@@ -1,7 +1,6 @@
 @page "/character/{Name}"
 @using Microsoft.AspNetCore.Components.Authorization
 @using SharpMUSH.Client.Models.Widgets
-@inject AuthenticationStateProvider AuthStateProvider
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Name — @Loc["AppTitle"]</PageTitle>
@@ -43,16 +42,16 @@
     [Parameter]
     public required string Name { get; set; }
 
-    private bool _canEdit;
+    // Cascaded rather than read once from the provider: a sign-in or sign-out while this page is open
+    // hands down a new task, so the edit affordances follow it.
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
     private ProfilePageContext _context = new(string.Empty, false);
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        _canEdit = authState.User.Identity?.IsAuthenticated == true;
-        _context = new ProfilePageContext(Name, _canEdit);
+        var canEdit = AuthState is not null && (await AuthState).User.Identity?.IsAuthenticated == true;
+        _context = new ProfilePageContext(Name, canEdit);
     }
-
-    protected override void OnParametersSet()
-        => _context = new ProfilePageContext(Name, _canEdit);
 }

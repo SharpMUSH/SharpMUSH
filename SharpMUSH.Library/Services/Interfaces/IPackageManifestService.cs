@@ -1,4 +1,4 @@
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -13,17 +13,17 @@ public interface IPackageManifestService
 	/// Parses a package.yaml document. Returns the validated manifest (with
 	/// any non-blocking warnings) or a failure listing every issue found.
 	/// </summary>
-	OneOf<ParsedPackageManifest, PackageManifestFailure> ParseManifest(string yaml);
+	PackageManifestResult<ParsedPackageManifest> ParseManifest(string yaml);
 
 	/// <summary>
 	/// Parses an index.yaml repo listing.
 	/// </summary>
-	OneOf<PackageIndex, PackageManifestFailure> ParseIndex(string yaml);
+	PackageManifestResult<PackageIndex> ParseIndex(string yaml);
 
 	/// <summary>
 	/// Parses one community repo listing file (a <c>community/*.yaml</c>
 	/// document in an official repo). Unknown keys are tolerated silently for
 	/// forward compatibility of the listing format.
 	/// </summary>
-	OneOf<CommunityRepoListing, PackageManifestFailure> ParseCommunityListing(string yaml);
+	PackageManifestResult<CommunityRepoListing> ParseCommunityListing(string yaml);
 }

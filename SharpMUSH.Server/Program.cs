@@ -212,33 +212,31 @@ public class Program
 
 		var result = await dispatcher.DispatchAsync(request.Method, path, body, headers, context.RequestAborted);
 
-		await result.Match(
-			async handled =>
-			{
-				context.Response.StatusCode = handled.Status;
-				var feature = context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpResponseFeature>();
-				if (feature is not null)
-				{
-					feature.ReasonPhrase = handled.ReasonPhrase;
-				}
+		if (result is not SharpMUSH.Library.Services.Interfaces.HttpHandlerResult handled)
+		{
+			// No http_handler configured, or no <METHOD> attribute on it (see help sharphttp).
+			context.Response.StatusCode = StatusCodes.Status404NotFound;
+			await context.Response.WriteAsync("Not Found", context.RequestAborted);
+			return;
+		}
 
-				context.Response.ContentType = handled.ContentType;
-				foreach (var (name, value) in handled.Headers)
-				{
-					// @respond already forbids Content-Length; defend anyway since the server computes it.
-					if (!name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
-					{
-						context.Response.Headers.Append(name, value);
-					}
-				}
+		context.Response.StatusCode = handled.Status;
+		var feature = context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpResponseFeature>();
+		if (feature is not null)
+		{
+			feature.ReasonPhrase = handled.ReasonPhrase;
+		}
 
-				await context.Response.WriteAsync(handled.Body, context.RequestAborted);
-			},
-			async _ =>
+		context.Response.ContentType = handled.ContentType;
+		foreach (var (name, value) in handled.Headers)
+		{
+			// @respond already forbids Content-Length; defend anyway since the server computes it.
+			if (!name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
 			{
-				// No http_handler configured, or no <METHOD> attribute on it (see help sharphttp).
-				context.Response.StatusCode = StatusCodes.Status404NotFound;
-				await context.Response.WriteAsync("Not Found", context.RequestAborted);
-			});
+				context.Response.Headers.Append(name, value);
+			}
+		}
+
+		await context.Response.WriteAsync(handled.Body, context.RequestAborted);
 	}
 }

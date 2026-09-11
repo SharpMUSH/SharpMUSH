@@ -35,7 +35,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Flags:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Flags:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -139,7 +139,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Powers:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Powers:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -257,7 +257,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
@@ -281,7 +281,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Flag '{flagName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
@@ -316,7 +316,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' disabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
@@ -340,7 +340,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Power '{powerName}' enabled.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await Mediator.Send(new DeletePowerCommand(powerName));
 	}
@@ -409,7 +409,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, $"{name} - Builder granted.")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{name} - Builder granted.")),
 				null, INotifyService.NotificationType.Announce);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {newDb}"));
@@ -467,7 +467,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s =>
+				Arg.Is<SharpMessage>(s =>
 					TestHelpers.MessagePlainTextEquals(s, "NOSUCHPOWERXYZ - I don't recognize that power.")),
 				null, INotifyService.NotificationType.Announce);
 
@@ -488,7 +488,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s,
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s,
 					ErrorMessages.Notifications.OnlyWizardsMayGrantPowers)),
 				null, INotifyService.NotificationType.Announce);
 	}
@@ -504,7 +504,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "     Name: Builder")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "     Name: Builder")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -708,7 +708,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s =>
+				Arg.Is<SharpMessage>(s =>
 					TestHelpers.MessagePlainTextContains(s, powerName)
 					&& TestHelpers.MessagePlainTextContains(s, "Symbol")
 					&& TestHelpers.MessagePlainTextContains(s, "K")),
@@ -730,7 +730,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s =>
+				Arg.Is<SharpMessage>(s =>
 					TestHelpers.MessagePlainTextContains(s, "Character: X")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
@@ -748,7 +748,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf.OneOf<MString, string>>(s =>
+				Arg.Is<SharpMessage>(s =>
 					TestHelpers.MessagePlainTextContains(s, "Builder")
 					&& !TestHelpers.MessagePlainTextContains(s, "Announce")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -971,7 +971,7 @@ public class FlagAndPowerCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf.OneOf<MString, string>>(s => TestHelpers.MessagePlainTextStartsWith(s, "Flag: WIZARD")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "Flag: WIZARD")),
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 

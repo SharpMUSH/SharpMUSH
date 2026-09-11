@@ -11,23 +11,18 @@ public class GetObjectsByZoneQueryHandler(INavigationStore database, IObjectStor
 {
 	public async IAsyncEnumerable<SharpObject> Handle(GetObjectsByZoneQuery request, CancellationToken cancellationToken)
 	{
-		AnySharpObject zone;
+		var zone = request.Zone switch
+		{
+			DBRef zoneRef => await objects.GetObjectNodeAsync(zoneRef, cancellationToken),
+			AnySharpObject known => known.WithNoneOption()
+		};
 
-		if (request.Zone.IsT0)
+		if (zone is not AnySharpObject knownZone)
 		{
-			var maybeZone = await objects.GetObjectNodeAsync(request.Zone.AsT0, cancellationToken);
-			if (maybeZone.IsNone)
-			{
-				yield break;
-			}
-			zone = maybeZone.Known;
-		}
-		else
-		{
-			zone = request.Zone.AsT1;
+			yield break;
 		}
 
-		await foreach (var obj in database.GetObjectsByZoneAsync(zone, cancellationToken)
+		await foreach (var obj in database.GetObjectsByZoneAsync(knownZone, cancellationToken)
 			.WithCancellation(cancellationToken))
 		{
 			yield return obj;

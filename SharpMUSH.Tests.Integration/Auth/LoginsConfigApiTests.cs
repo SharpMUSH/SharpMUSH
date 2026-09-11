@@ -125,7 +125,7 @@ public class LoginsConfigApiTests(ServerWebAppFactory factory)
 		var wizardFlag = await mediator.Send(new GetObjectFlagQuery("WIZARD"));
 		await Assert.That(wizardFlag).IsNotNull();
 		var characterNode = await mediator.Send(new GetObjectNodeQuery(new DBRef(character.DbrefNumber, character.CreationTime)));
-		await mediator.Send(new SetObjectFlagCommand(new AnySharpObject(characterNode.AsPlayer), wizardFlag!));
+		await mediator.Send(new SetObjectFlagCommand(characterNode.Expect<AnySharpObject>(), wizardFlag!));
 
 		using var configuration = DisableLogins();
 		using var response = await http.PostAsJsonAsync("api/auth/account-login",

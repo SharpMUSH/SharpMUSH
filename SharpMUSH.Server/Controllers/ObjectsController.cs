@@ -140,9 +140,11 @@ public class ObjectsController(
 		var requested = Math.Clamp(depth ?? DefaultListDepth, 1, MaxListDepth);
 		var result = await attributeService.GetVisibleAttributesAsync(executor, target, requested);
 
-		return result.Match<IActionResult>(
-			attributes => Ok(attributes.Select(ToDto).ToList()),
-			error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value)));
+		return result switch
+		{
+			SharpAttribute[] attributes => Ok(attributes.Select(ToDto).ToList()),
+			Error<string> error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value))
+		};
 	}
 
 	[HttpGet("{dbref:int}/attributes/{name}")]
@@ -156,10 +158,12 @@ public class ObjectsController(
 		var result = await attributeService.GetAttributeAsync(
 			executor, target, name, IAttributeService.AttributeMode.Read, parent: false);
 
-		return result.Match<IActionResult>(
-			attributes => Ok(ToDto(attributes.Last())),
-			_ => NotFound(),
-			error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value)));
+		return result switch
+		{
+			SharpAttribute[] attributes => Ok(ToDto(attributes.Last())),
+			None => NotFound(),
+			Error<string> error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value))
+		};
 	}
 
 	[HttpPut("{dbref:int}/attributes/{name}")]
@@ -179,9 +183,11 @@ public class ObjectsController(
 		var result = await attributeService.SetAttributeAsync(
 			executor, target, name, MarkupText.Plain(request.Value ?? string.Empty));
 
-		return result.Match<IActionResult>(
-			_ => NoContent(),
-			error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value)));
+		return result switch
+		{
+			Success => NoContent(),
+			Error<string> error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value))
+		};
 	}
 
 	[HttpDelete("{dbref:int}/attributes/{name}")]
@@ -202,9 +208,11 @@ public class ObjectsController(
 
 		var result = await attributeService.SetAttributeFlagAsync(executor, target, name, request.Flag);
 
-		return result.Match<IActionResult>(
-			_ => NoContent(),
-			error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value)));
+		return result switch
+		{
+			Success => NoContent(),
+			Error<string> error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value))
+		};
 	}
 
 	[HttpDelete("{dbref:int}/attributes/{name}/flags/{flag}")]
@@ -215,9 +223,11 @@ public class ObjectsController(
 
 		var result = await attributeService.UnsetAttributeFlagAsync(executor, target, name, flag);
 
-		return result.Match<IActionResult>(
-			_ => NoContent(),
-			error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value)));
+		return result switch
+		{
+			Success => NoContent(),
+			Error<string> error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value))
+		};
 	}
 
 	private async Task<IActionResult> ClearAttributeAsync(AnySharpObject executor, AnySharpObject target, string name)
@@ -226,9 +236,11 @@ public class ObjectsController(
 			executor, target, name,
 			IAttributeService.AttributePatternMode.Exact);
 
-		return result.Match<IActionResult>(
-			_ => NoContent(),
-			error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value)));
+		return result switch
+		{
+			Success => NoContent(),
+			Error<string> error => StatusCode(StatusCodes.Status403Forbidden, new ApiErrorDto(error.Value))
+		};
 	}
 
 	/// <summary>
@@ -247,9 +259,10 @@ public class ObjectsController(
 	/// </summary>
 	private async Task<AnySharpObject?> ResolveTargetAsync(AnySharpObject executor, int dbref, CancellationToken ct)
 	{
-		var result = await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct);
-		return result.IsNone || !await reality.CanPerceiveAsync(executor.Object().DBRef, result.Known.Object().DBRef, ct)
-			? null : result.Known;
+		return await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct) is AnySharpObject target
+			&& await reality.CanPerceiveAsync(executor.Object().DBRef, target.Object().DBRef, ct)
+				? target
+				: null;
 	}
 
 	private static AttributeDto ToDto(SharpAttribute attribute) => new(

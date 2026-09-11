@@ -4,26 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-SharpMUSH is a modern .NET 10 MUSH server (text-based multiplayer role-playing) targeting PennMUSH compatibility. The repository contains both the game engine and a Blazor WASM web portal. This branch (`feature/web-portal-design`) is focused on the web portal.
+SharpMUSH is a modern .NET 11 MUSH server (text-based multiplayer role-playing) targeting PennMUSH compatibility. The repository contains both the game engine and a Blazor WASM web portal.
 
 ## Build & Test Commands
 
-`global.json` pins the SDK to the **10.0.4xx** feature band with `allowPrerelease: false`, so a
-10.0.3xx SDK or a .NET 11 preview will not satisfy it — `dotnet` fails with "A compatible .NET SDK
-was not found" before any project is read. Install 10.0.400 or newer within that band:
+`global.json` pins the SDK to **11.0.100-rc.1** (`allowPrerelease: true`, rolling forward within
+the 11.0.1xx band), so a .NET 10 SDK or an older 11.0 preview will not satisfy it — `dotnet` fails
+with "A compatible .NET SDK was not found" before any project is read. Install it with:
 
 ```bash
-curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 10.0.400
+curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 11.0.100-rc.1.26425.128
 ```
 
-The pin is not cosmetic: the two source-generator projects reference `Microsoft.CodeAnalysis.CSharp`
-5.9.0, which is the Roslyn that ships inside 10.0.400. An older SDK carries an older compiler and
-rejects the generators with CS9057.
+The source-generator projects reference `Microsoft.CodeAnalysis.CSharp` 5.9.0; the compiler that
+loads them must be at least that version, and 11.0.100-rc.1 carries Roslyn 5.11. An SDK with an
+older compiler rejects the generators with CS9057.
 
 `global.json` is the only place the SDK version is written down. Every workflow resolves it with
-`actions/setup-dotnet`'s `global-json-file: global.json`, so bumping the band is a one-line change
-here; the Dockerfiles track the floating `mcr.microsoft.com/dotnet/sdk:10.0` tag and fail loudly
-against `global.json` if that tag ever lags the pin.
+`actions/setup-dotnet`'s `global-json-file: global.json`, so bumping it is a one-line change here;
+the Dockerfiles track the floating `mcr.microsoft.com/dotnet/sdk:11.0` tag and fail loudly against
+`global.json` if that tag ever lags the pin. The runtime-versioned packages (`Microsoft.AspNetCore.*`,
+`Microsoft.Extensions.*`, `Microsoft.Data.Sqlite`) share one version, `$(DotNetPackageVersion)` in
+`Directory.Build.props`, which moves with it.
 
 ```bash
 # Build everything
@@ -211,7 +213,22 @@ A custom `SharpAccount` model (not ASP.NET Identity) manages web accounts (email
 - **Line endings**: LF, pinned by `.gitattributes` (`* text=auto eol=lf`)
 - `TreatWarningsAsErrors` is enabled in most projects, but not all — notably `SharpMUSH.Tests.BUnit` and `SharpMUSH.Tests.ScenePlugin` do not set it (the source-generated projects and `templates/` don't either). `SharpMUSH.Tests`, `SharpMUSH.Tests.Infrastructure`, and `SharpMUSH.Tests.Integration` DO set it. Check the specific `.csproj` before assuming either way.
 - Prefer `var` throughout; no `this.` qualifier
-- Discriminated unions via `OneOf<T1, T2>` (never nullable returns from services)
+- Discriminated unions are C# 15 unions, never nullable returns from services. An inline result is a
+  `union` declaration (a struct): reuse `Result<T>` (value or `Error<string>`), `Found<T>` (value or
+  `NotFound`) or `FoundResult<T>` from `SharpMUSH.Contracts` before declaring one, and name a new one
+  for what it means. A union handed around as a nullable reference (`AnySharpObject?`, `Option<T>`)
+  is a `[Union] sealed partial class : IUnion`. The case primitives (`None`, `NotFound`, `Success`,
+  `Error`, `Error<T>`) are record structs in `SharpMUSH.Library.DiscriminatedUnions`. Consume a union
+  with patterns (`x switch { T0 a => …, T1 b => … }`, `x is T t`), never by casting `Value`. C# does not
+  narrow a union after `is not`, so "return the failure, carry on with the value" is a switch at the
+  point the result is produced, with the rest of the work extracted into a method named for it:
+  `return await CreateAsync(…) switch { SharpAccount account => await RegisteredAsync(account), Error<string> error => Conflict(error.Value) };`.
+  When the failure's contents are not needed, a guard is enough: `if (x is not SharpAccount account) return NotFound();`.
+  The optional object unions nest the object union (`AnyOptionalSharpObject(AnySharpObject, None)`, and the
+  `…OrError`/`…Container`/`…Content` variants), so a lookup reads `if (found is not AnySharpObject obj) return …;`,
+  and a concrete kind binds through the nesting: `found is AnySharpObject and SharpPlayer player`. Unions carry no
+  member that throws on the wrong case — ask with a pattern, which binds the case in the same step.
+  Tests bind the case they expect with `x.Expect<T>()` (Tests.Infrastructure), not `IsTypeOf<T>()` plus `!`.
 - Source-generated `Mediator` (not MediatR) for command/query dispatching
 
 ### Formatting is enforced

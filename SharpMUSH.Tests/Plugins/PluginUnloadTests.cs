@@ -79,7 +79,7 @@ public class PluginUnloadTests
 		await Assert.That(loaderRef.IsAlive).IsTrue();
 
 		var result = await manager.UnloadAsync(pluginId);
-		await Assert.That(result.IsT0).IsTrue().Because("an unloadable plugin must unload successfully");
+		await Assert.That(result.Value).IsTypeOf<Success>().Because("an unloadable plugin must unload successfully");
 
 		await Assert.That(commands.ContainsKey("+UNLOADME")).IsFalse();
 		await Assert.That(functions.ContainsKey("unloadme")).IsFalse();
@@ -101,7 +101,7 @@ public class PluginUnloadTests
 		await Assert.That(commands.ContainsKey("+UNLOADME")).IsTrue();
 
 		var result = await manager.ReloadAsync("command-only");
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 
 		await Assert.That(commands.ContainsKey("+UNLOADME")).IsTrue();
 		await Assert.That(functions.ContainsKey("unloadme")).IsTrue();
@@ -117,11 +117,11 @@ public class PluginUnloadTests
 		manager.RegisterPlugin(plugin);
 
 		var reload = await manager.ReloadAsync("load-once");
-		await Assert.That(reload.IsT1).IsTrue().Because("a load-once plugin must refuse reload");
-		await Assert.That(reload.AsT1.Value).Contains("load-once");
+		var reloadError = reload.Expect<Error<string>>("a load-once plugin must refuse reload");
+		await Assert.That(reloadError.Value).Contains("load-once");
 
 		var unload = await manager.UnloadAsync("load-once");
-		await Assert.That(unload.IsT1).IsTrue().Because("a load-once plugin must refuse unload");
+		await Assert.That(unload.Value).IsTypeOf<Error<string>>().Because("a load-once plugin must refuse unload");
 	}
 
 	[Test]
@@ -129,8 +129,8 @@ public class PluginUnloadTests
 	{
 		var manager = NewManager(out _, out _);
 		var result = await manager.UnloadAsync("does-not-exist");
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("not loaded");
+		var error = result.Expect<Error<string>>();
+		await Assert.That(error.Value).Contains("not loaded");
 	}
 
 	/// <summary>
@@ -228,7 +228,7 @@ public class PluginUnloadTests
 
 		public IEnumerable<CommandDefinition> GetCommands() =>
 			[new CommandDefinition(new SharpCommandAttribute { Name = "+LOADONCE" },
-				_ => ValueTask.FromResult(new Option<CallState>(new OneOf.Types.None())))];
+				_ => ValueTask.FromResult(new Option<CallState>(new SharpMUSH.Library.DiscriminatedUnions.None())))];
 
 		public IEnumerable<PluginFlag> Flags =>
 			[new PluginFlag("LOADONCE_FLAG", "L", [], [], [], ["ROOM", "PLAYER", "EXIT", "THING"])];

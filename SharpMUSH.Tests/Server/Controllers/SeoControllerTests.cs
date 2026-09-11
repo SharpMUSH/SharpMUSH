@@ -50,8 +50,7 @@ public class SeoControllerTests
 	public async Task Sitemap_PublishedMainPage_IncludedWithWikiUrl()
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var created = await wiki.CreateAsync("Getting Started", "# hello", "#1");
-		var page = created.AsT0;
+		var page = (await wiki.CreateAsync("Getting Started", "# hello", "#1")).Expect<WikiPage>();
 
 		var xml = await GetSitemapXml(MakeController(wiki));
 
@@ -63,8 +62,8 @@ public class SeoControllerTests
 	public async Task Sitemap_UnpublishedPage_Excluded()
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var published = (await wiki.CreateAsync("Visible Page", "# visible", "#1")).AsT0;
-		var draft = (await wiki.CreateAsync("Secret Draft", "# hidden", "#1")).AsT0;
+		var published = (await wiki.CreateAsync("Visible Page", "# visible", "#1")).Expect<WikiPage>();
+		var draft = (await wiki.CreateAsync("Secret Draft", "# hidden", "#1")).Expect<WikiPage>();
 		await wiki.SetMetadataAsync(draft.Id, null, [], published: false);
 
 		var xml = await GetSitemapXml(MakeController(wiki));
@@ -77,7 +76,7 @@ public class SeoControllerTests
 	public async Task Sitemap_Lastmod_UsesIsoDateFormat()
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var page = (await wiki.CreateAsync("Dated Page", "# dated", "#1")).AsT0;
+		var page = (await wiki.CreateAsync("Dated Page", "# dated", "#1")).Expect<WikiPage>();
 
 		var xml = await GetSitemapXml(MakeController(wiki));
 
@@ -90,7 +89,7 @@ public class SeoControllerTests
 	public async Task Sitemap_CharacterNamespacePage_MapsToCharacterUrl()
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var page = (await wiki.CreateAsync("Aria Stormwind", "# bio", "#1", WikiNamespace.Character)).AsT0;
+		var page = (await wiki.CreateAsync("Aria Stormwind", "# bio", "#1", WikiNamespace.Character)).Expect<WikiPage>();
 
 		var xml = await GetSitemapXml(MakeController(wiki));
 

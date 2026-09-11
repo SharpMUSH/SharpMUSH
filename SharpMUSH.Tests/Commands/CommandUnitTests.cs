@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -90,12 +91,12 @@ public class CommandUnitTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(_player.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(x
+			.Notify(TestHelpers.MatchingObject(_player.DbRef), Arg.Is<SharpMessage>(x
 				=> TestHelpers.MessageContains(x, expected1)), TestHelpers.MatchingObject(_player.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(_player.DbRef), Arg.Is<OneOf.OneOf<MString, string>>(x
+			.Notify(TestHelpers.MatchingObject(_player.DbRef), Arg.Is<SharpMessage>(x
 				=> TestHelpers.MessageContains(x, expected2)), TestHelpers.MatchingObject(_player.DbRef), INotifyService.NotificationType.Announce);
 	}
 }

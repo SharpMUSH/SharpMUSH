@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Services;
@@ -139,8 +140,7 @@ public class GitPackageSourceServiceTests
 	{
 		var result = await NewService().RefreshAsync(Remote);
 
-		await Assert.That(result.IsT0).IsTrue();
-		var snapshot = result.AsT0;
+		var snapshot = result.Expect<PackageRepoSnapshot>();
 		await Assert.That(snapshot.HeadCommit).IsEqualTo(RevParse("main"));
 
 		// Select who-where by path: a sibling-package test may have committed
@@ -160,19 +160,16 @@ public class GitPackageSourceServiceTests
 	{
 		var service = NewService();
 
-		var tagged = await service.GetManifestAsync(Remote, "who-where", "1.0.0");
-		await Assert.That(tagged.IsT0).IsTrue();
-		await Assert.That(tagged.AsT0.ManifestYaml).Contains("format-one");
-		await Assert.That(tagged.AsT0.Commit).IsEqualTo(RevParse("who-where/v1.0.0"));
-		await Assert.That(tagged.AsT0.Version).IsEqualTo("1.0.0");
+		var tagged = (await service.GetManifestAsync(Remote, "who-where", "1.0.0")).Expect<PackageManifestSource>();
+		await Assert.That(tagged.ManifestYaml).Contains("format-one");
+		await Assert.That(tagged.Commit).IsEqualTo(RevParse("who-where/v1.0.0"));
+		await Assert.That(tagged.Version).IsEqualTo("1.0.0");
 
-		var tip = await service.GetManifestAsync(Remote, "who-where");
-		await Assert.That(tip.IsT0).IsTrue();
-		await Assert.That(tip.AsT0.ManifestYaml).Contains("format-two");
+		var tip = (await service.GetManifestAsync(Remote, "who-where")).Expect<PackageManifestSource>();
+		await Assert.That(tip.ManifestYaml).Contains("format-two");
 
-		var missing = await service.GetManifestAsync(Remote, "who-where", "9.9.9");
-		await Assert.That(missing.IsT1).IsTrue();
-		await Assert.That(missing.AsT1.Value).Contains("who-where/v9.9.9");
+		var missing = (await service.GetManifestAsync(Remote, "who-where", "9.9.9")).Expect<Error<string>>();
+		await Assert.That(missing.Value).Contains("who-where/v9.9.9");
 	}
 
 	[Test, NotInParallel(nameof(GitPackageSourceServiceTests))]
@@ -180,8 +177,7 @@ public class GitPackageSourceServiceTests
 	{
 		var result = await NewService().GetCommunityListingsAsync(Remote);
 
-		await Assert.That(result.IsT0).IsTrue();
-		var directory = result.AsT0;
+		var directory = result.Expect<CommunityRepoDirectory>();
 		// _template.yaml skipped; broken.yaml reported; two valid listings sorted by name.
 		await Assert.That(directory.Listings.Select(l => l.Name).ToArray())
 			.IsEquivalentTo((string[])["Another Collection", "Volund's MUSH Suite"]);
@@ -194,18 +190,17 @@ public class GitPackageSourceServiceTests
 	{
 		var service = NewService();
 
-		var root = await service.GetReadmeAsync(Remote, "");
-		await Assert.That(root.IsT0).IsTrue();
-		await Assert.That(root.AsT0).Contains("Fixture Repo");
+		var root = (await service.GetReadmeAsync(Remote, "")).Expect<string>();
+		await Assert.That(root).Contains("Fixture Repo");
 
-		var package = await service.GetReadmeAsync(Remote, "who-where");
-		await Assert.That(package.AsT0).Contains("Package readme");
+		var package = (await service.GetReadmeAsync(Remote, "who-where")).Expect<string>();
+		await Assert.That(package).Contains("Package readme");
 
 		// At the v1.1.0 tag the package README exists; at v1.0.0 it does not.
 		var tagged = await service.GetReadmeAsync(Remote, "who-where", "1.1.0");
-		await Assert.That(tagged.IsT0).IsTrue();
+		await Assert.That(tagged.Value).IsTypeOf<string>();
 		var missing = await service.GetReadmeAsync(Remote, "who-where", "1.0.0");
-		await Assert.That(missing.IsT1).IsTrue();
+		await Assert.That(missing.Value).IsTypeOf<Error<string>>();
 	}
 
 	[Test, NotInParallel(nameof(GitPackageSourceServiceTests))]
@@ -219,18 +214,17 @@ public class GitPackageSourceServiceTests
 			new DateTimeOffset(2026, 6, 12, 0, 0, 0, TimeSpan.Zero), 1);
 
 		// Installed at v1.0.0: update available, path changed at tip, tag intact.
-		var behind = await service.CheckForUpdateAsync(Remote, Installed("1.0.0", v1Commit));
-		await Assert.That(behind.IsT0).IsTrue();
-		await Assert.That(behind.AsT0.UpdateAvailable).IsTrue();
-		await Assert.That(behind.AsT0.LatestVersion).IsEqualTo("1.1.0");
-		await Assert.That(behind.AsT0.PathChangedAtHead).IsTrue();
-		await Assert.That(behind.AsT0.InstalledTagMoved).IsFalse();
+		var behind = (await service.CheckForUpdateAsync(Remote, Installed("1.0.0", v1Commit))).Expect<PackageUpdateInfo>();
+		await Assert.That(behind.UpdateAvailable).IsTrue();
+		await Assert.That(behind.LatestVersion).IsEqualTo("1.1.0");
+		await Assert.That(behind.PathChangedAtHead).IsTrue();
+		await Assert.That(behind.InstalledTagMoved).IsFalse();
 
 		// Installed at v1.1.0 (current): nothing to do.
-		var current = await service.CheckForUpdateAsync(Remote, Installed("1.1.0", RevParse("who-where/v1.1.0")));
-		await Assert.That(current.AsT0.UpdateAvailable).IsFalse();
-		await Assert.That(current.AsT0.PathChangedAtHead).IsFalse();
-		await Assert.That(current.AsT0.InstalledTagMoved).IsFalse();
+		var current = (await service.CheckForUpdateAsync(Remote, Installed("1.1.0", RevParse("who-where/v1.1.0")))).Expect<PackageUpdateInfo>();
+		await Assert.That(current.UpdateAvailable).IsFalse();
+		await Assert.That(current.PathChangedAtHead).IsFalse();
+		await Assert.That(current.InstalledTagMoved).IsFalse();
 
 		// An unrelated sibling package changing must NOT trip the path signal.
 		Directory.CreateDirectory(Path.Combine(RepoDir, "other-pkg"));
@@ -238,14 +232,13 @@ public class GitPackageSourceServiceTests
 			"package: other-pkg\nversion: \"1.0\"\nobjects:\n  - ref: a\n    type: thing\n    name: A\n");
 		Git("add", "-A");
 		Git("commit", "-m", "unrelated sibling");
-		var sibling = await service.CheckForUpdateAsync(Remote, Installed("1.1.0", RevParse("who-where/v1.1.0")));
-		await Assert.That(sibling.AsT0.PathChangedAtHead).IsFalse();
+		var sibling = (await service.CheckForUpdateAsync(Remote, Installed("1.1.0", RevParse("who-where/v1.1.0")))).Expect<PackageUpdateInfo>();
+		await Assert.That(sibling.PathChangedAtHead).IsFalse();
 
 		// Move the v1.0.0 tag — the trust check must catch it after a fetch.
 		Git("tag", "-f", "who-where/v1.0.0", "main");
-		var moved = await service.CheckForUpdateAsync(Remote, Installed("1.0.0", v1Commit));
-		await Assert.That(moved.IsT0).IsTrue();
-		await Assert.That(moved.AsT0.InstalledTagMoved).IsTrue();
+		var moved = (await service.CheckForUpdateAsync(Remote, Installed("1.0.0", v1Commit))).Expect<PackageUpdateInfo>();
+		await Assert.That(moved.InstalledTagMoved).IsTrue();
 
 		// Restore the tag for any later assertions.
 		Git("tag", "-f", "who-where/v1.0.0", v1Commit);

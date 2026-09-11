@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Diagnostics;
@@ -9,10 +8,10 @@ namespace SharpMUSH.Library.Services;
 
 public interface IQueueDiagnosticsService
 {
-	Task<OneOf<QueueDiagnosticsReport, DiagnosticsError>> InspectAsync(CapabilityActor actor, int limit = 50,
+	Task<DiagnosticsResult<QueueDiagnosticsReport>> InspectAsync(CapabilityActor actor, int limit = 50,
 		Guid? beforeCursor = null, CancellationToken ct = default);
-	Task<OneOf<Guid, DiagnosticsError>> StartProfileAsync(CapabilityActor actor, int seconds = 60, CancellationToken ct = default);
-	Task<OneOf<Success, DiagnosticsError>> StopProfileAsync(CapabilityActor actor, CancellationToken ct = default);
+	Task<DiagnosticsResult<Guid>> StartProfileAsync(CapabilityActor actor, int seconds = 60, CancellationToken ct = default);
+	Task<DiagnosticsResult<Success>> StopProfileAsync(CapabilityActor actor, CancellationToken ct = default);
 	Task CollectProfilesAsync(CancellationToken ct = default);
 }
 
@@ -28,7 +27,7 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 	private static bool CanProfile(QueueInspectionScope? scope) => CanInspect(scope)
 		&& scope!.Scopes.Contains(PortalPermission.DiagnosticsProfile);
 
-	public async Task<OneOf<QueueDiagnosticsReport, DiagnosticsError>> InspectAsync(CapabilityActor actor, int limit = 50,
+	public async Task<DiagnosticsResult<QueueDiagnosticsReport>> InspectAsync(CapabilityActor actor, int limit = 50,
 		Guid? beforeCursor = null, CancellationToken ct = default)
 	{
 		if (limit is < 1 or > 100 || beforeCursor == Guid.Empty) return DiagnosticsError.InvalidRequest;
@@ -84,7 +83,7 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 		return new QueueDiagnosticsReport(current, history.Take(limit).ToArray(), profile, CanProfile(scope), next, active.Count > 100);
 	}
 
-	public async Task<OneOf<Guid, DiagnosticsError>> StartProfileAsync(CapabilityActor actor, int seconds = 60, CancellationToken ct = default)
+	public async Task<DiagnosticsResult<Guid>> StartProfileAsync(CapabilityActor actor, int seconds = 60, CancellationToken ct = default)
 	{
 		if (seconds is < 1 or > 300) return DiagnosticsError.InvalidDuration;
 		if (!CanProfile(await queues.GetInspectionScopeAsync(actor, ct))) return DiagnosticsError.PermissionDenied;
@@ -96,7 +95,7 @@ public sealed class QueueDiagnosticsService(QueueDiagnosticsRecorder recorder, I
 		var profile = recorder.StartProfile(actor, TimeSpan.FromSeconds(seconds));
 		return profile is null ? DiagnosticsError.CapacityExceeded : profile.Id;
 	}
-	public async Task<OneOf<Success, DiagnosticsError>> StopProfileAsync(CapabilityActor actor, CancellationToken ct = default)
+	public async Task<DiagnosticsResult<Success>> StopProfileAsync(CapabilityActor actor, CancellationToken ct = default)
 	{
 		if (!CanProfile(await queues.GetInspectionScopeAsync(actor, ct))) return DiagnosticsError.PermissionDenied;
 		var profile = recorder.ProfileRegistrations().SingleOrDefault(p => p.Actor == actor);

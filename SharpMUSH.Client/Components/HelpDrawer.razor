@@ -6,6 +6,7 @@
 @using SharpMUSH.Client.Services
 @inject HelpService Help
 @inject IJSRuntime JS
+@inject ILogger<HelpDrawer> Logger
 @inject IStringLocalizer<SharedResource> Loc
 @implements IAsyncDisposable
 
@@ -108,13 +109,21 @@
         if (firstRender)
         {
             _dotNetRef = DotNetObjectReference.Create(this);
-            _clickHandler = await JS.InvokeAsync<IJSObjectReference>(
-                "SharpMUSH.Help.registerLinkInterceptor", _dotNetRef);
+            try
+            {
+                _clickHandler = await JS.InvokeAsync<IJSObjectReference>(
+                    "SharpMUSH.Help.registerLinkInterceptor", _dotNetRef);
+            }
+            catch (JSException ex)
+            {
+                // help: links in the content then stay inert instead of opening in the drawer.
+                Logger.LogWarning(ex, "Help link interception unavailable");
+            }
         }
     }
 
     public void Open() { _open = true; StateHasChanged(); }
-    public void Close() { _open = false; StateHasChanged(); }
+    private void Close() => _open = false;
 
     public void NavigateTo(string name)
     {
@@ -153,7 +162,6 @@
         var prev = _history.Pop();
         var entry = Help.Get(prev);
         if (entry is not null) SetEntry(entry);
-        StateHasChanged();
     }
 
     private Task<IEnumerable<HelpEntry>> SearchEntries(string? text, CancellationToken ct)
@@ -173,7 +181,6 @@
         if (_current is not null) _history.Push(_current.Name);
         SetEntry(entry);
         _searchValue = null;
-        StateHasChanged();
     }
 
     /// <summary>

@@ -142,8 +142,8 @@ public class AdminGuestsController(
 		// @POWER reports success and failure the same way (an empty CallState plus a notification),
 		// so the grant is confirmed by reading it back. A player created without the power is worse
 		// than no player at all: it looks like a guest in every listing and `connect guest` ignores it.
-		var node = await mediator.Send(new GetObjectNodeQuery(dbref), ct);
-		if (node.IsNone || !await GuestCharacters.IsGuestAsync(node.AsPlayer))
+		if (await mediator.Send(new GetObjectNodeQuery(dbref), ct) is not (AnySharpObject and SharpPlayer player)
+			|| !await GuestCharacters.IsGuestAsync(player))
 		{
 			return StatusCode(StatusCodes.Status500InternalServerError,
 				new ApiErrorDto($"'{name}' was created but the {GuestCharacters.GuestPower} power did not take."));
@@ -151,7 +151,6 @@ public class AdminGuestsController(
 
 		// From the node, not the parsed dbref: a `?? 0` fallback would hand the panel `#N:0` for a
 		// guest that exists. The node is already loaded and is what List reports.
-		var player = node.AsPlayer;
 		return Ok(new GuestRow(player.Object.Key, player.Object.CreationTime, name,
 			await IsInUseAsync(dbref, ct)));
 	}
@@ -171,10 +170,9 @@ public class AdminGuestsController(
 			return StatusCode(StatusCodes.Status403Forbidden,
 				new ApiErrorDto("Only a wizard may remove guest characters."));
 
-		var node = await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct);
-		if (node.IsNone || !node.Known.IsPlayer) return NotFound();
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct) is not (AnySharpObject and SharpPlayer player))
+			return NotFound();
 
-		var player = node.AsPlayer;
 		if (created is { } stamp && player.Object.CreationTime != stamp)
 			return Conflict(new ApiErrorDto(
 				$"#{dbref} is not the guest you asked to remove — that number now belongs to a "
@@ -238,8 +236,7 @@ public class AdminGuestsController(
 	{
 		if (User.GetActingCharacter() is not { } character) return null;
 
-		var result = await mediator.Send(new GetObjectNodeQuery(character), ct);
-		return result.IsNone ? null : result.Known;
+		return await mediator.Send(new GetObjectNodeQuery(character), ct) is AnySharpObject found ? found : null;
 	}
 
 	/// <summary>

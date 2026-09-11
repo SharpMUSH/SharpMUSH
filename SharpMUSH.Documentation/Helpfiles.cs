@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -54,23 +53,14 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		var mdFiles = dir.GetFiles("*.md");
 		foreach (var file in mdFiles)
 		{
-			var maybeIndexedFile = IndexMarkdown(file);
-			if (maybeIndexedFile.IsT1)
+			switch (IndexMarkdown(file))
 			{
-				logger?.LogWarning("Failed to index markdown helpfile {FilePath}: {Error}", file.FullName, maybeIndexedFile.AsT1.Value);
-				continue;
-			}
-
-			var indexedFile = maybeIndexedFile.AsT0;
-
-			foreach (var kv in indexedFile)
-			{
-				if (IndexedHelp.ContainsKey(kv.Key))
-				{
-					logger?.LogWarning("Duplicate help index '{HelpIndex}' found in file {FilePath}, skipping", kv.Key, file.FullName);
-					continue;
-				}
-				IndexedHelp.Add(kv.Key, kv.Value);
+				case Dictionary<string, string> indexedFile:
+					AddToIndex(indexedFile, file);
+					break;
+				case Error<string> error:
+					logger?.LogWarning("Failed to index markdown helpfile {FilePath}: {Error}", file.FullName, error.Value);
+					break;
 			}
 		}
 
@@ -80,7 +70,24 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		}
 	}
 
-	public static OneOf<Dictionary<string, string>, Error<string>> Index(FileInfo file)
+	/// <summary>
+	/// Adds one file's entries to the index. An entry another file already claimed keeps its first
+	/// definition.
+	/// </summary>
+	private void AddToIndex(Dictionary<string, string> indexedFile, FileInfo file)
+	{
+		foreach (var kv in indexedFile)
+		{
+			if (IndexedHelp.ContainsKey(kv.Key))
+			{
+				logger?.LogWarning("Duplicate help index '{HelpIndex}' found in file {FilePath}, skipping", kv.Key, file.FullName);
+				continue;
+			}
+			IndexedHelp.Add(kv.Key, kv.Value);
+		}
+	}
+
+	public static Result<Dictionary<string, string>> Index(FileInfo file)
 	{
 		if (!file.Exists)
 		{
@@ -111,7 +118,7 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	[GeneratedRegex(@"(?:^& (?<Indexes>.+)\n)+(?<Body>(?:[^&].*\n)+)", RegexOptions.Compiled | RegexOptions.Multiline)]
 	private static partial Regex Indexes();
 
-	public static OneOf<Dictionary<string, string>, Error<string>> IndexMarkdown(FileInfo file)
+	public static Result<Dictionary<string, string>> IndexMarkdown(FileInfo file)
 	{
 		if (!file.Exists)
 		{
@@ -175,7 +182,7 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	/// that all share the same byte range (from the first alias header to the
 	/// end of the content block).
 	/// </summary>
-	public static OneOf<Dictionary<string, (long Start, long End)>, Error<string>> IndexMarkdownPositions(FileInfo file)
+	public static Result<Dictionary<string, (long Start, long End)>> IndexMarkdownPositions(FileInfo file)
 	{
 		if (!file.Exists)
 		{

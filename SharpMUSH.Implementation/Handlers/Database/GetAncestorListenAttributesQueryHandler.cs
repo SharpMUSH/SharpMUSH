@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -21,12 +22,11 @@ public class GetAncestorListenAttributesQueryHandler(IMediator mediator)
 		GetAncestorListenAttributesQuery request, CancellationToken cancellationToken)
 	{
 		var ancestorNode = await mediator.Send(new GetObjectNodeQuery(request.Ancestor), cancellationToken);
-		if (ancestorNode.IsNone)
+		if (ancestorNode is not AnySharpObject ancestor)
 		{
 			return [];
 		}
 
-		var ancestor = ancestorNode.Known;
 		var result = new List<ListenAttributeCache>();
 		var visited = new HashSet<int> { ancestor.Object().DBRef.Number };
 
@@ -38,11 +38,9 @@ public class GetAncestorListenAttributesQueryHandler(IMediator mediator)
 		var depth = 0;
 		while (depth < MaxParentDepth)
 		{
-			var parentAsync = await current.Object().Parent.WithCancellation(cancellationToken);
-			if (parentAsync.IsNone)
+			if (await current.Object().Parent.WithCancellation(cancellationToken) is not AnySharpObject parent)
 				break;
 
-			var parent = parentAsync.Known;
 			var parentObject = parent.Object();
 			if (!visited.Add(parentObject.DBRef.Number))
 				break;

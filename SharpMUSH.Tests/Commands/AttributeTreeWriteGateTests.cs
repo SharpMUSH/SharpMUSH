@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -194,16 +195,16 @@ public class AttributeTreeWriteGateTests
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGMortalOwner");
 		var ownerDbRef = owner.DbRef.ToString();
-		var obj = await Mediator.Send(new GetObjectNodeQuery(owner.DbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Expect<AnySharpObject>();
 
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&MSW{uid} me=original"));
 		// God applies WIZARD directly, so the precondition doesn't depend on the very path
 		// under test (SetAttributeFlagAsync) having been trustworthy.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {ownerDbRef}/MSW{uid}=WIZARD"));
 
-		var before = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"MSW{uid}",
-			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(before.AsAttribute.Last().Flags.Any(f => f.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase)))
+		var before = (await AttributeService.GetAttributeAsync(obj, obj, $"MSW{uid}",
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
+		await Assert.That(before.Last().Flags.Any(f => f.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase)))
 			.IsTrue().Because("the precondition must hold before the mortal's strip attempt means anything");
 
 		// Control: a mortal owner CAN unset an unrelated, unprivileged flag on its own
@@ -212,17 +213,17 @@ public class AttributeTreeWriteGateTests
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&MSWOK{uid} me=original"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {ownerDbRef}/MSWOK{uid}=VISUAL"));
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/MSWOK{uid}=!VISUAL"));
-		var controlAfter = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"MSWOK{uid}",
-			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(controlAfter.AsAttribute.Last().Flags.Any(f => f.Name.Equals("VISUAL", StringComparison.OrdinalIgnoreCase)))
+		var controlAfter = (await AttributeService.GetAttributeAsync(obj, obj, $"MSWOK{uid}",
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
+		await Assert.That(controlAfter.Last().Flags.Any(f => f.Name.Equals("VISUAL", StringComparison.OrdinalIgnoreCase)))
 			.IsFalse().Because("a mortal owner can unset an unprivileged flag on its own attribute");
 
 		// The mortal owner attempts to strip WIZARD from its own attribute.
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/MSW{uid}=!WIZARD"));
 
-		var after = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"MSW{uid}",
-			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(after.AsAttribute.Last().Flags.Any(f => f.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase)))
+		var after = (await AttributeService.GetAttributeAsync(obj, obj, $"MSW{uid}",
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
+		await Assert.That(after.Last().Flags.Any(f => f.Name.Equals("WIZARD", StringComparison.OrdinalIgnoreCase)))
 			.IsTrue().Because("a mortal owner must never be able to strip WIZARD off its own attribute");
 	}
 
@@ -241,7 +242,7 @@ public class AttributeTreeWriteGateTests
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeOwner");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(owner.DbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Expect<AnySharpObject>();
 
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WWB{uid} me=branchvalue"));
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WWB{uid}`LEAF me=leafvalue"));
@@ -254,7 +255,7 @@ public class AttributeTreeWriteGateTests
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WWBOK{uid} me=okbranch"));
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WWBOK{uid}`LEAF me=okleaf"));
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@wipe me/WWBOK{uid}`LEAF"));
-		var controlLeaf = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WWBOK{uid}`LEAF",
+		var controlLeaf = await AttributeService.GetAttributeAsync(obj, obj, $"WWBOK{uid}`LEAF",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(controlLeaf.IsAttribute).IsFalse()
 			.Because("a mortal owner can wipe a leaf under an unflagged sibling branch");
@@ -265,7 +266,7 @@ public class AttributeTreeWriteGateTests
 		// unflagged leaf (never touching the branch node in attrArr) exercises the actual gap.
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@wipe me/WWB{uid}`LEAF"));
 
-		var leafAfter = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WWB{uid}`LEAF",
+		var leafAfter = await AttributeService.GetAttributeAsync(obj, obj, $"WWB{uid}`LEAF",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(leafAfter.IsAttribute).IsTrue()
 			.Because("a wizard-flagged branch must block @wipe of its leaf from a mortal owner, even under their own object");
@@ -286,7 +287,7 @@ public class AttributeTreeWriteGateTests
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeDesc");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(owner.DbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Expect<AnySharpObject>();
 
 		// WPROT{uid} itself carries no flag - only its WIZLEAF child does. The outer
 		// ancestor-path gate on WPROT{uid} alone would pass; only per-descendant gating
@@ -302,7 +303,7 @@ public class AttributeTreeWriteGateTests
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WPROTOK{uid} me=okbranch"));
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&WPROTOK{uid}`LEAF me=okleaf"));
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@wipe me/WPROTOK{uid}"));
-		var controlBranch = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROTOK{uid}",
+		var controlBranch = await AttributeService.GetAttributeAsync(obj, obj, $"WPROTOK{uid}",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(controlBranch.IsAttribute).IsFalse()
 			.Because("a wholly-unflagged branch is fully removed by @wipe, proving the command still works end-to-end");
@@ -311,11 +312,10 @@ public class AttributeTreeWriteGateTests
 		var wipeMessages = await MessagesWhile(owner.DbRef, () =>
 			Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@wipe me/WPROT{uid}")).AsTask());
 
-		var protectedLeaf = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROT{uid}`WIZLEAF",
-			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(protectedLeaf.IsAttribute).IsTrue()
-			.Because("a wizard-flagged descendant must survive @wipe of its unflagged parent branch, even for the branch's own mortal owner");
-		await Assert.That(protectedLeaf.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("protectedvalue")
+		var protectedLeaf = (await AttributeService.GetAttributeAsync(obj, obj, $"WPROT{uid}`WIZLEAF",
+			IAttributeService.AttributeMode.Read, false))
+			.Expect<SharpAttribute[]>("a wizard-flagged descendant must survive @wipe of its unflagged parent branch, even for the branch's own mortal owner");
+		await Assert.That(protectedLeaf.Last().Value.ToPlainText()).IsEqualTo("protectedvalue")
 			.Because("the surviving descendant's value must be untouched, not merely left present under a different value");
 
 		// The branch itself must also survive completely untouched - PennMUSH's real_atr_clr
@@ -324,14 +324,13 @@ public class AttributeTreeWriteGateTests
 		// Fix round 1 got this wrong: it called ClearAttributeCommand on the branch whenever
 		// anything below it was denied, which blanks the value even though the wipe of that
 		// branch was supposed to have been refused.
-		var branchAfter = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROT{uid}",
-			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(branchAfter.IsAttribute).IsTrue()
-			.Because("the branch itself must survive a wipe that couldn't fully clear its subtree");
-		await Assert.That(branchAfter.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("branchvalue")
+		var branchAfter = (await AttributeService.GetAttributeAsync(obj, obj, $"WPROT{uid}",
+			IAttributeService.AttributeMode.Read, false))
+			.Expect<SharpAttribute[]>("the branch itself must survive a wipe that couldn't fully clear its subtree");
+		await Assert.That(branchAfter.Last().Value.ToPlainText()).IsEqualTo("branchvalue")
 			.Because("a denied wipe must not silently blank the branch's own value - that is data loss on an operation that was refused");
 
-		var removableLeaf = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WPROT{uid}`OKLEAF",
+		var removableLeaf = await AttributeService.GetAttributeAsync(obj, obj, $"WPROT{uid}`OKLEAF",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(removableLeaf.IsAttribute).IsFalse()
 			.Because("an unprotected sibling under the same branch must still be removed by the wipe");
@@ -389,7 +388,7 @@ public class AttributeTreeWriteGateTests
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
 		var wiz = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeWizGuard");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(wiz.DbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(wiz.DbRef))).Expect<AnySharpObject>();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wiz.DbRef}=WIZARD"));
 
@@ -401,16 +400,15 @@ public class AttributeTreeWriteGateTests
 
 		// Control: the unflagged sibling matched the same wildcard and IS gone, so the survivor
 		// below is the AF_WIZARD guard and not a @wipe that silently no-op'd on the whole pattern.
-		var control = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WZ{uid}OK",
+		var control = await AttributeService.GetAttributeAsync(obj, obj, $"WZ{uid}OK",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(control.IsAttribute).IsFalse()
 			.Because("an unflagged attribute matched by the same wildcard must still be wiped");
 
-		var survivor = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WZ{uid}G",
-			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(survivor.IsAttribute).IsTrue()
-			.Because("only God may wipe a wizard-flagged attribute through a wildcard pattern");
-		await Assert.That(survivor.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("wizvalue")
+		var survivor = (await AttributeService.GetAttributeAsync(obj, obj, $"WZ{uid}G",
+			IAttributeService.AttributeMode.Read, false))
+			.Expect<SharpAttribute[]>("only God may wipe a wizard-flagged attribute through a wildcard pattern");
+		await Assert.That(survivor.Last().Value.ToPlainText()).IsEqualTo("wizvalue")
 			.Because("the spared attribute must be untouched, not merely present with a blanked value");
 	}
 
@@ -427,21 +425,21 @@ public class AttributeTreeWriteGateTests
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
 		var wiz = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeWizLiteral");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(wiz.DbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(wiz.DbRef))).Expect<AnySharpObject>();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wiz.DbRef}=WIZARD"));
 
 		await Parser.CommandParse(wiz.Handle, ConnectionService, MarkupText.Plain($"&WL{uid}G me=wizvalue"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wiz.DbRef}/WL{uid}G=WIZARD"));
 
-		var before = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WL{uid}G",
+		var before = await AttributeService.GetAttributeAsync(obj, obj, $"WL{uid}G",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(before.IsAttribute).IsTrue()
 			.Because("the wizard-flagged attribute exists before the wipe");
 
 		await Parser.CommandParse(wiz.Handle, ConnectionService, MarkupText.Plain($"@wipe me/WL{uid}G"));
 
-		var after = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"WL{uid}G",
+		var after = await AttributeService.GetAttributeAsync(obj, obj, $"WL{uid}G",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(after.IsAttribute).IsFalse()
 			.Because("a literal (non-wildcard) @wipe of a wizard attribute is still allowed to a wizard");
@@ -460,7 +458,7 @@ public class AttributeTreeWriteGateTests
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGWipeSafeMsg");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(owner.DbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Expect<AnySharpObject>();
 
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&SF{uid}S me=safevalue"));
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&SF{uid}OK me=okvalue"));
@@ -482,7 +480,7 @@ public class AttributeTreeWriteGateTests
 				ErrorMessages.Notifications.UnableToWipeAttribute, $"SF{uid}S"))
 			.Because("AE_SAFE and AE_ERROR are distinct outcomes - the safe case must not also report the generic one");
 
-		var survivor = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, $"SF{uid}S",
+		var survivor = await AttributeService.GetAttributeAsync(obj, obj, $"SF{uid}S",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(survivor.IsAttribute).IsTrue()
 			.Because("a safe attribute must survive the wipe that reported it");

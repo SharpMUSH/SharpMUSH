@@ -1,6 +1,5 @@
 using Mediator;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -51,7 +50,7 @@ public class LocateServiceCompatibilityTests
 			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
 		_mediator.CreateStream(
 				Arg.Is<GetContentsQuery>(q =>
-					q.DBRef.Match(d => d, c => c.Object().DBRef).Number == container.Object.DBRef.Number),
+					ContainerNumber(q.DBRef) == container.Object.DBRef.Number),
 				Arg.Any<CancellationToken>())
 			.Returns(_ => contents.Select(x => x.AsContent));
 	}
@@ -85,7 +84,7 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchObjectsInLookerLocation);
 
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(result.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -157,9 +156,9 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.RoomsPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.MatchMeForLooker |
 			LocateFlags.PreferLockPass);
 
-		await Assert.That(withNoTypePreference.WithoutError().WithoutNone().Object().DBRef)
+		await Assert.That(withNoTypePreference.Expect<AnySharpObject>().Object().DBRef)
 			.IsEqualTo(new DBRef(1, 0));
-		await Assert.That(withoutNoTypePreference.WithoutError().WithoutNone().Object().DBRef)
+		await Assert.That(withoutNoTypePreference.Expect<AnySharpObject>().Object().DBRef)
 			.IsEqualTo(new DBRef(1, 0));
 		await Assert.That(wrongTypeUnderMatType.IsNone).IsTrue();
 	}
@@ -196,10 +195,10 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchMeForLooker | LocateFlags.PreferLockPass);
 
 		await Assert.That(resultWithControlRequired.IsValid()).IsTrue();
-		await Assert.That(resultWithControlRequired.WithoutError().WithoutNone().Object().DBRef)
+		await Assert.That(resultWithControlRequired.Expect<AnySharpObject>().Object().DBRef)
 			.IsEqualTo(new DBRef(1, 0));
 		await Assert.That(resultWithoutControlRequired.IsValid()).IsTrue();
-		await Assert.That(resultWithoutControlRequired.WithoutError().WithoutNone().Object().DBRef)
+		await Assert.That(resultWithoutControlRequired.Expect<AnySharpObject>().Object().DBRef)
 			.IsEqualTo(new DBRef(1, 0));
 
 		_permissionService.Controls(target, player)
@@ -239,8 +238,8 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchHereForLookerLocation | LocateFlags.PreferLockPass);
 
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().IsRoom).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(999);
+		await Assert.That(result.Expect<AnySharpObject>().IsRoom).IsTrue();
+		await Assert.That(result.Expect<AnySharpObject>().Object().DBRef.Number).IsEqualTo(999);
 	}
 
 	[Test]
@@ -270,7 +269,7 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.AbsoluteMatch | LocateFlags.PreferLockPass);
 
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(42, 0));
+		await Assert.That(result.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(42, 0));
 	}
 
 	[Test]
@@ -285,7 +284,7 @@ public class LocateServiceCompatibilityTests
 
 		Holds(sharedRoom, contents);
 
-		var playerResults = new[] { targetPlayer.AsPlayer }.ToAsyncEnumerable();
+		var playerResults = new[] { targetPlayer.Expect<SharpPlayer>() }.ToAsyncEnumerable();
 		_mediator.CreateStream(Arg.Is<GetPlayerQuery>(q => q.Name.Contains("Bob")), Arg.Any<CancellationToken>())
 			.Returns(_ => playerResults);
 
@@ -304,8 +303,8 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchObjectsInLookerInventory | LocateFlags.PreferLockPass);
 
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().IsPlayer).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(result.Expect<AnySharpObject>().IsPlayer).IsTrue();
+		await Assert.That(result.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	[Test]
@@ -335,7 +334,7 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsFalse();
 		await Assert.That(bestMatch.IsValid()).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -454,7 +453,7 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchObjectsInLookerLocation);
 
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(result.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -488,7 +487,7 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchObjectsInLookerLocation | LocateFlags.UseLastIfAmbiguous);
 
 		await Assert.That(resultLast.IsValid()).IsTrue();
-		await Assert.That(resultLast.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(4);
+		await Assert.That(resultLast.Expect<AnySharpObject>().Object().DBRef.Number).IsEqualTo(4);
 	}
 
 	[Test]
@@ -558,7 +557,7 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchObjectsInLookerInventory);
 
 		await Assert.That(result.IsError).IsTrue();
-		await Assert.That(result.AsError.Value).Contains("NOT PERMITTED");
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("NOT PERMITTED");
 	}
 
 	[Test]
@@ -638,7 +637,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(10, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(10, 0));
 	}
 
 	[Test]
@@ -663,7 +662,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(10, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(10, 0));
 	}
 
 	[Test]
@@ -715,7 +714,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	/// <summary>
@@ -771,7 +770,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(state.Count).IsEqualTo(1);
 		await Assert.That(state.Exact).IsFalse();
-		await Assert.That(state.Best.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(state.Best.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	/// <summary>
@@ -797,7 +796,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(state.Count).IsEqualTo(1);
 		await Assert.That(state.Exact).IsTrue();
-		await Assert.That(state.Best.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(state.Best.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	[Test]
@@ -830,7 +829,7 @@ public class LocateServiceCompatibilityTests
 		// After both are processed: exact match resets counter, partial removed
 		await Assert.That(exact).IsTrue();
 		await Assert.That(curr).IsEqualTo(1);
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	[Test]
@@ -891,7 +890,7 @@ public class LocateServiceCompatibilityTests
 		// Both matched → bestMatch is the last one (coin2 = #4)
 		await Assert.That(curr).IsEqualTo(2);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef.Number).IsEqualTo(4);
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef.Number).IsEqualTo(4);
 	}
 
 	[Test]
@@ -951,7 +950,7 @@ public class LocateServiceCompatibilityTests
 		// Exact match resets: curr=1, exact=true, bestMatch = exactMatch
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(4, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(4, 0));
 	}
 
 	[Test]
@@ -986,7 +985,7 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
 		await Assert.That(bestMatch.IsValid()).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -1011,7 +1010,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -1036,7 +1035,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(1);
 		await Assert.That(exact).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -1067,7 +1066,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(2);
 		await Assert.That(flow).IsTrue(); // found the Nth item → every remaining scope is skipped
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(4, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(4, 0));
 	}
 
 	[Test]
@@ -1095,7 +1094,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(flow).IsTrue();
 		await Assert.That(flow).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(3, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]
@@ -1153,7 +1152,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(2);
 		await Assert.That(rightType).IsEqualTo(1);
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(6, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(6, 0));
 	}
 
 	[Test]
@@ -1178,8 +1177,8 @@ public class LocateServiceCompatibilityTests
 		var curr = state.Count;
 
 		await Assert.That(curr).IsEqualTo(1);
-		await Assert.That(bestMatch.WithoutError().WithoutNone().IsPlayer).IsFalse();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(6, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().IsPlayer).IsFalse();
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(6, 0));
 	}
 
 	[Test]
@@ -1205,8 +1204,8 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(curr).IsEqualTo(2);
 		await Assert.That(rightType).IsEqualTo(1);
-		await Assert.That(bestMatch.WithoutError().WithoutNone().IsPlayer).IsTrue();
-		await Assert.That(bestMatch.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(5, 0));
+		await Assert.That(bestMatch.Expect<AnySharpObject>().IsPlayer).IsTrue();
+		await Assert.That(bestMatch.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(5, 0));
 	}
 
 	[Test]
@@ -1254,7 +1253,7 @@ public class LocateServiceCompatibilityTests
 			LocateFlags.MatchMeForLooker | LocateFlags.OnlyMatchLookerControlledObjects | LocateFlags.PreferLockPass);
 
 		await Assert.That(result.IsValid()).IsTrue();
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(1, 0));
+		await Assert.That(result.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(1, 0));
 	}
 
 	[Test]
@@ -1287,7 +1286,7 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(result.IsValid()).IsEqualTo(canInteract);
 		if (!canInteract) return;
-		await Assert.That(result.WithoutError().WithoutNone().Object().DBRef).IsEqualTo(new DBRef(42, 0));
+		await Assert.That(result.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(42, 0));
 	}
 
 	/// <summary>
@@ -1333,4 +1332,14 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(isValid).IsEqualTo(shouldBeValid);
 	}
+
+	/// <summary>
+	/// The number of the container a contents query is for, whether it was given by reference or already
+	/// loaded. A matcher lambda is an expression tree, which cannot hold the switch this needs.
+	/// </summary>
+	private static int ContainerNumber(DbRefOrContainer container) => container switch
+	{
+		DBRef dbref => dbref.Number,
+		AnySharpContainer loaded => loaded.Object().DBRef.Number
+	};
 }

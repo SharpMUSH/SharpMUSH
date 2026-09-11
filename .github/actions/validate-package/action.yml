@@ -26,15 +26,22 @@ inputs:
   dotnet-version:
     description: .NET SDK version to set up for installing/running the tool.
     required: false
-    default: "10.0.x"
+    default: "11.0.x"
+  dotnet-quality:
+    description: >-
+      Build quality of that SDK (daily, signed, validated, preview, ga). Defaults to 'preview'
+      while the tool targets a .NET release that has not reached GA.
+    required: false
+    default: "preview"
 
 runs:
   using: composite
   steps:
     - name: Set up .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: ${{ inputs.dotnet-version }}
+        dotnet-quality: ${{ inputs.dotnet-quality }}
 
     - name: Install sharpmush-package tool
       shell: bash

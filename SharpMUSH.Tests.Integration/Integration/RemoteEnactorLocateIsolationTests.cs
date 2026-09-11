@@ -2,7 +2,7 @@ using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -60,7 +60,11 @@ public class RemoteEnactorLocateIsolationTests
 		if (args.Length < 2) return null;
 		return args[1] switch
 		{
-			OneOf<MString, string> oneOf => oneOf.Match(m => m.ToString(), s => s),
+			SharpMessage message => message switch
+			{
+				MString markup => markup.ToString(),
+				string text => text,
+			},
 			string s => s,
 			MString m => m.ToString(),
 			_ => null

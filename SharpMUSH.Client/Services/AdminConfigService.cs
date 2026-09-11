@@ -1,4 +1,4 @@
-﻿using OneOf.Types;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
@@ -13,7 +13,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 	private SharpMUSHOptions? _currentOptions = null;
 	private Dictionary<string, SharpConfigAttribute> _metadata = [];
 
-	public async Task<OneOf.OneOf<IEnumerable<ConfigItem>, Error<string>>> GetOptionsAsync()
+	public async Task<Result<IEnumerable<ConfigItem>>> GetOptionsAsync()
 	{
 		try
 		{
@@ -26,7 +26,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error fetching options from server, using defaults");
-			return OneOf.OneOf<IEnumerable<ConfigItem>, Error<string>>.FromT0([]);
+			return new Result<IEnumerable<ConfigItem>>([]);
 		}
 	}
 
@@ -51,7 +51,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		}
 	}
 
-	public async Task<OneOf.OneOf<ConfigurationResponse, Error<string>>> UpdateConfigAsync(
+	public async Task<Result<ConfigurationResponse>> UpdateConfigAsync(
 		Dictionary<string, object?> changes)
 	{
 		try
@@ -166,12 +166,11 @@ public static class SharpMUSHOptionsExtension
 	/// <c>OptionHelper.OptionsToConfigurationResponse</c>), so the two agree by construction and a property
 	/// added to an options record shows up here without any further wiring.
 	/// </remarks>
-	public static OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>> ToConfigItems(this ConfigurationResponse options)
+	public static Result<IEnumerable<AdminConfigService.ConfigItem>> ToConfigItems(this ConfigurationResponse options)
 	{
 		if (options.Configuration is null)
 		{
-			return OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>>.FromT1(
-				new Error<string>("The configuration response carried no configuration."));
+			return new Error<string>("The configuration response carried no configuration.");
 		}
 
 		var configItems = ConfigMetadata.PropertyMetadata
@@ -180,7 +179,7 @@ public static class SharpMUSHOptionsExtension
 			.ThenBy(x => x.Key)
 			.ToList();
 
-		return OneOf.OneOf<IEnumerable<AdminConfigService.ConfigItem>, Error<string>>.FromT0(configItems);
+		return new Result<IEnumerable<AdminConfigService.ConfigItem>>(configItems);
 	}
 
 	private static AdminConfigService.ConfigItem ToConfigItem(

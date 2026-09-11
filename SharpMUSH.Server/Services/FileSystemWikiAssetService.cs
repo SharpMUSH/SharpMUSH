@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Security.Cryptography;
@@ -57,7 +56,7 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 	/// <summary>Ids are Guid "N" strings; reject anything else so ids can't traverse paths.</summary>
 	private static bool IsValidId(string id) => Guid.TryParseExact(id, "N", out _);
 
-	public async Task<OneOf<WikiAsset, Error<string>>> SaveAsync(
+	public async Task<Result<WikiAsset>> SaveAsync(
 		string fileName,
 		string contentType,
 		Stream content,
@@ -103,7 +102,7 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 		}
 	}
 
-	public async Task<OneOf<(WikiAsset Asset, Stream Content), NotFound>> OpenAsync(string id, CancellationToken ct = default)
+	public async Task<Found<OpenedWikiAsset>> OpenAsync(string id, CancellationToken ct = default)
 	{
 		if (!IsValidId(id) || !File.Exists(MetaPath(id)) || !File.Exists(BinPath(id)))
 		{
@@ -117,8 +116,7 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 			return new NotFound();
 		}
 
-		Stream stream = File.OpenRead(BinPath(id));
-		return (asset, stream);
+		return new OpenedWikiAsset(asset, File.OpenRead(BinPath(id)));
 	}
 
 	public async Task<IReadOnlyList<WikiAsset>> ListAsync(int skip = 0, int take = 100)
@@ -146,11 +144,11 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 			.ToList();
 	}
 
-	public Task<OneOf<None, NotFound>> DeleteAsync(string id)
+	public Task<Found<None>> DeleteAsync(string id)
 	{
 		if (!IsValidId(id) || !File.Exists(MetaPath(id)))
 		{
-			return Task.FromResult<OneOf<None, NotFound>>(new NotFound());
+			return Task.FromResult<Found<None>>(new NotFound());
 		}
 
 		File.Delete(MetaPath(id));
@@ -159,6 +157,6 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 			File.Delete(BinPath(id));
 		}
 
-		return Task.FromResult<OneOf<None, NotFound>>(new None());
+		return Task.FromResult<Found<None>>(new None());
 	}
 }

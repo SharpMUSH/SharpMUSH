@@ -84,7 +84,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 
 	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait)
 	{
-		var god = (await _database!.GetObjectNodeAsync(new DBRef(1))).AsPlayer!;
+		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
+			throw new InvalidOperationException("God (#1) is not seeded as a player.");
 		var one = god.Object.DBRef;
 		var baseParser = _server!.Services.GetRequiredService<IMUSHCodeParser>();
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_FN"], MarkupText.Plain("[mul(%0,2)]"), god);

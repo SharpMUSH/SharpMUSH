@@ -73,8 +73,7 @@ public sealed class AdministrativeCapabilityService(
 			if (current > role) role = current;
 		}
 		var effective = new Dictionary<string, SharpRole>(StringComparer.OrdinalIgnoreCase);
-		var builtIn = await registry.GetRoleAsync(BuiltInRoles.SlugFor(role), ct);
-		if (builtIn.IsT0) effective[builtIn.AsT0.Slug] = builtIn.AsT0;
+		if (await registry.GetRoleAsync(BuiltInRoles.SlugFor(role), ct) is SharpRole builtIn) effective[builtIn.Slug] = builtIn;
 		foreach (var assigned in await registry.GetRolesForAccountAsync(actor.AccountId, ct))
 			effective[assigned.Slug] = assigned;
 		return effective.Values;

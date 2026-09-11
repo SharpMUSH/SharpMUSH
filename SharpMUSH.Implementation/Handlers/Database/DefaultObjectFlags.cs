@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -35,12 +36,10 @@ internal static class DefaultObjectFlags
 		}
 
 		var node = await objects.GetObjectNodeAsync(created, cancellationToken);
-		if (node.IsNone())
+		if (node is not AnySharpObject target)
 		{
 			return;
 		}
-
-		var target = node.Known();
 
 		foreach (var name in defaults)
 		{

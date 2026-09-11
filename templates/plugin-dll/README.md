@@ -1,7 +1,7 @@
 # PLUGIN_ID — a SharpMUSH C# DLL plugin
 
 A starter **compiled C# plugin** for [SharpMUSH](https://github.com/SharpMUSH/SharpMUSH).
-A plugin is an ordinary `net10.0` assembly that contributes `[SharpCommand]` /
+A plugin is an ordinary `net11.0` assembly that contributes `[SharpCommand]` /
 `[SharpFunction]` definitions (and optionally DI services, DB migrations, flags,
 NATS-bridge legs, and extension hooks) into the live engine — **no server
 recompile**. Authoring is identical to in-tree engine code.
@@ -14,7 +14,7 @@ and the [extensibility overview](https://github.com/SharpMUSH/SharpMUSH/blob/mai
 
 ```
 PLUGIN_ID/
-├── PLUGIN_NAME.csproj           # net10.0, EnableDynamicLoading, abstractions + generator refs
+├── PLUGIN_NAME.csproj           # net11.0, EnableDynamicLoading, abstractions + generator refs
 ├── Plugin.cs                    # [SharpPlugin] : PluginBase with a sample command + function
 ├── plugin.json                  # loader ordering metadata (id/version/dependencies/priority)
 ├── package.yaml                 # kind: managed — distributes the DLL via the package manager
@@ -26,7 +26,7 @@ PLUGIN_ID/
 
 ## Build prerequisites — the parallel NuGets
 
-This template references two SharpMUSH contract packages (versioned **2.0.0**,
+This template references two SharpMUSH contract packages (versioned **3.0.0**,
 aligned to the server's `PluginContractVersion`):
 
 - **`SharpMUSH.Library`** — the contract surface (`IPlugin`, `PluginBase`, the

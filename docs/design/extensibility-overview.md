@@ -33,7 +33,7 @@ always-present behavior lives. Changing it means recompiling the server.
 
 ## Layer 2 — C# DLL plugins (compiled, runtime-loaded)
 
-A plugin is an ordinary `net10.0` assembly dropped into `plugins/` (or distributed by the
+A plugin is an ordinary `net11.0` assembly dropped into `plugins/` (or distributed by the
 package manager) that contributes compiled C# **without forking the engine**. Authoring is
 identical to in-tree code — the same `[SharpCommand]`/`[SharpFunction]` attributes, surfaced
 through `PluginBase` — and plugins can also contribute DI services, DB migrations, engine

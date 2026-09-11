@@ -153,7 +153,7 @@ public class LockRecursionTests
 
 	private static SharpChannel CreateChannel()
 	{
-		var owner = new TestObjectFactory().CreatePlayer(100, "Owner").AsT0;
+		var owner = new TestObjectFactory().CreatePlayer(100, "Owner").Expect<SharpPlayer>();
 		return new SharpChannel
 		{
 			Name = MarkupText.Plain("Test"),
@@ -176,7 +176,7 @@ public class LockRecursionTests
 			var parser = new BooleanExpressionParser(services, Substitute.For<IMediator>(), _cache);
 			Service = new LockService(parser, Options(maxDepth));
 			services.LocateAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<LocateFlags>())
-				.Returns(call => new ValueTask<AnyOptionalSharpObjectOrError>(_objects[call.Arg<string>()].AsT3));
+				.Returns(call => new ValueTask<AnyOptionalSharpObjectOrError>(_objects[call.Arg<string>()]));
 			services.EvaluateLock(Arg.Any<string>(), Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 				.Returns(call => Service.Evaluate(call.Arg<string>(), call.ArgAt<AnySharpObject>(1), call.ArgAt<AnySharpObject>(2)));
 		}

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -66,7 +67,7 @@ public class DefaultPackagesBootstrapService(
 			// a package arrives, not whether it is kept current once it is here. Skipping the
 			// upgrade instead would leave an opted-in package frozen at the version that shipped
 			// the day it was installed, with no upgrade path short of a manual reinstall.
-			if (!package.InstallAtFirstBoot && (await registry.GetInstalledPackageAsync(package.PackageId)).IsT1)
+			if (!package.InstallAtFirstBoot && await registry.GetInstalledPackageAsync(package.PackageId) is NotFound)
 			{
 				logger.LogDebug("Bundled {PackageId} is available but not installed; leaving it to the admin.",
 					package.PackageId);
@@ -83,34 +84,39 @@ public class DefaultPackagesBootstrapService(
 		// defect, and it must be reported whether or not the package happens to be installed
 		// already. Deciding the version gate first would swallow it on every game that has the
 		// package, because an unparsed manifest has no version to compare.
-		var parsed = manifests.ParseManifest(BundledPackages.ManifestYaml(packageId));
-		if (parsed.IsT1)
+		switch (manifests.ParseManifest(BundledPackages.ManifestYaml(packageId)))
 		{
-			logger.LogError("Bundled {PackageId} manifest is invalid: {Issues}",
-				packageId, string.Join("; ", parsed.AsT1.Issues.Select(i => i.ToString())));
-			return;
+			case ParsedPackageManifest parsed:
+				await InstallOrUpgradeManifestAsync(packageId, parsed.Manifest, cancellationToken);
+				break;
+			case PackageManifestFailure failure:
+				logger.LogError("Bundled {PackageId} manifest is invalid: {Issues}",
+					packageId, string.Join("; ", failure.Issues.Select(i => i.ToString())));
+				break;
 		}
+	}
 
-		var manifest = parsed.AsT0.Manifest;
-
-		var already = await registry.GetInstalledPackageAsync(packageId);
-		if (already.IsT0)
+	/// <summary>
+	/// Installs a parsed bundled manifest, or upgrades the installed package when this build ships a newer version.
+	/// </summary>
+	private async Task InstallOrUpgradeManifestAsync(string packageId, PackageManifest manifest, CancellationToken cancellationToken)
+	{
+		if (await registry.GetInstalledPackageAsync(packageId) is InstalledPackageRecord already)
 		{
 			// Already installed: only step in when this build ships a NEWER version than the
 			// game has. Without this a game that installed an older bundled package never sees
-			// later additions to it — the portal's "online now" list stayed empty on every game
-			// created before GET`ONLINE was added to profile-handler, with no upgrade path short
-			// of a manual reinstall. Same-or-newer installed (an admin upgrade, a local fork) is
-			// left alone, and the apply below still resolves conflicts in favour of local edits.
-			if (!IsNewer(manifest.Version, already.AsT0.Version))
+			// later additions to it, with no upgrade path short of a manual reinstall.
+			// Same-or-newer installed (an admin upgrade, a local fork) is left alone, and the
+			// apply below still resolves conflicts in favour of local edits.
+			if (!IsNewer(manifest.Version, already.Version))
 			{
 				logger.LogDebug("Package {PackageId} already installed (v{Version}); leaving it to the package manager.",
-					packageId, already.AsT0.Version);
+					packageId, already.Version);
 				return;
 			}
 
 			logger.LogInformation("Upgrading bundled {PackageId} v{Installed} → v{Bundled}.",
-				packageId, already.AsT0.Version, manifest.Version);
+				packageId, already.Version, manifest.Version);
 		}
 
 		// Resolve any pre-existing conflicts in favor of what is already present (a game migrating
@@ -133,10 +139,16 @@ public class DefaultPackagesBootstrapService(
 		var result = await installer.ApplyAsync(manifest, new PackageApplyRequest(
 			source, new Dictionary<string, string>(), decisions), cancellationToken);
 
-		result.Switch(
-			ok => logger.LogInformation("Installed bundled {PackageId} v{Version} (revision {Revision}).",
-				packageId, manifest.Version, ok.Revision),
-			error => logger.LogError("Failed to install {PackageId}: {Error}", packageId, error.Value));
+		switch (result)
+		{
+			case PackageApplyResult ok:
+				logger.LogInformation("Installed bundled {PackageId} v{Version} (revision {Revision}).",
+					packageId, manifest.Version, ok.Revision);
+				break;
+			case Error<string> error:
+				logger.LogError("Failed to install {PackageId}: {Error}", packageId, error.Value);
+				break;
+		}
 	}
 
 	/// <summary>

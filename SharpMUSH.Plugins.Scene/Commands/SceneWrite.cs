@@ -52,18 +52,13 @@ public static class SceneWrite
 			return MarkupText.Plain(SceneCommandHelper.BadArguments);
 		}
 
-		var result = await sceneService.SetSceneMetaAsync(sceneId, key!, value.ToPlainText());
+		if (await sceneService.SetSceneMetaAsync(sceneId, key!, value.ToPlainText()) is not Contracts.Scene scene)
+		{
+			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
+			return MarkupText.Plain(SceneCommandHelper.NotFound);
+		}
 
-		return await result.Match(
-			async scene =>
-			{
-				await notifyService.Notify(executor, $"SCENE: #{scene.Id} {key} set.");
-				return MarkupText.Plain(scene.Id);
-			},
-			async _ =>
-			{
-				await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
-				return MarkupText.Plain(SceneCommandHelper.NotFound);
-			});
+		await notifyService.Notify(executor, $"SCENE: #{scene.Id} {key} set.");
+		return MarkupText.Plain(scene.Id);
 	}
 }

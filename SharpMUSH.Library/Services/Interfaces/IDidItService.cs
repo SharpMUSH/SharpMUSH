@@ -40,7 +40,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// per recipient would be wrong — but even the literal-default half has no seam to fix this through:
 /// <paramref name="Def"/> and <paramref name="ODef"/> reach players as rendered
 /// <c>MString</c>/<c>string</c> values, and <c>ICommunicationService.SendToRoomAsync</c>'s broadcast callback
-/// (<c>Func&lt;AnySharpObject, OneOf&lt;MString, string&gt;&gt;</c>) has no way to hand back a
+/// (<c>Func&lt;AnySharpObject, SharpMessage&gt;</c>) has no way to hand back a
 /// resource key instead and let the send resolve it per recipient the way <c>NotifyLocalized</c>
 /// does for a single target. Both stay literal until <c>INotifyService</c>/<c>ICommunicationService</c>
 /// grow a key-carrying broadcast path. Callers pass <c>ErrorMessages.Notifications.*</c> constants so

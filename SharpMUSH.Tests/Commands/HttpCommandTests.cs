@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
@@ -55,9 +54,9 @@ public class HttpCommandTests
 
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
 		using var scope = budget.Enter();
-		var result = await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" });
+		var result = (await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" })).Expect<CallState>();
 
-		await Assert.That(result.AsValue().Message?.ToPlainText() ?? "").IsEqualTo(admission.Accepted ? "" : admission.Error);
+		await Assert.That(result.Message?.ToPlainText() ?? "").IsEqualTo(admission.Accepted ? "" : admission.Error);
 		await mediator.Received(1).Send(Arg.Any<AdmitAttributeRequest>(), budget.Token);
 		clients.DidNotReceive().CreateClient(Arg.Any<string>());
 		if (reason is QueueRejectionReason.InvalidTarget or QueueRejectionReason.AlreadyReleased)
@@ -90,7 +89,7 @@ public class HttpCommandTests
 		var notices = 0;
 		notifications.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<object[]>())
 			.Returns(_ => { Interlocked.Increment(ref notices); return ValueTask.CompletedTask; });
-		notifications.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Any<OneOf.OneOf<MarkupText, string>>(),
+		notifications.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Any<SharpMessage>(),
 			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce)
 			.Returns(_ => { Interlocked.Increment(ref notices); return ValueTask.CompletedTask; });
 		var baseline = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>().CurrentValue;
@@ -121,9 +120,9 @@ public class HttpCommandTests
 		if (reason == QueueRejectionReason.ShuttingDown) await scheduler.DisposeAsync();
 		try
 		{
-			var result = await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" });
+			var result = (await commands.Http(parser, new SharpCommandAttribute { Name = "@HTTP" })).Expect<CallState>();
 
-			await Assert.That(result.AsValue().Message!.ToPlainText()).IsEqualTo(new QueueAdmissionResult(null, reason).Error);
+			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(new QueueAdmissionResult(null, reason).Error);
 			await notifications.Received(reason == QueueRejectionReason.InvalidTarget ? 0 : 1)
 				.NotifyLocalized(player.Handle, "QueueRejected", Arg.Any<object[]>());
 			await Assert.That(notices).IsEqualTo(1);

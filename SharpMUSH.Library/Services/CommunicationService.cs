@@ -1,5 +1,4 @@
 ﻿using Mediator;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -20,7 +19,7 @@ public class CommunicationService(
 	public async ValueTask SendToPortsAsync(
 		AnySharpObject executor,
 		long[] ports,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType)
 	{
 		var validPorts = await ports
@@ -47,16 +46,14 @@ public class CommunicationService(
 			return true;
 		}
 
-		var playerResult = await mediator.Send(new GetObjectNodeQuery(connectionData.Ref.Value));
-
-		return playerResult.IsNone()
-			|| await permissionService.CanInteract(executor, playerResult.WithoutNone(), InteractType.Hear);
+		return await mediator.Send(new GetObjectNodeQuery(connectionData.Ref.Value)) is not AnySharpObject player
+			|| await permissionService.CanInteract(executor, player, InteractType.Hear);
 	}
 
 	public async ValueTask SendToRoomAsync(
 		AnySharpObject executor,
 		AnySharpContainer room,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		AnySharpObject? sender = null,
 		IEnumerable<AnySharpObject>? excludeObjects = null,
@@ -93,26 +90,34 @@ public class CommunicationService(
 		}
 	}
 
-	public async ValueTask<OneOf<AnySharpObject, DeliveryFailure>> SendToObjectAsync(
+	public async ValueTask<DeliveryResult> SendToObjectAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
 		string targetName,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
-	{
-		var maybeLocateTarget = await locateService.LocateAndNotifyIfInvalidWithCallState(
-			parser, enactor, enactor, targetName, LocateFlags.All);
-
-		if (maybeLocateTarget.IsError)
+		=> await locateService.LocateAndNotifyIfInvalidWithCallState(parser, enactor, enactor, targetName, LocateFlags.All) switch
 		{
-			await notifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
-			return new DeliveryFailure(DeliveryFailure.Cause.TargetNotFound);
-		}
+			AnySharpObject target => await DeliverToTargetAsync(executor, target, messageFunc, notificationType,
+				notifyOnPermissionFailure),
+			Error<CallState> error => await TargetNotFoundAsync(executor, error.Value)
+		};
 
-		var target = maybeLocateTarget.AsSharpObject;
+	private async ValueTask<DeliveryResult> TargetNotFoundAsync(AnySharpObject executor, CallState error)
+	{
+		await notifyService.Notify(executor, error.Message!);
+		return new DeliveryFailure(DeliveryFailure.Cause.TargetNotFound);
+	}
 
+	private async ValueTask<DeliveryResult> DeliverToTargetAsync(
+		AnySharpObject executor,
+		AnySharpObject target,
+		Func<AnySharpObject, SharpMessage> messageFunc,
+		INotifyService.NotificationType notificationType,
+		bool notifyOnPermissionFailure)
+	{
 		if (!await permissionService.CanInteract(executor, target, InteractType.Hear))
 		{
 			if (notifyOnPermissionFailure)
@@ -132,8 +137,8 @@ public class CommunicationService(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
-		IAsyncEnumerable<OneOf<DBRef, string>> targets,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		IAsyncEnumerable<DbRefOrName> targets,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
 	{
@@ -141,13 +146,17 @@ public class CommunicationService(
 
 		await foreach (var target in targets)
 		{
-			var targetString = target.Match(dbref => dbref.ToString(), str => str);
+			var targetString = target switch
+			{
+				DBRef dbref => dbref.ToString(),
+				string name => name
+			};
 			var delivery = await SendToObjectAsync(parser, executor, enactor, targetString, messageFunc,
 				notificationType, notifyOnPermissionFailure);
 
-			if (delivery.IsT0)
+			if (delivery is AnySharpObject delivered)
 			{
-				notified.Add(delivery.AsT0);
+				notified.Add(delivered);
 			}
 		}
 

@@ -392,7 +392,7 @@ public class PageCommandTests
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
-		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
+		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 
 		return new PagePlayer(player.DbRef, player.Handle, playerObject, playerObject.Object().Name);
 	}

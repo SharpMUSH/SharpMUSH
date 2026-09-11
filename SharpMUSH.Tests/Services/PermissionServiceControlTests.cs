@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -30,7 +31,7 @@ public class PermissionServiceControlTests
 	private async Task<SharpMUSH.Library.DiscriminatedUnions.AnySharpObject> ObjectAt(string dbrefText)
 	{
 		SharpMUSH.Library.Models.DBRef.TryParse(dbrefText, out var dbref);
-		return (await Mediator.Send(new GetObjectNodeQuery(dbref!.Value))).WithoutNone();
+		return (await Mediator.Send(new GetObjectNodeQuery(dbref!.Value))).Expect<AnySharpObject>();
 	}
 
 	[Test]
@@ -43,7 +44,7 @@ public class PermissionServiceControlTests
 		var createResult = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService, thingName);
 
 		var thing = await ObjectAt(createResult.Message!.ToPlainText()!.Trim());
-		var mortal = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).WithoutNone();
+		var mortal = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 
 		await Assert.That(await PermissionService.Controls(mortal, thing)).IsFalse();
 	}
@@ -62,7 +63,7 @@ public class PermissionServiceControlTests
 			MarkupText.Plain($"@lock/control {thingDbRef}=#{player.DbRef.Number}"));
 
 		var thing = await ObjectAt(thingDbRef);
-		var mortal = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).WithoutNone();
+		var mortal = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 
 		await Assert.That(await PermissionService.Controls(mortal, thing)).IsTrue();
 	}
@@ -81,7 +82,7 @@ public class PermissionServiceControlTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock/control {thingDbRef}=#1"));
 
 		var thing = await ObjectAt(thingDbRef);
-		var mortal = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).WithoutNone();
+		var mortal = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 
 		await Assert.That(await PermissionService.Controls(mortal, thing)).IsFalse();
 	}
@@ -96,7 +97,7 @@ public class PermissionServiceControlTests
 		var createResult = await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService, thingName, player.Handle);
 
 		var thing = await ObjectAt(createResult.Message!.ToPlainText()!.Trim());
-		var owner = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).WithoutNone();
+		var owner = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 
 		await Assert.That(await PermissionService.Controls(owner, thing)).IsTrue();
 	}
@@ -120,7 +121,7 @@ public class PermissionServiceControlTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock/control {thingDbRef}=#TRUE"));
 
 		var thing = await ObjectAt(thingDbRef);
-		var mortal = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).WithoutNone();
+		var mortal = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 
 		await Assert.That(await PermissionService.Controls(mortal, thing)).IsTrue();
 	}

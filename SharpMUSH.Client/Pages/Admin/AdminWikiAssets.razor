@@ -111,9 +111,15 @@
         {
             await using var stream = file.OpenReadStream(maxAllowedSize: MaxUploadBytes);
             var result = await AssetService.UploadAsync(stream, file.Name, file.ContentType);
-            result.Switch(
-                uploaded => Snackbar.Add(Loc["WkAssetUploaded", uploaded.FileName], Severity.Success),
-                error => Snackbar.Add(error, Severity.Error));
+            switch (result)
+            {
+                case UploadedAssetInfo uploaded:
+                    Snackbar.Add(Loc["WkAssetUploaded", uploaded.FileName], Severity.Success);
+                    break;
+                case string error:
+                    Snackbar.Add(error, Severity.Error);
+                    break;
+            }
         }
         finally
         {
@@ -125,15 +131,32 @@
 
     private async Task CopyMarkdown(WikiAssetInfo asset)
     {
-        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", $"![]({asset.Url})");
-        Snackbar.Add(Loc["WkMarkdownCopied"], Severity.Info);
+        try
+        {
+            // Rejected outside a secure context, or when the browser withholds clipboard permission.
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", $"![]({asset.Url})");
+            Snackbar.Add(Loc["WkMarkdownCopied"], Severity.Info);
+        }
+        catch (JSException)
+        {
+            Snackbar.Add(Loc["WkCopyFailed"], Severity.Error);
+        }
     }
 
     private async Task DeleteAsset(WikiAssetInfo asset)
     {
-        var confirmed = await JSRuntime.InvokeAsync<bool>(
-            "confirm",
-            Loc["WkDeleteAssetPrompt", asset.FileName].Value);
+        bool confirmed;
+        try
+        {
+            confirmed = await JSRuntime.InvokeAsync<bool>(
+                "confirm",
+                Loc["WkDeleteAssetPrompt", asset.FileName].Value);
+        }
+        catch (JSException)
+        {
+            // A delete nobody confirmed is not one to perform.
+            confirmed = false;
+        }
 
         if (!confirmed)
         {

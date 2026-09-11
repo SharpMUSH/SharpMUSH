@@ -31,9 +31,9 @@ file sealed class FakeHubConnection : IGameHubConnection
 	public IDisposable On(string methodName, Action<RoomEventMessage> handler) => new Noop();
 	public IDisposable On(string methodName, Action<SceneEventMessage> handler) => new Noop();
 	public IDisposable On(string methodName, Action handler) => new Noop();
-	public event Func<Exception?, Task>? Closed;
-	public event Func<Exception?, Task>? Reconnecting;
-	public event Func<string?, Task>? Reconnected;
+	public event Func<Exception?, Task>? Closed { add { } remove { } }
+	public event Func<Exception?, Task>? Reconnecting { add { } remove { } }
+	public event Func<string?, Task>? Reconnected { add { } remove { } }
 	public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
 	private sealed class Noop : IDisposable { public void Dispose() { } }

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Library.Services.Interfaces;
@@ -35,13 +36,12 @@ public class ApplicationRegistryTests
 		await Registry.UpsertApplicationAsync(PageApp("app-beta", order: 1));
 
 		var fetched = await Registry.GetApplicationAsync("app-alpha");
-		await Assert.That(fetched.IsT0).IsTrue();
-		await Assert.That(fetched.AsT0).IsEqualTo(PageApp("app-alpha", order: 2));
+		await Assert.That(fetched.Value).IsEqualTo(PageApp("app-alpha", order: 2));
 
 		// Upsert replaces in full.
 		await Registry.UpsertApplicationAsync(PageApp("app-alpha", order: 9));
 		var upgraded = await Registry.GetApplicationAsync("app-alpha");
-		await Assert.That(upgraded.AsT0.Order).IsEqualTo(9);
+		await Assert.That(upgraded.Expect<RegisteredApplication>().Order).IsEqualTo(9);
 
 		// List is ordered by Order then slug.
 		var all = await Registry.GetApplicationsAsync();
@@ -52,7 +52,7 @@ public class ApplicationRegistryTests
 		await Registry.RemoveApplicationAsync("app-alpha");
 		await Registry.RemoveApplicationAsync("app-beta");
 		var missing = await Registry.GetApplicationAsync("app-alpha");
-		await Assert.That(missing.IsT1).IsTrue();
+		await Assert.That(missing.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test, NotInParallel]
@@ -60,10 +60,7 @@ public class ApplicationRegistryTests
 	{
 		await Registry.UpsertApplicationAsync(WidgetApp("app-widget"));
 
-		var fetched = await Registry.GetApplicationAsync("app-widget");
-		await Assert.That(fetched.IsT0).IsTrue();
-
-		var app = fetched.AsT0;
+		var app = (await Registry.GetApplicationAsync("app-widget")).Expect<RegisteredApplication>();
 		await Assert.That(app.Kind).IsEqualTo(ApplicationKind.Widget);
 		await Assert.That(app.MinimumRole).IsEqualTo(PortalRole.Wizard);
 		await Assert.That(app.DataUrl).IsNull();
@@ -89,8 +86,7 @@ public class ApplicationRegistryTests
 		await Registry.UpsertApplicationAsync(component);
 
 		var fetched = await Registry.GetApplicationAsync("app-component");
-		await Assert.That(fetched.IsT0).IsTrue();
-		var app = fetched.AsT0;
+		var app = fetched.Expect<RegisteredApplication>();
 		await Assert.That(app.RenderKind).IsEqualTo(ApplicationRenderKind.Component);
 		await Assert.That(app.ComponentAssemblyUrl).IsEqualTo("api/plugins/demo-pkg/ui/Demo.Ui.dll");
 		await Assert.That(app.ComponentTypeName).IsEqualTo("Demo.Ui.Widget");
@@ -102,6 +98,6 @@ public class ApplicationRegistryTests
 	public async Task GetApplication_Missing_ReturnsNotFound()
 	{
 		var missing = await Registry.GetApplicationAsync("does-not-exist");
-		await Assert.That(missing.IsT1).IsTrue();
+		await Assert.That(missing.Value).IsTypeOf<NotFound>();
 	}
 }

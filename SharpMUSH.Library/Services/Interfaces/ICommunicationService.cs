@@ -1,4 +1,3 @@
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -37,7 +36,7 @@ public interface ICommunicationService
 	ValueTask SendToPortsAsync(
 		AnySharpObject executor,
 		long[] ports,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType);
 
 	/// <summary>
@@ -59,7 +58,7 @@ public interface ICommunicationService
 	ValueTask SendToRoomAsync(
 		AnySharpObject executor,
 		AnySharpContainer room,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		AnySharpObject? sender = null,
 		IEnumerable<AnySharpObject>? excludeObjects = null,
@@ -79,12 +78,12 @@ public interface ICommunicationService
 	/// The object that received the message, or <see cref="DeliveryFailure"/> when it could not be
 	/// delivered — the target could not be located, or it declined to hear from the executor.
 	/// </returns>
-	ValueTask<OneOf<AnySharpObject, DeliveryFailure>> SendToObjectAsync(
+	ValueTask<DeliveryResult> SendToObjectAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
 		string targetName,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true);
 
@@ -103,8 +102,8 @@ public interface ICommunicationService
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
-		IAsyncEnumerable<OneOf<DBRef, string>> targets,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		IAsyncEnumerable<DbRefOrName> targets,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true);
 }

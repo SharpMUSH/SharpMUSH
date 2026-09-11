@@ -1,6 +1,5 @@
 using Mediator;
-using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -14,34 +13,36 @@ using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
-public class ChannelOrError : OneOfBase<SharpChannel, Error<CallState>>
+[Union]
+public sealed class ChannelOrError : IUnion
 {
-	public ChannelOrError(SharpChannel channel) : base(channel)
-	{
-	}
+	public ChannelOrError(SharpChannel value) => Value = value;
+	public ChannelOrError(Error<CallState> value) => Value = value;
 
-	public ChannelOrError(Error<CallState> error) : base(error)
-	{
-	}
+	public object? Value { get; }
 
-	public bool IsError => IsT1;
-	public SharpChannel AsChannel => AsT0;
-	public Error<CallState> AsError => AsT1;
+	public override bool Equals(object? obj) => obj is ChannelOrError other && Equals(Value, other.Value);
+
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsError => Value is Error<CallState>;
+
 }
 
-public class PrivilegeOrError : OneOfBase<string[], Error<string[]>>
+[Union]
+public sealed class PrivilegeOrError : IUnion
 {
-	public PrivilegeOrError(string[] channel) : base(channel)
-	{
-	}
+	public PrivilegeOrError(string[] value) => Value = value;
+	public PrivilegeOrError(Error<string[]> value) => Value = value;
 
-	public PrivilegeOrError(Error<string[]> error) : base(error)
-	{
-	}
+	public object? Value { get; }
 
-	public bool IsError => IsT1;
-	public string[] AsPrivileges => AsT0;
-	public Error<string[]> AsError => AsT1;
+	public override bool Equals(object? obj) => obj is PrivilegeOrError other && Equals(Value, other.Value);
+
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsError => Value is Error<string[]>;
+
 }
 
 public static class ChannelHelper

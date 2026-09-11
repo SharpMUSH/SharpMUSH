@@ -3,6 +3,8 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -15,17 +17,25 @@ public static class StatusMail
 		MString? arg0, MString? arg1, string sw)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var filteredList = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, arg0, executor);
-		var statusString = arg1?.ToPlainText().ToUpper();
-
-		if (filteredList.IsError)
+		return await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, arg0, executor) switch
 		{
-			await notifyService.Notify(executor, $"#-1 {filteredList.AsError}", executor);
-			return MarkupText.Plain(filteredList.AsError);
-		}
+			IAsyncEnumerable<SharpMail> actualList => await UpdateAsync(mediator, notifyService, executor, actualList,
+				arg1?.ToPlainText().ToUpper(), sw),
+			Error<string> error => await RefuseAsync(notifyService, executor, error.Value)
+		};
+	}
 
-		var actualList = filteredList.AsMailList;
+	private static async ValueTask<MString> RefuseAsync(INotifyService notifyService, AnySharpObject executor,
+		string error)
+	{
+		await notifyService.Notify(executor, $"#-1 {error}", executor);
+		return MarkupText.Plain(error);
+	}
 
+	/// <summary>Applies the status <paramref name="sw"/> names to each message in the list.</summary>
+	private static async ValueTask<MString> UpdateAsync(IMediator mediator, INotifyService notifyService,
+		AnySharpObject executor, IAsyncEnumerable<SharpMail> actualList, string? statusString, string sw)
+	{
 		switch (sw)
 		{
 			// @mail/status [<msg-list>|all]=<status> — the target status arrives as arg1, so the

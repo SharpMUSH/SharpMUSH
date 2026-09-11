@@ -160,13 +160,10 @@ public partial class Functions
 		// If more than 4 arguments, treat remaining arguments as prepared statement parameters
 		var isPreparedStatement = args.Count > 4;
 
-		var maybeObjAttr = HelperFunctions.SplitObjectAndAttr(objAttrStr);
-		if (maybeObjAttr.IsT1)
+		if (HelperFunctions.SplitObjectAndAttr(objAttrStr) is not { Object: var targetObjRef, Attribute: var attrName })
 		{
 			return new CallState(ErrorMessages.Returns.InvalidObjectAttribute) { HadErrors = hadErrors };
 		}
-
-		var (targetObjRef, attrName) = maybeObjAttr.AsT0;
 
 		var mappedResult = await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetObjRef,
 			LocateFlags.All,

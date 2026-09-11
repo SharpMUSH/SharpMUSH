@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -83,12 +82,12 @@ public sealed class PluginApplicationRegistryDecorator(
 			.ToList();
 	}
 
-	public async Task<OneOf<RegisteredApplication, NotFound>> GetApplicationAsync(string slug)
+	public async Task<Found<RegisteredApplication>> GetApplicationAsync(string slug)
 	{
 		// DB/built-in wins: try the inner first, only fall back to the plugin overlay when the DB has no
 		// such slug.
 		var dbResult = await inner.GetApplicationAsync(slug);
-		if (dbResult.IsT0)
+		if (dbResult is RegisteredApplication)
 		{
 			return dbResult;
 		}

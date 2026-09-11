@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
@@ -25,19 +24,20 @@ public partial class PackageAuthoringService(
 	[GeneratedRegex("[^a-z0-9_]+")]
 	private static partial Regex SlugCleanupRegex();
 
-	public async Task<OneOf<PackageAuthoringScan, Error<string>>> ScanAsync(
+	public async Task<Result<PackageAuthoringScan>> ScanAsync(
 		IReadOnlyList<string> objids, CancellationToken cancellationToken = default)
 	{
 		var objects = new List<AuthoringObject>();
 		foreach (var objid in objids.Distinct())
 		{
-			var read = await ReadObjectAsync(objid, cancellationToken);
-			if (read.IsT1)
+			switch (await ReadObjectAsync(objid, cancellationToken))
 			{
-				return read.AsT1;
+				case AuthoringObject authored:
+					objects.Add(authored);
+					break;
+				case Error<string> error:
+					return error;
 			}
-
-			objects.Add(read.AsT0);
 		}
 
 		var selectedNumbers = objects
@@ -74,20 +74,22 @@ public partial class PackageAuthoringService(
 				.ToList());
 	}
 
-	public async Task<OneOf<string, Error<string>>> ExportAsync(
+	public async Task<Result<string>> ExportAsync(
 		PackageAuthoringRequest request, CancellationToken cancellationToken = default)
 	{
 		var selections = new List<(AuthoringObjectSelection Selection, AuthoringObject Object)>();
 		var tokenByNumber = new Dictionary<int, string>();
 		foreach (var selection in request.Objects)
 		{
-			var read = await ReadObjectAsync(selection.Objid, cancellationToken);
-			if (read.IsT1)
+			switch (await ReadObjectAsync(selection.Objid, cancellationToken))
 			{
-				return read.AsT1;
+				case AuthoringObject authored:
+					selections.Add((selection, authored));
+					break;
+				case Error<string> error:
+					return error;
 			}
 
-			selections.Add((selection, read.AsT0));
 			var number = DbrefNumber(selection.Objid);
 			if (number is not null)
 			{
@@ -241,13 +243,15 @@ public partial class PackageAuthoringService(
 		// Round-trip through the parser: the exporter must never emit an invalid manifest.
 		var document = yaml.ToString();
 		var validation = manifests.ParseManifest(document);
-		return validation.Match<OneOf<string, Error<string>>>(
-			_ => document,
-			failure => new Error<string>(
-				$"Export produced an invalid manifest (bug): {string.Join("; ", failure.Errors.Select(e => e.ToString()))}"));
+		return validation switch
+		{
+			ParsedPackageManifest => document,
+			PackageManifestFailure failure => new Error<string>(
+				$"Export produced an invalid manifest (bug): {string.Join("; ", failure.Errors.Select(e => e.ToString()))}")
+		};
 	}
 
-	private async Task<OneOf<AuthoringObject, Error<string>>> ReadObjectAsync(
+	private async Task<Result<AuthoringObject>> ReadObjectAsync(
 		string objid, CancellationToken cancellationToken)
 	{
 		var dbref = PackageInstallService.ParseObjid(objid);
@@ -256,13 +260,11 @@ public partial class PackageAuthoringService(
 			return new Error<string>($"'{objid}' is not a valid objid.");
 		}
 
-		var node = await database.GetObjectNodeAsync(dbref.Value, cancellationToken);
-		if (node.IsNone())
+		if (await database.GetObjectNodeAsync(dbref.Value, cancellationToken) is not AnySharpObject known)
 		{
 			return new Error<string>($"Object {objid} does not exist.");
 		}
 
-		var known = node.Known();
 		var sharpObject = known.Object();
 
 		var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -284,8 +286,9 @@ public partial class PackageAuthoringService(
 			flags.Add(flag.Name);
 		}
 
-		var parent = await sharpObject.Parent.WithCancellation(cancellationToken);
-		var parentObjid = parent.IsNone() ? null : parent.Known().Object().DBRef.ToString();
+		var parentObjid = await sharpObject.Parent.WithCancellation(cancellationToken) is AnySharpObject parent
+			? parent.Object().DBRef.ToString()
+			: null;
 
 		return new AuthoringObject(
 			sharpObject.DBRef.ToString(),

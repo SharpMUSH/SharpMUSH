@@ -5,6 +5,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -38,85 +39,41 @@ public partial class Functions
 		var sep = await errors.DefaultArgumentAsync(parser, 4, delim);
 		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["2"].Message!);
 
-		var matches = new List<MString>();
-		var rejects = new List<MString>();
-
 		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
 			var lambdaResults = await EvaluateLambdaOrApplyForEachItemAsync(parser, executor, rawAttrArg, list, errors);
-			foreach (var (item, result) in list.Zip(lambdaResults, (item, result) => (item, result)))
-			{
-				if (result.ToPlainText() == "1")
-				{
-					matches.Add(item);
-				}
-				else
-				{
-					rejects.Add(item);
-				}
-			}
+			return FilteredCapturingRejects(parser, registerName, sep, list, lambdaResults, errors);
 		}
-		else
+
+		// Extra args (positions 5+) reach the predicate as %1, %2, ... — filter()'s positions
+		// 4+ shifted one to the right by the leading register.
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
-			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-			if (objAttr is { IsT1: true, AsT1: false })
+			AttributeFunction function => FilteredCapturingRejects(parser, registerName, sep, list,
+				await CallAttributeForEachItemAsync(parser, function, list, errors, ExtraPredicateArguments(parser, 5)), errors),
+			CallState refusal => errors.Complete(refusal),
+		};
+	}
+
+	/// <summary>
+	/// filterq()'s answer: the items whose predicate result is 1, with the rest stored in
+	/// <paramref name="registerName"/>, both joined by <paramref name="sep"/>.
+	/// </summary>
+	private static CallState FilteredCapturingRejects(IMUSHCodeParser parser, string registerName, MString sep,
+		MString[] list, List<MString> results, ListEvaluationErrors errors)
+	{
+		var matches = new List<MString>();
+		var rejects = new List<MString>();
+
+		foreach (var (item, result) in list.Zip(results, (item, result) => (item, result)))
+		{
+			if (result.ToPlainText() == "1")
 			{
-				return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
+				matches.Add(item);
 			}
-
-			var (dbref, attrName) = objAttr.AsT0;
-			dbref ??= executor.ToString();
-
-			var locate = await LocateService.LocateAndNotifyIfInvalid(
-				parser, executor, executor, dbref, LocateFlags.All);
-			if (!locate.IsValid())
+			else
 			{
-				return errors.Complete(CallState.Empty);
-			}
-
-			var located = locate.WithoutError().WithoutNone();
-
-			var maybeAttr = await AttributeService.GetAttributeAsync(
-				executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
-			if (maybeAttr.IsNone)
-			{
-				return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
-			}
-
-			if (maybeAttr.IsError)
-			{
-				return errors.Complete(new CallState(maybeAttr.AsError.Value));
-			}
-
-			var attrValue = maybeAttr.AsAttribute.Last().Value;
-
-			// Extra args (positions 5+) reach the predicate as %1, %2, ... — filter()'s positions
-			// 4+ shifted one to the right by the leading register.
-			var environmentRegisters = new Dictionary<string, CallState>();
-			for (var i = 5; i < parser.CurrentState.ArgumentsOrdered.Count; i++)
-			{
-				environmentRegisters[(i - 4).ToString()] = parser.CurrentState.ArgumentsOrdered[i.ToString()];
-			}
-
-			foreach (var item in list)
-			{
-				var newParser = parser.Push(parser.CurrentState with
-				{
-					Arguments = new Dictionary<string, CallState> { { "0", new CallState(item) } },
-					EnvironmentRegisters = new Dictionary<string, CallState>(environmentRegisters)
-					{
-						["0"] = new CallState(item)
-					}
-				});
-
-				if (errors.Record(await newParser.FunctionParse(attrValue)).ToPlainText() == "1")
-				{
-					matches.Add(item);
-				}
-				else
-				{
-					rejects.Add(item);
-				}
+				rejects.Add(item);
 			}
 		}
 

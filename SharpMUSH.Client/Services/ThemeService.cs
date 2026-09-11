@@ -84,14 +84,7 @@ public sealed class ThemeService : IThemeService
 
 		_current = preset;
 
-		try
-		{
-			await _js.InvokeVoidAsync("localStorage.setItem", LocalStorageKey, presetName);
-		}
-		catch (JSException)
-		{
-			// localStorage unavailable in some test environments — ignore
-		}
+		await _js.SetItemAsync(BrowserStore.Local, LocalStorageKey, presetName);
 
 		OnThemeChanged?.Invoke();
 	}
@@ -102,20 +95,10 @@ public sealed class ThemeService : IThemeService
 	/// </summary>
 	public async Task InitializeAsync()
 	{
-		try
-		{
-			var saved = await _js.InvokeAsync<string?>("localStorage.getItem", LocalStorageKey);
-			if (saved is not null)
-			{
-				var match = BuiltInPresets.FirstOrDefault(p => p.Name == saved);
-				if (match is not null)
-					_current = match;
-			}
-		}
-		catch (JSException)
-		{
-			// ignore — use default
-		}
+		var saved = await _js.GetItemAsync(BrowserStore.Local, LocalStorageKey);
+		var match = BuiltInPresets.FirstOrDefault(p => p.Name == saved);
+		if (match is not null)
+			_current = match;
 	}
 }
 

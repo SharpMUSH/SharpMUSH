@@ -3,6 +3,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Text;
 
 namespace SharpMUSH.Library.Services;
@@ -18,7 +19,13 @@ public class ConnectionService(
 	private const string ReconciledMarker = "ReconciledFromStateStore";
 
 	private readonly ConcurrentDictionary<long, IConnectionService.ConnectionData> _sessionState = [];
-	private readonly List<Action<(long handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
+	/// <summary>
+	/// Replaced wholesale on every registration, so each notification loops over the snapshot it started
+	/// with. Listeners register late and from any thread — <c>InputSessionService</c> does it in its
+	/// constructor, and a listener may register another while it is being notified — so no notification
+	/// can be left enumerating a collection that changes under it.
+	/// </summary>
+	private ImmutableArray<Action<(long handle, DBRef? Ref, IConnectionService.ConnectionState OldState, IConnectionService.ConnectionState NewState)>> _handlers = [];
 
 	/// <summary>
 	/// Guards <see cref="Disconnect"/>'s atomic remove-and-count against a race between two of the same
@@ -87,7 +94,7 @@ public class ConnectionService(
 	}
 
 	public void ListenState(Action<(long, DBRef?, IConnectionService.ConnectionState, IConnectionService.ConnectionState)> handler) =>
-		_handlers.Add(handler);
+		ImmutableInterlocked.Update(ref _handlers, handlers => handlers.Add(handler));
 
 	public async ValueTask Bind(long handle, DBRef player, bool firstLogin = false)
 	{

@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf.Types;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -10,6 +9,7 @@ using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -55,7 +55,6 @@ public partial class Commands
 	{
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).WithoutNone();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var objectList = args["0"].Message?.ToPlainText() ?? string.Empty;
@@ -73,18 +72,11 @@ public partial class Commands
 		foreach (var token in tokens)
 		{
 			var locate = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, token, LocateFlags.All);
-			if (!locate.IsValid())
+			if (locate is not AnySharpObject known)
 			{
 				return new None();
 			}
 
-			var found = locate.WithoutError();
-			if (found.IsNone())
-			{
-				return new None();
-			}
-
-			var known = found.Known();
 			if (!await PermissionService.CanExamine(executor, known))
 			{
 				await NotifyService.Notify(executor, $"PACKAGE: You can't examine {known.Object().Name}.", executor);
@@ -98,15 +90,27 @@ public partial class Commands
 
 		var authoring = parser.ServiceProvider.GetRequiredService<IPackageAuthoringService>();
 
-		var scan = await authoring.ScanAsync(objids.Distinct().ToList());
-		if (scan.IsT1)
+		return await authoring.ScanAsync(objids.Distinct().ToList()) switch
 		{
-			await NotifyService.Notify(executor, $"PACKAGE: {scan.AsT1.Value}", executor);
-			return new CallState(string.Empty);
-		}
+			PackageAuthoringScan scanResult =>
+				await ReportOrExportScanAsync(args, switches, executor, objectList, knownByObjid, authoring, scanResult),
+			Error<string> scanError => await PackageReplyAsync(executor, $"PACKAGE: {scanError.Value}"),
+		};
+	}
 
-		var scanResult = scan.AsT0;
-
+	/// <summary>
+	/// The rest of <c>@package</c> once the selection has scanned: the <c>/scan</c> report, or the exported
+	/// manifest.
+	/// </summary>
+	private async ValueTask<Option<CallState>> ReportOrExportScanAsync(
+		Dictionary<string, CallState> args,
+		IEnumerable<string> switches,
+		AnySharpObject executor,
+		string objectList,
+		Dictionary<string, AnySharpObject> knownByObjid,
+		IPackageAuthoringService authoring,
+		PackageAuthoringScan scanResult)
+	{
 		// Attribute visibility matches @decompile: keep only the attributes the
 		// executor may see (GetVisibleAttributesAsync), minus VEILED. Everything else
 		// is excluded from the export and ignored when judging self-containment.
@@ -117,9 +121,9 @@ public partial class Commands
 			if (knownByObjid.TryGetValue(obj.Objid, out var known))
 			{
 				var visible = await AttributeService.GetVisibleAttributesAsync(executor, known);
-				if (visible.IsAttribute)
+				if (visible is SharpAttribute[] visibleAttributes)
 				{
-					foreach (var attr in visible.AsAttributes)
+					foreach (var attr in visibleAttributes)
 					{
 						if (!attr.Flags.Any(f => f.Name.Equals(VeiledAttributeFlag, StringComparison.OrdinalIgnoreCase)))
 						{
@@ -232,31 +236,43 @@ public partial class Commands
 			selections.Add(new AuthoringObjectSelection(obj.Objid, refName, excluded));
 		}
 
-		var export = await authoring.ExportAsync(new PackageAuthoringRequest(
+		var reply = await authoring.ExportAsync(new PackageAuthoringRequest(
 			packageId, version, description, null, [executor.Object().Name],
 			selections,
 			new Dictionary<string, string>(),
-			new Dictionary<string, AuthoringConfigureClassification>()));
-
-		if (export.IsT1)
+			new Dictionary<string, AuthoringConfigureClassification>())) switch
 		{
-			var error = export.AsT1.Value;
+			string manifest => ManifestListing(manifest),
+			Error<string> exportError => ExportRefusal(exportError.Value),
+		};
+		return await PackageReplyAsync(executor, reply);
+
+		string ManifestListing(string manifest)
+		{
+			var output = new StringBuilder();
+			output.AppendLine($"PACKAGE: Generated manifest for '{packageId}' v{version} ({selections.Count} object(s)).");
+			output.AppendLine("Copy everything between the markers into a package.yaml:");
+			output.AppendLine("----- BEGIN package.yaml -----");
+			output.AppendLine(manifest.TrimEnd());
+			output.Append("----- END package.yaml -----");
+			return output.ToString();
+		}
+
+		static string ExportRefusal(string error)
+		{
 			// Unclassified dbrefs mean the selection isn't self-contained — point the
 			// user at the web panel where they can classify them.
 			var hint = error.StartsWith("Unclassified", StringComparison.Ordinal)
 				? "\nThese objects reference the outside world — finish this package at: /admin/packages/author"
 				: string.Empty;
-			await NotifyService.Notify(executor, $"PACKAGE: {error}{hint}", executor);
-			return new CallState(string.Empty);
+			return $"PACKAGE: {error}{hint}";
 		}
+	}
 
-		var output = new StringBuilder();
-		output.AppendLine($"PACKAGE: Generated manifest for '{packageId}' v{version} ({selections.Count} object(s)).");
-		output.AppendLine("Copy everything between the markers into a package.yaml:");
-		output.AppendLine("----- BEGIN package.yaml -----");
-		output.AppendLine(export.AsT0.TrimEnd());
-		output.Append("----- END package.yaml -----");
-		await NotifyService.Notify(executor, output.ToString(), executor);
+	/// <summary>Says <paramref name="message"/> to the executor; <c>@package</c> always returns empty.</summary>
+	private async ValueTask<Option<CallState>> PackageReplyAsync(AnySharpObject executor, string message)
+	{
+		await NotifyService.Notify(executor, message, executor);
 		return new CallState(string.Empty);
 	}
 

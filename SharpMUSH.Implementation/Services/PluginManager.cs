@@ -1,7 +1,6 @@
 using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services;
@@ -117,10 +116,10 @@ public sealed class PluginManager(
 	}
 
 	/// <inheritdoc />
-	public async Task<OneOf<Success, Error<string>>> UnloadAsync(string pluginId)
+	public async Task<Result<Success>> UnloadAsync(string pluginId)
 	{
 		var result = Unload(pluginId, forReload: false);
-		if (result.IsT0)
+		if (result is Success)
 		{
 			// A plugin DLL really left the running set: tell connected browsers to force a hard refresh, the
 			// only way to reclaim any compiled component assembly the WASM client may have loaded.
@@ -131,7 +130,7 @@ public sealed class PluginManager(
 	}
 
 	/// <inheritdoc />
-	public async Task<OneOf<Success, Error<string>>> ReloadAsync(string pluginId)
+	public async Task<Result<Success>> ReloadAsync(string pluginId)
 	{
 		string dllPath;
 		lock (_gate)
@@ -157,7 +156,7 @@ public sealed class PluginManager(
 
 		// Unload first (removes its library entries and disposes its collectible ALC), then reload from disk.
 		var unload = Unload(pluginId, forReload: true);
-		if (unload.IsT1)
+		if (unload is Error<string>)
 		{
 			return unload;
 		}
@@ -208,7 +207,7 @@ public sealed class PluginManager(
 	/// Remove a tracked plugin's command/function entries from the live libraries and dispose its collectible
 	/// loader. Refuses unknown or load-once plugins. <paramref name="forReload"/> only affects log wording.
 	/// </summary>
-	private OneOf<Success, Error<string>> Unload(string pluginId, bool forReload)
+	private Result<Success> Unload(string pluginId, bool forReload)
 	{
 		TrackedPlugin tracked;
 		lock (_gate)

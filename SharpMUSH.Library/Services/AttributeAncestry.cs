@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
@@ -62,10 +63,9 @@ public static class AttributeAncestry
 
 		for (var depth = 0; depth < maxDepth; depth++)
 		{
-			var parent = await current.Parent.WithCancellation(cancellationToken);
-			if (parent.IsNone) break;
+			if (await current.Parent.WithCancellation(cancellationToken) is not AnySharpObject parent) break;
 
-			var parentObj = parent.Known.Object();
+			var parentObj = parent.Object();
 			if (!visited.Add(parentObj.DBRef.Number)) break;
 
 			chain.Add(parentObj.DBRef);
@@ -127,10 +127,9 @@ public static class AttributeAncestry
 		var current = origin;
 		for (var depth = 0; depth < maxDepth; depth++)
 		{
-			var parent = await current.Parent.WithCancellation(cancellationToken);
-			if (parent.IsNone) break;
+			if (await current.Parent.WithCancellation(cancellationToken) is not AnySharpObject parent) break;
 
-			var parentObj = parent.Known.Object();
+			var parentObj = parent.Object();
 
 			// A @parent cycle would otherwise spin here forever - defence in depth, since the
 			// write-side guards (SafeToAddParent, ExceedsMaxParentDepthAsync) should already

@@ -1,4 +1,3 @@
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
@@ -20,7 +19,7 @@ public interface ILockEvaluationServices
 	/// Evaluates <paramref name="attributeName"/> on <paramref name="gated"/> as MUSHcode with
 	/// <paramref name="unlocker"/> as the enactor, the way PennMUSH's <c>check_attrib_lock()</c> does.
 	/// </summary>
-	ValueTask<OneOf<string, LockEvaluationFailure>> EvaluateAttributeAsync(AnySharpObject gated, AnySharpObject unlocker, string attributeName);
+	ValueTask<LockEvaluation> EvaluateAttributeAsync(AnySharpObject gated, AnySharpObject unlocker, string attributeName);
 
 	ValueTask<bool> EvaluateLock(string lockString, AnySharpObject gated, AnySharpObject unlocker);
 }

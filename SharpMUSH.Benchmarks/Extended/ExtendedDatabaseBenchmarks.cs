@@ -31,8 +31,12 @@ public abstract class ExtendedDatabaseBenchmarks
 	/// </summary>
 	protected async ValueTask SeedAsync()
 	{
-		_god = (await Database.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false)).Known.AsPlayer;
-		_masterRoom = (await Database.GetObjectNodeAsync(new DBRef(2)).ConfigureAwait(false)).Known.AsContainer;
+		_god = await Database.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false) is AnySharpObject and SharpPlayer god
+			? god
+			: throw new InvalidOperationException("God (#1) is not seeded as a player.");
+		_masterRoom = await Database.GetObjectNodeAsync(new DBRef(2)).ConfigureAwait(false) is AnySharpObject { IsContainer: true } masterRoom
+			? masterRoom.AsContainer
+			: throw new InvalidOperationException("The master room (#2) is not seeded.");
 
 		await SeedInheritanceWalkAsync().ConfigureAwait(false);
 		await SeedAttributeListingAsync().ConfigureAwait(false);
@@ -56,10 +60,11 @@ public abstract class ExtendedDatabaseBenchmarks
 		var cRef = await Database.CreateThingAsync("ExtBenchThingC", _masterRoom, _god, _masterRoom).ConfigureAwait(false);
 		var dRef = await Database.CreateThingAsync("ExtBenchThingD", _masterRoom, _god, _masterRoom).ConfigureAwait(false);
 
-		var z = (await Database.GetObjectNodeAsync(zRef).ConfigureAwait(false)).Known;
-		var b = (await Database.GetObjectNodeAsync(bRef).ConfigureAwait(false)).Known;
-		var c = (await Database.GetObjectNodeAsync(cRef).ConfigureAwait(false)).Known;
-		var d = (await Database.GetObjectNodeAsync(dRef).ConfigureAwait(false)).Known;
+		if (await Database.GetObjectNodeAsync(zRef).ConfigureAwait(false) is not AnySharpObject z
+			|| await Database.GetObjectNodeAsync(bRef).ConfigureAwait(false) is not AnySharpObject b
+			|| await Database.GetObjectNodeAsync(cRef).ConfigureAwait(false) is not AnySharpObject c
+			|| await Database.GetObjectNodeAsync(dRef).ConfigureAwait(false) is not AnySharpObject d)
+			throw new InvalidOperationException("The inheritance-walk fixture objects were not created.");
 
 		await Database.SetObjectZone(b, z).ConfigureAwait(false);
 		await Database.SetObjectParent(c, b).ConfigureAwait(false);
@@ -127,7 +132,8 @@ public abstract class ExtendedDatabaseBenchmarks
 	{
 		var secondPlayerRef = await Database.CreatePlayerAsync(
 			"ExtBenchSecondPlayer", "bench-pw", _masterRoom.Object().DBRef, _masterRoom.Object().DBRef, 0).ConfigureAwait(false);
-		var secondPlayer = (await Database.GetObjectNodeAsync(secondPlayerRef).ConfigureAwait(false)).Known.AsPlayer;
+		if (await Database.GetObjectNodeAsync(secondPlayerRef).ConfigureAwait(false) is not (AnySharpObject and SharpPlayer secondPlayer))
+			throw new InvalidOperationException("The second filtered-search player was not created.");
 		var wizardFlag = await Database.GetObjectFlagAsync("WIZARD").ConfigureAwait(false)
 			?? throw new InvalidOperationException("WIZARD flag is not seeded - migration did not run.");
 
@@ -138,7 +144,8 @@ public abstract class ExtendedDatabaseBenchmarks
 
 			if (i % 10 == 0)
 			{
-				var thing = (await Database.GetObjectNodeAsync(thingRef).ConfigureAwait(false)).Known;
+				if (await Database.GetObjectNodeAsync(thingRef).ConfigureAwait(false) is not AnySharpObject thing)
+					throw new InvalidOperationException($"Filtered-search thing {thingRef} was not created.");
 				await Database.SetObjectFlagAsync(thing, wizardFlag).ConfigureAwait(false);
 			}
 		}
@@ -229,7 +236,9 @@ public abstract class ExtendedDatabaseBenchmarks
 		for (var i = 0; i < chainLength; i++)
 		{
 			var dbref = await Database.CreateThingAsync($"ExtBenchChain{i:D2}", _masterRoom, _god, _masterRoom).ConfigureAwait(false);
-			nodes[i] = (await Database.GetObjectNodeAsync(dbref).ConfigureAwait(false)).Known;
+			nodes[i] = await Database.GetObjectNodeAsync(dbref).ConfigureAwait(false) is AnySharpObject node
+				? node
+				: throw new InvalidOperationException($"Reachability chain object {dbref} was not created.");
 		}
 
 		for (var i = 0; i < chainLength - 1; i++)

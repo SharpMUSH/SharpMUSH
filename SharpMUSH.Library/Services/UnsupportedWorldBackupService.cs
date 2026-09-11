@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -27,8 +26,8 @@ public sealed class UnsupportedWorldBackupService(string provider, string reason
 
 	public TimeSpan ScheduledInterval => TimeSpan.Zero;
 
-	public ValueTask<OneOf<WorldBackup, Error<string>>> CreateAsync(CancellationToken ct = default)
-		=> ValueTask.FromResult<OneOf<WorldBackup, Error<string>>>(new Error<string>(UnavailableReason));
+	public ValueTask<Result<WorldBackup>> CreateAsync(CancellationToken ct = default)
+		=> ValueTask.FromResult<Result<WorldBackup>>(new Error<string>(UnavailableReason));
 
 	public IReadOnlyList<WorldBackup> List() => [];
 }

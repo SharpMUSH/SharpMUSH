@@ -1,5 +1,6 @@
 using Mediator;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
@@ -51,17 +52,17 @@ public class ServerHostSchedulerTests
 
 		var standard = Standard.Services.GetRequiredService<IMediator>();
 		var reality = Reality.Services.GetRequiredService<IMediator>();
-		var owner = (await standard.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+		var owner = (await standard.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
 		var roomId = await standard.Send(new CreateRoomCommand(
 			TestIsolationHelpers.GenerateUniqueName("SharedWorld"), owner));
-		var room = await standard.Send(new GetObjectNodeQuery(roomId));
-		var fromReality = await reality.Send(new GetObjectNodeQuery(roomId));
-		await Assert.That(fromReality.Known.Object().Name).IsEqualTo(room.Known.Object().Name);
+		var room = (await standard.Send(new GetObjectNodeQuery(roomId))).Expect<AnySharpObject>();
+		var fromReality = (await reality.Send(new GetObjectNodeQuery(roomId))).Expect<AnySharpObject>();
+		await Assert.That(fromReality.Object().Name).IsEqualTo(room.Object().Name);
 
 		var renamed = TestIsolationHelpers.GenerateUniqueName("RenamedWorld");
-		await reality.Send(new SetNameCommand(fromReality.Known, MarkupText.Plain(renamed)));
-		var refreshed = await standard.Send(new GetObjectNodeQuery(roomId));
-		await Assert.That(refreshed.Known.Object().Name).IsEqualTo(renamed);
+		await reality.Send(new SetNameCommand(fromReality, MarkupText.Plain(renamed)));
+		var refreshed = (await standard.Send(new GetObjectNodeQuery(roomId))).Expect<AnySharpObject>();
+		await Assert.That(refreshed.Object().Name).IsEqualTo(renamed);
 	}
 
 }

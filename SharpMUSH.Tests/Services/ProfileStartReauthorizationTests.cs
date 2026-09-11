@@ -40,8 +40,7 @@ public class ProfileStartReauthorizationTests
 		});
 		release.SetResult([]);
 		var result = await pending.WaitAsync(TimeSpan.FromSeconds(2));
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1).IsEqualTo(DiagnosticsError.PermissionDenied);
+		await Assert.That(result.Value).IsEqualTo(DiagnosticsError.PermissionDenied);
 		var captures = recorder.ProfileRegistrations();
 		await Assert.That(captures.Count).IsEqualTo(existing ? 1 : 0);
 		if (existing) await Assert.That(captures.Single().Id).IsEqualTo(previous!.Id);
@@ -67,13 +66,12 @@ public class ProfileStartReauthorizationTests
 		var result = await service.StartProfileAsync(Actor);
 		if (!authorized || unsupported)
 		{
-			await Assert.That(result.AsT1).IsEqualTo(!authorized ? DiagnosticsError.PermissionDenied : DiagnosticsError.Unsupported);
+			await Assert.That(result.Value).IsEqualTo(!authorized ? DiagnosticsError.PermissionDenied : DiagnosticsError.Unsupported);
 			await Assert.That(recorder.ProfileRegistrations().Count).IsEqualTo(0);
 		}
 		else
 		{
-			await Assert.That(result.IsT0).IsTrue();
-			await Assert.That(recorder.ProfileRegistrations().Single().Id).IsEqualTo(result.AsT0);
+			await Assert.That(recorder.ProfileRegistrations().Single().Id).IsEqualTo(result.Expect<Guid>());
 		}
 		await Assert.That(probes).IsEqualTo(authorized ? 1 : 0);
 	}

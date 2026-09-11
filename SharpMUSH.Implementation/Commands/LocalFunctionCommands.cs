@@ -4,6 +4,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -86,21 +87,34 @@ public partial class Commands
 		if ((args.Count > 3 && !int.TryParse(args["3"].Message?.ToPlainText(), out min)) ||
 			(args.Count > 4 && !int.TryParse(args["4"].Message?.ToPlainText(), out max)) || min < 0 || max < min || max > 32)
 			return await Report(ErrorMessages.Returns.InvalidArgument);
-		var target = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectSpec, LocateFlags.All);
-		if (target.IsError) return target.AsError;
-		var obj = target.AsSharpObject;
-		if ((await obj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != owner || !await PermissionService.Controls(executor, obj))
-			return await Report(ErrorMessages.Returns.PermissionDenied);
-		var readable = await AttributeService.GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Read, false);
-		if (readable.IsError) return await Report(readable.AsError.Value);
-		if (readable.IsNone) return await Report(ErrorMessages.Returns.NoSuchAttribute);
-		try
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objectSpec, LocateFlags.All) switch
 		{
-			registry.DefineLocal(new UserDefinedFunction(name, obj.Object().DBRef, readable.AsAttribute.Last().LongName!, min, max, true, null) { Owner = owner });
+			AnySharpObject obj => await DefineFromObject(obj),
+			Error<CallState> error => error.Value
+		};
+
+		async ValueTask<Option<CallState>> DefineFromObject(AnySharpObject obj)
+		{
+			if ((await obj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != owner || !await PermissionService.Controls(executor, obj))
+				return await Report(ErrorMessages.Returns.PermissionDenied);
+			return await AttributeService.GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Read, false) switch
+			{
+				SharpAttribute[] chain => await DefineFromAttribute(obj, chain.Last()),
+				None => await Report(ErrorMessages.Returns.NoSuchAttribute),
+				Error<string> error => await Report(error.Value)
+			};
 		}
-		catch (NotSupportedException) { return await Report(ErrorMessages.Returns.PermissionDenied); }
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefineWouldDefineFormat), executor,
-			name, $"{obj.Object().DBRef}/{attribute}");
-		return CallState.Empty;
+
+		async ValueTask<Option<CallState>> DefineFromAttribute(AnySharpObject obj, SharpAttribute leaf)
+		{
+			try
+			{
+				registry.DefineLocal(new UserDefinedFunction(name, obj.Object().DBRef, leaf.LongName!, min, max, true, null) { Owner = owner });
+			}
+			catch (NotSupportedException) { return await Report(ErrorMessages.Returns.PermissionDenied); }
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefineWouldDefineFormat), executor,
+				name, $"{obj.Object().DBRef}/{attribute}");
+			return CallState.Empty;
+		}
 	}
 }

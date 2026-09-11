@@ -82,7 +82,7 @@
     private string Query => $"character={Uri.EscapeDataString(_character)}";
     protected override async Task OnInitializedAsync()
     {
-        if ((await Account.GetCharactersAsync()).IsT1) _error = "DiagError";
+        if (await Account.GetCharactersAsync() is not IReadOnlyList<AccountAuthService.CharacterSummary>) _error = "DiagError";
     }
     private async Task SelectCharacter(ChangeEventArgs args)
     {

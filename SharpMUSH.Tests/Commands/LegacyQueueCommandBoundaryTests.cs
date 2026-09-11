@@ -35,8 +35,8 @@ public class LegacyQueueCommandBoundaryTests
 		scheduler.GetQueueEntry(Arg.Any<long>()).Returns(_ => throw new NotSupportedException());
 		scheduler.GetQueueEntries().Returns(_ => throw new NotSupportedException());
 		scheduler.GetQueueUsage().Returns(_ => throw new NotSupportedException());
-		var result = await Invoke(commands, parser, method);
-		await Assert.That(result.AsValue().Message?.ToPlainText() ?? "").IsEqualTo(
+		var result = (await Invoke(commands, parser, method)).Expect<CallState>();
+		await Assert.That(result.Message?.ToPlainText() ?? "").IsEqualTo(
 			method == "ProcessStatus" && commandSwitch is not ("DEBUG" or "SEMAPHORE") ? "" : ErrorMessages.Returns.ErrorNotSupported);
 		var expectedKey = method == "ProcessStatus" && commandSwitch is not ("DEBUG" or "SEMAPHORE")
 			? nameof(ErrorMessages.Notifications.PsQueueForTargetFormat)
@@ -81,8 +81,8 @@ public class LegacyQueueCommandBoundaryTests
 		scheduler.GetQueueEntries().Returns(_ => throw new NotSupportedException());
 		var metadata = typeof(SharpMUSH.Implementation.Commands.Commands).GetMethod("QueueControl")!
 			.GetCustomAttributes(typeof(SharpCommandAttribute), false).Cast<SharpCommandAttribute>().Single();
-		var result = await commands.QueueControl(parser, metadata);
-		await Assert.That(result.AsValue().Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.ErrorNotSupported);
+		var result = (await commands.QueueControl(parser, metadata)).Expect<CallState>();
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.ErrorNotSupported);
 	}
 
 	[Test]
@@ -101,10 +101,10 @@ public class LegacyQueueCommandBoundaryTests
 			victimHalted = admittedAfterLookup;
 			return ValueTask.FromResult(victimHalted);
 		});
-		var result = await Invoke(commands, parser, "Halt");
+		var result = (await Invoke(commands, parser, "Halt")).Expect<CallState>();
 		await Assert.That(admittedAfterLookup).IsTrue();
 		await Assert.That(victimHalted).IsFalse();
-		await Assert.That(result.AsValue().Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NotFound);
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NotFound);
 		await mediator.DidNotReceive().Send(Arg.Any<HaltByPidRequest>(), Arg.Any<CancellationToken>());
 	}
 
@@ -114,7 +114,7 @@ public class LegacyQueueCommandBoundaryTests
 		var actor = new TestObjectFactory().CreatePlayer(commandSwitch == "ALL" ? 1 : 40, "Queue actor");
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
-			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(actor.AsPlayer));
+			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(actor));
 		mediator.CreateStream(Arg.Any<ScheduleSemaphoreQuery>(), Arg.Any<CancellationToken>()).Returns(commandSwitch is "SEMAPHORE" or "ALL"
 			? new[] { new SemaphoreTaskData(42, MarkupText.Plain("private command"), actor.Object().DBRef,
 				new DbRefAttribute(actor.Object().DBRef, ["SEMAPHORE"]), null) }.ToAsyncEnumerable()
@@ -122,7 +122,7 @@ public class LegacyQueueCommandBoundaryTests
 		mediator.CreateStream(Arg.Any<ScheduleDelayQuery>(), Arg.Any<CancellationToken>()).Returns(AsyncEnumerable.Empty<long>());
 		mediator.CreateStream(Arg.Any<ScheduleEnqueueQuery>(), Arg.Any<CancellationToken>()).Returns(AsyncEnumerable.Empty<long>());
 		mediator.CreateStream(Arg.Any<ScheduleAllTasksQuery>(), Arg.Any<CancellationToken>())
-			.Returns(AsyncEnumerable.Empty<(string, (DateTimeOffset, OneOf.OneOf<string, DBRef>)[])>());
+			.Returns(AsyncEnumerable.Empty<(string, (DateTimeOffset, NameOrDbRef)[])>());
 		var permissions = Substitute.For<IPermissionService>();
 		permissions.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
 		var scheduler = Substitute.For<ITaskScheduler>();

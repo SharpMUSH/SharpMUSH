@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -35,12 +36,12 @@ public class AttributeFlagArgumentTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
 		_players.Add(player);
-		var actor = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer;
+		var actor = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>();
 		var origin = await actor.Location.WithCancellation(CancellationToken.None);
 		_startingRoom = origin.Object().DBRef;
 		var roomId = await Mediator.Send(new CreateRoomCommand(
 			TestIsolationHelpers.GenerateUniqueName("FlagArgRoom"), actor));
-		var room = (await Mediator.Send(new GetObjectNodeQuery(roomId))).AsRoom;
+		var room = (await Mediator.Send(new GetObjectNodeQuery(roomId))).Expect<SharpRoom>();
 		await Mediator.Send(new MoveObjectCommand(actor, room, _startingRoom, IsSilent: true));
 		return player;
 	}
@@ -62,12 +63,12 @@ public class AttributeFlagArgumentTests
 	/// </summary>
 	private async Task<bool> HasFlag(DBRef who, string attribute, string flag)
 	{
-		var obj = await Mediator.Send(new GetObjectNodeQuery(who));
-		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
-		var attr = await AttributeService.GetAttributeAsync(god, obj.Known, attribute,
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(who))).Expect<AnySharpObject>();
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
+		var attr = await AttributeService.GetAttributeAsync(god, obj, attribute,
 			IAttributeService.AttributeMode.Read, false);
 
-		return attr.IsAttribute && attr.AsAttribute.Last().Flags
+		return attr is SharpAttribute[] chain && chain.Last().Flags
 			.Any(f => f.Name.Equals(flag, StringComparison.OrdinalIgnoreCase));
 	}
 
@@ -179,7 +180,7 @@ public class AttributeFlagArgumentTests
 	[Arguments(true)]
 	public async ValueTask FlagBatch_IsReportedAsOneLinePerHalf(bool broadcastInStartingRoom)
 	{
-		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
 		var initialRoom = await Mediator.Send(new CreateRoomCommand(
 			TestIsolationHelpers.GenerateUniqueName("FlagInitialRoom"), god));
 		using var configuration = TestOptionsOverride.Scope(options => options with
@@ -188,7 +189,7 @@ public class AttributeFlagArgumentTests
 		});
 		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
 		var owner = await CreateOwner("FlagArgReport");
-		var ownerName = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Known.Object().Name;
+		var ownerName = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Expect<AnySharpObject>().Object().Name;
 
 		await ParserFor(owner).CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&FR{uid} me=value"));
 		await ParserFor(owner).CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@set me/FR{uid}=case"));

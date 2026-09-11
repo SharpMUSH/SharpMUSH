@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -88,9 +89,8 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 	private async ValueTask<ObjectReality?> ReadObjectCoreAsync(DBRef reference, bool rejectMalformed, CancellationToken ct)
 	{
 		ct = ReadToken(ct);
-		var found = await objects.GetObjectNodeAsync(reference, ct);
-		if (found is null || found.IsNone) return null;
-		var obj = found.Known.Object();
+		if (await objects.GetObjectNodeAsync(reference, ct) is not AnySharpObject found) return null;
+		var obj = found.Object();
 		if (!obj.DBRef.Matches(reference) || obj.Id is null) return null;
 		var value = await store.GetExpandedObjectData<ObjectReality>(obj.Id, ObjectKey, ct);
 		if (value is null || !value.Object.Equals(obj.DBRef)) return ObjectReality.Default(obj.DBRef);

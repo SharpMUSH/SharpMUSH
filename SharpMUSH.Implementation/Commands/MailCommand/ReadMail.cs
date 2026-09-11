@@ -6,6 +6,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -19,9 +20,14 @@ public static class ReadMail
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var line = MarkupText.Plain("-").Repeat(78);
+		if (executor is not SharpPlayer player)
+		{
+			throw new InvalidOperationException("@mail reads a player's own mail, and its dispatcher routes only players here.");
+		}
+
 		var folder = await MessageListHelper.CurrentMailFolder(parser, objectDataService, executor);
 
-		var actualMail = await mediator.Send(new GetMailQuery(executor.AsPlayer, messageNumber, folder));
+		var actualMail = await mediator.Send(new GetMailQuery(player, messageNumber, folder));
 
 		if (actualMail is null)
 		{

@@ -63,25 +63,26 @@ public static class MessageHelpers
 			var maybeLocateTarget = await locateService.LocateAndNotifyIfInvalidWithCallState(
 				parser, executor, executor, attrObjSplit[0], LocateFlags.All);
 
-			if (maybeLocateTarget.IsError)
-			{
-				await notifyService.Notify(executor, maybeLocateTarget.AsError.Message!);
-				return new CallState(ErrorMessages.Returns.NotVisible);
-			}
-
-			objToEvaluate = maybeLocateTarget.AsSharpObject;
 			attrToEvaluate = attrObjSplit[1];
 
-			var attr = await attributeService.GetAttributeAsync(
-				executor, objToEvaluate, attrToEvaluate, IAttributeService.AttributeMode.Execute);
-
-			// Only pin a real attribute. attr is OneOf<SharpAttribute[], None, Error>: when the
-			// attribute is absent (None), !IsError is still true but AsAttribute (AsT0) throws,
-			// which silently aborts the whole @message (no recipients notified). Guard on IsAttribute
-			// so a missing format attr falls through to the per-recipient default (defmsg) instead.
-			if (attr.IsAttribute)
+			switch (maybeLocateTarget)
 			{
-				pinnedAttribute = attr.AsAttribute;
+				case Error<CallState> error:
+					await notifyService.Notify(executor, error.Value.Message!);
+					return new CallState(ErrorMessages.Returns.NotVisible);
+				case AnySharpObject located:
+					objToEvaluate = located;
+					var attr = await attributeService.GetAttributeAsync(
+						executor, located, attrToEvaluate, IAttributeService.AttributeMode.Execute);
+
+					// Only pin a real attribute: a missing format attribute falls through to the
+					// per-recipient default (defmsg) rather than aborting the whole @message.
+					if (attr is SharpAttribute[] found)
+					{
+						pinnedAttribute = found;
+					}
+
+					break;
 			}
 		}
 		else
@@ -96,7 +97,7 @@ public static class MessageHelpers
 			: INotifyService.NotificationType.Announce;
 
 		var enactor = isSpoof
-			? (await parser.CurrentState.EnactorObject(mediator)).WithoutNone()
+			? await parser.CurrentState.KnownEnactorObject(mediator)
 			: executor;
 
 		if (isSpoof && !await permissionService.CanNoSpoof(executor))
@@ -110,16 +111,14 @@ public static class MessageHelpers
 
 		foreach (var target in recipientNamelist)
 		{
-			var targetString = target.Match(dbref => dbref.ToString(), str => str);
+			var targetString = target switch { DBRef dbref => dbref.ToString(), string name => name };
 			var maybeLocateTarget = await locateService.LocateAndNotifyIfInvalidWithCallState(
 				parser, executor, executor, targetString, LocateFlags.All);
 
-			if (maybeLocateTarget.IsError)
+			if (maybeLocateTarget is not AnySharpObject locateTarget)
 			{
 				continue;
 			}
-
-			var locateTarget = maybeLocateTarget.AsSharpObject;
 
 			if (isRemit)
 			{
@@ -167,13 +166,13 @@ public static class MessageHelpers
 			var excludeObjects = new HashSet<AnySharpObject>();
 			foreach (var target in recipientNamelist)
 			{
-				var targetString = target.Match(dbref => dbref.ToString(), str => str);
+				var targetString = target switch { DBRef dbref => dbref.ToString(), string name => name };
 				var maybeLocateTarget = await locateService.LocateAndNotifyIfInvalidWithCallState(
 					parser, executor, executor, targetString, LocateFlags.All);
 
-				if (!maybeLocateTarget.IsError)
+				if (maybeLocateTarget is AnySharpObject excluded)
 				{
-					excludeObjects.Add(maybeLocateTarget.AsSharpObject);
+					excludeObjects.Add(excluded);
 				}
 			}
 

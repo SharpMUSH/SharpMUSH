@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -27,9 +26,8 @@ public class NewsCommandTests
 
 		await NotifyService
 			.Received() // Weak check. This is currently being interfered with by 'anews' also matching 'news'.
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("news")) ||
-				(msg.IsT1 && msg.AsT1.Contains("news"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "news")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -41,9 +39,8 @@ public class NewsCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("SharpMUSH")) ||
-				(msg.IsT1 && msg.AsT1.Contains("SharpMUSH"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "SharpMUSH")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -87,7 +84,7 @@ public class AhelpCommandTests
 
 		await NotifyService
 			.Received(2)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessageContains(msg, "get help on a specific admin topic")
 					|| TestHelpers.MessageContains(msg, "Only Wizards and Royalty may use them.")),
 					TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
@@ -101,9 +98,8 @@ public class AhelpCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("SharpMUSH includes comprehensive security features to protect your MUSH:")) ||
-				(msg.IsT1 && msg.AsT1.Contains("SharpMUSH includes comprehensive security features to protect your MUSH:"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "SharpMUSH includes comprehensive security features to protect your MUSH:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

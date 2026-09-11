@@ -93,7 +93,7 @@ public class WorldVisibilityTests
 		foreach (var obj in new AnySharpObject[] { room, viewer, first, second })
 		{
 			obj.Object().Id = obj.Object().DBRef.ToString();
-			objects.GetObjectNodeAsync(obj.Object().DBRef, Arg.Any<CancellationToken>()).Returns(obj.Match<AnyOptionalSharpObject>(player => player, room => room, exit => exit, thing => thing));
+			objects.GetObjectNodeAsync(obj.Object().DBRef, Arg.Any<CancellationToken>()).Returns(obj.WithNoneOption());
 		}
 		var store = Substitute.For<IExpandedDataStore>();
 		store.GetExpandedServerData<RealityConfiguration>(RealityPolicy.ConfigurationKey, Arg.Any<CancellationToken>())

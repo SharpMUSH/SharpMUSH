@@ -12,6 +12,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Time;
 using SharpMUSH.Library.Utilities;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -120,9 +121,9 @@ public partial class Functions
 		else
 		{
 			var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-			connection = maybeLocate.IsNone || maybeLocate.IsError
-				? null
-				: await LeastIdleConnectionAsync(maybeLocate.AsPlayer.Object.DBRef);
+			connection = maybeLocate is AnySharpObject and SharpPlayer player
+				? await LeastIdleConnectionAsync(player.Object.DBRef)
+				: null;
 		}
 
 		if (connection is null || !await CanAccessConnectionData(executor, connection.Ref))
@@ -147,8 +148,8 @@ public partial class Functions
 				return new CallState("-1");
 			}
 
-			var connectedPlayer = await Mediator.Send(new GetObjectNodeQuery(data2.Ref.Value));
-			if (!await PermissionService.CanSee(executor, connectedPlayer.Known))
+			if (await Mediator.Send(new GetObjectNodeQuery(data2.Ref.Value)) is not AnySharpObject connectedPlayer
+					|| !await PermissionService.CanSee(executor, connectedPlayer))
 			{
 				return new CallState("-1");
 			}
@@ -159,12 +160,10 @@ public partial class Functions
 		// fun_conn answers every failure with "-1" — a name that matches nothing, a match that is not
 		// connected, and a descriptor the caller may not see are one outcome, not three.
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate.IsNone || maybeLocate.IsError)
+		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 		{
 			return new CallState("-1");
 		}
-
-		var located = maybeLocate.AsPlayer;
 
 		if (!await PermissionService.CanSee(executor, located.Object))
 		{
@@ -373,29 +372,30 @@ public partial class Functions
 				return new CallState(string.Empty);
 			}
 
-			var player = await Mediator.Send(new GetObjectNodeQuery(data.Ref.Value));
+			if (await Mediator.Send(new GetObjectNodeQuery(data.Ref.Value)) is not AnySharpObject player)
+			{
+				return new CallState(string.Empty);
+			}
 
 			var maybeAttr = await AttributeService.GetAttributeAsync(
 				executor,
-				player.Known,
+				player,
 				"DOING",
 				mode: IAttributeService.AttributeMode.Read,
 				parent: false);
 
 			return maybeAttr switch
 			{
-				{ IsError: true } or { IsNone: true } => new CallState(string.Empty),
-				_ => new CallState(maybeAttr.AsAttribute.Last().Value)
+				SharpAttribute[] chain => new CallState(chain.Last().Value),
+				None or Error<string> => new CallState(string.Empty)
 			};
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate.IsNone || maybeLocate.IsError)
+		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 		{
 			return new CallState(string.Empty);
 		}
-
-		var located = maybeLocate.AsPlayer;
 
 		var doingAttr = await AttributeService.GetAttributeAsync(
 			executor,
@@ -406,8 +406,8 @@ public partial class Functions
 
 		return doingAttr switch
 		{
-			{ IsError: true } or { IsNone: true } => new CallState(string.Empty),
-			_ => new CallState(doingAttr.AsAttribute.Last().Value)
+			SharpAttribute[] chain => new CallState(chain.Last().Value),
+			None or Error<string> => new CallState(string.Empty)
 		};
 	}
 
@@ -436,12 +436,10 @@ public partial class Functions
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate.IsNone || maybeLocate.IsError)
+		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 		{
-			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
+			return new CallState(maybeLocate is Error<string> error ? error.Value : "#-1");
 		}
-
-		var located = maybeLocate.AsPlayer;
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
@@ -494,8 +492,8 @@ public partial class Functions
 				return new CallState("-1");
 			}
 
-			var connectedPlayer = await Mediator.Send(new GetObjectNodeQuery(data2.Ref.Value));
-			if (!await PermissionService.CanSee(executor, connectedPlayer.Known))
+			if (await Mediator.Send(new GetObjectNodeQuery(data2.Ref.Value)) is not AnySharpObject connectedPlayer
+					|| !await PermissionService.CanSee(executor, connectedPlayer))
 			{
 				return new CallState("-1");
 			}
@@ -504,12 +502,10 @@ public partial class Functions
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate.IsNone || maybeLocate.IsError)
+		if (maybeLocate is not (AnySharpObject and SharpPlayer locate))
 		{
-			return new CallState(maybeLocate.IsNone ? "-1" : maybeLocate.AsError.Value);
+			return new CallState(maybeLocate is Error<string> error ? error.Value : "-1");
 		}
-
-		var locate = maybeLocate.AsPlayer;
 
 		if (!await PermissionService.CanSee(executor, locate.Object))
 		{
@@ -544,12 +540,10 @@ public partial class Functions
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate.IsNone || maybeLocate.IsError)
+		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 		{
-			return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
+			return new CallState(maybeLocate is Error<string> error ? error.Value : "#-1");
 		}
-
-		var located = maybeLocate.AsPlayer;
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
@@ -583,12 +577,12 @@ public partial class Functions
 			if (!string.IsNullOrWhiteSpace(arg0))
 			{
 				var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
-				if (maybeLocate.IsNone || maybeLocate.IsError)
+				if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 				{
-					return new CallState(maybeLocate.IsNone ? "#-1" : maybeLocate.AsError.Value);
+					return new CallState(maybeLocate is Error<string> error ? error.Value : "#-1");
 				}
 
-				viewer = maybeLocate.AsPlayer;
+				viewer = located;
 			}
 		}
 
@@ -609,7 +603,8 @@ public partial class Functions
 									(status == "offline" && x.State != IConnectionService.ConnectionState.LoggedIn))
 			.Where(async (conn, _) => conn.Ref is null
 				? viewerSeesAll
-				: await PermissionService.CanSee(viewer, (await Mediator.Send(new GetObjectNodeQuery(conn.Ref.Value))).Known))
+				: await Mediator.Send(new GetObjectNodeQuery(conn.Ref.Value)) is AnySharpObject connected
+					&& await PermissionService.CanSee(viewer, connected))
 			.Select(conn => conn.Handle);
 
 		return new CallState(string.Join(" ", await visibleConnections.ToArrayAsync()));
@@ -723,18 +718,22 @@ public partial class Functions
 
 		var maybeLocate =
 			await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0Text);
-		if (maybeLocate.IsError)
-		{
-			return (executor, powered, maybeLocate.AsError);
-		}
 
-		var looker = maybeLocate.AsSharpObject;
-		if (!powered && looker.Object().DBRef.Number != executor.Object().DBRef.Number)
+		return maybeLocate switch
 		{
-			return (executor, false, new CallState(ErrorMessages.Returns.PermissionDenied));
-		}
+			Error<CallState> error => (executor, powered, error.Value),
+			AnySharpObject looker => await NamedLooker(looker)
+		};
 
-		return (looker, powered && await looker.IsSee_All(), null);
+		async ValueTask<(AnySharpObject Looker, bool Powered, CallState? Error)> NamedLooker(AnySharpObject looker)
+		{
+			if (!powered && looker.Object().DBRef.Number != executor.Object().DBRef.Number)
+			{
+				return (executor, false, new CallState(ErrorMessages.Returns.PermissionDenied));
+			}
+
+			return (looker, powered && await looker.IsSee_All(), null);
+		}
 	}
 
 	/// <summary>
@@ -760,17 +759,16 @@ public partial class Functions
 	/// </para>
 	/// </remarks>
 	private IAsyncEnumerable<AnySharpObject> MortalWhoPlayers() =>
-		ConnectionService
-			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-				&& x.PresenceClass != PresenceClasses.Portal
-				// @hide (per-connection Hidden, distinct from the DARK flag) must exclude a player from
-				// this whole WHO family exactly as DARK always did - see WHO's own row filtering in
-				// SocketCommands.cs for the same isHiddenRow = isDark || connection.IsHidden pattern.
-				&& !x.IsHidden)
-			.Select(x => x.Ref!.Value)
-			.DistinctBy(x => x.Number)
-			.Select(async (dbref, ct) => (await Mediator.Send(new GetObjectNodeQuery(dbref), ct)).Known)
+		ExistingObjects(ConnectionService
+				.GetAll()
+				.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
+					&& x.PresenceClass != PresenceClasses.Portal
+					// @hide (per-connection Hidden, distinct from the DARK flag) must exclude a player from
+					// this whole WHO family exactly as DARK always did - see WHO's own row filtering in
+					// SocketCommands.cs for the same isHiddenRow = isDark || connection.IsHidden pattern.
+					&& !x.IsHidden)
+				.Select(x => x.Ref!.Value)
+				.DistinctBy(x => x.Number))
 			.Where(async (x, _) => !await x.HasFlag("DARK"));
 
 	/// <summary>
@@ -780,20 +778,35 @@ public partial class Functions
 	/// <c>words(lwho(&lt;viewer&gt;))</c>, and lwho() lists each player once.
 	/// </summary>
 	private IAsyncEnumerable<AnySharpObject> VisibleWhoPlayers(AnySharpObject looker, bool powered) =>
-		ConnectionService
-			.GetAll()
-			.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
-			// @hide (per-connection Hidden, distinct from the DARK flag) must exclude a player from
-			// this whole WHO family exactly as DARK always did, unless the caller is privileged -
-			// PennMUSH's fun_nwho/fun_xwho: `if (!Hidden(d) || powered)` (bsd.c:6438,6503). `powered`
-			// is the *pair's* Priv_Who, not the looker's alone (see ResolveWhoLookerAsync). See WHO's
-			// own row filtering in SocketCommands.cs for the same
-			// isHiddenRow = isDark || connection.IsHidden pattern.
-			.Where(x => !x.IsHidden || powered)
-			.Select(x => x.Ref!.Value)
-			.DistinctBy(x => x.Number)
-			.Select(async (dbref, ct) => (await Mediator.Send(new GetObjectNodeQuery(dbref), ct)).Known)
+		ExistingObjects(ConnectionService
+				.GetAll()
+				.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+				// @hide (per-connection Hidden, distinct from the DARK flag) must exclude a player from
+				// this whole WHO family exactly as DARK always did, unless the caller is privileged -
+				// PennMUSH's fun_nwho/fun_xwho: `if (!Hidden(d) || powered)` (bsd.c:6438,6503). `powered`
+				// is the *pair's* Priv_Who, not the looker's alone (see ResolveWhoLookerAsync). See WHO's
+				// own row filtering in SocketCommands.cs for the same
+				// isHiddenRow = isDark || connection.IsHidden pattern.
+				.Where(x => !x.IsHidden || powered)
+				.Select(x => x.Ref!.Value)
+				.DistinctBy(x => x.Number))
 			.Where(async (x, _) => await PermissionService.CanSee(looker, x));
+
+	/// <summary>
+	/// The objects <paramref name="refs"/> name, skipping any that no longer exist: a connection can
+	/// outlive the player behind it for the moment it takes to be dropped.
+	/// </summary>
+	private async IAsyncEnumerable<AnySharpObject> ExistingObjects(IAsyncEnumerable<DBRef> refs,
+		[EnumeratorCancellation] CancellationToken cancellationToken = default)
+	{
+		await foreach (var dbref in refs.WithCancellation(cancellationToken))
+		{
+			if (await Mediator.Send(new GetObjectNodeQuery(dbref), cancellationToken) is AnySharpObject found)
+			{
+				yield return found;
+			}
+		}
+	}
 
 	[SharpFunction(Name = "mwho", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
 	public async ValueTask<CallState> MortalWho(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -870,12 +883,10 @@ public partial class Functions
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate.IsNone || maybeLocate.IsError)
+		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 		{
 			return new CallState("-1");
 		}
-
-		var located = maybeLocate.AsPlayer;
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
@@ -913,12 +924,10 @@ public partial class Functions
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate.IsNone || maybeLocate.IsError)
+		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 		{
 			return new CallState("-1");
 		}
-
-		var located = maybeLocate.AsPlayer;
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
@@ -961,12 +970,11 @@ public partial class Functions
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate.IsNone || maybeLocate.IsError)
+		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 		{
 			return new CallState(ErrorMessages.Returns.NotConnected);
 		}
 
-		var located = maybeLocate.AsPlayer;
 		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
 
 		if (connectionData is null)
@@ -1010,12 +1018,11 @@ public partial class Functions
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate.IsNone || maybeLocate.IsError)
+		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 		{
 			return new CallState(ErrorMessages.Returns.NotConnected);
 		}
 
-		var located = maybeLocate.AsPlayer;
 		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
 
 		// "unknown" is default_ttype — what a connected client with no terminal type is called. A
@@ -1200,12 +1207,10 @@ public partial class Functions
 		var arg0 = args["0"].Message!.ToPlainText();
 
 		var maybeZone = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
-		if (maybeZone.IsNone || maybeZone.IsError)
+		if (maybeZone is not AnySharpObject zone)
 		{
-			return new CallState(maybeZone.IsNone ? "#-1" : maybeZone.AsError.Value);
+			return new CallState(maybeZone is Error<string> error ? error.Value : "#-1");
 		}
-
-		var zone = maybeZone.AsAnyObject;
 
 		var executorHasSeeAll = await executor.IsSee_All();
 		// PennMUSH bsd.c:6815 - `powered = (strcmp(called_as, "ZMWHO") && Priv_Who(executor))`.
@@ -1223,12 +1228,15 @@ public partial class Functions
 
 			var maybeViewer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(
 				parser, executor, executor, arg1.Message!.ToPlainText());
-			if (maybeViewer.IsError)
+			switch (maybeViewer)
 			{
-				return maybeViewer.AsError;
+				case Error<CallState> error:
+					return error.Value;
+				case AnySharpObject named:
+					viewer = named;
+					break;
 			}
 
-			viewer = maybeViewer.AsSharpObject;
 			powered = await viewer.IsSee_All();
 		}
 
@@ -1245,8 +1253,8 @@ public partial class Functions
 			.Where(async (player, _) =>
 			{
 				var location = await player.Where();
-				var locationZone = await location.Object().Zone.WithCancellation(CancellationToken.None);
-				return !locationZone.IsNone && locationZone.Known.Object().DBRef.Number == zoneNumber;
+				return await location.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject locationZone
+					&& locationZone.Object().DBRef.Number == zoneNumber;
 			})
 			.Select(player => $"#{player.Object().DBRef.Number}");
 
@@ -1261,12 +1269,10 @@ public partial class Functions
 		var arg0 = args["0"].Message!.ToPlainText();
 
 		var maybeZone = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
-		if (maybeZone.IsNone || maybeZone.IsError)
+		if (maybeZone is not AnySharpObject zone)
 		{
-			return new CallState(maybeZone.IsNone ? "#-1" : maybeZone.AsError.Value);
+			return new CallState(maybeZone is Error<string> error ? error.Value : "#-1");
 		}
-
-		var zone = maybeZone.AsAnyObject;
 
 		var hasSeeAll = await executor.IsSee_All();
 		if (!hasSeeAll)
@@ -1280,8 +1286,8 @@ public partial class Functions
 		var objectList = await Mediator.CreateStream(new GetObjectsByZoneQuery(zone))
 			.Where(async (obj, _) =>
 			{
-				var fullObj = await Mediator.Send(new GetObjectNodeQuery(new DBRef(obj.Key)));
-				return !fullObj.IsNone && (hasSeeAll || await PermissionService.CanExamine(executor, fullObj.Known));
+				return await Mediator.Send(new GetObjectNodeQuery(new DBRef(obj.Key))) is AnySharpObject fullObj
+					&& (hasSeeAll || await PermissionService.CanExamine(executor, fullObj));
 			})
 			.Select(obj => $"#{obj.Key}")
 			.ToArrayAsync();
@@ -1311,12 +1317,10 @@ public partial class Functions
 		// MAT_ABSOLUTE | MAT_PLAYER | MAT_ME | MAT_TYPE — so "me" works here too, and a name that
 		// matches nothing is answered with an empty list rather than an error string or a message.
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate.IsNone || maybeLocate.IsError)
+		if (maybeLocate is not (AnySharpObject and SharpPlayer target))
 		{
 			return CallState.Empty;
 		}
-
-		var target = maybeLocate.AsPlayer;
 
 		// The one thing fun_ports does say out loud, and it still returns nothing rather than "#-1":
 		// reading someone else's descriptors needs Priv_Who.
@@ -1395,20 +1399,19 @@ public partial class Functions
 				return new CallState("#-1");
 			}
 
-			var player = await Mediator.Send(new GetObjectNodeQuery(data.Ref.Value));
-			var isHidden = data.IsHidden || await player.Known.HasFlag("DARK");
+			var isHidden = data.IsHidden
+				|| (await Mediator.Send(new GetObjectNodeQuery(data.Ref.Value)) is AnySharpObject player && await player.HasFlag("DARK"));
 			return new CallState(isHidden ? "1" : "0");
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate.IsNone || maybeLocate.IsError)
+		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 		{
 			await NotifyService.NotifyLocalized(executor,
 				nameof(ErrorMessages.Notifications.CouldNotFindPlayer), executor);
 			return new CallState("#-1");
 		}
 
-		var located = maybeLocate.AsPlayer;
 		var isHiddenPlayer = await ConnectionService.IsPlayerHiddenAsync(located.Object.DBRef)
 			|| await new AnySharpObject(located).HasFlag("DARK");
 		return new CallState(isHiddenPlayer ? "1" : "0");
@@ -1480,9 +1483,9 @@ public partial class Functions
 			var executor = await inner.CurrentState.KnownExecutorObject(Mediator);
 			var maybeLocate = await LocateService.LocateConnectionTarget(inner, executor, executor, name);
 
-			return maybeLocate.IsNone || maybeLocate.IsError
-				? null
-				: await LeastIdleConnectionAsync(maybeLocate.AsPlayer.Object.DBRef);
+			return maybeLocate is AnySharpObject and SharpPlayer player
+				? await LeastIdleConnectionAsync(player.Object.DBRef)
+				: null;
 		}
 	}
 

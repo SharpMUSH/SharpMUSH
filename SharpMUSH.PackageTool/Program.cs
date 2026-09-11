@@ -86,33 +86,42 @@ internal static class PackageToolApp
 		}
 
 		var label = DisplayLabel(manifestPath);
-		var result = service.ParseManifest(yaml);
+		return service.ParseManifest(yaml) switch
+		{
+			ParsedPackageManifest parsed => CheckParsed(parsed, yaml, packageDir, label, strict),
+			PackageManifestFailure failure => ReportInvalid(failure, label),
+		};
+	}
 
-		return result.Match(
-			parsed =>
-			{
-				var warningsFail = strict && parsed.Warnings.Count > 0;
-				PrintIssues(label, parsed.Warnings);
+	/// <summary>Prints why a manifest failed to parse. Always false: an unparsable manifest is never acceptable.</summary>
+	private static bool ReportInvalid(PackageManifestFailure failure, string label)
+	{
+		PrintIssues(label, failure.Issues);
+		Console.WriteLine($"FAIL  {label}: {failure.Errors.Count()} error(s).");
+		return false;
+	}
 
-				var binariesOk = VerifyBinaries(yaml, packageDir, label);
+	/// <summary>
+	/// Reports a parsed manifest's warnings and checks its binaries. True when both pass (warnings
+	/// only fail under strict).
+	/// </summary>
+	private static bool CheckParsed(ParsedPackageManifest parsed, string yaml, string packageDir, string label, bool strict)
+	{
+		var warningsFail = strict && parsed.Warnings.Count > 0;
+		PrintIssues(label, parsed.Warnings);
 
-				if (parsed.Warnings.Count == 0 && binariesOk && !warningsFail)
-				{
-					Console.WriteLine($"OK    {label}: {parsed.Manifest.Name} {parsed.Manifest.Version} ({parsed.Manifest.Kind.ToString().ToLowerInvariant()})");
-				}
-				else if (binariesOk && !warningsFail)
-				{
-					Console.WriteLine($"OK    {label}: {parsed.Manifest.Name} {parsed.Manifest.Version} ({parsed.Manifest.Kind.ToString().ToLowerInvariant()}) — with warnings");
-				}
+		var binariesOk = VerifyBinaries(yaml, packageDir, label);
 
-				return binariesOk && !warningsFail;
-			},
-			failure =>
-			{
-				PrintIssues(label, failure.Issues);
-				Console.WriteLine($"FAIL  {label}: {failure.Errors.Count()} error(s).");
-				return false;
-			});
+		if (parsed.Warnings.Count == 0 && binariesOk && !warningsFail)
+		{
+			Console.WriteLine($"OK    {label}: {parsed.Manifest.Name} {parsed.Manifest.Version} ({parsed.Manifest.Kind.ToString().ToLowerInvariant()})");
+		}
+		else if (binariesOk && !warningsFail)
+		{
+			Console.WriteLine($"OK    {label}: {parsed.Manifest.Name} {parsed.Manifest.Version} ({parsed.Manifest.Kind.ToString().ToLowerInvariant()}) — with warnings");
+		}
+
+		return binariesOk && !warningsFail;
 	}
 
 	private static readonly IDeserializer YamlDeserializer = new DeserializerBuilder().Build();

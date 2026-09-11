@@ -37,9 +37,9 @@ public partial class Functions
 				var accnameAttr = await AttributeService.GetAttributeAsync(
 					executor, found, "ACCNAME", IAttributeService.AttributeMode.Read);
 
-				if (accnameAttr.IsAttribute)
+				if (accnameAttr is SharpAttribute[] chain)
 				{
-					var attr = accnameAttr.AsAttribute.Last();
+					var attr = chain.Last();
 					var attrValue = attr.Value.ToString();
 					if (!string.IsNullOrWhiteSpace(attrValue))
 					{
@@ -88,15 +88,15 @@ public partial class Functions
 				var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 					parser, executor, executor, arg, LocateFlags.PlayersPreference);
 
-				if (locateResult.IsError || locateResult.IsNone)
+				if (locateResult is AnySharpObject and SharpPlayer located)
 				{
-					folderSpec = arg;
+					targetPlayer = located;
+					folderSpec = await Implementation.Commands.MailCommand.MessageListHelper.CurrentMailFolder(
+						parser, ObjectDataService, targetPlayer);
 				}
 				else
 				{
-					targetPlayer = locateResult.AsPlayer;
-					folderSpec = await Implementation.Commands.MailCommand.MessageListHelper.CurrentMailFolder(
-						parser, ObjectDataService, targetPlayer);
+					folderSpec = arg;
 				}
 			}
 		}
@@ -111,16 +111,19 @@ public partial class Functions
 			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
 
-			if (locateResult.IsError || locateResult.IsNone)
+			if (locateResult is not (AnySharpObject and SharpPlayer located))
 			{
 				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
-			targetPlayer = locateResult.AsPlayer;
+			targetPlayer = located;
 			folderSpec = args["1"].Message!.ToPlainText();
 		}
 
-		var tally = await TallyMail(Mediator.CreateStream(new GetMailListQuery(targetPlayer.AsPlayer, folderSpec ?? "INBOX")));
+		// Only a player has a mailbox; anything else holds no mail.
+		var tally = targetPlayer is SharpPlayer mailbox
+			? await TallyMail(Mediator.CreateStream(new GetMailListQuery(mailbox, folderSpec ?? "INBOX")))
+			: new MailTally();
 
 		return new CallState($"{tally.Read} {tally.Unread} {tally.Cleared}");
 	}
@@ -218,18 +221,11 @@ public partial class Functions
 			parser, executor, executor, obj, LocateFlags.All,
 			found =>
 			{
-				var aliases = found switch
-				{
-					{ IsExit: true, AsExit: var exit } => exit.Aliases,
-					{ IsThing: true, AsThing: var thing } => thing.Aliases,
-					{ IsPlayer: true, AsPlayer: var player } => player.Aliases,
-					{ IsRoom: true, AsRoom: var room } => room.Aliases,
-					_ => null
-				};
+				var aliases = found.Aliases;
 
 				if (args.Count == 1)
 				{
-					return ValueTask.FromResult(new CallState(aliases?.FirstOrDefault() ?? string.Empty));
+					return ValueTask.FromResult(new CallState(aliases.FirstOrDefault() ?? string.Empty));
 				}
 
 				var indexArg = args["1"].Message!.ToPlainText();
@@ -239,7 +235,7 @@ public partial class Functions
 				}
 
 				return ValueTask.FromResult(new CallState(
-					aliases != null && index <= aliases.Length
+					index <= aliases.Length
 						? aliases[index - 1]
 						: string.Empty));
 			});
@@ -255,16 +251,12 @@ public partial class Functions
 		var maybeLooker = await LocateService.LocateAndNotifyIfInvalidWithCallState(
 			parser, executor, executor, lookerArg, LocateFlags.All);
 
-		if (maybeLooker.IsError)
+		return maybeLooker switch
 		{
-			return maybeLooker.AsError;
-		}
-
-		var looker = maybeLooker.AsSharpObject;
-
-		var maybeTarget = await LocateService.Locate(parser, looker, executor, targetArg, LocateFlags.All);
-
-		return new CallState(maybeTarget.IsValid());
+			Error<CallState> error => error.Value,
+			AnySharpObject looker => new CallState(
+				await LocateService.Locate(parser, looker, executor, targetArg, LocateFlags.All) is AnySharpObject)
+		};
 	}
 
 	[SharpFunction(Name = "fullalias", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -277,15 +269,7 @@ public partial class Functions
 			parser, executor, executor, obj, LocateFlags.All,
 			found =>
 			{
-				return ValueTask.FromResult(new CallState(
-					string.Join(" ", found switch
-					{
-						{ IsExit: true, AsExit: var exit } => exit.Aliases ?? [],
-						{ IsThing: true, AsThing: var thing } => thing.Aliases ?? [],
-						{ IsPlayer: true, AsPlayer: var player } => player.Aliases ?? [],
-						{ IsRoom: true, AsRoom: var room } => room.Aliases ?? [],
-						_ => throw new ArgumentOutOfRangeException()
-					})));
+				return ValueTask.FromResult(new CallState(string.Join(" ", found.Aliases)));
 			});
 	}
 
@@ -303,8 +287,8 @@ public partial class Functions
 				return ValueTask.FromResult(new CallState(
 					string.Join(" ", found switch
 					{
-						{ IsExit: true, AsExit: var exit } => [name, .. exit.Aliases ?? []],
-						_ => [name]
+						SharpExit exit => [name, .. exit.Aliases ?? []],
+						SharpPlayer or SharpRoom or SharpThing => [name]
 					})));
 			});
 	}
@@ -315,13 +299,10 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
-		if (split.IsT1)
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(arg0) is not { Object: var db, Attribute: var attr })
 		{
 			return string.Format(ErrorMessages.Returns.BadArgumentFormat, "getpids");
 		}
-
-		var (db, attr) = split.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, db, LocateFlags.All,
@@ -376,15 +357,11 @@ public partial class Functions
 			LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, toLocate.ToPlainText(),
 				LocateFlags.All);
 
-		if (maybeLocate.IsError)
+		return maybeLocate switch
 		{
-			return maybeLocate.AsError;
-		}
-
-		var located = maybeLocate.AsSharpObject;
-		var hasPower = await located.HasPower(power);
-
-		return new CallState(hasPower);
+			Error<CallState> error => error.Value,
+			AnySharpObject located => new CallState(await located.HasPower(power))
+		};
 	}
 
 	/// <summary>
@@ -414,20 +391,13 @@ public partial class Functions
 			LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, toLocate.ToPlainText(),
 				LocateFlags.All);
 
-		if (maybeLocate.IsError)
+		return maybeLocate switch
 		{
-			return maybeLocate.AsError;
-		}
-
-		if (typeQuery.Any(x => x is not "PLAYER" and not "THING" and not "ROOM" and not "EXIT"))
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchType);
-		}
-
-		var located = maybeLocate.AsSharpObject;
-		var hasType = typeQuery.Any(validType => located.HasType(validType));
-
-		return new CallState(hasType);
+			Error<CallState> error => error.Value,
+			AnySharpObject when typeQuery.Any(x => x is not "PLAYER" and not "THING" and not "ROOM" and not "EXIT")
+				=> new CallState(ErrorMessages.Returns.NoSuchType),
+			AnySharpObject located => new CallState(typeQuery.Any(validType => located.HasType(validType)))
+		};
 	}
 
 	[SharpFunction(Name = "iname", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -462,42 +432,43 @@ public partial class Functions
 				executor, executor, target.ToPlainText(),
 				LocateFlags.All);
 
-		if (maybeLocate.IsError)
+		return maybeLocate switch
 		{
-			return maybeLocate.AsError;
-		}
+			Error<CallState> error => error.Value,
+			AnySharpObject located => await PidsOf(located.Object().DBRef)
+		};
 
-		var located = maybeLocate.AsSharpObject;
-		var locationDBRef = located.Object().DBRef;
-
-		bool includeWait = queueTypes.Contains("WAIT");
-		bool includeSemaphore = queueTypes.Contains("SEMAPHORE");
-		bool independent = queueTypes.Contains("INDEPENDENT");
-
-		if (!includeWait && !includeSemaphore)
+		async ValueTask<CallState> PidsOf(DBRef locationDBRef)
 		{
-			includeWait = true;
-			includeSemaphore = true;
+			bool includeWait = queueTypes.Contains("WAIT");
+			bool includeSemaphore = queueTypes.Contains("SEMAPHORE");
+			bool independent = queueTypes.Contains("INDEPENDENT");
+
+			if (!includeWait && !includeSemaphore)
+			{
+				includeWait = true;
+				includeSemaphore = true;
+			}
+
+			var allPids = AsyncEnumerable.Empty<long>();
+
+			if (includeWait)
+			{
+				allPids = allPids.Concat(Mediator.CreateStream(new ScheduleDelayQuery(locationDBRef)));
+			}
+
+			if (includeSemaphore)
+			{
+				allPids = allPids.Concat(Mediator.CreateStream(new ScheduleSemaphoreQuery(locationDBRef)).Select(x => x.Pid));
+			}
+
+			// Note: INDEPENDENT filtering would require owner-based filtering
+			// Current implementation returns PIDs for the specific DBRef
+			// In PennMUSH, INDEPENDENT filters out tasks from objects with same owner but different DBRef
+			// This would require extending the query to check task executor owner vs target owner
+
+			return new CallState(string.Join(' ', await allPids.OrderBy(x => x).ToArrayAsync()));
 		}
-
-		var allPids = AsyncEnumerable.Empty<long>();
-
-		if (includeWait)
-		{
-			allPids = allPids.Concat(Mediator.CreateStream(new ScheduleDelayQuery(locationDBRef)));
-		}
-
-		if (includeSemaphore)
-		{
-			allPids = allPids.Concat(Mediator.CreateStream(new ScheduleSemaphoreQuery(locationDBRef)).Select(x => x.Pid));
-		}
-
-		// Note: INDEPENDENT filtering would require owner-based filtering
-		// Current implementation returns PIDs for the specific DBRef
-		// In PennMUSH, INDEPENDENT filters out tasks from objects with same owner but different DBRef
-		// This would require extending the query to check task executor owner vs target owner
-
-		return new CallState(string.Join(' ', await allPids.OrderBy(x => x).ToArrayAsync()));
 	}
 
 	[SharpFunction(Name = "lstats", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["type"])]
@@ -606,9 +577,9 @@ public partial class Functions
 				var monikerAttr = await AttributeService.GetAttributeAsync(
 					executor, found, "MONIKER", IAttributeService.AttributeMode.Read);
 
-				if (monikerAttr.IsAttribute)
+				if (monikerAttr is SharpAttribute[] chain)
 				{
-					var attr = monikerAttr.AsAttribute.Last();
+					var attr = chain.Last();
 					var attrValue = attr.Value.ToPlainText();
 					if (!string.IsNullOrWhiteSpace(attrValue))
 					{
@@ -645,8 +616,8 @@ public partial class Functions
 		var maybeObj2 = await LocateService.LocateAndNotifyIfInvalidWithCallState(
 			parser, executor, executor, obj2Arg, LocateFlags.All);
 
-		var obj1 = maybeObj1.IsError ? null : maybeObj1.AsSharpObject;
-		var obj2 = maybeObj2.IsError ? null : maybeObj2.AsSharpObject;
+		var obj1 = maybeObj1 is AnySharpObject found1 ? found1 : null;
+		var obj2 = maybeObj2 is AnySharpObject found2 ? found2 : null;
 
 		// controls() and nearby() are both false for NOTHING in Penn, so an argument that did not
 		// resolve simply contributes nothing to the gate rather than skipping it.
@@ -720,11 +691,11 @@ public partial class Functions
 		if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))
 		{
 			var maybeClass = await LocateService.Locate(parser, executor, executor, classArg, LocateFlags.All);
-			if (!maybeClass.IsValid())
+			if (maybeClass is not AnySharpObject classFound)
 			{
 				return new CallState(ErrorMessages.Returns.InvalidClass);
 			}
-			classObj = maybeClass.AsAnyObject;
+			classObj = classFound;
 		}
 
 		var results = Mediator.CreateStream(new GetAllObjectsQuery())

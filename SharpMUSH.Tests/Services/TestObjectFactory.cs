@@ -1,4 +1,3 @@
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using System.Collections.Immutable;
@@ -74,8 +73,8 @@ public class TestObjectFactory
 			Owner = new(async ct =>
 			{
 				await ValueTask.CompletedTask;
-				return _objects.TryGetValue(key, out var player) && player.IsPlayer
-					? player.AsPlayer
+				return _objects.TryGetValue(key, out var self) && self is SharpPlayer selfPlayer
+					? selfPlayer
 					: null!;
 			}),
 			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
@@ -132,7 +131,7 @@ public class TestObjectFactory
 			Owner = new(async ct =>
 			{
 				await ValueTask.CompletedTask;
-				return owner?.IsPlayer == true ? owner.AsPlayer : null!;
+				return owner is SharpPlayer ownerPlayer ? ownerPlayer : null!;
 			}),
 			Powers = new(() => AsyncEnumerable.Empty<SharpPower>()),
 			Attributes = new(() => AsyncEnumerable.Empty<SharpAttribute>()),

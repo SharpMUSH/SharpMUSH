@@ -4,6 +4,7 @@ using SharpMUSH.Client.Services;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Tests.BUnit.Services;
 
@@ -79,7 +80,7 @@ public class CharacterDirectoryServiceTests : TrackingTestContext
 
 		var result = await service.ListAsync();
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Error>();
 	}
 
 	[TUnit.Core.Test]
@@ -89,7 +90,7 @@ public class CharacterDirectoryServiceTests : TrackingTestContext
 
 		var result = await service.ListOnlineAsync();
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Error>();
 	}
 
 	[TUnit.Core.Test]
@@ -99,8 +100,8 @@ public class CharacterDirectoryServiceTests : TrackingTestContext
 
 		var result = await service.ResolveObjidAsync("Solitaire");
 
-		// The failed arm, not "no such character" — the two used to be the same null.
-		await Assert.That(result.IsT2).IsTrue();
+		// The failed arm, not "no such character": a read that failed says nothing about the name.
+		await Assert.That(result.Value).IsTypeOf<Error>();
 	}
 
 	[TUnit.Core.Test]
@@ -110,8 +111,7 @@ public class CharacterDirectoryServiceTests : TrackingTestContext
 
 		var result = await service.ResolveObjidAsync("sOlItAiRe");
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0).IsEqualTo("#11:1100");
+		await Assert.That(result.Value).IsEqualTo("#11:1100");
 	}
 
 	[TUnit.Core.Test]
@@ -121,7 +121,7 @@ public class CharacterDirectoryServiceTests : TrackingTestContext
 
 		var result = await service.ResolveObjidAsync("Nobody");
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[TUnit.Core.Test]

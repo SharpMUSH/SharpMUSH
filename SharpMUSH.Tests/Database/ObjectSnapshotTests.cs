@@ -5,8 +5,7 @@ using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Attributes;
@@ -27,12 +26,14 @@ public class ObjectSnapshotTests
 	public required ServerWebAppFactory Factory { get; init; }
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
 
+	private async Task<AnySharpObject> Node(DBRef dbref) => (await Get<IObjectStore>().GetObjectNodeAsync(dbref)).Expect<AnySharpObject>();
+
 	private async Task<(CapabilityActor Actor, DBRef Target, SharpPlayer Player)> Setup()
 	{
-		var player = (await Get<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await Get<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var actor = await Get<IAdministrativeCapabilityService>().GetGameActorAsync(player.Object.DBRef);
 		var target = await Get<IMediator>().Send(new CreateRoomCommand("snapshot-test-" + Guid.NewGuid().ToString("N"), player));
-		target = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().DBRef;
+		target = (await Node(target)).Object().DBRef;
 		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], MarkupText.Plain("original"), player));
 		return (actor!, target, player);
 	}
@@ -46,7 +47,7 @@ public class ObjectSnapshotTests
 		var service = Get<IObjectSnapshotService>();
 		var styled = MarkupText.Wrap(AnsiMarkup.Create(foreground: new AnsiColor.Standard(1, false)), MarkupText.Plain("original"));
 		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], styled, player));
-		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known;
+		var node = await Node(target);
 		await Get<IMediator>().Send(new SetLockCommand(node.Object(), "Basic", "#TRUE", player) { Flags = Library.Services.LockService.LockFlags.Visual });
 		await Get<IManipulateSharpObjectService>().SetOrUnsetFlag(player, node, "DARK", false);
 		var saved = await service.CaptureAsync(actor, target, "before edit");
@@ -59,7 +60,7 @@ public class ObjectSnapshotTests
 		await Assert.That(result.Completed).IsTrue();
 		var attribute = await Get<IAttributeStore>().GetAttributeAsync(target, ["DESC"]).LastAsync();
 		await Assert.That(MarkupTextSerializer.Serialize(attribute.Value)).IsEqualTo(MarkupTextSerializer.Serialize(styled));
-		var restored = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known;
+		var restored = await Node(target);
 		await Assert.That(restored.Object().Locks["Basic"].LockString).IsEqualTo("#TRUE");
 		await Assert.That(restored.Object().Locks["Basic"].Flags).IsEqualTo(Library.Services.LockService.LockFlags.Visual);
 		await Assert.That((await restored.Object().Flags.Value.ToListAsync()).Any(f => f.Name == "DARK")).IsTrue();
@@ -88,7 +89,7 @@ public class ObjectSnapshotTests
 		for (var i = 0; i < 3; i++) await service.CaptureAsync(actor, target, "version " + i, 2);
 		var history = await service.ListAsync(actor, target);
 		await Assert.That(history.Snapshots.Length).IsEqualTo(2);
-		var obj = (await Get<IObjectStore>().GetObjectNodeAsync(target)).AsRoom.Object;
+		var obj = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Expect<SharpRoom>().Object;
 		var persisted = await Get<IExpandedDataStore>().GetExpandedObjectData<SnapshotStorageRecord>(obj.Id!, ObjectSnapshotService.StorageKey);
 		await Assert.That(persisted!.History.Snapshots.Length).IsEqualTo(2);
 		var corrupt = history.Snapshots[0] with { Digest = "corrupt" };
@@ -116,7 +117,7 @@ public class ObjectSnapshotTests
 		var writes = 0;
 		failing.SetAttributeAsync(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<string>(), Arg.Any<MarkupText>())
 			.Returns(call => ++writes == 2
-				? ValueTask.FromException<OneOf<Success, Error<string>>>(new IOException("Injected failure"))
+				? ValueTask.FromException<Result<Success>>(new IOException("Injected failure"))
 				: realAttributes.SetAttributeAsync(call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(0), call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<MarkupText>(3)));
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
 			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), failing, Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
@@ -161,7 +162,7 @@ public class ObjectSnapshotTests
 	public async Task MissingLockReferencesAreRejectedBeforeRestore()
 	{
 		var (actor, target, _) = await Setup();
-		var obj = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object();
+		var obj = (await Node(target)).Object();
 		await Get<IObjectStore>().SetLockAsync(obj, "Basic", new SharpLockData("=#999999:1"));
 		var service = Get<IObjectSnapshotService>();
 		var saved = await service.CaptureAsync(actor, target, "missing reference");
@@ -173,7 +174,7 @@ public class ObjectSnapshotTests
 	public async Task RecoveryRemovesLockCreatedBeforeLaterFailure()
 	{
 		var (actor, target, player) = await Setup();
-		var obj = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object();
+		var obj = (await Node(target)).Object();
 		await Get<IMediator>().Send(new SetLockCommand(obj, "Basic", "#TRUE", player));
 		var real = Get<IObjectSnapshotService>();
 		var saved = await real.CaptureAsync(actor, target, "lock before");
@@ -188,13 +189,13 @@ public class ObjectSnapshotTests
 		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		var result = await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token);
 		await Assert.That(result.Completed).IsFalse();
-		await Assert.That((await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks.ContainsKey("Basic")).IsTrue();
+		await Assert.That((await Node(target)).Object().Locks.ContainsKey("Basic")).IsTrue();
 		await Get<IMediator>().Send(new SetLockCommand(obj, "Unrelated", "#FALSE", player));
 		await Assert.ThrowsAsync<SnapshotOperationException>(async () => await real.PreviewAsync(actor, target, result.RecoverySnapshotId, new([])));
 		var recovery = await real.PreviewAsync(actor, target, result.RecoverySnapshotId, selection);
 		await Assert.That((await real.RestoreAsync(actor, target, result.RecoverySnapshotId, selection, recovery.Token)).Completed).IsTrue();
-		await Assert.That((await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks.ContainsKey("Basic")).IsFalse();
-		await Assert.That((await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks["Unrelated"].LockString).IsEqualTo("#FALSE");
+		await Assert.That((await Node(target)).Object().Locks.ContainsKey("Basic")).IsFalse();
+		await Assert.That((await Node(target)).Object().Locks["Unrelated"].LockString).IsEqualTo("#FALSE");
 	}
 
 	[Test, NotInParallel]
@@ -202,7 +203,7 @@ public class ObjectSnapshotTests
 	{
 		var (actor, target, player) = await Setup();
 		await Get<IMediator>().Send(new SetAttributeCommand(target, ["BRANCH", "LEAF"], MarkupText.Plain("private"), player));
-		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known;
+		var node = await Node(target);
 		await Get<IAttributeService>().SetAttributeFlagsAsync(player, node, "BRANCH", ["MORTAL_DARK"]);
 		var saved = await Get<IObjectSnapshotService>().CaptureAsync(actor, target, "restricted branch");
 		await Assert.That(saved.Attributes.Single(a => a.Name == "BRANCH`LEAF").Ancestors.Any(a => a.Flags.Contains("mortal_dark", StringComparer.OrdinalIgnoreCase))).IsTrue();
@@ -281,7 +282,7 @@ public class ObjectSnapshotTests
 		var writes = 0;
 		var diagnosticWritesAfterCancellation = 0;
 		var attributes = Substitute.For<IAttributeService>();
-		async ValueTask<OneOf<Success, Error<string>>> WriteThenCancel(NSubstitute.Core.CallInfo call)
+		async ValueTask<Result<Success>> WriteThenCancel(NSubstitute.Core.CallInfo call)
 		{
 			var result = await Get<IAttributeService>().SetAttributeAsync(call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(0),
 				call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<MarkupText>(3));
@@ -324,7 +325,7 @@ public class ObjectSnapshotTests
 		var history = await Get<IObjectSnapshotService>().ListAsync(actor, target);
 		await Assert.That(history.Snapshots.Length).IsEqualTo(1);
 		await Assert.That(history.Snapshots[0].Description).IsEqualTo("game capture");
-		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object();
+		var node = (await Node(target)).Object();
 		await Get<IExpandedDataStore>().SetExpandedObjectData(node.Id!, ObjectSnapshotService.StorageKey, new SnapshotStorageRecord(history with { PendingRecoveryId = history.Snapshots[0].Id }));
 		await Factory.CommandParser.CommandParse(1, Get<IConnectionService>(), MarkupText.Plain($"@snapshot/resolve {target}={history.Snapshots[0].Id}"));
 		var resolved = await Get<IObjectSnapshotService>().ListAsync(actor, target);
@@ -336,7 +337,7 @@ public class ObjectSnapshotTests
 	public async Task RevocationAfterValueWriteStopsAttributeFlagMutation()
 	{
 		var (actor, target, player) = await Setup();
-		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known;
+		var node = await Node(target);
 		await Get<IMediator>().Send(new SetAttributeCommand(target, ["GUARDED"], MarkupText.Plain("saved"), player));
 		var realAttributes = Get<IAttributeService>();
 		await realAttributes.SetAttributeFlagsAsync(player, node, "GUARDED", ["VISUAL"]);
@@ -346,7 +347,7 @@ public class ObjectSnapshotTests
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
 		var attributes = Substitute.For<IAttributeService>();
-		async ValueTask<OneOf<Success, Error<string>>> RevokeAfterWrite(NSubstitute.Core.CallInfo call)
+		async ValueTask<Result<Success>> RevokeAfterWrite(NSubstitute.Core.CallInfo call)
 		{
 			var result = await realAttributes.SetAttributeAsync(call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(0), call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<MarkupText>(3));
 			capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
@@ -376,13 +377,13 @@ public class ObjectSnapshotTests
 	public async Task LockProtectionAddedDuringRestoreStopsTheLockMutation()
 	{
 		var (actor, target, player) = await Setup();
-		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known;
+		var node = await Node(target);
 		await Get<IMediator>().Send(new SetLockCommand(node.Object(), "Basic", "#TRUE", player));
 		var saved = await Get<IObjectSnapshotService>().CaptureAsync(actor, target, "before");
 		await Get<IMediator>().Send(new SetLockCommand(node.Object(), "Basic", "#FALSE", player));
 		var realAttributes = Get<IAttributeService>();
 		var attributes = Substitute.For<IAttributeService>();
-		async ValueTask<OneOf<Success, Error<string>>> ProtectAfterWrite(NSubstitute.Core.CallInfo call)
+		async ValueTask<Result<Success>> ProtectAfterWrite(NSubstitute.Core.CallInfo call)
 		{
 			var result = await realAttributes.SetAttributeAsync(call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(0), call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<MarkupText>(3));
 			await Get<IMediator>().Send(new SetLockCommand(node.Object(), "Basic", "#FALSE", player) { Flags = Library.Services.LockService.LockFlags.Locked });
@@ -394,7 +395,7 @@ public class ObjectSnapshotTests
 		var selection = new SnapshotSelection(["DESC"], Locks: true);
 		var preview = await service.PreviewAsync(actor, target, saved.Id, selection);
 		await Assert.That((await service.RestoreAsync(actor, target, saved.Id, selection, preview.Token)).Completed).IsFalse();
-		var current = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks["Basic"];
+		var current = (await Node(target)).Object().Locks["Basic"];
 		await Assert.That(current.LockString).IsEqualTo("#FALSE");
 		await Assert.That(current.Flags).IsEqualTo(Library.Services.LockService.LockFlags.Locked);
 	}
@@ -404,7 +405,7 @@ public class ObjectSnapshotTests
 	{
 		var (originalActor, target, _) = await Setup();
 		var original = await Get<IObjectSnapshotService>().CaptureAsync(originalActor, target, "old account recovery");
-		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object();
+		var node = (await Node(target)).Object();
 		await Get<IExpandedDataStore>().SetExpandedObjectData(node.Id!, ObjectSnapshotService.StorageKey, new SnapshotStorageRecord(new([original], original.Id)));
 		var actor = originalActor with { AccountId = "new-controller" };
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
@@ -435,7 +436,7 @@ public class ObjectSnapshotTests
 		var names = Enumerable.Range(0, 30).Select(i => "ATTR" + i.ToString("D3") + new string('X', 50)).ToArray();
 		foreach (var name in names) await Get<IMediator>().Send(new SetAttributeCommand(target, [name], MarkupText.Plain("saved"), player));
 		var saved = await service.CaptureAsync(actor, target, "saved");
-		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known;
+		var node = await Node(target);
 		foreach (var name in names) await Get<IAttributeService>().ClearAttributeAsync(player, node, name, IAttributeService.AttributePatternMode.Exact);
 		await Get<IMediator>().Send(new SetAttributeCommand(target, ["DESC"], MarkupText.Plain("x"), player));
 		var probe = await service.CaptureAsync(actor, target, "probe");
@@ -477,7 +478,7 @@ public class ObjectSnapshotTests
 	public async Task NestedRecoveryPreservesInheritedAbsentLockMarkers()
 	{
 		var (actor, target, player) = await Setup();
-		var obj = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object();
+		var obj = (await Node(target)).Object();
 		await Get<IMediator>().Send(new SetLockCommand(obj, "Basic", "#TRUE", player));
 		var real = Get<IObjectSnapshotService>();
 		var saved = await real.CaptureAsync(actor, target, "before");
@@ -499,7 +500,7 @@ public class ObjectSnapshotTests
 		await Get<IMediator>().Send(new SetLockCommand(obj, "Basic", "#TRUE", player));
 		var finalPreview = await real.PreviewAsync(actor, target, second.RecoverySnapshotId, selection);
 		await Assert.That((await real.RestoreAsync(actor, target, second.RecoverySnapshotId, selection, finalPreview.Token)).Completed).IsTrue();
-		await Assert.That((await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks.ContainsKey("Basic")).IsFalse();
+		await Assert.That((await Node(target)).Object().Locks.ContainsKey("Basic")).IsFalse();
 	}
 
 	/// <summary>
@@ -513,7 +514,7 @@ public class ObjectSnapshotTests
 	public async Task RecoveryKeepsALockAPreUpgradeSnapshotSpelledTheOldWay()
 	{
 		var (actor, target, player) = await Setup();
-		var obj = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object();
+		var obj = (await Node(target)).Object();
 		await Get<IMediator>().Send(new SetLockCommand(obj, nameof(LockType.Teleport), "#TRUE", player));
 		var real = Get<IObjectSnapshotService>();
 		var saved = await real.CaptureAsync(actor, target, "pre-upgrade spelling");
@@ -540,7 +541,7 @@ public class ObjectSnapshotTests
 		var recoverySelection = new SnapshotSelection(recovery.DefaultAttributes(), Locks: true, Name: true);
 		var recoveryPreview = await real.PreviewAsync(actor, target, recovery.Id, recoverySelection);
 		await Assert.That((await real.RestoreAsync(actor, target, recovery.Id, recoverySelection, recoveryPreview.Token)).Completed).IsTrue();
-		var locks = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Locks;
+		var locks = (await Node(target)).Object().Locks;
 		await Assert.That(locks.ContainsKey(nameof(LockType.Teleport))).IsTrue()
 			.Because("recovery must put the lock back, not delete it");
 		await Assert.That(locks[nameof(LockType.Teleport)].LockString).IsEqualTo("#FALSE");
@@ -550,7 +551,7 @@ public class ObjectSnapshotTests
 	private async Task RespellStoredLockAsync(DBRef target, string snapshotId, string from, string to)
 	{
 		var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-		var id = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known.Object().Id!;
+		var id = (await Node(target)).Object().Id!;
 		var stored = await Get<IExpandedDataStore>().GetExpandedObjectData<SnapshotStorageRecord>(id, ObjectSnapshotService.StorageKey)
 			?? throw new InvalidOperationException("The snapshot history was not stored.");
 		var rewritten = stored.History.Snapshots.Select(snapshot =>
@@ -602,7 +603,7 @@ public class ObjectSnapshotTests
 	public async Task HistoryReusesCurrentAttributeReadsWithinOneRequest()
 	{
 		var (actor, target, player) = await Setup();
-		var node = (await Get<IObjectStore>().GetObjectNodeAsync(target)).Known;
+		var node = await Node(target);
 		await Get<IAttributeService>().SetAttributeFlagAsync(player, node, "DESC", "VISUAL");
 		for (var i = 0; i < 3; i++) await Get<IObjectSnapshotService>().CaptureAsync(actor, target, "version " + i);
 		var reads = 0;

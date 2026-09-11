@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
@@ -53,18 +54,16 @@ public static class EditWiki
 			title, contentArg.ToPlainText(), WikiCommandHelper.EditorDbref(executor), ns, category,
 			localization.DefaultLocale);
 
-		return await result.Match(
-			async page =>
-			{
-				await notifyService.Notify(executor,
-					$"WIKI: Created page '{page.Title}' ({WikiCommandHelper.DisplayReference(page)}).", executor);
-				return MarkupText.Plain(page.Slug);
-			},
-			async err =>
-			{
-				await notifyService.Notify(executor, $"WIKI: {err.Value}", executor);
-				return MarkupText.Plain($"#-1 {err.Value.ToUpperInvariant()}");
-			});
+		var (message, returned) = result switch
+		{
+			WikiPage page => (
+				$"WIKI: Created page '{page.Title}' ({WikiCommandHelper.DisplayReference(page)}).",
+				MarkupText.Plain(page.Slug)),
+			Error<string> err => ($"WIKI: {err.Value}", MarkupText.Plain($"#-1 {err.Value.ToUpperInvariant()}"))
+		};
+
+		await notifyService.Notify(executor, message, executor);
+		return returned;
 	}
 
 	public static async ValueTask<MString> Rollback(
@@ -84,22 +83,19 @@ public static class EditWiki
 			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
-		if (lookup.IsT1)
+		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
-		var page = lookup.AsT0;
 		if (!await WikiCommandHelper.CanEdit(executor, page))
 		{
 			await notifyService.Notify(executor, $"WIKI: '{page.Title}' is protected. Only wizards may edit it.", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var revisionLookup = await wikiService.GetRevisionAsync(page.Id, revisionNumber);
-		if (revisionLookup.IsT1)
+		if (await wikiService.GetRevisionAsync(page.Id, revisionNumber) is not WikiRevision revision)
 		{
 			await notifyService.Notify(executor, $"WIKI: '{page.Title}' has no revision r{revisionNumber}.", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
@@ -108,21 +104,18 @@ public static class EditWiki
 		// A rollback is a normal edit — it creates a NEW revision, so history
 		// is preserved and the rollback itself can be rolled back.
 		var result = await wikiService.UpdateAsync(
-			page.Id, revisionLookup.AsT0.MarkdownSource, WikiCommandHelper.EditorDbref(executor),
+			page.Id, revision.MarkdownSource, WikiCommandHelper.EditorDbref(executor),
 			$"rollback to r{revisionNumber} via @wiki/rollback");
 
-		return await result.Match(
-			async updated =>
-			{
-				await notifyService.Notify(executor,
-					$"WIKI: Restored '{updated.Title}' to r{revisionNumber} (now rev {updated.RevisionNumber}).", executor);
-				return MarkupText.Plain(updated.Slug);
-			},
-			async _ =>
-			{
-				await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
-				return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
-			});
+		if (result is not WikiPage updated)
+		{
+			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
+		}
+
+		await notifyService.Notify(executor,
+			$"WIKI: Restored '{updated.Title}' to r{revisionNumber} (now rev {updated.RevisionNumber}).", executor);
+		return MarkupText.Plain(updated.Slug);
 	}
 
 	public static async ValueTask<MString> Edit(
@@ -137,14 +130,12 @@ public static class EditWiki
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(targetArg.ToPlainText());
 
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
-		if (lookup.IsT1)
+		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
 
-		var page = lookup.AsT0;
 		if (!await WikiCommandHelper.CanEdit(executor, page))
 		{
 			await notifyService.Notify(executor, $"WIKI: '{page.Title}' is protected. Only wizards may edit it.", executor);
@@ -159,18 +150,15 @@ public static class EditWiki
 		var result = await wikiService.UpdateAsync(
 			page.Id, newContent, WikiCommandHelper.EditorDbref(executor), summary);
 
-		return await result.Match(
-			async updated =>
-			{
-				await notifyService.Notify(executor,
-					$"WIKI: {(append ? "Appended to" : "Updated")} '{updated.Title}' (now rev {updated.RevisionNumber}).", executor);
-				return MarkupText.Plain(updated.Slug);
-			},
-			async _ =>
-			{
-				await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
-				return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
-			});
+		if (result is not WikiPage updated)
+		{
+			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
+		}
+
+		await notifyService.Notify(executor,
+			$"WIKI: {(append ? "Appended to" : "Updated")} '{updated.Title}' (now rev {updated.RevisionNumber}).", executor);
+		return MarkupText.Plain(updated.Slug);
 	}
 
 	/// <summary>
@@ -193,24 +181,34 @@ public static class EditWiki
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
-		var split = WikiCommandHelper.SplitLocaleTarget(targetArg.ToPlainText());
-		if (split.IsT1)
+		return WikiCommandHelper.SplitLocaleTarget(targetArg.ToPlainText()) switch
 		{
-			await notifyService.Notify(executor, $"WIKI: {split.AsT1.Value}", executor);
-			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
-		}
+			WikiCommandHelper.LocaleTarget target =>
+				await WriteTranslation(wikiService, localization, notifyService, executor, target, contentArg),
+			Error<string> splitError => await RefuseTranslateTarget(notifyService, executor, splitError.Value),
+		};
+	}
 
-		var (pageTarget, locale) = split.AsT0;
+	/// <summary>
+	/// Writes the translation <see cref="Translate"/> was asked for, once its target has split into a page
+	/// and a canonical locale.
+	/// </summary>
+	private static async ValueTask<MString> WriteTranslation(
+		IWikiService wikiService,
+		IWikiLocalizationService localization,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		WikiCommandHelper.LocaleTarget target,
+		MString contentArg)
+	{
+		var (pageTarget, locale) = target;
 		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(pageTarget);
 
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
-		if (lookup.IsT1)
+		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {pageTarget}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
-
-		var page = lookup.AsT0;
 
 		// A translation is an edit to the page, gated exactly as one — the same rule the API's
 		// PUT .../translations/{locale} applies, and no new permission of its own.
@@ -232,42 +230,45 @@ public static class EditWiki
 		// The compare-and-swap baseline is the row as it stands right now, which is the closest thing a
 		// one-shot command has to the web editor's "revision I loaded". Passing null instead would make
 		// every write after the first an AlreadyExists conflict, i.e. a translation nobody could ever update.
-		var existing = await wikiService.GetTranslationAsync(page.Id, locale);
-		var expectedRevision = existing.IsT0 ? existing.AsT0.RevisionNumber : (int?)null;
+		var existing = await wikiService.GetTranslationAsync(page.Id, locale) is WikiTranslation row ? row : null;
+		var expectedRevision = existing?.RevisionNumber;
 
 		// Title and Published belong to the translation, and this command supplies neither: an existing row
 		// keeps both, so an in-game body edit cannot silently retitle or publish what the web is drafting.
 		// A brand-new row is born published — @wiki has no per-translation publish switch, so a draft created
 		// here would be invisible to every in-game reader including its author, with no way to reveal it. The
 		// page's own draft state still hides the whole page either way.
-		var title = existing.IsT0 ? existing.AsT0.Title : page.Title;
-		var published = !existing.IsT0 || existing.AsT0.Published;
+		var title = existing?.Title ?? page.Title;
+		var published = existing?.Published ?? true;
 
 		var result = await wikiService.UpsertTranslationAsync(
 			page.Id, locale, title, contentArg.ToPlainText(), WikiCommandHelper.EditorDbref(executor),
 			"translated in-game via @wiki/translate", published, expectedRevision);
 
-		return await result.Match(
-			async translation =>
-			{
-				await notifyService.Notify(executor,
-					$"WIKI: Wrote the {translation.Locale} translation of '{page.Title}' (now rev {translation.RevisionNumber}).",
-					executor);
-				return MarkupText.Plain(page.Slug);
-			},
-			async conflict =>
-			{
-				// A lost race, never a retry: re-reading the winner's revision and writing again would put
-				// this translator's stale prose on top of theirs, which is the loss the compare-and-swap
-				// exists to prevent. The text stays in the player's scrollback to be re-applied by hand.
-				await notifyService.Notify(executor, $"WIKI: {ConflictMessage(conflict, locale, page.Title)}", executor);
-				return MarkupText.Plain(ErrorMessages.Returns.WikiWriteConflict);
-			},
-			async err =>
-			{
-				await notifyService.Notify(executor, $"WIKI: {err.Value}", executor);
-				return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
-			});
+		var (message, returned) = result switch
+		{
+			WikiTranslation translation => (
+				$"WIKI: Wrote the {translation.Locale} translation of '{page.Title}' (now rev {translation.RevisionNumber}).",
+				MarkupText.Plain(page.Slug)),
+			// A lost race, never a retry: re-reading the winner's revision and writing again would put
+			// this translator's stale prose on top of theirs, which is the loss the compare-and-swap
+			// exists to prevent. The text stays in the player's scrollback to be re-applied by hand.
+			WikiWriteConflict conflict => (
+				$"WIKI: {ConflictMessage(conflict, locale, page.Title)}",
+				MarkupText.Plain(ErrorMessages.Returns.WikiWriteConflict)),
+			Error<string> err => ($"WIKI: {err.Value}", MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand))
+		};
+
+		await notifyService.Notify(executor, message, executor);
+		return returned;
+	}
+
+	/// <summary>Tells the executor why a <c>@wiki/translate</c> target names no page and locale.</summary>
+	private static async ValueTask<MString> RefuseTranslateTarget(
+		INotifyService notifyService, AnySharpObject executor, string reason)
+	{
+		await notifyService.Notify(executor, $"WIKI: {reason}", executor);
+		return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 	}
 
 	/// <summary>

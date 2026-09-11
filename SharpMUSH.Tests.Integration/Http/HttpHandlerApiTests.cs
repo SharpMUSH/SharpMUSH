@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -26,11 +27,11 @@ public class HttpHandlerApiTests(ServerWebAppFactory factory)
 		var mediator = factory.Services.GetRequiredService<IMediator>();
 		var attributeService = factory.Services.GetRequiredService<IAttributeService>();
 
-		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1, null)))).Known;
-		var handler = (await mediator.Send(new GetObjectNodeQuery(new DBRef(8, null)))).Known;
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1, null)))).Expect<AnySharpObject>();
+		var handler = (await mediator.Send(new GetObjectNodeQuery(new DBRef(8, null)))).Expect<AnySharpObject>();
 
 		var result = await attributeService.SetAttributeAsync(god, handler, method, MarkupText.Plain(commandList));
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 	}
 
 	[Test]

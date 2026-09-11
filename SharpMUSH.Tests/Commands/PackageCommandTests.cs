@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -34,9 +33,8 @@ public class PackageCommandTests
 	private async Task ExpectNotify(DBRef player, string contains)
 		=> await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains(contains)) ||
-				(msg.IsT1 && msg.AsT1.Contains(contains))), TestHelpers.MatchingObject(player),
+			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, contains)), TestHelpers.MatchingObject(player),
 				INotifyService.NotificationType.Announce);
 
 	/// <summary>Asserts a single notify whose message contains every fragment. The manifest / scan
@@ -45,23 +43,21 @@ public class PackageCommandTests
 	private async Task ExpectNotifyAll(DBRef player, params string[] contains)
 		=> await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
 				contains.All(c => MessageContains(msg, c))), TestHelpers.MatchingObject(player),
 				INotifyService.NotificationType.Announce);
 
 	/// <summary>Creates a Thing owned by, and located in, the PM wizard (#7) — mirrors the authoring service tests.</summary>
 	private async Task<DBRef> CreateThingAsync(string name)
 	{
-		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Known();
-		var pm = pmNode.Match(p => p, _ => null!, _ => null!, _ => null!);
-		var location = pmNode.Match<AnySharpContainer>(p => p, _ => null!, _ => null!, t => t);
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
+		AnySharpContainer location = pm;
 		return await Database.CreateThingAsync(name, location, pm, location);
 	}
 
 	private async Task SetAttrAsync(DBRef target, string attr, string value)
 	{
-		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Known()
-			.Match(p => p, _ => null!, _ => null!, _ => null!);
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(target, [attr], MarkupText.Plain(value), pm);
 	}
 
@@ -135,7 +131,7 @@ public class PackageCommandTests
 		// VEILED one entirely — matching what @decompile would show.
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(god), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(god), Arg.Is<SharpMessage>(msg =>
 				MessageContains(msg, "----- BEGIN package.yaml -----") &&
 				MessageContains(msg, "PUBLICATTR") &&
 				!MessageContains(msg, "SECRETATTR") &&
@@ -143,9 +139,8 @@ public class PackageCommandTests
 				TestHelpers.MatchingObject(god), INotifyService.NotificationType.Announce);
 	}
 
-	private static bool MessageContains(OneOf<MString, string> msg, string contains)
-		=> (msg.IsT0 && msg.AsT0.ToString().Contains(contains)) ||
-			 (msg.IsT1 && msg.AsT1.Contains(contains));
+	private static bool MessageContains(SharpMessage msg, string contains)
+		=> TestHelpers.MessagePlainTextContains(msg, contains);
 
 	[Test]
 	public async ValueTask Package_InvalidPackageId_IsRejected()

@@ -45,6 +45,9 @@ public static class PluginLoaderService
 		typeof(PluginManifest),
 		typeof(PluginBase),
 		typeof(Option<CallState>),
+		// Option<T>'s None case lives in SharpMUSH.Contracts rather than Library; sharing it keeps a
+		// plugin's Option<CallState> values the host's.
+		typeof(None),
 		// Phase 2a contribution surfaces — must unify so the catalog's pattern-matches against the
 		// plugin's loaded instance see the host's interface types.
 		typeof(IServiceRegistrar),

@@ -21,20 +21,21 @@ public class DebugOwnerCancellationTests
 	public async Task DebugOwnerReadUsesCurrentLifetime(bool substitution)
 	{
 		var executor = new TestObjectFactory().CreatePlayer(15, "debug executor");
+		var executorPlayer = executor.Expect<SharpPlayer>();
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var release = new CancellationTokenSource();
-		executor.AsPlayer.Object.Owner = new(async token =>
+		executorPlayer.Object.Owner = new(async token =>
 		{
 			entered.TrySetResult();
 			using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, release.Token);
 			await Task.Delay(Timeout.Infinite, linked.Token);
-			return executor.AsPlayer;
+			return executorPlayer;
 		});
 		var mediator = Substitute.For<IMediator>();
-		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(executor.AsPlayer));
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(executor));
 		var notify = Substitute.For<INotifyService>();
 		var parser = Substitute.For<IMUSHCodeParser>();
-		var state = ParserState.RootFor(executor.AsPlayer.Object.DBRef) with { Flags = ParserStateFlags.Debug };
+		var state = ParserState.RootFor(executor.Object().DBRef) with { Flags = ParserStateFlags.Debug };
 		parser.CurrentState.Returns(state);
 		using var request = new CancellationTokenSource();
 		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, request.Token);

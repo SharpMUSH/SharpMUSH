@@ -1,6 +1,4 @@
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -32,7 +30,7 @@ public sealed class LockEvaluationServices(
 	/// and a non-matching result both deny, but only one of them says the game is broken, and a caller
 	/// that wants to treat them differently needs to be able to.
 	/// </remarks>
-	public async ValueTask<OneOf<string, LockEvaluationFailure>> EvaluateAttributeAsync(AnySharpObject gated, AnySharpObject unlocker, string attributeName)
+	public async ValueTask<LockEvaluation> EvaluateAttributeAsync(AnySharpObject gated, AnySharpObject unlocker, string attributeName)
 	{
 		// PennMUSH: call_ufun(&ufun, buff, player, player, pe_info, NULL)
 		// where player = unlocker, and the attribute is on the gated object.

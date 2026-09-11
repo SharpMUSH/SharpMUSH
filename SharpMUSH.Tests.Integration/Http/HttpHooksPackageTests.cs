@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Net;
@@ -23,8 +24,8 @@ public class HttpHooksPackageTests(ServerWebAppFactory factory)
 	{
 		var http = await Registry.GetInstalledPackageAsync("http-handler");
 		var profile = await Registry.GetInstalledPackageAsync("profile-handler");
-		await Assert.That(http.IsT0).IsTrue();
-		await Assert.That(profile.IsT0).IsTrue();
+		await Assert.That(http.Value).IsTypeOf<InstalledPackageRecord>();
+		await Assert.That(profile.Value).IsTypeOf<InstalledPackageRecord>();
 
 		await Assert.That((await Registry.GetPackageObjectsAsync("http-handler")).Count).IsEqualTo(0);
 		await Assert.That((await Registry.GetPackageObjectsAsync("profile-handler")).Count).IsEqualTo(0);

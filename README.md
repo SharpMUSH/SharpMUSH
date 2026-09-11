@@ -41,7 +41,7 @@ For information on setting up automatic DockerHub publishing when new versions a
 
 # Quick Contribution Guide
 ## How to Build and Test
-- Install [.NET 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) — SDK 10.0.400 or newer, as pinned in `global.json`
+- Install [.NET 11](https://dotnet.microsoft.com/en-us/download/dotnet/11.0) — SDK 11.0.100-rc.1 or newer, as pinned in `global.json`
 - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 Build with:

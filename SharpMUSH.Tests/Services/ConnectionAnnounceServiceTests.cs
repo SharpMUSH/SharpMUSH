@@ -1,8 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
@@ -214,7 +212,7 @@ public class ConnectionAnnounceServiceTests
 
 		await communicationService.Received(1).SendToRoomAsync(
 			player, player.AsContainer,
-			Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+			Arg.Any<Func<AnySharpObject, SharpMessage>>(),
 			INotifyService.NotificationType.Announce,
 			null, null);
 
@@ -268,7 +266,7 @@ public class ConnectionAnnounceServiceTests
 			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
 		mediator.CreateStream(
 				Arg.Is<GetContentsQuery>(q =>
-					q.DBRef.Match(d => d, c => c.Object().DBRef).Number == masterRoom.Object.Key),
+					ContainerNumber(q.DBRef) == masterRoom.Object.Key),
 				Arg.Any<CancellationToken>())
 			.Returns(_ => new[] { hookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
 		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
@@ -323,7 +321,7 @@ public class ConnectionAnnounceServiceTests
 			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
 		mediator.CreateStream(
 				Arg.Is<GetContentsQuery>(q =>
-					q.DBRef.Match(d => d, c => c.Object().DBRef).Number == masterRoom.Object.Key),
+					ContainerNumber(q.DBRef) == masterRoom.Object.Key),
 				Arg.Any<CancellationToken>())
 			.Returns(_ => new[] { throwingHookTarget, laterHookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
 		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
@@ -469,7 +467,7 @@ public class ConnectionAnnounceServiceTests
 		var communicationService = Substitute.For<ICommunicationService>();
 		communicationService.SendToRoomAsync(
 				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpContainer>(),
-				Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+				Arg.Any<Func<AnySharpObject, SharpMessage>>(),
 				Arg.Any<INotifyService.NotificationType>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<IEnumerable<AnySharpObject>?>())
 			.Returns(_ => throw new InvalidOperationException("boom"));
@@ -505,7 +503,7 @@ public class ConnectionAnnounceServiceTests
 		var communicationService = Substitute.For<ICommunicationService>();
 		communicationService.SendToRoomAsync(
 				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpContainer>(),
-				Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+				Arg.Any<Func<AnySharpObject, SharpMessage>>(),
 				Arg.Any<INotifyService.NotificationType>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<IEnumerable<AnySharpObject>?>())
 			.Returns(_ => throw new InvalidOperationException("boom"));
@@ -546,7 +544,7 @@ public class ConnectionAnnounceServiceTests
 		var communicationService = Substitute.For<ICommunicationService>();
 		communicationService.SendToRoomAsync(
 				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpContainer>(),
-				Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+				Arg.Any<Func<AnySharpObject, SharpMessage>>(),
 				Arg.Any<INotifyService.NotificationType>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<IEnumerable<AnySharpObject>?>())
 			.Returns(_ => throw new InvalidOperationException("boom"));
@@ -580,7 +578,7 @@ public class ConnectionAnnounceServiceTests
 		var communicationService = Substitute.For<ICommunicationService>();
 		communicationService.SendToRoomAsync(
 				Arg.Any<AnySharpObject>(), Arg.Any<AnySharpContainer>(),
-				Arg.Any<Func<AnySharpObject, OneOf<MString, string>>>(),
+				Arg.Any<Func<AnySharpObject, SharpMessage>>(),
 				Arg.Any<INotifyService.NotificationType>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<IEnumerable<AnySharpObject>?>())
 			.Returns(_ => throw new InvalidOperationException("boom"));
@@ -783,4 +781,14 @@ public class ConnectionAnnounceServiceTests
 
 		await mediator.DidNotReceive().Publish(Arg.Any<ChannelMessageNotification>(), Arg.Any<CancellationToken>());
 	}
+
+	/// <summary>
+	/// The number of the container a contents query is for, whether it was given by reference or already
+	/// loaded. A matcher lambda is an expression tree, which cannot hold the switch this needs.
+	/// </summary>
+	private static int ContainerNumber(DbRefOrContainer container) => container switch
+	{
+		DBRef dbref => dbref.Number,
+		AnySharpContainer loaded => loaded.Object().DBRef.Number
+	};
 }

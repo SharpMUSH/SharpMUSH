@@ -53,9 +53,9 @@ public partial class Functions
 		AnySharpObject player,
 		string folder,
 		int messageIndex)
-	{
-		return await Mediator.Send(new GetMailQuery(player.AsPlayer, messageIndex, folder));
-	}
+		=> player is SharpPlayer mailbox
+			? await Mediator.Send(new GetMailQuery(mailbox, messageIndex, folder))
+			: null;
 
 	/// <summary>
 	/// Result of parsing player and message arguments
@@ -94,20 +94,13 @@ public partial class Functions
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText()!;
-		var locateResult = await LocateService.LocateAndNotifyIfInvalid(
-			parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-
-		if (locateResult.IsError)
+		return await LocateService.LocateAndNotifyIfInvalid(
+				parser, executor, executor, playerArg, LocateFlags.PlayersPreference) switch
 		{
-			return PlayerMessageResult.FromError(locateResult.AsError.Value);
-		}
-
-		if (locateResult.IsNone)
-		{
-			return PlayerMessageResult.FromError(ErrorMessages.Returns.NoSuchPlayer);
-		}
-
-		return PlayerMessageResult.Success(locateResult.AsPlayer, args["1"].Message!.ToPlainText());
+			AnySharpObject and SharpPlayer player => PlayerMessageResult.Success(player, args["1"].Message!.ToPlainText()),
+			AnySharpObject or None => PlayerMessageResult.FromError(ErrorMessages.Returns.NoSuchPlayer),
+			Error<string> error => PlayerMessageResult.FromError(error.Value)
+		};
 	}
 
 	/// <summary>
@@ -124,6 +117,12 @@ public partial class Functions
 		public int Unread => Total - Read;
 	}
 
+	/// <summary>What has arrived in a mailbox. Only a player has one; anything else has received nothing.</summary>
+	private ValueTask<MailTally> ReceivedTally(AnySharpObject target)
+		=> target is SharpPlayer mailbox
+			? TallyMail(Mediator.CreateStream(new GetAllMailListQuery(mailbox)))
+			: ValueTask.FromResult(new MailTally());
+
 	private static ValueTask<MailTally> TallyMail(IAsyncEnumerable<SharpMail> mail)
 		=> mail.AggregateAsync(new MailTally(), (tally, m) => new MailTally(
 			tally.Total + 1,
@@ -139,8 +138,10 @@ public partial class Functions
 
 		if (args.Count == 0 || (args.Count == 1 && string.IsNullOrWhiteSpace(args["0"].Message?.ToPlainText())))
 		{
-			var allMail = Mediator.CreateStream(new GetAllMailListQuery(executor.AsPlayer));
-			var count = await allMail.CountAsync();
+			// Only a player has a mailbox; anything else holds no mail.
+			var count = executor is SharpPlayer mailbox
+				? await Mediator.CreateStream(new GetAllMailListQuery(mailbox)).CountAsync()
+				: 0;
 			return new CallState(count.ToString());
 		}
 
@@ -159,7 +160,12 @@ public partial class Functions
 				parser, executor, executor, arg0, LocateFlags.PlayersPreference,
 				async target =>
 				{
-					var tally = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer)));
+					if (target is not SharpPlayer mailbox)
+					{
+						return new CallState(ErrorMessages.Returns.NoSuchPlayer);
+					}
+
+					var tally = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(mailbox)));
 					return new CallState($"{tally.Read} {tally.Unread} {tally.Cleared}");
 				});
 		}
@@ -192,6 +198,11 @@ public partial class Functions
 			parser, executor, executor, arg0, LocateFlags.PlayersPreference,
 			async target =>
 			{
+				if (target is not SharpPlayer)
+				{
+					return new CallState(ErrorMessages.Returns.NoSuchPlayer);
+				}
+
 				var (folder, messageIndex) = await ParseMessageSpec(parser, target, arg1);
 				if (messageIndex < 0)
 				{
@@ -251,31 +262,40 @@ public partial class Functions
 			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
 
-			if (locateResult.IsError || locateResult.IsNone)
+			if (locateResult is not (AnySharpObject and SharpPlayer located))
 			{
 				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
-			targetPlayer = locateResult.AsPlayer;
+			targetPlayer = located;
 			messageListSpec = args["1"].Message?.ToPlainText();
+		}
+
+		// Only a player has a mailbox; anything else holds no mail.
+		if (targetPlayer is not SharpPlayer mailbox)
+		{
+			return new CallState(string.Empty);
 		}
 
 		var msgListArg = messageListSpec != null ? MarkupText.Plain(messageListSpec) : null;
 		var filteredList = await MessageListHelper.Handle(
 			parser, ObjectDataService, Mediator, NotifyService, msgListArg, targetPlayer);
 
-		if (filteredList.IsError)
+		return filteredList switch
 		{
-			return new CallState("#-1 " + filteredList.AsError);
-		}
+			Error<string> error => new CallState("#-1 " + error.Value),
+			IAsyncEnumerable<SharpMail> mailList => await MailPositions(mailbox, mailList)
+		};
+	}
 
-		var mailList = filteredList.AsMailList;
-
+	/// <summary>Each message's <c>folder:position</c>, which is how <c>@mail</c> names it.</summary>
+	private async ValueTask<CallState> MailPositions(SharpPlayer mailbox, IAsyncEnumerable<SharpMail> mailList)
+	{
 		var results = new List<string>();
 		await foreach (var mail in mailList)
 		{
 			// The message's 1-based position within its folder, which is how @mail names it.
-			var position = await Mediator.CreateStream(new GetMailListQuery(targetPlayer.AsPlayer, mail.Folder))
+			var position = await Mediator.CreateStream(new GetMailListQuery(mailbox, mail.Folder))
 				.Select((m, index) => (m.Id, Position: index + 1))
 				.Where(x => x.Id == mail.Id)
 				.Select(x => x.Position)
@@ -355,19 +375,19 @@ public partial class Functions
 			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
 
-			if (locateResult.IsError || locateResult.IsNone)
+			if (locateResult is not (AnySharpObject and SharpPlayer located))
 			{
 				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
-			target = locateResult.AsPlayer;
+			target = located;
 		}
 
-		var allSentMail = Mediator.CreateStream(new GetAllSentMailListQuery(target.Object()));
-		var allReceivedMail = Mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer));
-
-		var sentCount = await allSentMail.CountAsync();
-		var receivedCount = await allReceivedMail.CountAsync();
+		var sentCount = await Mediator.CreateStream(new GetAllSentMailListQuery(target.Object())).CountAsync();
+		// Only a player has a mailbox; anything else has received nothing.
+		var receivedCount = target is SharpPlayer mailbox
+			? await Mediator.CreateStream(new GetAllMailListQuery(mailbox)).CountAsync()
+			: 0;
 
 		return new CallState($"{sentCount} {receivedCount}");
 	}
@@ -394,16 +414,16 @@ public partial class Functions
 			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
 
-			if (locateResult.IsError || locateResult.IsNone)
+			if (locateResult is not (AnySharpObject and SharpPlayer located))
 			{
 				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
-			target = locateResult.AsPlayer;
+			target = located;
 		}
 
 		var sent = await TallyMail(Mediator.CreateStream(new GetAllSentMailListQuery(target.Object())));
-		var received = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer)));
+		var received = await ReceivedTally(target);
 
 		return new CallState($"{sent.Total} {sent.Unread} {sent.Cleared} {received.Total} {received.Unread} {received.Cleared}");
 	}
@@ -430,16 +450,16 @@ public partial class Functions
 			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
 
-			if (locateResult.IsError || locateResult.IsNone)
+			if (locateResult is not (AnySharpObject and SharpPlayer located))
 			{
 				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 			}
 
-			target = locateResult.AsPlayer;
+			target = located;
 		}
 
 		var sent = await TallyMail(Mediator.CreateStream(new GetAllSentMailListQuery(target.Object())));
-		var received = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(target.AsPlayer)));
+		var received = await ReceivedTally(target);
 
 		return new CallState($"{sent.Total} {sent.Unread} {sent.Cleared} {sent.Bytes} {received.Total} {received.Unread} {received.Cleared} {received.Bytes}");
 	}

@@ -28,17 +28,23 @@ public static class ChannelEmit
 		MString channelName,
 		MString message,
 		bool spoof)
-	{
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(permissionService, mediator,
-			notifyService, executor, channelName, notify: true);
-
-		if (maybeChannel.IsError)
+		=> await ChannelHelper.GetVisibleChannelOrError(permissionService, mediator,
+				notifyService, executor, channelName, notify: true) switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await EmitAsync(permissionService, mediator, notifyService, executor, channel, message,
+				spoof),
+			Error<CallState> error => error.Value
+		};
 
-		var channel = maybeChannel.AsChannel;
-
+	private static async ValueTask<CallState> EmitAsync(
+		IPermissionService permissionService,
+		IMediator mediator,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		SharpChannel channel,
+		MString message,
+		bool spoof)
+	{
 		var check = await ChannelHelper.CemitRefusal(permissionService, executor, channel);
 		if (check.Refused)
 		{

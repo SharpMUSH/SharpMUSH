@@ -30,14 +30,15 @@ public sealed class VisibleWorldProjection(IAdministrativeCapabilityService capa
 	{
 		if (actor.ActiveCharacter is not { IsObjid: true } character || actor.Executor != character
 			|| await capabilities.GetGameActorAsync(character, ct) != actor) return null;
-		var result = await mediator.Send(new GetObjectNodeQuery(character), ct);
-		return result.IsPlayer && result.AsPlayer.Object.DBRef == character ? result.AsPlayer : null;
+		return await mediator.Send(new GetObjectNodeQuery(character), ct) is AnySharpObject and SharpPlayer player
+			&& player.Object.DBRef == character
+				? player
+				: null;
 	}
 
 	private async ValueTask<AnySharpContainer?> CurrentLocationAsync(SharpPlayer player, CancellationToken ct)
 	{
-		var location = await mediator.Send(new GetLocationQuery(player.Object.DBRef), ct);
-		return location.IsNone ? null : location.WithoutNone();
+		return await mediator.Send(new GetLocationQuery(player.Object.DBRef), ct) is AnySharpContainer location ? location : null;
 	}
 
 	private async ValueTask<AnySharpContainer?> VisibleLocationAsync(SharpPlayer player, CancellationToken ct)
@@ -62,8 +63,7 @@ public sealed class VisibleWorldProjection(IAdministrativeCapabilityService capa
 		if (!room.IsObjid || !source.IsObjid || !Enum.IsDefined(type)
 			|| await ResolveCharacterAsync(actor, ct) is not { } player) return false;
 		if (await CurrentLocationAsync(player, ct) is not { } location || location.Object().DBRef != room) return false;
-		var sender = await mediator.Send(new GetObjectNodeQuery(source), ct);
-		if (sender.IsNone || sender.Known.Object().DBRef != source
+		if (await mediator.Send(new GetObjectNodeQuery(source), ct) is not AnySharpObject sender || sender.Object().DBRef != source
 			|| !await reality.CanPerceiveAsync(player.Object.DBRef, source, ct)) return false;
 		// Legacy permission implementations have no token parameter. Give built-in reads the
 		// dispatch lifetime and bound this read-only await for implementations without cancellation.
@@ -73,8 +73,8 @@ public sealed class VisibleWorldProjection(IAdministrativeCapabilityService capa
 		budget.ThrowIfExceeded();
 		// Hearing is directed from sender to receiver; visual interaction is viewer to target.
 		var interaction = type is RoomEventType.Say or RoomEventType.Pose
-			? permissions.CanInteract(sender.Known, (AnySharpObject)player, IPermissionService.InteractType.Hear)
-			: permissions.CanInteract(player, sender.Known, IPermissionService.InteractType.See);
+			? permissions.CanInteract(sender, new AnySharpObject(player), IPermissionService.InteractType.Hear)
+			: permissions.CanInteract(player, sender, IPermissionService.InteractType.See);
 		return await interaction.AsTask().WaitAsync(budget.Token);
 	}
 

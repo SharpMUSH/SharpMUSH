@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
@@ -203,7 +204,7 @@ public class FunctionFlagDispatchTests
 			Arguments = new() { ["0"] = new CallState("log-argument-probe") }
 		});
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-		var executor = (await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Known;
+		var executor = (await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Expect<AnySharpObject>();
 		var logger = new RecordingLogger();
 		await FunctionDispatcher.InvokeAsync(parser, parser.FunctionLibrary["flagprobe"].LibraryInformation,
 			executor, true, Substitute.For<INotifyService>(), logger);
@@ -218,7 +219,7 @@ public class FunctionFlagDispatchTests
 		var parser = Parser(FunctionFlags.Deprecated);
 		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with { Arguments = new() { ["0"] = new CallState("hello") } });
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-		var executor = (await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Known;
+		var executor = (await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Expect<AnySharpObject>();
 		var notify = Substitute.For<INotifyService>();
 		await FunctionDispatcher.InvokeAsync(parser, parser.FunctionLibrary["flagprobe"].LibraryInformation,
 			executor, true, notify, new RecordingLogger());
@@ -264,8 +265,8 @@ public class FunctionFlagDispatchTests
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var playerRef = await mediator.Send(new CreatePlayerCommand($"Owner{Guid.NewGuid():N}"[..20],
 			"password", new DBRef(0), new DBRef(0), 100));
-		var player = (await mediator.Send(new GetObjectNodeQuery(playerRef))).Known.AsPlayer;
-		var room = (await mediator.Send(new GetObjectNodeQuery(new DBRef(0)))).Known.AsRoom;
+		var player = (await mediator.Send(new GetObjectNodeQuery(playerRef))).Expect<SharpPlayer>();
+		var room = (await mediator.Send(new GetObjectNodeQuery(new DBRef(0)))).Expect<SharpRoom>();
 		var thing = await mediator.Send(new CreateThingCommand("FlagOwnedObject", room, player, room));
 		var connection = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 		await WebAppFactoryArg.CommandParser.CommandParse(1, connection, MarkupText.Plain($"@set {playerRef}={objectFlag}"));
@@ -291,7 +292,7 @@ public class FunctionFlagDispatchTests
 		await Assert.That(parsed!.Message!.ToPlainText()).IsEqualTo(expected);
 		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with { Arguments = new() { ["0"] = new CallState("hello") } });
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-		var executor = (await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Known;
+		var executor = (await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Expect<AnySharpObject>();
 		var applied = await FunctionDispatcher.InvokeAsync(parser, definition, executor,
 			false, Substitute.For<INotifyService>(), new RecordingLogger());
 		await Assert.That(applied.Message!.ToPlainText()).IsEqualTo(expected);

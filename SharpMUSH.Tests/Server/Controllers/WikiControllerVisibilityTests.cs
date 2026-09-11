@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Hubs;
@@ -66,8 +67,7 @@ public class WikiControllerVisibilityTests
 	private static async Task<(InMemoryWikiService Wiki, string Slug)> SeedUnpublishedPage()
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var created = await wiki.CreateAsync("Draft Page", "# draft", "#1");
-		var page = created.AsT0;
+		var page = (await wiki.CreateAsync("Draft Page", "# draft", "#1")).Expect<WikiPage>();
 		await wiki.SetMetadataAsync(page.Id, null, [], published: false);
 		return (wiki, page.Slug);
 	}
@@ -98,10 +98,10 @@ public class WikiControllerVisibilityTests
 	public async Task GetPage_Published_Anonymous_Returns200()
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var created = await wiki.CreateAsync("Public Page", "# public", "#1");
+		var created = (await wiki.CreateAsync("Public Page", "# public", "#1")).Expect<WikiPage>();
 		var controller = MakeController(wiki, authenticated: false);
 
-		var result = await controller.GetPage("main", "general", created.AsT0.Slug);
+		var result = await controller.GetPage("main", "general", created.Slug);
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}

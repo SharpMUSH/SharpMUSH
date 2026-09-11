@@ -288,7 +288,6 @@
     private async Task ReloadAsync()
     {
         _installed = await Packages.GetInstalledAsync();
-        StateHasChanged();
     }
 
     private async Task CheckUpdateAsync(string id)

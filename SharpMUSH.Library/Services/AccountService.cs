@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -75,7 +74,7 @@ public class AccountService(
 	public ValueTask<bool> HasAnyAccountAsync(CancellationToken ct = default)
 		=> database.HasAnyAccountAsync(ct);
 
-	public async ValueTask<OneOf<SharpAccount, Error<string>>> CreateAccountAsync(string username, string? email, string password, CancellationToken ct = default)
+	public async ValueTask<Result<SharpAccount>> CreateAccountAsync(string username, string? email, string password, CancellationToken ct = default)
 	{
 		if (SystemAccount.IsReserved(username))
 			return new Error<string>($"Username '{username}' is reserved.");
@@ -108,7 +107,7 @@ public class AccountService(
 	public ValueTask ForcePasswordChangeAsync(string accountId, CancellationToken ct = default)
 		=> database.UpdateAccountMustChangePasswordAsync(accountId, true, ct);
 
-	public async ValueTask<OneOf<Success, Error<string>>> ChangePasswordAsync(string accountId, string oldPassword, string newPassword, CancellationToken ct = default)
+	public async ValueTask<Result<Success>> ChangePasswordAsync(string accountId, string oldPassword, string newPassword, CancellationToken ct = default)
 	{
 		var account = await database.GetAccountByIdAsync(accountId, ct);
 		if (account is null)
@@ -123,7 +122,7 @@ public class AccountService(
 		return new Success();
 	}
 
-	public async ValueTask<OneOf<Success, Error<string>>> ChangeEmailAsync(string accountId, string? newEmail, string currentPassword, CancellationToken ct = default)
+	public async ValueTask<Result<Success>> ChangeEmailAsync(string accountId, string? newEmail, string currentPassword, CancellationToken ct = default)
 	{
 		var account = await database.GetAccountByIdAsync(accountId, ct);
 		if (account is null)
@@ -139,7 +138,7 @@ public class AccountService(
 		return new Success();
 	}
 
-	public async ValueTask<OneOf<Success, Error<string>>> ChangeUsernameAsync(string accountId, string newUsername, CancellationToken ct = default)
+	public async ValueTask<Result<Success>> ChangeUsernameAsync(string accountId, string newUsername, CancellationToken ct = default)
 	{
 		if (await database.GetAccountByUsernameAsync(newUsername, ct) is not null)
 			return new Error<string>($"Username '{newUsername}' is already taken.");
@@ -188,7 +187,7 @@ public class AccountService(
 	public ValueTask<SharpAccount?> GetByEmailAsync(string email, CancellationToken ct = default)
 		=> database.GetAccountByEmailAsync(email, ct);
 
-	public async ValueTask<OneOf<Success, Error<string>>> SetAccountStatusAsync(string accountId, AccountStatus status, CancellationToken ct = default)
+	public async ValueTask<Result<Success>> SetAccountStatusAsync(string accountId, AccountStatus status, CancellationToken ct = default)
 	{
 		var account = await database.GetAccountByIdAsync(accountId, ct);
 		if (account is null)
@@ -222,20 +221,20 @@ public class AccountService(
 		return new Success();
 	}
 
-	public ValueTask<OneOf<Success, Error<string>>> DisableAccountAsync(string accountId, CancellationToken ct = default)
+	public ValueTask<Result<Success>> DisableAccountAsync(string accountId, CancellationToken ct = default)
 		=> SetAccountStatusAsync(accountId, AccountStatus.Disabled, ct);
 
-	public ValueTask<OneOf<Success, Error<string>>> CloseAccountAsync(string accountId, CancellationToken ct = default)
+	public ValueTask<Result<Success>> CloseAccountAsync(string accountId, CancellationToken ct = default)
 		=> SetAccountStatusAsync(accountId, AccountStatus.Closed, ct);
 
-	public ValueTask<OneOf<Success, Error<string>>> MarkAccountDeletedAsync(string accountId, CancellationToken ct = default)
+	public ValueTask<Result<Success>> MarkAccountDeletedAsync(string accountId, CancellationToken ct = default)
 		=> SetAccountStatusAsync(accountId, AccountStatus.Deleted, ct);
 
 	public async ValueTask<SharpAccount> GetOrCreateSystemAccountAsync(CancellationToken ct = default)
 		=> await database.GetAccountByUsernameAsync(SystemAccount.Username, ct)
 			?? await CreateUnclaimedAccountAsync(SystemAccount.Username, ct);
 
-	public async ValueTask<OneOf<Success, Error<string>>> SetPasswordAsync(string accountId, string newPassword, bool mustChangePassword, CancellationToken ct = default)
+	public async ValueTask<Result<Success>> SetPasswordAsync(string accountId, string newPassword, bool mustChangePassword, CancellationToken ct = default)
 	{
 		var account = await database.GetAccountByIdAsync(accountId, ct);
 		if (account is null)
@@ -250,7 +249,7 @@ public class AccountService(
 	public ValueTask<SharpAccount> CreateUnclaimedAccountAsync(string username, CancellationToken ct = default)
 		=> database.CreateAccountAsync(username, null, string.Empty, ct);
 
-	public ValueTask<OneOf<Success, Error<string>>> EnableAccountAsync(string accountId, CancellationToken ct = default)
+	public ValueTask<Result<Success>> EnableAccountAsync(string accountId, CancellationToken ct = default)
 		=> SetAccountStatusAsync(accountId, AccountStatus.Active, ct);
 
 	public ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken ct = default)

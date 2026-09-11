@@ -1,32 +1,31 @@
-﻿using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class OptionalSharpAttributeOrError(OneOf<SharpAttribute[], None, Error<string>> input)
-	: OneOfBase<SharpAttribute[], None, Error<string>>(input)
+[Union]
+public sealed class OptionalSharpAttributeOrError : IUnion
 {
-	public static implicit operator OptionalSharpAttributeOrError(SharpAttribute[] x) => new(x);
-	public static implicit operator OptionalSharpAttributeOrError(None x) => new(x);
-	public static implicit operator OptionalSharpAttributeOrError(Error<string> x) => new(x);
+	public OptionalSharpAttributeOrError(SharpAttribute[] value) => Value = value;
+	public OptionalSharpAttributeOrError(None value) => Value = value;
+	public OptionalSharpAttributeOrError(Error<string> value) => Value = value;
 
-	public bool IsAttribute => IsT0;
-	public bool IsNone => IsT1;
-	public bool IsError => IsT2;
+	public object? Value { get; }
 
-	public SharpAttribute[] AsAttribute => AsT0;
-	public Error<string> AsError => AsT2;
+	public override bool Equals(object? obj) => obj is OptionalSharpAttributeOrError other && Equals(Value, other.Value);
 
-	public CallState AsCallStateError => IsT1
-		? new CallState(ErrorMessages.Returns.NoSuchAttribute)
-		: new CallState(AsT2.Value);
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
 
-	public CallState AsCallState => Match(
-		attribute => new CallState(AsT0.Last().Value),
-		none => new CallState(ErrorMessages.Returns.NoSuchAttribute),
-		error => new CallState(AsT2.Value));
+	public bool IsAttribute => Value is SharpAttribute[];
+	public bool IsNone => Value is None;
+	public bool IsError => Value is Error<string>;
+
+	public CallState AsCallState => this switch
+	{
+		SharpAttribute[] attribute => new CallState(attribute.Last().Value),
+		None => new CallState(ErrorMessages.Returns.NoSuchAttribute),
+		Error<string> error => new CallState(error.Value)
+	};
 }

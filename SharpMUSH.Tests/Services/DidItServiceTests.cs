@@ -28,7 +28,7 @@ public class DidItServiceTests
 	private IMUSHCodeParser GodParser => WebAppFactoryArg.CommandParser;
 
 	private async Task<AnySharpObject> Node(DBRef dbref)
-		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Known;
+		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 
 	private async Task<DBRef> Thing(string prefix)
 		=> await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, prefix);
@@ -158,7 +158,7 @@ public class DidItServiceTests
 			? dbref!.Value
 			: throw new InvalidOperationException($"@dig did not return a dbref: {roomRef}");
 
-		return (await Mediator.Send(new GetObjectNodeQuery(parsed))).Known.AsContainer;
+		return (await Mediator.Send(new GetObjectNodeQuery(parsed))).Expect<AnySharpObject>().AsContainer;
 	}
 
 	[Test]

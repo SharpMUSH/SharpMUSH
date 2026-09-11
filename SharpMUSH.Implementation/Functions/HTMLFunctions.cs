@@ -64,7 +64,6 @@ public partial class Functions
 	{
 		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 
 		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
@@ -77,12 +76,10 @@ public partial class Functions
 			playerStr,
 			PlayersPreference | AbsoluteMatch);
 
-		if (!locate.IsValid())
+		if (locate is not AnySharpObject located)
 		{
 			return CallState.Empty;
 		}
-
-		var located = locate.WithoutError().WithoutNone();
 
 		if (!located.IsPlayer)
 		{
@@ -139,7 +136,6 @@ public partial class Functions
 	{
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 
 		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
@@ -152,12 +148,10 @@ public partial class Functions
 			playerStr,
 			PlayersPreference | AbsoluteMatch);
 
-		if (!locate.IsValid())
+		if (locate is not AnySharpObject located)
 		{
 			return CallState.Empty;
 		}
-
-		var located = locate.WithoutError().WithoutNone();
 
 		if (!located.IsPlayer)
 		{
@@ -202,27 +196,15 @@ public partial class Functions
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		AnySharpObject target;
-		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg))
+		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg)
+				&& await LocateService.LocateAndNotifyIfInvalidWithCallState(
+					parser,
+					executor,
+					executor,
+					targetArg.Message!.ToPlainText(),
+					PlayersPreference | AbsoluteMatch) is Error<CallState> error)
 		{
-			var targetRef = targetArg.Message!.ToPlainText();
-			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
-				parser,
-				executor,
-				executor,
-				targetRef,
-				PlayersPreference | AbsoluteMatch);
-
-			if (locateResult.IsError)
-			{
-				return new CallState(locateResult.AsError);
-			}
-
-			target = locateResult.AsAnyObject;
-		}
-		else
-		{
-			target = executor;
+			return error.Value;
 		}
 
 		// TODO: Actual websocket/out-of-band HTML communication is planned for future release.

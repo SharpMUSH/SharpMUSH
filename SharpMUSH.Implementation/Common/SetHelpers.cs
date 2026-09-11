@@ -41,40 +41,38 @@ public static class SetHelpers
 		MString objectAndOptionalAttribute,
 		MString flagOrAttributeValue)
 	{
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectAndOptionalAttribute.ToPlainText());
-
-		if (!split.TryPickT0(out var details, out _))
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objectAndOptionalAttribute.ToPlainText()) is not { Object: var name, Attribute: var maybeAttribute })
 		{
 			return new CallState(ErrorMessages.Returns.BadArgumentFormatToSet);
 		}
 
-		var (name, maybeAttribute) = details;
-
 		var locate = await locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, name, LocateFlags.All);
 
-		if (locate.IsError)
+		return locate switch
 		{
-			return locate.AsError;
-		}
+			Error<CallState> error => error.Value,
+			AnySharpObject target => await SetOn(target)
+		};
 
-		var target = locate.AsSharpObject;
-
-		// PennMUSH gates every confirmation this routine emits on AreQuiet(player, thing)
-		// (hdrs/dbdefs.h:198): the player is QUIET, or the thing is QUIET and the player owns it.
-		// set_flag (src/flags.c:1855,1914) and do_set_atr (src/attrib.c:2446) both test it.
-		var areQuiet = await target.Object().AreQuietAsync(executor);
-
-		if (!string.IsNullOrEmpty(maybeAttribute))
+		async ValueTask<CallState> SetOn(AnySharpObject target)
 		{
-			return await SetAttributeFlags(target, maybeAttribute);
+			// PennMUSH gates every confirmation this routine emits on AreQuiet(player, thing)
+			// (hdrs/dbdefs.h:198): the player is QUIET, or the thing is QUIET and the player owns it.
+			// set_flag (src/flags.c:1855,1914) and do_set_atr (src/attrib.c:2446) both test it.
+			var areQuiet = await target.Object().AreQuietAsync(executor);
+
+			if (!string.IsNullOrEmpty(maybeAttribute))
+			{
+				return await SetAttributeFlags(target, maybeAttribute);
+			}
+
+			var colon = flagOrAttributeValue.IndexOf(":");
+
+			return colon > -1
+				? await SetAttributeValue(target, colon, areQuiet)
+				: await SetFlags(target, areQuiet);
 		}
-
-		var colon = flagOrAttributeValue.IndexOf(":");
-
-		return colon > -1
-			? await SetAttributeValue(target, colon)
-			: await SetFlags(target);
 
 		// do_attrib_flags: every token is applied as ONE batch, because Penn checks permission once
 		// for the whole flag argument rather than once per flag, so the result does not depend on
@@ -87,49 +85,49 @@ public static class SetHelpers
 
 			var result = await attributeService.SetAttributeFlagsAsync(executor, found, attribute, flagTokens);
 
-			if (result.IsT1)
+			if (result is Error<string> error)
 			{
-				await notifyService.Notify(executor, result.AsT1.Value, executor);
+				await notifyService.Notify(executor, error.Value, executor);
+				return new CallState(error.Value);
 			}
 
-			return new CallState(result.Match(_ => string.Empty, failure => failure.Value));
+			return new CallState(string.Empty);
 		}
 
 		// do_set_atr(thing, flag, p, player, 1) — the trailing 1 is what makes it report the write
 		// (`flags & 0x01`, src/attrib.c:2445).
-		async ValueTask<CallState> SetAttributeValue(AnySharpObject found, int colonIndex)
+		async ValueTask<CallState> SetAttributeValue(AnySharpObject found, int colonIndex, bool areQuiet)
 		{
 			var attribute = flagOrAttributeValue.Substring(0, colonIndex);
 			var content = flagOrAttributeValue.Substring(colonIndex + 1, flagOrAttributeValue.Length - (colonIndex + 1));
 
 			var result = await attributeService.SetAttributeAsync(executor, found, attribute.ToPlainText(), content);
 
-			if (result.IsT0)
+			if (result is Error<string> error)
 			{
-				// do_set_atr (src/attrib.c:2446-2451) has a second gate the flag path does not: the
-				// written attribute's own AF_Quiet suppresses the line as well.
-				var written = await attributeService.GetAttributeAsync(executor, found, attribute.ToPlainText(),
-					IAttributeService.AttributeMode.Read, false);
-				var attributeIsQuiet = written.IsAttribute && written.AsAttribute.Last().IsQuiet();
-
-				if (!areQuiet && !attributeIsQuiet)
-				{
-					await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
-						found.Object().Name, attribute.ToPlainText());
-				}
-			}
-			else
-			{
-				await notifyService.Notify(executor, result.AsT1.Value, executor);
+				await notifyService.Notify(executor, error.Value, executor);
+				return new CallState(error.Value);
 			}
 
-			return new CallState(result.Match(_ => string.Empty, failure => failure.Value));
+			// do_set_atr (src/attrib.c:2446-2451) has a second gate the flag path does not: the
+			// written attribute's own AF_Quiet suppresses the line as well.
+			var written = await attributeService.GetAttributeAsync(executor, found, attribute.ToPlainText(),
+				IAttributeService.AttributeMode.Read, false);
+			var attributeIsQuiet = written is SharpAttribute[] writtenAttribute && writtenAttribute.Last().IsQuiet();
+
+			if (!areQuiet && !attributeIsQuiet)
+			{
+				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
+					found.Object().Name, attribute.ToPlainText());
+			}
+
+			return new CallState(string.Empty);
 		}
 
 		// `do { f = split_token(&p, ' '); … set_flag(player, thing, f, negate, …) } while (p)`. The
 		// loop runs to the end whatever any one token does; the first failure is what the caller is
 		// told about, since a function has one return value and Penn has none at all.
-		async ValueTask<CallState> SetFlags(AnySharpObject found)
+		async ValueTask<CallState> SetFlags(AnySharpObject found, bool areQuiet)
 		{
 			CallState? failure = null;
 

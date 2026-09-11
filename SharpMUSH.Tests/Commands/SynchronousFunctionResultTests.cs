@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -115,7 +116,7 @@ public class SynchronousFunctionResultTests
 	{
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var attributes = Factory.Services.GetRequiredService<IAttributeService>();
-		var actor = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known();
+		var actor = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
 		var name = "result" + Guid.NewGuid().ToString("N");
 		var value = mode switch { "syntax" => "[", "literal" => "#-1 EXCEPTION: ordinary text", _ => "valid" };
 		await attributes.SetAttributeAsync(actor, actor, name, MarkupText.Plain(value));
@@ -160,8 +161,8 @@ public class SynchronousFunctionResultTests
 		if (kind == "markdown")
 		{
 			var owner = await actor.Object().Owner.WithCancellation(CancellationToken.None);
-			var room = (await mediator.Send(new GetObjectNodeQuery(await mediator.Send(new CreateRoomCommand(name, owner))))).AsRoom;
-			var target = (await mediator.Send(new GetObjectNodeQuery(await mediator.Send(new CreateThingCommand(name, room, owner, room))))).Known();
+			var room = (await mediator.Send(new GetObjectNodeQuery(await mediator.Send(new CreateRoomCommand(name, owner))))).Expect<SharpRoom>();
+			var target = (await mediator.Send(new GetObjectNodeQuery(await mediator.Send(new CreateThingCommand(name, room, owner, room))))).Expect<AnySharpObject>();
 			await attributes.SetAttributeAsync(actor, target, "RENDERMARKUP`BOLD", MarkupText.Plain(value));
 			expression = $"rendermarkdowncustom(**word**,{target.Object().DBRef})";
 		}
@@ -201,7 +202,7 @@ public class SynchronousFunctionResultTests
 	{
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var attributes = Factory.Services.GetRequiredService<IAttributeService>();
-		var actor = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known();
+		var actor = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
 		var name = "skipped" + Guid.NewGuid().ToString("N");
 		await attributes.SetAttributeAsync(actor, actor, name, MarkupText.Plain("["));
 		var result = (await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression.Replace("CHILD", $"ufun(me/{name})"))))!;

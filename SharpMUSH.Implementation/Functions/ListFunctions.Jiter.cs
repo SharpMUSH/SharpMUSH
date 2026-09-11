@@ -5,6 +5,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -34,50 +35,33 @@ public partial class Functions
 
 		var results = new List<MString>(tokens.Length);
 
-		foreach (var objAttr in tokens.Select(HelperFunctions.SplitOptionalObjectAndAttr))
+		foreach (var token in tokens)
 		{
-			if (objAttr is { IsT1: true, AsT1: false })
+			switch (await AttributeService.FetchAttributeFunctionAsync(parser, executor, token))
 			{
-				return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
+				case AttributeFunction function:
+					results.Add(await JiterStepAsync(parser, function, input, errors));
+					break;
+				case CallState refusal:
+					return errors.Complete(refusal);
 			}
-
-			var (dbref, attrName) = objAttr.AsT0;
-			dbref ??= executor.ToString();
-
-			var locate = await LocateService.LocateAndNotifyIfInvalid(
-				parser, executor, executor, dbref, LocateFlags.All);
-			if (!locate.IsValid())
-			{
-				return errors.Complete(CallState.Empty);
-			}
-
-			var located = locate.WithoutError().WithoutNone();
-
-			var maybeAttr = await AttributeService.GetAttributeAsync(
-				executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
-			if (maybeAttr.IsNone)
-			{
-				return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
-			}
-
-			if (maybeAttr.IsError)
-			{
-				return errors.Complete(new CallState(maybeAttr.AsError.Value));
-			}
-
-			var attrValue = maybeAttr.AsAttribute.Last().Value;
-
-			var env = new Dictionary<string, CallState> { ["0"] = new CallState(input) };
-
-			var stepParser = parser.Push(parser.CurrentState with
-			{
-				Arguments = new Dictionary<string, CallState>(env),
-				EnvironmentRegisters = env
-			});
-
-			results.Add(errors.Record(await stepParser.FunctionParse(attrValue)));
 		}
 
 		return errors.Complete(new CallState(MarkupText.Join(osep, results)));
+	}
+
+	/// <summary>One attribute of jiter(): runs <paramref name="function"/> with the shared input as %0.</summary>
+	private async ValueTask<MString> JiterStepAsync(IMUSHCodeParser parser, AttributeFunction function,
+		MString input, ListEvaluationErrors errors)
+	{
+		var env = new Dictionary<string, CallState> { ["0"] = new CallState(input) };
+
+		var stepParser = parser.Push(parser.CurrentState with
+		{
+			Arguments = new Dictionary<string, CallState>(env),
+			EnvironmentRegisters = env
+		});
+
+		return errors.Record(await AttributeService.CallAttributeFunctionAsync(stepParser, function));
 	}
 }

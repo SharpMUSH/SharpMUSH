@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
@@ -94,12 +95,12 @@ public class FilteredObjectQueryTests
 	{
 		var zoneResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FilterZoneMaster"));
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
-		var zoneObject = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
+		var zoneObject = (await Mediator.Send(new GetObjectNodeQuery(zoneDbRef))).Expect<AnySharpObject>();
 
 		var objResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FilterZonedObject"));
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		await Mediator.Send(new SetObjectZoneCommand(obj.Known, zoneObject.Known));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		await Mediator.Send(new SetObjectZoneCommand(obj, zoneObject));
 
 		var unzonedResult = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@create FilterUnzonedObject"));
 		var unzonedDbRef = DBRef.Parse(unzonedResult.Message!.ToPlainText()!);

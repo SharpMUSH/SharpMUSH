@@ -1,39 +1,62 @@
-﻿using SharpMUSH.Library.Extensions;
-using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnyOptionalSharpObject : OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing, None>, IObjectShaped<AnyOptionalSharpObject>
+/// <summary>
+/// An object, or none. Found objects are one case, so <c>x is AnySharpObject found</c> binds the
+/// object and <c>x is AnySharpObject and SharpPlayer player</c> binds one kind of it.
+/// </summary>
+[Union]
+public sealed class AnyOptionalSharpObject : IUnion, IObjectShaped<AnyOptionalSharpObject>
 {
-	public AnyOptionalSharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None> input) : base(input) { }
-	public static implicit operator AnyOptionalSharpObject(SharpPlayer x) => new(x);
-	public static implicit operator AnyOptionalSharpObject(SharpRoom x) => new(x);
-	public static implicit operator AnyOptionalSharpObject(SharpExit x) => new(x);
-	public static implicit operator AnyOptionalSharpObject(SharpThing x) => new(x);
-	public static implicit operator AnyOptionalSharpObject(None x) => new(x);
+	public AnyOptionalSharpObject(AnySharpObject value) => Value = value;
+	public AnyOptionalSharpObject(None value) => Value = value;
 
-	public bool IsPlayer => IsT0;
-	public bool IsRoom => IsT1;
-	public bool IsExit => IsT2;
-	public bool IsThing => IsT3;
-	public bool IsNone => IsT4;
+	public static implicit operator AnyOptionalSharpObject(SharpPlayer value) => new(new AnySharpObject(value));
+	public static implicit operator AnyOptionalSharpObject(SharpRoom value) => new(new AnySharpObject(value));
+	public static implicit operator AnyOptionalSharpObject(SharpExit value) => new(new AnySharpObject(value));
+	public static implicit operator AnyOptionalSharpObject(SharpThing value) => new(new AnySharpObject(value));
 
-	public SharpPlayer AsPlayer => AsT0;
-	public SharpRoom AsRoom => AsT1;
-	public SharpExit AsExit => AsT2;
-	public SharpThing AsThing => AsT3;
-	public AnySharpObject Known => Match(
-		player => new AnySharpObject(player),
-		room => new AnySharpObject(room),
-		exit => new AnySharpObject(exit),
-		thing => new AnySharpObject(thing),
-		_ => throw new ArgumentOutOfRangeException()
-		);
+	public object? Value { get; }
 
-	public static DBRef? RefOf(AnyOptionalSharpObject value) => value.IsNone ? null : value.Known.Object().DBRef;
+	/// <summary>
+	/// Equal when both are none, or both hold objects <see cref="AnySharpObject"/> calls equal: the same
+	/// model instance.
+	/// </summary>
+	public override bool Equals(object? obj) => obj is AnyOptionalSharpObject other && Equals(Value, other.Value);
+
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsPlayer => this is AnySharpObject and SharpPlayer;
+	public bool IsRoom => this is AnySharpObject and SharpRoom;
+	public bool IsExit => this is AnySharpObject and SharpExit;
+	public bool IsThing => this is AnySharpObject and SharpThing;
+	public bool IsNone => this is None;
+
+	public SharpObject? Object() => this switch
+	{
+		AnySharpObject found => found.Object(),
+		None => null
+	};
+
+	public string? Id() => this switch
+	{
+		AnySharpObject found => found.Id(),
+		None => null
+	};
+
+	public AnyOptionalSharpObjectOrError WithErrorOption() => this switch
+	{
+		AnySharpObject found => found,
+		None none => none
+	};
+
+	public static DBRef? RefOf(AnyOptionalSharpObject value) => value switch
+	{
+		AnySharpObject found => found.Object().DBRef,
+		None => null
+	};
 
 	public static bool TryFromNode(AnyOptionalSharpObject node, out AnyOptionalSharpObject value)
 	{

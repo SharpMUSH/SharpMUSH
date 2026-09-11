@@ -67,7 +67,7 @@ public class HookIntegrationTests
 		await Assert.That(hook.IsSome()).IsTrue();
 		if (hook.IsSome())
 		{
-			await Assert.That(hook.AsValue().Inline).IsTrue();
+			await Assert.That(hook.Expect<CommandHook>().Inline).IsTrue();
 		}
 		await HookService.ClearHookAsync(testCommand, "BEFORE");
 	}
@@ -81,7 +81,7 @@ public class HookIntegrationTests
 		await Assert.That(hook.IsSome()).IsTrue();
 		if (hook.IsSome())
 		{
-			await Assert.That(hook.AsValue().Localize).IsTrue();
+			await Assert.That(hook.Expect<CommandHook>().Localize).IsTrue();
 		}
 		await HookService.ClearHookAsync(testCommand, "BEFORE");
 	}
@@ -95,7 +95,7 @@ public class HookIntegrationTests
 		await Assert.That(hook.IsSome()).IsTrue();
 		if (hook.IsSome())
 		{
-			await Assert.That(hook.AsValue().ClearRegs).IsTrue();
+			await Assert.That(hook.Expect<CommandHook>().ClearRegs).IsTrue();
 		}
 		await HookService.ClearHookAsync(testCommand, "BEFORE");
 	}

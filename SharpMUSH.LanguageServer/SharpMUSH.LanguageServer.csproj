@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
@@ -16,8 +16,8 @@
          they no longer flow to anything referencing it — SharpMUSH.Tests, whose TUnit test methods
          intentionally do not carry the "Async" suffix VSTHRD200 demands. -->
     <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.6.40" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(DotNetPackageVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="$(DotNetPackageVersion)" />
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />

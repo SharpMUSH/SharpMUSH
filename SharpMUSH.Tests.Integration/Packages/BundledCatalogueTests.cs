@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
@@ -99,14 +100,14 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task UpdateCheck_ForAPackageInstalledAtFirstBoot_AnswersFromTheImage()
 	{
-		var installed = await Registry.GetInstalledPackageAsync("common-functions");
-		await Assert.That(installed.IsT0).IsTrue().Because("common-functions installs at first boot");
-		await Assert.That(BundledPackages.IsCatalogueSource(installed.AsT0.SourceRepo)).IsTrue();
+		if (await Registry.GetInstalledPackageAsync("common-functions") is not InstalledPackageRecord installed)
+			throw new InvalidOperationException("common-functions installs at first boot, but is not installed.");
+		await Assert.That(BundledPackages.IsCatalogueSource(installed.SourceRepo)).IsTrue();
 
 		var info = Value(await Controller().CheckForUpdate("common-functions", CancellationToken.None));
 
-		await Assert.That(info.InstalledVersion).IsEqualTo(installed.AsT0.Version);
-		await Assert.That(info.LatestVersion).IsEqualTo(installed.AsT0.Version);
+		await Assert.That(info.InstalledVersion).IsEqualTo(installed.Version);
+		await Assert.That(info.LatestVersion).IsEqualTo(installed.Version);
 		await Assert.That(info.UpdateAvailable).IsFalse();
 		await Assert.That(info.LatestCommit).IsEqualTo(BundledPackages.SourceCommit);
 	}
@@ -126,8 +127,8 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 		var controller = Controller();
 
 		var before = await Registry.GetInstalledPackageAsync("wiki-reader");
-		await Assert.That(before.IsT1)
-			.IsTrue()
+		await Assert.That(before.Value)
+			.IsTypeOf<NotFound>()
 			.Because("a package that is shipped but not flagged must not be installed at first boot");
 
 		// Read the master room's contents FIRST, so the entry the install has to invalidate is
@@ -150,11 +151,11 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 
 			await Assert.That(applied.Revision).IsEqualTo(1);
 
-			var after = await Registry.GetInstalledPackageAsync("wiki-reader");
-			await Assert.That(after.IsT0).IsTrue().Because("apply must install it");
-			await Assert.That(after.AsT0.SourceRepo).IsEqualTo(BundledPackages.SourceRepo);
-			await Assert.That(after.AsT0.SourcePath).IsEqualTo("wiki-reader");
-			await Assert.That(after.AsT0.InstalledCommit).IsEqualTo(BundledPackages.SourceCommit);
+			if (await Registry.GetInstalledPackageAsync("wiki-reader") is not InstalledPackageRecord after)
+				throw new InvalidOperationException("apply must install wiki-reader, but it is not installed.");
+			await Assert.That(after.SourceRepo).IsEqualTo(BundledPackages.SourceRepo);
+			await Assert.That(after.SourcePath).IsEqualTo("wiki-reader");
+			await Assert.That(after.InstalledCommit).IsEqualTo(BundledPackages.SourceCommit);
 
 			await AssertTheNewObjectIsLiveInTheMasterRoom(applied.CreatedObjects["wiki_global"]);
 		}
@@ -188,7 +189,7 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 		await Assert.That(await MasterRoomContentsAsync()).Contains(created.Number);
 
 		var node = (await factory.Services.GetRequiredService<IMediator>()
-			.Send(new GetObjectNodeQuery(created))).Known();
+			.Send(new GetObjectNodeQuery(created))).Expect<AnySharpObject>();
 		await Assert.That(await node.HasFlag("NO_COMMAND")).IsFalse();
 	}
 

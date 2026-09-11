@@ -3,10 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -87,13 +86,18 @@ public class GalleryController(
 		if (string.IsNullOrEmpty(uploaderDbref))
 			return Unauthorized("Missing character identity.");
 		await using var content = file.OpenReadStream();
-		var saved = await assetService.SaveAsync(file.FileName, file.ContentType, content, uploaderDbref, ct);
-		if (saved.IsT1)
+		return await assetService.SaveAsync(file.FileName, file.ContentType, content, uploaderDbref, ct) switch
 		{
-			return StatusCode(StatusCodes.Status500InternalServerError, new { error = saved.AsT1.Value });
-		}
+			WikiAsset asset => await AddToGalleryAsync(name, character, asset, uploaderDbref),
+			Error<string> saveError => StatusCode(StatusCodes.Status500InternalServerError, new { error = saveError.Value }),
+		};
+	}
 
-		var asset = saved.AsT0;
+	/// <summary>
+	/// Append a stored image to the character's gallery, as its icon when it is the first.
+	/// </summary>
+	private async Task<IActionResult> AddToGalleryAsync(string name, AnySharpObject character, WikiAsset asset, string uploaderDbref)
+	{
 		var entries = (await ReadGalleryAsync(character)).ToList();
 		entries.Add(new GalleryEntry(
 			AssetId: asset.Id,
@@ -104,7 +108,7 @@ public class GalleryController(
 			IsIcon: entries.Count == 0));
 
 		var write = await WriteGalleryAsync(character, entries);
-		if (write.IsT1) return StatusCode(StatusCodes.Status500InternalServerError, write.AsT1.Value);
+		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
 		logger.LogInformation("Gallery image added to {Character}: asset={Asset} by={Uploader}", LogSanitizer.Sanitize(name), asset.Id, LogSanitizer.Sanitize(uploaderDbref));
 		return Ok(entries.OrderBy(e => e.Order).ToList());
 	}
@@ -133,7 +137,7 @@ public class GalleryController(
 		}
 
 		var write = await WriteGalleryAsync(character, sanitized);
-		if (write.IsT1) return StatusCode(StatusCodes.Status500InternalServerError, write.AsT1.Value);
+		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
 		return Ok(sanitized);
 	}
 
@@ -160,7 +164,7 @@ public class GalleryController(
 		}
 
 		var write = await WriteGalleryAsync(character, entries);
-		if (write.IsT1) return StatusCode(StatusCodes.Status500InternalServerError, write.AsT1.Value);
+		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
 		await assetService.DeleteAsync(assetId);
 		return Ok(entries.OrderBy(e => e.Order).ToList());
 	}
@@ -190,20 +194,19 @@ public class GalleryController(
 	{
 		if (User.GetActingCharacter() is not { } character) return null;
 
-		var result = await mediator.Send(new GetObjectNodeQuery(character), ct);
-		return result.IsNone ? null : result.Known;
+		return await mediator.Send(new GetObjectNodeQuery(character), ct) is AnySharpObject viewer ? viewer : null;
 	}
 
 	private async Task<IReadOnlyList<GalleryEntry>> ReadGalleryAsync(AnySharpObject character)
 	{
 		var result = await attributeService.GetAttributeAsync(
 			character, character, GalleryAttribute, IAttributeService.AttributeMode.Read, parent: false);
-		if (!result.IsAttribute)
+		if (result is not SharpAttribute[] gallery)
 		{
 			return [];
 		}
 
-		var json = result.AsAttribute.Last().Value.ToString();
+		var json = gallery.Last().Value.ToString();
 		if (string.IsNullOrWhiteSpace(json))
 		{
 			return [];
@@ -221,7 +224,7 @@ public class GalleryController(
 		}
 	}
 
-	private async Task<OneOf<Success, Error<string>>> WriteGalleryAsync(AnySharpObject character, IReadOnlyList<GalleryEntry> entries)
+	private async Task<Result<Success>> WriteGalleryAsync(AnySharpObject character, IReadOnlyList<GalleryEntry> entries)
 	{
 		var json = JsonSerializer.Serialize(entries);
 		return await attributeService.SetAttributeAsync(character, character, GalleryAttribute, MarkupText.Plain(json));

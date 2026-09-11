@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -46,7 +45,7 @@ public class ExamineNullOwnerTests
 		{
 			await NotifyService.Received().Notify(
 				Arg.Any<AnySharpObject>(),
-				Arg.Is<OneOf<MString, string>>(m => TestHelpers.MessageContains(m, expected)),
+				Arg.Is<SharpMessage>(m => TestHelpers.MessageContains(m, expected)),
 				Arg.Any<AnySharpObject?>(),
 				Arg.Any<INotifyService.NotificationType>());
 		}

@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using Mediator;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -28,7 +27,7 @@ public class AttributeReadCancellationTests
 		using (budget.Enter())
 			result = await service.LazilyGetAttributePatternAsync(target, target, "*", false);
 		await Task.Delay(150);
-		await Assert.That(async () => await result.AsAttributes.ToArrayAsync()).Throws<OperationCanceledException>();
+		await Assert.That(async () => await result.Expect<IAsyncEnumerable<LazySharpAttribute>>().ToArrayAsync()).Throws<OperationCanceledException>();
 		mediator.DidNotReceive().CreateStream(Arg.Any<GetLazyAttributesQuery>(), Arg.Any<CancellationToken>());
 	}
 
@@ -105,7 +104,7 @@ public class AttributeReadCancellationTests
 			{
 				var result = await service.LazilyGetAttributePatternAsync(target, target, "*", false);
 				using var enumerationScope = stage.StartsWith("consumer-") ? budget.Enter() : null;
-				await result.AsAttributes.ToArrayAsync(stage.StartsWith("caller-") || stage.StartsWith("second-") ? cancel.Token : default);
+				await result.Expect<IAsyncEnumerable<LazySharpAttribute>>().ToArrayAsync(stage.StartsWith("caller-") || stage.StartsWith("second-") ? cancel.Token : default);
 			}
 		}
 		var operation = Read();
@@ -131,7 +130,7 @@ public class AttributeReadCancellationTests
 		var mediator = Substitute.For<IMediator>();
 		var permissions = Substitute.For<IPermissionService>();
 		var validation = Substitute.For<IValidateService>();
-		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<OneOf.OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>>()).Returns(true);
+		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<ValidationTarget>()).Returns(true);
 		var attributes = new[] { TestAttributeFactory.Named("RUN") };
 		mediator.CreateStream(Arg.Any<GetAttributeWithInheritanceQuery>(), Arg.Any<CancellationToken>())
 			.Returns(new[] { new AttributeWithInheritance(attributes, target.Object().DBRef, AttributeSource.Self, []) }.ToAsyncEnumerable());
@@ -177,7 +176,7 @@ public class AttributeReadCancellationTests
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		options.CurrentValue.Returns(config with { Database = config.Database with { AncestorThing = 6 } });
 		var validation = Substitute.For<IValidateService>();
-		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<OneOf.OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>>()).Returns(true);
+		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<ValidationTarget>()).Returns(true);
 		var service = new AttributeService(mediator, Substitute.For<IPermissionService>(), Substitute.For<ILocateService>(), validation,
 			Substitute.For<INotifyService>(), options, Substitute.For<IServiceProvider>());
 		using var cancel = new CancellationTokenSource();
@@ -212,7 +211,7 @@ public class AttributeReadCancellationTests
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(async ValueTask<AnyOptionalSharpObject> (call) =>
 		{
 			await Block(call.Arg<CancellationToken>());
-			return ancestor.AsThing;
+			return ancestor;
 		});
 		var operation = stage == "lazy-fallback"
 			? service.LazilyGetAttributeAsync(target, target, "TREE`LEAF", IAttributeService.AttributeMode.Read).AsTask() as Task

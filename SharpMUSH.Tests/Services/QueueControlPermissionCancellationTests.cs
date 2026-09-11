@@ -25,11 +25,11 @@ public class QueueControlPermissionCancellationTests
 	{
 		var factory = new TestObjectFactory();
 		var player = factory.CreatePlayer(40, "actor");
-		var target = factory.CreateThing(41, "target", owner: player.AsPlayer);
+		var target = factory.CreateThing(41, "target", owner: player.Expect<SharpPlayer>());
 		var actor = new CapabilityActor("account", player.Object().DBRef, player.Object().DBRef);
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
-			ValueTask.FromResult<AnyOptionalSharpObject>(call.Arg<GetObjectNodeQuery>().DBRef.Number == 40 ? (AnyOptionalSharpObject)player.AsPlayer : target.AsThing));
+			ValueTask.FromResult<AnyOptionalSharpObject>(call.Arg<GetObjectNodeQuery>().DBRef.Number == 40 ? (AnyOptionalSharpObject)player : target));
 		var options = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 		options.CurrentValue.Returns(TestSharpMushOptions.Create());
 		var permissions = new PermissionService(Substitute.For<ILockService>(), options);

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -19,8 +20,8 @@ public class WikiMetadataServiceTests
 		IWikiService svc, string title, WikiNamespace ns = WikiNamespace.Main)
 	{
 		var result = await svc.CreateAsync(title, $"# {title}", "#1", ns);
-		await Assert.That(result.IsT0).IsTrue();
-		return result.AsT0;
+		var page = result.Expect<WikiPage>();
+		return page;
 	}
 
 	[Test]
@@ -109,8 +110,7 @@ public class WikiMetadataServiceTests
 
 		var result = await svc.SetMetadataAsync(page.Id, "  Lore ", ["Magic", " magic ", "RULES", ""], published: true);
 
-		await Assert.That(result.IsT0).IsTrue();
-		var updated = result.AsT0;
+		var updated = result.Expect<WikiPage>();
 		await Assert.That(updated.Category).IsEqualTo("lore");
 		await Assert.That(updated.Tags.Count).IsEqualTo(2);
 		await Assert.That(updated.Tags).Contains("magic");
@@ -124,9 +124,9 @@ public class WikiMetadataServiceTests
 		var svc = BuildService();
 		var page = await CreatePageAsync(svc, "Untagged");
 
-		var result = await svc.SetMetadataAsync(page.Id, "   ", [], published: true);
+		var updated = (await svc.SetMetadataAsync(page.Id, "   ", [], published: true)).Expect<WikiPage>();
 
-		await Assert.That(result.AsT0.Category).IsEqualTo("general");
+		await Assert.That(updated.Category).IsEqualTo("general");
 	}
 
 	[Test]
@@ -137,9 +137,9 @@ public class WikiMetadataServiceTests
 
 		await svc.SetMetadataAsync(page.Id, "lore", ["x"], published: false);
 
-		var reloaded = await svc.GetByIdAsync(page.Id);
-		await Assert.That(reloaded.AsT0.RevisionNumber).IsEqualTo(page.RevisionNumber);
-		await Assert.That(reloaded.AsT0.MarkdownSource).IsEqualTo(page.MarkdownSource);
+		var reloaded = (await svc.GetByIdAsync(page.Id)).Expect<WikiPage>();
+		await Assert.That(reloaded.RevisionNumber).IsEqualTo(page.RevisionNumber);
+		await Assert.That(reloaded.MarkdownSource).IsEqualTo(page.MarkdownSource);
 
 		var revisions = await svc.GetRevisionsAsync(page.Id);
 		await Assert.That(revisions.Count).IsEqualTo(1); // only the creation snapshot
@@ -152,7 +152,7 @@ public class WikiMetadataServiceTests
 
 		var result = await svc.SetMetadataAsync("nope", "lore", [], true);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]

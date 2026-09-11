@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -79,18 +80,18 @@ public class FlagUnsetPermissionTests
 		var name = TestIsolationHelpers.GenerateUniqueName("Suspect");
 		var created = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {name}=pw_{name}"));
 		var playerDbRef = DBRef.Parse(created.Message!.ToPlainText()!);
-		var player = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Known;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
 
 		var suspect = await Mediator.Send(new GetObjectFlagQuery("SUSPECT"));
 		await Mediator.Send(new SetObjectFlagCommand(player, suspect!));
 
-		var reread = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Known;
+		var reread = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
 		var result = await ManipulateService.SetOrUnsetFlag(reread, reread, "!SUSPECT", false);
 
 		await Assert.That(result.Message!.ToPlainText())
 			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 
-		var after = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Known;
+		var after = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
 		var flags = await after.Object().Flags.Value.ToArrayAsync();
 		await Assert.That(flags.Any(flag => flag.Name == "SUSPECT"))
 			.IsTrue()

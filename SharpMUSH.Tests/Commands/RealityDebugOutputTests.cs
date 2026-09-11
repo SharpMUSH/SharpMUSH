@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -50,11 +51,11 @@ public class RealityDebugOutputTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var owner = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var owner = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var room = await owner.Location.WithCancellation(CancellationToken.None);
-		var source = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("debug source", room, owner, room)))).AsThing;
+		var source = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("debug source", room, owner, room)))).Expect<SharpThing>();
 		var receiver = forward
-			? (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("debug recipient", room, owner, room)))).Known.Object()
+			? (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("debug recipient", room, owner, room)))).Expect<AnySharpObject>().Object()
 			: owner.Object;
 		if (forward) await Get<IAttributeService>().SetAttributeAsync(owner, source, "DEBUGFORWARDLIST", MarkupText.Plain(receiver.DBRef.ToString()));
 		try

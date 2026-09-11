@@ -20,12 +20,8 @@ public class BundledPackagesTests
 		foreach (var descriptor in BundledPackages.All)
 		{
 			var yaml = BundledPackages.ManifestYaml(descriptor.PackageId);
-			var parsed = _manifests.ParseManifest(yaml);
-
-			await Assert.That(parsed.IsT0)
-				.IsTrue()
-				.Because($"bundled manifest '{descriptor.PackageId}' must parse");
-			await Assert.That(parsed.AsT0.Manifest.Name).IsEqualTo(descriptor.PackageId);
+			var parsed = _manifests.ParseManifest(yaml).Expect<ParsedPackageManifest>($"bundled manifest '{descriptor.PackageId}' must parse");
+			await Assert.That(parsed.Manifest.Name).IsEqualTo(descriptor.PackageId);
 		}
 	}
 
@@ -38,10 +34,9 @@ public class BundledPackagesTests
 	[Test]
 	public async Task RoomContents_AttachesTheRoomContentsHandlerToTheEventHandler()
 	{
-		var parsed = _manifests.ParseManifest(BundledPackages.ManifestYaml("room-contents"));
-		await Assert.That(parsed.IsT0).IsTrue();
+		var parsed = _manifests.ParseManifest(BundledPackages.ManifestYaml("room-contents")).Expect<ParsedPackageManifest>();
 
-		var handler = parsed.AsT0.Manifest.Objects.Single();
+		var handler = parsed.Manifest.Objects.Single();
 		await Assert.That(handler.Target).IsEqualTo(new PackageRef(PackageRefKind.WellKnown, "event_handler"));
 		await Assert.That(handler.Attributes.Keys).Contains("ROOM`CONTENTS");
 	}
@@ -56,14 +51,11 @@ public class BundledPackagesTests
 		foreach (var descriptor in BundledPackages.All)
 		{
 			// Assert the parse rather than assuming it: reaching AsT0 on a failed parse throws an
-			// opaque OneOf exception, and this test would silently depend on running after
+			// opaque InvalidOperationException, and this test would silently depend on running after
 			// EveryBundledPackage_HasAnEmbeddedManifestThatParses to get a readable failure.
-			var parsed = _manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId));
-			await Assert.That(parsed.IsT0)
-				.IsTrue()
-				.Because($"bundled manifest '{descriptor.PackageId}' must parse");
+			var parsed = _manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId)).Expect<ParsedPackageManifest>($"bundled manifest '{descriptor.PackageId}' must parse");
 
-			var manifest = parsed.AsT0.Manifest;
+			var manifest = parsed.Manifest;
 
 			var expected = descriptor.Requires switch
 			{
@@ -141,7 +133,7 @@ public class BundledPackagesTests
 		await Assert.That(descriptor.Requires).IsEqualTo(BundledPackageHandler.None);
 
 		var parsed = _manifests.ParseManifest(BundledPackages.ManifestYaml("wiki-reader"));
-		await Assert.That(parsed.IsT0).IsTrue().Because("wiki-reader's manifest must be embedded");
+		await Assert.That(parsed.Value).IsTypeOf<ParsedPackageManifest>().Because("wiki-reader's manifest must be embedded");
 	}
 
 	/// <summary>
@@ -156,12 +148,9 @@ public class BundledPackagesTests
 
 		foreach (var descriptor in BundledPackages.All)
 		{
-			var parsed = _manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId));
-			await Assert.That(parsed.IsT0)
-				.IsTrue()
-				.Because($"bundled manifest '{descriptor.PackageId}' must parse");
+			var parsed = _manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId)).Expect<ParsedPackageManifest>($"bundled manifest '{descriptor.PackageId}' must parse");
 
-			foreach (var dependency in parsed.AsT0.Manifest.Dependencies)
+			foreach (var dependency in parsed.Manifest.Dependencies)
 			{
 				await Assert.That(catalogue)
 					.Contains(dependency.PackageId)

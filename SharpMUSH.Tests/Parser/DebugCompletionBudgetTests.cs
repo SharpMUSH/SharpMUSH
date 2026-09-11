@@ -2,7 +2,6 @@ using Mediator;
 using SharpMUSH.Tests.Services;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library.Definitions;
@@ -97,16 +96,17 @@ public class DebugCompletionBudgetTests
 	private (IMUSHCodeParser Parser, IMediator Mediator) Create(Func<string, CancellationToken, Task> read)
 	{
 		var executor = new TestObjectFactory().CreatePlayer(15, "debug executor");
-		executor.AsPlayer.Object.Owner = new(async token => { await read("owner", token); return executor.AsPlayer; });
+		var executorPlayer = executor.Expect<SharpPlayer>();
+		executorPlayer.Object.Owner = new(async token => { await read("owner", token); return executorPlayer; });
 		var mediator = Substitute.For<IMediator>();
 		async Task<AnyOptionalSharpObject> ReadObject(CancellationToken token)
 		{
 			await read("identity", token);
-			return new AnyOptionalSharpObject(executor.AsPlayer);
+			return new AnyOptionalSharpObject(executor);
 		}
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call => new ValueTask<AnyOptionalSharpObject>(ReadObject(call.Arg<CancellationToken>())));
 		var notify = Substitute.For<INotifyService>();
-		notify.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>())
+		notify.Notify(Arg.Any<AnySharpObject>(), Arg.Any<SharpMessage>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>())
 			.Returns(_ => new ValueTask(read("notification", ExecutionBudget.CurrentToken)));
 		var services = Substitute.For<IServiceProvider>();
 		services.GetService(Arg.Any<Type>()).Returns(call => call.Arg<Type>() == typeof(IMediator) ? mediator
@@ -117,7 +117,7 @@ public class DebugCompletionBudgetTests
 		var parser = new MUSHCodeParser(Factory.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<MUSHCodeParser>>(),
 			Factory.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
 			Factory.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(), options, services,
-			ParserState.RootFor(executor.AsPlayer.Object.DBRef) with
+			ParserState.RootFor(executor.Object().DBRef) with
 			{
 				Flags = ParserStateFlags.Debug,
 				EnvironmentRegisters = new() { ["0"] = new("private-substitution") }

@@ -1,6 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -28,12 +28,12 @@ public class ExamineSyntaxFormattingTests
 	{
 		_player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamineSyntaxFormatting");
-		var player = (await Mediator.Send(new GetObjectNodeQuery(_player.DbRef))).AsPlayer;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(_player.DbRef))).Expect<SharpPlayer>();
 		var wizard = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
 		await Assert.That(await Mediator.Send(new SetObjectFlagCommand(player, wizard!))).IsTrue();
 		var roomId = await Mediator.Send(new CreateRoomCommand(
 			TestIsolationHelpers.GenerateUniqueName("ExamineRoom"), player));
-		var room = (await Mediator.Send(new GetObjectNodeQuery(roomId))).AsRoom;
+		var room = (await Mediator.Send(new GetObjectNodeQuery(roomId))).Expect<SharpRoom>();
 		var origin = await player.Location.WithCancellation(CancellationToken.None);
 		await Mediator.Send(new MoveObjectCommand(player, room, origin.Object().DBRef, IsSilent: true));
 	}
@@ -55,7 +55,7 @@ public class ExamineSyntaxFormattingTests
 	}
 
 	private int _notificationOffset;
-	private IEnumerable<OneOf<MString, string>> Messages =>
+	private IEnumerable<SharpMessage> Messages =>
 		WebAppFactoryArg.Notifications.RawFor(_player.DbRef).Skip(_notificationOffset);
 
 	private void BeginNotificationWindow() =>
@@ -137,7 +137,7 @@ public class ExamineSyntaxFormattingTests
 
 		// Every Notify call's plain text, in the order they were sent this command.
 		var texts = Messages
-			.Select(m => m.Match(ms => ms.ToPlainText(), s => s))
+			.Select(m => m switch { MString markup => markup.ToPlainText(), string text => text })
 			.ToList();
 
 		var headerIndex = texts.FindIndex(t => t.StartsWith("EMPTYFN ["));

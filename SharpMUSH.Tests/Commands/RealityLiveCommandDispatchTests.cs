@@ -43,19 +43,19 @@ public class RealityLiveCommandDispatchTests
 		var objects = Get<IObjectStore>();
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
-		var god = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var god = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var suffix = Guid.NewGuid().ToString("N")[..12];
-		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("dispatch room", god)))).AsRoom;
-		var actor = (await objects.GetObjectNodeAsync(await mediator.Send(new CreatePlayerCommand("Dispatcher" + suffix, "test-password", room.Object.DBRef, room.Object.DBRef, 20)))).AsPlayer;
+		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("dispatch room", god)))).Expect<SharpRoom>();
+		var actor = (await objects.GetObjectNodeAsync(await mediator.Send(new CreatePlayerCommand("Dispatcher" + suffix, "test-password", room.Object.DBRef, room.Object.DBRef, 20)))).Expect<SharpPlayer>();
 		var masterRef = new DBRef((int)Get<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Database.MasterRoom);
-		var master = (await objects.GetObjectNodeAsync(masterRef)).Known;
-		var zone = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("dispatch zone", god)))).Known;
+		var master = (await objects.GetObjectNodeAsync(masterRef)).Expect<AnySharpObject>();
+		var zone = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("dispatch zone", god)))).Expect<AnySharpObject>();
 		if (source == "zone") await mediator.Send(new SetObjectZoneCommand(room, zone));
 		if (source == "personal") await mediator.Send(new SetObjectZoneCommand(actor, zone));
 		AnySharpContainer container = source is "zone" or "personal" ? zone.AsContainer
 			: source == "global-contents" ? master.AsContainer : room;
 		AnySharpObject host = source == "location" ? room : source == "global-room" ? master
-			: (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("dispatch host", container, actor, room)))).Known;
+			: (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("dispatch host", container, actor, room)))).Expect<AnySharpObject>();
 		var setup = Factory.CommandParser.FromState(ParserState.RootFor(god.Object.DBRef));
 		var commandAttribute = "CMD_" + suffix;
 		var marker = "RAN_" + suffix.ToUpperInvariant();
@@ -70,7 +70,7 @@ public class RealityLiveCommandDispatchTests
 			await setup.CommandListParse(MarkupText.Plain($"&{commandAttribute} {host.Object().DBRef}=${word}:think {marker}"));
 			if (source == "precedence")
 			{
-				fallback = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("visible fallback", master.AsContainer, actor, room)))).Known;
+				fallback = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("visible fallback", master.AsContainer, actor, room)))).Expect<AnySharpObject>();
 				await setup.CommandListParse(MarkupText.Plain($"@set {fallback.Object().DBRef}=!NO_COMMAND"));
 				await setup.CommandListParse(MarkupText.Plain($"&{commandAttribute} {fallback.Object().DBRef}=${word}:think {marker}"));
 			}

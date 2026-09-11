@@ -28,13 +28,8 @@ public class ChannelFunctionUnitTests
 	[Before(Test)]
 	public async Task SetupTestChannel()
 	{
-		var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
-		_testPlayer = playerNode.IsPlayer ? playerNode.AsPlayer : null;
-
-		if (_testPlayer == null)
-		{
-			throw new InvalidOperationException($"Test player #{TestPlayerDbRef} not found");
-		}
+		_testPlayer = (await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef)))
+			.Expect<SharpPlayer>($"test player #{TestPlayerDbRef} exists");
 
 		// Create a test channel (owner is automatically added as a member)
 		await Mediator.Send(new CreateChannelCommand(
@@ -139,17 +134,17 @@ public class ChannelFunctionUnitTests
 		{
 			throw new InvalidOperationException("Test channel is not initialized.");
 		}
-		var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
+		var player = (await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef))).Expect<SharpPlayer>();
 
 		var userStartsOn = (await Parser.FunctionParse(MarkupText.Plain($"cstatus(%#,{TestChannelName})")))?.Message!;
 		await Assert.That(userStartsOn.ToPlainText()).Contains("ON");
 
-		await Mediator.Send(new RemoveUserFromChannelCommand(_testChannel, playerNode.AsPlayer));
+		await Mediator.Send(new RemoveUserFromChannelCommand(_testChannel, player));
 
 		var userEndsOff = (await Parser.FunctionParse(MarkupText.Plain($"cstatus(%#,{TestChannelName})")))?.Message!;
 		await Assert.That(userEndsOff.ToPlainText()).IsEqualTo("OFF");
 
-		await Mediator.Send(new AddUserToChannelCommand(_testChannel, playerNode.AsPlayer));
+		await Mediator.Send(new AddUserToChannelCommand(_testChannel, player));
 		var userIsPutBackOn = (await Parser.FunctionParse(MarkupText.Plain($"cstatus(%#,{TestChannelName})")))?.Message!;
 		await Assert.That(userIsPutBackOn.ToPlainText()).Contains("ON");
 	}

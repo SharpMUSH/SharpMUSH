@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -27,9 +26,8 @@ public class HelpCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("help newbie")) ||
-				(msg.IsT1 && msg.AsT1.Contains("help newbie"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "help newbie")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -47,9 +45,8 @@ public class HelpCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains(expected)) ||
-				(msg.IsT1 && msg.AsT1.Contains(expected))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, expected)), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -61,15 +58,13 @@ public class HelpCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Here are the entries which match 'help*'")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Here are the entries which match 'help*'"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Here are the entries which match 'help*'")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("help, help query, help search, help/search, helpfile, helpfile2")) ||
-				(msg.IsT1 && msg.AsT1.Contains("help, help query, help search, help/search, helpfile, helpfile2"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "help, help query, help search, help/search, helpfile, helpfile2")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -81,9 +76,8 @@ public class HelpCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Matches:")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Matches:"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Matches:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -95,9 +89,8 @@ public class HelpCommandTests
 		// "No entry for" is the PennMUSH-compatible message.
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("No entry for")) ||
-				(msg.IsT1 && msg.AsT1.Contains("No entry for"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "No entry for")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -109,9 +102,8 @@ public class HelpCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("If you are new to MUSHing")) ||
-				(msg.IsT1 && msg.AsT1.Contains("If you are new to MUSHing"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "If you are new to MUSHing")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -133,7 +125,7 @@ public class HelpCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessagePlainTextContains(msg, privilege)),
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -165,7 +157,7 @@ public class HelpCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessagePlainTextContains(msg, $"@clock/{lockName}")),
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}

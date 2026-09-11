@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -68,17 +69,21 @@ public class PackagesController(
 		foreach (var official in officials)
 		{
 			var result = await source.GetCommunityListingsAsync(official, cancellationToken);
-			result.Switch(
-				directory =>
-				{
+			switch (result)
+			{
+				case CommunityRepoDirectory directory:
 					errors.AddRange(directory.Errors.Select(e => $"{official.Name}: {e}"));
 					foreach (var listing in directory.Listings.Where(l => seenUrls.Add(l.Url)))
 					{
 						listings.Add(new CommunityRepoListingDto(
 							listing, official.Name, configuredUrls.Contains(listing.Url)));
 					}
-				},
-				error => errors.Add($"{official.Name}: {error.Value}"));
+
+					break;
+				case Error<string> error:
+					errors.Add($"{official.Name}: {error.Value}");
+					break;
+			}
 		}
 
 		return new CommunityReposResponse(listings, errors);
@@ -119,10 +124,11 @@ public class PackagesController(
 		var remote = configured ?? new PackageRemoteRecord(
 			accepted!.Name, accepted.Url, PackageRemoteTrust.Community, accepted.Branch);
 
-		var readme = await source.GetReadmeAsync(remote, "", null, cancellationToken);
-		return readme.Match<ActionResult<ReadmeResponse>>(
-			markdown => Ok(new ReadmeResponse(markdown, Markdown.RenderToHtml(markdown))),
-			error => NotFound(error.Value));
+		return await source.GetReadmeAsync(remote, "", null, cancellationToken) switch
+		{
+			string markdown => Ok(new ReadmeResponse(markdown, Markdown.RenderToHtml(markdown))),
+			Error<string> error => NotFound(error.Value)
+		};
 	}
 
 	/// <summary>Scans selected live objects: attrs, flags, parents, and external dbrefs needing classification.</summary>
@@ -131,10 +137,11 @@ public class PackagesController(
 	public async Task<ActionResult<PackageAuthoringScan>> AuthorScan(
 		[FromBody] List<string> objids, CancellationToken cancellationToken)
 	{
-		var result = await authoring.ScanAsync(objids, cancellationToken);
-		return result.Match<ActionResult<PackageAuthoringScan>>(
-			scan => Ok(scan),
-			error => BadRequest(error.Value));
+		return await authoring.ScanAsync(objids, cancellationToken) switch
+		{
+			PackageAuthoringScan scan => Ok(scan),
+			Error<string> error => BadRequest(error.Value)
+		};
 	}
 
 	/// <summary>Exports a classified selection as a validated package.yaml document.</summary>
@@ -143,10 +150,11 @@ public class PackagesController(
 	public async Task<IActionResult> AuthorExport(
 		[FromBody] PackageAuthoringRequest request, CancellationToken cancellationToken)
 	{
-		var result = await authoring.ExportAsync(request, cancellationToken);
-		return result.Match<IActionResult>(
-			yaml => File(System.Text.Encoding.UTF8.GetBytes(yaml), "application/yaml", "package.yaml"),
-			error => BadRequest(error.Value));
+		return await authoring.ExportAsync(request, cancellationToken) switch
+		{
+			string yaml => File(System.Text.Encoding.UTF8.GetBytes(yaml), "application/yaml", "package.yaml"),
+			Error<string> error => BadRequest(error.Value)
+		};
 	}
 
 	/// <summary>Lists installed packages with dashboard context.</summary>
@@ -184,10 +192,11 @@ public class PackagesController(
 	[Authorize]
 	public async Task<ActionResult<PackageRollbackResult>> Rollback(string id, int revision, CancellationToken cancellationToken)
 	{
-		var result = await installer.RollbackAsync(id, revision, cancellationToken);
-		return result.Match<ActionResult<PackageRollbackResult>>(
-			ok => Ok(ok),
-			error => BadRequest(error.Value));
+		return await installer.RollbackAsync(id, revision, cancellationToken) switch
+		{
+			PackageRollbackResult ok => Ok(ok),
+			Error<string> error => BadRequest(error.Value)
+		};
 	}
 
 	/// <summary>Uninstalls a package; 409 when dependents exist and force is not set.</summary>
@@ -195,10 +204,11 @@ public class PackagesController(
 	[Authorize]
 	public async Task<IActionResult> Uninstall(string id, [FromQuery] bool force, CancellationToken cancellationToken)
 	{
-		var result = await installer.UninstallAsync(id, force, cancellationToken);
-		return result.Match<IActionResult>(
-			_ => NoContent(),
-			error => Conflict(error.Value));
+		return await installer.UninstallAsync(id, force, cancellationToken) switch
+		{
+			Success => NoContent(),
+			Error<string> error => Conflict(error.Value)
+		};
 	}
 
 	/// <summary>
@@ -209,32 +219,31 @@ public class PackagesController(
 	[Authorize]
 	public async Task<ActionResult<PackageUpdateInfo>> CheckForUpdate(string id, CancellationToken cancellationToken)
 	{
-		var installed = await registry.GetInstalledPackageAsync(id);
-		if (installed.IsT1)
+		if (await registry.GetInstalledPackageAsync(id) is not InstalledPackageRecord installed)
 		{
 			return NotFound($"'{id}' is not installed.");
 		}
 
-		// A package that came out of the image has no git remote to ask. Before this branch existed
-		// the fallback below synthesized a remote whose URL was "bundled:sharpmush" and handed it to
-		// the source service, which tried to clone that as a repo — so every bundled package (all
-		// five installed at first boot) answered this endpoint with a 502.
-		if (BundledPackages.IsCatalogueSource(installed.AsT0.SourceRepo))
+		// A package that came out of the image has no git remote to ask: the fallback below would
+		// synthesize a remote whose URL is "bundled:sharpmush", and the source service would try to
+		// clone that as a repo and answer with a 502.
+		if (BundledPackages.IsCatalogueSource(installed.SourceRepo))
 		{
-			return Ok(CatalogueUpdateInfo(installed.AsT0));
+			return Ok(CatalogueUpdateInfo(installed));
 		}
 
 		var remotes = await registry.GetPackageRemotesAsync();
 		var remote = remotes.FirstOrDefault(r =>
-				string.Equals(r.Url, installed.AsT0.SourceRepo, StringComparison.OrdinalIgnoreCase))
+				string.Equals(r.Url, installed.SourceRepo, StringComparison.OrdinalIgnoreCase))
 			?? new PackageRemoteRecord(
-				installed.AsT0.SourceRepo, installed.AsT0.SourceRepo,
-				PackageRemoteTrust.Unknown, installed.AsT0.PinnedBranch);
+				installed.SourceRepo, installed.SourceRepo,
+				PackageRemoteTrust.Unknown, installed.PinnedBranch);
 
-		var result = await source.CheckForUpdateAsync(remote, installed.AsT0, cancellationToken);
-		return result.Match<ActionResult<PackageUpdateInfo>>(
-			info => Ok(info),
-			error => StatusCode(StatusCodes.Status502BadGateway, error.Value));
+		return await source.CheckForUpdateAsync(remote, installed, cancellationToken) switch
+		{
+			PackageUpdateInfo info => Ok(info),
+			Error<string> error => StatusCode(StatusCodes.Status502BadGateway, error.Value)
+		};
 	}
 
 	/// <summary>
@@ -304,16 +313,16 @@ public class PackagesController(
 			return Ok(BrowseCatalogue());
 		}
 
-		var remote = await registry.GetPackageRemoteAsync(name);
-		if (remote.IsT1)
+		if (await registry.GetPackageRemoteAsync(name) is not PackageRemoteRecord remote)
 		{
 			return NotFound($"No configured remote named '{name}'.");
 		}
 
-		var snapshot = await source.RefreshAsync(remote.AsT0, cancellationToken);
-		return snapshot.Match<ActionResult<PackageRepoSnapshot>>(
-			ok => Ok(ok),
-			error => StatusCode(StatusCodes.Status502BadGateway, error.Value));
+		return await source.RefreshAsync(remote, cancellationToken) switch
+		{
+			PackageRepoSnapshot ok => Ok(ok),
+			Error<string> error => StatusCode(StatusCodes.Status502BadGateway, error.Value)
+		};
 	}
 
 	/// <summary>
@@ -325,14 +334,18 @@ public class PackagesController(
 	[HttpPost("plan")]
 	[Authorize]
 	public async Task<ActionResult<PlanResponse>> Plan([FromBody] PlanRequest request, CancellationToken cancellationToken)
-	{
-		var fetched = await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken);
-		if (fetched.IsT1)
+		=> await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken) switch
 		{
-			return fetched.AsT1;
-		}
+			FetchedManifest fetched => await PlanManifestAsync(request, fetched, cancellationToken),
+			ActionResult response => response,
+		};
 
-		var (manifest, warnings, manifestSource) = fetched.AsT0;
+	/// <summary>Plans a fetched manifest against the live game and renders the review panes.</summary>
+	private async Task<ActionResult<PlanResponse>> PlanManifestAsync(
+		PlanRequest request, FetchedManifest fetched, CancellationToken cancellationToken)
+	{
+		var (manifest, warnings, manifestSource) = fetched;
+
 		var answers = request.ConfigureAnswers ?? new Dictionary<string, string>();
 		var changeset = await installer.PlanAsync(manifest, answers, cancellationToken);
 
@@ -360,18 +373,33 @@ public class PackagesController(
 	[HttpPost("apply")]
 	[Authorize]
 	public async Task<ActionResult<ApplyResponse>> Apply([FromBody] ApplyRequest request, CancellationToken cancellationToken)
-	{
-		var fetched = await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken);
-		if (fetched.IsT1)
+		=> await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken) switch
 		{
-			return fetched.AsT1;
-		}
+			FetchedManifest fetched => await ApplyManifestAsync(request, fetched, cancellationToken),
+			ActionResult response => response,
+		};
 
-		var (manifest, _, manifestSource) = fetched.AsT0;
+	/// <summary>Installs a fetched manifest from the remote it was fetched from.</summary>
+	private async Task<ActionResult<ApplyResponse>> ApplyManifestAsync(
+		ApplyRequest request, FetchedManifest fetched, CancellationToken cancellationToken)
+	{
+		var (manifest, _, manifestSource) = fetched;
+
+		// FetchManifestAsync looked the remote up already, but it can be removed in between.
 		var isCatalogue = BundledPackages.IsCatalogueRemote(request.Remote);
-		var remote = isCatalogue
-			? CatalogueRemote
-			: (await registry.GetPackageRemoteAsync(request.Remote)).AsT0;
+		PackageRemoteRecord remote;
+		if (isCatalogue)
+		{
+			remote = CatalogueRemote;
+		}
+		else if (await registry.GetPackageRemoteAsync(request.Remote) is PackageRemoteRecord configured)
+		{
+			remote = configured;
+		}
+		else
+		{
+			return NotFound($"No configured remote named '{request.Remote}'.");
+		}
 
 		// Managed packages (Phase 4) carry a compiled DLL alongside package.yaml;
 		// resolve a binary reader over the same commit so the installer can verify
@@ -387,13 +415,14 @@ public class PackagesController(
 
 		if (manifest.Kind == PackageKind.Managed)
 		{
-			var binary = await source.GetBinarySourceAsync(remote, request.Path, manifestSource.Commit, cancellationToken);
-			if (binary.IsT1)
+			switch (await source.GetBinarySourceAsync(remote, request.Path, manifestSource.Commit, cancellationToken))
 			{
-				return BadRequest(binary.AsT1.Value);
+				case Error<string> error:
+					return BadRequest(error.Value);
+				case IManagedPackageBinarySource binary:
+					binarySource = binary;
+					break;
 			}
-
-			binarySource = binary.AsT0;
 		}
 
 		// A catalogue install records the package id as its path, which is what first-boot bootstrap
@@ -408,64 +437,80 @@ public class PackagesController(
 			request.KeepRevisions,
 			request.AllowManagedCode), cancellationToken, binarySource);
 
-		return result.Match<ActionResult<ApplyResponse>>(
-			ok => Ok(new ApplyResponse(ok.Revision, ok.CreatedObjects, ok.Notes)),
-			error => BadRequest(error.Value));
+		return result switch
+		{
+			PackageApplyResult ok => Ok(new ApplyResponse(ok.Revision, ok.CreatedObjects, ok.Notes)),
+			Error<string> error => BadRequest(error.Value)
+		};
 	}
 
-	private async Task<OneOf.OneOf<(PackageManifest Manifest, IReadOnlyList<string> Warnings, PackageManifestSource Source), ActionResult>>
-		FetchManifestAsync(string remoteName, string path, string? version, CancellationToken cancellationToken)
+	/// <summary>A parsed manifest, the warnings its parse raised, and where it was read from.</summary>
+	private readonly record struct FetchedManifest(
+		PackageManifest Manifest, IReadOnlyList<string> Warnings, PackageManifestSource Source);
+
+	private async Task<ValueOrResponse<FetchedManifest>> FetchManifestAsync(
+		string remoteName, string path, string? version, CancellationToken cancellationToken)
 	{
 		var isCatalogue = BundledPackages.IsCatalogueRemote(remoteName);
 
-		OneOf.OneOf<PackageManifestSource, ActionResult> fetched;
+		ValueOrResponse<PackageManifestSource> fetched;
 		if (isCatalogue)
 		{
 			fetched = FetchCatalogueManifest(path);
 		}
 		else
 		{
-			var remote = await registry.GetPackageRemoteAsync(remoteName);
-			if (remote.IsT1)
+			if (await registry.GetPackageRemoteAsync(remoteName) is not PackageRemoteRecord remote)
 			{
 				return NotFound($"No configured remote named '{remoteName}'.");
 			}
 
-			var fromRemote = await source.GetManifestAsync(remote.AsT0, path, version, cancellationToken);
-			fetched = fromRemote.IsT1
-				? NotFound(fromRemote.AsT1.Value)
-				: fromRemote.AsT0;
+			fetched = await source.GetManifestAsync(remote, path, version, cancellationToken) switch
+			{
+				PackageManifestSource fromRemote => fromRemote,
+				Error<string> error => NotFound(error.Value)
+			};
 		}
 
-		if (fetched.IsT1)
+		return fetched switch
 		{
-			return fetched.AsT1;
-		}
+			PackageManifestSource manifestSource => ParseFetchedManifest(manifestSource, isCatalogue, version),
+			ActionResult response => response,
+		};
+	}
 
-		var parsed = manifests.ParseManifest(fetched.AsT0.ManifestYaml);
-		if (parsed.IsT1)
+	/// <summary>Parses a fetched manifest, answering with its issues when it does not parse.</summary>
+	private ValueOrResponse<FetchedManifest> ParseFetchedManifest(
+		PackageManifestSource manifestSource, bool isCatalogue, string? version)
+		=> manifests.ParseManifest(manifestSource.ManifestYaml) switch
 		{
-			return UnprocessableEntity(new
+			ParsedPackageManifest parsed => HonourRequestedVersion(parsed, manifestSource, isCatalogue, version),
+			PackageManifestFailure failure => UnprocessableEntity(new
 			{
 				Message = "The manifest is invalid.",
-				Issues = parsed.AsT1.Issues.Select(i => i.ToString()).ToList()
-			});
-		}
+				Issues = failure.Issues.Select(i => i.ToString()).ToList()
+			}),
+		};
 
+	/// <summary>The parsed manifest, unless the catalogue cannot serve the version that was asked for.</summary>
+	private ValueOrResponse<FetchedManifest> HonourRequestedVersion(
+		ParsedPackageManifest parsed, PackageManifestSource manifestSource, bool isCatalogue, string? version)
+	{
 		// The image ships exactly one version of each catalogue package, so an explicit version
 		// request can only be honoured when it names that one. Serving the shipped manifest anyway
 		// would install something other than what was asked for.
-		var shipped = parsed.AsT0.Manifest.Version.ToString();
+		var shipped = parsed.Manifest.Version.ToString();
 		if (isCatalogue && !string.IsNullOrWhiteSpace(version) &&
 			!string.Equals(version, shipped, StringComparison.OrdinalIgnoreCase))
 		{
 			return NotFound(
-				$"This server ships {parsed.AsT0.Manifest.Name} v{shipped}; the catalogue has no other versions.");
+				$"This server ships {parsed.Manifest.Name} v{shipped}; the catalogue has no other versions.");
 		}
 
-		return (parsed.AsT0.Manifest,
-			parsed.AsT0.Warnings.Select(w => w.ToString()).ToList(),
-			fetched.AsT0);
+		return new FetchedManifest(
+			parsed.Manifest,
+			parsed.Warnings.Select(w => w.ToString()).ToList(),
+			manifestSource);
 	}
 
 	/// <summary>
@@ -473,7 +518,7 @@ public class PackagesController(
 	/// package id (the catalogue has no directories); a trailing slash is tolerated because the
 	/// browse entries of a git remote carry one and the UI passes back whatever it was given.
 	/// </summary>
-	private OneOf.OneOf<PackageManifestSource, ActionResult> FetchCatalogueManifest(string path)
+	private ValueOrResponse<PackageManifestSource> FetchCatalogueManifest(string path)
 	{
 		var packageId = (path ?? "").Trim().Trim('/');
 		if (!BundledPackages.Contains(packageId))
@@ -494,13 +539,11 @@ public class PackagesController(
 	private PackageRepoSnapshot BrowseCatalogue()
 	{
 		var entries = BundledPackages.All
-			.Select(descriptor =>
+			.Select(descriptor => manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId)) switch
 			{
-				var parsed = manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId));
-				return parsed.IsT0
-					? new PackageRepoEntry(descriptor.PackageId, parsed.AsT0.Manifest.Name,
-						parsed.AsT0.Manifest.Version.ToString(), parsed.AsT0.Manifest.Description, [])
-					: new PackageRepoEntry(descriptor.PackageId, null, null, null, []);
+				ParsedPackageManifest { Manifest: var manifest } => new PackageRepoEntry(descriptor.PackageId,
+					manifest.Name, manifest.Version.ToString(), manifest.Description, []),
+				PackageManifestFailure => new PackageRepoEntry(descriptor.PackageId, null, null, null, [])
 			})
 			.ToList();
 
@@ -535,13 +578,11 @@ public class PackagesController(
 			return null;
 		}
 
-		var parsed = manifests.ParseManifest(BundledPackages.ManifestYaml(packageId));
-		if (parsed.IsT1)
+		if (manifests.ParseManifest(BundledPackages.ManifestYaml(packageId)) is not ParsedPackageManifest { Manifest: var manifest })
 		{
 			return $"# {packageId}\n\nThis build's manifest for `{packageId}` could not be read.";
 		}
 
-		var manifest = parsed.AsT0.Manifest;
 		var descriptor = BundledPackages.All.Single(d =>
 			string.Equals(d.PackageId, packageId, StringComparison.OrdinalIgnoreCase));
 
@@ -589,13 +630,12 @@ public class PackagesController(
 
 		// An unparsable embedded manifest is a build defect that BundledPackagesTests catches; here
 		// it must not turn an update check into a 500.
-		var parsed = manifests.ParseManifest(BundledPackages.ManifestYaml(installed.Id));
-		if (parsed.IsT1)
+		if (manifests.ParseManifest(BundledPackages.ManifestYaml(installed.Id)) is not ParsedPackageManifest parsed)
 		{
 			return new PackageUpdateInfo(installed.Version, null, null, false, false, false);
 		}
 
-		var shipped = parsed.AsT0.Manifest.Version;
+		var shipped = parsed.Manifest.Version;
 		return new PackageUpdateInfo(
 			installed.Version,
 			shipped.ToString(),
@@ -624,15 +664,15 @@ public class PackagesController(
 				: Ok(new ReadmeResponse(markdown, Markdown.RenderToHtml(markdown)));
 		}
 
-		var remote = await registry.GetPackageRemoteAsync(name);
-		if (remote.IsT1)
+		if (await registry.GetPackageRemoteAsync(name) is not PackageRemoteRecord remote)
 		{
 			return NotFound($"No configured remote named '{name}'.");
 		}
 
-		var readme = await source.GetReadmeAsync(remote.AsT0, path ?? "", version, cancellationToken);
-		return readme.Match<ActionResult<ReadmeResponse>>(
-			markdown => Ok(new ReadmeResponse(markdown, Markdown.RenderToHtml(markdown))),
-			error => NotFound(error.Value));
+		return await source.GetReadmeAsync(remote, path ?? "", version, cancellationToken) switch
+		{
+			string markdown => Ok(new ReadmeResponse(markdown, Markdown.RenderToHtml(markdown))),
+			Error<string> error => NotFound(error.Value)
+		};
 	}
 }

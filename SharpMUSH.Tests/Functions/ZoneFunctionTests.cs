@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -32,11 +33,11 @@ public class ZoneFunctionTests
 	{
 		Actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ZoneActor");
-		var actor = (await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef))).AsPlayer;
+		var actor = (await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef))).Expect<SharpPlayer>();
 		var wizard = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
 		await Assert.That(await Mediator.Send(new SetObjectFlagCommand(actor, wizard!))).IsTrue();
 		var roomId = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("ZoneRoom"), actor));
-		var room = (await Mediator.Send(new GetObjectNodeQuery(roomId))).AsRoom;
+		var room = (await Mediator.Send(new GetObjectNodeQuery(roomId))).Expect<SharpRoom>();
 		var origin = await actor.Location.WithCancellation(CancellationToken.None);
 		await Mediator.Send(new MoveObjectCommand(actor, room, origin.Object().DBRef, IsSilent: true));
 	}
@@ -76,8 +77,8 @@ public class ZoneFunctionTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		// Clear any zone the object may have inherited from the creator, ensuring isolation
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		await Mediator.Send(new UnsetObjectZoneCommand(obj.Known));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		await Mediator.Send(new UnsetObjectZoneCommand(obj));
 
 		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef})")))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
@@ -111,8 +112,8 @@ public class ZoneFunctionTests
 		// clearing any inherited zone for clean isolation
 		var objResult = await CreateFixtureAsync("ZoneFuncSetTest");
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		await Mediator.Send(new UnsetObjectZoneCommand(obj.Known));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		await Mediator.Send(new UnsetObjectZoneCommand(obj));
 
 		// Set the zone via function (requires side effects enabled)
 		var setResult = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef},{zoneDbRef})")))?.Message!;
@@ -161,8 +162,8 @@ public class ZoneFunctionTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		// Clear any inherited zone for clean isolation
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		await Mediator.Send(new UnsetObjectZoneCommand(obj.Known));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		await Mediator.Send(new UnsetObjectZoneCommand(obj));
 
 		// Player can examine their own objects, so this should work
 		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef})")))?.Message!;
@@ -200,10 +201,10 @@ public class ZoneFunctionTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 
 		// Clear any inherited zones on both objects for clean isolation
-		var zoneObj = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
-		await Mediator.Send(new UnsetObjectZoneCommand(zoneObj.Known));
-		var theObj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		await Mediator.Send(new UnsetObjectZoneCommand(theObj.Known));
+		var zoneObj = (await Mediator.Send(new GetObjectNodeQuery(zoneDbRef))).Expect<AnySharpObject>();
+		await Mediator.Send(new UnsetObjectZoneCommand(zoneObj));
+		var theObj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		await Mediator.Send(new UnsetObjectZoneCommand(theObj));
 
 		await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef},{zoneDbRef})"));
 
@@ -222,20 +223,20 @@ public class ZoneFunctionTests
 		// Create a zone master and clear any inherited zone
 		var zoneResult = await CreateFixtureAsync("ZfindTestZone");
 		var zoneDbRef = DBRef.Parse(zoneResult.Message!.ToPlainText()!);
-		var zoneObj = await Mediator.Send(new GetObjectNodeQuery(zoneDbRef));
-		await Mediator.Send(new UnsetObjectZoneCommand(zoneObj.Known));
+		var zoneObj = (await Mediator.Send(new GetObjectNodeQuery(zoneDbRef))).Expect<AnySharpObject>();
+		await Mediator.Send(new UnsetObjectZoneCommand(zoneObj));
 
 		// Create multiple objects in the zone, clearing inherited zones first
 		var obj1Result = await CreateFixtureAsync("ZfindObj1");
 		var obj1DbRef = DBRef.Parse(obj1Result.Message!.ToPlainText()!);
-		var obj1 = await Mediator.Send(new GetObjectNodeQuery(obj1DbRef));
-		await Mediator.Send(new UnsetObjectZoneCommand(obj1.Known));
+		var obj1 = (await Mediator.Send(new GetObjectNodeQuery(obj1DbRef))).Expect<AnySharpObject>();
+		await Mediator.Send(new UnsetObjectZoneCommand(obj1));
 		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {obj1DbRef}={zoneDbRef}"));
 
 		var obj2Result = await CreateFixtureAsync("ZfindObj2");
 		var obj2DbRef = DBRef.Parse(obj2Result.Message!.ToPlainText()!);
-		var obj2 = await Mediator.Send(new GetObjectNodeQuery(obj2DbRef));
-		await Mediator.Send(new UnsetObjectZoneCommand(obj2.Known));
+		var obj2 = (await Mediator.Send(new GetObjectNodeQuery(obj2DbRef))).Expect<AnySharpObject>();
+		await Mediator.Send(new UnsetObjectZoneCommand(obj2));
 		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {obj2DbRef}={zoneDbRef}"));
 
 		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"zfind({zoneDbRef})")))?.Message!;
@@ -264,10 +265,10 @@ public class ZoneFunctionTests
 		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {zoneBDbRef}={zoneADbRef}"));
 		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneBDbRef}"));
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		var zoneChain = new List<int>();
 
-		await foreach (var zone in obj.Known.GetZoneChain())
+		await foreach (var zone in obj.GetZoneChain())
 		{
 			zoneChain.Add(zone.Object().DBRef.Number);
 		}
@@ -293,11 +294,9 @@ public class ZoneFunctionTests
 		var objDbRef = DBRef.Parse(objResult.Message!.ToPlainText()!);
 		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}={zoneDbRef}"));
 
-		var stored = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		await Assert.That(stored.IsNone).IsFalse();
-		var storedZone = await stored.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		await Assert.That(storedZone.IsNone).IsFalse();
-		await Assert.That(storedZone.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		var stored = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var storedZone = (await stored.Object().Zone.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+		await Assert.That(storedZone.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
 		var zoneAttribute = await Mediator.CreateStream(new GetAttributeQuery(zoneDbRef, ["TEST_ZONE_ATTR"])).SingleAsync();
 		await Assert.That(zoneAttribute.Value.ToPlainText()).IsEqualTo("Zone Master Value");
 
@@ -306,19 +305,18 @@ public class ZoneFunctionTests
 		await Assert.That(hasAttr.ToPlainText()).IsEqualTo("1");
 
 		// Directly test AttributeService to verify zone attribute inheritance
-		var executor = await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef));
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var executor = (await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef))).Expect<AnySharpObject>();
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 		var maybeAttr = await attributeService.GetAttributeAsync(
-			executor.Known,
-			obj.Known,
+			executor,
+			obj,
 			"TEST_ZONE_ATTR",
 			IAttributeService.AttributeMode.Read,
 			parent: true);
 
-		await Assert.That(maybeAttr.IsAttribute).IsTrue();
-		await Assert.That(maybeAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("Zone Master Value");
+		await Assert.That(maybeAttr.Expect<SharpAttribute[]>().Last().Value.ToPlainText()).IsEqualTo("Zone Master Value");
 	}
 
 	[Test]
@@ -343,17 +341,15 @@ public class ZoneFunctionTests
 
 		var setViaFunction = (await FunctionParser.FunctionParse(MarkupText.Plain($"parent({childDbRef},{parentDbRef})")))?.Message!;
 
-		var childFromDB = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
-		var parentFromDB = await childFromDB.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var childFromDB = (await Mediator.Send(new GetObjectNodeQuery(childDbRef))).Expect<AnySharpObject>();
+		var parentFromDB = (await childFromDB.Object().Parent.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
 
-		await Assert.That(parentFromDB.IsNone).IsFalse();
-		await Assert.That(parentFromDB.Known.Object().DBRef.Number).IsEqualTo(parentDbRef.Number);
+		await Assert.That(parentFromDB.Object().DBRef.Number).IsEqualTo(parentDbRef.Number);
 
 		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {childDbRef}={zoneDbRef}"));
 
-		var childZoneFromDB = await childFromDB.Known.Object().Zone.WithCancellation(CancellationToken.None);
-		await Assert.That(childZoneFromDB.IsNone).IsFalse();
-		await Assert.That(childZoneFromDB.Known.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
+		var childZoneFromDB = (await childFromDB.Object().Zone.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+		await Assert.That(childZoneFromDB.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
 
 		// Test attribute inheritance using get_eval which checks parent and zone chains
 		// Parent attributes should take precedence over zone attributes
@@ -384,29 +380,27 @@ public class ZoneFunctionTests
 		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@parent {childDbRef}={parentDbRef}"));
 		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {childDbRef}={childZoneDbRef}"));
 
-		var executor = await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef));
-		var child = await Mediator.Send(new GetObjectNodeQuery(childDbRef));
+		var executor = (await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef))).Expect<AnySharpObject>();
+		var child = (await Mediator.Send(new GetObjectNodeQuery(childDbRef))).Expect<AnySharpObject>();
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 		var childZoneAttr = await attributeService.GetAttributeAsync(
-			executor.Known,
-			child.Known,
+			executor,
+			child,
 			"CHILD_ZONE_ATTR",
 			IAttributeService.AttributeMode.Read,
 			parent: true);
 
-		await Assert.That(childZoneAttr.IsAttribute).IsTrue();
-		await Assert.That(childZoneAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("From Child Zone");
+		await Assert.That(childZoneAttr.Expect<SharpAttribute[]>().Last().Value.ToPlainText()).IsEqualTo("From Child Zone");
 
 		// Should inherit from parent's zone (after checking child and child's zone)
 		var parentZoneAttr = await attributeService.GetAttributeAsync(
-			executor.Known,
-			child.Known,
+			executor,
+			child,
 			"PARENT_ZONE_ATTR",
 			IAttributeService.AttributeMode.Read,
 			parent: true);
 
-		await Assert.That(parentZoneAttr.IsAttribute).IsTrue();
-		await Assert.That(parentZoneAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("From Parent Zone");
+		await Assert.That(parentZoneAttr.Expect<SharpAttribute[]>().Last().Value.ToPlainText()).IsEqualTo("From Parent Zone");
 	}
 }

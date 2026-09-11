@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SurrealDb.Net;
 using SurrealDb.Net.Models;
@@ -140,9 +141,8 @@ SELECT out.key AS dbref FROM account_owns_character WHERE in = $accountId
 		var players = new List<SharpPlayer>();
 		foreach (var record in records)
 		{
-			var obj = await GetObjectNodeAsync(new DBRef(record.dbref), cancellationToken);
-			if (obj.IsPlayer)
-				players.Add(obj.AsPlayer);
+			if (await GetObjectNodeAsync(new DBRef(record.dbref), cancellationToken) is AnySharpObject and SharpPlayer player)
+				players.Add(player);
 		}
 		return players;
 	}

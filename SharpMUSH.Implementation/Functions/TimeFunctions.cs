@@ -3,6 +3,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Time;
@@ -347,12 +348,12 @@ public partial class Functions
 			{
 				var attr = await AttributeService.GetAttributeAsync(executor, found, "TZ",
 					IAttributeService.AttributeMode.Read, false);
-				if (!attr.IsAttribute)
+				if (attr is not SharpAttribute[] tz)
 				{
 					return DateTimeOffset.Now.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);
 				}
 
-				var attrValue = attr.AsAttribute.Last().Value.ToPlainText();
+				var attrValue = tz.Last().Value.ToPlainText();
 
 				return TimeZoneInfo.TryFindSystemTimeZoneById(attrValue, out var dbTimeZone)
 					? DateTimeOffset.Now.ToOffset(dbTimeZone.BaseUtcOffset).ToString(PennTimeFormat, CultureInfo.InvariantCulture)

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -42,9 +41,8 @@ public partial class Commands
 
 		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
-		var location = await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
-
-		if (location.IsNone || location.IsExit)
+		if (await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref)) is not AnySharpObject location
+				|| location.IsExit)
 		{
 			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
@@ -65,18 +63,17 @@ public partial class Commands
 		var thing = await Mediator.Send(new CreateThingCommand(name.ToPlainText(),
 			executor.AsContainer,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None),
-			location.Known.AsContainer));
+			location.AsContainer));
 
 		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
-		if (!creatorZone.IsNone)
+		if (creatorZone is AnySharpObject zone)
 		{
-			var newThing = await Mediator.Send(new GetObjectNodeQuery(thing));
-			if (!newThing.IsNone)
+			if (await Mediator.Send(new GetObjectNodeQuery(thing)) is AnySharpObject newThing)
 			{
 				// Check for cycles before inheriting zone from creator
-				if (await HelperFunctions.SafeToAddZone(Mediator, Database, newThing.Known, creatorZone.Known))
+				if (await HelperFunctions.SafeToAddZone(Mediator, Database, newThing, zone))
 				{
-					await Mediator.Send(new SetObjectZoneCommand(newThing.Known, creatorZone.Known));
+					await Mediator.Send(new SetObjectZoneCommand(newThing, zone));
 				}
 			}
 		}
@@ -114,7 +111,11 @@ public partial class Commands
 				LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsPreference,
 				async o =>
 				{
-					var oldData = o.AsExit;
+					if (o is not SharpExit oldData)
+					{
+						throw new InvalidOperationException("An exits-only lookup found something that is not an exit.");
+					}
+
 					var oldLocation = await oldData.Location.WithCancellation(CancellationToken.None);
 					await Mediator.Send(new UnlinkExitCommand(oldData));
 					await Mediator.Send(new LinkExitCommand(oldData, oldLocation));
@@ -214,7 +215,7 @@ public partial class Commands
 					executor, executor, newOwnerName, LocateFlags.All,
 					async newOwnerObj =>
 					{
-						if (!newOwnerObj.IsPlayer)
+						if (newOwnerObj is not SharpPlayer newOwnerPlayer)
 						{
 							return await NotifyService.NotifyAndReturn(
 								executor.Object().DBRef,
@@ -223,7 +224,7 @@ public partial class Commands
 								shouldNotify: true);
 						}
 
-						var result = await ManipulateSharpObjectService.SetOwner(executor, obj, newOwnerObj.AsPlayer, true);
+						var result = await ManipulateSharpObjectService.SetOwner(executor, obj, newOwnerPlayer, true);
 
 						if (!preserve)
 						{
@@ -405,9 +406,9 @@ public partial class Commands
 		// This combines PennMUSH's pre_destroy (mark possessions GOING) and the
 		// object/channel chown portion of clear_player (which runs at purge time in
 		// PennMUSH but is done here because SharpMUSH lacks a live purge cycle).
-		if (obj.IsPlayer)
+		if (obj is SharpPlayer destroyedPlayer)
 		{
-			await HandlePlayerPossessionsAsync(parser, executor, obj);
+			await HandlePlayerPossessionsAsync(parser, executor, destroyedPlayer);
 		}
 
 		// Phase 2b: object-lifecycle destroy seam. The object is about to be marked GOING (scheduled for
@@ -472,36 +473,34 @@ public partial class Commands
 	private async ValueTask HandlePlayerPossessionsAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
-		AnySharpObject playerObj)
+		SharpPlayer playerObj)
 	{
 		var config = Configuration.CurrentValue.Command;
-		var playerDbRefNumber = playerObj.Object().DBRef.Number;
+		var playerDbRefNumber = playerObj.Object.DBRef.Number;
 
 		// Resolve the probate player; fall back to God (#1) if the config value is invalid.
 		var probateDbRef = new DBRef((int)config.ProbateJudge);
-		var probateNode = await Mediator.Send(new GetObjectNodeQuery(probateDbRef));
 		SharpPlayer probatePlayer;
-		if (!probateNode.IsNone && probateNode.Known.IsPlayer)
+		if (await Mediator.Send(new GetObjectNodeQuery(probateDbRef)) is AnySharpObject and SharpPlayer probate)
 		{
-			probatePlayer = probateNode.Known.AsPlayer;
+			probatePlayer = probate;
 		}
 		else
 		{
 			Logger?.LogWarning(
 				"probate_judge config option (#{ProbateDbRef}) is set to an invalid object; falling back to God (#1).",
 				probateDbRef.Number);
-			var godNode = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-			if (godNode.IsNone || !godNode.Known.IsPlayer)
+			if (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1))) is not (AnySharpObject and SharpPlayer god))
 			{
 				Logger?.LogError(
 					"God (#1) is not a valid player; cannot proceed with player possession chown during deletion.");
 				return; // Cannot proceed without a valid probate player.
 			}
-			probatePlayer = godNode.Known.AsPlayer;
+			probatePlayer = god;
 		}
 
 		// --- Channels: always chown to probate (PennMUSH chan_chownall) ---
-		var channels = Mediator.CreateStream(new GetChannelsOwnedByQuery(playerObj.Object().DBRef));
+		var channels = Mediator.CreateStream(new GetChannelsOwnedByQuery(playerObj.Object.DBRef));
 		await foreach (var channel in channels)
 		{
 			await Mediator.Send(new UpdateChannelOwnerCommand(channel, probatePlayer));
@@ -557,7 +556,7 @@ public partial class Commands
 		// (scheduled for deletion) can be excluded, reducing unnecessary work when
 		// destroy_possessions is enabled.
 		// PennMUSH defers this to dbck(), but we do it eagerly to keep the database consistent.
-		await Mediator.Send(new ReassignAttributeOwnerCommand(playerObj.AsPlayer, probatePlayer));
+		await Mediator.Send(new ReassignAttributeOwnerCommand(playerObj, probatePlayer));
 	}
 
 	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
@@ -583,7 +582,7 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				if (exitObj.IsExit)
+				if (exitObj is SharpExit exit)
 				{
 					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
 					{
@@ -645,11 +644,11 @@ public partial class Commands
 										shouldNotify: true);
 								}
 
-								if (executor.IsPlayer)
+								if (executor is SharpPlayer executorPlayer)
 								{
 									try
 									{
-										await Mediator.Send(new SetObjectOwnerCommand(exitObj, executor.AsPlayer));
+										await Mediator.Send(new SetObjectOwnerCommand(exitObj, executorPlayer));
 									}
 									catch (Exception)
 									{
@@ -667,7 +666,7 @@ public partial class Commands
 
 							await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Empty);
 
-							await Mediator.Send(new LinkExitCommand(exitObj.AsExit, destination));
+							await Mediator.Send(new LinkExitCommand(exit, destination));
 
 							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, exitObj.Object().DBRef.Number, destination.Object().DBRef.Number);
 							return CallState.Empty;
@@ -722,13 +721,13 @@ public partial class Commands
 						}
 					);
 				}
-				else if (exitObj.IsRoom)
+				else if (exitObj is SharpRoom room)
 				{
 					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
-							if (!destObj.IsRoom)
+							if (destObj is not SharpRoom destinationRoom)
 							{
 								return await NotifyService.NotifyAndReturn(
 									executor.Object().DBRef,
@@ -737,7 +736,7 @@ public partial class Commands
 									shouldNotify: true);
 							}
 
-							await Mediator.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
+							await Mediator.Send(new LinkRoomCommand(room, destinationRoom));
 							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToSet), executor);
 							return CallState.Empty;
 						}
@@ -959,15 +958,14 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executorBase, roomName, response.Number);
 
 		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
-		if (!creatorZone.IsNone)
+		if (creatorZone is AnySharpObject zone)
 		{
-			var newRoom = await Mediator.Send(new GetObjectNodeQuery(response));
-			if (!newRoom.IsNone)
+			if (await Mediator.Send(new GetObjectNodeQuery(response)) is AnySharpObject newRoom)
 			{
 				// Check for cycles before inheriting zone from creator
-				if (await HelperFunctions.SafeToAddZone(Mediator, Database, newRoom.Known, creatorZone.Known))
+				if (await HelperFunctions.SafeToAddZone(Mediator, Database, newRoom, zone))
 				{
-					await Mediator.Send(new SetObjectZoneCommand(newRoom.Known, creatorZone.Known));
+					await Mediator.Send(new SetObjectZoneCommand(newRoom, zone));
 				}
 			}
 		}
@@ -984,10 +982,13 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{toExitResponse.Number}");
 			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
 
-			var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
-			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(toExitResponse));
+			if (await Mediator.Send(new GetObjectNodeQuery(response)) is not (AnySharpObject and SharpRoom newRoomObject)
+					|| await Mediator.Send(new GetObjectNodeQuery(toExitResponse)) is not (AnySharpObject and SharpExit newExitObject))
+			{
+				throw new InvalidOperationException("The room and exit just dug must exist.");
+			}
 
-			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, newRoomObject.AsRoom));
+			await Mediator.Send(new LinkExitCommand(newExitObject, newRoomObject));
 
 			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, toExitResponse.Number, response.Number);
 		}
@@ -998,18 +999,24 @@ public partial class Commands
 			// CAN LINK BACK TO CURRENT ROOM?
 
 			var exitFromName = exitFrom.ToPlainText().Split(";");
-			var newRoomObject = await Mediator.Send(new GetObjectNodeQuery(response));
+			if (await Mediator.Send(new GetObjectNodeQuery(response)) is not (AnySharpObject and SharpRoom newRoomObject))
+			{
+				throw new InvalidOperationException("The room just dug must exist.");
+			}
 
 			var fromExitResponse = await Mediator.Send(new CreateExitCommand(exitFromName.First(),
-				exitFromName.Skip(1).ToArray(), newRoomObject.AsRoom,
+				exitFromName.Skip(1).ToArray(), newRoomObject,
 				await executor.Owner.WithCancellation(CancellationToken.None)));
-			var newExitObject = await Mediator.Send(new GetObjectNodeQuery(fromExitResponse));
+			if (await Mediator.Send(new GetObjectNodeQuery(fromExitResponse)) is not (AnySharpObject and SharpExit newExitObject))
+			{
+				throw new InvalidOperationException("The exit just opened must exist.");
+			}
 
 			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{fromExitResponse.Number}");
 			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
 
 			var where = await executorBase.Where();
-			await Mediator.Send(new LinkExitCommand(newExitObject.AsExit, where));
+			await Mediator.Send(new LinkExitCommand(newExitObject, where));
 
 			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, fromExitResponse.Number, where.Object().DBRef.Number);
 		}
@@ -1260,15 +1267,13 @@ public partial class Commands
 		if (args.ContainsKey("2") && !string.IsNullOrWhiteSpace(args["2"].Message!.ToPlainText()))
 		{
 			var sourceRoomName = args["2"].Message!.ToPlainText();
-			var locateResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-				executor, executor, sourceRoomName, LocateFlags.All);
-
-			if (locateResult.IsError || !locateResult.AsSharpObject.IsRoom)
+			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+					executor, executor, sourceRoomName, LocateFlags.All) is not (AnySharpObject and SharpRoom namedRoom))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SourceMustBeARoom), executor);
 				return new CallState(ErrorMessages.Returns.NotARoom);
 			}
-			sourceRoom = locateResult.AsSharpObject.AsRoom;
+			sourceRoom = namedRoom;
 		}
 
 		if (!await PermissionService.Controls(executor, sourceRoom.WithExitOption()))
@@ -1288,15 +1293,14 @@ public partial class Commands
 		));
 
 		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
-		if (!creatorZone.IsNone)
+		if (creatorZone is AnySharpObject zone)
 		{
-			var newExit = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
-			if (!newExit.IsNone)
+			if (await Mediator.Send(new GetObjectNodeQuery(exitDbRef)) is AnySharpObject newExit)
 			{
 				// Check for cycles before inheriting zone from creator
-				if (await HelperFunctions.SafeToAddZone(Mediator, Database, newExit.Known, creatorZone.Known))
+				if (await HelperFunctions.SafeToAddZone(Mediator, Database, newExit, zone))
 				{
-					await Mediator.Send(new SetObjectZoneCommand(newExit.Known, creatorZone.Known));
+					await Mediator.Send(new SetObjectZoneCommand(newExit, zone));
 				}
 			}
 		}
@@ -1306,10 +1310,8 @@ public partial class Commands
 		if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
 		{
 			var destName = args["1"].Message!.ToPlainText();
-			var locateResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-				executor, executor, destName, LocateFlags.All);
-
-			if (locateResult.IsError)
+			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+					executor, executor, destName, LocateFlags.All) is not AnySharpObject destination)
 			{
 				// LocateAndNotifyIfInvalidWithCallState has already said why.
 				return new CallState(exitDbRef.ToString());
@@ -1318,15 +1320,19 @@ public partial class Commands
 			// An exit may lead to any container — room, player or thing (PennMUSH can_link_to). Anything
 			// else, or anywhere the executor may not link into, is reported rather than leaving the exit
 			// silently unlinked.
-			if (!locateResult.AsSharpObject.IsContainer
-					|| !await CanLinkTo(executor, locateResult.AsSharpObject))
+			if (!destination.IsContainer
+					|| !await CanLinkTo(executor, destination))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
 				return new CallState(exitDbRef.ToString());
 			}
 
-			var exitObj = await Mediator.Send(new GetObjectNodeQuery(exitDbRef));
-			await Mediator.Send(new LinkExitCommand(exitObj.AsExit, locateResult.AsSharpObject.AsContainer));
+			if (await Mediator.Send(new GetObjectNodeQuery(exitDbRef)) is not (AnySharpObject and SharpExit exitObj))
+			{
+				throw new InvalidOperationException("The exit just opened must exist.");
+			}
+
+			await Mediator.Send(new LinkExitCommand(exitObj, destination.AsContainer));
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToNameFormat), executor, destName);
 		}
 
@@ -1345,9 +1351,8 @@ public partial class Commands
 
 		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
-		var location = await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
-
-		if (location.IsNone || location.IsExit)
+		if (await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref)) is not AnySharpObject location
+				|| location.IsExit)
 		{
 			return await NotifyService.NotifyAndReturn(
 					executor.Object().DBRef,
@@ -1393,7 +1398,7 @@ public partial class Commands
 						newName,
 						await executor.Where(),
 						owner,
-						location.Known.AsContainer
+						location.AsContainer
 					));
 				}
 				else if (obj.IsRoom)
@@ -1422,8 +1427,10 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				var clonedObjOptional = await Mediator.Send(new GetObjectNodeQuery(cloneDbRef));
-				var clonedObj = clonedObjOptional.WithoutNone();
+				if (await Mediator.Send(new GetObjectNodeQuery(cloneDbRef)) is not AnySharpObject clonedObj)
+				{
+					throw new InvalidOperationException("The clone just created must exist.");
+				}
 
 				// Penn's atr_cpy (attrib.c:1692-1710) walks the source's flat, sorted attribute
 				// list - branch vs. leaf is purely a naming convention over one namespace - and
@@ -1474,7 +1481,7 @@ public partial class Commands
 					// 608-675) - the exact hazard this propagation exists to prevent. Unreachable
 					// today (the clone's owner always controls the freshly-created destination),
 					// but one permission change away from live.
-					if (setResult.IsT1)
+					if (setResult is Error<string>)
 					{
 						skippedAttributes.Add(longName);
 						continue;
@@ -1650,17 +1657,17 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				if (obj.IsExit)
+				if (obj is SharpExit exit)
 				{
 					await AttributeService.SetAttributeAsync(executor, obj, AttrLinkType, MarkupText.Empty);
 
-					await Mediator.Send(new UnlinkExitCommand(obj.AsExit));
+					await Mediator.Send(new UnlinkExitCommand(exit));
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UnlinkedExit), executor, obj.Object().DBRef.Number);
 					return CallState.Empty;
 				}
-				else if (obj.IsRoom)
+				else if (obj is SharpRoom room)
 				{
-					await Mediator.Send(new UnlinkRoomCommand(obj.AsRoom));
+					await Mediator.Send(new UnlinkRoomCommand(room));
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToRemoved), executor);
 					return CallState.Empty;
 				}

@@ -3,18 +3,16 @@ using SharpMUSH.Client.Services;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Tests.BUnit.Services;
 
 /// <summary>
 /// That <see cref="ObjectApiService"/> puts an attribute value on the wire unmodified.
 ///
-/// This is the seam that used to mangle: its predecessor,
-/// <c>MushQueryService.SetAttributeAsync</c>, rewrote every newline as the two characters
-/// <c>%r</c> so the value would survive as one line on the terminal WebSocket, and the editor
-/// translated <c>%r</c> back to a newline on load. Together those made a real newline and a typed
-/// <c>%r</c> indistinguishable. A JSON body has no line limit, so neither conversion is needed —
-/// and these tests fail if either is reintroduced.
+/// A JSON body has no line limit, so a newline travels as a newline and a typed <c>%r</c> as those
+/// two characters. Rewriting newlines as <c>%r</c> on save, or <c>%r</c> as a newline on load, would
+/// make the two indistinguishable; these tests fail if either conversion is introduced.
 /// </summary>
 public class ObjectApiServiceTests
 {
@@ -60,6 +58,14 @@ public class ObjectApiServiceTests
 	private static ObjectApiService Failing(Exception failure) =>
 		new(new SingleClientFactory(new ThrowingHandler(failure)));
 
+	/// <summary>The failure a call returned; fails the test when it returned a value instead.</summary>
+	private static async Task<ApiFailure> FailureOf<T>(ApiResult<T> result) =>
+		(await Assert.That(result.Value).IsTypeOf<ApiFailure>())!;
+
+	/// <summary>The value a call returned; fails the test when it returned a failure instead.</summary>
+	private static async Task<T> ValueOf<T>(ApiResult<T> result) =>
+		(await Assert.That(result.Value).IsTypeOf<T>())!;
+
 	[Test]
 	public async Task SetAttribute_SendsTheValueVerbatim_NewlinesIntact()
 	{
@@ -81,7 +87,7 @@ public class ObjectApiServiceTests
 		await service.SetAttributeAsync(7, "DESC", "line one\nline two");
 
 		await Assert.That(handler.RequestBody).DoesNotContain("%r")
-			.Because("the %r rewrite is exactly the behaviour this service replaced");
+			.Because("a newline must reach the server as a newline, not as %r");
 	}
 
 	[Test]
@@ -122,8 +128,9 @@ public class ObjectApiServiceTests
 
 		var result = await service.SetAttributeAsync(7, "DESC", "x");
 
-		await Assert.That(result.IsT1).IsTrue().Because("a transport failure must be in the return type");
-		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Transport);
+		if (result is not ApiFailure failure)
+			throw new InvalidOperationException("a transport failure must be in the return type");
+		await Assert.That(failure.Kind).IsEqualTo(ApiFailureKind.Transport);
 	}
 
 	[Test]
@@ -133,8 +140,7 @@ public class ObjectApiServiceTests
 
 		var result = await service.GetObjectAsync(7);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Transport);
+		await Assert.That((await FailureOf(result)).Kind).IsEqualTo(ApiFailureKind.Transport);
 	}
 
 	[Test]
@@ -144,8 +150,7 @@ public class ObjectApiServiceTests
 
 		var result = await service.CreateObjectAsync("Widget", MushObjectType.Thing);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Transport);
+		await Assert.That((await FailureOf(result)).Kind).IsEqualTo(ApiFailureKind.Transport);
 	}
 
 	/// <summary>
@@ -159,8 +164,7 @@ public class ObjectApiServiceTests
 
 		var result = await service.GetObjectAsync(7);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Unexpected);
+		await Assert.That((await FailureOf(result)).Kind).IsEqualTo(ApiFailureKind.Unexpected);
 	}
 
 	/// <summary>A response whose Content-Type names a charset .NET cannot resolve.</summary>
@@ -188,8 +192,7 @@ public class ObjectApiServiceTests
 
 		var result = await service.GetObjectAsync(7);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Unexpected);
+		await Assert.That((await FailureOf(result)).Kind).IsEqualTo(ApiFailureKind.Unexpected);
 	}
 
 	/// <summary>
@@ -205,8 +208,8 @@ public class ObjectApiServiceTests
 		var (refused, _) = Build(HttpStatusCode.Forbidden, """{"error":"#-1 PERMISSION DENIED"}""");
 		var denied = await refused.GetObjectAsync(7);
 
-		await Assert.That(expired.AsT1.Kind).IsEqualTo(ApiFailureKind.Unauthenticated);
-		await Assert.That(denied.AsT1.Kind).IsEqualTo(ApiFailureKind.Forbidden);
+		await Assert.That((await FailureOf(expired)).Kind).IsEqualTo(ApiFailureKind.Unauthenticated);
+		await Assert.That((await FailureOf(denied)).Kind).IsEqualTo(ApiFailureKind.Forbidden);
 	}
 
 	/// <summary>
@@ -221,9 +224,10 @@ public class ObjectApiServiceTests
 		var (refused, _) = Build(HttpStatusCode.Forbidden, """{"error":"#-1 PERMISSION DENIED"}""");
 		var forbidden = await refused.GetAttributeAsync(7, "SECRET");
 
-		await Assert.That(notFound.AsT1.Kind).IsEqualTo(ApiFailureKind.NotFound);
-		await Assert.That(forbidden.AsT1.Kind).IsEqualTo(ApiFailureKind.Forbidden);
-		await Assert.That(forbidden.AsT1.Message).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That((await FailureOf(notFound)).Kind).IsEqualTo(ApiFailureKind.NotFound);
+		var refusal = await FailureOf(forbidden);
+		await Assert.That(refusal.Kind).IsEqualTo(ApiFailureKind.Forbidden);
+		await Assert.That(refusal.Message).IsEqualTo("#-1 PERMISSION DENIED");
 	}
 
 	[Test]
@@ -234,8 +238,7 @@ public class ObjectApiServiceTests
 
 		var result = await service.SetAttributeAsync(7, "PWNED", "nope");
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Message).IsEqualTo("You do not have permission to do that.");
+		await Assert.That((await FailureOf(result)).Message).IsEqualTo("You do not have permission to do that.");
 	}
 
 	[Test]
@@ -245,7 +248,7 @@ public class ObjectApiServiceTests
 
 		var result = await service.SetAttributeAsync(7, "DESC", "fine");
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 	}
 
 	[Test]
@@ -256,7 +259,7 @@ public class ObjectApiServiceTests
 
 		var attributes = await service.GetAttributesAsync(7);
 
-		await Assert.That(attributes.AsT0[0].Value).IsEqualTo("line one\nline two")
+		await Assert.That((await ValueOf(attributes))[0].Value).IsEqualTo("line one\nline two")
 			.Because("the load path must not translate either way round");
 	}
 
@@ -267,8 +270,7 @@ public class ObjectApiServiceTests
 
 		var result = await service.CreateObjectAsync("Widget", MushObjectType.Thing);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0).IsEqualTo(123);
+		await Assert.That(await ValueOf(result)).IsEqualTo(123);
 	}
 
 	[Test]
@@ -278,8 +280,8 @@ public class ObjectApiServiceTests
 
 		var result = await service.CreateObjectAsync("!!", MushObjectType.Thing);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Kind).IsEqualTo(ApiFailureKind.Forbidden);
-		await Assert.That(result.AsT1.Message).IsEqualTo("#-1 THAT IS A BAD NAME.");
+		var failure = await FailureOf(result);
+		await Assert.That(failure.Kind).IsEqualTo(ApiFailureKind.Forbidden);
+		await Assert.That(failure.Message).IsEqualTo("#-1 THAT IS A BAD NAME.");
 	}
 }

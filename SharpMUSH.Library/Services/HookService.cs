@@ -31,7 +31,7 @@ public class HookService : IHookService
 			return ValueTask.FromResult<Option<CommandHook>>(hook);
 		}
 
-		return ValueTask.FromResult<Option<CommandHook>>(new OneOf.Types.None());
+		return ValueTask.FromResult<Option<CommandHook>>(new SharpMUSH.Library.DiscriminatedUnions.None());
 	}
 
 	public ValueTask<bool> SetHookAsync(string commandName, string hookType, DBRef targetObject, string attributeName,
@@ -84,15 +84,10 @@ public class HookService : IHookService
 		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
 		var attributeService = parser.ServiceProvider.GetRequiredService<IAttributeService>();
 
-		var targetQuery = new GetObjectNodeQuery(hook.TargetObject);
-		var targetResult = await mediator.Send(targetQuery);
-
-		if (targetResult.IsNone)
+		if (await mediator.Send(new GetObjectNodeQuery(hook.TargetObject)) is not AnySharpObject targetObject)
 		{
 			return CallState.Empty;
 		}
-
-		var targetObject = targetResult.Known;
 
 		var attrResult = await attributeService.GetAttributeAsync(
 			targetObject,

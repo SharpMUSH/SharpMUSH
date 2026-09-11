@@ -45,8 +45,8 @@ public class RealityPolicyCancellationTests
 		var objects = Substitute.For<IObjectStore>();
 		store.GetExpandedServerData<RealityConfiguration>(RealityPolicy.ConfigurationKey, Arg.Any<CancellationToken>())
 			.Returns(new RealityConfiguration(1, true, ["normal"]));
-		objects.GetObjectNodeAsync(receiver.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(receiver.AsPlayer));
-		objects.GetObjectNodeAsync(target.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(target.AsPlayer));
+		objects.GetObjectNodeAsync(receiver.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(receiver));
+		objects.GetObjectNodeAsync(target.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(target));
 		var blocked = operation == "scan" ? target : receiver;
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var release = new CancellationTokenSource();

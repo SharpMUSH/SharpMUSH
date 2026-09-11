@@ -30,13 +30,13 @@ public class RealityFunctionProjectionTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var owner = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
-		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("function scan room", owner)))).AsRoom;
-		var actor = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("function scanner", room, owner, room)))).AsThing;
+		var owner = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("function scan room", owner)))).Expect<SharpRoom>();
+		var actor = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("function scanner", room, owner, room)))).Expect<SharpThing>();
 		AnySharpContainer container = scope == "inventory" ? actor : scope == "globals"
-			? (await objects.GetObjectNodeAsync(new DBRef(0))).AsRoom : room;
-		var visible = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("visible command", container, owner, room)))).AsThing;
-		var hidden = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("hidden command", container, owner, room)))).AsThing;
+			? (await objects.GetObjectNodeAsync(new DBRef(0))).Expect<SharpRoom>() : room;
+		var visible = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("visible command", container, owner, room)))).Expect<SharpThing>();
+		var hidden = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("hidden command", container, owner, room)))).Expect<SharpThing>();
 		var command = "scanprojection" + Guid.NewGuid().ToString("N");
 		try
 		{
@@ -69,11 +69,11 @@ public class RealityFunctionProjectionTests
 		var mediator = Get<IMediator>();
 		var policy = Get<RealityPolicy>();
 		var original = await policy.ConfigurationAsync();
-		var owner = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
-		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("rnum projection room", owner)))).AsRoom;
-		var actor = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("rnum observer", room, owner, room)))).AsThing;
-		var visible = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("projection visible", room, owner, room)))).AsThing;
-		var hidden = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("projection hidden", room, owner, room)))).AsThing;
+		var owner = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		var room = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateRoomCommand("rnum projection room", owner)))).Expect<SharpRoom>();
+		var actor = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("rnum observer", room, owner, room)))).Expect<SharpThing>();
+		var visible = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("projection visible", room, owner, room)))).Expect<SharpThing>();
+		var hidden = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("projection hidden", room, owner, room)))).Expect<SharpThing>();
 		try
 		{
 			await policy.SaveObjectAsync(hidden.Object.Id!, ObjectReality.Default(hidden.Object.DBRef) with { Transmit = ["ghost"] }, default);

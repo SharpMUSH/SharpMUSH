@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -28,9 +29,7 @@ public class PmatchFunctionTests
 	public async Task Pmatch_ResolvesPlayerInADifferentRoom()
 	{
 		var target = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "Faraway");
-		var node = await Mediator.Send(new GetObjectNodeQuery(target));
-		await Assert.That(node.IsNone).IsFalse();
-		var name = node.Known.Object().Name;
+		var name = (await Mediator.Send(new GetObjectNodeQuery(target))).Expect<AnySharpObject>().Object().Name;
 
 		// Separate the looker (#1) from the target: God in Room Zero, target in the Master Room (#2).
 		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("@tel me=#0"));

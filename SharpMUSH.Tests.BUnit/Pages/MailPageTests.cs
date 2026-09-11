@@ -63,14 +63,11 @@ file sealed class MailPageApiHandler : HttpMessageHandler
 /// Selecting a row has to put the message text on screen: <c>.mail-reading-body</c> rendered the
 /// envelope over a "read full message" link and no body at all.
 /// </summary>
-public class MailPageTests : TrackingBunitContext, IAsyncDisposable
+public class MailPageTests : TrackingBunitContext
 {
-	private readonly List<HttpClient> ownedHttpClients = [];
-
 	private void Arrange()
 	{
 		var apiClient = Track(new HttpClient(new MailPageApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
-		ownedHttpClients.Add(apiClient);
 
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
@@ -111,17 +108,5 @@ public class MailPageTests : TrackingBunitContext, IAsyncDisposable
 		});
 
 		await Assert.That(cut.Find(".mail-reading-body").TextContent).Contains(MailPageApiHandler.Body);
-	}
-
-	public async ValueTask DisposeAsync()
-	{
-		foreach (var client in ownedHttpClients)
-		{
-			client.Dispose();
-		}
-
-		ownedHttpClients.Clear();
-		await ValueTask.CompletedTask;
-		GC.SuppressFinalize(this);
 	}
 }

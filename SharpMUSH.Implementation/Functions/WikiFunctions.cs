@@ -31,8 +31,7 @@ public partial class Functions
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
 		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(target);
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
-		if (lookup.IsT1)
+		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
 		{
 			return new CallState(ErrorMessages.Returns.NoSuchWikiPage);
 		}
@@ -42,7 +41,7 @@ public partial class Functions
 		// only filters unpublished *translations*; on its own it left every draft page's body, title and
 		// metadata one wiki() call away from anybody who could guess a slug. The answer is the one an
 		// absent page gives, because "this page exists but you may not read it" is itself the disclosure.
-		if (!lookup.AsT0.Published)
+		if (!page.Published)
 		{
 			return new CallState(ErrorMessages.Returns.NoSuchWikiPage);
 		}
@@ -61,7 +60,7 @@ public partial class Functions
 
 		// Softcode is unauthenticated with respect to translation drafts too: there is no per-locale
 		// permission to check against, so an unpublished translation is never reachable from a function.
-		var localized = await localization.LocalizeAsync(lookup.AsT0, locale, includeDrafts: false);
+		var localized = await localization.LocalizeAsync(page, locale, includeDrafts: false);
 
 		return field switch
 		{

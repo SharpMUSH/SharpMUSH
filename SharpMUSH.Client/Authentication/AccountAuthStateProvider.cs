@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
 using SharpMUSH.Client.Services;
@@ -11,6 +12,7 @@ namespace SharpMUSH.Client.Authentication;
 /// from the account-login response and drive [Authorize] / policy gates in the portal.
 /// Server-side authorization is enforced independently per request.
 /// </summary>
+[SuppressMessage("Usage", "BL0013", Justification = "The provider hands its own freshly computed state to NotifyAuthenticationStateChanged; it caches nothing that could go stale.")]
 public class AccountAuthStateProvider : AuthenticationStateProvider
 {
 	private readonly IAccountAuthState _accountAuth;

@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -41,7 +40,7 @@ public class WarningCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: normal")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: normal")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -56,7 +55,7 @@ public class WarningCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: all")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: all")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -71,7 +70,7 @@ public class WarningCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings cleared.")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings cleared.")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -86,7 +85,7 @@ public class WarningCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: extra")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Warnings set to: extra")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -101,7 +100,7 @@ public class WarningCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Unknown warning: unknown-warning")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Unknown warning: unknown-warning")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -116,7 +115,7 @@ public class WarningCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Usage: @warnings <object>=<warning list>")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Usage: @warnings <object>=<warning list>")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -132,7 +131,7 @@ public class WarningCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "@wcheck complete.")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "@wcheck complete.")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -146,7 +145,7 @@ public class WarningCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Usage: @wcheck <object> or @wcheck/me or @wcheck/all")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Usage: @wcheck <object> or @wcheck/me or @wcheck/all")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -161,7 +160,7 @@ public class WarningCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "Checking objects you own...")),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Checking objects you own...")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 

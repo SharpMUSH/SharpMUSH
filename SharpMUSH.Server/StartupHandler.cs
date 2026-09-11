@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
@@ -525,9 +525,15 @@ public class StartupHandler(
 			ns: WikiNamespace.Main,
 			category: "general",
 			sourceLocale: "en");
-		homeResult.Switch(
-			page => logger.LogInformation("Home wiki page seeded (id={Id}).", page.Id),
-			err => LogSeedSkip("Home", err.Value));
+		switch (homeResult)
+		{
+			case WikiPage page:
+				logger.LogInformation("Home wiki page seeded (id={Id}).", page.Id);
+				break;
+			case Error<string> err:
+				LogSeedSkip("Home", err.Value);
+				break;
+		}
 
 		// Seed the Markdown formatting guide in the Help namespace. Like the home page,
 		// CreateAsync rejects duplicate slugs, so re-seeding on restart is a no-op and
@@ -539,9 +545,15 @@ public class StartupHandler(
 			ns: WikiNamespace.Help,
 			category: "general",
 			sourceLocale: "en");
-		guideResult.Switch(
-			page => logger.LogInformation("Markdown Guide wiki page seeded (id={Id}).", page.Id),
-			err => LogSeedSkip("Markdown Guide", err.Value));
+		switch (guideResult)
+		{
+			case WikiPage page:
+				logger.LogInformation("Markdown Guide wiki page seeded (id={Id}).", page.Id);
+				break;
+			case Error<string> err:
+				LogSeedSkip("Markdown Guide", err.Value);
+				break;
+		}
 
 		// Seed the Dynamic Applications (Area 21) schema guide in the Help namespace, alongside
 		// the Markdown Guide. Same idempotent CreateAsync contract: duplicate slugs are a no-op on
@@ -553,9 +565,15 @@ public class StartupHandler(
 			ns: WikiNamespace.Help,
 			category: "general",
 			sourceLocale: "en");
-		appSchemaResult.Switch(
-			page => logger.LogInformation("Application Schema Guide wiki page seeded (id={Id}).", page.Id),
-			err => LogSeedSkip("Application Schema Guide", err.Value));
+		switch (appSchemaResult)
+		{
+			case WikiPage page:
+				logger.LogInformation("Application Schema Guide wiki page seeded (id={Id}).", page.Id);
+				break;
+			case Error<string> err:
+				LogSeedSkip("Application Schema Guide", err.Value);
+				break;
+		}
 	}
 
 	/// <summary>

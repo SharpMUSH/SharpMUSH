@@ -45,10 +45,10 @@ public class MovementParityTests
 	private IMUSHCodeParser GodParser => WebAppFactoryArg.CommandParser;
 
 	private async Task<AnySharpObject> Node(string reference)
-		=> (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(reference)))).Known;
+		=> (await Mediator.Send(new GetObjectNodeQuery(DBRef.Parse(reference)))).Expect<AnySharpObject>();
 
 	private async Task<AnySharpObject> Node(DBRef reference)
-		=> (await Mediator.Send(new GetObjectNodeQuery(reference))).Known;
+		=> (await Mediator.Send(new GetObjectNodeQuery(reference))).Expect<AnySharpObject>();
 
 	private async Task<string> LocationOf(string reference)
 	{
@@ -434,7 +434,7 @@ public class MovementParityTests
 			GodParser.Push(GodParser.CurrentState with { MoveDepth = atCap }),
 			moverNode.AsContent, destination.AsContainer, noMoveMsgs: true, mover.DbRef, "test");
 
-		await Assert.That(allowed.IsT0).IsTrue();
+		await Assert.That(allowed.Value).IsTypeOf<Success>();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(to));
 
 		// One frame deeper and the move is abandoned rather than run.
@@ -449,8 +449,7 @@ public class MovementParityTests
 			(await Node(mover.DbRef)).AsContent, (await Node(from)).AsContainer,
 			noMoveMsgs: true, mover.DbRef, "test");
 
-		await Assert.That(refused.IsT1).IsTrue();
-		await Assert.That(refused.AsT1.Value).IsEqualTo(ErrorMessages.Notifications.TooManyContainers);
+		await Assert.That(refused.Expect<Error<string>>().Value).IsEqualTo(ErrorMessages.Notifications.TooManyContainers);
 		await Assert.That(await LocationOf(mover.DbRef.ToString()))
 			.IsEqualTo(BareDbref(to))
 			.Because("the refused move must not have happened");
@@ -596,7 +595,7 @@ public class MovementParityTests
 		var result = await MoveService.SafeTel(GodParser, (await Node(mover.DbRef)).AsContent,
 			(await Node(elsewhere)).AsContainer, noMoveMsgs: true, mover.DbRef, "test");
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await Assert.That(await LocationOf(sticky.ToString())).IsEqualTo(BareDbref(home));
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(elsewhere));
 	}
@@ -627,7 +626,7 @@ public class MovementParityTests
 
 		// The control: luggage stays on the mover whenever the teleport does not happen at all, so
 		// the move has to be shown to have happened before its location says anything about safe_tel.
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(elsewhere));
 
 		await Assert.That(await LocationOf(sticky.ToString()))
@@ -736,7 +735,7 @@ public class MovementParityTests
 
 		// The control: luggage stays on the mover whenever the teleport does not happen at all, so
 		// the move has to be shown to have happened before its location says anything about safe_tel.
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(elsewhere));
 
 		await Assert.That(await LocationOf(sticky.ToString()))
@@ -879,8 +878,8 @@ public class MovementParityTests
 		var thing = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "TagThing");
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {thing}={origin}"));
 
-		var mover = (await Mediator.Send(new GetObjectNodeQuery(thing))).Known.AsContent;
-		var into = (await Mediator.Send(new GetObjectNodeQuery(destination))).Known.AsContainer;
+		var mover = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>().AsContent;
+		var into = (await Mediator.Send(new GetObjectNodeQuery(destination))).Expect<AnySharpObject>().AsContainer;
 
 		var move = new MoveObjectCommand(mover, into, origin);
 
@@ -1565,7 +1564,7 @@ public class MovementParityTests
 		var result = await MoveService.SafeTel(GodParser, (await Node(exit)).AsContent,
 			(await Node(destination)).AsContainer, noMoveMsgs: true, new DBRef(1), "test");
 
-		await Assert.That(result.IsT1).IsTrue()
+		await Assert.That(result.Value).IsTypeOf<Error<string>>()
 			.Because("only a Mobile is moved by enter_room (move.c:243)");
 		await Assert.That(await LocationOf(exit)).IsNotEqualTo(BareDbref(destination));
 	}

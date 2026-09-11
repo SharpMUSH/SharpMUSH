@@ -2,6 +2,7 @@ using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Definitions;
 
@@ -58,12 +59,12 @@ public partial class Commands
 		var isWildcard = topic.Contains('*') || topic.Contains('?');
 		var resolution = await HelpTopicResolver.ResolveAsync(HelpCorpora.Help, topic);
 
-		if (resolution.TryPickT0(out var entry, out var notAnEntry))
+		if (resolution is HelpEntry entry)
 		{
 			var rendered = RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown, mushParser: parser);
 			await NotifyService.Notify(executor, rendered, executor);
 		}
-		else if (notAnEntry.TryPickT0(out var candidates, out _))
+		else if (resolution is HelpCandidates candidates)
 		{
 			await NotifyService.Notify(executor, $"Here are the entries which match '{topic}':", executor);
 			await NotifyService.Notify(executor, string.Join(", ", candidates.Topics), executor);

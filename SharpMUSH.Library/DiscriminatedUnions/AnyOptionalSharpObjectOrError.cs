@@ -1,48 +1,44 @@
-﻿using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnyOptionalSharpObjectOrError : OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing, None,
-	Error<string>>
+/// <summary>
+/// An object, none, or the error that stopped the lookup. Found objects are one case, so
+/// <c>x is AnySharpObject found</c> binds the object.
+/// </summary>
+[Union]
+public sealed class AnyOptionalSharpObjectOrError : IUnion
 {
-	public AnyOptionalSharpObjectOrError(
-		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> input) :
-		base(input)
-	{
-	}
+	public AnyOptionalSharpObjectOrError(AnySharpObject value) => Value = value;
+	public AnyOptionalSharpObjectOrError(None value) => Value = value;
+	public AnyOptionalSharpObjectOrError(Error<string> value) => Value = value;
 
-	public static implicit operator AnyOptionalSharpObjectOrError(SharpPlayer x) => new(x);
-	public static implicit operator AnyOptionalSharpObjectOrError(SharpRoom x) => new(x);
-	public static implicit operator AnyOptionalSharpObjectOrError(SharpExit x) => new(x);
-	public static implicit operator AnyOptionalSharpObjectOrError(SharpThing x) => new(x);
-	public static implicit operator AnyOptionalSharpObjectOrError(None x) => new(x);
-	public static implicit operator AnyOptionalSharpObjectOrError(Error<string> x) => new(x);
+	public static implicit operator AnyOptionalSharpObjectOrError(SharpPlayer value) => new(new AnySharpObject(value));
+	public static implicit operator AnyOptionalSharpObjectOrError(SharpRoom value) => new(new AnySharpObject(value));
+	public static implicit operator AnyOptionalSharpObjectOrError(SharpExit value) => new(new AnySharpObject(value));
+	public static implicit operator AnyOptionalSharpObjectOrError(SharpThing value) => new(new AnySharpObject(value));
 
-	public bool IsPlayer => IsT0;
-	public bool IsRoom => IsT1;
-	public bool IsExit => IsT2;
-	public bool IsThing => IsT3;
-	public bool IsNone => IsT4;
-	public bool IsError => IsT5;
+	public object? Value { get; }
 
-	public SharpPlayer AsPlayer => AsT0;
-	public SharpRoom AsRoom => AsT1;
-	public SharpExit AsExit => AsT2;
-	public SharpThing AsThing => AsT3;
+	/// <summary>
+	/// Equal when both hold equal errors, are both none, or hold objects <see cref="AnySharpObject"/>
+	/// calls equal: the same model instance.
+	/// </summary>
+	public override bool Equals(object? obj) => obj is AnyOptionalSharpObjectOrError other && Equals(Value, other.Value);
 
-	public bool IsAnyObject => !IsNone && !IsError;
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
 
-	public AnySharpObject AsAnyObject => Match(
-		player => new AnySharpObject(player),
-		room => new AnySharpObject(room),
-		exit => new AnySharpObject(exit),
-		thing => new AnySharpObject(thing),
-		_ => throw new ArgumentOutOfRangeException(),
-		_ => throw new ArgumentOutOfRangeException());
+	public bool IsPlayer => this is AnySharpObject and SharpPlayer;
+	public bool IsRoom => this is AnySharpObject and SharpRoom;
+	public bool IsExit => this is AnySharpObject and SharpExit;
+	public bool IsThing => this is AnySharpObject and SharpThing;
+	public bool IsNone => this is None;
+	public bool IsError => this is Error<string>;
 
-	public None AsNone => AsT4;
-	public Error<string> AsError => AsT5;
+	public bool IsAnyObject => this is AnySharpObject;
+
+	/// <summary>True when this names an object: neither <see cref="None"/> nor an error.</summary>
+	public bool IsValid() => IsAnyObject;
+
 }

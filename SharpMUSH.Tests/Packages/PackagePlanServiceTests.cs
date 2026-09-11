@@ -15,7 +15,11 @@ public class PackagePlanServiceTests
 
 	private static readonly DateTimeOffset Anchor = new(2026, 6, 12, 12, 0, 0, TimeSpan.Zero);
 
-	private PackageManifest Parse(string yaml) => _manifests.ParseManifest(yaml).AsT0.Manifest;
+	private PackageManifest Parse(string yaml) => _manifests.ParseManifest(yaml) switch
+	{
+		ParsedPackageManifest parsed => parsed.Manifest,
+		PackageManifestFailure failure => throw new InvalidOperationException(string.Join("; ", failure.Issues))
+	};
 
 	private static InstalledPackageRecord Installed(string id, string version = "1.0.0") => new(
 		id, version, "https://example.com/repo", $"{id}/", "commit-1", "main", Anchor, 1);

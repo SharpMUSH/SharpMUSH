@@ -3,6 +3,7 @@ using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
@@ -67,12 +68,11 @@ public class RegistriesTests
 
 		await registry.UpsertLayoutAsync("scope-a", layout);
 		var fetched = await registry.GetLayoutAsync("scope-a");
-		await Assert.That(fetched.IsT0).IsTrue();
-		await Assert.That(fetched.AsT0.Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("SomeWidget");
+		await Assert.That(fetched.Expect<LayoutConfiguration>().Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("SomeWidget");
 		await Assert.That((await registry.GetCustomizedScopesAsync())).Contains("scope-a");
 
 		await registry.RemoveLayoutAsync("scope-a");
-		await Assert.That((await registry.GetLayoutAsync("scope-a")).IsT1).IsTrue();
+		await Assert.That((await registry.GetLayoutAsync("scope-a")).Value).IsTypeOf<NotFound>();
 	});
 
 	[Test]
@@ -85,11 +85,10 @@ public class RegistriesTests
 
 		await registry.UpsertApplicationAsync(app);
 		var fetched = await registry.GetApplicationAsync("app-a");
-		await Assert.That(fetched.IsT0).IsTrue();
-		await Assert.That(fetched.AsT0).IsEqualTo(app);
+		await Assert.That(fetched.Value).IsEqualTo(app);
 
 		await registry.RemoveApplicationAsync("app-a");
-		await Assert.That((await registry.GetApplicationAsync("app-a")).IsT1).IsTrue();
+		await Assert.That((await registry.GetApplicationAsync("app-a")).Value).IsTypeOf<NotFound>();
 	});
 
 	[Test]
@@ -108,8 +107,7 @@ public class RegistriesTests
 
 		await registry.UpsertRoleAsync(role);
 		var fetched = await registry.GetRoleAsync("role-a");
-		await Assert.That(fetched.IsT0).IsTrue();
-		await Assert.That(fetched.AsT0.Permissions[PortalPermission.WikiAdmin]).IsEqualTo(PermissionState.Allow);
+		await Assert.That(fetched.Expect<SharpRole>().Permissions[PortalPermission.WikiAdmin]).IsEqualTo(PermissionState.Allow);
 
 		await registry.AssignRoleToAccountAsync("acct-1", "role-a");
 		await registry.AssignRoleToAccountAsync("acct-1", "role-a"); // idempotent
@@ -121,7 +119,7 @@ public class RegistriesTests
 		await Assert.That((await registry.GetRolesForAccountAsync("acct-1")).Any(r => r.Slug == "role-a")).IsFalse();
 
 		await registry.RemoveRoleAsync("role-a");
-		await Assert.That((await registry.GetRoleAsync("role-a")).IsT1).IsTrue();
+		await Assert.That((await registry.GetRoleAsync("role-a")).Value).IsTypeOf<NotFound>();
 	});
 
 	[Test]

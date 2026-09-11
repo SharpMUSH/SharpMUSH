@@ -1,28 +1,34 @@
-﻿using OneOf;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnySharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing> input)
-	: OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing>(input), IObjectShaped<AnySharpObject>
+[Union]
+public sealed class AnySharpObject : IUnion, IObjectShaped<AnySharpObject>
 {
-	protected bool Equals(AnySharpObject other) => this.Object().DBRef == other.Object().DBRef;
+	public AnySharpObject(SharpPlayer value) => Value = value;
+	public AnySharpObject(SharpRoom value) => Value = value;
+	public AnySharpObject(SharpExit value) => Value = value;
+	public AnySharpObject(SharpThing value) => Value = value;
 
-	public override int GetHashCode() => this.Object().DBRef.GetHashCode();
+	public object? Value { get; }
 
-	public static implicit operator AnySharpObject(SharpPlayer x) => new(x);
-	public static implicit operator AnySharpObject(SharpRoom x) => new(x);
-	public static implicit operator AnySharpObject(SharpExit x) => new(x);
-	public static implicit operator AnySharpObject(SharpThing x) => new(x);
+	/// <summary>
+	/// Equal when both hold the same model instance. The object node cache hands out one instance per
+	/// object, so in practice that means the same object.
+	/// </summary>
+	public override bool Equals(object? obj) => obj is AnySharpObject other && Equals(Value, other.Value);
 
-	public async ValueTask<AnySharpContainer> Where() => await Match<ValueTask<AnySharpContainer>>(
-		async player => await player.Location.WithCancellation(CancellationToken.None),
-		async room => await ValueTask.FromResult(room),
-		async exit => await exit.Location.WithCancellation(CancellationToken.None),
-		async thing => await thing.Location.WithCancellation(CancellationToken.None)
-	);
+	public override int GetHashCode() => Object().DBRef.GetHashCode();
+
+	public async ValueTask<AnySharpContainer> Where() => this switch
+	{
+		SharpPlayer player => await player.Location.WithCancellation(CancellationToken.None),
+		SharpRoom room => room,
+		SharpExit exit => await exit.Location.WithCancellation(CancellationToken.None),
+		SharpThing thing => await thing.Location.WithCancellation(CancellationToken.None)
+	};
 
 	public async ValueTask<AnySharpContainer> OutermostWhere()
 	{
@@ -37,62 +43,84 @@ public class AnySharpObject(OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing>
 		return where;
 	}
 
-	public string[] Aliases => Match(
-		player => player.Aliases,
-		room => room.Aliases,
-		exit => exit.Aliases,
-		thing => thing.Aliases
-	) ?? [];
+	public string[] Aliases => this switch
+	{
+		SharpPlayer player => player.Aliases,
+		SharpRoom room => room.Aliases,
+		SharpExit exit => exit.Aliases,
+		SharpThing thing => thing.Aliases
+	} ?? [];
 
-	public AnySharpContainer MinusExit()
-		=> Match<AnySharpContainer>(
-			player => player,
-			room => room,
-			exit => throw new ArgumentException("Cannot convert an exit to a non-exit."),
-			thing => thing
-		);
+	public AnySharpContainer MinusExit() => this switch
+	{
+		SharpPlayer player => player,
+		SharpRoom room => room,
+		SharpExit => throw new ArgumentException("Cannot convert an exit to a non-exit."),
+		SharpThing thing => thing
+	};
 
-	public AnySharpContent MinusRoom()
-		=> Match<AnySharpContent>(
-			player => player,
-			room => throw new ArgumentException("Cannot convert an room to a non-room."),
-			exit => exit,
-			thing => thing
-		);
+	public AnySharpContent MinusRoom() => this switch
+	{
+		SharpPlayer player => player,
+		SharpRoom => throw new ArgumentException("Cannot convert an room to a non-room."),
+		SharpExit exit => exit,
+		SharpThing thing => thing
+	};
 
-	public bool IsPlayer => IsT0;
-	public bool IsRoom => IsT1;
-	public bool IsExit => IsT2;
-	public bool IsThing => IsT3;
+	public bool IsPlayer => Value is SharpPlayer;
+	public bool IsRoom => Value is SharpRoom;
+	public bool IsExit => Value is SharpExit;
+	public bool IsThing => Value is SharpThing;
 
 	public bool IsContent => IsPlayer || IsExit || IsThing;
 
-	public AnySharpContent AsContent => Match<AnySharpContent>(
-		player => player,
-		room => throw new ArgumentException("Cannot convert a room to content."),
-		exit => exit,
-		thing => thing
-	);
+	public AnySharpContent AsContent => this switch
+	{
+		SharpPlayer player => player,
+		SharpRoom => throw new ArgumentException("Cannot convert a room to content."),
+		SharpExit exit => exit,
+		SharpThing thing => thing
+	};
 
-	public AnySharpContainer AsContainer => Match<AnySharpContainer>(
-		player => player,
-		room => room,
-		exit => throw new ArgumentException("Cannot convert an exit to container."),
-		thing => thing
-	);
+	public AnySharpContainer AsContainer => this switch
+	{
+		SharpPlayer player => player,
+		SharpRoom room => room,
+		SharpExit => throw new ArgumentException("Cannot convert an exit to container."),
+		SharpThing thing => thing
+	};
 
 	public bool IsContainer => IsPlayer || IsRoom || IsThing;
 
-	public SharpPlayer AsPlayer => AsT0;
-	public SharpRoom AsRoom => AsT1;
-	public SharpExit AsExit => AsT2;
-	public SharpThing AsThing => AsT3;
+	public SharpObject Object() => this switch
+	{
+		SharpPlayer player => player.Object,
+		SharpRoom room => room.Object,
+		SharpExit exit => exit.Object,
+		SharpThing thing => thing.Object
+	};
+
+	public string? Id() => this switch
+	{
+		SharpPlayer player => player.Id,
+		SharpRoom room => room.Id,
+		SharpExit exit => exit.Id,
+		SharpThing thing => thing.Id
+	};
+
+	public AnyOptionalSharpObject WithNoneOption() => this;
 
 	public static DBRef? RefOf(AnySharpObject value) => value.Object().DBRef;
 
 	public static bool TryFromNode(AnyOptionalSharpObject node, out AnySharpObject value)
 	{
-		value = node.IsNone ? null! : node.Known;
-		return !node.IsNone;
+		if (node is AnySharpObject found)
+		{
+			value = found;
+			return true;
+		}
+
+		value = null!;
+		return false;
 	}
 }

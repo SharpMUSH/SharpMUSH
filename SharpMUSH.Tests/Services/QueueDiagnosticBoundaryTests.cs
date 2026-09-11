@@ -1,8 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
 using Quartz;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -49,7 +47,7 @@ public class QueueDiagnosticBoundaryTests
 		var entered = new TaskCompletionSource<DateTimeOffset>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var notify = Substitute.For<INotifyService>();
-		notify.Notify(Arg.Any<long>(), Arg.Any<OneOf<MarkupText, string>>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>())
+		notify.Notify(Arg.Any<long>(), Arg.Any<SharpMessage>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>())
 			.Returns(async ValueTask (_) =>
 			{
 				entered.TrySetResult(DateTimeOffset.UtcNow);
@@ -85,7 +83,7 @@ public class QueueDiagnosticBoundaryTests
 		if (ownerLookup)
 		{
 			var source = await mediator.Send(new GetObjectNodeQuery(executor));
-			source.AsPlayer.Object.Owner = new(_ => Task.FromException<SharpPlayer>(failure));
+			source.Expect<SharpPlayer>().Object.Owner = new(_ => Task.FromException<SharpPlayer>(failure));
 			mediator.Send(Arg.Is<GetObjectNodeQuery>(query => query.DBRef == executor), Arg.Any<CancellationToken>()).Returns(source);
 		}
 		else

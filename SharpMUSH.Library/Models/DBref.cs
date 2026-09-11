@@ -1,4 +1,6 @@
-﻿namespace SharpMUSH.Library.Models;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
+
+namespace SharpMUSH.Library.Models;
 
 public readonly struct DBRef : IEquatable<DBRef>
 {
@@ -84,15 +86,20 @@ public readonly struct DBRef : IEquatable<DBRef>
 			return false;
 		}
 
-		var parsed = HelperFunctions.ParseDbRef(value);
+		if (HelperFunctions.ParseDbRef(value).TryGetValue(out var parsed))
+		{
+			dbref = parsed;
+			return true;
+		}
 
-		// Cast the null arm explicitly: with `: default` the ternary's natural type is DBRef, so a
-		// failed parse yielded default(DBRef) — #0 — which then widened to DBRef?. The signature
-		// promised null and never produced it, making `out var` look safe when it was #0.
-		dbref = parsed.IsSome() ? parsed.AsValue() : (DBRef?)null;
-		return parsed.IsSome();
+		dbref = null;
+		return false;
 	}
 
 	public static DBRef Parse(string value)
-		=> HelperFunctions.ParseDbRef(value).AsValue();
+		=> HelperFunctions.ParseDbRef(value) switch
+		{
+			DBRef parsed => parsed,
+			None => throw new FormatException($"'{value}' is not a dbref.")
+		};
 }

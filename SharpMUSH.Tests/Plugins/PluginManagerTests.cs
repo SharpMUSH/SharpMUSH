@@ -155,7 +155,7 @@ public class PluginManagerTests
 
 		var overridden = await interceptor.TryOverrideAsync(null!, "@over here");
 		await Assert.That(overridden).IsNotNull();
-		await Assert.That(overridden!.AsValue().Message!.ToString()).IsEqualTo("overridden");
+		await Assert.That(overridden!.Expect<CallState>().Message!.ToString()).IsEqualTo("overridden");
 
 		await Assert.That(await interceptor.TryOverrideAsync(null!, "look")).IsNull();
 
@@ -180,7 +180,7 @@ public class PluginManagerTests
 
 	private static CommandDefinition MakeCommand(string name) =>
 		new(new SharpCommandAttribute { Name = name },
-			_ => ValueTask.FromResult(new Option<CallState>(new OneOf.Types.None())));
+			_ => ValueTask.FromResult(new Option<CallState>(new SharpMUSH.Library.DiscriminatedUnions.None())));
 
 	private static FunctionDefinition MakeFunction(string name) =>
 		new(new SharpFunctionAttribute { Name = name, Flags = FunctionFlags.Regular },

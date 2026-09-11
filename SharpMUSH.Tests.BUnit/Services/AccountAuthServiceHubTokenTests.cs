@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Reflection;
 using Bunit;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.JSInterop;
 using NSubstitute;
 using SharpMUSH.Client.Services;
 
@@ -223,7 +224,7 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session-token-1");
 		JSInterop.SetupVoid("sessionStorage.setItem", "sharpmush.account.sessionToken", "session-token-2")
-			.SetException(new InvalidOperationException("storage unavailable"));
+			.SetException(new JSException("storage unavailable"));
 
 		var handler = new CapturingHandler(HttpStatusCode.OK,
 			new { ott = "one-time-token", expiresIn = 60, accountSessionToken = "session-token-2" });
@@ -239,5 +240,40 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 		// credential must not start acting on it, or a reload would silently revert the identity.
 		await Assert.That(ott).IsNull();
 		await Assert.That(service.AccountSessionToken).IsEqualTo("session-token-1");
+	}
+
+	[Test]
+	public async Task LoginAsync_TokenWriteFails_ReportsFailureAndAdoptsNothing()
+	{
+		JSInterop.Mode = JSRuntimeMode.Loose;
+		JSInterop.Setup<string?>("sessionStorage.getItem", _ => true).SetResult(null);
+		JSInterop.SetupVoid("sessionStorage.setItem", "sharpmush.account.sessionToken", "session-token-1")
+			.SetException(new JSException("storage unavailable"));
+
+		var handler = new CapturingHandler(HttpStatusCode.OK, new
+		{
+			accountId = "account-1",
+			username = "alice",
+			characters = Array.Empty<object>(),
+			accountSessionToken = "session-token-1",
+			mustChangePassword = false,
+		});
+		using var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		var httpClientFactory = Substitute.For<IHttpClientFactory>();
+		httpClientFactory.CreateClient("api").Returns(http);
+
+		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var authChanges = 0;
+		service.AuthStateChanged += () => authChanges++;
+
+		var (success, error, _) = await service.LoginAsync("alice", "correct horse");
+
+		// The same rule as the switch: a session this tab cannot persist is refused, not half-adopted,
+		// so the tab never runs as an account a reload would not bring back.
+		await Assert.That(success).IsFalse();
+		await Assert.That(error).IsNotNull();
+		await Assert.That(service.IsLoggedIn).IsFalse();
+		await Assert.That(service.Username).IsNull();
+		await Assert.That(authChanges).IsEqualTo(0);
 	}
 }

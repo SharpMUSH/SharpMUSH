@@ -4,6 +4,7 @@ using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -29,7 +30,7 @@ public class StagingTests
 		=> db.Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("next_dbref"), out var v) ? Keys.ReadDbref(v) : -1);
 
 	private static async Task<SharpPlayer> GodAsync(ISharpDatabase db)
-		=> (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		=> (await db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 	private static async Task Cleanup(LightningDatabase db, string path)
 	{
@@ -103,7 +104,7 @@ public class StagingTests
 			await live.Migrate();
 			var staging = (LightningStagingDatabase)await live.CreateStagingAsync();
 			var stagedAccount = await staging.CreateAccountAsync("staged", "staged@example.com", "hash");
-			var stagedPage = (await staging.CreateAsync("Staged Page", "body", "#1")).AsT0;
+			var stagedPage = (await staging.CreateAsync("Staged Page", "body", "#1")).Expect<WikiPage>();
 			await staging.Store.WriteAsync(tx =>
 			{
 				tx.Put(Tables.Meta, Keys.Str("next_account_id"), Keys.Dbref(0));
@@ -113,12 +114,12 @@ public class StagingTests
 			await staging.PromoteToLiveAsync();
 
 			var laterAccount = await live.CreateAccountAsync("later", "later@example.com", "hash");
-			var laterPage = (await live.CreateAsync("Later Page", "body", "#1")).AsT0;
+			var laterPage = (await live.CreateAsync("Later Page", "body", "#1")).Expect<WikiPage>();
 
 			await Assert.That(laterAccount.Id).IsNotEqualTo(stagedAccount.Id);
 			await Assert.That(laterPage.Id).IsNotEqualTo(stagedPage.Id);
 			await Assert.That((await live.GetAccountByUsernameAsync("staged"))?.Id).IsEqualTo(stagedAccount.Id);
-			await Assert.That((await live.GetByIdAsync(stagedPage.Id)).AsT0.Title).IsEqualTo("Staged Page");
+			await Assert.That((await live.GetByIdAsync(stagedPage.Id)).Expect<WikiPage>().Title).IsEqualTo("Staged Page");
 			await Assert.That(live.Store.Count(Tables.Account)).IsEqualTo(2L);
 			await Assert.That(live.Store.Count(Tables.WikiPage)).IsEqualTo(2L);
 		}

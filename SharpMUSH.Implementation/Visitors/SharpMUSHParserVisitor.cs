@@ -4,8 +4,6 @@ using Antlr4.Runtime.Tree;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
@@ -332,12 +330,12 @@ public class SharpMUSHParserVisitor(
 			executor, executor, "DEBUGFORWARDLIST",
 			IAttributeService.AttributeMode.Read, parent: false);
 
-		if (debugForwardAttr.IsAttribute is not true)
+		if (debugForwardAttr is not SharpAttribute[] forwardChain)
 		{
 			return;
 		}
 
-		var attr = debugForwardAttr.AsAttribute.Last();
+		var attr = forwardChain.Last();
 		var forwardListText = attr.Value.ToPlainText();
 		if (string.IsNullOrWhiteSpace(forwardListText))
 		{
@@ -349,9 +347,9 @@ public class SharpMUSHParserVisitor(
 			// Forwarding is receiver-directed, like a page; the sender need not see the recipient.
 			var locateResult = await LocateService.Locate(parser, executor, executor, targetStr,
 				LocateFlags.AbsoluteMatch | LocateFlags.MatchForPage);
-			if (locateResult.IsValid())
+			if (locateResult is AnySharpObject forwardTarget)
 			{
-				await NotifyService.Notify(locateResult.WithoutError().WithoutNone(), MarkupText.Plain(message), executor);
+				await NotifyService.Notify(forwardTarget, MarkupText.Plain(message), executor);
 			}
 		}
 	}
@@ -675,9 +673,9 @@ public class SharpMUSHParserVisitor(
 		string? indent = null;
 		var dbrefNumber = 0;
 
-		if (!executor.IsNone)
+		if (executor is AnySharpObject knownExecutor)
 		{
-			executorObj = executor.Known();
+			executorObj = knownExecutor;
 
 			var stateFlags = parser.CurrentState.Flags;
 			if (stateFlags.HasFlag(ParserStateFlags.NoDebug))
@@ -837,13 +835,12 @@ public class SharpMUSHParserVisitor(
 			}
 			else
 			{
-				var executorOption = await currentState.ExecutorObject(Mediator);
-				if (executorOption.IsNone)
+				if (await currentState.ExecutorObject(Mediator) is not AnySharpObject knownExecutor)
 				{
 					success = false;
 					return CallState.Empty;
 				}
-				executor = executorOption.Known();
+				executor = knownExecutor;
 				permissionError = await SharpMUSH.Library.Services.FunctionDispatcher.CheckPermissionAsync(attribute, executor);
 			}
 			if (permissionError is not null)
@@ -1062,11 +1059,9 @@ public class SharpMUSHParserVisitor(
 			// KnownExecutorObject throws when there is no executor — which is exactly the state at the
 			// connect screen. Using it here meant the error handler replaced the real exception with an
 			// ArgumentNullException of its own, hiding the actual failure. Resolve optionally instead.
-			var executor = await parser.CurrentState.ExecutorObject(Mediator);
-
-			if (!executor.IsNone && executor.Known().IsGod())
+			if (await parser.CurrentState.ExecutorObject(Mediator) is AnySharpObject executor && executor.IsGod())
 			{
-				await NotifyService.Notify(executor.Known(),
+				await NotifyService.Notify(executor,
 					string.Format(ErrorMessages.Returns.InternalErrorFormat, ex));
 			}
 
@@ -1129,8 +1124,7 @@ public class SharpMUSHParserVisitor(
 
 		return new FunctionDefinition(attribute, async invokedParser =>
 		{
-			var targetObject = await Mediator.Send(new GetObjectNodeQuery(target));
-			if (targetObject.IsNone)
+			if (await Mediator.Send(new GetObjectNodeQuery(target)) is not AnySharpObject targetObject)
 			{
 				return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
 			}
@@ -1146,8 +1140,8 @@ public class SharpMUSHParserVisitor(
 			// The caller-level permission gate (@function/restrict) was already enforced in CallFunction.
 			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(
 				invokedParser,
-				targetObject.Known,
-				targetObject.Known,
+				targetObject,
+				targetObject,
 				attributeName,
 				args,
 				evalParent: false);
@@ -1361,7 +1355,7 @@ public class SharpMUSHParserVisitor(
 					singleTokenCandidate.LibraryInformation);
 			}
 
-			var executorObject = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+			var executorObject = await parser.CurrentState.KnownExecutorObject(Mediator);
 			if (executorObject.IsContent)
 			{
 				var locate = await LocateService.Locate(
@@ -1374,9 +1368,8 @@ public class SharpMUSHParserVisitor(
 					| LocateFlags.ExitsPreference
 					| LocateFlags.OnlyMatchTypePreference);
 
-				if (locate.IsExit)
+				if (locate is AnySharpObject and SharpExit exit)
 				{
-					var exit = locate.AsExit;
 					return await HandleGoCommandPattern(parser, exit, command);
 				}
 			}
@@ -1450,7 +1443,7 @@ public class SharpMUSHParserVisitor(
 			Option<CallState> PreserveCommandEvaluationErrors(Option<CallState> result)
 			{
 				if (evaluatedCommandResult?.HadErrors != true) return result;
-				return (result.IsSome() ? result.AsValue() : CallState.Empty) with { HadErrors = true };
+				return (result is CallState value ? value : CallState.Empty) with { HadErrors = true };
 			}
 
 			// Live discovery uses the invoking executor's perception before handlers can match.
@@ -1469,9 +1462,9 @@ public class SharpMUSHParserVisitor(
 				PerceivedCandidates(nearbyObjects),
 				evaluatedCommandText);
 
-			if (userDefinedCommandMatches.IsSome())
+			if (userDefinedCommandMatches.TryGetValue(out var nearbyMatches))
 			{
-				return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, userDefinedCommandMatches.AsValue()));
+				return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, nearbyMatches));
 			}
 
 			// Step 10: Zone Exit Name and Aliases - handled in LocateService
@@ -1483,9 +1476,9 @@ public class SharpMUSHParserVisitor(
 					await executorLocation.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
 
 				// If the location has a zone that is a room (ZMR), check for $-commands in ZMR contents
-				if (locationZone is { IsNone: false, Known.IsRoom: true })
+				if (locationZone is AnySharpObject and SharpRoom zoneMasterRoom)
 				{
-					AnySharpContainer zmr = locationZone.Known.AsRoom;
+					AnySharpContainer zmr = zoneMasterRoom;
 					var zmrContents = zmr
 						.Content(Mediator)
 						.Select(x => x.WithRoomOption());
@@ -1495,9 +1488,9 @@ public class SharpMUSHParserVisitor(
 						PerceivedCandidates(zmrContents),
 						evaluatedCommandText);
 
-					if (userDefinedCommandMatchesOnZMR.IsSome())
+					if (userDefinedCommandMatchesOnZMR.TryGetValue(out var zoneMatches))
 					{
-						return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnZMR.AsValue()));
+						return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, zoneMatches));
 					}
 				}
 			}
@@ -1511,18 +1504,18 @@ public class SharpMUSHParserVisitor(
 					PerceivedCandidates(item.ToAsyncEnumerable()),
 					evaluatedCommandText);
 
-				if (userDefinedCommandMatchesOnLocation.IsSome())
+				if (userDefinedCommandMatchesOnLocation.TryGetValue(out var locationMatches))
 				{
-					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnLocation.AsValue()));
+					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, locationMatches));
 				}
 			}
 
 			// Step 13: User defined commands on the player's personal zone.
 			var executorZone = await executorObject.Object().Zone.WithCancellation(CancellationToken.None);
-			if (executorZone is { IsNone: false, Known.IsRoom: true })
+			if (executorZone is AnySharpObject and SharpRoom personalZoneRoom)
 			{
 				// If player has a ZMR as their personal zone, check for $-commands in ZMR contents
-				AnySharpContainer personalZMR = executorZone.Known.AsRoom;
+				AnySharpContainer personalZMR = personalZoneRoom;
 				var personalZMRContents = personalZMR
 					.Content(Mediator)
 					.Select(x => x.WithRoomOption());
@@ -1532,41 +1525,43 @@ public class SharpMUSHParserVisitor(
 					PerceivedCandidates(personalZMRContents),
 					evaluatedCommandText);
 
-				if (userDefinedCommandMatchesOnPersonalZMR.IsSome())
+				if (userDefinedCommandMatchesOnPersonalZMR.TryGetValue(out var personalZoneMatches))
 				{
-					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnPersonalZMR.AsValue()));
+					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, personalZoneMatches));
 				}
 			}
 
 			// Step 14: Global Exits
 			// Step 15: Global User-defined commands
 			var goConfig = Configuration.CurrentValue.Database.MasterRoom;
-			var maybeGlobalObject = await Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
-			var globalObject = maybeGlobalObject.Known();
-			AnySharpObject[] globalObjects = [globalObject];
-			var globalObjectContent = globalObject.AsContainer
-				.Content(Mediator)
-				.Select(x => x.WithRoomOption());
-
-			var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService.MatchUserDefinedCommand(
-				parser,
-				PerceivedCandidates(globalObjects.ToAsyncEnumerable().Union(globalObjectContent)),
-				evaluatedCommandText);
-
-			if (userDefinedCommandMatchesOnGlobal.IsSome())
+			// A master room that does not exist has no global commands to offer.
+			if (await Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig)))) is AnySharpObject globalObject)
 			{
-				return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, userDefinedCommandMatchesOnGlobal.AsValue()));
+				AnySharpObject[] globalObjects = [globalObject];
+				var globalObjectContent = globalObject.AsContainer
+					.Content(Mediator)
+					.Select(x => x.WithRoomOption());
+
+				var userDefinedCommandMatchesOnGlobal = await CommandDiscoveryService.MatchUserDefinedCommand(
+					parser,
+					PerceivedCandidates(globalObjects.ToAsyncEnumerable().Union(globalObjectContent)),
+					evaluatedCommandText);
+
+				if (userDefinedCommandMatchesOnGlobal.TryGetValue(out var globalMatches))
+				{
+					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, globalMatches));
+				}
 			}
 
 			// Step 16: HUH_COMMAND is run
 			// Check for HUH_COMMAND hook before running the built-in HUH_COMMAND
 			var huhHook = await HookService.GetHookAsync("HUH_COMMAND", "OVERRIDE");
-			if (huhHook.IsSome())
+			if (huhHook is CommandHook huhOverride)
 			{
 				var executor = await parser.CurrentState.ExecutorObject(Mediator);
 				// Construct the full command input for $-command matching
 				Option<MString> huhInput = src;
-				var huhResult = await ExecuteHookCode(parser, executor, huhHook.AsValue(), huhInput);
+				var huhResult = await ExecuteHookCode(parser, executor, huhOverride, huhInput);
 				if (huhResult.IsSome())
 				{
 					return PreserveCommandEvaluationErrors(huhResult);
@@ -1618,13 +1613,13 @@ public class SharpMUSHParserVisitor(
 	{
 		try
 		{
-			var executor = await parser.CurrentState.ExecutorObject(Mediator);
-			var privileged = !executor.IsNone && await executor.Known().IsPriv();
+			var executor = await parser.CurrentState.ExecutorObject(Mediator) is AnySharpObject found ? found : null;
+			var privileged = executor is not null && await executor.IsPriv();
 			var message = ExceptionReport.Format(ex, command, correlationId, privileged);
 
-			if (!executor.IsNone)
+			if (executor is not null)
 			{
-				await NotifyService.Notify(executor.Known(), message);
+				await NotifyService.Notify(executor, message);
 			}
 			else if (parser.CurrentState.Handle is not null)
 			{
@@ -1808,17 +1803,15 @@ public class SharpMUSHParserVisitor(
 			// No = sign - clear/unset the attribute
 			var objectToClear = argsPlainText.Trim();
 
-			var clearExecutor = (await prs.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+			var clearExecutor = await prs.CurrentState.KnownExecutorObject(Mediator);
 
 			var clearLocateResult = await LocateService.LocateAndNotifyIfInvalid(
 				prs, clearExecutor, clearExecutor, objectToClear, LocateFlags.All);
 
-			if (!clearLocateResult.IsValid())
+			if (clearLocateResult is not AnySharpObject clearTargetObject)
 			{
 				return CallState.Empty;
 			}
-
-			var clearTargetObject = clearLocateResult.WithoutError().WithoutNone();
 
 			var clearResult = await AttributeService.ClearAttributeAsync(
 				clearExecutor, clearTargetObject, matchedEntry.Name,
@@ -1831,7 +1824,7 @@ public class SharpMUSHParserVisitor(
 				return CallState.Empty;
 			}
 
-			if (clearResult.TryPickT0(out _, out var clearError))
+			if (clearResult is not Error<string> clearError)
 			{
 				await NotifyService.NotifyLocalized(clearHandle.Value, nameof(ErrorMessages.Notifications.AttributeCleared),
 					clearExecutor, clearTargetObject.Object().Name, matchedEntry.Name);
@@ -1856,17 +1849,15 @@ public class SharpMUSHParserVisitor(
 			? argsText.Substring(equalsIndex + 1, valueLength)
 			: MarkupText.Plain(valuePart);
 
-		var executor = (await prs.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+		var executor = await prs.CurrentState.KnownExecutorObject(Mediator);
 
 		var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 			prs, executor, executor, objectPart, LocateFlags.All);
 
-		if (!locateResult.IsValid())
+		if (locateResult is not AnySharpObject targetObject)
 		{
 			return CallState.Empty;
 		}
-
-		var targetObject = locateResult.WithoutError().WithoutNone();
 
 		var setResult = await AttributeService.SetAttributeAsync(
 			executor, targetObject, matchedEntry.Name, valueMString);
@@ -1878,7 +1869,7 @@ public class SharpMUSHParserVisitor(
 			return CallState.Empty;
 		}
 
-		if (setResult.TryPickT0(out _, out var error))
+		if (setResult is not Error<string> error)
 		{
 			await NotifyService.NotifyLocalized(handle2.Value, nameof(ErrorMessages.Notifications.AttributeSet), executor,
 				targetObject.Object().Name, matchedEntry.Name);
@@ -1898,14 +1889,22 @@ public class SharpMUSHParserVisitor(
 	{
 		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
 		var singleArgument = switches.Any(s => libraryCommandDefinition.Attribute.SingleArgumentSwitches.Contains(s, StringComparer.OrdinalIgnoreCase));
-		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch, singleArgument);
-		if (splitResult.TryPickT1(out var splitError, out var argumentResults))
+		return await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch, singleArgument) switch
 		{
-			if (prs.CurrentState.Handle.HasValue)
-				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
-			return new None();
-		}
+			CommandArguments argumentResults => await DispatchInternalCommand(prs, src, rootCommand, switches,
+				libraryCommandDefinition, singleArgument, argumentResults),
+			Error<string> splitError => await RefuseArgumentSplit(prs, splitError.Value),
+		};
+	}
 
+	/// <summary>
+	/// Runs a built-in command whose arguments have split: its hooks, plugin interceptors, switch and lock
+	/// checks, then the command itself.
+	/// </summary>
+	private async ValueTask<Option<CallState>> DispatchInternalCommand(IMUSHCodeParser prs, MString src,
+		string rootCommand, string[] switches, CommandDefinition libraryCommandDefinition, bool singleArgument,
+		CommandArguments argumentResults)
+	{
 		var arguments = argumentResults.Values;
 
 		var executor = await prs.CurrentState.ExecutorObject(Mediator);
@@ -2002,23 +2001,23 @@ public class SharpMUSHParserVisitor(
 				async ValueTask<Option<CallState>> EvaluateHook(CommandHook hook, Option<MString> input = null!)
 				{
 					var result = await ExecuteHookCode(newParser, executor, hook, input);
-					hookHadErrors |= result.IsSome() && result.AsValue().HadErrors;
+					hookHadErrors |= result is CallState { HadErrors: true };
 					return result;
 				}
 				Option<CallState> PreserveHookErrors(Option<CallState> result)
 				{
 					if (!hookHadErrors) return result;
-					return (result.IsSome() ? result.AsValue() : CallState.Empty) with { HadErrors = true };
+					return (result is CallState value ? value : CallState.Empty) with { HadErrors = true };
 				}
 
 				// 1. Check for /ignore hook
 				var ignoreHook = await HookService.GetHookAsync(rootCommand, "IGNORE");
-				if (ignoreHook.IsSome())
+				if (ignoreHook is CommandHook ignoreCode)
 				{
-					var ignoreResult = await EvaluateHook(ignoreHook.AsValue());
-					if (ignoreResult.IsSome())
+					var ignoreResult = await EvaluateHook(ignoreCode);
+					if (ignoreResult is CallState ignoreValue)
 					{
-						if (ignoreResult.AsValue().Message.Falsy(newParser))
+						if (ignoreValue.Message.Falsy(newParser))
 						{
 							return PreserveHookErrors(CallState.Empty);
 						}
@@ -2027,9 +2026,9 @@ public class SharpMUSHParserVisitor(
 
 				// 2. Check for /before hook
 				var beforeHook = await HookService.GetHookAsync(rootCommand, "BEFORE");
-				if (beforeHook.IsSome())
+				if (beforeHook is CommandHook beforeCode)
 				{
-					await EvaluateHook(beforeHook.AsValue());
+					await EvaluateHook(beforeCode);
 					// Hook text is ignored, but failure state is retained.
 				}
 
@@ -2051,20 +2050,20 @@ public class SharpMUSHParserVisitor(
 
 				// 3. Check for /override hook with $-command matching
 				var overrideHook = await HookService.GetHookAsync(rootCommand, "OVERRIDE");
-				if (overrideHook.IsSome())
+				if (overrideHook is CommandHook overrideCode)
 				{
-					var overrideResult = await EvaluateHook(overrideHook.AsValue(), HookInput());
-					if (overrideResult.IsSome())
+					var overrideResult = await EvaluateHook(overrideCode, HookInput());
+					if (overrideResult is CallState overridden)
 					{
 						// 5. Check for /after hook before returning
 						var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
-						if (afterHook.IsSome())
+						if (afterHook is CommandHook afterCode)
 						{
-							await EvaluateHook(afterHook.AsValue());
+							await EvaluateHook(afterCode);
 							// Hook text is ignored, but failure state is retained.
 						}
 
-						return PreserveHookErrors(overrideResult.AsValue());
+						return PreserveHookErrors(overridden);
 					}
 				}
 
@@ -2076,9 +2075,9 @@ public class SharpMUSHParserVisitor(
 					if (pluginOverride is not null)
 					{
 						var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
-						if (afterHook.IsSome())
+						if (afterHook is CommandHook afterCode)
 						{
-							await EvaluateHook(afterHook.AsValue());
+							await EvaluateHook(afterCode);
 						}
 
 						await pluginHooks.CommandAfterAsync(newParser, pluginCommandText);
@@ -2096,19 +2095,19 @@ public class SharpMUSHParserVisitor(
 				{
 					// Check for /extend hook to handle invalid switches
 					var extendHook = await HookService.GetHookAsync(rootCommand, "EXTEND");
-					if (extendHook.IsSome())
+					if (extendHook is CommandHook extendCode)
 					{
-						var extendResult = await EvaluateHook(extendHook.AsValue(), HookInput());
-						if (extendResult.IsSome())
+						var extendResult = await EvaluateHook(extendCode, HookInput());
+						if (extendResult is CallState extended)
 						{
 							// Execute /after hook before returning
 							var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
-							if (afterHook.IsSome())
+							if (afterHook is CommandHook afterCode)
 							{
-								await EvaluateHook(afterHook.AsValue());
+								await EvaluateHook(afterCode);
 							}
 
-							return PreserveHookErrors(extendResult.AsValue());
+							return PreserveHookErrors(extended);
 						}
 					}
 
@@ -2122,9 +2121,9 @@ public class SharpMUSHParserVisitor(
 					// (oracle: `@shutdown/what` → "@SHUTDOWN doesn't know switch WHAT."). The return value
 					// still lists every offender as typed, because that string is a machine-readable
 					// result callers already match on.
-					if (!executor.IsNone)
+					if (executor is AnySharpObject notifiedExecutor)
 					{
-						await NotifyService.NotifyLocalized(executor.Known(),
+						await NotifyService.NotifyLocalized(notifiedExecutor,
 							nameof(ErrorMessages.Notifications.CommandUnknownSwitchFormat),
 							libraryCommandDefinition.Attribute.Name, invalidSwitches[0].ToUpperInvariant());
 					}
@@ -2135,12 +2134,11 @@ public class SharpMUSHParserVisitor(
 
 				// 4. Check CommandLock before executing
 				var commandLockStr = libraryCommandDefinition.Attribute.CommandLock;
-				if (!string.IsNullOrEmpty(commandLockStr) && !executor.IsNone)
+				if (!string.IsNullOrEmpty(commandLockStr) && executor is AnySharpObject lockedExecutor)
 				{
-					var executorObj = executor.Known();
-					if (!await LockService.Evaluate(commandLockStr, executorObj, executorObj))
+					if (!await LockService.Evaluate(commandLockStr, lockedExecutor, lockedExecutor))
 					{
-						await NotifyService.NotifyLocalized(executorObj, nameof(ErrorMessages.Notifications.PermissionDenied));
+						await NotifyService.NotifyLocalized(lockedExecutor, nameof(ErrorMessages.Notifications.PermissionDenied));
 						return PreserveHookErrors(new CallState(ErrorMessages.Returns.PermissionDenied));
 					}
 				}
@@ -2150,14 +2148,10 @@ public class SharpMUSHParserVisitor(
 				var commandSuccess = true;
 				Option<CallState> commandResult;
 
-				if (!executor.IsNone)
+				if (executor is AnySharpObject verboseExecutor && await verboseExecutor.HasFlag("VERBOSE"))
 				{
-					var executorObj = executor.Known();
-					if (await executorObj.HasFlag("VERBOSE"))
-					{
-						var verboseOutput = $"#{executorObj.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
-						await SendDebugOrVerboseOutput(executorObj, verboseOutput);
-					}
+					var verboseOutput = $"#{verboseExecutor.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
+					await SendDebugOrVerboseOutput(verboseExecutor, verboseOutput);
 				}
 
 				try
@@ -2180,9 +2174,9 @@ public class SharpMUSHParserVisitor(
 
 				// 5. Check for /after hook
 				var afterHookFinal = await HookService.GetHookAsync(rootCommand, "AFTER");
-				if (afterHookFinal.IsSome())
+				if (afterHookFinal is CommandHook afterFinalCode)
 				{
-					await EvaluateHook(afterHookFinal.AsValue());
+					await EvaluateHook(afterFinalCode);
 					// Hook text is ignored, but failure state is retained.
 				}
 
@@ -2208,13 +2202,12 @@ public class SharpMUSHParserVisitor(
 		CommandHook hook, Option<MString> commandInput = null!)
 	{
 		var targetObject = await Mediator.Send(new GetObjectNodeQuery(hook.TargetObject));
-		if (targetObject.IsNone)
+		if (targetObject is not AnySharpObject targetObj)
 		{
 			return new None();
 		}
 
-		var targetObj = targetObject.Known();
-		var executorObj = executor.IsNone ? targetObj : executor.Known();
+		var executorObj = executor is AnySharpObject knownExecutor ? knownExecutor : targetObj;
 
 		// Save q-registers if /localize is set
 		Dictionary<string, MString>? savedRegisters = null;
@@ -2238,14 +2231,14 @@ public class SharpMUSHParserVisitor(
 		try
 		{
 			// For OVERRIDE and EXTEND hooks, perform $-command matching
-			if (hook.HookType is "OVERRIDE" or "EXTEND" && commandInput.IsSome())
+			if (hook.HookType is "OVERRIDE" or "EXTEND" && commandInput is MString input)
 			{
 				var matchResult = await CommandDiscoveryService.MatchUserDefinedCommand(
 					localParser,
 					new[] { targetObj }.ToAsyncEnumerable(),
-					commandInput.AsValue());
+					input);
 
-				if (!matchResult.IsSome())
+				if (!matchResult.TryGetValue(out var matches))
 				{
 					return new None();
 				}
@@ -2253,7 +2246,7 @@ public class SharpMUSHParserVisitor(
 				// Dispatch is the same whether or not the hook is /inline: the matched $-command's body
 				// runs here on this call stack either way. The flag only selects the register handling
 				// above (/localize, /clearregs).
-				return await HandleUserDefinedCommand(localParser, matchResult.AsValue());
+				return await HandleUserDefinedCommand(localParser, matches);
 			}
 
 			return await AttributeService.EvaluateAttributeFunctionResultAsync(localParser, executorObj, targetObj,
@@ -2285,14 +2278,18 @@ public class SharpMUSHParserVisitor(
 		// set the prefix to "OUTPUTPREFIX" instead of clearing it, and bare SOCKSET asked for an option
 		// and a value instead of reporting the settings. `command` rather than the library name because
 		// realSubtext holds what the player typed, which may be an unambiguous abbreviation of it.
-		var splitResult = await ArgumentSplit(prs, src, context, librarySocketCommandDefinition, command);
-		if (splitResult.TryPickT1(out var splitError, out var argumentResults))
+		return await ArgumentSplit(prs, src, context, librarySocketCommandDefinition, command) switch
 		{
-			if (prs.CurrentState.Handle.HasValue)
-				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
-			return new None();
-		}
+			CommandArguments argumentResults =>
+				await DispatchSocketCommand(prs, command, librarySocketCommandDefinition, argumentResults),
+			Error<string> splitError => await RefuseArgumentSplit(prs, splitError.Value),
+		};
+	}
 
+	/// <summary>Runs a socket command whose arguments have split.</summary>
+	private static async ValueTask<Option<CallState>> DispatchSocketCommand(IMUSHCodeParser prs, string command,
+		CommandDefinition librarySocketCommandDefinition, CommandArguments argumentResults)
+	{
 		var arguments = argumentResults.Values;
 
 		var dispatchResult = await prs.With(state => state with
@@ -2302,6 +2299,17 @@ public class SharpMUSHParserVisitor(
 			Function = null
 		}, async newParser => await librarySocketCommandDefinition.Command.Invoke(newParser));
 		return PreserveArgumentErrors(dispatchResult, argumentResults);
+	}
+
+	/// <summary>
+	/// Tells the handle that typed the command why its arguments would not split, and runs nothing. Shared by
+	/// every command pattern that splits arguments.
+	/// </summary>
+	private async ValueTask<Option<CallState>> RefuseArgumentSplit(IMUSHCodeParser prs, string reason)
+	{
+		if (prs.CurrentState.Handle.HasValue)
+			await NotifyService.Notify(prs.CurrentState.Handle.Value, reason);
+		return new None();
 	}
 
 	/// <summary>
@@ -2354,14 +2362,21 @@ public class SharpMUSHParserVisitor(
 		// The root command must be passed so the no-space branch strips the token: without it, a bare
 		// "]" split to a single argument equal to "]" itself, and the re-dispatch in NoParse/StrictParse
 		// re-entered this same path forever — a stack overflow that takes the whole process down.
-		var splitResult = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition, singleRootCommand);
-		if (splitResult.TryPickT1(out var splitError, out var argumentResults))
+		return await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition, singleRootCommand) switch
 		{
-			if (prs.CurrentState.Handle.HasValue)
-				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
-			return new None();
-		}
+			CommandArguments argumentResults => await DispatchSingleTokenCommand(prs, singleRootCommand, rest,
+				singleLibraryCommandDefinition, argumentResults),
+			Error<string> splitError => await RefuseArgumentSplit(prs, splitError.Value),
+		};
+	}
 
+	/// <summary>
+	/// Runs a single-token command whose arguments have split, with the text glued to the token as <c>%0</c>.
+	/// </summary>
+	private static async ValueTask<Option<CallState>> DispatchSingleTokenCommand(IMUSHCodeParser prs,
+		string singleRootCommand, string rest, CommandDefinition singleLibraryCommandDefinition,
+		CommandArguments argumentResults)
+	{
 		var arguments = argumentResults.Values;
 
 		// %0 is the text glued to the token itself; the split arguments follow from %1.
@@ -2400,10 +2415,10 @@ public class SharpMUSHParserVisitor(
 
 	private static Option<CallState> PreserveArgumentErrors(Option<CallState> result, CommandArguments arguments)
 		=> arguments.HadErrors
-			? (result.IsSome() ? result.AsValue() : CallState.Empty) with { HadErrors = true }
+			? (result is CallState value ? value : CallState.Empty) with { HadErrors = true }
 			: result;
 
-	private async ValueTask<OneOf<CommandArguments, Error<string>>> ArgumentSplit(IMUSHCodeParser prs, MString src,
+	private async ValueTask<Result<CommandArguments>> ArgumentSplit(IMUSHCodeParser prs, MString src,
 		CommandContext context,
 		(SharpCommandAttribute Attribute, Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Function)
 			libraryCommandDefinition,
@@ -2998,10 +3013,7 @@ public class SharpMUSHParserVisitor(
 		var isCommandList = context.Parent is CommandListContext;
 
 		var result = await EvaluateCommands(source, context, isCommandList, VisitChildren);
-		return result
-			.Match<CallState?>(
-				x => x,
-				_ => CallState.Empty);
+		return result is CallState callState ? callState : CallState.Empty;
 	}
 
 	public override async ValueTask<CallState?> VisitStartCommandString(

@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -15,6 +14,6 @@ public interface IPluginUiAssemblyProvider
 	/// Returns the verified bytes, or <see cref="NotFound"/> when the plugin/assembly is unknown, the sidecar
 	/// is missing, or the on-disk bytes do not match the recorded hash.
 	/// </summary>
-	Task<OneOf<byte[], NotFound>> GetVerifiedAssemblyAsync(
+	Task<Found<byte[]>> GetVerifiedAssemblyAsync(
 		string pluginId, string assembly, CancellationToken cancellationToken = default);
 }

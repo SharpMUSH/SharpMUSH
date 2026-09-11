@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -284,11 +285,18 @@ public class AuthController(
 		if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
 			return BadRequest("Username and Password are required.");
 
-		var result = await accountService.CreateAccountAsync(request.Username, request.Email, request.Password);
-		if (result.IsT1)
-			return Conflict(result.AsT1.Value);
+		return await accountService.CreateAccountAsync(request.Username, request.Email, request.Password) switch
+		{
+			SharpAccount account => await RegisteredAsync(account),
+			Error<string> error => Conflict(error.Value),
+		};
+	}
 
-		var account = result.AsT0;
+	/// <summary>
+	/// Mint the session a newly registered account signs in with.
+	/// </summary>
+	private async Task<IActionResult> RegisteredAsync(SharpAccount account)
+	{
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
 		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
 
@@ -317,14 +325,12 @@ public class AuthController(
 		if (!environment.IsDevelopment())
 			return NotFound();
 
-		var obj = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		if (!obj.IsT0)
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(1))) is not (AnySharpObject and SharpPlayer player))
 		{
 			logger.LogWarning("Debug OTT: #1 is not a player or does not exist");
 			return NotFound("Player #1 not found.");
 		}
 
-		var player = obj.AsPlayer;
 		var playerRef = new DBRef(player.Object.Key, player.Object.CreationTime);
 		const int ttl = 60;
 		var token = await ottStore.CreateTokenAsync(playerRef, TimeSpan.FromSeconds(ttl));

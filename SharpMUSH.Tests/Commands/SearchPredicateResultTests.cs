@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -29,7 +30,7 @@ public class SearchPredicateResultTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var attributes = Factory.Services.GetRequiredService<IAttributeService>();
 		var id = await TestIsolationHelpers.CreateTestPlayerAsync(Factory.Services, mediator, "SearchResult");
-		var actor = (await mediator.Send(new GetObjectNodeQuery(id))).Known;
+		var actor = (await mediator.Send(new GetObjectNodeQuery(id))).Expect<AnySharpObject>();
 		var value = mode switch { "syntax" => "[", "literal" => "#-1 EXCEPTION: ordinary text", "true" => "1", _ => "0" };
 		await attributes.SetAttributeAsync(actor, actor, "BODY", MarkupText.Plain(value));
 		var parser = Factory.FunctionParser.FromState(ParserState.RootFor(id));

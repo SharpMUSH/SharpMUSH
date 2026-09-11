@@ -62,9 +62,13 @@
         // A tile that could not be fetched keeps the loading placeholder instead of printing 0:
         // "the game has no characters" and "the request never arrived" look identical as a count,
         // and only one of them is something the portal actually knows.
-        _characters = (await charsTask).Match(rows => rows.Count, _ => (int?)null);
+        _characters = await charsTask is IReadOnlyList<CharacterDirectoryService.CharacterSummary> characters
+            ? characters.Count
+            : null;
         _charactersFailed = _characters is null;
-        _online = (await onlineTask).Match(rows => rows.Count, _ => (int?)null);
+        _online = await onlineTask is IReadOnlyList<CharacterDirectoryService.CharacterSummary> online
+            ? online.Count
+            : null;
         _onlineFailed = _online is null;
     }
 }

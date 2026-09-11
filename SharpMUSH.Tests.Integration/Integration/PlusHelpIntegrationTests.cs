@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.ParserInterfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -136,7 +137,7 @@ public class PlusHelpIntegrationTests
 	public async Task IsInstalledAtFirstBoot_WithTheLibrarianInTheMasterRoom()
 	{
 		var installed = await Registry.GetInstalledPackageAsync("plus-help");
-		await Assert.That(installed.IsT0).IsTrue().Because("plus-help installs at first boot");
+		await Assert.That(installed.Value).IsTypeOf<InstalledPackageRecord>().Because("plus-help installs at first boot");
 
 		var librarian = await LibrarianAsync();
 		var powers = (await God1($"think [powers({librarian})]")).Message?.ToPlainText() ?? string.Empty;
@@ -402,7 +403,11 @@ public class PlusHelpIntegrationTests
 		var before = Notifications.RawCountFor(actor);
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("+help scene"));
 		var markup = string.Join("\n", Notifications.RawFor(actor).Skip(before)
-			.Select(m => m.Match(ms => ms.ToString(), str => str)));
+			.Select(m => m switch
+			{
+				MString markup => markup.ToString(),
+				string text => text,
+			}));
 
 		await Assert.That(markup).Contains(">join<")
 			.Because("a subtopic is labelled by its short name");

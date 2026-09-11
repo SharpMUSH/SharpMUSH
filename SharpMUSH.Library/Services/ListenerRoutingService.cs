@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
 using SharpMUSH.Library.Commands.ListenPattern;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -65,7 +64,7 @@ public class ListenerRoutingService(
 	/// </remarks>
 	public async ValueTask ProcessNotificationAsync(
 		NotificationContext context,
-		OneOf<MString, string> message,
+		SharpMessage message,
 		AnySharpObject? sender,
 		NotificationType type)
 	{
@@ -78,11 +77,8 @@ public class ListenerRoutingService(
 		if (context.ExcludedObjects.Contains(context.Target))
 			return;
 
-		var targetResult = await mediator.Send(new GetObjectNodeQuery(context.Target));
-		if (targetResult.IsNone())
+		if (await mediator.Send(new GetObjectNodeQuery(context.Target)) is not AnySharpObject listener)
 			return;
-
-		var listener = targetResult.WithoutNone();
 
 		// Only when there is no speaker at all, which NotifyService never does: it routes nothing
 		// without one. The location stands in for the speaker, as it did when this walked the room —
@@ -95,22 +91,22 @@ public class ListenerRoutingService(
 		}
 		else
 		{
-			var location = await mediator.Send(new GetObjectNodeQuery(context.Location.Value));
-			if (location.IsNone())
+			if (await mediator.Send(new GetObjectNodeQuery(context.Location.Value)) is not AnySharpObject location)
 			{
 				return;
 			}
 
-			actualSender = location.WithoutNone();
+			actualSender = location;
 		}
 
 		if (!await permissionService.CanInteract(actualSender, listener, IPermissionService.InteractType.Hear))
 			return;
 
-		var messageText = message.Match(
-			markupString => markupString.ToPlainText(),
-			str => str
-		);
+		var messageText = message switch
+		{
+			MString markupString => markupString.ToPlainText(),
+			string str => str
+		};
 
 		await ProcessListenPatternsAsync(listener, messageText, actualSender);
 
@@ -129,10 +125,10 @@ public class ListenerRoutingService(
 			IAttributeService.AttributeMode.Read,
 			parent: false);
 
-		if (!listenAttr.IsAttribute)
+		if (listenAttr is not SharpAttribute[] listen)
 			return;
 
-		var listenPattern = listenAttr.AsAttribute.Last().Value.ToPlainText();
+		var listenPattern = listen.Last().Value.ToPlainText();
 		if (string.IsNullOrWhiteSpace(listenPattern))
 			return;
 
@@ -234,7 +230,7 @@ public class ListenerRoutingService(
 
 	private async ValueTask ProcessPuppetRelayAsync(
 		AnySharpObject puppet,
-		OneOf<MString, string> message,
+		SharpMessage message,
 		AnySharpObject speaker,
 		NotificationType type)
 	{
@@ -271,8 +267,8 @@ public class ListenerRoutingService(
 			IAttributeService.AttributeMode.Read,
 			parent: false);
 
-		var prefix = prefixAttr.IsAttribute
-			? prefixAttr.AsAttribute.Last().Value.ToPlainText()
+		var prefix = prefixAttr is SharpAttribute[] prefixChain
+			? prefixChain.Last().Value.ToPlainText()
 			: $"{puppet.Object().Name}> ";
 
 		// The relay stays an MString all the way to the ConnectionServer, which owns the wire format
@@ -284,7 +280,11 @@ public class ListenerRoutingService(
 		// — which made a puppet a route for one player's text to format another player's screen.
 		var relayed = MarkupText.Concat(
 			MarkupText.Plain(prefix),
-			message.Match(markupString => markupString, MarkupText.Plain));
+			message switch
+			{
+				MString markupString => markupString,
+				string str => MarkupText.Plain(str)
+			});
 
 		var serialized = MarkupTextSerializer.Serialize(relayed);
 		foreach (var binding in bindings)

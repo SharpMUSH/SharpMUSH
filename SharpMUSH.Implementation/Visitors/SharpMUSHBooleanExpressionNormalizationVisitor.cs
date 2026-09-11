@@ -179,8 +179,8 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(
 			var exec = executor!;
 			var locateResult = services.LocateAsync(exec, exec, value, LocateFlags.All).AsTask().GetAwaiter().GetResult();
 
-			return locateResult.IsAnyObject
-				? $"#{locateResult.AsAnyObject.Object().DBRef.Number}"
+			return locateResult is AnySharpObject located
+				? $"#{located.Object().DBRef.Number}"
 				: value; // Not found — preserve the name
 		}
 		catch

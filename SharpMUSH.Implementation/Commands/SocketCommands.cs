@@ -1,6 +1,5 @@
 ﻿using DotNext.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -29,8 +28,7 @@ public partial class Commands
 		// WHO is CommandBehavior.SOCKET precisely so it answers at the connect screen, where nothing
 		// is bound to the handle yet. KnownExecutorObject() throws on that None, so resolve the
 		// executor optionally: an anonymous viewer is never a wizard and gets the mortal listing.
-		var executorOption = await parser.CurrentState.ExecutorObject(Mediator);
-		var executor = executorOption.IsNone ? null : executorOption.Known();
+		var executor = await parser.CurrentState.ExecutorObject(Mediator) is AnySharpObject found ? found : null;
 		var isWizard = executor is not null && await executor.IsWizard();
 
 		var everyone = ConnectionService.GetAll();
@@ -41,64 +39,67 @@ public partial class Commands
 				"Player Name", "Loc #", "On For", "Idle", "Cmds", "Des", "Host")
 			: string.Format("{0,-16} {1,10} {2,6}  {3}", "Player Name", "On For", "Idle", "Doing");
 
-		var filteredPlayers = await everyone
-			.Where(player => player.Ref.HasValue && (isWizard || player.PresenceClass != PresenceClasses.Portal))
+		var lines = new List<string>();
+		await foreach (var player in everyone
+			.Where(player => player.Ref.HasValue && (isWizard || player.PresenceClass != PresenceClasses.Portal)))
+		{
 			// PennMUSH dump_users skips a descriptor whose player is not a GoodObject. A handle can
 			// outlive the object it is bound to — @nuke a connected player, or a stale entry recovered
-			// from the state store — and Known throws on that None, taking the whole listing down with
-			// an #-1 EXCEPTION rather than omitting one row.
-			.Select(async (player, _, ct) => (Player: player,
-				Object: await Mediator.Send(new GetObjectNodeQuery(player.Ref!.Value), ct)))
-			.Where(entry => !entry.Object.IsNone)
-			.Select(async (entry, i, ct) =>
+			// from the state store — so that descriptor is omitted rather than taking the whole listing
+			// down with an #-1 EXCEPTION.
+			if (await Mediator.Send(new GetObjectNodeQuery(player.Ref!.Value)) is not AnySharpObject known)
 			{
-				var player = entry.Player;
-				var known = entry.Object.Known;
-				var name = known.Object().Name;
-				var namePadded = name.PadToColumns(16);
-				var onFor = TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3);
-				var idle = TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero);
-				var isDark = await known.HasFlag("DARK");
-				// A row is treated as hidden-from-mortals either because the object itself is DARK,
-				// or because this specific connection is Hidden (PennMUSH DESC.hide / @HIDE) — the
-				// latter doesn't touch the object's flags, so it can't be seen via HasFlag("DARK").
-				var isHiddenRow = isDark || player.IsHidden;
+				continue;
+			}
 
-				string line;
-				if (isWizard)
-				{
-					var location = known.IsContent
-						? "#" + ((await known.AsContent.Location())?.Object().DBRef.Number.ToString() ?? "-1")
-						: "#-1";
-					// Host truncated + " (Dark)" for dark/hidden players, else truncated to 27 (PennMUSH).
-					var host = isHiddenRow
-						? (player.HostName.Length > 20 ? player.HostName[..20] : player.HostName) + " (Dark)"
-						: (player.HostName.Length > 27 ? player.HostName[..27] : player.HostName);
-					// "Des" is the descriptor (handle) plus connection-type flags: S=SSL, L=local, W=WebSocket.
-					line = $"{namePadded} {location,6} {onFor,9} {idle,5}  {player.CommandCount,4} {player.Handle,3}{ConnType(player)} {host}";
-				}
-				else
-				{
-					// No executor at the connect screen: read DOING as the listed player reads it on
-					// itself. @doing is public in PennMUSH, and it is the one column the connect-screen
-					// listing exists to show.
-					var doingText = await GetDoingText(executor ?? known, known);
-					line = $"{namePadded} {onFor,10}   {idle,4}{(isHiddenRow ? 'D' : ' ')} {doingText}";
-				}
+			var name = known.Object().Name;
+			var namePadded = name.PadToColumns(16);
+			var onFor = TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3);
+			var idle = TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero);
+			var isDark = await known.HasFlag("DARK");
+			// A row is treated as hidden-from-mortals either because the object itself is DARK,
+			// or because this specific connection is Hidden (PennMUSH DESC.hide / @HIDE) — the
+			// latter doesn't touch the object's flags, so it can't be seen via HasFlag("DARK").
+			var isHiddenRow = isDark || player.IsHidden;
 
-				return (Line: line, Known: known, HiddenRow: isHiddenRow);
-			})
+			string line;
+			if (isWizard)
+			{
+				var location = known.IsContent
+					? "#" + ((await known.AsContent.Location())?.Object().DBRef.Number.ToString() ?? "-1")
+					: "#-1";
+				// Host truncated + " (Dark)" for dark/hidden players, else truncated to 27 (PennMUSH).
+				var host = isHiddenRow
+					? (player.HostName.Length > 20 ? player.HostName[..20] : player.HostName) + " (Dark)"
+					: (player.HostName.Length > 27 ? player.HostName[..27] : player.HostName);
+				// "Des" is the descriptor (handle) plus connection-type flags: S=SSL, L=local, W=WebSocket.
+				line = $"{namePadded} {location,6} {onFor,9} {idle,5}  {player.CommandCount,4} {player.Handle,3}{ConnType(player)} {host}";
+			}
+			else
+			{
+				// No executor at the connect screen: read DOING as the listed player reads it on
+				// itself. @doing is public in PennMUSH, and it is the one column the connect-screen
+				// listing exists to show.
+				var doingText = await GetDoingText(executor ?? known, known);
+				line = $"{namePadded} {onFor,10}   {idle,4}{(isHiddenRow ? 'D' : ' ')} {doingText}";
+			}
+
 			// CanSee(viewer, target) is `viewer.IsPriv() || viewer.IsSee_All() || !target.IsDark()`,
-			// which only knows about the DARK flag. HiddenRow folds in the per-connection Hidden
+			// which only knows about the DARK flag. isHiddenRow folds in the per-connection Hidden
 			// state too (see above), so the row is visible when either CanSee's own privilege
 			// exemption applies, or the row isn't hidden by either mechanism. An anonymous
 			// connect-screen viewer has no executor and is never privileged.
-			.Where(async (player, _) => executor is null
-				? !player.HiddenRow
-				: !player.HiddenRow || await executor.IsPriv() || await executor.IsSee_All())
-			.ToListAsync();
+			var visible = executor is null
+				? !isHiddenRow
+				: !isHiddenRow || await executor.IsPriv() || await executor.IsSee_All();
 
-		var count = filteredPlayers.Count;
+			if (visible)
+			{
+				lines.Add(line);
+			}
+		}
+
+		var count = lines.Count;
 		var footer = count switch
 		{
 			0 => "There are no players connected.",
@@ -106,7 +107,7 @@ public partial class Commands
 			_ => $"There are {count} players connected."
 		};
 
-		var message = $"{header}\n{string.Join('\n', filteredPlayers.Select(x => x.Line))}\n{footer}";
+		var message = $"{header}\n{string.Join('\n', lines)}\n{footer}";
 
 		await NotifyService.Notify(handle: parser.CurrentState.Handle!.Value, what: message);
 
@@ -225,11 +226,13 @@ public partial class Commands
 
 		var nameItem = nameItems.First();
 
-		var foundDB = await nameItem.Match(
-			async dbref => (await Mediator.Send(new GetObjectNodeQuery(dbref))).TryPickT0(out var player, out _)
+		var foundDB = nameItem switch
+		{
+			DBRef dbref => await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject and SharpPlayer player
 				? player
 				: null,
-			async name => await (Mediator.CreateStream(new GetPlayerQuery(name))).FirstOrDefaultAsync());
+			string name => await Mediator.CreateStream(new GetPlayerQuery(name)).FirstOrDefaultAsync()
+		};
 
 		if (foundDB is null)
 		{
@@ -346,12 +349,11 @@ public partial class Commands
 		}
 
 		var playerNode = await Mediator.Send(new GetObjectNodeQuery(playerDbRef.Value));
-		if (!playerNode.IsPlayer)
+		if (playerNode is not (AnySharpObject and SharpPlayer foundPlayer))
 		{
 			await NotifyService.Notify(handle, "Could not find that player.");
 			return new CallState(ErrorMessages.Returns.PlayerNotFound);
 		}
-		var foundPlayer = playerNode.AsPlayer;
 
 		if (!Configuration.CurrentValue.Net.Logins
 			&& !await new AnySharpObject(foundPlayer).IsWizard())
@@ -523,8 +525,7 @@ public partial class Commands
 		// QUIT is a SOCKET command: it must also work at the connect screen, where the handle has
 		// no executor bound and KnownExecutorObject() would throw. Fall back to notifying the
 		// socket directly in that case.
-		var executorOption = await parser.CurrentState.ExecutorObject(Mediator);
-		var executor = executorOption.IsNone ? null : executorOption.Known();
+		var executor = await parser.CurrentState.ExecutorObject(Mediator) is AnySharpObject found ? found : null;
 
 		await NotifyQuitAsync(MarkupText.Plain("GOODBYE."));
 

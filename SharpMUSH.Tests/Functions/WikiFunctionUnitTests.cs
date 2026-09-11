@@ -85,7 +85,7 @@ public class WikiFunctionUnitTests
 	{
 		var created = await WikiService.CreateAsync(
 			"Function Search Target", "Contains the plugh-marker token.", "#1");
-		await Assert.That(created.IsT0).IsTrue();
+		await Assert.That(created.Value).IsTypeOf<WikiPage>();
 
 		var result = await Eval("wikisearch(plugh-marker)");
 
@@ -96,13 +96,10 @@ public class WikiFunctionUnitTests
 	private async Task<WikiPage> SeedUnpublishedPageAsync(string title, string body)
 	{
 		var created = await WikiService.CreateAsync(title, body, "#1", WikiNamespace.Main, "general", "en");
-		await Assert.That(created.IsT0).IsTrue();
-		var page = created.AsT0;
+		var page = created.Expect<WikiPage>();
 
 		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
-		await Assert.That(unpublished.IsT0).IsTrue();
-
-		return unpublished.AsT0;
+		return unpublished.Expect<WikiPage>();
 	}
 
 	/// <remarks>
@@ -115,13 +112,12 @@ public class WikiFunctionUnitTests
 	{
 		var draft = await SeedUnpublishedPageAsync(
 			"Fn Draft Search Target", "Contains the frotz-marker token.");
-		var published = await WikiService.CreateAsync(
-			"Fn Published Search Target", "Also contains the frotz-marker token.", "#1");
-		await Assert.That(published.IsT0).IsTrue();
+		var published = (await WikiService.CreateAsync(
+			"Fn Published Search Target", "Also contains the frotz-marker token.", "#1")).Expect<WikiPage>();
 
 		var result = await Eval("wikisearch(frotz-marker)");
 
-		await Assert.That(result).Contains(published.AsT0.Slug);
+		await Assert.That(result).Contains(published.Slug);
 		await Assert.That(result)
 			.DoesNotContain(draft.Slug)
 			.Because("a draft's reference is as much of a disclosure as its body");
@@ -152,12 +148,11 @@ public class WikiFunctionUnitTests
 	{
 		var created = await WikiService.CreateAsync(
 			"Fn Translated Search Target", "en fn search body", "#1", WikiNamespace.Main, "general", "en");
-		await Assert.That(created.IsT0).IsTrue();
-		var page = created.AsT0;
+		var page = created.Expect<WikiPage>();
 		var translated = await WikiService.UpsertTranslationAsync(
 			page.Id, "fr", "Cible fn traduite", "corps avec vertugadin", "#1", null,
 			published: true, expectedRevisionNumber: null);
-		await Assert.That(translated.IsT0).IsTrue();
+		await Assert.That(translated.Value).IsTypeOf<WikiTranslation>();
 
 		var result = await Eval("wikisearch(vertugadin)");
 
@@ -174,7 +169,7 @@ public class WikiFunctionUnitTests
 	{
 		var created = await WikiService.CreateAsync(
 			"Fn Draft Translation Target", "en draft-tr host body", "#1", WikiNamespace.Main, "general", "en");
-		var page = created.AsT0;
+		var page = created.Expect<WikiPage>();
 		await WikiService.UpsertTranslationAsync(
 			page.Id, "fr", "Cible brouillon", "corps avec fanfreluche", "#1", null,
 			published: false, expectedRevisionNumber: null);
@@ -222,14 +217,13 @@ public class WikiFunctionUnitTests
 	{
 		var created = await WikiService.CreateAsync(
 			title, "en fn body", "#1", WikiNamespace.Main, "general", "en");
-		await Assert.That(created.IsT0).IsTrue();
-		var page = created.AsT0;
+		var page = created.Expect<WikiPage>();
 
 		// Create-only: this is the first write for fr, so there is no revision to compare against.
 		var translated = await WikiService.UpsertTranslationAsync(
 			page.Id, "fr", $"{title} (fr)", "corps fn fr", "#1", null, published: true,
 			expectedRevisionNumber: null);
-		await Assert.That(translated.IsT0).IsTrue();
+		await Assert.That(translated.Value).IsTypeOf<WikiTranslation>();
 
 		return page.Slug;
 	}
@@ -268,7 +262,7 @@ public class WikiFunctionUnitTests
 		var created = await WikiService.CreateAsync(
 			"Fn Draft Locale Page", "en draft-host body", "#1",
 			WikiNamespace.Main, "general", "en");
-		var page = created.AsT0;
+		var page = created.Expect<WikiPage>();
 		await WikiService.UpsertTranslationAsync(
 			page.Id, "fr", "Brouillon fn", "corps brouillon fn", "#1", null, published: false,
 			expectedRevisionNumber: null);
@@ -317,8 +311,7 @@ public class WikiFunctionUnitTests
 	{
 		var created = await WikiService.CreateAsync(
 			"Fn Wiki Link Page", "See [[Getting Started]] for details.", "#1");
-		await Assert.That(created.IsT0).IsTrue();
-		var page = created.AsT0;
+		var page = created.Expect<WikiPage>();
 
 		var text = (await Parser.FunctionParse(MarkupText.Plain($"wiki({page.Slug})")))!.Message!;
 		var markdown = (await Parser.FunctionParse(MarkupText.Plain($"wiki({page.Slug},markdown)")))!.Message!;

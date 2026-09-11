@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -199,10 +200,10 @@ public class WikiController(
 	[HttpGet("ns/{ns}/{category}/{slug}")]
 	public async Task<IActionResult> GetPage(string ns, string category, string slug, [FromQuery] string? lang = null)
 	{
-		var result = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
-		if (result.IsT1 || !CanSee(result.AsT0)) return NotFound();
+		if (await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
+			return NotFound();
 
-		return Ok(await LocalizedDtoAsync(result.AsT0, lang));
+		return Ok(await LocalizedDtoAsync(page, lang));
 	}
 
 	/// <summary>
@@ -213,10 +214,11 @@ public class WikiController(
 	[HttpGet("character/{name}")]
 	public async Task<IActionResult> GetCharacterPage(string name, [FromQuery] string? lang = null)
 	{
-		var result = await wikiService.GetBySlugAsync(name, WikiHelpers.DefaultCategory, WikiNamespace.Character);
-		if (result.IsT1 || !CanSee(result.AsT0)) return NotFound();
+		if (await wikiService.GetBySlugAsync(name, WikiHelpers.DefaultCategory, WikiNamespace.Character) is not WikiPage page
+			|| !CanSee(page))
+			return NotFound();
 
-		return Ok(await LocalizedDtoAsync(result.AsT0, lang));
+		return Ok(await LocalizedDtoAsync(page, lang));
 	}
 
 	/// <summary>
@@ -230,7 +232,7 @@ public class WikiController(
 		var available = await localization.GetVisibleLocalesAsync(page, includeDrafts);
 
 		// Read path: a bad tag is a client-side hint, never a 400. NormalizeLocaleOrEmpty is the permissive
-		// form for exactly this reason — the OneOf-returning NormalizeLocale belongs at write boundaries.
+		// form for exactly this reason — the Result-returning NormalizeLocale belongs at write boundaries.
 		if (!string.IsNullOrWhiteSpace(lang) && WikiHelpers.NormalizeLocaleOrEmpty(lang).Length == 0)
 			logger.LogDebug("Unrecognised wiki lang tag ignored: {Lang}", LogSanitizer.Sanitize(lang));
 
@@ -284,14 +286,13 @@ public class WikiController(
 	/// Anonymous callers only see published pages.
 	/// </summary>
 	/// <remarks>
-	/// The header used to be withheld from callers without <c>wiki.read</c>, because the only count
-	/// available included drafts and would have disclosed how many exist. Now that the count takes the
-	/// same visibility flag the rows are filtered by, the total matches the collection and can be sent to
-	/// everyone — a paginated listing without a total cannot be paged through.
+	/// The count takes the same visibility flag the rows are filtered by, so the total matches the
+	/// collection and discloses no drafts; it can be sent to everyone, and has to be — a paginated listing
+	/// without a total cannot be paged through.
 	/// <para>
 	/// One caller is counted slightly short: <see cref="CanSee"/> also passes a caller's own drafts, which
 	/// no count can express. Such a caller sees rows the total does not include — their own, so nothing is
-	/// disclosed — where before they got no header at all and the client fell back to the page size.
+	/// disclosed.
 	/// </para>
 	/// </remarks>
 	[HttpGet("pages")]
@@ -333,7 +334,7 @@ public class WikiController(
 	/// <summary>
 	/// GET /api/wiki/{slug}/revisions?skip=&amp;take=&amp;ns=&amp;category=&amp;lang=
 	/// Revision history, newest first. Omitting <c>lang</c> (or naming the page's source locale) returns
-	/// the source-locale stream, which is exactly what this route returned before translations existed.
+	/// the source-locale stream.
 	/// </summary>
 	[HttpGet("{slug}/revisions")]
 	public async Task<IActionResult> GetRevisions(
@@ -341,12 +342,10 @@ public class WikiController(
 		[FromQuery] string? ns = null, [FromQuery] string? category = null,
 		[FromQuery] string? lang = null)
 	{
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
-		if (lookup.IsT1) return NotFound();
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
-		if (!CanSee(lookup.AsT0)) return NotFound();
+		if (await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
+			return NotFound();
 
-		var page = lookup.AsT0;
 		// The source page's revisions are stored with an empty Locale; a translation's carry its tag.
 		var stream = await ResolveRevisionStreamAsync(page, lang);
 
@@ -363,10 +362,10 @@ public class WikiController(
 	public async Task<IActionResult> GetTranslations(
 		string slug, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
-		if (lookup.IsT1 || !CanSee(lookup.AsT0)) return NotFound();
+		if (await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
+			return NotFound();
 
-		var summaries = await localization.GetVisibleTranslationsAsync(lookup.AsT0.Id, IncludeDrafts);
+		var summaries = await localization.GetVisibleTranslationsAsync(page.Id, IncludeDrafts);
 		return Ok(summaries.Select(ToDto));
 	}
 
@@ -385,40 +384,44 @@ public class WikiController(
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
 
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
-		if (lookup.IsT1) return NotFound();
+		if (await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page)
+			return NotFound();
 
-		if (lookup.AsT0.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
+		if (page.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
 			return Forbid();
 
 		var result = await wikiService.UpsertTranslationAsync(
-			lookup.AsT0.Id, locale, request.Title, request.Markdown,
+			page.Id, locale, request.Title, request.Markdown,
 			editorDbref, request.EditSummary, request.Published, request.ExpectedRevisionNumber);
 
-		return result.Match<IActionResult>(
-			translation =>
-			{
-				logger.LogInformation(
-					"Wiki translation saved: slug={Slug} locale={Locale} rev={Rev} by={Editor}",
-					LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(translation.Locale),
-					translation.RevisionNumber, LogSanitizer.Sanitize(editorDbref));
-				prerenderCache.InvalidatePrefix("/wiki/");
-				return Ok(ToDto(new WikiTranslationSummary(
-					translation.Locale, translation.Title, translation.Published,
-					translation.UpdatedAt, translation.RevisionNumber)));
-			},
+		return result switch
+		{
+			WikiTranslation translation => TranslationSaved(translation),
 			// A lost write is 409, not 400: the request was well-formed and the client's correct response is
 			// to reload, which is a different instruction from "your body was invalid". The endpoint does not
 			// retry — retrying would re-apply this caller's stale markdown over the winner's, which is the
 			// loss expectedRevisionNumber exists to prevent.
-			conflict => Conflict(new { error = ConflictMessage(conflict, locale), reload = true }),
-			err => BadRequest(new { error = err.Value }));
+			WikiWriteConflict conflict => Conflict(new { error = ConflictMessage(conflict, locale), reload = true }),
+			Error<string> err => BadRequest(new { error = err.Value })
+		};
+
+		IActionResult TranslationSaved(WikiTranslation translation)
+		{
+			logger.LogInformation(
+				"Wiki translation saved: slug={Slug} locale={Locale} rev={Rev} by={Editor}",
+				LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(translation.Locale),
+				translation.RevisionNumber, LogSanitizer.Sanitize(editorDbref));
+			prerenderCache.InvalidatePrefix("/wiki/");
+			return Ok(ToDto(new WikiTranslationSummary(
+				translation.Locale, translation.Title, translation.Published,
+				translation.UpdatedAt, translation.RevisionNumber)));
+		}
 	}
 
 	/// <summary>
 	/// Human wording for a <see cref="WikiWriteConflict"/>. Phrasing lives here rather than in the four
-	/// storage implementations: it is presentation, and when it was theirs the status code depended on all
-	/// four wording it identically.
+	/// storage implementations: it is presentation, and keeping it in one place means the response cannot
+	/// depend on every provider wording it identically.
 	/// </summary>
 	private static string ConflictMessage(WikiWriteConflict conflict, string locale) => conflict switch
 	{
@@ -443,24 +446,20 @@ public class WikiController(
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
 
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
-		if (lookup.IsT1) return NotFound();
+		if (await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page)
+			return NotFound();
 
-		if (lookup.AsT0.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
+		if (page.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
 			return Forbid();
 
-		var result = await wikiService.DeleteTranslationAsync(lookup.AsT0.Id, locale, editorDbref);
+		if (await wikiService.DeleteTranslationAsync(page.Id, locale, editorDbref) is not None)
+			return NotFound();
 
-		return result.Match<IActionResult>(
-			_ =>
-			{
-				logger.LogInformation(
-					"Wiki translation deleted: slug={Slug} locale={Locale} by={Editor}",
-					LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(locale), LogSanitizer.Sanitize(editorDbref));
-				prerenderCache.InvalidatePrefix("/wiki/");
-				return NoContent();
-			},
-			_ => NotFound());
+		logger.LogInformation(
+			"Wiki translation deleted: slug={Slug} locale={Locale} by={Editor}",
+			LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(locale), LogSanitizer.Sanitize(editorDbref));
+		prerenderCache.InvalidatePrefix("/wiki/");
+		return NoContent();
 	}
 
 	/// <summary>
@@ -479,18 +478,15 @@ public class WikiController(
 		[FromQuery] string? ns = null, [FromQuery] string? category = null,
 		[FromQuery] string? lang = null)
 	{
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
-		if (lookup.IsT1) return NotFound();
 		// Mirror GetPage: drafts (and their history) are hidden from anonymous callers.
-		if (!CanSee(lookup.AsT0)) return NotFound();
+		if (await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page || !CanSee(page))
+			return NotFound();
 
-		var page = lookup.AsT0;
 		var stream = await ResolveRevisionStreamAsync(page, lang);
 
-		var result = await wikiService.GetRevisionForLocaleAsync(page.Id, stream, number);
-		return result.Match<IActionResult>(
-			revision => Ok(ToDto(revision)),
-			_ => NotFound());
+		return await wikiService.GetRevisionForLocaleAsync(page.Id, stream, number) is WikiRevision revision
+			? Ok(ToDto(revision))
+			: NotFound();
 	}
 
 	/// <summary>
@@ -543,15 +539,19 @@ public class WikiController(
 		// resolution only; it never reinterprets a page that already exists.
 		var result = await wikiService.CreateAsync(
 			request.Title, request.Markdown, authorDbref, ns, request.Category, localization.DefaultLocale);
-		return result.Match<IActionResult>(
-			page =>
-			{
-				logger.LogInformation("Wiki page created: slug={Slug} ns={Ns} category={Category} by={Author}",
-					LogSanitizer.Sanitize(page.Slug), ns, LogSanitizer.Sanitize(page.Category), LogSanitizer.Sanitize(authorDbref));
-				return CreatedAtAction(nameof(GetPage),
-					new { ns = page.Namespace, category = page.Category, slug = page.Slug }, ToDto(page));
-			},
-			err => Conflict(new { error = err.Value }));
+		return result switch
+		{
+			WikiPage page => PageCreated(page),
+			Error<string> err => Conflict(new { error = err.Value })
+		};
+
+		IActionResult PageCreated(WikiPage page)
+		{
+			logger.LogInformation("Wiki page created: slug={Slug} ns={Ns} category={Category} by={Author}",
+				LogSanitizer.Sanitize(page.Slug), ns, LogSanitizer.Sanitize(page.Category), LogSanitizer.Sanitize(authorDbref));
+			return CreatedAtAction(nameof(GetPage),
+				new { ns = page.Namespace, category = page.Category, slug = page.Slug }, ToDto(page));
+		}
 	}
 
 	/// <summary>
@@ -566,23 +566,20 @@ public class WikiController(
 		var editorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
-		if (lookup.IsT1) return NotFound();
+		if (await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage existing)
+			return NotFound();
 
 		// Protected pages may only be edited by Wizard-level users.
-		if (lookup.AsT0.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
+		if (existing.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
 			return Forbid();
 
-		var id = lookup.AsT0.Id;
-		var result = await wikiService.UpdateAsync(id, request.Markdown, editorDbref, request.EditSummary);
-		return result.Match<IActionResult>(
-			page =>
-			{
-				logger.LogInformation("Wiki page updated: slug={Slug} rev={Rev} by={Editor}", LogSanitizer.Sanitize(slug), page.RevisionNumber, LogSanitizer.Sanitize(editorDbref));
-				prerenderCache.InvalidatePrefix($"/wiki/");
-				return Ok(ToDto(page));
-			},
-			_ => NotFound());
+		if (await wikiService.UpdateAsync(existing.Id, request.Markdown, editorDbref, request.EditSummary)
+			is not WikiPage page)
+			return NotFound();
+
+		logger.LogInformation("Wiki page updated: slug={Slug} rev={Rev} by={Editor}", LogSanitizer.Sanitize(slug), page.RevisionNumber, LogSanitizer.Sanitize(editorDbref));
+		prerenderCache.InvalidatePrefix("/wiki/");
+		return Ok(ToDto(page));
 	}
 
 	/// <summary>Request body for rolling a page back to an earlier revision.</summary>
@@ -601,28 +598,24 @@ public class WikiController(
 		var editorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
-		if (lookup.IsT1) return NotFound();
+		if (await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page)
+			return NotFound();
 
-		var page = lookup.AsT0;
 		if (page.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
 			return Forbid();
 
-		var revisionLookup = await wikiService.GetRevisionAsync(page.Id, request.RevisionNumber);
-		if (revisionLookup.IsT1) return NotFound();
+		if (await wikiService.GetRevisionAsync(page.Id, request.RevisionNumber) is not WikiRevision revision)
+			return NotFound();
 
-		var result = await wikiService.UpdateAsync(
-			page.Id, revisionLookup.AsT0.MarkdownSource, editorDbref,
-			$"rollback to r{request.RevisionNumber}");
-		return result.Match<IActionResult>(
-			updated =>
-			{
-				logger.LogInformation("Wiki page rolled back: slug={Slug} to r{Target} (now r{Rev}) by={Editor}",
-					LogSanitizer.Sanitize(slug), request.RevisionNumber, updated.RevisionNumber, LogSanitizer.Sanitize(editorDbref));
-				prerenderCache.InvalidatePrefix($"/wiki/");
-				return Ok(ToDto(updated));
-			},
-			_ => NotFound());
+		if (await wikiService.UpdateAsync(
+				page.Id, revision.MarkdownSource, editorDbref, $"rollback to r{request.RevisionNumber}")
+			is not WikiPage updated)
+			return NotFound();
+
+		logger.LogInformation("Wiki page rolled back: slug={Slug} to r{Target} (now r{Rev}) by={Editor}",
+			LogSanitizer.Sanitize(slug), request.RevisionNumber, updated.RevisionNumber, LogSanitizer.Sanitize(editorDbref));
+		prerenderCache.InvalidatePrefix("/wiki/");
+		return Ok(ToDto(updated));
 	}
 
 	/// <summary>Request body for the batch existence check. Refs use URL-path form:
@@ -645,8 +638,7 @@ public class WikiController(
 		foreach (var reference in request.Refs.Distinct(StringComparer.Ordinal).Take(maxRefs))
 		{
 			var (ns, category, slug) = ParseRef(reference);
-			var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
-			result[reference] = lookup.IsT0 && CanSee(lookup.AsT0);
+			result[reference] = await wikiService.GetBySlugAsync(slug, category, ns) is WikiPage page && CanSee(page);
 		}
 
 		return Ok(result);
@@ -663,19 +655,15 @@ public class WikiController(
 		var editorDbref = CallerDbref;
 		if (string.IsNullOrEmpty(editorDbref))
 			return Unauthorized("Missing character identity.");
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
-		if (lookup.IsT1) return NotFound();
+		if (await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page)
+			return NotFound();
 
-		var id = lookup.AsT0.Id;
-		var result = await wikiService.DeleteAsync(id, editorDbref);
-		return result.Match<IActionResult>(
-			_ =>
-			{
-				logger.LogInformation("Wiki page deleted: slug={Slug} by={Editor}", LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(editorDbref));
-				prerenderCache.InvalidatePrefix($"/wiki/");
-				return NoContent();
-			},
-			_ => NotFound());
+		if (await wikiService.DeleteAsync(page.Id, editorDbref) is not None)
+			return NotFound();
+
+		logger.LogInformation("Wiki page deleted: slug={Slug} by={Editor}", LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(editorDbref));
+		prerenderCache.InvalidatePrefix("/wiki/");
+		return NoContent();
 	}
 
 	/// <summary>
@@ -686,14 +674,13 @@ public class WikiController(
 	[Authorize(Policy = PortalPermission.WikiAdmin)]
 	public async Task<IActionResult> SetProtection(string slug, [FromBody] SetProtectionRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
-		if (lookup.IsT1) return NotFound();
+		if (await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage page)
+			return NotFound();
 
-		var id = lookup.AsT0.Id;
-		var result = await wikiService.SetProtectionAsync(id, request.IsProtected);
-		return result.Match<IActionResult>(
-			_ => Ok(),
-			_ => NotFound());
+		if (await wikiService.SetProtectionAsync(page.Id, request.IsProtected) is not None)
+			return NotFound();
+
+		return Ok();
 	}
 
 	/// <summary>Request body for setting page metadata.</summary>
@@ -708,25 +695,22 @@ public class WikiController(
 	[Authorize(Policy = PortalPermission.WikiEdit)]
 	public async Task<IActionResult> SetMetadata(string slug, [FromBody] SetMetadataRequest request, [FromQuery] string? ns = null, [FromQuery] string? category = null)
 	{
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns));
-		if (lookup.IsT1) return NotFound();
+		if (await wikiService.GetBySlugAsync(slug, category, ParseNamespace(ns)) is not WikiPage existing)
+			return NotFound();
 
 		// Protected pages may only be retagged/(un)published by Wizard-level users,
 		// mirroring the edit restriction in UpdatePage.
-		if (lookup.AsT0.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
+		if (existing.IsProtected && !User.HasClaim(PortalPermission.ClaimType, PortalPermission.WikiAdmin))
 			return Forbid();
 
-		var result = await wikiService.SetMetadataAsync(
-			lookup.AsT0.Id, request.Category, request.Tags ?? [], request.Published);
-		return result.Match<IActionResult>(
-			page =>
-			{
-				logger.LogInformation("Wiki page metadata updated: slug={Slug} category={Category} published={Published}",
-					LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(page.Category), page.Published);
-				prerenderCache.InvalidatePrefix("/wiki/");
-				return Ok(ToDto(page));
-			},
-			_ => NotFound());
+		if (await wikiService.SetMetadataAsync(existing.Id, request.Category, request.Tags ?? [], request.Published)
+			is not WikiPage page)
+			return NotFound();
+
+		logger.LogInformation("Wiki page metadata updated: slug={Slug} category={Category} published={Published}",
+			LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(page.Category), page.Published);
+		prerenderCache.InvalidatePrefix("/wiki/");
+		return Ok(ToDto(page));
 	}
 
 	/// <summary>Request body for batch protection changes. Refs use "ns/category/slug" form.</summary>
@@ -752,15 +736,14 @@ public class WikiController(
 		foreach (var reference in request.Refs ?? [])
 		{
 			var (ns, category, slug) = ParseRef(reference);
-			var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
-			if (lookup.IsT1)
+			if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
 			{
 				failed.Add(reference);
 				continue;
 			}
 
-			var result = await wikiService.SetProtectionAsync(lookup.AsT0.Id, request.IsProtected);
-			(result.IsT0 ? succeeded : failed).Add(reference);
+			var result = await wikiService.SetProtectionAsync(page.Id, request.IsProtected);
+			(result is None ? succeeded : failed).Add(reference);
 		}
 
 		logger.LogInformation("Wiki batch protect: protected={Protected} ok={Ok} failed={Failed}",
@@ -785,15 +768,14 @@ public class WikiController(
 		foreach (var reference in request.Refs ?? [])
 		{
 			var (ns, category, slug) = ParseRef(reference);
-			var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
-			if (lookup.IsT1)
+			if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
 			{
 				failed.Add(reference);
 				continue;
 			}
 
-			var result = await wikiService.DeleteAsync(lookup.AsT0.Id, editorDbref);
-			(result.IsT0 ? succeeded : failed).Add(reference);
+			var result = await wikiService.DeleteAsync(page.Id, editorDbref);
+			(result is None ? succeeded : failed).Add(reference);
 		}
 
 		prerenderCache.InvalidatePrefix("/wiki/");

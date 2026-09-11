@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -49,8 +50,13 @@ public class WikiLocalizationServiceTests
 			storage, resolver, NullLogger<WikiLocalizationService>.Instance));
 	}
 
-	private static async Task<WikiPage> SeedAsync(IWikiService storage, string? sourceLocale = "en") =>
-		(await storage.CreateAsync("Dragons", "en **body**", "#1", WikiNamespace.Main, "general", sourceLocale)).AsT0;
+	private static async Task<WikiPage> SeedAsync(
+		IWikiService storage, string? sourceLocale = "en", string title = "Dragons", string markdown = "en **body**") =>
+		(await storage.CreateAsync(title, markdown, "#1", WikiNamespace.Main, "general", sourceLocale)) switch
+		{
+			WikiPage page => page,
+			Error<string> error => throw new InvalidOperationException(error.Value)
+		};
 
 	[Test]
 	public async Task RequestedSourceLocale_ServesThePageWithNoBanner()
@@ -60,8 +66,7 @@ public class WikiLocalizationServiceTests
 
 		var result = await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "en", false);
 
-		await Assert.That(result.IsT0).IsTrue();
-		var localized = result.AsT0;
+		var localized = result.Expect<LocalizedWikiPage>();
 		await Assert.That(localized.Locale).IsEqualTo("en");
 		await Assert.That(localized.IsFallback).IsFalse();
 		await Assert.That(localized.Title).IsEqualTo(page.Title);
@@ -75,9 +80,8 @@ public class WikiLocalizationServiceTests
 		var page = await SeedAsync(storage);
 		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, published: true, expectedRevisionNumber: null);
 
-		var result = await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr", false);
+		var localized = (await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr", false)).Expect<LocalizedWikiPage>();
 
-		var localized = result.AsT0;
 		await Assert.That(localized.Locale).IsEqualTo("fr");
 		await Assert.That(localized.Title).IsEqualTo("Dragons (fr)");
 		await Assert.That(localized.MarkdownSource).IsEqualTo("corps fr");
@@ -91,10 +95,9 @@ public class WikiLocalizationServiceTests
 		var page = await SeedAsync(storage);
 		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
-		var result = await service.GetLocalizedBySlugAsync(
-			"dragons", "general", WikiNamespace.Main, "fr", includeDrafts: false);
+		var localized = (await service.GetLocalizedBySlugAsync(
+			"dragons", "general", WikiNamespace.Main, "fr", includeDrafts: false)).Expect<LocalizedWikiPage>();
 
-		var localized = result.AsT0;
 		await Assert.That(localized.Locale)
 			.IsEqualTo("en")
 			.Because("a draft translation must fall through exactly as if it did not exist");
@@ -112,10 +115,9 @@ public class WikiLocalizationServiceTests
 		var page = await SeedAsync(storage);
 		await storage.UpsertTranslationAsync(page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
-		var result = await service.GetLocalizedBySlugAsync(
-			"dragons", "general", WikiNamespace.Main, "fr", includeDrafts: true);
+		var localized = (await service.GetLocalizedBySlugAsync(
+			"dragons", "general", WikiNamespace.Main, "fr", includeDrafts: true)).Expect<LocalizedWikiPage>();
 
-		var localized = result.AsT0;
 		await Assert.That(localized.Locale).IsEqualTo("fr");
 		await Assert.That(localized.MarkdownSource).IsEqualTo("corps brouillon");
 		await Assert.That(localized.Published)
@@ -164,13 +166,13 @@ public class WikiLocalizationServiceTests
 		var (storageB, serviceB) = Build("de");
 		await SeedAsync(storageB, sourceLocale: "fr");
 
-		var onEnglishGame = await serviceA.GetLocalizedBySlugAsync(
-			"dragons", "general", WikiNamespace.Main, "es", false);
-		var onGermanGame = await serviceB.GetLocalizedBySlugAsync(
-			"dragons", "general", WikiNamespace.Main, "es", false);
+		var onEnglishGame = (await serviceA.GetLocalizedBySlugAsync(
+			"dragons", "general", WikiNamespace.Main, "es", false)).Expect<LocalizedWikiPage>();
+		var onGermanGame = (await serviceB.GetLocalizedBySlugAsync(
+			"dragons", "general", WikiNamespace.Main, "es", false)).Expect<LocalizedWikiPage>();
 
-		await Assert.That(onEnglishGame.AsT0.Locale).IsEqualTo("fr");
-		await Assert.That(onGermanGame.AsT0.Locale)
+		await Assert.That(onEnglishGame.Locale).IsEqualTo("fr");
+		await Assert.That(onGermanGame.Locale)
 			.IsEqualTo("fr")
 			.Because("SourceLocale is materialised once by the migration, never re-derived from configuration");
 	}
@@ -186,10 +188,8 @@ public class WikiLocalizationServiceTests
 
 		var result = await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr", false);
 
-		await Assert.That(result.IsT0)
-			.IsTrue()
-			.Because("an unmigrated row must not turn every read of that page into an error");
-		await Assert.That(result.AsT0.Locale).IsEqualTo("fr");
+		var localized = result.Expect<LocalizedWikiPage>("an unmigrated row must not turn every read of that page into an error");
+		await Assert.That(localized.Locale).IsEqualTo("fr");
 	}
 
 	[Test]
@@ -235,11 +235,11 @@ public class WikiLocalizationServiceTests
 		var page = await SeedAsync(storage);
 		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, true, expectedRevisionNumber: null);
 
-		var result = await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr-CA", false);
+		var localized = (await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr-CA", false)).Expect<LocalizedWikiPage>();
 
-		await Assert.That(result.AsT0.Locale).IsEqualTo("fr");
-		await Assert.That(result.AsT0.RequestedLocale).IsEqualTo("fr-CA");
-		await Assert.That(result.AsT0.IsFallback).IsFalse();
+		await Assert.That(localized.Locale).IsEqualTo("fr");
+		await Assert.That(localized.RequestedLocale).IsEqualTo("fr-CA");
+		await Assert.That(localized.IsFallback).IsFalse();
 	}
 
 	[Test]
@@ -251,10 +251,10 @@ public class WikiLocalizationServiceTests
 		var page = await SeedAsync(storage, sourceLocale: "fr");
 		await storage.UpsertTranslationAsync(page.Id, "fr-CA", "Dragons (fr-CA)", "corps fr-CA", "#2", null, true, expectedRevisionNumber: null);
 
-		var result = await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr-CA", false);
+		var localized = (await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr-CA", false)).Expect<LocalizedWikiPage>();
 
-		await Assert.That(result.AsT0.Locale).IsEqualTo("fr-CA");
-		await Assert.That(result.AsT0.MarkdownSource).IsEqualTo("corps fr-CA");
+		await Assert.That(localized.Locale).IsEqualTo("fr-CA");
+		await Assert.That(localized.MarkdownSource).IsEqualTo("corps fr-CA");
 	}
 
 	[Test]
@@ -269,11 +269,9 @@ public class WikiLocalizationServiceTests
 		var result = await service.GetLocalizedBySlugAsync(
 			"dragons", "general", WikiNamespace.Main, requested, false);
 
-		await Assert.That(result.IsT0)
-			.IsTrue()
-			.Because("a read can never fail for locale reasons");
-		await Assert.That(result.AsT0.Locale).IsEqualTo("en");
-		await Assert.That(result.AsT0.IsFallback).IsFalse();
+		var localized = result.Expect<LocalizedWikiPage>("a read can never fail for locale reasons");
+		await Assert.That(localized.Locale).IsEqualTo("en");
+		await Assert.That(localized.IsFallback).IsFalse();
 	}
 
 	[Test]
@@ -283,15 +281,15 @@ public class WikiLocalizationServiceTests
 
 		var result = await service.GetLocalizedBySlugAsync("ghost", "general", WikiNamespace.Main, "fr", false);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
 	public async Task LocalizeAllAsync_LocalizesEveryPageAndReturnsOneRowPerPage()
 	{
 		var (storage, service) = Build();
-		var first = (await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "general", "en")).AsT0;
-		var second = (await storage.CreateAsync("Beta", "b", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		var first = await SeedAsync(storage, title: "Alpha", markdown: "a");
+		var second = await SeedAsync(storage, title: "Beta", markdown: "b");
 		await storage.UpsertTranslationAsync(first.Id, "fr", "Alpha (fr)", "a-fr", "#2", null, true, expectedRevisionNumber: null);
 
 		var localized = await service.LocalizeAllAsync([first, second], "fr", includeDrafts: false);
@@ -308,7 +306,7 @@ public class WikiLocalizationServiceTests
 	public async Task LocalizeAllAsync_DoesNotLeakADraftTitleIntoAListing()
 	{
 		var (storage, service) = Build();
-		var page = (await storage.CreateAsync("Alpha", "a", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		var page = await SeedAsync(storage, title: "Alpha", markdown: "a");
 		await storage.UpsertTranslationAsync(page.Id, "fr", "Alpha (brouillon)", "a-fr", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var localized = await service.LocalizeAllAsync([page], "fr", includeDrafts: false);
@@ -323,7 +321,7 @@ public class WikiLocalizationServiceTests
 		var page = await SeedAsync(storage);
 		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, true, expectedRevisionNumber: null);
 
-		var localized = (await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr", false)).AsT0;
+		var localized = (await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr", false)).Expect<LocalizedWikiPage>();
 
 		await Assert.That(localized.Page.Title).IsEqualTo("Dragons");
 		await Assert.That(localized.Page.MarkdownSource)

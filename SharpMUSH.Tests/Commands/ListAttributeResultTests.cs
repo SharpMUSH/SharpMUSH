@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -127,7 +128,7 @@ public class ListAttributeResultTests
 	{
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var attributes = Factory.Services.GetRequiredService<IAttributeService>();
-		var actor = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known();
+		var actor = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
 		var name = "LISTERROR" + Guid.NewGuid().ToString("N");
 		var value = mode switch { "syntax" => "[", "literal" => "#-1 EXCEPTION: ordinary text", _ => "1" };
 		await attributes.SetAttributeAsync(actor, actor, name, MarkupText.Plain(value));

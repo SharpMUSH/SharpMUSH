@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -162,7 +161,7 @@ public class LockShortCircuitTests
 	private static string Route(bool leavesSuspend) => leavesSuspend ? "suspending leaves" : "completed leaves";
 
 	private async ValueTask<AnySharpObject> God()
-		=> (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		=> (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 
 	/// <summary>
 	/// A parser per case, over its own cache: these tests compile the same lock text under both
@@ -208,7 +207,7 @@ public class LockShortCircuitTests
 			get { lock (_evaluated) { return _evaluated.ToArray(); } }
 		}
 
-		public async ValueTask<OneOf<string, LockEvaluationFailure>> EvaluateAttributeAsync(
+		public async ValueTask<LockEvaluation> EvaluateAttributeAsync(
 			AnySharpObject gated, AnySharpObject unlocker, string attributeName)
 		{
 			lock (_evaluated)

@@ -627,7 +627,11 @@ public partial class LightningDatabase
 		return Store.Read<SharpPlayer?>(tx =>
 		{
 			var found = ReadObject(tx, ownerDbref);
-			return found is null ? null : Hydrate(found.Value.Dbref, found.Value.Record).AsPlayer;
+			return found is null
+				? null
+				: Hydrate(found.Value.Dbref, found.Value.Record) is SharpPlayer owner
+					? owner
+					: throw new InvalidOperationException($"The owner of #{ownerDbref} is not a player");
 		});
 	}
 

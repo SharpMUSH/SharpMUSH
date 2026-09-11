@@ -29,54 +29,43 @@ public partial class Functions
 		var locateResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0,
 			LocateFlags.All);
 
-		if (locateResult.IsError)
+		return locateResult switch
 		{
-			return locateResult.AsError;
-		}
+			Error<CallState> error => error.Value,
+			AnySharpObject and SharpPlayer player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			AnySharpObject and SharpRoom room => (await room.Location.WithCancellation(CancellationToken.None)).Object()?.DBRef.ToString() ?? "#-1",
+			AnySharpObject and SharpExit exit => await ExitLocation(exit),
+			AnySharpObject and SharpThing thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
+		};
 
-		var found = locateResult.AsSharpObject;
+		async ValueTask<CallState> ExitLocation(SharpExit exit)
+		{
+			var linkTypeAttr = await AttributeService.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
 
-		return await found.Match<ValueTask<CallState>>(
-			async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			async room =>
+			if (linkTypeAttr is SharpAttribute[] { Length: > 0 } linkType)
 			{
-				var location = await room.Location.WithCancellation(CancellationToken.None);
-				return location.Match(
-					player => player.Object.DBRef.ToString(),
-					r => r.Object.DBRef.ToString(),
-					thing => thing.Object.DBRef.ToString(),
-					_ => "#-1");
-			},
-			async exit =>
-			{
-				var linkTypeAttr = await AttributeService.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
-
-				if (linkTypeAttr.IsAttribute && linkTypeAttr.AsT0.Length > 0)
+				var linkTypeText = linkType[0].Value.ToPlainText();
+				if (!string.IsNullOrEmpty(linkTypeText))
 				{
-					var linkTypeText = linkTypeAttr.AsT0[0].Value.ToPlainText();
-					if (!string.IsNullOrEmpty(linkTypeText))
+					if (string.Equals(linkTypeText, LinkTypeVariable, StringComparison.OrdinalIgnoreCase))
 					{
-						if (string.Equals(linkTypeText, LinkTypeVariable, StringComparison.OrdinalIgnoreCase))
-						{
-							return "#-2";
-						}
-						else if (string.Equals(linkTypeText, LinkTypeHome, StringComparison.OrdinalIgnoreCase))
-						{
-							return "#-3";
-						}
+						return "#-2";
+					}
+					else if (string.Equals(linkTypeText, LinkTypeHome, StringComparison.OrdinalIgnoreCase))
+					{
+						return "#-3";
 					}
 				}
+			}
 
-				// PennMUSH fun_loc (fundb.c:1459) returns Location(it), which for an exit is where it
-				// leads. The room it sits in is what where() reports.
-				var destination = await exit.Home.WithCancellation(CancellationToken.None);
+			// PennMUSH fun_loc (fundb.c:1459) returns Location(it), which for an exit is where it
+			// leads. The room it sits in is what where() reports.
+			var destination = await exit.Home.WithCancellation(CancellationToken.None);
 
-				return destination.IsNone
-					? "#-1"
-					: destination.WithoutNone().Object().DBRef;
-			},
-			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
-		);
+			return destination is AnySharpContainer found
+				? found.Object().DBRef
+				: "#-1";
+		}
 	}
 
 	[SharpFunction(Name = "children", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -116,66 +105,55 @@ public partial class Functions
 			arg0,
 			LocateFlags.All);
 
-		if (maybeLocateObject.IsError)
+		return maybeLocateObject switch
 		{
-			return maybeLocateObject.AsError;
-		}
+			Error<CallState> error => error.Value,
+			AnySharpObject locateObject when isAttributeCheck => await ControlsAttribute(locateObject, arg1Split[0], arg1Split[1]),
+			AnySharpObject locateObject => await ControlsVictim(locateObject)
+		};
 
-		var locateObject = maybeLocateObject.AsSharpObject;
-
-		if (isAttributeCheck)
+		async ValueTask<CallState> ControlsAttribute(AnySharpObject locateObject, string attributeObj, string attribute)
 		{
-			var attributeObj = arg1Split[0];
-			var attribute = arg1Split[1];
 			var maybeLocateAttributeObject = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor,
 				executor,
 				attributeObj,
 				LocateFlags.All);
 
-			if (maybeLocateAttributeObject.IsError)
+			return maybeLocateAttributeObject switch
 			{
-				return maybeLocateAttributeObject.AsError;
-			}
+				Error<CallState> error => error.Value,
+				AnySharpObject attributeObject => await ControlsAttributeOn(locateObject, attributeObject, attribute)
+			};
+		}
 
-			var attributeObject = maybeLocateAttributeObject.AsSharpObject;
-
+		async ValueTask<CallState> ControlsAttributeOn(AnySharpObject locateObject, AnySharpObject attributeObject, string attribute)
+		{
 			var locateAttribute = await AttributeService.GetAttributeAsync(executor, attributeObject, attribute,
 				IAttributeService.AttributeMode.Read);
 
-			if (locateAttribute.IsError)
+			return locateAttribute switch
 			{
-				return locateAttribute.AsError.Value;
-			}
-
-			if (locateAttribute.IsNone)
-			{
-				return ErrorMessages.Returns.NotVisible;
-			}
-
-			var foundAttribute = locateAttribute.AsAttribute;
-
-			var controlsAttribute = await PermissionService.Controls(locateObject, attributeObject, foundAttribute);
-
-			return controlsAttribute;
+				SharpAttribute[] foundAttribute => await PermissionService.Controls(locateObject, attributeObject, foundAttribute),
+				None => ErrorMessages.Returns.NotVisible,
+				Error<string> error => error.Value
+			};
 		}
 
-		var maybeLocateVictim = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			executor,
-			executor,
-			arg1,
-			LocateFlags.All);
-
-		if (maybeLocateVictim.IsError)
+		async ValueTask<CallState> ControlsVictim(AnySharpObject locateObject)
 		{
-			return maybeLocateVictim.AsError;
+			var maybeLocateVictim = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+				executor,
+				executor,
+				arg1,
+				LocateFlags.All);
+
+			return maybeLocateVictim switch
+			{
+				Error<CallState> error => error.Value,
+				AnySharpObject locateVictim => await PermissionService.Controls(locateObject, locateVictim)
+			};
 		}
-
-		var locateVictim = maybeLocateVictim.AsSharpObject;
-
-		var controls = await PermissionService.Controls(locateObject, locateVictim);
-
-		return controls;
 	}
 
 	[SharpFunction(Name = "entrances", MinArgs = 0, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -189,11 +167,11 @@ public partial class Functions
 		{
 			var locStr = locArg.Message!.ToPlainText();
 			var maybeTarget = await LocateService.Locate(parser, executor, executor, locStr, LocateFlags.All);
-			if (!maybeTarget.IsValid())
+			if (maybeTarget is not AnySharpObject located)
 			{
 				return new CallState(ErrorMessages.Returns.InvalidLocation);
 			}
-			target = maybeTarget.AsAnyObject;
+			target = located;
 		}
 
 		var typeFilter = "a";
@@ -281,9 +259,9 @@ public partial class Functions
 				var followingAttr = await AttributeService.GetAttributeAsync(
 					executor, found, "FOLLOWING", IAttributeService.AttributeMode.Read, false);
 
-				if (followingAttr.IsAttribute)
+				if (followingAttr is SharpAttribute[] chain)
 				{
-					return new CallState(followingAttr.AsAttribute.Last().Value.ToPlainText());
+					return new CallState(chain.Last().Value.ToPlainText());
 				}
 
 				return new CallState(string.Empty);
@@ -299,28 +277,15 @@ public partial class Functions
 		var locateResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, arg0, LocateFlags.All);
 
-		if (locateResult.IsError)
+		return locateResult switch
 		{
-			return locateResult.AsError;
-		}
-
-		var found = locateResult.AsSharpObject;
-
-		return await found.Match<ValueTask<CallState>>(
-			async player => (await player.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
-			async room =>
-			{
-				var location = await room.Location.WithCancellation(CancellationToken.None);
-				return location.Match(
-					player => player.Object.DBRef.ToString(),
-					r => r.Object.DBRef.ToString(),
-					thing => thing.Object.DBRef.ToString(),
-					_ => "#-1");
-			},
+			Error<CallState> error => error.Value,
+			AnySharpObject and SharpPlayer player => (await player.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
+			AnySharpObject and SharpRoom room => (await room.Location.WithCancellation(CancellationToken.None)).Object()?.DBRef.ToString() ?? "#-1",
 			// PennMUSH fun_home (fundb.c:1672) returns Source() for an exit — the room it sits in.
-			async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			async thing => (await thing.Home.WithCancellation(CancellationToken.None)).Object().DBRef
-		);
+			AnySharpObject and SharpExit exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			AnySharpObject and SharpThing thing => (await thing.Home.WithCancellation(CancellationToken.None)).Object().DBRef
+		};
 	}
 
 	[SharpFunction(Name = "llockflags", MinArgs = 0, MaxArgs = 1,
@@ -420,11 +385,10 @@ public partial class Functions
 			async found =>
 			{
 				var victimResult = await LocateService.Locate(parser, executor, executor, victimArg, LocateFlags.All);
-				if (!victimResult.IsValid())
+				if (victimResult is not AnySharpObject victim)
 				{
 					return new CallState("#-1");
 				}
-				var victim = victimResult.AsAnyObject;
 
 				// Lock names match case-insensitively per PennMUSH, and the legacy "tport" spelling has
 				// to find the lock LockType spells Teleport — both of which LockNames owns.
@@ -456,11 +420,11 @@ public partial class Functions
 		{
 			var objStr = objArg.Message!.ToPlainText();
 			var maybeTarget = await LocateService.Locate(parser, executor, executor, objStr, LocateFlags.All);
-			if (!maybeTarget.IsValid())
+			if (maybeTarget is not AnySharpObject located)
 			{
 				return new CallState(ErrorMessages.Returns.InvalidObject);
 			}
-			target = maybeTarget.AsAnyObject;
+			target = located;
 		}
 
 		var lockNames = target.Object().Locks.Keys;
@@ -474,11 +438,10 @@ public partial class Functions
 		var objStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		var maybeTarget = await LocateService.Locate(parser, executor, executor, objStr, LocateFlags.All);
-		if (!maybeTarget.IsValid())
+		if (maybeTarget is not AnySharpObject target)
 		{
 			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
-		var target = maybeTarget.AsAnyObject;
 
 		var lockNames = target.Object().Locks.Keys;
 		return new CallState(string.Join(" ", lockNames));
@@ -501,108 +464,110 @@ public partial class Functions
 		var maybeLooker =
 			await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, lookerArg,
 				LocateFlags.All);
-		if (maybeLooker.IsError)
+		return maybeLooker switch
 		{
-			return maybeLooker.AsError;
-		}
+			Error<CallState> error => error.Value,
+			AnySharpObject looker => await LocateAs(looker)
+		};
 
-		var looker = maybeLooker.AsSharpObject;
-
-		var (locateFlags, unknownSwitches) = ParseLocateParameters(parametersArg);
-
-		// fun_locate notifies once per letter it does not recognise and carries on with the rest.
-		foreach (var unknown in unknownSwitches)
+		async ValueTask<CallState> LocateAs(AnySharpObject looker)
 		{
-			await NotifyService.Notify(executor,
-				string.Format(ErrorMessages.Notifications.LocateUnknownSwitchFormat, unknown));
+			var (locateFlags, unknownSwitches) = ParseLocateParameters(parametersArg);
+
+			// fun_locate notifies once per letter it does not recognise and carries on with the rest.
+			foreach (var unknown in unknownSwitches)
+			{
+				await NotifyService.Notify(executor,
+					string.Format(ErrorMessages.Notifications.LocateUnknownSwitchFormat, unknown));
+			}
+
+			// fun_locate: 's' is refused up front unless the executor controls the looker.
+			if (locateFlags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
+					&& !await PermissionService.Controls(executor, looker))
+			{
+				return "#-1";
+			}
+
+			// fun_locate injects the default scope set *before* it gates, and the order is load-bearing: a
+			// flags string naming no scope ('N' is one) picks up MAT_NEIGHBOR and friends here, and must
+			// then clear the gate like any other relative-scope search. Gating on the flags as typed sees no
+			// relative-scope bit and lets the call through.
+			locateFlags = Library.Services.LocateService.ApplyDefaultScopes(locateFlags);
+
+			// fun_locate's relative-scope gate, and it has to live here: it asks whether *executor* may
+			// evaluate against *looker* (fundb.c), while the match below runs with looker as its own
+			// permission subject. Folding both into one Locate call makes the gate ask Nearby(looker, looker),
+			// which is always true — so a non-privileged executor could search a remote looker's neighbours.
+			if ((locateFlags & Library.Services.LocateService.LookerRelativeScopes) != 0
+					&& !await executor.IsSee_All()
+					&& !await Library.Services.LocateService.Nearby(executor, looker)
+					&& !await PermissionService.Controls(executor, looker))
+			{
+				return "#-1";
+			}
+
+			// fun_locate passes `looker` as match_result's `who` as well as its `where`, so every
+			// can_interact / controls / Long_Fingers / nearby question inside the match is asked about the
+			// looker. The executor is the subject only of the gates that bracket the call — the 's' check
+			// above, this one, and the visibility check below.
+			var maybeFound = await LocateService.Locate(parser, looker, looker, nameArg, locateFlags);
+
+			// fun_locate writes the dbref itself on every failure path: safe_str("#-1") for the looker gate,
+			// safe_dbref(item) for NOTHING/AMBIGUOUS, safe_dbref(NOTHING) for a failed visibility check. It
+			// never emits a "#-1 SOMETHING" string, and softcode compares against these — a decorated one
+			// will not `=` a bare #-1.
+			if (maybeFound is Error<string> error)
+			{
+				return error.Value == ErrorMessages.Returns.AmbiguousMatch ? "#-2" : "#-1";
+			}
+
+			if (maybeFound is not AnySharpObject found)
+			{
+				return "#-1";
+			}
+
+			// fun_locate's own visibility check, which match_result does not do and no other caller gets:
+			//   loc = Location(item);
+			//   if (GoodObject(loc)) Can_Examine(executor, loc)
+			//                        || ((!DarkLegal(item) || Light(loc) || Light(item)) && can_interact(...))
+			//   else                 (See_All(executor) || !DarkLegal(item) || Light(item)) && can_interact(...)
+			// A room has no location to examine, which is the `else` — it was missing entirely, and asking
+			// Can_Examine about the room itself is a different question with a different answer.
+			// PennMUSH's Location(x) is db[x].location, which is none of the three helpers that look like it:
+			// FriendlyWhereIs is match.c's `loc` and takes an exit's Source, Room() walks the chain to the
+			// enclosing room, and a room's own dbref is not its location. For an exit db[x].location is
+			// Destination(); for a room it is the drop-to, which is usually unset — and "unset" is exactly
+			// what selects fun_locate's second arm, so this cannot be approximated by `found.IsRoom`.
+			var loc = found switch
+			{
+				SharpPlayer player => (await player.Location.WithCancellation(CancellationToken.None)).WithNoneOption(),
+				SharpRoom room => await room.Location.WithCancellation(CancellationToken.None),
+				SharpExit exit => await exit.Home.WithCancellation(CancellationToken.None),
+				SharpThing thing => (await thing.Location.WithCancellation(CancellationToken.None)).WithNoneOption()
+			};
+
+			// can_interact is the last term of both arms, so it is only asked once Can_Examine has declined
+			// and the dark test has passed — as the else-if ordering has it. It can run softcode through an
+			// @interact lock, so hoisting it out is neither free nor side-effect-free.
+			bool visible;
+			if (loc is not AnySharpContainer location)
+			{
+				visible = (await executor.IsSee_All() || !await found.IsDarkLegal() || await found.IsLight())
+									&& await PermissionService.CanInteract(executor, found, IPermissionService.InteractType.See);
+			}
+			else
+			{
+				var container = location.WithExitOption();
+				visible = await PermissionService.CanExamine(executor, container)
+									|| ((!await found.IsDarkLegal() || await container.IsLight() || await found.IsLight())
+											&& await PermissionService.CanInteract(executor, found, IPermissionService.InteractType.See));
+			}
+
+			// No post-hoc type filter: 'F' is MAT_TYPE, which the search itself honours now. Filtering the
+			// winner afterwards could only ever turn a legitimate match into #-1 while the wrong-type
+			// candidate had already displaced the right-type one during matching.
+			return visible ? $"#{found.Object().DBRef.Number}" : "#-1";
 		}
-
-		// fun_locate: 's' is refused up front unless the executor controls the looker.
-		if (locateFlags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-				&& !await PermissionService.Controls(executor, looker))
-		{
-			return "#-1";
-		}
-
-		// fun_locate injects the default scope set *before* it gates, and the order is load-bearing: a
-		// flags string naming no scope ('N' is one) picks up MAT_NEIGHBOR and friends here, and must
-		// then clear the gate like any other relative-scope search. Gating on the flags as typed sees no
-		// relative-scope bit and lets the call through.
-		locateFlags = Library.Services.LocateService.ApplyDefaultScopes(locateFlags);
-
-		// fun_locate's relative-scope gate, and it has to live here: it asks whether *executor* may
-		// evaluate against *looker* (fundb.c), while the match below runs with looker as its own
-		// permission subject. Folding both into one Locate call makes the gate ask Nearby(looker, looker),
-		// which is always true — so a non-privileged executor could search a remote looker's neighbours.
-		if ((locateFlags & Library.Services.LocateService.LookerRelativeScopes) != 0
-				&& !await executor.IsSee_All()
-				&& !await Library.Services.LocateService.Nearby(executor, looker)
-				&& !await PermissionService.Controls(executor, looker))
-		{
-			return "#-1";
-		}
-
-		// fun_locate passes `looker` as match_result's `who` as well as its `where`, so every
-		// can_interact / controls / Long_Fingers / nearby question inside the match is asked about the
-		// looker. The executor is the subject only of the gates that bracket the call — the 's' check
-		// above, this one, and the visibility check below.
-		var maybeFound = await LocateService.Locate(parser, looker, looker, nameArg, locateFlags);
-
-		// fun_locate writes the dbref itself on every failure path: safe_str("#-1") for the looker gate,
-		// safe_dbref(item) for NOTHING/AMBIGUOUS, safe_dbref(NOTHING) for a failed visibility check. It
-		// never emits a "#-1 SOMETHING" string, and softcode compares against these — a decorated one
-		// will not `=` a bare #-1.
-		if (maybeFound.IsError)
-		{
-			return maybeFound.AsError.Value == ErrorMessages.Returns.AmbiguousMatch ? "#-2" : "#-1";
-		}
-
-		if (maybeFound.IsNone)
-		{
-			return "#-1";
-		}
-
-		var found = maybeFound.WithoutError().WithoutNone();
-
-		// fun_locate's own visibility check, which match_result does not do and no other caller gets:
-		//   loc = Location(item);
-		//   if (GoodObject(loc)) Can_Examine(executor, loc)
-		//                        || ((!DarkLegal(item) || Light(loc) || Light(item)) && can_interact(...))
-		//   else                 (See_All(executor) || !DarkLegal(item) || Light(item)) && can_interact(...)
-		// A room has no location to examine, which is the `else` — it was missing entirely, and asking
-		// Can_Examine about the room itself is a different question with a different answer.
-		// PennMUSH's Location(x) is db[x].location, which is none of the three helpers that look like it:
-		// FriendlyWhereIs is match.c's `loc` and takes an exit's Source, Room() walks the chain to the
-		// enclosing room, and a room's own dbref is not its location. For an exit db[x].location is
-		// Destination(); for a room it is the drop-to, which is usually unset — and "unset" is exactly
-		// what selects fun_locate's second arm, so this cannot be approximated by `found.IsRoom`.
-		var loc = await found.Match<ValueTask<AnyOptionalSharpContainer>>(
-			async player => (await player.Location.WithCancellation(CancellationToken.None)).WithNoneOption(),
-			room => new(room.Location.WithCancellation(CancellationToken.None)),
-			exit => new(exit.Home.WithCancellation(CancellationToken.None)),
-			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).WithNoneOption());
-
-		// can_interact is the last term of both arms, so it is only asked once Can_Examine has declined
-		// and the dark test has passed — as the else-if ordering has it. It can run softcode through an
-		// @interact lock, so hoisting it out is neither free nor side-effect-free.
-		bool visible;
-		if (loc.IsNone)
-		{
-			visible = (await executor.IsSee_All() || !await found.IsDarkLegal() || await found.IsLight())
-								&& await PermissionService.CanInteract(executor, found, IPermissionService.InteractType.See);
-		}
-		else
-		{
-			var container = loc.WithoutNone().WithExitOption();
-			visible = await PermissionService.CanExamine(executor, container)
-								|| ((!await found.IsDarkLegal() || await container.IsLight() || await found.IsLight())
-										&& await PermissionService.CanInteract(executor, found, IPermissionService.InteractType.See));
-		}
-
-		// No post-hoc type filter: 'F' is MAT_TYPE, which the search itself honours now. Filtering the
-		// winner afterwards could only ever turn a legitimate match into #-1 while the wrong-type
-		// candidate had already displaced the right-type one during matching.
-		return visible ? $"#{found.Object().DBRef.Number}" : "#-1";
 	}
 
 	/// <summary>
@@ -719,12 +684,10 @@ public partial class Functions
 		foreach (var objRef in objList)
 		{
 			var maybeObj = await LocateService.Locate(parser, executor, executor, objRef, LocateFlags.All);
-			if (!maybeObj.IsValid())
+			if (maybeObj is not AnySharpObject found)
 			{
 				continue;
 			}
-
-			var found = maybeObj.AsAnyObject;
 
 			if (!found.Object().Locks.TryGetValue(LockNames.Canonical(lockName), out var lockData))
 			{
@@ -788,33 +751,35 @@ public partial class Functions
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All);
 
-		if (maybeLocate.IsError)
+		return maybeLocate switch
 		{
-			return maybeLocate.AsError;
-		}
+			Error<CallState> error => error.Value,
+			AnySharpObject located => await ExaminableParents(located)
+		};
 
-		var locate = maybeLocate.AsSharpObject;
-		var list = new List<DBRef>();
-
-		while (true)
+		async ValueTask<CallState> ExaminableParents(AnySharpObject locate)
 		{
-			var parent = await locate.Object().Parent.WithCancellation(CancellationToken.None);
-			if (parent.IsNone)
+			var list = new List<DBRef>();
+
+			while (true)
 			{
-				break;
+				var parent = await locate.Object().Parent.WithCancellation(CancellationToken.None);
+				if (parent is not AnySharpObject knownParent)
+				{
+					break;
+				}
+
+				if (!await PermissionService.CanExamine(executor, knownParent))
+				{
+					break;
+				}
+
+				locate = knownParent;
+				list.Add(knownParent.Object().DBRef);
 			}
 
-			var knownParent = parent.Known;
-			if (!await PermissionService.CanExamine(executor, knownParent))
-			{
-				break;
-			}
-
-			locate = knownParent;
-			list.Add(knownParent.Object().DBRef);
+			return string.Join(" ", list);
 		}
-
-		return string.Join(" ", list);
 	}
 
 	[SharpFunction(Name = "lsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["player", "class=restriction..."])]
@@ -840,11 +805,11 @@ public partial class Functions
 		if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))
 		{
 			var maybeClass = await LocateService.Locate(parser, executor, executor, classArg, LocateFlags.All);
-			if (!maybeClass.IsValid())
+			if (maybeClass is not AnySharpObject classFound)
 			{
 				return new CallState(ErrorMessages.Returns.InvalidClass);
 			}
-			classObj = maybeClass.AsAnyObject;
+			classObj = classFound;
 		}
 
 		var pairs = new List<SearchSpecEngine.SearchPair>();
@@ -901,9 +866,9 @@ public partial class Functions
 				var attrPart = specSpan.Slice(slashIndex + 1).ToString();
 
 				var objResult = await LocateService.Locate(parser, executor, executor, objPart, LocateFlags.All);
-				if (objResult.IsValid())
+				if (objResult is AnySharpObject callbackFound)
 				{
-					callbackObject = objResult.WithoutError().WithoutNone();
+					callbackObject = callbackFound;
 					callbackAttribute = attrPart.Split('`');
 				}
 			}
@@ -924,53 +889,51 @@ public partial class Functions
 			int errorCode = 0; // 0 = success, -1 = not found, -2 = ambiguous
 			string originalName = string.Empty;
 
-			if (item.IsT0)
+			switch (item)
 			{
-				var dbref = item.AsT0;
-				var exists = await Mediator.Send(new GetBaseObjectNodeQuery(dbref));
+				case DBRef dbref:
+					var exists = await Mediator.Send(new GetBaseObjectNodeQuery(dbref));
 
-				if (exists != null)
-				{
-					resolvedDbref = dbref;
-				}
-				else
-				{
-					errorCode = -1;
-					originalName = $"#{dbref.Number}";
-				}
-			}
-			else
-			{
-				var name = item.AsT1;
-				originalName = name;
-
-				var locateResult = await LocateService.Locate(parser, executor, executor, name, LocateFlags.All);
-
-				if (locateResult.IsValid())
-				{
-					resolvedDbref = locateResult.AsAnyObject.Object().DBRef;
-				}
-				else if (locateResult.IsT4)
-				{
-					errorCode = -1;
-				}
-				else if (locateResult.IsT5)
-				{
-					var error = locateResult.AsT5;
-					if (error.Value.Contains("ambiguous", StringComparison.OrdinalIgnoreCase) ||
-							error.Value.Contains("#-2"))
+					if (exists != null)
 					{
-						errorCode = -2;
+						resolvedDbref = dbref;
+					}
+					else
+					{
+						errorCode = -1;
+						originalName = $"#{dbref.Number}";
+					}
+					break;
+				case string name:
+					originalName = name;
+
+					var locateResult = await LocateService.Locate(parser, executor, executor, name, LocateFlags.All);
+
+					if (locateResult is AnySharpObject located)
+					{
+						resolvedDbref = located.Object().DBRef;
+					}
+					else if (locateResult is None)
+					{
+						errorCode = -1;
+					}
+					else if (locateResult is Error<string> error)
+					{
+						if (error.Value.Contains("ambiguous", StringComparison.OrdinalIgnoreCase) ||
+								error.Value.Contains("#-2"))
+						{
+							errorCode = -2;
+						}
+						else
+						{
+							errorCode = -1;
+						}
 					}
 					else
 					{
 						errorCode = -1;
 					}
-				}
-				else
-				{
-					errorCode = -1;
-				}
+					break;
 			}
 
 			if (resolvedDbref.HasValue)
@@ -1180,22 +1143,15 @@ public partial class Functions
 				var current = found;
 				for (var i = 0; i < levels; i++)
 				{
-					if (current.IsContent)
-					{
-						var location = await current.AsContent.Location();
-						current = location.WithRoomOption();
-					}
-					else if (current.IsExit)
-					{
-						// Exits' location is their source room
-						var location = await current.AsExit.Location.WithCancellation(CancellationToken.None);
-						current = location.WithRoomOption();
-					}
-					else
+					if (!current.IsContent)
 					{
 						// Rooms don't have locations
 						return new CallState("#-1");
 					}
+
+					// An exit's location is its source room.
+					var location = await current.AsContent.Location();
+					current = location.WithExitOption();
 				}
 
 				return new CallState(current.Object().DBRef);
@@ -1229,13 +1185,14 @@ public partial class Functions
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
-			async x =>
-				await x.Match<ValueTask<string>>(
-					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
-					_ => ValueTask.FromResult<string>(ErrorMessages.Returns.ThisIsARoom),
-					// For exits, return the location (the room containing the exit)
-					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
-					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString()));
+			async x => x switch
+			{
+				SharpPlayer player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
+				SharpRoom => ErrorMessages.Returns.ThisIsARoom,
+				// For exits, return the location (the room containing the exit)
+				SharpExit exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
+				SharpThing thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString()
+			});
 	}
 
 	[SharpFunction(Name = "zone", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, SideEffectMinArgs = 2, ParameterNames = ["object"])]
@@ -1275,12 +1232,10 @@ public partial class Functions
 					}
 
 					var maybeZone = await LocateService.Locate(parser, executor, executor, arg1Str, LocateFlags.All);
-					if (!maybeZone.IsValid())
+					if (maybeZone is not AnySharpObject zone)
 					{
 						return ErrorMessages.Returns.InvalidZone;
 					}
-
-					var zone = maybeZone.AsAnyObject;
 
 					// Check permissions - must control both object and zone, or pass ChZone lock
 					if (!await PermissionService.Controls(executor, target))
@@ -1322,10 +1277,10 @@ public partial class Functions
 
 				// query fresh from database
 				var freshTarget = await Mediator.Send(new GetObjectNodeQuery(target.Object().DBRef));
-				var zoneObj = await freshTarget.Known.Object().Zone.WithCancellation(CancellationToken.None);
-				return zoneObj.IsNone
-					? "#-1"
-					: zoneObj.Known.Object().DBRef.ToString();
+				return freshTarget is AnySharpObject fresh
+							&& await fresh.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zoneObj
+					? zoneObj.Object().DBRef.ToString()
+					: "#-1";
 			});
 	}
 
@@ -1585,8 +1540,7 @@ public partial class Functions
 			.AnyAsync(async (objRef, _) =>
 			{
 				var maybeObj = await LocateService.Locate(parser, executor, executor, objRef, LocateFlags.All);
-				if (!maybeObj.IsValid()) return false;
-				var found = maybeObj.AsAnyObject;
+				if (maybeObj is not AnySharpObject found) return false;
 				return await powers.ToAsyncEnumerable()
 					.AnyAsync(async (power, _) => await found.HasPower(power));
 			}));
@@ -1650,8 +1604,7 @@ public partial class Functions
 			.AllAsync(async (objRef, _) =>
 			{
 				var maybeObj = await LocateService.Locate(parser, executor, executor, objRef, LocateFlags.All);
-				if (!maybeObj.IsValid()) return false;
-				var found = maybeObj.AsAnyObject;
+				if (maybeObj is not AnySharpObject found) return false;
 				return await powers.ToAsyncEnumerable()
 					.AllAsync(async (power, _) => await found.HasPower(power));
 			}));

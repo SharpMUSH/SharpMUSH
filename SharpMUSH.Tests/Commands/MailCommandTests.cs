@@ -9,7 +9,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using OneOf;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -76,7 +75,7 @@ public class MailCommandTests
 	}
 
 	/// <summary>
-	/// <c>@mail/review &lt;player&gt;=&lt;msglist&gt;</c> lists the named player's mail. Both of its
+	/// <c>@mail/review &lt;player&gt;=&lt;msglist&gt;</c> reads the mail the reviewer sent to that player. Both of its
 	/// guards were inverted: a non-blank name skipped the locate, and a successful list was read
 	/// through <c>AsError</c>, so the success path threw rather than printing anything. The
 	/// <c>all</c> msglist is also pinned here: it selected every folder as the source and then
@@ -105,6 +104,59 @@ public class MailCommandTests
 		await Assert.That(afterReview).Contains("Subject: Review Subject");
 	}
 
+	/// <summary>
+	/// Review is of mail you sent (PennMUSH <c>do_mail_review</c> selects <c>ms.player = player</c>), so
+	/// naming another player shows only what you sent them — never their inbox.
+	/// </summary>
+	[Test]
+	public async ValueTask ReviewNeverShowsAnotherPlayersInbox()
+	{
+		var sender = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailPrivSender");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailPrivTarget");
+		var snoop = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailPrivSnoop");
+
+		await WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle).CommandParse(sender.Handle, ConnectionService,
+			MarkupText.Plain($"@mail #{target.DbRef.Number}=Private Subject/Private body."));
+
+		var beforeReview = NotificationsTo(snoop.DbRef).Length;
+
+		await WebAppFactoryArg.CommandParserFor(snoop.DbRef, snoop.Handle).CommandParse(snoop.Handle, ConnectionService,
+			MarkupText.Plain($"@mail/review #{target.DbRef.Number}=all"));
+
+		var afterReview = string.Join("\n", NotificationsTo(snoop.DbRef).Skip(beforeReview));
+
+		await Assert.That(afterReview).DoesNotContain("Private Subject");
+		await Assert.That(afterReview).DoesNotContain("Private body.");
+	}
+
+	/// <summary>
+	/// With no player, <c>@mail/review</c> covers everything you have sent, to anyone.
+	/// </summary>
+	[Test]
+	public async ValueTask ReviewWithNoPlayerCoversEverythingYouSent()
+	{
+		var sender = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailAllSender");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailAllTarget");
+		var parser = WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle);
+
+		await parser.CommandParse(sender.Handle, ConnectionService,
+			MarkupText.Plain($"@mail #{target.DbRef.Number}=Sent Subject/Sent body."));
+
+		var beforeReview = NotificationsTo(sender.DbRef).Length;
+
+		await parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain("@mail/review"));
+
+		var afterReview = string.Join("\n", NotificationsTo(sender.DbRef).Skip(beforeReview));
+
+		await Assert.That(afterReview).DoesNotContain("#-1 EXCEPTION: ");
+		await Assert.That(afterReview).Contains("Subject: Sent Subject");
+	}
+
 	private string[] NotificationsTo(DBRef target) =>
 		NotifyService.ReceivedCalls()
 			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
@@ -115,8 +167,8 @@ public class MailCommandTests
 			.ToArray();
 
 	private static string? TextOf(ICall call) =>
-		call.GetArguments() is [_, OneOf<MString, string> msg, ..]
-			? msg.Match(ms => ms.ToPlainText(), s => s)
+		call.GetArguments() is [_, SharpMessage msg, ..]
+			? msg switch { MString markup => markup.ToPlainText(), string text => text }
 			: null;
 
 	[Test]
@@ -129,12 +181,12 @@ public class MailCommandTests
 		// delivery notice. The original expectation of exactly one is what kept this skipped.
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You sent a message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You have received a message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -191,7 +243,7 @@ public class MailCommandTests
 			MarkupText.Plain("@mail me=and//or/The body."));
 
 		var mail = await Mediator.Send(new GetMailQuery(
-			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
+			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>(), 0, "INBOX"));
 
 		await Assert.That(mail).IsNotNull();
 		await Assert.That(mail!.Subject.ToPlainText()).IsEqualTo("and/or");
@@ -214,7 +266,7 @@ public class MailCommandTests
 			MarkupText.Plain($"@mail me={body}"));
 
 		var mail = await Mediator.Send(new GetMailQuery(
-			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
+			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>(), 0, "INBOX"));
 
 		await Assert.That(mail).IsNotNull();
 		await Assert.That(mail!.Subject.ToPlainText()).IsEqualTo(new string('x', 60));
@@ -258,7 +310,7 @@ public class MailCommandTests
 			MarkupText.Plain("think [mailsend(me,Fn Subject/Fn body.)]"));
 
 		var mail = await Mediator.Send(new GetMailQuery(
-			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
+			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>(), 0, "INBOX"));
 
 		await Assert.That(mail).IsNotNull();
 		await Assert.That(mail!.Subject.ToPlainText()).IsEqualTo("Fn Subject");
@@ -299,7 +351,7 @@ public class MailCommandTests
 			MarkupText.Plain("think [mailsend(me,Sig Subject/Sig body.)]"));
 
 		var mail = await Mediator.Send(new GetMailQuery(
-			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).AsPlayer, 0, "INBOX"));
+			(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>(), 0, "INBOX"));
 
 		await Assert.That(mail).IsNotNull();
 		await Assert.That(mail!.Content.ToPlainText()).Contains("-- Regards");
@@ -344,7 +396,7 @@ public class MailCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "@MALIAS/")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

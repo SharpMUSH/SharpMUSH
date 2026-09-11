@@ -1,7 +1,6 @@
 ﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
@@ -12,21 +11,21 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
-[GenerateOneOf]
-public class ErrorOrMailList : OneOfBase<Error<string>, IAsyncEnumerable<SharpMail>>
+[Union]
+public sealed class ErrorOrMailList : IUnion
 {
-	private ErrorOrMailList(OneOf<Error<string>, IAsyncEnumerable<SharpMail>> input) : base(input)
-	{
-	}
+	public ErrorOrMailList(Error<string> value) => Value = value;
+	public ErrorOrMailList(IAsyncEnumerable<SharpMail> value) => Value = value;
 
-	public bool IsError => IsT0;
-	public string AsError => AsT0.Value;
-	public IAsyncEnumerable<SharpMail> AsMailList => AsT1;
+	public object? Value { get; }
 
-	public static implicit operator ErrorOrMailList(Error<string> x) => new(x);
+	public override bool Equals(object? obj) => obj is ErrorOrMailList other && Equals(Value, other.Value);
 
-	public static ErrorOrMailList FromAsyncEnumerable(IAsyncEnumerable<SharpMail> x)
-		=> new(OneOf<Error<string>, IAsyncEnumerable<SharpMail>>.FromT1(x));
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsError => Value is Error<string>;
+
+	public static ErrorOrMailList FromAsyncEnumerable(IAsyncEnumerable<SharpMail> x) => new(x);
 }
 
 public static class MessageListHelper
@@ -46,8 +45,21 @@ public static class MessageListHelper
 		return mailData.ActiveFolder!;
 	}
 
+	/// <summary>Tells the executor why a message list could not be read, and answers with the same words.</summary>
+	public static async ValueTask<MString> RefuseAsync(INotifyService notifyService, AnySharpObject executor,
+		string error)
+	{
+		await notifyService.Notify(executor, error);
+		return MarkupText.Plain(error);
+	}
+
 	public static async ValueTask<ErrorOrMailList> Handle(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, MString? arg0, AnySharpObject executor)
 	{
+		if (executor is not SharpPlayer player)
+		{
+			throw new InvalidOperationException("Only a player has a mail list.");
+		}
+
 		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
 		var folderSplit = msgList.Split(':');
 		var rangeSplit = msgList.Split('-');
@@ -55,17 +67,17 @@ public static class MessageListHelper
 
 		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
 		{
-			mailList = mediator!.CreateStream(new GetMailListQuery(executor.AsPlayer, folderSplit[0]));
+			mailList = mediator!.CreateStream(new GetMailListQuery(player, folderSplit[0]));
 			msgList = folderSplit[1];
 		}
 		else if (msgList == "all")
 		{
-			mailList = mediator!.CreateStream(new GetAllMailListQuery(executor.AsPlayer));
+			mailList = mediator!.CreateStream(new GetAllMailListQuery(player));
 		}
 		else
 		{
 			var currentFolder = await CurrentMailFolder(parser, objectDataService, executor);
-			mailList = mediator!.CreateStream(new GetMailListQuery(executor.AsPlayer, currentFolder));
+			mailList = mediator!.CreateStream(new GetMailListQuery(player, currentFolder));
 		}
 
 		ErrorOrMailList filteredList = msgList switch
@@ -111,27 +123,24 @@ public static class MessageListHelper
 		return filteredList;
 	}
 
-	public static async ValueTask<ErrorOrMailList> HandleSent(IMUSHCodeParser parser, IMediator? mediator, INotifyService? notifyService, MString? arg0, AnySharpObject executor, SharpPlayer target)
+	/// <summary>
+	/// The mail <paramref name="executor"/> has sent, filtered by <paramref name="arg0"/>: to
+	/// <paramref name="recipient"/>, or to anyone when it is null. Sent mail has no folders, so a
+	/// <c>folder:</c> prefix is ignored.
+	/// </summary>
+	public static ErrorOrMailList HandleSent(IMediator mediator, MString? arg0, AnySharpObject executor, SharpPlayer? recipient)
 	{
-		await ValueTask.CompletedTask;
 		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
 		var folderSplit = msgList.Split(':');
-		var rangeSplit = msgList.Split('-');
-		IAsyncEnumerable<SharpMail> mailList;
-
 		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
 		{
-			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object(), target));
 			msgList = folderSplit[1];
 		}
-		else if (msgList == "all")
-		{
-			mailList = mediator!.CreateStream(new GetAllSentMailListQuery(executor.Object()));
-		}
-		else
-		{
-			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object(), target));
-		}
+
+		var rangeSplit = msgList.Split('-');
+		var mailList = recipient is null
+			? mediator.CreateStream(new GetAllSentMailListQuery(executor.Object()))
+			: mediator.CreateStream(new GetSentMailListQuery(executor.Object(), recipient));
 
 		ErrorOrMailList filteredList = msgList switch
 		{
@@ -184,7 +193,7 @@ public static class MessageListHelper
 		var locateService = parser.ServiceProvider.GetRequiredService<ILocateService>();
 		var locateResult = await locateService.Locate(parser, executor, executor, personName, LocateFlags.PlayersPreference);
 
-		if (!locateResult.IsValid() || !locateResult.IsPlayer)
+		if (locateResult is not (AnySharpObject and SharpPlayer targetPlayer))
 		{
 			return ErrorOrMailList.FromAsyncEnumerable(mailList
 				.Where(async (x, _) =>
@@ -194,7 +203,7 @@ public static class MessageListHelper
 				}));
 		}
 
-		var targetPlayerDbref = locateResult.AsPlayer.Object.DBRef;
+		var targetPlayerDbref = targetPlayer.Object.DBRef;
 		return ErrorOrMailList.FromAsyncEnumerable(mailList
 			.Where(async (x, _) =>
 			{

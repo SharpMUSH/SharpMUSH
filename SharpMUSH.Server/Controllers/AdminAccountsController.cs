@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
@@ -91,7 +92,7 @@ public class AdminAccountsController(
 			return BadRequest("NewPassword must be at least 8 characters.");
 
 		var result = await accountService.SetPasswordAsync(FullId(key), request.NewPassword, mustChangePassword: true);
-		if (result.IsT1) return NotFound(result.AsT1.Value);
+		if (result is Error<string> error) return NotFound(error.Value);
 		await accountSessionStore.RevokeAllForAccountAsync(FullId(key));
 		logger.LogInformation("Admin {AdminId} reset password for account {Key}", LogSanitizer.Sanitize(adminId), LogSanitizer.Sanitize(key));
 		return NoContent();
@@ -103,7 +104,7 @@ public class AdminAccountsController(
 		var (adminId, failure) = await RequireWizardAsync();
 		if (failure is not null) return failure;
 		var result = await accountService.DisableAccountAsync(FullId(key));
-		if (result.IsT1) return NotFound(result.AsT1.Value);
+		if (result is Error<string> error) return NotFound(error.Value);
 		logger.LogInformation("Admin {AdminId} disabled account {Key}", LogSanitizer.Sanitize(adminId), LogSanitizer.Sanitize(key));
 		return NoContent();
 	}
@@ -114,7 +115,7 @@ public class AdminAccountsController(
 		var (adminId, failure) = await RequireWizardAsync();
 		if (failure is not null) return failure;
 		var result = await accountService.EnableAccountAsync(FullId(key));
-		if (result.IsT1) return NotFound(result.AsT1.Value);
+		if (result is Error<string> error) return NotFound(error.Value);
 		logger.LogInformation("Admin {AdminId} enabled account {Key}", LogSanitizer.Sanitize(adminId), LogSanitizer.Sanitize(key));
 		return NoContent();
 	}
@@ -138,7 +139,7 @@ public class AdminAccountsController(
 			return NotFound($"No account with key '{key}'.");
 
 		var result = await accountService.SetAccountStatusAsync(accountId, status);
-		if (result.IsT1) return Conflict(result.AsT1.Value);
+		if (result is Error<string> error) return Conflict(error.Value);
 
 		logger.LogInformation("Admin {AdminId} set account {Key} status to {Status}",
 			LogSanitizer.Sanitize(adminId), LogSanitizer.Sanitize(key), status);

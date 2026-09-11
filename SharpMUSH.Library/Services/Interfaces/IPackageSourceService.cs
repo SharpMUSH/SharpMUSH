@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -19,7 +18,7 @@ public interface IPackageSourceService
 	/// Clones or fetches the remote's cache, then discovers packages: from
 	/// index.yaml when present, otherwise by scanning for package.yaml files.
 	/// </summary>
-	Task<OneOf<PackageRepoSnapshot, Error<string>>> RefreshAsync(
+	Task<Result<PackageRepoSnapshot>> RefreshAsync(
 		PackageRemoteRecord remote, CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -28,7 +27,7 @@ public interface IPackageSourceService
 	/// null. Assumes a prior <see cref="RefreshAsync"/> populated the cache
 	/// (refreshes automatically when it hasn't).
 	/// </summary>
-	Task<OneOf<PackageManifestSource, Error<string>>> GetManifestAsync(
+	Task<Result<PackageManifestSource>> GetManifestAsync(
 		PackageRemoteRecord remote, string path, string? version = null,
 		CancellationToken cancellationToken = default);
 
@@ -37,7 +36,7 @@ public interface IPackageSourceService
 	/// release tag vs installed version, dev-channel path changes since
 	/// installed_commit, and moved-tag detection (decision 20.14).
 	/// </summary>
-	Task<OneOf<PackageUpdateInfo, Error<string>>> CheckForUpdateAsync(
+	Task<Result<PackageUpdateInfo>> CheckForUpdateAsync(
 		PackageRemoteRecord remote, InstalledPackageRecord installed,
 		CancellationToken cancellationToken = default);
 
@@ -47,7 +46,7 @@ public interface IPackageSourceService
 	/// with <c>_</c> or <c>.</c> (templates, dotfiles) are skipped; unparsable
 	/// files are reported as per-file errors without hiding the valid ones.
 	/// </summary>
-	Task<OneOf<CommunityRepoDirectory, Error<string>>> GetCommunityListingsAsync(
+	Task<Result<CommunityRepoDirectory>> GetCommunityListingsAsync(
 		PackageRemoteRecord remote, CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -56,7 +55,7 @@ public interface IPackageSourceService
 	/// release tag when <paramref name="version"/> is given, otherwise the
 	/// branch tip. Returns raw markdown — render with the portal pipeline.
 	/// </summary>
-	Task<OneOf<string, Error<string>>> GetReadmeAsync(
+	Task<Result<string>> GetReadmeAsync(
 		PackageRemoteRecord remote, string path, string? version = null,
 		CancellationToken cancellationToken = default);
 
@@ -68,7 +67,7 @@ public interface IPackageSourceService
 	/// the SHA-256 the manifest signed off on). The installer asks it for each
 	/// declared file name and verifies the hash before depositing.
 	/// </summary>
-	Task<OneOf<IManagedPackageBinarySource, Error<string>>> GetBinarySourceAsync(
+	Task<Result<IManagedPackageBinarySource>> GetBinarySourceAsync(
 		PackageRemoteRecord remote, string path, string commit,
 		CancellationToken cancellationToken = default);
 }

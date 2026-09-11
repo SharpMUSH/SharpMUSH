@@ -12,7 +12,7 @@ public class NameList
 		var result = ArgHelpers.NameList(str);
 
 		await Assert
-			.That(result.Single().AsT1)
+			.That(result.Single().Expect<string>())
 			.IsEqualTo(expected);
 	}
 
@@ -23,7 +23,7 @@ public class NameList
 		var result = ArgHelpers.NameList(str);
 
 		await Assert
-			.That(result.Single().AsT0)
+			.That(result.Single().Expect<DBRef>())
 			.IsEquatableOrEqualTo(new DBRef(expected));
 	}
 
@@ -34,7 +34,7 @@ public class NameList
 		var result = ArgHelpers.NameList(str);
 
 		await Assert
-			.That(result.Single().AsT0)
+			.That(result.Single().Expect<DBRef>())
 			.IsEquatableOrEqualTo(new DBRef(expectedDbRef, expectedTimestamp));
 	}
 }

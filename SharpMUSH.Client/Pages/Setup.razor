@@ -120,7 +120,7 @@
         // handling will surface any real server problem. So unknown-yet (!_statusResolved) hides the
         // form, but a check that came back and failed still shows it.
         var status = await AccountAuth.NeedsSetupAsync();
-        _alreadyClaimed = status.TryPickT0(out var needsSetup, out _) && !needsSetup;
+        _alreadyClaimed = status is bool needsSetup && !needsSetup;
         _statusResolved = true;
 
         if (_alreadyClaimed)
@@ -136,7 +136,6 @@
         if (_password.Length < 8) { _error = Loc["AuthPasswordTooShort"]; return; }
 
         _busy = true;
-        StateHasChanged();
 
         var (success, error, autoLoggedIn) = await AccountAuth.CompleteSetupAsync(_username, _password);
         _busy = false;
@@ -151,14 +150,12 @@
                     => Loc["AuthUsernameTaken"],
                 _ => error ?? Loc["AuthSetupFailed"],
             };
-            StateHasChanged();
             return;
         }
 
         _completedUsername = _username;
         _success = true;
         _autoLoggedIn = autoLoggedIn;
-        StateHasChanged();
     }
 
     private void EnterPortal() => Nav.NavigateTo("/");

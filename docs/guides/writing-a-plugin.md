@@ -9,14 +9,14 @@ See `docs/design/plugin-system.md` for the architecture and the registration/loa
 
 ## 1. The project file
 
-A plugin targets `net10.0`, enables dynamic loading, references `SharpMUSH.Library` as a non-private
+A plugin targets `net11.0`, enables dynamic loading, references `SharpMUSH.Library` as a non-private
 contract reference, and references the source generator **as an analyzer**:
 
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <Nullable>enable</Nullable>
     <!-- Emits a .deps.json and keeps the contract assembly out of the plugin's private bin. -->
     <EnableDynamicLoading>true</EnableDynamicLoading>
@@ -376,7 +376,7 @@ authors: [You]
 description: "What it does"
 kind: managed
 binaries:
-  min_server_version: ">=1.0"   # the plugin/server contract version your DLL was built against
+  min_server_version: ">=3.0"   # the plugin/server contract version your DLL was built against
   files:
     - file: MyPlugin.dll
       sha256: <64-hex SHA-256 of MyPlugin.dll>

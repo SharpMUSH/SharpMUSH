@@ -1,14 +1,13 @@
 ﻿using Json.Patch;
 using Json.Path;
 using Json.Pointer;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
@@ -117,65 +116,39 @@ public partial class Functions
 			userArgs[i.ToString()] = parser.CurrentState.Arguments[i.ToString()];
 		}
 
-		// Resolved attribute text for the standard (non-lambda) path; only set in the if-block below.
-		MString attrValue = MarkupText.Empty;
-		var hadErrors = separatorResult.HadErrors;
-
-		// Helper to evaluate a function call (attribute or lambda) with a given args dict.
-		// For #lambda / #apply, EvaluateAttributeFunctionAsync handles the special prefix.
-		// For regular attribute references, we use the pre-resolved attrValue via FunctionParse.
-		async ValueTask<MString> EvalWithArgs(Dictionary<string, CallState> callArgs)
+		// For #lambda / #apply, EvaluateAttributeFunctionResultAsync handles the special prefix.
+		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
-			if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
-			{
-				var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg, callArgs);
-				hadErrors |= result.HadErrors;
-				return result.Message ?? MarkupText.Empty;
-			}
-
-			var callParser = parser.Push(parser.CurrentState with
-			{
-				Arguments = callArgs,
-				EnvironmentRegisters = callArgs
-			});
-			var parsed = await callParser.FunctionParse(attrValue);
-			hadErrors |= parsed?.HadErrors == true;
-			return parsed?.Message ?? MarkupText.Empty;
+			return await JsonMapAsync(jsonStr, osep, userArgs, separatorResult.HadErrors,
+				callArgs => AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg, callArgs));
 		}
 
-		if (!HelperFunctions.IsLambdaOrApply(rawAttrStr))
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
-			var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
-			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-			if (objAttr is { IsT1: true, AsT1: false })
-			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString) { HadErrors = hadErrors };
-			}
+			AttributeFunction function => await JsonMapAsync(jsonStr, osep, userArgs, separatorResult.HadErrors,
+				callArgs => AttributeService.CallAttributeFunctionAsync(parser.Push(parser.CurrentState with
+				{
+					Arguments = callArgs,
+					EnvironmentRegisters = callArgs
+				}), function)),
+			CallState refusal => refusal with { HadErrors = separatorResult.HadErrors },
+		};
+	}
 
-			var (dbref, attrName) = objAttr.AsT0;
-			dbref ??= executor.Object().DBRef.ToString();
-
-			var locate = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All);
-			if (!locate.IsValid())
-			{
-				return CallState.Empty with { HadErrors = hadErrors };
-			}
-
-			var located = locate.WithoutError().WithoutNone();
-			var maybeAttr = await AttributeService.GetAttributeAsync(executor, located, attrName,
-				mode: IAttributeService.AttributeMode.Execute, parent: true);
-
-			if (maybeAttr.IsNone)
-			{
-				return new CallState(ErrorMessages.Returns.NoSuchAttribute) { HadErrors = hadErrors };
-			}
-
-			if (maybeAttr.IsError)
-			{
-				return new CallState(maybeAttr.AsError.Value) { HadErrors = hadErrors };
-			}
-
-			attrValue = maybeAttr.AsAttribute.Last().Value;
+	/// <summary>
+	/// json_map()'s walk over <paramref name="jsonStr"/>: <paramref name="evaluate"/> runs once for a
+	/// scalar, or once per array element or object member, with the value's type as %0, its JSON as
+	/// %1, its index or key as %2 and <paramref name="userArgs"/> after them.
+	/// </summary>
+	private static async ValueTask<CallState> JsonMapAsync(string jsonStr, MString osep,
+		Dictionary<string, CallState> userArgs, bool hadErrors,
+		Func<Dictionary<string, CallState>, ValueTask<CallState>> evaluate)
+	{
+		async ValueTask<MString> EvalWithArgs(Dictionary<string, CallState> callArgs)
+		{
+			var result = await evaluate(callArgs);
+			hadErrors |= result.HadErrors;
+			return result.Message ?? MarkupText.Empty;
 		}
 
 		try
@@ -551,7 +524,6 @@ public partial class Functions
 	public async ValueTask<CallState> oob(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 
 		var playersArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var package = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
@@ -587,12 +559,10 @@ public partial class Functions
 				playerStr,
 				LocateFlags.All);
 
-			if (!locate.IsValid())
+			if (locate is not AnySharpObject located)
 			{
 				continue;
 			}
-
-			var located = locate.WithoutError().WithoutNone();
 
 			if (!located.IsPlayer)
 			{
@@ -639,27 +609,15 @@ public partial class Functions
 		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		AnySharpObject target;
-		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg))
+		if (parser.CurrentState.Arguments.TryGetValue("1", out var targetArg)
+				&& await LocateService.LocateAndNotifyIfInvalidWithCallState(
+					parser,
+					executor,
+					executor,
+					targetArg.Message!.ToPlainText(),
+					PlayersPreference | AbsoluteMatch) is Error<CallState> error)
 		{
-			var targetRef = targetArg.Message!.ToPlainText();
-			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
-				parser,
-				executor,
-				executor,
-				targetRef,
-				PlayersPreference | AbsoluteMatch);
-
-			if (locateResult.IsError)
-			{
-				return new CallState(locateResult.AsError);
-			}
-
-			target = locateResult.AsAnyObject;
-		}
-		else
-		{
-			target = executor;
+			return error.Value;
 		}
 
 		// TODO: Actual websocket/out-of-band JSON communication is planned for future release.

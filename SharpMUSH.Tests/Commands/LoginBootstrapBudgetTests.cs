@@ -2,9 +2,10 @@ using System.Text;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.ExpandedObjectData;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
@@ -28,7 +29,7 @@ public class LoginBootstrapBudgetTests
 		var services = Factory.Services;
 		var connections = services.GetRequiredService<IConnectionService>();
 		var mediator = services.GetRequiredService<IMediator>();
-		var player = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(Factory.ExecutorDBRef))).Known.AsPlayer;
+		var player = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<SharpPlayer>();
 		var handle = Random.Shared.NextInt64(80000000, 90000000);
 		await connections.Register(handle, "localhost", "localhost", "telnet", _ => ValueTask.CompletedTask,
 			_ => ValueTask.CompletedTask, () => Encoding.UTF8);
@@ -58,10 +59,10 @@ public class LoginBootstrapBudgetTests
 			catch (OperationCanceledException) when (budget.IsExpired) { }
 			await Assert.That(hookReached).IsTrue();
 			await Assert.That(budget.IsExpired).IsEqualTo(expire);
-			await notify.Received(1).Notify(handle, Arg.Is<OneOf<MString, string>>(x => x.IsT1 && x.AsT1 == "login-motd"), null, INotifyService.NotificationType.Announce);
+			await notify.Received(1).Notify(handle, Arg.Is<SharpMessage>(x => TestHelpers.MessageIsString(x, "login-motd")), null, INotifyService.NotificationType.Announce);
 			await Assert.That(connections.Get(handle)!.Ref).IsNotNull();
 			if (checkPreferences) await bus.Received(1).Publish(Arg.Is<UpdatePlayerPreferencesMessage>(x => x.Handle == handle), Arg.Any<CancellationToken>());
-			else await notify.Received(1).Notify(handle, Arg.Is<OneOf<MString, string>>(x => x.IsT1 && x.AsT1 == "wizard-motd"), null, INotifyService.NotificationType.Announce);
+			else await notify.Received(1).Notify(handle, Arg.Is<SharpMessage>(x => TestHelpers.MessageIsString(x, "wizard-motd")), null, INotifyService.NotificationType.Announce);
 		}
 		finally { await connections.Disconnect(handle); }
 	}

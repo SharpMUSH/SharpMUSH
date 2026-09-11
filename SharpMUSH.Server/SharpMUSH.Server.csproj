@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
@@ -32,7 +32,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="$(DotNetPackageVersion)" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
     <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.11.0-beta.1" />
@@ -52,7 +52,7 @@
 		     reference closure and resolves each referenced assembly against the host's default load context,
 		     so FSharp.Core must be present beside the host binary for plugin loading to succeed. -->
 		<PackageReference Include="FSharp.Core" Version="10.1.400" />
-		<PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.7" />
+		<PackageReference Include="System.Configuration.ConfigurationManager" Version="$(DotNetPackageVersion)" />
 
 	</ItemGroup>
 	
@@ -78,7 +78,7 @@
        the build-output copy and the publish-output copy below consume this one list. -->
   <Target Name="ResolveScenePluginFiles">
     <PropertyGroup>
-      <ScenePluginOutDir>$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\bin\$(Configuration)\net10.0</ScenePluginOutDir>
+      <ScenePluginOutDir>$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\bin\$(Configuration)\net11.0</ScenePluginOutDir>
     </PropertyGroup>
     <ItemGroup>
       <ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.dll" />
@@ -121,7 +121,6 @@
   <ItemGroup>
     <PackageReference Include="Asp.Versioning.Mvc" Version="10.2.1" />
     <PackageReference Include="LibGit2Sharp" Version="0.32.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
     <None Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\*.md">
       <Link>TextFiles\help\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

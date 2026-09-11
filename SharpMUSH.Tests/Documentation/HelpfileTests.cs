@@ -37,11 +37,7 @@ public class HelpfileTests
 		var fileString = Path.Combine(currentDirectory, "Documentation", "Testfile", file);
 		var fileInfo = new FileInfo(fileString);
 
-		var maybeIndexes = Helpfiles.Index(fileInfo);
-
-		await Assert.That(maybeIndexes.IsT1).IsNotEqualTo(true);
-
-		var indexes = maybeIndexes.AsT0;
+		var indexes = Helpfiles.Index(fileInfo).Expect<Dictionary<string, string>>();
 
 		await Assert.That(indexes).IsNotEmpty();
 
@@ -52,7 +48,7 @@ public class HelpfileTests
 
 		foreach (var key in aliasTest.Skip(1))
 		{
-			await Assert.That(indexes[key]).IsEqualTo(indexes[aliasTest.First()]);
+			await Assert.That(indexes![key]).IsEqualTo(indexes[aliasTest.First()]);
 		}
 	}
 

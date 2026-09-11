@@ -1,5 +1,5 @@
 using Mediator;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
@@ -227,16 +227,16 @@ public static partial class ArgHelpers
 	public static ValueTask<bool> HasObjectPowers(SharpObject obj, string power)
 		=> obj.HasPower(power);
 
-	public static IEnumerable<OneOf<DBRef, string>> NameList(string list)
+	public static IEnumerable<DbRefOrName> NameList(string list)
 		=> NameListPattern().Matches(list).Select(x =>
-			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
-				? OneOf<DBRef, string>.FromT0(HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue())
-				: OneOf<DBRef, string>.FromT1(x.Groups["User"].Value));
+			HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value) is DBRef dbref
+				? new DbRefOrName(dbref)
+				: new DbRefOrName(x.Groups["User"].Value));
 
 	public static IEnumerable<string> NameListString(string list)
 		=> NameListPattern().Matches(list).Select(x =>
-			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
-				? HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue().ToString()
+			HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value) is DBRef dbref
+				? dbref.ToString()
 				: x.Groups["User"].Value);
 
 	public static async ValueTask<CallState> ForHandleOrPlayer(IMUSHCodeParser parser, IMediator mediator,
@@ -260,17 +260,22 @@ public static partial class ArgHelpers
 		var maybeFound =
 			await locateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, valueText);
 
-		if (maybeFound.IsError)
+		return maybeFound switch
 		{
-			return maybeFound.AsError;
-		}
+			Error<CallState> error => error.Value,
+			AnySharpObject and SharpPlayer found => await ForConnectedPlayer(connectionService, found, playerFunc),
+			AnySharpObject => throw new InvalidOperationException("A player-only locate returned a non-player.")
+		};
+	}
 
-		var found = maybeFound.AsSharpObject.AsPlayer;
-		var foundData = await connectionService.Get(found.Object.DBRef).FirstOrDefaultAsync();
+	private static async ValueTask<CallState> ForConnectedPlayer(IConnectionService connectionService,
+		SharpPlayer player, Func<SharpPlayer, IConnectionService.ConnectionData, ValueTask<CallState>> playerFunc)
+	{
+		var playerData = await connectionService.Get(player.Object.DBRef).FirstOrDefaultAsync();
 
-		if (foundData is null) return new CallState("#-1 That player is not connected.");
+		if (playerData is null) return new CallState("#-1 That player is not connected.");
 
-		return await playerFunc(found, foundData);
+		return await playerFunc(player, playerData);
 	}
 
 	/// <summary>
@@ -287,13 +292,12 @@ public static partial class ArgHelpers
 			return null;
 		}
 
-		var found = await mediator.Send(new GetObjectNodeQuery(reference));
-		if (found.IsNone)
+		if (await mediator.Send(new GetObjectNodeQuery(reference)) is not AnySharpObject found)
 		{
 			return null;
 		}
 
-		var names = await found.Known.Object().Flags.Value
+		var names = await found.Object().Flags.Value
 			.Select(flag => flag.Name)
 			.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
 

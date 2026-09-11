@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Tests.Packages;
@@ -27,14 +28,19 @@ public class ExamplePackageTests
 		throw new DirectoryNotFoundException("Could not locate examples/packages above the test directory.");
 	}
 
+	private async Task<PackageManifest> ParseAsync(string path)
+	{
+		var parsed = _service.ParseManifest(await File.ReadAllTextAsync(path)).Expect<ParsedPackageManifest>($"{path} must parse");
+		return parsed.Manifest;
+	}
+
 	[Test]
 	public async Task Index_IsValid_AndListsExistingPackages()
 	{
 		var root = ExamplesRoot();
 		var result = _service.ParseIndex(await File.ReadAllTextAsync(Path.Combine(root, "index.yaml")));
 
-		await Assert.That(result.IsT0).IsTrue();
-		var index = result.AsT0;
+		var index = result.Expect<PackageIndex>();
 		await Assert.That(index.Packages.Count).IsGreaterThan(0);
 
 		foreach (var entry in index.Packages)
@@ -53,17 +59,14 @@ public class ExamplePackageTests
 
 		foreach (var path in manifests)
 		{
-			var result = _service.ParseManifest(await File.ReadAllTextAsync(path));
-
-			if (result.IsT1)
+			switch (_service.ParseManifest(await File.ReadAllTextAsync(path)))
 			{
-				Assert.Fail($"{path} failed to parse:\n{string.Join("\n", result.AsT1.Issues)}");
-			}
-
-			var warnings = result.AsT0.Warnings;
-			if (warnings.Count > 0)
-			{
-				Assert.Fail($"{path} parsed with warnings:\n{string.Join("\n", warnings)}");
+				case PackageManifestFailure failure:
+					Assert.Fail($"{path} failed to parse:\n{string.Join("\n", failure.Issues)}");
+					break;
+				case ParsedPackageManifest { Warnings.Count: > 0 } parsed:
+					Assert.Fail($"{path} parsed with warnings:\n{string.Join("\n", parsed.Warnings)}");
+					break;
 			}
 		}
 	}
@@ -72,8 +75,8 @@ public class ExamplePackageTests
 	public async Task EveryExampleDirectoryInIndex_AndEveryManifestInIndex()
 	{
 		var root = ExamplesRoot();
-		var indexResult = _service.ParseIndex(await File.ReadAllTextAsync(Path.Combine(root, "index.yaml")));
-		var indexedPaths = indexResult.AsT0.Packages
+		var index = _service.ParseIndex(await File.ReadAllTextAsync(Path.Combine(root, "index.yaml"))).Expect<PackageIndex>();
+		var indexedPaths = index.Packages
 			.Select(p => p.Path.TrimEnd('/'))
 			.ToHashSet(StringComparer.Ordinal);
 
@@ -98,7 +101,7 @@ public class ExamplePackageTests
 	public async Task EveryIndexEntry_AgreesWithTheManifestItSummarizes()
 	{
 		var root = ExamplesRoot();
-		var index = _service.ParseIndex(await File.ReadAllTextAsync(Path.Combine(root, "index.yaml"))).AsT0;
+		var index = _service.ParseIndex(await File.ReadAllTextAsync(Path.Combine(root, "index.yaml"))).Expect<PackageIndex>();
 
 		foreach (var entry in index.Packages)
 		{
@@ -108,7 +111,7 @@ public class ExamplePackageTests
 				.Because($"{entry.Path} must be relative to the package root");
 
 			var path = Path.Combine(root, entry.Path, "package.yaml");
-			var manifest = _service.ParseManifest(await File.ReadAllTextAsync(path)).AsT0.Manifest;
+			var manifest = await ParseAsync(path);
 
 			await Assert.That(entry.PackageId).IsEqualTo(manifest.Name)
 				.Because($"{entry.Path} is indexed under the wrong id");
@@ -138,7 +141,7 @@ public class ExamplePackageTests
 
 		foreach (var path in Directory.GetFiles(root, "package.yaml", SearchOption.AllDirectories))
 		{
-			var manifest = _service.ParseManifest(await File.ReadAllTextAsync(path)).AsT0.Manifest;
+			var manifest = await ParseAsync(path);
 
 			foreach (var obj in manifest.Objects)
 			{

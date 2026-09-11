@@ -4,6 +4,7 @@ using SharpMUSH.Client.Services;
 using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Tests.Server;
 using System.Net;
 using System.Text;
@@ -108,11 +109,9 @@ public class AdminConfigServiceTests
 
 		var service = new AdminConfigService(logger, httpClient);
 
-		var options = await service.GetOptionsAsync();
+		var options = (await service.GetOptionsAsync()).Expect<IEnumerable<AdminConfigService.ConfigItem>>();
 
-		await Assert.That(options.IsT1).IsFalse();
-
-		var mudName = options.AsT0.Single(i => i.Key == nameof(NetOptions.MudName));
+		var mudName = options.Single(i => i.Key == nameof(NetOptions.MudName));
 		await Assert.That(mudName.Value).IsEqualTo("SharpMUSH");
 		await Assert.That(mudName.Description).IsEqualTo("Name of your MUSH as displayed to players");
 	}
@@ -141,7 +140,7 @@ public class AdminConfigServiceTests
 
 		var options = await service.GetOptionsAsync();
 
-		await Assert.That(options.IsT1).IsTrue();
+		await Assert.That(options.Value).IsTypeOf<Error<string>>();
 	}
 
 	/// <summary>
@@ -163,7 +162,8 @@ public class AdminConfigServiceTests
 	[Test]
 	public async Task ToConfigItems_ReadsValuesFromTheConfigurationSection()
 	{
-		var items = FullResponse().ToConfigItems().AsT0.ToList();
+		var configured = FullResponse().ToConfigItems().Expect<IEnumerable<AdminConfigService.ConfigItem>>();
+		var items = configured.ToList();
 
 		var mudName = items.Single(i => i.Key == nameof(NetOptions.MudName));
 
@@ -184,7 +184,8 @@ public class AdminConfigServiceTests
 	[Test]
 	public async Task ToConfigItems_ProducesNoErrorRows()
 	{
-		var items = FullResponse().ToConfigItems().AsT0.ToList();
+		var configured = FullResponse().ToConfigItems().Expect<IEnumerable<AdminConfigService.ConfigItem>>();
+		var items = configured.ToList();
 
 		var errors = items
 			.Where(i => i.Type == "Error" || i.Value.StartsWith("Error:", StringComparison.Ordinal))
@@ -201,7 +202,8 @@ public class AdminConfigServiceTests
 	[Test]
 	public async Task ToConfigItems_CoversEveryConfiguredProperty()
 	{
-		var items = FullResponse().ToConfigItems().AsT0.ToList();
+		var configured = FullResponse().ToConfigItems().Expect<IEnumerable<AdminConfigService.ConfigItem>>();
+		var items = configured.ToList();
 
 		var keys = items.Select(i => i.Key).ToList();
 

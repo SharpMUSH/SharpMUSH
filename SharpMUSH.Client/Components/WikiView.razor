@@ -145,30 +145,30 @@ else
                 draft.Slug, _selectedLocale, draft.Title, draft.Content, draft.Published,
                 ExpectedTranslationRevision, editSummary: null, ns: Namespace, category: Category);
 
-            translationResult.Switch(
-                _ =>
-                {
+            switch (translationResult)
+            {
+                case WikiTranslationInfo:
                     _editDraft = null;
                     Mode = WikiMode.View;
                     Nav.NavigateTo(
                         $"/wiki/{Namespace ?? "main"}/{Category ?? "general"}/{Slug}?lang={Uri.EscapeDataString(_selectedLocale)}",
                         forceLoad: true);
-                },
-                err =>
-                {
+                    break;
+                case WikiTranslationSaveError err:
                     // On a conflict, prompt for a reload and STOP. Retrying — or silently re-reading the
                     // current revision and saving again — would re-apply this editor's stale markdown over
                     // the other translator's, which is precisely the loss expectedRevisionNumber prevents.
                     // The draft stays in the editor so its text can be copied out first.
                     _saveConflict = err.NeedsReload;
                     _saveError = err.NeedsReload ? Loc["WkTranslationConflict"] : err.Message;
-                });
+                    break;
+            }
 
             StateHasChanged();
             return;
         }
 
-        OneOf.OneOf<WikiArticle, string> result;
+        MessageResult<WikiArticle> result;
 
         if (string.IsNullOrEmpty(draft.Slug))
         {
@@ -181,31 +181,27 @@ else
             result = await Wiki.UpdatePageAsync(draft.Slug, draft.Content, ns: Namespace, category: Category);
         }
 
-        if (result.IsT0 && MetadataChanged(result.AsT0, draft))
+        if (result is WikiArticle saved && MetadataChanged(saved, draft))
         {
             // Content save succeeded; push the metadata separately. The created/updated article
             // carries the server's current category, used as the lookup key in case the category
             // itself is changing (a re-key/move).
             result = await Wiki.SetMetadataAsync(
-                result.AsT0.Slug, draft.Category, draft.Tags, draft.Published, Namespace,
-                currentCategory: result.AsT0.Category);
+                saved.Slug, draft.Category, draft.Tags, draft.Published, Namespace,
+                currentCategory: saved.Category);
         }
 
-        await result.Match<Task>(
-            updated =>
-            {
+        switch (result)
+        {
+            case WikiArticle updated:
                 _article = updated;
                 _editDraft = null;
                 Mode = WikiMode.View;
-                StateHasChanged();
-                return Task.CompletedTask;
-            },
-            err =>
-            {
+                break;
+            case string err:
                 _saveError = err;
-                StateHasChanged();
-                return Task.CompletedTask;
-            });
+                break;
+        }
     }
 
     /// <summary>True when the draft's metadata differs from the just-saved server copy.</summary>
@@ -218,7 +214,6 @@ else
     private void HandleArticleRestored(WikiArticle restored)
     {
         _article = restored;
-        StateHasChanged();
     }
 
     private void HandleCancel()
@@ -226,14 +221,12 @@ else
         _editDraft = null;
         _saveError = null;
         Mode = WikiMode.View;
-        StateHasChanged();
     }
 
     protected override async Task OnInitializedAsync()
     {
         _loading = true;
-        var result = await Wiki.GetWikiArticle(Slug, Category, Namespace, Locale);
-        _article = result.IsT0 ? result.AsT0 : null;
+        _article = await Wiki.GetWikiArticle(Slug, Category, Namespace, Locale) is WikiArticle article ? article : null;
 
         if (_article is not null)
         {

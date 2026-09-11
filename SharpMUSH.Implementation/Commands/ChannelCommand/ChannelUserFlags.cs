@@ -2,6 +2,7 @@ using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -81,14 +82,11 @@ public static class ChannelUserFlags
 			}
 		}
 
-		SharpChannel[] channels;
-		var silent = channelName is null || channelName.Length == 0;
-
-		if (silent)
+		if (channelName is null || channelName.Length == 0)
 		{
 			// extchat.c:1913 — the bulk form walks the executor's OWN channel list, not every channel in the
 			// game, and says one thing about the lot of them rather than naming each one.
-			channels = await Mediator.CreateStream(new GetOnChannelQuery(executor)).ToArrayAsync();
+			var channels = await Mediator.CreateStream(new GetOnChannelQuery(executor)).ToArrayAsync();
 
 			if (channels.Length == 0)
 			{
@@ -97,23 +95,30 @@ public static class ChannelUserFlags
 			}
 
 			await NotifyService.Notify(executor, BulkSummary(flag, setting), executor);
+			return await SetFlagAsync(PermissionService, Mediator, NotifyService, executor, channels, flag, setting,
+				silent: true);
 		}
-		else
+
+		// extchat.c:1938 — test_channel_on: these all act on a channel you are ON, so the name resolves
+		// against those and nothing else.
+		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			NotifyService, executor, channelName, notify: true,
+			scope: ChannelHelper.ChannelMatchScope.Member) switch
 		{
-			// extchat.c:1938 — test_channel_on: these all act on a channel you are ON, so the name resolves
-			// against those and nothing else.
-			var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-				NotifyService, executor, channelName!, notify: true,
-				scope: ChannelHelper.ChannelMatchScope.Member);
+			SharpChannel channel => await SetFlagAsync(PermissionService, Mediator, NotifyService, executor, [channel],
+				flag, setting, silent: false),
+			Error<CallState> error => error.Value
+		};
+	}
 
-			if (maybeChannel.IsError)
-			{
-				return maybeChannel.AsError.Value;
-			}
-
-			channels = [maybeChannel.AsChannel];
-		}
-
+	/// <summary>
+	/// Sets or clears <paramref name="flag"/> on each channel the executor is on; <paramref name="silent"/> is
+	/// the bulk form, which has already said what it did.
+	/// </summary>
+	private static async ValueTask<CallState> SetFlagAsync(IPermissionService PermissionService, IMediator Mediator,
+		INotifyService NotifyService, AnySharpObject executor, SharpChannel[] channels, UserFlag flag, bool setting,
+		bool silent)
+	{
 		var changed = 0;
 
 		foreach (var channel in channels)

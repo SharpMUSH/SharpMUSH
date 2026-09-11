@@ -1,11 +1,10 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SurrealDb.Net;
 using SurrealDb.Net.Models;
-using OkNone = OneOf.Types.None;
+using OkNone = SharpMUSH.Library.DiscriminatedUnions.None;
 
 namespace SharpMUSH.Database.SurrealDB;
 
@@ -86,7 +85,7 @@ public partial class SurrealDatabase : IWikiService
 			"id, pageId, locale, title, markdownSource, renderedHtml, plainText, " +
 			"lastEditorDbref, createdAt, updatedAt, published, revisionNumber";
 
-	public async Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
+	public async Task<Found<WikiPage>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
 	{
 		var nsStr = ns.ToString().ToLowerInvariant();
 		var cat = WikiHelpers.NormalizeCategory(category);
@@ -100,7 +99,7 @@ public partial class SurrealDatabase : IWikiService
 		return new NotFound();
 	}
 
-	public async Task<OneOf<WikiPage, NotFound>> GetByIdAsync(string id)
+	public async Task<Found<WikiPage>> GetByIdAsync(string id)
 	{
 		var key = NormalizeSurrealId(id, "wiki_page");
 		var parameters = new Dictionary<string, object?> { ["id"] = new StringRecordId(key) };
@@ -210,7 +209,7 @@ public partial class SurrealDatabase : IWikiService
 		return results?.Select(MapToWikiPage).ToList() ?? [];
 	}
 
-	public async Task<OneOf<WikiPage, Error<string>>> CreateAsync(
+	public async Task<Result<WikiPage>> CreateAsync(
 			string title,
 			string markdown,
 			string authorDbref,
@@ -224,19 +223,21 @@ public partial class SurrealDatabase : IWikiService
 		var stampedLocale = string.Empty;
 		if (!string.IsNullOrWhiteSpace(sourceLocale))
 		{
-			var normalizedSource = WikiHelpers.NormalizeLocale(sourceLocale);
-			if (normalizedSource.IsT1)
-				return normalizedSource.AsT1;
-
-			stampedLocale = normalizedSource.AsT0;
+			switch (WikiHelpers.NormalizeLocale(sourceLocale))
+			{
+				case Error<string> error:
+					return error;
+				case string normalizedSource:
+					stampedLocale = normalizedSource;
+					break;
+			}
 		}
 
 		var nsStr = ns.ToString().ToLowerInvariant();
 		var slug = Slugify(title);
 		var cat = WikiHelpers.NormalizeCategory(category);
 
-		var existing = await GetBySlugAsync(slug, cat, ns);
-		if (existing.IsT0)
+		if (await GetBySlugAsync(slug, cat, ns) is WikiPage)
 			return new Error<string>($"A wiki page with slug '{slug}' already exists in namespace '{nsStr}' category '{cat}'.");
 
 		var now = DateTimeOffset.UtcNow;
@@ -289,17 +290,14 @@ public partial class SurrealDatabase : IWikiService
 		return page;
 	}
 
-	public async Task<OneOf<WikiPage, NotFound>> UpdateAsync(
+	public async Task<Found<WikiPage>> UpdateAsync(
 			string id,
 			string markdown,
 			string editorDbref,
 			string? editSummary = null)
 	{
-		var lookupResult = await GetByIdAsync(id);
-		if (lookupResult.IsT1)
+		if (await GetByIdAsync(id) is not WikiPage existing)
 			return new NotFound();
-
-		var existing = lookupResult.AsT0;
 		var now = DateTimeOffset.UtcNow;
 		var newRevision = existing.RevisionNumber + 1;
 		var key = NormalizeSurrealId(id, "wiki_page");
@@ -332,10 +330,9 @@ public partial class SurrealDatabase : IWikiService
 		return updated;
 	}
 
-	public async Task<OneOf<OkNone, NotFound>> DeleteAsync(string id, string editorDbref)
+	public async Task<Found<OkNone>> DeleteAsync(string id, string editorDbref)
 	{
-		var lookupResult = await GetByIdAsync(id);
-		if (lookupResult.IsT1)
+		if (await GetByIdAsync(id) is NotFound)
 			return new NotFound();
 
 		var parameters = new Dictionary<string, object?> { ["id"] = id };
@@ -352,10 +349,9 @@ public partial class SurrealDatabase : IWikiService
 		return new OkNone();
 	}
 
-	public async Task<OneOf<OkNone, NotFound>> SetProtectionAsync(string id, bool isProtected)
+	public async Task<Found<OkNone>> SetProtectionAsync(string id, bool isProtected)
 	{
-		var lookupResult = await GetByIdAsync(id);
-		if (lookupResult.IsT1)
+		if (await GetByIdAsync(id) is NotFound)
 			return new NotFound();
 
 		var key = NormalizeSurrealId(id, "wiki_page");
@@ -369,24 +365,22 @@ public partial class SurrealDatabase : IWikiService
 		return new OkNone();
 	}
 
-	public async Task<OneOf<WikiPage, NotFound>> SetMetadataAsync(
+	public async Task<Found<WikiPage>> SetMetadataAsync(
 			string id,
 			string? category,
 			IReadOnlyList<string> tags,
 			bool published)
 	{
-		var lookupResult = await GetByIdAsync(id);
-		if (lookupResult.IsT1)
+		if (await GetByIdAsync(id) is not WikiPage existingPage)
 			return new NotFound();
 
-		var existingPage = lookupResult.AsT0;
 		var normalizedCategory = WikiHelpers.NormalizeCategory(category);
 		var normalizedTags = WikiHelpers.NormalizeTags(tags);
 
 		// Category is part of page identity; reject a recategorization that would collide.
 		if (!string.Equals(normalizedCategory, existingPage.Category, StringComparison.OrdinalIgnoreCase)
 				&& Enum.TryParse<WikiNamespace>(existingPage.Namespace, ignoreCase: true, out var nsEnum)
-				&& (await GetBySlugAsync(existingPage.Slug, normalizedCategory, nsEnum)).IsT0)
+				&& await GetBySlugAsync(existingPage.Slug, normalizedCategory, nsEnum) is WikiPage)
 		{
 			return new NotFound();
 		}
@@ -423,7 +417,7 @@ public partial class SurrealDatabase : IWikiService
 		return results?.Select(MapToWikiRevision).ToList() ?? [];
 	}
 
-	public async Task<OneOf<WikiRevision, NotFound>> GetRevisionAsync(string pageId, int revisionNumber)
+	public async Task<Found<WikiRevision>> GetRevisionAsync(string pageId, int revisionNumber)
 	{
 		var parameters = new Dictionary<string, object?>
 		{
@@ -574,7 +568,7 @@ public partial class SurrealDatabase : IWikiService
 		return results?.Select(MapToWikiTranslation).ToList() ?? [];
 	}
 
-	public async Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
+	public async Task<Found<WikiTranslation>> GetTranslationAsync(string pageId, string locale)
 	{
 		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
 		if (normalized.Length == 0) return new NotFound();
@@ -588,20 +582,27 @@ public partial class SurrealDatabase : IWikiService
 		return MapToWikiTranslation(results[0]);
 	}
 
-	public async Task<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>> UpsertTranslationAsync(
+	public async Task<TranslationWriteResult> UpsertTranslationAsync(
 			string pageId, string locale, string title, string markdown,
 			string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
+		=> WikiHelpers.NormalizeLocale(locale) switch
+		{
+			string normalized => await WriteTranslationAsync(
+				pageId, normalized, title, markdown, editorDbref, editSummary, published, expectedRevisionNumber),
+			Error<string> error => error,
+		};
+
+	/// <summary>
+	/// Writes a translation under an already-normalized locale, as a create or a compare-and-swap on the
+	/// revision the editor loaded.
+	/// </summary>
+	private async Task<TranslationWriteResult> WriteTranslationAsync(
+			string pageId, string normalized, string title, string markdown,
+			string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
 	{
-		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
-		if (normalizedLocale.IsT1) return normalizedLocale.AsT1;
-
-		var normalized = normalizedLocale.AsT0;
-
-		var pageLookup = await GetByIdAsync(pageId);
-		if (pageLookup.IsT1)
+		if (await GetByIdAsync(pageId) is not WikiPage page)
 			return new Error<string>($"No wiki page with id '{pageId}'.");
 
-		var page = pageLookup.AsT0;
 		if (page.SourceLocale.Length > 0
 				&& string.Equals(page.SourceLocale, normalized, StringComparison.OrdinalIgnoreCase))
 			return new Error<string>(
@@ -661,8 +662,7 @@ public partial class SurrealDatabase : IWikiService
 				// end, find the winner's row and report the loser's create as a success.
 				if (createResponse.HasErrors)
 				{
-					var winner = await GetTranslationAsync(pageId, normalized);
-					if (winner.IsT0) return WikiWriteConflict.AlreadyExists;
+					if (await GetTranslationAsync(pageId, normalized) is WikiTranslation) return WikiWriteConflict.AlreadyExists;
 
 					return new Error<string>($"Could not create translation '{normalized}' for page '{pageId}'.");
 				}
@@ -698,7 +698,7 @@ public partial class SurrealDatabase : IWikiService
 					// Zero rows affected. Do NOT re-read and re-apply: that overwrites the winner with this
 					// caller's stale markdown, which is the loss expectedRevisionNumber exists to prevent.
 					var current = await GetTranslationAsync(pageId, normalized);
-					return current.IsT0 ? WikiWriteConflict.StaleRevision : WikiWriteConflict.TranslationGone;
+					return current is WikiTranslation ? WikiWriteConflict.StaleRevision : WikiWriteConflict.TranslationGone;
 				}
 
 				saved = MapToWikiTranslation(updated[0]);
@@ -710,8 +710,7 @@ public partial class SurrealDatabase : IWikiService
 			// are handled off the response above because ExecuteAsync does not throw them.
 			if (expectedRevisionNumber is null)
 			{
-				var existing = await GetTranslationAsync(pageId, normalized);
-				if (existing.IsT0) return WikiWriteConflict.AlreadyExists;
+				if (await GetTranslationAsync(pageId, normalized) is WikiTranslation) return WikiWriteConflict.AlreadyExists;
 			}
 
 			return new Error<string>($"Could not write translation '{normalized}': {ex.Message}");
@@ -722,24 +721,22 @@ public partial class SurrealDatabase : IWikiService
 		// the rule.
 		if (saved is null)
 		{
-			var written = await GetTranslationAsync(pageId, normalized);
-			if (written.IsT1)
+			if (await GetTranslationAsync(pageId, normalized) is not WikiTranslation written)
 				return new Error<string>($"Upsert of translation '{normalized}' returned no document.");
 
-			saved = written.AsT0;
+			saved = written;
 		}
 
 		await SaveSurrealTranslationRevisionAsync(saved, editorDbref, editSummary, now);
 		return saved;
 	}
 
-	public async Task<OneOf<OkNone, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
+	public async Task<Found<OkNone>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
 	{
 		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
 		if (normalized.Length == 0) return new NotFound();
 
-		var lookup = await GetTranslationAsync(pageId, normalized);
-		if (lookup.IsT1) return new NotFound();
+		if (await GetTranslationAsync(pageId, normalized) is not WikiTranslation translation) return new NotFound();
 
 		var revParams = new Dictionary<string, object?> { ["pageId"] = pageId, ["locale"] = normalized };
 
@@ -752,7 +749,7 @@ public partial class SurrealDatabase : IWikiService
 		// column in an expression makes it index-ineligible and forces the scan that actually matches.
 		await ExecuteAsync("DELETE wiki_revision WHERE pageId = $pageId AND (locale ?? '') = $locale", revParams);
 
-		var key = NormalizeSurrealId(lookup.AsT0.Id, "wiki_translation");
+		var key = NormalizeSurrealId(translation.Id, "wiki_translation");
 		var delParams = new Dictionary<string, object?> { ["id"] = new StringRecordId(key) };
 		await ExecuteAsync("DELETE $id", delParams);
 
@@ -777,7 +774,7 @@ public partial class SurrealDatabase : IWikiService
 		return results?.Select(MapToWikiRevision).ToList() ?? [];
 	}
 
-	public async Task<OneOf<WikiRevision, NotFound>> GetRevisionForLocaleAsync(
+	public async Task<Found<WikiRevision>> GetRevisionForLocaleAsync(
 			string pageId, string locale, int revisionNumber)
 	{
 		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);

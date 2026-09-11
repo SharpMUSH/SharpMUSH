@@ -1,5 +1,4 @@
 using Mediator;
-using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -42,7 +41,7 @@ public static class ChannelRecall
 	/// Everything both spellings do before they render: parse the counts, resolve the channel, apply the
 	/// access gate, take the window and drop the See_All-only lines the viewer may not read.
 	/// </summary>
-	public static async ValueTask<OneOf<RecallWindow, CallState>> SelectAsync(
+	public static async ValueTask<RecallSelection> SelectAsync(
 		IPermissionService permissionService,
 		IMediator mediator,
 		INotifyService notifyService,
@@ -84,16 +83,27 @@ public static class ChannelRecall
 			startLine = Math.Max(parsedStart - 1, 0);
 		}
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(permissionService, mediator,
-			notifyService, executor, channelName, notify);
-
-		if (maybeChannel.IsError)
+		return await ChannelHelper.GetVisibleChannelOrError(permissionService, mediator,
+			notifyService, executor, channelName, notify) switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await SelectWindowAsync(permissionService, mediator, notifyService, executor, channel, requested,
+				startLine, hasStart, notify),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
-
+	/// <summary>Applies the access gate to the resolved channel and takes the window of its buffer.</summary>
+	private static async ValueTask<RecallSelection> SelectWindowAsync(
+		IPermissionService permissionService,
+		IMediator mediator,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		SharpChannel channel,
+		int requested,
+		int startLine,
+		bool hasStart,
+		bool notify)
+	{
 		// extchat.c:4050 — membership is not required; being ABLE to join is. A player who could join the
 		// channel may read its history, which is what makes recall usable for deciding whether to join.
 		if (!await ChannelHelper.IsMemberOfChannel(executor, channel)
@@ -131,15 +141,22 @@ public static class ChannelRecall
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var selection = await SelectAsync(PermissionService, Mediator, NotifyService, executor, channelName,
-			lines, start, notify: true);
-
-		if (selection.IsT1)
+		return await SelectAsync(PermissionService, Mediator, NotifyService, executor, channelName,
+			lines, start, notify: true) switch
 		{
-			return selection.AsT1;
-		}
+			RecallWindow window => await RecallAsync(NotifyService, executor, window, switches),
+			CallState refusal => refusal,
+		};
+	}
 
-		var (channel, selected, showedEverything) = selection.AsT0;
+	/// <summary>
+	/// Shows the executor the window <see cref="SelectAsync"/> chose, framed the way <c>do_chan_recall</c>
+	/// frames it.
+	/// </summary>
+	private static async ValueTask<CallState> RecallAsync(INotifyService notifyService, AnySharpObject executor,
+		RecallWindow window, string[] switches)
+	{
+		var (channel, selected, showedEverything) = window;
 		var quiet = switches.Contains("QUIET");
 		var channelLabel = channel.Name.ToPlainText();
 		var body = selected.Select(x => quiet ? x.Message : Stamped(x));
@@ -157,7 +174,7 @@ public static class ChannelRecall
 		];
 
 		var message = MarkupText.Join(MarkupText.NewLine, framed);
-		await NotifyService.Notify(executor, message, executor);
+		await notifyService.Notify(executor, message, executor);
 		return new CallState(message);
 	}
 

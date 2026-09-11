@@ -63,14 +63,16 @@ public class ObjectDestructionService(
 		await mediator.Send(new HaltObjectQueueRequest(dbref), cancellationToken);
 
 		// Type-specific teardown, in PennMUSH's order: clear_* runs before the object is unlinked.
-		var cleared = await target.Match(
-			player => ClearPlayerAsync(parser, player, cancellationToken),
-			room => ClearRoomAsync(parser, room, cancellationToken),
+		var cleared = await (target switch
+		{
+			SharpPlayer player => ClearPlayerAsync(parser, player, cancellationToken),
+			SharpRoom room => ClearRoomAsync(parser, room, cancellationToken),
 			// clear_exit() only detaches the exit from its source's exit list and refunds the deposit.
 			// The detach is the AtLocation edge, which the storage delete removes, and SharpMUSH has no
 			// money to refund (money() is unsupported), so nothing is left to do here.
-			_ => ValueTask.FromResult(true),
-			thing => ClearThingAsync(parser, thing, cancellationToken));
+			SharpExit => ValueTask.FromResult(true),
+			SharpThing thing => ClearThingAsync(parser, thing, cancellationToken)
+		});
 
 		// DEVIATION: PennMUSH's empty_contents cannot fail — moveto is a pointer rewrite over an
 		// in-memory database. Here evacuating is a move that can be refused (a containment loop, the
@@ -126,8 +128,8 @@ public class ObjectDestructionService(
 			obj.Name,
 			obj.Type,
 			owner.Object.DBRef.ToString(),
-			parent.IsNone ? NothingDbRef : parent.Known.Object().DBRef.ToString(),
-			zone.IsNone ? NothingDbRef : zone.Known.Object().DBRef.ToString()
+			parent is AnySharpObject parentObject ? parentObject.Object().DBRef.ToString() : NothingDbRef,
+			zone is AnySharpObject zoneObject ? zoneObject.Object().DBRef.ToString() : NothingDbRef
 		];
 	}
 
@@ -159,10 +161,7 @@ public class ObjectDestructionService(
 		{
 			// Re-resolved because a cascade earlier in this pass may already have taken it (a room takes
 			// its exits with it), and a stale dbref reads as None.
-			var node = await mediator.Send(new GetObjectNodeQuery(doomedObject.DBRef), cancellationToken);
-			if (node.IsNone) continue;
-
-			var candidate = node.Known;
+			if (await mediator.Send(new GetObjectNodeQuery(doomedObject.DBRef), cancellationToken) is not AnySharpObject candidate) continue;
 
 			// Belt and braces over the pushdown, deliberately kept despite being redundant with the
 			// query above. A provider that silently ignores HasFlag hands back the entire database, and
@@ -272,10 +271,10 @@ public class ObjectDestructionService(
 
 		foreach (var content in contents)
 		{
-			if (content.IsExit)
+			if (content is SharpExit exit)
 			{
 				// An exit cannot be sent anywhere — PennMUSH frees exits found in contents outright.
-				await FreeObjectAsync(parser, content.AsExit, ct);
+				await FreeObjectAsync(parser, exit, ct);
 				continue;
 			}
 
@@ -293,7 +292,7 @@ public class ObjectDestructionService(
 			var moved = await moveService.EnterRoom(parser, content, destination, noMoveMsgs: false,
 				new DBRef(-1), "container destroyed");
 
-			if (!moved.IsT1)
+			if (moved is not Error<string> refused)
 			{
 				continue;
 			}
@@ -307,7 +306,7 @@ public class ObjectDestructionService(
 			{
 				logger.LogError(
 					"#{Content} could not be evacuated from #{Container}: {Reason}",
-					content.Object().DBRef.Number, containerDbRefNumber, moved.AsT1.Value);
+					content.Object().DBRef.Number, containerDbRefNumber, refused.Value);
 				emptied = false;
 				continue;
 			}
@@ -315,13 +314,13 @@ public class ObjectDestructionService(
 			var rehoused = await moveService.EnterRoom(parser, content, fallback, noMoveMsgs: false,
 				new DBRef(-1), "container destroyed");
 
-			if (rehoused.IsT1)
+			if (rehoused is Error<string> fallbackRefused)
 			{
 				logger.LogError(
 					"#{Content} could not be evacuated from #{Container} to its home ({Reason}) nor to "
 					+ "default_home (#{DefaultHome}: {FallbackReason}).",
-					content.Object().DBRef.Number, containerDbRefNumber, moved.AsT1.Value,
-					fallback.Object().DBRef.Number, rehoused.AsT1.Value);
+					content.Object().DBRef.Number, containerDbRefNumber, refused.Value,
+					fallback.Object().DBRef.Number, fallbackRefused.Value);
 				emptied = false;
 			}
 		}
@@ -336,11 +335,8 @@ public class ObjectDestructionService(
 	private async ValueTask<AnySharpContainer?> ResolveEvacuationTargetAsync(AnySharpContent content,
 		int containerDbRefNumber, CancellationToken ct)
 	{
-		var home = await content.Home();
-
-		if (!home.IsNone)
+		if (await content.Home() is AnySharpContainer candidate)
 		{
-			var candidate = home.WithoutNone();
 			// Sending it to the container that is being destroyed would only strand it again.
 			if (candidate.Object().DBRef.Number != containerDbRefNumber)
 			{
@@ -414,27 +410,24 @@ public class ObjectDestructionService(
 		var configured = new DBRef((int)configuration.CurrentValue.Database.DefaultHome);
 		var node = await mediator.Send(new GetObjectNodeQuery(configured), ct);
 
-		return !node.IsNone && node.Known.IsContainer ? node.Known.AsContainer : null;
+		return node is AnySharpObject found && found.IsContainer ? found.AsContainer : null;
 	}
 
 	private async ValueTask<SharpPlayer?> ResolveProbatePlayerAsync(CancellationToken ct)
 	{
 		var configured = new DBRef((int)configuration.CurrentValue.Command.ProbateJudge);
-		var node = await mediator.Send(new GetObjectNodeQuery(configured), ct);
-
-		if (!node.IsNone && node.Known.IsPlayer)
+		if (await mediator.Send(new GetObjectNodeQuery(configured), ct) is AnySharpObject and SharpPlayer judge)
 		{
-			return node.Known.AsPlayer;
+			return judge;
 		}
 
 		logger.LogWarning(
 			"probate_judge config option (#{ProbateDbRef}) is set to an invalid object; falling back to God (#1).",
 			configured.Number);
 
-		var god = await mediator.Send(new GetObjectNodeQuery(new DBRef(GodDbRefNumber)), ct);
-		if (!god.IsNone && god.Known.IsPlayer)
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(GodDbRefNumber)), ct) is AnySharpObject and SharpPlayer god)
 		{
-			return god.Known.AsPlayer;
+			return god;
 		}
 
 		logger.LogError("God (#1) is not a valid player; possessions cannot be handed to a probate player.");

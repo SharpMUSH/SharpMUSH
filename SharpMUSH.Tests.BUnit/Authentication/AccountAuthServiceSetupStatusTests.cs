@@ -3,6 +3,7 @@ using Bunit;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Tests.BUnit.Authentication;
 
@@ -48,14 +49,14 @@ public class AccountAuthServiceSetupStatusTests : TrackingBunitContext
 
 		var result = await service.NeedsSetupAsync();
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Error>();
 	}
 
 	[TUnit.Core.Test]
 	public async Task NeedsSetupAsync_NonJsonSpaFallbackBody_ReturnsFailureNotFalse()
 	{
 		// Simulates a stale dev server / proxy returning the SPA's index.html for the API route
-		// instead of JSON — the historical field observation behind this bug.
+		// instead of JSON, as has been seen in the field.
 		using var http = new HttpClient(new SequencedSetupStatusHandler(
 			new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("<!doctype html><html>...</html>") }))
 		{
@@ -68,15 +69,14 @@ public class AccountAuthServiceSetupStatusTests : TrackingBunitContext
 
 		var result = await service.NeedsSetupAsync();
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Error>();
 	}
 
 	/// <summary>
-	/// The essential regression pin: a failing first attempt followed by a succeeding second one —
-	/// mirroring one transient hiccup during EnsureAccountRoutingAsync's retry loop, which never
-	/// caches anything but a definitive result. Before the fix, the first failed call would have
-	/// returned `false` and gotten cached forever, so the wizard would never be reached on the
-	/// second, successful attempt.
+	/// A failing first attempt followed by a succeeding second one — mirroring one transient hiccup
+	/// during EnsureAccountRoutingAsync's retry loop, which never caches anything but a definitive
+	/// result. A failed call that answered `false` would be cached forever, and the wizard would never
+	/// be reached on the second, successful attempt.
 	/// </summary>
 	[TUnit.Core.Test]
 	public async Task NeedsSetupAsync_FailsThenSucceeds_RetryReachesWizard()
@@ -97,14 +97,14 @@ public class AccountAuthServiceSetupStatusTests : TrackingBunitContext
 		bool? cachedNeedsSetup = null;
 
 		var first = await service.NeedsSetupAsync();
-		if (first.TryPickT0(out var firstAnswer, out _)) cachedNeedsSetup = firstAnswer;
-		await Assert.That(first.IsT1).IsTrue();
+		if (first is bool firstAnswer) cachedNeedsSetup = firstAnswer;
+		await Assert.That(first.Value).IsTypeOf<Error>();
 		await Assert.That(cachedNeedsSetup).IsNull();
 
 		var second = await service.NeedsSetupAsync();
-		if (second.TryPickT0(out var secondAnswer, out _)) cachedNeedsSetup = secondAnswer;
-		await Assert.That(second.IsT0).IsTrue();
-		await Assert.That(second.AsT0).IsTrue();
+		if (second is bool secondAnswer) cachedNeedsSetup = secondAnswer;
+		await Assert.That(second.Value).IsTypeOf<bool>();
+		await Assert.That(second is true).IsTrue();
 		await Assert.That(cachedNeedsSetup).IsTrue();
 	}
 

@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -30,20 +29,19 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// Returns every character, name-sorted; <see cref="Error"/> if the request failed.
 	/// </summary>
 	/// <remarks>
-	/// The failed arm is not decoration: "nobody" and "we could not ask" are different facts that
-	/// used to render identically, because a failed fetch degraded to an empty list. The
-	/// dashboard's "Characters" tile then printed a confident <c>0</c> for a game with four
-	/// characters in it. A count is an assertion about the game, and a caller that never got an
-	/// answer must not make one — so the failure is in the type, where a consumer has to decide
-	/// what to do with it rather than inherit the old lie by accident.
+	/// The failed arm is not decoration: "nobody" and "we could not ask" are different facts. A
+	/// failed fetch that degraded to an empty list would have the dashboard's "Characters" tile print
+	/// a confident <c>0</c> for a game with characters in it. A count is an assertion about the game,
+	/// and a caller that never got an answer must not make one — so the failure is in the type, where
+	/// a consumer has to decide what to do with it.
 	/// </remarks>
-	public async Task<OneOf<IReadOnlyList<CharacterSummary>, Error>> ListAsync(CancellationToken cancellationToken = default)
+	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> ListAsync(CancellationToken cancellationToken = default)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/characters", cancellationToken);
-			return OneOf<IReadOnlyList<CharacterSummary>, Error>.FromT0(Normalize(rows));
+			return new ServerResult<IReadOnlyList<CharacterSummary>>(Normalize(rows));
 		}
 		catch (Exception ex) when (IsRequestFailure(ex, cancellationToken))
 		{
@@ -59,13 +57,13 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// the roster of every character that exists: a character being listed there implies nothing
 	/// about presence.
 	/// </summary>
-	public async Task<OneOf<IReadOnlyList<CharacterSummary>, Error>> ListOnlineAsync(CancellationToken cancellationToken = default)
+	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> ListOnlineAsync(CancellationToken cancellationToken = default)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/online", cancellationToken);
-			return OneOf<IReadOnlyList<CharacterSummary>, Error>.FromT0(Normalize(rows));
+			return new ServerResult<IReadOnlyList<CharacterSummary>>(Normalize(rows));
 		}
 		catch (Exception ex) when (IsRequestFailure(ex, cancellationToken))
 		{
@@ -133,20 +131,20 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// directory could not be read.
 	/// </summary>
 	/// <remarks>
-	/// The same two facts <see cref="ListAsync"/> keeps apart, kept apart here as well. This used to
-	/// return one null for both, justified by its only caller — a route template with an
-	/// <c>{objid}</c> hole — declining to fetch either way. That is still true of that caller, but it
-	/// is a fact about the caller, not about the answer: "there is no such character" is a 404 page
-	/// and "we could not ask the game" is not, and a caller that wants to say so should not have to
-	/// widen this signature first.
+	/// The same two facts <see cref="ListAsync"/> keeps apart, kept apart here as well. A caller may
+	/// decline to fetch either way, but that is a fact about the caller, not about the answer: "there
+	/// is no such character" is a 404 page and "we could not ask the game" is not, and a caller that
+	/// wants to say so should not have to widen this signature first.
 	/// </remarks>
-	public async Task<OneOf<string, NotFound, Error>> ResolveObjidAsync(string name, CancellationToken cancellationToken = default)
+	public async Task<ObjidResolution> ResolveObjidAsync(string name, CancellationToken cancellationToken = default)
 	{
-		var rows = await ListAsync(cancellationToken);
-		return rows.Match<OneOf<string, NotFound, Error>>(
-			found => found.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match
-				? match.Objid
-				: new NotFound(),
-			error => error);
+		return await ListAsync(cancellationToken) switch
+		{
+			IReadOnlyList<CharacterSummary> rows =>
+				rows.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match
+					? match.Objid
+					: new NotFound(),
+			Error error => error
+		};
 	}
 }

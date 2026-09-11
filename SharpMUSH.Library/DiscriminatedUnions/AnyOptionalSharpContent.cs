@@ -1,40 +1,41 @@
-﻿using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnyOptionalSharpContent : OneOfBase<SharpPlayer, SharpExit, SharpThing, None>
+/// <summary>
+/// A content object, or none. Found contents are one case, so <c>x is AnySharpContent found</c> binds
+/// the content.
+/// </summary>
+[Union]
+public sealed class AnyOptionalSharpContent : IUnion
 {
-	public AnyOptionalSharpContent(OneOf<SharpPlayer, SharpExit, SharpThing, None> input) : base(input) { }
-	public static implicit operator AnyOptionalSharpContent(SharpPlayer x) => new(x);
-	public static implicit operator AnyOptionalSharpContent(SharpExit x) => new(x);
-	public static implicit operator AnyOptionalSharpContent(SharpThing x) => new(x);
-	public static implicit operator AnyOptionalSharpContent(None x) => new(x);
+	public AnyOptionalSharpContent(AnySharpContent value) => Value = value;
+	public AnyOptionalSharpContent(None value) => Value = value;
 
-	public bool IsPlayer => IsT0;
-	public bool IsExit => IsT1;
-	public bool IsThing => IsT2;
-	public bool IsNone => IsT3;
+	public static implicit operator AnyOptionalSharpContent(SharpPlayer value) => new(new AnySharpContent(value));
+	public static implicit operator AnyOptionalSharpContent(SharpExit value) => new(new AnySharpContent(value));
+	public static implicit operator AnyOptionalSharpContent(SharpThing value) => new(new AnySharpContent(value));
 
-	public SharpPlayer AsPlayer => AsT0;
-	public SharpExit AsExit => AsT1;
-	public SharpThing AsThing => AsT2;
+	public object? Value { get; }
 
-	public AnyOptionalSharpObject WithRoomOption()
-		=> Match<AnyOptionalSharpObject>(
-			player => player,
-			exit => exit,
-			thing => thing,
-			none => none
-		);
+	/// <summary>
+	/// Equal when both are none, or both hold contents <see cref="AnySharpContent"/> calls equal: the
+	/// same model instance.
+	/// </summary>
+	public override bool Equals(object? obj) => obj is AnyOptionalSharpContent other && Equals(Value, other.Value);
 
-	public AnySharpContent WithoutNone()
-		=> Match<AnySharpContent>(
-			player => player,
-			exit => exit,
-			thing => thing,
-			none => throw new Exception("Cannot convert None to a valid object.")
-		);
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsPlayer => this is AnySharpContent and SharpPlayer;
+	public bool IsExit => this is AnySharpContent and SharpExit;
+	public bool IsThing => this is AnySharpContent and SharpThing;
+	public bool IsNone => this is None;
+
+	public AnyOptionalSharpObject WithRoomOption() => this switch
+	{
+		AnySharpContent found => found.WithRoomOption(),
+		None none => none
+	};
+
 }

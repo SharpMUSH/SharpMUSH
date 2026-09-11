@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
@@ -28,7 +27,7 @@ public sealed class ManagedPackageInstaller(
 	private readonly string _pluginsRoot = pluginsRoot
 		?? Path.Combine(AppContext.BaseDirectory, "plugins");
 
-	public async Task<OneOf<IReadOnlyList<string>, Error<string>>> DeployAsync(
+	public async Task<Result<IReadOnlyList<string>>> DeployAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
 		IManagedPackageBinarySource binarySource,
@@ -115,7 +114,7 @@ public sealed class ManagedPackageInstaller(
 				+ "It loads on the next server boot.",
 				manifest.Name, manifest.Version, deployed.Count, targetDirectory);
 
-			return OneOf<IReadOnlyList<string>, Error<string>>.FromT0(deployed);
+			return new Result<IReadOnlyList<string>>(deployed);
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 		{
@@ -125,7 +124,7 @@ public sealed class ManagedPackageInstaller(
 		}
 	}
 
-	public async Task<OneOf<Success, Error<string>>> RemoveAsync(
+	public async Task<Result<Success>> RemoveAsync(
 		string packageId,
 		IReadOnlyList<string> deployedFiles,
 		CancellationToken cancellationToken = default)
@@ -133,12 +132,17 @@ public sealed class ManagedPackageInstaller(
 		// Unload first (if loaded + unloadable) so no assembly is pinned while we
 		// delete its DLL; a load-once plugin cannot be unloaded at runtime, but its
 		// directory is still removed so the next boot does not re-load it.
-		var unload = await pluginManager.UnloadAsync(packageId);
-		unload.Switch(
-			_ => logger.LogInformation("Unloaded managed package '{PackageId}' before removing its directory.", packageId),
-			error => logger.LogDebug(
-				"Managed package '{PackageId}' not unloaded at runtime ({Reason}); removing its directory so it does not load on next boot.",
-				packageId, error.Value));
+		switch (await pluginManager.UnloadAsync(packageId))
+		{
+			case Success:
+				logger.LogInformation("Unloaded managed package '{PackageId}' before removing its directory.", packageId);
+				break;
+			case Error<string> error:
+				logger.LogDebug(
+					"Managed package '{PackageId}' not unloaded at runtime ({Reason}); removing its directory so it does not load on next boot.",
+					packageId, error.Value);
+				break;
+		}
 
 		var targetDirectory = Path.Combine(_pluginsRoot, packageId);
 		try

@@ -1,6 +1,5 @@
 using System.Globalization;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models.Wiki;
@@ -203,12 +202,12 @@ public partial class LightningDatabase
 		=> tx.Range(Tables.WikiRev, WikiRevPrefix(pageId, locale))
 			.Select(entry => MapWikiRevision(Codec.Deserialize<WikiRevisionRecord>(entry.Value)));
 
-	public Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
+	public Task<Found<WikiPage>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
 	{
 		var nsStr = ns.ToString().ToLowerInvariant();
 		var key = WikiSlugKey(nsStr, category, WikiHelpers.Slugify(slug));
 
-		return Task.FromResult(Store.Read<OneOf<WikiPage, NotFound>>(tx =>
+		return Task.FromResult(Store.Read<Found<WikiPage>>(tx =>
 		{
 			if (!tx.TryGet(Tables.WikiSlug, key, out var idBytes)) return new NotFound();
 
@@ -217,8 +216,8 @@ public partial class LightningDatabase
 		}));
 	}
 
-	public Task<OneOf<WikiPage, NotFound>> GetByIdAsync(string id)
-		=> Task.FromResult(Store.Read<OneOf<WikiPage, NotFound>>(tx =>
+	public Task<Found<WikiPage>> GetByIdAsync(string id)
+		=> Task.FromResult(Store.Read<Found<WikiPage>>(tx =>
 			TryReadWikiPage(tx, id) is { } found ? MapWikiPage(found.Key, found.Record) : new NotFound()));
 
 	public Task<IReadOnlyList<WikiPage>> GetRecentChangesAsync(int count = 20)
@@ -285,7 +284,7 @@ public partial class LightningDatabase
 			.ToList()));
 	}
 
-	public async Task<OneOf<WikiPage, Error<string>>> CreateAsync(
+	public async Task<Result<WikiPage>> CreateAsync(
 		string title,
 		string markdown,
 		string authorDbref,
@@ -299,10 +298,14 @@ public partial class LightningDatabase
 		var stampedLocale = string.Empty;
 		if (!string.IsNullOrWhiteSpace(sourceLocale))
 		{
-			var normalizedSource = WikiHelpers.NormalizeLocale(sourceLocale);
-			if (normalizedSource.IsT1) return normalizedSource.AsT1;
-
-			stampedLocale = normalizedSource.AsT0;
+			switch (WikiHelpers.NormalizeLocale(sourceLocale))
+			{
+				case Error<string> error:
+					return error;
+				case string normalizedSource:
+					stampedLocale = normalizedSource;
+					break;
+			}
 		}
 
 		var nsStr = ns.ToString().ToLowerInvariant();
@@ -333,7 +336,7 @@ public partial class LightningDatabase
 
 		// The duplicate check and the insert share one write job, so two creators of the same
 		// (namespace, category, slug) cannot both pass the check.
-		return await Store.WriteAsync<OneOf<WikiPage, Error<string>>>(tx =>
+		return await Store.WriteAsync<Result<WikiPage>>(tx =>
 		{
 			var slugKey = WikiSlugKey(nsStr, cat, slug);
 			if (tx.TryGet(Tables.WikiSlug, slugKey, out _))
@@ -352,7 +355,7 @@ public partial class LightningDatabase
 		});
 	}
 
-	public async Task<OneOf<WikiPage, NotFound>> UpdateAsync(
+	public async Task<Found<WikiPage>> UpdateAsync(
 		string id,
 		string markdown,
 		string editorDbref,
@@ -362,7 +365,7 @@ public partial class LightningDatabase
 		var html = WikiRenderer.RenderToHtml(markdown);
 		var plain = WikiRenderer.ExtractPlainText(markdown);
 
-		return await Store.WriteAsync<OneOf<WikiPage, NotFound>>(tx =>
+		return await Store.WriteAsync<Found<WikiPage>>(tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
@@ -385,8 +388,8 @@ public partial class LightningDatabase
 		});
 	}
 
-	public async Task<OneOf<None, NotFound>> DeleteAsync(string id, string editorDbref)
-		=> await Store.WriteAsync<OneOf<None, NotFound>>(tx =>
+	public async Task<Found<None>> DeleteAsync(string id, string editorDbref)
+		=> await Store.WriteAsync<Found<None>>(tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
@@ -401,8 +404,8 @@ public partial class LightningDatabase
 			return new None();
 		});
 
-	public async Task<OneOf<None, NotFound>> SetProtectionAsync(string id, bool isProtected)
-		=> await Store.WriteAsync<OneOf<None, NotFound>>(tx =>
+	public async Task<Found<None>> SetProtectionAsync(string id, bool isProtected)
+		=> await Store.WriteAsync<Found<None>>(tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
@@ -411,7 +414,7 @@ public partial class LightningDatabase
 			return new None();
 		});
 
-	public async Task<OneOf<WikiPage, NotFound>> SetMetadataAsync(
+	public async Task<Found<WikiPage>> SetMetadataAsync(
 		string id,
 		string? category,
 		IReadOnlyList<string> tags,
@@ -420,7 +423,7 @@ public partial class LightningDatabase
 		var normalizedCategory = WikiHelpers.NormalizeCategory(category);
 		var normalizedTags = WikiHelpers.NormalizeTags(tags).ToArray();
 
-		return await Store.WriteAsync<OneOf<WikiPage, NotFound>>(tx =>
+		return await Store.WriteAsync<Found<WikiPage>>(tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
@@ -454,7 +457,7 @@ public partial class LightningDatabase
 	public Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
 		=> GetRevisionsForLocaleAsync(pageId, string.Empty, skip, take);
 
-	public Task<OneOf<WikiRevision, NotFound>> GetRevisionAsync(string pageId, int revisionNumber)
+	public Task<Found<WikiRevision>> GetRevisionAsync(string pageId, int revisionNumber)
 		=> GetRevisionForLocaleAsync(pageId, string.Empty, revisionNumber);
 
 	public Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId)
@@ -473,18 +476,18 @@ public partial class LightningDatabase
 				.Select(entry => MapWikiTranslation(Codec.Deserialize<WikiTranslationRecord>(entry.Value)))
 				.ToList()));
 
-	public Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
+	public Task<Found<WikiTranslation>> GetTranslationAsync(string pageId, string locale)
 	{
 		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
-		if (normalized.Length == 0) return Task.FromResult<OneOf<WikiTranslation, NotFound>>(new NotFound());
+		if (normalized.Length == 0) return Task.FromResult<Found<WikiTranslation>>(new NotFound());
 
-		return Task.FromResult(Store.Read<OneOf<WikiTranslation, NotFound>>(tx =>
+		return Task.FromResult(Store.Read<Found<WikiTranslation>>(tx =>
 			tx.TryGet(Tables.WikiTr, WikiTranslationKey(CanonicalWikiPageId(pageId), normalized), out var bytes)
 				? MapWikiTranslation(Codec.Deserialize<WikiTranslationRecord>(bytes))
 				: new NotFound()));
 	}
 
-	public async Task<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>> UpsertTranslationAsync(
+	public async Task<TranslationWriteResult> UpsertTranslationAsync(
 		string pageId,
 		string locale,
 		string title,
@@ -493,11 +496,27 @@ public partial class LightningDatabase
 		string? editSummary,
 		bool published,
 		int? expectedRevisionNumber)
-	{
-		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
-		if (normalizedLocale.IsT1) return normalizedLocale.AsT1;
+		=> WikiHelpers.NormalizeLocale(locale) switch
+		{
+			string normalized => await WriteTranslationAsync(
+				pageId, normalized, title, markdown, editorDbref, editSummary, published, expectedRevisionNumber),
+			Error<string> error => error,
+		};
 
-		var normalized = normalizedLocale.AsT0;
+	/// <summary>
+	/// Writes a translation under an already-normalized locale, as a create or a compare-and-swap on the
+	/// revision the editor loaded.
+	/// </summary>
+	private async Task<TranslationWriteResult> WriteTranslationAsync(
+		string pageId,
+		string normalized,
+		string title,
+		string markdown,
+		string editorDbref,
+		string? editSummary,
+		bool published,
+		int? expectedRevisionNumber)
+	{
 		var now = DateTimeOffset.UtcNow;
 		var stamp = WikiTimestamp(now);
 		var html = WikiRenderer.RenderToHtml(markdown);
@@ -506,7 +525,7 @@ public partial class LightningDatabase
 		// The compare-and-swap, the row write and the revision append are one job on the writer thread.
 		// Never make this an unconditional write: two translators who both loaded revision 4 would both
 		// write 5 and one would lose their prose.
-		return await Store.WriteAsync<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>>(tx =>
+		return await Store.WriteAsync<TranslationWriteResult>(tx =>
 		{
 			if (TryReadWikiPage(tx, pageId) is not { } found) return new Error<string>($"No wiki page with id '{pageId}'.");
 
@@ -563,12 +582,12 @@ public partial class LightningDatabase
 		});
 	}
 
-	public async Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
+	public async Task<Found<None>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
 	{
 		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
 		if (normalized.Length == 0) return new NotFound();
 
-		return await Store.WriteAsync<OneOf<None, NotFound>>(tx =>
+		return await Store.WriteAsync<Found<None>>(tx =>
 		{
 			var canonicalPageId = CanonicalWikiPageId(pageId);
 			var key = WikiTranslationKey(canonicalPageId, normalized);
@@ -591,12 +610,12 @@ public partial class LightningDatabase
 				.ToList()));
 	}
 
-	public Task<OneOf<WikiRevision, NotFound>> GetRevisionForLocaleAsync(string pageId, string locale, int revisionNumber)
+	public Task<Found<WikiRevision>> GetRevisionForLocaleAsync(string pageId, string locale, int revisionNumber)
 	{
 		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
-		if (revisionNumber < 0) return Task.FromResult<OneOf<WikiRevision, NotFound>>(new NotFound());
+		if (revisionNumber < 0) return Task.FromResult<Found<WikiRevision>>(new NotFound());
 
-		return Task.FromResult(Store.Read<OneOf<WikiRevision, NotFound>>(tx =>
+		return Task.FromResult(Store.Read<Found<WikiRevision>>(tx =>
 			tx.TryGet(Tables.WikiRev, WikiRevKey(CanonicalWikiPageId(pageId), wanted, revisionNumber), out var bytes)
 				? MapWikiRevision(Codec.Deserialize<WikiRevisionRecord>(bytes))
 				: new NotFound()));

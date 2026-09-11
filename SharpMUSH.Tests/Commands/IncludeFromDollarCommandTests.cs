@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -41,7 +41,8 @@ public class IncludeFromDollarCommandTests
 		if (args.Length < 2) return null;
 		return args[1] switch
 		{
-			OneOf<MString, string> oneOf => oneOf.Match(m => m.ToString(), s => s),
+			SharpMessage { Value: MString m } => m.ToString(),
+			SharpMessage { Value: string s } => s,
 			string s => s,
 			MString m => m.ToString(),
 			_ => null

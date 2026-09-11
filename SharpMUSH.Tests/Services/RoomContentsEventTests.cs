@@ -153,7 +153,7 @@ public class RoomContentsEventTests
 		// Resolve God's (#1) current room so we can assert against it after connect.
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var godNode = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var godRoom = (await godNode.AsPlayer.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString();
+		var godRoom = (await godNode.Expect<SharpPlayer>().Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString();
 
 		// Use a fresh handle (9001) so there is no "already logged in" rejection.
 		// The connect command works with an unregistered handle (connectionData may be null;
@@ -194,7 +194,7 @@ public class RoomContentsEventTests
 		// Resolve God's (#1) current room so we can assert against it after disconnect.
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var godNode = await mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		var godRoom = (await godNode.AsPlayer.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString();
+		var godRoom = (await godNode.Expect<SharpPlayer>().Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString();
 
 		// Register a fresh handle and bind it to God (#1) so we have a LoggedIn connection.
 		var disconnectHandle = 9002L;

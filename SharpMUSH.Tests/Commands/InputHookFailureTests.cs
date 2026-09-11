@@ -78,7 +78,7 @@ public class InputHookFailureTests
 		}, _ => { functionCalls++; throw new InvalidOperationException("hook failed"); }), true));
 		var hooks = Substitute.For<IHookService>();
 		hooks.GetHookAsync(Arg.Any<string>(), Arg.Any<string>())
-			.Returns(ValueTask.FromResult<Option<CommandHook>>(new OneOf.Types.None()));
+			.Returns(ValueTask.FromResult<Option<CommandHook>>(new SharpMUSH.Library.DiscriminatedUnions.None()));
 		hooks.GetHookAsync(Arg.Is<string>(s => s.Equals(commandName, StringComparison.OrdinalIgnoreCase)), hookType)
 			.Returns(ValueTask.FromResult<Option<CommandHook>>(new CommandHook(hookType, player.DbRef, "HOOKBODY")));
 		if (mode is "branch-override" or "branch-extend")
@@ -103,7 +103,7 @@ public class InputHookFailureTests
 		var parser = new SharpMUSH.Implementation.MUSHCodeParser(original.Logger, functions, commands, original.Configuration, provider);
 		try
 		{
-			var actor = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(player.DbRef))).Known();
+			var actor = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 			var matchAttribute = new SharpAttribute("override", "OVERRIDE", "OVERRIDE", [], 0, "OVERRIDE", null!, null!, null!)
 			{ Value = MarkupText.Plain(commandName + "override") };
 			discovery.MatchUserDefinedCommand(Arg.Any<IMUSHCodeParser>(), Arg.Any<IAsyncEnumerable<AnySharpObject>>(), Arg.Any<MarkupText>())

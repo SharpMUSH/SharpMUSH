@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -180,13 +179,10 @@ public class CommandExceptionSurfacingTests
 	/// <summary>
 	/// A connection whose executor cannot be resolved — bound to a dbref that is not in the
 	/// database — has nobody to notify by object, so the report goes to the raw socket instead.
-	/// This used to be demonstrated with pre-login <c>WHO</c>, which threw
-	/// <see cref="ArgumentNullException"/> out of <c>KnownExecutorObject()</c>; that was a bug in
-	/// <c>WHO</c> and is fixed, so the handle-targeted path is exercised here instead.
-	/// <para>The throw comes from the visitor's own <c>WithoutNone()</c> on the unresolvable
-	/// executor, before the command body runs — a separate robustness gap that is only visible at
-	/// all because of the surfacing this class covers. What is asserted here is the delivery
-	/// target, not which line threw.</para>
+	/// <para>The throw comes from the visitor resolving the unresolvable executor, before the
+	/// command body runs — a separate robustness gap that is only visible at all because of the
+	/// surfacing this class covers. What is asserted here is the delivery target, not which line
+	/// threw.</para>
 	/// </summary>
 	[Test]
 	public async Task ACommandWithNoResolvableExecutorNotifiesTheConnectionHandle()
@@ -206,7 +202,7 @@ public class CommandExceptionSurfacingTests
 
 		using var document = JsonDocument.Parse(PayloadOf(message));
 		await Assert.That(document.RootElement.GetProperty("type").GetString())
-			.IsEqualTo(nameof(ArgumentException));
+			.IsEqualTo(nameof(InvalidOperationException));
 		await Assert.That(document.RootElement.GetProperty("command").GetString()).IsEqualTo(CrashingCommand);
 
 		// No resolvable executor means no privilege, so the unprivileged allowlist applies.
@@ -262,8 +258,8 @@ public class CommandExceptionSurfacingTests
 		NotifyService.ReceivedCalls()
 			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
 			.Where(targetMatches)
-			.Select(call => call.GetArguments() is [_, OneOf<MString, string> msg, ..]
-				? msg.Match(ms => ms.ToPlainText(), s => s)
+			.Select(call => call.GetArguments() is [_, SharpMessage msg, ..]
+				? msg switch { MString markup => markup.ToPlainText(), string text => text }
 				: null)
 			.LastOrDefault(text => text is not null && text.StartsWith("#-1 EXCEPTION: "));
 

@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.DiscriminatedUnions;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -92,8 +94,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.UpdatePageAsync("home", "# Home", null);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Slug).IsEqualTo("home");
+		var article = result.Expect<WikiArticle>();
+		await Assert.That(article.Slug).IsEqualTo("home");
 	}
 
 	[Test]
@@ -103,8 +105,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.UpdatePageAsync("home", "## Updated", null);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Content).IsEqualTo("## Updated");
+		var article = result.Expect<WikiArticle>();
+		await Assert.That(article.Content).IsEqualTo("## Updated");
 	}
 
 	[Test]
@@ -114,8 +116,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.UpdatePageAsync("home", "## Updated", null);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.RenderedHtml).IsEqualTo("<h2>Updated</h2>");
+		var article = result.Expect<WikiArticle>();
+		await Assert.That(article.RenderedHtml).IsEqualTo("<h2>Updated</h2>");
 	}
 
 	[Test]
@@ -125,8 +127,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.UpdatePageAsync("does-not-exist", "# X", null);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1).Contains("404");
+		var text = result.Expect<string>();
+		await Assert.That(text).Contains("404");
 	}
 
 	[Test]
@@ -136,8 +138,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.UpdatePageAsync("home", "# X", null);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1).Contains("500");
+		var text = result.Expect<string>();
+		await Assert.That(text).Contains("500");
 	}
 
 	[Test]
@@ -199,9 +201,9 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.GetWikiArticle("home");
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Title).IsEqualTo("Home");
-		await Assert.That(result.AsT0.Slug).IsEqualTo("home");
+		var article = result.Expect<WikiArticle>();
+		await Assert.That(article.Title).IsEqualTo("Home");
+		await Assert.That(article.Slug).IsEqualTo("home");
 	}
 
 	[Test]
@@ -211,7 +213,7 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.GetWikiArticle("missing");
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<None>();
 	}
 
 	[Test]
@@ -233,9 +235,9 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.CreatePageAsync("My Page", "# My Page");
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Title).IsEqualTo("My Page");
-		await Assert.That(result.AsT0.Slug).IsEqualTo("my-page");
+		var article = result.Expect<WikiArticle>();
+		await Assert.That(article.Title).IsEqualTo("My Page");
+		await Assert.That(article.Slug).IsEqualTo("my-page");
 	}
 
 	[Test]
@@ -245,8 +247,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.CreatePageAsync("Duplicate", "# Dup");
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1).Contains("409");
+		var text = result.Expect<string>();
+		await Assert.That(text).Contains("409");
 	}
 
 	[Test]

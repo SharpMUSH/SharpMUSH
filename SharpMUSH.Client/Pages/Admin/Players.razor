@@ -99,9 +99,9 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        (await Guests.ListAsync()).Switch(
-            list =>
-            {
+        switch (await Guests.ListAsync())
+        {
+            case AdminGuestsService.GuestListResponse list:
                 _error = null;
                 _list = list;
                 // Pre-fill with a name the server has confirmed is free, so the common case is one click.
@@ -109,12 +109,12 @@
                 // overwrite something they are in the middle of.
                 if (string.IsNullOrWhiteSpace(_newName))
                     _newName = list.NextFreeName;
-            },
-            failure =>
-            {
+                break;
+            case ApiFailure failure:
                 _error = failure.Message;
                 _list = null;
-            });
+                break;
+        }
         _loading = false;
     }
 
@@ -125,15 +125,17 @@
         var result = await Guests.CreateAsync(string.IsNullOrWhiteSpace(_newName) ? null : _newName.Trim());
         _busy = false;
 
-        if (result.TryPickT1(out var failure, out var created))
+        switch (result)
         {
-            _error = failure.Message;
-            return;
+            case AdminGuestsService.GuestRow created:
+                Snackbar.Add(Loc["AdmGuestCreated", created.Name], Severity.Success);
+                _newName = string.Empty;
+                await LoadAsync();
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
         }
-
-        Snackbar.Add(Loc["AdmGuestCreated", created.Name], Severity.Success);
-        _newName = string.Empty;
-        await LoadAsync();
     }
 
     private async Task DeleteAsync(AdminGuestsService.GuestRow guest)
@@ -143,7 +145,7 @@
         var result = await Guests.DeleteAsync(guest.DbrefNumber, guest.CreationTime);
         _busy = false;
 
-        if (result.TryPickT1(out var failure, out _))
+        if (result is ApiFailure failure)
         {
             _error = failure.Message;
             return;

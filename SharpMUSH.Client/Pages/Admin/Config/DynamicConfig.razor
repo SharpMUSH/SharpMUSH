@@ -5,6 +5,7 @@
 @using SharpMUSH.Library.API
 @using System.Text.Json
 @using SharpMUSH.Configuration.Generated
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject AdminConfigService AdminConfigService
 @inject ConfigSchemaService SchemaService
 @inject ISnackbar Snackbar
@@ -668,7 +669,6 @@
     {
         _saving = true;
         _validationErrors.Clear();
-        StateHasChanged();
 
         try
         {
@@ -683,9 +683,9 @@
             }
 
             var result = await AdminConfigService.UpdateConfigAsync(changes);
-            result.Switch(
-                response =>
-                {
+            switch (result)
+            {
+                case ConfigurationResponse:
                     Snackbar.Add(
                         Loc.Plural("ConfigSavedCount", "count", changes.Count),
                         Severity.Success);
@@ -696,9 +696,8 @@
                     }
                     _hasChanges = false;
                     _changedCount = 0;
-                },
-                error =>
-                {
+                    break;
+                case Error<string> error:
                     try
                     {
                         var errorDoc = JsonDocument.Parse(error.Value);
@@ -732,8 +731,8 @@
                     {
                         Snackbar.Add(string.Format(Loc["SaveFailed"].Value, error.Value), Severity.Error);
                     }
-                }
-            );
+                    break;
+            }
         }
         catch (Exception ex)
         {
@@ -742,7 +741,6 @@
         finally
         {
             _saving = false;
-            StateHasChanged();
         }
     }
 
@@ -757,7 +755,6 @@
         _hasChanges = false;
         _changedCount = 0;
         _validationErrors.Clear();
-        StateHasChanged();
     }
 
     private void ResetToDefaults()
@@ -769,7 +766,6 @@
         _dictDrafts.Clear();
         _listDrafts.Clear();
         RecalculateChanges();
-        StateHasChanged();
         Snackbar.Add(Loc["DefaultsRestored"].Value, Severity.Info);
     }
 

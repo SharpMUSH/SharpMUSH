@@ -35,10 +35,8 @@ public class RoleSeedService(IRoleRegistryService roles, ILogger<RoleSeedService
 		foreach (var template in BuiltInRoles.All)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			var existing = await roles.GetRoleAsync(template.Slug);
-			if (existing.IsT0)
+			if (await roles.GetRoleAsync(template.Slug) is SharpRole current)
 			{
-				var current = existing.AsT0;
 				if (upgrade && current.IsSystem)
 				{
 					var permissions = new Dictionary<string, PermissionState>(current.Permissions);

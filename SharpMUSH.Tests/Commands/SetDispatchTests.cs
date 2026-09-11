@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -28,7 +29,7 @@ public class SetDispatchTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
 	private async Task<bool> HasFlag(DBRef who, string flag)
-		=> await (await Mediator.Send(new GetObjectNodeQuery(who))).Known.HasFlag(flag);
+		=> await (await Mediator.Send(new GetObjectNodeQuery(who))).Expect<AnySharpObject>().HasFlag(flag);
 
 	/// <summary>
 	/// Everything <paramref name="who"/> was notified of while <paramref name="action"/> ran.
@@ -117,8 +118,8 @@ public class SetDispatchTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {viaCommand}={owner.DbRef}"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {viaFunction}={owner.DbRef}"));
 
-		var commandName = (await Mediator.Send(new GetObjectNodeQuery(viaCommand))).Known.Object().Name;
-		var functionName = (await Mediator.Send(new GetObjectNodeQuery(viaFunction))).Known.Object().Name;
+		var commandName = (await Mediator.Send(new GetObjectNodeQuery(viaCommand))).Expect<AnySharpObject>().Object().Name;
+		var functionName = (await Mediator.Send(new GetObjectNodeQuery(viaFunction))).Expect<AnySharpObject>().Object().Name;
 
 		var commandMessages = await MessagesWhile(owner.DbRef, () =>
 			Parser.CommandParse(owner.Handle, ConnectionService,
@@ -150,7 +151,7 @@ public class SetDispatchTests
 
 		var agent = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetActorAgent");
 		var beacon = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetActorBeacon");
-		var beaconName = (await Mediator.Send(new GetObjectNodeQuery(beacon))).Known.Object().Name;
+		var beaconName = (await Mediator.Send(new GetObjectNodeQuery(beacon))).Expect<AnySharpObject>().Object().Name;
 
 		// The agent goes elsewhere; the beacon stays with God, who does the forcing. The two are
 		// therefore in different places, which is the only thing separating "looked for as the

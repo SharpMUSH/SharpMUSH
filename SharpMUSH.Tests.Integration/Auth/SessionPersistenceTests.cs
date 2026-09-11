@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
@@ -21,8 +23,11 @@ public class SessionPersistenceTests(ServerWebAppFactory factory)
 		var store = new DatabaseAccountSessionStore(db);
 		var account = await factory.Services.GetRequiredService<IAccountService>().CreateAccountAsync(
 			TestIsolationHelpers.GenerateUniqueName("SessionPersistence"), null, "Integration-Test-Pw-1!");
-		await Assert.That(account.IsT0).IsTrue();
-		var accountId = account.AsT0.Id!;
+		var accountId = account switch
+		{
+			SharpAccount created => created.Id!,
+			Error<string> error => throw new InvalidOperationException($"Account creation failed: {error.Value}"),
+		};
 		var token = await store.CreateTokenAsync(accountId, TimeSpan.FromMinutes(15), "203.0.113.50");
 
 		try

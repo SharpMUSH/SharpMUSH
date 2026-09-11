@@ -1,7 +1,6 @@
 using DotNext.Collections.Generic;
 using Humanizer;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -656,15 +655,16 @@ public partial class Commands
 		}
 
 		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-
-		if (maybePlayer.IsError)
+		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg) switch
 		{
-			return maybePlayer.AsError;
-		}
+			AnySharpObject and SharpPlayer player => await PoorAsync(executor, player),
+			AnySharpObject => throw new InvalidOperationException("A player lookup found something that is not a player."),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var player = maybePlayer.AsSharpObject.AsPlayer;
-
+	private async ValueTask<Option<CallState>> PoorAsync(AnySharpObject executor, SharpPlayer player)
+	{
 		await Mediator.Send(new SetPlayerQuotaCommand(player, 0));
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerSetToPoorFormat), executor, player.Object.Name);
@@ -689,15 +689,21 @@ public partial class Commands
 		if (args.Count > 0)
 		{
 			var playerArg = args["0"].Message!.ToPlainText();
-			var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-			if (maybePlayer.IsError)
+			switch (await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg))
 			{
-				return maybePlayer.AsError;
+				case AnySharpObject found:
+					targetPlayer = found;
+					break;
+				case Error<CallState> error:
+					return error.Value;
 			}
-			targetPlayer = maybePlayer.AsSharpObject;
 		}
 
-		var targetPlayerObj = targetPlayer.AsPlayer;
+		if (targetPlayer is not SharpPlayer targetPlayerObj)
+		{
+			throw new InvalidOperationException("A quota belongs to a player.");
+		}
+
 		var quota = targetPlayerObj.Quota;
 
 		var objectsOwned = await Mediator.Send(new GetOwnedObjectCountQuery(targetPlayerObj));
@@ -772,13 +778,10 @@ public partial class Commands
 			return true;
 		}
 
-		var listenerObject = await Mediator.Send(new GetObjectNodeQuery(listener));
-		if (listenerObject.IsNone)
+		if (await Mediator.Send(new GetObjectNodeQuery(listener)) is not AnySharpObject known)
 		{
 			return false;
 		}
-
-		var known = listenerObject.Known;
 
 		return audience switch
 		{
@@ -1506,13 +1509,13 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var maybeTarget = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectArg, LocateFlags.All);
-		if (!maybeTarget.IsValid())
+		if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, objectArg, LocateFlags.All)
+				is not AnySharpObject target)
 		{
 			return CallState.Empty;
 		}
 
-		await ManipulateSharpObjectService.SetOrUnsetPowers(executor, maybeTarget.WithoutError().Known(), powerArg, true);
+		await ManipulateSharpObjectService.SetOrUnsetPowers(executor, target, powerArg, true);
 		return CallState.Empty;
 	}
 
@@ -1721,19 +1724,23 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 			var playerArg = args["0"].Message!.ToPlainText();
-			var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-			if (maybePlayer.IsError)
+			switch (await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg))
 			{
-				return maybePlayer.AsError;
+				case AnySharpObject and SharpPlayer playerObj:
+					// Boot only the last active connection to match PennMUSH behavior
+					var lastConnection = await ConnectionService.Get(playerObj.Object.DBRef).LastOrDefaultAsync();
+					if (lastConnection is not null)
+					{
+						targetHandles.Add(lastConnection.Handle);
+					}
+
+					break;
+				case AnySharpObject:
+					throw new InvalidOperationException("A player lookup found something that is not a player.");
+				case Error<CallState> error:
+					return error.Value;
 			}
-			var playerObj = maybePlayer.AsSharpObject.AsPlayer;
-			var targetDbRef = playerObj.Object.DBRef;
-			// Boot only the last active connection to match PennMUSH behavior
-			var lastConnection = await ConnectionService.Get(targetDbRef).LastOrDefaultAsync();
-			if (lastConnection is not null)
-			{
-				targetHandles.Add(lastConnection.Handle);
-			}
+
 			if (targetHandles.Count == 0)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNotConnected), executor);
@@ -1866,12 +1873,10 @@ public partial class Commands
 		var maybeObject = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor,
 			objectRef, LocateFlags.All);
 
-		if (!maybeObject.IsValid())
+		if (maybeObject is not AnySharpObject targetObject)
 		{
 			return CallState.Empty;
 		}
-
-		var targetObject = maybeObject.WithoutError().Known();
 		var dbref = targetObject.Object().DBRef;
 
 		var attributeArg = args.Count > 2 ? args["2"].Message?.ToPlainText() : null;
@@ -1918,16 +1923,17 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordGenerateSwitchConflict), executor);
 		}
 
-		var maybePlayer =
-			await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0);
-
-		if (maybePlayer.IsError)
+		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0) switch
 		{
-			return maybePlayer.AsError;
-		}
+			AnySharpObject and SharpPlayer asPlayer => await NewPasswordAsync(executor, asPlayer, args, isGenerate),
+			AnySharpObject => throw new InvalidOperationException("A player lookup found something that is not a player."),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var asPlayer = maybePlayer.AsSharpObject.AsPlayer;
-
+	private async ValueTask<Option<CallState>> NewPasswordAsync(AnySharpObject executor, SharpPlayer asPlayer,
+		Dictionary<string, CallState> args, bool isGenerate)
+	{
 		if (isGenerate)
 		{
 			var generatedPassword = PasswordService.GenerateRandomPassword();
@@ -2101,29 +2107,30 @@ public partial class Commands
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText();
-		var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-
-		if (maybePlayer.IsError)
+		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg) switch
 		{
-			return maybePlayer.AsError;
-		}
+			AnySharpObject and SharpPlayer oldOwner => await ChownAllFromAsync(parser, executor, oldOwner, switches, args,
+				preserve),
+			AnySharpObject => throw new InvalidOperationException("A player lookup found something that is not a player."),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var oldOwner = maybePlayer.AsSharpObject.AsPlayer;
-
-		AnySharpObject newOwner;
+	private async ValueTask<Option<CallState>> ChownAllFromAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		SharpPlayer oldOwner, IEnumerable<string> switches, Dictionary<string, CallState> args, bool preserve)
+	{
+		var newOwner = executor;
 		if (args.Count > 1)
 		{
 			var newOwnerArg = args["1"].Message!.ToPlainText();
-			var maybeNewOwner = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, newOwnerArg);
-			if (maybeNewOwner.IsError)
+			switch (await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, newOwnerArg))
 			{
-				return maybeNewOwner.AsError;
+				case AnySharpObject found:
+					newOwner = found;
+					break;
+				case Error<CallState> error:
+					return error.Value;
 			}
-			newOwner = maybeNewOwner.AsSharpObject;
-		}
-		else
-		{
-			newOwner = executor;
 		}
 
 		var chownThings = switches.Contains("THINGS") || (!switches.Contains("ROOMS") && !switches.Contains("EXITS"));
@@ -2153,7 +2160,12 @@ public partial class Commands
 				continue;
 			}
 
-			await Mediator.Send(new SetObjectOwnerCommand(obj, newOwner.AsPlayer));
+			if (newOwner is not SharpPlayer newOwnerPlayer)
+			{
+				throw new InvalidOperationException("Objects are owned by players.");
+			}
+
+			await Mediator.Send(new SetObjectOwnerCommand(obj, newOwnerPlayer));
 			count++;
 
 			if (!preserve && !obj.IsPlayer)
@@ -2236,16 +2248,26 @@ public partial class Commands
 		// wedged command.
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupStarted), executor);
 
-		var result = await WorldBackupService.CreateAsync();
-		if (result.TryPickT0(out var written, out var error))
+		return await WorldBackupService.CreateAsync() switch
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCompleteFormat),
-				executor, written.Name, DescribeBytes(written.SizeBytes), WorldBackupService.Keep);
-			return new CallState(written.Name);
-		}
+			WorldBackup written => await BackupWrittenAsync(executor, written),
+			Error<string> failure => await BackupFailedAsync(executor, failure.Value),
+		};
+	}
 
+	/// <summary>Reports a finished <c>@backup</c> copy and returns its name.</summary>
+	private async ValueTask<Option<CallState>> BackupWrittenAsync(AnySharpObject executor, WorldBackup written)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCompleteFormat),
+			executor, written.Name, DescribeBytes(written.SizeBytes), WorldBackupService.Keep);
+		return new CallState(written.Name);
+	}
+
+	/// <summary>Reports why <c>@backup</c> wrote no copy.</summary>
+	private async ValueTask<Option<CallState>> BackupFailedAsync(AnySharpObject executor, string reason)
+	{
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupFailedFormat), executor,
-			error.Value);
+			reason);
 		return new None();
 	}
 
@@ -2356,20 +2378,16 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-			if (maybePlayer.IsError)
-			{
-				return maybePlayer.AsError;
-			}
+			return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
+				playerArg, async player =>
+				{
+					await Mediator.Send(new SetPlayerQuotaCommand(player, amount));
 
-			var player = maybePlayer.AsSharpObject.AsPlayer;
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaForPlayerSetFormat), executor, player.Object.Name, amount);
+					await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.YourQuotaSetToByFormat), executor, amount, executor.Object().Name);
 
-			await Mediator.Send(new SetPlayerQuotaCommand(player, amount));
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaForPlayerSetFormat), executor, player.Object.Name, amount);
-			await NotifyService.NotifyLocalized(player.Object.DBRef, nameof(ErrorMessages.Notifications.YourQuotaSetToByFormat), executor, amount, executor.Object().Name);
-
-			return CallState.Empty;
+					return CallState.Empty;
+				});
 		}
 
 		if (switches.Contains("ALL"))
@@ -2402,15 +2420,21 @@ public partial class Commands
 		if (args.Count > 0)
 		{
 			var playerArg = args["0"].Message!.ToPlainText();
-			var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-			if (maybePlayer.IsError)
+			switch (await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg))
 			{
-				return maybePlayer.AsError;
+				case AnySharpObject found:
+					targetPlayer = found;
+					break;
+				case Error<CallState> error:
+					return error.Value;
 			}
-			targetPlayer = maybePlayer.AsSharpObject;
 		}
 
-		var targetPlayerObj = targetPlayer.AsPlayer;
+		if (targetPlayer is not SharpPlayer targetPlayerObj)
+		{
+			throw new InvalidOperationException("A quota belongs to a player.");
+		}
+
 		var quota = targetPlayerObj.Quota;
 
 		var objectsOwned = await Mediator.Send(new GetOwnedObjectCountQuery(targetPlayerObj));
@@ -2769,13 +2793,16 @@ public partial class Commands
 		}
 
 		var playerArg = args["0"].Message!.ToPlainText();
-		var maybePlayer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg);
-		if (maybePlayer.IsError)
+		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg) switch
 		{
-			return maybePlayer.AsError;
-		}
+			AnySharpObject and SharpPlayer playerObj => await KickAsync(executor, playerObj),
+			AnySharpObject => throw new InvalidOperationException("A player lookup found something that is not a player."),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var playerObj = maybePlayer.AsSharpObject.AsPlayer;
+	private async ValueTask<Option<CallState>> KickAsync(AnySharpObject executor, SharpPlayer playerObj)
+	{
 		var targetDbRef = playerObj.Object.DBRef;
 
 		var any = false;

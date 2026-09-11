@@ -1,7 +1,7 @@
 @page "/wiki/{Ns}/{Category}/{Slug}/diff"
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
-@using OneOf
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
 @inject NavigationManager Nav
@@ -153,13 +153,12 @@
 
         if (FromRev.HasValue && ToRev.HasValue)
         {
-            var fromTask = Wiki.GetRevisionAsync(Slug, FromRev.Value, Ns, Category, Lang);
-            var toTask   = Wiki.GetRevisionAsync(Slug, ToRev.Value, Ns, Category, Lang);
-            await Task.WhenAll(fromTask.AsTask(), toTask.AsTask());
-            var fromResult = await fromTask;
-            var toResult   = await toTask;
-            _fromRev = fromResult.IsT0 ? fromResult.AsT0 : null;
-            _toRev   = toResult.IsT0   ? toResult.AsT0   : null;
+            // A ValueTask may be awaited only once, so each becomes a Task before the two are joined.
+            var fromTask = Wiki.GetRevisionAsync(Slug, FromRev.Value, Ns, Category, Lang).AsTask();
+            var toTask   = Wiki.GetRevisionAsync(Slug, ToRev.Value, Ns, Category, Lang).AsTask();
+            await Task.WhenAll(fromTask, toTask);
+            _fromRev = await fromTask is WikiRevisionInfo fromRevision ? fromRevision : null;
+            _toRev   = await toTask is WikiRevisionInfo toRevision ? toRevision : null;
         }
 
         if (_fromRev is not null && _toRev is not null)

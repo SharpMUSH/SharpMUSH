@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -34,7 +35,7 @@ public class ChannelMatchRecallTests
 
 	private async Task<SharpChannel> CreateChannel(string name, params string[] privileges)
 	{
-		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
 		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(name), privileges, god));
 		return (await Mediator.Send(new GetChannelQuery(name)))!;
 	}
@@ -98,7 +99,7 @@ public class ChannelMatchRecallTests
 		var channel = await CreateChannel(name, "Player", "Open");
 		var mortal = await CreateMortal("ChanMatchLeaver");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>()));
 
 		await Run(mortal, $"@channel/off {name[..9]}");
 
@@ -175,7 +176,7 @@ public class ChannelMatchRecallTests
 		var channel = await CreateChannel(name, "Player", "Open");
 		var mortal = await CreateMortal("ChanMatchRejoin");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>()));
 
 		var messages = await MessagesWhile(mortal.DbRef, () => Run(mortal, $"@channel/on {name[..10]}"));
 
@@ -214,7 +215,7 @@ public class ChannelMatchRecallTests
 		await CreateChannel($"{stem}Two", "Player", "Open");
 		var mortal = await CreateMortal("ChanMatchScope");
 		await Mediator.Send(new AddUserToChannelCommand(joined,
-			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>()));
 
 		await Run(mortal, $"@channel/on {stem}");
 
@@ -234,7 +235,7 @@ public class ChannelMatchRecallTests
 		var channel = await CreateChannel(name, "Player", "Open");
 		var mortal = await CreateMortal("ChanRecallOrder");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>()));
 
 		await Run(mortal, $"@chat {name}=first line");
 		await Run(mortal, $"@chat {name}=second line");
@@ -275,7 +276,7 @@ public class ChannelMatchRecallTests
 		var channel = await CreateChannel(name, "Player", "Open");
 		var mortal = await CreateMortal("ChanRecallQuiet");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>()));
 
 		await Run(mortal, $"@chat {name}=quiet line");
 
@@ -298,7 +299,7 @@ public class ChannelMatchRecallTests
 		var channel = await CreateChannel(name, "Player", "Open");
 		var mortal = await CreateMortal("ChanRecallFull");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>()));
 
 		foreach (var i in Enumerable.Range(1, 4))
 		{
@@ -330,7 +331,7 @@ public class ChannelMatchRecallTests
 		var channel = await CreateChannel(name, "Player", "Open");
 		var mortal = await CreateMortal("ChanRecallFun");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>()));
 
 		await Run(mortal, $"@chat {name}=alpha");
 		await Run(mortal, $"@chat {name}=omega");
@@ -355,7 +356,7 @@ public class ChannelMatchRecallTests
 		var member = await CreateMortal("ChanRecallSpeaker");
 		var outsider = await CreateMortal("ChanRecallOutsider");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(member.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(member.DbRef))).Expect<AnySharpObject>()));
 
 		await Run(member, $"@chat {name}=overheard");
 
@@ -380,14 +381,14 @@ public class ChannelMatchRecallTests
 		foreach (var who in new[] { hider, watcher })
 		{
 			await Mediator.Send(new AddUserToChannelCommand(channel,
-				(await Mediator.Send(new GetObjectNodeQuery(who.DbRef))).Known));
+				(await Mediator.Send(new GetObjectNodeQuery(who.DbRef))).Expect<AnySharpObject>()));
 		}
 
-		var hiderName = (await Mediator.Send(new GetObjectNodeQuery(hider.DbRef))).Known.Object().Name;
+		var hiderName = (await Mediator.Send(new GetObjectNodeQuery(hider.DbRef))).Expect<AnySharpObject>().Object().Name;
 
 		await Run(hider, $"@channel/hide {name}=yes");
 
-		var watcherName = (await Mediator.Send(new GetObjectNodeQuery(watcher.DbRef))).Known.Object().Name;
+		var watcherName = (await Mediator.Send(new GetObjectNodeQuery(watcher.DbRef))).Expect<AnySharpObject>().Object().Name;
 		var seen = string.Join("\n", await MessagesWhile(watcher.DbRef, () => Run(watcher, $"@channel/who {name}")));
 		await Assert.That(seen).Contains(watcherName).Because("the control: an unhidden member IS listed");
 		await Assert.That(seen).DoesNotContain(hiderName);
@@ -411,12 +412,12 @@ public class ChannelMatchRecallTests
 		var watcher = await CreateMortal("ChanWhoOnlooker");
 
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(offline))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(offline))).Expect<AnySharpObject>()));
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(watcher.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(watcher.DbRef))).Expect<AnySharpObject>()));
 
-		var offlineName = (await Mediator.Send(new GetObjectNodeQuery(offline))).Known.Object().Name;
-		var watcherName = (await Mediator.Send(new GetObjectNodeQuery(watcher.DbRef))).Known.Object().Name;
+		var offlineName = (await Mediator.Send(new GetObjectNodeQuery(offline))).Expect<AnySharpObject>().Object().Name;
+		var watcherName = (await Mediator.Send(new GetObjectNodeQuery(watcher.DbRef))).Expect<AnySharpObject>().Object().Name;
 		var seen = string.Join("\n", await MessagesWhile(watcher.DbRef, () => Run(watcher, $"@channel/who {name}")));
 
 		await Assert.That(seen).Contains(watcherName).Because("the control: a connected member IS listed");
@@ -434,7 +435,7 @@ public class ChannelMatchRecallTests
 	{
 		var name = UniqueChannel("BufferAdd");
 		var channel = await CreateChannel(name, "Player", "Open");
-		var owner = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
+		var owner = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(channel, owner));
 
 		await WebAppFactoryArg.FunctionParserFor(new DBRef(1))
@@ -457,7 +458,7 @@ public class ChannelMatchRecallTests
 		var channel = await CreateChannel(name, "Player", "Open");
 		var mortal = await CreateMortal("ChanBufferForger");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>()));
 
 		var result = (await WebAppFactoryArg.FunctionParserFor(mortal.DbRef)
 			.FunctionParse(MarkupText.Plain($"cbufferadd({name},forged)")))!.Message!.ToPlainText();
@@ -502,7 +503,7 @@ public class ChannelMatchRecallTests
 		var channel = await CreateChannel(name, "Player", "Open");
 		var mortal = await CreateMortal("ChanTitleAsker");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>()));
 
 		await Run(mortal, $"@channel/title {name}=the Bold");
 
@@ -512,13 +513,13 @@ public class ChannelMatchRecallTests
 
 		// The title survived being asked about.
 		var status = await ChannelHelper.ChannelMemberStatus(
-			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known,
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>(),
 			(await Mediator.Send(new GetChannelQuery(name)))!);
 		await Assert.That(status!.Status.Title?.ToPlainText()).IsEqualTo("the Bold");
 
 		await Run(mortal, $"@channel/title {name}=");
 		var cleared = await ChannelHelper.ChannelMemberStatus(
-			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known,
+			(await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>(),
 			(await Mediator.Send(new GetChannelQuery(name)))!);
 		await Assert.That(cleared!.Status.Title?.ToPlainText() ?? string.Empty).IsEmpty();
 	}
@@ -551,7 +552,7 @@ public class ChannelMatchRecallTests
 		var name = UniqueChannel("Decomp");
 		var channel = await CreateChannel(name, "Player", "Open");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>()));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@clock/speak {name}=#1"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@channel/describe {name}=a decompiled channel"));
 
@@ -581,7 +582,7 @@ public class ChannelMatchRecallTests
 		var channel = await CreateChannel(name, "Player", "Open");
 		var member = await CreateMortal("ChanWipeMember");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(member.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(member.DbRef))).Expect<AnySharpObject>()));
 
 		await Assert.That(await IsMember(name, member.DbRef)).IsTrue();
 
@@ -604,7 +605,7 @@ public class ChannelMatchRecallTests
 		var listener = await CreateMortal("ChanOpenListener");
 		var outsider = await CreateMortal("ChanOpenOutsider");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(listener.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(listener.DbRef))).Expect<AnySharpObject>()));
 
 		var heard = await MessagesWhile(listener.DbRef,
 			() => Run(outsider, $"@chat {name}=spoken from outside"));
@@ -648,11 +649,11 @@ public class ChannelMatchRecallTests
 		var channel = await CreateChannel(name, "Player", "Open");
 		var listener = await CreateMortal($"ChanCemitEar{spelling.TrimStart('@')}");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(listener.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(listener.DbRef))).Expect<AnySharpObject>()));
 
 		// Creating a channel joins its creator to it, so take God back off — this needs an authorized
 		// emitter who is NOT a member.
-		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 		await Mediator.Send(new RemoveUserFromChannelCommand(
 			(await Mediator.Send(new GetChannelQuery(name)))!, god));
 		await Assert.That(await IsMember(name, new DBRef(1))).IsFalse();
@@ -694,7 +695,7 @@ public class ChannelMatchRecallTests
 		var listener = await CreateMortal($"ChanClosedEar{spelling.TrimStart('@')}");
 		var outsider = await CreateMortal($"ChanClosedOut{spelling.TrimStart('@')}");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(listener.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(listener.DbRef))).Expect<AnySharpObject>()));
 
 		var heard = await MessagesWhile(listener.DbRef, async () =>
 		{
@@ -723,7 +724,7 @@ public class ChannelMatchRecallTests
 		var channel = await CreateChannel(name, "Player", "Wizard");
 		var member = await CreateMortal("ChanParityMember");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(member.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(member.DbRef))).Expect<AnySharpObject>()));
 		await Run(member, $"@chat {name}=wizard business");
 
 		// A mortal cannot join a Wizard channel, so neither spelling may recall from it.
@@ -754,7 +755,7 @@ public class ChannelMatchRecallTests
 	{
 		var permissions = WebAppFactoryArg.Services.GetRequiredService<IPermissionService>();
 		var mortal = await CreateMortal("ChanSpoofPower");
-		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
+		var mortalObject = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>();
 
 		await Assert.That(await permissions.CanNoSpoof(mortalObject)).IsFalse()
 			.Because("the control: a plain mortal may not spoof");
@@ -762,7 +763,7 @@ public class ChannelMatchRecallTests
 		await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@power {mortal.DbRef}=Can_Spoof"));
 
-		var granted = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Known;
+		var granted = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>();
 		await Assert.That(await permissions.CanNoSpoof(granted)).IsTrue();
 	}
 
@@ -778,14 +779,14 @@ public class ChannelMatchRecallTests
 		var channel = await CreateChannel(name, "Player", "Object", "Open", "Hide_Ok");
 		var watcher = await CreateMortal("ChanWhoThingWatcher");
 		await Mediator.Send(new AddUserToChannelCommand(channel,
-			(await Mediator.Send(new GetObjectNodeQuery(watcher.DbRef))).Known));
+			(await Mediator.Send(new GetObjectNodeQuery(watcher.DbRef))).Expect<AnySharpObject>()));
 
 		var thingName = TestIsolationHelpers.GenerateUniqueName("ChanThing").Replace("_", string.Empty);
 		var created = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {thingName}"));
 		var thingRef = DBRef.TryParse(created.Message!.ToPlainText().Trim(), out var parsed)
 			? parsed!.Value
 			: throw new InvalidOperationException($"@create did not return a dbref: {created.Message}");
-		var thing = (await Mediator.Send(new GetObjectNodeQuery(thingRef))).Known;
+		var thing = (await Mediator.Send(new GetObjectNodeQuery(thingRef))).Expect<AnySharpObject>();
 		await Mediator.Send(new AddUserToChannelCommand(channel, thing));
 
 		var visible = string.Join("\n",

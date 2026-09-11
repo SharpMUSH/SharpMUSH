@@ -200,7 +200,6 @@ public class MailController(IMediator mediator, IEngineCommandInvoker commandInv
 	{
 		if (User.GetActingCharacter() is not { } character) return null;
 
-		var result = await mediator.Send(new GetObjectNodeQuery(character), ct);
-		return result.IsPlayer ? result.AsPlayer : null;
+		return await mediator.Send(new GetObjectNodeQuery(character), ct) is AnySharpObject and SharpPlayer player ? player : null;
 	}
 }

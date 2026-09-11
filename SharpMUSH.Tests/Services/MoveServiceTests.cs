@@ -19,7 +19,7 @@ public class MoveServiceTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
 	private async Task<AnySharpObject> Node(DBRef dbref)
-		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Known;
+		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 
 	private IMUSHCodeParser GodParser => WebAppFactoryArg.CommandParser;
 

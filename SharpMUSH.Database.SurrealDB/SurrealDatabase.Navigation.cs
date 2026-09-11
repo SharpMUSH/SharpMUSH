@@ -1,7 +1,6 @@
 using DotNext.Threading;
 using MarkupString;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -125,13 +124,18 @@ public partial class SurrealDatabase
 	}
 
 	public async ValueTask<AnySharpContainer> GetLocationAsync(AnySharpObject obj, int depth = 1, CancellationToken cancellationToken = default)
-		=> (await GetLocationAsync(obj.Object().DBRef, depth, cancellationToken)).WithoutNone();
+		=> await GetLocationAsync(obj.Object().DBRef, depth, cancellationToken) switch
+		{
+			AnySharpContainer location => location,
+			None => throw new InvalidOperationException($"No location found for {obj.Object().DBRef}")
+		};
 
 	public async ValueTask<AnySharpContainer> GetLocationAsync(string id, int depth = 1, CancellationToken cancellationToken = default)
-	{
-		var result = await GetLocationFromTypedIdAsync(id, depth, cancellationToken);
-		return result.WithoutNone();
-	}
+		=> await GetLocationFromTypedIdAsync(id, depth, cancellationToken) switch
+		{
+			AnySharpContainer location => location,
+			None => throw new InvalidOperationException($"No location found for {id}")
+		};
 
 	private async ValueTask<AnyOptionalSharpContainer> GetLocationFromTypedIdAsync(string typedId, int depth, CancellationToken ct)
 	{
@@ -161,14 +165,17 @@ public partial class SurrealDatabase
 		if (lastValidContainerKey == null) return new None();
 
 		var typed = await BuildTypedObjectFromKey(lastValidContainerKey.Value, ct);
-		if (typed.IsNone) return new None();
-
-		return typed.Match<AnyOptionalSharpContainer>(
-			player => player,
-			room => room,
-			_ => throw new Exception("Invalid Location: Exit"),
-			thing => thing,
-			_ => new None());
+		return typed switch
+		{
+			AnySharpObject found => found switch
+			{
+				SharpPlayer player => player,
+				SharpRoom room => room,
+				SharpExit => throw new Exception("Invalid Location: Exit"),
+				SharpThing thing => thing
+			},
+			None none => none
+		};
 	}
 
 	public async IAsyncEnumerable<AnySharpContent> GetContentsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -199,14 +206,17 @@ public partial class SurrealDatabase
 		foreach (var contentKey in records)
 		{
 			var typed = await BuildTypedObjectFromKey(contentKey, ct);
-			if (typed.IsNone) continue;
-
-			var content = typed.Match<AnySharpContent?>(
-				player => player,
-				_ => null, // Room cannot be content
-				exit => exit,
-				thing => thing,
-				_ => null);
+			AnySharpContent? content = typed switch
+			{
+				AnySharpObject found => found switch
+				{
+					SharpPlayer player => player,
+					SharpExit exit => exit,
+					SharpThing thing => thing,
+					SharpRoom => null // Room cannot be content
+				},
+				None => null
+			};
 
 			if (content != null)
 				yield return content;
@@ -215,11 +225,10 @@ public partial class SurrealDatabase
 
 	public async IAsyncEnumerable<SharpExit> GetExitsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var baseObject = await GetObjectNodeAsync(obj, cancellationToken);
-		if (baseObject.IsNone) yield break;
+		if (await GetObjectNodeAsync(obj, cancellationToken) is not AnySharpObject baseObject) yield break;
 
 		await foreach (var exit in GetExitsForKeyAsync(
-			ExtractTable(baseObject.Known.Id()!), ExtractKey(baseObject.Known.Id()!), cancellationToken))
+			ExtractTable(baseObject.Id()!), ExtractKey(baseObject.Id()!), cancellationToken))
 			yield return exit;
 	}
 
@@ -296,7 +305,7 @@ public partial class SurrealDatabase
 
 	public async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsAsync(DBRef obj, [EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
-		var self = (await GetObjectNodeAsync(obj, cancellationToken)).WithoutNone();
+		if (await GetObjectNodeAsync(obj, cancellationToken) is not AnySharpObject self) yield break;
 		var location = await self.Where();
 
 		yield return self;

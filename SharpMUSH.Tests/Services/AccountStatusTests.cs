@@ -1,6 +1,7 @@
 using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -103,7 +104,7 @@ public class AccountStatusTests
 
 		var result = await svc.SetAccountStatusAsync("node_accounts/1", status);
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await db.Received(1).UpdateAccountStatusAsync("node_accounts/1", status, Arg.Any<CancellationToken>());
 		await sessions.Received(1).RevokeAllForAccountAsync("node_accounts/1", Arg.Any<CancellationToken>());
 	}
@@ -117,7 +118,7 @@ public class AccountStatusTests
 
 		var result = await svc.SetAccountStatusAsync("node_accounts/1", AccountStatus.Active);
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await sessions.DidNotReceive().RevokeAllForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 
@@ -129,8 +130,7 @@ public class AccountStatusTests
 
 		var result = await svc.SetAccountStatusAsync("node_accounts/404", AccountStatus.Closed);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).IsEqualTo("Account not found.");
+		await Assert.That(result.Expect<Error<string>>().Value).IsEqualTo("Account not found.");
 	}
 
 	[Test]
@@ -155,7 +155,7 @@ public class AccountStatusTests
 
 		var result = await svc.SetAccountStatusAsync("node_accounts/9", AccountStatus.Closed);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Error<string>>();
 		await db.DidNotReceive().UpdateAccountStatusAsync(
 			Arg.Any<string>(), Arg.Any<AccountStatus>(), Arg.Any<CancellationToken>());
 	}
@@ -169,7 +169,7 @@ public class AccountStatusTests
 
 		var result = await svc.CreateAccountAsync(SystemAccount.Username.ToUpperInvariant(), null, "password123");
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Error<string>>();
 		await db.DidNotReceive().CreateAccountAsync(
 			Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}

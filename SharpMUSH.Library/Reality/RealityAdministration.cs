@@ -93,17 +93,17 @@ public sealed class RealityAdministration(RealityPolicy policy, IAdministrativeC
 		if (actor.ActiveCharacter is not { IsObjid: true } active || actor.Executor is not { } executor
 			|| !executor.Equals(active) || !await capabilities.AuthorizeAsync(actor, PortalPermission.RealityAdmin, ct))
 			throw new UnauthorizedAccessException("The active player requires reality.admin.");
-		var found = await objects.GetObjectNodeAsync(active, ct);
-		if (found is null || !found.IsPlayer || !found.AsPlayer.Object.DBRef.Equals(active))
+		if (await objects.GetObjectNodeAsync(active, ct) is not AnySharpObject found || found is not SharpPlayer player
+			|| !player.Object.DBRef.Equals(active))
 			throw new UnauthorizedAccessException("The active player no longer exists.");
-		return found.Known;
+		return found;
 	}
 
 	private async Task<AnySharpObject> ControlledTarget(CapabilityActor actor, DBRef reference, CancellationToken ct)
 	{
 		var executor = await Authorize(actor, ct);
-		var found = await objects.GetObjectNodeAsync(reference, ct);
-		if (found is null || found.IsNone || !found.Known.Object().DBRef.Matches(reference) || found.Known.Object().Id is null)
+		if (await objects.GetObjectNodeAsync(reference, ct) is not AnySharpObject found
+			|| !found.Object().DBRef.Matches(reference) || found.Object().Id is null)
 			throw new ArgumentException("The object no longer exists.");
 		// Controls is a legacy read-only interface. Give builtin reads the caller's
 		// cancellation and bound implementations that cannot accept an explicit token.
@@ -111,8 +111,8 @@ public sealed class RealityAdministration(RealityPolicy policy, IAdministrativeC
 		using var budget = ExecutionBudget.FromMilliseconds(0, cancellation.Token);
 		using var scope = budget.Enter();
 		budget.ThrowIfExceeded();
-		if (!await permissions.Controls(executor, found.Known).AsTask().WaitAsync(budget.Token))
+		if (!await permissions.Controls(executor, found).AsTask().WaitAsync(budget.Token))
 			throw new UnauthorizedAccessException("The active player must control the object.");
-		return found.Known;
+		return found;
 	}
 }

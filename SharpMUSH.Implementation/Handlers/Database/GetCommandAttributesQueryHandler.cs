@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Queries.Database;
@@ -35,10 +36,9 @@ public class GetCommandAttributesQueryHandler(
 		var current = sharpObj.Object();
 		for (var depth = 0; depth < maxDepth; depth++)
 		{
-			var parent = await current.Parent.WithCancellation(cancellationToken);
-			if (parent.IsNone) break;
+			if (await current.Parent.WithCancellation(cancellationToken) is not AnySharpObject parent) break;
 
-			var parentObj = parent.Known.Object();
+			var parentObj = parent.Object();
 			if (!visited.Add(parentObj.DBRef.Number)) break;
 
 			await CommandAttributeScanner.ScanAttributes(parentObj.AllAttributes.Value, commandAttributes, seenNames,

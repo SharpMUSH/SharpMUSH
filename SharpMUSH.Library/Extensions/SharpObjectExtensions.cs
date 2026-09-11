@@ -51,9 +51,8 @@ public static class SharpObjectExtensions
 		var currentZone = await obj.Zone.WithCancellation(ct);
 		var depth = 0;
 
-		while (!currentZone.IsNone && (maxDepth < 0 || depth < maxDepth))
+		while (currentZone is AnySharpObject zone && (maxDepth < 0 || depth < maxDepth))
 		{
-			var zone = currentZone.Known;
 			yield return zone;
 
 			currentZone = await zone.Object().Zone.WithCancellation(ct);
@@ -90,14 +89,12 @@ public static class SharpObjectExtensions
 		bool checkHierarchy = true,
 		CancellationToken ct = default)
 	{
-		var objectZone = await obj.Zone.WithCancellation(ct);
-
-		if (objectZone.IsNone)
+		if (await obj.Zone.WithCancellation(ct) is not AnySharpObject objectZone)
 		{
 			return false;
 		}
 
-		if (objectZone.Known.Object().DBRef.Number == targetZone.Object().DBRef.Number)
+		if (objectZone.Object().DBRef.Number == targetZone.Object().DBRef.Number)
 		{
 			return true;
 		}

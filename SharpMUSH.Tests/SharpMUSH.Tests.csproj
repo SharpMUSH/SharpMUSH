@@ -1,14 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <LangVersion>default</LangVersion>
 		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-		<NoWarn>TUnit0038;TUnitAssertions0002;ASPDEPR004;ASPDEPR008</NoWarn>
+		<!-- BL0016 wants every IJSRuntime call inside a try/catch. The only such calls here are NSubstitute
+		     arrangements (js.InvokeAsync<T>(Arg.Any...).Returns(...)), which configure a fake and call nothing. -->
+		<NoWarn>TUnit0038;TUnitAssertions0002;ASPDEPR004;ASPDEPR008;BL0016</NoWarn>
 		<!-- The Fixtures/ plugin projects are deliberately not in SharpMUSH.sln. When MSBuild builds a
 		     solution it unsets Configuration for ProjectReferences outside that solution, so those fixtures
 		     fell back to their own default (Debug) even under `dotnet build -c Release`, while the copy
@@ -123,7 +125,7 @@
        without colliding with any plugins/ folder an integration host scans. -->
   <Target Name="CopyCommandOnlyPlugin" AfterTargets="Build">
     <PropertyGroup>
-      <CommandOnlyPluginOutDir>$(MSBuildThisFileDirectory)Fixtures\CommandOnlyPlugin\bin\$(Configuration)\net10.0</CommandOnlyPluginOutDir>
+      <CommandOnlyPluginOutDir>$(MSBuildThisFileDirectory)Fixtures\CommandOnlyPlugin\bin\$(Configuration)\net11.0</CommandOnlyPluginOutDir>
       <CommandOnlyPluginTargetDir>$(OutDir)plugins-unit\command-only</CommandOnlyPluginTargetDir>
     </PropertyGroup>
     <ItemGroup>
@@ -140,7 +142,7 @@
        scans. -->
   <Target Name="CopyApplicationSourcePlugin" AfterTargets="Build">
     <PropertyGroup>
-      <ApplicationSourcePluginOutDir>$(MSBuildThisFileDirectory)Fixtures\ApplicationSourcePlugin\bin\$(Configuration)\net10.0</ApplicationSourcePluginOutDir>
+      <ApplicationSourcePluginOutDir>$(MSBuildThisFileDirectory)Fixtures\ApplicationSourcePlugin\bin\$(Configuration)\net11.0</ApplicationSourcePluginOutDir>
       <ApplicationSourcePluginTargetDir>$(OutDir)plugins-unit\app-source</ApplicationSourcePluginTargetDir>
     </PropertyGroup>
     <ItemGroup>
@@ -156,7 +158,7 @@
        HelloUiManagedPackageExampleTests can load it from disk through PluginLoaderService. -->
   <Target Name="CopyHelloUiPlugin" AfterTargets="Build">
     <PropertyGroup>
-      <HelloUiPluginOutDir>$(MSBuildThisFileDirectory)..\examples\plugins\hello-ui\bin\$(Configuration)\net10.0</HelloUiPluginOutDir>
+      <HelloUiPluginOutDir>$(MSBuildThisFileDirectory)..\examples\plugins\hello-ui\bin\$(Configuration)\net11.0</HelloUiPluginOutDir>
       <HelloUiPluginTargetDir>$(OutDir)plugins-unit\hello-ui</HelloUiPluginTargetDir>
     </PropertyGroup>
     <ItemGroup>

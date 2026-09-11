@@ -47,4 +47,22 @@ public class HaltFlagTests
 		await Cmd($"@set {dbref}=!HALT");
 		await Assert.That(await Eval($"u({dbref}/{attr})")).IsEqualTo("3");
 	}
+
+	/// <summary>
+	/// map() and the other list functions run their attribute through call_ufun, as u() does, so a halted
+	/// object's attribute comes back verbatim for every element.
+	/// </summary>
+	[Test]
+	public async ValueTask HaltedObjectsAttributeIsNotRunByMap()
+	{
+		var suffix = Guid.NewGuid().ToString("N")[..8];
+		var dbref = await Eval($"create(HaltMapObj{suffix})");
+		var attr = $"CODE{suffix}";
+		await Cmd($"&{attr} {dbref}=[add(%0,1)]");
+
+		await Assert.That(await Eval($"map({dbref}/{attr},1 2)")).IsEqualTo("2 3");
+
+		await Cmd($"@set {dbref}=HALT");
+		await Assert.That(await Eval($"map({dbref}/{attr},1 2)")).IsEqualTo("[add(%0,1)] [add(%0,1)]");
+	}
 }

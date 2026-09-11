@@ -4,7 +4,7 @@
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Services.DatabaseConversion
 @inject DatabaseConversionService ConversionService
-@inject IJSRuntime JSRuntime
+@inject ILogger<ImportDatabase> Logger
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Loc
 
@@ -227,17 +227,9 @@
 	private ConversionResult? _result;
 	private System.Threading.Timer? _progressTimer;
 
-	private async Task OnFileSelected(IBrowserFile? file)
-	{
-		_selectedFile = file;
-		StateHasChanged();
-	}
+	private void OnFileSelected(IBrowserFile? file) => _selectedFile = file;
 
-	private void ClearSelection()
-	{
-		_selectedFile = null;
-		StateHasChanged();
-	}
+	private void ClearSelection() => _selectedFile = null;
 
 	private async Task StartConversion()
 	{
@@ -245,7 +237,6 @@
 			return;
 
 		_isUploading = true;
-		StateHasChanged();
 
 		try
 		{
@@ -256,16 +247,14 @@
 			{
 				_isUploading = false;
 				_isConverting = true;
-				StateHasChanged();
 
 				_progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
 			}
 		}
 		catch (Exception ex)
 		{
-			await JSRuntime.InvokeVoidAsync("console.error", $"Error starting conversion: {ex.Message}");
+			Logger.LogError(ex, "Error starting conversion of {FileName}", _selectedFile.Name);
 			_isUploading = false;
-			StateHasChanged();
 		}
 	}
 
@@ -279,9 +268,10 @@
 			}
 			catch (Exception ex)
 			{
-				await JSRuntime.InvokeVoidAsync("console.error", $"Progress update failed: {ex.Message}");
+				Logger.LogError(ex, "Progress update failed");
 				_progressTimer?.Dispose();
 				_isConverting = false;
+				await InvokeAsync(StateHasChanged);
 			}
 		});
 	}
@@ -308,9 +298,10 @@
 		}
 		catch (Exception ex)
 		{
-			await JSRuntime.InvokeVoidAsync("console.error", $"Error updating progress: {ex.Message}");
+			Logger.LogError(ex, "Error updating conversion progress");
 			_progressTimer?.Dispose();
 			_isConverting = false;
+			await InvokeAsync(StateHasChanged);
 		}
 		finally
 		{
@@ -332,7 +323,7 @@
 		}
 		catch (Exception ex)
 		{
-			await JSRuntime.InvokeVoidAsync("console.error", $"Error cancelling conversion: {ex.Message}");
+			Logger.LogError(ex, "Error cancelling conversion");
 		}
 	}
 
@@ -345,7 +336,6 @@
 		_isConverting = false;
 		_isUploading = false;
 		_progressTimer?.Dispose();
-		StateHasChanged();
 	}
 
 	private string FormatTimeSpan(TimeSpan ts)

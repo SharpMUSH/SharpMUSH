@@ -20,7 +20,10 @@ public static class FolderMail
 		MString? arg0, MString? arg1, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator!);
-		var executorPlayer = executor.AsPlayer;
+		if (executor is not SharpPlayer executorPlayer)
+		{
+			throw new InvalidOperationException("@mail reads a player's own mail, and its dispatcher routes only players here.");
+		}
 
 		var folderInfo =
 			await objectDataService.GetExpandedDataAsync<ExpandedMailData>(executor.Object());
@@ -51,22 +54,26 @@ public static class FolderMail
 	private static async Task<MString> MoveToMailFolder(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, IMediator? mediator, INotifyService? notifyService, MString msgList,
 		AnySharpObject executor, MString folder, ExpandedMailData? folderInfo)
 	{
-		var maybeList = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, msgList, executor);
-		if (maybeList.IsError)
+		return await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, msgList, executor) switch
 		{
-			await notifyService!.Notify(executor, maybeList.AsError);
-			return MarkupText.Plain(maybeList.AsError);
-		}
+			IAsyncEnumerable<SharpMail> list => await MoveAsync(objectDataService, mediator!, notifyService!, list, executor,
+				folder, folderInfo),
+			Error<string> error => await MessageListHelper.RefuseAsync(notifyService!, executor, error.Value)
+		};
+	}
 
-		var list = maybeList.AsMailList;
+	private static async ValueTask<MString> MoveAsync(IExpandedObjectDataService objectDataService, IMediator mediator,
+		INotifyService notifyService, IAsyncEnumerable<SharpMail> list, AnySharpObject executor, MString folder,
+		ExpandedMailData? folderInfo)
+	{
 		var length = 0;
 		await foreach (var mail in list)
 		{
 			length++;
-			await mediator!.Send(new MoveMailFolderCommand(mail, folder.ToPlainText()));
+			await mediator.Send(new MoveMailFolderCommand(mail, folder.ToPlainText()));
 		}
 
-		await notifyService!.Notify(executor, $"MAIL: Moved {length} messages to {folder.ToPlainText()}.");
+		await notifyService.Notify(executor, $"MAIL: Moved {length} messages to {folder.ToPlainText()}.");
 		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(
 				Folders: [.. (folderInfo?.Folders ?? []).Append(folder.ToPlainText()).Distinct()]),

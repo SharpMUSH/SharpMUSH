@@ -2,6 +2,7 @@ using Mediator;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.InputSessions;
@@ -119,21 +120,20 @@ public sealed class InputSessionService : IInputSessionService
 		if (state.Handle is not { } handle || _connections.Get(handle) is not { Ref: { } character } connection
 			|| connection.State != IConnectionService.ConnectionState.LoggedIn || state.Executor is not { } executor
 			|| state.Enactor is not { } enactor || !TransportMatches(connection, state.ConnectionSessionId)) return InvalidContext;
-		var player = await _mediator.Send(new GetObjectNodeQuery(character), ExecutionBudget.CurrentToken);
-		var actor = await _mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken);
-		var source = await _mediator.Send(new GetObjectNodeQuery(target), ExecutionBudget.CurrentToken);
-		var cause = await _mediator.Send(new GetObjectNodeQuery(enactor), ExecutionBudget.CurrentToken);
-		if (player.IsNone || actor.IsNone || source.IsNone || cause.IsNone
-			|| player.Known().Object().DBRef != cause.Known().Object().DBRef) return InvalidContext;
-		if (await actor.Known().HasFlag("HALT", ExecutionBudget.CurrentToken) || !await CheckReadAsync(() => _permissions.Controls(actor.Known(), source.Known())))
+		if (await _mediator.Send(new GetObjectNodeQuery(character), ExecutionBudget.CurrentToken) is not AnySharpObject player
+			|| await _mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken) is not AnySharpObject actor
+			|| await _mediator.Send(new GetObjectNodeQuery(target), ExecutionBudget.CurrentToken) is not AnySharpObject source
+			|| await _mediator.Send(new GetObjectNodeQuery(enactor), ExecutionBudget.CurrentToken) is not AnySharpObject cause
+			|| player.Object().DBRef != cause.Object().DBRef) return InvalidContext;
+		if (await actor.HasFlag("HALT", ExecutionBudget.CurrentToken) || !await CheckReadAsync(() => _permissions.Controls(actor, source)))
 			return ErrorMessages.Returns.PermissionDenied;
-		if (!(await _attributes.GetAttributeAsync(actor.Known(), source.Known(), attribute, IAttributeService.AttributeMode.Read, false)).IsAttribute
-			|| !(await _attributes.GetAttributeAsync(actor.Known(), source.Known(), attribute, IAttributeService.AttributeMode.Execute, false)).IsAttribute)
+		if (!(await _attributes.GetAttributeAsync(actor, source, attribute, IAttributeService.AttributeMode.Read, false)).IsAttribute
+			|| !(await _attributes.GetAttributeAsync(actor, source, attribute, IAttributeService.AttributeMode.Execute, false)).IsAttribute)
 			return InvalidCallback;
-		var owner = (await actor.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
-		var callbackOwner = (await source.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+		var owner = (await actor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+		var callbackOwner = (await source.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
 		var session = new InputSession(Guid.NewGuid(), connection, connection.Metadata.GetValueOrDefault("SessionId"),
-			player.Known().Object().DBRef, actor.Known().Object().DBRef, owner, source.Known().Object().DBRef,
+			player.Object().DBRef, actor.Object().DBRef, owner, source.Object().DBRef,
 			callbackOwner, attribute, _time.GetUtcNow() + timeout);
 		if (!session.Character.IsObjid || !session.Executor.IsObjid || !session.CallbackTarget.IsObjid
 			|| !session.Owner.IsObjid || !session.CallbackOwner.IsObjid) return InvalidContext;
@@ -180,8 +180,8 @@ public sealed class InputSessionService : IInputSessionService
 	{
 		if (!TransportMatches(session.Connection, parser.CurrentState.ConnectionSessionId)
 			|| parser.CurrentState.Executor is not { } executor) return false;
-		var actor = await _mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken);
-		return !actor.IsNone && (actor.Known().Object().DBRef == session.Executor || actor.Known().Object().DBRef == session.Character);
+		return await _mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken) is AnySharpObject actor
+			&& (actor.Object().DBRef == session.Executor || actor.Object().DBRef == session.Character);
 	}
 
 	public async ValueTask<string?> PromptAsync(IMUSHCodeParser parser, MString prompt)
@@ -314,17 +314,16 @@ public sealed class InputSessionService : IInputSessionService
 	{
 		if (!IsCurrent(session, timeout)) return null;
 		ExecutionBudget.Current?.ThrowIfExceeded();
-		var actor = await _mediator.Send(new GetObjectNodeQuery(session.Executor), ExecutionBudget.CurrentToken);
-		var target = await _mediator.Send(new GetObjectNodeQuery(session.CallbackTarget), ExecutionBudget.CurrentToken);
-		var character = await _mediator.Send(new GetObjectNodeQuery(session.Character), ExecutionBudget.CurrentToken);
-		if (actor.IsNone || target.IsNone || character.IsNone
-			|| await actor.Known().HasFlag("HALT", ExecutionBudget.CurrentToken)
-			|| (await actor.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != session.Owner
-			|| (await target.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != session.CallbackOwner
-			|| !await CheckReadAsync(() => _permissions.Controls(actor.Known(), target.Known()))) return await Revoke(session);
-		var readable = await _attributes.GetAttributeAsync(actor.Known(), target.Known(), session.CallbackAttribute, IAttributeService.AttributeMode.Read, false);
-		var executable = await _attributes.GetAttributeAsync(actor.Known(), target.Known(), session.CallbackAttribute, IAttributeService.AttributeMode.Execute, false);
-		if (!readable.IsAttribute || !executable.IsAttribute) return await Revoke(session);
+		if (await _mediator.Send(new GetObjectNodeQuery(session.Executor), ExecutionBudget.CurrentToken) is not AnySharpObject actor
+			|| await _mediator.Send(new GetObjectNodeQuery(session.CallbackTarget), ExecutionBudget.CurrentToken) is not AnySharpObject target
+			|| await _mediator.Send(new GetObjectNodeQuery(session.Character), ExecutionBudget.CurrentToken) is None
+			|| await actor.HasFlag("HALT", ExecutionBudget.CurrentToken)
+			|| (await actor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != session.Owner
+			|| (await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != session.CallbackOwner
+			|| !await CheckReadAsync(() => _permissions.Controls(actor, target))) return await Revoke(session);
+		var readable = await _attributes.GetAttributeAsync(actor, target, session.CallbackAttribute, IAttributeService.AttributeMode.Read, false);
+		var executable = await _attributes.GetAttributeAsync(actor, target, session.CallbackAttribute, IAttributeService.AttributeMode.Execute, false);
+		if (readable is not SharpAttribute[] || executable is not SharpAttribute[] callback) return await Revoke(session);
 		if (!IsCurrent(session, timeout)) return null;
 		ExecutionBudget.Current?.ThrowIfExceeded();
 		if (input.Length > MaxInputCodeUnits)
@@ -346,7 +345,7 @@ public sealed class InputSessionService : IInputSessionService
 				["0"] = new(input), ["1"] = new(timeout ? "timeout" : "input")
 			}
 		};
-		return await parser.FromState(state).CommandListParse(executable.AsAttribute.Last().Value);
+		return await parser.FromState(state).CommandListParse(callback.Last().Value);
 	}
 
 	private async ValueTask<CallState?> Revoke(InputSession session)

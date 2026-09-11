@@ -19,7 +19,7 @@ public class AmbientIdentityHelperTests
 	{
 		var factory = new TestObjectFactory();
 		var actor = factory.CreatePlayer(40, "actor");
-		var target = factory.CreateThing(41, "target", owner: actor.AsPlayer);
+		var target = factory.CreateThing(41, "target", owner: actor.Expect<SharpPlayer>());
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var release = new CancellationTokenSource();
 		async Task<T> Block<T>(CancellationToken token)

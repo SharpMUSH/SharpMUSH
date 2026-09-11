@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Plugins.Scene.Models;
 using SharpMUSH.Plugins.Scene.Storage;
@@ -16,33 +15,33 @@ namespace SharpMUSH.Tests.ScenePlugin;
 internal abstract class SceneServiceStub : ISceneService
 {
 	public virtual Task<Scene> CreateSceneAsync(string roomDbref, string ownerDbref, string title = "") => throw new NotSupportedException();
-	public virtual Task<OneOf<Scene, NotFound>> GetSceneAsync(string sceneId) => throw new NotSupportedException();
-	public virtual Task<OneOf<Scene, NotFound>> SetSceneMetaAsync(string sceneId, string key, string value) => throw new NotSupportedException();
+	public virtual Task<Found<Scene>> GetSceneAsync(string sceneId) => throw new NotSupportedException();
+	public virtual Task<Found<Scene>> SetSceneMetaAsync(string sceneId, string key, string value) => throw new NotSupportedException();
 	public virtual Task<IReadOnlyList<Scene>> ListScenesAsync(string filter, string? viewerDbref = null, long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50) => throw new NotSupportedException();
-	public virtual Task<OneOf<Scene, NotFound>> GetActiveSceneInRoomAsync(string roomDbref) => throw new NotSupportedException();
-	public virtual Task<OneOf<ScenePose, NotFound, Error<string>>> AddPoseAsync(string sceneId, string authorDbref, string showAs, string originDbref, string source, IReadOnlyList<string> tags, string content) => throw new NotSupportedException();
-	public virtual Task<OneOf<ScenePose, NotFound>> GetPoseAsync(string poseId) => throw new NotSupportedException();
-	public virtual Task<OneOf<IReadOnlyList<ScenePose>, NotFound>> GetPosesAsync(string sceneId, string? authorDbref = null, int? count = null) => throw new NotSupportedException();
-	public virtual Task<OneOf<ScenePose, NotFound>> SetPoseMetaAsync(string poseId, string key, string value) => throw new NotSupportedException();
-	public virtual Task<OneOf<ScenePose, NotFound>> EditPoseAsync(string poseId, string editorDbref, string content) => throw new NotSupportedException();
-	public virtual Task<OneOf<ScenePose, NotFound, Error<string>>> UndoPoseAsync(string poseId) => throw new NotSupportedException();
-	public virtual Task<OneOf<ScenePose, NotFound, Error<string>>> RedoPoseAsync(string poseId) => throw new NotSupportedException();
-	public virtual Task<OneOf<ScenePose, NotFound, Error<string>>> MovePoseAsync(string poseId, string afterPoseId) => throw new NotSupportedException();
-	public virtual Task<OneOf<ScenePose, NotFound>> DeletePoseAsync(string poseId) => throw new NotSupportedException();
-	public virtual Task<OneOf<IReadOnlyList<ScenePoseEdit>, NotFound>> GetPoseEditsAsync(string poseId) => throw new NotSupportedException();
-	public virtual Task<OneOf<SceneMember, NotFound>> AddMemberAsync(string sceneId, string playerDbref, string role) => throw new NotSupportedException();
-	public virtual Task<OneOf<None, NotFound>> RemoveMemberAsync(string sceneId, string playerDbref) => throw new NotSupportedException();
-	public virtual Task<OneOf<IReadOnlyList<SceneMember>, NotFound>> GetMembersAsync(string sceneId, string? role = null) => throw new NotSupportedException();
-	public virtual Task<OneOf<SceneMember, NotFound>> GetMemberAsync(string sceneId, string playerDbref) => throw new NotSupportedException();
-	public virtual Task<OneOf<None, NotFound>> SetFocusAsync(string playerDbref, string? sceneId = null) => throw new NotSupportedException();
-	public virtual Task<OneOf<Scene, NotFound>> GetCurrentSceneAsync(string playerDbref) => throw new NotSupportedException();
-	public virtual Task<OneOf<SceneMember, NotFound>> SetShowAsAsync(string sceneId, string playerDbref, string showAs) => throw new NotSupportedException();
+	public virtual Task<Found<Scene>> GetActiveSceneInRoomAsync(string roomDbref) => throw new NotSupportedException();
+	public virtual Task<FoundResult<ScenePose>> AddPoseAsync(string sceneId, string authorDbref, string showAs, string originDbref, string source, IReadOnlyList<string> tags, string content) => throw new NotSupportedException();
+	public virtual Task<Found<ScenePose>> GetPoseAsync(string poseId) => throw new NotSupportedException();
+	public virtual Task<Found<IReadOnlyList<ScenePose>>> GetPosesAsync(string sceneId, string? authorDbref = null, int? count = null) => throw new NotSupportedException();
+	public virtual Task<Found<ScenePose>> SetPoseMetaAsync(string poseId, string key, string value) => throw new NotSupportedException();
+	public virtual Task<Found<ScenePose>> EditPoseAsync(string poseId, string editorDbref, string content) => throw new NotSupportedException();
+	public virtual Task<FoundResult<ScenePose>> UndoPoseAsync(string poseId) => throw new NotSupportedException();
+	public virtual Task<FoundResult<ScenePose>> RedoPoseAsync(string poseId) => throw new NotSupportedException();
+	public virtual Task<FoundResult<ScenePose>> MovePoseAsync(string poseId, string afterPoseId) => throw new NotSupportedException();
+	public virtual Task<Found<ScenePose>> DeletePoseAsync(string poseId) => throw new NotSupportedException();
+	public virtual Task<Found<IReadOnlyList<ScenePoseEdit>>> GetPoseEditsAsync(string poseId) => throw new NotSupportedException();
+	public virtual Task<Found<SceneMember>> AddMemberAsync(string sceneId, string playerDbref, string role) => throw new NotSupportedException();
+	public virtual Task<Found<None>> RemoveMemberAsync(string sceneId, string playerDbref) => throw new NotSupportedException();
+	public virtual Task<Found<IReadOnlyList<SceneMember>>> GetMembersAsync(string sceneId, string? role = null) => throw new NotSupportedException();
+	public virtual Task<Found<SceneMember>> GetMemberAsync(string sceneId, string playerDbref) => throw new NotSupportedException();
+	public virtual Task<Found<None>> SetFocusAsync(string playerDbref, string? sceneId = null) => throw new NotSupportedException();
+	public virtual Task<Found<Scene>> GetCurrentSceneAsync(string playerDbref) => throw new NotSupportedException();
+	public virtual Task<Found<SceneMember>> SetShowAsAsync(string sceneId, string playerDbref, string showAs) => throw new NotSupportedException();
 	public virtual Task<ScenePlot> UpsertPlotAsync(string? plotId, string title, string description, string ownerDbref) => throw new NotSupportedException();
-	public virtual Task<OneOf<ScenePlot, NotFound>> GetPlotAsync(string plotId) => throw new NotSupportedException();
-	public virtual Task<OneOf<None, NotFound>> LinkSceneToPlotAsync(string plotId, string sceneId) => throw new NotSupportedException();
-	public virtual Task<OneOf<None, NotFound>> UnlinkSceneFromPlotAsync(string plotId, string sceneId) => throw new NotSupportedException();
-	public virtual Task<OneOf<IReadOnlyList<string>, NotFound>> GetTagsAsync(string sceneId) => throw new NotSupportedException();
-	public virtual Task<OneOf<IReadOnlyList<string>, NotFound>> GetCastAsync(string sceneId) => throw new NotSupportedException();
+	public virtual Task<Found<ScenePlot>> GetPlotAsync(string plotId) => throw new NotSupportedException();
+	public virtual Task<Found<None>> LinkSceneToPlotAsync(string plotId, string sceneId) => throw new NotSupportedException();
+	public virtual Task<Found<None>> UnlinkSceneFromPlotAsync(string plotId, string sceneId) => throw new NotSupportedException();
+	public virtual Task<Found<IReadOnlyList<string>>> GetTagsAsync(string sceneId) => throw new NotSupportedException();
+	public virtual Task<Found<IReadOnlyList<string>>> GetCastAsync(string sceneId) => throw new NotSupportedException();
 }
 
 /// <summary>
@@ -62,12 +61,12 @@ internal sealed class FixedSceneService(params Scene[] scenes) : SceneServiceStu
 
 	public List<string> SceneLookups { get; } = [];
 
-	public override Task<OneOf<Scene, NotFound>> GetSceneAsync(string sceneId)
+	public override Task<Found<Scene>> GetSceneAsync(string sceneId)
 	{
 		SceneLookups.Add(sceneId);
 
-		return Task.FromResult(scenes.FirstOrDefault(s => s.Id == sceneId) is { } scene
-			? OneOf<Scene, NotFound>.FromT0(scene)
+		return Task.FromResult<Found<Scene>>(scenes.FirstOrDefault(s => s.Id == sceneId) is { } scene
+			? scene
 			: new NotFound());
 	}
 
@@ -75,7 +74,7 @@ internal sealed class FixedSceneService(params Scene[] scenes) : SceneServiceStu
 		long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50) =>
 		Task.FromResult<IReadOnlyList<Scene>>(scenes);
 
-	public override Task<OneOf<SceneMember, NotFound>> GetMemberAsync(string sceneId, string playerDbref)
+	public override Task<Found<SceneMember>> GetMemberAsync(string sceneId, string playerDbref)
 	{
 		MemberLookups.Add(playerDbref);
 
@@ -86,9 +85,8 @@ internal sealed class FixedSceneService(params Scene[] scenes) : SceneServiceStu
 			&& DBRef.TryParse(playerDbref, out var actual)
 			&& expected!.Value.SameObjectAs(actual!.Value);
 
-		return Task.FromResult(matches
-			? OneOf<SceneMember, NotFound>.FromT0(
-				new SceneMember(sceneId, MemberDbref, "God", "participant", string.Empty, true, 3))
+		return Task.FromResult<Found<SceneMember>>(matches
+			? new SceneMember(sceneId, MemberDbref, "God", "participant", string.Empty, true, 3)
 			: new NotFound());
 	}
 }

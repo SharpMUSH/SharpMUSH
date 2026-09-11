@@ -75,8 +75,8 @@ public sealed class SceneHub(ISceneService sceneService, ILogger<SceneHub> logge
 		var id = RequireSceneId(sceneId);
 		var character = RequireCharacter();
 
-		var result = await sceneService.GetSceneAsync(id);
-		if (result.IsT1 || !await SceneVisibility.CanSeeAsync(sceneService, result.AsT0, character))
+		if (await sceneService.GetSceneAsync(id) is not Contracts.Scene scene
+			|| !await SceneVisibility.CanSeeAsync(sceneService, scene, character))
 		{
 			logger.LogWarning(
 				"[SceneHub] Connection {ConnectionId} (char:{Character}) was refused scene group {Group}: " +

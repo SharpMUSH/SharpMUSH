@@ -28,7 +28,7 @@ public class StagingDatabaseTests
 	{
 		var db = Database;
 
-		var playerOne = (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		await Assert.That(playerOne.Object.Name).IsEqualTo("God");
 
 		var liveMarker = $"LIVE_MARKER_{Guid.NewGuid():N}";
@@ -48,11 +48,11 @@ public class StagingDatabaseTests
 	{
 		var db = Database;
 
-		var playerOne = (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 		await using var staging = await db.CreateStagingAsync();
 
-		var stagingPlayerOne = (await staging.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var stagingPlayerOne = (await staging.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		await Assert.That(stagingPlayerOne.Object.Name).IsEqualTo("God");
 
 		var stagingMarker = $"STAGING_ONLY_{Guid.NewGuid():N}";
@@ -80,7 +80,7 @@ public class StagingDatabaseTests
 	{
 		var db = Database;
 
-		var playerOne = (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 		var liveOnlyMarker = $"BEFORE_PROMOTE_{Guid.NewGuid():N}";
 		await db.SetAttributeAsync(new DBRef(1), ["BEFORE_PROMOTE"], MarkupText.Plain(liveOnlyMarker), playerOne);
@@ -89,7 +89,7 @@ public class StagingDatabaseTests
 		await Assert.That(prePromoteAttr.Last().Value.ToString()).IsEqualTo(liveOnlyMarker);
 
 		await using var staging = await db.CreateStagingAsync();
-		var stagingPlayer = (await staging.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var stagingPlayer = (await staging.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 		var stagingMarker = $"AFTER_PROMOTE_{Guid.NewGuid():N}";
 		await staging.SetAttributeAsync(new DBRef(1), ["PROMOTED_MARKER"], MarkupText.Plain(stagingMarker), stagingPlayer);
@@ -118,16 +118,16 @@ public class StagingDatabaseTests
 	{
 		var db = Database;
 
-		var roomZero = (await db.GetObjectNodeAsync(new DBRef(0))).AsRoom;
+		var roomZero = (await db.GetObjectNodeAsync(new DBRef(0))).Expect<SharpRoom>();
 		await Assert.That(roomZero.Object.Name).IsEqualTo("Room Zero");
 
-		var playerOne = (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		await Assert.That(playerOne.Object.Name).IsEqualTo("God");
 
 		var newRoomRef = await db.CreateRoomAsync("PostPromoteRoom", playerOne);
 		await Assert.That(newRoomRef.Number).IsGreaterThan(0);
 
-		var newRoom = (await db.GetObjectNodeAsync(newRoomRef)).AsRoom;
+		var newRoom = (await db.GetObjectNodeAsync(newRoomRef)).Expect<SharpRoom>();
 		await Assert.That(newRoom.Object.Name).IsEqualTo("PostPromoteRoom");
 
 		var continuityMarker = $"CONTINUITY_{Guid.NewGuid():N}";
@@ -144,7 +144,7 @@ public class StagingDatabaseTests
 
 		await using var staging2 = await db.CreateStagingAsync();
 
-		var stagingPlayer = (await staging2.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var stagingPlayer = (await staging2.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		await Assert.That(stagingPlayer.Object.Name).IsEqualTo("God");
 
 		await staging2.AbortAsync();
@@ -156,13 +156,13 @@ public class StagingDatabaseTests
 	{
 		var db = Database;
 
-		var playerOne = (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 		var liveMarker = $"ABORT_TEST_{Guid.NewGuid():N}";
 		await db.SetAttributeAsync(new DBRef(1), ["ABORT_TEST_MARKER"], MarkupText.Plain(liveMarker), playerOne);
 
 		await using var staging = await db.CreateStagingAsync();
-		var stagingPlayer = (await staging.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var stagingPlayer = (await staging.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		await staging.SetAttributeAsync(new DBRef(1), ["ABORT_TEST_MARKER"], MarkupText.Plain("SHOULD_NOT_APPEAR"), stagingPlayer);
 
 		await staging.AbortAsync();
@@ -179,19 +179,19 @@ public class StagingDatabaseTests
 
 		await using var staging = await db.CreateStagingAsync();
 
-		var stagingPlayer = (await staging.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var stagingPlayer = (await staging.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 		var roomRef = await staging.CreateRoomAsync("StagingTestRoom", stagingPlayer);
 		await Assert.That(roomRef.Number).IsGreaterThan(0);
 
-		var room = (await staging.GetObjectNodeAsync(roomRef)).AsRoom;
+		var room = (await staging.GetObjectNodeAsync(roomRef)).Expect<SharpRoom>();
 		await Assert.That(room.Object.Name).IsEqualTo("StagingTestRoom");
 
-		var roomZero = (await staging.GetObjectNodeAsync(new DBRef(0))).AsRoom;
+		var roomZero = (await staging.GetObjectNodeAsync(new DBRef(0))).Expect<SharpRoom>();
 		var thingRef = await staging.CreateThingAsync("StagingWidget", roomZero, stagingPlayer, roomZero);
 		await Assert.That(thingRef.Number).IsGreaterThan(0);
 
-		var thing = (await staging.GetObjectNodeAsync(thingRef)).AsThing;
+		var thing = (await staging.GetObjectNodeAsync(thingRef)).Expect<SharpThing>();
 		await Assert.That(thing.Object.Name).IsEqualTo("StagingWidget");
 
 		await staging.AbortAsync();
@@ -205,7 +205,7 @@ public class StagingDatabaseTests
 
 		{
 			await using var staging = await db.CreateStagingAsync();
-			var stagingPlayer = (await staging.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+			var stagingPlayer = (await staging.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 			await staging.SetAttributeAsync(new DBRef(1), ["DISPOSE_TEST"], MarkupText.Plain("dispose_test_value"), stagingPlayer);
 		}
 

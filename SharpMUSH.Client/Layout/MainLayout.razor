@@ -174,7 +174,11 @@
         Terminal.ConnectionStateChanged += OnCharacterConnectionChanged;
         UpdateConfigRouteState();
         await AccountAuth.InitAsync();
+        // Read once, after hydration, to decide how this tab bootstraps its session. The cascaded task
+        // could still be the one issued before InitAsync finished.
+#pragma warning disable BL0013
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+#pragma warning restore BL0013
 
         // DebugAuthStateProvider sets AuthenticationType = "Server authentication".
         // In debug mode, always refresh the session so server restarts (which clear the
@@ -378,7 +382,7 @@
             // error, cold server, stale proxy, etc.) — leave _needsSetup as-is so the next
             // navigation retries instead of latching a false negative that would hide the wizard
             // for the rest of the session.
-            if ((await AccountAuth.NeedsSetupAsync()).TryPickT0(out var needsSetup, out _))
+            if (await AccountAuth.NeedsSetupAsync() is bool needsSetup)
                 _needsSetup = needsSetup;
 
             if (_needsSetup == true)
@@ -401,7 +405,17 @@
     // breakpoint decision in JS so it always matches the 760px CSS breakpoint.
     private async Task ToggleSidebar()
     {
-        var narrow = await JS.InvokeAsync<bool>("sharpmushLayout.isTouchChrome");
+        bool narrow;
+        try
+        {
+            narrow = await JS.InvokeAsync<bool>("sharpmushLayout.isTouchChrome");
+        }
+        catch (JSException)
+        {
+            // Unmeasurable viewport: the desktop rail toggle is the one that cannot strand the user.
+            narrow = false;
+        }
+
         if (narrow)
             _mobileNavOpen = !_mobileNavOpen;
         else

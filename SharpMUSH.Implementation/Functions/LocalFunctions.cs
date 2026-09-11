@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -32,8 +34,8 @@ public partial class Functions
 			return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
 		}
 		if (entry is null) return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
-		var target = await Mediator.Send(new GetObjectNodeQuery(entry.Object), ExecutionBudget.CurrentToken);
-		if (target.IsNone || (await target.Known.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != owner)
+		if (await Mediator.Send(new GetObjectNodeQuery(entry.Object), ExecutionBudget.CurrentToken) is not AnySharpObject target
+				|| (await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != owner)
 		{
 			registry.InvalidateLocalDefinitions(entry.Object);
 			return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
@@ -41,11 +43,10 @@ public partial class Functions
 		var argumentCount = parser.CurrentState.Arguments.Count - 1;
 		if (argumentCount < entry.MinArgs) return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, name, entry.MinArgs, argumentCount));
 		if (argumentCount > entry.MaxArgs) return new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, name, entry.MaxArgs, argumentCount));
-		var readable = await AttributeService.GetAttributeAsync(caller, target.Known, entry.Attribute, IAttributeService.AttributeMode.Read, false);
-		if (readable.IsError) return new CallState(readable.AsError.Value);
-		if (readable.IsNone) return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+		var readable = await AttributeService.GetAttributeAsync(caller, target, entry.Attribute, IAttributeService.AttributeMode.Read, false);
+		if (readable is not SharpAttribute[]) return readable.AsCallState;
 		var arguments = Enumerable.Range(0, argumentCount).ToDictionary(i => i.ToString(), i => parser.CurrentState.Arguments[(i + 1).ToString()]);
-		return await AttributeService.EvaluateAttributeFunctionResultAsync(parser, caller, target.Known,
+		return await AttributeService.EvaluateAttributeFunctionResultAsync(parser, caller, target,
 			entry.Attribute, arguments, evalParent: false);
 	}
 }

@@ -34,9 +34,9 @@ public class NoSpoofEmitRealityTests
 		var executor = objects.CreatePlayer(71, "executor", room);
 		var enactor = objects.CreatePlayer(72, "enactor", room);
 		var recipient = objects.CreatePlayer(73, "recipient", room);
-		executor.AsPlayer.Id = "executor";
-		enactor.AsPlayer.Id = "enactor";
-		recipient.AsPlayer.Id = "recipient";
+		executor.Expect<SharpPlayer>().Id = "executor";
+		enactor.Expect<SharpPlayer>().Id = "enactor";
+		recipient.Expect<SharpPlayer>().Id = "recipient";
 		executor.Object().Powers = new(() => new[] { new SharpPower
 		{
 			Name = "Can_Spoof", Alias = "", System = true,
@@ -53,7 +53,7 @@ public class NoSpoofEmitRealityTests
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
 			new AnyOptionalSharpObject(call.Arg<GetObjectNodeQuery>().DBRef.Equals(executor.Object().DBRef)
-				? executor.AsPlayer : enactor.AsPlayer));
+				? executor : enactor));
 		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
 			.Returns(new[] { recipient.MinusRoom() }.ToAsyncEnumerable());
 		var notifications = Substitute.For<INotifyService>();

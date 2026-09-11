@@ -47,7 +47,7 @@ public class SpeechCommandParityTests
 		await God($"@tel #{_listener.DbRef.Number}={room}");
 
 		_speakerName = (await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(_speaker.DbRef)))
-			.Known.Object().Name;
+			.Expect<AnySharpObject>().Object().Name;
 	}
 
 	// Both fields are still null when PutTwoPlayersInOneRoom throws part-way through (a failed @dig or
@@ -278,7 +278,7 @@ public class SpeechCommandParityTests
 	}
 
 	private async Task<string> NameOf(DBRef who)
-		=> (await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(who))).Known.Object().Name;
+		=> (await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(who))).Expect<AnySharpObject>().Object().Name;
 
 	private async Task<(string[] Mine, string[] Theirs)> Speak(string command)
 	{

@@ -178,7 +178,11 @@
     protected override async Task OnInitializedAsync()
     {
         await AccountAuth.InitAsync();
+        // Read once, after hydration, to decide how this tab bootstraps its session. The cascaded task
+        // could still be the one issued before InitAsync finished.
+#pragma warning disable BL0013
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+#pragma warning restore BL0013
 
         // In debug mode, ensure the account session for #1 is established — unless the user
         // explicitly logged out in this tab (mirrors MainLayout's guard; without it, visiting
@@ -188,16 +192,20 @@
 
         _isDebugAuth = !AccountAuth.ExplicitlyLoggedOut && authState.User.Identity?.IsAuthenticated == true && !AccountAuth.IsLoggedIn;
         if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
+        {
+            // Past this method's first await, so ComponentBase does not render the loading state on
+            // its own here, as it does when the refresh button calls RefreshCharactersAsync.
+            _loadingChars = true;
+            StateHasChanged();
             await RefreshCharactersAsync();
+        }
     }
 
     private async Task RefreshCharactersAsync()
     {
         _loadingChars = true;
-        StateHasChanged();
         await AccountAuth.GetCharactersAsync();
         _loadingChars = false;
-        StateHasChanged();
     }
 
     private async Task SaveUsernameAsync()
@@ -209,7 +217,6 @@
         _editingUsername = !success;
         if (success) _profileSuccess = Loc["AuthUsernameUpdated"];
         else _profileError = error;
-        StateHasChanged();
     }
 
     private async Task SavePasswordAsync()
@@ -223,7 +230,6 @@
         _newPassword = string.Empty;
         if (success) _profileSuccess = Loc["AuthPasswordUpdated"];
         else _profileError = error;
-        StateHasChanged();
     }
 
     private async Task UnlinkCharacterAsync(int dbrefNumber)

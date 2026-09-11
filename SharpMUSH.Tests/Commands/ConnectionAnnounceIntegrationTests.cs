@@ -67,7 +67,7 @@ public class ConnectionAnnounceIntegrationTests
 
 	/// <summary>Resolves an object already known to exist (created earlier in the same test) to its <see cref="AnySharpObject"/>.</summary>
 	private async ValueTask<AnySharpObject> KnownObjectAsync(DBRef dbRef)
-		=> (await Mediator.Send(new GetObjectNodeQuery(dbRef))).Known;
+		=> (await Mediator.Send(new GetObjectNodeQuery(dbRef))).Expect<AnySharpObject>();
 
 	/// <summary>Everything <paramref name="who"/> was notified of since <paramref name="before"/>, in order.</summary>
 	private string[] MessagesTo(DBRef who, int before)
@@ -81,8 +81,7 @@ public class ConnectionAnnounceIntegrationTests
 	private async ValueTask<(string Name, SharpChannel Channel)> CreateChannelAsync(string prefix, params string[] privs)
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName(prefix);
-		var ownerNode = await Database.GetObjectNodeAsync(WebAppFactoryArg.ExecutorDBRef);
-		var owner = ownerNode.AsPlayer;
+		var owner = (await Database.GetObjectNodeAsync(WebAppFactoryArg.ExecutorDBRef)).Expect<SharpPlayer>();
 
 		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(name), privs, owner));
 		var channel = await Mediator.Send(new GetChannelQuery(name))
@@ -585,10 +584,9 @@ public class ConnectionAnnounceIntegrationTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("QUIT"));
 		await TestHelpers.WaitForAttribute(AttributeService, playerObj, "LASTLOGOUT");
 
-		var firstLogout = await AttributeService.GetAttributeAsync(
-			playerObj, playerObj, "LASTLOGOUT", IAttributeService.AttributeMode.Read, false);
-		await Assert.That(firstLogout.IsAttribute).IsTrue();
-		var firstValue = firstLogout.AsAttribute.Last().Value.ToPlainText();
+		var firstLogout = (await AttributeService.GetAttributeAsync(
+			playerObj, playerObj, "LASTLOGOUT", IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
+		var firstValue = firstLogout.Last().Value.ToPlainText();
 
 		// Confirms the exact mechanism of the bug: now that LASTLOGOUT exists and carries the seeded
 		// wizard flag, a mortal player's OWN authority is denied from overwriting it. This is exactly
@@ -596,7 +594,7 @@ public class ConnectionAnnounceIntegrationTests
 		// not IAttributeService.SetAttributeAsync) for the real disconnect flow to keep working.
 		var mortalAttempt = await AttributeService.SetAttributeAsync(
 			playerObj, playerObj, "LASTLOGOUT", MarkupText.Plain("mortal write should be denied"));
-		await Assert.That(mortalAttempt.IsT1).IsTrue()
+		await Assert.That(mortalAttempt.Value).IsTypeOf<Error<string>>()
 			.Because("LASTLOGOUT is seeded wizard-flagged, so once it exists a mortal player's own " +
 				"authority must be denied - proving AnnounceDisconnectAsync would silently freeze " +
 				"LASTLOGOUT after one update if it wrote through this same path");
@@ -615,9 +613,9 @@ public class ConnectionAnnounceIntegrationTests
 		{
 			var attr = await AttributeService.GetAttributeAsync(
 				playerObj, playerObj, "LASTLOGOUT", IAttributeService.AttributeMode.Read, false);
-			if (attr.IsAttribute)
+			if (attr is SharpAttribute[] chain)
 			{
-				secondValue = attr.AsAttribute.Last().Value.ToPlainText();
+				secondValue = chain.Last().Value.ToPlainText();
 				if (secondValue != firstValue) break;
 			}
 			await Task.Delay(100);

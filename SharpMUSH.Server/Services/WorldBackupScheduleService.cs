@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Services;
@@ -46,12 +48,17 @@ public sealed class WorldBackupScheduleService(
 		{
 			while (await timer.WaitForNextTickAsync(stoppingToken))
 			{
-				var result = await backups.CreateAsync(stoppingToken);
-				result.Switch(
-					backup => logger.LogInformation("Scheduled world backup {Name} written", backup.Name),
+				switch (await backups.CreateAsync(stoppingToken))
+				{
+					case WorldBackup backup:
+						logger.LogInformation("Scheduled world backup {Name} written", backup.Name);
+						break;
 					// Reported and dropped: one failed copy must not end the schedule, because the next
 					// interval may well succeed and a stopped schedule is silent.
-					error => logger.LogError("Scheduled world backup failed: {Error}", error.Value));
+					case Error<string> error:
+						logger.LogError("Scheduled world backup failed: {Error}", error.Value);
+						break;
+				}
 			}
 		}
 		catch (OperationCanceledException)

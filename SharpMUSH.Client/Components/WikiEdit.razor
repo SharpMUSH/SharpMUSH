@@ -2,6 +2,7 @@
 @using SharpMUSH.Client.Resources
 @using SharpMUSH.Library.Services
 @inject IJSRuntime JsRuntime
+@inject ILogger<WikiEdit> Logger
 @inject WikiMarkdigPipeline Pipeline
 @inject IStringLocalizer<SharedResource> Loc
 
@@ -217,10 +218,9 @@
         // so it is canonicalised and rejected here rather than being sent for the server to refuse.
         // NormalizeLocale's Error case is silently ignored rather than surfaced, because the field is
         // validated as-you-type by the same rule and an empty selection is the visible feedback.
-        var normalized = WikiHelpers.NormalizeLocale(_customLocale);
-        if (normalized.IsT1) return;
+        if (WikiHelpers.NormalizeLocale(_customLocale) is not string normalized) return;
         _customLocale = string.Empty;
-        await SelectLocaleAsync(normalized.AsT0);
+        await SelectLocaleAsync(normalized);
     }
 
     private string LocaleLabel(string locale) =>
@@ -249,7 +249,17 @@
         : ByteDelta.ToString(System.Globalization.CultureInfo.CurrentCulture);
 
     private async Task Wrap(string before, string after, bool block)
-        => await JsRuntime.InvokeVoidAsync("SharpMUSH.Wiki.wrap", _taId, before, after, block);
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("SharpMUSH.Wiki.wrap", _taId, before, after, block);
+        }
+        catch (JSException ex)
+        {
+            // The toolbar is a convenience over typing the markdown by hand, which still works.
+            Logger.LogWarning(ex, "Wiki editor toolbar could not wrap the selection");
+        }
+    }
 
     private void AddTag()
     {

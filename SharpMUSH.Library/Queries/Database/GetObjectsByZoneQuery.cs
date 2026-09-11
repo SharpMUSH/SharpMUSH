@@ -1,5 +1,4 @@
 using Mediator;
-using OneOf;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -10,10 +9,16 @@ namespace SharpMUSH.Library.Queries.Database;
 /// <summary>
 /// Query to get all objects that belong to a specific zone.
 /// </summary>
-public record GetObjectsByZoneQuery(OneOf<DBRef, AnySharpObject> Zone)
+public record GetObjectsByZoneQuery(DbRefOrObject Zone)
 	: IStreamQuery<SharpObject>, ICacheable
 {
-	public string CacheKey => $"zone-objects:{Zone.Match(x => x, y => y.Object().DBRef)}";
+	public string CacheKey => $"zone-objects:{ZoneRef}";
 	public string[] CacheTags => [Definitions.CacheTags.ZoneObjects];
 	public CacheEntryProfile Profile => CacheEntryProfile.Scan;
+
+	private DBRef ZoneRef => Zone switch
+	{
+		DBRef dbref => dbref,
+		AnySharpObject zone => zone.Object().DBRef
+	};
 }

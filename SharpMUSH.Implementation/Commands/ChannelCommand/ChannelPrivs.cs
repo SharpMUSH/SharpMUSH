@@ -5,6 +5,8 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -19,16 +21,18 @@ public static class ChannelPrivs
 			return new CallState(ErrorMessages.Returns.GuestsCannotModifyChannels);
 		}
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, true);
-
-		if (maybeChannel.IsError)
+		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			NotifyService, executor, channelName, true) switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await SetPrivilegesAsync(PermissionService, Mediator, NotifyService, executor, channel,
+				privs),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
-
+	private static async ValueTask<CallState> SetPrivilegesAsync(IPermissionService PermissionService,
+		IMediator Mediator, INotifyService NotifyService, AnySharpObject executor, SharpChannel channel, MString privs)
+	{
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
 			await NotifyService.Notify(executor, "You are not the owner of the channel.", executor);
@@ -39,23 +43,35 @@ public static class ChannelPrivs
 		// TO the channel's current privileges, not substituted for them, and `!priv` removes one. This used
 		// to replace the whole set, so `@channel/privs Pub=quiet` silently dropped the Player bit and left
 		// a channel nobody was the right type for.
-		var privilegeList = ChannelHelper.StringToChannelPrivileges(privs, channel.Privs);
-		if (privilegeList.IsError)
+		return ChannelHelper.StringToChannelPrivileges(privs, channel.Privs) switch
 		{
-			await NotifyService.Notify(executor,
-				$"CHAT: Invalid channel privileges(s):  {string.Join(",", privilegeList.AsError.Value)}", executor);
-			return new CallState(ErrorMessages.Returns.InvalidPrivileges);
-		}
+			string[] privileges => await ApplyPrivilegesAsync(PermissionService, Mediator, NotifyService, executor,
+				channel, privileges),
+			Error<string[]> invalid => await RefuseInvalidPrivilegesAsync(NotifyService, executor, invalid.Value)
+		};
+	}
 
+	private static async ValueTask<CallState> RefuseInvalidPrivilegesAsync(INotifyService NotifyService,
+		AnySharpObject executor, string[] invalid)
+	{
+		await NotifyService.Notify(executor,
+			$"CHAT: Invalid channel privileges(s):  {string.Join(",", invalid)}", executor);
+		return new CallState(ErrorMessages.Returns.InvalidPrivileges);
+	}
+
+	private static async ValueTask<CallState> ApplyPrivilegesAsync(IPermissionService PermissionService,
+		IMediator Mediator, INotifyService NotifyService, AnySharpObject executor, SharpChannel channel,
+		string[] privileges)
+	{
 		// extchat.c:1832 — Chan_Can_Priv against the type being SET.
-		if (!await PermissionService.ChannelCanPriv(executor, privilegeList.AsPrivileges))
+		if (!await PermissionService.ChannelCanPriv(executor, privileges))
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatCannotMakeThatType, executor);
 			return new CallState(ErrorMessages.Returns.ChannelPermissionDenied);
 		}
 
 		// extchat.c:1836
-		if (privilegeList.AsPrivileges.HasPriv("Disabled"))
+		if (privileges.HasPriv("Disabled"))
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatChannelWillBeDisabled, executor);
 		}
@@ -63,7 +79,7 @@ public static class ChannelPrivs
 		await Mediator.Send(new UpdateChannelCommand(channel,
 			null,
 			null,
-			Privs: privilegeList.AsPrivileges,
+			Privs: privileges,
 			null,
 			null,
 			null,

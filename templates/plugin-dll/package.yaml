@@ -21,7 +21,7 @@ keywords: [plugin, dll, managed]
 binaries:
   # The plugin/server contract version your DLL was built against. The installer
   # refuses a package built for a newer contract than the target server provides.
-  min_server_version: ">=0.1"
+  min_server_version: ">=3.0"
   files:
     # file: = a FLAT name (no path separators, no '..'). Each deposits directly
     # into plugins/<id>/. sha256: = the 64-hex digest of the built bytes.

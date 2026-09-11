@@ -149,8 +149,8 @@ public class CacheEntryProfileTests
 					var t when t == typeof(string[]) => new[] { "x" },
 					var t when t == typeof(int) => 1,
 					var t when t == typeof(bool) => true,
-					var t when t == typeof(OneOf.OneOf<DBRef, AnySharpContainer>) => (object)(OneOf.OneOf<DBRef, AnySharpContainer>)new DBRef(2),
-					var t when t == typeof(OneOf.OneOf<DBRef, AnySharpObject>) => (object)(OneOf.OneOf<DBRef, AnySharpObject>)new DBRef(2),
+					var t when t == typeof(DbRefOrContainer) => (object)(DbRefOrContainer)new DBRef(2),
+					var t when t == typeof(DbRefOrObject) => (object)(DbRefOrObject)new DBRef(2),
 					var t => t.IsValueType ? Activator.CreateInstance(t) : null,
 				})
 				.ToArray();

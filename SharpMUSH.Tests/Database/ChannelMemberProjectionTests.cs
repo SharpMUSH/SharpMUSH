@@ -31,9 +31,9 @@ public class ChannelMemberProjectionTests
 	[NotInParallel]
 	public async Task EveryMemberArrivesWithItsOwnObjectAndItsOwnStatus()
 	{
-		var ownerNode = await Database.GetObjectNodeAsync(new DBRef(1));
-		var owner = ownerNode.AsPlayer;
-		var home = ownerNode.Known().AsContainer;
+		var ownerNode = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
+		var owner = ownerNode.Expect<SharpPlayer>();
+		var home = ownerNode.AsContainer;
 		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(ChannelName), ["Open"], owner));
 
 		var channel = await Mediator.Send(new GetChannelQuery(ChannelName));
@@ -44,9 +44,9 @@ public class ChannelMemberProjectionTests
 		foreach (var name in new[] { "ProjectionAlpha", "ProjectionBeta" })
 		{
 			var created = await Mediator.Send(new CreateThingCommand(name, home, owner, home));
-			var thing = await Mediator.Send(new GetObjectNodeQuery(created));
-			extras.Add(thing.Known());
-			await Mediator.Send(new AddUserToChannelCommand(channel!, thing.Known()));
+			var thing = (await Mediator.Send(new GetObjectNodeQuery(created))).Expect<AnySharpObject>();
+			extras.Add(thing);
+			await Mediator.Send(new AddUserToChannelCommand(channel!, thing));
 		}
 
 		// One of them gagged, so a status swapped between members would show.

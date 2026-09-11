@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -31,14 +32,13 @@ public class PackageRegistryTests
 		await Registry.UpsertInstalledPackageAsync(SamplePackage("reg-beta"));
 
 		var fetched = await Registry.GetInstalledPackageAsync("reg-alpha");
-		await Assert.That(fetched.IsT0).IsTrue();
-		await Assert.That(fetched.AsT0).IsEqualTo(SamplePackage("reg-alpha"));
+		await Assert.That(fetched.Value).IsEqualTo(SamplePackage("reg-alpha"));
 
 		// Upsert replaces in full.
 		await Registry.UpsertInstalledPackageAsync(SamplePackage("reg-alpha", "1.3.0", revision: 2));
-		var upgraded = await Registry.GetInstalledPackageAsync("reg-alpha");
-		await Assert.That(upgraded.AsT0.Version).IsEqualTo("1.3.0");
-		await Assert.That(upgraded.AsT0.CurrentRevision).IsEqualTo(2);
+		var upgraded = (await Registry.GetInstalledPackageAsync("reg-alpha")).Expect<InstalledPackageRecord>();
+		await Assert.That(upgraded.Version).IsEqualTo("1.3.0");
+		await Assert.That(upgraded.CurrentRevision).IsEqualTo(2);
 
 		var all = await Registry.GetInstalledPackagesAsync();
 		await Assert.That(all.Count(p => p.Id.StartsWith("reg-"))).IsEqualTo(2);
@@ -46,7 +46,7 @@ public class PackageRegistryTests
 		await Registry.RemoveInstalledPackageAsync("reg-alpha");
 		await Registry.RemoveInstalledPackageAsync("reg-beta");
 		var missing = await Registry.GetInstalledPackageAsync("reg-alpha");
-		await Assert.That(missing.IsT1).IsTrue();
+		await Assert.That(missing.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test, NotInParallel]
@@ -177,22 +177,21 @@ public class PackageRegistryTests
 			"Volund Suite", "https://example.com/volund/mush-suite", PackageRemoteTrust.Community, null));
 
 		var fetched = await Registry.GetPackageRemoteAsync("SharpMUSH Official");
-		await Assert.That(fetched.IsT0).IsTrue();
-		await Assert.That(fetched.AsT0.Trust).IsEqualTo(PackageRemoteTrust.Official);
+		await Assert.That(fetched.Expect<PackageRemoteRecord>().Trust).IsEqualTo(PackageRemoteTrust.Official);
 
 		// Upsert replaces (trust downgrade scenario).
 		await Registry.UpsertPackageRemoteAsync(new PackageRemoteRecord(
 			"Volund Suite", "https://example.com/volund/mush-suite", PackageRemoteTrust.Unknown, "stable"));
-		var downgraded = await Registry.GetPackageRemoteAsync("Volund Suite");
-		await Assert.That(downgraded.AsT0.Trust).IsEqualTo(PackageRemoteTrust.Unknown);
-		await Assert.That(downgraded.AsT0.Branch).IsEqualTo("stable");
+		var downgraded = (await Registry.GetPackageRemoteAsync("Volund Suite")).Expect<PackageRemoteRecord>();
+		await Assert.That(downgraded.Trust).IsEqualTo(PackageRemoteTrust.Unknown);
+		await Assert.That(downgraded.Branch).IsEqualTo("stable");
 
 		var all = await Registry.GetPackageRemotesAsync();
 		await Assert.That(all.Count).IsEqualTo(2);
 
 		await Registry.RemovePackageRemoteAsync("SharpMUSH Official");
 		await Registry.RemovePackageRemoteAsync("Volund Suite");
-		await Assert.That((await Registry.GetPackageRemoteAsync("Volund Suite")).IsT1).IsTrue();
+		await Assert.That((await Registry.GetPackageRemoteAsync("Volund Suite")).Value).IsTypeOf<NotFound>();
 	}
 
 	[Test, NotInParallel]
@@ -214,11 +213,10 @@ public class PackageRegistryTests
 		await Assert.That(revisions[0].Revision).IsEqualTo(5);
 		await Assert.That(revisions[0].Kind).IsEqualTo(PackageRevisionKind.Upgrade);
 
-		var second = await Registry.GetPackageRevisionAsync("rev-pkg", 2);
-		await Assert.That(second.IsT0).IsTrue();
-		await Assert.That(second.AsT0.Version).IsEqualTo("1.2.0");
-		await Assert.That(second.AsT0.ConfigureAnswersJson).Contains("bbs_storage");
-		await Assert.That(second.AsT0.AppliedAt).IsEqualTo(Anchor.AddMinutes(2));
+		var second = (await Registry.GetPackageRevisionAsync("rev-pkg", 2)).Expect<PackageRevisionRecord>();
+		await Assert.That(second.Version).IsEqualTo("1.2.0");
+		await Assert.That(second.ConfigureAnswersJson).Contains("bbs_storage");
+		await Assert.That(second.AppliedAt).IsEqualTo(Anchor.AddMinutes(2));
 
 		await Registry.PrunePackageRevisionsAsync("rev-pkg", keep: 2);
 		var pruned = await Registry.GetPackageRevisionsAsync("rev-pkg");

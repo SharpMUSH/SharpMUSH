@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -43,8 +42,8 @@ public class AttributeTreePennTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO` {objDbRef}=baz"));
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO`",
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var attr = await AttributeService.GetAttributeAsync(obj, obj, "FOO`",
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(attr.IsAttribute).IsFalse()
@@ -62,8 +61,8 @@ public class AttributeTreePennTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&`BAR {objDbRef}=baz"));
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "`BAR",
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var attr = await AttributeService.GetAttributeAsync(obj, obj, "`BAR",
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(attr.IsAttribute).IsFalse()
@@ -81,8 +80,8 @@ public class AttributeTreePennTests
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO``BAR {objDbRef}=baz"));
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO``BAR",
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var attr = await AttributeService.GetAttributeAsync(obj, obj, "FOO``BAR",
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(attr.IsAttribute).IsFalse()
@@ -97,12 +96,12 @@ public class AttributeTreePennTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeAuto");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var objName = obj.Known.Object().Name;
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var objName = obj.Object().Name;
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 
-		var leafAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO`BAR",
+		var leafAttr = await AttributeService.GetAttributeAsync(obj, obj, "FOO`BAR",
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(leafAttr.IsAttribute).IsTrue()
@@ -134,14 +133,14 @@ public class AttributeTreePennTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeClrBr");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 
 		// Try to clear the branch FOO while it still has children (no '=' = explicit clear)
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO {objDbRef}"));
 
-		var branchAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO",
+		var branchAttr = await AttributeService.GetAttributeAsync(obj, obj, "FOO",
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(branchAttr.IsAttribute).IsTrue()
@@ -156,14 +155,14 @@ public class AttributeTreePennTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeClrLf");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 
 		// Clear the leaf FOO`BAR (no '=' = explicit clear)
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}"));
 
-		var leafAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO`BAR",
+		var leafAttr = await AttributeService.GetAttributeAsync(obj, obj, "FOO`BAR",
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(leafAttr.IsAttribute).IsFalse()
@@ -178,7 +177,7 @@ public class AttributeTreePennTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "TreeClrSeq");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO`BAR {objDbRef}=baz"));
 
@@ -188,7 +187,7 @@ public class AttributeTreePennTests
 		// Now clear the branch (no '=' = explicit clear)
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&FOO {objDbRef}"));
 
-		var branchAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "FOO",
+		var branchAttr = await AttributeService.GetAttributeAsync(obj, obj, "FOO",
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(branchAttr.IsAttribute).IsFalse()

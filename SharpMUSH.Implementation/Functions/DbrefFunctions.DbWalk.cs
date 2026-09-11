@@ -184,7 +184,7 @@ public partial class Functions
 		var located = await LocateService.LocateAndNotifyIfInvalidWithCallState(
 			parser, executor, executor, name, LocateFlags.All);
 
-		return (executor, enactor, located.IsError ? null : located.AsSharpObject);
+		return (executor, enactor, located is AnySharpObject found ? found : null);
 	}
 
 	private string Arg(IMUSHCodeParser parser, string index)

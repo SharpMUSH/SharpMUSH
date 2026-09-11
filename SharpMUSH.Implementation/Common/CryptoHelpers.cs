@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -18,7 +17,7 @@ public static class CryptoHelpers
 		{"SHA512", SHA512.HashData}
 	};
 
-	public static OneOf<string, None> Digest(string type, MString str)
+	public static DigestResult Digest(string type, MString str)
 	{
 		if (!hashAlgorithms.TryGetValue(type, out var hash))
 		{

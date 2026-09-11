@@ -273,7 +273,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.RoomDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				await Complain(checker, target, "room-desc", "Room has no description.");
 				hasWarnings = true;
@@ -292,15 +292,16 @@ public class WarningService(
 
 		if (warnings.HasFlag(WarningType.ExitUnlinked))
 		{
-			if (target.IsExit)
+			if (target is SharpExit linkedExit)
 			{
 				// One read of the destination edge serves both checks below.
 				int? destinationNumber = null;
 				var destinationReadable = true;
 				try
 				{
-					var destination = await target.AsExit.Home.WithCancellation(CancellationToken.None);
-					destinationNumber = destination.IsNone ? null : destination.WithoutNone().Object().DBRef.Number;
+					destinationNumber = await linkedExit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
+						? destination.Object().DBRef.Number
+						: null;
 				}
 				catch
 				{
@@ -345,7 +346,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.ExitDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				await Complain(checker, target, "exit-desc", "Exit has no description.");
 				hasWarnings = true;
@@ -358,14 +359,14 @@ public class WarningService(
 			var osuccess = await attributeService.GetAttributeAsync(checker, target, "OSUCCESS", IAttributeService.AttributeMode.Read, false);
 			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
 
-			if (success.IsT1 || osuccess.IsT1 || odrop.IsT1)
+			if (success.IsNone || osuccess.IsNone || odrop.IsNone)
 			{
 				await Complain(checker, target, "exit-msgs", "Exit is missing messages (SUCCESS, OSUCCESS, or ODROP).");
 				hasWarnings = true;
 			}
 
 			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
-			if (failure.IsT1)
+			if (failure.IsNone)
 			{
 				await Complain(checker, target, "exit-msgs", "Exit is missing FAILURE message.");
 				hasWarnings = true;
@@ -373,18 +374,16 @@ public class WarningService(
 		}
 
 		// These require topology analysis
-		if (target.IsExit && (warnings.HasFlag(WarningType.ExitOneway) || warnings.HasFlag(WarningType.ExitMultiple)))
+		if (target is SharpExit exit && (warnings.HasFlag(WarningType.ExitOneway) || warnings.HasFlag(WarningType.ExitMultiple)))
 		{
-			var exit = target.AsExit;
 			try
 			{
 				var maybeDestination = await exit.Home.WithCancellation(CancellationToken.None);
 				var source = await exit.Location.WithCancellation(CancellationToken.None);
 
 				// An unlinked exit has no topology to analyse: it is neither one-way nor duplicated.
-				if (!maybeDestination.IsNone)
+				if (maybeDestination is AnySharpContainer destination)
 				{
-					var destination = maybeDestination.WithoutNone();
 					var destObj = destination.Object();
 					var sourceObj = source.Object();
 
@@ -397,8 +396,8 @@ public class WarningService(
 						{
 							try
 							{
-								var returnDest = await returnExit.Home.WithCancellation(CancellationToken.None);
-								if (!returnDest.IsNone && returnDest.WithoutNone().Object().DBRef.Equals(sourceObj.DBRef))
+								if (await returnExit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer returnDest
+										&& returnDest.Object().DBRef.Equals(sourceObj.DBRef))
 								{
 									returnExitCount++;
 								}
@@ -444,12 +443,11 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.ThingDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				// Skip things in player inventory as per PennMUSH behavior
-				if (target.IsThing)
+				if (target is SharpThing thing)
 				{
-					var thing = target.AsThing;
 					var location = await thing.Location.WithCancellation(CancellationToken.None);
 					var isInInventory = location.IsPlayer;
 
@@ -474,14 +472,14 @@ public class WarningService(
 			var drop = await attributeService.GetAttributeAsync(checker, target, "DROP", IAttributeService.AttributeMode.Read, false);
 			var odrop = await attributeService.GetAttributeAsync(checker, target, "ODROP", IAttributeService.AttributeMode.Read, false);
 
-			if (success.IsT1 || osuccess.IsT1 || drop.IsT1 || odrop.IsT1)
+			if (success.IsNone || osuccess.IsNone || drop.IsNone || odrop.IsNone)
 			{
 				await Complain(checker, target, "thing-msgs", "Thing is missing messages (SUCCESS, OSUCCESS, DROP, or ODROP).");
 				hasWarnings = true;
 			}
 
 			var failure = await attributeService.GetAttributeAsync(checker, target, "FAILURE", IAttributeService.AttributeMode.Read, false);
-			if (failure.IsT1)
+			if (failure.IsNone)
 			{
 				await Complain(checker, target, "thing-msgs", "Thing is missing FAILURE message.");
 				hasWarnings = true;
@@ -501,7 +499,7 @@ public class WarningService(
 		if (warnings.HasFlag(WarningType.PlayerDesc))
 		{
 			var desc = await attributeService.GetAttributeAsync(checker, target, "DESCRIBE", IAttributeService.AttributeMode.Read, false);
-			if (desc.IsT1)
+			if (desc.IsNone)
 			{
 				await Complain(checker, target, "my-desc", "Player is missing description.");
 				hasWarnings = true;

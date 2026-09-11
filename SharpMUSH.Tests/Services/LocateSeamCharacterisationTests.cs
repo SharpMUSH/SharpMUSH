@@ -1,7 +1,5 @@
 using Mediator;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
 using System.Collections.Concurrent;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Configuration;
@@ -88,15 +86,15 @@ public class LocateSeamCharacterisationTests
 				Arg.Any<CancellationToken>())
 			.Returns(_ => contents.Select(x => x.AsContent).ToAsyncEnumerable());
 
-	private static int Number(GetContentsQuery q) => q.DBRef.Match(d => d, c => c.Object().DBRef).Number;
+	private static int Number(GetContentsQuery q) => (q.DBRef switch { DBRef d => d, AnySharpContainer c => c.Object().DBRef }).Number;
 
 	private static DBRef Found(AnyOptionalSharpObjectOrError result) =>
-		result.WithoutError().WithoutNone().Object().DBRef;
+		result.Expect<AnySharpObject>().Object().DBRef;
 
 	private async Task AssertNotified(string message) =>
 		await _notifyService.Received(1).Notify(
 			Arg.Any<AnySharpObject>(),
-			Arg.Is<OneOf<MString, string>>(w => w.IsT1 && w.AsT1 == message),
+			Arg.Is<SharpMessage>(w => TestHelpers.MessageIsString(w, message)),
 			Arg.Any<AnySharpObject>(),
 			Arg.Any<INotifyService.NotificationType>());
 

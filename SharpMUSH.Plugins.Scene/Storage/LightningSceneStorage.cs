@@ -1,12 +1,11 @@
 using System.Buffers.Binary;
 using System.Text.Json;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SceneModel = SharpMUSH.Plugins.Scene.Models.Scene;
-using OkNone = OneOf.Types.None;
+using OkNone = SharpMUSH.Library.DiscriminatedUnions.None;
 
 namespace SharpMUSH.Plugins.Scene.Storage;
 
@@ -259,12 +258,12 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return ProjectScene(tx, record);
 		}).AsTask();
 
-	public Task<OneOf<SceneModel, NotFound>> GetSceneAsync(string sceneId)
-		=> Task.FromResult(_accessor.Read<OneOf<SceneModel, NotFound>>(tx
+	public Task<Found<SceneModel>> GetSceneAsync(string sceneId)
+		=> Task.FromResult(_accessor.Read<Found<SceneModel>>(tx
 			=> ReadScene(tx, BareId(sceneId)) is { } scene ? ProjectScene(tx, scene) : new NotFound()));
 
-	public Task<OneOf<SceneModel, NotFound>> SetSceneMetaAsync(string sceneId, string key, string value)
-		=> _accessor.WriteAsync<OneOf<SceneModel, NotFound>>(tx =>
+	public Task<Found<SceneModel>> SetSceneMetaAsync(string sceneId, string key, string value)
+		=> _accessor.WriteAsync<Found<SceneModel>>(tx =>
 		{
 			var id = BareId(sceneId);
 			if (ReadScene(tx, id) is not { } scene)
@@ -366,8 +365,8 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return matches.Take(Math.Max(0, count)).Select(s => ProjectScene(tx, s)).ToList();
 		}));
 
-	public Task<OneOf<SceneModel, NotFound>> GetActiveSceneInRoomAsync(string roomDbref)
-		=> Task.FromResult(_accessor.Read<OneOf<SceneModel, NotFound>>(tx =>
+	public Task<Found<SceneModel>> GetActiveSceneInRoomAsync(string roomDbref)
+		=> Task.FromResult(_accessor.Read<Found<SceneModel>>(tx =>
 		{
 			if (DbrefNumber(roomDbref) is not { } room)
 			{
@@ -386,9 +385,9 @@ public sealed class LightningSceneStorage : ISceneStorage
 
 	#region ISceneService — poses
 
-	public Task<OneOf<ScenePose, NotFound, Error<string>>> AddPoseAsync(string sceneId, string authorDbref,
+	public Task<FoundResult<ScenePose>> AddPoseAsync(string sceneId, string authorDbref,
 		string showAs, string originDbref, string source, IReadOnlyList<string> tags, string content)
-		=> _accessor.WriteAsync<OneOf<ScenePose, NotFound, Error<string>>>(tx =>
+		=> _accessor.WriteAsync<FoundResult<ScenePose>>(tx =>
 		{
 			var id = BareId(sceneId);
 			if (ReadScene(tx, id) is not { } scene)
@@ -431,13 +430,13 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return ProjectPose(tx, pose);
 		}).AsTask();
 
-	public Task<OneOf<ScenePose, NotFound>> GetPoseAsync(string poseId)
-		=> Task.FromResult(_accessor.Read<OneOf<ScenePose, NotFound>>(tx
+	public Task<Found<ScenePose>> GetPoseAsync(string poseId)
+		=> Task.FromResult(_accessor.Read<Found<ScenePose>>(tx
 			=> ReadPose(tx, BareId(poseId)) is { } found ? ProjectPose(tx, found.Pose) : new NotFound()));
 
-	public Task<OneOf<IReadOnlyList<ScenePose>, NotFound>> GetPosesAsync(string sceneId,
+	public Task<Found<IReadOnlyList<ScenePose>>> GetPosesAsync(string sceneId,
 		string? authorDbref = null, int? count = null)
-		=> Task.FromResult(_accessor.Read<OneOf<IReadOnlyList<ScenePose>, NotFound>>(tx =>
+		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<ScenePose>>>(tx =>
 		{
 			var id = BareId(sceneId);
 			if (ReadScene(tx, id) is null)
@@ -459,11 +458,11 @@ public sealed class LightningSceneStorage : ISceneStorage
 				poses.RemoveRange(0, poses.Count - limit);
 			}
 
-			return OneOf<IReadOnlyList<ScenePose>, NotFound>.FromT0(poses);
+			return poses;
 		}));
 
-	public Task<OneOf<ScenePose, NotFound>> SetPoseMetaAsync(string poseId, string key, string value)
-		=> _accessor.WriteAsync<OneOf<ScenePose, NotFound>>(tx =>
+	public Task<Found<ScenePose>> SetPoseMetaAsync(string poseId, string key, string value)
+		=> _accessor.WriteAsync<Found<ScenePose>>(tx =>
 		{
 			if (ReadPose(tx, BareId(poseId)) is not { } found)
 			{
@@ -506,8 +505,8 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return ProjectPose(tx, pose);
 		}).AsTask();
 
-	public Task<OneOf<ScenePose, NotFound>> EditPoseAsync(string poseId, string editorDbref, string content)
-		=> _accessor.WriteAsync<OneOf<ScenePose, NotFound>>(tx =>
+	public Task<Found<ScenePose>> EditPoseAsync(string poseId, string editorDbref, string content)
+		=> _accessor.WriteAsync<Found<ScenePose>>(tx =>
 		{
 			if (ReadPose(tx, BareId(poseId)) is not { } found)
 			{
@@ -533,14 +532,14 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return ProjectPose(tx, pose);
 		}).AsTask();
 
-	public Task<OneOf<ScenePose, NotFound, Error<string>>> UndoPoseAsync(string poseId)
+	public Task<FoundResult<ScenePose>> UndoPoseAsync(string poseId)
 		=> MoveEditPointerAsync(poseId, -1, "Already at the oldest version.");
 
-	public Task<OneOf<ScenePose, NotFound, Error<string>>> RedoPoseAsync(string poseId)
+	public Task<FoundResult<ScenePose>> RedoPoseAsync(string poseId)
 		=> MoveEditPointerAsync(poseId, +1, "Already at the newest version.");
 
-	public Task<OneOf<ScenePose, NotFound, Error<string>>> MovePoseAsync(string poseId, string afterPoseId)
-		=> _accessor.WriteAsync<OneOf<ScenePose, NotFound, Error<string>>>(tx =>
+	public Task<FoundResult<ScenePose>> MovePoseAsync(string poseId, string afterPoseId)
+		=> _accessor.WriteAsync<FoundResult<ScenePose>>(tx =>
 		{
 			var id = BareId(poseId);
 			if (ReadPose(tx, id) is not { } found)
@@ -605,8 +604,8 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return ProjectPose(tx, moved.Pose);
 		}).AsTask();
 
-	public Task<OneOf<ScenePose, NotFound>> DeletePoseAsync(string poseId)
-		=> _accessor.WriteAsync<OneOf<ScenePose, NotFound>>(tx =>
+	public Task<Found<ScenePose>> DeletePoseAsync(string poseId)
+		=> _accessor.WriteAsync<Found<ScenePose>>(tx =>
 		{
 			if (ReadPose(tx, BareId(poseId)) is not { } found)
 			{
@@ -628,8 +627,8 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return ProjectPose(tx, pose);
 		}).AsTask();
 
-	public Task<OneOf<IReadOnlyList<ScenePoseEdit>, NotFound>> GetPoseEditsAsync(string poseId)
-		=> Task.FromResult(_accessor.Read<OneOf<IReadOnlyList<ScenePoseEdit>, NotFound>>(tx =>
+	public Task<Found<IReadOnlyList<ScenePoseEdit>>> GetPoseEditsAsync(string poseId)
+		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<ScenePoseEdit>>>(tx =>
 		{
 			if (ReadPose(tx, BareId(poseId)) is not { } found)
 			{
@@ -637,35 +636,35 @@ public sealed class LightningSceneStorage : ISceneStorage
 			}
 
 			var edits = PoseEdits(tx, found.Pose.Id).Select(e => ProjectEdit(tx, e.Record)).ToList();
-			return OneOf<IReadOnlyList<ScenePoseEdit>, NotFound>.FromT0(edits);
+			return edits;
 		}));
 
-	public Task<OneOf<IReadOnlyList<string>, NotFound>> GetTagsAsync(string sceneId)
-		=> Task.FromResult(_accessor.Read<OneOf<IReadOnlyList<string>, NotFound>>(tx
+	public Task<Found<IReadOnlyList<string>>> GetTagsAsync(string sceneId)
+		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<string>>>(tx
 			=> LivePoses(tx, BareId(sceneId)) is not { } poses
 				? new NotFound()
-				: OneOf<IReadOnlyList<string>, NotFound>.FromT0(poses
+				: poses
 					.SelectMany(p => p.Tags)
 					.Where(t => !string.IsNullOrWhiteSpace(t))
 					.Distinct(StringComparer.Ordinal)
-					.ToList())));
+					.ToList()));
 
-	public Task<OneOf<IReadOnlyList<string>, NotFound>> GetCastAsync(string sceneId)
-		=> Task.FromResult(_accessor.Read<OneOf<IReadOnlyList<string>, NotFound>>(tx
+	public Task<Found<IReadOnlyList<string>>> GetCastAsync(string sceneId)
+		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<string>>>(tx
 			=> LivePoses(tx, BareId(sceneId)) is not { } poses
 				? new NotFound()
-				: OneOf<IReadOnlyList<string>, NotFound>.FromT0(poses
+				: poses
 					.Select(p => string.IsNullOrEmpty(p.ShowAsName) ? p.AuthorName : p.ShowAsName)
 					.Where(n => !string.IsNullOrWhiteSpace(n))
 					.Distinct(StringComparer.Ordinal)
-					.ToList())));
+					.ToList()));
 
 	#endregion
 
 	#region ISceneService — membership
 
-	public Task<OneOf<SceneMember, NotFound>> AddMemberAsync(string sceneId, string playerDbref, string role)
-		=> _accessor.WriteAsync<OneOf<SceneMember, NotFound>>(tx =>
+	public Task<Found<SceneMember>> AddMemberAsync(string sceneId, string playerDbref, string role)
+		=> _accessor.WriteAsync<Found<SceneMember>>(tx =>
 		{
 			var id = BareId(sceneId);
 			if (ReadScene(tx, id) is null || DbrefNumber(playerDbref) is not { } player)
@@ -705,8 +704,8 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return ProjectMember(tx, member);
 		}).AsTask();
 
-	public Task<OneOf<OkNone, NotFound>> RemoveMemberAsync(string sceneId, string playerDbref)
-		=> _accessor.WriteAsync<OneOf<OkNone, NotFound>>(tx =>
+	public Task<Found<OkNone>> RemoveMemberAsync(string sceneId, string playerDbref)
+		=> _accessor.WriteAsync<Found<OkNone>>(tx =>
 		{
 			var id = BareId(sceneId);
 			if (ReadScene(tx, id) is null)
@@ -723,8 +722,8 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return new OkNone();
 		}).AsTask();
 
-	public Task<OneOf<IReadOnlyList<SceneMember>, NotFound>> GetMembersAsync(string sceneId, string? role = null)
-		=> Task.FromResult(_accessor.Read<OneOf<IReadOnlyList<SceneMember>, NotFound>>(tx =>
+	public Task<Found<IReadOnlyList<SceneMember>>> GetMembersAsync(string sceneId, string? role = null)
+		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<SceneMember>>>(tx =>
 		{
 			var id = BareId(sceneId);
 			if (ReadScene(tx, id) is null)
@@ -736,11 +735,11 @@ public sealed class LightningSceneStorage : ISceneStorage
 				.Where(m => string.IsNullOrWhiteSpace(role) || string.Equals(m.Role, role, StringComparison.Ordinal))
 				.Select(m => ProjectMember(tx, m))
 				.ToList();
-			return OneOf<IReadOnlyList<SceneMember>, NotFound>.FromT0(members);
+			return members;
 		}));
 
-	public Task<OneOf<SceneMember, NotFound>> GetMemberAsync(string sceneId, string playerDbref)
-		=> Task.FromResult(_accessor.Read<OneOf<SceneMember, NotFound>>(tx =>
+	public Task<Found<SceneMember>> GetMemberAsync(string sceneId, string playerDbref)
+		=> Task.FromResult(_accessor.Read<Found<SceneMember>>(tx =>
 		{
 			var id = BareId(sceneId);
 			if (ReadScene(tx, id) is null || DbrefNumber(playerDbref) is not { } player)
@@ -753,8 +752,8 @@ public sealed class LightningSceneStorage : ISceneStorage
 				: new NotFound();
 		}));
 
-	public Task<OneOf<OkNone, NotFound>> SetFocusAsync(string playerDbref, string? sceneId = null)
-		=> _accessor.WriteAsync<OneOf<OkNone, NotFound>>(tx =>
+	public Task<Found<OkNone>> SetFocusAsync(string playerDbref, string? sceneId = null)
+		=> _accessor.WriteAsync<Found<OkNone>>(tx =>
 		{
 			if (DbrefNumber(playerDbref) is not { } player)
 			{
@@ -819,8 +818,8 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return new OkNone();
 		}).AsTask();
 
-	public Task<OneOf<SceneModel, NotFound>> GetCurrentSceneAsync(string playerDbref)
-		=> Task.FromResult(_accessor.Read<OneOf<SceneModel, NotFound>>(tx =>
+	public Task<Found<SceneModel>> GetCurrentSceneAsync(string playerDbref)
+		=> Task.FromResult(_accessor.Read<Found<SceneModel>>(tx =>
 		{
 			if (DbrefNumber(playerDbref) is not { } player)
 			{
@@ -840,8 +839,8 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return new NotFound();
 		}));
 
-	public Task<OneOf<SceneMember, NotFound>> SetShowAsAsync(string sceneId, string playerDbref, string showAs)
-		=> _accessor.WriteAsync<OneOf<SceneMember, NotFound>>(tx =>
+	public Task<Found<SceneMember>> SetShowAsAsync(string sceneId, string playerDbref, string showAs)
+		=> _accessor.WriteAsync<Found<SceneMember>>(tx =>
 		{
 			var id = BareId(sceneId);
 			if (ReadScene(tx, id) is null || DbrefNumber(playerDbref) is not { } player)
@@ -886,14 +885,14 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return ProjectPlot(tx, plot);
 		}).AsTask();
 
-	public Task<OneOf<ScenePlot, NotFound>> GetPlotAsync(string plotId)
-		=> Task.FromResult(_accessor.Read<OneOf<ScenePlot, NotFound>>(tx
+	public Task<Found<ScenePlot>> GetPlotAsync(string plotId)
+		=> Task.FromResult(_accessor.Read<Found<ScenePlot>>(tx
 			=> tx.TryGet(_plots, Keys.Str(BareId(plotId)), out var bytes)
 				? ProjectPlot(tx, Decode<ScenePlotRecord>(bytes))
 				: new NotFound()));
 
-	public Task<OneOf<OkNone, NotFound>> LinkSceneToPlotAsync(string plotId, string sceneId)
-		=> _accessor.WriteAsync<OneOf<OkNone, NotFound>>(tx =>
+	public Task<Found<OkNone>> LinkSceneToPlotAsync(string plotId, string sceneId)
+		=> _accessor.WriteAsync<Found<OkNone>>(tx =>
 		{
 			var plot = BareId(plotId);
 			var scene = BareId(sceneId);
@@ -906,8 +905,8 @@ public sealed class LightningSceneStorage : ISceneStorage
 			return new OkNone();
 		}).AsTask();
 
-	public Task<OneOf<OkNone, NotFound>> UnlinkSceneFromPlotAsync(string plotId, string sceneId)
-		=> _accessor.WriteAsync<OneOf<OkNone, NotFound>>(tx =>
+	public Task<Found<OkNone>> UnlinkSceneFromPlotAsync(string plotId, string sceneId)
+		=> _accessor.WriteAsync<Found<OkNone>>(tx =>
 		{
 			var plot = BareId(plotId);
 			var scene = BareId(sceneId);
@@ -1112,8 +1111,8 @@ public sealed class LightningSceneStorage : ISceneStorage
 		}));
 	}
 
-	private Task<OneOf<ScenePose, NotFound, Error<string>>> MoveEditPointerAsync(string poseId, int step, string atEnd)
-		=> _accessor.WriteAsync<OneOf<ScenePose, NotFound, Error<string>>>(tx =>
+	private Task<FoundResult<ScenePose>> MoveEditPointerAsync(string poseId, int step, string atEnd)
+		=> _accessor.WriteAsync<FoundResult<ScenePose>>(tx =>
 		{
 			if (ReadPose(tx, BareId(poseId)) is not { } found)
 			{

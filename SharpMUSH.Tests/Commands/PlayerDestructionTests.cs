@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Extensions;
@@ -46,10 +47,9 @@ public class PlayerDestructionTests
 	{
 		var playerDbRef = await CreateTestPlayerAsync("SelfOwnership");
 
-		var playerNode = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
-		await Assert.That(playerNode.IsNone).IsFalse();
+		var playerNode = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
 
-		var owner = await playerNode.Known.Object().Owner.WithCancellation(CancellationToken.None);
+		var owner = await playerNode.Object().Owner.WithCancellation(CancellationToken.None);
 
 		await Assert.That(owner.Object.DBRef.Number).IsEqualTo(playerDbRef.Number);
 	}
@@ -57,10 +57,9 @@ public class PlayerDestructionTests
 	[Test]
 	public async Task GodPlayer_SelfOwnership_OwnerEqualsGod()
 	{
-		var godNode = await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)));
-		await Assert.That(godNode.IsNone).IsFalse();
+		var godNode = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 
-		var owner = await godNode.Known.Object().Owner.WithCancellation(CancellationToken.None);
+		var owner = await godNode.Object().Owner.WithCancellation(CancellationToken.None);
 
 		await Assert.That(owner.Object.DBRef.Number).IsEqualTo(1);
 	}
@@ -77,9 +76,8 @@ public class PlayerDestructionTests
 			1, ConnectionService,
 			MarkupText.Plain($"@destroy {thingDbRef}"));
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
-		await Assert.That(obj.IsNone).IsFalse();
-		var isGoing = await obj.Known.HasFlag("GOING");
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(thingDbRef))).Expect<AnySharpObject>();
+		var isGoing = await obj.HasFlag("GOING");
 		await Assert.That(isGoing).IsTrue();
 	}
 
@@ -101,16 +99,16 @@ public class PlayerDestructionTests
 				Arg.Is<string>(s => s.Contains("You must use @nuke to destroy a player.")),
 				Arg.Any<bool>());
 
-		var playerBeforeNuke = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
-		var goingBeforeNuke = await playerBeforeNuke.Known.HasFlag("GOING");
+		var playerBeforeNuke = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
+		var goingBeforeNuke = await playerBeforeNuke.HasFlag("GOING");
 		await Assert.That(goingBeforeNuke).IsFalse();
 
 		await Parser.CommandParse(
 			1, ConnectionService,
 			MarkupText.Plain($"@nuke {playerDbRef}"));
 
-		var playerAfterNuke = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
-		var goingAfterNuke = await playerAfterNuke.Known.HasFlag("GOING");
+		var playerAfterNuke = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
+		var goingAfterNuke = await playerAfterNuke.HasFlag("GOING");
 		await Assert.That(goingAfterNuke).IsTrue();
 	}
 
@@ -123,9 +121,8 @@ public class PlayerDestructionTests
 			1, ConnectionService,
 			MarkupText.Plain($"@nuke {playerDbRef}"));
 
-		var player = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
-		await Assert.That(player.IsNone).IsFalse();
-		var isGoing = await player.Known.HasFlag("GOING");
+		var player = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
+		var isGoing = await player.HasFlag("GOING");
 		await Assert.That(isGoing).IsTrue();
 	}
 
@@ -133,8 +130,7 @@ public class PlayerDestructionTests
 	public async Task Nuke_Player_OwnedChannelTransfersToProbatePlayer()
 	{
 		var playerDbRef = await CreateTestPlayerAsync("ChannelChown");
-		var playerNode = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
-		var testPlayer = playerNode.Known.AsPlayer;
+		var testPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<SharpPlayer>();
 
 		await Mediator.Send(new CreateChannelCommand(
 			MarkupText.Plain("PDT_ChannelChown"),
@@ -170,8 +166,8 @@ public class PlayerDestructionTests
 			1, ConnectionService,
 			MarkupText.Plain($"@chown {thingDbRef}={playerDbRef}"));
 
-		var thingBeforeNuke = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
-		var ownerBefore = await thingBeforeNuke.Known.Object().Owner.WithCancellation(CancellationToken.None);
+		var thingBeforeNuke = (await Mediator.Send(new GetObjectNodeQuery(thingDbRef))).Expect<AnySharpObject>();
+		var ownerBefore = await thingBeforeNuke.Object().Owner.WithCancellation(CancellationToken.None);
 		await Assert.That(ownerBefore.Object.DBRef.Number).IsEqualTo(playerDbRef.Number);
 
 		// nuke the player  (destroy_possessions=yes)
@@ -179,8 +175,8 @@ public class PlayerDestructionTests
 			1, ConnectionService,
 			MarkupText.Plain($"@nuke {playerDbRef}"));
 
-		var thingAfterNuke = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
-		var isGoing = await thingAfterNuke.Known.HasFlag("GOING");
+		var thingAfterNuke = (await Mediator.Send(new GetObjectNodeQuery(thingDbRef))).Expect<AnySharpObject>();
+		var isGoing = await thingAfterNuke.HasFlag("GOING");
 		await Assert.That(isGoing).IsTrue();
 	}
 
@@ -207,11 +203,11 @@ public class PlayerDestructionTests
 			1, ConnectionService,
 			MarkupText.Plain($"@nuke {playerDbRef}"));
 
-		var thingAfterNuke = await Mediator.Send(new GetObjectNodeQuery(thingDbRef));
-		var isGoing = await thingAfterNuke.Known.HasFlag("GOING");
+		var thingAfterNuke = (await Mediator.Send(new GetObjectNodeQuery(thingDbRef))).Expect<AnySharpObject>();
+		var isGoing = await thingAfterNuke.HasFlag("GOING");
 		await Assert.That(isGoing).IsFalse();
 
-		var ownerAfter = await thingAfterNuke.Known.Object().Owner.WithCancellation(CancellationToken.None);
+		var ownerAfter = await thingAfterNuke.Object().Owner.WithCancellation(CancellationToken.None);
 		await Assert.That(ownerAfter.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
 	}
 
@@ -222,8 +218,7 @@ public class PlayerDestructionTests
 	public async Task Nuke_Player_AttributeOwnerReassignedToProbatePlayer()
 	{
 		var playerDbRef = await CreateTestPlayerAsync("AttrOwner");
-		var playerNode = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
-		var testPlayer = playerNode.Known.AsPlayer;
+		var testPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<SharpPlayer>();
 
 		var createResult = await Parser.CommandParse(
 			1, ConnectionService,
@@ -263,8 +258,7 @@ public class PlayerDestructionTests
 	public async Task Nuke_Player_CombinedScenario_AllPhasesComplete()
 	{
 		var playerDbRef = await CreateTestPlayerAsync("CombinedScenario");
-		var playerNode = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
-		var testPlayer = playerNode.Known.AsPlayer;
+		var testPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<SharpPlayer>();
 
 		await Mediator.Send(new CreateChannelCommand(
 			MarkupText.Plain("PDT_CombinedChannel"),
@@ -290,10 +284,10 @@ public class PlayerDestructionTests
 			1, ConnectionService,
 			MarkupText.Plain($"@chown {safeDbRef}={playerDbRef}"));
 
-		var probateNode = await Mediator.Send(new GetObjectNodeQuery(new DBRef(ProbateJudgeDbRefNumber)));
+		var probateNode = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(ProbateJudgeDbRefNumber)))).Expect<AnySharpObject>();
 		var attrName = "PDT_COMBINED_ATTR_TEST";
 		await Database.SetAttributeAsync(
-			probateNode.Known.Object().DBRef,
+			probateNode.Object().DBRef,
 			[attrName],
 			MarkupText.Plain("PDT combined test attribute value"),
 			testPlayer);
@@ -302,24 +296,24 @@ public class PlayerDestructionTests
 			1, ConnectionService,
 			MarkupText.Plain($"@nuke {playerDbRef}"));
 
-		var playerObj = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
-		await Assert.That(await playerObj.Known.HasFlag("GOING")).IsTrue();
+		var playerObj = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
+		await Assert.That(await playerObj.HasFlag("GOING")).IsTrue();
 
 		var combinedChannel = await Mediator.Send(new GetChannelQuery("PDT_CombinedChannel"));
 		await Assert.That(combinedChannel).IsNotNull();
 		var channelOwner = await combinedChannel!.Owner.WithCancellation(CancellationToken.None);
 		await Assert.That(channelOwner.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
 
-		var nonSafeObj = await Mediator.Send(new GetObjectNodeQuery(nonSafeDbRef));
-		await Assert.That(await nonSafeObj.Known.HasFlag("GOING")).IsTrue();
+		var nonSafeObj = (await Mediator.Send(new GetObjectNodeQuery(nonSafeDbRef))).Expect<AnySharpObject>();
+		await Assert.That(await nonSafeObj.HasFlag("GOING")).IsTrue();
 
-		var safeObj = await Mediator.Send(new GetObjectNodeQuery(safeDbRef));
-		await Assert.That(await safeObj.Known.HasFlag("GOING")).IsFalse();
-		var safeOwner = await safeObj.Known.Object().Owner.WithCancellation(CancellationToken.None);
+		var safeObj = (await Mediator.Send(new GetObjectNodeQuery(safeDbRef))).Expect<AnySharpObject>();
+		await Assert.That(await safeObj.HasFlag("GOING")).IsFalse();
+		var safeOwner = await safeObj.Object().Owner.WithCancellation(CancellationToken.None);
 		await Assert.That(safeOwner.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
 
 		var attr = await Database.GetAttributeAsync(
-			probateNode.Known.Object().DBRef,
+			probateNode.Object().DBRef,
 			[attrName]).LastOrDefaultAsync();
 		await Assert.That(attr).IsNotNull();
 		var attrOwner = await attr!.Owner.WithCancellation(CancellationToken.None);

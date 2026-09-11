@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 
@@ -23,7 +24,7 @@ public class RoomContentsPackageTests(ServerWebAppFactory factory)
 	public async Task IsInstalledAtBoot_AsAnAttachPackageManagingTheHandlerAttributes()
 	{
 		var installed = await Registry.GetInstalledPackageAsync("room-contents");
-		await Assert.That(installed.IsT0).IsTrue();
+		await Assert.That(installed.Value).IsTypeOf<InstalledPackageRecord>();
 
 		// Attach mode: it manages attributes on the pre-seeded event_handler object and creates
 		// no objects of its own, so uninstalling leaves that object's other softcode intact.

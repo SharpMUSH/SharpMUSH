@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
@@ -21,7 +20,7 @@ public class RoleSeedServiceTests
 			Slug = x.Slug, Name = "Custom " + x.Name, IsSystem = x.IsSystem, Color = "#123456", Priority = 123,
 			Permissions = new Dictionary<string, PermissionState> { [PortalPermission.QueueControl] = PermissionState.Deny, ["JOBS.MANAGE"] = PermissionState.Deny, [PortalPermission.QueueInspectOwn] = PermissionState.Inherit }
 		});
-		roles.GetRoleAsync(Arg.Any<string>()).Returns(c => Task.FromResult<OneOf<SharpRole, NotFound>>(existing[c.Arg<string>()]));
+		roles.GetRoleAsync(Arg.Any<string>()).Returns(c => Task.FromResult<Found<SharpRole>>(existing[c.Arg<string>()]));
 		roles.UpsertRoleAsync(Arg.Any<SharpRole>()).Returns(c => { existing[c.Arg<SharpRole>().Slug] = c.Arg<SharpRole>(); return Task.CompletedTask; });
 		var store = Substitute.For<IExpandedDataStore>();
 		RoleSeedService.CapabilityMigration? migration = null;
@@ -55,7 +54,7 @@ public class RoleSeedServiceTests
 	{
 		var roles = Substitute.For<IRoleRegistryService>();
 		var oldRole = new SharpRole { Slug = "god", Name = "God", IsSystem = true };
-		roles.GetRoleAsync(Arg.Any<string>()).Returns(Task.FromResult<OneOf<SharpRole, NotFound>>(oldRole));
+		roles.GetRoleAsync(Arg.Any<string>()).Returns(Task.FromResult<Found<SharpRole>>(oldRole));
 		roles.UpsertRoleAsync(Arg.Any<SharpRole>()).Returns(Task.FromException(new IOException("write rejected")));
 		var store = Substitute.For<IExpandedDataStore>();
 		var service = new RoleSeedService(roles, NullLogger<RoleSeedService>.Instance, store);
@@ -69,7 +68,7 @@ public class RoleSeedServiceTests
 	{
 		var roles = Substitute.For<IRoleRegistryService>();
 		var saved = new Dictionary<string, SharpRole>();
-		roles.GetRoleAsync(Arg.Any<string>()).Returns(c => Task.FromResult<OneOf<SharpRole, NotFound>>(
+		roles.GetRoleAsync(Arg.Any<string>()).Returns(c => Task.FromResult<Found<SharpRole>>(
 			saved.TryGetValue(c.Arg<string>(), out var role) ? role : new NotFound()));
 		roles.UpsertRoleAsync(Arg.Any<SharpRole>()).Returns(c => { saved[c.Arg<SharpRole>().Slug] = c.Arg<SharpRole>(); return Task.CompletedTask; });
 		var store = Substitute.For<IExpandedDataStore>();

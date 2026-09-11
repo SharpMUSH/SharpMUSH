@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Queries.Database;
@@ -39,15 +40,17 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 	/// <summary>A controller acting as <paramref name="actor"/>, wired exactly as DI would build it.</summary>
 	private async Task<ObjectsController> ControllerAs(DBRef actor)
 	{
-		var player = (await Mediator.Send(new GetObjectNodeQuery(actor))).AsPlayer;
+		var player = (await Mediator.Send(new GetObjectNodeQuery(actor))).Expect<SharpPlayer>();
 		var fullIdentity = player.Object.DBRef;
 		var accounts = factory.Services.GetRequiredService<IAccountService>();
 		var account = await accounts.GetAccountForCharacterAsync(fullIdentity);
 		if (account is null)
 		{
-			var created = await accounts.CreateAccountAsync("objapi_" + Guid.NewGuid().ToString("N"), null, "TestPassword123!");
-			await Assert.That(created.IsT0).IsTrue();
-			account = created.AsT0;
+			account = await accounts.CreateAccountAsync("objapi_" + Guid.NewGuid().ToString("N"), null, "TestPassword123!") switch
+			{
+				SharpAccount created => created,
+				Error<string> error => throw new InvalidOperationException($"Account creation failed: {error.Value}"),
+			};
 			await accounts.LinkCharacterAsync(account.Id!, fullIdentity);
 		}
 		return ControllerFor(new ClaimsIdentity(
@@ -164,8 +167,8 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 		var snooper = await NewPlayerAsync("ObjApiExamineSnooper");
 
 		var permissions = factory.Services.GetRequiredService<IPermissionService>();
-		var ownerObject = (await Mediator.Send(new GetObjectNodeQuery(owner))).Known;
-		var snooperObject = (await Mediator.Send(new GetObjectNodeQuery(snooper))).Known;
+		var ownerObject = (await Mediator.Send(new GetObjectNodeQuery(owner))).Expect<AnySharpObject>();
+		var snooperObject = (await Mediator.Send(new GetObjectNodeQuery(snooper))).Expect<AnySharpObject>();
 
 		// Only meaningful while the engine actually refuses this pairing.
 		var mayExamine = await permissions.CanExamine(snooperObject, ownerObject);

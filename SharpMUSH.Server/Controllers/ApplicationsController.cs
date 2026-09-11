@@ -69,12 +69,10 @@ public class ApplicationsController(
 	[AllowAnonymous]
 	public async Task<ActionResult<ApplicationDto>> Get(string slug)
 	{
-		var result = await registry.GetApplicationAsync(slug);
-		return result.Match<ActionResult<ApplicationDto>>(
-			app => IsComponent(app) && !options.CurrentValue.Database.AllowBrowserCode
-				? NotFound()
-				: Ok(ToDto(app)),
-			_ => NotFound());
+		return await registry.GetApplicationAsync(slug) is RegisteredApplication app
+			&& (!IsComponent(app) || options.CurrentValue.Database.AllowBrowserCode)
+			? Ok(ToDto(app))
+			: NotFound();
 	}
 
 	private static bool IsComponent(RegisteredApplication a) =>
@@ -110,8 +108,9 @@ public class ApplicationsController(
 
 		// Preserve provenance: a manual edit of a package-installed application keeps its OwningPackage,
 		// so uninstalling the package still reclaims the record. Manual registrations stay unowned.
-		var existing = await registry.GetApplicationAsync(dto.Slug.Trim());
-		var owningPackage = existing.Match(app => app.OwningPackage, _ => null);
+		var owningPackage = await registry.GetApplicationAsync(dto.Slug.Trim()) is RegisteredApplication existing
+			? existing.OwningPackage
+			: null;
 
 		var renderKind = string.Equals(dto.RenderKind, ApplicationRenderKind.Component, StringComparison.OrdinalIgnoreCase)
 			? ApplicationRenderKind.Component
@@ -163,25 +162,25 @@ public class ApplicationsController(
 		try
 		{
 			var result = await dispatcher.DispatchAsync("GET", path, string.Empty, [], HttpContext.RequestAborted);
-			return result.Match(
-				handled =>
-				{
-					if (handled.Status is < 200 or >= 300)
-					{
-						return (false, $"handler returned HTTP {handled.Status}.");
-					}
+			if (result is not HttpHandlerResult handled)
+			{
+				return (false, "no http_handler route is configured for that path.");
+			}
 
-					try
-					{
-						using var _ = JsonDocument.Parse(handled.Body);
-						return (true, string.Empty);
-					}
-					catch (JsonException ex)
-					{
-						return (false, $"response was not valid JSON ({ex.Message}).");
-					}
-				},
-				_ => (false, "no http_handler route is configured for that path."));
+			if (handled.Status is < 200 or >= 300)
+			{
+				return (false, $"handler returned HTTP {handled.Status}.");
+			}
+
+			try
+			{
+				using var _ = JsonDocument.Parse(handled.Body);
+				return (true, string.Empty);
+			}
+			catch (JsonException ex)
+			{
+				return (false, $"response was not valid JSON ({ex.Message}).");
+			}
 		}
 		catch (Exception ex)
 		{

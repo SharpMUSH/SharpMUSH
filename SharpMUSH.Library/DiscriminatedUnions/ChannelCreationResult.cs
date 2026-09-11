@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
@@ -17,19 +16,24 @@ public readonly record struct ChannelNameTaken;
 /// The outcome of a channel create: it worked, the name was taken, or the storage layer failed.
 /// </summary>
 /// <remarks>
-/// exception, aborted its transaction and returned normally — so a create that failed reported success to
-/// the caller. Every provider now answers with one of these three, and none of them is silence.
+/// Every provider answers with one of these three, so a create the storage layer rejected can never
+/// read as success to the caller.
 /// </remarks>
-public class ChannelCreationResult(OneOf<Success, ChannelNameTaken, Error<string>> input)
-	: OneOfBase<Success, ChannelNameTaken, Error<string>>(input)
+[Union]
+public sealed class ChannelCreationResult : IUnion
 {
-	public static implicit operator ChannelCreationResult(Success x) => new(x);
-	public static implicit operator ChannelCreationResult(ChannelNameTaken x) => new(x);
-	public static implicit operator ChannelCreationResult(Error<string> x) => new(x);
+	public ChannelCreationResult(Success value) => Value = value;
+	public ChannelCreationResult(ChannelNameTaken value) => Value = value;
+	public ChannelCreationResult(Error<string> value) => Value = value;
 
-	public bool IsSuccess => IsT0;
-	public bool IsNameTaken => IsT1;
-	public bool IsError => IsT2;
+	public object? Value { get; }
 
-	public string AsError => AsT2.Value;
+	public override bool Equals(object? obj) => obj is ChannelCreationResult other && Equals(Value, other.Value);
+
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsSuccess => Value is Success;
+	public bool IsNameTaken => Value is ChannelNameTaken;
+	public bool IsError => Value is Error<string>;
+
 }

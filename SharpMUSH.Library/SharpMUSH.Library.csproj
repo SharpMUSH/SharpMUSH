@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>default</LangVersion>
@@ -39,11 +39,11 @@
 	<PropertyGroup>
 		<IsPackable>true</IsPackable>
 		<PackageId>SharpMUSH.Library</PackageId>
-		<!-- Version is aligned to PluginContractVersion.Current (2.0.0). Bump both together when the
+		<!-- Version is aligned to PluginContractVersion.Current (3.0.0). Bump both together when the
 		     plugin contract surface changes. -->
-		<Version>2.0.0</Version>
+		<Version>3.0.0</Version>
 		<Authors>SharpMUSH Contributors</Authors>
-		<Description>SharpMUSH plugin contract surface (interim). External SharpMUSH plugins reference this package to write [SharpPlugin] : PluginBase entry types with [SharpCommand]/[SharpFunction] members. Aligned to PluginContractVersion 2.0.0.</Description>
+		<Description>SharpMUSH plugin contract surface (interim). External SharpMUSH plugins reference this package to write [SharpPlugin] : PluginBase entry types with [SharpCommand]/[SharpFunction] members. Aligned to PluginContractVersion 3.0.0.</Description>
 		<PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
 		<RepositoryUrl>https://github.com/SharpMUSH/SharpMUSH</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
@@ -75,19 +75,14 @@
     <PackageReference Include="DotNext.Threading" Version="6.6.5" />
     <PackageReference Include="Mediator.Abstractions" Version="3.0.2" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="$(DotNetPackageVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="$(DotNetPackageVersion)" />
     <PackageReference Include="morelinq" Version="4.4.0" />
     <PackageReference Include="MySqlConnector" Version="2.5.0" />
     <PackageReference Include="NATS.Net" Version="2.7.3" />
     <PackageReference Include="Npgsql" Version="10.0.2" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.7" />
-    <!-- Transitive pin: force SQLitePCLRaw 3.x (bundles SQLite >= 3.50.4, past CVE-2025-6965).
-         Microsoft.Data.Sqlite 10.0.7 requires SQLitePCLRaw >= 2.1.11 (a minimum), so 3.x satisfies it. -->
-    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="$(DotNetPackageVersion)" />
     <PackageReference Include="NaturalSort.Extension" Version="4.4.1" />
-		<PackageReference Include="OneOf" Version="3.0.271" />
-    <PackageReference Include="OneOf.SourceGenerator" Version="3.0.271" />
     <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
     <PackageReference Include="Quartz" Version="3.18.1" />
     <PackageReference Include="Serilog" Version="4.3.1" />
@@ -110,7 +105,7 @@
     <!-- The core SurrealDb.Net client only (NOT the embedded provider). -->
     <PackageReference Include="SurrealDb.Net" Version="0.9.0" PrivateAssets="all" />
     <!-- SurrealDb.Net pulls System.Linq.Async 6.x, whose IOrderedAsyncEnumerable collides at compile time
-         with .NET 10's built-in System.Linq.AsyncEnumerable. ExcludeAssets="compile" keeps the runtime
+         with the BCL's built-in System.Linq.AsyncEnumerable (.NET 10+). ExcludeAssets="compile" keeps the runtime
          assembly available but drops its compile-time facade (same fix the SurrealDB provider uses). -->
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" PrivateAssets="all" />
   </ItemGroup>

@@ -36,10 +36,12 @@ public partial class Commands
 			&& (!int.TryParse(timeout.Message?.Text, NumberStyles.None, CultureInfo.InvariantCulture, out seconds) || seconds is < 1 or > 3600))
 			return await InputError(parser, InputSessionService.InvalidTimeout);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var target = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, path[..separator], LocateFlags.All);
-		if (target.IsError) return target.AsError;
-		return await InputResult(parser, await sessions.StartAsync(parser, target.AsSharpObject.Object().DBRef,
-			path[(separator + 1)..], prompt.Message ?? MString.Empty, TimeSpan.FromSeconds(seconds)));
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, path[..separator], LocateFlags.All) switch
+		{
+			AnySharpObject target => await InputResult(parser, await sessions.StartAsync(parser, target.Object().DBRef,
+				path[(separator + 1)..], prompt.Message ?? MString.Empty, TimeSpan.FromSeconds(seconds))),
+			Error<CallState> error => error.Value
+		};
 	}
 
 	private async ValueTask<Option<CallState>> InputResult(IMUSHCodeParser parser, string? error)

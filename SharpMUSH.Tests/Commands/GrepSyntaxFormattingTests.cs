@@ -1,6 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -38,7 +38,7 @@ public class GrepSyntaxFormattingTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParserFor(_player.DbRef, _player.Handle);
 
 	private int _notificationOffset;
-	private IEnumerable<OneOf<MString, string>> Messages =>
+	private IEnumerable<SharpMessage> Messages =>
 		WebAppFactoryArg.Notifications.RawFor(_player.DbRef).Skip(_notificationOffset);
 
 	private void BeginNotificationWindow() =>
@@ -234,7 +234,11 @@ public class GrepSyntaxFormattingTests
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@grep/print {obj}={StraddlesABreak}"));
 
 		var messages = Messages
-			.Select(m => (Plain: m.Match(ms => ms.ToPlainText(), s => s), Markup: m.Match(ms => ms.ToString(), s => s)))
+			.Select(m => m switch
+			{
+				MString markup => (Plain: markup.ToPlainText(), Markup: markup.Render(MarkupFormat.Ansi)),
+				string text => (Plain: text, Markup: text)
+			})
 			.ToList();
 
 		var message = messages.FirstOrDefault(m => m.Plain.StartsWith("BADFN: ", StringComparison.Ordinal));

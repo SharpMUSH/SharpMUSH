@@ -445,16 +445,21 @@
         finally { _busy = false; }
     }
 
-    private void ReportBatchResult(OneOf.OneOf<WikiService.WikiBatchResult, string> result) =>
-        result.Switch(
-            ok =>
-            {
+    private void ReportBatchResult(MessageResult<WikiService.WikiBatchResult> result)
+    {
+        switch (result)
+        {
+            case WikiService.WikiBatchResult ok:
                 if (ok.Succeeded.Count > 0)
                     Snackbar.Add(Loc.Plural("WikiBatchSucceeded", "count", ok.Succeeded.Count), Severity.Success);
                 if (ok.Failed.Count > 0)
                     Snackbar.Add(Loc.Plural("WikiBatchFailed", "count", ok.Failed.Count), Severity.Error);
-            },
-            err => Snackbar.Add(err, Severity.Error));
+                break;
+            case string err:
+                Snackbar.Add(err, Severity.Error);
+                break;
+        }
+    }
 
     private void OpenMetadataDialog(WikiPageSummary page)
     {
@@ -488,9 +493,15 @@
             var result = await Wiki.SetMetadataAsync(
                 _metadataTarget.Slug, _metaCategory, _metaTags, _metaPublished, _metadataTarget.Namespace,
                 currentCategory: _metadataTarget.Category);
-            result.Switch(
-                _ => Snackbar.Add(string.Format(Loc["WikiMetadataSaved"], _metadataTarget.Title), Severity.Success),
-                err => Snackbar.Add(string.Format(Loc["WikiMetadataSaveFailed"], err), Severity.Error));
+            switch (result)
+            {
+                case WikiArticle:
+                    Snackbar.Add(string.Format(Loc["WikiMetadataSaved"], _metadataTarget.Title), Severity.Success);
+                    break;
+                case string err:
+                    Snackbar.Add(string.Format(Loc["WikiMetadataSaveFailed"], err), Severity.Error);
+                    break;
+            }
             _showMetadataDialog = false;
             await ReloadAsync();
         }

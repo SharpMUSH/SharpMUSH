@@ -57,15 +57,15 @@ public class QuotaCommandTests
 			startingQuota));
 
 		// Populate the object cache the same way a game read (LocateService) would, before the mutation.
-		var before = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
-		await Assert.That(before.AsPlayer.Quota).IsEqualTo(startingQuota);
+		var before = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<SharpPlayer>();
+		await Assert.That(before.Quota).IsEqualTo(startingQuota);
 
 		var setResult = await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@quota/set {name}=777"));
 		await Assert.That(setResult.Message).IsNotNull();
 
 		// Re-read via the SAME cached path — must reflect 777, not the stale startingQuota.
-		var after = await Mediator.Send(new GetObjectNodeQuery(playerDbRef));
-		await Assert.That(after.AsPlayer.Quota).IsEqualTo(777);
+		var after = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<SharpPlayer>();
+		await Assert.That(after.Quota).IsEqualTo(777);
 	}
 }

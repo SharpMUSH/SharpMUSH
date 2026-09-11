@@ -1,4 +1,4 @@
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services;
@@ -28,8 +28,8 @@ public class WikiHelpersLocaleTests
 	{
 		var result = WikiHelpers.NormalizeLocale(input);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0).IsEqualTo(expected);
+		var text = result.Expect<string>();
+		await Assert.That(text).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -38,7 +38,14 @@ public class WikiHelpersLocaleTests
 		// This is the hole case canonicalisation closes: three spellings, one row, one index entry.
 		string[] spellings = ["pt-br", "PT-BR", "pt-BR"];
 
-		var canonical = spellings.Select(s => WikiHelpers.NormalizeLocale(s).AsT0).Distinct().ToList();
+		var canonical = spellings
+			.Select(s => WikiHelpers.NormalizeLocale(s) switch
+			{
+				string locale => locale,
+				Error<string> error => error.Value
+			})
+			.Distinct()
+			.ToList();
 
 		await Assert.That(canonical)
 			.IsEquivalentTo(new[] { "pt-BR" })
@@ -56,10 +63,8 @@ public class WikiHelpersLocaleTests
 	{
 		var result = WikiHelpers.NormalizeLocale(input);
 
-		await Assert.That(result.IsT1)
-			.IsTrue()
+		await Assert.That(result.Value).IsTypeOf<Error<string>>()
 			.Because("a write boundary must refuse a non-locale rather than store an empty string");
-		await Assert.That(result.AsT1).IsTypeOf<Error<string>>();
 	}
 
 	[Test]
@@ -80,7 +85,7 @@ public class WikiHelpersLocaleTests
 		// ValidateSharpOptions restates this rule because SharpMUSH.Contracts references
 		// SharpMUSH.Configuration and the dependency cannot run the other way. This is the test that
 		// keeps the restatement honest.
-		await Assert.That(WikiHelpers.NormalizeLocale(WikiOptions.DefaultLocaleFallback).IsT0).IsTrue();
+		await Assert.That(WikiHelpers.NormalizeLocale(WikiOptions.DefaultLocaleFallback).Value).IsTypeOf<string>();
 		await Assert.That(new ValidateSharpOptions()
 				.Validate(null, TestSharpMushOptions.Create(wikiDefaultLocale: "zz-ZZ")).Failed)
 			.IsTrue()

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -14,13 +13,12 @@ public sealed class WikiLocalizationService(
 {
 	public string DefaultLocale => resolver.DefaultLocale;
 
-	public async Task<OneOf<LocalizedWikiPage, NotFound>> GetLocalizedBySlugAsync(
+	public async Task<Found<LocalizedWikiPage>> GetLocalizedBySlugAsync(
 		string slug, string? category, WikiNamespace ns, string? requestedLocale, bool includeDrafts)
 	{
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
-		if (lookup.IsT1) return new NotFound();
+		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page) return new NotFound();
 
-		return await LocalizeAsync(lookup.AsT0, requestedLocale, includeDrafts);
+		return await LocalizeAsync(page, requestedLocale, includeDrafts);
 	}
 
 	public async Task<LocalizedWikiPage> LocalizeAsync(WikiPage page, string? requestedLocale, bool includeDrafts)
@@ -114,10 +112,9 @@ public sealed class WikiLocalizationService(
 
 		// A translation deleted between the summary listing and this read leaves nothing to serve for that
 		// locale, and a read can never fail for locale reasons — so degrade to the source rather than throw.
-		var row = await wikiService.GetTranslationAsync(page.Id, winner.Locale);
-		if (row.IsT1) return FromSource(page, source, requested);
+		if (await wikiService.GetTranslationAsync(page.Id, winner.Locale) is not WikiTranslation served)
+			return FromSource(page, source, requested);
 
-		var served = row.AsT0;
 		return new LocalizedWikiPage(
 			Page: page,
 			Locale: served.Locale,

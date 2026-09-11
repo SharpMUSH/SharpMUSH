@@ -1,5 +1,4 @@
-﻿using OneOf;
-using OneOf.Types;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Client.Models;
 using System.Net.Http.Json;
 
@@ -55,7 +54,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// <summary>Per-slug outcome of a batch operation (mirrors WikiController.BatchResult).</summary>
 	public record WikiBatchResult(IReadOnlyList<string> Succeeded, IReadOnlyList<string> Failed);
 
-	public async ValueTask<OneOf<WikiArticle, None>> GetWikiArticle(
+	public async ValueTask<Maybe<WikiArticle>> GetWikiArticle(
 		string slug, string? category = null, string? ns = null, string? lang = null)
 	{
 		try
@@ -207,7 +206,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// <summary>
 	/// Returns a single revision snapshot (with full markdown) or None when missing.
 	/// </summary>
-	public async ValueTask<OneOf<WikiRevisionInfo, None>> GetRevisionAsync(
+	public async ValueTask<Maybe<WikiRevisionInfo>> GetRevisionAsync(
 		string slug, int revisionNumber, string? ns = null, string? category = null, string? lang = null)
 	{
 		try
@@ -258,7 +257,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// rather than retrying — a retry re-sends this editor's stale markdown over the winner's, which is the
 	/// data loss the whole compare-and-swap exists to prevent.
 	/// </remarks>
-	public async ValueTask<OneOf<WikiTranslationInfo, WikiTranslationSaveError>> UpsertTranslationAsync(
+	public async ValueTask<TranslationSaveResult> UpsertTranslationAsync(
 		string slug, string locale, string title, string markdown, bool published,
 		int? expectedRevisionNumber, string? editSummary = null, string? ns = null, string? category = null)
 	{
@@ -287,7 +286,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	}
 
 	/// <summary>Removes one locale's translation. The page and every other locale are untouched.</summary>
-	public async ValueTask<OneOf<None, string>> DeleteTranslationAsync(
+	public async ValueTask<MessageResult<None>> DeleteTranslationAsync(
 		string slug, string locale, string? ns = null, string? category = null)
 	{
 		try
@@ -311,7 +310,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Creates a new wiki page on the server.
 	/// Returns the created <see cref="WikiArticle"/> or a string error message.
 	/// </summary>
-	public async ValueTask<OneOf<WikiArticle, string>> CreatePageAsync(
+	public async ValueTask<MessageResult<WikiArticle>> CreatePageAsync(
 		string title,
 		string markdown,
 		string? ns = null,
@@ -326,8 +325,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			{
 				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
 				return dto is null
-					? OneOf<WikiArticle, string>.FromT1("Server returned an empty response.")
-					: OneOf<WikiArticle, string>.FromT0(ToArticle(dto));
+					? "Server returned an empty response."
+					: ToArticle(dto);
 			}
 
 			var body = await response.Content.ReadAsStringAsync();
@@ -345,7 +344,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// that cannot safely survive URL-encoding through ASP.NET Core routing.
 	/// Returns the updated <see cref="WikiArticle"/> or a string error message.
 	/// </summary>
-	public async ValueTask<OneOf<WikiArticle, string>> UpdatePageAsync(
+	public async ValueTask<MessageResult<WikiArticle>> UpdatePageAsync(
 		string slug,
 		string markdown,
 		string? editSummary = null,
@@ -363,8 +362,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			{
 				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
 				return dto is null
-					? OneOf<WikiArticle, string>.FromT1("Server returned an empty response.")
-					: OneOf<WikiArticle, string>.FromT0(ToArticle(dto));
+					? "Server returned an empty response."
+					: ToArticle(dto);
 			}
 
 			var body = await response.Content.ReadAsStringAsync();
@@ -381,7 +380,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Sets the category, tags and published flag on a page identified by slug.
 	/// Returns the updated <see cref="WikiArticle"/> or a string error message.
 	/// </summary>
-	public async ValueTask<OneOf<WikiArticle, string>> SetMetadataAsync(
+	public async ValueTask<MessageResult<WikiArticle>> SetMetadataAsync(
 		string slug,
 		string? category,
 		IEnumerable<string> tags,
@@ -401,8 +400,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			{
 				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
 				return dto is null
-					? OneOf<WikiArticle, string>.FromT1("Server returned an empty response.")
-					: OneOf<WikiArticle, string>.FromT0(ToArticle(dto));
+					? "Server returned an empty response."
+					: ToArticle(dto);
 			}
 
 			var body = await response.Content.ReadAsStringAsync();
@@ -420,7 +419,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// edit (new revision), so rollbacks are themselves recorded in history.
 	/// Returns the updated <see cref="WikiArticle"/> or a string error message.
 	/// </summary>
-	public async ValueTask<OneOf<WikiArticle, string>> RollbackAsync(
+	public async ValueTask<MessageResult<WikiArticle>> RollbackAsync(
 		string slug,
 		int revisionNumber,
 		string? ns = null,
@@ -437,8 +436,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			{
 				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
 				return dto is null
-					? OneOf<WikiArticle, string>.FromT1("Server returned an empty response.")
-					: OneOf<WikiArticle, string>.FromT0(ToArticle(dto));
+					? "Server returned an empty response."
+					: ToArticle(dto);
 			}
 
 			var body = await response.Content.ReadAsStringAsync();
@@ -483,7 +482,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Sets or clears the protection flag on multiple pages at once (Wizard only).
 	/// Returns the per-slug outcome, or a string error message on transport failure.
 	/// </summary>
-	public async ValueTask<OneOf<WikiBatchResult, string>> BatchProtectAsync(
+	public async ValueTask<MessageResult<WikiBatchResult>> BatchProtectAsync(
 		IEnumerable<string> refs, bool isProtected)
 	{
 		try
@@ -497,8 +496,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			{
 				var result = await response.Content.ReadFromJsonAsync<WikiBatchResult>();
 				return result is null
-					? OneOf<WikiBatchResult, string>.FromT1("Server returned an empty response.")
-					: OneOf<WikiBatchResult, string>.FromT0(result);
+					? "Server returned an empty response."
+					: result;
 			}
 
 			var body = await response.Content.ReadAsStringAsync();
@@ -515,7 +514,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Deletes multiple pages at once (Wizard only).
 	/// Returns the per-slug outcome, or a string error message on transport failure.
 	/// </summary>
-	public async ValueTask<OneOf<WikiBatchResult, string>> BatchDeleteAsync(
+	public async ValueTask<MessageResult<WikiBatchResult>> BatchDeleteAsync(
 		IEnumerable<string> refs)
 	{
 		try
@@ -529,8 +528,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			{
 				var result = await response.Content.ReadFromJsonAsync<WikiBatchResult>();
 				return result is null
-					? OneOf<WikiBatchResult, string>.FromT1("Server returned an empty response.")
-					: OneOf<WikiBatchResult, string>.FromT0(result);
+					? "Server returned an empty response."
+					: result;
 			}
 
 			var body = await response.Content.ReadAsStringAsync();
@@ -547,7 +546,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Deletes a single page identified by slug (Wizard only).
 	/// Returns None on success or a string error message.
 	/// </summary>
-	public async ValueTask<OneOf<None, string>> DeletePageAsync(string slug, string? ns = null, string? category = null)
+	public async ValueTask<MessageResult<None>> DeletePageAsync(string slug, string? ns = null, string? category = null)
 	{
 		try
 		{

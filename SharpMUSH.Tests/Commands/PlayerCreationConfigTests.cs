@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text;
@@ -49,7 +50,7 @@ public class PlayerCreationConfigTests
 
 		await NotifyService.Received(1).Notify(
 			Arg.Is<long>(h => h == handle),
-			Arg.Is<OneOf<MString, string>>(s =>
+			Arg.Is<SharpMessage>(s =>
 				TestHelpers.MessagePlainTextEquals(s, "Player creation is disabled on this server.")),
 			null, INotifyService.NotificationType.Announce);
 	}
@@ -73,7 +74,7 @@ public class PlayerCreationConfigTests
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),
-				Arg.Is<OneOf<MString, string>>(s =>
+				Arg.Is<SharpMessage>(s =>
 					TestHelpers.MessagePlainTextEquals(s, registerFileContents)),
 				null, INotifyService.NotificationType.Announce);
 		}
@@ -96,7 +97,7 @@ public class PlayerCreationConfigTests
 		await ConnectionService.Register(handle, "localhost", "localhost", "test",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		var accountResult = await AccountService.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("MakeBlocked"), null, "somepassword");
-		await ConnectionService.BindAccount(handle, accountResult.AsT0.Id!);
+		await ConnectionService.BindAccount(handle, accountResult.Expect<SharpAccount>().Id!);
 
 		var missingRegisterFile = $"{Guid.NewGuid()}.nonexistent.txt";
 		using var configuration = TestOptionsOverride.Scope(options => options with
@@ -108,7 +109,7 @@ public class PlayerCreationConfigTests
 
 		await NotifyService.Received(1).Notify(
 			Arg.Is<long>(h => h == handle),
-			Arg.Is<OneOf<MString, string>>(s =>
+			Arg.Is<SharpMessage>(s =>
 				TestHelpers.MessagePlainTextEquals(s, "Player creation is disabled on this server.")),
 			null, INotifyService.NotificationType.Announce);
 	}
@@ -128,7 +129,7 @@ public class PlayerCreationConfigTests
 		await ConnectionService.Register(handle, "localhost", "localhost", "test",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		var accountResult = await AccountService.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("MakeFile"), null, "somepassword");
-		await ConnectionService.BindAccount(handle, accountResult.AsT0.Id!);
+		await ConnectionService.BindAccount(handle, accountResult.Expect<SharpAccount>().Id!);
 
 		using var configuration = TestOptionsOverride.Scope(options => options with
 		{
@@ -141,7 +142,7 @@ public class PlayerCreationConfigTests
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),
-				Arg.Is<OneOf<MString, string>>(s =>
+				Arg.Is<SharpMessage>(s =>
 					TestHelpers.MessagePlainTextEquals(s, registerFileContents)),
 				null, INotifyService.NotificationType.Announce);
 		}

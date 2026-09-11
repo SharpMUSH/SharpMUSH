@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -35,7 +34,7 @@ public class SystemCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "Object Flags:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "Object Flags:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: cmd_power with SWITCH_LIST calls do_list_flags("POWER", ..., FLAG_LIST_NAMECHAR, T("Powers"))
@@ -52,7 +51,7 @@ public class SystemCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(testPlayer.DbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "Object Powers:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextStartsWith(msg, "Object Powers:")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	// PennMUSH reference: cmd_hook with SWITCH_LIST calls do_hook_list(executor, arg_left, 1).

@@ -4,6 +4,7 @@ using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -94,8 +95,8 @@ public class AttributeResultCoverageTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var attributes = Factory.Services.GetRequiredService<IAttributeService>();
 		var id = await TestIsolationHelpers.CreateTestPlayerAsync(Factory.Services, mediator, "AttrResult");
-		var actor = (await mediator.Send(new GetObjectNodeQuery(id))).Known();
-		var god = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known();
+		var actor = (await mediator.Send(new GetObjectNodeQuery(id))).Expect<AnySharpObject>();
+		var god = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
 		if (kind == "pfun") await mediator.Send(new SetObjectParentCommand(actor, god));
 		if (kind == "zfun") await mediator.Send(new SetObjectZoneCommand(actor, god));
 		var value = mode switch { "syntax" => "[", "literal" => "#-1 EXCEPTION: ordinary text", _ => "ok" };
@@ -151,7 +152,7 @@ public class AttributeResultCoverageTests
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var attributes = Factory.Services.GetRequiredService<IAttributeService>();
 		var id = await TestIsolationHelpers.CreateTestPlayerAsync(Factory.Services, mediator, "PronounResult");
-		var actor = (await mediator.Send(new GetObjectNodeQuery(id))).Known();
+		var actor = (await mediator.Send(new GetObjectNodeQuery(id))).Expect<AnySharpObject>();
 		var value = mode switch { "syntax" => "[", "literal" => "#-1 EXCEPTION: ordinary text", _ => "ok" };
 		await attributes.SetAttributeAsync(actor, actor, "PRONOUN", MarkupText.Plain(value));
 		var current = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue;

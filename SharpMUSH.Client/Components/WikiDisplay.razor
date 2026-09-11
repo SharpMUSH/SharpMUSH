@@ -9,6 +9,7 @@
 @inject WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
+@inject ILogger<WikiDisplay> Logger
 
 @if (Article is null && IsCharacterBiography)
 {
@@ -282,14 +283,22 @@ else
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        // Diagrams and fragment scrolling are enhancements; the article HTML is already on screen.
+        try
         {
-            await JS.InvokeVoidAsync("SharpMUSH.WikiRender.init");
-        }
+            if (firstRender)
+            {
+                await JS.InvokeVoidAsync("SharpMUSH.WikiRender.init");
+            }
 
-        if (Article is not null)
+            if (Article is not null)
+            {
+                await JS.InvokeVoidAsync("SharpMUSH.WikiRender.render");
+            }
+        }
+        catch (JSException ex)
         {
-            await JS.InvokeVoidAsync("SharpMUSH.WikiRender.render");
+            Logger.LogWarning(ex, "Wiki post-render pass failed");
         }
     }
 

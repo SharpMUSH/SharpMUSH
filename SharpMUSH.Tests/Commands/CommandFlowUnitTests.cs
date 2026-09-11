@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -36,9 +35,8 @@ public class CommandFlowUnitTests
 		await Parser.CommandListParse(MarkupText.Plain(str));
 
 		await NotifyService.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
-				(msg.IsT1 && msg.AsT1 == expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test, Skip("Command is failing. Needs to be implemented correctly.")]
@@ -50,11 +48,11 @@ public class CommandFlowUnitTests
 		await testParser.CommandListParse(MarkupText.Plain("think Retry %0; @retry gt(%0,-1)=dec(%0)"));
 
 		await NotifyService.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessageEquals(msg, "Retry ")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessageEquals(msg, "Retry -1")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 }

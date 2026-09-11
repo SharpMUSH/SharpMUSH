@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Documentation;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Buffers;
 using System.Text;
@@ -227,10 +228,10 @@ public class TextFileService : ITextFileService
 	/// </summary>
 	/// <remarks>
 	/// The replacement index is built entirely off to the side and swapped in under one lock. Clearing the
-	/// live index first and refilling it category by category — which is what this used to do — leaves it
-	/// visibly empty, then visibly partial, for as long as the file reads take, and every concurrent
-	/// <c>help</c> during that window answers from whatever happened to be indexed so far. <c>@readcache</c>
-	/// on a live game is exactly when the most people are reading help.
+	/// live index first and refilling it category by category would leave it visibly empty, then visibly
+	/// partial, for as long as the file reads take, and every concurrent <c>help</c> during that window would
+	/// answer from whatever happened to be indexed so far. <c>@readcache</c> on a live game is exactly when
+	/// the most people are reading help.
 	/// </remarks>
 	public async Task ReindexAsync()
 	{
@@ -248,7 +249,7 @@ public class TextFileService : ITextFileService
 
 		foreach (var category in categories)
 		{
-			var categoryIndex = await BuildCategoryIndexAsync(category);
+			var categoryIndex = BuildCategoryIndex(category);
 			if (categoryIndex is not null)
 			{
 				rebuilt[category] = categoryIndex;
@@ -271,7 +272,7 @@ public class TextFileService : ITextFileService
 	/// Indexes one category's markdown files, or returns null when the directory has gone.
 	/// Publishing the result is the caller's job — see <see cref="ReindexAsync"/>.
 	/// </summary>
-	private async Task<Dictionary<string, IndexEntry>?> BuildCategoryIndexAsync(string category)
+	private Dictionary<string, IndexEntry>? BuildCategoryIndex(string category)
 	{
 		var baseDir = _options.Value.TextFile.TextFilesDirectory;
 		var categoryPath = Path.Combine(baseDir, category);
@@ -287,38 +288,36 @@ public class TextFileService : ITextFileService
 
 		foreach (var file in mdFiles)
 		{
-			await IndexMarkdownFileAsync(file, categoryIndex);
+			IndexMarkdownFile(file, categoryIndex);
 		}
 
 		_logger.LogDebug("Indexed category {Category}: {Count} entries", category, categoryIndex.Count);
 		return categoryIndex;
 	}
 
-	private Task IndexMarkdownFileAsync(string filePath, Dictionary<string, IndexEntry> index)
+	private void IndexMarkdownFile(string filePath, Dictionary<string, IndexEntry> index)
 	{
 		var fileInfo = new FileInfo(filePath);
-		var result = Helpfiles.IndexMarkdownPositions(fileInfo);
 
-		if (result.IsT1)
+		switch (Helpfiles.IndexMarkdownPositions(fileInfo))
 		{
-			_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, result.AsT1.Value);
-			return Task.CompletedTask;
+			case Dictionary<string, (long Start, long End)> entries:
+				foreach (var (entryName, positions) in entries)
+				{
+					var entry = new IndexEntry(
+						filePath,
+						positions.Start,
+						positions.End,
+						entryName
+					);
+					index[entryName] = entry;
+				}
+
+				break;
+			case Error<string> error:
+				_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, error.Value);
+				break;
 		}
-
-		var entries = result.AsT0;
-
-		foreach (var (entryName, positions) in entries)
-		{
-			var entry = new IndexEntry(
-				filePath,
-				positions.Start,
-				positions.End,
-				entryName
-			);
-			index[entryName] = entry;
-		}
-
-		return Task.CompletedTask;
 	}
 
 	private async Task<string> ReadEntryFromFileAsync(IndexEntry entry)

@@ -3,7 +3,6 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -102,11 +101,13 @@ public class MyrddinBBSIntegrationTests
 		var args = call.GetArguments();
 		if (args.Length < 2) return null;
 
-		if (args[1] is OneOf<MString, string> oneOf)
+		if (args[1] is SharpMessage message)
 		{
-			return oneOf.Match(
-				mstr => mstr.ToString(),
-				str => str);
+			return message switch
+			{
+				MString markup => markup.ToString(),
+				string text => text,
+			};
 		}
 
 		if (args[1] is string str2)
@@ -216,7 +217,7 @@ public class MyrddinBBSIntegrationTests
 			var board = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(mbboardDbref!)));
 			var pocket = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(bbpocketDbref!)));
 			var installer = await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef));
-			var pocketLocation = await pocket.AsThing.Location.WithCancellation(TestContext.Current!.Execution.CancellationToken);
+			var pocketLocation = await pocket.Expect<SharpThing>().Location.WithCancellation(TestContext.Current!.Execution.CancellationToken);
 			return board.Object()!.Name == "BBS - Myrddin's Global BBS v4.0.6"
 				&& pocketLocation.Object().DBRef == board.Object()!.DBRef
 				&& !await installer.Object()!.Flags.Value.AnyAsync(flag => flag.Name == "QUIET",
@@ -601,7 +602,7 @@ public class MyrddinBBSIntegrationTests
 	{
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var board = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(_mbboardDbref!)));
-		return board.Known.Object().DBRef;
+		return board.Expect<AnySharpObject>().Object().DBRef;
 	}
 
 	/// <summary>Waits for actual BBS output, excluding DEBUG traces that quote the same text.</summary>

@@ -1,6 +1,7 @@
 using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
@@ -48,14 +49,11 @@ public static class ManageWiki
 		}
 
 		var (ns, lookupCategory, slug) = WikiCommandHelper.ResolveTarget(targetArg.ToPlainText());
-		var lookup = await wikiService.GetBySlugAsync(slug, lookupCategory, ns);
-		if (lookup.IsT1)
+		if (await wikiService.GetBySlugAsync(slug, lookupCategory, ns) is not WikiPage page)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {targetArg.ToPlainText().Trim()}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
-
-		var page = lookup.AsT0;
 
 		// Metadata edits on protected pages follow the same rule as content edits.
 		if (op is Operation.Category or Operation.Tag && !await WikiCommandHelper.CanEdit(executor, page))
@@ -84,7 +82,7 @@ public static class ManageWiki
 				{
 					var publish = op == Operation.Publish;
 					var publishResult = await wikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, publish);
-					if (publishResult.IsT1)
+					if (publishResult is NotFound)
 					{
 						await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
 						return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
@@ -98,7 +96,7 @@ public static class ManageWiki
 				{
 					var category = valueArg?.ToPlainText().Trim();
 					var categoryResult = await wikiService.SetMetadataAsync(page.Id, category, page.Tags, page.Published);
-					if (categoryResult.IsT1)
+					if (categoryResult is NotFound)
 					{
 						await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
 						return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
@@ -116,13 +114,13 @@ public static class ManageWiki
 					var tags = (valueArg?.ToPlainText() ?? string.Empty)
 						.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 					var result = await wikiService.SetMetadataAsync(page.Id, page.Category, tags, page.Published);
-					if (result.IsT1)
+					if (result is not WikiPage tagged)
 					{
 						await notifyService.Notify(executor, $"WIKI: Could not update '{page.Title}' (it may have just been deleted).", executor);
 						return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 					}
-					var stored = result.AsT0.Tags.Count > 0
-						? string.Join(", ", result.AsT0.Tags)
+					var stored = tagged.Tags.Count > 0
+						? string.Join(", ", tagged.Tags)
 						: "(none)";
 					await notifyService.Notify(executor, $"WIKI: Tags on '{page.Title}' set to: {stored}.", executor);
 					return MarkupText.Plain(page.Slug);

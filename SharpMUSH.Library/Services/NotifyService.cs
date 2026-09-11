@@ -1,6 +1,5 @@
 using MarkupString;
 using Mediator;
-using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -76,11 +75,19 @@ public class NotifyService(
 		public string Serialized => _serialized ??= MarkupTextSerializer.Serialize(text);
 	}
 
-	private static Outgoing Prepare(OneOf<MString, string> what)
-		=> new(what.Match(markup => markup, MarkupText.Plain));
+	private static Outgoing Prepare(SharpMessage what)
+		=> new(what switch
+		{
+			MString markup => markup,
+			string str => MarkupText.Plain(str)
+		});
 
-	private static bool IsEmpty(OneOf<MString, string> what)
-		=> what.Match(markup => markup.Length == 0, str => str.Length == 0);
+	private static bool IsEmpty(SharpMessage what)
+		=> what switch
+		{
+			MString markup => markup.Length == 0,
+			string str => str.Length == 0
+		};
 
 	/// <summary>
 	/// Publishes output to a single connection as serialized markup. The ConnectionServer owns the
@@ -141,7 +148,7 @@ public class NotifyService(
 		return MarkupText.Concat(parts);
 	}
 
-	public async ValueTask Notify(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask Notify(DBRef who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (!await CanReceive(who, sender)) return;
 		if (IsEmpty(what))
@@ -153,7 +160,11 @@ public class NotifyService(
 		// the handler becomes the HTTP response body instead of going to a (nonexistent)
 		// connection — PennMUSH's CONN_HTTP_BUFFER hijack (src/notify.c queue_newwrite).
 		if (httpOutputCapture?.TryCapture(who.Number,
-				what.Match(markupString => markupString.ToPlainText(), str => str)) == true)
+				what switch
+				{
+					MString markupString => markupString.ToPlainText(),
+					string str => str
+				}) == true)
 		{
 			return;
 		}
@@ -162,12 +173,13 @@ public class NotifyService(
 		{
 			try
 			{
-				var location = await sender.Match<ValueTask<DBRef>>(
-					async player => (await player.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
-					room => ValueTask.FromResult(room.Object.DBRef),
-					async exit => (await exit.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
-					async thing => (await thing.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef
-				);
+				var location = sender switch
+				{
+					SharpPlayer player => (await player.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
+					SharpRoom room => room.Object.DBRef,
+					SharpExit exit => (await exit.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
+					SharpThing thing => (await thing.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef
+				};
 
 				var notificationContext = new NotificationContext(
 					Target: who,
@@ -194,10 +206,10 @@ public class NotifyService(
 		}
 	}
 
-	public ValueTask Notify(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public ValueTask Notify(AnySharpObject who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Notify(who.Object().DBRef, what, sender, type);
 
-	public async ValueTask Notify(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask Notify(long handle, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (IsEmpty(what))
 		{
@@ -207,7 +219,7 @@ public class NotifyService(
 		if (await CanReceiveHandle(handle, sender)) await PublishMarkup(handle, Prepare(what));
 	}
 
-	public async ValueTask Notify(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask Notify(long[] handles, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (IsEmpty(what))
 		{
@@ -221,7 +233,7 @@ public class NotifyService(
 		}
 	}
 
-	public async ValueTask Prompt(DBRef who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask Prompt(DBRef who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (!await CanReceive(who, sender)) return;
 		if (IsEmpty(what))
@@ -237,19 +249,19 @@ public class NotifyService(
 		}
 	}
 
-	public ValueTask Prompt(AnySharpObject who, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public ValueTask Prompt(AnySharpObject who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Prompt(who.Object().DBRef, what, sender, type);
 
-	public ValueTask PromptToSession(long handle, string sessionId, OneOf<MString, string> what)
+	public ValueTask PromptToSession(long handle, string sessionId, SharpMessage what)
 		=> PublishMarkupPrompt(handle, Prepare(what), sessionId);
 
-	public async ValueTask Prompt(long handle, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask Prompt(long handle, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (!IsEmpty(what) && await CanReceiveHandle(handle, sender)) await PublishMarkupPrompt(handle, Prepare(what));
 	}
 
 
-	public async ValueTask Prompt(long[] handles, OneOf<MString, string> what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask Prompt(long[] handles, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (IsEmpty(what))
 		{
@@ -263,7 +275,7 @@ public class NotifyService(
 		}
 	}
 
-	public async ValueTask NotifyExcept(DBRef who, OneOf<MString, string> what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public async ValueTask NotifyExcept(DBRef who, SharpMessage what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
 		if (IsEmpty(what))
 		{
@@ -285,10 +297,10 @@ public class NotifyService(
 		}
 	}
 
-	public ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public ValueTask NotifyExcept(AnySharpObject who, SharpMessage what, DBRef[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> NotifyExcept(who.Object().DBRef, what, except, sender, type);
 
-	public ValueTask NotifyExcept(AnySharpObject who, OneOf<MString, string> what, AnySharpObject[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	public ValueTask NotifyExcept(AnySharpObject who, SharpMessage what, AnySharpObject[] except, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> NotifyExcept(who.Object().DBRef, what, Array.ConvertAll(except, x => x.Object().DBRef), sender, type);
 
 	/// <summary>

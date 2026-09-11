@@ -1,7 +1,6 @@
 using System.Globalization;
 using Mediator;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Commands.Database;
@@ -148,9 +147,13 @@ public class ConnectionAnnounceService(
 				// every subsequent write from a mortal player - freezing LASTLOGOUT after one update.
 				// Sending SetAttributeCommand directly bypasses that permission gate entirely, the same
 				// way the engine's other automatic bookkeeping writes do.
-				var god = await HelperFunctions.GetGod(mediator);
+				if (await HelperFunctions.GetGod(mediator) is not SharpPlayer god)
+				{
+					throw new InvalidOperationException("God (#1) is not a player, so LASTLOGOUT has no writer.");
+				}
+
 				await mediator.Send(new SetAttributeCommand(
-					player.Object().DBRef, ["LASTLOGOUT"], MarkupText.Plain(lastLogout), god.AsPlayer));
+					player.Object().DBRef, ["LASTLOGOUT"], MarkupText.Plain(lastLogout), god));
 			}
 		}
 		catch (Exception ex)
@@ -216,10 +219,8 @@ public class ConnectionAnnounceService(
 		// PennMUSH zones the player's LOCATION, not the player itself (bsd.c:5992, loc = Location(player)) -
 		// zones are attached to rooms, so reading player.Object().Zone directly was dead code in practice.
 		var loc = await player.Where();
-		var zoneRelation = await loc.Object().Zone.WithCancellation(CancellationToken.None);
-		if (!zoneRelation.IsNone)
+		if (await loc.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone)
 		{
-			var zone = zoneRelation.Known;
 			if (zone.IsThing)
 			{
 				await QueueHookAsync(parser, zone, player, attrName, countArg);
@@ -234,10 +235,9 @@ public class ConnectionAnnounceService(
 		}
 
 		var masterRoomDbref = new DBRef(Convert.ToInt32(configuration.CurrentValue.Database.MasterRoom));
-		var masterRoomResult = await mediator.Send(new GetObjectNodeQuery(masterRoomDbref));
-		if (!masterRoomResult.IsNone)
+		if (await mediator.Send(new GetObjectNodeQuery(masterRoomDbref)) is AnySharpObject masterRoom)
 		{
-			await foreach (var content in masterRoomResult.Known.AsContainer.Content(mediator))
+			await foreach (var content in masterRoom.AsContainer.Content(mediator))
 			{
 				await QueueHookAsync(parser, content.WithRoomOption(), player, attrName, countArg);
 			}
@@ -319,7 +319,7 @@ public class ConnectionAnnounceService(
 			var attrResult = await attributeService.GetAttributeAsync(
 				owner, owner, attrName, IAttributeService.AttributeMode.Execute, parent: true);
 
-			if (!attrResult.IsAttribute || attrResult.AsAttribute.Length == 0)
+			if (attrResult is not SharpAttribute[] { Length: > 0 } hook)
 			{
 				return;
 			}
@@ -361,7 +361,7 @@ public class ConnectionAnnounceService(
 				MoveDepth = isEmpty ? new InvocationCounter() : parser.CurrentState.MoveDepth ?? new InvocationCounter()
 			});
 
-			var attributeText = attrResult.AsAttribute.Last().Value.ToPlainText();
+			var attributeText = hook.Last().Value.ToPlainText();
 			await evalParser.CommandListParse(MarkupText.Plain(attributeText));
 		}
 		catch (Exception ex)

@@ -1,6 +1,4 @@
-﻿using OneOf;
-using OneOf.Types;
-using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -66,7 +64,7 @@ public interface IMoveService
 	/// An error carrying the reason the move was refused — Penn rawlogs these and returns; naming
 	/// them lets a caller decide whether to tell the mover.
 	/// </returns>
-	ValueTask<OneOf<Success, Error<string>>> EnterRoom(
+	ValueTask<Result<Success>> EnterRoom(
 		IMUSHCodeParser parser,
 		AnySharpContent what,
 		AnySharpContainer where,
@@ -84,7 +82,7 @@ public interface IMoveService
 	/// <c>HOME</c> sentinel in <see cref="AnySharpContainer"/>, so a caller that means home resolves
 	/// it before calling.
 	/// </remarks>
-	ValueTask<OneOf<Success, Error<string>>> SafeTel(
+	ValueTask<Result<Success>> SafeTel(
 		IMUSHCodeParser parser,
 		AnySharpContent what,
 		AnySharpContainer where,

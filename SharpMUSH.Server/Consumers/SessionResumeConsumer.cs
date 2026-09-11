@@ -75,9 +75,8 @@ public sealed class SessionResumeConsumer(
 		{
 			if (!DBRef.TryParse(persisted.PlayerObjid, out var reference) || reference is not { IsObjid: true }
 				|| current.Ref != reference) return false;
-			var node = await mediator.Send(new GetObjectNodeQuery(reference.Value), ct);
-			if (!node.IsPlayer) return false;
-			player = node.AsPlayer;
+			if (await mediator.Send(new GetObjectNodeQuery(reference.Value), ct) is not (AnySharpObject and SharpPlayer found)) return false;
+			player = found;
 			if (new DBRef(player.Object.Key, player.Object.CreationTime) != reference.Value) return false;
 		}
 		else if (persisted.PlayerObjid is not null || current.Ref is not null) return false;

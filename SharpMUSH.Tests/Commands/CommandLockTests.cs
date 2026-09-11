@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -29,10 +30,9 @@ public class CommandLockTests
 
 		var resultText = result.Message!.ToPlainText()!;
 		var newDb = DBRef.Parse(resultText);
-		var newObject = await Mediator.Send(new GetObjectNodeQuery(newDb));
+		var newObject = (await Mediator.Send(new GetObjectNodeQuery(newDb))).Expect<AnySharpObject>();
 
-		await Assert.That(newObject.IsNone).IsFalse();
-		await Assert.That(newObject.Known.Object().Name).IsEqualTo(uniqueName);
+		await Assert.That(newObject.Object().Name).IsEqualTo(uniqueName);
 	}
 
 	[Test]
@@ -85,9 +85,8 @@ public class CommandLockTests
 
 		await Assert.That(resultText).DoesNotContain("#-1 INVALID SWITCH");
 
-		var found = await Mediator.Send(new GetObjectNodeQuery(obj));
-		await Assert.That(found.IsNone).IsFalse();
-		await Assert.That(found.Known.Object().Locks.ContainsKey("Use")).IsTrue();
-		await Assert.That(found.Known.Object().Locks["Use"].LockString).IsEqualTo("#FALSE");
+		var found = (await Mediator.Send(new GetObjectNodeQuery(obj))).Expect<AnySharpObject>();
+		await Assert.That(found.Object().Locks.ContainsKey("Use")).IsTrue();
+		await Assert.That(found.Object().Locks["Use"].LockString).IsEqualTo("#FALSE");
 	}
 }

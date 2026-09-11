@@ -47,7 +47,7 @@ public class SurrealAttributeEnumerationTests
 	public async Task AutoCreatedBranchParent_HasAnOwner()
 	{
 		var (db, _) = await CreateFreshMigratedAsync("branchowner");
-		var god = (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var god = (await db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var godRef = new DBRef(god.Object.Key);
 
 		// Setting only the child auto-creates BRANCH as a parent node; it must be owned, like the leaf.
@@ -65,7 +65,7 @@ public class SurrealAttributeEnumerationTests
 	public async Task EveryAttribute_LeafBranchParentAndChild_HasItsFullyQualifiedLongName()
 	{
 		var (db, _) = await CreateFreshMigratedAsync("longnameinvariant");
-		var god = (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var god = (await db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var godRef = new DBRef(god.Object.Key);
 
 		await db.SetAttributeAsync(godRef, ["LEAFONE"], MarkupText.Plain("one"), god);

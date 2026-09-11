@@ -1,56 +1,71 @@
-﻿using SharpMUSH.Library.Extensions;
-using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnyOptionalSharpContainer : OneOfBase<SharpPlayer, SharpRoom, SharpThing, None>, IObjectShaped<AnyOptionalSharpContainer>
+/// <summary>
+/// A container, or none. Found containers are one case, so <c>x is AnySharpContainer found</c> binds
+/// the container.
+/// </summary>
+[Union]
+public sealed class AnyOptionalSharpContainer : IUnion, IObjectShaped<AnyOptionalSharpContainer>
 {
-	public AnyOptionalSharpContainer(OneOf<SharpPlayer, SharpRoom, SharpThing, None> input) : base(input) { }
-	public static implicit operator AnyOptionalSharpContainer(SharpPlayer x) => new(x);
-	public static implicit operator AnyOptionalSharpContainer(SharpRoom x) => new(x);
-	public static implicit operator AnyOptionalSharpContainer(SharpThing x) => new(x);
-	public static implicit operator AnyOptionalSharpContainer(None x) => new(x);
+	public AnyOptionalSharpContainer(AnySharpContainer value) => Value = value;
+	public AnyOptionalSharpContainer(None value) => Value = value;
 
-	public bool IsPlayer => IsT0;
-	public bool IsRoom => IsT1;
-	public bool IsThing => IsT2;
-	public bool IsNone => IsT3;
+	public static implicit operator AnyOptionalSharpContainer(SharpPlayer value) => new(new AnySharpContainer(value));
+	public static implicit operator AnyOptionalSharpContainer(SharpRoom value) => new(new AnySharpContainer(value));
+	public static implicit operator AnyOptionalSharpContainer(SharpThing value) => new(new AnySharpContainer(value));
 
-	public SharpPlayer AsPlayer => AsT0;
-	public SharpRoom AsRoom => AsT1;
-	public SharpThing AsThing => AsT2;
+	public object? Value { get; }
 
-	public AnyOptionalSharpObject WithExitOption()
-		=> Match<AnyOptionalSharpObject>(
-			player => player,
-			room => room,
-			thing => thing,
-			none => none
-		);
+	/// <summary>
+	/// Equal when both are none, or both hold containers <see cref="AnySharpContainer"/> calls equal:
+	/// the same model instance.
+	/// </summary>
+	public override bool Equals(object? obj) => obj is AnyOptionalSharpContainer other && Equals(Value, other.Value);
 
-	public AnySharpContainer WithoutNone()
-		=> Match<AnySharpContainer>(
-			player => player,
-			room => room,
-			thing => thing,
-			none => throw new Exception("Cannot convert None to a valid object.")
-		);
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
 
-	public static DBRef? RefOf(AnyOptionalSharpContainer value) => value.IsNone ? null : value.WithoutNone().Object().DBRef;
+	public bool IsPlayer => this is AnySharpContainer and SharpPlayer;
+	public bool IsRoom => this is AnySharpContainer and SharpRoom;
+	public bool IsThing => this is AnySharpContainer and SharpThing;
+	public bool IsNone => this is None;
+
+	public SharpObject? Object() => this switch
+	{
+		AnySharpContainer found => found.Object(),
+		None => null
+	};
+
+	public string? Id() => this switch
+	{
+		AnySharpContainer found => found.Id,
+		None => null
+	};
+
+	public AnyOptionalSharpObject WithExitOption() => this switch
+	{
+		AnySharpContainer found => found.WithExitOption(),
+		None none => none
+	};
+
+	public static DBRef? RefOf(AnyOptionalSharpContainer value) => value switch
+	{
+		AnySharpContainer found => found.Object().DBRef,
+		None => null
+	};
 
 	public static bool TryFromNode(AnyOptionalSharpObject node, out AnyOptionalSharpContainer value)
 	{
-		if (node.IsNone)
+		if (node is None none)
 		{
-			value = new None();
+			value = none;
 			return true;
 		}
 
-		var container = node.Known.IsContainer;
-		value = container ? node.Known.AsContainer.Match<AnyOptionalSharpContainer>(p => p, r => r, t => t) : null!;
-		return container;
+		var isContainer = AnySharpContainer.TryFromNode(node, out var container);
+		value = isContainer ? new AnyOptionalSharpContainer(container) : null!;
+		return isContainer;
 	}
 }

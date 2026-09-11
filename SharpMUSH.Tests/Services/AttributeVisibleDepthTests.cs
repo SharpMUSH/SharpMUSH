@@ -30,7 +30,7 @@ public class AttributeVisibleDepthTests
 	{
 		var result = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {label}"));
 		var dbref = DBRef.Parse(result.Message!.ToPlainText()!);
-		var obj = (await Mediator.Send(new GetObjectNodeQuery(dbref))).Known;
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 
 		await AttributeService.SetAttributeAsync(obj, obj, "TREE", MarkupText.Plain("root"));
 		await AttributeService.SetAttributeAsync(obj, obj, "TREE`BRANCH", MarkupText.Plain("branch"));
@@ -48,7 +48,7 @@ public class AttributeVisibleDepthTests
 		var full = await AttributeService.GetVisibleAttributesAsync(obj, obj, depth: 3);
 		await Assert.That(full.IsAttribute).IsTrue();
 
-		var names = full.AsAttributes.Select(a => a.LongName).ToList();
+		var names = full.Expect<SharpAttribute[]>().Select(a => a.LongName).ToList();
 		await Assert.That(names).Contains("TREE");
 		await Assert.That(names).Contains("TREE`BRANCH");
 		await Assert.That(names).Contains("TREE`BRANCH`LEAF");
@@ -56,7 +56,7 @@ public class AttributeVisibleDepthTests
 		await Assert.That(names.IndexOf("TREE`BRANCH`LEAF")).IsGreaterThan(names.IndexOf("TREE`BRANCH"));
 
 		var shallow = await AttributeService.GetVisibleAttributesAsync(obj, obj, depth: 2);
-		var shallowNames = shallow.AsAttributes.Select(a => a.LongName).ToList();
+		var shallowNames = shallow.Expect<SharpAttribute[]>().Select(a => a.LongName).ToList();
 		await Assert.That(shallowNames).Contains("TREE`BRANCH");
 		await Assert.That(shallowNames).DoesNotContain("TREE`BRANCH`LEAF");
 	}
@@ -70,13 +70,13 @@ public class AttributeVisibleDepthTests
 		var full = await AttributeService.LazilyGetVisibleAttributesAsync(obj, obj, depth: 3);
 		await Assert.That(full.IsAttribute).IsTrue();
 
-		var names = await full.AsAttributes.Select(a => a.LongName).ToListAsync(ct);
+		var names = await full.Expect<IAsyncEnumerable<LazySharpAttribute>>().Select(a => a.LongName).ToListAsync(ct);
 		await Assert.That(names).Contains("TREE");
 		await Assert.That(names).Contains("TREE`BRANCH");
 		await Assert.That(names).Contains("TREE`BRANCH`LEAF");
 
 		var shallow = await AttributeService.LazilyGetVisibleAttributesAsync(obj, obj, depth: 2);
-		var shallowNames = await shallow.AsAttributes.Select(a => a.LongName).ToListAsync(ct);
+		var shallowNames = await shallow.Expect<IAsyncEnumerable<LazySharpAttribute>>().Select(a => a.LongName).ToListAsync(ct);
 		await Assert.That(shallowNames).Contains("TREE`BRANCH");
 		await Assert.That(shallowNames).DoesNotContain("TREE`BRANCH`LEAF");
 	}

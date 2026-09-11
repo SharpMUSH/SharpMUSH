@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Library.Services.Interfaces;
 using SurrealDb.Net.Models;
@@ -33,7 +32,7 @@ public partial class SurrealDatabase : ILayoutRegistryService
 			parameters);
 	}
 
-	public async Task<OneOf<LayoutConfiguration, NotFound>> GetLayoutAsync(string scope)
+	public async Task<Found<LayoutConfiguration>> GetLayoutAsync(string scope)
 	{
 		var response = await ExecuteAsync(
 			$"SELECT {SysLayoutFields} FROM sys_layout WHERE scope = $scope",

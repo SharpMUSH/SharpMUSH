@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services;
@@ -75,10 +75,9 @@ public class HelloUiManagedPackageExampleTests
 			var all = await decorator.GetApplicationsAsync();
 			await Assert.That(all.Select(a => a.Slug)).Contains(AppSlug);
 
-			var single = await decorator.GetApplicationAsync(AppSlug);
-			await Assert.That(single.IsT0).IsTrue();
-			await Assert.That(single.AsT0.DisplayName).IsEqualTo("Hello UI");
-			await Assert.That(single.AsT0.NavPlacement).IsEqualTo(NavSection);
+			var single = (await decorator.GetApplicationAsync(AppSlug)).Expect<RegisteredApplication>();
+			await Assert.That(single.DisplayName).IsEqualTo("Hello UI");
+			await Assert.That(single.NavPlacement).IsEqualTo(NavSection);
 		}
 		finally
 		{
@@ -92,10 +91,9 @@ public class HelloUiManagedPackageExampleTests
 		var manifestPath = ManifestPath();
 		var result = new PackageManifestService().ParseManifest(await File.ReadAllTextAsync(manifestPath));
 
-		await Assert.That(result.IsT0).IsTrue()
-			.Because($"{manifestPath} must parse as a valid manifest");
+		var parsed = result.Expect<ParsedPackageManifest>($"{manifestPath} must parse as a valid manifest");
 
-		var manifest = result.AsT0.Manifest;
+		var manifest = parsed.Manifest;
 		await Assert.That(manifest.Name).IsEqualTo(AppSlug);
 		await Assert.That(manifest.Binary).IsNotNull()
 			.Because("a kind: managed package must carry a binaries block");
@@ -126,8 +124,8 @@ public class HelloUiManagedPackageExampleTests
 	{
 		public Task UpsertApplicationAsync(RegisteredApplication application) => Task.CompletedTask;
 
-		public Task<OneOf<RegisteredApplication, NotFound>> GetApplicationAsync(string slug) =>
-			Task.FromResult<OneOf<RegisteredApplication, NotFound>>(new NotFound());
+		public Task<Found<RegisteredApplication>> GetApplicationAsync(string slug) =>
+			Task.FromResult<Found<RegisteredApplication>>(new NotFound());
 
 		public Task<IReadOnlyList<RegisteredApplication>> GetApplicationsAsync() =>
 			Task.FromResult<IReadOnlyList<RegisteredApplication>>([]);

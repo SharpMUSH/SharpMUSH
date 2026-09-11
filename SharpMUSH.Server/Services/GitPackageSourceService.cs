@@ -2,8 +2,7 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using LibGit2Sharp;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -31,7 +30,7 @@ public class GitPackageSourceService(
 		"+refs/tags/*:refs/tags/*"
 	];
 
-	public async Task<OneOf<PackageRepoSnapshot, Error<string>>> RefreshAsync(
+	public async Task<Result<PackageRepoSnapshot>> RefreshAsync(
 		PackageRemoteRecord remote, CancellationToken cancellationToken = default)
 	{
 		return await WithRepoAsync(remote, repository =>
@@ -39,7 +38,7 @@ public class GitPackageSourceService(
 			var tip = ResolveTip(repository, remote.Branch);
 			if (tip is null)
 			{
-				return OneOf<PackageRepoSnapshot, Error<string>>.FromT1(
+				return new Result<PackageRepoSnapshot>(
 					new Error<string>($"Remote '{remote.Name}': branch '{remote.Branch ?? "default"}' not found."));
 			}
 
@@ -54,7 +53,7 @@ public class GitPackageSourceService(
 		}, cancellationToken);
 	}
 
-	public async Task<OneOf<PackageManifestSource, Error<string>>> GetManifestAsync(
+	public async Task<Result<PackageManifestSource>> GetManifestAsync(
 		PackageRemoteRecord remote, string path, string? version = null,
 		CancellationToken cancellationToken = default)
 	{
@@ -66,7 +65,7 @@ public class GitPackageSourceService(
 				commit = ResolveTip(repository, remote.Branch);
 				if (commit is null)
 				{
-					return OneOf<PackageManifestSource, Error<string>>.FromT1(
+					return new Result<PackageManifestSource>(
 						new Error<string>($"Remote '{remote.Name}': branch '{remote.Branch ?? "default"}' not found."));
 				}
 			}
@@ -76,7 +75,7 @@ public class GitPackageSourceService(
 				commit = tag?.PeeledTarget as Commit;
 				if (commit is null)
 				{
-					return OneOf<PackageManifestSource, Error<string>>.FromT1(
+					return new Result<PackageManifestSource>(
 						new Error<string>($"No release tag '{TagNameFor(path, version)}' on remote '{remote.Name}'."));
 				}
 			}
@@ -84,7 +83,7 @@ public class GitPackageSourceService(
 			var yaml = ReadBlob(commit, ManifestPathFor(path));
 			if (yaml is null)
 			{
-				return OneOf<PackageManifestSource, Error<string>>.FromT1(
+				return new Result<PackageManifestSource>(
 					new Error<string>($"No package.yaml under '{path}' at {(version is null ? "branch tip" : version)}."));
 			}
 
@@ -92,7 +91,7 @@ public class GitPackageSourceService(
 		}, cancellationToken);
 	}
 
-	public async Task<OneOf<PackageUpdateInfo, Error<string>>> CheckForUpdateAsync(
+	public async Task<Result<PackageUpdateInfo>> CheckForUpdateAsync(
 		PackageRemoteRecord remote, InstalledPackageRecord installed,
 		CancellationToken cancellationToken = default)
 	{
@@ -102,7 +101,7 @@ public class GitPackageSourceService(
 			var tip = ResolveTip(repository, installed.PinnedBranch ?? remote.Branch);
 			if (tip is null)
 			{
-				return OneOf<PackageUpdateInfo, Error<string>>.FromT1(
+				return new Result<PackageUpdateInfo>(
 					new Error<string>($"Remote '{remote.Name}': branch not found."));
 			}
 
@@ -145,7 +144,7 @@ public class GitPackageSourceService(
 		}, cancellationToken);
 	}
 
-	public async Task<OneOf<CommunityRepoDirectory, Error<string>>> GetCommunityListingsAsync(
+	public async Task<Result<CommunityRepoDirectory>> GetCommunityListingsAsync(
 		PackageRemoteRecord remote, CancellationToken cancellationToken = default)
 	{
 		return await WithRepoAsync(remote, repository =>
@@ -153,7 +152,7 @@ public class GitPackageSourceService(
 			var tip = ResolveTip(repository, remote.Branch);
 			if (tip is null)
 			{
-				return OneOf<CommunityRepoDirectory, Error<string>>.FromT1(
+				return new Result<CommunityRepoDirectory>(
 					new Error<string>($"Remote '{remote.Name}': branch '{remote.Branch ?? "default"}' not found."));
 			}
 
@@ -172,11 +171,16 @@ public class GitPackageSourceService(
 						continue;
 					}
 
-					var parsed = manifests.ParseCommunityListing(((Blob)entry.Target).GetContentText());
-					parsed.Switch(
-						listing => listings.Add(listing),
-						failure => errors.Add(
-							$"community/{entry.Name}: {string.Join("; ", failure.Errors.Select(e => e.ToString()))}"));
+					switch (manifests.ParseCommunityListing(((Blob)entry.Target).GetContentText()))
+					{
+						case CommunityRepoListing listing:
+							listings.Add(listing);
+							break;
+						case PackageManifestFailure failure:
+							errors.Add(
+								$"community/{entry.Name}: {string.Join("; ", failure.Errors.Select(e => e.ToString()))}");
+							break;
+					}
 				}
 			}
 
@@ -186,7 +190,7 @@ public class GitPackageSourceService(
 		}, cancellationToken);
 	}
 
-	public async Task<OneOf<string, Error<string>>> GetReadmeAsync(
+	public async Task<Result<string>> GetReadmeAsync(
 		PackageRemoteRecord remote, string path, string? version = null,
 		CancellationToken cancellationToken = default)
 	{
@@ -204,7 +208,7 @@ public class GitPackageSourceService(
 
 			if (commit is null)
 			{
-				return OneOf<string, Error<string>>.FromT1(new Error<string>(
+				return new Result<string>(new Error<string>(
 					$"Remote '{remote.Name}': {(version is null ? "branch tip" : $"release tag for {version}")} not found."));
 			}
 
@@ -219,12 +223,12 @@ public class GitPackageSourceService(
 				}
 			}
 
-			return OneOf<string, Error<string>>.FromT1(new Error<string>(
+			return new Result<string>(new Error<string>(
 				$"No README.md under '{(directory.Length == 0 ? "repo root" : directory)}' on remote '{remote.Name}'."));
 		}, cancellationToken);
 	}
 
-	public async Task<OneOf<IManagedPackageBinarySource, Error<string>>> GetBinarySourceAsync(
+	public async Task<Result<IManagedPackageBinarySource>> GetBinarySourceAsync(
 		PackageRemoteRecord remote, string path, string commit, CancellationToken cancellationToken = default)
 	{
 		return await WithRepoAsync(remote, repository =>
@@ -232,7 +236,7 @@ public class GitPackageSourceService(
 			var resolved = repository.Lookup<Commit>(commit);
 			if (resolved is null)
 			{
-				return OneOf<IManagedPackageBinarySource, Error<string>>.FromT1(
+				return new Result<IManagedPackageBinarySource>(
 					new Error<string>($"Remote '{remote.Name}': commit '{commit}' is not in the cache."));
 			}
 
@@ -256,7 +260,7 @@ public class GitPackageSourceService(
 				}
 			}
 
-			return OneOf<IManagedPackageBinarySource, Error<string>>.FromT0(new GitCommitBinarySource(files));
+			return new Result<IManagedPackageBinarySource>(new GitCommitBinarySource(files));
 		}, cancellationToken);
 	}
 
@@ -267,9 +271,9 @@ public class GitPackageSourceService(
 			Task.FromResult(files.GetValueOrDefault(fileName));
 	}
 
-	private async Task<OneOf<T, Error<string>>> WithRepoAsync<T>(
+	private async Task<Result<T>> WithRepoAsync<T>(
 		PackageRemoteRecord remote,
-		Func<Repository, OneOf<T, Error<string>>> action,
+		Func<Repository, Result<T>> action,
 		CancellationToken cancellationToken)
 	{
 		var gate = RepoLocks.GetOrAdd(remote.Url, _ => new SemaphoreSlim(1, 1));
@@ -298,7 +302,7 @@ public class GitPackageSourceService(
 				}
 				catch (LibGit2SharpException ex)
 				{
-					return OneOf<T, Error<string>>.FromT1(
+					return new Result<T>(
 						new Error<string>($"Remote '{remote.Name}' ({remote.Url}): {ex.Message}"));
 				}
 			}, cancellationToken);
@@ -329,10 +333,9 @@ public class GitPackageSourceService(
 		var indexYaml = ReadBlob(tip, "index.yaml");
 		if (indexYaml is not null)
 		{
-			var parsed = manifests.ParseIndex(indexYaml);
-			if (parsed.IsT0)
+			if (manifests.ParseIndex(indexYaml) is PackageIndex index)
 			{
-				return parsed.AsT0.Packages.Select(p => p.Path.TrimEnd('/')).ToList();
+				return index.Packages.Select(p => p.Path.TrimEnd('/')).ToList();
 			}
 		}
 
@@ -366,10 +369,8 @@ public class GitPackageSourceService(
 		var yaml = ReadBlob(tip, ManifestPathFor(path));
 		if (yaml is not null)
 		{
-			var parsed = manifests.ParseManifest(yaml);
-			if (parsed.IsT0)
+			if (manifests.ParseManifest(yaml) is ParsedPackageManifest { Manifest: var manifest })
 			{
-				var manifest = parsed.AsT0.Manifest;
 				packageId = manifest.Name;
 				version = manifest.Version.ToString();
 				description = manifest.Description;

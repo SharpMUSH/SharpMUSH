@@ -1,8 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using System.Text.Json;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -54,8 +52,7 @@ public class PackageInstallService(
 		IReadOnlyDictionary<string, string> configureAnswers,
 		CancellationToken cancellationToken)
 	{
-		var installedResult = await registry.GetInstalledPackageAsync(manifest.Name);
-		var installed = installedResult.IsT0 ? installedResult.AsT0 : null;
+		var installed = await registry.GetInstalledPackageAsync(manifest.Name) is InstalledPackageRecord found ? found : null;
 		var installedObjects = await registry.GetPackageObjectsAsync(manifest.Name);
 		var baselines = await registry.GetManagedAttributesAsync(manifest.Name);
 		var allInstalled = await registry.GetInstalledPackagesAsync();
@@ -222,13 +219,11 @@ public class PackageInstallService(
 			return new LiveObjectState(objid, false, "", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 		}
 
-		var node = await database.GetObjectNodeAsync(dbref.Value, cancellationToken);
-		if (node.IsNone())
+		if (await database.GetObjectNodeAsync(dbref.Value, cancellationToken) is not AnySharpObject known)
 		{
 			return new LiveObjectState(objid, false, "", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 		}
 
-		var known = node.Known();
 		var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		var attributeFlags = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
 		foreach (var attribute in attributes)
@@ -263,10 +258,9 @@ public class PackageInstallService(
 
 		async Task AddAsync(string name, uint? number, uint fallback)
 		{
-			var node = await database.GetObjectNodeAsync(new DBRef((int)(number ?? fallback)), cancellationToken);
-			if (!node.IsNone())
+			if (await database.GetObjectNodeAsync(new DBRef((int)(number ?? fallback)), cancellationToken) is AnySharpObject node)
 			{
-				map[name] = node.Known().Object().DBRef.ToString();
+				map[name] = node.Object().DBRef.ToString();
 			}
 		}
 
@@ -295,7 +289,7 @@ public class PackageInstallService(
 
 	// ── Apply ────────────────────────────────────────────────────────────────
 
-	public async Task<OneOf<PackageApplyResult, Error<string>>> ApplyAsync(
+	public async Task<Result<PackageApplyResult>> ApplyAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
 		CancellationToken cancellationToken = default,
@@ -384,14 +378,15 @@ public class PackageInstallService(
 			is PackageObjectAction.Create or PackageObjectAction.RecreateMissing))
 		{
 			var spec = manifestByRef[change.Ref];
-			var createdRef = await CreateObjectAsync(spec, pmWizard, Resolve, notes, cancellationToken);
-			if (createdRef.IsT1)
+			switch (await CreateObjectAsync(spec, pmWizard, Resolve, notes, cancellationToken))
 			{
-				return createdRef.AsT1;
+				case string createdObjid:
+					objidByRef[change.Ref] = createdObjid;
+					created[change.Ref] = createdObjid;
+					break;
+				case Error<string> error:
+					return error;
 			}
-
-			objidByRef[change.Ref] = createdRef.AsT0;
-			created[change.Ref] = createdRef.AsT0;
 		}
 
 		// Pass 2: exits link, parents, name updates (flags/locks/powers come later).
@@ -563,14 +558,15 @@ public class PackageInstallService(
 		// as objects/attributes, so {{?configure}} settings land here too.
 		if (manifest is { Kind: PackageKind.Application, Application: not null })
 		{
-			var built = BuildRegisteredApplication(manifest.Application, manifest.Name, Resolve);
-			if (built.IsT1)
+			switch (BuildRegisteredApplication(manifest.Application, manifest.Name, Resolve))
 			{
-				return built.AsT1;
+				case RegisteredApplication application:
+					await applications.UpsertApplicationAsync(application);
+					notes.Add($"Registered application '{application.Slug}' ({application.Kind}) at /apps/{application.Slug}.");
+					break;
+				case Error<string> error:
+					return error;
 			}
-
-			await applications.UpsertApplicationAsync(built.AsT0);
-			notes.Add($"Registered application '{built.AsT0.Slug}' ({built.AsT0.Kind}) at /apps/{built.AsT0.Slug}.");
 		}
 
 		// Lifecycle hooks (decision 20.x): after a successful apply, run AINSTALL on
@@ -589,7 +585,7 @@ public class PackageInstallService(
 	/// and a revision. No game objects, attributes, or plan are involved. The
 	/// plugin loads on the next server boot.
 	/// </summary>
-	private async Task<OneOf<PackageApplyResult, Error<string>>> ApplyManagedAsync(
+	private async Task<Result<PackageApplyResult>> ApplyManagedAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
 		IManagedPackageBinarySource? binarySource,
@@ -601,16 +597,23 @@ public class PackageInstallService(
 				$"Managed package '{manifest.Name}' cannot be installed without a binary source to read its DLL(s) from.");
 		}
 
-		var deployResult = await managedInstaller.DeployAsync(manifest, request, binarySource, cancellationToken);
-		if (deployResult.IsT1)
+		return await managedInstaller.DeployAsync(manifest, request, binarySource, cancellationToken) switch
 		{
-			return deployResult.AsT1;
-		}
+			IReadOnlyList<string> deployed => await RecordManagedDeploymentAsync(manifest, request, deployed),
+			Error<string> error => error,
+		};
+	}
 
-		var deployed = deployResult.AsT0;
-
-		var installedResult = await registry.GetInstalledPackageAsync(manifest.Name);
-		var installed = installedResult.IsT0 ? installedResult.AsT0 : null;
+	/// <summary>
+	/// Records a managed package whose binaries <see cref="IManagedPackageInstaller"/> has deposited: the
+	/// install row with the deployed file list, its dependencies, and a revision.
+	/// </summary>
+	private async Task<PackageApplyResult> RecordManagedDeploymentAsync(
+		PackageManifest manifest,
+		PackageApplyRequest request,
+		IReadOnlyList<string> deployed)
+	{
+		var installed = await registry.GetInstalledPackageAsync(manifest.Name) is InstalledPackageRecord found ? found : null;
 		var revision = (installed?.CurrentRevision ?? 0) + 1;
 
 		await registry.UpsertInstalledPackageAsync(new InstalledPackageRecord(
@@ -649,7 +652,7 @@ public class PackageInstallService(
 	/// fields and parsing the role/kind/zone enums. Provenance is stamped with
 	/// the package id so uninstall can reclaim it.
 	/// </summary>
-	private static OneOf<RegisteredApplication, Error<string>> BuildRegisteredApplication(
+	private static Result<RegisteredApplication> BuildRegisteredApplication(
 		PackageApplicationSpec spec, string packageId, Func<PackageRef, string?> resolve)
 	{
 		string? Sub(string? value) =>
@@ -687,7 +690,7 @@ public class PackageInstallService(
 		return application;
 	}
 
-	private async Task<OneOf<string, Error<string>>> CreateObjectAsync(
+	private async Task<Result<string>> CreateObjectAsync(
 		PackageObjectSpec spec,
 		SharpPlayer pmWizard,
 		Func<PackageRef, string?> resolve,
@@ -734,8 +737,12 @@ public class PackageInstallService(
 				return new Error<string>($"Object type '{spec.Type}' is not supported by the apply engine.");
 		}
 
-		var node = await database.GetObjectNodeAsync(createdDbref, cancellationToken);
-		var objid = node.Known().Object().DBRef.ToString();
+		if (await database.GetObjectNodeAsync(createdDbref, cancellationToken) is not AnySharpObject created)
+		{
+			return new Error<string>($"Internal error: object {{{{{spec.Ref}}}}} ({createdDbref}) vanished during apply.");
+		}
+
+		var objid = created.Object().DBRef.ToString();
 		notes.Add($"Created {spec.Type.ToString().ToLowerInvariant()} {{{{{spec.Ref}}}}} as {objid}.");
 		return objid;
 	}
@@ -763,8 +770,12 @@ public class PackageInstallService(
 				return $"Exit {{{{{spec.Ref}}}}}: destination is not resolvable.";
 			}
 
-			await mediator.Send(new LinkExitCommand(
-				node.Match(_ => null!, _ => null!, exit => exit, _ => null!), destination), cancellationToken);
+			if (node is not SharpExit exit)
+			{
+				return $"Internal error: exit {{{{{spec.Ref}}}}} ({objid}) is not an exit.";
+			}
+
+			await mediator.Send(new LinkExitCommand(exit, destination), cancellationToken);
 		}
 
 		// Name updates for metadata drift.
@@ -1106,11 +1117,10 @@ public class PackageInstallService(
 
 	// ── Uninstall ────────────────────────────────────────────────────────────
 
-	public async Task<OneOf<Success, Error<string>>> UninstallAsync(
+	public async Task<Result<Success>> UninstallAsync(
 		string packageId, bool force = false, CancellationToken cancellationToken = default)
 	{
-		var installed = await registry.GetInstalledPackageAsync(packageId);
-		if (installed.IsT1)
+		if (await registry.GetInstalledPackageAsync(packageId) is not InstalledPackageRecord installed)
 		{
 			return new Error<string>($"'{packageId}' is not installed.");
 		}
@@ -1125,13 +1135,13 @@ public class PackageInstallService(
 		// Managed packages (Phase 4): no game objects/attributes — remove the
 		// deposited plugins/<id>/ directory (and unload the plugin if it is loaded
 		// and unloadable), then drop the registry records.
-		if (installed.AsT0.DeployedFiles is { Count: > 0 })
+		if (installed.DeployedFiles is { Count: > 0 })
 		{
 			var removed = await managedInstaller.RemoveAsync(
-				packageId, installed.AsT0.DeployedFiles, cancellationToken);
-			if (removed.IsT1)
+				packageId, installed.DeployedFiles, cancellationToken);
+			if (removed is Error<string> removeError)
 			{
-				return removed.AsT1;
+				return removeError;
 			}
 
 			await registry.RemoveInstalledPackageAsync(packageId);
@@ -1206,22 +1216,19 @@ public class PackageInstallService(
 
 	// ── Rollback ─────────────────────────────────────────────────────────────
 
-	public async Task<OneOf<PackageRollbackResult, Error<string>>> RollbackAsync(
+	public async Task<Result<PackageRollbackResult>> RollbackAsync(
 		string packageId, int revision, CancellationToken cancellationToken = default)
 	{
-		var installedResult = await registry.GetInstalledPackageAsync(packageId);
-		if (installedResult.IsT1)
+		if (await registry.GetInstalledPackageAsync(packageId) is not InstalledPackageRecord installed)
 		{
 			return new Error<string>($"'{packageId}' is not installed.");
 		}
 
-		var revisionResult = await registry.GetPackageRevisionAsync(packageId, revision);
-		if (revisionResult.IsT1)
+		if (await registry.GetPackageRevisionAsync(packageId, revision) is not PackageRevisionRecord record)
 		{
 			return new Error<string>($"'{packageId}' has no revision {revision}.");
 		}
 
-		var record = revisionResult.AsT0;
 		var snapshot = JsonSerializer.Deserialize<PackageRevisionSnapshot>(record.ManifestSnapshotJson, SnapshotJson);
 		if (snapshot is null)
 		{
@@ -1245,7 +1252,7 @@ public class PackageInstallService(
 		foreach (var attribute in snapshot.Attributes.Where(a => sharedRefs.Contains((a.Objid, a.Attribute.ToUpperInvariant()))))
 		{
 			var dbref = ParseObjid(attribute.Objid);
-			if (dbref is null || (await database.GetObjectNodeAsync(dbref.Value, cancellationToken)).IsNone())
+			if (dbref is null || (await database.GetObjectNodeAsync(dbref.Value, cancellationToken)).IsNone)
 			{
 				continue;
 			}
@@ -1264,7 +1271,7 @@ public class PackageInstallService(
 		foreach (var attribute in snapshot.Attributes)
 		{
 			var dbref = ParseObjid(attribute.Objid);
-			if (dbref is null || (await database.GetObjectNodeAsync(dbref.Value, cancellationToken)).IsNone())
+			if (dbref is null || (await database.GetObjectNodeAsync(dbref.Value, cancellationToken)).IsNone)
 			{
 				notes.Add($"Skipped {attribute.Objid}/{attribute.Attribute}: object no longer exists.");
 				continue;
@@ -1297,7 +1304,6 @@ public class PackageInstallService(
 
 		await RestoreStructureAsync(packageId, snapshot, notes, cancellationToken);
 
-		var installed = installedResult.AsT0;
 		var newRevision = installed.CurrentRevision + 1;
 		await registry.UpsertInstalledPackageAsync(installed with
 		{
@@ -1454,8 +1460,7 @@ public class PackageInstallService(
 			return null;
 		}
 
-		var node = await database.GetObjectNodeAsync(dbref.Value, cancellationToken);
-		return node.IsNone() ? null : node.Known();
+		return await database.GetObjectNodeAsync(dbref.Value, cancellationToken) is AnySharpObject node ? node : null;
 	}
 
 	/// <summary>
@@ -1489,27 +1494,25 @@ public class PackageInstallService(
 
 		var objid = resolve(reference);
 		var node = objid is null ? null : await GetKnownAsync(objid, cancellationToken);
-		return node?.Match<AnySharpContainer?>(
-			player => player,
-			room => room,
-			_ => null,
-			thing => thing);
+		return node switch
+		{
+			null or SharpExit => null,
+			SharpPlayer player => player,
+			SharpRoom room => room,
+			SharpThing thing => thing
+		};
 	}
 
 	private async Task<SharpPlayer> GetPackageManagerWizardAsync(CancellationToken cancellationToken)
 	{
 		var number = (int)(configuration.CurrentValue.Database.PackageManager ?? 3);
 		var node = await database.GetObjectNodeAsync(new DBRef(number), cancellationToken);
-		if (node.IsNone())
+		return node switch
 		{
-			throw new InvalidOperationException($"Package Manager wizard #{number} does not exist.");
-		}
-
-		return node.Known().Match(
-			player => player,
-			_ => throw new InvalidOperationException($"#{number} is not a player."),
-			_ => throw new InvalidOperationException($"#{number} is not a player."),
-			_ => throw new InvalidOperationException($"#{number} is not a player."));
+			AnySharpObject and SharpPlayer player => player,
+			AnySharpObject => throw new InvalidOperationException($"#{number} is not a player."),
+			None => throw new InvalidOperationException($"Package Manager wizard #{number} does not exist.")
+		};
 	}
 
 	private static AnySharpContainer ToContainer(SharpPlayer player) => player;

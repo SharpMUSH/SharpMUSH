@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -30,7 +29,7 @@ public class RealityPortalHttpTests
 	{
 		var objects = new TestObjectFactory();
 		var room = objects.CreateRoom(10, "Room metadata");
-		var player = objects.CreatePlayer(11, "Viewer", room).AsPlayer;
+		var player = objects.CreatePlayer(11, "Viewer", room).Expect<SharpPlayer>();
 		var actor = new CapabilityActor("account", player.Object.DBRef, player.Object.DBRef);
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.GetGameActorAsync(player.Object.DBRef, Arg.Any<CancellationToken>()).Returns(actor);

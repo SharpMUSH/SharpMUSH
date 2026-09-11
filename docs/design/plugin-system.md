@@ -225,7 +225,7 @@ skipped names are never recorded, so unload never removes a built-in or another 
   and re-register its commands/functions. Same `Error` restraints. A reload picks up a new DLL on disk because
   the load goes back to the file every time.
 
-Both return `OneOf<Success, Error<string>>`; the `Error` message for a load-once plugin names the offending
+Both return `Result<Success>`; the `Error` message for a load-once plugin names the offending
 contribution kinds and says to restart.
 
 ### The unload proof (the real gate)
@@ -321,7 +321,7 @@ package: my-plugin
 version: "1.0.0"
 kind: managed
 binaries:
-  min_server_version: ">=1.0"        # plugin/server contract version constraint (refused if too new)
+  min_server_version: ">=3.0"        # plugin/server contract version constraint (refused if too new)
   files:
     - file: MyPlugin.dll             # flat file name — no path separators or '..'
       sha256: <64-hex SHA-256>       # the installer rejects a mismatch

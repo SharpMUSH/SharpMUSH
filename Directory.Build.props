@@ -20,6 +20,16 @@
     <TelnetNegotiationCoreVersion>2.16.0</TelnetNegotiationCoreVersion>
   </PropertyGroup>
 
+  <!--
+    The Microsoft.AspNetCore.*, Microsoft.Extensions.*, Microsoft.Data.Sqlite and
+    System.Configuration.ConfigurationManager packages ship with the runtime and share its version.
+    They move with global.json's SDK: a package a release behind the shared framework the app runs
+    on is the NU1605 downgrade that fails every project under TreatWarningsAsErrors.
+  -->
+  <PropertyGroup>
+    <DotNetPackageVersion>11.0.0-rc.1.26425.128</DotNetPackageVersion>
+  </PropertyGroup>
+
   <!-- Keep the runner, assertions, generators, and ASP.NET integration on one release. -->
   <PropertyGroup>
     <TUnitVersion>1.66.27</TUnitVersion>

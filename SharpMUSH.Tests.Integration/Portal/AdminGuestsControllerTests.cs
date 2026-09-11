@@ -59,7 +59,7 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 		var player = await NewPlayerAsync(prefix);
 		var wizardFlag = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
 		var node = await Mediator.Send(new GetObjectNodeQuery(player));
-		await Mediator.Send(new SetObjectFlagCommand(new AnySharpObject(node.AsPlayer), wizardFlag!));
+		await Mediator.Send(new SetObjectFlagCommand(node.Expect<AnySharpObject>(), wizardFlag!));
 		return player;
 	}
 
@@ -85,7 +85,7 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 		// The power is what `connect guest` actually selects on, so creating a player without it
 		// would leave the panel reporting success while guest login stayed broken.
 		var node = await Mediator.Send(new GetObjectNodeQuery(new DBRef(row.DbrefNumber, row.CreationTime)));
-		await Assert.That(await node.AsPlayer.Object.HasPower("Guest")).IsTrue();
+		await Assert.That(await node.Expect<SharpPlayer>().Object.HasPower("Guest")).IsTrue();
 	}
 
 	[Test]

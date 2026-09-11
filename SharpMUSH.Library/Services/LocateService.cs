@@ -1,5 +1,4 @@
 using Mediator;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -70,21 +69,19 @@ public partial class LocateService(
 		public bool NoControl { get; set; }
 	}
 
-	// Notify's sender is nullable and a locate need not have a caller — a system-originated one has
-	// none. WithoutNone() threw ArgumentException there, so the notification the caller asked for became
-	// an exception instead.
+	// Notify's sender is nullable, and a locate need not have a caller — a system-originated one has none.
 	private static AnySharpObject? Sender(AnyOptionalSharpObject caller)
-		=> caller.IsNone ? null : caller.WithoutNone();
+		=> caller is AnySharpObject found ? found : null;
 
 	/// <summary>What a failed noisy locate tells the executor. match.c picks between exactly these three.</summary>
 	private static string LocateNotifyMessage(AnyOptionalSharpObjectOrError loc, bool noControl)
 		=> loc switch
 		{
-			{ IsError: true, AsError.Value: var e } when e == ErrorMessages.Returns.AmbiguousMatch
+			Error<string> { Value: var e } when e == ErrorMessages.Returns.AmbiguousMatch
 				=> ErrorMessages.Notifications.AmbiguousMatch,
 			_ when noControl => ErrorMessages.Notifications.PermissionDenied,
 			// Anything else that arrived as an error carries its own wording (the looker gate, say).
-			{ IsError: true, AsError.Value: var e } when e != ErrorMessages.Returns.CantSeeThat => e,
+			Error<string> { Value: var e } when e != ErrorMessages.Returns.CantSeeThat => e,
 			// match.c's remaining arm is "I can't see that here." for a plain miss as much as for a
 			// candidate that could not be seen. Notifications.NoMatch ("I don't see that here.") is
 			// do_look's string, not match_result_internal's.
@@ -109,14 +106,14 @@ public partial class LocateService(
 		string name, LocateFlags flags)
 	{
 		var (loc, noControl) = await LocateWithDiagnosis(looker, executor, name, flags);
-		if (loc.IsValid())
+		if (loc is AnySharpObject found)
 		{
-			return loc.AsAnyObject;
+			return found;
 		}
 
 		var caller = await parser.CurrentState.CallerObject(mediator);
 		await notifyService.Notify(executor, LocateNotifyMessage(loc, noControl), Sender(caller));
-		var callStateMessage = loc.IsError ? loc.AsError.Value : ErrorMessages.Returns.NoMatch;
+		var callStateMessage = loc is Error<string> error ? error.Value : ErrorMessages.Returns.NoMatch;
 
 		return new Error<CallState>(new CallState(callStateMessage));
 	}
@@ -126,9 +123,8 @@ public partial class LocateService(
 		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, ValueTask<CallState>> foundFunc)
 		=> await LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, flags) switch
 		{
-			{ IsError: true, AsError: var error } => error,
-			{ IsT0: true, AsSharpObject: var obj } => await foundFunc(obj),
-			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
+			Error<CallState> error => error.Value,
+			AnySharpObject obj => await foundFunc(obj)
 		};
 
 
@@ -137,9 +133,8 @@ public partial class LocateService(
 		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, CallState> foundFunc)
 		=> await LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, flags) switch
 		{
-			{ IsError: true, AsError: var error } => error,
-			{ IsT0: true, AsSharpObject: var obj } => foundFunc(obj),
-			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
+			Error<CallState> error => error.Value,
+			AnySharpObject obj => foundFunc(obj)
 		};
 
 	public async ValueTask<AnyOptionalSharpObjectOrError> Locate(
@@ -276,9 +271,10 @@ public partial class LocateService(
 		AnySharpObject executor, string name, Func<SharpPlayer, ValueTask<CallState>> foundFunc)
 		=> await LocatePlayerAndNotifyIfInvalidWithCallState(parser, looker, executor, name) switch
 		{
-			{ IsError: true, AsError: var error } => error,
-			{ IsT0: true, AsSharpObject: var obj } => await foundFunc(obj.AsPlayer),
-			_ => throw new InvalidOperationException("Unexpected state in LocateAndNotifyIfInvalidWithCallStateFunction")
+			Error<CallState> error => error.Value,
+			AnySharpObject and SharpPlayer player => await foundFunc(player),
+			AnySharpObject other => throw new InvalidOperationException(
+				$"A player-only locate matched {other.Object().DBRef}, which is not a player.")
 		};
 
 	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(IMUSHCodeParser parser, AnySharpObject looker,
@@ -380,29 +376,25 @@ public partial class LocateService(
 		}
 
 		// "#<dbref>"
-		if (absolute.IsSome() && flags.HasFlag(LocateFlags.AbsoluteMatch))
+		if (absolute.TryGetValue(out var reference) && flags.HasFlag(LocateFlags.AbsoluteMatch)
+				&& await mediator.Send(new GetObjectNodeQuery(reference)) is AnySharpObject known)
 		{
-			var found = (await mediator.Send(new GetObjectNodeQuery(absolute.AsValue()))).WithErrorOption();
-			if (!found.IsNone)
+			if (await permissionService.CanInteract(executor, known, MatchInteraction(flags))
+					&& TypeAllows(preferred, flags, TypeOf(known))
+					&& await InLookerContents(known)
+					&& (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
+							|| await executor.HasLongFingers()
+							|| await Nearby(executor, known)
+							|| await permissionService.Controls(executor, known)))
 			{
-				var known = found.WithoutError().WithoutNone();
-				if (await permissionService.CanInteract(executor, known, MatchInteraction(flags))
-						&& TypeAllows(preferred, flags, TypeOf(known))
-						&& await InLookerContents(known)
-						&& (!flags.HasFlag(LocateFlags.OnlyMatchObjectsInLookerLocation)
-								|| await executor.HasLongFingers()
-								|| await Nearby(executor, known)
-								|| await permissionService.Controls(executor, known)))
+				// MATCH_CONTROLS is per candidate — the object that matched, never the search origin.
+				if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
+						|| await permissionService.Controls(executor, known))
 				{
-					// MATCH_CONTROLS is per candidate — the object that matched, never the search origin.
-					if (!flags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
-							|| await permissionService.Controls(executor, known))
-					{
-						return (found, noControl);
-					}
-
-					noControl = true;
+					return (known.WithNoneOption().WithErrorOption(), noControl);
 				}
+
+				noControl = true;
 			}
 		}
 
@@ -488,9 +480,9 @@ public partial class LocateService(
 			if (flags.HasFlag(LocateFlags.MatchRemoteContents) && remote)
 			{
 				var zone = await location.WithExitOption().Object().Zone.WithCancellation(CancellationToken.None);
-				if (!zone.IsNone && zone.Known.IsRoom)
+				if (zone is AnySharpObject and SharpRoom zoneRoom)
 				{
-					foreach (var candidate in ExitsIn(await reader.Of(zone.Known.AsRoom))) yield return candidate;
+					foreach (var candidate in ExitsIn(await reader.Of(zoneRoom))) yield return candidate;
 				}
 			}
 
@@ -557,7 +549,12 @@ public partial class LocateService(
 		=> contents.Where(x => !x.IsExit).Select(x => x.WithRoomOption());
 
 	private static IEnumerable<AnySharpObject> ExitsIn(IReadOnlyList<AnySharpContent> contents)
-		=> contents.Where(x => x.IsExit).Select(x => new AnySharpObject(x.AsExit));
+	{
+		foreach (var content in contents)
+		{
+			if (content is SharpExit exit) yield return exit;
+		}
+	}
 
 	/// <summary>PennMUSH's <c>MATCH_LIST</c> over one candidate list, accumulating into <paramref name="state"/>.</summary>
 	internal async ValueTask MatchList(
@@ -576,7 +573,7 @@ public partial class LocateService(
 			if (!TypeAllows(state.Preferred, state.Flags, TypeOf(cur))) continue;
 
 			// Resolve exact identity before classifying names; every candidate still passes interaction policy.
-			var absolute = abs.IsSome() && cur.Object().DBRef.Matches(abs.AsValue());
+			var absolute = abs.TryGetValue(out var reference) && cur.Object().DBRef.Matches(reference);
 			var kind = absolute
 				? MatchKind.Exact
 				// Once an exact match exists, a partial one is not a candidate at all: without that guard
@@ -695,17 +692,13 @@ public partial class LocateService(
 		MatchState state,
 		AnyOptionalSharpObject thing1, AnyOptionalSharpObject thing2)
 	{
-		switch (thing1, thing2)
-		{
-			case ({ IsNone: true }, { IsNone: true }): return new None();
-			case ({ IsNone: true }, _): return thing2;
-			case (_, { IsNone: true }): return thing1;
-		}
+		if (thing1 is not AnySharpObject firstThing) return thing2;
+		if (thing2 is not AnySharpObject secondThing) return thing1;
 
 		if (state.Preferred != SharpObjectTypes.None)
 		{
-			var first = (state.Preferred & TypeOf(thing1.Known)) != SharpObjectTypes.None;
-			var second = (state.Preferred & TypeOf(thing2.Known)) != SharpObjectTypes.None;
+			var first = (state.Preferred & TypeOf(firstThing)) != SharpObjectTypes.None;
+			var second = (state.Preferred & TypeOf(secondThing)) != SharpObjectTypes.None;
 
 			// Only decisive when exactly one is preferred; two of the preferred type fall through to
 			// the lock check, which is what match.c's nested if/else-if does.
@@ -755,11 +748,17 @@ public partial class LocateService(
 			return;
 		}
 
-		var chosen = await ChooseThing(executor, state, state.Best.WithoutError(), cur.WithNoneOption());
+		AnyOptionalSharpObject best = state.Best switch
+		{
+			AnySharpObject found => found,
+			None none => none,
+			Error<string> => throw new InvalidOperationException("A match in progress never holds an error.")
+		};
+		var chosen = await ChooseThing(executor, state, best, cur.WithNoneOption());
 		state.Best = chosen.WithErrorOption();
 
 		// A previously matched item won on type or @lock — it stays, and cur is not counted.
-		if (!chosen.IsNone && chosen.Known.Object().DBRef != cur.Object().DBRef)
+		if (chosen is AnySharpObject winner && winner.Object().DBRef != cur.Object().DBRef)
 		{
 			return;
 		}
@@ -780,8 +779,8 @@ public partial class LocateService(
 		// is *of the preferred type*. Comparing it to cur's type is a tautology here: they are the same
 		// object by the time this runs.
 		if (state.Preferred != SharpObjectTypes.None
-				&& !chosen.IsNone
-				&& (state.Preferred & TypeOf(chosen.Known)) != SharpObjectTypes.None)
+				&& chosen is AnySharpObject counted
+				&& (state.Preferred & TypeOf(counted)) != SharpObjectTypes.None)
 		{
 			state.RightType++;
 		}
@@ -816,12 +815,13 @@ public partial class LocateService(
 
 	/// <summary>Resolves the containing location within an explicit read lifetime.</summary>
 	public static ValueTask<AnySharpContainer> FriendlyWhereIs(AnySharpObject obj, CancellationToken cancellationToken)
-		=> obj.Match<ValueTask<AnySharpContainer>>(
-			player => new(player.Location.WithCancellation(cancellationToken)),
-			room => ValueTask.FromResult<AnySharpContainer>(room),
-			exit => new(exit.Location.WithCancellation(cancellationToken)),
-			thing => new(thing.Location.WithCancellation(cancellationToken))
-		);
+		=> obj switch
+		{
+			SharpPlayer player => new(player.Location.WithCancellation(cancellationToken)),
+			SharpRoom room => ValueTask.FromResult<AnySharpContainer>(room),
+			SharpExit exit => new(exit.Location.WithCancellation(cancellationToken)),
+			SharpThing thing => new(thing.Location.WithCancellation(cancellationToken))
+		};
 
 	/// <summary>
 	/// PennMUSH's <c>nearby</c> (predicat.c:1251), which resolves each side with <c>where_is</c>.

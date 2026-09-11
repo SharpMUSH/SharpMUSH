@@ -1,4 +1,3 @@
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -43,24 +42,21 @@ public static class ScenePoseHandlers
 			: tagsRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 		var result = await sceneService.AddPoseAsync(sceneId, authorDbref, showAs, originDbref, source, tags, content);
+		if (result is Error<string> err)
+		{
+			await notifyService.Notify(executor, $"SCENE: {err.Value}");
+			return MarkupText.Plain($"#-1 {err.Value}");
+		}
 
-		return await result.Match(
-			async pose =>
-			{
-				await notifyService.Notify(executor, $"SCENE: Added pose #{pose.Id} to scene #{sceneId}.");
-				await SceneBroadcast.PublishSceneEventAsync(parser, sceneId, "pose", pose);
-				return MarkupText.Plain(pose.Id);
-			},
-			async _ =>
-			{
-				await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
-				return MarkupText.Plain(SceneCommandHelper.NotFound);
-			},
-			async err =>
-			{
-				await notifyService.Notify(executor, $"SCENE: {err.Value}");
-				return MarkupText.Plain($"#-1 {err.Value}");
-			});
+		if (result is not Contracts.ScenePose pose)
+		{
+			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
+			return MarkupText.Plain(SceneCommandHelper.NotFound);
+		}
+
+		await notifyService.Notify(executor, $"SCENE: Added pose #{pose.Id} to scene #{sceneId}.");
+		await SceneBroadcast.PublishSceneEventAsync(parser, sceneId, "pose", pose);
+		return MarkupText.Plain(pose.Id);
 	}
 
 	public static async ValueTask<MString> SetPose(
@@ -166,48 +162,47 @@ public static class ScenePoseHandlers
 		INotifyService notifyService,
 		AnySharpObject executor,
 		string poseId,
-		OneOf.OneOf<Contracts.ScenePose, NotFound> result,
+		Found<Contracts.ScenePose> result,
 		string successMessage,
 		IMUSHCodeParser? parser = null,
 		string? eventType = null)
-		=> await result.Match(
-			async pose =>
-			{
-				await notifyService.Notify(executor, $"SCENE: {successMessage}");
-				if (parser is not null && eventType is not null)
-					await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
-				return MarkupText.Plain(pose.Id);
-			},
-			async _ =>
-			{
-				await notifyService.Notify(executor, $"SCENE: No pose '{poseId}'.");
-				return MarkupText.Plain(SceneCommandHelper.NotFound);
-			});
+	{
+		if (result is not Contracts.ScenePose pose)
+		{
+			await notifyService.Notify(executor, $"SCENE: No pose '{poseId}'.");
+			return MarkupText.Plain(SceneCommandHelper.NotFound);
+		}
+
+		await notifyService.Notify(executor, $"SCENE: {successMessage}");
+		if (parser is not null && eventType is not null)
+			await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
+		return MarkupText.Plain(pose.Id);
+	}
 
 	private static async ValueTask<MString> PoseResultWithError(
 		INotifyService notifyService,
 		AnySharpObject executor,
 		string poseId,
-		OneOf.OneOf<Contracts.ScenePose, NotFound, Error<string>> result,
+		FoundResult<Contracts.ScenePose> result,
 		string successMessage,
 		IMUSHCodeParser? parser = null,
 		string? eventType = null)
-		=> await result.Match(
-			async pose =>
-			{
-				await notifyService.Notify(executor, $"SCENE: {successMessage}");
-				if (parser is not null && eventType is not null)
-					await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
-				return MarkupText.Plain(pose.Id);
-			},
-			async _ =>
-			{
-				await notifyService.Notify(executor, $"SCENE: No pose '{poseId}'.");
-				return MarkupText.Plain(SceneCommandHelper.NotFound);
-			},
-			async err =>
-			{
-				await notifyService.Notify(executor, $"SCENE: {err.Value}");
-				return MarkupText.Plain($"#-1 {err.Value}");
-			});
+	{
+		if (result is Error<string> err)
+		{
+			await notifyService.Notify(executor, $"SCENE: {err.Value}");
+			return MarkupText.Plain($"#-1 {err.Value}");
+		}
+
+		if (result is not Contracts.ScenePose pose)
+		{
+			await notifyService.Notify(executor, $"SCENE: No pose '{poseId}'.");
+			return MarkupText.Plain(SceneCommandHelper.NotFound);
+		}
+
+		await notifyService.Notify(executor, $"SCENE: {successMessage}");
+		if (parser is not null && eventType is not null)
+			await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
+		return MarkupText.Plain(pose.Id);
+	}
 }

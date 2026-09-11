@@ -4,7 +4,6 @@ using Antlr4.Runtime.Misc;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Implementation.Visitors;
@@ -550,23 +549,21 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			return;
 		}
 
-		var shouldDebug = false;
-		AnySharpObject? executorObj = null;
-
-		var executor = await callerState.ExecutorObject(mediator);
-		if (!executor.IsNone)
+		if (await callerState.ExecutorObject(mediator) is not AnySharpObject executorObj)
 		{
-			executorObj = executor.Known;
-			var stateFlags = callerState.Flags;
-			if (stateFlags.HasFlag(ParserStateFlags.NoDebug))
-				shouldDebug = false;
-			else if (stateFlags.HasFlag(ParserStateFlags.Debug))
-				shouldDebug = true;
-			else
-				shouldDebug = await executorObj.HasFlag("DEBUG");
+			return;
 		}
 
-		if (shouldDebug && executorObj is not null)
+		var stateFlags = callerState.Flags;
+		bool shouldDebug;
+		if (stateFlags.HasFlag(ParserStateFlags.NoDebug))
+			shouldDebug = false;
+		else if (stateFlags.HasFlag(ParserStateFlags.Debug))
+			shouldDebug = true;
+		else
+			shouldDebug = await executorObj.HasFlag("DEBUG");
+
+		if (shouldDebug)
 		{
 			var dbrefNumber = executorObj.Object().DBRef.Number;
 			var owner = await executorObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);

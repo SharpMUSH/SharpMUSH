@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -36,14 +35,11 @@ public class StartupAttributeBootstrapService(
 	{
 		try
 		{
-			var godNode = await mediator.Send(new GetObjectNodeQuery(God), cancellationToken);
-			if (godNode.IsNone)
+			if (await mediator.Send(new GetObjectNodeQuery(God), cancellationToken) is not AnySharpObject god)
 			{
 				logger.LogWarning("Boot @STARTUP pass skipped: God (#1) not found (database not ready?).");
 				return;
 			}
-
-			var god = godNode.Known;
 
 			// Fresh parser state: God is executor, enactor, and caller — there is no ambient
 			// parser at boot.

@@ -6,6 +6,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -34,18 +35,16 @@ public static class ChannelOn
 		{
 			var targetName = arg1.ToPlainText();
 
-			var maybeTarget =
-				await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName);
-
-			switch (maybeTarget)
+			switch (await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, targetName))
 			{
-				case { IsError: true }:
-					return new CallState(maybeTarget.AsError.Value);
-				case { IsNone: true }:
+				case AnySharpObject found:
+					target = found;
+					break;
+				case None:
 					return new CallState(ErrorMessages.Returns.PlayerNotFound);
+				case Error<string> error:
+					return new CallState(error.Value);
 			}
-
-			target = maybeTarget.AsAnyObject;
 		}
 
 		// extchat.c:1328 vs :1209 — joining SOMEBODY ELSE resolves the name against every visible channel,
@@ -57,12 +56,17 @@ public static class ChannelOn
 			: await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 				NotifyService, executor, channelName, true);
 
-		if (maybeChannel.IsError)
+		return maybeChannel switch
 		{
-			return maybeChannel.AsError.Value;
-		}
+			SharpChannel channel => await JoinAsync(PermissionService, Mediator, NotifyService, executor, target, channel),
+			Error<CallState> error => error.Value
+		};
+	}
 
-		var channel = maybeChannel.AsChannel;
+	/// <summary>Puts <paramref name="target"/> on the channel, if the executor may and it passes the channel's gates.</summary>
+	private static async ValueTask<CallState> JoinAsync(IPermissionService PermissionService, IMediator Mediator,
+		INotifyService NotifyService, AnySharpObject executor, AnySharpObject target, SharpChannel channel)
+	{
 		var channelLabel = channel.Name.ToPlainText();
 
 		// extchat.c:1250 — joining somebody else to a channel requires control of them.

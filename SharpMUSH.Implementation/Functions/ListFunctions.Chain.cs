@@ -5,6 +5,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -49,52 +50,16 @@ public partial class Functions
 
 		try
 		{
-			foreach (var objAttr in tokens.Select(HelperFunctions.SplitOptionalObjectAndAttr))
+			foreach (var token in tokens)
 			{
-				if (objAttr is { IsT1: true, AsT1: false })
+				switch (await AttributeService.FetchAttributeFunctionAsync(parser, executor, token))
 				{
-					return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
+					case AttributeFunction function:
+						accumulator = await ChainStepAsync(parser, function, accumulator, sideArgs, wrappedIteration, errors);
+						break;
+					case CallState refusal:
+						return errors.Complete(refusal);
 				}
-
-				var (dbref, attrName) = objAttr.AsT0;
-				dbref ??= executor.ToString();
-
-				var locate = await LocateService.LocateAndNotifyIfInvalid(
-					parser, executor, executor, dbref, LocateFlags.All);
-				if (!locate.IsValid())
-				{
-					return errors.Complete(CallState.Empty);
-				}
-
-				var located = locate.WithoutError().WithoutNone();
-
-				var maybeAttr = await AttributeService.GetAttributeAsync(
-					executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
-				if (maybeAttr.IsNone)
-				{
-					return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
-				}
-
-				if (maybeAttr.IsError)
-				{
-					return errors.Complete(new CallState(maybeAttr.AsError.Value));
-				}
-
-				var attrValue = maybeAttr.AsAttribute.Last().Value;
-
-				wrappedIteration.Value = accumulator;
-				wrappedIteration.Iteration++;
-
-				// %0 is the running value threaded from the previous step; %1, %2, ... are the side-arguments.
-				var env = new Dictionary<string, CallState>(sideArgs) { ["0"] = new CallState(accumulator) };
-
-				var stepParser = parser.Push(parser.CurrentState with
-				{
-					Arguments = new Dictionary<string, CallState>(env),
-					EnvironmentRegisters = env
-				});
-
-				accumulator = errors.Record(await stepParser.FunctionParse(attrValue));
 
 				// A step called ibreak(): stop the pipeline and return the value produced so far.
 				if (wrappedIteration.Break)
@@ -109,5 +74,28 @@ public partial class Functions
 		}
 
 		return errors.Complete(new CallState(accumulator));
+	}
+
+	/// <summary>
+	/// One step of chain(): runs <paramref name="function"/> on the running value and answers the
+	/// value it hands to the next step.
+	/// </summary>
+	private async ValueTask<MString> ChainStepAsync(IMUSHCodeParser parser, AttributeFunction function,
+		MString accumulator, Dictionary<string, CallState> sideArgs, IterationWrapper<MString> wrappedIteration,
+		ListEvaluationErrors errors)
+	{
+		wrappedIteration.Value = accumulator;
+		wrappedIteration.Iteration++;
+
+		// %0 is the running value threaded from the previous step; %1, %2, ... are the side-arguments.
+		var env = new Dictionary<string, CallState>(sideArgs) { ["0"] = new CallState(accumulator) };
+
+		var stepParser = parser.Push(parser.CurrentState with
+		{
+			Arguments = new Dictionary<string, CallState>(env),
+			EnvironmentRegisters = env
+		});
+
+		return errors.Record(await AttributeService.CallAttributeFunctionAsync(stepParser, function));
 	}
 }

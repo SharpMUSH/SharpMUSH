@@ -1,6 +1,5 @@
 using System.Globalization;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
@@ -54,12 +53,12 @@ public partial class LightningDatabase
 		=> await Store.WriteAsync(tx =>
 			tx.Put(Tables.Pkg, Keys.Str(package.Id), Codec.Serialize(ToInstalledPackageRecord(package))));
 
-	public Task<OneOf<InstalledPackageRecord, NotFound>> GetInstalledPackageAsync(string packageId)
+	public Task<Found<InstalledPackageRecord>> GetInstalledPackageAsync(string packageId)
 	{
 		var result = Store.Read(tx => tx.TryGet(Tables.Pkg, Keys.Str(packageId), out var bytes)
 			? MapInstalledPackage(Codec.Deserialize<Records.InstalledPackageRecord>(bytes))
 			: (InstalledPackageRecord?)null);
-		return Task.FromResult<OneOf<InstalledPackageRecord, NotFound>>(result is null ? new NotFound() : result);
+		return Task.FromResult<Found<InstalledPackageRecord>>(result is null ? new NotFound() : result);
 	}
 
 	public Task<IReadOnlyList<InstalledPackageRecord>> GetInstalledPackagesAsync()
@@ -279,12 +278,12 @@ public partial class LightningDatabase
 		return Task.FromResult<IReadOnlyList<PackageRemoteRecord>>(results);
 	}
 
-	public Task<OneOf<PackageRemoteRecord, NotFound>> GetPackageRemoteAsync(string name)
+	public Task<Found<PackageRemoteRecord>> GetPackageRemoteAsync(string name)
 	{
 		var result = Store.Read(tx => tx.TryGet(Tables.PkgRemote, Keys.Str(name), out var bytes)
 			? MapRemote(Codec.Deserialize<Records.PackageRemoteRecord>(bytes))
 			: (PackageRemoteRecord?)null);
-		return Task.FromResult<OneOf<PackageRemoteRecord, NotFound>>(result is null ? new NotFound() : result);
+		return Task.FromResult<Found<PackageRemoteRecord>>(result is null ? new NotFound() : result);
 	}
 
 	public async Task RemovePackageRemoteAsync(string name)
@@ -327,12 +326,12 @@ public partial class LightningDatabase
 		return Task.FromResult<IReadOnlyList<PackageRevisionRecord>>(results);
 	}
 
-	public Task<OneOf<PackageRevisionRecord, NotFound>> GetPackageRevisionAsync(string packageId, int revision)
+	public Task<Found<PackageRevisionRecord>> GetPackageRevisionAsync(string packageId, int revision)
 	{
 		var result = Store.Read(tx => tx.TryGet(Tables.PkgRev, Keys.Composite(packageId, (long)revision), out var bytes)
 			? MapRevision(Codec.Deserialize<Records.PackageRevisionRecord>(bytes))
 			: (PackageRevisionRecord?)null);
-		return Task.FromResult<OneOf<PackageRevisionRecord, NotFound>>(result is null ? new NotFound() : result);
+		return Task.FromResult<Found<PackageRevisionRecord>>(result is null ? new NotFound() : result);
 	}
 
 	public async Task PrunePackageRevisionsAsync(string packageId, int keep)

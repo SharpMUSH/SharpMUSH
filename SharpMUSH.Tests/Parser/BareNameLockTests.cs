@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -25,7 +26,7 @@ public class BareNameLockTests
 	public async Task BareNameLockValidation(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
+		var dbn = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 
 		await Assert.That(bep.Validate(input, dbn)).IsEqualTo(expected);
 	}
@@ -37,7 +38,7 @@ public class BareNameLockTests
 	public async Task BareNameLockMatching(string input, bool expected)
 	{
 		var bep = BooleanParser;
-		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
+		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 
 		await Assert.That(await bep.Compile(input)(player, player)).IsEqualTo(expected);
 	}
@@ -46,7 +47,7 @@ public class BareNameLockTests
 	public async Task BareNameLockNormalization()
 	{
 		var bep = BooleanParser;
-		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
+		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 		var dbRef = player.Object().DBRef;
 
 		var normalized = bep.Normalize($"#{dbRef.Number}");
@@ -59,7 +60,7 @@ public class BareNameLockTests
 	public async Task BareNameInCompoundLock()
 	{
 		var bep = BooleanParser;
-		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
+		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 
 		await Assert.That(await bep.Compile("me & #TRUE")(player, player)).IsTrue();
 		await Assert.That(await bep.Compile("me | #FALSE")(player, player)).IsTrue();

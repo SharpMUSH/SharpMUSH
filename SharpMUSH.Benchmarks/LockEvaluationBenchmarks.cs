@@ -24,7 +24,9 @@ public class LockEvaluationBenchmarks : LightningBaseBenchmark
 		await base.Setup().ConfigureAwait(false);
 
 		_lockParser = _server!.Services.GetRequiredService<IBooleanExpressionParser>();
-		_godPlayer = (await _database!.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false)).Known;
+		_godPlayer = await _database!.GetObjectNodeAsync(new DBRef(1)).ConfigureAwait(false) is AnySharpObject god
+			? god
+			: throw new InvalidOperationException("God (#1) is not seeded.");
 
 		_simpleLock = _lockParser.Compile("#1");
 		_andLock = _lockParser.Compile("#1&#1&#1");

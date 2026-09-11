@@ -1,6 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
@@ -29,9 +32,9 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task ScenePackage_IsInstalled_WithWizardLoggerObjectAndAttributes()
 	{
-		var package = await Registry.GetInstalledPackageAsync("scene");
-		await Assert.That(package.IsT0).IsTrue();
-		await Assert.That(package.AsT0.Version).IsEqualTo("1.20.0");
+		if (await Registry.GetInstalledPackageAsync("scene") is not InstalledPackageRecord package)
+			throw new InvalidOperationException("scene is not installed.");
+		await Assert.That(package.Version).IsEqualTo("1.20.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		// Two created objects: the WIZARD Logger that runs the verbs and the @hook overrides, and
@@ -59,7 +62,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 		var node = await factory.Services.GetRequiredService<ISharpDatabase>()
 			.GetObjectNodeAsync(loggerDbref);
 		var flags = new List<string>();
-		await foreach (var flag in node.Known.Object().Flags.Value)
+		await foreach (var flag in node.Expect<AnySharpObject>().Object().Flags.Value)
 		{
 			flags.Add(flag.Name);
 		}
@@ -83,9 +86,9 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 
 	private async Task AssertOverrideHook(string command, int expectedTargetNumber, string expectedAttribute)
 	{
-		var hook = await Hooks.GetHookAsync(command, "OVERRIDE");
-		await Assert.That(hook.IsT0).IsTrue();
-		await Assert.That(hook.AsT0.TargetObject.Number).IsEqualTo(expectedTargetNumber);
-		await Assert.That(hook.AsT0.AttributeName.ToUpperInvariant()).IsEqualTo(expectedAttribute);
+		if (await Hooks.GetHookAsync(command, "OVERRIDE") is not CommandHook hook)
+			throw new InvalidOperationException($"{command} has no OVERRIDE hook.");
+		await Assert.That(hook.TargetObject.Number).IsEqualTo(expectedTargetNumber);
+		await Assert.That(hook.AttributeName.ToUpperInvariant()).IsEqualTo(expectedAttribute);
 	}
 }

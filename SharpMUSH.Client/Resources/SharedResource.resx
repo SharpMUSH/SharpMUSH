@@ -2817,6 +2817,9 @@
   <data name="WkUrlCopied" xml:space="preserve">
     <value>URL copied.</value>
   </data>
+  <data name="WkCopyFailed" xml:space="preserve">
+    <value>Could not copy to the clipboard.</value>
+  </data>
   <data name="WkWikiAssets" xml:space="preserve">
     <value>Wiki Assets</value>
   </data>

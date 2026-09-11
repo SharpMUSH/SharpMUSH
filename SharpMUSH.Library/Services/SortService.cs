@@ -2,7 +2,9 @@ using Mediator;
 using MoreLinq;
 using NaturalSort.Extension;
 using System.Globalization;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -136,28 +138,20 @@ public class SortService(ILocateService locateService, IConnectionService connec
 
 			ISortService.SortType.CasedName => source
 				.OrderByAwait(async (key, ct)
-					=> await (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
-						.Match<ValueTask<string>>(
-							player => ValueTask.FromResult(player.Object.Name),
-							room => ValueTask.FromResult(room.Object.Name),
-							exit => ValueTask.FromResult(exit.Object.Name),
-							thing => ValueTask.FromResult(thing.Object.Name),
-							_ => keySelector(key, ct),
-							_ => keySelector(key, ct)
-						), StringComparer.Ordinal, direction),
+					=> await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All) switch
+					{
+						AnySharpObject found => found.Object().Name,
+						None or Error<string> => await keySelector(key, ct)
+					}, StringComparer.Ordinal, direction),
 
 			ISortService.SortType.UncasedName => source
 				.OrderByAwait(async (key, ct)
-						=> await (await locateService.Locate(parser, executor, executor, await keySelector(key, ct),
-								LocateFlags.All))
-							.Match<ValueTask<string>>(
-								player => ValueTask.FromResult(player.Object.Name),
-								room => ValueTask.FromResult(room.Object.Name),
-								exit => ValueTask.FromResult(exit.Object.Name),
-								thing => ValueTask.FromResult(thing.Object.Name),
-								_ => keySelector(key, ct),
-								_ => keySelector(key, ct)
-							), StringComparer.OrdinalIgnoreCase,
+						=> await locateService.Locate(parser, executor, executor, await keySelector(key, ct),
+								LocateFlags.All) switch
+						{
+							AnySharpObject found => found.Object().Name,
+							None or Error<string> => await keySelector(key, ct)
+						}, StringComparer.OrdinalIgnoreCase,
 					direction),
 
 			ISortService.SortType.Conn => source
@@ -172,54 +166,38 @@ public class SortService(ILocateService locateService, IConnectionService connec
 
 			ISortService.SortType.Owner => source
 				.OrderByAwait(async (key, ct)
-						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
-						.Match(
-							async player => (await player.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
-							async room => (await room.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
-							async exit => (await exit.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
-							async thing => (await thing.Object.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
-							async _ => await ValueTask.FromResult(-1),
-							async _ => await ValueTask.FromResult(-1)
-						),
+						=> await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All) switch
+						{
+							AnySharpObject found => (await found.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number,
+							None or Error<string> => -1
+						},
 					direction),
 
 			ISortService.SortType.Location => source
 				.OrderByAwait(async (key, ct)
-						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
-						.Match(
-							async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.Number,
-							async room => await ValueTask.FromResult(room.Object.DBRef.Number),
-							async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef.Number,
-							async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.Number,
-							async _ => await ValueTask.FromResult(-1),
-							async _ => await ValueTask.FromResult(-1)
-						),
+						=> await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All) switch
+						{
+							AnySharpObject found => (await found.Where()).Object().DBRef.Number,
+							None or Error<string> => -1
+						},
 					direction),
 
 			ISortService.SortType.CreatedTime => source
 				.OrderByAwait(async (key, ct)
-						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
-						.Match(
-							player => player.Object.CreationTime,
-							room => room.Object.CreationTime,
-							exit => exit.Object.CreationTime,
-							thing => thing.Object.CreationTime,
-							_ => -1,
-							_ => -1
-						),
+						=> await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All) switch
+						{
+							AnySharpObject found => found.Object().CreationTime,
+							None or Error<string> => -1
+						},
 					direction),
 
 			ISortService.SortType.ModifiedTime => source
 				.OrderByAwait(async (key, ct)
-						=> (await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All))
-						.Match(
-							player => player.Object.ModifiedTime,
-							room => room.Object.ModifiedTime,
-							exit => exit.Object.ModifiedTime,
-							thing => thing.Object.ModifiedTime,
-							_ => -1,
-							_ => -1
-						),
+						=> await locateService.Locate(parser, executor, executor, await keySelector(key, ct), LocateFlags.All) switch
+						{
+							AnySharpObject found => found.Object().ModifiedTime,
+							None or Error<string> => -1
+						},
 					direction),
 
 			ISortService.SortType.AttributeName => source
@@ -240,13 +218,12 @@ public class SortService(ILocateService locateService, IConnectionService connec
 		async ValueTask<TimeSpan> ConnectionTime(string name,
 			Func<IConnectionService.ConnectionData, TimeSpan?> selector, CancellationToken ct)
 		{
-			var located = await locateService.Locate(parser, executor, executor, name, LocateFlags.All);
-			if (!located.IsPlayer)
+			if (await locateService.Locate(parser, executor, executor, name, LocateFlags.All) is not (AnySharpObject and SharpPlayer player))
 			{
 				return TimeSpan.MaxValue;
 			}
 
-			var connection = await connectionService.Get(located.AsPlayer.Object.DBRef).FirstOrDefaultAsync(ct);
+			var connection = await connectionService.Get(player.Object.DBRef).FirstOrDefaultAsync(ct);
 			return connection is null ? TimeSpan.MaxValue : selector(connection) ?? TimeSpan.MaxValue;
 		}
 	}

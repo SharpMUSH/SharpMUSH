@@ -1,5 +1,3 @@
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -23,7 +21,7 @@ public partial class Commands
 
 	private sealed record SemaphoreAccounting(Func<int, ValueTask> Persist, Func<ValueTask<bool>> Reconcile);
 
-	private async ValueTask<OneOf<SemaphoreAccounting, Error<string>>> SemaphoreCommandAccounting(
+	private async ValueTask<Result<SemaphoreAccounting>> SemaphoreCommandAccounting(
 		AnySharpObject target, string[] path, Func<int, int, long> nextCount, bool clearZero)
 	{
 		var token = ExecutionBudget.CurrentToken;
@@ -33,7 +31,11 @@ public partial class Commands
 		var originalValue = original?.Value.ToPlainText();
 		if (!string.IsNullOrEmpty(originalValue) && !int.TryParse(originalValue, out oldCount))
 			return new Error<string>($"Semaphore attribute must have a numeric or empty value. Current value: {originalValue}");
-		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)), token)).AsPlayer;
+		if (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)), token) is not (AnySharpObject and SharpPlayer god))
+		{
+			throw new InvalidOperationException("God (#1) must exist and be a player.");
+		}
+
 		int? expected = null;
 		CreatedCommandSemaphore? createdIdentity = null;
 		var observedFlags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -86,7 +88,7 @@ public partial class Commands
 				if (original is null)
 					await SemaphoreAttributes.InitializeAsync(Mediator, fullTarget, path, ValidateCreated);
 				var validation = await ValidateSemaphoreAttribute(target, path);
-				if (validation.IsT1) throw new InvalidOperationException("Semaphore metadata is incomplete or changed; repair it before retrying: " + validation.AsT1.Value);
+				if (validation is Error<string> error) throw new InvalidOperationException("Semaphore metadata is incomplete or changed; repair it before retrying: " + error.Value);
 				return true;
 			}
 			if (value == oldCount && original is not null) return false;

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -34,10 +35,7 @@ public class LayoutRegistryTests
 	{
 		await Registry.UpsertLayoutAsync("test-profile", SampleLayout());
 
-		var fetched = await Registry.GetLayoutAsync("test-profile");
-		await Assert.That(fetched.IsT0).IsTrue();
-
-		var layout = fetched.AsT0;
+		var layout = (await Registry.GetLayoutAsync("test-profile")).Expect<LayoutConfiguration>();
 		await Assert.That(layout.Zones[WidgetZone.MainContent].Count).IsEqualTo(2);
 		await Assert.That(layout.Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("CharacterHeader");
 		await Assert.That(layout.Zones[WidgetZone.MainContent][1].WidgetName).IsEqualTo("WikiBody");
@@ -50,22 +48,22 @@ public class LayoutRegistryTests
 			new Dictionary<WidgetZone, List<WidgetPlacement>> { [WidgetZone.MainContent] = [new WidgetPlacement("WikiIndex", 0, null)] },
 			new LayoutSettings(LeftSidebarEnabled: false, RightSidebarEnabled: false));
 		await Registry.UpsertLayoutAsync("test-profile", replacement);
-		var upgraded = await Registry.GetLayoutAsync("test-profile");
-		await Assert.That(upgraded.AsT0.Zones[WidgetZone.MainContent].Count).IsEqualTo(1);
-		await Assert.That(upgraded.AsT0.Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("WikiIndex");
+		var upgraded = (await Registry.GetLayoutAsync("test-profile")).Expect<LayoutConfiguration>();
+		await Assert.That(upgraded.Zones[WidgetZone.MainContent].Count).IsEqualTo(1);
+		await Assert.That(upgraded.Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("WikiIndex");
 
 		var scopes = await Registry.GetCustomizedScopesAsync();
 		await Assert.That(scopes).Contains("test-profile");
 
 		await Registry.RemoveLayoutAsync("test-profile");
 		var missing = await Registry.GetLayoutAsync("test-profile");
-		await Assert.That(missing.IsT1).IsTrue();
+		await Assert.That(missing.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test, NotInParallel]
 	public async Task GetLayout_Missing_ReturnsNotFound()
 	{
 		var missing = await Registry.GetLayoutAsync("never-customized-scope");
-		await Assert.That(missing.IsT1).IsTrue();
+		await Assert.That(missing.Value).IsTypeOf<NotFound>();
 	}
 }

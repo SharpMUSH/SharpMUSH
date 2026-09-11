@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models;
 using System.Collections.Concurrent;
 using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
@@ -120,16 +121,13 @@ public partial class Functions
 		{
 			var maybeFound = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 				speaker.ToPlainText(), LocateFlags.All);
-			if (maybeFound.IsError)
+			switch (maybeFound)
 			{
-				return maybeFound.AsError;
-			}
-
-			var found = maybeFound.AsSharpObject;
-
-			if (await PermissionService.Controls(executor, found))
-			{
-				speakerObject = found;
+				case Error<CallState> error:
+					return error.Value;
+				case AnySharpObject found when await PermissionService.Controls(executor, found):
+					speakerObject = found;
+					break;
 			}
 
 			speakerName = MarkupText.Plain(speakerObject.Object().Name);
@@ -190,9 +188,7 @@ public partial class Functions
 
 		if (hasTransform)
 		{
-			var splitTransform = HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText());
-
-			if (splitTransform.IsT1)
+			if (HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText()) is not { } splitTransform)
 			{
 				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 			}
@@ -201,41 +197,45 @@ public partial class Functions
 				LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
-					splitTransform.AsT0.db,
+					splitTransform.Object,
 					LocateFlags.All);
 
-			if (transformationObject.IsError)
+			switch (transformationObject)
 			{
-				return transformationObject.AsError;
+				case Error<CallState> error:
+					return error.Value;
+				case AnySharpObject found:
+					actualTransformationObject = found;
+					break;
 			}
 
-			actualTransformationObject = transformationObject.AsSharpObject;
-			actualTransformAttribute = splitTransform.AsT0.Attribute;
+			actualTransformAttribute = splitTransform.Attribute;
 		}
 
 		if (hasTransform && hasNull)
 		{
-			var splitNull = HelperFunctions.SplitObjectAndAttr(isNullObjAttr.ToPlainText());
-
-			if (splitNull.IsT1)
+			if (HelperFunctions.SplitObjectAndAttr(isNullObjAttr.ToPlainText()) is not { } splitNull)
 			{
 				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 			}
 
-			actualNullAttribute = splitNull.AsT0.Attribute;
+			actualNullAttribute = splitNull.Attribute;
 
 			var nullObject = await
 				LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
-					splitNull.AsT0.db,
+					splitNull.Object,
 					LocateFlags.All);
 
-			if (nullObject.IsError)
+			switch (nullObject)
 			{
-				return nullObject.AsError;
+				case Error<CallState> error:
+					return error.Value;
+				case AnySharpObject found:
+					actualNullObject = found;
+					break;
 			}
-			actualNullObject = nullObject.AsSharpObject;
 		}
 
 		if (hasTransform)
@@ -823,12 +823,9 @@ public partial class Functions
 	private int CompareDbRefs(string value1, string value2)
 	{
 		// Try to parse as dbrefs (#123 or objid #123:timestamp format)
-		var dbref1 = HelperFunctions.ParseDbRef(value1);
-		var dbref2 = HelperFunctions.ParseDbRef(value2);
-
-		if (dbref1.IsSome() && dbref2.IsSome())
+		if (HelperFunctions.ParseDbRef(value1) is DBRef dbref1 && HelperFunctions.ParseDbRef(value2) is DBRef dbref2)
 		{
-			return dbref1.AsValue().Number.CompareTo(dbref2.AsValue().Number);
+			return dbref1.Number.CompareTo(dbref2.Number);
 		}
 
 		// Fall back to string comparison if not valid dbrefs
@@ -888,8 +885,8 @@ public partial class Functions
 			return string.Join(" ", CryptoHelpers.hashAlgorithms.Keys);
 		}
 
-		return CryptoHelpers.hashAlgorithms.ContainsKey(arg0)
-			? CryptoHelpers.Digest(arg0, arg1!).AsT0
+		return CryptoHelpers.Digest(arg0, arg1!) is string digest
+			? digest
 			: ErrorMessages.Returns.ArgRange;
 	}
 

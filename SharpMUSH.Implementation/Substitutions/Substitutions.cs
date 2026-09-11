@@ -4,6 +4,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSHParser;
@@ -93,9 +94,9 @@ public static partial class Substitutions
 		};
 
 	public static MString LastCommandBeforeEvaluation(IMUSHCodeParser parser) =>
-		MarkupText.Plain(parser.StateHistory(2).Match(
-			state => state.Command ?? string.Empty,
-			_ => string.Empty));
+		MarkupText.Plain(parser.StateHistory(2) is ParserState state
+			? state.Command ?? string.Empty
+			: string.Empty);
 
 	private static async ValueTask<string> GetLocationDbRefString(IMUSHCodeParser parser, IMediator mediator)
 	{
@@ -155,11 +156,9 @@ public static partial class Substitutions
 			symbol.Message!.ToPlainText(),
 			IAttributeService.AttributeMode.Read);
 
-		return val.Match(
-			attr => new CallState(attr.Last().Value),
-			_ => new CallState(string.Empty),
-			_ => new CallState(string.Empty)
-		);
+		return val is SharpAttribute[] attr
+			? new CallState(attr.Last().Value)
+			: new CallState(string.Empty);
 	}
 
 	// Symbol Example: %$0 --> 0

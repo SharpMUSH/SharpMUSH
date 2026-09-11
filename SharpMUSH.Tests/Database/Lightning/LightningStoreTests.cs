@@ -95,11 +95,11 @@ public class LightningStoreTests
 		});
 
 		var (under1, under2, absent, node, missingNode) = store.Read(tx => (
-			tx.CountDups(Tables.RevLocation, Keys.Dbref(1, stackalloc byte[8])).AsT0,
-			tx.CountDups(Tables.RevLocation, Keys.Dbref(2)).AsT0,
-			tx.CountDups(Tables.RevLocation, Keys.Dbref(3)).AsT0,
-			tx.CountDups(Tables.Meta, Keys.Str("one")).AsT0,
-			tx.CountDups(Tables.Meta, Keys.Str("two")).AsT0));
+			tx.CountDups(Tables.RevLocation, Keys.Dbref(1, stackalloc byte[8])).Expect<long>(),
+			tx.CountDups(Tables.RevLocation, Keys.Dbref(2)).Expect<long>(),
+			tx.CountDups(Tables.RevLocation, Keys.Dbref(3)).Expect<long>(),
+			tx.CountDups(Tables.Meta, Keys.Str("one")).Expect<long>(),
+			tx.CountDups(Tables.Meta, Keys.Str("two")).Expect<long>()));
 
 		await Assert.That(under1).IsEqualTo(2);
 		await Assert.That(under2).IsEqualTo(1);

@@ -49,8 +49,7 @@ public class ParentDepthCapTests
 			.Because($"@create {name} must return a dbref, got: \"{message}\"");
 
 		var dbref = DBRef.Parse(message);
-		var node = await Mediator.Send(new GetObjectNodeQuery(dbref));
-		return node.Known;
+		return (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 	}
 
 	/// <summary>
@@ -90,10 +89,10 @@ public class ParentDepthCapTests
 		await Assert.That(message).IsNotEqualTo(ErrorMessages.Returns.TooManyAncestors);
 		await Assert.That(message).IsNotEqualTo(ErrorMessages.Returns.ParentLoop);
 
-		var updated = await Mediator.Send(new GetObjectNodeQuery(child.Object().DBRef));
-		var parent = await updated.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var updated = (await Mediator.Send(new GetObjectNodeQuery(child.Object().DBRef))).Expect<AnySharpObject>();
+		var parent = await updated.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parent.IsNone).IsFalse();
-		await Assert.That(parent.Known.Object().DBRef.Number).IsEqualTo(prospectiveParent.Object().DBRef.Number);
+		await Assert.That(parent.Expect<AnySharpObject>().Object().DBRef.Number).IsEqualTo(prospectiveParent.Object().DBRef.Number);
 	}
 
 	[Test]
@@ -112,8 +111,8 @@ public class ParentDepthCapTests
 		await Assert.That(message).IsEqualTo(ErrorMessages.Returns.TooManyAncestors);
 		await Assert.That(message).Contains("ANCESTORS");
 
-		var updated = await Mediator.Send(new GetObjectNodeQuery(child.Object().DBRef));
-		var parent = await updated.Known.Object().Parent.WithCancellation(CancellationToken.None);
+		var updated = (await Mediator.Send(new GetObjectNodeQuery(child.Object().DBRef))).Expect<AnySharpObject>();
+		var parent = await updated.Object().Parent.WithCancellation(CancellationToken.None);
 		await Assert.That(parent.IsNone).IsTrue();
 	}
 }

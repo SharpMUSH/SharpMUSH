@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using Mediator;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -94,7 +93,7 @@ public class AttributeVisibilityCancellationTests
 			{
 				var result = await service.LazilyGetVisibleAttributesAsync(target, target, depth);
 				using var consumer = stage.StartsWith("consumer-") ? budget.Enter() : null;
-				await result.AsAttributes.ToArrayAsync(stage.StartsWith("caller-") || stage.StartsWith("second-") ? cancel.Token : default);
+				await result.Expect<IAsyncEnumerable<LazySharpAttribute>>().ToArrayAsync(stage.StartsWith("caller-") || stage.StartsWith("second-") ? cancel.Token : default);
 			}
 		}
 		var operation = Read();
@@ -127,7 +126,7 @@ public class AttributeVisibilityCancellationTests
 		target.Object().LazyAttributes = new(() => new[] { node }.ToAsyncEnumerable());
 		var result = await service.LazilyGetVisibleAttributesAsync(target, target, depth);
 		// Take four bounds the old traversal without waiting for its non-terminating tail.
-		await Assert.That((await result.AsAttributes.Take(4).ToArrayAsync()).Length).IsEqualTo(depth);
+		await Assert.That((await result.Expect<IAsyncEnumerable<LazySharpAttribute>>().Take(4).ToArrayAsync()).Length).IsEqualTo(depth);
 	}
 
 	[Test]
@@ -148,7 +147,7 @@ public class AttributeVisibilityCancellationTests
 		using var scope = budget.Enter();
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		async Task Block(CancellationToken token) { entered.TrySetResult(); await Task.Delay(Timeout.InfiniteTimeSpan, token).WaitAsync(cleanup.Token); }
-		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<OneOf.OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>>())
+		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<ValidationTarget>())
 			.Returns(async ValueTask<bool> (_) => { if (!identity) await Block(CancellationToken.None); return true; });
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(async ValueTask<AnyOptionalSharpObject> (call) => { await Block(call.Arg<CancellationToken>()); return new None(); });
 		var parser = Substitute.For<IMUSHCodeParser>();

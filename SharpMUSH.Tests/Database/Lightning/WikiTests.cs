@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services;
@@ -61,22 +62,21 @@ public class WikiTests
 	{
 		var created = await wiki.CreateAsync("Dragon Lore", "Hello **world**.", "#1", WikiNamespace.Main, "Lore", "en");
 
-		await Assert.That(created.IsT0).IsTrue();
-		var page = created.AsT0;
+		var page = created.Expect<WikiPage>();
 		await Assert.That(page.Slug).IsEqualTo("dragon_lore");
 		await Assert.That(page.Category).IsEqualTo("lore");
 		await Assert.That(page.SourceLocale).IsEqualTo("en");
 		await Assert.That(page.RevisionNumber).IsEqualTo(1);
 
 		// Identity is (namespace, category, slug), and the lookup normalises a display title into it.
-		await Assert.That((await wiki.GetBySlugAsync("Dragon Lore", "lore", WikiNamespace.Main)).AsT0.Id).IsEqualTo(page.Id);
-		await Assert.That((await wiki.GetByIdAsync(page.Id)).AsT0.Title).IsEqualTo("Dragon Lore");
-		await Assert.That((await wiki.GetBySlugAsync("dragon_lore", "general", WikiNamespace.Main)).IsT1).IsTrue();
-		await Assert.That((await wiki.GetBySlugAsync("dragon_lore", "lore", WikiNamespace.Help)).IsT1).IsTrue();
+		await Assert.That((await wiki.GetBySlugAsync("Dragon Lore", "lore", WikiNamespace.Main)).Expect<WikiPage>().Id).IsEqualTo(page.Id);
+		await Assert.That((await wiki.GetByIdAsync(page.Id)).Expect<WikiPage>().Title).IsEqualTo("Dragon Lore");
+		await Assert.That((await wiki.GetBySlugAsync("dragon_lore", "general", WikiNamespace.Main)).Value).IsTypeOf<NotFound>();
+		await Assert.That((await wiki.GetBySlugAsync("dragon_lore", "lore", WikiNamespace.Help)).Value).IsTypeOf<NotFound>();
 
 		// A second page on the same identity is refused by the index, not by a scan.
 		var duplicate = await wiki.CreateAsync("Dragon Lore", "again", "#1", WikiNamespace.Main, "lore");
-		await Assert.That(duplicate.IsT1).IsTrue();
+		await Assert.That(duplicate.Value).IsTypeOf<Error<string>>();
 
 		var indexed = db.Store.Read(tx => tx.TryGet(Tables.WikiSlug, SlugKey("main", "lore", "dragon_lore"), out var v)
 			? Keys.ReadDbref(v)
@@ -85,24 +85,24 @@ public class WikiTests
 		await Assert.That(db.Store.Count(Tables.WikiPage)).IsEqualTo(1L);
 
 		// An id from another provider's URL space must miss rather than throw.
-		await Assert.That((await wiki.GetByIdAsync("node_wiki_pages/ghost")).IsT1).IsTrue();
+		await Assert.That((await wiki.GetByIdAsync("node_wiki_pages/ghost")).Value).IsTypeOf<NotFound>();
 	});
 
 	[Test]
 	public async Task UpdateAppendsToTheSourceStreamInRevisionOrder() => await WithDatabaseAsync(async (db, wiki) =>
 	{
-		var page = (await wiki.CreateAsync("Rev Stream", "v1", "#1")).AsT0;
+		var page = (await wiki.CreateAsync("Rev Stream", "v1", "#1")).Expect<WikiPage>();
 		await wiki.UpdateAsync(page.Id, "v2", "#2", "second");
-		var third = await wiki.UpdateAsync(page.Id, "v3", "#3", "third");
+		var third = (await wiki.UpdateAsync(page.Id, "v3", "#3", "third")).Expect<WikiPage>();
 
-		await Assert.That(third.AsT0.RevisionNumber).IsEqualTo(3);
-		await Assert.That(third.AsT0.LastEditorDbref).IsEqualTo("#3");
+		await Assert.That(third.RevisionNumber).IsEqualTo(3);
+		await Assert.That(third.LastEditorDbref).IsEqualTo("#3");
 
 		var revisions = await wiki.GetRevisionsAsync(page.Id);
 		await Assert.That(revisions.Select(r => r.RevisionNumber)).IsEquivalentTo(new[] { 3, 2, 1 });
 		await Assert.That(revisions.All(r => r.Locale.Length == 0)).IsTrue();
-		await Assert.That((await wiki.GetRevisionAsync(page.Id, 1)).AsT0.MarkdownSource).IsEqualTo("v1");
-		await Assert.That((await wiki.GetRevisionAsync(page.Id, 4)).IsT1).IsTrue();
+		await Assert.That((await wiki.GetRevisionAsync(page.Id, 1)).Expect<WikiRevision>().MarkdownSource).IsEqualTo("v1");
+		await Assert.That((await wiki.GetRevisionAsync(page.Id, 4)).Value).IsTypeOf<NotFound>();
 
 		// The stream is a contiguous ascending key range, so the last entry is the latest revision.
 		var stored = db.Store.Read(tx => tx.Range(Tables.WikiRev, PagePrefix(page.Id)).Select(e => e.Key).ToList());
@@ -113,47 +113,45 @@ public class WikiTests
 	[Test]
 	public async Task TranslationRoundTripsAndAStaleExpectedRevisionIsRefused() => await WithDatabaseAsync(async (db, wiki) =>
 	{
-		var page = (await wiki.CreateAsync("Trans Round", "en body", "#1", WikiNamespace.Main, "general", "en")).AsT0;
+		var page = (await wiki.CreateAsync("Trans Round", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
 
-		var created = await wiki.UpsertTranslationAsync(
-			page.Id, "FR-ca", "Titre", "corps v1", "#2", "première", published: true, expectedRevisionNumber: null);
-		await Assert.That(created.IsT0).IsTrue();
-		await Assert.That(created.AsT0.Locale).IsEqualTo("fr-CA");
-		await Assert.That(created.AsT0.RevisionNumber).IsEqualTo(1);
-		await Assert.That(created.AsT0.RenderedHtml).Contains("corps v1");
+		var created = (await wiki.UpsertTranslationAsync(
+			page.Id, "FR-ca", "Titre", "corps v1", "#2", "première", published: true, expectedRevisionNumber: null)).Expect<WikiTranslation>();
+		await Assert.That(created.Locale).IsEqualTo("fr-CA");
+		await Assert.That(created.RevisionNumber).IsEqualTo(1);
+		await Assert.That(created.RenderedHtml).Contains("corps v1");
 
 		var fetched = await wiki.GetTranslationAsync(page.Id, "fr-ca");
-		await Assert.That(fetched.AsT0.MarkdownSource).IsEqualTo("corps v1");
+		await Assert.That(fetched.Expect<WikiTranslation>().MarkdownSource).IsEqualTo("corps v1");
 
-		var second = await wiki.UpsertTranslationAsync(
-			page.Id, "fr-CA", "Titre", "corps v2", "#3", null, published: true, expectedRevisionNumber: 1);
-		await Assert.That(second.AsT0.RevisionNumber).IsEqualTo(2);
-		await Assert.That(second.AsT0.CreatedAt).IsEqualTo(created.AsT0.CreatedAt)
+		var second = (await wiki.UpsertTranslationAsync(
+			page.Id, "fr-CA", "Titre", "corps v2", "#3", null, published: true, expectedRevisionNumber: 1)).Expect<WikiTranslation>();
+		await Assert.That(second.RevisionNumber).IsEqualTo(2);
+		await Assert.That(second.CreatedAt).IsEqualTo(created.CreatedAt)
 			.Because("an update keeps the row's original creation stamp");
 
 		// The compare-and-swap: the loser's expected revision no longer matches, and its prose must not
 		// reach the store at all — no revision row, no overwrite of the winner.
 		var stale = await wiki.UpsertTranslationAsync(
 			page.Id, "fr-CA", "Perdu", "corps perdu", "#4", null, published: true, expectedRevisionNumber: 1);
-		await Assert.That(stale.IsT1).IsTrue();
-		await Assert.That(stale.AsT1).IsEqualTo(WikiWriteConflict.StaleRevision);
+		await Assert.That(stale.Value).IsEqualTo(WikiWriteConflict.StaleRevision);
 
 		var again = await wiki.UpsertTranslationAsync(
 			page.Id, "fr-CA", "Écrasé", "corps écrasé", "#4", null, published: true, expectedRevisionNumber: null);
-		await Assert.That(again.AsT1).IsEqualTo(WikiWriteConflict.AlreadyExists);
+		await Assert.That(again.Value).IsEqualTo(WikiWriteConflict.AlreadyExists);
 
 		await wiki.DeleteTranslationAsync(page.Id, "de", "#4");
 		var gone = await wiki.UpsertTranslationAsync(
 			page.Id, "de", "Weg", "korpus", "#4", null, published: true, expectedRevisionNumber: 1);
-		await Assert.That(gone.AsT1).IsEqualTo(WikiWriteConflict.TranslationGone);
+		await Assert.That(gone.Value).IsEqualTo(WikiWriteConflict.TranslationGone);
 
 		var shadow = await wiki.UpsertTranslationAsync(
 			page.Id, "en", "Shadow", "body", "#4", null, published: true, expectedRevisionNumber: null);
-		await Assert.That(shadow.IsT2).IsTrue().Because("shadowing the source locale is a bad request, not a lost race");
+		await Assert.That(shadow.Value).IsTypeOf<Error<string>>().Because("shadowing the source locale is a bad request, not a lost race");
 
 		var french = await wiki.GetRevisionsForLocaleAsync(page.Id, "fr-CA", 0, 20);
 		await Assert.That(french.Select(r => r.MarkdownSource)).IsEquivalentTo(new[] { "corps v2", "corps v1" });
-		await Assert.That((await wiki.GetTranslationAsync(page.Id, "fr-CA")).AsT0.MarkdownSource).IsEqualTo("corps v2");
+		await Assert.That((await wiki.GetTranslationAsync(page.Id, "fr-CA")).Expect<WikiTranslation>().MarkdownSource).IsEqualTo("corps v2");
 		await Assert.That((await wiki.GetRevisionsAsync(page.Id)).Single().MarkdownSource)
 			.IsEqualTo("en body")
 			.Because("the source stream is keyed by the empty locale, so a translation cannot land in it");
@@ -171,23 +169,23 @@ public class WikiTests
 	[Test]
 	public async Task DraftsAreReturnedToEveryReaderAndOnlyTheCountFiltersThem() => await WithDatabaseAsync(async (_, wiki) =>
 	{
-		var published = (await wiki.CreateAsync("Kept", "body", "#1", WikiNamespace.System)).AsT0;
-		var draft = (await wiki.CreateAsync("Hidden", "body", "#1", WikiNamespace.System)).AsT0;
+		var published = (await wiki.CreateAsync("Kept", "body", "#1", WikiNamespace.System)).Expect<WikiPage>();
+		var draft = (await wiki.CreateAsync("Hidden", "body", "#1", WikiNamespace.System)).Expect<WikiPage>();
 
 		// Recategorising also moves the slug-index entry, so the new identity resolves and the old one stops.
-		var unpublished = await wiki.SetMetadataAsync(draft.Id, "Lore", ["Lore", "lore", " "], published: false);
-		await Assert.That(unpublished.AsT0.Published).IsFalse();
-		await Assert.That(unpublished.AsT0.Category).IsEqualTo("lore");
-		await Assert.That(unpublished.AsT0.Tags).IsEquivalentTo(new[] { "lore" });
-		await Assert.That((await wiki.GetBySlugAsync("hidden", "lore", WikiNamespace.System)).AsT0.Id).IsEqualTo(draft.Id);
-		await Assert.That((await wiki.GetBySlugAsync("hidden", "general", WikiNamespace.System)).IsT1).IsTrue();
+		var unpublished = (await wiki.SetMetadataAsync(draft.Id, "Lore", ["Lore", "lore", " "], published: false)).Expect<WikiPage>();
+		await Assert.That(unpublished.Published).IsFalse();
+		await Assert.That(unpublished.Category).IsEqualTo("lore");
+		await Assert.That(unpublished.Tags).IsEquivalentTo(new[] { "lore" });
+		await Assert.That((await wiki.GetBySlugAsync("hidden", "lore", WikiNamespace.System)).Expect<WikiPage>().Id).IsEqualTo(draft.Id);
+		await Assert.That((await wiki.GetBySlugAsync("hidden", "general", WikiNamespace.System)).Value).IsTypeOf<NotFound>();
 
 		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(2);
 		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: false)).IsEqualTo(1);
 
 		var listed = await wiki.GetAllPagesAsync(0, 50, WikiNamespace.System);
 		await Assert.That(listed.Select(p => p.Id)).IsEquivalentTo(new[] { published.Id, draft.Id });
-		await Assert.That((await wiki.GetByIdAsync(draft.Id)).AsT0.Published).IsFalse();
+		await Assert.That((await wiki.GetByIdAsync(draft.Id)).Expect<WikiPage>().Published).IsFalse();
 		await Assert.That((await wiki.GetByCategoryAsync("lore")).Select(p => p.Id)).IsEquivalentTo(new[] { draft.Id });
 		await Assert.That((await wiki.GetByTagAsync("LORE")).Select(p => p.Id)).IsEquivalentTo(new[] { draft.Id });
 
@@ -200,14 +198,14 @@ public class WikiTests
 	[Test]
 	public async Task DeleteRemovesThePageItsSlugEntryItsRevisionsAndItsTranslations() => await WithDatabaseAsync(async (db, wiki) =>
 	{
-		var page = (await wiki.CreateAsync("Cascade Me", "v1", "#1", WikiNamespace.Main, "lore", "en")).AsT0;
-		var keep = (await wiki.CreateAsync("Untouched", "v1", "#1", WikiNamespace.Main, "lore", "en")).AsT0;
+		var page = (await wiki.CreateAsync("Cascade Me", "v1", "#1", WikiNamespace.Main, "lore", "en")).Expect<WikiPage>();
+		var keep = (await wiki.CreateAsync("Untouched", "v1", "#1", WikiNamespace.Main, "lore", "en")).Expect<WikiPage>();
 		await wiki.UpdateAsync(page.Id, "v2", "#1");
 		await wiki.UpsertTranslationAsync(page.Id, "fr", "T", "fr", "#2", null, true, expectedRevisionNumber: null);
 		await wiki.UpsertTranslationAsync(page.Id, "de", "T", "de", "#2", null, true, expectedRevisionNumber: null);
 		await wiki.UpsertTranslationAsync(keep.Id, "fr", "T", "fr", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That((await wiki.DeleteAsync(page.Id, "#1")).IsT0).IsTrue();
+		await Assert.That((await wiki.DeleteAsync(page.Id, "#1")).Value).IsTypeOf<None>();
 
 		var (pages, slug, revisions, translations) = db.Store.Read(tx => (
 			tx.Range(Tables.WikiPage, []).Count(),
@@ -219,14 +217,14 @@ public class WikiTests
 		await Assert.That(slug).IsFalse();
 		await Assert.That(revisions).IsEqualTo(0);
 		await Assert.That(translations).IsEqualTo(0);
-		await Assert.That((await wiki.GetByIdAsync(page.Id)).IsT1).IsTrue();
+		await Assert.That((await wiki.GetByIdAsync(page.Id)).Value).IsTypeOf<NotFound>();
 
 		// The neighbour keeps everything: the cascade sweeps one page's prefix, not the whole table.
 		await Assert.That((await wiki.GetRevisionsAsync(keep.Id)).Count).IsEqualTo(1);
 		await Assert.That((await wiki.GetTranslationsAsync(keep.Id)).Count).IsEqualTo(1);
-		await Assert.That((await wiki.DeleteAsync(page.Id, "#1")).IsT1).IsTrue();
+		await Assert.That((await wiki.DeleteAsync(page.Id, "#1")).Value).IsTypeOf<NotFound>();
 
 		// The identity is free again once the index entry is gone.
-		await Assert.That((await wiki.CreateAsync("Cascade Me", "fresh", "#1", WikiNamespace.Main, "lore")).IsT0).IsTrue();
+		await Assert.That((await wiki.CreateAsync("Cascade Me", "fresh", "#1", WikiNamespace.Main, "lore")).Value).IsTypeOf<WikiPage>();
 	});
 }

@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
@@ -131,7 +132,8 @@ public class ConnectionStateChangeHandler(
 	{
 		if (!playerRef.HasValue) return null;
 
-		var node = await objects.GetObjectNodeAsync(playerRef.Value, cancellationToken);
-		return node.IsNone() ? null : node.Known().Object().Name;
+		return await objects.GetObjectNodeAsync(playerRef.Value, cancellationToken) is AnySharpObject player
+			? player.Object().Name
+			: null;
 	}
 }

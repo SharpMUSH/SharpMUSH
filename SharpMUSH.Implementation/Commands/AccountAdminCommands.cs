@@ -1,4 +1,3 @@
-using OneOf.Types;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Definitions;
@@ -71,45 +70,51 @@ public partial class Commands
 			}
 
 			var result = await AccountService.SetPasswordAsync(account.Id!, arg1, mustChangePassword: true);
-			if (result.IsT0)
+			if (result is Success)
 			{
 				await AccountSessionStore.RevokeAllForAccountAsync(account.Id!);
 			}
-			await NotifyService.Notify(executor, result.Match(
-				_ => $"Password for account '{account.Username}' set; active sessions revoked. They must change it at next login.",
-				err => err.Value));
+			await NotifyService.Notify(executor, result switch
+			{
+				Success => $"Password for account '{account.Username}' set; active sessions revoked. They must change it at next login.",
+				Error<string> err => err.Value
+			});
 			return CallState.Empty;
 		}
 
 		if (switches.Contains("DISABLE"))
 		{
 			var result = await AccountService.DisableAccountAsync(account.Id!);
-			await NotifyService.Notify(executor, result.Match(
-				_ => $"Account '{account.Username}' disabled; active sessions revoked.",
-				err => err.Value));
+			await NotifyService.Notify(executor, result switch
+			{
+				Success => $"Account '{account.Username}' disabled; active sessions revoked.",
+				Error<string> err => err.Value
+			});
 			return CallState.Empty;
 		}
 
 		if (switches.Contains("ENABLE"))
 		{
 			var result = await AccountService.EnableAccountAsync(account.Id!);
-			await NotifyService.Notify(executor, result.Match(
-				_ => $"Account '{account.Username}' enabled.",
-				err => err.Value));
+			await NotifyService.Notify(executor, result switch
+			{
+				Success => $"Account '{account.Username}' enabled.",
+				Error<string> err => err.Value
+			});
 			return CallState.Empty;
 		}
 
 		if (switches.Contains("CLOSE"))
 		{
 			var result = await AccountService.CloseAccountAsync(account.Id!);
-			if (result.IsT0)
+			if (result is Error<string> err)
 			{
-				await NotifyService.NotifyLocalized(executor,
-					nameof(ErrorMessages.Notifications.AccountClosedFormat), executor, account.Username);
+				await NotifyService.Notify(executor, err.Value);
 			}
 			else
 			{
-				await NotifyService.Notify(executor, result.AsT1.Value);
+				await NotifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.AccountClosedFormat), executor, account.Username);
 			}
 
 			return CallState.Empty;
@@ -118,14 +123,14 @@ public partial class Commands
 		if (switches.Contains("DELETE"))
 		{
 			var result = await AccountService.MarkAccountDeletedAsync(account.Id!);
-			if (result.IsT0)
+			if (result is Error<string> err)
 			{
-				await NotifyService.NotifyLocalized(executor,
-					nameof(ErrorMessages.Notifications.AccountMarkedDeletedFormat), executor, account.Username);
+				await NotifyService.Notify(executor, err.Value);
 			}
 			else
 			{
-				await NotifyService.Notify(executor, result.AsT1.Value);
+				await NotifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.AccountMarkedDeletedFormat), executor, account.Username);
 			}
 
 			return CallState.Empty;

@@ -1,3 +1,5 @@
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Server.Services;
 using System.Security.Cryptography;
 using System.Text;
@@ -28,20 +30,15 @@ public class FileSystemWikiAssetServiceTests
 			var payload = "fake png bytes";
 			var expectedSha = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
 
-			var saved = await service.SaveAsync("picture.png", "image/png", Bytes(payload), "#42");
-			await Assert.That(saved.IsT0).IsTrue();
+			var asset = (await service.SaveAsync("picture.png", "image/png", Bytes(payload), "#42")).Expect<WikiAsset>();
 
-			var asset = saved.AsT0;
 			await Assert.That(asset.FileName).IsEqualTo("picture.png");
 			await Assert.That(asset.ContentType).IsEqualTo("image/png");
 			await Assert.That(asset.SizeBytes).IsEqualTo((long)payload.Length);
 			await Assert.That(asset.Sha256).IsEqualTo(expectedSha);
 			await Assert.That(asset.UploaderDbref).IsEqualTo("#42");
 
-			var opened = await service.OpenAsync(asset.Id);
-			await Assert.That(opened.IsT0).IsTrue();
-
-			var (meta, stream) = opened.AsT0;
+			var (meta, stream) = (await service.OpenAsync(asset.Id)).Expect<OpenedWikiAsset>();
 			await Assert.That(meta).IsEqualTo(asset);
 
 			using var reader = new StreamReader(stream);
@@ -82,14 +79,14 @@ public class FileSystemWikiAssetServiceTests
 		var (service, root) = MakeService();
 		try
 		{
-			var saved = await service.SaveAsync("gone.png", "image/png", Bytes("xyz"), "#1");
-			var id = saved.AsT0.Id;
+			var saved = (await service.SaveAsync("gone.png", "image/png", Bytes("xyz"), "#1")).Expect<WikiAsset>();
+			var id = saved.Id;
 
 			var deleted = await service.DeleteAsync(id);
-			await Assert.That(deleted.IsT0).IsTrue();
+			await Assert.That(deleted.Value).IsTypeOf<None>();
 
 			var opened = await service.OpenAsync(id);
-			await Assert.That(opened.IsT1).IsTrue();
+			await Assert.That(opened.Value).IsTypeOf<NotFound>();
 
 			var listed = await service.ListAsync();
 			await Assert.That(listed.Count).IsEqualTo(0);
@@ -106,9 +103,8 @@ public class FileSystemWikiAssetServiceTests
 		var (service, root) = MakeService();
 		try
 		{
-			var saved = await service.SaveAsync("../../etc/pa$$ wd.png", "image/png", Bytes("data"), "#1");
-			await Assert.That(saved.IsT0).IsTrue();
-			await Assert.That(saved.AsT0.FileName).IsEqualTo("pa___wd.png");
+			var saved = (await service.SaveAsync("../../etc/pa$$ wd.png", "image/png", Bytes("data"), "#1")).Expect<WikiAsset>();
+			await Assert.That(saved.FileName).IsEqualTo("pa___wd.png");
 		}
 		finally
 		{
@@ -134,14 +130,14 @@ public class FileSystemWikiAssetServiceTests
 			var unknown = Guid.NewGuid().ToString("N");
 
 			var opened = await service.OpenAsync(unknown);
-			await Assert.That(opened.IsT1).IsTrue();
+			await Assert.That(opened.Value).IsTypeOf<NotFound>();
 
 			var deleted = await service.DeleteAsync(unknown);
-			await Assert.That(deleted.IsT1).IsTrue();
+			await Assert.That(deleted.Value).IsTypeOf<NotFound>();
 
 			// Path-traversal-shaped ids must also be rejected, not probed on disk.
 			var traversal = await service.OpenAsync("../../etc/passwd");
-			await Assert.That(traversal.IsT1).IsTrue();
+			await Assert.That(traversal.Value).IsTypeOf<NotFound>();
 		}
 		finally
 		{

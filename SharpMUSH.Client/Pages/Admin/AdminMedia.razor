@@ -237,15 +237,17 @@
         {
             await using var stream = file.OpenReadStream(maxAllowedSize: 52428800);
             var result = await AssetService.UploadAsync(stream, file.Name, file.ContentType);
-            result.Switch(
-                info =>
-                {
+            switch (result)
+            {
+                case UploadedAssetInfo info:
                     _assets.Insert(0, new WikiAssetInfo(info.Id, info.FileName, info.Url,
                         info.ContentType, info.SizeBytes, string.Empty, "me", DateTimeOffset.UtcNow));
                     Snackbar.Add(Loc["WkAssetUploaded", info.FileName], Severity.Success);
-                },
-                err => Snackbar.Add(Loc["WkUploadFailed", err], Severity.Error)
-            );
+                    break;
+                case string err:
+                    Snackbar.Add(Loc["WkUploadFailed", err], Severity.Error);
+                    break;
+            }
         }
         catch (Exception ex)
         {
@@ -283,8 +285,16 @@
 
     private async Task CopyUrlAsync(string url)
     {
-        await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", url);
-        Snackbar.Add(Loc["WkUrlCopied"], Severity.Info);
+        try
+        {
+            // Rejected outside a secure context, or when the browser withholds clipboard permission.
+            await JsRuntime.InvokeVoidAsync("navigator.clipboard.writeText", url);
+            Snackbar.Add(Loc["WkUrlCopied"], Severity.Info);
+        }
+        catch (JSException)
+        {
+            Snackbar.Add(Loc["WkCopyFailed"], Severity.Error);
+        }
     }
 
     private static string AssetKind(string contentType) => contentType switch

@@ -1,5 +1,6 @@
 using Quartz;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
@@ -172,13 +173,13 @@ public partial class TaskScheduler
 	{
 		if (entry.SemaphoreTarget is { } semaphoreTarget)
 		{
-			var semaphore = await mediator.Send(new GetObjectNodeQuery(semaphoreTarget), ExecutionBudget.CurrentToken);
-			if (semaphore.IsNone || semaphore.Known().Object().DBRef != semaphoreTarget) return false;
+			if (await mediator.Send(new GetObjectNodeQuery(semaphoreTarget), ExecutionBudget.CurrentToken) is not AnySharpObject semaphore
+				|| semaphore.Object().DBRef != semaphoreTarget) return false;
 		}
 		if (entry.Executor is not { } executor) return true;
-		var target = await mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken);
-		if (target.IsNone || target.Known().Object().DBRef != executor) return false;
-		return (await target.Known().Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString() == entry.Owner;
+		if (await mediator.Send(new GetObjectNodeQuery(executor), ExecutionBudget.CurrentToken) is not AnySharpObject target
+			|| target.Object().DBRef != executor) return false;
+		return (await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString() == entry.Owner;
 	}
 
 	// Caller owns the deferred mutation lease. Each replacement invalidates callbacks already

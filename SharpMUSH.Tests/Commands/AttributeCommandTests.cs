@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -31,17 +30,17 @@ public class AttributeCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrBasic");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var objName = obj.Known.Object().Name;
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var objName = obj.Object().Name;
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TEST_ATTRSET_UNIQUE {objDbRef}=Test Value"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessageEquals(msg, $"{objName}/TEST_ATTRSET_UNIQUE - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
-		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "TEST_ATTRSET_UNIQUE",
+		var attr = await AttributeService.GetAttributeAsync(obj, obj, "TEST_ATTRSET_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 
 		await Assert.That(attr.IsAttribute).IsTrue();
@@ -52,15 +51,15 @@ public class AttributeCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrEmpty");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var objName = obj.Known.Object().Name;
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var objName = obj.Object().Name;
 
 		// With empty_attrs=yes (test config), &attr obj= sets to empty (not clear)
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTCLEAR_ATTRSET_UNIQUE {objDbRef}="));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessageEquals(msg, $"{objName}/TESTCLEAR_ATTRSET_UNIQUE - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -75,20 +74,19 @@ public class AttributeCommandTests
 	{
 		var forcer = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrForcedMe");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var forcerObj = await Mediator.Send(new GetObjectNodeQuery(forcer));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var forcerObj = (await Mediator.Send(new GetObjectNodeQuery(forcer))).Expect<AnySharpObject>();
 		var attrName = TestIsolationHelpers.GenerateUniqueName("FORCED_ME").ToUpperInvariant();
 
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@force {objDbRef}=&{attrName} me=yes"));
 
-		var onThing = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrName,
-			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(onThing.IsAttribute).IsTrue()
-			.Because("me in a forced & names the forced object, which is the executor");
-		await Assert.That(onThing.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("yes");
+		var onThing = (await AttributeService.GetAttributeAsync(obj, obj, attrName,
+			IAttributeService.AttributeMode.Read, false))
+			.Expect<SharpAttribute[]>("me in a forced & names the forced object, which is the executor");
+		await Assert.That(onThing.Last().Value.ToPlainText()).IsEqualTo("yes");
 
-		var onForcer = await AttributeService.GetAttributeAsync(forcerObj.Known, forcerObj.Known, attrName,
+		var onForcer = await AttributeService.GetAttributeAsync(forcerObj, forcerObj, attrName,
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(onForcer.IsAttribute).IsFalse()
 			.Because("the forcing player is the enactor, not the looker & resolves me against");
@@ -99,14 +97,14 @@ public class AttributeCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrComplex");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var objName = obj.Known.Object().Name;
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var objName = obj.Object().Name;
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&COMPLEX {objDbRef}=This is a [add(1,2)] test"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessageEquals(msg, $"{objName}/COMPLEX - Set.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -127,14 +125,11 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"&{attrName} {objDbRef}=$+test_{uniqueId} *:@switch hasflag(%#,wizard)=1,{{@pemit %#=yes}},{{@pemit %#=no}}"));
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, attrName,
-			IAttributeService.AttributeMode.Read, false);
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var attr = (await AttributeService.GetAttributeAsync(obj, obj, attrName,
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>($"&{attrName} should have been set");
 
-		await Assert.That(attr.IsAttribute).IsTrue()
-			.Because($"&{attrName} should have been set");
-
-		var attrValue = attr.AsAttribute.Last().Value.ToPlainText();
+		var attrValue = attr.Last().Value.ToPlainText();
 
 		await Assert.That(attrValue).Contains("{@pemit %#=yes}")
 			.Because("braces around @switch case bodies must be preserved in attribute storage");
@@ -147,7 +142,7 @@ public class AttributeCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "CpAttrDirect");
-		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(objDbRef, ["SOURCE_DIRECT_CPATTR"], MarkupText.Plain("test_string_CPATTR_direct"), owner);
 
 		var sourceAttr = Database.GetAttributeAsync(objDbRef, ["SOURCE_DIRECT_CPATTR"]);
@@ -180,14 +175,13 @@ public class AttributeCommandTests
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, executor)).IsTrue();
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var destAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "DEST_CPATTR_BASIC",
-			IAttributeService.AttributeMode.Read, false);
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var destAttr = (await AttributeService.GetAttributeAsync(obj, obj, "DEST_CPATTR_BASIC",
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
 
-		await Assert.That(destAttr.IsAttribute).IsTrue();
-		await Assert.That(destAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("test_string_CPATTR_basic_unique");
+		await Assert.That(destAttr.Last().Value.ToPlainText()).IsEqualTo("test_string_CPATTR_basic_unique");
 
-		var sourceAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "SOURCE_CPATTR_BASIC",
+		var sourceAttr = await AttributeService.GetAttributeAsync(obj, obj, "SOURCE_CPATTR_BASIC",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(sourceAttr.IsAttribute).IsTrue();
 	}
@@ -204,17 +198,15 @@ public class AttributeCommandTests
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeCopiedToDestinationsFormat), executor, executor)).IsTrue();
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
-		var dest1Attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "DEST1_CPATTR_MULTI",
-			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(dest1Attr.IsAttribute).IsTrue();
-		await Assert.That(dest1Attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("test_string_CPATTR_multi_value");
+		var dest1Attr = (await AttributeService.GetAttributeAsync(obj, obj, "DEST1_CPATTR_MULTI",
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
+		await Assert.That(dest1Attr.Last().Value.ToPlainText()).IsEqualTo("test_string_CPATTR_multi_value");
 
-		var dest2Attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "DEST2_CPATTR_MULTI",
-			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(dest2Attr.IsAttribute).IsTrue();
-		await Assert.That(dest2Attr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("test_string_CPATTR_multi_value");
+		var dest2Attr = (await AttributeService.GetAttributeAsync(obj, obj, "DEST2_CPATTR_MULTI",
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
+		await Assert.That(dest2Attr.Last().Value.ToPlainText()).IsEqualTo("test_string_CPATTR_multi_value");
 	}
 
 	[Test]
@@ -229,14 +221,13 @@ public class AttributeCommandTests
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeMovedToFormat), executor, executor)).IsTrue();
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
-		var destAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "MOVEDEST_UNIQUE",
-			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(destAttr.IsAttribute).IsTrue();
-		await Assert.That(destAttr.AsAttribute.Last().Value.ToPlainText()).IsEqualTo("test_string_MVATTR_basic_moved");
+		var destAttr = (await AttributeService.GetAttributeAsync(obj, obj, "MOVEDEST_UNIQUE",
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
+		await Assert.That(destAttr.Last().Value.ToPlainText()).IsEqualTo("test_string_MVATTR_basic_moved");
 
-		var sourceAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "MOVESOURCE_UNIQUE",
+		var sourceAttr = await AttributeService.GetAttributeAsync(obj, obj, "MOVESOURCE_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(sourceAttr.IsAttribute).IsFalse();
 	}
@@ -250,8 +241,8 @@ public class AttributeCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&WIPE1_UNIQUE {objDbRef}=test_string_WIPE_val1_unique"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&WIPE2_UNIQUE {objDbRef}=test_string_WIPE_val2_unique"));
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var attr1Before = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "WIPE1_UNIQUE",
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var attr1Before = await AttributeService.GetAttributeAsync(obj, obj, "WIPE1_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr1Before.IsAttribute).IsTrue();
 
@@ -263,11 +254,11 @@ public class AttributeCommandTests
 		// descendants), so the count is 2.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributesWipedCount), executor, executor)).IsTrue();
 
-		var attr1After = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "WIPE1_UNIQUE",
+		var attr1After = await AttributeService.GetAttributeAsync(obj, obj, "WIPE1_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr1After.IsAttribute).IsFalse();
 
-		var attr2After = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "WIPE2_UNIQUE",
+		var attr2After = await AttributeService.GetAttributeAsync(obj, obj, "WIPE2_UNIQUE",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr2After.IsAttribute).IsFalse();
 	}
@@ -284,22 +275,20 @@ public class AttributeCommandTests
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeLocked), executor, executor)).IsTrue();
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "LOCKTEST_UNIQUE_ATTR",
-			IAttributeService.AttributeMode.Read, false);
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var attr = (await AttributeService.GetAttributeAsync(obj, obj, "LOCKTEST_UNIQUE_ATTR",
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
 
-		await Assert.That(attr.IsAttribute).IsTrue();
-
-		var isLocked = attr.AsAttribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
+		var isLocked = attr.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
 		await Assert.That(isLocked).IsTrue();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@atrlock {objDbRef}/LOCKTEST_UNIQUE_ATTR=off"));
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AttributeUnlocked), executor, executor)).IsTrue();
 
-		attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "LOCKTEST_UNIQUE_ATTR",
-			IAttributeService.AttributeMode.Read, false);
-		isLocked = attr.AsAttribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
+		attr = (await AttributeService.GetAttributeAsync(obj, obj, "LOCKTEST_UNIQUE_ATTR",
+			IAttributeService.AttributeMode.Read, false)).Expect<SharpAttribute[]>();
+		isLocked = attr.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
 		await Assert.That(isLocked).IsFalse();
 	}
 
@@ -353,7 +342,7 @@ public class AttributeCommandTests
 	public async ValueTask Test_Edit_SimpleReplace()
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditSimple");
-		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_TEST"], MarkupText.Plain("Hello World"), owner);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit {objDbRef}/EDIT_TEST=World,Universe"));
@@ -367,7 +356,7 @@ public class AttributeCommandTests
 	public async ValueTask Test_Edit_Append()
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditAppend");
-		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_APPEND_TEST"], MarkupText.Plain("Start"), owner);
 
 		// Edit it - append " End" (use braces to preserve leading space)
@@ -383,7 +372,7 @@ public class AttributeCommandTests
 	public async ValueTask Test_Edit_Prepend()
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditPrepend");
-		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_PREPEND_TEST"], MarkupText.Plain("End"), owner);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit {objDbRef}/EDIT_PREPEND_TEST=^,Start "));
@@ -397,7 +386,7 @@ public class AttributeCommandTests
 	public async ValueTask Test_Edit_FirstOnly()
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditFirst");
-		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_FIRST_TEST"], MarkupText.Plain("foo bar foo baz"), owner);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/first {objDbRef}/EDIT_FIRST_TEST=foo,qux"));
@@ -411,7 +400,7 @@ public class AttributeCommandTests
 	public async ValueTask Test_Edit_ReplaceAll()
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditAll");
-		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_ALL_TEST"], MarkupText.Plain("foo bar foo baz"), owner);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit {objDbRef}/EDIT_ALL_TEST=foo,qux"));
@@ -425,7 +414,7 @@ public class AttributeCommandTests
 	public async ValueTask Test_Edit_Check_NoChange()
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditCheck");
-		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_CHECK_TEST"], MarkupText.Plain("Original"), owner);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/check {objDbRef}/EDIT_CHECK_TEST=Original,Changed"));
@@ -439,7 +428,7 @@ public class AttributeCommandTests
 	public async ValueTask Test_Edit_Regex()
 	{
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditRegex");
-		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
+		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_REGEX_TEST"], MarkupText.Plain("foo123bar"), owner);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/regexp {objDbRef}/EDIT_REGEX_TEST=\\d+,XXX"));
@@ -465,8 +454,8 @@ public class AttributeCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrUnclosed");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var objName = obj.Known.Object().Name;
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var objName = obj.Object().Name;
 
 		// Missing closing ')' — lenient (ANTLR-recovery) command parsing should store the
 		// best-effort value rather than silently dropping or rejecting the input.
@@ -475,16 +464,15 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(msg =>
+				Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessageEquals(msg, $"{objName}/UNCLOSED_PAREN_ATTR - Set.")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
-		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNCLOSED_PAREN_ATTR",
-			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(attr.IsAttribute).IsTrue()
-			.Because("lenient command parsing should store the ANTLR-recovered value");
+		var attr = (await AttributeService.GetAttributeAsync(obj, obj, "UNCLOSED_PAREN_ATTR",
+			IAttributeService.AttributeMode.Read, false))
+			.Expect<SharpAttribute[]>("lenient command parsing should store the ANTLR-recovered value");
 
-		var storedValue = attr.AsAttribute.Last().Value.ToPlainText();
+		var storedValue = attr.Last().Value.ToPlainText();
 		await Assert.That(storedValue).IsEqualTo("ansi(hr,fun")
 			.Because("lenient mode stores verbatim source text, not ANTLR error-recovery annotations");
 	}
@@ -494,18 +482,18 @@ public class AttributeCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetAttrTildeStrict");
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
 
 		// The ~ prefix opts into strict parsing — an unclosed ')' must surface as #-1 PARSER FAILURE.
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"~&UNCLOSED_TILDE_ATTR {objDbRef}=ansi(hr,fun"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(Arg.Any<long>(), Arg.Is<OneOf<MString, string>>(msg =>
-				msg.Match(ms => ms.ToPlainText(), s => s).StartsWith("#-1 PARSER FAILURE")),
+			.Notify(Arg.Any<long>(), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "#-1 PARSER FAILURE")),
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 
-		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNCLOSED_TILDE_ATTR",
+		var attr = await AttributeService.GetAttributeAsync(obj, obj, "UNCLOSED_TILDE_ATTR",
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(attr.IsAttribute).IsFalse()
 			.Because("strict (~) parse mode should reject the command on syntax error");

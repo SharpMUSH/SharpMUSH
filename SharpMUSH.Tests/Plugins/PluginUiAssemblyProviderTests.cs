@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services;
 
@@ -48,10 +49,8 @@ public class PluginUiAssemblyProviderTests
 		var bytes = Encoding.UTF8.GetBytes("PRETEND-WASM-ASSEMBLY-BYTES");
 		var provider = NewProvider(StagePlugin(bytes));
 
-		var result = await provider.GetVerifiedAssemblyAsync(PluginId, Assembly);
-
-		await Assert.That(result.IsT0).IsTrue().Because("matching bytes verify and are served");
-		await Assert.That(result.AsT0).IsEquivalentTo(bytes);
+		var served = (await provider.GetVerifiedAssemblyAsync(PluginId, Assembly)).Expect<byte[]>("matching bytes verify and are served");
+		await Assert.That(served).IsEquivalentTo(bytes);
 	}
 
 	[Test]
@@ -62,7 +61,7 @@ public class PluginUiAssemblyProviderTests
 
 		var result = await provider.GetVerifiedAssemblyAsync(PluginId, Assembly);
 
-		await Assert.That(result.IsT1).IsTrue().Because("a hash mismatch must 404, never serve");
+		await Assert.That(result.Value).IsTypeOf<NotFound>().Because("a hash mismatch must 404, never serve");
 	}
 
 	[Test]
@@ -72,7 +71,7 @@ public class PluginUiAssemblyProviderTests
 
 		var result = await provider.GetVerifiedAssemblyAsync(PluginId, "NotDeclared.dll");
 
-		await Assert.That(result.IsT1).IsTrue().Because("an assembly not in the sidecar is unverified");
+		await Assert.That(result.Value).IsTypeOf<NotFound>().Because("an assembly not in the sidecar is unverified");
 	}
 
 	[Test]
@@ -82,7 +81,7 @@ public class PluginUiAssemblyProviderTests
 
 		var result = await provider.GetVerifiedAssemblyAsync("no-such-plugin", Assembly);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -92,7 +91,7 @@ public class PluginUiAssemblyProviderTests
 
 		var result = await provider.GetVerifiedAssemblyAsync(PluginId, Assembly);
 
-		await Assert.That(result.IsT1).IsTrue().Because("no install-time hash sidecar means no trust anchor");
+		await Assert.That(result.Value).IsTypeOf<NotFound>().Because("no install-time hash sidecar means no trust anchor");
 	}
 
 	[Test]
@@ -105,6 +104,6 @@ public class PluginUiAssemblyProviderTests
 
 		var result = await provider.GetVerifiedAssemblyAsync(pluginId, assembly);
 
-		await Assert.That(result.IsT1).IsTrue().Because("non-flat ids/assemblies must be rejected up front");
+		await Assert.That(result.Value).IsTypeOf<NotFound>().Because("non-flat ids/assemblies must be rejected up front");
 	}
 }

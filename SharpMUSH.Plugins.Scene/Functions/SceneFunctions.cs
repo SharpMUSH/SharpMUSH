@@ -4,6 +4,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -48,8 +49,7 @@ public static class SceneFunctions
 			return true;
 		}
 
-		var member = await service.GetMemberAsync(scene.Id, enactor.Object().DBRef.ToString());
-		return member.IsT0;
+		return await service.GetMemberAsync(scene.Id, enactor.Object().DBRef.ToString()) is SceneMember;
 	}
 
 	private static async ValueTask<string> ViewerDbrefAsync(IMUSHCodeParser parser)
@@ -72,8 +72,9 @@ public static class SceneFunctions
 			return dbref ?? string.Empty;
 
 		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
-		var node = await mediator.Send(new GetObjectNodeQuery(reference));
-		return node.IsNone ? dbref : node.Known().Object().DBRef.ToString();
+		return await mediator.Send(new GetObjectNodeQuery(reference)) is AnySharpObject node
+			? node.Object().DBRef.ToString()
+			: dbref;
 	}
 
 	/// <summary>Guard for side-effect (write) functions: false ⇒ side effects are disabled in config.</summary>
@@ -99,13 +100,11 @@ public static class SceneFunctions
 			: "status";
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var lookup = await service.GetSceneAsync(id);
-		if (lookup.IsT1)
+		if (await service.GetSceneAsync(id) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		var scene = lookup.AsT0;
 		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
@@ -218,13 +217,11 @@ public static class SceneFunctions
 		var roomArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
 		var room = await SceneLocate.ObjectOrSelf(parser, roomArg);
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var lookup = await service.GetActiveSceneInRoomAsync(room);
-		if (lookup.IsT1)
+		if (await service.GetActiveSceneInRoomAsync(room) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		var scene = lookup.AsT0;
 		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
@@ -271,24 +268,22 @@ public static class SceneFunctions
 		}
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var lookup = await service.GetSceneAsync(id);
-		if (lookup.IsT1)
+		if (await service.GetSceneAsync(id) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, lookup.AsT0, parser))
+		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
 		}
 
-		var poses = await service.GetPosesAsync(id, author, count);
-		if (poses.IsT1)
+		if (await service.GetPosesAsync(id, author, count) is not IReadOnlyList<ScenePose> poses)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		return new CallState(string.Join(" ", poses.AsT0.Select(p => p.Id)));
+		return new CallState(string.Join(" ", poses.Select(p => p.Id)));
 	}
 
 	/// <summary>
@@ -310,25 +305,17 @@ public static class SceneFunctions
 			: "content";
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var sceneLookup = await service.GetSceneAsync(sceneId);
-		if (sceneLookup.IsT1)
+		if (await service.GetSceneAsync(sceneId) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, parser))
+		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
 		}
 
-		var poseLookup = await service.GetPoseAsync(poseId);
-		if (poseLookup.IsT1)
-		{
-			return new CallState(SceneNotFound);
-		}
-
-		var pose = poseLookup.AsT0;
-		if (pose.SceneId != sceneId)
+		if (await service.GetPoseAsync(poseId) is not ScenePose pose || pose.SceneId != sceneId)
 		{
 			return new CallState(SceneNotFound);
 		}
@@ -372,30 +359,27 @@ public static class SceneFunctions
 		var poseId = args["1"].Message!.ToPlainText().Trim();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var sceneLookup = await service.GetSceneAsync(sceneId);
-		if (sceneLookup.IsT1)
+		if (await service.GetSceneAsync(sceneId) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, parser))
+		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
 		}
 
-		var poseLookup = await service.GetPoseAsync(poseId);
-		if (poseLookup.IsT1 || poseLookup.AsT0.SceneId != sceneId)
+		if (await service.GetPoseAsync(poseId) is not ScenePose pose || pose.SceneId != sceneId)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		var edits = await service.GetPoseEditsAsync(poseId);
-		if (edits.IsT1)
+		if (await service.GetPoseEditsAsync(poseId) is not IReadOnlyList<ScenePoseEdit> edits)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		return new CallState(string.Join(" ", edits.AsT0.Select(e => e.Id)));
+		return new CallState(string.Join(" ", edits.Select(e => e.Id)));
 	}
 
 	/// <summary>
@@ -420,24 +404,22 @@ public static class SceneFunctions
 		}
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var sceneLookup = await service.GetSceneAsync(id);
-		if (sceneLookup.IsT1)
+		if (await service.GetSceneAsync(id) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, parser))
+		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
 		}
 
-		var members = await service.GetMembersAsync(id, role);
-		if (members.IsT1)
+		if (await service.GetMembersAsync(id, role) is not IReadOnlyList<SceneMember> members)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		return new CallState(string.Join(" ", members.AsT0.Select(m => m.MemberDbref ?? m.MemberName)));
+		return new CallState(string.Join(" ", members.Select(m => m.MemberDbref ?? m.MemberName)));
 	}
 
 	/// <summary>
@@ -459,24 +441,21 @@ public static class SceneFunctions
 			: "role";
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var sceneLookup = await service.GetSceneAsync(id);
-		if (sceneLookup.IsT1)
+		if (await service.GetSceneAsync(id) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, parser))
+		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
 		}
 
-		var lookup = await service.GetMemberAsync(id, player);
-		if (lookup.IsT1)
+		if (await service.GetMemberAsync(id, player) is not SceneMember member)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		var member = lookup.AsT0;
 		return field switch
 		{
 			"role" => new CallState(member.Role),
@@ -500,13 +479,11 @@ public static class SceneFunctions
 		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
 		var player = await SceneLocate.PlayerOrSelf(parser, playerArg);
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var lookup = await service.GetCurrentSceneAsync(player);
-		if (lookup.IsT1)
+		if (await service.GetCurrentSceneAsync(player) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		var scene = lookup.AsT0;
 		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
@@ -526,24 +503,22 @@ public static class SceneFunctions
 	{
 		var id = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var sceneLookup = await service.GetSceneAsync(id);
-		if (sceneLookup.IsT1)
+		if (await service.GetSceneAsync(id) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, parser))
+		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
 		}
 
-		var tags = await service.GetTagsAsync(id);
-		if (tags.IsT1)
+		if (await service.GetTagsAsync(id) is not IReadOnlyList<string> tags)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		return new CallState(string.Join(" ", tags.AsT0));
+		return new CallState(string.Join(" ", tags));
 	}
 
 	/// <summary>
@@ -557,24 +532,22 @@ public static class SceneFunctions
 	{
 		var id = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var sceneLookup = await service.GetSceneAsync(id);
-		if (sceneLookup.IsT1)
+		if (await service.GetSceneAsync(id) is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		if (!await SceneVisibleToAsync(service, sceneLookup.AsT0, parser))
+		if (!await SceneVisibleToAsync(service, scene, parser))
 		{
 			return new CallState(ScenePermission);
 		}
 
-		var cast = await service.GetCastAsync(id);
-		if (cast.IsT1)
+		if (await service.GetCastAsync(id) is not IReadOnlyList<string> cast)
 		{
 			return new CallState(SceneNotFound);
 		}
 
-		return new CallState(string.Join(" ", cast.AsT0));
+		return new CallState(string.Join(" ", cast));
 	}
 
 	/// <summary>
@@ -623,10 +596,9 @@ public static class SceneFunctions
 		var value = args["2"].Message!.ToPlainText();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var result = await service.SetSceneMetaAsync(id, key, value);
-		return result.IsT1
-			? new CallState(SceneNotFound)
-			: new CallState(result.AsT0.Id);
+		return await service.SetSceneMetaAsync(id, key, value) is Contracts.Scene scene
+			? new CallState(scene.Id)
+			: new CallState(SceneNotFound);
 	}
 
 	/// <summary>
@@ -660,10 +632,12 @@ public static class SceneFunctions
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var result = await service.AddPoseAsync(id, author, showAs, origin, source, tags, content);
 
-		return result.Match(
-			pose => new CallState(pose.Id),
-			_ => new CallState(SceneNotFound),
-			error => new CallState(error.Value));
+		return result switch
+		{
+			ScenePose pose => new CallState(pose.Id),
+			NotFound => new CallState(SceneNotFound),
+			Error<string> error => new CallState(error.Value),
+		};
 	}
 
 	/// <summary>
@@ -686,10 +660,9 @@ public static class SceneFunctions
 		var value = args["2"].Message!.ToPlainText();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var result = await service.SetPoseMetaAsync(poseId, key, value);
-		return result.IsT1
-			? new CallState(SceneNotFound)
-			: new CallState(result.AsT0.Id);
+		return await service.SetPoseMetaAsync(poseId, key, value) is ScenePose pose
+			? new CallState(pose.Id)
+			: new CallState(SceneNotFound);
 	}
 
 	/// <summary>
@@ -712,10 +685,9 @@ public static class SceneFunctions
 		var content = args["2"].Message!.ToPlainText();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var result = await service.EditPoseAsync(poseId, editor, content);
-		return result.IsT1
-			? new CallState(SceneNotFound)
-			: new CallState(result.AsT0.Id);
+		return await service.EditPoseAsync(poseId, editor, content) is ScenePose pose
+			? new CallState(pose.Id)
+			: new CallState(SceneNotFound);
 	}
 
 	/// <summary>
@@ -736,10 +708,12 @@ public static class SceneFunctions
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var result = await service.UndoPoseAsync(poseId);
 
-		return result.Match(
-			pose => new CallState(pose.Id),
-			_ => new CallState(SceneNotFound),
-			error => new CallState(error.Value));
+		return result switch
+		{
+			ScenePose pose => new CallState(pose.Id),
+			NotFound => new CallState(SceneNotFound),
+			Error<string> error => new CallState(error.Value),
+		};
 	}
 
 	/// <summary>
@@ -760,10 +734,12 @@ public static class SceneFunctions
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var result = await service.RedoPoseAsync(poseId);
 
-		return result.Match(
-			pose => new CallState(pose.Id),
-			_ => new CallState(SceneNotFound),
-			error => new CallState(error.Value));
+		return result switch
+		{
+			ScenePose pose => new CallState(pose.Id),
+			NotFound => new CallState(SceneNotFound),
+			Error<string> error => new CallState(error.Value),
+		};
 	}
 
 	/// <summary>
@@ -790,10 +766,12 @@ public static class SceneFunctions
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var result = await service.MovePoseAsync(poseId, after);
 
-		return result.Match(
-			pose => new CallState(pose.Id),
-			_ => new CallState(SceneNotFound),
-			error => new CallState(error.Value));
+		return result switch
+		{
+			ScenePose pose => new CallState(pose.Id),
+			NotFound => new CallState(SceneNotFound),
+			Error<string> error => new CallState(error.Value),
+		};
 	}
 
 	/// <summary>
@@ -812,10 +790,9 @@ public static class SceneFunctions
 
 		var poseId = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var result = await service.DeletePoseAsync(poseId);
-		return result.IsT1
-			? new CallState(SceneNotFound)
-			: new CallState(result.AsT0.Id);
+		return await service.DeletePoseAsync(poseId) is ScenePose pose
+			? new CallState(pose.Id)
+			: new CallState(SceneNotFound);
 	}
 
 	/// <summary>
@@ -838,10 +815,9 @@ public static class SceneFunctions
 		var role = args["2"].Message!.ToPlainText().Trim();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var result = await service.AddMemberAsync(id, player, role);
-		return result.IsT1
-			? new CallState(SceneNotFound)
-			: new CallState(result.AsT0.MemberDbref ?? result.AsT0.MemberName);
+		return await service.AddMemberAsync(id, player, role) is SceneMember member
+			? new CallState(member.MemberDbref ?? member.MemberName)
+			: new CallState(SceneNotFound);
 	}
 
 	/// <summary>
@@ -864,7 +840,7 @@ public static class SceneFunctions
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var result = await service.RemoveMemberAsync(id, player);
-		return result.IsT1
+		return result is NotFound
 			? new CallState(SceneNotFound)
 			: new CallState(id);
 	}
@@ -892,7 +868,7 @@ public static class SceneFunctions
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		var result = await service.SetFocusAsync(player, id);
-		return result.IsT1
+		return result is NotFound
 			? new CallState(SceneNotFound)
 			: new CallState(id);
 	}
@@ -917,10 +893,9 @@ public static class SceneFunctions
 		var name = args["2"].Message!.ToPlainText();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var result = await service.SetShowAsAsync(id, player, name);
-		return result.IsT1
-			? new CallState(SceneNotFound)
-			: new CallState(result.AsT0.ShowAs);
+		return await service.SetShowAsAsync(id, player, name) is SceneMember member
+			? new CallState(member.ShowAs)
+			: new CallState(SceneNotFound);
 	}
 
 	/// <summary>
@@ -964,14 +939,14 @@ public static class SceneFunctions
 			case "link":
 				{
 					var result = await service.LinkSceneToPlotAsync(plot, id);
-					return result.IsT1
+					return result is NotFound
 						? new CallState(SceneNotFound)
 						: new CallState(plot);
 				}
 			case "unlink":
 				{
 					var result = await service.UnlinkSceneFromPlotAsync(plot, id);
-					return result.IsT1
+					return result is NotFound
 						? new CallState(SceneNotFound)
 						: new CallState(plot);
 				}

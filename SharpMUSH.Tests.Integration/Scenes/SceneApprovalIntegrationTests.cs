@@ -3,7 +3,6 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -78,7 +77,11 @@ public class SceneApprovalIntegrationTests
 			case nameof(INotifyService.Notify) when args.Length >= 2:
 				return args[1] switch
 				{
-					OneOf<MString, string> oneOf => oneOf.Match(m => m.ToPlainText(), s => s),
+					SharpMessage message => message switch
+					{
+						MString markup => markup.ToPlainText(),
+						string text => text,
+					},
 					string s => s,
 					MString m => m.ToPlainText(),
 					_ => null
@@ -126,8 +129,8 @@ public class SceneApprovalIntegrationTests
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var manipulate = WebAppFactoryArg.Services.GetRequiredService<IManipulateSharpObjectService>();
 		DBRef.TryParse(playerDbref, out var parsed);
-		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
-		var target = (await mediator.Send(new GetObjectNodeQuery(parsed!.Value))).Known;
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
+		var target = (await mediator.Send(new GetObjectNodeQuery(parsed!.Value))).Expect<AnySharpObject>();
 		await manipulate.SetPower(god, target, "Guest", false);
 	}
 

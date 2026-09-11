@@ -19,7 +19,7 @@ public class RealityAdministrationTests
 		player.Object().Id = "admin";
 		var store = Substitute.For<IExpandedDataStore>();
 		var objects = Substitute.For<IObjectStore>();
-		objects.GetObjectNodeAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(player.AsPlayer));
+		objects.GetObjectNodeAsync(Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(player));
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), PortalPermission.RealityAdmin, Arg.Any<CancellationToken>()).Returns(true);
 		var permissions = Substitute.For<IPermissionService>();
@@ -73,8 +73,8 @@ public class RealityAdministrationTests
 		var actor = new TestObjectFactory().CreatePlayer(40, "admin");
 		var target = new TestObjectFactory().CreatePlayer(41, "other");
 		actor.Object().Id = "admin"; target.Object().Id = "other";
-		objects.GetObjectNodeAsync(actor.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(actor.AsPlayer));
-		objects.GetObjectNodeAsync(target.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(target.AsPlayer));
+		objects.GetObjectNodeAsync(actor.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(actor));
+		objects.GetObjectNodeAsync(target.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(target));
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		var allowed = true;
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), PortalPermission.RealityAdmin, Arg.Any<CancellationToken>()).Returns(_ => allowed);
@@ -96,7 +96,7 @@ public class RealityAdministrationTests
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), PortalPermission.RealityAdmin, Arg.Any<CancellationToken>()).Returns(true);
 		var player = new TestObjectFactory().CreatePlayer(42, "admin");
-		objects.GetObjectNodeAsync(player.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(player.AsPlayer));
+		objects.GetObjectNodeAsync(player.Object().DBRef, Arg.Any<CancellationToken>()).Returns(new AnyOptionalSharpObject(player));
 		var policy = new RealityPolicy(store, objects);
 		await Assert.That(await policy.IsEnabledAsync()).IsFalse();
 		var service = new RealityAdministration(policy, capabilities, objects, Substitute.For<IPermissionService>(), Substitute.For<IValidateService>());

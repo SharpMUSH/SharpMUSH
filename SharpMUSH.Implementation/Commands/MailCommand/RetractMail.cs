@@ -4,6 +4,8 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -16,20 +18,22 @@ public static class RetractMail
 			executor, executor, target,
 			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
 
-		if (!maybeLocate.IsValid())
+		if (maybeLocate is not (AnySharpObject and SharpPlayer targetPlayer))
 		{
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		var sentMails = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, MarkupText.Plain(msgList), maybeLocate.AsPlayer);
-
-		if (sentMails.IsError)
+		return await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, MarkupText.Plain(msgList), targetPlayer) switch
 		{
-			return MarkupText.Plain(sentMails.AsError);
-		}
+			IAsyncEnumerable<SharpMail> foundMailList => await RetractAsync(mediator, notifyService, executor, foundMailList),
+			Error<string> error => MarkupText.Plain(error.Value)
+		};
+	}
 
-		var foundMailList = sentMails.AsMailList;
-
+	/// <summary>Deletes each message in the list that nobody has read yet.</summary>
+	private static async ValueTask<MString> RetractAsync(IMediator mediator, INotifyService notifyService,
+		AnySharpObject executor, IAsyncEnumerable<SharpMail> foundMailList)
+	{
 		var length = 0;
 		await foreach (var mail in foundMailList)
 		{

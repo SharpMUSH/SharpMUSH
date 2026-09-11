@@ -28,7 +28,7 @@ public class AccountAdminCommandTests
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, mediator, ConnectionService, "AccountAdmin");
-		var player = (await mediator.Send(new GetObjectNodeQuery(_actor.DbRef))).AsPlayer;
+		var player = (await mediator.Send(new GetObjectNodeQuery(_actor.DbRef))).Expect<SharpPlayer>();
 		var wizard = await mediator.Send(new GetObjectFlagQuery("WIZARD"));
 		await Assert.That(await mediator.Send(new SetObjectFlagCommand(player, wizard!))).IsTrue();
 	}
@@ -44,8 +44,8 @@ public class AccountAdminCommandTests
 	{
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
 		var accountSessionStore = WebAppFactoryArg.Services.GetRequiredService<IAccountSessionStore>();
-		var createResult = await accountService.CreateAccountAsync(_username, null, "old-password-1");
-		var accountId = createResult.AsT0.Id!;
+		var createResult = (await accountService.CreateAccountAsync(_username, null, "old-password-1")).Expect<SharpAccount>();
+		var accountId = createResult.Id!;
 		var sessionToken = await accountSessionStore.CreateTokenAsync(accountId, TimeSpan.FromMinutes(15), "0.0.0.0");
 
 		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/newpassword {_username}=temp-password-9"));

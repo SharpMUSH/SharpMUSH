@@ -2,6 +2,7 @@
 @using SharpMUSH.Client.Components
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Services
+@using System.Globalization
 @inject IStringLocalizer<SharedResource> Loc
 @inject IPlayTerminalService PlayTerminal
 @inject AccountAuthService AccountAuth
@@ -191,20 +192,16 @@ else
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        try
+        var stored = await JS.GetItemAsync(BrowserStore.Local, "play.cols");
+        if (int.TryParse(stored, out var n))
         {
-            var stored = await JS.InvokeAsync<string?>("localStorage.getItem", "play.cols");
-            if (int.TryParse(stored, out var n))
+            var clamped = Math.Clamp(n, MinCols, MaxCols);
+            if (clamped != _targetCols)
             {
-                var clamped = Math.Clamp(n, MinCols, MaxCols);
-                if (clamped != _targetCols)
-                {
-                    _targetCols = clamped;
-                    StateHasChanged();
-                }
+                _targetCols = clamped;
+                StateHasChanged();
             }
         }
-        catch (JSException) { /* localStorage unavailable — keep the default */ }
     }
 
     private async Task OnColsChanged(ChangeEventArgs e)
@@ -212,9 +209,7 @@ else
         _targetCols = int.TryParse(e.Value?.ToString(), out var n)
             ? Math.Clamp(n, MinCols, MaxCols)
             : MinCols;
-        try { await JS.InvokeVoidAsync("localStorage.setItem", "play.cols", _targetCols); }
-        catch (JSException) { /* best-effort persistence */ }
-        StateHasChanged();
+        await JS.SetItemAsync(BrowserStore.Local, "play.cols", _targetCols.ToString(CultureInfo.InvariantCulture));
     }
 
     // Whether the account-vs-roster question has been answered yet, and its answer. All three start
@@ -247,7 +242,7 @@ else
 
         if (AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0)
         {
-            if ((await AccountAuth.GetCharactersAsync()).TryPickT0(out var characters, out _))
+            if (await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> characters)
                 _needsCharacter = characters.Count == 0;
             else
                 _rosterFailed = true;
@@ -261,9 +256,7 @@ else
     private async Task RetryRosterAsync()
     {
         _rosterResolved = false;
-        StateHasChanged();
         await ResolveRosterAsync();
-        StateHasChanged();
     }
 
     private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);

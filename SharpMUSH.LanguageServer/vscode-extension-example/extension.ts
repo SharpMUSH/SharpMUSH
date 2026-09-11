@@ -19,9 +19,9 @@ export function activate(context: ExtensionContext) {
     // Try to find the server in common locations
     const possiblePaths = [
       // Development build
-      path.join(context.extensionPath, '..', '..', 'bin', 'Debug', 'net10.0', 'SharpMUSH.LanguageServer.dll'),
+      path.join(context.extensionPath, '..', '..', 'bin', 'Debug', 'net11.0', 'SharpMUSH.LanguageServer.dll'),
       // Release build
-      path.join(context.extensionPath, '..', '..', 'bin', 'Release', 'net10.0', 'SharpMUSH.LanguageServer.dll'),
+      path.join(context.extensionPath, '..', '..', 'bin', 'Release', 'net11.0', 'SharpMUSH.LanguageServer.dll'),
       // Bundled with extension
       path.join(context.extensionPath, 'server', 'SharpMUSH.LanguageServer.dll'),
     ];

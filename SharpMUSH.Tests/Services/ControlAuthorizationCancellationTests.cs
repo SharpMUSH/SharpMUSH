@@ -1,7 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -37,7 +36,7 @@ public class ControlAuthorizationCancellationTests
 		var owner = factory.CreatePlayer(42, "other owner");
 		var target = factory.CreateThing(41, "target", owner: owner);
 		actor.Object().Id = "actor"; owner.Object().Id = "owner"; target.Object().Id = "target";
-		actor.AsPlayer.Id = "player-actor"; owner.AsPlayer.Id = "player-owner"; target.AsThing.Id = "thing-target";
+		actor.Expect<SharpPlayer>().Id = "player-actor"; owner.Expect<SharpPlayer>().Id = "player-owner"; target.Expect<SharpThing>().Id = "thing-target";
 		var options = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 		var baseline = TestSharpMushOptions.Create();
 		options.CurrentValue.Returns(baseline with { Database = baseline.Database with { ZoneControlZmpOnly = false } });

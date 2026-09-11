@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Plugins.Scene.Models;
@@ -107,16 +105,16 @@ public class SceneSystemRegistrationTests
 	/// <summary>A no-database storage core that records its own invocation, used to observe the chain order.</summary>
 	private sealed class RecordingStorage(List<string> calls) : SceneServiceStub, ISceneStorage
 	{
-		public override Task<OneOf<Scene, NotFound>> GetSceneAsync(string sceneId)
+		public override Task<Found<Scene>> GetSceneAsync(string sceneId)
 		{
 			calls.Add("core");
-			return Task.FromResult<OneOf<Scene, NotFound>>(new NotFound());
+			return Task.FromResult<Found<Scene>>(new NotFound());
 		}
 	}
 
 	private sealed class FirstBehavior(ISceneService inner, List<string> calls) : SceneServiceStub, ISceneServiceBehavior
 	{
-		public override Task<OneOf<Scene, NotFound>> GetSceneAsync(string sceneId)
+		public override Task<Found<Scene>> GetSceneAsync(string sceneId)
 		{
 			calls.Add("first");
 			return inner.GetSceneAsync(sceneId);
@@ -125,7 +123,7 @@ public class SceneSystemRegistrationTests
 
 	private sealed class SecondBehavior(ISceneService inner, List<string> calls) : SceneServiceStub, ISceneServiceBehavior
 	{
-		public override Task<OneOf<Scene, NotFound>> GetSceneAsync(string sceneId)
+		public override Task<Found<Scene>> GetSceneAsync(string sceneId)
 		{
 			calls.Add("second");
 			return inner.GetSceneAsync(sceneId);
