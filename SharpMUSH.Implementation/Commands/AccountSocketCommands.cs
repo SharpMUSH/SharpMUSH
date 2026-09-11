@@ -75,13 +75,13 @@ public partial class Commands
 		}
 
 		var result = await AccountService.CreateAccountAsync(username, email, password);
-		if (result.IsT1)
+		if (result is Error<string> error)
 		{
-			await NotifyService.Notify(handle, result.AsT1.Value);
+			await NotifyService.Notify(handle, error.Value);
 			return new None();
 		}
 
-		var account = result.AsT0;
+		var account = (SharpAccount)result.Value!;
 		await ConnectionService.BindAccount(handle, account.Id!);
 
 		await NotifyService.Notify(handle,

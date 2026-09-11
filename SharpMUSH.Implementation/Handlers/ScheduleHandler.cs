@@ -32,7 +32,12 @@ public class GetScheduledTasksHandler(ITaskScheduler scheduler)
 {
 	public IAsyncEnumerable<SemaphoreTaskData> Handle(ScheduleSemaphoreQuery query,
 		CancellationToken cancellationToken)
-		=> SchedulerQueryLifetime.Read(() => query.Query.Match(scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks, scheduler.GetSemaphoreTasks), cancellationToken);
+		=> SchedulerQueryLifetime.Read(() => query.Query switch
+		{
+			long pid => scheduler.GetSemaphoreTasks(pid),
+			DBRef obj => scheduler.GetSemaphoreTasks(obj),
+			DbRefAttribute attribute => scheduler.GetSemaphoreTasks(attribute)
+		}, cancellationToken);
 }
 
 public class GetDelayTasksHandler(ITaskScheduler scheduler)

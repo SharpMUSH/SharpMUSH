@@ -133,12 +133,12 @@ public static class ChannelRecall
 		var selection = await SelectAsync(PermissionService, Mediator, NotifyService, executor, channelName,
 			lines, start, notify: true);
 
-		if (selection.IsT1)
+		if (selection is CallState refusal)
 		{
-			return selection.AsT1;
+			return refusal;
 		}
 
-		var (channel, selected, showedEverything) = selection.AsT0;
+		var (channel, selected, showedEverything) = (RecallWindow)selection.Value!;
 		var quiet = switches.Contains("QUIET");
 		var channelLabel = channel.Name.ToPlainText();
 		var body = selected.Select(x => quiet ? x.Message : Stamped(x));

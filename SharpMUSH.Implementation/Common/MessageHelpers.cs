@@ -110,7 +110,7 @@ public static class MessageHelpers
 
 		foreach (var target in recipientNamelist)
 		{
-			var targetString = target.Match(dbref => dbref.ToString(), str => str);
+			var targetString = target switch { DBRef dbref => dbref.ToString(), string name => name };
 			var maybeLocateTarget = await locateService.LocateAndNotifyIfInvalidWithCallState(
 				parser, executor, executor, targetString, LocateFlags.All);
 
@@ -167,7 +167,7 @@ public static class MessageHelpers
 			var excludeObjects = new HashSet<AnySharpObject>();
 			foreach (var target in recipientNamelist)
 			{
-				var targetString = target.Match(dbref => dbref.ToString(), str => str);
+				var targetString = target switch { DBRef dbref => dbref.ToString(), string name => name };
 				var maybeLocateTarget = await locateService.LocateAndNotifyIfInvalidWithCallState(
 					parser, executor, executor, targetString, LocateFlags.All);
 

@@ -119,7 +119,7 @@ public sealed class PluginManager(
 	public async Task<Result<Success>> UnloadAsync(string pluginId)
 	{
 		var result = Unload(pluginId, forReload: false);
-		if (result.IsT0)
+		if (result is Success)
 		{
 			// A plugin DLL really left the running set: tell connected browsers to force a hard refresh, the
 			// only way to reclaim any compiled component assembly the WASM client may have loaded.
@@ -156,7 +156,7 @@ public sealed class PluginManager(
 
 		// Unload first (removes its library entries and disposes its collectible ALC), then reload from disk.
 		var unload = Unload(pluginId, forReload: true);
-		if (unload.IsT1)
+		if (unload is Error<string>)
 		{
 			return unload;
 		}

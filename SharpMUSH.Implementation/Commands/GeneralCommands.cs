@@ -588,12 +588,7 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.CantSeeThroughThat);
 			}
 
-			viewing = (await container.Location()).WithExitOption().Match<AnyOptionalSharpObject>(
-				player => player,
-				room => room,
-				exit => exit,
-				thing => thing
-			);
+			viewing = (await container.Location()).WithExitOption().WithNoneOption();
 		}
 		else if (args.Count == 1)
 		{
@@ -615,7 +610,7 @@ public partial class Commands
 				.WithNoneOption();
 		}
 
-		if (viewing.IsNone())
+		if (viewing.IsNone)
 		{
 			return new None();
 		}
@@ -680,12 +675,12 @@ public partial class Commands
 			viewing = (await Mediator.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
 		}
 
-		if (viewing.IsNone())
+		if (viewing.IsNone)
 		{
 			return new None();
 		}
 
-		var viewingKnown = viewing.Known();
+		var viewingKnown = viewing.Known;
 
 		var canExamine = await PermissionService.CanExamine(executor, viewingKnown);
 
@@ -716,13 +711,14 @@ public partial class Commands
 		var name = obj.Name;
 		var ownerName = ownerObj.Name;
 		var description = (await AttributeService.GetAttributeAsync(executor, viewingKnown, "DESCRIBE",
-				IAttributeService.AttributeMode.Read, false))
-			.Match(
-				attr => attr.Last().Value.Length == 0
-					? MarkupText.Plain("There is nothing to see here")
-					: attr.Last().Value,
-				none => MarkupText.Plain("There is nothing to see here"),
-				error => MarkupText.Empty);
+				IAttributeService.AttributeMode.Read, false)) switch
+		{
+			SharpAttribute[] attr => attr.Last().Value.Length == 0
+				? MarkupText.Plain("There is nothing to see here")
+				: attr.Last().Value,
+			None => MarkupText.Plain("There is nothing to see here"),
+			Error<string> => MarkupText.Empty
+		};
 
 		var objFlags = await obj.Flags.Value.ToArrayAsync();
 		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
@@ -1132,17 +1128,17 @@ public partial class Commands
 
 		// PennMUSH only permits a variable destination the exit itself could have been linked to
 		// (move.c:457), and an exit is not somewhere you can end up.
-		if (located.IsNone() || !located.Known().IsContainer
-				|| !await ExitCanLinkTo(exitObject, located.Known()))
+		if (located.IsNone || !located.Known.IsContainer
+				|| !await ExitCanLinkTo(exitObject, located.Known))
 		{
 			await NotifyService.NotifyLocalized(executor,
 				nameof(ErrorMessages.Notifications.VariableExitDestinationInvalidFormat), executor,
-				located.IsNone() ? "#-1" : located.Known().Object().DBRef.Number.ToString());
+				located.IsNone ? "#-1" : located.Known.Object().DBRef.Number.ToString());
 
 			return null;
 		}
 
-		return located.Known().AsContainer;
+		return located.Known.AsContainer;
 	}
 
 	/// <summary>
@@ -1225,17 +1221,15 @@ public partial class Commands
 
 		var resolved = await ResolveExitDestination(parser, executor, executor, exitObj, typedName);
 
-		if (!resolved.IsT0)
+		if (resolved is not AnySharpContainer destination)
 		{
 			// PennMUSH could_doit() (predicat.c:77) refuses an exit with no destination before the basic
 			// lock is even evaluated, so do_move falls through to fail_lock. A variable exit that could
 			// not work out where it leads has already reported that itself.
-			return resolved.AsT1 == ExitDestinationFailure.Unlinked
+			return resolved is ExitDestinationFailure.Unlinked
 				? await FailBasicLock(parser, executor, exitObject)
 				: CallState.Empty;
 		}
-
-		var destination = resolved.AsT0;
 
 		if (!await PermissionService.CanGoto(executor, exitObj, destination))
 		{
@@ -1270,9 +1264,9 @@ public partial class Commands
 			: await MoveService.SafeTel(parser, executor.AsContent, destination,
 				noMoveMsgs: false, executor.Object().DBRef, "move");
 
-		if (result.IsT1)
+		if (result is Error<string> error)
 		{
-			await NotifyService.Notify(executor, result.AsT1.Value, executor);
+			await NotifyService.Notify(executor, error.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -1343,9 +1337,11 @@ public partial class Commands
 			toTeleportList = [isDbRef ? objToTeleport!.Value : toTeleport];
 		}
 
-		var toTeleportStringList = toTeleportList.Select(x => x.Match(
-			dbref => dbref.ToString(),
-			str => str));
+		var toTeleportStringList = toTeleportList.Select(x => x switch
+		{
+			DBRef dbref => dbref.ToString(),
+			string str => str
+		});
 
 		var destination = await LocateService.LocateAndNotifyIfInvalid(parser,
 			executor,
@@ -1403,9 +1399,9 @@ public partial class Commands
 				var resolvedExit = await ResolveExitDestination(
 					parser, executor, target, destinationExit, destinationString);
 
-				if (!resolvedExit.IsT0)
+				if (resolvedExit is not AnySharpContainer resolvedContainer)
 				{
-					if (resolvedExit.AsT1 == ExitDestinationFailure.Unlinked)
+					if (resolvedExit is ExitDestinationFailure.Unlinked)
 					{
 						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitGoesNowhere), executor);
 					}
@@ -1413,7 +1409,7 @@ public partial class Commands
 					continue;
 				}
 
-				destinationContainer = resolvedExit.AsT0;
+				destinationContainer = resolvedContainer;
 			}
 
 			// recursive_member(destination, victim, 0) || victim == destination (wiz.c:440). This is a
@@ -1532,9 +1528,9 @@ public partial class Commands
 			var moveResult = await MoveService.SafeTel(
 				parser, targetContent, destinationContainer, isSilent, executor.Object().DBRef, "teleport");
 
-			if (moveResult.IsT1)
+			if (moveResult is Error<string> error)
 			{
-				await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
+				await NotifyService.Notify(executor, error.Value, executor);
 				continue;
 			}
 
@@ -1609,7 +1605,7 @@ public partial class Commands
 			.Where(async (obj, ct) =>
 			{
 				var objNode = await Mediator.Send(new GetObjectNodeQuery(obj.DBRef), ct);
-				return !objNode.IsNone() && await PermissionService.Controls(executor, objNode.WithoutNone());
+				return !objNode.IsNone && await PermissionService.Controls(executor, objNode.WithoutNone());
 			})
 			.ToListAsync();
 
@@ -1900,14 +1896,15 @@ public partial class Commands
 
 		var dbRefAttribute = new DbRefAttribute(objectToNotify.Object().DBRef, attribute.Split("`"));
 		var validation = await ValidateSemaphoreAttribute(objectToNotify, dbRefAttribute.Attribute);
-		if (validation.IsT1) return await ReportSemaphoreCommandError(executor, validation.AsT1.Value);
+		if (validation is Error<string> validationError) return await ReportSemaphoreCommandError(executor, validationError.Value);
 		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 		var accounting = await SemaphoreCommandAccounting(objectToNotify, dbRefAttribute.Attribute,
 			(old, selected) => notifyType == "ALL" ? Math.Max(0, (long)old - selected) : (long)old - (notifyType == "SETQ" ? 1 : notifyCount), false);
-		if (accounting.IsT1) return await ReportSemaphoreCommandError(executor, accounting.AsT1.Value);
+		if (accounting is Error<string> accountingError) return await ReportSemaphoreCommandError(executor, accountingError.Value);
+		var counted = (SemaphoreAccounting)accounting.Value!;
 		var changed = await scheduler.ApplySemaphoreCommandAsync(dbRefAttribute,
 			notifyType == "ALL" ? null : notifyType == "SETQ" ? 1 : notifyCount, false,
-			accounting.AsT0.Persist, accounting.AsT0.Reconcile, qRegisters);
+			counted.Persist, counted.Reconcile, qRegisters);
 		if (notifyType == "SETQ")
 		{
 			if (changed == 0)
@@ -2348,9 +2345,9 @@ public partial class Commands
 					var customSemaphoreAttr = splitBySlashes[1].Split('`');
 					var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
 
-					if (validation.IsT1)
+					if (validation is Error<string> error)
 					{
-						await NotifyService.Notify(executor, validation.AsT1.Value, executor);
+						await NotifyService.Notify(executor, error.Value, executor);
 						return new CallState(ErrorMessages.Returns.InvalidSemaphoreAttribute);
 					}
 
@@ -2369,9 +2366,9 @@ public partial class Commands
 					var customSemaphoreAttr = splitBySlashes[1].Split('`');
 					var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
 
-					if (validation.IsT1)
+					if (validation is Error<string> error)
 					{
-						await NotifyService.Notify(executor, validation.AsT1.Value, executor);
+						await NotifyService.Notify(executor, error.Value, executor);
 						return new CallState(ErrorMessages.Returns.InvalidSemaphoreAttribute);
 					}
 
@@ -2385,9 +2382,9 @@ public partial class Commands
 					var customSemaphoreAttr = splitBySlashes[1].Split('`');
 					var validation = await ValidateSemaphoreAttribute(foundObject, customSemaphoreAttr);
 
-					if (validation.IsT1)
+					if (validation is Error<string> error)
 					{
-						await NotifyService.Notify(executor, validation.AsT1.Value, executor);
+						await NotifyService.Notify(executor, error.Value, executor);
 						return new CallState(ErrorMessages.Returns.InvalidSemaphoreAttribute);
 					}
 
@@ -2825,12 +2822,13 @@ public partial class Commands
 		async ValueTask<CallState?> DrainAttribute(DbRefAttribute target)
 		{
 			var validation = await ValidateSemaphoreAttribute(objectToDrain, target.Attribute);
-			if (validation.IsT1) return await ReportSemaphoreCommandError(executor, validation.AsT1.Value);
+			if (validation is Error<string> validationError) return await ReportSemaphoreCommandError(executor, validationError.Value);
 			var accounting = await SemaphoreCommandAccounting(objectToDrain, target.Attribute,
 				(old, selected) => drainCount.HasValue && old < 0 ? old : Math.Max(0, (long)old - selected), true);
-			if (accounting.IsT1) return await ReportSemaphoreCommandError(executor, accounting.AsT1.Value);
+			if (accounting is Error<string> accountingError) return await ReportSemaphoreCommandError(executor, accountingError.Value);
+			var counted = (SemaphoreAccounting)accounting.Value!;
 			await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().ApplySemaphoreCommandAsync(target,
-				drainCount, true, accounting.AsT0.Persist, accounting.AsT0.Reconcile);
+				drainCount, true, counted.Persist, counted.Reconcile);
 			return null;
 		}
 
@@ -3129,7 +3127,7 @@ public partial class Commands
 
 		foreach (var target in nameListTargets)
 		{
-			var targetString = target.Match(dbref => dbref.ToString(), str => str);
+			var targetString = target switch { DBRef dbref => dbref.ToString(), string name => name };
 			var maybeLocateTarget = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 				targetString,
 				LocateFlags.All);
@@ -5100,10 +5098,9 @@ public partial class Commands
 			var tfPrefixAttr = await AttributeService.GetAttributeAsync(executor, executor, "TFPREFIX",
 				IAttributeService.AttributeMode.Read, false);
 
-			prefix = tfPrefixAttr.Match(
-				attr => attr.Last().Value.ToPlainText(),
-				none => "FugueEdit > ",
-				error => "FugueEdit > ");
+			prefix = tfPrefixAttr is SharpAttribute[] attr
+				? attr.Last().Value.ToPlainText()
+				: "FugueEdit > ";
 		}
 
 		string? attributePattern = null;
@@ -5148,12 +5145,12 @@ public partial class Commands
 			}
 		}
 
-		if (target.IsNone())
+		if (target.IsNone)
 		{
 			return new None();
 		}
 
-		var targetKnown = target.Known();
+		var targetKnown = target.Known;
 
 		var canExamine = await PermissionService.CanExamine(executor, targetKnown);
 		if (!canExamine)
@@ -5578,7 +5575,7 @@ public partial class Commands
 		var objectList = ArgHelpers.NameList(objectsToExclude);
 		var excludeObjects = new List<AnySharpObject>();
 
-		foreach (var objName in objectList.Select(obj => obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1))
+		foreach (var objName in objectList.Select(obj => obj switch { DBRef dbref => dbref.ToString(), string name => name }))
 		{
 			await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser,
@@ -6460,7 +6457,7 @@ public partial class Commands
 		MString? arg0, arg1;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var caller = (await parser.CurrentState.CallerObject(Mediator)).Known();
+		var caller = (await parser.CurrentState.CallerObject(Mediator)).Known;
 		string[] sendSwitches = ["SEND", "URGENT", "NOSIG", "SILENT", "NOEVAL"];
 
 		if (switches.Except(sendSwitches).Any() && switches.Length > 1)
@@ -6588,7 +6585,7 @@ public partial class Commands
 
 		foreach (var recipient in recipientList)
 		{
-			var recipientName = recipient.IsT0 ? recipient.AsT0.ToString() : recipient.AsT1;
+			var recipientName = recipient switch { DBRef dbref => dbref.ToString(), string name => name };
 
 			await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser,

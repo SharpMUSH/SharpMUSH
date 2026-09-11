@@ -282,8 +282,7 @@ public static class ListWiki
 
 				if (!pages.TryGetValue(translation.PageId, out var page))
 				{
-					var lookup = await wikiService.GetByIdAsync(translation.PageId);
-					page = lookup.IsT0 ? lookup.AsT0 : null;
+					page = await wikiService.GetByIdAsync(translation.PageId) is WikiPage found ? found : null;
 					pages[translation.PageId] = page;
 				}
 

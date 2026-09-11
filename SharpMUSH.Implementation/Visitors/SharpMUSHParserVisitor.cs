@@ -675,7 +675,7 @@ public class SharpMUSHParserVisitor(
 
 		if (!executor.IsNone)
 		{
-			executorObj = executor.Known();
+			executorObj = executor.Known;
 
 			var stateFlags = parser.CurrentState.Flags;
 			if (stateFlags.HasFlag(ParserStateFlags.NoDebug))
@@ -841,7 +841,7 @@ public class SharpMUSHParserVisitor(
 					success = false;
 					return CallState.Empty;
 				}
-				executor = executorOption.Known();
+				executor = executorOption.Known;
 				permissionError = await SharpMUSH.Library.Services.FunctionDispatcher.CheckPermissionAsync(attribute, executor);
 			}
 			if (permissionError is not null)
@@ -1062,9 +1062,9 @@ public class SharpMUSHParserVisitor(
 			// ArgumentNullException of its own, hiding the actual failure. Resolve optionally instead.
 			var executor = await parser.CurrentState.ExecutorObject(Mediator);
 
-			if (!executor.IsNone && executor.Known().IsGod())
+			if (!executor.IsNone && executor.Known.IsGod())
 			{
-				await NotifyService.Notify(executor.Known(),
+				await NotifyService.Notify(executor.Known,
 					string.Format(ErrorMessages.Returns.InternalErrorFormat, ex));
 			}
 
@@ -1540,7 +1540,7 @@ public class SharpMUSHParserVisitor(
 			// Step 15: Global User-defined commands
 			var goConfig = Configuration.CurrentValue.Database.MasterRoom;
 			var maybeGlobalObject = await Mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(goConfig))));
-			var globalObject = maybeGlobalObject.Known();
+			var globalObject = maybeGlobalObject.Known;
 			AnySharpObject[] globalObjects = [globalObject];
 			var globalObjectContent = globalObject.AsContainer
 				.Content(Mediator)
@@ -1617,12 +1617,12 @@ public class SharpMUSHParserVisitor(
 		try
 		{
 			var executor = await parser.CurrentState.ExecutorObject(Mediator);
-			var privileged = !executor.IsNone && await executor.Known().IsPriv();
+			var privileged = !executor.IsNone && await executor.Known.IsPriv();
 			var message = ExceptionReport.Format(ex, command, correlationId, privileged);
 
 			if (!executor.IsNone)
 			{
-				await NotifyService.Notify(executor.Known(), message);
+				await NotifyService.Notify(executor.Known, message);
 			}
 			else if (parser.CurrentState.Handle is not null)
 			{
@@ -1904,7 +1904,7 @@ public class SharpMUSHParserVisitor(
 			return new None();
 		}
 
-		var argumentResults = splitResult.AsT0;
+		var argumentResults = (CommandArguments)splitResult.Value!;
 		var arguments = argumentResults.Values;
 
 		var executor = await prs.CurrentState.ExecutorObject(Mediator);
@@ -2123,7 +2123,7 @@ public class SharpMUSHParserVisitor(
 					// result callers already match on.
 					if (!executor.IsNone)
 					{
-						await NotifyService.NotifyLocalized(executor.Known(),
+						await NotifyService.NotifyLocalized(executor.Known,
 							nameof(ErrorMessages.Notifications.CommandUnknownSwitchFormat),
 							libraryCommandDefinition.Attribute.Name, invalidSwitches[0].ToUpperInvariant());
 					}
@@ -2136,7 +2136,7 @@ public class SharpMUSHParserVisitor(
 				var commandLockStr = libraryCommandDefinition.Attribute.CommandLock;
 				if (!string.IsNullOrEmpty(commandLockStr) && !executor.IsNone)
 				{
-					var executorObj = executor.Known();
+					var executorObj = executor.Known;
 					if (!await LockService.Evaluate(commandLockStr, executorObj, executorObj))
 					{
 						await NotifyService.NotifyLocalized(executorObj, nameof(ErrorMessages.Notifications.PermissionDenied));
@@ -2151,7 +2151,7 @@ public class SharpMUSHParserVisitor(
 
 				if (!executor.IsNone)
 				{
-					var executorObj = executor.Known();
+					var executorObj = executor.Known;
 					if (await executorObj.HasFlag("VERBOSE"))
 					{
 						var verboseOutput = $"#{executorObj.Object().DBRef.Number}] {commandWithSwitches.ToPlainText()}";
@@ -2212,8 +2212,8 @@ public class SharpMUSHParserVisitor(
 			return new None();
 		}
 
-		var targetObj = targetObject.Known();
-		var executorObj = executor.IsNone ? targetObj : executor.Known();
+		var targetObj = targetObject.Known;
+		var executorObj = executor.IsNone ? targetObj : executor.Known;
 
 		// Save q-registers if /localize is set
 		Dictionary<string, MString>? savedRegisters = null;
@@ -2292,7 +2292,7 @@ public class SharpMUSHParserVisitor(
 			return new None();
 		}
 
-		var argumentResults = splitResult.AsT0;
+		var argumentResults = (CommandArguments)splitResult.Value!;
 		var arguments = argumentResults.Values;
 
 		var dispatchResult = await prs.With(state => state with
@@ -2362,7 +2362,7 @@ public class SharpMUSHParserVisitor(
 			return new None();
 		}
 
-		var argumentResults = splitResult.AsT0;
+		var argumentResults = (CommandArguments)splitResult.Value!;
 		var arguments = argumentResults.Values;
 
 		// %0 is the text glued to the token itself; the split arguments follow from %1.
@@ -2999,10 +2999,7 @@ public class SharpMUSHParserVisitor(
 		var isCommandList = context.Parent is CommandListContext;
 
 		var result = await EvaluateCommands(source, context, isCommandList, VisitChildren);
-		return result
-			.Match<CallState?>(
-				x => x,
-				_ => CallState.Empty);
+		return result is CallState callState ? callState : CallState.Empty;
 	}
 
 	public override async ValueTask<CallState?> VisitStartCommandString(

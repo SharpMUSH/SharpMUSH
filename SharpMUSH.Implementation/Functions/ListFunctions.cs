@@ -152,7 +152,7 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(sep, filteredItems)));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
 		{
 			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
@@ -246,7 +246,7 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(sep, filteredItems)));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
 		{
 			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
@@ -414,7 +414,7 @@ public partial class Functions
 			return errors.Complete(new CallState(accumulator));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
 		{
 			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
@@ -752,7 +752,7 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(sep, lambdaResults)));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
 		{
 			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
@@ -915,7 +915,7 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(delimiter, result)));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
 		{
 			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
@@ -1011,7 +1011,7 @@ public partial class Functions
 		}
 		else
 		{
-			var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
+			var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 			if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
 			{
 				return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
@@ -1337,7 +1337,7 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(sep, await SortByComparisons(list, CompareViaLambda))));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
 		{
 			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
@@ -1452,7 +1452,7 @@ public partial class Functions
 		}
 		else
 		{
-			var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
+			var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 			if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
 			{
 				return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
@@ -1581,7 +1581,7 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(sep, result)));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known();
+		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
 		{
 			return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));

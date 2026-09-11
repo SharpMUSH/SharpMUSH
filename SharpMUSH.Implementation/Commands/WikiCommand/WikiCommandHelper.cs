@@ -80,7 +80,7 @@ public static class WikiCommandHelper
 	/// chosen occurrence, so an unexpected shape stops the write instead of guessing at it.
 	/// </para>
 	/// </remarks>
-	public static Result<(string PageTarget, string Locale)> SplitLocaleTarget(string target)
+	public static Result<LocaleTarget> SplitLocaleTarget(string target)
 	{
 		var parts = target.Trim().Split('/');
 
@@ -98,11 +98,17 @@ public static class WikiCommandHelper
 		if (pageTarget.Length == 0)
 			return new Error<string>("that names a language but no page: @wiki/translate <page>/<lang>=<text>");
 
-		var locale = WikiHelpers.NormalizeLocale(parts[1].Trim());
-		return locale.IsT1
-			? locale.AsT1
-			: (pageTarget, locale.AsT0);
+		return WikiHelpers.NormalizeLocale(parts[1].Trim()) switch
+		{
+			string locale => new LocaleTarget(pageTarget, locale),
+			Error<string> error => error
+		};
 	}
+
+	/// <summary>
+	/// A write target split by <see cref="SplitLocaleTarget"/>: the page reference and its canonical locale tag.
+	/// </summary>
+	public readonly record struct LocaleTarget(string PageTarget, string Locale);
 
 	/// <summary>
 	/// The display form of a page reference, always fully qualified as "ns:category:slug". Round-trips

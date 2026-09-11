@@ -184,10 +184,10 @@ public partial class Commands
 		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
 		var result = await AttributeService.SetAttributeAsync(executor, executor, attributeName, channel.Name);
 
-		if (result.IsT1)
+		if (result is Error<string> error)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorSettingAliasFormat), executor, result.AsT1.Value);
-			return new CallState($"#-1 Error setting alias: {result.AsT1.Value}");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorSettingAliasFormat), executor, error.Value);
+			return new CallState($"#-1 Error setting alias: {error.Value}");
 		}
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AliasAddedForChannelFormat), executor, alias, channel.Name.ToPlainText());
@@ -233,10 +233,10 @@ public partial class Commands
 
 		var clearResult = await AttributeService.ClearAttributeAsync(executor, executor, attributeName, IAttributeService.AttributePatternMode.Exact);
 
-		if (clearResult.IsT1)
+		if (clearResult is Error<string> error)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorDeletingAliasFormat), executor, clearResult.AsT1.Value);
-			return new CallState($"#-1 Error deleting alias: {clearResult.AsT1.Value}");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ErrorDeletingAliasFormat), executor, error.Value);
+			return new CallState($"#-1 Error deleting alias: {error.Value}");
 		}
 
 		var allAliases = await AttributeService.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false, IAttributeService.AttributePatternMode.Wildcard);

@@ -78,12 +78,12 @@ public partial class Commands
 			}
 
 			var found = locate.WithoutError();
-			if (found.IsNone())
+			if (found.IsNone)
 			{
 				return new None();
 			}
 
-			var known = found.Known();
+			var known = found.Known;
 			if (!await PermissionService.CanExamine(executor, known))
 			{
 				await NotifyService.Notify(executor, $"PACKAGE: You can't examine {known.Object().Name}.", executor);
@@ -98,13 +98,13 @@ public partial class Commands
 		var authoring = parser.ServiceProvider.GetRequiredService<IPackageAuthoringService>();
 
 		var scan = await authoring.ScanAsync(objids.Distinct().ToList());
-		if (scan.IsT1)
+		if (scan is Error<string> scanError)
 		{
-			await NotifyService.Notify(executor, $"PACKAGE: {scan.AsT1.Value}", executor);
+			await NotifyService.Notify(executor, $"PACKAGE: {scanError.Value}", executor);
 			return new CallState(string.Empty);
 		}
 
-		var scanResult = scan.AsT0;
+		var scanResult = (PackageAuthoringScan)scan.Value!;
 
 		// Attribute visibility matches @decompile: keep only the attributes the
 		// executor may see (GetVisibleAttributesAsync), minus VEILED. Everything else
@@ -237,9 +237,9 @@ public partial class Commands
 			new Dictionary<string, string>(),
 			new Dictionary<string, AuthoringConfigureClassification>()));
 
-		if (export.IsT1)
+		if (export is Error<string> exportError)
 		{
-			var error = export.AsT1.Value;
+			var error = exportError.Value;
 			// Unclassified dbrefs mean the selection isn't self-contained — point the
 			// user at the web panel where they can classify them.
 			var hint = error.StartsWith("Unclassified", StringComparison.Ordinal)
@@ -253,7 +253,7 @@ public partial class Commands
 		output.AppendLine($"PACKAGE: Generated manifest for '{packageId}' v{version} ({selections.Count} object(s)).");
 		output.AppendLine("Copy everything between the markers into a package.yaml:");
 		output.AppendLine("----- BEGIN package.yaml -----");
-		output.AppendLine(export.AsT0.TrimEnd());
+		output.AppendLine(((string)export.Value!).TrimEnd());
 		output.Append("----- END package.yaml -----");
 		await NotifyService.Notify(executor, output.ToString(), executor);
 		return new CallState(string.Empty);

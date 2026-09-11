@@ -84,7 +84,7 @@ public partial class Commands
 				if (original is null)
 					await SemaphoreAttributes.InitializeAsync(Mediator, fullTarget, path, ValidateCreated);
 				var validation = await ValidateSemaphoreAttribute(target, path);
-				if (validation.IsT1) throw new InvalidOperationException("Semaphore metadata is incomplete or changed; repair it before retrying: " + validation.AsT1.Value);
+				if (validation is Error<string> error) throw new InvalidOperationException("Semaphore metadata is incomplete or changed; repair it before retrying: " + error.Value);
 				return true;
 			}
 			if (value == oldCount && original is not null) return false;

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Documentation;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Buffers;
 using System.Text;
@@ -299,13 +300,13 @@ public class TextFileService : ITextFileService
 		var fileInfo = new FileInfo(filePath);
 		var result = Helpfiles.IndexMarkdownPositions(fileInfo);
 
-		if (result.IsT1)
+		if (result is Error<string> error)
 		{
-			_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, result.AsT1.Value);
+			_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, error.Value);
 			return Task.CompletedTask;
 		}
 
-		var entries = result.AsT0;
+		var entries = (Dictionary<string, (long Start, long End)>)result.Value!;
 
 		foreach (var (entryName, positions) in entries)
 		{

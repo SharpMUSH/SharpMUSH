@@ -80,14 +80,11 @@ public static class ViewWiki
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(target.ToPlainText());
 
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
-		if (lookup.IsT1)
+		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {target.ToPlainText().Trim()}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
-
-		var page = lookup.AsT0;
 
 		// The page-edit gate cannot serve here: it passes every player on every unprotected page, so using
 		// it meant a mortal whose LOCALE matched an unpublished translation was handed its body in full.
@@ -165,14 +162,11 @@ public static class ViewWiki
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(target.ToPlainText());
 
-		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
-		if (lookup.IsT1)
+		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)
 		{
 			await notifyService.Notify(executor, $"WIKI: No such page: {target.ToPlainText().Trim()}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchWikiPage);
 		}
-
-		var page = lookup.AsT0;
 
 		// Revision numbering restarts at 1 per locale, so the stream has to be picked explicitly — the same
 		// reason GET /revisions takes ?lang=. It must be picked from the locale actually *served*, not the

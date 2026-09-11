@@ -185,7 +185,7 @@ public partial class Commands
 
 			var node = await Mediator.Send(new GetObjectNodeQuery(followerRef!.Value));
 
-			if (node.IsNone || (await ClearFollowingAsync(node.Known)).IsT1)
+			if (node.IsNone || await ClearFollowingAsync(node.Known) is Error<string>)
 			{
 				continue;
 			}
@@ -1115,12 +1115,12 @@ public partial class Commands
 			viewing = (await Mediator.Send(new GetLocationQuery(enactor.Object().DBRef))).WithExitOption();
 		}
 
-		if (viewing.IsNone())
+		if (viewing.IsNone)
 		{
 			return new None();
 		}
 
-		var viewingKnown = viewing.Known();
+		var viewingKnown = viewing.Known;
 
 		var canExamine = await PermissionService.CanExamine(executor, viewingKnown);
 
@@ -1240,9 +1240,9 @@ public partial class Commands
 			// lists in step. The leader's FOLLOWERS is what names the followers, so no scan of every
 			// object's FOLLOWING is needed to find them.
 			var selfCleared = await StopFollowingAsync(executor);
-			if (selfCleared.IsT1)
+			if (selfCleared is Error<string> error)
 			{
-				await NotifyService.Notify(executor, selfCleared.AsT1.Value, executor);
+				await NotifyService.Notify(executor, error.Value, executor);
 				return CallState.Empty;
 			}
 
@@ -1275,9 +1275,9 @@ public partial class Commands
 			{
 				// del_follow(player, who) — both lists (move.c:1197).
 				var cleared = await StopFollowingAsync(executor);
-				if (cleared.IsT1)
+				if (cleared is Error<string> error)
 				{
-					await NotifyService.Notify(executor, cleared.AsT1.Value, executor);
+					await NotifyService.Notify(executor, error.Value, executor);
 					return CallState.Empty;
 				}
 
@@ -1295,9 +1295,9 @@ public partial class Commands
 			{
 				// del_follow(who, player) — the other direction (move.c:1198).
 				var dismissed = await StopFollowingAsync(target);
-				if (dismissed.IsT1)
+				if (dismissed is Error<string> error)
 				{
-					await NotifyService.Notify(executor, dismissed.AsT1.Value, executor);
+					await NotifyService.Notify(executor, error.Value, executor);
 					return CallState.Empty;
 				}
 
@@ -1361,9 +1361,9 @@ public partial class Commands
 
 		// del_follow(player, follower) — both lists (move.c:1162).
 		var targetDismissed = await StopFollowingAsync(target);
-		if (targetDismissed.IsT1)
+		if (targetDismissed is Error<string> error)
 		{
-			await NotifyService.Notify(executor, targetDismissed.AsT1.Value, executor);
+			await NotifyService.Notify(executor, error.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -1395,10 +1395,7 @@ public partial class Commands
 
 		var objectLocation = await objectToDrop.Where();
 
-		bool isCarrying = objectLocation.Match(
-			player => player.Object.DBRef.Equals(executor.Object().DBRef),
-			room => room.Object.DBRef.Equals(executor.Object().DBRef),
-			thing => thing.Object.DBRef.Equals(executor.Object().DBRef));
+		var isCarrying = objectLocation.Object().DBRef.Equals(executor.Object().DBRef);
 
 		if (!isCarrying)
 		{
@@ -1674,10 +1671,10 @@ public partial class Commands
 
 				// A refused take leaves the item in the container, so it is not one of the objects the
 				// tally at the end reports, and none of its triads describe anything that happened.
-				if (takeMove.IsT1)
+				if (takeMove is Error<string> error)
 				{
 					count--;
-					await NotifyService.Notify(executor, takeMove.AsT1.Value, executor);
+					await NotifyService.Notify(executor, error.Value, executor);
 					continue;
 				}
 
@@ -1810,9 +1807,9 @@ public partial class Commands
 		var moveResult = await MoveService.SafeTel(parser, executor.AsContent, objectToEnter.AsContainer,
 			noMoveMsgs: false, executor.Object().DBRef, "enter");
 
-		if (moveResult.IsT1)
+		if (moveResult is Error<string> error)
 		{
-			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
+			await NotifyService.Notify(executor, error.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -1871,9 +1868,9 @@ public partial class Commands
 		var previousLeader = await LeaderOfAsync(executor);
 
 		var followSet = await SetFollowingAsync(executor, target);
-		if (followSet.IsT1)
+		if (followSet is Error<string> error)
 		{
-			await NotifyService.Notify(executor, followSet.AsT1.Value, executor);
+			await NotifyService.Notify(executor, error.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -1955,10 +1952,7 @@ public partial class Commands
 
 		var objectLocation = await objectToGet.Where();
 
-		var alreadyCarrying = objectLocation.Match(
-			player => player.Object.DBRef.Equals(executor.Object().DBRef),
-			room => room.Object.DBRef.Equals(executor.Object().DBRef),
-			thing => thing.Object.DBRef.Equals(executor.Object().DBRef));
+		var alreadyCarrying = objectLocation.Object().DBRef.Equals(executor.Object().DBRef);
 
 		if (alreadyCarrying)
 		{
@@ -2118,10 +2112,7 @@ public partial class Commands
 
 		var objectLocation = await objectToGive.Where();
 
-		var isCarrying = objectLocation.Match(
-			player => player.Object.DBRef.Equals(executor.Object().DBRef),
-			room => room.Object.DBRef.Equals(executor.Object().DBRef),
-			thing => thing.Object.DBRef.Equals(executor.Object().DBRef));
+		var isCarrying = objectLocation.Object().DBRef.Equals(executor.Object().DBRef);
 
 		if (!isCarrying)
 		{
@@ -2176,9 +2167,9 @@ public partial class Commands
 
 		// A refused move leaves the gift where it was, so none of the triads below describe anything
 		// that happened. rob.c has no analogue because moveto cannot fail there.
-		if (giveMove.IsT1)
+		if (giveMove is Error<string> error)
 		{
-			await NotifyService.Notify(executor, giveMove.AsT1.Value, executor);
+			await NotifyService.Notify(executor, error.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -2274,9 +2265,9 @@ public partial class Commands
 		var moveResult = await MoveService.SafeTel(parser, executor.AsContent, homeLocation,
 			noMoveMsgs: false, executor.Object().DBRef, "home");
 
-		if (moveResult.IsT1)
+		if (moveResult is Error<string> error)
 		{
-			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
+			await NotifyService.Notify(executor, error.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -2333,10 +2324,12 @@ public partial class Commands
 		var currentLocation = await executor.Where();
 		var container = currentLocation.WithExitOption();
 
-		var destinationLocation = await currentLocation.Match(
-			async player => await player.Location.WithCancellation(CancellationToken.None),
-			async room => await ValueTask.FromResult<AnySharpContainer>(room),
-			async thing => await thing.Location.WithCancellation(CancellationToken.None));
+		AnySharpContainer destinationLocation = currentLocation switch
+		{
+			SharpPlayer player => await player.Location.WithCancellation(CancellationToken.None),
+			SharpRoom room => room,
+			SharpThing thing => await thing.Location.WithCancellation(CancellationToken.None)
+		};
 
 		// move.c:981-983: standing in a room, a NO_LEAVE container, or one whose leave lock refuses,
 		// are one and the same refusal — fail_lock on the container, defaulting to "You can't leave.".
@@ -2353,9 +2346,9 @@ public partial class Commands
 		var moveResult = await MoveService.EnterRoom(parser, executor.AsContent, destinationLocation,
 			noMoveMsgs: false, executor.Object().DBRef, "leave");
 
-		if (moveResult.IsT1)
+		if (moveResult is Error<string> error)
 		{
-			await NotifyService.Notify(executor, moveResult.AsT1.Value, executor);
+			await NotifyService.Notify(executor, error.Value, executor);
 			return CallState.Empty;
 		}
 
@@ -2383,10 +2376,9 @@ public partial class Commands
 		{
 			var lastPagedAttr = await AttributeService.GetAttributeAsync(
 				executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Read, false);
-			var lastPagedText = lastPagedAttr.Match(
-				attr => attr.Last().Value.ToPlainText(),
-				_ => string.Empty,
-				_ => string.Empty);
+			var lastPagedText = lastPagedAttr is SharpAttribute[] attr
+				? attr.Last().Value.ToPlainText()
+				: string.Empty;
 
 			if (string.IsNullOrWhiteSpace(lastPagedText))
 			{
@@ -2438,11 +2430,9 @@ public partial class Commands
 		{
 			var lastPagedAttr = await AttributeService.GetAttributeAsync(
 				executor, executor, "LASTPAGED", IAttributeService.AttributeMode.Read, false);
-			recipientsText = lastPagedAttr.Match(
-				attr => attr.Last().Value.ToPlainText(),
-				_ => string.Empty,
-				_ => string.Empty
-			);
+			recipientsText = lastPagedAttr is SharpAttribute[] attr
+				? attr.Last().Value.ToPlainText()
+				: string.Empty;
 
 			if (string.IsNullOrWhiteSpace(recipientsText))
 			{
@@ -2588,9 +2578,9 @@ public partial class Commands
 			var lastPagedText = string.Join(" ", successfulRecipients.Select(r => r.Object().DBRef));
 			var lastPagedResult = await AttributeService.SetAttributeAsync(
 				await HelperFunctions.GetGod(Mediator), executor, "LASTPAGED", MarkupText.Plain(lastPagedText));
-			if (lastPagedResult.IsT1)
+			if (lastPagedResult is Error<string> error)
 			{
-				await NotifyService.Notify(executor, lastPagedResult.AsT1.Value, executor);
+				await NotifyService.Notify(executor, error.Value, executor);
 				return CallState.Empty;
 			}
 
@@ -2816,9 +2806,9 @@ public partial class Commands
 
 		// del_follow removes from both lists (move.c:1292).
 		var unfollowed = await StopFollowingAsync(executor);
-		if (unfollowed.IsT1)
+		if (unfollowed is Error<string> error)
 		{
-			await NotifyService.Notify(executor, unfollowed.AsT1.Value, executor);
+			await NotifyService.Notify(executor, error.Value, executor);
 			return CallState.Empty;
 		}
 

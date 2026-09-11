@@ -34,22 +34,22 @@ public partial class Commands
 			if (argument.Length > 0 && (!int.TryParse(argument, NumberStyles.None, CultureInfo.InvariantCulture, out seconds)
 				|| seconds is < 1 or > 300)) return await DiagnosticFailure(parser, DiagnosticsError.InvalidDuration);
 			var result = await service.StartProfileAsync(actor, seconds, ExecutionBudget.CurrentToken);
-			if (result.IsT1) return await DiagnosticFailure(parser, result.AsT1);
+			if (result is DiagnosticsError error) return await DiagnosticFailure(parser, error);
 			await NotifyService.NotifyLocalized(executor, "QueueProfileStarted", seconds);
 			return CallState.Empty;
 		}
 		if (switches.Contains("STOP"))
 		{
 			var result = await service.StopProfileAsync(actor, ExecutionBudget.CurrentToken);
-			if (result.IsT1) return await DiagnosticFailure(parser, result.AsT1);
+			if (result is DiagnosticsError error) return await DiagnosticFailure(parser, error);
 			await NotifyService.NotifyLocalized(executor, "QueueProfileStopped");
 			return CallState.Empty;
 		}
 		if (argument.Length > 0) return await DiagnosticFailure(parser, DiagnosticsError.InvalidRequest);
 		await service.CollectProfilesAsync(ExecutionBudget.CurrentToken);
 		var report = await service.InspectAsync(actor, ct: ExecutionBudget.CurrentToken);
-		if (report.IsT1) return await DiagnosticFailure(parser, report.AsT1);
-		if (report.AsT0.Profile is not { } profile) return await DiagnosticFailure(parser, DiagnosticsError.NotFound);
+		if (report is not QueueDiagnosticsReport { Profile: { } profile })
+			return await DiagnosticFailure(parser, report is DiagnosticsError error ? error : DiagnosticsError.NotFound);
 		var rows = string.Join('\n', profile.Rows.Select(row =>
 			$"{row.Source ?? "?"}{(row.SourceAttribute is null ? "" : "/" + row.SourceAttribute)} {row.Kind} {row.Name} " +
 			$"{row.Count} {row.Failures} {row.InclusiveMilliseconds.ToString("F2", CultureInfo.InvariantCulture)} {row.MaximumMilliseconds.ToString("F2", CultureInfo.InvariantCulture)}"));
@@ -69,8 +69,8 @@ public partial class Commands
 			.GetGameActorAsync(executor.Object().DBRef, ExecutionBudget.CurrentToken);
 		if (actor is null) return await DiagnosticFailure(parser, DiagnosticsError.PermissionDenied);
 		var result = await parser.ServiceProvider.GetRequiredService<IQueueDiagnosticsService>().InspectAsync(actor, limit, ct: ExecutionBudget.CurrentToken);
-		if (result.IsT1) return await DiagnosticFailure(parser, result.AsT1);
-		var rows = string.Join('\n', result.AsT0.Recent.Select(row =>
+		if (result is DiagnosticsError error) return await DiagnosticFailure(parser, error);
+		var rows = string.Join('\n', ((QueueDiagnosticsReport)result.Value!).Recent.Select(row =>
 			$"{row.Pid?.ToString() ?? "-"} {row.Source ?? "?"}{(row.SourceAttribute is null ? "" : "/" + row.SourceAttribute)} {row.Owner ?? "?"} {row.Kind} {row.Status} " +
 			$"{row.WaitDuration?.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture) ?? "-"} " +
 			$"{row.ExecutionDuration?.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture) ?? "-"} {row.InvocationCount}"));

@@ -884,8 +884,8 @@ public partial class Functions
 			return string.Join(" ", CryptoHelpers.hashAlgorithms.Keys);
 		}
 
-		return CryptoHelpers.hashAlgorithms.ContainsKey(arg0)
-			? CryptoHelpers.Digest(arg0, arg1!).AsT0
+		return CryptoHelpers.Digest(arg0, arg1!) is string digest
+			? digest
 			: ErrorMessages.Returns.ArgRange;
 	}
 

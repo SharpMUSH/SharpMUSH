@@ -83,12 +83,13 @@ public static class SetHelpers
 
 			var result = await attributeService.SetAttributeFlagsAsync(executor, found, attribute, flagTokens);
 
-			if (result.IsT1)
+			if (result is Error<string> error)
 			{
-				await notifyService.Notify(executor, result.AsT1.Value, executor);
+				await notifyService.Notify(executor, error.Value, executor);
+				return new CallState(error.Value);
 			}
 
-			return new CallState(result.Match(_ => string.Empty, failure => failure.Value));
+			return new CallState(string.Empty);
 		}
 
 		// do_set_atr(thing, flag, p, player, 1) — the trailing 1 is what makes it report the write
@@ -100,26 +101,25 @@ public static class SetHelpers
 
 			var result = await attributeService.SetAttributeAsync(executor, found, attribute.ToPlainText(), content);
 
-			if (result.IsT0)
+			if (result is Error<string> error)
 			{
-				// do_set_atr (src/attrib.c:2446-2451) has a second gate the flag path does not: the
-				// written attribute's own AF_Quiet suppresses the line as well.
-				var written = await attributeService.GetAttributeAsync(executor, found, attribute.ToPlainText(),
-					IAttributeService.AttributeMode.Read, false);
-				var attributeIsQuiet = written.IsAttribute && written.AsAttribute.Last().IsQuiet();
-
-				if (!areQuiet && !attributeIsQuiet)
-				{
-					await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
-						found.Object().Name, attribute.ToPlainText());
-				}
-			}
-			else
-			{
-				await notifyService.Notify(executor, result.AsT1.Value, executor);
+				await notifyService.Notify(executor, error.Value, executor);
+				return new CallState(error.Value);
 			}
 
-			return new CallState(result.Match(_ => string.Empty, failure => failure.Value));
+			// do_set_atr (src/attrib.c:2446-2451) has a second gate the flag path does not: the
+			// written attribute's own AF_Quiet suppresses the line as well.
+			var written = await attributeService.GetAttributeAsync(executor, found, attribute.ToPlainText(),
+				IAttributeService.AttributeMode.Read, false);
+			var attributeIsQuiet = written is SharpAttribute[] writtenAttribute && writtenAttribute.Last().IsQuiet();
+
+			if (!areQuiet && !attributeIsQuiet)
+			{
+				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
+					found.Object().Name, attribute.ToPlainText());
+			}
+
+			return new CallState(string.Empty);
 		}
 
 		// `do { f = split_token(&p, ' '); … set_flag(player, thing, f, negate, …) } while (p)`. The

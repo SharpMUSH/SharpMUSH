@@ -22,24 +22,15 @@ public class ObjectEventHandlers(
 			parser,
 			"OBJECT`MOVE",
 			notification.Enactor,
-			notification.Target.Match(
-				player => player.Object.DBRef.ToString(),
-				exit => exit.Object.DBRef.ToString(),
-				thing => thing.Object.DBRef.ToString()),
-			notification.NewLocation.Match(
-				player => player.Object.DBRef.ToString(),
-				room => room.Object.DBRef.ToString(),
-				thing => thing.Object.DBRef.ToString()),
+			notification.Target.Object().DBRef.ToString(),
+			notification.NewLocation.Object().DBRef.ToString(),
 			notification.OldLocation.ToString(),
 			notification.IsSilent ? "1" : "0",
 			notification.Cause);
 
 		// Room-scoped ROOM`CONTENTS so the handler can refresh ALL occupants of the affected
 		// rooms (not just the mover): one fire for the destination, one for the origin.
-		var newLocDbref = notification.NewLocation.Match(
-			player => player.Object.DBRef.ToString(),
-			room => room.Object.DBRef.ToString(),
-			thing => thing.Object.DBRef.ToString());
+		var newLocDbref = notification.NewLocation.Object().DBRef.ToString();
 
 		await eventService.TriggerEventAsync(
 			parser,
@@ -63,11 +54,7 @@ public class ObjectEventHandlers(
 			parser,
 			"OBJECT`FLAG",
 			notification.Enactor,
-			notification.Target.Match(
-				player => player.Object.DBRef.ToString(),
-				room => room.Object.DBRef.ToString(),
-				thing => thing.Object.DBRef.ToString(),
-				exit => exit.Object.DBRef.ToString()),
+			notification.Target.Object().DBRef.ToString(),
 			notification.FlagName,
 			notification.Type,
 			notification.IsSet ? "1" : "0",

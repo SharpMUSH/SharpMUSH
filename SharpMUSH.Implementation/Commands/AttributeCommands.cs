@@ -192,9 +192,9 @@ public partial class Commands
 
 			var setResult = await AttributeService.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
-			if (setResult.IsT1)
+			if (setResult is Error<string> error)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, setResult.AsT1.Value);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, error.Value);
 				continue;
 			}
 
@@ -309,9 +309,9 @@ public partial class Commands
 
 			var setResult = await AttributeService.SetAttributeAsync(executor, destObject, targetAttrName, attrValue);
 
-			if (setResult.IsT1)
+			if (setResult is Error<string> error)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, setResult.AsT1.Value);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCopyAttributeToFormat), executor, destDbref, error.Value);
 				continue;
 			}
 
@@ -333,9 +333,9 @@ public partial class Commands
 			IAttributeService.AttributePatternMode.Exact);
 
 			var destWord = copiedCount == 1 ? "destination" : "destinations";
-			if (clearResult.IsT1)
+			if (clearResult is Error<string> error)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedFailedRemoveFormat), executor, copiedCount, destWord, clearResult.AsT1.Value);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeMovedFailedRemoveFormat), executor, copiedCount, destWord, error.Value);
 			}
 			else
 			{
@@ -443,9 +443,9 @@ public partial class Commands
 		var currentValue = attribute.AsAttribute.Last().Value;
 		var setResult = await AttributeService.SetAttributeAsync(executor, targetObject, attrName, currentValue);
 
-		if (setResult.IsT1)
+		if (setResult is Error<string> error)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToChangeOwnershipFormat), executor, setResult.AsT1.Value);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToChangeOwnershipFormat), executor, error.Value);
 			return new CallState(ErrorMessages.Returns.Failed);
 		}
 

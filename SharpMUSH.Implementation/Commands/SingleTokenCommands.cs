@@ -114,13 +114,15 @@ public partial class Commands
 					var clearResult = await AttributeService.ClearAttributeAsync(
 						executor, realLocated, attrName,
 						IAttributeService.AttributePatternMode.Exact);
-					await NotifyService.Notify(executor,
-						clearResult.Match(
-							_ => string.Format(ErrorMessages.Notifications.AttributeCleared, realLocated.Object().Name, attrName),
-							failure => failure.Value), executor);
-					return new CallState(clearResult.Match(
-						_ => $"{realLocated.Object().Name}/{attrNameParsed}",
-						_ => string.Empty));
+					var (clearMessage, cleared) = clearResult switch
+					{
+						Success => (
+							string.Format(ErrorMessages.Notifications.AttributeCleared, realLocated.Object().Name, attrName),
+							$"{realLocated.Object().Name}/{attrNameParsed}"),
+						Error<string> failure => (failure.Value, string.Empty)
+					};
+					await NotifyService.Notify(executor, clearMessage, executor);
+					return new CallState(cleared);
 				}
 
 				// PennMUSH QUEUE_NOLIST behavior via ParserStateFlags.DirectInput:
@@ -139,14 +141,16 @@ public partial class Commands
 				// Notifications go to executor so softcoded WIZARD objects don't leak confirmations to players.
 				var setResult =
 					await AttributeService.SetAttributeAsync(executor, realLocated, attrName, contents);
-				await NotifyService.Notify(executor,
-					setResult.Match(
-						_ => string.Format(ErrorMessages.Notifications.AttributeSet, realLocated.Object().Name, attrNameParsed),
-						failure => failure.Value), executor);
+				var (setMessage, stored) = setResult switch
+				{
+					Success => (
+						string.Format(ErrorMessages.Notifications.AttributeSet, realLocated.Object().Name, attrNameParsed),
+						$"{realLocated.Object().Name}/{attrNameParsed}"),
+					Error<string> failure => (failure.Value, string.Empty)
+				};
+				await NotifyService.Notify(executor, setMessage, executor);
 
-				return new CallState(setResult.Match(
-					_ => $"{realLocated.Object().Name}/{attrNameParsed}",
-					_ => string.Empty));
+				return new CallState(stored);
 			});
 		return result with { HadErrors = result.HadErrors || attrNameResult?.HadErrors == true };
 	}

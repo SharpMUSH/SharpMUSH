@@ -29,7 +29,7 @@ public partial class Commands
 		// is bound to the handle yet. KnownExecutorObject() throws on that None, so resolve the
 		// executor optionally: an anonymous viewer is never a wizard and gets the mortal listing.
 		var executorOption = await parser.CurrentState.ExecutorObject(Mediator);
-		var executor = executorOption.IsNone ? null : executorOption.Known();
+		var executor = executorOption.IsNone ? null : executorOption.Known;
 		var isWizard = executor is not null && await executor.IsWizard();
 
 		var everyone = ConnectionService.GetAll();
@@ -224,11 +224,13 @@ public partial class Commands
 
 		var nameItem = nameItems.First();
 
-		var foundDB = await nameItem.Match(
-			async dbref => await Mediator.Send(new GetObjectNodeQuery(dbref)) is SharpPlayer player
+		var foundDB = nameItem switch
+		{
+			DBRef dbref => await Mediator.Send(new GetObjectNodeQuery(dbref)) is SharpPlayer player
 				? player
 				: null,
-			async name => await (Mediator.CreateStream(new GetPlayerQuery(name))).FirstOrDefaultAsync());
+			string name => await Mediator.CreateStream(new GetPlayerQuery(name)).FirstOrDefaultAsync()
+		};
 
 		if (foundDB is null)
 		{
@@ -523,7 +525,7 @@ public partial class Commands
 		// no executor bound and KnownExecutorObject() would throw. Fall back to notifying the
 		// socket directly in that case.
 		var executorOption = await parser.CurrentState.ExecutorObject(Mediator);
-		var executor = executorOption.IsNone ? null : executorOption.Known();
+		var executor = executorOption.IsNone ? null : executorOption.Known;
 
 		await NotifyQuitAsync(MarkupText.Plain("GOODBYE."));
 

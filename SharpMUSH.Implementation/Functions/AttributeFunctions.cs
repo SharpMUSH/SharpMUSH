@@ -85,11 +85,13 @@ public partial class Functions
 
 				var setResult = await AttributeService.SetAttributeAsync(executor, realLocated, attribute, contents);
 
-				await NotifyOfSet(executor, realLocated, attribute, setResult.IsT0, args.ContainsKey("1"));
+				await NotifyOfSet(executor, realLocated, attribute, setResult is Success, args.ContainsKey("1"));
 
-				return new CallState(setResult.Match(
-					_ => string.Empty,
-					failure => failure.Value));
+				return new CallState(setResult switch
+				{
+					Success => string.Empty,
+					Error<string> failure => failure.Value
+				});
 			});
 	}
 
@@ -114,11 +116,13 @@ public partial class Functions
 
 				var setResult = await AttributeService.SetAttributeAsync(executor, realLocated, attribute, contents);
 
-				await NotifyOfSet(executor, realLocated, attribute, setResult.IsT0, args.ContainsKey("1"));
+				await NotifyOfSet(executor, realLocated, attribute, setResult is Success, args.ContainsKey("1"));
 
-				return new CallState(setResult.Match(
-					_ => $"{realLocated.Object().Name}/{args["0"].Message}",
-					failure => failure.Value));
+				return new CallState(setResult switch
+				{
+					Success => $"{realLocated.Object().Name}/{args["0"].Message}",
+					Error<string> failure => failure.Value
+				});
 			});
 	}
 
@@ -282,10 +286,12 @@ public partial class Functions
 				var attr = await AttributeService.LazilyGetAttributeAsync(
 					executor, found, attributePattern, IAttributeService.AttributeMode.Read, false);
 
-				return attr.Match(
-					attribute => string.Join("", attribute.Last().Flags.Select(x => x.Symbol)),
-					_ => ErrorMessages.Returns.NoSuchAttribute,
-					error => error.Value);
+				return attr switch
+				{
+					LazySharpAttribute[] attribute => string.Join("", attribute.Last().Flags.Select(x => x.Symbol)),
+					None => ErrorMessages.Returns.NoSuchAttribute,
+					Error<string> error => error.Value
+				};
 			});
 	}
 
@@ -638,10 +644,12 @@ public partial class Functions
 				var attr = await AttributeService.LazilyGetAttributeAsync(
 					executor, found, attributePattern, IAttributeService.AttributeMode.Read, false);
 
-				return attr.Match(
-					attribute => string.Join(" ", attribute.Last().Flags.Select(x => x.Name)),
-					_ => ErrorMessages.Returns.NoSuchAttribute,
-					error => error.Value);
+				return attr switch
+				{
+					LazySharpAttribute[] attribute => string.Join(" ", attribute.Last().Flags.Select(x => x.Name)),
+					None => ErrorMessages.Returns.NoSuchAttribute,
+					Error<string> error => error.Value
+				};
 			});
 	}
 

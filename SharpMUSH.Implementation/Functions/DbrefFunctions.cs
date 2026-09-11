@@ -36,47 +36,42 @@ public partial class Functions
 
 		var found = locateResult.AsSharpObject;
 
-		return await found.Match<ValueTask<CallState>>(
-			async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			async room =>
-			{
-				var location = await room.Location.WithCancellation(CancellationToken.None);
-				return location.Match(
-					player => player.Object.DBRef.ToString(),
-					r => r.Object.DBRef.ToString(),
-					thing => thing.Object.DBRef.ToString(),
-					_ => "#-1");
-			},
-			async exit =>
-			{
-				var linkTypeAttr = await AttributeService.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
+		return found switch
+		{
+			SharpPlayer player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			SharpRoom room => (await room.Location.WithCancellation(CancellationToken.None)).Object()?.DBRef.ToString() ?? "#-1",
+			SharpExit exit => await ExitLocation(exit),
+			SharpThing thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
+		};
 
-				if (linkTypeAttr.IsAttribute && linkTypeAttr.AsT0.Length > 0)
+		async ValueTask<CallState> ExitLocation(SharpExit exit)
+		{
+			var linkTypeAttr = await AttributeService.GetAttributeAsync(executor, exit, AttrLinkType, IAttributeService.AttributeMode.Read, false);
+
+			if (linkTypeAttr is SharpAttribute[] { Length: > 0 } linkType)
+			{
+				var linkTypeText = linkType[0].Value.ToPlainText();
+				if (!string.IsNullOrEmpty(linkTypeText))
 				{
-					var linkTypeText = linkTypeAttr.AsT0[0].Value.ToPlainText();
-					if (!string.IsNullOrEmpty(linkTypeText))
+					if (string.Equals(linkTypeText, LinkTypeVariable, StringComparison.OrdinalIgnoreCase))
 					{
-						if (string.Equals(linkTypeText, LinkTypeVariable, StringComparison.OrdinalIgnoreCase))
-						{
-							return "#-2";
-						}
-						else if (string.Equals(linkTypeText, LinkTypeHome, StringComparison.OrdinalIgnoreCase))
-						{
-							return "#-3";
-						}
+						return "#-2";
+					}
+					else if (string.Equals(linkTypeText, LinkTypeHome, StringComparison.OrdinalIgnoreCase))
+					{
+						return "#-3";
 					}
 				}
+			}
 
-				// PennMUSH fun_loc (fundb.c:1459) returns Location(it), which for an exit is where it
-				// leads. The room it sits in is what where() reports.
-				var destination = await exit.Home.WithCancellation(CancellationToken.None);
+			// PennMUSH fun_loc (fundb.c:1459) returns Location(it), which for an exit is where it
+			// leads. The room it sits in is what where() reports.
+			var destination = await exit.Home.WithCancellation(CancellationToken.None);
 
-				return destination.IsNone
-					? "#-1"
-					: destination.WithoutNone().Object().DBRef;
-			},
-			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef
-		);
+			return destination.IsNone
+				? "#-1"
+				: destination.WithoutNone().Object().DBRef;
+		}
 	}
 
 	[SharpFunction(Name = "children", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -306,21 +301,14 @@ public partial class Functions
 
 		var found = locateResult.AsSharpObject;
 
-		return await found.Match<ValueTask<CallState>>(
-			async player => (await player.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
-			async room =>
-			{
-				var location = await room.Location.WithCancellation(CancellationToken.None);
-				return location.Match(
-					player => player.Object.DBRef.ToString(),
-					r => r.Object.DBRef.ToString(),
-					thing => thing.Object.DBRef.ToString(),
-					_ => "#-1");
-			},
+		return found switch
+		{
+			SharpPlayer player => (await player.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
+			SharpRoom room => (await room.Location.WithCancellation(CancellationToken.None)).Object()?.DBRef.ToString() ?? "#-1",
 			// PennMUSH fun_home (fundb.c:1672) returns Source() for an exit — the room it sits in.
-			async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
-			async thing => (await thing.Home.WithCancellation(CancellationToken.None)).Object().DBRef
-		);
+			SharpExit exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
+			SharpThing thing => (await thing.Home.WithCancellation(CancellationToken.None)).Object().DBRef
+		};
 	}
 
 	[SharpFunction(Name = "llockflags", MinArgs = 0, MaxArgs = 1,
@@ -576,11 +564,13 @@ public partial class Functions
 		// enclosing room, and a room's own dbref is not its location. For an exit db[x].location is
 		// Destination(); for a room it is the drop-to, which is usually unset — and "unset" is exactly
 		// what selects fun_locate's second arm, so this cannot be approximated by `found.IsRoom`.
-		var loc = await found.Match<ValueTask<AnyOptionalSharpContainer>>(
-			async player => (await player.Location.WithCancellation(CancellationToken.None)).WithNoneOption(),
-			room => new(room.Location.WithCancellation(CancellationToken.None)),
-			exit => new(exit.Home.WithCancellation(CancellationToken.None)),
-			async thing => (await thing.Location.WithCancellation(CancellationToken.None)).WithNoneOption());
+		var loc = found switch
+		{
+			SharpPlayer player => (await player.Location.WithCancellation(CancellationToken.None)).WithNoneOption(),
+			SharpRoom room => await room.Location.WithCancellation(CancellationToken.None),
+			SharpExit exit => await exit.Home.WithCancellation(CancellationToken.None),
+			SharpThing thing => (await thing.Location.WithCancellation(CancellationToken.None)).WithNoneOption()
+		};
 
 		// can_interact is the last term of both arms, so it is only asked once Can_Examine has declined
 		// and the dark test has passed — as the else-if ordering has it. It can run softcode through an
@@ -924,53 +914,51 @@ public partial class Functions
 			int errorCode = 0; // 0 = success, -1 = not found, -2 = ambiguous
 			string originalName = string.Empty;
 
-			if (item.IsT0)
+			switch (item)
 			{
-				var dbref = item.AsT0;
-				var exists = await Mediator.Send(new GetBaseObjectNodeQuery(dbref));
+				case DBRef dbref:
+					var exists = await Mediator.Send(new GetBaseObjectNodeQuery(dbref));
 
-				if (exists != null)
-				{
-					resolvedDbref = dbref;
-				}
-				else
-				{
-					errorCode = -1;
-					originalName = $"#{dbref.Number}";
-				}
-			}
-			else
-			{
-				var name = item.AsT1;
-				originalName = name;
-
-				var locateResult = await LocateService.Locate(parser, executor, executor, name, LocateFlags.All);
-
-				if (locateResult.IsValid())
-				{
-					resolvedDbref = locateResult.AsAnyObject.Object().DBRef;
-				}
-				else if (locateResult.IsT4)
-				{
-					errorCode = -1;
-				}
-				else if (locateResult.IsT5)
-				{
-					var error = locateResult.AsT5;
-					if (error.Value.Contains("ambiguous", StringComparison.OrdinalIgnoreCase) ||
-							error.Value.Contains("#-2"))
+					if (exists != null)
 					{
-						errorCode = -2;
+						resolvedDbref = dbref;
+					}
+					else
+					{
+						errorCode = -1;
+						originalName = $"#{dbref.Number}";
+					}
+					break;
+				case string name:
+					originalName = name;
+
+					var locateResult = await LocateService.Locate(parser, executor, executor, name, LocateFlags.All);
+
+					if (locateResult.IsValid())
+					{
+						resolvedDbref = locateResult.AsAnyObject.Object().DBRef;
+					}
+					else if (locateResult.IsNone)
+					{
+						errorCode = -1;
+					}
+					else if (locateResult is Error<string> error)
+					{
+						if (error.Value.Contains("ambiguous", StringComparison.OrdinalIgnoreCase) ||
+								error.Value.Contains("#-2"))
+						{
+							errorCode = -2;
+						}
+						else
+						{
+							errorCode = -1;
+						}
 					}
 					else
 					{
 						errorCode = -1;
 					}
-				}
-				else
-				{
-					errorCode = -1;
-				}
+					break;
 			}
 
 			if (resolvedDbref.HasValue)
@@ -1229,13 +1217,14 @@ public partial class Functions
 			executor,
 			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
 			LocateFlags.All,
-			async x =>
-				await x.Match<ValueTask<string>>(
-					async player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
-					_ => ValueTask.FromResult<string>(ErrorMessages.Returns.ThisIsARoom),
-					// For exits, return the location (the room containing the exit)
-					async exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
-					async thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString()));
+			async x => x switch
+			{
+				SharpPlayer player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
+				SharpRoom => ErrorMessages.Returns.ThisIsARoom,
+				// For exits, return the location (the room containing the exit)
+				SharpExit exit => (await exit.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
+				SharpThing thing => (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString()
+			});
 	}
 
 	[SharpFunction(Name = "zone", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, SideEffectMinArgs = 2, ParameterNames = ["object"])]

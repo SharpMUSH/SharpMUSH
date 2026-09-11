@@ -22,9 +22,6 @@ public class MoveObjectCommandHandler(INavigationStore database, IPublisher publ
 			request.Cause),
 			cancellationToken);
 
-		return request.Destination.Match(
-			player => player.Object.DBRef,
-			room => room.Object.DBRef,
-			thing => thing.Object.DBRef);
+		return request.Destination.Object().DBRef;
 	}
 }

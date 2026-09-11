@@ -1511,7 +1511,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		await ManipulateSharpObjectService.SetOrUnsetPowers(executor, maybeTarget.WithoutError().Known(), powerArg, true);
+		await ManipulateSharpObjectService.SetOrUnsetPowers(executor, maybeTarget.WithoutError().Known, powerArg, true);
 		return CallState.Empty;
 	}
 
@@ -1870,7 +1870,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var targetObject = maybeObject.WithoutError().Known();
+		var targetObject = maybeObject.WithoutError().Known;
 		var dbref = targetObject.Object().DBRef;
 
 		var attributeArg = args.Count > 2 ? args["2"].Message?.ToPlainText() : null;
@@ -2243,8 +2243,9 @@ public partial class Commands
 			return new CallState(written.Name);
 		}
 
+		var failure = (Error<string>)result.Value!;
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupFailedFormat), executor,
-			result.AsT1.Value);
+			failure.Value);
 		return new None();
 	}
 

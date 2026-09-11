@@ -251,7 +251,7 @@ public partial class Functions
 
 			foreach (var obj in objectList)
 			{
-				var objName = obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1;
+				var objName = obj switch { DBRef dbref => dbref.ToString(), string name => name };
 
 				await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 					parser,
@@ -298,7 +298,7 @@ public partial class Functions
 
 		foreach (var recipient in recipientList)
 		{
-			var recipientName = recipient.IsT0 ? recipient.AsT0.ToString() : recipient.AsT1;
+			var recipientName = recipient switch { DBRef dbref => dbref.ToString(), string name => name };
 
 			await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser,
@@ -336,7 +336,7 @@ public partial class Functions
 
 		foreach (var recipient in recipientList)
 		{
-			var recipientName = recipient.IsT0 ? recipient.AsT0.ToString() : recipient.AsT1;
+			var recipientName = recipient switch { DBRef dbref => dbref.ToString(), string name => name };
 
 			await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 				parser,
@@ -498,7 +498,7 @@ public partial class Functions
 
 			foreach (var obj in objectList)
 			{
-				var objName = obj.IsT0 ? obj.AsT0.ToString() : obj.AsT1;
+				var objName = obj switch { DBRef dbref => dbref.ToString(), string name => name };
 
 				await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 					parser,

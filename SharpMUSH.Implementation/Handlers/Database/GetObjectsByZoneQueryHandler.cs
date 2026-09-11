@@ -13,9 +13,9 @@ public class GetObjectsByZoneQueryHandler(INavigationStore database, IObjectStor
 	{
 		AnySharpObject zone;
 
-		if (request.Zone.IsT0)
+		if (request.Zone is DBRef zoneRef)
 		{
-			var maybeZone = await objects.GetObjectNodeAsync(request.Zone.AsT0, cancellationToken);
+			var maybeZone = await objects.GetObjectNodeAsync(zoneRef, cancellationToken);
 			if (maybeZone.IsNone)
 			{
 				yield break;
@@ -24,7 +24,7 @@ public class GetObjectsByZoneQueryHandler(INavigationStore database, IObjectStor
 		}
 		else
 		{
-			zone = request.Zone.AsT1;
+			zone = (AnySharpObject)request.Zone.Value!;
 		}
 
 		await foreach (var obj in database.GetObjectsByZoneAsync(zone, cancellationToken)

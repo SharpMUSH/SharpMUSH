@@ -41,12 +41,7 @@ public partial class Functions
 			Number = Convert.ToInt32(Configuration.CurrentValue.Database.PlayerStart)
 		}));
 
-		var trueLocation = location.Match(
-			player => player.Object.Key,
-			room => room.Object.Key,
-			exit => exit.Object.Key,
-			thing => thing.Object.Key,
-			none => -1);
+		var trueLocation = location.Object()?.Key ?? -1;
 
 		var created = await Mediator.Send(new CreatePlayerCommand(
 			args["0"].Message!.ToPlainText(),
@@ -1954,7 +1949,7 @@ public partial class Functions
 							parser, targetContent, destinationContainer, quiet,
 							executor.Object().DBRef, "tel()");
 
-						return moveResult.IsT1
+						return moveResult is Error<string>
 							? ErrorMessages.Returns.CannotTeleport
 							: "1";
 					});

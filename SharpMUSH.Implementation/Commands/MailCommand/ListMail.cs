@@ -18,13 +18,11 @@ public static class ListMail
 
 		var filteredList = await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, arg0, executor);
 
-		if (filteredList.IsError)
+		if (filteredList is not IAsyncEnumerable<SharpMail> list)
 		{
-			await notifyService!.Notify(executor, filteredList.AsT0.Value);
-			return MarkupText.Plain(filteredList.AsT0.Value);
+			await notifyService!.Notify(executor, filteredList.AsError);
+			return MarkupText.Plain(filteredList.AsError);
 		}
-
-		var list = filteredList.AsT1 ?? AsyncEnumerable.Empty<SharpMail>();
 
 		var foundAny = false;
 		await foreach (var folder in list.GroupBy(x => x.Folder))

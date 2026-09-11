@@ -56,8 +56,8 @@ public class ChannelMessageRequestHandler(
 			var mogrifierResult = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(notification.Channel.Mogrifier)), cancellationToken);
 			if (mogrifierResult != null && !mogrifierResult.IsNone)
 			{
-				var mogrifierObj = mogrifierResult.Known();
-				var source = notification.Source.IsNone ? mogrifierObj : notification.Source.Known();
+				var mogrifierObj = mogrifierResult.Known;
+				var source = notification.Source.IsNone ? mogrifierObj : notification.Source.Known;
 
 				var passesUseLock = await permissionService.PassesLock(source, mogrifierObj, LockType.Use);
 
@@ -167,7 +167,7 @@ public class ChannelMessageRequestHandler(
 
 		if (blockMessage != null && !notification.Source.IsNone)
 		{
-			await notifyService.Notify(notification.Source.Known(), blockMessage, notification.Source.Known, notification.MessageType);
+			await notifyService.Notify(notification.Source.Known, blockMessage, notification.Source.Known, notification.MessageType);
 			return;
 		}
 
@@ -182,7 +182,7 @@ public class ChannelMessageRequestHandler(
 		{
 			var sourceNumber = notification.Source.IsNone
 				? (int?)null
-				: notification.Source.Known().Object().DBRef.Number;
+				: notification.Source.Known.Object().DBRef.Number;
 
 			await foreach (var (member, status) in notification.Channel.Members.Value.WithCancellation(cancellationToken))
 			{
@@ -205,7 +205,7 @@ public class ChannelMessageRequestHandler(
 
 				var isGagged = status.Gagged ?? false;
 				var wantsToHear = notification.Source.IsNone ||
-													await permissionService.CanInteract(notification.Source.Known(), member,
+													await permissionService.CanInteract(notification.Source.Known, member,
 														IPermissionService.InteractType.Hear);
 
 				if (!isGagged && wantsToHear)
@@ -238,12 +238,7 @@ public class ChannelMessageRequestHandler(
 				// Add to channel recall buffer - only if there's an actual source
 				if (!notification.Source.IsNone)
 				{
-					var sourceDbRef = notification.Source.Match(
-						player => player.Object.DBRef,
-						room => room.Object.DBRef,
-						exit => exit.Object.DBRef,
-						thing => thing.Object.DBRef,
-						_ => new DBRef(0));
+					var sourceDbRef = notification.Source.Known.Object().DBRef;
 
 					var channelMessage = new SharpChannelMessage
 					{
@@ -299,7 +294,7 @@ public class ChannelMessageRequestHandler(
 			["7"] = new CallState(MarkupText.Plain(options))
 		};
 
-		var sourceObj = source.IsNone ? player : source.Known();
+		var sourceObj = source.IsNone ? player : source.Known;
 		return await AttributeHelpers.EvaluateFormatAttribute(
 			attributeService,
 			null, // parser - not needed for attribute evaluation

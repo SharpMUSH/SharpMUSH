@@ -230,8 +230,8 @@ public static partial class ArgHelpers
 	public static IEnumerable<DbRefOrName> NameList(string list)
 		=> NameListPattern().Matches(list).Select(x =>
 			!string.IsNullOrWhiteSpace(x.Groups["DBRef"].Value)
-				? DbRefOrName.FromT0(HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue())
-				: DbRefOrName.FromT1(x.Groups["User"].Value));
+				? new DbRefOrName(HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value).AsValue())
+				: new DbRefOrName(x.Groups["User"].Value));
 
 	public static IEnumerable<string> NameListString(string list)
 		=> NameListPattern().Matches(list).Select(x =>

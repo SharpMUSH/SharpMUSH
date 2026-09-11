@@ -375,15 +375,15 @@ public partial class Functions
 		var selection = await ChannelRecall.SelectAsync(PermissionService, Mediator, NotifyService, executor,
 			arguments["0"].Message!, Argument("1"), Argument("2"), notify: false);
 
-		if (selection.IsT1)
+		if (selection is CallState refusal)
 		{
-			return selection.AsT1;
+			return refusal;
 		}
 
 		var separator = arguments.TryGetValue("3", out var osep) ? osep.Message! : MarkupText.Space;
 		var showStamp = arguments.TryGetValue("4", out var stamp) && stamp.Message!.Truthy();
 
-		var messages = selection.AsT0.Lines
+		var messages = ((ChannelRecall.RecallWindow)selection.Value!).Lines
 			.Select(x => showStamp ? ChannelRecall.Stamped(x) : x.Message);
 
 		return new CallState(MarkupText.Join(separator, messages));

@@ -1473,7 +1473,7 @@ public partial class Commands
 					// 608-675) - the exact hazard this propagation exists to prevent. Unreachable
 					// today (the clone's owner always controls the freshly-created destination),
 					// but one permission change away from live.
-					if (setResult.IsT1)
+					if (setResult is Error<string>)
 					{
 						skippedAttributes.Add(longName);
 						continue;

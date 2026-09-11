@@ -35,12 +35,12 @@ internal static class DefaultObjectFlags
 		}
 
 		var node = await objects.GetObjectNodeAsync(created, cancellationToken);
-		if (node.IsNone())
+		if (node.IsNone)
 		{
 			return;
 		}
 
-		var target = node.Known();
+		var target = node.Known;
 
 		foreach (var name in defaults)
 		{

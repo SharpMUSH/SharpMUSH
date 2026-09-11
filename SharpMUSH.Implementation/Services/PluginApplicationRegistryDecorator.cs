@@ -87,7 +87,7 @@ public sealed class PluginApplicationRegistryDecorator(
 		// DB/built-in wins: try the inner first, only fall back to the plugin overlay when the DB has no
 		// such slug.
 		var dbResult = await inner.GetApplicationAsync(slug);
-		if (dbResult.IsT0)
+		if (dbResult is RegisteredApplication)
 		{
 			return dbResult;
 		}
