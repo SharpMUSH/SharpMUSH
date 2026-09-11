@@ -123,7 +123,6 @@ public partial class Functions
 				callArgs => AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg, callArgs));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => await JsonMapAsync(jsonStr, osep, userArgs, separatorResult.HadErrors,
@@ -525,7 +524,6 @@ public partial class Functions
 	public async ValueTask<CallState> oob(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 
 		var playersArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var package = parser.CurrentState.Arguments["1"].Message!.ToPlainText();

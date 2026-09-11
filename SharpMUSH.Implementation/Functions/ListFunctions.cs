@@ -153,7 +153,6 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(sep, filteredItems)));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
@@ -187,7 +186,6 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(sep, filteredItems)));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
@@ -324,7 +322,6 @@ public partial class Functions
 			return errors.Complete(new CallState(accumulator));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(
@@ -638,7 +635,6 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(sep, lambdaResults)));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
@@ -754,7 +750,6 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(delimiter, result)));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(delimiter,
@@ -823,7 +818,6 @@ public partial class Functions
 				MungeRearrange(list1, list2, MushText.SplitList(delim, transformedList1Str)))));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep, MungeRearrange(list1, list2,
@@ -1125,7 +1119,6 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(sep, await SortByComparisons(list, CompareViaLambda))));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
@@ -1200,7 +1193,6 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(sep, SortedByKeys(list, lambdaKeys, sortType))));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,
@@ -1289,7 +1281,6 @@ public partial class Functions
 			return errors.Complete(new CallState(MarkupText.Join(sep, result)));
 		}
 
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
 		{
 			AttributeFunction function => errors.Complete(new CallState(MarkupText.Join(sep,

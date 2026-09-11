@@ -64,7 +64,6 @@ public partial class Functions
 	{
 		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 
 		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
@@ -139,7 +138,6 @@ public partial class Functions
 	{
 		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
 
 		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
 			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
