@@ -60,10 +60,10 @@ public class AttributeSyntaxFlagTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&UNSETWIZ_ATTR {objDbRef}=hello"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {objDbRef}/UNSETWIZ_ATTR=wizard"));
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var beforeAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETWIZ_ATTR",
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var beforeAttr = await AttributeService.GetAttributeAsync(obj, obj, "UNSETWIZ_ATTR",
 			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(HasFlag(beforeAttr.AsAttribute.Last(), "wizard")).IsTrue()
+		await Assert.That(HasFlag(beforeAttr.Expect<SharpAttribute[]>().Last(), "wizard")).IsTrue()
 			.Because("precondition: wizard must be set before we can test unsetting it via prefix");
 
 		// "wiz" is a prefix of "wizard", not an exact name or symbol match -- this is exactly the
@@ -76,9 +76,9 @@ public class AttributeSyntaxFlagTests
 			.IsTrue()
 			.Because("the prefix `!wiz` must resolve to wizard and report the unset by name");
 
-		var afterAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETWIZ_ATTR",
+		var afterAttr = await AttributeService.GetAttributeAsync(obj, obj, "UNSETWIZ_ATTR",
 			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(HasFlag(afterAttr.AsAttribute.Last(), "wizard")).IsFalse();
+		await Assert.That(HasFlag(afterAttr.Expect<SharpAttribute[]>().Last(), "wizard")).IsFalse();
 	}
 
 	[Test]
@@ -89,10 +89,10 @@ public class AttributeSyntaxFlagTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&UNSETX_ATTR {objDbRef}=$hi:@pemit %#=hi"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {objDbRef}/UNSETX_ATTR=cmdsyntax"));
 
-		var obj = await Mediator.Send(new GetObjectNodeQuery(objDbRef));
-		var beforeAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETX_ATTR",
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(objDbRef))).Expect<AnySharpObject>();
+		var beforeAttr = await AttributeService.GetAttributeAsync(obj, obj, "UNSETX_ATTR",
 			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(HasFlag(beforeAttr.AsAttribute.Last(), "cmdsyntax")).IsTrue()
+		await Assert.That(HasFlag(beforeAttr.Expect<SharpAttribute[]>().Last(), "cmdsyntax")).IsTrue()
 			.Because("precondition: cmdsyntax must be set before we can test unsetting it via its symbol");
 
 		var messages = await MessagesWhile(executor, () =>
@@ -103,9 +103,9 @@ public class AttributeSyntaxFlagTests
 			.IsTrue()
 			.Because("the symbol `!x` must resolve to cmdsyntax and report the unset by name");
 
-		var afterAttr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNSETX_ATTR",
+		var afterAttr = await AttributeService.GetAttributeAsync(obj, obj, "UNSETX_ATTR",
 			IAttributeService.AttributeMode.Read, false);
-		await Assert.That(HasFlag(afterAttr.AsAttribute.Last(), "cmdsyntax")).IsFalse();
+		await Assert.That(HasFlag(afterAttr.Expect<SharpAttribute[]>().Last(), "cmdsyntax")).IsFalse();
 	}
 
 	private static string SymbolFor(string name) => name switch

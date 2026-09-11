@@ -31,8 +31,7 @@ public class ChannelMembershipDebugTests
 		TestDiagnostics.WriteLine("=== Starting Deep Debug Test (Using AddUserToChannelCommand) ===");
 
 		TestDiagnostics.WriteLine("\n--- Step 1: Getting test player ---");
-		var playerNode = await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef));
-		var player = playerNode.AsPlayer;
+		var player = (await Database.GetObjectNodeAsync(new DBRef(TestPlayerDbRef))).Expect<SharpPlayer>();
 		TestDiagnostics.WriteLine($"Using player DBRef: {TestPlayerDbRef}");
 		TestDiagnostics.WriteLine($"Player ID: {player.Id}");
 		TestDiagnostics.WriteLine($"Player Object ID: {player.Id}");

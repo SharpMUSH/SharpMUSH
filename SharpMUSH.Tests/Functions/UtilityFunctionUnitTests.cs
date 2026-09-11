@@ -49,9 +49,8 @@ public class UtilityFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("pcreate(John,SomePassword)")))?.Message?.ToString()!;
 
-		var a = HelperFunctions.ParseDbRef(result).AsValue();
-		var db = await Mediator.Send(new GetObjectNodeQuery(a));
-		var player = db.AsPlayer;
+		var a = HelperFunctions.ParseDbRef(result).Expect<DBRef>();
+		var player = (await Mediator.Send(new GetObjectNodeQuery(a))).Expect<SharpPlayer>();
 
 		await Assert.That(PasswordService.PasswordIsValid(result, "SomePassword", player.PasswordHash)).IsTrue();
 		await Assert.That(PasswordService.PasswordIsValid(result, "SomePassword2", player.PasswordHash)).IsFalse();
@@ -486,10 +485,9 @@ public class UtilityFunctionUnitTests
 
 		await Assert.That(resultStr).StartsWith("#");
 
-		var dbRef = HelperFunctions.ParseDbRef(resultStr).AsValue();
-		var room = await Mediator.Send(new GetObjectNodeQuery(dbRef));
-		await Assert.That(room.IsRoom).IsTrue();
-		await Assert.That(room.AsRoom.Object.Name).IsEqualTo("test_room_DIG_case1");
+		var dbRef = HelperFunctions.ParseDbRef(resultStr).Expect<DBRef>();
+		var room = (await Mediator.Send(new GetObjectNodeQuery(dbRef))).Expect<SharpRoom>();
+		await Assert.That(room.Object.Name).IsEqualTo("test_room_DIG_case1");
 	}
 
 	[Test]
@@ -500,30 +498,28 @@ public class UtilityFunctionUnitTests
 
 		await Assert.That(resultStr).StartsWith("#");
 
-		var dbRef = HelperFunctions.ParseDbRef(resultStr).AsValue();
-		var exit = await Mediator.Send(new GetObjectNodeQuery(dbRef));
-		await Assert.That(exit.IsExit).IsTrue();
-		await Assert.That(exit.AsExit.Object.Name).IsEqualTo("test_exit_OPEN_case1");
+		var dbRef = HelperFunctions.ParseDbRef(resultStr).Expect<DBRef>();
+		var exit = (await Mediator.Send(new GetObjectNodeQuery(dbRef))).Expect<SharpExit>();
+		await Assert.That(exit.Object.Name).IsEqualTo("test_exit_OPEN_case1");
 	}
 
 	[Test]
 	public async Task Clone_CopyObject()
 	{
 		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(test_thing_CLONE_original)")))?.Message!;
-		var originalDbRef = HelperFunctions.ParseDbRef(createResult.ToPlainText()).AsValue();
+		var originalDbRef = HelperFunctions.ParseDbRef(createResult.ToPlainText()).Expect<DBRef>();
 
 		// attrib_set(<object>/<attrib>, <value>) - see Wipe_ClearAttributes. In the old form this
 		// line set nothing at all, so the attribute it was meant to give the clone never existed.
 		await Parser.FunctionParse(MarkupText.Plain($"attrib_set({createResult}/TEST_ATTR,test_value_CLONE)"));
 
 		var cloneResult = (await Parser.FunctionParse(MarkupText.Plain($"clone({createResult},test_thing_CLONE_copy)")))?.Message!;
-		var cloneDbRef = HelperFunctions.ParseDbRef(cloneResult.ToPlainText()).AsValue();
+		var cloneDbRef = HelperFunctions.ParseDbRef(cloneResult.ToPlainText()).Expect<DBRef>();
 
 		await Assert.That(cloneDbRef.Number).IsNotEqualTo(originalDbRef.Number);
 
-		var clone = await Mediator.Send(new GetObjectNodeQuery(cloneDbRef));
-		await Assert.That(clone.IsThing).IsTrue();
-		await Assert.That(clone.AsThing.Object.Name).IsEqualTo("test_thing_CLONE_copy");
+		var clone = (await Mediator.Send(new GetObjectNodeQuery(cloneDbRef))).Expect<SharpThing>();
+		await Assert.That(clone.Object.Name).IsEqualTo("test_thing_CLONE_copy");
 
 		var clonedAttr = (await Parser.FunctionParse(MarkupText.Plain($"get({cloneResult}/TEST_ATTR)")))?.Message!;
 		await Assert.That(clonedAttr.ToPlainText()).IsEqualTo("test_value_CLONE")

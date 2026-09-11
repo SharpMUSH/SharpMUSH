@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
@@ -57,7 +58,7 @@ public class FlagsAndPowersTests
 	[Test]
 	public async Task SetAndUnsetObjectFlag_WriteBothEdgeDirections()
 	{
-		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known;
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 		var dark = (await _db.GetObjectFlagAsync("DARK"))!;
 		var dbref = (long)god.Object().Key;
 
@@ -145,7 +146,7 @@ public class FlagsAndPowersTests
 		const string name = "TEST_FLAG_WITH_EDGE";
 		await _db.CreateObjectFlagAsync(name, null, "T", false, [], [], ["PLAYER", "THING", "ROOM", "EXIT"]);
 		var flag = (await _db.GetObjectFlagAsync(name))!;
-		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known;
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 		var dbref = (long)god.Object().Key;
 
 		await Assert.That(await _db.SetObjectFlagAsync(god, flag)).IsTrue();
@@ -164,7 +165,7 @@ public class FlagsAndPowersTests
 		var power = await _db.CreatePowerAsync(name, "TCP", "", false, [], [], ["PLAYER"]);
 		await Assert.That(power).IsNotNull();
 
-		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known;
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 		var dbref = (long)god.Object().Key;
 
 		await Assert.That(await _db.SetObjectPowerAsync(god, power!)).IsTrue();

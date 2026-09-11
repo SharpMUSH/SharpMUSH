@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -20,8 +21,8 @@ public class NameListCallbackTests
 			MarkupText.Plain($"@create NameListCallback_{Guid.NewGuid():N}"));
 		var dbref = DBRef.Parse(created.Message!.ToPlainText());
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
-		var obj = (await mediator.Send(new GetObjectNodeQuery(dbref))).Known;
-		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Known;
+		var obj = (await mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 		var attributes = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 		await attributes.SetAttributeAsync(god, obj, "CALLBACK", MarkupText.Plain(body.Replace("$OBJECT", dbref.ToString())));
 		return dbref;

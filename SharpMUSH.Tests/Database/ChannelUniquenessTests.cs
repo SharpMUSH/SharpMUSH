@@ -32,7 +32,7 @@ public class ChannelUniquenessTests
 		=> TestIsolationHelpers.GenerateUniqueName(prefix).Replace("_", string.Empty);
 
 	private async Task<SharpPlayer> God()
-		=> (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).AsPlayer;
+		=> (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
 
 	private async Task<ChannelCreationResult> Create(string name, params string[] privs)
 		=> await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(name), privs, await God()));
@@ -93,7 +93,7 @@ public class ChannelUniquenessTests
 
 		var winners = results.Count(r => r.IsSuccess);
 		var refused = results.Count(r => r.IsNameTaken);
-		var failed = results.Where(r => r.IsError).Select(r => r.AsError).ToArray();
+		var failed = results.Select(r => r is Error<string> error ? error.Value : null).OfType<string>().ToArray();
 
 		// Joined rather than asserted empty as a collection, so a failure prints what the storage layer said.
 		await Assert.That(string.Join(" | ", failed)).IsEqualTo(string.Empty);

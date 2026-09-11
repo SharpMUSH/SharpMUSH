@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
@@ -43,7 +44,7 @@ public class AttributesTests
 		}
 	}
 
-	private async Task<SharpPlayer> God() => (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
+	private async Task<SharpPlayer> God() => (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 	[Test]
 	public async Task SetCreatesAncestorsAndMarksBranch()
@@ -150,7 +151,7 @@ public class AttributesTests
 	{
 		var god = await God();
 		var newOwnerRef = await _db.CreatePlayerAsync("Heir", "pw", new DBRef(2), new DBRef(2), 0);
-		var heir = (await _db.GetObjectNodeAsync(newOwnerRef)).Known.AsPlayer;
+		var heir = (await _db.GetObjectNodeAsync(newOwnerRef)).Expect<SharpPlayer>();
 
 		await _db.SetAttributeAsync(new DBRef(1), ["OWNED"], MarkupText.Plain("v"), god);
 		var before = await _db.GetAttributeAsync(new DBRef(1), ["OWNED"]).FirstAsync();
@@ -172,7 +173,7 @@ public class AttributesTests
 		var wizard = await _db.GetAttributeFlagAsync("wizard");
 		await Assert.That(wizard).IsNotNull();
 
-		var target = (await _db.GetObjectNodeAsync(new DBRef(1))).Known.Object();
+		var target = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object();
 		await Assert.That(await _db.SetAttributeFlagAsync(target, ["FLAGGED"], wizard!)).IsTrue();
 		var flagged = await _db.GetAttributeAsync(new DBRef(1), ["FLAGGED"]).FirstAsync();
 		await Assert.That(flagged.Flags.Select(f => f.Name)).Contains("wizard");

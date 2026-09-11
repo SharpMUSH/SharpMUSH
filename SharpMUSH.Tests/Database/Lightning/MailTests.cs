@@ -56,7 +56,7 @@ public class MailTests
 	}
 
 	private async Task<SharpPlayer> NewPlayer(string name)
-		=> (await _db.GetObjectNodeAsync(await _db.CreatePlayerAsync(name, "pw", new DBRef(0), new DBRef(0), 0))).Known.AsPlayer;
+		=> (await _db.GetObjectNodeAsync(await _db.CreatePlayerAsync(name, "pw", new DBRef(0), new DBRef(0), 0))).Expect<SharpPlayer>();
 
 	private static SharpMail NewMail(string subject, string content, string folder = "INBOX") => new()
 	{
@@ -91,9 +91,8 @@ public class MailTests
 		await Assert.That(mails[0].Subject.ToPlainText()).IsEqualTo("Hello");
 		await Assert.That(mails[0].Content.ToPlainText()).IsEqualTo("World");
 
-		var from = await mails[0].From.WithCancellation(CancellationToken.None);
-		await Assert.That(from.IsPlayer).IsTrue();
-		await Assert.That(from.AsPlayer.Object.DBRef.Number).IsEqualTo(sender.Object.DBRef.Number);
+		var from = (await mails[0].From.WithCancellation(CancellationToken.None)).Expect<SharpPlayer>();
+		await Assert.That(from.Object.DBRef.Number).IsEqualTo(sender.Object.DBRef.Number);
 	}
 
 	[Test]

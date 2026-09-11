@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
@@ -23,9 +24,9 @@ public class RealityPersistenceTests
 		var store = Get<IExpandedDataStore>();
 		await store.SetExpandedServerData(RealityPolicy.ConfigurationKey, RealityConfiguration.Default);
 		var objects = Get<IObjectStore>();
-		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var target = await Get<IMediator>().Send(new CreateRoomCommand("reality-" + Guid.NewGuid().ToString("N"), player));
-		target = (await objects.GetObjectNodeAsync(target)).Known.Object().DBRef;
+		target = (await objects.GetObjectNodeAsync(target)).Expect<AnySharpObject>().Object().DBRef;
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), PortalPermission.RealityAdmin, Arg.Any<CancellationToken>()).Returns(true);
 		var actor = new CapabilityActor("admin", player.Object.DBRef, player.Object.DBRef);

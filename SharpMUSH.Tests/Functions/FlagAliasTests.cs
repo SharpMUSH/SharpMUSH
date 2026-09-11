@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -106,7 +107,7 @@ public class FlagAliasTests
 	public async Task HasFlagHelper_AnswersToAnAlias()
 	{
 		var dbref = await ThingFlagged("AliasHelper", "MONITOR");
-		var obj = (await Mediator.Send(new GetObjectNodeQuery(dbref))).Known;
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 
 		await Assert.That(await obj.HasFlag("MONITOR")).IsTrue();
 		await Assert.That(await obj.HasFlag("LISTENER")).IsTrue();
@@ -125,7 +126,7 @@ public class FlagAliasTests
 	public async Task HasFlagHelper_StillWorksForAFlagWithNoAliases()
 	{
 		var dbref = await ThingFlagged("AliasNone", "DARK");
-		var obj = (await Mediator.Send(new GetObjectNodeQuery(dbref))).Known;
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 
 		await Assert.That(await obj.HasFlag("DARK")).IsTrue();
 		await Assert.That(await obj.HasFlag("WIZARD")).IsFalse();

@@ -14,7 +14,7 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task ClearAttributeAsync_LeafAttribute_RemovesAttribute()
 	{
-		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var attributeName = $"CLEAR_LEAF_TEST_{Guid.NewGuid():N}";
 
@@ -35,7 +35,7 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task ClearAttributeAsync_AttributeWithChildren_ClearsValueKeepsStructure()
 	{
-		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var baseName = $"CLEAR_PARENT_TEST_{Guid.NewGuid():N}";
 
@@ -71,7 +71,7 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task ClearAttributeAsync_NonExistentAttribute_ReturnsFalse()
 	{
-		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var attributeName = $"NONEXISTENT_CLEAR_{Guid.NewGuid():N}";
 
@@ -83,7 +83,7 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task WipeAttributeAsync_LeafAttribute_RemovesAttribute()
 	{
-		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var attributeName = $"WIPE_LEAF_TEST_{Guid.NewGuid():N}";
 
@@ -103,7 +103,7 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task WipeAttributeAsync_AttributeTree_RemovesAllDescendants()
 	{
-		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var baseName = $"WIPE_TREE_TEST_{Guid.NewGuid():N}";
 
@@ -150,7 +150,7 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task WipeAttributeAsync_MiddleOfTree_RemovesOnlySubtree()
 	{
-		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var baseName = $"WIPE_SUBTREE_TEST_{Guid.NewGuid():N}";
 
@@ -190,7 +190,7 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task WipeAttributeAsync_NonExistentAttribute_ReturnsFalse()
 	{
-		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var attributeName = $"NONEXISTENT_WIPE_{Guid.NewGuid():N}";
 
@@ -202,7 +202,7 @@ public class ClearAndWipeAttributeTests
 	[Test]
 	public async Task WipeAttributeAsync_DeepTree_RemovesAllLevels()
 	{
-		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var baseName = $"WIPE_DEEP_TEST_{Guid.NewGuid():N}";
 
@@ -231,7 +231,7 @@ public class ClearAndWipeAttributeTests
 	public async Task ClearAndWipe_DifferentAttributes_NoConflict()
 	{
 		// Two separate attribute trees to ensure they don't interfere
-		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		var playerOne = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var playerOneDBRef = playerOne.Object.DBRef;
 		var clearAttr = $"CONFLICT_CLEAR_{Guid.NewGuid():N}";
 		var wipeAttr = $"CONFLICT_WIPE_{Guid.NewGuid():N}";

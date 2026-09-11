@@ -49,15 +49,15 @@ public class AttributeInheritanceTests
 		}
 	}
 
-	private async Task<SharpPlayer> God() => (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
+	private async Task<SharpPlayer> God() => (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 	private async Task<DBRef> Thing(string name)
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Known.AsContainer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
 		return await _db.CreateThingAsync(name, room, await God(), room);
 	}
 
-	private async Task<AnySharpObject> Node(DBRef dbref) => (await _db.GetObjectNodeAsync(dbref)).Known;
+	private async Task<AnySharpObject> Node(DBRef dbref) => (await _db.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>();
 
 	private async Task Parent(DBRef child, DBRef parent)
 		=> await _db.SetObjectParent(await Node(child), await Node(parent));

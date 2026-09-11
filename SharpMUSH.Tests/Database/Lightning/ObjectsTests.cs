@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
@@ -46,10 +47,10 @@ public class ObjectsTests
 	[Test]
 	public async Task CreateThingWiresNameOwnerLocationAndHome()
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Known.AsContainer;
-		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var dbref = await _db.CreateThingAsync("Widget", room, god, room);
-		var thing = (await _db.GetObjectNodeAsync(dbref)).Known;
+		var thing = (await _db.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>();
 		await Assert.That(thing.Object().Name).IsEqualTo("Widget");
 		await Assert.That((await thing.AsContent.Location()).Object().DBRef.Number).IsEqualTo(2);
 		await Assert.That((await thing.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number).IsEqualTo(1);
@@ -59,8 +60,8 @@ public class ObjectsTests
 	[Test]
 	public async Task OwnedObjectCountFollowsCreationAndDestruction()
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Known.AsContainer;
-		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var before = await _db.GetOwnedObjectCountAsync(god);
 
 		var first = await _db.CreateThingAsync("First", room, god, room);
@@ -74,8 +75,8 @@ public class ObjectsTests
 	[Test]
 	public async Task DeleteObjectRemovesEveryEdgeInBothDirections()
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Known.AsContainer;
-		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var dbref = await _db.CreateThingAsync("Doomed", room, god, room);
 
 		var n = dbref.Number;

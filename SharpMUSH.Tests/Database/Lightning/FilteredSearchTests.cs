@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
@@ -54,8 +55,8 @@ public class FilteredSearchTests
 	[Test]
 	public async Task MinAndMaxDbRefBoundTheScanInclusively()
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Known.AsContainer;
-		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 		var first = await _db.CreateThingAsync("RangeBoundsA", room, god, room);
 		var second = await _db.CreateThingAsync("RangeBoundsB", room, god, room);
@@ -88,8 +89,8 @@ public class FilteredSearchTests
 	[Test]
 	public async Task SkipAndLimitPageThroughMatchesInAscendingDbRefOrder()
 	{
-		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Known.AsContainer;
-		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsContainer;
+		var god = (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 		var created = new List<DBRef>();
 		for (var i = 0; i < 5; i++)

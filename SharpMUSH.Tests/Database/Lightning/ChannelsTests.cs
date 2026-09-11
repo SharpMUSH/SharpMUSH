@@ -53,10 +53,10 @@ public class ChannelsTests
 		}
 	}
 
-	private async Task<SharpPlayer> God() => (await _db.GetObjectNodeAsync(new DBRef(1))).Known.AsPlayer;
+	private async Task<SharpPlayer> God() => (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 	private async Task<SharpPlayer> NewPlayer(string name)
-		=> (await _db.GetObjectNodeAsync(await _db.CreatePlayerAsync(name, "pw", new DBRef(0), new DBRef(0), 0))).Known.AsPlayer;
+		=> (await _db.GetObjectNodeAsync(await _db.CreatePlayerAsync(name, "pw", new DBRef(0), new DBRef(0), 0))).Expect<SharpPlayer>();
 
 	[Test]
 	public async Task CreateChannelAsyncStoresTheRecordAndSecondCreateOfTheSameNameIsRefused()
@@ -169,7 +169,7 @@ public class ChannelsTests
 	{
 		var god = await God();
 		var dbref = await _db.CreatePlayerAsync("Dave", "pw", new DBRef(0), new DBRef(0), 0);
-		var dave = (await _db.GetObjectNodeAsync(dbref)).Known.AsPlayer;
+		var dave = (await _db.GetObjectNodeAsync(dbref)).Expect<SharpPlayer>();
 		await _db.CreateChannelAsync(MarkupText.Plain("CascadeChan"), ["Player"], god);
 		var channel = (await _db.GetChannelAsync("CascadeChan"))!;
 		await _db.AddUserToChannelAsync(channel, dave);

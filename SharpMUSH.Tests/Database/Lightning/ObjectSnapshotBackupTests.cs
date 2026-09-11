@@ -22,7 +22,7 @@ public class ObjectSnapshotBackupTests
 			await using var source = new LightningDatabase(NullLogger<LightningDatabase>.Instance,
 				new LightningStoreOptions { Path = sourcePath, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);
 			await source.Migrate();
-			var room = (await source.GetObjectNodeAsync(new DBRef(0))).AsRoom.Object;
+			var room = (await source.GetObjectNodeAsync(new DBRef(0))).Expect<SharpRoom>().Object;
 			var snapshot = new ObjectSnapshot("pending-image", 1, room.DBRef.ToString(), room.Type, "account", "#1:1", 1, "before restore", 10, room.Name,
 				[new SnapshotAttribute("DESC", MarkupTextSerializer.Serialize(MarkupText.Plain("backup text")), [], "#1:1")], new(), [], "digest");
 			var history = new SnapshotHistory([snapshot], "pending-image", "injected stop");

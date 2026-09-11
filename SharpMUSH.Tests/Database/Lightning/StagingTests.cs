@@ -30,7 +30,7 @@ public class StagingTests
 		=> db.Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("next_dbref"), out var v) ? Keys.ReadDbref(v) : -1);
 
 	private static async Task<SharpPlayer> GodAsync(ISharpDatabase db)
-		=> (await db.GetObjectNodeAsync(new DBRef(1))).AsPlayer;
+		=> (await db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 
 	private static async Task Cleanup(LightningDatabase db, string path)
 	{

@@ -29,7 +29,7 @@ public class MailFunctionUnitTests
 		if (_setupComplete) return;
 
 		var executor = await Parser.CurrentState.KnownExecutorObject(Mediator);
-		var testPlayer = executor.AsPlayer;
+		var testPlayer = executor.Expect<SharpPlayer>();
 
 		var existingMail = Mediator.CreateStream(new GetAllMailListQuery(testPlayer));
 

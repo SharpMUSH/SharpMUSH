@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Implementation.Functions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -917,11 +918,11 @@ public class MarkdownFunctionUnitTests
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var attributeService = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
-		var executor = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse("#1")));
-		var templateObject = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(templateDbref)));
+		var executor = (await mediator.Send(new GetObjectNodeQuery(DBRef.Parse("#1")))).Expect<AnySharpObject>();
+		var templateObject = (await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(templateDbref)))).Expect<AnySharpObject>();
 
 		return new CustomizableMarkdownRenderer(
-			Parser, executor.Known, templateObject.Known, attributeService);
+			Parser, executor, templateObject, attributeService);
 	}
 
 	/// <summary>
