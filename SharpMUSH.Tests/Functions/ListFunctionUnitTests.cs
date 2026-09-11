@@ -223,6 +223,19 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToString()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// PennMUSH reads a bare attribute name as one on the executor.
+	/// </summary>
+	[Test]
+	[Arguments("map(MAP_NO_OBJECT_ODD,1 2 3)", "1 0 1")]
+	[Arguments("filter(MAP_NO_OBJECT_ODD,1 2 3 4 5)", "1 3 5")]
+	public async Task AttributeWithoutObjectIsReadFromExecutor(string function, string expected)
+	{
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain("&MAP_NO_OBJECT_ODD me=mod(%0,2)"));
+		var result = (await Parser.FunctionParse(MarkupText.Plain(function)))?.Message!;
+		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
 	[Test, NotInParallel]
 	[Arguments(@"map(#lambda/strlen\(\%0\),hello world foo)", "5 5 3")]
 	[Arguments(@"map(#lambda/strlen\(\%0\),hello;world;foo,;)", "5;5;3")]

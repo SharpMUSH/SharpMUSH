@@ -29,7 +29,7 @@ public class ObjectAttributeSplitTests
 	[Test]
 	[Arguments("#1/FOO", "#1", "FOO")]
 	[Arguments("me/foo`bar", "me", "foo`bar")]
-	[Arguments("FOO", "", "FOO")]
+	[Arguments("FOO", null, "FOO")]
 	public async Task SplitOptionalObjectAndAttrSplitsBothHalves(string text, string? obj, string attribute)
 		=> await Assert.That(HelperFunctions.SplitOptionalObjectAndAttr(text))
 			.IsEqualTo(new AttributeWithOptionalObject(obj, attribute));

@@ -473,7 +473,7 @@ public static partial class HelperFunctions
 
 		return string.IsNullOrEmpty(attr)
 			? null
-			: new AttributeWithOptionalObject(obj, attr);
+			: new AttributeWithOptionalObject(string.IsNullOrEmpty(obj) ? null : obj, attr);
 	}
 
 	/// <summary>
