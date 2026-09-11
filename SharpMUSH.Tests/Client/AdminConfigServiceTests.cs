@@ -109,9 +109,9 @@ public class AdminConfigServiceTests
 
 		var service = new AdminConfigService(logger, httpClient);
 
-		var options = await Assert.That((await service.GetOptionsAsync()).Value).IsTypeOf<IEnumerable<AdminConfigService.ConfigItem>>();
+		var options = (await service.GetOptionsAsync()).Expect<IEnumerable<AdminConfigService.ConfigItem>>();
 
-		var mudName = options!.Single(i => i.Key == nameof(NetOptions.MudName));
+		var mudName = options.Single(i => i.Key == nameof(NetOptions.MudName));
 		await Assert.That(mudName.Value).IsEqualTo("SharpMUSH");
 		await Assert.That(mudName.Description).IsEqualTo("Name of your MUSH as displayed to players");
 	}
@@ -162,8 +162,8 @@ public class AdminConfigServiceTests
 	[Test]
 	public async Task ToConfigItems_ReadsValuesFromTheConfigurationSection()
 	{
-		var configured = await Assert.That(FullResponse().ToConfigItems().Value).IsTypeOf<IEnumerable<AdminConfigService.ConfigItem>>();
-		var items = configured!.ToList();
+		var configured = FullResponse().ToConfigItems().Expect<IEnumerable<AdminConfigService.ConfigItem>>();
+		var items = configured.ToList();
 
 		var mudName = items.Single(i => i.Key == nameof(NetOptions.MudName));
 
@@ -184,8 +184,8 @@ public class AdminConfigServiceTests
 	[Test]
 	public async Task ToConfigItems_ProducesNoErrorRows()
 	{
-		var configured = await Assert.That(FullResponse().ToConfigItems().Value).IsTypeOf<IEnumerable<AdminConfigService.ConfigItem>>();
-		var items = configured!.ToList();
+		var configured = FullResponse().ToConfigItems().Expect<IEnumerable<AdminConfigService.ConfigItem>>();
+		var items = configured.ToList();
 
 		var errors = items
 			.Where(i => i.Type == "Error" || i.Value.StartsWith("Error:", StringComparison.Ordinal))
@@ -202,8 +202,8 @@ public class AdminConfigServiceTests
 	[Test]
 	public async Task ToConfigItems_CoversEveryConfiguredProperty()
 	{
-		var configured = await Assert.That(FullResponse().ToConfigItems().Value).IsTypeOf<IEnumerable<AdminConfigService.ConfigItem>>();
-		var items = configured!.ToList();
+		var configured = FullResponse().ToConfigItems().Expect<IEnumerable<AdminConfigService.ConfigItem>>();
+		var items = configured.ToList();
 
 		var keys = items.Select(i => i.Key).ToList();
 

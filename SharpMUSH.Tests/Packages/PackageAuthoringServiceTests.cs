@@ -39,9 +39,8 @@ public class PackageAuthoringServiceTests
 		var coreObjid = core.DBRef.ToString();
 		var globalObjid = global.DBRef.ToString();
 
-		var scan = await Assert.That((await Authoring.ScanAsync([coreObjid, globalObjid])).Value)
-			.IsTypeOf<PackageAuthoringScan>();
-		await Assert.That(scan!.Objects.Count).IsEqualTo(2);
+		var scan = (await Authoring.ScanAsync([coreObjid, globalObjid])).Expect<PackageAuthoringScan>();
+		await Assert.That(scan.Objects.Count).IsEqualTo(2);
 		var external = scan.ExternalDbrefs.Single();
 		await Assert.That(external.Dbref).IsEqualTo("#0");
 
@@ -54,15 +53,14 @@ public class PackageAuthoringServiceTests
 			new Dictionary<string, string> { ["#0"] = "room_zero" },
 			new Dictionary<string, AuthoringConfigureClassification>()));
 
-		var yaml = await Assert.That(result.Value).IsTypeOf<string>();
+		var yaml = result.Expect<string>();
 
 		await Assert.That(yaml).Contains("{{auth_core}}");
 		await Assert.That(yaml).Contains("{{$room_zero}}");
 		await Assert.That(yaml).DoesNotContain($"#{coreDbref.Number}/FN_FMT");
 
-		var parsed = await Assert.That(new PackageManifestService().ParseManifest(yaml!).Value)
-			.IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(parsed!.Manifest.Name).IsEqualTo("authored-pkg");
+		var parsed = new PackageManifestService().ParseManifest(yaml).Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Manifest.Name).IsEqualTo("authored-pkg");
 		await Assert.That(parsed.Manifest.Objects.Count).IsEqualTo(2);
 		var cmd = parsed.Manifest.Objects.Single(o => o.Ref == "auth_global").Attributes["CMD_+AUTH"];
 		await Assert.That(cmd.Value).Contains("u({{auth_core}}/FN_FMT)");
@@ -85,18 +83,17 @@ public class PackageAuthoringServiceTests
 			[new AuthoringObjectSelection(sourceObjid, "rt_core", [])],
 			new Dictionary<string, string> { ["#0"] = "room_zero" },
 			new Dictionary<string, AuthoringConfigureClassification>()));
-		var exportedText = await Assert.That(exported.Value).IsTypeOf<string>();
+		var exportedText = exported.Expect<string>();
 
-		var parsed = await Assert.That(new PackageManifestService().ParseManifest(exportedText!).Value)
-			.IsTypeOf<ParsedPackageManifest>();
-		var manifest = parsed!.Manifest;
+		var parsed = new PackageManifestService().ParseManifest(exportedText).Expect<ParsedPackageManifest>();
+		var manifest = parsed.Manifest;
 		var installer = WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 		var applied = await installer.ApplyAsync(manifest, new PackageApplyRequest(
 			new PackageApplySource("https://example.com/roundtrip", "roundtrip-pkg/", "rt-commit", "main"),
 			new Dictionary<string, string>(), []));
-		var clone = await Assert.That(applied.Value).IsTypeOf<PackageApplyResult>();
+		var clone = applied.Expect<PackageApplyResult>();
 
-		var cloneObjid = clone!.CreatedObjects["rt_core"];
+		var cloneObjid = clone.CreatedObjects["rt_core"];
 		await Assert.That(cloneObjid).IsNotEqualTo(sourceObjid);
 
 		// The clone's code recalls refs via v(PM`REFS`...) (decision 20.21),
@@ -132,7 +129,7 @@ public class PackageAuthoringServiceTests
 			new Dictionary<string, string>(),
 			new Dictionary<string, AuthoringConfigureClassification>()));
 
-		var error = await Assert.That(result.Value).IsTypeOf<Error<string>>();
+		var error = result.Expect<Error<string>>();
 		await Assert.That(error.Value).Contains("#4242");
 	}
 
@@ -158,12 +155,10 @@ public class PackageAuthoringServiceTests
 			new Dictionary<string, string>(),
 			new Dictionary<string, AuthoringConfigureClassification>()));
 
-		var text = await Assert.That(result.Value).IsTypeOf<string>()
-			.Because($"export must produce a valid manifest for blank/whitespace values; got: {(result is Error<string> error ? error.Value : "success")}");
+		var text = result.Expect<string>("export must produce a valid manifest for blank/whitespace values");
 
-		var parsed = await Assert.That(new PackageManifestService().ParseManifest(text!).Value)
-			.IsTypeOf<ParsedPackageManifest>();
-		var attrs = parsed!.Manifest.Objects.Single(o => o.Ref == "ws_obj").Attributes;
+		var parsed = new PackageManifestService().ParseManifest(text).Expect<ParsedPackageManifest>();
+		var attrs = parsed.Manifest.Objects.Single(o => o.Ref == "ws_obj").Attributes;
 		await Assert.That(attrs.ContainsKey("WS_ONLY")).IsTrue();
 		await Assert.That(attrs.ContainsKey("LEADING")).IsTrue();
 		await Assert.That(attrs["NORMAL"].Value).IsEqualTo("plain value");

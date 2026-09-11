@@ -75,8 +75,8 @@ public class HelloUiManagedPackageExampleTests
 			var all = await decorator.GetApplicationsAsync();
 			await Assert.That(all.Select(a => a.Slug)).Contains(AppSlug);
 
-			var single = await Assert.That((await decorator.GetApplicationAsync(AppSlug)).Value).IsTypeOf<RegisteredApplication>();
-			await Assert.That(single!.DisplayName).IsEqualTo("Hello UI");
+			var single = (await decorator.GetApplicationAsync(AppSlug)).Expect<RegisteredApplication>();
+			await Assert.That(single.DisplayName).IsEqualTo("Hello UI");
 			await Assert.That(single.NavPlacement).IsEqualTo(NavSection);
 		}
 		finally
@@ -91,10 +91,9 @@ public class HelloUiManagedPackageExampleTests
 		var manifestPath = ManifestPath();
 		var result = new PackageManifestService().ParseManifest(await File.ReadAllTextAsync(manifestPath));
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>()
-			.Because($"{manifestPath} must parse as a valid manifest");
+		var parsed = result.Expect<ParsedPackageManifest>($"{manifestPath} must parse as a valid manifest");
 
-		var manifest = parsed!.Manifest;
+		var manifest = parsed.Manifest;
 		await Assert.That(manifest.Name).IsEqualTo(AppSlug);
 		await Assert.That(manifest.Binary).IsNotNull()
 			.Because("a kind: managed package must carry a binaries block");

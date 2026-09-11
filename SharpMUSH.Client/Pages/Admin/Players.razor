@@ -125,9 +125,9 @@
         var result = await Guests.CreateAsync(string.IsNullOrWhiteSpace(_newName) ? null : _newName.Trim());
         _busy = false;
 
-        if (result is not AdminGuestsService.GuestRow created)
+        if (!result.TryGetValue(out var created, out var failure))
         {
-            _error = ((ApiFailure)result.Value!).Message;
+            _error = failure.Message;
             return;
         }
 

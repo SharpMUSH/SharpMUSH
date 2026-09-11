@@ -31,9 +31,9 @@ public partial class PackageAuthoringService(
 		foreach (var objid in objids.Distinct())
 		{
 			var read = await ReadObjectAsync(objid, cancellationToken);
-			if (read is not AuthoringObject authored)
+			if (!read.TryGetValue(out var authored, out var error))
 			{
-				return (Error<string>)read.Value!;
+				return error;
 			}
 
 			objects.Add(authored);
@@ -81,9 +81,9 @@ public partial class PackageAuthoringService(
 		foreach (var selection in request.Objects)
 		{
 			var read = await ReadObjectAsync(selection.Objid, cancellationToken);
-			if (read is not AuthoringObject authored)
+			if (!read.TryGetValue(out var authored, out var error))
 			{
-				return (Error<string>)read.Value!;
+				return error;
 			}
 
 			selections.Add((selection, authored));

@@ -71,8 +71,8 @@ public class WikiControllerProtectionTests
 
 		await Assert.That(result).IsTypeOf<ForbidResult>();
 
-		var page = await Assert.That((await wiki.GetBySlugAsync(slug, "general")).Value).IsTypeOf<WikiPage>();
-		await Assert.That(page!.MarkdownSource).IsEqualTo("# original");
+		var page = (await wiki.GetBySlugAsync(slug, "general")).Expect<WikiPage>();
+		await Assert.That(page.MarkdownSource).IsEqualTo("# original");
 	}
 
 	[Test]

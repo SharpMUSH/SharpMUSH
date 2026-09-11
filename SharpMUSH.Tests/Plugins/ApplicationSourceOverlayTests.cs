@@ -83,8 +83,8 @@ public class ApplicationSourceOverlayTests
 		var merged = await withPlugin.GetApplicationsAsync();
 		await Assert.That(merged.Select(a => a.Slug)).IsEquivalentTo(new[] { "plugin-page", "db-page" });
 
-		var single = await Assert.That((await withPlugin.GetApplicationAsync("plugin-page")).Value).IsTypeOf<RegisteredApplication>();
-		await Assert.That(single!.Slug).IsEqualTo("plugin-page");
+		var single = (await withPlugin.GetApplicationAsync("plugin-page")).Expect<RegisteredApplication>();
+		await Assert.That(single.Slug).IsEqualTo("plugin-page");
 	}
 
 	[Test]
@@ -101,8 +101,8 @@ public class ApplicationSourceOverlayTests
 		await Assert.That(all.Count).IsEqualTo(1).Because("the colliding plugin overlay is skipped");
 		await Assert.That(all[0].DisplayName).IsEqualTo("DB Owns This");
 
-		var single = await Assert.That((await decorator.GetApplicationAsync("shared")).Value).IsTypeOf<RegisteredApplication>();
-		await Assert.That(single!.DisplayName).IsEqualTo("DB Owns This");
+		var single = (await decorator.GetApplicationAsync("shared")).Expect<RegisteredApplication>();
+		await Assert.That(single.DisplayName).IsEqualTo("DB Owns This");
 	}
 
 	[Test]
@@ -124,8 +124,8 @@ public class ApplicationSourceOverlayTests
 			.Because("a plugin-owned slug must not be persisted");
 
 		await decorator.RemoveApplicationAsync(PluginSlug);
-		var stillThere = await Assert.That((await decorator.GetApplicationAsync(PluginSlug)).Value).IsTypeOf<RegisteredApplication>();
-		await Assert.That(stillThere!.DisplayName).IsEqualTo("Plugin Demo");
+		var stillThere = (await decorator.GetApplicationAsync(PluginSlug)).Expect<RegisteredApplication>();
+		await Assert.That(stillThere.DisplayName).IsEqualTo("Plugin Demo");
 	}
 
 	private static RegisteredApplication DbApp(string slug, int order, string? display = null) =>

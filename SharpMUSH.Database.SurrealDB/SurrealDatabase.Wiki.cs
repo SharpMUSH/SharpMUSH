@@ -587,7 +587,7 @@ public partial class SurrealDatabase : IWikiService
 			string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber)
 	{
 		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
-		if (normalizedLocale is not string normalized) return (Error<string>)normalizedLocale.Value!;
+		if (!normalizedLocale.TryGetValue(out var normalized, out var error)) return error;
 
 		if (await GetByIdAsync(pageId) is not WikiPage page)
 			return new Error<string>($"No wiki page with id '{pageId}'.");

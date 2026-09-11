@@ -67,8 +67,8 @@ public class WikiControllerVisibilityTests
 	private static async Task<(InMemoryWikiService Wiki, string Slug)> SeedUnpublishedPage()
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var page = await Assert.That((await wiki.CreateAsync("Draft Page", "# draft", "#1")).Value).IsTypeOf<WikiPage>();
-		await wiki.SetMetadataAsync(page!.Id, null, [], published: false);
+		var page = (await wiki.CreateAsync("Draft Page", "# draft", "#1")).Expect<WikiPage>();
+		await wiki.SetMetadataAsync(page.Id, null, [], published: false);
 		return (wiki, page.Slug);
 	}
 
@@ -98,10 +98,10 @@ public class WikiControllerVisibilityTests
 	public async Task GetPage_Published_Anonymous_Returns200()
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
-		var created = await Assert.That((await wiki.CreateAsync("Public Page", "# public", "#1")).Value).IsTypeOf<WikiPage>();
+		var created = (await wiki.CreateAsync("Public Page", "# public", "#1")).Expect<WikiPage>();
 		var controller = MakeController(wiki, authenticated: false);
 
-		var result = await controller.GetPage("main", "general", created!.Slug);
+		var result = await controller.GetPage("main", "general", created.Slug);
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}

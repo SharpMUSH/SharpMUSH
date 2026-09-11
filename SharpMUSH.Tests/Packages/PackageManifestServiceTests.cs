@@ -55,8 +55,8 @@ public class PackageManifestServiceTests
 	{
 		var result = _service.ParseManifest(ValidManifest);
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		var (manifest, warnings) = parsed!;
+		var parsed = result.Expect<ParsedPackageManifest>();
+		var (manifest, warnings) = parsed;
 
 		await Assert.That(manifest.Format).IsEqualTo(new PackageFormatVersion(1, 0));
 		await Assert.That(manifest.Name).IsEqualTo("myrddins-bbs");
@@ -84,18 +84,18 @@ public class PackageManifestServiceTests
 	[Test]
 	public async Task MissingFormat_DefaultsTo1()
 	{
-		var parsed = await Assert.That(_service.ParseManifest(MinimalManifest()).Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(parsed!.Manifest.Format).IsEqualTo(new PackageFormatVersion(1, 0));
+		var parsed = _service.ParseManifest(MinimalManifest()).Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Manifest.Format).IsEqualTo(new PackageFormatVersion(1, 0));
 	}
 
 	[Test]
 	public async Task NewerFormatMinor_Warns_NewerMajor_Rejects()
 	{
-		var minor = await Assert.That(_service.ParseManifest(MinimalManifest("format: 1.5")).Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(minor!.Warnings.Any(w => w.Path == "format")).IsTrue();
+		var minor = _service.ParseManifest(MinimalManifest("format: 1.5")).Expect<ParsedPackageManifest>();
+		await Assert.That(minor.Warnings.Any(w => w.Path == "format")).IsTrue();
 
-		var major = await Assert.That(_service.ParseManifest(MinimalManifest("format: 2")).Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(major!.Errors.Any(e => e.Path == "format")).IsTrue();
+		var major = _service.ParseManifest(MinimalManifest("format: 2")).Expect<PackageManifestFailure>();
+		await Assert.That(major.Errors.Any(e => e.Path == "format")).IsTrue();
 	}
 
 	#region Versions & constraints
@@ -209,8 +209,8 @@ public class PackageManifestServiceTests
 			  - other-pkg: "^1.2"
 			"""));
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Message.Contains("caret/tilde"))).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Message.Contains("caret/tilde"))).IsTrue();
 	}
 
 	#endregion
@@ -227,8 +227,8 @@ public class PackageManifestServiceTests
 			      FN_GLOB: "switch(%0, ?board, yes, no) and %?board"
 			"""));
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(parsed!.Warnings.Count).IsEqualTo(0);
+		var parsed = result.Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Warnings.Count).IsEqualTo(0);
 	}
 
 	[Test]
@@ -250,8 +250,8 @@ public class PackageManifestServiceTests
 			      FN_X: "[u({{missing_object}}/FN_Y)]"
 			"""));
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Message.Contains("{{missing_object}}"))).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Message.Contains("{{missing_object}}"))).IsTrue();
 	}
 
 	[Test]
@@ -262,8 +262,8 @@ public class PackageManifestServiceTests
 			      FN_X: "[u({{not a ref}}/FN)]"
 			"""));
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Message.Contains("not a valid ref"))).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Message.Contains("not a valid ref"))).IsTrue();
 	}
 
 	[Test]
@@ -274,8 +274,8 @@ public class PackageManifestServiceTests
 			      FN_X: "literal {{{{mustache}}}} stays text"
 			"""));
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(parsed!.Warnings.Count).IsEqualTo(0);
+		var parsed = result.Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Warnings.Count).IsEqualTo(0);
 	}
 
 	[Test]
@@ -297,20 +297,20 @@ public class PackageManifestServiceTests
 			      FN_X: "U({{Bbs_Parent}}/FN_Y, %0)"
 			""");
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(parsed!.Manifest.Objects[1].Parent)
+		var parsed = result.Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Manifest.Objects[1].Parent)
 			.IsEqualTo(new PackageRef(PackageRefKind.Internal, "bbs_parent"));
 	}
 
 	[Test]
 	public async Task WellKnownParent_Resolves_UnknownName_Errors()
 	{
-		var ok = await Assert.That(_service.ParseManifest(MinimalManifest(objectExtras: "    parent: \"{{$room_zero}}\"")).Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(ok!.Manifest.Objects[0].Parent)
+		var ok = _service.ParseManifest(MinimalManifest(objectExtras: "    parent: \"{{$room_zero}}\"")).Expect<ParsedPackageManifest>();
+		await Assert.That(ok.Manifest.Objects[0].Parent)
 			.IsEqualTo(new PackageRef(PackageRefKind.WellKnown, "room_zero"));
 
-		var bad = await Assert.That(_service.ParseManifest(MinimalManifest(objectExtras: "    parent: \"{{$nonsense_ref}}\"")).Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(bad!.Errors.Any(e => e.Message.Contains("$nonsense_ref"))).IsTrue();
+		var bad = _service.ParseManifest(MinimalManifest(objectExtras: "    parent: \"{{$nonsense_ref}}\"")).Expect<PackageManifestFailure>();
+		await Assert.That(bad.Errors.Any(e => e.Message.Contains("$nonsense_ref"))).IsTrue();
 	}
 
 	[Test]
@@ -329,8 +329,8 @@ public class PackageManifestServiceTests
 			"""
 			      FN_X: "[u({{who-where/ww_functions}}/FN)]"
 			"""));
-		var undeclaredFailure = await Assert.That(undeclared.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(undeclaredFailure!.Errors.Any(e => e.Message.Contains("not listed under 'depends'"))).IsTrue();
+		var undeclaredFailure = undeclared.Expect<PackageManifestFailure>();
+		await Assert.That(undeclaredFailure.Errors.Any(e => e.Message.Contains("not listed under 'depends'"))).IsTrue();
 
 		var declared = _service.ParseManifest(MinimalManifest(
 			extraTop:
@@ -362,8 +362,8 @@ public class PackageManifestServiceTests
 			    name: Door;door
 			""");
 
-		var missingFailure = await Assert.That(missing.Value).IsTypeOf<PackageManifestFailure>();
-		var paths = missingFailure!.Errors.Select(e => e.Path).ToList();
+		var missingFailure = missing.Expect<PackageManifestFailure>();
+		var paths = missingFailure.Errors.Select(e => e.Path).ToList();
 		await Assert.That(paths).Contains("objects[0].location");
 		await Assert.That(paths).Contains("objects[0].destination");
 
@@ -385,8 +385,8 @@ public class PackageManifestServiceTests
 			    destination: "{{tavern}}"
 			""");
 
-		var validParsed = await Assert.That(valid.Value).IsTypeOf<ParsedPackageManifest>();
-		var door = validParsed!.Manifest.Objects[2];
+		var validParsed = valid.Expect<ParsedPackageManifest>();
+		var door = validParsed.Manifest.Objects[2];
 		await Assert.That(door.Location).IsEqualTo(new PackageRef(PackageRefKind.Internal, "square"));
 		await Assert.That(door.Destination).IsEqualTo(new PackageRef(PackageRefKind.Internal, "tavern"));
 	}
@@ -404,21 +404,21 @@ public class PackageManifestServiceTests
 			    name: Square
 			    location: "{{$room_zero}}"
 			""");
-		var roomFailure = await Assert.That(room.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(roomFailure!.Errors.Any(e => e.Path == "objects[0].location")).IsTrue();
+		var roomFailure = room.Expect<PackageManifestFailure>();
+		await Assert.That(roomFailure.Errors.Any(e => e.Path == "objects[0].location")).IsTrue();
 
-		var thing = await Assert.That(_service.ParseManifest(MinimalManifest(objectExtras: "    destination: \"{{$room_zero}}\"")).Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(thing!.Errors.Any(e => e.Path == "objects[0].destination")).IsTrue();
+		var thing = _service.ParseManifest(MinimalManifest(objectExtras: "    destination: \"{{$room_zero}}\"")).Expect<PackageManifestFailure>();
+		await Assert.That(thing.Errors.Any(e => e.Path == "objects[0].destination")).IsTrue();
 	}
 
 	[Test]
 	public async Task PreviousRefs_Parse_AndMustBeRetiredNames()
 	{
-		var ok = await Assert.That(_service.ParseManifest(MinimalManifest(objectExtras: "    previous_refs: [old_thing]")).Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(ok!.Manifest.Objects[0].PreviousRefs).Contains("old_thing");
+		var ok = _service.ParseManifest(MinimalManifest(objectExtras: "    previous_refs: [old_thing]")).Expect<ParsedPackageManifest>();
+		await Assert.That(ok.Manifest.Objects[0].PreviousRefs).Contains("old_thing");
 
-		var colliding = await Assert.That(_service.ParseManifest(MinimalManifest(objectExtras: "    previous_refs: [a]")).Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(colliding!.Errors.Any(e => e.Path == "objects[0].previous_refs")).IsTrue();
+		var colliding = _service.ParseManifest(MinimalManifest(objectExtras: "    previous_refs: [a]")).Expect<PackageManifestFailure>();
+		await Assert.That(colliding.Errors.Any(e => e.Path == "objects[0].previous_refs")).IsTrue();
 	}
 
 	#endregion
@@ -433,8 +433,8 @@ public class PackageManifestServiceTests
 			      FN_X: "get({{?mystery}}/SETTING)"
 			"""));
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Message.Contains("{{?mystery}}"))).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Message.Contains("{{?mystery}}"))).IsTrue();
 	}
 
 	[Test]
@@ -464,8 +464,8 @@ public class PackageManifestServiceTests
 			      FN_X: "get({{?storage}}/X) {{?board_name}} {{?max_posts}} {{?announce}}"
 			"""));
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		var configure = parsed!.Manifest.Configure;
+		var parsed = result.Expect<ParsedPackageManifest>();
+		var configure = parsed.Manifest.Configure;
 		await Assert.That(configure["storage"].Type).IsEqualTo(PackageConfigureType.Dbref);
 		await Assert.That(configure["board_name"].Type).IsEqualTo(PackageConfigureType.String);
 		await Assert.That(configure["board_name"].Default).IsEqualTo("Community Board");
@@ -483,8 +483,8 @@ public class PackageManifestServiceTests
 			    label: "Storage"
 			    default: "#123"
 			"""));
-		var dbrefDefaultFailure = await Assert.That(dbrefDefault.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(dbrefDefaultFailure!.Errors.Any(e => e.Message.Contains("dbref configure refs cannot"))).IsTrue();
+		var dbrefDefaultFailure = dbrefDefault.Expect<PackageManifestFailure>();
+		await Assert.That(dbrefDefaultFailure.Errors.Any(e => e.Message.Contains("dbref configure refs cannot"))).IsTrue();
 
 		var badNumber = _service.ParseManifest(MinimalManifest(extraTop:
 			"""
@@ -494,8 +494,8 @@ public class PackageManifestServiceTests
 			    type: number
 			    default: "many"
 			"""));
-		var badNumberFailure = await Assert.That(badNumber.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(badNumberFailure!.Errors.Any(e => e.Path == "configure.count.default")).IsTrue();
+		var badNumberFailure = badNumber.Expect<PackageManifestFailure>();
+		await Assert.That(badNumberFailure.Errors.Any(e => e.Path == "configure.count.default")).IsTrue();
 	}
 
 	[Test]
@@ -511,8 +511,8 @@ public class PackageManifestServiceTests
 			""",
 			objectExtras: "    parent: \"{{?board_name}}\""));
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Message.Contains("requires a dbref-typed"))).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Message.Contains("requires a dbref-typed"))).IsTrue();
 	}
 
 	[Test]
@@ -525,8 +525,8 @@ public class PackageManifestServiceTests
 			    label: "Orphan"
 			"""));
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(parsed!.Warnings.Any(w => w.Message.Contains("never_used"))).IsTrue();
+		var parsed = result.Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Warnings.Any(w => w.Message.Contains("never_used"))).IsTrue();
 	}
 
 	#endregion
@@ -547,8 +547,8 @@ public class PackageManifestServiceTests
 			      branch: main
 			"""));
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		var dependency = parsed!.Manifest.Dependencies[0];
+		var parsed = result.Expect<ParsedPackageManifest>();
+		var dependency = parsed.Manifest.Dependencies[0];
 		await Assert.That(dependency.PackageId).IsEqualTo("who-where");
 		await Assert.That(dependency.Constraint.IsSatisfiedBy(new PackageVersion(1, 5, 0))).IsTrue();
 		await Assert.That(dependency.Source).IsEqualTo(new PackageSourceHint(
@@ -566,8 +566,8 @@ public class PackageManifestServiceTests
 			      branch: main
 			"""));
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e =>
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e =>
 			e.Path == "depends[0].source" && e.Message.Contains("repo"))).IsTrue();
 	}
 
@@ -582,8 +582,8 @@ public class PackageManifestServiceTests
 			  - other-pkg
 			"""));
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		var messages = failure!.Errors.Select(e => e.Message).ToList();
+		var failure = result.Expect<PackageManifestFailure>();
+		var messages = failure.Errors.Select(e => e.Message).ToList();
 		await Assert.That(messages.Any(m => m.Contains("cannot appear in its own"))).IsTrue();
 		await Assert.That(messages.Any(m => m.Contains("Duplicate entry"))).IsTrue();
 	}
@@ -596,8 +596,8 @@ public class PackageManifestServiceTests
 			conflicts:
 			  - legacy-bbs: "<2.0"
 			"""));
-		var okParsed = await Assert.That(ok.Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(okParsed!.Manifest.Conflicts[0].PackageId).IsEqualTo("legacy-bbs");
+		var okParsed = ok.Expect<ParsedPackageManifest>();
+		await Assert.That(okParsed.Manifest.Conflicts[0].PackageId).IsEqualTo("legacy-bbs");
 
 		var overlap = _service.ParseManifest(MinimalManifest(extraTop:
 			"""
@@ -606,8 +606,8 @@ public class PackageManifestServiceTests
 			conflicts:
 			  - some-pkg
 			"""));
-		var overlapFailure = await Assert.That(overlap.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(overlapFailure!.Errors.Any(e => e.Message.Contains("both 'depends' and 'conflicts'"))).IsTrue();
+		var overlapFailure = overlap.Expect<PackageManifestFailure>();
+		await Assert.That(overlapFailure.Errors.Any(e => e.Message.Contains("both 'depends' and 'conflicts'"))).IsTrue();
 
 		var sourced = _service.ParseManifest(MinimalManifest(extraTop:
 			"""
@@ -615,8 +615,8 @@ public class PackageManifestServiceTests
 			  - package: legacy-bbs
 			    source: https://example.com/repo
 			"""));
-		var sourcedParsed = await Assert.That(sourced.Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(sourcedParsed!.Warnings.Any(w => w.Path == "conflicts[0].source")).IsTrue();
+		var sourcedParsed = sourced.Expect<ParsedPackageManifest>();
+		await Assert.That(sourcedParsed.Warnings.Any(w => w.Path == "conflicts[0].source")).IsTrue();
 	}
 
 	[Test]
@@ -624,16 +624,16 @@ public class PackageManifestServiceTests
 	{
 		var result = _service.ParseManifest(MinimalManifest(extraTop: "provides: [bbs]"));
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(parsed!.Warnings.Any(w =>
+		var parsed = result.Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Warnings.Any(w =>
 			w.Path == "provides" && w.Message.Contains("reserved"))).IsTrue();
 	}
 
 	[Test]
 	public async Task Replaces_MustBeValidAndNotSelf()
 	{
-		var ok = await Assert.That(_service.ParseManifest(MinimalManifest(extraTop: "replaces: old-probe")).Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(ok!.Manifest.Replaces).IsEqualTo("old-probe");
+		var ok = _service.ParseManifest(MinimalManifest(extraTop: "replaces: old-probe")).Expect<ParsedPackageManifest>();
+		await Assert.That(ok.Manifest.Replaces).IsEqualTo("old-probe");
 
 		var self = _service.ParseManifest(MinimalManifest(extraTop: "replaces: probe"));
 		await Assert.That(self.Value).IsTypeOf<PackageManifestFailure>();
@@ -644,8 +644,8 @@ public class PackageManifestServiceTests
 	{
 		var result = _service.ParseManifest(MinimalManifest(extraTop: "keywords: [a, b, c, d, e, f]"));
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(parsed!.Warnings.Any(w => w.Path == "keywords")).IsTrue();
+		var parsed = result.Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Warnings.Any(w => w.Path == "keywords")).IsTrue();
 	}
 
 	#endregion
@@ -657,8 +657,8 @@ public class PackageManifestServiceTests
 	{
 		var result = _service.ParseManifest("description: nothing else\n");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		var errors = failure!.Errors.Select(e => e.Path).ToList();
+		var failure = result.Expect<PackageManifestFailure>();
+		var errors = failure.Errors.Select(e => e.Path).ToList();
 		await Assert.That(errors).Contains("package");
 		await Assert.That(errors).Contains("version");
 		await Assert.That(errors).Contains("objects");
@@ -667,8 +667,8 @@ public class PackageManifestServiceTests
 	[Test]
 	public async Task InvalidPackageSlug_AndOverlongId_AreErrors()
 	{
-		var bad = await Assert.That(_service.ParseManifest(MinimalManifest().Replace("package: probe", "package: Bad_Name")).Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(bad!.Errors.Any(e => e.Path == "package")).IsTrue();
+		var bad = _service.ParseManifest(MinimalManifest().Replace("package: probe", "package: Bad_Name")).Expect<PackageManifestFailure>();
+		await Assert.That(bad.Errors.Any(e => e.Path == "package")).IsTrue();
 
 		var overlong = _service.ParseManifest(
 			MinimalManifest().Replace("package: probe", $"package: a{new string('b', 70)}"));
@@ -691,8 +691,8 @@ public class PackageManifestServiceTests
 			    name: Two
 			""");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Message.Contains("Duplicate object ref"))).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Message.Contains("Duplicate object ref"))).IsTrue();
 	}
 
 	[Test]
@@ -713,8 +713,8 @@ public class PackageManifestServiceTests
 			    parent: "{{a}}"
 			""");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Message.Contains("Parent cycle"))).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Message.Contains("Parent cycle"))).IsTrue();
 	}
 
 	[Test]
@@ -722,8 +722,8 @@ public class PackageManifestServiceTests
 	{
 		var result = _service.ParseManifest("package: [unclosed\nversion: 1.0");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Path.StartsWith("line "))).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Path.StartsWith("line "))).IsTrue();
 	}
 
 	[Test]
@@ -731,8 +731,8 @@ public class PackageManifestServiceTests
 	{
 		var result = _service.ParseManifest(MinimalManifest(extraTop: "dependz: [other-pkg]"));
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(parsed!.Warnings.Any(w => w.Message.Contains("dependz"))).IsTrue();
+		var parsed = result.Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Warnings.Any(w => w.Message.Contains("dependz"))).IsTrue();
 	}
 
 	[Test]
@@ -743,8 +743,8 @@ public class PackageManifestServiceTests
 			      FN_X: [ansi(hw,hello)]
 			"""));
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Message.Contains("block scalar"))).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Message.Contains("block scalar"))).IsTrue();
 	}
 
 	[Test]
@@ -769,8 +769,8 @@ public class PackageManifestServiceTests
 		var result = _service.ParseManifest(MinimalManifest(
 			objectExtras: "    flags: [no_command, dark]\n    locks:\n      use: \"{{a}}\"\n      page: \"=#1\""));
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		var obj = parsed!.Manifest.Objects.Single();
+		var parsed = result.Expect<ParsedPackageManifest>();
+		var obj = parsed.Manifest.Objects.Single();
 		await Assert.That(obj.Flags.ToArray()).IsEquivalentTo((string[])["no_command", "dark"]);
 		await Assert.That(obj.Locks["use"]).IsEqualTo("{{a}}");
 		await Assert.That(obj.Locks["page"]).IsEqualTo("=#1");
@@ -790,8 +790,8 @@ public class PackageManifestServiceTests
 			      SHORTHAND: "plain value"
 			"""));
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		var attrs = parsed!.Manifest.Objects.Single().Attributes;
+		var parsed = result.Expect<ParsedPackageManifest>();
+		var attrs = parsed.Manifest.Objects.Single().Attributes;
 		await Assert.That(attrs["WITH_FLAGS"].Flags.ToArray()).IsEquivalentTo((string[])["no_command", "veiled"]);
 		await Assert.That(attrs["SHORTHAND"].Flags.Count).IsEqualTo(0);
 	}
@@ -801,8 +801,8 @@ public class PackageManifestServiceTests
 	{
 		var result = _service.ParseManifest(MinimalManifest(objectExtras: "    powers: [pueblo, idle]"));
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(parsed!.Manifest.Objects.Single().Powers.ToArray())
+		var parsed = result.Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Manifest.Objects.Single().Powers.ToArray())
 			.IsEquivalentTo((string[])["pueblo", "idle"]);
 	}
 
@@ -824,8 +824,8 @@ public class PackageManifestServiceTests
 			        think hi
 			""");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Path == "objects[0].powers")).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Path == "objects[0].powers")).IsTrue();
 	}
 
 	#endregion
@@ -848,8 +848,8 @@ public class PackageManifestServiceTests
 			    description: Boards
 			""");
 
-		var index = await Assert.That(result.Value).IsTypeOf<PackageIndex>();
-		await Assert.That(index!.Packages[0]).IsEqualTo(new PackageIndexEntry("core/", null));
+		var index = result.Expect<PackageIndex>();
+		await Assert.That(index.Packages[0]).IsEqualTo(new PackageIndexEntry("core/", null));
 		await Assert.That(index.Packages[1].PackageId).IsEqualTo("volund-bbs");
 		await Assert.That(index.Packages[1].Version).IsEqualTo(new PackageVersion(2, 0, 0));
 	}
@@ -865,11 +865,11 @@ public class PackageManifestServiceTests
 			  - path: b/
 			    package: same-id
 			""");
-		var duplicateFailure = await Assert.That(duplicate.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(duplicateFailure!.Errors.Any(e => e.Message.Contains("Duplicate package id"))).IsTrue();
+		var duplicateFailure = duplicate.Expect<PackageManifestFailure>();
+		await Assert.That(duplicateFailure.Errors.Any(e => e.Message.Contains("Duplicate package id"))).IsTrue();
 
-		var missing = await Assert.That(_service.ParseIndex("name: Empty Repo\n").Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(missing!.Errors.Any(e => e.Path == "packages")).IsTrue();
+		var missing = _service.ParseIndex("name: Empty Repo\n").Expect<PackageManifestFailure>();
+		await Assert.That(missing.Errors.Any(e => e.Path == "packages")).IsTrue();
 	}
 
 	#endregion
@@ -891,8 +891,8 @@ public class PackageManifestServiceTests
 			        think hello
 			""");
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		var obj = parsed!.Manifest.Objects.Single();
+		var parsed = result.Expect<ParsedPackageManifest>();
+		var obj = parsed.Manifest.Objects.Single();
 		await Assert.That(obj.IsAttach).IsTrue();
 		await Assert.That(obj.Target).IsEqualTo(new PackageRef(PackageRefKind.WellKnown, "http_handler"));
 		await Assert.That(obj.Attributes.ContainsKey("GET")).IsTrue();
@@ -916,8 +916,8 @@ public class PackageManifestServiceTests
 			        think hi
 			""");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		var paths = failure!.Errors.Select(e => e.Path).ToList();
+		var failure = result.Expect<PackageManifestFailure>();
+		var paths = failure.Errors.Select(e => e.Path).ToList();
 		await Assert.That(paths).Contains("objects[0].type");
 		await Assert.That(paths).Contains("objects[0].name");
 		await Assert.That(paths).Contains("objects[0].flags");
@@ -941,8 +941,8 @@ public class PackageManifestServiceTests
 			      GET: |-
 			        think hi
 			""");
-		var internalTargetFailure = await Assert.That(internalTarget.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(internalTargetFailure!.Errors.Any(e => e.Path == "objects[1].target")).IsTrue();
+		var internalTargetFailure = internalTarget.Expect<PackageManifestFailure>();
+		await Assert.That(internalTargetFailure.Errors.Any(e => e.Path == "objects[1].target")).IsTrue();
 
 		var configureTarget = _service.ParseManifest(
 			"""
@@ -974,8 +974,8 @@ public class PackageManifestServiceTests
 			      FN_X: |-
 			        think extension
 			""");
-		var crossTargetParsed = await Assert.That(crossTarget.Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(crossTargetParsed!.Manifest.Objects.Single().Target)
+		var crossTargetParsed = crossTarget.Expect<ParsedPackageManifest>();
+		await Assert.That(crossTargetParsed.Manifest.Objects.Single().Target)
 			.IsEqualTo(new PackageRef(PackageRefKind.Internal, "hub", "base-pkg"));
 
 		// Cross-package target to an UNDECLARED dependency is an error.
@@ -1004,8 +1004,8 @@ public class PackageManifestServiceTests
 			  - ref: handler
 			    target: "{{$http_handler}}"
 			""");
-		var noAttrsFailure = await Assert.That(noAttrs.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(noAttrsFailure!.Errors.Any(e => e.Path == "objects[0].attributes")).IsTrue();
+		var noAttrsFailure = noAttrs.Expect<PackageManifestFailure>();
+		await Assert.That(noAttrsFailure.Errors.Any(e => e.Path == "objects[0].attributes")).IsTrue();
 
 		var badTarget = _service.ParseManifest(
 			"""
@@ -1018,8 +1018,8 @@ public class PackageManifestServiceTests
 			      GET: |-
 			        think hi
 			""");
-		var badTargetFailure = await Assert.That(badTarget.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(badTargetFailure!.Errors.Any(e => e.Path == "objects[0].target")).IsTrue();
+		var badTargetFailure = badTarget.Expect<PackageManifestFailure>();
+		await Assert.That(badTargetFailure.Errors.Any(e => e.Path == "objects[0].target")).IsTrue();
 	}
 
 	#endregion
@@ -1034,8 +1034,8 @@ public class PackageManifestServiceTests
 			      PM`REFS`CUSTOM: "nope"
 			"""));
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Message.Contains("reserved"))).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Message.Contains("reserved"))).IsTrue();
 	}
 
 	[Test]
@@ -1056,8 +1056,8 @@ public class PackageManifestServiceTests
 			    attributes:
 			      FN_X: "get({{?storage}}/DATA)"
 			""");
-		var configureCollisionFailure = await Assert.That(configureCollision.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(configureCollisionFailure!.Errors.Any(e =>
+		var configureCollisionFailure = configureCollision.Expect<PackageManifestFailure>();
+		await Assert.That(configureCollisionFailure.Errors.Any(e =>
 			e.Message.Contains("PM`REFS`STORAGE"))).IsTrue();
 
 		// Internal ref 'room_zero' vs use of {{$room_zero}}.
@@ -1072,8 +1072,8 @@ public class PackageManifestServiceTests
 			    attributes:
 			      FN_X: "loc({{$room_zero}})"
 			""");
-		var wellKnownCollisionFailure = await Assert.That(wellKnownCollision.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(wellKnownCollisionFailure!.Errors.Any(e =>
+		var wellKnownCollisionFailure = wellKnownCollision.Expect<PackageManifestFailure>();
+		await Assert.That(wellKnownCollisionFailure.Errors.Any(e =>
 			e.Message.Contains("PM`REFS`ROOM_ZERO"))).IsTrue();
 	}
 
@@ -1095,8 +1095,8 @@ public class PackageManifestServiceTests
 			future_field: ignored silently
 			""");
 
-		var listing = await Assert.That(result.Value).IsTypeOf<CommunityRepoListing>();
-		await Assert.That(listing!.Name).IsEqualTo("Volund's MUSH Suite");
+		var listing = result.Expect<CommunityRepoListing>();
+		await Assert.That(listing.Name).IsEqualTo("Volund's MUSH Suite");
 		await Assert.That(listing.Url).IsEqualTo("https://github.com/volund/mush-suite");
 		await Assert.That(listing.Branch).IsEqualTo("stable");
 		await Assert.That(listing.Maintainers).Contains("Volund");
@@ -1106,8 +1106,8 @@ public class PackageManifestServiceTests
 	[Test]
 	public async Task CommunityListing_RequiresNameUrlDescription_AndValidUrl()
 	{
-		var missing = await Assert.That(_service.ParseCommunityListing("branch: main\n").Value).IsTypeOf<PackageManifestFailure>();
-		var paths = missing!.Errors.Select(e => e.Path).ToList();
+		var missing = _service.ParseCommunityListing("branch: main\n").Expect<PackageManifestFailure>();
+		var paths = missing.Errors.Select(e => e.Path).ToList();
 		await Assert.That(paths).Contains("name");
 		await Assert.That(paths).Contains("url");
 		await Assert.That(paths).Contains("description");
@@ -1118,8 +1118,8 @@ public class PackageManifestServiceTests
 			url: "not a url"
 			description: x
 			""");
-		var badUrlFailure = await Assert.That(badUrl.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(badUrlFailure!.Errors.Any(e => e.Path == "url")).IsTrue();
+		var badUrlFailure = badUrl.Expect<PackageManifestFailure>();
+		await Assert.That(badUrlFailure.Errors.Any(e => e.Path == "url")).IsTrue();
 	}
 
 	#endregion

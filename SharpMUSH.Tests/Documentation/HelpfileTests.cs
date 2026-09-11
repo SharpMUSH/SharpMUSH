@@ -37,7 +37,7 @@ public class HelpfileTests
 		var fileString = Path.Combine(currentDirectory, "Documentation", "Testfile", file);
 		var fileInfo = new FileInfo(fileString);
 
-		var indexes = await Assert.That(Helpfiles.Index(fileInfo).Value).IsTypeOf<Dictionary<string, string>>();
+		var indexes = Helpfiles.Index(fileInfo).Expect<Dictionary<string, string>>();
 
 		await Assert.That(indexes).IsNotEmpty();
 

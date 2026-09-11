@@ -145,8 +145,7 @@ public class ManagedPackageInstallerTests
 			var result = await installer.DeployAsync(
 				Parse(ManifestYaml(sha)), Request(allow: true), new DirectoryBinarySource(sourceDir));
 
-			var deployedFiles = await Assert.That(result.Value).IsTypeOf<IReadOnlyList<string>>()
-				.Because("trust opt-in + allow-list + matching hash should deploy");
+			var deployedFiles = result.Expect<IReadOnlyList<string>>("trust opt-in + allow-list + matching hash should deploy");
 			await Assert.That(deployedFiles).Contains("CommandOnlyPlugin.dll");
 
 			var depositedDll = Path.Combine(pluginsRoot, PackageId, "CommandOnlyPlugin.dll");
@@ -223,7 +222,7 @@ public class ManagedPackageInstallerTests
 			var result = await installer.DeployAsync(
 				Parse(ManifestYaml(wrongSha)), Request(allow: true), new DirectoryBinarySource(sourceDir));
 
-			var error = await Assert.That(result.Value).IsTypeOf<Error<string>>().Because("a SHA-256 mismatch must reject the deploy");
+			var error = result.Expect<Error<string>>("a SHA-256 mismatch must reject the deploy");
 			await Assert.That(error.Value).Contains("SHA-256 mismatch");
 			await Assert.That(Directory.Exists(Path.Combine(pluginsRoot, PackageId))).IsFalse();
 		}
@@ -275,10 +274,10 @@ public class ManagedPackageInstallerTests
 			var installer = NewInstaller(pluginsRoot, new ManagedPackageTrustOptions(true, []));
 			var deploy = await installer.DeployAsync(
 				Parse(ManifestYaml(sha)), Request(allow: true), new DirectoryBinarySource(sourceDir));
-			var deployedFiles = await Assert.That(deploy.Value).IsTypeOf<IReadOnlyList<string>>();
+			var deployedFiles = deploy.Expect<IReadOnlyList<string>>();
 			await Assert.That(Directory.Exists(Path.Combine(pluginsRoot, PackageId))).IsTrue();
 
-			var removed = await installer.RemoveAsync(PackageId, deployedFiles!);
+			var removed = await installer.RemoveAsync(PackageId, deployedFiles);
 			await Assert.That(removed.Value).IsTypeOf<Success>().Because("uninstall removes the deposited directory");
 			await Assert.That(Directory.Exists(Path.Combine(pluginsRoot, PackageId))).IsFalse();
 		}

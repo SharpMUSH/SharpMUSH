@@ -102,7 +102,7 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 		}
 	}
 
-	public async Task<Found<(WikiAsset Asset, Stream Content)>> OpenAsync(string id, CancellationToken ct = default)
+	public async Task<Found<OpenedWikiAsset>> OpenAsync(string id, CancellationToken ct = default)
 	{
 		if (!IsValidId(id) || !File.Exists(MetaPath(id)) || !File.Exists(BinPath(id)))
 		{
@@ -116,8 +116,7 @@ public partial class FileSystemWikiAssetService : IWikiAssetService
 			return new NotFound();
 		}
 
-		Stream stream = File.OpenRead(BinPath(id));
-		return (asset, stream);
+		return new OpenedWikiAsset(asset, File.OpenRead(BinPath(id)));
 	}
 
 	public async Task<IReadOnlyList<WikiAsset>> ListAsync(int skip = 0, int take = 100)

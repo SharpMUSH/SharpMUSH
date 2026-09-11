@@ -390,8 +390,8 @@ public sealed class InMemoryWikiService : IWikiService
 			TranslationWriteResult value) => Task.FromResult(value);
 
 		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
-		if (normalizedLocale is not string normalized)
-			return Result((Error<string>)normalizedLocale.Value!);
+		if (!normalizedLocale.TryGetValue(out var normalized, out var error))
+			return Result(error);
 
 		if (!_pagesById.TryGetValue(pageId, out var page))
 			return Result(new Error<string>($"No wiki page with id '{pageId}'."));

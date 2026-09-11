@@ -50,8 +50,8 @@ public class SetupController(
 			return BadRequest("Password must be at least 8 characters.");
 
 		var result = await setupService.CompleteAsync(request.Username.Trim(), request.Password);
-		if (result is not SharpAccount account)
-			return Conflict(((Error<string>)result.Value!).Value);
+		if (!result.TryGetValue(out var account, out var error))
+			return Conflict(error.Value);
 
 		// The claim itself already succeeded (CompleteAsync flipped SetupCompleted) — everything
 		// below is best-effort auto-login enrichment. If any of it throws, the claimer must not

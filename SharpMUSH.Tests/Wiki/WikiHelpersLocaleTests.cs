@@ -28,7 +28,7 @@ public class WikiHelpersLocaleTests
 	{
 		var result = WikiHelpers.NormalizeLocale(input);
 
-		var text = await Assert.That(result.Value).IsTypeOf<string>();
+		var text = result.Expect<string>();
 		await Assert.That(text).IsEqualTo(expected);
 	}
 

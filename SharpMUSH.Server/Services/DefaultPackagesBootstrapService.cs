@@ -85,12 +85,14 @@ public class DefaultPackagesBootstrapService(
 		// already. Deciding the version gate first would swallow it on every game that has the
 		// package, because an unparsed manifest has no version to compare.
 		var parsed = manifests.ParseManifest(BundledPackages.ManifestYaml(packageId));
-		if (parsed is not ParsedPackageManifest { Manifest: var manifest })
+		if (!parsed.TryGetValue(out var parsedManifest, out var failure))
 		{
 			logger.LogError("Bundled {PackageId} manifest is invalid: {Issues}",
-				packageId, string.Join("; ", ((PackageManifestFailure)parsed.Value!).Issues.Select(i => i.ToString())));
+				packageId, string.Join("; ", failure.Issues.Select(i => i.ToString())));
 			return;
 		}
+
+		var manifest = parsedManifest.Manifest;
 
 		if (await registry.GetInstalledPackageAsync(packageId) is InstalledPackageRecord already)
 		{

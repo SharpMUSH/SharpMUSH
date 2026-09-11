@@ -831,9 +831,9 @@
         _createObjectType = null;
         _createObjectName = string.Empty;
         var result = await ObjectApi.CreateObjectAsync(name, type);
-        if (result is not int newDbref)
+        if (!result.TryGetValue(out var newDbref, out var failure))
         {
-            _saveMessage = ((ApiFailure)result.Value!).Message;
+            _saveMessage = failure.Message;
             _saveSeverity = Severity.Error;
             StateHasChanged();
             return;

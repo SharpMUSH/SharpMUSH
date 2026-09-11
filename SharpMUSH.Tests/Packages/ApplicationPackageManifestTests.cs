@@ -43,8 +43,8 @@ public class ApplicationPackageManifestTests
 	{
 		var result = _service.ParseManifest(ValidApplication);
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		var (manifest, warnings) = parsed!;
+		var parsed = result.Expect<ParsedPackageManifest>();
+		var (manifest, warnings) = parsed;
 
 		await Assert.That(manifest.Kind).IsEqualTo(PackageKind.Application);
 		await Assert.That(manifest.Objects.Count).IsEqualTo(0);
@@ -74,8 +74,8 @@ public class ApplicationPackageManifestTests
 			    name: A Room
 			""");
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		await Assert.That(parsed!.Manifest.Kind).IsEqualTo(PackageKind.Softcode);
+		var parsed = result.Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Manifest.Kind).IsEqualTo(PackageKind.Softcode);
 		await Assert.That(parsed.Manifest.Application).IsNull();
 	}
 
@@ -97,8 +97,8 @@ public class ApplicationPackageManifestTests
 			    name: A Room
 			""");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Path == "objects")).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Path == "objects")).IsTrue();
 	}
 
 	[Test]
@@ -111,8 +111,8 @@ public class ApplicationPackageManifestTests
 			kind: application
 			""");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Path == "application")).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Path == "application")).IsTrue();
 	}
 
 	[Test]
@@ -132,8 +132,8 @@ public class ApplicationPackageManifestTests
 			    name: A Room
 			""");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e =>
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e =>
 			e.Path == "application" && e.Message.Contains("kind: application"))).IsTrue();
 	}
 
@@ -152,8 +152,8 @@ public class ApplicationPackageManifestTests
 			  minimum_role: "{{?mystery}}"
 			""");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Message.Contains("{{?mystery}}"))).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Message.Contains("{{?mystery}}"))).IsTrue();
 	}
 
 	[Test]
@@ -171,8 +171,8 @@ public class ApplicationPackageManifestTests
 			  minimum_role: superuser
 			""");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Path == "application.minimum_role")).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Path == "application.minimum_role")).IsTrue();
 	}
 
 	[Test]
@@ -190,8 +190,8 @@ public class ApplicationPackageManifestTests
 			  schema_url: http/x/schema
 			""");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Path == "application.type")).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Path == "application.type")).IsTrue();
 	}
 
 	[Test]
@@ -209,8 +209,8 @@ public class ApplicationPackageManifestTests
 			  zones: [MainContent, RightSidebar]
 			""");
 
-		var parsed = await Assert.That(result.Value).IsTypeOf<ParsedPackageManifest>();
-		var app = parsed!.Manifest.Application!;
+		var parsed = result.Expect<ParsedPackageManifest>();
+		var app = parsed.Manifest.Application!;
 		await Assert.That(app.Slug).IsEqualTo("my-widget");
 		await Assert.That(app.Kind).IsEqualTo(PackageApplicationDisplay.Widget);
 		await Assert.That(app.Zones.Count).IsEqualTo(2);
@@ -230,7 +230,7 @@ public class ApplicationPackageManifestTests
 			    name: A Room
 			""");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<PackageManifestFailure>();
-		await Assert.That(failure!.Errors.Any(e => e.Path == "kind")).IsTrue();
+		var failure = result.Expect<PackageManifestFailure>();
+		await Assert.That(failure.Errors.Any(e => e.Path == "kind")).IsTrue();
 	}
 }

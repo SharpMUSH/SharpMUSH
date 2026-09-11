@@ -117,7 +117,7 @@ public class PluginUnloadTests
 		manager.RegisterPlugin(plugin);
 
 		var reload = await manager.ReloadAsync("load-once");
-		var reloadError = await Assert.That(reload.Value).IsTypeOf<Error<string>>().Because("a load-once plugin must refuse reload");
+		var reloadError = reload.Expect<Error<string>>("a load-once plugin must refuse reload");
 		await Assert.That(reloadError.Value).Contains("load-once");
 
 		var unload = await manager.UnloadAsync("load-once");
@@ -129,7 +129,7 @@ public class PluginUnloadTests
 	{
 		var manager = NewManager(out _, out _);
 		var result = await manager.UnloadAsync("does-not-exist");
-		var error = await Assert.That(result.Value).IsTypeOf<Error<string>>();
+		var error = result.Expect<Error<string>>();
 		await Assert.That(error.Value).Contains("not loaded");
 	}
 

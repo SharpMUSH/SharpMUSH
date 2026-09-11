@@ -113,7 +113,7 @@ public class PackageInstallServiceTests
 	private async Task<string> EvaluateAttributeAsync(string objid, string attribute)
 	{
 		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/{attribute})]"));
-		return result!.Message!.ToPlainText();
+		return result.Message!.ToPlainText();
 	}
 
 	private async Task<IReadOnlyList<string>> ReadAttributeFlagsAsync(string objid, string attribute)
@@ -139,8 +139,8 @@ public class PackageInstallServiceTests
 			""");
 		var answers = new Dictionary<string, string>();
 		var installed = await Installer.ApplyAsync(manifest, new PackageApplyRequest(Source(), answers, []));
-		var applied = await Assert.That(installed.Value).IsTypeOf<PackageApplyResult>();
-		var objid = applied!.CreatedObjects["core"];
+		var applied = installed.Expect<PackageApplyResult>();
+		var objid = applied.CreatedObjects["core"];
 		var upgraded = Parse("""
 			package: well-known-refs
 			version: "1.1"
@@ -288,13 +288,12 @@ public class PackageInstallServiceTests
 		var rolledBack = await Installer.RollbackAsync(package, 1);
 		if (conflictingValue)
 		{
-			var refusal = await Assert.That(rolledBack.Value).IsTypeOf<Error<string>>();
+			var refusal = rolledBack.Expect<Error<string>>();
 			await Assert.That(refusal.Value).Contains("shared");
 			await Assert.That(await ReadAttributeAsync(host, "ROLLBACK_CODE")).IsEqualTo("current");
 			await Assert.That(await ReadAttributeAsync(host, restoredRef)).IsEqualTo(liveRef);
-			var untouched = await Assert.That((await Registry.GetInstalledPackageAsync(package)).Value)
-				.IsTypeOf<InstalledPackageRecord>();
-			await Assert.That(untouched!.CurrentRevision).IsEqualTo(2);
+			var untouched = (await Registry.GetInstalledPackageAsync(package)).Expect<InstalledPackageRecord>();
+			await Assert.That(untouched.CurrentRevision).IsEqualTo(2);
 			await Registry.RemoveManagedAttributeAsync(other, host, restoredRef);
 			rolledBack = await Installer.RollbackAsync(package, 1);
 		}
@@ -378,13 +377,13 @@ public class PackageInstallServiceTests
 		var first = Consumer("ref-consumer-a");
 		var second = Consumer("ref-consumer-b");
 		var a = await Installer.ApplyAsync(first, new PackageApplyRequest(Source(), answers, []));
-		var appliedA = await Assert.That(a.Value).IsTypeOf<PackageApplyResult>();
+		var appliedA = a.Expect<PackageApplyResult>();
 		var b = await Installer.ApplyAsync(second, new PackageApplyRequest(Source(), answers, []));
-		var appliedB = await Assert.That(b.Value).IsTypeOf<PackageApplyResult>();
+		var appliedB = b.Expect<PackageApplyResult>();
 		var host = (await Database.GetObjectNodeAsync(new DBRef(0))).Known.Object().DBRef.ToString();
 		await Assert.That(await ReadAttributeAsync(host, "SRC`REF-CONSUMER-A")).IsEqualTo("[v(PM`ATTACHED_REFS`REF-CONSUMER-A`HELP)]");
-		await Assert.That(await ReadAttributeAsync(host, "PM`ATTACHED_REFS`REF-CONSUMER-A`HELP")).IsEqualTo(appliedA!.CreatedObjects["help"]);
-		await Assert.That(await ReadAttributeAsync(host, "PM`ATTACHED_REFS`REF-CONSUMER-B`HELP")).IsEqualTo(appliedB!.CreatedObjects["help"]);
+		await Assert.That(await ReadAttributeAsync(host, "PM`ATTACHED_REFS`REF-CONSUMER-A`HELP")).IsEqualTo(appliedA.CreatedObjects["help"]);
+		await Assert.That(await ReadAttributeAsync(host, "PM`ATTACHED_REFS`REF-CONSUMER-B`HELP")).IsEqualTo(appliedB.CreatedObjects["help"]);
 		await Assert.That((await Installer.PlanAsync(first, answers)).Attributes.All(x => x.Action == PackageAttributeAction.NoChange)).IsTrue();
 		await Assert.That(await EvaluateAttributeAsync(host, "SRC`REF-CONSUMER-A")).IsEqualTo(appliedA.CreatedObjects["help"]);
 		await Assert.That(await EvaluateAttributeAsync(host, "SRC`REF-CONSUMER-B")).IsEqualTo(appliedB.CreatedObjects["help"]);
@@ -407,8 +406,8 @@ public class PackageInstallServiceTests
 		await Assert.That(plan.Objects.Count(o => o.Action == PackageObjectAction.Create)).IsEqualTo(3);
 
 		var install = await Installer.ApplyAsync(manifestV1, new PackageApplyRequest(Source(), answers, []));
-		var result = await Assert.That(install.Value).IsTypeOf<PackageApplyResult>();
-		await Assert.That(result!.Revision).IsEqualTo(1);
+		var result = install.Expect<PackageApplyResult>();
+		await Assert.That(result.Revision).IsEqualTo(1);
 		await Assert.That(result.CreatedObjects.Keys.Order().ToArray())
 			.IsEquivalentTo((string[])["board", "lounge", "lounge_out"]);
 
@@ -431,9 +430,8 @@ public class PackageInstallServiceTests
 		await Assert.That(await ReadAttributeAsync(boardObjid, "PM`REFS`BOARD")).IsEqualTo(boardObjid);
 		await Assert.That(await ReadAttributeAsync(boardObjid, "PM`REFS`STORAGE")).IsEqualTo(roomZero);
 
-		var installedRecord = await Assert.That((await Registry.GetInstalledPackageAsync("e2e-pkg")).Value)
-			.IsTypeOf<InstalledPackageRecord>();
-		await Assert.That(installedRecord!.Version).IsEqualTo("1.0.0");
+		var installedRecord = (await Registry.GetInstalledPackageAsync("e2e-pkg")).Expect<InstalledPackageRecord>();
+		await Assert.That(installedRecord.Version).IsEqualTo("1.0.0");
 		await Assert.That((await Registry.GetPackageObjectsAsync("e2e-pkg")).Count).IsEqualTo(3);
 		var baselines = await Registry.GetManagedAttributesAsync("e2e-pkg");
 		await Assert.That(baselines.Single(b => b.Attribute == "FN_FMT").BaselineValue).IsEqualTo("version-one-format");
@@ -458,30 +456,28 @@ public class PackageInstallServiceTests
 		await Assert.That(conflict.LiveValue).IsEqualTo("my-custom-format");
 		await Assert.That(conflict.NewValue).IsEqualTo("version-two-format");
 
-		var undecided = await Assert.That((await Installer.ApplyAsync(manifestV2, new PackageApplyRequest(Source("commit-2"), answers, []))).Value).IsTypeOf<Error<string>>();
+		var undecided = (await Installer.ApplyAsync(manifestV2, new PackageApplyRequest(Source("commit-2"), answers, []))).Expect<Error<string>>();
 		await Assert.That(undecided.Value).Contains("Unresolved conflicts");
 
 		var upgrade = await Installer.ApplyAsync(manifestV2, new PackageApplyRequest(
 			Source("commit-2"), answers,
 			[new PackageConflictDecision(conflict.TargetRef, conflict.Attribute, PackageConflictResolution.TakeTheirs)]));
-		var upgraded = await Assert.That(upgrade.Value).IsTypeOf<PackageApplyResult>();
-		await Assert.That(upgraded!.Revision).IsEqualTo(2);
+		var upgraded = upgrade.Expect<PackageApplyResult>();
+		await Assert.That(upgraded.Revision).IsEqualTo(2);
 		await Assert.That(upgraded.CreatedObjects.Count).IsEqualTo(0);
 		await Assert.That(await ReadAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-two-format");
 		await Assert.That(await EvaluateAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-two-format");
-		var upgradedRecord = await Assert.That((await Registry.GetInstalledPackageAsync("e2e-pkg")).Value)
-			.IsTypeOf<InstalledPackageRecord>();
-		await Assert.That(upgradedRecord!.Version).IsEqualTo("1.1.0");
+		var upgradedRecord = (await Registry.GetInstalledPackageAsync("e2e-pkg")).Expect<InstalledPackageRecord>();
+		await Assert.That(upgradedRecord.Version).IsEqualTo("1.1.0");
 
 		var rollback = await Installer.RollbackAsync("e2e-pkg", 1);
-		var rolledBack = await Assert.That(rollback.Value).IsTypeOf<PackageRollbackResult>();
-		await Assert.That(rolledBack!.Revision).IsEqualTo(3);
+		var rolledBack = rollback.Expect<PackageRollbackResult>();
+		await Assert.That(rolledBack.Revision).IsEqualTo(3);
 		await Assert.That(rolledBack.RestoredFromRevision).IsEqualTo(1);
 		await Assert.That(await ReadAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-one-format");
 		await Assert.That(await EvaluateAttributeAsync(boardObjid, "FN_FMT")).IsEqualTo("version-one-format");
-		var afterRollback = await Assert.That((await Registry.GetInstalledPackageAsync("e2e-pkg")).Value)
-			.IsTypeOf<InstalledPackageRecord>();
-		await Assert.That(afterRollback!.Version).IsEqualTo("1.0.0");
+		var afterRollback = (await Registry.GetInstalledPackageAsync("e2e-pkg")).Expect<InstalledPackageRecord>();
+		await Assert.That(afterRollback.Version).IsEqualTo("1.0.0");
 		await Assert.That(afterRollback.CurrentRevision).IsEqualTo(3);
 
 		var uninstall = await Installer.UninstallAsync("e2e-pkg");
@@ -529,8 +525,8 @@ public class PackageInstallServiceTests
 
 		var answers = new Dictionary<string, string> { ["host"] = hostObjid };
 		var install = await Installer.ApplyAsync(manifest, new PackageApplyRequest(Source(), answers, []));
-		var applied = await Assert.That(install.Value).IsTypeOf<PackageApplyResult>();
-		await Assert.That(applied!.CreatedObjects.Count).IsEqualTo(0);
+		var applied = install.Expect<PackageApplyResult>();
+		await Assert.That(applied.CreatedObjects.Count).IsEqualTo(0);
 
 		await Assert.That(await ReadAttributeAsync(hostObjid, "CMD_X")).IsEqualTo("$+x:@pemit %#=managed");
 		await Assert.That(await ReadAttributeAsync(hostObjid, "PRE_EXISTING")).IsEqualTo("untouched");
@@ -584,8 +580,8 @@ public class PackageInstallServiceTests
 
 		var answers = new Dictionary<string, string>();
 		var providerResult = await Installer.ApplyAsync(provider, new PackageApplyRequest(Source(), answers, []));
-		var providerApplied = await Assert.That(providerResult.Value).IsTypeOf<PackageApplyResult>();
-		var hubObjid = providerApplied!.CreatedObjects["hub"];
+		var providerApplied = providerResult.Expect<PackageApplyResult>();
+		var hubObjid = providerApplied.CreatedObjects["hub"];
 
 		// The attacher manages an attribute on the provider's object (cross-package attach).
 		await Assert.That((await Installer.ApplyAsync(attacher, new PackageApplyRequest(Source(), answers, []))).Value).IsTypeOf<PackageApplyResult>();
@@ -594,7 +590,7 @@ public class PackageInstallServiceTests
 
 		// Uninstalling the provider is blocked while the attacher is present —
 		// both by the dependency and by the attachment guard.
-		var blocked = await Assert.That((await Installer.UninstallAsync("attach-provider")).Value).IsTypeOf<Error<string>>();
+		var blocked = (await Installer.UninstallAsync("attach-provider")).Expect<Error<string>>();
 		await Assert.That(blocked.Value).Contains("attach-consumer");
 
 		await Assert.That((await Installer.UninstallAsync("attach-consumer")).Value).IsTypeOf<Success>();
@@ -634,7 +630,7 @@ public class PackageInstallServiceTests
 		await Assert.That((await Installer.ApplyAsync(basePkg, new PackageApplyRequest(Source(), answers, []))).Value).IsTypeOf<PackageApplyResult>();
 		await Assert.That((await Installer.ApplyAsync(dependent, new PackageApplyRequest(Source(), answers, []))).Value).IsTypeOf<PackageApplyResult>();
 
-		var blocked = await Assert.That((await Installer.UninstallAsync("e2e-base")).Value).IsTypeOf<Error<string>>();
+		var blocked = (await Installer.UninstallAsync("e2e-base")).Expect<Error<string>>();
 		await Assert.That(blocked.Value).Contains("e2e-child");
 
 		await Assert.That((await Installer.UninstallAsync("e2e-child")).Value).IsTypeOf<Success>();
@@ -695,19 +691,19 @@ public class PackageInstallServiceTests
 		await Assert.That(plan.Notes.Any(n => n.Contains("Registers application 'appdep'"))).IsTrue();
 
 		var apply = await Installer.ApplyAsync(appPackage, new PackageApplyRequest(Source(), answers, []));
-		var applied = await Assert.That(apply.Value).IsTypeOf<PackageApplyResult>();
-		await Assert.That(applied!.CreatedObjects.Count).IsEqualTo(0);
+		var applied = apply.Expect<PackageApplyResult>();
+		await Assert.That(applied.CreatedObjects.Count).IsEqualTo(0);
 
 		var registered = await Applications.GetApplicationAsync("appdep");
-		var app = await Assert.That(registered.Value).IsTypeOf<RegisteredApplication>();
-		await Assert.That(app!.DisplayName).IsEqualTo("Appdep Application");
+		var app = registered.Expect<RegisteredApplication>();
+		await Assert.That(app.DisplayName).IsEqualTo("Appdep Application");
 		await Assert.That(app.Kind).IsEqualTo(ApplicationKind.Page);
 		await Assert.That(app.SchemaUrl).IsEqualTo("http/appdep/schema");
 		await Assert.That(app.MinimumRole).IsEqualTo(PortalRole.Wizard);
 		await Assert.That(app.OwningPackage).IsEqualTo("appdep-app");
 
 		// The dependency cannot be removed while the application depends on it.
-		var blockedUninstall = await Assert.That((await Installer.UninstallAsync("appdep-routes")).Value).IsTypeOf<Error<string>>();
+		var blockedUninstall = (await Installer.UninstallAsync("appdep-routes")).Expect<Error<string>>();
 		await Assert.That(blockedUninstall.Value).Contains("appdep-app");
 
 		await Assert.That((await Installer.UninstallAsync("appdep-app")).Value).IsTypeOf<Success>();
@@ -742,8 +738,8 @@ public class PackageInstallServiceTests
 			""");
 
 		var install = await Installer.ApplyAsync(v1, new PackageApplyRequest(Source(), new Dictionary<string, string>(), []));
-		var applied = await Assert.That(install.Value).IsTypeOf<PackageApplyResult>();
-		var widgetObjid = applied!.CreatedObjects["widget"];
+		var applied = install.Expect<PackageApplyResult>();
+		var widgetObjid = applied.CreatedObjects["widget"];
 
 		// Attribute flags landed on the live attribute (applied additively at apply).
 		var keepFlags = await ReadAttributeFlagsAsync(widgetObjid, "FN_KEEP");
@@ -840,9 +836,9 @@ public class PackageInstallServiceTests
 
 		var answers = new Dictionary<string, string>();
 		var install = await Installer.ApplyAsync(v1, new PackageApplyRequest(Source(), answers, []));
-		var applied = await Assert.That(install.Value).IsTypeOf<PackageApplyResult>();
+		var applied = install.Expect<PackageApplyResult>();
 
-		var widget = PackageInstallService.ParseObjid(applied!.CreatedObjects["widget"])!.Value;
+		var widget = PackageInstallService.ParseObjid(applied.CreatedObjects["widget"])!.Value;
 		var hallA = PackageInstallService.ParseObjid(applied.CreatedObjects["hall_a"])!.Value;
 		var hallB = PackageInstallService.ParseObjid(applied.CreatedObjects["hall_b"])!.Value;
 
@@ -912,8 +908,8 @@ public class PackageInstallServiceTests
 			""");
 
 		var install = await Installer.ApplyAsync(v1, new PackageApplyRequest(Source(), new Dictionary<string, string>(), []));
-		var applied = await Assert.That(install.Value).IsTypeOf<PackageApplyResult>();
-		var gadgetObjid = applied!.CreatedObjects["gadget"];
+		var applied = install.Expect<PackageApplyResult>();
+		var gadgetObjid = applied.CreatedObjects["gadget"];
 
 		var flagsV1 = await ReadObjectFlagsAsync(gadgetObjid);
 		await Assert.That(flagsV1).Contains("DARK");
@@ -1038,9 +1034,8 @@ public class PackageInstallServiceTests
 			var depositedDll = System.IO.Path.Combine(pluginsRoot, "e2e-managed", "CommandOnlyPlugin.dll");
 			await Assert.That(System.IO.File.Exists(depositedDll)).IsTrue();
 
-			var record = await Assert.That((await Registry.GetInstalledPackageAsync("e2e-managed")).Value)
-				.IsTypeOf<InstalledPackageRecord>();
-			await Assert.That(record!.DeployedFiles).IsNotNull();
+			var record = (await Registry.GetInstalledPackageAsync("e2e-managed")).Expect<InstalledPackageRecord>();
+			await Assert.That(record.DeployedFiles).IsNotNull();
 			await Assert.That(record.DeployedFiles!).Contains("CommandOnlyPlugin.dll")
 				.Because("the deployed file list must round-trip through the active DB provider");
 

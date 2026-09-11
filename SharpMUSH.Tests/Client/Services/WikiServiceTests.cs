@@ -94,8 +94,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.UpdatePageAsync("home", "# Home", null);
 
-		var article = await Assert.That(result.Value).IsTypeOf<WikiArticle>();
-		await Assert.That(article!.Slug).IsEqualTo("home");
+		var article = result.Expect<WikiArticle>();
+		await Assert.That(article.Slug).IsEqualTo("home");
 	}
 
 	[Test]
@@ -105,8 +105,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.UpdatePageAsync("home", "## Updated", null);
 
-		var article = await Assert.That(result.Value).IsTypeOf<WikiArticle>();
-		await Assert.That(article!.Content).IsEqualTo("## Updated");
+		var article = result.Expect<WikiArticle>();
+		await Assert.That(article.Content).IsEqualTo("## Updated");
 	}
 
 	[Test]
@@ -116,8 +116,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.UpdatePageAsync("home", "## Updated", null);
 
-		var article = await Assert.That(result.Value).IsTypeOf<WikiArticle>();
-		await Assert.That(article!.RenderedHtml).IsEqualTo("<h2>Updated</h2>");
+		var article = result.Expect<WikiArticle>();
+		await Assert.That(article.RenderedHtml).IsEqualTo("<h2>Updated</h2>");
 	}
 
 	[Test]
@@ -127,7 +127,7 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.UpdatePageAsync("does-not-exist", "# X", null);
 
-		var text = await Assert.That(result.Value).IsTypeOf<string>();
+		var text = result.Expect<string>();
 		await Assert.That(text).Contains("404");
 	}
 
@@ -138,7 +138,7 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.UpdatePageAsync("home", "# X", null);
 
-		var text = await Assert.That(result.Value).IsTypeOf<string>();
+		var text = result.Expect<string>();
 		await Assert.That(text).Contains("500");
 	}
 
@@ -201,8 +201,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.GetWikiArticle("home");
 
-		var article = await Assert.That(result.Value).IsTypeOf<WikiArticle>();
-		await Assert.That(article!.Title).IsEqualTo("Home");
+		var article = result.Expect<WikiArticle>();
+		await Assert.That(article.Title).IsEqualTo("Home");
 		await Assert.That(article.Slug).IsEqualTo("home");
 	}
 
@@ -235,8 +235,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.CreatePageAsync("My Page", "# My Page");
 
-		var article = await Assert.That(result.Value).IsTypeOf<WikiArticle>();
-		await Assert.That(article!.Title).IsEqualTo("My Page");
+		var article = result.Expect<WikiArticle>();
+		await Assert.That(article.Title).IsEqualTo("My Page");
 		await Assert.That(article.Slug).IsEqualTo("my-page");
 	}
 
@@ -247,7 +247,7 @@ public class WikiServiceTests : TrackingTestContext
 
 		var result = await service.CreatePageAsync("Duplicate", "# Dup");
 
-		var text = await Assert.That(result.Value).IsTypeOf<string>();
+		var text = result.Expect<string>();
 		await Assert.That(text).Contains("409");
 	}
 

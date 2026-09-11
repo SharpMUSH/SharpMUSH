@@ -88,14 +88,12 @@ internal static class PackageToolApp
 		var label = DisplayLabel(manifestPath);
 		var result = service.ParseManifest(yaml);
 
-		if (result is PackageManifestFailure failure)
+		if (!result.TryGetValue(out var parsed, out var failure))
 		{
 			PrintIssues(label, failure.Issues);
 			Console.WriteLine($"FAIL  {label}: {failure.Errors.Count()} error(s).");
 			return false;
 		}
-
-		var parsed = (ParsedPackageManifest)result.Value!;
 		var warningsFail = strict && parsed.Warnings.Count > 0;
 		PrintIssues(label, parsed.Warnings);
 

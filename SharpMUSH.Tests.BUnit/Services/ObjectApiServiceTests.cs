@@ -128,9 +128,9 @@ public class ObjectApiServiceTests
 
 		var result = await service.SetAttributeAsync(7, "DESC", "x");
 
-		var failure = await Assert.That(result.Value).IsTypeOf<ApiFailure>()
-			.Because("a transport failure must be in the return type");
-		await Assert.That(failure!.Kind).IsEqualTo(ApiFailureKind.Transport);
+		if (result is not ApiFailure failure)
+			throw new InvalidOperationException("a transport failure must be in the return type");
+		await Assert.That(failure.Kind).IsEqualTo(ApiFailureKind.Transport);
 	}
 
 	[Test]

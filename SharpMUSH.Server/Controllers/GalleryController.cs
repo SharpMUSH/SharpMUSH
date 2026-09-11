@@ -87,9 +87,9 @@ public class GalleryController(
 			return Unauthorized("Missing character identity.");
 		await using var content = file.OpenReadStream();
 		var saved = await assetService.SaveAsync(file.FileName, file.ContentType, content, uploaderDbref, ct);
-		if (saved is not WikiAsset asset)
+		if (!saved.TryGetValue(out var asset, out var saveError))
 		{
-			return StatusCode(StatusCodes.Status500InternalServerError, new { error = ((Error<string>)saved.Value!).Value });
+			return StatusCode(StatusCodes.Status500InternalServerError, new { error = saveError.Value });
 		}
 
 		var entries = (await ReadGalleryAsync(character)).ToList();

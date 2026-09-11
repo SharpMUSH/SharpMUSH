@@ -286,8 +286,8 @@ public class AuthController(
 			return BadRequest("Username and Password are required.");
 
 		var result = await accountService.CreateAccountAsync(request.Username, request.Email, request.Password);
-		if (result is not SharpAccount account)
-			return Conflict(((Error<string>)result.Value!).Value);
+		if (!result.TryGetValue(out var account, out var error))
+			return Conflict(error.Value);
 
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
 		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);

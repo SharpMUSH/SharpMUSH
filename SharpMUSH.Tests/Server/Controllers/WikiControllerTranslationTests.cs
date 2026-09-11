@@ -75,8 +75,8 @@ public class WikiControllerTranslationTests
 	public async Task PutTranslation_OnAProtectedPageRequiresWikiAdmin()
 	{
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.SetProtectionAsync(page!.Id, isProtected: true);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.SetProtectionAsync(page.Id, isProtected: true);
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
@@ -91,8 +91,8 @@ public class WikiControllerTranslationTests
 	public async Task PutTranslation_OnAProtectedPageSucceedsForWikiAdmin()
 	{
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit, PortalPermission.WikiAdmin);
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.SetProtectionAsync(page!.Id, isProtected: true);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.SetProtectionAsync(page.Id, isProtected: true);
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
@@ -134,8 +134,8 @@ public class WikiControllerTranslationTests
 	public async Task PutTranslation_ReturnsConflictOnAStaleExpectedRevision()
 	{
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpsertTranslationAsync(page!.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
 		await storage.UpsertTranslationAsync(page.Id, "fr", "v2", "corps v2", "#2", null, true, expectedRevisionNumber: 1);
 
 		var result = await controller.PutTranslation(
@@ -146,8 +146,8 @@ public class WikiControllerTranslationTests
 		await Assert.That(result)
 			.IsTypeOf<ConflictObjectResult>()
 			.Because("the request was well-formed; the client's correct response is to reload, not to fix its body");
-		var stored = await Assert.That((await storage.GetTranslationAsync(page.Id, "fr")).Value).IsTypeOf<WikiTranslation>();
-		await Assert.That(stored!.MarkdownSource)
+		var stored = (await storage.GetTranslationAsync(page.Id, "fr")).Expect<WikiTranslation>();
+		await Assert.That(stored.MarkdownSource)
 			.IsEqualTo("corps v2")
 			.Because("the endpoint must never retry a conflict — that re-applies the loser's stale markdown");
 		await Assert.That(stored.RevisionNumber)
@@ -159,8 +159,8 @@ public class WikiControllerTranslationTests
 	public async Task PutTranslation_ReturnsConflictWhenCreateOnlyHitsAnExistingTranslation()
 	{
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpsertTranslationAsync(page!.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
@@ -168,8 +168,8 @@ public class WikiControllerTranslationTests
 			ns: "main", category: "general");
 
 		await Assert.That(result).IsTypeOf<ConflictObjectResult>();
-		var stored = await Assert.That((await storage.GetTranslationAsync(page.Id, "fr")).Value).IsTypeOf<WikiTranslation>();
-		await Assert.That(stored!.MarkdownSource)
+		var stored = (await storage.GetTranslationAsync(page.Id, "fr")).Expect<WikiTranslation>();
+		await Assert.That(stored.MarkdownSource)
 			.IsEqualTo("corps v1")
 			.Because("a create-only request that lost must not overwrite the row that already exists");
 	}
@@ -181,8 +181,8 @@ public class WikiControllerTranslationTests
 		// the editor loaded revision 1, somebody deleted the locale, and the save arrives with an expected
 		// revision for a row that is gone. It is a race, not a malformed body, so it is a 409.
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpsertTranslationAsync(page!.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
 		await storage.DeleteTranslationAsync(page.Id, "fr", "#3");
 
 		var result = await controller.PutTranslation(
@@ -201,8 +201,8 @@ public class WikiControllerTranslationTests
 	public async Task PutTranslation_UpdatesWithTheCurrentRevisionAndBumpsIt()
 	{
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpsertTranslationAsync(page!.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "v1", "corps v1", "#2", null, true, expectedRevisionNumber: null);
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
@@ -210,8 +210,8 @@ public class WikiControllerTranslationTests
 			ns: "main", category: "general");
 
 		await Assert.That(OkTranslation(result).RevisionNumber).IsEqualTo(2);
-		var stored = await Assert.That((await storage.GetTranslationAsync(page.Id, "fr")).Value).IsTypeOf<WikiTranslation>();
-		await Assert.That(stored!.MarkdownSource).IsEqualTo("corps v2");
+		var stored = (await storage.GetTranslationAsync(page.Id, "fr")).Expect<WikiTranslation>();
+		await Assert.That(stored.MarkdownSource).IsEqualTo("corps v2");
 	}
 
 	[Test]
@@ -222,8 +222,8 @@ public class WikiControllerTranslationTests
 		await controller.CreatePage(
 			new WikiController.CreatePageRequest("Dragons", "en body", Namespace: "main", Category: "general"));
 
-		var created = await Assert.That((await storage.GetBySlugAsync("dragons", "general", WikiNamespace.Main)).Value).IsTypeOf<WikiPage>();
-		await Assert.That(created!.SourceLocale)
+		var created = (await storage.GetBySlugAsync("dragons", "general", WikiNamespace.Main)).Expect<WikiPage>();
+		await Assert.That(created.SourceLocale)
 			.IsEqualTo("en")
 			.Because("SourceLocale is materialised at creation, not re-derived on every later read");
 	}
@@ -232,8 +232,8 @@ public class WikiControllerTranslationTests
 	public async Task GetTranslations_HidesDraftsFromAnonymousReaders()
 	{
 		var (controller, storage) = BuildAnonymous();
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpsertTranslationAsync(page!.Id, "fr", "T", "m", "#2", null, published: true, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, published: true, expectedRevisionNumber: null);
 		await storage.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.GetTranslations("dragons", ns: "main", category: "general");
@@ -246,8 +246,8 @@ public class WikiControllerTranslationTests
 	public async Task GetTranslations_ShowsDraftsToAnEditor()
 	{
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpsertTranslationAsync(page!.Id, "fr", "T", "m", "#2", null, published: true, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, published: true, expectedRevisionNumber: null);
 		await storage.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.GetTranslations("dragons", ns: "main", category: "general");
@@ -260,8 +260,8 @@ public class WikiControllerTranslationTests
 	public async Task GetTranslations_OnAnUnpublishedPageIs404ForAnonymousReaders()
 	{
 		var (controller, storage) = BuildAnonymous();
-		var page = await Assert.That((await storage.CreateAsync("Secret", "s", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.SetMetadataAsync(page!.Id, "general", [], published: false);
+		var page = (await storage.CreateAsync("Secret", "s", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.SetMetadataAsync(page.Id, "general", [], published: false);
 
 		var result = await controller.GetTranslations("secret", ns: "main", category: "general");
 
@@ -272,8 +272,8 @@ public class WikiControllerTranslationTests
 	public async Task DeleteTranslation_RemovesOneLocaleAndReturns204()
 	{
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpsertTranslationAsync(page!.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 		await storage.UpsertTranslationAsync(page.Id, "de", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
 		var result = await controller.DeleteTranslation("dragons", "fr", ns: "main", category: "general");
@@ -290,8 +290,8 @@ public class WikiControllerTranslationTests
 	public async Task DeleteTranslation_OnAProtectedPageRequiresWikiAdmin()
 	{
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpsertTranslationAsync(page!.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 		await storage.SetProtectionAsync(page.Id, isProtected: true);
 
 		var result = await controller.DeleteTranslation("dragons", "fr", ns: "main", category: "general");
@@ -315,8 +315,8 @@ public class WikiControllerTranslationTests
 	public async Task GetRevisions_WithLangReturnsThatLocaleStream()
 	{
 		var (controller, storage) = BuildAnonymous();
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "v1", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpdateAsync(page!.Id, "v2", "#1");
+		var page = (await storage.CreateAsync("Dragons", "v1", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpdateAsync(page.Id, "v2", "#1");
 		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "fr1", "#2", null, true, expectedRevisionNumber: null);
 		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "fr2", "#2", null, true, expectedRevisionNumber: 1);
 
@@ -339,8 +339,8 @@ public class WikiControllerTranslationTests
 	public async Task GetRevisions_NamingTheSourceLocaleReturnsTheSourceStream()
 	{
 		var (controller, storage) = BuildAnonymous();
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "v1", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpsertTranslationAsync(page!.Id, "fr", "T", "fr1", "#2", null, true, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "v1", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "fr1", "#2", null, true, expectedRevisionNumber: null);
 
 		var result = await controller.GetRevisions("dragons", 0, 20, "main", "general", lang: "en");
 
@@ -354,8 +354,8 @@ public class WikiControllerTranslationTests
 		// The reader cannot see the draft, so LocalizeAsync resolves to the source and the history they get
 		// is the source's. Serving the draft's revision stream would leak its prose through the diff view.
 		var (controller, storage) = BuildAnonymous();
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "v1", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpsertTranslationAsync(page!.Id, "fr", "T", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "v1", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.GetRevisions("dragons", 0, 20, "main", "general", lang: "fr");
 
@@ -370,8 +370,8 @@ public class WikiControllerTranslationTests
 		// GET /revisions/1?lang=fr answered with the English revision 1 — the history page would then show
 		// French entries and diff English bodies, which reads as a legitimate rename rather than a bug.
 		var (controller, storage) = BuildAnonymous();
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en v1", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpsertTranslationAsync(page!.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "en v1", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
 
 		var french = await controller.GetRevision("dragons", 1, "main", "general", lang: "fr");
 		var source = await controller.GetRevision("dragons", 1, "main", "general", lang: null);
@@ -390,8 +390,8 @@ public class WikiControllerTranslationTests
 		// Same rule as GetRevisions: the reader cannot see the draft, so the stream resolves to the source.
 		// Serving the draft's revision here would leak its prose one number at a time.
 		var (controller, storage) = BuildAnonymous();
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en v1", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpsertTranslationAsync(page!.Id, "fr", "T", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
+		var page = (await storage.CreateAsync("Dragons", "en v1", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "corps brouillon", "#2", null, published: false, expectedRevisionNumber: null);
 
 		var result = await controller.GetRevision("dragons", 1, "main", "general", lang: "fr");
 
@@ -405,8 +405,8 @@ public class WikiControllerTranslationTests
 		// The fallback that must NOT happen: fr has one revision, en has two, and asking fr for 2 must be
 		// a 404 rather than quietly handing back the English revision 2.
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
-		var page = await Assert.That((await storage.CreateAsync("Dragons", "en v1", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
-		await storage.UpdateAsync(page!.Id, "en v2", "#1");
+		var page = (await storage.CreateAsync("Dragons", "en v1", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
+		await storage.UpdateAsync(page.Id, "en v2", "#1");
 		await storage.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
 
 		var result = await controller.GetRevision("dragons", 2, "main", "general", lang: "fr");

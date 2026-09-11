@@ -171,10 +171,10 @@ public class WikiPrerenderLocaleTests
 	public async Task DraftTranslation_IsNeitherServedNorAdvertised()
 	{
 		var (storage, localization) = Build();
-		var page = await Assert.That((await storage.CreateAsync(
-			"Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Value).IsTypeOf<WikiPage>();
+		var page = (await storage.CreateAsync(
+			"Dragons", "en body", "#1", WikiNamespace.Main, "general", "en")).Expect<WikiPage>();
 		await storage.UpsertTranslationAsync(
-			page!.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false,
+			page.Id, "fr", "Brouillon", "corps brouillon", "#2", null, published: false,
 			expectedRevisionNumber: null);
 
 		var localized = await localization.LocalizeAsync(page, "fr", includeDrafts: false);

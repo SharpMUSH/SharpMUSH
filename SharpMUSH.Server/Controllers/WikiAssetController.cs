@@ -95,8 +95,8 @@ public partial class WikiAssetController(
 		await using var content = file.OpenReadStream();
 		var result = await assetService.SaveAsync(file.FileName, contentType, content, uploaderDbref, ct);
 
-		if (result is not WikiAsset asset)
-			return StatusCode(StatusCodes.Status500InternalServerError, new { error = ((Error<string>)result.Value!).Value });
+		if (!result.TryGetValue(out var asset, out var error))
+			return StatusCode(StatusCodes.Status500InternalServerError, new { error = error.Value });
 
 		logger.LogInformation("Wiki asset uploaded: id={Id} name={Name} size={Size} by={Uploader}",
 			asset.Id, LogSanitizer.Sanitize(asset.FileName), asset.SizeBytes, LogSanitizer.Sanitize(uploaderDbref));
@@ -113,8 +113,7 @@ public partial class WikiAssetController(
 	[AllowAnonymous]
 	public async Task<IActionResult> Serve(string id, string fileName, CancellationToken ct)
 	{
-		// The case is a tuple, which a type pattern can only name by its ValueTuple spelling.
-		if (await assetService.OpenAsync(id, ct) is not ValueTuple<WikiAsset, Stream>(var asset, var content))
+		if (await assetService.OpenAsync(id, ct) is not OpenedWikiAsset(var asset, var content))
 			return NotFound();
 
 		Response.Headers.CacheControl = "public, max-age=31536000, immutable";

@@ -30,16 +30,15 @@ public class FileSystemWikiAssetServiceTests
 			var payload = "fake png bytes";
 			var expectedSha = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
 
-			var asset = await Assert.That((await service.SaveAsync("picture.png", "image/png", Bytes(payload), "#42")).Value).IsTypeOf<WikiAsset>();
+			var asset = (await service.SaveAsync("picture.png", "image/png", Bytes(payload), "#42")).Expect<WikiAsset>();
 
-			await Assert.That(asset!.FileName).IsEqualTo("picture.png");
+			await Assert.That(asset.FileName).IsEqualTo("picture.png");
 			await Assert.That(asset.ContentType).IsEqualTo("image/png");
 			await Assert.That(asset.SizeBytes).IsEqualTo((long)payload.Length);
 			await Assert.That(asset.Sha256).IsEqualTo(expectedSha);
 			await Assert.That(asset.UploaderDbref).IsEqualTo("#42");
 
-			var (meta, stream) = await Assert.That((await service.OpenAsync(asset.Id)).Value)
-				.IsTypeOf<(WikiAsset Asset, Stream Content)>();
+			var (meta, stream) = (await service.OpenAsync(asset.Id)).Expect<OpenedWikiAsset>();
 			await Assert.That(meta).IsEqualTo(asset);
 
 			using var reader = new StreamReader(stream);
@@ -80,8 +79,8 @@ public class FileSystemWikiAssetServiceTests
 		var (service, root) = MakeService();
 		try
 		{
-			var saved = await Assert.That((await service.SaveAsync("gone.png", "image/png", Bytes("xyz"), "#1")).Value).IsTypeOf<WikiAsset>();
-			var id = saved!.Id;
+			var saved = (await service.SaveAsync("gone.png", "image/png", Bytes("xyz"), "#1")).Expect<WikiAsset>();
+			var id = saved.Id;
 
 			var deleted = await service.DeleteAsync(id);
 			await Assert.That(deleted.Value).IsTypeOf<None>();
@@ -104,8 +103,8 @@ public class FileSystemWikiAssetServiceTests
 		var (service, root) = MakeService();
 		try
 		{
-			var saved = await Assert.That((await service.SaveAsync("../../etc/pa$$ wd.png", "image/png", Bytes("data"), "#1")).Value).IsTypeOf<WikiAsset>();
-			await Assert.That(saved!.FileName).IsEqualTo("pa___wd.png");
+			var saved = (await service.SaveAsync("../../etc/pa$$ wd.png", "image/png", Bytes("data"), "#1")).Expect<WikiAsset>();
+			await Assert.That(saved.FileName).IsEqualTo("pa___wd.png");
 		}
 		finally
 		{

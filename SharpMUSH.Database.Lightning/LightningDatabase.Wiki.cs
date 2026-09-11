@@ -498,7 +498,7 @@ public partial class LightningDatabase
 		int? expectedRevisionNumber)
 	{
 		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
-		if (normalizedLocale is not string normalized) return (Error<string>)normalizedLocale.Value!;
+		if (!normalizedLocale.TryGetValue(out var normalized, out var error)) return error;
 
 		var now = DateTimeOffset.UtcNow;
 		var stamp = WikiTimestamp(now);

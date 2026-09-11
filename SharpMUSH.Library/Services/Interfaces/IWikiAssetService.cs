@@ -29,7 +29,7 @@ public interface IWikiAssetService
 	/// Opens an asset for reading. The caller owns (and must dispose) the returned stream.
 	/// Returns <c>NotFound</c> when no asset with <paramref name="id"/> exists.
 	/// </summary>
-	Task<Found<(WikiAsset Asset, Stream Content)>> OpenAsync(string id, CancellationToken ct = default);
+	Task<Found<OpenedWikiAsset>> OpenAsync(string id, CancellationToken ct = default);
 
 	/// <summary>
 	/// Lists stored asset metadata, newest first, with skip/take pagination.

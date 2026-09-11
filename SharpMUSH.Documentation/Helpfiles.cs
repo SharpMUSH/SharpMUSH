@@ -54,13 +54,11 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		foreach (var file in mdFiles)
 		{
 			var maybeIndexedFile = IndexMarkdown(file);
-			if (maybeIndexedFile is Error<string> error)
+			if (!maybeIndexedFile.TryGetValue(out var indexedFile, out var error))
 			{
 				logger?.LogWarning("Failed to index markdown helpfile {FilePath}: {Error}", file.FullName, error.Value);
 				continue;
 			}
-
-			var indexedFile = (Dictionary<string, string>)maybeIndexedFile.Value!;
 
 			foreach (var kv in indexedFile)
 			{

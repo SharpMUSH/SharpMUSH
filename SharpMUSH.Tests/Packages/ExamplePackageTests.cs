@@ -30,10 +30,8 @@ public class ExamplePackageTests
 
 	private async Task<PackageManifest> ParseAsync(string path)
 	{
-		var parsed = await Assert.That(_service.ParseManifest(await File.ReadAllTextAsync(path)).Value)
-			.IsTypeOf<ParsedPackageManifest>()
-			.Because($"{path} must parse");
-		return parsed!.Manifest;
+		var parsed = _service.ParseManifest(await File.ReadAllTextAsync(path)).Expect<ParsedPackageManifest>($"{path} must parse");
+		return parsed.Manifest;
 	}
 
 	[Test]
@@ -42,8 +40,8 @@ public class ExamplePackageTests
 		var root = ExamplesRoot();
 		var result = _service.ParseIndex(await File.ReadAllTextAsync(Path.Combine(root, "index.yaml")));
 
-		var index = await Assert.That(result.Value).IsTypeOf<PackageIndex>();
-		await Assert.That(index!.Packages.Count).IsGreaterThan(0);
+		var index = result.Expect<PackageIndex>();
+		await Assert.That(index.Packages.Count).IsGreaterThan(0);
 
 		foreach (var entry in index.Packages)
 		{
@@ -77,9 +75,8 @@ public class ExamplePackageTests
 	public async Task EveryExampleDirectoryInIndex_AndEveryManifestInIndex()
 	{
 		var root = ExamplesRoot();
-		var index = await Assert.That(_service.ParseIndex(await File.ReadAllTextAsync(Path.Combine(root, "index.yaml"))).Value)
-			.IsTypeOf<PackageIndex>();
-		var indexedPaths = index!.Packages
+		var index = _service.ParseIndex(await File.ReadAllTextAsync(Path.Combine(root, "index.yaml"))).Expect<PackageIndex>();
+		var indexedPaths = index.Packages
 			.Select(p => p.Path.TrimEnd('/'))
 			.ToHashSet(StringComparer.Ordinal);
 
@@ -104,10 +101,9 @@ public class ExamplePackageTests
 	public async Task EveryIndexEntry_AgreesWithTheManifestItSummarizes()
 	{
 		var root = ExamplesRoot();
-		var index = await Assert.That(_service.ParseIndex(await File.ReadAllTextAsync(Path.Combine(root, "index.yaml"))).Value)
-			.IsTypeOf<PackageIndex>();
+		var index = _service.ParseIndex(await File.ReadAllTextAsync(Path.Combine(root, "index.yaml"))).Expect<PackageIndex>();
 
-		foreach (var entry in index!.Packages)
+		foreach (var entry in index.Packages)
 		{
 			// An index path is relative to the repo it indexes; a rooted one would make Path.Combine
 			// silently discard the root and read some other file entirely.

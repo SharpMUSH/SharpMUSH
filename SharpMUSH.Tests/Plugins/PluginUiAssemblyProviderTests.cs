@@ -49,8 +49,7 @@ public class PluginUiAssemblyProviderTests
 		var bytes = Encoding.UTF8.GetBytes("PRETEND-WASM-ASSEMBLY-BYTES");
 		var provider = NewProvider(StagePlugin(bytes));
 
-		var served = await Assert.That((await provider.GetVerifiedAssemblyAsync(PluginId, Assembly)).Value).IsTypeOf<byte[]>()
-			.Because("matching bytes verify and are served");
+		var served = (await provider.GetVerifiedAssemblyAsync(PluginId, Assembly)).Expect<byte[]>("matching bytes verify and are served");
 		await Assert.That(served).IsEquivalentTo(bytes);
 	}
 

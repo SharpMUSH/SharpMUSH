@@ -382,9 +382,9 @@ public class PackageInstallService(
 		{
 			var spec = manifestByRef[change.Ref];
 			var createdRef = await CreateObjectAsync(spec, pmWizard, Resolve, notes, cancellationToken);
-			if (createdRef is not string createdObjid)
+			if (!createdRef.TryGetValue(out var createdObjid, out var error))
 			{
-				return (Error<string>)createdRef.Value!;
+				return error;
 			}
 
 			objidByRef[change.Ref] = createdObjid;
@@ -561,9 +561,9 @@ public class PackageInstallService(
 		if (manifest is { Kind: PackageKind.Application, Application: not null })
 		{
 			var built = BuildRegisteredApplication(manifest.Application, manifest.Name, Resolve);
-			if (built is not RegisteredApplication application)
+			if (!built.TryGetValue(out var application, out var error))
 			{
-				return (Error<string>)built.Value!;
+				return error;
 			}
 
 			await applications.UpsertApplicationAsync(application);
@@ -599,9 +599,9 @@ public class PackageInstallService(
 		}
 
 		var deployResult = await managedInstaller.DeployAsync(manifest, request, binarySource, cancellationToken);
-		if (deployResult is not IReadOnlyList<string> deployed)
+		if (!deployResult.TryGetValue(out var deployed, out var error))
 		{
-			return (Error<string>)deployResult.Value!;
+			return error;
 		}
 
 		var installed = await registry.GetInstalledPackageAsync(manifest.Name) is InstalledPackageRecord found ? found : null;

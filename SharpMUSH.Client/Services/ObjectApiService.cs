@@ -46,7 +46,7 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 	public async Task<ApiResult<MushObject>> GetObjectAsync(int dbref)
 	{
 		var summary = await SendAsync<ObjectSummaryDto>(HttpMethod.Get, $"api/objects/{dbref}");
-		if (summary is not ObjectSummaryDto dto) return (ApiFailure)summary.Value!;
+		if (!summary.TryGetValue(out var dto, out var failure)) return failure;
 
 		var attributes = await GetAttributesAsync(dbref);
 
@@ -111,7 +111,7 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 		var result = await SendAsync<CreatedObjectDto>(
 			HttpMethod.Post, "api/objects", new CreateObjectRequest(name, typeName));
 
-		if (result is not CreatedObjectDto created) return (ApiFailure)result.Value!;
+		if (!result.TryGetValue(out var created, out var failure)) return failure;
 
 		// '#N' or '#N:creationTime' — the browser addresses objects by number.
 		var number = created.Dbref.TrimStart('#').Split(':')[0];

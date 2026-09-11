@@ -336,10 +336,12 @@ public class PackagesController(
 	public async Task<ActionResult<PlanResponse>> Plan([FromBody] PlanRequest request, CancellationToken cancellationToken)
 	{
 		var fetched = await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken);
-		if (fetched is not FetchedManifest(var manifest, var warnings, var manifestSource))
+		if (!fetched.TryGetValue(out var fetchedManifest, out var response))
 		{
-			return (ActionResult)fetched.Value!;
+			return response;
 		}
+
+		var (manifest, warnings, manifestSource) = fetchedManifest;
 
 		var answers = request.ConfigureAnswers ?? new Dictionary<string, string>();
 		var changeset = await installer.PlanAsync(manifest, answers, cancellationToken);
@@ -370,10 +372,12 @@ public class PackagesController(
 	public async Task<ActionResult<ApplyResponse>> Apply([FromBody] ApplyRequest request, CancellationToken cancellationToken)
 	{
 		var fetched = await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken);
-		if (fetched is not FetchedManifest(var manifest, _, var manifestSource))
+		if (!fetched.TryGetValue(out var fetchedManifest, out var response))
 		{
-			return (ActionResult)fetched.Value!;
+			return response;
 		}
+
+		var (manifest, _, manifestSource) = fetchedManifest;
 
 		// FetchManifestAsync looked the remote up already, but it can be removed in between.
 		var isCatalogue = BundledPackages.IsCatalogueRemote(request.Remote);
@@ -462,18 +466,18 @@ public class PackagesController(
 			};
 		}
 
-		if (fetched is not PackageManifestSource manifestSource)
+		if (!fetched.TryGetValue(out var manifestSource, out var response))
 		{
-			return (ActionResult)fetched.Value!;
+			return response;
 		}
 
 		var result = manifests.ParseManifest(manifestSource.ManifestYaml);
-		if (result is not ParsedPackageManifest parsed)
+		if (!result.TryGetValue(out var parsed, out var failure))
 		{
 			return UnprocessableEntity(new
 			{
 				Message = "The manifest is invalid.",
-				Issues = ((PackageManifestFailure)result.Value!).Issues.Select(i => i.ToString()).ToList()
+				Issues = failure.Issues.Select(i => i.ToString()).ToList()
 			});
 		}
 
