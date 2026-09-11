@@ -60,6 +60,9 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 
 	public ISharpDatabase Database => _services.GetRequiredService<ISharpDatabase>();
 
+	/// <summary>The world's engine, whose object cache fronts <see cref="Database"/>.</summary>
+	public IMediator Mediator => _services.GetRequiredService<IMediator>();
+
 	public static async Task<IsolatedImportWorld> CreateAsync()
 	{
 		var useSurreal = string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER"),
@@ -72,7 +75,7 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 
 		var services = new ServiceCollection();
 		new Startup(
-				colorFile: Path.Combine(AppContext.BaseDirectory, "colors.json"),
+				colorFile: Path.Join(AppContext.BaseDirectory, "colors.json"),
 				natsUrl: UnreachableNats,
 				databaseProvider: useSurreal ? DatabaseProvider.SurrealDB : DatabaseProvider.Lightning)
 			.ConfigureServices(services, new ConfigurationBuilder().Build(), environment);
@@ -87,7 +90,16 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 				.AddInMemoryProvider();
 			surrealServices = surrealCollection.BuildServiceProvider();
 			var client = surrealServices.GetRequiredService<ISurrealDbClient>();
-			await client.Connect();
+			try
+			{
+				await client.Connect();
+			}
+			catch
+			{
+				await surrealServices.DisposeAsync();
+				throw;
+			}
+
 			services.AddSingleton(sp => new SurrealDatabase(
 				sp.GetRequiredService<ILogger<SurrealDatabase>>(), client,
 				sp.GetRequiredService<IPasswordService>(), sp.GetRequiredService<IObjectRelationLoader>(),
