@@ -202,7 +202,7 @@ public class CommandExceptionSurfacingTests
 
 		using var document = JsonDocument.Parse(PayloadOf(message));
 		await Assert.That(document.RootElement.GetProperty("type").GetString())
-			.IsEqualTo(nameof(ArgumentException));
+			.IsEqualTo(nameof(InvalidOperationException));
 		await Assert.That(document.RootElement.GetProperty("command").GetString()).IsEqualTo(CrashingCommand);
 
 		// No resolvable executor means no privilege, so the unprivileged allowlist applies.
