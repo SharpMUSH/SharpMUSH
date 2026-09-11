@@ -123,27 +123,24 @@ public static class MessageListHelper
 		return filteredList;
 	}
 
-	public static async ValueTask<ErrorOrMailList> HandleSent(IMUSHCodeParser parser, IMediator? mediator, INotifyService? notifyService, MString? arg0, AnySharpObject executor, SharpPlayer target)
+	/// <summary>
+	/// The mail <paramref name="executor"/> has sent, filtered by <paramref name="arg0"/>: to
+	/// <paramref name="recipient"/>, or to anyone when it is null. Sent mail has no folders, so a
+	/// <c>folder:</c> prefix is ignored.
+	/// </summary>
+	public static ErrorOrMailList HandleSent(IMediator mediator, MString? arg0, AnySharpObject executor, SharpPlayer? recipient)
 	{
-		await ValueTask.CompletedTask;
 		var msgList = arg0?.ToPlainText().Trim().ToLower() ?? "folder";
 		var folderSplit = msgList.Split(':');
-		var rangeSplit = msgList.Split('-');
-		IAsyncEnumerable<SharpMail> mailList;
-
 		if (folderSplit.Length == 2 && !string.IsNullOrWhiteSpace(folderSplit[0]))
 		{
-			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object(), target));
 			msgList = folderSplit[1];
 		}
-		else if (msgList == "all")
-		{
-			mailList = mediator!.CreateStream(new GetAllSentMailListQuery(executor.Object()));
-		}
-		else
-		{
-			mailList = mediator!.CreateStream(new GetSentMailListQuery(executor.Object(), target));
-		}
+
+		var rangeSplit = msgList.Split('-');
+		var mailList = recipient is null
+			? mediator.CreateStream(new GetAllSentMailListQuery(executor.Object()))
+			: mediator.CreateStream(new GetSentMailListQuery(executor.Object(), recipient));
 
 		ErrorOrMailList filteredList = msgList switch
 		{

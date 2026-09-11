@@ -75,7 +75,7 @@ public class MailCommandTests
 	}
 
 	/// <summary>
-	/// <c>@mail/review &lt;player&gt;=&lt;msglist&gt;</c> lists the named player's mail. Both of its
+	/// <c>@mail/review &lt;player&gt;=&lt;msglist&gt;</c> reads the mail the reviewer sent to that player. Both of its
 	/// guards were inverted: a non-blank name skipped the locate, and a successful list was read
 	/// through <c>AsError</c>, so the success path threw rather than printing anything. The
 	/// <c>all</c> msglist is also pinned here: it selected every folder as the source and then
@@ -102,6 +102,59 @@ public class MailCommandTests
 
 		await Assert.That(afterReview).DoesNotContain("#-1 EXCEPTION: ");
 		await Assert.That(afterReview).Contains("Subject: Review Subject");
+	}
+
+	/// <summary>
+	/// Review is of mail you sent (PennMUSH <c>do_mail_review</c> selects <c>ms.player = player</c>), so
+	/// naming another player shows only what you sent them — never their inbox.
+	/// </summary>
+	[Test]
+	public async ValueTask ReviewNeverShowsAnotherPlayersInbox()
+	{
+		var sender = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailPrivSender");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailPrivTarget");
+		var snoop = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailPrivSnoop");
+
+		await WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle).CommandParse(sender.Handle, ConnectionService,
+			MarkupText.Plain($"@mail #{target.DbRef.Number}=Private Subject/Private body."));
+
+		var beforeReview = NotificationsTo(snoop.DbRef).Length;
+
+		await WebAppFactoryArg.CommandParserFor(snoop.DbRef, snoop.Handle).CommandParse(snoop.Handle, ConnectionService,
+			MarkupText.Plain($"@mail/review #{target.DbRef.Number}=all"));
+
+		var afterReview = string.Join("\n", NotificationsTo(snoop.DbRef).Skip(beforeReview));
+
+		await Assert.That(afterReview).DoesNotContain("Private Subject");
+		await Assert.That(afterReview).DoesNotContain("Private body.");
+	}
+
+	/// <summary>
+	/// With no player, <c>@mail/review</c> covers everything you have sent, to anyone.
+	/// </summary>
+	[Test]
+	public async ValueTask ReviewWithNoPlayerCoversEverythingYouSent()
+	{
+		var sender = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailAllSender");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailAllTarget");
+		var parser = WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle);
+
+		await parser.CommandParse(sender.Handle, ConnectionService,
+			MarkupText.Plain($"@mail #{target.DbRef.Number}=Sent Subject/Sent body."));
+
+		var beforeReview = NotificationsTo(sender.DbRef).Length;
+
+		await parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain("@mail/review"));
+
+		var afterReview = string.Join("\n", NotificationsTo(sender.DbRef).Skip(beforeReview));
+
+		await Assert.That(afterReview).DoesNotContain("#-1 EXCEPTION: ");
+		await Assert.That(afterReview).Contains("Subject: Sent Subject");
 	}
 
 	private string[] NotificationsTo(DBRef target) =>

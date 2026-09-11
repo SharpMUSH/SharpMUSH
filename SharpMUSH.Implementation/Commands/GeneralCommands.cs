@@ -6519,9 +6519,7 @@ public partial class Commands
 				Mediator, NotifyService, arg0, switches),
 			[.., "DEBUG"] => await AdminMail.Handle(parser, Mediator, NotifyService, switches),
 			[.., "NUKE"] => await AdminMail.Handle(parser, Mediator, NotifyService, switches),
-			[.., "REVIEW"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
-				=> await ReviewMail.Handle(parser, LocateService, ObjectDataService, Mediator, NotifyService, arg0, arg1,
-					switches),
+			[.., "REVIEW"] => await ReviewMail.Handle(parser, LocateService, Mediator, NotifyService, arg0, arg1, switches),
 			[.., "RETRACT"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await RetractMail.Handle(parser, ObjectDataService, LocateService, Mediator, NotifyService,
 					arg0!.ToPlainText(), arg1!.ToPlainText()),

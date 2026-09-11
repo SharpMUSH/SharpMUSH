@@ -11,43 +11,50 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class ReviewMail
 {
-	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, ILocateService locateService, IExpandedObjectDataService objectDataService, IMediator mediator, INotifyService notifyService, MString? arg0, MString? msgListArg, string[] switches)
+	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, ILocateService locateService, IMediator mediator, INotifyService notifyService, MString? arg0, MString? msgListArg, string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var line = MarkupText.Plain("-").Repeat(78);
-		var name = arg0?.ToPlainText() ?? "all";
+		var name = arg0?.ToPlainText() ?? string.Empty;
 
-		if (executor is not SharpPlayer target)
+		// Review is of the mail the executor SENT (PennMUSH do_mail_review selects on the sender), so a
+		// named player narrows it to what was sent to them — it never opens that player's own mailbox.
+		if (string.IsNullOrWhiteSpace(name))
 		{
-			throw new InvalidOperationException("@mail/review is run by a player.");
-		}
-
-		if (!string.IsNullOrWhiteSpace(arg0?.ToPlainText()))
-		{
-			// extmail.c's lookup_player resolves "#1" as readily as a name, so a dbref must match too.
-			var actualPlayer = await locateService.LocateAndNotifyIfInvalid(parser,
-				executor, executor, name,
-				LocateFlags.PlayersPreference |
-				LocateFlags.MatchWildCardForPlayerName |
-				LocateFlags.MatchOptionalWildCardForPlayerName |
-				LocateFlags.OnlyMatchTypePreference |
-				LocateFlags.AbsoluteMatch);
-
-			if (actualPlayer is not (AnySharpObject and SharpPlayer located))
+			if (!string.IsNullOrWhiteSpace(msgListArg?.ToPlainText()))
 			{
-				await notifyService.Notify(executor, $"MAIL: {name} not found.", executor);
-				return MarkupText.Plain(ErrorMessages.Returns.NoSuchPlayer);
+				await notifyService.Notify(executor, "MAIL: You must specify a player.", executor);
+				return MarkupText.Empty;
 			}
 
-			target = located;
+			return await ReviewSentAsync(notifyService, mediator, executor, line, msgListArg, recipient: null);
 		}
 
-		return await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, msgListArg, target) switch
+		// extmail.c's lookup_player resolves "#1" as readily as a name, so a dbref must match too.
+		var actualPlayer = await locateService.LocateAndNotifyIfInvalid(parser,
+			executor, executor, name,
+			LocateFlags.PlayersPreference |
+			LocateFlags.MatchWildCardForPlayerName |
+			LocateFlags.MatchOptionalWildCardForPlayerName |
+			LocateFlags.OnlyMatchTypePreference |
+			LocateFlags.AbsoluteMatch);
+
+		if (actualPlayer is not (AnySharpObject and SharpPlayer recipient))
+		{
+			await notifyService.Notify(executor, $"MAIL: {name} not found.", executor);
+			return MarkupText.Plain(ErrorMessages.Returns.NoSuchPlayer);
+		}
+
+		return await ReviewSentAsync(notifyService, mediator, executor, line, msgListArg, recipient);
+	}
+
+	private static async ValueTask<MString> ReviewSentAsync(INotifyService notifyService, IMediator mediator,
+		AnySharpObject executor, MString line, MString? msgListArg, SharpPlayer? recipient)
+		=> MessageListHelper.HandleSent(mediator, msgListArg, executor, recipient) switch
 		{
 			IAsyncEnumerable<SharpMail> mailList => await ReviewAsync(notifyService, executor, line, mailList),
 			Error<string> error => MarkupText.Plain(error.Value)
 		};
-	}
 
 	private static async ValueTask<MString> ReviewAsync(INotifyService notifyService, AnySharpObject executor,
 		MString line, IAsyncEnumerable<SharpMail> mailList)
