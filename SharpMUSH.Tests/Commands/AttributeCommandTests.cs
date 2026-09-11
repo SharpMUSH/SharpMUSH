@@ -442,7 +442,7 @@ public class AttributeCommandTests
 		var owner = (await Database.GetObjectNodeAsync(new(1))).AsPlayer;
 		await Database.SetAttributeAsync(objDbRef, ["EDIT_REGEX_TEST"], MarkupText.Plain("foo123bar"), owner);
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/regexp {objDbRef}/EDIT_REGEX_TEST=\\\\d+,XXX"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/regexp {objDbRef}/EDIT_REGEX_TEST=\\d+,XXX"));
 
 		var attr = Database.GetAttributeAsync(objDbRef, ["EDIT_REGEX_TEST"]);
 		var attrList = await attr!.ToListAsync();

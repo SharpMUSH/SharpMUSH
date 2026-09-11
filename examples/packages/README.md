@@ -122,8 +122,7 @@ Two places it bites a manifest in particular:
   rule.
 - A `+help` topic body is evaluated before it is rendered, so
   `+help/list [<source>]` documents a syntax with no brackets in it. Write
-  `%[<source>%]` (or `\[<source>\]` — the manifest's backslashes reach the
-  parser intact, unlike a client-typed `&`).
+  `%[<source>%]` or `\[<source>\]`.
 
 ### Refs: `{{...}}` tokens, never dbrefs
 
