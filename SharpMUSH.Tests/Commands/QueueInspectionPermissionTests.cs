@@ -7,6 +7,26 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+/// <summary>
+/// A mortal may not read or change a queue entry that is not theirs.
+/// </summary>
+/// <remarks>
+/// <para><c>[NotInParallel]</c>: every case here parks a semaphore entry on the scheduler, asserts
+/// against it, and halts it again in its <c>finally</c> — and <see cref="ServerWebAppFactory"/> makes
+/// that scheduler session-wide. Run in parallel, the five cases interleave those three phases on one
+/// shared ledger, and the assertion failed in a full suite run while passing in isolation: the entry
+/// was gone by the time the mortal's command looked it up, so the command failed on the lookup
+/// (<c>#-1 NO SUCH PID</c> / <c>INVALID PID</c> / <c>NOT FOUND</c>) before it could reach the
+/// permission check the test exists to measure. Tracing every removal showed all of them going
+/// through <c>HaltByPid</c>, never a timeout firing.</para>
+///
+/// <para>This is the same reason <c>QueueQuotaTests</c> and <c>QueueControlCommandTests</c> carry the
+/// attribute, and this class was the only queue suite without it. Note what it does and does not buy:
+/// it serialises these cases against each other and against the other <c>[NotInParallel]</c> classes,
+/// but it does not pause the rest of the session — a class without the attribute still runs
+/// alongside.</para>
+/// </remarks>
+[NotInParallel]
 public class QueueInspectionPermissionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
