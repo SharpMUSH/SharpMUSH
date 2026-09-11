@@ -34,37 +34,12 @@ public partial class Functions
 
 		var results = new List<MString>(tokens.Length);
 
-		foreach (var objAttr in tokens.Select(HelperFunctions.SplitOptionalObjectAndAttr))
+		foreach (var token in tokens)
 		{
-			if (objAttr is not { Object: var dbref, Attribute: var attrName })
+			if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, token)).TryGetValue(out var function, out var refusal))
 			{
-				return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
+				return errors.Complete(refusal);
 			}
-
-			dbref ??= executor.Object().DBRef.ToString();
-
-			var locate = await LocateService.LocateAndNotifyIfInvalid(
-				parser, executor, executor, dbref, LocateFlags.All);
-			if (!locate.IsValid())
-			{
-				return errors.Complete(CallState.Empty);
-			}
-
-			var located = locate.WithoutError().WithoutNone();
-
-			var maybeAttr = await AttributeService.GetAttributeAsync(
-				executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
-			if (maybeAttr.IsNone)
-			{
-				return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
-			}
-
-			if (maybeAttr.IsError)
-			{
-				return errors.Complete(new CallState(maybeAttr.AsError.Value));
-			}
-
-			var attrValue = maybeAttr.AsAttribute.Last().Value;
 
 			var env = new Dictionary<string, CallState> { ["0"] = new CallState(input) };
 
@@ -74,7 +49,7 @@ public partial class Functions
 				EnvironmentRegisters = env
 			});
 
-			results.Add(errors.Record(await stepParser.FunctionParse(attrValue)));
+			results.Add(errors.Record(await AttributeService.CallAttributeFunctionAsync(stepParser, function)));
 		}
 
 		return errors.Complete(new CallState(MarkupText.Join(osep, results)));

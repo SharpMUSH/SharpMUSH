@@ -30,7 +30,7 @@ public class AttributeService(
 		AnySharpObject obj,
 		string attribute,
 		IAttributeService.AttributeMode mode,
-		bool checkParent = true)
+		bool parent = true)
 	{
 		var cancellationToken = ExecutionBudget.CurrentToken;
 		cancellationToken.ThrowIfCancellationRequested();
@@ -59,7 +59,7 @@ public class AttributeService(
 		};
 
 		var attributeResult = mediator.CreateStream(
-			new GetAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, checkParent), cancellationToken);
+			new GetAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, parent), cancellationToken);
 
 		var result = await attributeResult.FirstOrDefaultAsync(cancellationToken);
 		cancellationToken.ThrowIfCancellationRequested();
@@ -67,7 +67,7 @@ public class AttributeService(
 		// PennMUSH ancestor fall-through: after the object's own @parent chain is exhausted,
 		// consult the type ancestor (ANCESTOR_ROOM/PLAYER/EXIT/THING). Only when parent-checking
 		// is enabled and nothing was found on the object or its parents.
-		if (result == null && checkParent)
+		if (result == null && parent)
 		{
 			var ancestor = await GetAncestorAttributeAsync(obj, attributePath);
 			if (ancestor == null)
@@ -279,7 +279,7 @@ public class AttributeService(
 
 	public async ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute,
-		IAttributeService.AttributeMode mode, bool checkParent = true)
+		IAttributeService.AttributeMode mode, bool parent = true)
 	{
 		if (!await CheckReadAsync(() => validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj)))
 		{
@@ -302,13 +302,13 @@ public class AttributeService(
 		};
 
 		var attributeResult = mediator.CreateStream(
-			new GetLazyAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, checkParent), ExecutionBudget.CurrentToken);
+			new GetLazyAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, parent), ExecutionBudget.CurrentToken);
 
 		var result = await attributeResult.FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
 		ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
 
 		// PennMUSH ancestor fall-through (lazy): see GetAttributeAsync for full semantics.
-		if (result == null && checkParent)
+		if (result == null && parent)
 		{
 			var ancestor = await GetLazyAncestorAttributeAsync(obj, attributePath);
 			if (ancestor == null)
@@ -430,18 +430,30 @@ public class AttributeService(
 			return CallState.Empty;
 		}
 
-		// PennMUSH: a HALTED object runs none of its softcode. process_expression returns
-		// PE_NOTHING for a Halted executor (src/parse.c), so u()/ufun and any attribute evaluated
-		// as that object yield the stored text unevaluated rather than its result. The HALT flag is
-		// set by @halt and by @chown (to break ownership loops); until now nothing enforced it, so a
-		// halted object kept running. The attribute runs as obj (Executor = obj below), so obj's
-		// flag is the one that matters.
-		if (await obj.HasFlag("HALT", ExecutionBudget.CurrentToken))
-		{
-			return new CallState(attr.AsAttribute.Last().Value);
-		}
+		var function = new AttributeFunction(obj, attr.AsAttribute.Last().LongName.ToUpper(), attr.AsAttribute.Last().Value);
+		return await RunAsOwnerAsync(parser, function, s => s with { Arguments = args, EnvironmentRegisters = args });
+	}
 
-		var attributeName = attr.AsAttribute.Last().LongName!.ToUpper();
+	public ValueTask<CallState> CallAttributeFunctionAsync(IMUSHCodeParser parser, AttributeFunction function)
+		=> RunAsOwnerAsync(parser, function, s => s);
+
+	/// <summary>
+	/// PennMUSH's <c>call_ufun</c>: the attribute runs as the object it was read from, with the current
+	/// executor as caller.
+	/// </summary>
+	private async ValueTask<CallState> RunAsOwnerAsync(IMUSHCodeParser parser, AttributeFunction function,
+		Func<ParserState, ParserState> withArguments)
+	{
+		var (owner, attributeName, code) = function;
+
+		// PennMUSH: a HALTED object runs none of its softcode. process_expression returns PE_NOTHING for a
+		// halted executor (src/parse.c), so the attribute yields its stored text unevaluated. The HALT flag is
+		// set by @halt and by @chown (to break ownership loops). The code runs as its owner, so the owner's
+		// flag is the one that matters.
+		if (await owner.HasFlag("HALT", ExecutionBudget.CurrentToken))
+		{
+			return new CallState(code);
+		}
 
 		// Use shared tracking collections from parser state.
 		// These are guaranteed to be non-null because:
@@ -469,17 +481,15 @@ public class AttributeService(
 		try
 		{
 			var result = await parser.With(s =>
-					s with
+					withArguments(s) with
 					{
-						Arguments = args,
-						EnvironmentRegisters = args,
-						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attributeName),
+						CurrentEvaluation = new DBAttribute(owner.Object().DBRef, attributeName),
 						Function = attributeName,
-						Executor = obj.Object().DBRef,
+						Executor = owner.Object().DBRef,
 						Caller = s.Executor
 					},
 				async newParser =>
-					await newParser.FunctionParse(attr.AsAttribute.Last().Value));
+					await newParser.FunctionParse(code));
 
 			return result ?? CallState.Empty;
 		}
@@ -516,6 +526,30 @@ public class AttributeService(
 		bool ignorePermissions = false, bool ignoreLambda = false)
 		=> (await EvaluateAttributeFunctionResultAsync(parser, executor, objAndAttribute, args,
 			evalParent, ignorePermissions, ignoreLambda)).Message ?? MarkupText.Empty;
+
+	public async ValueTask<AttributeFunctionFetch> FetchAttributeFunctionAsync(IMUSHCodeParser parser,
+		AnySharpObject executor, string objectAndAttribute)
+	{
+		if (HelperFunctions.SplitOptionalObjectAndAttr(objectAndAttribute) is not { Object: var objectName, Attribute: var attributeName })
+		{
+			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
+		}
+
+		var located = await locateService.LocateAndNotifyIfInvalid(parser, executor, executor,
+			objectName ?? executor.Object().DBRef.ToString(), LocateFlags.All);
+		if (!located.IsValid())
+		{
+			return CallState.Empty;
+		}
+
+		var owner = located.WithoutError().WithoutNone();
+		return await GetAttributeAsync(executor, owner, attributeName, IAttributeService.AttributeMode.Execute, parent: true) switch
+		{
+			SharpAttribute[] chain => new AttributeFunction(owner, chain.Last().LongName.ToUpper(), chain.Last().Value),
+			None => new CallState(ErrorMessages.Returns.NoSuchAttribute),
+			Error<string> error => new CallState(error.Value)
+		};
+	}
 
 	public async ValueTask<CallState> EvaluateAttributeFunctionResultAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		MString objAndAttribute,

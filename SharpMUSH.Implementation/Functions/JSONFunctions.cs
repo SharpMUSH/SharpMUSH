@@ -7,6 +7,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
@@ -115,13 +116,13 @@ public partial class Functions
 			userArgs[i.ToString()] = parser.CurrentState.Arguments[i.ToString()];
 		}
 
-		// Resolved attribute text for the standard (non-lambda) path; only set in the if-block below.
-		MString attrValue = MarkupText.Empty;
+		// The fetched attribute for the standard (non-lambda) path; only set in the if-block below.
+		var function = default(AttributeFunction);
 		var hadErrors = separatorResult.HadErrors;
 
 		// Helper to evaluate a function call (attribute or lambda) with a given args dict.
 		// For #lambda / #apply, EvaluateAttributeFunctionAsync handles the special prefix.
-		// For regular attribute references, we use the pre-resolved attrValue via FunctionParse.
+		// For regular attribute references, we run the attribute fetched below.
 		async ValueTask<MString> EvalWithArgs(Dictionary<string, CallState> callArgs)
 		{
 			if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
@@ -136,7 +137,7 @@ public partial class Functions
 				Arguments = callArgs,
 				EnvironmentRegisters = callArgs
 			});
-			var parsed = await callParser.FunctionParse(attrValue);
+			var parsed = await AttributeService.CallAttributeFunctionAsync(callParser, function);
 			hadErrors |= parsed?.HadErrors == true;
 			return parsed?.Message ?? MarkupText.Empty;
 		}
@@ -144,34 +145,10 @@ public partial class Functions
 		if (!HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
 			var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
-			if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
+			if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out function, out var refusal))
 			{
-				return new CallState(ErrorMessages.Returns.ObjectAttributeString) { HadErrors = hadErrors };
+				return refusal with { HadErrors = hadErrors };
 			}
-
-			dbref ??= executor.Object().DBRef.ToString();
-
-			var locate = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All);
-			if (!locate.IsValid())
-			{
-				return CallState.Empty with { HadErrors = hadErrors };
-			}
-
-			var located = locate.WithoutError().WithoutNone();
-			var maybeAttr = await AttributeService.GetAttributeAsync(executor, located, attrName,
-				mode: IAttributeService.AttributeMode.Execute, parent: true);
-
-			if (maybeAttr.IsNone)
-			{
-				return new CallState(ErrorMessages.Returns.NoSuchAttribute) { HadErrors = hadErrors };
-			}
-
-			if (maybeAttr.IsError)
-			{
-				return new CallState(maybeAttr.AsError.Value) { HadErrors = hadErrors };
-			}
-
-			attrValue = maybeAttr.AsAttribute.Last().Value;
 		}
 
 		try

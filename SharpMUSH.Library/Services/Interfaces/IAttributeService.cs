@@ -57,6 +57,26 @@ public interface IAttributeService
 	/// </summary>
 	ValueTask<Result<Success>> SetAttributeFlagsAsync(AnySharpObject executor, AnySharpObject obj, string attribute, IReadOnlyList<string> flagTokens);
 
+	/// <summary>
+	/// Fetches the attribute a function such as <c>map()</c> or <c>filter()</c> runs for each element —
+	/// PennMUSH's <c>fetch_ufun_attrib</c>. <paramref name="objectAndAttribute"/> is
+	/// <c>[&lt;object&gt;/]&lt;attribute&gt;</c>, and a bare attribute name is read from
+	/// <paramref name="executor"/>.
+	/// </summary>
+	/// <returns>The attribute and the object it came from, or the <see cref="CallState"/> to return
+	/// instead: a malformed specification, a missing attribute, or no access to it. An object that
+	/// cannot be found has already been reported to the executor, and returns empty.</returns>
+	ValueTask<AttributeFunctionFetch> FetchAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		string objectAndAttribute);
+
+	/// <summary>
+	/// Runs a fetched attribute once — PennMUSH's <c>call_ufun</c>, the same rules <c>u()</c> follows: the code
+	/// runs as <see cref="AttributeFunction.Owner"/> with the current executor as caller, a HALTed owner
+	/// yields the stored text unevaluated, and each call counts toward the function recursion limit.
+	/// </summary>
+	/// <param name="parser">A parser already carrying this call's arguments and registers.</param>
+	ValueTask<CallState> CallAttributeFunctionAsync(IMUSHCodeParser parser, AttributeFunction function);
+
 	ValueTask<MString> EvaluateAttributeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject obj,
 		string attribute, Dictionary<string, CallState> args, bool evalParent = true, bool ignorePermissions = false);
 

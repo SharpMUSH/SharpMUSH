@@ -100,35 +100,10 @@ public partial class Functions
 		}
 		else
 		{
-			if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
+			if (!(await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr)).TryGetValue(out var function, out var refusal))
 			{
-				return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
+				return errors.Complete(refusal);
 			}
-
-			dbref ??= executor.Object().DBRef.ToString();
-
-			var locate = await LocateService.LocateAndNotifyIfInvalid(
-				parser, executor, executor, dbref, LocateFlags.All);
-			if (!locate.IsValid())
-			{
-				return errors.Complete(CallState.Empty);
-			}
-
-			var located = locate.WithoutError().WithoutNone();
-
-			var maybeAttr = await AttributeService.GetAttributeAsync(
-				executor, located, attrName, mode: IAttributeService.AttributeMode.Execute, parent: true);
-			if (maybeAttr.IsNone)
-			{
-				return errors.Complete(new CallState(ErrorMessages.Returns.NoSuchAttribute));
-			}
-
-			if (maybeAttr.IsError)
-			{
-				return errors.Complete(new CallState(maybeAttr.AsError.Value));
-			}
-
-			var attrValue = maybeAttr.AsAttribute.Last().Value;
 
 			foreach (var item in list)
 			{
@@ -138,7 +113,7 @@ public partial class Functions
 					EnvironmentRegisters = new Dictionary<string, CallState> { ["0"] = new CallState(item) }
 				});
 
-				if (errors.Record(await newParser.FunctionParse(attrValue)).Truthy(parser))
+				if (errors.Record(await AttributeService.CallAttributeFunctionAsync(newParser, function)).Truthy(parser))
 				{
 					sawPass = true;
 

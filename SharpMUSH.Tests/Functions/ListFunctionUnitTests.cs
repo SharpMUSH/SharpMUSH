@@ -185,6 +185,9 @@ public class ListFunctionUnitTests
 	[Arguments("sort(0.0 0 0.3 *foo*,f)", "0.0 0 *foo* 0.3")]
 	[Arguments("sort(3 1 foo 2 bar,f)", "foo bar 1 2 3")]
 	[Arguments("sort(z a 0 -1 3,f)", "-1 z a 0 3")]
+	// Sorting by location compares each object's loc(); the key used to be an unawaited task, so any
+	// two distinct keys threw and the sort returned nothing.
+	[Arguments("sort(#2 #0,loc)", "#0 #2")]
 	// Penn sort.3/sort.4 — ANSI-aware sort. SharpMUSH preserves ANSI through sort
 	// (superior behavior), so sorted output retains formatting. PennMUSH strips it.
 	// Comparison is correct in both — only output representation differs.
@@ -202,6 +205,19 @@ public class ListFunctionUnitTests
 		var functionWithDbRef = function.Replace("test", $"#{objNum}");
 		var result = (await Parser.FunctionParse(MarkupText.Plain(functionWithDbRef)))?.Message!;
 		await Assert.That(result.ToString()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>call_ufun</c> runs the attribute as the object it was read from, as <c>u()</c> does
+	/// (<c>utils.c</c>, <c>process_expression(…, ufun->thing, caller, enactor, …)</c>), so <c>me</c> inside
+	/// it is that object, not the caller.
+	/// </summary>
+	[Test]
+	public async Task MapRunsTheAttributeAsItsObject()
+	{
+		var objNum = await CreateObjectWithAttribute("map_me_obj", "WHOAMI", "[num(me)]");
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"map(#{objNum}/WHOAMI,a b)")))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo($"#{objNum} #{objNum}");
 	}
 
 	[Test, NotInParallel]
