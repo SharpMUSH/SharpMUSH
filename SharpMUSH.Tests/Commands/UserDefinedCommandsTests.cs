@@ -248,8 +248,7 @@ public class UserDefinedCommandsTests
 	/// handed <c>(?\:</c>, <c>CommandAttributeScanner</c>'s catch swallows the ArgumentException, and
 	/// the command silently ceases to exist — the symptom is "Huh?", never an error message.
 	/// <para>
-	/// <c>\\:</c> in the typed line is what stores <c>\:</c>: the attribute value is evaluated on set,
-	/// same as it is in Penn.
+	/// A client-typed <c>&amp;</c> stores its value as written, so <c>\:</c> typed is <c>\:</c> stored.
 	/// </para>
 	/// </summary>
 	[Test]
@@ -259,7 +258,7 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRxNoCap");
 		var token = TestIsolationHelpers.GenerateUniqueName("ucnc");
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($@"&UTEST_RXNOCAP {obj}=${token} (?\\:at|toward) ([A-Za-z]+):@emit {token}: %1"));
+			MarkupText.Plain($@"&UTEST_RXNOCAP {obj}=${token} (?\:at|toward) ([A-Za-z]+):@emit {token}: %1"));
 		await Parser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@set {obj}/UTEST_RXNOCAP=regexp"));
 
@@ -284,7 +283,7 @@ public class UserDefinedCommandsTests
 		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcColon");
 		var token = TestIsolationHelpers.GenerateUniqueName("ucc");
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($@"&UTEST_COLON {obj}=${token}\\:go *:@emit {token}: %0"));
+			MarkupText.Plain($@"&UTEST_COLON {obj}=${token}\:go *:@emit {token}: %0"));
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}:go north"));
 
