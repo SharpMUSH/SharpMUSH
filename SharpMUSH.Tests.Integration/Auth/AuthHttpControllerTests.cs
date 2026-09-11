@@ -101,11 +101,7 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
 	}
 
-	// Plain non-staff account-login expecting success races the shared Net.Logins substitute
-	// mutated by LoginsConfigApiTests/SwitchCharacterTests/PlayerCreationApiTests/
-	// AdminAccountsApiTests — see the comment on AdminAccountsApiTests'
-	// UnlinkCharacter_RemovesItFromTargetsCharacterList for the full explanation.
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task AccountLogin_CorrectPassword_ReturnsSessionAndCharacters()
 	{
 		var (http, account) = await RegisterAccountAsync();
@@ -121,9 +117,7 @@ public class AuthHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(login.Characters.Count).IsEqualTo(1);
 	}
 
-	// Same Net.Logins race as AccountLogin_CorrectPassword_ReturnsSessionAndCharacters above:
-	// mush-token via account session is gated by Net.Logins too.
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task MushToken_ViaAccountSession_IssuesOttWithoutCharacterPassword()
 	{
 		var (http, account) = await RegisterAccountAsync();

@@ -141,6 +141,10 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 				sc.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
 				sc.AddSingleton(substitute);
 
+				// The TestServer otherwise runs each request on a fresh execution context, which drops
+				// the TestOptionsOverride scope of the test that sent it.
+				sc.Configure<TestServerOptions>(options => options.PreserveExecutionContext = true);
+
 				// Services that take IOptionsMonitor<SharpMUSHOptions> directly (PermissionService is
 				// the notable one) never see the wrapper, so the scoped override is applied here too.
 				sc.AddSingleton<IOptionsMonitor<SharpMUSHOptions>>(sp =>

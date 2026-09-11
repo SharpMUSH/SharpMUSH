@@ -285,10 +285,7 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That(authenticated!.MustChangePassword).IsTrue();
 	}
 
-	// A plain non-staff account-login expecting success races the same shared
-	// IOptionsWrapper<SharpMUSHOptions> Net.Logins substitute as LoginsConfigApiTests et al.
-	// (see the comment on UnlinkCharacter_RemovesItFromTargetsCharacterList below).
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task AccountLogin_ReturnsRoleAndPermissions()
 	{
 		var (http, account) = await RegisterAccountAsync();
@@ -301,11 +298,9 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 	/// <summary>
 	/// Shares <c>GodAccount_CanListAndResetPassword</c>'s <c>NotInParallel("SetupFlow", Order = 6)</c>
 	/// group for the same reason documented on the class: it logs in as the God-linked bootstrap
-	/// admin, which mutates the shared #1-linked account's password/SetupCompleted state. Also
-	/// claims "ConfigMutation": <c>restoredLogin</c> below expects a plain non-staff account-login
-	/// to succeed (see the comment on <c>UnlinkCharacter_RemovesItFromTargetsCharacterList</c>).
+	/// admin, which mutates the shared #1-linked account's password/SetupCompleted state.
 	/// </summary>
-	[Test, NotInParallel(["SetupFlow", "ConfigMutation"], Order = 6)]
+	[Test, NotInParallel("SetupFlow", Order = 6)]
 	public async Task Disable_Enable_RoundTrip_BlocksThenRestoresLogin()
 	{
 		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
@@ -329,9 +324,7 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That(restoredLogin.StatusCode).IsEqualTo(HttpStatusCode.OK);
 	}
 
-	// Also claims "ConfigMutation": targetLogin below expects a plain non-staff account-login to
-	// succeed (see the comment on UnlinkCharacter_RemovesItFromTargetsCharacterList below).
-	[Test, NotInParallel(["SetupFlow", "ConfigMutation"], Order = 6)]
+	[Test, NotInParallel("SetupFlow", Order = 6)]
 	public async Task Disable_RevokesTargetsExistingSession()
 	{
 		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
@@ -353,9 +346,7 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That(charsResponse.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
 	}
 
-	// Also claims "ConfigMutation": targetLogin below expects a plain non-staff account-login to
-	// succeed (see the comment on UnlinkCharacter_RemovesItFromTargetsCharacterList below).
-	[Test, NotInParallel(["SetupFlow", "ConfigMutation"], Order = 6)]
+	[Test, NotInParallel("SetupFlow", Order = 6)]
 	public async Task ResetPassword_RevokesTargetsExistingSession()
 	{
 		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
@@ -383,12 +374,7 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That(charsResponse.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
 	}
 
-	// Also claims "ConfigMutation": the re-authentication below expects api/auth/account-login
-	// to succeed for a plain non-staff account, which fails if a concurrent LoginsConfigApiTests/
-	// SwitchCharacterTests/PlayerCreationApiTests test has Net.Logins flipped off at that instant
-	// on the shared IOptionsWrapper<SharpMUSHOptions> substitute. "SetupFlow" and "ConfigMutation"
-	// are independent NotInParallel domains (see the class doc above), so both keys are required.
-	[Test, NotInParallel(["SetupFlow", "ConfigMutation"], Order = 6)]
+	[Test, NotInParallel("SetupFlow", Order = 6)]
 	public async Task UnlinkCharacter_RemovesItFromTargetsCharacterList()
 	{
 		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();

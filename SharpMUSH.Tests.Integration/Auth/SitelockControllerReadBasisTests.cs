@@ -30,7 +30,7 @@ namespace SharpMUSH.Tests.Integration.Auth;
 /// </para>
 /// </summary>
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-[NotInParallel("ConfigMutation")]
+[NotInParallel("PersistedOptions")]
 public class SitelockControllerReadBasisTests(ServerWebAppFactory factory)
 {
 	private ISharpDatabase Database => factory.Services.GetRequiredService<ISharpDatabase>();
