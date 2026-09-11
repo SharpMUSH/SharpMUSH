@@ -120,6 +120,19 @@ public interface IAttributeStore
 	ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Sets each of <paramref name="attributes"/> on one object, in order, exactly as
+	/// <see cref="SetAttributeAsync"/> would, and adds each write's flags to its leaf. No checks, as with
+	/// every write here.
+	/// </summary>
+	/// <remarks>
+	/// The object is read once rather than once per attribute, and the writes share a transaction; a
+	/// provider may split a long list across several, so a failure part-way can leave the earlier ones
+	/// written.
+	/// </remarks>
+	/// <returns>False when the object does not exist, having written nothing, or when the store refused a write.</returns>
+	ValueTask<bool> SetAttributesAsync(DBRef dbref, IReadOnlyList<AttributeWrite> attributes, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Bulk-reassigns all attributes owned by <paramref name="oldOwner"/> to <paramref name="newOwner"/>.
 	/// Used when a player is deleted so that surviving attributes are transferred to the probate player.
 	/// This operates at the edge/relationship level for efficiency.

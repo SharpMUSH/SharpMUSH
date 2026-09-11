@@ -170,16 +170,9 @@ public partial class SurrealDatabase
 	private async ValueTask<bool> SetAttributeAsyncCore(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default)
 	{
 		attribute = attribute.Select(x => x.ToUpper()).ToArray();
-		var objKey = dbref.Number;
-		var ownerKey = ExtractKey(owner.Id!);
-		var serializedValue = MarkupTextSerializer.Serialize(value);
 
-		var objParams = new Dictionary<string, object?> { ["key"] = objKey };
-		var objResult = await ExecuteAsync("SELECT * FROM object:$key", objParams, cancellationToken);
-		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
-		if (objRecords.Count == 0) return false;
-
-		var typedRecordId = GetSurrealRecordId(objRecords[0].type.ToLower(), objKey);
+		var typedRecordId = await TypedRecordIdAsync(dbref, cancellationToken);
+		if (typedRecordId is null) return false;
 
 		// Read each level's default-flag config up front so the write below can run as a single
 		// transaction with no interleaved reads.
@@ -191,87 +184,170 @@ public partial class SurrealDatabase
 			defaultFlagsPerLevel.Add(attrEntry?.DefaultFlags ?? []);
 		}
 
-		// The entire attribute write is ONE transaction: every attribute node, its edge to its parent,
-		// its owner edge, and its flags are committed together. No partial state is ever visible to a
-		// concurrent reader — a newly-created node (leaf or auto-created branch parent) is never observed
-		// owner-less (which would crash examine via GetAttributeOwnerAsync), and a re-set re-owns atomically.
-		// ExecuteAsync inlines $params textually, so each value gets a distinctive, unique param name to
-		// avoid cross-statement token collisions.
-		var txnParams = new Dictionary<string, object?>();
-		var paramCounter = 0;
-		string P(object? v)
+		var transaction = new AttributeTransaction(typedRecordId, dbref.Number, storedFlagNames: null);
+		transaction.Append(attribute, value, owner, defaultFlagsPerLevel, []);
+		return await transaction.CommitAsync(this, cancellationToken);
+	}
+
+	/// <summary>
+	/// The object, the attribute-entry table and the attribute-flag table are read once, and the writes go
+	/// in transactions of <see cref="AttributeWritesPerTransaction"/>, rather than an object read, an entry
+	/// read per level and a transaction for every attribute. Knowing each flag's stored name lets its
+	/// lookup use the name index instead of upper-casing every row of the table.
+	/// </summary>
+	public async ValueTask<bool> SetAttributesAsync(DBRef dbref, IReadOnlyList<AttributeWrite> attributes, CancellationToken cancellationToken = default)
+	{
+		var typedRecordId = await TypedRecordIdAsync(dbref, cancellationToken);
+		if (typedRecordId is null) return false;
+
+		var defaultFlags = await GetAllAttributeEntriesAsync(cancellationToken)
+			.ToDictionaryAsync(entry => entry.Name, entry => entry.DefaultFlags, StringComparer.Ordinal, cancellationToken);
+		var storedFlagNames = await GetAttributeFlagsAsync(cancellationToken)
+			.ToDictionaryAsync(flag => flag.Name, flag => flag.Name, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+		var committed = true;
+		foreach (var chunk in attributes.Where(write => write.Path.Length > 0).Chunk(AttributeWritesPerTransaction))
 		{
-			var name = $"txnp{paramCounter++}";
-			txnParams[name] = v;
+			var transaction = new AttributeTransaction(typedRecordId, dbref.Number, storedFlagNames);
+			foreach (var write in chunk)
+			{
+				var path = write.Path.Select(x => x.ToUpper()).ToArray();
+				var defaultFlagsPerLevel = Enumerable.Range(1, path.Length)
+					.Select(length => defaultFlags.GetValueOrDefault(string.Join('`', path, 0, length)) ?? [])
+					.ToList();
+				transaction.Append(path, write.Value, write.Owner, defaultFlagsPerLevel, write.Flags.Select(flag => flag.Name));
+			}
+
+			committed &= await transaction.CommitAsync(this, cancellationToken);
+		}
+
+		return committed;
+	}
+
+	/// <summary>
+	/// Enough to amortise a round trip over, few enough that one query stays a modest string to build and
+	/// parse: an object with thousands of attributes is not one statement list thousands long.
+	/// </summary>
+	private const int AttributeWritesPerTransaction = 64;
+
+	/// <summary>The object's record id under its type's table, or null when it does not exist.</summary>
+	private async ValueTask<string?> TypedRecordIdAsync(DBRef dbref, CancellationToken cancellationToken)
+	{
+		var objParams = new Dictionary<string, object?> { ["key"] = dbref.Number };
+		var objResult = await ExecuteAsync("SELECT * FROM object:$key", objParams, cancellationToken);
+		var objRecords = objResult.GetValue<List<ObjectRecord>>(0)!;
+		return objRecords.Count == 0 ? null : GetSurrealRecordId(objRecords[0].type.ToLower(), dbref.Number);
+	}
+
+	/// <summary>
+	/// One or more attribute sets on one object as a single transaction: every attribute node, its edge to
+	/// its parent, its owner edge, and its flags are committed together. No partial state is ever visible
+	/// to a concurrent reader — a newly-created node (leaf or auto-created branch parent) is never observed
+	/// owner-less (which would crash examine via GetAttributeOwnerAsync), and a re-set re-owns atomically.
+	/// </summary>
+	/// <remarks>
+	/// ExecuteAsync inlines $params textually, so each value gets a distinctive, unique param name to
+	/// avoid cross-statement token collisions.
+	/// </remarks>
+	/// <param name="storedFlagNames">Each attribute flag's name as the table stores it, keyed without regard
+	/// to case, when the caller has read the table. Without it a flag is matched by upper-casing the table's
+	/// names.</param>
+	private sealed class AttributeTransaction(string typedRecordId, int objKey,
+		IReadOnlyDictionary<string, string>? storedFlagNames)
+	{
+		private readonly Dictionary<string, object?> _parameters = [];
+		private readonly StringBuilder _statements = new("BEGIN TRANSACTION;");
+		private int _nodes;
+
+		private string P(object? v)
+		{
+			var name = $"txnp{_parameters.Count}";
+			_parameters[name] = v;
 			return $"${name}";
 		}
 
-		var sb = new StringBuilder();
-		sb.Append("BEGIN TRANSACTION;");
-
-		// 1. Attribute nodes + the edge linking each to its parent.
-		for (var i = 0; i < attribute.Length; i++)
+		/// <summary>
+		/// The statements for one attribute set, <paramref name="attribute"/> already upper-cased, with
+		/// <paramref name="leafFlags"/> added to its leaf beside the entry defaults.
+		/// </summary>
+		public void Append(string[] attribute, MString value, SharpPlayer owner, IReadOnlyList<string[]> defaultFlagsPerLevel,
+			IEnumerable<string> leafFlags)
 		{
-			var attrName = attribute[i];
-			var longName = string.Join('`', attribute.Take(i + 1));
-			var attrKey = $"{objKey}_{longName}";
-			var isLast = i == attribute.Length - 1;
+			var ownerKey = ExtractKey(owner.Id!);
+			var serializedValue = MarkupTextSerializer.Serialize(value);
+			var sb = _statements;
 
-			var valueAssignment = isLast ? $"value = {P(serializedValue)}" : "value = value ?? ''";
-			sb.Append($"UPSERT attribute:⟨{P(attrKey)}⟩ SET key = {P(attrKey)}, name = {P(attrName)}, longName = {P(longName)}, {valueAssignment};");
-
-			// RELATE, not UPSERT ... SET in=, out=: a plain table row with matching in/out fields
-			// looks identical to a real graph edge in a SELECT, but SurrealDB's graph-traversal
-			// operator (->has_attribute->attribute, used by GetAllAttributesForIdAsync's recursive
-			// read) only ever finds edges actually created through RELATE. The explicit, still
-			// deterministic edge id keeps this UPSERT-equivalent: RELATE with an id that already
-			// exists is a no-op against the existing edge, not a duplicate - re-setting an existing
-			// attribute must not grow the tree an extra edge every time.
-			if (i == 0)
+			// 1. Attribute nodes + the edge linking each to its parent.
+			for (var i = 0; i < attribute.Length; i++)
 			{
-				var edgeId = $"{typedRecordId.Replace(":", "_")}__attr_{EscapeString(attrKey)}";
-				sb.Append($"RELATE {typedRecordId}->has_attribute:⟨{P(edgeId)}⟩->attribute:⟨{P(attrKey)}⟩;");
+				var attrName = attribute[i];
+				var longName = string.Join('`', attribute.Take(i + 1));
+				var attrKey = $"{objKey}_{longName}";
+				var isLast = i == attribute.Length - 1;
+
+				var valueAssignment = isLast ? $"value = {P(serializedValue)}" : "value = value ?? ''";
+				sb.Append($"UPSERT attribute:⟨{P(attrKey)}⟩ SET key = {P(attrKey)}, name = {P(attrName)}, longName = {P(longName)}, {valueAssignment};");
+
+				// RELATE, not UPSERT ... SET in=, out=: a plain table row with matching in/out fields
+				// looks identical to a real graph edge in a SELECT, but SurrealDB's graph-traversal
+				// operator (->has_attribute->attribute, used by GetAllAttributesForIdAsync's recursive
+				// read) only ever finds edges actually created through RELATE. The explicit, still
+				// deterministic edge id keeps this UPSERT-equivalent: RELATE with an id that already
+				// exists is a no-op against the existing edge, not a duplicate - re-setting an existing
+				// attribute must not grow the tree an extra edge every time.
+				if (i == 0)
+				{
+					var edgeId = $"{typedRecordId.Replace(":", "_")}__attr_{EscapeString(attrKey)}";
+					sb.Append($"RELATE {typedRecordId}->has_attribute:⟨{P(edgeId)}⟩->attribute:⟨{P(attrKey)}⟩;");
+				}
+				else
+				{
+					var prevAttrKey = $"{objKey}_{string.Join('`', attribute.Take(i))}";
+					var edgeId = $"attr_{EscapeString(prevAttrKey)}__attr_{EscapeString(attrKey)}";
+					sb.Append($"RELATE attribute:⟨{P(prevAttrKey)}⟩->has_attribute:⟨{P(edgeId)}⟩->attribute:⟨{P(attrKey)}⟩;");
+				}
 			}
-			else
+
+			// 2. Owner edge for EVERY level — leaf and every auto-created branch parent. Deleted-then-recreated
+			// so a re-set re-owns; because it is inside this transaction the swap is atomic to readers.
+			for (var i = 0; i < attribute.Length; i++)
 			{
-				var prevAttrKey = $"{objKey}_{string.Join('`', attribute.Take(i))}";
-				var edgeId = $"attr_{EscapeString(prevAttrKey)}__attr_{EscapeString(attrKey)}";
-				sb.Append($"RELATE attribute:⟨{P(prevAttrKey)}⟩->has_attribute:⟨{P(edgeId)}⟩->attribute:⟨{P(attrKey)}⟩;");
+				var attrKey = $"{objKey}_{string.Join('`', attribute.Take(i + 1))}";
+				sb.Append($"DELETE has_attribute_owner WHERE in = attribute:⟨{P(attrKey)}⟩;");
+				sb.Append($"RELATE attribute:⟨{P(attrKey)}⟩->has_attribute_owner->player:{P(ownerKey)};");
 			}
-		}
 
-		// 2. Owner edge for EVERY level — leaf and every auto-created branch parent. Deleted-then-recreated
-		// so a re-set re-owns; because it is inside this transaction the swap is atomic to readers.
-		for (var i = 0; i < attribute.Length; i++)
-		{
-			var attrKey = $"{objKey}_{string.Join('`', attribute.Take(i + 1))}";
-			sb.Append($"DELETE has_attribute_owner WHERE in = attribute:⟨{P(attrKey)}⟩;");
-			sb.Append($"RELATE attribute:⟨{P(attrKey)}⟩->has_attribute_owner->player:{P(ownerKey)};");
-		}
-
-		// 3. BRANCH flag on every parent node (not the leaf, not the root typed node).
-		for (var i = 0; i < attribute.Length - 1; i++)
-		{
-			var attrKey = $"{objKey}_{string.Join('`', attribute.Take(i + 1))}";
-			var escapedAttrKey = EscapeRecordId(attrKey);
-			sb.Append($"RELATE attribute:⟨{escapedAttrKey}⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = 'BRANCH' AND id NOT IN (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨{escapedAttrKey}⟩) LIMIT 1);");
-		}
-
-		// 4. Default flags configured for each level's attribute entry.
-		for (var i = 0; i < attribute.Length; i++)
-		{
-			var attrKey = $"{objKey}_{string.Join('`', attribute.Take(i + 1))}";
-			var escapedAttrKey = EscapeRecordId(attrKey);
-			foreach (var flagName in defaultFlagsPerLevel[i])
+			// 3. Flags: each level's entry defaults, BRANCH on every parent node, and the leaf's own. One
+			// RELATE per node however many flags it takes, skipping those the node already has, whose list is
+			// read once into a variable rather than in the RELATE's own WHERE clause.
+			for (var i = 0; i < attribute.Length; i++)
 			{
-				sb.Append($"RELATE attribute:⟨{escapedAttrKey}⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE string::uppercase(name) = string::uppercase({P(flagName)}) AND id NOT IN (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨{escapedAttrKey}⟩) LIMIT 1);");
+				var requested = defaultFlagsPerLevel[i].Concat(i == attribute.Length - 1 ? leafFlags : ["branch"]);
+				var flagNames = (storedFlagNames is null
+						? requested.Select(flagName => flagName.ToUpperInvariant())
+						: requested.Select(flagName => storedFlagNames.GetValueOrDefault(flagName)).OfType<string>())
+					.Distinct()
+					.ToArray();
+				if (flagNames.Length == 0)
+				{
+					continue;
+				}
+
+				var escapedAttrKey = EscapeRecordId($"{objKey}_{string.Join('`', attribute.Take(i + 1))}");
+				var existing = $"$existingFlags{_nodes++}";
+				var name = storedFlagNames is null ? "string::uppercase(name)" : "name";
+				sb.Append($"LET {existing} = (SELECT VALUE out FROM has_attribute_flag WHERE in = attribute:⟨{escapedAttrKey}⟩);");
+				sb.Append($"RELATE attribute:⟨{escapedAttrKey}⟩->has_attribute_flag->(SELECT VALUE id FROM attribute_flag WHERE {name} IN {P(flagNames)} AND id NOT IN {existing});");
 			}
 		}
 
-		sb.Append("COMMIT TRANSACTION");
-
-		await ExecuteAsync(sb.ToString(), txnParams, cancellationToken);
-		return true;
+		/// <summary>False when SurrealDB refused the transaction, which it reports rather than throws.</summary>
+		public async ValueTask<bool> CommitAsync(SurrealDatabase database, CancellationToken cancellationToken)
+		{
+			_statements.Append("COMMIT TRANSACTION");
+			var response = await database.ExecuteAsync(_statements.ToString(), _parameters, cancellationToken);
+			return !response.HasErrors;
+		}
 	}
 
 	public async ValueTask<bool> SetAttributeFlagAsync(SharpObject dbref, string[] attribute, SharpAttributeFlag flag, CancellationToken cancellationToken = default)
