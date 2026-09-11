@@ -86,7 +86,7 @@ public class LocateSeamCharacterisationTests
 				Arg.Any<CancellationToken>())
 			.Returns(_ => contents.Select(x => x.AsContent).ToAsyncEnumerable());
 
-	private static int Number(GetContentsQuery q) => q.DBRef.Match(d => d, c => c.Object().DBRef).Number;
+	private static int Number(GetContentsQuery q) => (q.DBRef switch { DBRef d => d, AnySharpContainer c => c.Object().DBRef }).Number;
 
 	private static DBRef Found(AnyOptionalSharpObjectOrError result) =>
 		result.WithoutError().WithoutNone().Object().DBRef;
@@ -94,7 +94,7 @@ public class LocateSeamCharacterisationTests
 	private async Task AssertNotified(string message) =>
 		await _notifyService.Received(1).Notify(
 			Arg.Any<AnySharpObject>(),
-			Arg.Is<SharpMessage>(w => w.IsT1 && w.AsT1 == message),
+			Arg.Is<SharpMessage>(w => w.Value as string == message),
 			Arg.Any<AnySharpObject>(),
 			Arg.Any<INotifyService.NotificationType>());
 

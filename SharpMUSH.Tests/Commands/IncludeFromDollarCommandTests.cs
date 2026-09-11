@@ -41,7 +41,8 @@ public class IncludeFromDollarCommandTests
 		if (args.Length < 2) return null;
 		return args[1] switch
 		{
-			SharpMessage oneOf => oneOf.Match(m => m.ToString(), s => s),
+			SharpMessage { Value: MString m } => m.ToString(),
+			SharpMessage { Value: string s } => s,
 			string s => s,
 			MString m => m.ToString(),
 			_ => null

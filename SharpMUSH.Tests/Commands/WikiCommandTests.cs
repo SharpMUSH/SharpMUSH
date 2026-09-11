@@ -31,8 +31,7 @@ public class WikiCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains(contains)) ||
-				(msg.IsT1 && msg.AsT1.Contains(contains))), TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextContains(msg, contains)), TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>The negative of <see cref="ExpectNotify"/>: this player was never told <paramref name="contains"/>.</summary>
@@ -41,8 +40,7 @@ public class WikiCommandTests
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains(contains)) ||
-				(msg.IsT1 && msg.AsT1.Contains(contains))), TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextContains(msg, contains)), TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -250,8 +248,7 @@ public class WikiCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("in-game interface to the shared wiki")) ||
-				(msg.IsT1 && msg.AsT1.Contains("in-game interface to the shared wiki"))),
+				TestHelpers.MessagePlainTextContains(msg, "in-game interface to the shared wiki")),
 				Arg.Any<SharpMUSH.Library.DiscriminatedUnions.AnySharpObject?>(),
 				INotifyService.NotificationType.Announce);
 	}
@@ -267,8 +264,7 @@ public class WikiCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Returns information about a wiki page")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Returns information about a wiki page"))),
+				TestHelpers.MessagePlainTextContains(msg, "Returns information about a wiki page")),
 				Arg.Any<SharpMUSH.Library.DiscriminatedUnions.AnySharpObject?>(),
 				INotifyService.NotificationType.Announce);
 	}
@@ -302,17 +298,18 @@ public class WikiCommandTests
 	{
 		var created = await WikiService.CreateAsync(
 			title, englishBody, "#1", WikiNamespace.Main, "general", "en");
-		await Assert.That(created.IsT0).IsTrue();
-		var page = created.AsT0;
+		var page = created.Expect<WikiPage>();
 
 		var translated = await WikiService.UpsertTranslationAsync(
 			page.Id, "fr", frenchTitle, frenchBody, "#1", null, published, expectedRevisionNumber: null);
-		await Assert.That(translated.IsT0)
+		await Assert.That(translated is WikiTranslation)
 			.IsTrue()
-			.Because(translated.Match(
-				_ => "translation seeded",
-				conflict => $"seeding lost a write race: {conflict}",
-				error => error.Value));
+			.Because(translated switch
+			{
+				WikiTranslation => "translation seeded",
+				WikiWriteConflict conflict => $"seeding lost a write race: {conflict}",
+				Error<string> error => error.Value
+			});
 
 		return page.Slug;
 	}
@@ -387,7 +384,7 @@ public class WikiCommandTests
 		var slug = await SeedTranslatedPageAsync(
 			"Draft Locale Page", "en visible body", "Brouillon", "corps brouillon secret", published: false);
 
-		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).AsT0;
+		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).Expect<WikiPage>();
 		await WikiService.SetProtectionAsync(page.Id, isProtected: true);
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
@@ -411,9 +408,9 @@ public class WikiCommandTests
 			"Draft Page Published Tr", "en secret host body", "Titre Publié", "corps publié secret",
 			published: true);
 
-		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).AsT0;
+		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).Expect<WikiPage>();
 		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
-		await Assert.That(unpublished.IsT0).IsTrue();
+		await Assert.That(unpublished.Value).IsTypeOf<WikiPage>();
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/view {slug}"));
@@ -433,9 +430,9 @@ public class WikiCommandTests
 			"Draft Page Published Hist", "en host body", "Titre Historique", "corps historique",
 			published: true);
 
-		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).AsT0;
+		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).Expect<WikiPage>();
 		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
-		await Assert.That(unpublished.IsT0).IsTrue();
+		await Assert.That(unpublished.Value).IsTypeOf<WikiPage>();
 
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
 		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/history {slug}"));
@@ -481,8 +478,7 @@ public class WikiCommandTests
 			MarkupText.Plain("@wiki/create Stamped At Birth=body of a stamped page"));
 
 		var created = await WikiService.GetBySlugAsync("stamped_at_birth", "general", WikiNamespace.Main);
-		await Assert.That(created.IsT0).IsTrue();
-		await Assert.That(created.AsT0.SourceLocale)
+		await Assert.That(created.Expect<WikiPage>().SourceLocale)
 			.IsEqualTo(localization.DefaultLocale)
 			.Because("a page created in-game must be stamped at birth exactly as the API path is; the "
 				+ "migration backfill is not a safety net for pages created after it ran");
@@ -547,13 +543,10 @@ public class WikiCommandTests
 		string title, string body, WikiNamespace ns = WikiNamespace.Main)
 	{
 		var created = await WikiService.CreateAsync(title, body, "#1", ns, "general", "en");
-		await Assert.That(created.IsT0).IsTrue();
-		var page = created.AsT0;
+		var page = created.Expect<WikiPage>();
 
 		var unpublished = await WikiService.SetMetadataAsync(page.Id, page.Category, page.Tags, published: false);
-		await Assert.That(unpublished.IsT0).IsTrue();
-
-		return unpublished.AsT0;
+		return unpublished.Expect<WikiPage>();
 	}
 
 	[Test]
@@ -905,10 +898,7 @@ public class WikiCommandTests
 	private async Task<WikiPage> SeedSourcePageAsync(string title, string body)
 	{
 		var created = await WikiService.CreateAsync(title, body, "#1", WikiNamespace.Main, "general", "en");
-		await Assert.That(created.IsT0)
-			.IsTrue()
-			.Because(created.Match(_ => "page seeded", error => error.Value));
-		return created.AsT0;
+		return created.Expect<WikiPage>();
 	}
 
 	[Test]
@@ -931,7 +921,7 @@ public class WikiCommandTests
 
 		// ...and the source body being untouched is what rules out "wrote the page itself".
 		var reloaded = await WikiService.GetBySlugAsync(page.Slug, "general", WikiNamespace.Main);
-		await Assert.That(reloaded.AsT0.MarkdownSource).IsEqualTo("en dragon body");
+		await Assert.That(reloaded.Expect<WikiPage>().MarkdownSource).IsEqualTo("en dragon body");
 	}
 
 	[Test]
@@ -951,13 +941,13 @@ public class WikiCommandTests
 		await ExpectNotify(player.DbRef, "a translation needs an explicit language");
 
 		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
-		await Assert.That(fr.IsT1)
-			.IsTrue()
+		await Assert.That(fr.Value)
+			.IsTypeOf<NotFound>()
 			.Because("an untagged write must produce no translation at all, least of all one in the "
 				+ "writer's own reading locale");
 
 		var reloaded = await WikiService.GetBySlugAsync(page.Slug, "general", WikiNamespace.Main);
-		await Assert.That(reloaded.AsT0.MarkdownSource).IsEqualTo("en untagged body");
+		await Assert.That(reloaded.Expect<WikiPage>().MarkdownSource).IsEqualTo("en untagged body");
 	}
 
 	[Test]
@@ -993,7 +983,7 @@ public class WikiCommandTests
 		await ExpectNoNotify(player.DbRef, "rather than adding a translation");
 
 		var reloaded = await WikiService.GetBySlugAsync(page.Slug, "general", WikiNamespace.Main);
-		await Assert.That(reloaded.AsT0.MarkdownSource).IsEqualTo("en shadowing body");
+		await Assert.That(reloaded.Expect<WikiPage>().MarkdownSource).IsEqualTo("en shadowing body");
 	}
 
 	[Test]
@@ -1012,10 +1002,9 @@ public class WikiCommandTests
 
 		await ExpectNotify(player.DbRef, "now rev 2");
 
-		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
-		await Assert.That(fr.IsT0).IsTrue();
-		await Assert.That(fr.AsT0.MarkdownSource).IsEqualTo("deuxieme version");
-		await Assert.That(fr.AsT0.RevisionNumber).IsEqualTo(2);
+		var fr = (await WikiService.GetTranslationAsync(page.Id, "fr")).Expect<WikiTranslation>();
+		await Assert.That(fr.MarkdownSource).IsEqualTo("deuxieme version");
+		await Assert.That(fr.RevisionNumber).IsEqualTo(2);
 	}
 
 	[Test]
@@ -1033,7 +1022,7 @@ public class WikiCommandTests
 		await ExpectNotify(player.DbRef, $"'{page.Title}' is protected");
 
 		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
-		await Assert.That(fr.IsT1).IsTrue();
+		await Assert.That(fr.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -1051,9 +1040,8 @@ public class WikiCommandTests
 
 		await ExpectNotify(wizard.DbRef, $"Wrote the fr translation of '{page.Title}'");
 
-		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
-		await Assert.That(fr.IsT0).IsTrue();
-		await Assert.That(fr.AsT0.MarkdownSource).IsEqualTo("corps autorise");
+		var fr = (await WikiService.GetTranslationAsync(page.Id, "fr")).Expect<WikiTranslation>();
+		await Assert.That(fr.MarkdownSource).IsEqualTo("corps autorise");
 	}
 
 	[Test]
@@ -1065,16 +1053,15 @@ public class WikiCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiTranslatorDraftKeeper");
 		var slug = await SeedTranslatedPageAsync(
 			"Draft Keeping Dragons", "en keeper body", "Dragons Conserves", "corps initial", published: false);
-		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).AsT0;
+		var page = (await WikiService.GetBySlugAsync(slug, "general", WikiNamespace.Main)).Expect<WikiPage>();
 
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wiki/translate {slug}/fr=corps corrige"));
 
-		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
-		await Assert.That(fr.IsT0).IsTrue();
-		await Assert.That(fr.AsT0.MarkdownSource).IsEqualTo("corps corrige");
-		await Assert.That(fr.AsT0.Published).IsFalse();
-		await Assert.That(fr.AsT0.Title).IsEqualTo("Dragons Conserves");
+		var fr = (await WikiService.GetTranslationAsync(page.Id, "fr")).Expect<WikiTranslation>();
+		await Assert.That(fr.MarkdownSource).IsEqualTo("corps corrige");
+		await Assert.That(fr.Published).IsFalse();
+		await Assert.That(fr.Title).IsEqualTo("Dragons Conserves");
 	}
 
 	[Test]
@@ -1089,10 +1076,9 @@ public class WikiCommandTests
 		await Parser.CommandParse(player.Handle, ConnectionService,
 			MarkupText.Plain($"@wiki/translate {page.Slug}/fr=corps tout neuf"));
 
-		var fr = await WikiService.GetTranslationAsync(page.Id, "fr");
-		await Assert.That(fr.IsT0).IsTrue();
-		await Assert.That(fr.AsT0.Published).IsTrue();
-		await Assert.That(fr.AsT0.Title).IsEqualTo(page.Title);
+		var fr = (await WikiService.GetTranslationAsync(page.Id, "fr")).Expect<WikiTranslation>();
+		await Assert.That(fr.Published).IsTrue();
+		await Assert.That(fr.Title).IsEqualTo(page.Title);
 	}
 
 	[Test]
@@ -1123,7 +1109,7 @@ public class WikiCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
-				msg.IsT0 && msg.AsT0.Render(format).Contains(contains)),
+				RendersToContain(msg, format, contains)),
 				TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
 	}
 
@@ -1136,8 +1122,7 @@ public class WikiCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToPlainText().Contains(contains)) ||
-				(msg.IsT1 && msg.AsT1.Contains(contains))),
+				TestHelpers.MessagePlainTextContains(msg, contains)),
 				TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
 	}
 
@@ -1256,4 +1241,12 @@ public class WikiCommandTests
 		await ExpectNoNotify(player.DbRef, "plugh-md-marker");
 		await ExpectNotifyPlainText(player.DbRef, "WIKI: This is a draft; its body is not shown.");
 	}
+
+	/// <summary>
+	/// True when the message went out as markup whose rendering in <paramref name="format"/> contains
+	/// <paramref name="contains"/>. A matcher lambda is an expression tree, which cannot hold the
+	/// declaration pattern this needs.
+	/// </summary>
+	private static bool RendersToContain(SharpMessage msg, MarkupFormat format, string contains) =>
+		msg is MString markup && markup.Render(format).Contains(contains);
 }

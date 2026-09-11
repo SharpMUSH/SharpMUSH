@@ -59,12 +59,11 @@ public class BackupTests
 				new WorldBackupOptions { Root = root }, NullLogger<SurrealWorldBackupService>.Instance);
 
 			using var exportCancellation = new CancellationTokenSource();
-			var result = await backups.CreateAsync(exportCancellation.Token);
+			var result = (await backups.CreateAsync(exportCancellation.Token)).Expect<WorldBackup>();
 			exportCancellation.Cancel();
 
-			await Assert.That(result.IsT0).IsTrue();
 			var script = await File.ReadAllTextAsync(
-				Path.Combine(result.AsT0.Path, SurrealWorldBackupService.ExportFileName));
+				Path.Combine(result.Path, SurrealWorldBackupService.ExportFileName));
 			await Assert.That(script).IsNotEmpty();
 
 			// The restore: a brand-new world that has never seen this data.
@@ -113,11 +112,10 @@ public class BackupTests
 
 			var backups = new SurrealWorldBackupService(client,
 				new WorldBackupOptions { Root = root }, NullLogger<SurrealWorldBackupService>.Instance);
-			var result = await backups.CreateAsync();
+			var result = (await backups.CreateAsync()).Expect<WorldBackup>();
 
-			await Assert.That(result.IsT0).IsTrue();
 			var script = await File.ReadAllTextAsync(
-				Path.Combine(result.AsT0.Path, SurrealWorldBackupService.ExportFileName));
+				Path.Combine(result.Path, SurrealWorldBackupService.ExportFileName));
 			await Assert.That(script).Contains("before");
 		}
 		finally

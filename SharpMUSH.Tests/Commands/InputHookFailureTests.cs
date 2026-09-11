@@ -103,7 +103,7 @@ public class InputHookFailureTests
 		var parser = new SharpMUSH.Implementation.MUSHCodeParser(original.Logger, functions, commands, original.Configuration, provider);
 		try
 		{
-			var actor = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(player.DbRef))).Known();
+			var actor = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(player.DbRef))).Known;
 			var matchAttribute = new SharpAttribute("override", "OVERRIDE", "OVERRIDE", [], 0, "OVERRIDE", null!, null!, null!)
 			{ Value = MarkupText.Plain(commandName + "override") };
 			discovery.MatchUserDefinedCommand(Arg.Any<IMUSHCodeParser>(), Arg.Any<IAsyncEnumerable<AnySharpObject>>(), Arg.Any<MarkupText>())

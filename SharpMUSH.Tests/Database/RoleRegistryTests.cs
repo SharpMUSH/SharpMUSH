@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -44,17 +45,16 @@ public class RoleRegistryTests
 		await Registry.UpsertRoleAsync(Role("test-beta", 35));
 
 		var fetched = await Registry.GetRoleAsync("test-alpha");
-		await Assert.That(fetched.IsT0).IsTrue();
-		var role = fetched.AsT0;
+		var role = fetched.Expect<SharpRole>();
 		await Assert.That(role.Name).IsEqualTo("Role test-alpha");
 		await Assert.That(role.Priority).IsEqualTo(25);
 		await Assert.That(role.Permissions[PortalPermission.WikiAdmin]).IsEqualTo(PermissionState.Allow);
 		await Assert.That(role.Permissions[PortalPermission.ServerAdmin]).IsEqualTo(PermissionState.Deny);
 
 		await Registry.UpsertRoleAsync(Role("test-alpha", 99));
-		var upgraded = await Registry.GetRoleAsync("test-alpha");
-		await Assert.That(upgraded.AsT0.Priority).IsEqualTo(99);
-		await Assert.That(upgraded.AsT0.Permissions.Count).IsEqualTo(0);
+		var upgraded = (await Registry.GetRoleAsync("test-alpha")).Expect<SharpRole>();
+		await Assert.That(upgraded.Priority).IsEqualTo(99);
+		await Assert.That(upgraded.Permissions.Count).IsEqualTo(0);
 
 		var ours = (await Registry.GetRolesAsync()).Where(r => r.Slug.StartsWith("test-")).ToList();
 		await Assert.That(ours.Count).IsEqualTo(2);
@@ -62,7 +62,7 @@ public class RoleRegistryTests
 
 		await Registry.RemoveRoleAsync("test-alpha");
 		await Registry.RemoveRoleAsync("test-beta");
-		await Assert.That((await Registry.GetRoleAsync("test-alpha")).IsT1).IsTrue();
+		await Assert.That((await Registry.GetRoleAsync("test-alpha")).Value).IsTypeOf<NotFound>();
 	}
 
 	[Test, NotInParallel]
@@ -91,22 +91,20 @@ public class RoleRegistryTests
 	public async Task GetRole_Missing_ReturnsNotFound()
 	{
 		var missing = await Registry.GetRoleAsync("does-not-exist-role");
-		await Assert.That(missing.IsT1).IsTrue();
+		await Assert.That(missing.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test, NotInParallel]
 	public async Task BuiltInRoles_AreSeeded()
 	{
-		var god = await Registry.GetRoleAsync("god");
-		await Assert.That(god.IsT0).IsTrue();
-		await Assert.That(god.AsT0.IsSystem).IsTrue();
-		await Assert.That(god.AsT0.Permissions[PortalPermission.ServerAdmin]).IsEqualTo(PermissionState.Allow);
+		var god = (await Registry.GetRoleAsync("god")).Expect<SharpRole>();
+		await Assert.That(god.IsSystem).IsTrue();
+		await Assert.That(god.Permissions[PortalPermission.ServerAdmin]).IsEqualTo(PermissionState.Allow);
 
-		var wizard = await Registry.GetRoleAsync("wizard");
-		await Assert.That(wizard.IsT0).IsTrue();
-		await Assert.That(wizard.AsT0.IsSystem).IsTrue();
-		await Assert.That(wizard.AsT0.Permissions[PortalPermission.WikiAdmin]).IsEqualTo(PermissionState.Allow);
-		await Assert.That(wizard.AsT0.Permissions.GetValueOrDefault(PortalPermission.ServerAdmin, PermissionState.Inherit))
+		var wizard = (await Registry.GetRoleAsync("wizard")).Expect<SharpRole>();
+		await Assert.That(wizard.IsSystem).IsTrue();
+		await Assert.That(wizard.Permissions[PortalPermission.WikiAdmin]).IsEqualTo(PermissionState.Allow);
+		await Assert.That(wizard.Permissions.GetValueOrDefault(PortalPermission.ServerAdmin, PermissionState.Inherit))
 			.IsNotEqualTo(PermissionState.Allow);
 	}
 }

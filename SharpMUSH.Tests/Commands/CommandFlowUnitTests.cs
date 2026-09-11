@@ -36,8 +36,7 @@ public class CommandFlowUnitTests
 
 		await NotifyService.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString() == expected) ||
-				(msg.IsT1 && msg.AsT1 == expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, expected)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test, Skip("Command is failing. Needs to be implemented correctly.")]

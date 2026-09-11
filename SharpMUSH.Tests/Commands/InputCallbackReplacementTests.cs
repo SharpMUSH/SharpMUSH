@@ -63,7 +63,7 @@ public class InputCallbackReplacementTests
 		Task<CallState?>? delivery = null;
 		try
 		{
-			var actor = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known();
+			var actor = (await mediator.Send(new GetObjectNodeQuery(player.DbRef))).Known;
 			await Get<IAttributeService>().SetAttributeAsync(actor, actor, "REPLACEMENT", MarkupText.Plain("think next"));
 			await Get<IAttributeService>().SetAttributeAsync(actor, actor, "EXTERNAL", MarkupText.Plain("think unrelated"));
 			await Get<IAttributeService>().SetAttributeAsync(actor, actor, "CALLBACK", MarkupText.Plain($"@input/start me/REPLACEMENT=Next:,120; {finish}"));

@@ -262,7 +262,7 @@ public class CommandExceptionSurfacingTests
 			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
 			.Where(targetMatches)
 			.Select(call => call.GetArguments() is [_, SharpMessage msg, ..]
-				? msg.Match(ms => ms.ToPlainText(), s => s)
+				? msg switch { MString markup => markup.ToPlainText(), string text => text }
 				: null)
 			.LastOrDefault(text => text is not null && text.StartsWith("#-1 EXCEPTION: "));
 

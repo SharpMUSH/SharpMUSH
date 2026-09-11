@@ -43,7 +43,7 @@ public class EvalLockEvaluationFailureTests
 	[Test]
 	public async Task EvaluationThatThrows_IsReportedAsAFailure_NotAsAValue()
 	{
-		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		var attributeService = Substitute.For<IAttributeService>();
 		attributeService.EvaluateAttributeFunctionAsync(
@@ -62,11 +62,12 @@ public class EvalLockEvaluationFailureTests
 			NullLogger<LockEvaluationServices>.Instance);
 		var result = await services.EvaluateAttributeAsync(one, one, "BOOM");
 
-		await Assert.That(result.IsT1)
-			.IsTrue()
+		await Assert.That(result.Value)
+			.IsTypeOf<LockEvaluationFailure>()
 			.Because("a failed evaluation must not be indistinguishable from an evaluated value");
-		await Assert.That(result.AsT1.AttributeName).IsEqualTo("BOOM");
-		await Assert.That(result.AsT1.Reason).Contains("evaluation exploded");
+		var failure = result.Expect<LockEvaluationFailure>();
+		await Assert.That(failure.AttributeName).IsEqualTo("BOOM");
+		await Assert.That(failure.Reason).Contains("evaluation exploded");
 	}
 
 	/// <summary>
@@ -76,7 +77,7 @@ public class EvalLockEvaluationFailureTests
 	[Test]
 	public async Task EvalLock_WhoseEvaluationFailed_DoesNotPass()
 	{
-		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		var services = Substitute.For<ILockEvaluationServices>();
 		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>())
@@ -97,7 +98,7 @@ public class EvalLockEvaluationFailureTests
 	[Test]
 	public async Task EvalLock_WhoseEvaluationMatched_Passes()
 	{
-		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var one = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		var services = Substitute.For<ILockEvaluationServices>();
 		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>())

@@ -72,11 +72,14 @@ public class MarkupSurvivesNotificationTests
 		}
 	}
 
-	private static bool CarriesEscapes(SharpMessage message) =>
-		message.Match(markup => markup.ToPlainText().Contains(Escape), text => text.Contains(Escape));
+	private static bool CarriesEscapes(SharpMessage message) => message switch
+	{
+		MString markup => markup.ToPlainText().Contains(Escape),
+		string text => text.Contains(Escape)
+	};
 
 	/// <summary>True when the message kept its markup rather than being flattened to a string.</summary>
-	private static bool IsMarkup(SharpMessage message) => message.IsT0;
+	private static bool IsMarkup(SharpMessage message) => message is MString;
 
 	[Test]
 	public async ValueTask Think_SendsMarkup_NotAnsiEscapes()

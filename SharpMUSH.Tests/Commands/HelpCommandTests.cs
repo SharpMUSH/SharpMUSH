@@ -27,8 +27,7 @@ public class HelpCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("help newbie")) ||
-				(msg.IsT1 && msg.AsT1.Contains("help newbie"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextContains(msg, "help newbie")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -47,8 +46,7 @@ public class HelpCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains(expected)) ||
-				(msg.IsT1 && msg.AsT1.Contains(expected))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextContains(msg, expected)), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -61,14 +59,12 @@ public class HelpCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Here are the entries which match 'help*'")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Here are the entries which match 'help*'"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextContains(msg, "Here are the entries which match 'help*'")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("help, help query, help search, help/search, helpfile, helpfile2")) ||
-				(msg.IsT1 && msg.AsT1.Contains("help, help query, help search, help/search, helpfile, helpfile2"))), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextContains(msg, "help, help query, help search, help/search, helpfile, helpfile2")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -81,8 +77,7 @@ public class HelpCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("Matches:")) ||
-				(msg.IsT1 && msg.AsT1.Contains("Matches:"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextContains(msg, "Matches:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -95,8 +90,7 @@ public class HelpCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("No entry for")) ||
-				(msg.IsT1 && msg.AsT1.Contains("No entry for"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextContains(msg, "No entry for")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -109,8 +103,7 @@ public class HelpCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				(msg.IsT0 && msg.AsT0.ToString().Contains("If you are new to MUSHing")) ||
-				(msg.IsT1 && msg.AsT1.Contains("If you are new to MUSHing"))), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextContains(msg, "If you are new to MUSHing")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>

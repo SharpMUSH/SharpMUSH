@@ -61,8 +61,7 @@ public class BackupTests
 
 			var result = await backups.CreateAsync();
 
-			await Assert.That(result.IsT0).IsTrue();
-			var backup = result.AsT0;
+			var backup = result.Expect<WorldBackup>();
 			using var copy = new LightningStore(new LightningStoreOptions { Path = backup.Path, MapSize = 256L << 20 });
 			await Assert.That(copy.Count(Tables.Obj)).IsEqualTo(objects);
 			var godName = copy.Read(tx => tx.TryGet(Tables.Obj, Keys.Dbref(1), out var v)
@@ -94,12 +93,11 @@ public class BackupTests
 			await db.Migrate();
 			var objects = db.Store.Count(Tables.Obj);
 
-			var result = await backups.CreateAsync();
+			var result = (await backups.CreateAsync()).Expect<WorldBackup>();
 
-			await Assert.That(result.IsT0).IsTrue();
 			using var copy = new LightningStore(new LightningStoreOptions
 			{
-				Path = result.AsT0.Path,
+				Path = result.Path,
 				MapSize = 256L << 20
 			});
 			await Assert.That(copy.Count(Tables.Obj)).IsEqualTo(objects);
@@ -123,14 +121,13 @@ public class BackupTests
 			await db.Migrate();
 			await db.Store.WriteAsync(tx => tx.Put(Tables.Meta, Keys.Str("before"), Keys.Str("1")));
 
-			var result = await backups.CreateAsync();
-			await Assert.That(result.IsT0).IsTrue();
+			var result = (await backups.CreateAsync()).Expect<WorldBackup>();
 
 			await db.Store.WriteAsync(tx => tx.Put(Tables.Meta, Keys.Str("after"), Keys.Str("1")));
 
 			using var copy = new LightningStore(new LightningStoreOptions
 			{
-				Path = result.AsT0.Path,
+				Path = result.Path,
 				MapSize = 256L << 20
 			});
 			await Assert.That(copy.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("before"), out _))).IsTrue();
@@ -158,8 +155,7 @@ public class BackupTests
 			for (var i = 0; i < 4; i++)
 			{
 				var made = await backups.CreateAsync();
-				await Assert.That(made.IsT0).IsTrue();
-				names.Add(made.AsT0.Name);
+				names.Add(made.Expect<WorldBackup>().Name);
 			}
 
 			var kept = backups.List().Select(b => b.Name).ToArray();
@@ -191,8 +187,7 @@ public class BackupTests
 
 			var made = await backups.CreateAsync();
 
-			await Assert.That(made.IsT0).IsTrue();
-			await Assert.That(Directory.Exists(made.AsT0.Path)).IsTrue();
+			await Assert.That(Directory.Exists(made.Expect<WorldBackup>().Path)).IsTrue();
 			await Assert.That(backups.List().Count).IsEqualTo(1);
 		}
 		finally
@@ -215,8 +210,7 @@ public class BackupTests
 			await backups.CreateAsync();
 			var second = await backups.CreateAsync();
 
-			await Assert.That(second.IsT0).IsTrue();
-			await Assert.That(ReadLatestPointer(root)).IsEqualTo(second.AsT0.Name);
+			await Assert.That(ReadLatestPointer(root)).IsEqualTo(second.Expect<WorldBackup>().Name);
 		}
 		finally
 		{
@@ -269,7 +263,7 @@ public class BackupTests
 
 			var result = await backups.CreateAsync();
 
-			await Assert.That(result.IsT1).IsTrue();
+			await Assert.That(result.Value).IsTypeOf<Error<string>>();
 			await Assert.That(backups.List().Count).IsEqualTo(0);
 			var leftovers = Directory.Exists(root) ? Directory.GetDirectories(root) : [];
 			await Assert.That(leftovers.Length).IsEqualTo(0);
@@ -300,7 +294,7 @@ public class BackupTests
 
 			var result = await backups.CreateAsync();
 
-			await Assert.That(result.IsT1).IsTrue();
+			await Assert.That(result.Value).IsTypeOf<Error<string>>();
 			await Assert.That(backups.List().Count).IsEqualTo(0);
 		}
 		finally
@@ -323,13 +317,12 @@ public class BackupTests
 		IWorldBackupService backups = new UnsupportedWorldBackupService("external",
 			"requires external backup tooling");
 
-		var result = await backups.CreateAsync();
+		var result = (await backups.CreateAsync()).Expect<Error<string>>();
 
 		await Assert.That(backups.IsSupported).IsFalse();
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("external");
-		await Assert.That(result.AsT1.Value).Contains("external backup tooling");
-		await Assert.That(backups.UnavailableReason).IsEqualTo(result.AsT1.Value);
+		await Assert.That(result.Value).Contains("external");
+		await Assert.That(result.Value).Contains("external backup tooling");
+		await Assert.That(backups.UnavailableReason).IsEqualTo(result.Value);
 		await Assert.That(backups.List().Count).IsEqualTo(0);
 	}
 

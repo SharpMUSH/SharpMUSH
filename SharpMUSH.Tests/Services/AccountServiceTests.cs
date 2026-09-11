@@ -70,8 +70,7 @@ public class AccountServiceTests
 
 		var result = await svc.CreateAccountAsync("Alice", null, "password123");
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Username).IsEqualTo("Alice");
+		await Assert.That(result.Expect<SharpAccount>().Username).IsEqualTo("Alice");
 		await db.Received(1).UpdateAccountPasswordAsync("accounts/1", "real-hash", Arg.Any<CancellationToken>());
 	}
 
@@ -85,8 +84,7 @@ public class AccountServiceTests
 
 		var result = await svc.CreateAccountAsync("Alice", null, "password");
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("already taken");
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("already taken");
 	}
 
 	[Test]
@@ -101,8 +99,7 @@ public class AccountServiceTests
 
 		var result = await svc.CreateAccountAsync("NewUser", "used@example.com", "password");
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("already registered");
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("already registered");
 	}
 
 	[Test]
@@ -120,7 +117,7 @@ public class AccountServiceTests
 
 		var result = await svc.CreateAccountAsync("Bob", null, "pass");
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<SharpAccount>();
 		await db.DidNotReceive().GetAccountByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 
@@ -208,7 +205,7 @@ public class AccountServiceTests
 
 		var result = await svc.ChangePasswordAsync("accounts/1", "oldpass", "newpass");
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await db.Received(1).UpdateAccountPasswordAsync("accounts/1", "new-hash", Arg.Any<CancellationToken>());
 	}
 
@@ -223,8 +220,7 @@ public class AccountServiceTests
 
 		var result = await svc.ChangePasswordAsync("accounts/1", "wrong", "newpass");
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("incorrect");
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("incorrect");
 	}
 
 	[Test]
@@ -237,8 +233,7 @@ public class AccountServiceTests
 
 		var result = await svc.ChangePasswordAsync("accounts/ghost", "old", "new");
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("not found");
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("not found");
 	}
 
 	[Test]
@@ -254,7 +249,7 @@ public class AccountServiceTests
 
 		var result = await svc.ChangeEmailAsync("accounts/1", "new@test.com", "pass");
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await db.Received(1).UpdateAccountEmailAsync("accounts/1", "new@test.com", Arg.Any<CancellationToken>());
 	}
 
@@ -271,8 +266,7 @@ public class AccountServiceTests
 
 		var result = await svc.ChangeEmailAsync("accounts/1", "taken@test.com", "pass");
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("already registered");
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("already registered");
 	}
 
 	[Test]
@@ -286,7 +280,7 @@ public class AccountServiceTests
 
 		var result = await svc.ChangeEmailAsync("accounts/1", null, "pass");
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await db.Received(1).UpdateAccountEmailAsync("accounts/1", null, Arg.Any<CancellationToken>());
 		await db.DidNotReceive().GetAccountByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
@@ -301,7 +295,7 @@ public class AccountServiceTests
 
 		var result = await svc.ChangeUsernameAsync("accounts/1", "NewName");
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await db.Received(1).UpdateAccountUsernameAsync("accounts/1", "NewName", Arg.Any<CancellationToken>());
 	}
 
@@ -315,8 +309,7 @@ public class AccountServiceTests
 
 		var result = await svc.ChangeUsernameAsync("accounts/1", "Taken");
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("already taken");
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("already taken");
 	}
 
 	[Test]
@@ -381,8 +374,7 @@ public class AccountServiceTests
 
 		var result = await svc.DisableAccountAsync("accounts/ghost");
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("not found");
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("not found");
 	}
 
 	[Test]
@@ -394,7 +386,7 @@ public class AccountServiceTests
 
 		var result = await svc.DisableAccountAsync("accounts/1");
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await db.Received(1).UpdateAccountStatusAsync("accounts/1", AccountStatus.Disabled, Arg.Any<CancellationToken>());
 		await sessions.Received(1).RevokeAllForAccountAsync("accounts/1", Arg.Any<CancellationToken>());
 	}
@@ -409,7 +401,7 @@ public class AccountServiceTests
 
 		var result = await svc.DisableAccountAsync("accounts/1");
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await db.Received(1).UpdateAccountStatusAsync("accounts/1", AccountStatus.Disabled, Arg.Any<CancellationToken>());
 		await sessions.Received(1).RevokeAllForAccountAsync("accounts/1", Arg.Any<CancellationToken>());
 	}
@@ -423,7 +415,7 @@ public class AccountServiceTests
 
 		var result = await svc.DisableAccountAsync("accounts/1");
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		// The session revoke floor still runs...
 		await sessions.Received(1).RevokeAllForAccountAsync("accounts/1", Arg.Any<CancellationToken>());
 		// ...and the wired enforcer is additionally invoked with the same account id.
@@ -439,7 +431,7 @@ public class AccountServiceTests
 
 		var result = await svc.DisableAccountAsync("accounts/ghost");
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Error<string>>();
 		await banEnforcer.DidNotReceive().EnforceAccountBanAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 
@@ -453,8 +445,7 @@ public class AccountServiceTests
 
 		var result = await svc.EnableAccountAsync("accounts/ghost");
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("not found");
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("not found");
 	}
 
 	[Test]
@@ -467,7 +458,7 @@ public class AccountServiceTests
 
 		var result = await svc.EnableAccountAsync("accounts/1");
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await db.Received(1).UpdateAccountStatusAsync("accounts/1", AccountStatus.Active, Arg.Any<CancellationToken>());
 	}
 
@@ -481,8 +472,7 @@ public class AccountServiceTests
 
 		var result = await svc.SetPasswordAsync("accounts/ghost", "newpass", false);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1.Value).Contains("not found");
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("not found");
 	}
 
 	[Test]
@@ -495,7 +485,7 @@ public class AccountServiceTests
 
 		var result = await svc.SetPasswordAsync("accounts/1", "newpass", true);
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await db.Received(1).UpdateAccountPasswordAsync("accounts/1", "new-hash", Arg.Any<CancellationToken>());
 		await db.Received(1).UpdateAccountMustChangePasswordAsync("accounts/1", true, Arg.Any<CancellationToken>());
 	}

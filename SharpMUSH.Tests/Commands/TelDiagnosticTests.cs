@@ -24,8 +24,10 @@ public class TelDiagnosticTests
 		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify)) return null;
 		var args = call.GetArguments();
 		if (args.Length < 2) return null;
-		if (args[1] is SharpMessage oneOf)
-			return oneOf.Match(mstr => mstr.ToString(), str => str);
+		if (args[1] is SharpMessage { Value: MString markup })
+			return markup.ToString();
+		if (args[1] is SharpMessage { Value: string text })
+			return text;
 		if (args[1] is string str2) return str2;
 		if (args[1] is MString mstr2) return mstr2.ToString();
 		return null;

@@ -36,7 +36,11 @@ public class ControlFlowCommandTests
 			return null;
 		}
 
-		return msg.Match(m => m.ToString(), s => s);
+		return msg switch
+		{
+			MString markup => markup.ToPlainText(),
+			string text => text
+		};
 	}
 
 	[Test]

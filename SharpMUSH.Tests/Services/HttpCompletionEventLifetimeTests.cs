@@ -110,7 +110,7 @@ public class HttpCompletionEventLifetimeTests
 			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
 			if (deadline)
 			{
-				var response = (await pending.WaitAsync(TimeSpan.FromSeconds(1))).AsT0;
+				var response = (await pending.WaitAsync(TimeSpan.FromSeconds(1))).Expect<HttpHandlerResult>();
 				await Assert.That(response.Status).IsEqualTo(503);
 				await Assert.That(response.Body).IsEqualTo(ExecutionBudget.Error);
 			}
@@ -132,7 +132,7 @@ public class HttpCompletionEventLifetimeTests
 	{
 		var fixture = new Fixture(10) { Handler = async _ => await Task.Delay(30) };
 		var response = await fixture.Service.DispatchAsync("GET", "/expired", "", []);
-		await Assert.That(response.AsT0.Status).IsEqualTo(503);
+		await Assert.That(response.Expect<HttpHandlerResult>().Status).IsEqualTo(503);
 		await Assert.That(fixture.EventCalls).IsEqualTo(0);
 		await Assert.That(fixture.EventLookups).IsEqualTo(0);
 	}
@@ -146,7 +146,7 @@ public class HttpCompletionEventLifetimeTests
 		var fixture = new Fixture(5000);
 		if (eventFailure == 1) fixture.Event = _ => throw new IOException("ordinary event failure");
 		if (eventFailure == 2) fixture.Event = _ => throw new OperationCanceledException("unrelated event cancellation");
-		var response = (await fixture.Service.DispatchAsync("GET", "/normal", "request", [])).AsT0;
+		var response = (await fixture.Service.DispatchAsync("GET", "/normal", "request", [])).Expect<HttpHandlerResult>();
 		await Assert.That(response.Status).IsEqualTo(201);
 		await Assert.That(response.Body).IsEqualTo("original response");
 		await Assert.That(fixture.EventCalls).IsEqualTo(1);
@@ -250,7 +250,7 @@ public class HttpCompletionEventLifetimeTests
 			await Assert.ThrowsAsync<OperationCanceledException>(async () => await pending.WaitAsync(TimeSpan.FromSeconds(1)));
 		else
 		{
-			var response = (await pending.WaitAsync(TimeSpan.FromSeconds(1))).AsT0;
+			var response = (await pending.WaitAsync(TimeSpan.FromSeconds(1))).Expect<HttpHandlerResult>();
 			await Assert.That(response.Status).IsEqualTo(503);
 			await Assert.That(response.Body).IsEqualTo(ExecutionBudget.Error);
 		}

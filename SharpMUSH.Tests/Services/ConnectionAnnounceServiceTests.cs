@@ -266,7 +266,7 @@ public class ConnectionAnnounceServiceTests
 			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
 		mediator.CreateStream(
 				Arg.Is<GetContentsQuery>(q =>
-					q.DBRef.Match(d => d, c => c.Object().DBRef).Number == masterRoom.Object.Key),
+					ContainerNumber(q.DBRef) == masterRoom.Object.Key),
 				Arg.Any<CancellationToken>())
 			.Returns(_ => new[] { hookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
 		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
@@ -321,7 +321,7 @@ public class ConnectionAnnounceServiceTests
 			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
 		mediator.CreateStream(
 				Arg.Is<GetContentsQuery>(q =>
-					q.DBRef.Match(d => d, c => c.Object().DBRef).Number == masterRoom.Object.Key),
+					ContainerNumber(q.DBRef) == masterRoom.Object.Key),
 				Arg.Any<CancellationToken>())
 			.Returns(_ => new[] { throwingHookTarget, laterHookTarget }.ToAsyncEnumerable().Select(x => x.AsContent));
 		mediator.CreateStream(Arg.Any<GetOnChannelQuery>(), Arg.Any<CancellationToken>())
@@ -781,4 +781,14 @@ public class ConnectionAnnounceServiceTests
 
 		await mediator.DidNotReceive().Publish(Arg.Any<ChannelMessageNotification>(), Arg.Any<CancellationToken>());
 	}
+
+	/// <summary>
+	/// The number of the container a contents query is for, whether it was given by reference or already
+	/// loaded. A matcher lambda is an expression tree, which cannot hold the switch this needs.
+	/// </summary>
+	private static int ContainerNumber(DbRefOrContainer container) => container switch
+	{
+		DBRef dbref => dbref.Number,
+		AnySharpContainer loaded => loaded.Object().DBRef.Number
+	};
 }

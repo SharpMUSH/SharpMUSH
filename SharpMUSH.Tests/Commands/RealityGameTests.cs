@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -53,7 +54,7 @@ public class RealityGameTests
 			{
 				var moved = await Get<IMoveService>().EnterRoom(Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)),
 					vehicle, destination, noMoveMsgs: false, actor.Object.DBRef, "move");
-				await Assert.That(moved.IsT0).IsTrue();
+				await Assert.That(moved.Value).IsTypeOf<Success>();
 			}
 			await Assert.That(output.Body.ToString().Contains("You sense that you have moved")).IsEqualTo(containerVisible);
 			await Assert.That(output.Body.ToString().Contains(destination.Object.Name)).IsEqualTo(containerVisible && destinationVisible);
@@ -111,7 +112,7 @@ public class RealityGameTests
 			{
 				var moved = await Get<IMoveService>().EnterRoom(Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)),
 					mover, destination, noMoveMsgs: false, actor.Object.DBRef, "move");
-				await Assert.That(moved.IsT0).IsTrue();
+				await Assert.That(moved.Value).IsTypeOf<Success>();
 			}
 			await Assert.That(output.Body.ToString()).IsEmpty();
 		}
@@ -264,7 +265,7 @@ public class RealityGameTests
 			var blocked = await Get<IMoveService>().EnterRoom(
 				Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef)),
 				player, room, noMoveMsgs: true, player.Object.DBRef, "move");
-			await Assert.That(blocked.IsT1).IsTrue();
+			await Assert.That(blocked.Value).IsTypeOf<Error<string>>();
 		}
 		finally
 		{

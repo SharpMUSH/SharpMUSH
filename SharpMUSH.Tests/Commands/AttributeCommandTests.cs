@@ -501,7 +501,7 @@ public class AttributeCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(Arg.Any<long>(), Arg.Is<SharpMessage>(msg =>
-				msg.Match(ms => ms.ToPlainText(), s => s).StartsWith("#-1 PARSER FAILURE")),
+				TestHelpers.MessagePlainTextStartsWith(msg, "#-1 PARSER FAILURE")),
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
 
 		var attr = await AttributeService.GetAttributeAsync(obj.Known, obj.Known, "UNCLOSED_TILDE_ATTR",

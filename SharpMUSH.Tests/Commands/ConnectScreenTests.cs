@@ -103,6 +103,6 @@ public class ConnectScreenTests
 
 	private static string? TextOf(ICall call) =>
 		call.GetArguments() is [_, SharpMessage message, ..]
-			? message.Match(ms => ms.ToPlainText(), s => s)
+			? message switch { MString markup => markup.ToPlainText(), string text => text }
 			: null;
 }

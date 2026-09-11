@@ -33,7 +33,7 @@ public class ChannelMemberProjectionTests
 	{
 		var ownerNode = await Database.GetObjectNodeAsync(new DBRef(1));
 		var owner = ownerNode.AsPlayer;
-		var home = ownerNode.Known().AsContainer;
+		var home = ownerNode.Known.AsContainer;
 		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(ChannelName), ["Open"], owner));
 
 		var channel = await Mediator.Send(new GetChannelQuery(ChannelName));
@@ -45,8 +45,8 @@ public class ChannelMemberProjectionTests
 		{
 			var created = await Mediator.Send(new CreateThingCommand(name, home, owner, home));
 			var thing = await Mediator.Send(new GetObjectNodeQuery(created));
-			extras.Add(thing.Known());
-			await Mediator.Send(new AddUserToChannelCommand(channel!, thing.Known()));
+			extras.Add(thing.Known);
+			await Mediator.Send(new AddUserToChannelCommand(channel!, thing.Known));
 		}
 
 		// One of them gagged, so a status swapped between members would show.

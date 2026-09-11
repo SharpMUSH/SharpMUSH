@@ -64,7 +64,7 @@ public class RoleReadCompatibilityTests
 		var provider = new LegacyRegistry();
 		provider.Result.SetResult(new NotFound());
 		IRoleRegistryService contract = provider;
-		await Assert.That((await contract.GetRoleAsync("wizard", CancellationToken.None)).IsT1).IsTrue();
+		await Assert.That((await contract.GetRoleAsync("wizard", CancellationToken.None)).Value).IsTypeOf<NotFound>();
 		await Assert.That(provider.Reads).IsEqualTo(1);
 	}
 

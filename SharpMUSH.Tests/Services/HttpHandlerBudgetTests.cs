@@ -63,7 +63,7 @@ public class HttpHandlerBudgetTests
 		try
 		{
 			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-			if (expire) await Assert.That((await dispatch.WaitAsync(TimeSpan.FromSeconds(2))).AsT0.Status).IsEqualTo(503);
+			if (expire) await Assert.That((await dispatch.WaitAsync(TimeSpan.FromSeconds(2))).Expect<HttpHandlerResult>().Status).IsEqualTo(503);
 			else
 			{
 				cancellation.Cancel();
@@ -99,7 +99,7 @@ public class HttpHandlerBudgetTests
 		try
 		{
 			await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-			if (expire) await Assert.That((await dispatch.WaitAsync(TimeSpan.FromSeconds(2))).AsT0.Status).IsEqualTo(503);
+			if (expire) await Assert.That((await dispatch.WaitAsync(TimeSpan.FromSeconds(2))).Expect<HttpHandlerResult>().Status).IsEqualTo(503);
 			else
 			{
 				cancellation.Cancel();
@@ -124,7 +124,7 @@ public class HttpHandlerBudgetTests
 		});
 		activeCapture = capture;
 
-		var result = (await service.DispatchAsync("GET", "/large", "", [])).AsT0;
+		var result = (await service.DispatchAsync("GET", "/large", "", [])).Expect<HttpHandlerResult>();
 
 		await Assert.That(result.Status).IsEqualTo(500);
 		await Assert.That(result.ContentType).IsEqualTo("text/plain");
@@ -144,11 +144,11 @@ public class HttpHandlerBudgetTests
 			await Task.Delay(30);
 			return new CallState(ExecutionBudget.Error) { HadErrors = true };
 		}, 10);
-		var result = await service.DispatchAsync("GET", "/budget", "", []);
-		await Assert.That(result.AsT0.Status).IsEqualTo(503);
-		await Assert.That(result.AsT0.ContentType).IsEqualTo("text/plain");
-		await Assert.That(result.AsT0.Body).IsEqualTo(ExecutionBudget.Error);
-		await Assert.That(result.AsT0.Headers.Count).IsEqualTo(0);
+		var result = (await service.DispatchAsync("GET", "/budget", "", [])).Expect<HttpHandlerResult>();
+		await Assert.That(result.Status).IsEqualTo(503);
+		await Assert.That(result.ContentType).IsEqualTo("text/plain");
+		await Assert.That(result.Body).IsEqualTo(ExecutionBudget.Error);
+		await Assert.That(result.Headers.Count).IsEqualTo(0);
 		await Assert.That(capture.TryCapture(8, "late output")).IsFalse();
 	}
 
@@ -180,10 +180,10 @@ public class HttpHandlerBudgetTests
 			state.HttpResponse.Body.Append("{\"ok\":true}");
 			return ValueTask.FromResult<CallState?>(new CallState(ExecutionBudget.Error));
 		});
-		var result = await service.DispatchAsync("GET", "/normal", "", []);
-		await Assert.That(result.AsT0.Status).IsEqualTo(202);
-		await Assert.That(result.AsT0.ContentType).IsEqualTo("application/json");
-		await Assert.That(result.AsT0.Body).IsEqualTo("{\"ok\":true}");
-		await Assert.That(result.AsT0.Headers.Single().Name).IsEqualTo("X-Handler");
+		var result = (await service.DispatchAsync("GET", "/normal", "", [])).Expect<HttpHandlerResult>();
+		await Assert.That(result.Status).IsEqualTo(202);
+		await Assert.That(result.ContentType).IsEqualTo("application/json");
+		await Assert.That(result.Body).IsEqualTo("{\"ok\":true}");
+		await Assert.That(result.Headers.Single().Name).IsEqualTo("X-Handler");
 	}
 }

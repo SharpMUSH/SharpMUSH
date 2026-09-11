@@ -123,8 +123,8 @@ public class PennMUSHDatabaseConverterTests
 		await Assert.That(result.IsSuccessful).IsTrue();
 
 		var godPlayer = await database.GetObjectNodeAsync(new Library.Models.DBRef(1));
-		await Assert.That(godPlayer.IsT0).IsTrue();
-		await Assert.That(godPlayer.AsT0.Object.Name).IsEqualTo("CustomGod");
+		await Assert.That(godPlayer.IsPlayer).IsTrue();
+		await Assert.That(godPlayer.AsPlayer.Object.Name).IsEqualTo("CustomGod");
 	}
 
 	[Test]
@@ -161,8 +161,8 @@ public class PennMUSHDatabaseConverterTests
 		await Assert.That(result.IsSuccessful).IsTrue();
 
 		var room0 = await database.GetObjectNodeAsync(new Library.Models.DBRef(0));
-		await Assert.That(room0.IsT1).IsTrue();
-		await Assert.That(room0.AsT1.Object.Name).IsEqualTo("Custom Void");
+		await Assert.That(room0.IsRoom).IsTrue();
+		await Assert.That(room0.AsRoom.Object.Name).IsEqualTo("Custom Void");
 	}
 
 	[Test]

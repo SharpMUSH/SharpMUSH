@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Diagnostics;
 using SharpMUSH.Library.Models.SchedulerModels;
@@ -46,12 +47,12 @@ public class QueueDiagnosticsAuthorizationTests
 		h.Recorder.Rejected(h.Actor.Executor, h.Actor.ActiveCharacter, "enqueue", QueueOutcome.OwnerLimit);
 		for (var i = 0; i < 5; i++) h.Recorder.Rejected(new DBRef(9, 100), new DBRef(9, 100), "enqueue", QueueOutcome.OwnerLimit);
 		h.Recorder.Rejected(h.Actor.Executor, h.Actor.ActiveCharacter, "enqueue", QueueOutcome.OwnerLimit);
-		var result = (await h.Service.InspectAsync(h.Actor)).AsT0;
+		var result = (await h.Service.InspectAsync(h.Actor)).Expect<QueueDiagnosticsReport>();
 		await Assert.That(result.Recent.Count).IsEqualTo(2);
 		await Assert.That(result.Recent.All(row => row.Pid is null)).IsTrue();
 		await Assert.That(JsonSerializer.Serialize(result.Recent).Contains("Sequence", StringComparison.Ordinal)).IsFalse();
 		h.Controls = false;
-		var empty = (await h.Service.InspectAsync(h.Actor, 1)).AsT0;
+		var empty = (await h.Service.InspectAsync(h.Actor, 1)).Expect<QueueDiagnosticsReport>();
 		await Assert.That(empty.Recent.Count).IsEqualTo(0);
 		await Assert.That(empty.NextHistoryCursor).IsNull();
 	}
@@ -63,17 +64,16 @@ public class QueueDiagnosticsAuthorizationTests
 		h.Record(1, h.Actor.ActiveCharacter!.Value, "OWN");
 		h.Record(2, new DBRef(9, 100), "OTHER");
 		h.Scope = new(h.Actor, new HashSet<string> { PortalPermission.QueueInspect, PortalPermission.QueueInspectOwn });
-		var first = (await h.Service.InspectAsync(h.Actor, 1)).AsT0;
+		var first = (await h.Service.InspectAsync(h.Actor, 1)).Expect<QueueDiagnosticsReport>();
 		await Assert.That(first.NextHistoryCursor).IsNotNull();
 		h.Scope = new(h.Actor, new HashSet<string> { PortalPermission.QueueInspectOwn });
 		var denied = await h.Service.InspectAsync(h.Actor, 1, first.NextHistoryCursor);
-		await Assert.That(denied.IsT1).IsTrue();
-		await Assert.That(denied.AsT1).IsEqualTo(DiagnosticsError.InvalidRequest);
+		await Assert.That(denied.Value).IsEqualTo(DiagnosticsError.InvalidRequest);
 		h.Scope = new(h.Actor, new HashSet<string> { PortalPermission.QueueInspect, PortalPermission.QueueInspectOwn });
 		for (var i = 0; i < QueueDiagnosticsRecorder.HistoryCapacity; i++) h.Record(i + 10, h.Actor.ActiveCharacter.Value, "NEW");
 		await Assert.That(h.Recorder.Recent().Count).IsEqualTo(QueueDiagnosticsRecorder.HistoryCapacity);
 		var expired = await h.Service.InspectAsync(h.Actor, 1, first.NextHistoryCursor);
-		await Assert.That(expired.AsT1).IsEqualTo(DiagnosticsError.InvalidRequest);
+		await Assert.That(expired.Value).IsEqualTo(DiagnosticsError.InvalidRequest);
 	}
 
 	[Test]
@@ -83,13 +83,12 @@ public class QueueDiagnosticsAuthorizationTests
 		h.Record(1, h.Actor.ActiveCharacter!.Value, "VISIBLE_OLD");
 		h.Record(2, h.Actor.ActiveCharacter.Value, "VISIBLE_NEW");
 		h.Record(3, new DBRef(9, 100), "PRIVATE_ATTRIBUTE");
-		var result = await h.Service.InspectAsync(h.Actor, limit: 1);
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Recent.Single().SourceAttribute).IsEqualTo("VISIBLE_NEW");
-		await Assert.That(result.AsT0.NextHistoryCursor).IsNotNull();
-		await Assert.That(JsonSerializer.Serialize(result.AsT0).Contains("PRIVATE_ATTRIBUTE", StringComparison.Ordinal)).IsFalse();
-		var next = await h.Service.InspectAsync(h.Actor, 1, result.AsT0.NextHistoryCursor);
-		await Assert.That(next.AsT0.Recent.Single().SourceAttribute).IsEqualTo("VISIBLE_OLD");
+		var result = (await h.Service.InspectAsync(h.Actor, limit: 1)).Expect<QueueDiagnosticsReport>();
+		await Assert.That(result.Recent.Single().SourceAttribute).IsEqualTo("VISIBLE_NEW");
+		await Assert.That(result.NextHistoryCursor).IsNotNull();
+		await Assert.That(JsonSerializer.Serialize(result).Contains("PRIVATE_ATTRIBUTE", StringComparison.Ordinal)).IsFalse();
+		var next = await h.Service.InspectAsync(h.Actor, 1, result.NextHistoryCursor);
+		await Assert.That(next.Expect<QueueDiagnosticsReport>().Recent.Single().SourceAttribute).IsEqualTo("VISIBLE_OLD");
 	}
 
 	[Test]
@@ -99,24 +98,23 @@ public class QueueDiagnosticsAuthorizationTests
 		h.Scope = new(h.Actor, new HashSet<string> { PortalPermission.QueueInspect });
 		h.Record(1, h.Actor.ActiveCharacter!.Value, "OWN_DENIED");
 		h.Record(2, new DBRef(9, 100), "GLOBAL_ALLOWED");
-		var result = await h.Service.InspectAsync(h.Actor);
-		await Assert.That(result.AsT0.Recent.Single().SourceAttribute).IsEqualTo("GLOBAL_ALLOWED");
-		await Assert.That(result.AsT0.CanProfile).IsFalse();
+		var result = (await h.Service.InspectAsync(h.Actor)).Expect<QueueDiagnosticsReport>();
+		await Assert.That(result.Recent.Single().SourceAttribute).IsEqualTo("GLOBAL_ALLOWED");
+		await Assert.That(result.CanProfile).IsFalse();
 	}
 
 	[Test]
 	public async Task RevocationDiscardsQueuedSamplesAndPriorResults()
 	{
 		var h = new Harness();
-		var started = await h.Service.StartProfileAsync(h.Actor);
-		await Assert.That(started.IsT0).IsTrue();
+		var started = (await h.Service.StartProfileAsync(h.Actor)).Expect<Guid>();
 		var observation = h.Recorder.Admitted(1, new DBRef(2, 100), h.Actor.ActiveCharacter, "enqueue");
 		using (observation.Enter()) h.Recorder.RecordInvocation(new(TelemetryInvocationKind.Function, "add", 1, true));
 		h.Scope = null;
 		await h.Service.CollectProfilesAsync();
-		await Assert.That(h.Recorder.Profile(started.AsT0)).IsNull();
+		await Assert.That(h.Recorder.Profile(started)).IsNull();
 		var denied = await h.Service.InspectAsync(h.Actor);
-		await Assert.That(denied.AsT1).IsEqualTo(DiagnosticsError.PermissionDenied);
+		await Assert.That(denied.Value).IsEqualTo(DiagnosticsError.PermissionDenied);
 	}
 
 	[Test]
@@ -130,10 +128,10 @@ public class QueueDiagnosticsAuthorizationTests
 		await h.Service.CollectProfilesAsync();
 		await h.Queues.Received(1).CanInspectAsync(Arg.Any<QueueInspectionScope>(), h.Actor.ActiveCharacter, source, Arg.Any<CancellationToken>());
 		var visible = await h.Service.InspectAsync(h.Actor);
-		await Assert.That(visible.AsT0.Profile!.Rows.Single().Count).IsEqualTo(100L);
+		await Assert.That(visible.Expect<QueueDiagnosticsReport>().Profile!.Rows.Single().Count).IsEqualTo(100L);
 		h.Controls = false;
 		var denied = await h.Service.InspectAsync(h.Actor);
-		await Assert.That(denied.AsT0.Profile!.Rows.Count).IsEqualTo(0);
+		await Assert.That(denied.Expect<QueueDiagnosticsReport>().Profile!.Rows.Count).IsEqualTo(0);
 	}
 
 	[Test]
@@ -141,13 +139,13 @@ public class QueueDiagnosticsAuthorizationTests
 	{
 		var h = new Harness();
 		h.Scope = new(h.Actor, new HashSet<string> { PortalPermission.DiagnosticsProfile });
-		await Assert.That((await h.Service.StartProfileAsync(h.Actor)).AsT1).IsEqualTo(DiagnosticsError.PermissionDenied);
+		await Assert.That((await h.Service.StartProfileAsync(h.Actor)).Expect<DiagnosticsError>()).IsEqualTo(DiagnosticsError.PermissionDenied);
 		h.Scope = new(h.Actor, new HashSet<string> { PortalPermission.QueueInspectOwn, PortalPermission.DiagnosticsProfile });
 		await h.Service.StartProfileAsync(h.Actor);
 		var other = h.Actor with { ActiveCharacter = new DBRef(3, 100), Executor = new DBRef(3, 100) };
 		h.Scope = h.Scope with { Actor = other };
-		await Assert.That((await h.Service.InspectAsync(other)).AsT0.Profile).IsNull();
-		await Assert.That((await h.Service.StopProfileAsync(other)).AsT1).IsEqualTo(DiagnosticsError.NotFound);
+		await Assert.That((await h.Service.InspectAsync(other)).Expect<QueueDiagnosticsReport>().Profile).IsNull();
+		await Assert.That((await h.Service.StopProfileAsync(other)).Expect<DiagnosticsError>()).IsEqualTo(DiagnosticsError.NotFound);
 	}
 	[Test]
 	[Arguments(true)]
@@ -159,8 +157,8 @@ public class QueueDiagnosticsAuthorizationTests
 		var observation = h.Recorder.Admitted(1, new DBRef(2, 100), h.Actor.ActiveCharacter, "enqueue");
 		using (observation.Enter()) h.Recorder.RecordInvocation(new(TelemetryInvocationKind.Function, "add", 4, true));
 		h.Controls = controls;
-		await Assert.That((await h.Service.StopProfileAsync(h.Actor)).IsT0).IsTrue();
-		var report = (await h.Service.InspectAsync(h.Actor)).AsT0.Profile!;
+		await Assert.That((await h.Service.StopProfileAsync(h.Actor)).Value).IsTypeOf<Success>();
+		var report = (await h.Service.InspectAsync(h.Actor)).Expect<QueueDiagnosticsReport>().Profile!;
 		await Assert.That(report.Recording).IsFalse();
 		await Assert.That(report.Rows.Sum(row => row.Count)).IsEqualTo(controls ? 1L : 0L);
 		await Assert.That(h.Recorder.DrainProfileSamples().Count).IsEqualTo(0);
@@ -177,11 +175,11 @@ public class QueueDiagnosticsAuthorizationTests
 		var observation = h.Recorder.Admitted(1, new DBRef(2, 100), h.Actor.ActiveCharacter, "enqueue");
 		using (observation.Enter()) h.Recorder.RecordInvocation(new(TelemetryInvocationKind.Function, "add", 4, true));
 		await h.Service.StopProfileAsync(h.Actor);
-		await Assert.That((await h.Service.InspectAsync(h.Actor)).AsT0.Profile!.Rows.Sum(row => row.Count)).IsEqualTo(1L);
+		await Assert.That((await h.Service.InspectAsync(h.Actor)).Expect<QueueDiagnosticsReport>().Profile!.Rows.Sum(row => row.Count)).IsEqualTo(1L);
 		h.Scope = invalidActor ? null : new(h.Actor, new HashSet<string> { PortalPermission.QueueInspectOwn });
 		await h.Service.CollectProfilesAsync();
 		h.Scope = originalScope;
-		await Assert.That((await h.Service.InspectAsync(h.Actor)).AsT0.Profile).IsNull();
+		await Assert.That((await h.Service.InspectAsync(h.Actor)).Expect<QueueDiagnosticsReport>().Profile).IsNull();
 	}
 
 	[Test]
@@ -222,7 +220,7 @@ public class QueueDiagnosticsAuthorizationTests
 		var entries = Enumerable.Range(1, 101).Select(pid => new QueueEntrySnapshot(pid, new DBRef(2, 100),
 			h.Actor.ActiveCharacter, "enqueue", QueueEntryState.Ready, null, "")).ToArray();
 		h.Queues.ListAsync(h.Actor, 101, Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<QueueEntrySnapshot>>(entries));
-		var report = (await h.Service.InspectAsync(h.Actor)).AsT0;
+		var report = (await h.Service.InspectAsync(h.Actor)).Expect<QueueDiagnosticsReport>();
 		await Assert.That(report.Active.Count).IsEqualTo(100);
 		await Assert.That(report.ActiveTruncated).IsTrue();
 		await h.Queues.DidNotReceive().ListAsync(h.Actor, Arg.Any<CancellationToken>());

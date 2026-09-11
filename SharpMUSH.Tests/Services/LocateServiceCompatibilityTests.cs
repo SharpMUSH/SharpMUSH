@@ -50,7 +50,7 @@ public class LocateServiceCompatibilityTests
 			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
 		_mediator.CreateStream(
 				Arg.Is<GetContentsQuery>(q =>
-					q.DBRef.Match(d => d, c => c.Object().DBRef).Number == container.Object.DBRef.Number),
+					ContainerNumber(q.DBRef) == container.Object.DBRef.Number),
 				Arg.Any<CancellationToken>())
 			.Returns(_ => contents.Select(x => x.AsContent));
 	}
@@ -1332,4 +1332,14 @@ public class LocateServiceCompatibilityTests
 
 		await Assert.That(isValid).IsEqualTo(shouldBeValid);
 	}
+
+	/// <summary>
+	/// The number of the container a contents query is for, whether it was given by reference or already
+	/// loaded. A matcher lambda is an expression tree, which cannot hold the switch this needs.
+	/// </summary>
+	private static int ContainerNumber(DbRefOrContainer container) => container switch
+	{
+		DBRef dbref => dbref.Number,
+		AnySharpContainer loaded => loaded.Object().DBRef.Number
+	};
 }

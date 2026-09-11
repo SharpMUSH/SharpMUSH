@@ -234,7 +234,11 @@ public class GrepSyntaxFormattingTests
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain($"@grep/print {obj}={StraddlesABreak}"));
 
 		var messages = Messages
-			.Select(m => (Plain: m.Match(ms => ms.ToPlainText(), s => s), Markup: m.Match(ms => ms.ToString(), s => s)))
+			.Select(m => m switch
+			{
+				MString markup => (Plain: markup.ToPlainText(), Markup: markup.Render(MarkupFormat.Ansi)),
+				string text => (Plain: text, Markup: text)
+			})
 			.ToList();
 
 		var message = messages.FirstOrDefault(m => m.Plain.StartsWith("BADFN: ", StringComparison.Ordinal));

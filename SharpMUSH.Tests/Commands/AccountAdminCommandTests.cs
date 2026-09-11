@@ -45,7 +45,7 @@ public class AccountAdminCommandTests
 		var accountService = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
 		var accountSessionStore = WebAppFactoryArg.Services.GetRequiredService<IAccountSessionStore>();
 		var createResult = await accountService.CreateAccountAsync(_username, null, "old-password-1");
-		var accountId = createResult.AsT0.Id!;
+		var accountId = createResult.Expect<SharpAccount>().Id!;
 		var sessionToken = await accountSessionStore.CreateTokenAsync(accountId, TimeSpan.FromMinutes(15), "0.0.0.0");
 
 		await Parser.CommandParse(_actor!.Handle, ConnectionService, MarkupText.Plain($"@account/newpassword {_username}=temp-password-9"));

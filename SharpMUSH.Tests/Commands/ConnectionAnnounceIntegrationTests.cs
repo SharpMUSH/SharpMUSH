@@ -596,7 +596,7 @@ public class ConnectionAnnounceIntegrationTests
 		// not IAttributeService.SetAttributeAsync) for the real disconnect flow to keep working.
 		var mortalAttempt = await AttributeService.SetAttributeAsync(
 			playerObj, playerObj, "LASTLOGOUT", MarkupText.Plain("mortal write should be denied"));
-		await Assert.That(mortalAttempt.IsT1).IsTrue()
+		await Assert.That(mortalAttempt.Value).IsTypeOf<Error<string>>()
 			.Because("LASTLOGOUT is seeded wizard-flagged, so once it exists a mortal player's own " +
 				"authority must be denied - proving AnnounceDisconnectAsync would silently freeze " +
 				"LASTLOGOUT after one update if it wrote through this same path");

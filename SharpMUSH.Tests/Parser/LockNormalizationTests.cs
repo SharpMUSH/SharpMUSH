@@ -25,7 +25,7 @@ public class LockNormalizationTests
 		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(NormTestObj1)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
-		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
+		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known;
 		var testObjFullDbRef = testObj.Object().DBRef;
 
 		var lockString = $"=#{testObjFullDbRef.Number}";
@@ -42,7 +42,7 @@ public class LockNormalizationTests
 		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(NormTestObjId1)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
-		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
+		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known;
 		var testObjFullDbRef = testObj.Object().DBRef;
 
 		var lockString = $"=#{testObjFullDbRef.Number}:{testObjFullDbRef.CreationMilliseconds}";
@@ -58,13 +58,13 @@ public class LockNormalizationTests
 		var createResult1 = (await Parser.FunctionParse(MarkupText.Plain("create(NormTestComplex1)")))?.Message!;
 		var testObjDbRefStr1 = createResult1.ToPlainText();
 		var testObjDbRef1 = HelperFunctions.ParseDbRef(testObjDbRefStr1).AsValue();
-		var testObj1 = (await Database.GetObjectNodeAsync(testObjDbRef1)).Known();
+		var testObj1 = (await Database.GetObjectNodeAsync(testObjDbRef1)).Known;
 		var testObjFullDbRef1 = testObj1.Object().DBRef;
 
 		var createResult2 = (await Parser.FunctionParse(MarkupText.Plain("create(NormTestComplex2)")))?.Message!;
 		var testObjDbRefStr2 = createResult2.ToPlainText();
 		var testObjDbRef2 = HelperFunctions.ParseDbRef(testObjDbRefStr2).AsValue();
-		var testObj2 = (await Database.GetObjectNodeAsync(testObjDbRef2)).Known();
+		var testObj2 = (await Database.GetObjectNodeAsync(testObjDbRef2)).Known;
 		var testObjFullDbRef2 = testObj2.Object().DBRef;
 
 		var lockString = $"=#{testObjFullDbRef1.Number} | +#{testObjFullDbRef2.Number}";

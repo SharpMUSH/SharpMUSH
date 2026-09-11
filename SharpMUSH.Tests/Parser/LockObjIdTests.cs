@@ -26,12 +26,12 @@ public class LockObjIdTests
 		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestObj1)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
-		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
+		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known;
 
 		var lockString = $"=#{testObjDbRef.Number}";
 
 		var bep = BooleanParser;
-		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(lockString, god)).IsTrue();
 
@@ -45,14 +45,14 @@ public class LockObjIdTests
 		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestObjId1)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
-		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
+		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known;
 		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
 		var testObjFullDbRef = testObj.Object().DBRef;
 
 		var lockString = $"=#{testObjFullDbRef.Number}:{testObjFullDbRef.CreationMilliseconds}";
 
 		var bep = BooleanParser;
-		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(lockString, god)).IsTrue();
 
@@ -66,7 +66,7 @@ public class LockObjIdTests
 		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestObjId2)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
-		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
+		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known;
 		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
 		var testObjFullDbRef = testObj.Object().DBRef;
 
@@ -74,7 +74,7 @@ public class LockObjIdTests
 		var lockString = $"=#{testObjFullDbRef.Number}:{differentCreationTime}";
 
 		var bep = BooleanParser;
-		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 		await Assert.That(bep.Validate(lockString, god)).IsTrue();
 
@@ -88,12 +88,12 @@ public class LockObjIdTests
 		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestListObj1)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
-		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
+		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known;
 
 		var lockHolderResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockHolder1)")))?.Message!;
 		var lockHolderDbRefStr = lockHolderResult.ToPlainText();
 		var lockHolderDbRef = HelperFunctions.ParseDbRef(lockHolderDbRefStr).AsValue();
-		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known();
+		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known;
 
 		await Parser.FunctionParse(MarkupText.Plain($"attrib_set({lockHolderDbRefStr}/allowedlist,#{testObjDbRef.Number})"));
 
@@ -113,14 +113,14 @@ public class LockObjIdTests
 		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestListObjId1)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
-		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
+		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known;
 		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
 		var testObjFullDbRef = testObj.Object().DBRef;
 
 		var lockHolderResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockHolderObjId1)")))?.Message!;
 		var lockHolderDbRefStr = lockHolderResult.ToPlainText();
 		var lockHolderDbRef = HelperFunctions.ParseDbRef(lockHolderDbRefStr).AsValue();
-		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known();
+		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known;
 
 		await Parser.FunctionParse(MarkupText.Plain($"attrib_set({lockHolderDbRefStr}/allowedlistobjid,#{testObjFullDbRef.Number}:{testObjFullDbRef.CreationMilliseconds})"));
 
@@ -140,14 +140,14 @@ public class LockObjIdTests
 		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestListObjId2)")))?.Message!;
 		var testObjDbRefStr = createResult.ToPlainText();
 		var testObjDbRef = HelperFunctions.ParseDbRef(testObjDbRefStr).AsValue();
-		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known();
+		var testObj = (await Database.GetObjectNodeAsync(testObjDbRef)).Known;
 		// Get full DBRef with creation time from the database object (create() returns bare #N; objid includes timestamp)
 		var testObjFullDbRef = testObj.Object().DBRef;
 
 		var lockHolderResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockHolderObjId2)")))?.Message!;
 		var lockHolderDbRefStr = lockHolderResult.ToPlainText();
 		var lockHolderDbRef = HelperFunctions.ParseDbRef(lockHolderDbRefStr).AsValue();
-		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known();
+		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known;
 
 		var differentCreationTime = (testObjFullDbRef.CreationMilliseconds ?? 0) + 1000;
 		await Parser.FunctionParse(MarkupText.Plain($"attrib_set({lockHolderDbRefStr}/allowedlistdiff,#{testObjFullDbRef.Number}:{differentCreationTime})"));
@@ -168,20 +168,20 @@ public class LockObjIdTests
 		var createResult1 = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestMulti1)")))?.Message!;
 		var testObjDbRefStr1 = createResult1.ToPlainText();
 		var testObjDbRef1 = HelperFunctions.ParseDbRef(testObjDbRefStr1).AsValue();
-		var testObj1 = (await Database.GetObjectNodeAsync(testObjDbRef1)).Known();
+		var testObj1 = (await Database.GetObjectNodeAsync(testObjDbRef1)).Known;
 		// Get creation times from database objects (create() returns bare #N; objid includes timestamp)
 		var testObjFullDbRef1 = testObj1.Object().DBRef;
 
 		var createResult2 = (await Parser.FunctionParse(MarkupText.Plain("create(LockTestMulti2)")))?.Message!;
 		var testObjDbRefStr2 = createResult2.ToPlainText();
 		var testObjDbRef2 = HelperFunctions.ParseDbRef(testObjDbRefStr2).AsValue();
-		var testObj2 = (await Database.GetObjectNodeAsync(testObjDbRef2)).Known();
+		var testObj2 = (await Database.GetObjectNodeAsync(testObjDbRef2)).Known;
 		var testObjFullDbRef2 = testObj2.Object().DBRef;
 
 		var lockHolderResult = (await Parser.FunctionParse(MarkupText.Plain("create(LockHolderMulti)")))?.Message!;
 		var lockHolderDbRefStr = lockHolderResult.ToPlainText();
 		var lockHolderDbRef = HelperFunctions.ParseDbRef(lockHolderDbRefStr).AsValue();
-		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known();
+		var lockHolder = (await Database.GetObjectNodeAsync(lockHolderDbRef)).Known;
 
 		await Parser.FunctionParse(MarkupText.Plain($"attrib_set({lockHolderDbRefStr}/multilist,#{testObjFullDbRef1.Number}:{testObjFullDbRef1.CreationMilliseconds} #{testObjFullDbRef2.Number}:{testObjFullDbRef2.CreationMilliseconds})"));
 
@@ -194,7 +194,7 @@ public class LockObjIdTests
 		await Assert.That(await bep.Compile(lockString)(lockHolder, testObj1)).IsTrue();
 		await Assert.That(await bep.Compile(lockString)(lockHolder, testObj2)).IsTrue();
 
-		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		var god = (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 		await Assert.That(await bep.Compile(lockString)(lockHolder, god)).IsFalse();
 	}
 }

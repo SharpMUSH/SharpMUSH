@@ -760,7 +760,7 @@ public class InputSessionServiceTests
 		await Assert.That(h.Sessions.GetCapturing(1)!.Id).IsEqualTo(independent);
 		await Assert.That(h.Notify.ReceivedCalls().Any()).IsFalse();
 		await Assert.That(await h.Sessions.PromptAsync(caller, MarkupText.Plain("CURRENT"))).IsNull();
-		await h.Notify.Received(1).PromptToSession(1, "transport", Arg.Is<SharpMessage>(text => text.IsT0 && text.AsT0.Text == "CURRENT"));
+		await h.Notify.Received(1).PromptToSession(1, "transport", Arg.Is<SharpMessage>(text => text.Value is MString && ((MString)text.Value).Text == "CURRENT"));
 		await Assert.That(await h.Sessions.CancelAsync(caller)).IsNull();
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
 		await h.Notify.Received(1).NotifyLocalizedToSession(1, "transport", "InputSessionCancelled");

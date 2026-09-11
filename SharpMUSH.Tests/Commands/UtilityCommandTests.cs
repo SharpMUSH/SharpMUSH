@@ -83,9 +83,8 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				msg.IsT0 &&
 				TestHelpers.MessagePlainTextStartsWith(msg, "Room Zero(#0") &&
-				msg.AsT0.Render(MarkupFormat.Ansi).Contains("\x1b[")),
+				RendersAnsiEscapes(msg)),
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -130,9 +129,8 @@ public class UtilityCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				msg.IsT0 &&
 				TestHelpers.MessagePlainTextStartsWith(msg, "God(#1") &&
-				msg.AsT0.Render(MarkupFormat.Ansi).Contains("\x1b[")),
+				RendersAnsiEscapes(msg)),
 				TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -270,7 +268,7 @@ public class UtilityCommandTests
 			.Received(2)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText") &&
-				msg.IsT0 && msg.AsT0.Render(MarkupFormat.Ansi).Contains("\x1b[")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				RendersAnsiEscapes(msg)), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -539,4 +537,11 @@ public class UtilityCommandTests
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("page/noeval #1 \\= ="));
 		await Assert.That(result).IsNotNull();
 	}
+
+	/// <summary>
+	/// True when the message went out as markup whose ANSI rendering carries escape codes. A matcher
+	/// lambda is an expression tree, which cannot hold the declaration pattern this needs.
+	/// </summary>
+	private static bool RendersAnsiEscapes(SharpMessage msg) =>
+		msg is MString markup && markup.Render(MarkupFormat.Ansi).Contains("\x1b[");
 }

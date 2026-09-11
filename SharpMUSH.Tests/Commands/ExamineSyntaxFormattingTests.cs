@@ -137,7 +137,7 @@ public class ExamineSyntaxFormattingTests
 
 		// Every Notify call's plain text, in the order they were sent this command.
 		var texts = Messages
-			.Select(m => m.Match(ms => ms.ToPlainText(), s => s))
+			.Select(m => m switch { MString markup => markup.ToPlainText(), string text => text })
 			.ToList();
 
 		var headerIndex = texts.FindIndex(t => t.StartsWith("EMPTYFN ["));

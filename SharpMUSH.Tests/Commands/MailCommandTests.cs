@@ -115,7 +115,7 @@ public class MailCommandTests
 
 	private static string? TextOf(ICall call) =>
 		call.GetArguments() is [_, SharpMessage msg, ..]
-			? msg.Match(ms => ms.ToPlainText(), s => s)
+			? msg switch { MString markup => markup.ToPlainText(), string text => text }
 			: null;
 
 	[Test]

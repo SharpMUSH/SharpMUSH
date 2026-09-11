@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using SharpMUSH.Library.Models.Diagnostics;
 using SharpMUSH.Server.Controllers;
 using Mediator;
 using System.Reflection;
@@ -33,7 +34,7 @@ public class QueueDiagnosticsCommandTests
 	public async Task UnsupportedSchedulerDiagnosticsRemainAuthorized(string path, bool allowed)
 	{
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
-		var full = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known().Object().DBRef;
+		var full = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known.Object().DBRef;
 		var actor = new CapabilityActor("diagnostics", full, full);
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.GetGameActorAsync(full, Arg.Any<CancellationToken>()).Returns(actor);
@@ -96,7 +97,7 @@ public class QueueDiagnosticsCommandTests
 		var recorder = Factory.Services.GetRequiredService<QueueDiagnosticsRecorder>();
 		var service = Factory.Services.GetRequiredService<IQueueDiagnosticsService>();
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
-		var full = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known().Object().DBRef;
+		var full = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Known.Object().DBRef;
 		var actor = await Factory.Services.GetRequiredService<IAdministrativeCapabilityService>().GetGameActorAsync(full);
 		await Assert.That(actor).IsNotNull();
 		await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain("@profile/start 60"));
@@ -107,10 +108,9 @@ public class QueueDiagnosticsCommandTests
 			using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 			while (!recorder.Recent().Any(row => row.Pid == queued.Pid)) await Task.Delay(10, timeout.Token);
 			await service.CollectProfilesAsync();
-			var report = await service.InspectAsync(actor!);
-			await Assert.That(report.IsT0).IsTrue();
-			await Assert.That(report.AsT0.Recent.Any(row => row.Pid == queued.Pid && row.InvocationCount >= 2)).IsTrue();
-			await Assert.That(report.AsT0.Profile!.Rows.Any(row => row.Name == "ADD")).IsTrue();
+			var report = (await service.InspectAsync(actor!)).Expect<QueueDiagnosticsReport>();
+			await Assert.That(report.Recent.Any(row => row.Pid == queued.Pid && row.InvocationCount >= 2)).IsTrue();
+			await Assert.That(report.Profile!.Rows.Any(row => row.Name == "ADD")).IsTrue();
 			var before = Factory.Notifications.CountFor(Factory.ExecutorDBRef);
 			await Factory.CommandParser.CommandParse(1, connections, MarkupText.Plain("@ps/history 10"));
 			var historyOutput = string.Join('\n', Factory.Notifications.For(Factory.ExecutorDBRef).Skip(before));

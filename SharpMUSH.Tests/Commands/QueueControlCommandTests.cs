@@ -24,7 +24,7 @@ public class QueueControlCommandTests
 		var queue = Factory.Services.GetRequiredService<ITaskScheduler>();
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connections, "QueueRetime");
-		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Known().Object().DBRef;
+		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Known.Object().DBRef;
 		var job = await queue.AdmitCommandList(MarkupText.Plain("think later"), ParserState.Empty with { Executor = objid },
 			new SharpMUSH.Library.Models.DbRefAttribute(objid, ["SEMAPHORE"]), 1, TimeSpan.FromHours(1));
 		try
@@ -50,7 +50,7 @@ public class QueueControlCommandTests
 		var queue = Factory.Services.GetRequiredService<ITaskScheduler>();
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connections, "QueueUntil");
-		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Known().Object().DBRef;
+		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Known.Object().DBRef;
 		var state = ParserState.Empty with { Executor = objid };
 		var job = semaphore
 			? await queue.AdmitCommandList(MarkupText.Plain("think later"), state,
@@ -82,7 +82,7 @@ public class QueueControlCommandTests
 		var queue = Factory.Services.GetRequiredService<ITaskScheduler>();
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connections, "QueuePause");
-		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Known().Object().DBRef;
+		var objid = (await mediator.Send(new GetObjectNodeQuery(target))).Known.Object().DBRef;
 		var job = await queue.AdmitCommandList(MarkupText.Plain("think QueuePrivatePayload"), ParserState.Empty with { Executor = objid }, TimeSpan.FromHours(1));
 		try
 		{

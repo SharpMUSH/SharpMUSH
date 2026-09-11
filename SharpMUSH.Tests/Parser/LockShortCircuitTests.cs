@@ -161,7 +161,7 @@ public class LockShortCircuitTests
 	private static string Route(bool leavesSuspend) => leavesSuspend ? "suspending leaves" : "completed leaves";
 
 	private async ValueTask<AnySharpObject> God()
-		=> (await Database.GetObjectNodeAsync(new DBRef(1))).Known();
+		=> (await Database.GetObjectNodeAsync(new DBRef(1))).Known;
 
 	/// <summary>
 	/// A parser per case, over its own cache: these tests compile the same lock text under both
