@@ -215,13 +215,24 @@ public class InputSessionCommandTests
 		finally { await Connections.Disconnect(player.Handle); }
 	}
 
+	/// <summary>
+	/// A callback may set and read q-registers across its commands, and each reply starts with none: the
+	/// register the first reply leaves behind is gone by the second.
+	/// </summary>
+	/// <remarks>
+	/// Two attributes hold the observations rather than one each. Seven writes made this callback the
+	/// slowest entry on the queue in a full SurrealDB run — 3 to 4 seconds, most of the barrier's own
+	/// window — and the queue is shared by the whole session and runs one entry at a time, so the input
+	/// tests behind it waited nearly as long. Two of them are still two commands, which is what shows a
+	/// register set in one command being read in the next.
+	/// </remarks>
 	[Test]
 	public async Task CallbackQRegistersAreUsableAndFreshForEveryReply()
 	{
 		var player = await Player();
 		try
 		{
-			await Command(player.Handle, "&CALLBACK me=&BEFORE me=listq(); &SET me=setq(LOCAL,%0); &VALUE me=%q<LOCAL>; &RETURN me=setr(OTHER,%0); &KEYS me=sort(listq()); &CLEAR me=unsetq(); &AFTER me=listq(); think setq(LEFTOVER,secret)");
+			await Command(player.Handle, "&CALLBACK me=&SET me=[listq()]|[setq(LOCAL,%0)]|%q<LOCAL>|[setr(OTHER,%0)]|[sort(listq())]; &READ me=%q<LOCAL>|[unsetq()]|[listq()]; think setq(LEFTOVER,secret)");
 			await Command(player.Handle, "@input/start me/CALLBACK=Answer:,120");
 			foreach (var reply in new[] { "first", "second" })
 			{
@@ -229,12 +240,10 @@ public class InputSessionCommandTests
 				var drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 				await Scheduler.EnqueueWork(() => { drained.SetResult(); return ValueTask.FromResult<CallState?>(null); }, "input-register-check", "test");
 				await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
-				await Assert.That(await Read(player.DbRef, "VALUE")).IsEqualTo(reply);
-				await Assert.That(await Read(player.DbRef, "RETURN")).IsEqualTo(reply);
-				await Assert.That(await Read(player.DbRef, "KEYS")).IsEqualTo("LOCAL OTHER");
-				await Assert.That(await Read(player.DbRef, "BEFORE") ?? "").IsEqualTo("");
-				await Assert.That(await Read(player.DbRef, "SET") ?? "").IsEqualTo("");
-				await Assert.That(await Read(player.DbRef, "AFTER") ?? "").IsEqualTo("");
+				await Assert.That(await Read(player.DbRef, "SET")).IsEqualTo($"||{reply}|{reply}|LOCAL OTHER")
+					.Because("no register carries over from the previous reply, and each is readable as it is set");
+				await Assert.That(await Read(player.DbRef, "READ")).IsEqualTo($"{reply}||")
+					.Because("a register set in one command is readable in the next, and unsetq() empties the set");
 				await Assert.That(Sessions.GetCapturing(player.Handle)).IsNotNull();
 			}
 		}
