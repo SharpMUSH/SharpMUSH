@@ -186,17 +186,18 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		var (created, modified) = PennTimestamps(pennObject);
-		if (created is null)
+		if (created is null && modified is null)
 		{
 			return new DBRef(number);
 		}
 
-		await _mediator.Send(new SetObjectTimestampsCommand(new DBRef(number), created.Value, modified),
+		// A source with no creation time keeps the seeded one, and with it the objid.
+		var creation = created ?? seeded.Object().CreationTime;
+		await _mediator.Send(new SetObjectTimestampsCommand(new DBRef(number), creation, modified),
 			cancellationToken);
-		_logger.LogDebug("Restamped reused object #{DBRef} with its PennMUSH creation time {Created}",
-			number, created.Value);
+		_logger.LogDebug("Restamped reused object #{DBRef} with creation time {Created}", number, creation);
 
-		return new DBRef(number, created.Value);
+		return new DBRef(number, creation);
 	}
 
 	/// <summary>
