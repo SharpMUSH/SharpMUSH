@@ -1,7 +1,5 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -52,13 +50,13 @@ public partial class Commands
 	/// This is engine bookkeeping, not a player write; routing it through the executor would
 	/// deny every mortal FOLLOW, DESERT, DISMISS and UNFOLLOW.
 	/// </remarks>
-	private async ValueTask<OneOf<Success, Error<string>>> ClearFollowingAsync(
+	private async ValueTask<Result<Success>> ClearFollowingAsync(
 		AnySharpObject follower)
 		=> await AttributeService.ClearAttributeAsync(await HelperFunctions.GetGod(Mediator), follower,
 			AttrFollowing, IAttributeService.AttributePatternMode.Exact);
 
 	/// <inheritdoc cref="ClearFollowingAsync"/>
-	private async ValueTask<OneOf<Success, Error<string>>> SetFollowingAsync(
+	private async ValueTask<Result<Success>> SetFollowingAsync(
 		AnySharpObject follower, AnySharpObject leader)
 		=> await AttributeService.SetAttributeAsync(await HelperFunctions.GetGod(Mediator), follower,
 			AttrFollowing, MarkupText.Plain(leader.Object().DBRef.ToString()));
@@ -87,7 +85,7 @@ public partial class Commands
 	}
 
 	/// <inheritdoc cref="FollowersOfAsync"/>
-	private async ValueTask<OneOf<Success, Error<string>>> WriteFollowersAsync(
+	private async ValueTask<Result<Success>> WriteFollowersAsync(
 		AnySharpObject leader, IEnumerable<string> followers)
 	{
 		var god = await HelperFunctions.GetGod(Mediator);
@@ -155,7 +153,7 @@ public partial class Commands
 	/// Stops <paramref name="follower"/> following anyone, taking them off their leader's
 	/// <c>FOLLOWERS</c> too. PennMUSH <c>clear_following</c> (<c>src/move.c:1425</c>).
 	/// </summary>
-	private async ValueTask<OneOf<Success, Error<string>>> StopFollowingAsync(AnySharpObject follower)
+	private async ValueTask<Result<Success>> StopFollowingAsync(AnySharpObject follower)
 	{
 		var leader = await LeaderOfAsync(follower);
 

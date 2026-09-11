@@ -62,7 +62,6 @@
 		<PackageReference Include="Microsoft.Extensions.Http" Version="$(DotNetPackageVersion)" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="$(DotNetPackageVersion)" />
 		<PackageReference Include="MudBlazor" Version="9.9.0" />
-		<PackageReference Include="OneOf" Version="3.0.271" />
 		<PackageReference Include="Slugify.Core" Version="5.1.1" />
 		<PackageReference Include="System.Private.Uri" Version="4.3.2" />
 		<PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />

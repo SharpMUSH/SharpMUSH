@@ -43,12 +43,12 @@ public static class SetHelpers
 	{
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectAndOptionalAttribute.ToPlainText());
 
-		if (!split.TryPickT0(out var details, out _))
+		if (!split.IsT0)
 		{
 			return new CallState(ErrorMessages.Returns.BadArgumentFormatToSet);
 		}
 
-		var (name, maybeAttribute) = details;
+		var (name, maybeAttribute) = split.AsT0;
 
 		var locate = await locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, name, LocateFlags.All);

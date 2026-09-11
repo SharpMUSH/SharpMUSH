@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Plugins;
@@ -126,8 +125,8 @@ public class HelloUiManagedPackageExampleTests
 	{
 		public Task UpsertApplicationAsync(RegisteredApplication application) => Task.CompletedTask;
 
-		public Task<OneOf<RegisteredApplication, NotFound>> GetApplicationAsync(string slug) =>
-			Task.FromResult<OneOf<RegisteredApplication, NotFound>>(new NotFound());
+		public Task<Found<RegisteredApplication>> GetApplicationAsync(string slug) =>
+			Task.FromResult<Found<RegisteredApplication>>(new NotFound());
 
 		public Task<IReadOnlyList<RegisteredApplication>> GetApplicationsAsync() =>
 			Task.FromResult<IReadOnlyList<RegisteredApplication>>([]);

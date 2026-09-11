@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 
@@ -32,11 +31,11 @@ public class AdminGuestsService(IHttpClientFactory httpClientFactory, AccountAut
 	// take the page down, which is a worse outcome than showing the message. The catch is the boundary,
 	// not a swallow: the detail reaches the operator either way.
 	//
-	// The results are OneOf rather than a (value, error) tuple of nullables. A tuple has a fourth state
+	// The results are unions rather than a (value, error) tuple of nullables. A tuple has a fourth state
 	// nothing means — (null, null) — and it was reachable: a body that deserialises to null is a
 	// successful response with no value, which left the panel showing an empty roster and no
 	// explanation. There is no such arm here; every path names either a list or a reason.
-	public async Task<OneOf<GuestListResponse, ApiFailure>> ListAsync()
+	public async Task<ApiResult<GuestListResponse>> ListAsync()
 	{
 		try
 		{
@@ -45,7 +44,7 @@ public class AdminGuestsService(IHttpClientFactory httpClientFactory, AccountAut
 				return ApiFailure.FromStatus(response.StatusCode, await response.Content.ReadAsStringAsync());
 
 			return await response.Content.ReadFromJsonAsync<GuestListResponse>()
-				?? (OneOf<GuestListResponse, ApiFailure>)new ApiFailure(
+				?? (ApiResult<GuestListResponse>)new ApiFailure(
 					ApiFailureKind.Unexpected, "The server returned no guest list.", response.StatusCode);
 		}
 		catch (Exception ex)
@@ -54,7 +53,7 @@ public class AdminGuestsService(IHttpClientFactory httpClientFactory, AccountAut
 		}
 	}
 
-	public async Task<OneOf<GuestRow, ApiFailure>> CreateAsync(string? name)
+	public async Task<ApiResult<GuestRow>> CreateAsync(string? name)
 	{
 		try
 		{
@@ -63,7 +62,7 @@ public class AdminGuestsService(IHttpClientFactory httpClientFactory, AccountAut
 				return ApiFailure.FromStatus(response.StatusCode, await response.Content.ReadAsStringAsync());
 
 			return await response.Content.ReadFromJsonAsync<GuestRow>()
-				?? (OneOf<GuestRow, ApiFailure>)new ApiFailure(
+				?? (ApiResult<GuestRow>)new ApiFailure(
 					ApiFailureKind.Unexpected, "The guest was created but the server described nothing.",
 					response.StatusCode);
 		}
@@ -78,7 +77,7 @@ public class AdminGuestsService(IHttpClientFactory httpClientFactory, AccountAut
 	/// moment one is nuked and another created, which is exactly what this panel does, so the number
 	/// is sent with the stamp that pins it to one guest.
 	/// </param>
-	public async Task<OneOf<Success, ApiFailure>> DeleteAsync(int dbrefNumber, long creationTime)
+	public async Task<ApiResult<Success>> DeleteAsync(int dbrefNumber, long creationTime)
 	{
 		try
 		{

@@ -43,7 +43,7 @@ public class ListenerRoutingScopeTests
 
 		_attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(),
 				Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
-			.Returns(new ValueTask<OptionalSharpAttributeOrError>(new OneOf.Types.None()));
+			.Returns(new ValueTask<OptionalSharpAttributeOrError>(new SharpMUSH.Library.DiscriminatedUnions.None()));
 
 		var serviceProvider = Substitute.For<IServiceProvider>();
 		serviceProvider.GetService(typeof(IAttributeService)).Returns(_attributes);
@@ -181,7 +181,7 @@ public class ListenerRoutingScopeTests
 		ResolveObjectsThroughMediator(target);
 		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == Room.Object.DBRef.Number),
 				Arg.Any<CancellationToken>())
-			.Returns(new ValueTask<AnyOptionalSharpObject>(new OneOf.Types.None()));
+			.Returns(new ValueTask<AnyOptionalSharpObject>(new SharpMUSH.Library.DiscriminatedUnions.None()));
 		var service = NewService();
 
 		await service.ProcessNotificationAsync(

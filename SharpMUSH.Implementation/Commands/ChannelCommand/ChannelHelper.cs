@@ -1,6 +1,5 @@
 using Mediator;
-using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -14,34 +13,48 @@ using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
-public class ChannelOrError : OneOfBase<SharpChannel, Error<CallState>>
+[Union]
+public sealed partial class ChannelOrError : IUnion
 {
-	public ChannelOrError(SharpChannel channel) : base(channel)
-	{
-	}
+	public ChannelOrError(SharpChannel value) => Value = value;
+	public ChannelOrError(Error<CallState> value) => Value = value;
 
-	public ChannelOrError(Error<CallState> error) : base(error)
-	{
-	}
+	public object? Value { get; }
 
-	public bool IsError => IsT1;
-	public SharpChannel AsChannel => AsT0;
-	public Error<CallState> AsError => AsT1;
+	public override bool Equals(object? obj) => obj is ChannelOrError other && Equals(Value, other.Value);
+
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsError => Value is Error<CallState>;
+
+	public SharpChannel AsChannel => Value as SharpChannel
+		?? throw new InvalidOperationException($"Expected a channel, but the value is {Value?.GetType().Name ?? "null"}.");
+
+	public Error<CallState> AsError => Value is Error<CallState> error
+		? error
+		: throw new InvalidOperationException($"Expected an error, but the value is {Value?.GetType().Name ?? "null"}.");
 }
 
-public class PrivilegeOrError : OneOfBase<string[], Error<string[]>>
+[Union]
+public sealed partial class PrivilegeOrError : IUnion
 {
-	public PrivilegeOrError(string[] channel) : base(channel)
-	{
-	}
+	public PrivilegeOrError(string[] value) => Value = value;
+	public PrivilegeOrError(Error<string[]> value) => Value = value;
 
-	public PrivilegeOrError(Error<string[]> error) : base(error)
-	{
-	}
+	public object? Value { get; }
 
-	public bool IsError => IsT1;
-	public string[] AsPrivileges => AsT0;
-	public Error<string[]> AsError => AsT1;
+	public override bool Equals(object? obj) => obj is PrivilegeOrError other && Equals(Value, other.Value);
+
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsError => Value is Error<string[]>;
+
+	public string[] AsPrivileges => Value as string[]
+		?? throw new InvalidOperationException($"Expected privileges, but the value is {Value?.GetType().Name ?? "null"}.");
+
+	public Error<string[]> AsError => Value is Error<string[]> error
+		? error
+		: throw new InvalidOperationException($"Expected an error, but the value is {Value?.GetType().Name ?? "null"}.");
 }
 
 public static class ChannelHelper

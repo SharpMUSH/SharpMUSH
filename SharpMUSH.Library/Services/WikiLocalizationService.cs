@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -14,7 +13,7 @@ public sealed class WikiLocalizationService(
 {
 	public string DefaultLocale => resolver.DefaultLocale;
 
-	public async Task<OneOf<LocalizedWikiPage, NotFound>> GetLocalizedBySlugAsync(
+	public async Task<Found<LocalizedWikiPage>> GetLocalizedBySlugAsync(
 		string slug, string? category, WikiNamespace ns, string? requestedLocale, bool includeDrafts)
 	{
 		var lookup = await wikiService.GetBySlugAsync(slug, category, ns);

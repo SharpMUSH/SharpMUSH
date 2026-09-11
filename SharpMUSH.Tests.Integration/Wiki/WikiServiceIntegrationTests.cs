@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;

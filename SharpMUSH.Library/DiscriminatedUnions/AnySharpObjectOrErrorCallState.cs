@@ -1,23 +1,24 @@
-using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnySharpObjectOrErrorCallState(
-	OneOf<AnySharpObject,
-		Error<CallState>> input)
-	: OneOfBase<AnySharpObject,
-		Error<CallState>>(input)
+[Union]
+public sealed partial class AnySharpObjectOrErrorCallState : IUnion
 {
-	public static implicit operator AnySharpObjectOrErrorCallState(AnySharpObject x) => new(x);
-	public static implicit operator AnySharpObjectOrErrorCallState(Error<CallState> x) => new(x);
+	public AnySharpObjectOrErrorCallState(AnySharpObject value) => Value = value;
+	public AnySharpObjectOrErrorCallState(Error<CallState> value) => Value = value;
 
-	public bool IsAnySharpObject => IsT0;
-	public bool IsError => IsT1;
+	public object? Value { get; }
 
-	public AnySharpObject AsSharpObject => AsT0;
+	public override bool Equals(object? obj) => obj is AnySharpObjectOrErrorCallState other && Equals(Value, other.Value);
 
-	public CallState AsError => AsT1.Value;
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsAnySharpObject => Value is AnySharpObject;
+	public bool IsError => Value is Error<CallState>;
+
+	public AnySharpObject AsSharpObject => Value as AnySharpObject ?? throw UnionCase.Mismatch<AnySharpObject>(Value);
+
+	public CallState AsError => Value is Error<CallState> error ? error.Value : throw UnionCase.Mismatch<Error<CallState>>(Value);
 }

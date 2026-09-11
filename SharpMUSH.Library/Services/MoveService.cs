@@ -1,7 +1,5 @@
 ﻿using Mediator;
 using Microsoft.Extensions.Options;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -341,7 +339,7 @@ public class MoveService(
 	}
 
 	/// <inheritdoc />
-	public async ValueTask<OneOf<Success, Error<string>>> EnterRoom(
+	public async ValueTask<Result<Success>> EnterRoom(
 		IMUSHCodeParser parser,
 		AnySharpContent what,
 		AnySharpContainer where,
@@ -434,7 +432,7 @@ public class MoveService(
 	}
 
 	/// <inheritdoc />
-	public async ValueTask<OneOf<Success, Error<string>>> SafeTel(
+	public async ValueTask<Result<Success>> SafeTel(
 		IMUSHCodeParser parser,
 		AnySharpContent what,
 		AnySharpContainer where,

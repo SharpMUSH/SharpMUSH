@@ -97,12 +97,12 @@ public class AccountAuthServiceSetupStatusTests : TrackingBunitContext
 		bool? cachedNeedsSetup = null;
 
 		var first = await service.NeedsSetupAsync();
-		if (first.TryPickT0(out var firstAnswer, out _)) cachedNeedsSetup = firstAnswer;
+		if (first is bool firstAnswer) cachedNeedsSetup = firstAnswer;
 		await Assert.That(first.IsT1).IsTrue();
 		await Assert.That(cachedNeedsSetup).IsNull();
 
 		var second = await service.NeedsSetupAsync();
-		if (second.TryPickT0(out var secondAnswer, out _)) cachedNeedsSetup = secondAnswer;
+		if (second is bool secondAnswer) cachedNeedsSetup = secondAnswer;
 		await Assert.That(second.IsT0).IsTrue();
 		await Assert.That(second.AsT0).IsTrue();
 		await Assert.That(cachedNeedsSetup).IsTrue();

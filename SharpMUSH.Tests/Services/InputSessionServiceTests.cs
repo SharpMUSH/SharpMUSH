@@ -9,7 +9,6 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using Scheduler = SharpMUSH.Library.Services.TaskScheduler;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.InputSessions;
@@ -608,7 +607,7 @@ public class InputSessionServiceTests
 	{
 		var h = new Harness();
 		var caller = await h.Connect();
-		h.Notify.PromptToSession(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<OneOf.OneOf<MarkupText, string>>()).Returns(_ => throw new InvalidOperationException("prompt failed"));
+		h.Notify.PromptToSession(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<SharpMessage>()).Returns(_ => throw new InvalidOperationException("prompt failed"));
 		try { await h.Sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Empty, TimeSpan.FromSeconds(60)); }
 		catch (InvalidOperationException) { }
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
@@ -761,7 +760,7 @@ public class InputSessionServiceTests
 		await Assert.That(h.Sessions.GetCapturing(1)!.Id).IsEqualTo(independent);
 		await Assert.That(h.Notify.ReceivedCalls().Any()).IsFalse();
 		await Assert.That(await h.Sessions.PromptAsync(caller, MarkupText.Plain("CURRENT"))).IsNull();
-		await h.Notify.Received(1).PromptToSession(1, "transport", Arg.Is<OneOf.OneOf<MarkupText, string>>(text => text.IsT0 && text.AsT0.Text == "CURRENT"));
+		await h.Notify.Received(1).PromptToSession(1, "transport", Arg.Is<SharpMessage>(text => text.IsT0 && text.AsT0.Text == "CURRENT"));
 		await Assert.That(await h.Sessions.CancelAsync(caller)).IsNull();
 		await Assert.That(h.Sessions.GetCapturing(1)).IsNull();
 		await h.Notify.Received(1).NotifyLocalizedToSession(1, "transport", "InputSessionCancelled");

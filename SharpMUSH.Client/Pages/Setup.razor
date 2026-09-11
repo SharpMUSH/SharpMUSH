@@ -120,7 +120,7 @@
         // handling will surface any real server problem. So unknown-yet (!_statusResolved) hides the
         // form, but a check that came back and failed still shows it.
         var status = await AccountAuth.NeedsSetupAsync();
-        _alreadyClaimed = status.TryPickT0(out var needsSetup, out _) && !needsSetup;
+        _alreadyClaimed = status is bool needsSetup && !needsSetup;
         _statusResolved = true;
 
         if (_alreadyClaimed)

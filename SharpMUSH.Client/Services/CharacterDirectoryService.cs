@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -37,13 +36,13 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// answer must not make one — so the failure is in the type, where a consumer has to decide
 	/// what to do with it rather than inherit the old lie by accident.
 	/// </remarks>
-	public async Task<OneOf<IReadOnlyList<CharacterSummary>, Error>> ListAsync(CancellationToken cancellationToken = default)
+	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> ListAsync(CancellationToken cancellationToken = default)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/characters", cancellationToken);
-			return OneOf<IReadOnlyList<CharacterSummary>, Error>.FromT0(Normalize(rows));
+			return ServerResult<IReadOnlyList<CharacterSummary>>.FromT0(Normalize(rows));
 		}
 		catch (Exception ex) when (IsRequestFailure(ex, cancellationToken))
 		{
@@ -59,13 +58,13 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// the roster of every character that exists: a character being listed there implies nothing
 	/// about presence.
 	/// </summary>
-	public async Task<OneOf<IReadOnlyList<CharacterSummary>, Error>> ListOnlineAsync(CancellationToken cancellationToken = default)
+	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> ListOnlineAsync(CancellationToken cancellationToken = default)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var rows = await http.GetFromJsonAsync<List<CharacterSummary>>("http/online", cancellationToken);
-			return OneOf<IReadOnlyList<CharacterSummary>, Error>.FromT0(Normalize(rows));
+			return ServerResult<IReadOnlyList<CharacterSummary>>.FromT0(Normalize(rows));
 		}
 		catch (Exception ex) when (IsRequestFailure(ex, cancellationToken))
 		{
@@ -140,10 +139,10 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// and "we could not ask the game" is not, and a caller that wants to say so should not have to
 	/// widen this signature first.
 	/// </remarks>
-	public async Task<OneOf<string, NotFound, Error>> ResolveObjidAsync(string name, CancellationToken cancellationToken = default)
+	public async Task<ObjidResolution> ResolveObjidAsync(string name, CancellationToken cancellationToken = default)
 	{
 		var rows = await ListAsync(cancellationToken);
-		return rows.Match<OneOf<string, NotFound, Error>>(
+		return rows.Match<ObjidResolution>(
 			found => found.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase)) is { } match
 				? match.Objid
 				: new NotFound(),

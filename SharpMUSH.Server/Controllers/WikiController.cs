@@ -230,7 +230,7 @@ public class WikiController(
 		var available = await localization.GetVisibleLocalesAsync(page, includeDrafts);
 
 		// Read path: a bad tag is a client-side hint, never a 400. NormalizeLocaleOrEmpty is the permissive
-		// form for exactly this reason — the OneOf-returning NormalizeLocale belongs at write boundaries.
+		// form for exactly this reason — the Result-returning NormalizeLocale belongs at write boundaries.
 		if (!string.IsNullOrWhiteSpace(lang) && WikiHelpers.NormalizeLocaleOrEmpty(lang).Length == 0)
 			logger.LogDebug("Unrecognised wiki lang tag ignored: {Lang}", LogSanitizer.Sanitize(lang));
 

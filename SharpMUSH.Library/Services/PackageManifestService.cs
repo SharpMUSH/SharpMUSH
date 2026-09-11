@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Widgets;
@@ -87,7 +87,7 @@ public partial class PackageManifestService : IPackageManifestService
 		_wellKnownRefs = set;
 	}
 
-	public OneOf<ParsedPackageManifest, PackageManifestFailure> ParseManifest(string yaml)
+	public PackageManifestResult<ParsedPackageManifest> ParseManifest(string yaml)
 	{
 		var issues = new List<PackageManifestIssue>();
 
@@ -194,7 +194,7 @@ public partial class PackageManifestService : IPackageManifestService
 		return new ParsedPackageManifest(manifest, issues);
 	}
 
-	public OneOf<PackageIndex, PackageManifestFailure> ParseIndex(string yaml)
+	public PackageManifestResult<PackageIndex> ParseIndex(string yaml)
 	{
 		var issues = new List<PackageManifestIssue>();
 
@@ -267,7 +267,7 @@ public partial class PackageManifestService : IPackageManifestService
 		return new PackageIndex(name, description, entries);
 	}
 
-	public OneOf<CommunityRepoListing, PackageManifestFailure> ParseCommunityListing(string yaml)
+	public PackageManifestResult<CommunityRepoListing> ParseCommunityListing(string yaml)
 	{
 		var issues = new List<PackageManifestIssue>();
 

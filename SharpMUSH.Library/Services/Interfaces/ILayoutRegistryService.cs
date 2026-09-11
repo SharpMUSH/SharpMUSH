@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Widgets;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -15,7 +14,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// no provider has to model the nested zone/placement structure. A missing record means the scope has
 /// never been customized; callers fall back to a code-supplied default.
 ///
-/// Single-fetch methods return <c>OneOf&lt;T, NotFound&gt;</c> rather than null, matching
+/// Single-fetch methods return <see cref="Found{T}"/> rather than null, matching
 /// <see cref="IApplicationRegistryService"/> conventions.
 /// </remarks>
 public interface ILayoutRegistryService
@@ -24,7 +23,7 @@ public interface ILayoutRegistryService
 	Task UpsertLayoutAsync(string scope, LayoutConfiguration layout);
 
 	/// <summary>Fetches the stored layout for a scope, or <see cref="NotFound"/> if it was never customized.</summary>
-	Task<OneOf<LayoutConfiguration, NotFound>> GetLayoutAsync(string scope);
+	Task<Found<LayoutConfiguration>> GetLayoutAsync(string scope);
 
 	/// <summary>Lists the scopes that have a stored (customized) layout, sorted by scope name.</summary>
 	Task<IReadOnlyList<string>> GetCustomizedScopesAsync();

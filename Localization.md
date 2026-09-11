@@ -395,7 +395,7 @@ SharpMUSH.Library/
 
 SharpMUSH.Contracts/
   Services/WikiHelpers.cs                   — NormalizeLocale (write boundary,
-                                              returns OneOf) / NormalizeLocaleOrEmpty
+                                              returns Result) / NormalizeLocaleOrEmpty
                                               (permissive read path) / NeutralLocale /
                                               SameLanguage
 

@@ -1,7 +1,6 @@
 ﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
@@ -12,21 +11,28 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
-[GenerateOneOf]
-public class ErrorOrMailList : OneOfBase<Error<string>, IAsyncEnumerable<SharpMail>>
+[Union]
+public sealed partial class ErrorOrMailList : IUnion
 {
-	private ErrorOrMailList(OneOf<Error<string>, IAsyncEnumerable<SharpMail>> input) : base(input)
-	{
-	}
+	public ErrorOrMailList(Error<string> value) => Value = value;
+	public ErrorOrMailList(IAsyncEnumerable<SharpMail> value) => Value = value;
 
-	public bool IsError => IsT0;
-	public string AsError => AsT0.Value;
-	public IAsyncEnumerable<SharpMail> AsMailList => AsT1;
+	public object? Value { get; }
 
-	public static implicit operator ErrorOrMailList(Error<string> x) => new(x);
+	public override bool Equals(object? obj) => obj is ErrorOrMailList other && Equals(Value, other.Value);
 
-	public static ErrorOrMailList FromAsyncEnumerable(IAsyncEnumerable<SharpMail> x)
-		=> new(OneOf<Error<string>, IAsyncEnumerable<SharpMail>>.FromT1(x));
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsError => Value is Error<string>;
+
+	public string AsError => Value is Error<string> error
+		? error.Value
+		: throw new InvalidOperationException($"Expected an error, but the value is {Value?.GetType().Name ?? "null"}.");
+
+	public IAsyncEnumerable<SharpMail> AsMailList => Value as IAsyncEnumerable<SharpMail>
+		?? throw new InvalidOperationException($"Expected a mail list, but the value is {Value?.GetType().Name ?? "null"}.");
+
+	public static ErrorOrMailList FromAsyncEnumerable(IAsyncEnumerable<SharpMail> x) => new(x);
 }
 
 public static class MessageListHelper

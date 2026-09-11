@@ -3,8 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -386,7 +384,7 @@ public class ObjectDestructionTests
 			NullLogger<ObjectDestructionService>.Instance);
 
 	private static IMoveService MoveServiceAnswering(
-		Func<AnySharpContainer, OneOf<Success, Error<string>>> answer, List<int> destinations)
+		Func<AnySharpContainer, Result<Success>> answer, List<int> destinations)
 	{
 		var moves = Substitute.For<IMoveService>();
 		moves.EnterRoom(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpContent>(), Arg.Any<AnySharpContainer>(),

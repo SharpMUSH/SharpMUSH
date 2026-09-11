@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -51,7 +50,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessageEquals(msg, "Set new password for God: newpassNewpassword")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -65,7 +64,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessageEquals(msg, "Password changed.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -105,7 +104,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Purge complete.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -119,7 +118,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "The quota system is disabled") ||
 				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
@@ -134,7 +133,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Reindexing text files")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -148,7 +147,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -162,7 +161,7 @@ public class AdminCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessageEquals(msg, "I don't see that here.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

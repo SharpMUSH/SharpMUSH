@@ -1,6 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -82,7 +80,7 @@ public static class WikiCommandHelper
 	/// chosen occurrence, so an unexpected shape stops the write instead of guessing at it.
 	/// </para>
 	/// </remarks>
-	public static OneOf<(string PageTarget, string Locale), Error<string>> SplitLocaleTarget(string target)
+	public static Result<(string PageTarget, string Locale)> SplitLocaleTarget(string target)
 	{
 		var parts = target.Trim().Split('/');
 

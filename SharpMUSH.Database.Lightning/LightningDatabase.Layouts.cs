@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
@@ -17,12 +16,12 @@ public partial class LightningDatabase
 	public async Task UpsertLayoutAsync(string scope, LayoutConfiguration layout)
 		=> await Store.WriteAsync(tx => tx.Put(Tables.Layout, Keys.Str(scope), Keys.Str(LayoutSerialization.Serialize(layout))));
 
-	public Task<OneOf<LayoutConfiguration, NotFound>> GetLayoutAsync(string scope)
+	public Task<Found<LayoutConfiguration>> GetLayoutAsync(string scope)
 	{
 		var layout = Store.Read(tx => tx.TryGet(Tables.Layout, Keys.Str(scope), out var bytes)
 			? LayoutSerialization.Deserialize(Keys.ReadStr(bytes))
 			: null);
-		return Task.FromResult<OneOf<LayoutConfiguration, NotFound>>(layout is null ? new NotFound() : layout);
+		return Task.FromResult<Found<LayoutConfiguration>>(layout is null ? new NotFound() : layout);
 	}
 
 	public Task<IReadOnlyList<string>> GetCustomizedScopesAsync()

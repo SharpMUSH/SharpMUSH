@@ -75,8 +75,8 @@ public static class MessageHelpers
 			var attr = await attributeService.GetAttributeAsync(
 				executor, objToEvaluate, attrToEvaluate, IAttributeService.AttributeMode.Execute);
 
-			// Only pin a real attribute. attr is OneOf<SharpAttribute[], None, Error>: when the
-			// attribute is absent (None), !IsError is still true but AsAttribute (AsT0) throws,
+			// Only pin a real attribute. attr is an OptionalSharpAttributeOrError: when the
+			// attribute is absent (None), !IsError is still true but AsAttribute throws,
 			// which silently aborts the whole @message (no recipients notified). Guard on IsAttribute
 			// so a missing format attr falls through to the per-recipient default (defmsg) instead.
 			if (attr.IsAttribute)

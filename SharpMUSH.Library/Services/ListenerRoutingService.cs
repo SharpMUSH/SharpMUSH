@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using OneOf;
 using SharpMUSH.Library.Commands.ListenPattern;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -65,7 +64,7 @@ public class ListenerRoutingService(
 	/// </remarks>
 	public async ValueTask ProcessNotificationAsync(
 		NotificationContext context,
-		OneOf<MString, string> message,
+		SharpMessage message,
 		AnySharpObject? sender,
 		NotificationType type)
 	{
@@ -234,7 +233,7 @@ public class ListenerRoutingService(
 
 	private async ValueTask ProcessPuppetRelayAsync(
 		AnySharpObject puppet,
-		OneOf<MString, string> message,
+		SharpMessage message,
 		AnySharpObject speaker,
 		NotificationType type)
 	{

@@ -1,7 +1,6 @@
 using DotNext.Collections.Generic;
 using Humanizer;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -2237,7 +2236,7 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupStarted), executor);
 
 		var result = await WorldBackupService.CreateAsync();
-		if (result.TryPickT0(out var written, out var error))
+		if (result is WorldBackup written)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCompleteFormat),
 				executor, written.Name, DescribeBytes(written.SizeBytes), WorldBackupService.Keep);
@@ -2245,7 +2244,7 @@ public partial class Commands
 		}
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupFailedFormat), executor,
-			error.Value);
+			result.AsT1.Value);
 		return new None();
 	}
 

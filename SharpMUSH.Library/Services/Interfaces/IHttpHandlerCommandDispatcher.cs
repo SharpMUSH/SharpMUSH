@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -43,7 +42,7 @@ public interface IHttpHandlerCommandDispatcher
 	/// <param name="path">Request path including the query string, e.g. <c>/foo?bar=baz</c>. Becomes <c>%0</c>.</param>
 	/// <param name="body">Raw request body. Becomes <c>%1</c>.</param>
 	/// <param name="headers">Request headers; duplicates are joined with <c>%r</c> in one q-register.</param>
-	ValueTask<OneOf<HttpHandlerResult, NotFound>> DispatchAsync(
+	ValueTask<Found<HttpHandlerResult>> DispatchAsync(
 		string method,
 		string path,
 		string body,

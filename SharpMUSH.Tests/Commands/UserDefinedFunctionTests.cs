@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
 using SharpMUSH.Library.Commands.Database;

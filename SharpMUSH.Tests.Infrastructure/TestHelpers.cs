@@ -1,6 +1,5 @@
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -17,50 +16,50 @@ namespace SharpMUSH.Tests;
 public static class TestHelpers
 {
 	/// <summary>
-	/// Checks if a OneOf&lt;MString, string&gt; message contains the expected text
+	/// Checks if a <see cref="SharpMessage"/> contains the expected text
 	/// when rendered as an ANSI string (escape codes included).
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool MessageContains(OneOf<MString, string> msg, string expected) =>
+	public static bool MessageContains(SharpMessage msg, string expected) =>
 		msg.Match(
 			ms => ms.Render(MarkupFormat.Ansi).Contains(expected),
 			s => s.Contains(expected));
 
 	/// <summary>
-	/// Checks if the plain-text content of a OneOf&lt;MString, string&gt; message contains
+	/// Checks if the plain-text content of a <see cref="SharpMessage"/> contains
 	/// the expected text, ignoring any ANSI escape sequences.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool MessagePlainTextContains(OneOf<MString, string> msg, string expected) =>
+	public static bool MessagePlainTextContains(SharpMessage msg, string expected) =>
 		msg.Match(
 			ms => ms.ToPlainText().Contains(expected),
 			s => s.Contains(expected));
 
 	/// <summary>
-	/// Checks if a OneOf&lt;MString, string&gt; message equals the expected text.
+	/// Checks if a <see cref="SharpMessage"/> equals the expected text.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool MessageEquals(OneOf<MString, string> msg, string expected) =>
+	public static bool MessageEquals(SharpMessage msg, string expected) =>
 		msg.Match(
 			ms => ms.ToString() == expected,
 			s => s == expected);
 
 	/// <summary>
-	/// Checks if the plain-text content of a OneOf&lt;MString, string&gt; message equals
+	/// Checks if the plain-text content of a <see cref="SharpMessage"/> equals
 	/// the expected text, ignoring any ANSI escape sequences.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool MessagePlainTextEquals(OneOf<MString, string> msg, string expected) =>
+	public static bool MessagePlainTextEquals(SharpMessage msg, string expected) =>
 		msg.Match(
 			ms => ms.ToPlainText() == expected,
 			s => s == expected);
 
 	/// <summary>
-	/// Checks if the plain-text content of a OneOf&lt;MString, string&gt; message starts with
+	/// Checks if the plain-text content of a <see cref="SharpMessage"/> starts with
 	/// the expected prefix, ignoring any ANSI escape sequences.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool MessagePlainTextStartsWith(OneOf<MString, string> msg, string expectedPrefix) =>
+	public static bool MessagePlainTextStartsWith(SharpMessage msg, string expectedPrefix) =>
 		msg.Match(
 			ms => ms.ToPlainText().StartsWith(expectedPrefix),
 			s => s.StartsWith(expectedPrefix));
@@ -69,14 +68,14 @@ public static class TestHelpers
 	/// Matches a notification by its TEXT, whichever form it arrived in.
 	///
 	/// <para>Passing a bare string to a <c>Received().Notify(...)</c> assertion pins more than the
-	/// test means to: it converts to <c>OneOf.FromT1</c> and can therefore only ever match a command
-	/// that sends a plain string. Commands that carry colour send <c>OneOf.FromT0</c> — an MString —
+	/// test means to: it converts to the <c>string</c> case of <see cref="SharpMessage"/> and can therefore
+	/// only ever match a command that sends a plain string. Commands that carry colour send the MString case
 	/// because rendering it to ANSI escapes at the call site is what left browsers printing
 	/// <c>[31m</c> as text. Use this where the message content is the subject and its representation
 	/// is not.</para>
 	/// </summary>
-	public static OneOf<MString, string> MatchingMessage(string expected) =>
-		Arg.Is<OneOf<MString, string>>(m => MessagePlainTextEquals(m, expected));
+	public static SharpMessage MatchingMessage(string expected) =>
+		Arg.Is<SharpMessage>(m => MessagePlainTextEquals(m, expected));
 
 	/// <summary>
 	/// Returns an NSubstitute argument matcher for <see cref="AnySharpObject"/> that matches
@@ -112,7 +111,7 @@ public static class TestHelpers
 
 		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<string>> _byRecipient = new();
 		private readonly ConcurrentDictionary<long, ConcurrentQueue<string>> _byHandle = new();
-		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<OneOf<MString, string>>> _rawByRecipient = new();
+		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<SharpMessage>> _rawByRecipient = new();
 		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<Delivery>> _deliveriesByRecipient = new();
 
 		internal void Record(DBRef recipient, string message)
@@ -126,8 +125,8 @@ public static class TestHelpers
 		/// printing <c>[31m</c> as literal text — and <see cref="For(DBRef)"/> cannot answer that,
 		/// because by then both look the same.</para>
 		/// </summary>
-		internal void RecordRaw(DBRef recipient, OneOf<MString, string> message)
-			=> _rawByRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<OneOf<MString, string>>()).Enqueue(message);
+		internal void RecordRaw(DBRef recipient, SharpMessage message)
+			=> _rawByRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<SharpMessage>()).Enqueue(message);
 
 		internal void RecordDelivery(
 			DBRef recipient,
@@ -188,7 +187,7 @@ public static class TestHelpers
 		}
 
 		/// <summary>Every message <paramref name="who"/> was sent, in the form it was sent in.</summary>
-		public List<OneOf<MString, string>> RawFor(DBRef who)
+		public List<SharpMessage> RawFor(DBRef who)
 			=> _rawByRecipient.TryGetValue(who, out var queue) ? [.. queue] : [];
 
 		/// <summary>How many such messages <paramref name="who"/> has had, for windowing.</summary>
@@ -246,7 +245,7 @@ public static class TestHelpers
 		// reaches here, so there is no unflattened form of those to keep.
 		void DeliverRaw(
 			DBRef recipient,
-			OneOf<MString, string> message,
+			SharpMessage message,
 			AnySharpObject? sender,
 			INotifyService.NotificationType type)
 		{
@@ -260,22 +259,22 @@ public static class TestHelpers
 		void DeliverToHandle(long handle, string message) => recorder?.RecordHandle(handle, message);
 
 		notifier
-			.When(x => x.Notify(Arg.Any<DBRef>(), Arg.Any<OneOf<MString, string>>(),
+			.When(x => x.Notify(Arg.Any<DBRef>(), Arg.Any<SharpMessage>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
 			.Do(call => DeliverRaw(
 				call.ArgAt<DBRef>(0),
-				call.ArgAt<OneOf<MString, string>>(1),
+				call.ArgAt<SharpMessage>(1),
 				call.ArgAt<AnySharpObject?>(2),
 				call.ArgAt<INotifyService.NotificationType>(3)));
 
 		// The real service's AnySharpObject overload delegates to the DBRef overload; a substitute
 		// does not, so hook both.
 		notifier
-			.When(x => x.Notify(Arg.Any<AnySharpObject>(), Arg.Any<OneOf<MString, string>>(),
+			.When(x => x.Notify(Arg.Any<AnySharpObject>(), Arg.Any<SharpMessage>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
 			.Do(call => DeliverRaw(
 				call.ArgAt<AnySharpObject>(0).Object().DBRef,
-				call.ArgAt<OneOf<MString, string>>(1),
+				call.ArgAt<SharpMessage>(1),
 				call.ArgAt<AnySharpObject?>(2),
 				call.ArgAt<INotifyService.NotificationType>(3)));
 
@@ -310,18 +309,18 @@ public static class TestHelpers
 		// Handle-addressed output: the descriptor overloads. These have no DBRef to capture against —
 		// a connect-screen socket has no object behind it — so they are recorded by handle instead.
 		notifier
-			.When(x => x.Notify(Arg.Any<long>(), Arg.Any<OneOf<MString, string>>(),
+			.When(x => x.Notify(Arg.Any<long>(), Arg.Any<SharpMessage>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
 			.Do(call => DeliverToHandle(
 				call.ArgAt<long>(0),
-				PlainText(call.ArgAt<OneOf<MString, string>>(1))));
+				PlainText(call.ArgAt<SharpMessage>(1))));
 
 		notifier
-			.When(x => x.Notify(Arg.Any<long[]>(), Arg.Any<OneOf<MString, string>>(),
+			.When(x => x.Notify(Arg.Any<long[]>(), Arg.Any<SharpMessage>(),
 				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
 			.Do(call =>
 			{
-				var text = PlainText(call.ArgAt<OneOf<MString, string>>(1));
+				var text = PlainText(call.ArgAt<SharpMessage>(1));
 				foreach (var handle in call.ArgAt<long[]>(0))
 				{
 					DeliverToHandle(handle, text);
@@ -359,7 +358,7 @@ public static class TestHelpers
 		return notifier;
 	}
 
-	private static string PlainText(OneOf<MString, string> msg) =>
+	private static string PlainText(SharpMessage msg) =>
 		msg.Match(ms => ms.ToPlainText(), s => s);
 
 	/// <summary>

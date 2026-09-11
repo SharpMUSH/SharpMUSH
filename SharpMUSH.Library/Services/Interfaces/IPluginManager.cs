@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -24,12 +23,12 @@ public interface IPluginManager
 	/// <see cref="Error{T}"/> when the plugin is unknown or is load-once (it contributes DI/migration/flag/
 	/// bridge state that the container, database, or bridge has captured and that a restart alone can clear).
 	/// </summary>
-	Task<OneOf<Success, Error<string>>> UnloadAsync(string pluginId);
+	Task<Result<Success>> UnloadAsync(string pluginId);
 
 	/// <summary>
 	/// Reload an <i>unloadable</i> plugin at runtime: unload it (see <see cref="UnloadAsync"/>) then load its
 	/// DLL afresh from disk and re-register its commands/functions. Returns an <see cref="Error{T}"/> with the
 	/// same restraints as <see cref="UnloadAsync"/> (unknown id, or load-once plugin requiring a restart).
 	/// </summary>
-	Task<OneOf<Success, Error<string>>> ReloadAsync(string pluginId);
+	Task<Result<Success>> ReloadAsync(string pluginId);
 }

@@ -122,7 +122,7 @@ public class LegacyQueueCommandBoundaryTests
 		mediator.CreateStream(Arg.Any<ScheduleDelayQuery>(), Arg.Any<CancellationToken>()).Returns(AsyncEnumerable.Empty<long>());
 		mediator.CreateStream(Arg.Any<ScheduleEnqueueQuery>(), Arg.Any<CancellationToken>()).Returns(AsyncEnumerable.Empty<long>());
 		mediator.CreateStream(Arg.Any<ScheduleAllTasksQuery>(), Arg.Any<CancellationToken>())
-			.Returns(AsyncEnumerable.Empty<(string, (DateTimeOffset, OneOf.OneOf<string, DBRef>)[])>());
+			.Returns(AsyncEnumerable.Empty<(string, (DateTimeOffset, NameOrDbRef)[])>());
 		var permissions = Substitute.For<IPermissionService>();
 		permissions.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
 		var scheduler = Substitute.For<ITaskScheduler>();

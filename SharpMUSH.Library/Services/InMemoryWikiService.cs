@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -32,19 +31,19 @@ public sealed class InMemoryWikiService : IWikiService
 		_renderer = renderer;
 	}
 
-	public Task<OneOf<WikiPage, NotFound>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
+	public Task<Found<WikiPage>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
 	{
 		var key = SlugKey(ns, category, Slugify(slug));
 		if (_slugIndex.TryGetValue(key, out var id) && _pagesById.TryGetValue(id, out var page))
-			return Task.FromResult<OneOf<WikiPage, NotFound>>(page);
-		return Task.FromResult<OneOf<WikiPage, NotFound>>(new NotFound());
+			return Task.FromResult<Found<WikiPage>>(page);
+		return Task.FromResult<Found<WikiPage>>(new NotFound());
 	}
 
-	public Task<OneOf<WikiPage, NotFound>> GetByIdAsync(string id)
+	public Task<Found<WikiPage>> GetByIdAsync(string id)
 	{
 		if (_pagesById.TryGetValue(id, out var page))
-			return Task.FromResult<OneOf<WikiPage, NotFound>>(page);
-		return Task.FromResult<OneOf<WikiPage, NotFound>>(new NotFound());
+			return Task.FromResult<Found<WikiPage>>(page);
+		return Task.FromResult<Found<WikiPage>>(new NotFound());
 	}
 
 	public Task<IReadOnlyList<WikiPage>> GetRecentChangesAsync(int count = 20)
@@ -125,7 +124,7 @@ public sealed class InMemoryWikiService : IWikiService
 		return Task.FromResult(result);
 	}
 
-	public Task<OneOf<WikiPage, Error<string>>> CreateAsync(
+	public Task<Result<WikiPage>> CreateAsync(
 		string title,
 		string markdown,
 		string authorDbref,
@@ -141,7 +140,7 @@ public sealed class InMemoryWikiService : IWikiService
 		{
 			var normalizedSource = WikiHelpers.NormalizeLocale(sourceLocale);
 			if (normalizedSource.IsT1)
-				return Task.FromResult<OneOf<WikiPage, Error<string>>>(normalizedSource.AsT1);
+				return Task.FromResult<Result<WikiPage>>(normalizedSource.AsT1);
 
 			stampedLocale = normalizedSource.AsT0;
 		}
@@ -178,7 +177,7 @@ public sealed class InMemoryWikiService : IWikiService
 		// Two concurrent CreateAsync calls with the same (ns, category, slug) now correctly reject
 		// the second caller instead of silently clobbering the first.
 		if (!_slugIndex.TryAdd(slugKey, id))
-			return Task.FromResult<OneOf<WikiPage, Error<string>>>(
+			return Task.FromResult<Result<WikiPage>>(
 				new Error<string>($"A wiki page with slug '{slug}' already exists in namespace '{ns}' category '{cat}'."));
 
 		_pagesById[id] = page;
@@ -186,17 +185,17 @@ public sealed class InMemoryWikiService : IWikiService
 
 		SaveRevisionSnapshot(page, authorDbref, editSummary: null);
 
-		return Task.FromResult<OneOf<WikiPage, Error<string>>>(page);
+		return Task.FromResult<Result<WikiPage>>(page);
 	}
 
-	public Task<OneOf<WikiPage, NotFound>> UpdateAsync(
+	public Task<Found<WikiPage>> UpdateAsync(
 		string id,
 		string markdown,
 		string editorDbref,
 		string? editSummary = null)
 	{
 		if (!_pagesById.TryGetValue(id, out var existing))
-			return Task.FromResult<OneOf<WikiPage, NotFound>>(new NotFound());
+			return Task.FromResult<Found<WikiPage>>(new NotFound());
 
 		var now = DateTimeOffset.UtcNow;
 		var html = _renderer.RenderToHtml(markdown);
@@ -215,13 +214,13 @@ public sealed class InMemoryWikiService : IWikiService
 		_pagesById[id] = updated;
 		SaveRevisionSnapshot(updated, editorDbref, editSummary);
 
-		return Task.FromResult<OneOf<WikiPage, NotFound>>(updated);
+		return Task.FromResult<Found<WikiPage>>(updated);
 	}
 
-	public Task<OneOf<None, NotFound>> DeleteAsync(string id, string editorDbref)
+	public Task<Found<None>> DeleteAsync(string id, string editorDbref)
 	{
 		if (!_pagesById.TryRemove(id, out var page))
-			return Task.FromResult<OneOf<None, NotFound>>(new NotFound());
+			return Task.FromResult<Found<None>>(new NotFound());
 
 		var slugKey = SlugKey(page.Namespace, page.Category, page.Slug);
 		_slugIndex.TryRemove(slugKey, out _);
@@ -231,26 +230,26 @@ public sealed class InMemoryWikiService : IWikiService
 		foreach (var key in _translations.Keys.Where(k => k.PageId == id))
 			_translations.TryRemove(key, out _);
 
-		return Task.FromResult<OneOf<None, NotFound>>(new None());
+		return Task.FromResult<Found<None>>(new None());
 	}
 
-	public Task<OneOf<None, NotFound>> SetProtectionAsync(string id, bool isProtected)
+	public Task<Found<None>> SetProtectionAsync(string id, bool isProtected)
 	{
 		if (!_pagesById.TryGetValue(id, out var existing))
-			return Task.FromResult<OneOf<None, NotFound>>(new NotFound());
+			return Task.FromResult<Found<None>>(new NotFound());
 
 		_pagesById[id] = existing with { IsProtected = isProtected };
-		return Task.FromResult<OneOf<None, NotFound>>(new None());
+		return Task.FromResult<Found<None>>(new None());
 	}
 
-	public Task<OneOf<WikiPage, NotFound>> SetMetadataAsync(
+	public Task<Found<WikiPage>> SetMetadataAsync(
 		string id,
 		string? category,
 		IReadOnlyList<string> tags,
 		bool published)
 	{
 		if (!_pagesById.TryGetValue(id, out var existing))
-			return Task.FromResult<OneOf<WikiPage, NotFound>>(new NotFound());
+			return Task.FromResult<Found<WikiPage>>(new NotFound());
 
 		var newCat = WikiHelpers.NormalizeCategory(category);
 
@@ -260,7 +259,7 @@ public sealed class InMemoryWikiService : IWikiService
 		{
 			var newKey = SlugKey(existing.Namespace, newCat, existing.Slug);
 			if (!_slugIndex.TryAdd(newKey, id))
-				return Task.FromResult<OneOf<WikiPage, NotFound>>(new NotFound());
+				return Task.FromResult<Found<WikiPage>>(new NotFound());
 			_slugIndex.TryRemove(SlugKey(existing.Namespace, existing.Category, existing.Slug), out _);
 		}
 
@@ -271,7 +270,7 @@ public sealed class InMemoryWikiService : IWikiService
 			Published = published,
 		};
 		_pagesById[id] = updated;
-		return Task.FromResult<OneOf<WikiPage, NotFound>>(updated);
+		return Task.FromResult<Found<WikiPage>>(updated);
 	}
 
 	public Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
@@ -292,10 +291,10 @@ public sealed class InMemoryWikiService : IWikiService
 		return Task.FromResult(result);
 	}
 
-	public Task<OneOf<WikiRevision, NotFound>> GetRevisionAsync(string pageId, int revisionNumber)
+	public Task<Found<WikiRevision>> GetRevisionAsync(string pageId, int revisionNumber)
 	{
 		if (!_revisions.TryGetValue(pageId, out var list))
-			return Task.FromResult<OneOf<WikiRevision, NotFound>>(new NotFound());
+			return Task.FromResult<Found<WikiRevision>>(new NotFound());
 
 		WikiRevision? result;
 		lock (list)
@@ -304,9 +303,9 @@ public sealed class InMemoryWikiService : IWikiService
 		}
 
 		if (result is null)
-			return Task.FromResult<OneOf<WikiRevision, NotFound>>(new NotFound());
+			return Task.FromResult<Found<WikiRevision>>(new NotFound());
 
-		return Task.FromResult<OneOf<WikiRevision, NotFound>>(result);
+		return Task.FromResult<Found<WikiRevision>>(result);
 	}
 
 	/// <summary>Generates a URL-safe slug from a title.</summary>
@@ -366,15 +365,15 @@ public sealed class InMemoryWikiService : IWikiService
 		return Task.FromResult(result);
 	}
 
-	public Task<OneOf<WikiTranslation, NotFound>> GetTranslationAsync(string pageId, string locale)
+	public Task<Found<WikiTranslation>> GetTranslationAsync(string pageId, string locale)
 	{
 		var key = TranslationKey(pageId, locale);
 		if (key is not null && _translations.TryGetValue(key.Value, out var translation))
-			return Task.FromResult<OneOf<WikiTranslation, NotFound>>(translation);
-		return Task.FromResult<OneOf<WikiTranslation, NotFound>>(new NotFound());
+			return Task.FromResult<Found<WikiTranslation>>(translation);
+		return Task.FromResult<Found<WikiTranslation>>(new NotFound());
 	}
 
-	public Task<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>> UpsertTranslationAsync(
+	public Task<TranslationWriteResult> UpsertTranslationAsync(
 		string pageId,
 		string locale,
 		string title,
@@ -384,8 +383,8 @@ public sealed class InMemoryWikiService : IWikiService
 		bool published,
 		int? expectedRevisionNumber)
 	{
-		static Task<OneOf<WikiTranslation, WikiWriteConflict, Error<string>>> Result(
-			OneOf<WikiTranslation, WikiWriteConflict, Error<string>> value) => Task.FromResult(value);
+		static Task<TranslationWriteResult> Result(
+			TranslationWriteResult value) => Task.FromResult(value);
 
 		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
 		if (normalizedLocale.IsT1)
@@ -462,11 +461,11 @@ public sealed class InMemoryWikiService : IWikiService
 		return Result(updated);
 	}
 
-	public Task<OneOf<None, NotFound>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
+	public Task<Found<None>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
 	{
 		var key = TranslationKey(pageId, locale);
 		if (key is null || !_translations.TryRemove(key.Value, out var removed))
-			return Task.FromResult<OneOf<None, NotFound>>(new NotFound());
+			return Task.FromResult<Found<None>>(new NotFound());
 
 		if (_revisions.TryGetValue(pageId, out var list))
 		{
@@ -476,7 +475,7 @@ public sealed class InMemoryWikiService : IWikiService
 			}
 		}
 
-		return Task.FromResult<OneOf<None, NotFound>>(new None());
+		return Task.FromResult<Found<None>>(new None());
 	}
 
 	public Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(string pageId, string locale, int skip, int take)
@@ -501,10 +500,10 @@ public sealed class InMemoryWikiService : IWikiService
 		return Task.FromResult(result);
 	}
 
-	public Task<OneOf<WikiRevision, NotFound>> GetRevisionForLocaleAsync(string pageId, string locale, int revisionNumber)
+	public Task<Found<WikiRevision>> GetRevisionForLocaleAsync(string pageId, string locale, int revisionNumber)
 	{
 		if (!_revisions.TryGetValue(pageId, out var list))
-			return Task.FromResult<OneOf<WikiRevision, NotFound>>(new NotFound());
+			return Task.FromResult<Found<WikiRevision>>(new NotFound());
 
 		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
 
@@ -516,7 +515,7 @@ public sealed class InMemoryWikiService : IWikiService
 				&& string.Equals(r.Locale, wanted, StringComparison.OrdinalIgnoreCase));
 		}
 
-		return Task.FromResult<OneOf<WikiRevision, NotFound>>(result is null ? new NotFound() : result);
+		return Task.FromResult<Found<WikiRevision>>(result is null ? new NotFound() : result);
 	}
 
 	/// <summary>The dictionary key for a translation, or null when the locale tag is unusable.</summary>

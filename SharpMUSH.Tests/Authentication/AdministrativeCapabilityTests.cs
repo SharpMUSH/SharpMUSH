@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 using NSubstitute;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;

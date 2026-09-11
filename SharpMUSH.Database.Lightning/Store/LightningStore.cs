@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
 using LightningDB;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using LmdbDb = LightningDB.LightningDatabase;
 
@@ -563,7 +562,7 @@ public sealed partial class LightningStore : IDisposable
 			} while (cursor.NextDuplicate().resultCode == MDBResultCode.Success);
 		}
 
-		public OneOf<long, Error<string>> CountDups(TableDef table, ReadOnlySpan<byte> key)
+		public Result<long> CountDups(TableDef table, ReadOnlySpan<byte> key)
 		{
 			using var cursor = tx.CreateCursor(Db(table));
 			if (cursor.Set(key) != MDBResultCode.Success) return 0L;

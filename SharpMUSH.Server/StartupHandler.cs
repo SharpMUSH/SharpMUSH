@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;

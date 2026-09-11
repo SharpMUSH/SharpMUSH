@@ -5,7 +5,6 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using OneOf;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -78,7 +77,7 @@ public class ConfigCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "Usage: @motd")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -140,7 +139,7 @@ public class ConfigCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Any<OneOf.OneOf<MString, string>>(), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Any<SharpMessage>(), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -152,7 +151,7 @@ public class ConfigCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Any<OneOf.OneOf<MString, string>>(), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Any<SharpMessage>(), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

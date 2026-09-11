@@ -9,7 +9,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using OneOf;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -115,7 +114,7 @@ public class MailCommandTests
 			.ToArray();
 
 	private static string? TextOf(ICall call) =>
-		call.GetArguments() is [_, OneOf<MString, string> msg, ..]
+		call.GetArguments() is [_, SharpMessage msg, ..]
 			? msg.Match(ms => ms.ToPlainText(), s => s)
 			: null;
 
@@ -129,12 +128,12 @@ public class MailCommandTests
 		// delivery notice. The original expectation of exactly one is what kept this skipped.
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You sent a message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You have received a message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -344,7 +343,7 @@ public class MailCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextStartsWith(msg, "@MALIAS/")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 }

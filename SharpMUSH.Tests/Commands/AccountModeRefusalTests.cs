@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -46,7 +46,7 @@ public class AccountModeRefusalTests
 			.Select(c => c.GetArguments())
 			.Where(a => a.Length > 1 && a[0] is long h && h == handle)
 			.Select(a => a[1])
-			.OfType<OneOf<MString, string>>()
+			.OfType<SharpMessage>()
 			.Any(m => TestHelpers.MessagePlainTextContains(m, fragment));
 
 		return await Task.FromResult(received);

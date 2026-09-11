@@ -1,5 +1,3 @@
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -23,7 +21,7 @@ public partial class Commands
 
 	private sealed record SemaphoreAccounting(Func<int, ValueTask> Persist, Func<ValueTask<bool>> Reconcile);
 
-	private async ValueTask<OneOf<SemaphoreAccounting, Error<string>>> SemaphoreCommandAccounting(
+	private async ValueTask<Result<SemaphoreAccounting>> SemaphoreCommandAccounting(
 		AnySharpObject target, string[] path, Func<int, int, long> nextCount, bool clearZero)
 	{
 		var token = ExecutionBudget.CurrentToken;

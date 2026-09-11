@@ -28,7 +28,7 @@ public enum ApiFailureKind
 /// The failed arm of a client API call.
 /// </summary>
 /// <remarks>
-/// Kept distinct from a bare <see cref="OneOf.Types.Error"/> so a caller CAN tell these apart:
+/// Kept distinct from a bare <see cref="SharpMUSH.Library.DiscriminatedUnions.Error"/> so a caller CAN tell these apart:
 /// "no such attribute", "you may not read that", "you are not signed in" and "the server is down"
 /// are four different facts, and collapsing them into <see langword="null"/> is what this type
 /// replaced. <see cref="Message"/> is what the editor currently renders; <see cref="Kind"/> is

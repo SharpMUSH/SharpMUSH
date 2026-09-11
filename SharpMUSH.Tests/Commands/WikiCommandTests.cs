@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
@@ -31,7 +30,7 @@ public class WikiCommandTests
 		// the executor of the command — here always the notified player themselves.
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains(contains)) ||
 				(msg.IsT1 && msg.AsT1.Contains(contains))), TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
 	}
@@ -41,7 +40,7 @@ public class WikiCommandTests
 	{
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains(contains)) ||
 				(msg.IsT1 && msg.AsT1.Contains(contains))), TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
 	}
@@ -250,7 +249,7 @@ public class WikiCommandTests
 		// so only the recipient and content are asserted here.
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("in-game interface to the shared wiki")) ||
 				(msg.IsT1 && msg.AsT1.Contains("in-game interface to the shared wiki"))),
 				Arg.Any<SharpMUSH.Library.DiscriminatedUnions.AnySharpObject?>(),
@@ -267,7 +266,7 @@ public class WikiCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToString().Contains("Returns information about a wiki page")) ||
 				(msg.IsT1 && msg.AsT1.Contains("Returns information about a wiki page"))),
 				Arg.Any<SharpMUSH.Library.DiscriminatedUnions.AnySharpObject?>(),
@@ -1123,7 +1122,7 @@ public class WikiCommandTests
 	{
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
 				msg.IsT0 && msg.AsT0.Render(format).Contains(contains)),
 				TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);
 	}
@@ -1136,7 +1135,7 @@ public class WikiCommandTests
 	{
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(player), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player), Arg.Is<SharpMessage>(msg =>
 				(msg.IsT0 && msg.AsT0.ToPlainText().Contains(contains)) ||
 				(msg.IsT1 && msg.AsT1.Contains(contains))),
 				TestHelpers.MatchingObject(player), INotifyService.NotificationType.Announce);

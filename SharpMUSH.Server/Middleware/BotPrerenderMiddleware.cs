@@ -122,7 +122,7 @@ public sealed class BotPrerenderMiddleware(
 			{
 				var resolver = scope.ServiceProvider.GetRequiredService<IHelpTopicResolver>();
 				var resolution = await resolver.ResolveAsync(HelpCorpora.Help, topic);
-				if (resolution.TryPickT0(out var entry, out _))
+				if (resolution is HelpEntry entry)
 				{
 					html = HelpController.GeneratePrerenderHtml(
 						entry,

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text;
@@ -83,7 +83,7 @@ public class AccountSocketArgSplitTests
 
 		await NotifyService.Received(1).Notify(
 			Arg.Is<long>(h => h == handle),
-			Arg.Is<OneOf<MString, string>>(s =>
+			Arg.Is<SharpMessage>(s =>
 				TestHelpers.MessagePlainTextEquals(s, "Usage: register <username> [email] <password>")),
 			null, INotifyService.NotificationType.Announce);
 

@@ -2,7 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text;
@@ -102,7 +102,7 @@ public class ConnectScreenTests
 			.ToArray();
 
 	private static string? TextOf(ICall call) =>
-		call.GetArguments() is [_, OneOf<MString, string> message, ..]
+		call.GetArguments() is [_, SharpMessage message, ..]
 			? message.Match(ms => ms.ToPlainText(), s => s)
 			: null;
 }

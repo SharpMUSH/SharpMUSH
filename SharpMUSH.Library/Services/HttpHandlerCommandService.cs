@@ -1,7 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -25,7 +23,7 @@ public class HttpHandlerCommandService(
 	ILogger<HttpHandlerCommandService> logger) : IHttpHandlerCommandDispatcher
 {
 	/// <inheritdoc />
-	public async ValueTask<OneOf<HttpHandlerResult, NotFound>> DispatchAsync(
+	public async ValueTask<Found<HttpHandlerResult>> DispatchAsync(
 		string method,
 		string path,
 		string body,

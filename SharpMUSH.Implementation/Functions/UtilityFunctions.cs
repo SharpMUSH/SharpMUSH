@@ -8,7 +8,6 @@ using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Html;
 using Microsoft.Extensions.Logging;
-using OneOf.Types;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -2076,12 +2075,12 @@ public partial class Functions
 		// optional decoration: without it every call wiped the whole object.
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttr);
 
-		if (!split.TryPickT0(out var details, out _))
+		if (!split.IsT0)
 		{
 			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
 
-		var (objectName, maybeAttribute) = details;
+		var (objectName, maybeAttribute) = split.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, objectName, LocateFlags.All,

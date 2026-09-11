@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Models.Portal.Widgets;
@@ -23,7 +22,7 @@ public class DefaultApplicationsBootstrapServiceTests
 	{
 		var registry = Substitute.For<IApplicationRegistryService>();
 		registry.GetApplicationAsync(Slug)
-			.Returns(Task.FromResult<OneOf<RegisteredApplication, NotFound>>(new NotFound()));
+			.Returns(Task.FromResult<Found<RegisteredApplication>>(new NotFound()));
 
 		var svc = new DefaultApplicationsBootstrapService(registry, NullLogger<DefaultApplicationsBootstrapService>.Instance);
 		await svc.StartAsync(CancellationToken.None);
@@ -45,7 +44,7 @@ public class DefaultApplicationsBootstrapServiceTests
 
 		var registry = Substitute.For<IApplicationRegistryService>();
 		registry.GetApplicationAsync(Slug)
-			.Returns(Task.FromResult<OneOf<RegisteredApplication, NotFound>>(existing));
+			.Returns(Task.FromResult<Found<RegisteredApplication>>(existing));
 
 		var svc = new DefaultApplicationsBootstrapService(registry, NullLogger<DefaultApplicationsBootstrapService>.Instance);
 		await svc.StartAsync(CancellationToken.None);

@@ -151,7 +151,7 @@ public sealed class HelpController(IHelpTopicResolver resolver) : ControllerBase
 
 		var resolution = await resolver.ResolveAsync(corpus, topic);
 
-		if (resolution.TryPickT0(out var entry, out var notAnEntry))
+		if (resolution is HelpEntry entry)
 		{
 			return Ok(new HelpEntryDto(
 				corpus,
@@ -164,7 +164,7 @@ public sealed class HelpController(IHelpTopicResolver resolver) : ControllerBase
 
 		// Several topics matched. That is an answer, not a failure — the reader picks one — so it
 		// is a 200 with the candidate list rather than a 404 the portal would have to special-case.
-		if (notAnEntry.TryPickT0(out var candidates, out _))
+		if (resolution is HelpCandidates candidates)
 		{
 			return Ok(new HelpEntryDto(corpus, topic, null, null, null, candidates.Topics));
 		}

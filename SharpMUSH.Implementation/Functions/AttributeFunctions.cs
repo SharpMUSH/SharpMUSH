@@ -1,6 +1,4 @@
 using SharpMUSH.Library.Markup;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library;
@@ -73,12 +71,12 @@ public partial class Functions
 		var split = HelperFunctions.SplitObjectAndAttr(args["0"].Message!.ToPlainText());
 		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
 
-		if (!split.TryPickT0(out var details, out _))
+		if (!split.IsT0)
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "ATTRIB_SET"));
 		}
 
-		var (dbref, attribute) = details;
+		var (dbref, attribute) = split.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, dbref, LocateFlags.All, async realLocated =>
@@ -104,12 +102,12 @@ public partial class Functions
 		var split = HelperFunctions.SplitObjectAndAttr(args["0"].Message!.ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (!split.TryPickT0(out var details, out _))
+		if (!split.IsT0)
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "ATTRIB_SET"));
 		}
 
-		var (dbref, attribute) = details;
+		var (dbref, attribute) = split.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, dbref, LocateFlags.All, async realLocated =>
@@ -533,12 +531,12 @@ public partial class Functions
 		var flagNameOrSymbol = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAndAttr);
 
-		if (!split.TryPickT0(out var details, out _))
+		if (!split.IsT0)
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(HasFlag)));
 		}
 
-		var (db, attr) = details;
+		var (db, attr) = split.AsT0;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, db, LocateFlags.All, async realLocated =>
@@ -1580,7 +1578,7 @@ public partial class Functions
 			_ => new CallState(await ValidateService.Valid(validationType, str, new None()) ? "1" : "0")
 		};
 
-		async ValueTask<OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>> GetChannel(string t)
+		async ValueTask<ValidationTarget> GetChannel(string t)
 		{
 			var channel = await Mediator.Send(new GetChannelQuery(t));
 			return channel is null
@@ -1588,7 +1586,7 @@ public partial class Functions
 				: channel;
 		}
 
-		async ValueTask<OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>> GetAttributeEntry(string name)
+		async ValueTask<ValidationTarget> GetAttributeEntry(string name)
 		{
 			var entry = await Mediator.Send(new GetAttributeEntryQuery(name));
 			return entry is null

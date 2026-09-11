@@ -3,7 +3,6 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -102,7 +101,7 @@ public class MyrddinBBSIntegrationTests
 		var args = call.GetArguments();
 		if (args.Length < 2) return null;
 
-		if (args[1] is OneOf<MString, string> oneOf)
+		if (args[1] is SharpMessage oneOf)
 		{
 			return oneOf.Match(
 				mstr => mstr.ToString(),

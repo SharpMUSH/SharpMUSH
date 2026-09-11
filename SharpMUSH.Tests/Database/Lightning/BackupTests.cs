@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
@@ -442,7 +441,7 @@ public class BackupTests
 		backups.CreateAsync(Arg.Any<CancellationToken>()).Returns(_ =>
 		{
 			Interlocked.Increment(ref taken);
-			return new ValueTask<OneOf<WorldBackup, Error<string>>>(
+			return new ValueTask<Result<WorldBackup>>(
 				new WorldBackup("20260101-000000-000", Path.Combine(root, "20260101-000000-000"),
 					DateTimeOffset.UnixEpoch, 0));
 		});
@@ -473,7 +472,7 @@ public class BackupTests
 		backups.CreateAsync(Arg.Any<CancellationToken>()).Returns(_ =>
 		{
 			Interlocked.Increment(ref attempts);
-			return new ValueTask<OneOf<WorldBackup, Error<string>>>(new Error<string>("disk full"));
+			return new ValueTask<Result<WorldBackup>>(new Error<string>("disk full"));
 		});
 		var schedule = new WorldBackupScheduleService(backups, NullLogger<WorldBackupScheduleService>.Instance);
 		try

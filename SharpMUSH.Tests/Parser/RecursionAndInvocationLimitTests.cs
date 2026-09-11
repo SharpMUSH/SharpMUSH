@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -368,7 +367,7 @@ public class RecursionAndInvocationLimitTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<OneOf<MString, string>>(s => TestHelpers.MessagePlainTextEquals(s, "CMDTRACK_A_LIM_UNIQUE_B_OK")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "CMDTRACK_A_LIM_UNIQUE_B_OK")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>

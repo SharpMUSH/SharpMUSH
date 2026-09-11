@@ -90,7 +90,7 @@ public class CacheCoherenceTests
 		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 7 && q.DBRef.CreationMilliseconds == thing.Object().CreationTime), Arg.Any<CancellationToken>())
 			.Returns(new ValueTask<AnyOptionalSharpObject>(thing.AsThing));
 		mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 7 && q.DBRef.CreationMilliseconds != thing.Object().CreationTime), Arg.Any<CancellationToken>())
-			.Returns(new ValueTask<AnyOptionalSharpObject>(new OneOf.Types.None()));
+			.Returns(new ValueTask<AnyOptionalSharpObject>(new SharpMUSH.Library.DiscriminatedUnions.None()));
 		var behaviour = new StreamQueryCachingBehavior<ContentsProbeQuery, AnySharpContent>(cache, mediator);
 
 		var listed = await behaviour.Handle(new ContentsProbeQuery(), (_, _) => new[] { thing.AsContent }.ToAsyncEnumerable(), CancellationToken.None).ToListAsync();

@@ -1,6 +1,4 @@
 ﻿using Mediator;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -445,7 +443,7 @@ public static partial class HelperFunctions
 	/// </summary>
 	/// <param name="objectAttr">Object/Attribute</param>
 	/// <returns><see cref="DbRefAttribute"/> if it is a valid Object/Attribute format. Otherwise, <see cref="None"/>.</returns>
-	public static OneOf<(string db, string Attribute), None> SplitObjectAndAttr(string objectAttr)
+	public static ObjectAttributeSplit SplitObjectAndAttr(string objectAttr)
 	{
 		var match = ObjectWithAttributeRegex.Match(objectAttr);
 		var obj = match.Groups["Object"].Value;
@@ -459,7 +457,7 @@ public static partial class HelperFunctions
 			: (obj, attr);
 	}
 
-	public static OneOf<(string? db, string Attribute), bool> SplitOptionalObjectAndAttr(string ObjectAttr)
+	public static OptionalObjectAttributeSplit SplitOptionalObjectAndAttr(string ObjectAttr)
 	{
 		var match = OptionalDatabaseReferenceWithAttributeRegex.Match(ObjectAttr);
 		var obj = match.Groups["Object"].Value;
@@ -524,7 +522,7 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, IObjectStore database, AnySharpObject start, AnySharpObject newZone, CancellationToken cancellationToken = default)
 		=> await SafeToAddRelationship(mediator, database, start, newZone, cancellationToken) == RelationshipSafety.Safe;
 
-	public static OneOf<(string db, string? Attribute), bool> SplitDbRefAndOptionalAttr(string DBRefAttr)
+	public static DbRefOptionalAttributeSplit SplitDbRefAndOptionalAttr(string DBRefAttr)
 	{
 		var match = DatabaseReferenceWithOptionalAttributeRegex.Match(DBRefAttr);
 		var obj = match.Groups["Object"].Value;

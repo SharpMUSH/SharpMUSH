@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.SurrealDB;
@@ -27,9 +26,9 @@ public class RoleReadCompatibilityTests
 	}
 	private sealed class LegacyRegistry : IRoleRegistryService
 	{
-		public TaskCompletionSource<OneOf<SharpRole, NotFound>> Result { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		public TaskCompletionSource<Found<SharpRole>> Result { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 		public int Reads { get; private set; }
-		public Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug) { Reads++; return Result.Task; }
+		public Task<Found<SharpRole>> GetRoleAsync(string slug) { Reads++; return Result.Task; }
 		public Task UpsertRoleAsync(SharpRole role) => throw new NotSupportedException();
 		public Task<IReadOnlyList<SharpRole>> GetRolesAsync(CancellationToken token = default) => throw new NotSupportedException();
 		public Task RemoveRoleAsync(string slug) => throw new NotSupportedException();

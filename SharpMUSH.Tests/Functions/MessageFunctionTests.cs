@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -41,7 +40,7 @@ public class MessageFunctionTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageFuncSends_Value_37291")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageFuncSends_Value_37291")),
 				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -57,7 +56,7 @@ public class MessageFunctionTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageEval_Result_82044:21")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageEval_Result_82044:21")),
 				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -72,7 +71,7 @@ public class MessageFunctionTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageDefault_Value_91847")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageDefault_Value_91847")),
 				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
 	}
 
@@ -87,7 +86,7 @@ public class MessageFunctionTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(objDbRef),
-				Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageArgs_Value_63018")),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "MessageArgs_Value_63018")),
 				Arg.Any<AnySharpObject?>(), INotifyService.NotificationType.Announce);
 	}
 

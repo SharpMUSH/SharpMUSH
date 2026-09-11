@@ -2,7 +2,6 @@ using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -85,7 +84,7 @@ public class SceneRoleplayIntegrationTests
 			return null;
 		return args[1] switch
 		{
-			OneOf<MString, string> oneOf => oneOf.Match(m => m.ToString(), s => s),
+			SharpMessage oneOf => oneOf.Match(m => m.ToString(), s => s),
 			string s => s,
 			MString m => m.ToString(),
 			_ => null

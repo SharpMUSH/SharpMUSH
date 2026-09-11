@@ -1,7 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
@@ -601,7 +601,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "LookDesc_UniqueTestValue_38471")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
@@ -627,7 +627,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"ROOMDESC_{token.ToUpper()}")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -655,7 +655,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"evaluated_{token}:47201")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -681,7 +681,7 @@ public class BuildingCommandTests
 		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, expectedMessage);
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, expectedMessage)), TestHelpers.MatchingObject(roomDbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -745,7 +745,7 @@ public class BuildingCommandTests
 
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(player.DbRef),
-			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"parent_{token}:inherited_42")),
+			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"parent_{token}:inherited_42")),
 			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -774,7 +774,7 @@ public class BuildingCommandTests
 
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(player.DbRef),
-			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"inner_{token}:inside_42")),
+			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"inner_{token}:inside_42")),
 			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -802,7 +802,7 @@ public class BuildingCommandTests
 			$"action_{token}:{playerRef}:{playerRef}:#{roomDbRef.Number}");
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(player.DbRef),
-			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg,
+			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg,
 				$"format_{token}:{playerRef}:{playerRef}:desc:{playerRef}:{playerRef}")),
 			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
 	}
@@ -826,7 +826,7 @@ public class BuildingCommandTests
 
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(player.DbRef),
-			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"empty_{token}:1::end")),
+			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"empty_{token}:1::end")),
 			TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -874,7 +874,7 @@ public class BuildingCommandTests
 		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"snapshot_old_{token}");
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(player.DbRef),
-			Arg.Is<OneOf<MString, string>>(msg => TestHelpers.MessagePlainTextEquals(msg, $"snapshot_old_{token}")),
+			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"snapshot_old_{token}")),
 			TestHelpers.MatchingObject(roomDbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -953,7 +953,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"THINGDESC_{token.ToUpper()}")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -1020,7 +1020,7 @@ public class BuildingCommandTests
 
 		await NotifyService
 			.Received()
-			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, $"INSIDEDESC_{token.ToUpper()}")), TestHelpers.MatchingObject(player.DbRef), INotifyService.NotificationType.Announce);
 	}
 
@@ -1099,7 +1099,7 @@ public class BuildingCommandTests
 		// look.c/move.c's string, for the commands that match for themselves.
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<OneOf<MString, string>>(msg =>
+			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "I can't see that here.")), TestHelpers.MatchingObject(testPlayer.DbRef),
 				INotifyService.NotificationType.Announce);
 	}

@@ -1,8 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services;
@@ -45,7 +44,7 @@ public sealed partial class WorldBackupWriter(
 
 	public TimeSpan ScheduledInterval => options.Interval;
 
-	public async ValueTask<OneOf<WorldBackup, Error<string>>> CreateAsync(CancellationToken ct = default)
+	public async ValueTask<Result<WorldBackup>> CreateAsync(CancellationToken ct = default)
 	{
 		await _oneAtATime.WaitAsync(ct);
 		try

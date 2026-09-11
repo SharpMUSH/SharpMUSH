@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Services.Interfaces;
@@ -66,7 +65,7 @@ public partial class SurrealDatabase : IApplicationRegistryService
 			""", parameters);
 	}
 
-	public async Task<OneOf<RegisteredApplication, NotFound>> GetApplicationAsync(string slug)
+	public async Task<Found<RegisteredApplication>> GetApplicationAsync(string slug)
 	{
 		var response = await ExecuteAsync(
 			$"SELECT {SysApplicationFields} FROM sys_application WHERE slug = $slug",

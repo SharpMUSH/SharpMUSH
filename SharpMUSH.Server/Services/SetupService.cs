@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
@@ -25,7 +24,7 @@ public class SetupService(
 	public async ValueTask<bool> NeedsSetupAsync(CancellationToken ct = default)
 		=> !(await database.GetServerStateAsync(ct)).SetupCompleted;
 
-	public async ValueTask<OneOf<SharpAccount, Error<string>>> CompleteAsync(string username, string password, CancellationToken ct = default)
+	public async ValueTask<Result<SharpAccount>> CompleteAsync(string username, string password, CancellationToken ct = default)
 	{
 		await _claimLock.WaitAsync(ct);
 		try

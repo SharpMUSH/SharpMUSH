@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -10,8 +9,8 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// </summary>
 /// <remarks>
 /// Mirrors the conventions of <see cref="IWikiService"/>: lookups that may miss return
-/// <c>OneOf&lt;T, NotFound&gt;</c>; operations that can fail with a message return
-/// <c>OneOf&lt;T, Error&lt;string&gt;&gt;</c>.
+/// <see cref="Found{T}"/>; operations that can fail with a message return
+/// <see cref="Result{T}"/>.
 /// </remarks>
 public interface IWikiAssetService
 {
@@ -19,7 +18,7 @@ public interface IWikiAssetService
 	/// Stores a new asset from <paramref name="content"/>, computing its SHA-256 while writing.
 	/// Returns the stored metadata, or <c>Error&lt;string&gt;</c> with a human-readable message on failure.
 	/// </summary>
-	Task<OneOf<WikiAsset, Error<string>>> SaveAsync(
+	Task<Result<WikiAsset>> SaveAsync(
 		string fileName,
 		string contentType,
 		Stream content,
@@ -30,7 +29,7 @@ public interface IWikiAssetService
 	/// Opens an asset for reading. The caller owns (and must dispose) the returned stream.
 	/// Returns <c>NotFound</c> when no asset with <paramref name="id"/> exists.
 	/// </summary>
-	Task<OneOf<(WikiAsset Asset, Stream Content), NotFound>> OpenAsync(string id, CancellationToken ct = default);
+	Task<Found<(WikiAsset Asset, Stream Content)>> OpenAsync(string id, CancellationToken ct = default);
 
 	/// <summary>
 	/// Lists stored asset metadata, newest first, with skip/take pagination.
@@ -41,5 +40,5 @@ public interface IWikiAssetService
 	/// Deletes an asset and its metadata.
 	/// Returns <c>None</c> if an asset was found and deleted; <c>NotFound</c> otherwise.
 	/// </summary>
-	Task<OneOf<None, NotFound>> DeleteAsync(string id);
+	Task<Found<None>> DeleteAsync(string id);
 }

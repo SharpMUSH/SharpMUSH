@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -16,7 +15,7 @@ public interface IPackageAuthoringService
 	/// Reads the selected objects (attrs, flags, parents) and reports every
 	/// dbref in their attribute values that is NOT itself in the selection.
 	/// </summary>
-	Task<OneOf<PackageAuthoringScan, Error<string>>> ScanAsync(
+	Task<Result<PackageAuthoringScan>> ScanAsync(
 		IReadOnlyList<string> objids, CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -25,6 +24,6 @@ public interface IPackageAuthoringService
 	/// <c>{{$well_known}}</c>/<c>{{?configure}}</c>), and validates the result
 	/// through the manifest parser before returning it.
 	/// </summary>
-	Task<OneOf<string, Error<string>>> ExportAsync(
+	Task<Result<string>> ExportAsync(
 		PackageAuthoringRequest request, CancellationToken cancellationToken = default);
 }

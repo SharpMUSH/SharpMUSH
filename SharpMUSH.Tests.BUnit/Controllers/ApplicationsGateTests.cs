@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
@@ -40,7 +39,7 @@ public class ApplicationsGateTests
 		{
 			var slug = ci.Arg<string>();
 			var match = apps.FirstOrDefault(a => string.Equals(a.Slug, slug, StringComparison.OrdinalIgnoreCase));
-			return Task.FromResult<OneOf<RegisteredApplication, NotFound>>(
+			return Task.FromResult<Found<RegisteredApplication>>(
 				match is null ? new NotFound() : match);
 		});
 

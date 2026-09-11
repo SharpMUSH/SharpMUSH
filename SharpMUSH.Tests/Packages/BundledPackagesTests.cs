@@ -56,7 +56,7 @@ public class BundledPackagesTests
 		foreach (var descriptor in BundledPackages.All)
 		{
 			// Assert the parse rather than assuming it: reaching AsT0 on a failed parse throws an
-			// opaque OneOf exception, and this test would silently depend on running after
+			// opaque InvalidOperationException, and this test would silently depend on running after
 			// EveryBundledPackage_HasAnEmbeddedManifestThatParses to get a readable failure.
 			var parsed = _manifests.ParseManifest(BundledPackages.ManifestYaml(descriptor.PackageId));
 			await Assert.That(parsed.IsT0)

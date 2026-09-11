@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text;
 
@@ -13,7 +12,7 @@ namespace SharpMUSH.Implementation.Services;
 public sealed class HelpTopicResolver(ITextFileService textFiles) : IHelpTopicResolver
 {
 	/// <inheritdoc />
-	public async ValueTask<OneOf<HelpEntry, HelpCandidates, None>> ResolveAsync(string corpus, string topic)
+	public async ValueTask<HelpResolution> ResolveAsync(string corpus, string topic)
 	{
 		if (string.IsNullOrWhiteSpace(topic))
 		{
@@ -67,7 +66,7 @@ public sealed class HelpTopicResolver(ITextFileService textFiles) : IHelpTopicRe
 		.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
 		.ToList();
 
-	private async ValueTask<OneOf<HelpEntry, HelpCandidates, None>> NarrowAsync(
+	private async ValueTask<HelpResolution> NarrowAsync(
 		string corpus,
 		IReadOnlyList<string> matches)
 	{

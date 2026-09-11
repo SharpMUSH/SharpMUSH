@@ -1,5 +1,4 @@
 using Mediator;
-using OneOf.Types;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -123,7 +122,7 @@ public class QueueAdmissionTests
 		var target = new TestObjectFactory().CreatePlayer(10, "lock target");
 		var services = Substitute.For<ILockEvaluationServices>();
 		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "LEFT")
-			.Returns(_ => { cancellation.Cancel(); return ValueTask.FromResult<OneOf.OneOf<string, LockEvaluationFailure>>("yes"); });
+			.Returns(_ => { cancellation.Cancel(); return ValueTask.FromResult<LockEvaluation>("yes"); });
 		var reads = 0;
 		services.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>())
 			.Returns(_ => { reads++; return ValueTask.FromResult<OptionalSharpAttributeOrError>(new None()); });
@@ -371,7 +370,7 @@ public class QueueAdmissionTests
 		}.ToAsyncEnumerable());
 		var notifications = Substitute.For<INotifyService>();
 		var reported = new TaskCompletionSource<(bool Cancelled, TimeSpan Remaining)>(TaskCreationOptions.RunContinuationsAsynchronously);
-		notifications.Notify(12L, Arg.Any<OneOf.OneOf<MarkupText, string>>(), null, INotifyService.NotificationType.Announce)
+		notifications.Notify(12L, Arg.Any<SharpMessage>(), null, INotifyService.NotificationType.Announce)
 			.Returns(_ =>
 			{
 				reported.TrySetResult((ExecutionBudget.CurrentToken.IsCancellationRequested, ExecutionBudget.Current?.Remaining ?? TimeSpan.MaxValue));
@@ -661,7 +660,7 @@ public class QueueAdmissionTests
 	{
 		var mediator = TargetMediator();
 		var validation = Substitute.For<IValidateService>();
-		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<OneOf.OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>>()).Returns(true);
+		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<ValidationTarget>()).Returns(true);
 		CancellationToken observed = default;
 		mediator.CreateStream(Arg.Any<GetAttributeWithInheritanceQuery>(), Arg.Any<CancellationToken>())
 			.Returns(call => { observed = call.ArgAt<CancellationToken>(1); return AsyncEnumerable.Empty<AttributeWithInheritance>(); });

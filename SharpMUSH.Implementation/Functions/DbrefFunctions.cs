@@ -1183,13 +1183,13 @@ public partial class Functions
 					if (current.IsContent)
 					{
 						var location = await current.AsContent.Location();
-						current = location.WithRoomOption();
+						current = location.WithExitOption();
 					}
 					else if (current.IsExit)
 					{
 						// Exits' location is their source room
 						var location = await current.AsExit.Location.WithCancellation(CancellationToken.None);
-						current = location.WithRoomOption();
+						current = location.WithExitOption();
 					}
 					else
 					{

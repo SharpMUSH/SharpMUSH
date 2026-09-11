@@ -5,8 +5,7 @@ using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Attributes;
@@ -116,7 +115,7 @@ public class ObjectSnapshotTests
 		var writes = 0;
 		failing.SetAttributeAsync(Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<Library.DiscriminatedUnions.AnySharpObject>(), Arg.Any<string>(), Arg.Any<MarkupText>())
 			.Returns(call => ++writes == 2
-				? ValueTask.FromException<OneOf<Success, Error<string>>>(new IOException("Injected failure"))
+				? ValueTask.FromException<Result<Success>>(new IOException("Injected failure"))
 				: realAttributes.SetAttributeAsync(call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(0), call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<MarkupText>(3)));
 		var service = new ObjectSnapshotService(Get<IObjectStore>(), Get<IAttributeStore>(), Get<IExpandedDataStore>(),
 			Get<IAdministrativeCapabilityService>(), Get<IPermissionService>(), failing, Get<IManipulateSharpObjectService>(), Get<ILockService>(), Get<IMediator>());
@@ -281,7 +280,7 @@ public class ObjectSnapshotTests
 		var writes = 0;
 		var diagnosticWritesAfterCancellation = 0;
 		var attributes = Substitute.For<IAttributeService>();
-		async ValueTask<OneOf<Success, Error<string>>> WriteThenCancel(NSubstitute.Core.CallInfo call)
+		async ValueTask<Result<Success>> WriteThenCancel(NSubstitute.Core.CallInfo call)
 		{
 			var result = await Get<IAttributeService>().SetAttributeAsync(call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(0),
 				call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<MarkupText>(3));
@@ -346,7 +345,7 @@ public class ObjectSnapshotTests
 		var capabilities = Substitute.For<IAdministrativeCapabilityService>();
 		capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
 		var attributes = Substitute.For<IAttributeService>();
-		async ValueTask<OneOf<Success, Error<string>>> RevokeAfterWrite(NSubstitute.Core.CallInfo call)
+		async ValueTask<Result<Success>> RevokeAfterWrite(NSubstitute.Core.CallInfo call)
 		{
 			var result = await realAttributes.SetAttributeAsync(call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(0), call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<MarkupText>(3));
 			capabilities.AuthorizeAsync(Arg.Any<CapabilityActor>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
@@ -382,7 +381,7 @@ public class ObjectSnapshotTests
 		await Get<IMediator>().Send(new SetLockCommand(node.Object(), "Basic", "#FALSE", player));
 		var realAttributes = Get<IAttributeService>();
 		var attributes = Substitute.For<IAttributeService>();
-		async ValueTask<OneOf<Success, Error<string>>> ProtectAfterWrite(NSubstitute.Core.CallInfo call)
+		async ValueTask<Result<Success>> ProtectAfterWrite(NSubstitute.Core.CallInfo call)
 		{
 			var result = await realAttributes.SetAttributeAsync(call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(0), call.ArgAt<Library.DiscriminatedUnions.AnySharpObject>(1), call.ArgAt<string>(2), call.ArgAt<MarkupText>(3));
 			await Get<IMediator>().Send(new SetLockCommand(node.Object(), "Basic", "#FALSE", player) { Flags = Library.Services.LockService.LockFlags.Locked });

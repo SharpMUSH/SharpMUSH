@@ -78,7 +78,7 @@ public class InputHookFailureTests
 		}, _ => { functionCalls++; throw new InvalidOperationException("hook failed"); }), true));
 		var hooks = Substitute.For<IHookService>();
 		hooks.GetHookAsync(Arg.Any<string>(), Arg.Any<string>())
-			.Returns(ValueTask.FromResult<Option<CommandHook>>(new OneOf.Types.None()));
+			.Returns(ValueTask.FromResult<Option<CommandHook>>(new SharpMUSH.Library.DiscriminatedUnions.None()));
 		hooks.GetHookAsync(Arg.Is<string>(s => s.Equals(commandName, StringComparison.OrdinalIgnoreCase)), hookType)
 			.Returns(ValueTask.FromResult<Option<CommandHook>>(new CommandHook(hookType, player.DbRef, "HOOKBODY")));
 		if (mode is "branch-override" or "branch-extend")

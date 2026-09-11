@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using OneOf.Types;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;

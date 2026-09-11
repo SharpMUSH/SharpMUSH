@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -8,7 +7,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// Storage for portal roles (Discord-style RBAC) and account↔role assignments. Implemented by
 /// every database provider; system data, never visible to softcode, travels with backups.
 /// Roles are keyed by <see cref="SharpRole.Slug"/>; assignments link an account id to a role slug.
-/// Single-fetch returns <c>OneOf&lt;T, NotFound&gt;</c>, matching the other registries.
+/// Single-fetch returns <see cref="Found{T}"/>, matching the other registries.
 /// </summary>
 public interface IRoleRegistryService
 {
@@ -16,11 +15,11 @@ public interface IRoleRegistryService
 	Task UpsertRoleAsync(SharpRole role);
 
 	/// <summary>Fetches one role by slug.</summary>
-	Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug);
+	Task<Found<SharpRole>> GetRoleAsync(string slug);
 
 	/// <summary>Token-aware read. Existing plugin providers retain their original method slot;
 	/// built-in providers override this overload to cancel their underlying database operation.</summary>
-	async Task<OneOf<SharpRole, NotFound>> GetRoleAsync(string slug, CancellationToken cancellationToken)
+	async Task<Found<SharpRole>> GetRoleAsync(string slug, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 		return await GetRoleAsync(slug).WaitAsync(cancellationToken);

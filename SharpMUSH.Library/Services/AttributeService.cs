@@ -1,8 +1,6 @@
 ﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NaturalSort.Extension;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -1066,11 +1064,11 @@ public class AttributeService(
 
 	}
 
-	public ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagAsync(AnySharpObject executor,
+	public ValueTask<Result<Success>> SetAttributeFlagAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute, string flag)
 		=> SetAttributeFlagsAsync(executor, obj, attribute, [flag]);
 
-	public ValueTask<OneOf<Success, Error<string>>> UnsetAttributeFlagAsync(AnySharpObject executor,
+	public ValueTask<Result<Success>> UnsetAttributeFlagAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute, string flag)
 		=> SetAttributeFlagsAsync(executor, obj, attribute, [$"!{flag}"]);
 
@@ -1091,7 +1089,7 @@ public class AttributeService(
 	/// the same logical operation.
 	/// </para>
 	/// </summary>
-	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeFlagsAsync(AnySharpObject executor,
+	public async ValueTask<Result<Success>> SetAttributeFlagsAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute, IReadOnlyList<string> flagTokens)
 	{
 		if (flagTokens.Count == 0)
@@ -1292,7 +1290,7 @@ public class AttributeService(
 		return objOwner?.Object.Id == executor.Object().Id;
 	}
 
-	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor,
+	public async ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attribute,
 		MString value)
@@ -1306,7 +1304,7 @@ public class AttributeService(
 	/// unchanged - a cloned attribute keeps its original creator, not the cloner. <c>@CLONE</c>
 	/// is the only caller today.
 	/// </summary>
-	public async ValueTask<OneOf<Success, Error<string>>> SetAttributeAsync(AnySharpObject executor,
+	public async ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attribute,
 		MString value,
@@ -1416,7 +1414,7 @@ public class AttributeService(
 	/// <param name="obj">The object whose attributes are being cleared.</param>
 	/// <param name="attributePattern">Attribute name or pattern to match.</param>
 	/// <param name="patternMode">Selects the @wipe or the @set semantics described above.</param>
-	public async ValueTask<OneOf<Success, Error<string>>> ClearAttributeAsync(AnySharpObject executor,
+	public async ValueTask<Result<Success>> ClearAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attributePattern,
 		IAttributeService.AttributePatternMode patternMode)

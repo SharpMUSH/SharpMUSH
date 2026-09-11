@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -123,7 +122,7 @@ public class CapabilityPolicyTests
 			["god"] = new() { Slug = "god", Name = "God", IsSystem = true, Priority = 100, Permissions = new() { [PortalPermission.RolesAdmin] = PermissionState.Allow } },
 			["restricted"] = new() { Slug = "restricted", Name = "Restricted", Priority = 40, Permissions = new() { [PortalPermission.RolesAdmin] = PermissionState.Deny } }
 		};
-		registry.GetRoleAsync(Arg.Any<string>()).Returns(call => Task.FromResult<OneOf<SharpRole, NotFound>>(state[call.Arg<string>()]));
+		registry.GetRoleAsync(Arg.Any<string>()).Returns(call => Task.FromResult<Found<SharpRole>>(state[call.Arg<string>()]));
 		registry.GetRolesAsync(Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult<IReadOnlyList<SharpRole>>(state.Values.ToArray()));
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

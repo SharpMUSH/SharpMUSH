@@ -26,8 +26,8 @@ public interface IChannelStore
 	/// than duplicating or overwriting the winner.
 	/// </summary>
 	/// <returns>
-	/// <see cref="OneOf.Types.Success"/>, <see cref="ChannelNameTaken"/> when the name is already in use, or
-	/// <see cref="OneOf.Types.Error{T}"/> carrying the storage layer's message. Never silence: the caller
+	/// <see cref="SharpMUSH.Library.DiscriminatedUnions.Success"/>, <see cref="ChannelNameTaken"/> when the name is already in use, or
+	/// <see cref="SharpMUSH.Library.DiscriminatedUnions.Error{T}"/> carrying the storage layer's message. Never silence: the caller
 	/// tells a player which of the three happened.
 	/// </returns>
 	ValueTask<ChannelCreationResult> CreateChannelAsync(MString name, string[] privs, SharpPlayer owner, CancellationToken cancellationToken = default);

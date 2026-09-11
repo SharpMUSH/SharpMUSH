@@ -1,6 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.ParserInterfaces;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.Queries;
@@ -128,9 +128,9 @@ public class GetEnqueueTasksHandler(ITaskScheduler scheduler)
 }
 
 public class GetAllTasksHandler(ITaskScheduler scheduler)
-	: IStreamQueryHandler<ScheduleAllTasksQuery, (string Group, (DateTimeOffset, OneOf<string, DBRef>)[])>
+	: IStreamQueryHandler<ScheduleAllTasksQuery, (string Group, (DateTimeOffset, NameOrDbRef)[])>
 {
-	public IAsyncEnumerable<(string Group, (DateTimeOffset, OneOf<string, DBRef>)[])> Handle(ScheduleAllTasksQuery query,
+	public IAsyncEnumerable<(string Group, (DateTimeOffset, NameOrDbRef)[])> Handle(ScheduleAllTasksQuery query,
 		CancellationToken cancellationToken)
 		=> SchedulerQueryLifetime.Read(() => scheduler.GetAllTasks(), cancellationToken);
 }

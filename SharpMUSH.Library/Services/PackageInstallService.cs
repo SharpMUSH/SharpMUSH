@@ -1,8 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using System.Text.Json;
-using OneOf;
-using OneOf.Types;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -295,7 +293,7 @@ public class PackageInstallService(
 
 	// ── Apply ────────────────────────────────────────────────────────────────
 
-	public async Task<OneOf<PackageApplyResult, Error<string>>> ApplyAsync(
+	public async Task<Result<PackageApplyResult>> ApplyAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
 		CancellationToken cancellationToken = default,
@@ -589,7 +587,7 @@ public class PackageInstallService(
 	/// and a revision. No game objects, attributes, or plan are involved. The
 	/// plugin loads on the next server boot.
 	/// </summary>
-	private async Task<OneOf<PackageApplyResult, Error<string>>> ApplyManagedAsync(
+	private async Task<Result<PackageApplyResult>> ApplyManagedAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
 		IManagedPackageBinarySource? binarySource,
@@ -649,7 +647,7 @@ public class PackageInstallService(
 	/// fields and parsing the role/kind/zone enums. Provenance is stamped with
 	/// the package id so uninstall can reclaim it.
 	/// </summary>
-	private static OneOf<RegisteredApplication, Error<string>> BuildRegisteredApplication(
+	private static Result<RegisteredApplication> BuildRegisteredApplication(
 		PackageApplicationSpec spec, string packageId, Func<PackageRef, string?> resolve)
 	{
 		string? Sub(string? value) =>
@@ -687,7 +685,7 @@ public class PackageInstallService(
 		return application;
 	}
 
-	private async Task<OneOf<string, Error<string>>> CreateObjectAsync(
+	private async Task<Result<string>> CreateObjectAsync(
 		PackageObjectSpec spec,
 		SharpPlayer pmWizard,
 		Func<PackageRef, string?> resolve,
@@ -1106,7 +1104,7 @@ public class PackageInstallService(
 
 	// ── Uninstall ────────────────────────────────────────────────────────────
 
-	public async Task<OneOf<Success, Error<string>>> UninstallAsync(
+	public async Task<Result<Success>> UninstallAsync(
 		string packageId, bool force = false, CancellationToken cancellationToken = default)
 	{
 		var installed = await registry.GetInstalledPackageAsync(packageId);
@@ -1206,7 +1204,7 @@ public class PackageInstallService(
 
 	// ── Rollback ─────────────────────────────────────────────────────────────
 
-	public async Task<OneOf<PackageRollbackResult, Error<string>>> RollbackAsync(
+	public async Task<Result<PackageRollbackResult>> RollbackAsync(
 		string packageId, int revision, CancellationToken cancellationToken = default)
 	{
 		var installedResult = await registry.GetInstalledPackageAsync(packageId);

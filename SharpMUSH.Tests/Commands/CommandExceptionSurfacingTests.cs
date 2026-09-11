@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.Core;
-using OneOf;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -262,7 +261,7 @@ public class CommandExceptionSurfacingTests
 		NotifyService.ReceivedCalls()
 			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
 			.Where(targetMatches)
-			.Select(call => call.GetArguments() is [_, OneOf<MString, string> msg, ..]
+			.Select(call => call.GetArguments() is [_, SharpMessage msg, ..]
 				? msg.Match(ms => ms.ToPlainText(), s => s)
 				: null)
 			.LastOrDefault(text => text is not null && text.StartsWith("#-1 EXCEPTION: "));

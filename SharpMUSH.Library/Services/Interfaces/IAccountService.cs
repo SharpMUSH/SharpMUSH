@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -25,7 +24,7 @@ public interface IAccountService
 	/// Creates a new account. <paramref name="email"/> is optional (pass null to omit).
 	/// Returns an <see cref="Error{T}"/> if the username or email is already taken.
 	/// </summary>
-	ValueTask<OneOf<SharpAccount, Error<string>>> CreateAccountAsync(string username, string? email, string password, CancellationToken ct = default);
+	ValueTask<Result<SharpAccount>> CreateAccountAsync(string username, string? email, string password, CancellationToken ct = default);
 
 	ValueTask<bool> UsernameExistsAsync(string username, CancellationToken ct = default);
 
@@ -36,15 +35,15 @@ public interface IAccountService
 	/// <summary>
 	/// Changes the account password. Returns an error if the account is not found or the old password is wrong.
 	/// </summary>
-	ValueTask<OneOf<Success, Error<string>>> ChangePasswordAsync(string accountId, string oldPassword, string newPassword, CancellationToken ct = default);
+	ValueTask<Result<Success>> ChangePasswordAsync(string accountId, string oldPassword, string newPassword, CancellationToken ct = default);
 
 	/// <summary>Adds, changes, or clears the email. Pass null to remove the email.</summary>
-	ValueTask<OneOf<Success, Error<string>>> ChangeEmailAsync(string accountId, string? newEmail, string currentPassword, CancellationToken ct = default);
+	ValueTask<Result<Success>> ChangeEmailAsync(string accountId, string? newEmail, string currentPassword, CancellationToken ct = default);
 
 	/// <summary>
 	/// Changes the username. Returns an error if the new username is already taken.
 	/// </summary>
-	ValueTask<OneOf<Success, Error<string>>> ChangeUsernameAsync(string accountId, string newUsername, CancellationToken ct = default);
+	ValueTask<Result<Success>> ChangeUsernameAsync(string accountId, string newUsername, CancellationToken ct = default);
 
 	ValueTask<IReadOnlyList<SharpPlayer>> GetCharactersAsync(string accountId, CancellationToken ct = default);
 
@@ -60,20 +59,20 @@ public interface IAccountService
 
 	ValueTask<SharpAccount?> GetByEmailAsync(string email, CancellationToken ct = default);
 
-	ValueTask<OneOf<Success, Error<string>>> DisableAccountAsync(string accountId, CancellationToken ct = default);
+	ValueTask<Result<Success>> DisableAccountAsync(string accountId, CancellationToken ct = default);
 	/// <summary>
 	/// Sets the account's lifecycle status. Accounts are never removed, so this is how an account is
 	/// disabled, closed, deleted, or restored. Any transition away from
 	/// <see cref="AccountStatus.Active"/> revokes live sessions.
 	/// Returns an error if the account is not found, or if it is the reserved system account.
 	/// </summary>
-	ValueTask<OneOf<Success, Error<string>>> SetAccountStatusAsync(string accountId, AccountStatus status, CancellationToken ct = default);
+	ValueTask<Result<Success>> SetAccountStatusAsync(string accountId, AccountStatus status, CancellationToken ct = default);
 
 	/// <summary>Marks the account closed — the holder has left. Reversible by an admin.</summary>
-	ValueTask<OneOf<Success, Error<string>>> CloseAccountAsync(string accountId, CancellationToken ct = default);
+	ValueTask<Result<Success>> CloseAccountAsync(string accountId, CancellationToken ct = default);
 
 	/// <summary>Marks the account deleted. The document is retained; see <see cref="AccountStatus"/>.</summary>
-	ValueTask<OneOf<Success, Error<string>>> MarkAccountDeletedAsync(string accountId, CancellationToken ct = default);
+	ValueTask<Result<Success>> MarkAccountDeletedAsync(string accountId, CancellationToken ct = default);
 
 	/// <summary>
 	/// Returns the reserved system account, creating it if absent. Idempotent — safe to call on
@@ -82,7 +81,7 @@ public interface IAccountService
 	ValueTask<SharpAccount> GetOrCreateSystemAccountAsync(CancellationToken ct = default);
 
 	/// <summary>Admin/setup password set: no old-password proof. Optionally flags MustChangePassword.</summary>
-	ValueTask<OneOf<Success, Error<string>>> SetPasswordAsync(string accountId, string newPassword, bool mustChangePassword, CancellationToken ct = default);
+	ValueTask<Result<Success>> SetPasswordAsync(string accountId, string newPassword, bool mustChangePassword, CancellationToken ct = default);
 
 	/// <summary>
 	/// Creates an account with an EMPTY password hash (unclaimed — cannot be logged into
@@ -90,7 +89,7 @@ public interface IAccountService
 	/// </summary>
 	ValueTask<SharpAccount> CreateUnclaimedAccountAsync(string username, CancellationToken ct = default);
 
-	ValueTask<OneOf<Success, Error<string>>> EnableAccountAsync(string accountId, CancellationToken ct = default);
+	ValueTask<Result<Success>> EnableAccountAsync(string accountId, CancellationToken ct = default);
 
 	ValueTask<IReadOnlyList<SharpAccount>> GetAllAccountsAsync(CancellationToken ct = default);
 }

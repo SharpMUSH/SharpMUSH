@@ -1,48 +1,60 @@
-﻿using OneOf;
-using OneOf.Types;
+using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.DiscriminatedUnions;
 
-[GenerateOneOf]
-public class AnyOptionalSharpObjectOrError : OneOfBase<SharpPlayer, SharpRoom, SharpExit, SharpThing, None,
-	Error<string>>
+[Union]
+public sealed partial class AnyOptionalSharpObjectOrError : IUnion
 {
-	public AnyOptionalSharpObjectOrError(
-		OneOf<SharpPlayer, SharpRoom, SharpExit, SharpThing, None, Error<string>> input) :
-		base(input)
-	{
-	}
+	public AnyOptionalSharpObjectOrError(SharpPlayer value) => Value = value;
+	public AnyOptionalSharpObjectOrError(SharpRoom value) => Value = value;
+	public AnyOptionalSharpObjectOrError(SharpExit value) => Value = value;
+	public AnyOptionalSharpObjectOrError(SharpThing value) => Value = value;
+	public AnyOptionalSharpObjectOrError(None value) => Value = value;
+	public AnyOptionalSharpObjectOrError(Error<string> value) => Value = value;
 
-	public static implicit operator AnyOptionalSharpObjectOrError(SharpPlayer x) => new(x);
-	public static implicit operator AnyOptionalSharpObjectOrError(SharpRoom x) => new(x);
-	public static implicit operator AnyOptionalSharpObjectOrError(SharpExit x) => new(x);
-	public static implicit operator AnyOptionalSharpObjectOrError(SharpThing x) => new(x);
-	public static implicit operator AnyOptionalSharpObjectOrError(None x) => new(x);
-	public static implicit operator AnyOptionalSharpObjectOrError(Error<string> x) => new(x);
+	public object? Value { get; }
 
-	public bool IsPlayer => IsT0;
-	public bool IsRoom => IsT1;
-	public bool IsExit => IsT2;
-	public bool IsThing => IsT3;
-	public bool IsNone => IsT4;
-	public bool IsError => IsT5;
+	public override bool Equals(object? obj) => obj is AnyOptionalSharpObjectOrError other && Equals(Value, other.Value);
 
-	public SharpPlayer AsPlayer => AsT0;
-	public SharpRoom AsRoom => AsT1;
-	public SharpExit AsExit => AsT2;
-	public SharpThing AsThing => AsT3;
+	public override int GetHashCode() => Value?.GetHashCode() ?? 0;
+
+	public bool IsPlayer => Value is SharpPlayer;
+	public bool IsRoom => Value is SharpRoom;
+	public bool IsExit => Value is SharpExit;
+	public bool IsThing => Value is SharpThing;
+	public bool IsNone => Value is None;
+	public bool IsError => Value is Error<string>;
+
+	public SharpPlayer AsPlayer => Value as SharpPlayer ?? throw UnionCase.Mismatch<SharpPlayer>(Value);
+	public SharpRoom AsRoom => Value as SharpRoom ?? throw UnionCase.Mismatch<SharpRoom>(Value);
+	public SharpExit AsExit => Value as SharpExit ?? throw UnionCase.Mismatch<SharpExit>(Value);
+	public SharpThing AsThing => Value as SharpThing ?? throw UnionCase.Mismatch<SharpThing>(Value);
 
 	public bool IsAnyObject => !IsNone && !IsError;
 
-	public AnySharpObject AsAnyObject => Match(
-		player => new AnySharpObject(player),
-		room => new AnySharpObject(room),
-		exit => new AnySharpObject(exit),
-		thing => new AnySharpObject(thing),
-		_ => throw new ArgumentOutOfRangeException(),
-		_ => throw new ArgumentOutOfRangeException());
+	/// <summary>True when this names an object: neither <see cref="None"/> nor an error.</summary>
+	public bool IsValid() => IsAnyObject;
 
-	public None AsNone => AsT4;
-	public Error<string> AsError => AsT5;
+	public AnySharpObject AsAnyObject => this switch
+	{
+		SharpPlayer player => player,
+		SharpRoom room => room,
+		SharpExit exit => exit,
+		SharpThing thing => thing,
+		None or Error<string> => throw new ArgumentOutOfRangeException()
+	};
+
+	public None AsNone => Value is None none ? none : throw UnionCase.Mismatch<None>(Value);
+	public Error<string> AsError => Value is Error<string> error ? error : throw UnionCase.Mismatch<Error<string>>(Value);
+
+	public AnyOptionalSharpObject WithoutError() => this switch
+	{
+		SharpPlayer player => player,
+		SharpRoom room => room,
+		SharpExit exit => exit,
+		SharpThing thing => thing,
+		None none => none,
+		Error<string> => throw new ArgumentException("Cannot convert an Error to a non-Error value.")
+	};
 }

@@ -298,7 +298,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		var godPlayerObj = await _database.GetObjectNodeAsync(tempGodDbRef, cancellationToken);
-		if (!godPlayerObj.TryPickT0(out var godPlayerWrapped, out _))
+		if (godPlayerObj is not SharpPlayer godPlayerWrapped)
 		{
 			throw new InvalidOperationException("Failed to retrieve God player after creation or reuse");
 		}
@@ -454,10 +454,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							if (room0 == null)
 							{
 								var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
-								if (!room0Obj.TryPickT1(out room0, out _))
-								{
-									throw new InvalidOperationException("Failed to retrieve Limbo room");
-								}
+								room0 = room0Obj is SharpRoom limbo
+									? limbo
+									: throw new InvalidOperationException("Failed to retrieve Limbo room");
 							}
 
 							newDbRef = await _database.CreateThingAsync(
@@ -478,10 +477,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							if (room0 == null)
 							{
 								var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
-								if (!room0Obj.TryPickT1(out room0, out _))
-								{
-									throw new InvalidOperationException("Failed to retrieve Limbo room");
-								}
+								room0 = room0Obj is SharpRoom limbo
+									? limbo
+									: throw new InvalidOperationException("Failed to retrieve Limbo room");
 							}
 
 							var aliases = ExtractAliases(pennObj.Name);

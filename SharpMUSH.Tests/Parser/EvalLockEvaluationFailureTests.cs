@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
-using OneOf;
 using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
@@ -81,7 +80,7 @@ public class EvalLockEvaluationFailureTests
 
 		var services = Substitute.For<ILockEvaluationServices>();
 		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>())
-			.Returns(new ValueTask<OneOf<string, LockEvaluationFailure>>(
+			.Returns(new ValueTask<LockEvaluation>(
 				new LockEvaluationFailure("FAILING", "evaluation exploded")));
 
 		var parser = new BooleanExpressionParser(services, Substitute.For<IMediator>(), new FusionCache(new FusionCacheOptions()));
@@ -102,7 +101,7 @@ public class EvalLockEvaluationFailureTests
 
 		var services = Substitute.For<ILockEvaluationServices>();
 		services.EvaluateAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>())
-			.Returns(new ValueTask<OneOf<string, LockEvaluationFailure>>("expected"));
+			.Returns(new ValueTask<LockEvaluation>("expected"));
 
 		var parser = new BooleanExpressionParser(services, Substitute.For<IMediator>(), new FusionCache(new FusionCacheOptions()));
 

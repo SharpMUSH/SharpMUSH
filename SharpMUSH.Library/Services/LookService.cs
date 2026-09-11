@@ -336,7 +336,7 @@ public class LookService(
 						var exitObj = exit.WithRoomOption().Object();
 						var destination = exit.IsExit
 							? await exit.AsExit.Home.WithCancellation(CancellationToken.None)
-							: new AnyOptionalSharpContainer(new OneOf.Types.None());
+							: new AnyOptionalSharpContainer(new SharpMUSH.Library.DiscriminatedUnions.None());
 						var destName = destination.IsNone ? "*UNLINKED*" : destination.WithoutNone().Object().Name;
 
 						var exitMString = WrapExitInSendTag(exitObj.Name);
@@ -369,7 +369,7 @@ public class LookService(
 						var exitObj = exit.WithRoomOption().Object();
 						var destination = exit.IsExit
 							? await exit.AsExit.Home.WithCancellation(CancellationToken.None)
-							: new AnyOptionalSharpContainer(new OneOf.Types.None());
+							: new AnyOptionalSharpContainer(new SharpMUSH.Library.DiscriminatedUnions.None());
 						var destName = destination.IsNone ? "*UNLINKED*" : destination.WithoutNone().Object().Name;
 
 						var exitMString = WrapExitInSendTag(exitObj.Name);

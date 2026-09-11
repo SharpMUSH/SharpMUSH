@@ -1,7 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using OneOf;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -303,7 +303,7 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),
-				Arg.Is<OneOf<MString, string>>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
+				Arg.Is<SharpMessage>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
 				null, INotifyService.NotificationType.Announce);
 
 			// Never bound to the player: the connection must still be anonymous.
@@ -346,7 +346,7 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),
-				Arg.Is<OneOf<MString, string>>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
+				Arg.Is<SharpMessage>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
 				null, INotifyService.NotificationType.Announce);
 
 			await Assert.That(ConnectionService.Get(handle)?.Ref).IsNull();
@@ -377,7 +377,7 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 
 			await NotifyService.Received(1).Notify(
 				Arg.Is<long>(h => h == handle),
-				Arg.Is<OneOf<MString, string>>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
+				Arg.Is<SharpMessage>(s => SharpMUSH.Tests.TestHelpers.MessagePlainTextEquals(s, "Access from your location is restricted.")),
 				null, INotifyService.NotificationType.Announce);
 
 			// The gate returned before any account mutation: the connection never entered AccountMode.

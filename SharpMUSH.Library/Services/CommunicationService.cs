@@ -1,5 +1,4 @@
 ﻿using Mediator;
-using OneOf;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -20,7 +19,7 @@ public class CommunicationService(
 	public async ValueTask SendToPortsAsync(
 		AnySharpObject executor,
 		long[] ports,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType)
 	{
 		var validPorts = await ports
@@ -56,7 +55,7 @@ public class CommunicationService(
 	public async ValueTask SendToRoomAsync(
 		AnySharpObject executor,
 		AnySharpContainer room,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		AnySharpObject? sender = null,
 		IEnumerable<AnySharpObject>? excludeObjects = null,
@@ -93,12 +92,12 @@ public class CommunicationService(
 		}
 	}
 
-	public async ValueTask<OneOf<AnySharpObject, DeliveryFailure>> SendToObjectAsync(
+	public async ValueTask<DeliveryResult> SendToObjectAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
 		string targetName,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
 	{
@@ -132,8 +131,8 @@ public class CommunicationService(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject enactor,
-		IAsyncEnumerable<OneOf<DBRef, string>> targets,
-		Func<AnySharpObject, OneOf<MString, string>> messageFunc,
+		IAsyncEnumerable<DbRefOrName> targets,
+		Func<AnySharpObject, SharpMessage> messageFunc,
 		INotifyService.NotificationType notificationType,
 		bool notifyOnPermissionFailure = true)
 	{

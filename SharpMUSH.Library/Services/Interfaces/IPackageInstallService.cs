@@ -1,5 +1,4 @@
-using OneOf;
-using OneOf.Types;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -36,7 +35,7 @@ public interface IPackageInstallService
 	/// list; the plugin loads on the next boot. A managed apply requires a
 	/// <paramref name="binarySource"/>.</para>
 	/// </summary>
-	Task<OneOf<PackageApplyResult, Error<string>>> ApplyAsync(
+	Task<Result<PackageApplyResult>> ApplyAsync(
 		PackageManifest manifest,
 		PackageApplyRequest request,
 		CancellationToken cancellationToken = default,
@@ -48,7 +47,7 @@ public interface IPackageInstallService
 	/// convention), clears managed attributes on shared objects, and removes
 	/// all registry records.
 	/// </summary>
-	Task<OneOf<Success, Error<string>>> UninstallAsync(
+	Task<Result<Success>> UninstallAsync(
 		string packageId,
 		bool force = false,
 		CancellationToken cancellationToken = default);
@@ -58,7 +57,7 @@ public interface IPackageInstallService
 	/// (decision 20.13). Restores managed attribute values on objects that
 	/// still exist; anything unrestorable is reported in the result notes.
 	/// </summary>
-	Task<OneOf<PackageRollbackResult, Error<string>>> RollbackAsync(
+	Task<Result<PackageRollbackResult>> RollbackAsync(
 		string packageId,
 		int revision,
 		CancellationToken cancellationToken = default);
