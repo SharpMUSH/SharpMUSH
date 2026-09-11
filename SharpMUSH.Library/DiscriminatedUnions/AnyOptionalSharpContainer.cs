@@ -32,10 +32,6 @@ public sealed class AnyOptionalSharpContainer : IUnion, IObjectShaped<AnyOptiona
 	public bool IsThing => this is AnySharpContainer and SharpThing;
 	public bool IsNone => this is None;
 
-	public SharpPlayer AsPlayer => this is AnySharpContainer found ? found.AsPlayer : throw UnionCase.Mismatch<SharpPlayer>(Value);
-	public SharpRoom AsRoom => this is AnySharpContainer found ? found.AsRoom : throw UnionCase.Mismatch<SharpRoom>(Value);
-	public SharpThing AsThing => this is AnySharpContainer found ? found.AsThing : throw UnionCase.Mismatch<SharpThing>(Value);
-
 	public SharpObject? Object() => this switch
 	{
 		AnySharpContainer found => found.Object(),
@@ -52,12 +48,6 @@ public sealed class AnyOptionalSharpContainer : IUnion, IObjectShaped<AnyOptiona
 	{
 		AnySharpContainer found => found.WithExitOption(),
 		None none => none
-	};
-
-	public AnySharpContainer WithoutNone() => this switch
-	{
-		AnySharpContainer found => found,
-		None => throw new Exception("Cannot convert None to a valid object.")
 	};
 
 	public static DBRef? RefOf(AnyOptionalSharpContainer value) => value switch

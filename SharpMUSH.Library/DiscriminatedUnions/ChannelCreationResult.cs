@@ -36,5 +36,4 @@ public sealed class ChannelCreationResult : IUnion
 	public bool IsNameTaken => Value is ChannelNameTaken;
 	public bool IsError => Value is Error<string>;
 
-	public string AsError => Value is Error<string> error ? error.Value : throw UnionCase.Mismatch<Error<string>>(Value);
 }

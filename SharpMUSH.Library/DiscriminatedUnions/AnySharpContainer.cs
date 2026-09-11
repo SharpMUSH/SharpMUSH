@@ -56,10 +56,6 @@ public sealed class AnySharpContainer : IUnion, IObjectShaped<AnySharpContainer>
 	public bool IsRoom => Value is SharpRoom;
 	public bool IsThing => Value is SharpThing;
 
-	public SharpPlayer AsPlayer => Value as SharpPlayer ?? throw UnionCase.Mismatch<SharpPlayer>(Value);
-	public SharpRoom AsRoom => Value as SharpRoom ?? throw UnionCase.Mismatch<SharpRoom>(Value);
-	public SharpThing AsThing => Value as SharpThing ?? throw UnionCase.Mismatch<SharpThing>(Value);
-
 	public static DBRef? RefOf(AnySharpContainer value) => value.Object().DBRef;
 
 	public static bool TryFromNode(AnyOptionalSharpObject node, out AnySharpContainer value)

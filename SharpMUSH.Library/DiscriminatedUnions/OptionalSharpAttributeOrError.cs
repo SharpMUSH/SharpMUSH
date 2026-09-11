@@ -22,13 +22,6 @@ public sealed class OptionalSharpAttributeOrError : IUnion
 	public bool IsNone => Value is None;
 	public bool IsError => Value is Error<string>;
 
-	public SharpAttribute[] AsAttribute => Value as SharpAttribute[] ?? throw UnionCase.Mismatch<SharpAttribute[]>(Value);
-	public Error<string> AsError => Value is Error<string> error ? error : throw UnionCase.Mismatch<Error<string>>(Value);
-
-	public CallState AsCallStateError => IsNone
-		? new CallState(ErrorMessages.Returns.NoSuchAttribute)
-		: new CallState(AsError.Value);
-
 	public CallState AsCallState => this switch
 	{
 		SharpAttribute[] attribute => new CallState(attribute.Last().Value),

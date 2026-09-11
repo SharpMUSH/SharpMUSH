@@ -18,7 +18,4 @@ public sealed class AnySharpObjectOrErrorCallState : IUnion
 	public bool IsAnySharpObject => Value is AnySharpObject;
 	public bool IsError => Value is Error<CallState>;
 
-	public AnySharpObject AsSharpObject => Value as AnySharpObject ?? throw UnionCase.Mismatch<AnySharpObject>(Value);
-
-	public CallState AsError => Value is Error<CallState> error ? error.Value : throw UnionCase.Mismatch<Error<CallState>>(Value);
 }

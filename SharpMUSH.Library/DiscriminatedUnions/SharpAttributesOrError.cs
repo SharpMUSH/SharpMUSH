@@ -18,6 +18,4 @@ public sealed class SharpAttributesOrError : IUnion
 	public bool IsAttribute => Value is SharpAttribute[];
 	public bool IsError => Value is Error<string>;
 
-	public SharpAttribute[] AsAttributes => Value as SharpAttribute[] ?? throw UnionCase.Mismatch<SharpAttribute[]>(Value);
-	public Error<string> AsError => Value is Error<string> error ? error : throw UnionCase.Mismatch<Error<string>>(Value);
 }

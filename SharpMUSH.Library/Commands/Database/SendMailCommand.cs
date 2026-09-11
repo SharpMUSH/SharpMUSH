@@ -48,8 +48,4 @@ public sealed class MailUpdate : IUnion
 	public bool IsTaggedEdit => Value is Tagged;
 	public bool IsUrgentEdit => Value is Urgent;
 
-	public bool AsReadEdit => Value is Read edit ? edit.Value : throw UnionCase.Mismatch<Read>(Value);
-	public bool AsClearEdit => Value is Cleared edit ? edit.Value : throw UnionCase.Mismatch<Cleared>(Value);
-	public bool AsTaggedEdit => Value is Tagged edit ? edit.Value : throw UnionCase.Mismatch<Tagged>(Value);
-	public bool AsUrgentEdit => Value is Urgent edit ? edit.Value : throw UnionCase.Mismatch<Urgent>(Value);
 }

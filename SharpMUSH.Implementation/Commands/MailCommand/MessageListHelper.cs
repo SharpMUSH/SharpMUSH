@@ -25,13 +25,6 @@ public sealed class ErrorOrMailList : IUnion
 
 	public bool IsError => Value is Error<string>;
 
-	public string AsError => Value is Error<string> error
-		? error.Value
-		: throw new InvalidOperationException($"Expected an error, but the value is {Value?.GetType().Name ?? "null"}.");
-
-	public IAsyncEnumerable<SharpMail> AsMailList => Value as IAsyncEnumerable<SharpMail>
-		?? throw new InvalidOperationException($"Expected a mail list, but the value is {Value?.GetType().Name ?? "null"}.");
-
 	public static ErrorOrMailList FromAsyncEnumerable(IAsyncEnumerable<SharpMail> x) => new(x);
 }
 

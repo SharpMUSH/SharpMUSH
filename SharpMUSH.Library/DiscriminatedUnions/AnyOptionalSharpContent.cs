@@ -32,19 +32,10 @@ public sealed class AnyOptionalSharpContent : IUnion
 	public bool IsThing => this is AnySharpContent and SharpThing;
 	public bool IsNone => this is None;
 
-	public SharpPlayer AsPlayer => this is AnySharpContent found ? found.AsPlayer : throw UnionCase.Mismatch<SharpPlayer>(Value);
-	public SharpExit AsExit => this is AnySharpContent found ? found.AsExit : throw UnionCase.Mismatch<SharpExit>(Value);
-	public SharpThing AsThing => this is AnySharpContent found ? found.AsThing : throw UnionCase.Mismatch<SharpThing>(Value);
-
 	public AnyOptionalSharpObject WithRoomOption() => this switch
 	{
 		AnySharpContent found => found.WithRoomOption(),
 		None none => none
 	};
 
-	public AnySharpContent WithoutNone() => this switch
-	{
-		AnySharpContent found => found,
-		None => throw new Exception("Cannot convert None to a valid object.")
-	};
 }

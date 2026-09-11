@@ -20,8 +20,4 @@ public sealed class LazySharpAttributesOrError : IUnion
 	public bool IsAttribute => Value is IAsyncEnumerable<LazySharpAttribute>;
 	public bool IsError => Value is Error<string>;
 
-	public IAsyncEnumerable<LazySharpAttribute> AsAttributes => Value as IAsyncEnumerable<LazySharpAttribute>
-		?? throw UnionCase.Mismatch<IAsyncEnumerable<LazySharpAttribute>>(Value);
-
-	public Error<string> AsError => Value is Error<string> error ? error : throw UnionCase.Mismatch<Error<string>>(Value);
 }

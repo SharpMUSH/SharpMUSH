@@ -27,12 +27,6 @@ public sealed class ChannelOrError : IUnion
 
 	public bool IsError => Value is Error<CallState>;
 
-	public SharpChannel AsChannel => Value as SharpChannel
-		?? throw new InvalidOperationException($"Expected a channel, but the value is {Value?.GetType().Name ?? "null"}.");
-
-	public Error<CallState> AsError => Value is Error<CallState> error
-		? error
-		: throw new InvalidOperationException($"Expected an error, but the value is {Value?.GetType().Name ?? "null"}.");
 }
 
 [Union]
@@ -49,12 +43,6 @@ public sealed class PrivilegeOrError : IUnion
 
 	public bool IsError => Value is Error<string[]>;
 
-	public string[] AsPrivileges => Value as string[]
-		?? throw new InvalidOperationException($"Expected privileges, but the value is {Value?.GetType().Name ?? "null"}.");
-
-	public Error<string[]> AsError => Value is Error<string[]> error
-		? error
-		: throw new InvalidOperationException($"Expected an error, but the value is {Value?.GetType().Name ?? "null"}.");
 }
 
 public static class ChannelHelper

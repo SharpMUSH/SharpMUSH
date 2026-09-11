@@ -22,13 +22,6 @@ public sealed class OptionalLazySharpAttributeOrError : IUnion
 	public bool IsNone => Value is None;
 	public bool IsError => Value is Error<string>;
 
-	public LazySharpAttribute[] AsAttribute => Value as LazySharpAttribute[] ?? throw UnionCase.Mismatch<LazySharpAttribute[]>(Value);
-	public Error<string> AsError => Value is Error<string> error ? error : throw UnionCase.Mismatch<Error<string>>(Value);
-
-	public CallState AsCallStateError => IsNone
-		? new CallState(ErrorMessages.Returns.NoSuchAttribute)
-		: new CallState(AsError.Value);
-
 	public async ValueTask<CallState> AsCallStateAsync() => this switch
 	{
 		LazySharpAttribute[] attributes => await attributes.Last().Value.WithCancellation(CancellationToken.None),

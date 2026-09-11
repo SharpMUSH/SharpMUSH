@@ -25,7 +25,6 @@ public sealed class Option<T> : IUnion
 
 	public bool IsSome() => Value is T;
 	public bool IsNone() => Value is None;
-	public T AsValue() => Value is T value ? value : throw UnionCase.Mismatch<T>(Value);
 
 	public static Option<T> FromOption(T some) => new(some);
 

@@ -92,11 +92,6 @@ public sealed class AnySharpObject : IUnion, IObjectShaped<AnySharpObject>
 
 	public bool IsContainer => IsPlayer || IsRoom || IsThing;
 
-	public SharpPlayer AsPlayer => Value as SharpPlayer ?? throw UnionCase.Mismatch<SharpPlayer>(Value);
-	public SharpRoom AsRoom => Value as SharpRoom ?? throw UnionCase.Mismatch<SharpRoom>(Value);
-	public SharpExit AsExit => Value as SharpExit ?? throw UnionCase.Mismatch<SharpExit>(Value);
-	public SharpThing AsThing => Value as SharpThing ?? throw UnionCase.Mismatch<SharpThing>(Value);
-
 	public SharpObject Object() => this switch
 	{
 		SharpPlayer player => player.Object,

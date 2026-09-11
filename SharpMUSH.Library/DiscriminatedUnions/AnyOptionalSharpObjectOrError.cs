@@ -36,29 +36,9 @@ public sealed class AnyOptionalSharpObjectOrError : IUnion
 	public bool IsNone => this is None;
 	public bool IsError => this is Error<string>;
 
-	public SharpPlayer AsPlayer => this is AnySharpObject found ? found.AsPlayer : throw UnionCase.Mismatch<SharpPlayer>(Value);
-	public SharpRoom AsRoom => this is AnySharpObject found ? found.AsRoom : throw UnionCase.Mismatch<SharpRoom>(Value);
-	public SharpExit AsExit => this is AnySharpObject found ? found.AsExit : throw UnionCase.Mismatch<SharpExit>(Value);
-	public SharpThing AsThing => this is AnySharpObject found ? found.AsThing : throw UnionCase.Mismatch<SharpThing>(Value);
-
 	public bool IsAnyObject => this is AnySharpObject;
 
 	/// <summary>True when this names an object: neither <see cref="None"/> nor an error.</summary>
 	public bool IsValid() => IsAnyObject;
 
-	public AnySharpObject AsAnyObject => this switch
-	{
-		AnySharpObject found => found,
-		None or Error<string> => throw new ArgumentOutOfRangeException()
-	};
-
-	public None AsNone => this is None none ? none : throw UnionCase.Mismatch<None>(Value);
-	public Error<string> AsError => this is Error<string> error ? error : throw UnionCase.Mismatch<Error<string>>(Value);
-
-	public AnyOptionalSharpObject WithoutError() => this switch
-	{
-		AnySharpObject found => found,
-		None none => none,
-		Error<string> => throw new ArgumentException("Cannot convert an Error to a non-Error value.")
-	};
 }

@@ -21,10 +21,6 @@ public sealed class AnySharpContent : IUnion, IObjectShaped<AnySharpContent>
 	public bool IsExit => Value is SharpExit;
 	public bool IsThing => Value is SharpThing;
 
-	public SharpPlayer AsPlayer => Value as SharpPlayer ?? throw UnionCase.Mismatch<SharpPlayer>(Value);
-	public SharpExit AsExit => Value as SharpExit ?? throw UnionCase.Mismatch<SharpExit>(Value);
-	public SharpThing AsThing => Value as SharpThing ?? throw UnionCase.Mismatch<SharpThing>(Value);
-
 	public string Id => this switch
 	{
 		SharpPlayer player => player.Id!,
