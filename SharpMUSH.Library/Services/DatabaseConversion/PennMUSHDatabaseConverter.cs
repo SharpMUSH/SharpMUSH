@@ -161,34 +161,42 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// Restamps one of the three objects reused from the migration seed with its PennMUSH times.
+	/// Hands a seeded object the identity of the source object it stands in for: its name, God's
+	/// password, and its PennMUSH times.
 	/// </summary>
 	/// <remarks>
 	/// #0, #1 and #2 already exist in a migrated database, so the importer reuses them instead of
-	/// creating them and never reaches the timestamp-aware create path. Left alone they keep the
-	/// seed's startup time and their PennMUSH objids do not resolve — God's especially, which
-	/// imported softcode references constantly.
+	/// creating them and never reaches the timestamp-aware create path. Left unstamped they keep the
+	/// seed's startup time and their PennMUSH objids do not resolve — God's especially, which imported
+	/// softcode references constantly. Every write goes through the Mediator: a running game has
+	/// usually read these three already, and a raw store write would leave its cached copies stale.
 	/// </remarks>
-	private async Task<DBRef> RestampReusedObjectAsync(int dbrefNumber, PennMUSHObject? pennObject,
+	private async Task<DBRef> AdoptSeededObjectAsync(AnySharpObject seeded, PennMUSHObject pennObject,
 		CancellationToken cancellationToken)
 	{
-		if (pennObject is null)
+		var number = seeded.Object().Key;
+		await _mediator.Send(new SetNameCommand(seeded, MarkupText.Plain(pennObject.Name)), cancellationToken);
+
+		// Before the restamp, because the command carries the object as read before it. The order is
+		// otherwise free: an imported PennMUSH hash validates against salt + plaintext, never the objid.
+		if (seeded is SharpPlayer seededPlayer && !string.IsNullOrEmpty(pennObject.Password))
 		{
-			return new DBRef(dbrefNumber);
+			var (salt, hash) = ExtractPennMUSHPasswordParts(pennObject.Password);
+			await _mediator.Send(new SetPlayerPasswordCommand(seededPlayer, hash, salt), cancellationToken);
 		}
 
 		var (created, modified) = PennTimestamps(pennObject);
 		if (created is null)
 		{
-			return new DBRef(dbrefNumber);
+			return new DBRef(number);
 		}
 
-		await _database.SetObjectTimestampsAsync(new DBRef(dbrefNumber), created.Value, modified,
+		await _mediator.Send(new SetObjectTimestampsCommand(new DBRef(number), created.Value, modified),
 			cancellationToken);
 		_logger.LogDebug("Restamped reused object #{DBRef} with its PennMUSH creation time {Created}",
-			dbrefNumber, created.Value);
+			number, created.Value);
 
-		return new DBRef(dbrefNumber, created.Value);
+		return new DBRef(number, created.Value);
 	}
 
 	/// <summary>
@@ -224,79 +232,66 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return (0, 0, 0, 0);
 		}
 
-		// Check if default objects from migration already exist (#0, #1, #2)
-		// If they do, we'll reuse them instead of creating new ones
+		// Migration seeds #0-#2 the way PennMUSH's create_minimal_db lays out every database: Room Zero,
+		// God (PennMUSH hardcodes GOD as #1) and the Master Room (MASTER_ROOM must be a room). A seeded
+		// object stands in for the source's only when both are the same type; a source object of any
+		// other type at those numbers is created in the main loop like the rest. A source that lacks one
+		// of them still maps its number onto the seeded object, so references to it resolve.
+		var godPennObject = pennDatabase.GetObject(1);
+		var existingPlayer1 = await _database.GetObjectNodeAsync(new DBRef(1), cancellationToken);
 		DBRef tempGodDbRef;
-		if (await _database.GetObjectNodeAsync(new DBRef(1), cancellationToken) is AnySharpObject and SharpPlayer existingPlayer1)
+
+		if (existingPlayer1 is AnySharpObject seededGod && seededGod.IsPlayer)
 		{
-			// Player #1 already exists (from database migration), reuse it
 			tempGodDbRef = new DBRef(1);
-			dbrefMapping[1] = tempGodDbRef;
-			_logger.LogInformation("Reusing existing God player #1 from database migration");
-
-			var godPennObject = pennDatabase.GetObject(1);
-			if (godPennObject is not null)
-			{
-				playersConverted++;
-			}
-
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
 			{
-				await _database.SetObjectName(existingPlayer1, MarkupText.Plain(godPennObject.Name), cancellationToken);
-
-				if (!string.IsNullOrEmpty(godPennObject.Password))
-				{
-					var (salt, hash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
-					await _database.SetPlayerPasswordAsync(existingPlayer1, hash, salt, cancellationToken);
-				}
-
-				// After the password, because SetPlayerPasswordAsync takes the object read before the
-				// restamp. The order is otherwise free: an imported PennMUSH hash validates against
-				// salt + plaintext, never against the objid.
-				tempGodDbRef = await RestampReusedObjectAsync(1, godPennObject, cancellationToken);
-				dbrefMapping[1] = tempGodDbRef;
-
-				_logger.LogDebug("Updated God player #{PennDBRef} with name: {Name}", 1, godPennObject.Name);
+				tempGodDbRef = await AdoptSeededObjectAsync(seededGod, godPennObject, cancellationToken);
+				playersConverted++;
+				_logger.LogInformation("Reusing existing God player #1 from database migration: {Name}", godPennObject.Name);
 			}
+
+			if (godPennObject is null || godPennObject.Type == PennMUSHObjectType.Player)
+			{
+				dbrefMapping[1] = tempGodDbRef;
+			}
+		}
+		else if (godPennObject?.Type == PennMUSHObjectType.Player)
+		{
+			var (godSalt, godHash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
+			var (godCreated, godModified) = PennTimestamps(godPennObject);
+			tempGodDbRef = await _database.CreatePlayerAsync(
+				godPennObject.Name,
+				godHash,
+				new DBRef(0), // Limbo room (will create or reuse next)
+				new DBRef(0), // Home is also Limbo
+				godPennObject.Pennies > 0 ? godPennObject.Pennies : 1000,
+				godSalt,
+				godCreated,
+				godModified,
+				cancellationToken);
+
+			dbrefMapping[1] = tempGodDbRef;
+			playersConverted++;
+			_logger.LogInformation("Created God player #{PennDBRef} -> {SharpDBRef}: {Name}", 1, tempGodDbRef, godPennObject.Name);
 		}
 		else
 		{
-			var godPennObject = pennDatabase.GetObject(1);
-
-			if (godPennObject?.Type == PennMUSHObjectType.Player)
+			// Create a default God player (no salt needed for new password)
+			tempGodDbRef = await _database.CreatePlayerAsync(
+				"God",
+				"NEEDS_RESET",
+				new DBRef(0),
+				new DBRef(0),
+				10000,
+				null,
+				cancellationToken: cancellationToken);
+			if (godPennObject is null)
 			{
-				var (godSalt, godHash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
-				var (godCreated, godModified) = PennTimestamps(godPennObject);
-				tempGodDbRef = await _database.CreatePlayerAsync(
-					godPennObject.Name,
-					godHash,
-					new DBRef(0), // Limbo room (will create or reuse next)
-					new DBRef(0), // Home is also Limbo
-					godPennObject.Pennies > 0 ? godPennObject.Pennies : 1000,
-					godSalt,
-					godCreated,
-					godModified,
-					cancellationToken);
+				dbrefMapping[1] = tempGodDbRef;
+			}
 
-				dbrefMapping[1] = tempGodDbRef;
-				playersConverted++;
-				_logger.LogInformation("Created God player #{PennDBRef} -> {SharpDBRef}: {Name}", 1, tempGodDbRef, godPennObject.Name);
-			}
-			else
-			{
-				// Create a default God player (no salt needed for new password)
-				tempGodDbRef = await _database.CreatePlayerAsync(
-					"God",
-					"NEEDS_RESET",
-					new DBRef(0),
-					new DBRef(0),
-					10000,
-					null,
-					cancellationToken: cancellationToken);
-				dbrefMapping[1] = tempGodDbRef;
-				playersConverted++;
-				_logger.LogWarning("Created default God player as #{PennDBRef} was not a player", 1);
-			}
+			_logger.LogWarning("Created default God player as #{PennDBRef} was not a player", 1);
 		}
 
 		var godPlayerObj = await _database.GetObjectNodeAsync(tempGodDbRef, cancellationToken);
@@ -306,72 +301,65 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 		var godPlayer = godPlayerWrapped;
 
-		// Check if Room #0 already exists (from database migration)
-		DBRef tempRoom0DbRef;
+		var room0Penn = pennDatabase.GetObject(0);
 		var existingRoom0 = await _database.GetObjectNodeAsync(new DBRef(0), cancellationToken);
+		DBRef tempRoom0DbRef;
 
-		if (existingRoom0 is AnySharpObject and SharpRoom reusedRoom0)
+		if (existingRoom0 is AnySharpObject seededRoom0 && seededRoom0.IsRoom)
 		{
-			// Room #0 already exists (from database migration), reuse it
 			tempRoom0DbRef = new DBRef(0);
-			dbrefMapping[0] = tempRoom0DbRef;
-			_logger.LogInformation("Reusing existing Limbo room #0 from database migration");
-
-			var room0Penn = pennDatabase.GetObject(0);
-			if (room0Penn is not null)
-			{
-				roomsConverted++;
-			}
-
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
-				await _database.SetObjectName(reusedRoom0, MarkupText.Plain(room0Penn.Name), cancellationToken);
-				tempRoom0DbRef = await RestampReusedObjectAsync(0, room0Penn, cancellationToken);
-				dbrefMapping[0] = tempRoom0DbRef;
-				_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
+				tempRoom0DbRef = await AdoptSeededObjectAsync(seededRoom0, room0Penn, cancellationToken);
+				roomsConverted++;
+				_logger.LogInformation("Reusing existing Limbo room #0 from database migration: {Name}", room0Penn.Name);
 			}
+
+			if (room0Penn is null || room0Penn.Type == PennMUSHObjectType.Room)
+			{
+				dbrefMapping[0] = tempRoom0DbRef;
+			}
+		}
+		else if (room0Penn?.Type == PennMUSHObjectType.Room)
+		{
+			var (room0Created, room0Modified) = PennTimestamps(room0Penn);
+			tempRoom0DbRef = await _database.CreateRoomAsync(
+				room0Penn.Name,
+				godPlayer,
+				room0Created,
+				room0Modified,
+				cancellationToken);
+			dbrefMapping[0] = tempRoom0DbRef;
+			roomsConverted++;
+			_logger.LogInformation("Created Limbo room #{PennDBRef} -> {SharpDBRef}: {Name}", 0, tempRoom0DbRef, room0Penn.Name);
 		}
 		else
 		{
-			var room0Penn = pennDatabase.GetObject(0);
+			tempRoom0DbRef = await _database.CreateRoomAsync(
+				"Limbo",
+				godPlayer,
+				cancellationToken: cancellationToken);
+			if (room0Penn is null)
+			{
+				dbrefMapping[0] = tempRoom0DbRef;
+			}
 
-			if (room0Penn?.Type == PennMUSHObjectType.Room)
-			{
-				var (room0Created, room0Modified) = PennTimestamps(room0Penn);
-				tempRoom0DbRef = await _database.CreateRoomAsync(
-					room0Penn.Name,
-					godPlayer,
-					room0Created,
-					room0Modified,
-					cancellationToken);
-				dbrefMapping[0] = tempRoom0DbRef;
-				roomsConverted++;
-				_logger.LogInformation("Created Limbo room #{PennDBRef} -> {SharpDBRef}: {Name}", 0, tempRoom0DbRef, room0Penn.Name);
-			}
-			else
-			{
-				tempRoom0DbRef = await _database.CreateRoomAsync(
-					"Limbo",
-					godPlayer,
-					cancellationToken: cancellationToken);
-				dbrefMapping[0] = tempRoom0DbRef;
-				roomsConverted++;
-				_logger.LogWarning("Created default Limbo room as #{PennDBRef} was not a room", 0);
-			}
+			_logger.LogWarning("Created default Limbo room as #{PennDBRef} was not a room", 0);
 		}
 
-		// #2 is the Master Room: PennMUSH's create_minimal_db makes it a room, MASTER_ROOM must be one,
-		// and the migration seeds the same. The seeded room can only stand in for a source #2 that is
-		// also a room; any other source #2 is created in the main loop like every other object.
 		var room2Penn = pennDatabase.GetObject(2);
-		if (room2Penn?.Type == PennMUSHObjectType.Room)
+		var existingRoom2 = await _database.GetObjectNodeAsync(new DBRef(2), cancellationToken);
+		if (existingRoom2 is AnySharpObject seededRoom2 && seededRoom2.IsRoom)
 		{
-			if (await _database.GetObjectNodeAsync(new DBRef(2), cancellationToken) is AnySharpObject and SharpRoom reusedRoom2)
+			if (room2Penn?.Type == PennMUSHObjectType.Room)
 			{
-				await _database.SetObjectName(reusedRoom2, MarkupText.Plain(room2Penn.Name), cancellationToken);
-				dbrefMapping[2] = await RestampReusedObjectAsync(2, room2Penn, cancellationToken);
+				dbrefMapping[2] = await AdoptSeededObjectAsync(seededRoom2, room2Penn, cancellationToken);
 				roomsConverted++;
 				_logger.LogInformation("Reusing existing Master Room #2 from database migration: {Name}", room2Penn.Name);
+			}
+			else if (room2Penn is null)
+			{
+				dbrefMapping[2] = new DBRef(2);
 			}
 		}
 
@@ -381,8 +369,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			// Skip already created or reused objects (God, Limbo, and potentially #2 if it was reused)
-			if (pennObj.DBRef == 0 || pennObj.DBRef == 1 || dbrefMapping.ContainsKey(pennObj.DBRef))
+			// Skip the seeded objects already standing in for source objects
+			if (dbrefMapping.ContainsKey(pennObj.DBRef))
 			{
 				continue;
 			}
