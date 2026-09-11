@@ -53,27 +53,37 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 		var mdFiles = dir.GetFiles("*.md");
 		foreach (var file in mdFiles)
 		{
-			var maybeIndexedFile = IndexMarkdown(file);
-			if (!maybeIndexedFile.TryGetValue(out var indexedFile, out var error))
+			switch (IndexMarkdown(file))
 			{
-				logger?.LogWarning("Failed to index markdown helpfile {FilePath}: {Error}", file.FullName, error.Value);
-				continue;
-			}
-
-			foreach (var kv in indexedFile)
-			{
-				if (IndexedHelp.ContainsKey(kv.Key))
-				{
-					logger?.LogWarning("Duplicate help index '{HelpIndex}' found in file {FilePath}, skipping", kv.Key, file.FullName);
-					continue;
-				}
-				IndexedHelp.Add(kv.Key, kv.Value);
+				case Dictionary<string, string> indexedFile:
+					AddToIndex(indexedFile, file);
+					break;
+				case Error<string> error:
+					logger?.LogWarning("Failed to index markdown helpfile {FilePath}: {Error}", file.FullName, error.Value);
+					break;
 			}
 		}
 
 		foreach (var subDir in dir.GetDirectories())
 		{
 			IndexMarkdownFilesRecursive(subDir);
+		}
+	}
+
+	/// <summary>
+	/// Adds one file's entries to the index. An entry another file already claimed keeps its first
+	/// definition.
+	/// </summary>
+	private void AddToIndex(Dictionary<string, string> indexedFile, FileInfo file)
+	{
+		foreach (var kv in indexedFile)
+		{
+			if (IndexedHelp.ContainsKey(kv.Key))
+			{
+				logger?.LogWarning("Duplicate help index '{HelpIndex}' found in file {FilePath}, skipping", kv.Key, file.FullName);
+				continue;
+			}
+			IndexedHelp.Add(kv.Key, kv.Value);
 		}
 	}
 

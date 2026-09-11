@@ -86,12 +86,18 @@ public class GalleryController(
 		if (string.IsNullOrEmpty(uploaderDbref))
 			return Unauthorized("Missing character identity.");
 		await using var content = file.OpenReadStream();
-		var saved = await assetService.SaveAsync(file.FileName, file.ContentType, content, uploaderDbref, ct);
-		if (!saved.TryGetValue(out var asset, out var saveError))
+		return await assetService.SaveAsync(file.FileName, file.ContentType, content, uploaderDbref, ct) switch
 		{
-			return StatusCode(StatusCodes.Status500InternalServerError, new { error = saveError.Value });
-		}
+			WikiAsset asset => await AddToGalleryAsync(name, character, asset, uploaderDbref),
+			Error<string> saveError => StatusCode(StatusCodes.Status500InternalServerError, new { error = saveError.Value }),
+		};
+	}
 
+	/// <summary>
+	/// Append a stored image to the character's gallery, as its icon when it is the first.
+	/// </summary>
+	private async Task<IActionResult> AddToGalleryAsync(string name, AnySharpObject character, WikiAsset asset, string uploaderDbref)
+	{
 		var entries = (await ReadGalleryAsync(character)).ToList();
 		entries.Add(new GalleryEntry(
 			AssetId: asset.Id,

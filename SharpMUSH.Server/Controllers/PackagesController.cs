@@ -334,14 +334,17 @@ public class PackagesController(
 	[HttpPost("plan")]
 	[Authorize]
 	public async Task<ActionResult<PlanResponse>> Plan([FromBody] PlanRequest request, CancellationToken cancellationToken)
-	{
-		var fetched = await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken);
-		if (!fetched.TryGetValue(out var fetchedManifest, out var response))
+		=> await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken) switch
 		{
-			return response;
-		}
+			FetchedManifest fetched => await PlanManifestAsync(request, fetched, cancellationToken),
+			ActionResult response => response,
+		};
 
-		var (manifest, warnings, manifestSource) = fetchedManifest;
+	/// <summary>Plans a fetched manifest against the live game and renders the review panes.</summary>
+	private async Task<ActionResult<PlanResponse>> PlanManifestAsync(
+		PlanRequest request, FetchedManifest fetched, CancellationToken cancellationToken)
+	{
+		var (manifest, warnings, manifestSource) = fetched;
 
 		var answers = request.ConfigureAnswers ?? new Dictionary<string, string>();
 		var changeset = await installer.PlanAsync(manifest, answers, cancellationToken);
@@ -370,14 +373,17 @@ public class PackagesController(
 	[HttpPost("apply")]
 	[Authorize]
 	public async Task<ActionResult<ApplyResponse>> Apply([FromBody] ApplyRequest request, CancellationToken cancellationToken)
-	{
-		var fetched = await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken);
-		if (!fetched.TryGetValue(out var fetchedManifest, out var response))
+		=> await FetchManifestAsync(request.Remote, request.Path, request.Version, cancellationToken) switch
 		{
-			return response;
-		}
+			FetchedManifest fetched => await ApplyManifestAsync(request, fetched, cancellationToken),
+			ActionResult response => response,
+		};
 
-		var (manifest, _, manifestSource) = fetchedManifest;
+	/// <summary>Installs a fetched manifest from the remote it was fetched from.</summary>
+	private async Task<ActionResult<ApplyResponse>> ApplyManifestAsync(
+		ApplyRequest request, FetchedManifest fetched, CancellationToken cancellationToken)
+	{
+		var (manifest, _, manifestSource) = fetched;
 
 		// FetchManifestAsync looked the remote up already, but it can be removed in between.
 		var isCatalogue = BundledPackages.IsCatalogueRemote(request.Remote);
@@ -466,21 +472,30 @@ public class PackagesController(
 			};
 		}
 
-		if (!fetched.TryGetValue(out var manifestSource, out var response))
+		return fetched switch
 		{
-			return response;
-		}
+			PackageManifestSource manifestSource => ParseFetchedManifest(manifestSource, isCatalogue, version),
+			ActionResult response => response,
+		};
+	}
 
-		var result = manifests.ParseManifest(manifestSource.ManifestYaml);
-		if (!result.TryGetValue(out var parsed, out var failure))
+	/// <summary>Parses a fetched manifest, answering with its issues when it does not parse.</summary>
+	private ValueOrResponse<FetchedManifest> ParseFetchedManifest(
+		PackageManifestSource manifestSource, bool isCatalogue, string? version)
+		=> manifests.ParseManifest(manifestSource.ManifestYaml) switch
 		{
-			return UnprocessableEntity(new
+			ParsedPackageManifest parsed => HonourRequestedVersion(parsed, manifestSource, isCatalogue, version),
+			PackageManifestFailure failure => UnprocessableEntity(new
 			{
 				Message = "The manifest is invalid.",
 				Issues = failure.Issues.Select(i => i.ToString()).ToList()
-			});
-		}
+			}),
+		};
 
+	/// <summary>The parsed manifest, unless the catalogue cannot serve the version that was asked for.</summary>
+	private ValueOrResponse<FetchedManifest> HonourRequestedVersion(
+		ParsedPackageManifest parsed, PackageManifestSource manifestSource, bool isCatalogue, string? version)
+	{
 		// The image ships exactly one version of each catalogue package, so an explicit version
 		// request can only be honoured when it names that one. Serving the shipped manifest anyway
 		// would install something other than what was asked for.

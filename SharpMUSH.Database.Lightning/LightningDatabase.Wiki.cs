@@ -496,10 +496,27 @@ public partial class LightningDatabase
 		string? editSummary,
 		bool published,
 		int? expectedRevisionNumber)
-	{
-		var normalizedLocale = WikiHelpers.NormalizeLocale(locale);
-		if (!normalizedLocale.TryGetValue(out var normalized, out var error)) return error;
+		=> WikiHelpers.NormalizeLocale(locale) switch
+		{
+			string normalized => await WriteTranslationAsync(
+				pageId, normalized, title, markdown, editorDbref, editSummary, published, expectedRevisionNumber),
+			Error<string> error => error,
+		};
 
+	/// <summary>
+	/// Writes a translation under an already-normalized locale, as a create or a compare-and-swap on the
+	/// revision the editor loaded.
+	/// </summary>
+	private async Task<TranslationWriteResult> WriteTranslationAsync(
+		string pageId,
+		string normalized,
+		string title,
+		string markdown,
+		string editorDbref,
+		string? editSummary,
+		bool published,
+		int? expectedRevisionNumber)
+	{
 		var now = DateTimeOffset.UtcNow;
 		var stamp = WikiTimestamp(now);
 		var html = WikiRenderer.RenderToHtml(markdown);

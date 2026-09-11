@@ -34,14 +34,12 @@ public static class BundledHttpHooks
 
 		foreach (var packageId in PackageIds)
 		{
-			var parsed = service.ParseManifest(ManifestYaml(packageId));
-			if (!parsed.TryGetValue(out var parsedManifest, out var failure))
+			var manifest = service.ParseManifest(ManifestYaml(packageId)) switch
 			{
-				throw new InvalidOperationException(
-					$"Bundled {packageId} manifest is invalid: {string.Join("; ", failure.Issues.Select(i => i.ToString()))}");
-			}
-
-			var manifest = parsedManifest.Manifest;
+				ParsedPackageManifest parsed => parsed.Manifest,
+				PackageManifestFailure failure => throw new InvalidOperationException(
+					$"Bundled {packageId} manifest is invalid: {string.Join("; ", failure.Issues.Select(i => i.ToString()))}"),
+			};
 
 			// Each default package has a single attach object (the handler).
 			foreach (var (name, attr) in manifest.Objects.Single().Attributes)

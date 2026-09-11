@@ -49,10 +49,18 @@ public class SetupController(
 		if (request.Password.Length < 8)
 			return BadRequest("Password must be at least 8 characters.");
 
-		var result = await setupService.CompleteAsync(request.Username.Trim(), request.Password);
-		if (!result.TryGetValue(out var account, out var error))
-			return Conflict(error.Value);
+		return await setupService.CompleteAsync(request.Username.Trim(), request.Password) switch
+		{
+			SharpAccount account => await ClaimedAsync(account, clientIp),
+			Error<string> error => Conflict(error.Value),
+		};
+	}
 
+	/// <summary>
+	/// Sign the claimer in as the administrator they just became.
+	/// </summary>
+	private async Task<IActionResult> ClaimedAsync(SharpAccount account, string clientIp)
+	{
 		// The claim itself already succeeded (CompleteAsync flipped SetupCompleted) — everything
 		// below is best-effort auto-login enrichment. If any of it throws, the claimer must not
 		// be handed a bare 500: that would strand them mid-wizard with no way to re-run it (setup

@@ -285,10 +285,18 @@ public class AuthController(
 		if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
 			return BadRequest("Username and Password are required.");
 
-		var result = await accountService.CreateAccountAsync(request.Username, request.Email, request.Password);
-		if (!result.TryGetValue(out var account, out var error))
-			return Conflict(error.Value);
+		return await accountService.CreateAccountAsync(request.Username, request.Email, request.Password) switch
+		{
+			SharpAccount account => await RegisteredAsync(account),
+			Error<string> error => Conflict(error.Value),
+		};
+	}
 
+	/// <summary>
+	/// Mint the session a newly registered account signs in with.
+	/// </summary>
+	private async Task<IActionResult> RegisteredAsync(SharpAccount account)
+	{
 		var role = await accountClaims.ComputeAccountRoleAsync(account.Id!);
 		var permissions = await accountClaims.ComputeGrantedScopesAsync(account.Id!, role);
 

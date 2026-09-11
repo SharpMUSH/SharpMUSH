@@ -830,19 +830,19 @@
         var name = _createObjectName.Trim();
         _createObjectType = null;
         _createObjectName = string.Empty;
-        var result = await ObjectApi.CreateObjectAsync(name, type);
-        if (!result.TryGetValue(out var newDbref, out var failure))
+        switch (await ObjectApi.CreateObjectAsync(name, type))
         {
-            _saveMessage = failure.Message;
-            _saveSeverity = Severity.Error;
-            StateHasChanged();
-            return;
-        }
-
-        if (_objectBrowser is not null)
-        {
-            await _objectBrowser.RefreshAsync();
-            await _objectBrowser.SelectDbrefAsync(newDbref);
+            case int newDbref:
+                if (_objectBrowser is not null)
+                {
+                    await _objectBrowser.RefreshAsync();
+                    await _objectBrowser.SelectDbrefAsync(newDbref);
+                }
+                break;
+            case ApiFailure failure:
+                _saveMessage = failure.Message;
+                _saveSeverity = Severity.Error;
+                break;
         }
     }
 

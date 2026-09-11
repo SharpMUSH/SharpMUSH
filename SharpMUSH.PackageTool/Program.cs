@@ -86,14 +86,27 @@ internal static class PackageToolApp
 		}
 
 		var label = DisplayLabel(manifestPath);
-		var result = service.ParseManifest(yaml);
-
-		if (!result.TryGetValue(out var parsed, out var failure))
+		return service.ParseManifest(yaml) switch
 		{
-			PrintIssues(label, failure.Issues);
-			Console.WriteLine($"FAIL  {label}: {failure.Errors.Count()} error(s).");
-			return false;
-		}
+			ParsedPackageManifest parsed => CheckParsed(parsed, yaml, packageDir, label, strict),
+			PackageManifestFailure failure => ReportInvalid(failure, label),
+		};
+	}
+
+	/// <summary>Prints why a manifest failed to parse. Always false: an unparsable manifest is never acceptable.</summary>
+	private static bool ReportInvalid(PackageManifestFailure failure, string label)
+	{
+		PrintIssues(label, failure.Issues);
+		Console.WriteLine($"FAIL  {label}: {failure.Errors.Count()} error(s).");
+		return false;
+	}
+
+	/// <summary>
+	/// Reports a parsed manifest's warnings and checks its binaries. True when both pass (warnings
+	/// only fail under strict).
+	/// </summary>
+	private static bool CheckParsed(ParsedPackageManifest parsed, string yaml, string packageDir, string label, bool strict)
+	{
 		var warningsFail = strict && parsed.Warnings.Count > 0;
 		PrintIssues(label, parsed.Warnings);
 

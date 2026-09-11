@@ -93,11 +93,18 @@ public partial class WikiAssetController(
 			return Unauthorized(new { error = "No character on this session." });
 
 		await using var content = file.OpenReadStream();
-		var result = await assetService.SaveAsync(file.FileName, contentType, content, uploaderDbref, ct);
+		return await assetService.SaveAsync(file.FileName, contentType, content, uploaderDbref, ct) switch
+		{
+			WikiAsset asset => Uploaded(asset, uploaderDbref),
+			Error<string> error => StatusCode(StatusCodes.Status500InternalServerError, new { error = error.Value }),
+		};
+	}
 
-		if (!result.TryGetValue(out var asset, out var error))
-			return StatusCode(StatusCodes.Status500InternalServerError, new { error = error.Value });
-
+	/// <summary>
+	/// Log a stored upload and answer with where it is served from.
+	/// </summary>
+	private CreatedResult Uploaded(WikiAsset asset, string uploaderDbref)
+	{
 		logger.LogInformation("Wiki asset uploaded: id={Id} name={Name} size={Size} by={Uploader}",
 			asset.Id, LogSanitizer.Sanitize(asset.FileName), asset.SizeBytes, LogSanitizer.Sanitize(uploaderDbref));
 		var url = AssetUrl(asset.Id, asset.FileName);

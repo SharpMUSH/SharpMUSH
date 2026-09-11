@@ -125,15 +125,17 @@
         var result = await Guests.CreateAsync(string.IsNullOrWhiteSpace(_newName) ? null : _newName.Trim());
         _busy = false;
 
-        if (!result.TryGetValue(out var created, out var failure))
+        switch (result)
         {
-            _error = failure.Message;
-            return;
+            case AdminGuestsService.GuestRow created:
+                Snackbar.Add(Loc["AdmGuestCreated", created.Name], Severity.Success);
+                _newName = string.Empty;
+                await LoadAsync();
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
         }
-
-        Snackbar.Add(Loc["AdmGuestCreated", created.Name], Severity.Success);
-        _newName = string.Empty;
-        await LoadAsync();
     }
 
     private async Task DeleteAsync(AdminGuestsService.GuestRow guest)

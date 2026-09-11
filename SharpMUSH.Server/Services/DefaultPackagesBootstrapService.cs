@@ -84,16 +84,23 @@ public class DefaultPackagesBootstrapService(
 		// defect, and it must be reported whether or not the package happens to be installed
 		// already. Deciding the version gate first would swallow it on every game that has the
 		// package, because an unparsed manifest has no version to compare.
-		var parsed = manifests.ParseManifest(BundledPackages.ManifestYaml(packageId));
-		if (!parsed.TryGetValue(out var parsedManifest, out var failure))
+		switch (manifests.ParseManifest(BundledPackages.ManifestYaml(packageId)))
 		{
-			logger.LogError("Bundled {PackageId} manifest is invalid: {Issues}",
-				packageId, string.Join("; ", failure.Issues.Select(i => i.ToString())));
-			return;
+			case ParsedPackageManifest parsed:
+				await InstallOrUpgradeManifestAsync(packageId, parsed.Manifest, cancellationToken);
+				break;
+			case PackageManifestFailure failure:
+				logger.LogError("Bundled {PackageId} manifest is invalid: {Issues}",
+					packageId, string.Join("; ", failure.Issues.Select(i => i.ToString())));
+				break;
 		}
+	}
 
-		var manifest = parsedManifest.Manifest;
-
+	/// <summary>
+	/// Installs a parsed bundled manifest, or upgrades the installed package when this build ships a newer version.
+	/// </summary>
+	private async Task InstallOrUpgradeManifestAsync(string packageId, PackageManifest manifest, CancellationToken cancellationToken)
+	{
 		if (await registry.GetInstalledPackageAsync(packageId) is InstalledPackageRecord already)
 		{
 			// Already installed: only step in when this build ships a NEWER version than the

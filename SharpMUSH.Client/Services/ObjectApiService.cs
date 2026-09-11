@@ -44,10 +44,15 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 		=> $"api/objects/{dbref}/attributes/{Uri.EscapeDataString(attribute)}";
 
 	public async Task<ApiResult<MushObject>> GetObjectAsync(int dbref)
-	{
-		var summary = await SendAsync<ObjectSummaryDto>(HttpMethod.Get, $"api/objects/{dbref}");
-		if (!summary.TryGetValue(out var dto, out var failure)) return failure;
+		=> await SendAsync<ObjectSummaryDto>(HttpMethod.Get, $"api/objects/{dbref}") switch
+		{
+			ObjectSummaryDto dto => await WithAttributesAsync(dbref, dto),
+			ApiFailure failure => failure,
+		};
 
+	/// <summary>Builds the object a summary describes, fetching its attributes to go with it.</summary>
+	private async Task<MushObject> WithAttributesAsync(int dbref, ObjectSummaryDto dto)
+	{
 		var attributes = await GetAttributesAsync(dbref);
 
 		return new MushObject
@@ -108,11 +113,17 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 			_ => "THING",
 		};
 
-		var result = await SendAsync<CreatedObjectDto>(
-			HttpMethod.Post, "api/objects", new CreateObjectRequest(name, typeName));
+		return await SendAsync<CreatedObjectDto>(
+			HttpMethod.Post, "api/objects", new CreateObjectRequest(name, typeName)) switch
+		{
+			CreatedObjectDto created => CreatedNumber(created),
+			ApiFailure failure => failure,
+		};
+	}
 
-		if (!result.TryGetValue(out var created, out var failure)) return failure;
-
+	/// <summary>The number of the object the server created, read out of its dbref.</summary>
+	private static ApiResult<int> CreatedNumber(CreatedObjectDto created)
+	{
 		// '#N' or '#N:creationTime' — the browser addresses objects by number.
 		var number = created.Dbref.TrimStart('#').Split(':')[0];
 
