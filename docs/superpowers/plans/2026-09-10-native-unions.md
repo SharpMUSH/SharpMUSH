@@ -257,3 +257,8 @@ Remaining positional call sites at the end of stage 1 (counted by marking every 
 - The in-repo plugin fixtures and `SharpMUSH.Plugins.Scene` reference `SharpMUSH.Contracts` directly
   (a ProjectReference to Library does not flow it), and `PluginLoaderService.SharedContractTypes`
   lists `None` so plugins share the host's copy.
+- **Baseline flakes.** `InputSessionCommandTests.CallbackQRegistersAreUsableAndFreshForEveryReply`,
+  `TimeoutWorkerEndsCaptureAndRunsItsAdmittedCallback` and
+  `PasteLinesRemainCapturedAndCallbackCanEndTheSession` fail intermittently in full SharpMUSH.Tests
+  runs on the parent commit as well (two of two runs there), and pass when the class runs alone.
+  They are not a union regression; rerun the class alone before chasing one.
