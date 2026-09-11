@@ -37,8 +37,7 @@ public static class PennMUSHDatabaseGenerator
 
 		while (currentSize < targetSizeBytes)
 		{
-			var objType = (PennMUSHObjectType)Random.Next(0, 4);
-			await WriteObjectAsync(writer, dbref, objType);
+			await WriteObjectAsync(writer, dbref, TypeFor(dbref));
 			dbref++;
 
 			if (dbref % 10 == 0)
@@ -70,8 +69,7 @@ public static class PennMUSHDatabaseGenerator
 
 		for (var dbref = 0; dbref < objectCount; dbref++)
 		{
-			var objType = (PennMUSHObjectType)Random.Next(0, 4);
-			await WriteObjectAsync(writer, dbref, objType);
+			await WriteObjectAsync(writer, dbref, TypeFor(dbref));
 		}
 
 		await writer.WriteLineAsync("***END OF DUMP***");
@@ -79,6 +77,17 @@ public static class PennMUSHDatabaseGenerator
 
 		return tempFile;
 	}
+
+	/// <summary>
+	/// #0-#2 have the shape PennMUSH's <c>create_minimal_db</c> gives every database — Room Zero, God and
+	/// the Master Room — and everything after them is random.
+	/// </summary>
+	private static PennMUSHObjectType TypeFor(int dbref) => dbref switch
+	{
+		0 or 2 => PennMUSHObjectType.Room,
+		1 => PennMUSHObjectType.Player,
+		_ => (PennMUSHObjectType)Random.Next(0, 4)
+	};
 
 	private static async Task WriteObjectAsync(StreamWriter writer, int dbref, PennMUSHObjectType type)
 	{

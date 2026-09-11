@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using System.Diagnostics;
 
@@ -8,20 +7,13 @@ namespace SharpMUSH.Tests.Services;
 /// Performance tests for PennMUSH database converter.
 /// These tests measure import performance with large databases.
 /// </summary>
+/// <remarks>
+/// Each import runs in its own <see cref="IsolatedImportWorld"/>. A generated world is thousands of
+/// objects that start in #0 and take over the seeded #0-#2, which is where every other suite in the
+/// shared session world runs.
+/// </remarks>
 public class PennMUSHDatabaseConverterPerformanceTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IPennMUSHDatabaseConverter GetConverter()
-	{
-		return WebAppFactoryArg.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
-	}
-
-	private PennMUSHDatabaseParser GetParser()
-	{
-		return WebAppFactoryArg.Services.GetRequiredService<PennMUSHDatabaseParser>();
-	}
 
 	/// <summary>
 	/// Tests conversion performance with a large 10MB+ PennMUSH database.
@@ -35,8 +27,9 @@ public class PennMUSHDatabaseConverterPerformanceTests
 
 		try
 		{
-			var parser = GetParser();
-			var converter = GetConverter();
+			await using var world = await IsolatedImportWorld.CreateAsync();
+			var parser = world.Parser;
+			var converter = world.Converter;
 
 			var parseStopwatch = Stopwatch.StartNew();
 			var database = await parser.ParseFileAsync(databaseFilePath);
@@ -98,8 +91,9 @@ public class PennMUSHDatabaseConverterPerformanceTests
 
 		try
 		{
-			var parser = GetParser();
-			var converter = GetConverter();
+			await using var world = await IsolatedImportWorld.CreateAsync();
+			var parser = world.Parser;
+			var converter = world.Converter;
 
 			var stopwatch = Stopwatch.StartNew();
 			var database = await parser.ParseFileAsync(databaseFilePath);
@@ -149,8 +143,9 @@ public class PennMUSHDatabaseConverterPerformanceTests
 
 			try
 			{
-				var parser = GetParser();
-				var converter = GetConverter();
+				await using var world = await IsolatedImportWorld.CreateAsync();
+				var parser = world.Parser;
+				var converter = world.Converter;
 
 				var stopwatch = Stopwatch.StartNew();
 				var database = await parser.ParseFileAsync(databaseFilePath);

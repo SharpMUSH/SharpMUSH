@@ -3,6 +3,7 @@ namespace SharpMUSH.Library.Services.DatabaseConversion;
 /// <summary>
 /// Represents a PennMUSH object as read from a database file.
 /// </summary>
+/// <remarks>A dbref field left unset is -1, PennMUSH's NOTHING: #0 is a real room.</remarks>
 public class PennMUSHObject
 {
 	/// <summary>
@@ -18,42 +19,42 @@ public class PennMUSHObject
 	/// <summary>
 	/// Location DBRef (#-1 for nothing, #-3 for garbage)
 	/// </summary>
-	public int Location { get; init; }
+	public int Location { get; init; } = -1;
 
 	/// <summary>
 	/// First object in contents list
 	/// </summary>
-	public int Contents { get; init; }
+	public int Contents { get; init; } = -1;
 
 	/// <summary>
 	/// First exit
 	/// </summary>
-	public int Exits { get; init; }
+	public int Exits { get; init; } = -1;
 
 	/// <summary>
 	/// Link/destination DBRef
 	/// </summary>
-	public int Link { get; init; }
+	public int Link { get; init; } = -1;
 
 	/// <summary>
 	/// Next object in linked list
 	/// </summary>
-	public int Next { get; init; }
+	public int Next { get; init; } = -1;
 
 	/// <summary>
 	/// Owner DBRef
 	/// </summary>
-	public int Owner { get; init; }
+	public int Owner { get; init; } = -1;
 
 	/// <summary>
 	/// Parent DBRef
 	/// </summary>
-	public int Parent { get; init; }
+	public int Parent { get; init; } = -1;
 
 	/// <summary>
-	/// Zone DBRef (master room)
+	/// Zone DBRef (the zone master object)
 	/// </summary>
-	public int Zone { get; init; }
+	public int Zone { get; init; } = -1;
 
 	/// <summary>
 	/// Pennies/money
