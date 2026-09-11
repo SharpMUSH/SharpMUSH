@@ -181,8 +181,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		// otherwise free: an imported PennMUSH hash validates against salt + plaintext, never the objid.
 		if (seeded is SharpPlayer seededPlayer && !string.IsNullOrEmpty(pennObject.Password))
 		{
-			var (salt, hash) = ExtractPennMUSHPasswordParts(pennObject.Password);
-			await _mediator.Send(new SetPlayerPasswordCommand(seededPlayer, hash, salt), cancellationToken);
+			await _mediator.Send(new SetPlayerPasswordCommand(seededPlayer, ImportedPassword(pennObject.Password),
+				StoredVerbatim), cancellationToken);
 		}
 
 		var (created, modified) = PennTimestamps(pennObject);
@@ -259,15 +259,14 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 		else if (godPennObject?.Type == PennMUSHObjectType.Player)
 		{
-			var (godSalt, godHash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
 			var (godCreated, godModified) = PennTimestamps(godPennObject);
 			tempGodDbRef = await _database.CreatePlayerAsync(
 				godPennObject.Name,
-				godHash,
+				ImportedPassword(godPennObject.Password),
 				new DBRef(0), // Limbo room (will create or reuse next)
 				new DBRef(0), // Home is also Limbo
 				godPennObject.Pennies > 0 ? godPennObject.Pennies : 1000,
-				godSalt,
+				StoredVerbatim,
 				godCreated,
 				godModified,
 				cancellationToken);
@@ -278,14 +277,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 		else
 		{
-			// Create a default God player (no salt needed for new password)
 			tempGodDbRef = await _database.CreatePlayerAsync(
 				"God",
-				"NEEDS_RESET",
+				PasswordService.LockedHash,
 				new DBRef(0),
 				new DBRef(0),
 				10000,
-				null,
+				StoredVerbatim,
 				cancellationToken: cancellationToken);
 			if (godPennObject is null)
 			{
@@ -385,16 +383,14 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				{
 					case PennMUSHObjectType.Player:
 						{
-							// Create player with password from PennMUSH - extract salt
 							// Players start in Limbo temporarily
-							var (playerSalt, playerHash) = ExtractPennMUSHPasswordParts(pennObj.Password);
 							newDbRef = await _database.CreatePlayerAsync(
 								pennObj.Name,
-								playerHash,
+								ImportedPassword(pennObj.Password),
 								tempRoom0DbRef, // Start in Limbo
 								tempRoom0DbRef, // Home is Limbo for now
 								pennObj.Pennies > 0 ? pennObj.Pennies : 100,
-								playerSalt,
+								StoredVerbatim,
 								created,
 								modified,
 								cancellationToken);
@@ -826,38 +822,18 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// Extracts the salt and hash from a PennMUSH password format.
-	/// PennMUSH format: V:ALGO:SALTEDHASH:TIMESTAMP
-	/// The first 2 characters of SALTEDHASH are the salt.
+	/// The stored password an imported player gets: the source value exactly as the source stored it,
+	/// or <see cref="PasswordService.LockedHash"/> when it has none. <see cref="PasswordService"/>
+	/// verifies every shape PennMUSH accepts, so the value is never hashed again here.
 	/// </summary>
-	/// <param name="password">The PennMUSH password string</param>
-	/// <returns>A tuple of (salt, hash) if valid PennMUSH format, or (null, password) if not</returns>
-	private static (string? salt, string hash) ExtractPennMUSHPasswordParts(string? password)
-	{
-		if (string.IsNullOrEmpty(password))
-			return (null, password ?? "NEEDS_RESET");
+	private static string ImportedPassword(string? password)
+		=> string.IsNullOrEmpty(password) ? PasswordService.LockedHash : password;
 
-		var parts = password.Split(':');
-		if (parts.Length < 3)
-			return (null, password);
-
-		// Check if first part is a version number (1 or 2)
-		if (!int.TryParse(parts[0], out var version) || version < 1 || version > 2)
-			return (null, password);
-
-		// Check if second part is a known algorithm
-		var algo = parts[1].ToUpperInvariant();
-		if (algo is not ("SHA1" or "SHA-1" or "SHA256" or "SHA-256"))
-			return (null, password);
-
-		var saltedHash = parts[2];
-		if (saltedHash.Length < 3)
-			return (null, password);
-
-		var salt = saltedHash[..2];
-
-		// Return the salt and the full password (we keep the full format for verification)
-		return (salt, password);
-	}
+	/// <summary>
+	/// The salt to pass alongside <see cref="ImportedPassword"/>. The providers keep a password verbatim
+	/// only when a salt accompanies it; without one they hash it as plaintext, which would make the
+	/// stored hash string itself the password. Nothing reads the salt back.
+	/// </summary>
+	private const string StoredVerbatim = "";
 
 }
