@@ -113,7 +113,7 @@ public class PackageInstallServiceTests
 	private async Task<string> EvaluateAttributeAsync(string objid, string attribute)
 	{
 		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/{attribute})]"));
-		return result.Message!.ToPlainText();
+		return result!.Message!.ToPlainText();
 	}
 
 	private async Task<IReadOnlyList<string>> ReadAttributeFlagsAsync(string objid, string attribute)

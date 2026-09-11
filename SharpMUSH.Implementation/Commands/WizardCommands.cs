@@ -2236,14 +2236,13 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupStarted), executor);
 
 		var result = await WorldBackupService.CreateAsync();
-		if (result is WorldBackup written)
+		if (result.TryGetValue(out var written, out var failure))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCompleteFormat),
 				executor, written.Name, DescribeBytes(written.SizeBytes), WorldBackupService.Keep);
 			return new CallState(written.Name);
 		}
 
-		var failure = (Error<string>)result.Value!;
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupFailedFormat), executor,
 			failure.Value);
 		return new None();

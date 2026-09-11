@@ -182,13 +182,13 @@ public static class EditWiki
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
 		var split = WikiCommandHelper.SplitLocaleTarget(targetArg.ToPlainText());
-		if (split is Error<string> splitError)
+		if (!split.TryGetValue(out var target, out var splitError))
 		{
 			await notifyService.Notify(executor, $"WIKI: {splitError.Value}", executor);
 			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
-		var (pageTarget, locale) = (WikiCommandHelper.LocaleTarget)split.Value!;
+		var (pageTarget, locale) = target;
 		var (ns, category, slug) = WikiCommandHelper.ResolveTarget(pageTarget);
 
 		if (await wikiService.GetBySlugAsync(slug, category, ns) is not WikiPage page)

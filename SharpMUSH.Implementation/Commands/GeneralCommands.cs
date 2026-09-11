@@ -1900,8 +1900,7 @@ public partial class Commands
 		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
 		var accounting = await SemaphoreCommandAccounting(objectToNotify, dbRefAttribute.Attribute,
 			(old, selected) => notifyType == "ALL" ? Math.Max(0, (long)old - selected) : (long)old - (notifyType == "SETQ" ? 1 : notifyCount), false);
-		if (accounting is Error<string> accountingError) return await ReportSemaphoreCommandError(executor, accountingError.Value);
-		var counted = (SemaphoreAccounting)accounting.Value!;
+		if (!accounting.TryGetValue(out var counted, out var accountingError)) return await ReportSemaphoreCommandError(executor, accountingError.Value);
 		var changed = await scheduler.ApplySemaphoreCommandAsync(dbRefAttribute,
 			notifyType == "ALL" ? null : notifyType == "SETQ" ? 1 : notifyCount, false,
 			counted.Persist, counted.Reconcile, qRegisters);
@@ -2825,8 +2824,7 @@ public partial class Commands
 			if (validation is Error<string> validationError) return await ReportSemaphoreCommandError(executor, validationError.Value);
 			var accounting = await SemaphoreCommandAccounting(objectToDrain, target.Attribute,
 				(old, selected) => drainCount.HasValue && old < 0 ? old : Math.Max(0, (long)old - selected), true);
-			if (accounting is Error<string> accountingError) return await ReportSemaphoreCommandError(executor, accountingError.Value);
-			var counted = (SemaphoreAccounting)accounting.Value!;
+			if (!accounting.TryGetValue(out var counted, out var accountingError)) return await ReportSemaphoreCommandError(executor, accountingError.Value);
 			await parser.ServiceProvider.GetRequiredService<ITaskScheduler>().ApplySemaphoreCommandAsync(target,
 				drainCount, true, counted.Persist, counted.Reconcile);
 			return null;

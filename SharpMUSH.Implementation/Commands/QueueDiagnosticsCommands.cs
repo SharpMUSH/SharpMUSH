@@ -69,8 +69,8 @@ public partial class Commands
 			.GetGameActorAsync(executor.Object().DBRef, ExecutionBudget.CurrentToken);
 		if (actor is null) return await DiagnosticFailure(parser, DiagnosticsError.PermissionDenied);
 		var result = await parser.ServiceProvider.GetRequiredService<IQueueDiagnosticsService>().InspectAsync(actor, limit, ct: ExecutionBudget.CurrentToken);
-		if (result is DiagnosticsError error) return await DiagnosticFailure(parser, error);
-		var rows = string.Join('\n', ((QueueDiagnosticsReport)result.Value!).Recent.Select(row =>
+		if (!result.TryGetValue(out var report, out var error)) return await DiagnosticFailure(parser, error);
+		var rows = string.Join('\n', report.Recent.Select(row =>
 			$"{row.Pid?.ToString() ?? "-"} {row.Source ?? "?"}{(row.SourceAttribute is null ? "" : "/" + row.SourceAttribute)} {row.Owner ?? "?"} {row.Kind} {row.Status} " +
 			$"{row.WaitDuration?.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture) ?? "-"} " +
 			$"{row.ExecutionDuration?.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture) ?? "-"} {row.InvocationCount}"));

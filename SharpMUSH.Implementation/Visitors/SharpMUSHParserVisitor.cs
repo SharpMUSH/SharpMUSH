@@ -1897,14 +1897,12 @@ public class SharpMUSHParserVisitor(
 		var noEvalSwitch = Array.Exists(switches, s => s.Equals("NOEVAL", StringComparison.OrdinalIgnoreCase));
 		var singleArgument = switches.Any(s => libraryCommandDefinition.Attribute.SingleArgumentSwitches.Contains(s, StringComparer.OrdinalIgnoreCase));
 		var splitResult = await ArgumentSplit(prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch, singleArgument);
-		if (splitResult is Error<string> splitError)
+		if (!splitResult.TryGetValue(out var argumentResults, out var splitError))
 		{
 			if (prs.CurrentState.Handle.HasValue)
 				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
 			return new None();
 		}
-
-		var argumentResults = (CommandArguments)splitResult.Value!;
 		var arguments = argumentResults.Values;
 
 		var executor = await prs.CurrentState.ExecutorObject(Mediator);
@@ -2285,14 +2283,12 @@ public class SharpMUSHParserVisitor(
 		// and a value instead of reporting the settings. `command` rather than the library name because
 		// realSubtext holds what the player typed, which may be an unambiguous abbreviation of it.
 		var splitResult = await ArgumentSplit(prs, src, context, librarySocketCommandDefinition, command);
-		if (splitResult is Error<string> splitError)
+		if (!splitResult.TryGetValue(out var argumentResults, out var splitError))
 		{
 			if (prs.CurrentState.Handle.HasValue)
 				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
 			return new None();
 		}
-
-		var argumentResults = (CommandArguments)splitResult.Value!;
 		var arguments = argumentResults.Values;
 
 		var dispatchResult = await prs.With(state => state with
@@ -2355,14 +2351,12 @@ public class SharpMUSHParserVisitor(
 		// "]" split to a single argument equal to "]" itself, and the re-dispatch in NoParse/StrictParse
 		// re-entered this same path forever — a stack overflow that takes the whole process down.
 		var splitResult = await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition, singleRootCommand);
-		if (splitResult is Error<string> splitError)
+		if (!splitResult.TryGetValue(out var argumentResults, out var splitError))
 		{
 			if (prs.CurrentState.Handle.HasValue)
 				await NotifyService.Notify(prs.CurrentState.Handle.Value, splitError.Value);
 			return new None();
 		}
-
-		var argumentResults = (CommandArguments)splitResult.Value!;
 		var arguments = argumentResults.Values;
 
 		// %0 is the text glued to the token itself; the split arguments follow from %1.

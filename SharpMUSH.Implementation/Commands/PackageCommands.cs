@@ -98,13 +98,11 @@ public partial class Commands
 		var authoring = parser.ServiceProvider.GetRequiredService<IPackageAuthoringService>();
 
 		var scan = await authoring.ScanAsync(objids.Distinct().ToList());
-		if (scan is Error<string> scanError)
+		if (!scan.TryGetValue(out var scanResult, out var scanError))
 		{
 			await NotifyService.Notify(executor, $"PACKAGE: {scanError.Value}", executor);
 			return new CallState(string.Empty);
 		}
-
-		var scanResult = (PackageAuthoringScan)scan.Value!;
 
 		// Attribute visibility matches @decompile: keep only the attributes the
 		// executor may see (GetVisibleAttributesAsync), minus VEILED. Everything else

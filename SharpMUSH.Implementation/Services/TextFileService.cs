@@ -300,13 +300,11 @@ public class TextFileService : ITextFileService
 		var fileInfo = new FileInfo(filePath);
 		var result = Helpfiles.IndexMarkdownPositions(fileInfo);
 
-		if (result is Error<string> error)
+		if (!result.TryGetValue(out var entries, out var error))
 		{
 			_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, error.Value);
 			return Task.CompletedTask;
 		}
-
-		var entries = (Dictionary<string, (long Start, long End)>)result.Value!;
 
 		foreach (var (entryName, positions) in entries)
 		{
