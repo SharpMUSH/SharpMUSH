@@ -11,8 +11,8 @@ namespace SharpMUSH.Library.Models;
 /// </summary>
 /// <remarks>
 /// Names arrive spelled three ways: from an <c>@lock</c>/<c>@unlock</c> switch (whatever case the
-/// player typed), from a PennMUSH world import (<c>PennMUSHDatabaseConverter</c> writes the lock
-/// names verbatim out of the foreign database), and from a package manifest. PennMUSH spells three
+/// player typed), from a PennMUSH world import (<c>PennMUSHDatabaseConverter</c> passes the foreign
+/// database's names to <c>SetLockCommand</c> as they were written), and from a package manifest. PennMUSH spells three
 /// of them differently only in case — <c>Chzone</c>, <c>Dropto</c>, <c>Chown</c> — which is what
 /// <see cref="Comparer"/> bridges. <see cref="Aliases"/> carries any spelling that is not merely a
 /// case variation of a <see cref="LockType"/> member; every member currently matches its PennMUSH
