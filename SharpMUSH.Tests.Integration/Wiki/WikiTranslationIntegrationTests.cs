@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -33,8 +34,7 @@ public class WikiTranslationIntegrationTests
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var result = await (wiki ?? Wiki).CreateAsync(
 			$"{label} {uid}", "en **body**", "#1", WikiNamespace.Main, "general", sourceLocale);
-		await Assert.That(result.IsT0).IsTrue();
-		return result.AsT0;
+		return result.Expect<WikiPage>();
 	}
 
 	[Test]
@@ -44,8 +44,7 @@ public class WikiTranslationIntegrationTests
 
 		var reread = await Wiki.GetBySlugAsync(page.Slug, page.Category, WikiNamespace.Main);
 
-		await Assert.That(reread.IsT0).IsTrue();
-		await Assert.That(reread.AsT0.SourceLocale)
+		await Assert.That(reread.Expect<WikiPage>().SourceLocale)
 			.IsEqualTo("fr-CA")
 			.Because("SourceLocale must round-trip through the provider's serializer");
 	}
@@ -59,14 +58,13 @@ public class WikiTranslationIntegrationTests
 			page.Id, "fr", "Titre fr", "corps **fr**", "#2", "première",
 			published: true, expectedRevisionNumber: null);
 
-		await Assert.That(created.IsT0).IsTrue();
-		var fetched = await Wiki.GetTranslationAsync(page.Id, "fr");
-		await Assert.That(fetched.IsT0).IsTrue();
-		await Assert.That(fetched.AsT0.Title).IsEqualTo("Titre fr");
-		await Assert.That(fetched.AsT0.MarkdownSource).IsEqualTo("corps **fr**");
-		await Assert.That(fetched.AsT0.RenderedHtml).Contains("<strong>fr</strong>");
-		await Assert.That(fetched.AsT0.RevisionNumber).IsEqualTo(1);
-		await Assert.That(fetched.AsT0.Published).IsTrue();
+		await Assert.That(created.Value).IsTypeOf<WikiTranslation>();
+		var fetched = (await Wiki.GetTranslationAsync(page.Id, "fr")).Expect<WikiTranslation>();
+		await Assert.That(fetched.Title).IsEqualTo("Titre fr");
+		await Assert.That(fetched.MarkdownSource).IsEqualTo("corps **fr**");
+		await Assert.That(fetched.RenderedHtml).Contains("<strong>fr</strong>");
+		await Assert.That(fetched.RevisionNumber).IsEqualTo(1);
+		await Assert.That(fetched.Published).IsTrue();
 	}
 
 	[Test]
@@ -81,9 +79,9 @@ public class WikiTranslationIntegrationTests
 		var second = await Wiki.UpsertTranslationAsync(
 			page.Id, "fr", "v2", "corps v2", "#3", "révision", true, expectedRevisionNumber: 1);
 
-		await Assert.That(second.IsT0).IsTrue();
-		await Assert.That(second.AsT0.RevisionNumber).IsEqualTo(2);
-		await Assert.That(second.AsT0.MarkdownSource).IsEqualTo("corps v2");
+		var translation = second.Expect<WikiTranslation>();
+		await Assert.That(translation.RevisionNumber).IsEqualTo(2);
+		await Assert.That(translation.MarkdownSource).IsEqualTo("corps v2");
 		var summaries = await Wiki.GetTranslationsAsync(page.Id);
 		await Assert.That(summaries.Count).IsEqualTo(1);
 	}
@@ -111,8 +109,8 @@ public class WikiTranslationIntegrationTests
 		await Wiki.UpsertTranslationAsync(first.Id, "fr", "A fr", "a", "#2", null, true, expectedRevisionNumber: null);
 		await Wiki.UpsertTranslationAsync(second.Id, "fr", "B fr", "b", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That((await Wiki.GetTranslationAsync(first.Id, "fr")).AsT0.Title).IsEqualTo("A fr");
-		await Assert.That((await Wiki.GetTranslationAsync(second.Id, "fr")).AsT0.Title)
+		await Assert.That((await Wiki.GetTranslationAsync(first.Id, "fr")).Expect<WikiTranslation>().Title).IsEqualTo("A fr");
+		await Assert.That((await Wiki.GetTranslationAsync(second.Id, "fr")).Expect<WikiTranslation>().Title)
 			.IsEqualTo("B fr")
 			.Because("the unique index is on (PageId, Locale), not on Locale alone");
 	}
@@ -124,9 +122,9 @@ public class WikiTranslationIntegrationTests
 
 		var created = await Wiki.UpsertTranslationAsync(page.Id, "FR-ca", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(created.AsT0.Locale).IsEqualTo("fr-CA");
-		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr-ca")).IsT0).IsTrue();
-		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "FR-CA")).IsT0).IsTrue();
+		await Assert.That(created.Expect<WikiTranslation>().Locale).IsEqualTo("fr-CA");
+		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr-ca")).Value).IsTypeOf<WikiTranslation>();
+		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "FR-CA")).Value).IsTypeOf<WikiTranslation>();
 	}
 
 	[Test]
@@ -136,8 +134,8 @@ public class WikiTranslationIntegrationTests
 
 		var result = await Wiki.UpsertTranslationAsync(page.Id, "en", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(result.IsT2)
-			.IsTrue()
+		await Assert.That(result.Value)
+			.IsTypeOf<Error<string>>()
 			.Because("shadowing the source locale is a malformed request, not a race the caller lost");
 	}
 
@@ -148,7 +146,7 @@ public class WikiTranslationIntegrationTests
 
 		var result = await Wiki.UpsertTranslationAsync(ghost, "fr", "T", "m", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(result.IsT2).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Error<string>>();
 	}
 
 	[Test]
@@ -156,7 +154,7 @@ public class WikiTranslationIntegrationTests
 	{
 		var page = await CreateSourcePageAsync("MissingLocale");
 
-		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "de")).IsT1).IsTrue();
+		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "de")).Value).IsTypeOf<NotFound>();
 	}
 
 	/// <summary>
@@ -267,11 +265,10 @@ public class WikiTranslationIntegrationTests
 		var page = await CreateSourcePageAsync("RevByNumber");
 		await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
 
-		var revision = await Wiki.GetRevisionAsync(page.Id, 1);
+		var revision = (await Wiki.GetRevisionAsync(page.Id, 1)).Expect<WikiRevision>();
 
-		await Assert.That(revision.IsT0).IsTrue();
-		await Assert.That(revision.AsT0.Locale).IsEqualTo(string.Empty);
-		await Assert.That(revision.AsT0.MarkdownSource)
+		await Assert.That(revision.Locale).IsEqualTo(string.Empty);
+		await Assert.That(revision.MarkdownSource)
 			.IsEqualTo("en **body**")
 			.Because("a rollback must restore the source body, never a translation's");
 	}
@@ -285,17 +282,15 @@ public class WikiTranslationIntegrationTests
 		var page = await CreateSourcePageAsync("RevByLocale");
 		await Wiki.UpsertTranslationAsync(page.Id, "fr", "T", "corps fr", "#2", null, true, expectedRevisionNumber: null);
 
-		var french = await Wiki.GetRevisionForLocaleAsync(page.Id, "fr", 1);
-		var source = await Wiki.GetRevisionForLocaleAsync(page.Id, string.Empty, 1);
+		var french = (await Wiki.GetRevisionForLocaleAsync(page.Id, "fr", 1)).Expect<WikiRevision>();
+		var source = (await Wiki.GetRevisionForLocaleAsync(page.Id, string.Empty, 1)).Expect<WikiRevision>();
 
-		await Assert.That(french.IsT0).IsTrue();
-		await Assert.That(french.AsT0.Locale).IsEqualTo("fr");
-		await Assert.That(french.AsT0.MarkdownSource)
+		await Assert.That(french.Locale).IsEqualTo("fr");
+		await Assert.That(french.MarkdownSource)
 			.IsEqualTo("corps fr")
 			.Because("the French revision 1 is not the English revision 1");
-		await Assert.That(source.IsT0).IsTrue();
-		await Assert.That(source.AsT0.Locale).IsEqualTo(string.Empty);
-		await Assert.That(source.AsT0.MarkdownSource)
+		await Assert.That(source.Locale).IsEqualTo(string.Empty);
+		await Assert.That(source.MarkdownSource)
 			.IsEqualTo("en **body**")
 			.Because("the empty stream stays the source's, on every backend");
 	}
@@ -313,9 +308,9 @@ public class WikiTranslationIntegrationTests
 		var missing = await Wiki.GetRevisionForLocaleAsync(page.Id, "fr", 2);
 		var present = await Wiki.GetRevisionForLocaleAsync(page.Id, "fr", 1);
 
-		await Assert.That(missing.IsT1).IsTrue();
-		await Assert.That(present.IsT0)
-			.IsTrue()
+		await Assert.That(missing.Value).IsTypeOf<NotFound>();
+		await Assert.That(present.Value)
+			.IsTypeOf<WikiRevision>()
 			.Because("a provider matching nothing at all would also make the NotFound above pass");
 	}
 
@@ -328,9 +323,9 @@ public class WikiTranslationIntegrationTests
 
 		var deleted = await Wiki.DeleteTranslationAsync(page.Id, "fr", "#2");
 
-		await Assert.That(deleted.IsT0).IsTrue();
-		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr")).IsT1).IsTrue();
-		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "de")).IsT0).IsTrue();
+		await Assert.That(deleted.Value).IsTypeOf<None>();
+		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr")).Value).IsTypeOf<NotFound>();
+		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "de")).Value).IsTypeOf<WikiTranslation>();
 		await Assert.That((await Wiki.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20)).Count).IsEqualTo(0);
 		await Assert.That((await Wiki.GetRevisionsForLocaleAsync(page.Id, "de", 0, 20)).Count).IsEqualTo(1);
 	}
@@ -340,7 +335,7 @@ public class WikiTranslationIntegrationTests
 	{
 		var page = await CreateSourcePageAsync("DeleteMissing");
 
-		await Assert.That((await Wiki.DeleteTranslationAsync(page.Id, "fr", "#2")).IsT1).IsTrue();
+		await Assert.That((await Wiki.DeleteTranslationAsync(page.Id, "fr", "#2")).Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -373,8 +368,8 @@ public class WikiTranslationIntegrationTests
 		var created = await Wiki.UpsertTranslationAsync(
 			page.Id, "fr", "Titre fr", "corps fr", "#2", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(created.IsT0)
-			.IsTrue()
+		await Assert.That(created.Value)
+			.IsTypeOf<WikiTranslation>()
 			.Because("a translation revision 1 must coexist with the source's revision 1");
 		var french = await Wiki.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
 		var source = await Wiki.GetRevisionsAsync(page.Id);
@@ -399,8 +394,8 @@ public class WikiTranslationIntegrationTests
 		var loser = await Wiki.UpsertTranslationAsync(
 			page.Id, "fr", "perdu", "corps perdu", "#4", null, true, expectedRevisionNumber: 1);
 
-		await Assert.That(winner.IsT0).IsTrue();
-		await Assert.That(loser.AsT1)
+		await Assert.That(winner.Value).IsTypeOf<WikiTranslation>();
+		await Assert.That(loser.Expect<WikiWriteConflict>())
 			.IsEqualTo(WikiWriteConflict.StaleRevision)
 			.Because("a second revision 2 for (PageId, Locale) must be refused, never silently accepted");
 
@@ -411,7 +406,7 @@ public class WikiTranslationIntegrationTests
 		await Assert.That(revisions.Select(r => r.MarkdownSource))
 			.DoesNotContain("corps perdu")
 			.Because("a rejected write must leave no revision behind");
-		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
+		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr")).Expect<WikiTranslation>().MarkdownSource)
 			.IsEqualTo("corps v2");
 	}
 
@@ -424,8 +419,8 @@ public class WikiTranslationIntegrationTests
 		var again = await Wiki.UpsertTranslationAsync(
 			page.Id, "fr", "écrasé", "corps écrasé", "#3", null, true, expectedRevisionNumber: null);
 
-		await Assert.That(again.AsT1).IsEqualTo(WikiWriteConflict.AlreadyExists);
-		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr")).AsT0.MarkdownSource)
+		await Assert.That(again.Expect<WikiWriteConflict>()).IsEqualTo(WikiWriteConflict.AlreadyExists);
+		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr")).Expect<WikiTranslation>().MarkdownSource)
 			.IsEqualTo("corps v1");
 	}
 
@@ -441,9 +436,9 @@ public class WikiTranslationIntegrationTests
 		var orphaned = await Wiki.UpsertTranslationAsync(
 			page.Id, "fr", "orphelin", "corps orphelin", "#2", null, true, expectedRevisionNumber: 1);
 
-		await Assert.That(orphaned.AsT1).IsEqualTo(WikiWriteConflict.TranslationGone);
-		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr")).IsT1)
-			.IsTrue()
+		await Assert.That(orphaned.Expect<WikiWriteConflict>()).IsEqualTo(WikiWriteConflict.TranslationGone);
+		await Assert.That((await Wiki.GetTranslationAsync(page.Id, "fr")).Value)
+			.IsTypeOf<NotFound>()
 			.Because("a compare-and-swap must not resurrect a row somebody deliberately deleted");
 	}
 
@@ -466,16 +461,16 @@ public class WikiTranslationIntegrationTests
 				Wiki.UpsertTranslationAsync(page.Id, "fr", "A", "corps a", "#2", null, true, expectedRevisionNumber: 1),
 				Wiki.UpsertTranslationAsync(page.Id, "fr", "B", "corps b", "#3", null, true, expectedRevisionNumber: 1));
 
-			await Assert.That(results.Count(r => r.IsT0))
+			await Assert.That(results.Count(r => r is WikiTranslation))
 				.IsEqualTo(1)
 				.Because("exactly one compare-and-swap on the same expected revision may succeed");
-			await Assert.That(results.Single(r => !r.IsT0).AsT1)
+			await Assert.That(results.Single(r => r is not WikiTranslation).Expect<WikiWriteConflict>())
 				.IsEqualTo(WikiWriteConflict.StaleRevision)
 				.Because("the loser lost a race, and 400 would tell it to edit a body that was never wrong");
 
 			var revisions = await Wiki.GetRevisionsForLocaleAsync(page.Id, "fr", 0, 20);
 			await Assert.That(revisions.Count).IsEqualTo(2);
-			var winnerMarkdown = results.Single(r => r.IsT0).AsT0.MarkdownSource;
+			var winnerMarkdown = results.Select(r => r.Value).OfType<WikiTranslation>().Single().MarkdownSource;
 			var loserMarkdown = winnerMarkdown == "corps a" ? "corps b" : "corps a";
 			await Assert.That(revisions.Select(r => r.MarkdownSource))
 				.DoesNotContain(loserMarkdown)

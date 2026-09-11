@@ -144,10 +144,8 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	[HttpGet("{id}")]
 	public async Task<IActionResult> GetScene(string id)
 	{
-		var result = await sceneService.GetSceneAsync(id);
-		if (result.IsT1) return NotFound();
+		if (await sceneService.GetSceneAsync(id) is not Contracts.Scene scene) return NotFound();
 
-		var scene = result.AsT0;
 		return await CanSeeAsync(scene) ? Ok(ToDto(scene)) : NotFound();
 	}
 
@@ -159,13 +157,11 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	[HttpGet("{id}/poses")]
 	public async Task<IActionResult> GetPoses(string id, [FromQuery] int? count = null)
 	{
-		var sceneResult = await sceneService.GetSceneAsync(id);
-		if (sceneResult.IsT1 || !await CanSeeAsync(sceneResult.AsT0)) return NotFound();
+		if (await sceneService.GetSceneAsync(id) is not Contracts.Scene scene || !await CanSeeAsync(scene)) return NotFound();
 
-		var poses = await sceneService.GetPosesAsync(id, count: count);
-		return poses.Match<IActionResult>(
-			list => Ok(list.Select(ToDto)),
-			_ => NotFound());
+		return await sceneService.GetPosesAsync(id, count: count) is IReadOnlyList<ScenePose> poses
+			? Ok(poses.Select(ToDto))
+			: NotFound();
 	}
 
 	/// <summary>
@@ -175,13 +171,11 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	[HttpGet("{id}/members")]
 	public async Task<IActionResult> GetMembers(string id)
 	{
-		var sceneResult = await sceneService.GetSceneAsync(id);
-		if (sceneResult.IsT1 || !await CanSeeAsync(sceneResult.AsT0)) return NotFound();
+		if (await sceneService.GetSceneAsync(id) is not Contracts.Scene scene || !await CanSeeAsync(scene)) return NotFound();
 
-		var members = await sceneService.GetMembersAsync(id);
-		return members.Match<IActionResult>(
-			list => Ok(list.Select(ToDto)),
-			_ => NotFound());
+		return await sceneService.GetMembersAsync(id) is IReadOnlyList<SceneMember> members
+			? Ok(members.Select(ToDto))
+			: NotFound();
 	}
 
 	/// <summary>
@@ -191,13 +185,11 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	[HttpGet("{id}/cast")]
 	public async Task<IActionResult> GetCast(string id)
 	{
-		var sceneResult = await sceneService.GetSceneAsync(id);
-		if (sceneResult.IsT1 || !await CanSeeAsync(sceneResult.AsT0)) return NotFound();
+		if (await sceneService.GetSceneAsync(id) is not Contracts.Scene scene || !await CanSeeAsync(scene)) return NotFound();
 
-		var cast = await sceneService.GetCastAsync(id);
-		return cast.Match<IActionResult>(
-			list => Ok(list),
-			_ => NotFound());
+		return await sceneService.GetCastAsync(id) is IReadOnlyList<string> cast
+			? Ok(cast)
+			: NotFound();
 	}
 
 	/// <summary>
@@ -207,12 +199,10 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	[HttpGet("{id}/tags")]
 	public async Task<IActionResult> GetTags(string id)
 	{
-		var sceneResult = await sceneService.GetSceneAsync(id);
-		if (sceneResult.IsT1 || !await CanSeeAsync(sceneResult.AsT0)) return NotFound();
+		if (await sceneService.GetSceneAsync(id) is not Contracts.Scene scene || !await CanSeeAsync(scene)) return NotFound();
 
-		var tags = await sceneService.GetTagsAsync(id);
-		return tags.Match<IActionResult>(
-			list => Ok(list),
-			_ => NotFound());
+		return await sceneService.GetTagsAsync(id) is IReadOnlyList<string> tags
+			? Ok(tags)
+			: NotFound();
 	}
 }

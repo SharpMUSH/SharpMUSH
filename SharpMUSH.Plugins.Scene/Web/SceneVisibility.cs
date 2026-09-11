@@ -59,7 +59,6 @@ internal static class SceneVisibility
 
 		// Otherwise the caller must hold a membership edge on the scene. The storage resolves the reference
 		// against the live object itself (rejecting a stale objid), so hand it the same canonical spelling.
-		var member = await sceneService.GetMemberAsync(scene.Id, me.ToString());
-		return member.IsT0;
+		return await sceneService.GetMemberAsync(scene.Id, me.ToString()) is SceneMember;
 	}
 }

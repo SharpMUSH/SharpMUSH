@@ -65,8 +65,8 @@ internal sealed class FixedSceneService(params Scene[] scenes) : SceneServiceStu
 	{
 		SceneLookups.Add(sceneId);
 
-		return Task.FromResult(scenes.FirstOrDefault(s => s.Id == sceneId) is { } scene
-			? Found<Scene>.FromT0(scene)
+		return Task.FromResult<Found<Scene>>(scenes.FirstOrDefault(s => s.Id == sceneId) is { } scene
+			? scene
 			: new NotFound());
 	}
 
@@ -85,9 +85,8 @@ internal sealed class FixedSceneService(params Scene[] scenes) : SceneServiceStu
 			&& DBRef.TryParse(playerDbref, out var actual)
 			&& expected!.Value.SameObjectAs(actual!.Value);
 
-		return Task.FromResult(matches
-			? Found<SceneMember>.FromT0(
-				new SceneMember(sceneId, MemberDbref, "God", "participant", string.Empty, true, 3))
+		return Task.FromResult<Found<SceneMember>>(matches
+			? new SceneMember(sceneId, MemberDbref, "God", "participant", string.Empty, true, 3)
 			: new NotFound());
 	}
 }

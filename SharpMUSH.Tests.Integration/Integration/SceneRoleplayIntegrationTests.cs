@@ -6,6 +6,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -84,7 +85,11 @@ public class SceneRoleplayIntegrationTests
 			return null;
 		return args[1] switch
 		{
-			SharpMessage oneOf => oneOf.Match(m => m.ToString(), s => s),
+			SharpMessage message => message switch
+			{
+				MString markup => markup.ToString(),
+				string text => text,
+			},
 			string s => s,
 			MString m => m.ToString(),
 			_ => null
@@ -211,15 +216,14 @@ public class SceneRoleplayIntegrationTests
 		//     registry and owns the single WIZARD 'Scene Logger' object that carries the capture
 		//     hooks and +scene/* verbs (read the registry, like ScenePackageTests).
 		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
-		var scenePackage = await registry.GetInstalledPackageAsync("scene");
-		await Assert.That(scenePackage.IsT0).IsTrue()
-			.Because("the bundled `scene` package must be installed at boot");
+		if (await registry.GetInstalledPackageAsync("scene") is not InstalledPackageRecord scenePackage)
+			throw new InvalidOperationException("the bundled `scene` package must be installed at boot");
 		var packageObjects = await registry.GetPackageObjectsAsync("scene");
 		await Assert.That(packageObjects.Count).IsEqualTo(2)
 			.Because("the `scene` package owns the Scene Logger and the plain object holding its +help topics");
 		var loggerRef = PackageInstallService.ParseObjid(packageObjects.Single(o => o.Ref == "logger").Objid)!.Value;
 		var loggerDbref = loggerRef.ToString(); // full "#N:creation" objid (reliable for @tel/loc)
-		Log($"[SETUP] Scene Logger object: {loggerDbref} (package version {scenePackage.AsT0.Version})");
+		Log($"[SETUP] Scene Logger object: {loggerDbref} (package version {scenePackage.Version})");
 
 		// 1c. Dig a dedicated room for the scene and co-locate three players in it.
 		//     (Temp-room note: the shipped scene 1.0 package does NOT ship `+scene/create/temp` —

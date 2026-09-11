@@ -60,7 +60,11 @@ public class RemoteEnactorLocateIsolationTests
 		if (args.Length < 2) return null;
 		return args[1] switch
 		{
-			SharpMessage oneOf => oneOf.Match(m => m.ToString(), s => s),
+			SharpMessage message => message switch
+			{
+				MString markup => markup.ToString(),
+				string text => text,
+			},
 			string s => s,
 			MString m => m.ToString(),
 			_ => null

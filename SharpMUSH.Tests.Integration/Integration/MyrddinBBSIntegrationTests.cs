@@ -101,11 +101,13 @@ public class MyrddinBBSIntegrationTests
 		var args = call.GetArguments();
 		if (args.Length < 2) return null;
 
-		if (args[1] is SharpMessage oneOf)
+		if (args[1] is SharpMessage message)
 		{
-			return oneOf.Match(
-				mstr => mstr.ToString(),
-				str => str);
+			return message switch
+			{
+				MString markup => markup.ToString(),
+				string text => text,
+			};
 		}
 
 		if (args[1] is string str2)

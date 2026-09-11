@@ -29,9 +29,7 @@ public class WikiServiceIntegrationTests
 			string markdown = "Hello **world**.",
 			string editor = "#1", IWikiService? wiki = null)
 	{
-		var result = await (wiki ?? Wiki).CreateAsync(title, markdown, editor, ns);
-		await Assert.That(result.IsT0).IsTrue();
-		return result.AsT0;
+		return (await (wiki ?? Wiki).CreateAsync(title, markdown, editor, ns)).Expect<WikiPage>();
 	}
 
 	[Test]
@@ -101,8 +99,7 @@ public class WikiServiceIntegrationTests
 
 		var result = await Wiki.CreateAsync(title, "content", "#1", WikiNamespace.Main);
 
-		await Assert.That(result.IsT1).IsTrue();
-		await Assert.That(result.AsT1).IsTypeOf<Error<string>>();
+		await Assert.That(result.Value).IsTypeOf<Error<string>>();
 	}
 
 	[Test]
@@ -124,18 +121,16 @@ public class WikiServiceIntegrationTests
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var title = $"Dragons {uid}";
 
-		var lore = await Wiki.CreateAsync(title, "content", "#1", WikiNamespace.Main, "lore");
-		var rules = await Wiki.CreateAsync(title, "content", "#1", WikiNamespace.Main, "rules");
+		var lore = (await Wiki.CreateAsync(title, "content", "#1", WikiNamespace.Main, "lore")).Expect<WikiPage>();
+		var rules = (await Wiki.CreateAsync(title, "content", "#1", WikiNamespace.Main, "rules")).Expect<WikiPage>();
 		var dupe = await Wiki.CreateAsync(title, "content", "#1", WikiNamespace.Main, "lore");
 
-		await Assert.That(lore.IsT0).IsTrue();
-		await Assert.That(rules.IsT0).IsTrue();
-		await Assert.That(lore.AsT0.Id).IsNotEqualTo(rules.AsT0.Id);
-		await Assert.That(dupe.IsT1).IsTrue();
+		await Assert.That(lore.Id).IsNotEqualTo(rules.Id);
+		await Assert.That(dupe.Value).IsTypeOf<Error<string>>();
 
-		var slug = lore.AsT0.Slug;
-		await Assert.That((await Wiki.GetBySlugAsync(slug, "lore", WikiNamespace.Main)).AsT0.Id).IsEqualTo(lore.AsT0.Id);
-		await Assert.That((await Wiki.GetBySlugAsync(slug, "rules", WikiNamespace.Main)).AsT0.Id).IsEqualTo(rules.AsT0.Id);
+		var slug = lore.Slug;
+		await Assert.That((await Wiki.GetBySlugAsync(slug, "lore", WikiNamespace.Main)).Expect<WikiPage>().Id).IsEqualTo(lore.Id);
+		await Assert.That((await Wiki.GetBySlugAsync(slug, "rules", WikiNamespace.Main)).Expect<WikiPage>().Id).IsEqualTo(rules.Id);
 	}
 
 	[Test]
@@ -147,8 +142,7 @@ public class WikiServiceIntegrationTests
 
 		var result = await Wiki.GetBySlugAsync(created.Slug, "general", WikiNamespace.Main);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
+		await Assert.That(result.Expect<WikiPage>().Id).IsEqualTo(created.Id);
 	}
 
 	/// <summary>
@@ -165,8 +159,7 @@ public class WikiServiceIntegrationTests
 
 		var result = await Wiki.GetBySlugAsync(title, "general", WikiNamespace.Main);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
+		await Assert.That(result.Expect<WikiPage>().Id).IsEqualTo(created.Id);
 	}
 
 	[Test]
@@ -177,8 +170,7 @@ public class WikiServiceIntegrationTests
 
 		var result = await Wiki.GetBySlugAsync(created.Slug.ToUpperInvariant(), "general", WikiNamespace.Main);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
+		await Assert.That(result.Expect<WikiPage>().Id).IsEqualTo(created.Id);
 	}
 
 	[Test]
@@ -186,7 +178,7 @@ public class WikiServiceIntegrationTests
 	{
 		var result = await Wiki.GetBySlugAsync($"nonexistent_{Guid.NewGuid():N}", "general", WikiNamespace.Main);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -197,7 +189,7 @@ public class WikiServiceIntegrationTests
 
 		var result = await Wiki.GetBySlugAsync(created.Slug, "general", WikiNamespace.Help);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -208,8 +200,7 @@ public class WikiServiceIntegrationTests
 
 		var result = await Wiki.GetByIdAsync(created.Id);
 
-		await Assert.That(result.IsT0).IsTrue();
-		await Assert.That(result.AsT0.Id).IsEqualTo(created.Id);
+		await Assert.That(result.Expect<WikiPage>().Id).IsEqualTo(created.Id);
 	}
 
 	[Test]
@@ -217,7 +208,7 @@ public class WikiServiceIntegrationTests
 	{
 		var result = await Wiki.GetByIdAsync($"node_wiki_pages/does_not_exist_{Guid.NewGuid():N}");
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -228,8 +219,7 @@ public class WikiServiceIntegrationTests
 
 		var updateResult = await Wiki.UpdateAsync(created.Id, "Updated content.", "#2", "v2");
 
-		await Assert.That(updateResult.IsT0).IsTrue();
-		var updated = updateResult.AsT0;
+		var updated = updateResult.Expect<WikiPage>();
 		await Assert.That(updated.RevisionNumber).IsEqualTo(2);
 		await Assert.That(updated.MarkdownSource).IsEqualTo("Updated content.");
 		await Assert.That(updated.LastEditorDbref).IsEqualTo("#2");
@@ -243,8 +233,7 @@ public class WikiServiceIntegrationTests
 
 		var updateResult = await Wiki.UpdateAsync(created.Id, "# New Heading", "#1", "rework");
 
-		await Assert.That(updateResult.IsT0).IsTrue();
-		await Assert.That(updateResult.AsT0.RenderedHtml).Contains("New Heading");
+		await Assert.That(updateResult.Expect<WikiPage>().RenderedHtml).Contains("New Heading");
 	}
 
 	[Test]
@@ -253,7 +242,7 @@ public class WikiServiceIntegrationTests
 		var result = await Wiki.UpdateAsync(
 				$"node_wiki_pages/ghost_{Guid.NewGuid():N}", "content", "#1");
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -264,9 +253,9 @@ public class WikiServiceIntegrationTests
 
 		var deleteResult = await Wiki.DeleteAsync(created.Id, "#1");
 
-		await Assert.That(deleteResult.IsT0).IsTrue();
+		await Assert.That(deleteResult.Value).IsTypeOf<None>();
 		var getResult = await Wiki.GetByIdAsync(created.Id);
-		await Assert.That(getResult.IsT1).IsTrue();
+		await Assert.That(getResult.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -288,7 +277,7 @@ public class WikiServiceIntegrationTests
 		var result = await Wiki.DeleteAsync(
 				$"node_wiki_pages/ghost_{Guid.NewGuid():N}", "#1");
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -324,8 +313,7 @@ public class WikiServiceIntegrationTests
 
 		var revResult = await Wiki.GetRevisionAsync(created.Id, 1);
 
-		await Assert.That(revResult.IsT0).IsTrue();
-		var rev = revResult.AsT0;
+		var rev = revResult.Expect<WikiRevision>();
 		await Assert.That(rev.RevisionNumber).IsEqualTo(1);
 		await Assert.That(rev.MarkdownSource).IsEqualTo("First edition.");
 	}
@@ -338,7 +326,7 @@ public class WikiServiceIntegrationTests
 
 		var result = await Wiki.GetRevisionAsync(created.Id, 99);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -350,10 +338,9 @@ public class WikiServiceIntegrationTests
 
 		var protResult = await Wiki.SetProtectionAsync(created.Id, true);
 
-		await Assert.That(protResult.IsT0).IsTrue();
+		await Assert.That(protResult.Value).IsTypeOf<None>();
 		var fetchResult = await Wiki.GetByIdAsync(created.Id);
-		await Assert.That(fetchResult.IsT0).IsTrue();
-		await Assert.That(fetchResult.AsT0.IsProtected).IsTrue();
+		await Assert.That(fetchResult.Expect<WikiPage>().IsProtected).IsTrue();
 	}
 
 	[Test]
@@ -362,7 +349,7 @@ public class WikiServiceIntegrationTests
 		var result = await Wiki.SetProtectionAsync(
 				$"node_wiki_pages/ghost_{Guid.NewGuid():N}", true);
 
-		await Assert.That(result.IsT1).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<NotFound>();
 	}
 
 	[Test]
@@ -421,8 +408,7 @@ public class WikiServiceIntegrationTests
 		var unpublished = await wiki.SetMetadataAsync(draft.Id, draft.Category, draft.Tags, published: false);
 
 		await Assert.That(kept.Published).IsTrue();
-		await Assert.That(unpublished.IsT0).IsTrue();
-		await Assert.That(unpublished.AsT0.Published).IsFalse();
+		await Assert.That(unpublished.Expect<WikiPage>().Published).IsFalse();
 
 		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: false)).IsEqualTo(1);
 		await Assert.That(await wiki.CountPagesAsync(WikiNamespace.System, includeDrafts: true)).IsEqualTo(2);

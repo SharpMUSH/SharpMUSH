@@ -237,7 +237,11 @@ public class HelpApiTests(ServerWebAppFactory factory)
 			? null
 			: args[1] switch
 			{
-				SharpMessage oneOf => oneOf.Match(m => m.ToString(), s => s),
+				SharpMessage message => message switch
+				{
+					MString markup => markup.ToString(),
+					string plain => plain,
+				},
 				MString mstring => mstring.ToString(),
 				string text => text,
 				_ => null

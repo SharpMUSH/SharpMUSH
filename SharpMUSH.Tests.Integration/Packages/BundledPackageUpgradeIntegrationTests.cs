@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
@@ -55,7 +56,12 @@ public class BundledPackageUpgradeIntegrationTests(ServerWebAppFactory factory)
 	/// </summary>
 	private async Task<int> ApplyAsync(string yaml)
 	{
-		var manifest = Manifests.ParseManifest(yaml).AsT0.Manifest;
+		var manifest = Manifests.ParseManifest(yaml) switch
+		{
+			ParsedPackageManifest parsed => parsed.Manifest,
+			PackageManifestFailure failure => throw new InvalidOperationException(
+				$"The test manifest does not parse: {string.Join("; ", failure.Errors)}"),
+		};
 		var plan = await Installer.PlanAsync(manifest);
 		var decisions = plan.Attributes
 			.Where(a => a.Action == PackageAttributeAction.Conflict)
@@ -66,7 +72,7 @@ public class BundledPackageUpgradeIntegrationTests(ServerWebAppFactory factory)
 			new PackageApplySource("bundled:sharpmush", PackageId, "bundled", null),
 			new Dictionary<string, string>(), decisions));
 
-		await Assert.That(result.IsT0).IsTrue().Because(result.IsT1 ? result.AsT1.Value : "applied");
+		await Assert.That(result.Value).IsTypeOf<PackageApplyResult>().Because(result is Error<string> error ? error.Value : "applied");
 		return decisions.Count;
 	}
 
@@ -87,9 +93,9 @@ public class BundledPackageUpgradeIntegrationTests(ServerWebAppFactory factory)
 		{
 			await ApplyAsync(Manifest("1.0.0", "first", string.Empty));
 
-			var installed = await Registry.GetInstalledPackageAsync(PackageId);
-			await Assert.That(installed.IsT0).IsTrue();
-			await Assert.That(installed.AsT0.Version).IsEqualTo("1.0.0");
+			if (await Registry.GetInstalledPackageAsync(PackageId) is not InstalledPackageRecord installed)
+				throw new InvalidOperationException($"{PackageId} is not installed after its first apply.");
+			await Assert.That(installed.Version).IsEqualTo("1.0.0");
 			await Assert.That((await Registry.GetManagedAttributesAsync(PackageId)).Select(m => m.Attribute))
 				.DoesNotContain("PROBE`ADDED");
 
@@ -99,7 +105,7 @@ public class BundledPackageUpgradeIntegrationTests(ServerWebAppFactory factory)
 			var packageManager = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
 				.CurrentValue.Database.PackageManager ?? 7;
 			var owner = (await Database.GetObjectNodeAsync(new DBRef((int)packageManager)))
-				.Known.Match(player => player, _ => null!, _ => null!, _ => null!);
+				.Known.AsPlayer;
 			await Database.SetAttributeAsync(probe, ["PROBE", "ORIGINAL"], MarkupText.Plain("admin-edit"), owner);
 
 			// v1.1.0: adds a route AND changes the value the admin edited, so the upgrade produces both
@@ -112,9 +118,9 @@ public class BundledPackageUpgradeIntegrationTests(ServerWebAppFactory factory)
 				.IsGreaterThan(0)
 				.Because("the edited attribute must reach the plan as a conflict for KeepMine to mean anything");
 
-			var upgraded = await Registry.GetInstalledPackageAsync(PackageId);
-			await Assert.That(upgraded.IsT0).IsTrue();
-			await Assert.That(upgraded.AsT0.Version).IsEqualTo("1.1.0");
+			if (await Registry.GetInstalledPackageAsync(PackageId) is not InstalledPackageRecord upgraded)
+				throw new InvalidOperationException($"{PackageId} is not installed after its upgrade.");
+			await Assert.That(upgraded.Version).IsEqualTo("1.1.0");
 
 			var managed = (await Registry.GetManagedAttributesAsync(PackageId)).Select(m => m.Attribute).ToList();
 			await Assert.That(managed).Contains("PROBE`ADDED");

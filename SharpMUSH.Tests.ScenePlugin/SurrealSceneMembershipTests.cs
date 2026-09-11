@@ -2,9 +2,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.SurrealDB;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Plugins.Storage;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Plugins.Scene.Models;
 using SharpMUSH.Plugins.Scene.Storage;
 using SurrealDb.Net;
 using SurrealDb.Net.Models.Response;
@@ -63,23 +65,23 @@ public class SurrealSceneMembershipTests
 		})).ToArray();
 		start.SetResult();
 		var results = await Task.WhenAll(writes);
-		await Assert.That(results.All(r => r.IsT0 && r.AsT0.Role == "participant")).IsTrue();
-		var members = await world.Storage.GetMembersAsync("1");
-		await Assert.That(members.AsT0.Count).IsEqualTo(1);
+		await Assert.That(results.All(r => r is SceneMember { Role: "participant" })).IsTrue();
+		var members = Expect(await world.Storage.GetMembersAsync("1"));
+		await Assert.That(members.Count).IsEqualTo(1);
 	}
 
 	[Test]
 	public async Task RoleChange_PreservesFocusPersonaAndGrantTime()
 	{
 		await using var world = await CreateWorld();
-		var original = await world.Storage.AddMemberAsync("1", "#1", "owner");
+		var original = Expect(await world.Storage.AddMemberAsync("1", "#1", "owner"));
 		await world.Storage.SetFocusAsync("#1", "1");
 		await world.Storage.SetShowAsAsync("1", "#1", "A persona");
-		var changed = await world.Storage.AddMemberAsync("1", "#1", "participant");
-		await Assert.That(changed.AsT0.Role).IsEqualTo("participant");
-		await Assert.That(changed.AsT0.IsCurrent).IsTrue();
-		await Assert.That(changed.AsT0.ShowAs).IsEqualTo("A persona");
-		await Assert.That(changed.AsT0.GrantedAt).IsEqualTo(original.AsT0.GrantedAt);
+		var changed = Expect(await world.Storage.AddMemberAsync("1", "#1", "participant"));
+		await Assert.That(changed.Role).IsEqualTo("participant");
+		await Assert.That(changed.IsCurrent).IsTrue();
+		await Assert.That(changed.ShowAs).IsEqualTo("A persona");
+		await Assert.That(changed.GrantedAt).IsEqualTo(original.GrantedAt);
 	}
 	[Test]
 	public async Task Migration_ConsolidatesLegacyDuplicatesAndSurvivesRestart()
@@ -94,7 +96,7 @@ public class SurrealSceneMembershipTests
 			""");
 		await world.Migrate();
 		await world.Migrate();
-		var members = (await world.Storage.GetMembersAsync("1")).AsT0;
+		var members = Expect(await world.Storage.GetMembersAsync("1"));
 		await Assert.That(members.Count).IsEqualTo(1);
 		await Assert.That(members[0].Role).IsEqualTo("owner");
 		await Assert.That(members[0].ShowAs).IsEqualTo("Persona");
@@ -103,7 +105,7 @@ public class SurrealSceneMembershipTests
 		await world.Query("IF array::len((SELECT * FROM scene_member_duplicate_backup)) != 2 { THROW 'Backup changed on restart'; }");
 		await world.Query("IF array::len((SELECT * FROM scene_member_duplicate_backup WHERE original.id = scene_member:new AND original.showAs = 'Persona' AND original.isCurrent = true)) != 1 { THROW 'Lost original duplicate data'; }");
 		await world.Storage.AddMemberAsync("1", "#1", "guest");
-		await Assert.That((await world.Storage.GetMembersAsync("1")).AsT0.Count).IsEqualTo(1);
+		await Assert.That(Expect(await world.Storage.GetMembersAsync("1")).Count).IsEqualTo(1);
 		await world.Query("IF array::len((SELECT VALUE ->scene_member FROM object:1)[0]) != 1 { THROW 'Broken migrated traversal'; }");
 	}
 
@@ -123,7 +125,7 @@ public class SurrealSceneMembershipTests
 		})).ToArray();
 		start.SetResult();
 		await Task.WhenAll(writes);
-		var members = (await world.Storage.GetMembersAsync("1")).AsT0;
+		var members = Expect(await world.Storage.GetMembersAsync("1"));
 		await Assert.That(members.Count).IsEqualTo(1);
 		await Assert.That(members[0].Role).IsEqualTo("participant");
 		await Assert.That(members[0].IsCurrent).IsTrue();
@@ -136,13 +138,13 @@ public class SurrealSceneMembershipTests
 		await world.Storage.AddMemberAsync("1", "#1", "owner");
 		await world.Storage.SetFocusAsync("#1", "1");
 		await world.Storage.RemoveMemberAsync("1", "#1");
-		await Assert.That((await world.Storage.GetCurrentSceneAsync("#1")).IsT1).IsTrue();
-		await Assert.That((await world.Storage.GetMembersAsync("1")).AsT0.Count).IsEqualTo(0);
+		await Assert.That((await world.Storage.GetCurrentSceneAsync("#1")).Value).IsTypeOf<NotFound>();
+		await Assert.That(Expect(await world.Storage.GetMembersAsync("1")).Count).IsEqualTo(0);
 		await world.Storage.AddMemberAsync("1", "#1", "guest");
 		await world.Query("IF array::len((SELECT VALUE ->scene_member FROM object:1)[0]) != 1 { THROW 'Broken outgoing traversal'; }");
 		await world.Query("IF array::len((SELECT VALUE <-scene_member FROM scene:⟨1⟩)[0]) != 1 { THROW 'Broken incoming traversal'; }");
-		await Assert.That((await world.Storage.GetMemberAsync("1", "#1")).AsT0.Role).IsEqualTo("guest");
-		await Assert.That((await world.Storage.GetMemberAsync("1", "#1")).AsT0.IsCurrent).IsFalse();
+		await Assert.That(Expect(await world.Storage.GetMemberAsync("1", "#1")).Role).IsEqualTo("guest");
+		await Assert.That(Expect(await world.Storage.GetMemberAsync("1", "#1")).IsCurrent).IsFalse();
 	}
 
 	[Test]
@@ -150,8 +152,8 @@ public class SurrealSceneMembershipTests
 	{
 		await using var world = await CreateWorld();
 		await world.Storage.SetFocusAsync("#1", "1");
-		await Assert.That((await world.Storage.SetFocusAsync("#1", "missing")).IsT1).IsTrue();
-		await Assert.That((await world.Storage.GetMemberAsync("1", "#1")).AsT0.IsCurrent).IsTrue();
+		await Assert.That((await world.Storage.SetFocusAsync("#1", "missing")).Value).IsTypeOf<NotFound>();
+		await Assert.That(Expect(await world.Storage.GetMemberAsync("1", "#1")).IsCurrent).IsTrue();
 	}
 
 	[Test]
@@ -175,8 +177,8 @@ public class SurrealSceneMembershipTests
 		await world.Migrate();
 		await world.Migrate();
 		await world.Query("IF array::len((SELECT * FROM scene_focus WHERE scene != NONE)) != 1 { THROW 'Multiple focused scenes'; }");
-		await Assert.That((await world.Storage.GetMemberAsync("1", "#1")).AsT0.IsCurrent).IsTrue();
-		var second = (await world.Storage.GetMemberAsync("2", "#1")).AsT0;
+		await Assert.That(Expect(await world.Storage.GetMemberAsync("1", "#1")).IsCurrent).IsTrue();
+		var second = Expect(await world.Storage.GetMemberAsync("2", "#1"));
 		await Assert.That(second.Role).IsEqualTo("participant");
 		await Assert.That(second.ShowAs).IsEqualTo("Persona");
 		await world.Query("IF array::len((SELECT * FROM scene_member_duplicate_backup)) != 2 { THROW 'Focus originals not archived exactly once'; }");
@@ -189,11 +191,11 @@ public class SurrealSceneMembershipTests
 		await world.Storage.AddMemberAsync("1", "#1", "owner");
 		await world.Storage.SetFocusAsync("#1", "1");
 		await new SurrealSceneStorage(world.Accessor).SetFocusAsync("#1");
-		var member = (await world.Storage.GetMemberAsync("1", "#1")).AsT0;
+		var member = Expect(await world.Storage.GetMemberAsync("1", "#1"));
 		await Assert.That(member.IsCurrent).IsFalse();
 		await Assert.That(member.Role).IsEqualTo("owner");
 		await new SurrealSceneStorage(world.Accessor).SetFocusAsync("#1", "1");
-		await Assert.That((await world.Storage.GetMemberAsync("1", "#1")).AsT0.IsCurrent).IsTrue();
+		await Assert.That(Expect(await world.Storage.GetMemberAsync("1", "#1")).IsCurrent).IsTrue();
 	}
 
 	[Test]
@@ -213,12 +215,12 @@ public class SurrealSceneMembershipTests
 		})).ToArray();
 		start.SetResult();
 		await Task.WhenAll(writes);
-		var current = (await world.Storage.GetCurrentSceneAsync("#1")).AsT0;
+		var current = Expect(await world.Storage.GetCurrentSceneAsync("#1"));
 		var focused = new List<string>();
 		foreach (var id in scenes)
 		{
-			var member = (await world.Storage.GetMemberAsync(id, "#1")).AsT0;
-			var members = (await world.Storage.GetMembersAsync(id)).AsT0;
+			var member = Expect(await world.Storage.GetMemberAsync(id, "#1"));
+			var members = Expect(await world.Storage.GetMembersAsync(id));
 			await Assert.That(members.Single().IsCurrent).IsEqualTo(member.IsCurrent);
 			if (member.IsCurrent) focused.Add(id);
 		}
@@ -237,13 +239,22 @@ public class SurrealSceneMembershipTests
 			new SurrealSceneStorage(world.Accessor).SetFocusAsync("#1", "1"),
 			new SurrealSceneStorage(world.Accessor).SetFocusAsync("#2", "2"));
 		await world.Migrate();
-		await Assert.That((await world.Storage.GetCurrentSceneAsync("#1")).AsT0.Id).IsEqualTo("1");
-		await Assert.That((await world.Storage.GetCurrentSceneAsync("#2")).AsT0.Id).IsEqualTo("2");
+		await Assert.That(Expect(await world.Storage.GetCurrentSceneAsync("#1")).Id).IsEqualTo("1");
+		await Assert.That(Expect(await world.Storage.GetCurrentSceneAsync("#2")).Id).IsEqualTo("2");
 		await world.Storage.SetFocusAsync("#1");
 		await world.Migrate();
-		await Assert.That((await world.Storage.GetCurrentSceneAsync("#1")).IsT1).IsTrue();
-		await Assert.That((await world.Storage.GetCurrentSceneAsync("#2")).AsT0.Id).IsEqualTo("2");
+		await Assert.That((await world.Storage.GetCurrentSceneAsync("#1")).Value).IsTypeOf<NotFound>();
+		await Assert.That(Expect(await world.Storage.GetCurrentSceneAsync("#2")).Id).IsEqualTo("2");
 	}
+
+	/// <summary>
+	/// The record a lookup the test expects to succeed returned. A miss fails the test at the lookup, naming
+	/// what was missing, rather than at whichever property the test reads next.
+	/// </summary>
+	private static T Expect<T>(Found<T> lookup)
+		=> lookup.Value is T value
+			? value
+			: throw new InvalidOperationException($"Expected a {typeof(T).Name}; the lookup found nothing.");
 
 	private sealed class FailedMigration : IMigrationSource
 	{
@@ -322,8 +333,8 @@ public class SurrealSceneMembershipTests
 			""");
 		await world.Migrate();
 		await world.Migrate();
-		await Assert.That((await world.Storage.GetMemberAsync("1", "#1")).AsT0.IsCurrent).IsTrue();
-		var other = (await world.Storage.GetMemberAsync("2", "#1")).AsT0;
+		await Assert.That(Expect(await world.Storage.GetMemberAsync("1", "#1")).IsCurrent).IsTrue();
+		var other = Expect(await world.Storage.GetMemberAsync("2", "#1"));
 		await Assert.That(other.IsCurrent).IsFalse();
 		await Assert.That(other.ShowAs).IsEqualTo("Two");
 		await Assert.That(other.Role).IsEqualTo("guest");

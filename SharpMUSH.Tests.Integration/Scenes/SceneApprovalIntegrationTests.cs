@@ -77,7 +77,11 @@ public class SceneApprovalIntegrationTests
 			case nameof(INotifyService.Notify) when args.Length >= 2:
 				return args[1] switch
 				{
-					SharpMessage oneOf => oneOf.Match(m => m.ToPlainText(), s => s),
+					SharpMessage message => message switch
+					{
+						MString markup => markup.ToPlainText(),
+						string text => text,
+					},
 					string s => s,
 					MString m => m.ToPlainText(),
 					_ => null

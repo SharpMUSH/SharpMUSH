@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Queries.Database;
@@ -45,9 +46,11 @@ public class ObjectsControllerPermissionTests(ServerWebAppFactory factory)
 		var account = await accounts.GetAccountForCharacterAsync(fullIdentity);
 		if (account is null)
 		{
-			var created = await accounts.CreateAccountAsync("objapi_" + Guid.NewGuid().ToString("N"), null, "TestPassword123!");
-			await Assert.That(created.IsT0).IsTrue();
-			account = created.AsT0;
+			account = await accounts.CreateAccountAsync("objapi_" + Guid.NewGuid().ToString("N"), null, "TestPassword123!") switch
+			{
+				SharpAccount created => created,
+				Error<string> error => throw new InvalidOperationException($"Account creation failed: {error.Value}"),
+			};
 			await accounts.LinkCharacterAsync(account.Id!, fullIdentity);
 		}
 		return ControllerFor(new ClaimsIdentity(

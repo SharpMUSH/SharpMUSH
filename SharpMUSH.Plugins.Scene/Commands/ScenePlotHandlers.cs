@@ -47,55 +47,43 @@ public static class ScenePlotHandlers
 				{
 					// /plot/link <plotId>=<sceneId>
 					var plotId = SceneCommandHelper.Plain(plotArg);
-					var result = await sceneService.LinkSceneToPlotAsync(plotId, sceneId);
-					return await result.Match(
-						async _ =>
-						{
-							await notifyService.Notify(executor, $"SCENE: Linked scene #{sceneId} into plot #{plotId}.");
-							return MarkupText.Plain(plotId);
-						},
-						async _ =>
-						{
-							await notifyService.Notify(executor, "SCENE: No such plot or scene.");
-							return MarkupText.Plain(SceneCommandHelper.NotFound);
-						});
+					if (await sceneService.LinkSceneToPlotAsync(plotId, sceneId) is NotFound)
+					{
+						await notifyService.Notify(executor, "SCENE: No such plot or scene.");
+						return MarkupText.Plain(SceneCommandHelper.NotFound);
+					}
+
+					await notifyService.Notify(executor, $"SCENE: Linked scene #{sceneId} into plot #{plotId}.");
+					return MarkupText.Plain(plotId);
 				}
 
 			case "UNLINK":
 				{
 					// /plot/unlink <plotId>=<sceneId>
 					var plotId = SceneCommandHelper.Plain(plotArg);
-					var result = await sceneService.UnlinkSceneFromPlotAsync(plotId, sceneId);
-					return await result.Match(
-						async _ =>
-						{
-							await notifyService.Notify(executor, $"SCENE: Unlinked scene #{sceneId} from plot #{plotId}.");
-							return MarkupText.Plain(plotId);
-						},
-						async _ =>
-						{
-							await notifyService.Notify(executor, "SCENE: No such plot or scene.");
-							return MarkupText.Plain(SceneCommandHelper.NotFound);
-						});
+					if (await sceneService.UnlinkSceneFromPlotAsync(plotId, sceneId) is NotFound)
+					{
+						await notifyService.Notify(executor, "SCENE: No such plot or scene.");
+						return MarkupText.Plain(SceneCommandHelper.NotFound);
+					}
+
+					await notifyService.Notify(executor, $"SCENE: Unlinked scene #{sceneId} from plot #{plotId}.");
+					return MarkupText.Plain(plotId);
 				}
 
 			default:
 				{
 					// Bare /plot <plotId> — display.
 					var plotId = SceneCommandHelper.Plain(plotArg);
-					var lookup = await sceneService.GetPlotAsync(plotId);
-					return await lookup.Match(
-						async plot =>
-						{
-							await notifyService.Notify(executor,
-								$"SCENE: Plot #{plot.Id} '{plot.Title}' — owner {plot.OwnerName}. {plot.Description}");
-							return MarkupText.Plain(plot.Id);
-						},
-						async _ =>
-						{
-							await notifyService.Notify(executor, $"SCENE: No plot '{plotId}'.");
-							return MarkupText.Plain(SceneCommandHelper.NotFound);
-						});
+					if (await sceneService.GetPlotAsync(plotId) is not ScenePlot plot)
+					{
+						await notifyService.Notify(executor, $"SCENE: No plot '{plotId}'.");
+						return MarkupText.Plain(SceneCommandHelper.NotFound);
+					}
+
+					await notifyService.Notify(executor,
+						$"SCENE: Plot #{plot.Id} '{plot.Title}' — owner {plot.OwnerName}. {plot.Description}");
+					return MarkupText.Plain(plot.Id);
 				}
 		}
 	}

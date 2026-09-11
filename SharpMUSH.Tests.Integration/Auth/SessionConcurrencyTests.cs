@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Net;
@@ -61,8 +63,11 @@ public class SessionConcurrencyTests(ServerWebAppFactory factory)
 	{
 		var account = await factory.Services.GetRequiredService<IAccountService>()
 			.CreateAccountAsync(UniqueName(prefix), null, Password);
-		await Assert.That(account.IsT0).IsTrue();
-		return account.AsT0.Id!;
+		return account switch
+		{
+			SharpAccount created => created.Id!,
+			Error<string> error => throw new InvalidOperationException($"Account creation failed: {error.Value}"),
+		};
 	}
 
 	[Test]

@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
@@ -71,7 +72,7 @@ public class BanEnforcementWiringTests(ServerWebAppFactory factory)
 
 		var result = await accountService.DisableAccountAsync(accountId);
 
-		await Assert.That(result.IsT0).IsTrue();
+		await Assert.That(result.Value).IsTypeOf<Success>();
 		await Assert.That(aborted).IsTrue();
 	}
 

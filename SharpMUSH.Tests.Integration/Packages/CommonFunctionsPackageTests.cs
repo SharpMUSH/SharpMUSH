@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -63,9 +64,9 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task CommonFunctions_IsInstalled_WithObjectAndAttributes()
 	{
-		var package = await Registry.GetInstalledPackageAsync("common-functions");
-		await Assert.That(package.IsT0).IsTrue();
-		await Assert.That(package.AsT0.Version).IsEqualTo("1.4.0");
+		if (await Registry.GetInstalledPackageAsync("common-functions") is not InstalledPackageRecord package)
+			throw new InvalidOperationException("common-functions is not installed.");
+		await Assert.That(package.Version).IsEqualTo("1.4.0");
 
 		var objects = await Registry.GetPackageObjectsAsync("common-functions");
 		await Assert.That(objects.Count).IsEqualTo(1);

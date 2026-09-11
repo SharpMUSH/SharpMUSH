@@ -458,7 +458,7 @@ public sealed class LightningSceneStorage : ISceneStorage
 				poses.RemoveRange(0, poses.Count - limit);
 			}
 
-			return Found<IReadOnlyList<ScenePose>>.FromT0(poses);
+			return poses;
 		}));
 
 	public Task<Found<ScenePose>> SetPoseMetaAsync(string poseId, string key, string value)
@@ -636,28 +636,28 @@ public sealed class LightningSceneStorage : ISceneStorage
 			}
 
 			var edits = PoseEdits(tx, found.Pose.Id).Select(e => ProjectEdit(tx, e.Record)).ToList();
-			return Found<IReadOnlyList<ScenePoseEdit>>.FromT0(edits);
+			return edits;
 		}));
 
 	public Task<Found<IReadOnlyList<string>>> GetTagsAsync(string sceneId)
 		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<string>>>(tx
 			=> LivePoses(tx, BareId(sceneId)) is not { } poses
 				? new NotFound()
-				: Found<IReadOnlyList<string>>.FromT0(poses
+				: poses
 					.SelectMany(p => p.Tags)
 					.Where(t => !string.IsNullOrWhiteSpace(t))
 					.Distinct(StringComparer.Ordinal)
-					.ToList())));
+					.ToList()));
 
 	public Task<Found<IReadOnlyList<string>>> GetCastAsync(string sceneId)
 		=> Task.FromResult(_accessor.Read<Found<IReadOnlyList<string>>>(tx
 			=> LivePoses(tx, BareId(sceneId)) is not { } poses
 				? new NotFound()
-				: Found<IReadOnlyList<string>>.FromT0(poses
+				: poses
 					.Select(p => string.IsNullOrEmpty(p.ShowAsName) ? p.AuthorName : p.ShowAsName)
 					.Where(n => !string.IsNullOrWhiteSpace(n))
 					.Distinct(StringComparer.Ordinal)
-					.ToList())));
+					.ToList()));
 
 	#endregion
 
@@ -735,7 +735,7 @@ public sealed class LightningSceneStorage : ISceneStorage
 				.Where(m => string.IsNullOrWhiteSpace(role) || string.Equals(m.Role, role, StringComparison.Ordinal))
 				.Select(m => ProjectMember(tx, m))
 				.ToList();
-			return Found<IReadOnlyList<SceneMember>>.FromT0(members);
+			return members;
 		}));
 
 	public Task<Found<SceneMember>> GetMemberAsync(string sceneId, string playerDbref)

@@ -46,26 +46,21 @@ public static class SceneRead
 		MString refArg)
 	{
 		var (sceneId, key) = SceneCommandHelper.SplitIdKey(refArg);
-		var lookup = await sceneService.GetSceneAsync(sceneId);
+		if (await sceneService.GetSceneAsync(sceneId) is not Contracts.Scene scene)
+		{
+			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
+			return MarkupText.Plain(SceneCommandHelper.NotFound);
+		}
 
-		return await lookup.Match(
-			async scene =>
-			{
-				if (string.IsNullOrEmpty(key))
-				{
-					await notifyService.Notify(executor, FormatSummary(scene));
-					return MarkupText.Plain(scene.Id);
-				}
+		if (string.IsNullOrEmpty(key))
+		{
+			await notifyService.Notify(executor, FormatSummary(scene));
+			return MarkupText.Plain(scene.Id);
+		}
 
-				var value = ReadKey(scene, key!);
-				await notifyService.Notify(executor, $"SCENE: {scene.Id}/{key} = {value}");
-				return MarkupText.Plain(value);
-			},
-			async _ =>
-			{
-				await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
-				return MarkupText.Plain(SceneCommandHelper.NotFound);
-			});
+		var value = ReadKey(scene, key!);
+		await notifyService.Notify(executor, $"SCENE: {scene.Id}/{key} = {value}");
+		return MarkupText.Plain(value);
 	}
 
 	public static async ValueTask<MString> Display(
@@ -76,31 +71,25 @@ public static class SceneRead
 		MString sceneIdArg)
 	{
 		var sceneId = SceneCommandHelper.Plain(sceneIdArg);
-		var lookup = await sceneService.GetSceneAsync(sceneId);
+		if (await sceneService.GetSceneAsync(sceneId) is not Contracts.Scene scene)
+		{
+			await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
+			return MarkupText.Plain(SceneCommandHelper.NotFound);
+		}
 
-		return await lookup.Match(
-			async scene =>
+		await notifyService.Notify(executor, FormatSummary(scene));
+		if (await sceneService.GetMembersAsync(scene.Id) is IReadOnlyList<SceneMember> members)
+		{
+			foreach (var member in members)
 			{
-				await notifyService.Notify(executor, FormatSummary(scene));
-				var members = await sceneService.GetMembersAsync(scene.Id);
-				if (members.IsT0)
-				{
-					foreach (var member in members.AsT0)
-					{
-						await notifyService.Notify(executor,
-							$"  [{member.Role}] {member.MemberName}" +
-							(string.IsNullOrEmpty(member.ShowAs) ? string.Empty : $" (as {member.ShowAs})") +
-							(member.IsCurrent ? " *" : string.Empty));
-					}
-				}
+				await notifyService.Notify(executor,
+					$"  [{member.Role}] {member.MemberName}" +
+					(string.IsNullOrEmpty(member.ShowAs) ? string.Empty : $" (as {member.ShowAs})") +
+					(member.IsCurrent ? " *" : string.Empty));
+			}
+		}
 
-				return MarkupText.Plain(scene.Id);
-			},
-			async _ =>
-			{
-				await notifyService.Notify(executor, $"SCENE: No scene '{sceneId}'.");
-				return MarkupText.Plain(SceneCommandHelper.NotFound);
-			});
+		return MarkupText.Plain(scene.Id);
 	}
 
 	private static string FormatSummary(Contracts.Scene scene)

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
@@ -52,7 +53,19 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 		        {version}
 		""";
 
-	private PackageManifest Parse(string yaml) => Manifests.ParseManifest(yaml).AsT0.Manifest;
+	private PackageManifest Parse(string yaml) => Manifests.ParseManifest(yaml) switch
+	{
+		ParsedPackageManifest parsed => parsed.Manifest,
+		PackageManifestFailure failure => throw new InvalidOperationException(
+			$"The test manifest does not parse: {string.Join("; ", failure.Errors)}"),
+	};
+
+	/// <summary>The applied revision; a failed apply fails the test with the installer's reason.</summary>
+	private static PackageApplyResult Applied(Result<PackageApplyResult> result) => result switch
+	{
+		PackageApplyResult applied => applied,
+		Error<string> error => throw new InvalidOperationException($"The package did not apply: {error.Value}"),
+	};
 
 	private async Task<string> ReadAttributeAsync(string objid, string attribute)
 	{
@@ -74,16 +87,15 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 		var pkg = UniquePackageId();
 		var answers = new Dictionary<string, string>();
 
-		var install = await Installer.ApplyAsync(Parse(Manifest(pkg, "1.0")), new PackageApplyRequest(Source(pkg), answers, []));
-		await Assert.That(install.IsT0).IsTrue();
+		var install = Applied(await Installer.ApplyAsync(Parse(Manifest(pkg, "1.0")), new PackageApplyRequest(Source(pkg), answers, [])));
 
-		var markerObjid = install.AsT0.CreatedObjects["marker"];
+		var markerObjid = install.CreatedObjects["marker"];
 
 		await Assert.That(await ReadAttributeAsync(markerObjid, "INSTALL_MARKER")).IsEqualTo("installed");
 
 		await Assert.That(await ReadAttributeAsync(markerObjid, "UPDATE_MARKER")).IsEqualTo("");
 
-		await Assert.That((await Installer.UninstallAsync(pkg)).IsT0).IsTrue();
+		await Assert.That((await Installer.UninstallAsync(pkg)).Value).IsTypeOf<Success>();
 	}
 
 	// Mirrors the bundled scene package's AINSTALL (`@teleport %!=#2`): a WIZARD thing
@@ -110,10 +122,9 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 		var pkg = UniquePackageId();
 		var answers = new Dictionary<string, string>();
 
-		var install = await Installer.ApplyAsync(Parse(TeleportManifest(pkg)), new PackageApplyRequest(Source(pkg), answers, []));
-		await Assert.That(install.IsT0).IsTrue();
+		var install = Applied(await Installer.ApplyAsync(Parse(TeleportManifest(pkg)), new PackageApplyRequest(Source(pkg), answers, [])));
 
-		var markerObjid = install.AsT0.CreatedObjects["marker"];
+		var markerObjid = install.CreatedObjects["marker"];
 		var markerDbref = PackageInstallService.ParseObjid(markerObjid)!.Value;
 
 		// The object must be in #2 purely because AINSTALL's `@teleport %!=#2` ran — no manual move.
@@ -121,7 +132,7 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 		await Assert.That(location.Object().DBRef.Number).IsEqualTo(2)
 			.Because("AINSTALL `@teleport %!=#2` must land the package object in the master room (#2)");
 
-		await Assert.That((await Installer.UninstallAsync(pkg)).IsT0).IsTrue();
+		await Assert.That((await Installer.UninstallAsync(pkg)).Value).IsTypeOf<Success>();
 	}
 
 	[Test, NotInParallel]
@@ -130,23 +141,21 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 		var pkg = UniquePackageId();
 		var answers = new Dictionary<string, string>();
 
-		var install = await Installer.ApplyAsync(Parse(Manifest(pkg, "1.0")), new PackageApplyRequest(Source(pkg), answers, []));
-		await Assert.That(install.IsT0).IsTrue();
-		var markerObjid = install.AsT0.CreatedObjects["marker"];
+		var install = Applied(await Installer.ApplyAsync(Parse(Manifest(pkg, "1.0")), new PackageApplyRequest(Source(pkg), answers, [])));
+		var markerObjid = install.CreatedObjects["marker"];
 
 		// Wipe the install marker so we can prove AINSTALL does NOT re-run on upgrade.
 		await ClearAttributeAsync(markerObjid, "INSTALL_MARKER");
 		await Assert.That(await ReadAttributeAsync(markerObjid, "INSTALL_MARKER")).IsEqualTo("");
 
 		// Upgrade to v1.1: this is an Upgrade revision, so AUPDATE runs and AINSTALL does not.
-		var upgrade = await Installer.ApplyAsync(Parse(Manifest(pkg, "1.1")), new PackageApplyRequest(Source(pkg, "commit-2"), answers, []));
-		await Assert.That(upgrade.IsT0).IsTrue();
-		await Assert.That(upgrade.AsT0.CreatedObjects.Count).IsEqualTo(0);
+		var upgrade = Applied(await Installer.ApplyAsync(Parse(Manifest(pkg, "1.1")), new PackageApplyRequest(Source(pkg, "commit-2"), answers, [])));
+		await Assert.That(upgrade.CreatedObjects.Count).IsEqualTo(0);
 
 		await Assert.That(await ReadAttributeAsync(markerObjid, "UPDATE_MARKER")).IsEqualTo("updated");
 
 		await Assert.That(await ReadAttributeAsync(markerObjid, "INSTALL_MARKER")).IsEqualTo("");
 
-		await Assert.That((await Installer.UninstallAsync(pkg)).IsT0).IsTrue();
+		await Assert.That((await Installer.UninstallAsync(pkg)).Value).IsTypeOf<Success>();
 	}
 }
