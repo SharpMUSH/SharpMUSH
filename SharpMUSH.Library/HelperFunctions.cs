@@ -442,33 +442,38 @@ public static partial class HelperFunctions
 	/// Takes the pattern of 'Object/attribute' and splits it out if possible.
 	/// </summary>
 	/// <param name="objectAttr">Object/Attribute</param>
-	/// <returns><see cref="DbRefAttribute"/> if it is a valid Object/Attribute format. Otherwise, <see cref="None"/>.</returns>
-	public static ObjectAttributeSplit SplitObjectAndAttr(string objectAttr)
+	/// <returns>The two halves if it is a valid Object/Attribute format. Otherwise, <see langword="null"/>.</returns>
+	public static ObjectAttribute? SplitObjectAndAttr(string objectAttr)
 	{
 		var match = ObjectWithAttributeRegex.Match(objectAttr);
 		var obj = match.Groups["Object"].Value;
 
 		var attr = match.Groups["Attribute"].Value;
 		if (!IsValidAttributeName(attr))
-			return new None();
+			return null;
 
 		return string.IsNullOrEmpty(attr) || string.IsNullOrEmpty(obj)
-			? new None()
-			: (obj, attr);
+			? null
+			: new ObjectAttribute(obj, attr);
 	}
 
-	public static OptionalObjectAttributeSplit SplitOptionalObjectAndAttr(string ObjectAttr)
+	/// <summary>
+	/// Takes the pattern of '[Object/]attribute' and splits it out if possible.
+	/// </summary>
+	/// <param name="ObjectAttr">[Object/]Attribute</param>
+	/// <returns>The two halves if it is a valid [Object/]Attribute format. Otherwise, <see langword="null"/>.</returns>
+	public static AttributeWithOptionalObject? SplitOptionalObjectAndAttr(string ObjectAttr)
 	{
 		var match = OptionalDatabaseReferenceWithAttributeRegex.Match(ObjectAttr);
 		var obj = match.Groups["Object"].Value;
 
 		var attr = match.Groups["Attribute"].Value;
 		if (!IsValidAttributeName(attr))
-			return false;
+			return null;
 
 		return string.IsNullOrEmpty(attr)
-			? false
-			: (obj, attr);
+			? null
+			: new AttributeWithOptionalObject(obj, attr);
 	}
 
 	/// <summary>
@@ -522,18 +527,23 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> SafeToAddZone(IMediator mediator, IObjectStore database, AnySharpObject start, AnySharpObject newZone, CancellationToken cancellationToken = default)
 		=> await SafeToAddRelationship(mediator, database, start, newZone, cancellationToken) == RelationshipSafety.Safe;
 
-	public static DbRefOptionalAttributeSplit SplitDbRefAndOptionalAttr(string DBRefAttr)
+	/// <summary>
+	/// Takes the pattern of 'Object[/attribute]' and splits it out if possible.
+	/// </summary>
+	/// <param name="DBRefAttr">Object[/Attribute]</param>
+	/// <returns>The two halves if it is a valid Object[/Attribute] format. Otherwise, <see langword="null"/>.</returns>
+	public static ObjectWithOptionalAttribute? SplitDbRefAndOptionalAttr(string DBRefAttr)
 	{
 		var match = DatabaseReferenceWithOptionalAttributeRegex.Match(DBRefAttr);
 		var obj = match.Groups["Object"].Value;
 
 		var attr = match.Groups["Attribute"].Value;
 		if (!string.IsNullOrEmpty(attr) && !IsValidAttributeName(attr))
-			return false;
+			return null;
 
 		return string.IsNullOrEmpty(obj)
-			? false
-			: (obj, string.IsNullOrEmpty(attr) ? null : attr);
+			? null
+			: new ObjectWithOptionalAttribute(obj, string.IsNullOrEmpty(attr) ? null : attr);
 	}
 
 	public static Option<DBRef> ParseDbRef(string dbrefStr)

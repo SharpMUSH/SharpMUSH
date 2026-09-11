@@ -26,15 +26,11 @@ public partial class Commands
 		}
 
 		var objAttrText = objAttrArg.Message!.ToPlainText();
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
-
-		if (!split.IsT0 || string.IsNullOrEmpty(split.AsT0.Attribute))
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText) is not { Object: var dbref, Attribute: { } attrName })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
-
-		var (dbref, attrName) = split.AsT0;
 
 		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, dbref, LocateFlags.All);
@@ -127,15 +123,11 @@ public partial class Commands
 		}
 
 		var sourceText = sourceArg.Message!.ToPlainText();
-		var sourceSplit = HelperFunctions.SplitDbRefAndOptionalAttr(sourceText);
-
-		if (!sourceSplit.IsT0 || string.IsNullOrEmpty(sourceSplit.AsT0.Attribute))
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(sourceText) is not { Object: var sourceDbref, Attribute: { } sourceAttr })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
 			return new CallState(ErrorMessages.Returns.InvalidSource);
 		}
-
-		var (sourceDbref, sourceAttr) = sourceSplit.AsT0;
 
 		var sourceLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, sourceDbref, LocateFlags.All);
@@ -172,15 +164,12 @@ public partial class Commands
 
 		foreach (var dest in destinations)
 		{
-			var destSplit = HelperFunctions.SplitDbRefAndOptionalAttr(dest);
-
-			if (!destSplit.IsT0)
+			if (HelperFunctions.SplitDbRefAndOptionalAttr(dest) is not { Object: var destDbref, Attribute: var destAttr })
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidDestinationFormat), executor, dest);
 				continue;
 			}
 
-			var (destDbref, destAttr) = destSplit.AsT0;
 			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
 
 			var destLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
@@ -251,15 +240,11 @@ public partial class Commands
 		}
 
 		var sourceText = sourceArg.Message!.ToPlainText();
-		var sourceSplit = HelperFunctions.SplitDbRefAndOptionalAttr(sourceText);
-
-		if (!sourceSplit.IsT0 || string.IsNullOrEmpty(sourceSplit.AsT0.Attribute))
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(sourceText) is not { Object: var sourceDbref, Attribute: { } sourceAttr })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidSourceFormat), executor);
 			return new CallState(ErrorMessages.Returns.InvalidSource);
 		}
-
-		var (sourceDbref, sourceAttr) = sourceSplit.AsT0;
 
 		var sourceLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, sourceDbref, LocateFlags.All);
@@ -296,15 +281,12 @@ public partial class Commands
 
 		foreach (var dest in destinations)
 		{
-			var destSplit = HelperFunctions.SplitDbRefAndOptionalAttr(dest);
-
-			if (!destSplit.IsT0)
+			if (HelperFunctions.SplitDbRefAndOptionalAttr(dest) is not { Object: var destDbref, Attribute: var destAttr })
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidDestinationFormat), executor, dest);
 				continue;
 			}
 
-			var (destDbref, destAttr) = destSplit.AsT0;
 			var targetAttrName = string.IsNullOrEmpty(destAttr) ? sourceAttr : destAttr;
 
 			var destLocate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
@@ -383,15 +365,11 @@ public partial class Commands
 		}
 
 		var objAttrText = objAttrArg.Message!.ToPlainText();
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
-
-		if (!split.IsT0 || string.IsNullOrEmpty(split.AsT0.Attribute))
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText) is not { Object: var dbref, Attribute: { } attrName })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
-
-		var (dbref, attrName) = split.AsT0;
 
 		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor, executor, dbref, LocateFlags.All);
@@ -489,15 +467,11 @@ public partial class Commands
 		}
 
 		var objAttr = args["0"].Message!.ToPlainText();
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttr);
-
-		if (!split.IsT0)
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttr) is not { Object: var dbref, Attribute: var maybeAttribute })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
-
-		var (dbref, maybeAttribute) = split.AsT0;
 
 		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 		executor,

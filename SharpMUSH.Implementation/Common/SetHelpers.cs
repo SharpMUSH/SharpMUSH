@@ -41,14 +41,10 @@ public static class SetHelpers
 		MString objectAndOptionalAttribute,
 		MString flagOrAttributeValue)
 	{
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectAndOptionalAttribute.ToPlainText());
-
-		if (!split.IsT0)
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objectAndOptionalAttribute.ToPlainText()) is not { Object: var name, Attribute: var maybeAttribute })
 		{
 			return new CallState(ErrorMessages.Returns.BadArgumentFormatToSet);
 		}
-
-		var (name, maybeAttribute) = split.AsT0;
 
 		var locate = await locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, name, LocateFlags.All);

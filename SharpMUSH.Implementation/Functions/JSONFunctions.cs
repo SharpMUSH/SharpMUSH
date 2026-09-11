@@ -144,13 +144,11 @@ public partial class Functions
 		if (!HelperFunctions.IsLambdaOrApply(rawAttrStr))
 		{
 			var enactor = (await parser.CurrentState.EnactorObject(Mediator)).Known;
-			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-			if (objAttr is { IsT1: true, AsT1: false })
+			if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
 			{
 				return new CallState(ErrorMessages.Returns.ObjectAttributeString) { HadErrors = hadErrors };
 			}
 
-			var (dbref, attrName) = objAttr.AsT0;
 			dbref ??= executor.Object().DBRef.ToString();
 
 			var locate = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, dbref, LocateFlags.All);

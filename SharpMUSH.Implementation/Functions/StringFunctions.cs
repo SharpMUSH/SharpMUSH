@@ -190,9 +190,7 @@ public partial class Functions
 
 		if (hasTransform)
 		{
-			var splitTransform = HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText());
-
-			if (splitTransform.IsT1)
+			if (HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText()) is not { } splitTransform)
 			{
 				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 			}
@@ -201,7 +199,7 @@ public partial class Functions
 				LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
-					splitTransform.AsT0.db,
+					splitTransform.Object,
 					LocateFlags.All);
 
 			if (transformationObject.IsError)
@@ -210,25 +208,23 @@ public partial class Functions
 			}
 
 			actualTransformationObject = transformationObject.AsSharpObject;
-			actualTransformAttribute = splitTransform.AsT0.Attribute;
+			actualTransformAttribute = splitTransform.Attribute;
 		}
 
 		if (hasTransform && hasNull)
 		{
-			var splitNull = HelperFunctions.SplitObjectAndAttr(isNullObjAttr.ToPlainText());
-
-			if (splitNull.IsT1)
+			if (HelperFunctions.SplitObjectAndAttr(isNullObjAttr.ToPlainText()) is not { } splitNull)
 			{
 				return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 			}
 
-			actualNullAttribute = splitNull.AsT0.Attribute;
+			actualNullAttribute = splitNull.Attribute;
 
 			var nullObject = await
 				LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 					executor,
 					executor,
-					splitNull.AsT0.db,
+					splitNull.Object,
 					LocateFlags.All);
 
 			if (nullObject.IsError)

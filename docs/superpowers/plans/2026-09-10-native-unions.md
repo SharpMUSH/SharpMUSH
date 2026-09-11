@@ -194,9 +194,9 @@ delete the file.
 | `OneOf<AnySharpObject, DeliveryFailure>` | `DeliveryResult` | Library |
 | `OneOf<WikiTranslation, WikiWriteConflict, Error<string>>` | `TranslationWriteResult` | Library |
 | `OneOf<long, DBRef, DbRefAttribute>` | `SemaphoreTarget` | Library |
-| `OneOf<(string db, string Attribute), None>` | `ObjectAttributeSplit` | Library |
-| `OneOf<(string? db, string Attribute), bool>` | `OptionalObjectAttributeSplit` | Library |
-| `OneOf<(string db, string? Attribute), bool>` | `DbRefOptionalAttributeSplit` | Library |
+| `OneOf<(string db, string Attribute), None>` | none: `ObjectAttribute?` (`readonly record struct (string Object, string Attribute)`) | Library `Models/` |
+| `OneOf<(string? db, string Attribute), bool>` | none: `AttributeWithOptionalObject?` (`readonly record struct (string? Object, string Attribute)`) | Library `Models/` |
+| `OneOf<(string db, string? Attribute), bool>` | none: `ObjectWithOptionalAttribute?` (`readonly record struct (string Object, string? Attribute)`) | Library `Models/` |
 | `OneOf<string, NotFound, Error>` | `ObjidResolution` | Client `Services/` |
 | `OneOf<WikiTranslationInfo, WikiTranslationSaveError>` | `TranslationSaveResult` | Client `Services/` |
 | `OneOf<RecallWindow, CallState>` | `RecallSelection` | Implementation `Commands/ChannelCommand/` |
@@ -242,9 +242,15 @@ Remaining positional call sites at the end of stage 1 (counted by marking every 
 
 - **Tuple cases cannot be named in a type pattern.** `x is (string db, string? Attribute) d` parses as a
   positional pattern, and `ValueTuple<string, string?>` loses the element names. The three
-  `*AttributeSplit` unions are why `AttributeCommands`, `GeneralCommands`, `SetHelpers`,
-  `AttributeFunctions` and `UtilityFunctions` read `IsT0`/`AsT0` instead of a pattern; giving those
-  cases a named record struct is the clean fix.
+  object/attribute splitters (`SplitObjectAndAttr`, `SplitOptionalObjectAndAttr`,
+  `SplitDbRefAndOptionalAttr`) were unions of a tuple and a failure case that carried nothing
+  (`None`, or a `bool` that was always `false`), so they are no longer unions: each returns a
+  nullable record struct from the rows above, `null` meaning "not a spec of that shape", and callers
+  bind the halves with a property pattern
+  (`if (HelperFunctions.SplitDbRefAndOptionalAttr(text) is not { Object: var obj, Attribute: var attr })`).
+  Two tuple cases remain: `Result<(string PageTarget, string Locale)>` (`WikiCommandHelper.SplitLocaleTarget`)
+  and `ValueOrResponse<(PackageManifest Manifest, …)>` (`PackagesController`); give each a named record
+  struct the same way.
 - **A switch statement is never exhaustive** for definite-return analysis: a method whose every path
   returns from `switch (union) { case A … case B … }` still fails CS0161. Use a switch expression, or
   return after the switch.

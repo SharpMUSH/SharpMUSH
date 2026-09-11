@@ -58,13 +58,11 @@ public partial class Functions
 		}
 		else
 		{
-			var objAttr = HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr);
-			if (objAttr is { IsT1: true, AsT1: false })
+			if (HelperFunctions.SplitOptionalObjectAndAttr(rawAttrStr) is not { Object: var dbref, Attribute: var attrName })
 			{
 				return errors.Complete(new CallState(ErrorMessages.Returns.ObjectAttributeString));
 			}
 
-			var (dbref, attrName) = objAttr.AsT0;
 			dbref ??= executor.Object().DBRef.ToString();
 
 			var locate = await LocateService.LocateAndNotifyIfInvalid(

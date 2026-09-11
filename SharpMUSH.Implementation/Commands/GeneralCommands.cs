@@ -263,14 +263,12 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoAttributeSpecified);
 		}
 
-		var pathSplit = HelperFunctions.SplitDbRefAndOptionalAttr(attributePath);
-		if (!pathSplit.IsT0)
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(attributePath) is not { Object: var objSpec, Attribute: var attrName })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapInvalidObjectAttributePath), executor);
 			return new CallState(ErrorMessages.Returns.InvalidPath);
 		}
 
-		var (objSpec, attrName) = pathSplit.AsT0;
 		if (string.IsNullOrEmpty(attrName))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MapMustSpecifyAttribute), executor);
@@ -638,11 +636,8 @@ public partial class Commands
 		if (args.Count == 1)
 		{
 			var argText = args["0"].Message!.ToPlainText();
-			var split = HelperFunctions.SplitDbRefAndOptionalAttr(argText);
-
-			if (split.IsT0)
+			if (HelperFunctions.SplitDbRefAndOptionalAttr(argText) is { Object: var objectName, Attribute: var maybeAttributePattern })
 			{
-				var (objectName, maybeAttributePattern) = split.AsT0;
 				attributePattern = maybeAttributePattern;
 
 				var locate = await LocateService.LocateAndNotifyIfInvalid(
@@ -1835,14 +1830,12 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.TooManySwitches);
 		}
 
-		var objectAndAttribute = HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText());
-		if (objectAndAttribute.IsT1 && objectAndAttribute.AsT1 == false)
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText()) is not { Object: var db, Attribute: var maybeAttributeString })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotifyMustSpecifyValidObjectAttribute), executor);
 			return new None();
 		}
 
-		var (db, maybeAttributeString) = objectAndAttribute.AsT0;
 		var maybeObject = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 			db, LocateFlags.All);
 
@@ -2777,14 +2770,12 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.TooManySwitches);
 		}
 
-		var maybeObjectAndAttribute = HelperFunctions.SplitDbRefAndOptionalAttr(arg0);
-		if (maybeObjectAndAttribute is { IsT1: true, AsT1: false })
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(arg0) is not { Object: var target, Attribute: var maybeAttribute })
 		{
 			await NotifyService.Notify(executor, ErrorMessages.Returns.CantSeeThat, executor);
 			return new CallState(ErrorMessages.Returns.CantSeeThat);
 		}
 
-		var (target, maybeAttribute) = maybeObjectAndAttribute.AsT0;
 		var maybeObject = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, target,
 			LocateFlags.All);
 
@@ -3552,15 +3543,11 @@ public partial class Commands
 		}
 
 		var objAttrText = objAttrArg.Message.ToPlainText();
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
-
-		if (!split.IsT0 || string.IsNullOrEmpty(split.AsT0.Attribute))
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText) is not { Object: var dbref, Attribute: { } attrPattern })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidFormat), executor);
 			return new CallState(ErrorMessages.Returns.InvalidFormat);
 		}
-
-		var (dbref, attrPattern) = split.AsT0;
 
 		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, dbref, LocateFlags.All);
@@ -5120,12 +5107,10 @@ public partial class Commands
 		}
 
 		string? attributePattern = null;
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objectSpec);
 		AnyOptionalSharpObject target;
 
-		if (split.IsT0)
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objectSpec) is { Object: var objectName, Attribute: var maybeAttributePattern })
 		{
-			var (objectName, maybeAttributePattern) = split.AsT0;
 			attributePattern = maybeAttributePattern;
 
 			var locate = await LocateService.LocateAndNotifyIfInvalid(
@@ -5994,15 +5979,12 @@ public partial class Commands
 
 		var objAttrText = objAttrArg.Message!.ToPlainText();
 		var pattern = patternArg.Message!.ToPlainText();
-		var split = HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText);
-
-		if (!split.IsT0)
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText) is not { Object: var dbref, Attribute: var maybeAttributePattern })
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return new CallState(ErrorMessages.Returns.InvalidObject);
 		}
 
-		var (dbref, maybeAttributePattern) = split.AsT0;
 		var attributePattern = string.IsNullOrEmpty(maybeAttributePattern) ? "*" : maybeAttributePattern;
 
 		var locate = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
