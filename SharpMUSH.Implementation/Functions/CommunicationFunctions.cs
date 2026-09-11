@@ -216,12 +216,11 @@ public partial class Functions
 				roomName,
 				LocateFlags.All);
 
-			if (!locateResult.IsValid())
+			if (locateResult is not AnySharpObject locatedObject)
 			{
 				return CallState.Empty;
 			}
 
-			var locatedObject = locateResult.WithoutError().WithoutNone();
 			if (!locatedObject.IsContainer)
 			{
 				return CallState.Empty;
@@ -463,12 +462,11 @@ public partial class Functions
 				roomName,
 				LocateFlags.All);
 
-			if (!locateResult.IsValid())
+			if (locateResult is not AnySharpObject locatedObject)
 			{
 				return CallState.Empty;
 			}
 
-			var locatedObject = locateResult.WithoutError().WithoutNone();
 			if (!locatedObject.IsContainer)
 			{
 				return CallState.Empty;

@@ -17,12 +17,12 @@ public class GetObjectsByZoneQueryHandler(INavigationStore database, IObjectStor
 			AnySharpObject known => known.WithNoneOption()
 		};
 
-		if (zone.IsNone)
+		if (zone is not AnySharpObject knownZone)
 		{
 			yield break;
 		}
 
-		await foreach (var obj in database.GetObjectsByZoneAsync(zone.Known, cancellationToken)
+		await foreach (var obj in database.GetObjectsByZoneAsync(knownZone, cancellationToken)
 			.WithCancellation(cancellationToken))
 		{
 			yield return obj;

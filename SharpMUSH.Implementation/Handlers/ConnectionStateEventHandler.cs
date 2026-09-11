@@ -3,6 +3,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -129,17 +130,17 @@ public class ConnectionStateEventHandler(
 
 				// Resolve the player object once, while it's still in the DB, and share it between
 				// the connection-announce call and the room-contents refresh below.
-				var playerNode = await mediator.Send(new GetObjectNodeQuery(notification.PlayerRef.Value));
-				if (!playerNode.IsNone && playerNode.IsPlayer)
+				if (await mediator.Send(new GetObjectNodeQuery(notification.PlayerRef.Value))
+						is AnySharpObject and SharpPlayer player)
 				{
 					await connectionAnnounceService.AnnounceDisconnectAsync(
 						parser,
-						new AnySharpObject(playerNode.AsPlayer),
+						player,
 						remainingConnections,
 						connectionData.IsHidden);
 
 					// Refresh the room's remaining occupants after the player disconnects.
-					var roomContainer = await playerNode.AsPlayer.Location.WithCancellation(CancellationToken.None);
+					var roomContainer = await player.Location.WithCancellation(CancellationToken.None);
 					var roomDbref = roomContainer.Object().DBRef.ToString();
 					await eventService.TriggerEventAsync(
 						parser,

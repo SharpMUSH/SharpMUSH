@@ -878,16 +878,14 @@ public partial class Functions
 		var named = new List<NamedDbRef>();
 		foreach (var token in list.Split(delimiter, StringSplitOptions.RemoveEmptyEntries))
 		{
-			var dbref = HelperFunctions.ParseDbRef(token);
-			if (dbref.IsNone())
+			if (HelperFunctions.ParseDbRef(token) is not DBRef dbref)
 			{
 				return null;
 			}
 
-			var item = await Mediator.Send(new GetObjectNodeQuery(dbref.AsValue()));
-			if (!item.IsNone)
+			if (await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject item)
 			{
-				named.Add(new NamedDbRef(token, item.Known.Object().Name));
+				named.Add(new NamedDbRef(token, item.Object().Name));
 			}
 		}
 

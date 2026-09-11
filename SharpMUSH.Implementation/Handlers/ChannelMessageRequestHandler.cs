@@ -24,6 +24,7 @@ public class ChannelMessageRequestHandler(
 	public async ValueTask Handle(ChannelMessageNotification notification, CancellationToken cancellationToken)
 	{
 		var chanName = notification.Channel.Name;
+		var sender = notification.Source is AnySharpObject found ? found : null;
 		var options = string.Join(" ", notification.Options);
 
 		var chatType = notification.MessageType switch
@@ -54,10 +55,9 @@ public class ChannelMessageRequestHandler(
 		if (!string.IsNullOrEmpty(notification.Channel.Mogrifier))
 		{
 			var mogrifierResult = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(notification.Channel.Mogrifier)), cancellationToken);
-			if (mogrifierResult != null && !mogrifierResult.IsNone)
+			if (mogrifierResult is AnySharpObject mogrifierObj)
 			{
-				var mogrifierObj = mogrifierResult.Known;
-				var source = notification.Source.IsNone ? mogrifierObj : notification.Source.Known;
+				var source = sender ?? mogrifierObj;
 
 				var passesUseLock = await permissionService.PassesLock(source, mogrifierObj, LockType.Use);
 
@@ -165,9 +165,9 @@ public class ChannelMessageRequestHandler(
 			}
 		}
 
-		if (blockMessage != null && !notification.Source.IsNone)
+		if (blockMessage != null && sender is not null)
 		{
-			await notifyService.Notify(notification.Source.Known, blockMessage, notification.Source.Known, notification.MessageType);
+			await notifyService.Notify(sender, blockMessage, sender, notification.MessageType);
 			return;
 		}
 
@@ -180,9 +180,7 @@ public class ChannelMessageRequestHandler(
 			["Category"] = "logs"
 		}))
 		{
-			var sourceNumber = notification.Source.IsNone
-				? (int?)null
-				: notification.Source.Known.Object().DBRef.Number;
+			var sourceNumber = sender?.Object().DBRef.Number;
 
 			await foreach (var (member, status) in notification.Channel.Members.Value.WithCancellation(cancellationToken))
 			{
@@ -204,8 +202,8 @@ public class ChannelMessageRequestHandler(
 				}
 
 				var isGagged = status.Gagged ?? false;
-				var wantsToHear = notification.Source.IsNone ||
-													await permissionService.CanInteract(notification.Source.Known, member,
+				var wantsToHear = sender is null ||
+													await permissionService.CanInteract(sender, member,
 														IPermissionService.InteractType.Hear);
 
 				if (!isGagged && wantsToHear)
@@ -216,7 +214,7 @@ public class ChannelMessageRequestHandler(
 					{
 						finalMessage = await ApplyPlayerChatFormat(
 							member,
-							notification.Source,
+							sender,
 							chatType,
 							notification.Channel.Name,
 							mogrifiedMessage,
@@ -227,7 +225,7 @@ public class ChannelMessageRequestHandler(
 							options);
 					}
 
-					await notifyService.Notify(member, finalMessage, notification.Source.Known, notification.MessageType);
+					await notifyService.Notify(member, finalMessage, sender, notification.MessageType);
 				}
 			}
 
@@ -236,9 +234,9 @@ public class ChannelMessageRequestHandler(
 				logger.LogInformation("{ChannelMessage}", MarkupTextSerializer.Serialize(message));
 
 				// Add to channel recall buffer - only if there's an actual source
-				if (!notification.Source.IsNone)
+				if (sender is not null)
 				{
-					var sourceDbRef = notification.Source.Known.Object().DBRef;
+					var sourceDbRef = sender.Object().DBRef;
 
 					var channelMessage = new SharpChannelMessage
 					{
@@ -261,7 +259,7 @@ public class ChannelMessageRequestHandler(
 	/// </summary>
 	private async ValueTask<MString> ApplyPlayerChatFormat(
 		AnySharpObject player,
-		AnyOptionalSharpObject source,
+		AnySharpObject? source,
 		string chatType,
 		MString channelName,
 		MString message,
@@ -294,7 +292,7 @@ public class ChannelMessageRequestHandler(
 			["7"] = new CallState(MarkupText.Plain(options))
 		};
 
-		var sourceObj = source.IsNone ? player : source.Known;
+		var sourceObj = source ?? player;
 		return await AttributeHelpers.EvaluateFormatAttribute(
 			attributeService,
 			null, // parser - not needed for attribute evaluation

@@ -55,7 +55,7 @@ public partial class Functions
 		// Read back the attribute that was just written, as Penn does, so its own quiet flag counts.
 		var written = await AttributeService.GetAttributeAsync(executor, thing, attribute,
 			mode: IAttributeService.AttributeMode.Read, parent: false);
-		if (written is { IsAttribute: true } && written.AsAttribute.Last().IsQuiet())
+		if (written is SharpAttribute[] chain && chain.Last().IsQuiet())
 		{
 			return;
 		}
@@ -69,7 +69,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitObjectAndAttr(args["0"].Message!.ToPlainText());
-		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (split is not { Object: var dbref, Attribute: var attribute })
 		{
@@ -152,26 +152,25 @@ public partial class Functions
 				dbref,
 				LocateFlags.All);
 
-			if (!maybeFound.IsAnySharpObject)
+			switch (maybeFound)
 			{
-				return Preserve(maybeFound.AsError);
+				case Error<CallState> error:
+					return Preserve(error.Value);
+				case AnySharpObject found:
+					var maybeAttr = await AttributeService.GetAttributeAsync(
+						executor,
+						found,
+						attribute,
+						mode: IAttributeService.AttributeMode.Execute,
+						parent: false);
+
+					if (maybeAttr is SharpAttribute[])
+					{
+						return Preserve(maybeAttr.AsCallState);
+					}
+
+					break;
 			}
-
-			var found = maybeFound.AsSharpObject;
-
-			var maybeAttr = await AttributeService.GetAttributeAsync(
-				executor,
-				found,
-				attribute,
-				mode: IAttributeService.AttributeMode.Execute,
-				parent: false);
-
-			if (!maybeAttr.IsAttribute)
-			{
-				continue;
-			}
-
-			return Preserve(maybeAttr.AsCallState);
 		}
 
 		return Preserve(await defaultArg.GetParsedResultAsync());
@@ -207,31 +206,30 @@ public partial class Functions
 				dbref,
 				LocateFlags.All);
 
-			if (!maybeFound.IsAnySharpObject)
+			switch (maybeFound)
 			{
-				return Preserve(maybeFound.AsError);
+				case Error<CallState> error:
+					return Preserve(error.Value);
+				case AnySharpObject found:
+					var maybeAttr = await AttributeService.GetAttributeAsync(
+						executor,
+						found,
+						attribute,
+						mode: IAttributeService.AttributeMode.Execute,
+						parent: false);
+
+					if (maybeAttr is SharpAttribute[])
+					{
+						return Preserve(await AttributeService.EvaluateAttributeFunctionResultAsync(
+							parser,
+							executor,
+							found,
+							attribute,
+							parser.CurrentState.EnvironmentRegisters));
+					}
+
+					break;
 			}
-
-			var found = maybeFound.AsSharpObject;
-
-			var maybeAttr = await AttributeService.GetAttributeAsync(
-				executor,
-				found,
-				attribute,
-				mode: IAttributeService.AttributeMode.Execute,
-				parent: false);
-
-			if (!maybeAttr.IsAttribute)
-			{
-				continue;
-			}
-
-			return Preserve(await AttributeService.EvaluateAttributeFunctionResultAsync(
-					parser,
-					executor,
-					found,
-					attribute,
-					parser.CurrentState.EnvironmentRegisters));
 		}
 
 		return Preserve(await defaultArg.GetParsedResultAsync());
@@ -298,7 +296,7 @@ public partial class Functions
 	[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object/attribute"])]
 	public async ValueTask<CallState> Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (HelperFunctions.SplitObjectAndAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText()) is not { Object: var dbref, Attribute: var attribute })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
@@ -320,9 +318,9 @@ public partial class Functions
 
 				return maybeAttr switch
 				{
-					{ IsError: true } => maybeAttr.AsCallStateError,
-					{ IsNone: true } => CallState.Empty,
-					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
+					SharpAttribute[] chain => new CallState(chain.Last().Value),
+					None => CallState.Empty,
+					Error<string> error => new CallState(error.Value)
 				};
 			});
 	}
@@ -384,20 +382,17 @@ public partial class Functions
 					attrsPattern ?? "*", checkParents,
 					IAttributeService.AttributePatternMode.Wildcard);
 
-				if (attributes.IsError)
-				{
-					return attributes.AsError;
-				}
-
 				var comparison = caseInsensitive
 					? StringComparison.OrdinalIgnoreCase
 					: StringComparison.Ordinal;
 
-				var matchingAttrs = attributes.AsAttributes
-					.Where(attr => attr.Value.ToPlainText().Contains(substring, comparison))
-					.Select(attr => attr.LongName);
-
-				return string.Join(" ", matchingAttrs);
+				return attributes switch
+				{
+					Error<string> error => error,
+					SharpAttribute[] matched => string.Join(" ", matched
+						.Where(attr => attr.Value.ToPlainText().Contains(substring, comparison))
+						.Select(attr => attr.LongName))
+				};
 			});
 	}
 
@@ -473,7 +468,7 @@ public partial class Functions
 					mode: IAttributeService.AttributeMode.Read,
 					parent: true);
 
-				var hasValue = maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText());
+				var hasValue = maybeAttr is SharpAttribute[] chain && !string.IsNullOrWhiteSpace(chain.Last().Value.ToPlainText());
 				return new CallState(hasValue ? "1" : "0");
 			});
 	}
@@ -500,7 +495,7 @@ public partial class Functions
 					mode: IAttributeService.AttributeMode.Read,
 					parent: false);
 
-				var hasValue = maybeAttr.IsAttribute && !string.IsNullOrWhiteSpace(maybeAttr.AsAttribute.Last().Value.ToPlainText());
+				var hasValue = maybeAttr is SharpAttribute[] chain && !string.IsNullOrWhiteSpace(chain.Last().Value.ToPlainText());
 				return new CallState(hasValue ? "1" : "0");
 			});
 	}
@@ -546,9 +541,9 @@ public partial class Functions
 				IAttributeService.AttributeMode.Read,
 				false);
 
-			if (!maybeAttr.IsAttribute) return "0";
+			if (maybeAttr is not SharpAttribute[] chain) return "0";
 
-			return maybeAttr.AsAttribute.Last().Flags.Any(f =>
+			return chain.Last().Flags.Any(f =>
 				string.Equals(f.Name, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase) ||
 				string.Equals(f.Symbol.ToString(), flagNameOrSymbol, StringComparison.OrdinalIgnoreCase));
 		}
@@ -574,12 +569,11 @@ public partial class Functions
 					attributePattern ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
 
-				if (attributes.IsError)
+				return attributes switch
 				{
-					return attributes.AsError;
-				}
-
-				return string.Join(" ", attributes.AsAttributes.Select(x => x.LongName));
+					Error<string> error => error,
+					SharpAttribute[] matched => string.Join(" ", matched.Select(x => x.LongName))
+				};
 			});
 	}
 
@@ -603,12 +597,11 @@ public partial class Functions
 					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
-				if (attributes.IsError)
+				return attributes switch
 				{
-					return attributes.AsError;
-				}
-
-				return string.Join(" ", attributes.AsAttributes.Select(x => x.LongName));
+					Error<string> error => error,
+					SharpAttribute[] matched => string.Join(" ", matched.Select(x => x.LongName))
+				};
 			});
 	}
 
@@ -673,12 +666,11 @@ public partial class Functions
 					attributePattern ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
 
-				if (attributes.IsError)
+				return attributes switch
 				{
-					return attributes.AsError;
-				}
-
-				return attributes.AsAttributes.Length;
+					Error<string> error => error,
+					SharpAttribute[] matched => matched.Length
+				};
 			});
 	}
 
@@ -702,12 +694,11 @@ public partial class Functions
 					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
-				if (attributes.IsError)
+				return attributes switch
 				{
-					return attributes.AsError;
-				}
-
-				return attributes.AsAttributes.Length;
+					Error<string> error => error,
+					SharpAttribute[] matched => matched.Length
+				};
 			});
 	}
 
@@ -791,7 +782,7 @@ public partial class Functions
 	{
 		var dbrefAndMaybeArg =
 			HelperFunctions.SplitDbRefAndOptionalAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
-		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		if (dbrefAndMaybeArg is not { Object: var obj, Attribute: var attribute })
 		{
@@ -817,9 +808,9 @@ public partial class Functions
 
 				return attributeObject switch
 				{
-					{ IsNone: true } => new CallState(ErrorMessages.Returns.NoSuchAttribute),
-					{ IsError: true } => new CallState(attributeObject.AsError.Value),
-					{ AsAttribute: var attr } => new CallState($"#{(await attr.Last().Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number}")
+					SharpAttribute[] attr => new CallState($"#{(await attr.Last().Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number}"),
+					None => new CallState(ErrorMessages.Returns.NoSuchAttribute),
+					Error<string> error => new CallState(error.Value)
 				};
 			}
 		);
@@ -1019,12 +1010,12 @@ public partial class Functions
 						false,
 						IAttributeService.AttributePatternMode.Wildcard);
 
-					if (!attributes.IsAttribute)
+					if (attributes is not SharpAttribute[] matched)
 					{
 						return CallState.Empty;
 					}
 
-					var matchingAttributes = attributes.AsAttributes
+					var matchingAttributes = matched
 						.Where(attr => attr.Value.ToPlainText() is { Length: > 0 } value && regex.IsMatch(value))
 						.Select(attr => attr.Name);
 
@@ -1062,16 +1053,15 @@ public partial class Functions
 					attributePattern ?? ".*", false,
 					IAttributeService.AttributePatternMode.Regex);
 
-				if (attributes.IsError)
-				{
-					return attributes.AsError;
-				}
-
 				var separator = parser.CurrentState.Arguments.TryGetValue("1", out var sepArg)
 					? sepArg.Message!.ToPlainText()
 					: " ";
 
-				return string.Join(separator, attributes.AsAttributes.Select(x => x.LongName));
+				return attributes switch
+				{
+					Error<string> error => error,
+					SharpAttribute[] matched => string.Join(separator, matched.Select(x => x.LongName))
+				};
 			});
 	}
 
@@ -1096,16 +1086,15 @@ public partial class Functions
 					attributePattern ?? ".*", true,
 					IAttributeService.AttributePatternMode.Regex);
 
-				if (attributes.IsError)
-				{
-					return attributes.AsError;
-				}
-
 				var separator = parser.CurrentState.Arguments.TryGetValue("1", out var sepArg)
 					? sepArg.Message!.ToPlainText()
 					: " ";
 
-				return string.Join(separator, attributes.AsAttributes.Select(x => x.LongName));
+				return attributes switch
+				{
+					Error<string> error => error,
+					SharpAttribute[] matched => string.Join(separator, matched.Select(x => x.LongName))
+				};
 			});
 	}
 
@@ -1130,12 +1119,11 @@ public partial class Functions
 					attributePattern ?? ".*", false,
 					IAttributeService.AttributePatternMode.Regex);
 
-				if (attributes.IsError)
+				return attributes switch
 				{
-					return attributes.AsError;
-				}
-
-				return attributes.AsAttributes.Length;
+					Error<string> error => error,
+					SharpAttribute[] matched => matched.Length
+				};
 			});
 	}
 
@@ -1160,12 +1148,11 @@ public partial class Functions
 					attributePattern ?? ".*", true,
 					IAttributeService.AttributePatternMode.Regex);
 
-				if (attributes.IsError)
+				return attributes switch
 				{
-					return attributes.AsError;
-				}
-
-				return attributes.AsAttributes.Length;
+					Error<string> error => error,
+					SharpAttribute[] matched => matched.Length
+				};
 			});
 	}
 
@@ -1202,18 +1189,15 @@ public partial class Functions
 					attributePattern ?? ".*", false,
 					IAttributeService.AttributePatternMode.Regex);
 
-				if (attributes.IsError)
-				{
-					return attributes.AsError;
-				}
-
-				var attributesStaging = attributes.AsAttributes.Skip(startInt - 1).Take(countInt);
-
 				var separator = parser.CurrentState.Arguments.TryGetValue("3", out var sepArg)
 					? sepArg.Message!.ToPlainText()
 					: " ";
 
-				return string.Join(separator!, attributesStaging.Select(x => x.LongName));
+				return attributes switch
+				{
+					Error<string> error => error,
+					SharpAttribute[] matched => string.Join(separator, matched.Skip(startInt - 1).Take(countInt).Select(x => x.LongName))
+				};
 			});
 	}
 
@@ -1250,18 +1234,15 @@ public partial class Functions
 					attributePattern ?? ".*", true,
 					IAttributeService.AttributePatternMode.Regex);
 
-				if (attributes.IsError)
-				{
-					return attributes.AsError;
-				}
-
-				var attributesStaging = attributes.AsAttributes.Skip(startInt - 1).Take(countInt);
-
 				var separator = parser.CurrentState.Arguments.TryGetValue("3", out var sepArg)
 					? sepArg.Message!.ToPlainText()
 					: " ";
 
-				return string.Join(separator!, attributesStaging.Select(x => x.LongName));
+				return attributes switch
+				{
+					Error<string> error => error,
+					SharpAttribute[] matched => string.Join(separator, matched.Skip(startInt - 1).Take(countInt).Select(x => x.LongName))
+				};
 			});
 	}
 
@@ -1320,7 +1301,7 @@ public partial class Functions
 			{
 				var attribute = await AttributeService.GetAttributeAsync(executor, actualObject, attributeName,
 					mode: IAttributeService.AttributeMode.Execute, parent: false);
-				if (!attribute.IsAttribute)
+				if (attribute is not SharpAttribute[] chain)
 					return await parser.FunctionParse(parser.CurrentState.Arguments["1"].Message!) ?? CallState.Empty;
 
 				var arguments = new Dictionary<string, CallState>();
@@ -1330,7 +1311,7 @@ public partial class Functions
 					hadErrors |= result.HadErrors;
 					arguments[arguments.Count.ToString()] = result;
 				}
-				var value = attribute.AsAttribute.Last();
+				var value = chain.Last();
 				return (await parser.With(state => state with
 				{
 					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, value.Name),
@@ -1369,9 +1350,7 @@ public partial class Functions
 		var dbrefAndAttr = parser.CurrentState.Arguments["0"].Message!;
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var parentObject = await executor.Object().Parent.WithCancellation(CancellationToken.None);
-
-		if (parentObject.IsNone)
+		if (await executor.Object().Parent.WithCancellation(CancellationToken.None) is not AnySharpObject parentObject)
 		{
 			return new CallState(ErrorMessages.Returns.ObjectHasNoParent);
 		}
@@ -1382,7 +1361,7 @@ public partial class Functions
 		// The evalParent=true parameter enables parent inheritance here.
 		// Future work: Add trust checks and attribute flag filtering in AttributeService.
 
-		var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, parentObject.Known,
+		var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, parentObject,
 			dbrefAndAttr,
 			parser.CurrentState.Arguments.Skip(1)
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
@@ -1456,9 +1435,9 @@ public partial class Functions
 
 				return maybeAttr switch
 				{
-					{ IsError: true } => maybeAttr.AsCallStateError,
-					{ IsNone: true } => CallState.Empty,
-					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
+					SharpAttribute[] chain => new CallState(chain.Last().Value),
+					None => CallState.Empty,
+					Error<string> error => new CallState(error.Value)
 				};
 		}
 	}
@@ -1512,7 +1491,7 @@ public partial class Functions
 				=> new CallState(await ValidateService.Valid(validationType, str, executor) ? "1" : "0"),
 			IValidateService.ValidationType.PlayerName
 				when await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, target, LocateFlags.All)
-					is { IsAnyObject: true, AsAnyObject: var obj }
+					is AnySharpObject obj
 				=> new CallState(await ValidateService.Valid(validationType, str, obj) ? "1" : "0"),
 			IValidateService.ValidationType.PlayerName => ErrorMessages.Returns.CantSeeThat,
 
@@ -1523,7 +1502,7 @@ public partial class Functions
 				=> new CallState(await ValidateService.Valid(validationType, str, executor) ? "1" : "0"),
 			IValidateService.ValidationType.LockType
 				when await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, target, LocateFlags.All)
-					is { IsAnyObject: true, AsAnyObject: var obj }
+					is AnySharpObject obj
 				=> new CallState(await ValidateService.Valid(validationType, str, obj) ? "1" : "0"),
 			IValidateService.ValidationType.LockType => ErrorMessages.Returns.CantSeeThat,
 			_ => new CallState(await ValidateService.Valid(validationType, str, new None()) ? "1" : "0")
@@ -1581,12 +1560,12 @@ public partial class Functions
 						var realAttr = await AttributeService.GetAttributeAsync(executor, foundVictim, attr,
 							IAttributeService.AttributeMode.Read, false);
 
-						if (realAttr.IsError || realAttr.IsNone)
+						if (realAttr is not SharpAttribute[] chain)
 						{
 							return false;
 						}
 
-						return await PermissionService.CanViewAttribute(foundObj, foundVictim, realAttr.AsAttribute);
+						return await PermissionService.CanViewAttribute(foundObj, foundVictim, chain);
 					});
 			}
 		);
@@ -1629,16 +1608,13 @@ public partial class Functions
 						attrsPattern ?? "*", false,
 						IAttributeService.AttributePatternMode.Wildcard);
 
-					if (attributes.IsError)
+					return attributes switch
 					{
-						return attributes.AsError;
-					}
-
-					var matchingAttrs = attributes.AsAttributes
-						.Where(attr => regex.IsMatch(attr.Value.ToPlainText()))
-						.Select(attr => attr.LongName);
-
-					return string.Join(" ", matchingAttrs);
+						Error<string> error => error,
+						SharpAttribute[] matched => string.Join(" ", matched
+							.Where(attr => regex.IsMatch(attr.Value.ToPlainText()))
+							.Select(attr => attr.LongName))
+					};
 				});
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
@@ -1680,18 +1656,15 @@ public partial class Functions
 					attributePattern ?? "*", false,
 					IAttributeService.AttributePatternMode.Wildcard);
 
-				if (attributes.IsError)
-				{
-					return attributes.AsError;
-				}
-
-				var attributesStaging = attributes.AsAttributes.Skip(startInt - 1).Take(countInt);
-
 				var separator = parser.CurrentState.Arguments.TryGetValue("3", out var sepArg)
 					? sepArg.Message!.ToPlainText()
 					: " ";
 
-				return string.Join(separator!, attributesStaging.Select(x => x.LongName));
+				return attributes switch
+				{
+					Error<string> error => error,
+					SharpAttribute[] matched => string.Join(separator, matched.Skip(startInt - 1).Take(countInt).Select(x => x.LongName))
+				};
 			});
 	}
 
@@ -1727,18 +1700,15 @@ public partial class Functions
 					attributePattern ?? "*", true,
 					IAttributeService.AttributePatternMode.Wildcard);
 
-				if (attributes.IsError)
-				{
-					return attributes.AsError;
-				}
-
-				var attributesStaging = attributes.AsAttributes.Skip(startInt - 1).Take(countInt);
-
 				var separator = parser.CurrentState.Arguments.TryGetValue("3", out var sepArg)
 					? sepArg.Message!.ToPlainText()
 					: " ";
 
-				return string.Join(separator!, attributesStaging.Select(x => x.LongName));
+				return attributes switch
+				{
+					Error<string> error => error,
+					SharpAttribute[] matched => string.Join(separator, matched.Skip(startInt - 1).Take(countInt).Select(x => x.LongName))
+				};
 			});
 	}
 
@@ -1748,7 +1718,7 @@ public partial class Functions
 		var dbref = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 		var attribute = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
-		var executor = (await parser.CurrentState.ExecutorObject(Mediator)).WithoutNone();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, dbref, LocateFlags.All,
 			async actualObject =>
@@ -1762,9 +1732,9 @@ public partial class Functions
 
 				return maybeAttr switch
 				{
-					{ IsError: true } => maybeAttr.AsCallStateError,
-					{ IsNone: true } => CallState.Empty,
-					_ => new CallState(maybeAttr.AsAttribute.Last().Value)
+					SharpAttribute[] chain => new CallState(chain.Last().Value),
+					None => CallState.Empty,
+					Error<string> error => new CallState(error.Value)
 				};
 			});
 	}
@@ -1774,16 +1744,14 @@ public partial class Functions
 	{
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
-		var zone = await enactor.Object().Zone.WithCancellation(CancellationToken.None);
-
-		if (zone.IsNone)
+		if (await enactor.Object().Zone.WithCancellation(CancellationToken.None) is not AnySharpObject zone)
 		{
 			return new CallState(ErrorMessages.Returns.NoZoneSet);
 		}
 
 		var result = await AttributeService.EvaluateAttributeFunctionResultAsync(
 			parser,
-			zone.Known,
+			zone,
 			objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
 			args: parser.CurrentState.Arguments.Skip(1)
 				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))

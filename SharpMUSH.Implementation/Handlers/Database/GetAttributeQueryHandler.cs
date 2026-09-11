@@ -43,11 +43,7 @@ public class GetAttributesQueryHandler(
 		// contract, and keeping two copies of atr_iter_get_parent is how they came to disagree.
 		return AttributeAncestry.MatchesWithParentsAsync(
 				request.DBRef,
-				async () =>
-				{
-					var obj = await objects.GetObjectNodeAsync(request.DBRef, cancellationToken);
-					return obj.IsNone ? null : obj.Known.Object();
-				},
+				async () => (await objects.GetObjectNodeAsync(request.DBRef, cancellationToken)).Object(),
 				(int)configuration.CurrentValue.Limit.MaxParents,
 				dbref => GetAttributesForDbRef(dbref, request, cancellationToken),
 				(dbref, segments) => database.GetAttributeAsync(dbref, segments, cancellationToken),
@@ -93,11 +89,7 @@ public class GetLazyAttributesQueryHandler(
 
 		return AttributeAncestry.MatchesWithParentsAsync(
 				request.DBRef,
-				async () =>
-				{
-					var obj = await objects.GetObjectNodeAsync(request.DBRef, cancellationToken);
-					return obj.IsNone ? null : obj.Known.Object();
-				},
+				async () => (await objects.GetObjectNodeAsync(request.DBRef, cancellationToken)).Object(),
 				(int)configuration.CurrentValue.Limit.MaxParents,
 				dbref => GetAttributesForDbRef(dbref, request, cancellationToken),
 				(dbref, segments) => database.GetLazyAttributeAsync(dbref, segments, cancellationToken),

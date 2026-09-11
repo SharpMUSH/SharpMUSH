@@ -332,44 +332,40 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var attributeName = args["0"].Message!.ToPlainText();
 
-		AnySharpObject targetObj;
-		if (args.ContainsKey("1"))
-		{
-			var objectName = args["1"].Message!.ToPlainText();
-			var locateResult = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-				executor, executor, objectName, LocateFlags.All);
+		AnySharpObjectOrErrorCallState target = args.TryGetValue("1", out var objectArg)
+			? await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+				executor, executor, objectArg.Message!.ToPlainText(), LocateFlags.All)
+			: executor;
 
-			if (!locateResult.IsAnySharpObject)
+		return target switch
+		{
+			Error<CallState> error => error.Value,
+			AnySharpObject targetObj => await AttributeLockPasses(targetObj)
+		};
+
+		async ValueTask<CallState> AttributeLockPasses(AnySharpObject targetObj)
+		{
+			// Get the attribute's lock (stored in attrname`lock attribute)
+			var lockAttrName = $"{attributeName}`LOCK";
+			var lockAttr = await AttributeService.GetAttributeAsync(
+				executor, targetObj, lockAttrName,
+				mode: IAttributeService.AttributeMode.Read,
+				parent: false);
+
+			if (lockAttr is not SharpAttribute[] lockChain)
 			{
-				return locateResult.AsError;
+				return "0"; // No lock set means no restriction
 			}
-			targetObj = locateResult.AsSharpObject;
-		}
-		else
-		{
-			targetObj = executor;
-		}
 
-		// Get the attribute's lock (stored in attrname`lock attribute)
-		var lockAttrName = $"{attributeName}`LOCK";
-		var lockAttr = await AttributeService.GetAttributeAsync(
-			executor, targetObj, lockAttrName,
-			mode: IAttributeService.AttributeMode.Read,
-			parent: false);
+			var lockString = lockChain.Last().Value.ToPlainText();
+			if (string.IsNullOrWhiteSpace(lockString))
+			{
+				return "0";
+			}
 
-		if (!lockAttr.IsAttribute)
-		{
-			return "0"; // No lock set means no restriction
+			var passes = await LockService.Evaluate(lockString, targetObj, executor);
+			return new CallState(passes ? "1" : "0");
 		}
-
-		var lockString = lockAttr.AsAttribute.Last().Value.ToPlainText();
-		if (string.IsNullOrWhiteSpace(lockString))
-		{
-			return "0";
-		}
-
-		var passes = await LockService.Evaluate(lockString, targetObj, executor);
-		return new CallState(passes ? "1" : "0");
 	}
 
 	[SharpFunction(Name = "beep", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.AdminOnly | FunctionFlags.StripAnsi)]
@@ -428,21 +424,16 @@ public partial class Functions
 	[SharpFunction(Name = "checkpass", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> Checkpass(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var dbRefConversion = HelperFunctions.ParseDbRef((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
-		if (dbRefConversion.IsNone())
+		if (HelperFunctions.ParseDbRef((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText()) is not DBRef dbRef)
 		{
 			await NotifyService.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.CantSeeThat));
 			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		var dbRef = dbRefConversion.AsValue();
-		var objectInfo = await Mediator.Send(new GetObjectNodeQuery(dbRef));
-		if (!objectInfo.IsPlayer)
+		if (await Mediator.Send(new GetObjectNodeQuery(dbRef)) is not (AnySharpObject and SharpPlayer player))
 		{
 			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 		}
-
-		var player = objectInfo.AsPlayer;
 
 		var result = PasswordService.PasswordIsValid(
 			$"#{player.Object.Key}:{player.Object.CreationTime}",
@@ -461,9 +452,7 @@ public partial class Functions
 
 		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
-		var location = await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
-
-		if (location.IsNone || location.IsExit)
+		if (await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref)) is not AnySharpObject location || location.IsExit)
 		{
 			return ErrorMessages.Returns.InvalidRoom;
 		}
@@ -497,7 +486,7 @@ public partial class Functions
 						newName,
 						await executor.Where(),
 						owner,
-						location.Known.AsContainer
+						location.AsContainer
 					));
 				}
 				else if (obj.IsRoom)
@@ -522,8 +511,10 @@ public partial class Functions
 					return ErrorMessages.Returns.InvalidObjectType;
 				}
 
-				var clonedObjOptional = await Mediator.Send(new GetObjectNodeQuery(cloneDbRef));
-				var clonedObj = clonedObjOptional.WithoutNone();
+				if (await Mediator.Send(new GetObjectNodeQuery(cloneDbRef)) is not AnySharpObject clonedObj)
+				{
+					throw new InvalidOperationException($"The clone {cloneDbRef} was not found after it was created.");
+				}
 
 				var preserve = args.ContainsKey("3") &&
 					args["3"].Message!.ToPlainText().Equals("preserve", StringComparison.OrdinalIgnoreCase);
@@ -580,9 +571,7 @@ public partial class Functions
 
 		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
-		var location = await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref));
-
-		if (location.IsNone || location.IsExit)
+		if (await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref)) is not AnySharpObject location || location.IsExit)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DefaultHomeLocationInvalid), executor);
 			return new CallState(ErrorMessages.Returns.InvalidRoom);
@@ -598,7 +587,7 @@ public partial class Functions
 			await executor.Where(),
 			await executor.Object()
 				.Owner.WithCancellation(CancellationToken.None),
-			location.Known.AsContainer));
+			location.AsContainer));
 
 		return new CallState($"#{thing.Number}");
 	}
@@ -754,9 +743,8 @@ public partial class Functions
 	[SharpFunction(Name = "isdbref", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> IsDbRef(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var parsed = HelperFunctions.ParseDbRef((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText());
-		if (parsed.IsNone()) return new("0");
-		return new CallState(!(await Mediator.Send(new GetObjectNodeQuery(parsed.AsValue()))).IsNone);
+		if (HelperFunctions.ParseDbRef((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText()) is not DBRef dbref) return new("0");
+		return new CallState(await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject);
 	}
 
 	/// <summary>
@@ -907,7 +895,7 @@ public partial class Functions
 					return ErrorMessages.Returns.PermissionDenied;
 				}
 
-				if (exitObj.IsExit)
+				if (exitObj is SharpExit exit)
 				{
 					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
 					{
@@ -925,12 +913,10 @@ public partial class Functions
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
-							if (!destObj.IsRoom)
+							if (destObj is not SharpRoom destinationRoom)
 							{
 								return ErrorMessages.Returns.InvalidDestination;
 							}
-
-							var destinationRoom = destObj.AsRoom;
 
 							if (!await PermissionService.Controls(executor, destObj) && !await destObj.HasFlag("LINK_OK"))
 							{
@@ -938,13 +924,13 @@ public partial class Functions
 							}
 
 							await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Empty);
-							await Mediator.Send(new LinkExitCommand(exitObj.AsExit, destinationRoom));
+							await Mediator.Send(new LinkExitCommand(exit, destinationRoom));
 
 							return "1";
 						}
 					);
 				}
-				else if (exitObj.IsThing || exitObj.IsPlayer)
+				else if (exitObj is SharpThing or SharpPlayer)
 				{
 					// Set home for thing or player
 					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -967,25 +953,24 @@ public partial class Functions
 								return ErrorMessages.Returns.PermissionDenied;
 							}
 
-							AnySharpContent contentObj = exitObj.IsThing ? exitObj.AsThing : (AnySharpContent)exitObj.AsPlayer;
-							await Mediator.Send(new SetObjectHomeCommand(contentObj, destObj.AsContainer));
+							await Mediator.Send(new SetObjectHomeCommand(exitObj.AsContent, destObj.AsContainer));
 							return "1";
 						}
 					);
 				}
-				else if (exitObj.IsRoom)
+				else if (exitObj is SharpRoom room)
 				{
 					// Set drop-to for room
 					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 						executor, executor, destName, LocateFlags.All,
 						async destObj =>
 						{
-							if (!destObj.IsRoom)
+							if (destObj is not SharpRoom dropTo)
 							{
 								return ErrorMessages.Returns.InvalidDestination;
 							}
 
-							await Mediator.Send(new LinkRoomCommand(exitObj.AsRoom, destObj.AsRoom));
+							await Mediator.Send(new LinkRoomCommand(room, dropTo));
 							return "1";
 						}
 					);
@@ -1434,11 +1419,11 @@ public partial class Functions
 			switches = args.ContainsKey("2") ? args["2"].Message!.ToPlainText() : "all";
 
 			var locateResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, lookerName, LocateFlags.All);
-			if (locateResult.IsError || locateResult.IsNone)
+			if (locateResult is not AnySharpObject located)
 			{
 				return CallState.Empty;
 			}
-			looker = locateResult.AsAnyObject;
+			looker = located;
 		}
 
 		if (!await PermissionService.Controls(executor, looker))
@@ -1476,9 +1461,8 @@ public partial class Functions
 		{
 			var locationOpt = await Mediator.Send(new GetLocationQuery(looker.Object().DBRef));
 
-			if (!locationOpt.IsNone)
+			if (locationOpt is AnySharpContainer location)
 			{
-				var location = locationOpt.WithoutNone();
 				objectsToScan.Add(location.WithExitOption());
 				await AddContents(location);
 			}
@@ -1486,10 +1470,8 @@ public partial class Functions
 
 		if (checkGlobals)
 		{
-			var masterRoomResult = await Mediator.Send(new GetObjectNodeQuery(new DBRef(0)));
-			if (!masterRoomResult.IsNone)
+			if (await Mediator.Send(new GetObjectNodeQuery(new DBRef(0))) is AnySharpObject masterRoom)
 			{
-				var masterRoom = masterRoomResult.Known;
 				objectsToScan.Add(masterRoom);
 
 				if (masterRoom.IsContainer)
@@ -1510,13 +1492,12 @@ public partial class Functions
 			uniqueObjects,
 			command);
 
-		if (matchResult.IsNone())
+		if (!matchResult.TryGetValue(out var matches))
 		{
 			return CallState.Empty;
 		}
 
 		// Format results as "dbref/attribute" pairs
-		var matches = matchResult.AsValue();
 		var results = matches.Select(match =>
 			$"{match.SObject.Object().DBRef}/{match.Attribute.Name}");
 

@@ -72,8 +72,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 	/// <returns>The dbref the operand names, or <c>null</c> when it names something else.</returns>
 	private static DBRef? ParsedAtCompileTime(string target)
 	{
-		var parsed = HelperFunctions.ParseDbRef(target);
-		return parsed.IsSome() ? parsed.AsValue() : null;
+		return HelperFunctions.ParseDbRef(target) is DBRef parsed ? parsed : null;
 	}
 
 	// A lock is evaluated on every movement and every permission check, so the pattern is built once
@@ -212,14 +211,11 @@ public class SharpMUSHBooleanExpressionVisitor(
 				if (targetDbRef.HasValue)
 				{
 					// Get the target object by DBRef (validates creation timestamp if objid format)
-					var targetObjResult = await med.Send(
-						new GetObjectNodeQuery(targetDbRef.Value),
-						ExecutionBudget.CurrentToken);
-
-					if (targetObjResult.IsNone)
+					if (await med.Send(new GetObjectNodeQuery(targetDbRef.Value), ExecutionBudget.CurrentToken)
+							is not AnySharpObject targetObject)
 						return false;
 
-					var targetOwner = await targetObjResult.Known.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
+					var targetOwner = await targetObject.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 					return unlockerOwnerDbRef == targetOwner.Object.DBRef;
 				}
 
@@ -229,10 +225,9 @@ public class SharpMUSHBooleanExpressionVisitor(
 				// its own it could only ever resolve "#N", which is the branch that already ran.
 				var locateResult = await Read(() => services.LocateAsync(gatedObj, gatedObj, target, LocateFlags.All));
 
-				if (!locateResult.IsValid())
+				if (locateResult is not AnySharpObject located)
 					return false;
 
-				var located = locateResult.WithoutError().WithoutNone();
 				var locatedOwner = await located.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 				return unlockerOwnerDbRef == locatedOwner.Object.DBRef;
 			}
@@ -369,10 +364,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 			foreach (var dbrefStr in dbrefs)
 			{
-				var parsedDbRef = HelperFunctions.ParseDbRef(dbrefStr);
-				if (parsedDbRef.IsSome())
+				if (HelperFunctions.ParseDbRef(dbrefStr) is DBRef lockDbRef)
 				{
-					var lockDbRef = parsedDbRef.AsValue();
 
 					// If lock specifies creation time (objid format), both number and timestamp must match
 					// This prevents locks from matching recycled dbrefs after objects are destroyed
@@ -590,14 +583,11 @@ public class SharpMUSHBooleanExpressionVisitor(
 				if (targetDbRef.HasValue)
 				{
 					// Validates creation timestamp if objid format
-					var targetObjResult = await med.Send(
-						new GetObjectNodeQuery(targetDbRef.Value),
-						ExecutionBudget.CurrentToken);
-
-					if (targetObjResult.IsNone)
+					if (await med.Send(new GetObjectNodeQuery(targetDbRef.Value), ExecutionBudget.CurrentToken)
+							is not AnySharpObject targetObject)
 						return false;
 
-					targetObj = targetObjResult.Known;
+					targetObj = targetObject;
 				}
 				else
 				{
@@ -605,10 +595,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 					// AbsoluteMatch on its own would leave this branch with nowhere to search.
 					var locateResult = await Read(() => services.LocateAsync(gatedObj, gatedObj, target, LocateFlags.All));
 
-					if (!locateResult.IsValid())
+					if (locateResult is not AnySharpObject located)
 						return false;
 
-					targetObj = locateResult.WithoutError().WithoutNone();
+					targetObj = located;
 				}
 
 				// Get the lock from the target object

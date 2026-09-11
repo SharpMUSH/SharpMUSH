@@ -325,5 +325,27 @@ public class MailFunctionUnitTests
 		await Assert.That(unread).IsGreaterThanOrEqualTo(0);
 		await Assert.That(cleared).IsGreaterThanOrEqualTo(0);
 	}
+
+	/// <summary>
+	/// Only a player has a mailbox. A located non-player answers as a missing player, and a non-player
+	/// executor holds no mail, rather than either one throwing out of the function.
+	/// </summary>
+	[Test]
+	[Arguments("mail(here)", "#-1 NO SUCH PLAYER")]
+	[Arguments("mail(here,1)", "#-1 NO SUCH PLAYER")]
+	[Arguments("maillist(here,1)", "#-1 NO SUCH PLAYER")]
+	[Arguments("mailfrom(here,1)", "#-1 NO SUCH PLAYER")]
+	[Arguments("mailstats(here)", "#-1 NO SUCH PLAYER")]
+	[Arguments("maildstats(here)", "#-1 NO SUCH PLAYER")]
+	[Arguments("mailfstats(here)", "#-1 NO SUCH PLAYER")]
+	[Arguments("folderstats(here,INBOX)", "#-1 NO SUCH PLAYER")]
+	[Arguments("objeval(here,mail())", "0")]
+	[Arguments("objeval(here,mail(1))", "#-1 NO SUCH MAIL")]
+	[Arguments("objeval(here,mailstats())", "0 0")]
+	public async Task MailFunctions_NonPlayer_HasNoMailbox(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }
 

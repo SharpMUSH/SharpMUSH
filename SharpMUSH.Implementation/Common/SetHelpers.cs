@@ -49,28 +49,30 @@ public static class SetHelpers
 		var locate = await locateService.LocateAndNotifyIfInvalidWithCallState(parser,
 			executor, executor, name, LocateFlags.All);
 
-		if (locate.IsError)
+		return locate switch
 		{
-			return locate.AsError;
-		}
+			Error<CallState> error => error.Value,
+			AnySharpObject target => await SetOn(target)
+		};
 
-		var target = locate.AsSharpObject;
-
-		// PennMUSH gates every confirmation this routine emits on AreQuiet(player, thing)
-		// (hdrs/dbdefs.h:198): the player is QUIET, or the thing is QUIET and the player owns it.
-		// set_flag (src/flags.c:1855,1914) and do_set_atr (src/attrib.c:2446) both test it.
-		var areQuiet = await target.Object().AreQuietAsync(executor);
-
-		if (!string.IsNullOrEmpty(maybeAttribute))
+		async ValueTask<CallState> SetOn(AnySharpObject target)
 		{
-			return await SetAttributeFlags(target, maybeAttribute);
+			// PennMUSH gates every confirmation this routine emits on AreQuiet(player, thing)
+			// (hdrs/dbdefs.h:198): the player is QUIET, or the thing is QUIET and the player owns it.
+			// set_flag (src/flags.c:1855,1914) and do_set_atr (src/attrib.c:2446) both test it.
+			var areQuiet = await target.Object().AreQuietAsync(executor);
+
+			if (!string.IsNullOrEmpty(maybeAttribute))
+			{
+				return await SetAttributeFlags(target, maybeAttribute);
+			}
+
+			var colon = flagOrAttributeValue.IndexOf(":");
+
+			return colon > -1
+				? await SetAttributeValue(target, colon, areQuiet)
+				: await SetFlags(target, areQuiet);
 		}
-
-		var colon = flagOrAttributeValue.IndexOf(":");
-
-		return colon > -1
-			? await SetAttributeValue(target, colon)
-			: await SetFlags(target);
 
 		// do_attrib_flags: every token is applied as ONE batch, because Penn checks permission once
 		// for the whole flag argument rather than once per flag, so the result does not depend on
@@ -94,7 +96,7 @@ public static class SetHelpers
 
 		// do_set_atr(thing, flag, p, player, 1) — the trailing 1 is what makes it report the write
 		// (`flags & 0x01`, src/attrib.c:2445).
-		async ValueTask<CallState> SetAttributeValue(AnySharpObject found, int colonIndex)
+		async ValueTask<CallState> SetAttributeValue(AnySharpObject found, int colonIndex, bool areQuiet)
 		{
 			var attribute = flagOrAttributeValue.Substring(0, colonIndex);
 			var content = flagOrAttributeValue.Substring(colonIndex + 1, flagOrAttributeValue.Length - (colonIndex + 1));
@@ -125,7 +127,7 @@ public static class SetHelpers
 		// `do { f = split_token(&p, ' '); … set_flag(player, thing, f, negate, …) } while (p)`. The
 		// loop runs to the end whatever any one token does; the first failure is what the caller is
 		// told about, since a function has one return value and Penn has none at all.
-		async ValueTask<CallState> SetFlags(AnySharpObject found)
+		async ValueTask<CallState> SetFlags(AnySharpObject found, bool areQuiet)
 		{
 			CallState? failure = null;
 

@@ -30,16 +30,44 @@ public partial class Functions
 			await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, playerName,
 				LocateFlags.All);
 
-		if (maybePlayer.IsError) return (null, null, maybePlayer.AsError);
+		return maybePlayer switch
+		{
+			Error<CallState> error => (null, null, error.Value),
+			AnySharpObject player => await WithChannel(player)
+		};
 
 		// extchat.c:2434 (fun_ctitle) / :2491 (fun_cstatus) — "You must pass the channel's see-lock".
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, MarkupText.Plain(channelName!), false);
-
-		if (maybeChannel.IsError) return (maybePlayer.AsSharpObject, null, maybeChannel.AsError.Value);
-
-		return (maybePlayer.AsSharpObject, maybeChannel.AsChannel, null);
+		async ValueTask<(AnySharpObject? Player, SharpChannel? Channel, CallState? Error)> WithChannel(AnySharpObject player)
+			=> await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+					NotifyService, executor, MarkupText.Plain(channelName), false) switch
+			{
+				Error<CallState> error => (player, null, error.Value),
+				SharpChannel channel => (player, channel, null)
+			};
 	}
+
+	/// <summary>
+	/// The channel <paramref name="channelName"/> names, if <paramref name="executor"/> may see it, handed
+	/// to <paramref name="channelFunc"/>; the refusal otherwise.
+	/// </summary>
+	private async ValueTask<CallState> WithVisibleChannel(AnySharpObject executor, MString channelName,
+		Func<SharpChannel, ValueTask<CallState>> channelFunc)
+		=> await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator, NotifyService, executor,
+				channelName, false) switch
+		{
+			Error<CallState> error => error.Value,
+			SharpChannel channel => await channelFunc(channel)
+		};
+
+	/// <inheritdoc cref="WithVisibleChannel(AnySharpObject, MString, Func{SharpChannel, ValueTask{CallState}})"/>
+	private async ValueTask<CallState> WithVisibleChannel(AnySharpObject executor, MString channelName,
+		Func<SharpChannel, CallState> channelFunc)
+		=> await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator, NotifyService, executor,
+				channelName, false) switch
+		{
+			Error<CallState> error => error.Value,
+			SharpChannel channel => channelFunc(channel)
+		};
 
 	/// <summary>
 	/// PennMUSH <c>fun_cbufferadd</c> (<c>src/extchat.c:2348-2400</c>):
@@ -59,40 +87,33 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.NoTextGiven);
 		}
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, false);
-
-		if (maybeChannel.IsError)
+		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
-			return maybeChannel.AsError.Value;
-		}
+			// extchat.c:2393 — Chan_Can_Modify, the same gate @channel/buffer and @channel/wipe answer to.
+			if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
+			{
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
 
-		var channel = maybeChannel.AsChannel;
+			// extchat.c:2380 — the third argument attributes the line to the enactor instead of the executor,
+			// which is what makes it usable from a command object replaying somebody's speech.
+			var speaker = executor;
+			if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2) && arg2.Message!.Truthy())
+			{
+				speaker = await parser.CurrentState.KnownEnactorObject(Mediator);
+			}
 
-		// extchat.c:2393 — Chan_Can_Modify, the same gate @channel/buffer and @channel/wipe answer to.
-		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
-		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
+			await Mediator.Send(new AddChannelMessageCommand(new SharpChannelMessage
+			{
+				ChannelId = channel.Id ?? string.Empty,
+				Timestamp = DateTimeOffset.UtcNow,
+				Sender = speaker.Object().DBRef,
+				Message = message,
+				MessageType = "Emit"
+			}));
 
-		// extchat.c:2380 — the third argument attributes the line to the enactor instead of the executor,
-		// which is what makes it usable from a command object replaying somebody's speech.
-		var speaker = executor;
-		if (parser.CurrentState.Arguments.TryGetValue("2", out var arg2) && arg2.Message!.Truthy())
-		{
-			speaker = (await parser.CurrentState.EnactorObject(Mediator)).WithoutNone();
-		}
-
-		await Mediator.Send(new AddChannelMessageCommand(new SharpChannelMessage
-		{
-			ChannelId = channel.Id ?? string.Empty,
-			Timestamp = DateTimeOffset.UtcNow,
-			Sender = speaker.Object().DBRef,
-			Message = message,
-			MessageType = "Emit"
-		}));
-
-		return CallState.Empty;
+			return CallState.Empty;
+		});
 	}
 
 	/// <summary>
@@ -137,48 +158,35 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, false);
-
-		if (maybeChannel.IsError)
+		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
-			return maybeChannel.AsError.Value;
-		}
+			if (!parser.CurrentState.Arguments.TryGetValue("1", out var arg1) || arg1.Message!.Length == 0)
+			{
+				return new CallState(verbose
+					? ChannelHelper.PrivilegeNames(channel.Privs)
+					: ChannelHelper.PrivilegeLetters(channel.Privs));
+			}
 
-		var channel = maybeChannel.AsChannel;
+			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
+				arg1.Message!.ToPlainText(), LocateFlags.All, async player =>
+				{
+					// extchat.c:2295 — a member's own channel flags are examine-gated, so this cannot be used to
+					// read who is hiding or gagging on a channel you share with them.
+					if (!await PermissionService.CanExamine(executor, player))
+					{
+						return new CallState(ErrorMessages.Returns.PermissionDenied);
+					}
 
-		if (!parser.CurrentState.Arguments.TryGetValue("1", out var arg1) || arg1.Message!.Length == 0)
-		{
-			return new CallState(verbose
-				? ChannelHelper.PrivilegeNames(channel.Privs)
-				: ChannelHelper.PrivilegeLetters(channel.Privs));
-		}
+					var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player, channel);
 
-		var maybePlayer = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
-			arg1.Message!.ToPlainText(), LocateFlags.All);
+					if (maybeMemberStatus is null)
+					{
+						return new CallState(ErrorMessages.Returns.NotOnChannel);
+					}
 
-		if (maybePlayer.IsError)
-		{
-			return maybePlayer.AsError;
-		}
-
-		var player = maybePlayer.AsSharpObject;
-
-		// extchat.c:2295 — a member's own channel flags are examine-gated, so this cannot be used to read
-		// who is hiding or gagging on a channel you share with them.
-		if (!await PermissionService.CanExamine(executor, player))
-		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(player, channel);
-
-		if (maybeMemberStatus is null)
-		{
-			return new CallState(ErrorMessages.Returns.NotOnChannel);
-		}
-
-		return new CallState(ChannelHelper.MemberFlags(maybeMemberStatus.Status, verbose));
+					return new CallState(ChannelHelper.MemberFlags(maybeMemberStatus.Status, verbose));
+				});
+		});
 	}
 
 	[SharpFunction(Name = "channels", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -192,12 +200,14 @@ public partial class Functions
 		{
 			var maybePlayer = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 				arg0.Message!.ToPlainText(), LocateFlags.All);
-			if (maybePlayer.IsError)
+			switch (maybePlayer)
 			{
-				return maybePlayer.AsError;
+				case Error<CallState> error:
+					return error.Value;
+				case AnySharpObject located:
+					player = located;
+					break;
 			}
-
-			player = maybePlayer.AsSharpObject;
 		}
 
 		var type = "all";
@@ -278,42 +288,35 @@ public partial class Functions
 		// Chan_Can_Decomp below refuses with #-1 PERMISSION DENIED, which a raw lookup's
 		// #-1 NO SUCH CHANNEL is distinguishable from — so softcode could tell an invisible channel from a
 		// nonexistent one even though the lock itself stayed secret.
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, MarkupText.Plain(channelName), false);
-
-		if (maybeChannel.IsError)
+		return await WithVisibleChannel(executor, MarkupText.Plain(channelName), async channel =>
 		{
-			return maybeChannel.AsError.Value;
-		}
+			// extchat.c:3400-3419 — five lock types, and anything else is an error rather than a silent JOIN.
+			// The type is resolved to a reader before it is read, so "unrecognised type" and "recognised type
+			// holding nothing" cannot answer the same way.
+			Func<SharpChannel, string>? readLock = lockType.ToUpperInvariant() switch
+			{
+				"JOIN" => x => x.JoinLock,
+				"SPEAK" => x => x.SpeakLock,
+				"MOD" => x => x.ModLock,
+				"SEE" => x => x.SeeLock,
+				"HIDE" => x => x.HideLock,
+				_ => null
+			};
 
-		var channel = maybeChannel.AsChannel;
+			if (readLock is null)
+			{
+				return new CallState(ErrorMessages.Returns.NoSuchLockType);
+			}
 
-		// extchat.c:3400-3419 — five lock types, and anything else is an error rather than a silent JOIN.
-		// The type is resolved to a reader before it is read, so "unrecognised type" and "recognised type
-		// holding nothing" cannot answer the same way.
-		Func<SharpChannel, string>? readLock = lockType.ToUpperInvariant() switch
-		{
-			"JOIN" => x => x.JoinLock,
-			"SPEAK" => x => x.SpeakLock,
-			"MOD" => x => x.ModLock,
-			"SEE" => x => x.SeeLock,
-			"HIDE" => x => x.HideLock,
-			_ => null
-		};
+			// extchat.c:3437 — reading a channel's lock needs Chan_Can_Decomp. This handed every channel's
+			// join/speak/see/hide/mod lock key to any mortal who asked for it.
+			if (!await PermissionService.ChannelCanDecomposeAsync(executor, channel))
+			{
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
 
-		if (readLock is null)
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchLockType);
-		}
-
-		// extchat.c:3437 — reading a channel's lock needs Chan_Can_Decomp. This handed every channel's
-		// join/speak/see/hide/mod lock key to any mortal who asked for it.
-		if (!await PermissionService.ChannelCanDecomposeAsync(executor, channel))
-		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		return new CallState(readLock(channel) ?? string.Empty);
+			return new CallState(readLock(channel) ?? string.Empty);
+		});
 	}
 
 	[SharpFunction(Name = "cmogrifier", MinArgs = 1, MaxArgs = 1,
@@ -323,17 +326,7 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, false);
-
-		if (maybeChannel.IsError)
-		{
-			return maybeChannel.AsError.Value;
-		}
-
-		var channel = maybeChannel.AsChannel;
-
-		return new CallState(channel.Mogrifier);
+		return await WithVisibleChannel(executor, channelName, channel => new CallState(channel.Mogrifier));
 	}
 
 	[SharpFunction(Name = "cowner", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
@@ -342,18 +335,12 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, false);
-
-		if (maybeChannel.IsError)
+		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
-			return maybeChannel.AsError.Value;
-		}
+			var owner = await channel.Owner.WithCancellation(CancellationToken.None);
 
-		var channel = maybeChannel.AsChannel;
-		var owner = await channel.Owner.WithCancellation(CancellationToken.None);
-
-		return new CallState(owner.Object.DBRef.ToString());
+			return new CallState(owner.Object.DBRef.ToString());
+		});
 	}
 
 	/// <summary>
@@ -459,42 +446,35 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, false);
-
-		if (maybeChannel.IsError)
+		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
-			return maybeChannel.AsError.Value;
-		}
-
-		var channel = maybeChannel.AsChannel;
-
-		var matchCondition = "on";
-		if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1) && arg1.Message!.Length != 0)
-		{
-			matchCondition = arg1.Message!.ToPlainText().ToLowerInvariant();
-			if (matchCondition is not ("on" or "off" or "all"))
+			var matchCondition = "on";
+			if (parser.CurrentState.Arguments.TryGetValue("1", out var arg1) && arg1.Message!.Length != 0)
 			{
-				return new CallState(ErrorMessages.Returns.InvalidArgument);
+				matchCondition = arg1.Message!.ToPlainText().ToLowerInvariant();
+				if (matchCondition is not ("on" or "off" or "all"))
+				{
+					return new CallState(ErrorMessages.Returns.InvalidArgument);
+				}
 			}
-		}
 
-		var skipGagged = parser.CurrentState.Arguments.TryGetValue("2", out var arg2)
-										 && arg2.Message!.Truthy();
+			var skipGagged = parser.CurrentState.Arguments.TryGetValue("2", out var arg2)
+											 && arg2.Message!.Truthy();
 
-		var privilegedWho = await ChannelHelper.PrivilegedWho(executor);
+			var privilegedWho = await ChannelHelper.PrivilegedWho(executor);
 
-		var listed = (await ChannelHelper.ChannelMembers(ConnectionService, channel))
-			.Where(x => matchCondition switch
-			{
-				"off" => x.ListedAsOff(privilegedWho),
-				"all" => true,
-				_ => x.ListedAsOn(privilegedWho)
-			})
-			.Where(x => !skipGagged || !x.Gagging)
-			.Select(x => x.Object.Object().DBRef.ToString());
+			var listed = (await ChannelHelper.ChannelMembers(ConnectionService, channel))
+				.Where(x => matchCondition switch
+				{
+					"off" => x.ListedAsOff(privilegedWho),
+					"all" => true,
+					_ => x.ListedAsOn(privilegedWho)
+				})
+				.Where(x => !skipGagged || !x.Gagging)
+				.Select(x => x.Object.Object().DBRef.ToString());
 
-		return new CallState(string.Join(" ", listed));
+			return new CallState(string.Join(" ", listed));
+		});
 	}
 
 	[SharpFunction(Name = "cbuffer", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["channel"])]
@@ -503,17 +483,7 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, false);
-
-		if (maybeChannel.IsError)
-		{
-			return maybeChannel.AsError.Value;
-		}
-
-		var channel = maybeChannel.AsChannel;
-
-		return new CallState(channel.Buffer.ToString());
+		return await WithVisibleChannel(executor, channelName, channel => new CallState(channel.Buffer.ToString()));
 	}
 
 	[SharpFunction(Name = "cdesc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["channel"])]
@@ -522,17 +492,7 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, false);
-
-		if (maybeChannel.IsError)
-		{
-			return maybeChannel.AsError.Value;
-		}
-
-		var channel = maybeChannel.AsChannel;
-
-		return new CallState(channel.Description);
+		return await WithVisibleChannel(executor, channelName, channel => new CallState(channel.Description));
 	}
 
 	[SharpFunction(Name = "cmsgs", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
@@ -541,20 +501,13 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, false);
-
-		if (maybeChannel.IsError)
+		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
-			return maybeChannel.AsError.Value;
-		}
+			var count = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
+				.CountAsync();
 
-		var channel = maybeChannel.AsChannel;
-
-		var count = await Mediator.CreateStream(new GetChannelMessagesQuery(channel.Id ?? string.Empty, int.MaxValue))
-			.CountAsync();
-
-		return new CallState(count.ToString());
+			return new CallState(count.ToString());
+		});
 	}
 
 	[SharpFunction(Name = "cusers", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["channel"])]
@@ -563,19 +516,12 @@ public partial class Functions
 		var channelName = parser.CurrentState.Arguments["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, false);
-
-		if (maybeChannel.IsError)
+		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
-			return maybeChannel.AsError.Value;
-		}
+			var memberCount = await channel.Members.Value.CountAsync();
 
-		var channel = maybeChannel.AsChannel;
-
-		var memberCount = await channel.Members.Value.CountAsync();
-
-		return new CallState(memberCount.ToString());
+			return new CallState(memberCount.ToString());
+		});
 	}
 
 	[SharpFunction(Name = "CINFO", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -588,24 +534,17 @@ public partial class Functions
 			: "name";
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var maybeChannel = await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, false);
-
-		if (maybeChannel.IsError)
+		return await WithVisibleChannel(executor, channelName, async channel =>
 		{
-			return maybeChannel.AsError.Value;
-		}
-
-		var channel = maybeChannel.AsChannel;
-
-		var owner = await channel.Owner.WithCancellation(CancellationToken.None);
-		return infoType switch
-		{
-			"name" => new CallState(channel.Name),
-			"owner" => new CallState($"#{owner.Object.DBRef.Number}"),
-			"members" => new CallState((await channel.Members.Value.CountAsync()).ToString()),
-			"buffer" => new CallState("50"), // Default buffer size
-			_ => new CallState(ErrorMessages.Returns.InvalidInfoType)
-		};
+			var owner = await channel.Owner.WithCancellation(CancellationToken.None);
+			return infoType switch
+			{
+				"name" => new CallState(channel.Name),
+				"owner" => new CallState($"#{owner.Object.DBRef.Number}"),
+				"members" => new CallState((await channel.Members.Value.CountAsync()).ToString()),
+				"buffer" => new CallState("50"), // Default buffer size
+				_ => new CallState(ErrorMessages.Returns.InvalidInfoType)
+			};
+		});
 	}
 }

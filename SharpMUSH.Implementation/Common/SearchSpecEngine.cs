@@ -116,11 +116,11 @@ public static class SearchSpecEngine
 					break;
 				case "ZONE":
 					var maybeZone = await locateService.Locate(parser, executor, executor, restriction, LocateFlags.All);
-					if (maybeZone.IsValid()) zone = maybeZone.AsAnyObject.Object().DBRef;
+					if (maybeZone is AnySharpObject zoneObject) zone = zoneObject.Object().DBRef;
 					break;
 				case "PARENT":
 					var maybeParent = await locateService.Locate(parser, executor, executor, restriction, LocateFlags.All);
-					if (maybeParent.IsValid()) parent = maybeParent.AsAnyObject.Object().DBRef;
+					if (maybeParent is AnySharpObject parentObject) parent = parentObject.Object().DBRef;
 					break;
 				case "FLAG":
 				case "FLAGS":
@@ -278,11 +278,11 @@ public static class SearchSpecEngine
 			if (matches && hasListenCriteria)
 			{
 				var attributesResult = await attributeService.GetVisibleAttributesAsync(executor, typedObj);
-				if (!attributesResult.IsError)
+				if (attributesResult is SharpAttribute[] attributes)
 				{
 					var hasMatchingListen = false;
 
-					foreach (var attr in attributesResult.AsAttributes.Where(a => a.Name.Equals("LISTEN", StringComparison.OrdinalIgnoreCase) ||
+					foreach (var attr in attributes.Where(a => a.Name.Equals("LISTEN", StringComparison.OrdinalIgnoreCase) ||
 																										 a.Name.StartsWith("LISTEN`", StringComparison.OrdinalIgnoreCase)))
 					{
 						var attrValue = attr.Value?.ToPlainText() ?? "";
@@ -307,11 +307,11 @@ public static class SearchSpecEngine
 			if (matches && hasCommandCriteria)
 			{
 				var attributesResult = await attributeService.GetVisibleAttributesAsync(executor, typedObj);
-				if (!attributesResult.IsError)
+				if (attributesResult is SharpAttribute[] attributes)
 				{
 					var hasMatchingCommand = false;
 
-					foreach (var attr in attributesResult.AsAttributes)
+					foreach (var attr in attributes)
 					{
 						var attrValue = attr.Value?.ToPlainText() ?? "";
 						// $-commands are in format: $command-pattern:action
@@ -396,10 +396,8 @@ public static class SearchSpecEngine
 
 		if (ownerFilter is { } namedOwner)
 		{
-			var ownerNode = await mediator.Send(new GetObjectNodeQuery(namedOwner));
-			if (!ownerNode.IsNone)
+			if (await mediator.Send(new GetObjectNodeQuery(namedOwner)) is AnySharpObject ownerObject)
 			{
-				var ownerObject = ownerNode.Known;
 				if (await ownerObject.HasFlag("SHARED") && await permissionService.PassesLock(executor, ownerObject, LockType.Zone))
 				{
 					return false;
@@ -417,14 +415,11 @@ public static class SearchSpecEngine
 	private static async Task<AnySharpObject> CreateAnySharpObjectFromSharpObject(IMediator mediator, SharpObject obj)
 	{
 		var dbref = new DBRef(obj.Key, obj.CreationTime);
-		var result = await mediator.Send(new GetObjectNodeQuery(dbref));
-
-		if (result.IsNone)
+		if (await mediator.Send(new GetObjectNodeQuery(dbref)) is not AnySharpObject found)
 		{
-			// This shouldn't happen in normal operation, but handle it gracefully
 			throw new InvalidOperationException($"Object {dbref} not found when evaluating lock criteria");
 		}
 
-		return result.Known;
+		return found;
 	}
 }

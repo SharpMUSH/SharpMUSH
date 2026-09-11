@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -21,8 +22,7 @@ public class GetAncestorCommandAttributesQueryHandler(
 	public async ValueTask<CommandAttributeCache[]> Handle(
 		GetAncestorCommandAttributesQuery request, CancellationToken cancellationToken)
 	{
-		var ancestorNode = await mediator.Send(new GetObjectNodeQuery(request.Ancestor), cancellationToken);
-		if (ancestorNode.IsNone)
+		if (await mediator.Send(new GetObjectNodeQuery(request.Ancestor), cancellationToken) is not AnySharpObject ancestor)
 		{
 			return [];
 		}
@@ -31,7 +31,7 @@ public class GetAncestorCommandAttributesQueryHandler(
 		var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		var noCommandPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-		var ancestorObj = ancestorNode.Known.Object();
+		var ancestorObj = ancestor.Object();
 
 		// The ancestor's attributes are inherited BY the child, so they are scanned as non-local
 		// (isLocal: false) — exactly as the original single-pass command scan did. A no_inherit
@@ -48,10 +48,9 @@ public class GetAncestorCommandAttributesQueryHandler(
 		var ancestorCurrent = ancestorObj;
 		for (var depth = 0; depth < maxDepth; depth++)
 		{
-			var ancestorParent = await ancestorCurrent.Parent.WithCancellation(cancellationToken);
-			if (ancestorParent.IsNone) break;
+			if (await ancestorCurrent.Parent.WithCancellation(cancellationToken) is not AnySharpObject ancestorParent) break;
 
-			var ancestorParentObj = ancestorParent.Known.Object();
+			var ancestorParentObj = ancestorParent.Object();
 			if (!visited.Add(ancestorParentObj.DBRef.Number)) break;
 
 			await CommandAttributeScanner.ScanAttributes(ancestorParentObj.AllAttributes.Value, commandAttributes,

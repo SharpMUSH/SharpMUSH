@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models;
 using System.Collections.Concurrent;
 using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
@@ -120,16 +121,13 @@ public partial class Functions
 		{
 			var maybeFound = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
 				speaker.ToPlainText(), LocateFlags.All);
-			if (maybeFound.IsError)
+			switch (maybeFound)
 			{
-				return maybeFound.AsError;
-			}
-
-			var found = maybeFound.AsSharpObject;
-
-			if (await PermissionService.Controls(executor, found))
-			{
-				speakerObject = found;
+				case Error<CallState> error:
+					return error.Value;
+				case AnySharpObject found when await PermissionService.Controls(executor, found):
+					speakerObject = found;
+					break;
 			}
 
 			speakerName = MarkupText.Plain(speakerObject.Object().Name);
@@ -202,12 +200,15 @@ public partial class Functions
 					splitTransform.Object,
 					LocateFlags.All);
 
-			if (transformationObject.IsError)
+			switch (transformationObject)
 			{
-				return transformationObject.AsError;
+				case Error<CallState> error:
+					return error.Value;
+				case AnySharpObject found:
+					actualTransformationObject = found;
+					break;
 			}
 
-			actualTransformationObject = transformationObject.AsSharpObject;
 			actualTransformAttribute = splitTransform.Attribute;
 		}
 
@@ -227,11 +228,14 @@ public partial class Functions
 					splitNull.Object,
 					LocateFlags.All);
 
-			if (nullObject.IsError)
+			switch (nullObject)
 			{
-				return nullObject.AsError;
+				case Error<CallState> error:
+					return error.Value;
+				case AnySharpObject found:
+					actualNullObject = found;
+					break;
 			}
-			actualNullObject = nullObject.AsSharpObject;
 		}
 
 		if (hasTransform)
@@ -819,12 +823,9 @@ public partial class Functions
 	private int CompareDbRefs(string value1, string value2)
 	{
 		// Try to parse as dbrefs (#123 or objid #123:timestamp format)
-		var dbref1 = HelperFunctions.ParseDbRef(value1);
-		var dbref2 = HelperFunctions.ParseDbRef(value2);
-
-		if (dbref1.IsSome() && dbref2.IsSome())
+		if (HelperFunctions.ParseDbRef(value1) is DBRef dbref1 && HelperFunctions.ParseDbRef(value2) is DBRef dbref2)
 		{
-			return dbref1.AsValue().Number.CompareTo(dbref2.AsValue().Number);
+			return dbref1.Number.CompareTo(dbref2.Number);
 		}
 
 		// Fall back to string comparison if not valid dbrefs

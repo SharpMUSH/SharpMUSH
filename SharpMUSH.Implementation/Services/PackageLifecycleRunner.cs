@@ -76,21 +76,16 @@ public class PackageLifecycleRunner(
 				return;
 			}
 
-			var godNode = await mediator.Send(new GetObjectNodeQuery(God), cancellationToken);
-			if (godNode.IsNone)
+			if (await mediator.Send(new GetObjectNodeQuery(God), cancellationToken) is not AnySharpObject god)
 			{
 				logger.LogWarning("Package lifecycle '{Attribute}' on {ObjId} skipped: God (#1) not found.", attribute, objId);
 				return;
 			}
 
-			var targetNode = await mediator.Send(new GetObjectNodeQuery(dbref.Value), cancellationToken);
-			if (targetNode.IsNone)
+			if (await mediator.Send(new GetObjectNodeQuery(dbref.Value), cancellationToken) is not AnySharpObject target)
 			{
 				return;
 			}
-
-			var god = godNode.Known;
-			var target = targetNode.Known;
 
 			// Establish a God base parser state (there is no ambient parser on the install path),
 			// then run the lifecycle attribute as a COMMAND LIST under the package object itself.
