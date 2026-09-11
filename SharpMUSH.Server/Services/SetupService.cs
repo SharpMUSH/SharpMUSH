@@ -54,13 +54,13 @@ public class SetupService(
 			else if (needsRename)
 			{
 				var rename = await accountService.ChangeUsernameAsync(account.Id!, username, ct);
-				if (rename.IsT1)
-					return rename.AsT1; // username taken (race) — claim NOT consumed
+				if (rename is Error<string> renameError)
+					return renameError; // username taken (race) — claim NOT consumed
 			}
 
 			var setPassword = await accountService.SetPasswordAsync(account.Id!, password, mustChangePassword: false, ct);
-			if (setPassword.IsT1)
-				return setPassword.AsT1;
+			if (setPassword is Error<string> setPasswordError)
+				return setPasswordError;
 
 			await SetGodCharacterPasswordAsync(password, ct);
 
@@ -102,8 +102,7 @@ public class SetupService(
 	{
 		try
 		{
-			var god = await objects.GetObjectNodeAsync(new DBRef(1), ct);
-			if (!god.IsT0)
+			if (await objects.GetObjectNodeAsync(new DBRef(1), ct) is not SharpPlayer player)
 			{
 				logger.LogError(
 					"First-run setup: #1 is not a player, so no character password could be set on it. "
@@ -111,7 +110,6 @@ public class SetupService(
 				return;
 			}
 
-			var player = god.AsT0;
 			await passwordService.SetPassword(player,
 				passwordService.HashPassword($"#{player.Object.Key}:{player.Object.CreationTime}", password));
 		}

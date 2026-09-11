@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Server.Services;
@@ -34,14 +35,15 @@ public static class BundledHttpHooks
 		foreach (var packageId in PackageIds)
 		{
 			var parsed = service.ParseManifest(ManifestYaml(packageId));
-			if (parsed.IsT1)
+			if (parsed is not ParsedPackageManifest { Manifest: var manifest })
 			{
+				var issues = ((PackageManifestFailure)parsed.Value!).Issues;
 				throw new InvalidOperationException(
-					$"Bundled {packageId} manifest is invalid: {string.Join("; ", parsed.AsT1.Issues.Select(i => i.ToString()))}");
+					$"Bundled {packageId} manifest is invalid: {string.Join("; ", issues.Select(i => i.ToString()))}");
 			}
 
 			// Each default package has a single attach object (the handler).
-			foreach (var (name, attr) in parsed.AsT0.Manifest.Objects.Single().Attributes)
+			foreach (var (name, attr) in manifest.Objects.Single().Attributes)
 			{
 				merged[name] = attr.Value;
 			}

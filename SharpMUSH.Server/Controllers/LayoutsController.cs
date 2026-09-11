@@ -43,10 +43,9 @@ public class LayoutsController(
 	[AllowAnonymous]
 	public async Task<ActionResult<LayoutConfiguration>> Get(string scope)
 	{
-		var result = await layouts.GetLayoutAsync(scope);
-		return result.Match<ActionResult<LayoutConfiguration>>(
-			layout => Ok(layout),
-			_ => NoContent());
+		return await layouts.GetLayoutAsync(scope) is LayoutConfiguration layout
+			? Ok(layout)
+			: NoContent();
 	}
 
 	[HttpPut("{scope}")]

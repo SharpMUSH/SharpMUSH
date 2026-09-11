@@ -586,17 +586,15 @@ public class AccountAuthService(
 	/// the empty roster, not a failure — there is nothing to ask for and no session to ask with.
 	/// </summary>
 	/// <remarks>
-	/// "This account owns no character" and "we could not find out" used to render identically,
-	/// because a failed request degraded to an empty list — the same defect this branch fixed in
-	/// <see cref="CharacterDirectoryService"/>, where a failed fetch printed a confident 0. /play
-	/// then told an account whose roster request had merely failed that it had no character and
-	/// offered to create one. The failure is in the type so a consumer has to decide what to do
-	/// with it rather than inherit the old lie by accident.
+	/// "This account owns no character" and "we could not find out" are different facts. A failed
+	/// request that degraded to an empty list would have /play tell an account whose roster request
+	/// had merely failed that it had no character, and offer to create one. The failure is in the
+	/// type so a consumer has to decide what to do with it.
 	/// </remarks>
 	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> GetCharactersAsync()
 	{
 		await InitAsync();
-		if (AccountSessionToken is null) return ServerResult<IReadOnlyList<CharacterSummary>>.FromT0([]);
+		if (AccountSessionToken is null) return new ServerResult<IReadOnlyList<CharacterSummary>>([]);
 
 		try
 		{
@@ -605,7 +603,7 @@ public class AccountAuthService(
 				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
 			var characters = await http.GetFromJsonAsync<IReadOnlyList<CharacterSummary>>("api/account/characters");
 			SetCharacters(characters ?? []);
-			return ServerResult<IReadOnlyList<CharacterSummary>>.FromT0(Characters);
+			return new ServerResult<IReadOnlyList<CharacterSummary>>(Characters);
 		}
 		catch (Exception ex)
 		{

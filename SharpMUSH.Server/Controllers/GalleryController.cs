@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -86,12 +87,11 @@ public class GalleryController(
 			return Unauthorized("Missing character identity.");
 		await using var content = file.OpenReadStream();
 		var saved = await assetService.SaveAsync(file.FileName, file.ContentType, content, uploaderDbref, ct);
-		if (saved.IsT1)
+		if (saved is not WikiAsset asset)
 		{
-			return StatusCode(StatusCodes.Status500InternalServerError, new { error = saved.AsT1.Value });
+			return StatusCode(StatusCodes.Status500InternalServerError, new { error = ((Error<string>)saved.Value!).Value });
 		}
 
-		var asset = saved.AsT0;
 		var entries = (await ReadGalleryAsync(character)).ToList();
 		entries.Add(new GalleryEntry(
 			AssetId: asset.Id,
@@ -102,7 +102,7 @@ public class GalleryController(
 			IsIcon: entries.Count == 0));
 
 		var write = await WriteGalleryAsync(character, entries);
-		if (write.IsT1) return StatusCode(StatusCodes.Status500InternalServerError, write.AsT1.Value);
+		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
 		logger.LogInformation("Gallery image added to {Character}: asset={Asset} by={Uploader}", LogSanitizer.Sanitize(name), asset.Id, LogSanitizer.Sanitize(uploaderDbref));
 		return Ok(entries.OrderBy(e => e.Order).ToList());
 	}
@@ -131,7 +131,7 @@ public class GalleryController(
 		}
 
 		var write = await WriteGalleryAsync(character, sanitized);
-		if (write.IsT1) return StatusCode(StatusCodes.Status500InternalServerError, write.AsT1.Value);
+		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
 		return Ok(sanitized);
 	}
 
@@ -158,7 +158,7 @@ public class GalleryController(
 		}
 
 		var write = await WriteGalleryAsync(character, entries);
-		if (write.IsT1) return StatusCode(StatusCodes.Status500InternalServerError, write.AsT1.Value);
+		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
 		await assetService.DeleteAsync(assetId);
 		return Ok(entries.OrderBy(e => e.Order).ToList());
 	}

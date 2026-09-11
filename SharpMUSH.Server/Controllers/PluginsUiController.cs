@@ -33,9 +33,8 @@ public sealed class PluginsUiController(
 			return NotFound();
 		}
 
-		var result = await provider.GetVerifiedAssemblyAsync(pluginId, assembly, cancellationToken);
-		return result.Match<IActionResult>(
-			bytes => File(bytes, "application/wasm"),
-			_ => NotFound());
+		return await provider.GetVerifiedAssemblyAsync(pluginId, assembly, cancellationToken) is byte[] bytes
+			? File(bytes, "application/wasm")
+			: NotFound();
 	}
 }

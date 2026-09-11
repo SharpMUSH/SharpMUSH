@@ -58,8 +58,7 @@
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
-        var roster = await AccountAuth.GetCharactersAsync();
-        _onboarding = roster.Match(characters => characters.Count == 0, _ => false);
+        _onboarding = await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> { Count: 0 };
     }
 
     private async Task CreateAsync()

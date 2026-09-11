@@ -57,8 +57,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _characters = (await CharacterDirectory.ListOnlineAsync())
-            .Match(rows => rows, _ => (IReadOnlyList<CharacterDirectoryService.CharacterSummary>?)null);
+        _characters = await CharacterDirectory.ListOnlineAsync()
+            is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows ? rows : null;
         _loading = false;
     }
 }

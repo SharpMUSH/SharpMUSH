@@ -111,9 +111,15 @@
         {
             await using var stream = file.OpenReadStream(maxAllowedSize: MaxUploadBytes);
             var result = await AssetService.UploadAsync(stream, file.Name, file.ContentType);
-            result.Switch(
-                uploaded => Snackbar.Add(Loc["WkAssetUploaded", uploaded.FileName], Severity.Success),
-                error => Snackbar.Add(error, Severity.Error));
+            switch (result)
+            {
+                case UploadedAssetInfo uploaded:
+                    Snackbar.Add(Loc["WkAssetUploaded", uploaded.FileName], Severity.Success);
+                    break;
+                case string error:
+                    Snackbar.Add(error, Severity.Error);
+                    break;
+            }
         }
         finally
         {

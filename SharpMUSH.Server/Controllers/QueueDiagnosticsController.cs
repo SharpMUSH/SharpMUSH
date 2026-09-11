@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Diagnostics;
 using SharpMUSH.Library.Services;
@@ -23,24 +24,33 @@ public sealed class QueueDiagnosticsController(IQueueDiagnosticsService diagnost
 		[FromQuery] Guid? beforeCursor = null, CancellationToken ct = default)
 	{
 		if (Actor(character) is not { } actor) return StatusCode(403);
-		var result = await diagnostics.InspectAsync(actor, limit, beforeCursor, ct);
-		return result.Match<IActionResult>(Ok, Error);
+		return await diagnostics.InspectAsync(actor, limit, beforeCursor, ct) switch
+		{
+			QueueDiagnosticsReport report => Ok(report),
+			DiagnosticsError error => Error(error)
+		};
 	}
 
 	[HttpPost("profile")]
 	public async Task<IActionResult> Start([FromBody] ProfileRequest request, CancellationToken ct = default)
 	{
 		if (Actor(request.Character) is not { } actor) return StatusCode(403);
-		var result = await diagnostics.StartProfileAsync(actor, request.Seconds, ct);
-		return result.Match<IActionResult>(id => Ok(new { id }), Error);
+		return await diagnostics.StartProfileAsync(actor, request.Seconds, ct) switch
+		{
+			Guid id => Ok(new { id }),
+			DiagnosticsError error => Error(error)
+		};
 	}
 
 	[HttpDelete("profile")]
 	public async Task<IActionResult> Stop([FromQuery] string character, CancellationToken ct = default)
 	{
 		if (Actor(character) is not { } actor) return StatusCode(403);
-		var result = await diagnostics.StopProfileAsync(actor, ct);
-		return result.Match<IActionResult>(_ => NoContent(), Error);
+		return await diagnostics.StopProfileAsync(actor, ct) switch
+		{
+			Success => NoContent(),
+			DiagnosticsError error => Error(error)
+		};
 	}
 
 	private CapabilityActor? Actor(string character)

@@ -79,12 +79,10 @@ public sealed class BotPrerenderMiddleware(
 				var ns = ParseNamespace(segments[0]);
 				var category = segments[1];
 				var slug = string.Join('/', segments[2..]);
-				var result = await wikiService.GetBySlugAsync(slug, category, ns);
-				// Published gate: a prerender is anonymous, bot-facing output, and this branch had no
-				// visibility check at all — a draft page was reachable by any crawler that asked.
-				if (result.IsT0 && result.AsT0.Published)
+				// Published gate: a prerender is anonymous, bot-facing output, so a draft page must not
+				// be reachable by any crawler that asks for it.
+				if (await wikiService.GetBySlugAsync(slug, category, ns) is WikiPage { Published: true } page)
 				{
-					var page = result.AsT0;
 					html = WikiController.GeneratePrerenderHtml(
 						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
 						$"{canonicalBase}/wiki/{page.Namespace}/{page.Category}/{page.Slug}",
@@ -98,10 +96,9 @@ public sealed class BotPrerenderMiddleware(
 			var name = path["/character/".Length..].Trim('/');
 			if (!string.IsNullOrEmpty(name))
 			{
-				var result = await wikiService.GetBySlugAsync(name, WikiHelpers.DefaultCategory, WikiNamespace.Character);
-				if (result.IsT0 && result.AsT0.Published)
+				if (await wikiService.GetBySlugAsync(name, WikiHelpers.DefaultCategory, WikiNamespace.Character)
+					is WikiPage { Published: true } page)
 				{
-					var page = result.AsT0;
 					html = WikiController.GenerateCharacterPrerenderHtml(
 						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
 						$"{canonicalBase}/character/{name}",

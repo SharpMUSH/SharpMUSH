@@ -97,8 +97,7 @@ public class RolesController(
 				}
 			}
 
-			var existingResult = await roles.GetRoleAsync(slug);
-			var existing = existingResult.Match(role => role, _ => (SharpRole?)null);
+			var existing = await roles.GetRoleAsync(slug) is SharpRole found ? found : null;
 
 			var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -136,14 +135,13 @@ public class RolesController(
 		await MutationGate.WaitAsync(HttpContext.RequestAborted);
 		try
 		{
-			var existingResult = await roles.GetRoleAsync(slug);
-			var isSystem = existingResult.Match(role => role.IsSystem, _ => false);
-			if (isSystem)
+			var existing = await roles.GetRoleAsync(slug);
+			if (existing is SharpRole { IsSystem: true })
 			{
 				return BadRequest(new { error = "System roles cannot be deleted." });
 			}
 
-			if (existingResult.IsT0 && !await CanChangeAsync(existingResult.AsT0)) return Forbid();
+			if (existing is SharpRole role && !await CanChangeAsync(role)) return Forbid();
 			await roles.RemoveRoleAsync(slug);
 			logger.LogInformation("Removed role {Slug}.", System.Text.Json.JsonSerializer.Serialize(slug));
 			return Ok(new { deleted = true });
@@ -179,9 +177,7 @@ public class RolesController(
 		await MutationGate.WaitAsync(HttpContext.RequestAborted);
 		try
 		{
-			var existingResult = await roles.GetRoleAsync(slug);
-			var exists = existingResult.Match(_ => true, _ => false);
-			if (!exists)
+			if (await roles.GetRoleAsync(slug) is not SharpRole role)
 			{
 				return BadRequest(new { error = $"Unknown role: {slug}" });
 			}
@@ -189,7 +185,7 @@ public class RolesController(
 			var account = await accounts.GetByIdAsync(accountId);
 			if (account?.Id is null) return NotFound();
 			accountId = account.Id;
-			if (!await CanChangeAsync(existingResult.AsT0, accountId)) return Forbid();
+			if (!await CanChangeAsync(role, accountId)) return Forbid();
 			await roles.AssignRoleToAccountAsync(accountId, slug);
 			logger.LogInformation("Assigned account role {Slug}.", System.Text.Json.JsonSerializer.Serialize(slug));
 			return Ok();
@@ -209,9 +205,8 @@ public class RolesController(
 			var account = await accounts.GetByIdAsync(accountId);
 			if (account?.Id is null) return NotFound();
 			accountId = account.Id;
-			var existing = await roles.GetRoleAsync(slug);
-			if (!existing.IsT0) return NotFound();
-			if (!await CanChangeAsync(existing.AsT0, accountId)) return Forbid();
+			if (await roles.GetRoleAsync(slug) is not SharpRole role) return NotFound();
+			if (!await CanChangeAsync(role, accountId)) return Forbid();
 			await roles.RemoveRoleFromAccountAsync(accountId, slug);
 			logger.LogInformation("Removed account role {Slug}.", System.Text.Json.JsonSerializer.Serialize(slug));
 			return Ok();

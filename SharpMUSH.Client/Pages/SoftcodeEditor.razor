@@ -645,22 +645,22 @@
             // state now, including the loading flag it set on its own way in.
             if (generation != _objectLoadGeneration) return;
 
-            result.Switch(
-                obj =>
-                {
+            switch (result)
+            {
+                case MushObject obj:
                     _selectedObject = obj;
                     // Mobile drill-down: picking an object advances to its attributes.
                     if (advanceMobilePane)
                         _mobilePane = MobilePane.Attrs;
-                },
-                failure =>
-                {
+                    break;
+                case ApiFailure failure:
                     // The selection is deliberately left alone. This runs on the reload after a
                     // successful save too, and blanking the panes because a re-read failed would
                     // throw away work the user can still see and re-save.
                     _saveMessage = Loc["TermErrorLoadingObject", failure.Message];
                     _saveSeverity = Severity.Error;
-                });
+                    break;
+            }
         }
         finally
         {
@@ -831,15 +831,13 @@
         _createObjectType = null;
         _createObjectName = string.Empty;
         var result = await ObjectApi.CreateObjectAsync(name, type);
-        if (result is ApiFailure failure)
+        if (result is not int newDbref)
         {
-            _saveMessage = failure.Message;
+            _saveMessage = ((ApiFailure)result.Value!).Message;
             _saveSeverity = Severity.Error;
             StateHasChanged();
             return;
         }
-
-        var newDbref = result.AsT0;
 
         if (_objectBrowser is not null)
         {

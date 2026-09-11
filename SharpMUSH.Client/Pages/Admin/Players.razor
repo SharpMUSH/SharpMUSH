@@ -99,9 +99,9 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        (await Guests.ListAsync()).Switch(
-            list =>
-            {
+        switch (await Guests.ListAsync())
+        {
+            case AdminGuestsService.GuestListResponse list:
                 _error = null;
                 _list = list;
                 // Pre-fill with a name the server has confirmed is free, so the common case is one click.
@@ -109,12 +109,12 @@
                 // overwrite something they are in the middle of.
                 if (string.IsNullOrWhiteSpace(_newName))
                     _newName = list.NextFreeName;
-            },
-            failure =>
-            {
+                break;
+            case ApiFailure failure:
                 _error = failure.Message;
                 _list = null;
-            });
+                break;
+        }
         _loading = false;
     }
 
@@ -125,13 +125,11 @@
         var result = await Guests.CreateAsync(string.IsNullOrWhiteSpace(_newName) ? null : _newName.Trim());
         _busy = false;
 
-        if (result is ApiFailure failure)
+        if (result is not AdminGuestsService.GuestRow created)
         {
-            _error = failure.Message;
+            _error = ((ApiFailure)result.Value!).Message;
             return;
         }
-
-        var created = result.AsT0;
 
         Snackbar.Add(Loc["AdmGuestCreated", created.Name], Severity.Success);
         _newName = string.Empty;

@@ -132,6 +132,6 @@ public class ConnectionStateChangeHandler(
 		if (!playerRef.HasValue) return null;
 
 		var node = await objects.GetObjectNodeAsync(playerRef.Value, cancellationToken);
-		return node.IsNone() ? null : node.Known().Object().Name;
+		return node.IsNone ? null : node.Known.Object().Name;
 	}
 }

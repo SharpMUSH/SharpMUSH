@@ -125,8 +125,8 @@
     protected override async Task OnInitializedAsync()
     {
         var result = await Directory.ListAsync();
-        _failed = result.IsT1;
-        _all = result.Match(rows => rows, _ => (IReadOnlyList<CharacterDirectoryService.CharacterSummary>)[]);
+        _failed = result is not IReadOnlyList<CharacterDirectoryService.CharacterSummary>;
+        _all = result is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows ? rows : [];
         _categories = _all
             .Select(c => c.Category?.Trim() ?? string.Empty)
             .Distinct()

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Helpers;
 using SharpMUSH.Server.Authentication;
@@ -93,15 +95,13 @@ public partial class WikiAssetController(
 		await using var content = file.OpenReadStream();
 		var result = await assetService.SaveAsync(file.FileName, contentType, content, uploaderDbref, ct);
 
-		return result.Match<IActionResult>(
-			asset =>
-			{
-				logger.LogInformation("Wiki asset uploaded: id={Id} name={Name} size={Size} by={Uploader}",
-					asset.Id, LogSanitizer.Sanitize(asset.FileName), asset.SizeBytes, LogSanitizer.Sanitize(uploaderDbref));
-				var url = AssetUrl(asset.Id, asset.FileName);
-				return Created(url, new UploadedAssetDto(asset.Id, asset.FileName, url, asset.SizeBytes, asset.ContentType));
-			},
-			err => StatusCode(StatusCodes.Status500InternalServerError, new { error = err.Value }));
+		if (result is not WikiAsset asset)
+			return StatusCode(StatusCodes.Status500InternalServerError, new { error = ((Error<string>)result.Value!).Value });
+
+		logger.LogInformation("Wiki asset uploaded: id={Id} name={Name} size={Size} by={Uploader}",
+			asset.Id, LogSanitizer.Sanitize(asset.FileName), asset.SizeBytes, LogSanitizer.Sanitize(uploaderDbref));
+		var url = AssetUrl(asset.Id, asset.FileName);
+		return Created(url, new UploadedAssetDto(asset.Id, asset.FileName, url, asset.SizeBytes, asset.ContentType));
 	}
 
 	/// <summary>
@@ -113,15 +113,13 @@ public partial class WikiAssetController(
 	[AllowAnonymous]
 	public async Task<IActionResult> Serve(string id, string fileName, CancellationToken ct)
 	{
-		var result = await assetService.OpenAsync(id, ct);
-		return result.Match<IActionResult>(
-			found =>
-			{
-				Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-				Response.Headers.XContentTypeOptions = "nosniff";
-				return File(found.Content, found.Asset.ContentType);
-			},
-			_ => NotFound());
+		// The case is a tuple, which a type pattern can only name by its ValueTuple spelling.
+		if (await assetService.OpenAsync(id, ct) is not ValueTuple<WikiAsset, Stream>(var asset, var content))
+			return NotFound();
+
+		Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+		Response.Headers.XContentTypeOptions = "nosniff";
+		return File(content, asset.ContentType);
 	}
 
 	/// <summary>
@@ -146,13 +144,10 @@ public partial class WikiAssetController(
 	[Authorize(Policy = PortalPermission.MediaAdmin)]
 	public async Task<IActionResult> Delete(string id)
 	{
-		var result = await assetService.DeleteAsync(id);
-		return result.Match<IActionResult>(
-			_ =>
-			{
-				logger.LogInformation("Wiki asset deleted: id={Id}", LogSanitizer.Sanitize(id));
-				return NoContent();
-			},
-			_ => NotFound());
+		if (await assetService.DeleteAsync(id) is not None)
+			return NotFound();
+
+		logger.LogInformation("Wiki asset deleted: id={Id}", LogSanitizer.Sanitize(id));
+		return NoContent();
 	}
 }

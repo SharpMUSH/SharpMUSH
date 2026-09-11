@@ -325,8 +325,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			{
 				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
 				return dto is null
-					? MessageResult<WikiArticle>.FromT1("Server returned an empty response.")
-					: MessageResult<WikiArticle>.FromT0(ToArticle(dto));
+					? "Server returned an empty response."
+					: ToArticle(dto);
 			}
 
 			var body = await response.Content.ReadAsStringAsync();
@@ -362,8 +362,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			{
 				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
 				return dto is null
-					? MessageResult<WikiArticle>.FromT1("Server returned an empty response.")
-					: MessageResult<WikiArticle>.FromT0(ToArticle(dto));
+					? "Server returned an empty response."
+					: ToArticle(dto);
 			}
 
 			var body = await response.Content.ReadAsStringAsync();
@@ -400,8 +400,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			{
 				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
 				return dto is null
-					? MessageResult<WikiArticle>.FromT1("Server returned an empty response.")
-					: MessageResult<WikiArticle>.FromT0(ToArticle(dto));
+					? "Server returned an empty response."
+					: ToArticle(dto);
 			}
 
 			var body = await response.Content.ReadAsStringAsync();
@@ -436,8 +436,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			{
 				var dto = await response.Content.ReadFromJsonAsync<WikiPageDto>();
 				return dto is null
-					? MessageResult<WikiArticle>.FromT1("Server returned an empty response.")
-					: MessageResult<WikiArticle>.FromT0(ToArticle(dto));
+					? "Server returned an empty response."
+					: ToArticle(dto);
 			}
 
 			var body = await response.Content.ReadAsStringAsync();
@@ -496,8 +496,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			{
 				var result = await response.Content.ReadFromJsonAsync<WikiBatchResult>();
 				return result is null
-					? MessageResult<WikiBatchResult>.FromT1("Server returned an empty response.")
-					: MessageResult<WikiBatchResult>.FromT0(result);
+					? "Server returned an empty response."
+					: result;
 			}
 
 			var body = await response.Content.ReadAsStringAsync();
@@ -528,8 +528,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			{
 				var result = await response.Content.ReadFromJsonAsync<WikiBatchResult>();
 				return result is null
-					? MessageResult<WikiBatchResult>.FromT1("Server returned an empty response.")
-					: MessageResult<WikiBatchResult>.FromT0(result);
+					? "Server returned an empty response."
+					: result;
 			}
 
 			var body = await response.Content.ReadAsStringAsync();

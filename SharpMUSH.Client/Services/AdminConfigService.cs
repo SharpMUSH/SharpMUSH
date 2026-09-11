@@ -26,7 +26,7 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error fetching options from server, using defaults");
-			return Result<IEnumerable<ConfigItem>>.FromT0([]);
+			return new Result<IEnumerable<ConfigItem>>([]);
 		}
 	}
 
@@ -170,8 +170,7 @@ public static class SharpMUSHOptionsExtension
 	{
 		if (options.Configuration is null)
 		{
-			return Result<IEnumerable<AdminConfigService.ConfigItem>>.FromT1(
-				new Error<string>("The configuration response carried no configuration."));
+			return new Error<string>("The configuration response carried no configuration.");
 		}
 
 		var configItems = ConfigMetadata.PropertyMetadata
@@ -180,7 +179,7 @@ public static class SharpMUSHOptionsExtension
 			.ThenBy(x => x.Key)
 			.ToList();
 
-		return Result<IEnumerable<AdminConfigService.ConfigItem>>.FromT0(configItems);
+		return new Result<IEnumerable<AdminConfigService.ConfigItem>>(configItems);
 	}
 
 	private static AdminConfigService.ConfigItem ToConfigItem(

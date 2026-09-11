@@ -232,14 +232,16 @@
         _restoring = true;
         var result = await Wiki.RollbackAsync(Slug, rev.RevisionNumber, Ns, Category);
         _restoring = false;
-        result.Switch(
-            _ =>
-            {
+        switch (result)
+        {
+            case WikiArticle:
                 Snackbar.Add(Loc["WkRestoredToRevision", rev.RevisionNumber], Severity.Success);
                 Nav.NavigateTo(WikiRoutes.PathFor(Ns, Category, Slug));
-            },
-            err => Snackbar.Add(Loc["WkRestoreFailed", err], Severity.Error)
-        );
+                break;
+            case string err:
+                Snackbar.Add(Loc["WkRestoreFailed", err], Severity.Error);
+                break;
+        }
     }
 
     private static string ByteDeltaBackground(int delta)

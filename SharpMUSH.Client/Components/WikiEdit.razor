@@ -218,10 +218,9 @@
         // so it is canonicalised and rejected here rather than being sent for the server to refuse.
         // NormalizeLocale's Error case is silently ignored rather than surfaced, because the field is
         // validated as-you-type by the same rule and an empty selection is the visible feedback.
-        var normalized = WikiHelpers.NormalizeLocale(_customLocale);
-        if (normalized.IsT1) return;
+        if (WikiHelpers.NormalizeLocale(_customLocale) is not string normalized) return;
         _customLocale = string.Empty;
-        await SelectLocaleAsync(normalized.AsT0);
+        await SelectLocaleAsync(normalized);
     }
 
     private string LocaleLabel(string locale) =>

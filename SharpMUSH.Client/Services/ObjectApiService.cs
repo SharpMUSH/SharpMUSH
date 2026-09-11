@@ -46,9 +46,7 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 	public async Task<ApiResult<MushObject>> GetObjectAsync(int dbref)
 	{
 		var summary = await SendAsync<ObjectSummaryDto>(HttpMethod.Get, $"api/objects/{dbref}");
-		if (summary is ApiFailure failure) return failure;
-
-		var dto = summary.AsT0;
+		if (summary is not ObjectSummaryDto dto) return (ApiFailure)summary.Value!;
 
 		var attributes = await GetAttributesAsync(dbref);
 
@@ -61,7 +59,7 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 			Flags = string.Join(' ', dto.Flags),
 			// A readable object with unreadable attributes is still worth showing; the attribute
 			// pane renders empty rather than the whole selection failing.
-			Attributes = attributes.Match(list => list, _ => []),
+			Attributes = attributes is List<MushAttribute> list ? list : [],
 		};
 	}
 
@@ -70,21 +68,27 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 		var result = await SendAsync<List<AttributeDto>>(
 			HttpMethod.Get, $"api/objects/{dbref}/attributes?depth={ListDepth}");
 
-		return result.Match<ApiResult<List<MushAttribute>>>(
-			attributes => attributes.Select(a => new MushAttribute
+		return result switch
+		{
+			List<AttributeDto> attributes => attributes.Select(a => new MushAttribute
 			{
 				Name = a.Name,
 				Value = a.Value,
 				AttributeFlags = [.. a.Flags],
 			}).ToList(),
-			failure => failure);
+			ApiFailure failure => failure
+		};
 	}
 
 	public async Task<ApiResult<string>> GetAttributeAsync(int dbref, string attribute)
 	{
 		var result = await SendAsync<AttributeDto>(HttpMethod.Get, AttrPath(dbref, attribute));
 
-		return result.Match<ApiResult<string>>(dto => dto.Value, failure => failure);
+		return result switch
+		{
+			AttributeDto dto => dto.Value,
+			ApiFailure failure => failure
+		};
 	}
 
 	/// <summary>Stores <paramref name="value"/> verbatim — newlines included.</summary>
@@ -107,9 +111,7 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 		var result = await SendAsync<CreatedObjectDto>(
 			HttpMethod.Post, "api/objects", new CreateObjectRequest(name, typeName));
 
-		if (result is ApiFailure failure) return failure;
-
-		var created = result.AsT0;
+		if (result is not CreatedObjectDto created) return (ApiFailure)result.Value!;
 
 		// '#N' or '#N:creationTime' — the browser addresses objects by number.
 		var number = created.Dbref.TrimStart('#').Split(':')[0];
@@ -168,7 +170,7 @@ public class ObjectApiService(IHttpClientFactory httpClientFactory)
 
 				return value is null
 					? new ApiFailure(ApiFailureKind.Unexpected, "The server returned an empty body.", response.StatusCode)
-					: ApiResult<T>.FromT0(value);
+					: new ApiResult<T>(value);
 			}
 			catch (Exception ex) when (IsBodyFailure(ex))
 			{

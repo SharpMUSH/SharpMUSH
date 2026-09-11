@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -200,9 +201,11 @@ public class AccountController(
 		if (failure is not null) return failure;
 
 		var result = await accountService.ChangePasswordAsync(accountId!, request.OldPassword, request.NewPassword);
-		return result.Match<IActionResult>(
-			_ => NoContent(),
-			err => Unauthorized(err.Value));
+		return result switch
+		{
+			Success => NoContent(),
+			Error<string> err => Unauthorized(err.Value)
+		};
 	}
 
 	public record ChangeEmailRequest(string? NewEmail, string CurrentPassword);
@@ -215,11 +218,13 @@ public class AccountController(
 		if (failure is not null) return failure;
 
 		var result = await accountService.ChangeEmailAsync(accountId!, request.NewEmail, request.CurrentPassword);
-		return result.Match<IActionResult>(
-			_ => NoContent(),
-			err => err.Value.Contains("already registered", StringComparison.OrdinalIgnoreCase)
-				? Conflict(err.Value)
-				: Unauthorized(err.Value));
+		return result switch
+		{
+			Success => NoContent(),
+			Error<string> err when err.Value.Contains("already registered", StringComparison.OrdinalIgnoreCase)
+				=> Conflict(err.Value),
+			Error<string> err => Unauthorized(err.Value)
+		};
 	}
 
 	public record ChangeUsernameRequest(string NewUsername);
@@ -232,9 +237,11 @@ public class AccountController(
 		if (failure is not null) return failure;
 
 		var result = await accountService.ChangeUsernameAsync(accountId!, request.NewUsername);
-		return result.Match<IActionResult>(
-			_ => NoContent(),
-			err => Conflict(err.Value));
+		return result switch
+		{
+			Success => NoContent(),
+			Error<string> err => Conflict(err.Value)
+		};
 	}
 
 	/// <summary>Invalidate the current account session token (logout).</summary>

@@ -51,8 +51,8 @@ public class WikiAssetService(IHttpClientFactory httpClientFactory, ILogger<Wiki
 			{
 				var dto = await response.Content.ReadFromJsonAsync<UploadedAssetInfo>();
 				return dto is null
-					? MessageResult<UploadedAssetInfo>.FromT1("Server returned an empty response.")
-					: MessageResult<UploadedAssetInfo>.FromT0(dto);
+					? "Server returned an empty response."
+					: dto;
 			}
 
 			var body = await response.Content.ReadAsStringAsync();

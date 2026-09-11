@@ -44,10 +44,9 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 			var ns = ParseNs(Uri.UnescapeDataString(getMatch.Groups[1].Value));
 			var category = Uri.UnescapeDataString(getMatch.Groups[2].Value);
 			var slug = Uri.UnescapeDataString(getMatch.Groups[3].Value);
-			var result = await wikiService.GetBySlugAsync(slug, category, ns);
-			return result.Match(
-					page => Json(ToDto(page)),
-					_ => new HttpResponseMessage(HttpStatusCode.NotFound));
+			return await wikiService.GetBySlugAsync(slug, category, ns) is WikiPage page
+				? Json(ToDto(page))
+				: new HttpResponseMessage(HttpStatusCode.NotFound);
 		}
 
 		// Refs use URL-path form: "ns/category/slug".
@@ -60,8 +59,7 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 			foreach (var reference in req.Refs)
 			{
 				var (ns, category, slug) = ParseRef(reference);
-				var lookup = await wikiService.GetBySlugAsync(slug, category, ns);
-				map[reference] = lookup.IsT0;
+				map[reference] = await wikiService.GetBySlugAsync(slug, category, ns) is WikiPage;
 			}
 
 			return Json(map);
@@ -71,10 +69,10 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 		{
 			var req = await request.Content!.ReadFromJsonAsync<CreateReq>(cancellationToken: cancellationToken);
 			if (req is null) return new HttpResponseMessage(HttpStatusCode.BadRequest);
-			var result = await wikiService.CreateAsync(req.Title, req.Markdown, "#1", ParseNs(req.Namespace), req.Category);
-			return result.Match(
-					page => Json(ToDto(page), HttpStatusCode.Created),
-					_ => new HttpResponseMessage(HttpStatusCode.Conflict));
+			return await wikiService.CreateAsync(req.Title, req.Markdown, "#1", ParseNs(req.Namespace), req.Category)
+				is WikiPage page
+				? Json(ToDto(page), HttpStatusCode.Created)
+				: new HttpResponseMessage(HttpStatusCode.Conflict);
 		}
 
 		if (request.Method == HttpMethod.Put &&
@@ -83,10 +81,9 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 			var id = Uri.UnescapeDataString(putMatch.Groups[1].Value);
 			var req = await request.Content!.ReadFromJsonAsync<UpdateReq>(cancellationToken: cancellationToken);
 			if (req is null) return new HttpResponseMessage(HttpStatusCode.BadRequest);
-			var result = await wikiService.UpdateAsync(id, req.Markdown, "#1", req.EditSummary);
-			return result.Match(
-					page => Json(ToDto(page)),
-					_ => new HttpResponseMessage(HttpStatusCode.NotFound));
+			return await wikiService.UpdateAsync(id, req.Markdown, "#1", req.EditSummary) is WikiPage page
+				? Json(ToDto(page))
+				: new HttpResponseMessage(HttpStatusCode.NotFound);
 		}
 
 		return new HttpResponseMessage(HttpStatusCode.NotFound);

@@ -41,8 +41,7 @@ public class DefaultApplicationsBootstrapService(
 	{
 		try
 		{
-			var existing = await applications.GetApplicationAsync(CharacterHeaderSlug);
-			if (existing.IsT0)
+			if (await applications.GetApplicationAsync(CharacterHeaderSlug) is RegisteredApplication)
 			{
 				logger.LogDebug("Application '{Slug}' already registered; leaving it as-is.", CharacterHeaderSlug);
 				return;

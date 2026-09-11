@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Services;
@@ -48,10 +50,8 @@ public class SetupController(
 			return BadRequest("Password must be at least 8 characters.");
 
 		var result = await setupService.CompleteAsync(request.Username.Trim(), request.Password);
-		if (result.IsT1)
-			return Conflict(result.AsT1.Value);
-
-		var account = result.AsT0;
+		if (result is not SharpAccount account)
+			return Conflict(((Error<string>)result.Value!).Value);
 
 		// The claim itself already succeeded (CompleteAsync flipped SetupCompleted) — everything
 		// below is best-effort auto-login enrichment. If any of it throws, the claimer must not

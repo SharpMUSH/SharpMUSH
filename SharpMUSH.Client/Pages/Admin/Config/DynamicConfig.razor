@@ -5,6 +5,7 @@
 @using SharpMUSH.Library.API
 @using System.Text.Json
 @using SharpMUSH.Configuration.Generated
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject AdminConfigService AdminConfigService
 @inject ConfigSchemaService SchemaService
 @inject ISnackbar Snackbar
@@ -682,9 +683,9 @@
             }
 
             var result = await AdminConfigService.UpdateConfigAsync(changes);
-            result.Switch(
-                response =>
-                {
+            switch (result)
+            {
+                case ConfigurationResponse:
                     Snackbar.Add(
                         Loc.Plural("ConfigSavedCount", "count", changes.Count),
                         Severity.Success);
@@ -695,9 +696,8 @@
                     }
                     _hasChanges = false;
                     _changedCount = 0;
-                },
-                error =>
-                {
+                    break;
+                case Error<string> error:
                     try
                     {
                         var errorDoc = JsonDocument.Parse(error.Value);
@@ -731,8 +731,8 @@
                     {
                         Snackbar.Add(string.Format(Loc["SaveFailed"].Value, error.Value), Severity.Error);
                     }
-                }
-            );
+                    break;
+            }
         }
         catch (Exception ex)
         {
