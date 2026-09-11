@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
@@ -80,7 +81,9 @@ public class SceneStoragePluginBoundaryTests
 			.Invoke(scenes, [createdId])!;
 		await getTask;
 		var got = getTask.GetType().GetProperty("Result")!.GetValue(getTask)!;
-		var isT0 = (bool)got.GetType().GetProperty("IsT0")!.GetValue(got)!;
-		await Assert.That(isT0).IsTrue();
+		// IUnion lives in CoreLib, so it is the one interface both load contexts share: found means the
+		// union holds the plugin's Scene model rather than NotFound.
+		var found = got is IUnion union ? union.Value : null;
+		await Assert.That(found?.GetType().Name).IsEqualTo("Scene");
 	}
 }

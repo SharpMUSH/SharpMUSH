@@ -75,6 +75,17 @@ public static class TestHelpers
 		};
 
 	/// <summary>
+	/// Checks that a <see cref="SharpMessage"/> was sent as the plain string <paramref name="expected"/>,
+	/// not as markup. NSubstitute matchers are expression trees, which cannot hold a pattern.
+	/// </summary>
+	public static bool MessageIsString(SharpMessage msg, string expected) => msg is string s && s == expected;
+
+	/// <summary>
+	/// Checks that a <see cref="SharpMessage"/> was sent as markup whose text is <paramref name="expected"/>.
+	/// </summary>
+	public static bool MessageIsMarkup(SharpMessage msg, string expected) => msg is MString ms && ms.Text == expected;
+
+	/// <summary>
 	/// Matches a notification by its TEXT, whichever form it arrived in.
 	///
 	/// <para>Passing a bare string to a <c>Received().Notify(...)</c> assertion pins more than the

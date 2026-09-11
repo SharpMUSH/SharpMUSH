@@ -94,7 +94,7 @@ public class LocateSeamCharacterisationTests
 	private async Task AssertNotified(string message) =>
 		await _notifyService.Received(1).Notify(
 			Arg.Any<AnySharpObject>(),
-			Arg.Is<SharpMessage>(w => w.Value as string == message),
+			Arg.Is<SharpMessage>(w => TestHelpers.MessageIsString(w, message)),
 			Arg.Any<AnySharpObject>(),
 			Arg.Any<INotifyService.NotificationType>());
 

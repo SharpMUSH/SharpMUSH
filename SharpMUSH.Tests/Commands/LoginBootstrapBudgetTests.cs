@@ -58,10 +58,10 @@ public class LoginBootstrapBudgetTests
 			catch (OperationCanceledException) when (budget.IsExpired) { }
 			await Assert.That(hookReached).IsTrue();
 			await Assert.That(budget.IsExpired).IsEqualTo(expire);
-			await notify.Received(1).Notify(handle, Arg.Is<SharpMessage>(x => x.Value as string == "login-motd"), null, INotifyService.NotificationType.Announce);
+			await notify.Received(1).Notify(handle, Arg.Is<SharpMessage>(x => TestHelpers.MessageIsString(x, "login-motd")), null, INotifyService.NotificationType.Announce);
 			await Assert.That(connections.Get(handle)!.Ref).IsNotNull();
 			if (checkPreferences) await bus.Received(1).Publish(Arg.Is<UpdatePlayerPreferencesMessage>(x => x.Handle == handle), Arg.Any<CancellationToken>());
-			else await notify.Received(1).Notify(handle, Arg.Is<SharpMessage>(x => x.Value as string == "wizard-motd"), null, INotifyService.NotificationType.Announce);
+			else await notify.Received(1).Notify(handle, Arg.Is<SharpMessage>(x => TestHelpers.MessageIsString(x, "wizard-motd")), null, INotifyService.NotificationType.Announce);
 		}
 		finally { await connections.Disconnect(handle); }
 	}

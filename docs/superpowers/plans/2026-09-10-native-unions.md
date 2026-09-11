@@ -268,3 +268,21 @@ Remaining positional call sites at the end of stage 1 (counted by marking every 
   `PasteLinesRemainCapturedAndCallbackCanEndTheSession` fail intermittently in full SharpMUSH.Tests
   runs on the parent commit as well (two of two runs there), and pass when the class runs alone.
   They are not a union regression; rerun the class alone before chasing one.
+
+## Stage 2 result
+
+Six agents rewrote every positional call site to patterns (≈2,400, counted by marking the compat
+members `[Obsolete]` and building), and the `Compat/` folders and `ObjectUnionExtensions` were then
+deleted; the solution builds without them. Two conventions came out of it:
+
+- **No cast to reach a case.** C# does not narrow a union after `if (x is not T value)`, so an early
+  return that needs the failure used to read `(Error<string>)x.Value!`. The success-or-failure unions
+  (`Result`, `PackageManifestResult`, `DiagnosticsResult`, `ApiResult`, `MessageResult`,
+  `ServerResult`, `ValueOrResponse`) carry `TryGetValue(out T value, out TFailure failure)` instead, and
+  `RecallSelection` carries `TryGetWindow`. Two out parameters on purpose: a single-parameter
+  `TryGetValue` is the compiler's own union access pattern.
+- **Tests bind the expected case with `Expect<T>()`** (`SharpMUSH.Tests.Infrastructure/UnionExpectations.cs`),
+  which fails naming the case it got. NSubstitute matchers are expression trees and cannot hold a
+  pattern; they call `TestHelpers.MessageIsString` / `MessageIsMarkup` / `MessagePlainText*`.
+
+The last tuple case became `OpenedWikiAsset`; `WikiCommandHelper.LocaleTarget` replaced the other.

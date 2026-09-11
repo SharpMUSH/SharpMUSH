@@ -211,9 +211,10 @@ A custom `SharpAccount` model (not ASP.NET Identity) manages web accounts (email
   for what it means. A union handed around as a nullable reference (`AnySharpObject?`, `Option<T>`)
   is a `[Union] sealed partial class : IUnion`. The case primitives (`None`, `NotFound`, `Success`,
   `Error`, `Error<T>`) are record structs in `SharpMUSH.Library.DiscriminatedUnions`. Consume a union
-  with patterns (`x switch { T0 a => …, T1 b => … }`, `x is T t`); the positional
-  `IsT0`/`AsT0`/`Match`/`Switch`/`FromT0` members in the `Compat/` folders are migration scaffolding
-  — add no new callers.
+  with patterns (`x switch { T0 a => …, T1 b => … }`, `x is T t`), never by casting `Value`. To hand
+  a failure back and go on with the value, the success-or-failure unions carry
+  `TryGetValue(out value, out failure)`: `if (!result.TryGetValue(out var page, out var error)) return error;`.
+  Tests bind the case they expect with `x.Expect<T>()` (Tests.Infrastructure), not `IsTypeOf<T>()` plus `!`.
 - Source-generated `Mediator` (not MediatR) for command/query dispatching
 
 ### Formatting is enforced
