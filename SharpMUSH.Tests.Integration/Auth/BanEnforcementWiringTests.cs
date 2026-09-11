@@ -75,10 +75,9 @@ public class BanEnforcementWiringTests(ServerWebAppFactory factory)
 		await Assert.That(aborted).IsTrue();
 	}
 
-	// Mutates the shared IOptionsWrapper<SharpMUSHOptions>-backed SitelockRules via
-	// ConfigurationReloadService.SignalChange(), so it shares the "ConfigMutation" NotInParallel
-	// group with the other suites that touch the same shared config (see LoginsConfigApiTests).
-	[Test, NotInParallel("ConfigMutation")]
+	// Read-modify-writes the persisted sitelock rules, as SitelockControllerReadBasisTests does; the
+	// shared key keeps either from overwriting a rule the other has just stored.
+	[Test, NotInParallel("PersistedOptions")]
 	public async Task AddSitelockRule_AbortsLiveSignalRConnectionForMatchingIp()
 	{
 		var database = factory.Services.GetRequiredService<ISharpDatabase>();

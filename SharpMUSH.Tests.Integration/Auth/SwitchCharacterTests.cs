@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
@@ -29,8 +28,6 @@ public class SwitchCharacterTests(ServerWebAppFactory factory)
 
 	private const string Password = "Integration-Test-Pw-1!";
 
-	private IOptionsWrapper<SharpMUSHOptions> Options => factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-
 	/// <summary>
 	/// Test client pinned to the https base address. The server uses UseHttpsRedirection;
 	/// following the 307 from http→https makes HttpClient drop the Authorization header,
@@ -58,15 +55,9 @@ public class SwitchCharacterTests(ServerWebAppFactory factory)
 		return string.IsNullOrEmpty(raw) ? "unknown" : raw;
 	}
 
-	/// <summary>Re-stubs the shared options substitute's SitelockRules; caller restores in a finally block.</summary>
-	private (IOptionsWrapper<SharpMUSHOptions> Options, SharpMUSHOptions Original) StubSitelockRules(
-		Dictionary<string, string[]> rules)
-	{
-		var options = Options;
-		var original = options.CurrentValue;
-		options.CurrentValue.Returns(original with { SitelockRules = new SitelockRulesOptions(rules) });
-		return (options, original);
-	}
+	/// <summary>Replaces the sitelock rules this test sees until the returned scope is disposed.</summary>
+	private static IDisposable OverrideSitelockRules(Dictionary<string, string[]> rules)
+		=> TestOptionsOverride.Scope(options => options with { SitelockRules = new SitelockRulesOptions(rules) });
 
 	private async Task<(HttpClient Http, AccountLoginResponse Account)> RegisterAccountAsync()
 	{
@@ -103,10 +94,7 @@ public class SwitchCharacterTests(ServerWebAppFactory factory)
 		return request;
 	}
 
-	// switch-character is gated by Net.Logins too, so a plain non-staff account expecting
-	// success here races the shared substitute mutated by SwitchCharacter_WhenLoginsDisabled_
-	// NonStaff403 below and the other Net.Logins-toggling tests across this test assembly.
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task SwitchCharacter_LinkedCharacter_Returns200WithNonEmptyOtt()
 	{
 		var (http, account) = await RegisterAccountAsync();
@@ -123,31 +111,21 @@ public class SwitchCharacterTests(ServerWebAppFactory factory)
 		await Assert.That(body!.Ott).IsNotEmpty();
 	}
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task SwitchCharacter_FromSitelockedIp_Returns403()
 	{
 		var (http, account) = await RegisterAccountAsync();
 		var character = await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("SwLock"), Password);
 
 		var clientIp = await GetClientIpAsync(http);
-		var (options, original) = StubSitelockRules(new Dictionary<string, string[]> { [clientIp] = ["!connect"] });
-		try
-		{
-			using var request = SwitchCharacterRequestMessage(account.AccountSessionToken, character.DbrefNumber, character.CreationTime);
-			using var response = await http.SendAsync(request);
+		using var configuration = OverrideSitelockRules(new Dictionary<string, string[]> { [clientIp] = ["!connect"] });
+		using var request = SwitchCharacterRequestMessage(account.AccountSessionToken, character.DbrefNumber, character.CreationTime);
+		using var response = await http.SendAsync(request);
 
-			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
 
-	// The Net.Logins gate runs before the "character not linked" check, so a concurrent
-	// Net.Logins-disabling test would flip the expected 401 to 403 here — same race as
-	// SwitchCharacter_LinkedCharacter_Returns200WithNonEmptyOtt above.
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task SwitchCharacter_CharacterNotLinked_Returns401()
 	{
 		var (http, account) = await RegisterAccountAsync();
@@ -188,37 +166,22 @@ public class SwitchCharacterTests(ServerWebAppFactory factory)
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
 
-	/// <summary>
-	/// Re-stubs the shared <see cref="IOptionsWrapper{SharpMUSHOptions}"/> substitute's
-	/// <c>CurrentValue</c> to disable Net.Logins. Mirrors <c>LoginsConfigApiTests.DisableLogins</c> —
-	/// callers must restore the original value in a finally block and mark the test
-	/// <c>[NotInParallel("ConfigMutation")]</c> to avoid racing other suites that do the same.
-	/// </summary>
-	private static (IOptionsWrapper<SharpMUSHOptions> Options, SharpMUSHOptions Original) DisableLogins(ServerWebAppFactory factory)
+	/// <summary>Disables Net.Logins for this test's requests until the returned scope is disposed.</summary>
+	private static IDisposable DisableLogins() => TestOptionsOverride.Scope(options => options with
 	{
-		var options = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-		var original = options.CurrentValue;
-		options.CurrentValue.Returns(original with { Net = original.Net with { Logins = false } });
-		return (options, original);
-	}
+		Net = options.Net with { Logins = false }
+	});
 
-	[Test, NotInParallel("ConfigMutation")]
+	[Test]
 	public async Task SwitchCharacter_WhenLoginsDisabled_NonStaff403()
 	{
 		var (http, account) = await RegisterAccountAsync();
 		var character = await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("SwPleb"), Password);
 
-		var (options, original) = DisableLogins(factory);
-		try
-		{
-			using var request = SwitchCharacterRequestMessage(account.AccountSessionToken, character.DbrefNumber, character.CreationTime);
-			using var response = await http.SendAsync(request);
+		using var configuration = DisableLogins();
+		using var request = SwitchCharacterRequestMessage(account.AccountSessionToken, character.DbrefNumber, character.CreationTime);
+		using var response = await http.SendAsync(request);
 
-			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
-		}
-		finally
-		{
-			options.CurrentValue.Returns(original);
-		}
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
 	}
 }

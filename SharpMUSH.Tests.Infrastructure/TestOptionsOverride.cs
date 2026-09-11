@@ -10,7 +10,8 @@ namespace SharpMUSH.Tests;
 /// session, so re-stubbing it mid-run would change the game under every test executing in
 /// parallel. The wrapper instead reads through <see cref="Apply"/> on every call, and the
 /// override lives in an <see cref="AsyncLocal{T}"/>: it is visible to the command the test
-/// awaits and to nothing else.
+/// awaits and to nothing else. The test host's TestServer preserves the client's execution
+/// context, so the same holds for an HTTP request the test sends.
 /// </para>
 /// </summary>
 public static class TestOptionsOverride

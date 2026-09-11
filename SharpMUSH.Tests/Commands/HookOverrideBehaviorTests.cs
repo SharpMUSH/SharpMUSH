@@ -38,6 +38,8 @@ public class HookOverrideBehaviorTests
 	[Arguments("@PEMIT", "OVERRIDE", "", "add(1,2)=", "3=")]
 	[Arguments("@DIG", "OVERRIDE", "", "add(1,2)=add(3,4),,add(5,6)", "3=7,,11")]
 	[Arguments("SAY", "OVERRIDE", "/noeval", "[add(1,2)]", "[add(1,2)]")]
+	[Arguments("SAY", "OVERRIDE", "", @"\[add(1,2)\] \\", @"[add(1,2)] \")]
+	[Arguments("@EMIT", "OVERRIDE", "", @"\%# \[x\]", "%# [x]")]
 	[Arguments("SAY", "OVERRIDE", "", "[setq(hook_count,inc(firstof(%q<hook_count>,0)))]%q<hook_count>", "1")]
 	public async ValueTask Hook_UsesCommandArgumentParsing(string command, string hookType,
 		string switches, string input, string expected)
