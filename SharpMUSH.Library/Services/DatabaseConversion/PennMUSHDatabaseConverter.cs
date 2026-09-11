@@ -161,16 +161,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// PennMUSH's creation/modification stamps, scaled into the milliseconds SharpMUSH stores.
-	/// </summary>
-	/// <remarks>
-	/// PennMUSH keeps a <c>time_t</c> in seconds (<c>src/db.c</c> writes <c>o-&gt;creation_time</c>
-	/// as an int) while SharpMUSH keeps milliseconds and puts them in the objid, so unscaled stamps
-	/// would date every imported object to January 1970.
-	/// <para>An object with no recorded creation time (a 0 field) defaults to now, since 1970 is not
-	/// a more truthful answer than the import date.</para>
-	/// </remarks>
-	/// <summary>
 	/// Restamps one of the three objects reused from the migration seed with its PennMUSH times.
 	/// </summary>
 	/// <remarks>
@@ -201,6 +191,16 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return new DBRef(dbrefNumber, created.Value);
 	}
 
+	/// <summary>
+	/// PennMUSH's creation/modification stamps, scaled into the milliseconds SharpMUSH stores.
+	/// </summary>
+	/// <remarks>
+	/// PennMUSH keeps a <c>time_t</c> in seconds (<c>src/db.c</c> writes <c>o-&gt;creation_time</c>
+	/// as an int) while SharpMUSH keeps milliseconds and puts them in the objid, so unscaled stamps
+	/// would date every imported object to January 1970.
+	/// <para>An object with no recorded creation time (a 0 field) defaults to now, since 1970 is not
+	/// a more truthful answer than the import date.</para>
+	/// </remarks>
 	internal static (long? Created, long? Modified) PennTimestamps(PennMUSHObject pennObject)
 		=> (pennObject.CreationTime > 0 ? pennObject.CreationTime * 1000 : null,
 			pennObject.ModificationTime > 0 ? pennObject.ModificationTime * 1000 : null);
@@ -232,10 +232,14 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			// Player #1 already exists (from database migration), reuse it
 			tempGodDbRef = new DBRef(1);
 			dbrefMapping[1] = tempGodDbRef;
-			playersConverted++; // Count reused object in totals
 			_logger.LogInformation("Reusing existing God player #1 from database migration");
 
 			var godPennObject = pennDatabase.GetObject(1);
+			if (godPennObject is not null)
+			{
+				playersConverted++;
+			}
+
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
 			{
 				await _database.SetObjectName(existingPlayer1, MarkupText.Plain(godPennObject.Name), cancellationToken);
@@ -306,15 +310,19 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		DBRef tempRoom0DbRef;
 		var existingRoom0 = await _database.GetObjectNodeAsync(new DBRef(0), cancellationToken);
 
-		if (existingRoom0.IsPlayer && existingRoom0 is AnySharpObject reusedRoom0)
+		if (existingRoom0 is AnySharpObject and SharpRoom reusedRoom0)
 		{
 			// Room #0 already exists (from database migration), reuse it
 			tempRoom0DbRef = new DBRef(0);
 			dbrefMapping[0] = tempRoom0DbRef;
-			roomsConverted++; // Count reused object in totals
 			_logger.LogInformation("Reusing existing Limbo room #0 from database migration");
 
 			var room0Penn = pennDatabase.GetObject(0);
+			if (room0Penn is not null)
+			{
+				roomsConverted++;
+			}
+
 			if (room0Penn?.Type == PennMUSHObjectType.Room)
 			{
 				await _database.SetObjectName(reusedRoom0, MarkupText.Plain(room0Penn.Name), cancellationToken);
@@ -352,47 +360,19 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 		}
 
-		// Check if Master Room #2 already exists (from database migration)
-		var existingRoom2 = await _database.GetObjectNodeAsync(new DBRef(2), cancellationToken);
-
-		if (existingRoom2.IsPlayer)
+		// #2 is the Master Room: PennMUSH's create_minimal_db makes it a room, MASTER_ROOM must be one,
+		// and the migration seeds the same. The seeded room can only stand in for a source #2 that is
+		// also a room; any other source #2 is created in the main loop like every other object.
+		var room2Penn = pennDatabase.GetObject(2);
+		if (room2Penn?.Type == PennMUSHObjectType.Room)
 		{
-			var room2Penn = pennDatabase.GetObject(2);
-
-			// Master Room #2 already exists (from database migration), reuse it
-			dbrefMapping[2] = await RestampReusedObjectAsync(2, room2Penn, cancellationToken);
-
-			if (room2Penn != null)
+			if (await _database.GetObjectNodeAsync(new DBRef(2), cancellationToken) is AnySharpObject and SharpRoom reusedRoom2)
 			{
-				switch (room2Penn.Type)
-				{
-					case PennMUSHObjectType.Room:
-						roomsConverted++;
-						break;
-					case PennMUSHObjectType.Thing:
-						thingsConverted++;
-						break;
-					case PennMUSHObjectType.Exit:
-						exitsConverted++;
-						break;
-					case PennMUSHObjectType.Player:
-						playersConverted++;
-						break;
-				}
-				_logger.LogInformation("Reusing existing object #2 from database migration as {Type}", room2Penn.Type);
+				await _database.SetObjectName(reusedRoom2, MarkupText.Plain(room2Penn.Name), cancellationToken);
+				dbrefMapping[2] = await RestampReusedObjectAsync(2, room2Penn, cancellationToken);
+				roomsConverted++;
+				_logger.LogInformation("Reusing existing Master Room #2 from database migration: {Name}", room2Penn.Name);
 			}
-			else
-			{
-				// Object #2 doesn't exist in PennMUSH database, but exists in Sharp
-				roomsConverted++; // Assume it's a room from migration
-				_logger.LogInformation("Reusing existing Master Room #2 from database migration (not in PennMUSH database)");
-			}
-		}
-		else
-		{
-			// No existing #2 in Sharp database
-			// It will be created in the main loop below based on its actual type in PennMUSH
-			_logger.LogDebug("Object #2 does not pre-exist in Sharp database, will be created in main loop");
 		}
 
 		SharpRoom? room0 = null; // Cache the limbo room to avoid repeated lookups
