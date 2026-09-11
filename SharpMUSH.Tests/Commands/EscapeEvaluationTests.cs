@@ -1,9 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using OneOf;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -17,8 +13,6 @@ public class EscapeEvaluationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 
@@ -44,20 +38,9 @@ public class EscapeEvaluationTests
 
 	private async ValueTask<List<string>> Run(string command)
 	{
-		var pre = NotifyService.ReceivedCalls().Count();
+		var pre = WebAppFactoryArg.Notifications.CountFor(_player.DbRef);
 		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain(command));
-		return NotifyService.ReceivedCalls().Skip(pre)
-			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Select(call => call.GetArguments())
-			.Where(args => args.Length > 1 && args[0] is AnySharpObject target && target.Object().DBRef == _player.DbRef)
-			.Select(args => args[1] switch
-			{
-				OneOf<MString, string> oneOf => oneOf.Match(m => m.ToPlainText(), s => s),
-				MString m => m.ToPlainText(),
-				string s => s,
-				_ => string.Empty
-			})
-			.ToList();
+		return [.. WebAppFactoryArg.Notifications.For(_player.DbRef).Skip(pre)];
 	}
 
 	[Test]
