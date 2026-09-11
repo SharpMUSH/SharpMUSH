@@ -122,3 +122,138 @@ and fixes whatever that exposes; then the full suite runs again against the stag
 from a `OneOfBase` subclass to a `[Union]` class is a breaking change for compiled plugins: bump
 `PluginContractVersion` and the SharpMUSH.Library / Implementation.Generated package major version
 in the same PR, and rebuild the in-repo plugins and fixtures.
+
+## Stage 1 result: shape → union table
+
+What stage 1 actually declared, for stage 2 to rely on. Case order is OneOf's order throughout, so
+`IsT{n}`/`AsT{n}` in the compat surface mean what they meant before. "struct" is a `union`
+declaration; "class" is a `[Union] sealed partial class : IUnion` with a constructor per case, a
+`Value` property and `Equals`/`GetHashCode` over `Value`.
+
+### Case primitives — SharpMUSH.Contracts, `SharpMUSH.Library.DiscriminatedUnions`
+
+`None`, `NotFound`, `Success`, `Error` and `Error<T>(T Value)`, as `readonly record struct`s in
+`SharpMUSH.Contracts/DiscriminatedUnions/`. No other OneOf.Types member was used.
+
+### Generic families (struct)
+
+| Family | Cases | Declared in | Replaces |
+|---|---|---|---|
+| `Result<T>` | `T`, `Error<string>` | Contracts | every `OneOf<X, Error<string>>` — including `Success`, `string`, `long`, interfaces (`IReadOnlyList<string>`, `IManagedPackageBinarySource`, `IEnumerable<ConfigItem>`), tuples (`(string PageTarget, string Locale)`), `Dictionary<…>` and the generic `T` in `GitPackageSourceService` |
+| `Found<T>` | `T`, `NotFound` | Contracts | every `OneOf<X, NotFound>` — including `None` (and its `OkNone` alias), `byte[]`, `IReadOnlyList<…>`, `(WikiAsset Asset, Stream Content)` |
+| `FoundResult<T>` | `T`, `NotFound`, `Error<string>` | Contracts | `OneOf<ScenePose, NotFound, Error<string>>` |
+| `PackageManifestResult<T>` | `T`, `PackageManifestFailure` | Library | `OneOf<ParsedPackageManifest \| PackageIndex \| CommunityRepoListing, PackageManifestFailure>` |
+| `DiagnosticsResult<T>` | `T`, `DiagnosticsError` | Library | `OneOf<QueueDiagnosticsReport \| Guid \| Success, DiagnosticsError>` |
+| `ApiResult<T>` | `T`, `ApiFailure` | Client (`Services/`) | every `OneOf<X, ApiFailure>` |
+| `MessageResult<T>` | `T`, `string` (the message to show) | Client (`Services/`) | `OneOf<WikiArticle \| WikiBatchResult \| UploadedAssetInfo \| None, string>` |
+| `Maybe<T>` | `T`, `None` | Client (`Services/`) | `OneOf<WikiArticle \| WikiRevisionInfo, None>` |
+| `ServerResult<T>` | `T`, `Error` | Client (`Services/`) | `OneOf<bool, Error>`, `OneOf<IReadOnlyList<CharacterSummary>, Error>` (two different nested `CharacterSummary` types, hence generic) |
+| `ValueOrResponse<T>` | `T`, `ActionResult` | Server (`Controllers/`) | `OneOf<PackageManifestSource, ActionResult>` and the manifest tuple |
+
+### Former `OneOfBase` subclasses (class)
+
+| Union | Cases | Declared in |
+|---|---|---|
+| `AnySharpObject` | `SharpPlayer`, `SharpRoom`, `SharpExit`, `SharpThing` | Library `DiscriminatedUnions/` |
+| `AnySharpContainer` | `SharpPlayer`, `SharpRoom`, `SharpThing` | Library |
+| `AnySharpContent` | `SharpPlayer`, `SharpExit`, `SharpThing` | Library |
+| `AnyOptionalSharpObject` | `SharpPlayer`, `SharpRoom`, `SharpExit`, `SharpThing`, `None` | Library |
+| `AnyOptionalSharpContainer` | `SharpPlayer`, `SharpRoom`, `SharpThing`, `None` | Library |
+| `AnyOptionalSharpContent` | `SharpPlayer`, `SharpExit`, `SharpThing`, `None` | Library |
+| `AnyOptionalSharpObjectOrError` | `SharpPlayer`, `SharpRoom`, `SharpExit`, `SharpThing`, `None`, `Error<string>` | Library |
+| `AnySharpObjectOrErrorCallState` | `AnySharpObject`, `Error<CallState>` | Library |
+| `ChannelCreationResult` | `Success`, `ChannelNameTaken`, `Error<string>` | Library |
+| `LazySharpAttributesOrError` | `IAsyncEnumerable<LazySharpAttribute>`, `Error<string>` | Library |
+| `OptionalLazySharpAttributeOrError` | `LazySharpAttribute[]`, `None`, `Error<string>` | Library |
+| `OptionalSharpAttributeOrError` | `SharpAttribute[]`, `None`, `Error<string>` | Library |
+| `SharpAttributesOrError` | `SharpAttribute[]`, `Error<string>` | Library |
+| `Option<T>` | `T`, `None` | Library (plugin contract) |
+| `MailUpdate` | `MailUpdate.Read`, `.Cleared`, `.Tagged`, `.Urgent` (each `(bool Value)`) | Library `Commands/Database/SendMailCommand.cs`; no compat part |
+| `ChannelOrError` | `SharpChannel`, `Error<CallState>` | Implementation `Commands/ChannelCommand/ChannelHelper.cs` |
+| `PrivilegeOrError` | `string[]`, `Error<string[]>` | Implementation `Commands/ChannelCommand/ChannelHelper.cs` |
+| `ErrorOrMailList` | `Error<string>`, `IAsyncEnumerable<SharpMail>` | Implementation `Commands/MailCommand/MessageListHelper.cs` |
+
+The helpers that were extension methods in `OneOfExtensions` (`Object()`, `Id()`, `WithNoneOption()`,
+`WithErrorOption()`, `WithoutNone()`, `WithoutError()`, `IsValid()`) are members of these classes
+now. `Known()`, `IsNone()` and `IsError()` duplicate a property of the same name, so they stay in
+`Library/Extensions/ObjectUnionExtensions.cs`; stage 2 can switch their callers to the properties and
+delete the file.
+
+### Named inline shapes (struct)
+
+| Shape | Union | Declared in |
+|---|---|---|
+| `OneOf<MString, string>` (also written `MarkupText`) | `SharpMessage` | Library |
+| `OneOf<string, DBRef>` | `NameOrDbRef` | Library |
+| `OneOf<DBRef, string>` | `DbRefOrName` | Library |
+| `OneOf<DBRef, AnySharpContainer>` | `DbRefOrContainer` | Library |
+| `OneOf<DBRef, AnySharpObject>` | `DbRefOrObject` | Library |
+| `OneOf<HelpEntry, HelpCandidates, None>` | `HelpResolution` | Library |
+| `OneOf<string, LockEvaluationFailure>` | `LockEvaluation` | Library |
+| `OneOf<AnySharpObject, SharpAttributeEntry, SharpChannel, None>` | `ValidationTarget` | Library |
+| `OneOf<AnySharpObject, DeliveryFailure>` | `DeliveryResult` | Library |
+| `OneOf<WikiTranslation, WikiWriteConflict, Error<string>>` | `TranslationWriteResult` | Library |
+| `OneOf<long, DBRef, DbRefAttribute>` | `SemaphoreTarget` | Library |
+| `OneOf<(string db, string Attribute), None>` | `ObjectAttributeSplit` | Library |
+| `OneOf<(string? db, string Attribute), bool>` | `OptionalObjectAttributeSplit` | Library |
+| `OneOf<(string db, string? Attribute), bool>` | `DbRefOptionalAttributeSplit` | Library |
+| `OneOf<string, NotFound, Error>` | `ObjidResolution` | Client `Services/` |
+| `OneOf<WikiTranslationInfo, WikiTranslationSaveError>` | `TranslationSaveResult` | Client `Services/` |
+| `OneOf<RecallWindow, CallState>` | `RecallSelection` | Implementation `Commands/ChannelCommand/` |
+| `OneOf<string, None>` | `DigestResult` | Implementation `Common/` |
+| `OneOf<AnySharpContainer, ExitDestinationFailure>` | `ExitDestination` | Implementation `Commands/ExitDestination.cs`, nested private in `Commands` (its failure enum is private) |
+
+`OneOf<SharpObject, None>` and `OneOf<SharpPlayer, SharpExit, SharpThing, None>` only appeared in
+dead extension methods, which were deleted.
+
+### Compat surface
+
+One generated file per union, in the `Compat/` folder next to its declaration:
+`SharpMUSH.Contracts/DiscriminatedUnions/Compat/` (3), `SharpMUSH.Library/DiscriminatedUnions/Compat/`
+(30), `SharpMUSH.Client/Services/Compat/` (6), `SharpMUSH.Server/Controllers/Compat/` (1), and in
+Implementation `Commands/Compat/`, `Commands/ChannelCommand/Compat/` (3), `Commands/MailCommand/Compat/`
+and `Common/Compat/`. The generator is not in the repository; nothing needs regenerating, only
+deleting. No union has `TryPickT{n}` or `Index`.
+
+Remaining positional call sites at the end of stage 1 (counted by marking every compat member
+`[Obsolete]` and building; `tools` is `tools/PackageValidator`):
+
+| Project | IsT | AsT | Match | Switch | FromT | Total |
+|---|---:|---:|---:|---:|---:|---:|
+| SharpMUSH.Client | 8 | 11 | 11 | 9 | 22 | 61 |
+| SharpMUSH.Database | 0 | 0 | 1 | 0 | 0 | 1 |
+| SharpMUSH.Database.Lightning | 2 | 4 | 1 | 0 | 0 | 7 |
+| SharpMUSH.Database.SurrealDB | 14 | 9 | 10 | 0 | 0 | 33 |
+| SharpMUSH.Documentation | 1 | 2 | 0 | 0 | 0 | 3 |
+| SharpMUSH.Implementation | 141 | 195 | 55 | 0 | 2 | 393 |
+| SharpMUSH.Library | 51 | 48 | 26 | 1 | 3 | 129 |
+| SharpMUSH.PackageTool | 0 | 0 | 1 | 0 | 0 | 1 |
+| SharpMUSH.Plugins.Scene | 67 | 43 | 21 | 0 | 10 | 141 |
+| SharpMUSH.Server | 57 | 90 | 42 | 7 | 11 | 207 |
+| SharpMUSH.Tests | 496 | 564 | 81 | 0 | 0 | 1141 |
+| SharpMUSH.Tests.BUnit | 19 | 17 | 3 | 0 | 0 | 39 |
+| SharpMUSH.Tests.Infrastructure | 0 | 0 | 6 | 0 | 0 | 6 |
+| SharpMUSH.Tests.Integration | 91 | 84 | 7 | 0 | 0 | 182 |
+| SharpMUSH.Tests.ScenePlugin | 4 | 26 | 0 | 0 | 2 | 32 |
+| tools | 0 | 0 | 0 | 3 | 0 | 3 |
+| **Total** | 951 | 1093 | 265 | 20 | 50 | 2379 |
+
+### Things stage 2 will trip over
+
+- **Tuple cases cannot be named in a type pattern.** `x is (string db, string? Attribute) d` parses as a
+  positional pattern, and `ValueTuple<string, string?>` loses the element names. The three
+  `*AttributeSplit` unions are why `AttributeCommands`, `GeneralCommands`, `SetHelpers`,
+  `AttributeFunctions` and `UtilityFunctions` read `IsT0`/`AsT0` instead of a pattern; giving those
+  cases a named record struct is the clean fix.
+- **A switch statement is never exhaustive** for definite-return analysis: a method whose every path
+  returns from `switch (union) { case A … case B … }` still fails CS0161. Use a switch expression, or
+  return after the switch.
+- **`x is null` on a class union tests `Value`**, not the reference (`== null` tests the reference). The
+  domain unions never hold a null value, so the two agree today.
+- **ToString** is the default (type name) on every union; OneOf printed `"<case type>: <value>"`.
+  Nothing left depends on either.
+- **Null in a case**: a union reports no case at all for a null value, where OneOf reported the index
+  it was constructed with. No case type is nullable and no test hit it.
+- The in-repo plugin fixtures and `SharpMUSH.Plugins.Scene` reference `SharpMUSH.Contracts` directly
+  (a ProjectReference to Library does not flow it), and `PluginLoaderService.SharedContractTypes`
+  lists `None` so plugins share the host's copy.
