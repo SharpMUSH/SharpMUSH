@@ -19,9 +19,8 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	/// Tests conversion performance with a large 10MB+ PennMUSH database.
 	/// </summary>
 	/// <remarks>
-	/// Ten megabytes is about 540 objects and 29,000 attributes, and attributes are nearly all of the
-	/// cost: Lightning converts it in about 12 seconds, SurrealDB in about 106. Each budget is roughly
-	/// three to five times that.
+	/// Ten megabytes is about 540 objects and 29,000 attributes: Lightning parses and converts it in
+	/// about 4 seconds, SurrealDB in about 19. Each budget is roughly five times that.
 	/// </remarks>
 	[Test]
 	[Category("Performance")]
@@ -68,7 +67,7 @@ public class PennMUSHDatabaseConverterPerformanceTests
 
 			var dbProvider = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER") ?? "";
 			var isSurrealDb = dbProvider.Equals("surrealdb", StringComparison.OrdinalIgnoreCase);
-			var timeoutSeconds = isSurrealDb ? 360.0 : 60.0;
+			var timeoutSeconds = isSurrealDb ? 90.0 : 20.0;
 
 			var totalTime = parseStopwatch.Elapsed + convertStopwatch.Elapsed;
 			await Assert.That(totalTime.TotalSeconds).IsLessThan(timeoutSeconds)
@@ -117,11 +116,10 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			TestDiagnostics.WriteLine($"  - Locks: {result.LocksConverted}");
 			TestDiagnostics.WriteLine($"  - Objects/sec: {1000 / stopwatch.Elapsed.TotalSeconds:F2}");
 
-			// About 55,000 attributes: some 22 seconds under Lightning, and roughly nine times that under
-			// SurrealDB, as with the large database.
+			// About 55,000 attributes: some 5 seconds under Lightning and 34 under SurrealDB.
 			var isSurrealDb = string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER"),
 				"surrealdb", StringComparison.OrdinalIgnoreCase);
-			var budgetSeconds = isSurrealDb ? 600.0 : 60.0;
+			var budgetSeconds = isSurrealDb ? 150.0 : 25.0;
 			await Assert.That(stopwatch.Elapsed.TotalSeconds).IsLessThan(budgetSeconds)
 				.Because($"1000 objects should convert in under {budgetSeconds} seconds");
 		}

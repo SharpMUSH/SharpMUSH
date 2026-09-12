@@ -230,7 +230,7 @@ public partial class SurrealDatabase(
 			return query;
 		}
 
-		var names = parameters.Keys.OrderByDescending(name => name.Length).ToArray();
+		var longest = parameters.Keys.Max(name => name.Length);
 		var text = query.AsSpan();
 		var pieces = new List<string>();
 		var inRecordId = false;
@@ -243,7 +243,7 @@ public partial class SurrealDatabase(
 			{
 				pieces.Add(segment);
 			}
-			else if (ParameterNameAtStart(segment, names) is { } name)
+			else if (ParameterNameAtStart(segment, parameters, longest) is { } name)
 			{
 				pieces.Add(inRecordId ? SerializeValueRaw(parameters[name]) : SerializeValue(parameters[name]));
 				pieces.Add(segment[name.Length..]);
@@ -264,9 +264,25 @@ public partial class SurrealDatabase(
 		return string.Concat(pieces);
 	}
 
-	/// <summary>The longest parameter name <paramref name="segment"/> starts with, or null.</summary>
-	private static string? ParameterNameAtStart(string segment, string[] namesLongestFirst) =>
-		namesLongestFirst.FirstOrDefault(name => segment.StartsWith(name, StringComparison.Ordinal));
+	/// <summary>
+	/// The longest parameter name <paramref name="segment"/> starts with, or null. Looked up by length
+	/// rather than by testing every name, so a transaction carrying hundreds of parameters does not cost
+	/// hundreds of comparisons at each of its hundreds of <c>$</c>s.
+	/// </summary>
+	private static string? ParameterNameAtStart(string segment, IReadOnlyDictionary<string, object?> parameters,
+		int longest)
+	{
+		for (var length = Math.Min(segment.Length, longest); length > 0; length--)
+		{
+			var candidate = segment[..length];
+			if (parameters.ContainsKey(candidate))
+			{
+				return candidate;
+			}
+		}
+
+		return null;
+	}
 
 	/// <summary>
 	/// Serializes a value to a SurrealQL literal string (with quotes for strings).
