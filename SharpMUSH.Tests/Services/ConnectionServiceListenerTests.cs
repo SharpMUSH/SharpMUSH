@@ -17,10 +17,13 @@ public class ConnectionServiceListenerTests
 	private static async Task<ConnectionService> Registered(long handle)
 	{
 		var service = new ConnectionService(Substitute.For<IPublisher>());
-		await service.Register(handle, "127.0.0.1", "localhost", "telnet",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		await RegisterAsync(service, handle);
 		return service;
 	}
+
+	private static async Task RegisterAsync(ConnectionService service, long handle) =>
+		await service.Register(handle, "127.0.0.1", "localhost", "telnet",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 
 	[Test]
 	public async Task ListenerRegisteredDuringANotificationDoesNotBreakIt()
@@ -42,5 +45,43 @@ public class ConnectionServiceListenerTests
 		await Assert.That(lateCalls).IsEqualTo(0);
 		await service.Disconnect(1);
 		await Assert.That(lateCalls).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// Listeners registering from another thread while connections come and go.
+	/// </summary>
+	/// <remarks>
+	/// A fixed number of registrations rather than as many as two seconds allows: each one copies the
+	/// listener array and every later state change calls everything registered so far, so an open-ended
+	/// loop spends the test allocating ever larger arrays instead of interleaving the two operations.
+	/// </remarks>
+	[Test]
+	public async Task ListenersCanBeAddedWhileConnectionsChangeState()
+	{
+		const int registrations = 200;
+		var connections = new ConnectionService(Substitute.For<IPublisher>());
+		using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+		var registering = Task.Run(async () =>
+		{
+			for (var i = 0; i < registrations; i++)
+			{
+				connections.ListenState(_ => { });
+				await Task.Yield();
+			}
+		}, stop.Token);
+
+		var changing = Task.Run(async () =>
+		{
+			for (var handle = 1L; !registering.IsCompleted; handle++)
+			{
+				stop.Token.ThrowIfCancellationRequested();
+				await RegisterAsync(connections, handle);
+				await connections.Bind(handle, new DBRef(400, 0));
+				await connections.Disconnect(handle);
+			}
+		}, stop.Token);
+
+		await Task.WhenAll(registering, changing);
 	}
 }
