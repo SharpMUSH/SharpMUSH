@@ -174,11 +174,11 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	public IMUSHCodeParser CommandParserFor(DBRef executor, long handle) => BuildParser(executor, handle, command: null);
 
 	/// <summary>
-	/// <see cref="CommandParser"/> dispatching through <paramref name="commands"/> instead of the host's own
-	/// table: a command whose effect reaches the whole session, run against services a test controls.
+	/// <see cref="CommandParserFor"/> dispatching through <paramref name="commands"/> instead of the host's
+	/// own table: a command whose effect reaches the whole session, run against services a test controls.
 	/// </summary>
-	public IMUSHCodeParser CommandParserWith(LibraryService<string, CommandDefinition> commands)
-		=> BuildParser(_one, handle: 1, command: null, commands);
+	public IMUSHCodeParser CommandParserWith(LibraryService<string, CommandDefinition> commands, DBRef executor, long handle)
+		=> BuildParser(executor, handle, command: null, commands);
 
 	public virtual async Task InitializeAsync()
 	{

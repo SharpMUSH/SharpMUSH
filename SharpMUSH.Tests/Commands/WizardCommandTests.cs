@@ -67,11 +67,17 @@ public class WizardCommandTests
 	/// keep the two apart, because it only serialises against other <c>[NotInParallel]</c> tests. The
 	/// command still runs through the ordinary parser and dispatch, against a <see cref="SharpMUSH.Implementation.Commands.Commands"/>
 	/// whose Mediator keeps <see cref="HaltObjectQueueRequest"/> to itself.
+	/// <para>
+	/// A wizard of this test's own runs it, so the report it receives is read from the recipient-keyed
+	/// recorder and belongs to this test alone.
+	/// </para>
 	/// </remarks>
 	[Test]
 	public async ValueTask AllhaltCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AllhaltWizard");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var bystander = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AllhaltBystander");
 		var parked = await Scheduler.AdmitCommandList(MarkupText.Plain("think parked"),
 			ParserState.Empty with { Executor = bystander, Enactor = bystander, Caller = bystander }, TimeSpan.FromMinutes(10));
@@ -82,23 +88,24 @@ public class WizardCommandTests
 			var halts = new ConcurrentQueue<DBRef>();
 			var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
 				WebAppFactoryArg.Services, HaltRecordingMediator.Wrap(Mediator, halts));
-			var parser = WebAppFactoryArg.CommandParserWith(((ILibraryProvider<CommandDefinition>)commands).Get());
+			var parser = WebAppFactoryArg.CommandParserWith(
+				((ILibraryProvider<CommandDefinition>)commands).Get(), wizard.DbRef, wizard.Handle);
 
-			await parser.CommandParse(1, ConnectionService, MarkupText.Plain("@allhalt"));
+			var messages = await MessagesWhile(wizard.DbRef, () =>
+				parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain("@allhalt")).AsTask());
 
 			await Assert.That(halts.Select(halted => halted.Number)).Contains(bystander.Number)
 				.Because("every object in the world is asked to halt, the one this test made among them");
-			await Assert.That(halts.Select(halted => halted.Number)).Contains(executor.Number);
-			await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(NotifyService,
-					nameof(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat),
-					string.Format(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat, halts.Count), executor))
-				.IsTrue();
+			await Assert.That(halts.Select(halted => halted.Number)).Contains(wizard.DbRef.Number);
+			await Assert.That(messages).Contains(
+				string.Format(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat, halts.Count));
 			await Assert.That(Scheduler.HasPendingWork($"dbref:{bystander}", $"delay:{bystander}")).IsTrue()
 				.Because("the scheduler is session-wide: whatever another suite has queued must survive this test");
 		}
 		finally
 		{
 			await Scheduler.HaltByPid(parked.Pid!.Value);
+			await ConnectionService.Disconnect(wizard.Handle);
 		}
 	}
 
