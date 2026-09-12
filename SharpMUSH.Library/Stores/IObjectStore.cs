@@ -13,11 +13,17 @@ public interface IObjectStore
 	/// Create a new player.
 	/// </summary>
 	/// <param name="name">Player name</param>
-	/// <param name="password">Player password (plaintext for new players, or pre-hashed for imports)</param>
+	/// <param name="password">
+	/// The plaintext password of a new player, hashed here; or, when <paramref name="salt"/> is given,
+	/// the value to store exactly as it is, which is how an import keeps a source database's hashes.
+	/// </param>
 	/// <param name="location">Location to create it in</param>
 	/// <param name="home"></param>
 	/// <param name="quota">Initial quota for the player</param>
-	/// <param name="salt">Optional salt for imported passwords (null for new players)</param>
+	/// <param name="salt">
+	/// <c>null</c> for a new player. Any other value, empty included, stores <paramref name="password"/>
+	/// verbatim; nothing reads the salt back.
+	/// </param>
 	/// <param name="creationTime">
 	/// Creation time in Unix milliseconds, or <c>null</c> for now. Importer only: the objid is
 	/// <c>#N:&lt;creationTime&gt;</c>, so the original stamp is what lets a converted database keep

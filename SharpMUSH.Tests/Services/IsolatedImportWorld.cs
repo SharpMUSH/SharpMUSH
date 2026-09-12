@@ -63,6 +63,8 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 	/// <summary>The world's engine, whose object cache fronts <see cref="Database"/>.</summary>
 	public IMediator Mediator => _services.GetRequiredService<IMediator>();
 
+	public IPasswordService Passwords => _services.GetRequiredService<IPasswordService>();
+
 	public static async Task<IsolatedImportWorld> CreateAsync()
 	{
 		var useSurreal = string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER"),

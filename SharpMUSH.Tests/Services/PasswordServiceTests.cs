@@ -102,12 +102,15 @@ public class PasswordServiceTests
 		await Assert.That(result).IsFalse();
 	}
 
+	/// <summary>
+	/// Version 1 is unsalted: PennMUSH's <c>password_comp</c> (src/mycrypt.c) compares the whole hash
+	/// field with the digest of the password alone.
+	/// </summary>
 	[Test]
 	public async ValueTask PennMUSHPassword_Version1_ValidPassword_ReturnsTrue()
 	{
 		var password = "mypassword";
-		var salt = "ef";
-		var pennMUSHHash = CreatePennMUSHHash(salt, password, "SHA1", version: 1);
+		var pennMUSHHash = $"1:SHA1:{Convert.ToHexStringLower(SHA1.HashData(Encoding.UTF8.GetBytes(password)))}:12345";
 
 		var result = PasswordService.PasswordIsValid("ignored", password, pennMUSHHash);
 
@@ -264,7 +267,7 @@ public class PasswordServiceTests
 		await Assert.That(result).IsFalse();
 	}
 
-	private static string CreatePennMUSHHash(string salt, string password, string algorithm, int version = 2, long? timestamp = null)
+	private static string CreatePennMUSHHash(string salt, string password, string algorithm, long? timestamp = null)
 	{
 		var saltedPlaintext = salt + password;
 		byte[] hashBytes;
@@ -285,6 +288,6 @@ public class PasswordServiceTests
 		var hashHex = Convert.ToHexString(hashBytes).ToLowerInvariant();
 		var ts = timestamp ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-		return $"{version}:{algorithm}:{salt}{hashHex}:{ts}";
+		return $"2:{algorithm}:{salt}{hashHex}:{ts}";
 	}
 }
