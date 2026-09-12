@@ -1,6 +1,8 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -19,16 +21,19 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private readonly ILogger<PennMUSHDatabaseConverter> _logger;
 	private readonly IAttributeService _attributeService;
 	private readonly IMediator _mediator;
+	private readonly IOptionsWrapper<SharpMUSHOptions> _options;
 
 	public PennMUSHDatabaseConverter(
 		PennMUSHDatabaseParser parser,
 		IAttributeService attributeService,
 		IMediator mediator,
+		IOptionsWrapper<SharpMUSHOptions> options,
 		ILogger<PennMUSHDatabaseConverter> logger)
 	{
 		_parser = parser;
 		_attributeService = attributeService;
 		_mediator = mediator;
+		_options = options;
 		_logger = logger;
 	}
 
@@ -120,6 +125,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Objects created", 0.25);
 
 			await EstablishRelationshipsAsync(pennDatabase, context, cancellationToken);
+			context.ReportUnconverted();
 			ReportProgress("Relationships established", 0.50);
 
 			attributesConverted = await CreateAttributesAsync(pennDatabase, context, cancellationToken);
@@ -263,7 +269,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				ImportedPassword(godPennObject.Password),
 				new DBRef(0), // Limbo room (will create or reuse next)
 				new DBRef(0), // Home is also Limbo
-				godPennObject.Pennies > 0 ? godPennObject.Pennies : 1000,
+				QuotaFor(godPennObject, pennDatabase),
 				StoredVerbatim,
 				ApplyDefaultFlags: false,
 				godCreated,
@@ -381,7 +387,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								ImportedPassword(pennObj.Password),
 								tempRoom0DbRef, // Start in Limbo
 								tempRoom0DbRef, // Home is Limbo for now
-								pennObj.Pennies > 0 ? pennObj.Pennies : 100,
+								QuotaFor(pennObj, pennDatabase),
 								StoredVerbatim,
 								ApplyDefaultFlags: false,
 								created,
@@ -463,8 +469,33 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 		}
 
+		var withPennies = pennDatabase.Objects.Count(o => o.Pennies > 0);
+		if (withPennies > 0)
+		{
+			warnings.Add($"Pennies on {withPennies} object(s) were not imported: SharpMUSH does not track money.");
+		}
+
 		return (playersConverted, roomsConverted, thingsConverted, exitsConverted);
 	}
+
+	/// <summary>
+	/// A player's quota limit. SharpMUSH's quota is the limit itself; PennMUSH keeps what is left of it
+	/// in the RQUOTA attribute (src/wiz.c, <c>do_quota</c>), so the limit is what the player owns plus
+	/// that. Without RQUOTA PennMUSH would derive one from its own <c>starting_quota</c>, which the dump
+	/// does not carry, so this game's stands in, never below what the player already owns.
+	/// </summary>
+	private int QuotaFor(PennMUSHObject player, PennMUSHDatabase pennDatabase)
+	{
+		// PennMUSH does not count the player itself (get_current_quota in src/predicat.c).
+		var owned = pennDatabase.Objects.Count(o => o.Owner == player.DBRef && o.DBRef != player.DBRef);
+		var remaining = player.Attributes.Find(a => a.Name.Equals(RemainingQuota, StringComparison.OrdinalIgnoreCase));
+		return remaining is not null && int.TryParse(remaining.Value, out var left)
+			? owned + left
+			: Math.Max(owned, (int)_options.CurrentValue.Limit.StartingQuota);
+	}
+
+	/// <summary>PennMUSH's remaining-quota attribute, which becomes the player's quota rather than an attribute.</summary>
+	private const string RemainingQuota = "RQUOTA";
 
 	private async Task EstablishRelationshipsAsync(
 		PennMUSHDatabase pennDatabase,
@@ -566,6 +597,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						warnings.Add($"Zone object #{pennObj.Zone} not found for object #{pennObj.DBRef}");
 					}
 				}
+
+				var target = sharpObj;
+				await SetOwnerAsync(pennObj, target, context, cancellationToken);
+				await SetHomeOrDropToAsync(pennObj, target, context, cancellationToken);
+				await SetFlagsAsync(pennObj, target, context, cancellationToken);
+				await SetPowersAsync(pennObj, target, context, cancellationToken);
+				await SetWarningsAsync(pennObj, target, context, cancellationToken);
 			}
 			catch (Exception ex)
 			{
@@ -574,6 +612,134 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				errors.Add(error);
 			}
 		}
+	}
+
+	/// <summary>The SharpMUSH object a source dbref became, or none if it was not imported.</summary>
+	private async Task<AnyOptionalSharpObject> MappedAsync(int pennDbref, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+		=> context.DbrefMapping.TryGetValue(pennDbref, out var dbref)
+			? await _mediator.Send(new GetObjectNodeQuery(dbref), cancellationToken)
+			: new None();
+
+	/// <summary>The source owner, resolved through the conversion's mapping. A player owns itself.</summary>
+	private async Task SetOwnerAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		if (pennObj.Owner < 0)
+		{
+			return;
+		}
+
+		if (await MappedAsync(pennObj.Owner, context, cancellationToken) is not (AnySharpObject and SharpPlayer owner))
+		{
+			context.Warnings.Add($"Owner #{pennObj.Owner} of #{pennObj.DBRef} is not an imported player; God keeps it");
+			return;
+		}
+
+		await _mediator.Send(new SetObjectOwnerCommand(target, owner), cancellationToken);
+	}
+
+	/// <summary>
+	/// PennMUSH keeps a thing's or player's home, and a room's drop-to, in the link field the parser
+	/// hands over as <see cref="PennMUSHObject.Link"/>. An exit's link is its destination, set above.
+	/// </summary>
+	private async Task SetHomeOrDropToAsync(PennMUSHObject pennObj, AnySharpObject target,
+		PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		if (pennObj.Type == PennMUSHObjectType.Exit || pennObj.Link < 0)
+		{
+			return;
+		}
+
+		var container = TryGetContainer(await MappedAsync(pennObj.Link, context, cancellationToken));
+		if (container is null)
+		{
+			context.Warnings.Add(
+				$"{(target.IsRoom ? "Drop-to" : "Home")} #{pennObj.Link} of #{pennObj.DBRef} is not an imported room, thing or player");
+			return;
+		}
+
+		if (target is SharpRoom targetRoom)
+		{
+			await _mediator.Send(new LinkRoomCommand(targetRoom, container.WithNoneOption()), cancellationToken);
+		}
+		else
+		{
+			await _mediator.Send(new SetObjectHomeCommand(target.AsContent, container), cancellationToken);
+		}
+	}
+
+	/// <summary>
+	/// Imported objects are created without this game's default flags, so the source's are the whole
+	/// set. CONNECTED is session state that PennMUSH itself clears on every load (db_read in src/db.c).
+	/// </summary>
+	private async Task SetFlagsAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		foreach (var name in pennObj.Flags)
+		{
+			if (name.Equals("CONNECTED", StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
+			var flag = await _mediator.Send(new GetObjectFlagQuery(name), cancellationToken);
+			if (flag is null)
+			{
+				context.NoteUnconverted($"Flag {name.ToUpperInvariant()}, which SharpMUSH does not have", pennObj.DBRef);
+			}
+			else if (!AllowedOn(flag.TypeRestrictions, target))
+			{
+				context.NoteUnconverted($"Flag {flag.Name}, which SharpMUSH does not allow on a {target.Object().Type}", pennObj.DBRef);
+			}
+			else
+			{
+				await _mediator.Send(new SetObjectFlagCommand(target, flag), cancellationToken);
+			}
+		}
+	}
+
+	/// <summary>Whether a flag or power with these type restrictions may sit on the target; none means any.</summary>
+	private static bool AllowedOn(string[] typeRestrictions, AnySharpObject target)
+		=> typeRestrictions.Length == 0 || typeRestrictions.Contains(target.Object().Type, StringComparer.OrdinalIgnoreCase);
+
+	private async Task SetPowersAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		foreach (var name in pennObj.Powers)
+		{
+			var power = await _mediator.Send(new GetPowerQuery(name), cancellationToken);
+			if (power is null)
+			{
+				context.NoteUnconverted($"Power {name}, which SharpMUSH does not have", pennObj.DBRef);
+			}
+			else if (!AllowedOn(power.TypeRestrictions, target))
+			{
+				context.NoteUnconverted($"Power {power.Name}, which SharpMUSH does not allow on a {target.Object().Type}", pennObj.DBRef);
+			}
+			else
+			{
+				await _mediator.Send(new SetObjectPowerCommand(target, power), cancellationToken);
+			}
+		}
+	}
+
+	private async Task SetWarningsAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		if (pennObj.Warnings.Count == 0)
+		{
+			return;
+		}
+
+		var unknown = new List<string>();
+		var warnings = WarningTypeHelper.ParseWarnings(string.Join(' ', pennObj.Warnings), unknown);
+		foreach (var name in unknown)
+		{
+			context.NoteUnconverted($"Warning {name}, which SharpMUSH does not have", pennObj.DBRef);
+		}
+
+		await _mediator.Send(new SetObjectWarningsCommand(target, warnings), cancellationToken);
 	}
 
 	private async Task<int> CreateAttributesAsync(
@@ -612,6 +778,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 				foreach (var pennAttr in pennObj.Attributes)
 				{
+					if (pennObj.Type == PennMUSHObjectType.Player
+						&& pennAttr.Name.Equals(RemainingQuota, StringComparison.OrdinalIgnoreCase))
+					{
+						continue;
+					}
+
 					try
 					{
 						var value = MarkupString.Ansi.AnsiEscapeParser.Parse(pennAttr.Value);

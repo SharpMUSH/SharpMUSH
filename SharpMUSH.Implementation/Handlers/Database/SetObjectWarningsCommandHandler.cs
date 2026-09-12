@@ -11,13 +11,7 @@ public class SetObjectWarningsCommandHandler(IObjectStore database) : ICommandHa
 	{
 		request.Target.Object().Warnings = request.Warnings;
 
-		try
-		{
-			await database.SetObjectWarnings(request.Target, request.Warnings, cancellationToken);
-		}
-		catch
-		{
-		}
+		await database.SetObjectWarnings(request.Target, request.Warnings, cancellationToken);
 
 		return Unit.Value;
 	}
