@@ -16,7 +16,51 @@ using SurrealDb.Net;
 
 namespace SharpMUSH.Tests.Database;
 
-public class DefinitionCreationTests
+public class LightningDefinitionCreationTests
+{
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public Task DuplicateCreatePreservesEntireDefinitionAndAssignments(bool power)
+		=> DefinitionCreationContract.DuplicateCreatePreservesEntireDefinitionAndAssignments("lightning", power);
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public Task ConcurrentCanonicalCreatesHaveOneWholeWinner(bool power)
+		=> DefinitionCreationContract.ConcurrentCanonicalCreatesHaveOneWholeWinner("lightning", power);
+
+	[Test]
+	public Task MixedCaseSeedPowerCannotBeDuplicated()
+		=> DefinitionCreationContract.MixedCaseSeedPowerCannotBeDuplicated("lightning");
+}
+
+public class SurrealDefinitionCreationTests
+{
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public Task DuplicateCreatePreservesEntireDefinitionAndAssignments(bool power)
+		=> DefinitionCreationContract.DuplicateCreatePreservesEntireDefinitionAndAssignments("surrealdb", power);
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public Task ConcurrentCanonicalCreatesHaveOneWholeWinner(bool power)
+		=> DefinitionCreationContract.ConcurrentCanonicalCreatesHaveOneWholeWinner("surrealdb", power);
+
+	[Test]
+	public Task MixedCaseSeedPowerCannotBeDuplicated()
+		=> DefinitionCreationContract.MixedCaseSeedPowerCannotBeDuplicated("surrealdb");
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public Task LegacyMixedCaseRowRetainsIdentityAndAssignments(bool power)
+		=> DefinitionCreationContract.SurrealLegacyMixedCaseRowRetainsIdentityAndAssignments(power);
+}
+
+internal static class DefinitionCreationContract
 {
 	private sealed record World(ISharpDatabase Database, Func<ValueTask> Cleanup, ISurrealDbClient? Client = null) : IAsyncDisposable
 	{
@@ -52,12 +96,7 @@ public class DefinitionCreationTests
 		catch { await container.DisposeAsync(); throw; }
 	}
 
-	[Test]
-	[Arguments("lightning", false)]
-	[Arguments("lightning", true)]
-	[Arguments("surrealdb", false)]
-	[Arguments("surrealdb", true)]
-	public async Task DuplicateCreatePreservesEntireDefinitionAndAssignments(string provider, bool power)
+	public static async Task DuplicateCreatePreservesEntireDefinitionAndAssignments(string provider, bool power)
 	{
 		await using var world = await Open(provider);
 		var db = world.Database;
@@ -89,12 +128,7 @@ public class DefinitionCreationTests
 		}
 	}
 
-	[Test]
-	[Arguments("lightning", false)]
-	[Arguments("lightning", true)]
-	[Arguments("surrealdb", false)]
-	[Arguments("surrealdb", true)]
-	public async Task ConcurrentCanonicalCreatesHaveOneWholeWinner(string provider, bool power)
+	public static async Task ConcurrentCanonicalCreatesHaveOneWholeWinner(string provider, bool power)
 	{
 		await using var world = await Open(provider);
 		var db = world.Database;
@@ -138,10 +172,7 @@ public class DefinitionCreationTests
 		}
 	}
 
-	[Test]
-	[Arguments("lightning")]
-	[Arguments("surrealdb")]
-	public async Task MixedCaseSeedPowerCannotBeDuplicated(string provider)
+	public static async Task MixedCaseSeedPowerCannotBeDuplicated(string provider)
 	{
 		await using var world = await Open(provider);
 		var db = world.Database;
@@ -155,10 +186,7 @@ public class DefinitionCreationTests
 		await Assert.That(await (await db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object().Powers.Value.AnyAsync(item => item.Id == original.Id)).IsTrue();
 	}
 
-	[Test]
-	[Arguments(false)]
-	[Arguments(true)]
-	public async Task SurrealLegacyMixedCaseRowRetainsIdentityAndAssignments(bool power)
+	public static async Task SurrealLegacyMixedCaseRowRetainsIdentityAndAssignments(bool power)
 	{
 		await using var world = await Open("surrealdb");
 		var table = power ? "power" : "object_flag";
