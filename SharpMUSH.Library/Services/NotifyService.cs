@@ -200,7 +200,7 @@ public class NotifyService(
 		// Inbound HTTP: while the http_handler's <METHOD> attribute runs, everything emitted to
 		// the handler becomes the HTTP response body instead of going to a (nonexistent)
 		// connection — PennMUSH's CONN_HTTP_BUFFER hijack (src/notify.c queue_newwrite).
-		if (!prompt && httpOutputCapture?.TryCapture(who.Number,
+		if (!prompt && (!IsEmpty(what) || context?.Prefix.Length > 0) && httpOutputCapture?.TryCapture(who.Number,
 				context is not null ? MString.Concat(context.Prefix, AsMarkup(what)).ToPlainText() : what switch
 				{
 					MString markupString => markupString.ToPlainText(),
@@ -260,6 +260,8 @@ public class NotifyService(
 	{
 		if (!await PrepareObjectNotification(who, body, sender, type, prompt, context)) return;
 		var delivered = context is null ? body : MString.Concat(context.Prefix, body);
+		// Empty relays can reach nested listeners without producing framing or an empty transport message.
+		if (!prompt && delivered.Length == 0) return;
 		var outgoing = await PrepareRecipient(Prepare(delivered), who, sender, type);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))

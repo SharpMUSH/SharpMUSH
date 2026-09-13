@@ -150,6 +150,9 @@ enactor, and raw body `%0`. Its result replaces the previous prefix and appends 
 present-empty result. A local empty attribute suppresses inheritance. Styled prefixes and bodies
 reach the shared notification path; listener captures and HTTP capture precede recipient NOSPOOF
 headers. Cancellation and failed prefix evaluation do not become successful fallback output.
+An empty relay still reaches nested listeners, which may add an INPREFIX. If its combined prefix
+and body remain empty, it produces neither HTTP capture text nor an ordinary transport message or
+connection framing. Actual empty prompts retain their protocol boundary.
 
 The original executor controls forwarded output Hear admission, with the speaker supplied separately.
 Listener reactions and puppet routing retain their separate speaker-based Interact gate. Output
