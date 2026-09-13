@@ -142,7 +142,7 @@ public partial class PrivateListenerTests
 		await AssertPromptConsumer(prompt, "");
 	}
 
-	private static async Task AssertPromptConsumer(MarkupPromptMessage prompt, string expected)
+	internal static async Task AssertPromptConsumer(MarkupPromptMessage prompt, string expected, string sessionId = "private-listen")
 	{
 		var writes = new List<byte[]>();
 		var outputWrites = 0;
@@ -150,7 +150,8 @@ public partial class PrivateListenerTests
 		var client = new SharpMUSH.ConnectionServer.Services.ConnectionServerService.ConnectionData(prompt.Handle, null,
 			SharpMUSH.ConnectionServer.Services.ConnectionServerService.ConnectionState.Connected,
 			_ => { outputWrites++; return ValueTask.CompletedTask; }, bytes => { writes.Add(bytes); return ValueTask.CompletedTask; },
-			() => Encoding.UTF8, () => { }, null, new SharpMUSH.ConnectionServer.Models.ProtocolCapabilities(), null, "telnet");
+			() => Encoding.UTF8, () => { }, null, new SharpMUSH.ConnectionServer.Models.ProtocolCapabilities(), null, "telnet")
+		{ SessionId = sessionId };
 		connections.Get(prompt.Handle).Returns(client);
 		var transform = Substitute.For<SharpMUSH.ConnectionServer.Services.IOutputTransformService>();
 		transform.TransformAsync(Arg.Any<byte[]>(), Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities>(),

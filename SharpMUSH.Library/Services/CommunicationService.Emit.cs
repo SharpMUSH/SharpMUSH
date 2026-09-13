@@ -10,6 +10,28 @@ namespace SharpMUSH.Library.Services;
 
 public partial class CommunicationService
 {
+	public async ValueTask<CallState> SpeechAsync(IMUSHCodeParser parser, MString message, string token)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		var location = await executor.Where();
+		if (!await MayEmitInAsync(parser, executor, executor, location, here: true)) return CallState.Empty;
+		var transformed = speechService is null ? new CallState(message) : await speechService.Value.TransformAsync(parser, executor, message, token);
+		if (transformed.HadErrors) return transformed;
+		message = transformed.Message!;
+		var name = speechService is null ? MString.Plain(executor.Object().Name) : await speechService.Value.Names.FormatAsync(executor, NameContext.Speech);
+		var type = token == "\"" ? INotifyService.NotificationType.Say : token == ":" ? INotifyService.NotificationType.Pose : INotifyService.NotificationType.SemiPose;
+		var audience = token == "\"" ? MString.Concat([name, MString.Plain(" says, \""), message, MString.Plain("\"")])
+			: token == ":" ? MString.Concat([name, MString.Space, message]) : MString.Concat(name, message);
+		HashSet<DBRef>? omitted = null;
+		if (token == "\"")
+		{
+			await notifyService.Notify(executor, MString.Concat([MString.Plain("You say, \""), message, MString.Plain("\"")]), executor, type);
+			omitted = [executor.Object().DBRef];
+		}
+		await EmitLocationAsync(executor, executor, location, audience, type, omitted);
+		return transformed;
+	}
+
 	public async ValueTask<CallState> EmitAsync(IMUSHCodeParser parser, EmitRequest request)
 		=> (await EmitWithOutcomeAsync(parser, request)).Result;
 
@@ -48,7 +70,10 @@ public partial class CommunicationService
 					}
 					if (!await MayEmitInAsync(parser, executor, speaker, location, request.Scope == EmitScope.Immediate)) break;
 					admitted = true;
-					await EmitLocationAsync(executor, speaker, location, request.Message, type);
+					var transformed = request.Scope == EmitScope.Immediate && speechService is not null
+						? await speechService.Value.TransformAsync(parser, executor, request.Message, "|") : new CallState(request.Message);
+					if (transformed.HadErrors) return new EmitOutcome(false, transformed);
+					await EmitLocationAsync(executor, speaker, location, transformed.Message!, type);
 					if (request.Scope == EmitScope.Outermost && !request.Silent && (await executor.Where()).Object().DBRef != location.Object().DBRef)
 						await notifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouLemitFormat), executor, request.Message);
 					break;

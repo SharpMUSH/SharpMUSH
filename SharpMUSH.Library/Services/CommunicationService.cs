@@ -16,8 +16,13 @@ public partial class CommunicationService(
 	IPermissionService permissionService,
 	ILocateService locateService,
 	ILockService lockService,
-	Lazy<IDidItService> didItService) : ICommunicationService
+	Lazy<IDidItService> didItService,
+	Lazy<SpeechService>? speechService = null) : ICommunicationService
 {
+	public CommunicationService(IMediator mediator, INotifyService notifyService, IConnectionService connectionService,
+		IPermissionService permissionService, ILocateService locateService, ILockService lockService, Lazy<IDidItService> didItService)
+		: this(mediator, notifyService, connectionService, permissionService, locateService, lockService, didItService, null) { }
+
 	public async ValueTask SendToPortsAsync(
 		AnySharpObject executor,
 		long[] ports,
