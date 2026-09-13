@@ -11,7 +11,11 @@ namespace SharpMUSH.Library.Services;
 public partial class CommunicationService
 {
 	public async ValueTask<CallState> EmitAsync(IMUSHCodeParser parser, EmitRequest request)
+		=> (await EmitWithOutcomeAsync(parser, request)).Result;
+
+	public async ValueTask<EmitOutcome> EmitWithOutcomeAsync(IMUSHCodeParser parser, EmitRequest request)
 	{
+		var admitted = false;
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var speaker = executor;
 		if (request.Spoof)
@@ -29,8 +33,7 @@ public partial class CommunicationService
 		{
 			case EmitScope.Private:
 			case EmitScope.Prompt:
-				await EmitPrivateAsync(parser, executor, speaker, request, type);
-				break;
+				return await EmitPrivateAsync(parser, executor, speaker, request, type);
 			case EmitScope.Immediate:
 			case EmitScope.Outermost:
 				{
@@ -42,6 +45,7 @@ public partial class CommunicationService
 						break;
 					}
 					if (!await MayEmitInAsync(parser, executor, speaker, location, request.Scope == EmitScope.Immediate)) break;
+					admitted = true;
 					await EmitLocationAsync(executor, speaker, location, request.Message, type);
 					if (request.Scope == EmitScope.Outermost && !request.Silent && (await executor.Where()).Object().DBRef != location.Object().DBRef)
 						await notifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouLemitFormat), executor, request.Message);
@@ -57,6 +61,7 @@ public partial class CommunicationService
 						continue;
 					}
 					if (!await MayPemitAsync(parser, speaker, target) || !await MayEmitInAsync(parser, executor, speaker, target.AsContainer)) continue;
+					admitted = true;
 					await EmitLocationAsync(executor, speaker, target.AsContainer, request.Message, type);
 					if (!request.Silent && (await executor.Where()).Object().DBRef != target.Object().DBRef)
 						await notifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouRemitInFormat), executor,
@@ -80,6 +85,7 @@ public partial class CommunicationService
 					{
 						if (item.Type != "ROOM" || await mediator.Send(new GetObjectNodeQuery(item.DBRef), ExecutionBudget.CurrentToken) is not AnySharpObject room) continue;
 						if (!await MayEmitInAsync(parser, executor, speaker, room.AsContainer, reportFailure: false)) continue;
+						admitted = true;
 						heardHere |= await EmitLocationAsync(executor, speaker, room.AsContainer, request.Message, type, observe: here);
 					}
 					if (!request.Silent && !heardHere)
@@ -88,7 +94,7 @@ public partial class CommunicationService
 				}
 				break;
 		}
-		return CallState.Empty;
+		return new EmitOutcome(admitted, CallState.Empty);
 	}
 
 	private async ValueTask<bool> MayEmitInAsync(IMUSHCodeParser parser, AnySharpObject executor,
@@ -134,22 +140,23 @@ public partial class CommunicationService
 		}
 	}
 
-	private async ValueTask<CallState> EmitOmitAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject speaker,
+	private async ValueTask<EmitOutcome> EmitOmitAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject speaker,
 		EmitRequest request, INotifyService.NotificationType type)
 	{
-		if (request.Message.Length == 0 || request.Targets.Count == 0 && request.OmitLocation is null) return CallState.Empty;
+		if (request.Message.Length == 0 || request.Targets.Count == 0 && request.OmitLocation is null) return new EmitOutcome(false, CallState.Empty);
 		var locations = new Dictionary<DBRef, AnySharpContainer>();
 		var omitted = new HashSet<DBRef>();
 		AnySharpObject looker = executor;
 		if (request.OmitLocation is { } locationName)
 		{
-			if (await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, locationName, LocateFlags.All) is not AnySharpObject target) return CallState.Empty;
+			if (await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, locationName, LocateFlags.All) is not AnySharpObject target)
+				return new EmitOutcome(false, CallState.Empty) { TargetFailure = new CallState(ErrorMessages.Returns.InvalidRoom) };
 			if (!target.IsContainer)
 			{
 				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidRoomSpecifiedDetail), executor);
-				return new CallState(ErrorMessages.Returns.InvalidRoom) { HadErrors = true };
+				return new EmitOutcome(false, new CallState(ErrorMessages.Returns.InvalidRoom) { HadErrors = true });
 			}
-			if (!await MayEmitInAsync(parser, executor, speaker, target.AsContainer)) return CallState.Empty;
+			if (!await MayEmitInAsync(parser, executor, speaker, target.AsContainer)) return new EmitOutcome(false, CallState.Empty);
 			looker = target;
 			locations[target.Object().DBRef] = target.AsContainer;
 		}
@@ -183,13 +190,15 @@ public partial class CommunicationService
 		}
 		if (locations.Count == 0) await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoMatchingObjects), executor);
 		foreach (var room in locations.Values) await EmitLocationAsync(executor, speaker, room, request.Message, type, omitted);
-		return CallState.Empty;
+		return new EmitOutcome(locations.Count > 0, CallState.Empty);
 	}
 
-	private async ValueTask EmitPrivateAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject speaker,
+	private async ValueTask<EmitOutcome> EmitPrivateAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject speaker,
 		EmitRequest request, INotifyService.NotificationType type)
 	{
-		if (request.Scope == EmitScope.Private && request.Message.Length == 0) return;
+		if (request.Scope == EmitScope.Private && request.Message.Length == 0) return new EmitOutcome(false, CallState.Empty);
+		var admitted = false;
+		Option<CallState> targetFailure = new None();
 		var notified = new List<AnySharpObject>();
 		var portsNotified = 0;
 		long lastPort = 0;
@@ -215,18 +224,26 @@ public partial class CommunicationService
 					continue;
 				}
 				if (!await CanHearOnPortAsync(executor, port)) continue;
+				admitted = true;
 				await notifyService.Notify(port, request.Message, speaker, type);
 				portsNotified++;
 				lastPort = port;
 				continue;
 			}
-			if (await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, name, LocateFlags.All) is not AnySharpObject target) continue;
+			var located = await locateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, name, LocateFlags.All);
+			if (located is not AnySharpObject target)
+			{
+				if (targetFailure is None && located is Error<CallState> error) targetFailure = error.Value;
+				continue;
+			}
 			if (!await MayPemitAsync(parser, speaker, target, !request.List) || !await permissionService.CanInteract(executor, target, IPermissionService.InteractType.Hear, speaker)) continue;
+			admitted = true;
 			if (request.Scope == EmitScope.Prompt) await notifyService.Prompt(target, request.Message, speaker, type);
 			else await notifyService.Notify(target, request.Message, speaker, type);
 			notified.Add(target);
 		}
-		if (request.Silent) return;
+		var outcome = new EmitOutcome(admitted, CallState.Empty) { TargetFailure = targetFailure };
+		if (request.Silent) return outcome;
 		if (portsNotified == 1)
 		{
 			var recipientName = connectionService.Get(lastPort)?.Ref is { } reference
@@ -238,10 +255,11 @@ public partial class CommunicationService
 		else if (portsNotified > 1)
 			await notifyService.NotifyLocalizedMarkup(executor, nameof(ErrorMessages.Notifications.YouPemitToConnectionsFormat), executor,
 				request.Message, MString.Plain(portsNotified.ToString()));
-		if (notified.Count == 0) return;
-		if (notified.Count == 1 && notified[0].Object().DBRef == executor.Object().DBRef) return;
+		if (notified.Count == 0) return outcome;
+		if (notified.Count == 1 && notified[0].Object().DBRef == executor.Object().DBRef) return outcome;
 		await notifyService.NotifyLocalizedMarkup(executor, notified.Count > 1
 			? nameof(ErrorMessages.Notifications.YouPemitToCountFormat) : nameof(ErrorMessages.Notifications.YouPemitToObjectFormat),
 			executor, request.Message, MString.Plain(notified.Count > 1 ? notified.Count.ToString() : notified[0].Object().Name));
+		return outcome;
 	}
 }
