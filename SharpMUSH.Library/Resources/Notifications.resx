@@ -2670,4 +2670,9 @@
   <data name="LocalFunctionHeader" xml:space="preserve"><value>Owner-local functions (call with localfun):</value></data>
   <data name="LocalFunctionReset" xml:space="preserve"><value>Removed {0} unpreserved owner-local functions.</value></data>
   <data name="LocalFunctionChanged" xml:space="preserve"><value>Owner-local function {0}: {1}.</value></data>
+  <data name="OemitTooManyRecipients" xml:space="preserve"><value>Too many people to oemit to.</value></data>
+  <data name="NoMatchingObjects" xml:space="preserve"><value>No matching objects.</value></data>
+  <data name="InvalidPortNumber" xml:space="preserve"><value>'{0}' is not a port number.</value></data>
+  <data name="PortNotActive" xml:space="preserve"><value>That port is not active.</value></data>
+  <data name="PemitTargetWishesAlone" xml:space="preserve"><value>I'm sorry, but {0} wishes to be left alone now.</value></data>
 </root>

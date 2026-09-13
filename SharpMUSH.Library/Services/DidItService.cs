@@ -45,6 +45,10 @@ public class DidItService(
 				{
 					await notifyService.Notify(request.Player, request.Def, request.Thing);
 				}
+				else if (request.DefaultNotification is { } notification)
+				{
+					await notifyService.NotifyLocalized(request.Player, notification.Key, request.Thing, notification.Arguments);
+				}
 			}
 
 			// A Dark object that is legally dark produces no o-messages at all.

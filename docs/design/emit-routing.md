@@ -18,7 +18,10 @@ no-spoof and explicit spoof options. `EmitRequest` carries the resulting intent.
 The emit core includes the location object, so an object in an inventory can notify its carrier.
 Recipient exclusions compare DBRefs, not object-wrapper identity.
 
-The executor owns targeting and interaction-lock checks. Explicit `/spoof`, when authorized,
+Target resolution, spoof authorization and recipient Interact-lock checks use the executor.
+Page/HAVEN admission, including Wizard/Pemit_All bypasses and Page failure actions, uses the
+selected speaker. Speech checks the speaker too, while Speech refusal actions target the executor.
+Explicit `/spoof`, when authorized,
 selects the enactor as speaker for Speech locks, reality hearing and output attribution.
 NS variants suppress recipient NOSPOOF tagging when permitted; they do not implicitly select
 the enactor. LOUD on the speaker bypasses Speech locks.
@@ -30,10 +33,26 @@ FailLock too. List private output suppresses the default refusal while retaining
 failure attributes. Ordinary empty private messages do nothing; empty prompts retain the
 protocol boundary.
 
-PEMIT descriptor routing requires privilege and an active positive descriptor. An all-integer
-target list selects descriptors; a mixed numeric/DBRef list remains object matching. `/port`
-selects descriptor mode explicitly. Private/list defaults to silent unless `/noisy` is supplied;
+Missing personal Speech/Page failure attributes use a resource key resolved separately for each
+connection, including two connections on the same player with different locales. Custom failure
+attributes still evaluate once; present-empty attributes suppress the default, and O/A failure
+attributes still run. HTTP capture receives the neutral default through the normal notification path.
+Room triad defaults remain literal pending the separate callback work in #1006.
+
+`@emit/room` and `@nsemit/room` select the outermost room, like LEMIT. `@pemit/contents`
+selects a container and its contents, like REMIT, retaining spaces in the target name even with
+`/list`. `@pemit/spoof` selects an authorized speaker for ordinary private or contents output.
+
+PEMIT descriptor routing requires privilege and an active positive descriptor. Functions infer
+descriptors from an all-integer target list; a mixed numeric/DBRef list remains object matching.
+Commands require explicit `/port`, so numeric object names remain addressable. SharpMUSH also
+supports `/port` on NSPEMIT. PORT takes precedence over CONTENTS and uses executor attribution;
+CONTENTS takes precedence over LIST. Neither branch inherits private-object-list implicit silence.
+Private/list defaults to silent unless `/noisy` is supplied;
 other command confirmation defaults follow `silent_pemit`, with `/silent` and `/noisy` overrides.
+
+PEMIT/NSPEMIT and REMIT/NSREMIT functions suppress confirmations. PROMPT/NSPROMPT,
+LEMIT/NSLEMIT and ZEMIT/NSZEMIT retain PennMUSH's confirmation behavior.
 
 OEMIT retains PennMUSH's maximum of ten matched exclusions. This is a recipient-selection
 contract, unrelated to the obsolete 8,192-character output buffers. Explicit location syntax

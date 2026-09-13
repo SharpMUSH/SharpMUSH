@@ -62,12 +62,12 @@ public class CommunicationFunctionSpeechLockTests
 		var scene = await SetupSceneAsync("PortScope");
 		var denied = Token("portdenied");
 		if (function) await Eval(scene.Speaker.Handle, $"{name}({scene.Witness.Handle},{denied})");
-		else await Command(scene.Speaker.Handle, $"@{name}/list {scene.Witness.Handle}={denied}");
+		else await Command(scene.Speaker.Handle, $"@{name}/port/list {scene.Witness.Handle}={denied}");
 		await Assert.That(Notifications.ForHandle(scene.Witness.Handle)).DoesNotContain(denied);
 		var token = Token("portallowed");
 		var ports = $"{scene.Speaker.Handle} {scene.Witness.Handle}";
 		if (function) await Eval(1, $"{name}({ports},{token})");
-		else await Command(1, $"@{name}/list {ports}={token}");
+		else await Command(1, $"@{name}/port/list {ports}={token}");
 		await Assert.That(Notifications.ForHandle(scene.Speaker.Handle)).Contains(token);
 		await Assert.That(Notifications.ForHandle(scene.Witness.Handle)).Contains(token);
 		var mixed = Token("mixedtargets");
@@ -80,6 +80,8 @@ public class CommunicationFunctionSpeechLockTests
 	[Test]
 	[Arguments("emit")]
 	[Arguments("remit")]
+	[Arguments("emit/room")]
+	[Arguments("nsemit/room")]
 	public async Task SpeechLockUsesSpoofedSpeakerAndLoudBypassesIt(string name)
 	{
 		var scene = await SetupSceneAsync("SpoofSpeech");
@@ -105,6 +107,107 @@ public class CommunicationFunctionSpeechLockTests
 		var loud = Token("loudallowed");
 		await Command(scene.Speaker.Handle, $"@{name}{target}{loud}");
 		await AssertHeardAsync(scene.Witness.DbRef, loud, "LOUD bypasses the Speech lock");
+	}
+
+	[Test]
+	[Arguments("emit")]
+	[Arguments("nsemit")]
+	public async Task RoomSwitchTargetsOutermostRoomWhileDefaultTargetsCarrier(string name)
+	{
+		var scene = await SetupSceneAsync("RoomSwitch");
+		var carrier = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "RoomCarrier");
+		await Command(1, $"@teleport/silent {carrier}={scene.Room}");
+		await Command(1, $"@teleport/silent {scene.Speaker.DbRef}={carrier}");
+		await Command(1, $"@power {scene.Speaker.DbRef}=Can_Spoof");
+		await Assert.That(await Eval(scene.Speaker.Handle, "loc(me)")).IsEqualTo(carrier.ToString());
+		var immediate = Token("roomdefault");
+		await Command(scene.Speaker.Handle, $"@{name} {immediate}");
+		await AssertHeardAsync(carrier, immediate, "default emission targets the immediate carrier");
+		await AssertNotHeardAsync(scene.Witness.DbRef, immediate, "the outside witness is outside the default scope");
+		await Command(1, $"@lock/speech {carrier}=#FALSE");
+		var outer = Token("roomouter");
+		await Command(scene.Speaker.Handle, $"@{name}/room {outer}");
+		await AssertHeardAsync(scene.Witness.DbRef, outer, "/room targets the outermost room and its Speech lock");
+		await AssertHeardAsync(DBRef.Parse(scene.Room), outer, "the room itself receives outermost output");
+		await WebAppFactoryArg.Services.GetRequiredService<INotifyService>().Received().Notify(
+			TestHelpers.MatchingObject(scene.Witness.DbRef), TestHelpers.MatchingMessage(outer),
+			TestHelpers.MatchingObject(scene.Speaker.DbRef), name == "nsemit" ? INotifyService.NotificationType.NSEmit : INotifyService.NotificationType.Emit);
+		await Command(1, $"@lock/speech {scene.Room}=#FALSE");
+		var denied = Token("roomdenied");
+		await Command(scene.Speaker.Handle, $"@{name}/room {denied}");
+		await AssertNotHeardAsync(scene.Witness.DbRef, denied, "outermost Speech denial still gates /room");
+	}
+
+	[Test]
+	public async Task PemitContentsAndPortOptionsTakePrecedenceOverListDefaults()
+	{
+		var scene = await SetupSceneAsync("ContentsOption");
+		var carrier = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "Contents Carrier");
+		await Command(1, $"@teleport/silent {carrier}={scene.Room}");
+		await Command(1, $"@teleport/silent {scene.Witness.DbRef}={carrier}");
+		var name = await Eval(1, $"name({carrier})");
+		await Assert.That(name).Contains(" ");
+		var contents = Token("contentsoption");
+		await Command(scene.Speaker.Handle, $"@pemit/contents/list {name}={contents}");
+		await AssertHeardAsync(carrier, contents, "contents includes the named container itself");
+		await AssertHeardAsync(scene.Witness.DbRef, contents, "CONTENTS keeps a spaced target name whole despite LIST");
+		var notify = WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(notify, "YouRemitInFormat",
+			$"You remit, \"{contents}\" in {name}(#{carrier.Number})", scene.Speaker.DbRef)).IsTrue()
+			.Because("CONTENTS bypasses private-list implicit silence and confirms remote output");
+		var port = Token("portprecedence");
+		var portParser = WebAppFactoryArg.CommandParserFor(WebAppFactoryArg.ExecutorDBRef, 1);
+		portParser = portParser.FromState(portParser.CurrentState with { Enactor = scene.Speaker.DbRef });
+		await portParser.CommandListParse(MarkupText.Plain($"@pemit/port/contents/list/spoof {scene.Speaker.Handle} {scene.Witness.Handle}={port}"));
+		await Assert.That(Notifications.ForHandle(scene.Speaker.Handle)).Contains(port);
+		await Assert.That(Notifications.ForHandle(scene.Witness.Handle)).Contains(port);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(notify, "YouPemitToConnectionsFormat",
+			$"You pemit \"{port}\" to 2 connections.", WebAppFactoryArg.ExecutorDBRef)).IsTrue()
+			.Because("PORT takes precedence and does not inherit object-list implicit silence");
+		await WebAppFactoryArg.Services.GetRequiredService<INotifyService>().Received().Notify(scene.Witness.Handle,
+			TestHelpers.MatchingMessage(port), TestHelpers.MatchingObject(WebAppFactoryArg.ExecutorDBRef), INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
+	[Arguments("pemit")]
+	[Arguments("nspemit")]
+	public async Task PemitCommandsTreatNumericNamesAsObjectsWithoutPort(string name)
+	{
+		var scene = await SetupSceneAsync("NumericObject");
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "NumericTarget");
+		await Command(1, $"@teleport/silent {target}={scene.Room}");
+		await Command(1, $"@name {target}={scene.Witness.Handle}");
+		var token = Token("numericobject");
+		await Command(scene.Speaker.Handle, $"@{name} {scene.Witness.Handle}={token}");
+		await AssertHeardAsync(target, token, "command descriptor routing requires explicit PORT");
+		await Assert.That(Notifications.ForHandle(scene.Witness.Handle)).DoesNotContain(token);
+	}
+
+	[Test]
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(false, true)]
+	[Arguments(true, true)]
+	public async Task PemitSpoofUsesAuthorizedSpeakerForOutputAndPageAdmission(bool authorized, bool contents)
+	{
+		var scene = await SetupSceneAsync("PemitSpoof");
+		var enactor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PemitEnactor");
+		if (authorized) await Command(1, $"@power {scene.Speaker.DbRef}=Can_Spoof");
+		var parser = WebAppFactoryArg.CommandParserFor(scene.Speaker.DbRef, scene.Speaker.Handle);
+		parser = parser.FromState(parser.CurrentState with { Enactor = enactor.DbRef });
+		var token = Token("pemitspoof");
+		var command = contents ? "@pemit/contents/spoof" : "@pemit/spoof";
+		await parser.CommandListParse(MarkupText.Plain($"{command} {scene.Witness.DbRef}={token}"));
+		await WebAppFactoryArg.Services.GetRequiredService<INotifyService>().Received().Notify(
+			TestHelpers.MatchingObject(scene.Witness.DbRef), TestHelpers.MatchingMessage(token),
+			TestHelpers.MatchingObject(authorized ? enactor.DbRef : scene.Speaker.DbRef),
+			contents ? INotifyService.NotificationType.Emit : INotifyService.NotificationType.Announce);
+		await Command(1, $"@lock/page {scene.Witness.DbRef}==#{enactor.DbRef.Number}");
+		var gated = Token("pemitpage");
+		await parser.CommandListParse(MarkupText.Plain($"{command} {scene.Witness.DbRef}={gated}"));
+		if (authorized) await AssertHeardAsync(scene.Witness.DbRef, gated, "Page evaluates the selected speaker");
+		else await AssertNotHeardAsync(scene.Witness.DbRef, gated, "unauthorized spoof falls back to the denied executor");
 	}
 
 	private async Task Command(long handle, string command)
@@ -244,6 +347,9 @@ public class CommunicationFunctionSpeechLockTests
 		if (function) await Eval(first.Speaker.Handle, $"{name}({zone},{nested})");
 		else await Command(first.Speaker.Handle, $"@{name}/noisy {zone}={nested}");
 		await AssertNotHeardAsync(first.Speaker.DbRef, nested, "enumerating the immediate carrier suppresses the zone echo even if it cannot hear");
+		var zoneName = await Eval(1, $"name({zone})");
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(WebAppFactoryArg.Services.GetRequiredService<INotifyService>(),
+			"YouZemitInZoneFormat", $"You zemit, \"{nested}\" in zone {zoneName}(#{zone.Number})", first.Speaker.DbRef)).IsFalse();
 	}
 
 	[Test]
