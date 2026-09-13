@@ -3419,7 +3419,7 @@ Walker WalkerBot Wilco
 # LOCKOWNER()
 `lockowner(<object>[/<locktype>])`
 
-  This function returns the dbref of the player who owns the `<locktype>` lock on `<object>`, or the Basic lock if no `<locktype>` is given. You must be able to examine the lock to use this function.
+  This function returns the dbref of the executor who set the `<locktype>` lock on `<object>`, or the Basic lock if no `<locktype>` is given. You must be able to examine the lock. Legacy locks with an unknown creator return `#-1`; absent or inaccessible locks return `#-1 NO SUCH LOCK`.
 
 
 **See Also:**
@@ -3428,10 +3428,20 @@ Walker WalkerBot Wilco
 - [lset()]
 - [lock()]
 - [llocks()]
+# LISTSET()
+`listset(<list>,<position>,<replacement>[,<input delimiter>[,<output delimiter>]])`
+
+  Replaces the item at the one-based position in a list. Delimiters default to a space; the output delimiter defaults to the input delimiter. For example, `listset(a b c,2,x)` returns `a x c`.
+
+  List replacement uses `listset()`. `lset()` sets lock flags.
+
+**See Also:**
+- [replace()]
+- [lset()]
 # LSET()
 `lset(<object>/<locktype>,[!]<flag>)`
 
-  This functions sets or clears flags on locks.
+  This function sets or clears flags on locks and returns an empty string. It requires side effects to be enabled.
 
   See [@lset] for more information on what flags are available.
 

@@ -11,38 +11,24 @@ namespace SharpMUSH.Library.Services;
 /// <summary>
 /// Reads and evaluates the standard locks.
 /// </summary>
-/// <remarks>
-/// It does not cache compiled expressions. <see cref="IBooleanExpressionParser.Compile"/> already
-/// does, keyed by the expression text, in the bounded cache Startup registers for it. This used to
-/// cache the delegate a second time in the engine cache keyed by object and lock type, which cannot
-/// be right — the delegate depends on the lock string and nothing else, so an object-keyed entry
-/// outlives the text that produced it — and it did not even save the inner lookup, because the value
-/// argument of GetOrSet is evaluated before the call.
-/// </remarks>
-public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSHOptions> options) : ILockService
+public partial class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSHOptions> options,
+	Mediator.IMediator mediator, Lazy<IPermissionService> permissions) : ILockService
 {
 	private readonly AsyncLocal<uint> _evaluationDepth = new();
 
 	public Dictionary<string, (string, LockFlags)> LockPrivileges { get; } = new(StringComparer.OrdinalIgnoreCase)
 	{
 		{ "visual", ("v", LockFlags.Visual) },
-		{ "no_inherit", ("n", LockFlags.Private) },
+		{ "no_inherit", ("i", LockFlags.Private) },
 		{ "no_clone", ("c", LockFlags.NoClone) },
 		{ "wizard", ("w", LockFlags.Wizard) },
-		{ "owner", ("o", LockFlags.Owner) },
-		{ "locked", ("l", LockFlags.Locked) }
+		{ "locked", ("+", LockFlags.Locked) }
 	};
 
-	/// <summary>
-	/// The standard locks and the flags they are given when set without explicit ones. Derived from
-	/// <see cref="LockType"/> rather than written out again, because these keys are what
-	/// <c>@lock</c> stores under and <see cref="GetIfSet"/> looks up — a second list of spellings is
-	/// exactly how four of them came to disagree and pass everybody. Every standard lock is
-	/// <see cref="LockFlags.Private"/>; use <see cref="LockNames.Canonical"/> on a name from a
-	/// player or a foreign world before looking it up here.
-	/// </summary>
+	/// <summary>Standard lock defaults; owner restrictions are internal and cannot be changed by @lset.</summary>
 	public Dictionary<string, LockFlags> SystemLocks { get; } =
-		Enum.GetNames<LockType>().ToDictionary(name => name, _ => LockFlags.Private, LockNames.Comparer);
+		Enum.GetNames<LockType>().ToDictionary(name => name, name => LockFlags.Private |
+			(name is "Examine" or "Forward" or "Control" or "Destroy" or "ChOwn" ? LockFlags.Owner : 0), LockNames.Comparer);
 
 	[Flags]
 	public enum LockFlags
@@ -68,7 +54,7 @@ public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSH
 		Wizard = 4,
 
 		/// <summary>
-		/// Only the lock's owner can set/unset it
+		/// Only the lock's creator or that creator's objects can set/unset it
 		/// </summary>
 		Locked = 8,
 
@@ -132,7 +118,8 @@ public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSH
 		// The outermost evaluation is depth zero; max_depth indirect hops are allowed.
 		// Check before the #TRUE fast path, just as PennMUSH does.
 		if (depth > options.CurrentValue.Limit.MaxDepth) return false;
-		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE") return true;
+		if (lockString is "#TRUE") return true;
+		if (string.IsNullOrEmpty(lockString)) return false;
 
 		_evaluationDepth.Value = depth + 1;
 		try
@@ -148,7 +135,7 @@ public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSH
 	public async ValueTask<bool> Evaluate(string lockString, SharpChannel gatedChannel, AnySharpObject unlocker)
 	{
 		if (string.IsNullOrEmpty(lockString) || lockString is "#TRUE")
-			return await Evaluate(lockString, unlocker, unlocker);
+			return await Evaluate("#TRUE", unlocker, unlocker);
 		// Channels have no object representation, so evaluate against the channel owner.
 		var channelOwner = await gatedChannel.Owner.WithCancellation(ExecutionBudget.CurrentToken);
 		var syntheticGated = new AnySharpObject(channelOwner);
@@ -159,7 +146,7 @@ public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSH
 		LockType standardType,
 		AnySharpObject gated,
 		AnySharpObject unlocker)
-		=> Evaluate(Get(standardType, gated), gated, unlocker);
+		=> EvaluateType(standardType.ToString(), gated, unlocker);
 
 	public async IAsyncEnumerable<bool> Evaluate(
 		LockType standardType,
@@ -176,7 +163,7 @@ public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSH
 		=> bep.Validate(lockString, lockee);
 
 	/// <summary>
-	/// Format lock flags for display (e.g., "v" for Visual, "n" for Private)
+	/// Format lock flags for display (e.g., "v" for Visual, "i" for no_inherit)
 	/// </summary>
 	public string FormatLockFlags(LockFlags flags)
 		=> flags == LockFlags.Default

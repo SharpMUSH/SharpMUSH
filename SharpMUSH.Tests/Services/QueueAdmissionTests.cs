@@ -136,15 +136,38 @@ public class QueueAdmissionTests
 	}
 
 	[Test]
+	public async Task LockBindingReleasesTheConsumerOnCancellation()
+	{
+		var target = new TestObjectFactory().CreatePlayer(10, "lock setter");
+		var services = Substitute.For<ILockEvaluationServices>();
+		var release = new TaskCompletionSource<AnyOptionalSharpObjectOrError>(TaskCreationOptions.RunContinuationsAsynchronously);
+		services.LocateAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "target", Arg.Any<LocateFlags>())
+			.Returns(_ => new ValueTask<AnyOptionalSharpObjectOrError>(release.Task));
+		using var cache = new ZiggyCreatures.Caching.Fusion.FusionCache(new ZiggyCreatures.Caching.Fusion.FusionCacheOptions());
+		var parser = new SharpMUSH.Implementation.BooleanExpressionParser(services, Substitute.For<IMediator>(), cache);
+		using var cancellation = new CancellationTokenSource();
+		var pending = parser.BindAsync("target", target, cancellation.Token).AsTask();
+		try
+		{
+			await Assert.That(pending.IsCompleted).IsFalse();
+			await cancellation.CancelAsync();
+			await Assert.That(async () => await pending).Throws<OperationCanceledException>();
+		}
+		finally
+		{
+			release.TrySetResult(new None());
+		}
+	}
+
+	[Test]
 	[Arguments("FLAG^WIZARD")]
 	[Arguments("POWER^QUEUE")]
-	[Arguments("$me")]
+	[Arguments("$#10")]
 	[Arguments("CHANNEL^test")]
 	[Arguments("@#10")]
 	[Arguments("+#11")]
 	[Arguments("#11")]
 	[Arguments("TEST:value")]
-	[Arguments("@target")]
 	public async Task CompiledLockReadsReleaseTheConsumerOnExpiry(string expression)
 	{
 		var target = new TestObjectFactory().CreatePlayer(10, "lock target");
@@ -173,9 +196,7 @@ public class QueueAdmissionTests
 		using var cache = new ZiggyCreatures.Caching.Fusion.FusionCache(new ZiggyCreatures.Caching.Fusion.FusionCacheOptions());
 		var services = Substitute.For<ILockEvaluationServices>();
 		async ValueTask<OptionalSharpAttributeOrError> AttributeRead() { await Block(CancellationToken.None); return new None(); }
-		async ValueTask<AnyOptionalSharpObjectOrError> LocateRead() { await Block(CancellationToken.None); return new None(); }
 		services.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<IAttributeService.AttributeMode>(), Arg.Any<bool>()).Returns(_ => AttributeRead());
-		services.LocateAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<LocateFlags>()).Returns(_ => LocateRead());
 		var parser = new SharpMUSH.Implementation.BooleanExpressionParser(services, mediator, cache);
 		var compiled = parser.Compile(expression);
 		await using var queue = Create(global: 10, milliseconds: 200);
@@ -192,7 +213,7 @@ public class QueueAdmissionTests
 		{
 			var token = await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
 			await following.Task.WaitAsync(TimeSpan.FromSeconds(3));
-			if (expression is not "TEST:value" and not "@target") await Assert.That(token.CanBeCanceled).IsTrue();
+			if (expression != "TEST:value") await Assert.That(token.CanBeCanceled).IsTrue();
 			await Assert.That(cancelled).IsTrue();
 		}
 		finally

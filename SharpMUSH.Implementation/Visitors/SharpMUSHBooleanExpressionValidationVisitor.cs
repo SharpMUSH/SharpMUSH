@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+using Antlr4.Runtime;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Visitors;
@@ -38,14 +39,14 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject? invoker
 		=> Visit(context.lockExprList());
 
 	public override bool? VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
-		=> ValidObjectOperand(context.@string());
+		=> ValidObjectOperand(context.objectOperand());
 
 	public override bool? VisitCarryExpr(SharpMUSHBoolExpParser.CarryExprContext context)
-		=> ValidObjectOperand(context.@string());
+		=> ValidObjectOperand(context.objectOperand());
 
 	public override bool? VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
 	{
-		var value = context.@string().GetText();
+		var value = LockLiteralText.Read(context.literal());
 		var _ = invoker; // Silence the linter / compiler for now.
 										 // We don't check for legality of flags.
 		return true;
@@ -63,40 +64,40 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject? invoker
 	public override bool? VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{
 		// Channel locks are always valid syntactically
-		var value = context.@string().GetText();
+		var value = LockLiteralText.Read(context.literal());
 		return true;
 	}
 
 	public override bool? VisitDbRefListExpr(SharpMUSHBoolExpParser.DbRefListExprContext context)
 	{
 		// DBRef list locks are always valid syntactically
-		var value = context.@string().GetText();
+		var value = LockLiteralText.Read(context.literal());
 		return true;
 	}
 
 	public override bool? VisitIpExpr(SharpMUSHBoolExpParser.IpExprContext context)
 	{
 		// IP locks are always valid syntactically
-		var value = context.@string().GetText();
+		var value = LockLiteralText.Read(context.literal());
 		return true;
 	}
 
 	public override bool? VisitHostNameExpr(SharpMUSHBoolExpParser.HostNameExprContext context)
 	{
 		// Hostname locks are always valid syntactically
-		var value = context.@string().GetText();
+		var value = LockLiteralText.Read(context.literal());
 		return true;
 	}
 
 	public override bool? VisitNameExpr(SharpMUSHBoolExpParser.NameExprContext context)
 	{
 		// Name locks are always valid - they just check pattern matching
-		var pattern = context.@string().GetText();
+		var pattern = LockLiteralText.Read(context.literal());
 		return true;
 	}
 
 	public override bool? VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
-		=> ValidObjectOperand(context.@string(0));
+		=> ValidObjectOperand(context.objectOperand());
 
 	public override bool? VisitDefaultExpr(SharpMUSHBoolExpParser.DefaultExprContext context)
 		=> ValidObjectOperand(context.@string());
@@ -114,13 +115,13 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject? invoker
 	}
 
 	public override bool? VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
-		=> ValidObjectOperand(context.@string(0));
+		=> ValidObjectOperand(context.objectOperand());
 
-	private static bool ValidObjectOperand(SharpMUSHBoolExpParser.StringContext operand)
+	private static bool ValidObjectOperand(ParserRuleContext operand)
 	{
 		var value = operand.GetText();
-		var numericReference = operand.STAMPED_DBREF() != null ||
-			value.Length > 1 && value[0] == '#' && value.Skip(1).All(char.IsDigit);
+		var numericReference = value.Length > 1 && value[0] == '#'
+			&& value.Skip(1).All(character => char.IsDigit(character) || character == ':');
 		return !numericReference || DBRef.TryParse(value, out _);
 	}
 

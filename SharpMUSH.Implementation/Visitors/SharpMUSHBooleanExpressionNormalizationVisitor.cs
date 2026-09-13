@@ -1,18 +1,10 @@
-using SharpMUSH.Library;
-using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Library.Extensions;
-using SharpMUSH.Library.Services.Interfaces;
-
 namespace SharpMUSH.Implementation.Visitors;
 
 /// <summary>
-/// Visitor for normalizing PennMUSH lock expressions to canonical form.
-/// Uppercases keyword prefixes and attribute names per PennMUSH conventions.
-/// Resolves object names to dbrefs at lock-set time, matching PennMUSH behavior.
+/// Formats parsed lock syntax, transforming only object operands through the supplied resolver.
 /// </summary>
 public class SharpMUSHBooleanExpressionNormalizationVisitor(
-	ILockEvaluationServices? services = null,
-	AnySharpObject? executor = null)
+	Func<string, string>? resolveObject = null, bool compact = false)
 	: SharpMUSHBoolExpParserBaseVisitor<string>
 {
 	protected override string AggregateResult(string aggregate, string nextResult)
@@ -25,10 +17,10 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(
 		=> VisitChildren(context);
 
 	public override string VisitLockAndExpr(SharpMUSHBoolExpParser.LockAndExprContext context)
-		=> string.Join(" & ", context.lockExpr().Select(x => Visit(x)));
+		=> string.Join(compact ? "&" : " & ", context.lockExpr().Select(x => Visit(x)));
 
 	public override string VisitLockOrExpr(SharpMUSHBoolExpParser.LockOrExprContext context)
-		=> string.Join(" | ", context.lockAndExpr().Select(x => Visit(x)));
+		=> string.Join(compact ? "|" : " | ", context.lockAndExpr().Select(x => Visit(x)));
 
 	public override string VisitLockExpr(SharpMUSHBoolExpParser.LockExprContext context)
 		=> VisitChildren(context);
@@ -47,25 +39,25 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(
 
 	public override string VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
 	{
-		var value = context.@string().GetText();
+		var value = LockLiteralText.ReadOperand(context.objectOperand());
 		return $"${ResolveToDbRef(value)}";
 	}
 
 	public override string VisitCarryExpr(SharpMUSHBoolExpParser.CarryExprContext context)
 	{
-		var value = context.@string().GetText();
+		var value = LockLiteralText.ReadOperand(context.objectOperand());
 		return $"+{ResolveToDbRef(value)}";
 	}
 
 	public override string VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
 	{
-		var value = context.@string().GetText();
+		var value = LockLiteralText.Read(context.literal());
 		return $"FLAG^{value.ToUpperInvariant()}";
 	}
 
 	public override string VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
 	{
-		var value = context.@string().GetText();
+		var value = LockLiteralText.Read(context.literal());
 		return $"POWER^{value.ToUpperInvariant()}";
 	}
 
@@ -77,13 +69,13 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(
 
 	public override string VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{
-		var value = context.@string().GetText();
-		return $"CHANNEL^{value.ToUpperInvariant()}";
+		var value = LockLiteralText.Read(context.literal());
+		return $"CHANNEL^{value}";
 	}
 
 	public override string VisitDbRefListExpr(SharpMUSHBoolExpParser.DbRefListExprContext context)
 	{
-		var attrName = context.@string().GetText();
+		var attrName = LockLiteralText.Read(context.literal());
 		// Note: The dbrefs in the attribute list will need to be normalized separately
 		// when the attribute is set, not when the lock is set
 		return $"DBREFLIST^{attrName.ToUpperInvariant()}";
@@ -91,34 +83,24 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(
 
 	public override string VisitIpExpr(SharpMUSHBoolExpParser.IpExprContext context)
 	{
-		var value = context.@string().GetText();
+		var value = LockLiteralText.Read(context.literal());
 		return $"IP^{value}";
 	}
 
 	public override string VisitHostNameExpr(SharpMUSHBoolExpParser.HostNameExprContext context)
 	{
-		var value = context.@string().GetText();
-		return $"HOSTNAME^{value.ToUpperInvariant()}";
+		var value = LockLiteralText.Read(context.literal());
+		return $"HOSTNAME^{value}";
 	}
 
 	public override string VisitNameExpr(SharpMUSHBoolExpParser.NameExprContext context)
 	{
-		var pattern = context.@string().GetText();
-		return $"NAME^{pattern.ToUpperInvariant()}";
+		var pattern = LockLiteralText.Read(context.literal());
+		return $"NAME^{pattern}";
 	}
 
 	public override string VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
-	{
-		if (context.ATTRIBUTE_COLON() != null)
-		{
-			// Preserve the explicit colon syntax, such as =attr:value.
-			var value = $"{context.@string(0).GetText()}:{context.@string(1).GetText()}";
-			return $"={value}";
-		}
-
-		var target = context.@string(0).GetText();
-		return $"={ResolveToDbRef(target)}";
-	}
+		=> $"={ResolveToDbRef(LockLiteralText.ReadOperand(context.objectOperand()))}";
 
 	public override string VisitDefaultExpr(SharpMUSHBoolExpParser.DefaultExprContext context)
 	{
@@ -128,65 +110,20 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(
 
 	public override string VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
-		var attrName = context.@string(0).GetText();
-		var value = context.@string(1).GetText();
+		var attrName = context.@string().GetText();
+		var value = LockLiteralText.Read(context.literal());
 		return $"{attrName.ToUpperInvariant()}:{value}";
 	}
 
 	public override string VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)
 	{
-		var attrName = context.@string(0).GetText();
-		var value = context.@string(1).GetText();
+		var attrName = context.@string().GetText();
+		var value = LockLiteralText.Read(context.literal());
 		return $"{attrName.ToUpperInvariant()}/{value}";
 	}
 
 	public override string VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
-	{
-		var value = context.@string(0).GetText();
-		var normalizedDbRef = ResolveToDbRef(value);
+		=> $"@{ResolveToDbRef(LockLiteralText.ReadOperand(context.objectOperand()))}/{context.@string()?.GetText() ?? "Basic"}";
 
-		if (context.@string().Length > 1)
-		{
-			var attrName = context.@string(1).GetText();
-			return $"@{normalizedDbRef}/{attrName}";
-		}
-
-		return $"@{normalizedDbRef}/Basic";
-	}
-
-	/// <summary>
-	/// Resolves a lock target to a dbref. If the value is already a dbref (#N or #N:timestamp),
-	/// returns it as-is. If it's "me", returns it as-is (resolved at evaluation time).
-	/// Otherwise, attempts name resolution using the executor's context, matching PennMUSH's
-	/// behavior of converting names to dbrefs at @lock time.
-	/// If name resolution fails (no executor or no match), preserves the original name.
-	/// </summary>
-	private string ResolveToDbRef(string value)
-	{
-		if (value.StartsWith('#'))
-			return value;
-
-		// "me" is special — resolved at evaluation time
-		if (value.Equals("me", StringComparison.OrdinalIgnoreCase))
-			return value;
-
-		// No executor or services: names cannot be resolved, so they are preserved as written
-		if (services == null || executor == null)
-			return value;
-
-		try
-		{
-			var exec = executor!;
-			var locateResult = services.LocateAsync(exec, exec, value, LocateFlags.All).AsTask().GetAwaiter().GetResult();
-
-			return locateResult is AnySharpObject located
-				? $"#{located.Object().DBRef.Number}"
-				: value; // Not found — preserve the name
-		}
-		catch
-		{
-			// If resolution fails for any reason, preserve the original name
-			return value;
-		}
-	}
+	private string ResolveToDbRef(string value) => resolveObject?.Invoke(value) ?? value;
 }

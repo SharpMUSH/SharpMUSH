@@ -290,161 +290,69 @@ public partial class Functions
 
 	[SharpFunction(Name = "llockflags", MinArgs = 0, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
-	public async ValueTask<CallState> LockFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		await ValueTask.CompletedTask;
-		var args = parser.CurrentState.Arguments;
-
-		if (args.Count == 0)
-		{
-			var flags = LockService.LockPrivileges.Keys;
-			return new CallState(string.Join(" ", flags));
-		}
-
-		var lockType = LockNames.Canonical(args["0"].Message!.ToPlainText());
-		if (LockService.SystemLocks.TryGetValue(lockType, out var lockFlags))
-		{
-			return new CallState(string.Join(" ",
-				LockFlagTable.Where(x => lockFlags.HasFlag(x.Flag)).Select(x => x.Name)));
-		}
-
-		return new CallState(string.Empty);
-	}
-
-	/// <summary>
-	/// The lock flags in the order lockflags() and llockflags() list them, with the letter the one
-	/// reports and the name the other does; the letters spell the "vncwol" lockflags() answers with no
-	/// argument.
-	/// </summary>
-	private static readonly (Library.Services.LockService.LockFlags Flag, string Name, char Letter)[] LockFlagTable =
-	[
-		(Library.Services.LockService.LockFlags.Visual, "visual", 'v'),
-		(Library.Services.LockService.LockFlags.Private, "no_inherit", 'n'),
-		(Library.Services.LockService.LockFlags.NoClone, "no_clone", 'c'),
-		(Library.Services.LockService.LockFlags.Wizard, "wizard", 'w'),
-		(Library.Services.LockService.LockFlags.Owner, "owner", 'o'),
-		(Library.Services.LockService.LockFlags.Locked, "locked", 'l')
-	];
+	public ValueTask<CallState> LockFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ReadLockFlagsAsync(parser, true);
 
 	[SharpFunction(Name = "lockflags", MinArgs = 0, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
-	public async ValueTask<CallState> LockFlagsObject(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> LockFlagsObject(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ReadLockFlagsAsync(parser, false);
+
+	private ValueTask<CallState> ReadLockFlagsAsync(IMUSHCodeParser parser, bool fullNames)
 	{
-		var args = parser.CurrentState.Arguments;
+		string Format(Library.Services.LockService.LockFlags flags) => fullNames
+			? string.Join(" ", LockService.LockPrivileges.Where(x => flags.HasFlag(x.Value.Item2)).Select(x => x.Key))
+			: LockService.FormatLockFlags(flags);
+		if (parser.CurrentState.Arguments.Count == 0 ||
+			parser.CurrentState.Arguments.Count == 1 && string.IsNullOrEmpty(parser.CurrentState.Arguments["0"].Message?.ToPlainText()))
+			return ValueTask.FromResult(new CallState(fullNames ? string.Join(" ", LockService.LockPrivileges.Keys) : string.Concat(LockService.LockPrivileges.Values.Select(x => x.Item1))));
+		return ReadLockAsync(parser, "#-1 NO SUCH LOCK", (_, _, resolved) =>
+			ValueTask.FromResult(new CallState(resolved is null ? "#-1 NO SUCH LOCK" : Format(resolved.Data.Flags))));
+	}
 
-		if (args.Count == 0)
-		{
-			// In PennMUSH: v=visual, n=no_inherit, c=no_clone, w=wizard, o=owner, l=locked
-			return new CallState("vncwol");
-		}
-
-		var argStr = args["0"].Message!.ToPlainText();
-		var parts = argStr.Split('/', 2);
-		var objectRef = parts[0];
-		var lockType = parts.Length > 1 ? parts[1] : "Basic";
-
+	private async ValueTask<CallState> ReadLockAsync(IMUSHCodeParser parser, string denied,
+		Func<AnySharpObject, AnySharpObject, ResolvedLock?, ValueTask<CallState>> read)
+	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, objectRef, LocateFlags.All,
-			async found =>
+		var parts = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Split('/', 2);
+		var name = parts.Length > 1 && parts[1].Length > 0 ? parts[1] : "Basic";
+		if (name.StartsWith("user:", StringComparison.OrdinalIgnoreCase)) name = name[5..];
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, parts[0], LocateFlags.All,
+			async target =>
 			{
-				if (!found.Object().Locks.TryGetValue(LockNames.Canonical(lockType), out var lockData))
-				{
-					return new CallState("#-1 NO SUCH LOCK");
-				}
-
-				// PennMUSH Can_Read_Lock permission check
-				if (!await PermissionService.CanReadLock(executor, found, lockData.Flags))
-				{
-					return new CallState("#-1 NO SUCH LOCK");
-				}
-
-				return new CallState(new string([.. LockFlagTable.Where(x => lockData.Flags.HasFlag(x.Flag)).Select(x => x.Letter)]));
+				var resolved = await LockService.LookupAsync(target, name) is ResolvedLock found ? found : null;
+				if (!await PermissionService.CanReadLock(executor, target, resolved?.Data.Flags ?? 0)) return new CallState(denied);
+				return await read(executor, target, resolved);
 			});
 	}
 
 	[SharpFunction(Name = "elock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "victim"])]
-	public async ValueTask<CallState> EvaluateLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		// PennMUSH format: elock(<object>/<lock name>, <victim>)
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var victimArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-		string lockName = "Basic";
-		var slashIdx = objArg.IndexOf('/');
-		if (slashIdx >= 0)
+	public ValueTask<CallState> EvaluateLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ReadLockAsync(parser, "#-1", async (executor, target, resolved) =>
 		{
-			lockName = objArg[(slashIdx + 1)..];
-			objArg = objArg[..slashIdx];
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, objArg, LocateFlags.All,
-			async found =>
-			{
-				var victimResult = await LocateService.Locate(parser, executor, executor, victimArg, LocateFlags.All);
-				if (victimResult is not AnySharpObject victim)
-				{
-					return new CallState("#-1");
-				}
-
-				// Lock names match case-insensitively per PennMUSH, and the legacy "tport" spelling has
-				// to find the lock LockType spells Teleport — both of which LockNames owns.
-				if (!found.Object().Locks.TryGetValue(LockNames.Canonical(lockName), out var lockData))
-				{
-					// No lock set = passes (TRUE_BOOLEXP)
-					return new CallState("1");
-				}
-
-				// PennMUSH Can_Read_Lock: See_All || controls || ((Visual || lock visual) && passes Examine lock)
-				if (!await PermissionService.CanReadLock(executor, found, lockData.Flags))
-				{
-					return new CallState("#-1");
-				}
-
-				var result = await LockService.Evaluate(lockData.LockString, found, victim);
-				return new CallState(result ? "1" : "0");
-			});
-	}
+			var victimName = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+			if (await LocateService.Locate(parser, executor, executor, victimName, LocateFlags.All) is not AnySharpObject victim)
+				return new CallState("#-1");
+			return new CallState(resolved is null || await LockService.Evaluate(resolved.Data.LockString, target, victim) ? "1" : "0");
+		});
 
 	[SharpFunction(Name = "llocks", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
-	public async ValueTask<CallState> Locks(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Locks(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ListLocksAsync(parser);
+
+	[SharpFunction(Name = "locks", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	public ValueTask<CallState> LocksRequired(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ListLocksAsync(parser);
+
+	private async ValueTask<CallState> ListLocksAsync(IMUSHCodeParser parser)
 	{
+		if (parser.CurrentState.Arguments.Count == 0 ||
+			parser.CurrentState.Arguments.Count == 1 && string.IsNullOrEmpty(parser.CurrentState.Arguments["0"].Message?.ToPlainText())) return new CallState(string.Join(" ", LockService.SystemLocks.Keys.Select(LockNames.Display)));
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-
-		AnySharpObject target = executor;
-		if (args.TryGetValue("0", out var objArg))
-		{
-			var objStr = objArg.Message!.ToPlainText();
-			var maybeTarget = await LocateService.Locate(parser, executor, executor, objStr, LocateFlags.All);
-			if (maybeTarget is not AnySharpObject located)
-			{
-				return new CallState(ErrorMessages.Returns.InvalidObject);
-			}
-			target = located;
-		}
-
-		var lockNames = target.Object().Locks.Keys;
-		return new CallState(string.Join(" ", lockNames));
-	}
-
-	[SharpFunction(Name = "locks", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
-	public async ValueTask<CallState> LocksRequired(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objStr = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-
-		var maybeTarget = await LocateService.Locate(parser, executor, executor, objStr, LocateFlags.All);
-		if (maybeTarget is not AnySharpObject target)
-		{
-			return new CallState(ErrorMessages.Returns.InvalidObject);
-		}
-
-		var lockNames = target.Object().Locks.Keys;
-		return new CallState(string.Join(" ", lockNames));
+		var objectName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, objectName, LocateFlags.All,
+			target => ValueTask.FromResult(new CallState(string.Join(" ", target.Object().Locks.Keys.Order(StringComparer.Ordinal)
+				.Select(name => LockService.SystemLocks.ContainsKey(name) ? LockNames.Display(name) : "USER:" + name)))));
 	}
 
 	[SharpFunction(Name = "localize", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.NoParse | FunctionFlags.Localize, ParameterNames = ["string"])]
@@ -629,117 +537,73 @@ public partial class Functions
 		System.Buffers.SearchValues.Create("NEPRTLFX*acehilmnypzxs");
 
 
-	[SharpFunction(Name = "lock", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	[SharpFunction(Name = "lock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, SideEffectMinArgs = 2, ParameterNames = ["object", "expression"])]
 	public async ValueTask<CallState> Lock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// PennMUSH format: lock(<object>[/<lock name>]) - slash syntax in single arg
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-
-		string lockName = "Basic";
-		var slashIdx = objArg.IndexOf('/');
-		if (slashIdx >= 0)
+		if (parser.CurrentState.Arguments.TryGetValue("1", out var expression))
 		{
-			lockName = objArg[(slashIdx + 1)..];
-			objArg = objArg[..slashIdx];
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+			if (!await CanInvokeLockCommandAsync(parser, executor, "@LOCK")) return new CallState(ErrorMessages.Returns.PermissionDenied);
+			var parts = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Split('/', 2);
+			if (await LocateService.Locate(parser, executor, executor, parts[0], LocateFlags.All) is not AnySharpObject target) return new CallState("#-1");
+			if (await LockService.SetAsync(executor, target, parts.Length > 1 ? parts[1] : "Basic", expression.Message!.ToPlainText()) is Error<string> error)
+				await NotifyService.Notify(executor, error.Value);
 		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, objArg, LocateFlags.All,
-			async found =>
-			{
-				// Lock names match case-insensitively per PennMUSH, and the legacy "tport" spelling has
-				// to find the lock LockType spells Teleport — both of which LockNames owns.
-				if (!found.Object().Locks.TryGetValue(LockNames.Canonical(lockName), out var lockData))
-				{
-					// PennMUSH returns *UNLOCKED* for unset locks
-					return new CallState("*UNLOCKED*");
-				}
-
-				// PennMUSH Can_Read_Lock permission check
-				if (!await PermissionService.CanReadLock(executor, found, lockData.Flags))
-				{
-					return new CallState("#-1");
-				}
-
-				return new CallState(lockData.LockString);
-			});
+		return await ReadLockAsync(parser, "#-1", async (executor, _, resolved) => new CallState(resolved is null
+			? "*UNLOCKED*" : await BooleanExpressionParser.RenderAsync(resolved.Data.LockString, executor, LockRenderMode.Readback)));
 	}
 
-	[SharpFunction(Name = "lockfilter", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["dbrefs", "lockname", "evaluate"])]
+	[SharpFunction(Name = "lset", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
+	public async ValueTask<CallState> SetLockFlagsFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await CanInvokeLockCommandAsync(parser, executor, "@LSET")) return new CallState(ErrorMessages.Returns.PermissionDenied);
+		var parts = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Split('/', 2);
+		if (parts.Length < 2)
+		{
+			await NotifyService.Notify(executor, "No lock name given.");
+			return CallState.Empty;
+		}
+		if (await LocateService.Locate(parser, executor, executor, parts[0], LocateFlags.All) is not AnySharpObject target) return new CallState("#-1");
+		if (await LockService.SetFlagsAsync(executor, target, parts.Length > 1 ? parts[1] : "Basic", parser.CurrentState.Arguments["1"].Message!.ToPlainText()) is Error<string> error)
+			await NotifyService.Notify(executor, error.Value);
+		return CallState.Empty;
+	}
+
+	private async ValueTask<bool> CanInvokeLockCommandAsync(IMUSHCodeParser parser, AnySharpObject executor, string command)
+	{
+		if (!parser.CommandLibrary.TryGetValue(command, out var definition)) return false;
+		var attribute = definition.LibraryInformation.Attribute;
+		if (attribute.Behavior.HasFlag(CommandBehavior.NoOp) || attribute.Behavior.HasFlag(CommandBehavior.Internal)) return false;
+		if (attribute.Behavior.HasFlag(CommandBehavior.God) && !executor.IsGod()) return false;
+		if (attribute.Behavior.HasFlag(CommandBehavior.NoGagged) && await executor.HasFlag("GAGGED")) return false;
+		if (attribute.Behavior.HasFlag(CommandBehavior.NoGuest) && await executor.HasFlag("GUEST")) return false;
+		return string.IsNullOrEmpty(attribute.CommandLock) || await LockService.Evaluate(attribute.CommandLock, executor, executor);
+	}
+
+	[SharpFunction(Name = "lockfilter", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["expression", "dbrefs", "delimiter"])]
 	public async ValueTask<CallState> LockFilter(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-
-		var objListStr = args["0"].Message!.ToPlainText();
-		var lockName = args["1"].Message!.ToPlainText();
-		var shouldPass = args.TryGetValue("2", out var evalArg)
-			? evalArg.Message!.ToPlainText().Equals("1", StringComparison.OrdinalIgnoreCase)
-			: true;
-
-		var objList = objListStr.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		if (await BooleanExpressionParser.BindAsync(args["0"].Message!.ToPlainText(), executor) is not string expression)
+			return new CallState("#-1 INVALID BOOLEXP");
+		var delimiter = args.TryGetValue("2", out var separator) ? separator.Message!.ToPlainText() : " ";
+		if (delimiter.Length != 1) return new CallState("#-1 SEPARATOR MUST BE ONE CHARACTER");
 		var results = new List<string>();
-
-		foreach (var objRef in objList)
+		foreach (var reference in args["1"].Message!.ToPlainText().Split(delimiter, StringSplitOptions.RemoveEmptyEntries))
 		{
-			var maybeObj = await LocateService.Locate(parser, executor, executor, objRef, LocateFlags.All);
-			if (maybeObj is not AnySharpObject found)
-			{
-				continue;
-			}
-
-			if (!found.Object().Locks.TryGetValue(LockNames.Canonical(lockName), out var lockData))
-			{
-				// No lock means it passes if we're looking for passes
-				if (!shouldPass)
-				{
-					results.Add(found.Object().DBRef.ToString());
-				}
-				continue;
-			}
-
-			var passes = await LockService.Evaluate(lockData.LockString, found, executor);
-
-			if (passes == shouldPass)
-			{
-				results.Add(found.Object().DBRef.ToString());
-			}
+			if (!DBRef.TryParse(reference.Trim(), out _)) continue;
+			if (await LocateService.Locate(parser, executor, executor, reference.Trim(), LocateFlags.All) is not AnySharpObject victim || !await PermissionService.CanLocate(executor, victim)) continue;
+			if (await LockService.Evaluate(expression, executor, victim)) results.Add($"#{victim.Object().DBRef.Number}");
 		}
-
-		return new CallState(string.Join(" ", results));
+		return new CallState(string.Join(delimiter, results));
 	}
 
 	[SharpFunction(Name = "lockowner", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
-	public async ValueTask<CallState> LockOwner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		// PennMUSH tracks per-lock setter; SharpMUSH returns object owner as approximation.
-		// If no /lockname, defaults to Basic
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-
-		string lockName = "Basic";
-		var slashIdx = objArg.IndexOf('/');
-		if (slashIdx >= 0)
-		{
-			lockName = objArg[(slashIdx + 1)..];
-			objArg = objArg[..slashIdx];
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, objArg, LocateFlags.All,
-			async found =>
-			{
-				if (!found.Object().Locks.ContainsKey(LockNames.Canonical(lockName)))
-				{
-					// PennMUSH: lockowner on nonexistent lock returns the object itself
-					return new CallState($"#{found.Object().DBRef.Number}");
-				}
-
-				var owner = await found.Object().Owner.WithCancellation(CancellationToken.None);
-				return new CallState($"#{owner.Object.DBRef.Number}");
-			});
-	}
+	public ValueTask<CallState> LockOwner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ReadLockAsync(parser, "#-1 NO SUCH LOCK", (_, _, resolved) => ValueTask.FromResult(new CallState(resolved is null
+			? "#-1 NO SUCH LOCK" : resolved.Data.Creator is { } creator ? $"#{creator.Number}" : "#-1")));
 
 	[SharpFunction(Name = "lparent", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListParents(IMUSHCodeParser parser, SharpFunctionAttribute _2)

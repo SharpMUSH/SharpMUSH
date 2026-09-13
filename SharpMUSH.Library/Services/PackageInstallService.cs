@@ -1073,21 +1073,26 @@ public class PackageInstallService(
 		AnySharpObject node, PackageStructureChange change,
 		Dictionary<string, PackageConflictDecision> decisions, CancellationToken cancellationToken)
 	{
-		// Both through the Mediator: locks load with the object node, so a direct store write
-		// leaves object:#N stale, and only the commands drop the compiled boolean expression the
-		// lock parser cached for the text being replaced.
-		async Task SetAsync(string value) =>
-			await mediator.Send(new SetLockCommand(node.Object(), change.Element, value), cancellationToken);
+		var executor = new AnySharpObject(await GetPackageManagerWizardAsync(cancellationToken));
+		async Task<string?> SetAsync(string value)
+		{
+			var name = Enum.TryParse<LockType>(LockNames.Canonical(change.Element), true, out _) ? change.Element : $"user:{change.Element}";
+			var result = await mediator.Send(new SetLockCommand(node.Object(), name, value, executor), cancellationToken);
+			return result is Error<string> error ? error.Value : null;
+		}
+		async Task<string?> RemoveAsync()
+		{
+			var result = await mediator.Send(new UnsetLockCommand(node.Object(), change.Element, executor), cancellationToken);
+			return result is Error<string> error ? error.Value : null;
+		}
 
 		switch (change.Action)
 		{
 			case PackageStructureAction.Add:
-				await SetAsync(change.NewValue ?? "");
-				return null;
+				return await SetAsync(change.NewValue ?? "");
 
 			case PackageStructureAction.Remove:
-				await mediator.Send(new UnsetLockCommand(node.Object(), change.Element), cancellationToken);
-				return null;
+				return await RemoveAsync();
 
 			case PackageStructureAction.Conflict:
 				{
@@ -1095,14 +1100,11 @@ public class PackageInstallService(
 					switch (decision.Resolution)
 					{
 						case PackageConflictResolution.TakeTheirs when change.Conflict == PackageConflictKind.ModifyDelete:
-							await mediator.Send(new UnsetLockCommand(node.Object(), change.Element), cancellationToken);
-							return null;
+							return await RemoveAsync();
 						case PackageConflictResolution.TakeTheirs:
-							await SetAsync(change.NewValue ?? "");
-							return null;
+							return await SetAsync(change.NewValue ?? "");
 						case PackageConflictResolution.UseCustom when decision.CustomValue is not null:
-							await SetAsync(decision.CustomValue);
-							return null;
+							return await SetAsync(decision.CustomValue);
 						case PackageConflictResolution.UseCustom:
 							return $"Lock conflict {change.TargetRef}/{change.Element}: UseCustom requires a value.";
 						default: // KeepMine — leave the live lock untouched.

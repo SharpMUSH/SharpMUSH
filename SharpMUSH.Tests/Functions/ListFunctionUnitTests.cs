@@ -710,9 +710,9 @@ public class ListFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("lset(a b c,2,x)", "a x c")]
-	[Arguments("lset(a b c,1,x)", "x b c")]
-	[Arguments("lset(a b c,3,x)", "a b x")]
+	[Arguments("listset(a b c,2,x)", "a x c")]
+	[Arguments("listset(a b c,1,x)", "x b c")]
+	[Arguments("listset(a b c,3,x)", "a b x")]
 	public async Task ListSet(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

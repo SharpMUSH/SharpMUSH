@@ -53,7 +53,7 @@ public class ExactLockIdentityTests
 		var stale = Locks.Compile($"{prefix}#{identity.Number}:{identity.CreationMilliseconds - 1}");
 		await Assert.That(await stale(unrelated, key)).IsFalse();
 		await Assert.That(await stale(unrelated, carrier)).IsFalse();
-		var normalizedName = Locks.Normalize(prefix + key.Object().Name, carrier);
+		var normalizedName = (await Locks.BindAsync(prefix + key.Object().Name, carrier)).Expect<string>();
 		await Assert.That(normalizedName).IsEqualTo($"{prefix}#{identity.Number}");
 		await Assert.That(await Locks.Compile(normalizedName)(unrelated, key)).IsEqualTo(prefix != "+");
 		await Assert.That(await Locks.Compile(normalizedName)(unrelated, carrier)).IsEqualTo(prefix != "=");

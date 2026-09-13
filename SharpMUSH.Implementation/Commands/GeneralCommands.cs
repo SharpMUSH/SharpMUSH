@@ -805,10 +805,9 @@ public partial class Commands
 			outputSections.Add(Format($"Parent: {parentLine}"));
 		}
 
-		foreach (var lockKvp in obj.Locks)
+		foreach (var lockKvp in obj.Locks.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
 		{
-			var flagsStr = LockService.FormatLockFlags(lockKvp.Value.Flags);
-			outputSections.Add(MarkupText.Plain($"{lockKvp.Key} Lock [#{obj.DBRef.Number}{flagsStr}]: {lockKvp.Value.LockString}"));
+			outputSections.Add(MarkupText.Plain(await FormatLockLineAsync(executor, lockKvp.Key, lockKvp.Value)));
 		}
 
 		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
@@ -4622,6 +4621,13 @@ public partial class Commands
 		return new CallState("What do you want to do with the channel?");
 	}
 
+	private async ValueTask<string> FormatLockLineAsync(AnySharpObject viewer, string name, SharpLockData data)
+	{
+		var expression = await BooleanExpressionParser.RenderAsync(data.LockString, viewer, LockRenderMode.Examine, ExecutionBudget.CurrentToken);
+		var creator = data.Creator is { } identity ? $"#{identity.Number}" : "#-1";
+		return $"{LockNames.Display(name)} Lock [{creator}{LockService.FormatLockFlags(data.Flags)}]: {expression}";
+	}
+
 	[SharpCommand(Name = "@DECOMPILE", Switches = ["DB", "NAME", "PREFIX", "TF", "FLAGS", "ATTRIBS", "SKIPDEFAULTS"],
 		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object", "name"])]
 	public async ValueTask<Option<CallState>> Decompile(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -4749,19 +4755,22 @@ public partial class Commands
 				outputs.Add($"{prefix}@power {objectRef}={power.Name}");
 			}
 
-			foreach (var lockEntry in obj.Locks)
+			foreach (var (lockName, lockData) in obj.Locks.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
 			{
-				var lockName = lockEntry.Key;
-				var lockData = lockEntry.Value;
-				var lockValue = lockData.LockString;
-
-				if (lockName.Equals("Basic", StringComparison.OrdinalIgnoreCase))
+				if (!BooleanExpressionParser.IsBound(lockData.LockString))
 				{
-					outputs.Add($"{prefix}@lock {objectRef}={lockValue}");
+					outputs.Add($"@@ Invalid {lockName} lock omitted; replace it explicitly before decompiling.");
+					continue;
 				}
-				else
+				var expression = await BooleanExpressionParser.RenderAsync(lockData.LockString, executor, LockRenderMode.Decompile, ExecutionBudget.CurrentToken);
+				var standard = LockService.SystemLocks.TryGetValue(lockName, out var defaults);
+				var switchName = standard ? LockNames.Display(lockName) : $"user:{lockName}";
+				outputs.Add($"{prefix}@lock/{switchName} {objectRef}={expression}");
+				foreach (var (flagName, (_, flag)) in LockService.LockPrivileges)
 				{
-					outputs.Add($"{prefix}@lock/{lockName} {objectRef}={lockValue}");
+					var set = lockData.Flags.HasFlag(flag);
+					if (set && (!skipDefaults || !defaults.HasFlag(flag))) outputs.Add($"{prefix}@lset {objectRef}/{lockName}={flagName}");
+					else if (!set && defaults.HasFlag(flag)) outputs.Add($"{prefix}@lset {objectRef}/{lockName}=!{flagName}");
 				}
 			}
 

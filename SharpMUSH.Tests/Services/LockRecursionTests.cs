@@ -1,5 +1,7 @@
-using System.Collections.Immutable;
 using Mediator;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Immutable;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using SharpMUSH.Configuration;
@@ -10,7 +12,6 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Tests.Services;
@@ -29,7 +30,7 @@ public class LockRecursionTests
 	public async Task ChainBeyondMaxDepthDenies()
 	{
 		var parser = Substitute.For<IBooleanExpressionParser>();
-		var service = new LockService(parser, Options(10));
+		var service = new LockService(parser, Options(10), Substitute.For<IMediator>(), new Lazy<IPermissionService>(() => Substitute.For<IPermissionService>()));
 		var obj = new TestObjectFactory().CreateThing(1, "Unlocker");
 		parser.Compile(Arg.Any<string>()).Returns(call =>
 		{
@@ -52,7 +53,7 @@ public class LockRecursionTests
 		using var fixture = new IndirectFixture((uint)maxDepth);
 		var target = fixture.Add("End", "#TRUE");
 		for (var i = 0; i < hops; i++)
-			target = fixture.Add($"Link{i}", $"@{target.Object().Name}");
+			target = fixture.Add($"Link{i}", $"@{target.Object().DBRef}");
 
 		await Assert.That(await fixture.Service.Evaluate(LockType.Basic, target, target)).IsEqualTo(expected);
 	}
@@ -63,8 +64,8 @@ public class LockRecursionTests
 	public async Task IndirectCyclesDenyAndDoNotPoisonLaterChecks(bool mutual)
 	{
 		using var fixture = new IndirectFixture(3);
-		var first = fixture.Add("First", mutual ? "@Second" : "@First");
-		fixture.Add("Second", "@First");
+		var first = fixture.Add("First", mutual ? "@#2" : "@#1");
+		fixture.Add("Second", "@#1");
 
 		await Assert.That(await fixture.Service.Evaluate(LockType.Basic, first, first)).IsFalse();
 		await Assert.That(await fixture.Service.Evaluate("#TRUE", first, first)).IsTrue();
@@ -75,14 +76,14 @@ public class LockRecursionTests
 	{
 		using var fixture = new IndirectFixture(1);
 		var end = fixture.Add("End", "#TRUE");
-		await Assert.That(await fixture.Service.Evaluate("@End&@End", end, end)).IsTrue();
+		await Assert.That(await fixture.Service.Evaluate($"@{end.Object().DBRef}&@{end.Object().DBRef}", end, end)).IsTrue();
 	}
 
 	[Test]
 	public async Task ConcurrentEvaluationsDoNotShareDepth()
 	{
 		var parser = Substitute.For<IBooleanExpressionParser>();
-		var service = new LockService(parser, Options(0));
+		var service = new LockService(parser, Options(0), Substitute.For<IMediator>(), new Lazy<IPermissionService>(() => Substitute.For<IPermissionService>()));
 		var obj = new TestObjectFactory().CreateThing(1, "Unlocker");
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -109,7 +110,7 @@ public class LockRecursionTests
 	public async Task ExceptionRestoresDepthForSiblingEvaluation()
 	{
 		var parser = Substitute.For<IBooleanExpressionParser>();
-		var service = new LockService(parser, Options(1));
+		var service = new LockService(parser, Options(1), Substitute.For<IMediator>(), new Lazy<IPermissionService>(() => Substitute.For<IPermissionService>()));
 		var obj = new TestObjectFactory().CreateThing(1, "Unlocker");
 		parser.Compile("throw").Returns(_ => (AnySharpObject _, AnySharpObject _) =>
 			throw new InvalidOperationException("test failure"));
@@ -133,17 +134,17 @@ public class LockRecursionTests
 	{
 		using var fixture = new IndirectFixture(1);
 		var end = fixture.Add("End", "#TRUE");
-		fixture.Add("Link", "@End");
+		var link = fixture.Add("Link", $"@{end.Object().DBRef}");
 		var channel = CreateChannel();
-		await Assert.That(await fixture.Service.Evaluate("@End", channel, end)).IsTrue();
-		await Assert.That(await fixture.Service.Evaluate("@Link", channel, end)).IsFalse();
+		await Assert.That(await fixture.Service.Evaluate($"@{end.Object().DBRef}", channel, end)).IsTrue();
+		await Assert.That(await fixture.Service.Evaluate($"@{link.Object().DBRef}", channel, end)).IsFalse();
 	}
 
 	[Test]
 	public async Task NestedUnlockedChannelCannotBypassDepthBoundary()
 	{
 		var parser = Substitute.For<IBooleanExpressionParser>();
-		var service = new LockService(parser, Options(0));
+		var service = new LockService(parser, Options(0), Substitute.For<IMediator>(), new Lazy<IPermissionService>(() => Substitute.For<IPermissionService>()));
 		var obj = new TestObjectFactory().CreateThing(1, "Unlocker");
 		var channel = CreateChannel();
 		parser.Compile("channel").Returns(_ => (AnySharpObject _, AnySharpObject unlocker) =>
@@ -173,12 +174,18 @@ public class LockRecursionTests
 		public IndirectFixture(uint maxDepth)
 		{
 			var services = Substitute.For<ILockEvaluationServices>();
-			var parser = new BooleanExpressionParser(services, Substitute.For<IMediator>(), _cache);
-			Service = new LockService(parser, Options(maxDepth));
-			services.LocateAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<LocateFlags>())
-				.Returns(call => new ValueTask<AnyOptionalSharpObjectOrError>(_objects[call.Arg<string>()]));
-			services.EvaluateLock(Arg.Any<string>(), Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
-				.Returns(call => Service.Evaluate(call.Arg<string>(), call.ArgAt<AnySharpObject>(1), call.ArgAt<AnySharpObject>(2)));
+			var mediator = Substitute.For<IMediator>();
+			mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+				.Returns(call =>
+				{
+					var reference = call.Arg<GetObjectNodeQuery>().DBRef;
+					var found = _objects.Values.FirstOrDefault(obj => obj.Object().DBRef.Matches(reference));
+					return ValueTask.FromResult<AnyOptionalSharpObject>(found is null ? new None() : found);
+				});
+			var parser = new BooleanExpressionParser(services, mediator, _cache);
+			Service = new LockService(parser, Options(maxDepth), mediator, new Lazy<IPermissionService>(() => Substitute.For<IPermissionService>()));
+			services.EvaluateLockType(Arg.Any<string>(), Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
+				.Returns(call => Service.EvaluateType(call.Arg<string>(), call.ArgAt<AnySharpObject>(1), call.ArgAt<AnySharpObject>(2)));
 		}
 
 		public AnySharpObject Add(string name, string expression)

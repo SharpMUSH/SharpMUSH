@@ -446,10 +446,16 @@ public class PermissionService(
 		// than evaluating it: an unset lock passes everybody, so evaluating it here would grant control of
 		// every object without an explicit control lock to everyone. Only a lock that was actually set,
 		// and that `who` passes, grants control.
-		var controlLock = LockService.GetIfSet(LockType.Control, target);
+		var controlLock = await lockService.LookupAsync(target, nameof(LockType.Control), token);
 
-		return controlLock is not null && await lockService.Evaluate(controlLock, target, who);
+		return controlLock is ResolvedLock resolved && await lockService.Evaluate(resolved.Data.LockString, target, who);
 	}
+
+	public async ValueTask<bool> CanLinkToAsync(AnySharpObject executor, AnySharpObject destination)
+		=> (options.CurrentValue.Command.LinkToObject || destination.IsRoom)
+			&& (await Controls(executor, destination) || await executor.IsPriv() || await executor.HasPower("Link_Anywhere")
+				|| (!await executor.IsGuest() && await destination.HasFlag("LINK_OK")
+					&& await lockService.Evaluate(LockType.Link, destination, executor)));
 
 	public async ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee)
 		=> examiner.Object().DBRef == examinee.Object().DBRef
