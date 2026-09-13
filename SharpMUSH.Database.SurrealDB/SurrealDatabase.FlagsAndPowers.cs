@@ -9,6 +9,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SurrealDb.Net;
+using SurrealDb.Net.Models;
 using SurrealDb.Net.Models.Response;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
@@ -21,39 +22,34 @@ public partial class SurrealDatabase
 {
 	#region Flags and Powers
 
-	/// <summary>
-	/// A flag by name or by any of its aliases, matched case-insensitively — the same contract the
-	/// Lightning provider has always had, where the key is upper-cased on the way in and a miss falls
-	/// back to scanning aliases.
-	/// <para>
-	/// This asked for an exact <c>name = $name</c>, which meant only a caller that already spelled the
-	/// flag exactly as the seed stored it found anything: <c>@set obj=no_command</c> works because the
-	/// command upper-cases first, but every caller passing a configured or user-typed name got null,
-	/// and no alias resolved here at all. It is the sort of divergence that stays invisible until two
-	/// providers are asked the same question.
-	/// </para>
-	/// </summary>
+	/// <summary>Finds a flag by its case-insensitive name or alias.</summary>
 	public async ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name, CancellationToken cancellationToken = default)
+	{
+		var record = await FindFlagRecordAsync(name, cancellationToken);
+		return record is null ? null : MapRecordToFlag(record);
+	}
+
+	private async ValueTask<FlagRecord?> FindFlagRecordAsync(string name, CancellationToken cancellationToken = default)
 	{
 		var parameters = new Dictionary<string, object?> { ["name"] = name.ToUpperInvariant() };
 		var response = await ExecuteAsync(
-			"SELECT * FROM object_flag WHERE string::uppercase(name) = $name",
+			"SELECT *, <string> id AS recordId FROM object_flag WHERE string::uppercase(name) = $name",
 			parameters, cancellationToken);
 
 		var results = response.GetValue<List<FlagRecord>>(0)!;
 		if (results.Count > 0)
 		{
-			return MapRecordToFlag(results[0]);
+			return results[0];
 		}
 
 		// Aliases are scanned rather than queried, as Lightning scans them: the flag table is a few
 		// dozen rows, and matching inside an array case-insensitively is not worth a query that has to
 		// be right across SurrealDB versions.
-		var all = await ExecuteAsync("SELECT * FROM object_flag", cancellationToken);
+		var all = await ExecuteAsync("SELECT *, <string> id AS recordId FROM object_flag", cancellationToken);
 		var byAlias = all.GetValue<List<FlagRecord>>(0)!
 			.FirstOrDefault(record => record.aliases?.Any(
 				alias => string.Equals(alias, name, StringComparison.OrdinalIgnoreCase)) == true);
-		return byAlias is null ? null : MapRecordToFlag(byAlias);
+		return byAlias;
 	}
 
 	public async IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -91,17 +87,18 @@ public partial class SurrealDatabase
 
 	public async ValueTask<bool> DeleteObjectFlagAsync(string name, CancellationToken cancellationToken = default)
 	{
-		var flag = await GetObjectFlagAsync(name, cancellationToken);
-		if (flag == null || flag.System) return false;
+		var flag = await FindFlagRecordAsync(name, cancellationToken);
+		if (flag == null || flag.system) return false;
 
-		var parameters = new Dictionary<string, object?> { ["name"] = name };
-		await ExecuteAsync(
+		var parameters = new Dictionary<string, object?> { ["recordId"] = new StringRecordId(flag.recordId) };
+		var response = await ExecuteAsync(
 			"BEGIN TRANSACTION;" +
-			"DELETE has_flags WHERE out = object_flag:⟨$name⟩;" +
-			"DELETE object_flag:⟨$name⟩;" +
-			"COMMIT TRANSACTION",
+			"LET $deleted = (DELETE $recordId WHERE (system ?? false) = false RETURN BEFORE);" +
+			"DELETE has_flags WHERE out IN $deleted.id;" +
+			"RETURN array::len($deleted) > 0;" +
+			"COMMIT TRANSACTION;",
 			parameters, cancellationToken);
-		return true;
+		return !response.HasErrors && response.GetValue<bool>(0);
 	}
 
 	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default)
@@ -152,12 +149,12 @@ public partial class SurrealDatabase
 		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken cancellationToken = default)
 	{
-		var flag = await GetObjectFlagAsync(name, cancellationToken);
-		if (flag == null || flag.System) return false;
+		var flag = await FindFlagRecordAsync(name, cancellationToken);
+		if (flag == null || flag.system) return false;
 
 		var parameters = new Dictionary<string, object?>
 		{
-			["name"] = name,
+			["recordId"] = new StringRecordId(flag.recordId),
 			["aliases"] = aliases ?? Array.Empty<string>(),
 			["symbol"] = symbol,
 			["setPerms"] = setPermissions,
@@ -165,37 +162,43 @@ public partial class SurrealDatabase
 			["typeRestrictions"] = typeRestrictions
 		};
 
-		await ExecuteAsync(
-			"UPDATE object_flag SET aliases = $aliases, symbol = $symbol, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions WHERE name = $name",
+		var response = await ExecuteAsync(
+			"UPDATE $recordId SET aliases = $aliases, symbol = $symbol, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions WHERE (system ?? false) = false RETURN AFTER",
 			parameters, cancellationToken);
-		return true;
+		return !response.HasErrors && response.GetValue<List<FlagRecord>>(0) is { Count: > 0 };
 	}
 
 	public async ValueTask<bool> SetObjectFlagDisabledAsync(string name, bool disabled, CancellationToken cancellationToken = default)
 	{
-		var flag = await GetObjectFlagAsync(name, cancellationToken);
-		if (flag == null || flag.System) return false;
+		var flag = await FindFlagRecordAsync(name, cancellationToken);
+		if (flag == null || flag.system) return false;
 
 		var parameters = new Dictionary<string, object?>
 		{
-			["name"] = name,
+			["recordId"] = new StringRecordId(flag.recordId),
 			["disabled"] = disabled
 		};
-		await ExecuteAsync(
-			"UPDATE object_flag SET disabled = $disabled WHERE name = $name",
+		var response = await ExecuteAsync(
+			"UPDATE $recordId SET disabled = $disabled WHERE (system ?? false) = false RETURN AFTER",
 			parameters, cancellationToken);
-		return true;
+		return !response.HasErrors && response.GetValue<List<FlagRecord>>(0) is { Count: > 0 };
 	}
 
 	public async ValueTask<SharpPower?> GetPowerAsync(string name, CancellationToken cancellationToken = default)
 	{
+		var record = await FindPowerRecordAsync(name, cancellationToken);
+		return record is null ? null : MapRecordToPower(record);
+	}
+
+	private async ValueTask<PowerRecord?> FindPowerRecordAsync(string name, CancellationToken cancellationToken = default)
+	{
 		var parameters = new Dictionary<string, object?> { ["name"] = name.ToUpperInvariant() };
 		var response = await ExecuteAsync(
-			"SELECT * FROM power WHERE string::uppercase(name) = $name",
+			"SELECT *, <string> id AS recordId FROM power WHERE string::uppercase(name) = $name",
 			parameters, cancellationToken);
 
 		var results = response.GetValue<List<PowerRecord>>(0)!;
-		return results.Count > 0 ? MapRecordToPower(results[0]) : null;
+		return results.FirstOrDefault();
 	}
 
 	public async IAsyncEnumerable<SharpPower> GetObjectPowersAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -233,17 +236,18 @@ public partial class SurrealDatabase
 
 	public async ValueTask<bool> DeletePowerAsync(string name, CancellationToken cancellationToken = default)
 	{
-		var power = await GetPowerAsync(name, cancellationToken);
-		if (power == null || power.System) return false;
+		var power = await FindPowerRecordAsync(name, cancellationToken);
+		if (power == null || power.system) return false;
 
-		var parameters = new Dictionary<string, object?> { ["name"] = name };
-		await ExecuteAsync(
+		var parameters = new Dictionary<string, object?> { ["recordId"] = new StringRecordId(power.recordId) };
+		var response = await ExecuteAsync(
 			"BEGIN TRANSACTION;" +
-			"DELETE has_powers WHERE out = power:⟨$name⟩;" +
-			"DELETE power:⟨$name⟩;" +
-			"COMMIT TRANSACTION",
+			"LET $deleted = (DELETE $recordId WHERE (system ?? false) = false RETURN BEFORE);" +
+			"DELETE has_powers WHERE out IN $deleted.id;" +
+			"RETURN array::len($deleted) > 0;" +
+			"COMMIT TRANSACTION;",
 			parameters, cancellationToken);
-		return true;
+		return !response.HasErrors && response.GetValue<bool>(0);
 	}
 
 	public async ValueTask<bool> SetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
@@ -294,12 +298,12 @@ public partial class SurrealDatabase
 		string[] setPermissions, string[] unsetPermissions, string[] typeRestrictions,
 		CancellationToken cancellationToken = default)
 	{
-		var power = await GetPowerAsync(name, cancellationToken);
-		if (power == null || power.System) return false;
+		var power = await FindPowerRecordAsync(name, cancellationToken);
+		if (power == null || power.system) return false;
 
 		var parameters = new Dictionary<string, object?>
 		{
-			["name"] = name,
+			["recordId"] = new StringRecordId(power.recordId),
 			["alias"] = alias,
 			["symbol"] = symbol,
 			["setPerms"] = setPermissions,
@@ -307,26 +311,26 @@ public partial class SurrealDatabase
 			["typeRestrictions"] = typeRestrictions
 		};
 
-		await ExecuteAsync(
-			"UPDATE power SET alias = $alias, symbol = $symbol, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions WHERE name = $name",
+		var response = await ExecuteAsync(
+			"UPDATE $recordId SET alias = $alias, symbol = $symbol, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions WHERE (system ?? false) = false RETURN AFTER",
 			parameters, cancellationToken);
-		return true;
+		return !response.HasErrors && response.GetValue<List<PowerRecord>>(0) is { Count: > 0 };
 	}
 
 	public async ValueTask<bool> SetPowerDisabledAsync(string name, bool disabled, CancellationToken cancellationToken = default)
 	{
-		var power = await GetPowerAsync(name, cancellationToken);
-		if (power == null || power.System) return false;
+		var power = await FindPowerRecordAsync(name, cancellationToken);
+		if (power == null || power.system) return false;
 
 		var parameters = new Dictionary<string, object?>
 		{
-			["name"] = name,
+			["recordId"] = new StringRecordId(power.recordId),
 			["disabled"] = disabled
 		};
-		await ExecuteAsync(
-			"UPDATE power SET disabled = $disabled WHERE name = $name",
+		var response = await ExecuteAsync(
+			"UPDATE $recordId SET disabled = $disabled WHERE (system ?? false) = false RETURN AFTER",
 			parameters, cancellationToken);
-		return true;
+		return !response.HasErrors && response.GetValue<List<PowerRecord>>(0) is { Count: > 0 };
 	}
 
 	#endregion
