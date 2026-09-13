@@ -93,14 +93,16 @@ public class EmitOutcomeTests
 	}
 
 	[Test]
-	public async Task UnresolvedExplicitOmitLocationRetainsCommandErrorOnly()
+	[Arguments("oemit")]
+	[Arguments("nsoemit")]
+	public async Task UnresolvedExplicitOmitLocationRetainsCommandErrorOnly(string name)
 	{
 		var actor = await Player();
 		var target = $"missing_{Guid.NewGuid():N}/unmatched";
-		var result = await Command(actor, $"@nsoemit {target}=undeliverable");
+		var result = await Command(actor, $"@{name} {target}=undeliverable");
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidRoom);
 		await Assert.That(result.HadErrors).IsFalse();
-		result = (await Factory.CommandParserFor(actor.DbRef, actor.Handle).FunctionParse(MarkupText.Plain($"[nsoemit({target},undeliverable)]")))!;
+		result = (await Factory.CommandParserFor(actor.DbRef, actor.Handle).FunctionParse(MarkupText.Plain($"[{name}({target},undeliverable)]")))!;
 		await Assert.That(result.Message!.ToPlainText()).IsEmpty();
 		await Assert.That(result.HadErrors).IsFalse();
 	}
