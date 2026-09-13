@@ -56,6 +56,10 @@ EXACTOBJECT: '=';
 FALSE: POUND F A L S E;
 TRUE: POUND T R U E;
 ATTRIBUTE_COLON: ':';
+// Keep a complete objid together at every operand position. A numeric prefix of an
+// attribute value (for example #12:345abc) is not an objid token.
+STAMPED_DBREF: POUND [0-9]+ ':' [0-9]+
+    {InputStream.LA(1) is -1 or '&' or '|' or ':' or '!' or ')' or '(' or '^' or ' ' or '/' or '+' or '$' or '@' or '='}?;
 // STRING - general token for names, dbrefs, patterns.
 // Excludes operator chars AND colon (colon is its own ATTRIBUTE_COLON token
 // so attribute locks like RACE:Elf tokenize as STRING ATTRIBUTE_COLON STRING).
