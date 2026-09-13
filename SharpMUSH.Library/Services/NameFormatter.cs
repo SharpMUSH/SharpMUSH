@@ -47,14 +47,7 @@ public sealed class NameFormatter(IAttributeService attributes, IOptionsWrapper<
 	}
 
 	private static async ValueTask<bool> IsInvisibleAsync(AnySharpObject obj, bool fullInvisibility)
-	{
-		if (!fullInvisibility || !await obj.HasFlag("DARK")) return false;
-		if (await obj.CanDark()) return true;
-		var alive = obj.IsPlayer || await obj.HasFlag("PUPPET")
-			|| await obj.HasFlag("AUDIBLE") && await obj.Object().Attributes.Value.AnyAsync(
-				attribute => attribute.Name.Equals("FORWARDLIST", StringComparison.OrdinalIgnoreCase), ExecutionBudget.CurrentToken);
-		return !alive;
-	}
+		=> fullInvisibility && await obj.IsDarkLegal(ExecutionBudget.CurrentToken);
 
 	private static async ValueTask<bool> EffectiveFlag(AnySharpObject obj, string flag)
 		=> await obj.HasFlag(flag) || await obj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken) is { } owner
