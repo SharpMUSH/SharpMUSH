@@ -34,8 +34,10 @@ public static partial class Substitutions
 			// ApplyCase(Sentence) matches PennMUSH, which upper-cases only the first character and
 			// leaves the rest alone — "McDonald" stays "McDonald", not "Mcdonald".
 			"n" or "N" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name,
-			"~" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // Accented name - using regular name as fallback
-			"K" or "k" => (await parser.CurrentState.EnactorObject(mediator)).Object()!.Name, // Moniker - using regular name as fallback
+			"~" => await new SharpMUSH.Library.Services.NameFormatter(attributeService, configuration).FormatAsync(
+				await parser.CurrentState.KnownEnactorObject(mediator), SharpMUSH.Library.Services.NameContext.Accented),
+			"K" or "k" => await new SharpMUSH.Library.Services.NameFormatter(attributeService, configuration).FormatAsync(
+				await parser.CurrentState.KnownEnactorObject(mediator), SharpMUSH.Library.Services.NameContext.UnaccentedMoniker),
 			"S" or "s" =>
 				await AttributeHelpers.GetPronoun(attributeService, mediator, parser,
 					await parser.CurrentState.KnownEnactorObject(mediator),

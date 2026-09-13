@@ -516,6 +516,7 @@ public class Startup(
 		services.AddSingleton<IPackageSourceService>(sp =>
 			new Services.GitPackageSourceService(sp.GetRequiredService<IPackageManifestService>()));
 		services.AddSingleton<ICommunicationService, CommunicationService>();
+		services.AddSingleton<SpeechService>();
 		services.AddSingleton<ILockService, LockService>();
 		services.AddSingleton<IGameBroadcastService, GameBroadcastService>();
 		services.AddSingleton<IConnectionAnnounceService, ConnectionAnnounceService>();

@@ -230,13 +230,14 @@ public class ListenerRoutingService(
 		// prefixed, so a '<' or '&' in what the puppet heard reached the client's parser raw. An
 		// unprefixed line sits in MXP's default open mode, where <b>, <color> and <font> are honoured
 		// — which made a puppet a route for one player's text to format another player's screen.
-		var relayed = MarkupText.Concat(
-			MarkupText.Plain(prefix),
-			message switch
-			{
-				MString markupString => markupString,
-				string str => MarkupText.Plain(str)
-			});
+		var body = message switch
+		{
+			MString markupString => markupString,
+			string str => MarkupText.Plain(str)
+		};
+		var header = body.Length == 0 ? MarkupText.Empty : await NameFormatter.HeaderAsync(owner, speaker, type,
+			serviceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Command.FullInvisibility ?? false, puppet);
+		var relayed = MarkupText.Concat([MarkupText.Plain(prefix), header, body]);
 
 		var serialized = MarkupTextSerializer.Serialize(relayed);
 		foreach (var binding in bindings)

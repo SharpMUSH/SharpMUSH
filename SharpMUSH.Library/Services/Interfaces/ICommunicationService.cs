@@ -24,6 +24,8 @@ public readonly record struct DeliveryFailure(DeliveryFailure.Cause Reason)
 
 public interface ICommunicationService
 {
+	/// <summary>Admits and transforms local SAY/POSE/SEMIPOSE once before location delivery.</summary>
+	ValueTask<CallState> SpeechAsync(IMUSHCodeParser parser, MString message, string token);
 	/// <summary>
 	/// Delivers private/prompt, immediate, outermost, named-location, omission or zone output.
 	/// The executor resolves targets and authorizes Spoof; the selected speaker owns Speech/Page
