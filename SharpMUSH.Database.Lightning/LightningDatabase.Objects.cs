@@ -235,7 +235,7 @@ public partial class LightningDatabase
 			// still hold. Writing the folded map back is what retires the old spelling on disk.
 			var locks = LockNames.Fold(found.Record.Locks);
 			locks[LockNames.Canonical(lockName)] =
-				new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString() };
+				new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString(), Creator = lockData.Creator?.ToString() };
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Locks = locks }));
 		}, cancellationToken);
 	}
@@ -1002,7 +1002,8 @@ public partial class LightningDatabase
 	internal static IImmutableDictionary<string, SharpLockData> MapLocks(Dictionary<string, LockRecord> locks)
 		=> LockNames.FoldToImmutable(locks,
 			record => new SharpLockData(record.LockString,
-				Enum.TryParse<LockService.LockFlags>(record.Flags, out var parsed) ? parsed : LockService.LockFlags.Default));
+				Enum.TryParse<LockService.LockFlags>(record.Flags, out var parsed) ? parsed : LockService.LockFlags.Default,
+				DBRef.TryParse(record.Creator, out var creator) ? creator : null));
 
 	private static WarningType ParseWarnings(string? raw)
 		=> raw is not null && uint.TryParse(raw, out var value) ? (WarningType)value : WarningType.None;

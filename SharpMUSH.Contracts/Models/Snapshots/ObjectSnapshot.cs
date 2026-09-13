@@ -5,7 +5,8 @@ public sealed record SnapshotAttribute(string Name, string Markup, string[] Flag
 {
 	public SnapshotAccess[] Ancestors { get; init; } = [];
 }
-public sealed record SnapshotLock(string Expression, int Flags);
+public sealed record SnapshotLock(string Expression, int Flags,
+	[property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? Creator = null);
 public sealed record ObjectSnapshot(
 	string Id, int SchemaVersion, string ObjectId, string ObjectType, string CreatorAccount,
 	string CreatorCharacter, long CreatedAt, string Description, int Retain,

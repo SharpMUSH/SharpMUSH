@@ -90,7 +90,10 @@ public class LockService(IBooleanExpressionParser bep, IOptionsMonitor<SharpMUSH
 		/// <summary>
 		/// Lock can only be set/unset by object's owner
 		/// </summary>
-		Owner = 128
+		Owner = 128,
+
+		/// <summary>The lock success messages include OX messages.</summary>
+		Ox = 256
 	}
 
 	public static string Get(LockType standardType, AnySharpObject lockee)

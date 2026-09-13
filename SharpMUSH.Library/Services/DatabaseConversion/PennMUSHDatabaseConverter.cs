@@ -762,11 +762,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					continue;
 				}
 
-				foreach (var (lockName, lockString) in pennObj.Locks)
+				foreach (var (lockName, importedLock) in pennObj.Locks)
 				{
 					try
 					{
-						var lockData = new Models.SharpLockData { LockString = lockString, Flags = Services.LockService.LockFlags.Default };
+						var creator = importedLock.Creator is { } creatorNumber && context.DbrefMapping.TryGetValue(creatorNumber, out var mappedCreator)
+							? (DBRef?)mappedCreator : null;
+						var lockData = importedLock.ToSharpLockData(creator);
 						await _database.SetLockAsync(
 							sharpObj.Object(),
 							lockName,
