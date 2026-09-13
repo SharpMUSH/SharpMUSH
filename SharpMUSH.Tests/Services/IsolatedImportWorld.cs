@@ -21,6 +21,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Server;
 using SurrealDb.Net;
+using System.Runtime.ExceptionServices;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace SharpMUSH.Tests.Services;
@@ -63,10 +64,20 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 	/// <summary>The world's engine, whose object cache fronts <see cref="Database"/>.</summary>
 	public IMediator Mediator => _services.GetRequiredService<IMediator>();
 
-	public static async Task<IsolatedImportWorld> CreateAsync()
+	public static Task<IsolatedImportWorld> CreateAsync()
 	{
 		var useSurreal = string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER"),
 			"surrealdb", StringComparison.OrdinalIgnoreCase);
+		return CreateAsync(useSurreal ? DatabaseProvider.SurrealDB : DatabaseProvider.Lightning);
+	}
+
+	internal string? LightningPath => _lightningPath;
+
+	internal static async Task<IsolatedImportWorld> CreateAsync(DatabaseProvider databaseProvider,
+		Action<IServiceCollection>? configureServices = null,
+		Action<IServiceCollection>? configureSurrealServices = null)
+	{
+		var useSurreal = databaseProvider == DatabaseProvider.SurrealDB;
 
 		var environment = Substitute.For<IHostEnvironment>();
 		environment.EnvironmentName.Returns(Environments.Development);
@@ -82,96 +93,108 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 
 		string? lightningPath = null;
 		ServiceProvider? surrealServices = null;
-		if (useSurreal)
-		{
-			// Always the embedded in-memory engine, whatever endpoint the shared world is on.
-			var surrealCollection = new ServiceCollection();
-			surrealCollection.AddSurreal($"Endpoint=mem://;Namespace=sharpmush;Database=import_{Guid.NewGuid():N}")
-				.AddInMemoryProvider();
-			surrealServices = surrealCollection.BuildServiceProvider();
-			var client = surrealServices.GetRequiredService<ISurrealDbClient>();
-			try
-			{
-				await client.Connect();
-			}
-			catch
-			{
-				await surrealServices.DisposeAsync();
-				throw;
-			}
-
-			services.AddSingleton(sp => new SurrealDatabase(
-				sp.GetRequiredService<ILogger<SurrealDatabase>>(), client,
-				sp.GetRequiredService<IPasswordService>(), sp.GetRequiredService<IObjectRelationLoader>(),
-				sp.GetRequiredService<PluginCatalog>().MigrationSources,
-				sp.GetRequiredService<PluginCatalog>().AllFlags));
-		}
-		else
-		{
-			lightningPath = Path.Join(Path.GetTempPath(), $"sharpmush-import-isolated-{Guid.NewGuid():N}");
-			var path = lightningPath;
-			services.AddSingleton(sp => new LightningDatabase(
-				sp.GetRequiredService<ILogger<LightningDatabase>>(),
-				new LightningStoreOptions { Path = path, MapSize = 1L << 30 },
-				sp.GetRequiredService<IPasswordService>(), sp.GetRequiredService<IObjectRelationLoader>(),
-				sp.GetRequiredService<PluginCatalog>().MigrationSources,
-				sp.GetRequiredService<PluginCatalog>().AllFlags));
-		}
-
-		// The same configuration the shared test host runs on. A world being built has nobody connected
-		// to it, so nothing here talks to NATS: no notifier, no message bus, and no connection store,
-		// whose only implementation is the shared key-value bucket and which ConnectionService runs
-		// without.
-		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-		options.CurrentValue.Returns(ReadPennMushConfig.Create(
-			Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst")));
-		services.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
-		services.AddSingleton(options);
-		services.RemoveAll<INotifyService>();
-		services.AddSingleton(TestHelpers.CreateNotifyServiceSubstitute());
-		services.RemoveAll<IMessageBus>();
-		services.AddSingleton(Substitute.For<IMessageBus>());
-		services.RemoveAll<IConnectionStateStore>();
-		// Nor a queue, and with it no Quartz: resolving Quartz's scheduler factory points Quartz's
-		// process-wide log provider at this container's logger factory, which dies with the world and
-		// takes every other host's Quartz logging down with it. Removing the factory makes anything that
-		// still reaches for Quartz fail here rather than repoint that static.
-		services.RemoveAll<ITaskScheduler>();
-		services.AddSingleton(Substitute.For<ITaskScheduler>());
-		services.RemoveAll<ISchedulerFactory>();
-		// As on the shared test host: the advisor is a delayed diagnostic task that outlives a short-lived
-		// container and faults once it is disposed.
-		services.PostConfigureAll<FusionCacheOptions>(cache => cache.EnableBestPracticesAdvisor = false);
-
-		var provider = services.BuildServiceProvider();
-		var world = new IsolatedImportWorld(provider, lightningPath, surrealServices);
+		ServiceProvider? provider = null;
 		try
 		{
+			if (useSurreal)
+			{
+				// Always the embedded in-memory engine, whatever endpoint the shared world is on.
+				var surrealCollection = new ServiceCollection();
+				surrealCollection.AddSurreal($"Endpoint=mem://;Namespace=sharpmush;Database=import_{Guid.NewGuid():N}")
+					.AddInMemoryProvider();
+				configureSurrealServices?.Invoke(surrealCollection);
+				surrealServices = surrealCollection.BuildServiceProvider();
+				var client = surrealServices.GetRequiredService<ISurrealDbClient>();
+				await client.Connect();
+
+				services.AddSingleton(sp => new SurrealDatabase(
+					sp.GetRequiredService<ILogger<SurrealDatabase>>(), client,
+					sp.GetRequiredService<IPasswordService>(), sp.GetRequiredService<IObjectRelationLoader>(),
+					sp.GetRequiredService<PluginCatalog>().MigrationSources,
+					sp.GetRequiredService<PluginCatalog>().AllFlags));
+			}
+			else
+			{
+				lightningPath = Path.Join(Path.GetTempPath(), $"sharpmush-import-isolated-{Guid.NewGuid():N}");
+				var path = lightningPath;
+				services.AddSingleton(sp => new LightningDatabase(
+					sp.GetRequiredService<ILogger<LightningDatabase>>(),
+					new LightningStoreOptions { Path = path, MapSize = 1L << 30 },
+					sp.GetRequiredService<IPasswordService>(), sp.GetRequiredService<IObjectRelationLoader>(),
+					sp.GetRequiredService<PluginCatalog>().MigrationSources,
+					sp.GetRequiredService<PluginCatalog>().AllFlags));
+			}
+
+			// The same configuration the shared test host runs on. A world being built has nobody connected
+			// to it, so nothing here talks to NATS: no notifier, no message bus, and no connection store,
+			// whose only implementation is the shared key-value bucket and which ConnectionService runs
+			// without.
+			var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+			options.CurrentValue.Returns(ReadPennMushConfig.Create(
+				Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst")));
+			services.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
+			services.AddSingleton(options);
+			services.RemoveAll<INotifyService>();
+			services.AddSingleton(TestHelpers.CreateNotifyServiceSubstitute());
+			services.RemoveAll<IMessageBus>();
+			services.AddSingleton(Substitute.For<IMessageBus>());
+			services.RemoveAll<IConnectionStateStore>();
+			// Nor a queue, and with it no Quartz: resolving Quartz's scheduler factory points Quartz's
+			// process-wide log provider at this container's logger factory, which dies with the world and
+			// takes every other host's Quartz logging down with it. Removing the factory makes anything that
+			// still reaches for Quartz fail here rather than repoint that static.
+			services.RemoveAll<ITaskScheduler>();
+			services.AddSingleton(Substitute.For<ITaskScheduler>());
+			services.RemoveAll<ISchedulerFactory>();
+			// As on the shared test host: the advisor is a delayed diagnostic task that outlives a short-lived
+			// container and faults once it is disposed.
+			services.PostConfigureAll<FusionCacheOptions>(cache => cache.EnableBestPracticesAdvisor = false);
+
+			configureServices?.Invoke(services);
+			provider = services.BuildServiceProvider();
 			await provider.GetRequiredService<IDatabaseLifecycle>().Migrate();
 			// The generated Mediator builds its handler table on first use and, if that throws, never
 			// resets: every later Send spins forever. The host's first Send is at startup; this is ours, so
 			// a failure to build the table surfaces here as the exception it is.
 			await provider.GetRequiredService<IMediator>().Send(new GetObjectNodeQuery(new DBRef(0)));
+			return new IsolatedImportWorld(provider, lightningPath, surrealServices);
 		}
-		catch
+		catch (Exception initializationFailure)
 		{
-			await world.DisposeAsync();
+			var cleanupFailures = await CleanupAsync(provider, surrealServices, lightningPath);
+			if (cleanupFailures.Count > 0)
+				throw new AggregateException("Import world initialization and cleanup failed.", [initializationFailure, .. cleanupFailures]);
 			throw;
 		}
-
-		return world;
 	}
 
 	public async ValueTask DisposeAsync()
 	{
-		await _services.DisposeAsync();
-		if (_surrealServices is not null)
+		var failures = await CleanupAsync(_services, _surrealServices, _lightningPath);
+		if (failures.Count == 1) ExceptionDispatchInfo.Capture(failures[0]).Throw();
+		if (failures.Count > 1) throw new AggregateException("Import world cleanup failed.", failures);
+	}
+
+	private static async ValueTask<List<Exception>> CleanupAsync(ServiceProvider? services,
+		ServiceProvider? surrealServices, string? lightningPath)
+	{
+		var failures = new List<Exception>();
+		// Each provider and the owned directory need an attempt even if another resource fails.
+		try
 		{
-			await _surrealServices.DisposeAsync();
+			if (services is not null) await services.DisposeAsync();
 		}
-		if (_lightningPath is not null && Directory.Exists(_lightningPath))
+		catch (Exception failure) { failures.Add(failure); }
+		try
 		{
-			Directory.Delete(_lightningPath, recursive: true);
+			if (surrealServices is not null) await surrealServices.DisposeAsync();
 		}
+		catch (Exception failure) { failures.Add(failure); }
+		try
+		{
+			if (lightningPath is not null && Directory.Exists(lightningPath)) Directory.Delete(lightningPath, recursive: true);
+		}
+		catch (Exception failure) { failures.Add(failure); }
+		return failures;
 	}
 }
