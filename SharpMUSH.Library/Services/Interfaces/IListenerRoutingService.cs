@@ -1,5 +1,6 @@
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using System.Collections.Immutable;
 using static SharpMUSH.Library.Services.Interfaces.INotifyService;
 
 namespace SharpMUSH.Library.Services.Interfaces;
@@ -32,4 +33,20 @@ public record NotificationContext(
 	DBRef Target,
 	DBRef? Location,
 	DBRef[] ExcludedObjects
-);
+)
+{
+	private ImmutableHashSet<DBRef> _exclusions = ExcludedObjects.ToImmutableHashSet();
+	public DBRef[] ExcludedObjects
+	{
+		get => _exclusions.ToArray();
+		init => _exclusions = value.ToImmutableHashSet();
+	}
+	/// <summary>Copied at admission; later changes to the legacy array cannot change the audience.</summary>
+	public ImmutableHashSet<DBRef> Exclusions => _exclusions;
+	public DBRef? Executor { get; init; }
+	public NotificationRelay Relay { get; init; }
+	public bool PuppetOk { get; init; }
+	public MString Prefix { get; init; } = MString.Empty;
+}
+
+public enum NotificationRelay { Initial, RelayOnce, NoRelay }

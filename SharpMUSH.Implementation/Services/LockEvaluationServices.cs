@@ -37,6 +37,7 @@ public sealed class LockEvaluationServices(
 		try
 		{
 			var unlockerRef = unlocker.Object().DBRef;
+			var arguments = LockEvaluationArguments.CreateArguments();
 
 			var evalParser = parser.Value.Push(new ParserState(
 				Registers: new([[]]),
@@ -51,7 +52,7 @@ public sealed class LockEvaluationServices(
 				Command: null,
 				CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 				Switches: [],
-				Arguments: [],
+				Arguments: arguments,
 				Executor: unlockerRef,
 				Enactor: unlockerRef,
 				Caller: unlockerRef,
@@ -62,7 +63,8 @@ public sealed class LockEvaluationServices(
 				TotalInvocations: new InvocationCounter(),
 				LimitExceeded: new LimitExceededFlag())
 			{
-				MoveDepth = new InvocationCounter()
+				MoveDepth = new InvocationCounter(),
+				Restrictions = EvaluationRestrictions.Current
 			});
 
 			var result = await attributes.Value.EvaluateAttributeFunctionAsync(
@@ -70,7 +72,7 @@ public sealed class LockEvaluationServices(
 				unlocker,
 				gated,
 				attributeName,
-				new Dictionary<string, CallState>(),
+				arguments,
 				evalParent: false,
 				ignorePermissions: true);
 

@@ -51,7 +51,7 @@ public partial class PrivateListenerTests
 	private sealed record Pipeline(NotifyService Notify, IMessageBus Bus, ConnectionService Connections,
 		MUSHCodeParser Parser, List<Queued> Queue, ITaskScheduler Scheduler);
 	private async Task<Pipeline> Build(TestIsolationHelpers.TestPlayer actor, DBRef recipient,
-		bool playerListen = true, bool playerAHear = true)
+		bool playerListen = true, bool playerAHear = true, IPermissionService? permission = null)
 	{
 		var bus = Substitute.For<IMessageBus>();
 		var connections = new ConnectionService(Substitute.For<IPublisher>());
@@ -75,12 +75,16 @@ public partial class PrivateListenerTests
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
 			.Returns(call => Mediator.Send(call.Arg<GetObjectNodeQuery>(), call.Arg<CancellationToken>()));
+		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
+			.Returns(call => Mediator.CreateStream(call.Arg<GetContentsQuery>(), call.Arg<CancellationToken>()));
 		mediator.Send(Arg.Any<ExecuteListenPatternCommand>(), Arg.Any<CancellationToken>())
 			.Returns(call => handler.Handle(call.Arg<ExecuteListenPatternCommand>(), call.Arg<CancellationToken>()));
+		NotifyService? notify = null;
 		var routing = new ListenerRoutingService(mediator, new ListenPatternMatcher(Mediator, options),
-			Factory.Services.GetRequiredService<IPermissionService>(), Factory.Services.GetRequiredService<ILockService>(),
-			connections, provider, bus, DisabledRealityPolicy.Instance);
-		var notify = new NotifyService(bus, connections, new LocalizationService(), DisabledRealityPolicy.Instance, routing, mediator);
+			permission ?? Factory.Services.GetRequiredService<IPermissionService>(), Factory.Services.GetRequiredService<ILockService>(),
+			connections, provider, bus, DisabledRealityPolicy.Instance,
+			new Lazy<INotifyService>(() => notify ?? throw new InvalidOperationException("Notifier is not initialized")));
+		notify = new NotifyService(bus, connections, new LocalizationService(), DisabledRealityPolicy.Instance, routing, mediator);
 		var communication = ActivatorUtilities.CreateInstance<CommunicationService>(Factory.Services, notify, connections);
 		var functions = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Functions.Functions>(Factory.Services, notify, communication);
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(Factory.Services, notify, communication, functions);
