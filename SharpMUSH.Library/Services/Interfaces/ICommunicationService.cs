@@ -34,6 +34,10 @@ public interface ICommunicationService
 	/// OEMIT location. Other delivery refusals notify through the normal lock/locate paths.</returns>
 	ValueTask<CallState> EmitAsync(IMUSHCodeParser parser, EmitRequest request);
 
+	/// <summary>Runs the same emit operation with explicit admission and target-failure metadata
+	/// for payload-returning commands. A refused target does not prevent other targets receiving output.</summary>
+	ValueTask<EmitOutcome> EmitWithOutcomeAsync(IMUSHCodeParser parser, EmitRequest request);
+
 	/// <summary>
 	/// Sends a private message to specified port recipients.
 	/// Performs permission checks for ports with associated DBRef.

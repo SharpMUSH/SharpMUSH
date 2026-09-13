@@ -1,3 +1,6 @@
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ParserInterfaces;
+
 namespace SharpMUSH.Library.Services.Interfaces;
 
 public enum EmitScope { Private, Prompt, Immediate, Room, Outermost, Omit, Zone }
@@ -17,3 +20,11 @@ public sealed record EmitRequest(
 	string? OmitLocation = null,
 	bool List = false,
 	bool PortTargets = false);
+
+/// <summary>Admission is independent of recipient filtering: a permitted location counts even
+/// when nobody hears it; private output requires a permitted target. Result retains the function
+/// contract. TargetFailure preserves lookup failures for commands that otherwise return the payload.</summary>
+public sealed record EmitOutcome(bool Admitted, CallState Result)
+{
+	public Option<CallState> TargetFailure { get; init; } = new None();
+}

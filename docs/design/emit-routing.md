@@ -1,8 +1,11 @@
 # Emit routing
 
 The fourteen emit/prompt commands and their fourteen function counterparts delegate to
-`ICommunicationService.EmitAsync`. Wrappers evaluate arguments and select list, silent,
+one `ICommunicationService.EmitWithOutcomeAsync` core. `EmitAsync` delegates to it and retains
+the function result contract. Wrappers evaluate arguments and select list, silent,
 no-spoof and explicit spoof options. `EmitRequest` carries the resulting intent.
+Custom service implementations must supply the outcome method; an empty result alone cannot
+establish admission.
 
 | Scope | Recipients and gates |
 | --- | --- |
@@ -30,8 +33,17 @@ Explicit failed Speech locks use the generic `SPEECH_LOCK` failure attribute tri
 (`SPEECH_LOCK` + backtick + `FAILURE`, `OFAILURE`, `AFAILURE`). Implicit OEMIT and zone
 fanout filter denied locations without running a refusal for every room. Page refusals use
 FailLock too. List private output suppresses the default refusal while retaining custom Page
-failure attributes. Ordinary empty private messages do nothing; empty prompts retain the
-protocol boundary.
+failure attributes. Ordinary empty private messages do nothing; empty prompts still invoke
+the Prompt path. Actual empty protocol delivery remains part of the NotifyService work in #1041.
+
+EMIT, NSEMIT, NSOEMIT and NSPROMPT commands return the attempted message only after admission.
+A location passes admission before recipient hearing filters, even if nobody ultimately hears it;
+private output needs at least one target to pass lookup, Page/HAVEN and hearing checks. Lock
+refusals return empty. Lookup failures take precedence in the payload-command result without
+preventing delivery to other admitted targets. NSPROMPT retains the first lookup failure's
+CallState; unresolved explicit NSOEMIT locations return InvalidRoom. These lookup results retain
+their existing error metadata. Functions retain empty results for these refusals; explicit
+noncontainer OEMIT locations return InvalidRoom with HadErrors on both surfaces.
 
 Missing personal Speech/Page failure attributes use a resource key resolved separately for each
 connection, including two connections on the same player with different locales. Custom failure
@@ -39,7 +51,9 @@ attributes still evaluate once; present-empty attributes suppress the default, a
 attributes still run. HTTP capture receives the neutral default through the normal notification path.
 Room triad defaults remain literal pending the separate callback work in #1006.
 
-`@emit/room` and `@nsemit/room` select the outermost room, like LEMIT. `@pemit/contents`
+`@emit/room` and `@nsemit/room` select the outermost room, like LEMIT. Both aliases accept
+`/silent` and `/noisy` to override `silent_pemit` for their confirmation. This is SharpMUSH's
+documented ROOM alias behavior. `@pemit/contents`
 selects a container and its contents, like REMIT, retaining spaces in the target name even with
 `/list`. `@pemit/spoof` selects an authorized speaker for ordinary private or contents output.
 
