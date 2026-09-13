@@ -442,17 +442,17 @@ public class SharpMUSHBooleanExpressionVisitor(
 		var targetIdentifier = context.ATTRIBUTE_COLON() != null
 			? $"{context.@string(0).GetText()}:{context.@string(1).GetText()}"
 			: context.@string(0).GetText();
-		return BuildExactObjectPredicate(targetIdentifier);
+		return BuildObjectPredicate(targetIdentifier, allowCarry: false);
 	}
 
 	public override LockPredicate VisitDefaultExpr(SharpMUSHBoolExpParser.DefaultExprContext context)
-		=> BuildExactObjectPredicate(context.@string().GetText());
+		=> BuildObjectPredicate(context.@string().GetText(), allowCarry: true);
 
-	private LockPredicate BuildExactObjectPredicate(string target)
+	private LockPredicate BuildObjectPredicate(string target, bool allowCarry)
 	{
 		var targetDbRef = ParsedAtCompileTime(target);
 
-		// PennMUSH OP_TCONST: passes if unlocker IS the target OR unlocker CARRIES the target
+		// Ordinary keys allow identity or direct carry; explicit exact keys allow identity only.
 		return async (gatedObj, unlockerObj) =>
 		{
 			// If target is "me", it refers to the gated object's owner
@@ -469,12 +469,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 				var unlockerDbRef = unlockerObj.Object().DBRef;
 
 				// Check if unlocker IS the target
-				var isMatch = lockDbRef.CreationMilliseconds.HasValue
-					? (lockDbRef.Number == unlockerDbRef.Number && lockDbRef.CreationMilliseconds == unlockerDbRef.CreationMilliseconds)
-					: lockDbRef.Number == unlockerDbRef.Number;
-
-				if (isMatch)
+				if (unlockerDbRef.Matches(lockDbRef))
 					return true;
+				if (!allowCarry)
+					return false;
 
 				// Check if unlocker CARRIES the target (PennMUSH: member(arg, Contents(player)))
 				try
