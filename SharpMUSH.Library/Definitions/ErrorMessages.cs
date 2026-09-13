@@ -1236,6 +1236,8 @@ public static class ErrorMessages
 		public const string PowerAddRequiresNameAndAlias = "@POWER/ADD requires power name and alias.";
 		public const string PowerNameAndAliasCannotBeEmpty = "Power name and alias cannot be empty.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PowerAlreadyExistsFormat = "Power '{0}' already exists.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PowerCreatedWithAliasFormat = "Power '{0}' created with alias '{1}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToCreatePowerFormat = "Failed to create power '{0}'.";
