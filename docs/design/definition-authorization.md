@@ -26,3 +26,13 @@ Seed refresh retains its separate upsert paths. Command prechecks provide duplic
 while the provider boundary supplies the atomic no-replacement guarantee. Existing Mediator cache
 invalidation remains in force, including conservative invalidation after a refused create. Symbols
 may be shared subject to existing type rules; global alias uniqueness is a separate registry policy.
+
+Object flag assignment is separate from definition management. The selected set or unset array
+treats DARK, MDARK, ODARK, LOG and EVENT as visibility/effect metadata, not privilege requirements.
+INTERNAL and DISABLED prohibit that operation before any principal alternative is considered;
+a disabled definition prohibits both operations even with empty permission arrays. Remaining
+built-in privilege levels and custom flag/power names retain SharpMUSH's OR semantics. An array
+containing only metadata adds no privilege requirement. Ownership, type and flag-specific checks
+still apply. SYSTEM protects definition management and does not itself prohibit assignment.
+Definitions retain their stored metadata and remain queryable for administration; no migration or
+global disabled-definition filtering is required.
