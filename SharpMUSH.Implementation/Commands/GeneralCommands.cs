@@ -2412,7 +2412,7 @@ public partial class Commands
 	/// action: <c>cmd_switch</c> folds <c>QUEUE_PRESERVE_QREG</c>/<c>QUEUE_CLEAR_QREG</c> into
 	/// <c>queue_type</c> only once it is already <c>QUEUE_INPLACE</c> (src/cmds.c:1513-1521), and
 	/// <c>do_entry</c> localizes around each inplace entry it drains (src/cque.c:1183-1195). A queued
-	/// action instead gets its own copy of the registers from <see cref="QueuedActionState"/>, matching
+	/// action instead gets its own copy of the registers from <see cref="ParserState.SnapshotForQueuedAction"/>, matching
 	/// <c>PE_INFO_CLONE</c>, so neither switch has anything to do there.</para>
 	/// </summary>
 	private async ValueTask<bool> RunControlFlowAction(IMUSHCodeParser parser, AnySharpObject executor, MString action,
@@ -2422,7 +2422,7 @@ public partial class Commands
 		{
 			await Mediator.Send(new AdmitCommandListRequest(
 				action,
-				QueuedActionState(parser),
+				parser.CurrentState.SnapshotForQueuedAction(),
 				new DbRefAttribute(executor.Object().DBRef, DefaultSemaphoreAttributeArray),
 				-1), ExecutionBudget.CurrentToken);
 			return false;
@@ -2469,40 +2469,6 @@ public partial class Commands
 				}
 			}
 		}
-	}
-
-	/// <summary>
-	/// The state a queued <c>@switch</c>/<c>@select</c> action carries. PennMUSH builds one with
-	/// <c>PE_INFO_CLONE</c> (do_switch, src/predicat.c:1121), which "copies the Q-registers, @switch,
-	/// @dol and env over to the new pe_info" (src/parse.c:1938) — a copy, not a view of the parent's.
-	/// So every mutable piece this engine keeps in a stack has to be cloned rather than aliased. The
-	/// calling action list pops its register frame long before the queue consumer gets to the entry,
-	/// which would lose the q-registers and %0-%9 the action was queued with; the caller pops its
-	/// <see cref="ParserState.SwitchStack"/> entry in a <c>finally</c> that normally runs before the
-	/// queue consumer touches the action, which would leave <c>stext()</c>/<c>slev()</c> reading an
-	/// empty or unrelated switch, and a shared <see cref="ParserState.ExecutionStack"/> would let the
-	/// action's <c>@break</c> stop the caller's list — the very thing a new queue entry must not do.
-	/// </summary>
-	private static ParserState QueuedActionState(IMUSHCodeParser parser)
-	{
-		var state = parser.CurrentState;
-
-		var registers = new ConcurrentStack<Dictionary<string, MString>>();
-		registers.Push(state.Registers.TryPeek(out var topRegisters)
-			? new Dictionary<string, MString>(topRegisters)
-			: []);
-
-		// ConcurrentStack enumerates top-first and its collection constructor pushes in order, so a
-		// straight copy would come out upside down. Reverse() to keep stext(0) on top.
-		var switchStack = new ConcurrentStack<MString>(state.SwitchStack.Reverse());
-
-		return state with
-		{
-			Registers = registers,
-			SwitchStack = switchStack,
-			ExecutionStack = new ConcurrentStack<Execution>(),
-			EnvironmentRegisters = new Dictionary<string, CallState>(state.EnvironmentRegisters)
-		};
 	}
 
 	private ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
