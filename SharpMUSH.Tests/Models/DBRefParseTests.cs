@@ -19,6 +19,9 @@ public class DBRefParseTests
 	[Arguments("#")]
 	[Arguments("#4 2")]
 	[Arguments("#42:")]
+	[Arguments("#2147483648")]
+	[Arguments("#2147483648:1")]
+	[Arguments("#1:9223372036854775808")]
 	public async ValueTask TryParse_Unparseable_ReturnsFalseWithoutThrowing(string? value)
 	{
 		await Assert.That(DBRef.TryParse(value, out var dbref)).IsFalse();
@@ -53,6 +56,7 @@ public class DBRefParseTests
 	[Arguments(42, 1700000000L)]
 	[Arguments(42, null)]
 	[Arguments(1, 0L)]
+	[Arguments(int.MaxValue, long.MaxValue)]
 	public async ValueTask ToString_RoundTripsThroughTryParse(int number, long? creationMilliseconds)
 	{
 		var original = new DBRef(number, creationMilliseconds);

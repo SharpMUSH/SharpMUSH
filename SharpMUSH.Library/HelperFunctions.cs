@@ -543,12 +543,12 @@ public static partial class HelperFunctions
 	public static Option<DBRef> ParseDbRef(string dbrefStr)
 	{
 		var match = DatabaseReferenceRegex.Match(dbrefStr);
-		var dbref = match.Groups["DatabaseNumber"].Value;
-		var cTime = match.Groups["CreationTimestamp"].Value;
-
-		return string.IsNullOrEmpty(dbref)
-			? new None()
-			: new DBRef(int.Parse(dbref), string.IsNullOrWhiteSpace(cTime) ? null : long.Parse(cTime));
+		if (!match.Success || !int.TryParse(match.Groups["DatabaseNumber"].ValueSpan, out var number))
+			return new None();
+		var timestamp = match.Groups["CreationTimestamp"];
+		if (!timestamp.Success) return new DBRef(number);
+		return long.TryParse(timestamp.ValueSpan, out var milliseconds)
+			? new DBRef(number, milliseconds) : new None();
 	}
 
 	/// <summary>
