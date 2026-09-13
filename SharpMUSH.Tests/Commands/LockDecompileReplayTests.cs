@@ -1,6 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -19,7 +19,6 @@ public class LockDecompileReplayTests
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 	private ILockService Locks => Factory.Services.GetRequiredService<ILockService>();
 	private IConnectionService Connections => Factory.Services.GetRequiredService<IConnectionService>();
-	private INotifyService Notify => Factory.Services.GetRequiredService<INotifyService>();
 
 	private async Task<AnySharpObject> Object(DBRef reference)
 		=> (await Mediator.Send(new GetObjectNodeQuery(reference))).Expect<AnySharpObject>();
@@ -29,19 +28,24 @@ public class LockDecompileReplayTests
 
 	private async Task<string[]> Output(string command)
 	{
-		var count = Notify.ReceivedCalls().Count();
+		var recipient = Factory.ExecutorDBRef;
+		var count = Factory.Notifications.CountFor(recipient);
 		await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain(command));
-		return Notify.ReceivedCalls().Skip(count)
-			.Where(call => call.GetMethodInfo().Name is "Notify" or "NotifyLocalized")
-			.Select(call => call.GetArguments()[1])
-			.Select(value => value switch
-			{
-				SharpMessage and string text => text,
-				SharpMessage and MarkupText text => text.ToPlainText(),
-				string text => text,
-				_ => ""
-			})
-			.ToArray();
+		return Factory.Notifications.For(recipient).Skip(count).ToArray();
+	}
+
+	[Test]
+	public async Task InvalidLockDiagnosticKeepsDecompilePrefix()
+	{
+		var created = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"create(InvalidLock{Guid.NewGuid():N})"));
+		var reference = DBRef.Parse(created!.Message!.ToPlainText());
+		var target = await Object(reference);
+		var invalid = new SharpLockData("=me");
+		await Factory.Services.GetRequiredService<ISharpDatabase>().SetLockAsync(target.Object(), "Basic", invalid);
+		target.Object().WithLock("Basic", invalid);
+		var output = await Output($"@decompile/db {reference}=PREFIX:");
+		await Assert.That(output).Contains("PREFIX:@@ Invalid Basic lock omitted; replace it explicitly before decompiling.");
+		await Assert.That(output.Any(line => line.Contains("@lock/", StringComparison.Ordinal))).IsFalse();
 	}
 
 	[Test]

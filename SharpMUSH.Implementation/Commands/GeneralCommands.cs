@@ -4759,7 +4759,7 @@ public partial class Commands
 			{
 				if (!BooleanExpressionParser.IsBound(lockData.LockString))
 				{
-					outputs.Add($"@@ Invalid {lockName} lock omitted; replace it explicitly before decompiling.");
+					outputs.Add($"{prefix}@@ Invalid {lockName} lock omitted; replace it explicitly before decompiling.");
 					continue;
 				}
 				var expression = await BooleanExpressionParser.RenderAsync(lockData.LockString, executor, LockRenderMode.Decompile, ExecutionBudget.CurrentToken);
