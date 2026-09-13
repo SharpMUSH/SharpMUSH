@@ -45,7 +45,9 @@ from splitting surrogate pairs or combining sequences. This Unicode policy repla
 indexing. Sharp's markup model has no standalone style on empty text.
 
 FULL_INVIS requires DARK plus Can_Dark or a nonliving object. Players, puppets and audible objects
-with FORWARDLIST are living for this check. Hidden legal players appear as Someone; other hidden
+with a local root FORWARDLIST are living for this check, even if its value is empty. Inherited
+FORWARDLIST and nested attribute-tree leaves do not confer life. The shared IsAlive/IsDarkLegal
+helpers inspect attribute names without evaluating their values. Hidden legal players appear as Someone; other hidden
 legal speakers appear as Something. Explicit name operations remain unaffected.
 
 ## Final-recipient attribution

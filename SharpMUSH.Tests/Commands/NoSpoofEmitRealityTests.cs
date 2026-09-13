@@ -63,7 +63,12 @@ public class NoSpoofEmitRealityTests
 		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
 			.Returns(new[] { recipient.MinusRoom() }.ToAsyncEnumerable());
 		var notifications = Substitute.For<INotifyService>();
-		var communication = ActivatorUtilities.CreateInstance<CommunicationService>(Factory.Services, mediator, permissions, notifications, locks);
+		var attributes = Substitute.For<IAttributeService>();
+		attributes.EvaluateAttributeFunctionAsync(Arg.Any<IMUSHCodeParser>(), executor, executor, "SPEECHMOD",
+			Arg.Any<Dictionary<string, CallState>>(), true, true).Returns(MarkupText.Empty);
+		var speech = new Lazy<SpeechService>(() => new SpeechService(attributes,
+			Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()));
+		var communication = ActivatorUtilities.CreateInstance<CommunicationService>(Factory.Services, mediator, permissions, notifications, locks, speech);
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
 			Factory.Services, mediator, permissions, notifications, communication);
 		var parser = Substitute.For<IMUSHCodeParser>();
@@ -73,6 +78,12 @@ public class NoSpoofEmitRealityTests
 			Switches = spoof ? ["NOEVAL", "SPOOF"] : ["NOEVAL"],
 			Arguments = new() { ["0"] = new CallState("literal [add(1,2)]") }
 		});
+		parser.Push(Arg.Any<ParserState>()).Returns(call =>
+		{
+			var scoped = Substitute.For<IMUSHCodeParser>();
+			scoped.CurrentState.Returns(call.Arg<ParserState>());
+			return scoped;
+		});
 
 		await commands.NoSpoofEmit(parser, new SharpCommandAttribute { Name = "@NSEMIT" });
 
@@ -80,5 +91,8 @@ public class NoSpoofEmitRealityTests
 		await notifications.Received(delivered ? 1 : 0).Notify(recipient,
 			TestHelpers.MatchingMessage("literal [add(1,2)]"), spoof ? enactor : executor, INotifyService.NotificationType.NSEmit);
 		await locks.DidNotReceive().Evaluate(LockType.Interact, recipient, enactor);
+		await attributes.Received(1).EvaluateAttributeFunctionAsync(
+			Arg.Is<IMUSHCodeParser>(scoped => scoped.CurrentState.Enactor == executor.Object().DBRef),
+			executor, executor, "SPEECHMOD", Arg.Any<Dictionary<string, CallState>>(), true, true);
 	}
 }
