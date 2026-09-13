@@ -9,25 +9,13 @@ using System.Text.RegularExpressions;
 namespace SharpMUSH.Library.Queries.Database;
 
 /// <summary>
-/// Query to get listen pattern attributes for an object with pre-compiled regex patterns.
-/// Results are cached automatically via QueryCachingBehavior, and invalidated two ways: by key, which
-/// every attribute-mutating command names through
-/// <see cref="Definitions.CacheKeys.AttributesTouchedBy"/>, and by the
-/// <see cref="Definitions.CacheTags.InheritedAttributes"/> tag.
+/// Visible local listen patterns with cached compiled expressions. This query does not traverse parents;
+/// inherited searches use complete <see cref="GetListenAttributeSnapshotQuery"/> snapshots so ordinary
+/// definitions and private trees can participate in shadowing.
 /// </summary>
 /// <remarks>
-/// The tag is there because the handler walks the object's PARENT CHAIN: a write to an ancestor
-/// changes this answer, and that write names only itself. Without it a builder adding a ^-pattern to a
-/// parent watched the children ignore it until the entry expired.
-/// <para>
-/// It is the game-wide tag, so any attribute write anywhere drops every object's set and they are
-/// rebuilt on next use. That is the same over-expiry the inherited attribute reads carry and for the
-/// same reason — what a read consulted is not recoverable from what it returned, and an ancestor that
-/// contributed nothing still has to be able to start contributing. Rebuilding costs an attribute scan
-/// over cached reads and no database round trip, and the compiled patterns survive in
-/// <see cref="Utilities.SoftcodeRegex"/>. Scoping it needs the read to record the chain it walked;
-/// see the note on <see cref="Definitions.CacheKeys.AttributesTag"/>.
-/// </para>
+/// Attribute mutations invalidate the inherited-attributes tag. Compiled expressions are reused through
+/// <see cref="Utilities.SoftcodeRegex"/> after a local snapshot is rebuilt.
 /// </remarks>
 public record GetListenAttributesQuery(AnySharpObject SharpObject) : IQuery<ListenAttributeCache[]>, ICacheable
 {

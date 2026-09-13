@@ -38,7 +38,7 @@ public class GeneralCommandTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(executor),
-				TestHelpers.MatchingMessage(expected), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingMessage(expected), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -60,7 +60,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "3 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "3 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -73,7 +73,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "4 This is, a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "4 This is, a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -85,15 +85,15 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "dolist-hash-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "dolist-hash-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "dolist-hash-2")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "dolist-hash-2")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "dolist-hash-3")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "dolist-hash-3")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -108,11 +108,11 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "5 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "5 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "6 This is also a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "6 This is also a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -127,15 +127,15 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "7 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "7 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "8 This is also a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "8 This is also a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "9 Repeat 3 times in this mode.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "9 Repeat 3 times in this mode.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -151,11 +151,11 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "10 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "10 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "11 Repeat 1 times in this mode.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "11 Repeat 1 times in this mode.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -170,11 +170,11 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(6)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "12 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "12 This is a test")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(2)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "13 Repeat 2 times in this mode.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "13 Repeat 2 times in this mode.")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -190,23 +190,23 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(2)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "14 This is a test 1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "14 This is a test 1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(2)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "14 This is a test 2")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "14 This is a test 2")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(2)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "14 This is a test 3")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "14 This is a test 3")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "15 Repeat 1 times in this mode a")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "15 Repeat 1 times in this mode a")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "15 Repeat 1 times in this mode b")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "15 Repeat 1 times in this mode b")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -540,12 +540,12 @@ public class GeneralCommandTests
 		await NotifyService.Received(1).Notify(
 			TestHelpers.MatchingObject(executor),
 			Arg.Is<SharpMessage>(m => TestHelpers.MessagePlainTextEquals(m, "SelectFirst_A_31708")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await NotifyService.DidNotReceive().Notify(
 			TestHelpers.MatchingObject(executor),
 			Arg.Is<SharpMessage>(m => TestHelpers.MessagePlainTextEquals(m, "SelectFirst_B_31708")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -624,7 +624,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Batched test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "Batched test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -638,7 +638,7 @@ public class GeneralCommandTests
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextEquals(msg, "DoListBatchesToOtherPlayers: Message to other player")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -652,7 +652,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(4)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Nested message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "Nested message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -665,7 +665,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "DoListWithoutBreak_AllMessagesReceived")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "DoListWithoutBreak_AllMessagesReceived")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -680,17 +680,17 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 2")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 2")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 3")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "Message DoListWithBreakAfterFirst_OnlyFirstMessageReceived 3")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -703,7 +703,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(3)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Message before break")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "Message before break")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -717,7 +717,7 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(6)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Inner message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "Inner message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -730,15 +730,15 @@ public class GeneralCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Fruit: apple")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "Fruit: apple")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Fruit: banana")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "Fruit: banana")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "Fruit: orange")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "Fruit: orange")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	/// <summary>
