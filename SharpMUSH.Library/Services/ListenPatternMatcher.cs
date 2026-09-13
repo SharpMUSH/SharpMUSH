@@ -20,11 +20,15 @@ public class ListenPatternMatcher(
 	IMediator mediator,
 	IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> configuration) : IListenPatternMatcher
 {
-	public async ValueTask<ListenMatch[]> MatchListenPatternsAsync(
+	public ValueTask<ListenMatch[]> MatchListenPatternsAsync(
 		AnySharpObject listener,
 		string message,
 		AnySharpObject speaker,
 		bool checkParents = false)
+		=> MatchListenPatternsAsync(listener, MString.Plain(message), speaker, checkParents);
+
+	public async ValueTask<ListenMatch[]> MatchListenPatternsAsync(AnySharpObject listener, MString message,
+		AnySharpObject speaker, bool checkParents = false)
 	{
 		var matches = new List<ListenMatch>();
 
@@ -88,7 +92,7 @@ public class ListenPatternMatcher(
 	private static void CollectMatches(
 		IEnumerable<ListenAttributeCache> listenAttributes,
 		AnySharpObject listener,
-		string message,
+		MString message,
 		AnySharpObject speaker,
 		List<ListenMatch> matches)
 	{
@@ -108,15 +112,17 @@ public class ListenPatternMatcher(
 				continue;
 
 			// A pattern that cannot finish is not a match, and must not stop the patterns after it.
-			var regexMatch = SoftcodeRegex.Match(listenAttr.CompiledRegex, message);
+			var regexMatch = SoftcodeRegex.Match(listenAttr.CompiledRegex, message.ToPlainText());
 			if (regexMatch is not { Success: true })
 				continue;
 
+			var arguments = PatternArguments.Capture(regexMatch, listenAttr.IsRegexFlag, message);
 			matches.Add(new ListenMatch(
 				listenAttr.Attribute,
-				regexMatch.Groups.Values.Select(group => group.Value).ToArray(),
+				regexMatch.Groups.Values.Skip(listenAttr.IsRegexFlag ? 0 : 1).Select(group => group.Value).ToArray(),
 				listenAttr.Behavior
-			));
+			)
+			{ Arguments = arguments });
 		}
 	}
 }

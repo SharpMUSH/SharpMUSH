@@ -23,7 +23,7 @@ public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributes
 		await foreach (var attr in attributes.WithCancellation(cancellationToken))
 		{
 			// Skip attributes with NO_COMMAND flag (applies to listen patterns too)
-			if (attr.Flags.Any(flag => flag.Name == "NO_COMMAND"))
+			if (attr.Flags.Any(flag => flag.Name.Equals("NO_COMMAND", StringComparison.OrdinalIgnoreCase)))
 				continue;
 
 			var plainValue = attr.Value.ToPlainText();
@@ -34,18 +34,19 @@ public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributes
 
 			// Same separator unescaping as CommandAttributeScanner — Penn runs one scan for both sigils.
 			var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value);
-			var isRegex = attr.Flags.Any(flag => flag.Name.Equals("REGEXP", StringComparison.OrdinalIgnoreCase));
+			var isRegex = attr.IsRegexp();
 			var behavior = ListenBehavior.AHear;
-			if (attr.Flags.Any(flag => flag.Name == "AAHEAR"))
+			if (attr.Flags.Any(flag => flag.Name.Equals("AAHEAR", StringComparison.OrdinalIgnoreCase)))
 				behavior = ListenBehavior.AAHear;
-			else if (attr.Flags.Any(flag => flag.Name == "AMHEAR"))
+			else if (attr.Flags.Any(flag => flag.Name.Equals("AMHEAR", StringComparison.OrdinalIgnoreCase)))
 				behavior = ListenBehavior.AMHear;
 
 			try
 			{
+				var options = RegexOptions.Compiled | (attr.IsCase() ? RegexOptions.None : RegexOptions.IgnoreCase);
 				var regex = isRegex
-					? SoftcodeRegex.Create(pattern, RegexOptions.Compiled)
-					: SoftcodeRegex.Wildcard(pattern, RegexOptions.Compiled);
+					? SoftcodeRegex.Create(pattern, options)
+					: SoftcodeRegex.Wildcard(pattern, options, caseSensitive: !options.HasFlag(RegexOptions.IgnoreCase));
 
 				listenAttributes.Add(new ListenAttributeCache(
 					attr,

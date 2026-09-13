@@ -33,8 +33,7 @@ public class ListenPatternMatcherTests
 	}
 
 	/// <summary>
-	/// A wildcard <c>^</c>-pattern binds the whole match as group 0 and each star after it, in
-	/// pattern order - the registers ProcessListenPatternsAsync hands the attribute as %0..%N.
+	/// A wildcard <c>^</c>-pattern binds each star in pattern order, beginning at %0.
 	/// </summary>
 	[Test]
 	public async ValueTask MatchListenPatternsAsync_WithMatchingPattern_ReturnsMatch()
@@ -51,7 +50,7 @@ public class ListenPatternMatcherTests
 		await Assert.That(matches).HasSingleItem();
 		await Assert.That(matches[0].Attribute.Name).IsEqualTo("LISTEN1");
 		await Assert.That(matches[0].Behavior).IsEqualTo(ListenBehavior.AHear);
-		await Assert.That(matches[0].CapturedGroups).IsEquivalentTo(new[] { "God says hello", "God", "hello" });
+		await Assert.That(matches[0].CapturedGroups).IsEquivalentTo(new[] { "God", "hello" });
 	}
 
 	[Test]

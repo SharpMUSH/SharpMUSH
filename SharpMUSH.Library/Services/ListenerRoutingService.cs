@@ -13,6 +13,8 @@ using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using static SharpMUSH.Library.Services.Interfaces.INotifyService;
 using SharpMUSH.Library.Utilities;
+using System.Text.RegularExpressions;
+using SharpMUSH.Configuration.Options;
 
 namespace SharpMUSH.Library.Services;
 
@@ -20,12 +22,6 @@ namespace SharpMUSH.Library.Services;
 /// Service for routing notifications to listening objects.
 /// Handles @listen attributes, ^-listen patterns, and puppet relaying.
 /// </summary>
-/// <remarks>
-/// Phase 3 + 4 implementation complete:
-/// - ✅ @prefix attribute support for puppets
-/// - ✅ @listen attribute matching with wildcard patterns
-/// - ✅ Action queue for ^-listen patterns via Mediator
-/// </remarks>
 public class ListenerRoutingService(
 	IMediator mediator,
 	IListenPatternMatcher patternMatcher,
@@ -104,20 +100,25 @@ public class ListenerRoutingService(
 
 		var messageText = message switch
 		{
-			MString markupString => markupString.ToPlainText(),
-			string str => str
+			MString markupString => markupString,
+			string str => MString.Plain(str)
 		};
 
-		await ProcessListenPatternsAsync(listener, messageText, actualSender);
-
-		await ProcessListenAttributeAsync(listener, messageText, actualSender);
+		var options = serviceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Attribute;
+		// Penn's NA_PROPAGATE speech path bypasses PLAYER_LISTEN; deliberate private output does not.
+		if (!listener.IsExit && (!IsPrivate(type) || !listener.IsPlayer || options?.PlayerListen != false))
+		{
+			await ProcessListenPatternsAsync(listener, messageText, actualSender);
+			if (!listener.IsPlayer || options?.PlayerAHear != false)
+				await ProcessListenAttributeAsync(listener, messageText, actualSender);
+		}
 
 		await ProcessPuppetRelayAsync(listener, message, actualSender, type);
 	}
 
 	private async ValueTask ProcessListenAttributeAsync(
 		AnySharpObject listener,
-		string message,
+		MString message,
 		AnySharpObject speaker)
 	{
 		var listenAttr = await AttributeService.GetAttributeAsync(
@@ -129,73 +130,32 @@ public class ListenerRoutingService(
 			return;
 
 		var listenPattern = listen.Last().Value.ToPlainText();
-		if (string.IsNullOrWhiteSpace(listenPattern))
-			return;
 
 		var passesListenLock = await lockService.Evaluate(LockType.Listen, listener, speaker);
 		if (!passesListenLock)
 			return;
 
-		var regex = SoftcodeRegex.Wildcard(listenPattern);
-
-		// Not the raw IsMatch: a LISTEN pattern that cannot finish must not take the puppet relay below
-		// down with it, and NotifyService would swallow the exception without either happening.
-		if (!SoftcodeRegex.IsMatch(regex, message))
+		var isRegex = listen.Last().IsRegexp();
+		var options = listen.Last().IsCase() ? RegexOptions.None : RegexOptions.IgnoreCase;
+		Regex regex;
+		try { regex = isRegex ? SoftcodeRegex.Create(listenPattern, options) : SoftcodeRegex.Wildcard(listenPattern, options, caseSensitive: !options.HasFlag(RegexOptions.IgnoreCase)); }
+		catch (ArgumentException) { return; }
+		if (SoftcodeRegex.Match(regex, message.ToPlainText()) is not { Success: true } match)
 			return;
 
 		var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
-
-		// Priority: AAHEAR > (AMHEAR if self) > AHEAR
-		string triggerAttrName;
-		if (await AttributeExistsAsync(listener, "AAHEAR"))
-		{
-			triggerAttrName = "AAHEAR";
-		}
-		else if (isSelf && await AttributeExistsAsync(listener, "AMHEAR"))
-		{
-			triggerAttrName = "AMHEAR";
-		}
-		else
-		{
-			triggerAttrName = "AHEAR";
-		}
-
-		var registers = new Dictionary<string, CallState>
-		{
-			["0"] = new CallState(message),
-			["#"] = new CallState(speaker.Object().DBRef.ToString()),
-			["!"] = new CallState(listener.Object().DBRef.ToString())
-		};
-
-		// Deliberately not awaited: the listener's own action is a reaction to a message that has
-		// already been delivered, and its handler evaluates softcode inline, so awaiting it here would
-		// run the reaction inside the notification that caused it — and let a listener that speaks
-		// recurse into this pass. AsTask() because discarding a ValueTask is invalid: its backing
-		// source may be pooled and handed to someone else while this one is still running.
-		_ = mediator.Send(new ExecuteListenPatternCommand(
-			listener,
-			speaker,
-			triggerAttrName,
-			registers
-		)).AsTask();
-	}
-
-	private async ValueTask<bool> AttributeExistsAsync(AnySharpObject obj, string attributeName)
-	{
-		var result = await AttributeService.GetAttributeAsync(
-			obj, obj, attributeName,
-			IAttributeService.AttributeMode.Read,
-			parent: false);
-		return result.IsAttribute;
+		var arguments = PatternArguments.Capture(match, isRegex, message);
+		await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, isSelf ? "AMHEAR" : "AHEAR", arguments), ExecutionBudget.CurrentToken);
+		await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, "AAHEAR", arguments), ExecutionBudget.CurrentToken);
 	}
 
 	private async ValueTask ProcessListenPatternsAsync(
 		AnySharpObject listener,
-		string message,
+		MString message,
 		AnySharpObject speaker)
 	{
 		var hasMonitor = await listener.Object().Flags.Value.AnyAsync(f => f.Name == "MONITOR");
-		if (!hasMonitor)
+		if (!hasMonitor || await listener.HasFlag("HALT"))
 			return;
 
 		// Both locks have to pass, so a failing Use lock settles it — and a lock evaluation is now a
@@ -208,23 +168,14 @@ public class ListenerRoutingService(
 
 		foreach (var match in matches)
 		{
-			var registers = new Dictionary<string, CallState>();
-
-			for (int i = 0; i < match.CapturedGroups.Length && i < 10; i++)
+			var registers = match.Arguments.Count > 0 ? match.Arguments
+				: match.CapturedGroups.Index().ToDictionary(pair => pair.Index.ToString(), pair => new CallState(pair.Item));
+			var prefix = CommandDiscoveryService.ListenPatternRegex().Match(match.Attribute.Value.ToPlainText());
+			if (!prefix.Success) continue;
+			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, match.Attribute.LongName, registers)
 			{
-				registers[i.ToString()] = new CallState(match.CapturedGroups[i]);
-			}
-
-			registers["#"] = new CallState(speaker.Object().DBRef.ToString());
-			registers["!"] = new CallState(listener.Object().DBRef.ToString());
-
-			// Not awaited, for the reason given in ProcessListenAttributeAsync.
-			_ = mediator.Send(new ExecuteListenPatternCommand(
-				listener,
-				speaker,
-				match.Attribute.Name,
-				registers
-			)).AsTask();
+				Action = match.Attribute.Value.Substring(prefix.Length)
+			}, ExecutionBudget.CurrentToken);
 		}
 	}
 
@@ -253,7 +204,7 @@ public class ListenerRoutingService(
 
 		// Check if puppet and owner are in same location (unless VERBOSE)
 		var hasVerbose = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "VERBOSE", ExecutionBudget.CurrentToken);
-		if (!hasVerbose)
+		if (!hasVerbose && !IsPrivate(type))
 		{
 			var puppetLocation = await LocateService.FriendlyWhereIs(puppet, ExecutionBudget.CurrentToken);
 			var ownerLocation = await owner.Location.WithCancellation(ExecutionBudget.CurrentToken);
@@ -311,9 +262,13 @@ public class ListenerRoutingService(
 			NotificationType.NSSay => true,
 			NotificationType.NSPose => true,
 			NotificationType.NSSemiPose => true,
-			NotificationType.Announce => false, // Private messages don't trigger listeners
+			NotificationType.PrivateEmit => true,
+			NotificationType.NSPrivateEmit => true,
+			NotificationType.Announce => false,
 			NotificationType.NSAnnounce => false,
 			_ => false
 		};
 	}
+
+	private static bool IsPrivate(NotificationType type) => type is NotificationType.PrivateEmit or NotificationType.NSPrivateEmit;
 }

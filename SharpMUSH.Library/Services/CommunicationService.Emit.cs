@@ -24,10 +24,12 @@ public partial class CommunicationService
 			if (await permissionService.CanSpoofAs(executor, enactor)) speaker = enactor;
 		}
 		var noSpoof = request.NoSpoof && await permissionService.CanNoSpoof(executor);
-		var privateOutput = request.Scope is EmitScope.Private or EmitScope.Prompt;
-		var type = privateOutput
-			? noSpoof ? INotifyService.NotificationType.NSAnnounce : INotifyService.NotificationType.Announce
-			: noSpoof ? INotifyService.NotificationType.NSEmit : INotifyService.NotificationType.Emit;
+		var type = request.Scope switch
+		{
+			EmitScope.Private when request.PortTargets => noSpoof ? INotifyService.NotificationType.NSAnnounce : INotifyService.NotificationType.Announce,
+			EmitScope.Private or EmitScope.Prompt => noSpoof ? INotifyService.NotificationType.NSPrivateEmit : INotifyService.NotificationType.PrivateEmit,
+			_ => noSpoof ? INotifyService.NotificationType.NSEmit : INotifyService.NotificationType.Emit
+		};
 
 		switch (request.Scope)
 		{
