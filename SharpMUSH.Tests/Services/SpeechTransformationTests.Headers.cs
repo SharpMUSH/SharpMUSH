@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation;
 using NSubstitute;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -24,9 +23,8 @@ public partial class SpeechTransformationTests
 		=> (await Mediator.Send(new GetObjectNodeQuery(reference))).Expect<AnySharpObject>();
 	private async Task Flag(DBRef reference, string name)
 	{
-		var flag = await Mediator.Send(new GetObjectFlagQuery(name));
-		await Assert.That(flag).IsNotNull();
-		await Mediator.Send(new SetObjectFlagCommand(await Node(reference), flag!));
+		await Admin($"@set {reference}={name}");
+		await Assert.That(await (await Node(reference)).HasFlag(name)).IsTrue();
 	}
 	private async Task<(NotifyService Notify, IMessageBus Bus, ConnectionService Connections)> NotificationPipeline(DBRef recipient,
 		IListenerRoutingService? routing = null, IHttpOutputCapture? capture = null)
