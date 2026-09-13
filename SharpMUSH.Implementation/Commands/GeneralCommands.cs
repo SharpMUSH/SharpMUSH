@@ -47,7 +47,18 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 		var messageIndex = scope is EmitScope.Immediate or EmitScope.Outermost ? 0 : 1;
-		if (args.Count <= messageIndex) return CallState.Empty;
+		if (args.Count <= messageIndex)
+		{
+			if (definition.Name == "@NSPROMPT" && await RejectIfTooFewArguments(parser, definition) is { } tooFew)
+				return tooFew;
+			if (scope is EmitScope.Outermost or EmitScope.Room or EmitScope.Omit or EmitScope.Zone || definition.Name == "@NSPEMIT")
+			{
+				var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontYouHaveAnythingToSayDetail), executor);
+				return new CallState(ErrorMessages.Returns.NothingToDo);
+			}
+			return CallState.Empty;
+		}
 		var messageArgument = args[messageIndex.ToString()];
 		var evaluated = definition.Behavior.HasFlag(CB.RSNoParse) && !switches.Contains("NOEVAL")
 			? await messageArgument.GetParsedResultAsync() : messageArgument;
