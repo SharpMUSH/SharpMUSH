@@ -33,6 +33,12 @@ FailLock too. List private output suppresses the default refusal while retaining
 failure attributes. Ordinary empty private messages do nothing; empty prompts retain the
 protocol boundary.
 
+Missing personal Speech/Page failure attributes use a resource key resolved separately for each
+connection, including two connections on the same player with different locales. Custom failure
+attributes still evaluate once; present-empty attributes suppress the default, and O/A failure
+attributes still run. HTTP capture receives the neutral default through the normal notification path.
+Room triad defaults remain literal pending the separate callback work in #1006.
+
 `@emit/room` and `@nsemit/room` select the outermost room, like LEMIT. `@pemit/contents`
 selects a container and its contents, like REMIT, retaining spaces in the target name even with
 `/list`. `@pemit/spoof` selects an authorized speaker for ordinary private or contents output.
@@ -44,6 +50,9 @@ supports `/port` on NSPEMIT. PORT takes precedence over CONTENTS and uses execut
 CONTENTS takes precedence over LIST. Neither branch inherits private-object-list implicit silence.
 Private/list defaults to silent unless `/noisy` is supplied;
 other command confirmation defaults follow `silent_pemit`, with `/silent` and `/noisy` overrides.
+
+PEMIT/NSPEMIT and REMIT/NSREMIT functions suppress confirmations. PROMPT/NSPROMPT,
+LEMIT/NSLEMIT and ZEMIT/NSZEMIT retain PennMUSH's confirmation behavior.
 
 OEMIT retains PennMUSH's maximum of ten matched exclusions. This is a recipient-selection
 contract, unrelated to the obsolete 8,192-character output buffers. Explicit location syntax
