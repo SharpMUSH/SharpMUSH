@@ -714,7 +714,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {secondName}"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@pemit/list {firstName} {secondName}=Group message"));
+			MarkupText.Plain($"@pemit/list/noisy {firstName} {secondName}=Group message"));
 
 		// The key alone would pass even if the command counted the recipients wrong.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(

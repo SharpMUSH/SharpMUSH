@@ -22,12 +22,16 @@ public class NoSpoofEmitRealityTests
 	public required ServerWebAppFactory Factory { get; init; }
 
 	[Test]
-	[Arguments(true, false, true, true)]
-	[Arguments(true, true, false, true)]
-	[Arguments(true, true, true, false)]
-	[Arguments(false, false, false, true)]
-	public async Task HearingUsesEnactorWhileInteractionLockRetainsExecutor(
-		bool enabled, bool executorVisible, bool enactorVisible, bool lockAllowed)
+	[Arguments(true, false, true, true, true)]
+	[Arguments(true, true, false, true, true)]
+	[Arguments(true, true, true, false, true)]
+	[Arguments(false, false, false, true, true)]
+	[Arguments(true, false, true, true, false)]
+	[Arguments(true, true, false, true, false)]
+	[Arguments(true, true, true, false, false)]
+	[Arguments(false, false, false, true, false)]
+	public async Task NoSpoofChangesTaggingWhileExplicitSpoofSelectsEnactor(
+		bool enabled, bool executorVisible, bool enactorVisible, bool lockAllowed, bool spoof)
 	{
 		var objects = new TestObjectFactory();
 		var room = objects.CreateRoom(70, "room");
@@ -46,6 +50,8 @@ public class NoSpoofEmitRealityTests
 		reality.CanPerceiveAsync(recipient.Object().DBRef, executor.Object().DBRef).Returns(executorVisible);
 		reality.CanPerceiveAsync(recipient.Object().DBRef, enactor.Object().DBRef).Returns(enactorVisible);
 		var locks = Substitute.For<ILockService>();
+		locks.Evaluate(LockType.Speech, room, enactor).Returns(true);
+		locks.Evaluate(LockType.Speech, room, executor).Returns(true);
 		locks.Evaluate(LockType.Interact, recipient, executor).Returns(lockAllowed);
 		locks.Evaluate(LockType.Interact, recipient, enactor).Returns(!lockAllowed);
 		var permissions = new PermissionService(locks, Substitute.For<IOptionsMonitor<SharpMUSHOptions>>(),
@@ -57,21 +63,22 @@ public class NoSpoofEmitRealityTests
 		mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
 			.Returns(new[] { recipient.MinusRoom() }.ToAsyncEnumerable());
 		var notifications = Substitute.For<INotifyService>();
+		var communication = ActivatorUtilities.CreateInstance<CommunicationService>(Factory.Services, mediator, permissions, notifications, locks);
 		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
-			Factory.Services, mediator, permissions, notifications);
+			Factory.Services, mediator, permissions, notifications, communication);
 		var parser = Substitute.For<IMUSHCodeParser>();
 		parser.CurrentState.Returns(ParserState.RootFor(executor.Object().DBRef) with
 		{
 			Enactor = enactor.Object().DBRef,
-			Switches = ["NOEVAL"],
+			Switches = spoof ? ["NOEVAL", "SPOOF"] : ["NOEVAL"],
 			Arguments = new() { ["0"] = new CallState("literal [add(1,2)]") }
 		});
 
 		await commands.NoSpoofEmit(parser, new SharpCommandAttribute { Name = "@NSEMIT" });
 
-		var delivered = (!enabled || enactorVisible) && lockAllowed;
+		var delivered = (!enabled || (spoof ? enactorVisible : executorVisible)) && lockAllowed;
 		await notifications.Received(delivered ? 1 : 0).Notify(recipient,
-			TestHelpers.MatchingMessage("literal [add(1,2)]"), enactor, INotifyService.NotificationType.NSEmit);
+			TestHelpers.MatchingMessage("literal [add(1,2)]"), spoof ? enactor : executor, INotifyService.NotificationType.NSEmit);
 		await locks.DidNotReceive().Evaluate(LockType.Interact, recipient, enactor);
 	}
 }

@@ -154,4 +154,11 @@
   <data name="QueueHistoryReport" xml:space="preserve"><value>Résultats récents de la file (historique de 15 minutes). Colonnes : PID source propriétaire type résultat attente-ms exécution-ms appels.
 {0}</value></data>
   <data name="QueueDiagnosticsError" xml:space="preserve"><value>Diagnostic indisponible : {0}.</value></data>
+  <data name="OemitTooManyRecipients" xml:space="preserve"><value>Trop de destinataires pour oemit.</value></data>
+  <data name="NoMatchingObjects" xml:space="preserve"><value>Aucun objet correspondant.</value></data>
+  <data name="InvalidPortNumber" xml:space="preserve"><value>'{0}' n'est pas un numéro de port.</value></data>
+  <data name="PortNotActive" xml:space="preserve"><value>Ce port n'est pas actif.</value></data>
+  <data name="PemitTargetWishesAlone" xml:space="preserve"><value>Désolé, mais {0} souhaite rester seul pour le moment.</value></data>
+  <data name="MayNotSpeakHere" xml:space="preserve"><value>Vous ne pouvez pas parler ici !</value></data>
+  <data name="MayNotSpeakThere" xml:space="preserve"><value>Vous ne pouvez pas parler là !</value></data>
 </root>
