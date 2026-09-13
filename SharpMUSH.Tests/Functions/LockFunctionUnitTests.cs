@@ -2,6 +2,8 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -31,6 +33,26 @@ public class LockFunctionUnitTests
 		{
 			attribute.CommandLock = previous;
 		}
+	}
+
+	[Test]
+	[Arguments("lock(me,#FALSE)")]
+	[Arguments("lset(me/Basic,visual)")]
+	public async Task GaggedOwnerCannotMutateLocksThroughOwnedThing(string expression)
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var ownerRef = await mediator.Send(new CreatePlayerCommand($"GaggedLock{Guid.NewGuid():N}"[..20], "password", new DBRef(0), new DBRef(0), 100));
+		var owner = (await mediator.Send(new GetObjectNodeQuery(ownerRef))).Expect<SharpPlayer>();
+		var room = (await mediator.Send(new GetObjectNodeQuery(new DBRef(0)))).Expect<SharpRoom>();
+		var thing = await mediator.Send(new CreateThingCommand("GaggedLockPuppet", room, owner, room));
+		var puppet = Parser.Push(Parser.CurrentState with { Executor = thing, Caller = ownerRef, Enactor = ownerRef });
+		await puppet.FunctionParse(MarkupText.Plain("lock(me,#TRUE)"));
+		var connections = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+		await WebAppFactoryArg.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@set {ownerRef}=GAGGED"));
+		var result = await puppet.FunctionParse(MarkupText.Plain(expression));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That((await puppet.FunctionParse(MarkupText.Plain("lock(me)")))!.Message!.ToPlainText()).IsEqualTo("#TRUE");
+		await Assert.That((await puppet.FunctionParse(MarkupText.Plain("lockflags(me)")))!.Message!.ToPlainText()).IsEqualTo("i");
 	}
 
 	[Test]

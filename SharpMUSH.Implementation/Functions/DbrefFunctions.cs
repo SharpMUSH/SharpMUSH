@@ -576,7 +576,11 @@ public partial class Functions
 		var attribute = definition.LibraryInformation.Attribute;
 		if (attribute.Behavior.HasFlag(CommandBehavior.NoOp) || attribute.Behavior.HasFlag(CommandBehavior.Internal)) return false;
 		if (attribute.Behavior.HasFlag(CommandBehavior.God) && !executor.IsGod()) return false;
-		if (attribute.Behavior.HasFlag(CommandBehavior.NoGagged) && await executor.HasFlag("GAGGED")) return false;
+		if (attribute.Behavior.HasFlag(CommandBehavior.NoGagged))
+		{
+			AnySharpObject owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
+			if (await owner.HasFlag("GAGGED")) return false;
+		}
 		if (attribute.Behavior.HasFlag(CommandBehavior.NoGuest) && await executor.HasFlag("GUEST")) return false;
 		return string.IsNullOrEmpty(attribute.CommandLock) || await LockService.Evaluate(attribute.CommandLock, executor, executor);
 	}
