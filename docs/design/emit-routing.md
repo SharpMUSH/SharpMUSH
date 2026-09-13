@@ -102,5 +102,5 @@ matchers must override the markup overload to preserve styling in captures; its 
 default retains their plain string captures. General queued-action HALT enforcement remains
 part of #1006. Empty prompt delivery does not establish the other lifecycle ordering proposed
 in #1010.
-Forwarding matched LISTEN messages into contents with FILTER/INPREFIX semantics remains
+Forwarding matched LISTEN messages into contents with INFILTER/INPREFIX and `@lock/infilter` semantics remains
 [issue #1048](https://github.com/SharpMUSH/SharpMUSH/issues/1048).
