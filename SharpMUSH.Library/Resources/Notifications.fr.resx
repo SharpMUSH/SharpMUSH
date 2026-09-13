@@ -161,4 +161,7 @@
   <data name="PemitTargetWishesAlone" xml:space="preserve"><value>Désolé, mais {0} souhaite rester seul pour le moment.</value></data>
   <data name="MayNotSpeakHere" xml:space="preserve"><value>Vous ne pouvez pas parler ici !</value></data>
   <data name="MayNotSpeakThere" xml:space="preserve"><value>Vous ne pouvez pas parler là !</value></data>
+  <data name="PowerAlreadyExistsFormat" xml:space="preserve">
+    <value>Le pouvoir '{0}' existe déjà.</value>
+  </data>
 </root>

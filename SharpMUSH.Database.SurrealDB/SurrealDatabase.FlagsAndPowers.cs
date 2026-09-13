@@ -70,7 +70,7 @@ public partial class SurrealDatabase
 	{
 		var parameters = new Dictionary<string, object?>
 		{
-			["name"] = name,
+			["name"] = name.ToUpperInvariant(),
 			["symbol"] = symbol,
 			["system"] = system,
 			["aliases"] = aliases ?? Array.Empty<string>(),
@@ -79,21 +79,14 @@ public partial class SurrealDatabase
 			["typeRestrictions"] = typeRestrictions
 		};
 
-		await ExecuteAsync(
-			"UPSERT object_flag:⟨$name⟩ SET name = $name, symbol = $symbol, system = $system, disabled = false, aliases = $aliases, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
+		var response = await ExecuteAsync(
+			"IF array::len((SELECT id FROM object_flag WHERE string::uppercase(name) = $name LIMIT 1)) = 0 { RETURN (" +
+			"CREATE object_flag:⟨$name⟩ SET name = $name, symbol = $symbol, system = $system, disabled = false, aliases = $aliases, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions); } ELSE { RETURN []; }",
 			parameters, cancellationToken);
 
-		return new SharpObjectFlag
-		{
-			Id = ObjectFlagId(name),
-			Name = name,
-			Aliases = aliases,
-			Symbol = symbol,
-			System = system,
-			SetPermissions = setPermissions,
-			UnsetPermissions = unsetPermissions,
-			TypeRestrictions = typeRestrictions
-		};
+		if (response.HasErrors) return null;
+		var created = response.GetValue<List<FlagRecord>>(0);
+		return created is { Count: > 0 } ? MapRecordToFlag(created[0]) : null;
 	}
 
 	public async ValueTask<bool> DeleteObjectFlagAsync(string name, CancellationToken cancellationToken = default)
@@ -196,9 +189,9 @@ public partial class SurrealDatabase
 
 	public async ValueTask<SharpPower?> GetPowerAsync(string name, CancellationToken cancellationToken = default)
 	{
-		var parameters = new Dictionary<string, object?> { ["name"] = name };
+		var parameters = new Dictionary<string, object?> { ["name"] = name.ToUpperInvariant() };
 		var response = await ExecuteAsync(
-			"SELECT * FROM power WHERE name = $name",
+			"SELECT * FROM power WHERE string::uppercase(name) = $name",
 			parameters, cancellationToken);
 
 		var results = response.GetValue<List<PowerRecord>>(0)!;
@@ -219,7 +212,7 @@ public partial class SurrealDatabase
 	{
 		var parameters = new Dictionary<string, object?>
 		{
-			["name"] = name,
+			["name"] = name.ToUpperInvariant(),
 			["alias"] = alias,
 			["symbol"] = symbol,
 			["system"] = system,
@@ -228,21 +221,14 @@ public partial class SurrealDatabase
 			["typeRestrictions"] = typeRestrictions
 		};
 
-		await ExecuteAsync(
-			"UPSERT power:⟨$name⟩ SET name = $name, alias = $alias, symbol = $symbol, system = $system, disabled = false, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions",
+		var response = await ExecuteAsync(
+			"IF array::len((SELECT id FROM power WHERE string::uppercase(name) = $name LIMIT 1)) = 0 { RETURN (" +
+			"CREATE power:⟨$name⟩ SET name = $name, alias = $alias, symbol = $symbol, system = $system, disabled = false, setPermissions = $setPerms, unsetPermissions = $unsetPerms, typeRestrictions = $typeRestrictions); } ELSE { RETURN []; }",
 			parameters, cancellationToken);
 
-		return new SharpPower
-		{
-			Id = PowerId(name),
-			Name = name,
-			Alias = alias,
-			Symbol = symbol,
-			System = system,
-			SetPermissions = setPermissions,
-			UnsetPermissions = unsetPermissions,
-			TypeRestrictions = typeRestrictions
-		};
+		if (response.HasErrors) return null;
+		var created = response.GetValue<List<PowerRecord>>(0);
+		return created is { Count: > 0 } ? MapRecordToPower(created[0]) : null;
 	}
 
 	public async ValueTask<bool> DeletePowerAsync(string name, CancellationToken cancellationToken = default)

@@ -48,7 +48,7 @@ public partial class LightningDatabase
 	{
 		var record = new FlagRecord
 		{
-			Name = name,
+			Name = name.ToUpperInvariant(),
 			Symbol = symbol,
 			Aliases = aliases ?? [],
 			SetPermissions = setPermissions,
@@ -58,8 +58,14 @@ public partial class LightningDatabase
 			Disabled = false
 		};
 
-		await Store.WriteAsync(tx => tx.Put(Tables.Flag, Keys.Upper(name), Codec.Serialize(record)), cancellationToken);
-		return MapFlag(record);
+		var created = await Store.WriteAsync(tx =>
+		{
+			var key = Keys.Upper(name);
+			if (tx.TryGet(Tables.Flag, key, out _)) return false;
+			tx.Put(Tables.Flag, key, Codec.Serialize(record));
+			return true;
+		}, cancellationToken);
+		return created ? MapFlag(record) : null;
 	}
 
 	public async ValueTask<bool> DeleteObjectFlagAsync(string name, CancellationToken cancellationToken = default)
@@ -163,7 +169,7 @@ public partial class LightningDatabase
 	{
 		var record = new PowerRecord
 		{
-			Name = name,
+			Name = name.ToUpperInvariant(),
 			Alias = alias,
 			Symbol = symbol,
 			SetPermissions = setPermissions,
@@ -173,8 +179,14 @@ public partial class LightningDatabase
 			Disabled = false
 		};
 
-		await Store.WriteAsync(tx => tx.Put(Tables.Power, Keys.Upper(name), Codec.Serialize(record)), cancellationToken);
-		return MapPower(record);
+		var created = await Store.WriteAsync(tx =>
+		{
+			var key = Keys.Upper(name);
+			if (tx.TryGet(Tables.Power, key, out _)) return false;
+			tx.Put(Tables.Power, key, Codec.Serialize(record));
+			return true;
+		}, cancellationToken);
+		return created ? MapPower(record) : null;
 	}
 
 	public async ValueTask<bool> DeletePowerAsync(string name, CancellationToken cancellationToken = default)
