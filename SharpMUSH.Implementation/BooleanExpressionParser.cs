@@ -108,7 +108,7 @@ public class BooleanExpressionParser(
 		// validation existed, or set through another path), and the visitor below assumes a
 		// well-formed tree. Fail closed rather than compiling ANTLR's error-recovery tree into a
 		// delegate that silently means something other than what was typed.
-		if (errors.HasErrors)
+		if (errors.HasErrors || !IsSemanticallyValid(chatContext))
 		{
 			return static (_, _) => ValueTask.FromResult(false);
 		}
@@ -152,12 +152,11 @@ public class BooleanExpressionParser(
 			return false;
 		}
 
-		SharpMUSHBooleanExpressionValidationVisitor visitor = new(lockee);
-
-		var valid = visitor.Visit(chatContext)!.Value;
-
-		return valid;
+		return IsSemanticallyValid(chatContext);
 	}
+
+	private static bool IsSemanticallyValid(SharpMUSHBoolExpParser.LockContext context)
+		=> new SharpMUSHBooleanExpressionValidationVisitor().Visit(context) == true;
 
 	/// <summary>
 	/// Normalizes a lock expression to canonical form, resolving object names to dbrefs.
@@ -171,9 +170,8 @@ public class BooleanExpressionParser(
 		var (sharpParser, errors) = CreateParser(text, nameof(Normalize));
 		var chatContext = sharpParser.@lock();
 
-		// If the expression does not parse there is no canonical form to produce; return it
-		// unchanged rather than serialising an error-recovery tree into a bogus "normalized" lock.
-		if (errors.HasErrors)
+		// Invalid syntax or object identities have no canonical form; preserve the original text.
+		if (errors.HasErrors || !IsSemanticallyValid(chatContext))
 		{
 			return text;
 		}
