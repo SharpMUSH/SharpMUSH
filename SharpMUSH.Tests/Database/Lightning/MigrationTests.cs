@@ -10,6 +10,27 @@ namespace SharpMUSH.Tests.Database.Lightning;
 
 public class MigrationTests
 {
+	[Test]
+	public async Task MigrateRefreshesExistingListenParentTypeRestrictions()
+	{
+		var path = Path.Combine(Path.GetTempPath(), "listen-parent-seed-" + Guid.NewGuid().ToString("N"));
+		var db = Create(path);
+		try
+		{
+			await db.Migrate();
+			await db.Store.WriteAsync(tx => tx.Put(Tables.Flag, Keys.Upper("LISTEN_PARENT"), Codec.Serialize(
+				new FlagRecord { Name = "LISTEN_PARENT", Symbol = "^", TypeRestrictions = ["PLAYER"], System = true })));
+			await db.Migrate();
+			var flag = db.Store.Read(tx => tx.TryGet(Tables.Flag, Keys.Upper("LISTEN_PARENT"), out var value)
+				? Codec.Deserialize<FlagRecord>(value) : throw new InvalidOperationException("Missing LISTEN_PARENT seed"));
+			await Assert.That(flag.TypeRestrictions).IsEquivalentTo(["PLAYER", "THING", "ROOM"]);
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
+		}
+	}
 	// relations: null — this fixture bypasses the host's Mediator cache, unlike the production wiring.
 	private static LightningDatabase Create(string path) => new(NullLogger<LightningDatabase>.Instance,
 		new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);

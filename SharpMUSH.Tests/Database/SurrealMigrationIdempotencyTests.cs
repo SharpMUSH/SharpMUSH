@@ -18,6 +18,21 @@ namespace SharpMUSH.Tests.Database;
 /// </summary>
 public class SurrealMigrationIdempotencyTests
 {
+	[Test]
+	public async Task MigrateRefreshesExistingListenParentTypeRestrictions()
+	{
+		var (_, client) = await CreateMigratedAsync("listenparent" + Guid.NewGuid().ToString("N"));
+		try
+		{
+			var changed = await client.RawQuery("UPDATE object_flag:LISTEN_PARENT SET typeRestrictions = ['PLAYER']");
+			await Assert.That(changed.HasErrors).IsFalse();
+			var restarted = NewDatabase(client);
+			await restarted.Migrate();
+			var flag = await restarted.GetObjectFlagAsync("LISTEN_PARENT");
+			await Assert.That(flag!.TypeRestrictions).IsEquivalentTo(["PLAYER", "THING", "ROOM"]);
+		}
+		finally { await client.DisposeAsync(); }
+	}
 	private sealed class NoopPasswordService : IPasswordService
 	{
 		public string HashPassword(string user, string pw) => pw;

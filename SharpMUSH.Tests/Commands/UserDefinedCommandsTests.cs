@@ -347,7 +347,7 @@ public class UserDefinedCommandsTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Inherited {token}")),
-				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	/// <summary>
@@ -413,14 +413,14 @@ public class UserDefinedCommandsTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"Child {token}")),
-				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.PrivateEmit);
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token}leaf"));
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Parent leaf")),
-				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	/// <summary>
@@ -460,7 +460,7 @@ public class UserDefinedCommandsTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
 				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, "Grand leaf")),
-				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(childObj), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	/// <summary>

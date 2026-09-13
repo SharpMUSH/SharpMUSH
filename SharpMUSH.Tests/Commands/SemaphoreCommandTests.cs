@@ -399,7 +399,7 @@ public class SemaphoreCommandTests
 		// Received(3) is the exact count: one for element "a", one for "b", one for "c".
 		await NotifyService.Received(3).Notify(
 			TestHelpers.MatchingObject(executor),
-			TestHelpers.MatchingMessage($"Inline{uniqueId}"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingMessage($"Inline{uniqueId}"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test, Skip("Needs a better way of testing. This is too timing sensitive.")]

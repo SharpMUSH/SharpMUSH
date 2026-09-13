@@ -34,7 +34,7 @@ public static class FlagSeed
 		("SAFE", "X", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
 		("SHARED", "Z", ["ZONE"], [], [], ["PLAYER"]),
 		("Z_TEL", "Z", null, [], [], ["ROOM"]),
-		("LISTEN_PARENT", "^", ["^"], [], [], ["PLAYER"]),
+		("LISTEN_PARENT", "^", ["^"], [], [], ["PLAYER", "THING", "ROOM"]),
 		("NOACCENTS", "~", null, [], [], ["PLAYER"]),
 		("UNREGISTERED", "?", null, ["royalty"], ["royalty"], ["PLAYER"]),
 		("NOSPOOF", "\"", null, ["odark"], ["odark"], ["ROOM","PLAYER","EXIT","THING"]),

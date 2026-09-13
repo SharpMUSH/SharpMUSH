@@ -171,9 +171,9 @@ public class AncestorInheritanceTests
 		// A ^-listen pattern defined on the Ancestor Thing should match for a plain thing of that type
 		// when parent/ancestor checking is enabled.
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"&LISTEN`ANC {AncestorThing}=^anc hears *:@pemit %#=HEARD %1"));
+			MarkupText.Plain($"&MONITOR_PATTERN`ANC {AncestorThing}=^anc hears *:@pemit %#=HEARD %0"));
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@set {AncestorThing}/LISTEN`ANC=aahear"));
+			MarkupText.Plain($"@set {AncestorThing}/MONITOR_PATTERN`ANC=aahear"));
 
 		var thingRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AncListenHost");
 		var thing = await Known(thingRef);
@@ -182,7 +182,7 @@ public class AncestorInheritanceTests
 		var matcher = WebAppFactoryArg.Services.GetRequiredService<IListenPatternMatcher>();
 		var matches = await matcher.MatchListenPatternsAsync(thing, "anc hears hello", god, checkParents: true);
 
-		await Assert.That(matches.Length).IsGreaterThan(0);
+		await Assert.That(matches.Select(match => match.Attribute.LongName)).Contains("MONITOR_PATTERN`ANC");
 	}
 
 	[Test]

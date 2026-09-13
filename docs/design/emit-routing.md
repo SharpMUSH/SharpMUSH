@@ -106,6 +106,19 @@ only player AHEAR/AMHEAR/AAHEAR. The existing propagated speech path bypasses Pl
 MONITOR respects HALT. Queue rejection does not execute a reaction inline, and restrictions and
 cancellation cannot turn it into an unrestricted callback.
 
+LISTEN actions are admitted before MONITOR actions. LISTEN_PARENT on the original listener enables
+inherited MONITOR patterns; parents need no flag. Complete child-first attribute snapshots retain
+plain and empty definitions as shadowing names. Inherited NO_INHERIT trees are invisible and permit
+farther visible definitions; visible NO_COMMAND roots block their full name and backtick descendants.
+Matching and queued source metadata preserve the full attribute path, with the child as executor.
+
+SharpMUSH visits at most Limit.MaxParents parents per phase, including zero as a local-only parent
+phase. Configured type-ancestor fallback is a SharpMUSH extension: when inheritance is enabled, it
+starts a separate phase with the same parent bound, shadow masks and visited object identities.
+It does not recursively consult another type ancestor. Complete local snapshots are cached and
+invalidated by attribute mutations; parent links are read on each search, and compiled regexes reuse
+the shared cache. The legacy ancestor query remains callable without caching a mutable aggregate.
+
 Existing listener constructors and the string matcher entry point remain available. Custom
 matchers must override the markup overload to preserve styling in captures; its compatibility
 default retains their plain string captures. General queued-action HALT enforcement remains
