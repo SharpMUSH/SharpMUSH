@@ -12,8 +12,7 @@ namespace SharpMUSH.Tests.Services;
 /// Unit tests for the real <see cref="NotifyService"/>'s HTTP output capture: while an inbound
 /// HTTP request runs the http_handler's softcode, output emitted to the handler must be appended
 /// to <see cref="HttpResponseContext.Body"/> instead of being published to connections —
-/// PennMUSH's CONN_HTTP_BUFFER hijack. (Integration paths use a substituted INotifyService, so
-/// this is the only place the real service's capture line is exercised.)
+/// PennMUSH's CONN_HTTP_BUFFER hijack.
 /// </summary>
 public class NotifyServiceHttpCaptureTests
 {

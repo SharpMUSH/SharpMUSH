@@ -5,6 +5,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 
@@ -26,6 +27,47 @@ public partial class PrivateListenerTests
 	private async Task SetRaw(DBRef target, string name, string value)
 		=> await Factory.Services.GetRequiredService<IAttributeService>().SetAttributeAsync(await Node(new DBRef(1)),
 			await Node(target), name, MarkupText.Plain(value));
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task EmptyPromptWithoutIncomingPrefixDoesNotPublishEmptyForwarding(bool framed)
+	{
+		var speaker = await Player();
+		var recipient = await Player();
+		var container = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "EmptyForwarder");
+		await Admin($"@tel/inside {recipient.DbRef}={container}");
+		await SetRaw(container, "LISTEN", "*");
+		var pipeline = await Build(speaker, recipient.DbRef);
+		if (!framed) RemoveOutputFraming(pipeline);
+		await pipeline.Notify.Prompt(container, MarkupText.Empty, await Node(speaker.DbRef), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(pipeline.Bus.ReceivedCalls().SelectMany(call => call.GetArguments().OfType<MarkupOutputMessage>())).IsEmpty();
+		await Assert.That(pipeline.Bus.ReceivedCalls().SelectMany(call => call.GetArguments().OfType<MarkupPromptMessage>())).IsEmpty();
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task EmptyRelayStillReachesNestedPrefixWithoutAddingAnHttpNewline(bool captureActive)
+	{
+		var speaker = await Player();
+		var recipient = await Player();
+		var outer = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "EmptyOuter");
+		var inner = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "EmptyInner");
+		await Admin($"@tel {inner}={outer}");
+		await Admin($"@tel/inside {recipient.DbRef}={inner}");
+		await SetRaw(outer, "LISTEN", "*");
+		await SetRaw(inner, "LISTEN", "*");
+		await SetRaw(inner, "INPREFIX", "nested");
+		var capture = new HttpOutputCapture();
+		var response = new HttpResponseContext();
+		var pipeline = await Build(speaker, recipient.DbRef, capture: capture);
+		RemoveOutputFraming(pipeline);
+		using (captureActive ? capture.BeginCapture(inner.Number, response) : null)
+			await pipeline.Notify.Prompt(outer, MarkupText.Empty, await Node(speaker.DbRef), INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(response.Body.Length).IsEqualTo(0);
+		await Assert.That(ForwardedOutput(pipeline).Single()).IsEqualTo("nested ");
+	}
 
 	[Test]
 	[Arguments(false)]
