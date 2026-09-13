@@ -5,6 +5,8 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using System.Text.Json;
 
 namespace SharpMUSH.Tests.Commands;
@@ -25,10 +27,30 @@ public class DefinitionAuthorizationTests
 	}
 	private async Task<TestIsolationHelpers.TestPlayer> Actor(bool wizard)
 	{
-		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, "DefinitionActor");
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>().Expect<SharpPlayer>();
+		var home = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("DefinitionHome"), god));
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, "DefinitionActor", home);
 		_handles.Add(actor.Handle);
 		if (wizard) await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@set {actor.DbRef}=WIZARD"));
 		return actor;
+	}
+	[Test]
+	[NotInParallel]
+	public async Task ActorStartsOutsideSharedHomeAndDisconnectDoesNotNotifyItsObservers()
+	{
+		var observer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, "DefinitionObserver");
+		_handles.Add(observer.Handle);
+		var start = Factory.Notifications.DeliveryCountFor(observer.DbRef);
+		var actor = await Actor(false);
+		var actorPlayer = (await Mediator.Send(new GetObjectNodeQuery(actor.DbRef))).Expect<AnySharpObject>().Expect<SharpPlayer>();
+		var observerPlayer = (await Mediator.Send(new GetObjectNodeQuery(observer.DbRef))).Expect<AnySharpObject>().Expect<SharpPlayer>();
+		await Connections.Disconnect(actor.Handle);
+		_handles.Remove(actor.Handle);
+		await Assert.That(Factory.Notifications.DeliveriesFor(observer.DbRef).Skip(start)
+			.Any(delivery => delivery.Message.Contains(actor.Name, StringComparison.Ordinal))).IsFalse();
+		var location = (await actorPlayer.Location.WithCancellation(CancellationToken.None)).Object().DBRef;
+		await Assert.That(location).IsNotEqualTo((await observerPlayer.Location.WithCancellation(CancellationToken.None)).Object().DBRef);
+		await Assert.That((await actorPlayer.Home.WithCancellation(CancellationToken.None)).Object().DBRef).IsEqualTo(location);
 	}
 	private async Task<string> Snapshot(string kind, string name) => kind == "flag"
 		? JsonSerializer.Serialize(await Mediator.Send(new GetObjectFlagQuery(name)))
