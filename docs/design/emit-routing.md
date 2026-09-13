@@ -41,7 +41,8 @@ A location passes admission before recipient hearing filters, even if nobody ult
 private output needs at least one target to pass lookup, Page/HAVEN and hearing checks. Lock
 refusals return empty. Lookup failures take precedence in the payload-command result without
 preventing delivery to other admitted targets. NSPROMPT retains the first lookup failure's
-CallState; unresolved explicit NSOEMIT locations return InvalidRoom. These lookup results retain
+CallState; unresolved explicit OEMIT/NSOEMIT command locations return InvalidRoom. Ordinary OEMIT
+still returns empty on success. These lookup results retain
 their existing error metadata. Functions retain empty results for these refusals; explicit
 noncontainer OEMIT locations return InvalidRoom with HadErrors on both surfaces.
 
@@ -72,7 +73,11 @@ OEMIT retains PennMUSH's maximum of ten matched exclusions. This is a recipient-
 contract, unrelated to the obsolete 8,192-character output buffers. Explicit location syntax
 with no matching exclusions still emits to that location; implicit unmatched lists report failure.
 Explicit-location exclusions accept quoted English ordinals and `*Player` names, but only immediate
-members count toward the exclusion limit. Player and thing containers are valid locations; exits
+player and thing members count toward the exclusion limit. The destination itself and exits cannot
+be omitted or consume exclusion slots. Broadcasts notify the location plus player and thing contents;
+navigation still enumerates exits. PennMUSH can count an absolute exit whose destination equals the
+room toward its exclusion limit even though that exit receives no broadcast; SharpMUSH counts only
+actual content recipients. Player and thing containers are valid locations; exit locations
 produce the localized invalid-room diagnostic and an error result without delivering the message.
 
 Private object output uses PrivateEmit/NSPrivateEmit notification intents. Both activate LISTEN

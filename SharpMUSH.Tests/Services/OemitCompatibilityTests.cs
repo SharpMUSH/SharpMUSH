@@ -136,8 +136,77 @@ public class OemitCompatibilityTests
 		var message = $"container_{Guid.NewGuid():N}";
 		var result = await Emit(actor, name, function, $"{container}/unmatched", message);
 		await Assert.That(result.HadErrors).IsFalse();
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(function || name == "oemit" ? "" : message);
 		await Assert.That(Heard(witness.DbRef, message)).IsTrue();
 		await Assert.That(Heard(container, message)).IsTrue();
 		await Assert.That(Heard(actor.DbRef, message)).IsFalse();
+	}
+
+	[Test]
+	[Arguments("oemit", false, 0)]
+	[Arguments("oemit", false, 1)]
+	[Arguments("oemit", false, 2)]
+	[Arguments("oemit", false, 3)]
+	[Arguments("oemit", true, 0)]
+	[Arguments("oemit", true, 1)]
+	[Arguments("oemit", true, 2)]
+	[Arguments("oemit", true, 3)]
+	[Arguments("nsoemit", false, 0)]
+	[Arguments("nsoemit", false, 1)]
+	[Arguments("nsoemit", false, 2)]
+	[Arguments("nsoemit", false, 3)]
+	[Arguments("nsoemit", true, 0)]
+	[Arguments("nsoemit", true, 1)]
+	[Arguments("nsoemit", true, 2)]
+	[Arguments("nsoemit", true, 3)]
+	public async Task NonRecipientsCannotOmitTheRoomOrConsumeTheRecipientLimit(string name, bool function, int scenario)
+	{
+		var actor = await Player("OmitLimitActor");
+		var omitted = await Player("OmitLimitMember");
+		var room = await Room(actor, omitted);
+		await Command($"@power {actor.DbRef}=Can_Spoof");
+		var exit = await Mediator.Send(new CreateExitCommand("out", [], (await Node(room)).AsContainer,
+			(await Node(actor.DbRef)).Expect<SharpPlayer>()));
+		await Command($"@link {exit}={room}");
+		var exclusions = new[]
+		{
+			room.ToString(),
+			$"{room} {omitted.DbRef}",
+			string.Join(' ', Enumerable.Repeat(room.ToString(), 10).Append(omitted.DbRef.ToString())),
+			string.Join(' ', Enumerable.Repeat(exit.ToString(), 10).Append(omitted.DbRef.ToString()))
+		};
+		var message = $"recipient_{Guid.NewGuid():N}";
+		var result = await Emit(actor, name, function, $"{room}/{exclusions[scenario]}", message);
+		await Assert.That(result.HadErrors).IsFalse();
+		await Assert.That(Heard(room, message)).IsTrue();
+		await Assert.That(Heard(actor.DbRef, message)).IsTrue();
+		await Assert.That(Heard(omitted.DbRef, message)).IsEqualTo(scenario == 0);
+	}
+
+	[Test]
+	[Arguments("emit", false)]
+	[Arguments("nsemit", false)]
+	[Arguments("emit", true)]
+	[Arguments("nsemit", true)]
+	public async Task LocationBroadcastIncludesPlayersAndThingsButNotExits(string name, bool function)
+	{
+		var actor = await Player("EmitContentsActor");
+		var room = await Room(actor);
+		await Command($"@power {actor.DbRef}=Can_Spoof");
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "EmitContentsThing");
+		await Command($"@tel {thing}={room}");
+		var exit = await Mediator.Send(new CreateExitCommand("out", [], (await Node(room)).AsContainer,
+			(await Node(actor.DbRef)).Expect<SharpPlayer>()));
+		var contents = await Mediator.CreateStream(new GetContentsQuery(room)).ToArrayAsync();
+		await Assert.That(contents.Any(item => item.Object().DBRef == exit)).IsTrue();
+		var message = $"contents_{Guid.NewGuid():N}";
+		var parser = Factory.CommandParserFor(actor.DbRef, actor.Handle);
+		var result = function ? (await parser.FunctionParse(MarkupText.Plain($"[{name}({message})]")))!
+			: await parser.CommandParse(actor.Handle, Connections, MarkupText.Plain($"@{name} {message}"));
+		await Assert.That(result.HadErrors).IsFalse();
+		await Assert.That(Heard(room, message)).IsTrue();
+		await Assert.That(Heard(actor.DbRef, message)).IsTrue();
+		await Assert.That(Heard(thing, message)).IsTrue();
+		await Assert.That(Heard(exit, message)).IsFalse();
 	}
 }
