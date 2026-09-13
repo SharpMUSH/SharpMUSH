@@ -103,7 +103,8 @@ LISTEN is local to the object and matches even a present-empty pattern. Its acti
 a local empty action suppresses inheritance. AHEAR runs for another speaker, AMHEAR for self,
 and AAHEAR additionally. PlayerListen gates private player LISTEN/MONITOR; PlayerAHear gates
 only player AHEAR/AMHEAR/AAHEAR. The existing propagated speech path bypasses PlayerListen.
-MONITOR respects HALT. Queue rejection does not execute a reaction inline, and restrictions and
+MONITOR rejects HALT on every object. Hear-action admission rejects halted nonplayers; players
+retain LISTEN actions. Queue rejection does not execute a reaction inline, and restrictions and
 cancellation cannot turn it into an unrestricted callback.
 
 LISTEN actions are admitted before MONITOR actions. LISTEN_PARENT on the original listener enables
