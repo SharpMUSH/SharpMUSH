@@ -454,7 +454,7 @@ public class CommunicationCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageEquals(msg, "Test nospoof pemit")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSAnnounce);
+					TestHelpers.MessageEquals(msg, "Test nospoof pemit")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSPrivateEmit);
 	}
 
 	[Test, Skip("Failing")]
@@ -673,7 +673,7 @@ public class CommunicationCommandTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(targetDbRef), Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessagePlainTextEquals(msg, "Quietly")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsFalse();
@@ -695,7 +695,7 @@ public class CommunicationCommandTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessagePlainTextEquals(msg, "Talking to myself")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsFalse();
