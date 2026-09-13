@@ -2,6 +2,7 @@ using MarkupString;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Library;
 using SharpMUSH.Implementation.Handlers.ListenPattern;
 using SharpMUSH.Library.Commands.ListenPattern;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -54,6 +55,8 @@ public partial class PrivateListenerTests
 		var actor = await Player();
 		var listener = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "DeferredListen");
 		await Admin($"@chown {listener}={actor.DbRef}");
+		await Admin($"@set {listener}=!HALT");
+		await Assert.That(await (await Node(listener)).HasFlag("HALT")).IsFalse();
 		await Admin($"@listen {listener}=*");
 		await Admin($"@amhear {listener}=@pemit/silent me=again");
 		var pipeline = await Build(actor, actor.DbRef);
