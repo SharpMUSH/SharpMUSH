@@ -97,22 +97,22 @@ public partial class CommunicationService
 	{
 		if (await speaker.IsLoud() || await lockService.Evaluate(LockType.Speech, location.WithExitOption(), speaker)) return true;
 		if (reportFailure)
-			await didItService.Value.FailLock(parser, executor, location.WithExitOption(), LockType.Speech,
-				MString.Plain(here ? ErrorMessages.Notifications.MayNotSpeakHere : ErrorMessages.Notifications.MayNotSpeakThere));
+			await didItService.Value.FailLockLocalized(parser, executor, location.WithExitOption(), LockType.Speech,
+				new LocalizedNotification(here ? nameof(ErrorMessages.Notifications.MayNotSpeakHere) : nameof(ErrorMessages.Notifications.MayNotSpeakThere)));
 		return false;
 	}
 
 	private async ValueTask<bool> MayPemitAsync(IMUSHCodeParser parser, AnySharpObject speaker, AnySharpObject target, bool showDefault = true)
 	{
 		if (await speaker.IsWizard() || await speaker.HasPower("Pemit_All")) return true;
-		var refusal = MString.Plain($"I'm sorry, but {target.Object().Name} wishes to be left alone now.");
+		var refusal = new LocalizedNotification(nameof(ErrorMessages.Notifications.PemitTargetWishesAlone), target.Object().Name);
 		if (target.IsPlayer && await target.HasFlag("HAVEN"))
 		{
-			if (showDefault) await notifyService.Notify(speaker, refusal, speaker);
+			if (showDefault) await notifyService.NotifyLocalized(speaker, refusal.Key, speaker, refusal.Arguments);
 			return false;
 		}
 		if (await lockService.Evaluate(LockType.Page, target, speaker)) return true;
-		await didItService.Value.FailLock(parser, speaker, target, LockType.Page, showDefault ? refusal : null);
+		await didItService.Value.FailLockLocalized(parser, speaker, target, LockType.Page, showDefault ? refusal : null);
 		return false;
 	}
 
@@ -159,7 +159,7 @@ public partial class CommunicationService
 				if ((await target.Where()).Object().DBRef != looker.Object().DBRef) continue;
 				if (matched++ == 10)
 				{
-					await notifyService.Notify(executor, "Too many people to oemit to.", executor);
+					await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OemitTooManyRecipients), executor);
 					break;
 				}
 				omitted.Add(target.Object().DBRef);
@@ -170,13 +170,13 @@ public partial class CommunicationService
 			if (!await MayEmitInAsync(parser, executor, speaker, room, reportFailure: false)) continue;
 			if (matched++ == 10)
 			{
-				await notifyService.Notify(executor, "Too many people to oemit to.", executor);
+				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OemitTooManyRecipients), executor);
 				break;
 			}
 			omitted.Add(target.Object().DBRef);
 			locations[room.Object().DBRef] = room;
 		}
-		if (locations.Count == 0) await notifyService.Notify(executor, "No matching objects.", executor);
+		if (locations.Count == 0) await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoMatchingObjects), executor);
 		foreach (var room in locations.Values) await EmitLocationAsync(executor, speaker, room, request.Message, type, omitted);
 	}
 
@@ -199,12 +199,13 @@ public partial class CommunicationService
 				}
 				if (!long.TryParse(name, out var port))
 				{
-					await notifyService.Notify(executor, $"'{name}' is not a port number.", executor);
+					await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidPortNumber), executor, name);
 					continue;
 				}
 				if (port <= 0 || connectionService.Get(port) is null)
 				{
-					await notifyService.Notify(executor, port <= 0 ? $"'{name}' is not a port number." : "That port is not active.", executor);
+					await notifyService.NotifyLocalized(executor, port <= 0 ? nameof(ErrorMessages.Notifications.InvalidPortNumber)
+						: nameof(ErrorMessages.Notifications.PortNotActive), executor, name);
 					continue;
 				}
 				if (!await CanHearOnPortAsync(executor, port)) continue;

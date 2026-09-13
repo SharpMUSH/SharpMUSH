@@ -540,10 +540,7 @@ public static class ErrorMessages
 			"The floor disappears under your feet, you fall through NOTHINGness and then:";
 
 		// --- Movement default notifications (PennMUSH src/move.c) ---
-		// These reach the game as literal text, not through the resx. That is the settled convention
-		// for every triad default; the reasoning — a multi-connection, per-recipient locale problem
-		// with no broadcast seam to carry a key through, not a missing resx entry — is written out
-		// once, on DidItRequest.
+		// Movement's room defaults remain literal until the broadcast path can carry resource keys.
 		public const string DefaultOLeave = "has left.";
 		public const string DefaultOEnter = "has arrived.";
 		public const string HomeNoPlaceLikeHome = "There's no place like home...";
@@ -560,6 +557,13 @@ public static class ErrorMessages
 		/// (PennMUSH src/speech.c, do_one_remit and do_lemit).
 		/// </summary>
 		public const string MayNotSpeakThere = "You may not speak there!";
+		public const string OemitTooManyRecipients = "Too many people to oemit to.";
+		public const string NoMatchingObjects = "No matching objects.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string InvalidPortNumber = "'{0}' is not a port number.";
+		public const string PortNotActive = "That port is not active.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PemitTargetWishesAlone = "I'm sorry, but {0} wishes to be left alone now.";
 
 		// --- @force guardrails (PennMUSH src/wiz.c) ---
 		public const string CantForceGod = "You can't force God!";
