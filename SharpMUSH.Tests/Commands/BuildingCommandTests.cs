@@ -671,7 +671,7 @@ public class BuildingCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(player.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, expectedMessage)), TestHelpers.MatchingObject(roomDbRef), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, expectedMessage)), TestHelpers.MatchingObject(roomDbRef), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	/// <summary>
@@ -864,7 +864,7 @@ public class BuildingCommandTests
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(player.DbRef),
 			Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"snapshot_old_{token}")),
-			TestHelpers.MatchingObject(roomDbRef), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(roomDbRef), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	/// <summary>

@@ -27,6 +27,22 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
+	private enum DefinitionOperation { Default, List, Add, Delete, Letter, Type, Alias, Restrict, Decompile, Disable, Enable, Debug }
+
+	private static DefinitionOperation SelectDefinitionOperation(IEnumerable<string> switches, bool power)
+	{
+		ReadOnlySpan<DefinitionOperation> precedence = power
+			? [DefinitionOperation.List, DefinitionOperation.Add, DefinitionOperation.Delete, DefinitionOperation.Alias,
+				DefinitionOperation.Letter, DefinitionOperation.Type, DefinitionOperation.Restrict, DefinitionOperation.Decompile,
+				DefinitionOperation.Disable, DefinitionOperation.Enable]
+			: [DefinitionOperation.List, DefinitionOperation.Add, DefinitionOperation.Delete, DefinitionOperation.Letter,
+				DefinitionOperation.Type, DefinitionOperation.Alias, DefinitionOperation.Restrict, DefinitionOperation.Decompile,
+				DefinitionOperation.Disable, DefinitionOperation.Enable, DefinitionOperation.Debug];
+		foreach (var operation in precedence)
+			if (switches.Contains(operation.ToString(), StringComparer.OrdinalIgnoreCase)) return operation;
+		return DefinitionOperation.Default;
+	}
+
 	[SharpCommand(Name = "@ALLHALT", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD|POWER^HALT",
 		MinArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> AllHalt(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -70,8 +86,9 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
+		var operation = SelectDefinitionOperation(switches, power: false);
 
-		if (switches.Contains("LIST"))
+		if (operation == DefinitionOperation.List)
 		{
 			var output = new System.Text.StringBuilder();
 			output.AppendLine("Object Flags:");
@@ -89,23 +106,22 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Editing flag definitions is God-only in flags.c; /decompile only reads, so it stays open like
-		// /list, and /debug wants Wizard rather than God.
-		if (!switches.Contains("DECOMPILE") && !switches.Contains("DEBUG") && switches.Any() && !executor.IsGod())
+		// Authorize the selected operation, not an unrelated switch in the same request.
+		if (operation is not (DefinitionOperation.Default or DefinitionOperation.List or DefinitionOperation.Decompile or DefinitionOperation.Debug) && !executor.IsGod())
 		{
 			await NotifyService.NotifyLocalized(executor,
 				nameof(ErrorMessages.Notifications.NotEnoughMagic), executor);
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("DEBUG") && !await executor.IsWizard())
+		if (operation == DefinitionOperation.Debug && !await executor.IsWizard())
 		{
 			await NotifyService.NotifyLocalized(executor,
 				nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("ADD"))
+		if (operation == DefinitionOperation.Add)
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
@@ -151,7 +167,7 @@ public partial class Commands
 			}
 		}
 
-		if (switches.Contains("DELETE"))
+		if (operation == DefinitionOperation.Delete)
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
@@ -194,7 +210,7 @@ public partial class Commands
 			}
 		}
 
-		if (switches.Contains("LETTER"))
+		if (operation == DefinitionOperation.Letter)
 		{
 			// PennMUSH src/flags.c do_flag_letter, via src/cmds.c cmd_flag with ns "FLAG".
 			if (parser.CurrentState.Arguments.Count < 1)
@@ -276,7 +292,7 @@ public partial class Commands
 			return new CallState(MarkupText.Plain(flag.Name));
 		}
 
-		if (switches.Contains("TYPE"))
+		if (operation == DefinitionOperation.Type)
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
@@ -331,7 +347,7 @@ public partial class Commands
 			}
 		}
 
-		if (switches.Contains("ALIAS"))
+		if (operation == DefinitionOperation.Alias)
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
@@ -391,7 +407,7 @@ public partial class Commands
 			}
 		}
 
-		if (switches.Contains("RESTRICT"))
+		if (operation == DefinitionOperation.Restrict)
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
@@ -444,7 +460,7 @@ public partial class Commands
 			}
 		}
 
-		if (switches.Contains("DECOMPILE"))
+		if (operation == DefinitionOperation.Decompile)
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
@@ -475,11 +491,11 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("DISABLE") || switches.Contains("ENABLE"))
+		if (operation == DefinitionOperation.Disable || operation == DefinitionOperation.Enable)
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDisableEnableRequiresNameFormat), executor, switches.Contains("DISABLE") ? "DISABLE" : "ENABLE");
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDisableEnableRequiresNameFormat), executor, operation == DefinitionOperation.Disable ? "DISABLE" : "ENABLE");
 				return CallState.Empty;
 			}
 
@@ -504,7 +520,7 @@ public partial class Commands
 				return CallState.Empty;
 			}
 
-			bool disable = switches.Contains("DISABLE");
+			bool disable = operation == DefinitionOperation.Disable;
 			var result = await Mediator.Send(new SetObjectFlagDisabledCommand(flagName.ToUpper(), disable));
 
 			if (result)
@@ -519,7 +535,7 @@ public partial class Commands
 			}
 		}
 
-		if (switches.Contains("DEBUG"))
+		if (operation == DefinitionOperation.Debug)
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
@@ -1016,8 +1032,9 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
+		var operation = SelectDefinitionOperation(switches, power: true);
 
-		if (switches.Contains("LIST"))
+		if (operation == DefinitionOperation.List)
 		{
 			// list_all_flags hides disabled definitions from everyone but God.
 			var pattern = parser.CurrentState.Arguments.Count > 0
@@ -1054,15 +1071,15 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Editing power definitions is God-only in flags.c; /decompile only reads, so it stays open like /list.
-		if (!switches.Contains("DECOMPILE") && switches.Any() && !executor.IsGod())
+		// Authorize the selected operation, not an unrelated switch in the same request.
+		if (operation is not (DefinitionOperation.Default or DefinitionOperation.List or DefinitionOperation.Decompile) && !executor.IsGod())
 		{
 			await NotifyService.NotifyLocalized(executor,
 				nameof(ErrorMessages.Notifications.NotEnoughMagic), executor);
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("ADD"))
+		if (operation == DefinitionOperation.Add)
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
@@ -1076,6 +1093,12 @@ public partial class Commands
 			if (string.IsNullOrWhiteSpace(powerName) || string.IsNullOrWhiteSpace(alias))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndAliasCannotBeEmpty), executor);
+				return CallState.Empty;
+			}
+
+			if (await Mediator.Send(new GetPowerQuery(powerName.ToUpperInvariant())) is not null)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerAlreadyExistsFormat), executor, powerName);
 				return CallState.Empty;
 			}
 
@@ -1101,7 +1124,7 @@ public partial class Commands
 			}
 		}
 
-		if (switches.Contains("DELETE"))
+		if (operation == DefinitionOperation.Delete)
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
@@ -1144,7 +1167,7 @@ public partial class Commands
 			}
 		}
 
-		if (switches.Contains("ALIAS"))
+		if (operation == DefinitionOperation.Alias)
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
@@ -1195,7 +1218,7 @@ public partial class Commands
 			}
 		}
 
-		if (switches.Contains("LETTER"))
+		if (operation == DefinitionOperation.Letter)
 		{
 			// PennMUSH src/flags.c do_flag_letter, via src/cmds.c cmd_power with ns "POWER".
 			if (parser.CurrentState.Arguments.Count < 1)
@@ -1279,7 +1302,7 @@ public partial class Commands
 			return new CallState(MarkupText.Plain(power.Name));
 		}
 
-		if (switches.Contains("TYPE"))
+		if (operation == DefinitionOperation.Type)
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
@@ -1334,7 +1357,7 @@ public partial class Commands
 			}
 		}
 
-		if (switches.Contains("RESTRICT"))
+		if (operation == DefinitionOperation.Restrict)
 		{
 			if (parser.CurrentState.Arguments.Count < 2)
 			{
@@ -1387,7 +1410,7 @@ public partial class Commands
 			}
 		}
 
-		if (switches.Contains("DECOMPILE"))
+		if (operation == DefinitionOperation.Decompile)
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
@@ -1418,11 +1441,11 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("DISABLE") || switches.Contains("ENABLE"))
+		if (operation == DefinitionOperation.Disable || operation == DefinitionOperation.Enable)
 		{
 			if (parser.CurrentState.Arguments.Count < 1)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDisableEnableRequiresNameFormat), executor, switches.Contains("DISABLE") ? "DISABLE" : "ENABLE");
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDisableEnableRequiresNameFormat), executor, operation == DefinitionOperation.Disable ? "DISABLE" : "ENABLE");
 				return CallState.Empty;
 			}
 
@@ -1447,7 +1470,7 @@ public partial class Commands
 				return CallState.Empty;
 			}
 
-			bool disable = switches.Contains("DISABLE");
+			bool disable = operation == DefinitionOperation.Disable;
 			var result = await Mediator.Send(new SetPowerDisabledCommand(powerName.ToUpper(), disable));
 
 			if (result)

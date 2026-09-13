@@ -2675,4 +2675,7 @@
   <data name="InvalidPortNumber" xml:space="preserve"><value>'{0}' is not a port number.</value></data>
   <data name="PortNotActive" xml:space="preserve"><value>That port is not active.</value></data>
   <data name="PemitTargetWishesAlone" xml:space="preserve"><value>I'm sorry, but {0} wishes to be left alone now.</value></data>
+  <data name="PowerAlreadyExistsFormat" xml:space="preserve">
+    <value>Power '{0}' already exists.</value>
+  </data>
 </root>

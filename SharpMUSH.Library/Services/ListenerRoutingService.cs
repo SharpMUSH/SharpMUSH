@@ -108,9 +108,9 @@ public class ListenerRoutingService(
 		// Penn's NA_PROPAGATE speech path bypasses PLAYER_LISTEN; deliberate private output does not.
 		if (!listener.IsExit && (!IsPrivate(type) || !listener.IsPlayer || options?.PlayerListen != false))
 		{
-			await ProcessListenPatternsAsync(listener, messageText, actualSender);
 			if (!listener.IsPlayer || options?.PlayerAHear != false)
 				await ProcessListenAttributeAsync(listener, messageText, actualSender);
+			await ProcessListenPatternsAsync(listener, messageText, actualSender);
 		}
 
 		await ProcessPuppetRelayAsync(listener, message, actualSender, type);
@@ -164,7 +164,8 @@ public class ListenerRoutingService(
 				|| !await lockService.Evaluate(LockType.Listen, listener, speaker))
 			return;
 
-		var matches = await patternMatcher.MatchListenPatternsAsync(listener, message, speaker);
+		var matches = await patternMatcher.MatchListenPatternsAsync(listener, message, speaker,
+			checkParents: await listener.HasFlag("LISTEN_PARENT"));
 
 		foreach (var match in matches)
 		{

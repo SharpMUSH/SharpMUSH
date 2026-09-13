@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Queries.Database;
@@ -7,14 +8,11 @@ using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
 
-/// <summary>
-/// Service for matching listen patterns on objects.
-/// </summary>
+/// <summary>Matches visible listen patterns while retaining the original listener's self/other identity.</summary>
 /// <remarks>
-/// Implements listen pattern matching for ^-prefixed attributes that trigger on speech.
-/// Supports AHEAR (others only), AAHEAR (anyone), and AMHEAR (self only) behaviors.
-/// Can optionally check parent objects with LISTEN_PARENT flag, then the type ancestor
-/// (PennMUSH ANCESTOR_*) and the ancestor's own LISTEN_PARENT chain.
+/// Callers opt into parent traversal; notification routing uses the original listener's LISTEN_PARENT.
+/// Each phase visits at most Limit.MaxParents parents. A separately configured type-ancestor phase is
+/// a SharpMUSH extension and shares shadow masks and visited identities with the ordinary parent phase.
 /// </remarks>
 public class ListenPatternMatcher(
 	IMediator mediator,
@@ -31,56 +29,14 @@ public class ListenPatternMatcher(
 		AnySharpObject speaker, bool checkParents = false)
 	{
 		var matches = new List<ListenMatch>();
-
-		var listenAttributes = await mediator.Send(new GetListenAttributesQuery(listener));
-		CollectMatches(listenAttributes, listener, message, speaker, matches);
-
-		if (checkParents)
-		{
-			var currentObject = listener;
-			var visitedObjects = new HashSet<int> { currentObject.Object().DBRef.Number };
-			const int maxParentDepth = 10;
-			var depth = 0;
-
-			while (depth < maxParentDepth)
-			{
-				if (await currentObject.Object().Parent.WithCancellation(CancellationToken.None) is not AnySharpObject parent)
-					break;
-
-				var parentObject = parent.Object();
-
-				if (!visitedObjects.Add(parentObject.DBRef.Number))
-					break;
-
-				var hasListenParent = await parentObject.Flags.Value.AnyAsync(f => f.Name == "LISTEN_PARENT");
-				if (!hasListenParent)
-					break;
-
-				var parentListenAttributes = await mediator.Send(new GetListenAttributesQuery(parent));
-				CollectMatches(parentListenAttributes, listener, message, speaker, matches);
-
-				currentObject = parent;
-				depth++;
-			}
-
-			// PennMUSH ancestor fall-through: after the object's own @parent chain, consult the
-			// type ancestor and its own LISTEN_PARENT chain (but no ancestor-of-ancestor).
-			//
-			// Short-circuit cheapest-first: Ancestor() resolves the configured ancestor purely from
-			// type + config with no DB access and returns null when disabled, so a disabled ancestor
-			// costs nothing here. Skip too when the object IS its own type ancestor (no self-loop) or
-			// when the ancestor was already visited along the @parent chain. The ancestor's listen
-			// contribution (its own listens + its LISTEN_PARENT chain) is itself cached keyed by
-			// ancestor dbref, so it is computed once per ancestor rather than re-walked per listener.
-			var ancestorRef = await listener.Ancestor(configuration);
-			if (ancestorRef is not null && ancestorRef.Value.Number != listener.Object().DBRef.Number
-					&& !visitedObjects.Contains(ancestorRef.Value.Number))
-			{
-				var ancestorListenAttributes =
-					await mediator.Send(new GetAncestorListenAttributesQuery(ancestorRef.Value));
-				CollectMatches(ancestorListenAttributes, listener, message, speaker, matches);
-			}
-		}
+		var search = new ListenAttributeSearch();
+		var token = ExecutionBudget.CurrentToken;
+		var maxParents = checkParents ? configuration.CurrentValue.Limit.MaxParents : 0;
+		CollectMatches(await search.ReadPhaseAsync(mediator, listener.Object().DBRef, maxParents, false, token),
+			listener, message, speaker, matches);
+		if (checkParents && await listener.Ancestor(configuration) is { } ancestor)
+			CollectMatches(await search.ReadPhaseAsync(mediator, ancestor, maxParents, true, token),
+				listener, message, speaker, matches);
 
 		return [.. matches];
 	}

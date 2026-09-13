@@ -23,7 +23,7 @@ public interface IFlagAndPowerStore
 	IAsyncEnumerable<SharpObjectFlag> GetObjectFlagsAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Create a new Object Flag.
+	/// Create a new Object Flag without replacing an existing case-insensitive primary name.
 	/// </summary>
 	/// <param name="name">Flag name</param>
 	/// <param name="aliases">Flag aliases</param>
@@ -72,7 +72,7 @@ public interface IFlagAndPowerStore
 	ValueTask<bool> UnsetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Create a new Power.
+	/// Create a new Power without replacing an existing case-insensitive primary name.
 	/// </summary>
 	/// <param name="name">Power name</param>
 	/// <param name="alias">Power alias</param>
