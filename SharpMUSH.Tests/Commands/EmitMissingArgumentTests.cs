@@ -1,6 +1,10 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -50,11 +54,21 @@ public class EmitMissingArgumentTests
 	public async Task PrivateNoOpRemainsSilent(string command)
 	{
 		var connection = Factory.Services.GetRequiredService<IConnectionService>();
+		var mediator = Factory.Services.GetRequiredService<IMediator>();
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>().Expect<SharpPlayer>();
+		var home = await mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("EmptyEmitHome"), god));
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			Factory.Services, Factory.Services.GetRequiredService<IMediator>(), connection, "EmptyEmit");
-		var before = Factory.Notifications.CountFor(player.DbRef);
-		var result = await Factory.CommandParser.CommandParse(player.Handle, connection, MarkupText.Plain(command));
-		await Assert.That(result.Message!.ToPlainText()).IsEmpty();
-		await Assert.That(Factory.Notifications.For(player.DbRef).Skip(before)).IsEmpty();
+			Factory.Services, mediator, connection, "EmptyEmit", home);
+		try
+		{
+			var before = Factory.Notifications.CountFor(player.DbRef);
+			var result = await Factory.CommandParser.CommandParse(player.Handle, connection, MarkupText.Plain(command));
+			await Assert.That(result.Message!.ToPlainText()).IsEmpty();
+			await Assert.That(Factory.Notifications.For(player.DbRef).Skip(before)).IsEmpty();
+		}
+		finally
+		{
+			await connection.Disconnect(player.Handle);
+		}
 	}
 }

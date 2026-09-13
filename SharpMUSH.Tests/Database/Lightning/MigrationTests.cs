@@ -28,7 +28,7 @@ public class MigrationTests
 		finally
 		{
 			await db.DisposeAsync();
-			if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
+			await FixtureDirectoryCleanup.DeleteAsync(path);
 		}
 	}
 	// relations: null — this fixture bypasses the host's Mediator cache, unlike the production wiring.
@@ -61,19 +61,7 @@ public class MigrationTests
 		finally
 		{
 			await db.DisposeAsync();
-			if (Directory.Exists(path))
-			{
-				try
-				{
-					Directory.Delete(path, recursive: true);
-				}
-				catch (IOException)
-				{
-					// Best-effort: a lingering LMDB lock file (mdb.lck) can outlive the writer thread's
-					// join by a few milliseconds under load. Leaving the temp directory behind costs
-					// disk, not correctness — matches ServerWebAppFactory's own cleanup.
-				}
-			}
+			await FixtureDirectoryCleanup.DeleteAsync(path);
 		}
 	}
 
@@ -130,18 +118,8 @@ public class MigrationTests
 		finally
 		{
 			await db.DisposeAsync();
-			if (Directory.Exists(path))
-			{
-				try
-				{
-					Directory.Delete(path, recursive: true);
-				}
-				// Best-effort cleanup of a temp directory, as the sibling fixtures do: a file still
-				// mapped by LMDB on a slow unmount must not fail an otherwise green test.
-				catch (IOException)
-				{
-				}
-			}
+			await FixtureDirectoryCleanup.DeleteAsync(path);
 		}
 	}
+
 }

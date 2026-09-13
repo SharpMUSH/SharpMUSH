@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.ListenPattern;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -28,6 +29,9 @@ public class ExecuteListenPatternCommandHandler(
 			var parser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
 			var restrictions = parser.State.IsEmpty ? null : parser.CurrentState.Restrictions;
 			EvaluationRestrictions.DemandObjectDataAccess(restrictions);
+			ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
+			if (!request.Listener.IsPlayer && await request.Listener.HasFlag("HALT", ExecutionBudget.CurrentToken))
+				return Unit.Value;
 			var listenerDbRef = request.Listener.Object().DBRef;
 			var speakerDbRef = request.Speaker.Object().DBRef;
 			MString action;
