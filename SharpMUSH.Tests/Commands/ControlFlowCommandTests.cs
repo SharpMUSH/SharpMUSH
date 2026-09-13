@@ -54,7 +54,7 @@ public class ControlFlowCommandTests
 
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SelectCommand_Other"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SelectCommand_Other"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -68,7 +68,7 @@ public class ControlFlowCommandTests
 
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SwitchCommand_Other"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SwitchCommand_Other"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -118,11 +118,11 @@ public class ControlFlowCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SkipCommand False"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SkipCommand False"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SkipCommand Rest"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("SkipCommand Rest"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -146,7 +146,7 @@ public class ControlFlowCommandTests
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("IfElseCommand True"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("IfElseCommand True"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -165,7 +165,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "IncludeDollarPrefix_Executed_71934")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "IncludeDollarPrefix_Executed_71934")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -184,7 +184,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "IncludeCaretPrefix_Executed_82045")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "IncludeCaretPrefix_Executed_82045")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -203,7 +203,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "IncludeNoPrefix_Executed_93156")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "IncludeNoPrefix_Executed_93156")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -222,12 +222,12 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "IncludeNobreak_Before_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "IncludeNobreak_Before_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "IncludeNobreak_After_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "IncludeNobreak_After_14267")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -246,7 +246,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "IncludeDollarArg_Hello_25378")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "IncludeDollarArg_Hello_25378")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -281,12 +281,12 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwFirst_A_47592")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwFirst_A_47592")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwFirst_B_47592")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwFirst_B_47592")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -300,12 +300,12 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwAll_A_58603")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwAll_A_58603")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwAll_B_58603")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwAll_B_58603")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -319,12 +319,12 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwRegexp_Match_69714")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwRegexp_Match_69714")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwRegexp_NoMatch_69714")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwRegexp_NoMatch_69714")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -338,12 +338,12 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwRegexpCI_Match_70825")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwRegexpCI_Match_70825")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwRegexpCI_NoMatch_70825")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwRegexpCI_NoMatch_70825")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -357,7 +357,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwHashDollar_hello_81936")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwHashDollar_hello_81936")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -371,7 +371,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "SwHashDollarDef_goodbye_92047")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "SwHashDollarDef_goodbye_92047")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -419,7 +419,7 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainAll_abc_71204")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "ChainAll_abc_71204")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -437,12 +437,12 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainBrk_S1_55019")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "ChainBrk_S1_55019")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await NotifyService
 			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainBrk_S2_55019")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "ChainBrk_S2_55019")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -461,12 +461,12 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainArg_P1_HELLO_88431")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "ChainArg_P1_HELLO_88431")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainArg_P2_HELLO_88431")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "ChainArg_P2_HELLO_88431")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -484,12 +484,12 @@ public class ControlFlowCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainNB_N1_31776")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "ChainNB_N1_31776")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, "ChainNB_N2_31776")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextEquals(msg, "ChainNB_N2_31776")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -511,12 +511,12 @@ public class ControlFlowCommandTests
 		await NotifyService.Received(1).Notify(
 			TestHelpers.MatchingObject(executor),
 			Arg.Is<SharpMessage>(m => TestHelpers.MessagePlainTextEquals(m, "ChainRecSelf_S1_88011")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 		// ... and S2 genuinely recursed (its marker fired), yet the call returned — proving it was bounded.
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(executor),
 			Arg.Is<SharpMessage>(m => TestHelpers.MessagePlainTextEquals(m, "ChainRecSelf_S2_88011")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -538,7 +538,7 @@ public class ControlFlowCommandTests
 		await NotifyService.Received().Notify(
 			TestHelpers.MatchingObject(executor),
 			Arg.Is<SharpMessage>(m => TestHelpers.MessagePlainTextEquals(m, "ChainRecWhole_S1_43307")),
-			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	// ---- @select / @switch: PennMUSH parity (issue #958, sweep item #7) ----

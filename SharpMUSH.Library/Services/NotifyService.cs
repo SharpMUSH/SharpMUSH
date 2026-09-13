@@ -10,12 +10,13 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// Notifies objects and sends telnet data.
-/// KafkaFlow handles batching automatically via producer LingerMs configuration.
 /// </summary>
 public class NotifyService(
 	IMessageBus publishEndpoint,
@@ -24,8 +25,13 @@ public class NotifyService(
 	IRealityPolicy reality,
 	IListenerRoutingService? listenerRoutingService = null,
 	IMediator? mediator = null,
-	IHttpOutputCapture? httpOutputCapture = null) : INotifyService
+	IHttpOutputCapture? httpOutputCapture = null,
+	IOptionsWrapper<SharpMUSHOptions>? configuration = null) : INotifyService, IContextualNotifyService
 {
+	public NotifyService(IMessageBus publishEndpoint, IConnectionService connections, ILocalizationService localizationService,
+		IRealityPolicy reality, IListenerRoutingService? listenerRoutingService, IMediator? mediator, IHttpOutputCapture? httpOutputCapture)
+		: this(publishEndpoint, connections, localizationService, reality, listenerRoutingService, mediator, httpOutputCapture, null) { }
+
 	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
 	public NotifyService(IMessageBus publishEndpoint, IConnectionService connections,
 		ILocalizationService localizationService, IListenerRoutingService? listenerRoutingService = null,
@@ -81,6 +87,38 @@ public class NotifyService(
 			MString markup => markup,
 			string str => MarkupText.Plain(str)
 		});
+
+	private async ValueTask<Outgoing> PrepareRecipient(Outgoing outgoing, DBRef? recipient, AnySharpObject? sender, INotifyService.NotificationType type)
+	{
+		if (outgoing.Text.Length == 0 || sender is null || recipient is null || mediator is null
+			|| type is INotifyService.NotificationType.Announce or INotifyService.NotificationType.NSAnnounce
+				or INotifyService.NotificationType.NSEmit or INotifyService.NotificationType.NSPrivateEmit) return outgoing;
+		if (await mediator.Send(new GetObjectNodeQuery(recipient.Value), ExecutionBudget.CurrentToken) is not AnySharpObject obj) return outgoing;
+		var header = await NameFormatter.HeaderAsync(obj, sender, type, configuration?.CurrentValue.Command.FullInvisibility ?? false);
+		return header.Length == 0 ? outgoing : new Outgoing(MString.Concat(header, outgoing.Text));
+	}
+
+	private async ValueTask PublishToHandle(long handle, Outgoing raw, AnySharpObject? sender, INotifyService.NotificationType type, bool prompt,
+		Dictionary<DBRef, Outgoing>? prepared = null)
+	{
+		var initial = connections.Get(handle);
+		var reference = initial?.Ref;
+		var session = initial?.Metadata.GetValueOrDefault("SessionId");
+		Outgoing outgoing;
+		if (reference is { } recipient && prepared is not null)
+		{
+			if (!prepared.TryGetValue(recipient, out var cached))
+				prepared[recipient] = cached = await PrepareRecipient(raw, recipient, sender, type);
+			outgoing = cached;
+		}
+		else outgoing = await PrepareRecipient(raw, reference, sender, type);
+		if (!await CanReceiveHandle(handle, sender)) return;
+		var current = connections.Get(handle);
+		if (!Nullable.Equals(reference, current?.Ref)
+			|| !string.Equals(session, current?.Metadata.GetValueOrDefault("SessionId"), StringComparison.Ordinal)) return;
+		if (prompt) await PublishMarkupPrompt(handle, outgoing, session);
+		else await PublishMarkup(handle, outgoing, session);
+	}
 
 	private static bool IsEmpty(SharpMessage what)
 		=> what switch
@@ -148,40 +186,43 @@ public class NotifyService(
 		return MarkupText.Concat(parts);
 	}
 
-	public async ValueTask Notify(DBRef who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	private async ValueTask<bool> PrepareObjectNotification(DBRef who, SharpMessage what, AnySharpObject? sender,
+		INotifyService.NotificationType type, bool prompt, NotificationContext? context = null)
 	{
-		if (!await CanReceive(who, sender)) return;
-		if (IsEmpty(what))
+		if (context?.Exclusions.Contains(who) == true) return false;
+		if (!await CanReceive(who, sender)) return false;
+		if (!prompt && IsEmpty(what) && (context is null
+			|| context.Relay == NotificationRelay.Initial && context.Prefix.Length == 0))
 		{
-			return;
+			return false;
 		}
 
 		// Inbound HTTP: while the http_handler's <METHOD> attribute runs, everything emitted to
 		// the handler becomes the HTTP response body instead of going to a (nonexistent)
 		// connection — PennMUSH's CONN_HTTP_BUFFER hijack (src/notify.c queue_newwrite).
-		if (httpOutputCapture?.TryCapture(who.Number,
-				what switch
+		if (!prompt && (!IsEmpty(what) || context?.Prefix.Length > 0) && httpOutputCapture?.TryCapture(who.Number,
+				context is not null ? MString.Concat(context.Prefix, AsMarkup(what)).ToPlainText() : what switch
 				{
 					MString markupString => markupString.ToPlainText(),
 					string str => str
 				}) == true)
 		{
-			return;
+			return false;
 		}
 
 		if (listenerRoutingService != null && mediator != null && sender != null)
 		{
 			try
 			{
-				var location = sender switch
+				var location = context?.Location ?? (sender switch
 				{
 					SharpPlayer player => (await player.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
 					SharpRoom room => room.Object.DBRef,
 					SharpExit exit => (await exit.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef,
 					SharpThing thing => (await thing.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().DBRef
-				};
+				});
 
-				var notificationContext = new NotificationContext(
+				var notificationContext = context is not null ? context with { Location = location } : new NotificationContext(
 					Target: who,
 					Location: location,
 					ExcludedObjects: []
@@ -198,11 +239,36 @@ public class NotifyService(
 			}
 		}
 
-		var outgoing = Prepare(what);
+		return true;
+	}
+
+	public async ValueTask Notify(DBRef who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+		=> await DeliverObjectAsync(who, AsMarkup(what), sender, type, false);
+
+	private static MString AsMarkup(SharpMessage message) => message switch
+	{
+		MString markup => markup,
+		string text => MString.Plain(text)
+	};
+
+	public ValueTask NotifyContextAsync(NotificationContext context, MString body, AnySharpObject? speaker,
+		INotifyService.NotificationType type, bool prompt = false)
+		=> DeliverObjectAsync(context.Target, body, speaker, type, prompt, context);
+
+	private async ValueTask DeliverObjectAsync(DBRef who, MString body, AnySharpObject? sender,
+		INotifyService.NotificationType type, bool prompt, NotificationContext? context = null)
+	{
+		if (!await PrepareObjectNotification(who, body, sender, type, prompt, context)) return;
+		var delivered = context is null ? body : MString.Concat(context.Prefix, body);
+		// Empty relays can reach nested listeners without producing framing or an empty transport message.
+		if (!prompt && delivered.Length == 0) return;
+		var outgoing = await PrepareRecipient(Prepare(delivered), who, sender, type);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
 		{
-			if (await CanReceiveBound(conn.Handle, who, sender, perceptions)) await PublishMarkup(conn.Handle, outgoing);
+			if (!await CanReceiveBound(conn.Handle, who, sender, perceptions)) continue;
+			if (prompt) await PublishMarkupPrompt(conn.Handle, outgoing);
+			else await PublishMarkup(conn.Handle, outgoing);
 		}
 	}
 
@@ -216,7 +282,7 @@ public class NotifyService(
 			return;
 		}
 
-		if (await CanReceiveHandle(handle, sender)) await PublishMarkup(handle, Prepare(what));
+		await PublishToHandle(handle, Prepare(what), sender, type, prompt: false);
 	}
 
 	public async ValueTask Notify(long[] handles, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
@@ -226,28 +292,16 @@ public class NotifyService(
 			return;
 		}
 
-		var outgoing = Prepare(what);
+		var raw = Prepare(what);
+		var prepared = new Dictionary<DBRef, Outgoing>();
 		foreach (var handle in handles)
 		{
-			if (await CanReceiveHandle(handle, sender)) await PublishMarkup(handle, outgoing);
+			await PublishToHandle(handle, raw, sender, type, prompt: false, prepared);
 		}
 	}
 
 	public async ValueTask Prompt(DBRef who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
-	{
-		if (!await CanReceive(who, sender)) return;
-		if (IsEmpty(what))
-		{
-			return;
-		}
-
-		var outgoing = Prepare(what);
-		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
-		await foreach (var conn in connections.Get(who))
-		{
-			if (await CanReceiveBound(conn.Handle, who, sender, perceptions)) await PublishMarkupPrompt(conn.Handle, outgoing);
-		}
-	}
+		=> await DeliverObjectAsync(who, AsMarkup(what), sender, type, true);
 
 	public ValueTask Prompt(AnySharpObject who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 		=> Prompt(who.Object().DBRef, what, sender, type);
@@ -257,21 +311,17 @@ public class NotifyService(
 
 	public async ValueTask Prompt(long handle, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (!IsEmpty(what) && await CanReceiveHandle(handle, sender)) await PublishMarkupPrompt(handle, Prepare(what));
+		await PublishToHandle(handle, Prepare(what), sender, type, prompt: true);
 	}
 
 
 	public async ValueTask Prompt(long[] handles, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (IsEmpty(what))
-		{
-			return;
-		}
-
-		var outgoing = Prepare(what);
+		var raw = Prepare(what);
+		var prepared = new Dictionary<DBRef, Outgoing>();
 		foreach (var handle in handles)
 		{
-			if (await CanReceiveHandle(handle, sender)) await PublishMarkupPrompt(handle, outgoing);
+			await PublishToHandle(handle, raw, sender, type, prompt: true, prepared);
 		}
 	}
 
@@ -288,7 +338,7 @@ public class NotifyService(
 			.ToHashSetAsync();
 
 		if (!await CanReceive(who, sender)) return;
-		var outgoing = Prepare(what);
+		var outgoing = await PrepareRecipient(Prepare(what), who, sender, type);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
 		{

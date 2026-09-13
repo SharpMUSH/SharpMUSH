@@ -1,5 +1,6 @@
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services.Interfaces;
 
@@ -17,6 +18,12 @@ public interface IListenPatternMatcher
 		string message,
 		AnySharpObject speaker,
 		bool checkParents = false);
+
+	/// <summary>Matches styled input. Legacy implementations retain their string captures; override
+	/// this overload to retain markup in Arguments.</summary>
+	ValueTask<ListenMatch[]> MatchListenPatternsAsync(AnySharpObject listener, MString message,
+		AnySharpObject speaker, bool checkParents = false)
+		=> MatchListenPatternsAsync(listener, message.ToPlainText(), speaker, checkParents);
 }
 
 /// <summary>
@@ -26,7 +33,10 @@ public record ListenMatch(
 	SharpAttribute Attribute,
 	string[] CapturedGroups,
 	ListenBehavior Behavior
-);
+)
+{
+	public Dictionary<string, CallState> Arguments { get; init; } = [];
+}
 
 /// <summary>
 /// How a listen pattern should trigger based on speaker.

@@ -2632,32 +2632,10 @@ public partial class Commands
 		MaxArgs = 1, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Pose(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var executorLocation = await executor.Where();
-		var isNoSpace = parser.CurrentState.Switches.Contains("NOSPACE");
-		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
-		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
+		var message = parser.CurrentState.Switches.Contains("NOEVAL")
+			? ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 0, MarkupText.Empty)
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
-
-		// Enforce Speech lock on the room (PennMUSH src/speech.c).
-		if (!await LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
-			return CallState.Empty;
-		}
-
-		var executorName = MarkupText.Plain(executor.Object().Name);
-		var poseMessage = isNoSpace
-			? MarkupText.Concat(executorName, message.Trim(global::MarkupString.TrimType.TrimStart, " "))
-			: MarkupText.Concat([executorName, MarkupText.Space, message]);
-
-		await CommunicationService.SendToRoomAsync(executor, executorLocation,
-			_ => poseMessage,
-			INotifyService.NotificationType.Pose);
-
-		return new CallState(message);
+		return await CommunicationService.SpeechAsync(parser, message, parser.CurrentState.Switches.Contains("NOSPACE") ? ";" : ":");
 	}
 
 	[SharpCommand(Name = "SCORE", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
@@ -2674,62 +2652,20 @@ public partial class Commands
 	[SharpCommand(Name = "SAY", Switches = ["NOEVAL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Say(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var executorLocation = await executor.Where();
-		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
-		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
+		var message = parser.CurrentState.Switches.Contains("NOEVAL")
+			? ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 0, MarkupText.Empty)
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
-
-		// Enforce Speech lock on the room (PennMUSH src/speech.c).
-		if (!await LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
-			return CallState.Empty;
-		}
-
-		var executorName = MarkupText.Plain(executor.Object().Name);
-		var youSayMessage = MarkupText.Concat([MarkupText.Plain("You say, \""), message, MarkupText.Plain("\"")]);
-		var namesSaysMessage = MarkupText.Concat([executorName, MarkupText.Plain(" says, \""), message, MarkupText.Plain("\"")]);
-
-		await NotifyService.Notify(executor, youSayMessage, executor, INotifyService.NotificationType.Say);
-
-		await CommunicationService.SendToRoomAsync(executor, executorLocation,
-			_ => namesSaysMessage,
-			INotifyService.NotificationType.Say,
-			excludeObjects: [executor]);
-
-		return new CallState(message);
+		return await CommunicationService.SpeechAsync(parser, message, "\"");
 	}
 
 	[SharpCommand(Name = "SEMIPOSE", Switches = ["NOEVAL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> SemiPose(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var executorLocation = await executor.Where();
-		var isNoEvaluation = parser.CurrentState.Switches.Contains("NOEVAL");
-		var message = isNoEvaluation
-			? ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty)
+		var message = parser.CurrentState.Switches.Contains("NOEVAL")
+			? ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 0, MarkupText.Empty)
 			: await ArgHelpers.NoParseDefaultEvaluatedArgument(parser, 0, MarkupText.Empty);
-
-		// Enforce Speech lock on the room (PennMUSH src/speech.c).
-		if (!await LockService.Evaluate(LockType.Speech, executorLocation.WithExitOption(), executor))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MayNotSpeakHere), executor);
-			return CallState.Empty;
-		}
-
-		var executorName = MarkupText.Plain(executor.Object().Name);
-		var semiposeMessage = MarkupText.Concat(executorName, message);
-
-		await CommunicationService.SendToRoomAsync(executor, executorLocation,
-			_ => semiposeMessage,
-			INotifyService.NotificationType.SemiPose);
-
-		return new CallState(message);
+		return await CommunicationService.SpeechAsync(parser, message, ";");
 	}
 
 	[SharpCommand(Name = "TEACH", Switches = ["LIST"], Behavior = CB.Default | CB.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = ["player", "attribute"])]

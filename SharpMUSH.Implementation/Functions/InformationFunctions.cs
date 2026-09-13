@@ -572,23 +572,8 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, obj, LocateFlags.All,
-			async found =>
-			{
-				var monikerAttr = await AttributeService.GetAttributeAsync(
-					executor, found, "MONIKER", IAttributeService.AttributeMode.Read);
-
-				if (monikerAttr is SharpAttribute[] chain)
-				{
-					var attr = chain.Last();
-					var attrValue = attr.Value.ToPlainText();
-					if (!string.IsNullOrWhiteSpace(attrValue))
-					{
-						return new CallState(attrValue);
-					}
-				}
-
-				return new CallState(found.Object().Name);
-			});
+			async found => new CallState(await new SharpMUSH.Library.Services.NameFormatter(AttributeService, Configuration)
+				.FormatAsync(found, SharpMUSH.Library.Services.NameContext.AccentedMoniker)));
 	}
 
 	/// <summary>

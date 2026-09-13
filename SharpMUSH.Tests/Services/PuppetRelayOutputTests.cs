@@ -249,6 +249,42 @@ public class PuppetRelayOutputTests
 		}
 	}
 
+	[Test]
+	[Arguments("character", false)]
+	[Arguments("stamp", false)]
+	[Arguments("session", false)]
+	[Arguments("logout", false)]
+	[Arguments("unchanged", false)]
+	[Arguments("character", true)]
+	[Arguments("stamp", true)]
+	[Arguments("session", true)]
+	[Arguments("logout", true)]
+	[Arguments("unchanged", true)]
+	public async Task PrivatePuppetRelayRetainsBindingGuards(string change, bool noSpoof)
+	{
+		var (service, bus) = BuildRelay(change);
+		await service.ProcessNotificationAsync(new(PuppetRef, RoomRef, []), MarkupText.Plain(Heard), Speaker,
+			noSpoof ? INotifyService.NotificationType.NSPrivateEmit : INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(bus.ReceivedCalls().Count(call => call.GetArguments().FirstOrDefault() is MarkupOutputMessage))
+			.IsEqualTo(change == "unchanged" ? 1 : 0);
+	}
+
+	[Test]
+	[Arguments(false, true)]
+	[Arguments(true, false)]
+	[Arguments(true, true)]
+	public async Task ForcedPrivatePuppetRelayStillRequiresOwnerReality(bool hearsSpeaker, bool seesPuppet)
+	{
+		var policy = Substitute.For<IRealityPolicy>();
+		policy.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>())
+			.Returns(call => call.ArgAt<DBRef>(1) == PuppetRef ? seesPuppet : hearsSpeaker);
+		var (service, bus) = BuildRelay(configure: (_, puppet) =>
+			puppet.Expect<SharpThing>().Location = new(_ => Task.FromResult(new AnySharpContainer(Room()))), policy: policy);
+		await service.ProcessNotificationAsync(new(PuppetRef, RoomRef, []), MarkupText.Plain(Heard), Speaker, INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(bus.ReceivedCalls().Count(call => call.GetArguments().FirstOrDefault() is MarkupOutputMessage))
+			.IsEqualTo(hearsSpeaker && seesPuppet ? 1 : 0);
+	}
+
 	private static SharpPlayer OwnerPlayer()
 	{
 		var room = Room();

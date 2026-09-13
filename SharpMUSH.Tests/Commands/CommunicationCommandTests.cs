@@ -454,7 +454,7 @@ public class CommunicationCommandTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageEquals(msg, "Test nospoof pemit")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSAnnounce);
+					TestHelpers.MessageEquals(msg, "Test nospoof pemit")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSPrivateEmit);
 	}
 
 	[Test, Skip("Failing")]
@@ -673,7 +673,7 @@ public class CommunicationCommandTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(targetDbRef), Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessagePlainTextEquals(msg, "Quietly")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsFalse();
@@ -695,7 +695,7 @@ public class CommunicationCommandTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
 					TestHelpers.MessagePlainTextEquals(msg, "Talking to myself")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsFalse();
@@ -714,7 +714,7 @@ public class CommunicationCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {secondName}"));
 
 		await Parser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@pemit/list {firstName} {secondName}=Group message"));
+			MarkupText.Plain($"@pemit/list/noisy {firstName} {secondName}=Group message"));
 
 		// The key alone would pass even if the command counted the recipients wrong.
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(

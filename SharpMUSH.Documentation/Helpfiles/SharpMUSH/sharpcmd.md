@@ -3009,7 +3009,7 @@ Hello, Walker!
 `@nsoemit[/<switch>] [<room>/]<object> [<object>...]=<message>`<br>
 `@nszemit <zone>=<message>`
 
-These commands work like @emit, @lemit, @pemit, @prompt, @remit, @oemit, and @zemit, respectively, but will not include nospoof information if used by Wizards or someone with the Can_spoof @power. They are meant to be used by commands in the master room where the nospoof information is just useless noise. They take the same switches as their respective commands, with a few exceptions (`/spoof`, and for @nspemit, `/contents` and the admin-only `/port`).
+These commands work like @emit, @lemit, @pemit, @prompt, @remit, @oemit, and @zemit, respectively, but will not include nospoof information if used by Wizards or someone with the Can_spoof @power. They are meant to be used by commands in the master room where the nospoof information is just useless noise. They take the same switches as their respective commands, with a few exceptions (`/spoof`, and for @nspemit, `/contents`). SharpMUSH also supports the privileged `/port` and `/port/list` forms on @nspemit.
 
 
 **See Also:**
@@ -3243,13 +3243,14 @@ Some clients, like TinyFugue, are smart enough to interpret GOAHEAD and treat pr
 # @pemit
 `@pemit[/<switches>] <object>=<message>`<br>
 `@pemit/list[/<switches>] <object list>=<message>`<br>
-`@pemit/port[/list][/silent] <descriptor(s)>=<message>`
+`@pemit/port[/silent] <descriptor>=<message>`<br>
+`@pemit/port/list[/silent] <descriptor list>=<message>`
 
 The basic form of this command sends `<message>` to `<object>` directly. It is very similar in its effects to @emit except only one object will see the message.
 
 `@pemit/list` sends the message to multiple objects. You will not get a confirmation message when using this switch.
 
-`@pemit/port` can only be used by Wizards/Royalty, and sends `<message>` to one or more connections. It can be used to send messages to connections which are still at the login screen, or to send a message to just one of a player's connections when he's logged in multiple times.
+`@pemit/port` can only be used by Wizards/Royalty and sends `<message>` to one connection. Add `/list` to send to a space-separated list of descriptors. Without `/list`, the target must be one complete positive descriptor number; a list or other trailing text is rejected. These forms can send to connections still at the login screen or to selected connections of a player logged in multiple times.
 
 See [@pemit2] for more.
 # @pemit2

@@ -1,11 +1,10 @@
 using System.Text;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -48,6 +47,7 @@ public class MyrddinBBSIntegrationTests
 	/// DBRef of the regular test user created during BBS install.
 	/// </summary>
 	private static string? _regularUserDbref;
+	private readonly HashSet<long> _dailyTimerPids = [];
 
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -91,35 +91,6 @@ public class MyrddinBBSIntegrationTests
 	}
 
 	/// <summary>
-	/// Extracts the message text from a notification call's arguments.
-	/// </summary>
-	private static string? ExtractMessageText(ICall call)
-	{
-		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify))
-			return null;
-
-		var args = call.GetArguments();
-		if (args.Length < 2) return null;
-
-		if (args[1] is SharpMessage message)
-		{
-			return message switch
-			{
-				MString markup => markup.ToString(),
-				string text => text,
-			};
-		}
-
-		if (args[1] is string str2)
-			return str2;
-
-		if (args[1] is MString mstr2)
-			return mstr2.ToString();
-
-		return null;
-	}
-
-	/// <summary>
 	/// Installs Myrddin's BBS v4.0.6 by running the installer script through CommandParse,
 	/// then runs +bbread to verify the installation completes without crashing.
 	/// </summary>
@@ -144,8 +115,7 @@ public class MyrddinBBSIntegrationTests
 		var executionExceptions = new List<(int LineNumber, string Line, string Error)>();
 		var antlrErrorsByLine = new Dictionary<int, List<string>>();
 
-		var preInstallNotificationCount = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var preInstallNotificationCount = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		string? bbpocketDbref = null;
 		string? mbboardDbref = null;
@@ -271,8 +241,7 @@ public class MyrddinBBSIntegrationTests
 			Log("[BBS INSTALL] WARNING: Failed to create regular test user — some tests may use God.");
 		}
 
-		var postInstallNotificationCount = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var postInstallNotificationCount = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		try
 		{
@@ -286,7 +255,7 @@ public class MyrddinBBSIntegrationTests
 		}
 
 
-		var allCalls = NotifyService.ReceivedCalls().ToList();
+		var allMessages = WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef);
 		var installMessages = new List<(int Index, string Message)>();
 		var bbreadMessages = new List<(int Index, string Message)>();
 		var installErrorMessages = new List<(int Index, string Message)>();
@@ -295,10 +264,9 @@ public class MyrddinBBSIntegrationTests
 		var cantSeeMessages = new List<(int Index, string Message)>();
 
 		var notifyIndex = 0;
-		foreach (var call in allCalls)
+		foreach (var delivery in allMessages)
 		{
-			var messageText = ExtractMessageText(call);
-			if (messageText == null) continue;
+			var messageText = delivery.Message;
 
 			notifyIndex++;
 
@@ -509,7 +477,7 @@ public class MyrddinBBSIntegrationTests
 
 		// 1) @package/scan — read-only schema report. Both install objects reference
 		//    only each other, so the report should declare the selection self-contained.
-		var scanMsgs = await RunAndCollect($"@package/scan {bbpocket} {mbboard}");
+		var scanMsgs = await RunPackageAndCollect($"@package/scan {bbpocket} {mbboard}", message => message.Contains("Self-contained"));
 		var scanReport = string.Join("\n", scanMsgs);
 		Log($"\n--- @package/scan ---\n{scanReport}");
 
@@ -523,8 +491,9 @@ public class MyrddinBBSIntegrationTests
 		// 2) @package export — produce the manifest in one step. Version (the BBS's
 		//    own 4.0.6) and a description are supplied so the CI-generated artifact is
 		//    publishable as-is.
-		var pkgMsgs = await RunAndCollect(
-			$"@package {bbpocket} {mbboard}=myrddin-bbs,4.0.6,Myrddin's Global Bulletin Board v4.0.6");
+		var pkgMsgs = await RunPackageAndCollect(
+			$"@package {bbpocket} {mbboard}=myrddin-bbs,4.0.6,Myrddin's Global Bulletin Board v4.0.6",
+			message => message.Contains("----- END package.yaml -----"));
 		var packageMessage = pkgMsgs.FirstOrDefault(m => m.Contains("BEGIN package.yaml"))
 			?? string.Join("\n", pkgMsgs);
 
@@ -605,6 +574,13 @@ public class MyrddinBBSIntegrationTests
 		return board.Expect<AnySharpObject>().Object().DBRef;
 	}
 
+	private async Task<DBRef> BbsPocketAsync()
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var pocket = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(_bbpocketDbref!)));
+		return pocket.Expect<AnySharpObject>().Object().DBRef;
+	}
+
 	/// <summary>Waits for actual BBS output, excluding DEBUG traces that quote the same text.</summary>
 	private async Task WaitForBbsOutputAsync(int startIndex, Func<string, bool> matches)
 	{
@@ -621,97 +597,123 @@ public class MyrddinBBSIntegrationTests
 	{
 		var scheduler = WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
 		var board = await BbsBoardAsync();
-		await Assert.That(() => !scheduler.GetQueueEntries().Any(entry => entry.Source?.Matches(board) == true))
+		var pocket = await BbsPocketAsync();
+		await Assert.That(() => !scheduler.GetQueueEntries().Any(entry =>
+			entry.Source?.Matches(board) == true || (entry.Source?.Matches(pocket) == true
+				&& !(entry.Kind == "delay" && entry.State == QueueEntryState.Pending
+					&& _dailyTimerPids.Contains(entry.Pid)))))
 			.WaitsFor(result => result.IsTrue(), timeout: TimeSpan.FromSeconds(10),
 				cancellationToken: TestContext.Current!.Execution.CancellationToken);
 	}
 
-	/// <summary>Returns the current notification count.</summary>
-	private int NotificationCount()
-		=> NotifyService.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
-
-	/// <summary>Collects notification messages in the range (fromCount, toCount].</summary>
-	private IReadOnlyList<string> GetNotificationMessages(int fromCount, int toCount)
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	[DependsOn(nameof(InstallMyrddinBBS_AndRunBBRead_ShouldNotCrash))]
+	public async Task BBS_CollectorWaitsForAdmittedDelayedOutput(bool pocketGate)
 	{
-		var all = NotifyService.ReceivedCalls().Select(ExtractMessageText).OfType<string>();
-		var sliced = all.Skip(fromCount);
-		if (toCount > 0)
-			sliced = sliced.Take(toCount - fromCount);
-		return sliced.ToList();
-	}
-
-	/// <summary>
-	/// Waits until the notification stream goes quiet, so output produced by QUEUED work is
-	/// collected too. @switch and @select make their actions new queue entries (as PennMUSH
-	/// does), and the queue consumer is a background reader, so a command's visible output is
-	/// not complete the moment CommandParse returns.
-	/// </summary>
-	private async Task SettleQueueAsync(int quietMs = 150, int timeoutMs = 5000)
-	{
-		var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-		var last = NotificationCount();
-		var quietSince = DateTime.UtcNow;
-
-		while (DateTime.UtcNow < deadline)
+		var scheduler = WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var collecting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current!.Execution.CancellationToken);
+		timeout.CancelAfter(TimeSpan.FromSeconds(10));
+		Task<IReadOnlyList<string>>? collection = null;
+		try
 		{
-			await Task.Delay(25, TestContext.Current!.Execution.CancellationToken);
-			var current = NotificationCount();
-			if (current != last)
+			var gateSource = pocketGate ? await BbsPocketAsync() : await BbsBoardAsync();
+			if (pocketGate)
 			{
-				last = current;
-				quietSince = DateTime.UtcNow;
-				continue;
+				var previous = scheduler.GetQueueEntries().Select(entry => entry.Pid).ToHashSet();
+				await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@trigger {gateSource}/DO_TIMEOUTS"));
+				// This exact invocation creates the script's 86400-second recurrence. Pin its identity once;
+				// arbitrary long waits are never excluded by the completion polling loop.
+				var timers = scheduler.GetQueueEntries().Where(entry => !previous.Contains(entry.Pid)
+					&& entry.Source?.Matches(gateSource) == true && entry.Kind == "delay"
+					&& entry.State == QueueEntryState.Pending && entry.RemainingDelay > TimeSpan.FromHours(23)).ToArray();
+				foreach (var timer in timers) _dailyTimerPids.Add(timer.Pid);
+				await Assert.That(timers).HasSingleItem();
+				await WaitForBbsQueueAsync();
 			}
-
-			if ((DateTime.UtcNow - quietSince).TotalMilliseconds >= quietMs) return;
+			var admission = await scheduler.AdmitWork(async () =>
+			{
+				entered.TrySetResult();
+				await release.Task.WaitAsync(timeout.Token);
+				return null;
+			}, "bbs-collector-gate", "bbs-test", gateSource);
+			await Assert.That(admission.Accepted).IsTrue();
+			await entered.Task.WaitAsync(timeout.Token);
+			collection = RunAndCollectAs("+bbconfig", 1, messages => messages.Any(m => m.Contains("Myrddin's Global BBS") && m.Contains("autotimeout:") && m.Contains("Board Config Parameters:")),
+				collectionStarted: () => collecting.TrySetResult());
+			await collecting.Task.WaitAsync(timeout.Token);
+			var recipient = WebAppFactoryArg.ExecutorDBRef;
+			var otherRecipient = DBRef.Parse(_regularUserDbref!);
+			await Assert.That(otherRecipient == recipient).IsFalse();
+			var unrelated = "unrelated-recipient-" + Guid.NewGuid().ToString("N");
+			var diagnostic = "same-recipient-diagnostic-" + Guid.NewGuid().ToString("N");
+			var sender = (await WebAppFactoryArg.Services.GetRequiredService<IMediator>()
+				.Send(new GetObjectNodeQuery(recipient))).Expect<AnySharpObject>();
+			await NotifyService.Notify(otherRecipient, unrelated, sender);
+			await NotifyService.Notify(recipient, diagnostic, sender);
+			// The queue remains deliberately blocked beyond the former 150ms quiet-window heuristic.
+			await Task.Delay(250, timeout.Token);
+			await Assert.That(collection.IsCompleted).IsFalse();
+			release.TrySetResult();
+			var messages = await collection.WaitAsync(timeout.Token);
+			await Assert.That(string.Join("\n", messages)).Contains("autotimeout:");
+			await Assert.That(messages.Contains(unrelated)).IsFalse();
+			await Assert.That(messages.Contains(diagnostic)).IsTrue();
+			await WaitForBbsQueueAsync();
 		}
-
-		throw new TimeoutException($"BBS notification stream did not settle within {timeoutMs} ms.");
+		finally
+		{
+			release.TrySetResult();
+			try
+			{
+				if (collection is not null) await collection.WaitAsync(TimeSpan.FromSeconds(10));
+				await WaitForBbsQueueAsync();
+			}
+			finally
+			{
+				foreach (var pid in _dailyTimerPids) await scheduler.HaltByPid(pid);
+				_dailyTimerPids.Clear();
+			}
+		}
 	}
 
-	/// <summary>Runs a command and collects all notifications it produces.</summary>
-	private async Task<IReadOnlyList<string>> RunAndCollect(string command, int delayMs = 0)
-	{
-		var before = NotificationCount();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
-		if (delayMs > 0)
-			await Task.Delay(delayMs, TestContext.Current!.Execution.CancellationToken);
-		await SettleQueueAsync();
-		var after = NotificationCount();
-		return GetNotificationMessages(before, after);
-	}
+	/// <summary>Collects diagnostic history only after actual recipient output and BBS queue completion.</summary>
+	private Task<IReadOnlyList<string>> RunAndCollect(string command,
+		Func<IReadOnlyList<string>, bool> outputComplete, bool pocketSender = false)
+		=> RunAndCollectAs(command, 1, outputComplete, pocketSender);
 
-	/// <summary>Collects diagnostics after the command's actual BBS output proves completion.</summary>
-	private async Task<IReadOnlyList<string>> RunAndCollect(string command,
-		Func<IReadOnlyList<string>, bool> outputComplete)
+	private async Task<IReadOnlyList<string>> RunAndCollectAs(string command, long handle,
+		Func<IReadOnlyList<string>, bool> outputComplete, bool pocketSender = false, Action? collectionStarted = null)
 	{
-		var before = NotificationCount();
-		var recipient = WebAppFactoryArg.ExecutorDBRef;
-		var board = await BbsBoardAsync();
+		var recipient = ConnectionService.Get(handle)?.Ref ?? throw new InvalidOperationException("BBS recipient is not bound.");
+		var sender = pocketSender ? await BbsPocketAsync() : await BbsBoardAsync();
 		var deliveryStart = WebAppFactoryArg.Notifications.DeliveryCountFor(recipient);
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		collectionStarted?.Invoke();
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
 		await Assert.That(() => outputComplete(WebAppFactoryArg.Notifications.DeliveriesFor(recipient)
-			.Skip(deliveryStart).Where(delivery => delivery.Sender == board)
+			.Skip(deliveryStart).Where(delivery => delivery.Sender == sender)
 			.Select(delivery => delivery.Message).ToArray()))
 			.WaitsFor(result => result.IsTrue(), timeout: TimeSpan.FromSeconds(10),
 				cancellationToken: TestContext.Current!.Execution.CancellationToken);
-		// The terminal message can precede draft cleanup or the delayed read-marker write.
 		await WaitForBbsQueueAsync();
-		// Keep collecting trailing queued diagnostics after observing completion.
-		await SettleQueueAsync();
-		return GetNotificationMessages(before, NotificationCount());
+		return WebAppFactoryArg.Notifications.DeliveriesFor(recipient).Skip(deliveryStart)
+			.Select(delivery => delivery.Message).ToArray();
 	}
 
-	/// <summary>Runs a command as a specific connection handle and collects all notifications.</summary>
-	private async Task<IReadOnlyList<string>> RunAndCollectAs(string command, long handle, int delayMs = 0)
+	/// <summary>Package commands return after their report is sent; their sender is the invoking player.</summary>
+	private async Task<IReadOnlyList<string>> RunPackageAndCollect(string command, Func<string, bool> reportComplete)
 	{
-		var before = NotificationCount();
-		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
-		if (delayMs > 0)
-			await Task.Delay(delayMs, TestContext.Current!.Execution.CancellationToken);
-		await SettleQueueAsync();
-		var after = NotificationCount();
-		return GetNotificationMessages(before, after);
+		var recipient = WebAppFactoryArg.ExecutorDBRef;
+		var start = WebAppFactoryArg.Notifications.DeliveryCountFor(recipient);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+		var messages = WebAppFactoryArg.Notifications.DeliveriesFor(recipient).Skip(start)
+			.Where(delivery => delivery.Sender == recipient).Select(delivery => delivery.Message).ToArray();
+		await Assert.That(messages.Any(reportComplete)).IsTrue();
+		return messages;
 	}
 
 	/// <summary>Returns the name of the BBS group at the given 1-based position.</summary>
@@ -745,8 +747,7 @@ public class MyrddinBBSIntegrationTests
 
 		var groupName = $"TestGrp_{Guid.NewGuid():N}"[..20]; // Keep name short for BBS
 
-		var preTestNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var preTestNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		var newGroupCmd = $"+bbnewgroup {groupName}";
 		var parseErrors = Parser.ValidateAndGetErrors(MarkupText.Plain(newGroupCmd), ParseType.CommandList);
@@ -791,8 +792,7 @@ public class MyrddinBBSIntegrationTests
 			Log($"[BBS NEWGROUP] WARNING: Exception looking up group dbref: {ex.Message}");
 		}
 
-		var postNewGroupNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var postNewGroupNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		Log($"\n{new string('-', 78)}");
 		Log("+BBNEWGROUP NOTIFICATIONS:");
@@ -803,9 +803,8 @@ public class MyrddinBBSIntegrationTests
 		var cantSeeMessages = new List<(int Index, string Message)>();
 
 		var ngIndex = 0;
-		foreach (var messageText in NotifyService.ReceivedCalls()
-			.Select(ExtractMessageText)
-			.OfType<string>())
+		foreach (var messageText in WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef)
+			.Select(delivery => delivery.Message))
 		{
 			ngIndex++;
 			if (ngIndex <= preTestNotifications) continue;
@@ -823,8 +822,7 @@ public class MyrddinBBSIntegrationTests
 				cantSeeMessages.Add((ngIndex, messageText));
 		}
 
-		preTestNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		preTestNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		var bbreadParseErrors = Parser.ValidateAndGetErrors(MarkupText.Plain("+bbread"), ParseType.CommandList);
 		await Assert.That(bbreadParseErrors.Count).IsEqualTo(0)
@@ -836,9 +834,8 @@ public class MyrddinBBSIntegrationTests
 		var bbreadErrors = new List<(int Index, string Message)>();
 		var notifyIndex = 0;
 
-		foreach (var messageText in NotifyService.ReceivedCalls()
-			.Select(ExtractMessageText)
-			.OfType<string>())
+		foreach (var messageText in WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef)
+			.Select(delivery => delivery.Message))
 		{
 			notifyIndex++;
 			if (notifyIndex <= preTestNotifications) continue;
@@ -945,8 +942,7 @@ public class MyrddinBBSIntegrationTests
 				Log($"  ANTLR: col {error.Column}: {error.Message}");
 		}
 
-		var prePostNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var prePostNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 		var postDeliveryStart = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		try
@@ -963,8 +959,7 @@ public class MyrddinBBSIntegrationTests
 		await WaitForBbsOutputAsync(postDeliveryStart, message =>
 			message.StartsWith("You post your note about 'Title Goes Here' in group 1", StringComparison.Ordinal));
 
-		var postPostNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var postPostNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		var postMessages = new List<(int Index, string Message)>();
 		var postErrors = new List<(int Index, string Message)>();
@@ -972,9 +967,8 @@ public class MyrddinBBSIntegrationTests
 		var cantSeeMessages = new List<(int Index, string Phase, string Message)>();
 
 		var pIndex = 0;
-		foreach (var messageText in NotifyService.ReceivedCalls()
-			.Select(ExtractMessageText)
-			.OfType<string>())
+		foreach (var messageText in WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef)
+			.Select(delivery => delivery.Message))
 		{
 			pIndex++;
 			if (pIndex <= prePostNotifications) continue;
@@ -1010,8 +1004,7 @@ public class MyrddinBBSIntegrationTests
 				Log($"  ANTLR: col {error.Column}: {error.Message}");
 		}
 
-		var preReadNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var preReadNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 		var readDeliveryStart = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		try
@@ -1031,16 +1024,14 @@ public class MyrddinBBSIntegrationTests
 			message.TrimStart().StartsWith("=", StringComparison.Ordinal)
 			&& message.Contains("Title Goes Here", StringComparison.Ordinal)
 			&& message.Contains("Body of the test post.", StringComparison.Ordinal));
-		var postReadNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var postReadNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		var readMessages = new List<(int Index, string Message)>();
 		var readErrors = new List<(int Index, string Message)>();
 
 		var rIndex = 0;
-		foreach (var messageText in NotifyService.ReceivedCalls()
-			.Select(ExtractMessageText)
-			.OfType<string>())
+		foreach (var messageText in WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef)
+			.Select(delivery => delivery.Message))
 		{
 			rIndex++;
 			if (rIndex <= preReadNotifications) continue;
@@ -1065,8 +1056,7 @@ public class MyrddinBBSIntegrationTests
 			Log($"  [{idx}] {msg}");
 		}
 
-		var preListNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var preListNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		try
 		{
@@ -1081,9 +1071,8 @@ public class MyrddinBBSIntegrationTests
 
 		var listMessages = new List<(int Index, string Message)>();
 		var lIndex = 0;
-		foreach (var messageText in NotifyService.ReceivedCalls()
-			.Select(ExtractMessageText)
-			.OfType<string>())
+		foreach (var messageText in WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef)
+			.Select(delivery => delivery.Message))
 		{
 			lIndex++;
 			if (lIndex <= preListNotifications) continue;
@@ -1175,20 +1164,17 @@ public class MyrddinBBSIntegrationTests
 		await Assert.That(postConfirmation.Message).Contains("Title Goes Here")
 			.Because("+bbpost should use the correct title 'Title Goes Here', not the group number");
 
-		var messLstSet = postMessages.Any(m => m.Message.Contains("mess_lst SET", StringComparison.OrdinalIgnoreCase)
-			|| m.Message.Contains("/mess_lst - Set.", StringComparison.OrdinalIgnoreCase));
-		await Assert.That(messLstSet).IsTrue()
-			.Because("mess_lst attribute should be SET on the group after +bbpost");
-
-		var hdrSet = postMessages.Any(m => m.Message.Contains("hdr_", StringComparison.OrdinalIgnoreCase)
-			&& m.Message.Contains("SET", StringComparison.OrdinalIgnoreCase));
-		await Assert.That(hdrSet).IsTrue()
-			.Because("hdr_ attribute should be SET on the group after +bbpost");
-
-		var bdySet = postMessages.Any(m => m.Message.Contains("bdy_", StringComparison.OrdinalIgnoreCase)
-			&& m.Message.Contains("SET", StringComparison.OrdinalIgnoreCase));
-		await Assert.That(bdySet).IsTrue()
-			.Because("bdy_ attribute should be SET on the group after +bbpost");
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var groups = await mediator.CreateStream(new GetAttributeQuery(await BbsPocketAsync(), ["GROUPS"])).LastAsync();
+		var group = DBRef.Parse(groups.Value.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries)[0]);
+		var messageList = await mediator.CreateStream(new GetAttributeQuery(group, ["MESS_LST"])).LastAsync();
+		var messageIds = messageList.Value.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(messageIds).HasSingleItem()
+			.Because("the first post must persist one message in the group's MESS_LST");
+		var header = await mediator.CreateStream(new GetAttributeQuery(group, ["HDR_" + messageIds[0]])).LastAsync();
+		var body = await mediator.CreateStream(new GetAttributeQuery(group, ["BDY_" + messageIds[0]])).LastAsync();
+		await Assert.That(header.Value.ToPlainText().Split('|')[0]).IsEqualTo("Title Goes Here");
+		await Assert.That(body.Value.ToPlainText()).IsEqualTo("Body of the test post.");
 
 		var readHasTitle = readMessages.Any(m => m.Message.Contains("Title Goes Here", StringComparison.OrdinalIgnoreCase));
 		await Assert.That(readHasTitle).IsTrue()
@@ -1263,7 +1249,7 @@ public class MyrddinBBSIntegrationTests
 		var group1Name = await GetGroupName(1);
 		Log($"  Group 1 name: {group1Name}");
 
-		var msgs = await RunAndCollect("+bblist");
+		var msgs = await RunAndCollect("+bblist", messages => messages.Any(m => m.Contains("Available Bulletin Board Groups") && m.Contains(group1Name) && m.Contains("To join groups, type")));
 
 		Log($"  Notifications received: {msgs.Count}");
 		for (var i = 0; i < msgs.Count; i++)
@@ -1301,12 +1287,12 @@ public class MyrddinBBSIntegrationTests
 		var group1Name = await GetGroupName(1);
 		Log($"  Group 1 name: {group1Name}");
 
-		var offMsgs = await RunAndCollect("+bbnotify 1=off");
+		var offMsgs = await RunAndCollect("+bbnotify 1=off", messages => messages.Any(m => m == $"Post notification for BB Group '{group1Name}' turned off. You will no longer be notified of new postings to that Group."));
 		Log($"  +bbnotify off notifications: {offMsgs.Count}");
 		for (var i = 0; i < offMsgs.Count; i++)
 			Log($"  [off/{i}] {Truncate(offMsgs[i], 200)}");
 
-		var onMsgs = await RunAndCollect("+bbnotify 1=on");
+		var onMsgs = await RunAndCollect("+bbnotify 1=on", messages => messages.Any(m => m == $"Post notification for BB Group '{group1Name}' turned on. You will now be notified of new postings to that Group."));
 		Log($"  +bbnotify on notifications: {onMsgs.Count}");
 		for (var i = 0; i < onMsgs.Count; i++)
 			Log($"  [on/{i}] {Truncate(onMsgs[i], 200)}");
@@ -1338,27 +1324,27 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS_STAGEDPOST_WRITEPROOFTOSS");
 		Log(new string('=', 78));
 
-		var startMsgs = await RunAndCollect("+bbpost 1/Proof Test Title");
+		var startMsgs = await RunAndCollect("+bbpost 1/Proof Test Title", messages => messages.Any(m => m.Contains("You start your posting to Group #1") && m.Contains("When you are finished")));
 		Log($"  +bbpost start notifications: {startMsgs.Count}");
 		for (var i = 0; i < startMsgs.Count; i++)
 			Log($"  [start/{i}] {Truncate(startMsgs[i], 200)}");
 
-		var writeMsgs = await RunAndCollect("+bbwrite First line of staged body.");
+		var writeMsgs = await RunAndCollect("+bbwrite First line of staged body.", messages => messages.Any(m => m == "Text added to bbpost."));
 		Log($"  +bbwrite notifications: {writeMsgs.Count}");
 		for (var i = 0; i < writeMsgs.Count; i++)
 			Log($"  [write/{i}] {Truncate(writeMsgs[i], 200)}");
 
-		var bbMsgs = await RunAndCollect("+bb Appended line.");
+		var bbMsgs = await RunAndCollect("+bb Appended line.", messages => messages.Any(m => m == "Text added to bbpost."));
 		Log($"  +bb notifications: {bbMsgs.Count}");
 		for (var i = 0; i < bbMsgs.Count; i++)
 			Log($"  [bb/{i}] {Truncate(bbMsgs[i], 200)}");
 
-		var proofMsgs = await RunAndCollect("+bbproof");
+		var proofMsgs = await RunAndCollect("+bbproof", messages => messages.Any(m => m.Contains("BB Post in Progress") && m.Contains("Proof Test Title") && m.Contains("First line of staged body.") && m.Contains("Appended line.")));
 		Log($"  +bbproof notifications: {proofMsgs.Count}");
 		for (var i = 0; i < proofMsgs.Count; i++)
 			Log($"  [proof/{i}] {Truncate(proofMsgs[i], 200)}");
 
-		var tossMsgs = await RunAndCollect("+bbtoss");
+		var tossMsgs = await RunAndCollect("+bbtoss", messages => messages.Any(m => m == "Your bbpost has been discarded."));
 		Log($"  +bbtoss notifications: {tossMsgs.Count}");
 		for (var i = 0; i < tossMsgs.Count; i++)
 			Log($"  [toss/{i}] {Truncate(tossMsgs[i], 200)}");
@@ -1402,12 +1388,12 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS_STAGEDPOST_WRITEANDPOST");
 		Log(new string('=', 78));
 
-		var startMsgs = await RunAndCollect("+bbpost 1/Staged Test Post");
+		var startMsgs = await RunAndCollect("+bbpost 1/Staged Test Post", messages => messages.Any(m => m.Contains("You start your posting to Group #1") && m.Contains("When you are finished")));
 		Log($"  +bbpost start notifications: {startMsgs.Count}");
 		for (var i = 0; i < startMsgs.Count; i++)
 			Log($"  [start/{i}] {Truncate(startMsgs[i], 200)}");
 
-		var writeMsgs = await RunAndCollect("+bbwrite Body of staged test post.");
+		var writeMsgs = await RunAndCollect("+bbwrite Body of staged test post.", messages => messages.Any(m => m == "Text added to bbpost."));
 		Log($"  +bbwrite notifications: {writeMsgs.Count}");
 		for (var i = 0; i < writeMsgs.Count; i++)
 			Log($"  [write/{i}] {Truncate(writeMsgs[i], 200)}");
@@ -1468,7 +1454,7 @@ public class MyrddinBBSIntegrationTests
 		// Clear bb_read to make all messages appear unread
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&bb_read #1"));
 
-		var msgs = await RunAndCollect("+bbscan");
+		var msgs = await RunAndCollect("+bbscan", messages => messages.Any(m => m.Contains("Unread Postings on the Global Bulletin Board") && m.Contains(group1Name) && m.Contains("2 unread")));
 		Log($"  +bbscan notifications: {msgs.Count}");
 		for (var i = 0; i < msgs.Count; i++)
 			Log($"  [{i}] {Truncate(msgs[i], 200)}");
@@ -1534,7 +1520,7 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS_BBCATCHUP_ALL");
 		Log(new string('=', 78));
 
-		var msgs = await RunAndCollect("+bbcatchup all");
+		var msgs = await RunAndCollect("+bbcatchup all", messages => messages.Any(m => m == "All postings on all boards marked as read."));
 		Log($"  +bbcatchup all notifications: {msgs.Count}");
 		for (var i = 0; i < msgs.Count; i++)
 			Log($"  [{i}] {Truncate(msgs[i], 200)}");
@@ -1561,7 +1547,7 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS_BBSCAN_NOUNREAD");
 		Log(new string('=', 78));
 
-		var msgs = await RunAndCollect("+bbscan");
+		var msgs = await RunAndCollect("+bbscan", messages => messages.Any(m => m.Contains("There are no unread postings on the Global Bulletin Board.")));
 		Log($"  +bbscan notifications: {msgs.Count}");
 		for (var i = 0; i < msgs.Count; i++)
 			Log($"  [{i}] {Truncate(msgs[i], 200)}");
@@ -1592,7 +1578,7 @@ public class MyrddinBBSIntegrationTests
 		var group1Name = await GetGroupName(1);
 		Log($"  Group 1 name: {group1Name}");
 
-		var msgs = await RunAndCollect("+bbedit 1/2=Body of staged test post./Edited body content.");
+		var msgs = await RunAndCollect("+bbedit 1/2=Body of staged test post./Edited body content.", messages => messages.Any(m => m.Contains("now reads:") && m.Contains("Edited body content.") && m.TrimEnd().EndsWith(new string('=', 78))));
 		Log($"  +bbedit notifications: {msgs.Count}");
 		for (var i = 0; i < msgs.Count; i++)
 			Log($"  [{i}] {Truncate(msgs[i], 200)}");
@@ -1757,7 +1743,7 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS_BBMOVE_MOVESMESSAGE");
 		Log(new string('=', 78));
 
-		var msgs = await RunAndCollect("+bbmove 1/1 to 2");
+		var msgs = await RunAndCollect("+bbmove 1/1 to 2", messages => messages.Any(m => m.Contains("removed from group '1'") && m.Contains("added to group '2'")));
 		Log($"  +bbmove notifications: {msgs.Count}");
 		for (var i = 0; i < msgs.Count; i++)
 			Log($"  [{i}] {Truncate(msgs[i], 200)}");
@@ -1794,12 +1780,12 @@ public class MyrddinBBSIntegrationTests
 		var userHandle = _regularUserHandle > 0 ? _regularUserHandle : 1L;
 		Log($"  Using handle {userHandle} (regular user: {_regularUserDbref ?? "God fallback"})");
 
-		var leaveMsgs = await RunAndCollectAs("+bbleave 2", userHandle);
+		var leaveMsgs = await RunAndCollectAs("+bbleave 2", userHandle, messages => messages.Any(m => m == "You have removed yourself from the BBTestGroup2 board."));
 		Log($"  +bbleave 2 notifications: {leaveMsgs.Count}");
 		for (var i = 0; i < leaveMsgs.Count; i++)
 			Log($"  [leave/{i}] {Truncate(leaveMsgs[i], 200)}");
 
-		var joinMsgs = await RunAndCollectAs("+bbjoin 2", userHandle);
+		var joinMsgs = await RunAndCollectAs("+bbjoin 2", userHandle, messages => messages.Any(m => m == "You have joined the BBTestGroup2 board."));
 		Log($"  +bbjoin 2 notifications: {joinMsgs.Count}");
 		for (var i = 0; i < joinMsgs.Count; i++)
 			Log($"  [join/{i}] {Truncate(joinMsgs[i], 200)}");
@@ -1829,17 +1815,17 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS_BBCONFIG_SHOWSANDSETS");
 		Log(new string('=', 78));
 
-		var showMsgs = await RunAndCollect("+bbconfig");
+		var showMsgs = await RunAndCollect("+bbconfig", messages => messages.Any(m => m.Contains("Myrddin's Global BBS") && m.Contains("autotimeout:") && m.Contains("Board Config Parameters:")));
 		Log($"  +bbconfig show notifications: {showMsgs.Count}");
 		for (var i = 0; i < showMsgs.Count; i++)
 			Log($"  [show/{i}] {Truncate(showMsgs[i], 200)}");
 
-		var set30Msgs = await RunAndCollect("+bbconfig timeout=30");
+		var set30Msgs = await RunAndCollect("+bbconfig timeout=30", messages => messages.Any(m => m.StartsWith("BB global config parameter 'timeout': 30 days.") && m.Contains("default timeout.")), pocketSender: true);
 		Log($"  +bbconfig timeout=30 notifications: {set30Msgs.Count}");
 		for (var i = 0; i < set30Msgs.Count; i++)
 			Log($"  [set30/{i}] {Truncate(set30Msgs[i], 200)}");
 
-		var reset0Msgs = await RunAndCollect("+bbconfig timeout=0");
+		var reset0Msgs = await RunAndCollect("+bbconfig timeout=0", messages => messages.Any(m => m.StartsWith("BB global config parameter 'timeout': none.") && m.Contains("default timeout.")), pocketSender: true);
 		Log($"  +bbconfig timeout=0 notifications: {reset0Msgs.Count}");
 		for (var i = 0; i < reset0Msgs.Count; i++)
 			Log($"  [reset/{i}] {Truncate(reset0Msgs[i], 200)}");
@@ -1874,12 +1860,12 @@ public class MyrddinBBSIntegrationTests
 		Log("BBS_BBLOCK_RESTRICTSGROUP");
 		Log(new string('=', 78));
 
-		var lockMsgs = await RunAndCollect("+bblock 2=flag/wizard");
+		var lockMsgs = await RunAndCollect("+bblock 2=flag/wizard", messages => messages.Any(m => m.Contains("locked") && m.Contains("flag=wizard")));
 		Log($"  +bblock notifications: {lockMsgs.Count}");
 		for (var i = 0; i < lockMsgs.Count; i++)
 			Log($"  [lock/{i}] {Truncate(lockMsgs[i], 200)}");
 
-		var wlockMsgs = await RunAndCollect("+bbwritelock 2=flag/wizard");
+		var wlockMsgs = await RunAndCollect("+bbwritelock 2=flag/wizard", messages => messages.Any(m => m.Contains("locked") && m.Contains("flag=wizard")));
 		Log($"  +bbwritelock notifications: {wlockMsgs.Count}");
 		for (var i = 0; i < wlockMsgs.Count; i++)
 			Log($"  [wlock/{i}] {Truncate(wlockMsgs[i], 200)}");
@@ -1915,12 +1901,12 @@ public class MyrddinBBSIntegrationTests
 		for (var i = 0; i < newGroupMsgs.Count; i++)
 			Log($"  [newgroup/{i}] {Truncate(newGroupMsgs[i], 200)}");
 
-		var clearMsgs = await RunAndCollect("+bbcleargroup 3");
+		var clearMsgs = await RunAndCollect("+bbcleargroup 3", messages => messages.Any(m => m.Contains("Warning") && m.Contains("+bbconfirm 3")));
 		Log($"  +bbcleargroup 3 notifications: {clearMsgs.Count}");
 		for (var i = 0; i < clearMsgs.Count; i++)
 			Log($"  [clear/{i}] {Truncate(clearMsgs[i], 200)}");
 
-		var confirmMsgs = await RunAndCollect("+bbconfirm 3");
+		var confirmMsgs = await RunAndCollect("+bbconfirm 3", messages => messages.Any(m => m.Contains("Group number 3 removed.")));
 		Log($"  +bbconfirm 3 notifications: {confirmMsgs.Count}");
 		for (var i = 0; i < confirmMsgs.Count; i++)
 			Log($"  [confirm/{i}] {Truncate(confirmMsgs[i], 200)}");

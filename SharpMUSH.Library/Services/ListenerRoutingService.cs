@@ -13,6 +13,8 @@ using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using static SharpMUSH.Library.Services.Interfaces.INotifyService;
 using SharpMUSH.Library.Utilities;
+using System.Text.RegularExpressions;
+using SharpMUSH.Configuration.Options;
 
 namespace SharpMUSH.Library.Services;
 
@@ -20,12 +22,6 @@ namespace SharpMUSH.Library.Services;
 /// Service for routing notifications to listening objects.
 /// Handles @listen attributes, ^-listen patterns, and puppet relaying.
 /// </summary>
-/// <remarks>
-/// Phase 3 + 4 implementation complete:
-/// - ✅ @prefix attribute support for puppets
-/// - ✅ @listen attribute matching with wildcard patterns
-/// - ✅ Action queue for ^-listen patterns via Mediator
-/// </remarks>
 public class ListenerRoutingService(
 	IMediator mediator,
 	IListenPatternMatcher patternMatcher,
@@ -34,8 +30,16 @@ public class ListenerRoutingService(
 	IConnectionService connectionService,
 	IServiceProvider serviceProvider,
 	IMessageBus publishEndpoint,
-	IRealityPolicy reality) : IListenerRoutingService
+	IRealityPolicy reality,
+	Lazy<INotifyService> notifier) : IListenerRoutingService
 {
+	public ListenerRoutingService(IMediator mediator, IListenPatternMatcher patternMatcher,
+		IPermissionService permissionService, ILockService lockService, IConnectionService connectionService,
+		IServiceProvider serviceProvider, IMessageBus publishEndpoint, IRealityPolicy reality)
+		: this(mediator, patternMatcher, permissionService, lockService, connectionService, serviceProvider,
+			publishEndpoint, reality, new Lazy<INotifyService>(() => serviceProvider.GetRequiredService<INotifyService>()))
+	{ }
+
 	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
 	public ListenerRoutingService(IMediator mediator, IListenPatternMatcher patternMatcher,
 		IPermissionService permissionService, ILockService lockService, IConnectionService connectionService,
@@ -74,7 +78,7 @@ public class ListenerRoutingService(
 		if (context.Location is null)
 			return;
 
-		if (context.ExcludedObjects.Contains(context.Target))
+		if (context.Exclusions.Contains(context.Target))
 			return;
 
 		if (await mediator.Send(new GetObjectNodeQuery(context.Target)) is not AnySharpObject listener)
@@ -104,21 +108,33 @@ public class ListenerRoutingService(
 
 		var messageText = message switch
 		{
-			MString markupString => markupString.ToPlainText(),
-			string str => str
+			MString markupString => markupString,
+			string str => MString.Plain(str)
 		};
+		var matchingText = MString.Concat(context.Prefix, messageText);
 
-		await ProcessListenPatternsAsync(listener, messageText, actualSender);
+		var options = serviceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Attribute;
+		// Penn's NA_PROPAGATE speech path bypasses PLAYER_LISTEN; deliberate private output does not.
+		if (context.Relay != NotificationRelay.NoRelay && !listener.IsExit
+			&& (!IsPrivate(type) || !listener.IsPlayer || options?.PlayerListen != false))
+		{
+			await ProcessListenAttributeAsync(listener, matchingText, messageText, actualSender, context, type,
+				!listener.IsPlayer || options?.PlayerAHear != false);
+			await ProcessListenPatternsAsync(listener, matchingText, actualSender);
+		}
 
-		await ProcessListenAttributeAsync(listener, messageText, actualSender);
-
-		await ProcessPuppetRelayAsync(listener, message, actualSender, type);
+		if (context.Relay != NotificationRelay.NoRelay || context.PuppetOk || IsPrivate(type))
+			await ProcessPuppetRelayAsync(listener, matchingText, actualSender, type);
 	}
 
 	private async ValueTask ProcessListenAttributeAsync(
 		AnySharpObject listener,
-		string message,
-		AnySharpObject speaker)
+		MString message,
+		MString rawBody,
+		AnySharpObject speaker,
+		NotificationContext context,
+		NotificationType type,
+		bool hearActions)
 	{
 		var listenAttr = await AttributeService.GetAttributeAsync(
 			listener, listener, "LISTEN",
@@ -129,73 +145,90 @@ public class ListenerRoutingService(
 			return;
 
 		var listenPattern = listen.Last().Value.ToPlainText();
-		if (string.IsNullOrWhiteSpace(listenPattern))
+
+		var isRegex = listen.Last().IsRegexp();
+		var options = listen.Last().IsCase() ? RegexOptions.None : RegexOptions.IgnoreCase;
+		Regex regex;
+		try { regex = isRegex ? SoftcodeRegex.Create(listenPattern, options) : SoftcodeRegex.Wildcard(listenPattern, options, caseSensitive: !options.HasFlag(RegexOptions.IgnoreCase)); }
+		catch (ArgumentException) { return; }
+		if (SoftcodeRegex.Match(regex, message.ToPlainText()) is not { Success: true } match)
 			return;
 
-		var passesListenLock = await lockService.Evaluate(LockType.Listen, listener, speaker);
-		if (!passesListenLock)
-			return;
-
-		var regex = SoftcodeRegex.Wildcard(listenPattern);
-
-		// Not the raw IsMatch: a LISTEN pattern that cannot finish must not take the puppet relay below
-		// down with it, and NotifyService would swallow the exception without either happening.
-		if (!SoftcodeRegex.IsMatch(regex, message))
-			return;
-
-		var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
-
-		// Priority: AAHEAR > (AMHEAR if self) > AHEAR
-		string triggerAttrName;
-		if (await AttributeExistsAsync(listener, "AAHEAR"))
+		if (hearActions && await lockService.Evaluate(LockType.Listen, listener, speaker))
 		{
-			triggerAttrName = "AAHEAR";
+			var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
+			var arguments = PatternArguments.Capture(match, isRegex, message);
+			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, isSelf ? "AMHEAR" : "AHEAR", arguments), ExecutionBudget.CurrentToken);
+			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, "AAHEAR", arguments), ExecutionBudget.CurrentToken);
 		}
-		else if (isSelf && await AttributeExistsAsync(listener, "AMHEAR"))
+		if (context.Location == listener.Object().DBRef || !listener.IsContainer) return;
+		await using var contents = listener.AsContainer.Content(mediator)
+			.Where(content => content.IsPlayer || content.IsThing).GetAsyncEnumerator(ExecutionBudget.CurrentToken);
+		if (!await contents.MoveNextAsync()) return;
+		using (LockEvaluationArguments.Enter(new Dictionary<string, MString> { ["0"] = message }))
+			if (!await lockService.Evaluate(LockType.InFilter, listener, speaker)) return;
+		var filter = await AttributeService.GetAttributeAsync(listener, listener, "INFILTER", IAttributeService.AttributeMode.Read, parent: true);
+		if (filter is SharpAttribute[] { Length: > 0 } filters)
 		{
-			triggerAttrName = "AMHEAR";
-		}
-		else
-		{
-			triggerAttrName = "AHEAR";
+			var attribute = filters.Last();
+			var compatibility = serviceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Compatibility;
+			var numeric = new NumericEvaluation(compatibility?.TinyMath ?? false, compatibility?.NullEqualsZero ?? false);
+			foreach (var pattern in IncomingFilterPatterns.Split(attribute.Value.ToPlainText(), ExecutionBudget.CurrentToken))
+				if (IncomingFilterPatterns.Matches(pattern, message.ToPlainText(), attribute.IsRegexp(), attribute.IsCase(), numeric)) return;
 		}
 
-		var registers = new Dictionary<string, CallState>
+		var prefix = MString.Empty;
+		var prefixAttribute = await AttributeService.GetAttributeAsync(listener, listener, "INPREFIX", IAttributeService.AttributeMode.Read, parent: true);
+		if (prefixAttribute is SharpAttribute[] { Length: > 0 })
 		{
-			["0"] = new CallState(message),
-			["#"] = new CallState(speaker.Object().DBRef.ToString()),
-			["!"] = new CallState(listener.Object().DBRef.ToString())
+			var parser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
+			var state = parser.State.IsEmpty ? ParserState.RootFor(listener.Object().DBRef) : parser.CurrentState;
+			var arguments = new Dictionary<string, CallState> { ["0"] = new(rawBody) };
+			var scoped = parser.Push(state with
+			{
+				Executor = listener.Object().DBRef,
+				Enactor = speaker.Object().DBRef,
+				Caller = speaker.Object().DBRef,
+				Arguments = arguments,
+				EnvironmentRegisters = new(arguments),
+				Registers = new(state.Registers.Reverse().Select(frame => new Dictionary<string, MString>(frame, frame.Comparer))),
+				Restrictions = EvaluationRestrictions.Current ?? state.Restrictions
+			});
+			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(scoped, listener, listener,
+				"INPREFIX", arguments, ignorePermissions: true);
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			if (result.HadErrors) return;
+			prefix = MString.Concat(result.Message ?? MString.Empty, MString.Plain(" "));
+		}
+		var executor = speaker;
+		if (context.Executor is DBRef reference)
+		{
+			if (await mediator.Send(new GetObjectNodeQuery(reference), ExecutionBudget.CurrentToken) is not AnySharpObject original) return;
+			executor = original;
+		}
+		var relay = context with
+		{
+			Prefix = prefix,
+			PuppetOk = true,
+			Relay = context.Relay == NotificationRelay.Initial ? NotificationRelay.RelayOnce : NotificationRelay.NoRelay
 		};
-
-		// Deliberately not awaited: the listener's own action is a reaction to a message that has
-		// already been delivered, and its handler evaluates softcode inline, so awaiting it here would
-		// run the reaction inside the notification that caused it — and let a listener that speaks
-		// recurse into this pass. AsTask() because discarding a ValueTask is invalid: its backing
-		// source may be pooled and handed to someone else while this one is still running.
-		_ = mediator.Send(new ExecuteListenPatternCommand(
-			listener,
-			speaker,
-			triggerAttrName,
-			registers
-		)).AsTask();
-	}
-
-	private async ValueTask<bool> AttributeExistsAsync(AnySharpObject obj, string attributeName)
-	{
-		var result = await AttributeService.GetAttributeAsync(
-			obj, obj, attributeName,
-			IAttributeService.AttributeMode.Read,
-			parent: false);
-		return result.IsAttribute;
+		do
+		{
+			var target = contents.Current.WithRoomOption();
+			if (relay.Exclusions.Contains(target.Object().DBRef)) continue;
+			if (!await permissionService.CanInteract(executor, target, IPermissionService.InteractType.Hear, speaker)) continue;
+			await notifier.Value.NotifyWithContextAsync(relay with { Target = target.Object().DBRef }, rawBody, speaker, type);
+		}
+		while (await contents.MoveNextAsync());
 	}
 
 	private async ValueTask ProcessListenPatternsAsync(
 		AnySharpObject listener,
-		string message,
+		MString message,
 		AnySharpObject speaker)
 	{
 		var hasMonitor = await listener.Object().Flags.Value.AnyAsync(f => f.Name == "MONITOR");
-		if (!hasMonitor)
+		if (!hasMonitor || await listener.HasFlag("HALT"))
 			return;
 
 		// Both locks have to pass, so a failing Use lock settles it — and a lock evaluation is now a
@@ -204,27 +237,19 @@ public class ListenerRoutingService(
 				|| !await lockService.Evaluate(LockType.Listen, listener, speaker))
 			return;
 
-		var matches = await patternMatcher.MatchListenPatternsAsync(listener, message, speaker);
+		var matches = await patternMatcher.MatchListenPatternsAsync(listener, message, speaker,
+			checkParents: await listener.HasFlag("LISTEN_PARENT"));
 
 		foreach (var match in matches)
 		{
-			var registers = new Dictionary<string, CallState>();
-
-			for (int i = 0; i < match.CapturedGroups.Length && i < 10; i++)
+			var registers = match.Arguments.Count > 0 ? match.Arguments
+				: match.CapturedGroups.Index().ToDictionary(pair => pair.Index.ToString(), pair => new CallState(pair.Item));
+			var prefix = CommandDiscoveryService.ListenPatternRegex().Match(match.Attribute.Value.ToPlainText());
+			if (!prefix.Success) continue;
+			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, match.Attribute.LongName, registers)
 			{
-				registers[i.ToString()] = new CallState(match.CapturedGroups[i]);
-			}
-
-			registers["#"] = new CallState(speaker.Object().DBRef.ToString());
-			registers["!"] = new CallState(listener.Object().DBRef.ToString());
-
-			// Not awaited, for the reason given in ProcessListenAttributeAsync.
-			_ = mediator.Send(new ExecuteListenPatternCommand(
-				listener,
-				speaker,
-				match.Attribute.Name,
-				registers
-			)).AsTask();
+				Action = match.Attribute.Value.Substring(prefix.Length)
+			}, ExecutionBudget.CurrentToken);
 		}
 	}
 
@@ -253,7 +278,7 @@ public class ListenerRoutingService(
 
 		// Check if puppet and owner are in same location (unless VERBOSE)
 		var hasVerbose = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "VERBOSE", ExecutionBudget.CurrentToken);
-		if (!hasVerbose)
+		if (!hasVerbose && !IsPrivate(type))
 		{
 			var puppetLocation = await LocateService.FriendlyWhereIs(puppet, ExecutionBudget.CurrentToken);
 			var ownerLocation = await owner.Location.WithCancellation(ExecutionBudget.CurrentToken);
@@ -278,13 +303,14 @@ public class ListenerRoutingService(
 		// prefixed, so a '<' or '&' in what the puppet heard reached the client's parser raw. An
 		// unprefixed line sits in MXP's default open mode, where <b>, <color> and <font> are honoured
 		// — which made a puppet a route for one player's text to format another player's screen.
-		var relayed = MarkupText.Concat(
-			MarkupText.Plain(prefix),
-			message switch
-			{
-				MString markupString => markupString,
-				string str => MarkupText.Plain(str)
-			});
+		var body = message switch
+		{
+			MString markupString => markupString,
+			string str => MarkupText.Plain(str)
+		};
+		var header = body.Length == 0 ? MarkupText.Empty : await NameFormatter.HeaderAsync(owner, speaker, type,
+			serviceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Command.FullInvisibility ?? false, puppet);
+		var relayed = MarkupText.Concat([MarkupText.Plain(prefix), header, body]);
 
 		var serialized = MarkupTextSerializer.Serialize(relayed);
 		foreach (var binding in bindings)
@@ -295,7 +321,7 @@ public class ListenerRoutingService(
 				|| !Nullable.Equals(current.Ref, binding.Ref)
 				|| !string.Equals(binding.Session, current.Metadata.GetValueOrDefault("SessionId"), StringComparison.Ordinal))
 				continue;
-			await publishEndpoint.HandlePublish(new MarkupOutputMessage(binding.Handle, serialized), ExecutionBudget.CurrentToken);
+			await publishEndpoint.HandlePublish(new MarkupOutputMessage(binding.Handle, serialized) { SessionId = binding.Session }, ExecutionBudget.CurrentToken);
 		}
 	}
 
@@ -311,9 +337,13 @@ public class ListenerRoutingService(
 			NotificationType.NSSay => true,
 			NotificationType.NSPose => true,
 			NotificationType.NSSemiPose => true,
-			NotificationType.Announce => false, // Private messages don't trigger listeners
+			NotificationType.PrivateEmit => true,
+			NotificationType.NSPrivateEmit => true,
+			NotificationType.Announce => false,
 			NotificationType.NSAnnounce => false,
 			_ => false
 		};
 	}
+
+	private static bool IsPrivate(NotificationType type) => type is NotificationType.PrivateEmit or NotificationType.NSPrivateEmit;
 }

@@ -257,7 +257,7 @@ public partial class LightningDatabase
 		}
 
 		// .AsContainer throws for an exit, same as the SurrealDB Match's "Invalid Location: Exit" branch —
-		// a location chain should never land on an exit, since exits carry no location edge of their own.
+		// A location chain cannot use an exit as a container; an exit's own Location is its source.
 		return Hydrate(found.Value.Dbref, found.Value.Record).AsContainer.WithNoneOption();
 	}
 
@@ -311,10 +311,44 @@ public partial class LightningDatabase
 	}
 
 	public ValueTask MoveObjectAsync(AnySharpContent enactorObj, AnySharpContainer destination, CancellationToken cancellationToken = default)
+		=> WriteContentLocationAsync(enactorObj, destination, cancellationToken);
+
+	private ValueTask WriteContentLocationAsync(AnySharpContent content, AnySharpContainer container, CancellationToken cancellationToken)
 	{
-		var objKey = (long)enactorObj.Object().Key;
-		var destKey = (long)destination.Object().Key;
-		return Store.WriteAsync(tx => SetSingleEdge(tx, Tables.Location, objKey, destKey), cancellationToken);
+		var source = content.Object().DBRef;
+		var destination = container.Object().DBRef;
+		var sourceType = content.Object().Type;
+		var destinationType = container.Object().Type;
+		return Store.WriteAsync(tx =>
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			var stored = ReadObject(tx, source.Number);
+			var target = ReadObject(tx, destination.Number);
+			if (stored is null || stored.Value.Record.CreationTime != source.CreationMilliseconds
+				|| stored.Value.Record.Type != sourceType || sourceType is not (DatabaseConstants.TypePlayer or DatabaseConstants.TypeThing or DatabaseConstants.TypeExit))
+				throw new InvalidOperationException($"Content {source} no longer identifies the stored object.");
+			if (target is null || target.Value.Record.CreationTime != destination.CreationMilliseconds
+				|| target.Value.Record.Type != destinationType || destinationType is not (DatabaseConstants.TypePlayer or DatabaseConstants.TypeThing or DatabaseConstants.TypeRoom))
+				throw new InvalidOperationException($"Container {destination} no longer identifies the stored container.");
+			if (sourceType == DatabaseConstants.TypeExit)
+			{
+				// Dispose each bounded duplicate cursor before removing historical source memberships.
+				while (true)
+				{
+					cancellationToken.ThrowIfCancellationRequested();
+					var oldSources = tx.Dups(Tables.Exit.Reverse, Keys.Dbref(source.Number)).Take(256).ToArray();
+					if (oldSources.Length == 0) break;
+					foreach (var old in oldSources)
+					{
+						cancellationToken.ThrowIfCancellationRequested();
+						DeleteEdge(tx, Tables.Exit, Keys.ReadDbref(old), source.Number);
+					}
+				}
+				PutEdge(tx, Tables.Exit, destination.Number, source.Number);
+			}
+			SetSingleEdge(tx, Tables.Location, source.Number, destination.Number);
+			cancellationToken.ThrowIfCancellationRequested();
+		}, cancellationToken);
 	}
 
 	public IAsyncEnumerable<SharpObject> GetObjectsByZoneAsync(AnySharpObject zone, CancellationToken cancellationToken = default)

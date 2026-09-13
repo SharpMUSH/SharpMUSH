@@ -9,13 +9,20 @@ using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 
 namespace SharpMUSH.Library.Services;
 
-public class CommunicationService(
+public partial class CommunicationService(
 	IMediator mediator,
 	INotifyService notifyService,
 	IConnectionService connectionService,
 	IPermissionService permissionService,
-	ILocateService locateService) : ICommunicationService
+	ILocateService locateService,
+	ILockService lockService,
+	Lazy<IDidItService> didItService,
+	Lazy<SpeechService>? speechService = null) : ICommunicationService
 {
+	public CommunicationService(IMediator mediator, INotifyService notifyService, IConnectionService connectionService,
+		IPermissionService permissionService, ILocateService locateService, ILockService lockService, Lazy<IDidItService> didItService)
+		: this(mediator, notifyService, connectionService, permissionService, locateService, lockService, didItService, null) { }
+
 	public async ValueTask SendToPortsAsync(
 		AnySharpObject executor,
 		long[] ports,

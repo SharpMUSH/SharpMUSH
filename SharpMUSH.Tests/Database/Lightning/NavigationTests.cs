@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.Database.Lightning;
 /// entrances, homed-at, parent chains and reachability. Semantics mirror
 /// <c>SurrealDatabase.Navigation.cs</c> / <c>SurrealDatabase.Objects.cs</c>.
 /// </summary>
-public class NavigationTests
+public partial class NavigationTests
 {
 	// relations: null — this fixture bypasses the host's Mediator cache, unlike the production wiring.
 	private static LightningDatabase Create(string path) => new(NullLogger<LightningDatabase>.Instance,
@@ -35,17 +35,7 @@ public class NavigationTests
 	public async Task Cleanup()
 	{
 		await _db.DisposeAsync();
-		if (Directory.Exists(_path))
-		{
-			try
-			{
-				Directory.Delete(_path, recursive: true);
-			}
-			catch (IOException)
-			{
-				// Best-effort, same as MigrationTests: a lingering mdb.lck can outlive the writer join.
-			}
-		}
+		await FixtureDirectoryCleanup.DeleteAsync(_path);
 	}
 
 	private async Task<SharpPlayer> God() => (await _db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();

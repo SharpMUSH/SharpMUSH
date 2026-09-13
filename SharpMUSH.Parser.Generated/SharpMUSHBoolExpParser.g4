@@ -74,4 +74,4 @@ indirectExpr:
     | INDIRECT string
 ;
 
-string: STRING;
+string: STRING | STAMPED_DBREF;

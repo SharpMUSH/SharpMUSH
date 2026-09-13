@@ -1,5 +1,5 @@
-using System.Buffers;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using MarkupString;
 using SharpMUSH.Library.Utilities;
@@ -78,7 +78,7 @@ public static class MushText
 	}
 
 	/// <summary>
-	/// Compiles MUSH glob patterns (<c>*</c>, <c>?</c>, with <c>\</c> escaping either) to .NET regex.
+	/// Compiles MUSH glob patterns (<c>*</c>, <c>?</c>, with <c>\</c> escaping the next character) to .NET regex.
 	/// </summary>
 	public static class Glob
 	{
@@ -97,49 +97,47 @@ public static class MushText
 		/// </remarks>
 		private const string SingleLineMode = "(?s)";
 
-		/// <summary>The characters <see cref="Regex.Escape"/> puts a backslash in front of.</summary>
-		private static readonly SearchValues<char> Metacharacters = SearchValues.Create("\t\n\f\r #$()*+.?[\\^{|");
-
-		/// <summary>The anchored regex equivalent to the glob <paramref name="pattern"/>.</summary>
+		/// <summary>The whole-input regex equivalent to the glob <paramref name="pattern"/>.</summary>
 		/// <remarks>
-		/// The pattern is cut at every metacharacter; the text between them is literal and each
-		/// metacharacter is spelled from its neighbours alone: a wildcard becomes a capture group unless
-		/// a backslash precedes it, a backslash is an escape only when a wildcard follows it, and every
-		/// other one is escaped the way <see cref="Regex.Escape"/> escapes it.
+		/// A backslash consumes the next character literally. Only unescaped wildcards create
+		/// capture groups; a dangling escape never matches, including under the non-backtracking engine.
 		/// </remarks>
 		public static string ToRegex(string pattern)
 		{
 			ArgumentNullException.ThrowIfNull(pattern);
-			var pieces = new List<string> { SingleLineMode, "^" };
-			foreach (var literal in pattern.AsSpan().SplitAny(Metacharacters))
+			var result = new StringBuilder(SingleLineMode).Append(@"\A");
+			var literalStart = 0;
+			for (var index = 0; index < pattern.Length; index++)
 			{
-				pieces.Add(pattern[literal]);
-				if (literal.End.Value < pattern.Length)
+				var character = pattern[index];
+				if (character is not ('*' or '?' or '\\')) continue;
+
+				result.Append(Regex.Escape(pattern[literalStart..index]));
+				switch (character)
 				{
-					pieces.Add(Metacharacter(pattern, literal.End.Value));
+					case '*':
+						result.Append("(.*?)");
+						break;
+					case '?':
+						result.Append("(.)");
+						break;
+					case '\\':
+						if (++index == pattern.Length)
+						{
+							// An empty character class works with RegexOptions.NonBacktracking.
+							result.Append(@"[^\s\S]");
+						}
+						else
+						{
+							result.Append(Regex.Escape(pattern[index].ToString()));
+						}
+						break;
 				}
+				literalStart = Math.Min(index + 1, pattern.Length);
 			}
 
-			pieces.Add("$");
-			return string.Concat(pieces);
-		}
-
-		/// <summary>The regex text for the metacharacter at <paramref name="at"/> in <paramref name="pattern"/>.</summary>
-		private static string Metacharacter(string pattern, int at)
-		{
-			var escaped = at > 0 && pattern[at - 1] == '\\';
-			var escaping = at + 1 < pattern.Length && pattern[at + 1] is '*' or '?';
-			return pattern[at] switch
-			{
-				'*' => escaped ? "*" : "(.*?)",
-				'?' => escaped ? "?" : "(.)",
-				'\\' => escaping ? @"\" : @"\\",
-				'\n' => @"\n",
-				'\r' => @"\r",
-				'\t' => @"\t",
-				'\f' => @"\f",
-				var c => $@"\{c}",
-			};
+			result.Append(Regex.Escape(pattern[literalStart..]));
+			return result.Append(@"\z").ToString();
 		}
 	}
 

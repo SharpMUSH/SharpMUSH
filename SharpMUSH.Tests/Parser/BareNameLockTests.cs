@@ -9,7 +9,7 @@ namespace SharpMUSH.Tests.Parser;
 
 /// <summary>
 /// Tests for bare name/dbref lock expressions (without = prefix).
-/// In PennMUSH, a bare name in a lock is equivalent to =name (exact object match).
+/// Bare object keys accept identity or direct carry; explicit = keys accept identity only.
 /// </summary>
 public class BareNameLockTests
 {

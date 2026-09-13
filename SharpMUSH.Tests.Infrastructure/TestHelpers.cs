@@ -109,11 +109,9 @@ public static class TestHelpers
 	/// <summary>
 	/// Every notification the substitute was asked to deliver, bucketed by full recipient DBRef.
 	///
-	/// <para>This exists because <c>ReceivedCalls()</c> must not be enumerated while the substitute is
-	/// still recording: NSubstitute's threading contract requires verification and production activity to
-	/// be disjoint (nsubstitute.github.io/help/threading), and the substitute the test factories install is
-	/// a singleton shared by every test in a session that TUnit runs in parallel. Clearing it is worse
-	/// still — it deletes calls other tests are about to assert on.</para>
+	/// <para>The test factories share one substitute across parallel tests. Recipient buckets isolate
+	/// assertions from unrelated calls in its shared history. Clearing that history would delete calls
+	/// other tests are about to assert on.</para>
 	///
 	/// <para>Recording happens inside the delivery callback, on the thread that made the call, into a
 	/// <see cref="ConcurrentQueue{T}"/> keyed by recipient. Enumeration never touches NSubstitute state,

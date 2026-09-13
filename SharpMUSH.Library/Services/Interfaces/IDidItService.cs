@@ -1,8 +1,12 @@
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Services.Interfaces;
+
+/// <summary>A notification resource and arguments resolved separately for each receiving connection.</summary>
+public sealed record LocalizedNotification(string Key, params object[] Arguments);
 
 /// <summary>
 /// One action on an object: a message to the actor, one message to everyone else present, and a
@@ -13,7 +17,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <param name="What">Attribute whose evaluated value is shown to <paramref name="Player"/>.</param>
 /// <param name="Def">
 /// Shown to <paramref name="Player"/> when <paramref name="What"/> is unset. Literal text, not a
-/// resource key — see the note below.
+/// resource key. A non-empty value takes precedence over <see cref="DidItRequest.DefaultNotification"/>.
 /// </param>
 /// <param name="OWhat">Attribute evaluated once and shown to everyone else in <paramref name="Loc"/>.</param>
 /// <param name="ODef">Fallback for <paramref name="OWhat"/>, rendered as "&lt;Name&gt; &lt;ODef&gt;".</param>
@@ -32,19 +36,12 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// <param name="Env1"><c>%1</c>, on the same terms as <paramref name="Env0"/>.</param>
 /// <param name="Interact">Interaction gate applied to the o-message audience.</param>
 /// <remarks>
-/// <b>Triad defaults are deliberately not localized.</b> PennMUSH wraps each of them in <c>T()</c>,
-/// which resolves once against the server's locale; SharpMUSH resolves per connection instead
-/// (<c>NotifyService.NotifyLocalized</c> reads a <c>Locale</c> from each connection's own metadata),
-/// and a single player can hold several connections with different locales at once. The
-/// evaluated-attribute half of the triad genuinely must render once regardless — running softcode
-/// per recipient would be wrong — but even the literal-default half has no seam to fix this through:
-/// <paramref name="Def"/> and <paramref name="ODef"/> reach players as rendered
-/// <c>MString</c>/<c>string</c> values, and <c>ICommunicationService.SendToRoomAsync</c>'s broadcast callback
-/// (<c>Func&lt;AnySharpObject, SharpMessage&gt;</c>) has no way to hand back a
-/// resource key instead and let the send resolve it per recipient the way <c>NotifyLocalized</c>
-/// does for a single target. Both stay literal until <c>INotifyService</c>/<c>ICommunicationService</c>
-/// grow a key-carrying broadcast path. Callers pass <c>ErrorMessages.Notifications.*</c> constants so
-/// the wording still has one home.
+/// Attribute messages evaluate once. An absent actor attribute can instead use
+/// <see cref="DefaultNotification"/>, resolved per connection by <c>NotifyLocalized</c>.
+/// Present attributes that evaluate to nothing suppress both defaults.
+/// <paramref name="ODef"/> remains literal: the room broadcast callback carries rendered text,
+/// not a resource key. Implementations of <see cref="IDidItService"/> must handle the optional
+/// notification property to deliver localized defaults; the positional constructor remains unchanged.
 /// </remarks>
 public record DidItRequest(
 	AnySharpObject Player,
@@ -57,7 +54,11 @@ public record DidItRequest(
 	AnySharpContainer? Loc = null,
 	string? Env0 = null,
 	string? Env1 = null,
-	IPermissionService.InteractType Interact = IPermissionService.InteractType.Hear);
+	IPermissionService.InteractType Interact = IPermissionService.InteractType.Hear)
+{
+	/// <summary>Used when What is absent and Def is empty, retaining Thing as the sender.</summary>
+	public LocalizedNotification? DefaultNotification { get; init; }
+}
 
 public interface IDidItService
 {
@@ -75,4 +76,20 @@ public interface IDidItService
 		LockType lockType,
 		MString? def = null,
 		AnySharpContainer? loc = null);
+
+	/// <summary>Runs the failure triad with a default resolved in each recipient connection's locale.</summary>
+	ValueTask<bool> FailLockLocalized(
+		IMUSHCodeParser parser,
+		AnySharpObject player,
+		AnySharpObject thing,
+		LockType lockType,
+		LocalizedNotification? notification,
+		AnySharpContainer? loc = null)
+	{
+		var (what, owhat, awhat) = LockMessages.FailureAttributes(lockType);
+		return DidIt(parser, new DidItRequest(player, thing, What: what, OWhat: owhat, AWhat: awhat, Loc: loc)
+		{
+			DefaultNotification = notification
+		});
+	}
 }

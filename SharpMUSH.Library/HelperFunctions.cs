@@ -192,8 +192,12 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> IsCloudy(this AnySharpObject obj)
 		=> await obj.HasFlag("CLOUDY");
 
-	public static async ValueTask<bool> IsDarkLegal(this AnySharpObject obj)
-		=> await obj.IsDark() && (await obj.CanDark() || !await obj.IsAlive());
+	public static ValueTask<bool> IsDarkLegal(this AnySharpObject obj)
+		=> obj.IsDarkLegal(ExecutionBudget.CurrentToken);
+
+	public static async ValueTask<bool> IsDarkLegal(this AnySharpObject obj, CancellationToken cancellationToken)
+		=> await obj.HasFlag("DARK", cancellationToken)
+			&& (await obj.CanDark(cancellationToken) || !await obj.IsAlive(cancellationToken));
 
 	public static async ValueTask<bool> IsAudible(this AnySharpObject obj)
 		=> await obj.HasFlag("AUDIBLE");
@@ -204,11 +208,17 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> IsListener(this AnySharpObject obj) => await obj.HasFlag("Monitor");
 
 
-	public static async ValueTask<bool> IsAlive(this AnySharpObject obj)
-		=> obj.IsPlayer
-			 || await IsPuppet(obj)
-			 || (await IsAudible(obj) && await (obj.Object().LazyAllAttributes.Value)
-				 .AnyAsync(x => x.Name == "FORWARDLIST"));
+	public static ValueTask<bool> IsAlive(this AnySharpObject obj)
+		=> obj.IsAlive(ExecutionBudget.CurrentToken);
+
+	/// <summary>Players, puppets, and audible objects with a local root FORWARDLIST are alive.</summary>
+	public static async ValueTask<bool> IsAlive(this AnySharpObject obj, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		return obj.IsPlayer || await obj.HasFlag("PUPPET", cancellationToken)
+			|| await obj.HasFlag("AUDIBLE", cancellationToken) && await obj.Object().LazyAttributes.Value
+				.AnyAsync(attribute => attribute.Name.Equals("FORWARDLIST", StringComparison.OrdinalIgnoreCase), cancellationToken);
+	}
 
 	public static async ValueTask<bool> IsPuppet(this AnySharpObject obj)
 		=> await obj.HasFlag("PUPPET");
@@ -338,8 +348,11 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> IsLoud(this AnySharpObject obj)
 		=> await obj.HasFlag("LOUD");
 
-	public static async ValueTask<bool> CanDark(this AnySharpObject obj)
-		=> await obj.HasPower("Can_Dark") || await obj.IsWizard();
+	public static ValueTask<bool> CanDark(this AnySharpObject obj)
+		=> obj.CanDark(ExecutionBudget.CurrentToken);
+
+	public static async ValueTask<bool> CanDark(this AnySharpObject obj, CancellationToken cancellationToken)
+		=> await obj.HasPower("Can_Dark", cancellationToken) || await obj.IsWizard(cancellationToken);
 
 	public static async ValueTask<bool> CanHide(this AnySharpObject obj)
 		=> await obj.HasPower("Hide") || await obj.IsPriv();
@@ -543,12 +556,12 @@ public static partial class HelperFunctions
 	public static Option<DBRef> ParseDbRef(string dbrefStr)
 	{
 		var match = DatabaseReferenceRegex.Match(dbrefStr);
-		var dbref = match.Groups["DatabaseNumber"].Value;
-		var cTime = match.Groups["CreationTimestamp"].Value;
-
-		return string.IsNullOrEmpty(dbref)
-			? new None()
-			: new DBRef(int.Parse(dbref), string.IsNullOrWhiteSpace(cTime) ? null : long.Parse(cTime));
+		if (!match.Success || !int.TryParse(match.Groups["DatabaseNumber"].ValueSpan, out var number))
+			return new None();
+		var timestamp = match.Groups["CreationTimestamp"];
+		if (!timestamp.Success) return new DBRef(number);
+		return long.TryParse(timestamp.ValueSpan, out var milliseconds)
+			? new DBRef(number, milliseconds) : new None();
 	}
 
 	/// <summary>

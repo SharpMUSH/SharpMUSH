@@ -54,44 +54,10 @@ public partial class CommandDiscoveryService(IMediator mediator) : ICommandDisco
 		var res = matchedCommandPatternAttributes.Select(match =>
 			(match.Obj,
 			 match.Attr,
-			 Arguments: CaptureArguments(match.Regex, match.IsRegex, plainCommandString, trimmedCommandString)));
+			 Arguments: PatternArguments.Capture(match.Regex, match.IsRegex, trimmedCommandString)));
 
 		return Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>
 			.FromOption(res);
-	}
-
-	/// <summary>
-	/// The registers a matched pattern binds, cut from the styled command text at the offsets the
-	/// plain-text match reported. A regexp pattern binds every group by index and by name; a
-	/// wildcard pattern binds its stars from %0 upward and skips group 0, the whole match, so that
-	/// a group's auto-generated name (e.g. "1") can never collide with the next star's index. The
-	/// first binding of a key wins, as an unnamed group's name is its own index.
-	/// </summary>
-	private static Dictionary<string, CallState> CaptureArguments(Regex regex, bool isRegex, string plain,
-		MString trimmed)
-	{
-		var arguments = new Dictionary<string, CallState>();
-		if (SoftcodeRegex.Match(regex, plain) is not { Success: true } match)
-		{
-			return arguments;
-		}
-
-		foreach (var (index, group) in match.Groups.Values.Index().Skip(isRegex ? 0 : 1))
-		{
-			var captured = trimmed.Substring(group.Index, group.Length);
-
-			if (isRegex)
-			{
-				arguments.TryAdd(index.ToString(), new CallState(captured, 0));
-				arguments.TryAdd(group.Name, new CallState(captured, 0));
-			}
-			else
-			{
-				arguments.TryAdd((index - 1).ToString(), new CallState(captured, 0));
-			}
-		}
-
-		return arguments;
 	}
 
 	/// <summary>

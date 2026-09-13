@@ -1,65 +1,16 @@
 using Mediator;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
-using System.Text.RegularExpressions;
 using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-/// <summary>
-/// Handler that builds listen attribute cache by scanning object attributes
-/// and pre-compiling all regex patterns. Results are cached automatically by QueryCachingBehavior.
-/// </summary>
+/// <summary>Compiles visible local patterns; inherited searches retain complete snapshots separately.</summary>
 public class GetListenAttributesQueryHandler : IQueryHandler<GetListenAttributesQuery, ListenAttributeCache[]>
 {
 	public async ValueTask<ListenAttributeCache[]> Handle(GetListenAttributesQuery request, CancellationToken cancellationToken)
 	{
-		var sharpObj = request.SharpObject;
-		var attributes = sharpObj.Object().AllAttributes.Value;
-		var listenAttributes = new List<ListenAttributeCache>();
-
-		await foreach (var attr in attributes.WithCancellation(cancellationToken))
-		{
-			// Skip attributes with NO_COMMAND flag (applies to listen patterns too)
-			if (attr.Flags.Any(flag => flag.Name == "NO_COMMAND"))
-				continue;
-
-			var plainValue = attr.Value.ToPlainText();
-			var match = CommandDiscoveryService.ListenPatternRegex().Match(plainValue);
-
-			if (!match.Success)
-				continue;
-
-			// Same separator unescaping as CommandAttributeScanner — Penn runs one scan for both sigils.
-			var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value);
-			var isRegex = attr.Flags.Any(flag => flag.Name.Equals("REGEXP", StringComparison.OrdinalIgnoreCase));
-			var behavior = ListenBehavior.AHear;
-			if (attr.Flags.Any(flag => flag.Name == "AAHEAR"))
-				behavior = ListenBehavior.AAHear;
-			else if (attr.Flags.Any(flag => flag.Name == "AMHEAR"))
-				behavior = ListenBehavior.AMHear;
-
-			try
-			{
-				var regex = isRegex
-					? SoftcodeRegex.Create(pattern, RegexOptions.Compiled)
-					: SoftcodeRegex.Wildcard(pattern, RegexOptions.Compiled);
-
-				listenAttributes.Add(new ListenAttributeCache(
-					attr,
-					regex,
-					isRegex,
-					behavior));
-			}
-			catch (ArgumentException)
-			{
-				// Invalid regex pattern, skip this attribute
-				continue;
-			}
-		}
-
-		return [.. listenAttributes];
+		var attributes = await request.SharpObject.Object().AllAttributes.Value.ToArrayAsync(cancellationToken);
+		return ListenAttributeSearch.Compile(new ListenAttributeSearch().Visible(attributes, false, cancellationToken), cancellationToken);
 	}
 }

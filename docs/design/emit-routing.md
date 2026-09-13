@@ -1,0 +1,164 @@
+# Emit routing
+
+The fourteen emit/prompt commands and their fourteen function counterparts delegate to
+one `ICommunicationService.EmitWithOutcomeAsync` core. `EmitAsync` delegates to it and retains
+the function result contract. Wrappers evaluate arguments and select list, silent,
+no-spoof and explicit spoof options. `EmitRequest` carries the resulting intent.
+Custom service implementations must supply the outcome method; an empty result alone cannot
+establish admission.
+
+| Scope | Recipients and gates |
+| --- | --- |
+| Immediate | Executor's immediate location and its contents; Speech lock |
+| Outermost | Outermost room and its contents; mobile executors only; Speech lock |
+| Room | Each named container and its contents; Page/HAVEN and Speech locks |
+| Omit | Explicit container or distinct locations of excluded objects; Speech lock per location |
+| Zone | Rooms belonging to a controlled zone; Speech lock per room |
+| Private | Located objects, or privileged descriptor recipients; Page/HAVEN for objects |
+| Prompt | Located objects through the Prompt protocol method; Page/HAVEN |
+
+`SendToRoomAsync` remains the contents-only operation used by movement and other callers.
+The emit core includes the location object, so an object in an inventory can notify its carrier.
+Recipient exclusions compare DBRefs, not object-wrapper identity.
+
+Target resolution, spoof authorization and recipient Interact-lock checks use the executor.
+Page/HAVEN admission, including Wizard/Pemit_All bypasses and Page failure actions, uses the
+selected speaker. Speech checks the speaker too, while Speech refusal actions target the executor.
+Explicit `/spoof`, when authorized,
+selects the enactor as speaker for Speech locks, reality hearing and output attribution.
+NS variants suppress recipient NOSPOOF tagging when permitted; they do not implicitly select
+the enactor. LOUD on the speaker bypasses Speech locks.
+
+Explicit failed Speech locks use the generic `SPEECH_LOCK` failure attribute triad
+(`SPEECH_LOCK` + backtick + `FAILURE`, `OFAILURE`, `AFAILURE`). Implicit OEMIT and zone
+fanout filter denied locations without running a refusal for every room. Page refusals use
+FailLock too. List private output suppresses the default refusal while retaining custom Page
+failure attributes. Ordinary empty private messages do nothing; empty prompts publish a prompt
+message and reach the protocol callback with an empty body.
+
+EMIT, NSEMIT, NSOEMIT and NSPROMPT commands return the attempted message only after admission.
+A location passes admission before recipient hearing filters, even if nobody ultimately hears it;
+private output needs at least one target to pass lookup, Page/HAVEN and hearing checks. Lock
+refusals return empty. Lookup failures take precedence in the payload-command result without
+preventing delivery to other admitted targets. NSPROMPT retains the first lookup failure's
+CallState; unresolved explicit OEMIT/NSOEMIT command locations return InvalidRoom. Ordinary OEMIT
+still returns empty on success. These lookup results retain
+their existing error metadata. Functions retain empty results for these refusals; explicit
+noncontainer OEMIT locations return InvalidRoom with HadErrors on both surfaces.
+
+Missing personal Speech/Page failure attributes use a resource key resolved separately for each
+connection, including two connections on the same player with different locales. Custom failure
+attributes still evaluate once; present-empty attributes suppress the default, and O/A failure
+attributes still run. HTTP capture receives the neutral default through the normal notification path.
+Room triad defaults remain literal pending the separate callback work in #1006.
+
+`@emit/room` and `@nsemit/room` select the outermost room, like LEMIT. Both aliases accept
+`/silent` and `/noisy` to override `silent_pemit` for their confirmation. This is SharpMUSH's
+documented ROOM alias behavior. `@pemit/contents`
+selects a container and its contents, like REMIT, retaining spaces in the target name even with
+`/list`. `@pemit/spoof` selects an authorized speaker for ordinary private or contents output.
+
+PEMIT descriptor routing requires privilege and an active positive descriptor. Functions infer
+descriptors from an all-integer target list; a mixed numeric/DBRef list remains object matching.
+Commands require explicit `/port`, so numeric object names remain addressable. `/port` accepts
+one complete positive descriptor number; `/port/list` accepts a space-separated descriptor list.
+Unlike PennMUSH's numeric-prefix parsing, SharpMUSH rejects trailing text in a single descriptor,
+including additional descriptors without `/list`. Neither implementation broadcasts to the whole
+list without `/list`. SharpMUSH also supports `/port` on NSPEMIT. PORT takes precedence over
+CONTENTS and uses executor attribution;
+CONTENTS takes precedence over LIST. Neither branch inherits private-object-list implicit silence.
+Private/list defaults to silent unless `/noisy` is supplied;
+other command confirmation defaults follow `silent_pemit`, with `/silent` and `/noisy` overrides.
+
+PEMIT/NSPEMIT and REMIT/NSREMIT functions suppress confirmations. PROMPT/NSPROMPT,
+LEMIT/NSLEMIT and ZEMIT/NSZEMIT retain PennMUSH's confirmation behavior.
+
+OEMIT retains PennMUSH's maximum of ten matched exclusions. This is a recipient-selection
+contract, unrelated to the obsolete 8,192-character output buffers. Explicit location syntax
+with no matching exclusions still emits to that location; implicit unmatched lists report failure.
+Explicit-location exclusions accept quoted English ordinals and `*Player` names, but only immediate
+player and thing members count toward the exclusion limit. The destination itself and exits cannot
+be omitted or consume exclusion slots. Broadcasts notify the location plus player and thing contents;
+navigation still enumerates exits. PennMUSH can count an absolute exit whose destination equals the
+room toward its exclusion limit even though that exit receives no broadcast; SharpMUSH counts only
+actual content recipients. Player and thing containers are valid locations; exit locations
+produce the localized invalid-room diagnostic and an error result without delivering the message.
+
+Private object output uses PrivateEmit/NSPrivateEmit notification intents. Both activate LISTEN
+and MONITOR and force puppet relay even when the owner is colocated. Descriptor output retains
+its announcement intent. Administrative Announce/NSAnnounce notifications remain inert.
+
+Notify and Prompt share recipient admission and listener preparation. HTTP capture retains its
+Notify-only behavior before listener routing. Direct prompts carry MarkupPromptMessage without
+output prefix/suffix wrapping. Prompt framing is not inherited by puppet relays or queued actions.
+Puppet relay retains styled text, owner reality checks and connection-binding validation.
+
+Listener reactions await queue admission, then execute as independent command lists. The listener
+is executor and the speaker is enactor/caller; command text and positional captures are snapshots.
+Wildcard captures start at %0; regexp %0 is the whole match. Both preserve markup, honor CASE,
+and use the same capture implementation as command discovery. MONITOR actions start after the
+parsed pattern separator, including escaped colons and paired backslashes.
+
+LISTEN is local to the object and matches even a present-empty pattern. Its actions may inherit;
+a local empty action suppresses inheritance. AHEAR runs for another speaker, AMHEAR for self,
+and AAHEAR additionally. PlayerListen gates private player LISTEN/MONITOR; PlayerAHear gates
+only player AHEAR/AMHEAR/AAHEAR. The existing propagated speech path bypasses PlayerListen.
+MONITOR rejects HALT on every object. Hear-action admission rejects halted nonplayers; players
+retain LISTEN actions. Queue rejection does not execute a reaction inline, and restrictions and
+cancellation cannot turn it into an unrestricted callback.
+
+LISTEN actions are admitted before MONITOR actions. LISTEN_PARENT on the original listener enables
+inherited MONITOR patterns; parents need no flag. Complete child-first attribute snapshots retain
+plain and empty definitions as shadowing names. Inherited NO_INHERIT trees are invisible and permit
+farther visible definitions; visible NO_COMMAND roots block their full name and backtick descendants.
+Matching and queued source metadata preserve the full attribute path, with the child as executor.
+
+SharpMUSH visits at most Limit.MaxParents parents per phase, including zero as a local-only parent
+phase. Configured type-ancestor fallback is a SharpMUSH extension: when inheritance is enabled, it
+starts a separate phase with the same parent bound, shadow masks and visited object identities.
+It does not recursively consult another type ancestor. Complete local snapshots are cached and
+invalidated by attribute mutations; parent links are read on each search, and compiled regexes reuse
+the shared cache. The legacy ancestor query remains callable without caching a mutable aggregate.
+
+Existing listener constructors and the string matcher entry point remain available. Custom
+matchers must override the markup overload to preserve styling in captures; its compatibility
+default retains their plain string captures. General queued-action HALT enforcement remains
+part of #1006. Empty prompt delivery does not establish the other lifecycle ordering proposed
+in #1010.
+
+A matching local LISTEN forwards to player and thing contents unless the listener is the original
+communication destination. Matching includes the incoming prefix; forwarding retains the raw body.
+Listen-lock failure, HALT and PlayerAHear affect actions independently of forwarding. MONITOR alone
+does not forward. Each contents pass advances an immutable relay state: two passes may react and
+forward, then the terminal delivery runs neither LISTEN nor MONITOR. Contents propagation permits
+puppet output at that terminal step, retaining ordinary remote-owner/VERBOSE checks; private output
+retains forced puppet relay. Prompts become ordinary output when forwarded.
+
+The inherited `@lock/infilter` evaluation receives matching text as `%0`. Its arguments are copied
+into a scoped immutable context and read when attribute locks execute, including indirect cached
+locks. Nested evaluations restore the preceding context; independent queued hear actions do not
+inherit it. Inherited INFILTER is literal: grouping and escapes protect commas without evaluation or
+space compression. REGEXP and CASE select matching policy. Non-regexp ordering prefixes (`>`, `>=`,
+`<`, `<=`) compare numeric operands when accepted by the configured numeric policy, otherwise text.
+CASE controls wildcard/regexp matching; nonnumeric ordering uses culture-sensitive collation without
+case folding, independently of CASE, matching PennMUSH's `local_wild_match_case` ordering branches.
+Strict conversion rejects overflow and nonzero values rounded to zero. Exact hexadecimal subnormals
+remain numeric; this does not emulate every platform-specific `strtod` rounded-subnormal ERANGE case.
+
+Inherited INPREFIX evaluates once per forwarding listener with listener executor/caller, speaker
+enactor, and raw body `%0`. Its result replaces the previous prefix and appends a space, including a
+present-empty result. A local empty attribute suppresses inheritance. Styled prefixes and bodies
+reach the shared notification path; listener captures and HTTP capture precede recipient NOSPOOF
+headers. Cancellation and failed prefix evaluation do not become successful fallback output.
+An empty relay still reaches nested listeners, which may add an INPREFIX. If its combined prefix
+and body remain empty, it produces neither HTTP capture text nor an ordinary transport message or
+connection framing. Actual empty prompts retain their protocol boundary.
+
+The original executor controls forwarded output Hear admission, with the speaker supplied separately.
+Listener reactions and puppet routing retain their separate speaker-based Interact gate. Output
+admitted for the executor can therefore reach a target whose speaker gate stops further reactions.
+Explicit missing or recycled executor identities stop forwarding. Exclusions retain full stamped
+identities in immutable snapshots across relay steps, including legacy record `with` updates.
+Existing notifier signatures remain available; implementations of the optional contextual notifier
+capability preserve relay metadata. Legacy notifiers receive combined prefix/body text but cannot
+propagate origin, exclusions or relay depth themselves.
