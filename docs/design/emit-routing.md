@@ -51,7 +51,9 @@ attributes still evaluate once; present-empty attributes suppress the default, a
 attributes still run. HTTP capture receives the neutral default through the normal notification path.
 Room triad defaults remain literal pending the separate callback work in #1006.
 
-`@emit/room` and `@nsemit/room` select the outermost room, like LEMIT. `@pemit/contents`
+`@emit/room` and `@nsemit/room` select the outermost room, like LEMIT. Both aliases accept
+`/silent` and `/noisy` to override `silent_pemit` for their confirmation. This is SharpMUSH's
+documented ROOM alias behavior. `@pemit/contents`
 selects a container and its contents, like REMIT, retaining spaces in the target name even with
 `/list`. `@pemit/spoof` selects an authorized speaker for ordinary private or contents output.
 

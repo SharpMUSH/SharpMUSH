@@ -2896,7 +2896,7 @@ public partial class Commands
 		return new CallState(truthy) { HadErrors = nestedResult?.HadErrors == true };
 	}
 
-	[SharpCommand(Name = "@NSEMIT", Switches = ["ROOM", "NOEVAL", "SILENT", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
+	[SharpCommand(Name = "@NSEMIT", Switches = ["ROOM", "NOEVAL", "SILENT", "NOISY", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
 		MinArgs = 0, MaxArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> NoSpoofEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await RunEmitCommand(parser, _2, EmitScope.Immediate, true);
@@ -4925,7 +4925,7 @@ public partial class Commands
 		return currentFlagNames.SequenceEqual(defaultFlagNames);
 	}
 
-	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF", "ROOM"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
+	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF", "ROOM", "SILENT", "NOISY"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
 		MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
