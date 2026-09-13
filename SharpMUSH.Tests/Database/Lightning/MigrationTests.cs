@@ -28,7 +28,7 @@ public class MigrationTests
 		finally
 		{
 			await db.DisposeAsync();
-			await DeleteFixtureDirectoryAsync(path);
+			await FixtureDirectoryCleanup.DeleteAsync(path);
 		}
 	}
 	// relations: null — this fixture bypasses the host's Mediator cache, unlike the production wiring.
@@ -61,7 +61,7 @@ public class MigrationTests
 		finally
 		{
 			await db.DisposeAsync();
-			await DeleteFixtureDirectoryAsync(path);
+			await FixtureDirectoryCleanup.DeleteAsync(path);
 		}
 	}
 
@@ -118,24 +118,8 @@ public class MigrationTests
 		finally
 		{
 			await db.DisposeAsync();
-			await DeleteFixtureDirectoryAsync(path);
+			await FixtureDirectoryCleanup.DeleteAsync(path);
 		}
 	}
 
-	/// <summary>Retries transient LMDB release races and surfaces persistent cleanup failures.</summary>
-	private static async Task DeleteFixtureDirectoryAsync(string path)
-	{
-		for (var attempt = 0; ; attempt++)
-		{
-			try
-			{
-				if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
-				return;
-			}
-			catch (IOException) when (attempt < 4)
-			{
-				await Task.Delay(25);
-			}
-		}
-	}
 }

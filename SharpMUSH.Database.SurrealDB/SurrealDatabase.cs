@@ -1050,6 +1050,7 @@ public partial class SurrealDatabase(
 
 	internal record FlagRecord
 	{
+		public string recordId { get; set; } = "";
 		public string name { get; set; } = "";
 		public string symbol { get; set; } = "";
 		public bool system { get; set; }
@@ -1062,6 +1063,7 @@ public partial class SurrealDatabase(
 
 	internal record PowerRecord
 	{
+		public string recordId { get; set; } = "";
 		public string name { get; set; } = "";
 		public string alias { get; set; } = "";
 		public string symbol { get; set; } = "";

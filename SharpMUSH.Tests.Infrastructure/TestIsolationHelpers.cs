@@ -59,10 +59,11 @@ public static class TestIsolationHelpers
 	private static async Task<DBRef> CreateNamedTestPlayerAsync(
 		IServiceProvider services,
 		IMediator mediator,
-		string name)
+		string name,
+		DBRef? initialHome = null)
 	{
 		var options = services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
-		var defaultHome = new DBRef((int)options.CurrentValue.Database.DefaultHome);
+		var defaultHome = initialHome ?? new DBRef((int)options.CurrentValue.Database.DefaultHome);
 		var startingQuota = (int)options.CurrentValue.Limit.StartingQuota;
 
 		return await mediator.Send(new CreatePlayerCommand(
@@ -94,14 +95,25 @@ public static class TestIsolationHelpers
 	/// (e.g. <c>"MvtTelSelf"</c> or <c>"MvtHome"</c>).
 	/// </param>
 	/// <returns>A <see cref="TestPlayer"/> with the DBRef, handle and name.</returns>
-	public static async Task<TestPlayer> CreateTestPlayerWithHandleAsync(
+	public static Task<TestPlayer> CreateTestPlayerWithHandleAsync(
 		IServiceProvider services,
 		IMediator mediator,
 		IConnectionService connectionService,
 		string namePrefix)
+		=> CreatePlayerWithHandleAsync(services, mediator, connectionService, namePrefix, null);
+
+	/// <summary>Creates the player at its supplied home before registering or binding a connection.</summary>
+	public static Task<TestPlayer> CreateTestPlayerWithHandleAsync(
+		IServiceProvider services, IMediator mediator, IConnectionService connectionService,
+		string namePrefix, DBRef initialHome)
+		=> CreatePlayerWithHandleAsync(services, mediator, connectionService, namePrefix, initialHome);
+
+	private static async Task<TestPlayer> CreatePlayerWithHandleAsync(
+		IServiceProvider services, IMediator mediator, IConnectionService connectionService,
+		string namePrefix, DBRef? initialHome)
 	{
 		var name = GenerateUniqueName(namePrefix);
-		var playerDbRef = await CreateNamedTestPlayerAsync(services, mediator, name);
+		var playerDbRef = await CreateNamedTestPlayerAsync(services, mediator, name, initialHome);
 		var handle = GenerateUniqueHandle();
 
 		await connectionService.Register(

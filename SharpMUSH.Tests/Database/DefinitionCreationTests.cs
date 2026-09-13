@@ -62,11 +62,11 @@ public class SurrealDefinitionCreationTests
 
 internal static class DefinitionCreationContract
 {
-	private sealed record World(ISharpDatabase Database, Func<ValueTask> Cleanup, ISurrealDbClient? Client = null) : IAsyncDisposable
+	internal sealed record World(ISharpDatabase Database, Func<ValueTask> Cleanup, ISurrealDbClient? Client = null) : IAsyncDisposable
 	{
 		public ValueTask DisposeAsync() => Cleanup();
 	}
-	private static async Task<World> Open(string provider)
+	internal static async Task<World> Open(string provider)
 	{
 		if (provider == "lightning")
 		{
@@ -76,7 +76,7 @@ internal static class DefinitionCreationContract
 			async ValueTask Cleanup()
 			{
 				await db.DisposeAsync();
-				if (Directory.Exists(path)) Directory.Delete(path, true);
+				await FixtureDirectoryCleanup.DeleteAsync(path);
 			}
 			try { await db.Migrate(); return new World(db, Cleanup); }
 			catch { await Cleanup(); throw; }
