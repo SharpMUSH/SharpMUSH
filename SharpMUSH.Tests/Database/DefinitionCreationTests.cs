@@ -141,7 +141,8 @@ internal static class DefinitionCreationContract
 				await gate.Task;
 				return await db.CreatePowerAsync(key, alias, "Q", false, [alias], [alias], [alias]);
 			}
-			var attempts = new[] { Create(name, "FIRST"), Create(name.ToLowerInvariant(), "SECOND") };
+			var attempts = Enumerable.Range(0, 8)
+				.Select(index => Create(index % 2 == 0 ? name : name.ToLowerInvariant(), $"CANDIDATE{index}")).ToArray();
 			gate.SetResult();
 			var results = await Task.WhenAll(attempts);
 			var winners = results.OfType<SharpPower>().ToArray();
@@ -159,7 +160,8 @@ internal static class DefinitionCreationContract
 				await gate.Task;
 				return await db.CreateObjectFlagAsync(key, [alias], "Q", false, [alias], [alias], [alias]);
 			}
-			var attempts = new[] { Create(name, "FIRST"), Create(name.ToLowerInvariant(), "SECOND") };
+			var attempts = Enumerable.Range(0, 8)
+				.Select(index => Create(index % 2 == 0 ? name : name.ToLowerInvariant(), $"CANDIDATE{index}")).ToArray();
 			gate.SetResult();
 			var results = await Task.WhenAll(attempts);
 			var winners = results.OfType<SharpObjectFlag>().ToArray();

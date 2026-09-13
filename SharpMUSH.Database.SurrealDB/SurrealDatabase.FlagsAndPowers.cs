@@ -22,6 +22,10 @@ public partial class SurrealDatabase
 {
 	#region Flags and Powers
 
+	// Embedded optimistic transactions can commit duplicate edges despite the unique index.
+	// One provider owns the store; serialize its assignment writes across both relationship tables.
+	private readonly SemaphoreSlim _definitionAssignmentLock = new(1, 1);
+
 	/// <summary>Finds a flag by its case-insensitive name or alias.</summary>
 	public async ValueTask<SharpObjectFlag?> GetObjectFlagAsync(string name, CancellationToken cancellationToken = default)
 	{
@@ -103,46 +107,59 @@ public partial class SurrealDatabase
 
 	public async ValueTask<bool> SetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default)
 	{
-		var objKey = dbref.Object().Key;
-		var parameters = new Dictionary<string, object?>
+		await _definitionAssignmentLock.WaitAsync(cancellationToken);
+		try
 		{
-			["key"] = objKey,
-			["fname"] = flag.Name
-		};
+			var definition = await FindFlagRecordAsync(flag.Name, cancellationToken);
+			if (definition is null) return false;
 
-		var existing = await ExecuteAsync(
-			"SELECT count() AS cnt FROM has_flags WHERE in = object:$key AND out.name = $fname GROUP ALL",
-			parameters, cancellationToken);
+			var parameters = new Dictionary<string, object?>
+			{
+				["key"] = dbref.Object().Key,
+				["recordId"] = new StringRecordId(definition.recordId)
+			};
 
-		var existingResults = existing.GetValue<List<CountRecord>>(0)!;
-		if (existingResults.Count > 0 && existingResults[0].cnt > 0)
-			return false;
+			var existing = await ExecuteAsync(
+				"SELECT count() AS cnt FROM has_flags WHERE in = object:$key AND out = $recordId GROUP ALL",
+				parameters, cancellationToken);
+			if (existing.HasErrors) return false;
+			if (existing.GetValue<List<CountRecord>>(0) is { Count: > 0 } counts && counts[0].cnt > 0)
+				return false;
 
-		await ExecuteAsync(
-			"RELATE object:$key->has_flags->object_flag:⟨$fname⟩",
-			parameters, cancellationToken);
-		return true;
+			var response = await ExecuteAsync(
+				"RELATE (SELECT VALUE id FROM object:$key)->has_flags->(SELECT VALUE id FROM $recordId) RETURN VALUE <string> id",
+				parameters, cancellationToken);
+			return !response.HasErrors && response.GetValue<List<string>>(0) is { Count: > 0 };
+		}
+		finally
+		{
+			_definitionAssignmentLock.Release();
+		}
 	}
 
 	public async ValueTask<bool> UnsetObjectFlagAsync(AnySharpObject dbref, SharpObjectFlag flag, CancellationToken cancellationToken = default)
 	{
-		var objKey = dbref.Object().Key;
-		var parameters = new Dictionary<string, object?>
+		await _definitionAssignmentLock.WaitAsync(cancellationToken);
+		try
 		{
-			["key"] = objKey,
-			["fname"] = flag.Name
-		};
+			var definition = await FindFlagRecordAsync(flag.Name, cancellationToken);
+			if (definition is null) return false;
 
-		var countResponse = await ExecuteAsync(
-			"SELECT count() AS cnt FROM has_flags WHERE in = object:$key AND out.name = $fname GROUP ALL",
-			parameters, cancellationToken);
-		var countResults = countResponse.GetValue<List<CountRecord>>(0)!;
-		var existed = countResults.Count > 0 && countResults[0].cnt > 0;
+			var parameters = new Dictionary<string, object?>
+			{
+				["key"] = dbref.Object().Key,
+				["recordId"] = new StringRecordId(definition.recordId)
+			};
 
-		await ExecuteAsync(
-			"DELETE has_flags WHERE in = object:$key AND out.name = $fname",
-			parameters, cancellationToken);
-		return existed;
+			var response = await ExecuteAsync(
+				"RETURN array::len((DELETE has_flags WHERE in = object:$key AND out = $recordId RETURN BEFORE)) > 0;",
+				parameters, cancellationToken);
+			return !response.HasErrors && response.GetValue<bool>(0);
+		}
+		finally
+		{
+			_definitionAssignmentLock.Release();
+		}
 	}
 
 	public async ValueTask<bool> UpdateObjectFlagAsync(string name, string[]? aliases, string symbol,
@@ -252,46 +269,59 @@ public partial class SurrealDatabase
 
 	public async ValueTask<bool> SetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
 	{
-		var objKey = dbref.Object().Key;
-		var parameters = new Dictionary<string, object?>
+		await _definitionAssignmentLock.WaitAsync(cancellationToken);
+		try
 		{
-			["key"] = objKey,
-			["pname"] = power.Name
-		};
+			var definition = await FindPowerRecordAsync(power.Name, cancellationToken);
+			if (definition is null) return false;
 
-		var existing = await ExecuteAsync(
-			"SELECT count() AS cnt FROM has_powers WHERE in = object:$key AND out.name = $pname GROUP ALL",
-			parameters, cancellationToken);
+			var parameters = new Dictionary<string, object?>
+			{
+				["key"] = dbref.Object().Key,
+				["recordId"] = new StringRecordId(definition.recordId)
+			};
 
-		var existingResults = existing.GetValue<List<CountRecord>>(0)!;
-		if (existingResults.Count > 0 && existingResults[0].cnt > 0)
-			return false;
+			var existing = await ExecuteAsync(
+				"SELECT count() AS cnt FROM has_powers WHERE in = object:$key AND out = $recordId GROUP ALL",
+				parameters, cancellationToken);
+			if (existing.HasErrors) return false;
+			if (existing.GetValue<List<CountRecord>>(0) is { Count: > 0 } counts && counts[0].cnt > 0)
+				return false;
 
-		await ExecuteAsync(
-			"RELATE object:$key->has_powers->power:⟨$pname⟩",
-			parameters, cancellationToken);
-		return true;
+			var response = await ExecuteAsync(
+				"RELATE (SELECT VALUE id FROM object:$key)->has_powers->(SELECT VALUE id FROM $recordId) RETURN VALUE <string> id",
+				parameters, cancellationToken);
+			return !response.HasErrors && response.GetValue<List<string>>(0) is { Count: > 0 };
+		}
+		finally
+		{
+			_definitionAssignmentLock.Release();
+		}
 	}
 
 	public async ValueTask<bool> UnsetObjectPowerAsync(AnySharpObject dbref, SharpPower power, CancellationToken cancellationToken = default)
 	{
-		var objKey = dbref.Object().Key;
-		var parameters = new Dictionary<string, object?>
+		await _definitionAssignmentLock.WaitAsync(cancellationToken);
+		try
 		{
-			["key"] = objKey,
-			["pname"] = power.Name
-		};
+			var definition = await FindPowerRecordAsync(power.Name, cancellationToken);
+			if (definition is null) return false;
 
-		var countResponse = await ExecuteAsync(
-			"SELECT count() AS cnt FROM has_powers WHERE in = object:$key AND out.name = $pname GROUP ALL",
-			parameters, cancellationToken);
-		var countResults = countResponse.GetValue<List<CountRecord>>(0)!;
-		var existed = countResults.Count > 0 && countResults[0].cnt > 0;
+			var parameters = new Dictionary<string, object?>
+			{
+				["key"] = dbref.Object().Key,
+				["recordId"] = new StringRecordId(definition.recordId)
+			};
 
-		await ExecuteAsync(
-			"DELETE has_powers WHERE in = object:$key AND out.name = $pname",
-			parameters, cancellationToken);
-		return existed;
+			var response = await ExecuteAsync(
+				"RETURN array::len((DELETE has_powers WHERE in = object:$key AND out = $recordId RETURN BEFORE)) > 0;",
+				parameters, cancellationToken);
+			return !response.HasErrors && response.GetValue<bool>(0);
+		}
+		finally
+		{
+			_definitionAssignmentLock.Release();
+		}
 	}
 
 	public async ValueTask<bool> UpdatePowerAsync(string name, string alias, string symbol,
