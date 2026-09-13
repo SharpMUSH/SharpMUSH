@@ -170,8 +170,12 @@ public class DefinitionAuthorizationTests
 				: reverse ? $"{extra}/{operation}" : $"{operation}/{extra}";
 			var argument = operation switch { "type" => "THING", "alias" => name + "_CHANGED", "restrict" => "FLAG^ROYALTY", _ => "" };
 			var command = MarkupText.Plain($"@{kind}/{switches} {name}={argument}");
+			var notificationOffset = Factory.Notifications.DeliveryCountFor(actor.DbRef);
 			await Factory.CommandParser.CommandParse(actor.Handle, Connections, command);
 			await Assert.That(await Snapshot(kind, name)).IsEqualTo(before);
+			var refusal = Factory.Services.GetRequiredService<ILocalizationService>()
+				.Format(nameof(ErrorMessages.Notifications.NotEnoughMagic), null);
+			await Assert.That(Factory.Notifications.DeliveriesFor(actor.DbRef).Skip(notificationOffset).Select(delivery => delivery.Message)).Contains(refusal);
 			await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(Factory.Services.GetRequiredService<INotifyService>(),
 				nameof(ErrorMessages.Notifications.NotEnoughMagic), actor.DbRef, actor.DbRef)).IsTrue();
 			await Factory.CommandParser.CommandParse(1, Connections, command);
