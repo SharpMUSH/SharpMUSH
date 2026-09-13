@@ -29,8 +29,7 @@ public class FlagUnsetPermissionTests
 		=> WebAppFactoryArg.Services.GetRequiredService<IManipulateSharpObjectService>();
 
 	/// <summary>
-	/// Every flag the seeds restrict unsetting on, with the permission level each requires. Staff-only
-	/// flags and the monitoring/punishment flags a badly behaved character would most want to clear.
+	/// Seeded unset permission and metadata arrays. ODARK controls visibility, not assignment privilege.
 	/// </summary>
 	public static IEnumerable<(string Flag, string Permission)> RestrictedUnsetFlags() =>
 	[
@@ -63,7 +62,7 @@ public class FlagUnsetPermissionTests
 		await Assert.That(flag).IsNotNull();
 		await Assert.That(flag!.UnsetPermissions)
 			.IsNotEmpty()
-			.Because($"{flagName} must not be unsettable by anyone who controls the object");
+			.Because($"{flagName}'s seeded permission and metadata array must persist");
 		await Assert.That(flag.UnsetPermissions).Contains(permission);
 	}
 

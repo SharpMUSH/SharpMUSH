@@ -176,20 +176,16 @@ public class ManipulateSharpObjectService(
 			return ErrorMessages.Returns.InvalidFlag;
 		}
 
-		// Generic flag permission check, matching PennMUSH's can_set_flag_generic().
-		// Permission levels: trusted, royalty, wizard, god (see help "flag permissions").
-		var requiredPermissions = unset ? realFlag.UnsetPermissions : realFlag.SetPermissions;
-		if (requiredPermissions is not null && requiredPermissions.Length > 0)
+		// Visibility/effect metadata does not grant or require a privilege.
+		var requiredPermissions = (unset ? realFlag.UnsetPermissions : realFlag.SetPermissions) ?? [];
+		if (realFlag.Disabled || !await HasAnyFlagPermission(executor, obj, requiredPermissions))
 		{
-			if (!await HasAnyFlagPermission(executor, obj, requiredPermissions))
+			if (notify)
 			{
-				if (notify)
-				{
-					await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
-				}
-
-				return ErrorMessages.Returns.PermissionDenied;
+				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
 			}
+
+			return ErrorMessages.Returns.PermissionDenied;
 		}
 
 		// Flag-specific permission checks, matching PennMUSH's can_set_flag().
@@ -667,14 +663,27 @@ public class ManipulateSharpObjectService(
 		return true;
 	}
 
-	/// <summary>Whether <paramref name="executor"/> holds at least one of <paramref name="permissions"/>.</summary>
-	private static ValueTask<bool> HasAnyFlagPermission(AnySharpObject executor, AnySharpObject obj, string[] permissions)
-		=> permissions.ToAsyncEnumerable().AnyAsync(async (permission, _) => await HasFlagPermission(executor, obj, permission));
+	/// <summary>Checks operation prohibitions before the remaining principal alternatives; metadata alone imposes no privilege requirement.</summary>
+	private static async ValueTask<bool> HasAnyFlagPermission(AnySharpObject executor, AnySharpObject obj, string[] permissions)
+	{
+		if (permissions.Any(permission => permission.ToLowerInvariant() is "internal" or "disabled"))
+			return false;
+
+		var hasPrincipal = false;
+		foreach (var permission in permissions)
+		{
+			if (permission.ToLowerInvariant() is "dark" or "mdark" or "odark" or "log" or "event")
+				continue;
+			hasPrincipal = true;
+			if (await HasFlagPermission(executor, obj, permission))
+				return true;
+		}
+		return !hasPrincipal;
+	}
 
 	/// <summary>
 	/// Resolves a named flag permission level to the appropriate privilege check.
-	/// Matches PennMUSH's can_set_flag_generic() logic from flags.c.
-	/// See help "flag permissions" for the documented permission levels.
+	/// Built-in privilege levels follow PennMUSH; custom flag and power names are SharpMUSH alternatives.
 	/// </summary>
 	private static async ValueTask<bool> HasFlagPermission(AnySharpObject executor, AnySharpObject obj, string permission) =>
 		permission.ToLowerInvariant() switch
