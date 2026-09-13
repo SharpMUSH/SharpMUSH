@@ -30,8 +30,16 @@ public class ListenerRoutingService(
 	IConnectionService connectionService,
 	IServiceProvider serviceProvider,
 	IMessageBus publishEndpoint,
-	IRealityPolicy reality) : IListenerRoutingService
+	IRealityPolicy reality,
+	Lazy<INotifyService> notifier) : IListenerRoutingService
 {
+	public ListenerRoutingService(IMediator mediator, IListenPatternMatcher patternMatcher,
+		IPermissionService permissionService, ILockService lockService, IConnectionService connectionService,
+		IServiceProvider serviceProvider, IMessageBus publishEndpoint, IRealityPolicy reality)
+		: this(mediator, patternMatcher, permissionService, lockService, connectionService, serviceProvider,
+			publishEndpoint, reality, new Lazy<INotifyService>(() => serviceProvider.GetRequiredService<INotifyService>()))
+	{ }
+
 	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
 	public ListenerRoutingService(IMediator mediator, IListenPatternMatcher patternMatcher,
 		IPermissionService permissionService, ILockService lockService, IConnectionService connectionService,
@@ -70,7 +78,7 @@ public class ListenerRoutingService(
 		if (context.Location is null)
 			return;
 
-		if (context.ExcludedObjects.Contains(context.Target))
+		if (context.Exclusions.Contains(context.Target))
 			return;
 
 		if (await mediator.Send(new GetObjectNodeQuery(context.Target)) is not AnySharpObject listener)
@@ -103,23 +111,30 @@ public class ListenerRoutingService(
 			MString markupString => markupString,
 			string str => MString.Plain(str)
 		};
+		var matchingText = MString.Concat(context.Prefix, messageText);
 
 		var options = serviceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Attribute;
 		// Penn's NA_PROPAGATE speech path bypasses PLAYER_LISTEN; deliberate private output does not.
-		if (!listener.IsExit && (!IsPrivate(type) || !listener.IsPlayer || options?.PlayerListen != false))
+		if (context.Relay != NotificationRelay.NoRelay && !listener.IsExit
+			&& (!IsPrivate(type) || !listener.IsPlayer || options?.PlayerListen != false))
 		{
-			if (!listener.IsPlayer || options?.PlayerAHear != false)
-				await ProcessListenAttributeAsync(listener, messageText, actualSender);
-			await ProcessListenPatternsAsync(listener, messageText, actualSender);
+			await ProcessListenAttributeAsync(listener, matchingText, messageText, actualSender, context, type,
+				!listener.IsPlayer || options?.PlayerAHear != false);
+			await ProcessListenPatternsAsync(listener, matchingText, actualSender);
 		}
 
-		await ProcessPuppetRelayAsync(listener, message, actualSender, type);
+		if (context.Relay != NotificationRelay.NoRelay || context.PuppetOk || IsPrivate(type))
+			await ProcessPuppetRelayAsync(listener, matchingText, actualSender, type);
 	}
 
 	private async ValueTask ProcessListenAttributeAsync(
 		AnySharpObject listener,
 		MString message,
-		AnySharpObject speaker)
+		MString rawBody,
+		AnySharpObject speaker,
+		NotificationContext context,
+		NotificationType type,
+		bool hearActions)
 	{
 		var listenAttr = await AttributeService.GetAttributeAsync(
 			listener, listener, "LISTEN",
@@ -131,10 +146,6 @@ public class ListenerRoutingService(
 
 		var listenPattern = listen.Last().Value.ToPlainText();
 
-		var passesListenLock = await lockService.Evaluate(LockType.Listen, listener, speaker);
-		if (!passesListenLock)
-			return;
-
 		var isRegex = listen.Last().IsRegexp();
 		var options = listen.Last().IsCase() ? RegexOptions.None : RegexOptions.IgnoreCase;
 		Regex regex;
@@ -143,10 +154,72 @@ public class ListenerRoutingService(
 		if (SoftcodeRegex.Match(regex, message.ToPlainText()) is not { Success: true } match)
 			return;
 
-		var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
-		var arguments = PatternArguments.Capture(match, isRegex, message);
-		await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, isSelf ? "AMHEAR" : "AHEAR", arguments), ExecutionBudget.CurrentToken);
-		await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, "AAHEAR", arguments), ExecutionBudget.CurrentToken);
+		if (hearActions && await lockService.Evaluate(LockType.Listen, listener, speaker))
+		{
+			var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
+			var arguments = PatternArguments.Capture(match, isRegex, message);
+			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, isSelf ? "AMHEAR" : "AHEAR", arguments), ExecutionBudget.CurrentToken);
+			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, "AAHEAR", arguments), ExecutionBudget.CurrentToken);
+		}
+		if (context.Location == listener.Object().DBRef || !listener.IsContainer) return;
+		await using var contents = listener.AsContainer.Content(mediator)
+			.Where(content => content.IsPlayer || content.IsThing).GetAsyncEnumerator(ExecutionBudget.CurrentToken);
+		if (!await contents.MoveNextAsync()) return;
+		using (LockEvaluationArguments.Enter(new Dictionary<string, MString> { ["0"] = message }))
+			if (!await lockService.Evaluate(LockType.InFilter, listener, speaker)) return;
+		var filter = await AttributeService.GetAttributeAsync(listener, listener, "INFILTER", IAttributeService.AttributeMode.Read, parent: true);
+		if (filter is SharpAttribute[] { Length: > 0 } filters)
+		{
+			var attribute = filters.Last();
+			var compatibility = serviceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Compatibility;
+			var numeric = new NumericEvaluation(compatibility?.TinyMath ?? false, compatibility?.NullEqualsZero ?? false);
+			foreach (var pattern in IncomingFilterPatterns.Split(attribute.Value.ToPlainText(), ExecutionBudget.CurrentToken))
+				if (IncomingFilterPatterns.Matches(pattern, message.ToPlainText(), attribute.IsRegexp(), attribute.IsCase(), numeric)) return;
+		}
+
+		var prefix = MString.Empty;
+		var prefixAttribute = await AttributeService.GetAttributeAsync(listener, listener, "INPREFIX", IAttributeService.AttributeMode.Read, parent: true);
+		if (prefixAttribute is SharpAttribute[] { Length: > 0 })
+		{
+			var parser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
+			var state = parser.State.IsEmpty ? ParserState.RootFor(listener.Object().DBRef) : parser.CurrentState;
+			var arguments = new Dictionary<string, CallState> { ["0"] = new(rawBody) };
+			var scoped = parser.Push(state with
+			{
+				Executor = listener.Object().DBRef,
+				Enactor = speaker.Object().DBRef,
+				Caller = speaker.Object().DBRef,
+				Arguments = arguments,
+				EnvironmentRegisters = new(arguments),
+				Registers = new(state.Registers.Reverse().Select(frame => new Dictionary<string, MString>(frame, frame.Comparer))),
+				Restrictions = EvaluationRestrictions.Current ?? state.Restrictions
+			});
+			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(scoped, listener, listener,
+				"INPREFIX", arguments, ignorePermissions: true);
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			if (result.HadErrors) return;
+			prefix = MString.Concat(result.Message ?? MString.Empty, MString.Plain(" "));
+		}
+		var executor = speaker;
+		if (context.Executor is DBRef reference)
+		{
+			if (await mediator.Send(new GetObjectNodeQuery(reference), ExecutionBudget.CurrentToken) is not AnySharpObject original) return;
+			executor = original;
+		}
+		var relay = context with
+		{
+			Prefix = prefix,
+			PuppetOk = true,
+			Relay = context.Relay == NotificationRelay.Initial ? NotificationRelay.RelayOnce : NotificationRelay.NoRelay
+		};
+		do
+		{
+			var target = contents.Current.WithRoomOption();
+			if (relay.Exclusions.Contains(target.Object().DBRef)) continue;
+			if (!await permissionService.CanInteract(executor, target, IPermissionService.InteractType.Hear, speaker)) continue;
+			await notifier.Value.NotifyWithContextAsync(relay with { Target = target.Object().DBRef }, rawBody, speaker, type);
+		}
+		while (await contents.MoveNextAsync());
 	}
 
 	private async ValueTask ProcessListenPatternsAsync(
@@ -248,7 +321,7 @@ public class ListenerRoutingService(
 				|| !Nullable.Equals(current.Ref, binding.Ref)
 				|| !string.Equals(binding.Session, current.Metadata.GetValueOrDefault("SessionId"), StringComparison.Ordinal))
 				continue;
-			await publishEndpoint.HandlePublish(new MarkupOutputMessage(binding.Handle, serialized), ExecutionBudget.CurrentToken);
+			await publishEndpoint.HandlePublish(new MarkupOutputMessage(binding.Handle, serialized) { SessionId = binding.Session }, ExecutionBudget.CurrentToken);
 		}
 	}
 

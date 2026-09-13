@@ -17,6 +17,27 @@ namespace SharpMUSH.Tests.Services;
 /// </summary>
 public class NotifyServiceHttpCaptureTests
 {
+	[Test]
+	public async Task ContextualForwardingCaptureIncludesPrefixBeforeListenerAndRecipientPreparation()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var connections = Substitute.For<IConnectionService>();
+		var listeners = Substitute.For<IListenerRoutingService>();
+		var capture = new HttpOutputCapture();
+		var service = new NotifyService(bus, connections, Substitute.For<ILocalizationService>(), DisabledRealityPolicy.Instance,
+			listeners, null, capture);
+		var response = new HttpResponseContext();
+		using (capture.BeginCapture(42, response))
+			await service.NotifyContextAsync(new NotificationContext(new DBRef(42), new DBRef(1), [])
+			{
+				Prefix = MarkupText.Plain("prefix "), Relay = NotificationRelay.RelayOnce
+			}, MarkupText.Plain("body"), null, INotifyService.NotificationType.PrivateEmit);
+		await Assert.That(response.Body.ToString()).IsEqualTo("prefix body\n");
+		await Assert.That(listeners.ReceivedCalls()).IsEmpty();
+		await Assert.That(bus.ReceivedCalls()).IsEmpty();
+		await Assert.That(connections.ReceivedCalls()).IsEmpty();
+	}
+
 	private static (NotifyService Service, IMessageBus Bus) BuildService()
 	{
 		var bus = Substitute.For<IMessageBus>();

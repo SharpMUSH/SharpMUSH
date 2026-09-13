@@ -154,17 +154,21 @@ public partial class CommunicationService
 		MString message, INotifyService.NotificationType type, HashSet<DBRef>? omitted = null, DBRef? observe = null)
 	{
 		var observed = false;
+		var context = new NotificationContext(location.Object().DBRef, location.Object().DBRef, omitted?.ToArray() ?? [])
+		{
+			Executor = executor.Object().DBRef
+		};
 		await Deliver(location.WithExitOption());
 		await foreach (var content in location.Content(mediator))
 			if (content.IsPlayer || content.IsThing) await Deliver(content.WithRoomOption());
 		return observed;
 		async ValueTask Deliver(AnySharpObject target)
 		{
-			if (omitted?.Contains(target.Object().DBRef) == true) return;
+			if (context.Exclusions.Contains(target.Object().DBRef)) return;
 			// na_zemit records that the location was enumerated before notify's hearing filters.
 			observed |= target.Object().DBRef == observe;
 			if (!await permissionService.CanInteract(executor, target, IPermissionService.InteractType.Hear, speaker)) return;
-			await notifyService.Notify(target, message, speaker, type);
+			await notifyService.NotifyWithContextAsync(context with { Target = target.Object().DBRef }, message, speaker, type, target: target);
 		}
 	}
 
@@ -267,8 +271,10 @@ public partial class CommunicationService
 			}
 			if (!await MayPemitAsync(parser, speaker, target, !request.List) || !await permissionService.CanInteract(executor, target, IPermissionService.InteractType.Hear, speaker)) continue;
 			admitted = true;
-			if (request.Scope == EmitScope.Prompt) await notifyService.Prompt(target, request.Message, speaker, type);
-			else await notifyService.Notify(target, request.Message, speaker, type);
+			await notifyService.NotifyWithContextAsync(new NotificationContext(target.Object().DBRef, null, [])
+			{
+				Executor = executor.Object().DBRef
+			}, request.Message, speaker, type, request.Scope == EmitScope.Prompt, target);
 			notified.Add(target);
 		}
 		var outcome = new EmitOutcome(admitted, CallState.Empty) { TargetFailure = targetFailure };

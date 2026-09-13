@@ -125,5 +125,35 @@ matchers must override the markup overload to preserve styling in captures; its 
 default retains their plain string captures. General queued-action HALT enforcement remains
 part of #1006. Empty prompt delivery does not establish the other lifecycle ordering proposed
 in #1010.
-Forwarding matched LISTEN messages into contents with INFILTER/INPREFIX and `@lock/infilter` semantics remains
-[issue #1048](https://github.com/SharpMUSH/SharpMUSH/issues/1048).
+
+A matching local LISTEN forwards to player and thing contents unless the listener is the original
+communication destination. Matching includes the incoming prefix; forwarding retains the raw body.
+Listen-lock failure, HALT and PlayerAHear affect actions independently of forwarding. MONITOR alone
+does not forward. Each contents pass advances an immutable relay state: two passes may react and
+forward, then the terminal delivery runs neither LISTEN nor MONITOR. Contents propagation permits
+puppet output at that terminal step, retaining ordinary remote-owner/VERBOSE checks; private output
+retains forced puppet relay. Prompts become ordinary output when forwarded.
+
+The inherited `@lock/infilter` evaluation receives matching text as `%0`. Its arguments are copied
+into a scoped immutable context and read when attribute locks execute, including indirect cached
+locks. Nested evaluations restore the preceding context; independent queued hear actions do not
+inherit it. Inherited INFILTER is literal: grouping and escapes protect commas without evaluation or
+space compression. REGEXP and CASE select matching policy. Non-regexp ordering prefixes (`>`, `>=`,
+`<`, `<=`) compare numeric operands when accepted by the configured numeric policy, otherwise text.
+Strict conversion rejects overflow and nonzero values rounded to zero. Exact hexadecimal subnormals
+remain numeric; this does not emulate every platform-specific `strtod` rounded-subnormal ERANGE case.
+
+Inherited INPREFIX evaluates once per forwarding listener with listener executor/caller, speaker
+enactor, and raw body `%0`. Its result replaces the previous prefix and appends a space, including a
+present-empty result. A local empty attribute suppresses inheritance. Styled prefixes and bodies
+reach the shared notification path; listener captures and HTTP capture precede recipient NOSPOOF
+headers. Cancellation and failed prefix evaluation do not become successful fallback output.
+
+The original executor controls forwarded output Hear admission, with the speaker supplied separately.
+Listener reactions and puppet routing retain their separate speaker-based Interact gate. Output
+admitted for the executor can therefore reach a target whose speaker gate stops further reactions.
+Explicit missing or recycled executor identities stop forwarding. Exclusions retain full stamped
+identities in immutable snapshots across relay steps, including legacy record `with` updates.
+Existing notifier signatures remain available; implementations of the optional contextual notifier
+capability preserve relay metadata. Legacy notifiers receive combined prefix/body text but cannot
+propagate origin, exclusions or relay depth themselves.
