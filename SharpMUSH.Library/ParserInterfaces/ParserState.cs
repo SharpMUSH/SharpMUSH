@@ -307,6 +307,39 @@ public partial record ParserState(
 	/// <summary>Restricted evaluation policy retained by nested parser state copies.</summary>
 	public EvaluationRestrictions? Restrictions { get; init; }
 
+	/// <summary>
+	/// Captures the register environment for an independent queued action. Like PE_INFO_CLONE,
+	/// only the active q-register frame is inherited; iteration, regex and switch contexts retain
+	/// their nesting order. Mutable frames belong to the new action, not the submitting list.
+	/// Execution control is fresh, and the scheduler supplies the action's budget when it runs.
+	/// </summary>
+	public ParserState SnapshotForQueuedAction() => this with
+	{
+		Registers = new([Registers.TryPeek(out var registers)
+			? new Dictionary<string, MString>(registers, registers.Comparer)
+			: []]),
+		// ConcurrentStack enumerates top-first, but its constructor pushes each item in order.
+		IterationRegisters = new(IterationRegisters.Reverse().Select(frame => new IterationWrapper<MString>
+		{
+			Value = frame.Value,
+			Iteration = frame.Iteration,
+			Break = frame.Break,
+			NoBreak = frame.NoBreak
+		})),
+		RegexRegisters = new(RegexRegisters.Reverse().Select(frame => new Dictionary<string, MString>(frame, frame.Comparer))),
+		SwitchStack = new(SwitchStack.Reverse()),
+		EnvironmentRegisters = new(EnvironmentRegisters, EnvironmentRegisters.Comparer),
+		ExecutionStack = [],
+		CommandHistory = null,
+		BreakPropagation = null,
+		CallDepth = new(),
+		FunctionRecursionDepths = new(StringComparer.OrdinalIgnoreCase),
+		TotalInvocations = new(),
+		LimitExceeded = new(),
+		MoveDepth = new(),
+		ExecutionBudget = null
+	};
+
 	private AnyOptionalSharpObject? _executorObject;
 	private AnyOptionalSharpObject? _enactorObject;
 	private AnyOptionalSharpObject? _callerObject;
