@@ -1,3 +1,6 @@
+using System.Collections.Concurrent;
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -6,6 +9,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -20,6 +24,7 @@ public class WizardCommandTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+	private ITaskScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
 
 	/// <summary>
 	/// Everything <paramref name="who"/> was notified of while <paramref name="action"/> ran, in
@@ -51,13 +56,95 @@ public class WizardCommandTests
 			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("Halted God and all their objects."), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
+	/// <summary>
+	/// <c>@allhalt</c> asks for every object's queue to be halted and reports how many it asked for.
+	/// </summary>
+	/// <remarks>
+	/// The halts are recorded here, not carried out. The scheduler is session-wide, so a real
+	/// <c>@allhalt</c> cancels whatever every other suite has queued at that moment. In full runs that
+	/// failed <c>InputSessionCommandTests</c> one test per halted player: a reply to <c>@input</c> that
+	/// never ran, an input timeout callback that never set its attribute. <c>[NotInParallel]</c> cannot
+	/// keep the two apart, because it only serialises against other <c>[NotInParallel]</c> tests. The
+	/// command still runs through the ordinary parser and dispatch, against a <see cref="SharpMUSH.Implementation.Commands.Commands"/>
+	/// whose Mediator keeps <see cref="HaltObjectQueueRequest"/> to itself.
+	/// <para>
+	/// A wizard of this test's own runs it, so the report it receives is read from the recipient-keyed
+	/// recorder and belongs to this test alone.
+	/// </para>
+	/// </remarks>
 	[Test]
 	public async ValueTask AllhaltCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@allhalt"));
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AllhaltWizard");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
+		var bystander = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AllhaltBystander");
+		var parked = await Scheduler.AdmitCommandList(MarkupText.Plain("think parked"),
+			ParserState.Empty with { Executor = bystander, Enactor = bystander, Caller = bystander }, TimeSpan.FromMinutes(10));
+		await Assert.That(parked.Accepted).IsTrue();
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat), executor, executor)).IsTrue();
+		try
+		{
+			var halts = new ConcurrentQueue<DBRef>();
+			var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(
+				WebAppFactoryArg.Services, HaltRecordingMediator.Wrap(Mediator, halts));
+			var parser = WebAppFactoryArg.CommandParserWith(
+				((ILibraryProvider<CommandDefinition>)commands).Get(), wizard.DbRef, wizard.Handle);
+
+			var messages = await MessagesWhile(wizard.DbRef, () =>
+				parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain("@allhalt")).AsTask());
+
+			await Assert.That(halts.Select(halted => halted.Number)).Contains(bystander.Number)
+				.Because("every object in the world is asked to halt, the one this test made among them");
+			await Assert.That(halts.Select(halted => halted.Number)).Contains(wizard.DbRef.Number);
+			await Assert.That(messages).Contains(
+				string.Format(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat, halts.Count));
+			await Assert.That(Scheduler.HasPendingWork($"dbref:{bystander}", $"delay:{bystander}")).IsTrue()
+				.Because("the scheduler is session-wide: whatever another suite has queued must survive this test");
+		}
+		finally
+		{
+			await Scheduler.HaltByPid(parked.Pid!.Value);
+			await ConnectionService.Disconnect(wizard.Handle);
+		}
+	}
+
+	/// <summary>
+	/// A Mediator that records each <see cref="HaltObjectQueueRequest"/> instead of sending it, and passes
+	/// every other request to the real one.
+	/// </summary>
+	public class HaltRecordingMediator : DispatchProxy
+	{
+		private IMediator _inner = null!;
+		private ConcurrentQueue<DBRef> _halts = null!;
+
+		public static IMediator Wrap(IMediator inner, ConcurrentQueue<DBRef> halts)
+		{
+			var proxy = Create<IMediator, HaltRecordingMediator>();
+			var recorder = (HaltRecordingMediator)(object)proxy;
+			recorder._inner = inner;
+			recorder._halts = halts;
+			return proxy;
+		}
+
+		protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+		{
+			if (args is [HaltObjectQueueRequest halt, ..])
+			{
+				_halts.Enqueue(halt.DbRef);
+				return Unit.ValueTask;
+			}
+
+			try
+			{
+				return targetMethod!.Invoke(_inner, args);
+			}
+			catch (TargetInvocationException ex) when (ex.InnerException is not null)
+			{
+				ExceptionDispatchInfo.Throw(ex.InnerException);
+				throw;
+			}
+		}
 	}
 
 	[Test]

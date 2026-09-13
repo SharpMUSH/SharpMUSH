@@ -117,13 +117,15 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	/// <c>"think"</c> for the function parsers and <see langword="null"/> for the command parsers, which
 	/// set their own as they dispatch.
 	/// </param>
-	private IMUSHCodeParser BuildParser(DBRef executor, long handle, string? command)
+	/// <param name="commands">The command table; the host's own unless a test supplies one.</param>
+	private IMUSHCodeParser BuildParser(DBRef executor, long handle, string? command,
+		LibraryService<string, CommandDefinition>? commands = null)
 	{
 		var integrationServer = _server!;
 		return new MUSHCodeParser(
 			integrationServer.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
 			integrationServer.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
-			integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
+			commands ?? integrationServer.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
 			integrationServer.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
 			integrationServer.Services,
 			state: new ParserState(
@@ -170,6 +172,13 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 
 	/// <summary><see cref="CommandParser"/> with a chosen executor and its bound connection handle.</summary>
 	public IMUSHCodeParser CommandParserFor(DBRef executor, long handle) => BuildParser(executor, handle, command: null);
+
+	/// <summary>
+	/// <see cref="CommandParserFor"/> dispatching through <paramref name="commands"/> instead of the host's
+	/// own table: a command whose effect reaches the whole session, run against services a test controls.
+	/// </summary>
+	public IMUSHCodeParser CommandParserWith(LibraryService<string, CommandDefinition> commands, DBRef executor, long handle)
+		=> BuildParser(executor, handle, command: null, commands);
 
 	public virtual async Task InitializeAsync()
 	{
