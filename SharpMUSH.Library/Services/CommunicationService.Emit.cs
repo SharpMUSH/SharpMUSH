@@ -64,8 +64,7 @@ public partial class CommunicationService
 				}
 				break;
 			case EmitScope.Omit:
-				await EmitOmitAsync(parser, executor, speaker, request, type);
-				break;
+				return await EmitOmitAsync(parser, executor, speaker, request, type);
 			case EmitScope.Zone:
 				foreach (var name in request.Targets)
 				{
@@ -135,24 +134,30 @@ public partial class CommunicationService
 		}
 	}
 
-	private async ValueTask EmitOmitAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject speaker,
+	private async ValueTask<CallState> EmitOmitAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject speaker,
 		EmitRequest request, INotifyService.NotificationType type)
 	{
-		if (request.Message.Length == 0 || request.Targets.Count == 0 && request.OmitLocation is null) return;
+		if (request.Message.Length == 0 || request.Targets.Count == 0 && request.OmitLocation is null) return CallState.Empty;
 		var locations = new Dictionary<DBRef, AnySharpContainer>();
 		var omitted = new HashSet<DBRef>();
 		AnySharpObject looker = executor;
 		if (request.OmitLocation is { } locationName)
 		{
-			if (await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, locationName, LocateFlags.All) is not AnySharpObject target || !target.IsContainer) return;
-			if (!await MayEmitInAsync(parser, executor, speaker, target.AsContainer)) return;
+			if (await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, locationName, LocateFlags.All) is not AnySharpObject target) return CallState.Empty;
+			if (!target.IsContainer)
+			{
+				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidRoomSpecifiedDetail), executor);
+				return new CallState(ErrorMessages.Returns.InvalidRoom) { HadErrors = true };
+			}
+			if (!await MayEmitInAsync(parser, executor, speaker, target.AsContainer)) return CallState.Empty;
 			looker = target;
 			locations[target.Object().DBRef] = target.AsContainer;
 		}
 		var matched = 0;
 		foreach (var name in request.Targets)
 		{
-			var flags = request.OmitLocation is null ? LocateFlags.All : LocateFlags.MatchObjectsInLookerInventory | LocateFlags.AbsoluteMatch;
+			var flags = request.OmitLocation is null ? LocateFlags.All : LocateFlags.MatchObjectsInLookerInventory
+				| LocateFlags.AbsoluteMatch | LocateFlags.EnglishStyleMatching | LocateFlags.MatchWildCardForPlayerName;
 			if (await locateService.Locate(parser, looker, executor, name, flags) is not AnySharpObject target) continue;
 			if (request.OmitLocation is not null)
 			{
@@ -178,6 +183,7 @@ public partial class CommunicationService
 		}
 		if (locations.Count == 0) await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoMatchingObjects), executor);
 		foreach (var room in locations.Values) await EmitLocationAsync(executor, speaker, room, request.Message, type, omitted);
+		return CallState.Empty;
 	}
 
 	private async ValueTask EmitPrivateAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject speaker,
