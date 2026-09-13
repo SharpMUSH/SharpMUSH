@@ -25,6 +25,16 @@ public readonly record struct DeliveryFailure(DeliveryFailure.Cause Reason)
 public interface ICommunicationService
 {
 	/// <summary>
+	/// Delivers private/prompt, immediate, outermost, named-location, omission or zone output.
+	/// The executor owns permissions and targeting; an authorized Spoof option selects the enactor
+	/// as speaker for Speech locks and hearing. NoSpoof independently suppresses recipient tagging.
+	/// Explicit Speech/Page refusals use FailLock; denied fanout locations are filtered.
+	/// </summary>
+	/// <returns>An empty successful command result after processing the recipients. Delivery refusals
+	/// are notified through the normal lock/locate paths. Wrappers retain argument-evaluation errors.</returns>
+	ValueTask<CallState> EmitAsync(IMUSHCodeParser parser, EmitRequest request);
+
+	/// <summary>
 	/// Sends a private message to specified port recipients.
 	/// Performs permission checks for ports with associated DBRef.
 	/// </summary>
