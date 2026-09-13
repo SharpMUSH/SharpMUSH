@@ -28,7 +28,7 @@ public class SetObjectLocationCommandHandler(IObjectStore database) : ICommandHa
 {
 	public async ValueTask<Unit> Handle(SetObjectLocationCommand request, CancellationToken cancellationToken)
 	{
-		await database.SetContentLocation(request.Target, request.Container);
+		await database.SetContentLocation(request.Target, request.Container, cancellationToken);
 		return Unit.Value;
 	}
 }

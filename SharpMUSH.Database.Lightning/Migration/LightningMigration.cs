@@ -9,15 +9,17 @@ public partial class LightningDatabase
 {
 	private const string InitialSeedMigrationId = "0001_initial_seed";
 	private const string AncestorFormatsMigrationId = "0002_ancestor_formats";
+	internal const string ExitSourceIndexMigrationId = "0003_exit_source_index";
 
 	/// <summary>
 	/// Idempotent world seed, run under <see cref="MigrateLock"/>:
 	/// 1. upsert the shared flag/power/attribute-flag/attribute-entry definitions (always, cheap, and
 	///    the only step a fresh install and a long-lived world both need every time);
 	/// 2. seed objects #0-#9 once, gated on <see cref="InitialSeedMigrationId"/>;
-	/// 3. run every plugin's not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
-	/// 4. recompute <c>next_dbref</c> from the objects actually on disk;
-	/// 5. ensure the singleton server-state row exists.
+	/// 3. apply pending core repairs, including the atomic exit source-index rebuild;
+	/// 4. run every plugin's not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
+	/// 5. recompute <c>next_dbref</c> from the objects actually on disk;
+	/// 6. ensure the singleton server-state row exists.
 	/// </summary>
 	public async ValueTask Migrate(CancellationToken cancellationToken = default)
 	{
@@ -42,6 +44,8 @@ public partial class LightningDatabase
 				await RecordMigrationAsync(AncestorFormatsMigrationId, cancellationToken);
 			}
 
+			await Store.WriteAsync(tx => RebuildExitSourceIndex(tx, cancellationToken), cancellationToken);
+
 			foreach (var source in _migrationSources)
 			{
 				foreach (var step in source.LightningSteps)
@@ -63,6 +67,54 @@ public partial class LightningDatabase
 		finally
 		{
 			MigrateLock.Release();
+		}
+	}
+
+	/// <summary>Repairs both derived source indexes from stored exits and their authoritative Location edge.</summary>
+	internal void RebuildExitSourceIndex(ITx tx, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var marker = Keys.Str("mig:" + ExitSourceIndexMigrationId);
+		if (tx.TryGet(Tables.Meta, marker, out _)) return;
+		Clear(Tables.Exit.Forward);
+		Clear(Tables.Exit.Reverse);
+		foreach (var (key, value) in tx.Range(Tables.Obj, []))
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			var record = Codec.Deserialize<ObjectRecord>(value);
+			if (record.Type != DatabaseConstants.TypeExit) continue;
+			var exit = Keys.ReadDbref(key);
+			if (GetSingleEdge(tx, Tables.Location.Forward, exit) is not long source) continue;
+			var location = ReadObject(tx, source);
+			if (location is null || location.Value.Record.Type is not (DatabaseConstants.TypeRoom or DatabaseConstants.TypeThing or DatabaseConstants.TypePlayer)) continue;
+			PutEdge(tx, Tables.Exit, source, exit);
+		}
+		cancellationToken.ThrowIfCancellationRequested();
+		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord
+		{
+			Id = ExitSourceIndexMigrationId, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+		}));
+		cancellationToken.ThrowIfCancellationRequested();
+
+		void Clear(TableDef table)
+		{
+			while (true)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+				var batch = new List<(byte[] Key, byte[] Value)>(256);
+				foreach (var entry in tx.Range(table, []).Take(256))
+				{
+					cancellationToken.ThrowIfCancellationRequested();
+					batch.Add(entry);
+				}
+				if (batch.Count == 0) return;
+				// Enumeration has disposed the cursor before this batch mutates its table.
+				foreach (var (key, value) in batch)
+				{
+					cancellationToken.ThrowIfCancellationRequested();
+					tx.Delete(table, key, value);
+				}
+			}
 		}
 	}
 

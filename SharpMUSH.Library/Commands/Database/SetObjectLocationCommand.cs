@@ -8,5 +8,11 @@ namespace SharpMUSH.Library.Commands.Database;
 public record SetObjectLocationCommand(AnySharpContent Target, AnySharpContainer Container) : ICommand, ICacheInvalidating
 {
 	public string[] CacheKeys => [Definitions.CacheKeys.Object(Target.Object().DBRef), Definitions.CacheKeys.Object(Container.Object().DBRef)];
-	public string[] CacheTags => [];
+	// The raw setter has no old-container argument, so its rare writes invalidate all contents.
+	public string[] CacheTags =>
+	[
+		Definitions.CacheTags.ObjectContents,
+		Definitions.CacheKeys.LocationTag(Target.Object().DBRef.Number),
+		Definitions.CacheKeys.LocationTag(Target.Object().Id!)
+	];
 }

@@ -546,12 +546,8 @@ public partial class LightningDatabase
 		await Store.WriteAsync(tx => SetSingleEdge(tx, Tables.Home, dbref, homeKey), cancellationToken);
 	}
 
-	public async ValueTask SetContentLocation(AnySharpContent obj, AnySharpContainer location, CancellationToken cancellationToken = default)
-	{
-		var dbref = (long)obj.Object().Key;
-		var locKey = (long)location.Object().Key;
-		await Store.WriteAsync(tx => SetSingleEdge(tx, Tables.Location, dbref, locKey), cancellationToken);
-	}
+	public ValueTask SetContentLocation(AnySharpContent obj, AnySharpContainer location, CancellationToken cancellationToken = default)
+		=> WriteContentLocationAsync(obj, location, cancellationToken);
 
 	public async ValueTask SetObjectParent(AnySharpObject obj, AnySharpObject? parent, CancellationToken cancellationToken = default)
 	{
