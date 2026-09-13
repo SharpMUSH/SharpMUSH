@@ -155,17 +155,15 @@ public class MushTextTests
 	}
 
 	/// <summary>
-	/// Exact-output coverage for the glob-to-regex compiler, ported from the deleted
-	/// <c>PatternUnitTests.TestWildcardAsRegex</c>. The regex text itself is the contract: it is
-	/// handed to callers (<c>CommandAttributeScanner</c> compiles <c>$</c>-command patterns from it)
-	/// that rely on the exact capture-group shape, not just on whether a given input matches.
+	/// The generated regex keeps absolute input anchors and one capture group per active wildcard.
+	/// Command and listener callers retain that capture-group shape when compiling the pattern.
 	/// </summary>
 	[Test]
-	[Arguments("*", "(?s)^(.*?)$")]
-	[Arguments("abc*def", @"(?s)^abc(.*?)def$")]
-	[Arguments("abc?efg*xyz", @"(?s)^abc(.)efg(.*?)xyz$")]
-	[Arguments(@"abc\?efg*xyz", @"(?s)^abc\?efg(.*?)xyz$")]
-	[Arguments(@"abc\\?efg*xyz", @"(?s)^abc\\\?efg(.*?)xyz$")]
+	[Arguments("*", @"(?s)\A(.*?)\z")]
+	[Arguments("abc*def", @"(?s)\Aabc(.*?)def\z")]
+	[Arguments("abc?efg*xyz", @"(?s)\Aabc(.)efg(.*?)xyz\z")]
+	[Arguments(@"abc\?efg*xyz", @"(?s)\Aabc\?efg(.*?)xyz\z")]
+	[Arguments(@"abc\\?efg*xyz", @"(?s)\Aabc\\(.)efg(.*?)xyz\z")]
 	public async Task Glob_ToRegex_ProducesTheExpectedPattern(string wildcardPattern, string expectedRegex)
 		=> await Assert.That(MushText.Glob.ToRegex(wildcardPattern)).IsEqualTo(expectedRegex);
 
@@ -179,21 +177,21 @@ public class MushTextTests
 		=> await Assert.That(MushText.Glob.ToRegex(wildcardPattern)).StartsWith("(?s)");
 
 	/// <summary>
-	/// A backslash makes a wildcard after it literal and is otherwise a literal backslash itself,
-	/// including at the end of the pattern and in front of a backslash that escapes a wildcard.
+	/// A backslash makes the next character literal; paired backslashes do not escape a following
+	/// wildcard. An unmatched final backslash cannot match.
 	/// </summary>
 	[Test]
-	[Arguments(@"a\*b", @"(?s)^a\*b$")]
-	[Arguments(@"a\\*b", @"(?s)^a\\\*b$")]
-	[Arguments(@"a\b", @"(?s)^a\\b$")]
-	[Arguments(@"a\", @"(?s)^a\\$")]
-	[Arguments(@"\", @"(?s)^\\$")]
-	[Arguments(@"\\", @"(?s)^\\\\$")]
-	[Arguments(@"\\\*", @"(?s)^\\\\\*$")]
-	[Arguments(@"\*\?", @"(?s)^\*\?$")]
-	[Arguments(@"*?*", @"(?s)^(.*?)(.)(.*?)$")]
-	[Arguments(@"*\", @"(?s)^(.*?)\\$")]
-	public async Task Glob_ToRegex_TreatsABackslashAsAnEscapeOnlyBeforeAWildcard(string wildcardPattern, string expectedRegex)
+	[Arguments(@"a\*b", @"(?s)\Aa\*b\z")]
+	[Arguments(@"a\\*b", @"(?s)\Aa\\(.*?)b\z")]
+	[Arguments(@"a\b", @"(?s)\Aab\z")]
+	[Arguments(@"a\", @"(?s)\Aa[^\s\S]\z")]
+	[Arguments(@"\", @"(?s)\A[^\s\S]\z")]
+	[Arguments(@"\\", @"(?s)\A\\\z")]
+	[Arguments(@"\\\*", @"(?s)\A\\\*\z")]
+	[Arguments(@"\*\?", @"(?s)\A\*\?\z")]
+	[Arguments(@"*?*", @"(?s)\A(.*?)(.)(.*?)\z")]
+	[Arguments(@"*\", @"(?s)\A(.*?)[^\s\S]\z")]
+	public async Task Glob_ToRegex_ConsumesEscapedCharactersSequentially(string wildcardPattern, string expectedRegex)
 		=> await Assert.That(MushText.Glob.ToRegex(wildcardPattern)).IsEqualTo(expectedRegex);
 
 	/// <summary>
@@ -202,17 +200,17 @@ public class MushTextTests
 	/// <c>\t</c>/<c>\n</c>, and the characters it leaves alone.
 	/// </summary>
 	[Test]
-	[Arguments("a.b+c|d", @"(?s)^a\.b\+c\|d$")]
-	[Arguments("(x)[y]{z}", @"(?s)^\(x\)\[y]\{z}$")]
-	[Arguments("^a$", @"(?s)^\^a\$$")]
-	[Arguments("a b#c", @"(?s)^a\ b\#c$")]
-	[Arguments("a\tb\nc\rd\fe", @"(?s)^a\tb\nc\rd\fe$")]
-	[Arguments("plain-text_0", @"(?s)^plain-text_0$")]
-	[Arguments("", @"(?s)^$")]
+	[Arguments("a.b+c|d", @"(?s)\Aa\.b\+c\|d\z")]
+	[Arguments("(x)[y]{z}", @"(?s)\A\(x\)\[y]\{z}\z")]
+	[Arguments("^a$", @"(?s)\A\^a\$\z")]
+	[Arguments("a b#c", @"(?s)\Aa\ b\#c\z")]
+	[Arguments("a\tb\nc\rd\fe", @"(?s)\Aa\tb\nc\rd\fe\z")]
+	[Arguments("plain-text_0", @"(?s)\Aplain-text_0\z")]
+	[Arguments("", @"(?s)\A\z")]
 	public async Task Glob_ToRegex_EscapesEveryLiteralAsRegexEscapeDoes(string wildcardPattern, string expectedRegex)
 	{
 		await Assert.That(MushText.Glob.ToRegex(wildcardPattern)).IsEqualTo(expectedRegex);
-		await Assert.That(MushText.Glob.ToRegex(wildcardPattern)).IsEqualTo($"(?s)^{Regex.Escape(wildcardPattern)}$");
+		await Assert.That(MushText.Glob.ToRegex(wildcardPattern)).IsEqualTo($@"(?s)\A{Regex.Escape(wildcardPattern)}\z");
 	}
 
 	[Test]
@@ -220,8 +218,8 @@ public class MushTextTests
 	{
 		const string awkward = "a.b (c) [d] {e} ^f$ g|h+i\tj\nk#l\\m";
 
-		await Assert.That(MushText.IsWildcardMatch(MarkupText.Plain(awkward), awkward)).IsTrue();
-		await Assert.That(MushText.IsWildcardMatch(MarkupText.Plain(awkward + "!"), awkward)).IsFalse();
+		await Assert.That(MushText.IsWildcardMatch(MarkupText.Plain(awkward), awkward.Replace(@"\", @"\\"))).IsTrue();
+		await Assert.That(MushText.IsWildcardMatch(MarkupText.Plain(awkward + "!"), awkward.Replace(@"\", @"\\"))).IsFalse();
 	}
 
 	[Test]
