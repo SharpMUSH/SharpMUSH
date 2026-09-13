@@ -541,7 +541,7 @@ public partial class TaskScheduler(
 	{
 		if (state.Executor is not null && await mediator.Send(new GetObjectNodeQuery(state.Executor.Value), ExecutionBudget.CurrentToken) is None) return null;
 		// Deferred bodies cannot consume the submitting command list's break/include state.
-		return await parser.FromState(state with { ExecutionStack = [], BreakPropagation = null }).CommandListParse(command);
+		return await parser.FromState(state with { ExecutionStack = [], BreakPropagation = null, CommandModifierDepth = 0 }).CommandListParse(command);
 	}
 	private readonly ConcurrentDictionary<long, QueueEntry> _pendingEntries = new();
 	private readonly CancellationTokenSource _shutdownCts = new();

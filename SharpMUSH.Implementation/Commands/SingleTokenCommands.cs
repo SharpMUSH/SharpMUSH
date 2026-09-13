@@ -10,22 +10,8 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	[SharpCommand(Name = "]", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> NoParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		// Re-parse the command with NoEval mode. This is necessary because the command
-		// was already tokenized in Default mode by the time we reach this handler.
-		// The "]" prefix changes evaluation semantics for the entire command.
-		var oldCommand = RebuildTokenlessCommand(parser);
-		if (oldCommand.Length == 0)
-		{
-			return CallState.Empty;
-		}
-
-		await parser.With(s => s with { ParseMode = ParseMode.NoEval },
-			async np => await np.CommandParse(oldCommand));
-
-		return new CallState(string.Empty);
-	}
+	public ValueTask<Option<CallState>> NoParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> RedispatchModifier(parser, noEval: true);
 
 	/// <summary>
 	/// The <c>~</c> prefix command switches command argument parsing to strict mode for the
@@ -36,36 +22,29 @@ public partial class Commands
 	/// is not executed.
 	/// </summary>
 	[SharpCommand(Name = "~", Behavior = CommandBehavior.SingleToken | CommandBehavior.NoParse, MinArgs = 1, MaxArgs = 1, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> StrictParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public ValueTask<Option<CallState>> StrictParse(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> RedispatchModifier(parser, noEval: false);
+
+	private async ValueTask<Option<CallState>> RedispatchModifier(IMUSHCodeParser parser, bool noEval)
 	{
-		var oldCommand = RebuildTokenlessCommand(parser);
-		if (oldCommand.Length == 0)
+		var command = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message ?? MarkupText.Empty;
+		if (string.IsNullOrWhiteSpace(command.ToPlainText())) return CallState.Empty;
+		if (parser.CurrentState.CommandModifierDepth >= Configuration.CurrentValue.Limit.MaxDepth)
 		{
-			return CallState.Empty;
+			if (parser.CurrentState.Handle is { } handle)
+				await NotifyService.Notify(handle, ErrorMessages.Returns.Call);
+			else if (parser.CurrentState.Executor is { } executor)
+				await NotifyService.Notify(executor, ErrorMessages.Returns.Call);
+			return new CallState(ErrorMessages.Returns.Call) { HadErrors = true };
 		}
 
-		await parser.With(
-			s => s with { Flags = s.Flags | ParserStateFlags.StrictParse },
-			async sp => await sp.CommandParse(oldCommand));
-
-		return new CallState(string.Empty);
-	}
-
-	/// <summary>
-	/// Reassembles the command line that a prefix token such as <c>]</c> or <c>~</c> modifies, with the
-	/// token itself removed, so it can be re-dispatched. An empty result means the player typed the bare
-	/// token and there is nothing to re-dispatch — re-parsing then would re-enter this same command.
-	/// </summary>
-	private MString RebuildTokenlessCommand(IMUSHCodeParser parser)
-	{
-		var parts = parser.CurrentState.ArgumentsOrdered.Values
-			.Select(x => x.Message ?? MarkupText.Empty)
-			.Where(x => x.Length > 0)
-			.ToArray();
-
-		return parts.Length == 0
-			? MarkupText.Empty
-			: MarkupText.Join(MarkupText.Space, parts);
+		var result = await parser.With(state => state with
+		{
+			ParseMode = noEval ? ParseMode.NoEval : state.ParseMode,
+			Flags = state.Flags | (noEval ? ParserStateFlags.PreserveBraces : ParserStateFlags.StrictParse),
+			CommandModifierDepth = state.CommandModifierDepth + 1
+		}, async modified => await modified.CommandParse(command));
+		return result.HadErrors ? result : CallState.Empty;
 	}
 
 	// RSNoParse: only the RHS value is kept unevaluated (deferred/literal).
