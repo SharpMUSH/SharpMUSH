@@ -46,6 +46,10 @@ public partial class Commands
 	{
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
+		var ports = scope == EmitScope.Private && switches.Contains("PORT");
+		var contents = scope == EmitScope.Private && !ports && switches.Contains("CONTENTS");
+		if (contents) scope = EmitScope.Room;
+		if (scope == EmitScope.Immediate && switches.Contains("ROOM")) scope = EmitScope.Outermost;
 		var messageIndex = scope is EmitScope.Immediate or EmitScope.Outermost ? 0 : 1;
 		if (args.Count <= messageIndex)
 		{
@@ -69,13 +73,13 @@ public partial class Commands
 			return evaluated;
 		}
 		var message = evaluated.Message!;
-		var list = switches.Contains("LIST") || scope is EmitScope.Prompt or EmitScope.Omit;
+		var list = !contents && switches.Contains("LIST") || scope is EmitScope.Prompt or EmitScope.Omit;
 		var silent = switches.Contains("SILENT") || (!switches.Contains("NOISY") &&
 			(Configuration.CurrentValue.Compatibility.SilentPEmit
-			 || scope == EmitScope.Private && list));
+			 || scope == EmitScope.Private && list && !ports));
 		var result = await CommunicationService.EmitAsync(parser, EmitHelpers.Create(scope,
 			messageIndex == 0 ? "" : args["0"].Message!.ToPlainText(), message, list, silent, noSpoof,
-			switches.Contains("SPOOF"), switches.Contains("PORT")));
+			!ports && switches.Contains("SPOOF"), ports));
 		return definition.Name is "@EMIT" or "@NSEMIT" or "@NSOEMIT" or "@NSPROMPT"
 			? new CallState(message) { HadErrors = result.HadErrors } : result;
 	}
@@ -992,7 +996,7 @@ public partial class Commands
 		return new CallState(obj.DBRef.ToString());
 	}
 
-	[SharpCommand(Name = "@PEMIT", Switches = ["LIST", "PORT", "SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit,
+	[SharpCommand(Name = "@PEMIT", Switches = ["LIST", "PORT", "CONTENTS", "SPOOF", "SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit,
 		MinArgs = 1, MaxArgs = 2, ParameterNames = ["target", "message"])]
 	public async ValueTask<Option<CallState>> PrivateEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await RunEmitCommand(parser, _2, EmitScope.Private, false);
@@ -4919,7 +4923,7 @@ public partial class Commands
 		return currentFlagNames.SequenceEqual(defaultFlagNames);
 	}
 
-	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
+	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF", "ROOM"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
 		MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)

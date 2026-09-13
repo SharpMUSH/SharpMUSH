@@ -20,7 +20,7 @@ public partial class Functions
 		var messageIndex = scope is EmitScope.Immediate or EmitScope.Outermost ? 0 : 1;
 		return CommunicationService.EmitAsync(parser, EmitHelpers.Create(scope,
 			messageIndex == 0 ? "" : args["0"].Message!.ToPlainText(), args[messageIndex.ToString()].Message!,
-			list: scope != EmitScope.Zone, silent: scope is EmitScope.Private or EmitScope.Room, noSpoof));
+			list: scope != EmitScope.Zone, silent: scope is EmitScope.Private or EmitScope.Room, noSpoof, inferPorts: true));
 	}
 
 
