@@ -1,8 +1,6 @@
 using System.Text;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -93,35 +91,6 @@ public class MyrddinBBSIntegrationTests
 	}
 
 	/// <summary>
-	/// Extracts the message text from a notification call's arguments.
-	/// </summary>
-	private static string? ExtractMessageText(ICall call)
-	{
-		if (call.GetMethodInfo().Name != nameof(INotifyService.Notify))
-			return null;
-
-		var args = call.GetArguments();
-		if (args.Length < 2) return null;
-
-		if (args[1] is SharpMessage message)
-		{
-			return message switch
-			{
-				MString markup => markup.ToString(),
-				string text => text,
-			};
-		}
-
-		if (args[1] is string str2)
-			return str2;
-
-		if (args[1] is MString mstr2)
-			return mstr2.ToString();
-
-		return null;
-	}
-
-	/// <summary>
 	/// Installs Myrddin's BBS v4.0.6 by running the installer script through CommandParse,
 	/// then runs +bbread to verify the installation completes without crashing.
 	/// </summary>
@@ -146,8 +115,7 @@ public class MyrddinBBSIntegrationTests
 		var executionExceptions = new List<(int LineNumber, string Line, string Error)>();
 		var antlrErrorsByLine = new Dictionary<int, List<string>>();
 
-		var preInstallNotificationCount = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var preInstallNotificationCount = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		string? bbpocketDbref = null;
 		string? mbboardDbref = null;
@@ -273,8 +241,7 @@ public class MyrddinBBSIntegrationTests
 			Log("[BBS INSTALL] WARNING: Failed to create regular test user — some tests may use God.");
 		}
 
-		var postInstallNotificationCount = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var postInstallNotificationCount = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		try
 		{
@@ -288,7 +255,7 @@ public class MyrddinBBSIntegrationTests
 		}
 
 
-		var allCalls = NotifyService.ReceivedCalls().ToList();
+		var allMessages = WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef);
 		var installMessages = new List<(int Index, string Message)>();
 		var bbreadMessages = new List<(int Index, string Message)>();
 		var installErrorMessages = new List<(int Index, string Message)>();
@@ -297,10 +264,9 @@ public class MyrddinBBSIntegrationTests
 		var cantSeeMessages = new List<(int Index, string Message)>();
 
 		var notifyIndex = 0;
-		foreach (var call in allCalls)
+		foreach (var delivery in allMessages)
 		{
-			var messageText = ExtractMessageText(call);
-			if (messageText == null) continue;
+			var messageText = delivery.Message;
 
 			notifyIndex++;
 
@@ -640,21 +606,6 @@ public class MyrddinBBSIntegrationTests
 				cancellationToken: TestContext.Current!.Execution.CancellationToken);
 	}
 
-	/// <summary>Returns the current notification count.</summary>
-	private int NotificationCount()
-		=> NotifyService.ReceivedCalls().Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
-
-	/// <summary>Collects notification messages in the range (fromCount, toCount].</summary>
-	private IReadOnlyList<string> GetNotificationMessages(int fromCount, int toCount)
-	{
-		var all = NotifyService.ReceivedCalls().Select(ExtractMessageText).OfType<string>();
-		var sliced = all.Skip(fromCount);
-		if (toCount > 0)
-			sliced = sliced.Take(toCount - fromCount);
-		return sliced.ToList();
-	}
-
-
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
@@ -663,6 +614,7 @@ public class MyrddinBBSIntegrationTests
 	{
 		var scheduler = WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var collecting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current!.Execution.CancellationToken);
 		timeout.CancelAfter(TimeSpan.FromSeconds(10));
@@ -691,13 +643,26 @@ public class MyrddinBBSIntegrationTests
 			}, "bbs-collector-gate", "bbs-test", gateSource);
 			await Assert.That(admission.Accepted).IsTrue();
 			await entered.Task.WaitAsync(timeout.Token);
-			collection = RunAndCollect("+bbconfig", messages => messages.Any(m => m.Contains("Myrddin's Global BBS") && m.Contains("autotimeout:") && m.Contains("Board Config Parameters:")));
+			collection = RunAndCollectAs("+bbconfig", 1, messages => messages.Any(m => m.Contains("Myrddin's Global BBS") && m.Contains("autotimeout:") && m.Contains("Board Config Parameters:")),
+				collectionStarted: () => collecting.TrySetResult());
+			await collecting.Task.WaitAsync(timeout.Token);
+			var recipient = WebAppFactoryArg.ExecutorDBRef;
+			var otherRecipient = DBRef.Parse(_regularUserDbref!);
+			await Assert.That(otherRecipient == recipient).IsFalse();
+			var unrelated = "unrelated-recipient-" + Guid.NewGuid().ToString("N");
+			var diagnostic = "same-recipient-diagnostic-" + Guid.NewGuid().ToString("N");
+			var sender = (await WebAppFactoryArg.Services.GetRequiredService<IMediator>()
+				.Send(new GetObjectNodeQuery(recipient))).Expect<AnySharpObject>();
+			await NotifyService.Notify(otherRecipient, unrelated, sender);
+			await NotifyService.Notify(recipient, diagnostic, sender);
 			// The queue remains deliberately blocked beyond the former 150ms quiet-window heuristic.
 			await Task.Delay(250, timeout.Token);
 			await Assert.That(collection.IsCompleted).IsFalse();
 			release.TrySetResult();
 			var messages = await collection.WaitAsync(timeout.Token);
 			await Assert.That(string.Join("\n", messages)).Contains("autotimeout:");
+			await Assert.That(messages.Contains(unrelated)).IsFalse();
+			await Assert.That(messages.Contains(diagnostic)).IsTrue();
 			await WaitForBbsQueueAsync();
 		}
 		finally
@@ -722,12 +687,12 @@ public class MyrddinBBSIntegrationTests
 		=> RunAndCollectAs(command, 1, outputComplete, pocketSender);
 
 	private async Task<IReadOnlyList<string>> RunAndCollectAs(string command, long handle,
-		Func<IReadOnlyList<string>, bool> outputComplete, bool pocketSender = false)
+		Func<IReadOnlyList<string>, bool> outputComplete, bool pocketSender = false, Action? collectionStarted = null)
 	{
-		var before = NotificationCount();
 		var recipient = ConnectionService.Get(handle)?.Ref ?? throw new InvalidOperationException("BBS recipient is not bound.");
 		var sender = pocketSender ? await BbsPocketAsync() : await BbsBoardAsync();
 		var deliveryStart = WebAppFactoryArg.Notifications.DeliveryCountFor(recipient);
+		collectionStarted?.Invoke();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
 		await Assert.That(() => outputComplete(WebAppFactoryArg.Notifications.DeliveriesFor(recipient)
 			.Skip(deliveryStart).Where(delivery => delivery.Sender == sender)
@@ -735,7 +700,8 @@ public class MyrddinBBSIntegrationTests
 			.WaitsFor(result => result.IsTrue(), timeout: TimeSpan.FromSeconds(10),
 				cancellationToken: TestContext.Current!.Execution.CancellationToken);
 		await WaitForBbsQueueAsync();
-		return GetNotificationMessages(before, NotificationCount());
+		return WebAppFactoryArg.Notifications.DeliveriesFor(recipient).Skip(deliveryStart)
+			.Select(delivery => delivery.Message).ToArray();
 	}
 
 	/// <summary>Package commands return after their report is sent; their sender is the invoking player.</summary>
@@ -781,8 +747,7 @@ public class MyrddinBBSIntegrationTests
 
 		var groupName = $"TestGrp_{Guid.NewGuid():N}"[..20]; // Keep name short for BBS
 
-		var preTestNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var preTestNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		var newGroupCmd = $"+bbnewgroup {groupName}";
 		var parseErrors = Parser.ValidateAndGetErrors(MarkupText.Plain(newGroupCmd), ParseType.CommandList);
@@ -827,8 +792,7 @@ public class MyrddinBBSIntegrationTests
 			Log($"[BBS NEWGROUP] WARNING: Exception looking up group dbref: {ex.Message}");
 		}
 
-		var postNewGroupNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var postNewGroupNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		Log($"\n{new string('-', 78)}");
 		Log("+BBNEWGROUP NOTIFICATIONS:");
@@ -839,9 +803,8 @@ public class MyrddinBBSIntegrationTests
 		var cantSeeMessages = new List<(int Index, string Message)>();
 
 		var ngIndex = 0;
-		foreach (var messageText in NotifyService.ReceivedCalls()
-			.Select(ExtractMessageText)
-			.OfType<string>())
+		foreach (var messageText in WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef)
+			.Select(delivery => delivery.Message))
 		{
 			ngIndex++;
 			if (ngIndex <= preTestNotifications) continue;
@@ -859,8 +822,7 @@ public class MyrddinBBSIntegrationTests
 				cantSeeMessages.Add((ngIndex, messageText));
 		}
 
-		preTestNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		preTestNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		var bbreadParseErrors = Parser.ValidateAndGetErrors(MarkupText.Plain("+bbread"), ParseType.CommandList);
 		await Assert.That(bbreadParseErrors.Count).IsEqualTo(0)
@@ -872,9 +834,8 @@ public class MyrddinBBSIntegrationTests
 		var bbreadErrors = new List<(int Index, string Message)>();
 		var notifyIndex = 0;
 
-		foreach (var messageText in NotifyService.ReceivedCalls()
-			.Select(ExtractMessageText)
-			.OfType<string>())
+		foreach (var messageText in WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef)
+			.Select(delivery => delivery.Message))
 		{
 			notifyIndex++;
 			if (notifyIndex <= preTestNotifications) continue;
@@ -981,8 +942,7 @@ public class MyrddinBBSIntegrationTests
 				Log($"  ANTLR: col {error.Column}: {error.Message}");
 		}
 
-		var prePostNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var prePostNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 		var postDeliveryStart = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		try
@@ -999,8 +959,7 @@ public class MyrddinBBSIntegrationTests
 		await WaitForBbsOutputAsync(postDeliveryStart, message =>
 			message.StartsWith("You post your note about 'Title Goes Here' in group 1", StringComparison.Ordinal));
 
-		var postPostNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var postPostNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		var postMessages = new List<(int Index, string Message)>();
 		var postErrors = new List<(int Index, string Message)>();
@@ -1008,9 +967,8 @@ public class MyrddinBBSIntegrationTests
 		var cantSeeMessages = new List<(int Index, string Phase, string Message)>();
 
 		var pIndex = 0;
-		foreach (var messageText in NotifyService.ReceivedCalls()
-			.Select(ExtractMessageText)
-			.OfType<string>())
+		foreach (var messageText in WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef)
+			.Select(delivery => delivery.Message))
 		{
 			pIndex++;
 			if (pIndex <= prePostNotifications) continue;
@@ -1046,8 +1004,7 @@ public class MyrddinBBSIntegrationTests
 				Log($"  ANTLR: col {error.Column}: {error.Message}");
 		}
 
-		var preReadNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var preReadNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 		var readDeliveryStart = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		try
@@ -1067,16 +1024,14 @@ public class MyrddinBBSIntegrationTests
 			message.TrimStart().StartsWith("=", StringComparison.Ordinal)
 			&& message.Contains("Title Goes Here", StringComparison.Ordinal)
 			&& message.Contains("Body of the test post.", StringComparison.Ordinal));
-		var postReadNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var postReadNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		var readMessages = new List<(int Index, string Message)>();
 		var readErrors = new List<(int Index, string Message)>();
 
 		var rIndex = 0;
-		foreach (var messageText in NotifyService.ReceivedCalls()
-			.Select(ExtractMessageText)
-			.OfType<string>())
+		foreach (var messageText in WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef)
+			.Select(delivery => delivery.Message))
 		{
 			rIndex++;
 			if (rIndex <= preReadNotifications) continue;
@@ -1101,8 +1056,7 @@ public class MyrddinBBSIntegrationTests
 			Log($"  [{idx}] {msg}");
 		}
 
-		var preListNotifications = NotifyService.ReceivedCalls()
-			.Count(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify));
+		var preListNotifications = WebAppFactoryArg.Notifications.DeliveryCountFor(WebAppFactoryArg.ExecutorDBRef);
 
 		try
 		{
@@ -1117,9 +1071,8 @@ public class MyrddinBBSIntegrationTests
 
 		var listMessages = new List<(int Index, string Message)>();
 		var lIndex = 0;
-		foreach (var messageText in NotifyService.ReceivedCalls()
-			.Select(ExtractMessageText)
-			.OfType<string>())
+		foreach (var messageText in WebAppFactoryArg.Notifications.DeliveriesFor(WebAppFactoryArg.ExecutorDBRef)
+			.Select(delivery => delivery.Message))
 		{
 			lIndex++;
 			if (lIndex <= preListNotifications) continue;
@@ -1211,20 +1164,17 @@ public class MyrddinBBSIntegrationTests
 		await Assert.That(postConfirmation.Message).Contains("Title Goes Here")
 			.Because("+bbpost should use the correct title 'Title Goes Here', not the group number");
 
-		var messLstSet = postMessages.Any(m => m.Message.Contains("mess_lst SET", StringComparison.OrdinalIgnoreCase)
-			|| m.Message.Contains("/mess_lst - Set.", StringComparison.OrdinalIgnoreCase));
-		await Assert.That(messLstSet).IsTrue()
-			.Because("mess_lst attribute should be SET on the group after +bbpost");
-
-		var hdrSet = postMessages.Any(m => m.Message.Contains("hdr_", StringComparison.OrdinalIgnoreCase)
-			&& m.Message.Contains("SET", StringComparison.OrdinalIgnoreCase));
-		await Assert.That(hdrSet).IsTrue()
-			.Because("hdr_ attribute should be SET on the group after +bbpost");
-
-		var bdySet = postMessages.Any(m => m.Message.Contains("bdy_", StringComparison.OrdinalIgnoreCase)
-			&& m.Message.Contains("SET", StringComparison.OrdinalIgnoreCase));
-		await Assert.That(bdySet).IsTrue()
-			.Because("bdy_ attribute should be SET on the group after +bbpost");
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var groups = await mediator.CreateStream(new GetAttributeQuery(await BbsPocketAsync(), ["GROUPS"])).LastAsync();
+		var group = DBRef.Parse(groups.Value.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries)[0]);
+		var messageList = await mediator.CreateStream(new GetAttributeQuery(group, ["MESS_LST"])).LastAsync();
+		var messageIds = messageList.Value.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(messageIds).HasSingleItem()
+			.Because("the first post must persist one message in the group's MESS_LST");
+		var header = await mediator.CreateStream(new GetAttributeQuery(group, ["HDR_" + messageIds[0]])).LastAsync();
+		var body = await mediator.CreateStream(new GetAttributeQuery(group, ["BDY_" + messageIds[0]])).LastAsync();
+		await Assert.That(header.Value.ToPlainText().Split('|')[0]).IsEqualTo("Title Goes Here");
+		await Assert.That(body.Value.ToPlainText()).IsEqualTo("Body of the test post.");
 
 		var readHasTitle = readMessages.Any(m => m.Message.Contains("Title Goes Here", StringComparison.OrdinalIgnoreCase));
 		await Assert.That(readHasTitle).IsTrue()
