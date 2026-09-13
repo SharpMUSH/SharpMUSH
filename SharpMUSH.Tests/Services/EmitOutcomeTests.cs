@@ -65,7 +65,7 @@ public class EmitOutcomeTests
 		await Assert.That(result.HadErrors).IsFalse();
 		if (name == "nsprompt")
 			await Notifications.Received().Prompt(TestHelpers.MatchingObject(recipient.DbRef), TestHelpers.MatchingMessage(accepted),
-				TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.Announce);
+				TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 		else await Assert.That(Factory.Notifications.For(recipient.DbRef)).Contains(accepted);
 		await Admin(name == "nsprompt" ? $"@lock/page {recipient.DbRef}=#FALSE" : $"@lock/speech {room}=#FALSE");
 		var denied = $"denied_{Guid.NewGuid():N}";
@@ -74,7 +74,7 @@ public class EmitOutcomeTests
 		await Assert.That(result.HadErrors).IsFalse();
 		await Assert.That(Factory.Notifications.For(recipient.DbRef)).DoesNotContain(denied);
 		await Notifications.DidNotReceive().Prompt(TestHelpers.MatchingObject(recipient.DbRef), TestHelpers.MatchingMessage(denied),
-			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -89,7 +89,7 @@ public class EmitOutcomeTests
 		var result = await Command(actor, $"@nsprompt/silent {recipient.DbRef}={body}");
 		await Assert.That(result.Message!.ToPlainText()).IsEmpty();
 		await Notifications.DidNotReceive().Prompt(TestHelpers.MatchingObject(recipient.DbRef), TestHelpers.MatchingMessage(body),
-			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -127,9 +127,9 @@ public class EmitOutcomeTests
 		if (missingTarget) targets = missingFirst ? $"{missing} {targets}" : $"{targets} {missing}";
 		var result = await Command(actor, $"@nsprompt/silent {targets}={body}");
 		await Notifications.Received().Prompt(TestHelpers.MatchingObject(accepted.DbRef), TestHelpers.MatchingMessage(body),
-			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 		await Notifications.DidNotReceive().Prompt(TestHelpers.MatchingObject(denied.DbRef), TestHelpers.MatchingMessage(body),
-			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(missingTarget
 			? expectedFailure.Expect<Error<CallState>>().Value.Message!.ToPlainText() : body);
 		await Assert.That(result.HadErrors).IsFalse();
@@ -156,7 +156,7 @@ public class EmitOutcomeTests
 			await Assert.That(result.HadErrors).IsFalse();
 			if (name == "nsprompt")
 				await Notifications.Received().Prompt(TestHelpers.MatchingObject(recipient.DbRef), TestHelpers.MatchingMessage(body),
-					TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.Announce);
+					TestHelpers.MatchingObject(actor.DbRef), INotifyService.NotificationType.PrivateEmit);
 		}
 	}
 

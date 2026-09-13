@@ -29,7 +29,7 @@ public class CommunicationFunctionUnitTests
 			.Received(1)
 			.Notify(
 				TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(x => TestHelpers.MessagePlainTextEquals(x, uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(x => TestHelpers.MessagePlainTextEquals(x, uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -98,7 +98,7 @@ public class CommunicationFunctionUnitTests
 			.Notify(
 				TestHelpers.MatchingObject(executor),
 				Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessageEquals(msg, uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSAnnounce);
+					TestHelpers.MessageEquals(msg, uniqueMessage)), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSPrivateEmit);
 	}
 
 	[Test]

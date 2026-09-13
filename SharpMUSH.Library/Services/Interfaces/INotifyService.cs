@@ -17,7 +17,9 @@ public interface INotifyService
 		NSSay,
 		NSPose,
 		NSSemiPose,
-		NSAnnounce
+		NSAnnounce,
+		PrivateEmit,
+		NSPrivateEmit
 	}
 
 	// Sender parameter added for Noisy rules support

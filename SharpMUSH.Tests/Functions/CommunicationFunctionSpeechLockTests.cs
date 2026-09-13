@@ -44,12 +44,12 @@ public class CommunicationFunctionSpeechLockTests
 		else await Command(scene.Speaker.Handle, $"@{name}/silent {scene.Witness.DbRef}={token}");
 		var notify = WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 		await notify.Received().Prompt(TestHelpers.MatchingObject(scene.Witness.DbRef), TestHelpers.MatchingMessage(token),
-			TestHelpers.MatchingObject(scene.Speaker.DbRef), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(scene.Speaker.DbRef), INotifyService.NotificationType.PrivateEmit);
 		if (!function) await AssertNotHeardAsync(scene.Speaker.DbRef, token, "/silent suppresses the confirmation");
 		if (function) await Eval(scene.Speaker.Handle, $"{name}({scene.Witness.DbRef},)");
 		else await Command(scene.Speaker.Handle, $"@{name}/silent {scene.Witness.DbRef}=");
 		await notify.Received().Prompt(TestHelpers.MatchingObject(scene.Witness.DbRef), TestHelpers.MatchingMessage(""),
-			TestHelpers.MatchingObject(scene.Speaker.DbRef), INotifyService.NotificationType.Announce);
+			TestHelpers.MatchingObject(scene.Speaker.DbRef), INotifyService.NotificationType.PrivateEmit);
 	}
 
 	[Test]
@@ -202,7 +202,7 @@ public class CommunicationFunctionSpeechLockTests
 		await WebAppFactoryArg.Services.GetRequiredService<INotifyService>().Received().Notify(
 			TestHelpers.MatchingObject(scene.Witness.DbRef), TestHelpers.MatchingMessage(token),
 			TestHelpers.MatchingObject(authorized ? enactor.DbRef : scene.Speaker.DbRef),
-			contents ? INotifyService.NotificationType.Emit : INotifyService.NotificationType.Announce);
+			contents ? INotifyService.NotificationType.Emit : INotifyService.NotificationType.PrivateEmit);
 		await Command(1, $"@lock/page {scene.Witness.DbRef}==#{enactor.DbRef.Number}");
 		var gated = Token("pemitpage");
 		await parser.CommandListParse(MarkupText.Plain($"{command} {scene.Witness.DbRef}={gated}"));

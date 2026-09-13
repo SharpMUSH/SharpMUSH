@@ -148,25 +148,26 @@ public class NotifyService(
 		return MarkupText.Concat(parts);
 	}
 
-	public async ValueTask Notify(DBRef who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	private async ValueTask<bool> PrepareObjectNotification(DBRef who, SharpMessage what, AnySharpObject? sender,
+		INotifyService.NotificationType type, bool prompt)
 	{
-		if (!await CanReceive(who, sender)) return;
-		if (IsEmpty(what))
+		if (!await CanReceive(who, sender)) return false;
+		if (!prompt && IsEmpty(what))
 		{
-			return;
+			return false;
 		}
 
 		// Inbound HTTP: while the http_handler's <METHOD> attribute runs, everything emitted to
 		// the handler becomes the HTTP response body instead of going to a (nonexistent)
 		// connection — PennMUSH's CONN_HTTP_BUFFER hijack (src/notify.c queue_newwrite).
-		if (httpOutputCapture?.TryCapture(who.Number,
+		if (!prompt && httpOutputCapture?.TryCapture(who.Number,
 				what switch
 				{
 					MString markupString => markupString.ToPlainText(),
 					string str => str
 				}) == true)
 		{
-			return;
+			return false;
 		}
 
 		if (listenerRoutingService != null && mediator != null && sender != null)
@@ -198,6 +199,12 @@ public class NotifyService(
 			}
 		}
 
+		return true;
+	}
+
+	public async ValueTask Notify(DBRef who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
+	{
+		if (!await PrepareObjectNotification(who, what, sender, type, prompt: false)) return;
 		var outgoing = Prepare(what);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
 		await foreach (var conn in connections.Get(who))
@@ -235,11 +242,7 @@ public class NotifyService(
 
 	public async ValueTask Prompt(DBRef who, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (!await CanReceive(who, sender)) return;
-		if (IsEmpty(what))
-		{
-			return;
-		}
+		if (!await PrepareObjectNotification(who, what, sender, type, prompt: true)) return;
 
 		var outgoing = Prepare(what);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
@@ -257,17 +260,12 @@ public class NotifyService(
 
 	public async ValueTask Prompt(long handle, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (!IsEmpty(what) && await CanReceiveHandle(handle, sender)) await PublishMarkupPrompt(handle, Prepare(what));
+		if (await CanReceiveHandle(handle, sender)) await PublishMarkupPrompt(handle, Prepare(what));
 	}
 
 
 	public async ValueTask Prompt(long[] handles, SharpMessage what, AnySharpObject? sender, INotifyService.NotificationType type = INotifyService.NotificationType.Announce)
 	{
-		if (IsEmpty(what))
-		{
-			return;
-		}
-
 		var outgoing = Prepare(what);
 		foreach (var handle in handles)
 		{
