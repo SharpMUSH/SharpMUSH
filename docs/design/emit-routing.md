@@ -140,6 +140,8 @@ locks. Nested evaluations restore the preceding context; independent queued hear
 inherit it. Inherited INFILTER is literal: grouping and escapes protect commas without evaluation or
 space compression. REGEXP and CASE select matching policy. Non-regexp ordering prefixes (`>`, `>=`,
 `<`, `<=`) compare numeric operands when accepted by the configured numeric policy, otherwise text.
+CASE controls wildcard/regexp matching; nonnumeric ordering uses culture-sensitive collation without
+case folding, independently of CASE, matching PennMUSH's `local_wild_match_case` ordering branches.
 Strict conversion rejects overflow and nonzero values rounded to zero. Exact hexadecimal subnormals
 remain numeric; this does not emulate every platform-specific `strtod` rounded-subnormal ERANGE case.
 

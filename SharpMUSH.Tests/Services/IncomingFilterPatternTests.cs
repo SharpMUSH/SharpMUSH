@@ -5,6 +5,22 @@ namespace SharpMUSH.Tests.Services;
 public class IncomingFilterPatternTests
 {
 	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task CaseFlagControlsWildcardMatchingButNotTextOrdering(bool caseSensitive)
+	{
+		var previous = System.Globalization.CultureInfo.CurrentCulture;
+		try
+		{
+			System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+			await Assert.That(IncomingFilterPatterns.Matches("<=alpha", "ALPHA", false, caseSensitive)).IsFalse();
+			await Assert.That(IncomingFilterPatterns.Matches(">alpha", "ALPHA", false, caseSensitive)).IsTrue();
+			await Assert.That(IncomingFilterPatterns.Matches("alpha", "ALPHA", false, caseSensitive)).IsEqualTo(!caseSensitive);
+		}
+		finally { System.Globalization.CultureInfo.CurrentCulture = previous; }
+	}
+
+	[Test]
 	[Arguments("(a,b),tail", "(a,b)|tail")]
 	[Arguments("{a,b},[c,d],tail", "{a,b}|[c,d]|tail")]
 	[Arguments(@"a\,b,tail", @"a\,b|tail")]
