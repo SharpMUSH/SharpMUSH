@@ -131,4 +131,17 @@ public class LockWriteParityTests
 		await Assert.That(await Read($"lockflags({target}/Teleport)")).IsEqualTo("i");
 	}
 
+	[Test]
+	[Arguments("visual !no_clone", "vic")]
+	[Arguments("!visual no_clone", "i")]
+	[Arguments("!visual !no_clone", "ic")]
+	public async Task FlagNegationSelectsMaskWithoutIndependentlyClearingExistingFlags(string input, string expected)
+	{
+		var target = await Create();
+		await Parser.CommandParse(1, Connections, MarkupText.Plain($"@lock {target}=#TRUE"));
+		await Parser.CommandParse(1, Connections, MarkupText.Plain($"@lset {target}/Basic=visual no_clone"));
+		await Parser.CommandParse(1, Connections, MarkupText.Plain($"@lset {target}/Basic={input}"));
+		await Assert.That(await Read($"lockflags({target})")).IsEqualTo(expected);
+	}
+
 }

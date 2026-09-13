@@ -69,6 +69,7 @@ public partial class LockService
 				subtract = false;
 			}
 		}
+		// Penn do_lset applies one mask; inner negation excludes bits from that mask.
 		var selected = yes & ~no;
 		if (selected == 0 || selected.HasFlag(LockFlags.Wizard) && !await executor.IsSee_All())
 			return new Error<string>("Unrecognized lock flag.");

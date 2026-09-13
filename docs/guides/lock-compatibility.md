@@ -14,6 +14,8 @@ Commands and functions use the same lock operations:
 - `@lset box/Basic=visual` and `lset(box/Basic,visual)` change flags.
 - `@lock box/ATTRIBUTE` and `@unlock box/ATTRIBUTE` change attribute locking.
 
+A leading `!` makes a flag operation clear its selected mask. Negated tokens inside that mask exclude flags from the selection: `visual !no_clone` sets visual and leaves an existing no_clone flag unchanged. To set visual and remove no_clone, use separate `visual` and `!no_clone` operations, as in PennMUSH.
+
 `lset()` takes two arguments and changes lock flags. List replacement is `listset(list,position,value[,input delimiter[,output delimiter]])`.
 
 Examine shows each lock's creator, flags, and a viewer-aware rendering of its object references. `lock()` returns numeric references. `lockowner()` returns the setter, rather than the object's owner. `locks()` lists standard lock types; `locks(object)` lists locally set locks, with `USER:` prefixes for custom locks. `lockflags()` uses `v` (visual), `i` (no_inherit), `c` (no_clone), `w` (wizard), and `+` (locked); `llockflags()` returns their names. The internal owner restriction is not a user-settable flag.
