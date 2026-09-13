@@ -60,8 +60,12 @@ selects a container and its contents, like REMIT, retaining spaces in the target
 
 PEMIT descriptor routing requires privilege and an active positive descriptor. Functions infer
 descriptors from an all-integer target list; a mixed numeric/DBRef list remains object matching.
-Commands require explicit `/port`, so numeric object names remain addressable. SharpMUSH also
-supports `/port` on NSPEMIT. PORT takes precedence over CONTENTS and uses executor attribution;
+Commands require explicit `/port`, so numeric object names remain addressable. `/port` accepts
+one complete positive descriptor number; `/port/list` accepts a space-separated descriptor list.
+Unlike PennMUSH's numeric-prefix parsing, SharpMUSH rejects trailing text in a single descriptor,
+including additional descriptors without `/list`. Neither implementation broadcasts to the whole
+list without `/list`. SharpMUSH also supports `/port` on NSPEMIT. PORT takes precedence over
+CONTENTS and uses executor attribution;
 CONTENTS takes precedence over LIST. Neither branch inherits private-object-list implicit silence.
 Private/list defaults to silent unless `/noisy` is supplied;
 other command confirmation defaults follow `silent_pemit`, with `/silent` and `/noisy` overrides.
