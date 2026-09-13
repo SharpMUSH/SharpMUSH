@@ -80,6 +80,7 @@ public partial class Commands
 		var result = await CommunicationService.EmitAsync(parser, EmitHelpers.Create(scope,
 			messageIndex == 0 ? "" : args["0"].Message!.ToPlainText(), message, list, silent, noSpoof,
 			!ports && switches.Contains("SPOOF"), ports));
+		if (result.HadErrors) return result;
 		return definition.Name is "@EMIT" or "@NSEMIT" or "@NSOEMIT" or "@NSPROMPT"
 			? new CallState(message) { HadErrors = result.HadErrors } : result;
 	}

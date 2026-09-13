@@ -57,6 +57,9 @@ LEMIT/NSLEMIT and ZEMIT/NSZEMIT retain PennMUSH's confirmation behavior.
 OEMIT retains PennMUSH's maximum of ten matched exclusions. This is a recipient-selection
 contract, unrelated to the obsolete 8,192-character output buffers. Explicit location syntax
 with no matching exclusions still emits to that location; implicit unmatched lists report failure.
+Explicit-location exclusions accept quoted English ordinals and `*Player` names, but only immediate
+members count toward the exclusion limit. Player and thing containers are valid locations; exits
+produce the localized invalid-room diagnostic and an error result without delivering the message.
 
 Private-output listener/puppet propagation is tracked separately by issue #1041. This change
 preserves ordinary/NS private notification parity and the distinct Prompt protocol path.

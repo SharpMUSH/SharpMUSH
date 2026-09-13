@@ -26,12 +26,12 @@ public interface ICommunicationService
 {
 	/// <summary>
 	/// Delivers private/prompt, immediate, outermost, named-location, omission or zone output.
-	/// The executor owns permissions and targeting; an authorized Spoof option selects the enactor
-	/// as speaker for Speech locks and hearing. NoSpoof independently suppresses recipient tagging.
+	/// The executor resolves targets and authorizes Spoof; the selected speaker owns Speech/Page
+	/// admission and hearing. NoSpoof independently suppresses recipient tagging.
 	/// Explicit Speech/Page refusals use FailLock; denied fanout locations are filtered.
 	/// </summary>
-	/// <returns>An empty successful command result after processing the recipients. Delivery refusals
-	/// are notified through the normal lock/locate paths. Wrappers retain argument-evaluation errors.</returns>
+	/// <returns>An empty result after processing, or InvalidRoom with HadErrors for a noncontainer
+	/// OEMIT location. Other delivery refusals notify through the normal lock/locate paths.</returns>
 	ValueTask<CallState> EmitAsync(IMUSHCodeParser parser, EmitRequest request);
 
 	/// <summary>
