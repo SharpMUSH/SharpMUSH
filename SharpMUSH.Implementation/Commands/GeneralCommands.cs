@@ -81,9 +81,9 @@ public partial class Commands
 			messageIndex == 0 ? "" : args["0"].Message!.ToPlainText(), message, list, silent, noSpoof,
 			!ports && switches.Contains("SPOOF"), ports));
 		if (outcome.Result.HadErrors) return outcome.Result;
-		if (definition.Name is not ("@EMIT" or "@NSEMIT" or "@NSOEMIT" or "@NSPROMPT")) return outcome.Result;
-		if (outcome.TargetFailure is CallState failure) return failure;
-		return outcome.Admitted ? new CallState(message) : outcome.Result;
+		var returnsMessage = definition.Name is "@EMIT" or "@NSEMIT" or "@NSOEMIT" or "@NSPROMPT";
+		if ((returnsMessage || definition.Name == "@OEMIT") && outcome.TargetFailure is CallState failure) return failure;
+		return returnsMessage && outcome.Admitted ? new CallState(message) : outcome.Result;
 	}
 
 	private const string DefaultSemaphoreAttribute = "SEMAPHORE";

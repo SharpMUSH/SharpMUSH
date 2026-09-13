@@ -128,7 +128,8 @@ public partial class CommunicationService
 	{
 		var observed = false;
 		await Deliver(location.WithExitOption());
-		await foreach (var content in location.Content(mediator)) await Deliver(content.WithRoomOption());
+		await foreach (var content in location.Content(mediator))
+			if (content.IsPlayer || content.IsThing) await Deliver(content.WithRoomOption());
 		return observed;
 		async ValueTask Deliver(AnySharpObject target)
 		{
@@ -168,6 +169,7 @@ public partial class CommunicationService
 			if (await locateService.Locate(parser, looker, executor, name, flags) is not AnySharpObject target) continue;
 			if (request.OmitLocation is not null)
 			{
+				if (!target.IsPlayer && !target.IsThing) continue;
 				if ((await target.Where()).Object().DBRef != looker.Object().DBRef) continue;
 				if (matched++ == 10)
 				{
