@@ -1351,7 +1351,7 @@ public class SharpMUSHParserVisitor(
 					&& singleTokenCandidate.IsSystem
 					&& singleTokenCandidate.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken))
 			{
-				return await HandleSingleTokenCommandPattern(parser, src, context, command,
+				return await HandleSingleTokenCommandPattern(parser, src, context, command, tokenText,
 					singleTokenCandidate.LibraryInformation);
 			}
 
@@ -2309,7 +2309,7 @@ public class SharpMUSHParserVisitor(
 	{
 		if (prs.CurrentState.Handle.HasValue)
 			await NotifyService.Notify(prs.CurrentState.Handle.Value, reason);
-		return new None();
+		return new CallState(reason) { HadErrors = true };
 	}
 
 	/// <summary>
@@ -2352,16 +2352,20 @@ public class SharpMUSHParserVisitor(
 	}
 
 	private async ValueTask<Option<CallState>> HandleSingleTokenCommandPattern(IMUSHCodeParser prs,
-		MString src, CommandContext context, string command, CommandDefinition singleLibraryCommandDefinition)
+		MString src, CommandContext context, string command, MString tokenText, CommandDefinition singleLibraryCommandDefinition)
 	{
 		var singleRootCommand = command[..1];
-		var rest = command[1..];
 
-		// TODO: Investigate if single-token commands should support argument splitting.
-		// Currently causing errors, may require special handling for single-character commands.
-		// The root command must be passed so the no-space branch strips the token: without it, a bare
-		// "]" split to a single argument equal to "]" itself, and the re-dispatch in NoParse/StrictParse
-		// re-entered this same path forever — a stack overflow that takes the whole process down.
+		// Modifiers carry one exact source slice. Attribute assignment retains its separate
+		// glued-name/LHS/RHS argument contract below.
+		if (singleRootCommand is "]" or "~")
+			return await prs.With(state => state with
+			{
+				Arguments = new() { ["0"] = new CallState(tokenText.Substring(1)) },
+				Function = null
+			}, async modified => await singleLibraryCommandDefinition.Command.Invoke(modified));
+
+		var rest = command[1..];
 		return await ArgumentSplit(prs, src, context, singleLibraryCommandDefinition, singleRootCommand) switch
 		{
 			CommandArguments argumentResults => await DispatchSingleTokenCommand(prs, singleRootCommand, rest,
@@ -2431,11 +2435,11 @@ public class SharpMUSHParserVisitor(
 
 		// PennMUSH's command_parse computes `noeval = SW_ISSET(sw, SWITCH_NOEVAL) || noevtoken` and
 		// hands it to command_argparse, so /noeval suppresses evaluation for ANY command that takes
-		// the switch — `say/noeval [add(1,2)]` says "[add(1,2)]". Restricted to non-EQSPLIT commands
-		// here: Penn's EQSPLIT branch has an extra rule (an `=` present means the LHS is evaluated
-		// after all) that SharpMUSH does not model yet, and guessing at it would be worse than
-		// leaving those commands as they are.
-		var noEval = noEvalSwitch && !behavior.HasFlag(CommandBehavior.EqSplit);
+		// the switch — `say/noeval [add(1,2)]` says "[add(1,2)]". The leading ] mode applies to
+		// both EQSPLIT sides. The explicit switch remains restricted to non-EQSPLIT commands here:
+		// Penn's explicit-switch EQSPLIT branch separately evaluates the LHS when '=' is present.
+		var noEval = prs.CurrentState.ParseMode == ParseMode.NoEval
+			|| noEvalSwitch && !behavior.HasFlag(CommandBehavior.EqSplit);
 
 		// Do not parse the argument splitting.
 		// Set PreserveBraces so VisitBracePattern preserves outer braces when:

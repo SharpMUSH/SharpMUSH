@@ -301,6 +301,9 @@ public partial record ParserState(
 	/// </remarks>
 	public InvocationCounter? MoveDepth { get; init; }
 
+	/// <summary>Synchronous command-modifier nesting, bounded by MaxDepth and reset for independent queued actions.</summary>
+	public uint CommandModifierDepth { get; init; }
+
 	/// <summary>Shared execution lifetime, retained when a nested parser copies this state.</summary>
 	public ExecutionBudget? ExecutionBudget { get; init; }
 
@@ -337,6 +340,7 @@ public partial record ParserState(
 		TotalInvocations = new(),
 		LimitExceeded = new(),
 		MoveDepth = new(),
+		CommandModifierDepth = 0,
 		ExecutionBudget = null
 	};
 
