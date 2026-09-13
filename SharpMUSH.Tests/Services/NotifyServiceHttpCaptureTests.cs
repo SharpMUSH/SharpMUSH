@@ -1,5 +1,8 @@
+using Mediator;
 using NSubstitute;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -23,19 +26,44 @@ public class NotifyServiceHttpCaptureTests
 		var connections = Substitute.For<IConnectionService>();
 		var listeners = Substitute.For<IListenerRoutingService>();
 		var capture = new HttpOutputCapture();
+		var mediator = Substitute.For<IMediator>();
+		var objects = new TestObjectFactory();
+		AnySharpObject speaker = objects.CreateRoom(1, "speaker");
+		AnySharpObject target = objects.CreateRoom(42, "HTTP handler");
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(new AnyOptionalSharpObject(target));
+		connections.Get(Arg.Any<DBRef>()).Returns(AsyncEnumerable.Empty<IConnectionService.ConnectionData>());
 		var service = new NotifyService(bus, connections, Substitute.For<ILocalizationService>(), DisabledRealityPolicy.Instance,
-			listeners, null, capture);
+			listeners, mediator, capture);
+		var context = new NotificationContext(target.Object().DBRef, speaker.Object().DBRef, [])
+		{
+			Prefix = MarkupText.Plain("prefix "), Relay = NotificationRelay.RelayOnce
+		};
 		var response = new HttpResponseContext();
 		using (capture.BeginCapture(42, response))
-			await service.NotifyContextAsync(new NotificationContext(new DBRef(42), new DBRef(1), [])
-			{
-				Prefix = MarkupText.Plain("prefix "), Relay = NotificationRelay.RelayOnce
-			}, MarkupText.Plain("body"), null, INotifyService.NotificationType.PrivateEmit);
+			await service.NotifyContextAsync(context, MarkupText.Plain("body"), speaker, INotifyService.NotificationType.PrivateEmit);
 		await Assert.That(response.Body.ToString()).IsEqualTo("prefix body\n");
 		await Assert.That(listeners.ReceivedCalls()).IsEmpty();
 		await Assert.That(bus.ReceivedCalls()).IsEmpty();
 		await Assert.That(connections.ReceivedCalls()).IsEmpty();
+		await Assert.That(mediator.ReceivedCalls()).IsEmpty();
+
+		await service.NotifyContextAsync(context, MarkupText.Plain("body"), speaker, INotifyService.NotificationType.PrivateEmit);
+		await listeners.Received(1).ProcessNotificationAsync(
+			Arg.Is<NotificationContext>(value => value.Target == context.Target && value.Location == context.Location
+				&& value.Prefix.ToPlainText() == "prefix " && value.Relay == NotificationRelay.RelayOnce),
+			Arg.Is<SharpMessage>(value => MessageText(value) == "body"),
+			speaker, INotifyService.NotificationType.PrivateEmit);
+		connections.Received(1).Get(context.Target);
+		await Assert.That(response.Body.ToString()).IsEqualTo("prefix body\n");
+		await Assert.That(bus.ReceivedCalls()).IsEmpty();
 	}
+
+	private static string MessageText(SharpMessage message) => message switch
+	{
+		MString markup => markup.ToPlainText(),
+		string text => text
+	};
 
 	private static (NotifyService Service, IMessageBus Bus) BuildService()
 	{
