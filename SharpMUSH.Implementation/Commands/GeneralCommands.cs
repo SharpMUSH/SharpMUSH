@@ -77,12 +77,13 @@ public partial class Commands
 		var silent = switches.Contains("SILENT") || (!switches.Contains("NOISY") &&
 			(Configuration.CurrentValue.Compatibility.SilentPEmit
 			 || scope == EmitScope.Private && list && !ports));
-		var result = await CommunicationService.EmitAsync(parser, EmitHelpers.Create(scope,
+		var outcome = await CommunicationService.EmitWithOutcomeAsync(parser, EmitHelpers.Create(scope,
 			messageIndex == 0 ? "" : args["0"].Message!.ToPlainText(), message, list, silent, noSpoof,
 			!ports && switches.Contains("SPOOF"), ports));
-		if (result.HadErrors) return result;
-		return definition.Name is "@EMIT" or "@NSEMIT" or "@NSOEMIT" or "@NSPROMPT"
-			? new CallState(message) { HadErrors = result.HadErrors } : result;
+		if (outcome.Result.HadErrors) return outcome.Result;
+		if (definition.Name is not ("@EMIT" or "@NSEMIT" or "@NSOEMIT" or "@NSPROMPT")) return outcome.Result;
+		if (outcome.TargetFailure is CallState failure) return failure;
+		return outcome.Admitted ? new CallState(message) : outcome.Result;
 	}
 
 	private const string DefaultSemaphoreAttribute = "SEMAPHORE";
@@ -2895,7 +2896,7 @@ public partial class Commands
 		return new CallState(truthy) { HadErrors = nestedResult?.HadErrors == true };
 	}
 
-	[SharpCommand(Name = "@NSEMIT", Switches = ["ROOM", "NOEVAL", "SILENT", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
+	[SharpCommand(Name = "@NSEMIT", Switches = ["ROOM", "NOEVAL", "SILENT", "NOISY", "SPOOF"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
 		MinArgs = 0, MaxArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> NoSpoofEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await RunEmitCommand(parser, _2, EmitScope.Immediate, true);
@@ -4924,7 +4925,7 @@ public partial class Commands
 		return currentFlagNames.SequenceEqual(defaultFlagNames);
 	}
 
-	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF", "ROOM"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
+	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF", "ROOM", "SILENT", "NOISY"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged,
 		MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
