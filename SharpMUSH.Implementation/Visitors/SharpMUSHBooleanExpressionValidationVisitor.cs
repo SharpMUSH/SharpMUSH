@@ -1,8 +1,9 @@
 ﻿using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Visitors;
 
-public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker) : SharpMUSHBoolExpParserBaseVisitor<bool?>
+public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject? invoker = null) : SharpMUSHBoolExpParserBaseVisitor<bool?>
 {
 	protected override bool? AggregateResult(bool? aggregate, bool? nextResult)
 		=> (aggregate ?? true) && (nextResult ?? true);
@@ -37,16 +38,10 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 		=> Visit(context.lockExprList());
 
 	public override bool? VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
-	{
-		// Owner locks are always valid syntactically - they check at runtime
-		return true;
-	}
+		=> ValidObjectOperand(context.@string());
 
 	public override bool? VisitCarryExpr(SharpMUSHBoolExpParser.CarryExprContext context)
-	{
-		// Carry locks are always valid syntactically - they check at runtime
-		return true;
-	}
+		=> ValidObjectOperand(context.@string());
 
 	public override bool? VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
 	{
@@ -101,17 +96,10 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 	}
 
 	public override bool? VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
-	{
-		// Exact object locks are always valid - they check at runtime
-		return true;
-	}
+		=> ValidObjectOperand(context.@string(0));
 
 	public override bool? VisitDefaultExpr(SharpMUSHBoolExpParser.DefaultExprContext context)
-	{
-		// Default (bare name) locks are always valid - they check at runtime
-		var value = context.@string().GetText();
-		return true;
-	}
+		=> ValidObjectOperand(context.@string());
 
 	public override bool? VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
@@ -126,9 +114,14 @@ public class SharpMUSHBooleanExpressionValidationVisitor(AnySharpObject invoker)
 	}
 
 	public override bool? VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
+		=> ValidObjectOperand(context.@string(0));
+
+	private static bool ValidObjectOperand(SharpMUSHBoolExpParser.StringContext operand)
 	{
-		// Indirect locks are always valid syntactically
-		return true;
+		var value = operand.GetText();
+		var numericReference = operand.STAMPED_DBREF() != null ||
+			value.Length > 1 && value[0] == '#' && value.Skip(1).All(char.IsDigit);
+		return !numericReference || DBRef.TryParse(value, out _);
 	}
 
 	public override bool? VisitString(SharpMUSHBoolExpParser.StringContext context) =>

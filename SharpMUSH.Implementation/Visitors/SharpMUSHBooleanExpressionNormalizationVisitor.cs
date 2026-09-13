@@ -111,7 +111,7 @@ public class SharpMUSHBooleanExpressionNormalizationVisitor(
 	{
 		if (context.ATTRIBUTE_COLON() != null)
 		{
-			// Attribute pattern like =attr:value — not an object reference
+			// Preserve the explicit colon syntax, such as =attr:value.
 			var value = $"{context.@string(0).GetText()}:{context.@string(1).GetText()}";
 			return $"={value}";
 		}
