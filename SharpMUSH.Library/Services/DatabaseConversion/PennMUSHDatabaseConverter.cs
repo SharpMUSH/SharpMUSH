@@ -1,9 +1,12 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Diagnostics;
 
@@ -14,23 +17,20 @@ namespace SharpMUSH.Library.Services.DatabaseConversion;
 /// </summary>
 public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 {
-	private readonly ISharpDatabase _database;
 	private readonly PennMUSHDatabaseParser _parser;
 	private readonly ILogger<PennMUSHDatabaseConverter> _logger;
-	private readonly IAttributeService _attributeService;
 	private readonly IMediator _mediator;
+	private readonly IOptionsWrapper<SharpMUSHOptions> _options;
 
 	public PennMUSHDatabaseConverter(
-		ISharpDatabase database,
 		PennMUSHDatabaseParser parser,
-		IAttributeService attributeService,
 		IMediator mediator,
+		IOptionsWrapper<SharpMUSHOptions> options,
 		ILogger<PennMUSHDatabaseConverter> logger)
 	{
-		_database = database;
 		_parser = parser;
-		_attributeService = attributeService;
 		_mediator = mediator;
+		_options = options;
 		_logger = logger;
 	}
 
@@ -122,6 +122,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Objects created", 0.25);
 
 			await EstablishRelationshipsAsync(pennDatabase, context, cancellationToken);
+			context.ReportUnconverted();
 			ReportProgress("Relationships established", 0.50);
 
 			attributesConverted = await CreateAttributesAsync(pennDatabase, context, cancellationToken);
@@ -161,6 +162,46 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
+	/// Hands a seeded object the identity of the source object it stands in for: its name, God's
+	/// password, and its PennMUSH times.
+	/// </summary>
+	/// <remarks>
+	/// #0, #1 and #2 already exist in a migrated database, so the importer reuses them instead of
+	/// creating them and never reaches the timestamp-aware create path. Left unstamped they keep the
+	/// seed's startup time and their PennMUSH objids do not resolve — God's especially, which imported
+	/// softcode references constantly. Every write goes through the Mediator: a running game has
+	/// usually read these three already, and a raw store write would leave its cached copies stale.
+	/// </remarks>
+	private async Task<DBRef> AdoptSeededObjectAsync(AnySharpObject seeded, PennMUSHObject pennObject,
+		CancellationToken cancellationToken)
+	{
+		var number = seeded.Object().Key;
+		await _mediator.Send(new SetNameCommand(seeded, MarkupText.Plain(pennObject.Name)), cancellationToken);
+
+		// Before the restamp, because the command carries the object as read before it. The order is
+		// otherwise free: an imported PennMUSH hash validates against salt + plaintext, never the objid.
+		if (seeded is SharpPlayer seededPlayer && !string.IsNullOrEmpty(pennObject.Password))
+		{
+			await _mediator.Send(new SetPlayerPasswordCommand(seededPlayer, ImportedPassword(pennObject.Password),
+				StoredVerbatim), cancellationToken);
+		}
+
+		var (created, modified) = PennTimestamps(pennObject);
+		if (created is null && modified is null)
+		{
+			return new DBRef(number);
+		}
+
+		// A source with no creation time keeps the seeded one, and with it the objid.
+		var creation = created ?? seeded.Object().CreationTime;
+		await _mediator.Send(new SetObjectTimestampsCommand(new DBRef(number), creation, modified),
+			cancellationToken);
+		_logger.LogDebug("Restamped reused object #{DBRef} with creation time {Created}", number, creation);
+
+		return new DBRef(number, creation);
+	}
+
+	/// <summary>
 	/// PennMUSH's creation/modification stamps, scaled into the milliseconds SharpMUSH stores.
 	/// </summary>
 	/// <remarks>
@@ -170,37 +211,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// <para>An object with no recorded creation time (a 0 field) defaults to now, since 1970 is not
 	/// a more truthful answer than the import date.</para>
 	/// </remarks>
-	/// <summary>
-	/// Restamps one of the three objects reused from the migration seed with its PennMUSH times.
-	/// </summary>
-	/// <remarks>
-	/// #0, #1 and #2 already exist in a migrated database, so the importer reuses them instead of
-	/// creating them and never reaches the timestamp-aware create path. Left alone they keep the
-	/// seed's startup time and their PennMUSH objids do not resolve — God's especially, which
-	/// imported softcode references constantly.
-	/// </remarks>
-	private async Task<DBRef> RestampReusedObjectAsync(int dbrefNumber, PennMUSHObject? pennObject,
-		CancellationToken cancellationToken)
-	{
-		if (pennObject is null)
-		{
-			return new DBRef(dbrefNumber);
-		}
-
-		var (created, modified) = PennTimestamps(pennObject);
-		if (created is null)
-		{
-			return new DBRef(dbrefNumber);
-		}
-
-		await _database.SetObjectTimestampsAsync(new DBRef(dbrefNumber), created.Value, modified,
-			cancellationToken);
-		_logger.LogDebug("Restamped reused object #{DBRef} with its PennMUSH creation time {Created}",
-			dbrefNumber, created.Value);
-
-		return new DBRef(dbrefNumber, created.Value);
-	}
-
 	internal static (long? Created, long? Modified) PennTimestamps(PennMUSHObject pennObject)
 		=> (pennObject.CreationTime > 0 ? pennObject.CreationTime * 1000 : null,
 			pennObject.ModificationTime > 0 ? pennObject.ModificationTime * 1000 : null);
@@ -224,175 +234,127 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return (0, 0, 0, 0);
 		}
 
-		// Check if default objects from migration already exist (#0, #1, #2)
-		// If they do, we'll reuse them instead of creating new ones
+		// Migration seeds #0-#2 the way PennMUSH's create_minimal_db lays out every database: Room Zero,
+		// God (PennMUSH hardcodes GOD as #1) and the Master Room (MASTER_ROOM must be a room). A seeded
+		// object stands in for the source's only when both are the same type; a source object of any
+		// other type at those numbers is created in the main loop like the rest. A source that lacks one
+		// of them still maps its number onto the seeded object, so references to it resolve.
+		var godPennObject = pennDatabase.GetObject(1);
+		var existingPlayer1 = await _mediator.Send(new GetObjectNodeQuery(new DBRef(1)), cancellationToken);
 		DBRef tempGodDbRef;
-		if (await _database.GetObjectNodeAsync(new DBRef(1), cancellationToken) is AnySharpObject and SharpPlayer existingPlayer1)
-		{
-			// Player #1 already exists (from database migration), reuse it
-			tempGodDbRef = new DBRef(1);
-			dbrefMapping[1] = tempGodDbRef;
-			playersConverted++; // Count reused object in totals
-			_logger.LogInformation("Reusing existing God player #1 from database migration");
 
-			var godPennObject = pennDatabase.GetObject(1);
+		if (existingPlayer1 is AnySharpObject seededGod && seededGod.IsPlayer)
+		{
+			tempGodDbRef = new DBRef(1);
 			if (godPennObject?.Type == PennMUSHObjectType.Player)
 			{
-				await _database.SetObjectName(existingPlayer1, MarkupText.Plain(godPennObject.Name), cancellationToken);
-
-				if (!string.IsNullOrEmpty(godPennObject.Password))
-				{
-					var (salt, hash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
-					await _database.SetPlayerPasswordAsync(existingPlayer1, hash, salt, cancellationToken);
-				}
-
-				// After the password, because SetPlayerPasswordAsync takes the object read before the
-				// restamp. The order is otherwise free: an imported PennMUSH hash validates against
-				// salt + plaintext, never against the objid.
-				tempGodDbRef = await RestampReusedObjectAsync(1, godPennObject, cancellationToken);
-				dbrefMapping[1] = tempGodDbRef;
-
-				_logger.LogDebug("Updated God player #{PennDBRef} with name: {Name}", 1, godPennObject.Name);
+				tempGodDbRef = await AdoptSeededObjectAsync(seededGod, godPennObject, cancellationToken);
+				playersConverted++;
+				_logger.LogInformation("Reusing existing God player #1 from database migration: {Name}", godPennObject.Name);
 			}
+
+			if (godPennObject is null || godPennObject.Type == PennMUSHObjectType.Player)
+			{
+				dbrefMapping[1] = tempGodDbRef;
+			}
+		}
+		else if (godPennObject?.Type == PennMUSHObjectType.Player)
+		{
+			var (godCreated, godModified) = PennTimestamps(godPennObject);
+			tempGodDbRef = await _mediator.Send(new CreatePlayerCommand(
+				godPennObject.Name,
+				ImportedPassword(godPennObject.Password),
+				new DBRef(0), // Limbo room (will create or reuse next)
+				new DBRef(0), // Home is also Limbo
+				QuotaFor(godPennObject, pennDatabase),
+				StoredVerbatim,
+				ApplyDefaultFlags: false,
+				godCreated,
+				godModified), cancellationToken);
+
+			dbrefMapping[1] = tempGodDbRef;
+			playersConverted++;
+			_logger.LogInformation("Created God player #{PennDBRef} -> {SharpDBRef}: {Name}", 1, tempGodDbRef, godPennObject.Name);
 		}
 		else
 		{
-			var godPennObject = pennDatabase.GetObject(1);
-
-			if (godPennObject?.Type == PennMUSHObjectType.Player)
+			tempGodDbRef = await _mediator.Send(new CreatePlayerCommand(
+				"God",
+				PasswordService.LockedHash,
+				new DBRef(0),
+				new DBRef(0),
+				10000,
+				StoredVerbatim,
+				ApplyDefaultFlags: false), cancellationToken);
+			if (godPennObject is null)
 			{
-				var (godSalt, godHash) = ExtractPennMUSHPasswordParts(godPennObject.Password);
-				var (godCreated, godModified) = PennTimestamps(godPennObject);
-				tempGodDbRef = await _database.CreatePlayerAsync(
-					godPennObject.Name,
-					godHash,
-					new DBRef(0), // Limbo room (will create or reuse next)
-					new DBRef(0), // Home is also Limbo
-					godPennObject.Pennies > 0 ? godPennObject.Pennies : 1000,
-					godSalt,
-					godCreated,
-					godModified,
-					cancellationToken);
+				dbrefMapping[1] = tempGodDbRef;
+			}
 
-				dbrefMapping[1] = tempGodDbRef;
-				playersConverted++;
-				_logger.LogInformation("Created God player #{PennDBRef} -> {SharpDBRef}: {Name}", 1, tempGodDbRef, godPennObject.Name);
-			}
-			else
-			{
-				// Create a default God player (no salt needed for new password)
-				tempGodDbRef = await _database.CreatePlayerAsync(
-					"God",
-					"NEEDS_RESET",
-					new DBRef(0),
-					new DBRef(0),
-					10000,
-					null,
-					cancellationToken: cancellationToken);
-				dbrefMapping[1] = tempGodDbRef;
-				playersConverted++;
-				_logger.LogWarning("Created default God player as #{PennDBRef} was not a player", 1);
-			}
+			_logger.LogWarning("Created default God player as #{PennDBRef} was not a player", 1);
 		}
 
-		var godPlayerObj = await _database.GetObjectNodeAsync(tempGodDbRef, cancellationToken);
-		if (godPlayerObj is not (AnySharpObject and SharpPlayer godPlayerWrapped))
+		if (await _mediator.Send(new GetObjectNodeQuery(tempGodDbRef), cancellationToken) is not (AnySharpObject and SharpPlayer godPlayerWrapped))
 		{
 			throw new InvalidOperationException("Failed to retrieve God player after creation or reuse");
 		}
 		var godPlayer = godPlayerWrapped;
 
-		// Check if Room #0 already exists (from database migration)
+		var room0Penn = pennDatabase.GetObject(0);
+		var existingRoom0 = await _mediator.Send(new GetObjectNodeQuery(new DBRef(0)), cancellationToken);
 		DBRef tempRoom0DbRef;
-		var existingRoom0 = await _database.GetObjectNodeAsync(new DBRef(0), cancellationToken);
 
-		if (existingRoom0.IsPlayer && existingRoom0 is AnySharpObject reusedRoom0)
+		if (existingRoom0 is AnySharpObject seededRoom0 && seededRoom0.IsRoom)
 		{
-			// Room #0 already exists (from database migration), reuse it
 			tempRoom0DbRef = new DBRef(0);
+			if (room0Penn?.Type == PennMUSHObjectType.Room)
+			{
+				tempRoom0DbRef = await AdoptSeededObjectAsync(seededRoom0, room0Penn, cancellationToken);
+				roomsConverted++;
+				_logger.LogInformation("Reusing existing Limbo room #0 from database migration: {Name}", room0Penn.Name);
+			}
+
+			if (room0Penn is null || room0Penn.Type == PennMUSHObjectType.Room)
+			{
+				dbrefMapping[0] = tempRoom0DbRef;
+			}
+		}
+		else if (room0Penn?.Type == PennMUSHObjectType.Room)
+		{
+			var (room0Created, room0Modified) = PennTimestamps(room0Penn);
+			tempRoom0DbRef = await _mediator.Send(
+				new CreateRoomCommand(room0Penn.Name, godPlayer, ApplyDefaultFlags: false, room0Created, room0Modified),
+				cancellationToken);
 			dbrefMapping[0] = tempRoom0DbRef;
-			roomsConverted++; // Count reused object in totals
-			_logger.LogInformation("Reusing existing Limbo room #0 from database migration");
-
-			var room0Penn = pennDatabase.GetObject(0);
-			if (room0Penn?.Type == PennMUSHObjectType.Room)
-			{
-				await _database.SetObjectName(reusedRoom0, MarkupText.Plain(room0Penn.Name), cancellationToken);
-				tempRoom0DbRef = await RestampReusedObjectAsync(0, room0Penn, cancellationToken);
-				dbrefMapping[0] = tempRoom0DbRef;
-				_logger.LogDebug("Updated Limbo room #{PennDBRef} with name: {Name}", 0, room0Penn.Name);
-			}
+			roomsConverted++;
+			_logger.LogInformation("Created Limbo room #{PennDBRef} -> {SharpDBRef}: {Name}", 0, tempRoom0DbRef, room0Penn.Name);
 		}
 		else
 		{
-			var room0Penn = pennDatabase.GetObject(0);
+			tempRoom0DbRef = await _mediator.Send(new CreateRoomCommand("Limbo", godPlayer, ApplyDefaultFlags: false),
+				cancellationToken);
+			if (room0Penn is null)
+			{
+				dbrefMapping[0] = tempRoom0DbRef;
+			}
 
-			if (room0Penn?.Type == PennMUSHObjectType.Room)
-			{
-				var (room0Created, room0Modified) = PennTimestamps(room0Penn);
-				tempRoom0DbRef = await _database.CreateRoomAsync(
-					room0Penn.Name,
-					godPlayer,
-					room0Created,
-					room0Modified,
-					cancellationToken);
-				dbrefMapping[0] = tempRoom0DbRef;
-				roomsConverted++;
-				_logger.LogInformation("Created Limbo room #{PennDBRef} -> {SharpDBRef}: {Name}", 0, tempRoom0DbRef, room0Penn.Name);
-			}
-			else
-			{
-				tempRoom0DbRef = await _database.CreateRoomAsync(
-					"Limbo",
-					godPlayer,
-					cancellationToken: cancellationToken);
-				dbrefMapping[0] = tempRoom0DbRef;
-				roomsConverted++;
-				_logger.LogWarning("Created default Limbo room as #{PennDBRef} was not a room", 0);
-			}
+			_logger.LogWarning("Created default Limbo room as #{PennDBRef} was not a room", 0);
 		}
 
-		// Check if Master Room #2 already exists (from database migration)
-		var existingRoom2 = await _database.GetObjectNodeAsync(new DBRef(2), cancellationToken);
-
-		if (existingRoom2.IsPlayer)
+		var room2Penn = pennDatabase.GetObject(2);
+		var existingRoom2 = await _mediator.Send(new GetObjectNodeQuery(new DBRef(2)), cancellationToken);
+		if (existingRoom2 is AnySharpObject seededRoom2 && seededRoom2.IsRoom)
 		{
-			var room2Penn = pennDatabase.GetObject(2);
-
-			// Master Room #2 already exists (from database migration), reuse it
-			dbrefMapping[2] = await RestampReusedObjectAsync(2, room2Penn, cancellationToken);
-
-			if (room2Penn != null)
+			if (room2Penn?.Type == PennMUSHObjectType.Room)
 			{
-				switch (room2Penn.Type)
-				{
-					case PennMUSHObjectType.Room:
-						roomsConverted++;
-						break;
-					case PennMUSHObjectType.Thing:
-						thingsConverted++;
-						break;
-					case PennMUSHObjectType.Exit:
-						exitsConverted++;
-						break;
-					case PennMUSHObjectType.Player:
-						playersConverted++;
-						break;
-				}
-				_logger.LogInformation("Reusing existing object #2 from database migration as {Type}", room2Penn.Type);
+				dbrefMapping[2] = await AdoptSeededObjectAsync(seededRoom2, room2Penn, cancellationToken);
+				roomsConverted++;
+				_logger.LogInformation("Reusing existing Master Room #2 from database migration: {Name}", room2Penn.Name);
 			}
-			else
+			else if (room2Penn is null)
 			{
-				// Object #2 doesn't exist in PennMUSH database, but exists in Sharp
-				roomsConverted++; // Assume it's a room from migration
-				_logger.LogInformation("Reusing existing Master Room #2 from database migration (not in PennMUSH database)");
+				dbrefMapping[2] = new DBRef(2);
 			}
-		}
-		else
-		{
-			// No existing #2 in Sharp database
-			// It will be created in the main loop below based on its actual type in PennMUSH
-			_logger.LogDebug("Object #2 does not pre-exist in Sharp database, will be created in main loop");
 		}
 
 		SharpRoom? room0 = null; // Cache the limbo room to avoid repeated lookups
@@ -401,8 +363,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
-			// Skip already created or reused objects (God, Limbo, and potentially #2 if it was reused)
-			if (pennObj.DBRef == 0 || pennObj.DBRef == 1 || dbrefMapping.ContainsKey(pennObj.DBRef))
+			// Skip the seeded objects already standing in for source objects
+			if (dbrefMapping.ContainsKey(pennObj.DBRef))
 			{
 				continue;
 			}
@@ -416,19 +378,17 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				{
 					case PennMUSHObjectType.Player:
 						{
-							// Create player with password from PennMUSH - extract salt
 							// Players start in Limbo temporarily
-							var (playerSalt, playerHash) = ExtractPennMUSHPasswordParts(pennObj.Password);
-							newDbRef = await _database.CreatePlayerAsync(
+							newDbRef = await _mediator.Send(new CreatePlayerCommand(
 								pennObj.Name,
-								playerHash,
+								ImportedPassword(pennObj.Password),
 								tempRoom0DbRef, // Start in Limbo
 								tempRoom0DbRef, // Home is Limbo for now
-								pennObj.Pennies > 0 ? pennObj.Pennies : 100,
-								playerSalt,
+								QuotaFor(pennObj, pennDatabase),
+								StoredVerbatim,
+								ApplyDefaultFlags: false,
 								created,
-								modified,
-								cancellationToken);
+								modified), cancellationToken);
 							playersConverted++;
 							break;
 						}
@@ -436,11 +396,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					case PennMUSHObjectType.Room:
 						{
 							// Rooms are created with God as owner initially
-							newDbRef = await _database.CreateRoomAsync(
-								pennObj.Name,
-								godPlayer,
-								created,
-								modified,
+							newDbRef = await _mediator.Send(
+								new CreateRoomCommand(pennObj.Name, godPlayer, ApplyDefaultFlags: false, created, modified),
 								cancellationToken);
 							roomsConverted++;
 							break;
@@ -451,20 +408,19 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							// Things need location and home - use Limbo temporarily
 							if (room0 == null)
 							{
-								var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
-								room0 = room0Obj is AnySharpObject and SharpRoom limbo
+								room0 = await _mediator.Send(new GetObjectNodeQuery(tempRoom0DbRef), cancellationToken) is AnySharpObject and SharpRoom limbo
 									? limbo
 									: throw new InvalidOperationException("Failed to retrieve Limbo room");
 							}
 
-							newDbRef = await _database.CreateThingAsync(
+							newDbRef = await _mediator.Send(new CreateThingCommand(
 								pennObj.Name,
 								room0, // Start in Limbo
 								godPlayer, // God owns it temporarily
 								room0, // Home is Limbo for now
+								ApplyDefaultFlags: false,
 								created,
-								modified,
-								cancellationToken);
+								modified), cancellationToken);
 							thingsConverted++;
 							break;
 						}
@@ -474,21 +430,20 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 							// Exits need location - use Limbo temporarily
 							if (room0 == null)
 							{
-								var room0Obj = await _database.GetObjectNodeAsync(tempRoom0DbRef, cancellationToken);
-								room0 = room0Obj is AnySharpObject and SharpRoom limbo
+								room0 = await _mediator.Send(new GetObjectNodeQuery(tempRoom0DbRef), cancellationToken) is AnySharpObject and SharpRoom limbo
 									? limbo
 									: throw new InvalidOperationException("Failed to retrieve Limbo room");
 							}
 
-							var aliases = ExtractAliases(pennObj.Name);
-							newDbRef = await _database.CreateExitAsync(
-								aliases.name,
-								aliases.aliases,
+							var (exitName, aliases) = ExitNameAndAliases(pennObj);
+							newDbRef = await _mediator.Send(new CreateExitCommand(
+								exitName,
+								aliases,
 								room0, // Start in Limbo
 								godPlayer, // God owns it temporarily
+								ApplyDefaultFlags: false,
 								created,
-								modified,
-								cancellationToken);
+								modified), cancellationToken);
 							exitsConverted++;
 							break;
 						}
@@ -511,8 +466,33 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 		}
 
+		var withPennies = pennDatabase.Objects.Count(o => o.Pennies > 0);
+		if (withPennies > 0)
+		{
+			warnings.Add($"Pennies on {withPennies} object(s) were not imported: SharpMUSH does not track money.");
+		}
+
 		return (playersConverted, roomsConverted, thingsConverted, exitsConverted);
 	}
+
+	/// <summary>
+	/// A player's quota limit. SharpMUSH's quota is the limit itself; PennMUSH keeps what is left of it
+	/// in the RQUOTA attribute (src/wiz.c, <c>do_quota</c>), so the limit is what the player owns plus
+	/// that. Without RQUOTA PennMUSH would derive one from its own <c>starting_quota</c>, which the dump
+	/// does not carry, so this game's stands in, never below what the player already owns.
+	/// </summary>
+	private int QuotaFor(PennMUSHObject player, PennMUSHDatabase pennDatabase)
+	{
+		// PennMUSH does not count the player itself (get_current_quota in src/predicat.c).
+		var owned = pennDatabase.Objects.Count(o => o.Owner == player.DBRef && o.DBRef != player.DBRef);
+		var remaining = player.Attributes.Find(a => a.Name.Equals(RemainingQuota, StringComparison.OrdinalIgnoreCase));
+		return remaining is not null && int.TryParse(remaining.Value, out var left)
+			? owned + left
+			: Math.Max(owned, (int)_options.CurrentValue.Limit.StartingQuota);
+	}
+
+	/// <summary>PennMUSH's remaining-quota attribute, which becomes the player's quota rather than an attribute.</summary>
+	private const string RemainingQuota = "RQUOTA";
 
 	private async Task EstablishRelationshipsAsync(
 		PennMUSHDatabase pennDatabase,
@@ -536,7 +516,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			try
 			{
-				if (await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken) is not AnySharpObject sharpObj)
+				if (await _mediator.Send(new GetObjectNodeQuery(sharpDbRef), cancellationToken) is not AnySharpObject sharpObj)
 				{
 					warnings.Add($"Could not retrieve object #{sharpDbRef} for relationship setup");
 					continue;
@@ -547,7 +527,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				{
 					if (dbrefMapping.TryGetValue(pennObj.Location, out var locationDbRef))
 					{
-						var locationObj = await _database.GetObjectNodeAsync(locationDbRef, cancellationToken);
+						var locationObj = await _mediator.Send(new GetObjectNodeQuery(locationDbRef), cancellationToken);
 						var container = TryGetContainer(locationObj);
 
 						if (container != null)
@@ -578,12 +558,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				{
 					if (dbrefMapping.TryGetValue(pennObj.Link, out var destDbRef))
 					{
-						var destObj = await _database.GetObjectNodeAsync(destDbRef, cancellationToken);
+						var destObj = await _mediator.Send(new GetObjectNodeQuery(destDbRef), cancellationToken);
 						var container = TryGetContainer(destObj);
 
 						if (container != null && sharpObj is SharpExit exit)
 						{
-							await _database.LinkExitAsync(exit, container, cancellationToken);
+							await _mediator.Send(new LinkExitCommand(exit, container), cancellationToken);
 							_logger.LogDebug("Linked exit #{PennDBRef} to destination #{DestDBRef}", pennObj.DBRef, pennObj.Link);
 						}
 					}
@@ -591,9 +571,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 				if (pennObj.Parent >= 0 && dbrefMapping.TryGetValue(pennObj.Parent, out var parentDbRef))
 				{
-					if (await _database.GetObjectNodeAsync(parentDbRef, cancellationToken) is AnySharpObject parentObj)
+					if (await _mediator.Send(new GetObjectNodeQuery(parentDbRef), cancellationToken) is AnySharpObject parentObj)
 					{
-						await _database.SetObjectParent(sharpObj, parentObj, cancellationToken);
+						await _mediator.Send(new SetObjectParentCommand(sharpObj, parentObj), cancellationToken);
 						_logger.LogDebug("Set parent for #{PennDBRef} to #{ParentDBRef}", pennObj.DBRef, pennObj.Parent);
 					}
 					else
@@ -604,9 +584,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 				if (pennObj.Zone >= 0 && dbrefMapping.TryGetValue(pennObj.Zone, out var zoneDbRef))
 				{
-					if (await _database.GetObjectNodeAsync(zoneDbRef, cancellationToken) is AnySharpObject zoneObj)
+					if (await _mediator.Send(new GetObjectNodeQuery(zoneDbRef), cancellationToken) is AnySharpObject zoneObj)
 					{
-						await _database.SetObjectZone(sharpObj, zoneObj, cancellationToken);
+						await _mediator.Send(new SetObjectZoneCommand(sharpObj, zoneObj), cancellationToken);
 						_logger.LogDebug("Set zone for #{PennDBRef} to #{ZoneDBRef}", pennObj.DBRef, pennObj.Zone);
 					}
 					else
@@ -614,6 +594,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						warnings.Add($"Zone object #{pennObj.Zone} not found for object #{pennObj.DBRef}");
 					}
 				}
+
+				var target = sharpObj;
+				await SetOwnerAsync(pennObj, target, context, cancellationToken);
+				await SetHomeOrDropToAsync(pennObj, target, context, cancellationToken);
+				await SetFlagsAsync(pennObj, target, context, cancellationToken);
+				await SetPowersAsync(pennObj, target, context, cancellationToken);
+				await SetWarningsAsync(pennObj, target, context, cancellationToken);
 			}
 			catch (Exception ex)
 			{
@@ -624,6 +611,147 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 	}
 
+	/// <summary>The SharpMUSH object a source dbref became, or none if it was not imported.</summary>
+	private async Task<AnyOptionalSharpObject> MappedAsync(int pennDbref, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+		=> context.DbrefMapping.TryGetValue(pennDbref, out var dbref)
+			? await _mediator.Send(new GetObjectNodeQuery(dbref), cancellationToken)
+			: new None();
+
+	/// <summary>The source owner, resolved through the conversion's mapping. A player owns itself.</summary>
+	private async Task SetOwnerAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		if (pennObj.Owner < 0)
+		{
+			return;
+		}
+
+		if (await MappedAsync(pennObj.Owner, context, cancellationToken) is not (AnySharpObject and SharpPlayer owner))
+		{
+			context.Warnings.Add($"Owner #{pennObj.Owner} of #{pennObj.DBRef} is not an imported player; God keeps it");
+			return;
+		}
+
+		await _mediator.Send(new SetObjectOwnerCommand(target, owner), cancellationToken);
+	}
+
+	/// <summary>
+	/// PennMUSH keeps a thing's or player's home, and a room's drop-to, in the link field the parser
+	/// hands over as <see cref="PennMUSHObject.Link"/>. An exit's link is its destination, set above.
+	/// </summary>
+	private async Task SetHomeOrDropToAsync(PennMUSHObject pennObj, AnySharpObject target,
+		PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		if (pennObj.Type == PennMUSHObjectType.Exit || pennObj.Link < 0)
+		{
+			return;
+		}
+
+		var container = TryGetContainer(await MappedAsync(pennObj.Link, context, cancellationToken));
+		if (container is null)
+		{
+			context.Warnings.Add(
+				$"{(target.IsRoom ? "Drop-to" : "Home")} #{pennObj.Link} of #{pennObj.DBRef} is not an imported room, thing or player");
+			return;
+		}
+
+		if (target is SharpRoom targetRoom)
+		{
+			await _mediator.Send(new LinkRoomCommand(targetRoom, container.WithNoneOption()), cancellationToken);
+		}
+		else
+		{
+			await _mediator.Send(new SetObjectHomeCommand(target.AsContent, container), cancellationToken);
+		}
+	}
+
+	/// <summary>
+	/// Imported objects are created without this game's default flags, so the source's are the whole
+	/// set. CONNECTED is session state that PennMUSH itself clears on every load (db_read in src/db.c).
+	/// </summary>
+	private async Task SetFlagsAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		foreach (var name in pennObj.Flags)
+		{
+			if (name.Equals("CONNECTED", StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
+			var flag = await _mediator.Send(new GetObjectFlagQuery(name), cancellationToken);
+			if (flag is null)
+			{
+				context.NoteUnconverted($"Flag {name.ToUpperInvariant()}, which SharpMUSH does not have", pennObj.DBRef);
+			}
+			else if (!AllowedOn(flag.TypeRestrictions, target))
+			{
+				context.NoteUnconverted($"Flag {flag.Name}, which SharpMUSH does not allow on a {target.Object().Type}", pennObj.DBRef);
+			}
+			else
+			{
+				await _mediator.Send(new SetObjectFlagCommand(target, flag), cancellationToken);
+			}
+		}
+	}
+
+	/// <summary>Whether a flag or power with these type restrictions may sit on the target; none means any.</summary>
+	private static bool AllowedOn(string[] typeRestrictions, AnySharpObject target)
+		=> typeRestrictions.Length == 0 || typeRestrictions.Contains(target.Object().Type, StringComparer.OrdinalIgnoreCase);
+
+	private async Task SetPowersAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		foreach (var name in pennObj.Powers)
+		{
+			var power = await _mediator.Send(new GetPowerQuery(name), cancellationToken);
+			if (power is null)
+			{
+				context.NoteUnconverted($"Power {name}, which SharpMUSH does not have", pennObj.DBRef);
+			}
+			else if (!AllowedOn(power.TypeRestrictions, target))
+			{
+				context.NoteUnconverted($"Power {power.Name}, which SharpMUSH does not allow on a {target.Object().Type}", pennObj.DBRef);
+			}
+			else
+			{
+				await _mediator.Send(new SetObjectPowerCommand(target, power), cancellationToken);
+			}
+		}
+	}
+
+	private async Task SetWarningsAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		if (pennObj.Warnings.Count == 0)
+		{
+			return;
+		}
+
+		var unknown = new List<string>();
+		var warnings = WarningTypeHelper.ParseWarnings(string.Join(' ', pennObj.Warnings), unknown);
+		foreach (var name in unknown)
+		{
+			context.NoteUnconverted($"Warning {name}, which SharpMUSH does not have", pennObj.DBRef);
+		}
+
+		await _mediator.Send(new SetObjectWarningsCommand(target, warnings), cancellationToken);
+	}
+
+	/// <summary>
+	/// Every object's attributes, as one <see cref="SetAttributesCommand"/> per object.
+	/// </summary>
+	/// <remarks>
+	/// <para>This loads a database; it is not a player typing <c>@set</c>. PennMUSH's loader applies each
+	/// attribute's stored flags and creator as they are, with no permission check, so a wizard-only attribute
+	/// on a mortal's object stays wizard-only and belongs to whoever set it. Two things are kept from
+	/// <c>@set</c>. Flag names are matched the same way. One name SharpMUSH does not know fails the
+	/// attribute's whole flag list, as it does in <c>string_to_atrflagsets</c>, so the attribute keeps its
+	/// value, takes none of its flags, and is reported.</para>
+	/// <para>One command per object means one cache invalidation and one store write per object. Doing it
+	/// per attribute, with a read before each write, cost the import most of its time.</para>
+	/// </remarks>
 	private async Task<int> CreateAttributesAsync(
 		PennMUSHDatabase pennDatabase,
 		PennMUSHConversionContext context,
@@ -635,6 +763,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		_logger.LogInformation("Creating attributes");
 		var count = 0;
+		var flagTable = await _mediator.CreateStream(new GetAttributeFlagsQuery(), cancellationToken)
+			.ToArrayAsync(cancellationToken);
+		var creators = new Dictionary<int, SharpPlayer?>();
 
 		foreach (var pennObj in pennDatabase.Objects)
 		{
@@ -652,62 +783,38 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			try
 			{
-				if (await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken) is not AnySharpObject sharpObj)
+				if (await _mediator.Send(new GetObjectNodeQuery(sharpDbRef), cancellationToken) is not AnySharpObject sharpObj)
 				{
 					warnings.Add($"Could not retrieve object #{sharpDbRef} for attribute creation");
 					continue;
 				}
 
+				var objectOwner = await sharpObj.Object().Owner.WithCancellation(cancellationToken);
+				var writes = new List<(PennMUSHAttribute Source, AttributeWrite Write)>(pennObj.Attributes.Count);
+
 				foreach (var pennAttr in pennObj.Attributes)
 				{
+					if (pennObj.Type == PennMUSHObjectType.Player
+						&& pennAttr.Name.Equals(RemainingQuota, StringComparison.OrdinalIgnoreCase))
+					{
+						continue;
+					}
+
 					try
 					{
+						var named = pennAttr.Flags.Select(flagTable.Named).ToArray();
+						SharpAttributeFlag[] flags = [.. named.OfType<SharpAttributeFlag>()];
+						if (flags.Length != named.Length)
+						{
+							warnings.Add(
+								$"Failed to set flags [{string.Join(", ", pennAttr.Flags)}] on attribute " +
+								$"{pennAttr.Name} of #{pennObj.DBRef}: {ErrorMessages.Returns.UnrecognizedAttributeFlag}");
+							flags = [];
+						}
+
+						var creator = await CreatorAsync(pennAttr, dbrefMapping, creators, cancellationToken) ?? objectOwner;
 						var value = MarkupString.Ansi.AnsiEscapeParser.Parse(pennAttr.Value);
-
-						if (pennAttr.Value != null && pennAttr.Value.Contains('\x1b'))
-						{
-							_logger.LogTrace("Converted ANSI escape sequences from attribute {AttrName} on object #{DBRef}",
-								pennAttr.Name, pennObj.DBRef);
-						}
-
-						var result = await _attributeService.SetAttributeAsync(
-							sharpObj, // executor (system)
-							sharpObj, // object to set attribute on
-							pennAttr.Name,
-							value);
-
-						if (result is Error<string> setError)
-						{
-							warnings.Add($"Failed to set attribute {pennAttr.Name} on #{pennObj.DBRef}: {setError.Value}");
-						}
-						else
-						{
-							count++;
-							_logger.LogTrace("Set attribute {AttrName} on object #{DBRef}", pennAttr.Name, pennObj.DBRef);
-
-							if (pennAttr.Flags.Count > 0)
-							{
-								// One batch, not one call per flag (Task 6 fix round 1, M3):
-								// applying imported flags one at a time re-checks permission
-								// after each mutation, so e.g. a converted attribute carrying
-								// both safe and wizard would silently lose wizard once safe
-								// landed first (the importing executor is the object itself,
-								// never God). Penn's own converter has no such per-flag gate.
-								// The batch is all-or-nothing (Penn's string_to_atrflagsets fails the
-								// whole argument on one unrecognized name), so a single unsupported
-								// imported flag silently leaves the attribute with NO flags at all.
-								// Surface it rather than reporting a clean conversion.
-								var flagResult = await _attributeService.SetAttributeFlagsAsync(sharpObj, sharpObj,
-									pennAttr.Name, pennAttr.Flags);
-
-								if (flagResult is Error<string> flagError)
-								{
-									warnings.Add(
-										$"Failed to set flags [{string.Join(", ", pennAttr.Flags)}] on attribute " +
-										$"{pennAttr.Name} of #{pennObj.DBRef}: {flagError.Value}");
-								}
-							}
-						}
+						writes.Add((pennAttr, new AttributeWrite(pennAttr.Name.Split('`'), value, creator, flags)));
 					}
 					catch (Exception ex)
 					{
@@ -715,6 +822,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						_logger.LogDebug(ex, "Attribute creation error");
 					}
 				}
+
+				count += await WriteAttributesAsync(pennObj, sharpDbRef, writes, warnings, cancellationToken);
 			}
 			catch (Exception ex)
 			{
@@ -726,6 +835,80 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		_logger.LogInformation("Created {Count} attributes", count);
 		return count;
+	}
+
+	/// <summary>
+	/// The player who set an attribute in the source (PennMUSH's <c>AL_CREATOR</c>), or null when it names
+	/// no player that was imported. Remembered per source dbref, since a handful of players set nearly all
+	/// of a game's attributes.
+	/// </summary>
+	private async ValueTask<SharpPlayer?> CreatorAsync(PennMUSHAttribute pennAttr, IReadOnlyDictionary<int, DBRef> dbrefMapping,
+		Dictionary<int, SharpPlayer?> creators, CancellationToken cancellationToken)
+	{
+		if (pennAttr.Owner is not { } source)
+		{
+			return null;
+		}
+
+		if (!creators.TryGetValue(source, out var creator))
+		{
+			creator = dbrefMapping.TryGetValue(source, out var mapped)
+				&& await _mediator.Send(new GetObjectNodeQuery(mapped), cancellationToken) is AnySharpObject and SharpPlayer node
+					? node
+					: null;
+			creators[source] = creator;
+		}
+
+		return creator;
+	}
+
+	/// <summary>
+	/// One object's attributes in one write. Should that fail, each is written alone, so the warnings
+	/// name the attributes that did not arrive rather than the object's whole list.
+	/// </summary>
+	private async Task<int> WriteAttributesAsync(PennMUSHObject pennObj, DBRef target,
+		List<(PennMUSHAttribute Source, AttributeWrite Write)> writes, List<string> warnings,
+		CancellationToken cancellationToken)
+	{
+		if (writes.Count == 0)
+		{
+			return 0;
+		}
+
+		try
+		{
+			if (await _mediator.Send(new SetAttributesCommand(target, [.. writes.Select(w => w.Write)]), cancellationToken))
+			{
+				return writes.Count;
+			}
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			_logger.LogDebug(ex, "Batched attribute write for #{DBRef} failed; writing its attributes singly", pennObj.DBRef);
+		}
+
+		var written = 0;
+		foreach (var (source, write) in writes)
+		{
+			try
+			{
+				if (await _mediator.Send(new SetAttributesCommand(target, [write]), cancellationToken))
+				{
+					written++;
+				}
+				else
+				{
+					warnings.Add($"Failed to set attribute {source.Name} on #{pennObj.DBRef}: the store refused it");
+				}
+			}
+			catch (Exception ex) when (ex is not OperationCanceledException)
+			{
+				warnings.Add($"Failed to set attribute {source.Name} on #{pennObj.DBRef}: {ex.Message}");
+				_logger.LogDebug(ex, "Attribute creation error");
+			}
+		}
+
+		return written;
 	}
 
 	private async Task<int> CreateLocksAsync(
@@ -756,7 +939,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			try
 			{
-				if (await _database.GetObjectNodeAsync(sharpDbRef, cancellationToken) is not AnySharpObject sharpObj)
+				if (await _mediator.Send(new GetObjectNodeQuery(sharpDbRef), cancellationToken) is not AnySharpObject sharpObj)
 				{
 					warnings.Add($"Could not retrieve object #{sharpDbRef} for lock creation");
 					continue;
@@ -768,12 +951,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					{
 						var creator = importedLock.Creator is { } creatorNumber && context.DbrefMapping.TryGetValue(creatorNumber, out var mappedCreator)
 							? (DBRef?)mappedCreator : null;
-						var lockData = importedLock.ToSharpLockData(creator);
-						await _database.SetLockAsync(
-							sharpObj.Object(),
-							lockName,
-							lockData,
-							cancellationToken);
+						await _mediator.Send(new ImportLockCommand(sharpObj.Object(), lockName,
+							importedLock.ToSharpLockData(creator)), cancellationToken);
 
 						count++;
 						_logger.LogTrace("Set lock {LockName} on object #{DBRef}", lockName, pennObj.DBRef);
@@ -797,13 +976,16 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return count;
 	}
 
-	private static (string name, string[] aliases) ExtractAliases(string nameString)
+	/// <summary>
+	/// An exit's name and the aliases SharpMUSH matches it by. PennMUSH 1.8 keeps the aliases in the
+	/// ALIAS attribute, which the parser lifts into <see cref="PennMUSHObject.Aliases"/>; a name written
+	/// as <c>north;n</c>, as in <c>@open north;n</c>, carries its own.
+	/// </summary>
+	private static (string Name, string[] Aliases) ExitNameAndAliases(PennMUSHObject exit)
 	{
-		// PennMUSH exit names can be like "north;n;out;o"
-		var parts = nameString.Split(';', StringSplitOptions.RemoveEmptyEntries);
-		var name = parts.Length > 0 ? parts[0] : nameString;
-		var aliases = parts.Length > 1 ? parts[1..] : [];
-		return (name, aliases);
+		var parts = exit.Name.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		var name = parts.Length > 0 ? parts[0] : exit.Name;
+		return (name, [.. parts.Skip(1).Concat(exit.Aliases).Distinct(StringComparer.OrdinalIgnoreCase)]);
 	}
 
 	/// <summary>
@@ -859,38 +1041,18 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// Extracts the salt and hash from a PennMUSH password format.
-	/// PennMUSH format: V:ALGO:SALTEDHASH:TIMESTAMP
-	/// The first 2 characters of SALTEDHASH are the salt.
+	/// The stored password an imported player gets: the source value exactly as the source stored it,
+	/// or <see cref="PasswordService.LockedHash"/> when it has none. <see cref="PasswordService"/>
+	/// verifies every shape PennMUSH accepts, so the value is never hashed again here.
 	/// </summary>
-	/// <param name="password">The PennMUSH password string</param>
-	/// <returns>A tuple of (salt, hash) if valid PennMUSH format, or (null, password) if not</returns>
-	private static (string? salt, string hash) ExtractPennMUSHPasswordParts(string? password)
-	{
-		if (string.IsNullOrEmpty(password))
-			return (null, password ?? "NEEDS_RESET");
+	private static string ImportedPassword(string? password)
+		=> string.IsNullOrEmpty(password) ? PasswordService.LockedHash : password;
 
-		var parts = password.Split(':');
-		if (parts.Length < 3)
-			return (null, password);
-
-		// Check if first part is a version number (1 or 2)
-		if (!int.TryParse(parts[0], out var version) || version < 1 || version > 2)
-			return (null, password);
-
-		// Check if second part is a known algorithm
-		var algo = parts[1].ToUpperInvariant();
-		if (algo is not ("SHA1" or "SHA-1" or "SHA256" or "SHA-256"))
-			return (null, password);
-
-		var saltedHash = parts[2];
-		if (saltedHash.Length < 3)
-			return (null, password);
-
-		var salt = saltedHash[..2];
-
-		// Return the salt and the full password (we keep the full format for verification)
-		return (salt, password);
-	}
+	/// <summary>
+	/// The salt to pass alongside <see cref="ImportedPassword"/>. The providers keep a password verbatim
+	/// only when a salt accompanies it; without one they hash it as plaintext, which would make the
+	/// stored hash string itself the password. Nothing reads the salt back.
+	/// </summary>
+	private const string StoredVerbatim = "";
 
 }

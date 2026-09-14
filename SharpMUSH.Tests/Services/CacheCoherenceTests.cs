@@ -201,6 +201,9 @@ public class CacheCoherenceTests
 	{
 		yield return () => ("set",
 			c => Invalidate(c, new SetAttributeCommand(Seven, NestedPath, MarkupText.Plain("v"), null!)));
+		yield return () => ("set-many",
+			c => Invalidate(c, new SetAttributesCommand(Seven,
+				[new AttributeWrite(["OTHER"], MarkupText.Plain("o"), null!, []), new AttributeWrite(NestedPath, MarkupText.Plain("v"), null!, [])])));
 		yield return () => ("clear",
 			c => Invalidate(c, new ClearAttributeCommand(Seven, NestedPath)));
 		yield return () => ("wipe",

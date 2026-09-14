@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Services.DatabaseConversion;
 
 namespace SharpMUSH.Tests.Services;
@@ -13,24 +12,16 @@ namespace SharpMUSH.Tests.Services;
 /// <see cref="Dictionary{TKey,TValue}"/> — which throws "Operations that change non-concurrent
 /// collections must have exclusive access" when the writes actually collide, and silently resolves
 /// one import's attributes, parents and exit links through the other's mapping when they do not.
+/// <para>Both imports run against one <see cref="IsolatedImportWorld"/>'s converter, so they share its
+/// singleton as they would in the server, and nothing they create lands in the shared session world.</para>
 /// </remarks>
 [NotInParallel]
 public class PennMUSHConcurrentImportTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IPennMUSHDatabaseConverter Converter =>
-		WebAppFactoryArg.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
-
 	private const int ObjectCount = 20;
 
 	private static readonly TimeSpan HandoffTimeout = TimeSpan.FromSeconds(30);
 
-	/// <summary>
-	/// Deliberately avoids #0/#1/#2, which the importer reuses from the migration seed rather than
-	/// creating — a source object at #1 renames the shared test God.
-	/// </summary>
 	private static PennMUSHDatabase Fixture(string tag, int firstDbref) => new()
 	{
 		Version = $"Concurrent Fixture {tag}",
@@ -65,7 +56,8 @@ public class PennMUSHConcurrentImportTests
 	[Test]
 	public async Task AnImportStartedMidwayThroughAnotherDoesNotStealItsDbrefMapping()
 	{
-		var converter = Converter;
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var converter = world.Converter;
 
 		var objectsCreated = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var secondImportDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -121,7 +113,8 @@ public class PennMUSHConcurrentImportTests
 	[Test]
 	public async Task ImportsRunningInParallelEachConvertTheirOwnObjects()
 	{
-		var converter = Converter;
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var converter = world.Converter;
 		string[] tags = ["P0", "P1", "P2", "P3"];
 
 		var results = await Task.WhenAll(tags.Select((tag, index) =>

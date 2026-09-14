@@ -22,9 +22,6 @@ public class PennMUSHImportTimestampTests
 
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
-	private IPennMUSHDatabaseConverter Converter =>
-		WebAppFactoryArg.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
-
 	private async Task<string> Eval(string code)
 		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
 
@@ -89,6 +86,13 @@ public class PennMUSHImportTimestampTests
 		// The whole point: the object id is derived from the stamp, so a carried-over stamp is what
 		// keeps an imported object answering to the id its softcode already holds.
 		await Assert.That(await Eval($"objid(#{dbref.Number})")).IsEqualTo($"#{dbref.Number}:{created}");
+
+		// And csecs()/msecs() are PennMUSH seconds, so an imported object reports exactly the number the
+		// source database recorded.
+		var objid = dbref.ToString();
+		await Assert.That(await Eval($"csecs({objid})")).IsEqualTo((created / 1000).ToString());
+		await Assert.That(await Eval($"msecs({objid})")).IsEqualTo((modified / 1000).ToString());
+		await Assert.That(await Eval($"csecs({objid},ms)")).IsEqualTo(created.ToString());
 	}
 
 	/// <summary>
@@ -139,19 +143,17 @@ public class PennMUSHImportTimestampTests
 	}
 
 	// ---- end to end through the converter -------------------------------------------------------
+	// Each import runs in an IsolatedImportWorld: an import places its objects in #0 and reuses the
+	// seeded #0-#2, all of which the shared session world's other suites stand in.
 
-	/// <summary>
-	/// The fixture deliberately contains no #0, #1 or #2. Those dbrefs are reused from the migration
-	/// seed, and a source object at #1 would rename the shared test God — which is why the other
-	/// converter tests that build a full database are skipped.
-	/// </summary>
 	[Test]
 	public async Task ConvertedObjectsKeepTheirPennCreationTime()
 	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
 		const long pennCreatedSeconds = 1_234_567_890L;
 		const long pennModifiedSeconds = 1_234_567_899L;
 
-		var result = await Converter.ConvertDatabaseAsync(new PennMUSHDatabase
+		var result = await world.Converter.ConvertDatabaseAsync(new PennMUSHDatabase
 		{
 			Version = "Timestamp Fixture",
 			Objects =
@@ -169,20 +171,10 @@ public class PennMUSHImportTimestampTests
 
 		await Assert.That(result.IsSuccessful).IsTrue();
 
-		// Found through the store rather than by name: the import drops its objects into its own
-		// Limbo, which the test executor is not in, so name matching cannot see them. Addressed by
-		// objid afterwards, which can.
-		var imported = await FindByNameAsync("ImportedTimestampThing");
+		var imported = await FindByNameAsync(world.Database, "ImportedTimestampThing");
 		await Assert.That(imported.CreationTime).IsEqualTo(pennCreatedSeconds * 1000);
 		await Assert.That(imported.ModifiedTime).IsEqualTo(pennModifiedSeconds * 1000);
 		await Assert.That(imported.DBRef.ToString()).EndsWith($":{pennCreatedSeconds * 1000}");
-
-		// The softcode-visible half, and the point of the whole exercise: csecs() is PennMUSH
-		// seconds, so an imported object reports exactly the number the source database recorded.
-		var objid = imported.DBRef.ToString();
-		await Assert.That(await Eval($"csecs({objid})")).IsEqualTo(pennCreatedSeconds.ToString());
-		await Assert.That(await Eval($"msecs({objid})")).IsEqualTo(pennModifiedSeconds.ToString());
-		await Assert.That(await Eval($"csecs({objid},ms)")).IsEqualTo((pennCreatedSeconds * 1000).ToString());
 	}
 
 	/// <summary>
@@ -192,6 +184,7 @@ public class PennMUSHImportTimestampTests
 	[Test]
 	public async Task ObjidIsStableAcrossAReimport()
 	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
 		const long pennCreatedSeconds = 1_111_111_111L;
 
 		PennMUSHDatabase Fixture(string name) => new()
@@ -210,11 +203,11 @@ public class PennMUSHImportTimestampTests
 			]
 		};
 
-		await Converter.ConvertDatabaseAsync(Fixture("ReimportedThingA"));
-		await Converter.ConvertDatabaseAsync(Fixture("ReimportedThingB"));
+		await world.Converter.ConvertDatabaseAsync(Fixture("ReimportedThingA"));
+		await world.Converter.ConvertDatabaseAsync(Fixture("ReimportedThingB"));
 
-		var first = (await FindByNameAsync("ReimportedThingA")).DBRef;
-		var second = (await FindByNameAsync("ReimportedThingB")).DBRef;
+		var first = (await FindByNameAsync(world.Database, "ReimportedThingA")).DBRef;
+		var second = (await FindByNameAsync(world.Database, "ReimportedThingB")).DBRef;
 
 		// Different dbref numbers — the two imports allocate their own — but the same creation stamp,
 		// which is the half of the objid the import controls.
@@ -231,6 +224,8 @@ public class PennMUSHImportTimestampTests
 	[Test]
 	public async Task ASecondImportInTheSameProcessStillCreatesObjects()
 	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+
 		PennMUSHDatabase Fixture(string name) => new()
 		{
 			Version = "Repeat Fixture",
@@ -247,12 +242,12 @@ public class PennMUSHImportTimestampTests
 			]
 		};
 
-		var first = await Converter.ConvertDatabaseAsync(Fixture("RepeatImportThingA"));
-		var second = await Converter.ConvertDatabaseAsync(Fixture("RepeatImportThingB"));
+		var first = await world.Converter.ConvertDatabaseAsync(Fixture("RepeatImportThingA"));
+		var second = await world.Converter.ConvertDatabaseAsync(Fixture("RepeatImportThingB"));
 
 		await Assert.That(first.ThingsConverted).IsEqualTo(1);
 		await Assert.That(second.ThingsConverted).IsEqualTo(1);
-		await Assert.That((await FindByNameAsync("RepeatImportThingB")).Name).IsEqualTo("RepeatImportThingB");
+		await Assert.That((await FindByNameAsync(world.Database, "RepeatImportThingB")).Name).IsEqualTo("RepeatImportThingB");
 	}
 
 	/// <summary>
@@ -295,9 +290,9 @@ public class PennMUSHImportTimestampTests
 		await Assert.That(restamped.Object().ModifiedTime).IsEqualTo(created);
 	}
 
-	private async Task<SharpObject> FindByNameAsync(string name)
+	private static async Task<SharpObject> FindByNameAsync(ISharpDatabase database, string name)
 	{
-		await foreach (var obj in Database.GetAllObjectsAsync())
+		await foreach (var obj in database.GetAllObjectsAsync())
 		{
 			if (obj.Name == name)
 			{

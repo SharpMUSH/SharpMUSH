@@ -13,11 +13,17 @@ public interface IObjectStore
 	/// Create a new player.
 	/// </summary>
 	/// <param name="name">Player name</param>
-	/// <param name="password">Player password (plaintext for new players, or pre-hashed for imports)</param>
+	/// <param name="password">
+	/// The plaintext password of a new player, hashed here; or, when <paramref name="salt"/> is given,
+	/// the value to store exactly as it is, which is how an import keeps a source database's hashes.
+	/// </param>
 	/// <param name="location">Location to create it in</param>
 	/// <param name="home"></param>
 	/// <param name="quota">Initial quota for the player</param>
-	/// <param name="salt">Optional salt for imported passwords (null for new players)</param>
+	/// <param name="salt">
+	/// <c>null</c> for a new player. Any other value, empty included, stores <paramref name="password"/>
+	/// verbatim; nothing reads the salt back.
+	/// </param>
 	/// <param name="creationTime">
 	/// Creation time in Unix milliseconds, or <c>null</c> for now. Importer only: the objid is
 	/// <c>#N:&lt;creationTime&gt;</c>, so the original stamp is what lets a converted database keep
@@ -222,13 +228,11 @@ public interface IObjectStore
 	/// anything holding the old one stops resolving. It exists for the importer, which reuses
 	/// <c>#0</c>, <c>#1</c> and <c>#2</c> from the migration seed rather than creating them and so
 	/// cannot stamp them at creation.
-	/// <para><b>Importer only, and unsafe on a live object.</b> This is a raw store write below the
-	/// Mediator layer and does not invalidate the number-keyed cache <c>GetObjectNodeByNumberQuery</c>
-	/// fills; a cached copy keeps the old creation time, and the objid check in
-	/// <c>GetObjectNodeQuery</c> then compares against that stale value, so every reference to the
-	/// object stops resolving. A conversion runs at startup before the cache is populated, as do the
-	/// other raw writes it makes (<see cref="SetObjectName"/>, SetObjectParent, SetObjectZone). Any
-	/// other caller needs a Mediator command carrying <c>ICacheInvalidating</c>.</para>
+	/// <para><b>Unsafe on a cached object; send <c>SetObjectTimestampsCommand</c> instead.</b> This is a
+	/// raw store write below the Mediator layer and does not invalidate the number-keyed cache
+	/// <c>GetObjectNodeByNumberQuery</c> fills; a cached copy keeps the old creation time, and the objid
+	/// check in <c>GetObjectNodeQuery</c> then compares against that stale value, so every reference to
+	/// the object stops resolving.</para>
 	/// </remarks>
 	/// <param name="target">Object to restamp</param>
 	/// <param name="creationTime">Creation time in Unix milliseconds</param>

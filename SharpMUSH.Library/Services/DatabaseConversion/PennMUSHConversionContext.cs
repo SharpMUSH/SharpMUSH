@@ -23,4 +23,31 @@ internal sealed class PennMUSHConversionContext
 
 	/// <summary>Things the conversion carried on past, but that the caller should see.</summary>
 	public List<string> Warnings { get; } = [];
+
+	/// <summary>
+	/// Source values the conversion could not carry — a flag, power or warning SharpMUSH has no
+	/// counterpart for, or one it does not allow on that type — keyed by what was dropped, with the
+	/// source dbrefs that had it. A flag every player carries would otherwise be a warning per player.
+	/// </summary>
+	public SortedDictionary<string, List<int>> Unconverted { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+	public void NoteUnconverted(string what, int dbref)
+	{
+		if (!Unconverted.TryGetValue(what, out var dbrefs))
+		{
+			Unconverted[what] = dbrefs = [];
+		}
+
+		dbrefs.Add(dbref);
+	}
+
+	/// <summary>Turns <see cref="Unconverted"/> into one warning each.</summary>
+	public void ReportUnconverted()
+	{
+		foreach (var (what, dbrefs) in Unconverted)
+		{
+			var sample = string.Join(" ", dbrefs.Take(10).Select(dbref => $"#{dbref}"));
+			Warnings.Add($"{what}: not imported on {dbrefs.Count} object(s) ({sample}{(dbrefs.Count > 10 ? " ..." : "")})");
+		}
+	}
 }

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using System.Diagnostics;
 
@@ -8,24 +7,21 @@ namespace SharpMUSH.Tests.Services;
 /// Performance tests for PennMUSH database converter.
 /// These tests measure import performance with large databases.
 /// </summary>
+/// <remarks>
+/// Each import runs in its own <see cref="IsolatedImportWorld"/>. A generated world is thousands of
+/// objects that start in #0 and take over the seeded #0-#2, which is where every other suite in the
+/// shared session world runs.
+/// </remarks>
 public class PennMUSHDatabaseConverterPerformanceTests
 {
-	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
-	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
-
-	private IPennMUSHDatabaseConverter GetConverter()
-	{
-		return WebAppFactoryArg.Services.GetRequiredService<IPennMUSHDatabaseConverter>();
-	}
-
-	private PennMUSHDatabaseParser GetParser()
-	{
-		return WebAppFactoryArg.Services.GetRequiredService<PennMUSHDatabaseParser>();
-	}
 
 	/// <summary>
 	/// Tests conversion performance with a large 10MB+ PennMUSH database.
 	/// </summary>
+	/// <remarks>
+	/// Ten megabytes is about 540 objects and 29,000 attributes: Lightning parses and converts it in
+	/// about 4 seconds, SurrealDB in about 19. Each budget is roughly five times that.
+	/// </remarks>
 	[Test]
 	[Category("Performance")]
 	[Category("LongRunning")]
@@ -35,8 +31,9 @@ public class PennMUSHDatabaseConverterPerformanceTests
 
 		try
 		{
-			var parser = GetParser();
-			var converter = GetConverter();
+			await using var world = await IsolatedImportWorld.CreateAsync();
+			var parser = world.Parser;
+			var converter = world.Converter;
 
 			var parseStopwatch = Stopwatch.StartNew();
 			var database = await parser.ParseFileAsync(databaseFilePath);
@@ -70,7 +67,7 @@ public class PennMUSHDatabaseConverterPerformanceTests
 
 			var dbProvider = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER") ?? "";
 			var isSurrealDb = dbProvider.Equals("surrealdb", StringComparison.OrdinalIgnoreCase);
-			var timeoutSeconds = isSurrealDb ? 120.0 : 60.0;
+			var timeoutSeconds = isSurrealDb ? 90.0 : 20.0;
 
 			var totalTime = parseStopwatch.Elapsed + convertStopwatch.Elapsed;
 			await Assert.That(totalTime.TotalSeconds).IsLessThan(timeoutSeconds)
@@ -98,8 +95,9 @@ public class PennMUSHDatabaseConverterPerformanceTests
 
 		try
 		{
-			var parser = GetParser();
-			var converter = GetConverter();
+			await using var world = await IsolatedImportWorld.CreateAsync();
+			var parser = world.Parser;
+			var converter = world.Converter;
 
 			var stopwatch = Stopwatch.StartNew();
 			var database = await parser.ParseFileAsync(databaseFilePath);
@@ -118,8 +116,12 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			TestDiagnostics.WriteLine($"  - Locks: {result.LocksConverted}");
 			TestDiagnostics.WriteLine($"  - Objects/sec: {1000 / stopwatch.Elapsed.TotalSeconds:F2}");
 
-			await Assert.That(stopwatch.Elapsed.TotalSeconds).IsLessThan(10.0)
-				.Because("1000 objects should convert in under 10 seconds");
+			// About 55,000 attributes: some 5 seconds under Lightning and 34 under SurrealDB.
+			var isSurrealDb = string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER"),
+				"surrealdb", StringComparison.OrdinalIgnoreCase);
+			var budgetSeconds = isSurrealDb ? 150.0 : 25.0;
+			await Assert.That(stopwatch.Elapsed.TotalSeconds).IsLessThan(budgetSeconds)
+				.Because($"1000 objects should convert in under {budgetSeconds} seconds");
 		}
 		finally
 		{
@@ -149,8 +151,9 @@ public class PennMUSHDatabaseConverterPerformanceTests
 
 			try
 			{
-				var parser = GetParser();
-				var converter = GetConverter();
+				await using var world = await IsolatedImportWorld.CreateAsync();
+				var parser = world.Parser;
+				var converter = world.Converter;
 
 				var stopwatch = Stopwatch.StartNew();
 				var database = await parser.ParseFileAsync(databaseFilePath);

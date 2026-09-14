@@ -10,7 +10,7 @@ public class PennMUSHLockMetadataTests
 	[Test]
 	public async Task LabeledLockBlockPreservesExpressionCreatorAndFlags()
 	{
-		var content = "V:PennMUSH v1.8.8p0\n!0\nRoom Zero\n-1\n-1\n-1\n-1\n-1\nlockcount 1\n type \"Basic\"\n creator #10\n flags 489\n derefs 0\n key \"(=#10|=#11)\"\n1\n-1\n0\nTYPE_ROOM VISUAL\n0\n0\n1234567890\n1234567890\n";
+		var content = "+V0\nsavedtime \"now\"\n!0\nname \"Room Zero\"\ntype 1\nlockcount 1\n type \"Basic\"\n creator #10\n flags 489\n derefs 0\n key \"(=#10|=#11)\"\n***END OF DUMP***\n";
 		using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(content));
 		var parser = new PennMUSHDatabaseParser(NullLogger<PennMUSHDatabaseParser>.Instance);
 		var database = await parser.ParseAsync(stream);
