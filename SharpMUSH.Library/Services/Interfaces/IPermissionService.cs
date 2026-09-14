@@ -42,6 +42,8 @@ public interface IPermissionService
 
 	ValueTask<bool> CanExamine(AnySharpObject examiner, AnySharpObject examinee);
 
+	ValueTask<bool> CanLinkToAsync(AnySharpObject executor, AnySharpObject destination);
+
 	/// <summary>
 	/// PennMUSH Can_Read_Lock: Can the viewer read a specific lock on target?
 	/// See_All || controls || ((Visual(target) || lock is Visual) &amp;&amp; passes Examine lock)

@@ -918,7 +918,7 @@ public partial class Commands
 						if (!zoneObj.Object().Locks.ContainsKey(nameof(LockType.ChZone)))
 						{
 							await Mediator.Send(new SetLockCommand(zoneObj.Object(), nameof(LockType.ChZone),
-								zoneObj.Object().DBRef.ToString()));
+								zoneObj.Object().DBRef.ToString(), executor));
 						}
 
 						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneChanged), executor);
@@ -1025,214 +1025,88 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@LOCK", Switches = ["*"], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "locktype", "key"])]
-	public async ValueTask<Option<CallState>> Lock(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var target = args["0"].Message!.ToPlainText();
-		var lockKey = args["1"].Message!.ToPlainText();
-
-		var lockType = "Basic";
-		if (parser.CurrentState.Switches.Any())
-		{
-			// Resolve to the LockType spelling every gate reads ("USE" -> "Use", "tport" ->
-			// "Teleport"); a switch naming no standard lock is a user lock and passes through as typed.
-			lockType = LockNames.Canonical(parser.CurrentState.Switches.First());
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, target, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				await Mediator.Send(new SetLockCommand(obj.Object(), lockType, lockKey, executor));
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, lockType);
-				return CallState.Empty;
-			}
-		);
-	}
+		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "key"])]
+	public ValueTask<Option<CallState>> Lock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
+		=> ChangeLockAsync(parser, null, false);
 
 	[SharpCommand(Name = "@UNLOCK", Switches = ["*"], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object", "locktype"])]
-	public async ValueTask<Option<CallState>> Unlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var target = args["0"].Message!.ToPlainText();
-
-		var lockType = "Basic";
-		if (parser.CurrentState.Switches.Any())
-		{
-			lockType = LockNames.Canonical(parser.CurrentState.Switches.First());
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, target, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				await Mediator.Send(new UnsetLockCommand(obj.Object(), lockType));
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, lockType);
-				return CallState.Empty;
-			}
-		);
-	}
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object", "key"])]
+	public ValueTask<Option<CallState>> Unlock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
+		=> ChangeLockAsync(parser, null, true);
 
 	[SharpCommand(Name = "@ELOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "key"])]
-	public async ValueTask<Option<CallState>> ELock(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		// @ELOCK is an alias for @lock/enter
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var target = args["0"].Message!.ToPlainText();
-		var lockKey = args["1"].Message!.ToPlainText();
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, target, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				await Mediator.Send(new SetLockCommand(obj.Object(), "Enter", lockKey, executor));
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Enter");
-				return CallState.Empty;
-			}
-		);
-	}
+		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "key"])]
+	public ValueTask<Option<CallState>> ELock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
+		=> ChangeLockAsync(parser, "Enter", false);
 
 	[SharpCommand(Name = "@EUNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public async ValueTask<Option<CallState>> EUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		// @EUNLOCK is an alias for @unlock/enter
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var target = args["0"].Message!.ToPlainText();
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, target, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				await Mediator.Send(new UnsetLockCommand(obj.Object(), "Enter"));
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Enter");
-				return CallState.Empty;
-			}
-		);
-	}
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object", "key"])]
+	public ValueTask<Option<CallState>> EUnlock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
+		=> ChangeLockAsync(parser, "Enter", true);
 
 	[SharpCommand(Name = "@ULOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "key"])]
-	public async ValueTask<Option<CallState>> ULock(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		// @ULOCK is an alias for @lock/use
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var target = args["0"].Message!.ToPlainText();
-		var lockKey = args["1"].Message!.ToPlainText();
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, target, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				await Mediator.Send(new SetLockCommand(obj.Object(), "Use", lockKey, executor));
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectLocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Use");
-				return CallState.Empty;
-			}
-		);
-	}
+		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "key"])]
+	public ValueTask<Option<CallState>> ULock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
+		=> ChangeLockAsync(parser, "Use", false);
 
 	[SharpCommand(Name = "@UUNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
-	public async ValueTask<Option<CallState>> UUnlock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object", "key"])]
+	public ValueTask<Option<CallState>> UUnlock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
+		=> ChangeLockAsync(parser, "Use", true);
+
+	private async ValueTask<Option<CallState>> ChangeLockAsync(IMUSHCodeParser parser, string? fixedType, bool unlock)
 	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		// @UUNLOCK is an alias for @unlock/use
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var target = args["0"].Message!.ToPlainText();
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, target, LocateFlags.All,
-			async obj =>
+		if (!args.TryGetValue("0", out var targetArg)) return new CallState(ErrorMessages.Returns.InvalidArguments);
+		var targetText = targetArg.Message!.ToPlainText();
+		var slash = targetText.IndexOf('/');
+		var attributeName = slash < 0 ? null : targetText[(slash + 1)..];
+		if (slash >= 0) targetText = targetText[..slash];
+		var expression = args.TryGetValue("1", out var key) ? key.Message!.ToPlainText() : string.Empty;
+		var type = fixedType ?? parser.CurrentState.Switches.FirstOrDefault() ?? "Basic";
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetText, LocateFlags.All,
+			async target =>
 			{
-				if (!await PermissionService.Controls(executor, obj))
+				if (attributeName is not null)
 				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
+					var attributeArgs = new Dictionary<string, CallState> { ["1"] = new CallState(unlock ? "off" : "on") };
+					var result = await AttributeLockAsync(executor, target, attributeArgs, attributeName);
+					return result is CallState state ? state : CallState.Empty;
 				}
-
-				await Mediator.Send(new UnsetLockCommand(obj.Object(), "Use"));
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectUnlocked), executor, obj.Object().Name, obj.Object().DBRef.Number, "Use");
+				var removing = unlock || expression.Length == 0;
+				var nameResult = await LockService.ResolveWriteNameAsync(target, type, ExecutionBudget.CurrentToken);
+				if (nameResult is Error<string> nameError)
+				{
+					await NotifyService.Notify(executor, nameError.Value, executor);
+					return CallState.Empty;
+				}
+				var name = nameResult is string value ? value : type;
+				var existed = target.Object().Locks.ContainsKey(name);
+				var changed = removing
+					? await LockService.UnsetAsync(executor, target, type)
+					: await LockService.SetAsync(executor, target, type, expression);
+				if (changed is Error<string> error)
+				{
+					await NotifyService.Notify(executor, error.Value, executor);
+					return CallState.Empty;
+				}
+				if (!await target.Object().AreQuietAsync(executor))
+				{
+					if (removing && !existed)
+						await NotifyService.Notify(executor, $"{target.Object().Name}(#{target.Object().DBRef.Number}) - {LockNames.Display(name)} (already) unlocked.", executor);
+					else
+						await NotifyService.NotifyLocalized(executor, removing
+							? nameof(ErrorMessages.Notifications.ObjectUnlocked)
+							: nameof(ErrorMessages.Notifications.ObjectLocked), executor,
+							target.Object().Name, target.Object().DBRef.Number, LockNames.Display(name));
+				}
 				return CallState.Empty;
-			}
-		);
+			});
 	}
 
-	/// <summary>
-	/// PennMUSH <c>can_link_to</c> (<c>mushdb.h:87</c>): you may point an exit at somewhere you control,
-	/// or at somewhere flagged LINK_OK. Both <c>@link</c> and <c>@open</c> gate on this — without it,
-	/// accepting any container as a destination would let anyone link an exit into someone else's object.
-	/// </summary>
-	private async ValueTask<bool> CanLinkTo(AnySharpObject executor, AnySharpObject destination)
-	{
-		if (await PermissionService.Controls(executor, destination))
-		{
-			return true;
-		}
-
-		return await destination.HasFlag("LINK_OK");
-	}
+	private ValueTask<bool> CanLinkTo(AnySharpObject executor, AnySharpObject destination)
+		=> PermissionService.CanLinkToAsync(executor, destination);
 
 	/// <summary>
 	/// PennMUSH <c>do_link</c>'s home gate (<c>src/create.c:404</c>): <c>!controls(player, room) &amp;&amp;
@@ -1530,6 +1404,13 @@ public partial class Commands
 							"Clone flag sync skipped for {LongName} on {CloneDbRef}: destination attribute was not found immediately after a successful set",
 							longName, clonedObj.Object().DBRef);
 					}
+				}
+
+				foreach (var (name, data) in obj.Object().Locks)
+				{
+					if (data.Flags.HasFlag(Library.Services.LockService.LockFlags.NoClone)) continue;
+					var copied = await Mediator.Send(new CopyLockCommand(obj.Object(), clonedObj.Object(), name, executor));
+					if (copied is Error<string> failure) await NotifyService.Notify(executor, $"Unable to clone {name} lock: {failure.Value}", executor);
 				}
 
 				// Synchronised to the source, not unioned with it. The clone is created through the same

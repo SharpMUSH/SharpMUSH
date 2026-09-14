@@ -64,4 +64,5 @@ public sealed record LockRecord
 {
 	public string LockString { get; init; } = "#TRUE";
 	public string Flags { get; init; } = "";
+	public string? Creator { get; init; }
 }

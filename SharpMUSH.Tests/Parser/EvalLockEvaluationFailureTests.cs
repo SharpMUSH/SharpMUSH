@@ -59,6 +59,7 @@ public class EvalLockEvaluationFailureTests
 			new Lazy<IAttributeService>(() => attributeService),
 			new Lazy<ILockService>(() => Substitute.For<ILockService>()),
 			new Lazy<IMUSHCodeParser>(() => parser),
+			new Lazy<IPermissionService>(() => Substitute.For<IPermissionService>()),
 			NullLogger<LockEvaluationServices>.Instance);
 		var result = await services.EvaluateAttributeAsync(one, one, "BOOM");
 

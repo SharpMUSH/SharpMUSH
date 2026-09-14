@@ -52,26 +52,33 @@ notExpr: NOT lockExpr;
 falseExpr: FALSE;
 trueExpr: TRUE;
 enclosedExpr: OPEN lockExprList CLOSE;
-ownerExpr: OWNER string;
-carryExpr: CARRY string;
-bitFlagExpr: BIT_FLAG string;
-bitPowerExpr: BIT_POWER string;
+ownerExpr: OWNER objectOperand;
+carryExpr: CARRY objectOperand;
+bitFlagExpr: BIT_FLAG literal;
+bitPowerExpr: BIT_POWER literal;
 bitTypeExpr: BIT_TYPE objectType;
 
 objectType: STRING;
-channelExpr: CHANNEL string;
-dbRefListExpr: DBREFLIST string;
-ipExpr: IP string;
-hostNameExpr: HOSTNAME string;
-nameExpr: NAME string;
-exactObjectExpr: EXACTOBJECT string (ATTRIBUTE_COLON string)?;
-attributeExpr: string ATTRIBUTE_COLON string;
-evaluationExpr: string EVALUATION string;
+channelExpr: CHANNEL literal;
+dbRefListExpr: DBREFLIST literal;
+ipExpr: IP literal;
+hostNameExpr: HOSTNAME literal;
+nameExpr: NAME literal;
+exactObjectExpr: EXACTOBJECT objectOperand;
+attributeExpr: string ATTRIBUTE_COLON literal;
+evaluationExpr: string EVALUATION literal;
 defaultExpr: string;
 
 indirectExpr:
-    INDIRECT string EVALUATION string
-    | INDIRECT string
+    INDIRECT objectOperand EVALUATION string
+    | INDIRECT objectOperand
 ;
 
 string: STRING | STAMPED_DBREF;
+objectOperand: string (ATTRIBUTE_COLON string)*;
+
+// Boolean separators terminate a value; other punctuation belongs to the literal.
+// Escaped separators are part of STRING and retain their wildcard meaning.
+literal: (STRING | STAMPED_DBREF | ATTRIBUTE_COLON | EVALUATION | NOT | CARRY
+    | OWNER | INDIRECT | EXACTOBJECT | OPEN | TRUE | FALSE | NAME | BIT_FLAG
+    | BIT_POWER | BIT_TYPE | DBREFLIST | CHANNEL | IP | HOSTNAME | LITERAL_CARET)+;

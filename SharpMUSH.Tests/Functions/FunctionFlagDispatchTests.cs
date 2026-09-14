@@ -108,6 +108,8 @@ public class FunctionFlagDispatchTests
 	[Arguments("pemit(me,hello)")]
 	[Arguments("mailsend(me,hello)")]
 	[Arguments("set(me,FLAGPROBE:value)")]
+	[Arguments("lock(me,#FALSE)")]
+	[Arguments("lset(me,visual)")]
 	public async Task RealMutatorsRespectGlobalSwitch(string input)
 	{
 		var result = await Parser(FunctionFlags.Regular, false).FunctionParse(MarkupText.Plain(input));

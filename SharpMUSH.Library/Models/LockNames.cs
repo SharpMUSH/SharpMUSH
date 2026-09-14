@@ -3,27 +3,18 @@ using System.Collections.Immutable;
 
 namespace SharpMUSH.Library.Models;
 
-/// <summary>
-/// The one place a standard lock's name is spelled. <see cref="LockType"/> is the source of truth —
-/// it is what every gate looks up (<c>LockService.Get(LockType.ChZone, ...)</c> reads
-/// <c>Locks["ChZone"]</c>) and what <c>@list/locks</c> already shows players — so every other
-/// spelling a name can arrive in resolves to the enum member's name here.
-/// </summary>
-/// <remarks>
-/// Names arrive spelled three ways: from an <c>@lock</c>/<c>@unlock</c> switch (whatever case the
-/// player typed), from a PennMUSH world import (<c>PennMUSHDatabaseConverter</c> writes the lock
-/// names verbatim out of the foreign database), and from a package manifest. PennMUSH spells three
-/// of them differently only in case — <c>Chzone</c>, <c>Dropto</c>, <c>Chown</c> — which is what
-/// <see cref="Comparer"/> bridges. <see cref="Aliases"/> carries any spelling that is not merely a
-/// case variation of a <see cref="LockType"/> member; every member currently matches its PennMUSH
-/// name up to case, so the table is empty and exists for the next divergence.
-/// <para>
-/// Lock names that are not standard locks (a user lock, say) pass through unchanged; they are still
-/// matched case-insensitively, as PennMUSH matches lock names.
-/// </para>
-/// </remarks>
+/// <summary>Canonical standard lock names, accepted aliases, and PennMUSH display spelling.</summary>
 public static class LockNames
 {
+	/// <summary>The standard lock spelling used in PennMUSH output.</summary>
+	public static string Display(string name) => Canonical(name) switch
+	{
+		"ChZone" => "Chzone",
+		"DropTo" => "Dropto",
+		"ChOwn" => "Chown",
+		var canonical => canonical
+	};
+
 	/// <summary>
 	/// The comparer every lock dictionary must use — the loaded <see cref="SharpObject.Locks"/>
 	/// model and each provider's persisted record alike. MUSH lock names are case-insensitive, so

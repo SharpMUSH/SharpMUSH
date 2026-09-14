@@ -324,7 +324,7 @@ public partial class SurrealDatabase(
 		if (locks == null || locks.Count == 0) return "{}";
 		var dict = locks.ToDictionary(
 			kvp => kvp.Key,
-			kvp => new { kvp.Value.LockString, Flags = kvp.Value.Flags.ToString() });
+			kvp => new { kvp.Value.LockString, Flags = kvp.Value.Flags.ToString(), Creator = kvp.Value.Creator?.ToString() });
 		return JsonSerializer.Serialize(dict, JsonOptions);
 	}
 
@@ -359,7 +359,9 @@ public partial class SurrealDatabase(
 		var flags = !string.IsNullOrEmpty(flagsStr) && Enum.TryParse<Library.Services.LockService.LockFlags>(flagsStr, out var parsed)
 			? parsed
 			: Library.Services.LockService.LockFlags.Default;
-		return new SharpLockData(lockString, flags);
+		var creatorText = element.TryGetProperty("Creator", out var creatorProp) && creatorProp.ValueKind == JsonValueKind.String
+			? creatorProp.GetString() : null;
+		return new SharpLockData(lockString, flags, DBRef.TryParse(creatorText, out var creator) ? creator : null);
 	}
 
 	private SharpObject MapRecordToSharpObject(ObjectRecord record)

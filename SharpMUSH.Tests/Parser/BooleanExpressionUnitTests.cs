@@ -120,7 +120,7 @@ public class BooleanExpressionUnitTests
 		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 
 		await Assert.That(bep.Validate(input, player)).IsTrue();
-		await Assert.That(await bep.Compile(input)(player, player)).IsEqualTo(expected);
+		await Assert.That(await bep.Compile((await bep.BindAsync(input, player)).Expect<string>())(player, player)).IsEqualTo(expected);
 	}
 
 	[Arguments("dbreflist^testattr", true)]
