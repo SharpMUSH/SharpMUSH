@@ -14,4 +14,6 @@ public record SharpLockDataQueryResult
 	/// Lock flags as a string (e.g., "Visual|Private|NoClone")
 	/// </summary>
 	public string Flags { get; init; } = string.Empty;
+
+	public string? Creator { get; init; }
 }

@@ -1,5 +1,6 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -43,14 +44,20 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> AttributeLockAsync(AnySharpObject executor, AnySharpObject targetObject,
 		Dictionary<string, CallState> args, string attrName)
 	{
+		if (!await PermissionService.Controls(executor, targetObject))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		if (await AttributeService.GetAttributeAsync(executor, targetObject, attrName,
-				IAttributeService.AttributeMode.Read) is not SharpAttribute[] attribute)
+				IAttributeService.AttributeMode.Read, false) is not SharpAttribute[] attribute)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
 			return new CallState(ErrorMessages.Returns.NoMatch);
 		}
 
-		if (!args.TryGetValue("1", out var valueArg))
+		if (!args.TryGetValue("1", out var valueArg) || string.IsNullOrEmpty(valueArg.Message?.ToPlainText()))
 		{
 			var isLocked = attribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
 			await NotifyService.NotifyLocalized(executor,
@@ -78,30 +85,33 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidValue);
 		}
 
-		var canSet = await PermissionService.CanSet(executor, targetObject);
-		if (!canSet)
+		if (!await PermissionService.CanSet(executor, targetObject, attribute))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.Notify(executor, "You need to be able to set the attribute to change its lock.", executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		var changed = shouldLock
+			? await AttributeService.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED")
+			: await AttributeService.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
+		if (changed is Error<string> error)
+		{
+			await NotifyService.Notify(executor, error.Value, executor);
+			return new CallState(error.Value);
+		}
 		if (shouldLock)
 		{
-			await AttributeService.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
-
-			if (executor.IsPlayer)
+			var owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
+			if (!await Mediator.Send(new SetAttributeOwnerCommand(targetObject.Object().DBRef,
+				attribute.Select(item => item.Name).ToArray(), owner), ExecutionBudget.CurrentToken))
 			{
-				var currentValue = attribute.Last().Value;
-				await AttributeService.SetAttributeAsync(executor, targetObject, attrName, currentValue);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
+				return new CallState(ErrorMessages.Returns.NoMatch);
 			}
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeLocked), executor);
 		}
-		else
-		{
-			await AttributeService.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeUnlocked), executor);
-		}
+		await NotifyService.NotifyLocalized(executor, shouldLock
+			? nameof(ErrorMessages.Notifications.AttributeLocked)
+			: nameof(ErrorMessages.Notifications.AttributeUnlocked), executor);
 
 		return new CallState(string.Empty);
 	}

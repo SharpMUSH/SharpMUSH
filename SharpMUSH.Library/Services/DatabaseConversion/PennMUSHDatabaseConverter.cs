@@ -714,13 +714,14 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					continue;
 				}
 
-				foreach (var (lockName, lockString) in pennObj.Locks)
+				foreach (var (lockName, importedLock) in pennObj.Locks)
 				{
 					try
 					{
-						// No executor: the lock keeps the names and dbrefs the source wrote, and the command
-						// files it under the lock name LockService looks up.
-						await _mediator.Send(new SetLockCommand(sharpObj.Object(), lockName, lockString), cancellationToken);
+						var creator = importedLock.Creator is { } creatorNumber && context.DbrefMapping.TryGetValue(creatorNumber, out var mappedCreator)
+							? (DBRef?)mappedCreator : null;
+						await _mediator.Send(new ImportLockCommand(sharpObj.Object(), lockName,
+							importedLock.ToSharpLockData(creator)), cancellationToken);
 
 						count++;
 						_logger.LogTrace("Set lock {LockName} on object #{DBRef}", lockName, pennObj.DBRef);

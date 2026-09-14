@@ -1,3 +1,5 @@
+using SharpMUSH.Library;
+using SharpMUSH.Library.Common;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -12,6 +14,7 @@ public sealed class LockEvaluationServices(
 	Lazy<IAttributeService> attributes,
 	Lazy<ILockService> locks,
 	Lazy<IMUSHCodeParser> parser,
+	Lazy<IPermissionService> permissions,
 	ILogger<LockEvaluationServices> logger) : ILockEvaluationServices
 {
 	/// <remarks>
@@ -91,4 +94,15 @@ public sealed class LockEvaluationServices(
 
 	public ValueTask<bool> EvaluateLock(string lockString, AnySharpObject gated, AnySharpObject unlocker)
 		=> locks.Value.Evaluate(lockString, gated, unlocker);
+	public ValueTask<bool> EvaluateLockType(string lockName, AnySharpObject gated, AnySharpObject unlocker)
+		=> locks.Value.EvaluateType(lockName, gated, unlocker);
+
+	public async ValueTask<string> FormatObjectAsync(AnySharpObject viewer, AnySharpObject obj)
+	{
+		var showReference = await permissions.Value.CanExamine(viewer, obj)
+			|| await permissions.Value.CanLinkToAsync(viewer, obj) || await obj.HasFlag("JUMP_OK")
+			|| await obj.HasFlag("CHOWN_OK") || await obj.HasFlag("DESTROY_OK");
+		return showReference ? await MessageFormatting.FormatObjectWithDbref(obj.Object()) : obj.Object().Name;
+	}
+
 }

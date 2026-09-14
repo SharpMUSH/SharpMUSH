@@ -210,7 +210,7 @@ public class ZoneCommandTests
 		// it "ChZone" against a case-sensitive lock dictionary. @CHZONE writes "ChZone", so that is
 		// the spelling the gate actually reads.
 		var newZoneNode = (await Mediator.Send(new GetObjectNodeQuery(newZone))).Expect<AnySharpObject>();
-		await Mediator.Send(new SetLockCommand(newZoneNode.Object(), nameof(LockType.ChZone), $"=#{mover.DbRef.Number}"));
+		await Mediator.Send(new SetLockCommand(newZoneNode.Object(), nameof(LockType.ChZone), $"=#{mover.DbRef.Number}", (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>()));
 		await Parser.CommandParse(owner.Handle, ConnectionService,
 			MarkupText.Plain($"@lock/zone {newZone}==#{owner.DbRef.Number}"));
 

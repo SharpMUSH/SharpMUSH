@@ -40,7 +40,7 @@ public class BareNameLockTests
 		var bep = BooleanParser;
 		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 
-		await Assert.That(await bep.Compile(input)(player, player)).IsEqualTo(expected);
+		await Assert.That(await bep.Compile((await bep.BindAsync(input, player)).Expect<string>())(player, player)).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -62,8 +62,8 @@ public class BareNameLockTests
 		var bep = BooleanParser;
 		var player = (await Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 
-		await Assert.That(await bep.Compile("me & #TRUE")(player, player)).IsTrue();
-		await Assert.That(await bep.Compile("me | #FALSE")(player, player)).IsTrue();
-		await Assert.That(await bep.Compile("!me")(player, player)).IsFalse();
+		await Assert.That(await bep.Compile((await bep.BindAsync("me & #TRUE", player)).Expect<string>())(player, player)).IsTrue();
+		await Assert.That(await bep.Compile((await bep.BindAsync("me | #FALSE", player)).Expect<string>())(player, player)).IsTrue();
+		await Assert.That(await bep.Compile((await bep.BindAsync("!me", player)).Expect<string>())(player, player)).IsFalse();
 	}
 }

@@ -17,6 +17,9 @@ public record SharpLockData
 	/// </summary>
 	public LockService.LockFlags Flags { get; init; } = LockService.LockFlags.Default;
 
+	/// <summary>The identity that created this lock, or null when unknown.</summary>
+	public DBRef? Creator { get; init; }
+
 	/// <summary>
 	/// Default constructor for object initializer syntax
 	/// </summary>
@@ -36,9 +39,10 @@ public record SharpLockData
 	/// <summary>
 	/// Creates a SharpLockData with a lock string and specific flags
 	/// </summary>
-	public SharpLockData(string lockString, LockService.LockFlags flags)
+	public SharpLockData(string lockString, LockService.LockFlags flags, DBRef? creator = null)
 	{
 		LockString = lockString;
 		Flags = flags;
+		Creator = creator;
 	}
 }

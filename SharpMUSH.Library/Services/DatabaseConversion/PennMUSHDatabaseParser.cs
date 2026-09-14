@@ -145,7 +145,7 @@ public partial class PennMUSHDatabaseParser
 		var next = ParseDbRef(await reader.ReadLineAsync(cancellationToken));
 
 		var lockLine = (await reader.ReadLineAsync(cancellationToken))?.Trim() ?? "";
-		var locks = ParseLocks(lockLine);
+		var locks = await ParseLocksAsync(reader, lockLine, cancellationToken);
 
 		var owner = ParseDbRef(await reader.ReadLineAsync(cancellationToken));
 		var parent = ParseDbRef(await reader.ReadLineAsync(cancellationToken));
@@ -329,9 +329,27 @@ public partial class PennMUSHDatabaseParser
 		return long.TryParse(line.Trim(), out var result) ? result : 0;
 	}
 
-	private static Dictionary<string, string> ParseLocks(string line)
+	private static async Task<Dictionary<string, PennMUSHLock>> ParseLocksAsync(PennMUSHLineReader reader, string line, CancellationToken cancellationToken)
 	{
-		var locks = new Dictionary<string, string>();
+		var locks = new Dictionary<string, PennMUSHLock>();
+		if (line.StartsWith("lockcount ", StringComparison.Ordinal))
+		{
+			if (!int.TryParse(line.AsSpan(10), out var count) || count < 0)
+				throw new FormatException("Invalid PennMUSH lock count.");
+			for (var i = 0; i < count; i++)
+			{
+				var type = await ReadLockFieldAsync(reader, "type", cancellationToken);
+				var creatorText = await ReadLockFieldAsync(reader, "creator", cancellationToken);
+				var flagsText = await ReadLockFieldAsync(reader, "flags", cancellationToken);
+				if ((await reader.PeekLineAsync(cancellationToken))?.TrimStart().StartsWith("derefs ", StringComparison.Ordinal) == true)
+					await ReadLockFieldAsync(reader, "derefs", cancellationToken);
+				var expression = await ReadLockFieldAsync(reader, "key", cancellationToken);
+				if (!int.TryParse(creatorText.TrimStart('#'), out var creator))
+					throw new FormatException("Invalid PennMUSH lock metadata.");
+				locks[type] = new PennMUSHLock(expression, ParseLockFlags(flagsText), creator >= 0 ? creator : null);
+			}
+			return locks;
+		}
 
 		if (string.IsNullOrWhiteSpace(line))
 		{
@@ -350,6 +368,40 @@ public partial class PennMUSHDatabaseParser
 		}
 
 		return locks;
+	}
+
+	private static int ParseLockFlags(string value)
+	{
+		if (int.TryParse(value, out var numeric)) return numeric;
+		var flags = 0;
+		foreach (var name in value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+			flags |= name.ToLowerInvariant() switch
+			{
+				"visual" => 0x01,
+				"no_inherit" => 0x02,
+				"wizard" => 0x04,
+				"locked" => 0x08,
+				"no_clone" => 0x10,
+				_ => throw new FormatException("Unknown PennMUSH lock flag: " + name)
+			};
+		return flags;
+	}
+
+	private static async Task<string> ReadLockFieldAsync(PennMUSHLineReader reader, string field, CancellationToken cancellationToken)
+	{
+		var line = (await reader.ReadLineAsync(cancellationToken))?.Trim()
+			?? throw new FormatException("Truncated PennMUSH lock block.");
+		if (!line.StartsWith(field + " ", StringComparison.Ordinal))
+			throw new FormatException($"Expected PennMUSH lock field {field}.");
+		var value = line[(field.Length + 1)..];
+		if (value.Length < 2 || value[0] != '"' || value[^1] != '"') return value;
+		var decoded = new System.Text.StringBuilder(value.Length - 2);
+		for (var i = 1; i < value.Length - 1; i++)
+		{
+			if (value[i] == '\\' && i + 1 < value.Length - 1 && value[i + 1] is '\\' or '"') i++;
+			decoded.Append(value[i]);
+		}
+		return decoded.ToString();
 	}
 
 	private static (PennMUSHObjectType type, List<string> flags) ParseFlagsAndType(string line)

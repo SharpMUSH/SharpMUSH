@@ -104,7 +104,7 @@ public class PennMUSHObject
 	/// <summary>
 	/// Locks on the object
 	/// </summary>
-	public Dictionary<string, string> Locks { get; init; } = [];
+	public Dictionary<string, PennMUSHLock> Locks { get; init; } = [];
 
 	/// <summary>
 	/// Player password (for PLAYER type only)

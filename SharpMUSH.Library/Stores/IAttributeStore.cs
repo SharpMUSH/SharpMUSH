@@ -119,6 +119,9 @@ public interface IAttributeStore
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default);
 
+	/// <summary>Changes only the existing leaf attribute owner, preserving all values and flags.</summary>
+	ValueTask<bool> SetAttributeOwnerAsync(DBRef dbref, string[] attribute, SharpPlayer owner, CancellationToken cancellationToken = default);
+
 	/// <summary>
 	/// Bulk-reassigns all attributes owned by <paramref name="oldOwner"/> to <paramref name="newOwner"/>.
 	/// Used when a player is deleted so that surviving attributes are transferred to the probate player.

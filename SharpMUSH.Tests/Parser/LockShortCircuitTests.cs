@@ -231,6 +231,12 @@ public class LockShortCircuitTests
 			string attribute, IAttributeService.AttributeMode mode, bool parent = true)
 			=> throw new NotSupportedException("These locks are eval locks only.");
 
+		public ValueTask<bool> EvaluateLockType(string lockName, AnySharpObject gated, AnySharpObject unlocker)
+			=> throw new InvalidOperationException("Unexpected indirect lock evaluation.");
+
+		public ValueTask<string> FormatObjectAsync(AnySharpObject viewer, AnySharpObject obj)
+			=> throw new InvalidOperationException("Unexpected object rendering.");
+
 		public ValueTask<bool> EvaluateLock(string lockString, AnySharpObject gated, AnySharpObject unlocker)
 			=> throw new NotSupportedException("These locks are eval locks only.");
 	}

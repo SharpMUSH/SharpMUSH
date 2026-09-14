@@ -488,7 +488,7 @@
       "helpFull": "`@elock <object>[=<key>]`<br>\n`@eunlock <object>`\n\n@elock sets the Enter @lock for `<object>` to `<key>`, or clears the the lock if no `<key>`. is given. @eunlock removes the Enter @lock for `<object>`.\n\n@elock and @eunlock are deprecated and uses of them should be replaced by<br>\n`@lock/enter <object>[=<key>]`<br>\nand<br>\n`@lock/enter <object>`\n\n\n**See Also:**\n- [@lock]\n- [locktypes]\n- [enter]\n- [ENTER_OK]",
       "helpPreview": "`@elock <object>[=<key>]`<br>\n`@eunlock <object>`\n@elock sets the Enter @lock for `<object>` to `<key>`, or clears the the lock if no `<key>`. is given. @eunlock removes the Enter @lock for `<object>`.",
       "maxArgs": 2,
-      "minArgs": 2,
+      "minArgs": 1,
       "parameterNames": [
         "object",
         "key"
@@ -830,7 +830,7 @@
       "helpFull": "`@lock[/<switch>] <object>=<key>`\n\nThis command \"locks\" the object, specifying a key which determines who or what can do certain things with the object. There are many different types of locks, all of which are described in [locktypes] and which are designated by the switch. The \"basic\" lock determines, for players and things, who can pick them up. For exits, it determines who can go through the exit. All other locks can be set the same way as the basic lock.\n\nWhenever you \"pass\" the basic lock, you succeed in doing something with the object. This triggers the @success/@osuccess/@asuccess messages and actions. If you fail to pass the basic lock, you trigger the @failure/@ofailure/@afailure messages and actions. Other locktypes may also have such success/failure messages: see [failure] for info.\n\nJust like attributes, locks can be inherited from parents. By default, locks are set no_inherit, but this flag can be cleared using @lset. More details and a list of flags can be found in [@lset].\n\nA listing of lock types, such as pagelocks, look at [locktypes]. For the available key types, such as how to check an attribute on an object trying to pass a lock, see [lockkeys].\n\n\n**See Also:**\n- [@lock-simple]\n- [locktypes]\n- [lockkeys]\n- [@clock]\n- [failure]\n- [success]\n- [elock()]\n- [lock()]\n- [@lset]\n- [@clock]\n- [testlock()]\n- [locks()]\n- [lockflags()]\n- [lockowner()]\n- [clock()]\n- [llocks()]",
       "helpPreview": "`@lock[/<switch>] <object>=<key>`\nThis command \"locks\" the object, specifying a key which determines who or what can do certain things with the object. There are many different types of locks, all of which are described in [locktypes] and which are designated by the switch. The \"basic\" lock determines, for players and things, who can pick them up. For exits, it determines who can go through the exit. All other locks can be set the same way as the basic lock.\nWhenever you \"pass\" the basic lock, you succeed in doing something with the object. This triggers the @success/@osuccess/@asuccess messages and actions. If you fail to pass the basic lock, you trigger the @failure/@ofailure/@afailure messages and actions. Other locktypes may also have such success/failure messages: see [failure] for info.",
       "maxArgs": 2,
-      "minArgs": 2,
+      "minArgs": 1,
       "parameterNames": [
         "object",
         "locktype",
@@ -1730,7 +1730,7 @@
       "helpFull": "`@ulock <object>[=<key>]`<br>\n`@uunlock <object>`\n\nThese commands set the Use lock for `<object>` to `<key>`, or clear the Use lock. They are deprecated, and should be replaced with\n\n`@lock/use <object>[=<key>]`<br>\nand<br>\n`@lock/use <object>`\n\nThe Use lock determines who is allowed to \"use\" the object or trigger any $-commands or ^-listens on the object.\n\nTo only lock who can use $-commands, use `@lock/command`. To only lock who can trigger ^-listens, use `@lock/listen`.\n\nExample: if I want everyone but Bob to be able to use my toy, I would \"`@lock/use toy=!*Bob`\". If I want only Bob to be able to use it, I would \"`@lock/use toy==*Bob`\".\n\n\n**See Also:**\n- [@lock]\n- [use]\n- [locktypes]",
       "helpPreview": "`@ulock <object>[=<key>]`<br>\n`@uunlock <object>`\nThese commands set the Use lock for `<object>` to `<key>`, or clear the Use lock. They are deprecated, and should be replaced with",
       "maxArgs": 2,
-      "minArgs": 2,
+      "minArgs": 1,
       "parameterNames": [
         "object",
         "key"
@@ -2559,7 +2559,7 @@
       ]
     },
     "UCSTR2": {
-      "helpFull": "`ucstr(<string>)`<br>\n`ucstr2(<string>)`\n\n  Returns `<string>` with all letters converted to uppercase.\n\n  If the MUSH is compiled with ICU Unicode support, ucstr2() does the same thing except the returned string might be a different length, and ansi colors and other markup are stripped.\n\n  Example:\n```sharp\nsay ucstr(Foo BAR baz)\nYou say, \"FOO BAR BAZ\"\nsay ucstr2(gr\u00fc\u00dfen)\nYou say, \"GR\u00dcSSEN\n```\n\n\n**See Also:**\n- [lcstr()]\n- [capstr()]",
+      "helpFull": "`ucstr(<string>)`<br>\n`ucstr2(<string>)`\n\n  Returns `<string>` with all letters converted to uppercase.\n\n  If the MUSH is compiled with ICU Unicode support, ucstr2() does the same thing except the returned string might be a different length, and ansi colors and other markup are stripped.\n\n  Example:\n```sharp\nsay ucstr(Foo BAR baz)\nYou say, \"FOO BAR BAZ\"\nsay ucstr2(grüßen)\nYou say, \"GRÜSSEN\n```\n\n\n**See Also:**\n- [lcstr()]\n- [capstr()]",
       "helpPreview": "`ucstr(<string>)`<br>\n`ucstr2(<string>)`\n  Returns `<string>` with all letters converted to uppercase.",
       "maxArgs": 1,
       "minArgs": 1,
@@ -4461,6 +4461,13 @@
       "minArgs": 0,
       "parameterNames": []
     },
+    "listset": {
+      "helpFull": "`listset(<list>,<position>,<replacement>[,<input delimiter>[,<output delimiter>]])`\n\n  Replaces the item at the one-based position in a list. Delimiters default to a space; the output delimiter defaults to the input delimiter. For example, `listset(a b c,2,x)` returns `a x c`.\n\n  List replacement uses `listset()`. `lset()` sets lock flags.\n\n**See Also:**\n- [replace()]\n- [lset()]",
+      "helpPreview": "`listset(<list>,<position>,<replacement>[,<input delimiter>[,<output delimiter>]])`\n  Replaces the item at the one-based position in a list. Delimiters default to a space; the output delimiter defaults to the input delimiter. For example, `listset(a b c,2,x)` returns `a x c`.\n  List replacement uses `listset()`. `lset()` sets lock flags.",
+      "minArgs": 3,
+      "maxArgs": 5,
+      "parameterNames": []
+    },
     "lit": {
       "helpFull": "`lit(<string>)`\n\n  This function returns `<string>` literally - without even squishing spaces, and without evaluating *anything*. This can be useful for writing ASCII maps with spaces or whatever.\n\n  It can be a bit tricky to get a literal string with spaces into an attrib, however, since spaces are usually squished in setting an attribute. This example illustrates how to make it work:\n\n    > @va me=$test: think {[lit(near       far)]}<br>\n    Set.<br>\n    > ex me/va<br>\n    VA [#1]: $test: think {[lit(near       far)]}<br>\n    > test<br>\n    near       far\n\n  Leaving out the {}'s will not work in the above.\n\n\n**See Also:**\n- [decompose()]",
       "helpPreview": "`lit(<string>)`\n  This function returns `<string>` literally - without even squishing spaces, and without evaluating *anything*. This can be useful for writing ASCII maps with spaces or whatever.\n  It can be a bit tricky to get a literal string with spaces into an attrib, however, since spaces are usually squished in setting an attribute. This example illustrates how to make it work:",
@@ -4493,8 +4500,8 @@
       ]
     },
     "llocks": {
-      "helpFull": "`llocks([<object>])`<br>\n`locks(<object>)`\n\n`llocks() and locks() both list @locks set on <object>, including user-defined locks (prefixed with USER:)`\n\n  If no object is given, llocks() returns all the predefined lock types available.\n\n  Example:\n```sharp\n@lock me==me\n@lock/use me==me\n@lock/user:itsme me==me\nth llocks(me)\nBasic USER:ITSME Use\n```\n\n\n**See Also:**\n- [lock()]\n- [lset()]\n- [lockflags()]\n- [llockflags()]\n- [lockowner()]",
-      "helpPreview": "`llocks([<object>])`<br>\n`locks(<object>)`\n`llocks() and locks() both list @locks set on <object>, including user-defined locks (prefixed with USER:)`",
+      "helpFull": "",
+      "helpPreview": "",
       "maxArgs": 1,
       "minArgs": 0,
       "parameterNames": [
@@ -4602,8 +4609,8 @@
       ]
     },
     "lockowner": {
-      "helpFull": "`lockowner(<object>[/<locktype>])`\n\n  This function returns the dbref of the player who owns the `<locktype>` lock on `<object>`, or the Basic lock if no `<locktype>` is given. You must be able to examine the lock to use this function.\n\n\n**See Also:**\n- [lockflags()]\n- [llockflags()]\n- [lset()]\n- [lock()]\n- [llocks()]",
-      "helpPreview": "`lockowner(<object>[/<locktype>])`\n  This function returns the dbref of the player who owns the `<locktype>` lock on `<object>`, or the Basic lock if no `<locktype>` is given. You must be able to examine the lock to use this function.\n**See Also:**",
+      "helpFull": "`lockowner(<object>[/<locktype>])`\n\n  This function returns the dbref of the executor who set the `<locktype>` lock on `<object>`, or the Basic lock if no `<locktype>` is given. You must be able to examine the lock. Legacy locks with an unknown creator return `#-1`; absent or inaccessible locks return `#-1 NO SUCH LOCK`.\n\n\n**See Also:**\n- [lockflags()]\n- [llockflags()]\n- [lset()]\n- [lock()]\n- [llocks()]",
+      "helpPreview": "`lockowner(<object>[/<locktype>])`\n  This function returns the dbref of the executor who set the `<locktype>` lock on `<object>`, or the Basic lock if no `<locktype>` is given. You must be able to examine the lock. Legacy locks with an unknown creator return `#-1`; absent or inaccessible locks return `#-1 NO SUCH LOCK`.\n**See Also:**",
       "maxArgs": 1,
       "minArgs": 1,
       "parameterNames": [
@@ -4615,7 +4622,7 @@
       "helpFull": "`llocks([<object>])`<br>\n`locks(<object>)`\n\n`llocks() and locks() both list @locks set on <object>, including user-defined locks (prefixed with USER:)`\n\n  If no object is given, llocks() returns all the predefined lock types available.\n\n  Example:\n```sharp\n@lock me==me\n@lock/use me==me\n@lock/user:itsme me==me\nth llocks(me)\nBasic USER:ITSME Use\n```\n\n\n**See Also:**\n- [lock()]\n- [lset()]\n- [lockflags()]\n- [llockflags()]\n- [lockowner()]",
       "helpPreview": "`llocks([<object>])`<br>\n`locks(<object>)`\n`llocks() and locks() both list @locks set on <object>, including user-defined locks (prefixed with USER:)`",
       "maxArgs": 1,
-      "minArgs": 1,
+      "minArgs": 0,
       "parameterNames": [
         "object"
       ]
@@ -4710,11 +4717,14 @@
       ]
     },
     "lset": {
-      "helpFull": "`lset(<object>/<locktype>,[!]<flag>)`\n\n  This functions sets or clears flags on locks.\n\n  See [@lset] for more information on what flags are available.\n\n\n**See Also:**\n- [lockflags()]\n- [llockflags()]\n- [lock()]\n- [lockowner()]",
-      "helpPreview": "`lset(<object>/<locktype>,[!]<flag>)`\n  This functions sets or clears flags on locks.\n  See [@lset] for more information on what flags are available.",
-      "maxArgs": 5,
-      "minArgs": 3,
-      "parameterNames": []
+      "helpFull": "`lset(<object>/<locktype>,[!]<flag>)`\n\n  This function sets or clears flags on locks and returns an empty string. It requires side effects to be enabled.\n\n  See [@lset] for more information on what flags are available.\n\n\n**See Also:**\n- [lockflags()]\n- [llockflags()]\n- [lock()]\n- [lockowner()]",
+      "helpPreview": "`lset(<object>/<locktype>,[!]<flag>)`\n  This function sets or clears flags on locks and returns an empty string. It requires side effects to be enabled.\n  See [@lset] for more information on what flags are available.",
+      "maxArgs": 2,
+      "minArgs": 2,
+      "parameterNames": [
+        "object",
+        "flags"
+      ]
     },
     "lstats": {
       "helpFull": "`lstats([<player>])`\n\n  This function returns the breakdown of objects in the database, in a format similar to \"@stats\". If `<player>` is \"all\" (the default), a breakdown is done for the entire database. Otherwise, the breakdown is returned for that particular player.\n\n  Only wizards and those with the Search power can LSTATS() other players. The list returned is in the format:<br>\n  `<Total objects>` `<Rooms>` `<Exits>` `<Things>` `<Players>` `<Garbage>`\n\n  stats() is an alias for lstats().\n\n**See Also:**\n- [nsearch()]",
@@ -7047,7 +7057,7 @@
       ]
     },
     "ucstr": {
-      "helpFull": "`ucstr(<string>)`<br>\n`ucstr2(<string>)`\n\n  Returns `<string>` with all letters converted to uppercase.\n\n  If the MUSH is compiled with ICU Unicode support, ucstr2() does the same thing except the returned string might be a different length, and ansi colors and other markup are stripped.\n\n  Example:\n```sharp\nsay ucstr(Foo BAR baz)\nYou say, \"FOO BAR BAZ\"\nsay ucstr2(gr\u00fc\u00dfen)\nYou say, \"GR\u00dcSSEN\n```\n\n\n**See Also:**\n- [lcstr()]\n- [capstr()]",
+      "helpFull": "`ucstr(<string>)`<br>\n`ucstr2(<string>)`\n\n  Returns `<string>` with all letters converted to uppercase.\n\n  If the MUSH is compiled with ICU Unicode support, ucstr2() does the same thing except the returned string might be a different length, and ansi colors and other markup are stripped.\n\n  Example:\n```sharp\nsay ucstr(Foo BAR baz)\nYou say, \"FOO BAR BAZ\"\nsay ucstr2(grüßen)\nYou say, \"GRÜSSEN\n```\n\n\n**See Also:**\n- [lcstr()]\n- [capstr()]",
       "helpPreview": "`ucstr(<string>)`<br>\n`ucstr2(<string>)`\n  Returns `<string>` with all letters converted to uppercase.",
       "maxArgs": 1,
       "minArgs": 1,

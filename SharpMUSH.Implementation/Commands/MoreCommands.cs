@@ -343,15 +343,27 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> SetChannelLockAsync(AnySharpObject executor, SharpChannel channel,
 		string lockType, string lockKey)
 	{
-		// This was Chan_Can_Modify rewritten by hand, and it carried the same defect: an unset ModLock made
-		// `passesModLock` true for everybody, so any non-guest could set the join/speak/see/hide/mod lock on
-		// any channel — and no channel has a ModLock, because CreateChannelCommand never writes one.
-		// ChannelCanModifyAsync now skips an unset lock rather than evaluating it; going through it means
-		// this command cannot drift away from that rule again.
+		// An absent modify lock grants no additional rights beyond the owner and wizard gates.
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (lockType is not ("JOIN" or "SPEAK" or "SEE" or "HIDE" or "MOD"))
+		{
+			await NotifyService.Notify(executor, $"Invalid lock type: {lockType}", executor);
+			return new CallState(ErrorMessages.Returns.InvalidLockType);
+		}
+
+		if (!string.IsNullOrEmpty(lockKey))
+		{
+			if (await BooleanExpressionParser.BindAsync(lockKey, executor, ExecutionBudget.CurrentToken) is not string bound)
+			{
+				await NotifyService.Notify(executor, "CHAT: I don't understand that key.", executor);
+				return new CallState(ErrorMessages.Returns.InvalidLock);
+			}
+			lockKey = bound;
 		}
 
 		UpdateChannelCommand updateCommand = lockType switch
@@ -364,13 +376,7 @@ public partial class Commands
 			_ => new UpdateChannelCommand(channel, null, null, null, null, null, null, null, null, null, null)
 		};
 
-		if (lockType is not ("JOIN" or "SPEAK" or "SEE" or "HIDE" or "MOD"))
-		{
-			await NotifyService.Notify(executor, $"Invalid lock type: {lockType}", executor);
-			return new CallState(ErrorMessages.Returns.InvalidLockType);
-		}
-
-		await Mediator.Send(updateCommand);
+		await Mediator.Send(updateCommand, ExecutionBudget.CurrentToken);
 
 		if (string.IsNullOrEmpty(lockKey))
 		{
@@ -706,68 +712,29 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@LSET", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
-		MaxArgs = 2, ParameterNames = ["list", "position", "value"])]
-	public async ValueTask<Option<CallState>> LockSet(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	[SharpCommand(Name = "@LSET", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
+		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object/lock", "flags"])]
+	public async ValueTask<Option<CallState>> LockSet(IMUSHCodeParser parser, SharpCommandAttribute attribute)
 	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
+		if (await RejectIfTooFewArguments(parser, attribute) is { } error) return error;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-
-		var objectLock = args["0"].Message!.ToPlainText();
-		var flagValue = args["1"].Message!.ToPlainText();
-
-		var slashIndex = objectLock.LastIndexOf('/');
-		if (slashIndex == -1)
+		var target = args["0"].Message!.ToPlainText();
+		var slash = target.IndexOf('/');
+		if (slash < 0)
 		{
-			await NotifyService.Notify(executor, "Invalid format. Use: @lset <object>/<lock type>=[!]<flag>", executor);
-			return new CallState(ErrorMessages.Returns.InvalidFormat);
+			await NotifyService.Notify(executor, "No lock name given.", executor);
+			return CallState.Empty;
 		}
-
-		var objectName = objectLock[..slashIndex];
-		var lockType = objectLock[(slashIndex + 1)..];
-
-		var isClearing = flagValue.StartsWith('!');
-		var flagName = isClearing ? flagValue[1..] : flagValue;
-
-		if (!LockService.LockPrivileges.TryGetValue(flagName.ToLower(), out var flagInfo))
-		{
-			await NotifyService.Notify(executor, $"Invalid flag: {flagName}", executor);
-			return new CallState(ErrorMessages.Returns.InvalidFlag);
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, objectName, LocateFlags.All,
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target[..slash], LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				if (!obj.Object().Locks.TryGetValue(LockNames.Canonical(lockType), out var lockData))
-				{
-					await NotifyService.Notify(executor, $"No such lock: {lockType}", executor);
-					return new CallState(ErrorMessages.Returns.NoSuchLock);
-				}
-
-				var currentFlags = lockData.Flags;
-				var newFlags = isClearing
-					? currentFlags & ~flagInfo.Item2
-					: currentFlags | flagInfo.Item2;
-
-				var updatedLockData = new Library.Models.SharpLockData(lockData.LockString, newFlags);
-
-				await Mediator.Send(new SetLockCommand(obj.Object(), lockType, updatedLockData.LockString));
-
-				await NotifyService.Notify(executor, $"Flag {flagName} {(isClearing ? "cleared" : "set")} on {lockType} lock.", executor);
+				var result = await LockService.SetFlagsAsync(executor, obj, target[(slash + 1)..], args["1"].Message!.ToPlainText());
+				if (result is Error<string> failure) await NotifyService.Notify(executor, failure.Value, executor);
+				else if (!await obj.Object().AreQuietAsync(executor))
+					await NotifyService.Notify(executor, $"{obj.Object().Name}/{LockNames.Display(target[(slash + 1)..])} - lock flags {(args["1"].Message!.ToPlainText().StartsWith('!') ? "unset" : "set")}.", executor);
 				return CallState.Empty;
-			}
-		);
+			});
 	}
 
 	[SharpCommand(Name = "@MALIAS",
@@ -1181,24 +1148,8 @@ public partial class Commands
 
 		outputSections.Add(MarkupText.Plain($"Parent: {objParent.Object()?.Name ?? "*NOTHING*"}"));
 
-		if (obj.Locks.Count > 0)
-		{
-			var lockLines = obj.Locks
-				.Select(kvp =>
-				{
-					var lockName = kvp.Key;
-					var lockData = kvp.Value;
-					var flagsStr = LockService.FormatLockFlags(lockData.Flags);
-					var flagsDisplay = string.IsNullOrEmpty(flagsStr) ? "" : $"[{flagsStr}]";
-					return $"{lockName}{flagsDisplay}: {lockData.LockString}";
-				});
-
-			outputSections.Add(MarkupText.Plain($"Locks:"));
-			foreach (var lockLine in lockLines)
-			{
-				outputSections.Add(MarkupText.Plain($"  {lockLine}"));
-			}
-		}
+		foreach (var (lockName, lockData) in obj.Locks.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+			outputSections.Add(MarkupText.Plain(await FormatLockLineAsync(executor, lockName, lockData)));
 
 		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
 		if (powersList.Length > 0)
