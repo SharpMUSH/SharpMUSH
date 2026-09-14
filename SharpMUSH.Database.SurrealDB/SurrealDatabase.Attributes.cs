@@ -162,6 +162,29 @@ public partial class SurrealDatabase
 		}
 	}
 
+	public async ValueTask<bool> SetAttributeOwnerAsync(DBRef dbref, string[] attribute, SharpPlayer owner, CancellationToken cancellationToken = default)
+	{
+		if (attribute.Length == 0) return false;
+		var path = attribute.Select(segment => segment.ToUpperInvariant()).ToArray();
+		var records = await WalkAttributeRecordsAsync(dbref, path, cancellationToken);
+		if (records.Count != path.Length) return false;
+		var parameters = new Dictionary<string, object?>
+		{
+			["ownerLeafKey"] = records[^1].key,
+			["replacementOwnerKey"] = ExtractKey(owner.Id!)
+		};
+		var response = await ExecuteAsync(
+			"BEGIN TRANSACTION;" +
+			"LET $leafExists = array::len((SELECT VALUE id FROM attribute:⟨$ownerLeafKey⟩)) > 0;" +
+			"IF $leafExists {" +
+			"DELETE has_attribute_owner WHERE in = attribute:⟨$ownerLeafKey⟩;" +
+			"RELATE attribute:⟨$ownerLeafKey⟩->has_attribute_owner->player:$replacementOwnerKey;" +
+			"};" +
+			"RETURN $leafExists;" +
+			"COMMIT TRANSACTION;", parameters, cancellationToken);
+		return !response.HasErrors && response.GetValue<bool>(0);
+	}
+
 	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default)
 	{
 		return await SetAttributeAsyncCore(dbref, attribute, value, owner, cancellationToken);

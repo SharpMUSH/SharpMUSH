@@ -16,6 +16,17 @@ public class LockOperandRangeTests
 	private IMediator Mediator => Factory.Services.GetRequiredService<IMediator>();
 
 	[Test]
+	[Arguments("me")]
+	[Arguments("=me")]
+	[Arguments("!missing_lock_operand")]
+	[Arguments("#TRUE | +missing_lock_operand")]
+	public async Task UnboundOperandRejectsWholeExpression(string expression)
+	{
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
+		await Assert.That(await Locks.Compile(expression)(god, god)).IsFalse();
+	}
+
+	[Test]
 	[Arguments("")]
 	[Arguments("=")]
 	[Arguments("$")]

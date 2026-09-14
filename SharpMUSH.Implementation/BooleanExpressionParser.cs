@@ -1,3 +1,7 @@
+using Antlr4.Runtime.Tree;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Queries.Database;
+using System.Text;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation.Visitors;
@@ -108,7 +112,7 @@ public class BooleanExpressionParser(
 		// validation existed, or set through another path), and the visitor below assumes a
 		// well-formed tree. Fail closed rather than compiling ANTLR's error-recovery tree into a
 		// delegate that silently means something other than what was typed.
-		if (errors.HasErrors || !IsSemanticallyValid(chatContext))
+		if (errors.HasErrors || !IsSemanticallyValid(chatContext) || !HasBoundOperands(chatContext))
 		{
 			return static (_, _) => ValueTask.FromResult(false);
 		}
@@ -159,13 +163,11 @@ public class BooleanExpressionParser(
 		=> new SharpMUSHBooleanExpressionValidationVisitor().Visit(context) == true;
 
 	/// <summary>
-	/// Normalizes a lock expression to canonical form, resolving object names to dbrefs.
-	/// PennMUSH resolves all lock targets to dbrefs at @lock time.
+	/// Formats lock syntax without looking up object operands.
 	/// </summary>
 	/// <param name="text">The lock expression to normalize</param>
-	/// <param name="executor">The object setting the lock, used for name resolution context. If null, name resolution is skipped.</param>
-	/// <returns>The normalized lock expression with names resolved to dbrefs</returns>
-	public string Normalize(string text, AnySharpObject? executor = null)
+	/// <returns>The formatted expression, or the original text when invalid.</returns>
+	public string Normalize(string text)
 	{
 		var (sharpParser, errors) = CreateParser(text, nameof(Normalize));
 		var chatContext = sharpParser.@lock();
@@ -176,10 +178,129 @@ public class BooleanExpressionParser(
 			return text;
 		}
 
-		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new(services, executor);
+		SharpMUSHBooleanExpressionNormalizationVisitor visitor = new();
 
 		var normalized = visitor.Visit(chatContext);
 
 		return normalized;
 	}
+
+	public bool IsBound(string text)
+	{
+		var (parser, errors) = CreateParser(text, nameof(IsBound));
+		var tree = parser.@lock();
+		return !errors.HasErrors && IsSemanticallyValid(tree) && HasBoundOperands(tree);
+	}
+
+	private static bool HasBoundOperands(IParseTree tree)
+		=> ObjectOperands(tree).All(value => DBRef.TryParse(value, out _));
+
+	private static IEnumerable<string> ObjectOperands(IParseTree tree)
+	{
+		var operand = tree switch
+		{
+			SharpMUSHBoolExpParser.DefaultExprContext node => node.@string().GetText(),
+			SharpMUSHBoolExpParser.OwnerExprContext node => LockLiteralText.ReadOperand(node.objectOperand()),
+			SharpMUSHBoolExpParser.CarryExprContext node => LockLiteralText.ReadOperand(node.objectOperand()),
+			SharpMUSHBoolExpParser.IndirectExprContext node => LockLiteralText.ReadOperand(node.objectOperand()),
+			SharpMUSHBoolExpParser.ExactObjectExprContext node => LockLiteralText.ReadOperand(node.objectOperand()),
+			_ => null
+		};
+		if (operand is not null)
+		{
+			yield return operand;
+			yield break;
+		}
+		for (var i = 0; i < tree.ChildCount; i++)
+			foreach (var child in ObjectOperands(tree.GetChild(i)))
+				yield return child;
+	}
+
+	private static string UnescapeObjectOperand(string operand)
+	{
+		if (!operand.Contains('\\')) return operand;
+		var decoded = new StringBuilder(operand.Length);
+		for (var i = 0; i < operand.Length; i++)
+		{
+			if (operand[i] == '\\' && i + 1 < operand.Length) i++;
+			decoded.Append(operand[i]);
+		}
+		return decoded.ToString();
+	}
+
+	public async ValueTask<Result<string>> BindAsync(string text, AnySharpObject executor, CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var (parser, errors) = CreateParser(text, nameof(BindAsync));
+		var tree = parser.@lock();
+		if (errors.HasErrors || !IsSemanticallyValid(tree)) return new Error<string>("Invalid lock expression.");
+		var bindings = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (var operand in ObjectOperands(tree).Distinct(StringComparer.Ordinal))
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			if (DBRef.TryParse(operand, out var reference))
+			{
+				if (await mediator.Send(new GetObjectNodeQuery(reference!.Value), cancellationToken) is not AnySharpObject)
+					return new Error<string>($"I don't see {operand} here.");
+				bindings[operand] = operand;
+			}
+			else
+			{
+				var located = await services.LocateAsync(executor, executor, UnescapeObjectOperand(operand), LocateFlags.All | LocateFlags.ThingsPreference)
+					.AsTask().WaitAsync(cancellationToken);
+				if (located is not AnySharpObject obj)
+					return new Error<string>($"I can't find a unique object matching {operand}.");
+				bindings[operand] = $"#{obj.Object().DBRef.Number}";
+			}
+		}
+		var bound = new SharpMUSHBooleanExpressionNormalizationVisitor(value => bindings[value]).Visit(tree);
+		return IsBound(bound) ? bound : new Error<string>("Invalid lock expression.");
+	}
+
+	public async ValueTask<string> RenderAsync(string text, AnySharpObject viewer, LockRenderMode mode, CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var (parser, errors) = CreateParser(text, nameof(RenderAsync));
+		var tree = parser.@lock();
+		if (errors.HasErrors || !IsSemanticallyValid(tree) || !HasBoundOperands(tree))
+			return $"*INVALID LOCK*: {text}";
+		var references = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (var operand in ObjectOperands(tree).Distinct(StringComparer.Ordinal))
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			var reference = DBRef.Parse(operand);
+			references[operand] = mode switch
+			{
+				LockRenderMode.Decompile when viewer.Object().DBRef.Matches(reference) && reference.CreationMilliseconds is null => "me",
+				LockRenderMode.Examine => await mediator.Send(new GetObjectNodeQuery(reference), cancellationToken) switch
+				{
+					AnySharpObject obj => await services.FormatObjectAsync(viewer, obj).AsTask().WaitAsync(cancellationToken),
+					_ => "*NOTHING*"
+				},
+				_ => operand
+			};
+		}
+		var rendered = new SharpMUSHBooleanExpressionNormalizationVisitor(value => references[value], compact: true).Visit(tree);
+		if (mode != LockRenderMode.Decompile) return rendered;
+		var escaped = new StringBuilder(rendered.Length);
+		for (var i = 0; i < rendered.Length; i++)
+		{
+			var character = rendered[i];
+			if (character == ' ' && (i > 0 && rendered[i - 1] == ' ' || i + 1 < rendered.Length && rendered[i + 1] == ' '))
+				escaped.Append("%b");
+			else if (character is '\r' or '\n')
+			{
+				escaped.Append("%r");
+				if (character == '\r' && i + 1 < rendered.Length && rendered[i + 1] == '\n') i++;
+			}
+			else if (character == '\t') escaped.Append("%t");
+			else
+			{
+				if ("$%(),;[]\\^{}".Contains(character)) escaped.Append('\\');
+				escaped.Append(character);
+			}
+		}
+		return escaped.ToString();
+	}
+
 }

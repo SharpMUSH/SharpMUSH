@@ -119,6 +119,9 @@ public interface IAttributeStore
 	/// <returns>Success or Failure</returns>
 	ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner, CancellationToken cancellationToken = default);
 
+	/// <summary>Changes only the existing leaf attribute owner, preserving all values and flags.</summary>
+	ValueTask<bool> SetAttributeOwnerAsync(DBRef dbref, string[] attribute, SharpPlayer owner, CancellationToken cancellationToken = default);
+
 	/// <summary>
 	/// Sets each of <paramref name="attributes"/> on one object, in order, exactly as
 	/// <see cref="SetAttributeAsync"/> would, and adds each write's flags to its leaf. No checks, as with

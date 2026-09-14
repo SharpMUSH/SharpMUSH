@@ -22,4 +22,7 @@ public interface ILockEvaluationServices
 	ValueTask<LockEvaluation> EvaluateAttributeAsync(AnySharpObject gated, AnySharpObject unlocker, string attributeName);
 
 	ValueTask<bool> EvaluateLock(string lockString, AnySharpObject gated, AnySharpObject unlocker);
+	ValueTask<bool> EvaluateLockType(string lockName, AnySharpObject gated, AnySharpObject unlocker);
+	ValueTask<string> FormatObjectAsync(AnySharpObject viewer, AnySharpObject obj);
+
 }

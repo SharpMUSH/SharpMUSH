@@ -104,10 +104,10 @@ public class PennMUSHDatabaseParserTests
 	public async Task LocksAreReadByType()
 	{
 		var widget = await Object(8);
-		await Assert.That(widget.Locks).IsEquivalentTo(new Dictionary<string, string>
+		await Assert.That(widget.Locks).IsEquivalentTo(new Dictionary<string, PennMUSHLock>
 		{
-			["Basic"] = "#3|#4",
-			["Use"] = "#1"
+			["Basic"] = new("#3|#4", 2, 1),
+			["Use"] = new("#1", 2, 1)
 		});
 	}
 

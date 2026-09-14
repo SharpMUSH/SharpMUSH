@@ -1,5 +1,4 @@
 using DotNext.Threading;
-using System.Text.RegularExpressions;
 using System.Text;
 using System.Text.Json;
 using Mediator;
@@ -197,7 +196,7 @@ public sealed partial class ObjectSnapshotService(
 		}
 		var lockData = new Dictionary<string, SnapshotLock>(LockNames.Comparer);
 		foreach (var (name, value) in obj.Object().Locks.OrderBy(p => p.Key))
-			if ((selection is null || selection.Locks && selectedLocks?.Contains(name) == true) && await permissions.CanReadLock(executor, obj, value.Flags)) lockData[name] = new(value.LockString, (int)value.Flags);
+			if ((selection is null || selection.Locks && selectedLocks?.Contains(name) == true) && await permissions.CanReadLock(executor, obj, value.Flags)) lockData[name] = new(value.LockString, (int)value.Flags, value.Creator?.ToString());
 		var snapshot = new ObjectSnapshot(Guid.NewGuid().ToString("N"), 1, obj.Object().DBRef.ToString(), obj.Object().Type,
 			actor.AccountId, actor.ActiveCharacter!.Value.ToString(), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), description, retain,
 			selection is null || selection.Name ? obj.Object().Name : "", captured.OrderBy(a => a.Name).ToArray(), lockData,
@@ -235,7 +234,7 @@ public sealed partial class ObjectSnapshotService(
 			snapshot.Attributes.Any(a => a is null || a.Flags is null || a.Name is null || a.Markup is null || a.Ancestors is null || a.Ancestors.Any(v => v is null || v.Name is null || v.Flags is null || v.Owner is null)) ||
 			snapshot.Attributes.Select(a => a.Name).Distinct(StringComparer.Ordinal).Count() != snapshot.Attributes.Length ||
 			snapshot.AbsentAttributes.Intersect(snapshot.Attributes.Select(a => a.Name)).Any() || snapshot.AbsentLocks.Intersect(snapshot.Locks.Keys).Any() ||
-			snapshot.Locks.Any(p => p.Value is null || p.Value.Expression is null) ||
+			snapshot.Locks.Any(p => p.Value is null || p.Value.Expression is null || p.Value.Creator is not null && !DBRef.TryParse(p.Value.Creator, out _)) ||
 			Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(snapshot, Json)) > MaxBytes ||
 			snapshot.SchemaVersion != 1 || snapshot.ObjectId != obj.Object().DBRef.ToString() || snapshot.ObjectType != obj.Object().Type ||
 			snapshot.Digest != ContentHash.Sha256Hex(JsonSerializer.Serialize(snapshot with { Digest = "" }, Json)))
@@ -292,20 +291,18 @@ public sealed partial class ObjectSnapshotService(
 				if (await mediator.Send(new GetObjectFlagQuery(flag), ct) is null) throw Error("missing", "An object flag no longer exists: " + flag);
 		if (selection.Locks)
 			foreach (var name in snapshot.AbsentLocks)
-				ValidateLockWrite(obj, name);
+				if (!await locks.CanWriteAsync(executor, obj, obj.Object().Locks.GetValueOrDefault(LockNames.Canonical(name), new())))
+					throw Error("denied", "Permission denied for lock: " + name);
 		if (selection.Locks)
 			foreach (var (name, value) in snapshot.Locks)
 			{
-				foreach (Match reference in LockReferences().Matches(value.Expression))
-				{
-					if (!DBRef.TryParse(reference.Value, out var objid) || objid is not { IsObjid: true } full)
-						throw Error("invalid", "A lock reference lacks a stable creation identity.");
-					if (await objects.GetObjectNodeAsync(full, ct) is not AnySharpObject referred || referred.Object().DBRef != full)
-						throw Error("missing", "A lock references a missing object.");
-				}
-				if (!locks.Validate(value.Expression, obj)) throw Error("invalid", "Invalid lock expression: " + name);
-				// Do not use snapshots to remove a lock's privileged write protection.
-				ValidateLockWrite(obj, name, (LockService.LockFlags)value.Flags);
+				if (!locks.IsBound(value.Expression) || await locks.BindAsync(value.Expression, executor, ct) is not string)
+					throw Error("invalid", "Invalid lock expression or missing object: " + name);
+				var data = new SharpLockData(value.Expression, (LockService.LockFlags)value.Flags,
+					DBRef.TryParse(value.Creator, out var creator) ? creator : null);
+				if (!await locks.CanWriteAsync(executor, obj, obj.Object().Locks.GetValueOrDefault(LockNames.Canonical(name), data)) ||
+					!await locks.CanWriteAsync(executor, obj, data)) throw Error("denied", "Permission denied for lock: " + name);
+
 			}
 	}
 
@@ -345,15 +342,6 @@ public sealed partial class ObjectSnapshotService(
 		}
 	}
 
-	private static void ValidateLockWrite(AnySharpObject obj, string name, LockService.LockFlags savedFlags = 0)
-	{
-		var protectedFlags = LockService.LockFlags.Wizard | LockService.LockFlags.Locked | LockService.LockFlags.Owner;
-		// A snapshot taken before lock names were canonical can name a lock the way the old world
-		// spelled it; the live object's keys are LockType's spelling.
-		if (((savedFlags | obj.Object().Locks.GetValueOrDefault(LockNames.Canonical(name), new()).Flags) & protectedFlags) != 0)
-			throw Error("denied", "Protected locks require their normal administrative workflow: " + name);
-	}
-
 	private async Task<bool> CanRead(AnySharpObject executor, AnySharpObject obj, ObjectSnapshot saved, ReadContext reads, CancellationToken ct)
 	{
 		foreach (var attribute in saved.Attributes)
@@ -380,9 +368,6 @@ public sealed partial class ObjectSnapshotService(
 				!await permissions.CanReadLock(executor, obj, obj.Object().Locks.GetValueOrDefault(LockNames.Canonical(name), new()).Flags)) return false;
 		return true;
 	}
-
-	[GeneratedRegex(@"(?<![:\w])#\d+(?::\d+)?", RegexOptions.CultureInvariant)]
-	private static partial Regex LockReferences();
 
 	private async Task Apply(CapabilityActor actor, AnySharpObject executor, AnySharpObject obj, ObjectSnapshot snapshot, SnapshotSelection selection, CancellationToken ct)
 	{
@@ -419,9 +404,21 @@ public sealed partial class ObjectSnapshotService(
 		if (selection.Locks)
 		{
 			foreach (var name in snapshot.AbsentLocks)
-				mutations.Add(async () => { ValidateLockWrite(obj, name); await mediator.Send(new UnsetLockCommand(obj.Object(), name), ct); });
+				mutations.Add(async () =>
+				{
+					if (await mediator.Send(new UnsetLockCommand(obj.Object(), name, executor), ct) is Error<string> error)
+						throw Error("write-failed", error.Value);
+				});
 			foreach (var (name, saved) in snapshot.Locks)
-				mutations.Add(async () => { ValidateLockWrite(obj, name, (LockService.LockFlags)saved.Flags); await mediator.Send(new SetLockCommand(obj.Object(), name, saved.Expression, executor) { Flags = (LockService.LockFlags)saved.Flags }, ct); });
+				mutations.Add(async () =>
+				{
+					if (await mediator.Send(new SetLockCommand(obj.Object(), locks.SystemLocks.ContainsKey(LockNames.Canonical(name)) ? name : "user:" + name, saved.Expression, executor)
+					{
+						Flags = (LockService.LockFlags)saved.Flags,
+						Creator = DBRef.TryParse(saved.Creator, out var creator) ? creator : null,
+						PreserveCreator = true
+					}, ct) is Error<string> error) throw Error("write-failed", error.Value);
+				});
 		}
 		if (selection.Flags)
 		{

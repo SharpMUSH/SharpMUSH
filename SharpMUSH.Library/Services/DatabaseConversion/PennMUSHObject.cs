@@ -107,7 +107,7 @@ public class PennMUSHObject
 	/// <summary>
 	/// Locks on the object
 	/// </summary>
-	public Dictionary<string, string> Locks { get; init; } = [];
+	public Dictionary<string, PennMUSHLock> Locks { get; init; } = [];
 
 	/// <summary>
 	/// A player's stored password, as the source wrote it: its XYXXY attribute in a PennMUSH dump.

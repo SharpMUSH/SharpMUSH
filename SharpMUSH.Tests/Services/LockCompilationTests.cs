@@ -1,3 +1,5 @@
+using Mediator;
+using SharpMUSH.Library.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -48,7 +50,7 @@ public class LockCompilationTests
 	[Test]
 	public async Task ChangingTheLockStringChangesTheAnswer()
 	{
-		var service = new LockService(_parser, Options());
+		var service = new LockService(_parser, Options(), Substitute.For<IMediator>(), new Lazy<IPermissionService>(() => Substitute.For<IPermissionService>()));
 		var unlocker = _factory.CreateThing(1, "Unlocker");
 		CompilesTo("=#1", true);
 		CompilesTo("=#2", false);

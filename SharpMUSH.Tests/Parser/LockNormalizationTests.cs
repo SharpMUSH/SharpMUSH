@@ -21,6 +21,15 @@ public class LockNormalizationTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
+	[Arguments("NAME^MixedCase*")]
+	[Arguments("HOSTNAME^MixedCase.example")]
+	[Arguments("CHANNEL^MixedCase")]
+	[Arguments("VALUE:me")]
+	[Arguments("VALUE/me")]
+	public async Task NormalizePreservesLiteralValues(string expression)
+		=> await Assert.That(BooleanParser.Normalize(expression)).IsEqualTo(expression);
+
+	[Test]
 	public async Task Normalize_ExactObjectLock_BareDbRef_PreservedAsIs()
 	{
 		var createResult = (await Parser.FunctionParse(MarkupText.Plain("create(NormTestObj1)")))?.Message!;

@@ -220,6 +220,19 @@ public partial class LightningDatabase
 
 	#region Attribute writes
 
+	public async ValueTask<bool> SetAttributeOwnerAsync(DBRef dbref, string[] attribute, SharpPlayer owner, CancellationToken cancellationToken = default)
+	{
+		if (attribute.Length == 0) return false;
+		var key = Keys.Attr(dbref.Number, string.Join('`', attribute.Select(segment => segment.ToUpperInvariant())));
+		return await Store.WriteAsync(tx =>
+		{
+			if (!tx.TryGet(Tables.AttrMeta, key, out var bytes)) return false;
+			var metadata = Codec.Deserialize<AttrMetaRecord>(bytes);
+			tx.Put(Tables.AttrMeta, key, Codec.Serialize(metadata with { Owner = (long)owner.Object.Key }));
+			return true;
+		}, cancellationToken);
+	}
+
 	/// <summary>
 	/// One write job for the whole path. Every prefix of <paramref name="attribute"/> that has no
 	/// <see cref="Tables.AttrMeta"/> row is created — owned by <paramref name="owner"/>, carrying whatever

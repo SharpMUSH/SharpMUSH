@@ -239,12 +239,14 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("first(lockowner(%#),:)", "#1")]
-	public async Task Lockowner(string str, string expected)
+	public async Task LockownerReportsAbsentLock()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+		var created = await Parser.FunctionParse(MarkupText.Plain($"create(LockOwnerAbsent{Guid.NewGuid():N})"));
+		var target = created!.Message!.ToPlainText();
+		var result = await Parser.FunctionParse(MarkupText.Plain($"lockowner({target})"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 NO SUCH LOCK");
 	}
+
 
 	[Test]
 	[Arguments("lockfilter(%# %l,Basic,1)", "")]

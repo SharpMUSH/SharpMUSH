@@ -16,6 +16,42 @@ namespace SharpMUSH.Tests.Database;
 /// </summary>
 public class LegacyLockNameLoadTests
 {
+	[Test]
+	public async Task SurrealPreservesLockCreatorFromStoredMetadata()
+	{
+		var loaded = SurrealProvider.DeserializeLocks("""{"Basic":{"LockString":"=#10","Flags":"Visual, Locked","Creator":"#10:1234"}}""");
+		await Assert.That(loaded["Basic"].Creator?.ToString()).IsEqualTo("#10:1234");
+		await Assert.That(loaded["Basic"].Flags).IsEqualTo(Library.Services.LockService.LockFlags.Visual | Library.Services.LockService.LockFlags.Locked);
+	}
+
+	[Test]
+	public async Task LightningRoundTripsCreatorAndFlags()
+	{
+		var record = new LockRecord { LockString = "=#10", Flags = "Visual, Locked", Creator = "#10:1234" };
+		var restored = Codec.Deserialize<LockRecord>(Codec.Serialize(record));
+		var loaded = LightningProvider.MapLocks(new() { ["Basic"] = restored });
+		await Assert.That(loaded["Basic"].Creator?.ToString()).IsEqualTo("#10:1234");
+		await Assert.That(loaded["Basic"].Flags).IsEqualTo(Library.Services.LockService.LockFlags.Visual | Library.Services.LockService.LockFlags.Locked);
+	}
+
+	[Test]
+	public async Task LegacyLocksKeepUnknownCreators()
+	{
+		var lightning = LightningProvider.MapLocks(new() { ["Basic"] = Stored("=#10") });
+		var surreal = SurrealProvider.DeserializeLocks(SurrealJson(("Basic", "=#10")));
+		await Assert.That(lightning["Basic"].Creator).IsNull();
+		await Assert.That(surreal["Basic"].Creator).IsNull();
+	}
+
+	[Test]
+	public async Task UnknownSnapshotCreatorKeepsLegacySerializedShape()
+	{
+		var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+		var legacy = """{"expression":"=#10","flags":1}""";
+		var snapshot = JsonSerializer.Deserialize<Library.Models.Snapshots.SnapshotLock>(legacy, options);
+		await Assert.That(JsonSerializer.Serialize(snapshot, options)).IsEqualTo(legacy);
+	}
+
 	private static LockRecord Stored(string lockString) => new() { LockString = lockString, Flags = "" };
 
 	/// <summary>The stored shape SurrealDB's <c>object.locks</c> column holds.</summary>
@@ -143,7 +179,7 @@ public class LegacyLockNameLoadTests
 	{
 		// The bug this guards: SystemLocks' keys are what @lock stores under and LockType is what
 		// every gate looks up, so a second list of spellings is a permission hole waiting to happen.
-		var systemLocks = new Library.Services.LockService(null!, null!).SystemLocks;
+		var systemLocks = new Library.Services.LockService(NSubstitute.Substitute.For<SharpMUSH.Library.ParserInterfaces.IBooleanExpressionParser>(), NSubstitute.Substitute.For<Microsoft.Extensions.Options.IOptionsMonitor<SharpMUSH.Configuration.Options.SharpMUSHOptions>>(), NSubstitute.Substitute.For<Mediator.IMediator>(), new Lazy<SharpMUSH.Library.Services.Interfaces.IPermissionService>(() => NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IPermissionService>())).SystemLocks;
 
 		await Assert.That(systemLocks.Count).IsEqualTo(Enum.GetNames<LockType>().Length);
 		foreach (var name in Enum.GetNames<LockType>())

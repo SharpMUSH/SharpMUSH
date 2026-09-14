@@ -30,7 +30,7 @@ public class PennMUSHImportCacheCoherenceTests
 			{
 				DBRef = 12, Name = "Cache Child", Type = PennMUSHObjectType.Thing, Location = 10, Parent = 11, Zone = 11,
 				Attributes = [new PennMUSHAttribute { Name = "DESCRIBE", Value = "A child.", Flags = [] }],
-				Locks = new Dictionary<string, string> { ["Basic"] = "#TRUE" }
+				Locks = new Dictionary<string, PennMUSHLock> { ["Basic"] = new("#TRUE", Flags: 1, Creator: 1) }
 			},
 			new PennMUSHObject
 			{
@@ -61,6 +61,12 @@ public class PennMUSHImportCacheCoherenceTests
 		});
 		var result = await world.Converter.ConvertDatabaseAsync(Fixture(), progress);
 		await Assert.That(result.Errors).IsEmpty();
+		await Assert.That(result.Warnings.Any(warning => warning.Contains("lock", StringComparison.OrdinalIgnoreCase))).IsFalse();
+		var child = (await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(await KeyOfAsync(world, "Cache Child"))))).Expect<AnySharpObject>();
+		var importedLock = child.Object().Locks["Basic"];
+		await Assert.That(importedLock.LockString).IsEqualTo("#TRUE");
+		await Assert.That(importedLock.Creator?.Number).IsEqualTo(1);
+		await Assert.That(importedLock.Flags).IsEqualTo(SharpMUSH.Library.Services.LockService.LockFlags.Visual);
 
 		foreach (var name in Names)
 		{
@@ -100,7 +106,7 @@ public class PennMUSHImportCacheCoherenceTests
 		var o = obj.Object();
 		var parent = await o.Parent.WithCancellation(CancellationToken.None);
 		var zone = await o.Zone.WithCancellation(CancellationToken.None);
-		var locks = string.Join(",", o.Locks.OrderBy(l => l.Key).Select(l => $"{l.Key}={l.Value.LockString}"));
+		var locks = string.Join(",", o.Locks.OrderBy(l => l.Key).Select(l => $"{l.Key}={l.Value.LockString}:{l.Value.Creator}:{l.Value.Flags}"));
 		var destination = "-";
 		if (obj.IsExit)
 		{

@@ -60,7 +60,7 @@ public class StampedLockOperandTests
 	[Arguments("race:Elf", "RACE:Elf")]
 	[Arguments("ref:#123:456", "REF:#123:456")]
 	[Arguments("ref/#123:456", "REF/#123:456")]
-	[Arguments("name^Test*", "NAME^TEST*")]
+	[Arguments("name^Test*", "NAME^Test*")]
 	[Arguments("=attr:value", "=attr:value")]
 	[Arguments("#123:456abc", "#123:456abc")]
 	[Arguments("!(#123:456 & #FALSE) | #TRUE", "!(#123:456 & #FALSE) | #TRUE")]

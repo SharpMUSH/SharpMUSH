@@ -1087,8 +1087,8 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(string.Join(" ", kv!.Keys)));
 	}
 
-	[SharpFunction(Name = "lset", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public ValueTask<CallState> LSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	[SharpFunction(Name = "listset", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public ValueTask<CallState> ListSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 
@@ -1951,13 +1951,14 @@ public partial class Functions
 			executor, executor, victimName, LocateFlags.All,
 			async victim =>
 			{
-				if (!LockService.Validate(lockString, executor))
+				if (await BooleanExpressionParser.BindAsync(lockString, executor) is not string expression)
 				{
-					return new CallState(ErrorMessages.Returns.InvalidLock);
+					return new CallState("#-1 INVALID BOOLEXP");
 				}
 
 				// Evaluate the lock: does victim pass the lock expression?
-				var passes = await LockService.Evaluate(lockString, executor, victim);
+				if (!await PermissionService.CanLocate(executor, victim)) return new CallState("#-1");
+				var passes = await LockService.Evaluate(expression, executor, victim);
 				return new CallState(passes ? "1" : "0");
 			});
 	}

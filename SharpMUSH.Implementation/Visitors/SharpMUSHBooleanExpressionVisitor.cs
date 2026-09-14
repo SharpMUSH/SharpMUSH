@@ -189,7 +189,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override LockPredicate VisitOwnerExpr(SharpMUSHBoolExpParser.OwnerExprContext context)
 	{
-		var target = context.@string().GetText();
+		var target = LockLiteralText.ReadOperand(context.objectOperand());
 		var targetDbRef = ParsedAtCompileTime(target);
 
 		// For owner locks, check if the unlocker is owned by the owner of the named object
@@ -199,13 +199,6 @@ public class SharpMUSHBooleanExpressionVisitor(
 			{
 				var unlockerOwner = await unlockerObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
 				var unlockerOwnerDbRef = unlockerOwner.Object.DBRef;
-
-				// If target is "me", check if unlocker is owned by gated object's owner
-				if (target.Equals("me", StringComparison.OrdinalIgnoreCase))
-				{
-					var gatedOwner = await gatedObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-					return unlockerOwnerDbRef == gatedOwner.Object.DBRef;
-				}
 
 				// If target is a DBRef or objid like "#123" or "#123:timestamp", compare owner DBRefs
 				if (targetDbRef.HasValue)
@@ -219,17 +212,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 					return unlockerOwnerDbRef == targetOwner.Object.DBRef;
 				}
 
-				// Name-based lookup using mediator query
-				// Note: Parser is null as substitutions should have been pre-evaluated
-				// A name, not a dbref — the dbref case returned above. AbsoluteMatch names no scope, so on
-				// its own it could only ever resolve "#N", which is the branch that already ran.
-				var locateResult = await Read(() => services.LocateAsync(gatedObj, gatedObj, target, LocateFlags.All));
-
-				if (locateResult is not AnySharpObject located)
-					return false;
-
-				var locatedOwner = await located.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-				return unlockerOwnerDbRef == locatedOwner.Object.DBRef;
+				return false;
 			}
 			catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)
 			{
@@ -245,7 +228,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override LockPredicate VisitCarryExpr(SharpMUSHBoolExpParser.CarryExprContext context)
 	{
-		var target = context.@string().GetText();
+		var target = LockLiteralText.ReadOperand(context.objectOperand());
 		var targetDbRef = ParsedAtCompileTime(target);
 
 		// PennMUSH OP_TCARRY: passes ONLY if unlocker CARRIES the target (not if IS the target)
@@ -275,36 +258,19 @@ public class SharpMUSHBooleanExpressionVisitor(
 				return false;
 			}
 
-			try
-			{
-				// MAT_POSSESSION | MAT_CONTENTS — PennMUSH's MAT_OBJ_CONTENTS shape. MAT_CONTENTS on its own
-				// is a filter over whatever the scopes turn up, not a scope, so it names nowhere to look.
-				var locateResult = await Read(() => services.LocateAsync(unlockerObj, unlockerObj, target,
-					LocateFlags.MatchObjectsInLookerInventory | LocateFlags.OnlyMatchObjectsInLookerInventory));
-
-				return locateResult.IsValid();
-			}
-			catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)
-			{
-				throw;
-			}
-			catch (Exception)
-			{
-				// Catch any errors during locate operation
-				return false;
-			}
+			return false;
 		};
 	}
 
 	public override LockPredicate VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
 	{
-		var flag = context.@string().GetText().ToUpperInvariant().Trim();
+		var flag = LockLiteralText.Read(context.literal()).ToUpperInvariant().Trim();
 		return (_, unlockerObj) => HasFlag(unlockerObj, flag);
 	}
 
 	public override LockPredicate VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
 	{
-		var power = context.@string().GetText().ToUpperInvariant().Trim();
+		var power = LockLiteralText.Read(context.literal()).ToUpperInvariant().Trim();
 		return (_, unlockerObj) => HasPower(unlockerObj, power);
 	}
 
@@ -323,7 +289,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override LockPredicate VisitChannelExpr(SharpMUSHBoolExpParser.ChannelExprContext context)
 	{
-		var channel = context.@string().GetText();
+		var channel = LockLiteralText.Read(context.literal());
 
 		// Channel locks check if the unlocker is a member of the specified channel
 		return async (_, unlockerObj) =>
@@ -347,7 +313,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override LockPredicate VisitDbRefListExpr(SharpMUSHBoolExpParser.DbRefListExprContext context)
 	{
-		var attrName = context.@string().GetText();
+		var attrName = LockLiteralText.Read(context.literal());
 
 		// DBRef list locks check if the unlocker's dbref is in a space-separated list stored in an attribute
 		return async (gatedObj, unlockerObj) =>
@@ -393,10 +359,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 	}
 
 	public override LockPredicate VisitIpExpr(SharpMUSHBoolExpParser.IpExprContext context)
-		=> ConnectionAttributeMatch("LASTIP", context.@string().GetText());
+		=> ConnectionAttributeMatch("LASTIP", LockLiteralText.Read(context.literal()));
 
 	public override LockPredicate VisitHostNameExpr(SharpMUSHBoolExpParser.HostNameExprContext context)
-		=> ConnectionAttributeMatch("LASTSITE", context.@string().GetText());
+		=> ConnectionAttributeMatch("LASTSITE", LockLiteralText.Read(context.literal()));
 
 	/// <summary>
 	/// IP and hostname locks are the same key with a different attribute: read
@@ -432,18 +398,12 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override LockPredicate VisitNameExpr(SharpMUSHBoolExpParser.NameExprContext context)
 	{
-		var pattern = context.@string().GetText();
+		var pattern = LockLiteralText.Read(context.literal());
 		return (_, unlockerObj) => ValueTask.FromResult(MatchesName(unlockerObj, pattern));
 	}
 
 	public override LockPredicate VisitExactObjectExpr(SharpMUSHBoolExpParser.ExactObjectExprContext context)
-	{
-		// Reconstruct full identifier including optional :timestamp for objid format
-		var targetIdentifier = context.ATTRIBUTE_COLON() != null
-			? $"{context.@string(0).GetText()}:{context.@string(1).GetText()}"
-			: context.@string(0).GetText();
-		return BuildObjectPredicate(targetIdentifier, allowCarry: false);
-	}
+		=> BuildObjectPredicate(LockLiteralText.ReadOperand(context.objectOperand()), allowCarry: false);
 
 	public override LockPredicate VisitDefaultExpr(SharpMUSHBoolExpParser.DefaultExprContext context)
 		=> BuildObjectPredicate(context.@string().GetText(), allowCarry: true);
@@ -455,13 +415,6 @@ public class SharpMUSHBooleanExpressionVisitor(
 		// Ordinary keys allow identity or direct carry; explicit exact keys allow identity only.
 		return async (gatedObj, unlockerObj) =>
 		{
-			// If target is "me", it refers to the gated object's owner
-			if (target.Equals("me", StringComparison.OrdinalIgnoreCase))
-			{
-				var owner = await gatedObj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-				return unlockerObj.Object().DBRef == owner.Object.DBRef;
-			}
-
 			// Read as a DBRef (both #123 and #123:timestamp formats) when the lock was compiled
 			if (targetDbRef.HasValue)
 			{
@@ -505,8 +458,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override LockPredicate VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
-		var attrName = context.@string(0).GetText();
-		var expectedValue = context.@string(1).GetText();
+		var attrName = context.@string().GetText();
+		var expectedValue = LockLiteralText.Read(context.literal());
 
 		return async (_, unlockerObj) =>
 		{
@@ -528,7 +481,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 				return string.Compare(actualValue, expectedValue[1..], StringComparison.OrdinalIgnoreCase) < 0;
 			}
 
-			if (expectedValue.Contains('*') || expectedValue.Contains('?'))
+			if (expectedValue.Contains('*') || expectedValue.Contains('?') || expectedValue.Contains('\\'))
 			{
 				return SoftcodeRegex.IsMatch(SoftcodeRegex.Wildcard(expectedValue), actualValue);
 			}
@@ -539,8 +492,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override LockPredicate VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)
 	{
-		var attrName = context.@string(0).GetText();
-		var expected = context.@string(1).GetText();
+		var attrName = context.@string().GetText();
+		var expected = LockLiteralText.Read(context.literal());
 
 		// PennMUSH eval lock (ATTR/pattern): evaluate the attribute on the gated object
 		// as MUSHcode with the unlocker as enactor (%#), then compare result to pattern.
@@ -564,8 +517,8 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override LockPredicate VisitIndirectExpr(SharpMUSHBoolExpParser.IndirectExprContext context)
 	{
-		var target = context.@string(0).GetText();
-		var lockType = context.@string().Length > 1 ? context.@string(1).GetText() : "Basic"; // Default to Basic lock if not specified
+		var target = LockLiteralText.ReadOperand(context.objectOperand());
+		var lockType = context.@string()?.GetText() ?? "Basic"; // Default to Basic lock if not specified
 		var targetDbRef = ParsedAtCompileTime(target);
 
 		// Indirect locks check another object's lock
@@ -589,21 +542,10 @@ public class SharpMUSHBooleanExpressionVisitor(
 				}
 				else
 				{
-					// Name-based lookup using mediator query — again, the dbref case is handled above, so
-					// AbsoluteMatch on its own would leave this branch with nowhere to search.
-					var locateResult = await Read(() => services.LocateAsync(gatedObj, gatedObj, target, LocateFlags.All));
-
-					if (locateResult is not AnySharpObject located)
-						return false;
-
-					targetObj = located;
+					return false;
 				}
 
-				// Get the lock from the target object
-				var lockData = targetObj.Object().Locks
-					.GetValueOrDefault(LockNames.Canonical(lockType), new SharpLockData("#TRUE"));
-
-				return await services.EvaluateLock(lockData.LockString, targetObj, unlockerObj);
+				return await services.EvaluateLockType(lockType, targetObj, unlockerObj);
 			}
 			catch (OperationCanceledException) when (ExecutionBudget.CurrentToken.IsCancellationRequested || ExecutionBudget.Current?.IsExceeded == true)
 			{

@@ -131,7 +131,7 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 		int owner = Nothing, zone = Nothing, pennies = 0;
 		long created = 0, modified = 0;
 		List<string> flags = [], powers = [], warnings = [];
-		var locks = new Dictionary<string, string>();
+		var locks = new Dictionary<string, PennMUSHLock>();
 		var attributes = new List<PennMUSHAttribute>();
 
 		while (await reader.PeekAsync(cancellationToken) is not ('!' or '*' or '~' or '+' or -1))
@@ -159,10 +159,10 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 					for (var i = Int(reader, value); i > 0; i--)
 					{
 						var lockType = await reader.ReadLabeledAsync("type", cancellationToken);
-						await reader.ReadLabeledAsync("creator", cancellationToken);
-						await reader.ReadLabeledAsync("flags", cancellationToken);
+						var creator = OptionalDbRef(reader, await reader.ReadLabeledAsync("creator", cancellationToken));
+						var lockFlags = ParseLockFlags(await reader.ReadLabeledAsync("flags", cancellationToken));
 						await reader.ReadLabeledAsync("derefs", cancellationToken);
-						locks[lockType] = await reader.ReadLabeledAsync("key", cancellationToken);
+						locks[lockType] = new PennMUSHLock(await reader.ReadLabeledAsync("key", cancellationToken), lockFlags, creator);
 					}
 
 					break;
@@ -263,6 +263,23 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 		=> int.TryParse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number)
 			? number
 			: throw reader.Error($"'{value}' is not a number");
+
+	private static int ParseLockFlags(string value)
+	{
+		if (int.TryParse(value, out var numeric)) return numeric;
+		var flags = 0;
+		foreach (var name in value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+			flags |= name.ToLowerInvariant() switch
+			{
+				"visual" => 0x01,
+				"no_inherit" => 0x02,
+				"wizard" => 0x04,
+				"locked" => 0x08,
+				"no_clone" => 0x10,
+				_ => throw new FormatException("Unknown PennMUSH lock flag: " + name)
+			};
+		return flags;
+	}
 
 	private static List<string> Words(string value) => [.. value.Split(' ', StringSplitOptions.RemoveEmptyEntries)];
 }
