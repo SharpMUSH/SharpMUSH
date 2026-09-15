@@ -38,6 +38,13 @@ public interface IHttpHandlerCommandDispatcher
 	/// <c>http_handler</c> is configured or the handler has no <c>&lt;METHOD&gt;</c> attribute
 	/// (SharpMUSH deviates from PennMUSH's 200-empty here by design — see help sharphttp).
 	/// </summary>
+	/// <summary>The address recorded when the caller's real one could not be established.</summary>
+	/// <remarks>
+	/// The same literal the web auth surfaces fall back to (<c>AuthController.ClientIp</c>), so one
+	/// sitelock rule covers every surface that cannot name its caller.
+	/// </remarks>
+	const string UnknownAddress = "unknown";
+
 	/// <param name="method">HTTP method (case-insensitive; matched to the attribute name uppercased).</param>
 	/// <param name="path">Request path including the query string, e.g. <c>/foo?bar=baz</c>. Becomes <c>%0</c>.</param>
 	/// <param name="body">Raw request body. Becomes <c>%1</c>.</param>
@@ -47,5 +54,23 @@ public interface IHttpHandlerCommandDispatcher
 		string path,
 		string body,
 		IEnumerable<(string Name, string Value)> headers,
+		CancellationToken ct = default);
+
+	/// <summary>
+	/// As above, for a caller whose address is known. That address is what sitelock rules for the
+	/// http_handler are matched against — both on its own and as the
+	/// "<c>&lt;IP&gt;`&lt;METHOD&gt;`&lt;PATH&gt;</c>" composite Penn treats as a hostname
+	/// (src/bsd.c:3814-3839) — and what the ``HTTP`COMMAND`` event reports (bsd.c:4076).
+	/// </summary>
+	/// <param name="clientIp">
+	/// The effective client address, already resolved through the trusted-proxy pipeline. Pass
+	/// <see cref="UnknownAddress"/> rather than an empty string when there is none.
+	/// </param>
+	ValueTask<Found<HttpHandlerResult>> DispatchAsync(
+		string method,
+		string path,
+		string body,
+		IEnumerable<(string Name, string Value)> headers,
+		string clientIp,
 		CancellationToken ct = default);
 }

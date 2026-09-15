@@ -217,7 +217,14 @@ public class Program
 			.SelectMany(header => header.Value.Where(value => value is not null)
 				.Select(value => (header.Key, Value: value!)));
 
-		var result = await dispatcher.DispatchAsync(request.Method, path, body, headers, context.RequestAborted);
+		// The address policy decides on, and the one ``HTTP`COMMAND`` reports: whatever
+		// UseForwardedHeaders resolved, which is the proxy hop unless an operator listed that hop in
+		// ForwardedHeaders:KnownProxies. Same fallback as the auth surfaces (AuthController.ClientIp),
+		// so one sitelock rule covers every entry point that cannot name its caller.
+		var clientIp = context.Connection.RemoteIpAddress?.ToString()
+			?? SharpMUSH.Library.Services.Interfaces.IHttpHandlerCommandDispatcher.UnknownAddress;
+
+		var result = await dispatcher.DispatchAsync(request.Method, path, body, headers, clientIp, context.RequestAborted);
 
 		if (result is not SharpMUSH.Library.Services.Interfaces.HttpHandlerResult handled)
 		{

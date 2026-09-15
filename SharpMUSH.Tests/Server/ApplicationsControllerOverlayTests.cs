@@ -102,5 +102,10 @@ public class ApplicationsControllerOverlayTests
 			string method, string path, string body, IEnumerable<(string Name, string Value)> headers,
 			CancellationToken ct = default) =>
 			throw new InvalidOperationException("read paths must not dispatch");
+
+		public ValueTask<Found<HttpHandlerResult>> DispatchAsync(
+			string method, string path, string body, IEnumerable<(string Name, string Value)> headers,
+			string clientIp, CancellationToken ct = default) =>
+			throw new InvalidOperationException("read paths must not dispatch");
 	}
 }
