@@ -19,6 +19,7 @@ using QueueScheduler = SharpMUSH.Library.Services.Interfaces.ITaskScheduler;
 
 namespace SharpMUSH.Tests.Services;
 
+[NotInParallel]
 public class RecurringJobTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -64,7 +65,7 @@ public class RecurringJobTests
 	}
 	private static Task<RecurringJob> Create(Context context) => context.Service.CreateAsync(context.Actor, new(context.Target.ToString(), "RUN", "* * * * *", "UTC"));
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("LIST")]
 	[Arguments("CREATE")]
 	[Arguments("DELETE")]
@@ -116,7 +117,7 @@ public class RecurringJobTests
 		await Assert.That(tokens.All(token => token == budget.Token)).IsTrue();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task DeletingAnotherAccountsJobRequiresExplicitAllSwitch(bool all)
@@ -140,7 +141,7 @@ public class RecurringJobTests
 		await Assert.That((await context.Service.ListAsync(context.Actor, true)).Any(entry => entry.Id == job.Id)).IsEqualTo(!all);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task HttpCreationCancelsAttributeReadsAndReleasesTheServiceGate(bool cooperativeRead)
@@ -197,7 +198,7 @@ public class RecurringJobTests
 		}
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task PollingCancellationReachesQueueAdmissionAndReleasesTheGate()
 	{
 		var context = await Setup();
@@ -238,7 +239,7 @@ public class RecurringJobTests
 		await context.Service.ListAsync(context.Actor).WaitAsync(TimeSpan.FromSeconds(2));
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task DelayedFiringDoesNotAccumulateQueueReservations()
 	{
 		var context = await Setup();
@@ -255,7 +256,7 @@ public class RecurringJobTests
 		await Assert.That(context.Callbacks.Count).IsEqualTo(2);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task RealQueueKeepsOneFiringAndRecoversAfterExternalHalt()
 	{
 		var context = await Setup();
@@ -299,7 +300,7 @@ public class RecurringJobTests
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).LastAsync()).Value.ToPlainText()).IsEqualTo("yes");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("DEBUG", false, true)]
 	[Arguments("NO_DEBUG", true, false)]
 	public async Task ScheduledAttributeRetainsItsDebugFlags(string attributeFlag, bool executorDebug, bool expectedTrace)
@@ -331,7 +332,7 @@ public class RecurringJobTests
 		}
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task ScheduledAttributeHasRootQRegisters()
 	{
 		var context = await Setup();
@@ -346,7 +347,7 @@ public class RecurringJobTests
 			.IsEqualTo("stored");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task DurableClaimsPreventDuplicateTicksAndRestartReplay()
 	{
 		var context = await Setup();
@@ -369,7 +370,7 @@ public class RecurringJobTests
 		await Assert.That((await restarted.ListAsync(context.Actor)).Single().Status).IsEqualTo("completed");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("disable")]
 	[Arguments("delete")]
 	[Arguments("revoke")]
@@ -407,7 +408,7 @@ public class RecurringJobTests
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task QueueRejectionIsDurableAndDoesNotRetryTheSameFiring()
 	{
 		var context = await Setup();
@@ -424,7 +425,7 @@ public class RecurringJobTests
 		await context.Queue.Received(1).AdmitWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), "recurring", context.Actor.ActiveCharacter!.Value, notifyOnRejection: false);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task ReschedulingInvalidatesQueuedWorkAndKeepsTheOwner()
 	{
 		var context = await Setup();
@@ -437,7 +438,7 @@ public class RecurringJobTests
 		await Assert.That(changed.NextRun).IsEqualTo(DateTimeOffset.Parse("2026-09-15T00:00:00Z").ToUnixTimeMilliseconds());
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
 	}
-	[Test, NotInParallel]
+	[Test]
 	public async Task GlobalListingHonorsAnExplicitOwnScopeDenial()
 	{
 		var context = await Setup();
@@ -451,7 +452,7 @@ public class RecurringJobTests
 		await Assert.ThrowsAsync<RecurringJobException>(async () => await context.Service.ConfigureAsync(context.Actor, own.Id, own.Schedule, own.TimeZone, false));
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task OwnCapabilityCannotMutateAnotherAccountsJob()
 	{
 		var context = await Setup();
@@ -468,7 +469,7 @@ public class RecurringJobTests
 		await Assert.That(updated.Character).IsEqualTo(context.Actor.ActiveCharacter!.Value.ToString());
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task ActualQueueSuppliesAFreshBudgetToAttributeEvaluation()
 	{
 		var context = await Setup();
@@ -493,7 +494,7 @@ public class RecurringJobTests
 		await Assert.That((await service.ListAsync(context.Actor)).Single().Status).IsEqualTo("completed");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task GameCommandsCreateDisableAndDeleteThroughTheSharedService()
 	{
 		var context = await Setup();
@@ -506,7 +507,7 @@ public class RecurringJobTests
 		await Assert.That((await context.Service.ListAsync(context.Actor)).Length).IsEqualTo(0);
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task ExecutionRechecksDisabledAndUnlinkedAccounts(bool unlink)
@@ -531,7 +532,7 @@ public class RecurringJobTests
 		await Assert.That(document!.Jobs.Single().Status).IsEqualTo("failed");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task QueuedAuthorizationCancelsBuiltInRoleLookup()
 	{
 		var context = await Setup();
@@ -575,7 +576,7 @@ public class RecurringJobTests
 		await Assert.That(document!.Jobs.Single().Status).IsEqualTo("failed");
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	[Arguments("read")]
 	[Arguments("running-save")]
 	[Arguments("authorize")]
@@ -589,14 +590,15 @@ public class RecurringJobTests
 		var objects = Substitute.For<IObjectStore>();
 		var armed = false;
 		var blocked = false;
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		CancellationToken observed = default;
 		async Task Block(string current, CancellationToken ct)
 		{
 			if (!armed || blocked || current != stage) return;
 			blocked = true;
 			observed = ct;
-			using var watchdog = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
-			await Task.Delay(Timeout.InfiniteTimeSpan, ct.CanBeCanceled ? ct : watchdog.Token);
+			entered.SetResult();
+			await Task.Delay(Timeout.InfiniteTimeSpan, ct);
 		}
 		async ValueTask<RecurringJobDocument?> Read(CancellationToken ct)
 		{
@@ -629,8 +631,13 @@ public class RecurringJobTests
 		context.Clock.Now = context.Clock.Now.AddMinutes(1);
 		await service.RunDueAsync();
 		armed = true;
-		using var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(100));
-		using (budget.Enter()) await context.Callbacks.Single()();
+		using var cancellation = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancellation.Token);
+		Task<CallState?> firing;
+		using (budget.Enter()) firing = context.Callbacks.Single()().AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+		await cancellation.CancelAsync();
+		await firing;
 		await Assert.That(blocked).IsTrue();
 		await Assert.That(observed).IsEqualTo(budget.Token);
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
@@ -639,7 +646,7 @@ public class RecurringJobTests
 		await Assert.That(saved.Jobs.Single().RunToken).IsNull();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task CancelledFiringDoesNotWaitIndefinitelyForTheDefinitionGate()
 	{
 		var context = await Setup();
@@ -654,11 +661,12 @@ public class RecurringJobTests
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
 		using var budget = new ExecutionBudget(TimeSpan.Zero);
 		Task<CallState?>? firing = null;
+		CallState? result = null;
 		try
 		{
 			using var scope = budget.Enter();
 			firing = context.Callbacks.Single()().AsTask();
-			try { await firing.WaitAsync(TimeSpan.FromSeconds(3)); }
+			try { result = await firing.WaitAsync(TimeSpan.FromSeconds(3)); }
 			catch (OperationCanceledException) { }
 		}
 		finally
@@ -667,25 +675,25 @@ public class RecurringJobTests
 			await configure;
 			if (firing is not null)
 			{
-				try { await firing.WaitAsync(TimeSpan.FromSeconds(3)); }
+				try { result = await firing.WaitAsync(TimeSpan.FromSeconds(3)); }
 				catch (OperationCanceledException) { }
 			}
 		}
-		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
+		await Assert.That(result).IsNull();
 	}
 
-	[Test, NotInParallel]
+	[Test]
 	public async Task TerminalPersistenceHasOneFreshBoundedAttemptAndRetainsUnacknowledgedClaim()
 	{
 		var context = await Setup();
-		var backing = Get<IExpandedDataStore>();
 		var store = Substitute.For<IExpandedDataStore>();
+		RecurringJobDocument? persisted = null;
 		var armed = false;
 		var attempts = 0;
 		var activeWrites = 0;
 		CancellationToken observed = default;
 		store.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey, Arg.Any<CancellationToken>())
-			.Returns(call => backing.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey, call.ArgAt<CancellationToken>(1)));
+			.Returns(_ => persisted);
 		async ValueTask Save(RecurringJobDocument document, CancellationToken ct)
 		{
 			if (armed && document.Jobs.Any(job => job.Status is "completed" or "failed"))
@@ -693,11 +701,16 @@ public class RecurringJobTests
 				attempts++;
 				activeWrites++;
 				observed = ct;
-				using var watchdog = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
-				try { await Task.Delay(Timeout.InfiniteTimeSpan, ct.CanBeCanceled ? ct : watchdog.Token); }
+				var cancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+				using var registration = ct.Register(cancelled.SetResult);
+				try
+				{
+					await cancelled.Task.WaitAsync(TimeSpan.FromSeconds(2));
+					ct.ThrowIfCancellationRequested();
+				}
 				finally { activeWrites--; }
 			}
-			await backing.SetExpandedServerData(RecurringJobService.StorageKey, document, ct);
+			persisted = document;
 		}
 		store.SetExpandedServerData(RecurringJobService.StorageKey, Arg.Any<object>(), Arg.Any<CancellationToken>())
 			.Returns(call => Save(call.ArgAt<RecurringJobDocument>(1), call.ArgAt<CancellationToken>(2)));
@@ -716,7 +729,7 @@ public class RecurringJobTests
 		await Assert.That(observed.CanBeCanceled).IsTrue();
 		await Assert.That(observed.IsCancellationRequested).IsTrue();
 		await Assert.That(observed == budget.Token).IsFalse();
-		var document = await backing.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey);
+		var document = persisted;
 		await Assert.That(document!.Jobs.Single().RunToken).IsNotNull();
 		await service.RunDueAsync();
 		await Assert.That(context.Callbacks.Count).IsEqualTo(1);

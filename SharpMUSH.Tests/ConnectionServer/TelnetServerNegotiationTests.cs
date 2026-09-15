@@ -14,6 +14,8 @@ using System.Net;
 using System.Text;
 using TelnetNegotiationCore.Builders;
 using TelnetNegotiationCore.Interpreters;
+using TelnetNegotiationCore.Plugins;
+using TelnetNegotiationCore.Protocols;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 
@@ -38,6 +40,16 @@ public class TelnetServerNegotiationTests
 	private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
 
 	[Test]
+	public async Task TncProvidesNativeTerminalTypeNotifications()
+	{
+		var builder = new TelnetInterpreterBuilder()
+			.AddPlugin<TerminalTypeProtocol>()
+			.OnTerminalTypes(_ => ValueTask.CompletedTask);
+
+		await Assert.That(builder).IsNotNull();
+	}
+
+	[Test]
 	public async Task RegistrationFailureReleasesAllocatedDescriptor()
 	{
 		var service = Substitute.For<IConnectionServerService>();
@@ -47,16 +59,31 @@ public class TelnetServerNegotiationTests
 			Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(Task.FromException(new IOException("registration failed")));
 		var descriptors = Substitute.For<IDescriptorGeneratorService>();
 		descriptors.GetNextTelnetDescriptorAsync(Arg.Any<CancellationToken>()).Returns(42L);
+		var plugin = Substitute.For<ITelnetProtocolPlugin>();
+		plugin.ProtocolType.Returns(typeof(ITelnetProtocolPlugin));
+		plugin.Dependencies.Returns([]);
+		plugin.DisposeAsync().Returns(ValueTask.FromException(new InvalidOperationException("dispose failed")));
 		var input = new Pipe();
 		var output = new Pipe();
 		using var cancellation = new CancellationTokenSource();
 		var context = new FakeConnectionContext(new PipeDuplex(input.Reader, output.Writer), cancellation.Token);
 		var server = new TelnetServer(NullLogger<TelnetServer>.Instance, service, Substitute.For<IMessageBus>(),
-			descriptors, new ServerBuilderFactory(), new ConnectionServerOptions());
+			descriptors, new ServerBuilderFactory(plugin), new ConnectionServerOptions());
 		try
 		{
 			await Assert.That(async () => await server.OnConnectedAsync(context).WaitAsync(Timeout)).Throws<IOException>();
 			descriptors.Received(1).ReleaseTelnetDescriptor(42);
+			await plugin.Received(1).DisposeAsync();
+
+			while (output.Reader.TryRead(out var pending))
+			{
+				output.Reader.AdvanceTo(pending.Buffer.End);
+			}
+
+			await WriteAsync(input.Writer, IAC, WILL, TTYPE);
+			using var probe = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
+			await Assert.That(async () => await output.Reader.ReadAsync(probe.Token))
+				.Throws<OperationCanceledException>();
 		}
 		finally
 		{
@@ -67,12 +94,16 @@ public class TelnetServerNegotiationTests
 	}
 
 	/// <summary>A builder factory in server mode, standing in for the one DI registers.</summary>
-	private sealed class ServerBuilderFactory : ITelnetInterpreterFactory
+	private sealed class ServerBuilderFactory(ITelnetProtocolPlugin? plugin = null) : ITelnetInterpreterFactory
 	{
-		public TelnetInterpreterBuilder CreateBuilder() =>
-			new TelnetInterpreterBuilder()
+		public TelnetInterpreterBuilder CreateBuilder()
+		{
+			var builder = new TelnetInterpreterBuilder()
 				.UseMode(TelnetInterpreter.TelnetMode.Server)
 				.UseLogger(NullLogger<TelnetInterpreter>.Instance);
+
+			return plugin is null ? builder : builder.AddPlugin(plugin);
+		}
 	}
 
 	private sealed class PipeDuplex(PipeReader input, PipeWriter output) : IDuplexPipe
@@ -96,7 +127,10 @@ public class TelnetServerNegotiationTests
 	/// what the server wrote back, and the handler's own task.
 	/// </summary>
 	private static (PipeWriter ToServer, PipeReader FromServer, Task Handler, List<object> Published, CancellationTokenSource Cts)
-		StartServer(ConnectionServerOptions? options = null, IConnectionServerService? connectionService = null)
+		StartServer(
+			ConnectionServerOptions? options = null,
+			IConnectionServerService? connectionService = null,
+			Func<object, Task>? beforePublish = null)
 	{
 		var clientToServer = new Pipe();
 		var serverToClient = new Pipe();
@@ -105,10 +139,14 @@ public class TelnetServerNegotiationTests
 		var published = new List<object>();
 		var bus = Substitute.For<IMessageBus>();
 		bus.Publish(Arg.Any<object>(), Arg.Any<CancellationToken>())
-			.ReturnsForAnyArgs(call =>
+			.ReturnsForAnyArgs(async call =>
 			{
+				if (beforePublish is not null)
+				{
+					await beforePublish(call[0]);
+				}
+
 				lock (published) published.Add(call[0]);
-				return Task.CompletedTask;
 			});
 
 		var descriptors = Substitute.For<IDescriptorGeneratorService>();
@@ -126,6 +164,95 @@ public class TelnetServerNegotiationTests
 			new PipeDuplex(clientToServer.Reader, serverToClient.Writer), cts.Token);
 
 		return (clientToServer.Writer, serverToClient.Reader, server.OnConnectedAsync(context), published, cts);
+	}
+
+	[Test]
+	public async Task RegistrationCompletingMidTerminalTypeCycle_PreservesSnapshotOrder()
+	{
+		var releaseRegistration = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var registrationComplete = 0;
+		var partialPublishStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var releasePartialPublish = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var laterPublishStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var terminalPublishCount = 0;
+
+		var connectionService = Substitute.For<IConnectionServerService>();
+		connectionService.RegisterAsync(
+				Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+				Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
+				Arg.Any<Func<Encoding>>(), Arg.Any<Action>(), Arg.Any<Func<string, string, ValueTask>>(),
+				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>(),
+				Arg.Any<string?>(), Arg.Any<CancellationToken>())
+			.Returns(async _ =>
+			{
+				await releaseRegistration.Task;
+				Volatile.Write(ref registrationComplete, 1);
+			});
+		connectionService.Get(42).Returns(_ => Volatile.Read(ref registrationComplete) == 0
+			? null
+			: new ConnectionServerService.ConnectionData(
+				42, null, ConnectionServerService.ConnectionState.Connected,
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+				() => Encoding.UTF8, () => { }, null, new ProtocolCapabilities(), null));
+
+		async Task BeforePublish(object message)
+		{
+			if (message is not TerminalTypeNegotiatedMessage)
+			{
+				return;
+			}
+
+			if (Interlocked.Increment(ref terminalPublishCount) == 1)
+			{
+				partialPublishStarted.TrySetResult();
+				await releasePartialPublish.Task;
+				return;
+			}
+
+			laterPublishStarted.TrySetResult();
+		}
+
+		var (toServer, fromServer, handler, published, cancellation) = StartServer(
+			connectionService: connectionService, beforePublish: BeforePublish);
+		using var cts = cancellation;
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, DO, TTYPE));
+			await WriteAsync(toServer, IAC, WILL, TTYPE);
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, TTYPE, SEND, IAC, SE));
+
+			await WriteAsync(toServer, [IAC, SB, TTYPE, IS, .. Encoding.ASCII.GetBytes("SharpMUTerm"), IAC, SE]);
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, TTYPE, SEND, IAC, SE));
+			await Task.Delay(25);
+
+			releaseRegistration.TrySetResult();
+			await partialPublishStarted.Task.WaitAsync(Timeout);
+
+			await WriteAsync(toServer, [IAC, SB, TTYPE, IS, .. Encoding.ASCII.GetBytes("MTTS 8"), IAC, SE]);
+			await Task.Delay(100);
+			await Assert.That(laterPublishStarted.Task.IsCompleted).IsFalse()
+				.Because("post-registration snapshots must not overtake the queue being drained");
+
+			releasePartialPublish.TrySetResult();
+			await laterPublishStarted.Task.WaitAsync(Timeout);
+
+			TerminalTypeNegotiatedMessage[] terminalTypes;
+			lock (published)
+			{
+				terminalTypes = [.. published.OfType<TerminalTypeNegotiatedMessage>()];
+			}
+
+			await Assert.That(terminalTypes.Length).IsEqualTo(2);
+			await Assert.That(terminalTypes[0].TerminalTypes.Count).IsLessThan(terminalTypes[1].TerminalTypes.Count);
+		}
+		finally
+		{
+			releaseRegistration.TrySetResult();
+			releasePartialPublish.TrySetResult();
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
 	}
 
 	/// <summary>Reads from the server until <paramref name="predicate"/> accepts what has arrived so far.</summary>
@@ -307,6 +434,7 @@ public class TelnetServerNegotiationTests
 	{
 		var registrationStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var releaseRegistration = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var registrationComplete = 0;
 
 		var connectionService = Substitute.For<IConnectionServerService>();
 		connectionService
@@ -320,7 +448,14 @@ public class TelnetServerNegotiationTests
 			{
 				registrationStarted.TrySetResult();
 				await releaseRegistration.Task;
+				Volatile.Write(ref registrationComplete, 1);
 			});
+		connectionService.Get(42).Returns(_ => Volatile.Read(ref registrationComplete) == 0
+			? null
+			: new ConnectionServerService.ConnectionData(
+				42, null, ConnectionServerService.ConnectionState.Connected,
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+				() => Encoding.UTF8, () => { }, null, new ProtocolCapabilities(), null));
 
 		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: connectionService);
 		try
@@ -351,12 +486,17 @@ public class TelnetServerNegotiationTests
 					.GetAwaiter().GetResult();
 			}
 
+			connectionService.DidNotReceive().UpdateCapabilities(
+				Arg.Any<long>(), Arg.Any<Func<ProtocolCapabilities, ProtocolCapabilities>>());
+
 			releaseRegistration.TrySetResult();
 
 			var terminalType = await WaitForPublishedAsync<TerminalTypeNegotiatedMessage>(published);
 			await Assert.That(terminalType).IsNotNull()
 				.Because("held is not dropped — it goes out once the handle exists to receive it");
 			await Assert.That(terminalType!.TerminalTypes).Contains("SharpMUTerm");
+			connectionService.Received(1).UpdateCapabilities(
+				42, Arg.Any<Func<ProtocolCapabilities, ProtocolCapabilities>>());
 
 			await Assert.That(await WaitForPublishedAsync<TelnetNegotiatedMessage>(published)).IsNotNull();
 		}

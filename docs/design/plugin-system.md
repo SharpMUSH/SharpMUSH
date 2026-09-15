@@ -54,10 +54,8 @@ plugin's loaded instance pattern-matches against the host's interface types acro
 
 > **Host dependency closure.** Because McMaster eagerly walks the shared `SharpMUSH.Library` reference
 > closure and resolves each referenced assembly against the host's *default* load context, the host must
-> carry its full dependency closure beside its binary. In particular `FSharp.Core` (a runtime transitive of
-> `SharpMUSH.Library` via `TelnetNegotiationCore` that the engine never JITs and that is normally trimmed
-> from output) is materialized into the `SharpMUSH.Server` output by an explicit `FSharp.Core`
-> `PackageReference`. A host that loads plugins must not be trimmed below its real closure.
+> carry its full dependency closure beside its binary. A host that loads plugins must not be trimmed below
+> its real closure.
 
 ## Contract surface (`SharpMUSH.Library`)
 

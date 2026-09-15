@@ -9,7 +9,7 @@
 	     progress/result DTOs, and the Markdig wiki-rendering pipeline. It deliberately references NONE of
 	     the server DB/infra packages (SqlClient, MySqlConnector, Npgsql,
 	     SurrealDb.Net, NATS.Net, Quartz, Serilog, TelnetNegotiationCore, ...) so the browser bundle no
-	     longer drags the full server closure (nor its transitive FSharp.Core / Windows desktop assemblies).
+	     longer drags the full server closure or Windows desktop assemblies.
 
 	     Namespaces are intentionally preserved (SharpMUSH.Library.*) so the whole solution keeps compiling
 	     unchanged: SharpMUSH.Library references this project and re-consumes these types, and every existing
