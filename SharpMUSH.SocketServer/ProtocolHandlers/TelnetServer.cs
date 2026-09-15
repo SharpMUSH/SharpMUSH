@@ -168,9 +168,18 @@ public class TelnetServer : ConnectionHandler
 				() => _publishEndpoint.Publish(new TelnetNegotiatedMessage(nextPort), ct));
 		}
 
-		var terminalTypeProtocol = new ObservableTerminalTypeProtocol(
+		IReadOnlyList<string> publishedTerminalTypes = [];
+		var terminalTypeProtocol = new TerminalTypeProtocol().OnTerminalTypes(
 			async terminalTypes =>
 			{
+				if (publishedTerminalTypes.SequenceEqual(terminalTypes))
+				{
+					return;
+				}
+
+				var snapshot = terminalTypes.ToArray();
+				publishedTerminalTypes = snapshot;
+
 				// MTTS is the only thing that ever tells us a client can render more than 16 colours.
 				// Until it was read, ProtocolCapabilities.SupportsXterm256 sat at its default of
 				// false for every telnet connection, and OutputTransformService dutifully downgraded
@@ -178,14 +187,11 @@ public class TelnetServer : ConnectionHandler
 				// place there is to say it, that they could display them.
 				await PublishAfterRegistrationAsync(async () =>
 				{
-					TryApplyTerminalCapabilities(nextPort, terminalTypes);
+					TryApplyTerminalCapabilities(nextPort, snapshot);
 					await _publishEndpoint.Publish(
-						new TerminalTypeNegotiatedMessage(nextPort, [.. terminalTypes]), ct);
+						new TerminalTypeNegotiatedMessage(nextPort, snapshot), ct);
 				});
-			},
-			// A client that agreed to TTYPE has proved it speaks telnet, and it may never send a
-			// line — a crawler reads the login screen and leaves — so do not wait for OnSubmit.
-			async _ => await AnnounceTelnetIfNegotiatedAsync());
+			});
 
 		TelnetInterpreterBuilder builder = _telnetFactory.CreateBuilder()
 			.OnSubmit(async (byteArray, encoding, _) =>
@@ -285,8 +291,8 @@ public class TelnetServer : ConnectionHandler
 
 		builder.UsePipe(connection.Transport);
 		var telnet = await builder.BuildAsync();
-		var readTask = ReadAndObserveTerminalTypesAsync(
-			telnet, terminalTypeProtocol, connection.Transport.Input, ct);
+		var readTask = ReadAndObserveNegotiationAsync(
+			telnet, connection.Transport.Input, AnnounceTelnetIfNegotiatedAsync, ct);
 		telnetInterpreter = telnet;
 
 		// The read loop is already running by now, so a fast client could have negotiated in the gap
@@ -386,10 +392,10 @@ public class TelnetServer : ConnectionHandler
 		}
 	}
 
-	private static async Task ReadAndObserveTerminalTypesAsync(
+	private static async Task ReadAndObserveNegotiationAsync(
 		TelnetInterpreter interpreter,
-		ObservableTerminalTypeProtocol terminalTypeProtocol,
 		PipeReader reader,
+		Func<ValueTask> onProcessed,
 		CancellationToken cancellationToken)
 	{
 		while (!cancellationToken.IsCancellationRequested)
@@ -400,7 +406,7 @@ public class TelnetServer : ConnectionHandler
 			{
 				await interpreter.InterpretByteArrayAsync(segment);
 				await interpreter.WaitForProcessingAsync(additionalDelayMs: 0);
-				await terminalTypeProtocol.PublishTerminalTypesIfChangedAsync();
+				await onProcessed();
 			}
 
 			reader.AdvanceTo(result.Buffer.End);

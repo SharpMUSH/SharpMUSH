@@ -14,6 +14,7 @@ using System.Net;
 using System.Text;
 using TelnetNegotiationCore.Builders;
 using TelnetNegotiationCore.Interpreters;
+using TelnetNegotiationCore.Protocols;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 
@@ -36,6 +37,16 @@ public class TelnetServerNegotiationTests
 	private const byte MXP = 91;
 
 	private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
+
+	[Test]
+	public async Task TncProvidesNativeTerminalTypeNotifications()
+	{
+		var builder = new TelnetInterpreterBuilder()
+			.AddPlugin<TerminalTypeProtocol>()
+			.OnTerminalTypes(_ => ValueTask.CompletedTask);
+
+		await Assert.That(builder).IsNotNull();
+	}
 
 	[Test]
 	public async Task RegistrationFailureReleasesAllocatedDescriptor()
