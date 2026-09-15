@@ -45,7 +45,9 @@ public static class AttributeHelpers
 	/// </code>
 	/// </remarks>
 	/// <param name="attributeService">The attribute service</param>
-	/// <param name="parser">Parser with current state (can be null for non-parser contexts)</param>
+	/// <param name="parser">Parser carrying the state the attribute body runs in. A caller with no
+	/// ambient parse frame builds one with <see cref="ParserState.RootFor"/>; passing a parser whose
+	/// state stack is empty throws, because the evaluation reads <c>CurrentState</c>.</param>
 	/// <param name="executor">The object executing the evaluation</param>
 	/// <param name="target">The object to check for the format attribute</param>
 	/// <param name="formatAttributeName">Name of the format attribute (e.g., "NAMEFORMAT", "DESCFORMAT", "CONFORMAT")</param>
@@ -55,7 +57,7 @@ public static class AttributeHelpers
 	/// <returns>The formatted result or default value</returns>
 	public static async ValueTask<MString> EvaluateFormatAttribute(
 		IAttributeService attributeService,
-		IMUSHCodeParser? parser,
+		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject target,
 		string formatAttributeName,
@@ -84,7 +86,7 @@ public static class AttributeHelpers
 			}
 
 			var result = await attributeService.EvaluateAttributeFunctionAsync(
-				parser!,
+				parser,
 				executor,
 				target,
 				formatAttributeName,
@@ -93,6 +95,12 @@ public static class AttributeHelpers
 				ignorePermissions: false);
 
 			return result.Length > 0 ? result : defaultValue;
+		}
+		catch (OperationCanceledException)
+		{
+			// Budget exhaustion is not "this object has no format attribute"; letting it fall through to
+			// the default would hide a runaway @nameformat behind an ordinary-looking room description.
+			throw;
 		}
 		catch
 		{

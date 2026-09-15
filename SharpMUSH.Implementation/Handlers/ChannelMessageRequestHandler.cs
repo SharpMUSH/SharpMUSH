@@ -26,7 +26,11 @@ public class ChannelMessageRequestHandler(
 	{
 		var chanName = notification.Channel.Name;
 		var sender = notification.Source is AnySharpObject found ? found : null;
-		var options = string.Join(" ", notification.Options);
+		// extchat.c:3944-3948 - %7 is one of two literals for every send, never the raw switch list:
+		// a /silent send reports "silent", everything else reports "noisy".
+		var options = notification.Options.Contains("silent", StringComparer.OrdinalIgnoreCase)
+			? "silent"
+			: "noisy";
 
 		var chatType = notification.MessageType switch
 		{
@@ -255,8 +259,12 @@ public class ChannelMessageRequestHandler(
 	}
 
 	/// <summary>
-	/// Applies individual player's @chatformat to channel messages.
-	/// Checks for CHATFORMAT`<channel> attribute on the player.
+	/// Applies the receiving player's own <c>@chatformat</c> to a channel line.
+	///
+	/// <para>PennMUSH reads one attribute for this, <c>CHATFORMAT</c> (<c>src/extchat.c:3935</c>,
+	/// <c>format.attr = "CHATFORMAT"</c>, <c>checkprivs = 0</c>), on each member in turn. It is not
+	/// qualified by channel: a player who wants per-channel formatting branches on %1 inside the one
+	/// attribute.</para>
 	/// </summary>
 	private async ValueTask<MString> ApplyPlayerChatFormat(
 		AnySharpObject player,
@@ -270,8 +278,6 @@ public class ChannelMessageRequestHandler(
 		MString says,
 		string options)
 	{
-		var chatFormatAttrName = $"CHATFORMAT`{channelName.ToPlainText().ToUpper()}";
-
 		// Evaluate the chatformat attribute with standard arguments:
 		// %0 = chat type character (", :, ;, @)
 		// %1 = channel name
@@ -293,13 +299,20 @@ public class ChannelMessageRequestHandler(
 			["7"] = new CallState(MarkupText.Plain(options))
 		};
 
+		// checkprivs = 0 (extchat.c:3935): the member's own CHATFORMAT is read without asking whether the
+		// speaker could have evaluated it, so the member is its own executor for the permission check.
+		// Asking as the speaker would drop a wizard's CHATFORMAT whenever a mortal spoke, since
+		// CanEval refuses a mortal evaluating anything on a privileged object.
+		//
+		// The speaker still supplies the frame the body runs in, so %# and %@ are the speaker; the
+		// attribute's own holder becomes %! when it runs.
 		var sourceObj = source ?? player;
 		return await AttributeHelpers.EvaluateFormatAttribute(
 			attributeService,
-			null, // parser - not needed for attribute evaluation
-			sourceObj,
+			EvaluationContextFor(sourceObj),
 			player,
-			chatFormatAttrName,
+			player,
+			"CHATFORMAT",
 			formatArgs,
 			defaultFormat,
 			checkParents: true);

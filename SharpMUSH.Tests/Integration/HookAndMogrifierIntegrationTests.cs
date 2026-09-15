@@ -271,7 +271,45 @@ public class MogrifierIntegrationTests
 			.Contains(x => x.Contains($"ARGS:\"|{stage.ChannelName}|argument check|{stage.Speaker.Name}"));
 	}
 
+	/// <summary>
+	/// <c>MOGRIFY`OVERRIDE</c> suppresses each member's own <c>@chatformat</c>, which is the only thing
+	/// it does — the channel line itself still goes out.
+	/// </summary>
+	[Test]
+	public async Task Mogrifier_OverrideAttribute_SkipsChatFormat()
+	{
+		var stage = await Setup("MogOverride");
+		await AsGod($"&CHATFORMAT {stage.Listener.DbRef}=MINE: %5");
 
+		// Without OVERRIDE the listener's own format wins.
+		var formatted = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=first"));
+		await Assert.That(formatted).Contains(x => x.StartsWith("MINE: "));
+
+		await AsGod($"&MOGRIFY`OVERRIDE {stage.Mogrifier}=1");
+
+		var overridden = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=second"));
+		await Assert.That(overridden).Contains(x => x.Contains("second"));
+		await Assert.That(overridden).DoesNotContain(x => x.Contains("MINE: "));
+	}
+
+	/// <summary>
+	/// A <c>MOGRIFY`OVERRIDE</c> that evaluates to one of the falsey forms is not an override:
+	/// <c>IsEmpty</c> treats <c>0</c>, <c>#-1</c>, <c>false</c> and whitespace as "unset".
+	/// </summary>
+	[Test]
+	public async Task MogrifierOverride_FalseyValue_LeavesChatFormatAlone()
+	{
+		var stage = await Setup("MogOverrideZero");
+		await AsGod($"&CHATFORMAT {stage.Listener.DbRef}=MINE: %5");
+		await AsGod($"&MOGRIFY`OVERRIDE {stage.Mogrifier}=0");
+
+		var heard = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=still formatted"));
+
+		await Assert.That(heard).Contains(x => x.StartsWith("MINE: "));
+	}
 
 	/// <summary>
 	/// <c>MOGRIFY`NOBUFFER</c> keeps the line out of the recall buffer while still delivering it.
@@ -440,9 +478,139 @@ public class MogrifierIntegrationTests
 		await Assert.That(semipose).Contains(x => x.Contains($"{stage.Speaker.Name}'s hat falls off"));
 	}
 
+	// --- @chatformat, per member --------------------------------------------------------------------
 
+	/// <summary>
+	/// The receiving member's own <c>CHATFORMAT</c> shapes the line they see, and nobody else's.
+	///
+	/// <para>This is #1112. PennMUSH reads the attribute unqualified (<c>src/extchat.c:3935</c>); the
+	/// handler was looking up <c>CHATFORMAT`&lt;CHANNEL&gt;</c>, so even with a working parser it asked
+	/// for a name Penn never writes.</para>
+	/// </summary>
+	[Test]
+	public async Task ChatFormat_IndividualPlayer_CustomizesFormat()
+	{
+		var stage = await Setup("ChatFmt", attachMogrifier: false);
+		var bystander = await Mortal("ChatFmtBystander");
+		await Join(stage.Channel, bystander.DbRef);
 
+		await AsGod($"&CHATFORMAT {stage.Listener.DbRef}=(%1) %3: %2");
 
+		var mine = new List<string>();
+		var theirs = await MessagesWhile(bystander.DbRef, async () =>
+			mine = await MessagesWhile(stage.Listener.DbRef,
+				() => As(stage.Speaker, $"@chat {stage.ChannelName}=per player")));
 
+		await Assert.That(mine)
+			.Contains(x => x.Contains($"({stage.ChannelName}) {stage.Speaker.Name}: per player"));
+		await Assert.That(theirs).Contains(x =>
+			x.Contains($"<{stage.ChannelName}> {stage.Speaker.Name} says, \"per player\""));
+		await Assert.That(theirs).DoesNotContain(x => x.Contains($"({stage.ChannelName})"));
+	}
 
+	/// <summary>
+	/// The channel-qualified name the handler used to build is not a PennMUSH attribute: setting
+	/// <c>CHATFORMAT`&lt;CHANNEL&gt;</c> and nothing else must leave the default rendering alone.
+	/// Without this, a fix that merely supplied a parser would look like it worked.
+	/// </summary>
+	[Test]
+	public async Task ChatFormat_ChannelQualifiedName_IsNotConsulted()
+	{
+		var stage = await Setup("ChatFmtQualified", attachMogrifier: false);
+		await AsGod($"&CHATFORMAT`{stage.ChannelName.ToUpperInvariant()} {stage.Listener.DbRef}=WRONG: %5");
+
+		var heard = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=unqualified only"));
+
+		await Assert.That(heard).DoesNotContain(x => x.Contains("WRONG: "));
+		await Assert.That(heard).Contains(x =>
+			x.Contains($"<{stage.ChannelName}> {stage.Speaker.Name} says, \"unqualified only\""));
+	}
+
+	/// <summary>
+	/// <c>CHATFORMAT</c>'s arguments, in order: %0 chat type, %1 channel, %2 message, %3 speaker,
+	/// %4 title, %5 the default rendering, %6 the speech verb, %7 the send's noisiness.
+	///
+	/// <para>%7 is a literal, not the switch list SharpMUSH used to join into it: PennMUSH passes
+	/// "silent" or "noisy" and nothing else (<c>src/extchat.c:3944-3948</c>). An ordinary <c>@chat</c>
+	/// is noisy.</para>
+	/// </summary>
+	[Test]
+	public async Task ChatFormat_ReceivesPennMUSHArguments()
+	{
+		var stage = await Setup("ChatFmtArgs", attachMogrifier: false);
+		await AsGod($"&CHATFORMAT {stage.Listener.DbRef}=ARGS:%0|%1|%2|%3|%6|%7");
+
+		var heard = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=arg order"));
+
+		await Assert.That(heard).Contains(x =>
+			x.Contains($"ARGS:\"|{stage.ChannelName}|arg order|{stage.Speaker.Name}|says|noisy"));
+	}
+
+	/// <summary>
+	/// The format runs as the member who holds it (%!), with the speaker as enactor (%#) and as caller
+	/// (%@) — PennMUSH's <c>call_attrib</c> shape, which is what lets a member's format say who is
+	/// talking to them.
+	/// </summary>
+	[Test]
+	public async Task ChatFormat_RunsAsTheMemberWithSpeakerAsEnactor()
+	{
+		var stage = await Setup("ChatFmtWho", attachMogrifier: false);
+		await AsGod($"&CHATFORMAT {stage.Listener.DbRef}=me=%! them=%# caller=%@");
+
+		var heard = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=who am i"));
+
+		await Assert.That(heard).Contains(x => x.Contains(
+			$"me=#{stage.Listener.DbRef.Number} them=#{stage.Speaker.DbRef.Number} caller=#{stage.Speaker.DbRef.Number}"));
+	}
+
+	/// <summary>
+	/// A wizard member's <c>CHATFORMAT</c> applies to a line spoken by a mortal.
+	///
+	/// <para><c>checkprivs = 0</c> (<c>src/extchat.c:3935</c>): the attribute is the member's own and is
+	/// read without asking whether the speaker could have evaluated it. Asking as the speaker — which
+	/// is what the handler did — fails <c>CanEval</c> for any mortal against a privileged object, so
+	/// every wizard on the channel would silently lose their format the moment a mortal spoke.</para>
+	/// </summary>
+	[Test]
+	public async Task ChatFormat_WizardMember_AppliesToMortalSpeech()
+	{
+		var stage = await Setup("ChatFmtWiz", attachMogrifier: false);
+		var wizard = await Mortal("ChatFmtWizard");
+		await AsGod($"@set {wizard.DbRef}=WIZARD");
+		await Join(stage.Channel, wizard.DbRef);
+		await AsGod($"&CHATFORMAT {wizard.DbRef}=WIZ: %5");
+
+		var heard = await MessagesWhile(wizard.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=mortal speech"));
+
+		await Assert.That(heard).Contains(x => x.StartsWith("WIZ: "));
+	}
+
+	/// <summary>
+	/// Mogrifier and <c>@chatformat</c> both run, in that order: the mogrifier shapes the channel-wide
+	/// line, and what it produced is the %5 each member's own format then decorates. The buffered copy
+	/// is the channel-wide one, not any member's.
+	/// </summary>
+	[Test]
+	public async Task ChatFormat_WithMogrifier_BothApplied()
+	{
+		var stage = await Setup("ChatFmtMog");
+		await AsGod($"&MOGRIFY`FORMAT {stage.Mogrifier}=MOG| %2");
+		await AsGod($"&CHATFORMAT {stage.Listener.DbRef}=FMT| %5");
+
+		var before = await Buffered(stage.Channel);
+		var heard = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=both layers"));
+
+		await Assert.That(heard).Contains(x => x.Contains("FMT| MOG| both layers"));
+
+		var buffered = await Mediator.CreateStream(
+				new GetChannelMessagesQuery(stage.Channel.Id ?? string.Empty, int.MaxValue))
+			.ToListAsync();
+		await Assert.That(buffered.Count).IsEqualTo(before + 1);
+		await Assert.That(buffered[^1].Message.ToPlainText()).IsEqualTo("MOG| both layers");
+	}
 }
