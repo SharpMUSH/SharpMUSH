@@ -19,6 +19,7 @@ using QueueScheduler = SharpMUSH.Library.Services.Interfaces.ITaskScheduler;
 
 namespace SharpMUSH.Tests.Services;
 
+[NotInParallel]
 public class RecurringJobTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
