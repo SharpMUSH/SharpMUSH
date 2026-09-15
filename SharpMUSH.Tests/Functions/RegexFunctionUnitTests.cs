@@ -64,7 +64,34 @@ public class RegexFunctionUnitTests
 		"1cookies=30|cookies|30")]
 	// Positional form: the Nth register takes subpattern N.
 	[Arguments("[regmatch(abc,%(a%)%(b%),rs0 rs1 rs2)]%q<rs0>|%q<rs1>|%q<rs2>", "1ab|a|b")]
+	// A destination named by a subpattern name rather than a number.
+	[Arguments("[regmatch(cookies=30,%(?<food>.+%)=%(?<amt>.+%),food:rf amt:ra)]%q<rf>|%q<ra>",
+		"1cookies|30")]
+	// The two-argument form names no destinations and must touch none: PennMUSH returns from the
+	// nargs == 2 branch before any register code runs (src/funlist.c:2871).
+	[Arguments("[setq(rmk,keep)][regmatch(a,z)]%q<rmk>", "0keep")]
+	[Arguments("[setq(rmj,keep)][regmatch(a,a)]%q<rmj>", "1keep")]
 	public async Task RegmatchRegisters(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// PennMUSH reports a destination it cannot use as a register with e_badregname, appended after
+	// the boolean (src/funlist.c:2942); "#-1 REGISTER NAME INVALID" is the same text SharpMUSH
+	// already returns from setq(). A bare "-" is the one spelling that is rejected silently instead,
+	// as an explicit discard (pi_regs_valid_key, src/parse.c:1407).
+	[Test]
+	[Arguments("[regmatch(abc,%(a%),0:bad$name)]", "1#-1 REGISTER NAME INVALID")]
+	// Split at the first colon only: "0:x:y" names the register "x:y", which is unusable. It must
+	// not fall through to the positional reading, which would clobber the register named "0".
+	[Arguments("[setq(0,orig)][regmatch(abc,%(a%),0:x:y)]|%q0", "1#-1 REGISTER NAME INVALID|orig")]
+	// One report per unusable destination.
+	[Arguments("[regmatch(abc,%(a%),0:bad$one 1:bad$two)]",
+		"1#-1 REGISTER NAME INVALID#-1 REGISTER NAME INVALID")]
+	// A bare "-" discards that capture: no register written, no error, later pairs still filled.
+	[Arguments("[regmatch(abc,%(a%)%(b%),- 1:rd1)]%q<rd1>", "1a")]
+	public async Task RegmatchRejectsUnusableRegisterNames(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);

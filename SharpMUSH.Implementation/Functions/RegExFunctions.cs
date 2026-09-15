@@ -130,16 +130,20 @@ public partial class Functions
 			// substring match returns 1; the pattern has to anchor itself to require the whole string.
 			var match = regex.Match(str);
 
+			// PennMUSH writes the boolean first and appends a bad-register report after it, so the
+			// order here matches: safe_integer(...) then the register loop (src/funlist.c:2899).
+			var result = match.Success ? "1" : "0";
+
 			if (args.ContainsKey("2"))
 			{
 				var registerList = args["2"].Message!.ToPlainText();
 				if (!string.IsNullOrWhiteSpace(registerList))
 				{
-					SetRegistersFromMatch(parser, match, registerList);
+					result += SetRegistersFromMatch(parser, match, registerList);
 				}
 			}
 
-			return ValueTask.FromResult(new CallState(match.Success ? "1" : "0"));
+			return ValueTask.FromResult(new CallState(result));
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 		{
@@ -161,23 +165,48 @@ public partial class Functions
 	/// q-register used to ''" — and leaves it empty when there was no match (src/funlist.c:2947), so
 	/// a failed regmatch clears what it was asked to fill instead of leaving a stale value behind.
 	/// </remarks>
-	private void SetRegistersFromMatch(IMUSHCodeParser parser, Match match, string registerList)
+	/// <returns>
+	/// The text to append to the function's result: empty normally, or one
+	/// <see cref="ErrorMessages.Returns.BadRegName"/> per destination that cannot name a register,
+	/// as PennMUSH appends e_badregname for each (src/funlist.c:2942).
+	/// </returns>
+	private string SetRegistersFromMatch(IMUSHCodeParser parser, Match match, string registerList)
 	{
 		var registers = registerList.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var errors = string.Empty;
 
 		for (var i = 0; i < registers.Length; i++)
 		{
-			var parts = registers[i].Split(':');
+			// Split at the first colon only, as PennMUSH's strchr does: "0:x:y" names capture 0 and
+			// the register "x:y", which is then rejected — rather than being read as positional and
+			// silently clobbering the unrelated register named by its first segment.
+			var parts = registers[i].Split(':', 2);
 
 			// X:Y names the capture explicitly; a bare Y takes the capture at its own position in the
 			// list, so the first element gets the whole match, the second the first capture, and so on.
 			var captureIndexOrName = parts.Length == 2 ? parts[0] : i.ToString();
-			var qRegister = parts.Length == 2 ? parts[1] : parts[0];
 
-			// AddRegister only accepts [A-Z0-9_.-]; setq() uppercases its name the same way, and
-			// without this a destination written in lowercase is silently dropped.
-			parser.CurrentState.AddRegister(qRegister.ToUpper(), MarkupText.Plain(CaptureValue(match, captureIndexOrName)));
+			// AddRegister only accepts [A-Z0-9_.-], so the name has to be uppercased or a destination
+			// written in lowercase is silently dropped. Invariant, not ToUpper: PennMUSH uppercases
+			// with ASCII strupper_r (src/parse.c:1406), whereas a Turkish-locale ToUpper turns "hit"
+			// into "HİT" (U+0130), which AddRegister would then reject.
+			var qRegister = (parts.Length == 2 ? parts[1] : parts[0]).ToUpperInvariant();
+
+			// A bare "-" is an explicit discard. pi_regs_valid_key rejects it (src/parse.c:1407) and
+			// fun_regmatch suppresses the error for that one spelling alone (src/funlist.c:2941), so
+			// it must not be written either — AddRegister's pattern would otherwise accept it.
+			if (qRegister == "-")
+			{
+				continue;
+			}
+
+			if (!parser.CurrentState.AddRegister(qRegister, MarkupText.Plain(CaptureValue(match, captureIndexOrName))))
+			{
+				errors += ErrorMessages.Returns.BadRegName;
+			}
 		}
+
+		return errors;
 	}
 
 	/// <summary>
