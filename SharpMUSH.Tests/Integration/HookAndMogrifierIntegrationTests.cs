@@ -342,13 +342,15 @@ public class MogrifierIntegrationTests
 	public async Task Mogrifier_FormatAttribute_CustomizesMessage()
 	{
 		var stage = await Setup("MogFormat");
-		await AsGod($"&MOGRIFY`FORMAT {stage.Mogrifier}=<<%1>> %3 -> %2");
+		// %1 is the mogrified channel name and has its own case below; this one is about FORMAT
+		// replacing the line at all.
+		await AsGod($"&MOGRIFY`FORMAT {stage.Mogrifier}=(%3) -> %2");
 
 		var heard = await MessagesWhile(stage.Listener.DbRef,
 			() => As(stage.Speaker, $"@chat {stage.ChannelName}=formatted please"));
 
 		await Assert.That(heard)
-			.Contains(x => x.Contains($"<<{stage.ChannelName}>> {stage.Speaker.Name} -> formatted please"));
+			.Contains(x => x.Contains($"({stage.Speaker.Name}) -> formatted please"));
 	}
 
 	/// <summary>
@@ -449,6 +451,156 @@ public class MogrifierIntegrationTests
 		await Assert.That(plain).Contains(x => x.Contains($"says, \"after the lock\""));
 	}
 
+	/// <summary>
+	/// A wizard-flagged mogrifier still mogrifies a mortal's line.
+	///
+	/// <para>PennMUSH's <c>mogrify</c> (<c>src/extchat.c:3702</c>) reaches the attribute through
+	/// <c>call_attrib</c>, which fetches with <c>UFUN_IGNORE_PERMS</c> (<c>src/utils.c:410-419</c>), so
+	/// the <c>@lock/use</c> is the only gate. Asking as the speaker instead does not merely skip a
+	/// privileged mogrifier: <c>GetAttributeAsync</c> answers a refusal with <c>Error&lt;string&gt;</c>
+	/// and <c>EvaluateAttributeFunctionResultAsync</c> hands that back as the RESULT, so the handler
+	/// reads <c>#-1 NO PERMISSION TO EVALUATE ATTRIBUTE</c> as a successful mogrification.</para>
+	/// </summary>
+	[Test]
+	public async Task Mogrifier_WizardFlaggedObject_StillMogrifiesMortalSpeech()
+	{
+		var stage = await Setup("MogWizObj");
+		await AsGod($"@set {stage.Mogrifier}=WIZARD");
+		await AsGod($"&MOGRIFY`FORMAT {stage.Mogrifier}=MOG| %2");
+
+		var heard = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=privileged mogrifier"));
+
+		await Assert.That(heard).Contains(x => x.Contains("MOG| privileged mogrifier"));
+		await Assert.That(heard).DoesNotContain(x => x.Contains("#-1"));
+	}
+
+	/// <summary>
+	/// The same object carrying <c>MOGRIFY`BLOCK</c> is the damaging case: read as the speaker, the
+	/// permission refusal is non-empty, so every mortal line on the channel would be blocked and the
+	/// speaker told <c>#-1 NO PERMISSION TO EVALUATE ATTRIBUTE</c>.
+	/// </summary>
+	[Test]
+	public async Task Mogrifier_WizardFlaggedObject_BlockDoesNotRefuseEveryMortalLine()
+	{
+		var stage = await Setup("MogWizBlock");
+		await AsGod($"@set {stage.Mogrifier}=WIZARD");
+		await AsGod($"&MOGRIFY`BLOCK {stage.Mogrifier}=[if(strmatch(%2,forbidden*),Refused)]");
+
+		var told = new List<string>();
+		var heard = await MessagesWhile(stage.Listener.DbRef, async () =>
+			told = await MessagesWhile(stage.Speaker.DbRef,
+				() => As(stage.Speaker, $"@chat {stage.ChannelName}=perfectly ordinary")));
+
+		await Assert.That(told).DoesNotContain(x => x.Contains("#-1"));
+		await Assert.That(heard).Contains(x => x.Contains("perfectly ordinary"));
+	}
+
+	/// <summary>
+	/// <c>MOGRIFY`OVERRIDE</c> and <c>MOGRIFY`NOBUFFER</c> go through PennMUSH's <c>parse_boolean</c>
+	/// (<c>src/extchat.c:3811,3817</c>), which is false for anything beginning <c>#-</c> — "which will
+	/// also cover our error messages" (<c>src/parse.c:239</c>). A mogrifier that errors must not switch
+	/// them on.
+	/// </summary>
+	[Test]
+	public async Task MogrifierOverride_ErrorString_IsNotTruthy()
+	{
+		var stage = await Setup("MogOverrideErr");
+		await AsGod($"&CHATFORMAT {stage.Listener.DbRef}=MINE: %5");
+		await AsGod($"&MOGRIFY`OVERRIDE {stage.Mogrifier}=#-1 NO SUCH THING");
+
+		var heard = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=error is not true"));
+
+		await Assert.That(heard).Contains(x => x.StartsWith("MINE: "));
+	}
+
+	/// <summary>
+	/// The same gate the other way: <c>parse_boolean</c> is not "is this text empty". A non-blank,
+	/// non-numeric string is TRUE, so the literal word <c>false</c> switches the override on.
+	/// </summary>
+	[Test]
+	public async Task MogrifierOverride_WordFalse_IsTruthy()
+	{
+		var stage = await Setup("MogOverrideWord");
+		await AsGod($"&CHATFORMAT {stage.Listener.DbRef}=MINE: %5");
+		await AsGod($"&MOGRIFY`OVERRIDE {stage.Mogrifier}=false");
+
+		var heard = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=a word is true"));
+
+		await Assert.That(heard).Contains(x => x.Contains("a word is true"));
+		await Assert.That(heard).DoesNotContain(x => x.StartsWith("MINE: "));
+	}
+
+	/// <summary>
+	/// <c>MOGRIFY`FORMAT</c>'s %1 is the bracketed channel name AFTER <c>MOGRIFY`CHANNAME</c> has run
+	/// (<c>argv[1] = channame</c>, <c>src/extchat.c:3908</c>), not the raw one. Handing it the raw name
+	/// discards <c>CHANNAME</c> whenever <c>FORMAT</c> rebuilds the line.
+	///
+	/// <para><c>@chatformat</c>'s %1 is the raw name (<c>format.args[1] = ChanName(channel)</c>,
+	/// <c>:3939</c>). The two differ on purpose, and the second half of this test pins that too.</para>
+	/// </summary>
+	[Test]
+	public async Task MogrifierFormat_FirstArgumentIsTheMogrifiedChannelName()
+	{
+		var stage = await Setup("MogFormatChan");
+		await AsGod($"&MOGRIFY`CHANNAME {stage.Mogrifier}=~%0~");
+		await AsGod($"&MOGRIFY`FORMAT {stage.Mogrifier}=%1 %3: %2");
+		await AsGod($"&CHATFORMAT {stage.Listener.DbRef}=raw=%1 line=%5");
+
+		var heard = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=keep the brackets"));
+
+		await Assert.That(heard).Contains(x => x.Contains(
+			$"raw={stage.ChannelName} line=~<{stage.ChannelName}>~ {stage.Speaker.Name}: keep the brackets"));
+	}
+
+	/// <summary>
+	/// The part callbacks see what the earlier ones produced: PennMUSH's <c>argv[4]</c>, <c>argv[5]</c>
+	/// and <c>argv[6]</c> point at the very buffers <c>TITLE</c>, <c>PLAYERNAME</c> and
+	/// <c>SPEECHTEXT</c> write into (<c>src/extchat.c:3822-3858</c>). %3 stays the raw message
+	/// throughout, because <c>MESSAGE</c> is written last.
+	/// </summary>
+	[Test]
+	public async Task MogrifierParts_SeeEarlierPartsResults()
+	{
+		var stage = await Setup("MogPartChain");
+		await As(stage.Speaker, $"@channel/title {stage.ChannelName}=Squire");
+		await AsGod($"&MOGRIFY`TITLE {stage.Mogrifier}=Sir");
+		await AsGod($"&MOGRIFY`PLAYERNAME {stage.Mogrifier}=%4-%0");
+		await AsGod($"&MOGRIFY`MESSAGE {stage.Mogrifier}=title=%4 name=%5 raw=%3");
+
+		var heard = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=chained"));
+
+		// PLAYERNAME saw TITLE's "Sir"; MESSAGE saw both, and still gets the raw message as %3.
+		await Assert.That(heard).Contains(x => x.Contains(
+			$"Sir Sir-{stage.Speaker.Name} says, \"title=Sir name=Sir-{stage.Speaker.Name} raw=chained\""));
+	}
+
+	/// <summary>
+	/// <c>MOGRIFY`SPEECHTEXT</c> is gated on <c>CB_SPEECH</c> (<c>src/extchat.c:3847</c>): a pose has no
+	/// speech verb to rewrite, so the callback is not consulted and %6 reaches
+	/// <c>MOGRIFY`FORMAT</c> untouched.
+	/// </summary>
+	[Test]
+	public async Task MogrifierSpeechText_NotConsultedForAPose()
+	{
+		var stage = await Setup("MogSpeechGate");
+		await AsGod($"&MOGRIFY`SPEECHTEXT {stage.Mogrifier}=declaims");
+		await AsGod($"&MOGRIFY`FORMAT {stage.Mogrifier}=verb=%6 line=%5");
+
+		var speech = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=spoken"));
+		await Assert.That(speech).Contains(x => x.Contains("verb=declaims"));
+
+		var pose = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=:waves"));
+		await Assert.That(pose).Contains(x => x.Contains("verb=says"));
+		await Assert.That(pose).DoesNotContain(x => x.Contains("declaims"));
+	}
+
 	// --- Chat types ---------------------------------------------------------------------------------
 
 	/// <summary>
@@ -476,6 +628,13 @@ public class MogrifierIntegrationTests
 			() => As(stage.Speaker, $"@chat {stage.ChannelName}=;'s hat falls off"));
 		await Assert.That(semipose).Contains(x => x.Contains("TYPE=; "));
 		await Assert.That(semipose).Contains(x => x.Contains($"{stage.Speaker.Name}'s hat falls off"));
+
+		// extchat.c:3781-3791 - CB_EMIT is "|", and CB_PRESENCE (which is what an announcement is) is
+		// "@". SharpMUSH had the two the wrong way round; both render alike, so only %0 showed it.
+		var emit = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@cemit {stage.ChannelName}=an emitted line"));
+		await Assert.That(emit).Contains(x => x.Contains("TYPE=| "));
+		await Assert.That(emit).Contains(x => x.Contains("an emitted line"));
 	}
 
 	// --- @chatformat, per member --------------------------------------------------------------------

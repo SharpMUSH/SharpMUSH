@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands;
@@ -32,20 +33,30 @@ public class ChannelMessageRequestHandler(
 			? "silent"
 			: "noisy";
 
+		// extchat.c:3781-3791 picks the type character in this order: CB_PRESENCE "@", CB_POSE ":",
+		// CB_SEMIPOSE ";", CB_EMIT "|", anything else speech. Announce is the presence message
+		// (ConnectionAnnounceService sends connect and disconnect lines with it, the way
+		// chat_player_announce sends CB_PRESENCE) and Emit is @cemit's CB_EMIT, so those two are "@"
+		// and "|" respectively. Both render alike in BuildDefaultMessage; the character only reaches
+		// the mogrifier and @chatformat callbacks as %0.
 		var chatType = notification.MessageType switch
 		{
+			INotifyService.NotificationType.Announce => "@",
+			INotifyService.NotificationType.NSAnnounce => "@",
 			INotifyService.NotificationType.Pose => ":",
 			INotifyService.NotificationType.NSPose => ":",
 			INotifyService.NotificationType.SemiPose => ";",
 			INotifyService.NotificationType.NSSemiPose => ";",
-			INotifyService.NotificationType.Emit => "@",
-			INotifyService.NotificationType.NSEmit => "@",
-			INotifyService.NotificationType.Announce => "|",
-			INotifyService.NotificationType.NSAnnounce => "|",
+			INotifyService.NotificationType.Emit => "|",
+			INotifyService.NotificationType.NSEmit => "|",
 			INotifyService.NotificationType.Say => "\"",
 			INotifyService.NotificationType.NSSay => "\"",
 			_ => throw new ArgumentOutOfRangeException()
 		};
+
+		// CB_SPEECH (extchat.h:75) is speech alone, and it is the only thing that carries a speech verb.
+		var isSpeech = notification.MessageType
+			is INotifyService.NotificationType.Say or INotifyService.NotificationType.NSSay;
 
 		var mogrifiedChanName = MarkupText.Concat([MarkupText.Plain("<"), chanName, MarkupText.Plain(">")]);
 		var mogrifiedTitle = notification.Title;
@@ -78,6 +89,7 @@ public class ChannelMessageRequestHandler(
 						["4"] = new CallState(notification.Title)
 					};
 
+					// extchat.c:3806 - BLOCK refuses on any non-empty result, tested as text.
 					var blockResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`BLOCK", controlArgs);
 					if (blockResult.Length > 0)
 					{
@@ -86,19 +98,20 @@ public class ChannelMessageRequestHandler(
 
 					if (blockMessage == null)
 					{
+						// extchat.c:3811,3817 - OVERRIDE and NOBUFFER go through parse_boolean, which is
+						// Predicates.Truthy. It is not "non-empty": "0" is false, and so is anything starting
+						// "#-", which is how an error message from the mogrifier fails to switch these on.
 						var overrideResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`OVERRIDE", controlArgs);
-						if (overrideResult.Length > 0 && !IsEmpty(overrideResult.ToPlainText()))
-						{
-							skipChatFormat = true;
-						}
+						skipChatFormat = overrideResult.Truthy();
 
 						var nobufferResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`NOBUFFER", controlArgs);
-						if (nobufferResult.Length > 0 && !IsEmpty(nobufferResult.ToPlainText()))
-						{
-							skipBuffer = true;
-						}
+						skipBuffer = nobufferResult.Truthy();
 
-						// Common arguments for part mogrifiers
+						// extchat.c:3822-3858. %1 (channel), %2 (type), %3 (message) and %7 hold still for the
+						// whole sequence; %4, %5 and %6 are pointers into the very buffers TITLE, PLAYERNAME
+						// and SPEECHTEXT write into, so each callback is handed what the earlier ones made of
+						// them. %3 is the raw message throughout, including for MESSAGE itself, because
+						// MESSAGE is written last.
 						var partArgs = new Dictionary<string, CallState>
 						{
 							// %0 varies by mogrifier (set individually)
@@ -124,6 +137,7 @@ public class ChannelMessageRequestHandler(
 						{
 							mogrifiedTitle = titleResult;
 						}
+						partArgs["4"] = new CallState(mogrifiedTitle);
 
 						partArgs["0"] = new CallState(mogrifiedPlayerName);
 						var playerNameResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`PLAYERNAME", partArgs);
@@ -131,12 +145,19 @@ public class ChannelMessageRequestHandler(
 						{
 							mogrifiedPlayerName = playerNameResult;
 						}
+						partArgs["5"] = new CallState(mogrifiedPlayerName);
 
-						partArgs["0"] = new CallState(mogrifiedSays);
-						var saysResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`SPEECHTEXT", partArgs);
-						if (saysResult.Length > 0)
+						// extchat.c:3847 - only speech has a speech verb to rewrite, so a pose or an emit
+						// leaves SPEECHTEXT unread and hands the untouched "says" on as %6.
+						if (isSpeech)
 						{
-							mogrifiedSays = saysResult;
+							partArgs["0"] = new CallState(mogrifiedSays);
+							var saysResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`SPEECHTEXT", partArgs);
+							if (saysResult.Length > 0)
+							{
+								mogrifiedSays = saysResult;
+							}
+							partArgs["6"] = new CallState(mogrifiedSays);
 						}
 
 						partArgs["0"] = new CallState(mogrifiedMessage);
@@ -146,13 +167,17 @@ public class ChannelMessageRequestHandler(
 							mogrifiedMessage = messageResult;
 						}
 
-						// MOGRIFY`FORMAT - channel-wide format (like @chatformat)
-						// Arguments match @chatformat: %0=type, %1=channel, %2=message, %3=name, %4=title, %5=default, %6=says, %7=options
+						// MOGRIFY`FORMAT - the channel-wide line, extchat.c:3905-3920.
+						// %0=type, %1=channel, %2=message, %3=name, %4=title, %5=default, %6=says, %7=noisiness.
+						// %1 here is argv[1] = channame, the bracketed name AFTER MOGRIFY`CHANNAME has run -
+						// not ChanName(channel). @chatformat's %1 is the raw name (extchat.c:3939), and the
+						// two differ on purpose: a FORMAT that rebuilds the line has to be able to keep what
+						// CHANNAME produced.
 						var defaultMessage = BuildDefaultMessage(chatType, mogrifiedChanName, mogrifiedPlayerName, mogrifiedTitle, mogrifiedSays, mogrifiedMessage);
 						var formatArgs = new Dictionary<string, CallState>
 						{
 							["0"] = new CallState(MarkupText.Plain(chatType)),
-							["1"] = new CallState(chanName),
+							["1"] = new CallState(mogrifiedChanName),
 							["2"] = new CallState(mogrifiedMessage),
 							["3"] = new CallState(mogrifiedPlayerName),
 							["4"] = new CallState(mogrifiedTitle),
@@ -341,6 +366,14 @@ public class ChannelMessageRequestHandler(
 	/// normal path, and it needs no exception. A mogrifier whose softcode actually throws must not take
 	/// the channel send down with it, so the line still goes out unmogrified, but the failure is logged
 	/// rather than discarded. Budget exhaustion is not a mogrifier fault and propagates.</para>
+	///
+	/// <para>The read ignores attribute permissions: PennMUSH's <c>mogrify</c> (<c>src/extchat.c:3702</c>)
+	/// goes through <c>call_attrib</c>, which fetches with <c>UFUN_IGNORE_PERMS</c>
+	/// (<c>src/utils.c:410-419</c>), so the <c>@lock/use</c> above is the only gate. Asking as the
+	/// speaker is worse than merely skipping a privileged mogrifier: <c>GetAttributeAsync</c> answers a
+	/// refusal with <c>Error&lt;string&gt;</c>, which <c>EvaluateAttributeFunctionResultAsync</c> returns
+	/// as the result text - so a wizard-flagged mogrifier carrying <c>MOGRIFY`BLOCK</c> would refuse
+	/// every mortal line on the channel with <c>#-1 NO PERMISSION TO EVALUATE ATTRIBUTE</c>.</para>
 	/// </summary>
 	private async ValueTask<MString> EvaluateMogrifyAttribute(AnySharpObject executor, AnySharpObject mogrifier, string attributeName, Dictionary<string, CallState> args)
 	{
@@ -353,7 +386,7 @@ public class ChannelMessageRequestHandler(
 				attributeName,
 				args,
 				evalParent: true,
-				ignorePermissions: false);
+				ignorePermissions: true);
 		}
 		catch (OperationCanceledException)
 		{
@@ -365,14 +398,6 @@ public class ChannelMessageRequestHandler(
 				mogrifier.Object().DBRef, attributeName);
 			return MarkupText.Empty;
 		}
-	}
-
-	/// <summary>
-	/// Checks if a string value should be considered "empty" for mogrification purposes
-	/// </summary>
-	private static bool IsEmpty(string value)
-	{
-		return string.IsNullOrWhiteSpace(value) || value == "0" || value == "#-1" || value.ToLower() == "false";
 	}
 
 	/// <summary>
