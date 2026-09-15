@@ -123,10 +123,12 @@ public partial class Functions
 			}
 
 			var regex = SoftcodeRegex.Create(pattern, options);
-			var match = regex.Match(str);
 
-			// Check if the entire string matches (not just a substring)
-			var isFullMatch = match.Success && match.Index == 0 && match.Length == str.Length;
+			// An unanchored search, as in PennMUSH: fun_regmatch runs pcre2_match at offset 0 with
+			// re_match_flags (0, never anchored) and returns `subpatterns >= 0` — src/funlist.c:2897,
+			// and quick_regexp_match at src/wild.c:610 for the two-argument form. A successful
+			// substring match returns 1; the pattern has to anchor itself to require the whole string.
+			var match = regex.Match(str);
 
 			if (args.ContainsKey("2"))
 			{
@@ -137,7 +139,7 @@ public partial class Functions
 				}
 			}
 
-			return ValueTask.FromResult(new CallState(isFullMatch ? "1" : "0"));
+			return ValueTask.FromResult(new CallState(match.Success ? "1" : "0"));
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 		{

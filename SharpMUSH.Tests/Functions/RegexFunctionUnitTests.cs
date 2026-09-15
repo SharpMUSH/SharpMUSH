@@ -9,13 +9,25 @@ public class RegexFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
+	// PennMUSH's regmatch runs an unanchored pcre2_match at offset 0 and returns
+	// `subpatterns >= 0` (src/funlist.c:2897, and quick_regexp_match at src/wild.c:610 for the
+	// two-argument form). `re_match_flags` is 0 (src/wild.c:53), so nothing anchors the search:
+	// a successful substring match returns 1. Anchor the pattern yourself to require the whole
+	// string. The sharpfunc.md help text inherited from TinyMUSH says "the entirety of <string>",
+	// which is what Penn's own helpfile says and is not what Penn's code does.
 	[Test]
 	[Arguments("regmatch(test,test)", "1")]
 	[Arguments("regmatch(test,t.*t)", "1")]
-	[Arguments("regmatch(test123,t.*t)", "0")]
+	[Arguments("regmatch(test123,t.*t)", "1")]
+	[Arguments("regmatch(test,tes)", "1")]
+	[Arguments("regmatch(test,est)", "1")]
+	[Arguments("regmatch(test,es)", "1")]
 	[Arguments("regmatch(test,TEST)", "0")]
-	[Arguments("regmatch(test,tes)", "0")]
+	[Arguments("regmatch(test,xyz)", "0")]
 	[Arguments("regmatch(test,.*)", "1")]
+	// An explicit anchor still restricts the match to the whole string.
+	[Arguments("regmatch(test,^test$)", "1")]
+	[Arguments("regmatch(test,^tes$)", "0")]
 	public async Task Regmatch(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -25,7 +37,10 @@ public class RegexFunctionUnitTests
 	[Test]
 	[Arguments("regmatchi(test,TEST)", "1")]
 	[Arguments("regmatchi(TeSt,test)", "1")]
-	[Arguments("regmatchi(test,tes)", "0")]
+	[Arguments("regmatchi(test,tes)", "1")]
+	[Arguments("regmatchi(TEST,es)", "1")]
+	[Arguments("regmatchi(test,xyz)", "0")]
+	[Arguments("regmatchi(test,^TES$)", "0")]
 	public async Task Regmatchi(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
