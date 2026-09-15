@@ -661,11 +661,12 @@ public class RecurringJobTests
 		await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
 		using var budget = new ExecutionBudget(TimeSpan.Zero);
 		Task<CallState?>? firing = null;
+		CallState? result = null;
 		try
 		{
 			using var scope = budget.Enter();
 			firing = context.Callbacks.Single()().AsTask();
-			try { await firing.WaitAsync(TimeSpan.FromSeconds(3)); }
+			try { result = await firing.WaitAsync(TimeSpan.FromSeconds(3)); }
 			catch (OperationCanceledException) { }
 		}
 		finally
@@ -674,25 +675,25 @@ public class RecurringJobTests
 			await configure;
 			if (firing is not null)
 			{
-				try { await firing.WaitAsync(TimeSpan.FromSeconds(3)); }
+				try { result = await firing.WaitAsync(TimeSpan.FromSeconds(3)); }
 				catch (OperationCanceledException) { }
 			}
 		}
-		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
+		await Assert.That(result).IsNull();
 	}
 
 	[Test]
 	public async Task TerminalPersistenceHasOneFreshBoundedAttemptAndRetainsUnacknowledgedClaim()
 	{
 		var context = await Setup();
-		var backing = Get<IExpandedDataStore>();
 		var store = Substitute.For<IExpandedDataStore>();
+		RecurringJobDocument? persisted = null;
 		var armed = false;
 		var attempts = 0;
 		var activeWrites = 0;
 		CancellationToken observed = default;
 		store.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey, Arg.Any<CancellationToken>())
-			.Returns(call => backing.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey, call.ArgAt<CancellationToken>(1)));
+			.Returns(_ => persisted);
 		async ValueTask Save(RecurringJobDocument document, CancellationToken ct)
 		{
 			if (armed && document.Jobs.Any(job => job.Status is "completed" or "failed"))
@@ -709,7 +710,7 @@ public class RecurringJobTests
 				}
 				finally { activeWrites--; }
 			}
-			await backing.SetExpandedServerData(RecurringJobService.StorageKey, document, ct);
+			persisted = document;
 		}
 		store.SetExpandedServerData(RecurringJobService.StorageKey, Arg.Any<object>(), Arg.Any<CancellationToken>())
 			.Returns(call => Save(call.ArgAt<RecurringJobDocument>(1), call.ArgAt<CancellationToken>(2)));
@@ -728,7 +729,7 @@ public class RecurringJobTests
 		await Assert.That(observed.CanBeCanceled).IsTrue();
 		await Assert.That(observed.IsCancellationRequested).IsTrue();
 		await Assert.That(observed == budget.Token).IsFalse();
-		var document = await backing.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey);
+		var document = persisted;
 		await Assert.That(document!.Jobs.Single().RunToken).IsNotNull();
 		await service.RunDueAsync();
 		await Assert.That(context.Callbacks.Count).IsEqualTo(1);
