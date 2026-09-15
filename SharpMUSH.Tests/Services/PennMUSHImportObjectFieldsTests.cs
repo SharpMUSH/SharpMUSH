@@ -34,9 +34,14 @@ public class PennMUSHImportObjectFieldsTests
 			new PennMUSHObject
 			{
 				DBRef = 4, Name = "Bob", Type = PennMUSHObjectType.Player, Owner = 4, Location = 10, Link = 0,
-				Flags = ["UNINSPECTED"], Powers = ["See_All", "QUOTAS"]
+				// STAFF is a flag the source game added with @flag/add; SharpMUSH has no counterpart for it.
+				Flags = ["STAFF"], Powers = ["See_All", "QUOTAS"]
 			},
-			new PennMUSHObject { DBRef = 10, Name = "Fields Hall", Type = PennMUSHObjectType.Room, Owner = 3, Link = 0 },
+			new PennMUSHObject
+			{
+				DBRef = 10, Name = "Fields Hall", Type = PennMUSHObjectType.Room, Owner = 3, Link = 0,
+				Flags = ["UNINSPECTED"]
+			},
 			new PennMUSHObject
 			{
 				DBRef = 11, Name = "Fields Widget", Type = PennMUSHObjectType.Thing, Owner = 3, Location = 10, Link = 10,
@@ -105,9 +110,14 @@ public class PennMUSHImportObjectFieldsTests
 		var powers = await bob.Object().Powers.Value.Select(p => p.Name).ToListAsync();
 		await Assert.That(powers).IsEquivalentTo(["See_All", "Quotas"]);
 
-		await Assert.That(result.Warnings.Any(w => w.Contains("UNINSPECTED"))).IsTrue();
+		await Assert.That(await FlagNamesAsync(world, "Fields Hall")).IsEquivalentTo(["UNINSPECTED"]);
+
+		await Assert.That(result.Warnings.Any(w => w.Contains("UNINSPECTED"))).IsFalse()
+			.Because("PennMUSH's UNINSPECTED room flag is seeded (#1130), so it imports instead of being reported");
 		await Assert.That(result.Warnings.Any(w => w.Contains("QUOTAS"))).IsFalse()
 			.Because("PennMUSH's QUOTAS power is seeded (#1131), so it imports instead of being reported");
+		await Assert.That(result.Warnings.Any(w => w.Contains("STAFF"))).IsTrue()
+			.Because("a flag SharpMUSH has no counterpart for is still reported, not silently lost");
 		await Assert.That(result.Warnings.Any(w => w.Contains("CONNECTED"))).IsFalse();
 	}
 

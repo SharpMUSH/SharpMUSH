@@ -58,6 +58,10 @@ public static class FlagSeed
 		("ROYALTY", "r", null, ["trusted","royalty","log"], ["trusted","royalty"], ["ROOM","PLAYER","EXIT","THING"]),
 		("SUSPECT", "s", null, ["wizard","mdark","log"], ["wizard","mdark"], ["ROOM","PLAYER","EXIT","THING"]),
 		("TRANSPARENT", "t", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
+		// PennMUSH hdrs/flag_tab.h:72 - {"UNINSPECTED", 'u', TYPE_ROOM, ROOM_UNINSPECT, F_ROYAL, F_ROYAL}.
+		// A marker only: nothing in PennMUSH reads ROOM_UNINSPECT, so the flag carries no engine
+		// behaviour here either - it exists so a game's own code and an import can set and see it.
+		("UNINSPECTED", "u", null, ["royalty"], ["royalty"], ["ROOM"]),
 		("VERBOSE", "v", null, [], [], ["ROOM","PLAYER","EXIT","THING"]),
 		("NO_WARN", "w", ["NOWARN"], [], [], ["ROOM","PLAYER","EXIT","THING"]),
 		("CLOUDY", "x", ["TERSE"], [], [], ["ROOM","PLAYER","EXIT","THING"]),
