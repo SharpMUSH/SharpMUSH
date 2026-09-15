@@ -133,6 +133,30 @@ public partial class Commands
 			LocateFlags.All,
 			async found =>
 			{
+				// PennMUSH authorises the trigger before it runs the query (do_mapsql, src/sql.c:461-478):
+				// control of the target, or — only when /SPOOF is absent — owning a LINK_OK target.
+				if (!await PermissionService.Controls(executor, found)
+						&& (spoofSwitch || !(await executor.Owns(found) && await found.HasFlag("LINK_OK"))))
+				{
+					await NotifyService.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				}
+
+				// The object the callbacks answer to: the command executor, or the enactor that caused
+				// the command under /SPOOF (sql.c:471-472).
+				var triggerer = spoofSwitch ? enactor : executor;
+
+				if (found.IsGod() && !executor.IsGod())
+				{
+					await NotifyService.Notify(executor, CannotTriggerGod, executor);
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				}
+
+				// The command executor stays the attribute-read privilege identity: Penn hands it to
+				// queue_attribute_base_priv as `priv` and reads the attribute with it, never with the
+				// target (cque.c:782-790). Penn re-reads under that privilege as each row is admitted;
+				// here it is read once, before the query, and the deferred re-read that fetches the
+				// callback text runs as the target the code belongs to.
 				var maybeAttribute = await AttributeService.GetAttributeAsync(executor, found, attrName,
 					IAttributeService.AttributeMode.Execute, true);
 
@@ -142,6 +166,21 @@ public partial class Commands
 				}
 
 				var attribute = attributeChain.Last();
+				var targetRef = found.Object().DBRef;
+				var triggererRef = triggerer.Object().DBRef;
+				var callbackAttribute = new DbRefAttribute(targetRef, attribute.LongName!.Split("`"));
+
+				// PennMUSH queues the attribute on the object that holds it and hands the triggerer both
+				// remaining identities: new_queue_actionlist_int(thing, triggerer, triggerer, …)
+				// (cque.c:866-868). So the target is %!, and the triggerer is %# and %@ alike.
+				ParserState CallbackState(Dictionary<string, CallState> arguments) => parser.CurrentState with
+				{
+					Executor = targetRef,
+					Enactor = triggererRef,
+					Caller = triggererRef,
+					Arguments = arguments,
+					EnvironmentRegisters = arguments
+				};
 
 				try
 				{
@@ -159,7 +198,6 @@ public partial class Commands
 						return new CallState(completion.Admission.Error);
 					}
 
-					var columnNames = new List<string>();
 					var firstRow = true;
 					var rowNumber = 1;
 					var admittedRows = 0;
@@ -185,26 +223,18 @@ public partial class Commands
 						sourceRows++;
 						if (colnamesSwitch && firstRow)
 						{
-							columnNames = row.Keys.ToList();
-
 							var headerAdmission = await Mediator.Send(new AdmitAttributeRequest(
 								() =>
 								{
-									var remainder = columnNames
+									var remainder = row.Keys
 										.Select((x, i)
 												=> new KeyValuePair<string, CallState>((i + 1).ToString(), MarkupText.Plain(x)))
 										.ToDictionary();
 
 									remainder.TryAdd("0", MushText.Zero);
 
-									var newState = parser.CurrentState with
-									{
-										Arguments = remainder,
-										EnvironmentRegisters = remainder
-									};
-									return ValueTask.FromResult(newState);
-								},
-								new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
+									return ValueTask.FromResult(CallbackState(remainder));
+								}, callbackAttribute, targetRef), ExecutionBudget.CurrentToken);
 
 							if (!headerAdmission.Accepted)
 							{
@@ -219,21 +249,14 @@ public partial class Commands
 						var rowAdmission = await Mediator.Send(new AdmitAttributeRequest(
 							() =>
 							{
-								parser.CurrentState.AddRegister("0", MarkupText.Plain(currentRow.ToString()));
-
 								var dict = row.Values.Select((x, i) =>
 										new KeyValuePair<string, CallState>((i + 1).ToString(),
 											MarkupText.Plain(x?.ToString() ?? string.Empty)))
 									.ToDictionary();
 								dict.TryAdd("0", MarkupText.Plain(currentRow.ToString()));
 
-								return ValueTask.FromResult(parser.CurrentState with
-								{
-									Arguments = dict,
-									EnvironmentRegisters = dict
-								});
-							},
-							new DbRefAttribute(found.Object().DBRef, attribute.LongName!.Split("`")), parser.CurrentState.Executor), ExecutionBudget.CurrentToken);
+								return ValueTask.FromResult(CallbackState(dict));
+							}, callbackAttribute, targetRef), ExecutionBudget.CurrentToken);
 
 						if (!rowAdmission.Accepted)
 						{
@@ -255,10 +278,6 @@ public partial class Commands
 						}
 					}
 
-					// Note: SPOOF switch affects who the queued attributes execute as
-					// This is handled at the parser/execution level, not here
-					// The attribute will execute with the permissions of the enactor rather than executor
-
 					var message = sourceRows == 0
 						? "No rows returned."
 						: $"{admittedRows} row{(admittedRows != 1 ? "s" : "")} queued for execution.";
@@ -279,6 +298,12 @@ public partial class Commands
 				}
 			});
 	}
+
+	/// <summary>
+	/// PennMUSH's <c>do_mapsql</c> God guard (<c>src/sql.c:474-477</c>). Kept local to the command
+	/// rather than in <c>ErrorMessages</c>: no other call site triggers code as a named target.
+	/// </summary>
+	private const string CannotTriggerGod = "You can't trigger God!";
 
 	/// <summary>
 	/// Splits a prepared statement's <c>query,param,param...</c> input on unescaped commas; a

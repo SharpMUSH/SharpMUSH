@@ -563,12 +563,12 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql {objDbRef}/mapsql_test_attr_basic=SELECT col1, col2 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		// Poll until the channel consumer has processed the queued attribute execution
-		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_Basic"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, objDbRef, m => m.Contains("Test_MapSql_Basic"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_Basic")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(objDbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_Basic")), TestHelpers.MatchingObject(objDbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -582,27 +582,27 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql {objDbRef}/mapsql_test_attr_mr=SELECT col1, col2, col3 FROM test_mapsql_data_cmd ORDER BY id"));
 
 		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
-		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, objDbRef, m => m.Contains("Test_MapSql_WithMultipleRows: 3 - data3_col1"));
 
 		await NotifyService
 			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Test_MapSql_WithMultipleRows: 0")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(objDbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextStartsWith(msg, "Test_MapSql_WithMultipleRows: 0")), TestHelpers.MatchingObject(objDbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(objDbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_WithMultipleRows: 1 - data1_col1 - data1_col2 - 10")), TestHelpers.MatchingObject(objDbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(objDbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_WithMultipleRows: 2 - data2_col1 - data2_col2 - 20")), TestHelpers.MatchingObject(objDbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(objDbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_WithMultipleRows: 3 - data3_col1 - data3_col2 - 30")), TestHelpers.MatchingObject(objDbRef), INotifyService.NotificationType.Announce);
 
 		// TODO: There is a bug here. It keeps reading and loops around somehow. I don't get how.
 	}
@@ -618,17 +618,17 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql/colnames {objDbRef}/mapsql_test_attr_cn=SELECT col1, col2, col3 FROM test_mapsql_data_cmd WHERE id = 1"));
 
 		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
-		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, objDbRef, m => m.Contains("Test_MapSql_WithColnamesSwitch: 1 - data1_col1"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_WithColnamesSwitch: 0 - col1 - col2 - col3")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(objDbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_WithColnamesSwitch: 0 - col1 - col2 - col3")), TestHelpers.MatchingObject(objDbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_WithColnamesSwitch: 1 - data1_col1 - data1_col2 - 10")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(objDbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_WithColnamesSwitch: 1 - data1_col1 - data1_col2 - 10")), TestHelpers.MatchingObject(objDbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -725,12 +725,12 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_basic=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id = ?),1"));
 
 		// Poll until the channel consumer has processed the queued attribute execution
-		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_PrepareSwitch_Basic"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, objDbRef, m => m.Contains("Test_MapSql_PrepareSwitch_Basic"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_PrepareSwitch_Basic")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(objDbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_PrepareSwitch_Basic")), TestHelpers.MatchingObject(objDbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -744,17 +744,17 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(wizardPlayer.Handle, ConnectionService, MarkupText.Plain($"@mapsql/PREPARE {objDbRef}/mapsql_prepare_test_attr_mr=lit(SELECT col1 FROM test_mapsql_data_cmd WHERE id <= ? ORDER BY id),2"));
 
 		// Poll until the channel consumer has processed the queued attribute executions (wait for last row)
-		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, wizardPlayer.DbRef, m => m.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1"));
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, objDbRef, m => m.Contains("Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1"));
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_PrepareSwitch_WithMultipleRows: 1 - data1_col1")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(objDbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_PrepareSwitch_WithMultipleRows: 1 - data1_col1")), TestHelpers.MatchingObject(objDbRef), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received(1)
-			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
+			.Notify(TestHelpers.MatchingObject(objDbRef), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextContains(msg, "Test_MapSql_PrepareSwitch_WithMultipleRows: 2 - data2_col1")), TestHelpers.MatchingObject(objDbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]
@@ -782,6 +782,157 @@ public class DatabaseCommandTests
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(wizardPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
 				TestHelpers.MessagePlainTextContains(msg, "#-1 SQL ERROR")), TestHelpers.MatchingObject(wizardPlayer.DbRef), INotifyService.NotificationType.Announce);
+	}
+
+	/// <summary>
+	/// Runs <c>@mapsql</c> with identities the command parser cannot produce on its own — a requester
+	/// that is not the enactor, or a requester that is an object rather than the connected player —
+	/// against the real scheduler, so the queued callbacks actually run.
+	/// </summary>
+	private async Task RunMapSqlAsAsync(DBRef requester, DBRef enactor, string[] switches,
+		string objectAndAttribute, string query)
+	{
+		var state = ParserState.RootFor(requester) with
+		{
+			Enactor = enactor,
+			Switches = switches,
+			Arguments = new Dictionary<string, CallState>
+			{
+				["0"] = new CallState(objectAndAttribute),
+				["1"] = new CallState(query)
+			}
+		};
+		await state.KnownExecutorObject(Mediator);
+		await state.KnownEnactorObject(Mediator);
+		var parser = Substitute.For<IMUSHCodeParser>();
+		parser.CurrentState.Returns(state);
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services);
+		await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
+	}
+
+	/// <summary>Creates a thing owned by <paramref name="owner"/> rather than by God.</summary>
+	private async Task<DBRef> CreateOwnedThingAsync(TestIsolationHelpers.TestPlayer owner, string prefix)
+	{
+		var created = await TestIsolationHelpers.CreateObjectCommandAsync(
+			SqlWebAppFactoryArg.CommandParserFor(owner.DbRef, owner.Handle), ConnectionService,
+			TestIsolationHelpers.GenerateUniqueName(prefix), owner.Handle);
+		return DBRef.Parse(created.Message!.ToPlainText());
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>do_mapsql</c> refuses before it queries unless the executor controls the target
+	/// (<c>src/sql.c:461-466</c>). The suite's other <c>@mapsql</c> tests run as a wizard or against
+	/// <c>me</c>, where that gate passes for free.
+	/// </summary>
+	[Test]
+	[NotInParallel]
+	public async Task MapSqlRefusesATargetTheExecutorDoesNotControl()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlNoControl");
+		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlNoControlTarget");
+		var marker = "uncontrolled-" + Guid.NewGuid().ToString("N");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&MAPDENIED {target}=think {marker}"));
+
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(mortal.DbRef, mortal.Handle);
+		await testParser.CommandParse(mortal.Handle, ConnectionService,
+			MarkupText.Plain($"@mapsql {target}/MAPDENIED=SELECT col1 FROM test_mapsql_data_cmd WHERE id = 1"));
+
+		await Assert.That(SqlWebAppFactoryArg.Notifications.For(mortal.DbRef)).Contains("Permission denied.");
+		await Assert.That(SqlWebAppFactoryArg.Notifications.For(mortal.DbRef).Any(m => m.EndsWith("queued for execution."))).IsFalse();
+		await Assert.That(SqlWebAppFactoryArg.Notifications.For(target).Any(m => m.Contains(marker))).IsFalse();
+	}
+
+	/// <summary>
+	/// The owned-and-LINK_OK exception (<c>src/sql.c:462-465</c>), which <c>/SPOOF</c> withdraws. It
+	/// needs a requester that owns the target without controlling it, so the requester is an object
+	/// and the target carries TRUST — <c>controls</c> stops at <c>Inheritable</c> there
+	/// (<c>src/predicat.c:402-406</c>).
+	/// </summary>
+	[Test]
+	[NotInParallel]
+	[Arguments(false, true)]
+	[Arguments(true, false)]
+	public async Task MapSqlAcceptsAnOwnedLinkOkTargetOnlyWithoutSpoof(bool spoof, bool allowed)
+	{
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlLinkOkOwner");
+		var requester = await CreateOwnedThingAsync(owner, "MapSqlLinkOkRequester");
+		var target = await CreateOwnedThingAsync(owner, "MapSqlLinkOkTarget");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {target}=TRUST"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {target}=LINK_OK"));
+		var marker = "linkok-" + Guid.NewGuid().ToString("N");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&MAPLINKOK {target}=think {marker}"));
+
+		await RunMapSqlAsAsync(requester, owner.DbRef, spoof ? ["SPOOF"] : [], $"{target}/MAPLINKOK",
+			"SELECT col1 FROM test_mapsql_data_cmd WHERE id = 1");
+
+		if (allowed)
+		{
+			await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, target, m => m == marker);
+		}
+		else
+		{
+			await Assert.That(SqlWebAppFactoryArg.Notifications.For(requester)).Contains("Permission denied.");
+			await Assert.That(SqlWebAppFactoryArg.Notifications.For(target).Any(m => m == marker)).IsFalse();
+		}
+	}
+
+	/// <summary>
+	/// <c>src/sql.c:474-477</c>. Reachable only through the owned-and-LINK_OK exception, since
+	/// <c>controls</c> already refuses God to everyone else (<c>src/predicat.c:390-391</c>).
+	/// </summary>
+	[Test]
+	[NotInParallel]
+	public async Task MapSqlRefusesToTriggerGod()
+	{
+		var requester = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlGodRequester");
+		var marker = "godtrigger-" + Guid.NewGuid().ToString("N");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&MAPGOD #1=think {marker}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set #1=LINK_OK"));
+		try
+		{
+			await RunMapSqlAsAsync(requester, requester, [], "#1/MAPGOD",
+				"SELECT col1 FROM test_mapsql_data_cmd WHERE id = 1");
+
+			await Assert.That(SqlWebAppFactoryArg.Notifications.For(requester)).Contains("You can't trigger God!");
+			await Assert.That(SqlWebAppFactoryArg.Notifications.For(new DBRef(1)).Any(m => m == marker)).IsFalse();
+		}
+		finally
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@set #1=!LINK_OK"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("&MAPGOD #1="));
+		}
+	}
+
+	/// <summary>
+	/// PennMUSH queues the callback on the object holding it and gives the triggerer both remaining
+	/// identities: <c>new_queue_actionlist_int(thing, triggerer, triggerer, …)</c>
+	/// (<c>src/cque.c:866-868</c>), where the triggerer is the executor, or the original enactor
+	/// under <c>/SPOOF</c> (<c>src/sql.c:471-472</c>).
+	/// </summary>
+	[Test]
+	[NotInParallel]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task MapSqlCallbackRunsAsTheTargetWithTheTriggererAsEnactorAndCaller(bool spoof)
+	{
+		var requester = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlIdentityRequester");
+		var origin = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlIdentityEnactor");
+		var target = await CreateOwnedThingAsync(requester, "MapSqlIdentityTarget");
+		var marker = "identity-" + Guid.NewGuid().ToString("N");
+		await SqlWebAppFactoryArg.CommandParserFor(requester.DbRef, requester.Handle).CommandParse(
+			requester.Handle, ConnectionService, MarkupText.Plain($"&MAPIDENTITY {target}=think {marker} %! %# %@"));
+
+		await RunMapSqlAsAsync(requester.DbRef, origin.DbRef, spoof ? ["SPOOF"] : [], $"{target}/MAPIDENTITY",
+			"SELECT col1 FROM test_mapsql_data_cmd WHERE id = 1");
+
+		var triggerer = spoof ? origin.DbRef : requester.DbRef;
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, target, m => m.StartsWith(marker));
+		await Assert.That(SqlWebAppFactoryArg.Notifications.For(target).First(m => m.StartsWith(marker)))
+			.IsEqualTo($"{marker} #{target.Number} #{triggerer.Number} #{triggerer.Number}");
 	}
 
 	/// <summary>
