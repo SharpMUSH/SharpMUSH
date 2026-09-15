@@ -33,18 +33,18 @@ public record HttpHandlerResult(
 /// </summary>
 public interface IHttpHandlerCommandDispatcher
 {
+	/// <summary>The address recorded when the caller's real one could not be established.</summary>
+	/// <remarks>
+	/// The same literal the web auth surfaces fall back to (<c>AuthController.ClientIp</c>), so a
+	/// log or event reads alike whichever surface could not name its caller.
+	/// </remarks>
+	const string UnknownAddress = "unknown";
+
 	/// <summary>
 	/// Runs the request through the handler. Returns <see cref="NotFound"/> when no
 	/// <c>http_handler</c> is configured or the handler has no <c>&lt;METHOD&gt;</c> attribute
 	/// (SharpMUSH deviates from PennMUSH's 200-empty here by design — see help sharphttp).
 	/// </summary>
-	/// <summary>The address recorded when the caller's real one could not be established.</summary>
-	/// <remarks>
-	/// The same literal the web auth surfaces fall back to (<c>AuthController.ClientIp</c>), so one
-	/// sitelock rule covers every surface that cannot name its caller.
-	/// </remarks>
-	const string UnknownAddress = "unknown";
-
 	/// <param name="method">HTTP method (case-insensitive; matched to the attribute name uppercased).</param>
 	/// <param name="path">Request path including the query string, e.g. <c>/foo?bar=baz</c>. Becomes <c>%0</c>.</param>
 	/// <param name="body">Raw request body. Becomes <c>%1</c>.</param>
@@ -57,10 +57,15 @@ public interface IHttpHandlerCommandDispatcher
 		CancellationToken ct = default);
 
 	/// <summary>
-	/// As above, for a caller whose address is known. That address is what sitelock rules for the
-	/// http_handler are matched against — both on its own and as the
-	/// "<c>&lt;IP&gt;`&lt;METHOD&gt;`&lt;PATH&gt;</c>" composite Penn treats as a hostname
-	/// (src/bsd.c:3814-3839) — and what the ``HTTP`COMMAND`` event reports (bsd.c:4076).
+	/// As above, for a caller whose address is known — which is what the ``HTTP`COMMAND`` event
+	/// reports in its first field (src/bsd.c:4076).
+	/// <para>
+	/// Site policy is deliberately NOT applied here. PennMUSH decides it in
+	/// <c>process_http_start</c>, the inbound-connection handler, not in the command run that this
+	/// interface corresponds to (<c>run_http_command</c>) — so an inbound request is gated by the
+	/// <c>/http/</c> route, and a caller the server dispatches on its own behalf (validating an
+	/// application's schema route, say) is not refused by a rule aimed at anonymous traffic.
+	/// </para>
 	/// </summary>
 	/// <param name="clientIp">
 	/// The effective client address, already resolved through the trusted-proxy pipeline. Pass

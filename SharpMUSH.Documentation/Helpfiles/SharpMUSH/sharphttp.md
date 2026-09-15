@@ -11,6 +11,8 @@ If the HTTP Handler is unset, or no matching method/route attribute exists on th
 
 That limit is one budget for the whole game, not an allowance per caller: the game serves up to "http_per_second" requests a second and may burst up to the same number after a quiet moment. A request arriving with the budget spent is answered **429 Too Many Requests** with a `Retry-After` header. Setting it to 0 turns the HTTP surface off entirely, and every request is then answered `404 Not Found` exactly as an unset "http_handler" is. Changes take effect on the next request.
 
+The web portal draws on this same budget — its character directory, online list, profiles and Dynamic Application routes are all handler routes — so the shipped default is higher than PennMUSH's. Raise it if a busy portal starts seeing 429s. The server's own internal use of a handler route (validating an application's schema endpoint when a wizard registers it) does not go through the HTTP surface and is neither counted nor sitelocked.
+
 The HTTP surface is served under a dedicated **`/http/`** path (so it can't shadow the web portal's own routes). When a request to `http://<mush>/http/<path>` arrives, SharpMUSH invisibly runs the HTTP Handler object (`@config http_handler`), executing an `@include me/<method>`. e.g: \`@include me/get\`.
 
 Immediately when the `@include` finishes, the http request is complete. Any queued entries (such as `@wait`, `$-commands`, etc) are not going to be sent to the HTTP client - you'll need to code using `@include`, `/inline` switches, and the like.

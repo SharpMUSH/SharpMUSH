@@ -60,11 +60,6 @@ public class HttpHandlerCommandService(
 			return new NotFound();
 		}
 
-		if (SiteRefuses(clientIp, method, path) is { } refusal)
-		{
-			return refusal;
-		}
-
 		ct.ThrowIfCancellationRequested();
 		var parentBudget = ExecutionBudget.Current;
 		using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct, parentBudget?.Token ?? default);
@@ -161,49 +156,6 @@ public class HttpHandlerCommandService(
 			return new HttpHandlerResult(503, "Service Unavailable", "text/plain", [], ExecutionBudget.Error);
 
 		return result;
-	}
-
-	/// <summary>
-	/// PennMUSH's HTTP site policy (src/bsd.c:3814-3839), applied before a single line of handler
-	/// code runs: the caller's address is matched against the sitelock rules, and then so is the
-	/// "<c>&lt;IP&gt;`&lt;METHOD&gt;`&lt;PATH&gt;</c>" composite Penn checks as though it were a
-	/// hostname — which is how a rule gates one route rather than a whole client (help sharphttp,
-	/// "HTTP SITELOCK"). Both check the same <c>!connect</c> flag the other login surfaces read, so
-	/// one matcher decides for every way into the game.
-	/// <para>
-	/// Penn answers a refused request with its <c>mud_url</c> landing page; SharpMUSH's HTTP surface
-	/// is an API rather than a port a browser stumbled onto, so it answers a plain 403 — the same
-	/// kind of deliberate deviation as the 404 for a missing method attribute (help sharphttp).
-	/// </para>
-	/// </summary>
-	/// <returns>The response to send, or <see langword="null"/> when the caller may proceed.</returns>
-	private HttpHandlerResult? SiteRefuses(string clientIp, string method, string path)
-	{
-		var rules = options.CurrentValue.SitelockRules.Rules;
-		if (rules.Count == 0)
-		{
-			return null;
-		}
-
-		string? reason = null;
-		if (SitelockMatcher.IsBlocked(rules, clientIp, host: string.Empty, SitelockMatcher.ConnectFlag))
-		{
-			reason = "IP sitelocked !connect";
-		}
-		else if (SitelockMatcher.IsBlocked(rules, ip: string.Empty,
-			host: $"{clientIp}`{method.ToUpperInvariant()}`{path}", SitelockMatcher.ConnectFlag))
-		{
-			reason = "path sitelocked !connect";
-		}
-
-		if (reason is null)
-		{
-			return null;
-		}
-
-		logger.LogInformation("Refused inbound HTTP {Method} {Path} from {ClientIp}: http: {Reason}.",
-			method, path, clientIp, reason);
-		return new HttpHandlerResult(403, "Forbidden", "text/plain", [], "Forbidden");
 	}
 
 	/// <summary>

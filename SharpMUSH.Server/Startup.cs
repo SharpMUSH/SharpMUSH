@@ -67,6 +67,13 @@ public class Startup(
 	public const string CompiledExpressionsCacheName = "compiled-expressions";
 
 	/// <summary>
+	/// Rate-limiting policy carrying PennMUSH's <c>http_per_second</c> quota. Named here because
+	/// both the policy registration and the <c>/http/{**path}</c> route that opts into it have to
+	/// agree, and so does the rejection handler that adds this policy's <c>Retry-After</c>.
+	/// </summary>
+	public const string SoftcodeHttpPolicy = "softcode-http";
+
+	/// <summary>
 	/// Exposes one concrete database provider under every interface it serves. The provider is a
 	/// single instance registered as its own type; each interface here forwards to that instance,
 	/// so the compiler checks that <typeparamref name="TProvider"/> implements every surface
@@ -779,7 +786,7 @@ public class Startup(
 			//
 			// Zero or less is Penn's "HTTP is off" setting and is answered as an unconfigured
 			// http_handler by HttpHandlerCommandService (404), not throttled to death here.
-			opts.AddPolicy("softcode-http", httpContext =>
+			opts.AddPolicy(SoftcodeHttpPolicy, httpContext =>
 			{
 				var perSecond = httpContext.RequestServices
 					.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
@@ -791,11 +798,15 @@ public class Startup(
 			});
 
 			// Penn schedules the next attempt with http_msecs_till_next; the HTTP equivalent is to
-			// tell the client when to come back. Only a limiter that supplies the metadata adds the
-			// header, so the portal's own policies are unaffected.
+			// tell the client when to come back. Scoped to this policy by endpoint, NOT by "does the
+			// lease carry RetryAfter metadata" — a rejected FixedWindowRateLimiter lease carries it
+			// too, so that test would have quietly added a Retry-After to the portal's "public-api"
+			// and "mcp" 429s as well.
 			opts.OnRejected = (context, _) =>
 			{
-				if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+				if (context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()
+						is { PolicyName: SoftcodeHttpPolicy }
+					&& context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
 				{
 					context.HttpContext.Response.Headers.RetryAfter =
 						((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);

@@ -83,7 +83,59 @@ public class HttpQuotaRateLimiterTests
 
 		await Assert.That(refused.IsAcquired).IsFalse();
 		await Assert.That(refused.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)).IsTrue();
-		await Assert.That(retryAfter).IsGreaterThan(TimeSpan.Zero);
+		// An empty bucket at 2/second is one permit away in 500ms, and the wait is measured from
+		// that shortfall — not from Penn's http_msecs_till_next, whose trailing term scales with
+		// the configured rate and would answer "2.5 seconds" here and 100 seconds at the maximum.
+		await Assert.That(retryAfter).IsEqualTo(TimeSpan.FromMilliseconds(500));
+	}
+
+	[Test]
+	public async Task TheWaitShrinksAsTheBucketRefills()
+	{
+		var clock = new Clock();
+		using var limiter = new HttpQuotaRateLimiter(4, clock);
+		Drain(limiter, 4);
+
+		clock.Advance(TimeSpan.FromMilliseconds(200));
+
+		using var refused = limiter.AttemptAcquire();
+		refused.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter);
+
+		// 200ms bought 800 of the 1000 quota a permit costs; the remaining 200 is 50ms at 4/second.
+		await Assert.That(retryAfter).IsEqualTo(TimeSpan.FromMilliseconds(50));
+	}
+
+	[Test]
+	public async Task AFullBucketReportsHowLongItHasBeenIdle()
+	{
+		var clock = new Clock();
+		using var limiter = new HttpQuotaRateLimiter(3, clock);
+
+		clock.Advance(TimeSpan.FromMinutes(2));
+
+		// The middleware evicts a partition that has been idle long enough. Re-stamping the "full
+		// since" mark on every refill would peg this at zero and keep every bucket alive forever —
+		// including the one left behind by each superseded http_per_second setting.
+		await Assert.That(limiter.IdleDuration).IsEqualTo(TimeSpan.FromMinutes(2));
+	}
+
+	[Test]
+	public async Task ABucketWithPermitsOutstandingIsNotIdle()
+	{
+		var clock = new Clock();
+		using var limiter = new HttpQuotaRateLimiter(3, clock);
+		Drain(limiter, 1);
+
+		clock.Advance(TimeSpan.FromMilliseconds(100));
+		await Assert.That(limiter.IdleDuration).IsNull();
+
+		// Once it refills to the ceiling the idle clock starts again from that moment, not from
+		// construction.
+		clock.Advance(TimeSpan.FromSeconds(1));
+		await Assert.That(limiter.IdleDuration).IsEqualTo(TimeSpan.Zero);
+
+		clock.Advance(TimeSpan.FromSeconds(5));
+		await Assert.That(limiter.IdleDuration).IsEqualTo(TimeSpan.FromSeconds(5));
 	}
 
 	[Test]

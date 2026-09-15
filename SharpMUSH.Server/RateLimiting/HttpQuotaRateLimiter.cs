@@ -93,7 +93,7 @@ public sealed class HttpQuotaRateLimiter : RateLimiter
 			if (_quota < cost)
 			{
 				_failedLeases++;
-				return new Lease(false, RetryAfter());
+				return new Lease(false, RetryAfter(cost));
 			}
 
 			_quota -= cost;
@@ -123,6 +123,13 @@ public sealed class HttpQuotaRateLimiter : RateLimiter
 		}
 
 		_lastTimestamp = now;
+		if (_quota >= _ceiling)
+		{
+			// Already full: leave _lastFullTimestamp on the moment it BECAME full, or an idle
+			// bucket would report no idle time at all and never be evicted.
+			return;
+		}
+
 		_quota = Math.Min(_ceiling, _quota + (milliseconds * _perSecond));
 		if (_quota >= _ceiling)
 		{
@@ -130,9 +137,23 @@ public sealed class HttpQuotaRateLimiter : RateLimiter
 		}
 	}
 
-	/// <summary>bsd.c:1017-1023 (<c>http_msecs_till_next</c>): when the next permit is affordable.</summary>
-	private TimeSpan RetryAfter()
-		=> TimeSpan.FromMilliseconds(((MillisecondsPerSecond - _quota) / _perSecond) + _perSecond);
+	/// <summary>
+	/// When the refused request could be afforded, from the quota it is actually short of.
+	/// <para>
+	/// Penn's <c>http_msecs_till_next</c> (bsd.c:1017-1023) is deliberately not copied here: it
+	/// feeds Penn's <c>select()</c> poll ceiling (bsd.c <c>min_timeout</c>), not a promise made to
+	/// a client, and its trailing <c>+ HTTP_SECOND_LIMIT</c> term scales with the configured rate
+	/// rather than with the shortfall — at a limit of 100000 it would tell a caller whose wait is
+	/// measured in microseconds to come back in 100 seconds.
+	/// </para>
+	/// </summary>
+	private TimeSpan RetryAfter(long cost)
+	{
+		var deficit = cost - _quota;
+		return deficit <= 0
+			? TimeSpan.Zero
+			: TimeSpan.FromMilliseconds(Math.Ceiling((double)deficit / _perSecond));
+	}
 
 	private sealed class Lease(bool acquired, TimeSpan? retryAfter) : RateLimitLease
 	{

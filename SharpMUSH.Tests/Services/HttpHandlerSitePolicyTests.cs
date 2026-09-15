@@ -14,13 +14,14 @@ using SharpMUSH.Tests.Server;
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// Issue #1122: the softcode HTTP dispatcher knows the caller's address, applies PennMUSH's
-/// HTTP site policy with it before running any softcode, and reports it on ``HTTP`COMMAND``.
+/// Issue #1122: the softcode HTTP dispatcher knows the caller's address and reports it as the
+/// first field of ``HTTP`COMMAND`` (PennMUSH src/bsd.c:4076), where it used to send an empty
+/// string.
 ///
-/// Penn checks the client IP against <c>@sitelock</c> for the http_handler player, then checks the
-/// composite "<c>&lt;IP&gt;`&lt;METHOD&gt;`&lt;PATH&gt;</c>" as though it were a hostname
-/// (src/bsd.c:3814-3839, and help sharphttp "HTTP SITELOCK"), and reports the address as the first
-/// field of the completion event (bsd.c:4076).
+/// Site policy is decided one layer up, on the <c>/http/</c> route, because that is where Penn
+/// decides it (<c>process_http_start</c>, bsd.c:3814-3839) and because the server also dispatches
+/// through here on its own behalf. <c>HttpHandlerSitelockTests</c> covers the route; the last test
+/// below pins the boundary from this side.
 /// </summary>
 public class HttpHandlerSitePolicyTests
 {
@@ -104,40 +105,18 @@ public class HttpHandlerSitePolicyTests
 	}
 
 	[Test]
-	public async Task AnIpSitelockedCallerIsRefusedBeforeAnySoftcodeRuns()
+	public async Task SitelockRulesDoNotReachTheDispatcherItself()
 	{
-		var fixture = new Fixture(new Dictionary<string, string[]> { ["198.51.100.*"] = ["!connect"] });
+		// The broadest possible lockdown. An inbound request carrying this address is refused by the
+		// route (HttpHandlerSitelockTests), but a dispatch the server makes on its own behalf — an
+		// admin registering an application, whose schema route is validated through this same
+		// dispatcher — must still run. Deciding policy in here would fail that action with an
+		// opaque 403.
+		var fixture = new Fixture(new Dictionary<string, string[]> { ["*"] = ["!connect"] });
 
-		var result = (await fixture.Service.DispatchAsync("GET", "/open", "", [], "198.51.100.4")).Expect<HttpHandlerResult>();
+		var result = (await fixture.Service.DispatchAsync("GET", "/chargen/schema", "", [], "198.51.100.4")).Expect<HttpHandlerResult>();
 
-		await Assert.That(result.Status).IsEqualTo(403);
-		await Assert.That(fixture.Executed).IsEmpty();
-	}
-
-	[Test]
-	public async Task APathSitelockRuleMatchesTheIpMethodPathComposite()
-	{
-		// help sharphttp: path restrictions are written as "<IP>`<METHOD>`<PATH>".
-		var fixture = new Fixture(new Dictionary<string, string[]> { ["*`GET`/admin/*"] = ["!connect"] });
-
-		var blocked = (await fixture.Service.DispatchAsync("GET", "/admin/secrets", "", [], "198.51.100.4")).Expect<HttpHandlerResult>();
-		await Assert.That(blocked.Status).IsEqualTo(403);
-		await Assert.That(fixture.Executed).IsEmpty();
-
-		var allowed = (await fixture.Service.DispatchAsync("GET", "/public", "", [], "198.51.100.4")).Expect<HttpHandlerResult>();
-		await Assert.That(allowed.Status).IsEqualTo(200);
+		await Assert.That(result.Status).IsEqualTo(200);
 		await Assert.That(fixture.Executed).Contains("GET");
-	}
-
-	[Test]
-	public async Task ARuleAgainstOneCallerDoesNotRefuseAnother()
-	{
-		var fixture = new Fixture(new Dictionary<string, string[]> { ["198.51.100.4"] = ["!connect"] });
-
-		var refused = (await fixture.Service.DispatchAsync("GET", "/open", "", [], "198.51.100.4")).Expect<HttpHandlerResult>();
-		var served = (await fixture.Service.DispatchAsync("GET", "/open", "", [], "198.51.100.5")).Expect<HttpHandlerResult>();
-
-		await Assert.That(refused.Status).IsEqualTo(403);
-		await Assert.That(served.Status).IsEqualTo(200);
 	}
 }
