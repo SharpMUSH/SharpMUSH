@@ -888,6 +888,12 @@ public class DatabaseCommandTests
 	[NotInParallel]
 	public async Task MapSqlRefusesToTriggerGod()
 	{
+		// The guard sits behind the owned-and-LINK_OK exception, and God owns himself, so reaching it
+		// means a God-owned requester and LINK_OK on #1 — there is no substitute target, since the
+		// guard tests Key == 1. The flag goes back in the finally. Every LINK_OK-on-#1 consumer in
+		// the suite (@notify and @drain, GeneralCommands.cs:1825 and :2714; @parent,
+		// ManipulateSharpObjectService.cs:545) is reached only by a non-controller, and the tests
+		// that drive them run as God, who controls #1 and short-circuits before the flag is read.
 		var requester = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlGodRequester");
 		var marker = "godtrigger-" + Guid.NewGuid().ToString("N");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&MAPGOD #1=think {marker}"));
@@ -1034,6 +1040,27 @@ public class DatabaseCommandTests
 			$"{marker} 2|second|second",
 			$"{marker} 3|third|third"
 		});
+	}
+
+	/// <summary>
+	/// A named register must never land in the positional namespace.
+	/// <see cref="ParserState.ArgumentsOrdered"/> and its comparer read a key with trailing
+	/// whitespace as a number, so a column named <c>"1 "</c> beside position <c>1</c> would be two
+	/// keys the ordered view calls equal — a duplicate key when it is built.
+	/// </summary>
+	[Test]
+	public async Task SqlRowArgumentsNeverNamesARegisterTheOrderedArgumentViewReadsAsAPosition()
+	{
+		var arguments = SharpMUSH.Implementation.Commands.SqlRowArguments.ForRow(
+			new Dictionary<string, object?> { ["alpha"] = "A", ["1 "] = "B", ["+2"] = "C", ["beta"] = "D" }, 7);
+
+		await Assert.That(arguments.Keys.Where(key => int.TryParse(key, out _)).Order())
+			.IsEquivalentTo(new[] { "0", "1", "2", "3", "4" });
+		await Assert.That((ParserState.Empty with { Arguments = arguments }).ArgumentsOrdered
+				.Values.Select(value => value.Message!.ToPlainText()))
+			.IsEquivalentTo(new[] { "7", "A", "B", "C", "D" });
+		await Assert.That(arguments["alpha"].Message!.ToPlainText()).IsEqualTo("A");
+		await Assert.That(arguments["beta"].Message!.ToPlainText()).IsEqualTo("D");
 	}
 
 	/// <summary>

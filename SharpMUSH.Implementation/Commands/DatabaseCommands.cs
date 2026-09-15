@@ -9,7 +9,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Data.Common;
-using System.Globalization;
 using System.Text.RegularExpressions;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Definitions;
@@ -331,7 +330,8 @@ public partial class Commands
 /// Names are matched case-insensitively and a later column of the same name wins, because Penn
 /// upper-cases every register name on both set and get (<c>pe_regs_set_if</c>,
 /// <c>src/parse.c:1123</c>; <c>pe_regs_get</c>, <c>:1207</c>) and <c>pe_regs_set</c> overwrites.
-/// Numeric names are skipped so a column called <c>1</c> cannot displace the first field.
+/// Names that would be read as an argument position are skipped, so a column called <c>1</c>
+/// cannot displace the first field.
 /// <para>One deliberate simplification of Penn's two call sites: <c>fun_mapsql</c> skips the named
 /// register for an empty cell while <c>do_mapsql</c> writes it anyway. Both are indistinguishable
 /// here — an absent register and an empty one both read back as empty — so this writes it in
@@ -370,7 +370,7 @@ internal static class SqlRowArguments
 		{
 			var cell = MarkupText.Plain(value?.ToString() ?? string.Empty);
 			arguments[(++position).ToString()] = cell;
-			if (!string.IsNullOrEmpty(name) && !IsStrictInteger(name))
+			if (!string.IsNullOrEmpty(name) && !IsArgumentPosition(name))
 			{
 				arguments[name] = cell;
 			}
@@ -380,10 +380,18 @@ internal static class SqlRowArguments
 	}
 
 	/// <summary>
-	/// PennMUSH's <c>is_strict_integer</c> (<c>src/parse.c:556-566</c>): <c>strtol</c> consumes the
-	/// whole string — leading whitespace and a sign allowed, nothing trailing — and stays in range.
+	/// Whether a column name would be read as an argument position rather than as a name. PennMUSH
+	/// asks <c>is_strict_integer</c> (<c>src/parse.c:556-566</c>) — <c>strtol</c> consuming the whole
+	/// string, in range — so a numeric column name never takes a register beside the positional one
+	/// it would collide with.
 	/// </summary>
-	private static bool IsStrictInteger(string value)
-		=> int.TryParse(value, NumberStyles.AllowLeadingWhite | NumberStyles.AllowLeadingSign,
-			CultureInfo.InvariantCulture, out _);
+	/// <remarks>
+	/// The test here is the one <see cref="ParserState.ArgumentsOrdered"/> and its comparer apply, a
+	/// shade wider than Penn's: a bare <c>int.TryParse</c> also accepts trailing whitespace. A column
+	/// named <c>"1 "</c> passes <c>is_strict_integer</c>, so Penn would name a register for it — and
+	/// that register would then sort equal to <c>"1"</c> in the ordered view, which is a duplicate
+	/// key. Nothing reads that view on a callback's own frame today, so this closes a latent trap
+	/// rather than a live one, and it costs only a named register for a column softcode cannot name.
+	/// </remarks>
+	private static bool IsArgumentPosition(string name) => int.TryParse(name, out _);
 }
