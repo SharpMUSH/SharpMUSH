@@ -131,9 +131,7 @@ top level (`plugins/YourPlugin.dll`) or in a per-plugin subfolder (`plugins/your
 failing plugin is logged and skipped; it never aborts server boot.
 
 > The server host must carry its full dependency closure beside its binary for the plugin loader to resolve
-> shared types (this is why `SharpMUSH.Server` references `FSharp.Core` explicitly — a transitive the engine
-> never JITs but the loader's reference walk requires). If you self-host the engine to load plugins, do the
-> same.
+> shared types. If you self-host the engine to load plugins, do the same.
 
 ## 6. Collisions and load order
 

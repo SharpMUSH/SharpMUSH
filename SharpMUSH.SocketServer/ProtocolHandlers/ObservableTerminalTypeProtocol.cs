@@ -1,13 +1,9 @@
-using Stateless;
-using TelnetNegotiationCore.Interpreters;
-using TelnetNegotiationCore.Models;
-using TelnetNegotiationCore.Plugins;
 using TelnetNegotiationCore.Protocols;
 
 namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 
 /// <summary>
-/// <see cref="TerminalTypeProtocol"/> with a completion callback.
+/// <see cref="TerminalTypeProtocol"/> with callbacks for observable state changes.
 /// <para>
 /// TelnetNegotiationCore collects the RFC 1091 / MTTS terminal types a client reports and exposes
 /// them on <see cref="TerminalTypeProtocol.TerminalTypes"/>, but offers no event for when they
@@ -17,18 +13,13 @@ namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
 /// main process and is only reachable over the message bus.
 /// </para>
 /// <para>
-/// Stateless runs entry actions in the order they were registered, so registering ours after
-/// <see cref="TerminalTypeProtocol.ConfigureStateMachine"/> has run means the base has already
-/// recorded the value — and, when the list is not finished, has already asked for the next one. The
-/// callback therefore fires once per reported type with the list so far, and the last call is the
-/// complete one; the receiver treats each as a snapshot rather than an increment.
-/// </para>
-/// <para>
-/// Client mode is left alone: there the states belong to answering a server's request, not to
-/// learning anything about the peer.
+/// TelnetNegotiationCore 4 uses a generated state machine and no longer exposes its former
+/// Stateless configuration seam. The connection read loop calls
+/// <see cref="PublishTerminalTypesIfChangedAsync"/> after each input segment has been interpreted,
+/// so the callback sees the public snapshot only after the protocol has updated it.
 /// </para>
 /// </summary>
-/// <param name="onTerminalTypes">Invoked with the types reported so far, each time one arrives.</param>
+/// <param name="onTerminalTypes">Invoked with the latest terminal-type snapshot after it changes.</param>
 /// <param name="onNegotiationChanged">
 /// Invoked when the peer agrees to or refuses TTYPE, ahead of any type actually arriving. TTYPE is
 /// usually the first option a client answers, so this is the earliest honest evidence that it speaks
@@ -40,6 +31,7 @@ public sealed class ObservableTerminalTypeProtocol(
 {
 	private readonly Func<IReadOnlyList<string>, ValueTask> _onTerminalTypes =
 		onTerminalTypes ?? throw new ArgumentNullException(nameof(onTerminalTypes));
+	private IReadOnlyList<string> _publishedTerminalTypes = [];
 
 	/// <inheritdoc />
 	protected override async ValueTask OnNegotiationChangedAsync(bool isNegotiated)
@@ -52,17 +44,15 @@ public sealed class ObservableTerminalTypeProtocol(
 		}
 	}
 
-	/// <inheritdoc />
-	public override void ConfigureStateMachine(StateMachine<State, Trigger> stateMachine, IProtocolContext context)
+	/// <summary>Publishes the current terminal-type snapshot when it changed during input processing.</summary>
+	public async ValueTask PublishTerminalTypesIfChangedAsync()
 	{
-		base.ConfigureStateMachine(stateMachine, context);
-
-		if (context.Mode != TelnetInterpreter.TelnetMode.Server)
+		if (_publishedTerminalTypes.SequenceEqual(TerminalTypes))
 		{
 			return;
 		}
 
-		stateMachine.Configure(State.CompletingTerminalType)
-			.OnEntryAsync(async () => await _onTerminalTypes(TerminalTypes));
+		_publishedTerminalTypes = [.. TerminalTypes];
+		await _onTerminalTypes(_publishedTerminalTypes);
 	}
 }

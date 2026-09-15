@@ -22,7 +22,7 @@ The honest bottom line: **compiled third-party WASM components are loadable and 
 Verified against the current branch:
 
 - **Project:** `SharpMUSH.Client/SharpMUSH.Client.csproj` — `Microsoft.NET.Sdk.BlazorWebAssembly`, `net10.0`.
-  - **`PublishTrimmed=false`** (already off — the trimming hazard is already avoided, for the FSharp.Core reason noted in the plugin docs).
+	- **`PublishTrimmed=false`** (already off when this proposal was written).
   - **No `RunAOTCompilation`** → runs on the **IL interpreter** (the configuration that *can* load runtime assemblies).
   - **No `BlazorWebAssemblyLazyLoad`** items and **no** `AssemblyLoadContext` / `LazyAssemblyLoader` / `Assembly.Load` usage anywhere in the client today. All extensibility is static-registration or JSON-schema-driven.
 - **Serving:** `SharpMUSH.Server` serves the WASM app as static files — `app.UseStaticFiles()` + `app.MapFallbackToFile("index.html")` (SPA fallback). The server does **not** publish-embed the client; the WASM output is deployed into the server's `wwwroot/`. The server already owns the static `_framework/` payload — so it is the natural place to *also* serve a plugin's `.wasm`.

@@ -8,8 +8,7 @@
 		<!-- NU1510: transitive dependency pinning; NU1702: BlazorMonaco targets net9 but is WASM/JS, fully compatible -->
 		<NoWarn>NU1510;NU1702</NoWarn>
 		<!-- IL trimming is safe now that the client no longer references the server-side
-		     SharpMUSH.Library: the browser bundle no longer pulls FSharp.Core / TelnetNegotiationCore
-		     (they reached it only transitively through Library). -->
+		     SharpMUSH.Library or its TelnetNegotiationCore dependency. -->
 		<PublishTrimmed>true</PublishTrimmed>
 		<!-- Full ICU. Blazor ships one of four prebuilt CLDR shards and they do not compose; the
 		     portal's target locales span all three partial sets (de/es/fr are EFIGS, most of the rest
