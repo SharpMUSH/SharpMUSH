@@ -155,53 +155,55 @@ public partial class Functions
 	/// <summary>
 	/// Helper to set registers from a regex match.
 	/// </summary>
+	/// <remarks>
+	/// Every requested destination is written, including when the match failed. PennMUSH initialises
+	/// each one to the empty string before filling it — src/funlist.c:2906, "Initialize every
+	/// q-register used to ''" — and leaves it empty when there was no match (src/funlist.c:2947), so
+	/// a failed regmatch clears what it was asked to fill instead of leaving a stale value behind.
+	/// </remarks>
 	private void SetRegistersFromMatch(IMUSHCodeParser parser, Match match, string registerList)
 	{
-		if (!match.Success) return;
-
 		var registers = registerList.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-		for (int i = 0; i < registers.Length; i++)
+		for (var i = 0; i < registers.Length; i++)
 		{
-			var reg = registers[i];
-			var parts = reg.Split(':');
+			var parts = registers[i].Split(':');
 
-			string captureIndexOrName;
-			string qRegister;
+			// X:Y names the capture explicitly; a bare Y takes the capture at its own position in the
+			// list, so the first element gets the whole match, the second the first capture, and so on.
+			var captureIndexOrName = parts.Length == 2 ? parts[0] : i.ToString();
+			var qRegister = parts.Length == 2 ? parts[1] : parts[0];
 
-			if (parts.Length == 2)
-			{
-				// X:Y format - X is capture, Y is q-register
-				captureIndexOrName = parts[0];
-				qRegister = parts[1];
-			}
-			else
-			{
-				// Just Y format - use position-based capture
-				// First element (i=0) gets full match, second (i=1) gets first capture, etc.
-				captureIndexOrName = i.ToString();
-				qRegister = parts[0];
-			}
-
-			string value = "";
-			if (int.TryParse(captureIndexOrName, out int captureIndex))
-			{
-				if (captureIndex < match.Groups.Count)
-				{
-					value = match.Groups[captureIndex].Value;
-				}
-			}
-			else
-			{
-				var group = match.Groups[captureIndexOrName];
-				if (group.Success)
-				{
-					value = group.Value;
-				}
-			}
-
-			parser.CurrentState.AddRegister(qRegister, MarkupText.Plain(value));
+			// AddRegister only accepts [A-Z0-9_.-]; setq() uppercases its name the same way, and
+			// without this a destination written in lowercase is silently dropped.
+			parser.CurrentState.AddRegister(qRegister.ToUpper(), MarkupText.Plain(CaptureValue(match, captureIndexOrName)));
 		}
+	}
+
+	/// <summary>
+	/// The text of one capture of a match: the empty string when the match failed, when the capture
+	/// does not exist, or when the group took no part in the match.
+	/// </summary>
+	private static string CaptureValue(Match match, string captureIndexOrName)
+	{
+		if (!match.Success)
+		{
+			return string.Empty;
+		}
+
+		Group? group;
+		if (int.TryParse(captureIndexOrName, out var captureIndex))
+		{
+			group = captureIndex >= 0 && captureIndex < match.Groups.Count
+				? match.Groups[captureIndex]
+				: null;
+		}
+		else
+		{
+			group = match.Groups[captureIndexOrName];
+		}
+
+		return group is { Success: true } ? group.Value : string.Empty;
 	}
 
 	/// <summary>

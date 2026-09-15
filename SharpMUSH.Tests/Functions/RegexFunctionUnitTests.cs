@@ -47,6 +47,29 @@ public class RegexFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// PennMUSH sets every requested destination to "" before filling it — src/funlist.c:2906,
+	// "Initialize every q-register used to ''" — and leaves it empty when the match failed
+	// (src/funlist.c:2947, `if (subpatterns < 0) lbuff[0] = '\0';`). A failed regmatch must
+	// therefore clear the destinations it was asked for rather than leave stale values behind.
+	// Capture groups reach the pattern as %( and %): SharpMUSH's argument parser ends the call at
+	// the first unescaped ')', so a bare (a)(b) would arrive truncated to "(a".
+	[Test]
+	[Arguments("[setq(rmx,stale)][regmatch(a,z,0:rmx)]%q<rmx>", "0")]
+	[Arguments("[setq(rma,A)][setq(rmb,B)][regmatch(zzz,%(q%)%(r%),0:rma 1:rmb)]%q<rma>|%q<rmb>", "0|")]
+	[Arguments("[setq(rmp,P)][setq(rmq,Q)][regmatch(zzz,%(q%)%(r%),rmp rmq)]%q<rmp>|%q<rmq>", "0|")]
+	// A group that did not participate in a successful match clears its destination too.
+	[Arguments("[setq(rmn,N)][regmatch(abc,%(a%)|%(z%),2:rmn)]%q<rmn>", "1")]
+	// A successful match still populates its destinations — help sharpfunc, regmatch2.
+	[Arguments("[regmatch(cookies=30,%(.+%)=%(.+%),0:rm0 1:rm3 2:rm5)]%q<rm0>|%q<rm3>|%q<rm5>",
+		"1cookies=30|cookies|30")]
+	// Positional form: the Nth register takes subpattern N.
+	[Arguments("[regmatch(abc,%(a%)%(b%),rs0 rs1 rs2)]%q<rs0>|%q<rs1>|%q<rs2>", "1ab|a|b")]
+	public async Task RegmatchRegisters(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
 	// regrab tests (from pennfunc.md)
 	[Test]
 	[Arguments("regrab(This is testing a test,test)", "testing")]
