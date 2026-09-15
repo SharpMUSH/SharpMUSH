@@ -18,6 +18,7 @@ public class ChannelMessageRequestHandler(
 	INotifyService notifyService,
 	IMediator mediator,
 	IAttributeService attributeService,
+	IMUSHCodeParser parser,
 	ILogger<ChannelMessageRequestHandler> logger)
 	: INotificationHandler<ChannelMessageNotification>
 {
@@ -305,26 +306,50 @@ public class ChannelMessageRequestHandler(
 	}
 
 	/// <summary>
-	/// Evaluates a mogrify attribute on the mogrifier object
+	/// A fresh evaluation context for softcode this pipeline runs on someone else's behalf.
+	///
+	/// <para><c>Mediator.Publish</c> hands a notification handler no parse frame, so the injected
+	/// parser's state stack is empty and <c>CurrentState</c> would throw. <see cref="ParserState.RootFor"/>
+	/// is the same answer <c>EventService</c> and the HTTP handler give to the same problem. The actor
+	/// is the speaker, matching PennMUSH's <c>call_attrib(thing, attr, buff, player, …)</c>: the speaker
+	/// is the enactor, and the attribute's holder becomes the executor once the body runs
+	/// (<c>AttributeService.RunAsOwnerAsync</c>), which leaves the speaker as %@.</para>
+	/// </summary>
+	private IMUSHCodeParser EvaluationContextFor(AnySharpObject actor)
+		=> parser.FromState(ParserState.RootFor(actor.Object().DBRef) with
+		{
+			ExecutionBudget = ExecutionBudget.Current
+		});
+
+	/// <summary>
+	/// Evaluates one <c>MOGRIFY`*</c> attribute on the channel's mogrifier object.
+	///
+	/// <para>A mogrifier that is absent or that yields nothing leaves the message alone - that is the
+	/// normal path, and it needs no exception. A mogrifier whose softcode actually throws must not take
+	/// the channel send down with it, so the line still goes out unmogrified, but the failure is logged
+	/// rather than discarded. Budget exhaustion is not a mogrifier fault and propagates.</para>
 	/// </summary>
 	private async ValueTask<MString> EvaluateMogrifyAttribute(AnySharpObject executor, AnySharpObject mogrifier, string attributeName, Dictionary<string, CallState> args)
 	{
 		try
 		{
-			var result = await attributeService.EvaluateAttributeFunctionAsync(
-				null!, // parser - not needed for attribute evaluation
+			return await attributeService.EvaluateAttributeFunctionAsync(
+				EvaluationContextFor(executor),
 				executor,
 				mogrifier,
 				attributeName,
 				args,
 				evalParent: true,
 				ignorePermissions: false);
-
-			return result;
 		}
-		catch
+		catch (OperationCanceledException)
 		{
-			// If attribute doesn't exist or evaluation fails, return empty
+			throw;
+		}
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex, "Mogrifier {Mogrifier} failed to evaluate {Attribute}",
+				mogrifier.Object().DBRef, attributeName);
 			return MarkupText.Empty;
 		}
 	}

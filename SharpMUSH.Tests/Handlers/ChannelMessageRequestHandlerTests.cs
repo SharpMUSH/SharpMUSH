@@ -5,6 +5,7 @@ using NSubstitute;
 using SharpMUSH.Implementation.Handlers;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -21,6 +22,7 @@ public class ChannelMessageRequestHandlerTests
 			notifyService,
 			Substitute.For<IMediator>(),
 			Substitute.For<IAttributeService>(),
+			Substitute.For<IMUSHCodeParser>(),
 			NullLogger<ChannelMessageRequestHandler>.Instance);
 
 		var member = new AnySharpObject(Thing(300, "Listener"));
