@@ -4,6 +4,14 @@ namespace SharpMUSH.Tests.Parser;
 
 public class ExecutionBudgetCancellationTests
 {
+	[Test]
+	public async Task ZeroDurationIsCancelledBeforeConstructionReturns()
+	{
+		using var budget = new ExecutionBudget(TimeSpan.Zero);
+		await Assert.That(budget.Token.IsCancellationRequested).IsTrue();
+		await Assert.That(budget.IsExpired).IsTrue();
+	}
+
 	private sealed class ManualTimerProvider : TimeProvider
 	{
 		private Action? _fire;

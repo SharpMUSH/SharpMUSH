@@ -590,14 +590,15 @@ public class RecurringJobTests
 		var objects = Substitute.For<IObjectStore>();
 		var armed = false;
 		var blocked = false;
+		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		CancellationToken observed = default;
 		async Task Block(string current, CancellationToken ct)
 		{
 			if (!armed || blocked || current != stage) return;
 			blocked = true;
 			observed = ct;
-			using var watchdog = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
-			await Task.Delay(Timeout.InfiniteTimeSpan, ct.CanBeCanceled ? ct : watchdog.Token);
+			entered.SetResult();
+			await Task.Delay(Timeout.InfiniteTimeSpan, ct);
 		}
 		async ValueTask<RecurringJobDocument?> Read(CancellationToken ct)
 		{
@@ -630,8 +631,13 @@ public class RecurringJobTests
 		context.Clock.Now = context.Clock.Now.AddMinutes(1);
 		await service.RunDueAsync();
 		armed = true;
-		using var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(100));
-		using (budget.Enter()) await context.Callbacks.Single()();
+		using var cancellation = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancellation.Token);
+		Task<CallState?> firing;
+		using (budget.Enter()) firing = context.Callbacks.Single()().AsTask();
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+		await cancellation.CancelAsync();
+		await firing;
 		await Assert.That(blocked).IsTrue();
 		await Assert.That(observed).IsEqualTo(budget.Token);
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
@@ -694,8 +700,13 @@ public class RecurringJobTests
 				attempts++;
 				activeWrites++;
 				observed = ct;
-				using var watchdog = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
-				try { await Task.Delay(Timeout.InfiniteTimeSpan, ct.CanBeCanceled ? ct : watchdog.Token); }
+				var cancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+				using var registration = ct.Register(cancelled.SetResult);
+				try
+				{
+					await cancelled.Task.WaitAsync(TimeSpan.FromSeconds(2));
+					ct.ThrowIfCancellationRequested();
+				}
 				finally { activeWrites--; }
 			}
 			await backing.SetExpandedServerData(RecurringJobService.StorageKey, document, ct);

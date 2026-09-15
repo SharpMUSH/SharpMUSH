@@ -23,6 +23,7 @@ public sealed class ExecutionBudget : IDisposable
 			throw new ArgumentOutOfRangeException(nameof(duration));
 		_duration = duration;
 		_deadline = new CancellationTokenSource(duration, timerProvider);
+		if (duration == TimeSpan.Zero) _deadline.Cancel();
 		_cancellation = cancellationToken.CanBeCanceled
 			? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _deadline.Token)
 			: _deadline;
