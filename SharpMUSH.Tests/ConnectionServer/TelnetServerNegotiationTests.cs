@@ -212,8 +212,9 @@ public class TelnetServerNegotiationTests
 			laterPublishStarted.TrySetResult();
 		}
 
-		var (toServer, fromServer, handler, published, cts) = StartServer(
+		var (toServer, fromServer, handler, published, cancellation) = StartServer(
 			connectionService: connectionService, beforePublish: BeforePublish);
+		using var cts = cancellation;
 		try
 		{
 			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, DO, TTYPE));
@@ -251,7 +252,6 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 
