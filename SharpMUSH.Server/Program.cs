@@ -176,7 +176,14 @@ public class Program
 		// Inbound HTTP to the MUSH: /http/<path> runs the http_handler's <METHOD> attribute as
 		// commands, PennMUSH-style (see help sharphttp). Prefixed (rather than a catch-all) so it
 		// cannot shadow the portal's routes.
-		app.Map("/http/{**path}", HandleMushHttpRequest);
+		//
+		// This is the one route that runs arbitrary softcode for an anonymous caller, so it carries
+		// PennMUSH's own admission control: the "softcode-http" policy is the @config http_per_second
+		// quota (src/bsd.c http_quota), one global budget rather than a per-IP allowance. The
+		// evaluation deadline (queue_entry_cpu_time) and the response-size ceiling are separate
+		// budgets inside the dispatcher and are unaffected.
+		app.Map("/http/{**path}", HandleMushHttpRequest)
+			.RequireRateLimiting("softcode-http");
 
 		app.MapPrometheusScrapingEndpoint();
 

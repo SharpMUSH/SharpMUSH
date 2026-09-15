@@ -31,10 +31,22 @@ public class HttpHandlerCommandService(
 		CancellationToken ct = default)
 	{
 		ct.ThrowIfCancellationRequested();
-		var handlerDbRef = options.CurrentValue.Database.HttpHandler;
+		var configuration = options.CurrentValue.Database;
+		var handlerDbRef = configuration.HttpHandler;
 		if (handlerDbRef is null or 0)
 		{
 			logger.LogDebug("Inbound HTTP request but no http_handler is configured.");
+			return new NotFound();
+		}
+
+		// PennMUSH refuses an HTTP request outright while http_per_second is below one, in the same
+		// breath as an unusable http_handler (src/bsd.c:3740-3743, reason "No HTTPHandler") — zero is
+		// how an operator turns the softcode HTTP surface off, not merely how they throttle it. The
+		// per-second quota itself is admission control one layer up, on the route.
+		if (configuration.HttpRequestsPerSecond < 1)
+		{
+			logger.LogDebug("Inbound HTTP request but http_per_second is {PerSecond}; the HTTP surface is off.",
+				configuration.HttpRequestsPerSecond);
 			return new NotFound();
 		}
 

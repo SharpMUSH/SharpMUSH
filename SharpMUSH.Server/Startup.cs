@@ -18,11 +18,13 @@ using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
+using SharpMUSH.Server.RateLimiting;
 using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using SurrealDb.Net;
 using SurrealDb.Embedded.InMemory;
+using System.Globalization;
 using System.Threading.RateLimiting;
 using OpenTelemetry.ResourceDetectors.Container;
 using Quartz;
@@ -764,6 +766,43 @@ public class Startup(
 						Window = TimeSpan.FromMinutes(1),
 						QueueLimit = 0
 					}));
+
+			// "softcode-http" policy: PennMUSH's http_per_second quota on /http/{**path}, the only
+			// surface that runs arbitrary softcode for an anonymous caller. Penn keeps ONE global
+			// counter rather than a per-IP allowance (src/bsd.c http_quota), so the partition key is
+			// the configured limit and not the client — every caller draws on the same budget.
+			//
+			// Keying on the limit is what makes @config/set http_per_second live: a changed setting
+			// lands in a fresh partition sized to it, instead of leaving a bucket built for the old
+			// one in place. The option is read per request (never captured), as the auth surfaces
+			// read their sitelock rules.
+			//
+			// Zero or less is Penn's "HTTP is off" setting and is answered as an unconfigured
+			// http_handler by HttpHandlerCommandService (404), not throttled to death here.
+			opts.AddPolicy("softcode-http", httpContext =>
+			{
+				var perSecond = httpContext.RequestServices
+					.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
+					.CurrentValue.Database.HttpRequestsPerSecond;
+
+				return perSecond < 1
+					? RateLimitPartition.GetNoLimiter(0u)
+					: RateLimitPartition.Get(perSecond, limit => new HttpQuotaRateLimiter(limit));
+			});
+
+			// Penn schedules the next attempt with http_msecs_till_next; the HTTP equivalent is to
+			// tell the client when to come back. Only a limiter that supplies the metadata adds the
+			// header, so the portal's own policies are unaffected.
+			opts.OnRejected = (context, _) =>
+			{
+				if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+				{
+					context.HttpContext.Response.Headers.RetryAfter =
+						((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+				}
+
+				return ValueTask.CompletedTask;
+			};
 		});
 
 		services.AddProblemDetails();
