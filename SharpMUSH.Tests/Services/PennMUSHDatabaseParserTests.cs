@@ -274,6 +274,49 @@ public class PennMUSHDatabaseParserTests
 		await Assert.That(database.FlagDefinitions.Single().Aliases).IsEquivalentTo(["OTAG"]);
 	}
 
+	/// <summary>
+	/// A definition table SharpMUSH cannot make sense of costs the game its definitions and not its
+	/// world. The entry readers take a table's fields in the order PennMUSH writes them, so a dump
+	/// whose entries carry a field more would otherwise throw out of the parse before the converter
+	/// ever ran, and take every object with it.
+	/// </summary>
+	[Test]
+	public async Task ATableThatCannotBeReadCostsItsDefinitionsAndNotTheObjects()
+	{
+		var database = await ParseText(Dump(
+			"+FLAGS LIST",
+			"flagcount 1",
+			" name \"ORACLE_TAG\"",
+			"  letter \"o\"",
+			"  gravity \"9.8\"",
+			"  type \"THING\"",
+			"  perms \"\"",
+			"  negate_perms \"\"",
+			"~1",
+			"!0",
+			"name \"Room Zero\"",
+			"location #-1",
+			"contents #-1",
+			"exits #-1",
+			"next #-1",
+			"parent #-1",
+			"lockcount 0",
+			"owner #1",
+			"zone #-1",
+			"pennies 0",
+			"type 1",
+			"flags \"LINK_OK\"",
+			"powers \"\"",
+			"warnings \"\"",
+			"created 1789145415",
+			"modified 1789145415",
+			"attrcount 0",
+			"***END OF DUMP***"));
+
+		await Assert.That(database.FlagDefinitions).IsEmpty();
+		await Assert.That(database.Objects.Select(o => o.Name)).IsEquivalentTo(["Room Zero"]);
+	}
+
 	/// <summary>A dump with no definition tables at all still reads, with nothing invented for it.</summary>
 	[Test]
 	public async Task ADumpWithoutDefinitionTablesHasNoDefinitions()
@@ -299,6 +342,10 @@ public class PennMUSHDatabaseParserTests
 	{
 		await Assert.That(async () => await ParseText("!0\nRoom Zero\n-1\n")).Throws<FormatException>();
 	}
+
+	/// <summary>A hand-written dump: the header every one needs, then the lines the test is about.</summary>
+	private static string Dump(params string[] lines)
+		=> string.Join("\n", (string[])["+V-4199422", "dbversion 6", "savedtime \"Fri Sep 11 16:50:50 2026\"", .. lines]) + "\n";
 
 	private static async Task<PennMUSHDatabase> ParseText(string text)
 	{

@@ -120,26 +120,40 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 		CancellationToken cancellationToken)
 	{
 		var section = (await reader.ReadLineAsync(cancellationToken))!;
-		switch (section)
+
+		// A table SharpMUSH cannot make sense of costs the game its definitions and not its objects:
+		// the world is the point of an import, and a definition is a convenience beside it. Both the
+		// unknown section and the unreadable one leave through the skip below, which resynchronises on
+		// the next section — a definition table is always followed by one.
+		try
 		{
-			case "+FLAGS LIST":
-				await ReadFlagTableAsync(reader, database.FlagDefinitions, cancellationToken);
-				break;
+			switch (section)
+			{
+				case "+FLAGS LIST":
+					await ReadFlagTableAsync(reader, database.FlagDefinitions, cancellationToken);
+					return;
 
-			case "+POWER LIST":
-				// PennMUSH keeps its powers in a flag table of their own, written by the same routine.
-				await ReadFlagTableAsync(reader, database.PowerDefinitions, cancellationToken);
-				break;
+				case "+POWER LIST":
+					// PennMUSH keeps its powers in a flag table of their own, written by the same routine.
+					await ReadFlagTableAsync(reader, database.PowerDefinitions, cancellationToken);
+					return;
 
-			case "+ATTRIBUTES LIST":
-				await ReadAttributeTableAsync(reader, database.AttributeDefinitions, cancellationToken);
-				break;
+				case "+ATTRIBUTES LIST":
+					await ReadAttributeTableAsync(reader, database.AttributeDefinitions, cancellationToken);
+					return;
 
-			default:
-				logger.LogWarning("Skipping PennMUSH database section {Section}, which SharpMUSH does not read", section);
-				await SkipLabeledAsync(reader, cancellationToken);
-				break;
+				default:
+					logger.LogWarning("Skipping PennMUSH database section {Section}, which SharpMUSH does not read", section);
+					break;
+			}
 		}
+		catch (FormatException ex)
+		{
+			logger.LogWarning(ex,
+				"Reading the PennMUSH {Section} section failed; its definitions are dropped and the world still loads", section);
+		}
+
+		await SkipLabeledAsync(reader, cancellationToken);
 	}
 
 	private async Task ReadFlagTableAsync(PennMUSHDumpReader reader, List<PennMUSHFlagDefinition> definitions,

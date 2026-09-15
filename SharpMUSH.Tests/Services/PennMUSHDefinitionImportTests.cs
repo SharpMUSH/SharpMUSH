@@ -183,6 +183,70 @@ public class PennMUSHDefinitionImportTests
 	}
 
 	/// <summary>
+	/// A game running before an import may already have asked after a name the source defines —
+	/// <c>@attribute ZLEAVE</c> — which caches the miss. Defining it has to reach that cached answer.
+	/// </summary>
+	[Test]
+	public async Task DefiningAStandardAttributeInvalidatesAnEarlierMissForIt()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+
+		await Assert.That(await world.Mediator.Send(new GetAttributeEntryQuery("ZLEAVE"))).IsNull()
+			.Because("nothing has defined ZLEAVE yet, and this caches that answer");
+
+		await ImportAsync(world, await world.Parser.ParseFileAsync(FixturePath));
+
+		var entry = await world.Mediator.Send(new GetAttributeEntryQuery("ZLEAVE"));
+		await Assert.That(entry).IsNotNull().Because("the import defined ZLEAVE after the miss was cached");
+		await Assert.That(entry!.DefaultFlags).IsEquivalentTo(["no_command", "prefixmatch"]);
+	}
+
+	/// <summary>
+	/// A site that widened a flag past what this server allows is told where the source's own type
+	/// list is still in hand. The alternative is one per-object refusal per object, far from the
+	/// table that knew the answer.
+	/// </summary>
+	[Test]
+	public async Task AKeptDefinitionNarrowerThanTheSourcesIsReported()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var result = await ImportAsync(world, CustomFixture());
+
+		await Assert.That(result.Warnings.Any(w => w.Contains("Flag ABODE") && w.Contains("THING"))).IsTrue()
+			.Because("the source allows ABODE on a thing and SharpMUSH's own definition does not");
+	}
+
+	/// <summary>
+	/// And a stock table says nothing, because SharpMUSH's seed is no longer narrower than PennMUSH's
+	/// own for any of its 64 flags — see <c>FlagSeedIntegrityTests</c>. This is the import side of
+	/// that: a seed narrowed again would show up here as imported objects quietly losing a flag.
+	/// </summary>
+	[Test]
+	public async Task AStockTableIsNarrowerNowhere()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var result = await ImportAsync(world, await world.Parser.ParseFileAsync(FixturePath));
+
+		await Assert.That(result.Warnings.Where(w => w.Contains("which SharpMUSH's own definition does not"))).IsEmpty();
+	}
+
+	/// <summary>
+	/// What a definition this server keeps its own version of loses is not reported as a loss: the
+	/// definition was never a candidate for import, and a stock table would name 213 of them.
+	/// </summary>
+	[Test]
+	public async Task AKeptDefinitionIsNotReportedForSemanticsItWasNeverGoingToBringOver()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var result = await ImportAsync(world, CustomFixture());
+
+		await Assert.That(result.Warnings.Where(w => w.Contains("DESCRIBE") && w.Contains("default value"))).IsEmpty();
+		await Assert.That(result.Warnings.Where(w => w.Contains("DESCRIBE") && w.Contains("#7"))).IsEmpty();
+		await Assert.That(result.Warnings.Any(w => w.Contains("ORACLE_NOTE") && w.Contains("default value"))).IsTrue()
+			.Because("ORACLE_NOTE is imported, so its unimportable default value is a real loss");
+	}
+
+	/// <summary>
 	/// A site's own definitions, and deliberate collisions with this server's protected built-ins: a
 	/// WIZARD that would be royalty-settable on a thing, a DESCRIBE that would be wizard-only, an
 	/// alias that would shadow DARK and a letter ON_VACATION already carries.
@@ -206,7 +270,8 @@ public class PennMUSHDefinitionImportTests
 				Name = "WIZARD", Letter = "q", Types = ["THING"],
 				SetPermissions = ["royalty"], UnsetPermissions = ["royalty"]
 			},
-			new PennMUSHFlagDefinition { Name = "CONNECTED", Letter = "c", Types = ["PLAYER"], SetPermissions = ["internal"] }
+			new PennMUSHFlagDefinition { Name = "CONNECTED", Letter = "c", Types = ["PLAYER"], SetPermissions = ["internal"] },
+			new PennMUSHFlagDefinition { Name = "ABODE", Letter = "A", Types = ["ROOM", "THING"] }
 		],
 		PowerDefinitions =
 		[
@@ -222,7 +287,10 @@ public class PennMUSHDefinitionImportTests
 			{
 				Name = "ORACLE_NOTE", Flags = ["visual", "no_such_flag"], Creator = 0, Data = "nothing yet"
 			},
-			new PennMUSHAttributeDefinition { Name = "DESCRIBE", Flags = ["wizard"], Creator = 0, Aliases = ["DESC"] }
+			new PennMUSHAttributeDefinition
+			{
+				Name = "DESCRIBE", Flags = ["wizard"], Creator = 7, Data = "a default description", Aliases = ["DESC"]
+			}
 		],
 		Objects =
 		[

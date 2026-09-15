@@ -271,6 +271,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				kept.Add(definition.Name);
 				ReportAliasesOfKept("Flag", definition, existing, known, context);
+				ReportNarrowerKept("Flag", definition, existing, context);
 				continue;
 			}
 
@@ -302,7 +303,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		var known = new KnownDefinitions(await _mediator.CreateStream(new GetPowersQuery(), cancellationToken)
 			.Select(power => new KnownDefinition(power.Name, power.Symbol, power.TypeRestrictions,
-				power.Alias.Length == 0 ? [] : [power.Alias]))
+				string.IsNullOrEmpty(power.Alias) ? [] : [power.Alias]))
 			.ToArrayAsync(cancellationToken));
 
 		var kept = new List<string>();
@@ -321,6 +322,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				kept.Add(definition.Name);
 				ReportAliasesOfKept("Power", definition, existing, known, context);
+				ReportNarrowerKept("Power", definition, existing, context);
 				continue;
 			}
 
@@ -389,6 +391,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			// SharpMUSH resolves an attribute name without aliases, so DESC does not reach DESCRIBE.
 			aliased.AddRange(definition.Aliases);
 
+			if (!known.Add(definition.Name))
+			{
+				kept.Add(definition.Name);
+				continue;
+			}
+
 			if (definition.Data.Length > 0)
 			{
 				context.Warnings.Add($"Standard attribute {definition.Name}: its default value is not imported, " +
@@ -399,12 +407,6 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				context.Warnings.Add($"Standard attribute {definition.Name}: #{creator} defined it in the source, " +
 					"which SharpMUSH's attribute table does not record");
-			}
-
-			if (!known.Add(definition.Name))
-			{
-				kept.Add(definition.Name);
-				continue;
 			}
 
 			// One flag name SharpMUSH does not know fails the whole set, as string_to_atrflagsets does
@@ -555,6 +557,29 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					break;
 			}
 		}
+	}
+
+	/// <summary>
+	/// What an imported object loses to a definition this server keeps a narrower version of. A flag
+	/// the source allowed on a type this server does not will be refused object by object in
+	/// <see cref="SetFlagsAsync"/>, which is far from the table that knew the source's own type list.
+	/// </summary>
+	private static void ReportNarrowerKept(string kind, PennMUSHFlagDefinition definition, KnownDefinition existing,
+		PennMUSHConversionContext context)
+	{
+		if (existing.TypeRestrictions.Length == 0 || definition.Types.Count == 0)
+		{
+			return;
+		}
+
+		var lost = definition.Types.Except(existing.TypeRestrictions, StringComparer.OrdinalIgnoreCase).ToArray();
+		if (lost.Length == 0)
+		{
+			return;
+		}
+
+		context.Warnings.Add($"{kind} {existing.Name}: the source allows it on {string.Join(" ", lost)}, " +
+			"which SharpMUSH's own definition does not, so objects of those types will not keep it");
 	}
 
 	/// <summary>
