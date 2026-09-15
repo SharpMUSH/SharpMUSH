@@ -790,7 +790,7 @@ public class DatabaseCommandTests
 	/// against the real scheduler, so the queued callbacks actually run.
 	/// </summary>
 	private async Task RunMapSqlAsAsync(DBRef requester, DBRef enactor, string[] switches,
-		string objectAndAttribute, string query)
+		string objectAndAttribute, string query, ISqlService? sqlService = null)
 	{
 		var state = ParserState.RootFor(requester) with
 		{
@@ -806,7 +806,9 @@ public class DatabaseCommandTests
 		await state.KnownEnactorObject(Mediator);
 		var parser = Substitute.For<IMUSHCodeParser>();
 		parser.CurrentState.Returns(state);
-		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services);
+		var commands = sqlService is null
+			? ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services)
+			: ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, sqlService);
 		await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
 	}
 
@@ -933,6 +935,105 @@ public class DatabaseCommandTests
 		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, target, m => m.StartsWith(marker));
 		await Assert.That(SqlWebAppFactoryArg.Notifications.For(target).First(m => m.StartsWith(marker)))
 			.IsEqualTo($"{marker} #{target.Number} #{triggerer.Number} #{triggerer.Number}");
+	}
+
+	/// <summary>
+	/// PennMUSH also exposes every nonnumeric column name as an argument register
+	/// (<c>src/sql.c:596-597</c>), which softcode reads with <c>r(&lt;name&gt;,args)</c>. Register
+	/// names are case-insensitive, and the <c>/colnames</c> header row carries none of them.
+	/// </summary>
+	[Test]
+	[NotInParallel]
+	public async Task MapSqlRowCallbackExposesNamedColumnArguments()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlNamedArgs");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var marker = "named-" + Guid.NewGuid().ToString("N");
+		await testParser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&MAPNAMED me=think {marker} %0|%1|%2|[r(colname,args)]|[r(AMOUNT,args)]"));
+
+		await testParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(
+			"@mapsql/colnames me/MAPNAMED=SELECT col1 AS colname, col3 AS amount FROM test_mapsql_data_cmd ORDER BY id LIMIT 2"));
+
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, player.DbRef,
+			m => m.StartsWith($"{marker} 2|"));
+		var callbacks = SqlWebAppFactoryArg.Notifications.For(player.DbRef).Where(m => m.StartsWith(marker)).ToArray();
+		await Assert.That(callbacks).IsEquivalentTo(new[]
+		{
+			$"{marker} 0|colname|amount||",
+			$"{marker} 1|data1_col1|10|data1_col1|10",
+			$"{marker} 2|data2_col1|20|data2_col1|20"
+		});
+	}
+
+	/// <summary>
+	/// A column named with a strict integer gets no named register (<c>src/sql.c:597</c>), so it can
+	/// never displace another column's argument position. A NULL cell reads back as empty under both
+	/// the numeric and the named register.
+	/// </summary>
+	[Test]
+	[NotInParallel]
+	public async Task MapSqlRowCallbackKeepsNumericColumnNamesOutOfTheArgumentPositions()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlNumericNames");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var marker = "numeric-" + Guid.NewGuid().ToString("N");
+		await testParser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&MAPNUMERIC me=think {marker} %1|%2|%3|[r(2,args)]|[r(nothing,args)]|[r(beta,args)]"));
+
+		await testParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(
+			"@mapsql me/MAPNUMERIC=SELECT col1 AS `2`, col2 AS beta, NULL AS nothing FROM test_mapsql_data_cmd WHERE id = 1"));
+
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, player.DbRef, m => m.StartsWith(marker));
+		await Assert.That(SqlWebAppFactoryArg.Notifications.For(player.DbRef).First(m => m.StartsWith(marker)))
+			.IsEqualTo($"{marker} data1_col1|data1_col2||data1_col2||data1_col2");
+	}
+
+	/// <summary>
+	/// A streaming provider is free to hand the same dictionary back for every row, so a callback
+	/// that read it when it ran would see the last row's values. The arguments are materialised
+	/// before the callback is admitted.
+	/// </summary>
+	[Test]
+	[NotInParallel]
+	public async Task MapSqlRowCallbacksKeepTheirOwnValuesWhenTheProviderReusesTheRowDictionary()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlReusedRow");
+		var testParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var marker = "reused-" + Guid.NewGuid().ToString("N");
+		await testParser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&MAPREUSED me=think {marker} %0|%1|[r(label,args)]"));
+
+		var reused = new Dictionary<string, object?>();
+		async IAsyncEnumerable<Dictionary<string, object?>> Rows()
+		{
+			foreach (var value in new[] { "first", "second", "third" })
+			{
+				await Task.Yield();
+				reused.Clear();
+				reused["label"] = value;
+				yield return reused;
+			}
+		}
+
+		var sql = Substitute.For<ISqlService>();
+		sql.IsAvailable.Returns(true);
+		sql.ExecuteStreamQueryAsync(Arg.Any<string>()).Returns(_ => Rows());
+
+		await RunMapSqlAsAsync(player.DbRef, player.DbRef, [], $"{player.DbRef}/MAPREUSED", "SELECT label", sql);
+
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, player.DbRef,
+			m => m.StartsWith($"{marker} 3|"));
+		var callbacks = SqlWebAppFactoryArg.Notifications.For(player.DbRef).Where(m => m.StartsWith(marker)).ToArray();
+		await Assert.That(callbacks).IsEquivalentTo(new[]
+		{
+			$"{marker} 1|first|first",
+			$"{marker} 2|second|second",
+			$"{marker} 3|third|third"
+		});
 	}
 
 	/// <summary>

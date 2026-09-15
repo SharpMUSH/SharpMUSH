@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Definitions;
+﻿using SharpMUSH.Implementation.Commands;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -210,16 +211,9 @@ public partial class Functions
 					{
 						if (doFieldNames && firstRow)
 						{
-							var remainder = row.Keys
-								.Select((x, i)
-									=> new KeyValuePair<string, CallState>((i + 1).ToString(), MarkupText.Plain(x)))
-								.ToDictionary();
-
-							remainder.TryAdd("0", MushText.Zero);
-
 							var headerResult = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, found,
 								attrName,
-								remainder);
+								SqlRowArguments.ForHeader(row.Keys));
 
 							hadErrors |= headerResult.HadErrors;
 							results.Add(headerResult.Message ?? MarkupText.Empty);
@@ -227,14 +221,8 @@ public partial class Functions
 							firstRow = false;
 						}
 
-						var dict = row.Values.Select((x, i) =>
-								new KeyValuePair<string, CallState>((i + 1).ToString(),
-									MarkupText.Plain(x?.ToString() ?? string.Empty)))
-							.ToDictionary();
-						dict.TryAdd("0", MarkupText.Plain(rowNumber.ToString()));
-
 						var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, found, attrName,
-							dict);
+							SqlRowArguments.ForRow(row, rowNumber));
 
 						hadErrors |= result.HadErrors;
 						results.Add(result.Message ?? MarkupText.Empty);

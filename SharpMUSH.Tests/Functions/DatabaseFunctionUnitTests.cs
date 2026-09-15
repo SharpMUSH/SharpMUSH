@@ -408,6 +408,44 @@ public class DatabaseFunctionUnitTests
 			$"mapsql({objDbRef}/Test_Mapsql_PreparedStatement_TableDoesNotExist,lit(SELECT * FROM nonexistent_table),%b,0,param)");
 		await Assert.That(result.ToPlainText()).StartsWith("#-1 SQL ERROR");
 	}
+	/// <summary>
+	/// <c>fun_mapsql</c> exposes every nonnumeric column name as an argument register
+	/// (<c>src/sql.c:937-938</c>), read back with <c>r(&lt;name&gt;,args)</c>; register names are
+	/// case-insensitive. A strict-integer column name gets none, so it cannot displace an argument
+	/// position, and a NULL cell reads back empty either way.
+	/// </summary>
+	[Test]
+	public async Task Test_Mapsql_NamedColumnArguments()
+	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlNamedArgs");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"&Test_Mapsql_NamedColumnArguments {objDbRef}=%0|%1|%2|%3|[r(NAME,args)]|[r(2,args)]|[r(nothing,args)]"));
+
+		var result = await PollFunctionUntilAttributeReadyAsync(
+			Parser,
+			$"mapsql({objDbRef}/Test_Mapsql_NamedColumnArguments,lit(SELECT `name`,`value` AS `2`,NULL AS nothing FROM `test_sql_data_func` WHERE id = 1))");
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("1|test_sql_row1|100||test_sql_row1|100|");
+	}
+
+	/// <summary>
+	/// The <c>fieldnames</c> header row carries the column names as <c>%1</c>…<c>%N</c> and no named
+	/// registers at all (<c>src/sql.c:873-878</c>).
+	/// </summary>
+	[Test]
+	public async Task Test_Mapsql_HeaderRowHasNoNamedArguments()
+	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlHeaderArgs");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"&Test_Mapsql_HeaderRowHasNoNamedArguments {objDbRef}=%0|%1|[r(name,args)]"));
+
+		var result = await PollFunctionUntilAttributeReadyAsync(
+			Parser,
+			$"mapsql({objDbRef}/Test_Mapsql_HeaderRowHasNoNamedArguments,lit(SELECT `name` FROM `test_sql_data_func` WHERE id = 1),%r,1)");
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("0|name|\n1|test_sql_row1|test_sql_row1");
+	}
+
 	private const string NoSuchAttributeError = "#-1 NO SUCH ATTRIBUTE";
 
 	/// <summary>

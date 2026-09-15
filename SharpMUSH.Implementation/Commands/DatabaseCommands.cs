@@ -9,6 +9,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Data.Common;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Definitions;
@@ -223,18 +224,9 @@ public partial class Commands
 						sourceRows++;
 						if (colnamesSwitch && firstRow)
 						{
+							var headerState = CallbackState(SqlRowArguments.ForHeader(row.Keys));
 							var headerAdmission = await Mediator.Send(new AdmitAttributeRequest(
-								() =>
-								{
-									var remainder = row.Keys
-										.Select((x, i)
-												=> new KeyValuePair<string, CallState>((i + 1).ToString(), MarkupText.Plain(x)))
-										.ToDictionary();
-
-									remainder.TryAdd("0", MushText.Zero);
-
-									return ValueTask.FromResult(CallbackState(remainder));
-								}, callbackAttribute, targetRef), ExecutionBudget.CurrentToken);
+								() => ValueTask.FromResult(headerState), callbackAttribute, targetRef), ExecutionBudget.CurrentToken);
 
 							if (!headerAdmission.Accepted)
 							{
@@ -245,18 +237,11 @@ public partial class Commands
 							firstRow = false;
 						}
 
-						var currentRow = rowNumber;
+						// Materialised before admission: a provider is free to hand the same dictionary
+						// back for every row, and a callback that read it when it ran would see the last.
+						var rowState = CallbackState(SqlRowArguments.ForRow(row, rowNumber));
 						var rowAdmission = await Mediator.Send(new AdmitAttributeRequest(
-							() =>
-							{
-								var dict = row.Values.Select((x, i) =>
-										new KeyValuePair<string, CallState>((i + 1).ToString(),
-											MarkupText.Plain(x?.ToString() ?? string.Empty)))
-									.ToDictionary();
-								dict.TryAdd("0", MarkupText.Plain(currentRow.ToString()));
-
-								return ValueTask.FromResult(CallbackState(dict));
-							}, callbackAttribute, targetRef), ExecutionBudget.CurrentToken);
+							() => ValueTask.FromResult(rowState), callbackAttribute, targetRef), ExecutionBudget.CurrentToken);
 
 						if (!rowAdmission.Accepted)
 						{
@@ -334,4 +319,71 @@ public partial class Commands
 	/// <summary>A backslash and the character it escapes, or a bare backslash ending the input.</summary>
 	[GeneratedRegex(@"\\([\s\S]?)")]
 	private static partial Regex EscapedCharacter();
+}
+/// <summary>
+/// The argument registers one SQL result row hands a <c>@mapsql</c> or <c>mapsql()</c> callback.
+/// PennMUSH builds them the same way for the command (<c>src/sql.c:577-600</c>) and the function
+/// (<c>src/sql.c:873-939</c>): <c>%0</c> is the row number, <c>%1</c>…<c>%N</c> are the field
+/// values in column order, and every column whose name is not a strict integer gets a register
+/// under that name as well, which softcode reads as <c>r(&lt;name&gt;,args)</c>.
+/// </summary>
+/// <remarks>
+/// Names are matched case-insensitively and a later column of the same name wins, because Penn
+/// upper-cases every register name on both set and get (<c>pe_regs_set_if</c>,
+/// <c>src/parse.c:1123</c>; <c>pe_regs_get</c>, <c>:1207</c>) and <c>pe_regs_set</c> overwrites.
+/// Numeric names are skipped so a column called <c>1</c> cannot displace the first field.
+/// <para>One deliberate simplification of Penn's two call sites: <c>fun_mapsql</c> skips the named
+/// register for an empty cell while <c>do_mapsql</c> writes it anyway. Both are indistinguishable
+/// here — an absent register and an empty one both read back as empty — so this writes it in
+/// either case.</para>
+/// </remarks>
+internal static class SqlRowArguments
+{
+	/// <summary>
+	/// The <c>/colnames</c> header callback's arguments: <c>%0</c> is the literal <c>0</c> and
+	/// <c>%1</c>…<c>%N</c> are the column names. Penn's header row carries no named registers.
+	/// </summary>
+	public static Dictionary<string, CallState> ForHeader(IEnumerable<string> columnNames)
+	{
+		var arguments = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase) { ["0"] = MushText.Zero };
+		var position = 0;
+		foreach (var name in columnNames)
+		{
+			arguments[(++position).ToString()] = MarkupText.Plain(name);
+		}
+
+		return arguments;
+	}
+
+	/// <summary>
+	/// One data row's arguments. Materialised eagerly from <paramref name="row"/>, so a provider
+	/// that hands the same dictionary back for every row cannot rewrite a queued callback's values.
+	/// </summary>
+	public static Dictionary<string, CallState> ForRow(IReadOnlyDictionary<string, object?> row, int rowNumber)
+	{
+		var arguments = new Dictionary<string, CallState>(StringComparer.OrdinalIgnoreCase)
+		{
+			["0"] = MarkupText.Plain(rowNumber.ToString())
+		};
+		var position = 0;
+		foreach (var (name, value) in row)
+		{
+			var cell = MarkupText.Plain(value?.ToString() ?? string.Empty);
+			arguments[(++position).ToString()] = cell;
+			if (!string.IsNullOrEmpty(name) && !IsStrictInteger(name))
+			{
+				arguments[name] = cell;
+			}
+		}
+
+		return arguments;
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>is_strict_integer</c> (<c>src/parse.c:556-566</c>): <c>strtol</c> consumes the
+	/// whole string — leading whitespace and a sign allowed, nothing trailing — and stays in range.
+	/// </summary>
+	private static bool IsStrictInteger(string value)
+		=> int.TryParse(value, NumberStyles.AllowLeadingWhite | NumberStyles.AllowLeadingSign,
+			CultureInfo.InvariantCulture, out _);
 }
