@@ -25,6 +25,7 @@ namespace SharpMUSH.Tests.ConnectionServer;
 /// was silently not offering: RFC 1091 terminal type (without which <c>terminfo()</c> can only ever
 /// answer "unknown") and MXP (without which no client can turn it on, however capable).
 /// </summary>
+[NotInParallel]
 public class TelnetServerNegotiationTests
 {
 	private const byte IAC = 255;
