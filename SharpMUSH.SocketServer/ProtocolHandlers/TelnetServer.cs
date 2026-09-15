@@ -86,6 +86,9 @@ public class TelnetServer : ConnectionHandler
 
 	private async Task RunConnectionAsync(ConnectionContext connection, long nextPort, CancellationToken ct)
 	{
+		using var readLifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		ct = readLifetime.Token;
+
 		// Assigned once BuildAsync returns; the callbacks below only run after that, since the
 		// interpreter has to exist before it can hand any of them anything.
 		TelnetInterpreter? telnetInterpreter = null;
@@ -293,102 +296,142 @@ public class TelnetServer : ConnectionHandler
 		var telnet = await builder.BuildAsync();
 		var readTask = ReadAndObserveNegotiationAsync(
 			telnet, connection.Transport.Input, AnnounceTelnetIfNegotiatedAsync, ct);
-		telnetInterpreter = telnet;
-
-		// The read loop is already running by now, so a fast client could have negotiated in the gap
-		// above and found nothing to sample. Re-sampling here closes it without needing a lock.
-		await AnnounceTelnetIfNegotiatedAsync();
-
-		var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint
-			? "unknown"
-			: $"{remoteEndpoint.Address}:{remoteEndpoint.Port}";
-
-		// Send Pueblo hello before registration so the client can respond
-		// before the welcome screen is sent by the main process.
-		if (_options.PuebloEnabled)
-		{
-			await telnet.SendAsync(PuebloHelloBytes);
-		}
-
-		// PennMUSH's CONN_SSL. Kestrel attaches ITlsHandshakeFeature only on an endpoint that actually
-		// terminated TLS, so this is the handshake that happened rather than anything the client says
-		// about itself — and it is false, correctly, on the plaintext listener.
-		var isSecure = connection.Features.Get<ITlsHandshakeFeature>() is not null;
-
-		await _connectionService.RegisterAsync(
-			nextPort,
-			remoteIp,
-			connection.RemoteEndPoint?.ToString() ?? remoteIp,
-			"telnet",
-		async (data) =>
-		{
-			// Write output to the network transport using SendAsync which handles
-			// IAC (0xFF) escaping and CRLF line termination internally.
-			// Write serialization is handled by the library's internal write lock.
-			_logger.LogTrace("OutputFunction called with {ByteCount} bytes for handle {Handle}", data.Length, nextPort);
-			try
-			{
-				await telnet.SendAsync(data);
-				_logger.LogTrace("Successfully sent {ByteCount} bytes to transport for handle {Handle}",
-					data.Length, nextPort);
-			}
-			catch (ObjectDisposedException ode)
-			{
-				_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
-			}
-		},
-		async (data) =>
-		{
-			// Write prompt output using SendPromptAsync which handles IAC (0xFF) escaping
-			// and adds the appropriate prompt terminator (EOR, GA, or CRLF) based on
-			// what the client has negotiated.
-			// Write serialization is handled by the library's internal write lock.
-			try
-			{
-				await telnet.SendPromptAsync(data);
-			}
-			catch (ObjectDisposedException ode)
-			{
-				_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
-			}
-		},
-		() => telnet.CurrentEncoding,
-		connection.Abort,
-		async (module, message) =>
-		{
-			await telnet.SendGMCPCommand(module, message);
-		},
-		isSecure: isSecure, cancellationToken: ct);
-
-		// The handle exists in the main process from here on, so everything negotiation produced before
-		// now can go out and land on a connection that is there to receive it.
-		await FlushPendingPublishesAsync();
-
 		try
 		{
+			telnetInterpreter = telnet;
+
+			// The read loop is already running by now, so a fast client could have negotiated in the gap
+			// above and found nothing to sample. Re-sampling here closes it without needing a lock.
+			await AnnounceTelnetIfNegotiatedAsync();
+
+			var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint
+				? "unknown"
+				: $"{remoteEndpoint.Address}:{remoteEndpoint.Port}";
+
+			// Send Pueblo hello before registration so the client can respond
+			// before the welcome screen is sent by the main process.
+			if (_options.PuebloEnabled)
+			{
+				await telnet.SendAsync(PuebloHelloBytes);
+			}
+
+			// PennMUSH's CONN_SSL. Kestrel attaches ITlsHandshakeFeature only on an endpoint that actually
+			// terminated TLS, so this is the handshake that happened rather than anything the client says
+			// about itself — and it is false, correctly, on the plaintext listener.
+			var isSecure = connection.Features.Get<ITlsHandshakeFeature>() is not null;
+
+			await _connectionService.RegisterAsync(
+				nextPort,
+				remoteIp,
+				connection.RemoteEndPoint?.ToString() ?? remoteIp,
+				"telnet",
+			async (data) =>
+			{
+				// Write output to the network transport using SendAsync which handles
+				// IAC (0xFF) escaping and CRLF line termination internally.
+				// Write serialization is handled by the library's internal write lock.
+				_logger.LogTrace("OutputFunction called with {ByteCount} bytes for handle {Handle}", data.Length, nextPort);
+				try
+				{
+					await telnet.SendAsync(data);
+					_logger.LogTrace("Successfully sent {ByteCount} bytes to transport for handle {Handle}",
+						data.Length, nextPort);
+				}
+				catch (ObjectDisposedException ode)
+				{
+					_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
+				}
+			},
+			async (data) =>
+			{
+				// Write prompt output using SendPromptAsync which handles IAC (0xFF) escaping
+				// and adds the appropriate prompt terminator (EOR, GA, or CRLF) based on
+				// what the client has negotiated.
+				// Write serialization is handled by the library's internal write lock.
+				try
+				{
+					await telnet.SendPromptAsync(data);
+				}
+				catch (ObjectDisposedException ode)
+				{
+					_logger.LogError(ode, "{ConnectionId} Stream has been closed", connection.ConnectionId);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "{ConnectionId} Unexpected Exception occurred", connection.ConnectionId);
+				}
+			},
+			() => telnet.CurrentEncoding,
+			connection.Abort,
+			async (module, message) =>
+			{
+				await telnet.SendGMCPCommand(module, message);
+			},
+			isSecure: isSecure, cancellationToken: ct);
+
+			// The handle exists in the main process from here on, so everything negotiation produced before
+			// now can go out and land on a connection that is there to receive it.
+			await FlushPendingPublishesAsync();
+
 			// Await the read task, which completes when the connection closes or the cancellation token
 			// is triggered.
-			await readTask;
+			await AwaitReadTaskAsync(readTask, connection.ConnectionId);
 		}
-		catch (ConnectionResetException)
+		finally
 		{
-			/* Disconnected while evaluating. That's fine. It just means someone closed their client. */
+			await StopTelnetAsync(readLifetime, readTask, telnet, connection.ConnectionId);
 		}
-		catch (OperationCanceledException)
+	}
+
+	private async Task StopTelnetAsync(
+		CancellationTokenSource readLifetime,
+		Task readTask,
+		TelnetInterpreter telnet,
+		string connectionId)
+	{
+		try
 		{
-			/* Connection closed via cancellation token - normal shutdown path. */
+			await readLifetime.CancelAsync();
 		}
 		catch (Exception ex)
 		{
-			_logger.LogDebug(ex, "Connection {ConnectionId} disconnected unexpectedly.", connection.ConnectionId);
+			_logger.LogDebug(ex, "Connection {ConnectionId} read cancellation failed", connectionId);
+		}
+
+		var readStopped = AwaitReadTaskAsync(readTask, connectionId);
+		var interpreterStopped = DisposeTelnetAsync(telnet, connectionId);
+		await Task.WhenAll(readStopped, interpreterStopped);
+	}
+
+	private async Task DisposeTelnetAsync(TelnetInterpreter telnet, string connectionId)
+	{
+		try
+		{
+			await telnet.DisposeAsync();
+		}
+		catch (Exception ex)
+		{
+			_logger.LogDebug(ex, "Connection {ConnectionId} telnet disposal failed", connectionId);
+		}
+	}
+
+	private async Task AwaitReadTaskAsync(Task readTask, string connectionId)
+	{
+		try
+		{
+			await readTask;
+		}
+		catch (Exception ex) when (ex is ConnectionResetException or OperationCanceledException)
+		{
+			// Normal disconnect or read-loop shutdown.
+		}
+		catch (Exception ex)
+		{
+			_logger.LogDebug(ex, "Connection {ConnectionId} disconnected unexpectedly.", connectionId);
 		}
 	}
 

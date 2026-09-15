@@ -14,6 +14,7 @@ using System.Net;
 using System.Text;
 using TelnetNegotiationCore.Builders;
 using TelnetNegotiationCore.Interpreters;
+using TelnetNegotiationCore.Plugins;
 using TelnetNegotiationCore.Protocols;
 
 namespace SharpMUSH.Tests.ConnectionServer;
@@ -58,16 +59,31 @@ public class TelnetServerNegotiationTests
 			Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(Task.FromException(new IOException("registration failed")));
 		var descriptors = Substitute.For<IDescriptorGeneratorService>();
 		descriptors.GetNextTelnetDescriptorAsync(Arg.Any<CancellationToken>()).Returns(42L);
+		var plugin = Substitute.For<ITelnetProtocolPlugin>();
+		plugin.ProtocolType.Returns(typeof(ITelnetProtocolPlugin));
+		plugin.Dependencies.Returns([]);
+		plugin.DisposeAsync().Returns(ValueTask.FromException(new InvalidOperationException("dispose failed")));
 		var input = new Pipe();
 		var output = new Pipe();
 		using var cancellation = new CancellationTokenSource();
 		var context = new FakeConnectionContext(new PipeDuplex(input.Reader, output.Writer), cancellation.Token);
 		var server = new TelnetServer(NullLogger<TelnetServer>.Instance, service, Substitute.For<IMessageBus>(),
-			descriptors, new ServerBuilderFactory(), new ConnectionServerOptions());
+			descriptors, new ServerBuilderFactory(plugin), new ConnectionServerOptions());
 		try
 		{
 			await Assert.That(async () => await server.OnConnectedAsync(context).WaitAsync(Timeout)).Throws<IOException>();
 			descriptors.Received(1).ReleaseTelnetDescriptor(42);
+			await plugin.Received(1).DisposeAsync();
+
+			while (output.Reader.TryRead(out var pending))
+			{
+				output.Reader.AdvanceTo(pending.Buffer.End);
+			}
+
+			await WriteAsync(input.Writer, IAC, WILL, TTYPE);
+			using var probe = new CancellationTokenSource(TimeSpan.FromMilliseconds(250));
+			await Assert.That(async () => await output.Reader.ReadAsync(probe.Token))
+				.Throws<OperationCanceledException>();
 		}
 		finally
 		{
@@ -78,12 +94,16 @@ public class TelnetServerNegotiationTests
 	}
 
 	/// <summary>A builder factory in server mode, standing in for the one DI registers.</summary>
-	private sealed class ServerBuilderFactory : ITelnetInterpreterFactory
+	private sealed class ServerBuilderFactory(ITelnetProtocolPlugin? plugin = null) : ITelnetInterpreterFactory
 	{
-		public TelnetInterpreterBuilder CreateBuilder() =>
-			new TelnetInterpreterBuilder()
+		public TelnetInterpreterBuilder CreateBuilder()
+		{
+			var builder = new TelnetInterpreterBuilder()
 				.UseMode(TelnetInterpreter.TelnetMode.Server)
 				.UseLogger(NullLogger<TelnetInterpreter>.Instance);
+
+			return plugin is null ? builder : builder.AddPlugin(plugin);
+		}
 	}
 
 	private sealed class PipeDuplex(PipeReader input, PipeWriter output) : IDuplexPipe
