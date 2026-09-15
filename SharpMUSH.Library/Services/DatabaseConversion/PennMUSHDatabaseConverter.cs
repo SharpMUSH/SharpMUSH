@@ -112,6 +112,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		try
 		{
+			// Ahead of the first progress report, since nothing to report on exists until it has run.
+			await ImportDefinitionsAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Creating objects", 0.0);
 
 			var objectCounts = await CreateObjectsAsync(pennDatabase, context, cancellationToken);
@@ -214,6 +216,364 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	internal static (long? Created, long? Modified) PennTimestamps(PennMUSHObject pennObject)
 		=> (pennObject.CreationTime > 0 ? pennObject.CreationTime * 1000 : null,
 			pennObject.ModificationTime > 0 ? pennObject.ModificationTime * 1000 : null);
+
+	/// <summary>
+	/// The source's definition tables — its flags, powers and standard attributes — before the object,
+	/// flag and attribute writes that resolve names against them.
+	/// </summary>
+	/// <remarks>
+	/// <para>A definition this server already has, by name or by alias, is left exactly as it is: a
+	/// built-in flag's permissions and type restrictions gate this server's own <c>@set</c> and
+	/// permission checks, and a system definition cannot be rewritten at all. What the source has and
+	/// this server does not is created without <see cref="SharpObjectFlag.System"/>, so an administrator
+	/// can still drop it afterwards.</para>
+	/// <para>PennMUSH's own definitions stay behind: <c>internal</c> among a flag's permissions marks
+	/// server state rather than site configuration — CONNECTED is a live session, GOING a queued
+	/// destruction — and the one internal standard attribute, XYXXY, is the password slot the parser
+	/// lifts into <see cref="PennMUSHObject.Password"/>.</para>
+	/// <para>Four collection reads front the pass and one create covers each new definition, so a stock
+	/// table costs those reads rather than a point query per row. Every write goes through the Mediator,
+	/// which invalidates the definition caches a running game has already read.</para>
+	/// </remarks>
+	private async Task ImportDefinitionsAsync(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		await ImportFlagDefinitionsAsync(pennDatabase.FlagDefinitions, context, cancellationToken);
+		await ImportPowerDefinitionsAsync(pennDatabase.PowerDefinitions, context, cancellationToken);
+		await ImportAttributeDefinitionsAsync(pennDatabase, context, cancellationToken);
+	}
+
+	private async Task ImportFlagDefinitionsAsync(List<PennMUSHFlagDefinition> definitions,
+		PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		if (definitions.Count == 0)
+		{
+			return;
+		}
+
+		var known = new KnownDefinitions(await _mediator.CreateStream(new GetAllObjectFlagsQuery(), cancellationToken)
+			.Select(flag => new KnownDefinition(flag.Name, flag.Symbol, flag.TypeRestrictions, flag.Aliases ?? []))
+			.ToArrayAsync(cancellationToken));
+
+		var kept = new List<string>();
+		var created = 0;
+
+		foreach (var definition in definitions)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+
+			if (definition.IsInternal)
+			{
+				continue;
+			}
+
+			if (known.Resolve(definition.Name) is { } existing)
+			{
+				kept.Add(definition.Name);
+				ReportAliasesOfKept("Flag", definition, existing, known, context);
+				continue;
+			}
+
+			var letter = UsableLetter("Flag", definition, known, context);
+			var aliases = UsableAliases("Flag", definition, known, context);
+			var flag = await _mediator.Send(new CreateObjectFlagCommand(definition.Name, aliases, letter, false,
+				[.. definition.SetPermissions], [.. definition.UnsetPermissions], [.. definition.Types]), cancellationToken);
+			if (flag is null)
+			{
+				context.Warnings.Add($"Flag {definition.Name} from the source's flag table could not be created");
+				continue;
+			}
+
+			known.Add(new KnownDefinition(flag.Name, flag.Symbol, flag.TypeRestrictions, aliases));
+			created++;
+		}
+
+		ReportKept("flag", kept, context);
+		_logger.LogInformation("Imported {Created} flag definitions, keeping SharpMUSH's for {Kept}", created, kept.Count);
+	}
+
+	private async Task ImportPowerDefinitionsAsync(List<PennMUSHFlagDefinition> definitions,
+		PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		if (definitions.Count == 0)
+		{
+			return;
+		}
+
+		var known = new KnownDefinitions(await _mediator.CreateStream(new GetPowersQuery(), cancellationToken)
+			.Select(power => new KnownDefinition(power.Name, power.Symbol, power.TypeRestrictions,
+				power.Alias.Length == 0 ? [] : [power.Alias]))
+			.ToArrayAsync(cancellationToken));
+
+		var kept = new List<string>();
+		var created = 0;
+
+		foreach (var definition in definitions)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+
+			if (definition.IsInternal)
+			{
+				continue;
+			}
+
+			if (known.Resolve(definition.Name) is { } existing)
+			{
+				kept.Add(definition.Name);
+				ReportAliasesOfKept("Power", definition, existing, known, context);
+				continue;
+			}
+
+			var letter = UsableLetter("Power", definition, known, context);
+			var aliases = UsableAliases("Power", definition, known, context);
+
+			// SharpMUSH gives a power one alias; PennMUSH writes a row per alias, and Announce has two.
+			if (aliases.Length > 1)
+			{
+				context.Warnings.Add($"Power {definition.Name}: SharpMUSH gives a power one alias, so only " +
+					$"{aliases[0]} is imported ({string.Join(" ", aliases[1..])} dropped)");
+				aliases = [aliases[0]];
+			}
+
+			var power = await _mediator.Send(new CreatePowerCommand(definition.Name,
+				aliases.Length == 0 ? string.Empty : aliases[0], letter, false,
+				[.. definition.SetPermissions], [.. definition.UnsetPermissions], [.. definition.Types]), cancellationToken);
+			if (power is null)
+			{
+				context.Warnings.Add($"Power {definition.Name} from the source's power table could not be created");
+				continue;
+			}
+
+			known.Add(new KnownDefinition(power.Name, power.Symbol, power.TypeRestrictions, aliases));
+			created++;
+		}
+
+		ReportKept("power", kept, context);
+		_logger.LogInformation("Imported {Created} power definitions, keeping SharpMUSH's for {Kept}", created, kept.Count);
+	}
+
+	/// <summary>
+	/// The source's standard attributes: the default flags an attribute of each name is created with.
+	/// </summary>
+	/// <remarks>
+	/// The table is read whole through <see cref="GetAllAttributeEntriesQuery"/> rather than a point
+	/// query per row, which a 213-name stock table would make 213 of.
+	/// </remarks>
+	private async Task ImportAttributeDefinitionsAsync(PennMUSHDatabase pennDatabase,
+		PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		var definitions = pennDatabase.AttributeDefinitions;
+		if (definitions.Count == 0)
+		{
+			return;
+		}
+
+		var flagTable = await _mediator.CreateStream(new GetAttributeFlagsQuery(), cancellationToken)
+			.ToArrayAsync(cancellationToken);
+		var known = new HashSet<string>(await _mediator.CreateStream(new GetAllAttributeEntriesQuery(), cancellationToken)
+			.Select(entry => entry.Name).ToArrayAsync(cancellationToken), StringComparer.OrdinalIgnoreCase);
+
+		var kept = new List<string>();
+		var aliased = new List<string>();
+		var created = 0;
+
+		foreach (var definition in definitions)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+
+			if (definition.IsInternal)
+			{
+				continue;
+			}
+
+			// SharpMUSH resolves an attribute name without aliases, so DESC does not reach DESCRIBE.
+			aliased.AddRange(definition.Aliases);
+
+			if (definition.Data.Length > 0)
+			{
+				context.Warnings.Add($"Standard attribute {definition.Name}: its default value is not imported, " +
+					"because SharpMUSH's attribute table holds none");
+			}
+
+			if (definition.Creator is { } creator && creator != 0 && creator != pennDatabase.GodPlayer)
+			{
+				context.Warnings.Add($"Standard attribute {definition.Name}: #{creator} defined it in the source, " +
+					"which SharpMUSH's attribute table does not record");
+			}
+
+			if (!known.Add(definition.Name))
+			{
+				kept.Add(definition.Name);
+				continue;
+			}
+
+			// One flag name SharpMUSH does not know fails the whole set, as string_to_atrflagsets does
+			// (src/attrib.c): the definition arrives with no default flags rather than with some of them.
+			var named = definition.Flags.Select(flagTable.Named).ToArray();
+			string[] flags = [.. named.OfType<SharpAttributeFlag>().Select(flag => flag.Name)];
+			if (flags.Length != named.Length)
+			{
+				context.Warnings.Add($"Standard attribute {definition.Name}: its default flags " +
+					$"[{string.Join(", ", definition.Flags)}] are not imported: {ErrorMessages.Returns.UnrecognizedAttributeFlag}");
+				flags = [];
+			}
+
+			if (await _mediator.Send(new CreateAttributeEntryCommand(definition.Name, flags), cancellationToken) is null)
+			{
+				context.Warnings.Add(
+					$"Standard attribute {definition.Name} from the source's attribute table could not be created");
+				known.Remove(definition.Name);
+				continue;
+			}
+
+			created++;
+		}
+
+		ReportKept("standard attribute", kept, context);
+		if (aliased.Count > 0)
+		{
+			context.Warnings.Add($"{aliased.Count} source attribute alias(es) are not imported, because SharpMUSH " +
+				$"resolves an attribute name without them ({Sample(aliased)})");
+		}
+
+		_logger.LogInformation("Imported {Created} standard attribute definitions, keeping SharpMUSH's for {Kept}",
+			created, kept.Count);
+	}
+
+	/// <summary>A definition this server already has, reduced to what an imported one is checked against.</summary>
+	private sealed record KnownDefinition(string Name, string Symbol, string[] TypeRestrictions, string[] Aliases);
+
+	/// <summary>
+	/// The definitions this server already has, and every name — each one's own and its aliases — that
+	/// resolves to one. A name wins over an alias, as it does in the store's own lookup.
+	/// </summary>
+	private sealed class KnownDefinitions
+	{
+		private readonly Dictionary<string, KnownDefinition> _byName = new(StringComparer.OrdinalIgnoreCase);
+		private readonly List<KnownDefinition> _all;
+
+		public KnownDefinitions(IEnumerable<KnownDefinition> definitions)
+		{
+			_all = [.. definitions];
+			foreach (var definition in _all)
+			{
+				_byName[definition.Name] = definition;
+			}
+
+			foreach (var alias in _all.SelectMany(definition => definition.Aliases.Select(alias => (alias, definition))))
+			{
+				_byName.TryAdd(alias.alias, alias.definition);
+			}
+		}
+
+		public KnownDefinition? Resolve(string name) => _byName.GetValueOrDefault(name);
+
+		/// <summary>
+		/// The definition already spending a letter on an object type one of <paramref name="types"/>
+		/// covers, if any. PennMUSH allows a letter one meaning per type (<c>letter_to_flagptr</c>,
+		/// src/flags.c), which is why SharpMUSH can seed ABODE and ANSI both on <c>A</c>.
+		/// </summary>
+		public KnownDefinition? LetterHolder(string letter, List<string> types)
+			=> letter.Length == 0
+				? null
+				: _all.Find(definition => definition.Symbol == letter && Overlaps(definition.TypeRestrictions, types));
+
+		public void Add(KnownDefinition definition)
+		{
+			_all.Add(definition);
+			_byName[definition.Name] = definition;
+			foreach (var alias in definition.Aliases)
+			{
+				_byName.TryAdd(alias, definition);
+			}
+		}
+
+		/// <summary>Whether two type restrictions can meet on one object; empty means any type.</summary>
+		private static bool Overlaps(string[] left, List<string> right)
+			=> left.Length == 0 || right.Count == 0 || left.Intersect(right, StringComparer.OrdinalIgnoreCase).Any();
+	}
+
+	/// <summary>
+	/// The source aliases an imported definition may keep. One this server already resolves elsewhere
+	/// would shadow that definition, so it is dropped and reported.
+	/// </summary>
+	private static string[] UsableAliases(string kind, PennMUSHFlagDefinition definition, KnownDefinitions known,
+		PennMUSHConversionContext context)
+	{
+		var usable = new List<string>(definition.Aliases.Count);
+		foreach (var alias in definition.Aliases)
+		{
+			if (known.Resolve(alias) is { } holder)
+			{
+				context.Warnings.Add(
+					$"{kind} {definition.Name}: its alias {alias} is not imported, because {holder.Name} answers to it here");
+			}
+			else
+			{
+				usable.Add(alias);
+			}
+		}
+
+		return [.. usable];
+	}
+
+	/// <summary>
+	/// The letter an imported definition may keep. One this server already spends on a definition of an
+	/// overlapping type is dropped and reported; the definition itself still arrives.
+	/// </summary>
+	private static string UsableLetter(string kind, PennMUSHFlagDefinition definition, KnownDefinitions known,
+		PennMUSHConversionContext context)
+	{
+		if (known.LetterHolder(definition.Letter, definition.Types) is not { } holder)
+		{
+			return definition.Letter;
+		}
+
+		context.Warnings.Add(
+			$"{kind} {definition.Name}: its letter {definition.Letter} is not imported, because {holder.Name} uses it here");
+		return string.Empty;
+	}
+
+	/// <summary>
+	/// What a source definition this server already has loses by that: a name it answered to there and
+	/// does not here, or one that means something else here, both of which imported softcode may use.
+	/// </summary>
+	private static void ReportAliasesOfKept(string kind, PennMUSHFlagDefinition definition, KnownDefinition existing,
+		KnownDefinitions known, PennMUSHConversionContext context)
+	{
+		foreach (var alias in definition.Aliases)
+		{
+			switch (known.Resolve(alias))
+			{
+				case null:
+					context.Warnings.Add(
+						$"{kind} {existing.Name}: SharpMUSH's own definition is kept and does not answer to {alias}");
+					break;
+
+				case { } other when !other.Name.Equals(existing.Name, StringComparison.OrdinalIgnoreCase):
+					context.Warnings.Add($"{kind} {existing.Name}: {alias} names it in the source, but {other.Name} here");
+					break;
+			}
+		}
+	}
+
+	/// <summary>
+	/// The source definitions this server already has, as one line for the lot: a stock PennMUSH table
+	/// overlaps SharpMUSH's almost entirely, and a line each would bury the rest of the report.
+	/// </summary>
+	private static void ReportKept(string kind, List<string> kept, PennMUSHConversionContext context)
+	{
+		if (kept.Count == 0)
+		{
+			return;
+		}
+
+		context.Warnings.Add($"{kept.Count} source {kind} definition(s) already exist here, " +
+			$"so SharpMUSH's own are kept ({Sample(kept)})");
+	}
+
+	private static string Sample(List<string> names)
+		=> $"{string.Join(" ", names.Take(10))}{(names.Count > 10 ? " ..." : "")}";
 
 	private async Task<(int players, int rooms, int things, int exits)> CreateObjectsAsync(
 		PennMUSHDatabase pennDatabase,
