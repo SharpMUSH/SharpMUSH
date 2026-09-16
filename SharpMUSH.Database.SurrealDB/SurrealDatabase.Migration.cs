@@ -407,12 +407,20 @@ public partial class SurrealDatabase
 	/// <summary>
 	/// The built-in flag table is <see cref="FlagSeed.Flags"/>, shared with every provider. The UPSERT sets
 	/// every field unconditionally on each Migrate(), so a changed definition (MYOPIC splitting off MISTRUST,
-	/// say) lands on an existing row the next time the game boots — no separate repair migration.
+	/// say) lands on an existing row the next time the game boots — no separate repair migration. The one
+	/// row it will not touch is one an administrator created: see <see cref="UserOwnedNamesAsync"/>.
 	/// </summary>
 	private async Task CreateInitialFlags(CancellationToken ct)
 	{
+		var userOwned = await UserOwnedNamesAsync("object_flag", ct);
+
 		foreach (var f in FlagSeed.Flags)
 		{
+			if (userOwned.Contains(f.Name))
+			{
+				continue;
+			}
+
 			var parameters = new Dictionary<string, object?>
 			{
 				["name"] = f.Name,
@@ -506,10 +514,33 @@ public partial class SurrealDatabase
 		}
 	}
 
+	/// <summary>
+	/// The names in <paramref name="table"/> an administrator created with <c>@flag/add</c> or
+	/// <c>@power/add</c>, which are always <c>system = false</c>. The seed does not redefine them:
+	/// PennMUSH's own built-in add path stops at the same line, with the "Don't double-add" guard in
+	/// <c>add_flag_generic</c> (<c>src/flags.c:2252</c>) returning <c>FLAG_EXISTS</c> and leaving the
+	/// existing definition alone. Rows the seed owns are still rewritten on every migration, which is
+	/// how a corrected definition reaches a world seeded before the correction.
+	/// </summary>
+	private async Task<HashSet<string>> UserOwnedNamesAsync(string table, CancellationToken ct)
+	{
+		var response = await ExecuteAsync($"SELECT VALUE name FROM {table} WHERE system = false",
+			new Dictionary<string, object?>(), ct);
+
+		return new HashSet<string>(response.GetValue<List<string>>(0) ?? [], StringComparer.OrdinalIgnoreCase);
+	}
+
 	private async Task CreateInitialPowers(CancellationToken ct)
 	{
+		var userOwned = await UserOwnedNamesAsync("power", ct);
+
 		foreach (var p in PowerSeed.Powers)
 		{
+			if (userOwned.Contains(p.Name))
+			{
+				continue;
+			}
+
 			var parameters = new Dictionary<string, object?>
 			{
 				["name"] = p.Name,
