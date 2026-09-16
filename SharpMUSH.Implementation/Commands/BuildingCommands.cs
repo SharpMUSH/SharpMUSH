@@ -262,16 +262,9 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// Core destroy logic shared by <c>@destroy</c> and <c>@nuke</c>.
-	/// Mirrors PennMUSH <c>what_to_destroy()</c> + <c>pre_destroy()</c> + the player-specific parts
-	/// of <c>clear_player()</c> that must happen at the "mark GOING" phase (channel chown,
-	/// surviving-object chown, attribute ownership reassignment) because SharpMUSH does not yet
-	/// have a live purge cycle.
-	/// <para>
-	/// For players, all of the above is handled by <see cref="HandlePlayerPossessionsAsync"/>.
-	/// Lock expressions are left unchanged per PennMUSH invariants
-	/// ("we allow indirect locks to refer to destroyed objects").
-	/// </para>
+	/// Core destroy logic shared by <c>@destroy</c> and <c>@nuke</c>: PennMUSH <c>what_to_destroy()</c>,
+	/// <c>do_destroy()</c> and <c>pre_destroy()</c>. Scheduling is reversible — nothing changes owner
+	/// here; a destroyed player's probate happens when the purge actually frees them.
 	/// </summary>
 	private async ValueTask<CallState> DestroyObjectAsync(
 		IMUSHCodeParser parser,
@@ -436,13 +429,9 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// For players: handle possessions and channels before marking GOING.
-		// This combines PennMUSH's pre_destroy (mark possessions GOING) and the
-		// object/channel chown portion of clear_player (which runs at purge time in
-		// PennMUSH but is done here because SharpMUSH lacks a live purge cycle).
 		if (obj is SharpPlayer destroyedPlayer)
 		{
-			await HandlePlayerPossessionsAsync(parser, executor, destroyedPlayer);
+			await PreDestroyPossessionsAsync(destroyedPlayer);
 		}
 
 		// Phase 2b: object-lifecycle destroy seam. The object is about to be marked GOING (scheduled for
@@ -522,29 +511,6 @@ public partial class Commands
 		return destroyOk && await LockService.Evaluate(LockType.Destroy, obj, executor);
 	}
 
-	/// <summary>
-	/// Handles the player-specific parts of destruction:
-	/// <list type="bullet">
-	///   <item>Channels owned by the player are chowned to the probate player.</item>
-	///   <item>
-	///     Objects owned by the player (other than the player themselves) are either
-	///     marked GOING (to be destroyed at the next purge cycle) or chowned to the
-	///     probate player, depending on <c>destroy_possessions</c> and <c>really_safe</c>
-	///     config options — matching <c>clear_player()</c> in PennMUSH.
-	///   </item>
-	///   <item>
-	///     All attributes whose creator is the deleted player are bulk-reassigned to the
-	///     probate player via <see cref="ReassignAttributeOwnerCommand"/>.
-	///     This is done after the chown and channel-chown steps so that any objects
-	///     already marked GOING (scheduled for deletion) can be skipped, reducing the
-	///     number of attributes that need to be reassigned when
-	///     <c>destroy_possessions</c> is enabled.
-	///     PennMUSH defers this to <c>dbck()</c>, but SharpMUSH does it eagerly at
-	///     deletion time to avoid leaving dangling attribute-owner references in the database.
-	///   </item>
-	/// </list>
-	/// <para>Lock expressions are left unchanged per PennMUSH invariants.</para>
-	/// </summary>
 	private async ValueTask NotifyObjectDestroyingAsync(IMUSHCodeParser parser, DBRef obj)
 	{
 		// Phase 2b: notify plugin IObjectLifecycleHooks that obj is about to be destroyed. No-op when no
@@ -557,93 +523,38 @@ public partial class Commands
 		}
 	}
 
-	private async ValueTask HandlePlayerPossessionsAsync(
-		IMUSHCodeParser parser,
-		AnySharpObject executor,
-		SharpPlayer playerObj)
+	/// <summary>
+	/// PennMUSH <c>pre_destroy()</c> for a player: with <c>destroy_possessions</c>, mark everything the
+	/// player owns that <c>clear_player()</c> will free at purge time. Only marks — the hand-off of
+	/// whatever survives waits for the purge, so <c>@undestroy</c> can still take it all back.
+	/// </summary>
+	/// <remarks>
+	/// DEVIATION: Penn's filter reads <c>!Safe(thing)</c> with <c>thing</c> the player, so under
+	/// <c>really_safe</c> a SAFE possession is marked and then freed by its own purge pass. Its comment
+	/// states the intent this follows instead: mark exactly what <c>clear_player()</c> would free.
+	/// </remarks>
+	private async ValueTask PreDestroyPossessionsAsync(SharpPlayer player)
 	{
 		var config = Configuration.CurrentValue.Command;
-		var playerDbRefNumber = playerObj.Object.DBRef.Number;
-
-		// Resolve the probate player; fall back to God (#1) if the config value is invalid.
-		var probateDbRef = new DBRef((int)config.ProbateJudge);
-		SharpPlayer probatePlayer;
-		if (await Mediator.Send(new GetObjectNodeQuery(probateDbRef)) is AnySharpObject and SharpPlayer probate)
+		if (!config.DestroyPossessions)
 		{
-			probatePlayer = probate;
-		}
-		else
-		{
-			Logger?.LogWarning(
-				"probate_judge config option (#{ProbateDbRef}) is set to an invalid object; falling back to God (#1).",
-				probateDbRef.Number);
-			if (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1))) is not (AnySharpObject and SharpPlayer god))
-			{
-				Logger?.LogError(
-					"God (#1) is not a valid player; cannot proceed with player possession chown during deletion.");
-				return; // Cannot proceed without a valid probate player.
-			}
-			probatePlayer = god;
+			return;
 		}
 
-		// --- Channels: always chown to probate (PennMUSH chan_chownall) ---
-		var channels = Mediator.CreateStream(new GetChannelsOwnedByQuery(playerObj.Object.DBRef));
-		await foreach (var channel in channels)
+		var playerDbRef = player.Object.DBRef;
+		await foreach (var owned in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
 		{
-			await Mediator.Send(new UpdateChannelOwnerCommand(channel, probatePlayer));
+			var ownedDbRef = owned.Object().DBRef;
+			if (ownedDbRef.Number == playerDbRef.Number || ObjectDestructionService.IsSpecialObject(ownedDbRef)) continue;
+
+			var owner = await owned.Object().Owner.WithCancellation(CancellationToken.None);
+			if (owner.Object.DBRef.Number != playerDbRef.Number) continue;
+
+			if (config.ReallySafe && await owned.HasFlag("SAFE")) continue;
+
+			await SetFlagInternalAsync(owned, "GOING", true);
+			await SetFlagInternalAsync(owned, "GOING_TWICE", false);
 		}
-
-		// --- Possessions (PennMUSH clear_player object loop) ---
-		var objects = Mediator.CreateStream(new GetAllTypedObjectsQuery());
-		await foreach (var obj in objects)
-		{
-			var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
-
-			if (objOwner.Object.DBRef.Number != playerDbRefNumber)
-				continue;
-
-			if (obj.Object().DBRef.Number == playerDbRefNumber)
-				continue; // Never process the player themselves.
-
-			// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
-			var fullObj = obj;
-
-			// Determine whether this object should be chowned to probate or destroyed.
-			// Logic mirrors PennMUSH clear_player():
-			//   chown  if: !destroy_possessions
-			//          or: really_safe && SAFE flag is set
-			//   destroy otherwise (when destroy_possessions is on)
-			bool chownToProbate;
-			if (!config.DestroyPossessions)
-			{
-				chownToProbate = true;
-			}
-			else if (config.ReallySafe && await fullObj.HasFlag("SAFE"))
-			{
-				chownToProbate = true;
-			}
-			else
-			{
-				chownToProbate = false;
-			}
-
-			if (chownToProbate)
-			{
-				await Mediator.Send(new SetObjectOwnerCommand(fullObj, probatePlayer));
-			}
-			else
-			{
-				// Pre-destroy: mark for destruction, matching PennMUSH pre_destroy().
-				await SetFlagInternalAsync(fullObj, "GOING", true);
-			}
-		}
-
-		// --- Attribute ownership: bulk-reassign all attributes owned by the deleted player ---
-		// Done after the chown and channel-chown passes so that objects already marked GOING
-		// (scheduled for deletion) can be excluded, reducing unnecessary work when
-		// destroy_possessions is enabled.
-		// PennMUSH defers this to dbck(), but we do it eagerly to keep the database consistent.
-		await Mediator.Send(new ReassignAttributeOwnerCommand(playerObj, probatePlayer));
 	}
 
 	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,

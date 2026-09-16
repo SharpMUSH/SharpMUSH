@@ -206,44 +206,62 @@ public class ObjectDestructionService(
 		=> EmptyContentsAsync(parser, room, ct);
 
 	/// <summary>
-	/// PennMUSH <c>clear_player()</c>: hand everything the player still owns to the probate player,
-	/// then do the <c>clear_thing()</c> work.
+	/// PennMUSH <c>clear_player()</c>: the <c>clear_thing()</c> work, then probate — channels and
+	/// surviving possessions go to the probate judge, the rest are freed, and attributes the player
+	/// wrote change hands. This is the only place a destroyed player's belongings change owner:
+	/// <c>@destroy</c> merely marks them, so <c>@undestroy</c> has nothing to give back.
 	/// </summary>
 	/// <remarks>
-	/// <c>@destroy</c> already chowned or marked these at pre-destroy time
-	/// (<c>HandlePlayerPossessionsAsync</c>). Repeating it here is not redundant: possessions marked
-	/// <c>GOING</c> are deliberately left owned by the doomed player until they are purged, and
-	/// deleting the player would sever their ownership edge and make every later read of them throw.
-	/// PennMUSH has the same split and resolves it the same way — the probate judge exists for this.
+	/// Evacuation runs first, because it is the one step that can fail here. Refusing then leaves the
+	/// player and everything they own untouched, still GOING, and the whole of it is retried on the next
+	/// purge pass. Penn runs <c>chan_chownall</c> before <c>clear_thing</c>, which cannot fail there.
 	/// </remarks>
 	/// <returns><see langword="false"/> when a piece of content could not be evacuated.</returns>
 	private async ValueTask<bool> ClearPlayerAsync(IMUSHCodeParser parser, SharpPlayer player, CancellationToken ct)
 	{
-		var probate = await ResolveProbatePlayerAsync(ct);
-		if (probate is not null)
+		if (!await EmptyContentsAsync(parser, player, ct))
 		{
-			var playerDbRefNumber = player.Object.DBRef.Number;
-
-			await foreach (var channel in mediator.CreateStream(
-				new GetChannelsOwnedByQuery(player.Object.DBRef), ct))
-			{
-				await mediator.Send(new UpdateChannelOwnerCommand(channel, probate), ct);
-			}
-
-			await foreach (var owned in mediator.CreateStream(new GetAllTypedObjectsQuery(), ct))
-			{
-				if (owned.Object().DBRef.Number == playerDbRefNumber) continue;
-
-				var owner = await owned.Object().Owner.WithCancellation(ct);
-				if (owner.Object.DBRef.Number != playerDbRefNumber) continue;
-
-				await mediator.Send(new SetObjectOwnerCommand(owned, probate), ct);
-			}
-
-			await mediator.Send(new ReassignAttributeOwnerCommand(player, probate), ct);
+			return false;
 		}
 
-		return await EmptyContentsAsync(parser, player, ct);
+		var probate = await ResolveProbatePlayerAsync(ct);
+		if (probate is null)
+		{
+			return true;
+		}
+
+		var playerDbRef = player.Object.DBRef;
+
+		await foreach (var channel in mediator.CreateStream(new GetChannelsOwnedByQuery(playerDbRef), ct))
+		{
+			await mediator.Send(new UpdateChannelOwnerCommand(channel, probate), ct);
+		}
+
+		// Materialised: freeing a possession deletes rows the live stream would still be reading.
+		var owned = await mediator.CreateStream(new GetAllTypedObjectsQuery(), ct)
+			.Where(async (candidate, token) => candidate.Object().DBRef.Number != playerDbRef.Number
+				&& (await candidate.Object().Owner.WithCancellation(token)).Object.DBRef.Number == playerDbRef.Number)
+			.ToListAsync(ct);
+
+		var command = configuration.CurrentValue.Command;
+
+		foreach (var possession in owned)
+		{
+			var survives = IsSpecialObject(possession.Object().DBRef)
+				|| !command.DestroyPossessions
+				|| (command.ReallySafe && await possession.HasFlag("SAFE"));
+
+			// A possession whose own teardown is refused is handed over instead: deleting the player
+			// would otherwise sever its ownership edge and make every later read of it throw.
+			if (survives || !await FreeObjectAsync(parser, possession, ct))
+			{
+				await mediator.Send(new SetObjectOwnerCommand(possession, probate), ct);
+			}
+		}
+
+		await mediator.Send(new ReassignAttributeOwnerCommand(player, probate), ct);
+
+		return true;
 	}
 
 	/// <summary>
