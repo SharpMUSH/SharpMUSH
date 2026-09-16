@@ -113,9 +113,10 @@ jobs:
     env:
       # Detailed console output and TRX retain results without the optional HTML report.
       TUNIT_DISABLE_HTML_REPORTER: "true"
-    # Backstop only. It must clear the retry budget below (2 x 30 minutes) plus ~3 minutes of
-    # checkout and artifact download, or it would truncate the second attempt — reintroducing the
-    # killed-mid-run failure this timeout exists to prevent.
+    # Backstop only. It must clear the retry budget below (2 x 30 minutes, plus up to 40 seconds of
+    # process cleanup per attempt) and ~3 minutes of checkout and artifact download, or it would
+    # truncate the second attempt — reintroducing the killed-mid-run failure this timeout exists to
+    # prevent.
     timeout-minutes: 70
     strategy:
       matrix:
@@ -153,18 +154,17 @@ jobs:
           python3 .github/scripts/ensure-test-packages.py
 
       - name: Test (${{ matrix.database }})
-        uses: nick-fields/retry@v4
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
           SHARPMUSH_DATABASE_PROVIDER: ${{ matrix.database }}
-        with:
-          # Retain the retry budget while test isolation is repaired.
-          timeout_minutes: 30
-          max_attempts: 2
-          # Exclude standalone embedded SurrealDB fixtures as well as the disabled provider matrix entry.
-          # Keep the existing concurrency and execution deadlines.
-          command: dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/unit" --maximum-parallel-tests 8 --treenode-filter '/*/(*)&(!SharpMUSH.Tests.Database.SurrealDB)/(*)&(!Surreal*)/*'
+        # Retain the retry budget while test isolation is repaired. run_owned.py stops everything an
+        # attempt started before the next one begins, so a retry never runs beside the one it replaced.
+        # Exclude standalone embedded SurrealDB fixtures as well as the disabled provider matrix entry.
+        # Keep the existing concurrency and execution deadlines.
+        run: >-
+          exec python3 .github/scripts/run_owned.py --attempts 2 --timeout-minutes 30 --
+          dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/unit" --maximum-parallel-tests 8 --treenode-filter '/*/(*)&(!SharpMUSH.Tests.Database.SurrealDB)/(*)&(!Surreal*)/*'
 
       - name: Upload unit test results
         if: always()
@@ -232,11 +232,9 @@ jobs:
           python3 .github/scripts/ensure-test-packages.py
 
       - name: BUnit Tests
-        uses: nick-fields/retry@v4
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          command: dotnet run --project SharpMUSH.Tests.BUnit --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/bunit"
+        run: >-
+          exec python3 .github/scripts/run_owned.py --attempts 3 --timeout-minutes 10 --
+          dotnet run --project SharpMUSH.Tests.BUnit --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/bunit"
 
       - name: Upload bunit test results
         if: always()
@@ -341,15 +339,13 @@ jobs:
           python3 .github/scripts/ensure-test-packages.py
 
       - name: Integration Test (${{ matrix.database }})
-        uses: nick-fields/retry@v4
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry-integration.md
           SHARPMUSH_DATABASE_PROVIDER: ${{ matrix.database }}
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          command: dotnet run --project SharpMUSH.Tests.Integration --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/integration" --maximum-parallel-tests 8
+        run: >-
+          exec python3 .github/scripts/run_owned.py --attempts 3 --timeout-minutes 10 --
+          dotnet run --project SharpMUSH.Tests.Integration --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/integration" --maximum-parallel-tests 8
 
       - name: Upload integration test results
         if: always()
