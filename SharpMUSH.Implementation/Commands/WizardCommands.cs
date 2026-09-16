@@ -714,7 +714,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		AnySharpObject targetPlayer = executor;
+		AnySharpObject targetPlayer;
 		if (args.Count > 0)
 		{
 			var playerArg = args["0"].Message!.ToPlainText();
@@ -725,7 +725,18 @@ public partial class Commands
 					break;
 				case Error<CallState> error:
 					return error.Value;
+				default:
+					throw new InvalidOperationException("A player lookup returned neither a player nor an error.");
 			}
+		}
+		else
+		{
+			// PennMUSH src/wiz.c:165 resolves the no-argument form as Owner(player), not the executor
+			// itself, so a thing or a puppet reports the quota of whoever owns it. Defaulting to the
+			// executor instead made every non-player caller - `@force <thing>=@quota`, a $-command on a
+			// thing - throw out of the command and take its queue entry with it.
+			targetPlayer = new AnySharpObject(
+				await executor.Object().Owner.WithCancellation(CancellationToken.None));
 		}
 
 		if (targetPlayer is not SharpPlayer targetPlayerObj)
@@ -2461,7 +2472,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		AnySharpObject targetPlayer = executor;
+		AnySharpObject targetPlayer;
 		if (args.Count > 0)
 		{
 			var playerArg = args["0"].Message!.ToPlainText();
@@ -2472,7 +2483,18 @@ public partial class Commands
 					break;
 				case Error<CallState> error:
 					return error.Value;
+				default:
+					throw new InvalidOperationException("A player lookup returned neither a player nor an error.");
 			}
+		}
+		else
+		{
+			// PennMUSH src/wiz.c:165 resolves the no-argument form as Owner(player), not the executor
+			// itself, so a thing or a puppet reports the quota of whoever owns it. Defaulting to the
+			// executor instead made every non-player caller - `@force <thing>=@quota`, a $-command on a
+			// thing - throw out of the command and take its queue entry with it.
+			targetPlayer = new AnySharpObject(
+				await executor.Object().Owner.WithCancellation(CancellationToken.None));
 		}
 
 		if (targetPlayer is not SharpPlayer targetPlayerObj)
