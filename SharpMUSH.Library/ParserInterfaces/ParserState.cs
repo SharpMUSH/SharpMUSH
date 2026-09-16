@@ -311,6 +311,12 @@ public partial record ParserState(
 	public EvaluationRestrictions? Restrictions { get; init; }
 
 	/// <summary>
+	/// Most UTF-16 code units one function may produce in this evaluation. Lowered for a guest's
+	/// input, and carried by every copy of the state, including the snapshots of queued actions.
+	/// </summary>
+	public int OutputLimit { get; init; } = SharpMUSH.Library.Definitions.FunctionLimits.MaxOutputCodeUnits;
+
+	/// <summary>
 	/// Captures the register environment for an independent queued action. Like PE_INFO_CLONE,
 	/// only the active q-register frame is inherited; iteration, regex and switch contexts retain
 	/// their nesting order. Mutable frames belong to the new action, not the submitting list.

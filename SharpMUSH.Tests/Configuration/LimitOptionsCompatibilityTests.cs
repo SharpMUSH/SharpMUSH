@@ -71,6 +71,24 @@ public class LimitOptionsCompatibilityTests
 	}
 
 	[Test]
+	public async Task GuestOutputLimitBindsToItsConfigurationName()
+	{
+		await Assert.That(Options().Limit.GuestOutputLimit).IsEqualTo(LimitOptions.DefaultGuestOutputLimit);
+		await Assert.That(ConfigAccessor.GetDeclaredDefault(nameof(LimitOptions.GuestOutputLimit))).IsEqualTo((object)LimitOptions.DefaultGuestOutputLimit);
+		await Assert.That(ConfigMetadata.PropertyToAttributeName[nameof(LimitOptions.GuestOutputLimit)]).IsEqualTo("guest_output_limit");
+		var path = Path.GetTempFileName();
+		try
+		{
+			await File.WriteAllTextAsync(path, "guest_output_limit 4096\n");
+			await Assert.That(ReadPennMushConfig.Create(path).Limit.GuestOutputLimit).IsEqualTo(4096u);
+		}
+		finally
+		{
+			File.Delete(path);
+		}
+	}
+
+	[Test]
 	public async Task NonPositionalQueueLimitRetainsConfigurationBindingAndDeclaredDefault()
 	{
 		await Assert.That(Options().Limit.GlobalQueueLimit).IsEqualTo(10000u);

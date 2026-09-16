@@ -188,7 +188,8 @@ public static partial class ReadPennMushConfig
 				UnsignedInteger(Get(nameof(LimitOptions.ChunkMigrate)), 150),
 				UnsignedInteger(Get(nameof(LimitOptions.MaxAttributeValueLength)), 8192))
 			{
-				GlobalQueueLimit = UnsignedInteger(Get(nameof(LimitOptions.GlobalQueueLimit)), 10000)
+				GlobalQueueLimit = UnsignedInteger(Get(nameof(LimitOptions.GlobalQueueLimit)), 10000),
+				GuestOutputLimit = UnsignedInteger(Get(nameof(LimitOptions.GuestOutputLimit)), LimitOptions.DefaultGuestOutputLimit)
 			},
 			Log = new LogOptions(
 				Boolean(Get(nameof(LogOptions.UseSyslog)), false),

@@ -30,7 +30,7 @@ public partial class Functions
 				return new CallState(EvaluationRestrictions.Error);
 			operations.Add(operation);
 		}
-		if (FunctionLimits.ExceedsCombinedOutput(args.Values.Select(value => value.Message ?? MarkupText.Empty)))
+		if (FunctionLimits.ExceedsCombinedOutput(parser.CurrentState, args.Values.Select(value => value.Message ?? MarkupText.Empty)))
 			return FunctionLimits.RejectOutput(parser.CurrentState);
 		// The source and literal inputs remain live throughout the nested parse.
 		using var retainedSource = RestrictedTextRetention.Enter(parser.CurrentState, recognizedEntry: true);

@@ -350,7 +350,7 @@ public partial class Functions
 	public ValueTask<CallState> Concat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var values = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message ?? MarkupText.Empty);
-		return ValueTask.FromResult(FunctionLimits.ExceedsCombinedOutput(values)
+		return ValueTask.FromResult(FunctionLimits.ExceedsCombinedOutput(parser.CurrentState, values)
 			? FunctionLimits.RejectOutput(parser.CurrentState) : new CallState(MarkupText.Concat(values)));
 	}
 
@@ -358,7 +358,7 @@ public partial class Functions
 	public ValueTask<CallState> Cat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var values = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message ?? MarkupText.Empty);
-		return ValueTask.FromResult(FunctionLimits.ExceedsCombinedOutput(values, 1)
+		return ValueTask.FromResult(FunctionLimits.ExceedsCombinedOutput(parser.CurrentState, values, 1)
 			? FunctionLimits.RejectOutput(parser.CurrentState) : new CallState(MarkupText.Join(MarkupText.Space, values)));
 	}
 
@@ -1492,7 +1492,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
-		if (FunctionLimits.ExceedsOutput((long)str.Length * repeatNumber))
+		if (FunctionLimits.ExceedsOutput(parser.CurrentState, (long)str.Length * repeatNumber))
 			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));
 		if (str.Length == 0) return ValueTask.FromResult(CallState.Empty);
 		var repeat = str.Repeat(repeatNumber);
@@ -1558,7 +1558,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
 
-		if (FunctionLimits.ExceedsOutput(repeatNumber))
+		if (FunctionLimits.ExceedsOutput(parser.CurrentState, repeatNumber))
 			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));
 		var repeat = MarkupText.Space.Repeat(repeatNumber);
 		return ValueTask.FromResult(new CallState(repeat));

@@ -2,22 +2,24 @@ using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Definitions;
 
-/// <summary>Shared output ceiling, checked before expanding or joining text as well as at dispatch.</summary>
+/// <summary>Output ceiling, checked before expanding or joining text as well as at dispatch.</summary>
 public static class FunctionLimits
 {
-	/// <summary>Maximum UTF-16 code units in one function result. Producers check before
-	/// expansion; the evaluator also checks every completed result.</summary>
+	/// <summary>Maximum UTF-16 code units in one function result, for anyone. Producers check before
+	/// expansion; the evaluator also checks every completed result. An evaluation may lower it
+	/// (<see cref="ParserState.OutputLimit"/>), never raise it.</summary>
 	public const int MaxOutputCodeUnits = 5 * 1024 * 1024;
-	public static bool ExceedsOutput(long characters) => characters > MaxOutputCodeUnits;
 
-	public static bool ExceedsCombinedOutput(IEnumerable<MString> values, int separatorLength = 0)
+	public static bool ExceedsOutput(ParserState state, long characters) => characters > state.OutputLimit;
+
+	public static bool ExceedsCombinedOutput(ParserState state, IEnumerable<MString> values, int separatorLength = 0)
 	{
 		long length = 0;
 		var first = true;
 		foreach (var value in values)
 		{
 			length += value.Length + (first ? 0L : separatorLength);
-			if (ExceedsOutput(length)) return true;
+			if (ExceedsOutput(state, length)) return true;
 			first = false;
 		}
 		return false;

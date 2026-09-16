@@ -1031,7 +1031,7 @@ public class SharpMUSHParserVisitor(
 			// Output ceiling: stop a single function that generates an enormous string from
 			// propagating it (and halt the rest of the evaluation, as the other limits do). Checked
 			// at the return so it covers every function without each having to guard itself.
-			if (result.Message is not null && result.Message.Length > FunctionLimits.MaxOutputCodeUnits)
+			if (result.Message is not null && FunctionLimits.ExceedsOutput(currentState, result.Message.Length))
 			{
 				limitExceeded.IsExceeded = true;
 				limitExceeded.ErrorMessage ??= ErrorMessages.Returns.OutputTooLarge;

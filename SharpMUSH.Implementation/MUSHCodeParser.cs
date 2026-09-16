@@ -13,6 +13,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
@@ -681,6 +682,15 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		return () => visitor.Visit(chatContext);
 	}
 
+	/// <summary>Guests get <c>guest_output_limit</c>; everyone else, and a handle not yet logged in, the full ceiling.</summary>
+	private async ValueTask<int> OutputLimitForAsync(DBRef? player)
+	{
+		if (player is null
+			|| await _mediator.Send(new GetObjectNodeQuery(player.Value)) is not AnySharpObject actor
+			|| !await actor.IsGuest()) return FunctionLimits.MaxOutputCodeUnits;
+		return (int)Math.Min(Configuration.CurrentValue.Limit.GuestOutputLimit, FunctionLimits.MaxOutputCodeUnits);
+	}
+
 	/// <summary>
 	/// This is the main entry point for commands run by a player.
 	/// </summary>
@@ -693,6 +703,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var expectedSession = State.IsEmpty ? null : CurrentState.ConnectionSessionId;
 		if (!string.IsNullOrEmpty(expectedSession) &&
 			handleId?.Metadata.GetValueOrDefault("SessionId") != expectedSession) return CallState.Empty;
+		var outputLimit = await OutputLimitForAsync(handleId?.Ref);
 		var newParser = Push(new ParserState(
 			Registers: new([[]]),
 			IterationRegisters: [],
@@ -720,7 +731,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Flags: ParserStateFlags.DirectInput,
 			ConnectionSessionId: expectedSession)
 		{
-			MoveDepth = new InvocationCounter()
+			MoveDepth = new InvocationCounter(),
+			OutputLimit = outputLimit
 		});
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);

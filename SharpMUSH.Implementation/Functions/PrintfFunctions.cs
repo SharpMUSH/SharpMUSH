@@ -13,13 +13,11 @@ public partial class Functions
 	{
 		var arguments = parser.CurrentState.ArgumentsOrdered;
 		if (PrintfFormatter.TryFormat(arguments["0"].Message!,
-			arguments.Skip(1).Select(argument => argument.Value.Message!).ToArray(), out var result, out var error))
+			arguments.Skip(1).Select(argument => argument.Value.Message!).ToArray(), out var result, out var error,
+			parser.CurrentState.OutputLimit))
 			return ValueTask.FromResult<CallState>(result);
-		if (error == ErrorMessages.Returns.OutputTooLarge && parser.CurrentState.LimitExceeded is { } limit)
-		{
-			limit.IsExceeded = true;
-			limit.ErrorMessage ??= error;
-		}
-		return ValueTask.FromResult<CallState>(error!);
+		return ValueTask.FromResult(error == ErrorMessages.Returns.OutputTooLarge
+			? FunctionLimits.RejectOutput(parser.CurrentState)
+			: new CallState(error!));
 	}
 }
