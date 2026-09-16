@@ -87,6 +87,20 @@ public partial class Commands
 		}
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>@mapsql</c> (<c>cmd_mapsql</c>, <c>src/sql.c:418</c>): runs a query and triggers
+	/// <c>&lt;obj&gt;/&lt;attr&gt;</c> once per result row, with the row number in <c>%0</c>, the field
+	/// values in <c>%1</c>…<c>%N</c>, and every nonnumeric column name as a named argument register.
+	/// <c>/colnames</c> prepends a header callback carrying the column names, <c>/notify</c> queues an
+	/// <c>@notify me</c> behind the last row, and <c>/prepare</c> reads <c>query,param,…</c> rather
+	/// than a literal statement.
+	/// </summary>
+	/// <remarks>
+	/// The executor must control the target, or — only without <c>/spoof</c> — own a <c>LINK_OK</c>
+	/// one, and nobody but God triggers God. Every callback then runs as the target, with the
+	/// triggerer (the executor, or the original enactor under <c>/spoof</c>) as both its enactor and
+	/// its caller, while the executor remains the identity the attribute is read under.
+	/// </remarks>
 	[SharpCommand(Name = "@MAPSQL", Switches = ["NOTIFY", "COLNAMES", "SPOOF", "PREPARE"], Behavior = CB.Default | CB.EqSplit,
 		MinArgs = 0, MaxArgs = 0, ParameterNames = ["obj/attr", "query"])]
 	public async ValueTask<Option<CallState>> MapSql(IMUSHCodeParser parser, SharpCommandAttribute _2)

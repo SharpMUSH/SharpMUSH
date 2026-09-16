@@ -116,6 +116,19 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(escaped));
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>mapsql()</c> (<c>fun_mapsql</c>, <c>src/sql.c:770</c>): evaluates
+	/// <c>&lt;obj&gt;/&lt;attr&gt;</c> once per result row and joins the results with the output
+	/// separator, which defaults to a space. The row number is <c>%0</c>, the field values are
+	/// <c>%1</c>…<c>%N</c>, and every nonnumeric column name is also a named argument register. A
+	/// truthy fourth argument prepends a header evaluation carrying the column names; a fifth
+	/// argument and beyond make the query a prepared statement and supply its parameters.
+	/// </summary>
+	/// <remarks>
+	/// Unlike the command, this evaluates inline rather than queueing, so it keeps <c>call_ufun</c>'s
+	/// identities: the attribute runs as the object it was read from, with the current executor as
+	/// its caller.
+	/// </remarks>
 	[SharpFunction(Name = "mapsql", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["obj/attr", "query", "osep", "fieldnames"])]
 	public async ValueTask<CallState> MapSql(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
