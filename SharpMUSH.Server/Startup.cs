@@ -18,11 +18,13 @@ using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
+using SharpMUSH.Server.RateLimiting;
 using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using SurrealDb.Net;
 using SurrealDb.Embedded.InMemory;
+using System.Globalization;
 using System.Threading.RateLimiting;
 using OpenTelemetry.ResourceDetectors.Container;
 using Quartz;
@@ -63,6 +65,13 @@ public class Startup(
 	// Cache name for the dedicated compiled boolean-lock expression cache.
 	// Must match the [FromKeyedServices] key used in BooleanExpressionParser.
 	public const string CompiledExpressionsCacheName = "compiled-expressions";
+
+	/// <summary>
+	/// Rate-limiting policy carrying PennMUSH's <c>http_per_second</c> quota. Named here because
+	/// both the policy registration and the <c>/http/{**path}</c> route that opts into it have to
+	/// agree, and so does the rejection handler that adds this policy's <c>Retry-After</c>.
+	/// </summary>
+	public const string SoftcodeHttpPolicy = "softcode-http";
 
 	/// <summary>
 	/// Exposes one concrete database provider under every interface it serves. The provider is a
@@ -764,6 +773,47 @@ public class Startup(
 						Window = TimeSpan.FromMinutes(1),
 						QueueLimit = 0
 					}));
+
+			// "softcode-http" policy: PennMUSH's http_per_second quota on /http/{**path}, the only
+			// surface that runs arbitrary softcode for an anonymous caller. Penn keeps ONE global
+			// counter rather than a per-IP allowance (src/bsd.c http_quota), so the partition key is
+			// the configured limit and not the client — every caller draws on the same budget.
+			//
+			// Keying on the limit is what makes @config/set http_per_second live: a changed setting
+			// lands in a fresh partition sized to it, instead of leaving a bucket built for the old
+			// one in place. The option is read per request (never captured), as the auth surfaces
+			// read their sitelock rules.
+			//
+			// Zero or less is Penn's "HTTP is off" setting and is answered as an unconfigured
+			// http_handler by HttpHandlerCommandService (404), not throttled to death here.
+			opts.AddPolicy(SoftcodeHttpPolicy, httpContext =>
+			{
+				var perSecond = httpContext.RequestServices
+					.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
+					.CurrentValue.Database.HttpRequestsPerSecond;
+
+				return perSecond < 1
+					? RateLimitPartition.GetNoLimiter(0u)
+					: RateLimitPartition.Get(perSecond, limit => new HttpQuotaRateLimiter(limit));
+			});
+
+			// Penn schedules the next attempt with http_msecs_till_next; the HTTP equivalent is to
+			// tell the client when to come back. Scoped to this policy by endpoint, NOT by "does the
+			// lease carry RetryAfter metadata" — a rejected FixedWindowRateLimiter lease carries it
+			// too, so that test would have quietly added a Retry-After to the portal's "public-api"
+			// and "mcp" 429s as well.
+			opts.OnRejected = (context, _) =>
+			{
+				if (context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()
+						is { PolicyName: SoftcodeHttpPolicy }
+					&& context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+				{
+					context.HttpContext.Response.Headers.RetryAfter =
+						((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+				}
+
+				return ValueTask.CompletedTask;
+			};
 		});
 
 		services.AddProblemDetails();

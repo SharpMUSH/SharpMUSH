@@ -35,9 +35,14 @@ mud_url
 http_handler 8
 
 # How many HTTP requests do you want to handle every second?
-# Setting this to 0 (or negative) disables HTTP. Defaults to 3,
-# as HTTP is also disabled unless http_handler is set.
-http_per_second 3
+# One budget for the whole game, bursting up to the same number. Setting this to 0
+# disables HTTP entirely, as does leaving http_handler unset.
+#
+# Higher than PennMUSH's 3 on purpose, and matching the value SharpMUSH assumes when
+# the setting is absent: the web portal serves its own character directory, online
+# list, profiles and Dynamic Application routes through this same surface, so the
+# quota is not spent only by outside callers. Raise it further if the portal is busy.
+http_per_second 30
 
 # The port it's running on. See also ssl_port, later.
 port 4203

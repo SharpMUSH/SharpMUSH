@@ -12,6 +12,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Messaging.NATS.Strategy;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
+using SharpMUSH.Server.Logging;
 using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
 
@@ -176,7 +177,14 @@ public class Program
 		// Inbound HTTP to the MUSH: /http/<path> runs the http_handler's <METHOD> attribute as
 		// commands, PennMUSH-style (see help sharphttp). Prefixed (rather than a catch-all) so it
 		// cannot shadow the portal's routes.
-		app.Map("/http/{**path}", HandleMushHttpRequest);
+		//
+		// This is the one route that runs arbitrary softcode for an anonymous caller, so it carries
+		// PennMUSH's own admission control: the "softcode-http" policy is the @config http_per_second
+		// quota (src/bsd.c http_quota), one global budget rather than a per-IP allowance. The
+		// evaluation deadline (queue_entry_cpu_time) and the response-size ceiling are separate
+		// budgets inside the dispatcher and are unaffected.
+		app.Map("/http/{**path}", HandleMushHttpRequest)
+			.RequireRateLimiting(Startup.SoftcodeHttpPolicy);
 
 		app.MapPrometheusScrapingEndpoint();
 
@@ -196,12 +204,28 @@ public class Program
 	/// </summary>
 	private static async Task HandleMushHttpRequest(
 		HttpContext context,
-		SharpMUSH.Library.Services.Interfaces.IHttpHandlerCommandDispatcher dispatcher)
+		SharpMUSH.Library.Services.Interfaces.IHttpHandlerCommandDispatcher dispatcher,
+		SitelockGuard sitelock,
+		ILogger<Program> logger)
 	{
 		var request = context.Request;
 
 		// %0 is the path as the MUSH sees it — strip the /http prefix, keep the query string.
 		var path = $"/{context.GetRouteValue("path") as string}{request.QueryString.Value}";
+
+		// The address policy decides on, and the one ``HTTP`COMMAND`` reports: whatever
+		// UseForwardedHeaders resolved, which is the proxy hop unless an operator listed that hop in
+		// ForwardedHeaders:KnownProxies. Same fallback as the auth surfaces (AuthController.ClientIp),
+		// so one sitelock rule covers every entry point that cannot name its caller.
+		var clientIp = context.Connection.RemoteIpAddress?.ToString()
+			?? SharpMUSH.Library.Services.Interfaces.IHttpHandlerCommandDispatcher.UnknownAddress;
+
+		if (SiteRefuses(sitelock, logger, clientIp, request.Method, path))
+		{
+			context.Response.StatusCode = StatusCodes.Status403Forbidden;
+			await context.Response.WriteAsync("Forbidden", context.RequestAborted);
+			return;
+		}
 
 		using var reader = new StreamReader(request.Body);
 		var body = await reader.ReadToEndAsync(context.RequestAborted);
@@ -210,7 +234,7 @@ public class Program
 			.SelectMany(header => header.Value.Where(value => value is not null)
 				.Select(value => (header.Key, Value: value!)));
 
-		var result = await dispatcher.DispatchAsync(request.Method, path, body, headers, context.RequestAborted);
+		var result = await dispatcher.DispatchAsync(request.Method, path, body, headers, clientIp, context.RequestAborted);
 
 		if (result is not SharpMUSH.Library.Services.Interfaces.HttpHandlerResult handled)
 		{
@@ -238,5 +262,50 @@ public class Program
 		}
 
 		await context.Response.WriteAsync(handled.Body, context.RequestAborted);
+	}
+
+	/// <summary>
+	/// PennMUSH's HTTP site policy (src/bsd.c:3814-3839), applied where Penn applies it — at the
+	/// inbound request, before a body is even read, let alone a line of handler code run. The
+	/// caller's address is matched against the sitelock rules, and then so is the
+	/// "<c>&lt;IP&gt;`&lt;METHOD&gt;`&lt;PATH&gt;</c>" composite Penn checks as though it were a
+	/// hostname — which is how a rule gates one route rather than a whole client (help sharphttp,
+	/// "HTTP SITELOCK"). Both read the same <c>!connect</c> flag as the other login surfaces, so one
+	/// matcher decides for every way into the game.
+	/// <para>
+	/// This lives on the route rather than in the dispatcher on purpose: the dispatcher is also how
+	/// the server runs a handler route on its own behalf (<c>ApplicationsController</c> validating
+	/// an application's schema endpoint), and a rule written to keep anonymous traffic out must not
+	/// fail an authenticated admin's action.
+	/// </para>
+	/// <para>
+	/// Penn answers a refused request with its <c>mud_url</c> landing page; SharpMUSH's HTTP surface
+	/// is an API rather than a port a browser stumbled onto, so it answers a plain 403 — the same
+	/// kind of deliberate deviation as the 404 for a missing method attribute (help sharphttp).
+	/// </para>
+	/// </summary>
+	private static bool SiteRefuses(SitelockGuard sitelock, Microsoft.Extensions.Logging.ILogger logger, string clientIp, string method, string path)
+	{
+		// Upper-cased to match how the handler attribute itself is looked up, so a rule written
+		// against POST cannot be slipped past by sending "post".
+		var upperMethod = method.ToUpperInvariant();
+		var reason = sitelock.IsBlocked(clientIp, host: string.Empty, SitelockGuard.Connect)
+			? "IP sitelocked !connect"
+			: sitelock.IsBlocked(string.Empty, $"{clientIp}`{upperMethod}`{path}", SitelockGuard.Connect)
+				? "path sitelocked !connect"
+				: null;
+
+		if (reason is null)
+		{
+			return false;
+		}
+
+		// Method and path are the caller's, and routing hands the path over percent-DECODED — so
+		// both are stripped of control characters before they reach a log line they would otherwise
+		// be able to forge entries in (CWE-117). The address comes from IPAddress.ToString() and the
+		// reason is one of the two literals above; neither can carry one.
+		logger.LogInformation("Refused inbound HTTP {Method} {Path} from {ClientIp}: http: {Reason}.",
+			SafeLogValue.OneLine(upperMethod), SafeLogValue.OneLine(path), clientIp, reason);
+		return true;
 	}
 }

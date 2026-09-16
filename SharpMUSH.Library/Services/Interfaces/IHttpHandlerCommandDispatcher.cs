@@ -33,6 +33,13 @@ public record HttpHandlerResult(
 /// </summary>
 public interface IHttpHandlerCommandDispatcher
 {
+	/// <summary>The address recorded when the caller's real one could not be established.</summary>
+	/// <remarks>
+	/// The same literal the web auth surfaces fall back to (<c>AuthController.ClientIp</c>), so a
+	/// log or event reads alike whichever surface could not name its caller.
+	/// </remarks>
+	const string UnknownAddress = "unknown";
+
 	/// <summary>
 	/// Runs the request through the handler. Returns <see cref="NotFound"/> when no
 	/// <c>http_handler</c> is configured or the handler has no <c>&lt;METHOD&gt;</c> attribute
@@ -47,5 +54,28 @@ public interface IHttpHandlerCommandDispatcher
 		string path,
 		string body,
 		IEnumerable<(string Name, string Value)> headers,
+		CancellationToken ct = default);
+
+	/// <summary>
+	/// As above, for a caller whose address is known — which is what the ``HTTP`COMMAND`` event
+	/// reports in its first field (src/bsd.c:4076).
+	/// <para>
+	/// Site policy is deliberately NOT applied here. PennMUSH decides it in
+	/// <c>process_http_start</c>, the inbound-connection handler, not in the command run that this
+	/// interface corresponds to (<c>run_http_command</c>) — so an inbound request is gated by the
+	/// <c>/http/</c> route, and a caller the server dispatches on its own behalf (validating an
+	/// application's schema route, say) is not refused by a rule aimed at anonymous traffic.
+	/// </para>
+	/// </summary>
+	/// <param name="clientIp">
+	/// The effective client address, already resolved through the trusted-proxy pipeline. Pass
+	/// <see cref="UnknownAddress"/> rather than an empty string when there is none.
+	/// </param>
+	ValueTask<Found<HttpHandlerResult>> DispatchAsync(
+		string method,
+		string path,
+		string body,
+		IEnumerable<(string Name, string Value)> headers,
+		string clientIp,
 		CancellationToken ct = default);
 }

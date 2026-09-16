@@ -23,18 +23,40 @@ public class HttpHandlerCommandService(
 	ILogger<HttpHandlerCommandService> logger) : IHttpHandlerCommandDispatcher
 {
 	/// <inheritdoc />
-	public async ValueTask<Found<HttpHandlerResult>> DispatchAsync(
+	public ValueTask<Found<HttpHandlerResult>> DispatchAsync(
 		string method,
 		string path,
 		string body,
 		IEnumerable<(string Name, string Value)> headers,
 		CancellationToken ct = default)
+		=> DispatchAsync(method, path, body, headers, IHttpHandlerCommandDispatcher.UnknownAddress, ct);
+
+	/// <inheritdoc />
+	public async ValueTask<Found<HttpHandlerResult>> DispatchAsync(
+		string method,
+		string path,
+		string body,
+		IEnumerable<(string Name, string Value)> headers,
+		string clientIp,
+		CancellationToken ct = default)
 	{
 		ct.ThrowIfCancellationRequested();
-		var handlerDbRef = options.CurrentValue.Database.HttpHandler;
+		var configuration = options.CurrentValue.Database;
+		var handlerDbRef = configuration.HttpHandler;
 		if (handlerDbRef is null or 0)
 		{
 			logger.LogDebug("Inbound HTTP request but no http_handler is configured.");
+			return new NotFound();
+		}
+
+		// PennMUSH refuses an HTTP request outright while http_per_second is below one, in the same
+		// breath as an unusable http_handler (src/bsd.c:3740-3743, reason "No HTTPHandler") — zero is
+		// how an operator turns the softcode HTTP surface off, not merely how they throttle it. The
+		// per-second quota itself is admission control one layer up, on the route.
+		if (configuration.HttpRequestsPerSecond < 1)
+		{
+			logger.LogDebug("Inbound HTTP request but http_per_second is {PerSecond}; the HTTP surface is off.",
+				configuration.HttpRequestsPerSecond);
 			return new NotFound();
 		}
 
@@ -110,8 +132,8 @@ public class HttpHandlerCommandService(
 			? new HttpHandlerResult(503, "Service Unavailable", "text/plain", [], ExecutionBudget.Error)
 			: AssembleResult(context);
 
-		// HTTP`COMMAND sysevent, mirroring Penn: ip is unknown at this layer (proxied), method,
-		// path, code, ctype, request body length, response body length.
+		// HTTP`COMMAND sysevent, mirroring Penn (src/bsd.c:4076): address, method, path, code,
+		// ctype, request body length, response body length.
 		if (!DeadlineExpired() && handlerRef is { } resolvedHandler)
 		{
 			using (budget.Enter())
@@ -121,7 +143,7 @@ public class HttpHandlerCommandService(
 					budget.ThrowIfExceeded();
 					await eventService.TriggerEventAsync(
 						parser, "HTTP`COMMAND", resolvedHandler, budget.Token,
-						string.Empty, method, path, result.Status.ToString(), result.ContentType,
+						clientIp, method, path, result.Status.ToString(), result.ContentType,
 						body.Length.ToString(), result.Body.Length.ToString());
 				}
 				catch (OperationCanceledException) when (DeadlineExpired()) { }

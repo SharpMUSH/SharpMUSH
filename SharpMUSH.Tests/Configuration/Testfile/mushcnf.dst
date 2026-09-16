@@ -37,7 +37,10 @@ http_handler 8
 # How many HTTP requests do you want to handle every second?
 # Setting this to 0 (or negative) disables HTTP. Defaults to 3,
 # as HTTP is also disabled unless http_handler is set.
-http_per_second 3
+# Raised well above the PennMUSH default (3): one shared test host serves every integration
+# test's /http/ traffic in parallel, and the production quota would 429 unrelated tests.
+# HttpHandlerRateLimitTests scopes its own low limit per test instead.
+http_per_second 100000
 
 # The port it's running on. See also ssl_port, later.
 port 4203

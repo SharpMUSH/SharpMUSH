@@ -139,8 +139,10 @@ public record DatabaseOptions(
 		ValidationPattern = @"^\d+$",
 		Group = "Handlers",
 		Order = 3,
-		Min = 1,
-		Max = 1000)]
+		Min = 0,
+		Max = 100000,
+		Tooltip = "Set to 0 to turn the softcode HTTP surface off entirely; otherwise the whole game "
+			+ "serves at most this many /http/ requests a second, bursting up to the same number.")]
 	uint HttpRequestsPerSecond,
 
 	[property: SharpConfig(
