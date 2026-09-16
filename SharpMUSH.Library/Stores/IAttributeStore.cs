@@ -101,6 +101,26 @@ public interface IAttributeStore
 	ValueTask<SharpAttributeEntry?> CreateOrUpdateAttributeEntryAsync(string name, string[] defaultFlags, string? limit = null, string[]? enumValues = null, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Create an attribute entry only if the name is free, in one atomic step.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="CreateOrUpdateAttributeEntryAsync"/> is what <c>@attribute/access</c> needs — it sets
+	/// an attribute's permissions whether or not the table already names it — which makes it the wrong
+	/// primitive for anything that must leave an existing definition alone. A PennMUSH import checks
+	/// the table once and then writes each name it lacked, so between the two a concurrent import or a
+	/// live <c>@attribute</c> could define the same name and have its flags overwritten. The check and
+	/// the write belong in the same transaction, as they do for a flag
+	/// (<see cref="IFlagAndPowerStore.CreateObjectFlagAsync"/>).
+	/// </remarks>
+	/// <param name="name">Attribute name</param>
+	/// <param name="defaultFlags">Default flags for this attribute</param>
+	/// <param name="limit">Optional regex pattern to limit values</param>
+	/// <param name="enumValues">Optional enumeration of allowed values</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>The created entry, or null if the table already named it</returns>
+	ValueTask<SharpAttributeEntry?> CreateAttributeEntryIfAbsentAsync(string name, string[] defaultFlags, string? limit = null, string[]? enumValues = null, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Delete an attribute entry from the attribute table.
 	/// </summary>
 	/// <param name="name">Attribute name</param>

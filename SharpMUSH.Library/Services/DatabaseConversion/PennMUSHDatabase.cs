@@ -21,6 +21,21 @@ public class PennMUSHDatabase
 	public List<PennMUSHObject> Objects { get; set; } = [];
 
 	/// <summary>
+	/// The game's object-flag table, from the dump's <c>+FLAGS LIST</c> section.
+	/// </summary>
+	public List<PennMUSHFlagDefinition> FlagDefinitions { get; set; } = [];
+
+	/// <summary>
+	/// The game's power table, from the dump's <c>+POWER LIST</c> section.
+	/// </summary>
+	public List<PennMUSHFlagDefinition> PowerDefinitions { get; set; } = [];
+
+	/// <summary>
+	/// The game's standard-attribute table, from the dump's <c>+ATTRIBUTES LIST</c> section.
+	/// </summary>
+	public List<PennMUSHAttributeDefinition> AttributeDefinitions { get; set; } = [];
+
+	/// <summary>
 	/// God/Wizard player DBRef (usually #1)
 	/// </summary>
 	public int GodPlayer { get; set; } = 1;

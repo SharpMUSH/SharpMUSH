@@ -165,6 +165,208 @@ public class PennMUSHDatabaseParserTests
 		await Assert.That(database.Objects.SelectMany(o => o.Attributes).Any(a => a.Name == "XYXXY")).IsFalse();
 	}
 
+	/// <summary>
+	/// The dump's <c>+FLAGS LIST</c> and <c>+POWER LIST</c> tables are the game's own definitions:
+	/// a name, its letter, the types it may sit on, and the permissions to set and clear it.
+	/// </summary>
+	[Test]
+	public async Task TheFlagAndPowerTablesAreRead()
+	{
+		var database = await Fixture();
+
+		await Assert.That(database.FlagDefinitions).Count().IsEqualTo(64);
+		await Assert.That(database.PowerDefinitions).Count().IsEqualTo(35);
+
+		var uninspected = database.FlagDefinitions.Single(f => f.Name == "UNINSPECTED");
+		await Assert.That(uninspected.Letter).IsEqualTo("u");
+		await Assert.That(uninspected.Types).IsEquivalentTo(["ROOM"]);
+		await Assert.That(uninspected.SetPermissions).IsEquivalentTo(["royalty"]);
+		await Assert.That(uninspected.UnsetPermissions).IsEquivalentTo(["royalty"]);
+		await Assert.That(uninspected.IsInternal).IsFalse();
+
+		var quotas = database.PowerDefinitions.Single(p => p.Name == "Quotas");
+		await Assert.That(quotas.Letter).IsEmpty();
+		await Assert.That(quotas.Types).IsEquivalentTo(["PLAYER", "ROOM", "EXIT", "THING"]);
+		await Assert.That(quotas.SetPermissions).IsEquivalentTo(["wizard", "log"]);
+		await Assert.That(quotas.UnsetPermissions).IsEquivalentTo(["wizard"]);
+	}
+
+	/// <summary>
+	/// A definition PennMUSH marks <c>internal</c> is server state rather than site configuration:
+	/// CONNECTED is a live session and GOING is a queued destruction.
+	/// </summary>
+	[Test]
+	public async Task InternalFlagsAreMarkedAsSuch()
+	{
+		var database = await Fixture();
+
+		await Assert.That(database.FlagDefinitions.Where(f => f.IsInternal).Select(f => f.Name))
+			.IsEquivalentTo(["GOING", "GOING_TWICE", "CONNECTED"]);
+		await Assert.That(database.AttributeDefinitions.Where(a => a.IsInternal).Select(a => a.Name))
+			.IsEquivalentTo(["XYXXY"]);
+	}
+
+	/// <summary>
+	/// Aliases come after the definitions, one row per alias, so a definition with two of them is
+	/// named twice: <c>Announce</c> answers to both <c>@wall</c> and <c>wall</c>.
+	/// </summary>
+	[Test]
+	public async Task AliasRowsAreGatheredOntoTheDefinitionTheyName()
+	{
+		var database = await Fixture();
+
+		await Assert.That(database.FlagDefinitions.Single(f => f.Name == "JUMP_OK").Aliases)
+			.IsEquivalentTo(["TEL-OK", "TEL_OK", "TELOK"]);
+		await Assert.That(database.FlagDefinitions.Single(f => f.Name == "ON-VACATION").Aliases)
+			.IsEquivalentTo(["VACATION"]);
+		await Assert.That(database.PowerDefinitions.Single(p => p.Name == "Announce").Aliases)
+			.IsEquivalentTo(["@wall", "wall"]);
+		await Assert.That(database.AttributeDefinitions.Single(a => a.Name == "DESCRIBE").Aliases)
+			.IsEquivalentTo(["DESC"]);
+		await Assert.That(database.FlagDefinitions.Single(f => f.Name == "DARK").Aliases).IsEmpty();
+	}
+
+	/// <summary>
+	/// The <c>+ATTRIBUTES LIST</c> table is the game's standard attributes: the flags an attribute of
+	/// that name is created with, who defined it, and the value a read falls back to.
+	/// </summary>
+	[Test]
+	public async Task TheStandardAttributeTableIsRead()
+	{
+		var database = await Fixture();
+
+		await Assert.That(database.AttributeDefinitions).Count().IsEqualTo(213);
+
+		var aahear = database.AttributeDefinitions.Single(a => a.Name == "AAHEAR");
+		await Assert.That(aahear.Flags).IsEquivalentTo(["no_command", "prefixmatch"]);
+		await Assert.That(aahear.Creator).IsEqualTo(0);
+		await Assert.That(aahear.Data).IsEmpty();
+
+		await Assert.That(database.AttributeDefinitions.Single(a => a.Name == "XYXXY").Flags)
+			.IsEquivalentTo(["no_command", "no_clone", "wizard", "locked", "internal"]);
+	}
+
+	/// <summary>An alias naming a definition the table never declared is dropped, not guessed at.</summary>
+	[Test]
+	public async Task AnAliasForANameTheTableDoesNotDefineIsDropped()
+	{
+		var database = await ParseText("""
+			+V-4199422
+			dbversion 6
+			savedtime "Fri Sep 11 16:50:50 2026"
+			+FLAGS LIST
+			flagcount 1
+			 name "ORACLE_TAG"
+			  letter "o"
+			  type "THING"
+			  perms ""
+			  negate_perms ""
+			flagaliascount 2
+			 name "ORACLE_TAG"
+			  alias "OTAG"
+			 name "NOT_A_FLAG"
+			  alias "NAF"
+			~0
+			***END OF DUMP***
+
+			""");
+
+		await Assert.That(database.FlagDefinitions.Single().Aliases).IsEquivalentTo(["OTAG"]);
+	}
+
+	/// <summary>
+	/// A definition table SharpMUSH cannot make sense of costs the game its definitions and not its
+	/// world. The entry readers take a table's fields in the order PennMUSH writes them, so a dump
+	/// whose entries carry a field more would otherwise throw out of the parse before the converter
+	/// ever ran, and take every object with it.
+	/// </summary>
+	[Test]
+	public async Task ATableThatCannotBeReadCostsItsDefinitionsAndNotTheObjects()
+	{
+		var database = await ParseText(Dump(
+			"+FLAGS LIST",
+			"flagcount 1",
+			" name \"ORACLE_TAG\"",
+			"  letter \"o\"",
+			"  gravity \"9.8\"",
+			"  type \"THING\"",
+			"  perms \"\"",
+			"  negate_perms \"\"",
+			"~1",
+			"!0",
+			"name \"Room Zero\"",
+			"location #-1",
+			"contents #-1",
+			"exits #-1",
+			"next #-1",
+			"parent #-1",
+			"lockcount 0",
+			"owner #1",
+			"zone #-1",
+			"pennies 0",
+			"type 1",
+			"flags \"LINK_OK\"",
+			"powers \"\"",
+			"warnings \"\"",
+			"created 1789145415",
+			"modified 1789145415",
+			"attrcount 0",
+			"***END OF DUMP***"));
+
+		await Assert.That(database.FlagDefinitions).IsEmpty();
+		await Assert.That(database.Objects.Select(o => o.Name)).IsEquivalentTo(["Room Zero"]);
+	}
+
+	/// <summary>
+	/// And it costs the whole table, not the part before the trouble. A table read halfway is worse
+	/// than none: the definitions that did arrive would stand in for the game's entire flag table, so
+	/// the converter would take every name missing from it for a name the source never defined and
+	/// create nothing for them.
+	/// </summary>
+	[Test]
+	public async Task ATableThatFailsPartWayThroughKeepsNoneOfItsDefinitions()
+	{
+		var database = await ParseText(Dump(
+			"+FLAGS LIST",
+			"flagcount 2",
+			" name \"ORACLE_FIRST\"",
+			"  letter \"1\"",
+			"  type \"THING\"",
+			"  perms \"\"",
+			"  negate_perms \"\"",
+			" name \"ORACLE_SECOND\"",
+			"  letter \"2\"",
+			"  gravity \"9.8\"",
+			"  type \"THING\"",
+			"  perms \"\"",
+			"  negate_perms \"\"",
+			"+POWER LIST",
+			"flagcount 1",
+			" name \"Oracle_Sight\"",
+			"  letter \"\"",
+			"  type \"PLAYER\"",
+			"  perms \"wizard\"",
+			"  negate_perms \"wizard\"",
+			"~0",
+			"***END OF DUMP***"));
+
+		await Assert.That(database.FlagDefinitions).IsEmpty()
+			.Because("ORACLE_FIRST read cleanly, but its table did not");
+		await Assert.That(database.PowerDefinitions.Select(p => p.Name)).IsEquivalentTo(["Oracle_Sight"])
+			.Because("one table's trouble is not another's");
+	}
+
+	/// <summary>A dump with no definition tables at all still reads, with nothing invented for it.</summary>
+	[Test]
+	public async Task ADumpWithoutDefinitionTablesHasNoDefinitions()
+	{
+		var database = await ParseText("+V-4199422\ndbversion 6\nsavedtime \"Fri Sep 11 16:50:50 2026\"\n~0\n***END OF DUMP***\n");
+
+		await Assert.That(database.FlagDefinitions).IsEmpty();
+		await Assert.That(database.PowerDefinitions).IsEmpty();
+		await Assert.That(database.AttributeDefinitions).IsEmpty();
+	}
+
 	[Test]
 	public async Task AnEmptyDumpHasNoObjects()
 	{
@@ -179,6 +381,10 @@ public class PennMUSHDatabaseParserTests
 	{
 		await Assert.That(async () => await ParseText("!0\nRoom Zero\n-1\n")).Throws<FormatException>();
 	}
+
+	/// <summary>A hand-written dump: the header every one needs, then the lines the test is about.</summary>
+	private static string Dump(params string[] lines)
+		=> string.Join("\n", (string[])["+V-4199422", "dbversion 6", "savedtime \"Fri Sep 11 16:50:50 2026\"", .. lines]) + "\n";
 
 	private static async Task<PennMUSHDatabase> ParseText(string text)
 	{

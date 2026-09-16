@@ -75,13 +75,7 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 			switch (next)
 			{
 				case '+':
-					// The game's flag, power and attribute tables: its definitions, not its objects.
-					await reader.ReadLineAsync(cancellationToken);
-					while (await reader.PeekAsync(cancellationToken) is not ('+' or '~' or '!' or '*' or -1))
-					{
-						await reader.ReadLabeledAsync(cancellationToken);
-					}
-
+					await ReadDefinitionTableAsync(reader, database, cancellationToken);
 					break;
 
 				case '~':
@@ -115,6 +109,169 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 		}
 
 		throw reader.Error($"the database ends without '{EndOfDump}', so it is incomplete");
+	}
+
+	/// <summary>
+	/// One of the dump's definition tables: the game's own flags, powers and standard attributes, each
+	/// a count, that many entries, and a second count with that many alias rows (<c>flag_write_all</c>
+	/// in src/flags.c, <c>attr_write_all</c> in src/attrib.c).
+	/// </summary>
+	private async Task ReadDefinitionTableAsync(PennMUSHDumpReader reader, PennMUSHDatabase database,
+		CancellationToken cancellationToken)
+	{
+		var section = (await reader.ReadLineAsync(cancellationToken))!;
+
+		// A table is read whole into a list of its own and handed over only once it is complete, so a
+		// table SharpMUSH cannot make sense of costs the game that table and nothing else: not the
+		// objects, which are the point of an import, and not the part of the table read before the
+		// trouble, which would otherwise stand in for the game's whole definition set. Both the unknown
+		// section and the unreadable one leave through the skip below, which resynchronises on the next
+		// section — a definition table is always followed by one.
+		try
+		{
+			switch (section)
+			{
+				case "+FLAGS LIST":
+					database.FlagDefinitions.AddRange(await ReadFlagTableAsync(reader, cancellationToken));
+					return;
+
+				case "+POWER LIST":
+					// PennMUSH keeps its powers in a flag table of their own, written by the same routine.
+					database.PowerDefinitions.AddRange(await ReadFlagTableAsync(reader, cancellationToken));
+					return;
+
+				case "+ATTRIBUTES LIST":
+					database.AttributeDefinitions.AddRange(await ReadAttributeTableAsync(reader, cancellationToken));
+					return;
+
+				default:
+					logger.LogWarning("Skipping PennMUSH database section {Section}, which SharpMUSH does not read", section);
+					break;
+			}
+		}
+		catch (FormatException ex)
+		{
+			logger.LogWarning(ex,
+				"Reading the PennMUSH {Section} section failed; its definitions are dropped and the world still loads", section);
+		}
+
+		await SkipLabeledAsync(reader, cancellationToken);
+	}
+
+	/// <summary>
+	/// A flag or power table's own rows: <c>flagcount</c> entries of name, letter, types and the two
+	/// permission sets, then <c>flagaliascount</c> alias rows. An unknown top-level label is ignored,
+	/// so a future count SharpMUSH does not know costs the table nothing.
+	/// </summary>
+	private async Task<List<PennMUSHFlagDefinition>> ReadFlagTableAsync(PennMUSHDumpReader reader,
+		CancellationToken cancellationToken)
+	{
+		var definitions = new List<PennMUSHFlagDefinition>();
+		while (await reader.PeekAsync(cancellationToken) is not ('+' or '~' or '!' or '*' or -1))
+		{
+			var (label, value) = await reader.ReadLabeledAsync(cancellationToken);
+			switch (label)
+			{
+				case "flagcount":
+					for (var i = Int(reader, value); i > 0; i--)
+					{
+						definitions.Add(new PennMUSHFlagDefinition
+						{
+							Name = await reader.ReadLabeledAsync("name", cancellationToken),
+							Letter = await reader.ReadLabeledAsync("letter", cancellationToken),
+							Types = Words(await reader.ReadLabeledAsync("type", cancellationToken)),
+							SetPermissions = Words(await reader.ReadLabeledAsync("perms", cancellationToken)),
+							UnsetPermissions = Words(await reader.ReadLabeledAsync("negate_perms", cancellationToken))
+						});
+					}
+
+					break;
+
+				case "flagaliascount":
+					await ReadAliasRowsAsync(reader, Int(reader, value),
+						name => definitions.Find(d => d.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.Aliases,
+						cancellationToken);
+					break;
+
+				default:
+					logger.LogDebug("Ignoring field {Label} of a PennMUSH flag table", label);
+					break;
+			}
+		}
+
+		return definitions;
+	}
+
+	/// <summary>
+	/// The standard-attribute table's own rows: <c>attrcount</c> entries of name, default flags,
+	/// creator and default value, then <c>attraliascount</c> alias rows.
+	/// </summary>
+	private async Task<List<PennMUSHAttributeDefinition>> ReadAttributeTableAsync(PennMUSHDumpReader reader,
+		CancellationToken cancellationToken)
+	{
+		var definitions = new List<PennMUSHAttributeDefinition>();
+		while (await reader.PeekAsync(cancellationToken) is not ('+' or '~' or '!' or '*' or -1))
+		{
+			var (label, value) = await reader.ReadLabeledAsync(cancellationToken);
+			switch (label)
+			{
+				case "attrcount":
+					for (var i = Int(reader, value); i > 0; i--)
+					{
+						definitions.Add(new PennMUSHAttributeDefinition
+						{
+							Name = await reader.ReadLabeledAsync("name", cancellationToken),
+							Flags = Words(await reader.ReadLabeledAsync("flags", cancellationToken)),
+							Creator = OptionalDbRef(reader, await reader.ReadLabeledAsync("creator", cancellationToken)),
+							Data = await reader.ReadLabeledAsync("data", cancellationToken)
+						});
+					}
+
+					break;
+
+				case "attraliascount":
+					await ReadAliasRowsAsync(reader, Int(reader, value),
+						name => definitions.Find(d => d.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.Aliases,
+						cancellationToken);
+					break;
+
+				default:
+					logger.LogDebug("Ignoring field {Label} of a PennMUSH attribute table", label);
+					break;
+			}
+		}
+
+		return definitions;
+	}
+
+	/// <summary>
+	/// A table's alias rows, each a definition's name and one alias, onto the definition they name.
+	/// An alias for a name the table never declared is dropped rather than guessed at.
+	/// </summary>
+	private async Task ReadAliasRowsAsync(PennMUSHDumpReader reader, int count,
+		Func<string, List<string>?> aliasesOf, CancellationToken cancellationToken)
+	{
+		for (; count > 0; count--)
+		{
+			var name = await reader.ReadLabeledAsync("name", cancellationToken);
+			var alias = await reader.ReadLabeledAsync("alias", cancellationToken);
+			if (aliasesOf(name) is { } aliases)
+			{
+				aliases.Add(alias);
+			}
+			else
+			{
+				logger.LogWarning("Dropping alias {Alias}, which names {Name}, undefined in its table", alias, name);
+			}
+		}
+	}
+
+	private static async Task SkipLabeledAsync(PennMUSHDumpReader reader, CancellationToken cancellationToken)
+	{
+		while (await reader.PeekAsync(cancellationToken) is not ('+' or '~' or '!' or '*' or -1))
+		{
+			await reader.ReadLabeledAsync(cancellationToken);
+		}
 	}
 
 	private async Task<PennMUSHObject?> ReadObjectAsync(PennMUSHDumpReader reader, CancellationToken cancellationToken)

@@ -593,6 +593,28 @@ public partial class SurrealDatabase
 		return await GetSharpAttributeEntry(name, cancellationToken);
 	}
 
+	public async ValueTask<SharpAttributeEntry?> CreateAttributeEntryIfAbsentAsync(string name, string[] defaultFlags,
+		string? limit = null, string[]? enumValues = null, CancellationToken cancellationToken = default)
+	{
+		var parameters = new Dictionary<string, object?>
+		{
+			["name"] = name,
+			["defaultFlags"] = defaultFlags,
+			["lim"] = limit ?? "",
+			["enumValues"] = enumValues ?? Array.Empty<string>()
+		};
+
+		var response = await ExecuteAsync(
+			"IF array::len((SELECT id FROM attribute_entry WHERE string::uppercase(name) = string::uppercase($name) LIMIT 1)) = 0 { RETURN (" +
+			"CREATE attribute_entry:⟨$name⟩ SET name = $name, defaultFlags = $defaultFlags, lim = $lim, enumValues = $enumValues); } ELSE { RETURN []; }",
+			parameters, cancellationToken);
+
+		if (response.HasErrors) return null;
+		return response.GetValue<List<AttributeEntryRecord>>(0) is { Count: > 0 }
+			? await GetSharpAttributeEntry(name, cancellationToken)
+			: null;
+	}
+
 	public async ValueTask<bool> DeleteAttributeEntryAsync(string name, CancellationToken cancellationToken = default)
 	{
 		var existing = await GetSharpAttributeEntry(name, cancellationToken);
