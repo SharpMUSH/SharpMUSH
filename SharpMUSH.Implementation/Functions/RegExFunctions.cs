@@ -173,7 +173,7 @@ public partial class Functions
 	private string SetRegistersFromMatch(IMUSHCodeParser parser, Match match, string registerList)
 	{
 		var registers = registerList.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		var errors = string.Empty;
+		var unusableNames = 0;
 
 		for (var i = 0; i < registers.Length; i++)
 		{
@@ -202,11 +202,15 @@ public partial class Functions
 
 			if (!parser.CurrentState.AddRegister(qRegister, MarkupText.Plain(CaptureValue(match, captureIndexOrName))))
 			{
-				errors += ErrorMessages.Returns.BadRegName;
+				unusableNames++;
 			}
 		}
 
-		return errors;
+		// Every report is the same string, so count them and build the result once rather than
+		// concatenating inside the loop.
+		return unusableNames == 0
+			? string.Empty
+			: string.Concat(Enumerable.Repeat(ErrorMessages.Returns.BadRegName, unusableNames));
 	}
 
 	/// <summary>
@@ -220,19 +224,15 @@ public partial class Functions
 			return string.Empty;
 		}
 
-		Group? group;
-		if (int.TryParse(captureIndexOrName, out var captureIndex))
-		{
-			group = captureIndex >= 0 && captureIndex < match.Groups.Count
-				? match.Groups[captureIndex]
-				: null;
-		}
-		else
-		{
-			group = match.Groups[captureIndexOrName];
-		}
+		// Both GroupCollection indexers answer a miss with an unsuccessful Group rather than throwing
+		// — the numeric one range-checks through a uint cast, so a negative index misses too, and the
+		// named one yields an empty group for a name the pattern does not define. That is the empty
+		// string PennMUSH also produces for an out-of-range subpattern.
+		var group = int.TryParse(captureIndexOrName, out var captureIndex)
+			? match.Groups[captureIndex]
+			: match.Groups[captureIndexOrName];
 
-		return group is { Success: true } ? group.Value : string.Empty;
+		return group.Success ? group.Value : string.Empty;
 	}
 
 	/// <summary>

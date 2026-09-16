@@ -67,6 +67,13 @@ public class RegexFunctionUnitTests
 	// A destination named by a subpattern name rather than a number.
 	[Arguments("[regmatch(cookies=30,%(?<food>.+%)=%(?<amt>.+%),food:rf amt:ra)]%q<rf>|%q<ra>",
 		"1cookies|30")]
+	// A capture index the pattern does not have, and a negative one, each clear their destination
+	// rather than throwing: PennMUSH's ansi_pcre_copy_substring yields nothing for an out-of-range
+	// subpattern, and parse_integer accepts "-1" as a strict integer on the way there.
+	[Arguments("[setq(rmo,old)][regmatch(abc,%(a%),99:rmo)]%q<rmo>", "1")]
+	[Arguments("[setq(rmv,old)][regmatch(abc,%(a%),-1:rmv)]%q<rmv>", "1")]
+	// A subpattern name the pattern does not define does the same.
+	[Arguments("[setq(rmu,old)][regmatch(abc,%(?<here>a%),nowhere:rmu)]%q<rmu>", "1")]
 	// The two-argument form names no destinations and must touch none: PennMUSH returns from the
 	// nargs == 2 branch before any register code runs (src/funlist.c:2871).
 	[Arguments("[setq(rmk,keep)][regmatch(a,z)]%q<rmk>", "0keep")]
