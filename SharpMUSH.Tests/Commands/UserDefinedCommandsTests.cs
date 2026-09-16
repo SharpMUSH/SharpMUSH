@@ -168,6 +168,32 @@ public class UserDefinedCommandsTests
 	}
 
 	/// <summary>
+	/// %+ is the argument count, and a regexp $-command's named capture groups are not arguments.
+	/// PennMUSH's pi_regs_get_envc (src/parse.c:1783-1813) takes the highest numeric index plus one
+	/// and says so in the loop: "only check numeric args, ignore named ones". Named groups share the
+	/// register namespace with %0-%N here (PatternArguments.cs:19-20), so %+ counted them too.
+	/// </summary>
+	[Test]
+	public async ValueTask Regex_NamedCaptureGroups_AreNotCountedByPercentPlus()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "UdcRxPlus");
+		var token = TestIsolationHelpers.GenerateUniqueName("uc");
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&UTEST_RXPLUS {obj}=${token} (?<who>[A-Za-z]+) (?<what>[A-Za-z]+):@emit {token}: %+ %1 %2 [r(who,args)]"));
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@set {obj}/UTEST_RXPLUS=regexp"));
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} Alice Bob"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(executor),
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextEquals(s, $"{token}: 3 Alice Bob Alice")),
+				TestHelpers.MatchingObject(obj), INotifyService.NotificationType.Emit);
+	}
+
+	/// <summary>
 	/// Regex two capture groups: $cmd ([A-Za-z]+) ([A-Za-z]+) — %1 and %2 capture the two words.
 	/// Uses [A-Za-z]+ instead of \w+ to avoid MUSH backslash escaping on attribute set.
 	/// </summary>

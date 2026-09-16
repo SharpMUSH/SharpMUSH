@@ -87,7 +87,19 @@ public static partial class Substitutions
 			"U" or "u" => LastCommandBeforeEvaluation(parser), // Last command after evaluation - using same implementation
 																												 // PennMUSH: %? returns "invocations recursions" (two space-separated numbers)
 			"?" => $"{parser.CurrentState.TotalInvocations!.Count} {parser.CurrentState.CallDepth!.Count}",
-			"+" => parser.CurrentState.EnvironmentRegisters.Count.ToString(),
+			// PennMUSH's %+ is the argument count, not the register count: pi_regs_get_envc
+			// (src/parse.c:1783-1813) takes the highest numeric argument index plus one and skips
+			// the rest outright — "only check numeric args, ignore named ones". Named registers
+			// share this dictionary with %0-%N: a regexp $-command's capture groups land here
+			// (PatternArguments.cs:19-20), as do a mapsql callback's column names, so counting
+			// entries over-reported both. A key counts as a position when int.TryParse accepts it,
+			// which is the same test ParserState.ArgumentsOrdered applies; Penn's sscanf("%d") also
+			// takes a leading-integer prefix, which nothing here produces. Negative indices are
+			// ignored, as they are in Penn, where the running maximum starts at zero.
+			"+" => (parser.CurrentState.EnvironmentRegisters.Keys
+				.Select(key => int.TryParse(key, out var index) ? index : -1)
+				.DefaultIfEmpty(-1)
+				.Max() + 1).ToString(),
 			// PennMUSH emits "% " (percent then space) literally "for more natural typing"
 			// (src/parse.c), unlike other unknown substitutions where the percent is dropped
 			// (%z -> z). The literal space arrives here as the OTHER_SUB catch-all.
