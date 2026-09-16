@@ -1083,8 +1083,9 @@ public partial class Functions
 	[SharpFunction(Name = "listq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> ListQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		_ = parser.CurrentState.Registers.TryPeek(out var kv);
-		return ValueTask.FromResult(new CallState(string.Join(" ", kv!.Keys)));
+		var pattern = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText();
+		return ValueTask.FromResult(new CallState(
+			string.Join(" ", VisibleRegisterNames(parser.CurrentState, RegisterKinds.QRegisters, pattern))));
 	}
 
 	[SharpFunction(Name = "listset", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1257,6 +1258,65 @@ public partial class Functions
 
 	/// <summary>The register stores r() reads from; each is matched by unambiguous prefix.</summary>
 	private static readonly string[] RegisterTypes = ["qregisters", "args", "iter", "switch", "regexp"];
+
+	/// <summary>The register stores <c>registers()</c> can list, as its <c>&lt;types&gt;</c> argument names them.</summary>
+	[Flags]
+	private enum RegisterKinds
+	{
+		None = 0,
+		QRegisters = 1,
+		Args = 2,
+		Iter = 4,
+		Switch = 8,
+		Regexp = 16,
+		All = QRegisters | Args | Iter | Switch | Regexp
+	}
+
+	/// <summary>
+	/// The names of the visible registers of <paramref name="kinds"/> that hold a non-blank value and
+	/// match the wildcard <paramref name="pattern"/> (case-insensitive; empty matches all), as
+	/// PennMUSH's <c>fun_listq</c> lists them. Each is keyed by the type letter Penn gives it — A
+	/// (args), N and T (iteration count and text), Q, R (regexp), S (switch) — and the list is in
+	/// byte order of that key, so it is deterministic and groups by type. Iteration and switch
+	/// context are named for their innermost level only, <c>0</c>.
+	/// </summary>
+	private static IEnumerable<string> VisibleRegisterNames(ParserState state, RegisterKinds kinds, string? pattern)
+	{
+		var matcher = string.IsNullOrEmpty(pattern) ? null : SoftcodeRegex.Wildcard(pattern);
+		return RegisterEntries(state, kinds)
+			.Where(entry => matcher is null || matcher.IsMatch(entry.Name))
+			.DistinctBy(entry => entry.Key)
+			.OrderBy(entry => entry.Key, StringComparer.Ordinal)
+			.Select(entry => entry.Name);
+	}
+
+	private static IEnumerable<(string Key, string Name)> RegisterEntries(ParserState state, RegisterKinds kinds)
+	{
+		if (kinds.HasFlag(RegisterKinds.Args))
+			foreach (var (name, value) in state.EnvironmentRegisters)
+				if (value.Message is { Length: > 0 })
+					yield return ($"A{name}", name);
+
+		if (kinds.HasFlag(RegisterKinds.QRegisters) && state.Registers.TryPeek(out var qregs))
+			foreach (var (name, value) in qregs)
+				if (value.Length > 0)
+					yield return ($"Q{name}", name);
+
+		if (kinds.HasFlag(RegisterKinds.Regexp) && state.RegexRegisters.TryPeek(out var rxregs))
+			foreach (var (name, value) in rxregs)
+				if (value.Length > 0)
+					yield return ($"R{name.ToUpperInvariant()}", name.ToUpperInvariant());
+
+		if (kinds.HasFlag(RegisterKinds.Iter) && state.IterationRegisters.TryPeek(out var iteration))
+		{
+			yield return ("N0", "0");
+			if (iteration.Value.Length > 0)
+				yield return ("T0", "0");
+		}
+
+		if (kinds.HasFlag(RegisterKinds.Switch) && state.SwitchStack.TryPeek(out var switchText) && switchText.Length > 0)
+			yield return ("S0", "0");
+	}
 
 	[SharpFunction(Name = "rand", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> Rand(IMUSHCodeParser parser, SharpFunctionAttribute _2)

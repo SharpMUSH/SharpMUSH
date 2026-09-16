@@ -44,6 +44,29 @@ public class UtilityFunctionUnitTests
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// <c>listq([&lt;pattern&gt;])</c> lists the visible q-registers holding a non-blank value, matching
+	/// <c>&lt;pattern&gt;</c> case-insensitively, in byte order. Expectations read from a live PennMUSH (#1090).
+	/// </summary>
+	[Test]
+	[Arguments("[setq(alpha,1,beta,2)][listq(a*)]", "ALPHA")]
+	[Arguments("[setq(alpha,1,beta,2)][listq(A*)]", "ALPHA")]
+	[Arguments("[setq(alpha,1,beta,2)][listq()]", "ALPHA BETA")]
+	[Arguments("[setq(zed,1,beta,2,alpha,3)][listq()]", "ALPHA BETA ZED")]
+	[Arguments("[setq(zed,1,beta,,alpha,3)][listq()]", "ALPHA ZED")]
+	[Arguments("[setq(b,1,a,2,10,3,9,4,_x,5)][listq()]", "10 9 A B _X")]
+	[Arguments("[setq(alpha,1)][listq(zz*)]|", "|")]
+	[Arguments("[setq(alpha,1,beta,2)][letq(gamma,3,listq())]", "ALPHA BETA GAMMA")]
+	[Arguments("[setq(alpha,1,beta,2)][letq(alpha,,listq())]", "BETA")]
+	[Arguments("[setq(alpha,,beta,2)][letq(alpha,1,listq())]", "ALPHA BETA")]
+	[Arguments("[localize([setq(n,1)][listq()])]|[listq()]", "N|")]
+	public async Task ListQFiltersVisibleNonBlankRegisters(string expression, string expected)
+	{
+		var parser = Parser.FromState(ParserState.RootFor(new DBRef(1)));
+		var result = await parser.FunctionParse(MarkupText.Plain(expression));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+	}
+
 	[Test]
 	public async Task PCreate()
 	{
