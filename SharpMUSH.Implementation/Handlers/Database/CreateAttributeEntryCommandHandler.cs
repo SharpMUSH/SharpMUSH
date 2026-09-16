@@ -12,3 +12,12 @@ public class CreateAttributeEntryCommandHandler(IAttributeStore database) : ICom
 		return await database.CreateOrUpdateAttributeEntryAsync(request.Name, request.DefaultFlags, request.Limit, request.EnumValues, cancellationToken);
 	}
 }
+
+public class CreateAttributeEntryIfAbsentCommandHandler(IAttributeStore database)
+	: ICommandHandler<CreateAttributeEntryIfAbsentCommand, SharpAttributeEntry?>
+{
+	public async ValueTask<SharpAttributeEntry?> Handle(CreateAttributeEntryIfAbsentCommand request, CancellationToken cancellationToken)
+	{
+		return await database.CreateAttributeEntryIfAbsentAsync(request.Name, request.DefaultFlags, request.Limit, request.EnumValues, cancellationToken);
+	}
+}

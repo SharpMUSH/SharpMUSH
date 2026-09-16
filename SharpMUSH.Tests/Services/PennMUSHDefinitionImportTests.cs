@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -199,6 +200,36 @@ public class PennMUSHDefinitionImportTests
 		var entry = await world.Mediator.Send(new GetAttributeEntryQuery("ZLEAVE"));
 		await Assert.That(entry).IsNotNull().Because("the import defined ZLEAVE after the miss was cached");
 		await Assert.That(entry!.DefaultFlags).IsEquivalentTo(["no_command", "prefixmatch"]);
+	}
+
+	/// <summary>
+	/// The primitive the pass writes each new standard attribute through: it adds a name only if the
+	/// table does not already hold it, in one step, and answers null when it does.
+	/// </summary>
+	/// <remarks>
+	/// The pass reads the attribute table once, at the top, so a name absent then can have been
+	/// defined by a concurrent import or a live <c>@attribute/access</c> by the time it is written —
+	/// and <see cref="CreateAttributeEntryCommand"/>, the upsert <c>@attribute/access</c> itself
+	/// needs, replaces an existing definition's default flags. The interleaving cannot be produced
+	/// from one thread, so what is pinned here is the contract that makes it harmless, and the
+	/// contrast with the upsert that does not.
+	/// </remarks>
+	[Test]
+	public async Task DefiningAStandardAttributeThatIsAlreadyThereLeavesItAlone()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+
+		await Assert.That(await world.Mediator.Send(new CreateAttributeEntryIfAbsentCommand("ORACLE_RACE", ["veiled"])))
+			.IsNotNull().Because("the name was free");
+		await Assert.That(await world.Mediator.Send(new CreateAttributeEntryIfAbsentCommand("ORACLE_RACE", ["wizard"])))
+			.IsNull().Because("the name was taken, and null is how the pass learns to keep what is there");
+
+		await Assert.That((await AttributeEntryAsync(world, "ORACLE_RACE"))!.DefaultFlags).IsEquivalentTo(["veiled"])
+			.Because("the definition that arrived first is the one that stands");
+
+		await world.Mediator.Send(new CreateAttributeEntryCommand("ORACLE_RACE", ["wizard"]));
+		await Assert.That((await AttributeEntryAsync(world, "ORACLE_RACE"))!.DefaultFlags).IsEquivalentTo(["wizard"])
+			.Because("the upsert replaces, which is why the pass does not use it");
 	}
 
 	/// <summary>

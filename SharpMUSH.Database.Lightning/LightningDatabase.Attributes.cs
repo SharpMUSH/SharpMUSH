@@ -213,6 +213,27 @@ public partial class LightningDatabase
 		return MapEntry(record);
 	}
 
+	public async ValueTask<SharpAttributeEntry?> CreateAttributeEntryIfAbsentAsync(string name, string[] defaultFlags,
+		string? limit = null, string[]? enumValues = null, CancellationToken cancellationToken = default)
+	{
+		var record = new AttributeEntryRecord
+		{
+			Name = name,
+			DefaultFlags = defaultFlags,
+			Limit = limit,
+			Enum = enumValues
+		};
+
+		var created = await Store.WriteAsync(tx =>
+		{
+			var key = Keys.Upper(name);
+			if (tx.TryGet(Tables.AttrEntry, key, out _)) return false;
+			tx.Put(Tables.AttrEntry, key, Codec.Serialize(record));
+			return true;
+		}, cancellationToken);
+		return created ? MapEntry(record) : null;
+	}
+
 	public async ValueTask<bool> DeleteAttributeEntryAsync(string name, CancellationToken cancellationToken = default)
 		=> await Store.WriteAsync(tx => tx.Delete(Tables.AttrEntry, Keys.Upper(name)), cancellationToken);
 

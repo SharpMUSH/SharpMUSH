@@ -243,6 +243,10 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		await ImportAttributeDefinitionsAsync(pennDatabase, context, cancellationToken);
 	}
 
+	/// <summary>
+	/// The source's object flags, under the rules in <see cref="ImportDefinitionsAsync"/>. A flag
+	/// keeps every alias this server has not already spent elsewhere.
+	/// </summary>
 	private async Task ImportFlagDefinitionsAsync(List<PennMUSHFlagDefinition> definitions,
 		PennMUSHConversionContext context, CancellationToken cancellationToken)
 	{
@@ -293,6 +297,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		_logger.LogInformation("Imported {Created} flag definitions, keeping SharpMUSH's for {Kept}", created, kept.Count);
 	}
 
+	/// <summary>
+	/// The source's powers, under the rules in <see cref="ImportDefinitionsAsync"/>. The one
+	/// difference from a flag is the alias: <see cref="SharpPower.Alias"/> holds one, and PennMUSH
+	/// writes a row per alias, so a power with two keeps the first and reports the rest.
+	/// </summary>
 	private async Task ImportPowerDefinitionsAsync(List<PennMUSHFlagDefinition> definitions,
 		PennMUSHConversionContext context, CancellationToken cancellationToken)
 	{
@@ -420,11 +429,13 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				flags = [];
 			}
 
-			if (await _mediator.Send(new CreateAttributeEntryCommand(definition.Name, flags), cancellationToken) is null)
+			// Create-if-absent, not the upsert @attribute/access needs: the table was read once, up at
+			// the top, so a name absent then can have been defined since by a concurrent import or by a
+			// live @attribute. The check and the write have to be one step for this pass to keep the
+			// promise it makes about definitions this server already has.
+			if (await _mediator.Send(new CreateAttributeEntryIfAbsentCommand(definition.Name, flags), cancellationToken) is null)
 			{
-				context.Warnings.Add(
-					$"Standard attribute {definition.Name} from the source's attribute table could not be created");
-				known.Remove(definition.Name);
+				kept.Add(definition.Name);
 				continue;
 			}
 
