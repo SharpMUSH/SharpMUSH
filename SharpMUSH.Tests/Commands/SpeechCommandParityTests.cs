@@ -311,6 +311,146 @@ public class SpeechCommandParityTests
 		await Assert.That(mine).DoesNotContain("You can't whisper to yourself.");
 	}
 
+	// speech.c:396-414 — unmatched names are gathered into one `Unable to whisper to:` line, and the
+	// good names still get the whisper.
+	[Test]
+	public async ValueTask Whisper_UnmatchedNamesAreReportedTogether()
+	{
+		var listenerName = await NameOf(_listener.DbRef);
+		var (mine, theirs) = await Speak($"whisper Nobodyqq {listenerName} \"No Such Thing\"=hi");
+		await Assert.That(mine).Contains("Unable to whisper to: Nobodyqq \"No Such Thing\"");
+		await Assert.That(mine).DoesNotContain("I don't see Nobodyqq here.");
+		await Assert.That(mine).Contains($"You whisper, \"hi\" to {listenerName}.");
+		await Assert.That(theirs).Contains($"{_speakerName} whispers: hi");
+	}
+
+	// MAT_NEAR: a player standing somewhere else is not a match, whatever the name.
+	[Test]
+	public async ValueTask Whisper_RemotePlayerIsUnmatched()
+	{
+		var remote = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "Remote");
+		try
+		{
+			var (mine, _) = await Speak($"whisper #{remote.DbRef.Number}=hi");
+			await Assert.That(mine).Contains($"Unable to whisper to: #{remote.DbRef.Number}");
+			await Assert.That(Notifications.For(remote.DbRef)).DoesNotContain($"{_speakerName} whispers: hi");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(remote.Handle);
+		}
+	}
+
+	// speech.c:396-401 — a target that fails can_interact(INTERACT_HEAR) is named in `can't hear you`
+	// AND in the unable list, and is not whispered to. The speaker is a mortal, so the interact lock
+	// really is evaluated against them.
+	[Test]
+	public async ValueTask Whisper_TargetThatCannotHearIsAFailure()
+	{
+		var listenerName = await NameOf(_listener.DbRef);
+		await God($"@lock/interact #{_listener.DbRef.Number}=#1");
+		try
+		{
+			var (mine, theirs) = await Speak($"whisper {listenerName}=hi");
+			await Assert.That(mine).Contains($"{listenerName} can't hear you.");
+			await Assert.That(mine).Contains($"Unable to whisper to: {listenerName}");
+			await Assert.That(mine).DoesNotContain($"You whisper, \"hi\" to {listenerName}.");
+			await Assert.That(theirs).DoesNotContain($"{_speakerName} whispers: hi");
+		}
+		finally
+		{
+			await God($"@unlock/interact #{_listener.DbRef.Number}");
+		}
+	}
+
+	// speech.c:405-409 — the hundredth good target stops the scan with a warning, and those hundred are
+	// still whispered to.
+	[Test]
+	public async ValueTask Whisper_StopsAtAHundredTargets()
+	{
+		var listenerName = await NameOf(_listener.DbRef);
+		var targets = string.Join(' ', Enumerable.Repeat(listenerName, 101));
+		var (mine, theirs) = await Speak($"whisper {targets}=hi");
+		await Assert.That(mine).Contains("Too many people to whisper to.");
+		await Assert.That(theirs.Count(line => line.StartsWith($"{_speakerName} whispers to "))).IsEqualTo(100);
+	}
+
+	// speech.c:429 — a noisy whisper is overheard only when a roll in [0, 100] falls below
+	// whisper_loudness. At 0 it never does.
+	[Test]
+	public async ValueTask NoisyWhisper_AtLoudnessZero_IsNeverOverheard()
+	{
+		using var quiet = TestOptionsOverride.Scope(options => options with
+		{
+			Limit = options.Limit with { WhisperLoudness = 0 }
+		});
+		var (bystander, listenerName) = (await Bystander(), await NameOf(_listener.DbRef));
+		try
+		{
+			await Speak($"whisper/noisy {listenerName}=hi");
+			await Assert.That(Notifications.For(bystander.DbRef))
+				.DoesNotContain($"{_speakerName} whispers to {listenerName}.");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(bystander.Handle);
+		}
+	}
+
+	// get_random_u32(0, 100) never reaches 101, so every roll falls below it and the room overhears.
+	// The configured maximum is 100; the override steps past it only to take the dice out of the test.
+	[Test]
+	public async ValueTask NoisyWhisper_AboveEveryRoll_IsOverheard()
+	{
+		using var loud = TestOptionsOverride.Scope(options => options with
+		{
+			Limit = options.Limit with { WhisperLoudness = 101 }
+		});
+		var (bystander, listenerName) = (await Bystander(), await NameOf(_listener.DbRef));
+		try
+		{
+			await Speak($"whisper/noisy {listenerName}=hi");
+			await Assert.That(Notifications.For(bystander.DbRef))
+				.Contains($"{_speakerName} whispers to {listenerName}.");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(bystander.Handle);
+		}
+	}
+
+	// speech.c:423 — "Drunk wizards...": a DARK whisperer is never overheard.
+	[Test]
+	public async ValueTask NoisyWhisper_FromADarkSpeaker_IsNeverOverheard()
+	{
+		using var loud = TestOptionsOverride.Scope(options => options with
+		{
+			Limit = options.Limit with { WhisperLoudness = 101 }
+		});
+		var (bystander, listenerName) = (await Bystander(), await NameOf(_listener.DbRef));
+		await God($"@set #{_speaker.DbRef.Number}=DARK");
+		try
+		{
+			await Speak($"whisper/noisy {listenerName}=hi");
+			await Assert.That(Notifications.For(bystander.DbRef))
+				.DoesNotContain($"{_speakerName} whispers to {listenerName}.");
+		}
+		finally
+		{
+			await God($"@set #{_speaker.DbRef.Number}=!DARK");
+			await ConnectionService.Disconnect(bystander.Handle);
+		}
+	}
+
+	private async Task<TestIsolationHelpers.TestPlayer> Bystander()
+	{
+		var bystander = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "Bystander");
+		await God($"@tel #{bystander.DbRef.Number}={_room}");
+		return bystander;
+	}
+
 	private async Task<DBRef> ThingInTheRoom(string name)
 	{
 		var created = await God($"@create {name}");
