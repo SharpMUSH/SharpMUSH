@@ -589,6 +589,16 @@ public partial class SurrealDatabase
 		var oldId = $"power:{SanitizeRecordId(oldName)}";
 		var newId = $"power:{SanitizeRecordId(newName)}";
 
+		// PennMUSH renames its own struct; it has nothing to say about a power an administrator
+		// created under the same name, which @power/add leaves system = false. Moving its grants and
+		// deleting it would destroy exactly what UserOwnedNamesAsync refuses to overwrite.
+		var owner = await ExecuteAsync($"SELECT VALUE system FROM {oldId}",
+			new Dictionary<string, object?>(), ct);
+		if (owner.GetValue<List<bool>>(0) is [false, ..])
+		{
+			return;
+		}
+
 		// Delete-then-relate rather than UPDATE ... SET out: `out` on an existing graph edge does not
 		// move, and ExecuteAsync only logs SurrealQL errors, so an UPDATE here fails silently and
 		// strands the grant. Holders that somehow already hold the new power are excluded so the

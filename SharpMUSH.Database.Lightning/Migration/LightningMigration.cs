@@ -187,7 +187,15 @@ public partial class LightningDatabase
 	private static void MergeRenamedPower(ITx tx, string oldName, string newName)
 	{
 		var oldKey = Keys.Upper(oldName);
-		if (!tx.TryGet(Tables.Power, oldKey, out _))
+		if (!tx.TryGet(Tables.Power, oldKey, out var oldRecord))
+		{
+			return;
+		}
+
+		// PennMUSH renames its own struct; it has nothing to say about a power an administrator
+		// created under the same name, which @power/add leaves System = false. Moving its grants and
+		// deleting it would destroy exactly what the seed guard below refuses to overwrite.
+		if (!Codec.Deserialize<PowerRecord>(oldRecord).System)
 		{
 			return;
 		}

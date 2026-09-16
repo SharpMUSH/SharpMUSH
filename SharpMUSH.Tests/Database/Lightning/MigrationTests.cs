@@ -209,4 +209,60 @@ public class MigrationTests
 		}
 	}
 
+	/// <summary>
+	/// The rename above is PennMUSH rewriting <em>its own</em> FLAG struct (<c>src/flags.c:850-855</c>).
+	/// It has nothing to say about a power an administrator created under that name, which
+	/// <c>@power/add</c> leaves <c>System = false</c>. Moving its grants onto SEND_OOB and deleting the
+	/// row would destroy exactly the definition the seed guard above refuses to overwrite.
+	/// </summary>
+	[Test]
+	public async Task MigrateLeavesAnAdministratorsOwnPuebloSendAlone()
+	{
+		var path = Path.Combine(Path.GetTempPath(), "user-pueblo-" + Guid.NewGuid().ToString("N"));
+		var db = Create(path);
+
+		try
+		{
+			await db.Migrate();
+
+			await db.Store.WriteAsync(tx =>
+			{
+				tx.Put(Tables.Power, Keys.Upper("Pueblo_Send"), Codec.Serialize(new PowerRecord
+				{
+					Name = "Pueblo_Send",
+					Alias = "",
+					Symbol = "",
+					SetPermissions = ["FLAG^WIZARD"],
+					UnsetPermissions = ["FLAG^WIZARD"],
+					TypeRestrictions = [],
+					System = false,
+					Disabled = false
+				}));
+				tx.Put(Tables.ObjPower.Forward, Keys.Dbref(1), Keys.Upper("Pueblo_Send"));
+				tx.Put(Tables.ObjPower.Reverse, Keys.Upper("Pueblo_Send"), Keys.Dbref(1));
+				return true;
+			});
+
+			await db.Migrate();
+
+			var power = db.Store.Read(tx => tx.TryGet(Tables.Power, Keys.Upper("Pueblo_Send"), out var value)
+				? Codec.Deserialize<PowerRecord>(value) : null);
+
+			await Assert.That(power).IsNotNull()
+				.Because("an administrator's own power is not the rename's to delete");
+			await Assert.That(power!.System).IsFalse();
+
+			var held = db.Store.Read(tx =>
+				tx.Dups(Tables.ObjPower.Forward, Keys.Dbref(1)).Select(v => Keys.ReadStr(v)).ToArray());
+
+			await Assert.That(held).Contains("PUEBLO_SEND")
+				.Because("the grant belongs to the administrator's power, not to SEND_OOB");
+		}
+		finally
+		{
+			await db.DisposeAsync();
+			await FixtureDirectoryCleanup.DeleteAsync(path);
+		}
+	}
+
 }
