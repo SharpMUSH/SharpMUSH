@@ -121,25 +121,27 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 	{
 		var section = (await reader.ReadLineAsync(cancellationToken))!;
 
-		// A table SharpMUSH cannot make sense of costs the game its definitions and not its objects:
-		// the world is the point of an import, and a definition is a convenience beside it. Both the
-		// unknown section and the unreadable one leave through the skip below, which resynchronises on
-		// the next section — a definition table is always followed by one.
+		// A table is read whole into a list of its own and handed over only once it is complete, so a
+		// table SharpMUSH cannot make sense of costs the game that table and nothing else: not the
+		// objects, which are the point of an import, and not the part of the table read before the
+		// trouble, which would otherwise stand in for the game's whole definition set. Both the unknown
+		// section and the unreadable one leave through the skip below, which resynchronises on the next
+		// section — a definition table is always followed by one.
 		try
 		{
 			switch (section)
 			{
 				case "+FLAGS LIST":
-					await ReadFlagTableAsync(reader, database.FlagDefinitions, cancellationToken);
+					database.FlagDefinitions.AddRange(await ReadFlagTableAsync(reader, cancellationToken));
 					return;
 
 				case "+POWER LIST":
 					// PennMUSH keeps its powers in a flag table of their own, written by the same routine.
-					await ReadFlagTableAsync(reader, database.PowerDefinitions, cancellationToken);
+					database.PowerDefinitions.AddRange(await ReadFlagTableAsync(reader, cancellationToken));
 					return;
 
 				case "+ATTRIBUTES LIST":
-					await ReadAttributeTableAsync(reader, database.AttributeDefinitions, cancellationToken);
+					database.AttributeDefinitions.AddRange(await ReadAttributeTableAsync(reader, cancellationToken));
 					return;
 
 				default:
@@ -156,9 +158,15 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 		await SkipLabeledAsync(reader, cancellationToken);
 	}
 
-	private async Task ReadFlagTableAsync(PennMUSHDumpReader reader, List<PennMUSHFlagDefinition> definitions,
+	/// <summary>
+	/// A flag or power table's own rows: <c>flagcount</c> entries of name, letter, types and the two
+	/// permission sets, then <c>flagaliascount</c> alias rows. An unknown top-level label is ignored,
+	/// so a future count SharpMUSH does not know costs the table nothing.
+	/// </summary>
+	private async Task<List<PennMUSHFlagDefinition>> ReadFlagTableAsync(PennMUSHDumpReader reader,
 		CancellationToken cancellationToken)
 	{
+		var definitions = new List<PennMUSHFlagDefinition>();
 		while (await reader.PeekAsync(cancellationToken) is not ('+' or '~' or '!' or '*' or -1))
 		{
 			var (label, value) = await reader.ReadLabeledAsync(cancellationToken);
@@ -190,11 +198,18 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 					break;
 			}
 		}
+
+		return definitions;
 	}
 
-	private async Task ReadAttributeTableAsync(PennMUSHDumpReader reader,
-		List<PennMUSHAttributeDefinition> definitions, CancellationToken cancellationToken)
+	/// <summary>
+	/// The standard-attribute table's own rows: <c>attrcount</c> entries of name, default flags,
+	/// creator and default value, then <c>attraliascount</c> alias rows.
+	/// </summary>
+	private async Task<List<PennMUSHAttributeDefinition>> ReadAttributeTableAsync(PennMUSHDumpReader reader,
+		CancellationToken cancellationToken)
 	{
+		var definitions = new List<PennMUSHAttributeDefinition>();
 		while (await reader.PeekAsync(cancellationToken) is not ('+' or '~' or '!' or '*' or -1))
 		{
 			var (label, value) = await reader.ReadLabeledAsync(cancellationToken);
@@ -225,6 +240,8 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 					break;
 			}
 		}
+
+		return definitions;
 	}
 
 	/// <summary>

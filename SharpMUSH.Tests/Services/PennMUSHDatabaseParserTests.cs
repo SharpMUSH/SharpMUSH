@@ -317,6 +317,45 @@ public class PennMUSHDatabaseParserTests
 		await Assert.That(database.Objects.Select(o => o.Name)).IsEquivalentTo(["Room Zero"]);
 	}
 
+	/// <summary>
+	/// And it costs the whole table, not the part before the trouble. A table read halfway is worse
+	/// than none: the definitions that did arrive would stand in for the game's entire flag table, so
+	/// the converter would take every name missing from it for a name the source never defined and
+	/// create nothing for them.
+	/// </summary>
+	[Test]
+	public async Task ATableThatFailsPartWayThroughKeepsNoneOfItsDefinitions()
+	{
+		var database = await ParseText(Dump(
+			"+FLAGS LIST",
+			"flagcount 2",
+			" name \"ORACLE_FIRST\"",
+			"  letter \"1\"",
+			"  type \"THING\"",
+			"  perms \"\"",
+			"  negate_perms \"\"",
+			" name \"ORACLE_SECOND\"",
+			"  letter \"2\"",
+			"  gravity \"9.8\"",
+			"  type \"THING\"",
+			"  perms \"\"",
+			"  negate_perms \"\"",
+			"+POWER LIST",
+			"flagcount 1",
+			" name \"Oracle_Sight\"",
+			"  letter \"\"",
+			"  type \"PLAYER\"",
+			"  perms \"wizard\"",
+			"  negate_perms \"wizard\"",
+			"~0",
+			"***END OF DUMP***"));
+
+		await Assert.That(database.FlagDefinitions).IsEmpty()
+			.Because("ORACLE_FIRST read cleanly, but its table did not");
+		await Assert.That(database.PowerDefinitions.Select(p => p.Name)).IsEquivalentTo(["Oracle_Sight"])
+			.Because("one table's trouble is not another's");
+	}
+
 	/// <summary>A dump with no definition tables at all still reads, with nothing invented for it.</summary>
 	[Test]
 	public async Task ADumpWithoutDefinitionTablesHasNoDefinitions()
