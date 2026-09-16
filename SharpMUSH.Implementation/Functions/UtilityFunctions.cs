@@ -1273,6 +1273,32 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// Parses <c>registers()</c>' space-separated <c>&lt;types&gt;</c>. Unlike r(), each name must be
+	/// spelled in full (any case), and <c>stack</c> is a synonym for <c>args</c>.
+	/// </summary>
+	/// <returns><see cref="RegisterKinds.None"/> for an unknown name; <see cref="RegisterKinds.All"/> for none given.</returns>
+	private static RegisterKinds ParseRegisterKinds(string types)
+	{
+		var kinds = RegisterKinds.None;
+		foreach (var type in types.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		{
+			var kind = type.ToLowerInvariant() switch
+			{
+				"qregisters" => RegisterKinds.QRegisters,
+				"args" or "stack" => RegisterKinds.Args,
+				"iter" => RegisterKinds.Iter,
+				"switch" => RegisterKinds.Switch,
+				"regexp" => RegisterKinds.Regexp,
+				_ => RegisterKinds.None
+			};
+			if (kind == RegisterKinds.None) return RegisterKinds.None;
+			kinds |= kind;
+		}
+
+		return kinds == RegisterKinds.None ? RegisterKinds.All : kinds;
+	}
+
+	/// <summary>
 	/// The names of the visible registers of <paramref name="kinds"/> that hold a non-blank value and
 	/// match the wildcard <paramref name="pattern"/> (case-insensitive; empty matches all), as
 	/// PennMUSH's <c>fun_listq</c> lists them. Each is keyed by the type letter Penn gives it — A
@@ -1368,45 +1394,14 @@ public partial class Functions
 	public ValueTask<CallState> Registers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
+		var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText();
+		var kinds = ParseRegisterKinds(args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? string.Empty);
+		if (kinds == RegisterKinds.None)
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Nothing));
 
-		// Get current registers from the stack
-		if (!parser.CurrentState.Registers.TryPeek(out var registers))
-		{
-			return ValueTask.FromResult(CallState.Empty);
-		}
-
-		// No arguments: return count of registers
-		if (!args.TryGetValue("0", out var arg0))
-		{
-			return ValueTask.FromResult(new CallState(registers.Count));
-		}
-
-		// First argument determines what to return
-		var mode = (arg0.Message ?? MarkupText.Empty).ToPlainText().ToLower();
-
-		// Return space-separated list of register names
-		if (mode == "list" || mode == "names")
-		{
-			return ValueTask.FromResult(new CallState(string.Join(" ", registers.Keys)));
-		}
-
-		// Get specific register value (second argument is register name)
-		if (mode == "get")
-		{
-			if (!args.TryGetValue("1", out var arg1))
-			{
-				return ValueTask.FromResult(CallState.Empty);
-			}
-			var regName = (arg1.Message ?? MarkupText.Empty).ToPlainText().ToUpper();
-			if (registers.TryGetValue(regName, out var value))
-			{
-				return ValueTask.FromResult(new CallState(value));
-			}
-			return ValueTask.FromResult(CallState.Empty);
-		}
-
-		// Default: return count
-		return ValueTask.FromResult(new CallState(registers.Count));
+		var separator = args.GetValueOrDefault("2")?.Message?.ToPlainText() ?? " ";
+		return ValueTask.FromResult(new CallState(
+			string.Join(separator, VisibleRegisterNames(parser.CurrentState, kinds, pattern))));
 	}
 
 	[SharpFunction(Name = "render", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]

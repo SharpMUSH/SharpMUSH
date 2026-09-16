@@ -409,20 +409,56 @@ public class UtilityFunctionUnitTests
 		await Assert.That(prefixQ.ToPlainText()).IsEqualTo("bval");
 	}
 
+	/// <summary>
+	/// <c>registers([&lt;pattern&gt;[, &lt;types&gt;[, &lt;osep&gt;]]])</c> lists the names of set, non-blank
+	/// registers — PennMUSH's <c>fun_listq</c> in <c>src/funmisc.c</c>. Expectations were read from a
+	/// live PennMUSH (#1095). Iteration context contributes <c>T0</c> and <c>N0</c>, switch context
+	/// <c>S0</c>; each prints as <c>0</c> and sorts by its type letter.
+	/// </summary>
 	[Test]
-	public async Task Registers_Count()
+	[Arguments("[setq(alpha,1,beta,2)][registers(alpha,qregisters)]", "ALPHA")]
+	[Arguments("[setq(alpha,1,beta,2)][registers()]", "ALPHA BETA")]
+	[Arguments("[setq(alpha,1,beta,2)][registers(,qregisters,|)]", "ALPHA|BETA")]
+	[Arguments("[setq(alpha,1,beta,2)][registers(*,qregisters,|)]", "ALPHA|BETA")]
+	[Arguments("[setq(alpha,1,beta,2)][registers(,bogus)]", "#-1")]
+	[Arguments("[setq(alpha,1,beta,2)][registers(,q)]", "#-1")]
+	[Arguments("[setq(alpha,1,beta,2)][registers(,QREGISTERS)]", "ALPHA BETA")]
+	[Arguments("[setq(alpha,1,beta,2)][registers(,qregisters args)]", "ALPHA BETA")]
+	[Arguments("[setq(alpha,1)][registers(,qregisters,)]x", "ALPHAx")]
+	[Arguments("[setq(alpha,1)][registers(,stack)]", "")]
+	[Arguments("[setq(0,x)][registers(,qregisters)]", "0")]
+	[Arguments("[setq(abc,1)][registers(a?c)]", "ABC")]
+	[Arguments("[setq(alpha,,beta,2)][registers(,,|)]", "BETA")]
+	[Arguments("[setq(alpha,1)][iter(x y,registers())]", "0 ALPHA 0 0 ALPHA 0")]
+	[Arguments("[setq(alpha,1)][iter(x,iter(y,registers(,iter)))]", "0 0")]
+	[Arguments("[setq(alpha,1)][switch(foo,f*,registers(,switch))]", "0")]
+	[Arguments("[setq(alpha,1)][switch(foo,f*,registers(,qregisters switch))]", "ALPHA 0")]
+	[Arguments("[setq(alpha,1)][switch(foo,f*,registers(,iter))]", "")]
+	[Arguments("[iter(x,registers(,,|))]", "0|0")]
+	[Arguments("[switch(,,registers(,,|))]", "")]
+	public async Task RegistersEnumeratesNamesByPatternAndType(string expression, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("setq(A,1)[setq(B,2)][registers()]")))?.Message!;
-		await Assert.That(int.Parse(result.ToPlainText())).IsGreaterThanOrEqualTo(2);
+		var parser = Parser.FromState(ParserState.RootFor(new DBRef(1)));
+		var result = await parser.FunctionParse(MarkupText.Plain(expression));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// The argument stack lists its non-blank positions in byte order, so <c>10</c> sorts before
+	/// <c>2</c>: PennMUSH gives <c>0|1|10|11|2|…</c> for <c>u(fn,a,…,l)</c> and <c>0|2</c> for
+	/// <c>u(fn,a,,c)</c>.
+	/// </summary>
 	[Test]
-	public async Task Registers_List()
+	public async Task RegistersListsNonBlankArgumentsInByteOrder()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("setq(TEST1,val1)[setq(TEST2,val2)][registers(list)]")))?.Message!;
-		var list = result.ToPlainText();
-		await Assert.That(list).Contains("TEST1");
-		await Assert.That(list).Contains("TEST2");
+		var arguments = new[] { "a", "", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l" }
+			.Select((value, index) => (value, index))
+			.ToDictionary(x => x.index.ToString(), x => new CallState(x.value));
+		var parser = Parser.FromState(ParserState.RootFor(new DBRef(1)) with { EnvironmentRegisters = arguments });
+
+		var result = await parser.FunctionParse(MarkupText.Plain("[setq(z,1)][registers(,args,|)]|[registers(,stack,|)]"));
+
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("0|10|11|2|3|4|5|6|7|8|9|0|10|11|2|3|4|5|6|7|8|9");
 	}
 
 	[Test]
