@@ -12,6 +12,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Messaging.NATS.Strategy;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Hubs;
+using SharpMUSH.Server.Logging;
 using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
 
@@ -299,8 +300,12 @@ public class Program
 			return false;
 		}
 
+		// Method and path are the caller's, and routing hands the path over percent-DECODED — so
+		// both are stripped of control characters before they reach a log line they would otherwise
+		// be able to forge entries in (CWE-117). The address comes from IPAddress.ToString() and the
+		// reason is one of the two literals above; neither can carry one.
 		logger.LogInformation("Refused inbound HTTP {Method} {Path} from {ClientIp}: http: {Reason}.",
-			upperMethod, path, clientIp, reason);
+			SafeLogValue.OneLine(upperMethod), SafeLogValue.OneLine(path), clientIp, reason);
 		return true;
 	}
 }

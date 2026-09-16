@@ -118,6 +118,23 @@ public class HttpHandlerSitelockTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
+	public async Task ThePathReachesTheApplicationPercentDecoded()
+	{
+		// Why SafeLogValue exists. Routing decodes the catch-all route value, so "%0A" in a request
+		// target is a real newline in the string the server then hands to softcode — and would hand
+		// to a log call. If this ever stops being true the sanitiser is no longer load-bearing; while
+		// it stays true, nothing may log this value raw.
+		await SeedHandlerAttribute("DECODED", "think %0");
+
+		var http = CreateClient();
+		using var response = await SendAsync(http, "DECODED", "http/foo%0Abar%0Dbaz");
+		var body = await response.Content.ReadAsStringAsync();
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That(body).Contains("/foo\nbar\rbaz");
+	}
+
+	[Test]
 	public async Task AForwardedHeaderFromAnUntrustedCallerCannotChooseThePolicyAddress()
 	{
 		await SeedHandlerAttribute("SPOOF", "think handler-output");
