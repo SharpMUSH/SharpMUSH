@@ -145,7 +145,17 @@ public partial class LightningDatabase
 		foreach (var (name, alias, setPerms, unsetPerms) in PowerSeed.Powers)
 		{
 			var key = Keys.Upper(name);
-			var disabled = tx.TryGet(Tables.Power, key, out var existingPower) && Codec.Deserialize<PowerRecord>(existingPower).Disabled;
+			var currentPower = tx.TryGet(Tables.Power, key, out var existingPower)
+				? Codec.Deserialize<PowerRecord>(existingPower)
+				: null;
+
+			// Same line as UpsertFlag: a power @power/add created is not the seed's to redefine.
+			if (currentPower is { System: false })
+			{
+				continue;
+			}
+
+			var disabled = currentPower?.Disabled ?? false;
 			tx.Put(Tables.Power, key, Codec.Serialize(new PowerRecord
 			{
 				Name = name,
@@ -177,7 +187,15 @@ public partial class LightningDatabase
 	private static void MergeRenamedPower(ITx tx, string oldName, string newName)
 	{
 		var oldKey = Keys.Upper(oldName);
-		if (!tx.TryGet(Tables.Power, oldKey, out _))
+		if (!tx.TryGet(Tables.Power, oldKey, out var oldRecord))
+		{
+			return;
+		}
+
+		// PennMUSH renames its own struct; it has nothing to say about a power an administrator
+		// created under the same name, which @power/add leaves System = false. Moving its grants and
+		// deleting it would destroy exactly what the seed guard below refuses to overwrite.
+		if (!Codec.Deserialize<PowerRecord>(oldRecord).System)
 		{
 			return;
 		}
@@ -198,11 +216,28 @@ public partial class LightningDatabase
 		tx.Delete(Tables.Power, oldKey);
 	}
 
+	/// <summary>
+	/// Writes one flag definition, keeping the row's <c>Disabled</c> state. A definition the seed owns
+	/// (<paramref name="system"/>) never overwrites a row an administrator created with
+	/// <c>@flag/add</c>, which is always <c>System = false</c>: PennMUSH's own built-in add path stops
+	/// the same way, with the "Don't double-add" guard in <c>add_flag_generic</c>
+	/// (<c>src/flags.c:2252</c>) returning <c>FLAG_EXISTS</c> and leaving the existing flag alone. Rows
+	/// the seed does own are still rewritten on every migration, which is how a corrected definition
+	/// reaches a world that was seeded before the correction.
+	/// </summary>
 	private static void UpsertFlag(ITx tx, string name, string symbol, IReadOnlyList<string> aliases, IReadOnlyList<string> setPerms,
 		IReadOnlyList<string> unsetPerms, IReadOnlyList<string> typeRestrictions, bool system)
 	{
 		var key = Keys.Upper(name);
-		var disabled = tx.TryGet(Tables.Flag, key, out var existing) && Codec.Deserialize<FlagRecord>(existing).Disabled;
+		var present = tx.TryGet(Tables.Flag, key, out var existing);
+		var current = present ? Codec.Deserialize<FlagRecord>(existing) : null;
+
+		if (system && current is { System: false })
+		{
+			return;
+		}
+
+		var disabled = current?.Disabled ?? false;
 		tx.Put(Tables.Flag, key, Codec.Serialize(new FlagRecord
 		{
 			Name = name,

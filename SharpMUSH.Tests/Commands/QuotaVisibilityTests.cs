@@ -55,8 +55,15 @@ public class QuotaVisibilityTests
 			.Because("controls(player, player) is always true, so a player always sees their own quota");
 	}
 
+	/// <summary>
+	/// The same <c>controls</c> term reached through the other path: naming yourself goes through
+	/// <c>LocatePlayer</c>, where omitting the argument does not. A mortal controlling a player other
+	/// than themselves is not reachable in this game's model — nobody owns another player — and
+	/// <c>@quota</c> only ever resolves a player, so self is the whole of what <c>controls</c> admits
+	/// here.
+	/// </summary>
 	[Test]
-	public async Task AMortalCanReadTheQuotaOfAPlayerTheyControl()
+	public async Task AMortalCanReadTheirOwnQuotaWhenTheyNameThemselves()
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, ConnectionService, "QuotaOwner");
 

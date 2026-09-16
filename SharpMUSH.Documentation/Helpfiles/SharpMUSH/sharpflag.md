@@ -593,9 +593,11 @@ An UNFINDABLE object cannot be found with `@find`, `@search`, or `locate`. Only 
 
 # UNINSPECTED
 
-**Flag: UNINSPECTED (players)**
+**Flag: UNINSPECTED (rooms)**
 
-The UNINSPECTED flag is used by some MUSHes to mark new players who haven't been approved by staff yet. Its exact meaning varies by MUSH.
+This flag has no hardcoded purpose, but may be used by MUSH staff to indicate that a room has not been inspected or approved by staff yet.
+
+Setting and clearing it requires Royalty.
 
 # VERBOSE
 
