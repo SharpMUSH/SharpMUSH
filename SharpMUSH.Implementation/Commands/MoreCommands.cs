@@ -2738,6 +2738,17 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// <c>MAT_NEAR_THINGS | MAT_CONTAINER</c> with a <c>TYPE_PLAYER</c> preference: <c>MAT_ME</c>,
+	/// <c>MAT_ABSOLUTE</c>, <c>MAT_PLAYER</c>, <c>MAT_NEIGHBOR</c>, <c>MAT_POSSESSION</c> and the
+	/// looker's location by name, every match required to be nearby.
+	/// </summary>
+	private const LocateFlags WhisperTargetFlags =
+		LocateFlags.MatchMeForLooker | LocateFlags.AbsoluteMatch | LocateFlags.MatchWildCardForPlayerName |
+		LocateFlags.MatchObjectsInLookerLocation | LocateFlags.MatchObjectsInLookerInventory |
+		LocateFlags.MatchAgainstLookerLocationName | LocateFlags.OnlyMatchObjectsInLookerLocation |
+		LocateFlags.PlayersPreference;
+
 	[SharpCommand(Name = "WHISPER", Switches = ["LIST", "NOISY", "SILENT", "NOEVAL"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["player", "message"])]
 	public async ValueTask<Option<CallState>> Whisper(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -2789,30 +2800,17 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var targetNames = targetArg.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		var successfulTargets = new List<AnySharpObject>();
 
-		foreach (var targetName in targetNames)
+		// speech.c do_whisper: next_in_list takes a "quoted name" whole, and each name is matched with
+		// match_result(player, name, TYPE_PLAYER, MAT_NEAR_THINGS | MAT_CONTAINER). The type is a
+		// preference, so any nearby object is a recipient, the whisperer included.
+		foreach (var targetName in ArgHelpers.NameListString(targetArg.ToPlainText()))
 		{
-			var targetResult = await LocateService.LocateAndNotifyIfInvalid(
-				parser, executor, executorLocation.WithExitOption(), targetName, LocateFlags.All);
-
-			if (targetResult is not AnySharpObject target || !target.IsPlayer)
+			if (await LocateService.Locate(parser, executor, executor, targetName, WhisperTargetFlags)
+					is not AnySharpObject target)
 			{
 				await NotifyService.Notify(executor, $"I don't see {targetName} here.", executor);
-				continue;
-			}
-
-			if (target.Object().DBRef.Equals(executor.Object().DBRef))
-			{
-				await NotifyService.Notify(executor, "You can't whisper to yourself.", executor);
-				continue;
-			}
-
-			var targetLocation = await target.Where();
-			if (!targetLocation.Object().DBRef.Equals(executorLocation.Object().DBRef))
-			{
-				await NotifyService.Notify(executor, $"{target.Object().Name} is not here.", executor);
 				continue;
 			}
 

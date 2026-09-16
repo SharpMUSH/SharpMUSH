@@ -32,6 +32,7 @@ public class SpeechCommandParityTests
 	private TestIsolationHelpers.TestPlayer _speaker = null!;
 	private TestIsolationHelpers.TestPlayer _listener = null!;
 	private string _speakerName = null!;
+	private string _room = null!;
 
 	[Before(Test)]
 	public async Task PutTwoPlayersInOneRoom()
@@ -42,9 +43,9 @@ public class SpeechCommandParityTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "Listener");
 
 		var dig = await God($"@dig SpeechParity{_speaker.DbRef.Number}");
-		var room = dig.Message!.ToPlainText().Trim();
-		await God($"@tel #{_speaker.DbRef.Number}={room}");
-		await God($"@tel #{_listener.DbRef.Number}={room}");
+		_room = dig.Message!.ToPlainText().Trim();
+		await God($"@tel #{_speaker.DbRef.Number}={_room}");
+		await God($"@tel #{_listener.DbRef.Number}={_room}");
 
 		_speakerName = (await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(_speaker.DbRef)))
 			.Expect<AnySharpObject>().Object().Name;
@@ -275,6 +276,47 @@ public class SpeechCommandParityTests
 		var listenerName = await NameOf(_listener.DbRef);
 		var (mine, _) = await Speak($"whisper/silent {listenerName}=quiet one");
 		await Assert.That(mine).Contains($"You whisper, \"quiet one\" to {listenerName}.");
+	}
+
+	// PennMUSH do_whisper walks the target list with next_in_list, which takes a "quoted" name whole.
+	[Test]
+	public async ValueTask Whisper_QuotedMultiwordNameIsOneTarget()
+	{
+		var lamp = await ThingInTheRoom("Brass Lamp");
+		var (mine, _) = await Speak("whisper \"Brass Lamp\"=psst");
+		await Assert.That(mine).Contains("You whisper, \"psst\" to Brass Lamp.");
+		await Assert.That(Notifications.For(lamp)).Contains($"{_speakerName} whispers: psst");
+	}
+
+	// match_result(..., TYPE_PLAYER, ...) makes players a preference, not a requirement: a thing in the
+	// room is a valid recipient, and a list mixes both.
+	[Test]
+	public async ValueTask Whisper_ReachesNearbyThingsAlongsidePlayers()
+	{
+		var listenerName = await NameOf(_listener.DbRef);
+		var box = await ThingInTheRoom("Cardboard Box");
+		var (mine, theirs) = await Speak($"whisper \"Cardboard Box\" {listenerName}=hi");
+		await Assert.That(mine).Contains($"You whisper, \"hi\" to Cardboard Box and {listenerName}.");
+		await Assert.That(theirs).Contains($"{_speakerName} whispers to Cardboard Box and {listenerName}: hi");
+		await Assert.That(Notifications.For(box)).Contains($"{_speakerName} whispers to Cardboard Box and {listenerName}: hi");
+	}
+
+	// do_whisper has no self check, and MAT_ME resolves "me".
+	[Test]
+	public async ValueTask Whisper_ToSelfIsAllowed()
+	{
+		var (mine, _) = await Speak("whisper me=to myself");
+		await Assert.That(mine).Contains($"You whisper, \"to myself\" to {_speakerName}.");
+		await Assert.That(mine).Contains($"{_speakerName} whispers: to myself");
+		await Assert.That(mine).DoesNotContain("You can't whisper to yourself.");
+	}
+
+	private async Task<DBRef> ThingInTheRoom(string name)
+	{
+		var created = await God($"@create {name}");
+		var thing = DBRef.Parse(created.Message!.ToPlainText());
+		await God($"@tel {thing}={_room}");
+		return thing;
 	}
 
 	private async Task<string> NameOf(DBRef who)
