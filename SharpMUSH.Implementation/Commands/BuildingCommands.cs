@@ -291,13 +291,25 @@ public partial class Commands
 				shouldNotify: true);
 		}
 
-		// Nobody may destroy God.
+		// Nobody may destroy God. Every refusal below comes before anything is marked or handed over.
 		if (obj.IsGod())
 		{
 			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
 				notifyMessage: ErrorMessages.Notifications.DestroyGodBlasphemous,
+				shouldNotify: true);
+		}
+
+		// DESTROY_OK only means anything on a thing (PennMUSH DestOk).
+		var destroyOk = obj.IsThing && await obj.HasFlag("DESTROY_OK");
+
+		if (!await MayDestroyAsync(executor, obj, destroyOk))
+		{
+			return await NotifyService.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
 				shouldNotify: true);
 		}
 
@@ -313,29 +325,51 @@ public partial class Commands
 				shouldNotify: true);
 		}
 
-		// --- Standard permission and safety checks ---
-
-		if (!await PermissionService.Controls(executor, obj))
-		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-				shouldNotify: true);
-		}
-
-		if (await obj.HasFlag("SAFE") && !override_)
+		// really_safe makes SAFE absolute: even @nuke is refused until the flag is cleared.
+		var reallySafe = Configuration.CurrentValue.Command.ReallySafe;
+		var safe = await obj.HasFlag("SAFE");
+		if (safe && !destroyOk && (reallySafe || !override_))
 		{
 			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.SafeObject,
-				notifyMessage: ErrorMessages.Notifications.SafeObjectUseNuke,
+				notifyMessage: reallySafe
+					? ErrorMessages.Notifications.SafeObjectMustUnset
+					: ErrorMessages.Notifications.SafeObjectUseNuke,
+				shouldNotify: true);
+		}
+
+		// "check to make sure there's no accidental destruction"
+		if (!override_ && !destroyOk && !await executor.Owns(obj))
+		{
+			return await NotifyService.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.NotYoursUseNuke,
+				shouldNotify: true);
+		}
+
+		if (obj.IsThing && !override_ && await obj.HasFlag("WIZARD"))
+		{
+			return await NotifyService.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.WizardThingUseNuke,
 				shouldNotify: true);
 		}
 
 		// Player-specific guards (PennMUSH what_to_destroy, TYPE_PLAYER case)
 		if (obj.IsPlayer)
 		{
+			if (!executor.IsPlayer)
+			{
+				return await NotifyService.NotifyAndReturn(
+					executor.Object().DBRef,
+					errorReturn: ErrorMessages.Returns.PermissionDenied,
+					notifyMessage: ErrorMessages.Notifications.ProgramsDontKillPeople,
+					shouldNotify: true);
+			}
+
 			// Only a wizard can destroy a player.
 			if (!await executor.IsWizard())
 			{
@@ -415,7 +449,13 @@ public partial class Commands
 		// destruction) but still present in the DB, so a plugin hook can read it before it is gone.
 		await NotifyObjectDestroyingAsync(parser, obj.Object().DBRef);
 
-		await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "GOING", false);
+		await SetFlagInternalAsync(obj, "GOING", true);
+		await SetFlagInternalAsync(obj, "GOING_TWICE", false);
+
+		if (safe && !reallySafe)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SafeTargetScheduledAnyway), executor);
+		}
 
 		var destroyMsg = obj.IsPlayer
 			? string.Format(ErrorMessages.Notifications.ObjectAndPossessionsScheduledDestroyedFormat, obj.Object().Name)
@@ -433,6 +473,53 @@ public partial class Commands
 		}
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>set_flag_internal</c> / <c>clear_flag_internal</c>: GOING and GOING_TWICE are
+	/// wizard-only to set by hand, but scheduling and sparing an object is the server's bookkeeping, so
+	/// it must not be refused for the mortal whose @destroy already passed its own permission checks.
+	/// </summary>
+	private async ValueTask SetFlagInternalAsync(AnySharpObject obj, string flagName, bool set)
+	{
+		if (await obj.HasFlag(flagName) == set
+			|| await Mediator.Send(new GetObjectFlagQuery(flagName)) is not { } flag)
+		{
+			return;
+		}
+
+		_ = set
+			? await Mediator.Send(new SetObjectFlagCommand(obj, flag))
+			: await Mediator.Send(new UnsetObjectFlagCommand(obj, flag));
+	}
+
+	/// <summary>
+	/// PennMUSH <c>what_to_destroy()</c>'s three routes to permission: control the object, control
+	/// either end of it when it is an exit, or pass the <c>@lock/destroy</c> of a DESTROY_OK thing.
+	/// </summary>
+	private async ValueTask<bool> MayDestroyAsync(AnySharpObject executor, AnySharpObject obj, bool destroyOk)
+	{
+		if (await PermissionService.Controls(executor, obj))
+		{
+			return true;
+		}
+
+		if (obj is SharpExit exit)
+		{
+			if (await exit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
+				&& await PermissionService.Controls(executor, destination.WithExitOption()))
+			{
+				return true;
+			}
+
+			var source = await exit.Location.WithCancellation(CancellationToken.None);
+			if (await PermissionService.Controls(executor, source.WithExitOption()))
+			{
+				return true;
+			}
+		}
+
+		return destroyOk && await LockService.Evaluate(LockType.Destroy, obj, executor);
 	}
 
 	/// <summary>
@@ -547,7 +634,7 @@ public partial class Commands
 			else
 			{
 				// Pre-destroy: mark for destruction, matching PennMUSH pre_destroy().
-				await ManipulateSharpObjectService.SetOrUnsetFlag(executor, fullObj, "GOING", false);
+				await SetFlagInternalAsync(fullObj, "GOING", true);
 			}
 		}
 
@@ -797,14 +884,8 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				if (await obj.HasFlag("GOING"))
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!GOING", false);
-				}
-				if (await obj.HasFlag("GOING_TWICE"))
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!GOING_TWICE", false);
-				}
+				await SetFlagInternalAsync(obj, "GOING", false);
+				await SetFlagInternalAsync(obj, "GOING_TWICE", false);
 
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SparedFromDestructionFormat), executor, obj.Object().Name);
 

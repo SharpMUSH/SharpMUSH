@@ -96,7 +96,9 @@ public class PlayerDestructionTests
 			.NotifyAndReturn(
 				executor,
 				Arg.Is<string>(s => s.Contains("#-1 PERMISSION DENIED")),
-				Arg.Is<string>(s => s.Contains("You must use @nuke to destroy a player.")),
+				// what_to_destroy's ownership check precedes its player case, and a wizard does not
+				// own another player, so this is the message Penn gives — not "use @nuke on a player".
+				Arg.Is<string>(s => s.Contains("That object does not belong to you. Use @nuke to destroy it.")),
 				Arg.Any<bool>());
 
 		var playerBeforeNuke = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();

@@ -731,6 +731,14 @@ public static class ErrorMessages
 		public const string SafeObjectMustUnset = "That object is set SAFE. You must set it !SAFE before destroying it.";
 		/// <summary>PennMUSH: when object is marked SAFE (standard mode).</summary>
 		public const string SafeObjectUseNuke = "That object is marked SAFE. Use @nuke to destroy it.";
+		/// <summary>PennMUSH do_destroy: @nuke of a SAFE object when REALLY_SAFE is off.</summary>
+		public const string SafeTargetScheduledAnyway = "Warning: Target is set SAFE, but scheduling for destruction anyway.";
+		/// <summary>PennMUSH what_to_destroy: plain @destroy of an object the actor does not own.</summary>
+		public const string NotYoursUseNuke = "That object does not belong to you. Use @nuke to destroy it.";
+		/// <summary>PennMUSH what_to_destroy: plain @destroy of a WIZARD thing.</summary>
+		public const string WizardThingUseNuke = "That object is set WIZARD. You must use @nuke to destroy it.";
+		/// <summary>PennMUSH what_to_destroy: a player destroyed by anything but a player.</summary>
+		public const string ProgramsDontKillPeople = "Programs don't kill people; people kill people!";
 
 		// --- Zone messages aligned with PennMUSH src/set.c ---
 		public const string ZoneChanged = "Zone changed.";
