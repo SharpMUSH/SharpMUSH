@@ -35,6 +35,10 @@ public static class PowerSeed
 		("Player_Create", "", ["wizard","log"], ["wizard"]),
 		("Poll", "", ["wizard","log"], ["wizard"]),
 		("Queue", "", ["wizard","log"], ["wizard"]),
+		// PennMUSH hdrs/flag_tab.h:161 - {"Quotas", '\0', NOTYPE, CHANGE_QUOTAS, F_WIZARD | F_LOG, F_WIZARD}.
+		// The macro name predates the power: do_quota (src/wiz.c:175) still restricts *setting* a quota to
+		// wizards, and what the power buys is the read of another player's quota (wiz.c:179).
+		("Quotas", "", ["wizard","log"], ["wizard"]),
 		("Search", "", ["wizard","log"], ["wizard"]),
 		("See_All", "", ["wizard","log"], ["wizard"]),
 		("See_Queue", "", ["wizard","log"], ["wizard"]),

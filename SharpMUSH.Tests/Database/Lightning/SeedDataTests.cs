@@ -9,7 +9,7 @@ public class SeedDataTests
 	{
 		await Assert.That(FlagSeed.Flags.Length).IsEqualTo(63);
 		await Assert.That(AttributeFlagSeed.Flags.Length).IsEqualTo(26);
-		await Assert.That(PowerSeed.Powers.Length).IsEqualTo(36);
+		await Assert.That(PowerSeed.Powers.Length).IsEqualTo(37);
 		await Assert.That(AttributeEntrySeed.Entries.Length).IsEqualTo(216);
 		await Assert.That(InitialObjectSeed.Objects.Select(o => o.Dbref)).IsEquivalentTo(Enumerable.Range(0, 10).Select(i => (long)i));
 	}

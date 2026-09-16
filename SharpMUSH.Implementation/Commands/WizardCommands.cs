@@ -679,6 +679,19 @@ public partial class Commands
 		};
 	}
 
+	/// <summary>
+	/// Who may read a quota. PennMUSH's do_quota (src/wiz.c:179) gates the read half with
+	/// <c>if (!Do_Quotas(player) &amp;&amp; !See_All(player) &amp;&amp; !controls(player, who))</c>, where
+	/// <c>Do_Quotas(x)</c> is <c>Wizard(x) || has_power_by_name(x, "QUOTAS", NOTYPE)</c>
+	/// (hdrs/mushdb.h:34). <c>IsSee_All</c> already covers Hasprivs, so the
+	/// wizard half of Do_Quotas needs no term of its own, and controls(player, player) is what lets a
+	/// player read their own. Setting a quota stays wizard-only whatever the power says (wiz.c:175).
+	/// </summary>
+	private async ValueTask<bool> MayReadQuotaAsync(AnySharpObject executor, AnySharpObject target)
+		=> await executor.IsSee_All()
+			|| await executor.HasPower("Quotas")
+			|| await PermissionService.Controls(executor, target);
+
 	private async ValueTask<Option<CallState>> PoorAsync(AnySharpObject executor, SharpPlayer player)
 	{
 		await Mediator.Send(new SetPlayerQuotaCommand(player, 0));
@@ -701,7 +714,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		AnySharpObject targetPlayer = executor;
+		AnySharpObject targetPlayer;
 		if (args.Count > 0)
 		{
 			var playerArg = args["0"].Message!.ToPlainText();
@@ -712,12 +725,32 @@ public partial class Commands
 					break;
 				case Error<CallState> error:
 					return error.Value;
+				default:
+					throw new InvalidOperationException("A player lookup returned neither a player nor an error.");
 			}
+		}
+		else
+		{
+			// PennMUSH src/wiz.c:165 resolves the no-argument form as Owner(player), not the executor
+			// itself, so a thing or a puppet reports the quota of whoever owns it. Defaulting to the
+			// executor instead made every non-player caller - `@force <thing>=@quota`, a $-command on a
+			// thing - throw out of the command and take its queue entry with it.
+			targetPlayer = new AnySharpObject(
+				await executor.Object().Owner.WithCancellation(CancellationToken.None));
 		}
 
 		if (targetPlayer is not SharpPlayer targetPlayerObj)
 		{
 			throw new InvalidOperationException("A quota belongs to a player.");
+		}
+
+		if (!await MayReadQuotaAsync(executor, targetPlayer))
+		{
+			return await NotifyService.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				shouldNotify: true);
 		}
 
 		var quota = targetPlayerObj.Quota;
@@ -2439,7 +2472,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		AnySharpObject targetPlayer = executor;
+		AnySharpObject targetPlayer;
 		if (args.Count > 0)
 		{
 			var playerArg = args["0"].Message!.ToPlainText();
@@ -2450,12 +2483,32 @@ public partial class Commands
 					break;
 				case Error<CallState> error:
 					return error.Value;
+				default:
+					throw new InvalidOperationException("A player lookup returned neither a player nor an error.");
 			}
+		}
+		else
+		{
+			// PennMUSH src/wiz.c:165 resolves the no-argument form as Owner(player), not the executor
+			// itself, so a thing or a puppet reports the quota of whoever owns it. Defaulting to the
+			// executor instead made every non-player caller - `@force <thing>=@quota`, a $-command on a
+			// thing - throw out of the command and take its queue entry with it.
+			targetPlayer = new AnySharpObject(
+				await executor.Object().Owner.WithCancellation(CancellationToken.None));
 		}
 
 		if (targetPlayer is not SharpPlayer targetPlayerObj)
 		{
 			throw new InvalidOperationException("A quota belongs to a player.");
+		}
+
+		if (!await MayReadQuotaAsync(executor, targetPlayer))
+		{
+			return await NotifyService.NotifyAndReturn(
+				executor.Object().DBRef,
+				errorReturn: ErrorMessages.Returns.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				shouldNotify: true);
 		}
 
 		var quota = targetPlayerObj.Quota;

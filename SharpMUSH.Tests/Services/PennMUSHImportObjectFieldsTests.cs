@@ -103,10 +103,11 @@ public class PennMUSHImportObjectFieldsTests
 
 		var bob = await FindAsync(world, "Bob");
 		var powers = await bob.Object().Powers.Value.Select(p => p.Name).ToListAsync();
-		await Assert.That(powers).IsEquivalentTo(["See_All"]);
+		await Assert.That(powers).IsEquivalentTo(["See_All", "Quotas"]);
 
 		await Assert.That(result.Warnings.Any(w => w.Contains("UNINSPECTED"))).IsTrue();
-		await Assert.That(result.Warnings.Any(w => w.Contains("QUOTAS"))).IsTrue();
+		await Assert.That(result.Warnings.Any(w => w.Contains("QUOTAS"))).IsFalse()
+			.Because("PennMUSH's QUOTAS power is seeded (#1131), so it imports instead of being reported");
 		await Assert.That(result.Warnings.Any(w => w.Contains("CONNECTED"))).IsFalse();
 	}
 
