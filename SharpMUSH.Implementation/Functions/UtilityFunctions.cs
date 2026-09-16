@@ -2086,14 +2086,19 @@ public partial class Functions
 	[SharpFunction(Name = "unsetq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> UnSetQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText();
+		var patterns = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText()
+			.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
 		if (parser.CurrentState.Registers.TryPeek(out var registers))
 		{
-			if (string.IsNullOrEmpty(argument)) registers.Clear();
+			// No pattern, or a lone "*" among them, clears the whole scope.
+			if (patterns.Length == 0 || patterns.Contains("*")) registers.Clear();
 			else
 			{
-				foreach (var name in argument.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-					registers.TryRemove(name.ToUpper());
+				var matching = patterns
+					.SelectMany(pattern => VisibleRegisterNames(parser.CurrentState, RegisterKinds.QRegisters, pattern))
+					.ToList();
+				foreach (var name in matching)
+					registers.Remove(name);
 			}
 		}
 

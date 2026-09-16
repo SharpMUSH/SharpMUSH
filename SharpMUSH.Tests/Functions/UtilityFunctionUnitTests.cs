@@ -67,6 +67,27 @@ public class UtilityFunctionUnitTests
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// <c>unsetq()</c> takes a space-separated list of wildcard patterns, and a lone <c>*</c> clears
+	/// everything. Expectations read from a live PennMUSH (#1094).
+	/// </summary>
+	[Test]
+	[Arguments("[setq(alpha,1,beta,2)][unsetq(a*)]%q<alpha>|%q<beta>", "|2")]
+	[Arguments("[setq(alpha,1,beta,2,gamma,3)][unsetq(a* g*)]%q<alpha>|%q<beta>|%q<gamma>", "|2|")]
+	[Arguments("[setq(alpha,1,beta,2)][unsetq(*)]%q<alpha>|%q<beta>", "|")]
+	[Arguments("[setq(alpha,1,beta,2)][unsetq(a* *)]%q<alpha>|%q<beta>", "|")]
+	[Arguments("[setq(alpha,1,beta,2)][unsetq(zz*)]%q<alpha>|%q<beta>", "1|2")]
+	[Arguments("[setq(alpha,1,beta,2)][unsetq(ALPHA)]%q<alpha>|%q<beta>", "|2")]
+	[Arguments("[setq(alpha,1,beta,2)][unsetq(?eta)]%q<alpha>|%q<beta>", "1|")]
+	[Arguments("[setq(n,1)][letq(n,2,[unsetq(n)][listq()])]|[listq()]", "|N")]
+	[Arguments("[setq(n,1)][localize([unsetq(n)][listq()])]|[listq()]", "|N")]
+	public async Task UnsetQMatchesWildcardPatterns(string expression, string expected)
+	{
+		var parser = Parser.FromState(ParserState.RootFor(new DBRef(1)));
+		var result = await parser.FunctionParse(MarkupText.Plain(expression));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+	}
+
 	[Test]
 	public async Task PCreate()
 	{
