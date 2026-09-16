@@ -133,14 +133,24 @@ SharpMUSH releases behaved differently.
   run still matches and captures its `%0..` from the evaluated text.
 - An unknown function inside `[...]` whose name is close to a real one is
   reported as `#-1 FUNCTION (NAME) NOT FOUND DID YOU MEAN 'CLOSEST'`.
+- `%c` is the running command as written, and `%u` is the last command after
+  its arguments were evaluated, rebuilt as `NAME/switches arguments`
+  (`@PEMIT/silent me=2`; `ATTRIB_SET/<attribute>`, `SAY`, `GOTO <exit>` for the
+  token and exit forms; the typed word and evaluated rest for a command nothing
+  matched). A command's own arguments therefore see the *previous* command's
+  `%u`; its hooks and anything it runs see its own. Each queued entry and each
+  `$`-command body starts with both empty, while `@include` and `@ifelse` share
+  them with the list that ran them.
 
 ## Known limitations
 
 Not yet at parity; may change in a future release.
 
-- **`%u` equals `%c`.** Both currently return the command *before* evaluation.
-  In PennMUSH `%c` is the raw command and `%u` is the command after argument
-  evaluation.
+- **`%c` and `%u` inside `@trigger` and locks.** `@trigger` runs its list in
+  place, so that list starts from the triggering command's `%c`/`%u` instead of
+  empty ones. A lock evaluated for a `$`-command sees neither. `%u` also shows
+  the value of `&attr obj=value` and `@attr obj=value` as written, where
+  PennMUSH shows it evaluated in a queued list.
 - **Characters above U+FFFF** (emoji and other supplementary-plane characters)
   are stored as UTF-16 surrogate pairs. This is internally consistent, but a
   substitution or slice that lands between the two halves of a pair could split

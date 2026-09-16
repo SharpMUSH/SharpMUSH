@@ -1020,7 +1020,8 @@ public class SharpMUSHParserVisitor(
 				TotalInvocations: invocationCounter,
 				LimitExceeded: limitExceeded)
 			{
-				MoveDepth = currentState.MoveDepth
+				MoveDepth = currentState.MoveDepth,
+				CommandText = currentState.CommandText
 			});
 
 			var result = await SharpMUSH.Library.Services.FunctionDispatcher.InvokeAsync(newParser,
@@ -1199,6 +1200,7 @@ public class SharpMUSHParserVisitor(
 			// src, otherwise a $command in a list is matched against the entire list and its ^...$ pattern
 			// never matches. This is the same arithmetic as ArgumentSplit's realSubtext.
 			var commandText = src.Substring(firstCommandMatch.Start.StartIndex, firstCommandMatch.Stop.StopIndex - firstCommandMatch.Start.StartIndex + 1);
+			parser.CurrentState.CommandText?.Begin(commandText);
 
 			if (parser.CurrentState.Handle is not null && command != "IDLE")
 			{
@@ -1283,9 +1285,19 @@ public class SharpMUSHParserVisitor(
 			var speechReplacer = SpeechTokenCommand(tokenText);
 			if (speechReplacer is not null)
 			{
-				var result = await parser.CommandParse(MarkupText.Concat(
-					MarkupText.Plain(speechReplacer + " "), tokenText.Substring(1)));
-				return result.HadErrors ? result : CallState.Empty;
+				// PennMUSH swaps the token for the command name without touching cmd_raw: %c stays `"hi`.
+				var typed = parser.CurrentState.CommandText;
+				typed?.KeepRawThroughRedispatch();
+				try
+				{
+					var result = await parser.CommandParse(MarkupText.Concat(
+						MarkupText.Plain(speechReplacer + " "), tokenText.Substring(1)));
+					return result.HadErrors ? result : CallState.Empty;
+				}
+				finally
+				{
+					typed?.EndRedispatch();
+				}
 			}
 
 			if (command[..1] == Configuration.CurrentValue.Chat.ChatTokenAlias.ToString())
@@ -1440,6 +1452,9 @@ public class SharpMUSHParserVisitor(
 			// (Steps 1-8 above), so a built-in never pays for this evaluation.
 			var evaluatedCommandResult = await parser.FunctionParse(commandText);
 			var evaluatedCommandText = evaluatedCommandResult?.Message ?? commandText;
+			// game.c records this line as %u before looking for a $-command, so the caller keeps it
+			// whether a $-command, HUH_COMMAND or its hook ends up handling the command.
+			parser.CurrentState.CommandText?.Evaluated = evaluatedCommandText;
 			Option<CallState> PreserveCommandEvaluationErrors(Option<CallState> result)
 			{
 				if (evaluatedCommandResult?.HadErrors != true) return result;
@@ -1568,6 +1583,7 @@ public class SharpMUSHParserVisitor(
 				}
 			}
 
+			// The name is synthetic; %c and %u stay the line that matched nothing.
 			var newParser = parser.Push(parser.CurrentState with
 			{
 				Command = "HUH_COMMAND",
@@ -1651,6 +1667,10 @@ public class SharpMUSHParserVisitor(
 			? MarkupText.Empty
 			: full.Substring(firstSpace + 1, full.Length - firstSpace - 1);
 
+		// PennMUSH rewrites the alias to `@CHAT <channel>=<message>` before rebuilding it for %u.
+		prs.CurrentState.CommandText?.EvaluatedFrom(() => MarkupText.Concat(
+			[MarkupText.Plain("@CHAT "), channel.Name, MarkupText.Plain("="), rest]));
+
 		var chatParser = prs.Push(prs.CurrentState with
 		{
 			Command = "@CHAT",
@@ -1685,6 +1705,8 @@ public class SharpMUSHParserVisitor(
 				continue;
 			}
 
+			// The body is its own queue entry in PennMUSH (PE_INFO_DEFAULT): it starts with no %c/%u, and
+			// what it runs never reaches the command that matched it.
 			var newParser = prs.Push(prs.CurrentState with
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
@@ -1692,7 +1714,8 @@ public class SharpMUSHParserVisitor(
 				Arguments = arguments,
 				Function = null,
 				Executor = obj.Object().DBRef,
-				Caller = prs.CurrentState.Executor
+				Caller = prs.CurrentState.Executor,
+				CommandText = new CommandText()
 			});
 
 			var result = await newParser.CommandListParse(attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value));
@@ -1709,6 +1732,9 @@ public class SharpMUSHParserVisitor(
 	private static async ValueTask<Option<CallState>> HandleGoCommandPattern(
 		IMUSHCodeParser prs, SharpExit exit, string typedName)
 	{
+		// command_parse turns a matched exit into `GOTO <exit>`, which is what %u records.
+		prs.CurrentState.CommandText?.Evaluated = MarkupText.Plain($"GOTO {typedName}");
+
 		var newParser = prs.Push(prs.CurrentState with
 		{
 			Command = "GOTO",
@@ -1782,6 +1808,14 @@ public class SharpMUSHParserVisitor(
 
 		// The command format is: @attrname object=value
 		var spaceIndex = fullText.IndexOf(" ");
+
+		// command_isattr makes this ATTRIB_SET/<attribute>. The value is stored as written here, so
+		// that is also what %u shows; evaluating it for %u alone would run it when the command does not.
+		prs.CurrentState.CommandText?.EvaluatedFrom(() => spaceIndex == -1
+			? MarkupText.Plain($"ATTRIB_SET/{matchedEntry.Name}")
+			: MarkupText.Concat(MarkupText.Plain($"ATTRIB_SET/{matchedEntry.Name} "),
+				fullText.Substring(spaceIndex + 1, fullText.Length - spaceIndex - 1)));
+
 		if (spaceIndex == -1)
 		{
 			var handle = prs.CurrentState.Handle;
@@ -1952,11 +1986,14 @@ public class SharpMUSHParserVisitor(
 
 		var commandWithSwitches = src;
 
+		// PennMUSH command_parse rebuilds cmd_evaled from command_argparse's results and stores it
+		// before any hook runs, so /before, /after, the body and later commands all read it as %u.
+		prs.CurrentState.CommandText?.EvaluatedFrom(HookInput);
+
 		MString HookInput()
 		{
-			// PennMUSH command_parse rebuilds cmd_evaled from command_argparse's results.
-			// Reuse those same values here: evaluating the whole line loses bare function
-			// calls, ignores NoParse/RSNoParse/noeval, and runs side effects a second time.
+			// Reuse the split arguments: evaluating the whole line loses bare function calls,
+			// ignores NoParse/RSNoParse/noeval, and runs side effects a second time.
 			var name = libraryCommandDefinition.Attribute.Name;
 			var prefix = switches.Length == 0 ? name : $"{name}/{string.Join('/', switches)}";
 			if (arguments.Count == 0) return MarkupText.Plain(prefix);
@@ -2382,6 +2419,18 @@ public class SharpMUSHParserVisitor(
 		CommandArguments argumentResults)
 	{
 		var arguments = argumentResults.Values;
+
+		// `&` is the only token that splits arguments; command_isattr names it ATTRIB_SET/<attribute>.
+		// Its value is deferred, so %u carries it as written, which is what the command stores for
+		// direct input.
+		prs.CurrentState.CommandText?.EvaluatedFrom(() =>
+		{
+			var values = arguments.Select(argument => argument.Message ?? MarkupText.Empty).ToList();
+			var name = MarkupText.Plain($"ATTRIB_SET/{rest.ToUpperInvariant()} ");
+			return values.Count > 1
+				? MarkupText.Concat([name, values[0], MarkupText.Plain("="), MarkupText.Join(MarkupText.Plain(","), values.Skip(1))])
+				: MarkupText.Concat(name, values.FirstOrDefault() ?? MarkupText.Empty);
+		});
 
 		// %0 is the text glued to the token itself; the split arguments follow from %1.
 		var numbered = new Dictionary<string, CallState>(arguments.Count + 1) { ["0"] = new CallState(rest) };

@@ -1415,7 +1415,7 @@ public partial class Functions
 			case "l" or "L":
 				return (await (await parser.CurrentState.KnownEnactorObject(Mediator)).Where()).Object().DBRef;
 			case "c" or "C":
-				return Substitutions.Substitutions.LastCommandBeforeEvaluation(parser);
+				return Substitutions.Substitutions.CommandBeforeEvaluation(parser);
 			default:
 				if (int.TryParse(plainText, out _))
 				{
