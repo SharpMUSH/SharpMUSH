@@ -11,6 +11,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Markup;
@@ -566,7 +567,7 @@ public partial class Commands
 
 		if (!await thing.HasFlag("HALT"))
 		{
-			await RunStartupAsync(parser, thing);
+			await RunStartupAsync(thing);
 		}
 
 		var owner = await thing.Object().Owner.WithCancellation(CancellationToken.None);
@@ -668,30 +669,50 @@ public partial class Commands
 		return doomed;
 	}
 
+	/// <summary>
+	/// PennMUSH <c>pre_destroy()</c>'s <c>did_it(player, thing, …, "ADESTROY", …)</c>, when the
+	/// <c>adestroy</c> option is on: the action is queued with the object as executor and the destroyer
+	/// as enactor, and is looked up through parents.
+	/// </summary>
 	private async ValueTask RunAdestroyAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject thing)
 	{
-		try
+		if (!Configuration.CurrentValue.Attribute.ADestroy)
 		{
-			await AttributeService.EvaluateAttributeFunctionAsync(
-				parser, executor, thing, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
+			return;
 		}
-		catch (Exception)
-		{
-			// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
-		}
+
+		await DidItService.DidIt(parser, new DidItRequest(executor, thing, AWhat: "ADESTROY"));
 	}
 
-	private async ValueTask RunStartupAsync(IMUSHCodeParser parser, AnySharpObject thing)
+	/// <summary>
+	/// PennMUSH <c>undestroy()</c>'s <c>queue_attribute_noparent(thing, "STARTUP", thing)</c>: the
+	/// object's own STARTUP, never a parent's, queued as a fresh command list with the object as both
+	/// executor and enactor. The caller skips HALTed objects.
+	/// </summary>
+	private async ValueTask RunStartupAsync(AnySharpObject thing)
 	{
-		try
+		if (await AttributeService.GetAttributeAsync(thing, thing, "STARTUP",
+				IAttributeService.AttributeMode.Execute, parent: false) is not SharpAttribute[] { Length: > 0 } startup)
 		{
-			await AttributeService.EvaluateAttributeFunctionAsync(
-				parser, thing, thing, "STARTUP", new Dictionary<string, CallState>(), evalParent: false);
+			return;
 		}
-		catch (Exception)
+
+		var action = startup.Last();
+		if (action.Value.Length == 0)
 		{
-			// Ignore errors from @startup evaluation - attribute may not exist or may fail
+			return;
 		}
+
+		var self = thing.Object().DBRef;
+		await Mediator.Send(new AdmitCommandListRequest(
+			action.Value,
+			ParserState.RootFor(self).SnapshotForQueuedAction() with
+			{
+				Caller = self,
+				CurrentEvaluation = new DBAttribute(self, action.LongName!)
+			},
+			new DbRefAttribute(self, action.LongName!.Split('`')),
+			-1), ExecutionBudget.CurrentToken);
 	}
 
 	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
