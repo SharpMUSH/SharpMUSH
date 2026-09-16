@@ -9,6 +9,17 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Common;
 
+/// <summary>
+/// PennMUSH's <c>format_msg</c> contract (<c>src/notify.c:1287-1293</c>): an attribute that evaluates
+/// to nothing is not the same as no attribute at all. The first means "this target hears nothing" -
+/// <c>heard = 0</c>, the line is still delivered to everyone else - and the second means "use the
+/// default rendering".
+/// </summary>
+public record struct Suppressed;
+
+/// <summary>The line to deliver, <see cref="None"/> for the default, or <see cref="Suppressed"/>.</summary>
+public union FormattedLine(MString, None, Suppressed);
+
 public static class AttributeHelpers
 {
 	/// <summary>
@@ -45,7 +56,9 @@ public static class AttributeHelpers
 	/// </code>
 	/// </remarks>
 	/// <param name="attributeService">The attribute service</param>
-	/// <param name="parser">Parser with current state (can be null for non-parser contexts)</param>
+	/// <param name="parser">Parser carrying the state the attribute body runs in. A caller with no
+	/// ambient parse frame builds one with <see cref="ParserState.RootFor"/>; passing a parser whose
+	/// state stack is empty throws, because the evaluation reads <c>CurrentState</c>.</param>
 	/// <param name="executor">The object executing the evaluation</param>
 	/// <param name="target">The object to check for the format attribute</param>
 	/// <param name="formatAttributeName">Name of the format attribute (e.g., "NAMEFORMAT", "DESCFORMAT", "CONFORMAT")</param>
@@ -55,7 +68,7 @@ public static class AttributeHelpers
 	/// <returns>The formatted result or default value</returns>
 	public static async ValueTask<MString> EvaluateFormatAttribute(
 		IAttributeService attributeService,
-		IMUSHCodeParser? parser,
+		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject target,
 		string formatAttributeName,
@@ -84,7 +97,7 @@ public static class AttributeHelpers
 			}
 
 			var result = await attributeService.EvaluateAttributeFunctionAsync(
-				parser!,
+				parser,
 				executor,
 				target,
 				formatAttributeName,
@@ -94,9 +107,71 @@ public static class AttributeHelpers
 
 			return result.Length > 0 ? result : defaultValue;
 		}
+		catch (OperationCanceledException)
+		{
+			// Budget exhaustion is not "this object has no format attribute"; letting it fall through to
+			// the default would hide a runaway @nameformat behind an ordinary-looking room description.
+			throw;
+		}
 		catch
 		{
 			return defaultValue;
+		}
+	}
+
+	/// <summary>
+	/// The <c>format_msg</c> form of <see cref="EvaluateFormatAttribute"/>, for the notification path
+	/// (<c>@chatformat</c>): it keeps the distinction PennMUSH draws between an absent attribute and one
+	/// that deliberately produced nothing.
+	///
+	/// <para><c>notify_anything</c> runs the attribute and then, <c>if (!*buff) heard = 0;</c>
+	/// (<c>src/notify.c:1291</c>) — the target is shown nothing and its listen patterns do not fire,
+	/// while "the sound must still be propagated to other objects, which may hear something". Collapsing
+	/// that to the default rendering, as <see cref="EvaluateFormatAttribute"/> does, takes away the only
+	/// way softcode has to mute a channel line for one member.</para>
+	/// </summary>
+	public static async ValueTask<FormattedLine> EvaluateNotifyFormatAttribute(
+		IAttributeService attributeService,
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		AnySharpObject target,
+		string formatAttributeName,
+		Dictionary<string, CallState> formatArgs,
+		bool checkParents = false)
+	{
+		try
+		{
+			var attrResult = await attributeService.GetAttributeAsync(
+				executor,
+				target,
+				formatAttributeName,
+				IAttributeService.AttributeMode.Read,
+				checkParents);
+
+			// UFUN_REQUIRE_ATTR (notify.c:1267): no attribute, or an empty one, is not a format at all.
+			if (attrResult is not SharpAttribute[] chain || chain.Last().Value.Length == 0)
+			{
+				return new None();
+			}
+
+			var result = await attributeService.EvaluateAttributeFunctionAsync(
+				parser,
+				executor,
+				target,
+				formatAttributeName,
+				formatArgs,
+				evalParent: checkParents,
+				ignorePermissions: false);
+
+			return result.Length > 0 ? result : new Suppressed();
+		}
+		catch (OperationCanceledException)
+		{
+			throw;
+		}
+		catch
+		{
+			return new None();
 		}
 	}
 
