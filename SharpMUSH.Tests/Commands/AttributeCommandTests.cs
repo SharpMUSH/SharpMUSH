@@ -439,6 +439,45 @@ public class AttributeCommandTests
 	}
 
 	[Test]
+	public async ValueTask Test_Edit_RegexAll_EvaluatesInReverseAndSplicesAtOriginalPositions()
+	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditRegexAllOrder");
+		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
+		// Twelve zero-length matches before each 'é', so replacements grow from one digit to two
+		// and every splice after the first lands at a position the earlier ones have shifted.
+		await Database.SetAttributeAsync(objDbRef, ["EDIT_REGEX_ORDER"], MarkupText.Plain(string.Concat(Enumerable.Repeat("éa", 12))), owner);
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@edit/regexp/all {objDbRef}/EDIT_REGEX_ORDER=(?=é),setr(n,add(0%qn,1))"));
+
+		var attrList = await Database.GetAttributeAsync(objDbRef, ["EDIT_REGEX_ORDER"])!.ToListAsync();
+		var expected = string.Concat(Enumerable.Range(1, 12).Reverse().Select(n => $"{n}éa"));
+		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo(expected)
+			.Because("the last match is evaluated first, so it takes the first counter value");
+	}
+
+	[Test]
+	[NotInParallel(nameof(Test_Edit_RegexAll_LargeInputCopiesLinearly))]
+	public async ValueTask Test_Edit_RegexAll_LargeInputCopiesLinearly()
+	{
+		const int matches = 20_000;
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditRegexAllLarge");
+		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
+		var text = string.Concat(Enumerable.Repeat("abcdefghix", matches));
+		await Database.SetAttributeAsync(objDbRef, ["EDIT_REGEX_LARGE"], MarkupText.Plain(text), owner);
+
+		// Rebuilding the whole value once per match copies matches × length characters: about 24 GB
+		// here. A single splice copies the value once, so what remains is the per-match evaluation.
+		var before = GC.GetTotalAllocatedBytes(precise: true);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/regexp/all {objDbRef}/EDIT_REGEX_LARGE=x,Y"));
+		var allocated = GC.GetTotalAllocatedBytes(precise: true) - before;
+
+		var attrList = await Database.GetAttributeAsync(objDbRef, ["EDIT_REGEX_LARGE"])!.ToListAsync();
+		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo(text.Replace('x', 'Y'));
+		await Assert.That(allocated).IsLessThan(2L * 1024 * 1024 * 1024);
+	}
+
+	[Test]
 	public async ValueTask Test_Edit_NoMatch()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
