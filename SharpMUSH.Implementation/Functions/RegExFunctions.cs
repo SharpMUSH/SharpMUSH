@@ -123,21 +123,27 @@ public partial class Functions
 			}
 
 			var regex = SoftcodeRegex.Create(pattern, options);
+
+			// An unanchored search, as in PennMUSH: fun_regmatch runs pcre2_match at offset 0 with
+			// re_match_flags (0, never anchored) and returns `subpatterns >= 0` — src/funlist.c:2897,
+			// and quick_regexp_match at src/wild.c:610 for the two-argument form. A successful
+			// substring match returns 1; the pattern has to anchor itself to require the whole string.
 			var match = regex.Match(str);
 
-			// Check if the entire string matches (not just a substring)
-			var isFullMatch = match.Success && match.Index == 0 && match.Length == str.Length;
+			// PennMUSH writes the boolean first and appends a bad-register report after it, so the
+			// order here matches: safe_integer(...) then the register loop (src/funlist.c:2899).
+			var result = match.Success ? "1" : "0";
 
 			if (args.ContainsKey("2"))
 			{
 				var registerList = args["2"].Message!.ToPlainText();
 				if (!string.IsNullOrWhiteSpace(registerList))
 				{
-					SetRegistersFromMatch(parser, match, registerList);
+					result += SetRegistersFromMatch(parser, match, registerList);
 				}
 			}
 
-			return ValueTask.FromResult(new CallState(isFullMatch ? "1" : "0"));
+			return ValueTask.FromResult(new CallState(result));
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 		{
@@ -153,53 +159,80 @@ public partial class Functions
 	/// <summary>
 	/// Helper to set registers from a regex match.
 	/// </summary>
-	private void SetRegistersFromMatch(IMUSHCodeParser parser, Match match, string registerList)
+	/// <remarks>
+	/// Every requested destination is written, including when the match failed. PennMUSH initialises
+	/// each one to the empty string before filling it — src/funlist.c:2906, "Initialize every
+	/// q-register used to ''" — and leaves it empty when there was no match (src/funlist.c:2947), so
+	/// a failed regmatch clears what it was asked to fill instead of leaving a stale value behind.
+	/// </remarks>
+	/// <returns>
+	/// The text to append to the function's result: empty normally, or one
+	/// <see cref="ErrorMessages.Returns.BadRegName"/> per destination that cannot name a register,
+	/// as PennMUSH appends e_badregname for each (src/funlist.c:2942).
+	/// </returns>
+	private string SetRegistersFromMatch(IMUSHCodeParser parser, Match match, string registerList)
 	{
-		if (!match.Success) return;
-
 		var registers = registerList.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var unusableNames = 0;
 
-		for (int i = 0; i < registers.Length; i++)
+		for (var i = 0; i < registers.Length; i++)
 		{
-			var reg = registers[i];
-			var parts = reg.Split(':');
+			// Split at the first colon only, as PennMUSH's strchr does: "0:x:y" names capture 0 and
+			// the register "x:y", which is then rejected — rather than being read as positional and
+			// silently clobbering the unrelated register named by its first segment.
+			var parts = registers[i].Split(':', 2);
 
-			string captureIndexOrName;
-			string qRegister;
+			// X:Y names the capture explicitly; a bare Y takes the capture at its own position in the
+			// list, so the first element gets the whole match, the second the first capture, and so on.
+			var captureIndexOrName = parts.Length == 2 ? parts[0] : i.ToString();
 
-			if (parts.Length == 2)
-			{
-				// X:Y format - X is capture, Y is q-register
-				captureIndexOrName = parts[0];
-				qRegister = parts[1];
-			}
-			else
-			{
-				// Just Y format - use position-based capture
-				// First element (i=0) gets full match, second (i=1) gets first capture, etc.
-				captureIndexOrName = i.ToString();
-				qRegister = parts[0];
-			}
+			// AddRegister only accepts [A-Z0-9_.-], so the name has to be uppercased or a destination
+			// written in lowercase is silently dropped. Invariant, not ToUpper: PennMUSH uppercases
+			// with ASCII strupper_r (src/parse.c:1406), whereas a Turkish-locale ToUpper turns "hit"
+			// into "HİT" (U+0130), which AddRegister would then reject.
+			var qRegister = (parts.Length == 2 ? parts[1] : parts[0]).ToUpperInvariant();
 
-			string value = "";
-			if (int.TryParse(captureIndexOrName, out int captureIndex))
+			// A bare "-" is an explicit discard. pi_regs_valid_key rejects it (src/parse.c:1407) and
+			// fun_regmatch suppresses the error for that one spelling alone (src/funlist.c:2941), so
+			// it must not be written either — AddRegister's pattern would otherwise accept it.
+			if (qRegister == "-")
 			{
-				if (captureIndex < match.Groups.Count)
-				{
-					value = match.Groups[captureIndex].Value;
-				}
-			}
-			else
-			{
-				var group = match.Groups[captureIndexOrName];
-				if (group.Success)
-				{
-					value = group.Value;
-				}
+				continue;
 			}
 
-			parser.CurrentState.AddRegister(qRegister, MarkupText.Plain(value));
+			if (!parser.CurrentState.AddRegister(qRegister, MarkupText.Plain(CaptureValue(match, captureIndexOrName))))
+			{
+				unusableNames++;
+			}
 		}
+
+		// Every report is the same string, so count them and build the result once rather than
+		// concatenating inside the loop.
+		return unusableNames == 0
+			? string.Empty
+			: string.Concat(Enumerable.Repeat(ErrorMessages.Returns.BadRegName, unusableNames));
+	}
+
+	/// <summary>
+	/// The text of one capture of a match: the empty string when the match failed, when the capture
+	/// does not exist, or when the group took no part in the match.
+	/// </summary>
+	private static string CaptureValue(Match match, string captureIndexOrName)
+	{
+		if (!match.Success)
+		{
+			return string.Empty;
+		}
+
+		// Both GroupCollection indexers answer a miss with an unsuccessful Group rather than throwing
+		// — the numeric one range-checks through a uint cast, so a negative index misses too, and the
+		// named one yields an empty group for a name the pattern does not define. That is the empty
+		// string PennMUSH also produces for an out-of-range subpattern.
+		var group = int.TryParse(captureIndexOrName, out var captureIndex)
+			? match.Groups[captureIndex]
+			: match.Groups[captureIndexOrName];
+
+		return group.Success ? group.Value : string.Empty;
 	}
 
 	/// <summary>

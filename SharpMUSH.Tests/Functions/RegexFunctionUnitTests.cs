@@ -9,13 +9,25 @@ public class RegexFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
+	// PennMUSH's regmatch runs an unanchored pcre2_match at offset 0 and returns
+	// `subpatterns >= 0` (src/funlist.c:2897, and quick_regexp_match at src/wild.c:610 for the
+	// two-argument form). `re_match_flags` is 0 (src/wild.c:53), so nothing anchors the search:
+	// a successful substring match returns 1. Anchor the pattern yourself to require the whole
+	// string. The sharpfunc.md help text inherited from TinyMUSH says "the entirety of <string>",
+	// which is what Penn's own helpfile says and is not what Penn's code does.
 	[Test]
 	[Arguments("regmatch(test,test)", "1")]
 	[Arguments("regmatch(test,t.*t)", "1")]
-	[Arguments("regmatch(test123,t.*t)", "0")]
+	[Arguments("regmatch(test123,t.*t)", "1")]
+	[Arguments("regmatch(test,tes)", "1")]
+	[Arguments("regmatch(test,est)", "1")]
+	[Arguments("regmatch(test,es)", "1")]
 	[Arguments("regmatch(test,TEST)", "0")]
-	[Arguments("regmatch(test,tes)", "0")]
+	[Arguments("regmatch(test,xyz)", "0")]
 	[Arguments("regmatch(test,.*)", "1")]
+	// An explicit anchor still restricts the match to the whole string.
+	[Arguments("regmatch(test,^test$)", "1")]
+	[Arguments("regmatch(test,^tes$)", "0")]
 	public async Task Regmatch(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -25,8 +37,68 @@ public class RegexFunctionUnitTests
 	[Test]
 	[Arguments("regmatchi(test,TEST)", "1")]
 	[Arguments("regmatchi(TeSt,test)", "1")]
-	[Arguments("regmatchi(test,tes)", "0")]
+	[Arguments("regmatchi(test,tes)", "1")]
+	[Arguments("regmatchi(TEST,es)", "1")]
+	[Arguments("regmatchi(test,xyz)", "0")]
+	[Arguments("regmatchi(test,^TES$)", "0")]
 	public async Task Regmatchi(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// PennMUSH sets every requested destination to "" before filling it — src/funlist.c:2906,
+	// "Initialize every q-register used to ''" — and leaves it empty when the match failed
+	// (src/funlist.c:2947, `if (subpatterns < 0) lbuff[0] = '\0';`). A failed regmatch must
+	// therefore clear the destinations it was asked for rather than leave stale values behind.
+	// Capture groups reach the pattern as %( and %): SharpMUSH's argument parser ends the call at
+	// the first unescaped ')', so a bare (a)(b) would arrive truncated to "(a".
+	[Test]
+	[Arguments("[setq(rmx,stale)][regmatch(a,z,0:rmx)]%q<rmx>", "0")]
+	[Arguments("[setq(rma,A)][setq(rmb,B)][regmatch(zzz,%(q%)%(r%),0:rma 1:rmb)]%q<rma>|%q<rmb>", "0|")]
+	[Arguments("[setq(rmp,P)][setq(rmq,Q)][regmatch(zzz,%(q%)%(r%),rmp rmq)]%q<rmp>|%q<rmq>", "0|")]
+	// A group that did not participate in a successful match clears its destination too.
+	[Arguments("[setq(rmn,N)][regmatch(abc,%(a%)|%(z%),2:rmn)]%q<rmn>", "1")]
+	// A successful match still populates its destinations — help sharpfunc, regmatch2.
+	[Arguments("[regmatch(cookies=30,%(.+%)=%(.+%),0:rm0 1:rm3 2:rm5)]%q<rm0>|%q<rm3>|%q<rm5>",
+		"1cookies=30|cookies|30")]
+	// Positional form: the Nth register takes subpattern N.
+	[Arguments("[regmatch(abc,%(a%)%(b%),rs0 rs1 rs2)]%q<rs0>|%q<rs1>|%q<rs2>", "1ab|a|b")]
+	// A destination named by a subpattern name rather than a number.
+	[Arguments("[regmatch(cookies=30,%(?<food>.+%)=%(?<amt>.+%),food:rf amt:ra)]%q<rf>|%q<ra>",
+		"1cookies|30")]
+	// A capture index the pattern does not have, and a negative one, each clear their destination
+	// rather than throwing: PennMUSH's ansi_pcre_copy_substring yields nothing for an out-of-range
+	// subpattern, and parse_integer accepts "-1" as a strict integer on the way there.
+	[Arguments("[setq(rmo,old)][regmatch(abc,%(a%),99:rmo)]%q<rmo>", "1")]
+	[Arguments("[setq(rmv,old)][regmatch(abc,%(a%),-1:rmv)]%q<rmv>", "1")]
+	// A subpattern name the pattern does not define does the same.
+	[Arguments("[setq(rmu,old)][regmatch(abc,%(?<here>a%),nowhere:rmu)]%q<rmu>", "1")]
+	// The two-argument form names no destinations and must touch none: PennMUSH returns from the
+	// nargs == 2 branch before any register code runs (src/funlist.c:2871).
+	[Arguments("[setq(rmk,keep)][regmatch(a,z)]%q<rmk>", "0keep")]
+	[Arguments("[setq(rmj,keep)][regmatch(a,a)]%q<rmj>", "1keep")]
+	public async Task RegmatchRegisters(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	// PennMUSH reports a destination it cannot use as a register with e_badregname, appended after
+	// the boolean (src/funlist.c:2942); "#-1 REGISTER NAME INVALID" is the same text SharpMUSH
+	// already returns from setq(). A bare "-" is the one spelling that is rejected silently instead,
+	// as an explicit discard (pi_regs_valid_key, src/parse.c:1407).
+	[Test]
+	[Arguments("[regmatch(abc,%(a%),0:bad$name)]", "1#-1 REGISTER NAME INVALID")]
+	// Split at the first colon only: "0:x:y" names the register "x:y", which is unusable. It must
+	// not fall through to the positional reading, which would clobber the register named "0".
+	[Arguments("[setq(0,orig)][regmatch(abc,%(a%),0:x:y)]|%q0", "1#-1 REGISTER NAME INVALID|orig")]
+	// One report per unusable destination.
+	[Arguments("[regmatch(abc,%(a%),0:bad$one 1:bad$two)]",
+		"1#-1 REGISTER NAME INVALID#-1 REGISTER NAME INVALID")]
+	// A bare "-" discards that capture: no register written, no error, later pairs still filled.
+	[Arguments("[regmatch(abc,%(a%)%(b%),- 1:rd1)]%q<rd1>", "1a")]
+	public async Task RegmatchRejectsUnusableRegisterNames(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);

@@ -334,13 +334,15 @@ objects:
       # source from topic, "*" and "?" are its wildcards — then whether the derived PATH can be
       # stored, asked of valid(attrname) rather than restated in a character class here.
       #
-      # regmatch() matches the WHOLE string (help REGMATCH), so the reserved test says what a name
-      # may be made OF; its brackets are escaped or "[" opens an evaluation bracket instead.
+      # regmatch() is an unanchored search (help REGMATCH), so the reserved test anchors itself to
+      # say what the whole name may be made OF — without ^...$ it would match any run of safe
+      # characters and pass "BAD/NAME" on the strength of "BAD". CMD`SOURCE anchors the same way.
+      # Its brackets are escaped or "[" opens an evaluation bracket instead.
       #
       # %q<topic> is the caller's staged, trimmed, upper-cased name; this leaves %q<attr> set.
       INC`IS`TOPICNAME:
         value: |-
-          @@ no arguments — validates %q<topic>, which the calling command stages, and stages %q<obj> and %q<attr>; @assert strlen(%q<topic>)=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,\[^*?/\]+)=@include %!/INC`DISPLAY`ERROR=A topic name cannot contain * ? or / — +help reads those as wildcards and the source separator.; think [setq(attr,HELP`[edit(trim(squish(%q<topic>)),%b,`)])]; @assert valid(attrname,%q<attr>)=@include %!/INC`DISPLAY`ERROR=A topic name has to be storable as an attribute name.; think [setq(obj,u(%!/SRC`GAME))]
+          @@ no arguments — validates %q<topic>, which the calling command stages, and stages %q<obj> and %q<attr>; @assert strlen(%q<topic>)=@include %!/INC`DISPLAY`ERROR=Which topic?; @assert regmatch(%q<topic>,^\[^*?/\]+$)=@include %!/INC`DISPLAY`ERROR=A topic name cannot contain * ? or / — +help reads those as wildcards and the source separator.; think [setq(attr,HELP`[edit(trim(squish(%q<topic>)),%b,`)])]; @assert valid(attrname,%q<attr>)=@include %!/INC`DISPLAY`ERROR=A topic name has to be storable as an attribute name.; think [setq(obj,u(%!/SRC`GAME))]
         flags: [cmdsyntax]
       INC`DO`LISTING:
         value: |-
