@@ -18,28 +18,43 @@ public class PennMUSHDefinitionImportTests
 		Path.Join(AppContext.BaseDirectory, "Services", "TestData", "pennmush-1.8.8p0.outdb");
 
 	/// <summary>
-	/// The real dump's tables are stock PennMUSH, which overlaps SharpMUSH's seed almost entirely —
-	/// UNINSPECTED, Quotas and ZLEAVE are the three definitions it has and SharpMUSH does not.
+	/// The real dump's tables are stock PennMUSH, which overlaps SharpMUSH's seed almost entirely.
+	/// ZLEAVE is the one definition it has and this server does not, so it is the one that arrives as
+	/// an import: removable, because nothing here owns it.
 	/// </summary>
 	[Test]
 	public async Task TheRealDumpsDefinitionsThisServerLacksArrive()
 	{
 		await using var world = await ImportFixtureAsync();
 
+		await Assert.That(await AttributeEntryAsync(world, "ZLEAVE")).IsNotNull()
+			.Because("the source's attribute table defines ZLEAVE");
+	}
+
+	/// <summary>
+	/// UNINSPECTED and Quotas were two more of those until this server seeded them itself (#1130,
+	/// #1131). They now arrive on the other side of the same contract as WIZARD below — the source's
+	/// table names them, and what this server already defines is kept as this server defines it. The
+	/// values agree either way, both being PennMUSH's own, so <c>System</c> is what tells the two
+	/// sides apart: a seeded row is this server's and is not removable.
+	/// </summary>
+	[Test]
+	public async Task TheDefinitionsThisServerSeededItselfStayItsOwn()
+	{
+		await using var world = await ImportFixtureAsync();
+
 		var uninspected = await world.Mediator.Send(new GetObjectFlagQuery("UNINSPECTED"));
 		await Assert.That(uninspected).IsNotNull().Because("the source's flag table defines UNINSPECTED");
-		await Assert.That(uninspected!.Symbol).IsEqualTo("u");
+		await Assert.That(uninspected!.System).IsTrue().Because("SharpMUSH seeds UNINSPECTED itself since #1130");
+		await Assert.That(uninspected.Symbol).IsEqualTo("u");
 		await Assert.That(uninspected.TypeRestrictions).IsEquivalentTo(["ROOM"]);
 		await Assert.That(uninspected.SetPermissions).IsEquivalentTo(["royalty"]);
 		await Assert.That(uninspected.UnsetPermissions).IsEquivalentTo(["royalty"]);
-		await Assert.That(uninspected.System).IsFalse().Because("an imported definition stays removable");
 
 		var quotas = await world.Mediator.Send(new GetPowerQuery("Quotas"));
 		await Assert.That(quotas).IsNotNull().Because("the source's power table defines Quotas");
-		await Assert.That(quotas!.SetPermissions).IsEquivalentTo(["wizard", "log"]);
-
-		await Assert.That(await AttributeEntryAsync(world, "ZLEAVE")).IsNotNull()
-			.Because("the source's attribute table defines ZLEAVE");
+		await Assert.That(quotas!.System).IsTrue().Because("SharpMUSH seeds Quotas itself since #1131");
+		await Assert.That(quotas.SetPermissions).IsEquivalentTo(["wizard", "log"]);
 	}
 
 	/// <summary>
