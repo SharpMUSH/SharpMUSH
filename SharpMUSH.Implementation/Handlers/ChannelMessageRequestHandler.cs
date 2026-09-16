@@ -242,7 +242,7 @@ public class ChannelMessageRequestHandler(
 					var finalMessage = message;
 					if (!skipChatFormat)
 					{
-						finalMessage = await ApplyPlayerChatFormat(
+						var formatted = await ApplyPlayerChatFormat(
 							member,
 							sender,
 							chatType,
@@ -253,6 +253,18 @@ public class ChannelMessageRequestHandler(
 							message,
 							mogrifiedSays,
 							options);
+
+						switch (formatted)
+						{
+							// notify.c:1291 - a CHATFORMAT that deliberately evaluates to nothing silences the
+							// line for THIS member. Everyone else still hears it and it is still buffered, so
+							// this is a per-member mute written in softcode, not a block.
+							case Suppressed:
+								continue;
+							case MString line:
+								finalMessage = line;
+								break;
+						}
 					}
 
 					await notifyService.Notify(member, finalMessage, sender, notification.MessageType);
@@ -291,7 +303,7 @@ public class ChannelMessageRequestHandler(
 	/// qualified by channel: a player who wants per-channel formatting branches on %1 inside the one
 	/// attribute.</para>
 	/// </summary>
-	private async ValueTask<MString> ApplyPlayerChatFormat(
+	private async ValueTask<FormattedLine> ApplyPlayerChatFormat(
 		AnySharpObject player,
 		AnySharpObject? source,
 		string chatType,
@@ -332,14 +344,13 @@ public class ChannelMessageRequestHandler(
 		// The speaker still supplies the frame the body runs in, so %# and %@ are the speaker; the
 		// attribute's own holder becomes %! when it runs.
 		var sourceObj = source ?? player;
-		return await AttributeHelpers.EvaluateFormatAttribute(
+		return await AttributeHelpers.EvaluateNotifyFormatAttribute(
 			attributeService,
 			EvaluationContextFor(sourceObj),
 			player,
 			player,
 			"CHATFORMAT",
 			formatArgs,
-			defaultFormat,
 			checkParents: true);
 	}
 

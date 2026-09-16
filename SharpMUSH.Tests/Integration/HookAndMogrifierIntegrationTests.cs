@@ -749,6 +749,45 @@ public class MogrifierIntegrationTests
 	}
 
 	/// <summary>
+	/// A <c>CHATFORMAT</c> that deliberately evaluates to nothing silences the line for that member and
+	/// nobody else — PennMUSH's <c>format_msg</c> contract: <c>if (!*buff) heard = 0;</c>
+	/// (<c>src/notify.c:1291</c>), with the comment that "the sound must still be propagated to other
+	/// objects, which may hear something".
+	///
+	/// <para>Collapsing an empty result to the default rendering, which is what
+	/// <c>EvaluateFormatAttribute</c> does for every other format attribute, takes away the only way
+	/// softcode has to mute one channel line for one member.</para>
+	/// </summary>
+	[Test]
+	public async Task ChatFormat_EmptyResult_SilencesThatMemberOnly()
+	{
+		var stage = await Setup("ChatFmtMute", attachMogrifier: false);
+		var bystander = await Mortal("ChatFmtMuteBystander");
+		await Join(stage.Channel, bystander.DbRef);
+
+		// Everything but the word the member does not want to see.
+		await AsGod($"&CHATFORMAT {stage.Listener.DbRef}=[if(strmatch(%2,*spoilers*),,%5)]");
+
+		var before = await Buffered(stage.Channel);
+
+		var mine = new List<string>();
+		var theirs = await MessagesWhile(bystander.DbRef, async () =>
+			mine = await MessagesWhile(stage.Listener.DbRef,
+				() => As(stage.Speaker, $"@chat {stage.ChannelName}=contains spoilers")));
+
+		await Assert.That(mine).DoesNotContain(x => x.Contains("spoilers"));
+		await Assert.That(theirs).Contains(x => x.Contains("contains spoilers"));
+
+		// The line is still buffered: this mutes a member, it does not block the send.
+		await Assert.That(await Buffered(stage.Channel)).IsEqualTo(before + 1);
+
+		// And a line the format does pass through still reaches them.
+		var allowed = await MessagesWhile(stage.Listener.DbRef,
+			() => As(stage.Speaker, $"@chat {stage.ChannelName}=perfectly safe"));
+		await Assert.That(allowed).Contains(x => x.Contains("perfectly safe"));
+	}
+
+	/// <summary>
 	/// Mogrifier and <c>@chatformat</c> both run, in that order: the mogrifier shapes the channel-wide
 	/// line, and what it produced is the %5 each member's own format then decorates. The buffered copy
 	/// is the channel-wide one, not any member's.
