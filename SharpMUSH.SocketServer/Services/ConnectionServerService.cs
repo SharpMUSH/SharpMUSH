@@ -69,7 +69,8 @@ public class ConnectionServerService(
 						{ "ConnectionType", connectionType },
 						{ "PresenceClass", presenceClass },
 						{ "SessionId", sessionId },
-						{ "SSL", isSecure ? "1" : "0" }
+						{ "SSL", isSecure ? "1" : "0" },
+						{ ConnectionEstablishedMessage.OrderedPromptsMetadata, "1" }
 					}
 				};
 				// The engine rejects registration without this authoritative record. Complete the
@@ -77,8 +78,10 @@ public class ConnectionServerService(
 				await RetryRegistrationStepAsync(handle, "persist", ct => stateStore.SetConnectionAsync(handle, persisted, ct), deadline.Token);
 			}
 
+			// MarkupOutputConsumer writes prompts carried on the output subject, in order with output.
 			var established = new ConnectionEstablishedMessage(handle, ipAddress, hostname,
-				connectionType, connectedAt, presenceClass, isSecure, sessionId);
+				connectionType, connectedAt, presenceClass, isSecure, sessionId)
+			{ OrderedPrompts = true };
 			publishAttempted = true;
 			// Publication may have succeeded when its acknowledgement was lost. Re-publish the
 			// idempotent event, but never overwrite KV again after the engine can bind a player.

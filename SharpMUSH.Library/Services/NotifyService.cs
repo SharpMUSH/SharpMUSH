@@ -26,8 +26,14 @@ public class NotifyService(
 	IListenerRoutingService? listenerRoutingService = null,
 	IMediator? mediator = null,
 	IHttpOutputCapture? httpOutputCapture = null,
-	IOptionsWrapper<SharpMUSHOptions>? configuration = null) : INotifyService, IContextualNotifyService
+	IOptionsWrapper<SharpMUSHOptions>? configuration = null) : INotifyService, IContextualNotifyService, IOrderedHandlePublisher
 {
+	/// <summary>Connection metadata naming a socket owner that takes prompts in order with output ("1").</summary>
+	public const string OrderedPromptsMetadata = ConnectionEstablishedMessage.OrderedPromptsMetadata;
+
+	/// <summary>Every markup publication to a handle, in the order it was reserved.</summary>
+	public HandlePublicationLane Lane { get; } = new();
+
 	public NotifyService(IMessageBus publishEndpoint, IConnectionService connections, ILocalizationService localizationService,
 		IRealityPolicy reality, IListenerRoutingService? listenerRoutingService, IMediator? mediator, IHttpOutputCapture? httpOutputCapture)
 		: this(publishEndpoint, connections, localizationService, reality, listenerRoutingService, mediator, httpOutputCapture, null) { }
@@ -138,15 +144,21 @@ public class NotifyService(
 		var serialized = ReferenceEquals(wrapped, outgoing.Text)
 			? outgoing.Serialized
 			: MarkupTextSerializer.Serialize(wrapped);
-		return new ValueTask(publishEndpoint.HandlePublish(new MarkupOutputMessage(handle, serialized) { SessionId = sessionId }, ExecutionBudget.CurrentToken));
+		return Publish(handle, new MarkupOutputMessage(handle, serialized) { SessionId = sessionId });
 	}
 
 	/// <summary>
 	/// Publishes prompt output to a single connection as serialized markup. Prompts are not wrapped
-	/// with OUTPUTPREFIX/OUTPUTSUFFIX and carry no trailing newline.
+	/// with OUTPUTPREFIX/OUTPUTSUFFIX and carry no trailing newline. A socket owner that orders
+	/// prompts gets them on the output subject; any other keeps the separate, unordered prompt subject.
 	/// </summary>
 	private ValueTask PublishMarkupPrompt(long handle, Outgoing outgoing, string? sessionId = null)
-		=> new(publishEndpoint.HandlePublish(new MarkupPromptMessage(handle, outgoing.Serialized) { SessionId = sessionId }, ExecutionBudget.CurrentToken));
+		=> connections.Get(handle)?.Metadata.GetValueOrDefault(OrderedPromptsMetadata) == "1"
+			? Publish(handle, new MarkupOutputMessage(handle, outgoing.Serialized) { SessionId = sessionId, Prompt = true })
+			: Publish(handle, new MarkupPromptMessage(handle, outgoing.Serialized) { SessionId = sessionId });
+
+	private ValueTask Publish<T>(long handle, T message) where T : IHandleMessage
+		=> new(Lane.PublishAsync(handle, token => publishEndpoint.HandlePublish(message, token), ExecutionBudget.CurrentToken));
 
 	/// <summary>
 	/// Wraps markup with OUTPUTPREFIX / OUTPUTSUFFIX if set on the connection, keeping everything as

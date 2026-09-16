@@ -108,6 +108,7 @@ public sealed class SessionResumeConsumer(
 		current.Metadata["InternetProtocolAddress"] = request.IpAddress;
 		current.Metadata["HostName"] = request.Hostname;
 		current.Metadata["SSL"] = request.IsSecure ? "1" : "0";
+		current.Metadata[ConnectionEstablishedMessage.OrderedPromptsMetadata] = request.OrderedPrompts ? "1" : "0";
 		return true;
 	}
 }

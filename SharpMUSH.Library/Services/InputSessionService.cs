@@ -13,6 +13,13 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Library.Services;
 
 /// <summary>Owns connection capture generations; execution stays on the ordinary admitted scheduler.</summary>
+/// <remarks>
+/// Every prompt and lifecycle notice takes its place in the handle's publication order while
+/// <see cref="_gate"/> commits the transition it belongs to, and publishes after the lock is released.
+/// A prompt authorized before a cancellation, replacement or rebind therefore reaches the connection
+/// before anything published after that transition, when the notifier orders publications
+/// (<see cref="IOrderedHandlePublisher"/>); any other notifier publishes as the calls arrive.
+/// </remarks>
 public sealed class InputSessionService : IInputSessionService
 {
 	public const int MaxSessions = 1024;
@@ -57,6 +64,7 @@ public sealed class InputSessionService : IInputSessionService
 	private readonly IPermissionService _permissions;
 	private readonly INotifyService _notify;
 	private readonly TimeProvider _time;
+	private readonly HandlePublicationLane? _lane;
 
 	public InputSessionService(IConnectionService connections, IMediator mediator, IAttributeService attributes,
 		IPermissionService permissions, INotifyService notify, TimeProvider? timeProvider = null)
@@ -67,6 +75,7 @@ public sealed class InputSessionService : IInputSessionService
 		_permissions = permissions;
 		_notify = notify;
 		_time = timeProvider ?? TimeProvider.System;
+		_lane = (notify as IOrderedHandlePublisher)?.Lane;
 		connections.ListenState(change =>
 		{
 			lock (_gate)
@@ -132,6 +141,7 @@ public sealed class InputSessionService : IInputSessionService
 			return InvalidCallback;
 		var owner = (await actor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
 		var callbackOwner = (await source.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+		HandlePublicationLane.Slot? place = null;
 		var session = new InputSession(Guid.NewGuid(), connection, connection.Metadata.GetValueOrDefault("SessionId"),
 			player.Object().DBRef, actor.Object().DBRef, owner, source.Object().DBRef,
 			callbackOwner, attribute, _time.GetUtcNow() + timeout);
@@ -155,8 +165,12 @@ public sealed class InputSessionService : IInputSessionService
 			var generation = GenerationFor(connection);
 			generation.Ticket.ObserveStart(session.Id);
 			generation.Ticket = new InputCaptureTicket(session.Id);
+			place = _lane?.Reserve(handle);
 		}
-		try { await _notify.PromptToSession(handle, session.TransportSessionId ?? "", prompt); }
+		try
+		{
+			using (Publishing(place)) await _notify.PromptToSession(handle, session.TransportSessionId ?? "", prompt);
+		}
 		catch { Discard(session); throw; }
 		return null;
 	}
@@ -173,6 +187,10 @@ public sealed class InputSessionService : IInputSessionService
 		return result;
 	}
 
+	/// <summary>Publishes the next notification to the slot's handle in the place reserved for it.</summary>
+	private IDisposable? Publishing(HandlePublicationLane.Slot? place)
+		=> place is null ? null : _lane!.Bind(place);
+
 	private static bool TransportMatches(IConnectionService.ConnectionData connection, string? expected)
 		=> (connection.Metadata.GetValueOrDefault("SessionId") ?? "") == (expected ?? "");
 
@@ -188,11 +206,13 @@ public sealed class InputSessionService : IInputSessionService
 	{
 		if (parser.CurrentState.Handle is not { } handle || GetCapturing(handle) is not { } session) return NotActive;
 		if (!await CanManage(parser, session)) return ErrorMessages.Returns.PermissionDenied;
+		HandlePublicationLane.Slot? place;
 		lock (_gate)
 		{
 			if (!IsCurrent(session, timeout: false) || HasCancelledOwnership(session)) return NotActive;
+			place = _lane?.Reserve(handle);
 		}
-		await _notify.PromptToSession(handle, session.TransportSessionId ?? "", prompt);
+		using (Publishing(place)) await _notify.PromptToSession(handle, session.TransportSessionId ?? "", prompt);
 		return null;
 	}
 
@@ -200,13 +220,15 @@ public sealed class InputSessionService : IInputSessionService
 	{
 		if (parser.CurrentState.Handle is not { } handle || GetCapturing(handle) is not { } session) return NotActive;
 		if (!await CanManage(parser, session)) return ErrorMessages.Returns.PermissionDenied;
+		HandlePublicationLane.Slot? place;
 		lock (_gate)
 		{
 			if (!IsCurrent(session, timeout: false) || HasCancelledOwnership(session)) return NotActive;
 			CancelCallbacks(session);
 			_sessions.Remove(handle);
+			place = _lane?.Reserve(handle);
 		}
-		await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
+		using (Publishing(place)) await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
 		return null;
 	}
 
@@ -214,6 +236,7 @@ public sealed class InputSessionService : IInputSessionService
 	{
 		if (!input.Text.Equals("@input/cancel", StringComparison.OrdinalIgnoreCase)) return false;
 		InputSession session;
+		HandlePublicationLane.Slot? place;
 		lock (_gate)
 		{
 			if (!_sessions.TryGetValue(handle, out var entry) || entry.TimeoutPending
@@ -223,8 +246,9 @@ public sealed class InputSessionService : IInputSessionService
 			session = entry.Session;
 			CancelCallbacks(session);
 			_sessions.Remove(handle);
+			place = _lane?.Reserve(handle);
 		}
-		await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
+		using (Publishing(place)) await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
 		return true;
 	}
 
@@ -350,8 +374,14 @@ public sealed class InputSessionService : IInputSessionService
 
 	private async ValueTask<CallState?> Revoke(InputSession session)
 	{
-		Discard(session);
-		if (BindingMatches(session)) await _notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "", "InputSessionRevoked");
+		HandlePublicationLane.Slot? place;
+		lock (_gate)
+		{
+			Discard(session);
+			if (!BindingMatches(session)) return null;
+			place = _lane?.Reserve(session.Connection.Handle);
+		}
+		using (Publishing(place)) await _notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "", "InputSessionRevoked");
 		return null;
 	}
 }

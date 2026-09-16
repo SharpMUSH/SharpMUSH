@@ -41,10 +41,19 @@ public record MarkupOutputMessage(long Handle, string Markup) : IHandleMessage
 {
 	/// <summary>When present, delivery requires this exact transport incarnation.</summary>
 	public string? SessionId { get; init; }
+
+	/// <summary>
+	/// Written to the connection's prompt channel (no trailing newline). Carrying prompts on this
+	/// subject keeps them in order with ordinary output; the engine sends them this way only to a
+	/// socket owner that advertised <see cref="ConnectionEstablishedMessage.OrderedPrompts"/>.
+	/// </summary>
+	public bool Prompt { get; init; }
 }
 
 /// <summary>
-/// Like <see cref="MarkupOutputMessage"/> but for prompt output (no trailing newline).
+/// Like <see cref="MarkupOutputMessage"/> but for prompt output (no trailing newline). Consumed
+/// on its own subject, so it has no order relative to ordinary output; kept for socket owners that
+/// do not advertise <see cref="ConnectionEstablishedMessage.OrderedPrompts"/>.
 /// </summary>
 public record MarkupPromptMessage(long Handle, string Markup) : IHandleMessage
 {
