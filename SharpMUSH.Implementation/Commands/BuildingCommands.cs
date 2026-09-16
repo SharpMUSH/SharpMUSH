@@ -429,17 +429,9 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (obj is SharpPlayer destroyedPlayer)
-		{
-			await PreDestroyPossessionsAsync(destroyedPlayer);
-		}
-
 		// Phase 2b: object-lifecycle destroy seam. The object is about to be marked GOING (scheduled for
 		// destruction) but still present in the DB, so a plugin hook can read it before it is gone.
 		await NotifyObjectDestroyingAsync(parser, obj.Object().DBRef);
-
-		await SetFlagInternalAsync(obj, "GOING", true);
-		await SetFlagInternalAsync(obj, "GOING_TWICE", false);
 
 		if (safe && !reallySafe)
 		{
@@ -451,15 +443,7 @@ public partial class Commands
 			: string.Format(ErrorMessages.Notifications.ObjectScheduledDestroyedFormat, obj.Object().Name);
 		await NotifyService.Notify(executor, destroyMsg, executor);
 
-		try
-		{
-			await AttributeService.EvaluateAttributeFunctionAsync(
-				parser, executor, obj, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
-		}
-		catch (Exception)
-		{
-			// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
-		}
+		await PreDestroyAsync(parser, executor, obj.Object().DBRef, []);
 
 		return CallState.Empty;
 	}
@@ -524,36 +508,189 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// PennMUSH <c>pre_destroy()</c> for a player: with <c>destroy_possessions</c>, mark everything the
-	/// player owns that <c>clear_player()</c> will free at purge time. Only marks — the hand-off of
-	/// whatever survives waits for the purge, so <c>@undestroy</c> can still take it all back.
+	/// PennMUSH <c>pre_destroy()</c>: mark <paramref name="target"/> GOING, schedule what goes with it —
+	/// a room's exits, and whatever a player's purge will free — and run its ADESTROY. Scheduling is
+	/// reversible, so nothing changes owner here; see <see cref="UndestroyAsync"/>.
+	/// </summary>
+	/// <remarks>
+	/// Terminates because an object is marked before anything it drags along is visited, and an
+	/// already-GOING object is not revisited; <paramref name="visited"/> makes that hold even against a
+	/// flag read that lags the write.
+	/// </remarks>
+	private async ValueTask PreDestroyAsync(IMUSHCodeParser parser, AnySharpObject executor, DBRef target,
+		HashSet<int> visited)
+	{
+		if (!visited.Add(target.Number)
+			|| await Mediator.Send(new GetObjectNodeQuery(target)) is not AnySharpObject thing
+			|| await thing.HasFlag("GOING"))
+		{
+			return;
+		}
+
+		await SetFlagInternalAsync(thing, "GOING", true);
+		await SetFlagInternalAsync(thing, "GOING_TWICE", false);
+
+		var dragged = thing switch
+		{
+			SharpRoom room => await ExitsOfAsync(room),
+			SharpPlayer player => await DoomedPossessionsAsync(player),
+			_ => []
+		};
+
+		foreach (var next in dragged)
+		{
+			await PreDestroyAsync(parser, executor, next, visited);
+		}
+
+		await RunAdestroyAsync(parser, executor, thing);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>undestroy()</c>: spare <paramref name="target"/> and everything its survival
+	/// requires — its GOING owner, an exit's source room — plus what was scheduled only on its account:
+	/// a room's exits and a player's possessions. The exceptions are Penn's "two votes" compromise
+	/// (<c>src/destroy.c:176-196</c>): an exit still doomed by something else stays GOING.
+	/// </summary>
+	/// <returns><see langword="false"/> when <paramref name="target"/> was not GOING.</returns>
+	private async ValueTask<bool> UndestroyAsync(IMUSHCodeParser parser, DBRef target, HashSet<int> visited)
+	{
+		if (!visited.Add(target.Number)
+			|| await Mediator.Send(new GetObjectNodeQuery(target)) is not AnySharpObject thing
+			|| !await thing.HasFlag("GOING"))
+		{
+			return false;
+		}
+
+		await SetFlagInternalAsync(thing, "GOING", false);
+		await SetFlagInternalAsync(thing, "GOING_TWICE", false);
+
+		if (!await thing.HasFlag("HALT"))
+		{
+			await RunStartupAsync(parser, thing);
+		}
+
+		var owner = await thing.Object().Owner.WithCancellation(CancellationToken.None);
+		await UndestroyAsync(parser, owner.Object.DBRef, visited);
+
+		var destroyPossessions = Configuration.CurrentValue.Command.DestroyPossessions;
+
+		switch (thing)
+		{
+			case SharpPlayer player when destroyPossessions:
+				foreach (var owned in await OwnedByAsync(player))
+				{
+					if (owned is SharpExit exit && await IsInSomeoneElsesGoingSourceAsync(exit, player)) continue;
+					await UndestroyAsync(parser, owned.Object().DBRef, visited);
+				}
+
+				break;
+
+			case SharpExit exit:
+				var source = (await exit.Location.WithCancellation(CancellationToken.None)).WithExitOption();
+				await UndestroyAsync(parser, source.Object().DBRef, visited);
+				break;
+
+			case SharpRoom room:
+				foreach (var exitRef in await ExitsOfAsync(room))
+				{
+					if (destroyPossessions && await IsDoomedByItsOwnerAsync(exitRef)) continue;
+					await UndestroyAsync(parser, exitRef, visited);
+				}
+
+				break;
+		}
+
+		return true;
+	}
+
+	/// <summary>Penn: <c>IsExit(tmp) &amp;&amp; !Owns(thing, Source(tmp)) &amp;&amp; Going(Source(tmp))</c>.</summary>
+	private static async ValueTask<bool> IsInSomeoneElsesGoingSourceAsync(SharpExit exit, SharpPlayer player)
+	{
+		var source = (await exit.Location.WithCancellation(CancellationToken.None)).WithExitOption();
+		var sourceOwner = await source.Object().Owner.WithCancellation(CancellationToken.None);
+		return sourceOwner.Object.DBRef.Number != player.Object.DBRef.Number && await source.HasFlag("GOING");
+	}
+
+	/// <summary>Penn: <c>Going(Owner(tmp)) &amp;&amp; !Safe(tmp)</c> — the owner's purge still frees it.</summary>
+	private async ValueTask<bool> IsDoomedByItsOwnerAsync(DBRef exitRef)
+	{
+		if (await Mediator.Send(new GetObjectNodeQuery(exitRef)) is not AnySharpObject exit)
+		{
+			return false;
+		}
+
+		var owner = await exit.Object().Owner.WithCancellation(CancellationToken.None);
+		return await new AnySharpObject(owner).HasFlag("GOING") && !await exit.HasFlag("SAFE");
+	}
+
+	private async ValueTask<List<DBRef>> ExitsOfAsync(SharpRoom room)
+		=> await Mediator.CreateStream(new GetExitsQuery(room.Object.DBRef))
+			.Select(exit => exit.Object.DBRef)
+			.ToListAsync();
+
+	/// <summary>Everything <paramref name="player"/> owns except themselves, read in full before any write.</summary>
+	private async ValueTask<List<AnySharpObject>> OwnedByAsync(SharpPlayer player)
+	{
+		var playerNumber = player.Object.DBRef.Number;
+		return await Mediator.CreateStream(new GetAllTypedObjectsQuery())
+			.Where(async (owned, token) => owned.Object().DBRef.Number != playerNumber
+				&& (await owned.Object().Owner.WithCancellation(token)).Object.DBRef.Number == playerNumber)
+			.ToListAsync();
+	}
+
+	/// <summary>
+	/// What <c>clear_player()</c> will free when <paramref name="player"/> is purged, and so what
+	/// scheduling them schedules too.
 	/// </summary>
 	/// <remarks>
 	/// DEVIATION: Penn's filter reads <c>!Safe(thing)</c> with <c>thing</c> the player, so under
 	/// <c>really_safe</c> a SAFE possession is marked and then freed by its own purge pass. Its comment
 	/// states the intent this follows instead: mark exactly what <c>clear_player()</c> would free.
 	/// </remarks>
-	private async ValueTask PreDestroyPossessionsAsync(SharpPlayer player)
+	private async ValueTask<List<DBRef>> DoomedPossessionsAsync(SharpPlayer player)
 	{
 		var config = Configuration.CurrentValue.Command;
 		if (!config.DestroyPossessions)
 		{
-			return;
+			return [];
 		}
 
-		var playerDbRef = player.Object.DBRef;
-		await foreach (var owned in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
+		var doomed = new List<DBRef>();
+		foreach (var owned in await OwnedByAsync(player))
 		{
 			var ownedDbRef = owned.Object().DBRef;
-			if (ownedDbRef.Number == playerDbRef.Number || ObjectDestructionService.IsSpecialObject(ownedDbRef)) continue;
+			if (ObjectDestructionService.IsSpecialObject(ownedDbRef)
+				|| (config.ReallySafe && await owned.HasFlag("SAFE"))) continue;
 
-			var owner = await owned.Object().Owner.WithCancellation(CancellationToken.None);
-			if (owner.Object.DBRef.Number != playerDbRef.Number) continue;
+			doomed.Add(ownedDbRef);
+		}
 
-			if (config.ReallySafe && await owned.HasFlag("SAFE")) continue;
+		return doomed;
+	}
 
-			await SetFlagInternalAsync(owned, "GOING", true);
-			await SetFlagInternalAsync(owned, "GOING_TWICE", false);
+	private async ValueTask RunAdestroyAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject thing)
+	{
+		try
+		{
+			await AttributeService.EvaluateAttributeFunctionAsync(
+				parser, executor, thing, "ADESTROY", new Dictionary<string, CallState>(), evalParent: false);
+		}
+		catch (Exception)
+		{
+			// Ignore errors from @adestroy evaluation - attribute may not exist or may fail
+		}
+	}
+
+	private async ValueTask RunStartupAsync(IMUSHCodeParser parser, AnySharpObject thing)
+	{
+		try
+		{
+			await AttributeService.EvaluateAttributeFunctionAsync(
+				parser, thing, thing, "STARTUP", new Dictionary<string, CallState>(), evalParent: false);
+		}
+		catch (Exception)
+		{
+			// Ignore errors from @startup evaluation - attribute may not exist or may fail
 		}
 	}
 
@@ -786,7 +923,7 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				if (!await obj.HasFlag("GOING"))
+				if (!await UndestroyAsync(parser, obj.Object().DBRef, []))
 				{
 					return await NotifyService.NotifyAndReturn(
 						executor.Object().DBRef,
@@ -795,20 +932,7 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
-				await SetFlagInternalAsync(obj, "GOING", false);
-				await SetFlagInternalAsync(obj, "GOING_TWICE", false);
-
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SparedFromDestructionFormat), executor, obj.Object().Name);
-
-				try
-				{
-					await AttributeService.EvaluateAttributeFunctionAsync(
-						parser, executor, obj, "STARTUP", new Dictionary<string, CallState>(), evalParent: false);
-				}
-				catch (Exception)
-				{
-					// Ignore errors from @startup evaluation - attribute may not exist or may fail
-				}
 
 				return CallState.Empty;
 			}
