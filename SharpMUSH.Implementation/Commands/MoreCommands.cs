@@ -2840,6 +2840,11 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"Unable to whisper to: {string.Join(' ', unable)}", executor);
 		}
 
+		if (successfulTargets.Count == 0)
+		{
+			return CallState.Empty;
+		}
+
 		// PennMUSH cmd_whisper (src/cmds.c): `noisy = SW_ISSET(NOISY) || (!SW_ISSET(SILENT) &&
 		// NOISY_WHISPER)`, and `noisy` governs ONLY whether the room may overhear. The whisperer's own
 		// echo is unconditional — `whisper/silent X=hi` still says "You whisper, ..." to the whisperer.

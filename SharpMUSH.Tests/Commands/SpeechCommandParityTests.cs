@@ -334,6 +334,7 @@ public class SpeechCommandParityTests
 		{
 			var (mine, _) = await Speak($"whisper #{remote.DbRef.Number}=hi");
 			await Assert.That(mine).Contains($"Unable to whisper to: #{remote.DbRef.Number}");
+			await Assert.That(mine.Any(line => line.StartsWith("You whisper,"))).IsFalse();
 			await Assert.That(Notifications.For(remote.DbRef)).DoesNotContain($"{_speakerName} whispers: hi");
 		}
 		finally
@@ -355,7 +356,7 @@ public class SpeechCommandParityTests
 			var (mine, theirs) = await Speak($"whisper {listenerName}=hi");
 			await Assert.That(mine).Contains($"{listenerName} can't hear you.");
 			await Assert.That(mine).Contains($"Unable to whisper to: {listenerName}");
-			await Assert.That(mine).DoesNotContain($"You whisper, \"hi\" to {listenerName}.");
+			await Assert.That(mine.Any(line => line.StartsWith("You whisper,"))).IsFalse();
 			await Assert.That(theirs).DoesNotContain($"{_speakerName} whispers: hi");
 		}
 		finally
