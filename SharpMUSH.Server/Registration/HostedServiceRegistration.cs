@@ -19,7 +19,6 @@ using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.RateLimiting;
-using SharpMUSH.Server.Registration;
 using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -55,43 +54,39 @@ using SharpMUSH.Messaging.NATS;
 using Microsoft.Extensions.Caching.Memory;
 using ZiggyCreatures.Caching.Fusion;
 using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
+namespace SharpMUSH.Server.Registration;
 
-namespace SharpMUSH.Server;
-
-public class Startup(
-	string colorFile,
-	string natsUrl,
-	DatabaseProvider databaseProvider = DatabaseProvider.Lightning)
+/// <summary>
+/// The background services the host starts. Order matters in one place and is commented where it
+/// does: plugins load before softcode packages and startup attributes run.
+/// </summary>
+internal static class HostedServiceRegistration
 {
-	// Cache name for the dedicated compiled boolean-lock expression cache.
-	// Must match the [FromKeyedServices] key used in BooleanExpressionParser.
-	public const string CompiledExpressionsCacheName = "compiled-expressions";
-
-	/// <summary>
-	/// Rate-limiting policy carrying PennMUSH's <c>http_per_second</c> quota. Named here because
-	/// both the policy registration and the <c>/http/{**path}</c> route that opts into it have to
-	/// agree, and so does the rejection handler that adds this policy's <c>Retry-After</c>.
-	/// </summary>
-	public const string SoftcodeHttpPolicy = "softcode-http";
-
-	/// <summary>
-	/// Registration is grouped by concern under <c>Registration/</c>, one extension method per band.
-	/// The bands were already contiguous and non-interleaved inside the 667-line method this
-	/// replaced; naming them is what lets a reader follow one without reading the rest, and lets a
-	/// test assert on one.
-	/// </summary>
-	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
+	/// <summary>Bootstrap, reconciliation, monitoring, scheduled work and the conversion worker.</summary>
+	public static IServiceCollection AddSharpMushHostedServices(this IServiceCollection services)
 	{
-		services.AddSharpMushHttpPipeline(configuration, environment);
-		services.AddSharpMushDatabase(configuration, databaseProvider);
-		services.AddSharpMushEngine(configuration, natsUrl);
-		services.AddSharpMushOptions(colorFile);
-		services.AddSharpMushLogging(configuration);
-		services.AddSharpMushMessaging(natsUrl);
-		services.AddSharpMushCachingAndScheduling();
-		services.AddSharpMushAuthentication(configuration, environment);
-		services.AddSharpMushWebApi(configuration);
-		services.AddSharpMushHostedServices();
-		services.AddSharpMushObservability();
+		services.AddQuartzHostedService();
+		services.AddHostedService<StartupHandler>();
+		// Load C# plugins before softcode packages/startup attributes run, so plugin commands/functions
+		// are present in the libraries when later bootstrap stages execute.
+		services.AddHostedService<Services.PluginBootstrapService>();
+		services.AddHostedService<Services.DefaultPackagesBootstrapService>();
+		services.AddHostedService<Services.DefaultApplicationsBootstrapService>();
+		// Run @STARTUP on all objects at boot — registered after the other bootstrap services so
+		// any objects/attributes they seed already exist. Re-establishes in-memory @function regs.
+		services.AddHostedService<Services.StartupAttributeBootstrapService>();
+		services.AddHostedService<NatsBridgeService>();
+		services.AddHostedService<Services.ConnectionReconciliationService>();
+		services.AddHostedService<Services.ConnectionLoggingService>();
+		services.AddHostedService<Services.HealthMonitoringService>();
+		services.AddHostedService<Services.ScheduledTaskManagementService>();
+		services.AddHostedService<Services.WarningCheckService>();
+		services.AddHostedService<Services.WorldBackupScheduleService>();
+		services.AddHostedService<Services.RecurringJobRunner>();
+		services.AddHostedService<Services.PennMUSHDatabaseConversionService>();
+
+		// Configure OpenTelemetry Metrics with GKE/Kubernetes-aware resource detection
+
+		return services;
 	}
 }
