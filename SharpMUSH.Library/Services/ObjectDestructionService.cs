@@ -212,23 +212,25 @@ public class ObjectDestructionService(
 	/// <c>@destroy</c> merely marks them, so <c>@undestroy</c> has nothing to give back.
 	/// </summary>
 	/// <remarks>
-	/// Evacuation runs first, because it is the one step that can fail here. Refusing then leaves the
-	/// player and everything they own untouched, still GOING, and the whole of it is retried on the next
-	/// purge pass. Penn runs <c>chan_chownall</c> before <c>clear_thing</c>, which cannot fail there.
+	/// The two steps that can fail run first: resolving the probate player, then evacuating. Refusing at
+	/// either leaves the player and everything they own untouched, still GOING, and the whole of it is
+	/// retried on the next purge pass. Penn runs <c>chan_chownall</c> before <c>clear_thing</c>, and
+	/// neither can fail there.
 	/// </remarks>
 	/// <returns>
 	/// <see langword="false"/> when a piece of content could not be evacuated, or no probate player resolves.
 	/// </returns>
 	private async ValueTask<bool> ClearPlayerAsync(IMUSHCodeParser parser, SharpPlayer player, CancellationToken ct)
 	{
-		if (!await EmptyContentsAsync(parser, player, ct))
+		// With nobody to hand them to, deleting the player would sever the ownership edge of everything
+		// they own. Checked before anything moves, so the player stays GOING exactly as they were and the
+		// next purge retries once the configuration is fixed.
+		if (await ResolveProbatePlayerAsync(ct) is not { } probate)
 		{
 			return false;
 		}
 
-		// With nobody to hand them to, deleting the player would sever the ownership edge of everything
-		// they own. The player stays GOING and the next purge retries once the configuration is fixed.
-		if (await ResolveProbatePlayerAsync(ct) is not { } probate)
+		if (!await EmptyContentsAsync(parser, player, ct))
 		{
 			return false;
 		}

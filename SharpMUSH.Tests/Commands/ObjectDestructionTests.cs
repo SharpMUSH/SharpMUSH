@@ -463,14 +463,16 @@ public class ObjectDestructionTests
 	/// <summary>
 	/// Freeing a player hands what they own to the probate judge, falling back to God. When neither
 	/// resolves there is nobody to hand it to, and deleting the player anyway would sever every
-	/// ownership edge pointing at them. The free is refused instead, leaving the player GOING for a
-	/// later purge once the configuration is fixed.
+	/// ownership edge pointing at them. The free is refused before anything is touched, leaving the
+	/// player GOING, contents and all, for a later purge once the configuration is fixed.
 	/// </summary>
 	[Test]
 	public async Task FreePlayer_WithNoProbatePlayer_LeavesThePlayerStanding()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, "NoProbate");
+		var carried = await CreateThingAsync("NoProbateCarried");
+		await RunAsync($"@tel {carried}={player}");
 		var target = (await Mediator.Send(new GetObjectNodeQuery(player))).Expect<AnySharpObject>();
 
 		// probate_judge is #1 in the test config, so hiding #1 hides both the judge and the fallback.
@@ -480,6 +482,10 @@ public class ObjectDestructionTests
 
 		await Assert.That(await service.FreeObjectAsync(Parser, target)).IsFalse();
 		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(player))).IsNone).IsFalse();
+
+		// A refused free changes nothing, so what the player carries has not been evacuated either.
+		var stillCarried = (await Mediator.Send(new GetObjectNodeQuery(carried))).Expect<AnySharpObject>();
+		await Assert.That((await stillCarried.AsContent.Location()).Object().DBRef.Number).IsEqualTo(player.Number);
 	}
 
 	private static IMoveService MoveServiceAnswering(
