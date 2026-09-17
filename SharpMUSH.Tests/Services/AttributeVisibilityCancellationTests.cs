@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using Mediator;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
@@ -9,6 +9,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -38,7 +39,8 @@ public class AttributeVisibilityCancellationTests
 		var target = new TestObjectFactory().CreateThing(10, "target");
 		var permissions = Substitute.For<IPermissionService>();
 		var service = new AttributeService(Substitute.For<IMediator>(), permissions, Substitute.For<ILocateService>(), Substitute.For<IValidateService>(),
-			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>());
+			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>(),
+			NullLogger<SharpMUSH.Library.Services.AttributeService>.Instance);
 		using var cancel = new CancellationTokenSource();
 		using var cleanup = new CancellationTokenSource();
 		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancel.Token);
@@ -116,7 +118,8 @@ public class AttributeVisibilityCancellationTests
 		var permissions = Substitute.For<IPermissionService>();
 		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<LazySharpAttribute>()).Returns(true);
 		var service = new AttributeService(Substitute.For<IMediator>(), permissions, Substitute.For<ILocateService>(), Substitute.For<IValidateService>(),
-			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>());
+			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>(),
+			NullLogger<SharpMUSH.Library.Services.AttributeService>.Instance);
 		var node = Lazy(TestAttributeFactory.Named("FOUR"));
 		foreach (var name in new[] { "THREE", "TWO", "ONE" })
 		{
@@ -140,7 +143,8 @@ public class AttributeVisibilityCancellationTests
 		var mediator = Substitute.For<IMediator>();
 		var validation = Substitute.For<IValidateService>();
 		var service = new AttributeService(mediator, Substitute.For<IPermissionService>(), Substitute.For<ILocateService>(), validation,
-			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>());
+			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>(),
+			NullLogger<SharpMUSH.Library.Services.AttributeService>.Instance);
 		using var cancel = new CancellationTokenSource();
 		using var cleanup = new CancellationTokenSource();
 		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancel.Token);

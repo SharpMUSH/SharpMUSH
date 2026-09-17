@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -688,7 +688,8 @@ public class QueueAdmissionTests
 			.Returns(call => { observed = call.ArgAt<CancellationToken>(1); return AsyncEnumerable.Empty<AttributeWithInheritance>(); });
 		var service = new SharpMUSH.Library.Services.AttributeService(mediator, Substitute.For<IPermissionService>(),
 			Substitute.For<ILocateService>(), validation, Substitute.For<INotifyService>(),
-			Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>());
+			Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>(),
+			NullLogger<SharpMUSH.Library.Services.AttributeService>.Instance);
 		var target = (await mediator.Send(new GetObjectNodeQuery(new DBRef(10)))).Expect<AnySharpObject>();
 		using var budget = ExecutionBudget.FromMilliseconds(30000);
 		using var scope = budget.Enter();
