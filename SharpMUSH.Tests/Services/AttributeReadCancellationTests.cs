@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using Mediator;
 using NSubstitute;
 using SharpMUSH.Configuration;
@@ -10,6 +10,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -21,7 +22,8 @@ public class AttributeReadCancellationTests
 		var target = new TestObjectFactory().CreateThing(1, "god");
 		var mediator = Substitute.For<IMediator>();
 		var service = new AttributeService(mediator, Substitute.For<IPermissionService>(), Substitute.For<ILocateService>(), Substitute.For<IValidateService>(),
-			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>());
+			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>(),
+			NullLogger<SharpMUSH.Library.Services.AttributeService>.Instance);
 		LazySharpAttributesOrError result;
 		using (var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(100)))
 		using (budget.Enter())
@@ -60,7 +62,8 @@ public class AttributeReadCancellationTests
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 		options.CurrentValue.Returns(ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst")));
 		var service = new AttributeService(mediator, permissions, Substitute.For<ILocateService>(), Substitute.For<IValidateService>(),
-			Substitute.For<INotifyService>(), options, Substitute.For<IServiceProvider>());
+			Substitute.For<INotifyService>(), options, Substitute.For<IServiceProvider>(),
+			NullLogger<SharpMUSH.Library.Services.AttributeService>.Instance);
 		using var cancel = new CancellationTokenSource();
 		using var cleanup = new CancellationTokenSource();
 		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancel.Token);
@@ -140,7 +143,8 @@ public class AttributeReadCancellationTests
 		permissions.CanExecuteAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<SharpAttribute[]>()).Returns(_ => Block());
 		permissions.CanViewAttribute(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<SharpAttribute[]>()).Returns(_ => Block());
 		var service = new AttributeService(mediator, permissions, Substitute.For<ILocateService>(), validation,
-			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>());
+			Substitute.For<INotifyService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(), Substitute.For<IServiceProvider>(),
+			NullLogger<SharpMUSH.Library.Services.AttributeService>.Instance);
 		using var cancel = new CancellationTokenSource();
 		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancel.Token);
 		using var scope = budget.Enter();
@@ -178,7 +182,8 @@ public class AttributeReadCancellationTests
 		var validation = Substitute.For<IValidateService>();
 		validation.Valid(Arg.Any<IValidateService.ValidationType>(), Arg.Any<MarkupString.MarkupText>(), Arg.Any<ValidationTarget>()).Returns(true);
 		var service = new AttributeService(mediator, Substitute.For<IPermissionService>(), Substitute.For<ILocateService>(), validation,
-			Substitute.For<INotifyService>(), options, Substitute.For<IServiceProvider>());
+			Substitute.For<INotifyService>(), options, Substitute.For<IServiceProvider>(),
+			NullLogger<SharpMUSH.Library.Services.AttributeService>.Instance);
 		using var cancel = new CancellationTokenSource();
 		using var cleanup = new CancellationTokenSource();
 		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancel.Token);
