@@ -28,12 +28,16 @@ public class CommandRestrictionTests
 
 	private readonly List<DBRef> _players = [];
 
-	// A leftover Guest power would count as a guest character in GuestLoginTests.
+	// A leftover Guest power would count as a guest character in GuestLoginTests; revoke both grants
+	// so no player these tests made keeps a restriction.
 	[After(Test)]
 	public async Task RevokeGrants()
 	{
 		foreach (var player in _players)
+		{
 			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {player}=!Guest"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {player}=!GAGGED"));
+		}
 	}
 
 	private async Task<TestIsolationHelpers.TestPlayer> PlayerAsync(string prefix, string? grant = null)

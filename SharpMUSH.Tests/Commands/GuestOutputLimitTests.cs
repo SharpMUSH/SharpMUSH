@@ -1,4 +1,5 @@
 using Mediator;
+using NSubstitute;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
@@ -183,6 +184,28 @@ public class GuestOutputLimitTests
 
 		await Assert.That(caller.IsExceeded).IsTrue();
 		await Assert.That(OutputCeiling.Current).IsNull();
+	}
+
+	// Deciding the limit reads the player, which awaits; a login on the handle meanwhile makes the
+	// command someone else's, and it must not run with the first player's authority.
+	[Test]
+	public async Task CommandParse_WhenTheHandleRebindsDuringTheLimitLookup_RunsNothing()
+	{
+		var first = await PlayerAsync("OutLimitRebindFirst", guest: false);
+		var second = await PlayerAsync("OutLimitRebindSecond", guest: false);
+		const long handle = 918_273_645;
+		var metadata = new System.Collections.Concurrent.ConcurrentDictionary<string, string> { ["SessionId"] = "rebind" };
+		IConnectionService.ConnectionData Bound(DBRef player) => new(handle, player, IConnectionService.ConnectionState.LoggedIn,
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8, metadata);
+		var connections = Substitute.For<IConnectionService>();
+		connections.Get(handle).Returns(Bound(first.DbRef), Bound(second.DbRef));
+		var firstBefore = WebAppFactoryArg.Notifications.DeliveryCountFor(first.DbRef);
+		var secondBefore = WebAppFactoryArg.Notifications.DeliveryCountFor(second.DbRef);
+
+		await Parser.CommandParse(handle, connections, MarkupText.Plain("think rebind marker"));
+
+		await Assert.That(SaidBy(first, first.DbRef, firstBefore)).IsEmpty();
+		await Assert.That(SaidBy(second, second.DbRef, secondBefore)).IsEmpty();
 	}
 
 	[Test]

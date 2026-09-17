@@ -715,7 +715,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var expectedSession = State.IsEmpty ? null : CurrentState.ConnectionSessionId;
 		if (!string.IsNullOrEmpty(expectedSession) &&
 			handleId?.Metadata.GetValueOrDefault("SessionId") != expectedSession) return CallState.Empty;
-		var outputLimit = await OutputLimitForAsync(handleId?.Ref);
+		var player = handleId?.Ref;
+		var session = handleId?.Metadata.GetValueOrDefault("SessionId");
+		var outputLimit = await OutputLimitForAsync(player);
+		// The lookup awaited. A login, logout or reconnect on the handle meanwhile makes this someone
+		// else's command, which must not run with the player read above.
+		var current = connectionService.Get(handle);
+		if (current?.Ref != player || current?.Metadata.GetValueOrDefault("SessionId") != session) return CallState.Empty;
 		var newParser = Push(new ParserState(
 			Registers: new([[]]),
 			IterationRegisters: [],
@@ -730,9 +736,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 			Switches: [],
 			Arguments: [],
-			Executor: handleId?.Ref,
-			Enactor: handleId?.Ref,
-			Caller: handleId?.Ref,
+			Executor: player,
+			Enactor: player,
+			Caller: player,
 			Handle: handle,
 			ParseMode: ParseMode.Default,
 			HttpResponse: null,
