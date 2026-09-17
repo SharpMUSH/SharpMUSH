@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,13 +27,13 @@ internal sealed class RecordingWikiHandler : HttpMessageHandler
 {
 	public List<Uri> Requests { get; } = [];
 
-	public List<WikiController.WikiRevisionDto> Revisions { get; set; } =
+	public List<WikiRevisionDto> Revisions { get; set; } =
 	[
 		new(2, "#1", DateTimeOffset.UnixEpoch, null, "v2"),
 		new(1, "#1", DateTimeOffset.UnixEpoch, null, "v1"),
 	];
 
-	public List<WikiController.WikiTranslationSummaryDto> Translations { get; set; } =
+	public List<WikiTranslationSummaryDto> Translations { get; set; } =
 		[new("fr", "Dragons (fr)", true, DateTimeOffset.UnixEpoch, 1)];
 
 	public Uri? LastRequestTo(string pathSuffix) =>

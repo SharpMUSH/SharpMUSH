@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -20,7 +21,7 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// per-slug locale map, so the admin grid's coverage column has something real to read.
 /// </summary>
 internal sealed class AdminWikiCoverageHandler(
-	IReadOnlyList<WikiController.WikiPageDto> pages,
+	IReadOnlyList<WikiPageDto> pages,
 	IReadOnlyDictionary<string, string[]> translations) : HttpMessageHandler
 {
 	private static readonly Regex _translationsRoute =
@@ -42,7 +43,7 @@ internal sealed class AdminWikiCoverageHandler(
 			var slug = Uri.UnescapeDataString(match.Groups[1].Value);
 			var locales = translations.TryGetValue(slug, out var found) ? found : [];
 			var dtos = locales
-				.Select(l => new WikiController.WikiTranslationSummaryDto(
+				.Select(l => new WikiTranslationSummaryDto(
 					l, $"{slug} ({l})", true, DateTimeOffset.UnixEpoch, 1))
 				.ToList();
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(dtos) });
@@ -60,7 +61,7 @@ internal sealed class AdminWikiCoverageHandler(
 /// </summary>
 public class AdminWikiCoverageTests : TrackingBunitContext
 {
-	private static WikiController.WikiPageDto Summary(string slug, string title) => new(
+	private static WikiPageDto Summary(string slug, string title) => new(
 		Id: slug,
 		Slug: slug,
 		Title: title,
@@ -77,7 +78,7 @@ public class AdminWikiCoverageTests : TrackingBunitContext
 		Published: true);
 
 	private IRenderedComponent<SharpMUSH.Client.Pages.Admin.AdminWiki> RenderAdminWikiWith(
-		IReadOnlyList<WikiController.WikiPageDto> pages,
+		IReadOnlyList<WikiPageDto> pages,
 		Dictionary<string, string[]> translations)
 	{
 		var apiClient = Track(new HttpClient(new AdminWikiCoverageHandler(pages, translations))

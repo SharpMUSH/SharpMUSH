@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -67,7 +68,7 @@ public class WikiControllerProtectionTests
 		var (wiki, slug) = await SeedProtectedPage(isProtected: true);
 		var controller = MakeController(wiki);
 
-		var result = await controller.UpdatePage(slug, new WikiController.UpdatePageRequest("# changed", null));
+		var result = await controller.UpdatePage(slug, new UpdatePageRequest("# changed", null));
 
 		await Assert.That(result).IsTypeOf<ForbidResult>();
 
@@ -81,7 +82,7 @@ public class WikiControllerProtectionTests
 		var (wiki, slug) = await SeedProtectedPage(isProtected: true);
 		var controller = MakeController(wiki, PortalPermission.WikiAdmin);
 
-		var result = await controller.UpdatePage(slug, new WikiController.UpdatePageRequest("# changed", null));
+		var result = await controller.UpdatePage(slug, new UpdatePageRequest("# changed", null));
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}
@@ -92,7 +93,7 @@ public class WikiControllerProtectionTests
 		var (wiki, slug) = await SeedProtectedPage(isProtected: false);
 		var controller = MakeController(wiki);
 
-		var result = await controller.UpdatePage(slug, new WikiController.UpdatePageRequest("# changed", null));
+		var result = await controller.UpdatePage(slug, new UpdatePageRequest("# changed", null));
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}

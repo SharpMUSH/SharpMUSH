@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
@@ -51,67 +52,6 @@ public class WikiController(
 	IPrerenderCacheService prerenderCache,
 	ILogger<WikiController> logger) : ControllerBase
 {
-	/// <summary>Page data returned by the API. Includes MarkdownSource so the editor can round-trip.</summary>
-	public record WikiPageDto(
-		string Id,
-		string Slug,
-		string Title,
-		string Namespace,
-		string MarkdownSource,
-		string RenderedHtml,
-		string PlainText,
-		DateTimeOffset CreatedAt,
-		DateTimeOffset UpdatedAt,
-		bool IsProtected,
-		int RevisionNumber,
-		string? Category,
-		IReadOnlyList<string> Tags,
-		bool Published)
-	{
-		// Localization fields are init-only with defaults so that ToDto(WikiPage) — used by every
-		// endpoint that has not been localized yet — keeps compiling and keeps its current shape.
-
-		/// <summary>The locale actually served.</summary>
-		public string Locale { get; init; } = string.Empty;
-
-		/// <summary>The normalised locale the reader asked for.</summary>
-		public string RequestedLocale { get; init; } = string.Empty;
-
-		/// <summary>True when a different language was served than requested — drives the reader's notice.</summary>
-		public bool IsFallback { get; init; }
-
-		/// <summary>Locales this reader can actually read the page in, source locale first.</summary>
-		public IReadOnlyList<string> AvailableLocales { get; init; } = [];
-	}
-
-	/// <summary>A translation without its body — enough for locale lists and hreflang.</summary>
-	public record WikiTranslationSummaryDto(
-		string Locale,
-		string Title,
-		bool Published,
-		DateTimeOffset UpdatedAt,
-		int RevisionNumber);
-
-	/// <summary>Request body for creating or updating one locale's translation of a page.</summary>
-	/// <param name="ExpectedRevisionNumber">
-	/// The <c>RevisionNumber</c> the editor loaded, for optimistic concurrency. Null means create-only.
-	/// A stale value is answered with 409 and must not be retried — see <see cref="PutTranslation"/>.
-	/// </param>
-	public record UpsertTranslationRequest(
-		string Title,
-		string Markdown,
-		string? EditSummary,
-		bool Published,
-		int? ExpectedRevisionNumber);
-
-	/// <summary>A single revision snapshot. MarkdownSource is the full page body at that revision.</summary>
-	public record WikiRevisionDto(
-		int RevisionNumber,
-		string EditorDbref,
-		DateTimeOffset Timestamp,
-		string? EditSummary,
-		string MarkdownSource);
-
 	private static WikiPageDto ToDto(WikiPage p) => new(
 		p.Id, p.Slug, p.Title, p.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
 		p.CreatedAt, p.UpdatedAt, p.IsProtected, p.RevisionNumber,
@@ -514,15 +454,6 @@ public class WikiController(
 			: localized.Locale;
 	}
 
-	/// <summary>Request body for creating a new wiki page. Category is part of identity and is fixed at create.</summary>
-	public record CreatePageRequest(string Title, string Markdown, string? Namespace, string? Category);
-
-	/// <summary>Request body for updating an existing wiki page.</summary>
-	public record UpdatePageRequest(string Markdown, string? EditSummary);
-
-	/// <summary>Request body for setting page protection.</summary>
-	public record SetProtectionRequest(bool IsProtected);
-
 	/// <summary>
 	/// POST /api/wiki
 	/// Creates a new wiki page. The slug is derived from the title.
@@ -582,9 +513,6 @@ public class WikiController(
 		return Ok(ToDto(page));
 	}
 
-	/// <summary>Request body for rolling a page back to an earlier revision.</summary>
-	public record RollbackRequest(int RevisionNumber);
-
 	/// <summary>
 	/// POST /api/wiki/{slug}/rollback
 	/// Restores the page body from an earlier revision snapshot. The restore is a
@@ -617,10 +545,6 @@ public class WikiController(
 		prerenderCache.InvalidatePrefix("/wiki/");
 		return Ok(ToDto(updated));
 	}
-
-	/// <summary>Request body for the batch existence check. Refs use URL-path form:
-	/// "ns/category/slug" (canonical), "ns/slug" (general category), or "slug" (main/general).</summary>
-	public record ExistsRequest(string[] Refs);
 
 	/// <summary>
 	/// POST /api/wiki/exists
@@ -683,9 +607,6 @@ public class WikiController(
 		return Ok();
 	}
 
-	/// <summary>Request body for setting page metadata.</summary>
-	public record SetMetadataRequest(string? Category, string[] Tags, bool Published);
-
 	/// <summary>
 	/// PUT /api/wiki/{slug}/metadata
 	/// Sets the category, tags and published flag on a page, identified by slug.
@@ -713,15 +634,6 @@ public class WikiController(
 		return Ok(ToDto(page));
 	}
 
-	/// <summary>Request body for batch protection changes. Refs use "ns/category/slug" form.</summary>
-	public record BatchProtectRequest(string[] Refs, bool IsProtected);
-
-	/// <summary>Request body for batch deletion. Refs use "ns/category/slug" form.</summary>
-	public record BatchDeleteRequest(string[] Refs);
-
-	/// <summary>Per-slug outcome of a batch operation.</summary>
-	public record BatchResult(IReadOnlyList<string> Succeeded, IReadOnlyList<string> Failed);
-
 	/// <summary>
 	/// POST /api/wiki/batch/protect
 	/// Sets or clears the protection flag on multiple pages at once.
@@ -748,7 +660,7 @@ public class WikiController(
 
 		logger.LogInformation("Wiki batch protect: protected={Protected} ok={Ok} failed={Failed}",
 			request.IsProtected, succeeded.Count, failed.Count);
-		return Ok(new BatchResult(succeeded, failed));
+		return Ok(new WikiBatchResult(succeeded, failed));
 	}
 
 	/// <summary>
@@ -781,10 +693,8 @@ public class WikiController(
 		prerenderCache.InvalidatePrefix("/wiki/");
 		logger.LogInformation("Wiki batch delete: by={Editor} ok={Ok} failed={Failed}",
 			LogSanitizer.Sanitize(editorDbref), succeeded.Count, failed.Count);
-		return Ok(new BatchResult(succeeded, failed));
+		return Ok(new WikiBatchResult(succeeded, failed));
 	}
-
-	public record InvalidateCacheRequest(string? Path, string? Prefix);
 
 	/// <summary>
 	/// POST /api/wiki/invalidate-cache

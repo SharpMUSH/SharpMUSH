@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.API;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Client.Models;
 using System.Net.Http.Json;
 
@@ -11,48 +12,6 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiService> logger)
 {
-	private record WikiPageDto(
-		string Id,
-		string Slug,
-		string Title,
-		string Namespace,
-		string MarkdownSource,
-		string RenderedHtml,
-		string PlainText,
-		DateTimeOffset CreatedAt,
-		DateTimeOffset UpdatedAt,
-		bool IsProtected,
-		int RevisionNumber,
-		string? Category,
-		IReadOnlyList<string>? Tags,
-		bool Published,
-		string? Locale,
-		string? RequestedLocale,
-		bool IsFallback,
-		IReadOnlyList<string>? AvailableLocales);
-
-	private record WikiTranslationSummaryDto(
-		string Locale, string Title, bool Published, DateTimeOffset UpdatedAt, int RevisionNumber);
-
-	private record WikiRevisionDto(
-		int RevisionNumber,
-		string EditorDbref,
-		DateTimeOffset Timestamp,
-		string? EditSummary,
-		string MarkdownSource);
-
-	private record CreatePageRequest(string Title, string Markdown, string? Namespace, string? Category);
-	private record UpdatePageRequest(string Markdown, string? EditSummary);
-	private record SetMetadataRequest(string? Category, string[] Tags, bool Published);
-	private record RollbackRequest(int RevisionNumber);
-	private record UpsertTranslationRequest(
-		string Title, string Markdown, string? EditSummary, bool Published, int? ExpectedRevisionNumber);
-	private record ExistsRequest(string[] Refs);
-	private record BatchProtectRequest(string[] Refs, bool IsProtected);
-	private record BatchDeleteRequest(string[] Refs);
-
-	/// <summary>Per-slug outcome of a batch operation (mirrors WikiController.BatchResult).</summary>
-	public record WikiBatchResult(IReadOnlyList<string> Succeeded, IReadOnlyList<string> Failed);
 
 	public async ValueTask<Maybe<WikiArticle>> GetWikiArticle(
 		string slug, string? category = null, string? ns = null, string? lang = null)
@@ -577,12 +536,12 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			Id = dto.Id,
 			Slug = dto.Slug,
 			Category = dto.Category,
-			Tags = dto.Tags?.ToList() ?? [],
+			Tags = dto.Tags.ToList(),
 			Published = dto.Published,
-			Locale = dto.Locale ?? string.Empty,
-			RequestedLocale = dto.RequestedLocale ?? string.Empty,
+			Locale = dto.Locale,
+			RequestedLocale = dto.RequestedLocale,
 			IsFallback = dto.IsFallback,
-			AvailableLocales = dto.AvailableLocales?.ToList() ?? [],
+			AvailableLocales = dto.AvailableLocales.ToList(),
 			// The SERVED row's revision number — the translation's when a translation was served, the page's
 			// otherwise. WikiEdit passes it back as expectedRevisionNumber, which is why it must come from the
 			// same DTO field the server resolved rather than from a separate page lookup.
@@ -615,10 +574,10 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		new(dto.Slug, dto.Title, dto.Namespace, dto.UpdatedAt, dto.RevisionNumber)
 		{
 			Category = dto.Category,
-			Tags = dto.Tags ?? [],
+			Tags = dto.Tags,
 			Published = dto.Published,
 			IsProtected = dto.IsProtected,
-			Locale = dto.Locale ?? string.Empty,
+			Locale = dto.Locale,
 			IsFallback = dto.IsFallback,
 		};
 

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Wiki;
@@ -15,8 +16,8 @@ namespace SharpMUSH.Tests.Server.Controllers;
 /// </summary>
 public class WikiControllerLocaleTests
 {
-	private static WikiController.WikiPageDto OkDto(IActionResult result) =>
-		(WikiController.WikiPageDto)((OkObjectResult)result).Value!;
+	private static WikiPageDto OkDto(IActionResult result) =>
+		(WikiPageDto)((OkObjectResult)result).Value!;
 
 	[Test]
 	public async Task GetPage_WithNoLangParameter_ServesTheSourceLocaleWithoutABanner()
@@ -171,7 +172,7 @@ public class WikiControllerLocaleTests
 
 		var result = await controller.GetRecentChanges(count: 20, lang: "fr");
 
-		var dtos = ((IEnumerable<WikiController.WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiPageDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Count)
 			.IsEqualTo(2)
 			.Because("a localized listing must not return N rows per page");
@@ -190,7 +191,7 @@ public class WikiControllerLocaleTests
 
 		var result = await controller.ListAllPages(skip: 0, take: 50, ns: null, lang: "fr");
 
-		var dtos = ((IEnumerable<WikiController.WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiPageDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Count).IsEqualTo(2);
 		await Assert.That(controller.Response.Headers["X-Total-Count"].ToString()).IsEqualTo("2");
 	}
@@ -204,7 +205,7 @@ public class WikiControllerLocaleTests
 
 		var result = await controller.ListNamespacePages("help", skip: 0, take: 50, lang: "fr");
 
-		var dtos = ((IEnumerable<WikiController.WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiPageDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Single().Title)
 			.IsEqualTo("Help Intro")
 			.Because("an unpublished translation must not surface its title in a public listing");
@@ -219,7 +220,7 @@ public class WikiControllerLocaleTests
 
 		var result = await controller.ListCategoryPages("lore", skip: 0, take: 50, lang: "fr");
 
-		var dtos = ((IEnumerable<WikiController.WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiPageDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Single().Title).IsEqualTo("Alpha (fr)");
 	}
 
@@ -233,7 +234,7 @@ public class WikiControllerLocaleTests
 
 		var result = await controller.ListTagPages("dragons", skip: 0, take: 50, lang: "fr");
 
-		var dtos = ((IEnumerable<WikiController.WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiPageDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Single().Title).IsEqualTo("Alpha (fr)");
 	}
 
@@ -249,7 +250,7 @@ public class WikiControllerLocaleTests
 
 		var result = await controller.ListNamespacePages("main", skip: 0, take: 50, lang: "fr");
 
-		var dtos = ((IEnumerable<WikiController.WikiPageDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiPageDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Select(d => d.Slug)).IsEquivalentTo(new[] { "public" });
 	}
 }

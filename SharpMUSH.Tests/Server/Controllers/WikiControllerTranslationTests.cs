@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Library.Authorization;
@@ -17,8 +18,8 @@ namespace SharpMUSH.Tests.Server.Controllers;
 /// </summary>
 public class WikiControllerTranslationTests
 {
-	private static WikiController.WikiTranslationSummaryDto OkTranslation(IActionResult result) =>
-		(WikiController.WikiTranslationSummaryDto)((OkObjectResult)result).Value!;
+	private static WikiTranslationSummaryDto OkTranslation(IActionResult result) =>
+		(WikiTranslationSummaryDto)((OkObjectResult)result).Value!;
 
 	private static AuthorizeAttribute? ActionAuthorize(string name) =>
 		typeof(WikiController).GetMethod(name, BindingFlags.Public | BindingFlags.Instance)!
@@ -32,7 +33,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
-			new WikiController.UpsertTranslationRequest(
+			new UpsertTranslationRequest(
 				"Dragons (fr)", "corps fr", "première", Published: true, ExpectedRevisionNumber: null),
 			ns: "main", category: "general");
 
@@ -50,7 +51,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.PutTranslation(
 			"dragons", "en",
-			new WikiController.UpsertTranslationRequest("T", "m", null, true, null),
+			new UpsertTranslationRequest("T", "m", null, true, null),
 			ns: "main", category: "general");
 
 		await Assert.That(result).IsTypeOf<BadRequestObjectResult>();
@@ -65,7 +66,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.PutTranslation(
 			"dragons", "not a locale",
-			new WikiController.UpsertTranslationRequest("T", "m", null, true, null),
+			new UpsertTranslationRequest("T", "m", null, true, null),
 			ns: "main", category: "general");
 
 		await Assert.That(result).IsTypeOf<BadRequestObjectResult>();
@@ -80,7 +81,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
-			new WikiController.UpsertTranslationRequest("T", "m", null, true, null),
+			new UpsertTranslationRequest("T", "m", null, true, null),
 			ns: "main", category: "general");
 
 		await Assert.That(result).IsTypeOf<ForbidResult>()
@@ -96,7 +97,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
-			new WikiController.UpsertTranslationRequest("T", "m", null, true, null),
+			new UpsertTranslationRequest("T", "m", null, true, null),
 			ns: "main", category: "general");
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
@@ -109,7 +110,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.PutTranslation(
 			"ghost", "fr",
-			new WikiController.UpsertTranslationRequest("T", "m", null, true, null),
+			new UpsertTranslationRequest("T", "m", null, true, null),
 			ns: "main", category: "general");
 
 		await Assert.That(result).IsTypeOf<NotFoundResult>();
@@ -123,7 +124,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
-			new WikiController.UpsertTranslationRequest("T", "m", null, true, null),
+			new UpsertTranslationRequest("T", "m", null, true, null),
 			ns: "main", category: "general");
 
 		await Assert.That(result).IsTypeOf<UnauthorizedObjectResult>()
@@ -140,7 +141,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
-			new WikiController.UpsertTranslationRequest("perdu", "corps perdu", null, true, ExpectedRevisionNumber: 1),
+			new UpsertTranslationRequest("perdu", "corps perdu", null, true, ExpectedRevisionNumber: 1),
 			ns: "main", category: "general");
 
 		await Assert.That(result)
@@ -164,7 +165,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
-			new WikiController.UpsertTranslationRequest("écrasé", "corps écrasé", null, true, ExpectedRevisionNumber: null),
+			new UpsertTranslationRequest("écrasé", "corps écrasé", null, true, ExpectedRevisionNumber: null),
 			ns: "main", category: "general");
 
 		await Assert.That(result).IsTypeOf<ConflictObjectResult>();
@@ -187,7 +188,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
-			new WikiController.UpsertTranslationRequest("orphelin", "corps orphelin", null, true, ExpectedRevisionNumber: 1),
+			new UpsertTranslationRequest("orphelin", "corps orphelin", null, true, ExpectedRevisionNumber: 1),
 			ns: "main", category: "general");
 
 		await Assert.That(result)
@@ -206,7 +207,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.PutTranslation(
 			"dragons", "fr",
-			new WikiController.UpsertTranslationRequest("v2", "corps v2", "suite", true, ExpectedRevisionNumber: 1),
+			new UpsertTranslationRequest("v2", "corps v2", "suite", true, ExpectedRevisionNumber: 1),
 			ns: "main", category: "general");
 
 		await Assert.That(OkTranslation(result).RevisionNumber).IsEqualTo(2);
@@ -220,7 +221,7 @@ public class WikiControllerTranslationTests
 		var (controller, storage) = BuildWithClaims(PortalPermission.WikiEdit);
 
 		await controller.CreatePage(
-			new WikiController.CreatePageRequest("Dragons", "en body", Namespace: "main", Category: "general"));
+			new CreatePageRequest("Dragons", "en body", Namespace: "main", Category: "general"));
 
 		var created = (await storage.GetBySlugAsync("dragons", "general", WikiNamespace.Main)).Expect<WikiPage>();
 		await Assert.That(created.SourceLocale)
@@ -238,7 +239,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.GetTranslations("dragons", ns: "main", category: "general");
 
-		var dtos = (IEnumerable<WikiController.WikiTranslationSummaryDto>)((OkObjectResult)result).Value!;
+		var dtos = (IEnumerable<WikiTranslationSummaryDto>)((OkObjectResult)result).Value!;
 		await Assert.That(dtos.Select(d => d.Locale)).IsEquivalentTo(new[] { "fr" });
 	}
 
@@ -252,7 +253,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.GetTranslations("dragons", ns: "main", category: "general");
 
-		var dtos = (IEnumerable<WikiController.WikiTranslationSummaryDto>)((OkObjectResult)result).Value!;
+		var dtos = (IEnumerable<WikiTranslationSummaryDto>)((OkObjectResult)result).Value!;
 		await Assert.That(dtos.Select(d => d.Locale).Order()).IsEquivalentTo(new[] { "de", "fr" });
 	}
 
@@ -323,8 +324,8 @@ public class WikiControllerTranslationTests
 		var french = await controller.GetRevisions("dragons", 0, 20, "main", "general", lang: "fr");
 		var source = await controller.GetRevisions("dragons", 0, 20, "main", "general", lang: null);
 
-		var frenchDtos = ((IEnumerable<WikiController.WikiRevisionDto>)((OkObjectResult)french).Value!).ToList();
-		var sourceDtos = ((IEnumerable<WikiController.WikiRevisionDto>)((OkObjectResult)source).Value!).ToList();
+		var frenchDtos = ((IEnumerable<WikiRevisionDto>)((OkObjectResult)french).Value!).ToList();
+		var sourceDtos = ((IEnumerable<WikiRevisionDto>)((OkObjectResult)source).Value!).ToList();
 		await Assert.That(frenchDtos.Count).IsEqualTo(2);
 		await Assert.That(frenchDtos.Select(d => d.MarkdownSource)).Contains("fr2");
 		await Assert.That(sourceDtos.Count)
@@ -344,7 +345,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.GetRevisions("dragons", 0, 20, "main", "general", lang: "en");
 
-		var dtos = ((IEnumerable<WikiController.WikiRevisionDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiRevisionDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Select(d => d.MarkdownSource)).IsEquivalentTo(new[] { "v1" });
 	}
 
@@ -359,7 +360,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.GetRevisions("dragons", 0, 20, "main", "general", lang: "fr");
 
-		var dtos = ((IEnumerable<WikiController.WikiRevisionDto>)((OkObjectResult)result).Value!).ToList();
+		var dtos = ((IEnumerable<WikiRevisionDto>)((OkObjectResult)result).Value!).ToList();
 		await Assert.That(dtos.Select(d => d.MarkdownSource)).IsEquivalentTo(new[] { "v1" });
 	}
 
@@ -376,8 +377,8 @@ public class WikiControllerTranslationTests
 		var french = await controller.GetRevision("dragons", 1, "main", "general", lang: "fr");
 		var source = await controller.GetRevision("dragons", 1, "main", "general", lang: null);
 
-		var frenchDto = (WikiController.WikiRevisionDto)((OkObjectResult)french).Value!;
-		var sourceDto = (WikiController.WikiRevisionDto)((OkObjectResult)source).Value!;
+		var frenchDto = (WikiRevisionDto)((OkObjectResult)french).Value!;
+		var sourceDto = (WikiRevisionDto)((OkObjectResult)source).Value!;
 		await Assert.That(frenchDto.MarkdownSource).IsEqualTo("corps fr");
 		await Assert.That(sourceDto.MarkdownSource)
 			.IsEqualTo("en v1")
@@ -395,7 +396,7 @@ public class WikiControllerTranslationTests
 
 		var result = await controller.GetRevision("dragons", 1, "main", "general", lang: "fr");
 
-		var dto = (WikiController.WikiRevisionDto)((OkObjectResult)result).Value!;
+		var dto = (WikiRevisionDto)((OkObjectResult)result).Value!;
 		await Assert.That(dto.MarkdownSource).IsEqualTo("en v1");
 	}
 

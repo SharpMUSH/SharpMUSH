@@ -445,11 +445,11 @@
         finally { _busy = false; }
     }
 
-    private void ReportBatchResult(MessageResult<WikiService.WikiBatchResult> result)
+    private void ReportBatchResult(MessageResult<WikiBatchResult> result)
     {
         switch (result)
         {
-            case WikiService.WikiBatchResult ok:
+            case WikiBatchResult ok:
                 if (ok.Succeeded.Count > 0)
                     Snackbar.Add(Loc.Plural("WikiBatchSucceeded", "count", ok.Succeeded.Count), Severity.Success);
                 if (ok.Failed.Count > 0)

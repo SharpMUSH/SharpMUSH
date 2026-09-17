@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -92,7 +93,7 @@ file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHan
 	private static HttpResponseMessage Json<T>(T value, HttpStatusCode status = HttpStatusCode.OK) =>
 			new(status) { Content = JsonContent.Create(value) };
 
-	private static WikiController.WikiPageDto ToDto(WikiPage p) => new(
+	private static WikiPageDto ToDto(WikiPage p) => new(
 			p.Id, p.Slug, p.Title, p.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
 			p.CreatedAt, p.UpdatedAt, p.IsProtected, p.RevisionNumber,
 			p.Category, p.Tags, p.Published);

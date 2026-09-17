@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -266,7 +267,7 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 			}
 		};
 
-		var result = await controller.CreatePage(new WikiController.CreatePageRequest(
+		var result = await controller.CreatePage(new CreatePageRequest(
 			UniqueName("Page"), "Written by a brand-new player.", null, null));
 
 		await Assert.That(result).IsTypeOf<CreatedAtActionResult>()
