@@ -146,7 +146,7 @@ file static class AdminAccountsTestServices
 				.AddSingleton(sp => new AccountAuthService(
 						sp.GetRequiredService<IHttpClientFactory>(),
 						sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-						NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()))
+						NullLogger<AccountAuthService>.Instance, []))
 				.AddSingleton(sp => new AdminAccountsService(sp.GetRequiredService<IHttpClientFactory>()))
 				.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 

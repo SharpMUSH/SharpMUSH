@@ -139,23 +139,30 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 	/// <summary>
 	/// Character switching must go through <c>POST api/auth/switch-character</c> (Task 7's
 	/// session-based replacement for <c>jwt-switch-character</c>), authenticated via the
-	/// <c>AccountSession</c> scheme — i.e. a Bearer header carrying the account-session token, the
-	/// same way every other authenticated account-service call in this file does it — and must
+	/// <c>AccountSession</c> scheme — a Bearer header carrying the account-session token — and must
 	/// return the OTT from the response.
 	/// </summary>
+	/// <remarks>
+	/// The pipeline here includes the real <see cref="AccountSessionBearerHandler"/>, which is what
+	/// attaches that header. The service used to set it itself on the shared client, which suppressed
+	/// the handler's session hydration; the assertion below is still that the header arrives, but now
+	/// by the path production actually uses.
+	/// </remarks>
 	[Test]
 	public async Task SwitchCharacterAsync_PostsToSwitchCharacterEndpoint_WithBearerAuth_ReturnsOtt()
 	{
 		JSInterop.Mode = JSRuntimeMode.Loose;
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(null);
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session-token-1");
 
 		var handler = new CapturingHandler(HttpStatusCode.OK,
 			new { ott = "one-time-token", expiresIn = 60, accountSessionToken = "session-token-2" });
-		using var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
+		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
+		using var bearer = new AccountSessionBearerHandler(service) { InnerHandler = handler };
+		using var http = new HttpClient(bearer) { BaseAddress = new Uri("https://localhost:8081/") };
 		httpClientFactory.CreateClient("api").Returns(http);
 
-		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
 		var character = new AccountAuthService.CharacterSummary(42, 12345L, "Bob", "");
 
 		var ott = await service.SwitchCharacterAsync(character);
@@ -184,7 +191,7 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 		var service = new AccountAuthService(
 			Substitute.For<IHttpClientFactory>(),
 			JSInterop.JSRuntime,
-			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			NullLogger<AccountAuthService>.Instance, []);
 		var character = new AccountAuthService.CharacterSummary(42, 12345L, "Bob", "");
 
 		// No HTTP handler configured at all: if the not-logged-in guard regresses, the call falls
@@ -232,7 +239,7 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
 		httpClientFactory.CreateClient("api").Returns(http);
 
-		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 
 		var ott = await service.SwitchCharacterAsync(new AccountAuthService.CharacterSummary(42, 12345L, "Bob", ""));
 
@@ -262,7 +269,7 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
 		httpClientFactory.CreateClient("api").Returns(http);
 
-		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 		var authChanges = 0;
 		service.AuthStateChanged += () => authChanges++;
 

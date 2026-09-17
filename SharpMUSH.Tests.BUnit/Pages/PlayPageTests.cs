@@ -99,7 +99,7 @@ public class PlayPageTests : TrackingBunitContext, IAsyncDisposable
 
 		Services.AddSingleton(new AccountAuthService(
 			factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
+			[]));
 	}
 
 	[Test]

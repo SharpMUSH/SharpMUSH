@@ -78,7 +78,7 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 		Services.AddSingleton(new ApplicationRegistryClient(factory, NullLogger<ApplicationRegistryClient>.Instance));
 		Services.AddSingleton(new AccountAuthService(
 			factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
+			[]));
 
 		Auth = AddAuthorization();
 	}

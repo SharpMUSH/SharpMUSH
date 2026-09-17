@@ -96,8 +96,7 @@ public class AccountAuthServiceActiveCharacterTests : TrackingTestContext
 		new(Substitute.For<IHttpClientFactory>(),
 			Substitute.For<IJSRuntime>(),
 			Substitute.For<ILogger<AccountAuthService>>(),
-			Substitute.For<ITerminalService>(),
-			Substitute.For<IPlayTerminalService>());
+			[]);
 
 	private static HttpClient MakeLoginHttpClient(IReadOnlyList<CharacterSummary> characters) =>
 		new(new FakeLoginHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") };
@@ -127,7 +126,7 @@ public class AccountAuthServiceActiveCharacterTests : TrackingTestContext
 		var http = Track(new HttpClient(new FakeAccountHandler(characters)) { BaseAddress = new Uri("https://localhost:8081/") });
 		httpClientFactory.CreateClient("api").Returns(http);
 
-		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>(), Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>(), []);
 		await sut.InitAsync();
 		await sut.LoginAsync("headwiz", "password-one");
 		return sut;
@@ -207,7 +206,7 @@ public class AccountAuthServiceActiveCharacterTests : TrackingTestContext
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
 		httpClientFactory.CreateClient("api").Returns(http);
 
-		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>(), Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>(), []);
 
 		var (success, _, characters) = await sut.LoginAsync("headwiz", "password-one");
 
@@ -248,7 +247,7 @@ public class AccountAuthServiceActiveCharacterTests : TrackingTestContext
 		using var firstHttp = MakeLoginHttpClient([a, b]);
 		httpClientFactory.CreateClient("api").Returns(firstHttp);
 
-		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>(), Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(), Substitute.For<ILogger<AccountAuthService>>(), []);
 		await sut.LoginAsync("headwiz", "password-one");
 		await Assert.That(sut.ActiveCharacter!.DbrefNumber).IsEqualTo(a.DbrefNumber);
 
@@ -373,7 +372,7 @@ public class AccountAuthServiceActiveCharacterTests : TrackingTestContext
 		httpClientFactory.CreateClient("api").Returns(http);
 
 		var sut = new AccountAuthService(httpClientFactory, Substitute.For<IJSRuntime>(),
-			Substitute.For<ILogger<AccountAuthService>>(), Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			Substitute.For<ILogger<AccountAuthService>>(), []);
 		// Hydrate before logging in: a first InitAsync after login reads empty storage and would clear
 		// the token LoginAsync just set (see MakeUnlinkableServiceAsync's note).
 		await sut.InitAsync();

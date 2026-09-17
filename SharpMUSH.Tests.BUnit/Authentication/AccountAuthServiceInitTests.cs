@@ -49,7 +49,7 @@ public class AccountAuthServiceInitTests : TrackingBunitContext
 		var service = new AccountAuthService(
 			Substitute.For<IHttpClientFactory>(),
 			JSInterop.JSRuntime,
-			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			NullLogger<AccountAuthService>.Instance, []);
 
 		await service.InitAsync();
 
@@ -73,7 +73,7 @@ public class AccountAuthServiceInitTests : TrackingBunitContext
 		var service = new AccountAuthService(
 			Substitute.For<IHttpClientFactory>(),
 			JSInterop.JSRuntime,
-			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			NullLogger<AccountAuthService>.Instance, []);
 
 		await service.InitAsync();
 
@@ -95,7 +95,7 @@ public class AccountAuthServiceInitTests : TrackingBunitContext
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
 		httpClientFactory.CreateClient("api").Returns(http);
 
-		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 		await service.InitAsync();
 		await Assert.That(service.ExplicitlyLoggedOut).IsTrue();
 
@@ -127,7 +127,7 @@ public class AccountAuthServiceInitTests : TrackingBunitContext
 		var service = new AccountAuthService(
 			Substitute.For<IHttpClientFactory>(),
 			JSInterop.JSRuntime,
-			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			NullLogger<AccountAuthService>.Instance, []);
 
 		await service.InitAsync();
 		await Assert.That(service.ExplicitlyLoggedOut).IsTrue();
@@ -155,7 +155,7 @@ public class AccountAuthServiceInitTests : TrackingBunitContext
 		var service = new AccountAuthService(
 			Substitute.For<IHttpClientFactory>(),
 			JSInterop.JSRuntime,
-			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			NullLogger<AccountAuthService>.Instance, []);
 
 		await service.InitAsync();
 
@@ -186,7 +186,7 @@ public class AccountAuthServiceInitTests : TrackingBunitContext
 		var service = new AccountAuthService(
 			Substitute.For<IHttpClientFactory>(),
 			JSInterop.JSRuntime,
-			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			NullLogger<AccountAuthService>.Instance, []);
 
 		await service.InitAsync();
 		await service.InitAsync();

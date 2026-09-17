@@ -71,7 +71,7 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 		return new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			[]);
 	}
 
 	private async Task<AccountAuthService> BuildLoggedInAuth(IReadOnlyList<CharacterSummary> characters)

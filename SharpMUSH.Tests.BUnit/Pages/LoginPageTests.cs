@@ -51,7 +51,7 @@ public class LoginPageRenderTests : BunitContext
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-				NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()))
+				NullLogger<AccountAuthService>.Instance, []))
 			.AddSingleton(Substitute.For<ITerminalService>())
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 

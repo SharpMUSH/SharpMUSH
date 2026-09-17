@@ -52,7 +52,7 @@ public class AccountAuthServiceHydrationRaceTests : TrackingBunitContext
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
 		httpClientFactory.CreateClient("api").Returns(http);
 
-		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 
 		// No call to service.InitAsync() here — this is the point of the test.
 		var result = await service.GetDebugOttAsync();
@@ -75,7 +75,7 @@ public class AccountAuthServiceHydrationRaceTests : TrackingBunitContext
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
 		httpClientFactory.CreateClient("api").Returns(http);
 
-		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 		var provider = new DebugAuthStateProvider(service);
 
 		// Simulates CascadingAuthenticationState querying auth state on the very first render,
@@ -97,7 +97,7 @@ public class AccountAuthServiceHydrationRaceTests : TrackingBunitContext
 		var service = new AccountAuthService(
 			Substitute.For<IHttpClientFactory>(),
 			JSInterop.JSRuntime,
-			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			NullLogger<AccountAuthService>.Instance, []);
 
 		// Two callers racing before either has completed — the single-flight `_initTask ??= ...`
 		// must hand the second caller the first caller's in-flight task rather than starting a

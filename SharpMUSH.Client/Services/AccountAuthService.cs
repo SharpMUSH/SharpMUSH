@@ -17,8 +17,7 @@ public class AccountAuthService(
 	IHttpClientFactory httpClientFactory,
 	IJSRuntime js,
 	ILogger<AccountAuthService> logger,
-	ITerminalService terminal,
-	IPlayTerminalService playTerminal) : IAccountAuthState
+	IEnumerable<IAccountSessionEndingHandler> sessionEndingHandlers) : IAccountAuthState
 {
 	private const string SessionTokenKey = "sharpmush.account.sessionToken";
 	private const string UsernameKey = "sharpmush.account.username";
@@ -547,8 +546,6 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			http.DefaultRequestHeaders.Authorization =
-				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
 			using var response = await http.PostAsJsonAsync("api/auth/switch-character",
 				new SwitchCharacterRequest(character.DbrefNumber, character.CreationTime));
 
@@ -599,8 +596,6 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			http.DefaultRequestHeaders.Authorization =
-				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
 			var characters = await http.GetFromJsonAsync<IReadOnlyList<CharacterSummary>>("api/account/characters");
 			SetCharacters(characters ?? []);
 			return new ServerResult<IReadOnlyList<CharacterSummary>>(Characters);
@@ -621,8 +616,6 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			http.DefaultRequestHeaders.Authorization =
-				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
 			using var response = await http.PostAsJsonAsync("api/account/characters",
 				new CreateCharacterRequest(name, password));
 
@@ -651,8 +644,6 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			http.DefaultRequestHeaders.Authorization =
-				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
 			using var response = await http.DeleteAsync($"api/account/characters/{dbrefNumber}");
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync());
@@ -735,35 +726,26 @@ public class AccountAuthService(
 			try
 			{
 				var http = httpClientFactory.CreateClient("api");
-				http.DefaultRequestHeaders.Authorization =
-					new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
 				using var response = await http.PostAsync("api/account/logout", null);
 			}
 			catch { /* best-effort */ }
 		}
 
-		// End the game-side session too. While a character session is active the terminals are
-		// auto-connected to the ConnectionServer, and leaving them up keeps the character in lwho()
-		// (shown as "online") after the portal session is gone. A bare socket close is NOT enough: the
-		// ConnectionServer treats a client-side close as a DROP and holds the session for a ~120s grace
-		// window (ConnectionPump: sink.Detach() + detachedTracker.Detach(handle, grace)), during which
-		// the character is still in lwho(). Sending the game "QUIT" command instead routes to
-		// ConnectionService.Disconnect + a DisconnectConnectionMessage whose consumer calls the FORCED
-		// DisconnectAsync(handle) — removing the handle from the live registry immediately (lwho() drops
-		// it at once) and emitting a {"type":"bye"} frame so the client will not auto-reconnect. The
-		// follow-up DisconnectAsync is a safety net that closes the client socket and latches the
-		// intentional-disconnect flag; SendAsync awaits the flush, so QUIT is already on the wire first.
-		// Guard on IsConnected so tearing down an idle terminal is a no-op. This is the single chokepoint
-		// every logout entry point routes through, so no caller can forget to end the terminals.
-		if (terminal.IsConnected)
+		// Finish whatever the session was holding open — the game-side terminals above all — while
+		// there is still a session to finish it with. Logout is the single chokepoint every entry
+		// point routes through, so nothing registered here can be forgotten by a caller.
+		foreach (var handler in sessionEndingHandlers)
 		{
-			await terminal.SendAsync("QUIT");
-			await terminal.DisconnectAsync();
-		}
-		if (playTerminal.IsConnected)
-		{
-			await playTerminal.SendAsync("QUIT");
-			await playTerminal.DisconnectAsync();
+			try
+			{
+				await handler.OnAccountSessionEndingAsync();
+			}
+			catch (Exception ex)
+			{
+				// Ending the local session must not depend on a best-effort cleanup succeeding; the
+				// alternative is a tab that failed to hang up a socket and is also still signed in.
+				logger.LogError(ex, "Account session-ending handler {Handler} threw", handler.GetType().Name);
+			}
 		}
 
 		AccountSessionToken = null;
@@ -877,8 +859,6 @@ public class AccountAuthService(
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			http.DefaultRequestHeaders.Authorization =
-				new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AccountSessionToken);
 			using var response = await http.PutAsJsonAsync(path, body);
 			if (!response.IsSuccessStatusCode)
 				return (false, await response.Content.ReadAsStringAsync());

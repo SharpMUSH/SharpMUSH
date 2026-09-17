@@ -38,7 +38,7 @@ public class AccountSessionPermissionRefreshTests : TrackingBunitContext
 		var handler = new SessionHandler(expected, HttpStatusCode.OK);
 		var factory = Substitute.For<IHttpClientFactory>();
 		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			[]);
 		using var http = new HttpClient(new AccountSessionBearerHandler(service) { InnerHandler = handler }) { BaseAddress = new Uri("https://localhost/") };
 		factory.CreateClient("api").Returns(http);
 		await Task.WhenAll(service.InitAsync(), service.InitAsync()).WaitAsync(TimeSpan.FromSeconds(3));
@@ -61,7 +61,7 @@ public class AccountSessionPermissionRefreshTests : TrackingBunitContext
 		using var http = new HttpClient(new SessionHandler(["*"], status)) { BaseAddress = new Uri("https://localhost/") };
 		factory.CreateClient("api").Returns(http);
 		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			[]);
 		await service.InitAsync();
 		await Assert.That(service.Permissions).IsEmpty();
 		await Assert.That(service.Role).IsNull();
@@ -86,7 +86,7 @@ public class AccountSessionPermissionRefreshTests : TrackingBunitContext
 		using var http = new HttpClient(new FailedTransportHandler(timeout)) { BaseAddress = new Uri("https://localhost/") };
 		factory.CreateClient("api").Returns(http);
 		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			[]);
 		await service.InitAsync();
 		await service.InitAsync();
 		await Assert.That(service.AccountSessionToken).IsEqualTo("valid-token");

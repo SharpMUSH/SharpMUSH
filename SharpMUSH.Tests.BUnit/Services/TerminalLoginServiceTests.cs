@@ -83,7 +83,7 @@ public class TerminalLoginServiceTests : TrackingBunitContext, IAsyncDisposable
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(client);
 
-		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 		var (ok, err, _) = await auth.LoginAsync("wiz", "pw");
 		if (!ok) throw new InvalidOperationException($"login failed: {err}");
 
