@@ -1,3 +1,4 @@
+using SharpMUSH.Server.Resources;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server;
 
@@ -13,7 +14,7 @@ public class MarkdownGuideSeedTests
 	[Test]
 	public async Task Guide_RendersWithoutError_AndContainsCoreSections()
 	{
-		var html = new WikiMarkdigPipeline().RenderToHtml(StartupHandler.MarkdownGuideContent);
+		var html = new WikiMarkdigPipeline().RenderToHtml(SeededWikiPages.MarkdownGuide);
 
 		await Assert.That(html).Contains("Basic formatting");
 		await Assert.That(html).Contains("<table>");
@@ -23,7 +24,7 @@ public class MarkdownGuideSeedTests
 	[Test]
 	public async Task Guide_LiveRecentDirective_EmitsPlaceholder()
 	{
-		var html = new WikiMarkdigPipeline().RenderToHtml(StartupHandler.MarkdownGuideContent);
+		var html = new WikiMarkdigPipeline().RenderToHtml(SeededWikiPages.MarkdownGuide);
 
 		// The "recent 5" example block must become a live directive placeholder…
 		await Assert.That(html).Contains("data-directive=\"recent\" data-arg=\"5\"");
@@ -32,7 +33,7 @@ public class MarkdownGuideSeedTests
 	[Test]
 	public async Task Guide_DirectiveExamplesInCodeFences_StayLiteral()
 	{
-		var html = new WikiMarkdigPipeline().RenderToHtml(StartupHandler.MarkdownGuideContent);
+		var html = new WikiMarkdigPipeline().RenderToHtml(SeededWikiPages.MarkdownGuide);
 
 		// …while the fenced syntax examples stay literal text, not live directives.
 		await Assert.That(html).DoesNotContain("data-arg=\"lore\"");
@@ -42,7 +43,7 @@ public class MarkdownGuideSeedTests
 	[Test]
 	public async Task Guide_RawHtmlWarning_IsEscapedNotLive()
 	{
-		var html = new WikiMarkdigPipeline().RenderToHtml(StartupHandler.MarkdownGuideContent);
+		var html = new WikiMarkdigPipeline().RenderToHtml(SeededWikiPages.MarkdownGuide);
 
 		await Assert.That(html).DoesNotContain("<script>");
 	}

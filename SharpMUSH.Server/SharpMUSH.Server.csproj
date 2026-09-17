@@ -164,6 +164,15 @@
       <Link>BundledPackages\wiki-reader.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.wiki-reader.package.yaml</LogicalName>
     </EmbeddedResource>
+    <!-- The help pages a fresh game's wiki is seeded with. Prose, so it lives in .md files rather
+         than in const string literals inside StartupHandler. LogicalName is explicit because the
+         file names carry hyphens. -->
+    <EmbeddedResource Include="Resources\Wiki\markdown-guide.md">
+      <LogicalName>SharpMUSH.Server.Resources.Wiki.markdown-guide.md</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\Wiki\application-schema-guide.md">
+      <LogicalName>SharpMUSH.Server.Resources.Wiki.application-schema-guide.md</LogicalName>
+    </EmbeddedResource>
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.0.0-preview.1" />
     <PackageReference Include="SurrealDb.Embedded.InMemory" Version="0.9.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="compile" />
