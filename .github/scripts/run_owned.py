@@ -88,6 +88,18 @@ def wait_until_gone(seconds):
 		time.sleep(0.05)
 
 
+def kill_until_gone(seconds):
+	"""SIGKILLs every descendant, including any forked since the last look, until none remain or time runs out."""
+	deadline = time.monotonic() + seconds
+	while True:
+		reap()
+		remaining = descendants()
+		if not remaining or time.monotonic() >= deadline:
+			return remaining
+		signal_all(remaining, signal.SIGKILL)
+		time.sleep(0.05)
+
+
 def stop_owned(grace_seconds):
 	"""Stops every descendant; returns the pids that survived SIGKILL."""
 	started = time.monotonic()
@@ -99,8 +111,7 @@ def stop_owned(grace_seconds):
 	remaining = wait_until_gone(grace_seconds)
 	if remaining:
 		log(f"{len(remaining)} process(es) outlived SIGTERM; sending SIGKILL: {remaining}")
-		signal_all(remaining, signal.SIGKILL)
-		remaining = wait_until_gone(KILL_WAIT_SECONDS)
+		remaining = kill_until_gone(KILL_WAIT_SECONDS)
 	log(f"stopped {len(owned)} process(es) in {time.monotonic() - started:.1f}s")
 	return remaining
 
@@ -144,8 +155,9 @@ def main():
 				log(f"attempt {attempt}/{args.attempts} timed out after {timeout_seconds:g}s; stopping its processes", "warning")
 				status = 124
 			else:
-				log(f"attempt {attempt}/{args.attempts} exited with status {result}")
-				status = result
+				# A command killed by signal N reports -N; a shell reports 128+N.
+				status = 128 - result if result < 0 else result
+				log(f"attempt {attempt}/{args.attempts} exited with status {status}")
 
 			survivors = stop_owned(args.grace_seconds)
 			if survivors:

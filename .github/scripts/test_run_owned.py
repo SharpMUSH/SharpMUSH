@@ -1,3 +1,4 @@
+import importlib.util
 import os
 import signal
 import subprocess
@@ -129,6 +130,51 @@ class RunOwnedTests(unittest.TestCase):
 		self.assertEqual(proc.returncode, 128 + signal.SIGINT, output)
 		self.assertEqual(self.attempts(), 1)
 		self.assert_tree_gone()
+
+	def test_an_attempt_killed_by_a_signal_reports_128_plus_the_signal(self):
+		proc = subprocess.run([sys.executable, SCRIPT, "--attempts", "1", "--timeout-seconds", "30", "--grace-seconds", "0.5",
+			"--", "sh", "-c", "kill -KILL $$"], capture_output=True, text=True, timeout=60)
+
+		self.assertEqual(proc.returncode, 128 + signal.SIGKILL, proc.stderr)
+		self.assertIn(f"exited with status {128 + signal.SIGKILL}", proc.stderr)
+
+
+class StopOwnedTests(unittest.TestCase):
+	"""Drives stop_owned in this process, whose children are the tree it stops."""
+
+	def setUp(self):
+		spec = importlib.util.spec_from_file_location("run_owned", SCRIPT)
+		self.run_owned = importlib.util.module_from_spec(spec)
+		spec.loader.exec_module(self.run_owned)
+
+	def stubborn(self):
+		proc = subprocess.Popen([sys.executable, "-c",
+			"import signal, sys, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); print(flush=True); time.sleep(60)"],
+			stdout=subprocess.PIPE)
+		proc.stdout.readline()
+		self.addCleanup(proc.stdout.close)
+		self.addCleanup(lambda: proc.poll() is None and proc.kill())
+		return proc
+
+	def test_a_process_that_appears_after_the_kill_snapshot_is_killed_too(self):
+		module = self.run_owned
+		module.KILL_WAIT_SECONDS = 2
+		first, late = self.stubborn(), self.stubborn()
+		hidden = {late.pid}
+		listed, sent = module.descendants, module.signal_all
+		module.descendants = lambda: [pid for pid in listed() if pid not in hidden]
+
+		def signal_all(pids, signum):
+			sent(pids, signum)
+			# The late process forks between the snapshot SIGKILL used and its parent's death.
+			if signum == signal.SIGKILL:
+				hidden.clear()
+
+		module.signal_all = signal_all
+
+		self.assertEqual(module.stop_owned(0.2), [])
+		# stop_owned reaped them itself, so Popen never learns their status; they are simply gone.
+		self.assertEqual([pid for pid in (first.pid, late.pid) if alive(pid)], [])
 
 
 if __name__ == "__main__":
