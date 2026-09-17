@@ -36,66 +36,14 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var args = parser.CurrentState.Arguments;
-		var name = args["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
-		var defaultHomeDbref = new DBRef((int)defaultHome);
-		if (await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref)) is not AnySharpObject location
-				|| location.IsExit)
+		return await BuildingHelpers.CreateThingAsync(parser, Mediator, Database, Configuration, ValidateService,
+			NotifyService, EventService, executor, parser.CurrentState.Arguments["0"].Message!) switch
 		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.NotARoom,
-				notifyMessage: ErrorMessages.Notifications.DefaultHomeLocationInvalid,
-				shouldNotify: true);
-		}
-
-		if (!await ValidateService.Valid(IValidateService.ValidationType.Name, name, new None()))
-		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.BadObjectName,
-				notifyMessage: ErrorMessages.Notifications.InvalidNameThing,
-				shouldNotify: true);
-		}
-
-		var thing = await Mediator.Send(new CreateThingCommand(name.ToPlainText(),
-			executor.AsContainer,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None),
-			location.AsContainer));
-
-		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
-		if (creatorZone is AnySharpObject zone)
-		{
-			if (await Mediator.Send(new GetObjectNodeQuery(thing)) is AnySharpObject newThing)
-			{
-				// Check for cycles before inheriting zone from creator
-				if (await HelperFunctions.SafeToAddZone(Mediator, Database, newThing, zone))
-				{
-					await Mediator.Send(new SetObjectZoneCommand(newThing, zone));
-				}
-			}
-		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Created), executor, name, thing);
-
-		await EventService.TriggerEventAsync(
-			parser,
-			"OBJECT`CREATE",
-			executor.Object().DBRef,
-			thing.ToString(),
-			""); // null for cloned-from (not a clone)
-
-		// Phase 2b: C# object-lifecycle hooks fire alongside the softcode OBJECT`CREATE event.
-		var createHooks = parser.ServiceProvider.GetService<IPluginHookDispatcher>();
-		if (createHooks is not null)
-		{
-			await createHooks.ObjectCreatedAsync(thing, executor.Object().DBRef);
-		}
-
-		return new CallState(thing.ToString());
+			DBRef thing => new CallState(thing.ToString()),
+			Error<string> error => new CallState(error.Value)
+		};
 	}
 
 	[SharpCommand(Name = "@FIRSTEXIT", Switches = [], Behavior = CB.Default | CB.Args, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object"])]

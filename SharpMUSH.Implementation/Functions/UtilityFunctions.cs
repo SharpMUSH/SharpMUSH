@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Implementation.Definitions;
@@ -565,31 +566,16 @@ public partial class Functions
 	[SharpFunction(Name = "create", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
 	public async ValueTask<CallState> Create(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
-		var name = args["0"].Message!;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
-		var defaultHomeDbref = new DBRef((int)defaultHome);
-		if (await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref)) is not AnySharpObject location || location.IsExit)
+		return await BuildingHelpers.CreateThingAsync(parser, Mediator, Database, Configuration, ValidateService,
+			NotifyService, EventService, executor, parser.CurrentState.Arguments["0"].Message!) switch
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DefaultHomeLocationInvalid), executor);
-			return new CallState(ErrorMessages.Returns.InvalidRoom);
-		}
-
-		if (!await ValidateService.Valid(IValidateService.ValidationType.Name, name, new None()))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidNameThing), executor);
-			return new CallState(ErrorMessages.Returns.BadObjectName);
-		}
-
-		var thing = await Mediator.Send(new CreateThingCommand(name.ToPlainText(),
-			await executor.Where(),
-			await executor.Object()
-				.Owner.WithCancellation(CancellationToken.None),
-			location.AsContainer));
-
-		return new CallState($"#{thing.Number}");
+			// PennMUSH fun_create hands do_create's dbref to safe_dbref, which writes #n and not an
+			// objid (src/fundb.c).
+			DBRef thing => new CallState($"#{thing.Number}"),
+			Error<string> error => new CallState(error.Value)
+		};
 	}
 
 	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
