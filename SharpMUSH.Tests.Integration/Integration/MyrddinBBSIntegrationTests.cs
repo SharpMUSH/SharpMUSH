@@ -520,7 +520,8 @@ public class MyrddinBBSIntegrationTests
 		await Assert.That(manifestYaml).Contains("format: 1")
 			.Because("the generated artifact should be a complete package manifest");
 		await Assert.That(manifestYaml).Contains("package: myrddin-bbs");
-		await Assert.That(manifestYaml).Contains("version: \"4.0.6\"")
+		// Quoted because it leads with a digit — plain, YAML would hand back a number.
+		await Assert.That(manifestYaml).Contains("version: '4.0.6'")
 			.Because("the version passed to @package should be carried into the manifest");
 
 		// Both objects (bbpocket keeps its name; mbboard was renamed to

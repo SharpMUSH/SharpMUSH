@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Globalization;
 using System.Text;
 using SharpMUSH.Library.Models.Packages;
@@ -19,8 +20,10 @@ namespace SharpMUSH.Library.Services;
 /// silent omission at export time.
 /// </para>
 /// <para>
-/// The output is deliberately plain: single-quoted scalars for anything that could be re-parsed as
-/// a number, bool or null, and block scalars for multi-line MUSHcode so diffs stay readable.
+/// The output is shaped to look like the hand-written manifests it sits beside: plain scalars
+/// wherever one reads back as the same string, single quotes only where it would not, and literal
+/// block scalars for attribute values so MUSHcode stays diffable and cannot be re-typed by the
+/// YAML parser.
 /// </para>
 /// </remarks>
 public static class PackageManifestWriter
@@ -266,24 +269,24 @@ public static class PackageManifestWriter
 	}
 
 	/// <summary>
-	/// Writes an attribute value. Multi-line MUSHcode rides in a literal block scalar so diffs stay
-	/// readable; anything else is single-quoted.
+	/// Writes an attribute value. MUSHcode rides in a literal block scalar so diffs stay readable and
+	/// nothing inside it can be re-typed by the YAML parser — a block scalar is always a string, so
+	/// <c>12345</c> and <c>true</c> come back as text without any quoting of their own.
 	/// </summary>
 	/// <remarks>
-	/// A block scalar cannot carry a value that is empty or whose first or last line is blank or
-	/// begins with whitespace: YamlDotNet has no blank line to anchor the indentation on and rejects
-	/// the manifest outright, and leading spaces would be silently eaten. Those go single-quoted,
-	/// which preserves whitespace exactly.
+	/// A block scalar cannot carry a value that is empty or whose first or last character is
+	/// whitespace: YamlDotNet has no non-blank line to anchor the indentation on and rejects the
+	/// manifest outright ("extra spaces in first line"), and leading whitespace would be silently
+	/// lost. Those go single-quoted, which preserves whitespace exactly.
 	/// </remarks>
 	private static void AppendValue(StringBuilder yaml, string value, string indent)
 	{
 		var normalized = value.Replace("\r\n", "\n");
-		if (!normalized.Contains('\n')
-			|| normalized.Length == 0
+		if (normalized.Length == 0
 			|| char.IsWhiteSpace(normalized[0])
 			|| char.IsWhiteSpace(normalized[^1]))
 		{
-			yaml.Append(indent).Append("value: ").AppendLine(Scalar(normalized));
+			yaml.Append(indent).Append("value: ").AppendLine(Quoted(normalized));
 			return;
 		}
 
@@ -295,9 +298,49 @@ public static class PackageManifestWriter
 		}
 	}
 
-	/// <summary>A single-quoted YAML scalar — the one form that never re-parses as a number, bool or null.</summary>
-	private static string Scalar(string value) => $"'{value.Replace("'", "''")}'";
+	/// <summary>
+	/// A YAML scalar, quoted only when a plain one would not come back as the same string.
+	/// Manifests are read and hand-edited by admins, and every hand-written manifest in the repo
+	/// uses plain scalars, so an exporter that quotes indiscriminately produces something that does
+	/// not look like the thing it is a copy of.
+	/// </summary>
+	private static string Scalar(string value) => NeedsQuoting(value) ? Quoted(value) : value;
 
+	private static string Quoted(string value) => $"'{value.Replace("'", "''")}'";
+
+	/// <summary>Characters that make a plain scalar ambiguous wherever they appear in it.</summary>
+	private static readonly SearchValues<char> Hazards = SearchValues.Create("\n\r\t#:");
+
+	/// <summary>Characters that mean something other than themselves at the start of a plain scalar.</summary>
+	private static readonly SearchValues<char> LeadingIndicators = SearchValues.Create("-?:,[]{}#&*!|>'\"%@`");
+
+	/// <summary>The words YAML reads as a bool or a null rather than as text.</summary>
+	private static readonly HashSet<string> Keywords = new(StringComparer.OrdinalIgnoreCase)
+	{
+		"true", "false", "yes", "no", "on", "off", "y", "n", "null", "~"
+	};
+
+	private static bool NeedsQuoting(string value)
+		=> value.Length == 0
+			|| char.IsWhiteSpace(value[0])
+			|| char.IsWhiteSpace(value[^1])
+			|| value.AsSpan().ContainsAny(Hazards)
+			|| LeadingIndicators.Contains(value[0])
+			// A leading digit covers every number, version and date shape in one rule. It is broader
+			// than YAML strictly needs and deliberately so: the alternative is re-deciding, per field,
+			// whether the reader will hand back a string or a double.
+			|| char.IsAsciiDigit(value[0])
+			|| Keywords.Contains(value);
+
+	/// <summary>
+	/// A flow sequence. Flow context gives <c>,</c>, <c>[</c> and <c>]</c> meaning that block context
+	/// does not, so those force a quote here on top of the usual rules.
+	/// </summary>
 	private static string Flow(IEnumerable<string> values)
-		=> $"[{string.Join(", ", values.Select(Scalar))}]";
+		=> $"[{string.Join(", ", values.Select(FlowScalar))}]";
+
+	private static string FlowScalar(string value)
+		=> NeedsQuoting(value) || value.AsSpan().ContainsAny(FlowHazards) ? Quoted(value) : value;
+
+	private static readonly SearchValues<char> FlowHazards = SearchValues.Create(",[]{}");
 }

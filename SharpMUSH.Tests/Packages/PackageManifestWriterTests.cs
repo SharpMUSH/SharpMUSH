@@ -297,6 +297,58 @@ public class PackageManifestWriterTests
 		await Assert.That(binary.Files[0].Sha256).IsEqualTo(sha);
 	}
 
+	/// <summary>
+	/// The scalar policy. Manifests are hand-edited, and every hand-written one in the repo uses
+	/// plain scalars, so the writer quotes only where a plain scalar would read back as something
+	/// other than the string that went in.
+	/// </summary>
+	[Test]
+	[Arguments("package: kitchen-sink")]
+	[Arguments("description: Everything the reader reads.")]
+	[Arguments("license: MIT")]
+	[Arguments("convention_prefix: SINK_")]
+	[Arguments("  - ref: hall")]
+	[Arguments("    type: room")]
+	[Arguments("    name: The Hall")]
+	[Arguments("    flags: [audible]")]
+	[Arguments("    powers: [no_pay]")]
+	public async Task SafeScalarsAreWrittenPlain(string expected)
+		=> await Assert.That(PackageManifestWriter.Write(Maximal())).Contains(expected);
+
+	/// <summary>
+	/// A leading digit, a leading YAML indicator, an embedded colon, or a bool/null word all force a
+	/// quote. The version is the case that bites: written plain, <c>2.0</c> comes back as a double.
+	/// </summary>
+	[Test]
+	[Arguments("version: '2.4.1-rc.1'")]
+	[Arguments("requires_server: '>=0.1.0'")]
+	[Arguments("    parent: '{{hall}}'")]
+	[Arguments("    destination: '{{?staff_room}}'")]
+	[Arguments("    target: '{{$http_handler}}'")]
+	public async Task AmbiguousScalarsAreQuoted(string expected)
+		=> await Assert.That(PackageManifestWriter.Write(Maximal())).Contains(expected);
+
+	/// <summary>
+	/// Attribute values ride in literal block scalars, which are always strings. That is what keeps
+	/// MUSHcode diffable and stops <c>12345</c> or <c>true</c> from coming back as a number or a bool.
+	/// </summary>
+	[Test]
+	public async Task AttributeValuesUseBlockScalars()
+	{
+		var yaml = PackageManifestWriter.Write(Maximal());
+
+		await Assert.That(yaml).Contains("        value: |-\n          $look hall:@pemit %#=You look.");
+		await Assert.That(yaml).Contains("        value: |-\n          12345");
+		await Assert.That(yaml).Contains("        value: |-\n          true");
+	}
+
+	/// <summary>The two shapes a block scalar cannot carry: empty, and whitespace at either end.</summary>
+	[Test]
+	[Arguments("        value: ''")]
+	[Arguments("        value: '  leading and trailing  '")]
+	public async Task ValuesABlockScalarCannotCarryAreQuoted(string expected)
+		=> await Assert.That(PackageManifestWriter.Write(Maximal())).Contains(expected);
+
 	/// <summary>Writing twice is byte-identical: the writer has no ordering nondeterminism.</summary>
 	[Test]
 	public async Task WriteIsDeterministic()
