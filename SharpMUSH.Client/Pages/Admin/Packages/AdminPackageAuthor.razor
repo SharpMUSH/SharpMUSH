@@ -1,6 +1,7 @@
 @page "/admin/packages/author"
 @attribute [Authorize(Policy = "packages.admin")]
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @using SharpMUSH.Library.Models.Packages
 @inject PackagesAdminService Packages
 @inject ISnackbar Snackbar
@@ -229,17 +230,18 @@
         _busy = true;
         try
         {
-            var (scan, error) = await Packages.AuthorScanAsync(objids);
-            if (error is not null)
+            switch (await Packages.AuthorScanAsync(objids))
             {
-                Snackbar.Add(error, Severity.Error);
-                return;
+                case ApiFailure failure:
+                    Snackbar.Add(failure.Message, Severity.Error);
+                    return;
+                case PackageAuthoringScan scan:
+                    _scan = scan;
+                    _refs.Clear();
+                    _excluded.Clear();
+                    _classifications.Clear();
+                    break;
             }
-
-            _scan = scan;
-            _refs.Clear();
-            _excluded.Clear();
-            _classifications.Clear();
         }
         finally
         {
@@ -284,19 +286,20 @@
         _busy = true;
         try
         {
-            var (yaml, error) = await Packages.AuthorExportAsync(new PackageAuthoringRequest(
+            switch (await Packages.AuthorExportAsync(new PackageAuthoringRequest(
                 _packageId.Trim(), _version.Trim(), _description.Trim(),
                 string.IsNullOrWhiteSpace(_license) ? null : _license.Trim(),
                 _authors.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-                selections, wellKnown, configure));
-            if (error is not null)
+                selections, wellKnown, configure)))
             {
-                Snackbar.Add(error, Severity.Error);
-                return;
+                case string yaml:
+                    _exportedYaml = yaml;
+                    _showExport = true;
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(failure.Message, Severity.Error);
+                    return;
             }
-
-            _exportedYaml = yaml!;
-            _showExport = true;
         }
         finally
         {

@@ -1,6 +1,7 @@
 @page "/admin/packages/review"
 @attribute [Authorize(Policy = "packages.admin")]
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @using SharpMUSH.Library.API
 @using SharpMUSH.Library.Models.Packages
 @inject PackagesAdminService Packages
@@ -268,15 +269,16 @@ else
         _busy = true;
         try
         {
-            var (plan, error) = await Packages.PlanAsync(new PlanRequest(_remote, _path, _version, new(_answers)));
-            if (error is not null)
+            var planned = await Packages.PlanAsync(new PlanRequest(_remote, _path, _version, new(_answers)));
+            if (planned is ApiFailure planFailure)
             {
-                _loadError = error;
+                _loadError = planFailure.Message;
                 return;
             }
+            if (planned is not PlanResponse plan) return;
 
             _plan = plan;
-            _renders = plan!.Renders.ToDictionary(r => (r.TargetRef, r.Attribute), r => r);
+            _renders = plan.Renders.ToDictionary(r => (r.TargetRef, r.Attribute), r => r);
             _conflicts = plan.Changeset.Attributes
                 .Where(a => a.Action == PackageAttributeAction.Conflict)
                 .ToList();
@@ -314,21 +316,22 @@ else
                         : null);
             }).ToList();
 
-            var (result, error) = await Packages.ApplyAsync(new ApplyRequest(
-                _remote, _path, _version, new(_answers), decisions));
-            if (error is not null)
+            switch (await Packages.ApplyAsync(new ApplyRequest(
+                _remote, _path, _version, new(_answers), decisions)))
             {
-                Snackbar.Add(error, Severity.Error);
-                return;
-            }
+                case ApiFailure failure:
+                    Snackbar.Add(failure.Message, Severity.Error);
+                    return;
+                case ApplyResponse result:
+                    Snackbar.Add(Loc["PkgApplied", _plan.PackageId, _plan.Version, result.Revision], Severity.Success);
+                    foreach (var note in result.Notes.Take(6))
+                    {
+                        Snackbar.Add(note, Severity.Info);
+                    }
 
-            Snackbar.Add(Loc["PkgApplied", _plan.PackageId, _plan.Version, result!.Revision], Severity.Success);
-            foreach (var note in result.Notes.Take(6))
-            {
-                Snackbar.Add(note, Severity.Info);
+                    Nav.NavigateTo("/admin/packages");
+                    break;
             }
-
-            Nav.NavigateTo("/admin/packages");
         }
         finally
         {

@@ -1,6 +1,7 @@
 @page "/admin/packages/remotes"
 @attribute [Authorize(Policy = "packages.admin")]
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @using SharpMUSH.Library.API
 @using SharpMUSH.Library.Models.Packages
 @inject PackagesAdminService Packages
@@ -162,14 +163,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _remotes = await Packages.GetRemotesAsync();
+        _remotes = await Remotes();
         await LoadCommunityAsync();
     }
 
     private async Task LoadCommunityAsync()
     {
         _community = null;
-        _community = await Packages.GetCommunityReposAsync();
+        _community = await Packages.GetCommunityReposAsync() is CommunityReposResponse community ? community : null;
     }
 
     private async Task AddRemoteAsync()
@@ -177,17 +178,17 @@
         _busy = true;
         try
         {
-            var error = await Packages.UpsertRemoteAsync(new RemoteRequest(
-                _newName, _newUrl, _newTrust, string.IsNullOrWhiteSpace(_newBranch) ? null : _newBranch));
-            if (error is not null)
+            if (await Packages.UpsertRemoteAsync(new RemoteRequest(
+                _newName, _newUrl, _newTrust, string.IsNullOrWhiteSpace(_newBranch) ? null : _newBranch))
+                is ApiFailure failure)
             {
-                Snackbar.Add(error, Severity.Error);
+                Snackbar.Add(failure.Message, Severity.Error);
                 return;
             }
 
             Snackbar.Add(Loc["PkgRemoteSaved", _newName], Severity.Success);
             _newName = _newUrl = _newBranch = "";
-            _remotes = await Packages.GetRemotesAsync();
+            _remotes = await Remotes();
             await LoadCommunityAsync();
         }
         finally
@@ -201,10 +202,12 @@
         _busy = true;
         try
         {
-            var error = await Packages.UpsertRemoteAsync(new RemoteRequest(
+            var added = await Packages.UpsertRemoteAsync(new RemoteRequest(
                 listing.Name, listing.Url, "community", listing.Branch));
-            Snackbar.Add(error ?? Loc["PkgCommunityRemoteAdded", listing.Name], error is null ? Severity.Success : Severity.Error);
-            _remotes = await Packages.GetRemotesAsync();
+            Snackbar.Add(
+                added is ApiFailure failure ? failure.Message : Loc["PkgCommunityRemoteAdded", listing.Name].Value,
+                added is Success ? Severity.Success : Severity.Error);
+            _remotes = await Remotes();
             await LoadCommunityAsync();
         }
         finally
@@ -215,9 +218,14 @@
 
     private async Task DeleteAsync(string name)
     {
-        await Packages.DeleteRemoteAsync(name);
+        if (await Packages.DeleteRemoteAsync(name) is ApiFailure failure)
+        {
+            Snackbar.Add(failure.Message, Severity.Error);
+            return;
+        }
+
         Snackbar.Add(Loc["PkgRemoteRemoved", name], Severity.Info);
-        _remotes = await Packages.GetRemotesAsync();
+        _remotes = await Remotes();
         await LoadCommunityAsync();
     }
 
@@ -226,7 +234,22 @@
         _readmeTitle = listing.Name;
         _readmeHtml = null;
         _showReadme = true;
-        var readme = await Packages.GetCommunityReadmeAsync(listing.Url);
-        _readmeHtml = readme?.Html ?? $"<em>{Loc["PkgNoReadme"]}</em>";
+        _readmeHtml = await Packages.GetCommunityReadmeAsync(listing.Url) is ReadmeResponse readme
+            ? readme.Html
+            : $"<em>{Loc["PkgNoReadme"]}</em>";
+    }
+
+    /// <summary>The remote list, or an empty one with the reason reported.</summary>
+    private async Task<IReadOnlyList<PackageRemoteRecord>> Remotes() =>
+        await Packages.GetRemotesAsync() switch
+        {
+            IReadOnlyList<PackageRemoteRecord> remotes => remotes,
+            ApiFailure failure => Failed(failure)
+        };
+
+    private IReadOnlyList<PackageRemoteRecord> Failed(ApiFailure failure)
+    {
+        Snackbar.Add(failure.Message, Severity.Error);
+        return [];
     }
 }
