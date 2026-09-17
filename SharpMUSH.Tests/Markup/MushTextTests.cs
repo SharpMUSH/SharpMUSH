@@ -96,6 +96,8 @@ public class MushTextTests
 	/// finishing at all.
 	/// </summary>
 	[Test]
+	// A time budget measures the splice only while nothing else competes for the processor.
+	[NotInParallel]
 	public async Task CompressSpaces_OnAPathologicalInput_IsLinear()
 	{
 		var input = MarkupText.Plain("a" + new string(' ', 65_536) + "b");

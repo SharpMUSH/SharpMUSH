@@ -98,6 +98,8 @@ public class WildcardParityTests
 	/// command at a time that is the whole game stopped, by a pattern any builder could set.
 	/// </summary>
 	[Test]
+	// A time budget measures the matcher only while nothing else competes for the processor.
+	[NotInParallel]
 	[Arguments("******b")]
 	[Arguments("**********b")]
 	[Arguments("*a*a*a*a*a*a*b")]

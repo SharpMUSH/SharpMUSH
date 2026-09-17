@@ -25,6 +25,9 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	[Test]
 	[Category("Performance")]
 	[Category("LongRunning")]
+	// A time budget measures the converter only while nothing else competes for the processor; in
+	// the parallel suite it ran from 7 to 48 seconds for the same four seconds of work.
+	[NotInParallel]
 	public async ValueTask LargeDatabaseConversionPerformance()
 	{
 		var databaseFilePath = await PennMUSHDatabaseGenerator.GenerateLargeDatabaseFileAsync(10 * 1024 * 1024);
