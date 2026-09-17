@@ -2,6 +2,7 @@
 @attribute [Authorize(Policy = "config.admin")]
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.Configuration
 @using SharpMUSH.Library.API
 @using System.Text.Json
 @using SharpMUSH.Configuration.Generated
@@ -388,32 +389,14 @@
         </div>
     };
 
-    private string GetNumericString(PropertyMetadata prop)
-    {
-        if (prop.Type == "integer")
-            return GetNullableIntValue(prop)?.ToString() ?? string.Empty;
-        return GetNullableDoubleValue(prop)?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
-    }
+    private string GetNumericString(PropertyMetadata prop) =>
+        ConfigValues.NumericString(_currentValues, prop);
 
     private void UpdateNumeric(PropertyMetadata prop, string? raw)
     {
-        raw = raw?.Trim();
-        if (string.IsNullOrEmpty(raw))
-        {
-            UpdateValue(prop, prop.Required ? (prop.Type == "integer" ? 0 : 0.0) : null);
-            return;
-        }
-
-        if (prop.Type == "integer")
-        {
-            if (int.TryParse(raw, out var iv))
-                UpdateValue(prop, iv);
-        }
-        else if (double.TryParse(raw, System.Globalization.NumberStyles.Any,
-                     System.Globalization.CultureInfo.InvariantCulture, out var dv))
-        {
-            UpdateValue(prop, dv);
-        }
+        // A value only when the text parses; a mid-edit "-" must leave the stored number alone.
+        if (ConfigValues.ParseNumeric(prop, raw, out var value))
+            UpdateValue(prop, value);
     }
 
     private bool IsPropertyChanged(string path)
@@ -429,62 +412,19 @@
             (p.Group ?? "General").Equals(groupName, StringComparison.OrdinalIgnoreCase));
     }
 
-    private bool GetBoolValue(PropertyMetadata prop)
-    {
-        if (_currentValues.TryGetValue(prop.Path, out var value) && value is bool boolValue)
-            return boolValue;
-        return prop.DefaultValue is bool defaultBool ? defaultBool : false;
-    }
+    private bool GetBoolValue(PropertyMetadata prop) => ConfigValues.Bool(_currentValues, prop);
 
-    private int? GetNullableIntValue(PropertyMetadata prop)
-    {
-        if (_currentValues.TryGetValue(prop.Path, out var value))
-        {
-            if (value == null) return null;
-            if (value is int intValue) return intValue;
-            if (value is uint uintValue) return (int)uintValue;
-            if (value is long longValue) return (int)longValue;
-        }
-        
-        if (prop.DefaultValue is int defaultInt) return defaultInt;
-        if (prop.DefaultValue is uint defaultUint) return (int)defaultUint;
-        return 0;
-    }
+    private int? GetNullableIntValue(PropertyMetadata prop) =>
+        ConfigValues.NullableInt(_currentValues, prop);
 
-    private double? GetNullableDoubleValue(PropertyMetadata prop)
-    {
-        if (_currentValues.TryGetValue(prop.Path, out var value))
-        {
-            if (value == null) return null;
-            if (value is double doubleValue) return doubleValue;
-        }
-        return prop.DefaultValue is double defaultDouble ? defaultDouble : 0.0;
-    }
+    private double? GetNullableDoubleValue(PropertyMetadata prop) =>
+        ConfigValues.NullableDouble(_currentValues, prop);
 
-    private string GetStringValue(PropertyMetadata prop)
-    {
-        if (_currentValues.TryGetValue(prop.Path, out var value) && value != null)
-            return value.ToString() ?? "";
-        return prop.DefaultValue?.ToString() ?? "";
-    }
+    private string GetStringValue(PropertyMetadata prop) => ConfigValues.String(_currentValues, prop);
 
-    private List<string> GetStringListValue(PropertyMetadata prop)
-    {
-        if (_currentValues.TryGetValue(prop.Path, out var value) && value != null)
-            return NonBlank(CoerceToStringList(value));
-        return new List<string>();
-    }
+    private List<string> GetStringListValue(PropertyMetadata prop) =>
+        ConfigValues.StringList(_currentValues, prop);
 
-    private static List<string> CoerceToStringList(object value) => value switch
-    {
-        string[] arr => arr.ToList(),
-        IEnumerable<string> strings => strings.ToList(),
-        JsonElement { ValueKind: JsonValueKind.Array } je =>
-            je.EnumerateArray().Select(x => x.GetString() ?? "").ToList(),
-        System.Collections.IEnumerable enumerable and not string =>
-            enumerable.Cast<object?>().Select(x => x?.ToString() ?? "").ToList(),
-        _ => new List<string>()
-    };
 
     private readonly Dictionary<string, string> _listDrafts = new();
 
@@ -524,65 +464,21 @@
     // A draft list preserves entry order and allows in-progress (blank) keys while editing;
     // it is synced back to _currentValues as a Dictionary on every change.
 
-    private sealed class DictEntry
-    {
-        public string Key { get; set; } = string.Empty;
-        public List<string> Values { get; set; } = new();
 
-        public string ValueDraft { get; set; } = string.Empty;
-    }
+    private readonly Dictionary<string, List<ConfigDictEntry>> _dictDrafts = new();
 
-    private readonly Dictionary<string, List<DictEntry>> _dictDrafts = new();
-
-    private List<DictEntry> GetDictDraft(PropertyMetadata prop)
+    private List<ConfigDictEntry> GetDictDraft(PropertyMetadata prop)
     {
         if (!_dictDrafts.TryGetValue(prop.Path, out var draft))
         {
-            draft = BuildDictEntries(_currentValues.GetValueOrDefault(prop.Path));
+            draft = ConfigValues.BuildDictEntries(_currentValues.GetValueOrDefault(prop.Path));
             _dictDrafts[prop.Path] = draft;
         }
         return draft;
     }
 
-    private static List<DictEntry> BuildDictEntries(object? value)
-    {
-        var result = new List<DictEntry>();
-        switch (value)
-        {
-            case Dictionary<string, string[]> dict:
-                foreach (var kvp in dict)
-                    result.Add(new DictEntry { Key = kvp.Key, Values = NonBlank(kvp.Value) });
-                break;
-            case JsonElement { ValueKind: JsonValueKind.Object } je:
-                foreach (var prop in je.EnumerateObject())
-                    result.Add(new DictEntry { Key = prop.Name, Values = NonBlank(CoerceToStringList(prop.Value)) });
-                break;
-            case System.Collections.IDictionary idict:
-                foreach (System.Collections.DictionaryEntry entry in idict)
-                    result.Add(new DictEntry
-                    {
-                        Key = entry.Key?.ToString() ?? "",
-                        Values = entry.Value != null ? NonBlank(CoerceToStringList(entry.Value)) : new List<string>()
-                    });
-                break;
-        }
-        return result;
-    }
-
-    private static List<string> NonBlank(IEnumerable<string> values) =>
-        values.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-
-    private void SyncDictDraft(PropertyMetadata prop)
-    {
-        var draft = _dictDrafts[prop.Path];
-        var dict = new Dictionary<string, string[]>();
-        foreach (var entry in draft)
-        {
-            if (string.IsNullOrWhiteSpace(entry.Key)) continue;
-            dict[entry.Key] = entry.Values.ToArray();
-        }
-        UpdateValue(prop, dict);
-    }
+    private void SyncDictDraft(PropertyMetadata prop) =>
+        UpdateValue(prop, ConfigValues.ToDictionary(_dictDrafts[prop.Path]));
 
     private void UpdateDictKey(PropertyMetadata prop, int entryIndex, string newKey)
     {
@@ -594,7 +490,7 @@
 
     private void AddDictEntry(PropertyMetadata prop)
     {
-        GetDictDraft(prop).Add(new DictEntry());
+        GetDictDraft(prop).Add(new ConfigDictEntry());
         SyncDictDraft(prop);
     }
 
@@ -635,21 +531,9 @@
         SyncDictDraft(prop);
     }
 
-    private int? GetIntMin(PropertyMetadata prop)
-    {
-        if (prop.Min is int intMin) return intMin;
-        if (prop.Min is uint uintMin) return (int)uintMin;
-        if (prop.Min is JsonElement je && je.ValueKind == JsonValueKind.Number) return je.GetInt32();
-        return null;
-    }
+    private int? GetIntMin(PropertyMetadata prop) => ConfigValues.IntBound(prop.Min);
 
-    private int? GetIntMax(PropertyMetadata prop)
-    {
-        if (prop.Max is int intMax) return intMax;
-        if (prop.Max is uint uintMax) return (int)uintMax;
-        if (prop.Max is JsonElement je && je.ValueKind == JsonValueKind.Number) return je.GetInt32();
-        return null;
-    }
+    private int? GetIntMax(PropertyMetadata prop) => ConfigValues.IntBound(prop.Max);
 
     private void UpdateValue(PropertyMetadata prop, object? newValue)
     {
@@ -660,8 +544,7 @@
 
     private void RecalculateChanges()
     {
-        _changedCount = _currentValues.Count(kvp => 
-            !Equals(kvp.Value, _originalValues.GetValueOrDefault(kvp.Key)));
+        _changedCount = ConfigValues.Changes(_currentValues, _originalValues).Count;
         _hasChanges = _changedCount > 0;
     }
 
@@ -672,9 +555,7 @@
 
         try
         {
-            var changes = _currentValues
-                .Where(kvp => !Equals(kvp.Value, _originalValues.GetValueOrDefault(kvp.Key)))
-                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            var changes = ConfigValues.Changes(_currentValues, _originalValues);
 
             if (changes.Count == 0)
             {
