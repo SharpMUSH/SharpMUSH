@@ -1,4 +1,4 @@
-using SharpMUSH.Library.Models;
+﻿using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -20,7 +20,7 @@ public partial class TaskScheduler
 		lock (_admissionLock)
 		{
 			if (_stopping) throw new OperationCanceledException("The queue is stopping.");
-			selected = _pendingEntries.Values.Where(entry => entry.Group == $"{SemaphoreGroup}:{target}" &&
+			selected = _pendingEntries.Values.Where(entry => entry.Group == SchedulerKeys.Semaphore(target) &&
 				!_ready.Contains(entry.Pid) && entry.Deferred?.ReleasePending != true && !_semaphoreRepairs.ContainsKey(entry.Pid))
 				.OrderBy(entry => entry.Pid).Take(count ?? int.MaxValue).ToArray();
 		}
