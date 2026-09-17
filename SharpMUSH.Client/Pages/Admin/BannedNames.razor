@@ -1,9 +1,9 @@
 @page "/admin/config/bannednames"
 @layout ConfigLayout
 @attribute [Authorize(Policy = "config.admin")]
+@using SharpMUSH.Client.Components.Admin
 @using SharpMUSH.Client.Services
 @inject BannedNamesService BannedNamesService
-@inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["BannedNames"] - @Loc["Configuration"]</PageTitle>
@@ -17,133 +17,23 @@
         </div>
     </div>
 
-    @if (_loading)
-    {
-        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
-    }
-    else
-    {
-        <div class="config-group-title">@Loc["AddBannedName"]</div>
-        <div class="config-field-card config-pad mb-5">
-            <div class="config-add-grid">
-                <input class="config-input" placeholder="@Loc["NameToBan"].Value"
-                       value="@_newName"
-                       @oninput="@(e => _newName = e.Value?.ToString() ?? string.Empty)"
-                       @onkeydown="HandleKeyDown" />
-                <button type="button" class="config-primary-btn"
-                        @onclick="AddBannedName"
-                        disabled="@string.IsNullOrWhiteSpace(_newName)">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:1rem;" />
-                    @Loc["AddName"]
-                </button>
-            </div>
-        </div>
-
-        <div class="config-group-title">@Loc["BannedNamesList"]</div>
-        @if (_bannedNames == null || !_bannedNames.Any())
-        {
-            <div class="config-field-card config-pad">
-                <span class="config-empty">@Loc["NoBannedNamesConfigured"]</span>
-            </div>
-        }
-        else
-        {
-            <div class="config-field-card">
-                @foreach (var name in _bannedNames.OrderBy(n => n))
-                {
-                    <div class="config-list-row">
-                        <span class="config-list-name">@name</span>
-                        <button type="button" class="config-icon-btn config-icon-btn--danger"
-                                title="@Loc["Delete"]"
-                                @onclick="@(() => DeleteBannedName(name))">
-                            <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:1rem;" />
-                        </button>
-                    </div>
-                }
-            </div>
-        }
-    }
+    <AdminKeyValueList Text="@Text"
+                       Load="@(() => BannedNamesService.GetBannedNamesAsync().AsEntriesAsync())"
+                       Add="@((name, _) => BannedNamesService.AddBannedNameAsync(name))"
+                       Delete="@BannedNamesService.DeleteBannedNameAsync" />
 </div>
 
 @code {
-    private bool _loading = true;
-    private List<string> _bannedNames = new();
-    private string _newName = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadBannedNames();
-    }
-
-    private async Task LoadBannedNames()
-    {
-        _loading = true;
-        try
-        {
-            var names = await BannedNamesService.GetBannedNamesAsync();
-            _bannedNames = names?.ToList() ?? new List<string>();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(string.Format(Loc["ErrorLoadingBannedNames"], ex.Message), Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    private async Task AddBannedName()
-    {
-        if (string.IsNullOrWhiteSpace(_newName))
-            return;
-
-        try
-        {
-            var success = await BannedNamesService.AddBannedNameAsync(_newName.Trim());
-            if (success)
-            {
-                Snackbar.Add(string.Format(Loc["BannedNameAdded"], _newName), Severity.Success);
-                _newName = string.Empty;
-                await LoadBannedNames();
-            }
-            else
-            {
-                Snackbar.Add(string.Format(Loc["BannedNameAddFailed"], _newName), Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(string.Format(Loc["ErrorAddingBannedName"], ex.Message), Severity.Error);
-        }
-    }
-
-    private async Task DeleteBannedName(string name)
-    {
-        try
-        {
-            var success = await BannedNamesService.DeleteBannedNameAsync(name);
-            if (success)
-            {
-                Snackbar.Add(string.Format(Loc["BannedNameRemoved"], name), Severity.Success);
-                await LoadBannedNames();
-            }
-            else
-            {
-                Snackbar.Add(string.Format(Loc["BannedNameRemoveFailed"], name), Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(string.Format(Loc["ErrorRemovingBannedName"], ex.Message), Severity.Error);
-        }
-    }
-
-    private async Task HandleKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-        {
-            await AddBannedName();
-        }
-    }
+    private AdminKeyValueListText Text => new(
+        AddTitle: Loc["AddBannedName"],
+        KeyLabel: Loc["NameToBan"],
+        KeyPlaceholder: Loc["NameToBan"],
+        AddButton: Loc["AddName"],
+        ListTitle: Loc["BannedNamesList"],
+        Empty: Loc["NoBannedNamesConfigured"],
+        Added: name => string.Format(Loc["BannedNameAdded"], name),
+        Removed: name => string.Format(Loc["BannedNameRemoved"], name),
+        LoadFailed: failure => string.Format(Loc["ErrorLoadingBannedNames"], failure.Message),
+        AddFailed: (name, _) => string.Format(Loc["BannedNameAddFailed"], name),
+        RemoveFailed: (name, _) => string.Format(Loc["BannedNameRemoveFailed"], name));
 }

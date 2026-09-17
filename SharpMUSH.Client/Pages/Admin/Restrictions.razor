@@ -1,9 +1,9 @@
 @page "/admin/config/restrictions"
 @layout ConfigLayout
 @attribute [Authorize(Policy = "config.admin")]
+@using SharpMUSH.Client.Components.Admin
 @using SharpMUSH.Client.Services
 @inject RestrictionsService RestrictionsService
-@inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["Restrictions"] - @Loc["Configuration"]</PageTitle>
@@ -17,279 +17,59 @@
         </div>
     </div>
 
-    @if (_loading)
-    {
-        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
-    }
-    else
-    {
-        <MudTabs Elevation="0" Rounded="false" ApplyEffectsToContainer="true" Class="config-tabs mb-4">
-            <MudTabPanel Text="@Loc["CommandRestrictions"].Value" Icon="@Icons.Material.Filled.Terminal">
-                <div class="config-tab-body">
-                    <div class="config-group-title">@Loc["AddCommandRestriction"]</div>
-                    <div class="config-field-card config-pad mb-5">
-                        <div class="config-add-fields">
-                            <div class="config-add-field">
-                                <label class="config-field-label-text">@Loc["CommandName"]</label>
-                                <input class="config-input" placeholder="@Loc["CommandNameHelper"].Value"
-                                       value="@_newCommandName"
-                                       @oninput="@(e => _newCommandName = e.Value?.ToString() ?? string.Empty)" />
-                            </div>
-                            <div class="config-add-field">
-                                <label class="config-field-label-text">@Loc["RestrictionsLabel"]</label>
-                                <input class="config-input" placeholder="@Loc["RestrictionsHelper"].Value"
-                                       value="@_newCommandRestrictionsText"
-                                       @oninput="@(e => _newCommandRestrictionsText = e.Value?.ToString() ?? string.Empty)" />
-                            </div>
-                            <button type="button" class="config-primary-btn"
-                                    @onclick="AddCommandRestriction"
-                                    disabled="@(string.IsNullOrWhiteSpace(_newCommandName) || string.IsNullOrWhiteSpace(_newCommandRestrictionsText))">
-                                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:1rem;" />
-                                @Loc["Add"]
-                            </button>
-                        </div>
-                    </div>
+    <MudTabs Elevation="0" Rounded="false" ApplyEffectsToContainer="true" Class="config-tabs mb-4">
+        <MudTabPanel Text="@Loc["CommandRestrictions"].Value" Icon="@Icons.Material.Filled.Terminal">
+            <div class="config-tab-body">
+                <AdminKeyValueList Text="@CommandText"
+                                   Load="@(() => RestrictionsService.GetCommandRestrictionsAsync().AsEntriesAsync())"
+                                   Add="@RestrictionsService.AddCommandRestrictionAsync"
+                                   Delete="@RestrictionsService.DeleteCommandRestrictionAsync" />
+            </div>
+        </MudTabPanel>
 
-                    <div class="config-group-title">@Loc["ConfiguredCommandRestrictions"]</div>
-                    @if (_commandRestrictions == null || !_commandRestrictions.Any())
-                    {
-                        <div class="config-field-card config-pad">
-                            <span class="config-empty">@Loc["NoCommandRestrictions"]</span>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="config-field-card">
-                            @foreach (var restriction in _commandRestrictions.OrderBy(r => r.Key))
-                            {
-                                <div class="config-list-row">
-                                    <div class="config-list-text">
-                                        <span class="config-list-name">@restriction.Key</span>
-                                        <span class="config-list-sub">@string.Join(", ", restriction.Value)</span>
-                                    </div>
-                                    <button type="button" class="config-icon-btn config-icon-btn--danger"
-                                            title="@Loc["Delete"]"
-                                            @onclick="@(() => DeleteCommandRestriction(restriction.Key))">
-                                        <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:1rem;" />
-                                    </button>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
-            </MudTabPanel>
-
-            <MudTabPanel Text="@Loc["FunctionRestrictions"].Value" Icon="@Icons.Material.Filled.Functions">
-                <div class="config-tab-body">
-                    <div class="config-group-title">@Loc["AddFunctionRestriction"]</div>
-                    <div class="config-field-card config-pad mb-5">
-                        <div class="config-add-fields">
-                            <div class="config-add-field">
-                                <label class="config-field-label-text">@Loc["FunctionName"]</label>
-                                <input class="config-input" placeholder="@Loc["FunctionNameHelper"].Value"
-                                       value="@_newFunctionName"
-                                       @oninput="@(e => _newFunctionName = e.Value?.ToString() ?? string.Empty)" />
-                            </div>
-                            <div class="config-add-field">
-                                <label class="config-field-label-text">@Loc["RestrictionsLabel"]</label>
-                                <input class="config-input" placeholder="@Loc["RestrictionsBuilderHelper"].Value"
-                                       value="@_newFunctionRestrictionsText"
-                                       @oninput="@(e => _newFunctionRestrictionsText = e.Value?.ToString() ?? string.Empty)" />
-                            </div>
-                            <button type="button" class="config-primary-btn"
-                                    @onclick="AddFunctionRestriction"
-                                    disabled="@(string.IsNullOrWhiteSpace(_newFunctionName) || string.IsNullOrWhiteSpace(_newFunctionRestrictionsText))">
-                                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:1rem;" />
-                                @Loc["Add"]
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="config-group-title">@Loc["ConfiguredFunctionRestrictions"]</div>
-                    @if (_functionRestrictions == null || !_functionRestrictions.Any())
-                    {
-                        <div class="config-field-card config-pad">
-                            <span class="config-empty">@Loc["NoFunctionRestrictions"]</span>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="config-field-card">
-                            @foreach (var restriction in _functionRestrictions.OrderBy(r => r.Key))
-                            {
-                                <div class="config-list-row">
-                                    <div class="config-list-text">
-                                        <span class="config-list-name">@restriction.Key</span>
-                                        <span class="config-list-sub">@string.Join(", ", restriction.Value)</span>
-                                    </div>
-                                    <button type="button" class="config-icon-btn config-icon-btn--danger"
-                                            title="@Loc["Delete"]"
-                                            @onclick="@(() => DeleteFunctionRestriction(restriction.Key))">
-                                        <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:1rem;" />
-                                    </button>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
-            </MudTabPanel>
-        </MudTabs>
-    }
+        <MudTabPanel Text="@Loc["FunctionRestrictions"].Value" Icon="@Icons.Material.Filled.Functions">
+            <div class="config-tab-body">
+                <AdminKeyValueList Text="@FunctionText"
+                                   Load="@(() => RestrictionsService.GetFunctionRestrictionsAsync().AsEntriesAsync())"
+                                   Add="@RestrictionsService.AddFunctionRestrictionAsync"
+                                   Delete="@RestrictionsService.DeleteFunctionRestrictionAsync" />
+            </div>
+        </MudTabPanel>
+    </MudTabs>
 </div>
 
 @code {
-    private bool _loading = true;
-    private Dictionary<string, string[]> _commandRestrictions = new();
-    private Dictionary<string, string[]> _functionRestrictions = new();
-    
-    private string _newCommandName = string.Empty;
-    private string _newCommandRestrictionsText = string.Empty;
-    private string _newFunctionName = string.Empty;
-    private string _newFunctionRestrictionsText = string.Empty;
-
-    protected override async Task OnInitializedAsync()
+    // The two tabs are the same list with the nouns swapped, which is why this page used to be its
+    // own body written twice.
+    private AdminKeyValueListText CommandText => new(
+        AddTitle: Loc["AddCommandRestriction"],
+        KeyLabel: Loc["CommandName"],
+        KeyPlaceholder: Loc["CommandNameHelper"],
+        AddButton: Loc["Add"],
+        ListTitle: Loc["ConfiguredCommandRestrictions"],
+        Empty: Loc["NoCommandRestrictions"],
+        Added: name => string.Format(Loc["CommandRestrictionAdded"], name),
+        Removed: name => string.Format(Loc["CommandRestrictionRemoved"], name),
+        LoadFailed: failure => string.Format(Loc["ErrorLoadingRestrictions"], failure.Message),
+        AddFailed: (_, failure) => string.Format(Loc["ErrorAddingCommandRestriction"], failure.Message),
+        RemoveFailed: (_, failure) => string.Format(Loc["ErrorRemovingCommandRestriction"], failure.Message))
     {
-        await LoadRestrictions();
-    }
+        ValuesLabel = Loc["RestrictionsLabel"],
+        ValuesPlaceholder = Loc["RestrictionsHelper"],
+        ValuesRequired = Loc["AtLeastOneRestriction"],
+    };
 
-    private async Task LoadRestrictions()
+    private AdminKeyValueListText FunctionText => CommandText with
     {
-        _loading = true;
-        try
-        {
-            var commandTask = RestrictionsService.GetCommandRestrictionsAsync();
-            var functionTask = RestrictionsService.GetFunctionRestrictionsAsync();
-
-            await Task.WhenAll(commandTask, functionTask);
-
-            _commandRestrictions = commandTask.Result ?? new Dictionary<string, string[]>();
-            _functionRestrictions = functionTask.Result ?? new Dictionary<string, string[]>();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(string.Format(Loc["ErrorLoadingRestrictions"], ex.Message), Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    private async Task AddCommandRestriction()
-    {
-        if (string.IsNullOrWhiteSpace(_newCommandName) || string.IsNullOrWhiteSpace(_newCommandRestrictionsText))
-            return;
-
-        try
-        {
-            var restrictions = _newCommandRestrictionsText
-                .Split(',')
-                .Select(r => r.Trim())
-                .Where(r => !string.IsNullOrWhiteSpace(r))
-                .ToArray();
-
-            if (restrictions.Length == 0)
-            {
-                Snackbar.Add(Loc["AtLeastOneRestriction"].Value, Severity.Warning);
-                return;
-            }
-
-            var success = await RestrictionsService.AddCommandRestrictionAsync(_newCommandName.Trim(), restrictions);
-            if (success)
-            {
-                Snackbar.Add(string.Format(Loc["CommandRestrictionAdded"], _newCommandName), Severity.Success);
-                _newCommandName = string.Empty;
-                _newCommandRestrictionsText = string.Empty;
-                await LoadRestrictions();
-            }
-            else
-            {
-                Snackbar.Add(Loc["CommandRestrictionAddFailed"].Value, Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(string.Format(Loc["ErrorAddingCommandRestriction"], ex.Message), Severity.Error);
-        }
-    }
-
-    private async Task DeleteCommandRestriction(string commandName)
-    {
-        try
-        {
-            var success = await RestrictionsService.DeleteCommandRestrictionAsync(commandName);
-            if (success)
-            {
-                Snackbar.Add(string.Format(Loc["CommandRestrictionRemoved"], commandName), Severity.Success);
-                await LoadRestrictions();
-            }
-            else
-            {
-                Snackbar.Add(Loc["CommandRestrictionRemoveFailed"].Value, Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(string.Format(Loc["ErrorRemovingCommandRestriction"], ex.Message), Severity.Error);
-        }
-    }
-
-    private async Task AddFunctionRestriction()
-    {
-        if (string.IsNullOrWhiteSpace(_newFunctionName) || string.IsNullOrWhiteSpace(_newFunctionRestrictionsText))
-            return;
-
-        try
-        {
-            var restrictions = _newFunctionRestrictionsText
-                .Split(',')
-                .Select(r => r.Trim())
-                .Where(r => !string.IsNullOrWhiteSpace(r))
-                .ToArray();
-
-            if (restrictions.Length == 0)
-            {
-                Snackbar.Add(Loc["AtLeastOneRestriction"].Value, Severity.Warning);
-                return;
-            }
-
-            var success = await RestrictionsService.AddFunctionRestrictionAsync(_newFunctionName.Trim(), restrictions);
-            if (success)
-            {
-                Snackbar.Add(string.Format(Loc["FunctionRestrictionAdded"], _newFunctionName), Severity.Success);
-                _newFunctionName = string.Empty;
-                _newFunctionRestrictionsText = string.Empty;
-                await LoadRestrictions();
-            }
-            else
-            {
-                Snackbar.Add(Loc["FunctionRestrictionAddFailed"].Value, Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(string.Format(Loc["ErrorAddingFunctionRestriction"], ex.Message), Severity.Error);
-        }
-    }
-
-    private async Task DeleteFunctionRestriction(string functionName)
-    {
-        try
-        {
-            var success = await RestrictionsService.DeleteFunctionRestrictionAsync(functionName);
-            if (success)
-            {
-                Snackbar.Add(string.Format(Loc["FunctionRestrictionRemoved"], functionName), Severity.Success);
-                await LoadRestrictions();
-            }
-            else
-            {
-                Snackbar.Add(Loc["FunctionRestrictionRemoveFailed"].Value, Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(string.Format(Loc["ErrorRemovingFunctionRestriction"], ex.Message), Severity.Error);
-        }
-    }
+        AddTitle = Loc["AddFunctionRestriction"],
+        KeyLabel = Loc["FunctionName"],
+        KeyPlaceholder = Loc["FunctionNameHelper"],
+        ListTitle = Loc["ConfiguredFunctionRestrictions"],
+        Empty = Loc["NoFunctionRestrictions"],
+        Added = name => string.Format(Loc["FunctionRestrictionAdded"], name),
+        Removed = name => string.Format(Loc["FunctionRestrictionRemoved"], name),
+        ValuesPlaceholder = Loc["RestrictionsBuilderHelper"],
+        AddFailed = (_, failure) => string.Format(Loc["ErrorAddingFunctionRestriction"], failure.Message),
+        RemoveFailed = (_, failure) => string.Format(Loc["ErrorRemovingFunctionRestriction"], failure.Message),
+    };
 }
