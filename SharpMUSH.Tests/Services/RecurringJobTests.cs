@@ -13,9 +13,8 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Services.RecurringJobs;
-using QueueScheduler = SharpMUSH.Library.Services.Interfaces.ITaskScheduler;
-
 using SharpMUSH.Tests.Commands;
+using QueueScheduler = SharpMUSH.Library.Services.Interfaces.ITaskScheduler;
 
 namespace SharpMUSH.Tests.Services;
 

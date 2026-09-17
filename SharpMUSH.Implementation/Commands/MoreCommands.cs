@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Buffers;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Common;
@@ -2738,6 +2739,66 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// <c>MAT_NEAR_THINGS | MAT_CONTAINER</c> with a <c>TYPE_PLAYER</c> preference: <c>MAT_ME</c>,
+	/// <c>MAT_ABSOLUTE</c>, <c>MAT_PLAYER</c>, <c>MAT_NEIGHBOR</c>, <c>MAT_POSSESSION</c> and the
+	/// looker's location by name, every match required to be nearby.
+	/// </summary>
+	private const LocateFlags WhisperTargetFlags =
+		LocateFlags.MatchMeForLooker | LocateFlags.AbsoluteMatch | LocateFlags.MatchWildCardForPlayerName |
+		LocateFlags.MatchObjectsInLookerLocation | LocateFlags.MatchObjectsInLookerInventory |
+		LocateFlags.MatchAgainstLookerLocationName | LocateFlags.OnlyMatchObjectsInLookerLocation |
+		LocateFlags.PlayersPreference;
+
+	/// <summary>speech.c: <c>dbref good[100]</c>.</summary>
+	private const int MaxWhisperTargets = 100;
+
+	private static readonly SearchValues<char> WhisperNameBreaks = SearchValues.Create(" \"");
+
+	/// <summary>
+	/// strutil.c <c>next_in_list</c>: spaces separate names, a leading <c>"</c> takes everything up to
+	/// the next <c>"</c> as one name, and an unquoted name also stops at a <c>"</c>. Nothing else splits
+	/// a name — <c>#12Lamp</c> is one token, which <c>parse_dbref</c> then refuses as a whole.
+	/// </summary>
+	private static IEnumerable<string> WhisperTargetNames(string list)
+	{
+		var head = 0;
+		while (true)
+		{
+			while (head < list.Length && list[head] == ' ') head++;
+			if (head >= list.Length) yield break;
+
+			if (list[head] == '"')
+			{
+				var close = list.IndexOf('"', head + 1);
+				var end = close < 0 ? list.Length : close;
+				var quoted = list[(head + 1)..end];
+				head = close < 0 ? list.Length : close + 1;
+				if (quoted.Length > 0) yield return quoted;
+				continue;
+			}
+
+			var stop = list.AsSpan(head).IndexOfAny(WhisperNameBreaks);
+			var next = stop < 0 ? list.Length : head + stop;
+			yield return list[head..next];
+			head = next;
+		}
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>Location()</c>, which reads the raw location field: a room's is its drop-to and an
+	/// exit's its destination, where <see cref="AnySharpObject.Where"/> would answer with the room itself
+	/// or the exit's source.
+	/// </summary>
+	private static async ValueTask<bool> LocatedIn(AnySharpObject target, DBRef location) => target switch
+	{
+		SharpRoom room => await room.Location.WithCancellation(CancellationToken.None) is AnySharpContainer dropTo
+											&& dropTo.Object().DBRef.Equals(location),
+		SharpExit exit => await exit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
+											&& destination.Object().DBRef.Equals(location),
+		SharpPlayer or SharpThing => (await target.Where()).Object().DBRef.Equals(location)
+	};
+
 	[SharpCommand(Name = "WHISPER", Switches = ["LIST", "NOISY", "SILENT", "NOEVAL"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["player", "message"])]
 	public async ValueTask<Option<CallState>> Whisper(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -2789,34 +2850,41 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var targetNames = targetArg.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		var successfulTargets = new List<AnySharpObject>();
+		var unable = new List<string>();
 
-		foreach (var targetName in targetNames)
+		// speech.c do_whisper: next_in_list takes a "quoted name" whole, and each name is matched with
+		// match_result(player, name, TYPE_PLAYER, MAT_NEAR_THINGS | MAT_CONTAINER). The type is a
+		// preference, so any nearby object is a recipient, the whisperer included. A name that matches
+		// nothing, or an object that cannot hear the whisperer, lands in one `Unable to whisper to:`
+		// line — the deaf one also gets its own `can't hear you` — and the hundredth good target ends
+		// the scan.
+		foreach (var targetName in WhisperTargetNames(targetArg.ToPlainText()))
 		{
-			var targetResult = await LocateService.LocateAndNotifyIfInvalid(
-				parser, executor, executorLocation.WithExitOption(), targetName, LocateFlags.All);
-
-			if (targetResult is not AnySharpObject target || !target.IsPlayer)
+			var found = await LocateService.Locate(parser, executor, executor, targetName, WhisperTargetFlags);
+			if (found is not AnySharpObject target
+					|| !await PermissionService.CanInteract(executor, target, IPermissionService.InteractType.Hear))
 			{
-				await NotifyService.Notify(executor, $"I don't see {targetName} here.", executor);
-				continue;
-			}
+				unable.Add(targetName.Contains(' ') ? $"\"{targetName}\"" : targetName);
+				if (found is AnySharpObject deaf)
+				{
+					await NotifyService.Notify(executor, $"{deaf.Object().Name} can't hear you.", executor);
+				}
 
-			if (target.Object().DBRef.Equals(executor.Object().DBRef))
-			{
-				await NotifyService.Notify(executor, "You can't whisper to yourself.", executor);
-				continue;
-			}
-
-			var targetLocation = await target.Where();
-			if (!targetLocation.Object().DBRef.Equals(executorLocation.Object().DBRef))
-			{
-				await NotifyService.Notify(executor, $"{target.Object().Name} is not here.", executor);
 				continue;
 			}
 
 			successfulTargets.Add(target);
+			if (successfulTargets.Count >= MaxWhisperTargets)
+			{
+				await NotifyService.Notify(executor, "Too many people to whisper to.", executor);
+				break;
+			}
+		}
+
+		if (unable.Count > 0)
+		{
+			await NotifyService.Notify(executor, $"Unable to whisper to: {string.Join(' ', unable)}", executor);
 		}
 
 		if (successfulTargets.Count == 0)
@@ -2829,6 +2897,16 @@ public partial class Commands
 		// echo is unconditional — `whisper/silent X=hi` still says "You whisper, ..." to the whisperer.
 		var isNoisy = switches.Contains("NOISY")
 									|| (!switches.Contains("SILENT") && Configuration.CurrentValue.Command.NoisyWhisper);
+
+		// "Drunk wizards...": a DARK whisperer is never overheard. Otherwise each recipient rolls
+		// get_random_u32(0, 100) against whisper_loudness, and one roll under it is enough — unless some
+		// recipient is not standing in the whisperer's location, which keeps the whole whisper private.
+		var loudness = Configuration.CurrentValue.Limit.WhisperLoudness;
+		var overheard = isNoisy
+										&& !await executor.IsDark()
+										&& successfulTargets.Any(_ => Random.Shared.Next(0, 101) < loudness)
+										&& await successfulTargets.ToAsyncEnumerable().AllAsync(async (target, _)
+											=> await LocatedIn(target, executorLocation.Object().DBRef));
 		var messageText = messageArg.ToPlainText();
 
 		// PennMUSH do_whisper (src/speech.c) reads the message type off the first character exactly as
@@ -2865,7 +2943,7 @@ public partial class Commands
 			await NotifyService.Notify(executor, $"You whisper, \"{body}\" to {targetList}.", executor);
 		}
 
-		if (isNoisy)
+		if (overheard)
 		{
 			var contents = executorLocation.Content(Mediator);
 			await foreach (var obj in contents)

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Quartz;
@@ -13,6 +14,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Services;
 using TUnit.AspNetCore;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -65,14 +67,13 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 		// Disable that diagnostic task for both named and default caches in session fixtures.
 		builder.ConfigureTestServices(services => services.PostConfigureAll<FusionCacheOptions>(
 			options => options.EnableBestPracticesAdvisor = false));
-		// Recurring-job tests drive RecurringJobService with their own clock and queue. A runner
-		// polling the world on the real clock fires the jobs those tests write, and hosts that share
-		// a world would each run one. The wrapper TUnit puts around hosted services hides the type,
-		// so a test cannot find a runner to stop; no test host registers one.
+		// Recurring-job tests drive the job document with a clock of their own, and the hosts share one
+		// world. A background runner fires those jobs on the real clock and rewrites the document, so no
+		// test host runs one. TUnit wraps every hosted service, so a started runner cannot be picked out
+		// and stopped afterwards.
 		builder.ConfigureTestServices(services =>
 		{
-			foreach (var runner in services.Where(descriptor => descriptor.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService)
-				&& descriptor.ImplementationType == typeof(SharpMUSH.Server.Services.RecurringJobRunner)).ToArray())
+			foreach (var runner in services.Where(descriptor => descriptor.ImplementationType == typeof(RecurringJobRunner)).ToArray())
 				services.Remove(runner);
 		});
 

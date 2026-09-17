@@ -20,14 +20,14 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	/// </summary>
 	/// <remarks>
 	/// Ten megabytes is about 540 objects and 29,000 attributes: Lightning parses and converts it in
-	/// about 4 seconds, SurrealDB in about 19. Each budget is roughly five times that.
+	/// about 4 seconds, SurrealDB in about 19. Each budget is roughly five times that. The budget is
+	/// wall-clock time, so the test runs with nothing else executing: under the full parallel suite a
+	/// CI runner has taken 31 seconds over the same file.
 	/// </remarks>
 	[Test]
+	[NotInParallel]
 	[Category("Performance")]
 	[Category("LongRunning")]
-	// A time budget measures the converter only while nothing else competes for the processor; in
-	// the parallel suite it ran from 7 to 48 seconds for the same four seconds of work.
-	[NotInParallel]
 	public async ValueTask LargeDatabaseConversionPerformance()
 	{
 		var databaseFilePath = await PennMUSHDatabaseGenerator.GenerateLargeDatabaseFileAsync(10 * 1024 * 1024);

@@ -548,6 +548,18 @@
   <data name="SafeObjectUseNuke" xml:space="preserve">
     <value>That object is marked SAFE. Use @nuke to destroy it.</value>
   </data>
+  <data name="SafeTargetScheduledAnyway" xml:space="preserve">
+    <value>Warning: Target is set SAFE, but scheduling for destruction anyway.</value>
+  </data>
+  <data name="NotYoursUseNuke" xml:space="preserve">
+    <value>That object does not belong to you. Use @nuke to destroy it.</value>
+  </data>
+  <data name="WizardThingUseNuke" xml:space="preserve">
+    <value>That object is set WIZARD. You must use @nuke to destroy it.</value>
+  </data>
+  <data name="ProgramsDontKillPeople" xml:space="preserve">
+    <value>Programs don't kill people; people kill people!</value>
+  </data>
 
   <!-- Zone messages -->
   <data name="ZoneChanged" xml:space="preserve">

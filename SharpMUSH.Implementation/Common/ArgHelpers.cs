@@ -341,6 +341,6 @@ public static partial class ArgHelpers
 	/// A regular expression that matches one or more names in a list format.
 	/// </summary>
 	/// <returns>A regex that has a named group for the match.</returns>
-	[GeneratedRegex("(\"(?<User>.+?)\"|(?<DBRef>#\\d+(:\\d+)?)|(?<User>\\S+))(\\s?|$)")]
+	[GeneratedRegex("(\"(?<User>.+?)\"|(?<DBRef>#\\d+(:\\d+)?)(?=\\s|$)|(?<User>\\S+))(\\s?|$)")]
 	private static partial Regex NameListPattern();
 }

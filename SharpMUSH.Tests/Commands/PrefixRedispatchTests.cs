@@ -57,8 +57,9 @@ public class PrefixRedispatchTests
 	[Arguments("~]say [add(1,2)]", "You say, \"[add(1,2)]\"")]
 	[Arguments("]~say [add(1,2)]", "You say, \"[add(1,2)]\"")]
 	[Arguments("]say %u", "You say, \"%u\"")]
-	[Arguments("~@emit %u", "~@emit %u")]
-	[Arguments("~~@emit %u", "~~@emit %u")]
+	// %c is the command the modifier re-dispatched, without the modifier (PennMUSH strips `]` from cmd_raw).
+	[Arguments("~@emit %c", "@emit %c")]
+	[Arguments("~~@emit %c", "@emit %c")]
 	public async Task PrefixPreservesExactlyOneCommand(string text, string expected)
 	{
 		var before = Factory.Notifications.CountFor(_actor!.DbRef);
@@ -167,9 +168,10 @@ public class PrefixRedispatchTests
 	{
 		var parser = Factory.CommandParserFor(_actor!.DbRef, _actor.Handle);
 		using var budget = ExecutionBudget.FromMilliseconds(5000);
-		var state = parser.CurrentState with { Command = "caller-provenance", CommandHistory = new(), ExecutionBudget = budget };
+		var registers = new Dictionary<string, MString> { ["PROVENANCE"] = MarkupText.Plain("caller-provenance") };
+		var state = parser.CurrentState with { Registers = new([registers]), CommandHistory = new(), ExecutionBudget = budget };
 		var before = Factory.Notifications.CountFor(_actor.DbRef);
-		var result = await parser.FromState(state).CommandParse(MarkupText.Plain("~~@emit %u"));
+		var result = await parser.FromState(state).CommandParse(MarkupText.Plain("~~@emit %q<PROVENANCE>"));
 		await Assert.That(result.HadErrors).IsFalse();
 		await Assert.That(string.Join('|', Factory.Notifications.For(_actor.DbRef).Skip(before))).IsEqualTo("caller-provenance");
 		await Assert.That(state.CommandHistory!.Count).IsEqualTo(1);

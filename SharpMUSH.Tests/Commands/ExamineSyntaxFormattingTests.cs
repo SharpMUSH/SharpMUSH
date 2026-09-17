@@ -26,16 +26,17 @@ public class ExamineSyntaxFormattingTests
 	[Before(Test)]
 	public async Task CreatePlayer()
 	{
+		// These tests assert on the exact sequence of lines the player was sent, so the player never
+		// stands in the shared start room: a connect or disconnect announced there can be delivered
+		// after its recipient list was taken, even to a player who has since walked out.
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
+		var room = await Mediator.Send(new CreateRoomCommand(
+			TestIsolationHelpers.GenerateUniqueName("ExamineRoom"), god));
 		_player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamineSyntaxFormatting");
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExamineSyntaxFormatting", room);
 		var player = (await Mediator.Send(new GetObjectNodeQuery(_player.DbRef))).Expect<SharpPlayer>();
 		var wizard = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
 		await Assert.That(await Mediator.Send(new SetObjectFlagCommand(player, wizard!))).IsTrue();
-		var roomId = await Mediator.Send(new CreateRoomCommand(
-			TestIsolationHelpers.GenerateUniqueName("ExamineRoom"), player));
-		var room = (await Mediator.Send(new GetObjectNodeQuery(roomId))).Expect<SharpRoom>();
-		var origin = await player.Location.WithCancellation(CancellationToken.None);
-		await Mediator.Send(new MoveObjectCommand(player, room, origin.Object().DBRef, IsSilent: true));
 	}
 
 	[After(Test)]

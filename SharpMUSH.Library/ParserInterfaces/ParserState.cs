@@ -221,6 +221,78 @@ public class BreakPropagation
 }
 
 /// <summary>
+/// The text behind <c>%c</c> and <c>%u</c>: PennMUSH's <c>pe_info-&gt;cmd_raw</c> and
+/// <c>cmd_evaled</c>, one pair per queue entry.
+///
+/// <para><see cref="Raw"/> is the command that is running, as written. <see cref="Evaluated"/> is the
+/// last command whose arguments were parsed, rebuilt from those arguments — so while a command's own
+/// arguments evaluate it still holds the previous command's, and only hooks, the command body and
+/// whatever runs after see the current one (command.c <c>command_parse</c>, game.c
+/// <c>process_command</c>). Both are empty when an entry starts.</para>
+///
+/// <para>Reference type, shared the way PennMUSH shares a <c>pe_info</c>: every state copied within a
+/// queue entry, and an in-place list it runs (<c>@include</c>, <c>@ifelse</c>; PE_INFO_SHARE), write the
+/// same pair, so the last command of an included list is what the caller's next command reads. A queued
+/// entry or a <c>$</c>-command body gets a new pair (PE_INFO_DEFAULT / PE_INFO_CLONE).</para>
+/// </summary>
+public sealed class CommandText
+{
+	private MString? _redispatchedRaw;
+	private MString _evaluated = MarkupText.Empty;
+	private Func<MString>? _rebuildEvaluated;
+
+	/// <summary>The running command before evaluation: <c>%c</c>.</summary>
+	public MString Raw { get; private set; } = MarkupText.Empty;
+
+	/// <summary>The last parsed command after evaluation: <c>%u</c>.</summary>
+	public MString Evaluated
+	{
+		get
+		{
+			if (_rebuildEvaluated is { } rebuild)
+			{
+				_evaluated = rebuild();
+				_rebuildEvaluated = null;
+			}
+
+			return _evaluated;
+		}
+		set
+		{
+			_evaluated = value;
+			_rebuildEvaluated = null;
+		}
+	}
+
+	/// <summary>
+	/// Sets <see cref="Evaluated"/> from text built on first read. Every command sets it and few read
+	/// it, so the rebuild is only paid for by a <c>%u</c>. <paramref name="rebuild"/> must depend only on
+	/// values already evaluated: it never evaluates anything itself.
+	/// </summary>
+	public void EvaluatedFrom(Func<MString> rebuild) => _rebuildEvaluated = rebuild;
+
+	/// <summary>
+	/// A command starts: <paramref name="raw"/> becomes <see cref="Raw"/>, unless the command it
+	/// replaces asked to keep its own text with <see cref="KeepRawThroughRedispatch"/>.
+	/// </summary>
+	public void Begin(MString raw)
+	{
+		Raw = _redispatchedRaw ?? raw;
+		_redispatchedRaw = null;
+	}
+
+	/// <summary>
+	/// The next command to begin is a rewrite of this one — a speech token becoming <c>SAY</c> — and
+	/// PennMUSH's <c>%c</c> is still the line as typed. One-shot; <see cref="EndRedispatch"/> discards it
+	/// if the rewrite never began.
+	/// </summary>
+	public void KeepRawThroughRedispatch() => _redispatchedRaw = Raw;
+
+	/// <inheritdoc cref="KeepRawThroughRedispatch"/>
+	public void EndRedispatch() => _redispatchedRaw = null;
+}
+
+/// <summary>
 /// A layer or Parser State
 /// </summary>
 /// <param name="Registers">The current standard registers (%0, %1, named arguments)</param>
@@ -230,7 +302,7 @@ public class BreakPropagation
 /// <param name="CurrentEvaluation">The current evaluation context</param>
 /// <param name="ParserFunctionDepth">The function depth.</param>
 /// <param name="Function">Function name being evaluated</param>
-/// <param name="Command">Command name being evaluated</param>
+/// <param name="Command">Name of the command being evaluated; its text is <see cref="CommandText"/></param>
 /// <param name="Switches">Switches for the command being evaluated</param>
 /// <param name="Arguments">The arguments to the command or function</param>
 /// <param name="Executor">The executor of a command is the object actually carrying out the command or running the code: %!</param>
@@ -311,6 +383,12 @@ public partial record ParserState(
 	public EvaluationRestrictions? Restrictions { get; init; }
 
 	/// <summary>
+	/// <c>%c</c> and <c>%u</c> for the queue entry this state belongs to; null outside a command.
+	/// Shared by reference like <see cref="CommandHistory"/>.
+	/// </summary>
+	public CommandText? CommandText { get; init; }
+
+	/// <summary>
 	/// Most UTF-16 code units one function may produce in this evaluation. Lowered for a guest's
 	/// input, and carried by every copy of the state, including the snapshots of queued actions.
 	/// A new state starts from the <see cref="OutputCeiling"/> of the evaluation that creates it.
@@ -321,7 +399,8 @@ public partial record ParserState(
 	/// Captures the register environment for an independent queued action. Like PE_INFO_CLONE,
 	/// only the active q-register frame is inherited; iteration, regex and switch contexts retain
 	/// their nesting order. Mutable frames belong to the new action, not the submitting list.
-	/// Execution control is fresh, and the scheduler supplies the action's budget when it runs.
+	/// Execution control is fresh, and the scheduler supplies the action's budget when it runs. So is
+	/// <see cref="CommandText"/>: PE_INFO_CLONE copies no <c>%c</c>/<c>%u</c>.
 	/// </summary>
 	public ParserState SnapshotForQueuedAction() => this with
 	{
@@ -348,7 +427,8 @@ public partial record ParserState(
 		LimitExceeded = new(),
 		MoveDepth = new(),
 		CommandModifierDepth = 0,
-		ExecutionBudget = null
+		ExecutionBudget = null,
+		CommandText = null
 	};
 
 	private AnyOptionalSharpObject? _executorObject;
