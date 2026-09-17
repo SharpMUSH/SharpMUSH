@@ -1279,24 +1279,20 @@ public partial class Functions
 	/// <returns><see cref="RegisterKinds.None"/> for an unknown name; <see cref="RegisterKinds.All"/> for none given.</returns>
 	private static RegisterKinds ParseRegisterKinds(string types)
 	{
-		var kinds = RegisterKinds.None;
-		foreach (var type in types.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-		{
-			var kind = type.ToLowerInvariant() switch
-			{
-				"qregisters" => RegisterKinds.QRegisters,
-				"args" or "stack" => RegisterKinds.Args,
-				"iter" => RegisterKinds.Iter,
-				"switch" => RegisterKinds.Switch,
-				"regexp" => RegisterKinds.Regexp,
-				_ => RegisterKinds.None
-			};
-			if (kind == RegisterKinds.None) return RegisterKinds.None;
-			kinds |= kind;
-		}
-
-		return kinds == RegisterKinds.None ? RegisterKinds.All : kinds;
+		var named = types.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(ParseRegisterKind).ToList();
+		if (named.Contains(RegisterKinds.None)) return RegisterKinds.None;
+		return named.Count == 0 ? RegisterKinds.All : named.Aggregate(RegisterKinds.None, (kinds, kind) => kinds | kind);
 	}
+
+	private static RegisterKinds ParseRegisterKind(string type) => type.ToLowerInvariant() switch
+	{
+		"qregisters" => RegisterKinds.QRegisters,
+		"args" or "stack" => RegisterKinds.Args,
+		"iter" => RegisterKinds.Iter,
+		"switch" => RegisterKinds.Switch,
+		"regexp" => RegisterKinds.Regexp,
+		_ => RegisterKinds.None
+	};
 
 	/// <summary>
 	/// The names of the visible registers of <paramref name="kinds"/> that hold a non-blank value and
