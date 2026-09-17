@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -141,83 +140,41 @@ public partial class PackageAuthoringService(
 			});
 		}
 
-		var yaml = new StringBuilder();
-		yaml.AppendLine("format: 1");
-		yaml.AppendLine($"package: {request.PackageId}");
-		yaml.AppendLine($"version: \"{request.Version}\"");
-		if (request.Authors.Count > 0)
-		{
-			yaml.AppendLine($"authors: [{string.Join(", ", request.Authors)}]");
-		}
-
-		yaml.AppendLine($"description: {QuoteYaml(request.Description)}");
-		if (request.License is not null)
-		{
-			yaml.AppendLine($"license: {request.License}");
-		}
-
-		var body = new StringBuilder();
-		body.AppendLine("objects:");
+		var objects = new List<PackageObjectSpec>();
 		foreach (var (selection, obj) in selections)
 		{
-			var excluded = selection.ExcludedAttributes.ToHashSet(StringComparer.OrdinalIgnoreCase);
-			body.AppendLine($"  - ref: {selection.Ref}");
-			body.AppendLine($"    type: {obj.Type.ToLowerInvariant()}");
-			body.AppendLine($"    name: {QuoteYaml(obj.Name)}");
+			if (!Enum.TryParse<PackageObjectType>(obj.Type, ignoreCase: true, out var type))
+			{
+				return new Error<string>($"'{obj.Objid}' has type '{obj.Type}', which a package cannot create.");
+			}
 
+			PackageRef? parent = null;
 			if (obj.ParentObjid is not null)
 			{
 				var parentNumber = DbrefNumber(obj.ParentObjid);
-				if (parentNumber is not null && tokenByNumber.TryGetValue(parentNumber.Value, out var parentToken))
-				{
-					body.AppendLine($"    parent: \"{parentToken}\"");
-				}
-				else
+				if (parentNumber is null || !tokenByNumber.TryGetValue(parentNumber.Value, out var parentToken))
 				{
 					unresolved.Add($"#{parentNumber} (parent of {{{{{selection.Ref}}}}})");
 				}
-			}
-
-			if (obj.Flags.Count > 0)
-			{
-				body.AppendLine($"    flags: [{string.Join(", ", obj.Flags.Select(f => f.ToLowerInvariant()))}]");
-			}
-
-			var included = obj.Attributes
-				.Where(a => !excluded.Contains(a.Key) && !a.Key.Contains(' '))
-				.OrderBy(a => a.Key, StringComparer.Ordinal)
-				.ToList();
-			if (included.Count > 0)
-			{
-				body.AppendLine("    attributes:");
-				foreach (var (attrName, value) in included)
+				else
 				{
-					body.AppendLine($"      {attrName}:");
-					var tokenized = Tokenize(value).Replace("\r\n", "\n");
-					// Empty or leading/trailing-whitespace single-line values cannot ride in
-					// a literal block scalar: YamlDotNet can't anchor indentation on an
-					// all-blank line (it rejects the manifest with "extra spaces in first
-					// line"), and leading whitespace would be silently lost. Carry those as a
-					// single-quoted scalar, which preserves whitespace exactly. Everything
-					// else stays a block scalar so MUSHcode diffs stay readable.
-					if (!tokenized.Contains('\n')
-						&& (tokenized.Length == 0
-							|| char.IsWhiteSpace(tokenized[0])
-							|| char.IsWhiteSpace(tokenized[^1])))
-					{
-						body.AppendLine($"        value: {QuoteYaml(tokenized)}");
-					}
-					else
-					{
-						body.AppendLine("        value: |-");
-						var text = tokenized.AsSpan();
-						foreach (var line in text.Split('\n'))
-						{
-							body.Append("          ").Append(text[line]).AppendLine();
-						}
-					}
+					parent = PackageRefScanner.ParseSingle(parentToken);
 				}
 			}
+
+			var excluded = selection.ExcludedAttributes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+			var attributes = new Dictionary<string, PackageAttributeSpec>(StringComparer.OrdinalIgnoreCase);
+			foreach (var (attrName, value) in obj.Attributes
+				.Where(a => !excluded.Contains(a.Key) && !a.Key.Contains(' '))
+				.OrderBy(a => a.Key, StringComparer.Ordinal))
+			{
+				attributes[attrName] = new PackageAttributeSpec(Tokenize(value), []);
+			}
+
+			objects.Add(new PackageObjectSpec(
+				selection.Ref, type, obj.Name, null, parent, null, null,
+				[], obj.Flags.Select(f => f.ToLowerInvariant()).ToList(), [],
+				new Dictionary<string, string>(), attributes));
 		}
 
 		if (unresolved.Count > 0)
@@ -226,25 +183,35 @@ public partial class PackageAuthoringService(
 				$"Unclassified dbref(s): {string.Join(", ", unresolved)}. Classify each as a well-known ref or a configure parameter — manifests never carry dbrefs.");
 		}
 
-		if (usedConfigure.Count > 0)
+		if (!PackageVersion.TryParse(request.Version, out var version))
 		{
-			yaml.AppendLine();
-			yaml.AppendLine("configure:");
-			foreach (var configure in usedConfigure.Values.OrderBy(c => c.Key, StringComparer.Ordinal))
-			{
-				yaml.AppendLine($"  {configure.Key}:");
-				yaml.AppendLine($"    label: {QuoteYaml(configure.Label)}");
-				yaml.AppendLine("    type: dbref");
-			}
+			return new Error<string>($"'{request.Version}' is not a valid package version.");
 		}
 
-		yaml.AppendLine();
-		yaml.Append(body);
+		var manifest = new PackageManifest(
+			PackageFormatVersion.Supported,
+			request.PackageId,
+			version,
+			request.Authors,
+			request.Description,
+			request.License,
+			null,
+			[],
+			null,
+			null,
+			null,
+			[],
+			[],
+			usedConfigure.Values
+				.OrderBy(c => c.Key, StringComparer.Ordinal)
+				.ToDictionary(c => c.Key, c => new PackageConfigureSpec(c.Key, c.Label), StringComparer.Ordinal),
+			objects);
 
-		// Round-trip through the parser: the exporter must never emit an invalid manifest.
-		var document = yaml.ToString();
-		var validation = manifests.ParseManifest(document);
-		return validation switch
+		// The writer covers every field the reader reads, but the manifest is also built from live
+		// game state, so parse it back: an object whose name or attribute value cannot survive the
+		// schema is an export failure, not something to hand the admin.
+		var document = PackageManifestWriter.Write(manifest);
+		return manifests.ParseManifest(document) switch
 		{
 			ParsedPackageManifest => document,
 			PackageManifestFailure failure => new Error<string>(
@@ -309,5 +276,4 @@ public partial class PackageAuthoringService(
 		return slug.Length == 0 ? "object" : char.IsLetter(slug[0]) || slug[0] == '_' ? slug : $"_{slug}";
 	}
 
-	private static string QuoteYaml(string text) => $"'{text.Replace("'", "''")}'";
 }
