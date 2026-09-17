@@ -98,14 +98,7 @@ public class SharedResourceLocalizationTests
 	{
 		var loc = PortalLocalizer.Create();
 
-		IPortalWidget[] descriptors =
-		[
-			new QuickLinksWidgetDescriptor(), new WelcomeTextWidgetDescriptor(),
-			new SpacerWidgetDescriptor(), new WikiBodyWidgetDescriptor(),
-			new CharacterGalleryWidgetDescriptor(), new SchemaWidgetDescriptor()
-		];
-
-		var missing = descriptors
+		var missing = BuiltInWidgets.All
 			.SelectMany(d => WidgetConfigSchema.Describe(d.ConfigType))
 			.SelectMany(f => f.Children.Prepend(f))
 			.Select(f => f.DescriptionKey)

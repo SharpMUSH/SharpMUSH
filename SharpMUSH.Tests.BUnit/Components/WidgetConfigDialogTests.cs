@@ -21,9 +21,9 @@ public class WidgetConfigDialogTests : BunitContext
 	public WidgetConfigDialogTests()
 	{
 		var registry = new WidgetRegistry();
-		registry.Register(new WikiBodyWidgetDescriptor());
-		registry.Register(new QuickLinksWidgetDescriptor());
-		registry.Register(new StatsWidgetDescriptor());
+		registry.Register(BuiltInWidgets.Named("WikiBody"));
+		registry.Register(BuiltInWidgets.Named("QuickLinks"));
+		registry.Register(BuiltInWidgets.Named("Stats"));
 
 		Services.AddMudServices();
 		Services.AddSingleton<IWidgetRegistry>(registry);

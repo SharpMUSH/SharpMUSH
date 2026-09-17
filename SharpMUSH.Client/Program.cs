@@ -75,19 +75,10 @@ builder.Services.AddSingleton<DatabaseConversionService>();
 builder.Services.AddSingleton<IThemeService, ThemeService>();
 
 var registry = new WidgetRegistry();
-registry.Register(new QuickLinksWidgetDescriptor());
-registry.Register(new WelcomeTextWidgetDescriptor());
-registry.Register(new CharacterDirectoryWidgetDescriptor());
-registry.Register(new CharacterGalleryWidgetDescriptor());
-registry.Register(new WikiIndexWidgetDescriptor());
-registry.Register(new WikiBodyWidgetDescriptor());
-registry.Register(new SpacerWidgetDescriptor());
-registry.Register(new StatsWidgetDescriptor());
-registry.Register(new ActiveSceneWidgetDescriptor());
-registry.Register(new RecentWikiActivityWidgetDescriptor());
-registry.Register(new OnlineCharactersWidgetDescriptor());
-registry.Register(new QuickstartWidgetDescriptor());
-registry.Register(new SchemaWidgetDescriptor());
+foreach (var widget in BuiltInWidgets.All)
+{
+	registry.Register(widget);
+}
 
 // Where the server's API lives: same origin as the app itself unless configuration says otherwise
 // (the dev launch profile splits the client on http:8080 from the API on https:8081 and opts in via

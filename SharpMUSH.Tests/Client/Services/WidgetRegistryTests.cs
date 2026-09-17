@@ -18,7 +18,7 @@ public class WidgetRegistryTests
 	public async Task Register_ThenGetWidget_ReturnsDescriptor()
 	{
 		var registry = MakeRegistry();
-		var descriptor = new QuickLinksWidgetDescriptor();
+		var descriptor = BuiltInWidgets.Named("QuickLinks");
 
 		registry.Register(descriptor);
 		var result = registry.GetWidget("QuickLinks");
@@ -31,8 +31,8 @@ public class WidgetRegistryTests
 	public async Task Register_OverwritesExistingEntry_WithSameName()
 	{
 		var registry = MakeRegistry();
-		var first = new QuickLinksWidgetDescriptor();
-		var second = new QuickLinksWidgetDescriptor();
+		var first = BuiltInWidgets.Named("QuickLinks");
+		var second = BuiltInWidgets.Named("QuickLinks");
 
 		registry.Register(first);
 		registry.Register(second);
@@ -74,7 +74,7 @@ public class WidgetRegistryTests
 	public async Task GetWidget_IsCaseSensitive()
 	{
 		var registry = MakeRegistry();
-		registry.Register(new QuickLinksWidgetDescriptor());
+		registry.Register(BuiltInWidgets.Named("QuickLinks"));
 
 		// Ordinal comparison — lowercase does not resolve to the registered descriptor; it falls back
 		// to a synthetic application widget keyed by the requested (lowercase) name.
@@ -96,8 +96,8 @@ public class WidgetRegistryTests
 	public async Task GetAllWidgets_ReturnsAllRegisteredWidgets()
 	{
 		var registry = MakeRegistry();
-		registry.Register(new QuickLinksWidgetDescriptor());
-		registry.Register(new WelcomeTextWidgetDescriptor());
+		registry.Register(BuiltInWidgets.Named("QuickLinks"));
+		registry.Register(BuiltInWidgets.Named("WelcomeText"));
 
 		var result = registry.GetAllWidgets();
 		await Assert.That(result.Count).IsEqualTo(2);
@@ -107,8 +107,8 @@ public class WidgetRegistryTests
 	public async Task GetWidgetsForZone_ReturnsOnlyWidgetsAllowedInZone()
 	{
 		var registry = MakeRegistry();
-		registry.Register(new QuickLinksWidgetDescriptor());
-		registry.Register(new WelcomeTextWidgetDescriptor());
+		registry.Register(BuiltInWidgets.Named("QuickLinks"));
+		registry.Register(BuiltInWidgets.Named("WelcomeText"));
 
 		var topBar = registry.GetWidgetsForZone(WidgetZone.TopBar);
 		var mainContent = registry.GetWidgetsForZone(WidgetZone.MainContent);
@@ -124,7 +124,7 @@ public class WidgetRegistryTests
 	public async Task GetWidgetsForZone_ZoneWithNoWidgets_ReturnsEmpty()
 	{
 		var registry = MakeRegistry();
-		registry.Register(new WelcomeTextWidgetDescriptor());
+		registry.Register(BuiltInWidgets.Named("WelcomeText"));
 
 		var result = registry.GetWidgetsForZone(WidgetZone.Footer);
 		await Assert.That(result.Count).IsEqualTo(0);
@@ -134,7 +134,7 @@ public class WidgetRegistryTests
 	public async Task GetWidgetsForZone_AllZones_QuickLinksAllowed()
 	{
 		var registry = MakeRegistry();
-		registry.Register(new QuickLinksWidgetDescriptor());
+		registry.Register(BuiltInWidgets.Named("QuickLinks"));
 
 		var zones = new[] { WidgetZone.TopBar, WidgetZone.LeftSidebar, WidgetZone.RightSidebar, WidgetZone.Footer };
 		var results = zones.Select(z => registry.GetWidgetsForZone(z)).ToList();

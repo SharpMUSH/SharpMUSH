@@ -166,11 +166,11 @@ file static class WikiServiceSetup
 		// (HTTP-backed) layout service; the in-memory handler 404s /api/layouts/* so each scope falls
 		// back to its code default.
 		var registry = new WidgetRegistry();
-		registry.Register(new QuickLinksWidgetDescriptor());
-		registry.Register(new WelcomeTextWidgetDescriptor());
-		registry.Register(new CharacterGalleryWidgetDescriptor());
-		registry.Register(new WikiIndexWidgetDescriptor());
-		registry.Register(new WikiBodyWidgetDescriptor());
+		registry.Register(BuiltInWidgets.Named("QuickLinks"));
+		registry.Register(BuiltInWidgets.Named("WelcomeText"));
+		registry.Register(BuiltInWidgets.Named("CharacterGallery"));
+		registry.Register(BuiltInWidgets.Named("WikiIndex"));
+		registry.Register(BuiltInWidgets.Named("WikiBody"));
 		ctx.Services
 				.AddSingleton<IWidgetRegistry>(registry)
 				.AddSingleton<ILayoutService>(sp => new LayoutService(
