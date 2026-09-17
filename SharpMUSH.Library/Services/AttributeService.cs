@@ -345,6 +345,16 @@ public class AttributeService(
 		return chain;
 	}
 
+	/// <inheritdoc/>
+	/// <remarks>
+	/// The eager twin of this method, line for line, apart from the element type and the two write
+	/// modes it does not serve. The duplication is deliberate rather than collapsed behind a
+	/// type-shape abstraction: this is the server's hottest read path, the two bodies are the
+	/// PennMUSH <c>can_read_attr_internal</c> walk with its citations attached, and a generic
+	/// rewrite would trade a readable ninety lines for indirection over the query type, the
+	/// permission overload, the ancestor fetch and the return union — while hiding exactly the
+	/// asymmetry documented on the interface.
+	/// </remarks>
 	public async ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute,
 		IAttributeService.AttributeMode mode, bool parent = true)

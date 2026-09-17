@@ -23,6 +23,16 @@ public interface IAttributeService
 
 	ValueTask<OptionalSharpAttributeOrError> GetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributeMode mode, bool parent = true);
 
+	/// <summary>
+	/// As <see cref="GetAttributeAsync"/>, but yielding attributes whose values are fetched only when
+	/// read — for a caller that wants an attribute's flags or name and not its text.
+	/// </summary>
+	/// <param name="mode">
+	/// <see cref="AttributeMode.Read"/> or <see cref="AttributeMode.Execute"/> only. The two write
+	/// modes throw: a write needs the value it is gating, so deferring it buys nothing, and
+	/// <see cref="GetAttributeAsync"/> is the call for them. Both production callers ask for
+	/// <see cref="AttributeMode.Read"/>.
+	/// </param>
 	ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, AttributeMode mode, bool parent = true);
 
 	ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor, AnySharpObject obj, string attribute, MString value);
