@@ -444,6 +444,46 @@ public class SpeechCommandParityTests
 		}
 	}
 
+	// next_in_list ends an unquoted name only at a space, and parse_dbref (parse.c:130-133) rejects
+	// `#12Lamp` outright, so the whole token is one unmatched name. It must not be read as `#12` then
+	// `Lamp`, which would whisper to two objects nobody named.
+	[Test]
+	public async ValueTask Whisper_DbrefPrefixedTokenIsOneUnmatchedName()
+	{
+		var lamp = await ThingInTheRoom("Lamp");
+		var token = $"#{_listener.DbRef.Number}Lamp";
+		var (mine, theirs) = await Speak($"whisper {token}=hi");
+		await Assert.That(mine).Contains($"Unable to whisper to: {token}");
+		await Assert.That(mine).DoesNotContain($"You whisper, \"hi\" to {await NameOf(_listener.DbRef)} and Lamp.");
+		await Assert.That(theirs).DoesNotContain($"{_speakerName} whispers to {await NameOf(_listener.DbRef)} and Lamp: hi");
+		await Assert.That(Notifications.For(lamp).Any(line => line.Contains(" whispers"))).IsFalse();
+	}
+
+	// MAT_CONTAINER lets the whisperer name the room it stands in. speech.c:449-450 then compares
+	// Location(room) — its drop-to, NOTHING here — with the whisperer's location, so the room is never
+	// "in" the whisperer's location and the whisper stays private however loud it is.
+	[Test]
+	public async ValueTask NoisyWhisper_ToTheRoomItself_IsNeverOverheard()
+	{
+		using var loud = TestOptionsOverride.Scope(options => options with
+		{
+			Limit = options.Limit with { WhisperLoudness = 101 }
+		});
+		var roomName = $"SpeechParity{_speaker.DbRef.Number}";
+		var (bystander, listenerName) = (await Bystander(), await NameOf(_listener.DbRef));
+		try
+		{
+			var (mine, _) = await Speak($"whisper/noisy {roomName} {listenerName}=hi");
+			await Assert.That(mine).Contains($"You whisper, \"hi\" to {roomName} and {listenerName}.");
+			await Assert.That(Notifications.For(bystander.DbRef))
+				.DoesNotContain($"{_speakerName} whispers to {roomName} and {listenerName}.");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(bystander.Handle);
+		}
+	}
+
 	private async Task<TestIsolationHelpers.TestPlayer> Bystander()
 	{
 		var bystander = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(

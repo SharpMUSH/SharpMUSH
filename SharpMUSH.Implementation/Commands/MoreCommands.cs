@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Buffers;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Common;
@@ -2752,6 +2753,52 @@ public partial class Commands
 	/// <summary>speech.c: <c>dbref good[100]</c>.</summary>
 	private const int MaxWhisperTargets = 100;
 
+	private static readonly SearchValues<char> WhisperNameBreaks = SearchValues.Create(" \"");
+
+	/// <summary>
+	/// strutil.c <c>next_in_list</c>: spaces separate names, a leading <c>"</c> takes everything up to
+	/// the next <c>"</c> as one name, and an unquoted name also stops at a <c>"</c>. Nothing else splits
+	/// a name — <c>#12Lamp</c> is one token, which <c>parse_dbref</c> then refuses as a whole.
+	/// </summary>
+	private static IEnumerable<string> WhisperTargetNames(string list)
+	{
+		var head = 0;
+		while (true)
+		{
+			while (head < list.Length && list[head] == ' ') head++;
+			if (head >= list.Length) yield break;
+
+			if (list[head] == '"')
+			{
+				var close = list.IndexOf('"', head + 1);
+				var end = close < 0 ? list.Length : close;
+				var quoted = list[(head + 1)..end];
+				head = close < 0 ? list.Length : close + 1;
+				if (quoted.Length > 0) yield return quoted;
+				continue;
+			}
+
+			var stop = list.AsSpan(head).IndexOfAny(WhisperNameBreaks);
+			var next = stop < 0 ? list.Length : head + stop;
+			yield return list[head..next];
+			head = next;
+		}
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>Location()</c>, which reads the raw location field: a room's is its drop-to and an
+	/// exit's its destination, where <see cref="AnySharpObject.Where"/> would answer with the room itself
+	/// or the exit's source.
+	/// </summary>
+	private static async ValueTask<bool> LocatedIn(AnySharpObject target, DBRef location) => target switch
+	{
+		SharpRoom room => await room.Location.WithCancellation(CancellationToken.None) is AnySharpContainer dropTo
+											&& dropTo.Object().DBRef.Equals(location),
+		SharpExit exit => await exit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
+											&& destination.Object().DBRef.Equals(location),
+		SharpPlayer or SharpThing => (await target.Where()).Object().DBRef.Equals(location)
+	};
+
 	[SharpCommand(Name = "WHISPER", Switches = ["LIST", "NOISY", "SILENT", "NOEVAL"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["player", "message"])]
 	public async ValueTask<Option<CallState>> Whisper(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -2812,7 +2859,7 @@ public partial class Commands
 		// nothing, or an object that cannot hear the whisperer, lands in one `Unable to whisper to:`
 		// line — the deaf one also gets its own `can't hear you` — and the hundredth good target ends
 		// the scan.
-		foreach (var targetName in ArgHelpers.NameListString(targetArg.ToPlainText()))
+		foreach (var targetName in WhisperTargetNames(targetArg.ToPlainText()))
 		{
 			var found = await LocateService.Locate(parser, executor, executor, targetName, WhisperTargetFlags);
 			if (found is not AnySharpObject target
@@ -2859,7 +2906,7 @@ public partial class Commands
 										&& !await executor.IsDark()
 										&& successfulTargets.Any(_ => Random.Shared.Next(0, 101) < loudness)
 										&& await successfulTargets.ToAsyncEnumerable().AllAsync(async (target, _)
-											=> (await target.Where()).Object().DBRef.Equals(executorLocation.Object().DBRef));
+											=> await LocatedIn(target, executorLocation.Object().DBRef));
 		var messageText = messageArg.ToPlainText();
 
 		// PennMUSH do_whisper (src/speech.c) reads the message type off the first character exactly as
