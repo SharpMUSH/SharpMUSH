@@ -44,8 +44,8 @@ public class PermissionService(
 	// operation being performed is clearing AF_SAFE itself off the attribute
 	// (`(af->clrf & AF_SAFE) && Can_Write_Attr_Ignore_Safe(...)`). Every other write, including
 	// setting or unsetting any OTHER attribute flag, still goes through the normal safe-obeying
-	// check. AttributeService.UnsetAttributeFlagAsync is the one caller: it uses this overload
-	// only when the flag being unset is SAFE, and CanSet (obeying safe) for everything else.
+	// check. AttributeFlagWriter.ApplyAsync is the one caller: it uses this overload when the
+	// batch clears SAFE, and CanSet (obeying safe) for every other batch.
 	public async ValueTask<bool> CanSetIgnoringSafe(AnySharpObject executor, AnySharpObject target, params SharpAttribute[] attribute)
 		=> await CanSetInternal(executor, target, attribute, obeySafe: false);
 

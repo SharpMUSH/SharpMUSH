@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -303,5 +303,39 @@ public class AttributeFlagArgumentTests
 
 		await Assert.That(await HasFlag(obj, $"FD{uid}", "wizard")).IsTrue()
 			.Because("clrf is applied before setf, so a flag in both halves survives the batch");
+	}
+	/// <summary>
+	/// <c>af_helper</c> (<c>src/set.c:509-511</c>) picks its write gate from the batch as a whole:
+	/// <c>Can_Write_Attr_Ignore_Safe</c> when the batch clears <c>SAFE</c> itself, and the normal
+	/// safe-obeying <c>Can_Write_Attr</c> otherwise. Driven by a mortal on purpose - God short-circuits
+	/// <c>CanSetInternal</c> before <c>obeySafe</c> is ever read (<c>PermissionService.cs:61</c>), so
+	/// the same commands from <c>#1</c> would pass whichever way the gate went.
+	/// </summary>
+	[Test]
+	public async ValueTask ClearingSafeInTheSameBatch_IsTheOneCaseThatIgnoresSafe()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var mortal = await CreateOwner("FlagArgSafe");
+
+		await ParserFor(mortal).CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"&FS{uid} me=value"));
+		await ParserFor(mortal).CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@set me/FS{uid}=safe"));
+
+		await Assert.That(await HasFlag(mortal.DbRef, $"FS{uid}", "safe")).IsTrue()
+			.Because("precondition: safe must be on the attribute for the gate to have anything to obey");
+
+		// A batch that does NOT clear safe still obeys it, so nothing changes.
+		await ParserFor(mortal).CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@set me/FS{uid}=regexp"));
+
+		await Assert.That(await HasFlag(mortal.DbRef, $"FS{uid}", "regexp")).IsFalse()
+			.Because("Can_Write_Attr obeys AF_SAFE for every batch that does not clear it");
+
+		// The same flag, in a batch that clears safe, goes through Can_Write_Attr_Ignore_Safe -
+		// and BOTH halves land, because the fallback covers the whole batch, not just the !safe token.
+		await ParserFor(mortal).CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@set me/FS{uid}=!safe regexp"));
+
+		await Assert.That(await HasFlag(mortal.DbRef, $"FS{uid}", "safe")).IsFalse()
+			.Because("!safe is the one case af_helper drops to the safe-ignoring gate for");
+		await Assert.That(await HasFlag(mortal.DbRef, $"FS{uid}", "regexp")).IsTrue()
+			.Because("the fallback gate covers the whole batch, not only the token that triggered it");
 	}
 }
