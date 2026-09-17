@@ -37,4 +37,24 @@ public class NameList
 			.That(result.Single().Expect<DBRef>())
 			.IsEquatableOrEqualTo(new DBRef(expectedDbRef, expectedTimestamp));
 	}
+
+	// parse_dbref (parse.c:128-133) accepts only a whole `#nnn` token, so a dbref-shaped prefix does not
+	// split a word: `#12Lamp` is one name, not `#12` followed by `Lamp`.
+	[Test]
+	[Arguments("#12Lamp")]
+	[Arguments("#1:999x")]
+	public async Task DbRefPrefixedWordIsOneName(string str)
+	{
+		await Assert.That(ArgHelpers.NameList(str).Single().Expect<string>()).IsEqualTo(str);
+		await Assert.That(ArgHelpers.NameListString(str).Single()).IsEqualTo(str);
+	}
+
+	[Test]
+	public async Task DbRefFollowedByANameIsTwoEntries()
+	{
+		var result = ArgHelpers.NameList("#1 God").ToList();
+
+		await Assert.That(result[0].Expect<DBRef>()).IsEquatableOrEqualTo(new DBRef(1));
+		await Assert.That(result[1].Expect<string>()).IsEqualTo("God");
+	}
 }
