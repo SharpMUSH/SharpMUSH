@@ -24,46 +24,15 @@ namespace SharpMUSH.Tests.Server.Controllers;
 public class WikiControllerVisibilityTests
 {
 	/// <summary>
-	/// Builds a controller for a caller. <paramref name="canReadDrafts"/> grants the wiki.read scope
-	/// (any Player+ member by default); when false and <paramref name="callerDbref"/> is set, the
-	/// caller is authenticated but only sees drafts they authored. Pass authenticated: false for an
-	/// anonymous caller.
+	/// Builds the wiki endpoints for a caller. <paramref name="canReadDrafts"/> grants the wiki.read
+	/// scope (any Player+ member by default); when false and <paramref name="callerDbref"/> is set,
+	/// the caller is authenticated but only sees drafts they authored. Pass authenticated: false for
+	/// an anonymous caller.
 	/// </summary>
-	private static WikiController MakeController(
-		InMemoryWikiService wiki, bool authenticated, bool canReadDrafts = true, string callerDbref = "#42")
-	{
-		var monitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
-		monitor.CurrentValue.Returns(TestSharpMushOptions.Create());
-		var controller = new WikiController(
-			wiki,
-			new WikiLocalizationService(
-				wiki, new WikiLocaleResolver(monitor), NullLogger<WikiLocalizationService>.Instance),
-			Substitute.For<IPrerenderCacheService>(),
-			NullLogger<WikiController>.Instance);
-
-		// An identity without an authentication type reports IsAuthenticated == false.
-		ClaimsIdentity identity;
-		if (!authenticated)
-		{
-			identity = new ClaimsIdentity();
-		}
-		else
-		{
-			var claims = new List<Claim> { new(GameHub.CharacterDbrefClaim, callerDbref) };
-			if (canReadDrafts)
-				claims.Add(new Claim(PortalPermission.ClaimType, PortalPermission.WikiRead));
-			identity = new ClaimsIdentity(claims, "test");
-		}
-
-		controller.ControllerContext = new ControllerContext
-		{
-			HttpContext = new DefaultHttpContext
-			{
-				User = new ClaimsPrincipal(identity)
-			}
-		};
-		return controller;
-	}
+	private static WikiEndpoints MakeEndpoints(
+		InMemoryWikiService wiki, bool authenticated, bool canReadDrafts = true, string callerDbref = "#42") =>
+		WikiControllerTestHarness.Build(wiki, authenticated, callerDbref,
+			canReadDrafts ? [PortalPermission.WikiRead] : []).Wiki;
 
 	private static async Task<(InMemoryWikiService Wiki, string Slug)> SeedUnpublishedPage()
 	{
@@ -77,9 +46,9 @@ public class WikiControllerVisibilityTests
 	public async Task GetPage_Unpublished_Anonymous_Returns404()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
-		var controller = MakeController(wiki, authenticated: false);
+		var endpoints = MakeEndpoints(wiki, authenticated: false);
 
-		var result = await controller.GetPage("main", "general", slug);
+		var result = await endpoints.Pages.GetPage("main", "general", slug);
 
 		await Assert.That(result).IsTypeOf<NotFoundResult>();
 	}
@@ -88,9 +57,9 @@ public class WikiControllerVisibilityTests
 	public async Task GetPage_Unpublished_Authenticated_Returns200()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
-		var controller = MakeController(wiki, authenticated: true);
+		var endpoints = MakeEndpoints(wiki, authenticated: true);
 
-		var result = await controller.GetPage("main", "general", slug);
+		var result = await endpoints.Pages.GetPage("main", "general", slug);
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}
@@ -100,9 +69,9 @@ public class WikiControllerVisibilityTests
 	{
 		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
 		var created = (await wiki.CreateAsync("Public Page", "# public", "#1")).Expect<WikiPage>();
-		var controller = MakeController(wiki, authenticated: false);
+		var endpoints = MakeEndpoints(wiki, authenticated: false);
 
-		var result = await controller.GetPage("main", "general", created.Slug);
+		var result = await endpoints.Pages.GetPage("main", "general", created.Slug);
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}
@@ -111,9 +80,9 @@ public class WikiControllerVisibilityTests
 	public async Task GetRecentChanges_Anonymous_ExcludesUnpublished()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
-		var controller = MakeController(wiki, authenticated: false);
+		var endpoints = MakeEndpoints(wiki, authenticated: false);
 
-		var result = await controller.GetRecentChanges();
+		var result = await endpoints.Browse.GetRecentChanges();
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
@@ -125,9 +94,9 @@ public class WikiControllerVisibilityTests
 	public async Task GetRecentChanges_Authenticated_IncludesUnpublished()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
-		var controller = MakeController(wiki, authenticated: true);
+		var endpoints = MakeEndpoints(wiki, authenticated: true);
 
-		var result = await controller.GetRecentChanges();
+		var result = await endpoints.Browse.GetRecentChanges();
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
@@ -139,9 +108,9 @@ public class WikiControllerVisibilityTests
 	public async Task ListNamespacePages_Anonymous_ExcludesUnpublished()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
-		var controller = MakeController(wiki, authenticated: false);
+		var endpoints = MakeEndpoints(wiki, authenticated: false);
 
-		var result = await controller.ListNamespacePages("main");
+		var result = await endpoints.Browse.ListNamespacePages("main");
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
@@ -157,16 +126,16 @@ public class WikiControllerVisibilityTests
 		// because the only count available was the drafts-inclusive one.
 		var (wiki, slug) = await SeedUnpublishedPage();
 		await wiki.CreateAsync("Public Page", "# public", "#1");
-		var controller = MakeController(wiki, authenticated: false);
+		var endpoints = MakeEndpoints(wiki, authenticated: false);
 
-		var result = await controller.ListAllPages();
+		var result = await endpoints.Browse.ListAllPages();
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
 		var pages = ((IEnumerable<WikiPageDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsFalse();
 
-		var header = controller.Response.Headers["X-Total-Count"].ToString();
+		var header = endpoints.Browse.Response.Headers["X-Total-Count"].ToString();
 		await Assert.That(header)
 			.IsEqualTo("1")
 			.Because("a total that counted the draft would let an anonymous caller difference it "
@@ -181,16 +150,16 @@ public class WikiControllerVisibilityTests
 		// while blinding the one caller entitled to see them.
 		var (wiki, slug) = await SeedUnpublishedPage();
 		await wiki.CreateAsync("Public Page", "# public", "#1");
-		var controller = MakeController(wiki, authenticated: true);
+		var endpoints = MakeEndpoints(wiki, authenticated: true);
 
-		var result = await controller.ListAllPages();
+		var result = await endpoints.Browse.ListAllPages();
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
 		var pages = ((IEnumerable<WikiPageDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsTrue();
 
-		var header = controller.Response.Headers["X-Total-Count"].ToString();
+		var header = endpoints.Browse.Response.Headers["X-Total-Count"].ToString();
 		await Assert.That(header).IsEqualTo("2");
 	}
 
@@ -198,9 +167,9 @@ public class WikiControllerVisibilityTests
 	public async Task GetPage_Unpublished_Author_Returns200_EvenWithoutWikiRead()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
-		var controller = MakeController(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#1");
+		var endpoints = MakeEndpoints(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#1");
 
-		var result = await controller.GetPage("main", "general", slug);
+		var result = await endpoints.Pages.GetPage("main", "general", slug);
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}
@@ -209,9 +178,9 @@ public class WikiControllerVisibilityTests
 	public async Task GetPage_Unpublished_AuthenticatedNonAuthorWithoutWikiRead_Returns404()
 	{
 		var (wiki, slug) = await SeedUnpublishedPage();
-		var controller = MakeController(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#99");
+		var endpoints = MakeEndpoints(wiki, authenticated: true, canReadDrafts: false, callerDbref: "#99");
 
-		var result = await controller.GetPage("main", "general", slug);
+		var result = await endpoints.Pages.GetPage("main", "general", slug);
 
 		await Assert.That(result).IsTypeOf<NotFoundResult>();
 	}
