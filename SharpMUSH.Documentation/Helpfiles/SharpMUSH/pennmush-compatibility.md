@@ -150,7 +150,9 @@ Not yet at parity; may change in a future release.
   place, so that list starts from the triggering command's `%c`/`%u` instead of
   empty ones. A lock evaluated for a `$`-command sees neither. `%u` also shows
   the value of `&attr obj=value` and `@attr obj=value` as written, where
-  PennMUSH shows it evaluated in a queued list.
+  PennMUSH shows it evaluated in a queued list, and a computed `&` attribute
+  name as written (`ATTRIB_SET/[CAT(F,OO)]`), where PennMUSH shows the name it
+  evaluated to (`ATTRIB_SET/FOO`).
 - **Characters above U+FFFF** (emoji and other supplementary-plane characters)
   are stored as UTF-16 surrogate pairs. This is internally consistent, but a
   substitution or slice that lands between the two halves of a pair could split
