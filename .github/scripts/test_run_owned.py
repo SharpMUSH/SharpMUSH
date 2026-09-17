@@ -11,7 +11,8 @@ SCRIPT = Path(__file__).with_name("run_owned.py")
 
 # One attempt: records its number, how many processes of earlier attempts are still alive, then
 # starts a child that ignores SIGTERM and a double-forked daemon in its own session, all logging
-# progress, and either exits or runs until stopped.
+# progress, and either exits or runs until stopped. Each creates its progress file before its pid
+# is published, so a tree stopped the moment every pid is visible still has files to measure.
 FIXTURE = r"""
 d=$1
 n=$(( $(cat "$d/attempts" 2>/dev/null || echo 0) + 1 ))
@@ -20,8 +21,8 @@ alive=0
 for p in $(cat "$d/pids" 2>/dev/null); do kill -0 "$p" 2>/dev/null && alive=$((alive + 1)); done
 echo "$alive" > "$d/alive-at-attempt-$n"
 echo $$ >> "$d/pids"
-sh -c 'trap "" TERM; echo $$ >> "$1/pids"; while :; do echo tick >> "$1/child"; sleep 0.05; done' child "$d" &
-( setsid sh -c 'echo $$ >> "$1/pids"; while :; do echo tick >> "$1/daemon"; sleep 0.05; done' daemon "$d" & )
+sh -c 'trap "" TERM; : >> "$1/child"; echo $$ >> "$1/pids"; while :; do echo tick >> "$1/child"; sleep 0.05; done' child "$d" &
+( setsid sh -c ': >> "$1/daemon"; echo $$ >> "$1/pids"; while :; do echo tick >> "$1/daemon"; sleep 0.05; done' daemon "$d" & )
 while [ "$(wc -l < "$d/pids")" -lt $((n * 3)) ]; do sleep 0.02; done
 [ "$n" -ge "${SUCCEED_ON:-99}" ] && exit "${EXIT_WITH:-0}"
 [ -n "$FAIL_WITH" ] && exit "$FAIL_WITH"

@@ -52,7 +52,8 @@ public partial class Functions
 			FunctionRecursionDepths = parent.FunctionRecursionDepths,
 			LimitExceeded = parent.LimitExceeded,
 			ExecutionBudget = ExecutionBudget.Current ?? parent.ExecutionBudget,
-			Restrictions = EvaluationRestrictions.Current
+			Restrictions = EvaluationRestrictions.Current,
+			OutputLimit = parent.OutputLimit
 		};
 		return await parser.FromState(state).FunctionParse(args["1"].Message ?? MarkupText.Empty) ?? CallState.Empty;
 	}

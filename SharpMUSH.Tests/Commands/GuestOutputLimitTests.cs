@@ -63,6 +63,31 @@ public class GuestOutputLimitTests
 		await Assert.That(said).StartsWith(ErrorMessages.Returns.OutputTooLarge);
 	}
 
+	// Arguments are evaluated under the caller's state, but code a function parses itself (a
+	// lambda's body, an iter pattern rewritten for ##) runs under the state pushed for that call.
+	// The oversized value stays in a register, so no caller's result check sees it.
+	[Test]
+	[Arguments("u(#lambda/setq(0,repeat(x,{0})))")]
+	[Arguments("iter(1,setq(0,repeat(x,{0}))[null(##)])")]
+	public async Task Guest_ParsedFunctionBody_KeepsTheGuestLimit(string body)
+	{
+		var guest = await PlayerAsync("OutLimitGuestNested", guest: true);
+
+		var said = await ThinkAs(guest, $"[null({string.Format(body, GuestLimit + 1)})][left(%q0,4)]");
+
+		await Assert.That(said).StartsWith(ErrorMessages.Returns.OutputTooLarge);
+	}
+
+	[Test]
+	public async Task Guest_RestrictedExpression_KeepsTheGuestLimit()
+	{
+		var guest = await PlayerAsync("OutLimitGuestRestricted", guest: true);
+
+		var said = await ThinkAs(guest, $"restrictedexpr(space strlen,strlen(space({GuestLimit + 1})))");
+
+		await Assert.That(said).StartsWith(ErrorMessages.Returns.OutputTooLarge);
+	}
+
 	[Test]
 	public async Task Guest_OutputAtTheGuestLimit_IsAllowed()
 	{
