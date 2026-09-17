@@ -147,9 +147,7 @@ file static class AdminAccountsTestServices
 						sp.GetRequiredService<IHttpClientFactory>(),
 						sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 						NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()))
-				.AddSingleton(sp => new AdminAccountsService(
-						sp.GetRequiredService<IHttpClientFactory>(),
-						sp.GetRequiredService<AccountAuthService>()))
+				.AddSingleton(sp => new AdminAccountsService(sp.GetRequiredService<IHttpClientFactory>()))
 				.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;

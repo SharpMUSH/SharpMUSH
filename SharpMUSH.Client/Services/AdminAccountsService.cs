@@ -1,62 +1,43 @@
-using System.Net.Http.Json;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 
-/// <summary>Typed client for the admin accounts API (account-session bearer).</summary>
-public class AdminAccountsService(IHttpClientFactory httpClientFactory, AccountAuthService accountAuth)
+/// <summary>Typed client for the admin accounts API.</summary>
+/// <remarks>
+/// It does not build its own <c>Authorization</c> header. The <c>"api"</c> client's
+/// <see cref="AccountSessionBearerHandler"/> attaches the account-session bearer and hydrates the
+/// session from <c>sessionStorage</c> first; a caller that sets the header itself suppresses that
+/// hydration and sends a bare <c>Bearer</c> with no value during a page refresh.
+/// </remarks>
+public class AdminAccountsService(IHttpClientFactory httpClientFactory)
 {
 	public record AdminCharacterSummary(int DbrefNumber, string Name);
+
 	public record AdminAccountRow(string Id, string Username, string? Email, string Status,
 		bool MustChangePassword, bool IsReserved, IReadOnlyList<AdminCharacterSummary> Characters);
+
 	private record ResetPasswordRequest(string NewPassword);
 
-	private HttpClient CreateClient()
-	{
-		var http = httpClientFactory.CreateClient("api");
-		http.DefaultRequestHeaders.Authorization =
-			new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accountAuth.AccountSessionToken);
-		return http;
-	}
+	private HttpClient Client => httpClientFactory.CreateClient("api");
 
-	public async Task<(IReadOnlyList<AdminAccountRow> Rows, string? Error)> ListAsync(string? search = null)
-	{
-		try
-		{
-			var http = CreateClient();
-			var url = string.IsNullOrWhiteSpace(search) ? "api/admin/accounts" : $"api/admin/accounts?search={Uri.EscapeDataString(search)}";
-			var response = await http.GetAsync(url);
-			if (!response.IsSuccessStatusCode)
-				return ([], await response.Content.ReadAsStringAsync());
-			var rows = await response.Content.ReadFromJsonAsync<IReadOnlyList<AdminAccountRow>>();
-			return (rows ?? [], null);
-		}
-		catch (Exception ex)
-		{
-			return ([], ex.Message);
-		}
-	}
+	public Task<ApiResult<IReadOnlyList<AdminAccountRow>>> ListAsync(string? search = null) =>
+		Client.GetApiAsync<IReadOnlyList<AdminAccountRow>>(
+			string.IsNullOrWhiteSpace(search)
+				? "api/admin/accounts"
+				: $"api/admin/accounts?search={Uri.EscapeDataString(search)}",
+			"The server returned no account list.");
 
-	public async Task<(bool Success, string? Error)> ResetPasswordAsync(string key, string newPassword)
-	{
-		var response = await CreateClient().PostAsJsonAsync($"api/admin/accounts/{key}/reset-password", new ResetPasswordRequest(newPassword));
-		return response.IsSuccessStatusCode ? (true, null) : (false, await response.Content.ReadAsStringAsync());
-	}
+	public Task<ApiResult<Success>> ResetPasswordAsync(string key, string newPassword) =>
+		Client.PostApiAsync($"api/admin/accounts/{Uri.EscapeDataString(key)}/reset-password",
+			new ResetPasswordRequest(newPassword));
 
-	public async Task<(bool Success, string? Error)> SetDisabledAsync(string key, bool disabled)
-	{
-		var response = await CreateClient().PostAsync($"api/admin/accounts/{key}/{(disabled ? "disable" : "enable")}", null);
-		return response.IsSuccessStatusCode ? (true, null) : (false, await response.Content.ReadAsStringAsync());
-	}
+	public Task<ApiResult<Success>> SetDisabledAsync(string key, bool disabled) =>
+		Client.PostApiAsync(
+			$"api/admin/accounts/{Uri.EscapeDataString(key)}/{(disabled ? "disable" : "enable")}");
 
-	public async Task<(bool Success, string? Error)> SetStatusAsync(string key, string status)
-	{
-		var response = await CreateClient().PostAsJsonAsync($"api/admin/accounts/{key}/status", new { status });
-		return response.IsSuccessStatusCode ? (true, null) : (false, await response.Content.ReadAsStringAsync());
-	}
+	public Task<ApiResult<Success>> SetStatusAsync(string key, string status) =>
+		Client.PostApiAsync($"api/admin/accounts/{Uri.EscapeDataString(key)}/status", new { status });
 
-	public async Task<(bool Success, string? Error)> UnlinkCharacterAsync(string key, int dbrefNumber)
-	{
-		var response = await CreateClient().DeleteAsync($"api/admin/accounts/{key}/characters/{dbrefNumber}");
-		return response.IsSuccessStatusCode ? (true, null) : (false, await response.Content.ReadAsStringAsync());
-	}
+	public Task<ApiResult<Success>> UnlinkCharacterAsync(string key, int dbrefNumber) =>
+		Client.DeleteApiAsync($"api/admin/accounts/{Uri.EscapeDataString(key)}/characters/{dbrefNumber}");
 }

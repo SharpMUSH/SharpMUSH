@@ -1,35 +1,18 @@
-using System.Net.Http.Json;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 
-public class SitelockService
+/// <summary>Typed client for the sitelock rule list (glob and CIDR host patterns).</summary>
+public class SitelockService(IHttpClientFactory httpClientFactory)
 {
-	private readonly IHttpClientFactory _httpClientFactory;
+	private HttpClient Client => httpClientFactory.CreateClient("api");
 
-	public SitelockService(IHttpClientFactory httpClientFactory)
-	{
-		_httpClientFactory = httpClientFactory;
-	}
+	public Task<ApiResult<Dictionary<string, string[]>>> GetSitelockRulesAsync() =>
+		Client.GetApiAsync<Dictionary<string, string[]>>("api/sitelock", "The server returned no sitelock rules.");
 
-	private HttpClient CreateClient() => _httpClientFactory.CreateClient("api");
+	public Task<ApiResult<Success>> AddSitelockRuleAsync(string hostPattern, string[] accessRules) =>
+		Client.PostApiAsync($"api/sitelock/{Uri.EscapeDataString(hostPattern)}", accessRules);
 
-	public async Task<Dictionary<string, string[]>?> GetSitelockRulesAsync()
-	{
-		var client = CreateClient();
-		return await client.GetFromJsonAsync<Dictionary<string, string[]>>("api/sitelock");
-	}
-
-	public async Task<bool> AddSitelockRuleAsync(string hostPattern, string[] accessRules)
-	{
-		var client = CreateClient();
-		var response = await client.PostAsJsonAsync($"api/sitelock/{Uri.EscapeDataString(hostPattern)}", accessRules);
-		return response.IsSuccessStatusCode;
-	}
-
-	public async Task<bool> DeleteSitelockRuleAsync(string hostPattern)
-	{
-		var client = CreateClient();
-		var response = await client.DeleteAsync($"api/sitelock/{Uri.EscapeDataString(hostPattern)}");
-		return response.IsSuccessStatusCode;
-	}
+	public Task<ApiResult<Success>> DeleteSitelockRuleAsync(string hostPattern) =>
+		Client.DeleteApiAsync($"api/sitelock/{Uri.EscapeDataString(hostPattern)}");
 }

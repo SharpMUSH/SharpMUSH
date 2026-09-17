@@ -2,9 +2,9 @@
 @page "/admin/config/sitelockrules"
 @layout ConfigLayout
 @attribute [Authorize(Policy = "config.admin")]
+@using SharpMUSH.Client.Components.Admin
 @using SharpMUSH.Client.Services
 @inject SitelockService SitelockService
-@inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["SitelockRules"] - @Loc["Configuration"]</PageTitle>
@@ -21,150 +21,28 @@
         </div>
     </div>
 
-    @if (_loading)
-    {
-        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
-    }
-    else
-    {
-        <div class="config-group-title">@Loc["AddSitelockRule"]</div>
-        <div class="config-field-card config-pad mb-5">
-            <div class="config-add-fields">
-                <div class="config-add-field">
-                    <label class="config-field-label-text">@Loc["HostPattern"]</label>
-                    <input class="config-input" placeholder="@Loc["HostPatternHelper"].Value"
-                           value="@_newHostPattern"
-                           @oninput="@(e => _newHostPattern = e.Value?.ToString() ?? string.Empty)" />
-                </div>
-                <div class="config-add-field">
-                    <label class="config-field-label-text">@Loc["AccessRulesLabel"]</label>
-                    <input class="config-input" placeholder="@Loc["AccessRulesHelper"].Value"
-                           value="@_newAccessRulesText"
-                           @oninput="@(e => _newAccessRulesText = e.Value?.ToString() ?? string.Empty)" />
-                </div>
-                <button type="button" class="config-primary-btn"
-                        @onclick="AddSitelockRule"
-                        disabled="@(string.IsNullOrWhiteSpace(_newHostPattern) || string.IsNullOrWhiteSpace(_newAccessRulesText))">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:1rem;" />
-                    @Loc["Add"]
-                </button>
-            </div>
-        </div>
-
-        <div class="config-group-title">@Loc["ConfiguredRules"]</div>
-        @if (_sitelockRules == null || !_sitelockRules.Any())
-        {
-            <div class="config-field-card config-pad">
-                <span class="config-empty">@Loc["NoSitelockRulesConfigured"]</span>
-            </div>
-        }
-        else
-        {
-            <div class="config-field-card">
-                @foreach (var rule in _sitelockRules.OrderBy(r => r.Key))
-                {
-                    <div class="config-list-row">
-                        <div class="config-list-text">
-                            <span class="config-list-name">@rule.Key</span>
-                            <span class="config-list-sub">@string.Join(", ", rule.Value)</span>
-                        </div>
-                        <button type="button" class="config-icon-btn config-icon-btn--danger"
-                                title="@Loc["Delete"]"
-                                @onclick="@(() => DeleteSitelockRule(rule.Key))">
-                            <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:1rem;" />
-                        </button>
-                    </div>
-                }
-            </div>
-        }
-    }
+    <AdminKeyValueList Text="@Text"
+                       Load="@(() => SitelockService.GetSitelockRulesAsync().AsEntriesAsync())"
+                       Add="@SitelockService.AddSitelockRuleAsync"
+                       Delete="@SitelockService.DeleteSitelockRuleAsync" />
 </div>
 
 @code {
-    private bool _loading = true;
-    private Dictionary<string, string[]> _sitelockRules = new();
-    private string _newHostPattern = string.Empty;
-    private string _newAccessRulesText = string.Empty;
-
-    protected override async Task OnInitializedAsync()
+    private AdminKeyValueListText Text => new(
+        AddTitle: Loc["AddSitelockRule"],
+        KeyLabel: Loc["HostPattern"],
+        KeyPlaceholder: Loc["HostPatternHelper"],
+        AddButton: Loc["Add"],
+        ListTitle: Loc["ConfiguredRules"],
+        Empty: Loc["NoSitelockRulesConfigured"],
+        Added: pattern => string.Format(Loc["SitelockRuleAdded"], pattern),
+        Removed: pattern => string.Format(Loc["SitelockRuleRemoved"], pattern),
+        LoadFailed: failure => string.Format(Loc["ErrorLoadingSitelockRules"], failure.Message),
+        AddFailed: (_, failure) => string.Format(Loc["ErrorAddingSitelockRule"], failure.Message),
+        RemoveFailed: (_, failure) => string.Format(Loc["ErrorRemovingSitelockRule"], failure.Message))
     {
-        await LoadSitelockRules();
-    }
-
-    private async Task LoadSitelockRules()
-    {
-        _loading = true;
-        try
-        {
-            var rules = await SitelockService.GetSitelockRulesAsync();
-            _sitelockRules = rules ?? new Dictionary<string, string[]>();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(string.Format(Loc["ErrorLoadingSitelockRules"], ex.Message), Severity.Error);
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
-
-    private async Task AddSitelockRule()
-    {
-        if (string.IsNullOrWhiteSpace(_newHostPattern) || string.IsNullOrWhiteSpace(_newAccessRulesText))
-            return;
-
-        try
-        {
-            var accessRules = _newAccessRulesText
-                .Split(',')
-                .Select(r => r.Trim())
-                .Where(r => !string.IsNullOrWhiteSpace(r))
-                .ToArray();
-
-            if (accessRules.Length == 0)
-            {
-                Snackbar.Add(Loc["AtLeastOneAccessRule"].Value, Severity.Warning);
-                return;
-            }
-
-            var success = await SitelockService.AddSitelockRuleAsync(_newHostPattern.Trim(), accessRules);
-            if (success)
-            {
-                Snackbar.Add(string.Format(Loc["SitelockRuleAdded"], _newHostPattern), Severity.Success);
-                _newHostPattern = string.Empty;
-                _newAccessRulesText = string.Empty;
-                await LoadSitelockRules();
-            }
-            else
-            {
-                Snackbar.Add(Loc["SitelockRuleAddFailed"].Value, Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(string.Format(Loc["ErrorAddingSitelockRule"], ex.Message), Severity.Error);
-        }
-    }
-
-    private async Task DeleteSitelockRule(string hostPattern)
-    {
-        try
-        {
-            var success = await SitelockService.DeleteSitelockRuleAsync(hostPattern);
-            if (success)
-            {
-                Snackbar.Add(string.Format(Loc["SitelockRuleRemoved"], hostPattern), Severity.Success);
-                await LoadSitelockRules();
-            }
-            else
-            {
-                Snackbar.Add(Loc["SitelockRuleRemoveFailed"].Value, Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(string.Format(Loc["ErrorRemovingSitelockRule"], ex.Message), Severity.Error);
-        }
-    }
+        ValuesLabel = Loc["AccessRulesLabel"],
+        ValuesPlaceholder = Loc["AccessRulesHelper"],
+        ValuesRequired = Loc["AtLeastOneAccessRule"],
+    };
 }

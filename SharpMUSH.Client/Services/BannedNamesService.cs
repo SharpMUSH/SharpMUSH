@@ -1,35 +1,18 @@
-using System.Net.Http.Json;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 
-public class BannedNamesService
+/// <summary>Typed client for the banned player-name list.</summary>
+public class BannedNamesService(IHttpClientFactory httpClientFactory)
 {
-	private readonly IHttpClientFactory _httpClientFactory;
+	private HttpClient Client => httpClientFactory.CreateClient("api");
 
-	public BannedNamesService(IHttpClientFactory httpClientFactory)
-	{
-		_httpClientFactory = httpClientFactory;
-	}
+	public Task<ApiResult<string[]>> GetBannedNamesAsync() =>
+		Client.GetApiAsync<string[]>("api/bannednames", "The server returned no banned-name list.");
 
-	private HttpClient CreateClient() => _httpClientFactory.CreateClient("api");
+	public Task<ApiResult<Success>> AddBannedNameAsync(string name) =>
+		Client.PostApiAsync("api/bannednames", name);
 
-	public async Task<string[]?> GetBannedNamesAsync()
-	{
-		var client = CreateClient();
-		return await client.GetFromJsonAsync<string[]>("api/bannednames");
-	}
-
-	public async Task<bool> AddBannedNameAsync(string name)
-	{
-		var client = CreateClient();
-		var response = await client.PostAsJsonAsync("api/bannednames", name);
-		return response.IsSuccessStatusCode;
-	}
-
-	public async Task<bool> DeleteBannedNameAsync(string name)
-	{
-		var client = CreateClient();
-		var response = await client.DeleteAsync($"api/bannednames/{Uri.EscapeDataString(name)}");
-		return response.IsSuccessStatusCode;
-	}
+	public Task<ApiResult<Success>> DeleteBannedNameAsync(string name) =>
+		Client.DeleteApiAsync($"api/bannednames/{Uri.EscapeDataString(name)}");
 }

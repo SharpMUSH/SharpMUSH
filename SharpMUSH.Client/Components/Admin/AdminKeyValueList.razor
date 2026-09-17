@@ -1,0 +1,187 @@
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+@*
+    The admin config list: an add form, a sorted list of entries, a delete button per row.
+    Sitelock rules, banned names and both restriction tables are this page with the nouns swapped,
+    and each of them used to carry its own copy of the load/add/delete triple and its own snackbar
+    handling. The text is passed in so each page keeps its own resource keys; the behaviour is here.
+*@
+
+@if (_loading)
+{
+    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+}
+else
+{
+    <div class="config-group-title">@Text.AddTitle</div>
+    <div class="config-field-card config-pad mb-5">
+        <div class="@(HasValues ? "config-add-fields" : "config-add-grid")">
+            @if (HasValues)
+            {
+                <div class="config-add-field">
+                    <label class="config-field-label-text">@Text.KeyLabel</label>
+                    <input class="config-input" placeholder="@Text.KeyPlaceholder"
+                           value="@_newKey"
+                           @oninput="@(e => _newKey = e.Value?.ToString() ?? string.Empty)" />
+                </div>
+                <div class="config-add-field">
+                    <label class="config-field-label-text">@Text.ValuesLabel</label>
+                    <input class="config-input" placeholder="@Text.ValuesPlaceholder"
+                           value="@_newValues"
+                           @oninput="@(e => _newValues = e.Value?.ToString() ?? string.Empty)" />
+                </div>
+            }
+            else
+            {
+                <input class="config-input" placeholder="@Text.KeyPlaceholder"
+                       value="@_newKey"
+                       @oninput="@(e => _newKey = e.Value?.ToString() ?? string.Empty)"
+                       @onkeydown="HandleKeyDown" />
+            }
+            <button type="button" class="config-primary-btn" @onclick="AddAsync" disabled="@(!CanAdd)">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:1rem;" />
+                @Text.AddButton
+            </button>
+        </div>
+    </div>
+
+    <div class="config-group-title">@Text.ListTitle</div>
+    @if (_entries.Count == 0)
+    {
+        <div class="config-field-card config-pad">
+            <span class="config-empty">@Text.Empty</span>
+        </div>
+    }
+    else
+    {
+        <div class="config-field-card">
+            @foreach (var entry in _entries.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                <div class="config-list-row">
+                    <div class="config-list-text">
+                        <span class="config-list-name">@entry.Key</span>
+                        @if (entry.Value.Count > 0)
+                        {
+                            <span class="config-list-sub">@string.Join(", ", entry.Value)</span>
+                        }
+                    </div>
+                    <button type="button" class="config-icon-btn config-icon-btn--danger"
+                            title="@Loc["Delete"]"
+                            @onclick="@(() => DeleteAsync(entry.Key))">
+                        <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:1rem;" />
+                    </button>
+                </div>
+            }
+        </div>
+    }
+}
+
+@code {
+    /// <summary>Every string this list renders, so the page keeps its own resource keys.</summary>
+    [Parameter, EditorRequired]
+    public AdminKeyValueListText Text { get; set; } = default!;
+
+    /// <summary>Reads the current entries. Keys map to their values; an empty value list renders bare.</summary>
+    [Parameter, EditorRequired]
+    public Func<Task<ApiResult<IReadOnlyDictionary<string, string[]>>>> Load { get; set; } = default!;
+
+    /// <summary>Adds one entry. The values array is empty for a key-only list.</summary>
+    [Parameter, EditorRequired]
+    public Func<string, string[], Task<ApiResult<Success>>> Add { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<string, Task<ApiResult<Success>>> Delete { get; set; } = default!;
+
+    /// <summary>
+    /// Whether an entry carries a comma-separated value list (sitelock access rules, restriction
+    /// flags) or is a bare key (a banned name). It follows from the text: a list with no values has
+    /// nothing to label them with.
+    /// </summary>
+    private bool HasValues => Text.ValuesLabel is not null;
+
+    private bool CanAdd => !string.IsNullOrWhiteSpace(_newKey)
+        && (!HasValues || !string.IsNullOrWhiteSpace(_newValues));
+
+    private bool _loading = true;
+    private Dictionary<string, IReadOnlyList<string>> _entries = new(StringComparer.OrdinalIgnoreCase);
+    private string _newKey = string.Empty;
+    private string _newValues = string.Empty;
+
+    protected override Task OnInitializedAsync() => ReloadAsync();
+
+    /// <summary>Re-reads the list. Public so a page holding two of these can refresh one.</summary>
+    public async Task ReloadAsync()
+    {
+        _loading = true;
+        try
+        {
+            _entries = await Load() switch
+            {
+                IReadOnlyDictionary<string, string[]> loaded =>
+                    loaded.ToDictionary(e => e.Key, e => (IReadOnlyList<string>)e.Value, StringComparer.OrdinalIgnoreCase),
+                ApiFailure failure => Failed(failure)
+            };
+        }
+        finally
+        {
+            _loading = false;
+        }
+
+        Dictionary<string, IReadOnlyList<string>> Failed(ApiFailure failure)
+        {
+            Snackbar.Add(Text.LoadFailed(failure), Severity.Error);
+            return new(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private async Task AddAsync()
+    {
+        if (!CanAdd) return;
+
+        var key = _newKey.Trim();
+        var values = HasValues
+            ? _newValues.Split(',').Select(v => v.Trim()).Where(v => v.Length > 0).ToArray()
+            : [];
+
+        if (HasValues && values.Length == 0)
+        {
+            Snackbar.Add(Text.ValuesRequired ?? Loc["AtLeastOneAccessRule"].Value, Severity.Warning);
+            return;
+        }
+
+        switch (await Add(key, values))
+        {
+            case Success:
+                Snackbar.Add(Text.Added(key), Severity.Success);
+                _newKey = string.Empty;
+                _newValues = string.Empty;
+                await ReloadAsync();
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Text.AddFailed(key, failure), Severity.Error);
+                break;
+        }
+    }
+
+    private async Task DeleteAsync(string key)
+    {
+        switch (await Delete(key))
+        {
+            case Success:
+                Snackbar.Add(Text.Removed(key), Severity.Success);
+                await ReloadAsync();
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Text.RemoveFailed(key, failure), Severity.Error);
+                break;
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await AddAsync();
+    }
+}

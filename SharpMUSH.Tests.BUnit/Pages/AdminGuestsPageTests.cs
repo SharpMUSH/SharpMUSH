@@ -77,9 +77,7 @@ file static class AdminGuestsTestServices
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 				NullLogger<AccountAuthService>.Instance,
 				Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()))
-			.AddSingleton(sp => new AdminGuestsService(
-				sp.GetRequiredService<IHttpClientFactory>(),
-				sp.GetRequiredService<AccountAuthService>()))
+			.AddSingleton(sp => new AdminGuestsService(sp.GetRequiredService<IHttpClientFactory>()))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;

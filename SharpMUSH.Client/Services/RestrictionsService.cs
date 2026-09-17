@@ -1,55 +1,35 @@
-using System.Net.Http.Json;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 
-public class RestrictionsService
+/// <summary>
+/// Typed client for <c>@restrict</c>'s command and function restriction lists.
+/// </summary>
+/// <remarks>
+/// A name goes into the path, so it is escaped. Command names are not identifiers — <c>@EMIT</c>,
+/// <c>+who</c>, <c>WHO/ALL</c> — and an unescaped slash silently addresses a different route.
+/// </remarks>
+public class RestrictionsService(IHttpClientFactory httpClientFactory)
 {
-	private readonly IHttpClientFactory _httpClientFactory;
+	private HttpClient Client => httpClientFactory.CreateClient("api");
 
-	public RestrictionsService(IHttpClientFactory httpClientFactory)
-	{
-		_httpClientFactory = httpClientFactory;
-	}
+	public Task<ApiResult<Dictionary<string, string[]>>> GetCommandRestrictionsAsync() =>
+		Client.GetApiAsync<Dictionary<string, string[]>>(
+			"api/restrictions/commands", "The server returned no command restrictions.");
 
-	private HttpClient CreateClient() => _httpClientFactory.CreateClient("api");
+	public Task<ApiResult<Success>> AddCommandRestrictionAsync(string commandName, string[] restrictions) =>
+		Client.PostApiAsync($"api/restrictions/commands/{Uri.EscapeDataString(commandName)}", restrictions);
 
-	public async Task<Dictionary<string, string[]>?> GetCommandRestrictionsAsync()
-	{
-		var client = CreateClient();
-		return await client.GetFromJsonAsync<Dictionary<string, string[]>>("api/restrictions/commands");
-	}
+	public Task<ApiResult<Success>> DeleteCommandRestrictionAsync(string commandName) =>
+		Client.DeleteApiAsync($"api/restrictions/commands/{Uri.EscapeDataString(commandName)}");
 
-	public async Task<bool> AddCommandRestrictionAsync(string commandName, string[] restrictions)
-	{
-		var client = CreateClient();
-		var response = await client.PostAsJsonAsync($"api/restrictions/commands/{commandName}", restrictions);
-		return response.IsSuccessStatusCode;
-	}
+	public Task<ApiResult<Dictionary<string, string[]>>> GetFunctionRestrictionsAsync() =>
+		Client.GetApiAsync<Dictionary<string, string[]>>(
+			"api/restrictions/functions", "The server returned no function restrictions.");
 
-	public async Task<bool> DeleteCommandRestrictionAsync(string commandName)
-	{
-		var client = CreateClient();
-		var response = await client.DeleteAsync($"api/restrictions/commands/{commandName}");
-		return response.IsSuccessStatusCode;
-	}
+	public Task<ApiResult<Success>> AddFunctionRestrictionAsync(string functionName, string[] restrictions) =>
+		Client.PostApiAsync($"api/restrictions/functions/{Uri.EscapeDataString(functionName)}", restrictions);
 
-	public async Task<Dictionary<string, string[]>?> GetFunctionRestrictionsAsync()
-	{
-		var client = CreateClient();
-		return await client.GetFromJsonAsync<Dictionary<string, string[]>>("api/restrictions/functions");
-	}
-
-	public async Task<bool> AddFunctionRestrictionAsync(string functionName, string[] restrictions)
-	{
-		var client = CreateClient();
-		var response = await client.PostAsJsonAsync($"api/restrictions/functions/{functionName}", restrictions);
-		return response.IsSuccessStatusCode;
-	}
-
-	public async Task<bool> DeleteFunctionRestrictionAsync(string functionName)
-	{
-		var client = CreateClient();
-		var response = await client.DeleteAsync($"api/restrictions/functions/{functionName}");
-		return response.IsSuccessStatusCode;
-	}
+	public Task<ApiResult<Success>> DeleteFunctionRestrictionAsync(string functionName) =>
+		Client.DeleteApiAsync($"api/restrictions/functions/{Uri.EscapeDataString(functionName)}");
 }

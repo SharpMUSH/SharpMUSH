@@ -1,5 +1,6 @@
 @page "/admin/accounts"
 @attribute [Authorize(Roles = "Wizard,God")]
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject AdminAccountsService AccountsService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
@@ -79,12 +80,40 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        var (rows, error) = await AccountsService.ListAsync(_search);
-        if (error != null)
-            Snackbar.Add(error, Severity.Error);
-        _rows = rows;
+        _rows = await AccountsService.ListAsync(_search) switch
+        {
+            IReadOnlyList<AdminAccountsService.AdminAccountRow> rows => rows,
+            ApiFailure failure => Failed(failure)
+        };
         _loading = false;
         StateHasChanged();
+
+        IReadOnlyList<AdminAccountsService.AdminAccountRow> Failed(ApiFailure failure)
+        {
+            Snackbar.Add(failure.Message, Severity.Error);
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Reports the outcome and reloads. The failure carries the server's own refusal text, which is
+    /// what the operator needs — "you are not signed in" and "the server is down" used to arrive as
+    /// the same generic line.
+    /// </summary>
+    private async Task ReportAsync(ApiResult<Success> result, string succeeded, string failed,
+        Severity successSeverity = Severity.Success, Action<SnackbarOptions>? configure = null)
+    {
+        switch (result)
+        {
+            case Success:
+                Snackbar.Add(succeeded, successSeverity, configure);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(failure.Message is { Length: > 0 } detail ? detail : failed, Severity.Error);
+                break;
+        }
+
+        await LoadAsync();
     }
 
     private static Color StatusColor(string status) => status switch
@@ -102,28 +131,25 @@
 
     private async Task SetStatusAsync(AdminAccountsService.AdminAccountRow row, string target)
     {
-        var (success, error) = await AccountsService.SetStatusAsync(row.Id, target);
-        Snackbar.Add(success
-            ? Loc["AdmAccountStatusChanged", row.Username].Value
-            : error ?? Loc["AdmOperationFailed"].Value, success ? Severity.Success : Severity.Error);
-        await LoadAsync();
+        await ReportAsync(await AccountsService.SetStatusAsync(row.Id, target),
+            Loc["AdmAccountStatusChanged", row.Username].Value,
+            Loc["AdmOperationFailed"].Value);
     }
 
     private async Task UnlinkAsync(AdminAccountsService.AdminAccountRow row, AdminAccountsService.AdminCharacterSummary character)
     {
-        var (success, error) = await AccountsService.UnlinkCharacterAsync(row.Id, character.DbrefNumber);
-        Snackbar.Add(success ? Loc["AdmCharacterUnlinked", character.Name, row.Username].Value : error ?? Loc["AdmUnlinkFailed"].Value,
-            success ? Severity.Success : Severity.Error);
-        await LoadAsync();
+        await ReportAsync(await AccountsService.UnlinkCharacterAsync(row.Id, character.DbrefNumber),
+            Loc["AdmCharacterUnlinked", character.Name, row.Username].Value,
+            Loc["AdmUnlinkFailed"].Value);
     }
 
     private async Task OpenResetAsync(AdminAccountsService.AdminAccountRow row)
     {
         var temp = $"temp-{Guid.NewGuid().ToString("N")[..10]}";
-        var (success, error) = await AccountsService.ResetPasswordAsync(row.Id, temp);
-        Snackbar.Add(success
-            ? Loc["AdmPasswordReset", row.Username, temp].Value
-            : error ?? Loc["AdmResetFailed"].Value, success ? Severity.Warning : Severity.Error, o => o.RequireInteraction = true);
-        await LoadAsync();
+        // The temporary password is in this line and nowhere else, so it must stay up until dismissed.
+        await ReportAsync(await AccountsService.ResetPasswordAsync(row.Id, temp),
+            Loc["AdmPasswordReset", row.Username, temp].Value,
+            Loc["AdmResetFailed"].Value,
+            Severity.Warning, o => o.RequireInteraction = true);
     }
 }
