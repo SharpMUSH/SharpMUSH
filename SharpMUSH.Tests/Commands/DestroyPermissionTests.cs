@@ -64,6 +64,9 @@ public class DestroyPermissionTests
 	private bool WasTold(DBRef who, string message)
 		=> WebAppFactoryArg.Notifications.For(who).Any(m => m.Contains(message, StringComparison.Ordinal));
 
+	private int TellCount(DBRef who, string message)
+		=> WebAppFactoryArg.Notifications.For(who).Count(m => m.Contains(message, StringComparison.Ordinal));
+
 	private static IDisposable ReallySafe(bool on)
 		=> TestOptionsOverride.Scope(options => options with
 		{
@@ -222,9 +225,12 @@ public class DestroyPermissionTests
 		var owner = await MortalAsync("DPT_CrossOwner");
 		var thing = await CreateAsync("DPT_CrossThing", owner);
 
+		// God's log is shared by the whole session, so only a new copy of the message counts.
+		var toldBefore = TellCount(WebAppFactoryArg.ExecutorDBRef, ErrorMessages.Notifications.NotYoursUseNuke);
+
 		await AsGod($"@destroy {thing}");
 
-		await Assert.That(WasTold(WebAppFactoryArg.ExecutorDBRef, ErrorMessages.Notifications.NotYoursUseNuke)).IsTrue();
+		await Assert.That(TellCount(WebAppFactoryArg.ExecutorDBRef, ErrorMessages.Notifications.NotYoursUseNuke)).IsGreaterThan(toldBefore);
 		await Assert.That(await IsGoingAsync(thing)).IsFalse();
 
 		await AsGod($"@nuke {thing}");
@@ -239,9 +245,12 @@ public class DestroyPermissionTests
 		var thing = await CreateAsync("DPT_WizThing");
 		await AsGod($"@set {thing}=WIZARD");
 
+		// God's log is shared by the whole session, so only a new copy of the message counts.
+		var toldBefore = TellCount(WebAppFactoryArg.ExecutorDBRef, ErrorMessages.Notifications.WizardThingUseNuke);
+
 		await AsGod($"@destroy {thing}");
 
-		await Assert.That(WasTold(WebAppFactoryArg.ExecutorDBRef, ErrorMessages.Notifications.WizardThingUseNuke)).IsTrue();
+		await Assert.That(TellCount(WebAppFactoryArg.ExecutorDBRef, ErrorMessages.Notifications.WizardThingUseNuke)).IsGreaterThan(toldBefore);
 		await Assert.That(await IsGoingAsync(thing)).IsFalse();
 
 		await AsGod($"@nuke {thing}");
