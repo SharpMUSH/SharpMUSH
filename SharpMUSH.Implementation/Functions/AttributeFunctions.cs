@@ -64,7 +64,7 @@ public partial class Functions
 			$"{thing.Object().Name}/{attribute.ToUpperInvariant()} - {(wasSet ? "Set" : "Cleared")}.");
 	}
 
-	[SharpFunction(Name = "attrib_set", MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object/attribute"])]
+	[SharpFunction(Name = "attrib_set", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object/attribute"])]
 	public async ValueTask<CallState> AttributeSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -95,7 +95,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "attrib_set#", MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object/attribute"])]
+	[SharpFunction(Name = "attrib_set#", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object/attribute"])]
 	public async ValueTask<CallState> AttributeSetSharp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -180,7 +180,7 @@ public partial class Functions
 	/// Returns the first non-empty evaluated attribute value, or evaluates and returns the default value.
 	/// Similar to default() but evaluates all arguments. Checks attributes in order until one has content.
 	/// </summary>
-	[SharpFunction(Name = "edefault", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["object/attribute", "default"])]
+	[SharpFunction(Name = "edefault", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.NoParse, ParameterNames = ["object/attribute", "default"])]
 	public async ValueTask<CallState> EvaluateDefault(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

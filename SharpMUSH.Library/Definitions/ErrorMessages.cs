@@ -230,6 +230,7 @@ public static class ErrorMessages
 		public const string TooManyColumnsForAlign = "#-1 TOO MANY COLUMNS FOR ALIGN";
 		public const string UseTagwrapInstead = "#-1 USE TAGWRAP INSTEAD";
 		public const string VectorsMustBe3D = "#-1 VECTORS MUST BE 3-DIMENSIONAL";
+		public const string VectorsMustMatchDimensions = "#-1 VECTORS MUST BE SAME DIMENSIONS";
 		public const string WidthMustBeANumber = "#-1 WIDTH MUST BE A NUMBER";
 		public const string WordNumberOutOfRange = "#-1 WORD NUMBER OUT OF RANGE";
 		public const string WouldCreateLoop = "#-1 WOULD CREATE LOOP";

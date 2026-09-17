@@ -157,11 +157,11 @@ public partial class Functions
 				? long.MinValue
 				: (long)Math.Truncate(value);
 
-	[SharpFunction(Name = "max", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
+	[SharpFunction(Name = "max", MinArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Max(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser, Math.Max);
 
-	[SharpFunction(Name = "min", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
+	[SharpFunction(Name = "min", MinArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Min(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser, Math.Min);
 
@@ -1098,64 +1098,97 @@ public partial class Functions
 		return AngleTypeMath(angleType, angle, Math.Tan);
 	}
 
-	private ValueTask<CallState> VectorOperation(IMUSHCodeParser parser,
-		Func<Vector<decimal>, Vector<decimal>, Vector<decimal>> func)
+	/// <summary>The two vectors a call was made with, and the separator its answer is joined by.</summary>
+	private readonly record struct VectorPair(decimal[] Left, decimal[] Right, MString Separator);
+
+	/// <summary>
+	/// Reads slots 0 and 1 as vectors split on slot 2's delimiter, with slot 3 as the separator the
+	/// answer is joined by — the same shape <see cref="vcross"/> reads by hand.
+	/// </summary>
+	private static Result<VectorPair> ReadVectorPair(IMUSHCodeParser parser)
 	{
 		var numbers = NumericEvaluation.For(parser);
-		var delimiter = parser.CurrentState.Arguments.TryGetValue("3", out var tmpDelimiter)
-			? tmpDelimiter.Message ?? MarkupText.Empty
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var delimiter = args.TryGetValue("2", out var delimiterArg)
+			? delimiterArg.Message ?? MarkupText.Empty
 			: MarkupText.Space;
-		var sep = parser.CurrentState.Arguments.TryGetValue("4", out var tmpSep) ? tmpSep.Message ?? MarkupText.Empty : delimiter;
-		var list1 = MushText.SplitList(delimiter, (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty))
-			.Select(x => (numbers.TryDecimal(x.ToPlainText(), out var result), result)).ToArray();
-		var list2 = MushText.SplitList(delimiter, (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty))
-			.Select(x => (numbers.TryDecimal(x.ToPlainText(), out var result), result)).ToArray();
+		var separator = args.TryGetValue("3", out var separatorArg)
+			? separatorArg.Message ?? MarkupText.Empty
+			: delimiter;
 
-		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
+		decimal[]? Read(string key)
 		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+			var elements = MushText.SplitList(delimiter, args[key].Message ?? MarkupText.Empty)
+				.Select(element => (Parsed: numbers.TryDecimal(element.ToPlainText(), out var value), Value: value))
+				.ToArray();
+
+			return elements.Any(element => !element.Parsed) ? null : elements.Select(element => element.Value).ToArray();
 		}
 
-		var vector1 = new Vector<decimal>(list1.Select(x => x.result).ToArray().AsSpan());
-		var vector2 = new Vector<decimal>(list2.Select(x => x.result).ToArray().AsSpan());
-		var vectorResult = func(vector1, vector2);
-
-		var result = new decimal[Math.Max(list1.Length, list2.Length)];
-		vectorResult.CopyTo(result);
-
-		var output = result.Select(x => MarkupText.Plain(x.ToString(CultureInfo.InvariantCulture)));
-		return ValueTask.FromResult(new CallState(MarkupText.Join(sep, output)));
-	}
-
-	private ValueTask<CallState> VectorOperationToScalar(IMUSHCodeParser parser,
-		Func<Vector<decimal>, Vector<decimal>, decimal> func)
-	{
-		var numbers = NumericEvaluation.For(parser);
-		var delimiter = parser.CurrentState.Arguments.TryGetValue("3", out var tmpDelimiter)
-			? tmpDelimiter.Message ?? MarkupText.Empty
-			: MarkupText.Space;
-		var list1 = MushText.SplitList(delimiter, (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty))
-			.Select(x => (numbers.TryDecimal(x.ToPlainText(), out var result), result)).ToArray();
-		var list2 = MushText.SplitList(delimiter, (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty))
-			.Select(x => (numbers.TryDecimal(x.ToPlainText(), out var result), result)).ToArray();
-
-		if (list1.Any(x => !x.Item1) || list2.Any(x => !x.Item1))
+		if (Read("0") is not { } left || Read("1") is not { } right)
 		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+			return new Error<string>(ErrorMessages.Returns.Numbers);
 		}
 
-		var vector1 = new Vector<decimal>(list1.Select(x => x.result).ToArray().AsSpan());
-		var vector2 = new Vector<decimal>(list2.Select(x => x.result).ToArray().AsSpan());
-		var vectorResult = func(vector1, vector2);
-
-		var output = vectorResult.ToString(CultureInfo.InvariantCulture);
-
-		return ValueTask.FromResult<CallState>(output);
+		return new VectorPair(left, right, separator);
 	}
+
+	/// <summary>
+	/// PennMUSH pairs the two vectors element by element and refuses when they are not the same
+	/// length (<c>funmath.c:522</c>). It is emphatically not a SIMD operation: the width is the
+	/// list's, which <c>System.Numerics.Vector&lt;T&gt;</c> cannot express — and it does not support
+	/// <c>decimal</c> at all, so every one of these answered the empty string.
+	/// </summary>
+	private static ValueTask<CallState> VectorOperation(IMUSHCodeParser parser, Func<decimal, decimal, decimal> elementwise)
+		=> ValueTask.FromResult(ReadVectorPair(parser) switch
+		{
+			Error<string> error => new CallState(error.Value),
+			VectorPair { Left.Length: 0 } or VectorPair { Right.Length: 0 }
+				=> new CallState(ErrorMessages.Returns.VectorsMustMatchDimensions),
+			VectorPair pair when pair.Left.Length != pair.Right.Length
+				=> new CallState(ErrorMessages.Returns.VectorsMustMatchDimensions),
+			VectorPair pair => new CallState(MarkupText.Join(pair.Separator,
+				pair.Left.Zip(pair.Right, elementwise).Select(Number)))
+		});
+
+	/// <summary>
+	/// <c>vmul()</c> alone accepts a single number on either side and scales the other vector by it
+	/// (<c>funmath.c:512-529</c>); every other pairing is element-wise.
+	/// </summary>
+	private static ValueTask<CallState> VectorMultiplication(IMUSHCodeParser parser)
+		=> ValueTask.FromResult(ReadVectorPair(parser) switch
+		{
+			Error<string> error => new CallState(error.Value),
+			VectorPair { Left.Length: 0 } or VectorPair { Right.Length: 0 }
+				=> new CallState(ErrorMessages.Returns.VectorsMustMatchDimensions),
+			VectorPair { Left: [var scalar] } pair => new CallState(MarkupText.Join(pair.Separator,
+				pair.Right.Select(element => Number(scalar * element)))),
+			VectorPair { Right: [var scalar] } pair => new CallState(MarkupText.Join(pair.Separator,
+				pair.Left.Select(element => Number(element * scalar)))),
+			VectorPair pair when pair.Left.Length != pair.Right.Length
+				=> new CallState(ErrorMessages.Returns.VectorsMustMatchDimensions),
+			VectorPair pair => new CallState(MarkupText.Join(pair.Separator,
+				pair.Left.Zip(pair.Right, (a, b) => a * b).Select(Number)))
+		});
+
+	/// <summary>The dot product: the same pairing, summed rather than listed.</summary>
+	private static ValueTask<CallState> VectorOperationToScalar(IMUSHCodeParser parser,
+		Func<decimal[], decimal[], decimal> fold)
+		=> ValueTask.FromResult(ReadVectorPair(parser) switch
+		{
+			Error<string> error => new CallState(error.Value),
+			VectorPair { Left.Length: 0 } or VectorPair { Right.Length: 0 }
+				=> new CallState(ErrorMessages.Returns.VectorsMustMatchDimensions),
+			VectorPair pair when pair.Left.Length != pair.Right.Length
+				=> new CallState(ErrorMessages.Returns.VectorsMustMatchDimensions),
+			VectorPair pair => new CallState(Number(fold(pair.Left, pair.Right)))
+		});
+
+	private static MString Number(decimal value) => MarkupText.Plain(value.ToString(CultureInfo.InvariantCulture));
 
 	[SharpFunction(Name = "vadd", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
 	public ValueTask<CallState> VAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> VectorOperation(parser, Vector.Add);
+		=> VectorOperation(parser, (a, b) => a + b);
 
 	[SharpFunction(Name = "vcross", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
 	public ValueTask<CallState> vcross(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1192,23 +1225,23 @@ public partial class Functions
 
 	[SharpFunction(Name = "vsub", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
 	public ValueTask<CallState> vsub(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> VectorOperation(parser, Vector.Subtract);
+		=> VectorOperation(parser, (a, b) => a - b);
 
 	[SharpFunction(Name = "vmax", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
 	public ValueTask<CallState> vmax(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> VectorOperation(parser, Vector.Max);
+		=> VectorOperation(parser, Math.Max);
 
 	[SharpFunction(Name = "vmin", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
 	public ValueTask<CallState> vmin(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> VectorOperation(parser, Vector.Min);
+		=> VectorOperation(parser, Math.Min);
 
 	[SharpFunction(Name = "vmul", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
 	public ValueTask<CallState> vmul(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> VectorOperation(parser, Vector.Multiply);
+		=> VectorMultiplication(parser);
 
 	[SharpFunction(Name = "vdot", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
 	public ValueTask<CallState> vdot(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> VectorOperationToScalar(parser, Vector.Dot);
+		=> VectorOperationToScalar(parser, (left, right) => left.Zip(right, (a, b) => a * b).Sum());
 
 	[SharpFunction(Name = "vmag", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector", "delimiter"])]
 	public ValueTask<CallState> vmag(IMUSHCodeParser parser, SharpFunctionAttribute _2)

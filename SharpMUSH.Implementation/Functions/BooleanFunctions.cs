@@ -11,7 +11,7 @@ namespace SharpMUSH.Implementation.Functions;
 /// </summary>
 public partial class Functions
 {
-	[SharpFunction(Name = "and", Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "and", MinArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> And(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
@@ -19,11 +19,11 @@ public partial class Functions
 			? "1"
 			: "0");
 
-	[SharpFunction(Name = "cand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "cand", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> CancellingAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> EvaluateLazyBoolean(parser, parser.CurrentState.Arguments.Values, all: true, truthy: true);
 
-	[SharpFunction(Name = "cor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "cor", MinArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> CancellingOr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> EvaluateLazyBoolean(parser, parser.CurrentState.Arguments.Values, all: false, truthy: true);
 
@@ -66,7 +66,7 @@ public partial class Functions
 	public ValueTask<CallState> LessThanOrEquals(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser, pair => pair.Item1 <= pair.Item2);
 
-	[SharpFunction(Name = "nand", Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "nand", MinArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> NegativeAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.ArgumentsOrdered
 			.Select(x => x.Value.Message!)
@@ -74,11 +74,11 @@ public partial class Functions
 			? "1"
 			: "0");
 
-	[SharpFunction(Name = "cnand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
+	[SharpFunction(Name = "cnand", MinArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
 	public ValueTask<CallState> CancellingNegativeAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> EvaluateLazyBoolean(parser, parser.CurrentState.ArgumentsOrdered.Values, all: false, truthy: false);
 
-	[SharpFunction(Name = "ncand", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
+	[SharpFunction(Name = "ncand", MinArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
 	public ValueTask<CallState> NCand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> CancellingNegativeAnd(parser, _2);
 
@@ -87,7 +87,7 @@ public partial class Functions
 		=> ArgHelpers.ValidateDecimalAndEvaluatePairwise(parser,
 			pair => pair.Item1 == pair.Item2, negate: true);
 
-	[SharpFunction(Name = "nor", Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "nor", MinArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> Nor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
@@ -95,7 +95,7 @@ public partial class Functions
 			? "1"
 			: "0");
 
-	[SharpFunction(Name = "ncor", Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
+	[SharpFunction(Name = "ncor", MinArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.NoParse, ParameterNames = ["boolean1", "boolean2"])]
 	public ValueTask<CallState> NCor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> EvaluateLazyBoolean(parser, parser.CurrentState.Arguments.Values, all: true, truthy: false);
 
@@ -105,7 +105,7 @@ public partial class Functions
 			? "1"
 			: "0");
 
-	[SharpFunction(Name = "or", Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "or", MinArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> Or(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)
@@ -113,14 +113,14 @@ public partial class Functions
 			? "1"
 			: "0");
 
-	[SharpFunction(Name = "t", Flags = FunctionFlags.Regular, MinArgs = 0, MaxArgs = 1, ParameterNames = ["value"])]
+	[SharpFunction(Name = "t", Flags = FunctionFlags.Regular, MinArgs = 1, MaxArgs = 1, ParameterNames = ["value"])]
 	public ValueTask<CallState> T(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
 			.FirstOrDefault().Value.Message.Truthy(parser)
 			? "1"
 			: "0");
 
-	[SharpFunction(Name = "xor", Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
+	[SharpFunction(Name = "xor", MinArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
 	public ValueTask<CallState> Xor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
 			.Select(x => x.Value.Message!)

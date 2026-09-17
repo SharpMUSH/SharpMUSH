@@ -2819,7 +2819,7 @@ Player says, "This is a test"
 
 A rough implementation of @chatformat:
 ```sharp
-> &cmd.chat Globals=$^@chat (.+?)=([\:;]?)(.+?)$: @message/spoof cwho(%1)=setr(0,<%1> [speak(&[squish(ctitle(%1, %#) %n)], %2%3)]), CHATFORMAT, firstof(%2, "), %1, %3, %n, ctitle(%1, %#), %q0
+> &cmd.chat Globals=$^@chat (.+?)=([\:;]?)(.+?)$: @message/spoof cwho(%1)=setr(0,<%1> [speak(&[squish(ctitle(%#, %1) %n)], %2%3)]), CHATFORMAT, firstof(%2, "), %1, %3, %n, ctitle(%#, %1), %q0
 > @set Globals/cmd.chat=regexp
 ```
 
@@ -3582,6 +3582,30 @@ See [@search5] for some examples.
 @search all elock=FLAG^WIZARD|FLAG^ROYALTY <-- list all objects with wizard or royalty flags.
 @search wizard_bc command=+who <-- Forgot what object has your +who?
 ```
+# &
+`&<attribute> <object>[=<value>]`
+
+Sets `<attribute>` on `<object>` to `<value>`, and clears it when `<value>` is omitted. It is the short form of `@set <object>=<attribute>:<value>`, and the form almost all softcode uses.
+
+The attribute name is evaluated before the attribute is set, so `&hdr_%q1 me=...` stores into whatever `%q1` holds. The value is NOT evaluated: what you type is what is stored, and braces around it are kept, so `&cmd me={think [add(1,2)]}` stores the code rather than the number 3.
+
+
+**See Also:**
+- [@set]
+- [ATTRIBUTES]
+- [~]
+# ~
+`~<command>`
+
+Runs `<command>` once under strict parsing. A grammar error that the normal parser would recover from — an unclosed parenthesis or bracket, say — instead answers `#-1 PARSER FAILURE` and the command does not run at all.
+
+Use it while writing softcode, to find out whether a line really parses the way you think it does. Nesting is limited by the `max_depth` configuration option, as it is for [@@] and the other command modifiers.
+
+
+**See Also:**
+- [&]
+- [@@]
+- [restrictedexpr]
 # @set
 `@set <object>=[!]<flag> [[!]<flag> ...]`<br>
 `@<pre-defined attribute> <object>=<value>`<br>
@@ -3928,6 +3952,7 @@ The four command options can also be used as switches (i.e., you can use "`@swee
 **See Also:**
 - [@scan]
 # @switch
+# @sw
 # @select
 `@switch[/<switch>] <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]`<br>
 `@select <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]`
@@ -4175,6 +4200,55 @@ Removes the lock on `<object>`. It can take as many switches as @lock can.
 **See Also:**
 - [@lock]
 - [locktypes]
+# @account
+`@account <name>`<br>
+`@account/list [<pattern>]`<br>
+`@account/newpassword <name>=<password>`<br>
+`@account/disable <name>`<br>
+`@account/enable <name>`<br>
+`@account/close <name>`<br>
+`@account/delete <name>`
+
+Administers the web-portal accounts that characters are linked to. Wizard-only.
+
+With no switch, shows one account's details. `/list` lists every account, or those whose username contains `<pattern>`. `/newpassword` sets a password and requires the holder to change it at their next login. `/disable` and `/enable` suspend and restore access, and `/close` and `/delete` retire the account — the record is kept either way, so the characters linked to it are never orphaned.
+
+Accounts are a SharpMUSH concept; PennMUSH has no equivalent command.
+
+
+**See Also:**
+- [@pcreate]
+- [@newpassword]
+- [register]
+# @locale
+`@locale`<br>
+`@locale <tag>`<br>
+`@locale =`
+
+Shows or sets the language the server addresses you in. `<tag>` is a BCP-47 language tag such as `en`, `fr` or `de`; with no argument the command reports your current locale, and with an empty argument it clears the setting back to the server default.
+
+The locale applies to the connection that ran the command and is stored as the `LOCALE` attribute on your character, so it is remembered the next time you connect.
+
+This is a SharpMUSH command; PennMUSH has no @locale.
+
+
+**See Also:**
+- [@set]
+# @map
+`@map[/<switches>] <object>[/<attribute>]=<list>`
+
+Runs an attribute once for each element of `<list>`, as [@dolist] does, but passing the element as `%0` rather than substituting it into the command text. The attribute is named as `<object>/<attribute>`.
+
+Switches are the queue-control set shared with [@dolist] and [@include]: `/inline`, `/inplace`, `/localize`, `/clearregs`, `/nobreak`, `/notify` and `/delimit`.
+
+This is a SharpMUSH command; PennMUSH spells the same idea with [@dolist] and [map()].
+
+
+**See Also:**
+- [@dolist]
+- [@include]
+- [map()]
+- [QUEUE CONTROL]
 # @version
 `@version`
 
@@ -4731,6 +4805,7 @@ This command returns some information about the MUSH you are on, such as its ver
 **See Also:**
 - [MSSP-REQUEST]
 # inventory
+# i
 `inventory`
 
 Lists what you are carrying. Can be abbreviated by just 'i', or 'inv'. It also tells you how much MUSH money you have. If you are not set OPAQUE, others will also be able to see what is in your inventory by looking at you.
@@ -4765,6 +4840,7 @@ The NO_LEAVE flag may be enabled on some MUSHes. Objects set with this flag cann
 
 LOGOUT is similar to QUIT, but instead of disconnecting you from the game completely, it merely disconnects you from your current character and returns you to the opening welcome screen. This is useful if you want to disconnect and then reconnect to another character. Unlike most commands, it is case-sensitive and must be typed in all caps.
 # look
+# l
 # read
 `look [<object>]`<br>
 `look <container>'s <object>`<br>
@@ -4801,6 +4877,7 @@ If a room is set DARK, when you look you will not see any of the exits or conten
 
 The news system works just like the help system. Many MUSHes use it to provide standard information on the rules, theme, and customized commands of the particular MUSH. It is highly recommended that you read it regularly.
 # page
+# p
 `page[/<switch>] [<player-list>=]<message>`
 
 This command sends a message to a player or list of players. If the player's name contains spaces, surround it with double-quotes. If you have already paged someone since connecting, just typing:
@@ -4918,6 +4995,84 @@ One possible use: `@adesc me=think %n just looked at you.`
 **See Also:**
 - [@pemit]
 - [@@]
+# connect
+`connect <player> [<password>]`<br>
+`connect "<player with spaces>" [<password>]`<br>
+`connect guest`
+
+Connects you to a character from the login screen. Quote a name that contains spaces. A character with no password takes no password argument, and `connect guest` takes the next free guest character if the game offers them.
+
+See [cd] and [cv] to connect with your `DARK` flag forced on or off.
+
+
+**See Also:**
+- [QUIT]
+- [login]
+- [register]
+- [WHO]
+# register
+`register <name> [<email>] <password>`
+
+Creates a web-portal account from the login screen and puts your connection into account mode, where [make] and [play] work. Characters are then linked to the account rather than carrying their own login.
+
+The game may refuse the command from your address; see [SITELOCK].
+
+This is a SharpMUSH command; PennMUSH's `register` mails a password for a new character instead.
+
+
+**See Also:**
+- [login]
+- [make]
+- [play]
+- [@account]
+# login
+`login <name-or-email> <password>`
+
+Authenticates to an existing account from the login screen and puts your connection into account mode, where [make] and [play] work. It does not connect you to a character — use [play] for that.
+
+This is a SharpMUSH command; PennMUSH has no account layer.
+
+
+**See Also:**
+- [register]
+- [play]
+- [make]
+- [connect]
+# make
+`make <character> <password>`
+
+Creates a character, links it to the account you are logged in to, and connects you to it. Only works in account mode, which [login] and [register] put you in.
+
+This is a SharpMUSH command; PennMUSH's equivalent is `create`, which makes an unlinked character.
+
+
+**See Also:**
+- [login]
+- [play]
+- [register]
+# play
+`play <character>`
+
+Connects you to one of the characters linked to the account you are logged in to. Only works in account mode, which [login] and [register] put you in.
+
+This is a SharpMUSH command; PennMUSH has no account layer.
+
+
+**See Also:**
+- [login]
+- [make]
+- [connect]
+# version
+`version`
+
+Reports the game's name, its address if one is published, and the server version — the same lines [@version] prints. It works from the login screen, before you have connected.
+
+A deliberate divergence: PennMUSH has no bare `version` at the login screen, only `@version` in-game. Crawlers and players arriving from MUX-family servers type it unprefixed, and it publishes nothing that `INFO` does not.
+
+
+**See Also:**
+- [@version]
+- [connect]
 # QUIT
 `QUIT`
 
@@ -4983,6 +5138,7 @@ By default, the command just shows the message "This command has not been implem
 - [@command]
 - [@hook]
 # whisper
+# w
 `whisper <player>=<message>`<br>
 `whisper/silent <player>=<message>`<br>
 `whisper/noisy <player>=<message>`<br>

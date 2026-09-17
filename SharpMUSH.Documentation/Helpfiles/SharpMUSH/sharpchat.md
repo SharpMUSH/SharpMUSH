@@ -169,6 +169,7 @@ Help for `@channel` is split into a number of topics. Please see [@channel \<top
 
 # @CHANNEL JOINING
 # @channel/list
+# @CLIST
 # @channel/what
 # @channel/who
 # @channel/on
@@ -406,9 +407,16 @@ You may set a channel's locks if you own it, if you pass its mod lock, or if you
 # CFLAGS()
 # CLFLAGS()
 # CSTATUS()
+# CTITLE()
 # CWHO()
 # CRECALL()
+# CBUFFER()
 # CBUFFERADD()
+# CDESC()
+# CMSGS()
+# CUSERS()
+# CMOGRIFIER()
+# CINFO()
 # CLOCK()
 # CEMIT()
 # NSCEMIT()
@@ -417,11 +425,18 @@ You may set a channel's locks if you own it, if you pass its mod lock, or if you
 `cowner(<channel>)`<br>
 `cflags(<channel>[,<object>])`<br>
 `clflags(<channel>[,<object>])`<br>
-`cstatus([<player>][,<channel>])`<br>
+`cstatus(<object>, <channel>)`<br>
+`ctitle(<object>, <channel>)`<br>
 `cwho(<channel>[,<on|off|all>[,<skip gagged?>]])`<br>
 `crecall(<channel>[,<lines>[,<start>[,<osep>[,<timestamps?>]]]])`<br>
+`cbuffer(<channel>)`<br>
 `cbufferadd(<channel>,<message>[,<spoof?>])`<br>
-`clock(<channel>[/<locktype>])`<br>
+`cdesc(<channel>)`<br>
+`cmsgs(<channel>)`<br>
+`cusers(<channel>)`<br>
+`cmogrifier(<channel>)`<br>
+`cinfo(<channel>[,<field>])`<br>
+`clock(<channel>[/<locktype>][, <new lock>])`<br>
 `cemit(<channel>,<message>[,<noisy>])`<br>
 `nscemit(<channel>,<message>[,<noisy>])`
 
@@ -437,12 +452,15 @@ These functions provide information about channels:
 
 - **cflags()** and **clflags()**: With one argument, *\<channel\>*'s privileges; with two, *\<object\>*'s own flags on that channel. `cflags()` abbreviates each to its single letter and `clflags()` spells it out — that is the only difference between them. See [@channel privs] for the privilege letters; a member's own flags are `Q`uiet, `H`ide, `G`ag and `C`ombine. Reading another object's flags requires that you be able to examine it, and answers `#-1 NOT ON CHANNEL` when it is not a member.
 
-- **cstatus()**: Returns information about *\<player\>*'s channel status:
-  - With no args: List of channels I'm on
-  - With *\<player\>*: List of channels they're on
-  - With *\<channel\>*: My status on that channel
-  - With both: Their status on that channel
-  Status is one of: OFF ON GAG HIDE MUTE COMBINE
+- **cstatus()**: *\<object\>*'s standing on *\<channel\>*, as a space-separated list drawn from `OFF`, `ON`, `GAG`, `HIDE`, `MUTE` and `COMBINE`; an object that is not a member answers `OFF`. Both arguments are required, and SharpMUSH takes them object-first where PennMUSH takes them channel-first.
+
+- **ctitle()**: *\<object\>*'s @channel/title on *\<channel\>*, or nothing when it has none. Argument order matches cstatus(), object first.
+
+- **cbuffer()**, **cdesc()**, **cmsgs()**, **cusers()**: the recall buffer's size, the @channel/describe text, the number of messages held in the buffer, and the number of members, respectively. These are the same figures [@channel/list] prints.
+
+- **cmogrifier()**: the dbref of *\<channel\>*'s mogrifier, or nothing when none is set. See [@channel/mogrifier].
+
+- **cinfo()**: one field of *\<channel\>*, named by *\<field\>*: `name` (the default), `owner`, `members` or `buffer`. Any other field answers `#-1 INVALID INFO TYPE`. It is a SharpMUSH function; PennMUSH has no cinfo().
 
 - **cwho()**: The dbrefs of *\<channel\>*'s members, space separated. The second argument selects which: **on** (default) lists connected members, **off** lists the rest, and **all** lists everyone. Members hiding on the channel are treated as off unless you have the `Who` power; things are always listed. A true third argument omits members who are gagging the channel.
 
@@ -479,18 +497,27 @@ ON COMBINE
 - [@clock]
 
 # MUXCOMSYS
+# ADDCOM
+# DELCOM
+# COMLIST
+# COMTITLE
 
-SharpMUSH provides some aliases for players more familiar with the MUX comsys:
+`addcom <alias>=<channel>`<br>
+`delcom <alias>`<br>
+`comlist`<br>
+`comtitle <alias>=<title>`
 
-- `addcom <alias>=<channel>` > `@channel/on <channel>`
-- `delcom <alias>` > `@channel/off <channel>`
-- `comlist` > `@channel/list`
-- `comtitle <channel>=<title>` > `@channel/title <channel>=<title>`
+SharpMUSH provides the MUX comsys commands for players more familiar with them:
+
+- `addcom <alias>=<channel>` joins `<channel>` and remembers `<alias>` for it
+- `delcom <alias>` leaves the channel `<alias>` names and forgets the alias
+- `comlist` lists your aliases and the channels they name
+- `comtitle <alias>=<title>` is `@channel/title <channel>=<title>`
 - `<alias> <message>` > `@chat <channel>=<message>`
 - `<alias>:` > `@chat <channel>=:`
 - `<alias>;` > `@chat <channel>=;`
 
-Note that SharpMUSH does not actually support channel aliases - the above commands work by looking up the real channel name. You must use enough of the channel name to uniquely identify it.
+Aliases are stored on you as `CHANALIAS`<alias>` attributes, so they survive a disconnect. Where a command takes a channel name rather than an alias you must give enough of the name to identify it uniquely.
 
 **See Also:**
 - [@channel]

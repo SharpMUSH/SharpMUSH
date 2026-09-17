@@ -783,6 +783,7 @@ would show white text on an ANSI-blue background.
 - [sin()]
 - [tan()]
 # ATRLOCK()
+# ATTRLOCK()
 `atrlock(<object>/<attrib>[, [on|off]])`
 
   When given a single `<object>`/`<attribute>` pair as an argument, returns 1 if the attribute is locked, 0 if unlocked, and #-1 if the attribute doesn't exist or can't be read by the function's caller.
@@ -812,8 +813,24 @@ would show white text on an ANSI-blue background.
 **See Also:**
 - [set()]
 - [@set]
+- [attrib_set#()]
+# ATTRIB_SET#()
+`attrib_set#(<object>/<attrib>[, <value>])`
+
+  Sets or clears an attribute exactly as [attrib_set()] does, and returns `<object>`'s name followed by the `<object>`/`<attribute>` pair it was given, rather than the empty string. Use it when the calling code wants to report what it just set. On failure it returns the same error attrib_set() would.
+
+  This is a SharpMUSH function; PennMUSH has no attrib_set#().
+
+  **It cannot currently be called.** The parser's function-name token does not admit `#`, so
+  `attrib_set#(me/foo, bar)` is never recognised as a call and the text is returned unchanged. Use
+  [attrib_set()] until that is fixed.
+
+
+**See Also:**
+- [attrib_set()]
+- [set()]
 # BAND()
-`band(<integer>, <integer>[, ... , <integerN>])`
+`band(<integer>[, ... , <integerN>])`
 
   Does a bitwise AND of all its arguments, returning the result (a number with only the bits set in every argument set in it).
 
@@ -899,7 +916,7 @@ think brackets(v(desc))
 **See Also:**
 - [BITWISE FUNCTIONS]
 # BOR()
-`bor(<integer>, <integer>[, ... , <integerN>])`
+`bor(<integer>[, ... , <integerN>])`
 
   Does a bitwise OR of all its arguments, returning the result. (A number with a bit set if that bit appears in any of its arguments).
 
@@ -908,7 +925,7 @@ think brackets(v(desc))
 - [BITWISE FUNCTIONS]
 - [lmath()]
 # BOUND()
-`bound(<number>, <lower bound>, <higher bound>)`
+`bound(<number>, <lower bound>[, <higher bound>])`
 
   bound() returns `<number>` if it is between `<lower bound>` and `<higher bound>`. If it's lower than `<lower bound>`, `<lower bound>` is returned. If it's higher than `<higher bound>`, `<higher bound>` is returned.
 
@@ -921,7 +938,7 @@ think brackets(v(desc))
 - [round()]
 - [trunc()]
 # BXOR()
-`bxor(<integer>, <integer>[, ... , <integerN>])`
+`bxor(<integer>[, ... , <integerN>])`
 
   Does a bitwise XOR of all its arguments, returning the result. (A number with a bit set if it's set in only one of its arguments).
 
@@ -1278,8 +1295,8 @@ You say, "709395750"
 - [timefmt()]
 # CONVTIME()
 # CONVUTCTIME()
-`convtime(<time string>,[<timezone>])`<br>
-`convutctime(<time string>)`
+`convtime(<time string>[, <timezone>[, <precision>]])`<br>
+`convutctime(<time string>[, <precision>])`
 
   This functions converts a time string to the number of seconds since Jan 1, 1970 GMT. A time string is of the format:<br>
       Ddd MMM DD HH:MM:SS YYYY<br>
@@ -1328,7 +1345,7 @@ You say, "0"
 - [sin()]
 - [tan()]
 # PCREATE()
-`pcreate(<name>, <password>[, <dbref>])`
+`pcreate(<name>, <password>)`
 
   Creates a player with a given `<name>` and `<password>`. This function can only be used by wizards.
 
@@ -1356,7 +1373,7 @@ You say, "0"
 # CTIME()
 # CSECS()
 `ctime(<object>[, <utc>])`<br>
-`csecs(<object>)`
+`csecs(<object>[, <precision>])`
 
   ctime() returns the date and time that `<object>` was created. The time returned is in the server's local timezone, unless `<utc>` is true, in which case the time is in the UTC timezone.
 
@@ -1433,6 +1450,18 @@ You say, "90 degrees is 1.570796 radians"
 **See Also:**
 - [inc()]
 - [sub()]
+# DECOMPOSEWEB()
+`decomposeweb(<string>)`
+
+  Works like [decompose()], but reconstructs the string for a web client: angle brackets in the text are encoded so that the result can be placed in HTML without being read as markup, while any colour on the string is rebuilt as an [ansi()] call.
+
+  This is a SharpMUSH function; PennMUSH has no decomposeweb().
+
+
+**See Also:**
+- [decompose()]
+- [ansi()]
+- [render()]
 # DECOMPOSE()
 `decompose(<string>)`
 
@@ -1972,7 +2001,7 @@ Kept: 12 7 / Dropped: apples pears
 - [firstof()]
 - [strfirstof()]
 # FIRSTOF()
-`firstof(<expr>[, ... , <exprN>], <default>)`
+`firstof([<expr>, ... , <exprN>][, <default>])`
 
   Returns the first evaluated `<expr>` that is true. If no `<expr>` arguments are true, `<default>` is returned.
 
@@ -2263,7 +2292,7 @@ This is [a test].
 # REGRAB()
 # REGRABI()
 `grab(<list>, <pattern>[, <delimiter>])`<br>
-`regrab(<list>, <regexp>[, <delimiter>])`<br>
+`regrab(<list>, <regexp>[, <delimiter>[, <osep>]])`<br>
 `regrabi(<list>, <regexp>[, <delimiter>])`
 
   These functions return the first word in `<list>` which matches the pattern. For grab(), `<pattern>` is a wildcard pattern ([wildcards]). For regrab() and regrabi(), the pattern is a regular expression. regrabi() is case-insensitive. `<delimiter>` defaults to a space.
@@ -2473,7 +2502,7 @@ think hastype(test object, PLAYER THING)
 - [lports()]
 # IDLE()
 # IDLESECS()
-`idle(<player|descriptor>)`
+`idle(<player|descriptor>[, <precision>])`
 
   This function returns the number of seconds a player has been idle, much as WHO does. `<player name>` must be the full name of a player, or a player's dbref. You can also specify a `<descriptor>`, useful if a player is connected multiple times, or for connections which are still at the login screen. Players who are not connected have an idle time of "-1", as do dark wizards, when idle() is used on them by a non-priv'ed player.
 
@@ -3035,7 +3064,7 @@ You say, "foo ~ bar ~ boing"
 - [@lemit]
 - [remit()]
 # LETQ()
-`letq([<reg1>, <value1>[, ... , <regN>, <valueN>], <expr>)`
+`letq([<reg1>, <value1>[, ... , <regN>, <valueN>], ]<expr>)`
 
   letq() saves the current values of the given q-`<reg>`isters, sets them to new `<value>`s, evaluates `<expr>` and then restores the saved registers. It does not restore registers that are not listed. None of the values can see the updated contents of the registers -- they are only visible to `<expr>`.
 
@@ -3481,6 +3510,7 @@ Walker WalkerBot Wilco
 - [lcon()]
 - [lthings()]
 # LTHINGS()
+# LOBJECTS()
 `lthings(<object>)`
 
   This function returns the dbrefs of all things, dark or not, in `<object>`. You must be in `<object>` or control it to use this function.
@@ -3640,6 +3670,7 @@ th lt(1,3,2)
 - [lvthings()]
 - [lvexits()]
 # LVTHINGS()
+# LVOBJECTS()
 `lvthings(<object>)`
 
   This function returns the dbrefs of all non-dark things inside an object. You must be in the object or control it to use this function.
@@ -3734,6 +3765,7 @@ You say, "3"
 # REGLMATCHI()
 # REGLMATCHALL()
 # REGLMATCHALLI()
+# REGMATCHALLI()
 `reglmatch(<list>, <regexp>[, <delimiter>])`<br>
 `reglmatchi(<list>, <regexp>[, <delimiter>])`<br>
 `reglmatchall(<list>, <regexp>[, <delimiter>[, <output separator>]])`<br>
@@ -3744,6 +3776,8 @@ You say, "3"
   reglmatchall() returns the positions of all elements in `<list>` which match `<regexp>`. reglmatchalli() is case-insensitive.
 
   In all cases, the elements of `<list>` are separated by `<delimiter>`, which defaults to a space. The elements outputted by reglmatchall() are separated by `<output separator>`, if one is given, or by `<delimiter>` if not.
+
+  SharpMUSH also registers regmatchalli() for reglmatchalli(). Despite the name it searches a list and returns positions, as the rest of this family does — it is not a case-insensitive [regmatch()].
 
   See [reglmatch2] for examples.
 
@@ -3766,7 +3800,7 @@ You say, "3"
   You say, "3|5"
 ```
 # MAX()
-`max(<number1>, <number2>[, ... , <numberN>])`
+`max(<number1>[, ... , <numberN>])`
 
   This function returns the largest number in its list of arguments. It can take any number of arguments.
 
@@ -3778,7 +3812,7 @@ You say, "3"
 - [alphamax()]
 # AVG()
 # MEAN()
-`mean(<number1>, <number2>[, ... , <numberN>])`
+`mean(<number1>[, ... , <numberN>])`
 
   Returns the mean (arithmetic average) of its arguments.
 
@@ -3790,7 +3824,7 @@ You say, "3"
 - [stddev()]
 - [lmath()]
 # MEDIAN()
-`median(<number>, <number>[, ... , <numberN>)`
+`median(<number>[, ... , <numberN>])`
 
   Returns the median (the middlemost numerically) of its arguments.
 
@@ -3880,7 +3914,7 @@ You say, "es"
 - [right()]
 - [strdelete()]
 # MIN()
-`min(<number1>, <number2>[, ... , <numberN>])`
+`min(<number1>[, ... , <numberN>])`
 
   This function returns the smallest number in its list of arguments. It can take any number of arguments.
 
@@ -3972,7 +4006,7 @@ You say, "150"
 # MTIME()
 # MSECS()
 `mtime(<object>[, <utc?>])`<br>
-`msecs(<object>)`
+`msecs(<object>[, <precision>])`
 
   mtime() returns the date and time that one of `<object>`'s attributes or locks was last added, deleted, or modified. The time returned is in the server's local timezone, unless `<utc?>` is true, in which case the time is in the UTC timezone.
 
@@ -4130,8 +4164,8 @@ You say, "#1 #7 #56 #-1"
 - [pmatch()]
 # NAMEGRAB()
 # NAMEGRABALL()
-`namegrab(<dbref list>, <name>)`<br>
-`namegraball(<dbref list>, <name>)`
+`namegrab(<dbref list>, <name>[, <delimiter>])`<br>
+`namegraball(<dbref list>, <name>[, <delimiter>])`
 
   The namegrab() function returns the first dbref in the list that would match `<name>` as if you were checking num() or locate(). An exact match has priority over partial matches.
 
@@ -4151,10 +4185,12 @@ You say, "#1 #7 #56 #-1"
 - [locate()]
 # NAND()
 # NCAND()
+# CNAND()
 `nand(<boolean1>[, ... , <booleanN>])`<br>
-`ncand(<boolean1>[, ... , <booleanN>])`
+`ncand(<boolean1>[, ... , <booleanN>])`<br>
+`cnand(<boolean1>[, ... , <booleanN>])`
 
-  These functions return 1 if at least one of their arguments are false, and 0 if all are true. nand() always evaluates all of its arguments, while ncand() stops evaluating after the first false value.
+  These functions return 1 if at least one of their arguments are false, and 0 if all are true. nand() always evaluates all of its arguments, while ncand() stops evaluating after the first false value. cnand() is a SharpMUSH spelling of ncand(), for code written against servers that name the cancelling form that way; PennMUSH has no cnand().
 
   Equivalent to not(and()) and not(cand()), but more efficient.
 
@@ -4292,6 +4328,8 @@ You say, "#1 #7 #56 #-1"
 - [lvplayers()]
 # NVTHINGS()
 # NTHINGS()
+# NOBJECTS()
+# NVOBJECTS()
 `nthings(<object>)`<br>
 `nvthings(<object>)`
 
@@ -4359,6 +4397,8 @@ You say, "#1 #7 #56 #-1"
 `objmem(<object>)`
 
   This function returns the amount of memory, in bytes, being used by the object. It can only be used by players with Search powers.
+
+  **Not implemented.** SharpMUSH always answers 0, whatever object it is asked about, so no caller can tell a large object from a small one.
 
 
 **See Also:**
@@ -4539,6 +4579,26 @@ You say, "#1 #7 #56 #-1"
 - [num()]
 - [namelist()]
 - [locate()]
+# MOTD()
+# WIZMOTD()
+# DOWNMOTD()
+# FULLMOTD()
+`motd()`<br>
+`wizmotd()`<br>
+`downmotd()`<br>
+`fullmotd()`
+
+  These functions return the Message of the Day that [@motd] set, one function per `<type>`: motd() the connect MotD, wizmotd() the wizard one, downmotd() the one shown when logins are disabled, and fullmotd() the one shown when every connection is in use. A MotD that has not been set returns the empty string.
+
+  motd() is readable by anyone, since every player sees the connect MotD on the way in. The other three are Wizard-only and return `#-1 PERMISSION DENIED` to anyone else, matching who [@motd/list] shows them to.
+
+  These are SharpMUSH functions; PennMUSH exposes the same text only through [@motd].
+
+
+**See Also:**
+- [@motd]
+- [poll()]
+- [@poll]
 # POLL()
 `poll()`
 
@@ -4758,6 +4818,20 @@ You say "this Trash is the Brash string"
 - [@edit]
 - [regmatch()]
 - [regrab()]
+# REGREPLACE()
+`regreplace(<string>, <regexp>, <replacement>[, <flags>])`
+
+  Replaces every part of `<string>` that matches `<regexp>` with `<replacement>`, and returns the result. `<replacement>` may refer to captured groups with `$1`, `$2` and so on, or by name with `${name}`.
+
+  `<flags>` is a string of letters; only `i` (match case-insensitively) is meaningful. Replacement is always global, so a `g` is accepted and changes nothing. An invalid `<regexp>` returns `#-1 INVALID REGEX`.
+
+  This is a SharpMUSH function. PennMUSH spells the same idea [regedit()], which takes alternating pattern/replacement pairs instead of a flags argument and uses `%1`-style backreferences.
+
+
+**See Also:**
+- [regedit()]
+- [regmatch()]
+- [REGEXP SYNTAX]
 # REGMATCH()
 # REGMATCHI()
   (Help text from TinyMUSH 2.2.4, with permission)<br>
@@ -5135,9 +5209,9 @@ You say, "cfaedb"
 **See Also:**
 - [shuffle()]
 # SECS()
-`secs()`
+`secs([<precision>])`
 
-  This function takes no arguments, and returns the number of elapsed seconds since midnight, January 1, 1970 UTC. UTC is the base time zone, formerly GMT. This is a good way of synchronizing things that must run at a certain time.
+  This function returns the number of elapsed seconds since midnight, January 1, 1970 UTC. UTC is the base time zone, formerly GMT. This is a good way of synchronizing things that must run at a certain time.
 
 
 **See Also:**
@@ -5965,7 +6039,7 @@ d - e -
 - [anonymous attributes]
 - [registers()]
 # STDDEV()
-`stddev(<number1>, <number2>[, ... , <numberN>])`
+`stddev(<number1>[, ... , <numberN>])`
 
   Returns the sample standard deviation of its arguments.
 
@@ -6438,6 +6512,21 @@ a          b          areallylon d
 
 **See Also:**
 - [JSON PATHS]
+# WEBSOCKET_HTML()
+# WEBSOCKET_JSON()
+`websocket_html(<html>[, <player>])`<br>
+`websocket_json(<json>[, <player>])`
+
+  Reserved for sending raw HTML or a raw JSON payload out-of-band to a WebSocket client, defaulting to the caller when no `<player>` is given.
+
+  **Neither function is implemented yet.** Both validate their arguments and then return an error; no data reaches any connection. They are registered so that softcode written against them keeps its name, and so that this gap is visible from in-game help rather than only from the source. Use [oob()] for GMCP, which does work.
+
+  These are SharpMUSH functions; PennMUSH has neither.
+
+
+**See Also:**
+- [oob()]
+- [json()]
 # OOB()
 # GMCP
 `oob(<players>, <package>[, <message>])`
@@ -6479,7 +6568,7 @@ think isjson("quoted")
 **See Also:**
 - [json()]
 # JSON()
-`json(<type>[, <data>[, ..., <dataN>])`
+`json(<type>[, <data>[, ... , <dataN>]])`
 
   This function encodes `<data>` as a valid JSON (JavaScript Object Notation) message. `<type>` specifies the type of data to represent; valid `<type>`s and correspending `<data>`s are listed below.
 
@@ -6525,7 +6614,7 @@ think isjson("quoted")
    {"name": "Master Room", "dbref": "#2", "created": 1431039583}<br>
   ]
 # JSON_ARRAY()
-`json_array(<list>[, <delimiter>])`
+`json_array([<list>[, <delimiter>]])`
 
   This function assembles a MUSH `<list>` (separated by `<delimiter>`, which defaults to a space) of already-formed JSON values into a JSON array. Each element must itself be valid JSON — typically produced with json(type, value) — and is placed into the array unchanged. json_array() does NOT quote or re-escape its elements.
 
@@ -6755,7 +6844,7 @@ think testlock(\\+FOO:BAR,*Walker)
 # TEXTSEARCH()
 # DYNHELP()
 `textfile(<type>, <entry>)`<br>
-`textentries(<type>, <pattern>[, <osep>])`<br>
+`textentries(<type>[, <pattern>])`<br>
 `textsearch(<type>, <pattern>[, <osep>])`
 
   textfile() returns the text of entries from cached text files (such as "help", "news", "events", etc.) All whitespace and newlines are included, so you may want to edit %r's and squish the result if you plan to use the text as a list of words rather than a display.
@@ -6821,8 +6910,8 @@ Continued in HELP TIME2
 - [TIMEZONES]
 # TIMECALC()
 # SECSCALC()
-`timecalc(<timestring>, <modifier>, ...)`<br>
-`secscalc(<timestring>, <modifier>, ...)`
+`timecalc(<timestring>[, <modifier>, ... ])`<br>
+`secscalc(<timestring>[, <modifier>, ... ])`
 
 
  Takes a time and returns the resulting time after applying any modifiers. timecalc() returns a time is the same format as time(), and secscalc() as the seconds since the epoch. These functions can deal with a much broader range of times than the other time functions.
@@ -7208,7 +7297,7 @@ Continued in HELP TIMEZONES13
   W-SU                               WET<br>
   Zulu
 # ETIME()
-`etime(<seconds>[, <width>])`
+`etime(<seconds>[, <width>[, <precision>]])`
 
   This function formats a number of seconds using the same rules as the 'On for' and 'Idle' columens in WHO's output. The optional `<width>` argument controls the maximum size of the returned string.
 
@@ -7232,7 +7321,7 @@ think etime(61, 5)
 - [timestring()]
 - [stringsecs()]
 # ETIMEFMT()
-`etimefmt(<format>, <secs>)`
+`etimefmt(<format>, <secs>[, <precision>])`
 
   This function is similar to timestring() - it formats a number of seconds into days, hours, minutes and seconds. However, its formatting is much more versatile than timestring(), as well as being more complex.
 
@@ -7311,7 +7400,7 @@ Monday, the 17th day of July.
   $m - Month of the year         $Z - Time zone<br>
   $M - Minutes after the hour    $$ - $ character.
 # TIMESTRING()
-`timestring(<seconds>[, <pad flag>])`
+`timestring(<seconds>[, <pad flag>[, <precision>]])`
 
   The timestring function takes a number of seconds as input and returns the amount of time formatted into days, hours, minutes, and seconds. If `<pad flag>` is 1, all time periods will be used even if the number of seconds is less than a day, hour, or minute. If `<pad flag>` is 2, all numbers will be 2 digits long.
 
@@ -7332,7 +7421,7 @@ You say, "00d 00h 05m 01s"
 - [etime()]
 - [etimefmt()]
 # STRINGSECS()
-`stringsecs(<timestring>)`
+`stringsecs(<timestring>[, <precision>])`
 
   The stringsecs() function takes a string of the form produced by timestring() or etime() and converts it back into seconds.
 
@@ -7668,7 +7757,7 @@ think unique(1|2|3|3, n, |, _)
 - [r()]
 - [ATTRIBUTES]
 # VADD()
-`vadd(<vector1>, <vector2>[, <delimiter>])`
+`vadd(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
   Returns the sum of two vectors. A vector is a list of numbers separated by spaces or `<delimiter>`.
 
@@ -7727,7 +7816,7 @@ think unique(1|2|3|3, n, |, _)
   1
 
 # VCROSS()
-`vcross(<vector1>, <vector2>[, <delimiter>])`
+`vcross(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
   Returns the 3-dimensional vector that is the cross product of its 3-dimensional argument vectors. The cross product is defined as:
 
@@ -7753,7 +7842,7 @@ think unique(1|2|3|3, n, |, _)
 **See Also:**
 - [VECTOR FUNCTIONS]
 # VDOT()
-`vdot(<vector1>, <vector2>[, <delimiter>])`
+`vdot(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
   Returns the dot product of two vectors. A dot product is the sum of the products of the corresponding elements of the two vectors, e.g. vdot(a b c,d e f) = ad + be + cf. The vectors must be of the same length.
 
@@ -7764,7 +7853,7 @@ think unique(1|2|3|3, n, |, _)
 **See Also:**
 - [VECTOR FUNCTIONS]
 # VMIN()
-`vmin(<vector1>, <vector2>[, <delimiter>])`
+`vmin(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
   Returns a new vector made out of the minimums of each corresponding pair of numbers from the two vectors. The vectors must be of the same length.
 
@@ -7775,7 +7864,7 @@ think unique(1|2|3|3, n, |, _)
 **See Also:**
 - [VECTOR FUNCTIONS]
 # VMAX()
-`vmax(<vector1>, <vector2>[, <delimiter>])`
+`vmax(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
   Returns a new vector made out of the maximums of each corresponding pair of numbers from the two vectors. The vectors must be of the same length.
 
@@ -7831,7 +7920,7 @@ You say "1008001004"
 **See Also:**
 - [VECTOR FUNCTIONS]
 # VMUL()
-`vmul(<vector1|number1>, <vector2|number2>[, <delimiter>])`
+`vmul(<vector1|number1>, <vector2|number2>[, <delimiter>[, <osep>]])`
 
   Returns the result of either multiplying a vector by a number, or the element-wise product of two vectors. The element-wise product of a b c by w x z is aw bx cz
 
@@ -7844,7 +7933,7 @@ You say "1008001004"
 **See Also:**
 - [VECTOR FUNCTIONS]
 # VSUB()
-`vsub(<vector1>, <vector2>[, <delimiter>])`
+`vsub(<vector1>, <vector2>[, <delimiter>[, <osep>]])`
 
   Returns the difference between two vectors.
 
@@ -8042,6 +8131,8 @@ think words(1 2%b%b3, %b)
 - [xexits()]
 # XVTHINGS()
 # XTHINGS()
+# XOBJECTS()
+# XVOBJECTS()
 `xthings(<object>, <start>, <count>)`<br>
 `xvthings(<object>, <start>, <count>)`
 
@@ -8081,6 +8172,21 @@ think words(1 2%b%b3, %b)
 - [mwho()]
 - [nwho()]
 - [zwho()]
+# ZFIND()
+`zfind(<zone>[, <osep>])`
+
+  Returns the dbrefs of every object @chzone'd to `<zone>` that you may examine, separated by `<osep>` (a space by default).
+
+  You must be See_All or pass `<zone>`'s @lock/zone. Objects you could not examine are left out rather than erroring, so the result is what you may see and not necessarily the whole zone.
+
+  This is a SharpMUSH function; PennMUSH offers the zone lists through [search()] and [zwho()].
+
+
+**See Also:**
+- [zwho()]
+- [zone()]
+- [@chzone]
+- [lsearch()]
 # ZWHO()
 # ZMWHO()
 `zwho(<object>[, <viewer>])`<br>
@@ -8142,7 +8248,7 @@ think words(1 2%b%b3, %b)
 - [zwho()]
 - [zemit() ZONES]
 # UPTIME()
-`UPTIME([<type>])`
+`UPTIME([<type>[, <precision>]])`
 
   This function returns the time, as a number of seconds, that something happend (or will happen). Exactly what is returned depends on the given `<type>`, which should be one of:
 
@@ -8188,7 +8294,7 @@ AARDVARK AARDVARKS AARDVARK'S etc...
 **See Also:**
 - [@suggest]
 # CONNLOG()
-`CONNLOG(all|[not] logged in|<name>, <spec>...[, <osep>])`
+`CONNLOG(all|[not] logged in|<name>, <spec>, <spec>...[, <osep>])`
 
   If connection tracking is enabled, this Wizard-only returns a list of connections that match the given `<spec>`. The format of the list elements is '`<dbref>` `<unique-id>`', with elements seperated by `<osep>` (defaulting to |). `<unique-id>` is an identifier that can be used to get more information from the connection with connrecord().
 
@@ -8249,7 +8355,7 @@ shows all connections that were present during the last 15 minutes
 **See Also:**
 - [connlog()]
 # ADDRLOG()
-`ADDRLOG([count,], ip|hostname, <pattern>[, <osep>)`
+`ADDRLOG([<count>, ]ip|hostname, <pattern>[, <osep>])`
 
   Searches the log of unique sites that have connected to the mush and returns a list of 'IPADDRESS HOSTNAME' pairs that match the given field with the given wildcard pattern, separated by `<osep>`, which defaults to |. If 'count' is given, returns the total number of matches instead.
 

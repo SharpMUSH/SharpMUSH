@@ -1,5 +1,5 @@
 # RENDERMARKDOWN()
-`rendermarkdown(<markdown>[, <width>])`
+`rendermarkdown([<markdown>[, <width>]])`
 
 Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formatting. This function converts markdown syntax into formatted text with ANSI color codes and styles for display in MUSH clients.
 

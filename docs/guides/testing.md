@@ -42,6 +42,24 @@ CI keeps detailed pass/fail output and TRX files. Routine application logging an
 
 When changing fixtures, validate both a filtered run and a full run, including teardown. For timing comparisons, use the same provider, concurrency, logging, and build mode. On Linux, keep the temporary path short enough for Unix-domain sockets; a short symlink can point at disk-backed storage.
 
+## Shared accessors
+
+`SharpMUSH.Tests.Infrastructure` holds what more than one test needs. Derive an engine test from
+`ServerTestBase` rather than re-declaring the session factory and a private `Eval`: it supplies the
+two parsers, `Mediator`, `ConnectionService`, `NotifyService`, the notification recorder, and one
+spelling each of `Eval`/`EvalAs` and `Cmd`/`CmdAs`. The hand-rolled copies disagreed about what a
+null result means — one threw, one returned a sentinel, one returned the empty string — so the same
+engine bug surfaced as a crash in one file and a passing assertion in another. The base returns
+`ServerTestBase.NullResult` instead.
+
+The base runs as God. A test about `Controls`, `CanSet`, locks, quotas or visibility must drive a
+mortal through `EvalAs`/`CmdAs` or it proves nothing.
+
+`TestPaths` locates the repository root and the helpfile tree for a test that has to read a
+source-controlled file; `RegistryInventory` reads the registered function and command surface off the
+attributes. See [registry parity and coverage](registry-parity-and-coverage.md) for the tests built
+on them.
+
 ## TUnit references
 
 - [Tips and pitfalls](https://tunit.dev/docs/guides/best-practices/): share expensive infrastructure and keep test state independent.
