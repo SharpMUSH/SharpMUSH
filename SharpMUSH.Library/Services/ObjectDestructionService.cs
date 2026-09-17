@@ -216,7 +216,9 @@ public class ObjectDestructionService(
 	/// player and everything they own untouched, still GOING, and the whole of it is retried on the next
 	/// purge pass. Penn runs <c>chan_chownall</c> before <c>clear_thing</c>, which cannot fail there.
 	/// </remarks>
-	/// <returns><see langword="false"/> when a piece of content could not be evacuated.</returns>
+	/// <returns>
+	/// <see langword="false"/> when a piece of content could not be evacuated, or no probate player resolves.
+	/// </returns>
 	private async ValueTask<bool> ClearPlayerAsync(IMUSHCodeParser parser, SharpPlayer player, CancellationToken ct)
 	{
 		if (!await EmptyContentsAsync(parser, player, ct))
@@ -224,10 +226,11 @@ public class ObjectDestructionService(
 			return false;
 		}
 
-		var probate = await ResolveProbatePlayerAsync(ct);
-		if (probate is null)
+		// With nobody to hand them to, deleting the player would sever the ownership edge of everything
+		// they own. The player stays GOING and the next purge retries once the configuration is fixed.
+		if (await ResolveProbatePlayerAsync(ct) is not { } probate)
 		{
-			return true;
+			return false;
 		}
 
 		var playerDbRef = player.Object.DBRef;
@@ -238,18 +241,23 @@ public class ObjectDestructionService(
 		}
 
 		// Materialised: freeing a possession deletes rows the live stream would still be reading.
-		var owned = await mediator.CreateStream(new GetAllTypedObjectsQuery(), ct)
-			.Where(async (candidate, token) => candidate.Object().DBRef.Number != playerDbRef.Number
-				&& (await candidate.Object().Owner.WithCancellation(token)).Object.DBRef.Number == playerDbRef.Number)
+		var owned = await mediator
+			.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = playerDbRef }), ct)
+			.Select(candidate => candidate.DBRef)
+			.Where(ownedDbRef => ownedDbRef.Number != playerDbRef.Number)
 			.ToListAsync(ct);
 
 		var command = configuration.CurrentValue.Command;
 
-		foreach (var listed in owned)
+		foreach (var ownedDbRef in owned)
 		{
-			// Re-resolved because freeing an earlier possession may already have taken this one (a room
-			// takes its exits with it), and acting on the stale copy would write to a deleted dbref.
-			if (await mediator.Send(new GetObjectNodeQuery(listed.Object().DBRef), ct) is not AnySharpObject possession) continue;
+			// Resolved one at a time because freeing an earlier possession may already have taken this one
+			// (a room takes its exits with it), and acting on a stale copy would write to a deleted dbref.
+			if (await mediator.Send(new GetObjectNodeQuery(ownedDbRef), ct) is not AnySharpObject possession) continue;
+
+			// Belt and braces over the pushdown, as in PurgeAsync: a provider that ignored the owner
+			// predicate would otherwise have this free the whole database.
+			if (!await IsOwnedByAsync(possession, playerDbRef, ct)) continue;
 
 			var survives = IsSpecialObject(possession.Object().DBRef)
 				|| !command.DestroyPossessions
@@ -426,6 +434,9 @@ public class ObjectDestructionService(
 				configuration.CurrentValue.Database.DefaultHome, abandoned, dbref.Number);
 		}
 	}
+
+	private static async ValueTask<bool> IsOwnedByAsync(AnySharpObject target, DBRef owner, CancellationToken ct)
+		=> (await target.Object().Owner.WithCancellation(ct)).Object.DBRef.Number == owner.Number;
 
 	private async ValueTask<AnySharpContainer?> ResolveDefaultHomeAsync(CancellationToken ct)
 	{

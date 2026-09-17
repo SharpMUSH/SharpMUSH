@@ -1,3 +1,5 @@
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -412,14 +414,73 @@ public class ObjectDestructionTests
 	/// Builds the service over a substituted <see cref="IMoveService"/> so evacuation can be made to
 	/// fail; everything else is the live session's wiring.
 	/// </summary>
-	private ObjectDestructionService DestructionServiceWith(IMoveService moves)
+	private ObjectDestructionService DestructionServiceWith(IMoveService moves, IMediator? mediator = null)
 		=> new(
-			Mediator,
+			mediator ?? Mediator,
 			WebAppFactoryArg.Services.GetRequiredService<INotifyService>(),
 			moves,
 			WebAppFactoryArg.Services.GetRequiredService<IEventService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
 			NullLogger<ObjectDestructionService>.Instance);
+
+	/// <summary>
+	/// The live mediator, except that the listed dbrefs read as missing — the only way to stage a
+	/// world where neither probate_judge nor God resolves.
+	/// </summary>
+	public class HidingMediator : DispatchProxy
+	{
+		public IMediator Inner { get; set; } = null!;
+		public HashSet<int> Hidden { get; set; } = [];
+
+		public static IMediator Over(IMediator inner, params int[] hidden)
+		{
+			var proxy = Create<IMediator, HidingMediator>();
+			var hiding = (HidingMediator)(object)proxy;
+			hiding.Inner = inner;
+			hiding.Hidden = [.. hidden];
+			return proxy;
+		}
+
+		protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+		{
+			if (args is [GetObjectNodeQuery query, ..] && Hidden.Contains(query.DBRef.Number))
+			{
+				return ValueTask.FromResult(new AnyOptionalSharpObject(new None()));
+			}
+
+			try
+			{
+				return targetMethod!.Invoke(Inner, args);
+			}
+			catch (TargetInvocationException exception) when (exception.InnerException is not null)
+			{
+				ExceptionDispatchInfo.Throw(exception.InnerException);
+				throw;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Freeing a player hands what they own to the probate judge, falling back to God. When neither
+	/// resolves there is nobody to hand it to, and deleting the player anyway would sever every
+	/// ownership edge pointing at them. The free is refused instead, leaving the player GOING for a
+	/// later purge once the configuration is fixed.
+	/// </summary>
+	[Test]
+	public async Task FreePlayer_WithNoProbatePlayer_LeavesThePlayerStanding()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "NoProbate");
+		var target = (await Mediator.Send(new GetObjectNodeQuery(player))).Expect<AnySharpObject>();
+
+		// probate_judge is #1 in the test config, so hiding #1 hides both the judge and the fallback.
+		var service = DestructionServiceWith(
+			WebAppFactoryArg.Services.GetRequiredService<IMoveService>(),
+			HidingMediator.Over(Mediator, ProbateJudgeDbRefNumber));
+
+		await Assert.That(await service.FreeObjectAsync(Parser, target)).IsFalse();
+		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(player))).IsNone).IsFalse();
+	}
 
 	private static IMoveService MoveServiceAnswering(
 		Func<AnySharpContainer, Result<Success>> answer, List<int> destinations)
