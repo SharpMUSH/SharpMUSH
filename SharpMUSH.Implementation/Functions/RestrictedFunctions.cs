@@ -30,7 +30,7 @@ public partial class Functions
 				return new CallState(EvaluationRestrictions.Error);
 			operations.Add(operation);
 		}
-		if (FunctionLimits.ExceedsCombinedOutput(args.Values.Select(value => value.Message ?? MarkupText.Empty)))
+		if (FunctionLimits.ExceedsCombinedOutput(parser.CurrentState, args.Values.Select(value => value.Message ?? MarkupText.Empty)))
 			return FunctionLimits.RejectOutput(parser.CurrentState);
 		// The source and literal inputs remain live throughout the nested parse.
 		using var retainedSource = RestrictedTextRetention.Enter(parser.CurrentState, recognizedEntry: true);
@@ -52,7 +52,8 @@ public partial class Functions
 			FunctionRecursionDepths = parent.FunctionRecursionDepths,
 			LimitExceeded = parent.LimitExceeded,
 			ExecutionBudget = ExecutionBudget.Current ?? parent.ExecutionBudget,
-			Restrictions = EvaluationRestrictions.Current
+			Restrictions = EvaluationRestrictions.Current,
+			OutputLimit = parent.OutputLimit
 		};
 		return await parser.FromState(state).FunctionParse(args["1"].Message ?? MarkupText.Empty) ?? CallState.Empty;
 	}

@@ -14,12 +14,12 @@ internal static class RestrictedTextRetention
 		if (!recognizedEntry && Active.Value is null
 			&& EvaluationRestrictions.Current is null && state.Restrictions is null) return null;
 		var previous = Active.Value;
-		var budget = previous ?? new Budget();
+		var budget = previous ?? new Budget(state.OutputLimit);
 		Active.Value = budget;
 		return new Lease(budget, previous, state);
 	}
 
-	internal sealed class Budget
+	internal sealed class Budget(int limit)
 	{
 		private readonly object _gate = new();
 		private long _characters;
@@ -27,7 +27,7 @@ internal static class RestrictedTextRetention
 		{
 			lock (_gate)
 			{
-				if (characters > FunctionLimits.MaxOutputCodeUnits - _characters) return false;
+				if (characters > limit - _characters) return false;
 				_characters += characters;
 				return true;
 			}

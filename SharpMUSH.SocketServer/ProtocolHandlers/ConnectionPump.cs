@@ -156,7 +156,7 @@ public sealed class ConnectionPump(
 				if (stateStore is not null)
 				{
 					if (persisted is null || !await stateStore.TryUpdateTransportAsync(oldHandle, oldSession,
-						persisted.PlayerObjid, persisted.State, transport.RemoteIp, transport.Hostname, transport.IsSecure, ct))
+						persisted.PlayerObjid, persisted.State, transport.RemoteIp, transport.Hostname, transport.IsSecure, orderedPrompts: true, ct))
 						return null;
 				}
 				if (sink.Ended || connectionService.Get(oldHandle) is null) return null;

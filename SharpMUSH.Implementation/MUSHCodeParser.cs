@@ -13,6 +13,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
@@ -367,6 +368,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		parser ??= this;
 		using var restrictionScope = parser.State.IsEmpty ? null : parser.CurrentState.Restrictions?.Enter();
+		using var ceilingScope = parser.State.IsEmpty ? null : OutputCeiling.Enter(parser.CurrentState);
 		if (EvaluationRestrictions.Current is not null && methodName != nameof(FunctionParse))
 			return (new CallState(EvaluationRestrictions.Error) { HadErrors = true }, true);
 		using var ownedBudget = ExecutionBudget.Current is null && (parser.State.IsEmpty || parser.CurrentState.ExecutionBudget is null)
@@ -695,6 +697,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		return () => visitor.Visit(chatContext);
 	}
 
+	/// <summary>A handle not yet logged in has no player, and gets the full ceiling.</summary>
+	private async ValueTask<int> OutputLimitForAsync(DBRef? player)
+		=> await FunctionLimits.OutputLimitForAsync(
+			player is { } dbref && await _mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject actor ? actor : null,
+			Configuration.CurrentValue.Limit.GuestOutputLimit);
+
 	/// <summary>
 	/// This is the main entry point for commands run by a player.
 	/// </summary>
@@ -707,6 +715,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		var expectedSession = State.IsEmpty ? null : CurrentState.ConnectionSessionId;
 		if (!string.IsNullOrEmpty(expectedSession) &&
 			handleId?.Metadata.GetValueOrDefault("SessionId") != expectedSession) return CallState.Empty;
+		var player = handleId?.Ref;
+		var session = handleId?.Metadata.GetValueOrDefault("SessionId");
+		var outputLimit = await OutputLimitForAsync(player);
+		// The lookup awaited. A login, logout or reconnect on the handle meanwhile makes this someone
+		// else's command, which must not run with the player read above.
+		var current = connectionService.Get(handle);
+		if (current?.Ref != player || current?.Metadata.GetValueOrDefault("SessionId") != session) return CallState.Empty;
 		var newParser = Push(new ParserState(
 			Registers: new([[]]),
 			IterationRegisters: [],
@@ -721,9 +736,9 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 			Switches: [],
 			Arguments: [],
-			Executor: handleId?.Ref,
-			Enactor: handleId?.Ref,
-			Caller: handleId?.Ref,
+			Executor: player,
+			Enactor: player,
+			Caller: player,
 			Handle: handle,
 			ParseMode: ParseMode.Default,
 			HttpResponse: null,
@@ -735,7 +750,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ConnectionSessionId: expectedSession)
 		{
 			MoveDepth = new InvocationCounter(),
-			CommandText = new CommandText()
+			CommandText = new CommandText(),
+			OutputLimit = outputLimit
 		});
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);

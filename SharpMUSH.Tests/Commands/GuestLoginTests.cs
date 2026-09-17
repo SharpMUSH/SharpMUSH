@@ -11,8 +11,13 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
 
+/// <summary>Runs apart from every class that grants the Guest power, since these count guest characters.</summary>
+[NotInParallel(GuestLoginTests.GuestCharacters)]
 public class GuestLoginTests
 {
+	/// <summary>The key for tests that create guest characters or depend on how many exist.</summary>
+	public const string GuestCharacters = nameof(GuestCharacters);
+
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 

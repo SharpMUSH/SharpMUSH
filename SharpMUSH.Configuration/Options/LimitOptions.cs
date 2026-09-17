@@ -344,4 +344,10 @@ public record LimitOptions(
 
 	[SharpConfig(Name = "global_queue_limit", Category = "Limit", Description = "Maximum admitted jobs across all queues, including running jobs", Group = "Performance", Order = 9, Min = 1, Max = 1000000)]
 	public uint GlobalQueueLimit { get; init; } = 10000u;
+
+	/// <summary>Default output ceiling for guests, in UTF-16 code units.</summary>
+	public const uint DefaultGuestOutputLimit = 65536;
+
+	[SharpConfig(Name = "guest_output_limit", Category = "Limit", Description = "Maximum characters one function may produce while a guest's input is evaluated; everyone else has 5242880", Group = "Players", Order = 4, Min = 1024, Max = 5242880)]
+	public uint GuestOutputLimit { get; init; } = DefaultGuestOutputLimit;
 }

@@ -20,7 +20,7 @@ public static class PrintfFormatter
 		bool Left, bool Plus, bool Zero);
 
 	public static bool TryFormat(MarkupText format, IReadOnlyList<MarkupText> values,
-		out MarkupText result, out string? error)
+		out MarkupText result, out string? error, int maxOutput = FunctionLimits.MaxOutputCodeUnits)
 	{
 		result = MarkupText.Empty;
 		if (!TryParse(format.Text, out var fields, out error)) return false;
@@ -73,7 +73,7 @@ public static class PrintfFormatter
 					value = ApplyMarkupAt(source, 0, MarkupText.Plain(number));
 				}
 				var padding = Math.Max(0, field.Width - value.DisplayWidth);
-				if (length + value.Length + padding > FunctionLimits.MaxOutputCodeUnits) return TooLarge(out error);
+				if (length + value.Length + padding > maxOutput) return TooLarge(out error);
 				if (padding > 0)
 				{
 					var fill = MarkupText.Plain(new string(' ', padding));
@@ -92,7 +92,7 @@ public static class PrintfFormatter
 		bool Append(MarkupText part)
 		{
 			length += part.Length;
-			if (length > FunctionLimits.MaxOutputCodeUnits) return false;
+			if (length > maxOutput) return false;
 			parts.Add(part);
 			return true;
 		}

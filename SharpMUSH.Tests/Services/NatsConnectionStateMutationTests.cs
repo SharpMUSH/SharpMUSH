@@ -140,7 +140,7 @@ public class NatsConnectionStateMutationTests
 		await store.SetPlayerBindingAsync(42, "#5:1234");
 		await store.UpdateMetadataAsync(42, "State", "AccountMode");
 		await Assert.That(await store.TryRevokeResumeAsync(42, "current")).IsFalse();
-		await Assert.That(await store.TryUpdateTransportAsync(42, "current", null, "Connected", "127.0.0.1", "localhost", true)).IsFalse();
+		await Assert.That(await store.TryUpdateTransportAsync(42, "current", null, "Connected", "127.0.0.1", "localhost", true, true)).IsFalse();
 		await Assert.That(kv.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "TryUpdateAsync")).IsFalse();
 	}
 

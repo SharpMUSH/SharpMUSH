@@ -22,15 +22,8 @@ public partial class Functions
 		var separator = parser.CurrentState.Arguments.TryGetValue("1", out var argument)
 			? argument.Message! : MarkupText.Space;
 		var outputLength = text.Length + (long)Math.Max(0, text.GraphemeCount - 1) * separator.Length;
-		if (outputLength > FunctionLimits.MaxOutputCodeUnits)
-		{
-			if (parser.CurrentState.LimitExceeded is { } limit)
-			{
-				limit.IsExceeded = true;
-				limit.ErrorMessage ??= ErrorMessages.Returns.OutputTooLarge;
-			}
-			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.OutputTooLarge);
-		}
+		if (FunctionLimits.ExceedsOutput(parser.CurrentState, outputLength))
+			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));
 		return ValueTask.FromResult<CallState>(separator.Length == 0
 			? text : MarkupText.Join(separator, text.EnumerateGraphemes()));
 	}

@@ -4,6 +4,7 @@ using NATS.Client.Core;
 using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
 using NSubstitute;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -20,7 +21,7 @@ public class NatsSessionResumeMutationTests
 		Reads(kv, Entry(Data(), 1), Entry(revoked, 2));
 		var writes = Writes(kv, Conflict());
 		await using var store = Create(kv);
-		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true)).IsFalse();
+		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true, true)).IsFalse();
 		await Assert.That(writes.Count).IsEqualTo(1);
 	}
 
@@ -37,7 +38,7 @@ public class NatsSessionResumeMutationTests
 		Reads(kv, Entry(data, 1));
 		var writes = Writes(kv, new NatsResult<ulong>(2));
 		await using var store = Create(kv);
-		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true)).IsEqualTo(expected);
+		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true, true)).IsEqualTo(expected);
 		await Assert.That(writes.Count).IsEqualTo(expected ? 1 : 0);
 	}
 
@@ -51,7 +52,7 @@ public class NatsSessionResumeMutationTests
 		Reads(kv, Entry(Data(), 1), Entry(revoked, 2));
 		var writes = Writes(kv, Conflict());
 		await using var store = Create(kv);
-		var accepted = await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true);
+		var accepted = await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true, true);
 		await Assert.That(accepted).IsFalse();
 		await Assert.That(writes.Count).IsEqualTo(1);
 	}
@@ -65,7 +66,7 @@ public class NatsSessionResumeMutationTests
 		Reads(kv, Entry(Data(), 1), Entry(replacement, 2));
 		var writes = Writes(kv, Conflict());
 		await using var store = Create(kv);
-		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true)).IsFalse();
+		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true, true)).IsFalse();
 		await Assert.That(writes.Count).IsEqualTo(1);
 	}
 
@@ -76,7 +77,7 @@ public class NatsSessionResumeMutationTests
 		Reads(kv, Entry(Data(), 1), new NatsResult<NatsKVEntry<string>>(new NatsKVKeyDeletedException(2)));
 		var writes = Writes(kv, Conflict());
 		await using var store = Create(kv);
-		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true)).IsFalse();
+		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true, true)).IsFalse();
 		await Assert.That(writes.Count).IsEqualTo(1);
 		await Assert.That(kv.ReceivedCalls().Any(call => call.GetMethodInfo().Name == "PutAsync")).IsFalse();
 	}
@@ -90,13 +91,15 @@ public class NatsSessionResumeMutationTests
 		Reads(kv, Entry(Data(), 1), Entry(concurrent, 2));
 		var writes = Writes(kv, Conflict(), new NatsResult<ulong>(3));
 		await using var store = Create(kv);
-		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true)).IsTrue();
+		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true, true)).IsTrue();
 		await Assert.That(writes.Count).IsEqualTo(2);
 		await Assert.That(writes[1].Revision).IsEqualTo(2UL);
 		await Assert.That(writes[1].Data.Metadata["Width"]).IsEqualTo("120");
 		await Assert.That(writes[1].Data.Metadata["InternetProtocolAddress"]).IsEqualTo("new-ip");
 		await Assert.That(writes[1].Data.Metadata["HostName"]).IsEqualTo("new-host");
 		await Assert.That(writes[1].Data.Metadata["SSL"]).IsEqualTo("1");
+		await Assert.That(writes[1].Data.Metadata[ConnectionEstablishedMessage.OrderedPromptsMetadata]).IsEqualTo("1")
+			.Because("an engine that restarts reloads this record, and must keep ordering the resumed transport's prompts");
 	}
 
 	[Test]
@@ -106,7 +109,7 @@ public class NatsSessionResumeMutationTests
 		Reads(kv, Entry(Data(), 1), Entry(Data(DateTimeOffset.UnixEpoch.AddSeconds(1)), 2));
 		var writes = Writes(kv, Conflict());
 		await using var store = Create(kv);
-		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true)).IsFalse();
+		await Assert.That(await store.TryUpdateTransportAsync(42, "session", "#5:1234", "LoggedIn", "new-ip", "new-host", true, true)).IsFalse();
 		await Assert.That(writes.Count).IsEqualTo(1);
 	}
 

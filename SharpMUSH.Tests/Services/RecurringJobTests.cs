@@ -13,6 +13,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Services.RecurringJobs;
+using SharpMUSH.Tests.Commands;
 using QueueScheduler = SharpMUSH.Library.Services.Interfaces.ITaskScheduler;
 
 namespace SharpMUSH.Tests.Services;
@@ -22,6 +23,10 @@ public class RecurringJobTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory Factory { get; init; }
+	// Shares the primary world, so a job runner in either host would fire the jobs these tests write,
+	// on the real clock and with real authorization.
+	[ClassDataSource<RealityGameServerFactory>(Shared = SharedType.PerTestSession)]
+	public required RealityGameServerFactory SharedWorldHost { get; init; }
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
 	private sealed class Clock : TimeProvider
 	{
@@ -527,6 +532,18 @@ public class RecurringJobTests
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
 		var document = await Get<IExpandedDataStore>().GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey);
 		await Assert.That(document!.Jobs.Single().Status).IsEqualTo("failed");
+	}
+
+	[Test]
+	public async Task NoTestHostFiresJobsInTheSharedWorld()
+	{
+		var context = await Setup();
+		// The test clock is days behind the real one, so any live runner finds this job overdue.
+		await Create(context);
+
+		await Task.Delay(TimeSpan.FromSeconds(2.5));
+
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
 	}
 
 	[Test]

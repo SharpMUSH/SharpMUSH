@@ -343,6 +343,10 @@ max_logins 120
 # Any other number = the number of guest connections allowed at once.
 max_guests -1
 
+# The most characters one function may produce while a guest's input is being
+# evaluated, including code it queues. Everyone else is held to 5242880.
+guest_output_limit 65536
+
 # How much MUSH money do players get when they're created?
 starting_money 150
 

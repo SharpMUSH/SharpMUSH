@@ -8,7 +8,8 @@ namespace SharpMUSH.ConnectionServer.Consumers;
 /// Consumes <see cref="MarkupOutputMessage"/> (serialized markup) and writes it to the connection in
 /// its negotiated wire form via <see cref="IMarkupOutputRenderer"/>. Terminal output is additionally
 /// run through the capability-based <see cref="IOutputTransformService"/>; the WebSocket markup
-/// envelope is JSON and is sent verbatim.
+/// envelope is JSON and is sent verbatim. A <see cref="MarkupOutputMessage.Prompt"/> goes to the
+/// prompt channel; one loop handles both, so a connection sees them in the order they were published.
 /// </summary>
 public class MarkupOutputConsumer(
 	IConnectionServerService connectionService,
@@ -38,7 +39,8 @@ public class MarkupOutputConsumer(
 				: rendered.Data;
 
 			if (message.SessionId is { } sessionId && connectionService.Get(message.Handle)?.SessionId != sessionId) return;
-			await connection.OutputFunction(data);
+			if (message.Prompt) await connection.PromptOutputFunction(data);
+			else await connection.OutputFunction(data);
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
 		{
@@ -53,7 +55,9 @@ public class MarkupOutputConsumer(
 
 /// <summary>
 /// Consumes <see cref="MarkupPromptMessage"/> and writes it to the connection's prompt channel,
-/// mirroring <see cref="MarkupOutputConsumer"/>.
+/// mirroring <see cref="MarkupOutputConsumer"/>. An engine sends these only to connections whose
+/// socket owner did not advertise <see cref="ConnectionEstablishedMessage.OrderedPrompts"/>; they
+/// run on their own subject and carry no order relative to ordinary output.
 /// </summary>
 public class MarkupPromptConsumer(
 	IConnectionServerService connectionService,

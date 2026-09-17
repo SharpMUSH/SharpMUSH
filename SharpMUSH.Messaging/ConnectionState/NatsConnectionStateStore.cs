@@ -5,6 +5,7 @@ using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
 using System.Text.Json;
 
 namespace SharpMUSH.Library.Services;
@@ -174,12 +175,13 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 			: MutateAsync(handle, data => data.Metadata["ResumeRevoked"] = "1", ct, sessionId);
 
 	public Task<bool> TryUpdateTransportAsync(long handle, string sessionId, string? playerObjid, string state,
-		string ip, string host, bool secure, CancellationToken ct = default) =>
+		string ip, string host, bool secure, bool orderedPrompts, CancellationToken ct = default) =>
 		string.IsNullOrWhiteSpace(sessionId) ? Task.FromResult(false) : MutateAsync(handle, data =>
 		{
 			data.Metadata["InternetProtocolAddress"] = ip;
 			data.Metadata["HostName"] = host;
 			data.Metadata["SSL"] = secure ? "1" : "0";
+			data.Metadata[ConnectionEstablishedMessage.OrderedPromptsMetadata] = orderedPrompts ? "1" : "0";
 		}, ct, sessionId, data =>
 		{
 			if (data.Metadata.GetValueOrDefault("ResumeRevoked") == "1"

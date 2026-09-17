@@ -1021,7 +1021,8 @@ public class SharpMUSHParserVisitor(
 				LimitExceeded: limitExceeded)
 			{
 				MoveDepth = currentState.MoveDepth,
-				CommandText = currentState.CommandText
+				CommandText = currentState.CommandText,
+				OutputLimit = currentState.OutputLimit
 			});
 
 			var result = await SharpMUSH.Library.Services.FunctionDispatcher.InvokeAsync(newParser,
@@ -1032,11 +1033,18 @@ public class SharpMUSHParserVisitor(
 			// Output ceiling: stop a single function that generates an enormous string from
 			// propagating it (and halt the rest of the evaluation, as the other limits do). Checked
 			// at the return so it covers every function without each having to guard itself.
-			if (result.Message is not null && result.Message.Length > FunctionLimits.MaxOutputCodeUnits)
+			if (result.Message is not null && FunctionLimits.ExceedsOutput(currentState, result.Message.Length))
 			{
 				limitExceeded.IsExceeded = true;
 				limitExceeded.ErrorMessage ??= ErrorMessages.Returns.OutputTooLarge;
 				return new CallState(ErrorMessages.Returns.OutputTooLarge, contextDepth);
+			}
+
+			// A function that evaluates its own arguments (cand, iter, ...) may have run into a limit
+			// and still returned a small value of its own; the limit halts the evaluation regardless.
+			if (limitExceeded.IsExceeded)
+			{
+				return new CallState(limitExceeded.ErrorMessage ?? ErrorMessages.Returns.Invoke, contextDepth);
 			}
 
 			return result with { Depth = contextDepth };
@@ -2169,11 +2177,12 @@ public class SharpMUSHParserVisitor(
 					return PreserveHookErrors(new CallState($"#-1 INVALID SWITCH: {invalidSwitchList}"));
 				}
 
-				// 4. Check CommandLock before executing
+				// 4. Check the behaviour restrictions and CommandLock before executing
 				var commandLockStr = libraryCommandDefinition.Attribute.CommandLock;
-				if (!string.IsNullOrEmpty(commandLockStr) && executor is AnySharpObject lockedExecutor)
+				if (executor is AnySharpObject lockedExecutor)
 				{
-					if (!await LockService.Evaluate(commandLockStr, lockedExecutor, lockedExecutor))
+					if (!await SharpMUSH.Library.Services.CommandRestrictions.PermitsAsync(libraryCommandDefinition.Attribute, lockedExecutor)
+						|| (!string.IsNullOrEmpty(commandLockStr) && !await LockService.Evaluate(commandLockStr, lockedExecutor, lockedExecutor)))
 					{
 						await NotifyService.NotifyLocalized(lockedExecutor, nameof(ErrorMessages.Notifications.PermissionDenied));
 						return PreserveHookErrors(new CallState(ErrorMessages.Returns.PermissionDenied));

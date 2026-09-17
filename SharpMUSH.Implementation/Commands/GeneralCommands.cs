@@ -3507,6 +3507,9 @@ public partial class Commands
 		string pattern, string replaceTemplate, bool all, bool nocase)
 	{
 		var hadErrors = false;
+		Match[] matches = [];
+		var replacements = Array.Empty<string>();
+		var firstEvaluated = 0;
 		try
 		{
 			var options = RegexOptions.None;
@@ -3519,13 +3522,19 @@ public partial class Commands
 
 			if (all)
 			{
-				// Replace all matches, working backwards
-				foreach (var match in regex.Matches(text).Reverse())
+				// Evaluated last match first, as the replacements may have side effects; spliced once.
+				matches = regex.Matches(text).ToArray();
+				replacements = new string[matches.Length];
+				firstEvaluated = matches.Length;
+				for (var i = matches.Length - 1; i >= 0; i--)
 				{
-					var replacement = await EvaluateRegexReplacement(parser, regex, match, replaceTemplate);
+					var replacement = await EvaluateRegexReplacement(parser, regex, matches[i], replaceTemplate);
 					hadErrors |= replacement.HadErrors;
-					text = text[..match.Index] + replacement.Message!.ToPlainText() + text[(match.Index + match.Length)..];
+					replacements[i] = replacement.Message!.ToPlainText();
+					firstEvaluated = i;
 				}
+
+				text = SpliceReplacements(text, matches, replacements, firstEvaluated);
 			}
 			else
 			{
@@ -3542,13 +3551,35 @@ public partial class Commands
 		}
 		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
 		{
-			// Same answer as an unusable pattern: the text comes back as it went in.
-			return new CallState(text) { HadErrors = hadErrors };
+			// Same answer as an unusable pattern: the text keeps only the replacements evaluated before the failure.
+			return new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors };
 		}
 		catch (ArgumentException)
 		{
-			return new CallState(text) { HadErrors = hadErrors };
+			return new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors };
 		}
+	}
+
+	/// <summary>
+	/// Builds <paramref name="text"/> with <c>matches[from..]</c> replaced by the matching
+	/// <paramref name="replacements"/>, copying each unchanged stretch once.
+	/// </summary>
+	private static string SpliceReplacements(string text, Match[] matches, string[] replacements, int from)
+	{
+		if (from >= matches.Length)
+		{
+			return text;
+		}
+
+		var builder = new StringBuilder(text.Length);
+		var position = 0;
+		for (var i = from; i < matches.Length; i++)
+		{
+			builder.Append(text, position, matches[i].Index - position).Append(replacements[i]);
+			position = matches[i].Index + matches[i].Length;
+		}
+
+		return builder.Append(text, position, text.Length - position).ToString();
 	}
 
 	/// <summary>

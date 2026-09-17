@@ -321,7 +321,13 @@ public class ListenerRoutingService(
 				|| !Nullable.Equals(current.Ref, binding.Ref)
 				|| !string.Equals(binding.Session, current.Metadata.GetValueOrDefault("SessionId"), StringComparison.Ordinal))
 				continue;
-			await publishEndpoint.HandlePublish(new MarkupOutputMessage(binding.Handle, serialized) { SessionId = binding.Session }, ExecutionBudget.CurrentToken);
+			var output = new MarkupOutputMessage(binding.Handle, serialized) { SessionId = binding.Session };
+			// Relayed text takes its place among the notifier's other output to this handle. Looked up
+			// rather than forced, since the published constructors allow a provider with no notifier.
+			if (serviceProvider.GetService<INotifyService>() is IOrderedHandlePublisher ordered)
+				await ordered.Lane.PublishAsync(binding.Handle, binding.Session, token => publishEndpoint.HandlePublish(output, token), ExecutionBudget.CurrentToken);
+			else
+				await publishEndpoint.HandlePublish(output, ExecutionBudget.CurrentToken);
 		}
 	}
 

@@ -71,13 +71,15 @@ public class InputSessionServiceTests
 			Sessions = new(Connections, Mediator, Attributes, Permissions, Notify, Time);
 		}
 
-		public async Task<IMUSHCodeParser> Connect(long handle = 1, string session = "transport", long start = 100)
+		public async Task<IMUSHCodeParser> Connect(long handle = 1, string session = "transport", long start = 100, bool orderedPrompts = false)
 		{
+			var metadata = new Dictionary<string, string>
+			{
+				["SessionId"] = session, ["ConnectionStartTime"] = start.ToString(), ["LastConnectionSignal"] = start.ToString(), ["ConnectionType"] = "telnet"
+			};
+			if (orderedPrompts) metadata[NotifyService.OrderedPromptsMetadata] = "1";
 			await Connections.Register(handle, "127.0.0.1", "localhost", "telnet", _ => ValueTask.CompletedTask,
-				_ => ValueTask.CompletedTask, () => Encoding.UTF8, new ConcurrentDictionary<string, string>(new Dictionary<string, string>
-				{
-					["SessionId"] = session, ["ConnectionStartTime"] = start.ToString(), ["LastConnectionSignal"] = start.ToString(), ["ConnectionType"] = "telnet"
-				}));
+				_ => ValueTask.CompletedTask, () => Encoding.UTF8, new ConcurrentDictionary<string, string>(metadata));
 			if (Connections.Get(handle)!.State != IConnectionService.ConnectionState.LoggedIn)
 				await Connections.Bind(handle, Character.Object.DBRef);
 			var caller = Substitute.For<IMUSHCodeParser>();
@@ -1190,4 +1192,74 @@ public class InputSessionServiceTests
 		}
 	}
 
+	/// <summary>
+	/// A prompt authorized before a lifecycle transition is displayed before anything the transition
+	/// publishes, even while its own publication is still blocked (#1010).
+	/// </summary>
+	[Test]
+	[Arguments("cancel")]
+	[Arguments("escape")]
+	[Arguments("replace")]
+	[Arguments("reprompt")]
+	[Arguments("revoke")]
+	[Arguments("switch")]
+	public async Task LifecycleOutputWaitsForAnInFlightPrompt(string transition)
+	{
+		var h = new Harness();
+		var caller = await h.Connect(orderedPrompts: true);
+		var published = new List<string>();
+		var promptEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var releasePrompt = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var bus = Substitute.For<SharpMUSH.Messaging.Abstractions.IMessageBus>();
+		bus.HandlePublish(Arg.Any<MarkupOutputMessage>(), Arg.Any<CancellationToken>()).Returns(async call =>
+		{
+			var message = call.Arg<MarkupOutputMessage>();
+			var text = MarkupString.MarkupTextSerializer.Deserialize(message.Markup).ToPlainText();
+			lock (published) published.Add($"{(message.Prompt ? "prompt" : "output")}:{text}");
+			if (text == "first") { promptEntered.TrySetResult(); await releasePrompt.Task; }
+		});
+		var localization = Substitute.For<ILocalizationService>();
+		localization.Format(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<object[]>()).Returns(call => call.ArgAt<string>(0));
+		var notify = new NotifyService(bus, h.Connections, localization);
+		var sessions = new InputSessionService(h.Connections, h.Mediator, h.Attributes, h.Permissions, notify, h.Time);
+
+		var started = sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Plain("first"), TimeSpan.FromSeconds(60)).AsTask();
+		await promptEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		var session = sessions.GetCapturing(1)!;
+		string[] Published() { lock (published) return [.. published]; }
+		(Task followed, string expected) = transition switch
+		{
+			"cancel" => (Task.Run(async () => { await sessions.CancelAsync(caller); }), "output:InputSessionCancelled"),
+			"escape" => (Task.Run(async () => { await sessions.TryEscapeAsync(1, "transport", MarkupText.Plain("@input/cancel")); }), "output:InputSessionCancelled"),
+			"replace" => (Task.Run(async () => { await sessions.StartAsync(caller, h.Target.Object.DBRef, "CALLBACK", MarkupText.Plain("second"), TimeSpan.FromSeconds(60)); }), "prompt:second"),
+			"reprompt" => (Task.Run(async () => { await sessions.PromptAsync(caller, MarkupText.Plain("again")); }), "prompt:again"),
+			"revoke" => (Task.Run(async () => { h.CanControl = false; await sessions.DeliverAsync(h.Parser, session, MarkupText.Plain("answer")); }), "output:InputSessionRevoked"),
+			_ => (Task.Run(async () => { await h.Connections.Bind(1, h.Owner.Object.DBRef); await notify.Notify(1, "switched", null); }), "output:switched")
+		};
+
+		await Task.Delay(200);
+		await Assert.That(Published()).IsEquivalentTo(["prompt:first"]);
+		await Assert.That(followed.IsCompleted).IsFalse();
+
+		releasePrompt.SetResult();
+		await Task.WhenAll(started, followed).WaitAsync(TimeSpan.FromSeconds(5));
+		await Assert.That(Published()).IsEquivalentTo(["prompt:first", expected], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task PromptUsesTheLegacySubjectUnlessTheSocketOwnerOrdersPrompts()
+	{
+		var h = new Harness();
+		var bus = Substitute.For<SharpMUSH.Messaging.Abstractions.IMessageBus>();
+		var notify = new NotifyService(bus, h.Connections, Substitute.For<ILocalizationService>());
+		await h.Connect(1);
+		await h.Connect(2, orderedPrompts: true);
+
+		await notify.PromptToSession(1, "transport", "legacy");
+		await notify.PromptToSession(2, "transport", "ordered");
+
+		await bus.Received(1).HandlePublish(Arg.Is<MarkupPromptMessage>(message => message.Handle == 1 && message.SessionId == "transport"), Arg.Any<CancellationToken>());
+		await bus.Received(1).HandlePublish(Arg.Is<MarkupOutputMessage>(message => message.Handle == 2 && message.Prompt && message.SessionId == "transport"), Arg.Any<CancellationToken>());
+		await bus.DidNotReceive().HandlePublish(Arg.Is<MarkupPromptMessage>(message => message.Handle == 2), Arg.Any<CancellationToken>());
+	}
 }

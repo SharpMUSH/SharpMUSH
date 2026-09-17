@@ -275,6 +275,7 @@ fails the gate.
 - `implementation-order.md` — dependency graph for building portal features in parallel
 - `url-strategy.md` — canonical route map (public, authenticated, admin, API)
 - `engine-data-trunk.md` — engine reads/writes through the Mediator, stores, cache coherence, single-process assumptions
+- `guided-input-ordering.md` — per-handle publication order; guided-input prompts and lifecycle notices display in commit order
 
 `docs/todo/area-NN-*.md` files track implementation status for each portal area.
 

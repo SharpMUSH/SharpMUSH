@@ -27,7 +27,7 @@ public class DurableSessionResumeTests
 		};
 		state.GetConnectionAsync(9, Arg.Any<CancellationToken>()).Returns(data);
 		state.TryUpdateTransportAsync(9, "session", data.PlayerObjid, data.State,
-			Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+			Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
 			.Returns(_ => data.Metadata.GetValueOrDefault("ResumeRevoked") != "1");
 		var tokens = Substitute.For<IResumeTokenStore>();
 		tokens.TryResolveAsync("token", Arg.Any<CancellationToken>()).Returns((true, 9L, "session"));
@@ -50,7 +50,7 @@ public class DurableSessionResumeTests
 		await pump.RunAsync(transport, 10, default);
 		await Assert.That(transport.Sent.Any(frame => frame.Contains("reattached") || frame.Contains("private replay"))).IsFalse();
 		await state.Received(1).TryUpdateTransportAsync(9, "session", data.PlayerObjid, data.State,
-			Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>());
+			Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), true, Arg.Any<CancellationToken>());
 		await Assert.That(connections.Get(10)).IsNotNull();
 	}
 

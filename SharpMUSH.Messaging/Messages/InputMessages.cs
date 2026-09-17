@@ -43,7 +43,18 @@ public record ConnectionEstablishedMessage(
 	string PresenceClass = "play",
 	bool IsSecure = false,
 	string? SessionId = null
-) : IHandleMessage;
+) : IHandleMessage
+{
+	/// <summary>
+	/// The socket owner accepts prompts as <see cref="MarkupOutputMessage.Prompt"/>, in order with
+	/// ordinary output. Absent from older socket owners, which then keep receiving
+	/// <see cref="MarkupPromptMessage"/>.
+	/// </summary>
+	public bool OrderedPrompts { get; init; }
+
+	/// <summary>Connection metadata key recording <see cref="OrderedPrompts"/> ("1" or "0").</summary>
+	public const string OrderedPromptsMetadata = "OrderedPrompts";
+}
 
 /// <summary>
 /// Message sent from ConnectionServer to MainProcess when a connection is closed

@@ -64,7 +64,8 @@ public sealed class LockEvaluationServices(
 				CallDepth: new InvocationCounter(),
 				FunctionRecursionDepths: new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
 				TotalInvocations: new InvocationCounter(),
-				LimitExceeded: new LimitExceededFlag())
+				// A limit the lock's evaluation hits halts the evaluation that asked for the lock.
+				LimitExceeded: OutputCeiling.Current?.Flag ?? new LimitExceededFlag())
 			{
 				MoveDepth = new InvocationCounter(),
 				Restrictions = EvaluationRestrictions.Current
