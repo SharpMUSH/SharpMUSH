@@ -169,7 +169,7 @@ public sealed class InputSessionService : IInputSessionService
 			var generation = GenerationFor(connection);
 			generation.Ticket.ObserveStart(session.Id);
 			generation.Ticket = new InputCaptureTicket(session.Id);
-			place = _lane?.Reserve(handle);
+			place = _lane?.Reserve(handle, session.TransportSessionId);
 		}
 		try
 		{
@@ -214,7 +214,7 @@ public sealed class InputSessionService : IInputSessionService
 		lock (_gate)
 		{
 			if (!IsCurrent(session, timeout: false) || HasCancelledOwnership(session)) return NotActive;
-			place = _lane?.Reserve(handle);
+			place = _lane?.Reserve(handle, session.TransportSessionId);
 		}
 		using (Publishing(place)) await _notify.PromptToSession(handle, session.TransportSessionId ?? "", prompt);
 		return null;
@@ -230,7 +230,7 @@ public sealed class InputSessionService : IInputSessionService
 			if (!IsCurrent(session, timeout: false) || HasCancelledOwnership(session)) return NotActive;
 			CancelCallbacks(session);
 			_sessions.Remove(handle);
-			place = _lane?.Reserve(handle);
+			place = _lane?.Reserve(handle, session.TransportSessionId);
 		}
 		using (Publishing(place)) await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
 		return null;
@@ -250,7 +250,7 @@ public sealed class InputSessionService : IInputSessionService
 			session = entry.Session;
 			CancelCallbacks(session);
 			_sessions.Remove(handle);
-			place = _lane?.Reserve(handle);
+			place = _lane?.Reserve(handle, session.TransportSessionId);
 		}
 		using (Publishing(place)) await _notify.NotifyLocalizedToSession(handle, session.TransportSessionId ?? "", "InputSessionCancelled");
 		return true;
@@ -385,7 +385,7 @@ public sealed class InputSessionService : IInputSessionService
 		{
 			Discard(session);
 			if (!BindingMatches(session)) return null;
-			place = _lane?.Reserve(session.Connection.Handle);
+			place = _lane?.Reserve(session.Connection.Handle, session.TransportSessionId);
 		}
 		using (Publishing(place)) await _notify.NotifyLocalizedToSession(session.Connection.Handle, session.TransportSessionId ?? "", "InputSessionRevoked");
 		return null;

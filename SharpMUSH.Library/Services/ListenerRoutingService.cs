@@ -325,7 +325,7 @@ public class ListenerRoutingService(
 			// Relayed text takes its place among the notifier's other output to this handle. Looked up
 			// rather than forced, since the published constructors allow a provider with no notifier.
 			if (serviceProvider.GetService<INotifyService>() is IOrderedHandlePublisher ordered)
-				await ordered.Lane.PublishAsync(binding.Handle, token => publishEndpoint.HandlePublish(output, token), ExecutionBudget.CurrentToken);
+				await ordered.Lane.PublishAsync(binding.Handle, binding.Session, token => publishEndpoint.HandlePublish(output, token), ExecutionBudget.CurrentToken);
 			else
 				await publishEndpoint.HandlePublish(output, ExecutionBudget.CurrentToken);
 		}

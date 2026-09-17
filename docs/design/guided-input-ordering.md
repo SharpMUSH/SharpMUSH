@@ -25,10 +25,13 @@ orders whatever is published after them.
 
 ## Mechanism
 
-- **One order per handle, reserved synchronously.** `HandlePublicationLane` (owned by
-  `NotifyService`) gives each publication a place. A place starts publishing once every earlier
-  place for the handle has published, been abandoned or been cancelled. A caller that gives up still
-  holds its place until the earlier ones finish, so a later place can never overtake it.
+- **One order per incarnation, reserved synchronously.** `HandlePublicationLane` (owned by
+  `NotifyService`) gives each publication a place in the order of its handle and `SessionId`. A
+  message that names no `SessionId` takes the connection's current one, so plain output and prompts
+  to one incarnation share an order. A place starts publishing once every earlier place for that
+  incarnation has published, been abandoned or been cancelled. A caller that gives up still holds its
+  place until the earlier ones finish, so a later place can never overtake it. A recycled handle's
+  new incarnation has an order of its own and never waits for output still in flight to the old one.
 - **Reserved under the input lock, published outside it.** `InputSessionService` takes the place
   while `_gate` commits the transition, then binds it (`HandlePublicationLane.Bind`) around its
   unchanged `PromptToSession` / `NotifyLocalizedToSession` call. It never awaits while holding

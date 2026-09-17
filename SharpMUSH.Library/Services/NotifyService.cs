@@ -144,7 +144,7 @@ public class NotifyService(
 		var serialized = ReferenceEquals(wrapped, outgoing.Text)
 			? outgoing.Serialized
 			: MarkupTextSerializer.Serialize(wrapped);
-		return Publish(handle, new MarkupOutputMessage(handle, serialized) { SessionId = sessionId });
+		return Publish(handle, new MarkupOutputMessage(handle, serialized) { SessionId = sessionId }, sessionId);
 	}
 
 	/// <summary>
@@ -154,11 +154,16 @@ public class NotifyService(
 	/// </summary>
 	private ValueTask PublishMarkupPrompt(long handle, Outgoing outgoing, string? sessionId = null)
 		=> connections.Get(handle)?.Metadata.GetValueOrDefault(OrderedPromptsMetadata) == "1"
-			? Publish(handle, new MarkupOutputMessage(handle, outgoing.Serialized) { SessionId = sessionId, Prompt = true })
-			: Publish(handle, new MarkupPromptMessage(handle, outgoing.Serialized) { SessionId = sessionId });
+			? Publish(handle, new MarkupOutputMessage(handle, outgoing.Serialized) { SessionId = sessionId, Prompt = true }, sessionId)
+			: Publish(handle, new MarkupPromptMessage(handle, outgoing.Serialized) { SessionId = sessionId }, sessionId);
 
-	private ValueTask Publish<T>(long handle, T message) where T : IHandleMessage
-		=> new(Lane.PublishAsync(handle, token => publishEndpoint.HandlePublish(message, token), ExecutionBudget.CurrentToken));
+	/// <summary>
+	/// Publishes in the order of the incarnation the message is for: its own <paramref name="sessionId"/>,
+	/// or the connection's current one when it names none, so prompts and plain output share an order.
+	/// </summary>
+	private ValueTask Publish<T>(long handle, T message, string? sessionId) where T : IHandleMessage
+		=> new(Lane.PublishAsync(handle, sessionId ?? connections.Get(handle)?.Metadata.GetValueOrDefault("SessionId"),
+			token => publishEndpoint.HandlePublish(message, token), ExecutionBudget.CurrentToken));
 
 	/// <summary>
 	/// Wraps markup with OUTPUTPREFIX / OUTPUTSUFFIX if set on the connection, keeping everything as
