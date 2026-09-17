@@ -13,12 +13,13 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// Integration tests for the player-destruction process implemented in
-/// <c>DestroyObjectAsync</c> / <c>HandlePlayerPossessionsAsync</c> (BuildingCommands.cs).
+/// Integration tests for player destruction: <c>@nuke</c> only schedules (PennMUSH
+/// <c>pre_destroy</c>), and probate happens when the player is actually freed (<c>clear_player</c>,
+/// reached here through a second <c>@nuke</c>).
 ///
 /// Test-config invariants (mushcnf.dst):
-///   destroy_possessions = yes   → non-SAFE possessions are marked GOING
-///   really_safe          = yes   → SAFE possessions are chowned to probate instead
+///   destroy_possessions = yes   → non-SAFE possessions are marked GOING, and freed with the player
+///   really_safe          = yes   → SAFE possessions are left unmarked, and go to probate with the player
 ///   probate_judge        = 1     → probate player is #1 (God / the test executor)
 ///
 /// Each test creates fresh, uniquely-named objects so that shared-session state
@@ -96,7 +97,9 @@ public class PlayerDestructionTests
 			.NotifyAndReturn(
 				executor,
 				Arg.Is<string>(s => s.Contains("#-1 PERMISSION DENIED")),
-				Arg.Is<string>(s => s.Contains("You must use @nuke to destroy a player.")),
+				// what_to_destroy's ownership check precedes its player case, and a wizard does not
+				// own another player, so this is the message Penn gives — not "use @nuke on a player".
+				Arg.Is<string>(s => s.Contains("That object does not belong to you. Use @nuke to destroy it.")),
 				Arg.Any<bool>());
 
 		var playerBeforeNuke = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
@@ -127,29 +130,79 @@ public class PlayerDestructionTests
 	}
 
 	[Test]
-	public async Task Nuke_Player_OwnedChannelTransfersToProbatePlayer()
+	public async Task Nuke_Player_OwnedChannelTransfersToProbatePlayer_OnlyWhenFreed()
 	{
 		var playerDbRef = await CreateTestPlayerAsync("ChannelChown");
 		var testPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<SharpPlayer>();
+		var channelName = TestIsolationHelpers.GenerateUniqueName("PDT_Chan");
 
-		await Mediator.Send(new CreateChannelCommand(
-			MarkupText.Plain("PDT_ChannelChown"),
-			["Open"],
-			testPlayer));
+		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(channelName), ["Open"], testPlayer));
 
-		var channelBefore = await Mediator.Send(new GetChannelQuery("PDT_ChannelChown"));
-		await Assert.That(channelBefore).IsNotNull();
-		var ownerBefore = await channelBefore!.Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(ownerBefore.Object.DBRef.Number).IsEqualTo(playerDbRef.Number);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nuke {playerDbRef}"));
 
-		await Parser.CommandParse(
-			1, ConnectionService,
-			MarkupText.Plain($"@nuke {playerDbRef}"));
+		await Assert.That(await ChannelOwnerAsync(channelName)).IsEqualTo(playerDbRef.Number)
+			.Because("scheduling is reversible; the channel changes hands only when the player is freed");
 
-		var channelAfter = await Mediator.Send(new GetChannelQuery("PDT_ChannelChown"));
-		await Assert.That(channelAfter).IsNotNull();
-		var ownerAfter = await channelAfter!.Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(ownerAfter.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nuke {playerDbRef}"));
+
+		await Assert.That(await ChannelOwnerAsync(channelName)).IsEqualTo(ProbateJudgeDbRefNumber);
+	}
+
+	private async Task<int> ChannelOwnerAsync(string channelName)
+	{
+		var channel = await Mediator.Send(new GetChannelQuery(channelName));
+		await Assert.That(channel).IsNotNull();
+		return (await channel!.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number;
+	}
+
+	private async Task<int> OwnerOfAsync(DBRef target)
+		=> (await (await Mediator.Send(new GetObjectNodeQuery(target))).Expect<AnySharpObject>()
+			.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number;
+
+	private async Task<int?> AttributeOwnerAsync(DBRef holder, string attrName)
+	{
+		var attr = await Database.GetAttributeAsync(holder, [attrName]).LastOrDefaultAsync();
+		return attr is null ? null : (await attr.Owner.WithCancellation(CancellationToken.None))?.Object.DBRef.Number;
+	}
+
+	/// <summary>
+	/// PennMUSH probates in <c>clear_player</c>, after the grace period, so cancelling a deletion gives
+	/// nothing away. Every owner — channel, surviving and doomed possessions, authored attributes —
+	/// is exactly what it was before the <c>@nuke</c>.
+	/// </summary>
+	[Test]
+	public async Task Nuke_ThenUndestroy_Player_LeavesEveryOwnerUnchanged()
+	{
+		var playerDbRef = await CreateTestPlayerAsync("UndestroyOwners");
+		var testPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<SharpPlayer>();
+		var channelName = TestIsolationHelpers.GenerateUniqueName("PDT_UndChan");
+		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(channelName), ["Open"], testPlayer));
+
+		var doomed = DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_UndDoomed")}"))).Message!.ToPlainText());
+		var safe = DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_UndSafe")}"))).Message!.ToPlainText());
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {safe}=SAFE"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {doomed}={playerDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {safe}={playerDbRef}"));
+
+		var attrName = $"PDT_UND_{Guid.NewGuid():N}";
+		await Database.SetAttributeAsync(new DBRef(ProbateJudgeDbRefNumber), [attrName], MarkupText.Plain("authored"), testPlayer);
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nuke {playerDbRef}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@undestroy {playerDbRef}"));
+
+		try
+		{
+			await Assert.That(await ChannelOwnerAsync(channelName)).IsEqualTo(playerDbRef.Number);
+			await Assert.That(await OwnerOfAsync(doomed)).IsEqualTo(playerDbRef.Number);
+			await Assert.That(await OwnerOfAsync(safe)).IsEqualTo(playerDbRef.Number);
+			await Assert.That(await AttributeOwnerAsync(new DBRef(ProbateJudgeDbRefNumber), attrName)).IsEqualTo(playerDbRef.Number);
+		}
+		finally
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wipe #{ProbateJudgeDbRefNumber}/{attrName}"));
+		}
 	}
 
 	[Test]
@@ -181,143 +234,99 @@ public class PlayerDestructionTests
 	}
 
 	[Test]
-	public async Task Nuke_Player_SafePossession_IsChownedToProbateNotGoing()
+	public async Task Nuke_Player_SafePossession_IsNotMarked_AndGoesToProbateWhenFreed()
 	{
 		var playerDbRef = await CreateTestPlayerAsync("SafePossession");
 
 		var createResult = await Parser.CommandParse(
 			1, ConnectionService,
-			MarkupText.Plain("@create PDT_SafeThing_PossessionTest"));
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_SafeThing")}"));
 		var thingDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		await Parser.CommandParse(
-			1, ConnectionService,
-			MarkupText.Plain($"@set {thingDbRef}=SAFE"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thingDbRef}=SAFE"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {thingDbRef}={playerDbRef}"));
 
-		await Parser.CommandParse(
-			1, ConnectionService,
-			MarkupText.Plain($"@chown {thingDbRef}={playerDbRef}"));
-
-		// nuke the player  (really_safe=yes → SAFE things survive)
-		await Parser.CommandParse(
-			1, ConnectionService,
-			MarkupText.Plain($"@nuke {playerDbRef}"));
+		// really_safe=yes → SAFE things survive, so they are never scheduled
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nuke {playerDbRef}"));
 
 		var thingAfterNuke = (await Mediator.Send(new GetObjectNodeQuery(thingDbRef))).Expect<AnySharpObject>();
-		var isGoing = await thingAfterNuke.HasFlag("GOING");
-		await Assert.That(isGoing).IsFalse();
+		await Assert.That(await thingAfterNuke.HasFlag("GOING")).IsFalse();
+		await Assert.That(await OwnerOfAsync(thingDbRef)).IsEqualTo(playerDbRef.Number);
 
-		var ownerAfter = await thingAfterNuke.Object().Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(ownerAfter.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nuke {playerDbRef}"));
+
+		await Assert.That(await OwnerOfAsync(thingDbRef)).IsEqualTo(ProbateJudgeDbRefNumber);
 	}
 
-	// Validates that the attribute re-assignment step (which runs AFTER channel-chown
-	// and possession processing) still correctly reassigns all attributes owned by the
-	// deleted player.
 	[Test]
-	public async Task Nuke_Player_AttributeOwnerReassignedToProbatePlayer()
+	public async Task Nuke_Player_AttributeOwnerReassignedToProbatePlayer_OnlyWhenFreed()
 	{
 		var playerDbRef = await CreateTestPlayerAsync("AttrOwner");
 		var testPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<SharpPlayer>();
 
 		var createResult = await Parser.CommandParse(
 			1, ConnectionService,
-			MarkupText.Plain("@create PDT_AttrOwnerThing_ReassignTest"));
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_AttrHolder")}"));
 		var thingDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		// Set an attribute with the test player as attribute owner, simulating the test
-		// player having authored an attribute on some object.
-		var attrName = "PDT_ATTR_OWNER_TEST";
-		await Database.SetAttributeAsync(
-			thingDbRef,
-			[attrName],
-			MarkupText.Plain("PDT attribute value for owner reassign test"),
-			testPlayer);
+		// The test player authored an attribute on an object someone else owns.
+		const string attrName = "PDT_ATTR_OWNER_TEST";
+		await Database.SetAttributeAsync(thingDbRef, [attrName], MarkupText.Plain("authored"), testPlayer);
+		await Assert.That(await AttributeOwnerAsync(thingDbRef, attrName)).IsEqualTo(playerDbRef.Number);
 
-		var attrBefore = await Database.GetAttributeAsync(thingDbRef, [attrName]).LastOrDefaultAsync();
-		await Assert.That(attrBefore).IsNotNull();
-		var ownerBefore = await attrBefore!.Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(ownerBefore).IsNotNull();
-		await Assert.That(ownerBefore!.Object.DBRef.Number).IsEqualTo(playerDbRef.Number);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nuke {playerDbRef}"));
+		await Assert.That(await AttributeOwnerAsync(thingDbRef, attrName)).IsEqualTo(playerDbRef.Number);
 
-		await Parser.CommandParse(
-			1, ConnectionService,
-			MarkupText.Plain($"@nuke {playerDbRef}"));
-
-		var attrAfter = await Database.GetAttributeAsync(thingDbRef, [attrName]).LastOrDefaultAsync();
-		await Assert.That(attrAfter).IsNotNull();
-		var ownerAfter = await attrAfter!.Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(ownerAfter).IsNotNull();
-		await Assert.That(ownerAfter!.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nuke {playerDbRef}"));
+		await Assert.That(await AttributeOwnerAsync(thingDbRef, attrName)).IsEqualTo(ProbateJudgeDbRefNumber);
 	}
 
-	// Combined: nuke a player who owns a channel, a non-SAFE thing, a SAFE thing, and
-	// has attribute ownership; verify all three phases (channel-chown,
-	// possession-processing, attr-reassign) are completed in a single @nuke call.
+	// Combined: a player who owns a channel, a non-SAFE thing and a SAFE thing, and authored an
+	// attribute. The first @nuke only marks; the second frees the player and runs the whole probate.
 	[Test]
-	public async Task Nuke_Player_CombinedScenario_AllPhasesComplete()
+	public async Task Nuke_Player_Twice_CombinedScenario_ProbatesEverything()
 	{
 		var playerDbRef = await CreateTestPlayerAsync("CombinedScenario");
 		var testPlayer = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<SharpPlayer>();
+		var channelName = TestIsolationHelpers.GenerateUniqueName("PDT_CombChan");
+		await Mediator.Send(new CreateChannelCommand(MarkupText.Plain(channelName), ["Open"], testPlayer));
 
-		await Mediator.Send(new CreateChannelCommand(
-			MarkupText.Plain("PDT_CombinedChannel"),
-			["Open"],
-			testPlayer));
+		var nonSafeDbRef = DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_CombNonSafe")}"))).Message!.ToPlainText());
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {nonSafeDbRef}={playerDbRef}"));
 
-		var nonSafeResult = await Parser.CommandParse(
-			1, ConnectionService,
-			MarkupText.Plain("@create PDT_Combined_NonSafeThing"));
-		var nonSafeDbRef = DBRef.Parse(nonSafeResult.Message!.ToPlainText()!);
-		await Parser.CommandParse(
-			1, ConnectionService,
-			MarkupText.Plain($"@chown {nonSafeDbRef}={playerDbRef}"));
+		var safeDbRef = DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("PDT_CombSafe")}"))).Message!.ToPlainText());
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {safeDbRef}=SAFE"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {safeDbRef}={playerDbRef}"));
 
-		var safeResult = await Parser.CommandParse(
-			1, ConnectionService,
-			MarkupText.Plain("@create PDT_Combined_SafeThing"));
-		var safeDbRef = DBRef.Parse(safeResult.Message!.ToPlainText()!);
-		await Parser.CommandParse(
-			1, ConnectionService,
-			MarkupText.Plain($"@set {safeDbRef}=SAFE"));
-		await Parser.CommandParse(
-			1, ConnectionService,
-			MarkupText.Plain($"@chown {safeDbRef}={playerDbRef}"));
+		var holder = new DBRef(ProbateJudgeDbRefNumber);
+		var attrName = $"PDT_COMB_{Guid.NewGuid():N}";
+		await Database.SetAttributeAsync(holder, [attrName], MarkupText.Plain("authored"), testPlayer);
 
-		var probateNode = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(ProbateJudgeDbRefNumber)))).Expect<AnySharpObject>();
-		var attrName = "PDT_COMBINED_ATTR_TEST";
-		await Database.SetAttributeAsync(
-			probateNode.Object().DBRef,
-			[attrName],
-			MarkupText.Plain("PDT combined test attribute value"),
-			testPlayer);
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nuke {playerDbRef}"));
 
-		await Parser.CommandParse(
-			1, ConnectionService,
-			MarkupText.Plain($"@nuke {playerDbRef}"));
+			var playerObj = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
+			await Assert.That(await playerObj.HasFlag("GOING")).IsTrue();
+			var nonSafeObj = (await Mediator.Send(new GetObjectNodeQuery(nonSafeDbRef))).Expect<AnySharpObject>();
+			await Assert.That(await nonSafeObj.HasFlag("GOING")).IsTrue();
+			var safeObj = (await Mediator.Send(new GetObjectNodeQuery(safeDbRef))).Expect<AnySharpObject>();
+			await Assert.That(await safeObj.HasFlag("GOING")).IsFalse();
 
-		var playerObj = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
-		await Assert.That(await playerObj.HasFlag("GOING")).IsTrue();
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@nuke {playerDbRef}"));
 
-		var combinedChannel = await Mediator.Send(new GetChannelQuery("PDT_CombinedChannel"));
-		await Assert.That(combinedChannel).IsNotNull();
-		var channelOwner = await combinedChannel!.Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(channelOwner.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
-
-		var nonSafeObj = (await Mediator.Send(new GetObjectNodeQuery(nonSafeDbRef))).Expect<AnySharpObject>();
-		await Assert.That(await nonSafeObj.HasFlag("GOING")).IsTrue();
-
-		var safeObj = (await Mediator.Send(new GetObjectNodeQuery(safeDbRef))).Expect<AnySharpObject>();
-		await Assert.That(await safeObj.HasFlag("GOING")).IsFalse();
-		var safeOwner = await safeObj.Object().Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(safeOwner.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
-
-		var attr = await Database.GetAttributeAsync(
-			probateNode.Object().DBRef,
-			[attrName]).LastOrDefaultAsync();
-		await Assert.That(attr).IsNotNull();
-		var attrOwner = await attr!.Owner.WithCancellation(CancellationToken.None);
-		await Assert.That(attrOwner).IsNotNull();
-		await Assert.That(attrOwner!.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
+			await Assert.That((await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).IsNone).IsTrue();
+			await Assert.That(await ChannelOwnerAsync(channelName)).IsEqualTo(ProbateJudgeDbRefNumber);
+			await Assert.That((await Mediator.Send(new GetObjectNodeQuery(nonSafeDbRef))).IsNone).IsTrue()
+				.Because("clear_player frees what destroy_possessions dooms");
+			await Assert.That(await OwnerOfAsync(safeDbRef)).IsEqualTo(ProbateJudgeDbRefNumber);
+			await Assert.That(await AttributeOwnerAsync(holder, attrName)).IsEqualTo(ProbateJudgeDbRefNumber);
+		}
+		finally
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@wipe #{ProbateJudgeDbRefNumber}/{attrName}"));
+		}
 	}
 }

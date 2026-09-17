@@ -1,3 +1,5 @@
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -281,9 +283,8 @@ public class ObjectDestructionTests
 
 	/// <summary>
 	/// PennMUSH <c>clear_player()</c>: nothing may be left owned by a player who no longer exists, or
-	/// every later read of it throws on the severed ownership edge. Possessions marked GOING at
-	/// pre-destroy time are deliberately still owned by the doomed player at this point, so the
-	/// hand-off to the probate judge has to happen at free time as well.
+	/// every later read of it throws on the severed ownership edge. With destroy_possessions and
+	/// really_safe on, a SAFE possession survives and goes to the probate judge, and the rest are freed.
 	/// </summary>
 	[Test]
 	public async Task Nuke_Twice_RemovesThePlayerAndLeavesNothingOwnedByThem()
@@ -292,18 +293,67 @@ public class ObjectDestructionTests
 			WebAppFactoryArg.Services, Mediator, "NukeTwice");
 
 		var possession = await CreateThingAsync("NukeTwicePossession");
+		await RunAsync($"@set {possession}=SAFE");
 		await RunAsync($"@chown {possession}={player}");
+		var doomed = await CreateThingAsync("NukeTwiceDoomed");
+		await RunAsync($"@chown {doomed}={player}");
 
 		await RunAsync($"@nuke {player}");
 		await RunAsync($"@nuke {player}");
 
 		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(player))).IsNone).IsTrue();
+		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(doomed))).IsNone).IsTrue();
 
 		var survivor = (await Mediator.Send(new GetObjectNodeQuery(possession))).Expect<AnySharpObject>();
 
 		// Resolving Owner at all is the assertion: a severed ownership edge throws.
 		var owner = await survivor.Object().Owner.WithCancellation(CancellationToken.None);
 		await Assert.That(owner.Object.DBRef.Number).IsEqualTo(ProbateJudgeDbRefNumber);
+	}
+
+	/// <summary>
+	/// A doomed player's room takes its exits with it when the probate frees it, so an exit the same
+	/// player owns is already gone by the time the probate reaches it. Acting on the stale copy failed
+	/// its free and then handed the deleted dbref to the probate judge, writing an ownership edge for an
+	/// object that no longer exists. A fresh probate judge makes that stray edge countable.
+	/// </summary>
+	[Test]
+	public async Task Nuke_Twice_SkipsPossessionsAnEarlierFreeAlreadyTook()
+	{
+		var judge = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "NukeCascadeJudge");
+		using var probate = TestOptionsOverride.Scope(options => options with
+		{
+			Command = options.Command with { ProbateJudge = (uint)judge.Number }
+		});
+
+		var player = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "NukeCascade");
+		var room = await DigRoomAsync("NukeCascadeRoom");
+
+		// The probate walks possessions in dbref order; the exit has to come after its room.
+		await RunAsync($"@tel {room}");
+		DBRef exit;
+		do
+		{
+			var opened = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("NukeCascadeExit")}");
+			exit = DBRef.Parse(opened.Message!.ToPlainText().Trim());
+		} while (exit.Number < room.Number);
+		await RunAsync("@tel #0");
+
+		await RunAsync($"@chown {room}={player}");
+		await RunAsync($"@chown {exit}={player}");
+
+		await RunAsync($"@nuke {player}");
+		await RunAsync($"@nuke {player}");
+
+		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(player))).IsNone).IsTrue();
+		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(room))).IsNone).IsTrue();
+		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(exit))).IsNone).IsTrue();
+
+		var judgePlayer = (await Mediator.Send(new GetObjectNodeQuery(judge))).Expect<SharpPlayer>();
+		await Assert.That(await Mediator.Send(new GetOwnedObjectCountQuery(judgePlayer))).IsEqualTo(1)
+			.Because("the judge owns only itself; nothing survived to be handed over");
 	}
 
 	/// <summary>
@@ -364,14 +414,79 @@ public class ObjectDestructionTests
 	/// Builds the service over a substituted <see cref="IMoveService"/> so evacuation can be made to
 	/// fail; everything else is the live session's wiring.
 	/// </summary>
-	private ObjectDestructionService DestructionServiceWith(IMoveService moves)
+	private ObjectDestructionService DestructionServiceWith(IMoveService moves, IMediator? mediator = null)
 		=> new(
-			Mediator,
+			mediator ?? Mediator,
 			WebAppFactoryArg.Services.GetRequiredService<INotifyService>(),
 			moves,
 			WebAppFactoryArg.Services.GetRequiredService<IEventService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
 			NullLogger<ObjectDestructionService>.Instance);
+
+	/// <summary>
+	/// The live mediator, except that the listed dbrefs read as missing — the only way to stage a
+	/// world where neither probate_judge nor God resolves.
+	/// </summary>
+	public class HidingMediator : DispatchProxy
+	{
+		public IMediator Inner { get; set; } = null!;
+		public HashSet<int> Hidden { get; set; } = [];
+
+		public static IMediator Over(IMediator inner, params int[] hidden)
+		{
+			var proxy = Create<IMediator, HidingMediator>();
+			var hiding = (HidingMediator)(object)proxy;
+			hiding.Inner = inner;
+			hiding.Hidden = [.. hidden];
+			return proxy;
+		}
+
+		protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+		{
+			if (args is [GetObjectNodeQuery query, ..] && Hidden.Contains(query.DBRef.Number))
+			{
+				return ValueTask.FromResult(new AnyOptionalSharpObject(new None()));
+			}
+
+			try
+			{
+				return targetMethod!.Invoke(Inner, args);
+			}
+			catch (TargetInvocationException exception) when (exception.InnerException is not null)
+			{
+				ExceptionDispatchInfo.Throw(exception.InnerException);
+				throw;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Freeing a player hands what they own to the probate judge, falling back to God. When neither
+	/// resolves there is nobody to hand it to, and deleting the player anyway would sever every
+	/// ownership edge pointing at them. The free is refused before anything is touched, leaving the
+	/// player GOING, contents and all, for a later purge once the configuration is fixed.
+	/// </summary>
+	[Test]
+	public async Task FreePlayer_WithNoProbatePlayer_LeavesThePlayerStanding()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "NoProbate");
+		var carried = await CreateThingAsync("NoProbateCarried");
+		await RunAsync($"@tel {carried}={player}");
+		var target = (await Mediator.Send(new GetObjectNodeQuery(player))).Expect<AnySharpObject>();
+
+		// probate_judge is #1 in the test config, so hiding #1 hides both the judge and the fallback.
+		var service = DestructionServiceWith(
+			WebAppFactoryArg.Services.GetRequiredService<IMoveService>(),
+			HidingMediator.Over(Mediator, ProbateJudgeDbRefNumber));
+
+		await Assert.That(await service.FreeObjectAsync(Parser, target)).IsFalse();
+		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(player))).IsNone).IsFalse();
+
+		// A refused free changes nothing, so what the player carries has not been evacuated either.
+		var stillCarried = (await Mediator.Send(new GetObjectNodeQuery(carried))).Expect<AnySharpObject>();
+		await Assert.That((await stillCarried.AsContent.Location()).Object().DBRef.Number).IsEqualTo(player.Number);
+	}
 
 	private static IMoveService MoveServiceAnswering(
 		Func<AnySharpContainer, Result<Success>> answer, List<int> destinations)
@@ -418,6 +533,56 @@ public class ObjectDestructionTests
 
 		// Both the home and the default_home retry were tried before it gave up.
 		await Assert.That(attempted.Count).IsEqualTo(2);
+	}
+
+	/// <summary>
+	/// Probate is the irreversible half of freeing a player, so a player whose contents cannot be
+	/// evacuated keeps everything: the refusal leaves nothing handed over, and the retry that does
+	/// succeed runs the whole probate once.
+	/// </summary>
+	[Test]
+	public async Task FreePlayer_WhoseContentsCannotBeEvacuated_ProbatesNothing_UntilTheRetry()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "EvacFailPlayer");
+		var playerNode = (await Mediator.Send(new GetObjectNodeQuery(player))).Expect<SharpPlayer>();
+		var channelName = TestIsolationHelpers.GenerateUniqueName("EvacFailChan");
+		await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreateChannelCommand(
+			MarkupText.Plain(channelName), ["Open"], playerNode));
+
+		var kept = await CreateThingAsync("EvacFailKept");
+		await RunAsync($"@set {kept}=SAFE");
+		await RunAsync($"@chown {kept}={player}");
+
+		var occupant = await CreateThingAsync("EvacFailPlayerOccupant");
+		await RunAsync($"@link {occupant}={await DigRoomAsync("EvacFailPlayerHome")}");
+		await RunAsync($"@tel {occupant}={player}");
+
+		var failing = DestructionServiceWith(
+			MoveServiceAnswering(_ => new Error<string>("Injected evacuation failure"), []));
+		var target = (await Mediator.Send(new GetObjectNodeQuery(player))).Expect<AnySharpObject>();
+
+		await Assert.That(await failing.FreeObjectAsync(Parser, target)).IsFalse();
+		await Assert.That(await OwnerNumberAsync(kept)).IsEqualTo(player.Number);
+		await Assert.That(await ChannelOwnerNumberAsync(channelName)).IsEqualTo(player.Number);
+
+		var real = WebAppFactoryArg.Services.GetRequiredService<IObjectDestructionService>();
+		target = (await Mediator.Send(new GetObjectNodeQuery(player))).Expect<AnySharpObject>();
+
+		await Assert.That(await real.FreeObjectAsync(Parser, target)).IsTrue();
+		await Assert.That(await OwnerNumberAsync(kept)).IsEqualTo(ProbateJudgeDbRefNumber);
+		await Assert.That(await ChannelOwnerNumberAsync(channelName)).IsEqualTo(ProbateJudgeDbRefNumber);
+	}
+
+	private async Task<int> OwnerNumberAsync(DBRef target)
+		=> (await (await Mediator.Send(new GetObjectNodeQuery(target))).Expect<AnySharpObject>()
+			.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number;
+
+	private async Task<int> ChannelOwnerNumberAsync(string channelName)
+	{
+		var channel = await Mediator.Send(new GetChannelQuery(channelName));
+		await Assert.That(channel).IsNotNull();
+		return (await channel!.Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number;
 	}
 
 	/// <summary>
