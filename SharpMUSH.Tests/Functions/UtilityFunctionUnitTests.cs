@@ -461,6 +461,31 @@ public class UtilityFunctionUnitTests
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("0|10|11|2|3|4|5|6|7|8|9|0|10|11|2|3|4|5|6|7|8|9");
 	}
 
+	/// <summary>
+	/// The regexp store lists its non-blank captures, upper-cased, and honours the pattern. PennMUSH
+	/// gives <c>0|1|2|FIRST</c> and <c>FIRST</c> for
+	/// <c>reswitch(abc,%(?&lt;first&gt;a%)%(b%)c,registers(,regexp,|))</c> and <c>registers(f*,regexp)</c>.
+	/// The store is seeded directly because nothing in SharpMUSH fills it yet (#1156).
+	/// </summary>
+	[Test]
+	public async Task RegistersListsNonBlankRegexpCaptures()
+	{
+		var captures = new Dictionary<string, MString>
+		{
+			["0"] = MarkupText.Plain("abc"),
+			["1"] = MarkupText.Plain("a"),
+			["2"] = MarkupText.Plain("b"),
+			["first"] = MarkupText.Plain("a"),
+			["unmatched"] = MarkupText.Empty
+		};
+		var parser = Parser.FromState(ParserState.RootFor(new DBRef(1)) with { RegexRegisters = new([captures]) });
+
+		var result = await parser.FunctionParse(MarkupText.Plain(
+			"[setq(z,1)][registers(,regexp,|)]/[registers(f*,regexp)]/[registers(,qregisters regexp,|)]"));
+
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("0|1|2|FIRST/FIRST/Z|0|1|2|FIRST");
+	}
+
 	[Test]
 	public async Task SLev_CheckDepth()
 	{
