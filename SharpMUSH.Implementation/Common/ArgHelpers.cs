@@ -268,10 +268,21 @@ public static partial class ArgHelpers
 		};
 	}
 
+	/// <summary>
+	/// The descriptor PennMUSH's <c>lookup_desc()</c> (<c>src/bsd.c</c>) settles on for a player: it
+	/// walks the whole connected list and keeps the one with the greatest <c>last_time</c> — the
+	/// least idle. A player with two clients open therefore answers <c>idle()</c>, <c>terminfo()</c>,
+	/// <c>width()</c> and the rest about the one they are actually using, which taking whichever
+	/// connection came out of the dictionary first did only by luck.
+	/// </summary>
+	public static ValueTask<IConnectionService.ConnectionData?> LeastIdleConnectionAsync(
+		IConnectionService connectionService, DBRef who)
+		=> connectionService.Get(who).MinByAsync(connection => connection.Idle ?? TimeSpan.MaxValue);
+
 	private static async ValueTask<CallState> ForConnectedPlayer(IConnectionService connectionService,
 		SharpPlayer player, Func<SharpPlayer, IConnectionService.ConnectionData, ValueTask<CallState>> playerFunc)
 	{
-		var playerData = await connectionService.Get(player.Object.DBRef).FirstOrDefaultAsync();
+		var playerData = await LeastIdleConnectionAsync(connectionService, player.Object.DBRef);
 
 		if (playerData is null) return new CallState("#-1 That player is not connected.");
 
