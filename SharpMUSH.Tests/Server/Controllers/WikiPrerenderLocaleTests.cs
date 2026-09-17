@@ -61,7 +61,7 @@ public class WikiPrerenderLocaleTests
 	{
 		var (page, locales) = await ResolveAsync("fr", withFrench: true);
 
-		var html = WikiController.GeneratePrerenderHtml(page, Canonical, locales, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(page, Canonical, locales, "en");
 
 		await Assert.That(html).Contains("<html lang=\"fr\">");
 		await Assert.That(html).DoesNotContain("<html lang=\"en\">");
@@ -73,7 +73,7 @@ public class WikiPrerenderLocaleTests
 		// The mirror of the case above: hardcoding "fr" would satisfy it just as well.
 		var (page, locales) = await ResolveAsync("fr", withFrench: false);
 
-		var html = WikiController.GeneratePrerenderHtml(page, Canonical, locales, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(page, Canonical, locales, "en");
 
 		await Assert.That(html)
 			.Contains("<html lang=\"en\">")
@@ -85,7 +85,7 @@ public class WikiPrerenderLocaleTests
 	{
 		var (page, locales) = await ResolveAsync(null, withFrench: true);
 
-		var html = WikiController.GeneratePrerenderHtml(page, Canonical, locales, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(page, Canonical, locales, "en");
 
 		await Assert.That(html).Contains("hreflang=\"en\"");
 		await Assert.That(html).Contains("hreflang=\"fr\"");
@@ -97,7 +97,7 @@ public class WikiPrerenderLocaleTests
 	{
 		var (page, locales) = await ResolveAsync(null, withFrench: true);
 
-		var html = WikiController.GeneratePrerenderHtml(page, Canonical, locales, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(page, Canonical, locales, "en");
 
 		await Assert.That(html)
 			.Contains($"<link rel=\"alternate\" hreflang=\"x-default\" href=\"{Canonical}\" />")
@@ -109,7 +109,7 @@ public class WikiPrerenderLocaleTests
 	{
 		var (page, locales) = await ResolveAsync("fr", withFrench: true);
 
-		var html = WikiController.GeneratePrerenderHtml(page, Canonical, locales, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(page, Canonical, locales, "en");
 
 		await Assert.That(html).Contains($"<link rel=\"canonical\" href=\"{Canonical}\" />");
 		await Assert.That(html)
@@ -122,7 +122,7 @@ public class WikiPrerenderLocaleTests
 	{
 		var (page, locales) = await ResolveAsync(null, withFrench: false);
 
-		var html = WikiController.GeneratePrerenderHtml(page, Canonical, locales, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(page, Canonical, locales, "en");
 
 		await Assert.That(html)
 			.DoesNotContain("rel=\"alternate\"")
@@ -134,7 +134,7 @@ public class WikiPrerenderLocaleTests
 	{
 		var (page, locales) = await ResolveAsync("fr", withFrench: true);
 
-		var html = WikiController.GeneratePrerenderHtml(page, Canonical, locales, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(page, Canonical, locales, "en");
 
 		await Assert.That(html).Contains("\"inLanguage\":\"fr\"");
 		await Assert.That(html).Contains("Dragons (fr)");
@@ -147,7 +147,7 @@ public class WikiPrerenderLocaleTests
 		// would show up here as an English heading over French prose.
 		var (page, locales) = await ResolveAsync("fr", withFrench: true);
 
-		var html = WikiController.GeneratePrerenderHtml(page, Canonical, locales, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(page, Canonical, locales, "en");
 
 		await Assert.That(html).Contains("<h1>Dragons (fr)</h1>");
 		await Assert.That(html).Contains("corps fr");
@@ -161,7 +161,7 @@ public class WikiPrerenderLocaleTests
 		// two ends up still claiming English.
 		var (page, locales) = await ResolveAsync("fr", withFrench: true);
 
-		var html = WikiController.GenerateCharacterPrerenderHtml(page, Canonical, locales, "en");
+		var html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(page, Canonical, locales, "en");
 
 		await Assert.That(html).Contains("<html lang=\"fr\">");
 		await Assert.That(html).Contains("hreflang=\"x-default\"");
@@ -179,7 +179,7 @@ public class WikiPrerenderLocaleTests
 
 		var localized = await localization.LocalizeAsync(page, "fr", includeDrafts: false);
 		var locales = await localization.GetVisibleLocalesAsync(page, includeDrafts: false);
-		var html = WikiController.GeneratePrerenderHtml(localized, Canonical, locales, "en");
+		var html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(localized, Canonical, locales, "en");
 
 		await Assert.That(html).DoesNotContain("corps brouillon");
 		await Assert.That(html)

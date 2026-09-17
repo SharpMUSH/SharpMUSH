@@ -24,29 +24,8 @@ public class WikiControllerProtectionTests
 {
 	// Callers are identified by their granted permission scopes (the protected-page check authorizes
 	// on the wiki.admin claim, not on a role name).
-	private static WikiController MakeController(InMemoryWikiService wiki, params string[] scopes)
-	{
-		var monitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
-		monitor.CurrentValue.Returns(TestSharpMushOptions.Create());
-		var controller = new WikiController(
-			wiki,
-			new WikiLocalizationService(
-				wiki, new WikiLocaleResolver(monitor), NullLogger<WikiLocalizationService>.Instance),
-			Substitute.For<IPrerenderCacheService>(),
-			NullLogger<WikiController>.Instance);
-
-		var claims = new List<Claim> { new(GameHub.CharacterDbrefClaim, "#42") };
-		claims.AddRange(scopes.Select(s => new Claim(PortalPermission.ClaimType, s)));
-
-		controller.ControllerContext = new ControllerContext
-		{
-			HttpContext = new DefaultHttpContext
-			{
-				User = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"))
-			}
-		};
-		return controller;
-	}
+	private static WikiEndpoints MakeEndpoints(InMemoryWikiService wiki, params string[] scopes) =>
+		WikiControllerTestHarness.Build(wiki, authenticated: true, "#42", scopes).Wiki;
 
 	private static async Task<(InMemoryWikiService Wiki, string Slug)> SeedProtectedPage(bool isProtected)
 	{
@@ -66,9 +45,9 @@ public class WikiControllerProtectionTests
 	public async Task UpdatePage_ProtectedPage_NonWizard_Returns403()
 	{
 		var (wiki, slug) = await SeedProtectedPage(isProtected: true);
-		var controller = MakeController(wiki);
+		var endpoints = MakeEndpoints(wiki);
 
-		var result = await controller.UpdatePage(slug, new UpdatePageRequest("# changed", null));
+		var result = await endpoints.Pages.UpdatePage(slug, new UpdatePageRequest("# changed", null));
 
 		await Assert.That(result).IsTypeOf<ForbidResult>();
 
@@ -80,9 +59,9 @@ public class WikiControllerProtectionTests
 	public async Task UpdatePage_ProtectedPage_Wizard_Succeeds()
 	{
 		var (wiki, slug) = await SeedProtectedPage(isProtected: true);
-		var controller = MakeController(wiki, PortalPermission.WikiAdmin);
+		var endpoints = MakeEndpoints(wiki, PortalPermission.WikiAdmin);
 
-		var result = await controller.UpdatePage(slug, new UpdatePageRequest("# changed", null));
+		var result = await endpoints.Pages.UpdatePage(slug, new UpdatePageRequest("# changed", null));
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}
@@ -91,9 +70,9 @@ public class WikiControllerProtectionTests
 	public async Task UpdatePage_UnprotectedPage_NonWizard_Succeeds()
 	{
 		var (wiki, slug) = await SeedProtectedPage(isProtected: false);
-		var controller = MakeController(wiki);
+		var endpoints = MakeEndpoints(wiki);
 
-		var result = await controller.UpdatePage(slug, new UpdatePageRequest("# changed", null));
+		var result = await endpoints.Pages.UpdatePage(slug, new UpdatePageRequest("# changed", null));
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
 	}

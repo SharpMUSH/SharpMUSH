@@ -83,7 +83,7 @@ public sealed class BotPrerenderMiddleware(
 				// be reachable by any crawler that asks for it.
 				if (await wikiService.GetBySlugAsync(slug, category, ns) is WikiPage { Published: true } page)
 				{
-					html = WikiController.GeneratePrerenderHtml(
+					html = WikiPrerenderHtmlBuilder.GeneratePrerenderHtml(
 						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
 						$"{canonicalBase}/wiki/{page.Namespace}/{page.Category}/{page.Slug}",
 						await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
@@ -99,7 +99,7 @@ public sealed class BotPrerenderMiddleware(
 				if (await wikiService.GetBySlugAsync(name, WikiHelpers.DefaultCategory, WikiNamespace.Character)
 					is WikiPage { Published: true } page)
 				{
-					html = WikiController.GenerateCharacterPrerenderHtml(
+					html = WikiPrerenderHtmlBuilder.GenerateCharacterPrerenderHtml(
 						await localization.LocalizeAsync(page, normalizedLang, includeDrafts: false),
 						$"{canonicalBase}/character/{name}",
 						await localization.GetVisibleLocalesAsync(page, includeDrafts: false),
