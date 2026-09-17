@@ -371,46 +371,47 @@ public partial class Functions
 	private static ValueTask<CallState> TimedOut
 		=> ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegexpTimeout));
 
+	/// <summary>
+	/// The one body behind <c>grab</c>, <c>graball</c>, <c>match</c> and <c>matchall</c>: split the
+	/// list, wildcard-match each element, and emit either the element or its one-based position,
+	/// either the first hit or every hit. The four differ in nothing else, and their
+	/// regular-expression counterparts already share <c>RegGrabInternal(parser, ci, all)</c>.
+	/// </summary>
+	private static ValueTask<CallState> WildcardScan(IMUSHCodeParser parser, bool all, bool positions)
+	{
+		var arguments = parser.CurrentState.ArgumentsOrdered;
+		var pattern = (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty).ToPlainText()!;
+		var regex = SoftcodeRegex.Wildcard(pattern);
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(arguments, 2, " ");
+		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(arguments, 3, delimiter);
+		var split = MushText.SplitList(delimiter, parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty);
+
+		try
+		{
+			var matched = split
+				.Select((item, index) => (item, position: index + 1))
+				.Where(pair => regex.IsMatch(pair.item.ToPlainText()))
+				.Select(pair => positions ? MarkupText.Plain(pair.position.ToString()) : pair.item);
+
+			// No match is an empty element for grab and a zero position for match, which is what
+			// falling out of PennMUSH's loop with the accumulator untouched produces.
+			return ValueTask.FromResult<CallState>(all
+				? MarkupText.Join(outputSeparator, matched)
+				: matched.FirstOrDefault() ?? (positions ? MarkupText.Plain("0") : MarkupText.Empty));
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			return TimedOut;
+		}
+	}
+
 	[SharpFunction(Name = "grab", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
 	public ValueTask<CallState> Grab(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var list = parser.CurrentState.Arguments["0"].Message;
-		var globPattern = (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty).ToPlainText()!;
-		var regex = SoftcodeRegex.Wildcard(globPattern);
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var splitList = MushText.SplitList(delimiter, list ?? MarkupText.Empty);
+		=> WildcardScan(parser, all: false, positions: false);
 
-		try
-		{
-			return ValueTask.FromResult<CallState>(splitList
-				.FirstOrDefault(x => regex.IsMatch(x.ToPlainText())) ?? MarkupText.Empty);
-		}
-		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
-		{
-			return TimedOut;
-		}
-	}
-
-	[SharpFunction(Name = "graball", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter"])]
+	[SharpFunction(Name = "graball", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "pattern", "delimiter", "outsep"])]
 	public ValueTask<CallState> GrabAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var list = parser.CurrentState.Arguments["0"].Message;
-		var globPattern = (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty).ToPlainText()!;
-		var regex = SoftcodeRegex.Wildcard(globPattern);
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter);
-		var splitList = MushText.SplitList(delimiter, list ?? MarkupText.Empty);
-
-		try
-		{
-			return ValueTask.FromResult<CallState>(
-				MarkupText.Join(outputSep, splitList.Where(x => regex.IsMatch(x.ToPlainText()))));
-		}
-		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
-		{
-			return TimedOut;
-		}
-	}
+		=> WildcardScan(parser, all: true, positions: false);
 
 	[SharpFunction(Name = "index", MinArgs = 4, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "element", "delimiter"])]
 	public ValueTask<CallState> Index(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -645,51 +646,11 @@ public partial class Functions
 
 	[SharpFunction(Name = "match", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter"])]
 	public ValueTask<CallState> Match(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var list = parser.CurrentState.Arguments["0"].Message;
-		var globPattern = (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty).ToPlainText()!;
-		var regex = SoftcodeRegex.Wildcard(globPattern);
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var splitList = MushText.SplitList(delimiter, list ?? MarkupText.Empty);
-
-		try
-		{
-			var index = splitList
-				.Select((item, i) => (item, pos: i + 1))
-				.FirstOrDefault(pair => regex.IsMatch(pair.item.ToPlainText()));
-
-			return ValueTask.FromResult<CallState>(index.pos.ToString());
-		}
-		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
-		{
-			return TimedOut;
-		}
-	}
+		=> WildcardScan(parser, all: false, positions: true);
 
 	[SharpFunction(Name = "matchall", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["list", "pattern", "delimiter", "outsep"])]
 	public ValueTask<CallState> MatchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var list = parser.CurrentState.Arguments["0"].Message;
-		var globPattern = (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty).ToPlainText()!;
-		var regex = SoftcodeRegex.Wildcard(globPattern);
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
-		var outputSep = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter);
-		var splitList = MushText.SplitList(delimiter, list ?? MarkupText.Empty);
-
-		try
-		{
-			var positions = splitList
-				.Select((item, i) => (item, pos: i + 1))
-				.Where(pair => regex.IsMatch(pair.item.ToPlainText()))
-				.Select(pair => MarkupText.Plain(pair.pos.ToString()));
-
-			return ValueTask.FromResult<CallState>(MarkupText.Join(outputSep, positions));
-		}
-		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
-		{
-			return TimedOut;
-		}
-	}
+		=> WildcardScan(parser, all: true, positions: true);
 
 	[SharpFunction(Name = "member", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.StripAnsi, ParameterNames = ["list", "element", "delimiter"])]
 	public ValueTask<CallState> Member(IMUSHCodeParser parser, SharpFunctionAttribute _2)

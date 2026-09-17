@@ -1555,53 +1555,41 @@ public partial class Functions
 		return string.Join(" ", results);
 	}
 
-	[SharpFunction(Name = "setq", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
-	public ValueTask<CallState> setq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	/// <summary>
+	/// The one body behind <c>setq</c> and <c>setr</c>. PennMUSH registers both on
+	/// <c>fun_setq</c> and tells them apart by <c>called_as</c>, which decides only whether the
+	/// first value is echoed back (<c>src/funmisc.c:321-352</c>).
+	/// </summary>
+	private static CallState SetRegisters(IMUSHCodeParser parser, bool echoFirstValue)
 	{
+		var arguments = parser.CurrentState.ArgumentsOrdered;
 		var everythingIsOkay = true;
 
-		var numberedArguments = parser.CurrentState.ArgumentsOrdered;
-
-		for (var i = 0; i < numberedArguments.Count; i += 2)
+		for (var i = 0; i < arguments.Count; i += 2)
 		{
 			everythingIsOkay &= parser.CurrentState.AddRegister(
-				numberedArguments[i.ToString()].Message!.ToPlainText().ToUpper(),
-				numberedArguments[(i + 1).ToString()].Message!);
+				arguments[i.ToString()].Message!.ToPlainText().ToUpper(),
+				arguments[(i + 1).ToString()].Message!);
 		}
 
-		if (everythingIsOkay)
-		{
-			return ValueTask.FromResult(new CallState(string.Empty));
-		}
-		else
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.BadRegName));
-		}
+		if (!everythingIsOkay) return new CallState(ErrorMessages.Returns.BadRegName);
+
+		return echoFirstValue ? new CallState(arguments["1"].Message!) : new CallState(string.Empty);
 	}
+
+	/// <remarks>
+	/// <c>EvenArgsOnly</c> is PennMUSH's <c>(nargs % 2) != 0</c> guard (<c>src/funmisc.c:327</c>),
+	/// which <c>fun_setq</c> applies to both names. Declared on <c>setr</c> alone, an odd-argument
+	/// <c>setq</c> reached the pairing loop and read past the last argument.
+	/// </remarks>
+	[SharpFunction(Name = "setq", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.EvenArgsOnly)]
+	public ValueTask<CallState> setq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ValueTask.FromResult(SetRegisters(parser, echoFirstValue: false));
 
 	[SharpFunction(Name = "setr", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.EvenArgsOnly)]
 	public ValueTask<CallState> setr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var everythingIsOkay = true;
+		=> ValueTask.FromResult(SetRegisters(parser, echoFirstValue: true));
 
-		var numberedArguments = parser.CurrentState.ArgumentsOrdered;
-
-		for (var i = 0; i < numberedArguments.Count; i += 2)
-		{
-			everythingIsOkay &= parser.CurrentState.AddRegister(
-				numberedArguments[$"{i}"].Message!.ToPlainText().ToUpper(),
-				numberedArguments[$"{i + 1}"].Message!);
-		}
-
-		if (everythingIsOkay)
-		{
-			return ValueTask.FromResult(new CallState(numberedArguments["1"].Message!));
-		}
-		else
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.BadRegName));
-		}
-	}
 	[SharpFunction(Name = "soundex", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> SoundEx(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

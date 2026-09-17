@@ -872,8 +872,9 @@ public partial class Commands
 			: null;
 	}
 
-	private async ValueTask<IConnectionService.ConnectionData?> LeastIdleConnection(DBRef who)
-		=> await ConnectionService.Get(who).MinByAsync(connection => connection.Idle ?? TimeSpan.MaxValue);
+	/// <inheritdoc cref="ArgHelpers.LeastIdleConnectionAsync"/>
+	private ValueTask<IConnectionService.ConnectionData?> LeastIdleConnection(DBRef who)
+		=> ArgHelpers.LeastIdleConnectionAsync(ConnectionService, who);
 
 	[SharpCommand(Name = "@SLAVE", Switches = ["RESTART"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
 		MinArgs = 0, ParameterNames = ["object"])]

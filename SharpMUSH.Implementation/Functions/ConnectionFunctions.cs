@@ -1417,15 +1417,9 @@ public partial class Functions
 		return new CallState(isHiddenPlayer ? "1" : "0");
 	}
 
-	/// <summary>
-	/// The descriptor PennMUSH's <c>lookup_desc()</c> (src/bsd.c) settles on for a player: it walks the
-	/// whole connected list and keeps the one with the greatest <c>last_time</c> — the least idle. A
-	/// player with two clients open therefore answers <c>idle()</c>, <c>terminfo()</c>, <c>width()</c>
-	/// and the rest about the one they are actually using, which taking whichever connection came out
-	/// of the dictionary first did only by luck.
-	/// </summary>
+	/// <inheritdoc cref="ArgHelpers.LeastIdleConnectionAsync"/>
 	private ValueTask<IConnectionService.ConnectionData?> LeastIdleConnectionAsync(DBRef who)
-		=> ConnectionService.Get(who).MinByAsync(connection => connection.Idle ?? TimeSpan.MaxValue);
+		=> ArgHelpers.LeastIdleConnectionAsync(ConnectionService, who);
 
 	/// <summary>
 	/// Checks if the executor has permission to access connection data for another player.
