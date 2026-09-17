@@ -1083,8 +1083,9 @@ public partial class Functions
 	[SharpFunction(Name = "listq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> ListQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		_ = parser.CurrentState.Registers.TryPeek(out var kv);
-		return ValueTask.FromResult(new CallState(string.Join(" ", kv!.Keys)));
+		var pattern = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText();
+		return ValueTask.FromResult(new CallState(
+			string.Join(" ", VisibleRegisterNames(parser.CurrentState, RegisterKinds.QRegisters, pattern))));
 	}
 
 	[SharpFunction(Name = "listset", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -1258,6 +1259,87 @@ public partial class Functions
 	/// <summary>The register stores r() reads from; each is matched by unambiguous prefix.</summary>
 	private static readonly string[] RegisterTypes = ["qregisters", "args", "iter", "switch", "regexp"];
 
+	/// <summary>The register stores <c>registers()</c> can list, as its <c>&lt;types&gt;</c> argument names them.</summary>
+	[Flags]
+	private enum RegisterKinds
+	{
+		None = 0,
+		QRegisters = 1,
+		Args = 2,
+		Iter = 4,
+		Switch = 8,
+		Regexp = 16,
+		All = QRegisters | Args | Iter | Switch | Regexp
+	}
+
+	/// <summary>
+	/// Parses <c>registers()</c>' space-separated <c>&lt;types&gt;</c>. Unlike r(), each name must be
+	/// spelled in full (any case), and <c>stack</c> is a synonym for <c>args</c>.
+	/// </summary>
+	/// <returns><see cref="RegisterKinds.None"/> for an unknown name; <see cref="RegisterKinds.All"/> for none given.</returns>
+	private static RegisterKinds ParseRegisterKinds(string types)
+	{
+		var named = types.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(ParseRegisterKind).ToList();
+		if (named.Contains(RegisterKinds.None)) return RegisterKinds.None;
+		return named.Count == 0 ? RegisterKinds.All : named.Aggregate(RegisterKinds.None, (kinds, kind) => kinds | kind);
+	}
+
+	private static RegisterKinds ParseRegisterKind(string type) => type.ToLowerInvariant() switch
+	{
+		"qregisters" => RegisterKinds.QRegisters,
+		"args" or "stack" => RegisterKinds.Args,
+		"iter" => RegisterKinds.Iter,
+		"switch" => RegisterKinds.Switch,
+		"regexp" => RegisterKinds.Regexp,
+		_ => RegisterKinds.None
+	};
+
+	/// <summary>
+	/// The names of the visible registers of <paramref name="kinds"/> that hold a non-blank value and
+	/// match the wildcard <paramref name="pattern"/> (case-insensitive; empty matches all), as
+	/// PennMUSH's <c>fun_listq</c> lists them. Each is keyed by the type letter Penn gives it — A
+	/// (args), N and T (iteration count and text), Q, R (regexp), S (switch) — and the list is in
+	/// byte order of that key, so it is deterministic and groups by type. Iteration and switch
+	/// context are named for their innermost level only, <c>0</c>.
+	/// </summary>
+	private static IEnumerable<string> VisibleRegisterNames(ParserState state, RegisterKinds kinds, string? pattern)
+	{
+		var matcher = string.IsNullOrEmpty(pattern) ? null : SoftcodeRegex.Wildcard(pattern);
+		return RegisterEntries(state, kinds)
+			.Where(entry => matcher is null || matcher.IsMatch(entry.Name))
+			.DistinctBy(entry => entry.Key)
+			.OrderBy(entry => entry.Key, StringComparer.Ordinal)
+			.Select(entry => entry.Name);
+	}
+
+	private static IEnumerable<(string Key, string Name)> RegisterEntries(ParserState state, RegisterKinds kinds)
+	{
+		if (kinds.HasFlag(RegisterKinds.Args))
+			foreach (var (name, value) in state.EnvironmentRegisters)
+				if (value.Message is { Length: > 0 })
+					yield return ($"A{name}", name);
+
+		if (kinds.HasFlag(RegisterKinds.QRegisters) && state.Registers.TryPeek(out var qregs))
+			foreach (var (name, value) in qregs)
+				if (value.Length > 0)
+					yield return ($"Q{name}", name);
+
+		if (kinds.HasFlag(RegisterKinds.Regexp) && state.RegexRegisters.TryPeek(out var rxregs))
+			foreach (var (name, value) in rxregs)
+				if (value.Length > 0)
+					yield return ($"R{name.ToUpperInvariant()}", name.ToUpperInvariant());
+
+		if (kinds.HasFlag(RegisterKinds.Iter) && state.IterationRegisters.TryPeek(out var iteration))
+		{
+			yield return ("N0", "0");
+			if (iteration.Value.Length > 0)
+				yield return ("T0", "0");
+		}
+
+		if (kinds.HasFlag(RegisterKinds.Switch) && state.SwitchStack.TryPeek(out var switchText) && switchText.Length > 0)
+			yield return ("S0", "0");
+	}
+
 	[SharpFunction(Name = "rand", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> Rand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -1308,45 +1390,14 @@ public partial class Functions
 	public ValueTask<CallState> Registers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
+		var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText();
+		var kinds = ParseRegisterKinds(args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? string.Empty);
+		if (kinds == RegisterKinds.None)
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Nothing));
 
-		// Get current registers from the stack
-		if (!parser.CurrentState.Registers.TryPeek(out var registers))
-		{
-			return ValueTask.FromResult(CallState.Empty);
-		}
-
-		// No arguments: return count of registers
-		if (!args.TryGetValue("0", out var arg0))
-		{
-			return ValueTask.FromResult(new CallState(registers.Count));
-		}
-
-		// First argument determines what to return
-		var mode = (arg0.Message ?? MarkupText.Empty).ToPlainText().ToLower();
-
-		// Return space-separated list of register names
-		if (mode == "list" || mode == "names")
-		{
-			return ValueTask.FromResult(new CallState(string.Join(" ", registers.Keys)));
-		}
-
-		// Get specific register value (second argument is register name)
-		if (mode == "get")
-		{
-			if (!args.TryGetValue("1", out var arg1))
-			{
-				return ValueTask.FromResult(CallState.Empty);
-			}
-			var regName = (arg1.Message ?? MarkupText.Empty).ToPlainText().ToUpper();
-			if (registers.TryGetValue(regName, out var value))
-			{
-				return ValueTask.FromResult(new CallState(value));
-			}
-			return ValueTask.FromResult(CallState.Empty);
-		}
-
-		// Default: return count
-		return ValueTask.FromResult(new CallState(registers.Count));
+		var separator = args.GetValueOrDefault("2")?.Message?.ToPlainText() ?? " ";
+		return ValueTask.FromResult(new CallState(
+			string.Join(separator, VisibleRegisterNames(parser.CurrentState, kinds, pattern))));
 	}
 
 	[SharpFunction(Name = "render", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
@@ -2026,14 +2077,19 @@ public partial class Functions
 	[SharpFunction(Name = "unsetq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> UnSetQ(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var argument = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText();
+		var patterns = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText()
+			.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
 		if (parser.CurrentState.Registers.TryPeek(out var registers))
 		{
-			if (string.IsNullOrEmpty(argument)) registers.Clear();
+			// No pattern, or a lone "*" among them, clears the whole scope.
+			if (patterns.Length == 0 || patterns.Contains("*")) registers.Clear();
 			else
 			{
-				foreach (var name in argument.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-					registers.TryRemove(name.ToUpper());
+				var matching = patterns
+					.SelectMany(pattern => VisibleRegisterNames(parser.CurrentState, RegisterKinds.QRegisters, pattern))
+					.ToList();
+				foreach (var name in matching)
+					registers.Remove(name);
 			}
 		}
 
