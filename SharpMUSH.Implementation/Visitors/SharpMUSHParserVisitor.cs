@@ -1039,6 +1039,13 @@ public class SharpMUSHParserVisitor(
 				return new CallState(ErrorMessages.Returns.OutputTooLarge, contextDepth);
 			}
 
+			// A function that evaluates its own arguments (cand, iter, ...) may have run into a limit
+			// and still returned a small value of its own; the limit halts the evaluation regardless.
+			if (limitExceeded.IsExceeded)
+			{
+				return new CallState(limitExceeded.ErrorMessage ?? ErrorMessages.Returns.Invoke, contextDepth);
+			}
+
 			return result with { Depth = contextDepth };
 		}
 		catch (RestrictedExpressionException) { success = false; throw; }

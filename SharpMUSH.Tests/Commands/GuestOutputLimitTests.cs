@@ -78,6 +78,21 @@ public class GuestOutputLimitTests
 		await Assert.That(said).StartsWith(ErrorMessages.Returns.OutputTooLarge);
 	}
 
+	// A short-circuiting function evaluates its arguments itself and returns only a boolean, so
+	// the limit an argument ran into has to halt the evaluation after the function returns.
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task LazyArgumentOverTheLimit_HaltsTheEvaluation(bool guest)
+	{
+		var player = await PlayerAsync("OutLimitLazy", guest);
+		var limit = guest ? GuestLimit : FunctionLimits.MaxOutputCodeUnits;
+
+		var said = await ThinkAs(player, $"cand(strlen(repeat(x,{limit + 1})))");
+
+		await Assert.That(said).StartsWith(ErrorMessages.Returns.OutputTooLarge);
+	}
+
 	[Test]
 	public async Task Guest_RestrictedExpression_KeepsTheGuestLimit()
 	{
@@ -107,11 +122,13 @@ public class GuestOutputLimitTests
 		await Parser.CommandParse(guest.Handle, ConnectionService,
 			MarkupText.Plain($"@wait 0=think strlen(repeat(x,{GuestLimit + 1}))"));
 
+		// Other tests' room broadcasts reach this player too; think strlen() says a length or an error.
 		var said = string.Empty;
 		for (var waited = 0; waited < 100 && said.Length == 0; waited++)
 		{
 			await Task.Delay(50);
-			said = WebAppFactoryArg.Notifications.For(guest.DbRef).Skip(before).LastOrDefault() ?? string.Empty;
+			said = WebAppFactoryArg.Notifications.For(guest.DbRef).Skip(before)
+				.FirstOrDefault(n => n.StartsWith("#-1") || n.All(char.IsAsciiDigit)) ?? string.Empty;
 		}
 		await Assert.That(said).StartsWith(ErrorMessages.Returns.OutputTooLarge);
 	}
