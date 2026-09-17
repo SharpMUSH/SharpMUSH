@@ -245,8 +245,12 @@ public class ObjectDestructionService(
 
 		var command = configuration.CurrentValue.Command;
 
-		foreach (var possession in owned)
+		foreach (var listed in owned)
 		{
+			// Re-resolved because freeing an earlier possession may already have taken this one (a room
+			// takes its exits with it), and acting on the stale copy would write to a deleted dbref.
+			if (await mediator.Send(new GetObjectNodeQuery(listed.Object().DBRef), ct) is not AnySharpObject possession) continue;
+
 			var survives = IsSpecialObject(possession.Object().DBRef)
 				|| !command.DestroyPossessions
 				|| (command.ReallySafe && await possession.HasFlag("SAFE"));

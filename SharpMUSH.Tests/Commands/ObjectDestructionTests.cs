@@ -310,6 +310,51 @@ public class ObjectDestructionTests
 	}
 
 	/// <summary>
+	/// A doomed player's room takes its exits with it when the probate frees it, so an exit the same
+	/// player owns is already gone by the time the probate reaches it. Acting on the stale copy failed
+	/// its free and then handed the deleted dbref to the probate judge, writing an ownership edge for an
+	/// object that no longer exists. A fresh probate judge makes that stray edge countable.
+	/// </summary>
+	[Test]
+	public async Task Nuke_Twice_SkipsPossessionsAnEarlierFreeAlreadyTook()
+	{
+		var judge = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "NukeCascadeJudge");
+		using var probate = TestOptionsOverride.Scope(options => options with
+		{
+			Command = options.Command with { ProbateJudge = (uint)judge.Number }
+		});
+
+		var player = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "NukeCascade");
+		var room = await DigRoomAsync("NukeCascadeRoom");
+
+		// The probate walks possessions in dbref order; the exit has to come after its room.
+		await RunAsync($"@tel {room}");
+		DBRef exit;
+		do
+		{
+			var opened = await RunAsync($"@open {TestIsolationHelpers.GenerateUniqueName("NukeCascadeExit")}");
+			exit = DBRef.Parse(opened.Message!.ToPlainText().Trim());
+		} while (exit.Number < room.Number);
+		await RunAsync("@tel #0");
+
+		await RunAsync($"@chown {room}={player}");
+		await RunAsync($"@chown {exit}={player}");
+
+		await RunAsync($"@nuke {player}");
+		await RunAsync($"@nuke {player}");
+
+		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(player))).IsNone).IsTrue();
+		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(room))).IsNone).IsTrue();
+		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(exit))).IsNone).IsTrue();
+
+		var judgePlayer = (await Mediator.Send(new GetObjectNodeQuery(judge))).Expect<SharpPlayer>();
+		await Assert.That(await Mediator.Send(new GetOwnedObjectCountQuery(judgePlayer))).IsEqualTo(1)
+			.Because("the judge owns only itself; nothing survived to be handed over");
+	}
+
+	/// <summary>
 	/// PennMUSH <c>purge()</c> is deliberately two-pass: everything dies on the *second* purge after
 	/// <c>@destroy</c>, which is what leaves room for <c>@undestroy</c>.
 	/// </summary>
