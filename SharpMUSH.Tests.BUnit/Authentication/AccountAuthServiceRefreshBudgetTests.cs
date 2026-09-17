@@ -66,7 +66,7 @@ public class AccountAuthServiceRefreshBudgetTests : TrackingBunitContext
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
 		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			[]);
 		var provider = new AccountAuthStateProvider(service);
 		var authentication = provider.GetAuthenticationStateAsync();
 		var second = service.InitAsync();

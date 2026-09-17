@@ -97,7 +97,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 	{
 		var component = Render(KeyOnlyText(), () => Entries(("Vader", [])));
 
-		await Assert.That(component.FindAll("input")).HasCount(1);
+		await Assert.That(component.FindAll("input").Count).IsEqualTo(1);
 		await Assert.That(component.FindAll(".config-list-sub")).IsEmpty();
 	}
 
@@ -183,7 +183,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 
 		await Assert.That(component.Find(".config-empty").TextContent).IsEqualTo("Nothing configured.");
 		await Assert.That(Services.GetRequiredService<ISnackbar>().ShownSnackbars
-			.Any(s => s.Message.Contains("Your session has expired."))).IsTrue();
+			.Any(s => s.Message?.Contains("Your session has expired.") == true)).IsTrue();
 	}
 
 	/// <summary>A value list that parses to nothing is refused before it reaches the server.</summary>

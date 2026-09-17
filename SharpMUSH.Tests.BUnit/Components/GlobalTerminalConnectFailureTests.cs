@@ -43,8 +43,7 @@ public class GlobalTerminalConnectFailureTests : BunitContext
 			sp.GetRequiredService<IHttpClientFactory>(),
 			sp.GetRequiredService<IJSRuntime>(),
 			NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(),
-			Substitute.For<IPlayTerminalService>()));
+			[]));
 
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true));

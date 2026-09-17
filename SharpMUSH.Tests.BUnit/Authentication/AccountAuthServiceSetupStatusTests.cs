@@ -45,7 +45,7 @@ public class AccountAuthServiceSetupStatusTests : TrackingBunitContext
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
 
-		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 
 		var result = await service.NeedsSetupAsync();
 
@@ -65,7 +65,7 @@ public class AccountAuthServiceSetupStatusTests : TrackingBunitContext
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
 
-		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 
 		var result = await service.NeedsSetupAsync();
 
@@ -90,7 +90,7 @@ public class AccountAuthServiceSetupStatusTests : TrackingBunitContext
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
 
-		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 
 		// Simulates MainLayout's EnsureAccountRoutingAsync guard: only the success arm is ever
 		// cached, so a failure on the first navigation leaves the next navigation free to retry.

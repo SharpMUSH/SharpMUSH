@@ -124,7 +124,7 @@ file static class SetupTestServices
 				.AddSingleton(sp => new AccountAuthService(
 						sp.GetRequiredService<IHttpClientFactory>(),
 						sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-						NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
+						NullLogger<AccountAuthService>.Instance, []));
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		return apiClient;

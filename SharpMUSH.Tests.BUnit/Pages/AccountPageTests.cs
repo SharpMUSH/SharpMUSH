@@ -77,7 +77,7 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-				NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
+				NullLogger<AccountAuthService>.Instance, []));
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(null);

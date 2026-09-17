@@ -56,8 +56,7 @@ public class AdminServiceBearerTests : TrackingBunitContext
 			AuthOnlyFactory(authHttp),
 			JSInterop.JSRuntime,
 			NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(),
-			Substitute.For<IPlayTerminalService>());
+			[]);
 
 		var apiHttp = Track(new HttpClient(new AccountSessionBearerHandler(auth) { InnerHandler = wire })
 		{

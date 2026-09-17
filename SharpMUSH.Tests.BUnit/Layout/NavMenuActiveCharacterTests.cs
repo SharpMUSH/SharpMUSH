@@ -127,7 +127,7 @@ public class NavMenuActiveCharacterTests : TrackingBunitContext, IAsyncDisposabl
 			sp.GetRequiredService<IHttpClientFactory>(),
 			NullLogger<ApplicationRegistryClient>.Instance));
 
-		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 		var (success, error, _) = await auth.LoginAsync("headwiz", "password");
 		if (!success)
 			throw new InvalidOperationException($"Test setup login failed: {error}");

@@ -62,7 +62,7 @@ public class QueueDiagnosticsPageTests : TrackingBunitContext
 		var factory = Substitute.For<IHttpClientFactory>(); factory.CreateClient("api").Returns(client);
 		Services.AddSingleton(factory).AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 			.AddSingleton(sp => new AccountAuthService(factory, sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
-				NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
+				NullLogger<AccountAuthService>.Instance, []));
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("token");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.username").SetResult("account");

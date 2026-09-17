@@ -69,6 +69,10 @@ builder.Services.AddSingleton<HelpService>(sp =>
 // The server's shipped helpfile corpus (/api/help). Distinct from HelpService above, which indexes
 // mush-defs.json for the softcode editor's function drawer.
 builder.Services.AddSingleton<GameHelpService>();
+// The terminals register their own teardown rather than being reached into from the auth service:
+// logging out of the portal must end the game-side session, but that is the terminal layer's
+// business, and it sits above authentication, not below it.
+builder.Services.AddSingleton<IAccountSessionEndingHandler, TerminalSessionTeardown>();
 builder.Services.AddSingleton<AccountAuthService>();
 builder.Services.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>());
 builder.Services.AddSingleton<DatabaseConversionService>();

@@ -118,7 +118,7 @@ public class DynamicApplicationPageTests : TrackingBunitContext, IAsyncDisposabl
 
 		Services.AddSingleton(new AccountAuthService(
 			factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
+			[]));
 
 		AddAuthorization();
 	}
@@ -278,7 +278,7 @@ public class DynamicApplicationTopbarTests : TrackingBunitContext, IAsyncDisposa
 
 		Services.AddSingleton(new AccountAuthService(
 			factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
+			[]));
 		Services.AddSingleton<CharacterSwitchService>();
 		Services.AddSingleton<TerminalLoginService>();
 

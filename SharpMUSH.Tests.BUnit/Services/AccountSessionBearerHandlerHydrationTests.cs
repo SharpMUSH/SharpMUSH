@@ -50,8 +50,7 @@ public class AccountSessionBearerHandlerHydrationTests : TrackingBunitContext
 			factory,
 			JSInterop.JSRuntime,
 			NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(),
-			Substitute.For<IPlayTerminalService>());
+			[]);
 	}
 
 	private static async Task<AuthenticationHeaderValue?> SendAsync(IAccountAuthState auth, string url)

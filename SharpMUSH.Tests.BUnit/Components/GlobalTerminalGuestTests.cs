@@ -35,7 +35,7 @@ public class GlobalTerminalGuestTests : BunitContext
 		Services.AddSingleton(sp => new AccountAuthService(
 			sp.GetRequiredService<IHttpClientFactory>(),
 			sp.GetRequiredService<IJSRuntime>(),
-			NullLogger<AccountAuthService>.Instance, Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>()));
+			NullLogger<AccountAuthService>.Instance, []));
 
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 	}

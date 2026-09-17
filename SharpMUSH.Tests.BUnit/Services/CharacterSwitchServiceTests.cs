@@ -53,7 +53,7 @@ public class CharacterSwitchServiceTests : TrackingBunitContext
 
 		var auth = new AccountAuthService(
 			factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
-			Substitute.For<ITerminalService>(), Substitute.For<IPlayTerminalService>());
+			[]);
 		var connection = Substitute.For<IConnectionStateService>();
 		return (auth, connection, new CharacterSwitchService(auth, connection));
 	}
