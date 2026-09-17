@@ -684,7 +684,7 @@ public class PackagePlanService : IPackagePlanService
 	/// compared <c>foo\</c> instead and missed the collision.
 	/// </para>
 	/// </summary>
-	public static string? ExtractCommandPattern(string value)
+	internal static string? ExtractCommandPattern(string value)
 	{
 		var match = CommandDiscoveryService.CommandPatternRegex().Match(value);
 		if (!match.Success)
