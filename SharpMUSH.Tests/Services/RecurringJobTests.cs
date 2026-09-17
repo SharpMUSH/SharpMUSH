@@ -1,8 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using SharpMUSH.Server.Services;
 using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
@@ -36,7 +34,6 @@ public class RecurringJobTests
 		Get<IExpandedDataStore>(), Get<IObjectStore>(), capabilities, Get<IPermissionService>(), Get<IAttributeService>(), queue, Factory.CommandParser, clock);
 	private async Task<Context> Setup()
 	{
-		foreach (var runner in Factory.Services.GetServices<IHostedService>().OfType<RecurringJobRunner>()) await runner.StopAsync(default);
 		await Get<IExpandedDataStore>().SetExpandedServerData(RecurringJobService.StorageKey, new RecurringJobDocument([]));
 		var player = (await Get<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var actor = await Get<IAdministrativeCapabilityService>().GetGameActorAsync(player.Object.DBRef);
