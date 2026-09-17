@@ -143,7 +143,7 @@ public class CommonFunctionsPackageTests(ServerWebAppFactory factory)
 	public async Task EveryFunctionInTheTree_IsRegistered()
 	{
 		var objid = (await Registry.GetPackageObjectsAsync("common-functions")).Single().Objid;
-		var dbref = PackageInstallService.ParseObjid(objid)!.Value;
+		var dbref = DBRef.Parse(objid);
 
 		var heads = (await Eval($"lattr({dbref}/FUN`*)")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		await Assert.That(heads.Length).IsGreaterThan(0);

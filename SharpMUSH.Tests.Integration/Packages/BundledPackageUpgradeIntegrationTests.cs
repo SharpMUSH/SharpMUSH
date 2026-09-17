@@ -77,7 +77,7 @@ public class BundledPackageUpgradeIntegrationTests(ServerWebAppFactory factory)
 	}
 
 	private DBRef ProbeDbref(IReadOnlyList<PackageObjectRecord> objects) =>
-		PackageInstallService.ParseObjid(objects.Single(o => o.Ref == "probe").Objid)!.Value;
+		DBRef.Parse(objects.Single(o => o.Ref == "probe").Objid);
 
 	private async Task<string> ReadAttributeAsync(DBRef dbref, string attribute)
 	{

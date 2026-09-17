@@ -115,7 +115,7 @@ public class PlusHelpIntegrationTests
 	private async Task<string> ObjectAsync(string reference)
 	{
 		var objects = await Registry.GetPackageObjectsAsync("plus-help");
-		return PackageInstallService.ParseObjid(objects.Single(o => o.Ref == reference).Objid)!.Value.ToString();
+		return DBRef.Parse(objects.Single(o => o.Ref == reference).Objid).ToString();
 	}
 
 	private Task<string> LibrarianAsync() => ObjectAsync("librarian");

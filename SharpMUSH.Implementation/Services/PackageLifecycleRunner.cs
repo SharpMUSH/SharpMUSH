@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -70,8 +71,7 @@ public class PackageLifecycleRunner(
 	{
 		try
 		{
-			var dbref = SharpMUSH.Library.Services.PackageInstallService.ParseObjid(objId);
-			if (dbref is null)
+			if (HelperFunctions.ParseDbRef(objId) is not DBRef dbref)
 			{
 				return;
 			}
@@ -82,7 +82,7 @@ public class PackageLifecycleRunner(
 				return;
 			}
 
-			if (await mediator.Send(new GetObjectNodeQuery(dbref.Value), cancellationToken) is not AnySharpObject target)
+			if (await mediator.Send(new GetObjectNodeQuery(dbref), cancellationToken) is not AnySharpObject target)
 			{
 				return;
 			}

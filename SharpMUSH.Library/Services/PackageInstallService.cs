@@ -213,13 +213,12 @@ public class PackageInstallService(
 	private async Task<LiveObjectState> ReadLiveObjectAsync(
 		string objid, IReadOnlyCollection<string> attributes, bool checkContents, CancellationToken cancellationToken)
 	{
-		var dbref = ParseObjid(objid);
-		if (dbref is null)
+		if (HelperFunctions.ParseDbRef(objid) is not DBRef dbref)
 		{
 			return new LiveObjectState(objid, false, "", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 		}
 
-		if (await database.GetObjectNodeAsync(dbref.Value, cancellationToken) is not AnySharpObject known)
+		if (await database.GetObjectNodeAsync(dbref, cancellationToken) is not AnySharpObject known)
 		{
 			return new LiveObjectState(objid, false, "", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 		}
@@ -229,7 +228,7 @@ public class PackageInstallService(
 		foreach (var attribute in attributes)
 		{
 			var leaf = await attributeStore
-				.GetAttributeAsync(dbref.Value, attribute.Split('`'), cancellationToken)
+				.GetAttributeAsync(dbref, attribute.Split('`'), cancellationToken)
 				.LastOrDefaultAsync(cancellationToken);
 			if (leaf is not null)
 			{
@@ -239,7 +238,7 @@ public class PackageInstallService(
 		}
 
 		var hasContents = checkContents
-			&& await navigation.GetContentsAsync(dbref.Value, cancellationToken).AnyAsync(cancellationToken);
+			&& await navigation.GetContentsAsync(dbref, cancellationToken).AnyAsync(cancellationToken);
 
 		// Full live object structure for the three-way structure merge.
 		var sharpObject = known.Object();
@@ -822,13 +821,11 @@ public class PackageInstallService(
 		List<string> notes,
 		CancellationToken cancellationToken)
 	{
-		var parsed = ParseObjid(objid);
-		if (parsed is null)
+		if (HelperFunctions.ParseDbRef(objid) is not DBRef target)
 		{
 			return $"Internal error: invalid objid '{objid}'.";
 		}
 
-		var target = parsed.Value;
 		var path = change.Attribute.Split('`');
 
 		async Task WriteAsync(string value)
@@ -1040,7 +1037,7 @@ public class PackageInstallService(
 						{
 							// The flag commands carry the attribute cache keys and the
 							// inheritance tag; the store call carried neither.
-							await mediator.Send(new SetAttributeFlagCommand(ParseObjid(objid)!.Value, leaf, flag), cancellationToken);
+							await mediator.Send(new SetAttributeFlagCommand(DBRef.Parse(objid), leaf, flag), cancellationToken);
 						}
 						else
 						{
@@ -1054,7 +1051,7 @@ public class PackageInstallService(
 						var leaf = await ResolveAttributeLeafAsync(objid, path, cancellationToken);
 						if (leaf is not null)
 						{
-							await mediator.Send(new UnsetAttributeFlagCommand(ParseObjid(objid)!.Value, leaf, flag), cancellationToken);
+							await mediator.Send(new UnsetAttributeFlagCommand(DBRef.Parse(objid), leaf, flag), cancellationToken);
 						}
 					}
 				}
@@ -1186,15 +1183,14 @@ public class PackageInstallService(
 			var otherRefs = (await registry.GetManagedAttributesForObjectAsync(group.Key))
 				.Where(a => a.PackageId != packageId && PackageRefIndirection.IsRefAttribute(a.Attribute))
 				.Select(a => a.Attribute).ToHashSet(StringComparer.OrdinalIgnoreCase);
-			var dbref = ParseObjid(group.Key);
-			if (dbref is null)
+			if (HelperFunctions.ParseDbRef(group.Key) is not DBRef dbref)
 			{
 				continue;
 			}
 
 			foreach (var managed in group.Where(a => !otherRefs.Contains(a.Attribute)))
 			{
-				await mediator.Send(new ClearAttributeCommand(dbref.Value, managed.Attribute.Split('`')), cancellationToken);
+				await mediator.Send(new ClearAttributeCommand(dbref, managed.Attribute.Split('`')), cancellationToken);
 			}
 		}
 
@@ -1253,12 +1249,12 @@ public class PackageInstallService(
 		// A rollback must not redirect another package's code to our historical resolution.
 		foreach (var attribute in snapshot.Attributes.Where(a => sharedRefs.Contains((a.Objid, a.Attribute.ToUpperInvariant()))))
 		{
-			var dbref = ParseObjid(attribute.Objid);
-			if (dbref is null || (await database.GetObjectNodeAsync(dbref.Value, cancellationToken)).IsNone)
+			if (HelperFunctions.ParseDbRef(attribute.Objid) is not DBRef dbref
+				|| (await database.GetObjectNodeAsync(dbref, cancellationToken)).IsNone)
 			{
 				continue;
 			}
-			var live = await attributeStore.GetAttributeAsync(dbref.Value, attribute.Attribute.Split('`'), cancellationToken)
+			var live = await attributeStore.GetAttributeAsync(dbref, attribute.Attribute.Split('`'), cancellationToken)
 				.LastOrDefaultAsync(cancellationToken);
 			if (live?.Value.ToPlainText() != attribute.Value)
 			{
@@ -1272,15 +1268,15 @@ public class PackageInstallService(
 
 		foreach (var attribute in snapshot.Attributes)
 		{
-			var dbref = ParseObjid(attribute.Objid);
-			if (dbref is null || (await database.GetObjectNodeAsync(dbref.Value, cancellationToken)).IsNone)
+			if (HelperFunctions.ParseDbRef(attribute.Objid) is not DBRef dbref
+				|| (await database.GetObjectNodeAsync(dbref, cancellationToken)).IsNone)
 			{
 				notes.Add($"Skipped {attribute.Objid}/{attribute.Attribute}: object no longer exists.");
 				continue;
 			}
 
 			await mediator.Send(new SetAttributeCommand(
-				dbref.Value, attribute.Attribute.Split('`'), MarkupText.Plain(attribute.Value), pmWizard), cancellationToken);
+				dbref, attribute.Attribute.Split('`'), MarkupText.Plain(attribute.Value), pmWizard), cancellationToken);
 			await registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(
 				packageId, attribute.Objid, attribute.Attribute.ToUpperInvariant(),
 				attribute.Value, ContentHash.Sha256Hex(attribute.Value), snapshot.Version));
@@ -1292,10 +1288,9 @@ public class PackageInstallService(
 			.Where(m => !restoredKeys.Contains((m.Objid, m.Attribute.ToUpperInvariant()))))
 		{
 			var shared = sharedRefs.Contains((managed.Objid, managed.Attribute.ToUpperInvariant()));
-			var dbref = ParseObjid(managed.Objid);
-			if (dbref is not null && !shared)
+			if (HelperFunctions.ParseDbRef(managed.Objid) is DBRef dbref && !shared)
 			{
-				await mediator.Send(new ClearAttributeCommand(dbref.Value, managed.Attribute.Split('`')), cancellationToken);
+				await mediator.Send(new ClearAttributeCommand(dbref, managed.Attribute.Split('`')), cancellationToken);
 			}
 
 			await registry.RemoveManagedAttributeAsync(packageId, managed.Objid, managed.Attribute);
@@ -1456,13 +1451,12 @@ public class PackageInstallService(
 
 	private async Task<AnySharpObject?> GetKnownAsync(string objid, CancellationToken cancellationToken)
 	{
-		var dbref = ParseObjid(objid);
-		if (dbref is null)
+		if (HelperFunctions.ParseDbRef(objid) is not DBRef dbref)
 		{
 			return null;
 		}
 
-		return await database.GetObjectNodeAsync(dbref.Value, cancellationToken) is AnySharpObject node ? node : null;
+		return await database.GetObjectNodeAsync(dbref, cancellationToken) is AnySharpObject node ? node : null;
 	}
 
 	/// <summary>
@@ -1473,13 +1467,12 @@ public class PackageInstallService(
 	private async Task<SharpAttribute?> ResolveAttributeLeafAsync(
 		string objid, string[] path, CancellationToken cancellationToken)
 	{
-		var dbref = ParseObjid(objid);
-		if (dbref is null)
+		if (HelperFunctions.ParseDbRef(objid) is not DBRef dbref)
 		{
 			return null;
 		}
 
-		var chain = await mediator.CreateStream(new GetAttributeQuery(dbref.Value, path))
+		var chain = await mediator.CreateStream(new GetAttributeQuery(dbref, path))
 			.ToArrayAsync(cancellationToken);
 
 		// A partial chain is not a hit: the leaf named by the last segment does not exist.
@@ -1529,27 +1522,6 @@ public class PackageInstallService(
 
 		return manifest.Configure.GetValueOrDefault(key)?.Default;
 	}
-
-	public static DBRef? ParseObjid(string objid)
-	{
-		if (objid.Length < 2 || objid[0] != '#')
-		{
-			return null;
-		}
-
-		var body = objid.AsSpan(1);
-		Span<System.Range> fields = stackalloc System.Range[2];
-		var fieldCount = body.Split(fields, ':');
-		if (!int.TryParse(body[fields[0]], out var number))
-		{
-			return null;
-		}
-
-		return fieldCount == 2 && long.TryParse(body[fields[1]], out var milliseconds)
-			? new DBRef(number, milliseconds)
-			: new DBRef(number);
-	}
-
 
 	private static string PrimaryName(string name)
 	{

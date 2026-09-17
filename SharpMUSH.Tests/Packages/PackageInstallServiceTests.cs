@@ -104,7 +104,7 @@ public class PackageInstallServiceTests
 
 	private async Task<string> ReadAttributeAsync(string objid, string attribute)
 	{
-		var dbref = PackageInstallService.ParseObjid(objid)!.Value;
+		var dbref = DBRef.Parse(objid);
 		var leaf = await Database.GetAttributeAsync(dbref, attribute.Split('`'), CancellationToken.None)
 			.LastOrDefaultAsync();
 		return leaf?.Value.ToPlainText() ?? "";
@@ -118,7 +118,7 @@ public class PackageInstallServiceTests
 
 	private async Task<IReadOnlyList<string>> ReadAttributeFlagsAsync(string objid, string attribute)
 	{
-		var dbref = PackageInstallService.ParseObjid(objid)!.Value;
+		var dbref = DBRef.Parse(objid);
 		var leaf = await Database.GetAttributeAsync(dbref, attribute.Split('`'), CancellationToken.None)
 			.LastOrDefaultAsync();
 		return leaf?.Flags.Select(f => f.Name).ToList() ?? [];
@@ -165,7 +165,7 @@ public class PackageInstallServiceTests
 		}
 		await Assert.That((await Installer.PlanAsync(upgraded, answers)).Attributes.All(a => a.Action == PackageAttributeAction.NoChange)).IsTrue();
 		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
-		await Database.SetAttributeAsync(PackageInstallService.ParseObjid(objid)!.Value,
+		await Database.SetAttributeAsync(DBRef.Parse(objid),
 			["PM", "REFS", "PACKAGE_MANAGER"], MarkupText.Empty, pm);
 		var beforeRepair = await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain($"[u({objid}/FN_PM)]"));
 		await Assert.That(beforeRepair!.Message!.ToPlainText()).IsEqualTo("");
@@ -414,7 +414,7 @@ public class PackageInstallServiceTests
 		var boardObjid = result.CreatedObjects["board"];
 		var loungeObjid = result.CreatedObjects["lounge"];
 
-		var boardNode = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(boardObjid)!.Value);
+		var boardNode = await Database.GetObjectNodeAsync(DBRef.Parse(boardObjid));
 		await Assert.That(boardNode.IsNone).IsFalse();
 		await Assert.That(boardNode.Expect<AnySharpObject>().Object().Name).IsEqualTo("E2E Board");
 
@@ -445,7 +445,7 @@ public class PackageInstallServiceTests
 
 		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
 		await Database.SetAttributeAsync(
-			PackageInstallService.ParseObjid(boardObjid)!.Value, ["FN_FMT"],
+			DBRef.Parse(boardObjid), ["FN_FMT"],
 			MarkupText.Plain("my-custom-format"), pm);
 
 		var manifestV2 = Parse(ManifestV2);
@@ -486,7 +486,7 @@ public class PackageInstallServiceTests
 		await Assert.That((await Registry.GetPackageObjectsAsync("e2e-pkg")).Count).IsEqualTo(0);
 
 		// Created objects are marked GOING (the @destroy convention), not hard-deleted.
-		var goneBoard = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(boardObjid)!.Value);
+		var goneBoard = await Database.GetObjectNodeAsync(DBRef.Parse(boardObjid));
 		await Assert.That(goneBoard.IsNone).IsFalse();
 
 		// Keep the lounge objid referenced so the variable is used even if asserts change.
@@ -543,7 +543,7 @@ public class PackageInstallServiceTests
 		await Assert.That((await Installer.UninstallAsync("attach-pkg")).Value).IsTypeOf<Success>();
 		await Assert.That(await ReadAttributeAsync(hostObjid, "CMD_X")).IsEqualTo("");
 		await Assert.That(await ReadAttributeAsync(hostObjid, "PRE_EXISTING")).IsEqualTo("untouched");
-		var hostStillThere = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(hostObjid)!.Value);
+		var hostStillThere = await Database.GetObjectNodeAsync(DBRef.Parse(hostObjid));
 		await Assert.That(hostStillThere.IsNone).IsFalse();
 	}
 
@@ -782,7 +782,7 @@ public class PackageInstallServiceTests
 
 	private async Task<IReadOnlyList<string>> ReadObjectFlagsAsync(string objid)
 	{
-		var node = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(objid)!.Value);
+		var node = await Database.GetObjectNodeAsync(DBRef.Parse(objid));
 		var flags = new List<string>();
 		await foreach (var flag in node.Expect<AnySharpObject>().Object().Flags.Value)
 		{
@@ -794,7 +794,7 @@ public class PackageInstallServiceTests
 
 	private async Task<bool> HasLockAsync(string objid, string lockType)
 	{
-		var node = await Database.GetObjectNodeAsync(PackageInstallService.ParseObjid(objid)!.Value);
+		var node = await Database.GetObjectNodeAsync(DBRef.Parse(objid));
 		return node.Expect<AnySharpObject>().Object().Locks.ContainsKey(lockType);
 	}
 
@@ -838,9 +838,9 @@ public class PackageInstallServiceTests
 		var install = await Installer.ApplyAsync(v1, new PackageApplyRequest(Source(), answers, []));
 		var applied = install.Expect<PackageApplyResult>();
 
-		var widget = PackageInstallService.ParseObjid(applied.CreatedObjects["widget"])!.Value;
-		var hallA = PackageInstallService.ParseObjid(applied.CreatedObjects["hall_a"])!.Value;
-		var hallB = PackageInstallService.ParseObjid(applied.CreatedObjects["hall_b"])!.Value;
+		var widget = DBRef.Parse(applied.CreatedObjects["widget"]);
+		var hallA = DBRef.Parse(applied.CreatedObjects["hall_a"]);
+		var hallB = DBRef.Parse(applied.CreatedObjects["hall_b"]);
 
 		// Prime object:#N. From here on every cached read serves this snapshot until a write
 		// declaring the key removes it.
