@@ -362,6 +362,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	{
 		parser ??= this;
 		using var restrictionScope = parser.State.IsEmpty ? null : parser.CurrentState.Restrictions?.Enter();
+		using var ceilingScope = parser.State.IsEmpty ? null : OutputCeiling.Enter(parser.CurrentState);
 		if (EvaluationRestrictions.Current is not null && methodName != nameof(FunctionParse))
 			return (new CallState(EvaluationRestrictions.Error) { HadErrors = true }, true);
 		using var ownedBudget = ExecutionBudget.Current is null && (parser.State.IsEmpty || parser.CurrentState.ExecutionBudget is null)

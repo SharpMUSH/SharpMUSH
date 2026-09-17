@@ -143,6 +143,43 @@ public class GuestOutputLimitTests
 		else await Assert.That(said).IsEqualTo((limit + 1).ToString());
 	}
 
+	// An evaluation lock's attribute runs from a root the lock service creates, with no parser of
+	// the caller's to copy the limit from.
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task EvaluationLock_KeepsThePlayersLimit(bool guest)
+	{
+		var player = await PlayerAsync("OutLimitLock", guest);
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "OutLimitLockObj");
+		var gated = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
+		await WebAppFactoryArg.Services.GetRequiredService<IAttributeService>().SetAttributeAsync(gated, gated, "SIZECHECK",
+			MarkupText.Plain($"strlen(repeat(x,{GuestLimit + 1}))"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@lock {thing}=SIZECHECK/{GuestLimit + 1}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {thing}=loc({player.DbRef})"));
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"get {thing}"));
+
+		var holder = (await Mediator.Send(new GetLocationQuery(thing))).Expect<AnySharpContainer>().Object().DBRef;
+		await Assert.That(holder.Number == player.DbRef.Number).IsEqualTo(!guest);
+	}
+
+	[Test]
+	public async Task EvaluationLock_ReportsTheLimitToTheEvaluationThatAskedForIt()
+	{
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "OutLimitLockFlag");
+		var gated = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
+		await WebAppFactoryArg.Services.GetRequiredService<IAttributeService>().SetAttributeAsync(gated, gated, "SIZECHECK",
+			MarkupText.Plain($"strlen(repeat(x,{GuestLimit + 1}))"));
+		var caller = new LimitExceededFlag();
+
+		using (OutputCeiling.Enter(ParserState.Empty with { OutputLimit = (int)GuestLimit, LimitExceeded = caller }))
+			await WebAppFactoryArg.Services.GetRequiredService<ILockEvaluationServices>().EvaluateAttributeAsync(gated, gated, "SIZECHECK");
+
+		await Assert.That(caller.IsExceeded).IsTrue();
+		await Assert.That(OutputCeiling.Current).IsNull();
+	}
+
 	[Test]
 	public async Task Guest_OutputAtTheGuestLimit_IsAllowed()
 	{

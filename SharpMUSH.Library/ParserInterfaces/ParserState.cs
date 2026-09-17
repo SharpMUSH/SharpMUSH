@@ -313,8 +313,9 @@ public partial record ParserState(
 	/// <summary>
 	/// Most UTF-16 code units one function may produce in this evaluation. Lowered for a guest's
 	/// input, and carried by every copy of the state, including the snapshots of queued actions.
+	/// A new state starts from the <see cref="OutputCeiling"/> of the evaluation that creates it.
 	/// </summary>
-	public int OutputLimit { get; init; } = SharpMUSH.Library.Definitions.FunctionLimits.MaxOutputCodeUnits;
+	public int OutputLimit { get; init; } = OutputCeiling.CurrentLimit;
 
 	/// <summary>
 	/// Captures the register environment for an independent queued action. Like PE_INFO_CLONE,
