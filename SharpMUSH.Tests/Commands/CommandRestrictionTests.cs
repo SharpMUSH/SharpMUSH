@@ -48,11 +48,13 @@ public class CommandRestrictionTests
 	private async Task<string> NameOf(DBRef player)
 		=> (await Mediator.Send(new GetObjectNodeQuery(player))).Expect<AnySharpObject>().Object().Name;
 
-	private async Task<string> Run(TestIsolationHelpers.TestPlayer who, string command)
+	// Test players share a room, so a player's bucket also holds other tests' room broadcasts; read
+	// every delivery the command caused rather than whichever arrived last.
+	private async Task<List<TestHelpers.NotificationRecorder.Delivery>> Run(TestIsolationHelpers.TestPlayer who, string command)
 	{
-		var before = WebAppFactoryArg.Notifications.CountFor(who.DbRef);
+		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(who.DbRef);
 		await Parser.CommandParse(who.Handle, ConnectionService, MarkupText.Plain(command));
-		return WebAppFactoryArg.Notifications.For(who.DbRef).Skip(before).LastOrDefault() ?? string.Empty;
+		return [.. WebAppFactoryArg.Notifications.DeliveriesFor(who.DbRef).Skip(before)];
 	}
 
 	[Test]
@@ -66,7 +68,7 @@ public class CommandRestrictionTests
 		var said = await Run(player, $"@name me={TestIsolationHelpers.GenerateUniqueName("Renamed")}");
 
 		await Assert.That(await NameOf(player.DbRef)).IsEqualTo(original);
-		await Assert.That(said).IsEqualTo("Permission denied.");
+		await Assert.That(said.Select(delivery => delivery.Message)).Contains("Permission denied.");
 	}
 
 	[Test]
@@ -88,7 +90,7 @@ public class CommandRestrictionTests
 	{
 		var player = await PlayerAsync("CmdLset", grant);
 
-		var said = await Run(player, "think lset(me/Basic,no_inherit)");
+		var said = (await Run(player, "think lset(me/Basic,no_inherit)")).Single(delivery => delivery.Sender == player.DbRef).Message;
 
 		await Assert.That(said == ErrorMessages.Returns.PermissionDenied).IsEqualTo(denied);
 	}

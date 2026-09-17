@@ -65,6 +65,16 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 		// Disable that diagnostic task for both named and default caches in session fixtures.
 		builder.ConfigureTestServices(services => services.PostConfigureAll<FusionCacheOptions>(
 			options => options.EnableBestPracticesAdvisor = false));
+		// Recurring-job tests drive RecurringJobService with their own clock and queue. A runner
+		// polling the world on the real clock fires the jobs those tests write, and hosts that share
+		// a world would each run one. The wrapper TUnit puts around hosted services hides the type,
+		// so a test cannot find a runner to stop; no test host registers one.
+		builder.ConfigureTestServices(services =>
+		{
+			foreach (var runner in services.Where(descriptor => descriptor.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService)
+				&& descriptor.ImplementationType == typeof(SharpMUSH.Server.Services.RecurringJobRunner)).ToArray())
+				services.Remove(runner);
+		});
 
 		if (sharedWorldServices is not null)
 		{

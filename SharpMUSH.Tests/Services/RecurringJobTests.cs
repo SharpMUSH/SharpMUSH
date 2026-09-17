@@ -1,8 +1,6 @@
 using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using SharpMUSH.Server.Services;
 using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
@@ -17,6 +15,8 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Services.RecurringJobs;
 using QueueScheduler = SharpMUSH.Library.Services.Interfaces.ITaskScheduler;
 
+using SharpMUSH.Tests.Commands;
+
 namespace SharpMUSH.Tests.Services;
 
 [NotInParallel]
@@ -24,6 +24,10 @@ public class RecurringJobTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory Factory { get; init; }
+	// Shares the primary world, so a job runner in either host would fire the jobs these tests write,
+	// on the real clock and with real authorization.
+	[ClassDataSource<RealityGameServerFactory>(Shared = SharedType.PerTestSession)]
+	public required RealityGameServerFactory SharedWorldHost { get; init; }
 	private T Get<T>() where T : notnull => Factory.Services.GetRequiredService<T>();
 	private sealed class Clock : TimeProvider
 	{
@@ -36,7 +40,6 @@ public class RecurringJobTests
 		Get<IExpandedDataStore>(), Get<IObjectStore>(), capabilities, Get<IPermissionService>(), Get<IAttributeService>(), queue, Factory.CommandParser, clock);
 	private async Task<Context> Setup()
 	{
-		foreach (var runner in Factory.Services.GetServices<IHostedService>().OfType<RecurringJobRunner>()) await runner.StopAsync(default);
 		await Get<IExpandedDataStore>().SetExpandedServerData(RecurringJobService.StorageKey, new RecurringJobDocument([]));
 		var player = (await Get<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var actor = await Get<IAdministrativeCapabilityService>().GetGameActorAsync(player.Object.DBRef);
@@ -530,6 +533,18 @@ public class RecurringJobTests
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
 		var document = await Get<IExpandedDataStore>().GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey);
 		await Assert.That(document!.Jobs.Single().Status).IsEqualTo("failed");
+	}
+
+	[Test]
+	public async Task NoTestHostFiresJobsInTheSharedWorld()
+	{
+		var context = await Setup();
+		// The test clock is days behind the real one, so any live runner finds this job overdue.
+		await Create(context);
+
+		await Task.Delay(TimeSpan.FromSeconds(2.5));
+
+		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
 	}
 
 	[Test]

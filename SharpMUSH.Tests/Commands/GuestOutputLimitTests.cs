@@ -46,11 +46,17 @@ public class GuestOutputLimitTests
 		return player;
 	}
 
+	// Test players share a room, so their buckets also hold other tests' room broadcasts. Only the
+	// sender tells this test's output apart from those.
+	private string SaidBy(TestIsolationHelpers.TestPlayer to, DBRef sender, int from)
+		=> WebAppFactoryArg.Notifications.DeliveriesFor(to.DbRef).Skip(from)
+			.SingleOrDefault(delivery => delivery.Sender == sender)?.Message ?? string.Empty;
+
 	private async Task<string> ThinkAs(TestIsolationHelpers.TestPlayer who, string code)
 	{
-		var before = WebAppFactoryArg.Notifications.CountFor(who.DbRef);
+		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(who.DbRef);
 		await Parser.CommandParse(who.Handle, ConnectionService, MarkupText.Plain($"think {code}"));
-		return WebAppFactoryArg.Notifications.For(who.DbRef).Skip(before).LastOrDefault() ?? string.Empty;
+		return SaidBy(who, who.DbRef, before);
 	}
 
 	[Test]
@@ -133,12 +139,11 @@ public class GuestOutputLimitTests
 		await Assert.That(await sessions.StartAsync(starter, obj.Object().DBRef, "CALLBACK", MarkupText.Plain("Reply:"),
 			TimeSpan.FromMinutes(2))).IsNull();
 		var session = sessions.GetCapturing(player.Handle)!;
-		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(player.DbRef);
 
 		await sessions.DeliverAsync(Parser, session, MarkupText.Plain("reply"), false);
 
-		var said = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before)
-			.FirstOrDefault(n => n.StartsWith("#-1") || n.All(char.IsAsciiDigit)) ?? string.Empty;
+		var said = SaidBy(player, obj.Object().DBRef, before);
 		if (guest) await Assert.That(said).StartsWith(ErrorMessages.Returns.OutputTooLarge);
 		else await Assert.That(said).IsEqualTo((limit + 1).ToString());
 	}
@@ -194,20 +199,13 @@ public class GuestOutputLimitTests
 	public async Task Guest_QueuedCommand_KeepsTheGuestLimit()
 	{
 		var guest = await PlayerAsync("OutLimitGuestWait", guest: true);
-		var before = WebAppFactoryArg.Notifications.CountFor(guest.DbRef);
+		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(guest.DbRef);
 
 		await Parser.CommandParse(guest.Handle, ConnectionService,
 			MarkupText.Plain($"@wait 0=think strlen(repeat(x,{GuestLimit + 1}))"));
 
-		// Other tests' room broadcasts reach this player too; think strlen() says a length or an error.
-		var said = string.Empty;
-		for (var waited = 0; waited < 100 && said.Length == 0; waited++)
-		{
-			await Task.Delay(50);
-			said = WebAppFactoryArg.Notifications.For(guest.DbRef).Skip(before)
-				.FirstOrDefault(n => n.StartsWith("#-1") || n.All(char.IsAsciiDigit)) ?? string.Empty;
-		}
-		await Assert.That(said).StartsWith(ErrorMessages.Returns.OutputTooLarge);
+		await WebAppFactoryArg.Notifications.WaitForDeliveryAsync(guest.DbRef, "", guest.DbRef, startIndex: before);
+		await Assert.That(SaidBy(guest, guest.DbRef, before)).StartsWith(ErrorMessages.Returns.OutputTooLarge);
 	}
 
 	[Test]
