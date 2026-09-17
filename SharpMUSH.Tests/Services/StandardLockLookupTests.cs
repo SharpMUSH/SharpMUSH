@@ -11,12 +11,12 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// What <c>@lock/&lt;switch&gt;</c> writes, <see cref="LockService.GetIfSet"/> must be able to read.
+/// What <c>@lock/&lt;switch&gt;</c> writes, <see cref="ILockService.LookupAsync"/> must be able to read.
 /// </summary>
 /// <remarks>
 /// The two sides name the same lock differently: <c>@lock</c> stores the canonical
 /// <c>ILockService.SystemLocks</c> key (PennMUSH's own name, <c>src/lock.c:56-88</c>) while
-/// <see cref="LockService.GetIfSet"/> asks for <c>LockType.ToString()</c>. Case is bridged by
+/// every gate asks for <c>LockType.ToString()</c>. Case is bridged by
 /// <see cref="SharpObject.LockNameComparer"/>, as PennMUSH bridges it with <c>strcasecmp</c>
 /// (<c>src/lock.c:364</c>); anything more than case has to be fixed in the enum member's name.
 /// Run over every member so a newly-added one cannot quietly become unreadable.
@@ -46,8 +46,8 @@ public class StandardLockLookupTests
 
 		var reread = (await Mediator.Send(new GetObjectNodeQuery(target))).Expect<AnySharpObject>();
 
-		await Assert.That(LockService.GetIfSet(lockType, reread))
-			.IsNotNull()
+		await Assert.That(await Locks.LookupAsync(reread, lockType.ToString()) is ResolvedLock)
+			.IsTrue()
 			.Because($"@lock/{lockType} stored a key that LockType.{lockType} cannot find");
 	}
 

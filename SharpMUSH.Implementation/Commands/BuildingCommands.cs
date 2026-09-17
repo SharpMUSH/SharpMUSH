@@ -992,15 +992,33 @@ public partial class Commands
 					executor, executor, zoneName, LocateFlags.All,
 					async zoneObj =>
 					{
-						bool canZone = await PermissionService.Controls(executor, zoneObj);
-
-						if (!canZone && !await LockService.Evaluate(LockType.ChZone, zoneObj, executor))
+						// PennMUSH do_chzone (src/set.c:408-420) gates this on
+						// `has_lock && eval_lock_with(...)`, with has_lock computed as
+						// `getlock(zone, Chzone_Lock) != TRUE_BOOLEXP` and the comment "Note that an
+						// object with no chzone-lock isn't valid". An unset lock evaluates #TRUE, so
+						// asking only for the verdict hands every never-zone-locked object to every
+						// mortal as a zone. The lock has to be *present* before its verdict counts.
+						if (!await PermissionService.Controls(executor, zoneObj))
 						{
-							return await NotifyService.NotifyAndReturn(
-									executor.Object().DBRef,
-									errorReturn: ErrorMessages.Returns.PermissionDenied,
-									notifyMessage: ErrorMessages.Notifications.PermissionDeniedCannotZoneTo,
-									shouldNotify: true);
+							var zoneLock = await LockService.LookupAsync(zoneObj, nameof(LockType.ChZone), ExecutionBudget.CurrentToken);
+							if (zoneLock is not ResolvedLock resolved ||
+								!await LockService.Evaluate(resolved.Data.LockString, zoneObj, executor))
+							{
+								// Penn runs fail_lock() when the lock exists and refused, and a bare
+								// notify when there was no lock to fail.
+								if (zoneLock is ResolvedLock)
+								{
+									await DidItService.FailLockLocalized(parser, executor, zoneObj, LockType.ChZone,
+										new LocalizedNotification(nameof(ErrorMessages.Notifications.PermissionDeniedCannotZoneTo)));
+									return new CallState(ErrorMessages.Returns.PermissionDenied);
+								}
+
+								return await NotifyService.NotifyAndReturn(
+										executor.Object().DBRef,
+										errorReturn: ErrorMessages.Returns.PermissionDenied,
+										notifyMessage: ErrorMessages.Notifications.PermissionDeniedCannotZoneTo,
+										shouldNotify: true);
+							}
 						}
 
 						// Check for cycles before setting the zone
@@ -1048,11 +1066,15 @@ public partial class Commands
 
 						await Mediator.Send(new SetObjectZoneCommand(obj, zoneObj));
 
-						// Default ChZone lock is the zone object itself (allows controlled objects)
+						// PennMUSH check_zone_lock (src/lock.c:962): a zone that has never been
+						// zone-locked gets `=me` installed on it, written as GOD. It is a system
+						// write on purpose — the executor who most needs it is the one who reached
+						// this zone through its lock rather than through control, and so cannot
+						// write to it.
 						if (!zoneObj.Object().Locks.ContainsKey(nameof(LockType.ChZone)))
 						{
-							await Mediator.Send(new SetLockCommand(zoneObj.Object(), nameof(LockType.ChZone),
-								zoneObj.Object().DBRef.ToString(), executor));
+							await LockService.SetSystemAsync(zoneObj, nameof(LockType.ChZone),
+								$"=#{zoneObj.Object().DBRef.Number}", ExecutionBudget.CurrentToken);
 						}
 
 						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneChanged), executor);
@@ -1228,7 +1250,8 @@ public partial class Commands
 				if (!await target.Object().AreQuietAsync(executor))
 				{
 					if (removing && !existed)
-						await NotifyService.Notify(executor, $"{target.Object().Name}(#{target.Object().DBRef.Number}) - {LockNames.Display(name)} (already) unlocked.", executor);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectAlreadyUnlocked), executor,
+							target.Object().Name, target.Object().DBRef.Number, LockNames.Display(name));
 					else
 						await NotifyService.NotifyLocalized(executor, removing
 							? nameof(ErrorMessages.Notifications.ObjectUnlocked)

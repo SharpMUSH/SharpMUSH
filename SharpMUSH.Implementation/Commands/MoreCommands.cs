@@ -724,16 +724,20 @@ public partial class Commands
 		var slash = target.IndexOf('/');
 		if (slash < 0)
 		{
-			await NotifyService.Notify(executor, "No lock name given.", executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoLockNameGiven), executor);
 			return CallState.Empty;
 		}
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target[..slash], LocateFlags.All,
 			async obj =>
 			{
-				var result = await LockService.SetFlagsAsync(executor, obj, target[(slash + 1)..], args["1"].Message!.ToPlainText());
+				var flags = args["1"].Message!.ToPlainText();
+				var result = await LockService.SetFlagsAsync(executor, obj, target[(slash + 1)..], flags);
 				if (result is Error<string> failure) await NotifyService.Notify(executor, failure.Value, executor);
 				else if (!await obj.Object().AreQuietAsync(executor))
-					await NotifyService.Notify(executor, $"{obj.Object().Name}/{LockNames.Display(target[(slash + 1)..])} - lock flags {(args["1"].Message!.ToPlainText().StartsWith('!') ? "unset" : "set")}.", executor);
+					await NotifyService.NotifyLocalized(executor, flags.StartsWith('!')
+						? nameof(ErrorMessages.Notifications.LockFlagsUnset)
+						: nameof(ErrorMessages.Notifications.LockFlagsSet), executor,
+						obj.Object().Name, LockNames.Display(target[(slash + 1)..]));
 				return CallState.Empty;
 			});
 	}

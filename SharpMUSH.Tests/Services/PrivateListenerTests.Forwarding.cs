@@ -191,7 +191,10 @@ public partial class PrivateListenerTests
 		using (LockEvaluationArguments.Enter(new Dictionary<string, MarkupText> { ["0"] = MarkupText.Plain("first body") }))
 			await Assert.That(await Factory.Services.GetRequiredService<ILockService>().Evaluate(LockType.InFilter,
 				await Node(second), await Node(speaker.DbRef))).IsTrue()
-				.Because(SharpMUSH.Library.Services.LockService.Get(LockType.InFilter, await Node(second)));
+				.Because(await Factory.Services.GetRequiredService<ILockService>()
+					.LookupAsync(await Node(second), nameof(LockType.InFilter)) is ResolvedLock resolvedInFilter
+						? resolvedInFilter.Data.LockString
+						: "no InFilter lock is set on the forwarding target");
 		await Admin($"@set {terminal}=MONITOR");
 		await SetRaw(terminal, "PATTERN", "^*:&MONITORED me=yes");
 		var pipeline = await Build(speaker, terminal);

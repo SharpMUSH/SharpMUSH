@@ -37,6 +37,30 @@ public partial class LockService
 	public ValueTask<Result<Success>> UnsetAsync(AnySharpObject executor, AnySharpObject target, string name, CancellationToken cancellationToken = default)
 		=> mediator.Send(new UnsetLockCommand(target.Object(), name, executor), cancellationToken);
 
+	/// <summary>
+	/// A lock the game writes on its own behalf, with no executor and no permission check.
+	/// <para>
+	/// PennMUSH spells this <c>add_lock(GOD, …)</c> — <c>check_zone_lock</c> (<c>src/lock.c:966</c>)
+	/// installs a zone's default <c>=me</c> chzone-lock that way precisely because the player who
+	/// triggered it is the one who could not write it: they reached the zone through its lock rather
+	/// than through control. Running such a write through <see cref="SetAsync"/> would check
+	/// <see cref="CanWriteAsync"/> against that player and silently refuse.
+	/// </para>
+	/// <para>
+	/// The expression is stored as given, so callers must hand over one that is already bound.
+	/// Everything that takes player input belongs in <see cref="SetAsync"/> instead.
+	/// </para>
+	/// </summary>
+	public async ValueTask SetSystemAsync(AnySharpObject target, string name, string expression, CancellationToken cancellationToken = default)
+	{
+		var canonical = LockNames.Canonical(name);
+		// PennMUSH records GOD as the creator of such a lock, which is what keeps a Locked lock
+		// out of the triggering player's reach afterwards.
+		var data = new SharpLockData(expression, SystemLocks.GetValueOrDefault(canonical), new DBRef(1));
+		await mediator.Send(new ImportLockCommand(target.Object(), canonical, data), cancellationToken);
+		target.Object().WithLock(canonical, data);
+	}
+
 	public async ValueTask<Result<Success>> SetFlagsAsync(AnySharpObject executor, AnySharpObject target, string name, string flags, CancellationToken cancellationToken = default)
 	{
 		var canonical = LockNames.Canonical(name);

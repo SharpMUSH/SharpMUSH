@@ -82,32 +82,6 @@ public partial class LockService(IBooleanExpressionParser bep, IOptionsMonitor<S
 		Ox = 256
 	}
 
-	public static string Get(LockType standardType, AnySharpObject lockee)
-		=> GetIfSet(standardType, lockee) ?? "#TRUE";
-
-	/// <summary>
-	/// The lock exactly as stored, or <c>null</c> when the object has none — the distinction
-	/// <see cref="Get"/> erases by defaulting to <c>#TRUE</c>.
-	/// <para>
-	/// An unset lock passes everybody, which is the right default for gates like @lock/enter but the
-	/// wrong one for a permission check: evaluating an absent control lock would hand control of every
-	/// unlocked object to everyone. PennMUSH <c>controls()</c> (<c>predicat.c:416</c>) reads the raw
-	/// boolexp and skips it when it is <c>TRUE_BOOLEXP</c> for exactly this reason.
-	/// </para>
-	/// <para>
-	/// Because an absent lock is the permissive answer, a name that fails to match here is a
-	/// permission hole and not a no-op. The lookup is by <see cref="LockType"/> name against a
-	/// dictionary every provider builds through <see cref="LockNames.FoldToImmutable{TIn,TOut}"/>,
-	/// so its keys are canonical and its comparer case-insensitive; a name that came from a player
-	/// switch, a package manifest or a foreign world must go through
-	/// <see cref="LockNames.Canonical"/> before it is used as a lock key.
-	/// </para>
-	/// </summary>
-	public static string? GetIfSet(LockType standardType, AnySharpObject lockee)
-		=> lockee.Object().Locks.TryGetValue(standardType.ToString(), out var lockData)
-			? lockData.LockString
-			: null;
-
 	public async ValueTask<bool> Evaluate(
 		string lockString,
 		AnySharpObject gated,
