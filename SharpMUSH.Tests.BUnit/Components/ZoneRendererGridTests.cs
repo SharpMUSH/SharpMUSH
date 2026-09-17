@@ -20,7 +20,7 @@ public class ZoneRendererGridTests : BunitContext
 	public ZoneRendererGridTests()
 	{
 		var registry = new WidgetRegistry();
-		registry.Register(new WelcomeTextWidgetDescriptor());
+		registry.Register(BuiltInWidgets.Named("WelcomeText"));
 		Services.AddSingleton<IWidgetRegistry>(registry);
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		JSInterop.Mode = JSRuntimeMode.Loose;

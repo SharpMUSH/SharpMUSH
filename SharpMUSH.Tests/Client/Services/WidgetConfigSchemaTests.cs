@@ -145,21 +145,38 @@ public class WidgetConfigSchemaTests
 		await Assert.That(wikiBody).IsEqualTo("slug,namespace,category,locale,character");
 	}
 
+	/// <summary>
+	/// Over the whole catalogue, not a hand-written list of the widgets that happened to have config
+	/// when this was written — a new configurable widget used to be able to ship undocumented simply
+	/// by not being added to the array here.
+	/// </summary>
 	[Test]
 	public async Task EveryDescriptorThatDeclaresAConfigType_DocumentsAtLeastOneKey()
 	{
-		IPortalWidget[] descriptors =
-		[
-			new QuickLinksWidgetDescriptor(), new WelcomeTextWidgetDescriptor(),
-			new SpacerWidgetDescriptor(), new WikiBodyWidgetDescriptor(),
-			new CharacterGalleryWidgetDescriptor(), new SchemaWidgetDescriptor()
-		];
-
-		var undocumented = descriptors
+		var undocumented = BuiltInWidgets.All
 			.Where(d => d.ConfigType is not null && WidgetConfigSchema.Describe(d.ConfigType).Count == 0)
 			.Select(d => d.Name)
 			.ToList();
 
 		await Assert.That(undocumented).IsEmpty();
+	}
+
+	/// <summary>
+	/// The catalogue is what <c>Program</c> registers, so a widget missing from it is unreachable and
+	/// a duplicate name silently shadows another placement's widget.
+	/// </summary>
+	[Test]
+	public async Task TheBuiltInCatalogueHasNoDuplicateNames()
+	{
+		var duplicates = BuiltInWidgets.All
+			.GroupBy(w => w.Name, StringComparer.Ordinal)
+			.Where(g => g.Count() > 1)
+			.Select(g => g.Key)
+			.ToList();
+
+		await Assert.That(duplicates).IsEmpty();
+		await Assert.That(BuiltInWidgets.All.All(w => w.AllowedZones.Length > 0))
+			.IsTrue()
+			.Because("a widget with no allowed zone can never be placed");
 	}
 }

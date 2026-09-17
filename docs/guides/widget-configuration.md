@@ -234,6 +234,73 @@ That rescue path is not zone-restricted — it only renders placements an admin 
 never appears in the palette, so the application's own zone list is still what governs where the
 widget can be placed.
 
+## Adding a built-in widget
+
+The widgets on this page are one table: [`SharpMUSH.Client/Widgets/BuiltInWidgets.cs`][catalogue].
+`Program.cs` registers whatever is in it, so a widget is added by adding a row — there is no second
+place to remember.
+
+```csharp
+// BuiltInWidgets.All
+new("StaffNotice", "LayWidgetStaffNotice", WidgetSize.Medium, Content,
+    typeof(StaffNoticeWidget), typeof(StaffNoticeConfig)),
+```
+
+| Column | What it is |
+| --- | --- |
+| `Name` | The machine name a placement stores. Renaming one orphans every placement using it. |
+| `DisplayName` | A **`SharedResource` key**, not text — the palette resolves it through its localizer. |
+| `DefaultSize` | The size hint the layout engine starts from. |
+| `AllowedZones` | Where an admin may place it. A widget with none can never be placed. |
+| `ComponentType` | The Razor component that renders it. |
+| `ConfigType` | Its config model, or omitted for a widget that takes none. |
+
+### A configurable widget, end to end
+
+**1. The config model.** Every property carries `[WidgetConfigKey]` naming a `SharedResource` key
+that describes it. That attribute is what the layout editor's key reference is generated from, so a
+property without one is configurable but undocumented:
+
+```csharp
+namespace SharpMUSH.Client.Models.Widgets;
+
+/// <summary>Config schema for the staff notice widget.</summary>
+public record StaffNoticeConfig(
+    [property: WidgetConfigKey("LayCfgStaffNoticeBody")]
+    string Body = "",
+    [property: WidgetConfigKey("LayCfgStaffNoticeShowToGuests")]
+    bool ShowToGuests = false);
+```
+
+The defaults on the parameters are what the dialog's **Insert template** button seeds, and what a
+placement with no config blob renders with.
+
+**2. The resource entries.** `SharedResource.resx` needs the display-name key and one description
+key per config key:
+
+```xml
+<data name="LayWidgetStaffNotice"><value>Staff Notice</value></data>
+<data name="LayCfgStaffNoticeBody"><value>Markdown shown in the notice.</value></data>
+<data name="LayCfgStaffNoticeShowToGuests"><value>Show the notice to signed-out visitors.</value></data>
+```
+
+**3. The row in `BuiltInWidgets.All`**, as above.
+
+**4. This page**, with the keys, defaults and a worked JSON example, in the tables under
+[Widgets at a glance](#widgets-at-a-glance) and [Configurable widgets](#configurable-widgets).
+
+Two tests hold steps 1–3 together and run over the whole catalogue, not a list somebody maintains:
+`WidgetConfigSchemaTests.EveryDescriptorThatDeclaresAConfigType_DocumentsAtLeastOneKey` fails a
+`ConfigType` whose properties carry no `[WidgetConfigKey]`, and
+`SharedResourceLocalizationTests.Every_widget_config_key_has_a_description_in_the_resx` fails a key
+whose description is missing — which would otherwise ship a raw `LayCfgStaffNoticeBody` to admins.
+
+For a widget that ships outside this repository, in a plugin assembly, see
+[Custom Widgets](../design/custom-widgets.md) instead: those register through the plugin's own
+`IPortalWidget` contribution rather than through this table.
+
+[catalogue]: ../../SharpMUSH.Client/Widgets/BuiltInWidgets.cs
+
 ## Layout scopes and their defaults
 
 Widgets are arranged per scope, not once for the whole site. Each scope exposes only the zones it

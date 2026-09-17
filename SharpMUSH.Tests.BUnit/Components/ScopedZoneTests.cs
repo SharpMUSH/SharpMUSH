@@ -23,7 +23,7 @@ public class ScopedZoneTests : BunitContext
 	public ScopedZoneTests()
 	{
 		var registry = new WidgetRegistry();
-		registry.Register(new WelcomeTextWidgetDescriptor());
+		registry.Register(BuiltInWidgets.Named("WelcomeText"));
 
 		var welcomeConfig = JsonSerializer.SerializeToElement(new { markdown = "# HelloFromZone", showToGuests = true });
 		var layout = new LayoutConfiguration(

@@ -36,11 +36,11 @@ public class LayoutEditorTests : TrackingBunitContext
 	public LayoutEditorTests()
 	{
 		var registry = new WidgetRegistry();
-		registry.Register(new WikiIndexWidgetDescriptor());
-		registry.Register(new QuickLinksWidgetDescriptor());
-		registry.Register(new CharacterGalleryWidgetDescriptor());
+		registry.Register(BuiltInWidgets.Named("WikiIndex"));
+		registry.Register(BuiltInWidgets.Named("QuickLinks"));
+		registry.Register(BuiltInWidgets.Named("CharacterGallery"));
 		// Spacer is the second placement in the reorder tests: no services, so the live preview renders it.
-		registry.Register(new SpacerWidgetDescriptor());
+		registry.Register(BuiltInWidgets.Named("Spacer"));
 
 		var layout = new LayoutConfiguration(
 			new Dictionary<WidgetZone, List<WidgetPlacement>>
