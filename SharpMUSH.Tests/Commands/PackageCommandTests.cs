@@ -77,8 +77,10 @@ public class PackageCommandTests
 
 		// The whole manifest comes back in one pemit: header markers, metadata, and
 		// the cross-reference rewritten to a symbolic {{ref}} (no raw dbref survives).
+		// The version is quoted because it leads with a digit — plain, YAML would hand
+		// back a number. PackageManifestWriter quotes with ' throughout.
 		await ExpectNotifyAll(god,
-			"----- BEGIN package.yaml -----", "package: test-pkg", "version: \"2.0.0\"", "{{pkgselfcore}}");
+			"----- BEGIN package.yaml -----", "package: test-pkg", "version: '2.0.0'", "{{pkgselfcore}}");
 	}
 
 	[Test]
