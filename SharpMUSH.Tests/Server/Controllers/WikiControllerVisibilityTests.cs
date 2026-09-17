@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -116,7 +117,7 @@ public class WikiControllerVisibilityTests
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
-		var pages = ((IEnumerable<WikiController.WikiPageDto>)ok!.Value!).ToList();
+		var pages = ((IEnumerable<WikiPageDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsFalse();
 	}
 
@@ -130,7 +131,7 @@ public class WikiControllerVisibilityTests
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
-		var pages = ((IEnumerable<WikiController.WikiPageDto>)ok!.Value!).ToList();
+		var pages = ((IEnumerable<WikiPageDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsTrue();
 	}
 
@@ -144,7 +145,7 @@ public class WikiControllerVisibilityTests
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
-		var pages = ((IEnumerable<WikiController.WikiPageDto>)ok!.Value!).ToList();
+		var pages = ((IEnumerable<WikiPageDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsFalse();
 	}
 
@@ -162,7 +163,7 @@ public class WikiControllerVisibilityTests
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
-		var pages = ((IEnumerable<WikiController.WikiPageDto>)ok!.Value!).ToList();
+		var pages = ((IEnumerable<WikiPageDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsFalse();
 
 		var header = controller.Response.Headers["X-Total-Count"].ToString();
@@ -186,7 +187,7 @@ public class WikiControllerVisibilityTests
 
 		var ok = result as OkObjectResult;
 		await Assert.That(ok).IsNotNull();
-		var pages = ((IEnumerable<WikiController.WikiPageDto>)ok!.Value!).ToList();
+		var pages = ((IEnumerable<WikiPageDto>)ok!.Value!).ToList();
 		await Assert.That(pages.Any(p => p.Slug == slug)).IsTrue();
 
 		var header = controller.Response.Headers["X-Total-Count"].ToString();

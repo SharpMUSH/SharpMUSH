@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -42,7 +43,7 @@ file sealed class GatedWikiHandler(string gatedSlug, params string[] existingSlu
 			: new HttpResponseMessage(HttpStatusCode.NotFound);
 	}
 
-	private static WikiController.WikiPageDto Page(string slug) => new(
+	private static WikiPageDto Page(string slug) => new(
 		Id: slug, Slug: slug, Title: slug, Namespace: "main",
 		MarkdownSource: "body", RenderedHtml: "<p>body</p>", PlainText: "body",
 		CreatedAt: DateTimeOffset.UnixEpoch, UpdatedAt: DateTimeOffset.UnixEpoch,
