@@ -934,6 +934,17 @@ public static class ErrorMessages
 		public const string ObjectLocked = "{0}(#{1}) - {2} locked.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ObjectUnlocked = "{0}(#{1}) - {2} unlocked.";
+		/// <summary>PennMUSH src/lock.c:676.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ObjectAlreadyUnlocked = "{0}(#{1}) - {2} (already) unlocked.";
+		/// <summary>PennMUSH src/lock.c:913, do_lset.</summary>
+		public const string NoLockNameGiven = "No lock name given.";
+		/// <summary>PennMUSH src/lock.c:949, do_lset.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string LockFlagsSet = "{0}/{1} - lock flags set.";
+		/// <summary>PennMUSH src/lock.c:949, do_lset.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string LockFlagsUnset = "{0}/{1} - lock flags unset.";
 
 		// --- Link/Unlink messages aligned with PennMUSH src/create.c ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

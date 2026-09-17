@@ -267,6 +267,59 @@ public class ZoneCommandTests
 		await Assert.That(zone.IsNone).IsFalse();
 	}
 
+	/// <summary>
+	/// PennMUSH <c>do_chzone</c> (<c>src/set.c:408-420</c>): a non-controlling player needs
+	/// <c>has_lock &amp;&amp; eval_lock_with(...)</c>, where <c>has_lock</c> is
+	/// <c>getlock(zone, Chzone_Lock) != TRUE_BOOLEXP</c> — "Note that an object with no chzone-lock
+	/// isn't valid". An unset lock evaluates <c>#TRUE</c>, so gating on the verdict alone handed
+	/// every never-zone-locked object to every mortal as a zone.
+	/// </summary>
+	[Test]
+	public async ValueTask ChzoneRefusesAZoneThatCarriesNoChzoneLock()
+	{
+		var owner = await CreateTestPlayerWithHandleAsync("ZT_NoLockOwner");
+		var mover = await CreateTestPlayerWithHandleAsync("ZT_NoLockMover");
+
+		var zone = await CreateOwnedBy(owner, "NoLockZone");
+		var victim = await CreateOwnedBy(mover, "NoLockVictim");
+
+		// The scenario stands on the zone having no chzone-lock at all.
+		var zoneNode = (await Mediator.Send(new GetObjectNodeQuery(zone))).Expect<AnySharpObject>();
+		await Assert.That(zoneNode.Object().Locks.ContainsKey(nameof(LockType.ChZone))).IsFalse();
+
+		// …and on `mover` controlling the object but not the zone.
+		var permissionService = WebAppFactoryArg.Services.GetRequiredService<IPermissionService>();
+		var moverObj = (await Mediator.Send(new GetObjectNodeQuery(mover.DbRef))).Expect<AnySharpObject>();
+		var victimObj = (await Mediator.Send(new GetObjectNodeQuery(victim))).Expect<AnySharpObject>();
+		await Assert.That(await permissionService.Controls(moverObj, victimObj)).IsTrue();
+		await Assert.That(await permissionService.Controls(moverObj, zoneNode)).IsFalse();
+
+		await Parser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain($"@chzone {victim}={zone}"));
+
+		var moved = (await Mediator.Send(new GetObjectNodeQuery(victim))).Expect<AnySharpObject>();
+		await Assert.That((await moved.Object().Zone.WithCancellation(CancellationToken.None)).IsNone).IsTrue();
+	}
+
+	/// <summary>
+	/// PennMUSH <c>check_zone_lock</c> (<c>src/lock.c:962</c>) installs <c>=me</c> on a zone that has
+	/// none, through <c>add_lock(GOD, …)</c> — a system write, not the triggering player's. Going
+	/// through <c>ILockService.SetAsync</c> instead would run the write against that player.
+	/// </summary>
+	[Test]
+	public async ValueTask ChzoneInstallsTheDefaultZoneLockAsASystemWrite()
+	{
+		var owner = await CreateTestPlayerWithHandleAsync("ZT_DefaultLock");
+		var zone = await CreateOwnedBy(owner, "DefaultLockZone");
+		var victim = await CreateOwnedBy(owner, "DefaultLockVictim");
+
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@chzone {victim}={zone}"));
+
+		var zoneNode = (await Mediator.Send(new GetObjectNodeQuery(zone))).Expect<AnySharpObject>();
+		var installed = zoneNode.Object().Locks[nameof(LockType.ChZone)];
+		await Assert.That(installed.LockString).IsEqualTo($"=#{zone.Number}");
+		await Assert.That(installed.Creator?.Number).IsEqualTo(1);
+	}
+
 	[Test]
 	public async ValueTask ChzoneInvalidObject()
 	{

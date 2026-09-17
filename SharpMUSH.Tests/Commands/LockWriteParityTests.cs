@@ -1,4 +1,5 @@
 using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
 using Mediator;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Extensions;
@@ -144,4 +145,61 @@ public class LockWriteParityTests
 		await Assert.That(await Read($"lockflags({target})")).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// Every neighbour of <c>@LSET</c> reports through the localisation table; it reported through
+	/// hardcoded English, so a player on a non-default locale got the message in English and a
+	/// translator had nothing to translate. PennMUSH <c>do_lset</c> (<c>src/lock.c:913,949</c>)
+	/// wraps all three of these strings in <c>T()</c>.
+	/// </summary>
+	[Test]
+	[Arguments("visual", nameof(ErrorMessages.Notifications.LockFlagsSet), "lock flags set.")]
+	[Arguments("!visual", nameof(ErrorMessages.Notifications.LockFlagsUnset), "lock flags unset.")]
+	public async Task LsetReportsThroughTheLocalisationTable(string flags, string key, string tail)
+	{
+		var mediator = Factory.Services.GetRequiredService<IMediator>();
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "LsetLocale");
+		var name = $"LsetLocale{Guid.NewGuid():N}";
+		var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create {name}"));
+		var target = created.Message!.ToPlainText();
+
+		await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@lock {target}=#TRUE"));
+		await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@lset {target}/Basic={flags}"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
+			Factory.Services.GetRequiredService<INotifyService>(), key, $"{name}/Basic - {tail}", player.DbRef)).IsTrue();
+	}
+
+	/// <summary>PennMUSH <c>do_lset</c> (<c>src/lock.c:913</c>) — <c>T("No lock name given.")</c>.</summary>
+	[Test]
+	public async Task LsetWithoutALockNameReportsThroughTheLocalisationTable()
+	{
+		var mediator = Factory.Services.GetRequiredService<IMediator>();
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "LsetNoName");
+		var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create LsetNoName{Guid.NewGuid():N}"));
+
+		await Parser.CommandParse(player.Handle, Connections,
+			MarkupText.Plain($"@lset {created.Message!.ToPlainText()}=visual"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			Factory.Services.GetRequiredService<INotifyService>(),
+			nameof(ErrorMessages.Notifications.NoLockNameGiven), player.DbRef)).IsTrue();
+	}
+
+	/// <summary>PennMUSH <c>do_unlock</c> (<c>src/lock.c:676</c>) — <c>"%s(%s) - %s (already) unlocked."</c>.</summary>
+	[Test]
+	public async Task UnlockingALockThatWasNeverSetReportsThroughTheLocalisationTable()
+	{
+		var mediator = Factory.Services.GetRequiredService<IMediator>();
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, mediator, Connections, "UnlockNever");
+		var name = $"UnlockNever{Guid.NewGuid():N}";
+		var created = await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@create {name}"));
+		var target = created.Message!.ToPlainText();
+
+		await Parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"@unlock {target}"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(
+			Factory.Services.GetRequiredService<INotifyService>(),
+			nameof(ErrorMessages.Notifications.ObjectAlreadyUnlocked),
+			$"{name}(#{DBRef.Parse(target).Number}) - Basic (already) unlocked.", player.DbRef)).IsTrue();
+	}
 }
