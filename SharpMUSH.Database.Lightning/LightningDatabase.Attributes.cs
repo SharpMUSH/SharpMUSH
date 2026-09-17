@@ -949,10 +949,16 @@ public partial class LightningDatabase
 	}
 
 	/// <summary>
-	/// 297-344): <c>**</c> crosses tree levels, a single <c>*</c> stays inside one (<c>[^`]*</c>),
-	/// <c>?</c> is one character, every other regex metacharacter is escaped, and a trailing backtick
-	/// means "direct children only".
+	/// The backtick-aware attribute-name glob dialect: <c>**</c> crosses tree levels, a single
+	/// <c>*</c> stays inside one (<c>[^`]*</c>), <c>?</c> is one character, every other regex
+	/// metacharacter is escaped, and a trailing backtick means "direct children only".
 	/// </summary>
+	/// <remarks>
+	/// This is deliberately NOT the general MUSH wildcard (<c>MushText.Glob.ToRegex</c>), where
+	/// <c>*</c> matches anything including a backtick. Routing attribute matching at that dialect
+	/// makes a single <c>*</c> cross tree levels, so <c>obj/*</c> silently starts returning
+	/// grandchildren. The two dialects stay separate on purpose.
+	/// </remarks>
 	internal static Regex GlobToRegex(string pattern)
 	{
 		var converted = WildcardToRegex().Replace(pattern, m => m.Value switch
@@ -971,7 +977,8 @@ public partial class LightningDatabase
 		return new Regex($"^{converted}$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 	}
 
-	/// <summary>The regex readers take their pattern raw — no wildcard conversion, no anchoring — exactly
+	/// <summary>The regex readers take their pattern raw — no wildcard conversion and no anchoring; a
+	/// caller wanting "everything" passes <c>.*</c>.</summary>
 	private static Regex RawRegex(string pattern) => new(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
 	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
