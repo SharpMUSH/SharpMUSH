@@ -78,7 +78,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// record resolves in its field initialisers are singletons, and re-resolving them for every
 	/// command a player types bought nothing.
 	/// </summary>
-	public IMUSHCodeParser FromState(ParserState state) => this with { State = ImmutableStack.Create(state) };
+	/// <remarks>
+	/// A state standing alone is a new queue entry or a fresh root, so it does not keep the
+	/// <c>%c</c>/<c>%u</c> of the list that captured it: PennMUSH gives a queued entry a new
+	/// <c>pe_info</c>, and a captured state still points at the submitting list's text.
+	/// </remarks>
+	public IMUSHCodeParser FromState(ParserState state)
+		=> this with { State = ImmutableStack.Create(state with { CommandText = null }) };
 
 	public Option<ParserState> StateHistory(uint index)
 		=> State.Take((int)index).LastOrDefault() is { } state ? state : new None();
@@ -507,7 +513,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			MoveDepth = new InvocationCounter(),
 			ExecutionBudget = preserveCallerActors ? CurrentState.ExecutionBudget : null,
-			Restrictions = preserveCallerActors ? CurrentState.Restrictions : null
+			Restrictions = preserveCallerActors ? CurrentState.Restrictions : null,
+			CommandText = preserveCallerActors ? CurrentState.CommandText : null
 		});
 	}
 
@@ -623,10 +630,13 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		// Push a fresh CommandHistory so @retry can track previous commands in this parse session.
 		// Also clear DirectInput: a CommandListParse is always a queue/callback context, never
 		// direct player input (equivalent to PennMUSH dropping the QUEUE_NOLIST flag here).
+		// A list run from inside a command shares its %c/%u (PE_INFO_SHARE); a queued one arrives
+		// through FromState without any, and starts its own.
 		var freshParser = State.IsEmpty ? this : Push(CurrentState with
 		{
 			CommandHistory = new ConcurrentStack<(Func<IMUSHCodeParser, ValueTask<Option<CallState>>> Invoker, Dictionary<string, CallState> Args)>(),
-			Flags = CurrentState.Flags & ~ParserStateFlags.DirectInput
+			Flags = CurrentState.Flags & ~ParserStateFlags.DirectInput,
+			CommandText = CurrentState.CommandText ?? new CommandText()
 		});
 		return ParseInternal(text, p => p.startCommandString(), nameof(CommandListParse), freshParser);
 	}
@@ -666,7 +676,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		// Clear DirectInput for the same reason as CommandListParse: this visitor is always
 		// used in a queue/callback context (e.g., @force, @trigger), never for direct player input.
-		var parserForList = State.IsEmpty ? this : Push(CurrentState with { Flags = CurrentState.Flags & ~ParserStateFlags.DirectInput });
+		var parserForList = State.IsEmpty ? this : Push(CurrentState with
+		{
+			Flags = CurrentState.Flags & ~ParserStateFlags.DirectInput,
+			CommandText = CurrentState.CommandText ?? new CommandText()
+		});
 
 		SharpMUSHParserVisitor visitor = new(Logger, parserForList,
 			Configuration,
@@ -703,7 +717,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			ExecutionStack: [],
 			ParserFunctionDepth: 0,
 			Function: null,
-			Command: text.ToPlainText(),
+			Command: null,
 			CommandInvoker: _ => ValueTask.FromResult(new Option<CallState>(new None())),
 			Switches: [],
 			Arguments: [],
@@ -720,7 +734,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			Flags: ParserStateFlags.DirectInput,
 			ConnectionSessionId: expectedSession)
 		{
-			MoveDepth = new InvocationCounter()
+			MoveDepth = new InvocationCounter(),
+			CommandText = new CommandText()
 		});
 
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), newParser);
@@ -744,7 +759,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			? baseFlags | ParserStateFlags.DirectInput
 			: baseFlags & ~ParserStateFlags.DirectInput;
 
-		var parserToUse = State.IsEmpty ? this : Push(CurrentState with { Flags = derivedFlags });
+		var parserToUse = State.IsEmpty ? this : Push(CurrentState with
+		{
+			Flags = derivedFlags,
+			CommandText = CurrentState.CommandText ?? new CommandText()
+		});
 		var result = await ParseInternal(text, p => p.startSingleCommandString(), nameof(CommandParse), parserToUse);
 		return result ?? CallState.Empty;
 	}

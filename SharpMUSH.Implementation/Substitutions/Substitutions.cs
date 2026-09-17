@@ -83,9 +83,9 @@ public static partial class Substitutions
 			"!" => $"#{parser.CurrentState.Executor!.Value.Number}",
 			"d" or "D" => parser.CurrentState.Handle?.ToString() ?? string.Empty,
 			"L" or "l" => await GetLocationDbRefString(parser, mediator),
-			"C" or "c" => LastCommandBeforeEvaluation(parser), // Last command before evaluation - using same implementation
-			"U" or "u" => LastCommandBeforeEvaluation(parser), // Last command after evaluation - using same implementation
-																												 // PennMUSH: %? returns "invocations recursions" (two space-separated numbers)
+			"C" or "c" => CommandBeforeEvaluation(parser),
+			"U" or "u" => CommandAfterEvaluation(parser),
+			// PennMUSH: %? returns "invocations recursions" (two space-separated numbers)
 			"?" => $"{parser.CurrentState.TotalInvocations!.Count} {parser.CurrentState.CallDepth!.Count}",
 			// PennMUSH's %+ is the argument count, not the register count: pi_regs_get_envc
 			// (src/parse.c:1783-1813) takes the highest numeric argument index plus one and skips
@@ -107,10 +107,13 @@ public static partial class Substitutions
 			_ => symbol,
 		};
 
-	public static MString LastCommandBeforeEvaluation(IMUSHCodeParser parser) =>
-		MarkupText.Plain(parser.StateHistory(2) is ParserState state
-			? state.Command ?? string.Empty
-			: string.Empty);
+	/// <summary><c>%c</c>: the running command as written (parse.c, <c>pe_info-&gt;cmd_raw</c>).</summary>
+	public static MString CommandBeforeEvaluation(IMUSHCodeParser parser) =>
+		parser.CurrentState.CommandText?.Raw ?? MarkupText.Empty;
+
+	/// <summary><c>%u</c>: the last parsed command, rebuilt from its evaluated arguments (<c>cmd_evaled</c>).</summary>
+	public static MString CommandAfterEvaluation(IMUSHCodeParser parser) =>
+		parser.CurrentState.CommandText?.Evaluated ?? MarkupText.Empty;
 
 	private static async ValueTask<string> GetLocationDbRefString(IMUSHCodeParser parser, IMediator mediator)
 	{
