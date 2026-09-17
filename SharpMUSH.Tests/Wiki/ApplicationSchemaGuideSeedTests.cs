@@ -1,3 +1,4 @@
+using SharpMUSH.Server.Resources;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server;
 
@@ -12,7 +13,7 @@ namespace SharpMUSH.Tests.Wiki;
 public class ApplicationSchemaGuideSeedTests
 {
 	private static string Render() =>
-		new WikiMarkdigPipeline().RenderToHtml(StartupHandler.ApplicationSchemaGuideContent);
+		new WikiMarkdigPipeline().RenderToHtml(SeededWikiPages.ApplicationSchemaGuide);
 
 	[Test]
 	public async Task Guide_RendersWithoutError_AndContainsBothAudienceSections()
