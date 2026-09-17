@@ -1,3 +1,4 @@
+using NSubstitute;
 using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +7,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Commands.Database;
@@ -39,6 +41,7 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 			factory.Services.GetRequiredService<IEngineCommandInvoker>(),
 			factory.Services.GetRequiredService<IConnectionService>(),
 			factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>(),
+			FaceValueProjection(),
 			factory.Services.GetRequiredService<IPasswordService>())
 		{
 			ControllerContext = new ControllerContext
@@ -46,10 +49,34 @@ public class AdminGuestsControllerTests(ServerWebAppFactory factory)
 				HttpContext = new DefaultHttpContext
 				{
 					User = new ClaimsPrincipal(new ClaimsIdentity(
-						[new Claim(GameHub.CharacterDbrefClaim, actor.ToString())], "TestScheme"))
+						[
+							new Claim(ClaimTypes.NameIdentifier, "account"),
+							new Claim(GameHub.CharacterDbrefClaim, actor.ToString())
+						], "TestScheme"))
 				}
 			}
 		};
+
+	/// <summary>
+	/// Resolves the claimed character without checking its account link. The controller's real
+	/// <see cref="IVisibleWorldProjection"/> checks both, and that rule is pinned by
+	/// <c>VisibleWorldProjectionTests</c> and <c>RealityObjectApiTests</c>; the players these tests
+	/// create are linked to no account, and building one per case would be plumbing for assertions
+	/// that are about the wizard gate on the guest roster.
+	/// </summary>
+	private IVisibleWorldProjection FaceValueProjection()
+	{
+		var projection = Substitute.For<IVisibleWorldProjection>();
+		projection.ResolveCharacterAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>())
+			.Returns(call => new ValueTask<SharpPlayer?>(ResolvePlayerAsync(call.Arg<CapabilityActor>())));
+		return projection;
+	}
+
+	private async Task<SharpPlayer?> ResolvePlayerAsync(CapabilityActor actor) =>
+		actor.ActiveCharacter is { } character
+			&& await Mediator.Send(new GetObjectNodeQuery(character)) is AnySharpObject and SharpPlayer player
+				? player
+				: null;
 
 	private async Task<DBRef> NewPlayerAsync(string prefix)
 		=> await TestIsolationHelpers.CreateTestPlayerAsync(factory.Services, Mediator, prefix);

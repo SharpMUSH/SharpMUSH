@@ -43,6 +43,7 @@ public class AdminGuestsController(
 	IEngineCommandInvoker commandInvoker,
 	IConnectionService connectionService,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
+	IVisibleWorldProjection projection,
 	IPasswordService passwordService) : ControllerBase
 {
 	/// <param name="InUse">
@@ -229,15 +230,11 @@ public class AdminGuestsController(
 			.AnyAsync(c => c.State == IConnectionService.ConnectionState.LoggedIn, ct);
 
 	/// <summary>
-	/// The character this request acts as — the <c>character_dbref</c> claim, same rule as
-	/// <c>ObjectsController</c> and <c>MailController</c>.
+	/// The character this request acts as, re-checked against its current account link — the same
+	/// rule <c>ObjectsController</c> and <c>MailController</c> use, because it is now the only one.
 	/// </summary>
-	private async Task<AnySharpObject?> ResolveExecutorAsync(CancellationToken ct)
-	{
-		if (User.GetActingCharacter() is not { } character) return null;
-
-		return await mediator.Send(new GetObjectNodeQuery(character), ct) is AnySharpObject found ? found : null;
-	}
+	private ValueTask<AnySharpObject?> ResolveExecutorAsync(CancellationToken ct) =>
+		User.ResolveExecutorAsync(projection, ct);
 
 	/// <summary>
 	/// Reading the roster is wizard-only too: it names every character the game will hand to an

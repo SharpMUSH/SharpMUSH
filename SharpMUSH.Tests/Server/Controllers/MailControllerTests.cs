@@ -5,13 +5,16 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Mediator;
 using NSubstitute;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Services;
 
-namespace SharpMUSH.Tests.BUnit.Controllers;
+using SharpMUSH.Tests.Services;
+
+namespace SharpMUSH.Tests.Server.Controllers;
 
 /// <summary>
 /// <c>POST api/mail</c> runs the engine's <c>@MAIL</c> rather than sending mail itself, so the seam
@@ -22,12 +25,22 @@ namespace SharpMUSH.Tests.BUnit.Controllers;
 /// </summary>
 public class MailControllerTests
 {
-	private static readonly DBRef Actor = new(1);
+	private static readonly DBRef Actor = new(1, 0L);
 
-	private static MailController CreateController(IEngineCommandInvoker invoker)
+	private static MailController CreateController(IEngineCommandInvoker invoker, bool linked = true)
 	{
-		var controller = new MailController(Substitute.For<IMediator>(), invoker, NullLogger<MailController>.Instance);
-		var identity = new ClaimsIdentity([new Claim(GameHub.CharacterDbrefClaim, Actor.ToString())], "Test");
+		var sender = new TestObjectFactory().CreatePlayer(Actor.Number, "Sender").Expect<SharpPlayer>();
+		var projection = Substitute.For<IVisibleWorldProjection>();
+		projection.ResolveCharacterAsync(Arg.Any<CapabilityActor>(), Arg.Any<CancellationToken>())
+			.Returns(linked ? sender : null);
+
+		var controller = new MailController(
+			Substitute.For<IMediator>(), invoker, projection, NullLogger<MailController>.Instance);
+		var identity = new ClaimsIdentity(
+			[
+				new Claim(ClaimTypes.NameIdentifier, "account"),
+				new Claim(GameHub.CharacterDbrefClaim, Actor.ToString())
+			], "Test");
 
 		controller.ControllerContext = new ControllerContext
 		{
@@ -48,6 +61,24 @@ public class MailControllerTests
 
 	private static MailController.SendMailRequest Request(string to = "someone", string subject = "Subject",
 		string body = "Body.", bool urgent = false) => new(to, subject, body, urgent);
+
+	/// <summary>
+	/// A claimed character the projection will not vouch for gets nothing — and in particular does
+	/// not get <c>@MAIL</c> run as that character. <c>Send</c> used to read the claim directly, so
+	/// only the read endpoints enforced this.
+	/// </summary>
+	[Test]
+	public async Task SendRefusesACharacterTheProjectionWillNotResolve()
+	{
+		var invoker = InvokerReturning("#7:1700000000");
+		var controller = CreateController(invoker, linked: false);
+
+		var result = await controller.Send(Request(), CancellationToken.None);
+
+		await Assert.That(result).IsTypeOf<UnauthorizedResult>();
+		await invoker.DidNotReceive().InvokeAsync(Arg.Any<string>(), Arg.Any<DBRef>(),
+			Arg.Any<Dictionary<string, CallState>>(), Arg.Any<IEnumerable<string>?>());
+	}
 
 	[Test]
 	public async Task UnresolvableRecipientIsNotFound()

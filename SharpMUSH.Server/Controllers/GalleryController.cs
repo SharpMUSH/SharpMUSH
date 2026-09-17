@@ -10,6 +10,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Helpers;
+using SharpMUSH.Server.Services;
 using MarkupString;
 using SharpMUSH.Server.Authentication;
 using System.Text.Json;
@@ -35,6 +36,7 @@ public class GalleryController(
 	IMediator mediator,
 	IAttributeService attributeService,
 	IPermissionService permissionService,
+	IVisibleWorldProjection projection,
 	ILogger<GalleryController> logger) : ControllerBase
 {
 	private const string GalleryAttribute = "PROFILE`GALLERY";
@@ -190,12 +192,12 @@ public class GalleryController(
 		return (character, allowed);
 	}
 
-	private async Task<AnySharpObject?> ResolveViewerAsync(CancellationToken ct)
-	{
-		if (User.GetActingCharacter() is not { } character) return null;
-
-		return await mediator.Send(new GetObjectNodeQuery(character), ct) is AnySharpObject viewer ? viewer : null;
-	}
+	/// <summary>
+	/// The character whose control over the profile is being tested, re-checked against its current
+	/// account link. Editing somebody's gallery turns on this answer, so it uses the shared rule.
+	/// </summary>
+	private ValueTask<AnySharpObject?> ResolveViewerAsync(CancellationToken ct) =>
+		User.ResolveExecutorAsync(projection, ct);
 
 	private async Task<IReadOnlyList<GalleryEntry>> ReadGalleryAsync(AnySharpObject character)
 	{

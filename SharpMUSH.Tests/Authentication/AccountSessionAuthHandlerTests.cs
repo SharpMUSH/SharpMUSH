@@ -198,8 +198,8 @@ public class AccountSessionAuthHandlerTests
 	/// Regression pin (post-#691): the AccountSession scheme must emit the SAME character claim set as
 	/// <c>DebugAuthenticationHandler</c> — <c>character_key</c>, <c>character_creation_time</c>,
 	/// <c>character_name</c>, and <c>character_dbref</c> for the primary character. Before this, only
-	/// <c>character_dbref</c> was emitted, so <c>ApiControllerBase.CurrentCharacterKey</c> was populated
-	/// under DebugAuth (dev) but null under AccountSession (production), silently diverging per environment.
+	/// <c>character_dbref</c> was emitted, so the <c>character_key</c> claim was populated under
+	/// DebugAuth (dev) but null under AccountSession (production), silently diverging per environment.
 	/// </summary>
 	[Test]
 	public async Task ValidToken_EmitsFullCharacterClaimSet_ForPrimaryCharacter()
