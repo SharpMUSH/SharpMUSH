@@ -567,7 +567,7 @@ public partial class Commands
 
 		if (!await thing.HasFlag("HALT"))
 		{
-			await RunStartupAsync(thing);
+			await RunStartupAsync(parser, thing);
 		}
 
 		var owner = await thing.Object().Owner.WithCancellation(CancellationToken.None);
@@ -630,12 +630,22 @@ public partial class Commands
 			.ToListAsync();
 
 	/// <summary>Everything <paramref name="player"/> owns except themselves, read in full before any write.</summary>
+	/// <remarks>
+	/// The owner predicate is pushed down, and each result's owner is read again: a provider that ignored
+	/// the predicate would otherwise have scheduling one player mark the whole database.
+	/// </remarks>
 	private async ValueTask<List<AnySharpObject>> OwnedByAsync(SharpPlayer player)
 	{
 		var playerNumber = player.Object.DBRef.Number;
-		return await Mediator.CreateStream(new GetAllTypedObjectsQuery())
-			.Where(async (owned, token) => owned.Object().DBRef.Number != playerNumber
-				&& (await owned.Object().Owner.WithCancellation(token)).Object.DBRef.Number == playerNumber)
+		return await Mediator
+			.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = player.Object.DBRef }))
+			.Where(candidate => candidate.DBRef.Number != playerNumber)
+			.Select(async (candidate, token) => await Mediator.Send(new GetObjectNodeQuery(candidate.DBRef), token) is AnySharpObject found
+				&& (await found.Object().Owner.WithCancellation(token)).Object.DBRef.Number == playerNumber
+					? found
+					: null)
+			.Where(owned => owned is not null)
+			.Select(owned => owned!)
 			.ToListAsync();
 	}
 
@@ -689,30 +699,17 @@ public partial class Commands
 	/// object's own STARTUP, never a parent's, queued as a fresh command list with the object as both
 	/// executor and enactor. The caller skips HALTed objects.
 	/// </summary>
-	private async ValueTask RunStartupAsync(AnySharpObject thing)
+	private async ValueTask RunStartupAsync(IMUSHCodeParser parser, AnySharpObject thing)
 	{
+		// did_it looks the action up through parents; an object's own attribute shadows any inherited
+		// one, so requiring the object's own first gives queue_attribute_noparent's lookup.
 		if (await AttributeService.GetAttributeAsync(thing, thing, "STARTUP",
-				IAttributeService.AttributeMode.Execute, parent: false) is not SharpAttribute[] { Length: > 0 } startup)
+				IAttributeService.AttributeMode.Execute, parent: false) is not SharpAttribute[] { Length: > 0 })
 		{
 			return;
 		}
 
-		var action = startup.Last();
-		if (action.Value.Length == 0)
-		{
-			return;
-		}
-
-		var self = thing.Object().DBRef;
-		await Mediator.Send(new AdmitCommandListRequest(
-			action.Value,
-			ParserState.RootFor(self).SnapshotForQueuedAction() with
-			{
-				Caller = self,
-				CurrentEvaluation = new DBAttribute(self, action.LongName!)
-			},
-			new DbRefAttribute(self, action.LongName!.Split('`')),
-			-1), ExecutionBudget.CurrentToken);
+		await DidItService.DidIt(parser, new DidItRequest(thing, thing, AWhat: "STARTUP"));
 	}
 
 	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,

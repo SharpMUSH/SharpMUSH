@@ -152,6 +152,23 @@ public class DestroyActionTests
 			.WaitsFor(value => value.StartsWith($"#{thing.Number}"), timeout: TimeSpan.FromSeconds(5), pollingInterval: TimeSpan.FromMilliseconds(50));
 	}
 
+	/// <summary>
+	/// <c>queue_attribute_useatr</c> (<c>src/cque.c:842-857</c>) trims a leading <c>$command:</c> or
+	/// <c>^listen:</c> pattern off the queued text, so a STARTUP written as a $-command still runs its
+	/// action rather than the pattern.
+	/// </summary>
+	[Test]
+	public async Task Startup_RunsTheActionAfterACommandPattern()
+	{
+		var thing = await CreateAsync("DAT_Pattern");
+		await AsGod($"&STARTUP {thing}=$dat_pattern_cmd:&BACK me=ran");
+
+		await AsGod($"@destroy {thing}");
+		await AsGod($"@undestroy {thing}");
+
+		await WaitForAsync(thing, "BACK", "ran");
+	}
+
 	[Test]
 	public async Task Startup_RunsForEachObjectTheCascadeSpares()
 	{
