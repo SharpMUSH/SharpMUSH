@@ -75,7 +75,7 @@ def signal_all(pids, signum):
 		try:
 			os.kill(pid, signum)
 		except ProcessLookupError:
-			pass
+			pass  # exited since it was listed; the reap loop collects it
 
 
 def wait_until_gone(seconds):

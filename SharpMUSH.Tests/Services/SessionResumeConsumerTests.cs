@@ -27,7 +27,7 @@ public class SessionResumeConsumerTests
 			ConnectionType = "websocket", ConnectedAt = DateTimeOffset.UtcNow,
 			Metadata = new() { ["SessionId"] = "session", ["AccountId"] = "account", ["SSL"] = "1" }
 		};
-		public readonly SessionResumeRequestMessage Request = new(Guid.NewGuid(), 42, "session", "127.0.0.2", "new", true);
+		public readonly SessionResumeRequestMessage Request = new(Guid.NewGuid(), 42, "session", "127.0.0.2", "new", true) { OrderedPrompts = true };
 		public readonly IConnectionService.ConnectionData Current;
 		public readonly SessionResumeConsumer Consumer;
 
@@ -38,7 +38,7 @@ public class SessionResumeConsumerTests
 				new ConcurrentDictionary<string, string>(State.Metadata) { ["ConnectionType"] = "websocket" });
 			Store.GetConnectionAsync(42, Arg.Any<CancellationToken>()).Returns(State);
 			Connections.Get(42).Returns(Current);
-			Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, Arg.Any<CancellationToken>()).Returns(true);
+			Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, true, Arg.Any<CancellationToken>()).Returns(true);
 			Accounts.GetByIdAsync("account", Arg.Any<CancellationToken>()).Returns(new SharpAccount
 			{
 				Id = "account", Username = "user", PasswordHash = "unused"
@@ -84,7 +84,7 @@ public class SessionResumeConsumerTests
 	{
 		var h = new Harness();
 		var persisted = false;
-		h.Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, Arg.Any<CancellationToken>())
+		h.Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, true, Arg.Any<CancellationToken>())
 			.Returns(call => { persisted = true; return Task.FromResult(true); });
 		h.Bus.Publish(Arg.Any<SessionResumeResponseMessage>(), Arg.Any<CancellationToken>())
 			.Returns(call =>
@@ -128,7 +128,7 @@ public class SessionResumeConsumerTests
 	public async Task RevocationWhilePersistingTransportRejectsAcknowledgment()
 	{
 		var h = new Harness();
-		h.Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, Arg.Any<CancellationToken>())
+		h.Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, true, Arg.Any<CancellationToken>())
 			.Returns(call =>
 			{
 				h.Current.Metadata["ResumeRevoked"] = "1";
@@ -194,7 +194,7 @@ public class SessionResumeConsumerTests
 	public async Task RevocationBeforeConditionalWriteRejectsResume()
 	{
 		var h = new Harness();
-		h.Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, Arg.Any<CancellationToken>())
+		h.Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, true, Arg.Any<CancellationToken>())
 			.Returns(false);
 		await h.Consumer.HandleAsync(h.Request);
 		await h.AssertResponse(false);
@@ -205,7 +205,7 @@ public class SessionResumeConsumerTests
 	public async Task InMemorySessionReplacementBeforeAcknowledgmentRejectsResume()
 	{
 		var h = new Harness();
-		h.Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, Arg.Any<CancellationToken>())
+		h.Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, true, Arg.Any<CancellationToken>())
 			.Returns(call =>
 			{
 				h.Current.Metadata["SessionId"] = "replacement";
@@ -219,7 +219,7 @@ public class SessionResumeConsumerTests
 	public async Task PersistenceFailureFailsClosed()
 	{
 		var h = new Harness();
-		h.Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, Arg.Any<CancellationToken>())
+		h.Store.TryUpdateTransportAsync(42, "session", null, "AccountMode", "127.0.0.2", "new", true, true, Arg.Any<CancellationToken>())
 			.Returns(Task.FromException<bool>(new IOException("store unavailable")));
 		await h.Consumer.HandleAsync(h.Request);
 		await h.AssertResponse(false, retryable: true);

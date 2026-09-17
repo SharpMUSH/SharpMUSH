@@ -100,7 +100,7 @@ public sealed class SessionResumeConsumer(
 
 		// Authorization never binds a player or emits a second login event. Reconciliation owns that state.
 		if (!await store.TryUpdateTransportAsync(request.Handle, request.SessionId, persisted.PlayerObjid,
-			persisted.State, request.IpAddress, request.Hostname, request.IsSecure, ct)) return false;
+			persisted.State, request.IpAddress, request.Hostname, request.IsSecure, request.OrderedPrompts, ct)) return false;
 		if (!ReferenceEquals(connections.Get(request.Handle), current)
 			|| current.Metadata.GetValueOrDefault("SessionId") != request.SessionId
 			|| current.Metadata.GetValueOrDefault("ResumeRevoked") == "1"
