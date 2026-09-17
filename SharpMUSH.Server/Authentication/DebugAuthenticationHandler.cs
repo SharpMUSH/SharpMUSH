@@ -15,8 +15,8 @@ namespace SharpMUSH.Server.Authentication;
 /// client-side DebugAuthStateProvider.
 ///
 /// Emits the same claim set that <see cref="AccountSessionAuthenticationHandler"/> would
-/// produce so that <see cref="GameHub"/>, <see cref="Controllers.ApiControllerBase"/>, and
-/// all other server-side consumers see a fully-populated principal with no dev-mode special
+/// produce so that <see cref="GameHub"/>, <see cref="CharacterClaimsExtensions"/>, and all
+/// other server-side consumers see a fully-populated principal with no dev-mode special
 /// cases.
 ///
 /// Falls back to static placeholder claims if the DB is not yet initialised (e.g. during

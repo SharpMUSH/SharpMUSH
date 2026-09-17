@@ -247,11 +247,8 @@ public class ObjectsController(
 	/// Resolves the claimed full character identity against its current account link.
 	/// A stale cookie cannot retain object access after unlinking or character recycling.
 	/// </summary>
-	private async Task<AnySharpObject?> ResolveExecutorAsync(CancellationToken ct)
-	{
-		if (User.GetCapabilityActor() is not { } actor) return null;
-		return await projection.ResolveCharacterAsync(actor, ct) is { } player ? (AnySharpObject)player : null;
-	}
+	private ValueTask<AnySharpObject?> ResolveExecutorAsync(CancellationToken ct) =>
+		User.ResolveExecutorAsync(projection, ct);
 
 	/// <summary>
 	/// Addressing is by dbref only. Name resolution needs a parser and notifies on failure, and the

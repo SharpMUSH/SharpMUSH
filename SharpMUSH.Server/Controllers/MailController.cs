@@ -35,7 +35,11 @@ namespace SharpMUSH.Server.Controllers;
 [ApiController]
 [Route("api/mail")]
 [Authorize]
-public class MailController(IMediator mediator, IEngineCommandInvoker commandInvoker, ILogger<MailController> logger) : ControllerBase
+public class MailController(
+	IMediator mediator,
+	IEngineCommandInvoker commandInvoker,
+	IVisibleWorldProjection projection,
+	ILogger<MailController> logger) : ControllerBase
 {
 	private const string DefaultFolder = "INBOX";
 
@@ -121,7 +125,10 @@ public class MailController(IMediator mediator, IEngineCommandInvoker commandInv
 	[HttpPost]
 	public async Task<IActionResult> Send([FromBody] SendMailRequest request, CancellationToken ct)
 	{
-		if (User.GetActingCharacter() is not { } character) return Unauthorized();
+		// The same resolution the read paths use. This one runs an engine command as the resolved
+		// character, so it is the last place that should have been happy with a bare claim.
+		if (await ResolvePlayerAsync(ct) is not { } sender) return Unauthorized();
+		var character = sender.Object.DBRef;
 
 		if (string.IsNullOrWhiteSpace(request.To))
 		{
@@ -195,11 +202,10 @@ public class MailController(IMediator mediator, IEngineCommandInvoker commandInv
 	private static async Task<string> FromNameAsync(SharpMail mail)
 		=> (await mail.From.WithCancellation(CancellationToken.None)).Object()?.Name ?? "(unknown)";
 
-	/// <summary>Resolves the character this request acts as (the primary character's dbref) to a player, or null.</summary>
-	private async Task<SharpPlayer?> ResolvePlayerAsync(CancellationToken ct)
-	{
-		if (User.GetActingCharacter() is not { } character) return null;
-
-		return await mediator.Send(new GetObjectNodeQuery(character), ct) is AnySharpObject and SharpPlayer player ? player : null;
-	}
+	/// <summary>
+	/// Resolves the character this request acts as, re-checked against its current account link.
+	/// Mail is per-character and private, so this must never be looser than the object API's rule.
+	/// </summary>
+	private ValueTask<SharpPlayer?> ResolvePlayerAsync(CancellationToken ct) =>
+		User.ResolvePlayerAsync(projection, ct);
 }
