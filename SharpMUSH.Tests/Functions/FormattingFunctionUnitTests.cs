@@ -9,12 +9,51 @@ public class FormattingFunctionUnitTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
+	/// <summary>
+	/// render() takes two arguments, so the case below has always exercised the arity refusal rather
+	/// than any rendering. It declared an <c>expected</c> and never compared it — the assertion was
+	/// <c>IsNotNull()</c> on a non-nullable string, which no result could fail.
+	/// </summary>
 	[Test]
-	[Arguments("render(test %r newline)", "")]
+	[Arguments("render(test %r newline)", "#-1 FUNCTION (RENDER) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1")]
 	public async Task Render(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// <c>render(&lt;string&gt;, &lt;formats&gt;)</c> — PennMUSH's fun_render. Until #974 this name was
+	/// bound to an objeval, so none of these cases could have passed: the helpfile documented one
+	/// function and the engine ran another.
+	/// </summary>
+	[Test]
+	// No recognised format at all strips the markup, as stripansi() would.
+	[Arguments("render(ansi(r,red),markup)", "red")]
+	// noaccents is prefix-matched by PennMUSH, so "noacc" is the same request.
+	[Arguments("render(déjà vu,noaccents)", "deja vu")]
+	[Arguments("render(déjà vu,noacc)", "deja vu")]
+	[Arguments("render(plain,nosuchformat)", "#-1 INVALID SECOND ARGUMENT")]
+	public async Task RenderConvertsByFormatName(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task RenderToHtmlEscapesTheTextAndKeepsTheColour()
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain("render(ansi(r,a<b>c),html)")))?.Message!;
+
+		await Assert.That(result.ToPlainText()).Contains("&lt;b&gt;");
+	}
+
+	[Test]
+	public async Task RenderToAnsiEmitsEscapeCodes()
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain("render(ansi(r,red),ansi)")))?.Message!;
+
+		await Assert.That(result.ToPlainText()).Contains("\u001b[");
 	}
 
 	[Test]

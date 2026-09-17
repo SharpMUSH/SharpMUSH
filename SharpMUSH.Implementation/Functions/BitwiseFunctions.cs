@@ -109,7 +109,7 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(new(new string(output[start..])));
 	}
 
-	[SharpFunction(Name = "band",
+	[SharpFunction(Name = "band", MinArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer..."])]
 	public ValueTask<CallState> BAnd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.AggregateUnsignedIntegers(parser, (x, y) => x & y);
@@ -119,17 +119,17 @@ public partial class Functions
 	public ValueTask<CallState> BNand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.AggregateUnsignedIntegers(parser, (x, y) => x & ~y);
 
-	[SharpFunction(Name = "bnot", MaxArgs = 1,
+	[SharpFunction(Name = "bnot", MinArgs = 1, MaxArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer"])]
 	public ValueTask<CallState> BNot(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.EvaluateUnsignedInteger(parser, x => ~x);
 
-	[SharpFunction(Name = "bor",
+	[SharpFunction(Name = "bor", MinArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer..."])]
 	public ValueTask<CallState> Bor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.AggregateUnsignedIntegers(parser, (x, y) => x | y);
 
-	[SharpFunction(Name = "bxor",
+	[SharpFunction(Name = "bxor", MinArgs = 1,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.PositiveIntegersOnly, ParameterNames = ["integer..."])]
 	public ValueTask<CallState> BXor(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.AggregateUnsignedIntegers(parser, (x, y) => x ^ y);

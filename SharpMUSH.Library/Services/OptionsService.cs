@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
 
 namespace SharpMUSH.Library.Services;
@@ -279,41 +280,8 @@ public class OptionsService(
 				WebsocketUrl: "/wsclient"
 			),
 			Alias = new AliasOptions(
-				FunctionAliases: new Dictionary<string, string[]>
-				{
-					{ "atrlock", ["attrlock"] },
-					{ "iter", ["parse"] },
-					{ "lsearch", ["search"] },
-					{ "lstats", ["stats"] },
-					{ "lthings", ["lobjects"] },
-					{ "lvthings", ["lvobjects"] },
-					{ "modulo", ["mod", "modulus"] },
-					{ "nattr", ["attrcnt"] },
-					{ "nattrp", ["attrpcnt"] },
-					{ "nthings", ["nobjects"] },
-					{ "nvthings", ["nvobjects"] },
-					{ "randword", ["pickrand"] },
-					{ "soundslike", ["soundlike"] },
-					{ "textfile", ["dynhelp"] },
-					{ "trunc", ["val"] },
-					{ "ufun", ["u"] },
-					{ "xthings", ["xobjects"] },
-					{ "xvthings", ["xvobjects"] }
-				},
-				CommandAliases: new Dictionary<string, string[]>
-				{
-					{ "@ATRLOCK", ["@attrlock"] },
-					{ "@ATRCHOWN", ["@attrchown"] },
-					{ "@EDIT", ["@gedit"] },
-					{ "@IFELSE", ["@if"] },
-					{ "@SWITCH", ["@sw"] },
-					{ "GET", ["take"] },
-					{ "GOTO", ["move"] },
-					{ "INVENTORY", ["i"] },
-					{ "LOOK", ["l"] },
-					{ "PAGE", ["p"] },
-					{ "WHISPER", ["w"] }
-				}
+				FunctionAliases: Configurable.DefaultFunctionAliases,
+				CommandAliases: Configurable.DefaultCommandAliases
 			),
 			Restriction = new RestrictionOptions(
 				CommandRestrictions: new Dictionary<string, string[]>(),

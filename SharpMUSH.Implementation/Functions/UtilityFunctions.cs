@@ -294,7 +294,7 @@ public partial class Functions
 	public ValueTask<CallState> AtAt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ValueTask.FromResult<CallState>(new(string.Empty));
 
-	[SharpFunction(Name = "allof", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["value..."])]
+	[SharpFunction(Name = "allof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["value..."])]
 	public async ValueTask<CallState> AllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -422,26 +422,27 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "checkpass", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.StripAnsi)]
+	/// <remarks>
+	/// PennMUSH's <c>fun_checkpass</c> resolves its first argument with <c>lookup_player</c>, so a name
+	/// works as well as a dbref; resolving it with a dbref parse alone answered
+	/// <c>#-1 NO SUCH PLAYER</c> for every call that named a player.
+	/// </remarks>
+	[SharpFunction(Name = "checkpass", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.WizardOnly | FunctionFlags.StripAnsi,
+		ParameterNames = ["player", "password"])]
 	public async ValueTask<CallState> Checkpass(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		if (HelperFunctions.ParseDbRef((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText()) is not DBRef dbRef)
-		{
-			await NotifyService.NotifyLocalized(parser.CurrentState.Executor!.Value, nameof(ErrorMessages.Notifications.CantSeeThat));
-			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
-		}
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var target = (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText();
 
-		if (await Mediator.Send(new GetObjectNodeQuery(dbRef)) is not (AnySharpObject and SharpPlayer player))
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
-		}
-
-		var result = PasswordService.PasswordIsValid(
-			$"#{player.Object.Key}:{player.Object.CreationTime}",
-			parser.CurrentState.Arguments["1"].Message!.ToPlainText(),
-			player.PasswordHash);
-
-		return result ? new("1") : new("0");
+		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, target,
+			player => ValueTask.FromResult<CallState>(
+				PasswordService.PasswordIsValid(
+					$"#{player.Object.Key}:{player.Object.CreationTime}",
+					parser.CurrentState.Arguments["1"].Message!.ToPlainText(),
+					player.PasswordHash)
+					? "1"
+					: "0"));
 	}
 
 	[SharpFunction(Name = "clone", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
@@ -966,7 +967,7 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -1122,7 +1123,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(MarkupText.Join(MarkupText.Plain(outputDelimiter), items)));
 	}
 
-	[SharpFunction(Name = "null", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "null", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> Null(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(CallState.Empty);
 
@@ -1386,35 +1387,55 @@ public partial class Functions
 			string.Join(separator, VisibleRegisterNames(parser.CurrentState, kinds, pattern))));
 	}
 
-	[SharpFunction(Name = "render", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular)]
+	/// <summary>
+	/// <c>render(&lt;string&gt;, &lt;formats&gt;)</c> — PennMUSH's <c>fun_render</c>: turn a string's
+	/// markup into wire format for something outside the game, a bot or a web page.
+	///
+	/// <para>What stood here was an objeval: it located an object, checked Controls and evaluated the
+	/// second argument as that object — which is what <c>objeval()</c> already does, under a name the
+	/// helpfile gave to something else entirely.</para>
+	/// </summary>
+	/// <remarks>
+	/// PennMUSH's <c>markup</c> flag asks for whatever the other flags did not handle to survive as
+	/// internal markup tags. SharpMUSH holds markup as layers over the text rather than as inline
+	/// tags, and renders a whole string to one format, so there is nothing for the flag to leave
+	/// behind: it is accepted and changes nothing. See <c>pennmush-compatibility.md</c>.
+	/// </remarks>
+	[SharpFunction(Name = "render", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular,
+		ParameterNames = ["string", "formats"])]
 	public async ValueTask<CallState> Render(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objectName = args["0"].Message!.ToPlainText();
-		var code = args["1"].Message!;
+		var text = args["0"].Message ?? MarkupText.Empty;
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, objectName, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return ErrorMessages.Returns.PermissionDenied;
-				}
+		var ansi = false;
+		var html = false;
+		var noAccents = false;
 
-				// Evaluates the code from the perspective of the target object
-				var result = await AttributeService.EvaluateAttributeFunctionResultAsync(
-					parser,
-					obj, // executor is the target object
-					code,
-					[],
-					evalParent: false,
-					ignorePermissions: false,
-					ignoreLambda: true);
+		foreach (var format in args["1"].Message!.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		{
+			// PennMUSH prefix-matches "noaccents" alone; the other three are spelled in full.
+			if (format.Equals("ansi", StringComparison.OrdinalIgnoreCase)) ansi = true;
+			else if (format.Equals("html", StringComparison.OrdinalIgnoreCase)) html = true;
+			else if ("noaccents".StartsWith(format, StringComparison.OrdinalIgnoreCase)) noAccents = true;
+			else if (format.Equals("markup", StringComparison.OrdinalIgnoreCase)) { }
+			else return new CallState(ErrorMessages.Returns.InvalidSecondArgument);
+		}
 
-				return result;
-			});
+		// Raw colour codes are a spoofing tool wherever the result is echoed back into the game.
+		if (ansi && !await PermissionService.CanNoSpoof(await parser.CurrentState.KnownExecutorObject(Mediator)))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		var rendered = (html, ansi) switch
+		{
+			(true, _) => text.Render(MarkupFormat.Html),
+			(_, true) => text.Render(MarkupFormat.Ansi),
+			_ => text.ToPlainText()
+		};
+
+		return new CallState(noAccents ? RemoveDiacritics(rendered) : rendered);
 	}
 
 	[SharpFunction(Name = "s", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular)]
@@ -2126,6 +2147,6 @@ public partial class Functions
 	[GeneratedRegex(@"^#\d+:\d+$")]
 	private static partial Regex ObjIdRegex();
 
-	[GeneratedRegex(@"^[a-zA-Z]$")]
+	[GeneratedRegex(@"^[a-zA-Z]+$")]
 	private static partial Regex IsWordRegex();
 }

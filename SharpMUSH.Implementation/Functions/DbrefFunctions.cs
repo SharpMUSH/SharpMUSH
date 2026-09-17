@@ -20,7 +20,7 @@ public partial class Functions
 	private const string LinkTypeVariable = "variable";
 	private const string LinkTypeHome = "home";
 
-	[SharpFunction(Name = "loc", MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	[SharpFunction(Name = "loc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Location(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
@@ -340,7 +340,7 @@ public partial class Functions
 	public ValueTask<CallState> Locks(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ListLocksAsync(parser);
 
-	[SharpFunction(Name = "locks", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	[SharpFunction(Name = "locks", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public ValueTask<CallState> LocksRequired(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ListLocksAsync(parser);
 

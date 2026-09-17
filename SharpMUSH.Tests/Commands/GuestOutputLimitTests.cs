@@ -97,7 +97,7 @@ public class GuestOutputLimitTests
 		var player = await PlayerAsync("OutLimitLazy", guest);
 		var limit = guest ? GuestLimit : FunctionLimits.MaxOutputCodeUnits;
 
-		var said = await ThinkAs(player, $"cand(strlen(repeat(x,{limit + 1})))");
+		var said = await ThinkAs(player, $"cand(strlen(repeat(x,{limit + 1})),1)");
 
 		await Assert.That(said).StartsWith(ErrorMessages.Returns.OutputTooLarge);
 	}
