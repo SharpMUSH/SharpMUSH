@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
@@ -12,6 +13,7 @@ namespace SharpMUSH.Tests.Commands;
 /// Guests hold the <c>Guest</c> power and get <c>guest_output_limit</c> as their output ceiling
 /// instead of the 5 MB every other player has (#1024).
 /// </summary>
+[NotInParallel(GuestLoginTests.GuestCharacters)]
 public class GuestOutputLimitTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -22,11 +24,23 @@ public class GuestOutputLimitTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private uint GuestLimit => WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Limit.GuestOutputLimit;
 
+	private readonly List<DBRef> _guests = [];
+
+	// A leftover Guest power would count as a guest character in GuestLoginTests.
+	[After(Test)]
+	public async Task RevokeGuestPower()
+	{
+		foreach (var guest in _guests)
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {guest}=!Guest"));
+	}
+
 	private async Task<TestIsolationHelpers.TestPlayer> PlayerAsync(string prefix, bool guest)
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
-		if (guest) await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {player.DbRef}=Guest"));
+		if (!guest) return player;
+		_guests.Add(player.DbRef);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {player.DbRef}=Guest"));
 		return player;
 	}
 

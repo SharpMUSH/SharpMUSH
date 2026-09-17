@@ -202,6 +202,7 @@ public class FlagFunctionUnitTests
 
 	// Penn-oracle verified: a held power reports 1, matched case-insensitively (GuEsT).
 	[Test]
+	[NotInParallel(SharpMUSH.Tests.Commands.GuestLoginTests.GuestCharacters)]
 	public async Task HaspowerGranted()
 	{
 		var home = new DBRef(0, null);
@@ -210,12 +211,19 @@ public class FlagFunctionUnitTests
 		var guestPower = await Mediator.Send(new GetPowerQuery("Guest"));
 		await Assert.That(guestPower).IsNotNull();
 		await Mediator.Send(new SetObjectPowerCommand(new AnySharpObject(player), guestPower!));
+		try
+		{
+			var granted = (await Parser.FunctionParse(MarkupText.Plain($"haspower(#{subject.Number}, GuEsT)")))?.Message!;
+			await Assert.That(granted.ToPlainText()).IsEqualTo("1");
 
-		var granted = (await Parser.FunctionParse(MarkupText.Plain($"haspower(#{subject.Number}, GuEsT)")))?.Message!;
-		await Assert.That(granted.ToPlainText()).IsEqualTo("1");
-
-		var other = (await Parser.FunctionParse(MarkupText.Plain($"haspower(#{subject.Number}, builder)")))?.Message!;
-		await Assert.That(other.ToPlainText()).IsEqualTo("0");
+			var other = (await Parser.FunctionParse(MarkupText.Plain($"haspower(#{subject.Number}, builder)")))?.Message!;
+			await Assert.That(other.ToPlainText()).IsEqualTo("0");
+		}
+		finally
+		{
+			// A leftover guest would count as a guest character in GuestLoginTests.
+			await Mediator.Send(new UnsetObjectPowerCommand(new AnySharpObject(player), guestPower!));
+		}
 	}
 
 	// Penn-oracle verified: an invalid object is an error (#-1 NO SUCH OBJECT VISIBLE).

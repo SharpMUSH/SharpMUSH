@@ -2132,11 +2132,12 @@ public class SharpMUSHParserVisitor(
 					return PreserveHookErrors(new CallState($"#-1 INVALID SWITCH: {invalidSwitchList}"));
 				}
 
-				// 4. Check CommandLock before executing
+				// 4. Check the behaviour restrictions and CommandLock before executing
 				var commandLockStr = libraryCommandDefinition.Attribute.CommandLock;
-				if (!string.IsNullOrEmpty(commandLockStr) && executor is AnySharpObject lockedExecutor)
+				if (executor is AnySharpObject lockedExecutor)
 				{
-					if (!await LockService.Evaluate(commandLockStr, lockedExecutor, lockedExecutor))
+					if (!await SharpMUSH.Library.Services.CommandRestrictions.PermitsAsync(libraryCommandDefinition.Attribute, lockedExecutor)
+						|| (!string.IsNullOrEmpty(commandLockStr) && !await LockService.Evaluate(commandLockStr, lockedExecutor, lockedExecutor)))
 					{
 						await NotifyService.NotifyLocalized(lockedExecutor, nameof(ErrorMessages.Notifications.PermissionDenied));
 						return PreserveHookErrors(new CallState(ErrorMessages.Returns.PermissionDenied));

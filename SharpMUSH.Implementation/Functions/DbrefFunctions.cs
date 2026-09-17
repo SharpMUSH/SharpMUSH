@@ -575,13 +575,7 @@ public partial class Functions
 		if (!parser.CommandLibrary.TryGetValue(command, out var definition)) return false;
 		var attribute = definition.LibraryInformation.Attribute;
 		if (attribute.Behavior.HasFlag(CommandBehavior.NoOp) || attribute.Behavior.HasFlag(CommandBehavior.Internal)) return false;
-		if (attribute.Behavior.HasFlag(CommandBehavior.God) && !executor.IsGod()) return false;
-		if (attribute.Behavior.HasFlag(CommandBehavior.NoGagged))
-		{
-			AnySharpObject owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-			if (await owner.HasFlag("GAGGED")) return false;
-		}
-		if (attribute.Behavior.HasFlag(CommandBehavior.NoGuest) && await executor.HasFlag("GUEST")) return false;
+		if (!await SharpMUSH.Library.Services.CommandRestrictions.PermitsAsync(attribute, executor)) return false;
 		return string.IsNullOrEmpty(attribute.CommandLock) || await LockService.Evaluate(attribute.CommandLock, executor, executor);
 	}
 
