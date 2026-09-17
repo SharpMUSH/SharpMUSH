@@ -56,19 +56,6 @@ public class SocialCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask WhisperCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("whisper #1=Secret message"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "You can't whisper to yourself.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
 	[Category("TestInfrastructure")]
 	[Skip("Issue with NotifyService mock, needs investigation")]
 	public async ValueTask PageCommand()
