@@ -3,7 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 
@@ -101,6 +103,44 @@ public class GuestOutputLimitTests
 		var said = await ThinkAs(guest, $"restrictedexpr(space strlen,strlen(space({GuestLimit + 1})))");
 
 		await Assert.That(said).StartsWith(ErrorMessages.Returns.OutputTooLarge);
+	}
+
+	// A reply to @input runs the callback from its own root state, not through CommandParse. The
+	// session is an object's (a guest does not control itself), started by the player's input.
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task CapturedInputCallback_KeepsThePlayersLimit(bool guest)
+	{
+		// Below the configured default, so only a limit read from configuration can reject it.
+		const uint limit = 2048;
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Limit = options.Limit with { GuestOutputLimit = limit }
+		});
+		var player = await PlayerAsync("OutLimitInput", guest);
+		var sessions = WebAppFactoryArg.Services.GetRequiredService<IInputSessionService>();
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "OutLimitInputObj");
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
+		await WebAppFactoryArg.Services.GetRequiredService<IAttributeService>().SetAttributeAsync(obj, obj, "CALLBACK",
+			MarkupText.Plain($"@pemit %#=strlen(repeat(x,{limit + 1}))"));
+		var starter = Parser.FromState(ParserState.RootFor(obj.Object().DBRef) with
+		{
+			Enactor = player.DbRef,
+			Handle = player.Handle,
+			ConnectionSessionId = ConnectionService.Get(player.Handle)!.Metadata.GetValueOrDefault("SessionId")
+		});
+		await Assert.That(await sessions.StartAsync(starter, obj.Object().DBRef, "CALLBACK", MarkupText.Plain("Reply:"),
+			TimeSpan.FromMinutes(2))).IsNull();
+		var session = sessions.GetCapturing(player.Handle)!;
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+
+		await sessions.DeliverAsync(Parser, session, MarkupText.Plain("reply"), false);
+
+		var said = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before)
+			.FirstOrDefault(n => n.StartsWith("#-1") || n.All(char.IsAsciiDigit)) ?? string.Empty;
+		if (guest) await Assert.That(said).StartsWith(ErrorMessages.Returns.OutputTooLarge);
+		else await Assert.That(said).IsEqualTo((limit + 1).ToString());
 	}
 
 	[Test]

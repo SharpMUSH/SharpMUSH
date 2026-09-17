@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Library.Definitions;
@@ -9,6 +10,15 @@ public static class FunctionLimits
 	/// expansion; the evaluator also checks every completed result. An evaluation may lower it
 	/// (<see cref="ParserState.OutputLimit"/>), never raise it.</summary>
 	public const int MaxOutputCodeUnits = 5 * 1024 * 1024;
+
+	/// <summary>
+	/// Ceiling for evaluation a player's input starts, whether typed as a command or as a reply to
+	/// <c>@input</c>: <paramref name="guestOutputLimit"/> for a guest, the full ceiling otherwise.
+	/// </summary>
+	public static async ValueTask<int> OutputLimitForAsync(AnySharpObject? player, uint guestOutputLimit)
+		=> player is not null && await player.IsGuest()
+			? (int)Math.Min(guestOutputLimit, MaxOutputCodeUnits)
+			: MaxOutputCodeUnits;
 
 	public static bool ExceedsOutput(ParserState state, long characters) => characters > state.OutputLimit;
 

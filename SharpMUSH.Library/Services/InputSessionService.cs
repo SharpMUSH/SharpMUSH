@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Configuration.Options;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using SharpMUSH.Library.Definitions;
@@ -65,10 +66,13 @@ public sealed class InputSessionService : IInputSessionService
 	private readonly INotifyService _notify;
 	private readonly TimeProvider _time;
 	private readonly HandlePublicationLane? _lane;
+	private readonly IOptionsWrapper<SharpMUSHOptions>? _configuration;
 
 	public InputSessionService(IConnectionService connections, IMediator mediator, IAttributeService attributes,
-		IPermissionService permissions, INotifyService notify, TimeProvider? timeProvider = null)
+		IPermissionService permissions, INotifyService notify, TimeProvider? timeProvider = null,
+		IOptionsWrapper<SharpMUSHOptions>? configuration = null)
 	{
+		_configuration = configuration;
 		_connections = connections;
 		_mediator = mediator;
 		_attributes = attributes;
@@ -340,7 +344,7 @@ public sealed class InputSessionService : IInputSessionService
 		ExecutionBudget.Current?.ThrowIfExceeded();
 		if (await _mediator.Send(new GetObjectNodeQuery(session.Executor), ExecutionBudget.CurrentToken) is not AnySharpObject actor
 			|| await _mediator.Send(new GetObjectNodeQuery(session.CallbackTarget), ExecutionBudget.CurrentToken) is not AnySharpObject target
-			|| await _mediator.Send(new GetObjectNodeQuery(session.Character), ExecutionBudget.CurrentToken) is None
+			|| await _mediator.Send(new GetObjectNodeQuery(session.Character), ExecutionBudget.CurrentToken) is not AnySharpObject character
 			|| await actor.HasFlag("HALT", ExecutionBudget.CurrentToken)
 			|| (await actor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != session.Owner
 			|| (await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef != session.CallbackOwner
@@ -364,6 +368,8 @@ public sealed class InputSessionService : IInputSessionService
 			Handle = session.Connection.Handle,
 			ConnectionSessionId = session.TransportSessionId,
 			CurrentEvaluation = new DBAttribute(session.CallbackTarget, session.CallbackAttribute),
+			OutputLimit = await FunctionLimits.OutputLimitForAsync(character,
+				_configuration?.CurrentValue.Limit.GuestOutputLimit ?? LimitOptions.DefaultGuestOutputLimit),
 			EnvironmentRegisters = new Dictionary<string, CallState>
 			{
 				["0"] = new(input), ["1"] = new(timeout ? "timeout" : "input")

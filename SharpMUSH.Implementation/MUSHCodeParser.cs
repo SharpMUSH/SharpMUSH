@@ -682,14 +682,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		return () => visitor.Visit(chatContext);
 	}
 
-	/// <summary>Guests get <c>guest_output_limit</c>; everyone else, and a handle not yet logged in, the full ceiling.</summary>
+	/// <summary>A handle not yet logged in has no player, and gets the full ceiling.</summary>
 	private async ValueTask<int> OutputLimitForAsync(DBRef? player)
-	{
-		if (player is null
-			|| await _mediator.Send(new GetObjectNodeQuery(player.Value)) is not AnySharpObject actor
-			|| !await actor.IsGuest()) return FunctionLimits.MaxOutputCodeUnits;
-		return (int)Math.Min(Configuration.CurrentValue.Limit.GuestOutputLimit, FunctionLimits.MaxOutputCodeUnits);
-	}
+		=> await FunctionLimits.OutputLimitForAsync(
+			player is { } dbref && await _mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject actor ? actor : null,
+			Configuration.CurrentValue.Limit.GuestOutputLimit);
 
 	/// <summary>
 	/// This is the main entry point for commands run by a player.
