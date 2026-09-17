@@ -58,7 +58,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 
 		// The Scene Logger object is WIZARD (required: @hook target + wizard @scene/@hook).
 		var loggerObjid = objects.Single(o => o.Ref == "logger").Objid;
-		var loggerDbref = PackageInstallService.ParseObjid(loggerObjid)!.Value;
+		var loggerDbref = DBRef.Parse(loggerObjid);
 		var node = await factory.Services.GetRequiredService<ISharpDatabase>()
 			.GetObjectNodeAsync(loggerDbref);
 		var flags = new List<string>();
@@ -74,7 +74,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 	public async Task ScenePackage_OverrideHooks_ResolveToTheSceneLoggerObject()
 	{
 		var objects = await Registry.GetPackageObjectsAsync("scene");
-		var loggerDbref = PackageInstallService.ParseObjid(objects.Single(o => o.Ref == "logger").Objid)!.Value;
+		var loggerDbref = DBRef.Parse(objects.Single(o => o.Ref == "logger").Objid);
 
 		// STARTUP sets @hook/override on POSE, SAY, SEMIPOSE, and @EMIT, all targeting
 		// the Scene Logger with its CMD`CAPTURE`* capture attributes.

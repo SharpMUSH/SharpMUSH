@@ -184,7 +184,7 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 	/// </summary>
 	private async Task AssertTheNewObjectIsLiveInTheMasterRoom(string objid)
 	{
-		var created = PackageInstallService.ParseObjid(objid)!.Value;
+		var created = DBRef.Parse(objid);
 
 		await Assert.That(await MasterRoomContentsAsync()).Contains(created.Number);
 

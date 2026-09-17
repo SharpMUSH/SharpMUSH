@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -254,13 +255,12 @@ public partial class PackageAuthoringService(
 	private async Task<Result<AuthoringObject>> ReadObjectAsync(
 		string objid, CancellationToken cancellationToken)
 	{
-		var dbref = PackageInstallService.ParseObjid(objid);
-		if (dbref is null)
+		if (HelperFunctions.ParseDbRef(objid) is not DBRef dbref)
 		{
 			return new Error<string>($"'{objid}' is not a valid objid.");
 		}
 
-		if (await database.GetObjectNodeAsync(dbref.Value, cancellationToken) is not AnySharpObject known)
+		if (await database.GetObjectNodeAsync(dbref, cancellationToken) is not AnySharpObject known)
 		{
 			return new Error<string>($"Object {objid} does not exist.");
 		}
@@ -268,7 +268,7 @@ public partial class PackageAuthoringService(
 		var sharpObject = known.Object();
 
 		var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-		await foreach (var attribute in attributeStore.GetAttributesAsync(dbref.Value, "*", cancellationToken))
+		await foreach (var attribute in attributeStore.GetAttributesAsync(dbref, "*", cancellationToken))
 		{
 			// The PM` tree is engine-managed ref indirection (decision 20.21) —
 			// the apply engine recreates it; exports must never carry it.
@@ -301,10 +301,7 @@ public partial class PackageAuthoringService(
 	}
 
 	private static int? DbrefNumber(string objidOrDbref)
-	{
-		var dbref = PackageInstallService.ParseObjid(objidOrDbref);
-		return dbref?.Number;
-	}
+		=> HelperFunctions.ParseDbRef(objidOrDbref) is DBRef dbref ? dbref.Number : null;
 
 	private static string Slugify(string name)
 	{

@@ -69,7 +69,7 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 
 	private async Task<string> ReadAttributeAsync(string objid, string attribute)
 	{
-		var dbref = PackageInstallService.ParseObjid(objid)!.Value;
+		var dbref = DBRef.Parse(objid);
 		var leaf = await Database.GetAttributeAsync(dbref, attribute.Split('`'), CancellationToken.None)
 			.LastOrDefaultAsync();
 		return leaf?.Value.ToPlainText() ?? "";
@@ -77,7 +77,7 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 
 	private async Task ClearAttributeAsync(string objid, string attribute)
 	{
-		var dbref = PackageInstallService.ParseObjid(objid)!.Value;
+		var dbref = DBRef.Parse(objid);
 		await Database.ClearAttributeAsync(dbref, attribute.Split('`'), CancellationToken.None);
 	}
 
@@ -125,7 +125,7 @@ public class PackageLifecycleHooksTests(ServerWebAppFactory factory)
 		var install = Applied(await Installer.ApplyAsync(Parse(TeleportManifest(pkg)), new PackageApplyRequest(Source(pkg), answers, [])));
 
 		var markerObjid = install.CreatedObjects["marker"];
-		var markerDbref = PackageInstallService.ParseObjid(markerObjid)!.Value;
+		var markerDbref = DBRef.Parse(markerObjid);
 
 		// The object must be in #2 purely because AINSTALL's `@teleport %!=#2` ran — no manual move.
 		var location = (await Database.GetLocationAsync(markerDbref)).Expect<AnySharpContainer>();

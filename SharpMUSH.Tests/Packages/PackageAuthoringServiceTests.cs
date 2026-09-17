@@ -98,7 +98,7 @@ public class PackageAuthoringServiceTests
 
 		// The clone's code recalls refs via v(PM`REFS`...) (decision 20.21),
 		// and its ref attrs point at the CLONE's dbref and Room Zero.
-		var cloneDbref = PackageInstallService.ParseObjid(cloneObjid)!.Value;
+		var cloneDbref = DBRef.Parse(cloneObjid);
 		var attribute = await Database.GetAttributeAsync(cloneDbref, ["FN_GREET"]).LastOrDefaultAsync();
 		await Assert.That(attribute!.Value.ToPlainText())
 			.IsEqualTo("Hello from [v(PM`REFS`RT_CORE)] near [v(PM`REFS`ROOM_ZERO)]");
