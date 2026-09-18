@@ -297,7 +297,10 @@ public sealed class CommandText
 /// </summary>
 /// <param name="Registers">The current standard registers (%0, %1, named arguments)</param>
 /// <param name="IterationRegisters">The current iteration registers: %i0, #@, etc</param>
-/// <param name="RegexRegisters">The current regex registers, %$0 and named ones.</param>
+/// <param name="RegexRegisters">
+/// The regexp capture frames that <c>$0</c>-<c>$9</c> and <c>$&lt;name&gt;</c> read, innermost on top
+/// (see <see cref="RegexpCaptureFrame"/>). Not <c>%$0</c>, which is the switch text in <see cref="SwitchStack"/>.
+/// </param>
 /// <param name="SwitchStack">The switch context stack for stext() and slev() functions. Tracks the string being matched in nested switch statements.</param>
 /// <param name="CurrentEvaluation">The current evaluation context</param>
 /// <param name="ParserFunctionDepth">The function depth.</param>

@@ -73,11 +73,12 @@ evaluationString:
 ;
 
 explicitEvaluationString:
-    (bracePattern|bracketPattern|beginGenericText|PERCENT validSubstitution) 
+    (bracePattern|bracketPattern|beginGenericText|PERCENT validSubstitution|regexpCapture) 
     (
         bracePattern
       | bracketPattern
       | PERCENT validSubstitution
+      | regexpCapture
       | genericText
     )*
 ;
@@ -88,13 +89,23 @@ explicitEvaluationString:
 // Cannot use evaluationString here as it introduces recursive prediction
 // paths through the function rule that cause AdaptivePredict to hang on complex inputs.
 braceExplicitEvaluationString:
-    (bracePattern|bracketPattern|genericText|PERCENT validSubstitution) 
+    (bracePattern|bracketPattern|genericText|PERCENT validSubstitution|regexpCapture) 
     (
         bracePattern
       | bracketPattern
       | PERCENT validSubstitution
+      | regexpCapture
       | genericText
     )*
+;
+
+// $0-$9 or $<name>. The name is evaluated up to the '>', whether or not a regexp context is live:
+// PennMUSH only decides afterwards whether to look it up or to print it after a literal '$'.
+regexpCapture
+    locals [bool outerCaret]
+    : REGEXP_NUM
+    | REGEXP_STARTCARET { $outerCaret = lookingForRegisterCaret; lookingForRegisterCaret = true; }
+      explicitEvaluationString? CCARET? { lookingForRegisterCaret = $outerCaret; }
 ;
 
 bracePattern:
@@ -172,7 +183,7 @@ beginGenericText:
     | { !lookingForCommandArgEquals || inFunction > 0 }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
     | OPAREN { if (parenGroups) ++inParenDepth; }
-    | (escapedText|OTHER|ansi) 
+    | (escapedText|OTHER|DOLLAR|ansi) 
 ;
 
 escapedText: ESCAPE ANY;

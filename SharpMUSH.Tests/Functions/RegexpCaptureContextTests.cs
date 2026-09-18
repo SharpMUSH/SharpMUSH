@@ -1,4 +1,4 @@
-using SharpMUSH.Library.ParserInterfaces;
+﻿using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Functions;
@@ -60,6 +60,12 @@ public class RegexpCaptureContextTests
 	[Test]
 	[Arguments("$0 $<x>", "$0 $<x>")]
 	[Arguments("[strlen($0)]", "2")]
+	// Only the '$' is literal: what follows it is evaluated as usual (PennMUSH src/parse.c:2342).
+	[Arguments("$<[add(1,1)]>", "$<2>")]
+	// A literal argument keeps its text, even inside a capture context (PE_LITERAL, src/parse.c:2355).
+	[Arguments("[reswitch(abc,a(b)c,lit($1 $<x>))]", "$1 $<x>")]
+	// %$0 is the switch text, not a capture.
+	[Arguments("[reswitch(abc,a(b)c,%$0)]", "abc")]
 	public async Task DollarIsLiteralWithoutAContext(string code, string expected)
 		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
 

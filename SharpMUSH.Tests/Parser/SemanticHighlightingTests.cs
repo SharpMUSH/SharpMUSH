@@ -177,4 +177,16 @@ public class SemanticHighlightingTests
 		await Assert.That(caretToken).IsNotNull();
 		await Assert.That(caretToken!.TokenType).IsEqualTo(SemanticTokenType.Text);
 	}
+
+	[Test]
+	public async Task GetSemanticTokens_RegexpCaptures_AreRegisters()
+	{
+		// $0 and $<name> read regexp captures (#1156); a '$' followed by anything else is text.
+		var tokens = Parser.GetSemanticTokens(MarkupText.Plain("$0 $<first> $x"), ParseType.Function);
+
+		await Assert.That(tokens.Single(t => t.Text == "$0").TokenType).IsEqualTo(SemanticTokenType.Register);
+		await Assert.That(tokens.Single(t => t.Text == "$<").TokenType).IsEqualTo(SemanticTokenType.Register);
+		await Assert.That(tokens.Single(t => t.Text == ">").TokenType).IsEqualTo(SemanticTokenType.Register);
+		await Assert.That(tokens.Single(t => t.Text == "$").TokenType).IsEqualTo(SemanticTokenType.Text);
+	}
 }

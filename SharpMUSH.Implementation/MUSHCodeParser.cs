@@ -1146,6 +1146,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			SharpMUSHParser.ComplexSubstitutionSymbolContext
 				=> SemanticTokenType.Register,
 
+			// $0-$9 and $<name> read regexp captures; $< and its > are Register too.
+			SharpMUSHParser.RegexpCaptureContext
+				=> SemanticTokenType.Register,
+
 			// EQUALS here means %=; DBREF means %#; CALLED_DBREF means %@ — all Substitution.
 			SharpMUSHParser.SubstitutionSymbolContext
 				=> SemanticTokenType.Substitution,
