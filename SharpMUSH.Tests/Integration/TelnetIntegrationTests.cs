@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -13,8 +14,10 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Models.RecurringJobs;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Services.RecurringJobs;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -81,6 +84,8 @@ internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 			File.WriteAllText(temp, "{}");
 			try { File.Copy(temp, colorFile, true); } catch { /* best-effort */ }
 		}
+
+		builder.ConfigureTestServices(TestHostServices.RemoveRecurringJobRunner);
 
 		builder.ConfigureServices(sc =>
 		{
@@ -307,6 +312,31 @@ public class TelnetIntegrationTests
 
 		await Assert.That(postLogin).Contains("Room Zero")
 			.Because("After logging in as God, the auto-look should show Room Zero");
+	}
+
+	/// <summary>
+	/// A job runner in this engine host would fire the recurring-job tests' jobs on the real clock whenever
+	/// it shares their world. An overdue job must read back untouched.
+	/// </summary>
+	[Test]
+	[Timeout(60_000)]
+	public async Task EngineHostRunsNoRecurringJobs(CancellationToken cancellationToken)
+	{
+		var store = Fixture.ServerServices.GetRequiredService<IExpandedDataStore>();
+		var job = new RecurringJob(Guid.NewGuid().ToString("N"), "no-account", "#1:0", "#1:0", "RUN",
+			"* * * * *", "UTC", "", true, 1, 0, null, null, "scheduled", null);
+		await store.SetExpandedServerData(RecurringJobService.StorageKey, new RecurringJobDocument([job]), cancellationToken);
+		try
+		{
+			// The runner polls every second; two ticks would have claimed the job.
+			await Task.Delay(TimeSpan.FromSeconds(2.5), cancellationToken);
+			var seen = await store.GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey, cancellationToken);
+			await Assert.That(seen!.Jobs.Single()).IsEqualTo(job);
+		}
+		finally
+		{
+			await store.SetExpandedServerData(RecurringJobService.StorageKey, new RecurringJobDocument([]), CancellationToken.None);
+		}
 	}
 
 	/// <summary>
