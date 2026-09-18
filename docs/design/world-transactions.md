@@ -79,9 +79,11 @@ Every writer must take the gate, not just most of them. A write that skips it ca
 against an open Lightning session (§4), so the gate is enforced at the Mediator: a write command
 outside both the gate and a transaction fails in debug builds.
 
-## 4. Provider transactions
+## 4. The Lightning transaction
 
-### Lightning
+Lightning is the only storage engine; SurrealDB support was dropped (#1182). A provider added
+later has to supply a transaction with the same semantics before it can support world
+transactions.
 
 Writes today are synchronous jobs on one writer thread (`LightningWriter`), group-committed, with
 each job in a nested child transaction under one parent (`LightningStore.WriteBatch`). An LMDB
@@ -101,21 +103,6 @@ operation. The writer thread has to own it instead:
   mid-transaction loses the transaction whole.
 - Ordinary write jobs wait in the main channel while a session is open. Because every writer holds
   the gate (§3), none should be there.
-
-### SurrealDB
-
-The pinned client, `SurrealDb.Net` 0.9.0, has no multi-request transaction. The provider only
-ever sends single-batch `BEGIN TRANSACTION; …; COMMIT TRANSACTION` strings
-(`SurrealDatabase.Attributes.cs`). Version 1.0.0, which is in the local NuGet cache, adds
-`SurrealDbSession.BeginTransaction` and `SupportsTransactions`. Its embedded RocksDB and in-memory
-engines reference `ISurrealDbEngineWithTransactions`. **Unverified:** whether those engines carry
-an interactive transaction end to end, and whether 1.0.0 needs a newer embedded SurrealDB.
-Phase 2 settles that with a spike. Until then:
-
-- The provider reports `SupportsWorldTransactions = false`.
-- `BeginAsync` still takes the gate, which gives isolation, and the operation keeps writing through
-  `PackageWriteTransaction`, which gives atomicity by compensation. The compensation log stays as
-  the fallback for any provider without a real transaction. It is not thrown away.
 
 ## 5. The cache
 
@@ -160,9 +147,8 @@ have this problem, because it never rolls back.
 | Phase | Scope | Value on its own |
 |---|---|---|
 | **0** | HTTP handler commands become queue entries. Introduce `IWorldGate`, and have portal writes and package operations take it. | P1 parity with Penn. Package operations stop interleaving with play. |
-| **1** | The `IWorldTransaction` seam, the Lightning session (§4), cache deferral (§5) and the outbox (§6). Package apply, rollback and uninstall run in a world transaction when the provider supports one, and fall back to `PackageWriteTransaction` otherwise. | Crash-safe, isolated package operations on the default provider. |
-| **2** | Upgrade to `SurrealDb.Net` 1.x and verify interactive transactions on the embedded engines. | The same guarantee on SurrealDB. |
-| **3** *(optional)* | Run every queue entry in a world transaction that **always commits**: at completion, and on error too, because P3 says an error keeps its effects. Only a crash or a killed process discards it. | P4 parity: what is persisted is always a state between two entries, as a Penn dump is. The cost is that entry reads go to the writer thread, so it would be a configuration switch, measured before it is ever the default. |
+| **1** | The `IWorldTransaction` seam, the Lightning session (§4), cache deferral (§5) and the outbox (§6). Package apply, rollback and uninstall run in a world transaction, and `PackageWriteTransaction` is retired. | Crash-safe, isolated package operations. |
+| **2** *(optional)* | Run every queue entry in a world transaction that **always commits**: at completion, and on error too, because P3 says an error keeps its effects. Only a crash or a killed process discards it. | P4 parity: what is persisted is always a state between two entries, as a Penn dump is. The cost is that entry reads go to the writer thread, so it would be a configuration switch, measured before it is ever the default. |
 
 ## 8. Out of scope
 
@@ -185,7 +171,7 @@ have this problem, because it never rolls back.
 - **Stalls.** A long transaction pauses the game, as a long Penn command does. The budget bounds
   it, and package operations report their duration.
 - **Reads hop threads under Lightning.** That is fine for package operations. It is the open cost
-  of phase 3, and the reason phase 3 is optional.
+  of phase 2, and the reason phase 2 is optional.
 
 ## Tests the design needs
 
@@ -197,4 +183,4 @@ have this problem, because it never rolls back.
   the outbox sent nothing.
 - **Gate.** A queue entry submitted during a transaction runs after it, and sees its writes.
 - **Penn parity.** An HTTP handler command and a queue entry never interleave (phase 0). With
-  phase 3 enabled, killing the process mid-entry leaves the entry's state entirely absent.
+  phase 2 enabled, killing the process mid-entry leaves the entry's state entirely absent.
