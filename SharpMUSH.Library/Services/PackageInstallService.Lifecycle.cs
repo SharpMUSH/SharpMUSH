@@ -181,9 +181,106 @@ public partial class PackageInstallService
 			}
 		}
 
+		return await PlanObjectRollbackAsync(packageId, revision, snapshot, cancellationToken) switch
+		{
+			ObjectRollback objects => await RestoreRevisionAsync(
+				installed, record, snapshot, managedAttributes, sharedRefs, objects, cancellationToken),
+			Error<string> error => error
+		};
+	}
+
+	/// <summary>
+	/// How the package's object registry moves to the objects a revision owned.
+	/// </summary>
+	/// <param name="Wanted">The registry records the revision implies.</param>
+	/// <param name="Stale">Current records the revision does not have (a later object, or a later ref for one).</param>
+	/// <param name="Revive">Owned at the revision, not now: removed later and marked GOING then.</param>
+	/// <param name="Release">Owned now, not at the revision: added later, so marked GOING now.</param>
+	private sealed record ObjectRollback(
+		IReadOnlyList<PackageObjectRecord> Wanted,
+		IReadOnlyList<PackageObjectRecord> Stale,
+		IReadOnlyList<PackageObjectRecord> Revive,
+		IReadOnlyList<PackageObjectRecord> Release);
+
+	/// <summary>
+	/// Works out <see cref="ObjectRollback"/>, refusing before any write when it cannot be done: an
+	/// owned object that no longer exists cannot be recreated, and a snapshot written before
+	/// <see cref="PackageObjectRelation"/> was recorded cannot say whether an entry the registry does
+	/// not hold was owned or only attached.
+	/// </summary>
+	private async Task<Result<ObjectRollback>> PlanObjectRollbackAsync(
+		string packageId, int revision, PackageRevisionSnapshot snapshot, CancellationToken cancellationToken)
+	{
+		var current = await registry.GetPackageObjectsAsync(packageId);
+		var currentObjids = current.Select(o => o.Objid).ToHashSet(StringComparer.Ordinal);
+
+		var wanted = new List<PackageObjectRecord>();
+		foreach (var obj in snapshot.Objects.Where(o => o.Relation != PackageObjectRelation.Attached))
+		{
+			// An unrecorded entry the registry still holds was owned: a package registers only objects it created.
+			if (obj.Relation == PackageObjectRelation.Unrecorded && !currentObjids.Contains(obj.Objid))
+			{
+				return new Error<string>(
+					$"Cannot roll back '{packageId}' to revision {revision}: that revision predates recording whether the "
+					+ $"package owns or only attaches to each object, and {obj.Objid} ({{{{{obj.Ref}}}}}) is not registered "
+					+ "to the package now, so there is no way to tell whether to restore it.");
+			}
+
+			wanted.Add(new PackageObjectRecord(packageId, obj.Ref, obj.Objid, obj.Type));
+		}
+
+		var revive = wanted.Where(o => !currentObjids.Contains(o.Objid)).ToList();
+		foreach (var obj in revive)
+		{
+			if (await GetKnownAsync(obj.Objid, cancellationToken) is null)
+			{
+				return new Error<string>(
+					$"Cannot roll back '{packageId}' to revision {revision}: {obj.Objid} ({{{{{obj.Ref}}}}}) was destroyed "
+					+ "after that revision, and a rollback cannot recreate it.");
+			}
+		}
+
+		var wantedObjids = wanted.Select(o => o.Objid).ToHashSet(StringComparer.Ordinal);
+		return new ObjectRollback(
+			wanted,
+			current.Where(c => !wanted.Any(w => w.Ref == c.Ref && w.Objid == c.Objid)).ToList(),
+			revive,
+			current.Where(c => !wantedObjids.Contains(c.Objid)).ToList());
+	}
+
+	/// <summary>
+	/// The writes of a rollback that has passed every check: objects back into the registry first, so
+	/// the attribute and structure restores find them, and objects the revision did not own released last.
+	/// </summary>
+	private async Task<PackageRollbackResult> RestoreRevisionAsync(
+		InstalledPackageRecord installed,
+		PackageRevisionRecord record,
+		PackageRevisionSnapshot snapshot,
+		IReadOnlyList<ManagedAttributeRecord> managedAttributes,
+		HashSet<(string Objid, string Attribute)> sharedRefs,
+		ObjectRollback objects,
+		CancellationToken cancellationToken)
+	{
+		var packageId = installed.Id;
+		var revision = record.Revision;
 		var notes = new List<string>();
 		var pmWizard = await GetPackageManagerWizardAsync(cancellationToken);
 		var restoredKeys = new HashSet<(string, string)>();
+
+		foreach (var stale in objects.Stale)
+		{
+			await registry.RemovePackageObjectAsync(packageId, stale.Ref);
+		}
+
+		foreach (var owned in objects.Wanted)
+		{
+			await registry.UpsertPackageObjectAsync(owned);
+		}
+
+		foreach (var revived in objects.Revive)
+		{
+			await ClearGoingAsync(revived.Objid, notes, cancellationToken);
+		}
 
 		foreach (var attribute in snapshot.Attributes)
 		{
@@ -219,6 +316,11 @@ public partial class PackageInstallService
 		}
 
 		await RestoreStructureAsync(packageId, snapshot, notes, cancellationToken);
+
+		foreach (var released in objects.Release)
+		{
+			await MarkGoingAsync(released.Objid, notes, cancellationToken);
+		}
 
 		var newRevision = installed.CurrentRevision + 1;
 		await registry.UpsertInstalledPackageAsync(installed with

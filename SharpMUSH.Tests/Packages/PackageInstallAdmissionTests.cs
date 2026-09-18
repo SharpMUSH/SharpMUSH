@@ -1,10 +1,13 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
@@ -16,7 +19,8 @@ namespace SharpMUSH.Tests.Packages;
 /// <summary>
 /// What an apply or rollback must refuse before it writes anything: managed packages whose
 /// dependencies or conflicts are unmet (#1169), application registrations that cannot be built
-/// (#1170, #1171), and rollbacks of packages whose resources the snapshot does not carry (#1172).
+/// (#1170, #1171), rollbacks of packages whose resources the snapshot does not carry (#1172), and
+/// rollbacks that must bring the package's objects back to what the revision owned (#1173).
 /// Each test asserts the state a refusal must leave behind, not only the error.
 /// </summary>
 public class PackageInstallAdmissionTests
@@ -380,6 +384,162 @@ public class PackageInstallAdmissionTests
 		var application = (await Applications.GetApplicationAsync(id)).Expect<RegisteredApplication>();
 		await Assert.That(application.DisplayName).IsEqualTo("Admission Application v2");
 
+		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+	}
+
+	// ── #1173: rollback brings the package's objects back to what the revision owned ──
+
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+
+	/// <summary>A softcode package owning a thing per ref, optionally attached to <c>{{?host}}</c>.</summary>
+	private PackageManifest ObjectsManifest(string id, string version, bool attach, params string[] refs) => Parse($"""
+		package: {id}
+		version: "{version}"
+		configure:
+		  host:
+		    label: "Object to attach to"
+		objects:
+		{string.Concat(refs.Select(r => $"  - ref: {r}\n    type: thing\n    name: {id} {r}\n"))}{(attach ? "  - ref: hook\n    target: \"{{?host}}\"\n    attributes:\n      CMD_ADM: |-\n        $+adm:@pemit %#=attached\n" : "")}
+		""");
+
+	private async Task<Dictionary<string, string>> AttachHostAsync()
+	{
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
+		var location = pmNode.AsContainer;
+		var host = await Database.CreateThingAsync("Admission Attach Host", location, pmNode.Expect<SharpPlayer>(), location);
+		var objid = (await Database.GetObjectNodeAsync(host)).Expect<AnySharpObject>().Object().DBRef.ToString();
+		return new Dictionary<string, string> { ["host"] = objid };
+	}
+
+	private async Task<bool> IsGoingAsync(string objid)
+	{
+		var node = (await Database.GetObjectNodeAsync(DBRef.Parse(objid))).Expect<AnySharpObject>();
+		return await node.Object().Flags.Value.AnyAsync(f => f.Name == "GOING");
+	}
+
+	private async Task<string[]> RegisteredObjidsAsync(string packageId) =>
+		(await Registry.GetPackageObjectsAsync(packageId)).Select(o => o.Objid).Order().ToArray();
+
+	private async Task<IReadOnlyDictionary<string, string>> InstallAsync(
+		PackageManifest manifest, IReadOnlyDictionary<string, string>? answers = null, string commit = "commit-1") =>
+		(await Installer.ApplyAsync(manifest, Request(answers, commit: commit))).Expect<PackageApplyResult>().CreatedObjects;
+
+	[Test, NotInParallel]
+	public async Task Rollback_ReleasesAnObjectAddedAfterTheTarget()
+	{
+		const string id = "adm-rb-added";
+		var first = await InstallAsync(ObjectsManifest(id, "1.0", false, "keep"));
+		var second = await InstallAsync(ObjectsManifest(id, "2.0", false, "keep", "later"), commit: "commit-2");
+
+		await Assert.That((await Installer.RollbackAsync(id, 1)).Value).IsTypeOf<PackageRollbackResult>();
+
+		await Assert.That(await RegisteredObjidsAsync(id)).IsEquivalentTo([first["keep"]]);
+		await Assert.That(await IsGoingAsync(second["later"])).IsTrue();
+		await Assert.That(await IsGoingAsync(first["keep"])).IsFalse();
+		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+	}
+
+	[Test, NotInParallel]
+	public async Task Rollback_ReRegistersAnObjectRemovedAfterTheTarget()
+	{
+		const string id = "adm-rb-removed";
+		var first = await InstallAsync(ObjectsManifest(id, "1.0", false, "keep", "dropped"));
+		await InstallAsync(ObjectsManifest(id, "2.0", false, "keep"), commit: "commit-2");
+		await Assert.That(await IsGoingAsync(first["dropped"])).IsTrue();
+
+		await Assert.That((await Installer.RollbackAsync(id, 1)).Value).IsTypeOf<PackageRollbackResult>();
+
+		await Assert.That(await RegisteredObjidsAsync(id)).IsEquivalentTo(new[] { first["keep"], first["dropped"] }.Order().ToArray());
+		await Assert.That(await IsGoingAsync(first["dropped"])).IsFalse();
+		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+	}
+
+	[Test, NotInParallel]
+	public async Task Rollback_RefusesWhenAnObjectItOwnedWasDestroyed()
+	{
+		const string id = "adm-rb-destroyed";
+		var first = await InstallAsync(ObjectsManifest(id, "1.0", false, "keep", "gone"));
+		await InstallAsync(ObjectsManifest(id, "2.0", false, "keep"), commit: "commit-2");
+		await Mediator.Send(new DeleteObjectCommand(DBRef.Parse(first["gone"])));
+
+		var result = await Installer.RollbackAsync(id, 1);
+
+		await Assert.That(result.Expect<Error<string>>().Value).Contains($"{first["gone"]} ({{{{gone}}}}) was destroyed");
+		await Assert.That(await RegisteredObjidsAsync(id)).IsEquivalentTo([first["keep"]]);
+		var installed = (await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>();
+		await Assert.That(installed.Version).IsEqualTo("2.0.0");
+		await Assert.That(installed.CurrentRevision).IsEqualTo(2);
+		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+	}
+
+	[Test, NotInParallel]
+	public async Task Rollback_NeverRegistersAnAttachTarget()
+	{
+		const string id = "adm-rb-attach";
+		var answers = await AttachHostAsync();
+		var first = await InstallAsync(ObjectsManifest(id, "1.0", true, "keep", "dropped"), answers);
+		await InstallAsync(ObjectsManifest(id, "2.0", true, "keep"), answers, "commit-2");
+
+		var snapshot = JsonSerializer.Deserialize<PackageRevisionSnapshot>(
+			(await Registry.GetPackageRevisionAsync(id, 1)).Expect<PackageRevisionRecord>().ManifestSnapshotJson,
+			new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+		await Assert.That(snapshot.Objects.Single(o => o.Ref == "hook").Relation).IsEqualTo(PackageObjectRelation.Attached);
+		await Assert.That(snapshot.Objects.Single(o => o.Ref == "keep").Relation).IsEqualTo(PackageObjectRelation.Owned);
+
+		await Assert.That((await Installer.RollbackAsync(id, 1)).Value).IsTypeOf<PackageRollbackResult>();
+
+		await Assert.That(await RegisteredObjidsAsync(id)).IsEquivalentTo(new[] { first["keep"], first["dropped"] }.Order().ToArray());
+		await Assert.That(await IsGoingAsync(answers["host"])).IsFalse();
+		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+		await Assert.That(await IsGoingAsync(answers["host"])).IsFalse()
+			.Because("uninstall destroys only what the package owns, and the rollback must not have made it the host's owner");
+	}
+
+	/// <summary>
+	/// A revision written before <see cref="PackageObjectRelation"/> existed lists attached and owned
+	/// objects alike, with no relation property at all.
+	/// </summary>
+	private async Task AddLegacyRevisionAsync(string packageId, int revision, params (string Ref, string Objid)[] objects)
+	{
+		var json = JsonSerializer.Serialize(new
+		{
+			version = "1.0.0",
+			objects = objects.Select(o => new { @ref = o.Ref, objid = o.Objid, type = "thing" }),
+			attributes = Array.Empty<object>()
+		});
+		await Registry.AddPackageRevisionAsync(new PackageRevisionRecord(packageId, revision, PackageRevisionKind.Install,
+			"1.0.0", "legacy", json, "{}", "[]", DateTimeOffset.UtcNow));
+	}
+
+	[Test, NotInParallel]
+	public async Task Rollback_ToALegacyRevision_RefusesAnEntryItCannotClassify()
+	{
+		const string id = "adm-rb-legacy-ambiguous";
+		var answers = await AttachHostAsync();
+		var created = await InstallAsync(ObjectsManifest(id, "1.0", true, "keep"), answers);
+		await AddLegacyRevisionAsync(id, 50, ("keep", created["keep"]), ("hook", answers["host"]));
+
+		var result = await Installer.RollbackAsync(id, 50);
+
+		await Assert.That(result.Expect<Error<string>>().Value).Contains($"{answers["host"]} ({{{{hook}}}}) is not registered");
+		await Assert.That(await RegisteredObjidsAsync(id)).IsEquivalentTo([created["keep"]]);
+		await Assert.That((await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>().CurrentRevision).IsEqualTo(1);
+		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+		await Assert.That(await IsGoingAsync(answers["host"])).IsFalse();
+	}
+
+	[Test, NotInParallel]
+	public async Task Rollback_ToALegacyRevision_KeepsWhatTheRegistryProvesWasOwned()
+	{
+		const string id = "adm-rb-legacy-owned";
+		var first = await InstallAsync(ObjectsManifest(id, "1.0", false, "keep"));
+		var second = await InstallAsync(ObjectsManifest(id, "2.0", false, "keep", "later"), commit: "commit-2");
+		await AddLegacyRevisionAsync(id, 50, ("keep", first["keep"]));
+
+		await Assert.That((await Installer.RollbackAsync(id, 50)).Value).IsTypeOf<PackageRollbackResult>();
+
+		await Assert.That(await RegisteredObjidsAsync(id)).IsEquivalentTo([first["keep"]]);
+		await Assert.That(await IsGoingAsync(second["later"])).IsTrue();
 		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
 	}
 }

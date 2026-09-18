@@ -57,6 +57,19 @@ public partial class PackageInstallService(
 		notes.Add($"{objid}: marked GOING for garbage collection.");
 	}
 
+	private async Task ClearGoingAsync(string objid, List<string> notes, CancellationToken cancellationToken)
+	{
+		if (await GetKnownAsync(objid, cancellationToken) is not AnySharpObject node
+			|| await flags.GetObjectFlagAsync("GOING", cancellationToken) is not SharpObjectFlag going
+			|| !await node.Object().Flags.Value.AnyAsync(f => f.Name == going.Name, cancellationToken))
+		{
+			return;
+		}
+
+		await mediator.Send(new UnsetObjectFlagCommand(node, going), cancellationToken);
+		notes.Add($"{objid}: GOING cleared; restored to the package.");
+	}
+
 	private async Task<AnySharpObject?> GetKnownAsync(string objid, CancellationToken cancellationToken)
 	{
 		if (HelperFunctions.ParseDbRef(objid) is not DBRef dbref)

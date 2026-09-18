@@ -281,7 +281,8 @@ public partial class PackageInstallService
 		var snapshot = new PackageRevisionSnapshot(
 			manifest.Version.ToString(),
 			manifest.Objects
-				.Select(o => new PackageRevisionSnapshotObject(o.Ref, objidByRef[o.Ref], o.Type.ToString().ToLowerInvariant()))
+				.Select(o => new PackageRevisionSnapshotObject(o.Ref, objidByRef[o.Ref], o.Type.ToString().ToLowerInvariant(),
+					o.IsAttach ? PackageObjectRelation.Attached : PackageObjectRelation.Owned))
 				.ToList(),
 			finalValues.Select(kv => new PackageRevisionSnapshotAttribute(kv.Key.Objid, kv.Key.Attribute, kv.Value)).ToList(),
 			structureSnapshot);
