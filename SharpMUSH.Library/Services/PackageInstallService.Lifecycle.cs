@@ -123,6 +123,24 @@ public partial class PackageInstallService
 			return new Error<string>($"'{packageId}' is not installed.");
 		}
 
+		// A revision snapshot carries version, objects, attributes and structure. A managed package's
+		// deployed files and an application package's portal registration live outside it, so a
+		// rollback would move the recorded version while the newer DLLs or registration stayed live.
+		if (installed.DeployedFiles is { Count: > 0 })
+		{
+			return new Error<string>(
+				$"Cannot roll back '{packageId}': it is a managed package, and its revisions do not keep the files "
+				+ $"deployed under plugins/{packageId}/. Install the version you want instead.");
+		}
+
+		if ((await applications.GetApplicationsAsync())
+			.Any(a => string.Equals(a.OwningPackage, packageId, StringComparison.Ordinal)))
+		{
+			return new Error<string>(
+				$"Cannot roll back '{packageId}': it registers a portal application, and its revisions do not keep "
+				+ "that registration. Install the version you want instead.");
+		}
+
 		if (await registry.GetPackageRevisionAsync(packageId, revision) is not PackageRevisionRecord record)
 		{
 			return new Error<string>($"'{packageId}' has no revision {revision}.");

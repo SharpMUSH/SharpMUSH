@@ -333,4 +333,53 @@ public class PackageInstallAdmissionTests
 		await Assert.That(application.Zones!).IsEquivalentTo([Library.Models.Portal.Widgets.WidgetZone.RightSidebar]);
 		await Assert.That((await Installer.UninstallAsync("adm-app-zone-ok")).Value).IsTypeOf<Success>();
 	}
+
+	// ── #1172: rollback refuses what its snapshot cannot restore ────────────
+
+	[Test, NotInParallel]
+	public async Task Rollback_OfAManagedPackage_IsRefusedAndChangesNothing()
+	{
+		using var scope = CreateManagedScope();
+		var id = "adm-managed-rollback";
+		await Assert.That((await scope.Installer.ApplyAsync(ManagedManifest(id, "1.0.0"), Request(allowManagedCode: true),
+			CancellationToken.None, new FixtureBinarySource())).Value).IsTypeOf<PackageApplyResult>();
+		await Assert.That((await scope.Installer.ApplyAsync(ManagedManifest(id, "2.0.0"), Request(allowManagedCode: true, commit: "commit-2"),
+			CancellationToken.None, new FixtureBinarySource())).Value).IsTypeOf<PackageApplyResult>();
+
+		var result = await scope.Installer.RollbackAsync(id, 1);
+
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("managed package");
+		var installed = (await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>();
+		await Assert.That(installed.Version).IsEqualTo("2.0.0");
+		await Assert.That(installed.CurrentRevision).IsEqualTo(2);
+		await Assert.That((await Registry.GetPackageRevisionsAsync(id)).Count).IsEqualTo(2);
+		await Assert.That(scope.Deposited(id)).IsTrue();
+
+		await Assert.That((await scope.Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+	}
+
+	[Test, NotInParallel]
+	public async Task Rollback_OfAnApplicationPackage_IsRefusedAndChangesNothing()
+	{
+		var id = "adm-app-rollback";
+		var v1 = ApplicationManifest(id);
+		var v2 = v1 with
+		{
+			Version = PackageVersion.TryParse("2.0.0", out var two) ? two : throw new InvalidOperationException(),
+			Application = v1.Application! with { DisplayName = "Admission Application v2" }
+		};
+		await Assert.That((await Installer.ApplyAsync(v1, Request())).Value).IsTypeOf<PackageApplyResult>();
+		await Assert.That((await Installer.ApplyAsync(v2, Request(commit: "commit-2"))).Value).IsTypeOf<PackageApplyResult>();
+
+		var result = await Installer.RollbackAsync(id, 1);
+
+		await Assert.That(result.Expect<Error<string>>().Value).Contains("application");
+		var installed = (await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>();
+		await Assert.That(installed.Version).IsEqualTo("2.0.0");
+		await Assert.That(installed.CurrentRevision).IsEqualTo(2);
+		var application = (await Applications.GetApplicationAsync(id)).Expect<RegisteredApplication>();
+		await Assert.That(application.DisplayName).IsEqualTo("Admission Application v2");
+
+		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+	}
 }
