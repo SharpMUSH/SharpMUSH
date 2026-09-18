@@ -1,7 +1,9 @@
 # World Transactions
 
-**Status:** Proposed. Nothing here is built yet. When accepted, it amends `engine-data-trunk.md`
-§1 (cache policy) and §8 (one engine process).
+**Status:** Proposed only. Deferred and not scheduled: this records the design so it is not
+lost, and is not a plan of work. Nothing here is built. Package operations use the compensation log
+(`PackageWriteTransaction`) until this is taken up. If it is ever accepted, it amends
+`engine-data-trunk.md` §1 (cache policy) and §8 (one engine process).
 
 Package operations are atomic today only by compensation (`PackageWriteTransaction`). Each write
 records its inverse, and a failure replays the inverses. That covers failures the process lives
