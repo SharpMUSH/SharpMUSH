@@ -9,9 +9,9 @@ namespace SharpMUSH.Library.Services;
 
 /// <summary>
 /// Implements authoring scan/export (Phase 7). See
-/// <see cref="IPackageAuthoringService"/>. v1 scope: top-level attributes,
-/// object flags, and parents; locks and attribute trees are left for the
-/// authoring UI iteration.
+/// <see cref="IPackageAuthoringService"/>. Scope: attribute trees, object flags,
+/// and parents; powers and locks are left for the authoring UI iteration, since
+/// the scan does not read them.
 /// </summary>
 public partial class PackageAuthoringService(
 	IObjectStore database,
@@ -235,16 +235,20 @@ public partial class PackageAuthoringService(
 		var sharpObject = known.Object();
 
 		var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-		await foreach (var attribute in attributeStore.GetAttributesAsync(dbref, "*", cancellationToken))
+		// "**" is the whole attribute tree, not just its top level — a single "*" stays inside one
+		// level, so a child such as DESC`SHORT was read by nobody and silently absent from the
+		// manifest. Keyed by LongName because that backtick-joined path is what the manifest carries
+		// and what the apply engine splits again; the leaf Name alone would collide across branches.
+		await foreach (var attribute in attributeStore.GetAttributesAsync(dbref, "**", cancellationToken))
 		{
 			// The PM` tree is engine-managed ref indirection (decision 20.21) —
 			// the apply engine recreates it; exports must never carry it.
-			if (PackageRefIndirection.IsReservedAttribute(attribute.Name))
+			if (PackageRefIndirection.IsReservedAttribute(attribute.LongName))
 			{
 				continue;
 			}
 
-			attributes[attribute.Name] = attribute.Value.ToPlainText();
+			attributes[attribute.LongName] = attribute.Value.ToPlainText();
 		}
 
 		var flags = new List<string>();

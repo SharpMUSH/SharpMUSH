@@ -1003,7 +1003,7 @@ public partial class SurrealDatabase(
 		}
 	}
 
-	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
+	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/\\]")]
 	private static partial Regex WildcardToRegex();
 
 	#endregion

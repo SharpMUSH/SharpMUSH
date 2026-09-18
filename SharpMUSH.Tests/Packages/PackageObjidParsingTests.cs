@@ -17,16 +17,22 @@ public class PackageObjidParsingTests
 	public async Task BareDbrefParses(string text, int number)
 	{
 		await Assert.That(DBRef.TryParse(text, out var dbref)).IsTrue();
-		await Assert.That(dbref!.Value.Number).IsEqualTo(number);
-		await Assert.That(dbref.Value.CreationMilliseconds).IsNull();
+		await Assert.That(dbref).IsNotNull();
+
+		var parsed = dbref.GetValueOrDefault();
+		await Assert.That(parsed.Number).IsEqualTo(number);
+		await Assert.That(parsed.CreationMilliseconds).IsNull();
 	}
 
 	[Test]
 	public async Task FullObjidParses()
 	{
 		await Assert.That(DBRef.TryParse("#7:1700000000", out var dbref)).IsTrue();
-		await Assert.That(dbref!.Value.Number).IsEqualTo(7);
-		await Assert.That(dbref.Value.CreationMilliseconds).IsEqualTo(1700000000L);
+		await Assert.That(dbref).IsNotNull();
+
+		var parsed = dbref.GetValueOrDefault();
+		await Assert.That(parsed.Number).IsEqualTo(7);
+		await Assert.That(parsed.CreationMilliseconds).IsEqualTo(1700000000L);
 	}
 
 	/// <summary>
