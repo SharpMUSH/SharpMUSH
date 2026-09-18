@@ -196,8 +196,9 @@ purpose.<br>
 reason separately and often not giving one at all.<br>
 **SharpMUSH** puts the reason after the number: `#-1 PERMISSION DENIED`, `#-1 NO MATCH`,
 `#-1 NO ZONE SET`, `#-1 NO DROP-TO`, `#-2 I DON'T KNOW WHICH ONE YOU MEAN`, `#-2 VARIABLE
-DESTINATION`, `#-3 HOME`, and so on. A function does not also notify you of a reason its return value
-already carries.<br>
+DESTINATION`, `#-3 HOME`, and so on. Where PennMUSH notified a reason and returned a bare `#-1`, as
+`hidden()` did, the reason is now the return value and nothing is notified. A function that looks an
+object up still says "I can't see that here." when the match fails, as PennMUSH's does.<br>
 **Why.** A bare `#-1` reads the same whether the object was missing, refused, or simply had nothing
 to report, and a notification sent from inside `iter()` arrives once per element.<br>
 **Workaround.** Test the prefix, as PennMUSH's own test suite does: `strmatch(%0,#-*)`, or `t()`,
