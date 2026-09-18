@@ -39,7 +39,7 @@ internal static class DefinitionCreationContract
 	}
 	internal static async Task<World> Open()
 	{
-		var path = Path.Combine(Path.GetTempPath(), "definitions-" + Guid.NewGuid().ToString("N"));
+		var path = Path.Join(Path.GetTempPath(), "definitions-" + Guid.NewGuid().ToString("N"));
 		var db = new LightningDatabase(NullLogger<LightningDatabase>.Instance,
 			new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);
 		async ValueTask Cleanup()
