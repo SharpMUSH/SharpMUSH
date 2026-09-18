@@ -113,11 +113,8 @@ jobs:
     env:
       # Detailed console output and TRX retain results without the optional HTML report.
       TUNIT_DISABLE_HTML_REPORTER: "true"
-    # Backstop only. It must clear the retry budget below (2 x 30 minutes, plus up to 40 seconds of
-    # process cleanup per attempt) and ~3 minutes of checkout and artifact download, or it would
-    # truncate the second attempt — reintroducing the killed-mid-run failure this timeout exists to
-    # prevent.
-    timeout-minutes: 70
+    # Backstop only: the Test step's own deadline plus checkout and artifact download.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v6
 
@@ -152,11 +149,9 @@ jobs:
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
-        # Retain the retry budget while test isolation is repaired. run_owned.py stops everything an
-        # attempt started before the next one begins, so a retry never runs beside the one it replaced.
-        # Keep the existing concurrency and execution deadlines.
+        # No retry: a test that fails once is an isolation or ordering bug to fix, not to re-roll.
+        timeout-minutes: 30
         run: >-
-          exec python3 .github/scripts/run_owned.py --attempts 2 --timeout-minutes 30 --
           dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/unit" --maximum-parallel-tests 8
 
       - name: Upload unit test results
@@ -225,8 +220,8 @@ jobs:
           python3 .github/scripts/ensure-test-packages.py
 
       - name: BUnit Tests
+        timeout-minutes: 10
         run: >-
-          exec python3 .github/scripts/run_owned.py --attempts 3 --timeout-minutes 10 --
           dotnet run --project SharpMUSH.Tests.BUnit --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/bunit"
 
       - name: Upload bunit test results
@@ -329,8 +324,8 @@ jobs:
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry-integration.md
+        timeout-minutes: 10
         run: >-
-          exec python3 .github/scripts/run_owned.py --attempts 3 --timeout-minutes 10 --
           dotnet run --project SharpMUSH.Tests.Integration --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/integration" --maximum-parallel-tests 8
 
       - name: Upload integration test results
