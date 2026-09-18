@@ -10,9 +10,8 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// <see cref="IChannelStore"/>: chat channels and memberships. Ported from
-/// <c>SurrealDatabase.Channels.cs</c>. There is no <c>owner_of_channel</c>/<c>member_of_channel</c> graph
-/// here — <see cref="Tables.Chan"/> is keyed <c>Keys.Upper(name)</c> with the owner as a plain dbref field
+/// <see cref="IChannelStore"/>: chat channels and memberships. There is no ownership or membership
+/// graph — <see cref="Tables.Chan"/> is keyed <c>Keys.Upper(name)</c> with the owner as a plain dbref field
 /// on <see cref="ChannelRecord"/>; <see cref="Tables.ChanMember"/> is keyed
 /// <c>Keys.Composite(NAME, dbref)</c> so every member of one channel is a single prefix range; and
 /// <see cref="Tables.RevChanMember"/> is keyed by the member's dbref (duplicates) so
@@ -20,7 +19,7 @@ namespace SharpMUSH.Database.Lightning;
 /// object belonged to without scanning every channel.
 ///
 /// <para><c>CreateChannelAsync</c> needs no lock beyond the store's own single-writer serialization:
-/// unlike SurrealDB's optimistic embedded engine, only one job runs on the LMDB writer thread at a time,
+/// only one job runs on the LMDB writer thread at a time,
 /// so a <c>TryGet</c> immediately followed by a <c>Put</c> inside one job is already atomic with respect
 /// to every other create.</para>
 /// </summary>

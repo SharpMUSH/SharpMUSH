@@ -1,6 +1,6 @@
 namespace SharpMUSH.Database.Lightning.Records;
 
-/// <summary>Mirrors <c>SurrealDatabase.SysPackageDbRecord</c> / <c>InstalledPackageRecord</c>.</summary>
+/// <summary>The stored form of <c>SharpMUSH.Library.Models.Packages.InstalledPackageRecord</c>.</summary>
 public sealed record InstalledPackageRecord
 {
 	public string PackageId { get; init; } = "";
@@ -14,7 +14,7 @@ public sealed record InstalledPackageRecord
 	public string[]? DeployedFiles { get; init; }
 }
 
-/// <summary>Mirrors <c>SurrealDatabase.SysPackageObjectDbRecord</c> / <c>PackageObjectRecord</c>.</summary>
+/// <summary>The stored form of <c>SharpMUSH.Library.Models.Packages.PackageObjectRecord</c>.</summary>
 public sealed record PackageObjectRecord
 {
 	public string PackageId { get; init; } = "";
@@ -23,7 +23,7 @@ public sealed record PackageObjectRecord
 	public string ObjectType { get; init; } = "";
 }
 
-/// <summary>Mirrors <c>SurrealDatabase.SysManagedAttributeDbRecord</c> / <c>ManagedAttributeRecord</c>.</summary>
+/// <summary>The stored form of <c>SharpMUSH.Library.Models.Packages.ManagedAttributeRecord</c>.</summary>
 public sealed record ManagedAttributeRecord
 {
 	public string PackageId { get; init; } = "";
@@ -34,7 +34,7 @@ public sealed record ManagedAttributeRecord
 	public string BaselineVersion { get; init; } = "";
 }
 
-/// <summary>Mirrors <c>SurrealDatabase.SysManagedStructureDbRecord</c> / <c>ManagedStructureRecord</c>.</summary>
+/// <summary>The stored form of <c>SharpMUSH.Library.Models.Packages.ManagedStructureRecord</c>.</summary>
 public sealed record ManagedStructureRecord
 {
 	public string PackageId { get; init; } = "";
@@ -43,7 +43,7 @@ public sealed record ManagedStructureRecord
 	public string BaselineVersion { get; init; } = "";
 }
 
-/// <summary>Mirrors <c>SurrealDatabase.SysPackageDependencyDbRecord</c> / <c>PackageDependencyRecord</c>.</summary>
+/// <summary>The stored form of <c>SharpMUSH.Library.Models.Packages.PackageDependencyRecord</c>.</summary>
 public sealed record PackageDependencyRecord
 {
 	public string PackageId { get; init; } = "";
@@ -52,7 +52,7 @@ public sealed record PackageDependencyRecord
 }
 
 /// <summary>
-/// Mirrors <c>SurrealDatabase.SysRemoteDbRecord</c> / <c>PackageRemoteRecord</c>. <c>Trust</c> is
+/// The stored form of <c>SharpMUSH.Library.Models.Packages.PackageRemoteRecord</c>. <c>Trust</c> is
 /// <c>PackageRemoteTrust.ToString()</c>.
 /// </summary>
 public sealed record PackageRemoteRecord
@@ -64,7 +64,7 @@ public sealed record PackageRemoteRecord
 }
 
 /// <summary>
-/// Mirrors <c>SurrealDatabase.SysPackageRevisionDbRecord</c> / <c>PackageRevisionRecord</c>.
+/// The stored form of <c>SharpMUSH.Library.Models.Packages.PackageRevisionRecord</c>.
 /// <c>Kind</c> is <c>PackageRevisionKind.ToString()</c>.
 /// </summary>
 public sealed record PackageRevisionRecord

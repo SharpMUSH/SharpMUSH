@@ -84,8 +84,8 @@ public class SceneCommandFunctionIntegrationTests
 	}
 
 	/// <summary>
-	/// Service-level (runs on every provider, including SurrealDB): scene and pose ids come from 1-based
-	/// trailing numeric segment in all cases.
+	/// Service-level: scene and pose ids come from 1-based sequential counters, and are bare numbers in
+	/// all cases.
 	/// </summary>
 	[Test]
 	public async Task SceneAndPoseIds_AreSequentialCounters_ViaService()

@@ -9,11 +9,9 @@ namespace SharpMUSH.Tests.Database;
 public class AttributeOwnerPersistenceTests
 {
 	[Test]
-	[Arguments("lightning")]
-	[Arguments("surrealdb")]
-	public async Task OwnerChangePreservesAncestorsValuesAndFlags(string provider)
+	public async Task OwnerChangePreservesAncestorsValuesAndFlags()
 	{
-		await using var world = await DefinitionCreationContract.Open(provider);
+		await using var world = await DefinitionCreationContract.Open();
 		var db = world.Database;
 		var original = (await db.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
 		var playerRef = await db.CreatePlayerAsync("NewOwner", "password", new DBRef(0), new DBRef(0), 100);

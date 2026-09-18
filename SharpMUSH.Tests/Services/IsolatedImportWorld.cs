@@ -10,17 +10,14 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
-using SharpMUSH.Database.SurrealDB;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Server;
-using SurrealDb.Net;
 using System.Runtime.ExceptionServices;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -45,14 +42,12 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 	private const string UnreachableNats = "nats://127.0.0.1:1";
 
 	private readonly ServiceProvider _services;
-	private readonly string? _lightningPath;
-	private readonly ServiceProvider? _surrealServices;
+	private readonly string _lightningPath;
 
-	private IsolatedImportWorld(ServiceProvider services, string? lightningPath, ServiceProvider? surrealServices)
+	private IsolatedImportWorld(ServiceProvider services, string lightningPath)
 	{
 		_services = services;
 		_lightningPath = lightningPath;
-		_surrealServices = surrealServices;
 	}
 
 	public IPennMUSHDatabaseConverter Converter => _services.GetRequiredService<IPennMUSHDatabaseConverter>();
@@ -66,21 +61,10 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 
 	public IPasswordService Passwords => _services.GetRequiredService<IPasswordService>();
 
-	public static Task<IsolatedImportWorld> CreateAsync()
+	internal string LightningPath => _lightningPath;
+
+	public static async Task<IsolatedImportWorld> CreateAsync(Action<IServiceCollection>? configureServices = null)
 	{
-		var useSurreal = string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER"),
-			"surrealdb", StringComparison.OrdinalIgnoreCase);
-		return CreateAsync(useSurreal ? DatabaseProvider.SurrealDB : DatabaseProvider.Lightning);
-	}
-
-	internal string? LightningPath => _lightningPath;
-
-	internal static async Task<IsolatedImportWorld> CreateAsync(DatabaseProvider databaseProvider,
-		Action<IServiceCollection>? configureServices = null,
-		Action<IServiceCollection>? configureSurrealServices = null)
-	{
-		var useSurreal = databaseProvider == DatabaseProvider.SurrealDB;
-
 		var environment = Substitute.For<IHostEnvironment>();
 		environment.EnvironmentName.Returns(Environments.Development);
 		environment.ApplicationName.Returns("SharpMUSH.Server");
@@ -89,43 +73,19 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 		var services = new ServiceCollection();
 		new Startup(
 				colorFile: Path.Join(AppContext.BaseDirectory, "colors.json"),
-				natsUrl: UnreachableNats,
-				databaseProvider: useSurreal ? DatabaseProvider.SurrealDB : DatabaseProvider.Lightning)
+				natsUrl: UnreachableNats)
 			.ConfigureServices(services, new ConfigurationBuilder().Build(), environment);
 
-		string? lightningPath = null;
-		ServiceProvider? surrealServices = null;
+		var lightningPath = Path.Join(Path.GetTempPath(), $"sharpmush-import-isolated-{Guid.NewGuid():N}");
 		ServiceProvider? provider = null;
 		try
 		{
-			if (useSurreal)
-			{
-				// Always the embedded in-memory engine, whatever endpoint the shared world is on.
-				var surrealCollection = new ServiceCollection();
-				surrealCollection.AddSurreal($"Endpoint=mem://;Namespace=sharpmush;Database=import_{Guid.NewGuid():N}")
-					.AddInMemoryProvider();
-				configureSurrealServices?.Invoke(surrealCollection);
-				surrealServices = surrealCollection.BuildServiceProvider();
-				var client = surrealServices.GetRequiredService<ISurrealDbClient>();
-				await client.Connect();
-
-				services.AddSingleton(sp => new SurrealDatabase(
-					sp.GetRequiredService<ILogger<SurrealDatabase>>(), client,
-					sp.GetRequiredService<IPasswordService>(), sp.GetRequiredService<IObjectRelationLoader>(),
-					sp.GetRequiredService<PluginCatalog>().MigrationSources,
-					sp.GetRequiredService<PluginCatalog>().AllFlags));
-			}
-			else
-			{
-				lightningPath = Path.Join(Path.GetTempPath(), $"sharpmush-import-isolated-{Guid.NewGuid():N}");
-				var path = lightningPath;
-				services.AddSingleton(sp => new LightningDatabase(
-					sp.GetRequiredService<ILogger<LightningDatabase>>(),
-					new LightningStoreOptions { Path = path, MapSize = 1L << 30 },
-					sp.GetRequiredService<IPasswordService>(), sp.GetRequiredService<IObjectRelationLoader>(),
-					sp.GetRequiredService<PluginCatalog>().MigrationSources,
-					sp.GetRequiredService<PluginCatalog>().AllFlags));
-			}
+			services.AddSingleton(sp => new LightningDatabase(
+				sp.GetRequiredService<ILogger<LightningDatabase>>(),
+				new LightningStoreOptions { Path = lightningPath, MapSize = 1L << 30 },
+				sp.GetRequiredService<IPasswordService>(), sp.GetRequiredService<IObjectRelationLoader>(),
+				sp.GetRequiredService<PluginCatalog>().MigrationSources,
+				sp.GetRequiredService<PluginCatalog>().AllFlags));
 
 			// The same configuration the shared test host runs on. A world being built has nobody connected
 			// to it, so nothing here talks to NATS: no notifier, no message bus, and no connection store,
@@ -159,11 +119,11 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 			// resets: every later Send spins forever. The host's first Send is at startup; this is ours, so
 			// a failure to build the table surfaces here as the exception it is.
 			await provider.GetRequiredService<IMediator>().Send(new GetObjectNodeQuery(new DBRef(0)));
-			return new IsolatedImportWorld(provider, lightningPath, surrealServices);
+			return new IsolatedImportWorld(provider, lightningPath);
 		}
 		catch (Exception initializationFailure)
 		{
-			var cleanupFailures = await CleanupAsync(provider, surrealServices, lightningPath);
+			var cleanupFailures = await CleanupAsync(provider, lightningPath);
 			if (cleanupFailures.Count > 0)
 				throw new AggregateException("Import world initialization and cleanup failed.", [initializationFailure, .. cleanupFailures]);
 			throw;
@@ -172,16 +132,15 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 
 	public async ValueTask DisposeAsync()
 	{
-		var failures = await CleanupAsync(_services, _surrealServices, _lightningPath);
+		var failures = await CleanupAsync(_services, _lightningPath);
 		if (failures.Count == 1) ExceptionDispatchInfo.Capture(failures[0]).Throw();
 		if (failures.Count > 1) throw new AggregateException("Import world cleanup failed.", failures);
 	}
 
-	private static async ValueTask<List<Exception>> CleanupAsync(ServiceProvider? services,
-		ServiceProvider? surrealServices, string? lightningPath)
+	private static async ValueTask<List<Exception>> CleanupAsync(ServiceProvider? services, string lightningPath)
 	{
 		var failures = new List<Exception>();
-		// Each provider and the owned directory need an attempt even if another resource fails.
+		// The owned directory needs an attempt even if disposing the container fails.
 		try
 		{
 			if (services is not null) await services.DisposeAsync();
@@ -189,12 +148,7 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 		catch (Exception failure) { failures.Add(failure); }
 		try
 		{
-			if (surrealServices is not null) await surrealServices.DisposeAsync();
-		}
-		catch (Exception failure) { failures.Add(failure); }
-		try
-		{
-			if (lightningPath is not null && Directory.Exists(lightningPath)) Directory.Delete(lightningPath, recursive: true);
+			if (Directory.Exists(lightningPath)) Directory.Delete(lightningPath, recursive: true);
 		}
 		catch (Exception failure) { failures.Add(failure); }
 		return failures;

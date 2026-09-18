@@ -1,8 +1,7 @@
 namespace SharpMUSH.Database.Seed;
 
 /// <summary>
-/// The built-in attribute flags, shared verbatim across all database providers. Copied from
-/// <c>SharpMUSH.Database.SurrealDB/SurrealDatabase.Migration.cs</c> (<c>CreateInitialAttributeFlags</c>).
+/// The built-in attribute flags a new world is seeded with.
 /// </summary>
 public static class AttributeFlagSeed
 {

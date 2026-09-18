@@ -469,7 +469,7 @@ internal sealed class AttributeWriter(
 		// parent->child edges, so a node can only appear in the results if every ancestor
 		// between the object root and that node has its own vertex and edge - an "FOO`BAR`BAZ
 		// exists but FOO`BAR doesn't" gap is not representable by the traversal that produced
-		// this list in the first place (both supported providers share this edge-per-level model).
+		// this list in the first place (the provider stores one node per level).
 		// If that ever stopped holding, a node whose immediate parent is missing from this set
 		// would be "nobody's child" to IsDirectChildOf and so could never block an ancestor's
 		// fullyClearable computation - the mitigation, if it were ever needed, would be to

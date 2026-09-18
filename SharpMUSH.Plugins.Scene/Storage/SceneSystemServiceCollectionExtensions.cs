@@ -1,48 +1,32 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Plugins.Storage;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Plugins.Scene.Storage;
 
 /// <summary>
-/// ASP.NET-style, config-driven, behavior-extensible registration for the Scene System's storage,
-/// owned by the Scene plugin. <c>ScenePlugin.RegisterServices</c> calls <see cref="AddSceneSystem"/>.
+/// ASP.NET-style, behavior-extensible registration for the Scene System's storage, owned by the Scene
+/// plugin. <c>ScenePlugin.RegisterServices</c> calls <see cref="AddSceneSystem"/>.
 /// </summary>
 public static class SceneSystemServiceCollectionExtensions
 {
-	/// <summary>Provider keys for the keyed <see cref="ISceneStorage"/> registrations.</summary>
-	public const string SurrealKey = "surrealdb";
-	public const string LightningKey = "lightning";
-
-	private const string ProviderConfigKey = "SHARPMUSH_DATABASE_PROVIDER";
-
 	/// <summary>
-	/// Registers each provider's storage as a KEYED <see cref="ISceneStorage"/>, then registers
-	/// <see cref="ISceneService"/> via a factory that resolves the storage matching the active provider
-	/// (read from configuration / environment) and wraps it with the registered behaviors IN ORDER.
+	/// Registers the Lightning-backed <see cref="ISceneStorage"/>, then registers <see cref="ISceneService"/>
+	/// via a factory that wraps that storage with the registered behaviors IN ORDER.
 	/// Returns an <see cref="ISceneSystemBuilder"/> for chaining <c>.AddBehavior&lt;T&gt;()</c>.
 	/// </summary>
-	public static ISceneSystemBuilder AddSceneSystem(this IServiceCollection services, IConfiguration configuration)
+	public static ISceneSystemBuilder AddSceneSystem(this IServiceCollection services)
 	{
-		// Keyed storage cores — registered via FACTORY lambdas (not implementation types) so the host's
-		// ValidateOnBuild does not eagerly require every provider's accessor to be constructable. Only the
-		// active provider's accessor is registered by core; the other key is never resolved, so its
-		// missing accessors never error.
-		services.AddKeyedSingleton<ISceneStorage>(SurrealKey,
-			(sp, _) => new SurrealSceneStorage(sp.GetRequiredService<ISurrealStorageAccessor>()));
-		services.AddKeyedSingleton<ISceneStorage>(LightningKey,
-			(sp, _) => new LightningSceneStorage(sp.GetRequiredService<ILightningStorageAccessor>()));
+		// A factory lambda rather than an implementation type, so the host's ValidateOnBuild does not
+		// require the accessor before the provider has registered it.
+		services.AddSingleton<ISceneStorage>(sp =>
+			new LightningSceneStorage(sp.GetRequiredService<ILightningStorageAccessor>()));
 
 		var builder = new SceneSystemBuilder(services);
 		services.AddSingleton<ISceneSystemBuilder>(builder);
 
 		services.AddSingleton<ISceneService>(sp =>
 		{
-			var config = sp.GetService<IConfiguration>() ?? configuration;
-			var key = ResolveProviderKey(config);
-			ISceneService chain = sp.GetRequiredKeyedService<ISceneStorage>(key);
+			ISceneService chain = sp.GetRequiredService<ISceneStorage>();
 
 			// Hand-rolled decoration (no Scrutor): wrap the storage core with each behavior so the
 			// last-registered behavior is the outermost. The behavior receives the next ISceneService in
@@ -57,23 +41,5 @@ public static class SceneSystemServiceCollectionExtensions
 		});
 
 		return builder;
-	}
-
-	/// <summary>
-	/// Maps the configured provider name to a storage key. Reads <c>SHARPMUSH_DATABASE_PROVIDER</c> from
-	/// configuration first, then the process environment, defaulting to Lightning (same precedence the host
-	/// uses to pick <c>ISharpDatabase</c>).
-	/// </summary>
-	private static string ResolveProviderKey(IConfiguration? configuration)
-	{
-		var provider = configuration?[ProviderConfigKey]
-									 ?? Environment.GetEnvironmentVariable(ProviderConfigKey);
-
-		return DatabaseProviderResolver.Resolve(provider) switch
-		{
-			DatabaseProvider.SurrealDB => SurrealKey,
-			DatabaseProvider.Lightning => LightningKey,
-			_ => throw new ArgumentOutOfRangeException(nameof(provider))
-		};
 	}
 }

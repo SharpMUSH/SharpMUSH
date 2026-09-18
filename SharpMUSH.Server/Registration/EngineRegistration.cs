@@ -22,8 +22,6 @@ using SharpMUSH.Server.RateLimiting;
 using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
-using SurrealDb.Net;
-using SurrealDb.Embedded.InMemory;
 using System.Globalization;
 using System.Threading.RateLimiting;
 using OpenTelemetry.ResourceDetectors.Container;
@@ -34,7 +32,6 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
-using SharpMUSH.Database.SurrealDB;
 using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Functions;
@@ -194,14 +191,14 @@ internal static class EngineRegistration
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
 
-		// Wiki subsystem — IWikiService is the active database provider (see RegisterDatabaseProvider).
+		// Wiki subsystem — IWikiService is the database provider (see RegisterDatabaseProvider).
 		services.AddSingleton<WikiMarkdigPipeline>();
 
 		// Locale fallback rules (pure) and the one localized-read service every reader path goes through.
 		services.AddSingleton<IWikiLocaleResolver, WikiLocaleResolver>();
 		services.AddSingleton<IWikiLocalizationService, WikiLocalizationService>();
 
-		// Package, application, layout and role registries are the active database provider too
+		// Package, application, layout and role registries are the database provider too
 		// (see RegisterDatabaseProvider).
 		services.AddSingleton<IPermissionResolver, PermissionResolver>();
 		services.AddSingleton<IAdministrativeCapabilityService, AdministrativeCapabilityService>();
@@ -212,8 +209,8 @@ internal static class EngineRegistration
 
 		// Scene subsystem — ISceneService is NO LONGER implemented by core providers. It is registered by
 		// the Scene plugin's IServiceRegistrar (ScenePlugin.RegisterServices -> services.AddSceneSystem),
-		// which keys per-provider storage over the host-shared storage accessors registered above and wraps
-		// it with any registered behaviors. Removing the plugin leaves core with no scene storage.
+		// which builds its storage over the host-shared Lightning storage accessor registered above and
+		// wraps it with any registered behaviors. Removing the plugin leaves core with no scene storage.
 
 		// Pre-render cache for bot-facing static HTML (backed by the shared IMemoryCache from FusionCache setup).
 		services.AddMemoryCache();

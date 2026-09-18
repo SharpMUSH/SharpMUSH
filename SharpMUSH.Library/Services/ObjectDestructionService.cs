@@ -166,8 +166,8 @@ public class ObjectDestructionService(
 			// Belt and braces over the pushdown, deliberately kept despite being redundant with the
 			// query above. A provider that silently ignores HasFlag hands back the entire database, and
 			// with no second opinion this loop would then mark every object in the game GOING_TWICE and
-			// start freeing them on the following pass. both supported providers ignored or broke that
-			// predicate until it was fixed and pinned (ObjectSearchFilterPushdownTests); the cost of not
+			// start freeing them on the following pass. The predicate is pinned
+			// (ObjectSearchFilterPushdownTests), but the cost of not
 			// trusting it here is one flag read on an already-small set.
 			if (!await candidate.HasFlag(GoingFlag)) continue;
 
@@ -403,8 +403,8 @@ public class ObjectDestructionService(
 	private async ValueTask RehomeDependentsAsync(DBRef dbref, CancellationToken ct)
 	{
 		// Exits are handled by RelinkEntrancesAsync — for an exit the home edge is its destination.
-		// The stream is a snapshot in every provider (Lightning reads it inside one transaction,
-		// SurrealDB awaits the whole response), so rehoming while walking it is safe. The default
+		// The stream is a snapshot (Lightning reads it inside one transaction), so rehoming while
+		// walking it is safe. The default
 		// home is resolved on the first dependent, so an object nothing is homed at costs no lookup.
 		var homeless = mediator.CreateStream(new GetHomedAtQuery(dbref), ct).Where(dependent => !dependent.IsExit);
 		AnySharpContainer? defaultHome = null;

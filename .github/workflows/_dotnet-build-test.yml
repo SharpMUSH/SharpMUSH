@@ -118,11 +118,6 @@ jobs:
     # truncate the second attempt — reintroducing the killed-mid-run failure this timeout exists to
     # prevent.
     timeout-minutes: 70
-    strategy:
-      matrix:
-        # SurrealDB execution is paused while provider cost and test isolation are addressed.
-        database: [lightning]
-
     steps:
       - uses: actions/checkout@v6
 
@@ -153,24 +148,22 @@ jobs:
           tar -xzf "$RUNNER_TEMP/test-build/SharpMUSH.Tests.tar.gz"
           python3 .github/scripts/ensure-test-packages.py
 
-      - name: Test (${{ matrix.database }})
+      - name: Test
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
-          SHARPMUSH_DATABASE_PROVIDER: ${{ matrix.database }}
         # Retain the retry budget while test isolation is repaired. run_owned.py stops everything an
         # attempt started before the next one begins, so a retry never runs beside the one it replaced.
-        # Exclude standalone embedded SurrealDB fixtures as well as the disabled provider matrix entry.
         # Keep the existing concurrency and execution deadlines.
         run: >-
           exec python3 .github/scripts/run_owned.py --attempts 2 --timeout-minutes 30 --
-          dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/unit" --maximum-parallel-tests 8 --treenode-filter '/*/(*)&(!SharpMUSH.Tests.Database.SurrealDB)/(*)&(!Surreal*)/*'
+          dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/unit" --maximum-parallel-tests 8
 
       - name: Upload unit test results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: test-results-unit-${{ matrix.database }}
+          name: test-results-unit
           path: TestResults/unit/**/*.trx
           retention-days: 7
           if-no-files-found: warn
@@ -190,7 +183,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: test-telemetry-${{ matrix.database }}
+          name: test-telemetry
           path: test-telemetry.md
           if-no-files-found: ignore
 
@@ -284,9 +277,8 @@ jobs:
           tar -xzf "$RUNNER_TEMP/test-build/SharpMUSH.Tests.ScenePlugin.tar.gz"
           python3 .github/scripts/ensure-test-packages.py
 
-      # Keep provider-independent scene coverage; the membership fixture boots embedded SurrealDB.
-      - name: Scene plugin tests (without SurrealDB)
-        run: dotnet run --project SharpMUSH.Tests.ScenePlugin --no-build --no-restore -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/scene-plugin" --treenode-filter '/*/*/(*)&(!SurrealSceneMembershipTests)/*'
+      - name: Scene plugin tests
+        run: dotnet run --project SharpMUSH.Tests.ScenePlugin --no-build --no-restore -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/scene-plugin"
 
       - name: Upload scene-plugin test results
         if: always()
@@ -303,11 +295,6 @@ jobs:
     env:
       # Detailed console output and TRX retain results without the optional HTML report.
       TUNIT_DISABLE_HTML_REPORTER: "true"
-    strategy:
-      matrix:
-        # SurrealDB execution is paused while provider cost and test isolation are addressed.
-        database: [lightning]
-
     steps:
       - uses: actions/checkout@v6
 
@@ -338,11 +325,10 @@ jobs:
           tar -xzf "$RUNNER_TEMP/test-build/SharpMUSH.Tests.Integration.tar.gz"
           python3 .github/scripts/ensure-test-packages.py
 
-      - name: Integration Test (${{ matrix.database }})
+      - name: Integration Test
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry-integration.md
-          SHARPMUSH_DATABASE_PROVIDER: ${{ matrix.database }}
         run: >-
           exec python3 .github/scripts/run_owned.py --attempts 3 --timeout-minutes 10 --
           dotnet run --project SharpMUSH.Tests.Integration --no-build --no-restore --verbosity normal -- --output Detailed --report-trx --results-directory "$GITHUB_WORKSPACE/TestResults/integration" --maximum-parallel-tests 8
@@ -351,7 +337,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: test-results-integration-${{ matrix.database }}
+          name: test-results-integration
           path: TestResults/integration/**/*.trx
           retention-days: 7
           if-no-files-found: warn
@@ -371,7 +357,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: test-telemetry-integration-${{ matrix.database }}
+          name: test-telemetry-integration
           path: test-telemetry-integration.md
           if-no-files-found: ignore
 
@@ -379,6 +365,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: myrddin-bbs-package-${{ matrix.database }}
+          name: myrddin-bbs-package
           path: '**/MyrddinBBS_GeneratedPackage.yaml'
           if-no-files-found: warn

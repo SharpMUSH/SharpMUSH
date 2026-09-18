@@ -150,12 +150,12 @@ A plugin's `[SharpPlugin] IPlugin` may implement any subset of these (all live i
 | Interface | Where it is applied | Wiring |
 |-----------|---------------------|--------|
 | `IServiceRegistrar` | **Pre-build**, into the host `IServiceCollection` | `PluginCatalog.Build` calls `RegisterServices(services)` in `Startup.ConfigureServices`, before `AddMediator()`. |
-| `IFlagSource` (→ `PluginFlag` records) | **DB migration**, seeded alongside built-in flags | The catalog's `AllFlags` is passed into each DB constructor. Lightning and SurrealDB seed them idempotently by flag name. |
-| `IMigrationSource` (provider-tagged) | **DB migration**, alongside the built-in batch | Lightning runs `LightningSteps`; SurrealDB runs `SurrealStatements`. |
+| `IFlagSource` (→ `PluginFlag` records) | **DB migration**, seeded alongside built-in flags | The catalog's `AllFlags` is passed into each DB constructor. Lightning seeds them idempotently by flag name. |
+| `IMigrationSource` | **DB migration**, after the built-in batch | Lightning applies each `LightningSteps` entry once, tracked by its `Id`. |
 | `IBridgeSubscriptionSource` | **NATS→SignalR bridge** background loop | `NatsBridgeService` runs each `BridgeSources` entry's `RunAsync(nats, hubContext, ct)` alongside its built-in output/room/scene subscriptions, each wrapped in `try/catch` so one faulting subscription cannot tear down the loop. |
 
-`IMigrationSource` and `IBridgeSubscriptionSource` keep their parameter types loose (`Assembly?` / `object`)
-so the contracts live in `SharpMUSH.Library` without forcing a SignalR dependency there; the host passes the
+`IBridgeSubscriptionSource` keeps its parameter types loose (`object`)
+so the contract lives in `SharpMUSH.Library` without forcing a SignalR dependency there; the host passes the
 concrete `NatsConnection` and `IHubContext<GameHub, IGameHubClient>` for the plugin to cast.
 
 ### How the DB factory receives the migration/flag sources
@@ -376,14 +376,14 @@ committed to), not trust; trust is the operator's two-part opt-in. The default `
 ### The installed-package registry record extension
 
 The existing `InstalledPackageRecord` gained one field — `IReadOnlyList<string>? DeployedFiles` (default empty)
-— **no new collection**. It is threaded read+write through Lightning and SurrealDB. Empty for
+— **no new collection**. It is threaded read+write through Lightning. Empty for
 softcode/application packages; populated for managed
 packages so uninstall removes exactly what install deposited.
 
 ## Phase 5 — Scene as the reference plugin
 
 `SharpMUSH.Plugins.Scene` is the first **real** plugin: the whole `@SCENE` command/`scene…` function/
-migration/flag/bridge surface ships from a standalone DLL built into `plugins/scene/`. It proves every
+flag/bridge surface ships from a standalone DLL built into `plugins/scene/`. It proves every
 Phase-1/2a seam end-to-end against the existing Scene test suite, with no engine recompile to add the
 subsystem.
 
@@ -397,11 +397,10 @@ subsystem.
 | `@SCENE` command (`SceneCommandModule` + the `Scene*Handlers`) | `PluginBase`→`ICommandSource` via the generator analyzer | `SharpMUSH.Plugins.Scene/Commands/` |
 | `scene…` functions (`SceneFunctions`) | `PluginBase`→`IFunctionSource` | `SharpMUSH.Plugins.Scene/Functions/` |
 | `game.scene.{id}` publish (`SceneBroadcast`) | called by the `@SCENE` arms | `SharpMUSH.Plugins.Scene/Commands/SceneBroadcast.cs` |
-| Lightning/Surreal scene schema | `IMigrationSource` (`LightningSteps` / `SurrealStatements`) | `ScenePlugin` |
 | `SCENE_ROOM` object flag | `IFlagSource` (`PluginFlag`) | `ScenePlugin.Flags` |
 | `game.scene.*` NATS→SignalR leg (was `NatsBridgeService.SubscribeSceneAsync`) | `IBridgeSubscriptionSource` | `ScenePlugin.RunAsync` |
 
-Because it contributes load-once state (migration + flag + bridge), `ScenePlugin` is a **non-unloadable**
+Because it contributes load-once state (services + flag + bridge), `ScenePlugin` is a **non-unloadable**
 plugin (`PluginLoaderService.IsUnloadablePlugin` returns false), exactly as the Phase-3 table prescribes.
 
 **Authoring shape.** The plugin csproj mirrors the `SamplePlugin` fixture (`EnableDynamicLoading`, the
@@ -437,24 +436,23 @@ MSBuild target drops its DLL+`deps.json`+`plugin.json` into each output's `plugi
 
 The Phase-5 extraction left `ISceneService`'s *storage* in the core providers as `partial class
 <Provider>` files, because they share the provider's private connection and write provider-native
-provider-native queries. Phase 8 closes that seam:
+queries. Phase 8 closes that seam:
 
-- **Per-provider storage integrations** expose just the
-  connection + the primitive helpers a storage plugin needs. They are **generic** — no subsystem
-  concept. Each provider implements its own accessor and registers it in DI.
-- The supported storage implementations live in `SharpMUSH.Plugins.Scene/Storage/` as standalone classes
-  taking the matching provider dependency by constructor; the queries
-  moved **verbatim**. Core `DatabaseConstants` no longer names the scene graph.
-- **Registration is ASP.NET-style** (`SceneSystemServiceCollectionExtensions`): `AddSceneSystem(config)`
-  registers each provider's storage as a **keyed** `ISceneStorage`, picks the active one from config,
+- **The storage accessor** (`ILightningStorageAccessor`) exposes just the
+  environment + the primitive helpers a storage plugin needs. It is **generic** — no subsystem
+  concept. The Lightning provider implements it and registers it in DI.
+- The storage implementation lives in `SharpMUSH.Plugins.Scene/Storage/` as `LightningSceneStorage`,
+  taking the accessor by constructor and opening its own tables there. Core `DatabaseConstants` does not
+  name the scene graph.
+- **Registration is ASP.NET-style** (`SceneSystemServiceCollectionExtensions`): `AddSceneSystem()`
+  registers `LightningSceneStorage` as the single `ISceneStorage`
   and composes `ISceneService` through an ordered
   **decorator chain** — `ISceneSystemBuilder.AddBehavior<T>()` layers behavior (`T :
   ISceneServiceBehavior`) like `IHttpClientBuilder.AddHttpMessageHandler`. Hand-rolled (no Scrutor).
-- **ALC type identity:** provider contracts live in `SharpMUSH.Library` (already host-shared); provider
-  client assemblies such as `SurrealDb.Net` are shared **by assembly name**
-  via `PluginLoaderService.DefaultSharedAssemblyNames` + `PluginConfig.SharedAssemblies` — the host owns
-  the runtime copy, the plugin references them compile-only, so an accessor-returned client unifies on
-  one `Type`. The plugin stays collectible.
+- **ALC type identity:** the accessor contract lives in `SharpMUSH.Library` (already host-shared), so the
+  plugin references neither the provider assembly nor LightningDB and shares no further host assemblies. A
+  plugin that does need a host assembly lists it in its manifest's `sharedAssemblies`
+  (`PluginManifest.SharedAssemblies`). The plugin stays collectible.
 
 ## Phase 9 — plugin-owned web surface (`IEndpointContributor`)
 

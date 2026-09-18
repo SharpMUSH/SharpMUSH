@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests.Integration.Wiki;
 /// (via Testcontainers) and boots the full application stack. The backend is selected
 ///
 /// IWikiService is exposed through the ISharpDatabase singleton; all tests retrieve it
-/// from the DI container and verify identical semantics across both supported database providers.
+/// from the DI container.
 /// </summary>
 public class WikiServiceIntegrationTests
 {

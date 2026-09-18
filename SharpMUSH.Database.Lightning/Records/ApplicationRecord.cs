@@ -1,7 +1,7 @@
 namespace SharpMUSH.Database.Lightning.Records;
 
 /// <summary>
-/// Mirrors <c>SurrealDatabase.SysApplicationDbRecord</c>. <c>Kind</c> and <c>MinimumRole</c> are
+/// A stored Dynamic Application definition. <c>Kind</c> and <c>MinimumRole</c> are
 /// <c>ApplicationKind</c>/<c>PortalRole</c> serialized via <c>ToString()</c>; <c>Zones</c> is
 /// <c>ApplicationRegistryMapping.ZonesToString</c> output.
 /// </summary>

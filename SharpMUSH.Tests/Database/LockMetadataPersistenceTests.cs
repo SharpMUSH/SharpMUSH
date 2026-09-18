@@ -8,11 +8,9 @@ namespace SharpMUSH.Tests.Database;
 public class LockMetadataPersistenceTests
 {
 	[Test]
-	[Arguments("lightning")]
-	[Arguments("surrealdb")]
-	public async Task ProviderWritesAndReloadsExpressionFlagsAndCreator(string provider)
+	public async Task ProviderWritesAndReloadsExpressionFlagsAndCreator()
 	{
-		await using var world = await DefinitionCreationContract.Open(provider);
+		await using var world = await DefinitionCreationContract.Open();
 		var target = (await world.Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 		var data = new SharpLockData("=#1", LockService.LockFlags.Visual | LockService.LockFlags.Locked, target.Object().DBRef);
 		await world.Database.SetLockAsync(target.Object(), "Basic", data);

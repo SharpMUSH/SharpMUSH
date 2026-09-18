@@ -1,8 +1,7 @@
 namespace SharpMUSH.Database.Seed;
 
 /// <summary>
-/// The built-in powers, shared verbatim across all database providers. Copied from
-/// <c>SharpMUSH.Database.SurrealDB/SurrealDatabase.Migration.cs</c> (<c>CreateInitialPowers</c>).
+/// The built-in powers a new world is seeded with.
 /// </summary>
 public static class PowerSeed
 {

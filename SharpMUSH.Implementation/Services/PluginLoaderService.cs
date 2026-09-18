@@ -83,22 +83,6 @@ public static class PluginLoaderService
 	/// </summary>
 	private static readonly ConditionalWeakTable<IPlugin, PluginHandle> Handles = new();
 
-	/// <summary>
-	/// Host assembly NAMES shared into <b>every</b> plugin's ALC by default, in addition to any a plugin
-	/// declares in its manifest. Sharing a provider client by name lets a storage plugin use its connection
-	/// returned through a host-shared accessor without a type-identity mismatch — and without the plugin
-	/// framework itself referencing the client packages. Kept deliberately small and explicit (never
-	/// <c>PreferSharedTypes=true</c>, which would be far too broad).
-	/// </summary>
-	public static readonly IReadOnlyList<string> DefaultSharedAssemblyNames =
-	[
-		"SurrealDb.Net"
-		// The Scene plugin is now fully self-contained: its models + ISceneService + SceneEventMessage live
-		// INSIDE SharpMUSH.Plugins.Scene (no shared Contracts assembly). Every host↔plugin and client↔plugin
-		// scene boundary is a generic seam (IServiceRegistrar / IEndpointContributor) or serialization
-		// (HTTP / SignalR JSON), so no scene assembly needs to be host-shared by name.
-	];
-
 	/// <summary>A plugin DLL found on disk together with its (manifest-or-fallback) ordering metadata.</summary>
 	public sealed record PluginCandidate(
 		string DllPath,
@@ -321,13 +305,11 @@ public static class PluginLoaderService
 		PluginLoader? loader = null;
 		try
 		{
-			// Assembly NAMES the host must share into this plugin's ALC, beyond the sharedTypes net: the
-			// DefaultSharedAssemblyNames (the DB-client assemblies a storage plugin needs to unify on) plus
-			// anything the plugin's manifest declares. Sharing by name makes the host's already-loaded copy
+			// Assembly NAMES the host must share into this plugin's ALC, beyond the sharedTypes net: whatever
+			// the plugin's manifest declares. Sharing by name makes the host's already-loaded copy
 			// authoritative, so a host service whose signatures reference those types casts cleanly inside the
 			// plugin. We never set PreferSharedTypes=true (too broad).
-			var sharedNames = DefaultSharedAssemblyNames
-				.Concat(sharedAssemblyNames ?? [])
+			var sharedNames = (sharedAssemblyNames ?? [])
 				.Distinct(StringComparer.OrdinalIgnoreCase)
 				.ToList();
 

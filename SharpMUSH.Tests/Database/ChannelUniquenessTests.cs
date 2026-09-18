@@ -12,13 +12,9 @@ namespace SharpMUSH.Tests.Database;
 /// Channel names are a global namespace, and <c>CreateChannelAsync</c> — not the read-before-create in
 /// <c>ChannelAdd</c> — is what enforces it.
 ///
-/// <para>Each provider reaches that guarantee differently, because each has a different primitive:
-/// <c>:Channel(name)</c> uniqueness constraint because snapshot isolation lets both writers observe
-/// "absent", and SurrealDB relies on the record ID, which is the channel name.</para>
-///
-/// overwrite on SurrealDB, where <c>UPSERT</c> reset <c>privs</c> and all five locks and reported success
-/// to both callers. These tests run against whichever provider
-/// <c>SHARPMUSH_DATABASE_PROVIDER</c> selects, so the matrix covers all three.</para>
+/// <para>Lightning reaches that guarantee through its single writer: a check-then-put inside one
+/// writer job is atomic with respect to every other create, so a second create of the same name must
+/// fail rather than overwrite the first channel's privileges and locks.</para>
 /// </summary>
 public class ChannelUniquenessTests
 {

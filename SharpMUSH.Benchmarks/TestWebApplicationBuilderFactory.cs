@@ -21,8 +21,6 @@ namespace SharpMUSH.Benchmarks;
 /// </summary>
 public class TestWebApplicationBuilderFactory<TProgram>(
 		string configFile,
-		DatabaseProvider databaseProvider = DatabaseProvider.Lightning,
-		string? surrealEndpoint = null,
 		string? lightningPath = null) :
 	WebApplicationFactory<TProgram> where TProgram : class
 {
@@ -32,21 +30,10 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 		// This is the same approach the test suite uses (ServerWebAppFactory) and avoids
 		// calling startup.ConfigureServices() a second time, which would double-register
 		// the "compiled-expressions" FusionCache and throw at first resolution.
-		if (databaseProvider == DatabaseProvider.SurrealDB)
-		{
-			// No Testcontainer: SurrealDB runs embedded in-process. mem:// keeps benchmark runs
-			// isolated and disk-free, matching the test suite's default.
-			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "surrealdb");
-			Environment.SetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT", surrealEndpoint ?? "mem://");
-		}
-		else
-		{
-			// No Testcontainer: LMDB is a plain directory. The caller (LightningBaseBenchmark)
-			// owns the directory's lifetime, matching the test suite's ServerWebAppFactory.
-			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "lightning");
-			if (!string.IsNullOrEmpty(lightningPath))
-				Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH", lightningPath);
-		}
+		// No Testcontainer: LMDB is a plain directory. The caller (LightningBaseBenchmark)
+		// owns the directory's lifetime, matching the test suite's ServerWebAppFactory.
+		if (!string.IsNullOrEmpty(lightningPath))
+			Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH", lightningPath);
 		Log.Logger = BenchmarkHelpers.CreateBenchmarkLogger();
 
 		// Only override services that benchmarks specifically need to differ from production.
@@ -71,8 +58,6 @@ public class TestWebApplicationBuilderFactory<TProgram>(
 	{
 		if (disposing)
 		{
-			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", null);
-			Environment.SetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT", null);
 			Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH", null);
 		}
 

@@ -30,12 +30,11 @@ participate in the object namespace, containment hierarchy, or flag system.
 
 ## Data Model
 
-### Storage (Per-Database Backend)
+### Storage
 
 | Backend   | Wiki Pages             | Wiki Revisions          | Indexes                    |
 |-----------|------------------------|-------------------------|----------------------------|
 | Lightning | embedded records       | embedded records        | Local searchable projection |
-| SurrealDB | `wiki_page` table      | `wiki_revision` table   | Native FTS on body         |
 
 ### WikiPage Schema
 
@@ -567,8 +566,8 @@ Games have full freedom to unify, keep separate, or create hybrid approaches.
 
 ### Full-Text Search (Database Layer)
 
-SurrealDB uses its native full-text search. Lightning evaluates the same provider-neutral
-search contract over its local searchable projection.
+Lightning evaluates the provider-neutral search contract over its local searchable
+projection.
 
 ### In-Game Search
 

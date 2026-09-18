@@ -793,7 +793,7 @@ public partial class TaskScheduler(
 	 DbRefAttribute dbRefAttribute, int oldValue, TimeSpan timeout, bool manageSemaphoreCount = false)
 	{
 		// Direct callers have no queue-entry budget; shutdown must still interrupt
-		// every provider operation while this transaction owns the semaphore gate.
+		// every database operation while this transaction owns the semaphore gate.
 		using var transactionCancellation = CancellationTokenSource.CreateLinkedTokenSource(ExecutionBudget.CurrentToken, _shutdownCts.Token);
 		var remaining = ExecutionBudget.Current?.Remaining ?? TimeSpan.FromSeconds(1);
 		using var transactionBudget = new ExecutionBudget(remaining == TimeSpan.MaxValue ? TimeSpan.FromSeconds(1) : remaining,

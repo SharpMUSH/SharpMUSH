@@ -6,8 +6,8 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// <see cref="ISessionRecordStore"/>: persisted account-session records keyed by token. Ported from
-/// <c>SurrealDatabase.Sessions.cs</c>. <see cref="Tables.SessionAccount"/> and <see cref="Tables.SessionIp"/>
+/// <see cref="ISessionRecordStore"/>: persisted account-session records keyed by token.
+/// <see cref="Tables.SessionAccount"/> and <see cref="Tables.SessionIp"/>
 /// are secondary duplicate indexes (accountId/originIp → token) kept in step with <see cref="Tables.Session"/>
 /// inside the same writer job as every mutation that touches them.
 /// </summary>

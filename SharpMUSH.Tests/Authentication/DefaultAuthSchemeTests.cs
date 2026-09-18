@@ -50,8 +50,7 @@ public class DefaultAuthSchemeTests
 
 		var startup = new Startup(
 			colorFile: "colors.json",
-			natsUrl: "nats://localhost:4222",
-			databaseProvider: DatabaseProvider.Lightning);
+			natsUrl: "nats://localhost:4222");
 
 		startup.ConfigureServices(services, configuration, environment);
 

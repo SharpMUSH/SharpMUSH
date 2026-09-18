@@ -8,7 +8,7 @@
 	     the config/schema + package API DTOs, the client-facing service interfaces, the database-conversion
 	     progress/result DTOs, and the Markdig wiki-rendering pipeline. It deliberately references NONE of
 	     the server DB/infra packages (SqlClient, MySqlConnector, Npgsql,
-	     SurrealDb.Net, NATS.Net, Quartz, Serilog, TelnetNegotiationCore, ...) so the browser bundle no
+	     NATS.Net, Quartz, Serilog, TelnetNegotiationCore, ...) so the browser bundle no
 	     longer drags the full server closure or Windows desktop assemblies.
 
 	     Namespaces are intentionally preserved (SharpMUSH.Library.*) so the whole solution keeps compiling

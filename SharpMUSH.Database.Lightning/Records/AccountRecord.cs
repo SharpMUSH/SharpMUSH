@@ -1,6 +1,6 @@
 namespace SharpMUSH.Database.Lightning.Records;
 
-/// <summary>Mirrors <c>SurrealDatabase.AccountDbRecord</c>. <c>Status</c> is <c>AccountStatus.ToString()</c>.</summary>
+/// <summary>A stored web account. <c>Status</c> is <c>AccountStatus.ToString()</c>.</summary>
 public sealed record AccountRecord
 {
 	public string Username { get; init; } = "";

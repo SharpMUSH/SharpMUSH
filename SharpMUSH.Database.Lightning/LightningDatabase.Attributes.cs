@@ -23,7 +23,7 @@ namespace SharpMUSH.Database.Lightning;
 /// produce (see <c>IAttributeStore</c>'s remarks and <c>@CLONE</c>'s no_clone propagation).
 /// </para>
 /// <para>
-/// Semantics are ported from <c>SurrealDatabase.Attributes.cs</c>. The inheritance members
+/// The inheritance members
 /// (<see cref="GetAttributeWithInheritanceAsync"/>, <see cref="GetLazyAttributeWithInheritanceAsync"/>)
 /// resolve their whole candidate set inside one snapshot — see
 /// <see cref="CollectInheritanceCandidates{T}"/>.
@@ -260,10 +260,8 @@ public partial class LightningDatabase
 	/// default flags <see cref="Tables.AttrEntry"/> configures for that level's long name, and holding an
 	/// empty value; the leaf then takes <paramref name="value"/>.
 	/// <para>
-	/// Overwriting an existing node matches <c>SurrealDatabase.Attributes.cs</c> exactly: flags are only
-	/// ever added, never cleared (its <c>RELATE … WHERE id NOT IN …</c> guards at lines 327-344), and the
-	/// owner is re-pointed at the setter on <em>every</em> level of the path, leaf and auto-created branch
-	/// alike (its delete-then-relate of <c>has_attribute_owner</c> at lines 318-325). The <c>branch</c>
+	/// Overwriting an existing node only ever adds flags, never clears them, and re-points the owner at
+	/// the setter on <em>every</em> level of the path, leaf and auto-created branch alike. The <c>branch</c>
 	/// flag lands on every non-leaf level that lacks it, so a leaf that grows a child becomes a branch.
 	/// </para>
 	/// </summary>
@@ -372,8 +370,7 @@ public partial class LightningDatabase
 				Entry = entry?.Name ?? existing?.Entry
 			}));
 
-			// A node that already exists keeps its value unless it is the leaf being set — the same
-			// `value = value ?? ''` an ancestor upsert gets in the SurrealDB provider.
+			// A node that already exists keeps its value unless it is the leaf being set.
 			if (isLeaf)
 			{
 				tx.Put(Tables.AttrVal, key, write.Value);
@@ -922,7 +919,7 @@ public partial class LightningDatabase
 
 	/// <summary>The identity <see cref="SetAttributeFlagAsync(SharpAttribute,SharpAttributeFlag,CancellationToken)"/>
 	/// reads back: <c>dbref_LONGNAME</c>, split at the first underscore (the dbref half is all digits, so a
-	/// long name containing underscores is unambiguous). Shaped like the SurrealDB provider's attribute key.</summary>
+	/// long name containing underscores is unambiguous).</summary>
 	private static string AttributeKeyOf(long dbref, string longName) => $"{dbref}_{longName}";
 
 	private static string AttributeIdOf(long dbref, string longName) => $"Attribute/{AttributeKeyOf(dbref, longName)}";

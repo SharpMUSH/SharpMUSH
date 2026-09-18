@@ -20,7 +20,7 @@ public class PennMUSHDatabaseConverterPerformanceTests
 	/// </summary>
 	/// <remarks>
 	/// Ten megabytes is about 540 objects and 29,000 attributes: Lightning parses and converts it in
-	/// about 4 seconds, SurrealDB in about 19. Each budget is roughly five times that. The budget is
+	/// about 4 seconds, and the budget is roughly five times that. The budget is
 	/// wall-clock time, so the test runs with nothing else executing: under the full parallel suite a
 	/// CI runner has taken 31 seconds over the same file.
 	/// </remarks>
@@ -68,9 +68,7 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			TestDiagnostics.WriteLine($"MB/second: {fileSizeMB / (parseStopwatch.Elapsed + convertStopwatch.Elapsed).TotalSeconds:F2}");
 			TestDiagnostics.WriteLine($"===========================");
 
-			var dbProvider = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER") ?? "";
-			var isSurrealDb = dbProvider.Equals("surrealdb", StringComparison.OrdinalIgnoreCase);
-			var timeoutSeconds = isSurrealDb ? 90.0 : 20.0;
+			const double timeoutSeconds = 20.0;
 
 			var totalTime = parseStopwatch.Elapsed + convertStopwatch.Elapsed;
 			await Assert.That(totalTime.TotalSeconds).IsLessThan(timeoutSeconds)
@@ -119,10 +117,8 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			TestDiagnostics.WriteLine($"  - Locks: {result.LocksConverted}");
 			TestDiagnostics.WriteLine($"  - Objects/sec: {1000 / stopwatch.Elapsed.TotalSeconds:F2}");
 
-			// About 55,000 attributes: some 5 seconds under Lightning and 34 under SurrealDB.
-			var isSurrealDb = string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER"),
-				"surrealdb", StringComparison.OrdinalIgnoreCase);
-			var budgetSeconds = isSurrealDb ? 150.0 : 25.0;
+			// About 55,000 attributes: some 5 seconds under Lightning.
+			const double budgetSeconds = 25.0;
 			await Assert.That(stopwatch.Elapsed.TotalSeconds).IsLessThan(budgetSeconds)
 				.Because($"1000 objects should convert in under {budgetSeconds} seconds");
 		}

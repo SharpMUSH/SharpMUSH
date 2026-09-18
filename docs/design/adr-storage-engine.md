@@ -1,8 +1,11 @@
 # ADR: Supported storage engines
 
-**Status:** Accepted
+**Status:** Accepted; amended 2026-09-18
 
-SharpMUSH supports two storage engines:
+> **2026-09-18:** SurrealDB support was removed in #1177. Lightning is the only storage provider.
+> The decision below is kept as recorded; the Consequences describe the current state.
+
+SharpMUSH chose two storage engines:
 
 - **Lightning** is the default. It embeds LMDB in the server process, requires no database
   sidecar, and provides durable transactional storage with native hot-copy backups.
@@ -15,14 +18,14 @@ containers, tests, benchmarks, and documentation are intentionally absent.
 
 ## Consequences
 
-- `SHARPMUSH_DATABASE_PROVIDER` accepts `lightning` and `surrealdb`; omitted or unknown values
-  select Lightning.
+- `SHARPMUSH_DATABASE_PROVIDER` accepts only `lightning`; an omitted value selects Lightning, and
+  any other value, `surrealdb` included, fails startup. There is no in-place migration off
+  SurrealDB; a world moves to Lightning through a PennMUSH flatfile import.
 - Provider-neutral behavior remains defined by `ISharpDatabase` and its focused service
   interfaces.
-- Plugins may contribute `SurrealStatements` and `LightningSteps` through `IMigrationSource`.
-- The default deployment needs only SharpMUSH and NATS. SurrealDB deployment remains an
-  operator choice.
-- CI exercises the full database test matrix against both supported providers.
+- Plugins may contribute `LightningSteps` through `IMigrationSource`.
+- A deployment needs only SharpMUSH and NATS.
+- CI runs the database tests against Lightning; there is no provider matrix.
 
 New storage providers require a compatible long-term license, a complete implementation of
 the database contracts, migrations, backup behavior, integration coverage, and deployment

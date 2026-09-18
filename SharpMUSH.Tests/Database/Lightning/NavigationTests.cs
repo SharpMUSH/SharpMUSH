@@ -11,8 +11,7 @@ namespace SharpMUSH.Tests.Database.Lightning;
 
 /// <summary>
 /// <see cref="INavigationStore"/> ported onto the LMDB edge tables: locations, contents, exits,
-/// entrances, homed-at, parent chains and reachability. Semantics mirror
-/// <c>SurrealDatabase.Navigation.cs</c> / <c>SurrealDatabase.Objects.cs</c>.
+/// entrances, homed-at, parent chains and reachability.
 /// </summary>
 public partial class NavigationTests
 {

@@ -616,9 +616,8 @@ collections separate from the game-object DB — now a **named graph**
 - **No `SCENE`*` attributes** on rooms or players. A player's current scene +
   persona live on the `member` edge (`isCurrent`, `showAs`); a room's active
   scene is derived via `scenewhere()` (the `in_room` edge + `status=active`).
-- Implemented across both supported providers via the `ISceneService` tri-cast
-  (server `Startup.cs:257`; client `Client/Program.cs:33` stays `InMemory`); no
-  new `ISharpDatabase` methods.
+- Implemented by the Scene plugin's `LightningSceneStorage` behind `ISceneService`
+  (client `Client/Program.cs` stays `InMemory`); no new `ISharpDatabase` methods.
 
 ### 7.4 Pose Format: MString / ANSI Only
 

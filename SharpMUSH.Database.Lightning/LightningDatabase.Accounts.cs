@@ -7,9 +7,8 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// <see cref="IAccountStore"/>: web accounts and the character links that tie them to players. Ported
-/// from <c>SurrealDatabase.Accounts.cs</c>; unlike that provider, uniqueness on email and username is
-/// enforced here inside the writer job (<c>TryGet</c> before <c>Put</c> on <see cref="Tables.AccountEmail"/>
+/// <see cref="IAccountStore"/>: web accounts and the character links that tie them to players.
+/// Uniqueness on email and username is enforced inside the writer job (<c>TryGet</c> before <c>Put</c> on <see cref="Tables.AccountEmail"/>
 /// / <see cref="Tables.AccountUser"/>) because there is exactly one writer, so check-then-put is atomic.
 /// </summary>
 public partial class LightningDatabase

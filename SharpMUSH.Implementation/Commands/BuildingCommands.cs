@@ -1528,7 +1528,7 @@ public partial class Commands
 					.Select(flag => flag.Name)
 					.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
 
-				// Every provider reads the flags in full when enumeration starts, and an unset swaps the
+				// The provider reads the flags in full when enumeration starts, and an unset swaps the
 				// object's Flags for a new list rather than editing the one being walked.
 				await foreach (var flag in clonedObj.Object().Flags.Value.Where(flag => !copyable.Contains(flag.Name)))
 				{

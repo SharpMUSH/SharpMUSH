@@ -97,9 +97,8 @@ public class WikiTranslationsController(
 	}
 
 	/// <summary>
-	/// Human wording for a <see cref="WikiWriteConflict"/>. Phrasing lives here rather than in the four
-	/// storage implementations: it is presentation, and keeping it in one place means the response cannot
-	/// depend on every provider wording it identically.
+	/// Human wording for a <see cref="WikiWriteConflict"/>. Phrasing lives here rather than in the
+	/// storage implementation: it is presentation.
 	/// </summary>
 	private static string ConflictMessage(WikiWriteConflict conflict, string locale) => conflict switch
 	{

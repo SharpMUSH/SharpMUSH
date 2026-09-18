@@ -4,14 +4,13 @@ using SharpMUSH.Library.Extensions;
 namespace SharpMUSH.Benchmarks;
 
 /// <summary>
-/// Shared bodies for the "uncached storage shape" benchmarks: the eight operations the plain
-/// per-provider read/write benchmark pairs (<c>LightningReadBenchmarks</c>/<c>LightningWriteBenchmarks</c>,
-/// equivalents) don't exercise - inheritance-chain resolution, wildcard/regex attribute
-/// listing, a pushed-down filtered search, cascading subtree/object deletes, graph reachability,
-/// <c>LightningExtendedBenchmarks</c>) supplies <see cref="Database"/> and does its own provider
-/// <c>SurrealBaseBenchmark</c>/<c>LightningBaseBenchmark</c> (single inheritance, and those four
-/// share no common ancestor), so each concrete class re-does that one provider's short bootstrap
-/// sequence itself and calls <see cref="SeedAsync"/> once it has a live <see cref="Database"/>.
+/// Bodies for the "uncached storage shape" benchmarks: the operations the plain read/write
+/// benchmark pairs (<c>LightningReadBenchmarks</c>/<c>LightningWriteBenchmarks</c>) don't
+/// exercise - inheritance-chain resolution, wildcard/regex attribute listing, a pushed-down
+/// filtered search, cascading subtree/object deletes, graph reachability. The concrete class
+/// (<c>LightningExtendedBenchmarks</c>) supplies <see cref="Database"/>, does its own bootstrap
+/// rather than inheriting <c>LightningBaseBenchmark</c> (single inheritance), and calls
+/// <see cref="SeedAsync"/> once it has a live <see cref="Database"/>.
 /// </summary>
 [Config(typeof(AdaptiveBenchmarkConfig))]
 public abstract class ExtendedDatabaseBenchmarks

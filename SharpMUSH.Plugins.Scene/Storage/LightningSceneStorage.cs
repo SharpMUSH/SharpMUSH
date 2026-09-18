@@ -12,8 +12,7 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 /// <summary>
 /// Lightning (LMDB) storage for the Scene System, written against the host-shared
 /// <see cref="ILightningStorageAccessor"/> only — the plugin references neither the provider assembly nor
-/// LightningDB. The other three providers speak a query language and express the scene graph as edges;
-/// here there is one ordered byte-keyed map per concern, so the graph is spelled out as explicit keys and
+/// LightningDB. There is one ordered byte-keyed map per concern, so the scene graph is spelled out as explicit keys and
 /// index rows this class maintains on every write.
 /// </summary>
 /// <remarks>
@@ -40,15 +39,13 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 ///   <c>CurrentEditSeq</c> is the <c>current_edit</c> pointer undo/redo moves.</description></item>
 ///   <item><term><c>scene.plot</c></term><description>plot id → <see cref="ScenePlotRecord"/> JSON.</description></item>
 ///   <item><term><c>scene.meta</c></term><description>counters: <c>scene_id</c> and <c>pose_id</c> (the
-///   1-based id sequences the other providers get from an autoincrement key generator or a counter record),
-///   and <c>poseseq\0&lt;sceneId&gt;</c>, a scene's pose-order sequence.</description></item>
+///   1-based id sequences), and <c>poseseq\0&lt;sceneId&gt;</c>, a scene's pose-order sequence.</description></item>
 ///   <item><term><c>obj</c></term><description>NOT plugin-owned — the provider's own object table, which
 ///   <c>OpenTable</c> hands back because it is already open. See the name-snapshot note below.</description></item>
 /// </list>
 ///
 /// <para><b>Ids.</b> Scene and pose ids are 1-based decimal strings drawn from the <c>scene.meta</c>
-/// and SurrealDB's <c>counter:scene_id</c>/<c>counter:pose_id</c> allocate. Plot and pose-edit ids are
-/// GUIDs (<c>"N"</c>), as SurrealDB's are. Every id leaves this class bare, with no table prefix: players
+/// counters. Plot and pose-edit ids are GUIDs (<c>"N"</c>). Every id leaves this class bare, with no table prefix: players
 /// type scene ids and they are a path segment in <c>/scenes/{id}/live</c>.</para>
 ///
 /// <para><b>Name snapshots.</b> Taken at write time by reading the live object out of the provider's own
@@ -69,7 +66,7 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 ///
 /// <para><b>Sorting and visibility.</b> LMDB orders by key alone, so the orderings the contract specifies —
 /// recent-first by <c>LastActivityAt</c>, scheduled ascending inside the UTC-millis window — are applied in
-/// C# after the index range is read. Visibility filtering matches the other providers exactly: the viewer
+/// C# after the index range is read. Visibility filtering: the viewer
 /// scopes <c>mine</c> and nothing else; who may SEE a scene is decided above this layer.</para>
 /// </remarks>
 public sealed class LightningSceneStorage : ISceneStorage
@@ -228,7 +225,7 @@ public sealed class LightningSceneStorage : ISceneStorage
 			var record = new SceneRecord
 			{
 				Id = id,
-				// A freshly created scene is "new", not "active" — the create-default every provider shares.
+				// A freshly created scene is "new", not "active".
 				Status = "new",
 				// Public by default: a scene nobody can find is not a scene anyone can join.
 				IsPublic = true,
@@ -315,7 +312,7 @@ public sealed class LightningSceneStorage : ISceneStorage
 					break;
 				case "plot":
 					// The value is a plot id: link the scene under it, silently ignoring a plot that is
-					// not there — the same no-op the other providers perform from this key.
+					// not there.
 					LinkPlot(tx, BareId(value), id);
 					break;
 				default:
@@ -445,7 +442,7 @@ public sealed class LightningSceneStorage : ISceneStorage
 			}
 
 			// Filtered on the projected, live-resolved author: a pose whose author has since been destroyed
-			// carries a null AuthorDbref and matches nobody, the same as the other providers.
+			// carries a null AuthorDbref and matches nobody.
 			var author = DbrefNumber(authorDbref) is { } number ? $"#{number}" : null;
 			var poses = ScenePoses(tx, id)
 				.Select(entry => ProjectPose(tx, entry.Pose))
@@ -930,7 +927,7 @@ public sealed class LightningSceneStorage : ISceneStorage
 	private static T Decode<T>(byte[] bytes) => JsonSerializer.Deserialize<T>(bytes, JsonOptions)!;
 
 	/// <summary>
-	/// The bare storage key for an id a caller may spell any of the ways the other providers accept —
+	/// The bare storage key for an id a caller may spell any of the ways ids have been written —
 	/// <c>1</c>, <c>scene:1</c> or <c>node_sharp_sys_scene_scenes/1</c>. Only the last segment is ours.
 	/// </summary>
 	private static string BareId(string? id)

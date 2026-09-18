@@ -7,7 +7,7 @@ namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
 /// <see cref="Library.Services.Interfaces.ILayoutRegistryService"/>: admin-customized portal layouts.
-/// Ported from <c>SurrealDatabase.Layouts.cs</c>: the whole <see cref="LayoutConfiguration"/> is stored
+/// The whole <see cref="LayoutConfiguration"/> is stored
 /// as a single JSON blob (via <see cref="LayoutSerialization"/>) keyed by scope, so no record type or
 /// JSON-context registration is needed for this area.
 /// </summary>

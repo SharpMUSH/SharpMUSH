@@ -85,11 +85,6 @@ in both directions within weeks. Regenerate it.
 
 ## Provider coverage
 
-CI runs the Lightning provider only; the unit, integration and scene legs exclude the embedded
-SurrealDB fixtures (#1019). A green run therefore says nothing about SurrealDB parity, and the
-storage-layer tests are lopsided to match — several thousand lines for Lightning against a few
-hundred for Surreal.
-
-Locally, `SHARPMUSH_DATABASE_PROVIDER` selects the provider; with the variable unset only Lightning
-runs. Anything asserted about storage behaviour on one provider has to be re-run against the other
-before it can be described as a SharpMUSH guarantee rather than a Lightning one.
+Lightning is the only storage provider, and every CI leg — unit, integration and scene — runs
+against it. `SHARPMUSH_DATABASE_PROVIDER` accepts only `lightning` (or no value); anything else fails
+at startup, so there is no second provider to hold a storage guarantee against.

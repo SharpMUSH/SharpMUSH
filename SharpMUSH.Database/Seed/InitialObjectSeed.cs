@@ -1,10 +1,8 @@
 namespace SharpMUSH.Database.Seed;
 
 /// <summary>
-/// The ten initial objects (#0-#9) and their location/home/owner/flag edges, shared verbatim across all
-/// database providers. Copied from <c>SharpMUSH.Database.SurrealDB/SurrealDatabase.Migration.cs</c>
-/// (<c>ApplyInitialSeedAsync</c>): the object properties plus the <c>at_location</c>, <c>has_home</c>,
-/// <c>has_owner</c> and <c>has_flags</c> edge lists, folded into one record per object.
+/// The ten initial objects (#0-#9) a new world is seeded with: the object properties plus their
+/// location, home, owner and flags, one record per object.
 /// </summary>
 public static class InitialObjectSeed
 {

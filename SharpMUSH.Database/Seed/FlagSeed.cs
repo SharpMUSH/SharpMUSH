@@ -1,9 +1,8 @@
 namespace SharpMUSH.Database.Seed;
 
 /// <summary>
-/// The built-in object flags, shared verbatim across all database providers. Copied from
-/// <c>SharpMUSH.Database.SurrealDB/SurrealDatabase.Migration.cs</c> (<c>CreateInitialFlags</c>) so a new
-/// provider's seed migration reads the same array instead of re-typing it.
+/// The built-in object flags a new world is seeded with, kept out of the provider so a seed migration
+/// reads this array instead of re-typing it.
 /// </summary>
 public static class FlagSeed
 {

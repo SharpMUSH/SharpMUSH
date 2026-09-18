@@ -5,7 +5,7 @@ namespace SharpMUSH.Database;
 /// <summary>
 /// The synthetic flag every object carries for its own type (PLAYER, ROOM, THING, EXIT), so
 /// <c>hasflag(obj, PLAYER)</c> and the type-restricted flag checks work without a stored flag.
-/// Appended by every provider after the object's stored flags.
+/// Appended by the provider after the object's stored flags.
 /// </summary>
 public static class ObjectTypeFlag
 {

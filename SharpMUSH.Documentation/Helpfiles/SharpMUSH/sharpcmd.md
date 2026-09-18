@@ -733,9 +733,8 @@ complete, so a backup tool reading the directory never sees a half-written one.
 
 `@backup/list` reports the copies currently on disk, newest first, without taking one.
 
-What a copy is depends on the database. LMDB copies its environment with its own routine, which is a
-point-in-time snapshot by construction. SurrealDB produces a complete, restorable logical export from
-the running game.
+LMDB copies its environment with its own routine, so a copy is a point-in-time snapshot by
+construction.
 
 Older copies are deleted as new ones arrive, keeping a configured number. How many, where they go,
 and whether one is also taken automatically on an interval are deployment settings on the server

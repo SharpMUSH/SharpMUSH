@@ -1,9 +1,7 @@
 namespace SharpMUSH.Database.Seed;
 
 /// <summary>
-/// The built-in attribute entries (name + default flags), shared verbatim across all database providers.
-/// Copied from <c>SharpMUSH.Database.SurrealDB/SurrealDatabase.Migration.cs</c>
-/// (<c>CreateInitialAttributeEntries</c>). Includes the PennMUSH single-letter compatibility slots
+/// The built-in attribute entries (name + default flags) a new world is seeded with. Includes the PennMUSH single-letter compatibility slots
 /// (<c>VA</c>-<c>VZ</c>, <c>WA</c>-<c>WZ</c>, <c>XA</c>-<c>XZ</c>).
 /// </summary>
 public static class AttributeEntrySeed

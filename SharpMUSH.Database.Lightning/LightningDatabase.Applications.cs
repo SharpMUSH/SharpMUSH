@@ -9,7 +9,7 @@ namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
 /// <see cref="Library.Services.Interfaces.IApplicationRegistryService"/>: the Dynamic Application
-/// registry (Area 21). Ported from <c>SurrealDatabase.Applications.cs</c>; keyed by
+/// registry (Area 21), keyed by
 /// <see cref="RegisteredApplication.Slug"/> in <see cref="Tables.App"/>.
 /// </summary>
 public partial class LightningDatabase
