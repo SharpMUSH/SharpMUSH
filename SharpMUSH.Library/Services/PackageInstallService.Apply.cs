@@ -413,13 +413,17 @@ public partial class PackageInstallService
 				$"Application '{spec.Slug}': minimum_role '{roleText}' is not a valid role — answer its configure prompt or fix the manifest.");
 		}
 
-		var zones = spec.Zones
-			.Select(z => Sub(z))
-			.Where(z => !string.IsNullOrWhiteSpace(z))
-			.Select(z => Enum.TryParse<WidgetZone>(z, ignoreCase: true, out var zone) ? zone : (WidgetZone?)null)
-			.Where(z => z is not null)
-			.Select(z => z!.Value)
-			.ToList();
+		var zones = new List<WidgetZone>();
+		foreach (var zoneText in spec.Zones.Select(Sub).Where(z => !string.IsNullOrWhiteSpace(z)))
+		{
+			if (!Enum.TryParse<WidgetZone>(zoneText, ignoreCase: true, out var zone) || !Enum.IsDefined(zone))
+			{
+				return new Error<string>(
+					$"Application '{spec.Slug}': zone '{zoneText}' is not a valid widget zone — answer its configure prompt or fix the manifest.");
+			}
+
+			zones.Add(zone);
+		}
 
 		var application = new RegisteredApplication(
 			spec.Slug,

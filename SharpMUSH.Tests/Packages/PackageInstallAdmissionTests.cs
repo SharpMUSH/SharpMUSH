@@ -284,4 +284,53 @@ public class PackageInstallAdmissionTests
 		var manifest = ApplicationManifest($"adm-app-role-n{role.Trim('-')}");
 		await AssertApplicationRefusedAsync(manifest, new Dictionary<string, string> { ["access"] = role }, role);
 	}
+
+	// ── #1171: an invalid zone is refused, not dropped ───────────────────────
+
+	[Test, NotInParallel]
+	public async Task Application_InvalidConfiguredZone_PersistsNothing()
+	{
+		var manifest = ApplicationManifest("adm-app-zone-answer", zones: "[\"{{?zone}}\"]");
+		await AssertApplicationRefusedAsync(
+			manifest, new Dictionary<string, string> { ["zone"] = "Basement" }, "Basement");
+	}
+
+	[Test, NotInParallel]
+	public async Task Application_InvalidLiteralZone_PersistsNothing()
+	{
+		var parsed = ApplicationManifest("adm-app-zone-literal");
+		var manifest = parsed with { Application = parsed.Application! with { Zones = ["MainContent", "Basement"] } };
+		await AssertApplicationRefusedAsync(manifest, new Dictionary<string, string>(), "Basement");
+	}
+
+	[Test, NotInParallel]
+	public async Task Application_NumericZoneOutsideTheEnum_PersistsNothing()
+	{
+		var manifest = ApplicationManifest("adm-app-zone-numeric", zones: "[\"{{?zone}}\"]");
+		await AssertApplicationRefusedAsync(manifest, new Dictionary<string, string> { ["zone"] = "42" }, "42");
+	}
+
+	[Test, NotInParallel]
+	public async Task Application_EmptyZoneList_IsValid()
+	{
+		var manifest = ApplicationManifest("adm-app-no-zones");
+		var result = await Installer.ApplyAsync(manifest, Request(new Dictionary<string, string>()));
+
+		await Assert.That(result.Value).IsTypeOf<PackageApplyResult>();
+		var application = (await Applications.GetApplicationAsync("adm-app-no-zones")).Expect<RegisteredApplication>();
+		await Assert.That(application.MinimumRole).IsEqualTo(PortalRole.Player);
+		await Assert.That((await Installer.UninstallAsync("adm-app-no-zones")).Value).IsTypeOf<Success>();
+	}
+
+	[Test, NotInParallel]
+	public async Task Application_ConfiguredZone_IsRegistered()
+	{
+		var manifest = ApplicationManifest("adm-app-zone-ok", zones: "[\"{{?zone}}\"]");
+		var result = await Installer.ApplyAsync(manifest, Request(new Dictionary<string, string> { ["zone"] = "rightsidebar" }));
+
+		await Assert.That(result.Value).IsTypeOf<PackageApplyResult>();
+		var application = (await Applications.GetApplicationAsync("adm-app-zone-ok")).Expect<RegisteredApplication>();
+		await Assert.That(application.Zones!).IsEquivalentTo([Library.Models.Portal.Widgets.WidgetZone.RightSidebar]);
+		await Assert.That((await Installer.UninstallAsync("adm-app-zone-ok")).Value).IsTypeOf<Success>();
+	}
 }
