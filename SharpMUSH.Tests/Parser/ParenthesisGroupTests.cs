@@ -86,4 +86,24 @@ public class ParenthesisGroupTests
 	[Arguments("[regmatch(abc,(a)(b)c)]", "1")]
 	public async Task RegexpPatterns(string code, string expected)
 		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
+
+	/// <summary>
+	/// The editor's parses split arguments as evaluation does: with the option on, a comma inside a
+	/// group is text in the semantic tokens, as it is when the code runs.
+	/// </summary>
+	[Test]
+	public async Task SemanticTokensSeeGroups()
+	{
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Compatibility = options.Compatibility with { ParenGroups = true }
+		});
+
+		var commas = Parser.GetSemanticTokens(MarkupText.Plain("cat(x,(a,b)c)"))
+			.Where(token => token.Text == ",")
+			.Select(token => token.TokenType)
+			.ToList();
+
+		await Assert.That(commas).IsEquivalentTo([SemanticTokenType.Operator, SemanticTokenType.Text]);
+	}
 }

@@ -875,6 +875,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
+			parenGroups = Configuration.CurrentValue.Compatibility.ParenGroups,
 			Interpreter =
 			{
 				PredictionMode = GetPredictionMode()
@@ -970,6 +971,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
+			parenGroups = Configuration.CurrentValue.Compatibility.ParenGroups,
 			Interpreter =
 			{
 				PredictionMode = GetPredictionMode()
