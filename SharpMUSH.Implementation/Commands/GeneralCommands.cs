@@ -4307,9 +4307,13 @@ public partial class Commands
 				{
 					matches = SwitchPatterns.Matches(args["0"].Message!, pattern, isRegexp, captures);
 				}
-				catch (Exception ex) when (ex is ArgumentException or System.Text.RegularExpressions.RegexMatchTimeoutException)
+				catch (ArgumentException)
 				{
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat), executor, pattern);
+					continue;
+				}
+				catch (RegexMatchTimeoutException)
+				{
 					continue;
 				}
 

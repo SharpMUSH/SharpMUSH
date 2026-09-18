@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -294,6 +295,27 @@ public class ControlFlowCommandTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
 		await Assert.That(await WaitForMessage(executor, expected)).IsTrue();
+	}
+
+	/// <summary>
+	/// A regexp that cannot finish in time is a pattern that did not match, as it is for
+	/// <c>@switch</c>: the default runs, and nobody is told the pattern is invalid, because it is not.
+	/// </summary>
+	[Test]
+	public async ValueTask Select_RegexpTimeoutIsNoMatch()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var subject = new string('a', 40) + "!";
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"@select/regexp/inline {subject}=(a+)+$|z81244,@pemit #1=SelTimeout_A_81244,@pemit #1=SelTimeout_B_81244"));
+
+		await Assert.That(await WaitForMessage(executor, "SelTimeout_B_81244")).IsTrue();
+		var saidInvalid = NotifyService.ReceivedCalls().Any(call =>
+			call.GetMethodInfo().Name is "NotifyLocalized" or "NotifyLocalizedMarkup"
+			&& call.GetArguments() is [_, string key, ..] arguments
+			&& key == nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat)
+			&& arguments.SelectMany(argument => argument as object?[] ?? [argument]).Any(argument => argument?.ToString()?.Contains("z81244") == true));
+		await Assert.That(saidInvalid).IsFalse();
 	}
 
 	[Test]
