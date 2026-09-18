@@ -13,6 +13,7 @@ using Serilog;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
+using SharpMUSH.Database.Lightning;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models.RecurringJobs;
 using SharpMUSH.Library.Services;
@@ -39,10 +40,12 @@ namespace SharpMUSH.Tests.Integration;
 /// <see cref="ConfigureWebHost"/> so it is guaranteed to be in place before
 /// <c>Program.Main()</c> calls <c>NatsStrategyProvider.GetStrategy()</c>.
 /// </param>
+/// <param name="worldPath">The host's own Lightning world, never the session's.</param>
 internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 	string sqlConnectionString,
 	string configFile,
-	string natsUrl) :
+	string natsUrl,
+	string worldPath) :
 	TestWebApplicationFactory<TProgram> where TProgram : class
 {
 	/// <summary>
@@ -85,7 +88,13 @@ internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 			try { File.Copy(temp, colorFile, true); } catch { /* best-effort */ }
 		}
 
-		builder.ConfigureTestServices(TestHostServices.RemoveRecurringJobRunner);
+		builder.ConfigureTestServices(services =>
+		{
+			TestHostServices.RemoveRecurringJobRunner(services);
+			// SHARPMUSH_LIGHTNING_PATH names the primary host's world when one is running in this process.
+			services.RemoveAll<LightningWorldPath>();
+			services.AddSingleton(new LightningWorldPath(worldPath));
+		});
 
 		builder.ConfigureServices(sc =>
 		{
@@ -148,6 +157,7 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 	private WebApplication? _connectionServerApp;
 	private WebApplication? _renderingWorkerApp;
 	private readonly string _renderingDirectory = Path.Combine(Path.GetTempPath(), "sm-integration-" + Guid.NewGuid().ToString("N"));
+	private readonly string _worldPath = Path.Combine(Path.GetTempPath(), "sm-integration-world-" + Guid.NewGuid().ToString("N"));
 
 	public async Task InitializeAsync()
 	{
@@ -161,7 +171,8 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 		_serverFactory = new TelnetIntegrationServerBuilderFactory<SharpMUSH.Server.Program>(
 			MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
-			natsUrl);
+			natsUrl,
+			_worldPath);
 
 		// Accessing Services triggers the host build, which starts all hosted services
 		// (including NatsJetStreamConsumerService that listens for ConnectionEstablishedMessage).
@@ -235,6 +246,8 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 
 			await _serverFactory.DisposeAsync();
 		}
+		foreach (var path in new[] { _worldPath, _worldPath + ".backups" }.Where(Directory.Exists))
+			Directory.Delete(path, recursive: true);
 
 		GC.SuppressFinalize(this);
 	}
@@ -312,6 +325,21 @@ public class TelnetIntegrationTests
 
 		await Assert.That(postLogin).Contains("Room Zero")
 			.Because("After logging in as God, the auto-look should show Room Zero");
+	}
+
+	/// <summary>
+	/// The session's primary host opens the world <c>SHARPMUSH_LIGHTNING_PATH</c> names, and a second LMDB
+	/// environment on one path in one process is unsafe. Run alone, the variable is unset and the default is
+	/// a relative directory that outlives the run. The engine host must own a temporary world instead.
+	/// </summary>
+	[Test]
+	public async Task EngineHostOwnsAPrivateWorld()
+	{
+		// Only the Lightning provider opens a world directory.
+		if (Fixture.ServerServices.GetService<LightningDatabase>() is not { } world) return;
+		var path = world.Store.Path;
+		await Assert.That(path).IsNotEqualTo(Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH"));
+		await Assert.That(path).StartsWith(Path.GetTempPath());
 	}
 
 	/// <summary>
