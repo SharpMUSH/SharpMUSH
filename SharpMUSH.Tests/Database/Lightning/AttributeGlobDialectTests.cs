@@ -85,6 +85,24 @@ public class AttributeGlobDialectTests
 		await Assert.That(Attr("A+B", "AAB")).IsFalse();
 	}
 
+	/// <summary>
+	/// A backslash is an ordinary character in an attribute name, and the dialect has no escape
+	/// syntax. Left unescaped it reaches the regex engine as an assertion — <c>\B</c> is a
+	/// word boundary, <c>\d</c> a digit class — so the pattern matches the wrong names entirely.
+	/// </summary>
+	[Test]
+	[Arguments(@"A\B", @"A\B")]
+	[Arguments(@"A\d", @"A\d")]
+	[Arguments(@"A\w*", @"A\wXY")]
+	public async Task BackslashIsLiteral(string pattern, string name)
+		=> await Assert.That(Attr(pattern, name)).IsTrue();
+
+	[Test]
+	[Arguments(@"A\B", "AB")]
+	[Arguments(@"A\d", "A5")]
+	public async Task BackslashDoesNotBecomeARegexAssertion(string pattern, string name)
+		=> await Assert.That(Attr(pattern, name)).IsFalse();
+
 	[Test]
 	public async Task MatchingIsCaseInsensitive()
 		=> await Assert.That(Attr("desc`*", "DESC`SHORT")).IsTrue();

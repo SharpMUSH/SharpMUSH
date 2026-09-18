@@ -243,7 +243,10 @@ public static class PackageManifestWriter
 		yaml.AppendLine("    attributes:");
 		foreach (var (name, spec) in attributes.OrderBy(a => a.Key, StringComparer.Ordinal))
 		{
-			yaml.Append("      ").Append(name).AppendLine(":");
+			// Attribute names come off live objects and the store does not constrain them, so the
+			// reader accepts any non-whitespace name. A bare key that leads with a YAML indicator,
+			// or carries a colon, is not the name that went in.
+			yaml.Append("      ").Append(Scalar(name)).AppendLine(":");
 			AppendValue(yaml, spec.Value, "        ");
 			if (spec.Flags.Count > 0)
 			{
@@ -274,19 +277,30 @@ public static class PackageManifestWriter
 	/// <c>12345</c> and <c>true</c> come back as text without any quoting of their own.
 	/// </summary>
 	/// <remarks>
+	/// <para>
 	/// A block scalar cannot carry a value that is empty or whose first or last character is
 	/// whitespace: YamlDotNet has no non-blank line to anchor the indentation on and rejects the
 	/// manifest outright ("extra spaces in first line"), and leading whitespace would be silently
-	/// lost. Those go single-quoted, which preserves whitespace exactly.
+	/// lost.
+	/// </para>
+	/// <para>
+	/// Those fall back on quoting, and which quote matters. A single-quoted scalar preserves
+	/// whitespace but FOLDS physical line breaks into spaces, so a padded multi-line value written
+	/// that way parses cleanly and comes back as different MUSHcode. Only a double-quoted scalar,
+	/// where the break is an explicit <c>\n</c> escape, carries both.
+	/// </para>
 	/// </remarks>
 	private static void AppendValue(StringBuilder yaml, string value, string indent)
 	{
 		var normalized = value.Replace("\r\n", "\n");
-		if (normalized.Length == 0
-			|| char.IsWhiteSpace(normalized[0])
-			|| char.IsWhiteSpace(normalized[^1]))
+		var blockScalarFits = normalized.Length > 0
+			&& !char.IsWhiteSpace(normalized[0])
+			&& !char.IsWhiteSpace(normalized[^1]);
+
+		if (!blockScalarFits)
 		{
-			yaml.Append(indent).Append("value: ").AppendLine(Quoted(normalized));
+			yaml.Append(indent).Append("value: ")
+				.AppendLine(normalized.Contains('\n') ? DoubleQuoted(normalized) : Quoted(normalized));
 			return;
 		}
 
@@ -308,11 +322,48 @@ public static class PackageManifestWriter
 
 	private static string Quoted(string value) => $"'{value.Replace("'", "''")}'";
 
+	/// <summary>
+	/// A double-quoted YAML scalar. The only quoting that survives a line break, which is why it
+	/// exists here at all — see <see cref="AppendValue"/>.
+	/// </summary>
+	private static string DoubleQuoted(string value)
+	{
+		var quoted = new StringBuilder(value.Length + 2).Append('"');
+		foreach (var character in value)
+		{
+			switch (character)
+			{
+				case '\\': quoted.Append("\\\\"); break;
+				case '"': quoted.Append("\\\""); break;
+				case '\n': quoted.Append("\\n"); break;
+				case '\r': quoted.Append("\\r"); break;
+				case '\t': quoted.Append("\\t"); break;
+				default:
+					if (char.IsControl(character))
+					{
+						quoted.Append("\\x").Append(((int)character).ToString("x2", CultureInfo.InvariantCulture));
+					}
+					else
+					{
+						quoted.Append(character);
+					}
+
+					break;
+			}
+		}
+
+		return quoted.Append('"').ToString();
+	}
+
 	/// <summary>Characters that make a plain scalar ambiguous wherever they appear in it.</summary>
 	private static readonly SearchValues<char> Hazards = SearchValues.Create("\n\r\t#:");
 
-	/// <summary>Characters that mean something other than themselves at the start of a plain scalar.</summary>
-	private static readonly SearchValues<char> LeadingIndicators = SearchValues.Create("-?:,[]{}#&*!|>'\"%@`");
+	/// <summary>
+	/// Characters that mean something other than themselves at the start of a plain scalar. The
+	/// last two are not YAML indicators but number leads — <c>+1</c> resolves to an int and
+	/// <c>.inf</c> to a double, neither of which leads with a digit.
+	/// </summary>
+	private static readonly SearchValues<char> LeadingIndicators = SearchValues.Create("-?:,[]{}#&*!|>'\"%@`+.");
 
 	/// <summary>The words YAML reads as a bool or a null rather than as text.</summary>
 	private static readonly HashSet<string> Keywords = new(StringComparer.OrdinalIgnoreCase)

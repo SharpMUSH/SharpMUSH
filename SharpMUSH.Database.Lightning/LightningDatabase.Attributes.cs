@@ -981,7 +981,7 @@ public partial class LightningDatabase
 	/// caller wanting "everything" passes <c>.*</c>.</summary>
 	private static Regex RawRegex(string pattern) => new(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/]")]
+	[GeneratedRegex(@"\*\*|[.*+?^${}()|[\]/\\]")]
 	private static partial Regex WildcardToRegex();
 
 	#endregion

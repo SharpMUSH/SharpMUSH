@@ -66,6 +66,67 @@ public class PackageAuthoringServiceTests
 		await Assert.That(cmd.Value).Contains("u({{auth_core}}/FN_FMT)");
 	}
 
+	/// <summary>
+	/// Attribute trees are part of an object, and an export that silently drops them hands the
+	/// installing game a different object than the one that was packaged. The reader has always
+	/// accepted backticked names — the install path splits the path on a backtick — so the loss
+	/// was only ever on the way out.
+	/// </summary>
+	[Test, NotInParallel]
+	public async Task Export_CarriesNestedAttributes()
+	{
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
+		var pm = pmNode.Expect<SharpPlayer>();
+		var location = pmNode.AsContainer;
+
+		var dbref = await Database.CreateThingAsync("Nested Attr Source", location, pm, location);
+		await Database.SetAttributeAsync(dbref, ["DESCRIBE"], MarkupText.Plain("top level"), pm);
+		await Database.SetAttributeAsync(dbref, ["DESCRIBE", "SHORT"], MarkupText.Plain("one down"), pm);
+		await Database.SetAttributeAsync(dbref, ["DESCRIBE", "SHORT", "INNER"], MarkupText.Plain("two down"), pm);
+		var objid = (await Database.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>().Object().DBRef.ToString();
+
+		var exported = await Authoring.ExportAsync(new PackageAuthoringRequest(
+			"nested-pkg", "1.0.0", "Nested attributes", "MIT", ["Tester"],
+			[new AuthoringObjectSelection(objid, "nested", [])],
+			new Dictionary<string, string>(),
+			new Dictionary<string, AuthoringConfigureClassification>()));
+
+		var manifest = new PackageManifestService()
+			.ParseManifest(exported.Expect<string>()).Expect<ParsedPackageManifest>().Manifest;
+		var attributes = manifest.Objects.Single(o => o.Ref == "nested").Attributes;
+
+		await Assert.That(attributes["DESCRIBE"].Value).IsEqualTo("top level");
+		await Assert.That(attributes["DESCRIBE`SHORT"].Value).IsEqualTo("one down");
+		await Assert.That(attributes["DESCRIBE`SHORT`INNER"].Value).IsEqualTo("two down");
+	}
+
+	/// <summary>The engine-managed PM` tree is recreated by the apply engine and must never be carried.</summary>
+	[Test, NotInParallel]
+	public async Task Export_OmitsTheReservedRefTree()
+	{
+		var pmNode = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<AnySharpObject>();
+		var pm = pmNode.Expect<SharpPlayer>();
+		var location = pmNode.AsContainer;
+
+		var dbref = await Database.CreateThingAsync("Reserved Tree Source", location, pm, location);
+		await Database.SetAttributeAsync(dbref, ["FN_KEEP"], MarkupText.Plain("kept"), pm);
+		await Database.SetAttributeAsync(dbref, ["PM", "REFS", "SOMETHING"], MarkupText.Plain("#123"), pm);
+		var objid = (await Database.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>().Object().DBRef.ToString();
+
+		var exported = await Authoring.ExportAsync(new PackageAuthoringRequest(
+			"reserved-pkg", "1.0.0", "Reserved tree", "MIT", ["Tester"],
+			[new AuthoringObjectSelection(objid, "reserved", [])],
+			new Dictionary<string, string>(),
+			new Dictionary<string, AuthoringConfigureClassification>()));
+
+		var yaml = exported.Expect<string>();
+		var manifest = new PackageManifestService().ParseManifest(yaml).Expect<ParsedPackageManifest>().Manifest;
+		var attributes = manifest.Objects.Single(o => o.Ref == "reserved").Attributes;
+
+		await Assert.That(attributes.ContainsKey("FN_KEEP")).IsTrue();
+		await Assert.That(attributes.Keys.Any(k => k.StartsWith("PM`", StringComparison.OrdinalIgnoreCase))).IsFalse();
+	}
+
 	[Test, NotInParallel]
 	public async Task FullRoundTrip_AuthorExportInstall_VerifyState()
 	{

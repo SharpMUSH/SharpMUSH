@@ -63,12 +63,10 @@ public partial class PackageInstallService
 			var attachers = new SortedSet<string>(StringComparer.Ordinal);
 			foreach (var objid in ownObjids)
 			{
-				foreach (var managed in await registry.GetManagedAttributesForObjectAsync(objid))
+				foreach (var managed in (await registry.GetManagedAttributesForObjectAsync(objid))
+					.Where(managed => managed.PackageId != packageId))
 				{
-					if (managed.PackageId != packageId)
-					{
-						attachers.Add(managed.PackageId);
-					}
+					attachers.Add(managed.PackageId);
 				}
 			}
 

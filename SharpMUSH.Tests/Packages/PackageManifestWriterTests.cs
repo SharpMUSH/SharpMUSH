@@ -27,17 +27,17 @@ public class PackageManifestWriterTests
 		return result.Expect<ParsedPackageManifest>().Manifest;
 	}
 
+	// TryParse hands back VersionConstraint.Any / 0.0.0 on failure rather than signalling, so a
+	// typo in a literal below would quietly weaken the case instead of failing it.
 	private static VersionConstraint Constraint(string text)
-	{
-		VersionConstraint.TryParse(text, out var constraint);
-		return constraint;
-	}
+		=> VersionConstraint.TryParse(text, out var constraint)
+			? constraint
+			: throw new ArgumentException($"'{text}' is not a version constraint.", nameof(text));
 
 	private static PackageVersion Version(string text)
-	{
-		PackageVersion.TryParse(text, out var version);
-		return version;
-	}
+		=> PackageVersion.TryParse(text, out var version)
+			? version
+			: throw new ArgumentException($"'{text}' is not a package version.", nameof(text));
 
 	/// <summary>A softcode manifest that uses every field the reader understands.</summary>
 	private static PackageManifest Maximal() => new(
@@ -348,6 +348,90 @@ public class PackageManifestWriterTests
 	[Arguments("        value: '  leading and trailing  '")]
 	public async Task ValuesABlockScalarCannotCarryAreQuoted(string expected)
 		=> await Assert.That(PackageManifestWriter.Write(Maximal())).Contains(expected);
+
+	/// <summary>
+	/// A multi-line value that also has whitespace at either end cannot use a block scalar, and it
+	/// must not fall back to a single-quoted one: YAML folds the physical line breaks inside single
+	/// quotes into spaces, so the manifest parses and the MUSHcode silently changes.
+	/// </summary>
+	[Test]
+	[Arguments("  leading space\nsecond line")]
+	[Arguments("first line\ntrailing space  ")]
+	[Arguments("\tleading tab\nsecond line\t")]
+	[Arguments("\nleading newline")]
+	[Arguments("trailing newline\n")]
+	public async Task MultiLineValuesKeepTheirNewlinesWhateverTheirPadding(string value)
+	{
+		var manifest = OneAttribute("PADDED_MULTILINE", value);
+		var again = RoundTrip(manifest);
+
+		await Assert.That(again.Objects[0].Attributes["PADDED_MULTILINE"].Value).IsEqualTo(value);
+	}
+
+	/// <summary>
+	/// Attribute names come off live objects, and the attribute store does not constrain them, so
+	/// the manifest reader accepts any non-whitespace name. Emitted as a bare YAML key, one that
+	/// leads with an indicator or carries a colon produces a manifest that is invalid or whose key
+	/// is not the name that went in.
+	/// </summary>
+	[Test]
+	[Arguments("#HASH")]
+	[Arguments("&AMP")]
+	[Arguments("*STAR")]
+	[Arguments("!BANG")]
+	[Arguments("@AT")]
+	[Arguments("%PCT")]
+	[Arguments("WITH:COLON")]
+	[Arguments("-DASH")]
+	[Arguments("{BRACE")]
+	[Arguments("'QUOTE")]
+	[Arguments("TREE`CHILD")]
+	public async Task AttributeNamesSurviveAsKeys(string name)
+	{
+		var again = RoundTrip(OneAttribute(name, "a value"));
+
+		await Assert.That(again.Objects[0].Attributes.ContainsKey(name)).IsTrue();
+		await Assert.That(again.Objects[0].Attributes[name].Value).IsEqualTo("a value");
+	}
+
+	/// <summary>
+	/// Not every YAML number leads with a digit. A signed or dot-prefixed token read plain comes
+	/// back as a number, and the string field it was written from is gone.
+	/// </summary>
+	[Test]
+	[Arguments("+1")]
+	[Arguments("+1.2")]
+	[Arguments("-1.2")]
+	[Arguments(".inf")]
+	[Arguments("-.inf")]
+	[Arguments(".nan")]
+	[Arguments("0x1f")]
+	[Arguments("1_000")]
+	public async Task NumericLookingNamesSurviveAsStrings(string text)
+	{
+		var manifest = OneAttribute("ATTR", "value", objectName: text) with { Description = text };
+		var again = RoundTrip(manifest);
+
+		await Assert.That(again.Description).IsEqualTo(text);
+		await Assert.That(again.Objects[0].Name).IsEqualTo(text);
+	}
+
+	/// <summary>A minimal one-object manifest carrying a single attribute, for the scalar cases.</summary>
+	private static PackageManifest OneAttribute(string attribute, string value, string objectName = "A Thing") => new(
+		PackageFormatVersion.Supported,
+		"scalar-cases",
+		Version("1.0.0"),
+		[],
+		"Scalar cases.",
+		null, null, [], null, null, null, [], [],
+		new Dictionary<string, PackageConfigureSpec>(),
+		[
+			new PackageObjectSpec(
+				"thing", PackageObjectType.Thing, objectName, null, null, null, null,
+				[], [], [],
+				new Dictionary<string, string>(),
+				new Dictionary<string, PackageAttributeSpec> { [attribute] = new(value, []) })
+		]);
 
 	/// <summary>Writing twice is byte-identical: the writer has no ordering nondeterminism.</summary>
 	[Test]
