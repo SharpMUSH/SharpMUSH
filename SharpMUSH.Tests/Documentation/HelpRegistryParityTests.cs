@@ -1,3 +1,5 @@
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Documentation;
 using SharpMUSH.Library.Definitions;
 
@@ -21,28 +23,6 @@ public class HelpRegistryParityTests
 		helpfiles.Index();
 		return helpfiles;
 	}
-
-	/// <summary>
-	/// Function topics documented in help that no <c>[SharpFunction]</c> and no configured alias
-	/// registers, so <c>help &lt;name&gt;</c> describes something the parser answers
-	/// <c>#-1 FUNCTION (NAME) NOT FOUND</c> for.
-	///
-	/// <para>All eight are PennMUSH aliases the help text names in so many words — "avg() is an alias
-	/// for mean()" — that <see cref="Configurable.FunctionAliases"/> never picked up. Registering them
-	/// is a one-line change to that table; until it lands, the pairing is recorded here so neither
-	/// side can drift further.</para>
-	/// </summary>
-	private static readonly Dictionary<string, string> DocumentedButUnregisteredFunctions = new(StringComparer.OrdinalIgnoreCase)
-	{
-		["avg()"] = "help calls it an alias for mean(); Configurable.FunctionAliases does not register it",
-		["cname()"] = "help calls it an alias for moniker(); Configurable.FunctionAliases does not register it",
-		["element()"] = "help calls it an alias for match(); Configurable.FunctionAliases does not register it",
-		["exp()"] = "help calls it an alias for e(); Configurable.FunctionAliases does not register it",
-		["hostname()"] = "help calls it an alias for host(); Configurable.FunctionAliases does not register it",
-		["replace()"] = "help calls it an alias for lreplace(); Configurable.FunctionAliases does not register it",
-		["reverse()"] = "help calls it an alias for flip(); Configurable.FunctionAliases does not register it",
-		["speakpenn()"] = "help calls it an alias for speak(); Configurable.FunctionAliases does not register it"
-	};
 
 	/// <summary>
 	/// Signatures whose shape cannot be compared to the declared arity, with the reason.
@@ -87,7 +67,6 @@ public class HelpRegistryParityTests
 		var orphans = help.IndexedHelp.Keys
 			.Where(topic => topic.EndsWith("()", StringComparison.Ordinal))
 			.Where(topic => !registered.Contains(topic[..^2]))
-			.Where(topic => !DocumentedButUnregisteredFunctions.ContainsKey(topic))
 			.Order(StringComparer.OrdinalIgnoreCase)
 			.ToList();
 
@@ -95,19 +74,39 @@ public class HelpRegistryParityTests
 	}
 
 	/// <summary>
-	/// An entry that has started resolving keeps a stale excuse alive, and the next reader believes it.
+	/// The aliases this repository ships are written down once, in <see cref="AliasOptions.Default"/>.
+	/// They were written down three times — there, in <c>Configurable</c>'s field initializer and in
+	/// <c>ReadPennMushConfig.Create</c> — and the three had diverged: eight aliases the help documents
+	/// in so many words were registered by none of them. The imported copy wins at startup, so a game
+	/// that read a PennMUSH <c>mush.cnf</c> got the oldest of the three.
 	/// </summary>
 	[Test]
-	public async Task NoRecordedHelpOrphanIsRegisteredAfterAll()
+	public async Task TheShippedAliasesAreOneTable()
 	{
-		var registered = RegistryInventory.FunctionNamesWithAliases();
+		var imported = ReadPennMushConfig.Create(EmptyPennMushConfig()).Alias;
 
-		var resolved = DocumentedButUnregisteredFunctions.Keys
-			.Where(topic => registered.Contains(topic[..^2]))
-			.ToList();
-
-		await Assert.That(resolved).IsEmpty();
+		await Assert.That(Flatten(Configurable.DefaultFunctionAliases))
+			.IsEquivalentTo(Flatten(AliasOptions.Default.FunctionAliases));
+		await Assert.That(Flatten(Configurable.DefaultCommandAliases))
+			.IsEquivalentTo(Flatten(AliasOptions.Default.CommandAliases));
+		await Assert.That(Flatten(imported.FunctionAliases))
+			.IsEquivalentTo(Flatten(AliasOptions.Default.FunctionAliases));
+		await Assert.That(Flatten(imported.CommandAliases))
+			.IsEquivalentTo(Flatten(AliasOptions.Default.CommandAliases));
 	}
+
+	/// <summary>A config file that sets nothing, so every option comes back at its default.</summary>
+	private static string EmptyPennMushConfig()
+	{
+		var path = Path.Combine(Path.GetTempPath(), $"sharpmush-alias-parity-{Guid.NewGuid():N}.cnf");
+		File.WriteAllText(path, string.Empty);
+		return path;
+	}
+
+	private static List<string> Flatten(Dictionary<string, string[]> aliases) =>
+		aliases.SelectMany(pair => pair.Value.Select(alias => $"{pair.Key.ToLowerInvariant()}={alias.ToLowerInvariant()}"))
+			.Order(StringComparer.Ordinal)
+			.ToList();
 
 	/// <summary>
 	/// The signature line and the attribute have to agree about how many arguments a call may carry.
@@ -122,9 +121,8 @@ public class HelpRegistryParityTests
 		var signatures = HelpSignature.ReadAll(TestPaths.Helpfiles);
 		var offenders = new List<string>();
 
-		foreach (var entry in RegistryInventory.Functions)
+		foreach (var entry in RegistryInventory.Functions.Where(f => !SignatureExceptions.ContainsKey(f.Name)))
 		{
-			if (SignatureExceptions.ContainsKey(entry.Name)) continue;
 			if (!signatures.TryGetValue(entry.Name, out var lines)) continue;
 
 			var parsed = lines

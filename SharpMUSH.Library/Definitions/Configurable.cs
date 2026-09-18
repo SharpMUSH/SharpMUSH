@@ -19,57 +19,11 @@ public static class Configurable
 		get => _floatPrecision;
 		set => _floatPrecision = Math.Clamp(value, MinFloatPrecision, MaxFloatPrecision);
 	}
-	/// <summary>
-	/// The alias names PennMUSH ships, as the shipped helpfiles document them: every entry here has a
-	/// topic that says in so many words that it is another name for the function it maps to. It is the
-	/// one copy — <c>OptionsService</c> seeds the database from it rather than repeating it, because
-	/// the two copies had already diverged into eight aliases that were documented and unregistered.
-	/// </summary>
-	public static Dictionary<string, string[]> DefaultFunctionAliases => new()
-	{
-		{ "atrlock", ["attrlock"] },
-		{ "e", ["exp"] },
-		{ "flip", ["reverse"] },
-		{ "host", ["hostname"] },
-		{ "iter", ["parse"] },
-		{ "lreplace", ["replace"] },
-		{ "lsearch", ["search"] },
-		{ "lstats", ["stats"] },
-		{ "lthings", ["lobjects"] },
-		{ "lvthings", ["lvobjects"] },
-		{ "match", ["element"] },
-		{ "mean", ["avg"] },
-		{ "modulo", ["mod", "modulus"] },
-		{ "moniker", ["cname"] },
-		{ "nattr", ["attrcnt"] },
-		{ "nattrp", ["attrpcnt"] },
-		{ "nthings", ["nobjects"] },
-		{ "nvthings", ["nvobjects"] },
-		{ "randword", ["pickrand"] },
-		{ "soundslike", ["soundlike"] },
-		{ "speak", ["speakpenn"] },
-		{ "textfile", ["dynhelp"] },
-		{ "trunc", ["val"] },
-		{ "ufun", ["u"] },
-		{ "xthings", ["xobjects"] },
-		{ "xvthings", ["xvobjects"] }
-	};
+	/// <inheritdoc cref="AliasOptions.Default"/>
+	public static Dictionary<string, string[]> DefaultFunctionAliases => AliasOptions.Default.FunctionAliases;
 
-	/// <inheritdoc cref="DefaultFunctionAliases"/>
-	public static Dictionary<string, string[]> DefaultCommandAliases => new()
-	{
-		{ "@ATRLOCK", ["@attrlock"] },
-		{ "@ATRCHOWN", ["@attrchown"] },
-		{ "@EDIT", ["@gedit"] },
-		{ "@IFELSE", ["@if"] },
-		{ "@SWITCH", ["@sw"] },
-		{ "GET", ["take"] },
-		{ "GOTO", ["move"] },
-		{ "INVENTORY", ["i"] },
-		{ "LOOK", ["l"] },
-		{ "PAGE", ["p"] },
-		{ "WHISPER", ["w"] }
-	};
+	/// <inheritdoc cref="AliasOptions.Default"/>
+	public static Dictionary<string, string[]> DefaultCommandAliases => AliasOptions.Default.CommandAliases;
 
 	public static Dictionary<string, string[]> FunctionAliases { get; private set; } = DefaultFunctionAliases;
 

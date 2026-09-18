@@ -126,11 +126,10 @@ public class FunctionArityParityTests : ServerTestBase
 		var penn = PennArity();
 		var offenders = new List<string>();
 
-		foreach (var entry in RegistryInventory.Functions)
+		foreach (var entry in RegistryInventory.Functions.Where(f => !DeliberateDivergences.ContainsKey(f.Name)))
 		{
 			if (!penn.TryGetValue(entry.Name, out var expected)) continue;
 			if (Agrees(entry.Attribute, expected)) continue;
-			if (DeliberateDivergences.ContainsKey(entry.Name)) continue;
 
 			offenders.Add(
 				$"{entry.Name}: declared {entry.Attribute.MinArgs}..{entry.Attribute.MaxArgs}, "
@@ -183,9 +182,8 @@ public class FunctionArityParityTests : ServerTestBase
 		var path = Path.Combine(TestPaths.RepositoryRoot, "SharpMUSH.Tests", "PennMUSH", "function-arity.tsv");
 		var table = new Dictionary<string, (int, int)>(StringComparer.OrdinalIgnoreCase);
 
-		foreach (var line in File.ReadLines(path))
+		foreach (var line in File.ReadLines(path).Where(l => l.Length > 0 && l[0] != '#'))
 		{
-			if (line.Length == 0 || line[0] == '#') continue;
 			var fields = line.Split('\t');
 			table[fields[0]] = (int.Parse(fields[1]), fields[2] == "INF" ? int.MaxValue : int.Parse(fields[2]));
 		}
