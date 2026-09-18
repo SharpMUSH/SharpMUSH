@@ -13,9 +13,11 @@ where their data comes from, and how to change them when the answer is meant to 
 | `FunctionArityParityTests` | every declared arity matches PennMUSH's, except for a table of deliberate differences | `SharpMUSH.Tests/Functions/` |
 | `RegistryCoverageInventoryTests` | some test source calls every registered function by name | `SharpMUSH.Tests/Functions/` |
 
-Each carries its exceptions as a dictionary from name to reason, and each has a companion test that
-fails when an exception stops applying. An excuse that has quietly become false is worse than no
-excuse, because the next reader believes it.
+The first two carry their exceptions as a dictionary from name to reason, and each has a companion
+test that fails when an exception stops applying. An excuse that has quietly become false is worse
+than no excuse, because the next reader believes it. `RegistryCoverageInventoryTests` has no
+exception table at all: the only way for a function to ship untested is to delete a test, which shows
+up as a deletion in a diff.
 
 ## The PennMUSH arity table
 
