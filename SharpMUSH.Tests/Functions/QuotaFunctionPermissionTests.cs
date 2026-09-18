@@ -1,15 +1,18 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
 /// <summary>
-/// PennMUSH's <c>fun_quota</c> (<c>src/wiz.c:1864-1896</c>): match a <em>player</em>, refuse with
-/// <c>#-1</c> unless <c>Do_Quotas(executor) || See_All(executor) || controls(executor, who)</c>, answer
+/// PennMUSH's <c>fun_quota</c> (<c>src/wiz.c:1864-1896</c>): match a <em>player</em>, refuse
+/// unless <c>Do_Quotas(executor) || See_All(executor) || controls(executor, who)</c>, answer
 /// <c>99999</c> for a No_Quota holder, and otherwise return one integer — the player's limit
 /// (<c>owned + get_current_quota(who)</c>, which is what SharpMUSH stores as the quota itself).
+/// Failures depart from Penn on purpose: Penn returns a bare <c>#-1</c> and notifies the reason,
+/// where this returns the reason — <c>#-1 PERMISSION DENIED</c>, or the match's own error.
 /// </summary>
 /// <remarks>
 /// Every permission case drives a <em>mortal</em> handle. The fixture's handle 1 is God, so a
@@ -40,12 +43,16 @@ public class QuotaFunctionPermissionTests
 		var target = await Mortal("QuotaFnSubject");
 		await God($"@quota/set {target.Name}=37");
 
-		await Assert.That(await EvalAs(mortal.DbRef, $"quota({target.Name})")).IsEqualTo("#-1")
-			.Because("wiz.c:1881 refuses a mortal who neither controls the player nor holds See_All or Quotas");
+		await Assert.That(await EvalAs(mortal.DbRef, $"quota({target.Name})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+			.Because("wiz.c:1876 refuses a mortal who neither controls the player nor holds See_All or Quotas");
 	}
 
+	/// <summary>
+	/// The refusal is carried by the return value, so the function does not also notify — Penn's
+	/// "You can't see someone else's quota!" would land once per call from inside an <c>iter()</c>.
+	/// </summary>
 	[Test]
-	public async Task TheRefusalSaysWhyInPennsWords()
+	public async Task TheRefusalIsTheReturnValueNotANotification()
 	{
 		var mortal = await Mortal("QuotaFnTold");
 		var target = await Mortal("QuotaFnToldSubject");
@@ -53,18 +60,16 @@ public class QuotaFunctionPermissionTests
 		var before = Factory.Notifications.CountFor(mortal.DbRef);
 		await EvalAs(mortal.DbRef, $"quota({target.Name})");
 
-		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before))
-			.Contains("You can't see someone else's quota!")
-			.Because("wiz.c:1877");
+		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before)).IsEmpty();
 	}
 
 	[Test]
-	public async Task ANameThatMatchesNoPlayerIsABareNothing()
+	public async Task ANameThatMatchesNoPlayerSaysSo()
 	{
 		var mortal = await Mortal("QuotaFnMiss");
 
-		await Assert.That(await EvalAs(mortal.DbRef, $"quota(NoSuchQuotaPlayer{Guid.NewGuid():N})")).IsEqualTo("#-1")
-			.Because("wiz.c:1873 returns a bare #-1 when the match fails");
+		await Assert.That(await EvalAs(mortal.DbRef, $"quota(NoSuchQuotaPlayer{Guid.NewGuid():N})"))
+			.IsEqualTo(ErrorMessages.Returns.NoMatch);
 	}
 
 	/// <summary>
@@ -138,8 +143,7 @@ public class QuotaFunctionPermissionTests
 
 		var result = await EvalAs(mortal.DbRef, $"quota({thing})");
 
-		await Assert.That(result).StartsWith("#-1");
-		await Assert.That(result).DoesNotContain("59");
+		await Assert.That(result).IsEqualTo(ErrorMessages.Returns.NoMatch);
 	}
 
 	/// <summary>
@@ -164,7 +168,7 @@ public class QuotaFunctionPermissionTests
 		await God($"@quota/set {owner.Name}=67");
 		var thing = await CreateThingOwnedByAsync(owner, "QuotaFnPlain");
 
-		await Assert.That(await EvalAs(thing, $"quota({owner.DbRef})")).IsEqualTo("#-1")
+		await Assert.That(await EvalAs(thing, $"quota({owner.DbRef})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
 			.Because("predicat.c:405 refuses controls(thing, player) without TRUST");
 	}
 

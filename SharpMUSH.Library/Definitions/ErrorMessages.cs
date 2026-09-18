@@ -1290,7 +1290,6 @@ public static class ErrorMessages
 		public const string YourQuotaSetToZeroByFormat = "Your building quota has been set to 0 by {0}.";
 		public const string QuotaSystemDisabledMessage = "Quota system disabled.";
 		public const string CantLookAtOthersQuota = "You can't look at someone else's quota.";
-		public const string CantSeeOthersQuota = "You can't see someone else's quota!";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string QuotaStatusFormat = "Quota: {0}/{1}";
 		public const string AllQuotaUsage = "Usage: @allquota <amount>";
