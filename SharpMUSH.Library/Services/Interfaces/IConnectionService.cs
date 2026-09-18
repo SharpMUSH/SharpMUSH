@@ -27,16 +27,27 @@ public interface IConnectionService
 		ConcurrentDictionary<string, string> Metadata
 	)
 	{
-		public TimeSpan? Connected
-			=> State is ConnectionState.Connected or ConnectionState.AccountMode or ConnectionState.LoggedIn
-			? DateTimeOffset.UtcNow -
-				DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["ConnectionStartTime"]))
-			: null;
+		public TimeSpan? Connected => Since("ConnectionStartTime");
 
-		public TimeSpan? Idle
+		public TimeSpan? Idle => Since("LastConnectionSignal");
+
+		/// <summary>
+		/// How long ago the millisecond timestamp under <paramref name="key"/> was, or <c>null</c>
+		/// when the connection carries no usable one.
+		/// </summary>
+		/// <remarks>
+		/// These read straight out of <see cref="Metadata"/>, and <c>ConnectionService.Register</c>
+		/// seeds its defaults as <c>metaData ?? new …</c> — a caller that supplies any dictionary
+		/// supplies all of it. A caller that supplies a partial one produced a live connection whose
+		/// <see cref="Idle"/> threw <see cref="KeyNotFoundException"/> on read, which is not
+		/// something a <c>TimeSpan?</c> is expected to be able to do. Unknown is the honest answer
+		/// and the one every caller already handles.
+		/// </remarks>
+		private TimeSpan? Since(string key)
 			=> State is ConnectionState.Connected or ConnectionState.AccountMode or ConnectionState.LoggedIn
-			? DateTimeOffset.UtcNow -
-				DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(Metadata["LastConnectionSignal"]))
+				&& Metadata.TryGetValue(key, out var stamp)
+				&& long.TryParse(stamp, out var milliseconds)
+			? DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeMilliseconds(milliseconds)
 			: null;
 
 		public string InternetProtocolAddress => Metadata.GetValueOrDefault(nameof(InternetProtocolAddress), "UNKNOWN");
