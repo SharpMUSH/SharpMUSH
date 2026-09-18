@@ -72,10 +72,11 @@ public class ListenPatternMatcher(
 			if (regexMatch is not { Success: true })
 				continue;
 
-			var arguments = PatternArguments.Capture(regexMatch, listenAttr.IsRegexFlag, message);
+			var arguments = PatternArguments.Capture(listenAttr.CompiledRegex, regexMatch, listenAttr.IsRegexFlag, message);
 			matches.Add(new ListenMatch(
 				listenAttr.Attribute,
-				regexMatch.Groups.Values.Skip(listenAttr.IsRegexFlag ? 0 : 1).Select(group => group.Value).ToArray(),
+				PatternArguments.Groups(listenAttr.CompiledRegex, regexMatch, listenAttr.IsRegexFlag)
+					.Skip(listenAttr.IsRegexFlag ? 0 : 1).Select(group => group.Value).ToArray(),
 				listenAttr.Behavior
 			)
 			{ Arguments = arguments });

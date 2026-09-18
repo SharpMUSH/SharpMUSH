@@ -1,5 +1,6 @@
 using SharpMUSH.Library.ParserInterfaces;
 using Microsoft.Extensions.Caching.Memory;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Markup;
 
@@ -156,6 +157,105 @@ public static class SoftcodeRegex
 		}
 
 		return Create(pattern, options);
+	}
+
+	/// <summary>
+	/// The .NET group number for each PCRE group number of <paramref name="regex"/>: element <c>n</c> is
+	/// the group PennMUSH calls <c>$n</c>. PCRE numbers every capturing group in the order its <c>(</c>
+	/// opens; .NET numbers the unnamed ones first and the named ones after them, so they differ as soon
+	/// as a named group precedes an unnamed one.
+	/// </summary>
+	/// <remarks>
+	/// Found by scanning the pattern for the groups that capture. A pattern the scan cannot account for
+	/// — a name used twice, inline options, anything that leaves the count short of .NET's — keeps .NET's
+	/// numbering rather than a wrong mapping.
+	/// </remarks>
+	public static int[] PcreGroupNumbers(Regex regex) => PcreNumbering.GetValue(regex, ComputePcreGroupNumbers);
+
+	private static readonly ConditionalWeakTable<Regex, int[]> PcreNumbering = new();
+
+	private static int[] ComputePcreGroupNumbers(Regex regex)
+	{
+		var dotNet = regex.GetGroupNumbers();
+		if (dotNet.Length == 1 || regex.Options.HasFlag(RegexOptions.ExplicitCapture)
+				|| regex.Options.HasFlag(RegexOptions.IgnorePatternWhitespace))
+		{
+			return dotNet;
+		}
+
+		var pattern = regex.ToString();
+		var numbers = new List<int> { 0 };
+		var unnamed = 0;
+		for (var i = 0; i < pattern.Length; i++)
+		{
+			switch (pattern[i])
+			{
+				case '\\':
+					i++;
+					break;
+				case '[':
+					i = EndOfClass(pattern, i);
+					break;
+				case '(' when i + 1 < pattern.Length && pattern[i + 1] != '?':
+					numbers.Add(++unnamed);
+					break;
+				case '(':
+					if (GroupName(pattern, i + 2) is not { } name) continue;
+					if (name.Length == 0 || char.IsAsciiDigit(name[0])) return dotNet;
+					numbers.Add(regex.GroupNumberFromName(name));
+					break;
+			}
+		}
+
+		return numbers.Count == dotNet.Length && numbers.Distinct().Count() == numbers.Count ? [.. numbers] : dotNet;
+	}
+
+	/// <summary>
+	/// The name of a <c>(?&lt;name&gt;</c> or <c>(?'name'</c> group whose name starts at
+	/// <paramref name="start"/>, or null when the <c>(?</c> there does not capture: a lookbehind, a
+	/// comment, a non-capturing or atomic group, inline options. A balancing group names its first part.
+	/// </summary>
+	private static string? GroupName(string pattern, int start)
+	{
+		if (start >= pattern.Length) return null;
+		var close = pattern[start] switch
+		{
+			'<' when start + 1 < pattern.Length && pattern[start + 1] is not ('=' or '!') => '>',
+			'\'' => '\'',
+			_ => '\0'
+		};
+		if (close == '\0') return null;
+
+		var end = pattern.IndexOf(close, start + 1);
+		if (end < 0) return null;
+		var name = pattern[(start + 1)..end];
+		var balance = name.IndexOf('-');
+		return balance < 0 ? name : name[..balance];
+	}
+
+	/// <summary>The index of the <c>]</c> closing the character class that opens at <paramref name="open"/>.</summary>
+	private static int EndOfClass(string pattern, int open)
+	{
+		var i = open + 1;
+		if (i < pattern.Length && pattern[i] == '^') i++;
+		if (i < pattern.Length && pattern[i] == ']') i++;
+		var depth = 1;
+		for (; i < pattern.Length; i++)
+		{
+			switch (pattern[i])
+			{
+				case '\\':
+					i++;
+					break;
+				case '[' when pattern[i - 1] == '-':
+					depth++;
+					break;
+				case ']' when --depth == 0:
+					return i;
+			}
+		}
+
+		return pattern.Length;
 	}
 
 	/// <summary>How many <c>*</c> the pattern turned into, counted on the translated form.</summary>

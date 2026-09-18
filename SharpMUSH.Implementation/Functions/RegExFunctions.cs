@@ -139,7 +139,7 @@ public partial class Functions
 				var registerList = args["2"].Message!.ToPlainText();
 				if (!string.IsNullOrWhiteSpace(registerList))
 				{
-					result += SetRegistersFromMatch(parser, match, registerList);
+					result += SetRegistersFromMatch(parser, regex, match, registerList);
 				}
 			}
 
@@ -170,7 +170,7 @@ public partial class Functions
 	/// <see cref="ErrorMessages.Returns.BadRegName"/> per destination that cannot name a register,
 	/// as PennMUSH appends e_badregname for each (src/funlist.c:2942).
 	/// </returns>
-	private string SetRegistersFromMatch(IMUSHCodeParser parser, Match match, string registerList)
+	private string SetRegistersFromMatch(IMUSHCodeParser parser, Regex regex, Match match, string registerList)
 	{
 		var registers = registerList.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		var unusableNames = 0;
@@ -200,7 +200,7 @@ public partial class Functions
 				continue;
 			}
 
-			if (!parser.CurrentState.AddRegister(qRegister, MarkupText.Plain(CaptureValue(match, captureIndexOrName))))
+			if (!parser.CurrentState.AddRegister(qRegister, MarkupText.Plain(CaptureValue(regex, match, captureIndexOrName))))
 			{
 				unusableNames++;
 			}
@@ -215,9 +215,10 @@ public partial class Functions
 
 	/// <summary>
 	/// The text of one capture of a match: the empty string when the match failed, when the capture
-	/// does not exist, or when the group took no part in the match.
+	/// does not exist, or when the group took no part in the match. A number is PCRE's
+	/// (<see cref="SoftcodeRegex.PcreGroupNumbers"/>).
 	/// </summary>
-	private static string CaptureValue(Match match, string captureIndexOrName)
+	private static string CaptureValue(Regex regex, Match match, string captureIndexOrName)
 	{
 		if (!match.Success)
 		{
@@ -228,8 +229,9 @@ public partial class Functions
 		// — the numeric one range-checks through a uint cast, so a negative index misses too, and the
 		// named one yields an empty group for a name the pattern does not define. That is the empty
 		// string PennMUSH also produces for an out-of-range subpattern.
+		var numbers = SoftcodeRegex.PcreGroupNumbers(regex);
 		var group = int.TryParse(captureIndexOrName, out var captureIndex)
-			? match.Groups[captureIndex]
+			? match.Groups[captureIndex >= 0 && captureIndex < numbers.Length ? numbers[captureIndex] : -1]
 			: match.Groups[captureIndexOrName];
 
 		return group.Success ? group.Value : string.Empty;

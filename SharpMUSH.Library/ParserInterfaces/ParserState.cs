@@ -3,6 +3,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Utilities;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Text;
@@ -718,15 +719,15 @@ public sealed class RegexpCaptureFrame(DBAttribute? evaluation)
 
 	/// <summary>
 	/// Replaces the frame's captures with <paramref name="match"/>'s, as <c>pe_regs_set_rx_context</c>
-	/// does: every numbered group, and each named group that took part. Values are slices of
-	/// <paramref name="subject"/>, so they keep its markup.
+	/// does: every numbered group, numbered as PCRE numbers them, and each named group that took part.
+	/// Values are slices of <paramref name="subject"/>, so they keep its markup.
 	/// </summary>
 	public void Fill(Regex regex, Match match, MString subject)
 	{
 		Clear();
-		foreach (var number in regex.GetGroupNumbers())
+		foreach (var (number, dotNetNumber) in SoftcodeRegex.PcreGroupNumbers(regex).Index())
 		{
-			var group = match.Groups[number];
+			var group = match.Groups[dotNetNumber];
 			this[number.ToString()] = group.Success ? subject.Substring(group.Index, group.Length) : MarkupText.Empty;
 		}
 

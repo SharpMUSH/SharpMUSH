@@ -157,7 +157,7 @@ public class ListenerRoutingService(
 		if (hearActions && await lockService.Evaluate(LockType.Listen, listener, speaker))
 		{
 			var isSelf = listener.Object().DBRef == speaker.Object().DBRef;
-			var arguments = PatternArguments.Capture(match, isRegex, message);
+			var arguments = PatternArguments.Capture(regex, match, isRegex, message);
 			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, isSelf ? "AMHEAR" : "AHEAR", arguments), ExecutionBudget.CurrentToken);
 			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, "AAHEAR", arguments), ExecutionBudget.CurrentToken);
 		}

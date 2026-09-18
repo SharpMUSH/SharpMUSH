@@ -187,4 +187,12 @@ public class RegexpCaptureContextTests
 
 		await Assert.That(await Evaluate("[reswitch(abc,a(b)c,r(1,regexp)/[u(me/RX_R_1156)])]")).IsEqualTo("b/-");
 	}
+
+	/// <summary>Captures are numbered as PCRE numbers them: in the order each group opens, named or not.</summary>
+	[Test]
+	[Arguments("[reswitch(abc,^%(?<first>a%)%(b%)c,$1$2)]", "ab")]
+	[Arguments("[regedit(abc,%(?<x>a%)%(b%),$2$1)]", "bac")]
+	[Arguments("[regmatch(abc,^%(?<f>a%)%(b%)c,- p1156 q1156)]%q<p1156>%q<q1156>", "1ab")]
+	public async Task CapturesUsePcreNumbering(string code, string expected)
+		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
 }
