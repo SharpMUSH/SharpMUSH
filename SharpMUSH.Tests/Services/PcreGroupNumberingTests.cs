@@ -22,13 +22,18 @@ public class PcreGroupNumberingTests
 	[Arguments("(?<=x)(?<!y)(?=z)(?!w)(?<n>a)(b)", new[] { 0, 2, 1 })]
 	[Arguments(@"(?#x)\((?<n>a)[(](b)", new[] { 0, 2, 1 })]
 	[Arguments(@"[\](](?<n>a)(b)", new[] { 0, 2, 1 })]
+	// An unnamed group captures nothing where n is on: (?n: for its own group, (?n) to the end of the
+	// enclosing one.
+	[Arguments("(?<x>a)(?n:(b))(c)", new[] { 0, 2, 1 })]
+	[Arguments("(?<x>a)((?n)(b))(c)", new[] { 0, 3, 1, 2 })]
+	[Arguments("(?<x>a)(?n)(b)(?-n:(c))(d)", new[] { 0, 2, 1 })]
+	[Arguments("(?i)(?<x>a)(b)", new[] { 0, 2, 1 })]
 	public async Task NumbersGroupsInOpeningOrder(string pattern, int[] expected)
 		=> await Assert.That(string.Join(",", SoftcodeRegex.PcreGroupNumbers(new Regex(pattern)))).IsEqualTo(string.Join(",", expected));
 
 	/// <summary>A pattern the scan cannot account for keeps .NET's numbering rather than a wrong one.</summary>
 	[Test]
 	[Arguments("(?<n>a)(?<n>b)(c)")]
-	[Arguments("(?n)(a)(?<n>b)")]
 	public async Task FallsBackToDotNetNumbering(string pattern)
 	{
 		var regex = new Regex(pattern);

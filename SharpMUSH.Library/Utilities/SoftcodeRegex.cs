@@ -166,9 +166,11 @@ public static class SoftcodeRegex
 	/// as a named group precedes an unnamed one.
 	/// </summary>
 	/// <remarks>
-	/// Found by scanning the pattern for the groups that capture. A pattern the scan cannot account for
-	/// — a name used twice, inline options, anything that leaves the count short of .NET's — keeps .NET's
-	/// numbering rather than a wrong mapping.
+	/// Found by scanning the pattern for the groups that capture. An unnamed group captures nothing
+	/// where <c>n</c> (explicit capture) is on: set by <c>(?n)</c> to the end of the enclosing group, or
+	/// by <c>(?n:</c> for its own, as both engines scope it. A pattern the scan cannot account for — a
+	/// name used twice, anything that leaves the count short of .NET's — keeps .NET's numbering rather
+	/// than a wrong mapping.
 	/// </remarks>
 	public static int[] PcreGroupNumbers(Regex regex) => PcreNumbering.GetValue(regex, ComputePcreGroupNumbers);
 
@@ -186,6 +188,9 @@ public static class SoftcodeRegex
 		var pattern = regex.ToString();
 		var numbers = new List<int> { 0 };
 		var unnamed = 0;
+		// Whether explicit capture is on, and what it was in each group still open.
+		var explicitCapture = false;
+		var enclosing = new Stack<bool>();
 		for (var i = 0; i < pattern.Length; i++)
 		{
 			switch (pattern[i])
@@ -196,10 +201,23 @@ public static class SoftcodeRegex
 				case '[':
 					i = EndOfClass(pattern, i);
 					break;
+				case ')':
+					if (enclosing.TryPop(out var outer)) explicitCapture = outer;
+					break;
 				case '(' when i + 1 < pattern.Length && pattern[i + 1] != '?':
-					numbers.Add(++unnamed);
+					enclosing.Push(explicitCapture);
+					if (!explicitCapture) numbers.Add(++unnamed);
 					break;
 				case '(':
+					if (InlineOptions(pattern, i + 2, explicitCapture) is var (end, scoped, on))
+					{
+						if (scoped) enclosing.Push(explicitCapture);
+						explicitCapture = on;
+						i = end;
+						continue;
+					}
+
+					enclosing.Push(explicitCapture);
 					if (GroupName(pattern, i + 2) is not { } name) continue;
 					if (name.Length == 0 || char.IsAsciiDigit(name[0])) return dotNet;
 					numbers.Add(regex.GroupNumberFromName(name));
@@ -208,6 +226,37 @@ public static class SoftcodeRegex
 		}
 
 		return numbers.Count == dotNet.Length && numbers.Distinct().Count() == numbers.Count ? [.. numbers] : dotNet;
+	}
+
+	/// <summary>
+	/// The inline options that start at <paramref name="start"/>, just past a <c>(?</c>: where they end
+	/// (the <c>)</c> of <c>(?imnsx-imnsx)</c> or the <c>:</c> of <c>(?imnsx-imnsx:</c>), whether they open
+	/// a group of their own, and whether explicit capture is on after them. Null when the <c>(?</c> is not
+	/// inline options.
+	/// </summary>
+	private static (int End, bool Scoped, bool ExplicitCapture)? InlineOptions(string pattern, int start, bool explicitCapture)
+	{
+		var on = true;
+		for (var i = start; i < pattern.Length; i++)
+		{
+			switch (pattern[i])
+			{
+				case '-':
+					on = false;
+					break;
+				case 'n':
+					explicitCapture = on;
+					break;
+				case 'i' or 'm' or 's' or 'x':
+					break;
+				case ')' or ':' when i > start:
+					return (i, pattern[i] == ':', explicitCapture);
+				default:
+					return null;
+			}
+		}
+
+		return null;
 	}
 
 	/// <summary>
