@@ -319,7 +319,14 @@ web page, `ansi` for a terminal capture, neither for plain text.
 
 # COMPATIBILITY NAMES
 Functions and commands that exist in SharpMUSH and not in PennMUSH, or that take their arguments in a
-different order. None of these break PennMUSH code; they are additions and one ordering choice.
+different order.
+
+The additions below cost imported code nothing — a name PennMUSH never had cannot be called by
+PennMUSH softcode. **The argument-order difference is not in that class.** `ctitle()` and `cstatus()`
+take their two arguments the other way round here, so every existing call to either has to be
+swapped by hand; nothing detects it for you, and a call left alone will resolve the channel name as
+an object and answer an error or the wrong object's status. It is the one entry in this profile that
+requires migrating code you already have.
 
 ## Argument order: `ctitle()` and `cstatus()`
 
@@ -411,9 +418,6 @@ choices.
   `textentries(<type>, <pattern>[, <osep>])`. (#974)<br>
   **`attrib_set#()` cannot be called.** The parser's function-name token does not admit `#`, so the
   text is returned unchanged. Use `attrib_set()`. (#974)<br>
-  **Eight documented aliases are unregistered.** `avg() cname() element() exp() hostname() replace()
-  reverse() speakpenn()` each have a help topic saying they are another name for an existing
-  function, and each fails when called. (#974)<br>
   **`objmem()` always answers 0.** (#974)<br>
   **Lock creator and flags are lost on import.** A PennMUSH dump's protected, inheritable, visual and
   no_clone locks lose those semantics, and a lock whose creator differs from the object's owner is
@@ -458,6 +462,9 @@ behaved differently.
   every call.
 - `isword()` once answered 1 only for a single letter.
 - `checkpass()` once required a dbref and refused a player name.
+- `avg() cname() element() exp() hostname() replace() reverse() speakpenn()` each had a help topic
+  calling them another name for an existing function, and each failed when called: the alias table
+  had been copied into three places and none of the three carried them.
 - `render()` once evaluated its second argument as the object named by its first, which is what
   `objeval()` does, rather than rendering a string.
 

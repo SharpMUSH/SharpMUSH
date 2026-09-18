@@ -182,9 +182,12 @@ public class FunctionArityParityTests : ServerTestBase
 		var path = Path.Combine(TestPaths.RepositoryRoot, "SharpMUSH.Tests", "PennMUSH", "function-arity.tsv");
 		var table = new Dictionary<string, (int, int)>(StringComparer.OrdinalIgnoreCase);
 
-		foreach (var line in File.ReadLines(path).Where(l => l.Length > 0 && l[0] != '#'))
+		var rows = File.ReadLines(path)
+			.Where(line => line.Length > 0 && line[0] != '#')
+			.Select(line => line.Split('\t'));
+
+		foreach (var fields in rows)
 		{
-			var fields = line.Split('\t');
 			table[fields[0]] = (int.Parse(fields[1]), fields[2] == "INF" ? int.MaxValue : int.Parse(fields[2]));
 		}
 
