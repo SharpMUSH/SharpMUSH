@@ -63,9 +63,9 @@ else
                 <div class="config-list-row">
                     <div class="config-list-text">
                         <span class="config-list-name">@entry.Key</span>
-                        @if (entry.Value.Count > 0)
+                        @if (entry.Values.Count > 0)
                         {
-                            <span class="config-list-sub">@string.Join(", ", entry.Value)</span>
+                            <span class="config-list-sub">@string.Join(", ", entry.Values)</span>
                         }
                     </div>
                     <button type="button" class="config-icon-btn config-icon-btn--danger"
@@ -84,9 +84,12 @@ else
     [Parameter, EditorRequired]
     public AdminKeyValueListText Text { get; set; } = default!;
 
-    /// <summary>Reads the current entries. Keys map to their values; an empty value list renders bare.</summary>
+    /// <summary>
+    /// Reads the current rows. A row with no values renders bare. Rows, not a map: the server's
+    /// lists are case-sensitive, so two keys differing only in case are two rows and both arrive.
+    /// </summary>
     [Parameter, EditorRequired]
-    public Func<Task<ApiResult<IReadOnlyDictionary<string, string[]>>>> Load { get; set; } = default!;
+    public Func<Task<ApiResult<IReadOnlyList<AdminKeyValueEntry>>>> Load { get; set; } = default!;
 
     /// <summary>Adds one entry. The values array is empty for a key-only list.</summary>
     [Parameter, EditorRequired]
@@ -106,7 +109,7 @@ else
         && (!HasValues || !string.IsNullOrWhiteSpace(_newValues));
 
     private bool _loading = true;
-    private Dictionary<string, IReadOnlyList<string>> _entries = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<AdminKeyValueEntry> _entries = [];
     private string _newKey = string.Empty;
     private string _newValues = string.Empty;
 
@@ -120,8 +123,7 @@ else
         {
             _entries = await Load() switch
             {
-                IReadOnlyDictionary<string, string[]> loaded =>
-                    loaded.ToDictionary(e => e.Key, e => (IReadOnlyList<string>)e.Value, StringComparer.OrdinalIgnoreCase),
+                IReadOnlyList<AdminKeyValueEntry> loaded => loaded,
                 ApiFailure failure => Failed(failure)
             };
         }
@@ -130,10 +132,10 @@ else
             _loading = false;
         }
 
-        Dictionary<string, IReadOnlyList<string>> Failed(ApiFailure failure)
+        IReadOnlyList<AdminKeyValueEntry> Failed(ApiFailure failure)
         {
             Snackbar.Add(Text.LoadFailed(failure), Severity.Error);
-            return new(StringComparer.OrdinalIgnoreCase);
+            return [];
         }
     }
 

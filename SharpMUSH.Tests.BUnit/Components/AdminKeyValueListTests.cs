@@ -50,14 +50,14 @@ public class AdminKeyValueListTests : TrackingBunitContext
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
-	private static Task<ApiResult<IReadOnlyDictionary<string, string[]>>> Entries(
+	private static Task<ApiResult<IReadOnlyList<AdminKeyValueEntry>>> Entries(
 		params (string Key, string[] Values)[] rows) =>
-		Task.FromResult<ApiResult<IReadOnlyDictionary<string, string[]>>>(
-			(IReadOnlyDictionary<string, string[]>)rows.ToDictionary(r => r.Key, r => r.Values));
+		Task.FromResult<ApiResult<IReadOnlyList<AdminKeyValueEntry>>>(
+			(IReadOnlyList<AdminKeyValueEntry>)[.. rows.Select(r => new AdminKeyValueEntry(r.Key, r.Values))]);
 
 	private IRenderedComponent<AdminKeyValueList> Render(
 		AdminKeyValueListText text,
-		Func<Task<ApiResult<IReadOnlyDictionary<string, string[]>>>> load,
+		Func<Task<ApiResult<IReadOnlyList<AdminKeyValueEntry>>>> load,
 		Func<string, string[], Task<ApiResult<Success>>>? add = null,
 		Func<string, Task<ApiResult<Success>>>? delete = null)
 	{
@@ -78,6 +78,36 @@ public class AdminKeyValueListTests : TrackingBunitContext
 		var names = component.FindAll(".config-list-name").Select(n => n.TextContent).ToList();
 		await Assert.That(names).IsEquivalentTo(new[] { "alpha.example", "zeta.example" });
 		await Assert.That(component.Find(".config-list-sub").TextContent).IsEqualTo("!connect, !create");
+	}
+
+	/// <summary>
+	/// The server stores these lists in ordinary case-sensitive dictionaries
+	/// (<c>RestrictionsController</c>, <c>SitelockController</c>), so <c>Example.com</c> and
+	/// <c>example.com</c> are two rules and both arrive. Re-keying the response
+	/// case-insensitively threw <see cref="ArgumentException"/> out of <c>OnInitializedAsync</c> and
+	/// took the whole page down — the pages this component replaced rendered the dictionary directly
+	/// and had no such failure.
+	/// </summary>
+	[Test]
+	public async Task KeysDifferingOnlyByCaseAreBothRendered()
+	{
+		var component = Render(TextWithValues(),
+			() => Entries(("Example.com", ["!connect"]), ("example.com", ["register"])));
+
+		var names = component.FindAll(".config-list-name").Select(n => n.TextContent).ToList();
+		await Assert.That(names.Count).IsEqualTo(2);
+		await Assert.That(names).Contains("Example.com");
+		await Assert.That(names).Contains("example.com");
+	}
+
+	/// <summary>The same hazard on the key-only path: two banned names differing only by case.</summary>
+	[Test]
+	public async Task AKeyOnlyListRendersBothCasingsOfAName()
+	{
+		var component = Render(KeyOnlyText(),
+			() => Task.FromResult<ApiResult<string[]>>(new[] { "Vader", "vader" }).AsEntriesAsync());
+
+		await Assert.That(component.FindAll(".config-list-name").Count).IsEqualTo(2);
 	}
 
 	[Test]
@@ -178,7 +208,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 	public async Task AFailedLoadReportsTheServersOwnReason()
 	{
 		var component = Render(TextWithValues(),
-			() => Task.FromResult<ApiResult<IReadOnlyDictionary<string, string[]>>>(
+			() => Task.FromResult<ApiResult<IReadOnlyList<AdminKeyValueEntry>>>(
 				new ApiFailure(ApiFailureKind.Unauthenticated, "Your session has expired.")));
 
 		await Assert.That(component.Find(".config-empty").TextContent).IsEqualTo("Nothing configured.");
