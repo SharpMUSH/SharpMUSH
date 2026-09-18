@@ -1676,7 +1676,7 @@ public partial class Functions
 				var expression = await EvaluateArgument(pattern) ?? MarkupText.Empty;
 				var matches = captures is null
 					? arg0.ToPlainText() == expression.ToPlainText()
-					: SwitchCaseMatches(arg0, expression, captures);
+					: SwitchPatterns.Matches(arg0, expression.ToPlainText(), regexp: false, captures);
 				if (!matches)
 				{
 					continue;
@@ -1703,31 +1703,6 @@ public partial class Functions
 		}
 	}
 
-	/// <summary>
-	/// Whether <paramref name="subject"/> matches one switch case: a glob, whose captures replace those in
-	/// <paramref name="captures"/>, or a <c>&gt;</c>/<c>&lt;</c> numeric comparison, which captures nothing.
-	/// </summary>
-	private static bool SwitchCaseMatches(MString subject, MString expression, RegexpCaptureFrame captures)
-	{
-		captures.Clear();
-		var plainSubject = subject.ToPlainText();
-		var match = SoftcodeRegex.Wildcard(expression.ToPlainText()).Match(plainSubject);
-		if (match.Success)
-		{
-			captures.FillWildcard(match, subject);
-			return true;
-		}
-
-		var plainExpression = expression.ToPlainText();
-		if (!plainExpression.StartsWith('>') && !plainExpression.StartsWith('<'))
-		{
-			return false;
-		}
-
-		return decimal.TryParse(plainExpression[1..], out var bound)
-			&& decimal.TryParse(plainSubject, out var value)
-			&& (plainExpression[0] == '>' ? bound > value : bound < value);
-	}
 
 	[SharpFunction(Name = "tr", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "from", "to"])]
 	public ValueTask<CallState> Tr(IMUSHCodeParser parser, SharpFunctionAttribute _2)

@@ -40,7 +40,12 @@ public static class IncomingFilterPatterns
 		if (start < text.Length) yield return text[start..];
 	}
 
-	/// <summary>Ordering prefixes belong to incoming filters, not to the general wildcard dialect.</summary>
+	/// <summary>
+	/// An incoming-filter or <c>switch()</c> pattern against <paramref name="message"/>. A leading <c>&gt;</c>
+	/// or <c>&lt;</c> (optionally followed by <c>=</c>) orders the message against the rest, numerically when
+	/// both are numbers and as text otherwise, as PennMUSH's <c>local_wild_match_case</c> does; the general
+	/// wildcard dialect has no ordering prefixes.
+	/// </summary>
 	public static bool Matches(string pattern, string message, bool regexp, bool caseSensitive, NumericEvaluation numeric = default)
 	{
 		if (!regexp && pattern.Length > 0 && pattern[0] is '>' or '<')

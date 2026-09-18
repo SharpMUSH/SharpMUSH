@@ -2125,6 +2125,10 @@ public partial class Commands
 		var hasLocalize = switches.Contains("LOCALIZE") || isInplace;
 		var hasClearRegs = switches.Contains("CLEARREGS");
 
+		// do_switch (src/predicat.c) runs each matched action with a PE_REGS_SWITCH | PE_REGS_CAPTURE
+		// frame, so $0-$9 in it read the match; a queued action takes a copy of the frame with it.
+		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
+		parser.CurrentState.RegexRegisters.Push(captures);
 		parser.CurrentState.SwitchStack.Push(strArg.Message!);
 
 		try
@@ -2143,21 +2147,18 @@ public partial class Commands
 				var patternText = evaluatedPattern.ToPlainText();
 
 				bool patternMatched;
-				if (isRegexp)
+				try
 				{
-					try
-					{
-						patternMatched = Regex.IsMatch(testString, patternText, RegexOptions.IgnoreCase);
-					}
-					catch (ArgumentException ex)
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SwitchInvalidRegexpFormat), executor, patternText, ex.Message);
-						continue;
-					}
+					patternMatched = SwitchPatterns.Matches(strArg.Message!, patternText, isRegexp, captures);
 				}
-				else
+				catch (ArgumentException ex)
 				{
-					patternMatched = MushText.IsWildcardMatch(strArg.Message!, evaluatedPattern);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SwitchInvalidRegexpFormat), executor, patternText, ex.Message);
+					continue;
+				}
+				catch (RegexMatchTimeoutException)
+				{
+					continue;
 				}
 
 				if (patternMatched)
@@ -2174,6 +2175,7 @@ public partial class Commands
 
 			if (defaultArg.TryGetValue(out var defaultValue) && !matched)
 			{
+				captures.Clear();
 				var defaultText = defaultValue.ToPlainText().Replace("#$", testString);
 				hadErrors |= await RunControlFlowAction(parser, executor, MarkupText.Plain(defaultText),
 					isInline, noBreak, hasLocalize, hasClearRegs);
@@ -2195,6 +2197,7 @@ public partial class Commands
 		finally
 		{
 			parser.CurrentState.SwitchStack.TryPop(out _);
+			parser.CurrentState.RegexRegisters.TryPop(out _);
 		}
 	}
 
@@ -4279,6 +4282,9 @@ public partial class Commands
 
 		// cmd_select builds the same queue_type as cmd_switch (src/cmds.c:1390-1403), so /LOCALIZE and
 		// /CLEARREGS only bite on an INLINE action; RunControlFlowAction applies them around it.
+		// Like @switch, the matched action runs with the match's captures for $0-$9.
+		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
+		parser.CurrentState.RegexRegisters.Push(captures);
 		parser.CurrentState.SwitchStack.Push(args["0"].Message!);
 
 		try
@@ -4296,29 +4302,15 @@ public partial class Commands
 				var pattern = args[exprIndex.ToString()].Message?.ToPlainText() ?? "";
 				var action = args[actionIndex.ToString()].Message;
 
-				bool matches = false;
-				if (isRegexp)
+				bool matches;
+				try
 				{
-					try
-					{
-						var regex = SoftcodeRegex.Create(pattern, RegexOptions.None);
-						matches = regex.IsMatch(testString);
-					}
-					catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat), executor, pattern);
-						continue;
-					}
-					catch (ArgumentException)
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat), executor, pattern);
-						continue;
-					}
+					matches = SwitchPatterns.Matches(args["0"].Message!, pattern, isRegexp, captures);
 				}
-				else
+				catch (Exception ex) when (ex is ArgumentException or System.Text.RegularExpressions.RegexMatchTimeoutException)
 				{
-					var regex = SoftcodeRegex.Wildcard(pattern);
-					matches = SoftcodeRegex.IsMatch(regex, testString);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat), executor, pattern);
+					continue;
 				}
 
 				if (matches && action != null)
@@ -4337,6 +4329,7 @@ public partial class Commands
 
 			if (!matchFound && hasDefault)
 			{
+				captures.Clear();
 				var defaultIndex = args.Count - 1;
 				var defaultAction = args[defaultIndex.ToString()].Message;
 
@@ -4366,6 +4359,7 @@ public partial class Commands
 		finally
 		{
 			parser.CurrentState.SwitchStack.TryPop(out _);
+			parser.CurrentState.RegexRegisters.TryPop(out _);
 		}
 	}
 

@@ -195,4 +195,25 @@ public class RegexpCaptureContextTests
 	[Arguments("[regmatch(abc,^%(?<f>a%)%(b%)c,- p1156 q1156)]%q<p1156>%q<q1156>", "1ab")]
 	public async Task CapturesUsePcreNumbering(string code, string expected)
 		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
+
+	/// <summary>
+	/// A pattern starting with <c>&gt;</c> or <c>&lt;</c> is an ordering test of the subject against the
+	/// rest: <c>switch(X, &gt;Y, A, B)</c> is A when X is greater than Y (<c>help switch wildcards</c>;
+	/// <c>local_wild_match_case</c>, <c>src/wild.c</c>). Numbers compare as numbers, anything else as text,
+	/// <c>=</c> makes it inclusive, and <c>\&gt;</c> is a literal <c>&gt;</c> in a wildcard.
+	/// </summary>
+	[Test]
+	[Arguments("[switch(6,>5,A,B)]", "A")]
+	[Arguments("[switch(5,>5,A,B)]", "B")]
+	[Arguments("[switch(4,>5,A,B)]", "B")]
+	[Arguments("[switch(5,>=5,A,B)]", "A")]
+	[Arguments("[switch(4,<5,A,B)]", "A")]
+	[Arguments("[switch(5,<=5,A,B)]", "A")]
+	[Arguments("[switch(10,>9,A,B)]", "A")]
+	[Arguments("[switch(b,>a,A,B)]", "A")]
+	[Arguments("[switch(a,>b,A,B)]", "B")]
+	[Arguments("[switch(>x,\\\\>x,A,B)]", "A")]
+	[Arguments("[switchall(7,>5,big,<10,small)]", "bigsmall")]
+	public async Task SwitchOrderingComparesTheSubjectToThePattern(string code, string expected)
+		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
 }
