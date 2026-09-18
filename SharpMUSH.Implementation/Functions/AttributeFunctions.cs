@@ -822,8 +822,14 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Internal helper for regedit, regediti, regeditall, regeditalli.
+	/// Internal helper for regedit, regediti, regeditall, regeditalli: PennMUSH's <c>fun_regreplace</c>
+	/// (<c>src/funlist.c</c>).
 	/// </summary>
+	/// <remarks>
+	/// Each replacement is evaluated inside a regexp capture context holding its match, which
+	/// <c>$&lt;digit&gt;</c> and <c>$&lt;name&gt;</c> read. The captures are never pasted into the
+	/// replacement: they are the subject's text, and evaluating them would run it as softcode.
+	/// </remarks>
 	private async ValueTask<CallState> RegEditInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
 		var stringArg = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
@@ -839,18 +845,26 @@ public partial class Functions
 			options |= RegexOptions.IgnoreCase;
 		}
 
-		for (int i = 0; i < args.Count - 1; i += 2)
+		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
+		parser.CurrentState.RegexRegisters.Push(captures);
+
+		async ValueTask<MString> Replacement(CallState template, Regex regex, Match match)
 		{
-			var patternKv = args[i];
-			var replaceKv = args[i + 1];
+			captures.Fill(regex, match, mstr);
+			var replacement = await template.GetParsedResultAsync();
+			hadErrors |= replacement.HadErrors;
+			return replacement.Message ?? MarkupText.Empty;
+		}
 
-			var pattern = await patternKv.Value.GetParsedResultAsync();
-			hadErrors |= pattern.HadErrors;
-			var patternStr = pattern.Message?.ToPlainText() ?? "";
-			var replaceTemplate = replaceKv.Value.Message!.ToPlainText();
-
-			try
+		try
+		{
+			for (int i = 0; i < args.Count - 1; i += 2)
 			{
+				var pattern = await args[i].Value.GetParsedResultAsync();
+				hadErrors |= pattern.HadErrors;
+				var patternStr = pattern.Message?.ToPlainText() ?? "";
+				var template = args[i + 1].Value;
+
 				var regex = SoftcodeRegex.Create(patternStr, options);
 
 				if (all)
@@ -860,9 +874,7 @@ public partial class Functions
 					var edits = new List<MarkupString.Edit>();
 					foreach (Match match in regex.Matches(str))
 					{
-						var replacement = await EvaluateReplacement(parser, regex, match, replaceTemplate);
-						hadErrors |= replacement.HadErrors;
-						edits.Add(new MarkupString.Edit(match.Index, match.Length, replacement.Message ?? MarkupText.Empty));
+						edits.Add(new MarkupString.Edit(match.Index, match.Length, await Replacement(template, regex, match)));
 					}
 
 					if (edits.Count > 0)
@@ -876,53 +888,27 @@ public partial class Functions
 					var match = regex.Match(str);
 					if (match.Success)
 					{
-						var replacement = await EvaluateReplacement(parser, regex, match, replaceTemplate);
-						hadErrors |= replacement.HadErrors;
-						mstr = mstr.Replace(match.Index, match.Length, replacement.Message ?? MarkupText.Empty);
+						mstr = mstr.Replace(match.Index, match.Length, await Replacement(template, regex, match));
 						str = mstr.ToPlainText();
 					}
 				}
 			}
-			catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
-			{
-				// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
-				return new CallState(ErrorMessages.Returns.RegexpTimeout) { HadErrors = hadErrors };
-			}
-			catch (ArgumentException)
-			{
-				return new CallState(ErrorMessages.Returns.RegexpInvalid) { HadErrors = hadErrors };
-			}
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// A player's pattern that cannot finish within SoftcodeRegex.MatchTimeout: an answer, not a crash.
+			return new CallState(ErrorMessages.Returns.RegexpTimeout) { HadErrors = hadErrors };
+		}
+		catch (ArgumentException)
+		{
+			return new CallState(ErrorMessages.Returns.RegexpInvalid) { HadErrors = hadErrors };
+		}
+		finally
+		{
+			parser.CurrentState.RegexRegisters.TryPop(out _);
 		}
 
 		return new CallState(mstr) { HadErrors = hadErrors };
-	}
-
-	/// <summary>
-	/// Helper to evaluate a replacement template with captured groups.
-	/// </summary>
-	private async ValueTask<CallState> EvaluateReplacement(IMUSHCodeParser parser, Regex regex, Match match, string template)
-	{
-		var replacement = template;
-
-		for (int j = 0; j < match.Groups.Count; j++)
-		{
-			replacement = replacement.Replace($"${j}", match.Groups[j].Value);
-		}
-
-		foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
-		{
-			var group = match.Groups[groupName];
-			if (group.Success)
-			{
-				replacement = replacement.Replace($"$<{groupName}>", group.Value);
-			}
-		}
-
-		var evaluatedReplacement = await parser.FunctionParse(MarkupText.Plain(replacement));
-		return (evaluatedReplacement ?? CallState.Empty) with
-		{
-			Message = MarkupText.Plain(evaluatedReplacement?.Message?.ToPlainText() ?? replacement)
-		};
 	}
 
 	/// <summary>

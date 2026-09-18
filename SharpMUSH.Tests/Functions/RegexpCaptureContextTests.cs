@@ -154,4 +154,24 @@ public class RegexpCaptureContextTests
 	[Arguments("[reswitch(abc,a(b)c,[case(x,x,$1)])]", "b")]
 	public async Task CaseMatchesExactly(string code, string expected)
 		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
+
+	/// <summary>
+	/// <c>regedit()</c> evaluates its replacement once per match inside a regexp context holding that
+	/// match (<c>fun_regreplace</c>, <c>src/funlist.c</c>: <c>pe_regs_set_rx_context</c>, then
+	/// <c>PE_DOLLAR</c>). The replacement is never built from the capture text.
+	/// </summary>
+	[Test]
+	[Arguments("[regedit(lit([add(1,1)]),.+,$0)]", "[add(1,1)]")]
+	[Arguments("[regedit(lit([setq(re1156,pwned)]),.+,$0)]-[r(re1156)]", "[setq(re1156,pwned)]-")]
+	[Arguments("[regedit(abc,b(c),$1$0)]", "acbc")]
+	[Arguments("[regedit(abc,b(?<x>c),<$<x>>)]", "a<c>")]
+	[Arguments("[regeditall(a1b2,.,<$0>)]", "<a><1><b><2>")]
+	[Arguments("[regeditall(abab,a(b),$1)]", "bb")]
+	[Arguments("[regedit(abc,x,$0)]", "abc")]
+	// The innermost context is regedit's own, so the enclosing reswitch's $1 is not in it.
+	[Arguments("[reswitch(xyz,x(y)z,[regedit(abc,b,$0$1)])]", "abc")]
+	// A replacement keeps the markup it evaluates to.
+	[Arguments("[strlen(regedit(abc,b,[ansi(r,B)]))]", "3")]
+	public async Task RegeditReadsTheCaptureContext(string code, string expected)
+		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
 }
