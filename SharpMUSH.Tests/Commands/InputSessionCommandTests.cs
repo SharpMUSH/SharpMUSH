@@ -49,7 +49,7 @@ public class InputSessionCommandTests
 	/// <remarks>
 	/// Every wait in this class is for the queue to reach an entry, never for the engine to be quick. One
 	/// scheduler, one entry at a time, is shared by the whole session, so the wait covers everything queued
-	/// ahead — measured at over four seconds for a single unrelated entry in a full SurrealDB run. The
+	/// ahead — measured at over four seconds for a single unrelated entry in a full suite run. The
 	/// deadline is a hang detector; a real failure to run the entry never becomes a pass by waiting longer.
 	/// </remarks>
 	private static readonly TimeSpan QueueDeadline = TimeSpan.FromSeconds(30);
@@ -232,7 +232,7 @@ public class InputSessionCommandTests
 	/// </summary>
 	/// <remarks>
 	/// Two attributes hold the observations rather than one each. Seven writes made this callback the
-	/// slowest entry on the queue in a full SurrealDB run — 3 to 4 seconds, most of the barrier's own
+	/// slowest entry on the queue in a full suite run — 3 to 4 seconds, most of the barrier's own
 	/// window — and the queue is shared by the whole session and runs one entry at a time, so the input
 	/// tests behind it waited nearly as long. Two of them are still two commands, which is what shows a
 	/// register set in one command being read in the next.

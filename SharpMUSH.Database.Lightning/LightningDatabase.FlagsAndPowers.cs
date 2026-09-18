@@ -284,7 +284,7 @@ public partial class LightningDatabase
 			.Select(power => MapPower(power!));
 
 	/// <summary>Exact case-insensitive name match first (the common case, one point lookup); falls back to a scan of
-	/// the whole table (~60 rows) for a case-insensitive alias match, mirroring SurrealDatabase's alias handling.</summary>
+	/// the whole table (~60 rows) for a case-insensitive alias match.</summary>
 	private static FlagRecord? FindFlagRecord(ITx tx, string name)
 	{
 		// LMDB rejects empty keys; an empty flag name cannot match a definition.

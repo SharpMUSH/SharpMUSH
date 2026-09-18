@@ -399,7 +399,7 @@ SharpMUSH.Contracts/
                                               (permissive read path) / NeutralLocale /
                                               SameLanguage
 
-SharpMUSH.Database.Lightning/ and SharpMUSH.Database.SurrealDB/
+SharpMUSH.Database.Lightning/
   Migration definitions                         — SourceLocale / WikiRevision.Locale
                                                   backfill and revision constraints
 

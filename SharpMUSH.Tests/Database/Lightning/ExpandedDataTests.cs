@@ -95,7 +95,7 @@ public class ExpandedDataTests
 
 	/// <summary>
 	/// SetExpandedServerData replaces: unlike the object-scoped write, a null property clears the stored
-	/// replaces with <c>keepNull</c>, SurrealDB upserts the whole document).
+	/// value.
 	/// </summary>
 	[Test]
 	public async Task ServerDataWriteReplacesTheDocumentSoANullPropertyClearsIt()

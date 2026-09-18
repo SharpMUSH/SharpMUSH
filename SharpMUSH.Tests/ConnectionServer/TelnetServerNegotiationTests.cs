@@ -130,7 +130,8 @@ public class TelnetServerNegotiationTests
 		StartServer(
 			ConnectionServerOptions? options = null,
 			IConnectionServerService? connectionService = null,
-			Func<object, Task>? beforePublish = null)
+			Func<object, Task>? beforePublish = null,
+			Action<IReadOnlyList<object>>? afterPublish = null)
 	{
 		var clientToServer = new Pipe();
 		var serverToClient = new Pipe();
@@ -146,7 +147,11 @@ public class TelnetServerNegotiationTests
 					await beforePublish(call[0]);
 				}
 
-				lock (published) published.Add(call[0]);
+				lock (published)
+				{
+					published.Add(call[0]);
+					afterPublish?.Invoke(published);
+				}
 			});
 
 		var descriptors = Substitute.For<IDescriptorGeneratorService>();
@@ -174,6 +179,7 @@ public class TelnetServerNegotiationTests
 		var partialPublishStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var releasePartialPublish = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var laterPublishStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var bothSnapshotsRecorded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var terminalPublishCount = 0;
 
 		var connectionService = Substitute.For<IConnectionServerService>();
@@ -212,8 +218,18 @@ public class TelnetServerNegotiationTests
 			laterPublishStarted.TrySetResult();
 		}
 
+		// Starting a publish is not the same as having recorded it: the second snapshot's publish can
+		// have begun while its message is not yet in the list, so the assertions wait for the record.
+		void AfterPublish(IReadOnlyList<object> recorded)
+		{
+			if (recorded.OfType<TerminalTypeNegotiatedMessage>().Count() == 2)
+			{
+				bothSnapshotsRecorded.TrySetResult();
+			}
+		}
+
 		var (toServer, fromServer, handler, published, cancellation) = StartServer(
-			connectionService: connectionService, beforePublish: BeforePublish);
+			connectionService: connectionService, beforePublish: BeforePublish, afterPublish: AfterPublish);
 		using var cts = cancellation;
 		try
 		{
@@ -234,7 +250,7 @@ public class TelnetServerNegotiationTests
 				.Because("post-registration snapshots must not overtake the queue being drained");
 
 			releasePartialPublish.TrySetResult();
-			await laterPublishStarted.Task.WaitAsync(Timeout);
+			await bothSnapshotsRecorded.Task.WaitAsync(Timeout);
 
 			TerminalTypeNegotiatedMessage[] terminalTypes;
 			lock (published)

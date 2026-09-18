@@ -1,7 +1,6 @@
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Database.Lightning;
-using SharpMUSH.Database.SurrealDB;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Database;
@@ -11,7 +10,6 @@ public class RoleReadCompatibilityTests
 	[Test]
 	[Arguments(typeof(IRoleRegistryService))]
 	[Arguments(typeof(LightningDatabase))]
-	[Arguments(typeof(SurrealDatabase))]
 	public async Task PublishedSingleArgumentRoleReadRemainsAvailable(Type contract)
 	{
 		await Assert.That(contract.GetMethod(nameof(IRoleRegistryService.GetRoleAsync), [typeof(string)])).IsNotNull();

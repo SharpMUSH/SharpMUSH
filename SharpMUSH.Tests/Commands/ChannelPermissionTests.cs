@@ -330,7 +330,7 @@ public class ChannelPermissionTests
 	/// <summary>
 	/// PennMUSH checks LOUD at the call site rather than inside <c>Chan_Can_Speak</c>
 	/// (<c>src/extchat.c:1539</c>): "LOUD objects bypass all speech, channel speech, and interaction
-	/// @locks" (<c>hlp/pennflag.hlp:256</c>). The flag was seeded in every provider's migration and
+	/// @locks" (<c>hlp/pennflag.hlp:256</c>). The flag was seeded in the migration and
 	/// consulted nowhere.
 	/// </summary>
 	[Test]

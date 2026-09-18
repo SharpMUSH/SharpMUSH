@@ -23,8 +23,6 @@ using SharpMUSH.Server.Registration;
 using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
-using SurrealDb.Net;
-using SurrealDb.Embedded.InMemory;
 using System.Globalization;
 using System.Threading.RateLimiting;
 using OpenTelemetry.ResourceDetectors.Container;
@@ -35,7 +33,6 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
-using SharpMUSH.Database.SurrealDB;
 using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Functions;
@@ -58,10 +55,7 @@ using TaskScheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Server;
 
-public class Startup(
-	string colorFile,
-	string natsUrl,
-	DatabaseProvider databaseProvider = DatabaseProvider.Lightning)
+public class Startup(string colorFile, string natsUrl)
 {
 	// Cache name for the dedicated compiled boolean-lock expression cache.
 	// Must match the [FromKeyedServices] key used in BooleanExpressionParser.
@@ -83,7 +77,7 @@ public class Startup(
 	public void ConfigureServices(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
 		services.AddSharpMushHttpPipeline(configuration, environment);
-		services.AddSharpMushDatabase(configuration, databaseProvider);
+		services.AddSharpMushDatabase(configuration);
 		services.AddSharpMushEngine(configuration, natsUrl);
 		services.AddSharpMushOptions(colorFile);
 		services.AddSharpMushLogging(configuration);

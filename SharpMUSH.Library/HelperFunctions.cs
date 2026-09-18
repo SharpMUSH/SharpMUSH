@@ -166,7 +166,7 @@ public static partial class HelperFunctions
 	}
 
 	// VISUAL, DARK, LIGHT, AUDIBLE, ORPHAN and PUPPET are flags in PennMUSH (hdrs/dbdefs.h:132-162,
-	// each one a has_flag_by_name call) and are seeded as flags by both supported providers. They used to be
+	// each one a has_flag_by_name call) and are seeded as flags by the provider. They used to be
 	// asked of Powers, a collection that has never held an entry by any of those names, so every one of
 	// them answered false unconditionally — DARK objects were listed by look and WHO, VISUAL granted
 	// nothing, IsAlive()'s puppet and audible terms never fired. See issue #796. Can_Dark, See_All,
@@ -324,7 +324,7 @@ public static partial class HelperFunctions
 	/// <para>
 	/// The database-level <c>HasFlag</c> predicate in
 	/// <see cref="IObjectStore.GetFilteredObjectsAsync"/> is defined to agree with this helper and is
-	/// pinned against it on both supported providers, so the two move together.
+	/// pinned against it, so the two move together.
 	/// </para>
 	/// <para>
 	/// Not ported from <c>flag_hash_lookup</c>: its single-character fallback to a flag's <em>letter</em>,

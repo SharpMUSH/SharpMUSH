@@ -16,7 +16,7 @@ public readonly record struct ChannelNameTaken;
 /// The outcome of a channel create: it worked, the name was taken, or the storage layer failed.
 /// </summary>
 /// <remarks>
-/// Every provider answers with one of these three, so a create the storage layer rejected can never
+/// The provider answers with one of these three, so a create the storage layer rejected can never
 /// read as success to the caller.
 /// </remarks>
 [Union]

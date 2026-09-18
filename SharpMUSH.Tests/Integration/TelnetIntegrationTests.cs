@@ -335,9 +335,7 @@ public class TelnetIntegrationTests
 	[Test]
 	public async Task EngineHostOwnsAPrivateWorld()
 	{
-		// Only the Lightning provider opens a world directory.
-		if (Fixture.ServerServices.GetService<LightningDatabase>() is not { } world) return;
-		var path = world.Store.Path;
+		var path = Fixture.ServerServices.GetRequiredService<LightningDatabase>().Store.Path;
 		await Assert.That(path).IsNotEqualTo(Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH"));
 		await Assert.That(path).StartsWith(Path.GetTempPath());
 	}

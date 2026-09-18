@@ -684,9 +684,7 @@ public static class ChannelHelper
 	/// creator is gone still lists. Here the owner is an object behind an <c>AsyncLazy</c> that THROWS
 	/// when it cannot be found, and the commands that walk every channel at once — <c>@channel/list</c>
 	/// and <c>@channel/what</c> — are exactly the ones that must not die because one row's owner is
-	/// unresolvable. It is reachable in practice: under <c>surrealdb</c> the owner is an edge rather than
-	/// a field, and a channel read while another connection is creating one has been observed with no
-	/// <c>owner_of_channel</c> edge yet.</para>
+	/// unresolvable.</para>
 	///
 	/// <para>Commands that act on a single named channel do NOT use this — a missing owner there is worth
 	/// surfacing, not rendering as a dash.</para>

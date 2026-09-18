@@ -53,7 +53,7 @@ public static class SharpAttributeExtensions
 	/// <c>src/attrib.c:1232-1252</c>).
 	/// <para>
 	/// Compares case-insensitively: flag names are resolved from a canonical, case-normalised
-	/// catalog under the ordinary <c>@set</c> path, but this is the one place every provider's
+	/// catalog under the ordinary <c>@set</c> path, but this is the one place the provider's
 	/// <c>GetAttributeQueryHandler</c>) tests for it - a hand-rolled ordinal comparison at any of
 	/// those sites would silently diverge from the others the moment stored casing wasn't
 	/// canonical (imported data, a hand-edited record). Route every gate through here instead.

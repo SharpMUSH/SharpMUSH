@@ -11,8 +11,7 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// <see cref="IMailStore"/>: @mail folders, incoming and sent mail. Ported from
-/// <c>SurrealDatabase.Mail.cs</c>. <see cref="Tables.Mail"/> is keyed by a dedicated <c>next_mail</c>
+/// <see cref="IMailStore"/>: @mail folders, incoming and sent mail. <see cref="Tables.Mail"/> is keyed by a dedicated <c>next_mail</c>
 /// counter (mirroring <see cref="AllocateDbref"/> but its own key, since mail ids and dbrefs are
 /// unrelated sequences); <see cref="Tables.MailBox"/> and <see cref="Tables.MailSent"/> are ordered
 /// per-recipient / per-sender indexes (recipient-or-sender dbref + mail id -> empty), so <c>@mail N</c>
@@ -219,7 +218,7 @@ public partial class LightningDatabase
 
 			var record = Codec.Deserialize<MailRecord>(bytes);
 
-			// UpdateMailAsync only ever carries one edit; matches SurrealDatabase.Mail.cs's switch.
+			// UpdateMailAsync only ever carries one edit.
 			// Reading clears Fresh the way the read confirmation does everywhere else in the engine —
 			// clear/tag/urgent are status changes a player makes deliberately and don't touch it.
 			var updated = commandMail switch

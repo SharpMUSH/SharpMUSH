@@ -70,7 +70,7 @@ else to run, tune or connect to. Three settings on `sharpmush-server` matter:
 
 | Variable | Set to | Why |
 |---|---|---|
-| `SHARPMUSH_DATABASE_PROVIDER` | `lightning` | selects the provider |
+| `SHARPMUSH_DATABASE_PROVIDER` | `lightning` | the only accepted value; anything else fails startup |
 | `SHARPMUSH_LIGHTNING_PATH` | `data/lightning` | relative to `/app`, so it lands on the volume |
 | `SHARPMUSH_LIGHTNING_SYNC` | `periodic` | sync to disk once a second rather than on every commit; a power loss costs at most that second and the file stays consistent. `full` syncs every commit at roughly 5 ms each. |
 
@@ -81,10 +81,14 @@ the server refuses writes with `MDB_MAP_FULL` rather than corrupting anything.
 Nothing outside the server process should read `data.mdb` while the game runs. To get a copy
 that is safe to read, have the server make one: see [Backups](#backups-restic).
 
-#### Switching a box that ran SurrealDB
+#### A box that ran SurrealDB
 
-There is no data migration: the world starts fresh and the first visitor to `/setup` claims the
-admin again. Wiki asset uploads live in the same volume and are kept.
+SurrealDB is not supported. The server refuses to start with `SHARPMUSH_DATABASE_PROVIDER=surrealdb`
+(any value other than `lightning`, or none, fails startup). There is no in-place migration off the
+old store: the world starts fresh on Lightning — or is brought in from a PennMUSH flatfile import —
+and the first visitor to `/setup` claims the admin again. Wiki asset uploads live in the same volume
+and are kept. Once the world is running on Lightning, the old RocksDB directory at `/data/surreal`
+can be deleted:
 
 ```bash
 cd deploy
@@ -299,19 +303,14 @@ live world at `/data/lightning` is deliberately **not** in `RESTIC_BACKUP_SOURCE
 |---|---|---|
 | `SHARPMUSH_BACKUP_INTERVAL` | unset — no scheduled copy | How often a copy is taken. `6h`, `90m`, `1h30m` or a count of seconds. |
 | `SHARPMUSH_BACKUP_KEEP` | `2` | How many copies stay on disk. Each is a whole world, so this is a disk-space decision. |
-| `SHARPMUSH_BACKUP_PATH` | `<world>.backups` | Where the copies go. Both stacks set it to `data/backup`. Set it explicitly for an in-memory SurrealDB endpoint so backups land on the mounted volume. |
+| `SHARPMUSH_BACKUP_PATH` | `<world>.backups` | Where the copies go. Both stacks set it to `data/backup`. |
 | `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` | on | Omit free pages: smaller copies, slower to produce. `false` turns it off. |
 
 A wizard can take one at any time in-game with `@backup`, and list what is on disk with
 `@backup/list`.
 
-Every database that can copy its own world does so into the same directory layout, so the restic
-configuration above is the same whichever one you run:
-
-| Database | What a backup is | Consistency |
-|---|---|---|
-| `lightning` (what these stacks run) | LMDB's own `mdb_env_copy` of the environment | a point-in-time snapshot by construction |
-| `surrealdb` | `world.surql`, the engine's own export, restored with `surreal import` | logical, taken from a running game — not documented as an instant |
+Each copy is LMDB's own `mdb_env_copy` of the environment, a point-in-time snapshot by
+construction.
 
 The `docker compose run --rm backup …` commands below work whether or not the profile is
 enabled — `run` activates a service's profile automatically.
@@ -334,13 +333,9 @@ docker compose run --rm -v restore:/restore backup \
   restic restore latest --target /restore
 ```
 
-**To restore for real** (these stacks run `lightning`): stop the stack, then put the snapshot's
+**To restore for real**: stop the stack, then put the snapshot's
 contents back into the `app-data` volume — one of the `backup/<timestamp>` directories becomes
 `lightning`, and `wiki-assets` goes back as it is. The game reads whatever is in the volume on boot.
-
-> Restoring SurrealDB is not a file copy. With the game **stopped**, load
-> `backup/<timestamp>/world.surql` into an empty database with
-> `surreal import --ns sharpmush --db world <file>`. The import replaces the database; it is not a merge.
 
 ```bash
 docker compose stop sharpmush-server connectionserver

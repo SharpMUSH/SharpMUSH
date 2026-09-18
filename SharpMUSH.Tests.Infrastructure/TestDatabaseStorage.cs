@@ -13,9 +13,7 @@ public sealed class TestDatabaseStorage : IAsyncInitializer, IAsyncDisposable
 
 	public Task InitializeAsync()
 	{
-		if (!string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER"), "surrealdb",
-				StringComparison.OrdinalIgnoreCase)
-			&& Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH") is null)
+		if (Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH") is null)
 		{
 			_ownedPath = Path.Join(Path.GetTempPath(), $"sharpmush-lightning-tests-{Guid.NewGuid():N}");
 			Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH", _ownedPath);

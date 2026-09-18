@@ -9,14 +9,11 @@ namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
 /// <see cref="Library.Services.Interfaces.IPackageRegistryService"/>: the softcode package registry.
-/// Ported from <c>SurrealDatabase.Packages.cs</c>. The storage records under
-/// <c>SharpMUSH.Database.Lightning.Records</c> share their names with this interface's own model
-/// types (both mirror the SurrealDB <c>SysXyzDbRecord</c> shapes 1:1), so every storage-side
-/// reference below is qualified through the <c>Records</c> alias to keep the two apart.
+/// The storage records under <c>SharpMUSH.Database.Lightning.Records</c> share their names with this
+/// interface's own model types, so every storage-side reference below is qualified through the <c>Records</c> alias to keep the two apart.
 /// </summary>
 /// <remarks>
-/// Composite identities match the SurrealDB partial's <c>type::thing</c> keys, except
-/// <see cref="Tables.PkgDep"/>: Lightning models a dependency edge as a native LMDB dup-sort entry
+/// Rows are keyed by composite identities, except <see cref="Tables.PkgDep"/>: Lightning models a dependency edge as a native LMDB dup-sort entry
 /// (key = owning package id, one duplicate value per dependency) rather than fabricating a composite
 /// id, so <see cref="GetPackageDependentsAsync"/> — the reverse direction — scans the table and
 /// filters, same as <see cref="GetAccountIdsForRoleAsync"/> does for role assignments.

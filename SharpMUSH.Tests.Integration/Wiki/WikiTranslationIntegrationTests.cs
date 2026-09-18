@@ -7,15 +7,10 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Integration.Wiki;
 
 /// <summary>
-/// The translation overlay's CRUD and index semantics against the configured DB backend. The backend is
-/// assembly once per provider, so this one class is both supported providers' contract.
-///
-/// Written deliberately before the three hand-written backend implementations: the five CRUD methods are
-/// mechanical, but the existing revision indexes differ per store — unique on SurrealDB, non-unique on
+/// The translation overlay's CRUD and index semantics against the database provider.
 ///
 /// The <b>negative</b> cases at the bottom carry the weight. A suite that only writes valid data cannot
-/// distinguish a real unique constraint from a missing one, which is exactly how these three drifted
-/// apart, so "rejects a duplicate (PageId, Locale, RevisionNumber)" and "accepts a translation revision 1
+/// distinguish a real unique constraint from a missing one, so "rejects a duplicate (PageId, Locale, RevisionNumber)" and "accepts a translation revision 1
 /// beside a source revision 1" are asserted explicitly.
 ///
 /// The session database is shared and never reset, so every page title is uniquified.
@@ -360,9 +355,8 @@ public class WikiTranslationIntegrationTests
 	[Test]
 	public async Task RevisionIndex_AcceptsATranslationRevisionOneBesideASourceRevisionOne()
 	{
-		// (PageId, RevisionNumber) is NOT unique any more: a translation's stream restarts at 1 while the
-		// source page already has a revision 1. SurrealDB's pre-existing wiki_revision_page_rev UNIQUE
-		// index rejects this outright, which is the whole reason Task 9 must redefine it.
+		// (PageId, RevisionNumber) is not unique: a translation's stream restarts at 1 while the source
+		// page already has a revision 1.
 		var page = await CreateSourcePageAsync("RevOneTwice");
 
 		var created = await Wiki.UpsertTranslationAsync(

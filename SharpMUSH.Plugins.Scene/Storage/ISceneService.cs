@@ -17,9 +17,9 @@ namespace SharpMUSH.Plugins.Scene.Storage;
 /// All references to game objects are taken as <b>dbrefs</b>; the implementation
 /// resolves the live vertex, manages the edge, and snapshots the object's name
 /// (so a later deletion still renders). All timestamps are UTC Unix-millis.
-/// <see cref="Scene.Status"/> is a free string. There is <b>no in-memory
-/// SurrealDB) implement this interface as a side-effect of implementing
-/// <c>ISharpDatabase</c>; it is exercised by integration tests.
+/// <see cref="Scene.Status"/> is a free string. There is <b>no in-memory</b>
+/// implementation: <see cref="LightningSceneStorage"/> is the only one, and it is exercised by
+/// integration tests.
 /// </para>
 /// <para>
 /// Methods that may miss return <see cref="Found{T}"/>; methods that can

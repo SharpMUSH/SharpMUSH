@@ -15,9 +15,7 @@ using SharpMUSH.Library.Services;
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// <see cref="IObjectStore"/>: object identity and structure. Ported from
-/// <c>SurrealDatabase.Objects.cs</c>; see that file and the hydration helpers in
-/// <c>SurrealDatabase.cs</c> for the semantics this mirrors.
+/// <see cref="IObjectStore"/>: object identity and structure.
 /// </summary>
 public partial class LightningDatabase
 {
@@ -63,7 +61,7 @@ public partial class LightningDatabase
 			}));
 			tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
 
-			// A player owns itself, same as the SurrealDB and the migration seed.
+			// A player owns itself, as in the migration seed.
 			SetSingleEdge(tx, Tables.Owner, dbref, dbref);
 			SetSingleEdge(tx, Tables.Location, dbref, (long)location.Number);
 			SetSingleEdge(tx, Tables.Home, dbref, (long)home.Number);
@@ -168,7 +166,7 @@ public partial class LightningDatabase
 			// The exit's own location is its source room (at_location, same table Location() reads).
 			// The room->exit direction is a second, dedicated edge (Tables.Exit) so "exits at this
 			// room" is a cheap point lookup instead of a type-filtered scan of every reverse-location
-			// entry — SurrealDB can afford that scan; a flat key-value store cannot.
+			// entry, which a flat key-value store cannot afford.
 			SetSingleEdge(tx, Tables.Location, dbref, locKey);
 			PutEdge(tx, Tables.Exit, locKey, dbref);
 			SetSingleEdge(tx, Tables.Owner, dbref, ownerKey);
@@ -694,8 +692,7 @@ public partial class LightningDatabase
 		var result = Store.Read(tx =>
 		{
 			// maxDepth <= 0 leaves no traversal budget, not even the zero-hop start == target
-			// check below — matching the SurrealDB walk this ports, which never enters its
-			// depth-guarded loop in that case either.
+			// check below.
 			if (maxDepth <= 0)
 			{
 				return false;
@@ -829,8 +826,8 @@ public partial class LightningDatabase
 	{
 		Id = dbref.ToString(),
 		Object = sharpObj,
-		// A room's "Location" is its drop-to, which reuses the home edge exactly as SurrealDB's
-		// DropToOf/GetDropToAsync does — there is no distinct drop-to table.
+		// A room's "Location" is its drop-to, which reuses the home edge — there is no distinct
+		// drop-to table.
 		Location = new(ct => DropToRelation(dbref, ct))
 	};
 
@@ -849,8 +846,8 @@ public partial class LightningDatabase
 		Aliases = record.Aliases,
 		// Source room: the at_location edge, same as a player/thing's Location.
 		Location = new(ct => LocationRelation(dbref, ct)),
-		// Destination: the has_home edge, absent on a freshly @open'd or @unlink'd exit — same edge
-		// SurrealDB's ExitDestinationOf reuses rather than a dedicated "e.dest" table.
+		// Destination: the has_home edge, absent on a freshly @open'd or @unlink'd exit — reused
+		// rather than a dedicated destination table.
 		Home = new(ct => ExitDestinationRelation(dbref, ct))
 	};
 

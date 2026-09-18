@@ -6,7 +6,7 @@ Area 6 (HTTP handler / profile schema), Area 20 (package manager).
 ## Status (2026-06-13) — implemented & green
 
 Phases 1–8 landed and the full solution builds (warnings-as-errors). Backend registry
-runs on both supported providers; schema
+runs on Lightning; schema
 serialization, the view-renderer bUnit test, the chargen-schema JSON-validity test, and the
 example-package manifest all pass.
 
@@ -75,8 +75,8 @@ deferrals below.
 ### Phase 4: Application Registry (server, DB-backed)
 - [ ] `RegisteredApplication` model (id, slug, displayName, icon, kind, schemaUrl, dataUrl,
       submitRoute, allowedRoles, navPlacement, zones, order)
-- [ ] Persist via `ISharpDatabase` — **both supported providers** (Lightning/Surreal) at
-      parity, per-provider integration tests (mirror the Area-20 `sys_*` pattern)
+- [ ] Persist via `ISharpDatabase` on Lightning, with integration tests (mirror the Area-20
+      `sys_*` pattern)
 - [ ] `ApplicationsController` (`/api/applications`, `[Authorize]` Wizard+ per 10.3): list,
       get, create, update, delete
 - [ ] Validate `schemaUrl` returns parseable JSON before save
@@ -124,7 +124,7 @@ deferrals below.
 ## Testing (summary)
 - [ ] Schema (de)serialization + error-envelope binding (Phase 1)
 - [ ] Renderer control coverage + returned-schema re-render (Phases 2–3)
-- [ ] Registry CRUD + role gate on both supported providers (Phase 4)
+- [ ] Registry CRUD + role gate on Lightning (Phase 4)
 - [ ] Routing/role gating for `/apps/{slug}` (Phase 5)
 - [ ] Dynamic widget render + palette (Phase 6)
 - [ ] Example package validates + schema round-trips through the parser (Phase 8)

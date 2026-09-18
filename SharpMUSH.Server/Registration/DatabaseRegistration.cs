@@ -22,8 +22,6 @@ using SharpMUSH.Server.RateLimiting;
 using SharpMUSH.Server.Services;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
-using SurrealDb.Net;
-using SurrealDb.Embedded.InMemory;
 using System.Globalization;
 using System.Threading.RateLimiting;
 using OpenTelemetry.ResourceDetectors.Container;
@@ -34,7 +32,6 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
-using SharpMUSH.Database.SurrealDB;
 using SharpMUSH.Implementation;
 using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Functions;
@@ -68,9 +65,9 @@ namespace SharpMUSH.Server.Registration;
 /// </remarks>
 internal static class DatabaseRegistration
 {
-	/// <summary>Builds the plugin catalog, then puts the configured provider behind every store interface it serves.</summary>
+	/// <summary>Builds the plugin catalog, then puts the Lightning provider behind every store interface it serves.</summary>
 	public static IServiceCollection AddSharpMushDatabase(
-		this IServiceCollection services, IConfiguration configuration, DatabaseProvider databaseProvider)
+		this IServiceCollection services, IConfiguration configuration)
 	{
 		// PHASE 2a TWO-PHASE BOOT — build the plugin catalog ONCE, pre-build, before any service the
 		// plugins might extend is registered. The catalog runs the single McMaster DLL-load pass, applies
@@ -92,92 +89,45 @@ internal static class DatabaseRegistration
 		// of the cache.
 		services.AddSingleton<IObjectRelationLoader, Implementation.Services.MediatorObjectRelationLoader>();
 
-		if (databaseProvider == DatabaseProvider.SurrealDB)
+		// Config-driven path/map-size so production picks a durable location while tests default to a
+		// fresh temp directory per run. Resolution: SHARPMUSH_LIGHTNING_PATH env → appsettings
+		// "Lightning:Path" → "lightning-data"; SHARPMUSH_LIGHTNING_MAPSIZE (bytes) → 64 GiB;
+		// SHARPMUSH_LIGHTNING_SYNC (full|nometasync|periodic) → full; SHARPMUSH_LIGHTNING_FLUSH_MS → 1000.
+		var lightningPath = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH")
+			?? configuration["Lightning:Path"]
+			?? "lightning-data";
+		var lightningMapSizeSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE");
+		var lightningSyncSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_SYNC");
+		var lightningFlushSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_FLUSH_MS");
+		services.AddSingleton(new LightningWorldPath(lightningPath));
+		services.AddSingleton<LightningDatabase>(x =>
 		{
-			// Config-driven endpoint so production persists to disk (RocksDB) while tests stay in-memory.
-			// Resolution: SHARPMUSH_SURREALDB_ENDPOINT env → appsettings "SurrealDb:Endpoint" → file-backed default.
-			// A pure mem:// store loses ALL data on restart, so production must default to a durable engine.
-			var surrealEndpoint = Environment.GetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT")
-				?? configuration["SurrealDb:Endpoint"]
-				?? "rocksdb://surrealdb-data";
-			// Register both embedded engines; the endpoint scheme selects which the live client uses, and the
-			// migration staging client (always mem://) needs the in-memory engine present regardless.
-			services.AddSurreal($"Endpoint={surrealEndpoint};Namespace=sharpmush;Database=world")
-				.AddInMemoryProvider()
-				.AddRocksDbProvider();
-			services.AddSingleton<SurrealDatabase>(x =>
-			{
-				var dbLogger = x.GetRequiredService<ILogger<SurrealDatabase>>();
-				var surrealClient = x.GetRequiredService<ISurrealDbClient>();
-				surrealClient.Connect().ConfigureAwait(false).GetAwaiter().GetResult();
-				var password = x.GetRequiredService<IPasswordService>();
-				var db = new SurrealDatabase(dbLogger, surrealClient, password,
-					x.GetRequiredService<IObjectRelationLoader>(), pluginMigrationSources, pluginFlags);
-				return db;
-			});
-			RegisterDatabaseProvider<SurrealDatabase>(services);
-			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ISurrealStorageAccessor>(sp =>
-				sp.GetRequiredService<SurrealDatabase>());
+			var dbLogger = x.GetRequiredService<ILogger<LightningDatabase>>();
+			var password = x.GetRequiredService<IPasswordService>();
+			var relations = x.GetRequiredService<IObjectRelationLoader>();
+			var db = new LightningDatabase(dbLogger,
+				new LightningStoreOptions
+				{
+					Path = x.GetRequiredService<LightningWorldPath>().Value,
+					MapSize = ResolveLightningMapSize(lightningMapSizeSetting, dbLogger),
+					Sync = ResolveLightningSyncMode(lightningSyncSetting, dbLogger),
+					FlushInterval = ResolveLightningFlushInterval(lightningFlushSetting, dbLogger)
+				},
+				password, relations, pluginMigrationSources, pluginFlags);
+			return db;
+		});
+		RegisterDatabaseProvider<LightningDatabase>(services);
+		services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(sp =>
+			sp.GetRequiredService<LightningDatabase>());
 
-			// The default root is derived from the endpoint's own path when it is file-backed, so the
-			// export lands beside the world. A mem:// endpoint has no world on disk and gets no default:
-			// there is nothing durable to sit beside, and the working directory is the wrong guess.
-			var surrealWorldPath = surrealEndpoint.StartsWith("rocksdb://", StringComparison.OrdinalIgnoreCase)
-				? surrealEndpoint["rocksdb://".Length..]
-				: null;
-			services.AddSingleton<IWorldBackupService>(sp =>
-			{
-				var options = ResolveBackupOptions(surrealWorldPath, sp.GetRequiredService<ILogger<SurrealDatabase>>());
-				return options is null
-					? new UnsupportedWorldBackupService("surrealdb", NoBackupLocation)
-					: new SurrealWorldBackupService(sp.GetRequiredService<ISurrealDbClient>(), options,
-						sp.GetRequiredService<ILogger<SurrealWorldBackupService>>());
-			});
-		}
-		else
-		{
-			// Config-driven path/map-size so production picks a durable location while tests default to a
-			// fresh temp directory per run. Resolution: SHARPMUSH_LIGHTNING_PATH env → appsettings
-			// "Lightning:Path" → "lightning-data"; SHARPMUSH_LIGHTNING_MAPSIZE (bytes) → 64 GiB;
-			// SHARPMUSH_LIGHTNING_SYNC (full|nometasync|periodic) → full; SHARPMUSH_LIGHTNING_FLUSH_MS → 1000.
-			var lightningPath = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_PATH")
-				?? configuration["Lightning:Path"]
-				?? "lightning-data";
-			var lightningMapSizeSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE");
-			var lightningSyncSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_SYNC");
-			var lightningFlushSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_FLUSH_MS");
-			services.AddSingleton(new LightningWorldPath(lightningPath));
-			services.AddSingleton<LightningDatabase>(x =>
-			{
-				var dbLogger = x.GetRequiredService<ILogger<LightningDatabase>>();
-				var password = x.GetRequiredService<IPasswordService>();
-				var relations = x.GetRequiredService<IObjectRelationLoader>();
-				var db = new LightningDatabase(dbLogger,
-					new LightningStoreOptions
-					{
-						Path = x.GetRequiredService<LightningWorldPath>().Value,
-						MapSize = ResolveLightningMapSize(lightningMapSizeSetting, dbLogger),
-						Sync = ResolveLightningSyncMode(lightningSyncSetting, dbLogger),
-						FlushInterval = ResolveLightningFlushInterval(lightningFlushSetting, dbLogger)
-					},
-					password, relations, pluginMigrationSources, pluginFlags);
-				return db;
-			});
-			RegisterDatabaseProvider<LightningDatabase>(services);
-			services.AddSingleton<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(sp =>
-				sp.GetRequiredService<LightningDatabase>());
-
-			// World backup. SHARPMUSH_BACKUP_{PATH,KEEP,INTERVAL} are shared with the other providers that
-			// can back themselves up; compaction is Lightning's alone, because only a page-level copy has
-			// free pages to omit.
-			var lightningCompactSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_COMPACT");
-			services.AddSingleton<IWorldBackupService>(sp => new LightningWorldBackupService(
-				sp.GetRequiredService<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(),
-				// Never null: Lightning always has a world directory to name the default root after.
-				ResolveBackupOptions(sp.GetRequiredService<LightningWorldPath>().Value, sp.GetRequiredService<ILogger<LightningDatabase>>())!,
-				compact: !string.Equals(lightningCompactSetting, "false", StringComparison.OrdinalIgnoreCase),
-				sp.GetRequiredService<ILogger<LightningWorldBackupService>>()));
-		}
+		// World backup. SHARPMUSH_BACKUP_{PATH,KEEP,INTERVAL} say where copies go, how many stay and how
+		// often one is taken; SHARPMUSH_LIGHTNING_BACKUP_COMPACT turns off omitting free pages.
+		var lightningCompactSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_COMPACT");
+		services.AddSingleton<IWorldBackupService>(sp => new LightningWorldBackupService(
+			sp.GetRequiredService<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(),
+			ResolveBackupOptions(sp.GetRequiredService<LightningWorldPath>().Value, sp.GetRequiredService<ILogger<LightningDatabase>>()),
+			compact: !string.Equals(lightningCompactSetting, "false", StringComparison.OrdinalIgnoreCase),
+			sp.GetRequiredService<ILogger<LightningWorldBackupService>>()));
 
 		return services;
 	}
@@ -258,23 +208,13 @@ internal static class DatabaseRegistration
 	}
 
 	/// <summary>
-	/// Where the copies go, how many are kept and how often one is taken, for whichever provider can
-	/// back itself up. Provider-neutral (<c>SHARPMUSH_BACKUP_*</c>) because three of them can, and the
-	/// operator setting a retention count does not care which engine is underneath.
-	/// <paramref name="worldPath"/> only supplies the default root.
+	/// Where the copies go, how many are kept and how often one is taken.
+	/// <paramref name="worldPath"/> only supplies the default root, beside the world, when
+	/// <c>SHARPMUSH_BACKUP_PATH</c> is unset.
 	/// </summary>
-	/// <param name="worldPath">
-	/// The provider's own on-disk world, when it has one, used only to derive the default root. Null
-	/// for a provider that keeps nothing locally — SurrealDB on a <c>mem://</c> endpoint.
-	/// Those get no default: returns null unless <c>SHARPMUSH_BACKUP_PATH</c> names somewhere, because
-	/// guessing puts the copies in the working directory, which on a container is not the mounted
-	/// volume — backups that look like they are being taken and are gone at the next recreate.
-	/// </param>
-	/// <returns>Null when there is nowhere sensible to write, which the caller reports as unsupported.</returns>
-	private static WorldBackupOptions? ResolveBackupOptions(string? worldPath, Microsoft.Extensions.Logging.ILogger logger)
+	private static WorldBackupOptions ResolveBackupOptions(string worldPath, Microsoft.Extensions.Logging.ILogger logger)
 	{
 		var configuredRoot = Environment.GetEnvironmentVariable("SHARPMUSH_BACKUP_PATH");
-		if (string.IsNullOrWhiteSpace(configuredRoot) && string.IsNullOrWhiteSpace(worldPath)) return null;
 
 		var keepSetting = Environment.GetEnvironmentVariable("SHARPMUSH_BACKUP_KEEP");
 		var intervalSetting = Environment.GetEnvironmentVariable("SHARPMUSH_BACKUP_INTERVAL");
@@ -309,15 +249,10 @@ internal static class DatabaseRegistration
 		return new WorldBackupOptions
 		{
 			Root = string.IsNullOrWhiteSpace(configuredRoot)
-				? WorldBackupOptions.DefaultRootFor(worldPath!)
+				? WorldBackupOptions.DefaultRootFor(worldPath)
 				: configuredRoot,
 			Keep = keep,
 			Interval = interval
 		};
 	}
-
-	/// <summary>Why a provider that could otherwise back itself up is switched off.</summary>
-	private const string NoBackupLocation =
-		"can back itself up, but has no world directory to derive a location from; "
-		+ "set SHARPMUSH_BACKUP_PATH to somewhere durable to enable it";
 }

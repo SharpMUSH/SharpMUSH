@@ -1,104 +1,59 @@
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
-using SharpMUSH.Database.SurrealDB;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services.Interfaces;
-using SurrealDb.Net;
 
 namespace SharpMUSH.Tests.Database;
 
-public class LightningDefinitionCreationTests
+public class DefinitionCreationTests
 {
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public Task DuplicateCreatePreservesEntireDefinitionAndAssignments(bool power)
-		=> DefinitionCreationContract.DuplicateCreatePreservesEntireDefinitionAndAssignments("lightning", power);
+		=> DefinitionCreationContract.DuplicateCreatePreservesEntireDefinitionAndAssignments(power);
 
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public Task ConcurrentCanonicalCreatesHaveOneWholeWinner(bool power)
-		=> DefinitionCreationContract.ConcurrentCanonicalCreatesHaveOneWholeWinner("lightning", power);
+		=> DefinitionCreationContract.ConcurrentCanonicalCreatesHaveOneWholeWinner(power);
 
 	[Test]
 	public Task MixedCaseSeedPowerCannotBeDuplicated()
-		=> DefinitionCreationContract.MixedCaseSeedPowerCannotBeDuplicated("lightning");
-}
-
-public class SurrealDefinitionCreationTests
-{
-	[Test]
-	[Arguments(false)]
-	[Arguments(true)]
-	public Task DuplicateCreatePreservesEntireDefinitionAndAssignments(bool power)
-		=> DefinitionCreationContract.DuplicateCreatePreservesEntireDefinitionAndAssignments("surrealdb", power);
-
-	[Test]
-	[Arguments(false)]
-	[Arguments(true)]
-	public Task ConcurrentCanonicalCreatesHaveOneWholeWinner(bool power)
-		=> DefinitionCreationContract.ConcurrentCanonicalCreatesHaveOneWholeWinner("surrealdb", power);
-
-	[Test]
-	public Task MixedCaseSeedPowerCannotBeDuplicated()
-		=> DefinitionCreationContract.MixedCaseSeedPowerCannotBeDuplicated("surrealdb");
-
-	[Test]
-	[Arguments(false)]
-	[Arguments(true)]
-	public Task LegacyMixedCaseRowRetainsIdentityAndAssignments(bool power)
-		=> DefinitionCreationContract.SurrealLegacyMixedCaseRowRetainsIdentityAndAssignments(power);
+		=> DefinitionCreationContract.MixedCaseSeedPowerCannotBeDuplicated();
 }
 
 internal static class DefinitionCreationContract
 {
-	internal sealed record World(ISharpDatabase Database, Func<ValueTask> Cleanup, ISurrealDbClient? Client = null) : IAsyncDisposable
+	internal sealed record World(ISharpDatabase Database, Func<ValueTask> Cleanup) : IAsyncDisposable
 	{
 		public ValueTask DisposeAsync() => Cleanup();
 	}
-	internal static async Task<World> Open(string provider)
+	internal static async Task<World> Open()
 	{
-		if (provider == "lightning")
+		var path = Path.Join(Path.GetTempPath(), "definitions-" + Guid.NewGuid().ToString("N"));
+		var db = new LightningDatabase(NullLogger<LightningDatabase>.Instance,
+			new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);
+		async ValueTask Cleanup()
 		{
-			var path = Path.Combine(Path.GetTempPath(), "definitions-" + Guid.NewGuid().ToString("N"));
-			var db = new LightningDatabase(NullLogger<LightningDatabase>.Instance,
-				new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);
-			async ValueTask Cleanup()
-			{
-				await db.DisposeAsync();
-				await FixtureDirectoryCleanup.DeleteAsync(path);
-			}
-			try { await db.Migrate(); return new World(db, Cleanup); }
-			catch { await Cleanup(); throw; }
+			await db.DisposeAsync();
+			await FixtureDirectoryCleanup.DeleteAsync(path);
 		}
-		var services = new ServiceCollection();
-		services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Warning).AddSimpleConsole());
-		services.AddSurreal($"Endpoint=mem://;Namespace=definitions;Database=d{Guid.NewGuid():N}").AddInMemoryProvider();
-		var container = services.BuildServiceProvider();
-		try
-		{
-			var client = container.GetRequiredService<ISurrealDbClient>();
-			await client.Connect();
-			var db = new SurrealDatabase(container.GetRequiredService<ILogger<SurrealDatabase>>(), client, Substitute.For<IPasswordService>(), Substitute.For<IObjectRelationLoader>());
-			await db.Migrate();
-			return new World(db, container.DisposeAsync, client);
-		}
-		catch { await container.DisposeAsync(); throw; }
+		try { await db.Migrate(); return new World(db, Cleanup); }
+		catch { await Cleanup(); throw; }
 	}
 
-	public static async Task DuplicateCreatePreservesEntireDefinitionAndAssignments(string provider, bool power)
+	public static async Task DuplicateCreatePreservesEntireDefinitionAndAssignments(bool power)
 	{
-		await using var world = await Open(provider);
+		await using var world = await Open();
 		var db = world.Database;
 		var god = (await db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 		const string name = "DISPOSABLE_DEFINITION";
@@ -128,9 +83,9 @@ internal static class DefinitionCreationContract
 		}
 	}
 
-	public static async Task ConcurrentCanonicalCreatesHaveOneWholeWinner(string provider, bool power)
+	public static async Task ConcurrentCanonicalCreatesHaveOneWholeWinner(bool power)
 	{
-		await using var world = await Open(provider);
+		await using var world = await Open();
 		var db = world.Database;
 		const string name = "RACE_DEFINITION";
 		var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -174,9 +129,9 @@ internal static class DefinitionCreationContract
 		}
 	}
 
-	public static async Task MixedCaseSeedPowerCannotBeDuplicated(string provider)
+	public static async Task MixedCaseSeedPowerCannotBeDuplicated()
 	{
-		await using var world = await Open(provider);
+		await using var world = await Open();
 		var db = world.Database;
 		var original = await db.GetPowerAsync("Can_Spoof");
 		await Assert.That(original).IsNotNull();
@@ -186,38 +141,5 @@ internal static class DefinitionCreationContract
 		await Assert.That(JsonSerializer.Serialize(await db.GetPowerAsync("can_spoof"))).IsEqualTo(JsonSerializer.Serialize(original));
 		await Assert.That((await db.GetPowerAsync("CAN_SPOOF"))!.Id).IsEqualTo(original!.Id);
 		await Assert.That(await (await db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object().Powers.Value.AnyAsync(item => item.Id == original.Id)).IsTrue();
-	}
-
-	public static async Task SurrealLegacyMixedCaseRowRetainsIdentityAndAssignments(bool power)
-	{
-		await using var world = await Open("surrealdb");
-		var table = power ? "power" : "object_flag";
-		var alias = power ? "alias = 'LegacyAlias'" : "aliases = ['LegacyAlias']";
-		var response = await world.Client!.RawQuery($"CREATE {table}:LegacyDefinition SET name = 'LegacyDefinition', {alias}, symbol = 'Q', system = true, disabled = true, setPermissions = ['FLAG^ROYALTY'], unsetPermissions = ['FLAG^WIZARD'], typeRestrictions = ['THING']");
-		await Assert.That(response.HasErrors).IsFalse();
-		var db = world.Database;
-		var god = (await db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
-		if (power)
-		{
-			var original = await db.GetPowerAsync("legacydefinition");
-			await Assert.That(original).IsNotNull();
-			await db.SetObjectPowerAsync(god, original!);
-			await Assert.That(await db.CreatePowerAsync("LEGACYDEFINITION", "OTHER", "X", false, [], [], [])).IsNull();
-			var after = await db.GetPowerAsync("LEGACYDEFINITION");
-			await Assert.That(JsonSerializer.Serialize(after)).IsEqualTo(JsonSerializer.Serialize(original));
-			await Assert.That(after!.Id).IsEqualTo(original!.Id);
-			await Assert.That(await (await db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object().Powers.Value.AnyAsync(item => item.Id == original.Id)).IsTrue();
-		}
-		else
-		{
-			var original = await db.GetObjectFlagAsync("legacydefinition");
-			await Assert.That(original).IsNotNull();
-			await db.SetObjectFlagAsync(god, original!);
-			await Assert.That(await db.CreateObjectFlagAsync("LEGACYDEFINITION", ["OTHER"], "X", false, [], [], [])).IsNull();
-			var after = await db.GetObjectFlagAsync("LEGACYDEFINITION");
-			await Assert.That(JsonSerializer.Serialize(after)).IsEqualTo(JsonSerializer.Serialize(original));
-			await Assert.That(after!.Id).IsEqualTo(original!.Id);
-			await Assert.That(await (await db.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>().Object().Flags.Value.AnyAsync(item => item.Id == original.Id)).IsTrue();
-		}
 	}
 }

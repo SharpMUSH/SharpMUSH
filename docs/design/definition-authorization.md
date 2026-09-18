@@ -15,12 +15,10 @@ mutation. DISABLE wins when both enable/disable switches occur. System-definitio
 still apply after authorization.
 
 Provider creation refuses an existing primary name case-insensitively. Lightning checks and inserts
-inside one writer transaction. Surreal uses one conditional statement with a case-insensitive logical
-name check and a native CREATE at the canonical uppercase record ID. Explicit RETURN supplies the
-actual created record; an empty or failed creation returns the existing nullable failure result.
-Concurrent new creates contend on that same ID. Existing mixed-case records keep their IDs and
-assignment edges; lookup resolves their names case-insensitively. Definition update operations do
-not rename primary names, and seed refresh completes during startup before game commands run.
+inside one writer transaction; a refused creation returns the existing nullable failure result.
+Existing mixed-case records keep their IDs and assignment edges; lookup resolves their names
+case-insensitively. Definition update operations do not rename primary names, and seed refresh
+completes during startup before game commands run.
 
 Seed refresh retains its separate upsert paths. Command prechecks provide duplicate diagnostics,
 while the provider boundary supplies the atomic no-replacement guarantee. Existing Mediator cache

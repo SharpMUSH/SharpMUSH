@@ -229,7 +229,7 @@ public class AttributeService(
 	/// <see cref="ParentChainAsync"/>, and <see cref="AncestorTargetChainAsync"/> for the ancestor
 	/// fall-through - follow <c>@parent</c> only, so a zone-sourced result's source object is NOT in
 	/// the chain: the walk would run off the end and DENY (<c>attrib.c:356</c>), a fail-CLOSED
-	/// regression on zone reads that work today. both supported providers really do emit
+	/// regression on zone reads that work today. The provider really does emit
 	/// <see cref="AttributeSource.Zone"/>, so this arm is live.
 	/// <para>
 	/// <see cref="AttributeSource.Ancestor"/> is excluded alongside it purely defensively: no
@@ -301,7 +301,7 @@ public class AttributeService(
 		// blocks the whole path - not just on the resolved leaf. Penn's atr_get_with_parent
 		// (attrib.c:1232-1252) tests AF_PRIVATE on every backtick-delimited segment while
 		// crossing an inheritance boundary, and the ancestor is such a boundary exactly like an
-		// @parent is. Task 7 fixed this shape for @parent chains in both supported providers; this
+		// @parent is. Task 7 fixed this shape for @parent chains in the provider; this
 		// fall-through kept the old leaf-only test.
 		if (ancestorResult.Attributes.Any(a => a.IsNoInherit()))
 		{

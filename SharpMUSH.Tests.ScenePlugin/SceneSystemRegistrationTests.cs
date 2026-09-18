@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -14,37 +13,18 @@ namespace SharpMUSH.Tests.ScenePlugin;
 /// <summary>
 /// Pure-DI unit tests for the Scene plugin's <c>AddSceneSystem</c> registration seam (Phase 8). No server
 /// boots and no database is touched: these build a bare <see cref="IServiceCollection"/> and assert that
-/// (a) the storage matching the configured provider is selected by key, and (b) <c>AddBehavior&lt;T&gt;()</c>
+/// (a) the Lightning storage is registered, and (b) <c>AddBehavior&lt;T&gt;()</c>
 /// decorators wrap the core in registration order. Proves the registration shape independently of the ALC.
 /// </summary>
 public class SceneSystemRegistrationTests
 {
 	[Test]
-	public async Task AddSceneSystem_DefaultsToLightningStorage()
-	{
-		var services = new ServiceCollection();
-		services.AddSingleton<ILightningStorageAccessor>(new FakeLightningAccessor());
-		var config = new ConfigurationBuilder().Build();
-
-		services.AddSceneSystem(config);
-
-		await using var sp = services.BuildServiceProvider();
-		var svc = sp.GetRequiredService<ISceneService>();
-
-		await Assert.That(svc).IsTypeOf<LightningSceneStorage>();
-	}
-
-	[Test]
-	public async Task AddSceneSystem_SelectsLightningStorage_WhenProviderIsLightning()
+	public async Task AddSceneSystem_RegistersLightningStorage()
 	{
 		var services = new ServiceCollection();
 		services.AddSingleton<ILightningStorageAccessor>(new FakeLightningAccessor());
 
-		var config = new ConfigurationBuilder()
-			.AddInMemoryCollection(new Dictionary<string, string?> { ["SHARPMUSH_DATABASE_PROVIDER"] = "lightning" })
-			.Build();
-
-		services.AddSceneSystem(config);
+		services.AddSceneSystem();
 
 		await using var sp = services.BuildServiceProvider();
 		var svc = sp.GetRequiredService<ISceneService>();
@@ -59,18 +39,13 @@ public class SceneSystemRegistrationTests
 
 		var services = new ServiceCollection();
 		services.AddSingleton(calls);
-		var config = new ConfigurationBuilder()
-			.AddInMemoryCollection(new Dictionary<string, string?> { ["SHARPMUSH_DATABASE_PROVIDER"] = "surrealdb" })
-			.Build();
 
-		services.AddSceneSystem(config)
+		services.AddSceneSystem()
 			.AddBehavior<FirstBehavior>()
 			.AddBehavior<SecondBehavior>();
 
-		// Replace the surrealdb-keyed storage core with the recording fake (last keyed registration wins).
-		services.AddKeyedSingleton<ISceneStorage>(
-			SceneSystemServiceCollectionExtensions.SurrealKey,
-			(sp, _) => new RecordingStorage(sp.GetRequiredService<List<string>>()));
+		// Replace the storage core with the recording fake (last registration wins).
+		services.AddSingleton<ISceneStorage>(sp => new RecordingStorage(sp.GetRequiredService<List<string>>()));
 
 		await using var sp = services.BuildServiceProvider();
 		var svc = sp.GetRequiredService<ISceneService>();

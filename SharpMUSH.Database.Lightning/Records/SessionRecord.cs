@@ -1,6 +1,6 @@
 namespace SharpMUSH.Database.Lightning.Records;
 
-/// <summary>Mirrors <c>SurrealDatabase.SessionDbRecord</c>; the session token is the LMDB key.</summary>
+/// <summary>A stored account session; the session token is the LMDB key.</summary>
 public sealed record SessionRecord
 {
 	public string AccountId { get; init; } = "";

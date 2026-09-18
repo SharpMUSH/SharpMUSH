@@ -20,8 +20,8 @@ namespace SharpMUSH.Library.Services;
 /// <b>Why this is re-derived from the text rather than read from <c>SharpAttribute.CommandListIndex</c>.</b>
 /// That field is populated only on the copies <c>CommandAttributeScanner</c> puts in the
 /// command-attribute cache (<c>attr with { CommandListIndex = … }</c>). Every attribute that comes
-/// straight off the database carries <c>null</c> there — both supported providers pass <c>null</c> when
-/// they materialise a <see cref="SharpAttribute"/> — and <c>@examine</c>, <c>@grep/PRINT</c> and
+/// straight off the database carries <c>null</c> there — the provider passes <c>null</c> when
+/// it materialises a <see cref="SharpAttribute"/> — and <c>@examine</c>, <c>@grep/PRINT</c> and
 /// <c>AttributeService</c>'s set-time validation all read attributes that way. Plumbing the field
 /// through would therefore have to populate it first, in the database layer, for a value only the
 /// display path wants. Re-matching with the very regexes the scanner and the listen handler use keeps

@@ -120,7 +120,6 @@ public static class LoggingConfiguration
 			["Microsoft.AspNetCore"] = LogEventLevel.Warning,
 			["Microsoft.Hosting.Lifetime"] = LogEventLevel.Information,
 			["TelnetNegotiationCore"] = LogEventLevel.Information,
-			["SurrealDb"] = LogEventLevel.Error,
 			// The NATS.Net client's own loggers, and SharpMUSH's NATS plumbing, which is every logger in
 			// SharpMUSH.Messaging. Two entries because Serilog matches an override by SourceContext
 			// PREFIX: "SharpMUSH.Messaging.NATS.NatsJetStreamMessageBus" does not begin with "NATS", so
