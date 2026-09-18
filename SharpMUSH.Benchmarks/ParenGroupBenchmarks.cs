@@ -119,9 +119,14 @@ public class ParenGroupBenchmarks : LightningBaseBenchmark
 		}
 	}
 
+	/// <summary>The text <paramref name="code"/> evaluates to; throws when it fails to evaluate.</summary>
 	private static async Task<string> Evaluate(IMUSHCodeParser parser, DBRef executor, string code)
-		=> (await parser.FromState(BenchmarkHelpers.FreshState(executor)).FunctionParse(MarkupText.Plain(code)))?.Message?.ToPlainText()
-			?? string.Empty;
+		=> await parser.FromState(BenchmarkHelpers.FreshState(executor)).FunctionParse(MarkupText.Plain(code)) switch
+		{
+			{ HadErrors: false, Message: { } message } => message.ToPlainText(),
+			var result => throw new InvalidOperationException(
+				$"'{code}' did not evaluate cleanly: '{result?.Message?.ToPlainText()}'; a failing workload measures the error path.")
+		};
 
 	private Task Run(string name) => _parser!.FromState(BenchmarkHelpers.FreshState(_executor)).FunctionParse(_inputs[name]).AsTask();
 
