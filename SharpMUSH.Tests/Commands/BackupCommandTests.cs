@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -21,6 +22,13 @@ public class BackupCommandTests : ServerTestBase
 	/// The command carries <c>CommandLock = "FLAG^WIZARD"</c>. The fixture runs as God, who passes it
 	/// vacuously, so the gate is only exercised by driving a mortal on its own handle.
 	/// </summary>
+	/// <remarks>
+	/// The assertion is the refusal itself, not the number of copies on disk. Counting is vacuous
+	/// wherever the provider does not support backup at all: both sides of the comparison are zero,
+	/// and a mortal that walked straight past the command lock into the unsupported-provider branch
+	/// would have passed the test. That branch makes no copy either, so nothing downstream of the
+	/// lock can stand in for the lock.
+	/// </remarks>
 	[Test]
 	public async Task AMortalCannotRunIt()
 	{
@@ -32,10 +40,12 @@ public class BackupCommandTests : ServerTestBase
 
 		var before = BackupService.IsSupported ? BackupService.List().Count : 0;
 
-		await CmdAs(mortal.DbRef, mortal.Handle, "@backup");
+		var answer = await CmdAs(mortal.DbRef, mortal.Handle, "@backup");
 
+		await Assert.That(answer).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+			.Because("the FLAG^WIZARD command lock must refuse a mortal before @backup runs at all");
 		await Assert.That(BackupService.IsSupported ? BackupService.List().Count : 0).IsEqualTo(before)
-			.Because("a mortal must not be able to make the server copy its world");
+			.Because("and no copy may reach the disk either");
 	}
 
 	/// <summary>

@@ -7,8 +7,8 @@ namespace SharpMUSH.Tests.Functions;
 /// to it the list was wrong in both directions — several of the named functions had since gained
 /// tests, and the list said nothing about the ones that had been added in the meantime. A list in an
 /// issue decays; this computes the same thing from the registry and the test sources on every run, so
-/// the only way a function can ship untested is for someone to add its name to the exceptions below
-/// and say why.</para>
+/// the only way a function can ship untested is to delete a test, which shows up as a deletion in a
+/// diff rather than as an exception nobody reads.</para>
 ///
 /// <para>The measure is deliberately crude: does any test source contain <c>name(</c>. That counts a
 /// mention inside an unrelated assertion string as coverage, so it is a floor rather than a

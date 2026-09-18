@@ -517,7 +517,7 @@ SharpMUSH provides the MUX comsys commands for players more familiar with them:
 - `<alias>:` > `@chat <channel>=:`
 - `<alias>;` > `@chat <channel>=;`
 
-Aliases are stored on you as `CHANALIAS`<alias>` attributes, so they survive a disconnect. Where a command takes a channel name rather than an alias you must give enough of the name to identify it uniquely.
+Aliases are stored on you as `` CHANALIAS`<alias> `` attributes, so they survive a disconnect. Where a command takes a channel name rather than an alias you must give enough of the name to identify it uniquely.
 
 **See Also:**
 - [@channel]

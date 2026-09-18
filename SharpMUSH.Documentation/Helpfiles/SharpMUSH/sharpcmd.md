@@ -3597,9 +3597,11 @@ The attribute name is evaluated before the attribute is set, so `&hdr_%q1 me=...
 # ~
 `~<command>`
 
-Runs `<command>` once under strict parsing. A grammar error that the normal parser would recover from — an unclosed parenthesis or bracket, say — instead answers `#-1 PARSER FAILURE` and the command does not run at all.
+Runs `<command>` with strict argument parsing. SharpMUSH normally splits a command's arguments with error recovery: a syntax error in the argument text is patched up and the split returns its best effort. Under `~`, the recovery is switched off and that error answers `#-1 PARSER FAILURE` instead.
 
-Use it while writing softcode, to find out whether a line really parses the way you think it does. Nesting is limited by the `max_depth` configuration option, as it is for [@@] and the other command modifiers.
+This is narrower than it sounds, and it is **not** what makes a malformed expression an error — that happens anyway. `think [add(1,2)` answers `#-1 PARSER FAILURE` with or without `~`, because an argument whose split reported errors is re-parsed strictly before it is evaluated. What `~` changes is the split itself, so a command whose argument structure only survived by error recovery fails instead of running on a best-effort reading of what you typed.
+
+Nesting is limited by the `max_depth` configuration option, as it is for [@@] and the other command modifiers.
 
 
 **See Also:**

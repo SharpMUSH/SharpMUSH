@@ -414,8 +414,9 @@ choices.
   **`hasattr()`, `hasattrp()`, `hasattrval()`, `hasattrpval()` require two arguments.** PennMUSH also
   accepts the single-argument `<object>/<attribute>` form. (#974)<br>
   **`pcreate()` takes no third argument.** PennMUSH accepts an optional dbref to reuse. (#974)<br>
-  **`textentries()` is `textentries(<type>[, <pattern>])`.** PennMUSH is
-  `textentries(<type>, <pattern>[, <osep>])`. (#974)<br>
+  **`textentries()` is `textentries(<type>[, <osep>])`** — it lists every entry. PennMUSH is
+  `textentries(<type>, <pattern>[, <osep>])`, where `<pattern>` is required and filters the list;
+  SharpMUSH has no way to filter. (#974)<br>
   **`attrib_set#()` cannot be called.** The parser's function-name token does not admit `#`, so the
   text is returned unchanged. Use `attrib_set()`. (#974)<br>
   **`objmem()` always answers 0.** (#974)<br>
