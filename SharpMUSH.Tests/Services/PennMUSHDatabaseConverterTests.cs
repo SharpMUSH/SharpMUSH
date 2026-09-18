@@ -3,6 +3,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.DatabaseConversion;
 
 namespace SharpMUSH.Tests.Services;
@@ -464,4 +465,22 @@ public class PennMUSHDatabaseConverterTests
 
 	private static async Task<SharpObject> FindNamedAsync(IsolatedImportWorld world, string name)
 		=> await world.Database.GetAllObjectsAsync().SingleAsync(obj => obj.Name == name);
+
+	/// <summary>
+	/// Imported PennMUSH softcode writes literal parentheses unescaped, so the import turns on
+	/// <c>paren_groups</c> in the world it writes, alongside the objects.
+	/// </summary>
+	[Test]
+	public async ValueTask ImportTurnsOnParenGroups()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var store = world.ExpandedData;
+		await Assert.That((await store.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)))?.Compatibility.ParenGroups ?? false).IsFalse();
+
+		var result = await world.Converter.ConvertDatabaseAsync(new PennMUSHDatabase { Version = "Test Version", Objects = [] });
+
+		await Assert.That(result.IsSuccessful).IsTrue();
+		var stored = await store.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions));
+		await Assert.That(stored?.Compatibility.ParenGroups ?? false).IsTrue();
+	}
 }

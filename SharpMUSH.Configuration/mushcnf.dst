@@ -830,7 +830,8 @@ silent_pemit no
 # should an unescaped ( that starts no function call open a literal group, as
 # in PennMUSH? Commas inside it are text, and its ) does not close the call
 # around it: cat(x,(a,b)c) has two arguments. When off, write \( \) or %( %)
-# for a literal parenthesis inside a function's arguments.
+# for a literal parenthesis inside a function's arguments. Importing a PennMUSH
+# database turns it on.
 paren_groups no
 
 ###
