@@ -80,10 +80,10 @@ internal class TelnetIntegrationServerBuilderFactory<TProgram>(
 		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 
 		// Ensure colors.json exists in the test output directory (required by Server startup)
-		var colorFile = Path.Combine(AppContext.BaseDirectory, "colors.json");
+		var colorFile = Path.Join(AppContext.BaseDirectory, "colors.json");
 		if (!File.Exists(colorFile))
 		{
-			var temp = Path.Combine(Path.GetTempPath(), "colors.json");
+			var temp = Path.Join(Path.GetTempPath(), "colors.json");
 			File.WriteAllText(temp, "{}");
 			try { File.Copy(temp, colorFile, true); } catch { /* best-effort */ }
 		}
@@ -156,8 +156,8 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 	private TelnetIntegrationServerBuilderFactory<SharpMUSH.Server.Program>? _serverFactory;
 	private WebApplication? _connectionServerApp;
 	private WebApplication? _renderingWorkerApp;
-	private readonly string _renderingDirectory = Path.Combine(Path.GetTempPath(), "sm-integration-" + Guid.NewGuid().ToString("N"));
-	private readonly string _worldPath = Path.Combine(Path.GetTempPath(), "sm-integration-world-" + Guid.NewGuid().ToString("N"));
+	private readonly string _renderingDirectory = Path.Join(Path.GetTempPath(), "sm-integration-" + Guid.NewGuid().ToString("N"));
+	private readonly string _worldPath = Path.Join(Path.GetTempPath(), "sm-integration-world-" + Guid.NewGuid().ToString("N"));
 
 	public async Task InitializeAsync()
 	{
@@ -184,7 +184,7 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 
 		TelnetPort = FindFreePort();
 		var httpPort = FindFreePort();
-		var renderingSocket = Path.Combine(_renderingDirectory, "render.sock");
+		var renderingSocket = Path.Join(_renderingDirectory, "render.sock");
 		_renderingWorkerApp = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, renderingSocket);
 		await _renderingWorkerApp.StartAsync();
 
