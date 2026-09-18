@@ -1109,8 +1109,11 @@ public partial class Functions
 	{
 		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var delimiter = args.TryGetValue("2", out var delimiterArg)
-			? delimiterArg.Message ?? MarkupText.Empty
+		// PennMUSH's delim_check (function.c:254) reads a delimiter argument that is present but
+		// empty as the default space, so vadd(1 2 3,4 5 6,,|) splits on spaces rather than splitting
+		// between every character and then failing to parse the pieces as numbers.
+		var delimiter = args.TryGetValue("2", out var delimiterArg) && delimiterArg.Message is { Length: > 0 } given
+			? given
 			: MarkupText.Space;
 		var separator = args.TryGetValue("3", out var separatorArg)
 			? separatorArg.Message ?? MarkupText.Empty
@@ -1195,8 +1198,8 @@ public partial class Functions
 	{
 		var numbers = NumericEvaluation.For(parser);
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var delimiter = args.TryGetValue("2", out var tmpDelimiter)
-			? tmpDelimiter.Message ?? MarkupText.Empty
+		var delimiter = args.TryGetValue("2", out var tmpDelimiter) && tmpDelimiter.Message is { Length: > 0 } givenDelimiter
+			? givenDelimiter
 			: MarkupText.Space;
 		var sep = args.TryGetValue("3", out var tmpSep) ? tmpSep.Message ?? MarkupText.Empty : delimiter;
 

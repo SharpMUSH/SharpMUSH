@@ -38,6 +38,25 @@ public class VectorFunctionTests : ServerTestBase
 	public async Task ADelimiterAppliesToBothSidesAndToTheResult(string code, string expected)
 		=> await Assert.That(await Eval(code)).IsEqualTo(expected);
 
+	/// <summary>
+	/// PennMUSH's delim_check (function.c:254) reads a delimiter argument that is present but empty as
+	/// the default space, which is what makes the four-argument form reachable at all: you have to
+	/// pass something in slot three to get to slot four.
+	/// </summary>
+	/// <remarks>
+	/// Only the functions that read their own arguments are covered here. <c>vdim()</c> and
+	/// <c>vmag()</c> take theirs through <c>ArgHelpers.NoParseDefaultNoParseArgument</c>, which
+	/// substitutes its default only for an <em>absent</em> slot, so <c>vdim(1 2 3,)</c> answers 1
+	/// rather than 3. That helper is shared with the whole list family and changing it is a far wider
+	/// behaviour change than this lane should make quietly — reported rather than fixed.
+	/// </remarks>
+	[Test]
+	[Arguments("vadd(1 2 3,4 5 6,)", "5 7 9")]
+	[Arguments("vadd(1 2 3,4 5 6,,|)", "5|7|9")]
+	[Arguments("vcross(1 0 0,0 1 0,)", "0 0 1")]
+	public async Task AnEmptyDelimiterIsTheDefaultSpace(string code, string expected)
+		=> await Assert.That(await Eval(code)).IsEqualTo(expected);
+
 	/// <summary>SharpMUSH's fourth argument: the output separator, where PennMUSH has only three.</summary>
 	[Test]
 	public async Task AnOutputSeparatorOverridesTheDelimiter()

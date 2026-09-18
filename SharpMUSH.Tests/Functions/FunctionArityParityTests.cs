@@ -73,7 +73,7 @@ public class FunctionArityParityTests : ServerTestBase
 		["hasattrval"] = "GAP (#974): PennMUSH also accepts the single-argument <object>/<attribute> form",
 		["hasattrpval"] = "GAP (#974): PennMUSH also accepts the single-argument <object>/<attribute> form",
 		["pcreate"] = "GAP (#974): PennMUSH takes an optional third <dbref> to reuse",
-		["textentries"] = "GAP (#974): PennMUSH is textentries(<type>, <pattern>[, <osep>]); SharpMUSH omits <osep> and makes <pattern> optional"
+		["textentries"] = "GAP (#974): PennMUSH is textentries(<type>, <pattern>[, <osep>]); SharpMUSH has no <pattern> and lists every entry"
 	};
 
 	/// <summary>

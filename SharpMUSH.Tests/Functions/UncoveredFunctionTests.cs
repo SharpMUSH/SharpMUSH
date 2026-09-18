@@ -89,12 +89,21 @@ public class UncoveredFunctionTests : ServerTestBase
 	public async Task ConvUtcTimeReadsATimeStringAsUtc()
 		=> await Assert.That(await Eval("convutctime(Sat Jan 01 00:00:00 2000)")).IsEqualTo("946684800");
 
+	/// <summary>
+	/// utctime() drops the fractional second and secs() reads the clock again, so demanding an exact
+	/// zero fails whenever the two calls straddle a second boundary — a flake, not a conversion bug.
+	/// The contract worth pinning is that the round trip stays within the truncation it performs.
+	/// </summary>
 	[Test]
 	public async Task UtcTimeAndConvUtcTimeRoundTrip()
 	{
+		var before = long.Parse(await Eval("secs()"));
 		var now = await Eval("utctime()");
+		var parsed = long.Parse(await Eval($"convutctime({now})"));
+		var after = long.Parse(await Eval("secs()"));
 
-		await Assert.That(await Eval($"sub(secs(),convutctime({now}))")).IsEqualTo("0");
+		await Assert.That(parsed).IsGreaterThanOrEqualTo(before - 1);
+		await Assert.That(parsed).IsLessThanOrEqualTo(after);
 	}
 
 	// ---- Functions that need something in the world ----------------------------------------------
@@ -178,12 +187,26 @@ public class UncoveredFunctionTests : ServerTestBase
 		await Assert.That(await Eval($"lplayers({room})")).Contains("#1");
 	}
 
+	/// <summary>
+	/// The queue outlives the test: <see cref="ServerWebAppFactory"/> is shared for the whole session
+	/// and its scheduler is disposed only when the factory is. An entry left behind is visible to
+	/// every later test that reads the queue, so this halts the one it queued.
+	/// </summary>
 	[Test]
 	public async Task LPidsListsTheCallersQueuedProcesses()
 	{
 		await Cmd("@wait 3600=think CoverLPids");
+		var pids = await Eval("lpids()");
 
-		await Assert.That(await Eval("lpids()")).IsNotEmpty();
+		try
+		{
+			await Assert.That(pids).IsNotEmpty();
+		}
+		finally
+		{
+			foreach (var pid in pids.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+				await Cmd($"@halt/pid {pid}");
+		}
 	}
 
 	[Test]
