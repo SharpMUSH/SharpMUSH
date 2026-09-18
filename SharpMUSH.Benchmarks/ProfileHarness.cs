@@ -6,9 +6,11 @@ using System.Text;
 namespace SharpMUSH.Benchmarks;
 
 /// <summary>
-/// Profiling harness: <c>dotnet run -c Release -- profile [scenario,...] [--seconds N] [--wait N]</c>.
-/// Boots the Lightning-backed benchmark host and reports operations per second, managed bytes
-/// allocated per operation, and generation-zero collections per thousand operations.
+/// Profiling harness: <c>dotnet run -c Release -- profile [scenario,...] [--seconds N] [--wait N]
+/// [--paren-groups on|off]</c>. Boots the Lightning-backed benchmark host and reports operations per
+/// second, managed bytes allocated per operation, and generation-zero collections per thousand
+/// operations. <c>--paren-groups</c> sets that compatibility option for the run; the <c>paren-*</c>
+/// scenarios are <see cref="ParenGroupBenchmarks"/>' workloads.
 /// </summary>
 public sealed class ProfileHarness : LightningBaseBenchmark
 {
@@ -36,6 +38,13 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("set+get", "&PROFILE_X me=x;think [get(me/PROFILE_FN)]", true, IsCommandList: true),
 	];
 
+	/// <summary>
+	/// <see cref="ParenGroupBenchmarks"/>' workloads, each in the form its setting reads: unescaped with
+	/// <c>paren_groups</c> on, escaped with it off (the default).
+	/// </summary>
+	private static IEnumerable<Scenario> ParenScenarios(bool parenGroups)
+		=> ParenGroupBenchmarks.Workloads.Select(workload => new Scenario(workload.Name, workload.For(parenGroups), false));
+
 	private static string BuildNested(int depth)
 	{
 		var sb = new StringBuilder();
@@ -49,6 +58,7 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 	{
 		var seconds = 10;
 		var wait = 0;
+		bool? parenGroups = null;
 		var selected = new List<string>();
 		for (var i = 0; i < args.Length; i++)
 		{
@@ -62,19 +72,28 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 					if (++i >= args.Length || !int.TryParse(args[i], out wait) || wait < 0)
 						throw new ArgumentException("--wait requires a non-negative integer.");
 					break;
+				case "--paren-groups":
+					parenGroups = ++i < args.Length ? args[i] switch
+					{
+						"on" => true,
+						"off" => false,
+						_ => throw new ArgumentException("--paren-groups takes on or off.")
+					} : throw new ArgumentException("--paren-groups takes on or off.");
+					break;
 				default: selected.AddRange(args[i].Split(',', StringSplitOptions.RemoveEmptyEntries)); break;
 			}
 		}
 
+		var all = Scenarios.Concat(ParenScenarios(parenGroups ?? false)).ToArray();
 		var scenarios = selected.Count == 0
-			? Scenarios
-			: Scenarios.Where(s => selected.Contains(s.Name, StringComparer.OrdinalIgnoreCase)).ToArray();
+			? all
+			: all.Where(s => selected.Contains(s.Name, StringComparer.OrdinalIgnoreCase)).ToArray();
 
 		var harness = new ProfileHarness();
 		await harness.Setup();
 		try
 		{
-			await harness.RunScenariosAsync(scenarios, seconds, wait);
+			await harness.RunScenariosAsync(scenarios, seconds, wait, parenGroups);
 		}
 		finally
 		{
@@ -82,12 +101,15 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		}
 	}
 
-	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait)
+	private async Task RunScenariosAsync(Scenario[] scenarios, int seconds, int wait, bool? parenGroups)
 	{
 		if (await _database!.GetObjectNodeAsync(new DBRef(1)) is not (AnySharpObject and SharpPlayer god))
 			throw new InvalidOperationException("God (#1) is not seeded as a player.");
 		var one = god.Object.DBRef;
 		var baseParser = _server!.Services.GetRequiredService<IMUSHCodeParser>();
+		if (scenarios.Any(scenario => scenario.Name.StartsWith("paren-", StringComparison.Ordinal)))
+			await ParenGroupBenchmarks.VerifyWorkloadsAsync(baseParser, one);
+		if (parenGroups is { } on) baseParser = ParenGroupBenchmarks.WithParenGroups(baseParser, on);
 		await _database.SetAttributeAsync(new DBRef(1), ["PROFILE_FN"], MarkupText.Plain("[mul(%0,2)]"), god);
 		for (var i = 0; i < 50; i++)
 			await baseParser.FromState(BenchmarkHelpers.FreshState(one)).CommandParse(MarkupText.Plain($"@create Profile Thing {i}"));
