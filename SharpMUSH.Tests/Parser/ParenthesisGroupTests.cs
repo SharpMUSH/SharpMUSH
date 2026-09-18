@@ -4,11 +4,12 @@ using SharpMUSH.Library.ParserInterfaces;
 namespace SharpMUSH.Tests.Parser;
 
 /// <summary>
-/// A <c>(</c> that does not start a function call opens a literal group (#1157). PennMUSH's
+/// With <c>paren_groups</c> on, a <c>(</c> that does not start a function call opens a literal group (#1157). PennMUSH's
 /// <c>process_expression</c> (<c>src/parse.c</c>, <c>case '('</c>) copies the <c>(</c>, evaluates up to
 /// the matching <c>)</c> with only <c>PT_PAREN</c> as a terminator, and copies the <c>)</c>: commas
 /// inside the group are text, and its <c>)</c> does not close the enclosing call. Expected values are
-/// from a live PennMUSH (<c>95ad3511d</c>) where the issue gives one.
+/// from a live PennMUSH (<c>95ad3511d</c>) where the issue gives one. With it off, the default, a
+/// literal parenthesis inside a function's arguments is escaped.
 /// </summary>
 public class ParenthesisGroupTests
 {
@@ -17,8 +18,27 @@ public class ParenthesisGroupTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser.FromState(ParserState.RootFor(new DBRef(1)));
 
-	private async Task<string> Evaluate(string code)
-		=> (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+	private async Task<string> Evaluate(string code, bool parenGroups = true)
+	{
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Compatibility = options.Compatibility with { ParenGroups = parenGroups }
+		});
+		return (await Parser.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+	}
+
+	/// <summary>
+	/// Off, a bare <c>(</c> is text and a <c>)</c> closes the call around it, so a literal parenthesis
+	/// inside a function's arguments is written escaped.
+	/// </summary>
+	[Test]
+	[Arguments("[cat(x,(a)b)]", "x (ab)")]
+	[Arguments("[cat(x,(a,b)c)]", "x (a bc)")]
+	[Arguments(@"[cat(x,\(a\,b\)c)]", "x (a,b)c")]
+	[Arguments("[cat(x,%(a%,b%)c)]", "x (a,b)c")]
+	[Arguments("[reswitch(abc,%(a%)%(b%)c,$1$2)]", "ab")]
+	public async Task EscapedWhenOff(string code, string expected)
+		=> await Assert.That(await Evaluate(code, parenGroups: false)).IsEqualTo(expected);
 
 	[Test]
 	[Arguments("[cat(x,(a)b)]", "x (a)b")]

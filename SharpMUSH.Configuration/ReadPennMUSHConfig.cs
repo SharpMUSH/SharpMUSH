@@ -79,7 +79,8 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.TinyBooleans)), false),
 				Boolean(Get(nameof(CompatibilityOptions.TinyTrimFun)), false),
 				Boolean(Get(nameof(CompatibilityOptions.TinyMath)), false),
-				Boolean(Get(nameof(CompatibilityOptions.SilentPEmit)), false)
+				Boolean(Get(nameof(CompatibilityOptions.SilentPEmit)), false),
+				Boolean(Get(nameof(CompatibilityOptions.ParenGroups)), false)
 			),
 			Cosmetic = new CosmeticOptions(
 				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), "Penny").Trim(),

@@ -111,7 +111,8 @@ public class OptionsService(
 				SilentPEmit: false,
 				TinyBooleans: false,
 				TinyMath: false,
-				TinyTrimFun: false
+				TinyTrimFun: false,
+				ParenGroups: false
 			),
 			Cosmetic = new CosmeticOptions(
 				AnnounceConnects: true,

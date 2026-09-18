@@ -32,7 +32,7 @@ public class ConfigurationControllerTests
 			PossessiveGetD: false, ProbateJudge: 1, ReallySafe: true, WizardNoAEnter: false),
 		Compatibility = new CompatibilityOptions(
 			NullEqualsZero: true, SilentPEmit: false, TinyBooleans: false,
-			TinyMath: false, TinyTrimFun: false),
+			TinyMath: false, TinyTrimFun: false, ParenGroups: false),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true, AnsiNames: true, ChatStripQuote: true,
 			CommaExitList: true, CountAll: false, ExaminePublicAttributes: true,

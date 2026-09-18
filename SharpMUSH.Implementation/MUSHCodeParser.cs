@@ -285,6 +285,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				Interpreter = { PredictionMode = mode },
 				Trace = debug,
 				ErrorHandler = strategy,
+				parenGroups = Configuration.CurrentValue.Compatibility.ParenGroups,
 			};
 			parser.RemoveErrorListeners();
 			var errors = new ParserErrorListener(inputText);

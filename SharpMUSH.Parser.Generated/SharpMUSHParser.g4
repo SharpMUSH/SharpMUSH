@@ -11,6 +11,8 @@ options {
     public int inFunctionInsideBrace = 0;
     public System.Collections.Generic.Stack<int> savedFunctionInsideBrace = new();
     // Literal '(' groups open at the current call or brace level; see beginGenericText.
+    // Counted only when parenGroups is set (the paren_groups compatibility option).
+    public bool parenGroups = false;
     public int inParenDepth = 0;
     public System.Collections.Generic.Stack<int> savedParenDepth = new();
     public System.Collections.Generic.Stack<int> savedFunction = new();
@@ -155,20 +157,21 @@ substitutionSymbol: (
 ;
 
 // A name whose '(' is not in call position is text, and its '(' opens a literal group.
-genericText: beginGenericText | FUNCHAR { ++inParenDepth; };
+genericText: beginGenericText | FUNCHAR { if (parenGroups) ++inParenDepth; };
 
 // A '(' that does not start a function call opens a literal group. PennMUSH copies the '(',
 // evaluates up to the matching ')' with that as the only terminator, and copies the ')' (src/parse.c,
 // case '('), so the group's commas are text and its ')' does not close an enclosing call. Groups are
 // counted, not nested as rules, so a bare '(' costs no parser recursion however deep it goes; a call
-// or brace saves the count and starts its own.
+// or brace saves the count and starts its own. Only with parenGroups: otherwise a '(' is plain text
+// and a literal parenthesis inside a call's arguments has to be escaped.
 beginGenericText:
       { inFunction == 0 || inParenDepth > 0 }? CPAREN { if (inParenDepth > 0) --inParenDepth; }
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
     | { (!lookingForCommandArgCommas && inFunction == 0) || (inBraceDepth > 0 && inFunctionInsideBrace == 0) || inParenDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals || inFunction > 0 }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
-    | OPAREN { ++inParenDepth; }
+    | OPAREN { if (parenGroups) ++inParenDepth; }
     | (escapedText|OTHER|ansi) 
 ;
 

@@ -39,5 +39,13 @@ public record CompatibilityOptions(
 		Description = "Suppress permission error messages for pemit command",
 		Group = "Command Behavior",
 		Order = 1)]
-	bool SilentPEmit
+	bool SilentPEmit,
+
+	[property: SharpConfig(
+		Name = "paren_groups",
+		Category = "Compatibility",
+		Description = "Treat an unescaped ( that starts no function call as a literal group whose commas and ) are text, as PennMUSH does",
+		Group = "PennMUSH Compatibility",
+		Order = 1)]
+	bool ParenGroups
 );

@@ -10,6 +10,10 @@ namespace SharpMUSH.Tests.Functions;
 /// evaluates the body with <c>PE_DOLLAR</c>; the evaluator's <c>'$'</c> case (<c>src/parse.c</c>) reads
 /// only the innermost regexp context, and a new attribute (<c>PE_REGS_NEWATTR</c>) hides the caller's.
 /// </summary>
+/// <remarks>
+/// Named groups escape their parentheses, as a literal <c>(</c> inside a function's arguments must be
+/// unless <c>paren_groups</c> is on (#1157).
+/// </remarks>
 public class RegexpCaptureContextTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -30,7 +34,7 @@ public class RegexpCaptureContextTests
 	/// </summary>
 	[Test]
 	[Arguments("[reswitch(lit([add(1,1)]),.+,$0)]", "[add(1,1)]")]
-	[Arguments("[reswitch(lit([add(1,1)]),^(?<x>.+)$,$<x>)]", "[add(1,1)]")]
+	[Arguments("[reswitch(lit([add(1,1)]),^%(?<x>.+%)$,$<x>)]", "[add(1,1)]")]
 	[Arguments("[reswitchall(lit([add(1,1)]),.+,$0)]", "[add(1,1)]")]
 	[Arguments("[reswitch(lit([setq(rx1156,pwned)]),.+,$0)]-[r(rx1156)]", "[setq(rx1156,pwned)]-")]
 	public async Task CaptureIsNotEvaluated(string code, string expected)
@@ -41,11 +45,11 @@ public class RegexpCaptureContextTests
 	[Arguments("[reswitch(abc,a(b)c,$2)]", "")]
 	// A single digit follows the '$', as in PennMUSH; $10 is $1 then 0.
 	[Arguments("[reswitch(abc,a(b)c,$10)]", "b0")]
-	[Arguments("[reswitch(abc,^(?<first>a)bc,$<first>)]", "a")]
-	[Arguments("[reswitch(abc,^(?<first>a)bc,$<FIRST>)]", "a")]
-	[Arguments("[reswitch(abc,^(?<first>a)bc,$<missing>)]", "")]
+	[Arguments("[reswitch(abc,^%(?<first>a%)bc,$<first>)]", "a")]
+	[Arguments("[reswitch(abc,^%(?<first>a%)bc,$<FIRST>)]", "a")]
+	[Arguments("[reswitch(abc,^%(?<first>a%)bc,$<missing>)]", "")]
 	// The name is evaluated, up to the '>'.
-	[Arguments("[reswitch(abc,^(?<first>a)bc,$<[lcstr(FIRST)]>)]", "a")]
+	[Arguments("[reswitch(abc,^%(?<first>a%)bc,$<[lcstr(FIRST)]>)]", "a")]
 	// '$' not followed by a digit or '<' is itself.
 	[Arguments("[reswitch(abc,a(b)c,$ $x)]", "$ $x")]
 	// An escaped '$' is literal.
@@ -79,7 +83,7 @@ public class RegexpCaptureContextTests
 
 	[Test]
 	public async Task RegistersListsTheCaptureContext()
-		=> await Assert.That(await Evaluate("[reswitch(abc,^(?<first>a)(b)c,registers(,regexp,|))]"))
+		=> await Assert.That(await Evaluate("[reswitch(abc,^%(?<first>a%)%(b%)c,registers(,regexp,|))]"))
 			.IsEqualTo("0|1|2|FIRST");
 
 	/// <summary>
