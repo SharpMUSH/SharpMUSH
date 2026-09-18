@@ -732,6 +732,20 @@ public sealed class RegexpCaptureFrame(DBAttribute? evaluation)
 		}
 	}
 
+	/// <summary>
+	/// Replaces the frame's captures with a wildcard match's: one per <c>*</c> or <c>?</c>, numbered
+	/// from 0, as <c>local_wild_match</c> stores them (<c>src/wild.c</c>).
+	/// </summary>
+	public void FillWildcard(Match match, MString subject)
+	{
+		Clear();
+		for (var number = 1; number < match.Groups.Count; number++)
+		{
+			var group = match.Groups[number];
+			this[(number - 1).ToString()] = group.Success ? subject.Substring(group.Index, group.Length) : MarkupText.Empty;
+		}
+	}
+
 	public RegexpCaptureFrame Clone()
 	{
 		var copy = new RegexpCaptureFrame(Evaluation);

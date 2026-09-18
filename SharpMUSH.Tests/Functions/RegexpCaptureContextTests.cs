@@ -104,4 +104,54 @@ public class RegexpCaptureContextTests
 		await Assert.That(await Evaluate("[reswitch(abc,a(b)c,[u(me/RX_NEWATTR_1156)]/[u(me/RX_OWN_1156)]/$1)]"))
 			.IsEqualTo("$1/y/b");
 	}
+
+	/// <summary>
+	/// A wildcard <c>switch()</c> records its captures as a regexp context too: <c>fun_switch</c> localizes
+	/// <c>PE_REGS_SWITCH | PE_REGS_CAPTURE</c>, and <c>local_wild_match</c> stores one capture per
+	/// <c>*</c> or <c>?</c>, numbered from 0 (<c>src/wild.c</c>). Rows marked Penn are from the live oracle
+	/// in the issue.
+	/// </summary>
+	[Test]
+	[Arguments("[switch(foo,f*,$0)]", "oo")] // Penn
+	[Arguments("[switch([lit([add(1,1)])],*,$0)]", "[add(1,1)]")] // Penn
+	[Arguments("[switch(foo,f*,[setr(x,$0)])]", "oo")] // Penn
+	[Arguments("[reswitch(abc,a(b)c,[switch(xyz,x*,$0)])]", "yz")] // Penn
+	[Arguments("[switch(foo,f*,[registers(,regexp)])]", "0")] // Penn
+	[Arguments("[setq(alpha,1)][switch(foo,f*,registers())]", "ALPHA 0 0")] // Penn
+	[Arguments("[switch(foo,foo,registers(,regexp))]", "")] // Penn
+	[Arguments("[switch(foo,foo,$0)]", "$0")]
+	[Arguments("[switch(abc,a?c,$0)]", "b")]
+	[Arguments("[switch(a-b-c,*-*-*,$2$1$0)]", "cba")]
+	[Arguments("[switch(ABC,a*,$0)]", "BC")]
+	[Arguments("[switch(foo,x*,no,$0)]", "$0")]
+	[Arguments("[switchall(foo,f*,$0,*o,$0)]", "oofo")]
+	public async Task SwitchRecordsWildcardCaptures(string code, string expected)
+		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
+
+	/// <summary>
+	/// <c>switch()</c> takes its arguments as (pattern, list) pairs, with a default only when one is left
+	/// over (<c>fun_switch</c>: <c>j += 2</c>, and a default when <c>nargs</c> is even). A list is never
+	/// tried as a pattern, so it is never evaluated unless its own pattern matched.
+	/// </summary>
+	[Test]
+	[Arguments("[switch(b,a,b,c,d,e)]", "e")]
+	[Arguments("[switch(foo,bar,1)]", "")]
+	[Arguments("[switch(x,y,[setq(se1156,1)],z)]-[r(se1156)]", "z-")]
+	[Arguments("[switchall(b,a,b,c,d)]", "")]
+	public async Task SwitchPairsPatternsWithLists(string code, string expected)
+		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
+
+	/// <summary>
+	/// <c>case()</c> is <c>fun_switch</c> with an exact, case-sensitive match: the same pairing, a switch
+	/// context for <c>%$0</c>, and no regexp context of its own, so <c>$1</c> reads the enclosing one.
+	/// </summary>
+	[Test]
+	[Arguments("[case(b,a,b,c,d,e)]", "e")]
+	[Arguments("[case(foo,bar,1)]", "")]
+	[Arguments("[caseall(b,a,b,c,d)]", "")]
+	[Arguments("[case(foo,foo,%$0)]", "foo")]
+	[Arguments("[case(Foo,foo,1,0)]", "0")]
+	[Arguments("[reswitch(abc,a(b)c,[case(x,x,$1)])]", "b")]
+	public async Task CaseMatchesExactly(string code, string expected)
+		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
 }

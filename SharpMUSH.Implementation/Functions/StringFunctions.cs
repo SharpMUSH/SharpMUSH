@@ -606,66 +606,13 @@ public partial class Functions
 	[SharpFunction(Name = "case", MinArgs = 3, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.NoParse,
 		ParameterNames = ["expression", "case...|result...", "default"])]
-	public async ValueTask<CallState> Case(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var hadErrors = false;
-		async ValueTask<MString?> EvaluateArgument(CallState argument)
-		{
-			var result = await argument.GetParsedResultAsync();
-			hadErrors |= result.HadErrors;
-			return result.Message;
-		}
-
-		var arg0 = await EvaluateArgument(parser.CurrentState.Arguments["0"]);
-		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
-		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
-
-		foreach (var (expressionKv, listKv) in args)
-		{
-			var expression = await EvaluateArgument(expressionKv.Value);
-
-			if (arg0!.ToPlainText() == expression!.ToPlainText())
-			{
-				return new CallState(await EvaluateArgument(listKv.Value)) { HadErrors = hadErrors };
-			}
-		}
-
-		return new CallState(await EvaluateArgument(defaultValue.Value)) { HadErrors = hadErrors };
-	}
+	public ValueTask<CallState> Case(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> SwitchInternal(parser, all: false, exact: true);
 
 	[SharpFunction(Name = "caseall", MinArgs = 3, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.NoParse, ParameterNames = ["string", "expression...|list...", "default"])]
-	public async ValueTask<CallState> CaseAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var hadErrors = false;
-		async ValueTask<MString?> EvaluateArgument(CallState argument)
-		{
-			var result = await argument.GetParsedResultAsync();
-			hadErrors |= result.HadErrors;
-			return result.Message;
-		}
-
-		var arg0 = await EvaluateArgument(parser.CurrentState.Arguments["0"]);
-
-		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
-		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
-		var list = new List<MString>();
-
-		foreach (var (expressionKv, listKv) in args)
-		{
-			var expression = await EvaluateArgument(expressionKv.Value);
-
-			if (arg0!.ToPlainText() == expression!.ToPlainText())
-			{
-				list.Add(await EvaluateArgument(listKv.Value) ?? MarkupText.Empty);
-			}
-		}
-
-		return new CallState(list.Count != 0
-			? MarkupText.Concat(list)
-			: await EvaluateArgument(defaultValue.Value))
-		{ HadErrors = hadErrors };
-	}
+	public ValueTask<CallState> CaseAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> SwitchInternal(parser, all: true, exact: true);
 
 	[SharpFunction(Name = "center", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["text", "width", "fill"])]
 	public ValueTask<CallState> Center(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1683,65 +1630,26 @@ public partial class Functions
 
 	[SharpFunction(Name = "switch", MinArgs = 3, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.NoParse, ParameterNames = ["string", "expression...|list...", "default"])]
-	public async ValueTask<CallState> Switch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var hadErrors = false;
-		async ValueTask<MString?> EvaluateArgument(CallState argument)
-		{
-			var result = await argument.GetParsedResultAsync();
-			hadErrors |= result.HadErrors;
-			return result.Message;
-		}
-
-		var arg0 = await EvaluateArgument(parser.CurrentState.Arguments["0"]);
-		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
-		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
-
-		parser.CurrentState.SwitchStack.Push(arg0!);
-
-		try
-		{
-			foreach (var (expressionKv, listKv) in args)
-			{
-				var expression = await EvaluateArgument(expressionKv.Value);
-
-				if (MushText.IsWildcardMatch(arg0 ?? MarkupText.Empty, expression ?? MarkupText.Empty))
-				{
-					return new CallState(await EvaluateArgument(listKv.Value)) { HadErrors = hadErrors };
-				}
-
-				if (!expression!.ToPlainText().StartsWith('>') && !expression.ToPlainText().StartsWith('<'))
-				{
-					continue;
-				}
-
-				var gt = expression.ToPlainText()[0] == '>';
-
-				if (!decimal.TryParse(expression.ToPlainText()[1..], out var decimalExpression)
-					|| !decimal.TryParse(arg0!.ToPlainText(), out var arg0AsDecimal))
-				{
-					continue;
-				}
-
-				if (gt
-					? decimalExpression > arg0AsDecimal
-					: decimalExpression < arg0AsDecimal)
-				{
-					return new CallState(await EvaluateArgument(listKv.Value)) { HadErrors = hadErrors };
-				}
-			}
-
-			return new CallState(await EvaluateArgument(defaultValue.Value)) { HadErrors = hadErrors };
-		}
-		finally
-		{
-			parser.CurrentState.SwitchStack.TryPop(out _);
-		}
-	}
+	public ValueTask<CallState> Switch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> SwitchInternal(parser, all: false, exact: false);
 
 	[SharpFunction(Name = "switchall", MinArgs = 3, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.NoParse, ParameterNames = ["string", "expression...|list...", "default"])]
-	public async ValueTask<CallState> SwitchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> SwitchAll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> SwitchInternal(parser, all: true, exact: false);
+
+	/// <summary>
+	/// PennMUSH's <c>fun_switch</c> (<c>src/funmisc.c</c>), behind switch(), switchall(), case() and
+	/// caseall(). The subject is the switch text (<c>%$0</c>, <c>stext()</c>). Arguments pair as (pattern,
+	/// list), with a default only when one is left over, and a list is evaluated only when its own
+	/// pattern matched.
+	/// </summary>
+	/// <param name="exact">
+	/// case(): a case-sensitive string comparison, and no regexp context of its own. Otherwise a glob,
+	/// whose captures (one per <c>*</c> or <c>?</c>, numbered from 0) are a regexp context that
+	/// <c>$0</c>-<c>$9</c> read while the matched list is evaluated.
+	/// </param>
+	private static async ValueTask<CallState> SwitchInternal(IMUSHCodeParser parser, bool all, bool exact)
 	{
 		var hadErrors = false;
 		async ValueTask<MString?> EvaluateArgument(CallState argument)
@@ -1751,55 +1659,74 @@ public partial class Functions
 			return result.Message;
 		}
 
-		var arg0 = await EvaluateArgument(parser.CurrentState.Arguments["0"]);
-		var args = parser.CurrentState.ArgumentsOrdered.Skip(1).SkipLast(1).Pairwise();
-		var defaultValue = parser.CurrentState.ArgumentsOrdered.Last();
+		var arg0 = await EvaluateArgument(parser.CurrentState.Arguments["0"]) ?? MarkupText.Empty;
+		// (pattern, list) pairs, and a default only when an argument is left over.
+		var cases = parser.CurrentState.ArgumentsOrdered.Skip(1).Select(kv => kv.Value).Chunk(2).ToList();
+		var defaultValue = cases is [.., [var lone]] ? lone : null;
 		var resultList = new List<MString>();
 
-		parser.CurrentState.SwitchStack.Push(arg0!);
+		var captures = exact ? null : new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
+		if (captures is not null) parser.CurrentState.RegexRegisters.Push(captures);
+		parser.CurrentState.SwitchStack.Push(arg0);
 
 		try
 		{
-			foreach (var (expressionKv, listKv) in args)
+			foreach (var (pattern, list) in cases.Where(pair => pair.Length == 2).Select(pair => (pair[0], pair[1])))
 			{
-				var expression = await EvaluateArgument(expressionKv.Value);
-
-				if (MushText.IsWildcardMatch(arg0 ?? MarkupText.Empty, expression ?? MarkupText.Empty))
-				{
-					resultList.Add(await EvaluateArgument(listKv.Value) ?? MarkupText.Empty);
-					continue;
-				}
-
-				if (!expression!.ToPlainText().StartsWith('>') && !expression.ToPlainText().StartsWith('<'))
+				var expression = await EvaluateArgument(pattern) ?? MarkupText.Empty;
+				var matches = captures is null
+					? arg0.ToPlainText() == expression.ToPlainText()
+					: SwitchCaseMatches(arg0, expression, captures);
+				if (!matches)
 				{
 					continue;
 				}
 
-				var gt = expression.ToPlainText()[0] == '>';
-
-				if (!decimal.TryParse(expression.ToPlainText()[1..], out var decimalExpression)
-					|| !decimal.TryParse(arg0!.ToPlainText(), out var arg0AsDecimal))
+				var matched = await EvaluateArgument(list) ?? MarkupText.Empty;
+				if (!all)
 				{
-					continue;
+					return new CallState(matched) { HadErrors = hadErrors };
 				}
 
-				if (gt
-					? decimalExpression > arg0AsDecimal
-					: decimalExpression < arg0AsDecimal)
-				{
-					resultList.Add(await EvaluateArgument(listKv.Value) ?? MarkupText.Empty);
-				}
+				resultList.Add(matched);
 			}
 
-			return new CallState(resultList.Count != 0
+			var result = resultList.Count != 0
 				? MarkupText.Concat(resultList)
-				: await EvaluateArgument(defaultValue.Value))
-			{ HadErrors = hadErrors };
+				: defaultValue is null ? MarkupText.Empty : await EvaluateArgument(defaultValue) ?? MarkupText.Empty;
+			return new CallState(result) { HadErrors = hadErrors };
 		}
 		finally
 		{
 			parser.CurrentState.SwitchStack.TryPop(out _);
+			if (captures is not null) parser.CurrentState.RegexRegisters.TryPop(out _);
 		}
+	}
+
+	/// <summary>
+	/// Whether <paramref name="subject"/> matches one switch case: a glob, whose captures replace those in
+	/// <paramref name="captures"/>, or a <c>&gt;</c>/<c>&lt;</c> numeric comparison, which captures nothing.
+	/// </summary>
+	private static bool SwitchCaseMatches(MString subject, MString expression, RegexpCaptureFrame captures)
+	{
+		captures.Clear();
+		var plainSubject = subject.ToPlainText();
+		var match = SoftcodeRegex.Wildcard(expression.ToPlainText()).Match(plainSubject);
+		if (match.Success)
+		{
+			captures.FillWildcard(match, subject);
+			return true;
+		}
+
+		var plainExpression = expression.ToPlainText();
+		if (!plainExpression.StartsWith('>') && !plainExpression.StartsWith('<'))
+		{
+			return false;
+		}
+
+		return decimal.TryParse(plainExpression[1..], out var bound)
+			&& decimal.TryParse(plainSubject, out var value)
+			&& (plainExpression[0] == '>' ? bound > value : bound < value);
 	}
 
 	[SharpFunction(Name = "tr", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "from", "to"])]
