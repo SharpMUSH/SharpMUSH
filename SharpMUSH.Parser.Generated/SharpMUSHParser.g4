@@ -10,6 +10,9 @@ options {
     public int inBracketDepth = 0;
     public int inFunctionInsideBrace = 0;
     public System.Collections.Generic.Stack<int> savedFunctionInsideBrace = new();
+    // Literal '(' groups open at the current call or brace level; see beginGenericText.
+    public int inParenDepth = 0;
+    public System.Collections.Generic.Stack<int> savedParenDepth = new();
     public System.Collections.Generic.Stack<int> savedFunction = new();
     public bool inCommandList = false;
     public bool lookingForCommandArgCommas = false;
@@ -93,7 +96,7 @@ braceExplicitEvaluationString:
 ;
 
 bracePattern:
-    OBRACE { ++inBraceDepth; savedFunctionInsideBrace.Push(inFunctionInsideBrace); inFunctionInsideBrace = 0; savedFunction.Push(inFunction); inFunction = 0; } braceExplicitEvaluationString? CBRACE { --inBraceDepth; inFunctionInsideBrace = savedFunctionInsideBrace.Pop(); inFunction = savedFunction.Pop(); }
+    OBRACE { ++inBraceDepth; savedFunctionInsideBrace.Push(inFunctionInsideBrace); inFunctionInsideBrace = 0; savedFunction.Push(inFunction); inFunction = 0; savedParenDepth.Push(inParenDepth); inParenDepth = 0; } braceExplicitEvaluationString? CBRACE { --inBraceDepth; inFunctionInsideBrace = savedFunctionInsideBrace.Pop(); inFunction = savedFunction.Pop(); inParenDepth = savedParenDepth.Pop(); }
 ;
 
 bracketPattern:
@@ -101,9 +104,9 @@ bracketPattern:
 ;
 
 function: 
-    FUNCHAR {++inFunction; ++inFunctionInsideBrace;} 
+    FUNCHAR {++inFunction; ++inFunctionInsideBrace; savedParenDepth.Push(inParenDepth); inParenDepth = 0;} 
     (evaluationString? (COMMAWS evaluationString?)*)?
-    CPAREN {--inFunction; --inFunctionInsideBrace;} 
+    CPAREN {--inFunction; --inFunctionInsideBrace; inParenDepth = savedParenDepth.Pop();} 
 ;
 
 validSubstitution:
@@ -151,15 +154,22 @@ substitutionSymbol: (
     )
 ;
 
-genericText: beginGenericText | FUNCHAR;
+// A name whose '(' is not in call position is text, and its '(' opens a literal group.
+genericText: beginGenericText | FUNCHAR { ++inParenDepth; };
 
+// A '(' that does not start a function call opens a literal group. PennMUSH copies the '(',
+// evaluates up to the matching ')' with that as the only terminator, and copies the ')' (src/parse.c,
+// case '('), so the group's commas are text and its ')' does not close an enclosing call. Groups are
+// counted, not nested as rules, so a bare '(' costs no parser recursion however deep it goes; a call
+// or brace saves the count and starts its own.
 beginGenericText:
-      { inFunction == 0 }? CPAREN
+      { inFunction == 0 || inParenDepth > 0 }? CPAREN { if (inParenDepth > 0) --inParenDepth; }
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
-    | { (!lookingForCommandArgCommas && inFunction == 0) || (inBraceDepth > 0 && inFunctionInsideBrace == 0) }? COMMAWS
+    | { (!lookingForCommandArgCommas && inFunction == 0) || (inBraceDepth > 0 && inFunctionInsideBrace == 0) || inParenDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals || inFunction > 0 }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
-    | (escapedText|OPAREN|OTHER|ansi) 
+    | OPAREN { ++inParenDepth; }
+    | (escapedText|OTHER|ansi) 
 ;
 
 escapedText: ESCAPE ANY;
