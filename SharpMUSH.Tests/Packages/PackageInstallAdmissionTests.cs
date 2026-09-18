@@ -48,7 +48,7 @@ public class PackageInstallAdmissionTests
 	};
 
 	private static string CommandOnlyDllPath =>
-		Path.Combine(AppContext.BaseDirectory, "plugins-unit", "command-only", "CommandOnlyPlugin.dll");
+		Path.Join(AppContext.BaseDirectory, "plugins-unit", "command-only", "CommandOnlyPlugin.dll");
 
 	private static readonly string CommandOnlySha =
 		Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(CommandOnlyDllPath))).ToLowerInvariant();
@@ -65,7 +65,7 @@ public class PackageInstallAdmissionTests
 		public required string PluginsRoot { get; init; }
 		public required PackageInstallService Installer { get; init; }
 
-		public bool Deposited(string packageId) => Directory.Exists(Path.Combine(PluginsRoot, packageId));
+		public bool Deposited(string packageId) => Directory.Exists(Path.Join(PluginsRoot, packageId));
 
 		public void Dispose()
 		{
@@ -78,7 +78,7 @@ public class PackageInstallAdmissionTests
 
 	private ManagedScope CreateManagedScope()
 	{
-		var pluginsRoot = Path.Combine(Path.GetTempPath(), $"mpkg-admission-{Guid.NewGuid():N}");
+		var pluginsRoot = Path.Join(Path.GetTempPath(), $"mpkg-admission-{Guid.NewGuid():N}");
 		var services = WebAppFactoryArg.Services;
 		var managedInstaller = new ManagedPackageInstaller(
 			services.GetRequiredService<IPluginManager>(),

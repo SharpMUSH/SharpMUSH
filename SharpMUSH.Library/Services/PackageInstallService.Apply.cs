@@ -240,9 +240,9 @@ public partial class PackageInstallService
 				return $"Internal error: no objid for attribute target '{change.TargetRef}'.";
 			}
 
-			var spec = run.ManifestByRef.GetValueOrDefault(change.TargetRef);
 			string? newValue;
-			if (spec?.Attributes.GetValueOrDefault(change.Attribute) is { } attrSpec)
+			if (run.ManifestByRef.TryGetValue(change.TargetRef, out var spec)
+				&& spec.Attributes.GetValueOrDefault(change.Attribute) is { } attrSpec)
 			{
 				// Code: tokens become [v(PM`REFS`...)] recalls — never dbrefs (20.21).
 				newValue = PackageRefIndirection.TransformCode(attrSpec.Value, spec.IsAttach ? run.Manifest.Name : null);

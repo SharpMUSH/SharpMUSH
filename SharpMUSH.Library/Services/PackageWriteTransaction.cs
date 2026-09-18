@@ -355,22 +355,22 @@ public sealed class PackageWriteTransaction(
 		}
 
 		var live = leaf.Flags.Select(f => f.Name).ToList();
-		foreach (var name in previous.Flags.Except(live, StringComparer.OrdinalIgnoreCase))
+		await foreach (var flag in AttributeFlagsNamed(previous.Flags.Except(live, StringComparer.OrdinalIgnoreCase)))
 		{
-			if (await attributes.GetAttributeFlagAsync(name) is SharpAttributeFlag flag)
-			{
-				await mediator.Send(new SetAttributeFlagCommand(dbref, leaf, flag));
-			}
+			await mediator.Send(new SetAttributeFlagCommand(dbref, leaf, flag));
 		}
 
-		foreach (var name in live.Except(previous.Flags, StringComparer.OrdinalIgnoreCase))
+		await foreach (var flag in AttributeFlagsNamed(live.Except(previous.Flags, StringComparer.OrdinalIgnoreCase)))
 		{
-			if (await attributes.GetAttributeFlagAsync(name) is SharpAttributeFlag flag)
-			{
-				await mediator.Send(new UnsetAttributeFlagCommand(dbref, leaf, flag));
-			}
+			await mediator.Send(new UnsetAttributeFlagCommand(dbref, leaf, flag));
 		}
 	}
+
+	/// <summary>The attribute flags these names resolve to; a name no flag has any more is skipped.</summary>
+	private IAsyncEnumerable<SharpAttributeFlag> AttributeFlagsNamed(IEnumerable<string> names) =>
+		names.ToAsyncEnumerable()
+			.Select((name, cancellationToken) => attributes.GetAttributeFlagAsync(name, cancellationToken))
+			.OfType<SharpAttributeFlag>();
 
 	/// <summary>Sets a flag on an attribute; false when the attribute does not exist.</summary>
 	public Task<bool> SetAttributeFlagAsync(DBRef dbref, string[] path, SharpAttributeFlag flag, CancellationToken cancellationToken) =>
