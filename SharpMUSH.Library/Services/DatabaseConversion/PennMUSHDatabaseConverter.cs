@@ -136,7 +136,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			locksConverted = await CreateLocksAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Locks created", 1.0);
 
-			await EnableParenGroupsAsync(cancellationToken);
+			await EnableParenGroupsAsync(warnings, cancellationToken);
 
 			stopwatch.Stop();
 
@@ -174,15 +174,28 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// PennMUSH does only with that option on. Written through the Mediator, like the objects, so it
 	/// lands in the same world, and signalled so a running game rereads its configuration.
 	/// </summary>
-	private async ValueTask EnableParenGroupsAsync(CancellationToken cancellationToken)
+	/// <remarks>
+	/// It runs after the whole world is written, so a failure here is a warning: the conversion stands,
+	/// and the option is left for the administrator to set.
+	/// </remarks>
+	private async ValueTask EnableParenGroupsAsync(List<string> warnings, CancellationToken cancellationToken)
 	{
-		var options = _options.CurrentValue;
-		if (options.Compatibility.ParenGroups) return;
+		try
+		{
+			var options = _options.CurrentValue;
+			if (options.Compatibility.ParenGroups) return;
 
-		await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
-			options with { Compatibility = options.Compatibility with { ParenGroups = true } }), cancellationToken);
-		_configurationReload?.SignalChange();
-		_logger.LogInformation("Turned on paren_groups for the imported PennMUSH softcode");
+			await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
+				options with { Compatibility = options.Compatibility with { ParenGroups = true } }), cancellationToken);
+			_configurationReload?.SignalChange();
+			_logger.LogInformation("Turned on paren_groups for the imported PennMUSH softcode");
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			_logger.LogWarning(ex, "Could not turn on paren_groups for the imported PennMUSH softcode");
+			warnings.Add($"paren_groups could not be turned on ({ex.Message}); imported softcode that writes literal " +
+				"parentheses unescaped needs it: set paren_groups to yes in the configuration and reload it.");
+		}
 	}
 
 	/// <summary>

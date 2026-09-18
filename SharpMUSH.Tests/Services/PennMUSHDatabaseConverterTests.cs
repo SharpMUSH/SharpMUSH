@@ -1,10 +1,15 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.DatabaseConversion;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -482,5 +487,30 @@ public class PennMUSHDatabaseConverterTests
 		await Assert.That(result.IsSuccessful).IsTrue();
 		var stored = await store.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions));
 		await Assert.That(stored?.Compatibility.ParenGroups ?? false).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>paren_groups</c> is turned on after every object, attribute and lock is written. Failing to
+	/// turn it on leaves a converted world that needs the option set by hand, so the import succeeds
+	/// with a warning saying so, instead of reporting the world it wrote as a fatal failure.
+	/// </summary>
+	[Test]
+	public async ValueTask ParenGroupsFailureIsAWarning()
+	{
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(_ => throw new InvalidOperationException("configuration unavailable"));
+		await using var world = await IsolatedImportWorld.CreateAsync(services =>
+		{
+			services.RemoveAll<IPennMUSHDatabaseConverter>();
+			services.AddSingleton<IPennMUSHDatabaseConverter>(provider => new PennMUSHDatabaseConverter(
+				provider.GetRequiredService<PennMUSHDatabaseParser>(), provider.GetRequiredService<IMediator>(), options,
+				NullLogger<PennMUSHDatabaseConverter>.Instance));
+		});
+
+		var result = await world.Converter.ConvertDatabaseAsync(new PennMUSHDatabase { Version = "Test Version", Objects = [] });
+
+		await Assert.That(result.Errors).IsEmpty();
+		await Assert.That(result.IsSuccessful).IsTrue();
+		await Assert.That(result.Warnings).Contains(warning => warning.Contains("paren_groups"));
 	}
 }
