@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Tests;
@@ -95,7 +96,7 @@ public static partial class HelpSignature
 	/// </summary>
 	private static bool Split(string text, int depth, List<(int Depth, string Text)> slots)
 	{
-		var current = string.Empty;
+		var current = new StringBuilder();
 		var index = 0;
 
 		while (index < text.Length)
@@ -112,15 +113,15 @@ public static partial class HelpSignature
 
 				if (HoldsSeparator(inner) || inner.TrimStart().StartsWith(',')) // an optional group of arguments
 				{
-					slots.Add((depth, current));
-					current = string.Empty;
+					slots.Add((depth, current.ToString()));
+					current.Clear();
 					var body = inner.TrimStart();
 					if (!Split(body.StartsWith(',') ? body[1..] : body, depth + 1, slots)) return false;
 					index = close + 1;
 					continue;
 				}
 
-				if (current.Trim().Length == 0 && (rest.Trim().Length == 0 || rest.TrimStart()[0] is ',' or '['))
+				if (IsBlank(current) && (rest.Trim().Length == 0 || rest.TrimStart()[0] is ',' or '['))
 				{
 					// A whole argument that happens to be optional: fn(<a>[, <b>]) has already been
 					// handled above, but fn([<a>][, <b>]) reaches here with <a> alone in the brackets.
@@ -131,24 +132,34 @@ public static partial class HelpSignature
 					continue;
 				}
 
-				current += inner; // an optional part inside one argument, such as [<object>/]<attribute>
+				current.Append(inner); // an optional part inside one argument, such as [<object>/]<attribute>
 				index = close + 1;
 				continue;
 			}
 
 			if (character == ',')
 			{
-				slots.Add((depth, current));
-				current = string.Empty;
+				slots.Add((depth, current.ToString()));
+				current.Clear();
 				index++;
 				continue;
 			}
 
-			current += character;
+			current.Append(character);
 			index++;
 		}
 
-		slots.Add((depth, current));
+		slots.Add((depth, current.ToString()));
+		return true;
+	}
+
+	/// <summary>Whether nothing but whitespace has been accumulated, without materializing it.</summary>
+	private static bool IsBlank(StringBuilder builder)
+	{
+		for (var index = 0; index < builder.Length; index++)
+			if (!char.IsWhiteSpace(builder[index]))
+				return false;
+
 		return true;
 	}
 

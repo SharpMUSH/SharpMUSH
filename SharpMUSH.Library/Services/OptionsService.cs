@@ -279,10 +279,7 @@ public class OptionsService(
 				UseWebsockets: true,
 				WebsocketUrl: "/wsclient"
 			),
-			Alias = new AliasOptions(
-				FunctionAliases: Configurable.DefaultFunctionAliases,
-				CommandAliases: Configurable.DefaultCommandAliases
-			),
+			Alias = AliasOptions.Default,
 			Restriction = new RestrictionOptions(
 				CommandRestrictions: new Dictionary<string, string[]>(),
 				FunctionRestrictions: new Dictionary<string, string[]>()

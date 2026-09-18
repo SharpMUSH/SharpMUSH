@@ -1,6 +1,6 @@
 using System.Reflection;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Definitions;
+using SharpMUSH.Configuration.Options;
 
 namespace SharpMUSH.Tests;
 
@@ -50,15 +50,22 @@ public static class RegistryInventory
 	public static IReadOnlyList<CommandEntry> Commands => LazyCommands.Value;
 
 	/// <summary>
-	/// Every name a caller can type to reach a function: the registered names plus the configured
+	/// Every name a caller can type to reach a function: the registered names plus the shipped
 	/// aliases. A name-coverage check that skips the aliases passes while <c>u()</c> is undocumented.
 	/// </summary>
+	/// <remarks>
+	/// Deliberately the shipped defaults rather than the live <see cref="Configurable.FunctionAliases"/>,
+	/// which any host overwrites from the database at startup. A parity test that reads the live table
+	/// answers differently depending on which fixture booted first — and a game is free to configure
+	/// aliases the shipped help says nothing about, which is not a defect. What has to agree is the
+	/// help this repository ships and the aliases this repository ships.
+	/// </remarks>
 	public static IReadOnlySet<string> FunctionNamesWithAliases() =>
-		WithAliases(Functions.Select(f => f.Name), Configurable.FunctionAliases);
+		WithAliases(Functions.Select(f => f.Name), AliasOptions.Default.FunctionAliases);
 
 	/// <inheritdoc cref="FunctionNamesWithAliases"/>
 	public static IReadOnlySet<string> CommandNamesWithAliases() =>
-		WithAliases(Commands.Select(c => c.Name), Configurable.CommandAliases);
+		WithAliases(Commands.Select(c => c.Name), AliasOptions.Default.CommandAliases);
 
 	private static IReadOnlySet<string> WithAliases(IEnumerable<string> names, Dictionary<string, string[]> aliases)
 	{
