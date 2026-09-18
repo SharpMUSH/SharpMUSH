@@ -1380,7 +1380,7 @@ public partial class Functions
 		var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText();
 		var kinds = ParseRegisterKinds(args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? string.Empty);
 		if (kinds == RegisterKinds.None)
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Nothing));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidArgument));
 
 		var separator = args.GetValueOrDefault("2")?.Message?.ToPlainText() ?? " ";
 		return ValueTask.FromResult(new CallState(
@@ -2003,7 +2003,7 @@ public partial class Functions
 				}
 
 				// Evaluate the lock: does victim pass the lock expression?
-				if (!await PermissionService.CanLocate(executor, victim)) return new CallState("#-1");
+				if (!await PermissionService.CanLocate(executor, victim)) return new CallState(ErrorMessages.Returns.PermissionDenied);
 				var passes = await LockService.Evaluate(expression, executor, victim);
 				return new CallState(passes ? "1" : "0");
 			});

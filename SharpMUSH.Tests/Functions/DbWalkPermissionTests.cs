@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Models;
@@ -16,8 +17,8 @@ namespace SharpMUSH.Tests.Functions;
 /// trouble) they could build a scanner to locate anything they wanted."</para>
 ///
 /// <para>Every refusal below is paired with a control — the same call by someone entitled to an
-/// answer — because a bare <c>#-1</c> from a gate and a <c>#-1</c> from a search that was never going
-/// to match read identically.</para>
+/// answer — so a refusal is shown to come from the gate and not from a search that was never going to
+/// match.</para>
 /// </summary>
 public class DbWalkPermissionTests
 {
@@ -61,7 +62,7 @@ public class DbWalkPermissionTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WalkGate");
 
 		// The mortal can neither examine the room nor is standing in it, and is not the enactor of it.
-		await Assert.That(await EvalAs(mortal.DbRef, $"lcon(#{faraway.Number})")).IsEqualTo("#-1");
+		await Assert.That(await EvalAs(mortal.DbRef, $"lcon(#{faraway.Number})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 
 		// God is a wizard, so Can_Examine passes and the same call answers.
 		await Assert.That(await EvalAs(new DBRef(1), $"lcon(#{faraway.Number})"))
@@ -84,14 +85,14 @@ public class DbWalkPermissionTests
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "WalkFamily");
 
-		await Assert.That(await EvalAs(mortal.DbRef, $"con(#{faraway.Number})")).IsEqualTo("#-1");
-		await Assert.That(await EvalAs(mortal.DbRef, $"exit(#{faraway.Number})")).IsEqualTo("#-1");
-		await Assert.That(await EvalAs(mortal.DbRef, $"ncon(#{faraway.Number})")).IsEqualTo("#-1");
-		await Assert.That(await EvalAs(mortal.DbRef, $"xcon(#{faraway.Number},1,5)")).IsEqualTo("#-1");
-		await Assert.That(await EvalAs(mortal.DbRef, $"lvcon(#{faraway.Number})")).IsEqualTo("#-1");
+		await Assert.That(await EvalAs(mortal.DbRef, $"con(#{faraway.Number})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await EvalAs(mortal.DbRef, $"exit(#{faraway.Number})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await EvalAs(mortal.DbRef, $"ncon(#{faraway.Number})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await EvalAs(mortal.DbRef, $"xcon(#{faraway.Number},1,5)")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await EvalAs(mortal.DbRef, $"lvcon(#{faraway.Number})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 
 		// next() gates on the *location* of its argument, which is the same room.
-		await Assert.That(await EvalAs(mortal.DbRef, $"next(#{thing.Number})")).IsEqualTo("#-1");
+		await Assert.That(await EvalAs(mortal.DbRef, $"next(#{thing.Number})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 
 		// The controls: God clears the gate for every one of them.
 		// con() renders DBRef.ToString(), which is the objid form #N:<creation-ms>, as every form here
@@ -189,9 +190,9 @@ public class DbWalkPermissionTests
 		// Penn matches these with string_prefixe, so an abbreviation is the same keyword.
 		await Assert.That(await EvalAs(mortal.DbRef, $"lcon({room},pl)")).IsEqualTo(players);
 
-		// Anything that is not a prefix of a keyword is #-1 — including the plural of one.
-		await Assert.That(await EvalAs(mortal.DbRef, $"lcon({room},zzz)")).IsEqualTo("#-1");
-		await Assert.That(await EvalAs(mortal.DbRef, $"lcon({room},players)")).IsEqualTo("#-1");
+		// Anything that is not a prefix of a keyword is refused — including the plural of one.
+		await Assert.That(await EvalAs(mortal.DbRef, $"lcon({room},zzz)")).IsEqualTo(ErrorMessages.Returns.InvalidArgument);
+		await Assert.That(await EvalAs(mortal.DbRef, $"lcon({room},players)")).IsEqualTo(ErrorMessages.Returns.InvalidArgument);
 	}
 
 	/// <summary>

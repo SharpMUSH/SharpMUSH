@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
@@ -130,7 +131,7 @@ public class ObjectPredicateFlagTests
 		await Assert.That(await EvalAs(mortal.DbRef, $"locate(%#,{plainName},*)"))
 			.IsEqualTo($"#{plain.Number}")
 			.Because("the mortal has to be able to find an ordinary object here for the refusal below to mean anything");
-		await Assert.That(await EvalAs(mortal.DbRef, $"locate(%#,{darkName},*)")).IsEqualTo("#-1");
+		await Assert.That(await EvalAs(mortal.DbRef, $"locate(%#,{darkName},*)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 
 		// God is See_All, so the same object is still reachable by someone entitled to see it.
 		await Assert.That(await EvalAs(new DBRef(1), $"locate(#{mortal.DbRef.Number},{darkName},*)"))

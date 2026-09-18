@@ -32,9 +32,6 @@
   <data name="CouldNotFind" xml:space="preserve">
     <value>Could not find that.</value>
   </data>
-  <data name="CouldNotFindPlayer" xml:space="preserve">
-    <value>Could not find that player.</value>
-  </data>
   <data name="CantFindThatPlayer" xml:space="preserve">
     <value>I can't find that player</value>
   </data>

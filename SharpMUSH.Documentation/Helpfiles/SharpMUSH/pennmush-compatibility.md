@@ -190,6 +190,28 @@ the player with the same text.<br>
 purpose.<br>
 **Workaround.** See `help exception` for the payload and what a mortal versus a wizard is shown.
 
+## A failing function says why
+
+**PennMUSH** answers many failures with a bare `#-1` (or `#-2`, `#-3`), sometimes notifying the
+reason separately and often not giving one at all.<br>
+**SharpMUSH** puts the reason after the number: `#-1 PERMISSION DENIED`, `#-1 NO MATCH`,
+`#-1 NO ZONE SET`, `#-1 NO DROP-TO`, `#-2 I DON'T KNOW WHICH ONE YOU MEAN`, `#-2 VARIABLE
+DESTINATION`, `#-3 HOME`, and so on. A function does not also notify you of a reason its return value
+already carries.<br>
+**Why.** A bare `#-1` reads the same whether the object was missing, refused, or simply had nothing
+to report, and a notification sent from inside `iter()` arrives once per element.<br>
+**Workaround.** Test the prefix, as PennMUSH's own test suite does: `strmatch(%0,#-*)`, or `t()`,
+which is false for anything starting `#-`. Code that compares with `=` or `eq()` against exactly
+`#-1` needs the prefix test instead. `namelist()` keeps one-word `#-1` and `#-2` entries, because each
+entry is a position in a list.
+
+```
+> think zone(me)
+#-1 NO ZONE SET
+> think [strmatch(zone(me),#-*)] [t(zone(me))]
+1 0
+```
+
 # COMPATIBILITY ARGUMENTS
 Functions that accept a different number of arguments here. Every one of these is **additive**: the
 call you would write for PennMUSH keeps its PennMUSH meaning, and the extra argument is optional.

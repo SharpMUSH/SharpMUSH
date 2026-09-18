@@ -253,7 +253,6 @@ public class MushTextTests
 	[Test]
 	public async Task Singletons_CarryTheExpectedText()
 	{
-		await Assert.That(MushText.Error.ToPlainText()).IsEqualTo("#-1");
 		await Assert.That(MushText.Zero.ToPlainText()).IsEqualTo("0");
 		await Assert.That(MushText.One.ToPlainText()).IsEqualTo("1");
 		await Assert.That(MushText.Comma.ToPlainText()).IsEqualTo(",");

@@ -113,7 +113,7 @@ public partial class Functions
 	/// </summary>
 	/// <returns>
 	/// The matching contents in order, or <c>null</c> when the gate refused — which every caller renders
-	/// as <c>#-1</c>, exactly as <c>dbwalk</c>'s <c>else</c> branch does.
+	/// as <c>#-1 PERMISSION DENIED</c> where <c>dbwalk</c>'s <c>else</c> branch writes a bare <c>#-1</c>.
 	/// </returns>
 	private async ValueTask<List<AnySharpContent>?> DbWalk(AnySharpObject executor,
 		AnySharpObject enactor, AnySharpObject loc, WalkSpec spec)
@@ -172,11 +172,10 @@ public partial class Functions
 
 	/// <summary>
 	/// Resolves argument 0 the way <c>match_thing</c> does — noisily, so the executor is told why —
-	/// and hands the walk its location. A name that does not resolve answers a bare <c>#-1</c>:
-	/// <c>dbwalk</c>'s <c>!GoodObject(loc)</c> branch writes exactly that, the reason having already
-	/// gone to the executor.
+	/// and hands the walk its location. A name that does not resolve answers the match's own error,
+	/// where <c>dbwalk</c>'s <c>!GoodObject(loc)</c> branch writes a bare <c>#-1</c>.
 	/// </summary>
-	private async ValueTask<(AnySharpObject Executor, AnySharpObject Enactor, AnySharpObject? Loc)>
+	private async ValueTask<(AnySharpObject Executor, AnySharpObject Enactor, AnySharpObject? Loc, CallState Failure)>
 		WalkTarget(IMUSHCodeParser parser, string name)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -184,8 +183,14 @@ public partial class Functions
 		var located = await LocateService.LocateAndNotifyIfInvalidWithCallState(
 			parser, executor, executor, name, LocateFlags.All);
 
-		return (executor, enactor, located is AnySharpObject found ? found : null);
+		return located switch
+		{
+			AnySharpObject found => (executor, enactor, found, CallState.Empty),
+			Error<CallState> error => (executor, enactor, null, error.Value)
+		};
 	}
+
+	private static CallState Refused => new(ErrorMessages.Returns.PermissionDenied);
 
 	private string Arg(IMUSHCodeParser parser, string index)
 		=> parser.CurrentState.Arguments[index].Message!.ToPlainText();
@@ -197,21 +202,21 @@ public partial class Functions
 	private async ValueTask<CallState> WalkList(IMUSHCodeParser parser, WalkType types, bool skipDark,
 		WalkListening listening = WalkListening.None)
 	{
-		var (executor, enactor, loc) = await WalkTarget(parser, Arg(parser, "0"));
-		if (loc is null) return new CallState(ErrorMessages.Returns.Nothing);
+		var (executor, enactor, loc, failure) = await WalkTarget(parser, Arg(parser, "0"));
+		if (loc is null) return failure;
 
 		var walked = await DbWalk(executor, enactor, loc, new WalkSpec(types, skipDark, Listening: listening));
-		return new CallState(walked is null ? ErrorMessages.Returns.Nothing : Render(walked));
+		return walked is null ? Refused : new CallState(Render(walked));
 	}
 
 	/// <summary>The <c>n*</c> and <c>nv*</c> forms: how many matched, ignoring any window.</summary>
 	private async ValueTask<CallState> WalkCount(IMUSHCodeParser parser, WalkType types, bool skipDark)
 	{
-		var (executor, enactor, loc) = await WalkTarget(parser, Arg(parser, "0"));
-		if (loc is null) return new CallState(ErrorMessages.Returns.Nothing);
+		var (executor, enactor, loc, failure) = await WalkTarget(parser, Arg(parser, "0"));
+		if (loc is null) return failure;
 
 		var count = await DbWalkCount(executor, enactor, loc, new WalkSpec(types, skipDark));
-		return new CallState(count?.ToString() ?? ErrorMessages.Returns.Nothing);
+		return count is { } matched ? new CallState(matched) : Refused;
 	}
 
 	/// <summary>
@@ -231,33 +236,34 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.ArgRange);
 		}
 
-		var (executor, enactor, loc) = await WalkTarget(parser, Arg(parser, "0"));
-		if (loc is null) return new CallState(ErrorMessages.Returns.Nothing);
+		var (executor, enactor, loc, failure) = await WalkTarget(parser, Arg(parser, "0"));
+		if (loc is null) return failure;
 
 		var walked = await DbWalk(executor, enactor, loc, new WalkSpec(types, skipDark, start, count));
-		return new CallState(walked is null ? ErrorMessages.Returns.Nothing : Render(walked));
+		return walked is null ? Refused : new CallState(Render(walked));
 	}
 
 	/// <summary>
-	/// <c>con()</c> and <c>exit()</c>: the first match, or <c>#-1</c>. Penn runs the identical walk and
-	/// prints <c>safe_dbref</c> of its result, which is <c>#-1</c> for <c>NOTHING</c> — so a refused
-	/// gate and an empty container are the same answer here, as they are there.
+	/// <c>con()</c> and <c>exit()</c>: the first match. Penn prints <c>safe_dbref</c> of the walk's
+	/// result, a bare <c>#-1</c> both for a refused gate and for an empty container; these are told apart.
 	/// </summary>
 	private async ValueTask<CallState> WalkFirst(IMUSHCodeParser parser, WalkType types)
 	{
-		var (executor, enactor, loc) = await WalkTarget(parser, Arg(parser, "0"));
-		if (loc is null) return new CallState(ErrorMessages.Returns.Nothing);
+		var (executor, enactor, loc, failure) = await WalkTarget(parser, Arg(parser, "0"));
+		if (loc is null) return failure;
 
-		var walked = await DbWalk(executor, enactor, loc, new WalkSpec(types));
-		return new CallState(walked is { Count: > 0 }
-			? walked[0].Object().DBRef.ToString()
-			: ErrorMessages.Returns.Nothing);
+		return await DbWalk(executor, enactor, loc, new WalkSpec(types)) switch
+		{
+			null => Refused,
+			{ Count: > 0 } walked => new CallState(walked[0].Object().DBRef.ToString()),
+			_ => new CallState(types == WalkType.Exit ? ErrorMessages.Returns.NoExits : ErrorMessages.Returns.NoContents)
+		};
 	}
 
 	/// <summary>
 	/// <c>lcon()</c>'s optional second argument, which selects the type and the listening filter
 	/// (<c>fun_dbwalker</c>, src/fundb.c:779). Each keyword may be abbreviated — Penn matches with
-	/// <c>string_prefixe</c> — and anything else is <c>#-1</c>.
+	/// <c>string_prefixe</c> — and anything else is <c>#-1 INVALID ARGUMENT</c>.
 	/// </summary>
 	/// <remarks>
 	/// The argument was declared (<c>MaxArgs = 2</c>) and then ignored, so <c>lcon(here,players)</c>
@@ -271,7 +277,7 @@ public partial class Functions
 		}
 
 		var keyword = Arg(parser, "1");
-		if (string.IsNullOrEmpty(keyword)) return new CallState(ErrorMessages.Returns.Nothing);
+		if (string.IsNullOrEmpty(keyword)) return new CallState(ErrorMessages.Returns.InvalidArgument);
 
 		static bool Is(string keyword, string full)
 			=> full.StartsWith(keyword, StringComparison.OrdinalIgnoreCase);
@@ -286,7 +292,7 @@ public partial class Functions
 				=> await WalkList(parser, WalkType.Thing, skipDark: false, WalkListening.Puppet),
 			_ when Is(keyword, "listen")
 				=> await WalkList(parser, WalkType.Contents, skipDark: false, WalkListening.Listen),
-			_ => new CallState(ErrorMessages.Returns.Nothing)
+			_ => new CallState(ErrorMessages.Returns.InvalidArgument)
 		};
 	}
 
@@ -297,28 +303,29 @@ public partial class Functions
 	/// </summary>
 	/// <remarks>
 	/// The gate applies to the <em>location</em>, so <c>next()</c> on something in a room the executor
-	/// can neither examine nor stand in answers <c>#-1</c> — which is the drift Penn's 2001 unification
+	/// can neither examine nor stand in is refused — which is the drift Penn's 2001 unification
 	/// was fixing, and which had reappeared here.
 	/// <para>
-	/// An argument that is not itself visible in that walk has no successor and answers <c>#-1</c>:
+	/// An argument that is not itself visible in that walk has no successor:
 	/// Penn only starts filling <c>result</c> once it has passed <c>after</c> in the visible list.
 	/// </para>
 	/// </remarks>
 	private async ValueTask<CallState> WalkNext(IMUSHCodeParser parser)
 	{
-		var (executor, enactor, it) = await WalkTarget(parser, Arg(parser, "0"));
-		if (it is null || it.IsRoom) return new CallState(ErrorMessages.Returns.Nothing);
+		var (executor, enactor, it, failure) = await WalkTarget(parser, Arg(parser, "0"));
+		if (it is null) return failure;
+		if (it.IsRoom) return new CallState(ErrorMessages.Returns.NoNextObject);
 
 		var types = it.IsExit ? WalkType.Exit : WalkType.Contents;
 		var loc = (await it.Where()).WithExitOption();
 
 		var walked = await DbWalk(executor, enactor, loc, new WalkSpec(types));
-		if (walked is null) return new CallState(ErrorMessages.Returns.Nothing);
+		if (walked is null) return Refused;
 
 		var index = walked.FindIndex(x => x.Object().DBRef == it.Object().DBRef);
 		return new CallState(index >= 0 && index + 1 < walked.Count
 			? walked[index + 1].Object().DBRef.ToString()
-			: ErrorMessages.Returns.Nothing);
+			: ErrorMessages.Returns.NoNextObject);
 	}
 
 	/// <summary>

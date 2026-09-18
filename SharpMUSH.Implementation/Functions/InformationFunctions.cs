@@ -584,8 +584,8 @@ public partial class Functions
 	///     in the Tavern, because the coin's <c>where_is</c> is the bag.</item>
 	///   <item>The permission gate comes first, so an executor with no standing gets
 	///     <c>#-1 NO OBJECTS CONTROLLED</c> rather than being told whether the argument resolved.</item>
-	///   <item>An unresolvable argument answers a bare <c>#-1</c>. The match itself is noisy
-	///     (<c>match_thing</c> is <c>noisy_match_result</c>), so the reason went to the executor already.</item>
+	///   <item>An unresolvable argument answers the match's own error, where Penn writes a bare
+	///     <c>#-1</c> and leaves the reason to <c>match_thing</c>'s notification.</item>
 	/// </list>
 	/// </summary>
 	[SharpFunction(Name = "nearby", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object1", "object2"])]
@@ -611,10 +611,9 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.NoObjectsControlled);
 		}
 
-		if (obj1 is null || obj2 is null)
-		{
-			return new CallState(ErrorMessages.Returns.Nothing);
-		}
+		if (maybeObj1 is Error<CallState> missing1) return missing1.Value;
+		if (maybeObj2 is Error<CallState> missing2) return missing2.Value;
+		if (obj1 is null || obj2 is null) return new CallState(ErrorMessages.Returns.NoMatch);
 
 		return new CallState(await Library.Services.LocateService.Nearby(obj1, obj2));
 

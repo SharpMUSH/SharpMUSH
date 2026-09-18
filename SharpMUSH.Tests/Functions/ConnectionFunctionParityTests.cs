@@ -38,9 +38,9 @@ public class ConnectionFunctionParityTests
 	[Arguments("recv(NoSuchPlayerAnywhere)", "-1")]
 	[Arguments("sent(NoSuchPlayerAnywhere)", "-1")]
 	[Arguments("cmds(NoSuchPlayerAnywhere)", "-1")]
-	[Arguments("host(NoSuchPlayerAnywhere)", "#-1")]
-	[Arguments("ipaddr(NoSuchPlayerAnywhere)", "#-1")]
-	[Arguments("hidden(NoSuchPlayerAnywhere)", "#-1")]
+	[Arguments("host(NoSuchPlayerAnywhere)", ErrorMessages.Returns.NoSuchPlayer)]
+	[Arguments("ipaddr(NoSuchPlayerAnywhere)", ErrorMessages.Returns.NoSuchPlayer)]
+	[Arguments("hidden(NoSuchPlayerAnywhere)", ErrorMessages.Returns.NoSuchPlayer)]
 	[Arguments("doing(NoSuchPlayerAnywhere)", "")]
 	[Arguments("ports(NoSuchPlayerAnywhere)", "")]
 	[Arguments("ssl(NoSuchPlayerAnywhere)", "#-1 NOT CONNECTED")]
@@ -51,8 +51,9 @@ public class ConnectionFunctionParityTests
 		=> await Assert.That(await EvaluateAsync(code)).IsEqualTo(expected);
 
 	/// <summary>
-	/// A descriptor number nothing is listening on. Same answers as an unmatched name — PennMUSH runs
-	/// both through <c>lookup_desc</c> and cannot tell them apart by the time it returns NULL.
+	/// A descriptor number nothing is listening on. The integer functions answer as for an unmatched
+	/// name — PennMUSH runs both through <c>lookup_desc</c> — and host()/ipaddr() give the one answer
+	/// they also give a descriptor the caller may not see.
 	/// </summary>
 	[Test]
 	[Arguments("conn(999999999)", "-1")]
@@ -60,8 +61,8 @@ public class ConnectionFunctionParityTests
 	[Arguments("recv(999999999)", "-1")]
 	[Arguments("sent(999999999)", "-1")]
 	[Arguments("cmds(999999999)", "-1")]
-	[Arguments("host(999999999)", "#-1")]
-	[Arguments("ipaddr(999999999)", "#-1")]
+	[Arguments("host(999999999)", ErrorMessages.Returns.NoSuchDescriptorOrPermissionDenied)]
+	[Arguments("ipaddr(999999999)", ErrorMessages.Returns.NoSuchDescriptorOrPermissionDenied)]
 	[Arguments("ssl(999999999)", "#-1 NOT CONNECTED")]
 	[Arguments("terminfo(999999999)", "#-1 NOT CONNECTED")]
 	[Arguments("width(999999999)", "78")]
@@ -93,14 +94,13 @@ public class ConnectionFunctionParityTests
 		=> await Assert.That(await EvaluateAsync(code)).IsEqualTo(expected);
 
 	/// <summary>
-	/// Reading another player's connection without See_All. PennMUSH folds this into the same answer
-	/// as "no such descriptor" for the string and integer functions — whether the descriptor exists is
-	/// itself the thing being withheld — and only <c>fun_ssl</c> spends a distinct permission error on
-	/// it, because it has already said "#-1 NOT CONNECTED" for the other case.
+	/// Reading another player's connection without See_All. Asked by player, the refusal comes before
+	/// anything about the connection, so it can say <c>#-1 PERMISSION DENIED</c> without revealing
+	/// whether they are connected. The integer functions keep PennMUSH's <c>-1</c>.
 	/// </summary>
 	[Test]
-	[Arguments("host", "#-1")]
-	[Arguments("ipaddr", "#-1")]
+	[Arguments("host", ErrorMessages.Returns.PermissionDenied)]
+	[Arguments("ipaddr", ErrorMessages.Returns.PermissionDenied)]
 	[Arguments("recv", "-1")]
 	[Arguments("sent", "-1")]
 	[Arguments("cmds", "-1")]

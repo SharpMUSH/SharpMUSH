@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using SharpMUSH.Library.Definitions;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
@@ -26,7 +27,7 @@ public class JsonFunctionUnitTests
 	// Penn json.null.1-3
 	[Arguments("json(null)", "null")]
 	[Arguments("json(null,null)", "null")]
-	[Arguments("json(null,foo)", "#-1")]
+	[Arguments("json(null,foo)", ErrorMessages.Returns.InvalidArgument)]
 	// Penn json.boolean.1-5
 	[Arguments("json(boolean, true)", "true")]
 	[Arguments("json(boolean, 1)", "true")]

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
@@ -97,7 +98,7 @@ public class NewPennMUSHFunctionTests
 	public async Task CONVTIME_HandlesInvalidInput()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("convtime(invalid)")))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
+		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidTime);
 	}
 
 	#endregion

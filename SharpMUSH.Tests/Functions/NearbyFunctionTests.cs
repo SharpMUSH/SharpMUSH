@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Models;
@@ -143,11 +144,11 @@ public class NearbyFunctionTests
 
 	[Test]
 	[NotInParallel]
-	public async Task AnUnresolvableArgumentAnswersBareMinusOne()
+	public async Task AnUnresolvableArgumentAnswersTheMatchError()
 	{
-		// fun_nearby gates before it tests GoodObject, and then writes a bare "#-1" with no reason —
-		// the reason already went to the executor, because match_thing is noisy_match_result.
-		// %# clears the gate (God controls itself), so what is left is the bad second argument.
-		await Assert.That(await EvalAs(new DBRef(1), "nearby(%#,NoSuchThingExistsHere)")).IsEqualTo("#-1");
+		// fun_nearby gates before it tests GoodObject, then writes a bare "#-1"; this answers the
+		// match's own error instead. %# clears the gate (God controls itself), so what is left is the
+		// bad second argument.
+		await Assert.That(await EvalAs(new DBRef(1), "nearby(%#,NoSuchThingExistsHere)")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 	}
 }
