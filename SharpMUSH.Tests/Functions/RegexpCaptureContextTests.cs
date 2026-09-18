@@ -129,6 +129,18 @@ public class RegexpCaptureContextTests
 		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
 
 	/// <summary>
+	/// A pattern is evaluated before its own match replaces the captures, so it reads the previous
+	/// case's: <c>fun_switch</c> evaluates the pattern and only then calls
+	/// <c>pe_regs_clear_type(pe_regs, PE_REGS_CAPTURE)</c>, and <c>fun_reswitch</c> clears the context
+	/// only when a pattern has matched (<c>src/funmisc.c</c>).
+	/// </summary>
+	[Test]
+	[Arguments("[switchall(ab,*,x,$0,y)]", "xy")]
+	[Arguments("[reswitchall(ab,.+,x,$0,y)]", "xy")]
+	public async Task PatternReadsThePreviousCaseCaptures(string code, string expected)
+		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
+
+	/// <summary>
 	/// <c>switch()</c> takes its arguments as (pattern, list) pairs, with a default only when one is left
 	/// over (<c>fun_switch</c>: <c>j += 2</c>, and a default when <c>nargs</c> is even). A list is never
 	/// tried as a pattern, so it is never evaluated unless its own pattern matched.
