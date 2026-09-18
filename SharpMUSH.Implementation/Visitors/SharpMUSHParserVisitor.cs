@@ -2812,6 +2812,13 @@ public class SharpMUSHParserVisitor(
 	public override async ValueTask<CallState?> VisitExplicitEvaluationString(
 		[NotNull] ExplicitEvaluationStringContext context)
 	{
+		if (ReadsRegexpCaptures)
+		{
+			return await VisitChildrenReadingCaptures(context,
+								 trimTrailingText: parser.CurrentState.ParseMode is ParseMode.Default)
+							 ?? new CallState(GetContextText(context), context.Depth());
+		}
+
 		var result = await VisitChildren(context)
 								 ?? new CallState(GetContextText(context), context.Depth());
 
@@ -2836,9 +2843,140 @@ public class SharpMUSHParserVisitor(
 
 	public override async ValueTask<CallState?> VisitBraceExplicitEvaluationString(
 		[NotNull] BraceExplicitEvaluationStringContext context) =>
-		await VisitChildren(context)
+		await (ReadsRegexpCaptures ? VisitChildrenReadingCaptures(context, trimTrailingText: false) : VisitChildren(context))
 		?? new CallState(GetContextText(context),
 			context.Depth());
+
+	/// <summary>
+	/// Whether <c>$&lt;digit&gt;</c> and <c>$&lt;name&gt;</c> are substitutions in the text being
+	/// evaluated: PennMUSH's evaluator takes its <c>'$'</c> case only under <c>PE_EVALUATE</c> and only
+	/// while a regexp context holds captures (<c>src/parse.c</c>). Everywhere else a <c>'$'</c> is text,
+	/// and the plain child walk is kept.
+	/// </summary>
+	private bool ReadsRegexpCaptures
+		=> parser.CurrentState is { HasRegexpCaptures: true, ParseMode: not (ParseMode.NoParse or ParseMode.NoEval) };
+
+	/// <summary>
+	/// <see cref="VisitChildren"/> for an evaluation string inside a regexp context, reading
+	/// <c>$&lt;digit&gt;</c> and <c>$&lt;name&gt;</c> out of its literal text. A capture is output, never
+	/// source: it is spliced into the result after its text node has been evaluated.
+	/// </summary>
+	/// <remarks>
+	/// The lexer keeps <c>$</c> inside an <c>OTHER</c> run and always makes <c>&gt;</c> a token of its own,
+	/// so a <c>$&lt;name&gt;</c> spans children. As in PennMUSH, the name is evaluated: everything between
+	/// the <c>&lt;</c> and the next <c>&gt;</c> (or the end) is collected from the children's output.
+	/// </remarks>
+	/// <param name="trimTrailingText">
+	/// PE_COMPRESS_SPACES' trailing trim, applied to the last child's literal text before any capture is
+	/// spliced into it, since a capture's own spaces are not literal ones.
+	/// </param>
+	private async ValueTask<CallState?> VisitChildrenReadingCaptures(ParserRuleContext context, bool trimTrailingText)
+	{
+		var childCount = context.ChildCount;
+		var results = new List<CallState>(childCount);
+		string? pendingName = null;
+
+		for (var i = 0; i < childCount; i++)
+		{
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			var child = context.GetChild(i);
+
+			if (pendingName is not null && IsLiteralToken(child, SharpMUSHLexer.CCARET))
+			{
+				results.Add(new CallState(parser.CurrentState.RegexpCapture(pendingName)));
+				pendingName = null;
+				continue;
+			}
+
+			var childResult = await child.Accept(this);
+			if (childResult?.Message is not { } text)
+			{
+				if (childResult is not null) results.Add(childResult);
+				continue;
+			}
+
+			if (pendingName is not null)
+			{
+				pendingName += text.ToPlainText();
+				continue;
+			}
+
+			if (trimTrailingText && i == childCount - 1 && child is GenericTextContext or BeginGenericTextContext)
+			{
+				text = text.Trim(global::MarkupString.TrimType.TrimEnd, " ");
+			}
+
+			if (IsLiteralToken(child, SharpMUSHLexer.OTHER))
+			{
+				text = SpliceCaptures(text, out pendingName);
+			}
+
+			results.Add(childResult with { Message = text });
+			if (parser.CurrentState.LimitExceeded?.IsExceeded == true) break;
+		}
+
+		if (pendingName is not null)
+		{
+			results.Add(new CallState(parser.CurrentState.RegexpCapture(pendingName)));
+		}
+
+		return results.Count switch
+		{
+			0 => null,
+			1 => results[0],
+			_ => BatchMergeResults(CollectionsMarshal.AsSpan(results))
+		};
+	}
+
+	/// <summary>
+	/// <paramref name="text"/> with each <c>$&lt;digit&gt;</c> replaced by that capture. A single digit
+	/// follows the <c>$</c>, so <c>$10</c> is capture 1 and then a <c>0</c>. A <c>$&lt;</c> starts a
+	/// name that runs to the end of this text and on into later children, returned in
+	/// <paramref name="pendingName"/>. Any other <c>$</c> is itself.
+	/// </summary>
+	private MString SpliceCaptures(MString text, out string? pendingName)
+	{
+		pendingName = null;
+		var plain = text.ToPlainText();
+		var at = plain.IndexOf('$');
+		if (at < 0) return text;
+
+		var pieces = new List<MString>();
+		var start = 0;
+		while (at >= 0 && at + 1 < plain.Length)
+		{
+			var next = plain[at + 1];
+			if (char.IsAsciiDigit(next))
+			{
+				pieces.Add(text.Substring(start, at - start));
+				pieces.Add(parser.CurrentState.RegexpCapture(next.ToString()));
+				start = at + 2;
+			}
+			else if (next == '<')
+			{
+				pieces.Add(text.Substring(start, at - start));
+				pendingName = plain[(at + 2)..];
+				start = plain.Length;
+				break;
+			}
+
+			at = plain.IndexOf('$', Math.Max(start, at + 1));
+		}
+
+		if (start < plain.Length)
+		{
+			pieces.Add(text.Substring(start, plain.Length - start));
+		}
+
+		return MarkupText.Concat(pieces);
+	}
+
+	/// <summary>Whether <paramref name="child"/> is a literal-text node made of one token of <paramref name="tokenType"/>.</summary>
+	private static bool IsLiteralToken(IParseTree child, int tokenType)
+		=> child is GenericTextContext or BeginGenericTextContext
+			 && child is ParserRuleContext { Start: { } first, Stop: { } last }
+			 && first.TokenIndex == last.TokenIndex
+			 && first.Type == tokenType;
 
 	public override async ValueTask<CallState?> VisitBracePattern(
 		[NotNull] BracePatternContext context)

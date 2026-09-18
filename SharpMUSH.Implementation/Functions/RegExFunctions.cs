@@ -335,14 +335,20 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Internal helper for reswitch, reswitchi, reswitchall, reswitchalli.
+	/// Internal helper for reswitch, reswitchi, reswitchall, reswitchalli: PennMUSH's <c>fun_reswitch</c>
+	/// (<c>src/funmisc.c</c>).
 	/// </summary>
+	/// <remarks>
+	/// A matched body is evaluated inside a regexp capture context, which <c>$&lt;digit&gt;</c> and
+	/// <c>$&lt;name&gt;</c> read as it runs. The captures are never pasted into the body: a capture is
+	/// the player's text, and evaluating it would run that text as softcode.
+	/// </remarks>
 	private async ValueTask<CallState> RegSwitchInternal(IMUSHCodeParser parser, bool caseInsensitive, bool all)
 	{
 		var input = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
 		var hadErrors = input.HadErrors;
-		var arg0 = input.Message;
-		var str = arg0!.ToPlainText();
+		var subject = input.Message ?? MarkupText.Empty;
+		var str = subject.ToPlainText();
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered.Skip(1).ToList();
 
 		// Check if we have a default (odd number of remaining args)
@@ -357,60 +363,49 @@ public partial class Functions
 			options |= RegexOptions.IgnoreCase;
 		}
 
-		parser.CurrentState.SwitchStack.Push(arg0!);
+		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
+		parser.CurrentState.RegexRegisters.Push(captures);
+		parser.CurrentState.SwitchStack.Push(subject);
 
 		try
 		{
 			for (int i = 0; i < pairCount - 1; i += 2)
 			{
-				var patternKv = orderedArgs[i];
-				var listKv = orderedArgs[i + 1];
-
-				var patternResult = await patternKv.Value.GetParsedResultAsync();
+				var patternResult = await orderedArgs[i].Value.GetParsedResultAsync();
 				hadErrors |= patternResult.HadErrors;
-				var pattern = patternResult.Message;
-				var patternStr = pattern!.ToPlainText();
+				var patternStr = (patternResult.Message ?? MarkupText.Empty).ToPlainText();
 
+				Regex regex;
+				Match match;
 				try
 				{
-					var regex = SoftcodeRegex.Create(patternStr, options);
-					var match = regex.Match(str!);
-
-					if (match.Success)
-					{
-						// Replace #$ with the original string and $N with captures
-						var list = listKv.Value.Message!.ToPlainText();
-						list = list.Replace("#$", str);
-
-						for (int j = 0; j < match.Groups.Count; j++)
-						{
-							list = list.Replace($"${j}", match.Groups[j].Value);
-						}
-
-						foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
-						{
-							var group = match.Groups[groupName];
-							if (group.Success)
-							{
-								list = list.Replace($"$<{groupName}>", group.Value);
-							}
-						}
-
-						var evaluated = (await parser.FunctionParse(MarkupText.Plain(list))) ?? new CallState(MarkupText.Empty);
-						hadErrors |= evaluated.HadErrors;
-						var evaluatedMsg = evaluated.Message ?? MarkupText.Empty;
-						results.Add(evaluatedMsg);
-
-						if (!all)
-						{
-							return new CallState(evaluatedMsg) { HadErrors = hadErrors };
-						}
-					}
+					regex = SoftcodeRegex.Create(patternStr, options);
+					match = regex.Match(str);
 				}
 				catch (ArgumentException)
 				{
 					// Invalid regex - skip this pattern
 					continue;
+				}
+				catch (RegexMatchTimeoutException)
+				{
+					return new CallState(ErrorMessages.Returns.RegexpTimeout) { HadErrors = hadErrors };
+				}
+
+				if (!match.Success)
+				{
+					continue;
+				}
+
+				captures.Fill(regex, match, subject);
+				var evaluated = await EvaluateSwitchBody(parser, orderedArgs[i + 1].Value, subject);
+				hadErrors |= evaluated.HadErrors;
+				var evaluatedMsg = evaluated.Message ?? MarkupText.Empty;
+				results.Add(evaluatedMsg);
+
+				if (!all)
+				{
+					return new CallState(evaluatedMsg) { HadErrors = hadErrors };
 				}
 			}
 
@@ -422,7 +417,7 @@ public partial class Functions
 
 			if (defaultValue != null)
 			{
-				var defaultEvaluated = await defaultValue.Value.Value.GetParsedResultAsync();
+				var defaultEvaluated = await EvaluateSwitchBody(parser, defaultValue.Value.Value, subject);
 				return new CallState(defaultEvaluated.Message ?? MarkupText.Empty)
 				{ HadErrors = hadErrors || defaultEvaluated.HadErrors };
 			}
@@ -432,7 +427,25 @@ public partial class Functions
 		finally
 		{
 			parser.CurrentState.SwitchStack.TryPop(out _);
+			parser.CurrentState.RegexRegisters.TryPop(out _);
 		}
+	}
+
+	/// <summary>
+	/// A reswitch body or default. PennMUSH replaces <c>#$</c> with the subject text before evaluating
+	/// either (<c>replace_string("#$", mstr, ...)</c>), so a body that uses it is re-parsed from its text;
+	/// every other body is evaluated as it was parsed.
+	/// </summary>
+	private static async ValueTask<CallState> EvaluateSwitchBody(IMUSHCodeParser parser, CallState body, MString subject)
+	{
+		var text = (body.Message ?? MarkupText.Empty).ToPlainText();
+		if (!text.Contains("#$", StringComparison.Ordinal))
+		{
+			return await body.GetParsedResultAsync();
+		}
+
+		return await parser.FunctionParse(MarkupText.Plain(text.Replace("#$", subject.ToPlainText())))
+			?? new CallState(MarkupText.Empty);
 	}
 
 	[SharpFunction(Name = "REGREPLACE", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular,
