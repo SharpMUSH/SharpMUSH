@@ -66,18 +66,35 @@ needs it stated:
 
 - **`IWorldGate`** is one async exclusive lock per engine process. It is held for the duration of
   a queue entry, an HTTP handler invocation, a portal write request, and a world transaction.
-  Reads outside the gate are fine: they see the last commit (§4).
+  Reads outside the gate are fine: they see committed state (§4, and §5 for the cache).
 - **Queue entries** already run one at a time, so for them the gate costs one uncontended acquire.
 - **HTTP handler commands** should become queue entries, as they are in Penn (`run_http_command`).
   That is P1 parity and worth doing on its own, before any of the rest (§7, phase 0).
 - **A world transaction** holds the gate from `BeginAsync` to commit or abort. While it runs, the
-  game waits. That is exactly what Penn does during a long command or a non-forking dump. The wait
-  is bounded by `WorldTransactionOptions.Budget`, the same idea as `QueueEntryCpuTime`, and an
-  expired budget aborts the transaction.
+  game waits. That is what Penn does during a long command or a non-forking dump. The wait is
+  bounded by `WorldTransactionOptions.Budget`, the same idea as `QueueEntryCpuTime`. What an
+  expired budget does is part of the options: a package transaction aborts, and a phase 2
+  queue-entry transaction commits (§7), because P3 says a stopped entry keeps what it did.
+
+**Ownership.** The gate is held by an async flow, not a thread, since awaits change thread. The
+lease is a token carried in the same `AsyncLocal` as the transaction.
+
+- Acquiring is idempotent for the holder. A flow that already holds the lease (a queue entry that
+  runs `@package/install`, say) *adopts* it: `BeginAsync` records that it did not acquire, and never
+  waits on the gate a second time. A flow without the token waits.
+- The lease is released only by the scope that acquired it. A transaction that adopted the lease
+  leaves it held at commit or abort; the enclosing queue entry releases it when the entry ends.
+- Transactions do not nest. `BeginAsync` in a flow that already has an open transaction is
+  refused, rather than joined, so that an inner abort can never be mistaken for a whole one.
+- Once released, the token is dead. A copy inherited by a `Task.Run` or fire-and-forget (§9) no
+  longer counts as holding the gate, so that work waits like any other flow.
 
 Every writer must take the gate, not just most of them. A write that skips it can deadlock
-against an open Lightning session (§4), so the gate is enforced at the Mediator: a write command
-outside both the gate and a transaction fails in debug builds.
+against an open Lightning session (§4), so the gate is enforced at the Mediator in every build: a
+write command outside both the gate and a transaction fails with an error. The check is one
+`AsyncLocal` read. As a backstop, the budget is enforced by the session job on the writer thread
+(§4), not by the flow that opened it, so even a write that got past the check waits at most the
+budget before the session closes and the writer drains the main channel.
 
 ## 4. The Lightning transaction
 
@@ -103,6 +120,11 @@ operation. The writer thread has to own it instead:
   mid-transaction loses the transaction whole.
 - Ordinary write jobs wait in the main channel while a session is open. Because every writer holds
   the gate (§3), none should be there.
+- **The session job owns the budget.** When `WorldTransactionOptions.Budget` elapses, the job
+  applies the options' expiry outcome (abort, or commit for a phase 2 entry), closes the session,
+  and returns to the main channel. The flow that opened the session finds it closed at its next
+  use and gets an error. The writer thread is never held longer than the budget, whatever the
+  flow is doing.
 
 ## 5. The cache
 
@@ -120,6 +142,15 @@ instance of each object. Handlers mutate that instance in place: `SetLockCommand
    commit, the set is applied *after* the provider commits, bumping `ObjectVersions` exactly as the
    post-handler pass does today (§7 of the data trunk). On abort there is nothing to undo, because
    the shared cache never saw the transaction.
+
+   **Reader ordering.** Between the provider commit and the end of invalidation, a reader outside
+   the gate can still be served the pre-commit entry from the shared cache. That window is allowed,
+   and bounded: it ends when invalidation completes, and it is the same window every write has
+   today between its handler and the post-handler invalidation. The contract for outside readers is
+   therefore "committed state, possibly one commit behind until invalidation is applied", never
+   uncommitted state. Gated work never sees the lag, because the gate is released, and the outbox
+   (§6) released, only after invalidation. A queue entry that runs after the transaction, or a
+   notification that reports it, reads the new state.
 3. **A transaction writes only objects it loaded itself.** Rule 1 means objects loaded inside the
    transaction are private instances, so the in-place `With…` mutations stay private. An instance
    taken from the shared cache *before* the transaction must not be written through. A debug
@@ -148,7 +179,7 @@ have this problem, because it never rolls back.
 |---|---|---|
 | **0** | HTTP handler commands become queue entries. Introduce `IWorldGate`, and have portal writes and package operations take it. | P1 parity with Penn. Package operations stop interleaving with play. |
 | **1** | The `IWorldTransaction` seam, the Lightning session (§4), cache deferral (§5) and the outbox (§6). Package apply, rollback and uninstall run in a world transaction, and `PackageWriteTransaction` is retired. | Crash-safe, isolated package operations. |
-| **2** *(optional)* | Run every queue entry in a world transaction that **always commits**: at completion, and on error too, because P3 says an error keeps its effects. Only a crash or a killed process discards it. | P4 parity: what is persisted is always a state between two entries, as a Penn dump is. The cost is that entry reads go to the writer thread, so it would be a configuration switch, measured before it is ever the default. |
+| **2** *(optional)* | Run every queue entry in a world transaction that **always commits**: at completion, on error, and on an expired budget too, because P3 says a failed or stopped entry keeps its effects. Only a crash or a killed process discards it. | P4 parity: what is persisted is always a state between two entries, as a Penn dump is. The cost is that entry reads go to the writer thread, so it would be a configuration switch, measured before it is ever the default. |
 
 ## 8. Out of scope
 
@@ -166,8 +197,9 @@ have this problem, because it never rolls back.
   scheduler's consumer, already suppress flow (`TaskScheduler.EnsureConsumerStarted`), and the
   rest need auditing.
 - **Deadlock through a path that skips the gate.** A write that reaches the Lightning writer
-  without the ambient transaction waits behind the open session forever. §3's debug enforcement
-  and the budget's abort are the mitigations. The first real use should run under a watchdog.
+  without the ambient transaction would wait behind the open session. §3 rejects such a write in
+  every build, and the session job closes the session when the budget elapses (§4), so the wait
+  is bounded even if the check is bypassed. The first real use should still run under a watchdog.
 - **Stalls.** A long transaction pauses the game, as a long Penn command does. The budget bounds
   it, and package operations report their duration.
 - **Reads hop threads under Lightning.** That is fine for package operations. It is the open cost
@@ -181,6 +213,14 @@ have this problem, because it never rolls back.
   cache holds no uncommitted entry. After commit, the reader sees the new state.
 - **Abort.** After an abort, the shared cache and `ObjectVersions` are exactly as they were, and
   the outbox sent nothing.
-- **Gate.** A queue entry submitted during a transaction runs after it, and sees its writes.
+- **Gate.** A queue entry submitted during a transaction runs after it, and sees its writes. A
+  transaction begun inside a queue entry adopts the entry's lease without waiting, and the lease is
+  still held after the transaction commits. A nested `BeginAsync` is refused. A write outside the
+  gate fails in a release build.
+- **Budget.** A package transaction whose budget expires is aborted; with phase 2 enabled, a
+  queue entry whose budget expires is committed. Either way the writer thread serves the main
+  channel again once the budget has elapsed.
+- **Reader ordering.** Once `CommitAsync` returns, which is after invalidation, no read in any
+  flow is served the pre-commit cache entry.
 - **Penn parity.** An HTTP handler command and a queue entry never interleave (phase 0). With
   phase 2 enabled, killing the process mid-entry leaves the entry's state entirely absent.
