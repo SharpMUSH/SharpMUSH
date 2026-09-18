@@ -645,13 +645,16 @@ public partial class Functions
 		{
 			AnySharpObject and SharpPlayer player => await QuotaOfAsync(executor, player),
 			AnySharpObject => throw new InvalidOperationException("A player-only locate matched something that is not a player."),
-			Error<CallState> error => error.Value
+			// fun_quota returns a bare #-1 on a failed match (wiz.c:1873); the match has already said why.
+			Error<CallState> => new CallState(ErrorMessages.Returns.Nothing)
 		};
 	}
 
 	/// <summary>
 	/// wiz.c:1869 — <c>TYPE_PLAYER, MAT_TYPE | MAT_PMATCH | MAT_ME</c>. LocateService's player flag set
-	/// models <c>lookup_player</c> alone, so <c>MAT_ME</c> is added here.
+	/// models <c>lookup_player</c> alone, so <c>MAT_ME</c> is added here. <c>AbsoluteMatch</c> stays even
+	/// though <c>MAT_ABSOLUTE</c> is absent: <c>MAT_PMATCH</c> goes through <c>lookup_player</c>, which
+	/// takes a <c>#dbref</c> when it names a player (<c>src/plyrlist.c:169</c>).
 	/// </summary>
 	private const LocateFlags QuotaMatchFlags =
 		LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.MatchMeForLooker |
@@ -659,12 +662,9 @@ public partial class Functions
 
 	private async ValueTask<CallState> QuotaOfAsync(AnySharpObject executor, SharpPlayer player)
 	{
-		// IsSee_All covers Hasprivs, so it subsumes the Wizard half of Do_Quotas (hdrs/mushdb.h:34).
-		if (!await executor.IsSee_All()
-				&& !await executor.HasPower("Quotas")
-				&& !await PermissionService.Controls(executor, player))
+		if (!await PermissionService.CanSeeQuota(executor, player))
 		{
-			await NotifyService.Notify(executor, ErrorMessages.Notifications.PermissionDenied);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantSeeOthersQuota));
 			return new CallState(ErrorMessages.Returns.Nothing);
 		}
 

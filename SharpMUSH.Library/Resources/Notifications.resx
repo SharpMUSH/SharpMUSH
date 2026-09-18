@@ -1243,6 +1243,12 @@
   <data name="QuotaSystemDisabledMessage" xml:space="preserve">
     <value>Quota system disabled.</value>
   </data>
+  <data name="CantLookAtOthersQuota" xml:space="preserve">
+    <value>You can't look at someone else's quota.</value>
+  </data>
+  <data name="CantSeeOthersQuota" xml:space="preserve">
+    <value>You can't see someone else's quota!</value>
+  </data>
   <data name="QuotaStatusFormat" xml:space="preserve">
     <value>Quota: {0}/{1}</value>
   </data>

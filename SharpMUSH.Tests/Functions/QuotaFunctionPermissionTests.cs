@@ -45,6 +45,42 @@ public class QuotaFunctionPermissionTests
 	}
 
 	[Test]
+	public async Task TheRefusalSaysWhyInPennsWords()
+	{
+		var mortal = await Mortal("QuotaFnTold");
+		var target = await Mortal("QuotaFnToldSubject");
+
+		var before = Factory.Notifications.CountFor(mortal.DbRef);
+		await EvalAs(mortal.DbRef, $"quota({target.Name})");
+
+		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before))
+			.Contains("You can't see someone else's quota!")
+			.Because("wiz.c:1877");
+	}
+
+	[Test]
+	public async Task ANameThatMatchesNoPlayerIsABareNothing()
+	{
+		var mortal = await Mortal("QuotaFnMiss");
+
+		await Assert.That(await EvalAs(mortal.DbRef, $"quota(NoSuchQuotaPlayer{Guid.NewGuid():N})")).IsEqualTo("#-1")
+			.Because("wiz.c:1873 returns a bare #-1 when the match fails");
+	}
+
+	/// <summary>
+	/// <c>MAT_ABSOLUTE</c> is not in fun_quota's flags, but <c>MAT_PMATCH</c> reaches
+	/// <c>lookup_player</c>, which accepts a <c>#dbref</c> naming a player (<c>src/plyrlist.c:169</c>).
+	/// </summary>
+	[Test]
+	public async Task APlayersDbrefMatches()
+	{
+		var mortal = await Mortal("QuotaFnByDbref");
+		await God($"@quota/set {mortal.Name}=71");
+
+		await Assert.That(await EvalAs(mortal.DbRef, $"quota({mortal.DbRef})")).IsEqualTo("71");
+	}
+
+	[Test]
 	public async Task AMortalReadsTheirOwnQuotaAsOneInteger()
 	{
 		var mortal = await Mortal("QuotaFnSelf");

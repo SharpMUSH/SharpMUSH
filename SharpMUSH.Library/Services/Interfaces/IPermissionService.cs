@@ -87,6 +87,15 @@ public interface IPermissionService
 	/// </summary>
 	ValueTask<bool> CanSpoofAs(AnySharpObject executor, AnySharpObject enactor);
 
+	/// <summary>
+	/// Who may read a player's quota: PennMUSH's <c>Do_Quotas(x) || See_All(x) || controls(x, who)</c>,
+	/// the one gate <c>@quota</c> (<c>src/wiz.c:179</c>) and <c>quota()</c> (<c>src/wiz.c:1876</c>)
+	/// share. <c>Do_Quotas(x)</c> is <c>Wizard(x) || has_power_by_name(x, "QUOTAS", NOTYPE)</c>
+	/// (<c>hdrs/mushdb.h:34</c>). Setting a quota stays wizard-only whatever this answers
+	/// (<c>src/wiz.c:175</c>).
+	/// </summary>
+	ValueTask<bool> CanSeeQuota(AnySharpObject executor, AnySharpObject player);
+
 	ValueTask<bool> CouldDoIt(AnySharpObject who, AnyOptionalSharpObject thing1);
 
 	/// <summary>

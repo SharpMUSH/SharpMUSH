@@ -679,19 +679,6 @@ public partial class Commands
 		};
 	}
 
-	/// <summary>
-	/// Who may read a quota. PennMUSH's do_quota (src/wiz.c:179) gates the read half with
-	/// <c>if (!Do_Quotas(player) &amp;&amp; !See_All(player) &amp;&amp; !controls(player, who))</c>, where
-	/// <c>Do_Quotas(x)</c> is <c>Wizard(x) || has_power_by_name(x, "QUOTAS", NOTYPE)</c>
-	/// (hdrs/mushdb.h:34). <c>IsSee_All</c> already covers Hasprivs, so the
-	/// wizard half of Do_Quotas needs no term of its own, and controls(player, player) is what lets a
-	/// player read their own. Setting a quota stays wizard-only whatever the power says (wiz.c:175).
-	/// </summary>
-	private async ValueTask<bool> MayReadQuotaAsync(AnySharpObject executor, AnySharpObject target)
-		=> await executor.IsSee_All()
-			|| await executor.HasPower("Quotas")
-			|| await PermissionService.Controls(executor, target);
-
 	private async ValueTask<Option<CallState>> PoorAsync(AnySharpObject executor, SharpPlayer player)
 	{
 		await Mediator.Send(new SetPlayerQuotaCommand(player, 0));
@@ -744,12 +731,12 @@ public partial class Commands
 			throw new InvalidOperationException("A quota belongs to a player.");
 		}
 
-		if (!await MayReadQuotaAsync(executor, targetPlayer))
+		if (!await PermissionService.CanSeeQuota(executor, targetPlayer))
 		{
 			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.CantLookAtOthersQuota,
 				shouldNotify: true);
 		}
 
@@ -2502,12 +2489,12 @@ public partial class Commands
 			throw new InvalidOperationException("A quota belongs to a player.");
 		}
 
-		if (!await MayReadQuotaAsync(executor, targetPlayer))
+		if (!await PermissionService.CanSeeQuota(executor, targetPlayer))
 		{
 			return await NotifyService.NotifyAndReturn(
 				executor.Object().DBRef,
 				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
+				notifyMessage: ErrorMessages.Notifications.CantLookAtOthersQuota,
 				shouldNotify: true);
 		}
 
