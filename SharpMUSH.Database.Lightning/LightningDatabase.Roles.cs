@@ -9,7 +9,7 @@ namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
 /// <see cref="Library.Services.Interfaces.IRoleRegistryService"/>: portal roles (Discord-style RBAC)
-/// and account-role assignments. Ported from <c>SurrealDatabase.Roles.cs</c>. Roles are keyed by
+/// and account-role assignments. Roles are keyed by
 /// <see cref="SharpRole.Slug"/> in <see cref="Tables.Role"/>; an assignment is a duplicate entry in
 /// <see cref="Tables.AccountRole"/> keyed by account id with the role slug as the duplicate value —
 /// idempotent for free, since LMDB's dupsort tables collapse an exact (key, value) pair written twice.

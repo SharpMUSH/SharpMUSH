@@ -29,13 +29,13 @@ capture is a softcode `@hook/override` (see *Capture*).
 This subsystem is the **first reference plugin** for the Package Manager DLL
 framework, and it has now been **extracted into the standalone
 `SharpMUSH.Plugins.Scene` plugin** (Phase 5 of the plugin framework). Every seam
-— migrations, the `SCENE_ROOM` flag, `@SCENE`, the `scene…` functions, and the
+— the `SCENE_ROOM` flag, `@SCENE`, the `scene…` functions, and the
 `game.scene.{id}` realtime leg — moved out of the engine into the plugin through
-the framework's contribution surfaces (`IMigrationSource`, `IFlagSource`,
+the framework's contribution surfaces (`IFlagSource`,
 `ICommandSource`/`IFunctionSource`, `IBridgeSubscriptionSource`): a *move*, not a
-*rewrite*, with the unchanged scene test suite as the proof. Only the
-`ISceneService` graph **storage** stays in the DB providers (it cannot live in a
-collectible DLL). See `docs/design/plugin-system.md` §"Phase 5 — Scene as the
+*rewrite*, with the unchanged scene test suite as the proof. The
+`ISceneService` **storage** ships in the plugin as well (`LightningSceneStorage`,
+over the host-shared `ILightningStorageAccessor`). See `docs/design/plugin-system.md` §"Phase 5 — Scene as the
 reference plugin".
 
 ## Graph Schema
@@ -98,28 +98,10 @@ per-scene **persona** is `showAs` on that edge. There are therefore **no
 `SCENE`*` attributes** on rooms or players — focus/persona are edge properties,
 and a room's active scene is derived via `scenewhere()`.
 
-SurrealDB stores each membership at `scene_member:[object:<key>, scene:<id>]`.
-Both role grants and focus auto-membership use `INSERT RELATION ... ON DUPLICATE
-KEY UPDATE`; existing members keep their persona and original grant time. Focus
-changes clear the old focus and write the target in one transaction. Transaction
-conflicts are retried with a bounded backoff; other write errors propagate.
-This behavior is covered against the pinned embedded SurrealDB 2.3.6 engine
-(`SurrealDb.Embedded` 0.9.0). A unique edge index is deliberately avoided: the
-concurrent insert stress test exposed duplicates with that approach on this engine.
-
-On first startup after upgrading, `migration:scene_member_ids_v1` converts legacy
-random edge IDs in a transaction before the plugin accepts writes. Duplicate groups
-keep the earliest grant time and earliest nonempty role/persona/name (ties by edge
-ID). Active focus is retained, then reduced to one scene per player by earliest
-grant time and edge ID when legacy races left multiple focused scenes. Every original row from a duplicate or conflicting-focus group is retained
-under `scene_member_duplicate_backup.original`, including its original ID and
-conflicting values. Singleton memberships without conflicting focus are converted without a backup copy.
-The migration marker commits with the conversion; subsequent startups skip it.
-The scene plugin opts into `RequireSuccessfulSurrealMigrations`, so its migration
-errors abort startup; legacy plugins retain log-and-continue behavior. Take a normal database backup before upgrading;
-the conversion runs at startup and its cost scales with the existing membership table.
-Scene/pose counters are also raised to at least the highest stored numeric ID on
-startup, repairing counters reset by older versions without lowering higher values.
+Lightning stores each membership in `scene.part`, keyed by scene id and player
+dbref. Role grants and focus auto-membership update an existing row in place, so
+existing members keep their persona and original grant time. Focus changes clear
+the old focus and write the target in one write transaction.
 
 ```mermaid
 graph LR
@@ -281,7 +263,7 @@ Temp rooms keep the "a character is always in a room" invariant for web-created
 scenes. **The entire temp-room lifecycle is softcode** (`@dig`/`@tel`/`@set`/
 `@destroy`); the only engine piece is the informational **`SCENE_ROOM`** flag.
 
-- `SCENE_ROOM` is a system `ObjectFlag` seeded for both supported providers,
+- `SCENE_ROOM` is a system `ObjectFlag` seeded by the plugin's `IFlagSource`,
   **symbol `S`** (verified free among ObjectFlags; the `safe`
   *AttributeFlag* `S` is a different namespace, `SUSPECT` uses lowercase `s`).
   Informational only: `hasflag(<room>,SCENE_ROOM)` ⇒ 1; softcode reads it for
@@ -415,16 +397,13 @@ write — the legacy `SceneLive.razor:148` `PostMessageAsync` call is **removed*
 calendar/agenda surface. Client models use **`long` Unix-millis**
 (`portal-dto-timestamp-contract`).
 
-## Multi-Provider Persistence
+## Persistence
 
-Modeled on the provider wiki implementations and covered against both supported providers.
+Modeled on the Lightning wiki implementation and covered by the Lightning integration suite.
 `InMemorySceneService` mirrors the semantics used by focused unit tests.
 
-- **Lightning** — embedded records and indexes maintained by `LightningSceneStorage`.
-- **SurrealDB** — tables + `RELATE` edges supplied through the plugin migration source.
-  **CBOR gotcha** (`surrealdb-net-deserialization`): `*DbRecord` property names
-  must be camelCase *verbatim*; `[JsonPropertyName]` is ignored. `SCENE_ROOM`
-  added to the Surreal flag seeder.
+- **Lightning** — embedded records and indexes maintained by `LightningSceneStorage`, which opens
+  its own tables; no migration step is involved.
 
 Object edges are **incarnation-safe** — they reference the specific object
 document/node; if it is destroyed the edge drops (or dangles per provider) and
@@ -435,8 +414,8 @@ matrix.
 
 | # | Seam | Contribution type | Notes |
 |---|---|---|---|
-| 1 | Provider-specific scene schema | Schema | `IMigrationSource` supplies Lightning steps and SurrealDB statements. |
-| 1b | `SCENE_ROOM` flag seed | Schema (flag) | *Resolved (Phase 5):* seeded by `ScenePlugin`'s `IFlagSource` (a `PluginFlag`), applied after migration on both supported providers. |
+| 1 | Scene schema | Schema | None contributed: `LightningSceneStorage` opens its own tables when constructed. |
+| 1b | `SCENE_ROOM` flag seed | Schema (flag) | *Resolved (Phase 5):* seeded by `ScenePlugin`'s `IFlagSource` (a `PluginFlag`), applied after migration. |
 | 2 | `@SCENE` command + handlers | Command | `[SharpCommand]` assembly-scanned; no temp-room/building dependency (temp is softcode) → cleanly extractable. |
 | 3 | `scene…` functions | Function | `[SharpFunction]` assembly-scanned. |
 | 4 | *(no config)* | — | No `SceneOptions` by design — all knobs are softcode policy in the bootstrap; nothing to contribute. |
@@ -454,14 +433,13 @@ package-manager framework.
 
 > **Realized (plugin Phase 5).** The Scene System has been extracted into the
 > standalone `SharpMUSH.Plugins.Scene` plugin via the plugin framework's Phase-1/2a
-> seams; the `ISceneService` storage is supplied by the two supported provider implementations. The two blockers below
+> seams; the `ISceneService` storage is supplied by `LightningSceneStorage`. The two blockers below
 > (`IBridgeSubscription` and `IFlagContribution`) were the gating work, and both
 > are solved by the generic Phase-2a contribution seams
 > (`IBridgeSubscriptionSource` and `IFlagSource`) — see
 > `docs/design/plugin-system.md §Phase 5 — Scene as the reference plugin`. The
 > command/function surface ships as `PluginBase`→`ICommandSource`/`IFunctionSource`
-> (generator analyzer); the Lightning/Surreal
-> scene schema ship as `IMigrationSource`; the `SCENE_ROOM` flag as `IFlagSource`;
+> (generator analyzer); the `SCENE_ROOM` flag as `IFlagSource`;
 > the `game.scene.*` NATS→SignalR leg as `IBridgeSubscriptionSource`. The five
 > existing Scene test classes pass unchanged with Scene running as a plugin, which
 > is the proof the seams are complete. The notes below are kept for the design

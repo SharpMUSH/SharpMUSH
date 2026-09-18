@@ -38,8 +38,7 @@ public class Program
 		ConfigureMarkup();
 
 		var builder = WebApplication.CreateBuilder(args);
-		var dbProviderStr = builder.Configuration["SHARPMUSH_DATABASE_PROVIDER"];
-		var databaseProvider = DatabaseProviderResolver.Resolve(dbProviderStr);
+		DatabaseProviderSetting.EnsureSupported(builder.Configuration["SHARPMUSH_DATABASE_PROVIDER"]);
 
 		// Resolve the NATS URL.  Ownership of the testcontainer (when NATS_URL is not set)
 		// belongs to ConnectionServer; Server only needs the URL to connect.
@@ -53,7 +52,7 @@ public class Program
 			throw new FileNotFoundException($"Configuration file not found: {colorFile}");
 		}
 
-		var startup = new Startup(colorFile, natsUrl, databaseProvider);
+		var startup = new Startup(colorFile, natsUrl);
 		startup.ConfigureServices(builder.Services, builder.Configuration, builder.Environment);
 
 		var app = builder.Build();

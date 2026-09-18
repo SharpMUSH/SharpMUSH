@@ -41,7 +41,6 @@
 		<PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" />
 		<PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
 		<ProjectReference Include="..\SharpMUSH.Server\SharpMUSH.Server.csproj" />
-		<ProjectReference Include="..\SharpMUSH.Database.SurrealDB\SharpMUSH.Database.SurrealDB.csproj" />
 		<ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
 	</ItemGroup>
 

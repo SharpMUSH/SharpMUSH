@@ -175,13 +175,12 @@ public sealed class MyPlugin : PluginBase,
             TypeRestrictions: ["ROOM", "PLAYER", "EXIT", "THING"])
     ];
 
-    // (c) Migrations: provider-tagged. Implement only the backends you support; every member has an
-    //     empty/no-op default. Surreal statements run on every startup; make them idempotent or
-    //     guard data migrations with a committed marker. Opt into strict failures when runtime
-    //     writes depend on this migration. Older plugins retain log-and-continue behavior.
-    public bool RequireSuccessfulSurrealMigrations => true;
-    public IEnumerable<string> SurrealStatements => ["DEFINE TABLE IF NOT EXISTS my_thing SCHEMALESS"];
-    public IEnumerable<LightningMigrationStep> LightningSteps => [new MyLightningMigration()];
+    // (c) Migrations: Lightning steps, applied after the built-in batch. Each step runs once and is
+    //     tracked by its Id; changing the Id re-runs it. The member defaults to no steps.
+    public IEnumerable<LightningMigrationStep> LightningSteps =>
+    [
+        new LightningMigrationStep("myplugin:seed_v1", accessor => ValueTask.CompletedTask)
+    ];
 
     // (d) NATS bridge: subscribe to your own subjects and forward to SignalR groups, mirroring the engine's
     //     built-in output/room/scene subscriptions. The host runs this alongside the built-ins, isolated in
@@ -205,8 +204,8 @@ public sealed class MyPlugin : PluginBase,
   `IServiceRegistrar`. The catalog classifies each plugin by the interfaces it implements.
 - **Flags ride the migration plumbing.** A contributed flag is seeded during `db.Migrate()` on every backend,
   so it is queryable (e.g. `GetObjectFlagQuery`) immediately after boot.
-- **Migrations are per-provider.** Supply SurrealDB statements and/or Lightning steps for the
-  providers the plugin supports; omitted contributions default to empty.
+- **Migrations are Lightning steps.** Each `LightningMigrationStep` is applied once, recorded under its
+  `Id`; a plugin that contributes none leaves `LightningSteps` at its empty default.
 - **Bridge subscriptions are long-lived.** `RunAsync` should loop until `ct` is cancelled, exactly like the
   built-in subscriptions. A faulting subscription is logged and isolated; it does not tear down the others.
 

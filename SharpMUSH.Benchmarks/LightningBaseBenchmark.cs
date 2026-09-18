@@ -41,7 +41,6 @@ public class LightningBaseBenchmark
 
 		_server = new TestWebApplicationBuilderFactory<Server.Program>(
 			configFile: configFile,
-			databaseProvider: DatabaseProvider.Lightning,
 			lightningPath: _lightningPath);
 
 		_database = _server!.Services.GetRequiredService<ISharpDatabase>();

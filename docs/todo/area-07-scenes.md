@@ -1,11 +1,11 @@
 # Area 7: Scene System — TODO (Reconciled 2026-06-20)
 
 > **2026-06-20 status:** Phases 0–7 are **shipped**. The system is extracted into
-> `SharpMUSH.Plugins.Scene` (commands/functions/migration/flag/bridge) with
-> tri-provider graph storage, realtime, and full portal UI; the scene suite is
-> green on both supported providers. Two design deviations from the plan below, now
-> reflected in the boxes: **(a)** there is **no `InMemorySceneService`** — the
-> two supported database providers implement `ISceneService` directly and the WASM client reads
+> `SharpMUSH.Plugins.Scene` (commands/functions/flag/bridge) with
+> Lightning storage, realtime, and full portal UI; the scene suite is
+> green on Lightning. Two design deviations from the plan below, now
+> reflected in the boxes: **(a)** there is **no `InMemorySceneService`** —
+> `LightningSceneStorage` implements `ISceneService` directly and the WASM client reads
 > over the server API (Phase 1 reframed); **(b)** the member model is
 > `SceneMember`, not `SceneMemberEdge`. Remaining work is the optional temp-room
 > softcode extension (Phase 6, not in the 1.0 package) and a display audit pass.
@@ -59,13 +59,13 @@ plugin seam.
       `scenemembers`, `scenemember`, `scenefocus`, `scenetags`, `scenecast`
       (`SharpMUSH.Library/Services/Interfaces/ISceneService.cs`)
 - [x] ~~`InMemorySceneService`~~ **dropped by design** — there is no in-memory
-      implementation. The two supported database providers implement `ISceneService` directly
+      implementation. `LightningSceneStorage` implements `ISceneService` directly
       (Phase 3) and the WASM client reads scene data over the server API. The
       Phase-1 graph-mechanism behaviours (`pose_next` chain, `current_edit`
       undo/redo, soft-delete, `isCurrent` single-current, `scenewhere`, roomless
       create, `scheduled` filters, name snapshots) are tested against the real
-      providers in Phase 3 instead of an in-memory oracle.
-- **Ships:** complete mechanism contract, validated via the DB providers (P3).
+      provider in Phase 3 instead of an in-memory oracle.
+- **Ships:** complete mechanism contract, validated via the Lightning provider (P3).
 
 ## Phase 2 — `SCENE_ROOM` flag + wizard `@SCENE` + `scene…` functions — ✅ shipped
 - [x] `SCENE_ROOM` (`typesRoom`, wizard set/unset, informational, **symbol `S`**)
@@ -91,20 +91,18 @@ plugin seam.
   `@hook/override POSE`→`sceneaddpose` reading `scenewhere`/`scenefocus`/
   `scenemember(...,showas)`); `hasflag(<room>,SCENE_ROOM)` after softcode `@set`.
 
-## Phase 3 — DB-backed `ISceneService` across both providers + migrations — ✅ shipped
-- [x] Lightning and SurrealDB storage implementations provide equivalent scene semantics.
-- [x] `IMigrationSource` contributes provider-specific scene schema.
-- [x] `SCENE_ROOM` is contributed via `IFlagSource` for both providers.
+## Phase 3 — DB-backed `ISceneService` on Lightning — ✅ shipped
+- [x] `LightningSceneStorage` provides the scene semantics, opening its own tables (no migration step).
+- [x] `SCENE_ROOM` is contributed via `IFlagSource`.
 - [x] Server `Startup.cs`: `ISceneService` resolves from `ISharpDatabase` (the
       provider tri-cast). **`Client/Program.cs` registers no `ISceneService`** —
       the WASM client reads scene data over the server API
 - **Ships:** durable scenes + edges + edits on the default provider, incl.
-  1-based scene/pose ids across both supported providers (this branch).
-- **Test matrix (all 3 via Podman):** per-method parity; `pose_next` move; edit
+  1-based scene/pose ids.
+- **Test matrix (Lightning):** per-method parity; `pose_next` move; edit
   versioning + undo/redo pointer; soft-delete; member `isCurrent`; `scenewhere`
   via `in_room`; **object-edge + `Name` snapshot round-trip, incl. target-delete
-  → edge gone, snapshot remains**; Surreal CBOR round-trips `Tags`/`Meta`/edges;
-  migration idempotency; `SCENE_ROOM` parity; UTC-ms boundary. Phase-1 in-memory
+  → edge gone, snapshot remains**; `SCENE_ROOM` parity; UTC-ms boundary. Phase-1 in-memory
   tests re-run as the oracle.
 
 ## Phase 4 — Realtime `game.scene.{id}` leg — ✅ shipped
@@ -175,34 +173,33 @@ was extracted into `SharpMUSH.Plugins.Scene` (Phase 5 of the plugin framework).
 - [x] `SceneEventMessage` + the named-graph edges referencing core collections are the
       documented coupling points; the realtime contract is frozen.
 - **Shipped:** `SharpMUSH.Plugins.Scene` (commands/functions via `ICommandSource`/
-      `IFunctionSource`, migration via `IMigrationSource`, flag via `IFlagSource`, bridge
-      via `IBridgeSubscriptionSource`); `ISceneService` graph storage stays in the
-      providers. The unchanged 29-test scene suite passes with Scene as a loaded plugin —
+      `IFunctionSource`, flag via `IFlagSource`, bridge
+      via `IBridgeSubscriptionSource`), with `ISceneService` storage in
+      `LightningSceneStorage`. The unchanged 29-test scene suite passes with Scene as a loaded plugin —
       see `docs/design/plugin-system.md` §"Phase 5".
 
 ## Cross-Phase Test Matrix Summary
 
 > Note: the **In-Memory (TUnit)** column reflects the original plan's
 > `InMemorySceneService` oracle, which was dropped. Those `P1` mechanism concerns
-> are now covered directly against Lightning and SurrealDB via the integration scene suite.
+> are now covered directly against Lightning via the integration scene suite.
 
-| Concern | In-Memory (TUnit) | Lightning | Surreal | bUnit |
-|---|---|---|---|---|
-| Service-method parity | P1 | P3 | P3 | — |
-| `pose_next` order + move re-link | P1 | P3 | P3 | — |
-| Versioned edits + undo/redo pointer | P1 | P3 | P3 | — |
-| Soft-delete keeps slot | P1 | P3 | P3 | — |
-| Object edge + `Name` snapshot (incl. target delete) | P1 | P3 | P3 | P3 | P5 (display) |
-| Member edge `isCurrent`/`showAs`; `scenefocus`/`scenewhere` | P1 | P3 | P3 | P3 | — |
-| Roomless create + scheduled window/sort | P1 | P3 | P3 | P3 | — |
-| `SCENE_ROOM` (`S`) seed + `hasflag` parity | — | P3 | P3 | P3 | — |
-| `@SCENE` wizard gate + switches | P2 | — | — | — | — |
-| Functions + side-fx guard + inline returns | P2 | — | — | — | — |
-| OVERRIDE capture (text via `$`-match, focus==room) | P2 | — | — | — | — |
-| Migration idempotency + named graph | — | P3 | P3 | P3 | — |
-| Realtime publish/forward | P4 | — | — | — | — |
-| Web pose → SendCommand (no `@emit`, no double-capture) | — | — | — | — | P5 |
-| Pages + tag chips + ShowAsName + live patch | — | — | — | — | P5 |
-| `long` UTC-ms contract | P1 | P3 | P3 | P3 | P5 |
-| Config category | — (dropped: no `SceneOptions`) | — | — | — | — |
-| Temp-room softcode (dig/recycle occupant-safe) | — | — | — | — | — (P6 docs) |
+| Concern | In-Memory (TUnit) | Lightning | bUnit |
+|---|---|---|---|
+| Service-method parity | P1 | P3 | — |
+| `pose_next` order + move re-link | P1 | P3 | — |
+| Versioned edits + undo/redo pointer | P1 | P3 | — |
+| Soft-delete keeps slot | P1 | P3 | — |
+| Object edge + `Name` snapshot (incl. target delete) | P1 | P3 | P5 (display) |
+| Member edge `isCurrent`/`showAs`; `scenefocus`/`scenewhere` | P1 | P3 | — |
+| Roomless create + scheduled window/sort | P1 | P3 | — |
+| `SCENE_ROOM` (`S`) seed + `hasflag` parity | — | P3 | — |
+| `@SCENE` wizard gate + switches | P2 | — | — |
+| Functions + side-fx guard + inline returns | P2 | — | — |
+| OVERRIDE capture (text via `$`-match, focus==room) | P2 | — | — |
+| Realtime publish/forward | P4 | — | — |
+| Web pose → SendCommand (no `@emit`, no double-capture) | — | — | P5 |
+| Pages + tag chips + ShowAsName + live patch | — | — | P5 |
+| `long` UTC-ms contract | P1 | P3 | P5 |
+| Config category | — (dropped: no `SceneOptions`) | — | — |
+| Temp-room softcode (dig/recycle occupant-safe) | — | — | — (P6 docs) |

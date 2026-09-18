@@ -264,16 +264,12 @@ public class AttributeAncestryTests
 	/// <summary>
 	/// <see cref="NoInheritBranchOnAnIntermediateTarget_AbandonsThatTargetInsteadOfDenying"/>, but
 	/// the parent's <c>FOO</c> carries the flag stored as <c>NO_INHERIT</c> rather than the
-	/// canonical lowercase <c>no_inherit</c>. Every provider's flag catalog is seeded lowercase and
+	/// canonical lowercase <c>no_inherit</c>. The flag catalog is seeded lowercase and
 	/// <c>@set</c> always resolves through it, so this casing is unreachable via that path - but
 	/// <see cref="AttributeAncestry"/> tests <see cref="SharpAttribute"/> flags handed to it from
-	/// wherever a caller sourced them, not just catalog-resolved ones, and CodeRabbit's review of
-	/// this branch found three of the four provider-level no_inherit gates doing a case-sensitive
-	/// <c>==</c> instead of the case-insensitive test the fourth (SurrealDB) already used - a
-	/// production/dev divergence given SurrealDB is what actually runs in production. This test
-	/// pins the shared <see cref="SharpAttributeExtensions.IsNoInherit(SharpAttribute)"/> extension
-	/// all four gates were pointed at, so a regression in any one of them (or in the extension
-	/// itself) shows up here.
+	/// wherever a caller sourced them, not just catalog-resolved ones. This test pins the shared
+	/// <see cref="SharpAttributeExtensions.IsNoInherit(SharpAttribute)"/> extension every no_inherit
+	/// gate uses, so a regression in any gate (or in the extension itself) shows up here.
 	/// <para>
 	/// The parent's <c>FOO</c> is deliberately NOT visual, exactly as in the sibling test - were it
 	/// visual, a comparison that fails to recognise <c>NO_INHERIT</c> would still pass the flag

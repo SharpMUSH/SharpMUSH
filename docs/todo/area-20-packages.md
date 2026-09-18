@@ -35,9 +35,9 @@
 - [x] sys_managed_attributes collection (package, objid, attr, baseline_value + baseline_hash, baseline_version — full values per decision 20.13)
 - [x] sys_remotes collection (name, url, trust, branch)
 - [x] sys_package_revisions collection (per-apply snapshots: resolved manifest, configure answers, pre-apply values — decision 20.13)
-- [x] Implement across both supported backends (Lightning and SurrealDB) via `IPackageRegistryService`
-      on each provider implementation, following its existing query patterns
-- [x] PM wizard player (#3) exists in both provider migrations (`DatabaseOptions.PackageManager`)
+- [x] Implement on Lightning via `IPackageRegistryService`,
+      following the provider's existing patterns
+- [x] PM wizard player (#3) exists in the provider migrations (`DatabaseOptions.PackageManager`)
 
 ### Phase 3: Plan Engine (Changeset Computation)
 - [x] Read live DB state for objects/attrs referenced by package
@@ -202,8 +202,7 @@
 - [x] Reserved `PM`` attribute tree (manifest validation + authoring export exclusion)
 - [x] Cross-kind ref-name collision validation (shared PM`REFS namespace)
 - [x] Structural fields and locks keep direct dbref resolution (not function-evaluated)
-- [x] Registry + install e2e suites verified on both supported providers
-      (`SHARPMUSH_DATABASE_PROVIDER=surrealdb|lightning`)
+- [x] Registry + install e2e suites verified on Lightning
 
 ### Iteration: Cross-package attach + split default packages (decision 20.3)
 - [x] Attach `target:` now also accepts `{{dependency/ref}}` (cross-package) —
@@ -216,7 +215,7 @@
       installs both in dependency order; enables independent enable/disable
 - [x] Tests: cross-package attach target parse test; cross-package attach
       install + provider-uninstall-blocked-while-attached integration test
-      (verified on both supported backends); split-package live integration test
+      (verified on Lightning); split-package live integration test
 - [x] Fixed a pre-existing GitPackageSourceServiceTests isolation bug
       (shared fixture repo + `.Single()` assumption — CI ordering exposed it)
 
@@ -232,7 +231,7 @@
 - [x] Tests: attach-mode parse/plan unit tests; isolated attach apply/uninstall
       integration test; live "handler is package-managed" + endpoint-serves tests;
       all existing HTTP/profile integration tests still pass (behavior identical),
-      verified on Lightning + SurrealDB
+      verified on Lightning
 
 ### Iteration: cross-package attach + provider/attacher integrity (decision 20.3)
 - [x] Attach `target:` may be `{{dependency/ref}}` (cross-package) in addition
@@ -262,7 +261,7 @@
 - [x] Apply registers the application via `IApplicationRegistryService`,
       stamping `RegisteredApplication.OwningPackage`; uninstall reclaims every
       application a package owns. Plan surfaces the registration as a note
-- [x] `OwningPackage` round-trips on both supported providers; `ApplicationsController` preserves it on manual edits and
+- [x] `OwningPackage` round-trips on Lightning; `ApplicationsController` preserves it on manual edits and
       manual registrations stay unowned (null)
 - [x] Example `chargen-app` package (`kind: application`, depends on `chargen`,
       configurable `minimum_role`) + index entry + README section; kept honest

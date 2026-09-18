@@ -31,12 +31,8 @@ public interface IAttributeStore
 	/// skipped if its immediate parent was already skipped, which only works if the parent was
 	/// actually visited first.
 	/// <para>
-	/// path depth, and SurrealDB's does neither - it satisfies the invariant only because its
-	/// traversal happens to be a manual preorder DFS (<c>SurrealDatabase.cs</c>,
-	/// <c>GetAllAttributesForIdAsync</c>: yield an attribute, then recurse into its children,
-	/// before moving to the next sibling). Production runs SurrealDB. A future change to that
-	/// traversal (or a new provider) that preserves "returns every attribute" while dropping
-	/// this ordering would silently break <c>@CLONE</c>'s no_clone handling without breaking
+	/// A change to the provider's traversal (or a new provider) that preserves "returns every
+	/// attribute" while dropping this ordering would silently break <c>@CLONE</c>'s no_clone handling without breaking
 	/// this method's own contract as documented anywhere else - which is why it's documented
 	/// here, on the interface, rather than left as an accident of one provider's implementation.
 	/// </para>

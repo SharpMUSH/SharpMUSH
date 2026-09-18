@@ -3,27 +3,18 @@ using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models;
 using LightningProvider = SharpMUSH.Database.Lightning.LightningDatabase;
-using SurrealProvider = SharpMUSH.Database.SurrealDB.SurrealDatabase;
 
 namespace SharpMUSH.Tests.Database;
 
 /// <summary>
 /// A world written before lock names were canonical can hold two spellings of one lock on one
 /// object — <c>@CHZONE</c> wrote its default under <c>ChZone</c> while <c>@lock/chzone</c> wrote the
-/// player's under <c>Chzone</c>. Both providers now key their lock maps case-insensitively, and that
+/// player's under <c>Chzone</c>. The provider now keys its lock maps case-insensitively, and that
 /// row is exactly the one a naive comparer change throws a duplicate-key exception on, at world
-/// load. These run the real load path of each provider against it.
+/// load. These run the provider's real load path against it.
 /// </summary>
 public class LegacyLockNameLoadTests
 {
-	[Test]
-	public async Task SurrealPreservesLockCreatorFromStoredMetadata()
-	{
-		var loaded = SurrealProvider.DeserializeLocks("""{"Basic":{"LockString":"=#10","Flags":"Visual, Locked","Creator":"#10:1234"}}""");
-		await Assert.That(loaded["Basic"].Creator?.ToString()).IsEqualTo("#10:1234");
-		await Assert.That(loaded["Basic"].Flags).IsEqualTo(Library.Services.LockService.LockFlags.Visual | Library.Services.LockService.LockFlags.Locked);
-	}
-
 	[Test]
 	public async Task LightningRoundTripsCreatorAndFlags()
 	{
@@ -38,9 +29,7 @@ public class LegacyLockNameLoadTests
 	public async Task LegacyLocksKeepUnknownCreators()
 	{
 		var lightning = LightningProvider.MapLocks(new() { ["Basic"] = Stored("=#10") });
-		var surreal = SurrealProvider.DeserializeLocks(SurrealJson(("Basic", "=#10")));
 		await Assert.That(lightning["Basic"].Creator).IsNull();
-		await Assert.That(surreal["Basic"].Creator).IsNull();
 	}
 
 	[Test]
@@ -54,16 +43,6 @@ public class LegacyLockNameLoadTests
 
 	private static LockRecord Stored(string lockString) => new() { LockString = lockString, Flags = "" };
 
-	/// <summary>The stored shape SurrealDB's <c>object.locks</c> column holds.</summary>
-	private static string SurrealJson(params (string Name, string LockString)[] locks)
-		=> JsonSerializer.Serialize(locks.ToDictionary(
-			entry => entry.Name,
-			entry => new
-			{
-				entry.LockString,
-				Flags = ""
-			}));
-
 	[Test]
 	public async Task LightningLoadsAnObjectCarryingBothSpellingsOfOneLock()
 	{
@@ -74,18 +53,6 @@ public class LegacyLockNameLoadTests
 			["tport"] = Stored("=#13"),
 			["Basic"] = Stored("=#14")
 		});
-
-		await AssertFoldedTheLegacyRow(loaded);
-	}
-
-	[Test]
-	public async Task SurrealLoadsAnObjectCarryingBothSpellingsOfOneLock()
-	{
-		var loaded = SurrealProvider.DeserializeLocks(SurrealJson(
-			("ChZone", "=#11"),
-			("Chzone", "=#12"),
-			("tport", "=#13"),
-			("Basic", "=#14")));
 
 		await AssertFoldedTheLegacyRow(loaded);
 	}
@@ -113,7 +80,7 @@ public class LegacyLockNameLoadTests
 	}
 
 	[Test]
-	public async Task BothProvidersAgreeOnWhichEntryTheFoldKeeps()
+	public async Task TheFoldKeepsTheOrdinallyFirstEntry()
 	{
 		var lightning = LightningProvider.MapLocks(new Dictionary<string, LockRecord>
 		{
@@ -121,15 +88,11 @@ public class LegacyLockNameLoadTests
 			["CHZONE"] = Stored("=#13"),
 			["chzone"] = Stored("=#14")
 		});
-		var surreal = SurrealProvider.DeserializeLocks(
-			SurrealJson(("Chzone", "=#12"), ("CHZONE", "=#13"), ("chzone", "=#14")));
 
 		// No canonically-spelled entry present, so the ordinally-first key wins — arbitrary, but the
-		// same arbitrary answer in both providers and on every load, which hash order is not.
+		// same arbitrary answer on every load, which hash order is not.
 		await Assert.That(lightning.Count).IsEqualTo(1);
 		await Assert.That(lightning[nameof(LockType.ChZone)].LockString).IsEqualTo("=#13");
-		await Assert.That(surreal.Count).IsEqualTo(1);
-		await Assert.That(surreal[nameof(LockType.ChZone)].LockString).IsEqualTo("=#13");
 	}
 
 	[Test]

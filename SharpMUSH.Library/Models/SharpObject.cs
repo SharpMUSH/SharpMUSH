@@ -23,7 +23,7 @@ public class SharpObject : IObjectShaped<SharpObject>
 
 	/// <summary>
 	/// Keyed by lock name. PennMUSH matches a lock name with <c>strcasecmp</c>
-	/// (<c>src/lock.c:364</c>, <c>getlockstruct</c>), so every provider builds this dictionary with
+	/// (<c>src/lock.c:364</c>, <c>getlockstruct</c>), so the provider builds this dictionary with
 	/// <see cref="LockNameComparer"/>: <c>@lock/dropto</c> stores the canonical <c>Dropto</c> and a
 	/// reader asking for <see cref="LockType.DropTo"/> must still find it.
 	/// </summary>

@@ -1141,10 +1141,8 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
-	/// The configured creation defaults reach the object, on whichever provider the suite is running.
-	/// The defaults are looked up through the flag store directly, and the two providers disagreed
-	/// about resolving a name in the case the config supplies it, so this passed on Lightning and
-	/// applied nothing at all on SurrealDB.
+	/// The configured creation defaults reach the object. The defaults are looked up through the flag
+	/// store directly, in the case the config supplies them.
 	/// </summary>
 	[Test]
 	public async ValueTask Create_AppliesTheConfiguredDefaultFlags()

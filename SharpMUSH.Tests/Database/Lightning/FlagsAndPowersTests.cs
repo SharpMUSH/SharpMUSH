@@ -73,7 +73,7 @@ public class FlagsAndPowersTests
 		await Assert.That(forward).Contains("DARK");
 		await Assert.That(reverse).Contains(dbref);
 
-		// Setting an already-set flag is refused, same as SurrealDatabase.
+		// Setting an already-set flag is refused.
 		await Assert.That(await _db.SetObjectFlagAsync(god, dark)).IsFalse();
 
 		var unset = await _db.UnsetObjectFlagAsync(god, dark);

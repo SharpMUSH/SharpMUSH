@@ -25,9 +25,6 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	[ClassDataSource<DockerNetwork>(Shared = SharedType.PerTestSession)]
 	public required DockerNetwork DockerNetwork { get; init; }
 
-	[ClassDataSource<SurrealDbTestServer>(Shared = SharedType.PerTestSession)]
-	public required SurrealDbTestServer SurrealDbTestServer { get; init; }
-
 	[ClassDataSource<NatsTestServer>(Shared = SharedType.PerTestSession)]
 	public required NatsTestServer NatsTestServer { get; init; }
 
@@ -205,24 +202,6 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 		});
 		_meterListener.Start();
 		Log.Logger = TestDiagnostics.CreateLogger();
-
-		var dbProviderStr = Environment.GetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER");
-		var useSurrealDb = string.Equals(dbProviderStr, "surrealdb", StringComparison.OrdinalIgnoreCase);
-
-		if (useSurrealDb)
-		{
-			Environment.SetEnvironmentVariable("SHARPMUSH_DATABASE_PROVIDER", "surrealdb");
-			// Tests run the embedded in-memory engine for isolation/speed; production defaults to a
-			// durable file-backed RocksDB store (see Startup). Default to mem:// unless a test explicitly
-			// sets the endpoint (e.g. to smoke-test the rocksdb:// path), or SurrealDbTestServer is
-			// opted into via SHARPMUSH_SURREALDB_USE_TESTCONTAINER - a real server process instead of
-			// the embedded engine sharing the test host's own process/thread pool.
-			if (Environment.GetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT") is null)
-			{
-				Environment.SetEnvironmentVariable("SHARPMUSH_SURREALDB_ENDPOINT",
-					SurrealDbTestServer.IsEnabled ? SurrealDbTestServer.Endpoint : "mem://");
-			}
-		}
 
 		var configFile = Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
 

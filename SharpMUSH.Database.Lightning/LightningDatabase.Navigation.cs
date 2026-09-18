@@ -9,9 +9,7 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// <see cref="INavigationStore"/>: graph traversal between objects. Ported from
-/// <c>SurrealDatabase.Navigation.cs</c> (and, for exits/entrances/homed-at, <c>SurrealDatabase.Objects.cs</c>)
-/// onto the edge tables declared in <c>LightningDatabase.Objects.cs</c>:
+/// <see cref="INavigationStore"/>: graph traversal between objects, over the edge tables declared in <c>LightningDatabase.Objects.cs</c>:
 /// <see cref="Tables.Location"/> (object → its container, reverse → contents),
 /// <see cref="Tables.Home"/> (object → its home/drop-to/destination, reverse → what homes there),
 /// <see cref="Tables.Exit"/> (room → its exits, no reverse walk needed), and
@@ -31,8 +29,8 @@ public partial class LightningDatabase
 		=> ValueTask.FromResult(GetOptionalRelatedCore(Tables.Zone.Forward, ParseDbref(id)));
 
 	// GetHomeAsync/GetDropToAsync/GetExitDestinationAsync all read the same has_home-equivalent edge
-	// (Tables.Home.Forward) — a room's drop-to and an exit's destination both reuse the home edge, same
-	// as SurrealDatabase.cs does. They differ only in whether a missing edge is an error (a home is
+	// (Tables.Home.Forward) — a room's drop-to and an exit's destination both reuse the home edge.
+	// They differ only in whether a missing edge is an error (a home is
 	// mandatory for a player/thing) or a legitimate absence (an unset drop-to, or a freshly @open'd or
 	// @unlink'd exit).
 	public ValueTask<AnySharpContainer> GetHomeAsync(string typedId, CancellationToken cancellationToken = default)
@@ -48,7 +46,7 @@ public partial class LightningDatabase
 		=> new FreshAsyncEnumerable<SharpObject>(ct => GetParentsCoreAsync(ParseDbref(id), ct));
 
 	/// <summary>
-	/// Walks the parent chain exactly as <c>SurrealDatabase.GetParentsAsync</c> does: a visited set keyed
+	/// Walks the parent chain with a visited set keyed
 	/// on the node about to be expanded (starting with <paramref name="dbref"/> itself), so a cycle is
 	/// caught the moment the walk would revisit a node rather than only once a parent repeats. A 100-hop
 	/// cap bounds the work independent of that set, matching the <c>maxDepth</c> default every other
@@ -122,8 +120,7 @@ public partial class LightningDatabase
 	private async IAsyncEnumerable<AnySharpContent> GetHomedAtCoreAsync(long homeKey, [EnumeratorCancellation] CancellationToken ct)
 	{
 		// Home.Reverse carries every object whose home edge points here, including rooms (a room reuses
-		// the edge for its drop-to). A drop-to is not a home, so rooms are dropped — same exclusion
-		// SurrealDatabase.Objects.cs's GetHomedAtAsync makes.
+		// the edge for its drop-to). A drop-to is not a home, so rooms are dropped.
 		var contents = Store.Read(tx => tx.Dups(Tables.Home.Reverse, Keys.Dbref(homeKey))
 			.Select(v => Keys.ReadDbref(v))
 			.Select(key => ReadObject(tx, key))
@@ -158,8 +155,7 @@ public partial class LightningDatabase
 		=> new FreshAsyncEnumerable<AnySharpObject>(ct => GetNearbyObjectsCoreAsync(obj, ct));
 
 	/// <summary>Self, then the contents of self, then the contents of self's location (self excluded from the
-	/// second pass) — the same three-part composition as <c>SurrealDatabase.Navigation.cs</c>'s two
-	/// <c>GetNearbyObjectsAsync</c> overloads.</summary>
+	/// second pass).</summary>
 	private async IAsyncEnumerable<AnySharpObject> GetNearbyObjectsCoreAsync(AnySharpObject obj, [EnumeratorCancellation] CancellationToken ct)
 	{
 		var location = await obj.Where();
@@ -218,12 +214,10 @@ public partial class LightningDatabase
 
 	/// <summary>
 	/// Walks the location chain from <paramref name="startKey"/>, exactly <paramref name="depth"/> hops
-	/// (<c>-1</c> meaning "until there is no further edge", capped at 999 the same as
-	/// <c>SurrealDatabase.Navigation.cs</c>'s <c>GetLocationFromTypedIdAsync</c>). A <paramref name="depth"/>
-	/// of 0 takes no hops at all, so it returns <see cref="None"/> rather than the starting object itself —
-	/// matching that method's actual behavior, not the (looser) doc comment on the interface. If the chain
-	/// runs out of edges before <paramref name="depth"/> hops are taken, the last container actually reached
-	/// is returned rather than erroring, the same "missing edge mid-walk" tolerance SurrealDB has.
+	/// (<c>-1</c> meaning "until there is no further edge", capped at 999). A <paramref name="depth"/>
+	/// of 0 takes no hops at all, so it returns <see cref="None"/> rather than the starting object itself.
+	/// If the chain runs out of edges before <paramref name="depth"/> hops are taken, the last container
+	/// actually reached is returned rather than erroring.
 	/// </summary>
 	private AnyOptionalSharpContainer GetLocationFromKey(ITx tx, long startKey, int depth)
 	{
@@ -256,8 +250,8 @@ public partial class LightningDatabase
 			return new None();
 		}
 
-		// .AsContainer throws for an exit, same as the SurrealDB Match's "Invalid Location: Exit" branch —
-		// A location chain cannot use an exit as a container; an exit's own Location is its source.
+		// .AsContainer throws for an exit: a location chain cannot use an exit as a container; an exit's
+		// own Location is its source.
 		return Hydrate(found.Value.Dbref, found.Value.Record).AsContainer.WithNoneOption();
 	}
 

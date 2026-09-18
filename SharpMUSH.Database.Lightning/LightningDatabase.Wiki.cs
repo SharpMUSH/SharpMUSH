@@ -10,8 +10,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// <see cref="IWikiService"/>: wiki pages, their revision streams and their translations. Ported from
-/// <c>SurrealDatabase.Wiki.cs</c>.
+/// <see cref="IWikiService"/>: wiki pages, their revision streams and their translations.
 /// </summary>
 /// <remarks>
 /// Four tables carry the area. <see cref="Tables.WikiPage"/> holds the page rows, keyed by an id drawn
@@ -432,8 +431,7 @@ public partial class LightningDatabase
 			var oldSlugKey = WikiSlugKey(found.Record.Namespace, existingCategory, found.Record.Slug);
 			var newSlugKey = WikiSlugKey(found.Record.Namespace, normalizedCategory, found.Record.Slug);
 
-			// Category is part of page identity, so a recategorization that would collide is refused —
-			// the same NotFound the SurrealDB partial answers with.
+			// Category is part of page identity, so a recategorization that would collide is refused.
 			if (recategorized && tx.TryGet(Tables.WikiSlug, newSlugKey, out _)) return new NotFound();
 
 			var updated = found.Record with

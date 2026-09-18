@@ -4,8 +4,8 @@ using System.Text.RegularExpressions;
 namespace SharpMUSH.Library.Models;
 
 /// <summary>
-/// Where copies of the world go, how many are kept and how often one is taken on a schedule. Shared
-/// by every provider that can back itself up, because none of this is provider-specific: it is a
+/// Where copies of the world go, how many are kept and how often one is taken on a schedule. None of
+/// this is provider-specific: it is a
 /// deployment concern — the size of the disk the copies land on — rather than game configuration.
 /// </summary>
 public sealed partial record WorldBackupOptions

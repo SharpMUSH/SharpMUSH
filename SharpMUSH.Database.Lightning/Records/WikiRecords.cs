@@ -1,8 +1,8 @@
 namespace SharpMUSH.Database.Lightning.Records;
 
 /// <summary>
-/// Mirrors <c>SurrealDatabase.WikiPageDbRecord</c>. Timestamps stay <c>string</c> (ISO-8601), matching
-/// what the SurrealDB partial itself reads and writes rather than <c>WikiPage</c>'s <c>DateTimeOffset</c>.
+/// A stored wiki page. Timestamps stay <c>string</c> (ISO-8601) rather than <c>WikiPage</c>'s
+/// <c>DateTimeOffset</c>.
 /// </summary>
 public sealed record WikiPageRecord
 {
@@ -24,7 +24,7 @@ public sealed record WikiPageRecord
 	public string? SourceLocale { get; init; }
 }
 
-/// <summary>Mirrors <c>SurrealDatabase.WikiRevisionDbRecord</c>.</summary>
+/// <summary>A stored wiki page revision.</summary>
 public sealed record WikiRevisionRecord
 {
 	public string PageId { get; init; } = "";
@@ -36,7 +36,7 @@ public sealed record WikiRevisionRecord
 	public string? Locale { get; init; }
 }
 
-/// <summary>Mirrors <c>SurrealDatabase.WikiTranslationDbRecord</c>.</summary>
+/// <summary>A stored wiki page translation link.</summary>
 public sealed record WikiTranslationRecord
 {
 	public string? PageId { get; init; }

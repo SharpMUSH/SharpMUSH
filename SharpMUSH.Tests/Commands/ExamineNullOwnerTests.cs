@@ -10,12 +10,10 @@ namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
 /// Every attribute must have an owner — the leaf and every branch parent auto-created along the
-/// path. The SurrealDB write path owned only the leaf, so branch parents came back owner-less;
-/// <c>examine</c> (which annotates each attribute with its owner) then hit a missing owner and
-/// dropped every attribute after the first owner-less one. On a bundled handler object (e.g. #8,
-/// whose FN/PM branches were owner-less) it listed a single attribute. This exercises the whole
-/// path through <c>examine</c>; the direct write assertion lives in
-/// <c>SurrealAttributeEnumerationTests</c>.
+/// path. <c>examine</c> annotates each attribute with its owner, so an owner-less branch parent
+/// would make it drop every attribute after the first one; on a bundled handler object (e.g. #8,
+/// with its FN/PM branches) it would list a single attribute. This exercises the whole path
+/// through <c>examine</c>.
 /// </summary>
 public class ExamineNullOwnerTests
 {

@@ -136,7 +136,7 @@ public class PluginManagerTests
 		await Assert.That(plugin is IFlagSource).IsTrue();
 		await Assert.That(plugin is IMigrationSource).IsTrue();
 		await Assert.That(((IFlagSource)plugin).Flags.Single().Name).IsEqualTo("PLUGINFLAG");
-		await Assert.That(((IMigrationSource)plugin).SurrealStatements).IsNotEmpty();
+		await Assert.That(((IMigrationSource)plugin).LightningSteps).IsNotEmpty();
 
 		await Assert.That(plugin is ICommandInterceptor).IsTrue();
 		await Assert.That(plugin is IConnectionHook).IsTrue();
@@ -204,7 +204,8 @@ public class PluginManagerTests
 		public IEnumerable<PluginFlag> Flags =>
 			[new PluginFlag("PLUGINFLAG", "P", [], [], [], ["ROOM", "PLAYER", "EXIT", "THING"])];
 
-		public IEnumerable<string> SurrealStatements => ["DEFINE TABLE plugin_thing SCHEMALESS"];
+		public IEnumerable<LightningMigrationStep> LightningSteps =>
+			[new LightningMigrationStep("plugin_thing", _ => ValueTask.CompletedTask)];
 
 		public ValueTask<bool> BeforeAsync(IMUSHCodeParser parser, string command)
 			=> ValueTask.FromResult(!command.StartsWith("@veto", StringComparison.OrdinalIgnoreCase));

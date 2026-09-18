@@ -65,14 +65,14 @@ The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMU
 docker compose up -d
 ```
 
-Both supported providers are embedded and need no Docker for the database itself — `lightning`
+The `lightning` provider is embedded and needs no Docker for the database itself — it
 opens an LMDB directory in-process. NATS is still wanted for the connection server.
 
 Key environment variables:
-- `SHARPMUSH_DATABASE_PROVIDER` — `lightning` (default) or `surrealdb`
+- `SHARPMUSH_DATABASE_PROVIDER` — accepts only `lightning` (the default when unset); any other value fails startup
 - `SHARPMUSH_LIGHTNING_PATH` — LMDB data directory for the `lightning` provider (default: `lightning-data`)
 - `SHARPMUSH_LIGHTNING_MAPSIZE` — LMDB map-size ceiling in bytes for the `lightning` provider (default: 64 GiB)
-- `SHARPMUSH_BACKUP_PATH` — where `@backup` writes copies of the world (default: `<world path>.backups`; required under `surrealdb` on a `mem://` endpoint, since it has no world directory to derive it from)
+- `SHARPMUSH_BACKUP_PATH` — where `@backup` writes copies of the world (default: `<world path>.backups`)
 - `SHARPMUSH_BACKUP_KEEP` — how many copies stay on disk (default: 2)
 - `SHARPMUSH_BACKUP_INTERVAL` — how often a copy is taken automatically, e.g. `6h` (default: unset, no scheduled copy)
 - `SHARPMUSH_LIGHTNING_BACKUP_COMPACT` — Lightning only; `false` to skip compaction, for faster and larger copies (default: on)
@@ -83,9 +83,9 @@ Promoting a staged import under `lightning` renames the previous world to `<path
 
 Under `lightning`, `@backup` (wizard-only) copies the live world into a timestamped directory using LMDB's own copy routine, so an external snapshot tool has a consistent one to read without the server stopping. `@backup/list` shows what is on disk. Nothing else copies a live `data.mdb` — see `deploy/README.md`.
 
-`IWorldBackupService` is the provider-agnostic seam. `WorldBackupWriter` (in `SharpMUSH.Library`) owns everything identical across providers — writing the copy into `.incoming-<id>`, moving it into place only when complete, the `latest` symlink, retention — and each provider supplies only the part that fills a directory: `lightning` an `mdb_env_copy`, and `surrealdb` a `world.surql` export.
+`IWorldBackupService` is the provider-agnostic seam. `WorldBackupWriter` (in `SharpMUSH.Library`) owns everything provider-independent — writing the copy into `.incoming-<id>`, moving it into place only when complete, the `latest` symlink, retention — and the provider supplies only the part that fills a directory: for `lightning`, an `mdb_env_copy`.
 
-Only the Lightning copy is point-in-time by construction; the other two are logical dumps taken from a running game. Don't describe them as equivalent.
+The Lightning copy is point-in-time by construction.
 
 First-run admin setup: web portal `/setup` (first visitor claims the pre-generated admin linked to `#1`); or set God's password in-game.
 
@@ -113,7 +113,6 @@ Browser (Blazor WASM)
 | `SharpMUSH.ConnectionServer` | Raw telnet/WebSocket gateway; bridges to Server via NATS |
 | `SharpMUSH.Library` | Core interfaces, models, service contracts (`ISharpDatabase`, all `I*Service`) |
 | `SharpMUSH.Implementation` | MUSH parser (ANTLR4), commands, functions, substitutions |
-| `SharpMUSH.Database.SurrealDB` | SurrealDB embedded provider (RocksDB on disk in production, in-memory in tests) |
 | `SharpMUSH.Database.Lightning` | LMDB embedded provider through Lightning.NET; one directory per world; writes group-committed on one thread, sync policy per `SHARPMUSH_LIGHTNING_SYNC` |
 | `SharpMUSH.Messaging` | NATS pub/sub abstraction; Testcontainer fallback for dev |
 | `SharpMUSH.Configuration` | Strongly-typed config options |

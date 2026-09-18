@@ -12,8 +12,7 @@ namespace SharpMUSH.Tests.Database.Lightning;
 
 /// <summary>
 /// <see cref="IChannelStore"/> against the Lightning provider directly — no NATS, no
-/// <c>ServerWebAppFactory</c>. Complements <c>ChannelUniquenessTests</c> (which runs through the mediator
-/// across every provider) by asserting the LMDB encoding itself: both index directions
+/// <c>ServerWebAppFactory</c>. Complements <c>ChannelUniquenessTests</c> (which runs through the mediator) by asserting the LMDB encoding itself: both index directions
 /// (<see cref="Tables.ChanMember"/>/<see cref="Tables.RevChanMember"/>) after join/leave, a status update
 /// round trip, and that delete removes every member row and reverse-index entry it created.
 /// </summary>

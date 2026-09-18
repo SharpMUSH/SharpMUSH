@@ -8,8 +8,7 @@ before pagination.
 
 ## Storage strategy
 
-- SurrealDB may use native full-text indexes over normalized plain-text fields.
-- Lightning maintains the same searchable projection in its embedded store and evaluates the
+- Lightning maintains the searchable projection in its embedded store and evaluates the
   provider-neutral query contract locally.
 - No external search sidecar is required for the expected installation size.
 
