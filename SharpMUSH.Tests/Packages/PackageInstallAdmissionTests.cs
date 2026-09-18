@@ -223,4 +223,65 @@ public class PackageInstallAdmissionTests
 			await Installer.UninstallAsync("adm-good-dependency", force: true);
 		}
 	}
+
+	// ── #1170: the application registration is validated before anything is written ──
+
+	private PackageManifest ApplicationManifest(string id, string minimumRole = "\"{{?access}}\"", string zones = "[]") => Parse($"""
+		package: {id}
+		version: 1.0.0
+		kind: application
+		configure:
+		  access:
+		    label: "Minimum role"
+		    type: string
+		    default: player
+		  zone:
+		    label: "Zone"
+		    type: string
+		    default: MainContent
+		application:
+		  slug: {id}
+		  display_name: Admission Application
+		  type: widget
+		  schema_url: http/{id}/schema
+		  minimum_role: {minimumRole}
+		  zones: {zones}
+		""");
+
+	private async Task AssertApplicationRefusedAsync(
+		PackageManifest manifest, IReadOnlyDictionary<string, string> answers, string offendingValue)
+	{
+		var result = await Installer.ApplyAsync(manifest, Request(answers));
+
+		await Assert.That(result.Expect<Error<string>>().Value).Contains($"'{offendingValue}'");
+		await AssertNothingRecordedAsync(manifest.Name);
+		await Assert.That((await Applications.GetApplicationAsync(manifest.Application!.Slug)).Value).IsTypeOf<NotFound>();
+	}
+
+	[Test, NotInParallel]
+	public async Task Application_InvalidConfiguredMinimumRole_PersistsNothing()
+	{
+		var manifest = ApplicationManifest("adm-app-role-answer");
+		await AssertApplicationRefusedAsync(
+			manifest, new Dictionary<string, string> { ["access"] = "overlord" }, "overlord");
+	}
+
+	[Test, NotInParallel]
+	public async Task Application_InvalidLiteralMinimumRole_PersistsNothing()
+	{
+		// The manifest parser rejects a bad literal role, so the apply sees one only from a manifest
+		// built another way; it must still refuse on the same path as a configured one.
+		var parsed = ApplicationManifest("adm-app-role-literal");
+		var manifest = parsed with { Application = parsed.Application! with { MinimumRole = "overlord" } };
+		await AssertApplicationRefusedAsync(manifest, new Dictionary<string, string>(), "overlord");
+	}
+
+	[Test, NotInParallel]
+	[Arguments("99")]
+	[Arguments("-1")]
+	public async Task Application_NumericMinimumRoleOutsideTheEnum_PersistsNothing(string role)
+	{
+		var manifest = ApplicationManifest($"adm-app-role-n{role.Trim('-')}");
+		await AssertApplicationRefusedAsync(manifest, new Dictionary<string, string> { ["access"] = role }, role);
+	}
 }

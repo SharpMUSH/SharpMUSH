@@ -99,6 +99,23 @@ public partial class PackageInstallService
 			_ => null
 		};
 
+		// Application packages (kind: application) register a portal app instead of creating
+		// objects; its string fields resolve through the same ref map, so {{?configure}} settings
+		// land here too. Built before the first write: an answer can still name no role or zone,
+		// and a refused apply must leave nothing behind.
+		RegisteredApplication? application = null;
+		if (manifest is { Kind: PackageKind.Application, Application: not null })
+		{
+			switch (BuildRegisteredApplication(manifest.Application, manifest.Name, Resolve))
+			{
+				case RegisteredApplication built:
+					application = built;
+					break;
+				case Error<string> error:
+					return error;
+			}
+		}
+
 		var manifestByRef = manifest.Objects.ToDictionary(o => o.Ref, StringComparer.Ordinal);
 		foreach (var change in changeset.Objects.Where(c => c.Action
 			is PackageObjectAction.Create or PackageObjectAction.RecreateMissing))
@@ -279,20 +296,10 @@ public partial class PackageInstallService
 			DateTimeOffset.UtcNow));
 		await registry.PrunePackageRevisionsAsync(manifest.Name, request.KeepRevisions);
 
-		// Application packages (kind: application) register a portal app instead
-		// of creating objects; its string fields resolve through the same ref map
-		// as objects/attributes, so {{?configure}} settings land here too.
-		if (manifest is { Kind: PackageKind.Application, Application: not null })
+		if (application is not null)
 		{
-			switch (BuildRegisteredApplication(manifest.Application, manifest.Name, Resolve))
-			{
-				case RegisteredApplication application:
-					await applications.UpsertApplicationAsync(application);
-					notes.Add($"Registered application '{application.Slug}' ({application.Kind}) at /apps/{application.Slug}.");
-					break;
-				case Error<string> error:
-					return error;
-			}
+			await applications.UpsertApplicationAsync(application);
+			notes.Add($"Registered application '{application.Slug}' ({application.Kind}) at /apps/{application.Slug}.");
 		}
 
 		// Lifecycle hooks (decision 20.x): after a successful apply, run AINSTALL on
@@ -399,7 +406,8 @@ public partial class PackageInstallService
 			value is null ? null : PackageRefSubstitution.Substitute(value, resolve, out _);
 
 		var roleText = Sub(spec.MinimumRole) ?? nameof(PortalRole.Player);
-		if (!Enum.TryParse<PortalRole>(roleText, ignoreCase: true, out var role))
+		// Enum.TryParse accepts any integer, so "99" would otherwise register a role that does not exist.
+		if (!Enum.TryParse<PortalRole>(roleText, ignoreCase: true, out var role) || !Enum.IsDefined(role))
 		{
 			return new Error<string>(
 				$"Application '{spec.Slug}': minimum_role '{roleText}' is not a valid role — answer its configure prompt or fix the manifest.");
