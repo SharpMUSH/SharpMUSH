@@ -437,6 +437,27 @@ public class AttributeCommandTests
 		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo("fooXXXbar");
 	}
 
+	/// <summary>
+	/// The replacement reads the match from a regexp capture context, as PennMUSH's
+	/// <c>do_edit_regexp</c> does (<c>src/set.c</c>). The captured text is the attribute's own, and it
+	/// is never evaluated.
+	/// </summary>
+	[Test]
+	[Arguments("[add(1,1)]x", "^(.+)x$,$1y", "[add(1,1)]y")]
+	[Arguments("abc", "b(c),<$1>", "a<c>")]
+	[Arguments("abc", "b(?<n>c),<$<n>>", "a<c>")]
+	public async ValueTask Test_Edit_Regex_ReadsTheCaptureContext(string value, string edit, string expected)
+	{
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditRegexCapture");
+		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
+		await Database.SetAttributeAsync(objDbRef, ["EDIT_REGEX_CAPTURE"], MarkupText.Plain(value), owner);
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@edit/regexp {objDbRef}/EDIT_REGEX_CAPTURE={edit}"));
+
+		var attrList = await Database.GetAttributeAsync(objDbRef, ["EDIT_REGEX_CAPTURE"])!.ToListAsync();
+		await Assert.That(attrList.Last().Value.ToPlainText()).IsEqualTo(expected);
+	}
+
 	[Test]
 	public async ValueTask Test_Edit_RegexAll_EvaluatesInReverseAndSplicesAtOriginalPositions()
 	{

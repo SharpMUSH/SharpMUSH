@@ -3501,7 +3501,9 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// Perform regex replacement with evaluation
+	/// Perform regex replacement with evaluation: PennMUSH's <c>do_edit_regexp</c> (<c>src/set.c</c>).
+	/// Each replacement is evaluated inside a regexp capture context holding its match, and the capture
+	/// text is never pasted into the replacement.
 	/// </summary>
 	private async ValueTask<CallState> PerformRegexEdit(IMUSHCodeParser parser, string text,
 		string pattern, string replaceTemplate, bool all, bool nocase)
@@ -3510,6 +3512,8 @@ public partial class Commands
 		Match[] matches = [];
 		var replacements = Array.Empty<string>();
 		var firstEvaluated = 0;
+		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
+		parser.CurrentState.RegexRegisters.Push(captures);
 		try
 		{
 			var options = RegexOptions.None;
@@ -3528,7 +3532,7 @@ public partial class Commands
 				firstEvaluated = matches.Length;
 				for (var i = matches.Length - 1; i >= 0; i--)
 				{
-					var replacement = await EvaluateRegexReplacement(parser, regex, matches[i], replaceTemplate);
+					var replacement = await EvaluateRegexReplacement(parser, captures, regex, matches[i], replaceTemplate, text);
 					hadErrors |= replacement.HadErrors;
 					replacements[i] = replacement.Message!.ToPlainText();
 					firstEvaluated = i;
@@ -3541,7 +3545,7 @@ public partial class Commands
 				var match = regex.Match(text);
 				if (match.Success)
 				{
-					var replacement = await EvaluateRegexReplacement(parser, regex, match, replaceTemplate);
+					var replacement = await EvaluateRegexReplacement(parser, captures, regex, match, replaceTemplate, text);
 					hadErrors |= replacement.HadErrors;
 					text = text[..match.Index] + replacement.Message!.ToPlainText() + text[(match.Index + match.Length)..];
 				}
@@ -3557,6 +3561,10 @@ public partial class Commands
 		catch (ArgumentException)
 		{
 			return new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors };
+		}
+		finally
+		{
+			parser.CurrentState.RegexRegisters.TryPop(out _);
 		}
 	}
 
@@ -3583,29 +3591,15 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// Evaluate replacement template with captured groups
+	/// The replacement for one match, evaluated with that match as the innermost regexp context.
 	/// </summary>
-	private async ValueTask<CallState> EvaluateRegexReplacement(IMUSHCodeParser parser,
-		Regex regex, Match match, string template)
+	private static async ValueTask<CallState> EvaluateRegexReplacement(IMUSHCodeParser parser,
+		RegexpCaptureFrame captures, Regex regex, Match match, string template, string text)
 	{
-		var replacement = template;
+		captures.Fill(regex, match, MarkupText.Plain(text));
 
-		for (int j = 0; j < match.Groups.Count; j++)
-		{
-			replacement = replacement.Replace($"${j}", match.Groups[j].Value);
-		}
-
-		foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
-		{
-			var group = match.Groups[groupName];
-			if (group.Success)
-			{
-				replacement = replacement.Replace($"$<{groupName}>", group.Value);
-			}
-		}
-
-		var evaluatedReplacement = await parser.FunctionParse(MarkupText.Plain(replacement));
-		return new CallState(evaluatedReplacement?.Message?.ToPlainText() ?? replacement)
+		var evaluatedReplacement = await parser.FunctionParse(MarkupText.Plain(template));
+		return new CallState(evaluatedReplacement?.Message?.ToPlainText() ?? string.Empty)
 		{ HadErrors = evaluatedReplacement?.HadErrors == true };
 	}
 
