@@ -50,7 +50,7 @@ public partial class PackageInstallService
 	}
 
 	private async Task<string?> ApplyStructureChangeAsync(
-		PackageStructureChange change, string objid,
+		PackageWriteTransaction writes, PackageStructureChange change, string objid,
 		Dictionary<string, PackageConflictDecision> decisions, List<string> notes, CancellationToken cancellationToken)
 	{
 		var node = await GetKnownAsync(objid, cancellationToken);
@@ -59,95 +59,75 @@ public partial class PackageInstallService
 			return $"Internal error: object {objid} for structure '{change.Element}' vanished during apply.";
 		}
 
+		if (change.Kind == PackageStructureKind.Lock)
+		{
+			return await ApplyLockChangeAsync(writes, node, change, decisions, cancellationToken);
+		}
+
+		if (change.Action is not (PackageStructureAction.Add or PackageStructureAction.Remove))
+		{
+			return null;
+		}
+
+		var add = change.Action == PackageStructureAction.Add;
 		switch (change.Kind)
 		{
 			case PackageStructureKind.ObjectFlag:
-				if (change.Action is PackageStructureAction.Add or PackageStructureAction.Remove)
+				var flag = await flags.GetObjectFlagAsync(change.Element.ToUpperInvariant(), cancellationToken)
+					?? await flags.GetObjectFlagAsync(change.Element, cancellationToken);
+				if (flag is null)
 				{
-					var flag = await flags.GetObjectFlagAsync(change.Element.ToUpperInvariant(), cancellationToken)
-						?? await flags.GetObjectFlagAsync(change.Element, cancellationToken);
-					if (flag is null)
-					{
-						notes.Add($"{change.TargetRef}: unknown flag '{change.Element}' skipped.");
-					}
-					// Through the commands, not the database: the flag set is cached per object, and the
-					// commands are what invalidate it.
-					else if (change.Action == PackageStructureAction.Add)
-					{
-						await mediator.Send(new SetObjectFlagCommand(node, flag), cancellationToken);
-					}
-					else
-					{
-						await mediator.Send(new UnsetObjectFlagCommand(node, flag), cancellationToken);
-					}
+					notes.Add($"{change.TargetRef}: unknown flag '{change.Element}' skipped.");
+				}
+				else if (add)
+				{
+					await writes.SetFlagAsync(node, flag, cancellationToken);
+				}
+				else
+				{
+					await writes.UnsetFlagAsync(node, flag, cancellationToken);
 				}
 
 				return null;
 
 			case PackageStructureKind.ObjectPower:
-				if (change.Action is PackageStructureAction.Add or PackageStructureAction.Remove)
+				var power = await flags.GetPowerAsync(change.Element.ToUpperInvariant(), cancellationToken)
+					?? await flags.GetPowerAsync(change.Element, cancellationToken);
+				if (power is null)
 				{
-					var power = await flags.GetPowerAsync(change.Element.ToUpperInvariant(), cancellationToken)
-						?? await flags.GetPowerAsync(change.Element, cancellationToken);
-					if (power is null)
-					{
-						notes.Add($"{change.TargetRef}: unknown power '{change.Element}' skipped.");
-					}
-					else if (change.Action == PackageStructureAction.Add)
-					{
-						await mediator.Send(new SetObjectPowerCommand(node, power), cancellationToken);
-					}
-					else
-					{
-						await mediator.Send(new UnsetObjectPowerCommand(node, power), cancellationToken);
-					}
+					notes.Add($"{change.TargetRef}: unknown power '{change.Element}' skipped.");
+				}
+				else if (add)
+				{
+					await writes.SetPowerAsync(node, power, cancellationToken);
+				}
+				else
+				{
+					await writes.UnsetPowerAsync(node, power, cancellationToken);
 				}
 
 				return null;
 
 			case PackageStructureKind.AttributeFlag:
-				if (change.Action is PackageStructureAction.Add or PackageStructureAction.Remove)
+				var attributeFlag = await attributeStore.GetAttributeFlagAsync(change.Element.ToUpperInvariant(), cancellationToken)
+					?? await attributeStore.GetAttributeFlagAsync(change.Element, cancellationToken);
+				var path = change.Attribute!.Split('`');
+				if (attributeFlag is null)
 				{
-					var flag = await attributeStore.GetAttributeFlagAsync(change.Element.ToUpperInvariant(), cancellationToken)
-						?? await attributeStore.GetAttributeFlagAsync(change.Element, cancellationToken);
-					var path = change.Attribute!.Split('`');
-					if (flag is null)
-					{
-						notes.Add($"{change.TargetRef}/{change.Attribute}: unknown attribute flag '{change.Element}' skipped.");
-					}
-					else if (change.Action == PackageStructureAction.Add)
-					{
-						// Only flag an attribute that actually exists after apply — a
-						// flag the package adds to an attribute the admin deleted locally
-						// has nothing to land on.
-						var leaf = await ResolveAttributeLeafAsync(objid, path, cancellationToken);
-						if (leaf is not null)
-						{
-							// The flag commands carry the attribute cache keys and the
-							// inheritance tag; the store call carried neither.
-							await mediator.Send(new SetAttributeFlagCommand(DBRef.Parse(objid), leaf, flag), cancellationToken);
-						}
-						else
-						{
-							notes.Add($"{change.TargetRef}/{change.Attribute}: flag '{change.Element}' skipped (attribute not present).");
-						}
-					}
-					else
-					{
-						// An attribute that no longer resolves has no flag to remove; the store
-						// call was a no-op in that case too.
-						var leaf = await ResolveAttributeLeafAsync(objid, path, cancellationToken);
-						if (leaf is not null)
-						{
-							await mediator.Send(new UnsetAttributeFlagCommand(DBRef.Parse(objid), leaf, flag), cancellationToken);
-						}
-					}
+					notes.Add($"{change.TargetRef}/{change.Attribute}: unknown attribute flag '{change.Element}' skipped.");
+				}
+				// Only flag an attribute that exists after apply: a flag the package adds to an
+				// attribute the admin deleted locally has nothing to land on.
+				else if (add && !await writes.SetAttributeFlagAsync(node.Object().DBRef, path, attributeFlag, cancellationToken))
+				{
+					notes.Add($"{change.TargetRef}/{change.Attribute}: flag '{change.Element}' skipped (attribute not present).");
+				}
+				else if (!add)
+				{
+					await writes.UnsetAttributeFlagAsync(node.Object().DBRef, path, attributeFlag, cancellationToken);
 				}
 
 				return null;
-
-			case PackageStructureKind.Lock:
-				return await ApplyLockChangeAsync(node, change, decisions, cancellationToken);
 
 			default:
 				return null;
@@ -155,21 +135,16 @@ public partial class PackageInstallService
 	}
 
 	private async Task<string?> ApplyLockChangeAsync(
-		AnySharpObject node, PackageStructureChange change,
+		PackageWriteTransaction writes, AnySharpObject node, PackageStructureChange change,
 		Dictionary<string, PackageConflictDecision> decisions, CancellationToken cancellationToken)
 	{
-		var executor = new AnySharpObject(await GetPackageManagerWizardAsync(cancellationToken));
 		async Task<string?> SetAsync(string value)
 		{
 			var name = Enum.TryParse<LockType>(LockNames.Canonical(change.Element), true, out _) ? change.Element : $"user:{change.Element}";
-			var result = await mediator.Send(new SetLockCommand(node.Object(), name, value, executor), cancellationToken);
-			return result is Error<string> error ? error.Value : null;
+			return await writes.SetLockAsync(node.Object(), name, value, cancellationToken) is Error<string> error ? error.Value : null;
 		}
-		async Task<string?> RemoveAsync()
-		{
-			var result = await mediator.Send(new UnsetLockCommand(node.Object(), change.Element, executor), cancellationToken);
-			return result is Error<string> error ? error.Value : null;
-		}
+		async Task<string?> RemoveAsync() =>
+			await writes.UnsetLockAsync(node.Object(), change.Element, cancellationToken) is Error<string> error ? error.Value : null;
 
 		switch (change.Action)
 		{

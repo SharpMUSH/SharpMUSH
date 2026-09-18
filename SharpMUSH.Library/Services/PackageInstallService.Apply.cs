@@ -63,16 +63,14 @@ public partial class PackageInstallService
 			return new Error<string>($"Unresolved conflicts: {string.Join(", ", undecided)}");
 		}
 
-		var notes = new List<string>(changeset.Notes);
 		var pmWizard = await GetPackageManagerWizardAsync(cancellationToken);
+		await using var writes = BeginWrites(pmWizard);
+		var run = new ApplyRun(manifest, request, inputs, changeset, decisions, pmWizard, writes);
 
-		// Pass 1: create objects so every internal ref has a dbref.
-		var objidByRef = new Dictionary<string, string>(StringComparer.Ordinal);
-		var created = new Dictionary<string, string>(StringComparer.Ordinal);
 		foreach (var change in changeset.Objects.Where(c => c.Action
 			is PackageObjectAction.NoChange or PackageObjectAction.UpdateMetadata or PackageObjectAction.Rename))
 		{
-			objidByRef[change.Ref] = change.Objid!;
+			run.ObjidByRef[change.Ref] = change.Objid!;
 		}
 
 		// Attach objects (decision 20.3): the target must already exist; we
@@ -86,27 +84,16 @@ public partial class PackageInstallService
 					+ "configure it or check the http_handler setting before applying.");
 			}
 
-			objidByRef[change.Ref] = change.Objid;
+			run.ObjidByRef[change.Ref] = change.Objid;
 		}
-
-		string? Resolve(PackageRef reference) => reference switch
-		{
-			{ Kind: PackageRefKind.Internal, Package: not null } =>
-				inputs.CrossPackageObjids.GetValueOrDefault($"{reference.Package}/{reference.Name}"),
-			{ Kind: PackageRefKind.Internal } => objidByRef.GetValueOrDefault(reference.Name),
-			{ Kind: PackageRefKind.WellKnown } => inputs.WellKnownObjids.GetValueOrDefault(reference.Name),
-			{ Kind: PackageRefKind.Configure } => ResolveConfigure(manifest, request.ConfigureAnswers, reference.Name),
-			_ => null
-		};
 
 		// Application packages (kind: application) register a portal app instead of creating
 		// objects; its string fields resolve through the same ref map, so {{?configure}} settings
-		// land here too. Built before the first write: an answer can still name no role or zone,
-		// and a refused apply must leave nothing behind.
+		// land here too. Built before the first write: an answer can still name no role or zone.
 		RegisteredApplication? application = null;
 		if (manifest is { Kind: PackageKind.Application, Application: not null })
 		{
-			switch (BuildRegisteredApplication(manifest.Application, manifest.Name, Resolve))
+			switch (BuildRegisteredApplication(manifest.Application, manifest.Name, run.Resolve))
 			{
 				case RegisteredApplication built:
 					application = built;
@@ -116,218 +103,309 @@ public partial class PackageInstallService
 			}
 		}
 
-		if (await FindForeseeableFailureAsync(manifest, changeset, decisions, Resolve, cancellationToken) is string foreseen)
+		if (await FindForeseeableFailureAsync(manifest, changeset, decisions, run.Resolve, cancellationToken) is string foreseen)
 		{
 			return new Error<string>(foreseen);
 		}
 
-		// From the first write until the revision record commits the apply, a failure puts back
-		// everything captured here.
-		var before = await CaptureBeforeImageAsync(manifest, inputs, changeset, objidByRef, cancellationToken);
-		var committed = false;
-		var revision = (inputs.Installed?.CurrentRevision ?? 0) + 1;
-		try
+		return await ApplyChangesetAsync(run, application, cancellationToken) switch
 		{
-			var manifestByRef = manifest.Objects.ToDictionary(o => o.Ref, StringComparer.Ordinal);
-			foreach (var change in changeset.Objects.Where(c => c.Action
-				is PackageObjectAction.Create or PackageObjectAction.RecreateMissing))
-			{
-				var spec = manifestByRef[change.Ref];
-				switch (await CreateObjectAsync(spec, pmWizard, Resolve, notes, cancellationToken))
-				{
-					case string createdObjid:
-						objidByRef[change.Ref] = createdObjid;
-						created[change.Ref] = createdObjid;
-						break;
-					case Error<string> error:
-						return await AbandonAsync(before, created.Values, error.Value);
-				}
-			}
+			PackageApplyResult applied => await AfterCommitAsync(run, applied, cancellationToken),
+			Error<string> error => await writes.RevertAsync(error)
+		};
+	}
 
-			// Pass 2: exits link, parents, name updates (flags/locks/powers come later).
-			foreach (var spec in manifest.Objects)
-			{
-				var error = await ApplyObjectWiringAsync(
-					spec, objidByRef[spec.Ref], created.ContainsKey(spec.Ref), changeset, Resolve, cancellationToken);
-				if (error is not null)
-				{
-					return await AbandonAsync(before, created.Values, error);
-				}
-			}
+	/// <summary>
+	/// What follows a committed apply. Neither step is part of it and neither is undone; the lifecycle
+	/// runner swallows and logs failures, so a bad AINSTALL or AUPDATE never fails an install.
+	/// </summary>
+	private async Task<PackageApplyResult> AfterCommitAsync(ApplyRun run, PackageApplyResult applied, CancellationToken cancellationToken)
+	{
+		await registry.PrunePackageRevisionsAsync(run.Manifest.Name, run.Request.KeepRevisions);
+		await lifecycle.RunLifecycleAsync(run.Changeset, run.Created, cancellationToken);
+		return applied;
+	}
 
-			// Pass 3: attributes per changeset decision.
-			var preApply = new List<PackageRevisionSnapshotAttribute>();
-			var finalValues = new Dictionary<(string Objid, string Attribute), string>();
-			foreach (var change in changeset.Attributes)
-			{
-				var objid = change.Objid ?? objidByRef.GetValueOrDefault(change.TargetRef);
-				if (objid is null)
-				{
-					return await AbandonAsync(before, created.Values, $"Internal error: no objid for attribute target '{change.TargetRef}'.");
-				}
+	/// <summary>
+	/// One softcode or application apply in progress: what it was asked to do, the objids its refs
+	/// resolve to so far, and what it has created, written through <see cref="Writes"/>.
+	/// </summary>
+	private sealed record ApplyRun(
+		PackageManifest Manifest,
+		PackageApplyRequest Request,
+		PackagePlanInputs Inputs,
+		PackageChangeset Changeset,
+		Dictionary<string, PackageConflictDecision> Decisions,
+		SharpPlayer PackageManager,
+		PackageWriteTransaction Writes)
+	{
+		public Dictionary<string, PackageObjectSpec> ManifestByRef { get; } =
+			Manifest.Objects.ToDictionary(o => o.Ref, StringComparer.Ordinal);
 
-				var spec = manifestByRef.GetValueOrDefault(change.TargetRef);
-				var attrSpec = spec?.Attributes.GetValueOrDefault(change.Attribute);
-				string? newValue;
-				if (attrSpec is not null)
-				{
-					// Code: tokens become [v(PM`REFS`...)] recalls — never dbrefs (20.21).
-					newValue = PackageRefIndirection.TransformCode(attrSpec.Value, spec!.IsAttach ? manifest.Name : null);
-				}
-				else if (change.NewValue is not null && PackageRefIndirection.IsRefAttribute(change.Attribute))
-				{
-					// Engine-managed ref attr: the value IS the resolution. FindForeseeableFailureAsync
-					// has already refused a token nothing resolves.
-					newValue = PackageRefSubstitution.Substitute(change.NewValue, Resolve, out var stillUnresolved);
-					if (stillUnresolved.Count > 0)
-					{
-						return await AbandonAsync(before, created.Values, UnresolvedRef(change.TargetRef, change.Attribute, stillUnresolved[0]));
-					}
-				}
-				else
-				{
-					newValue = change.NewValue;
-				}
+		public Dictionary<string, string> ObjidByRef { get; } = new(StringComparer.Ordinal);
 
-				var error = await ApplyAttributeChangeAsync(
-					manifest, change, objid, newValue, decisions, pmWizard, preApply, finalValues, notes, cancellationToken);
-				if (error is not null)
-				{
-					return await AbandonAsync(before, created.Values, error);
-				}
-			}
+		public Dictionary<string, string> Created { get; } = new(StringComparer.Ordinal);
 
-			// Pass 3.5: object structure (flags, powers, locks, attribute flags) per
-			// the three-way merge — add/remove/keep-local/conflict, never additive.
-			foreach (var change in changeset.Structure)
-			{
-				var objid = change.Objid ?? objidByRef.GetValueOrDefault(change.TargetRef);
-				if (objid is null)
-				{
-					return await AbandonAsync(before, created.Values, $"Internal error: no objid for structure target '{change.TargetRef}'.");
-				}
+		public List<string> Notes { get; } = [.. Changeset.Notes];
 
-				// Lock values resolve at apply time (refs to objects created this apply
-				// only get dbrefs now), exactly like attribute code — never trust the
-				// plan-time NewValue for a lock write.
-				var effective = change;
-				if (change.Kind == PackageStructureKind.Lock
-					&& change.Action is PackageStructureAction.Add or PackageStructureAction.Conflict
-					&& manifestByRef.TryGetValue(change.TargetRef, out var lockSpec)
-					&& LockNames.Fold(lockSpec.Locks).TryGetValue(change.Element, out var rawLock))
-				{
-					var resolvedLock = PackageRefSubstitution.Substitute(rawLock, Resolve, out var unresolved);
-					if (unresolved.Count > 0)
-					{
-						return await AbandonAsync(before, created.Values, UnresolvedRef(change.TargetRef, $"lock:{change.Element}", unresolved[0]));
-					}
+		/// <summary>Live values of attributes this apply overwrote, for the revision's pre-apply record.</summary>
+		public List<PackageRevisionSnapshotAttribute> PreApply { get; } = [];
 
-					effective = change with { NewValue = resolvedLock };
-				}
+		/// <summary>Each managed attribute's value after this apply, for the revision snapshot.</summary>
+		public Dictionary<(string Objid, string Attribute), string> FinalValues { get; } = [];
 
-				var error = await ApplyStructureChangeAsync(effective, objid, decisions, notes, cancellationToken);
-				if (error is not null)
-				{
-					return await AbandonAsync(before, created.Values, error);
-				}
-			}
-
-			// Pass 4: deletions (objects removed from the package) — @destroy convention.
-			foreach (var change in changeset.Objects.Where(c => c.Action == PackageObjectAction.Delete))
-			{
-				await MarkGoingAsync(change.Objid!, notes, cancellationToken);
-				await registry.RemovePackageObjectAsync(manifest.Name, change.Ref);
-				await registry.RemoveManagedStructureAsync(manifest.Name, change.Objid!);
-			}
-
-			// Pass 5: registry — objects, renames, dependencies, package record, revision.
-			foreach (var change in changeset.Objects.Where(c => c.Action == PackageObjectAction.Rename))
-			{
-				await registry.RemovePackageObjectAsync(manifest.Name, change.RenamedFromRef!);
-			}
-
-			// Attach objects are NOT recorded here — the package does not own them.
-			// Their managed attributes live in sys_managed_attributes, which is what
-			// uninstall clears (without destroying the object). Decision 20.3.
-			foreach (var spec in manifest.Objects.Where(o => !o.IsAttach))
-			{
-				await registry.UpsertPackageObjectAsync(new PackageObjectRecord(
-					manifest.Name, spec.Ref, objidByRef[spec.Ref], spec.Type.ToString().ToLowerInvariant()));
-			}
-
-			// Persist the object-structure baseline (= the resolved manifest structure)
-			// for every managed object — including attach objects, which own attribute
-			// flags — and capture it for the rollback snapshot. Objects with no managed
-			// structure carry no row (their baseline is cleared if one lingered).
-			var structureSnapshot = new List<PackageRevisionSnapshotStructure>();
-			foreach (var spec in manifest.Objects)
-			{
-				var structObjid = objidByRef[spec.Ref];
-				var resolved = BuildResolvedStructure(spec, Resolve);
-				if (resolved is null)
-				{
-					await registry.RemoveManagedStructureAsync(manifest.Name, structObjid);
-					continue;
-				}
-
-				await registry.UpsertManagedStructureAsync(new ManagedStructureRecord(
-					manifest.Name, structObjid, JsonSerializer.Serialize(resolved, SnapshotJson), manifest.Version.ToString()));
-				structureSnapshot.Add(new PackageRevisionSnapshotStructure(
-					structObjid, resolved.Flags, resolved.Powers, resolved.Locks, resolved.AttributeFlags));
-			}
-
-			// The package record must exist BEFORE its dependency edges: graph
-			// DEPENDS_ON relationship, so a fresh install would otherwise lose
-			// its edges silently.
-			await registry.UpsertInstalledPackageAsync(new InstalledPackageRecord(
-			manifest.Name, manifest.Version.ToString(), request.Source.Repo, request.Source.Path,
-			request.Source.Commit, request.Source.Branch, DateTimeOffset.UtcNow, revision));
-
-			await registry.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
-				.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))
-				.ToList());
-
-			var snapshot = new PackageRevisionSnapshot(
-				manifest.Version.ToString(),
-				manifest.Objects
-					.Select(o => new PackageRevisionSnapshotObject(o.Ref, objidByRef[o.Ref], o.Type.ToString().ToLowerInvariant(),
-						o.IsAttach ? PackageObjectRelation.Attached : PackageObjectRelation.Owned))
-					.ToList(),
-				finalValues.Select(kv => new PackageRevisionSnapshotAttribute(kv.Key.Objid, kv.Key.Attribute, kv.Value)).ToList(),
-				structureSnapshot);
-
-			if (application is not null)
-			{
-				await applications.UpsertApplicationAsync(application);
-				notes.Add($"Registered application '{application.Slug}' ({application.Kind}) at /apps/{application.Slug}.");
-			}
-
-			// The commit point: once the revision exists the apply has happened, and nothing after it
-			// is undone.
-			await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
-				manifest.Name, revision,
-				inputs.Installed is null ? PackageRevisionKind.Install : PackageRevisionKind.Upgrade,
-				manifest.Version.ToString(), request.Source.Commit,
-				JsonSerializer.Serialize(snapshot, SnapshotJson),
-				JsonSerializer.Serialize(request.ConfigureAnswers, SnapshotJson),
-				JsonSerializer.Serialize(preApply, SnapshotJson),
-				DateTimeOffset.UtcNow));
-			committed = true;
-			await registry.PrunePackageRevisionsAsync(manifest.Name, request.KeepRevisions);
-		}
-		catch (Exception) when (!committed)
+		public string? Resolve(PackageRef reference) => reference switch
 		{
-			await AbandonAsync(before, created.Values, "The apply failed.");
-			throw;
+			{ Kind: PackageRefKind.Internal, Package: not null } =>
+				Inputs.CrossPackageObjids.GetValueOrDefault($"{reference.Package}/{reference.Name}"),
+			{ Kind: PackageRefKind.Internal } => ObjidByRef.GetValueOrDefault(reference.Name),
+			{ Kind: PackageRefKind.WellKnown } => Inputs.WellKnownObjids.GetValueOrDefault(reference.Name),
+			{ Kind: PackageRefKind.Configure } => ResolveConfigure(Manifest, Request.ConfigureAnswers, reference.Name),
+			_ => null
+		};
+	}
+
+	/// <summary>The passes of an apply, in order. The last write, the revision record, commits it.</summary>
+	private async Task<Result<PackageApplyResult>> ApplyChangesetAsync(
+		ApplyRun run, RegisteredApplication? application, CancellationToken cancellationToken)
+	{
+		if (await CreateObjectsAsync(run, cancellationToken) is string createError)
+		{
+			return new Error<string>(createError);
 		}
 
-		// Lifecycle hooks (decision 20.x): after a successful apply, run AINSTALL on
-		// a first install and AUPDATE on an upgrade so the package can self-configure
-		// (@function/@hook registration, etc.). Failures are swallowed/logged by the
-		// runner so a bad lifecycle script never fails the install.
-		await lifecycle.RunLifecycleAsync(changeset, created, cancellationToken);
+		if (await WireObjectsAsync(run, cancellationToken) is string wiringError)
+		{
+			return new Error<string>(wiringError);
+		}
 
-		return new PackageApplyResult(revision, created, notes);
+		if (await ApplyAttributesAsync(run, cancellationToken) is string attributeError)
+		{
+			return new Error<string>(attributeError);
+		}
+
+		if (await ApplyStructureAsync(run, cancellationToken) is string structureError)
+		{
+			return new Error<string>(structureError);
+		}
+
+		await RetireRemovedObjectsAsync(run, cancellationToken);
+		return await RecordApplyAsync(run, application);
+	}
+
+	/// <summary>Pass 1: creates objects, so every internal ref has an objid.</summary>
+	private async Task<string?> CreateObjectsAsync(ApplyRun run, CancellationToken cancellationToken)
+	{
+		foreach (var change in run.Changeset.Objects.Where(c => c.Action
+			is PackageObjectAction.Create or PackageObjectAction.RecreateMissing))
+		{
+			switch (await CreateObjectAsync(
+				run.Writes, run.ManifestByRef[change.Ref], run.PackageManager, run.Resolve, run.Notes, cancellationToken))
+			{
+				case string objid:
+					run.ObjidByRef[change.Ref] = objid;
+					run.Created[change.Ref] = objid;
+					break;
+				case Error<string> error:
+					return error.Value;
+			}
+		}
+
+		return null;
+	}
+
+	/// <summary>Pass 2: exit links, parents and renames; flags, powers and locks come in pass 4.</summary>
+	private async Task<string?> WireObjectsAsync(ApplyRun run, CancellationToken cancellationToken)
+	{
+		foreach (var spec in run.Manifest.Objects)
+		{
+			if (await ApplyObjectWiringAsync(run.Writes, spec, run.ObjidByRef[spec.Ref], run.Created.ContainsKey(spec.Ref),
+				run.Changeset, run.Resolve, cancellationToken) is string error)
+			{
+				return error;
+			}
+		}
+
+		return null;
+	}
+
+	/// <summary>Pass 3: attributes, per the changeset's decision for each.</summary>
+	private async Task<string?> ApplyAttributesAsync(ApplyRun run, CancellationToken cancellationToken)
+	{
+		foreach (var change in run.Changeset.Attributes)
+		{
+			var objid = change.Objid ?? run.ObjidByRef.GetValueOrDefault(change.TargetRef);
+			if (objid is null)
+			{
+				return $"Internal error: no objid for attribute target '{change.TargetRef}'.";
+			}
+
+			var spec = run.ManifestByRef.GetValueOrDefault(change.TargetRef);
+			string? newValue;
+			if (spec?.Attributes.GetValueOrDefault(change.Attribute) is { } attrSpec)
+			{
+				// Code: tokens become [v(PM`REFS`...)] recalls — never dbrefs (20.21).
+				newValue = PackageRefIndirection.TransformCode(attrSpec.Value, spec.IsAttach ? run.Manifest.Name : null);
+			}
+			else if (change.NewValue is not null && PackageRefIndirection.IsRefAttribute(change.Attribute))
+			{
+				// Engine-managed ref attr: the value IS the resolution. FindForeseeableFailureAsync
+				// has already refused a token nothing resolves.
+				newValue = PackageRefSubstitution.Substitute(change.NewValue, run.Resolve, out var unresolved);
+				if (unresolved.Count > 0)
+				{
+					return UnresolvedRef(change.TargetRef, change.Attribute, unresolved[0]);
+				}
+			}
+			else
+			{
+				newValue = change.NewValue;
+			}
+
+			if (await ApplyAttributeChangeAsync(run.Writes, run.Manifest, change, objid, newValue, run.Decisions,
+				run.PackageManager, run.PreApply, run.FinalValues, run.Notes, cancellationToken) is string error)
+			{
+				return error;
+			}
+		}
+
+		return null;
+	}
+
+	/// <summary>
+	/// Pass 4: object structure (flags, powers, locks, attribute flags) per the three-way merge —
+	/// add, remove, keep-local or conflict, never additive.
+	/// </summary>
+	private async Task<string?> ApplyStructureAsync(ApplyRun run, CancellationToken cancellationToken)
+	{
+		foreach (var change in run.Changeset.Structure)
+		{
+			var objid = change.Objid ?? run.ObjidByRef.GetValueOrDefault(change.TargetRef);
+			if (objid is null)
+			{
+				return $"Internal error: no objid for structure target '{change.TargetRef}'.";
+			}
+
+			// Lock values resolve at apply time (refs to objects created this apply
+			// only get dbrefs now), exactly like attribute code — never trust the
+			// plan-time NewValue for a lock write.
+			var effective = change;
+			if (change.Kind == PackageStructureKind.Lock
+				&& change.Action is PackageStructureAction.Add or PackageStructureAction.Conflict
+				&& run.ManifestByRef.TryGetValue(change.TargetRef, out var lockSpec)
+				&& LockNames.Fold(lockSpec.Locks).TryGetValue(change.Element, out var rawLock))
+			{
+				var resolvedLock = PackageRefSubstitution.Substitute(rawLock, run.Resolve, out var unresolved);
+				if (unresolved.Count > 0)
+				{
+					return UnresolvedRef(change.TargetRef, $"lock:{change.Element}", unresolved[0]);
+				}
+
+				effective = change with { NewValue = resolvedLock };
+			}
+
+			if (await ApplyStructureChangeAsync(run.Writes, effective, objid, run.Decisions, run.Notes, cancellationToken) is string error)
+			{
+				return error;
+			}
+		}
+
+		return null;
+	}
+
+	/// <summary>Pass 5: objects removed from the package are marked GOING, the @destroy convention.</summary>
+	private async Task RetireRemovedObjectsAsync(ApplyRun run, CancellationToken cancellationToken)
+	{
+		foreach (var change in run.Changeset.Objects.Where(c => c.Action == PackageObjectAction.Delete))
+		{
+			await MarkGoingAsync(run.Writes, change.Objid!, run.Notes, cancellationToken);
+			await run.Writes.RemovePackageObjectAsync(run.Manifest.Name, change.Ref);
+			await run.Writes.RemoveManagedStructureAsync(run.Manifest.Name, change.Objid!);
+		}
+	}
+
+	/// <summary>
+	/// Pass 6: the registry — objects, structure baselines, the package row, dependencies and the
+	/// application registration — and then the revision record, which commits the apply.
+	/// </summary>
+	private async Task<PackageApplyResult> RecordApplyAsync(ApplyRun run, RegisteredApplication? application)
+	{
+		var manifest = run.Manifest;
+		var writes = run.Writes;
+
+		foreach (var change in run.Changeset.Objects.Where(c => c.Action == PackageObjectAction.Rename))
+		{
+			await writes.RemovePackageObjectAsync(manifest.Name, change.RenamedFromRef!);
+		}
+
+		// Attach objects are NOT recorded here — the package does not own them.
+		// Their managed attributes live in sys_managed_attributes, which is what
+		// uninstall clears (without destroying the object). Decision 20.3.
+		foreach (var spec in manifest.Objects.Where(o => !o.IsAttach))
+		{
+			await writes.UpsertPackageObjectAsync(new PackageObjectRecord(
+				manifest.Name, spec.Ref, run.ObjidByRef[spec.Ref], spec.Type.ToString().ToLowerInvariant()));
+		}
+
+		// Persist the object-structure baseline (= the resolved manifest structure)
+		// for every managed object — including attach objects, which own attribute
+		// flags — and capture it for the rollback snapshot. Objects with no managed
+		// structure carry no row (their baseline is cleared if one lingered).
+		var structureSnapshot = new List<PackageRevisionSnapshotStructure>();
+		foreach (var spec in manifest.Objects)
+		{
+			var structObjid = run.ObjidByRef[spec.Ref];
+			if (BuildResolvedStructure(spec, run.Resolve) is not { } resolved)
+			{
+				await writes.RemoveManagedStructureAsync(manifest.Name, structObjid);
+				continue;
+			}
+
+			await writes.UpsertManagedStructureAsync(new ManagedStructureRecord(
+				manifest.Name, structObjid, JsonSerializer.Serialize(resolved, SnapshotJson), manifest.Version.ToString()));
+			structureSnapshot.Add(new PackageRevisionSnapshotStructure(
+				structObjid, resolved.Flags, resolved.Powers, resolved.Locks, resolved.AttributeFlags));
+		}
+
+		// The package record must exist BEFORE its dependency edges: graph
+		// DEPENDS_ON relationship, so a fresh install would otherwise lose
+		// its edges silently.
+		var revision = (run.Inputs.Installed?.CurrentRevision ?? 0) + 1;
+		var source = run.Request.Source;
+		await writes.UpsertInstalledPackageAsync(new InstalledPackageRecord(
+			manifest.Name, manifest.Version.ToString(), source.Repo, source.Path,
+			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision));
+
+		await writes.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
+			.Select(d => new PackageDependencyRecord(manifest.Name, d.PackageId, d.Constraint.ToString()))
+			.ToList());
+
+		if (application is not null)
+		{
+			await writes.UpsertApplicationAsync(application);
+			run.Notes.Add($"Registered application '{application.Slug}' ({application.Kind}) at /apps/{application.Slug}.");
+		}
+
+		var snapshot = new PackageRevisionSnapshot(
+			manifest.Version.ToString(),
+			manifest.Objects
+				.Select(o => new PackageRevisionSnapshotObject(o.Ref, run.ObjidByRef[o.Ref], o.Type.ToString().ToLowerInvariant(),
+					o.IsAttach ? PackageObjectRelation.Attached : PackageObjectRelation.Owned))
+				.ToList(),
+			run.FinalValues.Select(kv => new PackageRevisionSnapshotAttribute(kv.Key.Objid, kv.Key.Attribute, kv.Value)).ToList(),
+			structureSnapshot);
+
+		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(
+			manifest.Name, revision,
+			run.Inputs.Installed is null ? PackageRevisionKind.Install : PackageRevisionKind.Upgrade,
+			manifest.Version.ToString(), source.Commit,
+			JsonSerializer.Serialize(snapshot, SnapshotJson),
+			JsonSerializer.Serialize(run.Request.ConfigureAnswers, SnapshotJson),
+			JsonSerializer.Serialize(run.PreApply, SnapshotJson),
+			DateTimeOffset.UtcNow));
+		writes.Commit();
+
+		return new PackageApplyResult(revision, run.Created, run.Notes);
 	}
 
 	/// <summary>

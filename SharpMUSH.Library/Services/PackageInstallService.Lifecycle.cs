@@ -50,7 +50,6 @@ public partial class PackageInstallService
 			return new Success();
 		}
 
-		var notes = new List<string>();
 		var ownObjects = await registry.GetPackageObjectsAsync(packageId);
 		var ownObjids = ownObjects.Select(o => o.Objid).ToHashSet(StringComparer.Ordinal);
 
@@ -77,6 +76,24 @@ public partial class PackageInstallService
 			}
 		}
 
+		await using var writes = BeginWrites(await GetPackageManagerWizardAsync(cancellationToken));
+		await RetirePackageAsync(writes, packageId, ownObjects, cancellationToken);
+		return new Success();
+	}
+
+	/// <summary>
+	/// The writes of an uninstall that has passed its guards. Removing the package's rows is the
+	/// last write and commits it: that also drops its revisions, so it cannot be reverted.
+	/// </summary>
+	private async Task RetirePackageAsync(
+		PackageWriteTransaction writes,
+		string packageId,
+		IReadOnlyList<PackageObjectRecord> ownObjects,
+		CancellationToken cancellationToken)
+	{
+		var notes = new List<string>();
+		var ownObjids = ownObjects.Select(o => o.Objid).ToHashSet(StringComparer.Ordinal);
+
 		// Managed attrs on objects this package does NOT own (cross-package): clear them.
 		foreach (var group in (await registry.GetManagedAttributesAsync(packageId))
 			.Where(m => !ownObjids.Contains(m.Objid)).GroupBy(m => m.Objid))
@@ -91,13 +108,13 @@ public partial class PackageInstallService
 
 			foreach (var managed in group.Where(a => !otherRefs.Contains(a.Attribute)))
 			{
-				await mediator.Send(new ClearAttributeCommand(dbref, managed.Attribute.Split('`')), cancellationToken);
+				await writes.ClearAttributeAsync(dbref, managed.Attribute.Split('`'), cancellationToken);
 			}
 		}
 
 		foreach (var record in ownObjects)
 		{
-			await MarkGoingAsync(record.Objid, notes, cancellationToken);
+			await MarkGoingAsync(writes, record.Objid, notes, cancellationToken);
 		}
 
 		// Application packages own portal registrations rather than objects;
@@ -105,12 +122,12 @@ public partial class PackageInstallService
 		foreach (var app in (await applications.GetApplicationsAsync())
 			.Where(a => string.Equals(a.OwningPackage, packageId, StringComparison.Ordinal)))
 		{
-			await applications.RemoveApplicationAsync(app.Slug);
+			await writes.RemoveApplicationAsync(app.Slug);
 			notes.Add($"Removed application '{app.Slug}'.");
 		}
 
 		await registry.RemoveInstalledPackageAsync(packageId);
-		return new Success();
+		writes.Commit();
 	}
 
 	// ── Rollback ─────────────────────────────────────────────────────────────
@@ -249,8 +266,9 @@ public partial class PackageInstallService
 	}
 
 	/// <summary>
-	/// The writes of a rollback that has passed every check: objects back into the registry first, so
-	/// the attribute and structure restores find them, and objects the revision did not own released last.
+	/// The writes of a rollback that has passed every check, in one transaction: objects back into the
+	/// registry first, so the attribute and structure restores find them, objects the revision did not
+	/// own released last, and the new revision record committing it.
 	/// </summary>
 	private async Task<PackageRollbackResult> RestoreRevisionAsync(
 		InstalledPackageRecord installed,
@@ -263,23 +281,24 @@ public partial class PackageInstallService
 	{
 		var packageId = installed.Id;
 		var revision = record.Revision;
-		var notes = new List<string>();
 		var pmWizard = await GetPackageManagerWizardAsync(cancellationToken);
+		await using var writes = BeginWrites(pmWizard);
+		var notes = new List<string>();
 		var restoredKeys = new HashSet<(string, string)>();
 
 		foreach (var stale in objects.Stale)
 		{
-			await registry.RemovePackageObjectAsync(packageId, stale.Ref);
+			await writes.RemovePackageObjectAsync(packageId, stale.Ref);
 		}
 
 		foreach (var owned in objects.Wanted)
 		{
-			await registry.UpsertPackageObjectAsync(owned);
+			await writes.UpsertPackageObjectAsync(owned);
 		}
 
 		foreach (var revived in objects.Revive)
 		{
-			await ClearGoingAsync(revived.Objid, notes, cancellationToken);
+			await ClearGoingAsync(writes, revived.Objid, notes, cancellationToken);
 		}
 
 		foreach (var attribute in snapshot.Attributes)
@@ -291,9 +310,9 @@ public partial class PackageInstallService
 				continue;
 			}
 
-			await mediator.Send(new SetAttributeCommand(
-				dbref, attribute.Attribute.Split('`'), MarkupText.Plain(attribute.Value), pmWizard), cancellationToken);
-			await registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(
+			await writes.SetAttributeAsync(
+				dbref, attribute.Attribute.Split('`'), MarkupText.Plain(attribute.Value), pmWizard, cancellationToken);
+			await writes.UpsertManagedAttributeAsync(new ManagedAttributeRecord(
 				packageId, attribute.Objid, attribute.Attribute.ToUpperInvariant(),
 				attribute.Value, ContentHash.Sha256Hex(attribute.Value), snapshot.Version));
 			restoredKeys.Add((attribute.Objid, attribute.Attribute.ToUpperInvariant()));
@@ -306,24 +325,24 @@ public partial class PackageInstallService
 			var shared = sharedRefs.Contains((managed.Objid, managed.Attribute.ToUpperInvariant()));
 			if (HelperFunctions.ParseDbRef(managed.Objid) is DBRef dbref && !shared)
 			{
-				await mediator.Send(new ClearAttributeCommand(dbref, managed.Attribute.Split('`')), cancellationToken);
+				await writes.ClearAttributeAsync(dbref, managed.Attribute.Split('`'), cancellationToken);
 			}
 
-			await registry.RemoveManagedAttributeAsync(packageId, managed.Objid, managed.Attribute);
+			await writes.RemoveManagedAttributeAsync(packageId, managed.Objid, managed.Attribute);
 			notes.Add(shared
 				? $"Released ownership of shared ref {managed.Objid}/{managed.Attribute}; its value was retained."
 				: $"Removed {managed.Objid}/{managed.Attribute} (not present in revision {revision}).");
 		}
 
-		await RestoreStructureAsync(packageId, snapshot, notes, cancellationToken);
+		await RestoreStructureAsync(writes, packageId, snapshot, notes, cancellationToken);
 
 		foreach (var released in objects.Release)
 		{
-			await MarkGoingAsync(released.Objid, notes, cancellationToken);
+			await MarkGoingAsync(writes, released.Objid, notes, cancellationToken);
 		}
 
 		var newRevision = installed.CurrentRevision + 1;
-		await registry.UpsertInstalledPackageAsync(installed with
+		await writes.UpsertInstalledPackageAsync(installed with
 		{
 			Version = snapshot.Version,
 			CurrentRevision = newRevision,
@@ -335,6 +354,7 @@ public partial class PackageInstallService
 			Kind = PackageRevisionKind.Rollback,
 			AppliedAt = DateTimeOffset.UtcNow
 		});
+		writes.Commit();
 
 		return new PackageRollbackResult(newRevision, revision, notes);
 	}
@@ -346,6 +366,7 @@ public partial class PackageInstallService
 	/// package set, so admin-added extras are never disturbed.
 	/// </summary>
 	private async Task RestoreStructureAsync(
+		PackageWriteTransaction writes,
 		string packageId, PackageRevisionSnapshot snapshot, List<string> notes, CancellationToken cancellationToken)
 	{
 		var noDecisions = new Dictionary<string, PackageConflictDecision>(StringComparer.Ordinal);
@@ -370,7 +391,7 @@ public partial class PackageInstallService
 
 			foreach (var change in StructureRollbackChanges(objid, have, want))
 			{
-				var error = await ApplyStructureChangeAsync(change, objid, noDecisions, notes, cancellationToken);
+				var error = await ApplyStructureChangeAsync(writes, change, objid, noDecisions, notes, cancellationToken);
 				if (error is not null)
 				{
 					notes.Add(error);
@@ -379,12 +400,12 @@ public partial class PackageInstallService
 
 			if (want is null)
 			{
-				await registry.RemoveManagedStructureAsync(packageId, objid);
+				await writes.RemoveManagedStructureAsync(packageId, objid);
 			}
 			else
 			{
 				var baseline = new PackageStructureBaseline(want.Flags, want.Powers, want.Locks, want.AttributeFlags);
-				await registry.UpsertManagedStructureAsync(new ManagedStructureRecord(
+				await writes.UpsertManagedStructureAsync(new ManagedStructureRecord(
 					packageId, objid, JsonSerializer.Serialize(baseline, SnapshotJson), snapshot.Version));
 			}
 		}
