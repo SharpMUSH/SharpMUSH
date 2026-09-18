@@ -424,13 +424,28 @@ public partial class Functions
 					mode: IAttributeService.AttributeMode.Read,
 					parent: checkParents);
 
-				var present = requireValue
-					? maybeAttr is SharpAttribute[] chain && !string.IsNullOrWhiteSpace(chain.Last().Value.ToPlainText())
-					: maybeAttr.IsAttribute;
-
-				return new CallState(present ? "1" : "0");
+				// PennMUSH answers 0 only for an attribute that is genuinely absent from an object
+				// the caller may examine; an attribute that exists but cannot be read is e_perm,
+				// not "no" (src/fundb.c:243-256). Reporting absence for a refusal tells a mortal
+				// the attribute is not there, which is a different and wrong answer.
+				return maybeAttr switch
+				{
+					Error<string> error => new CallState(error.Value),
+					SharpAttribute[] chain => new CallState(
+						!requireValue || HasValue(chain.Last().Value.ToPlainText()) ? "1" : "0"),
+					_ => new CallState("0")
+				};
 			});
 	}
+
+	/// <summary>
+	/// What the <c>VAL</c> forms count as a value. PennMUSH (<c>src/fundb.c:245-250</c>) treats only
+	/// the empty string as empty, plus a value of exactly one space when <c>empty_attrs</c> is off —
+	/// the space being what an attribute set to nothing is stored as in that configuration. Anything
+	/// else, two spaces included, is a value; a blanket whitespace test answers 0 for it.
+	/// </summary>
+	private bool HasValue(string value)
+		=> value.Length != 0 && !(value == " " && !Configuration.CurrentValue.Attribute.EmptyAttributes);
 
 	[SharpFunction(Name = "hasattr", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute"])]
 	public ValueTask<CallState> HasAttribute(IMUSHCodeParser parser, SharpFunctionAttribute _2)

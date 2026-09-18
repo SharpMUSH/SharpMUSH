@@ -108,4 +108,57 @@ public class AttributeFamilyParityTests
 		await Assert.That(await Eval($"hasattrval(%!,H{uid})")).IsEqualTo("1");
 		await Assert.That(await Eval($"hasattrpval(%!,H{uid})")).IsEqualTo("1");
 	}
+
+	/// <summary>
+	/// PennMUSH's <c>VAL</c> test is <c>!*AL_STR(a)</c>, plus a value of exactly one space when
+	/// <c>empty_attrs</c> is off (<c>src/fundb.c:245-250</c>). Two spaces is a value. A blanket
+	/// <c>IsNullOrWhiteSpace</c> answers 0 for it, and for a tab, and for a newline.
+	/// </summary>
+	[Test]
+	[Arguments("%b%b", "two spaces")]
+	[Arguments("%b%b%b", "three spaces")]
+	public async Task AValueOfNothingButSpacesIsStillAValue(string value, string description)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		await Eval($"[attrib_set(%!/W{uid},{value})]");
+
+		await Assert.That(await Eval($"hasattrval(%!,W{uid})")).IsEqualTo("1").Because(description);
+		await Assert.That(await Eval($"hasattrpval(%!,W{uid})")).IsEqualTo("1").Because(description);
+	}
+
+	/// <summary>
+	/// An attribute that exists but cannot be read is a refusal, not an absence: PennMUSH falls into
+	/// <c>else if (a || !Can_Examine(...)) safe_str(T(e_perm))</c> (<c>src/fundb.c:254</c>). Telling
+	/// a mortal <c>0</c> says the attribute is not there, which is a different answer.
+	/// </summary>
+	[Test]
+	[Arguments("hasattr")]
+	[Arguments("hasattrp")]
+	[Arguments("hasattrval")]
+	[Arguments("hasattrpval")]
+	public async Task AnUnreadableAttributeIsRefusedRatherThanReportedAbsent(string function)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services,
+			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(),
+			WebAppFactoryArg.Services.GetRequiredService<IConnectionService>(),
+			$"Hav{uid[..4]}");
+
+		var owner = await Eval($"create(HavOwner{uid})");
+		await Eval($"[attrib_set({owner}/S{uid},secret)]");
+		await Eval($"[set({owner}/S{uid},mortal_dark)]");
+
+		// Control: the wizard who set it can still read it, so a 0 below is the mortal's view and
+		// not a failed set.
+		await Assert.That(await Eval($"{function}({owner},S{uid})")).IsEqualTo("1");
+
+		var asMortal = (await WebAppFactoryArg.CommandParser.CommandParse(
+			mortal.Handle,
+			WebAppFactoryArg.Services.GetRequiredService<IConnectionService>(),
+			MarkupText.Plain($"think {function}({owner},S{uid})")))?.Message?.ToPlainText() ?? string.Empty;
+
+		await Assert.That(asMortal).StartsWith("#-1")
+			.Because("PennMUSH answers e_perm for an attribute it can see is there but may not read");
+	}
 }

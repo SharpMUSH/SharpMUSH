@@ -53,8 +53,14 @@ public static class BuildingHelpers
 			return new Error<string>(ErrorMessages.Returns.BadObjectName);
 		}
 
+		// PennMUSH do_create hands the new object to the executor (src/create.c). An exit cannot
+		// hold anything — AnySharpObject.AsContainer throws for one — so code owned by an exit
+		// builds into the room the exit is in. @CREATE threw outright in that case; create() had
+		// the fallback and lost it when the two were merged.
+		var into = executor.IsContainer ? executor.AsContainer : await executor.Where();
+
 		var thing = await mediator.Send(new CreateThingCommand(name.ToPlainText(),
-			executor.AsContainer,
+			into,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None),
 			home.AsContainer));
 

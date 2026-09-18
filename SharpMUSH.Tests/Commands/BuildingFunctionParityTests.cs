@@ -77,6 +77,43 @@ public class BuildingFunctionParityTests
 	}
 
 	/// <summary>
+	/// An exit cannot hold anything, so an executor that is one builds into the room it is in.
+	/// <c>AnySharpObject.AsContainer</c> throws for an exit, which made <c>@create</c> run by an
+	/// exit's code fault outright; <c>create()</c> had a <c>Where()</c> fallback until the two were
+	/// merged, and then it faulted too.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask CreationByAnExitBuildsIntoTheRoomTheExitIsIn(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var roomResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig BfpExitRoom{uid}"));
+		var room = new DBRef(int.Parse(System.Text.RegularExpressions.Regex.Match(
+			roomResult.Message!.ToPlainText(), @"#(\d+)").Groups[1].Value));
+
+		var exitResult = await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@open BfpExit{uid}={room}"));
+		var exit = new DBRef(int.Parse(System.Text.RegularExpressions.Regex.Match(
+			exitResult.Message!.ToPlainText(), @"#(\d+)").Groups[1].Value));
+
+		// Where the exit itself lives is the answer we expect, and it is not necessarily `room`.
+		var exitHome = (await (await Node(exit)).Where()).Object().DBRef;
+
+		var name = $"BfpByExit{uid}";
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(throughTheFunction
+			? $"@force {exit}=think create({name})"
+			: $"@force {exit}=@create {name}"));
+
+		var found = (await Eval(1, $"lsearch(all,name,{name})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		await Assert.That(found.Length).IsEqualTo(1)
+			.Because("the create has to have happened at all — it used to throw for an exit executor");
+
+		var built = DBRef.Parse(found[0]);
+		await Assert.That((await (await Node(built)).Where()).Object().DBRef.Number).IsEqualTo(exitHome.Number);
+	}
+
+	/// <summary>
 	/// <c>do_create</c> reports the object it made, and <c>fun_create</c> reaches that report by
 	/// calling it.
 	/// </summary>
