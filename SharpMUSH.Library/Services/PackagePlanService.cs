@@ -15,7 +15,7 @@ public class PackagePlanService : IPackagePlanService
 		var manifest = inputs.Manifest;
 		var notes = new List<string>();
 
-		var dependencyIssues = CheckDependenciesAndConflicts(inputs);
+		var dependencyIssues = CheckDependenciesAndConflicts(manifest, inputs.AllInstalledPackages);
 		var (objects, objidByRef, deletedObjids) = ClassifyObjects(inputs, notes);
 		var attributes = ClassifyAttributes(inputs, objidByRef, deletedObjids, notes);
 		var structure = ClassifyStructure(inputs, objidByRef, deletedObjids, notes);
@@ -44,12 +44,18 @@ public class PackagePlanService : IPackagePlanService
 
 	// ── Dependencies & conflicts (decisions 20.6, 20.20) ───────────────────
 
-	private static List<PackageDependencyIssue> CheckDependenciesAndConflicts(PackagePlanInputs inputs)
+	/// <summary>
+	/// The admission gate every package kind passes before anything is written: each declared
+	/// dependency must be installed at a satisfying version, and no declared conflict may be. The
+	/// plan engine reports these as blockers; a managed install, which has no plan, calls this directly.
+	/// </summary>
+	public static IReadOnlyList<PackageDependencyIssue> CheckDependenciesAndConflicts(
+		PackageManifest manifest, IReadOnlyList<InstalledPackageRecord> allInstalled)
 	{
 		var issues = new List<PackageDependencyIssue>();
-		var installedById = inputs.AllInstalledPackages.ToDictionary(p => p.Id, StringComparer.Ordinal);
+		var installedById = allInstalled.ToDictionary(p => p.Id, StringComparer.Ordinal);
 
-		foreach (var dependency in inputs.Manifest.Dependencies)
+		foreach (var dependency in manifest.Dependencies)
 		{
 			if (!installedById.TryGetValue(dependency.PackageId, out var installed))
 			{
@@ -67,7 +73,7 @@ public class PackagePlanService : IPackagePlanService
 			}
 		}
 
-		foreach (var conflict in inputs.Manifest.Conflicts)
+		foreach (var conflict in manifest.Conflicts)
 		{
 			if (installedById.TryGetValue(conflict.PackageId, out var installed)
 				&& PackageVersion.TryParse(installed.Version, out var installedVersion)

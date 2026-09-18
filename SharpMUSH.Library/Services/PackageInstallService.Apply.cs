@@ -44,11 +44,7 @@ public partial class PackageInstallService
 
 		if (changeset.IsBlocked)
 		{
-			var blockers = string.Join("; ", changeset.DependencyIssues.Select(i =>
-				i.IsConflict
-					? $"conflicts with installed {i.PackageId} {i.InstalledVersion}"
-					: $"requires {i.PackageId} {i.Constraint}{(i.InstalledVersion is null ? " (not installed)" : $" (installed: {i.InstalledVersion})")}"));
-			return new Error<string>($"Plan is blocked: {blockers}");
+			return Blocked(changeset.DependencyIssues);
 		}
 
 		var decisions = request.ConflictDecisions.ToDictionary(
@@ -327,12 +323,26 @@ public partial class PackageInstallService
 				$"Managed package '{manifest.Name}' cannot be installed without a binary source to read its DLL(s) from.");
 		}
 
+		// The same dependency/conflict gate a softcode plan enforces, and it must run here: once
+		// DeployAsync has written plugins/<id>/, the loader runs that code on the next boot.
+		var issues = PackagePlanService.CheckDependenciesAndConflicts(manifest, await registry.GetInstalledPackagesAsync());
+		if (issues.Count > 0)
+		{
+			return Blocked(issues);
+		}
+
 		return await managedInstaller.DeployAsync(manifest, request, binarySource, cancellationToken) switch
 		{
 			IReadOnlyList<string> deployed => await RecordManagedDeploymentAsync(manifest, request, deployed),
 			Error<string> error => error,
 		};
 	}
+
+	private static Error<string> Blocked(IEnumerable<PackageDependencyIssue> issues) =>
+		new($"Plan is blocked: {string.Join("; ", issues.Select(i =>
+			i.IsConflict
+				? $"conflicts with installed {i.PackageId} {i.InstalledVersion}"
+				: $"requires {i.PackageId} {i.Constraint}{(i.InstalledVersion is null ? " (not installed)" : $" (installed: {i.InstalledVersion})")}"))}");
 
 	/// <summary>
 	/// Records a managed package whose binaries <see cref="IManagedPackageInstaller"/> has deposited: the
