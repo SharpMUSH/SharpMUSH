@@ -685,12 +685,18 @@ public partial record ParserState(
 	public bool HasRegexpCaptures => !RegexRegisters.IsEmpty && VisibleRegexpFrames.Any(frame => frame.Count > 0);
 
 	/// <summary>
+	/// The innermost visible regexp context, which is the only one <c>PE_Get_re</c> reads; null when
+	/// there is none. What <c>$n</c>, <c>r(&lt;n&gt;, regexp)</c> and <c>registers(, regexp)</c> see.
+	/// </summary>
+	public IReadOnlyDictionary<string, MString>? RegexpCaptures => VisibleRegexpFrames.FirstOrDefault();
+
+	/// <summary>
 	/// The capture <paramref name="name"/> — a group number or a group name, in any case — from the
 	/// innermost visible regexp context only, as <c>PE_Get_re</c> reads it. Empty when that context
 	/// has no such capture, even if an outer one does.
 	/// </summary>
 	public MString RegexpCapture(string name)
-		=> VisibleRegexpFrames.FirstOrDefault() is { } frame && frame.TryGetValue(name, out var value)
+		=> RegexpCaptures is { } frame && frame.TryGetValue(name, out var value)
 			? value
 			: MarkupText.Empty;
 }

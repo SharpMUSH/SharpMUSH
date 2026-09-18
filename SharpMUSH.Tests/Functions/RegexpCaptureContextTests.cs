@@ -174,4 +174,17 @@ public class RegexpCaptureContextTests
 	[Arguments("[strlen(regedit(abc,b,[ansi(r,B)]))]", "3")]
 	public async Task RegeditReadsTheCaptureContext(string code, string expected)
 		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
+
+	/// <summary>
+	/// <c>r(&lt;n&gt;, regexp)</c> and <c>registers(, regexp)</c> read the same context <c>$n</c> does, with
+	/// the same attribute boundary. PennMUSH's <c>fun_r</c> has no case for the regexp type and always
+	/// returns nothing; SharpMUSH returns the capture, as <c>help r</c> documents.
+	/// </summary>
+	[Test]
+	public async Task RegisterFunctionsRespectTheAttributeBoundary()
+	{
+		await Evaluate("[attrib_set(me/RX_R_1156,lit([r(1,regexp)]-[registers(,regexp)]))]");
+
+		await Assert.That(await Evaluate("[reswitch(abc,a(b)c,r(1,regexp)/[u(me/RX_R_1156)])]")).IsEqualTo("b/-");
+	}
 }
