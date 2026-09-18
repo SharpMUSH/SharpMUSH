@@ -191,7 +191,7 @@ public partial class PackageInstallService
 						case PackageConflictResolution.UseCustom when decision.CustomValue is not null:
 							return await SetAsync(decision.CustomValue);
 						case PackageConflictResolution.UseCustom:
-							return $"Lock conflict {change.TargetRef}/{change.Element}: UseCustom requires a value.";
+							return CustomValueMissing($"Lock conflict {change.TargetRef}/{change.Element}");
 						default: // KeepMine — leave the live lock untouched.
 							return null;
 					}

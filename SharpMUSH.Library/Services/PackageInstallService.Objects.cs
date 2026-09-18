@@ -54,7 +54,7 @@ public partial class PackageInstallService
 					var location = await ResolveContainerAsync(spec.Location, resolve, cancellationToken);
 					if (location is null)
 					{
-						return new Error<string>($"Exit {{{{{spec.Ref}}}}}: source room is not resolvable.");
+						return new Error<string>(ExitSourceUnresolved(spec.Ref));
 					}
 
 					var parts = spec.Name.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -96,7 +96,7 @@ public partial class PackageInstallService
 			var destination = await ResolveContainerAsync(spec.Destination, resolve, cancellationToken);
 			if (destination is null)
 			{
-				return $"Exit {{{{{spec.Ref}}}}}: destination is not resolvable.";
+				return ExitDestinationUnresolved(spec.Ref);
 			}
 
 			if (node is not SharpExit exit)
@@ -128,7 +128,7 @@ public partial class PackageInstallService
 			var parentNode = parentObjid is null ? null : await GetKnownAsync(parentObjid, cancellationToken);
 			if (parentNode is null)
 			{
-				return $"Object {{{{{spec.Ref}}}}}: parent {spec.Parent} is not resolvable.";
+				return ParentUnresolved(spec.Ref, spec.Parent);
 			}
 
 			await mediator.Send(new SetObjectParentCommand(node, parentNode), cancellationToken);
@@ -233,7 +233,7 @@ public partial class PackageInstallService
 							await BaselineAsync(newValue ?? decision.CustomValue, decision.CustomValue);
 							return null;
 						case PackageConflictResolution.UseCustom:
-							return $"Conflict {change.TargetRef}/{change.Attribute}: UseCustom requires a value.";
+							return CustomValueMissing($"Conflict {change.TargetRef}/{change.Attribute}");
 						default: // KeepMine
 							if (change.Conflict == PackageConflictKind.ModifyDelete)
 							{
