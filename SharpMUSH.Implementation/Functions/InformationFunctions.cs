@@ -1330,37 +1330,34 @@ public partial class Functions
 		return result2;
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>functions([&lt;type&gt;])</c> (<c>src/function.c</c> <c>list_functions</c>): the type is
+	/// "builtin", "local" (@functions) or "all", and anything else is <c>#-1 INVALID ARGUMENT</c>.
+	/// </summary>
 	[SharpFunction(Name = "functions", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> FFunctions(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var functionLibrary = parser.FunctionLibrary;
+		var type = parser.CurrentState.Arguments.TryGetValue("0", out var arg0)
+			? (arg0.Message ?? MarkupText.Empty).ToPlainText()
+			: string.Empty;
 
-		var pattern = "*";
-		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg0))
-		{
-			var patternArg = (arg0.Message ?? MarkupText.Empty).ToPlainText();
-			if (!string.IsNullOrWhiteSpace(patternArg))
-			{
-				pattern = patternArg;
-			}
-		}
-
-		var allFunctions = functionLibrary.Keys.OrderBy(x => x);
-
-		IEnumerable<string> filteredFunctions;
-		if (pattern == "*")
-		{
-			filteredFunctions = allFunctions;
-		}
-		else
-		{
-			var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-			var regex = SoftcodeRegex.Create(regexPattern, RegexOptions.IgnoreCase);
-			filteredFunctions = allFunctions.Where(name => SoftcodeRegex.IsMatch(regex, name));
-		}
-
-		return ValueTask.FromResult(new CallState(string.Join(" ", filteredFunctions)));
+		return ValueTask.FromResult(type is "" or "all" or "builtin" or "local"
+			? new CallState(string.Join(' ', FunctionNames(parser, type)))
+			: new CallState(ErrorMessages.Returns.InvalidArgument));
 	}
+
+	/// <summary>Function names of one type — "builtin", "local", or anything else for both — sorted, lower-case.</summary>
+	private static IEnumerable<string> FunctionNames(IMUSHCodeParser parser, string type)
+		=> (type switch
+		{
+			"builtin" => parser.FunctionLibrary.AsEnumerable().Where(kv => kv.Value.IsSystem),
+			"local" => parser.FunctionLibrary.AsEnumerable().Where(kv => !kv.Value.IsSystem),
+			_ => parser.FunctionLibrary.AsEnumerable()
+		})
+			.Select(kv => kv.Value.LibraryInformation.Attribute.Name)
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+			.Select(s => s.ToLowerInvariant());
 
 	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1389,21 +1386,7 @@ public partial class Functions
 					return await GetWizardMotdAsync(parser, option);
 				}
 			case "functions":
-				{
-					var funcPairs = type switch
-					{
-						"builtin" => parser.FunctionLibrary.AsEnumerable().Where(kv => kv.Value.IsSystem),
-						"local" => parser.FunctionLibrary.AsEnumerable().Where(kv => !kv.Value.IsSystem),
-						_ => parser.FunctionLibrary.AsEnumerable()
-					};
-
-					var names = funcPairs
-						.Select(kv => kv.Value.LibraryInformation.Attribute.Name)
-						.Distinct(StringComparer.OrdinalIgnoreCase)
-						.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
-						.Select(s => s.ToLowerInvariant());
-					return new CallState(JoinSpace(names));
-				}
+				return new CallState(JoinSpace(FunctionNames(parser, type)));
 			case "commands":
 				{
 					var cmdPairs = type switch
