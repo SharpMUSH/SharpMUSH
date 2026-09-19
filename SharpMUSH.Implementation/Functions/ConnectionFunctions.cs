@@ -33,7 +33,7 @@ public partial class Functions
 
 		if (!Configuration.CurrentValue.Log.UseConnLog)
 		{
-			return new CallState("#-1");
+			return new CallState(ErrorMessages.Returns.ConnectionLogDisabled);
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -180,7 +180,7 @@ public partial class Functions
 	{
 		if (!Configuration.CurrentValue.Log.UseConnLog)
 		{
-			return new CallState("#-1");
+			return new CallState(ErrorMessages.Returns.ConnectionLogDisabled);
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -311,7 +311,7 @@ public partial class Functions
 	{
 		if (!Configuration.CurrentValue.Log.UseConnLog)
 		{
-			return new CallState("#-1");
+			return new CallState(ErrorMessages.Returns.ConnectionLogDisabled);
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -419,17 +419,12 @@ public partial class Functions
 
 		if (long.TryParse(arg0, out var port))
 		{
+			// "No descriptor" and "not yours to see" are one answer: whether the descriptor exists is
+			// itself the thing a caller without See_All must not learn.
 			var data = ConnectionService.Get(port);
-			if (data is null)
+			if (data is null || !await CanAccessConnectionData(executor, data.Ref))
 			{
-				return new CallState("#-1");
-			}
-
-			// fun_hostname folds "no descriptor" and "not yours to see" into one "#-1": whether the
-			// descriptor exists is itself the thing a caller without See_All must not learn.
-			if (!await CanAccessConnectionData(executor, data.Ref))
-			{
-				return new CallState("#-1");
+				return new CallState(ErrorMessages.Returns.NoSuchDescriptorOrPermissionDenied);
 			}
 
 			return new CallState(data.HostName);
@@ -438,18 +433,18 @@ public partial class Functions
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 		{
-			return new CallState(maybeLocate is Error<string> error ? error.Value : "#-1");
+			return new CallState(maybeLocate is Error<string> error ? error.Value : ErrorMessages.Returns.NoSuchPlayer);
 		}
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
-			return new CallState("#-1");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
 		if (connectionData is null)
 		{
-			return new CallState("#-1");
+			return new CallState(ErrorMessages.Returns.NotConnected);
 		}
 
 		return new CallState(connectionData.HostName);
@@ -524,16 +519,11 @@ public partial class Functions
 
 		if (long.TryParse(arg0, out var port))
 		{
+			// One answer for both failures, as for host(), and for the same reason.
 			var data = ConnectionService.Get(port);
-			if (data is null)
+			if (data is null || !await CanAccessConnectionData(executor, data.Ref))
 			{
-				return new CallState("#-1");
-			}
-
-			// Same "#-1" for both failures as fun_hostname, and for the same reason.
-			if (!await CanAccessConnectionData(executor, data.Ref))
-			{
-				return new CallState("#-1");
+				return new CallState(ErrorMessages.Returns.NoSuchDescriptorOrPermissionDenied);
 			}
 
 			return new CallState(data.InternetProtocolAddress);
@@ -542,18 +532,18 @@ public partial class Functions
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 		{
-			return new CallState(maybeLocate is Error<string> error ? error.Value : "#-1");
+			return new CallState(maybeLocate is Error<string> error ? error.Value : ErrorMessages.Returns.NoSuchPlayer);
 		}
 
 		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
 		{
-			return new CallState("#-1");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
 
 		return connectionData is null
-			? new CallState("#-1")
+			? new CallState(ErrorMessages.Returns.NotConnected)
 			: new CallState(connectionData.InternetProtocolAddress);
 	}
 
@@ -579,7 +569,7 @@ public partial class Functions
 				var maybeLocate = await LocateService.LocatePlayerAndNotifyIfInvalid(parser, executor, executor, arg0);
 				if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 				{
-					return new CallState(maybeLocate is Error<string> error ? error.Value : "#-1");
+					return new CallState(maybeLocate is Error<string> error ? error.Value : ErrorMessages.Returns.NoSuchPlayer);
 				}
 
 				viewer = located;
@@ -1209,7 +1199,7 @@ public partial class Functions
 		var maybeZone = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
 		if (maybeZone is not AnySharpObject zone)
 		{
-			return new CallState(maybeZone is Error<string> error ? error.Value : "#-1");
+			return new CallState(maybeZone is Error<string> error ? error.Value : ErrorMessages.Returns.NoMatch);
 		}
 
 		var executorHasSeeAll = await executor.IsSee_All();
@@ -1271,7 +1261,7 @@ public partial class Functions
 		var maybeZone = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
 		if (maybeZone is not AnySharpObject zone)
 		{
-			return new CallState(maybeZone is Error<string> error ? error.Value : "#-1");
+			return new CallState(maybeZone is Error<string> error ? error.Value : ErrorMessages.Returns.NoMatch);
 		}
 
 		var hasSeeAll = await executor.IsSee_All();
@@ -1380,13 +1370,12 @@ public partial class Functions
 		var canSeeHidden = await executor.IsWizard() || await executor.IsRoyalty() ||
 											 await executor.IsSee_All();
 
-		// The exception in this family: fun_hidden answers "#-1" and says why, for all three of its
-		// failures. Being told a descriptor could not be found costs nothing, because only a caller who
-		// already has See_All gets this far.
+		// The exception in this family: hidden() names each of its three failures. Being told a
+		// descriptor could not be found costs nothing, because only a caller who already has See_All gets
+		// this far.
 		if (!canSeeHidden)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState("#-1");
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (long.TryParse(arg0, out var port))
@@ -1394,9 +1383,7 @@ public partial class Functions
 			var data = ConnectionService.Get(port);
 			if (data is null || data.Ref is null)
 			{
-				await NotifyService.NotifyLocalized(executor,
-					nameof(ErrorMessages.Notifications.CouldNotFindDescriptor), executor);
-				return new CallState("#-1");
+				return new CallState(ErrorMessages.Returns.NoSuchDescriptor);
 			}
 
 			var isHidden = data.IsHidden
@@ -1407,9 +1394,7 @@ public partial class Functions
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
 		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
 		{
-			await NotifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.CouldNotFindPlayer), executor);
-			return new CallState("#-1");
+			return new CallState(maybeLocate is Error<string> error ? error.Value : ErrorMessages.Returns.NoSuchPlayer);
 		}
 
 		var isHiddenPlayer = await ConnectionService.IsPlayerHiddenAsync(located.Object.DBRef)

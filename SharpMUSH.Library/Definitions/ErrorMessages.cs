@@ -209,6 +209,21 @@ public static class ErrorMessages
 		public const string NoSuchPlayer = "#-1 NO SUCH PLAYER";
 		public const string NoSuchType = "#-1 NO SUCH TYPE";
 		public const string NoZoneSet = "#-1 NO ZONE SET";
+		public const string NoDropTo = "#-1 NO DROP-TO";
+		public const string NotLinked = "#-1 NOT LINKED";
+		public const string VariableDestination = "#-2 VARIABLE DESTINATION";
+		public const string HomeDestination = "#-3 HOME";
+		public const string NoContents = "#-1 NO CONTENTS";
+		public const string NoExits = "#-1 NO EXITS";
+		public const string NoNextObject = "#-1 NO NEXT OBJECT";
+		public const string ConnectionLogDisabled = "#-1 CONNECTION LOG DISABLED";
+		public const string NoSuchDescriptor = "#-1 NO SUCH DESCRIPTOR";
+
+		/// <summary>
+		/// A descriptor lookup by a caller who may not see every descriptor: "no such descriptor" and
+		/// "not yours to see" have to read the same, or the answer says whether the descriptor exists.
+		/// </summary>
+		public const string NoSuchDescriptorOrPermissionDenied = "#-1 NO SUCH DESCRIPTOR OR PERMISSION DENIED";
 		public const string NonNegativeInteger = "#-1 ARGUMENT MUST BE NON-NEGATIVE INTEGER";
 		public const string NotAMember = "#-1 NOT A MEMBER OF THAT CHANNEL";
 		public const string NotAnArray = "#-1 NOT AN ARRAY";
@@ -402,9 +417,6 @@ public static class ErrorMessages
 		public const string CantSeeThat = "I can't see that here.";
 		public const string NoSuchObject = "I can't find that.";
 		public const string CouldNotFind = "Could not find that.";
-		public const string CouldNotFindPlayer = "Could not find that player.";
-		/// <summary>PennMUSH <c>fun_hidden</c> (src/bsd.c), in this codebase's wording.</summary>
-		public const string CouldNotFindDescriptor = "Could not find that descriptor.";
 		public const string CantFindThatPlayer = "I can't find that player";
 		// match.c:481 — with the exclamation mark. The neighbouring two are already exact.
 		public const string AmbiguousMatch = "I don't know which one you mean!";

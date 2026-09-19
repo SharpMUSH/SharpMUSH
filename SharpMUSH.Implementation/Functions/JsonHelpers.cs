@@ -25,7 +25,7 @@ public static class JsonHelpers
 		{
 			return ValueTask.FromResult(new CallState("null"));
 		}
-		return ValueTask.FromResult(new CallState("#-1"));
+		return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidArgument));
 	}
 
 	public static ValueTask<CallState> BooleanJSON(ImmutableSortedDictionary<string, CallState> args)

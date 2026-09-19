@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Models;
@@ -9,7 +10,7 @@ namespace SharpMUSH.Tests.Functions;
 /// <summary>
 /// <c>fun_locate</c>'s relative-scope gate (fundb.c): when the requested scopes depend on where the
 /// looker stands, the <em>executor</em> must be able to evaluate against that looker — near it,
-/// controlling it, or See_All — or the whole call answers <c>#-1</c>.
+/// controlling it, or See_All — or the whole call answers <c>#-1 PERMISSION DENIED</c>.
 ///
 /// <para>The gate and the match have different permission subjects. <c>match_result(looker, …)</c>
 /// asks its can_interact/controls questions about the <b>looker</b>, while the gate above it asks
@@ -56,7 +57,7 @@ public class LocateFunctionPermissionTests
 		// the gate talking and not simply a search that was never going to match.
 		var godSees = await EvalAs(new DBRef(1), $"locate(#{looker.Number},LocatePermTarget,n)");
 
-		await Assert.That(mortalSees).IsEqualTo("#-1");
+		await Assert.That(mortalSees).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(godSees).IsEqualTo($"#{target.Number}");
 	}
 
@@ -81,7 +82,7 @@ public class LocateFunctionPermissionTests
 		var mortalSees = await EvalAs(mortal.DbRef, $"locate(#{looker.Number},LocateInjectTarget,N)");
 		var godSees = await EvalAs(new DBRef(1), $"locate(#{looker.Number},LocateInjectTarget,N)");
 
-		await Assert.That(mortalSees).IsEqualTo("#-1");
+		await Assert.That(mortalSees).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(godSees).IsEqualTo($"#{target.Number}");
 	}
 }

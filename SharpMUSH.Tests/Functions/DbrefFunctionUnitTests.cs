@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -39,17 +40,17 @@ public class DbrefFunctionUnitTests
 	[Test]
 	public async Task LocOnCurrentRoom()
 	{
-		// loc() on the current room (%l) should return drop-to or #-1
+		// loc() on a room is its drop-to, or says it has none.
 		var result = (await Parser.FunctionParse(MarkupText.Plain("loc(%l)")))?.Message!;
-		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+:[0-9]+|#-1)$");
+		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+:[0-9]+|#-1 NO DROP-TO)$");
 	}
 
 	[Test]
 	public async Task HomeOnCurrentRoom()
 	{
-		// home() on the current room (%l) should return drop-to or #-1
+		// home() on a room is its drop-to, or says it has none.
 		var result = (await Parser.FunctionParse(MarkupText.Plain("home(%l)")))?.Message!;
-		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+:[0-9]+|#-1)$");
+		await Assert.That(result.ToPlainText()).Matches("^(#[0-9]+:[0-9]+|#-1 NO DROP-TO)$");
 	}
 
 
@@ -78,7 +79,7 @@ public class DbrefFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("locate(%#,nonsense-does-not-exist,*)", "#-1")]
+	[Arguments("locate(%#,nonsense-does-not-exist,*)", ErrorMessages.Returns.NoMatch)]
 	[Arguments("first(locate(%#,me,*),:)", "#1")]
 	[Arguments("first(locate(%#,here,*),:)", "#0")]
 	public async Task Locate(string str, string expected)
@@ -155,7 +156,7 @@ public class DbrefFunctionUnitTests
 		var dbref = createResult.ToPlainText();
 
 		var result = (await Parser.FunctionParse(MarkupText.Plain($"elock({dbref}/Basic,#99999)")))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
+		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoMatch);
 	}
 
 	[Test]
@@ -411,7 +412,7 @@ public class DbrefFunctionUnitTests
 	{
 		var locateResult = (await Parser.FunctionParse(MarkupText.Plain("locate(%#,#1:0,*)")))?.Message!;
 
-		await Assert.That(locateResult.ToPlainText()).IsEqualTo("#-1");
+		await Assert.That(locateResult.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoMatch);
 	}
 
 	[Test]

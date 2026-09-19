@@ -948,7 +948,7 @@ public partial class Functions
 		{
 			if (!DateTime.TryParse(timeStr, CultureInfo.InvariantCulture, out var dt))
 			{
-				return ValueTask.FromResult<CallState>("#-1");
+				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTime);
 			}
 			dateTime = new DateTimeOffset(dt, TimeSpan.Zero);
 		}
@@ -999,6 +999,6 @@ public partial class Functions
 				TimePrecisions.Format(dateTime.ToUnixTimeMilliseconds(), precision));
 		}
 
-		return ValueTask.FromResult<CallState>("#-1");
+		return ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidTime);
 	}
 }

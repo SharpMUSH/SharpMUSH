@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
@@ -64,7 +65,7 @@ public class LockFunctionUnitTests
 		var created = await Parser.FunctionParse(MarkupText.Plain("create(PrivateLock_" + Guid.NewGuid().ToString("N") + ")"));
 		var target = created!.Message!.ToPlainText();
 		var absent = await mortal.FunctionParse(MarkupText.Plain($"lock({target})"));
-		await Assert.That(absent?.Message?.ToPlainText()).IsEqualTo("#-1");
+		await Assert.That(absent?.Message?.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Parser.FunctionParse(MarkupText.Plain($"lock({target},#TRUE)"));
 		var creator = await mortal.FunctionParse(MarkupText.Plain($"lockowner({target})"));
 		var flags = await mortal.FunctionParse(MarkupText.Plain($"llockflags({target})"));

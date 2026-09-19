@@ -1400,12 +1400,12 @@ public partial class Functions
 			{
 				if (!await PermissionService.CanExamine(executor, container))
 				{
-					return new CallState("#-1");
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
 				}
 
 				if (!container.IsContainer)
 				{
-					return new CallState("#-1");
+					return new CallState(ErrorMessages.Returns.InvalidObjectType);
 				}
 
 				var perceive = await ObserveProjectionRealityAsync(parser, executor.Object().DBRef);
@@ -1423,7 +1423,7 @@ public partial class Functions
 
 				if (matches.Count == 0)
 				{
-					return new CallState("#-1");
+					return new CallState(ErrorMessages.Returns.NoMatch);
 				}
 				else if (matches.Count == 1)
 				{
@@ -1431,7 +1431,7 @@ public partial class Functions
 				}
 				else
 				{
-					return new CallState("#-2"); // Multiple matches
+					return new CallState(ErrorMessages.Returns.AmbiguousMatch);
 				}
 			});
 	}

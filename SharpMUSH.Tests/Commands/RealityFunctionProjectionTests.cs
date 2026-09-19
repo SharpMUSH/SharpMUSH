@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
@@ -80,8 +81,8 @@ public class RealityFunctionProjectionTests
 			await policy.SaveConfigurationAsync(new(1, enabled, ["normal", "ghost"]), default);
 			var result = await Factory.FunctionParser.FromState(ParserState.RootFor(actor.Object.DBRef))
 				.FunctionParse(MarkupText.Plain($"rnum({room.Object.DBRef},{(ambiguous ? "projection" : hidden.Object.Name)})"));
-			var expected = ambiguous ? enabled ? $"#{visible.Object.DBRef.Number}" : "#-2"
-				: enabled ? "#-1" : $"#{hidden.Object.DBRef.Number}";
+			var expected = ambiguous ? enabled ? $"#{visible.Object.DBRef.Number}" : ErrorMessages.Returns.AmbiguousMatch
+				: enabled ? ErrorMessages.Returns.NoMatch : $"#{hidden.Object.DBRef.Number}";
 			await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
 		}
 		finally { await policy.SaveConfigurationAsync(original, default); }

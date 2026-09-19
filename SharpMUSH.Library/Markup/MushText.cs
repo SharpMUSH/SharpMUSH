@@ -18,9 +18,6 @@ namespace SharpMUSH.Library.Markup;
 /// </summary>
 public static class MushText
 {
-	/// <summary>The generic MUSH error return, <c>#-1</c>.</summary>
-	public static readonly MarkupText Error = MarkupText.Plain("#-1");
-
 	/// <summary>The boolean-false / zero literal every predicate function returns.</summary>
 	public static readonly MarkupText Zero = MarkupText.Plain("0");
 

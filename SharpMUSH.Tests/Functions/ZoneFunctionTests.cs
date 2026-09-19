@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
@@ -81,7 +82,7 @@ public class ZoneFunctionTests
 		await Mediator.Send(new UnsetObjectZoneCommand(obj));
 
 		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef})")))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
+		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoZoneSet);
 	}
 
 	[Test]
@@ -143,7 +144,7 @@ public class ZoneFunctionTests
 		await Assert.That(clearResult.ToPlainText()).IsEqualTo("");
 
 		var getResult = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef})")))?.Message!;
-		await Assert.That(getResult.ToPlainText()).IsEqualTo("#-1");
+		await Assert.That(getResult.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoZoneSet);
 	}
 
 	[Test]
@@ -155,7 +156,7 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
-	public async Task ZoneNoPermissionToExamine()
+	public async Task ZoneOfAnObjectYouCanExamineIsReported()
 	{
 		// Create an object that player can examine (they created it)
 		var objResult = await CreateFixtureAsync("ZonePermTest");
@@ -168,8 +169,8 @@ public class ZoneFunctionTests
 		// Player can examine their own objects, so this should work
 		var result = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({objDbRef})")))?.Message!;
 
-		// Should return #-1 (no zone) rather than permission denied
-		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
+		// No zone, and not a refusal: the two used to be the same bare #-1.
+		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoZoneSet);
 	}
 
 	[Test]
@@ -178,7 +179,7 @@ public class ZoneFunctionTests
 		var result = (await FunctionParser.FunctionParse(MarkupText.Plain("zone(%#)")))?.Message!;
 
 		// The private fixture has no zone.
-		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
+		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoZoneSet);
 	}
 
 	[Test]
@@ -187,7 +188,7 @@ public class ZoneFunctionTests
 		var result = (await FunctionParser.FunctionParse(MarkupText.Plain("zone(%l)")))?.Message!;
 
 		// The private fixture has no zone.
-		await Assert.That(result.ToPlainText()).IsEqualTo("#-1");
+		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoZoneSet);
 	}
 
 	[Test]
@@ -212,9 +213,9 @@ public class ZoneFunctionTests
 		var objZoneDbRef = DBRef.Parse(objZone.ToPlainText()!);
 		await Assert.That(objZoneDbRef.Number).IsEqualTo(zoneDbRef.Number);
 
-		// Verify zone master itself has no zone (should be #-1)
+		// The zone master itself has no zone.
 		var zoneOfZone = (await FunctionParser.FunctionParse(MarkupText.Plain($"zone({zoneDbRef})")))?.Message!;
-		await Assert.That(zoneOfZone.ToPlainText()).IsEqualTo("#-1");
+		await Assert.That(zoneOfZone.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoZoneSet);
 	}
 
 	[Test]
