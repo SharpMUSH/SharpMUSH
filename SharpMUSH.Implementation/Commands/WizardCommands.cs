@@ -13,7 +13,6 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
@@ -41,26 +40,6 @@ public partial class Commands
 		foreach (var operation in precedence)
 			if (switches.Contains(operation.ToString(), StringComparer.OrdinalIgnoreCase)) return operation;
 		return DefinitionOperation.Default;
-	}
-
-	[SharpCommand(Name = "@ALLHALT", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD|POWER^HALT",
-		MinArgs = 0, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> AllHalt(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-
-		var objects = Mediator.CreateStream(new GetAllObjectsQuery());
-		var haltedCount = 0;
-
-		await foreach (var obj in objects)
-		{
-			await Mediator.Send(new HaltObjectQueueRequest(obj.DBRef));
-			haltedCount++;
-		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsHaltedWithCountFormat), executor, haltedCount);
-		return CallState.Empty;
 	}
 
 	// PennMUSH src/flags.c:955 letter_to_flagptr: a letter is only taken by a definition whose object
