@@ -40,7 +40,7 @@ public partial class Functions
 	/// string alone, and <c>strlen()</c> counts only the string. Written into the text instead, the
 	/// renderer escapes it like any other &lt; and every client shows it literally.</para>
 	///
-	/// <para><see cref="HtmlTagPolicy"/> is the gate: without Send_OOB, only PennMUSH's tags and only
+	/// <para><see cref="TagwrapPolicy"/> is the gate: without Send_OOB, only PennMUSH's tags and only
 	/// parameters a browser cannot be made to run.</para>
 	/// </summary>
 	[SharpFunction(Name = "tagwrap", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["tag", "parameters", "content"])]
@@ -52,23 +52,21 @@ public partial class Functions
 		var content = args[hasParameters ? "2" : "1"].Message!;
 		var parameters = hasParameters ? args["1"].Message!.ToPlainText().Trim() : string.Empty;
 
-		if (!HtmlTagPolicy.IsTagName(tagName))
+		if (!HtmlMarkup.IsValidTagName(tagName))
 		{
 			return new CallState(ErrorMessages.Returns.InvalidTagName);
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var privileged = await CanSendOob(executor);
-		if (!privileged && !HtmlTagPolicy.AllowedTags.Contains(tagName))
+		if (await CanSendOob(executor))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return new CallState(MarkupText.Wrap(
+				HtmlMarkup.Create(tagName, parameters.Length == 0 ? null : parameters), content));
 		}
 
-		var attributes = parameters.Length == 0 ? null
-			: privileged ? parameters
-			: HtmlTagPolicy.Sanitize(parameters);
-
-		return new CallState(MarkupText.Wrap(HtmlMarkup.Create(tagName, attributes), content));
+		return TagwrapPolicy.Wrap(tagName, parameters) is { } markup
+			? new CallState(MarkupText.Wrap(markup, content))
+			: new CallState(ErrorMessages.Returns.PermissionDenied);
 	}
 
 	/// <summary>

@@ -387,16 +387,16 @@ public class TelnetServerNegotiationTests
 		using var cts = cancellation;
 		try
 		{
-			await ReadUntilAsync(fromServer, seen => Encoding.ASCII.GetString(seen).Contains(ProtocolConstants.PuebloHello));
+			await ReadUntilAsync(fromServer, seen => Encoding.ASCII.GetString(seen).Contains(PuebloProtocol.Hello));
 			await WriteAsync(toServer, Encoding.ASCII.GetBytes("PUEBLOCLIENT 2.50\r\n"));
 			var answered = await ReadUntilAsync(fromServer,
-				seen => Encoding.ASCII.GetString(seen).Contains(ProtocolConstants.PuebloStart));
-			await Assert.That(Encoding.ASCII.GetString(answered)).Contains(ProtocolConstants.PuebloStart);
+				seen => Encoding.ASCII.GetString(seen).Contains(PuebloProtocol.Start));
+			await Assert.That(Encoding.ASCII.GetString(answered)).Contains(PuebloProtocol.Start);
 
 			await WriteAsync(toServer, Encoding.ASCII.GetBytes("PUEBLOCLIENT 2.50\r\n"));
 			var again = await ReadUntilAsync(fromServer,
-				seen => Encoding.ASCII.GetString(seen).Contains(ProtocolConstants.PuebloRestart));
-			await Assert.That(Encoding.ASCII.GetString(again)).Contains(ProtocolConstants.PuebloRestart);
+				seen => Encoding.ASCII.GetString(seen).Contains(PuebloProtocol.Restart));
+			await Assert.That(Encoding.ASCII.GetString(again)).Contains(PuebloProtocol.Restart);
 		}
 		finally
 		{

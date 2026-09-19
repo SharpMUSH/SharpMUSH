@@ -67,7 +67,7 @@ public partial class MarkupOutputRendererTests
 
 		await Assert.That(result.ApplyOutputTransform).IsTrue();
 		await Assert.That(text).Contains(
-			$"{ProtocolConstants.MxpLineSecure}&lt;send href=\"look\"&gt;Tom &amp; \"Sue\"&lt;/send&gt;");
+			$"{MxpSecureLineFramer.SecureLine}&lt;send href=\"look\"&gt;Tom &amp; \"Sue\"&lt;/send&gt;");
 	}
 
 	[Test]
@@ -81,7 +81,7 @@ public partial class MarkupOutputRendererTests
 		await Assert.That(lines.Length).IsEqualTo(2);
 		foreach (var line in lines)
 		{
-			await Assert.That(line.StartsWith(ProtocolConstants.MxpLineSecure)).IsTrue();
+			await Assert.That(line.StartsWith(MxpSecureLineFramer.SecureLine)).IsTrue();
 			await Assert.That(line).Contains("<SEND HREF=\"help newbie\">newbie</SEND>");
 		}
 	}
@@ -230,7 +230,7 @@ public partial class MarkupOutputRendererTests
 		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain("one\n\ntwo\r\nthree"));
 		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Mxp));
 
-		var prefix = ProtocolConstants.MxpLineSecure;
+		var prefix = MxpSecureLineFramer.SecureLine;
 		await Assert.That(Encoding.UTF8.GetString(result.Data))
 			.IsEqualTo($"{prefix}one\r\n\r\n{prefix}two\r\n{prefix}three");
 	}
