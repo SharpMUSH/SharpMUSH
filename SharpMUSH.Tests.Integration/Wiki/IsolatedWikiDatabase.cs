@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Integration.Wiki;
@@ -12,7 +13,7 @@ namespace SharpMUSH.Tests.Integration.Wiki;
 /// </summary>
 internal sealed class IsolatedWikiDatabase(LightningDatabase database, string path) : IAsyncDisposable
 {
-	public IWikiService Wiki { get; } = database;
+	public IWikiService Wiki { get; } = new WikiStoreService(database, new WikiMarkdigPipeline());
 
 	public static Task<IsolatedWikiDatabase> CreateAsync()
 	{

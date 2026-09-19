@@ -34,16 +34,16 @@ internal sealed record WikiEndpoints(
 /// </remarks>
 internal static class WikiControllerTestHarness
 {
-	public static (WikiEndpoints Wiki, InMemoryWikiService Storage) Build(
+	public static (WikiEndpoints Wiki, WikiStoreService Storage) Build(
 		bool authenticated, params string[] scopes) =>
-		Build(new InMemoryWikiService(new WikiMarkdigPipeline()), authenticated, "#42", scopes);
+		Build(InMemoryWikiStore.CreateService(), authenticated, "#42", scopes);
 
 	/// <param name="callerDbref">
 	/// The <c>character_dbref</c> claim. Draft authorship is compared against it verbatim, so a test
 	/// about "the author always sees their own draft" turns on this matching the seeded page's author.
 	/// </param>
-	public static (WikiEndpoints Wiki, InMemoryWikiService Storage) Build(
-		InMemoryWikiService storage, bool authenticated, string callerDbref, params string[] scopes)
+	public static (WikiEndpoints Wiki, WikiStoreService Storage) Build(
+		WikiStoreService storage, bool authenticated, string callerDbref, params string[] scopes)
 	{
 		var monitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 		monitor.CurrentValue.Returns(TestSharpMushOptions.Create());
@@ -83,9 +83,9 @@ internal static class WikiControllerTestHarness
 	private static IEnumerable<ControllerBase> Controllers(WikiEndpoints wiki) =>
 		[wiki.Pages, wiki.Browse, wiki.Revisions, wiki.Translations, wiki.Admin];
 
-	public static (WikiEndpoints Wiki, InMemoryWikiService Storage) BuildAnonymous() =>
+	public static (WikiEndpoints Wiki, WikiStoreService Storage) BuildAnonymous() =>
 		Build(authenticated: false);
 
-	public static (WikiEndpoints Wiki, InMemoryWikiService Storage) BuildWithClaims(params string[] scopes) =>
+	public static (WikiEndpoints Wiki, WikiStoreService Storage) BuildWithClaims(params string[] scopes) =>
 		Build(authenticated: true, scopes);
 }

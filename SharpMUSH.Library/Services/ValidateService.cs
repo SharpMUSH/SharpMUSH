@@ -5,7 +5,6 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -19,8 +18,6 @@ public partial class ValidateService(
 	ILockService lockService)
 	: IValidateService
 {
-	private readonly ConcurrentDictionary<string, Regex> _regexCache = new();
-	private readonly ConcurrentDictionary<string, Regex> _globCache = new();
 
 	/// <summary>Names that always resolve to something else, so nothing may be called by them.</summary>
 	private static readonly HashSet<string> MagicCookies = new(["me", "here", "!", "home"], StringComparer.Ordinal);
@@ -122,44 +119,14 @@ public partial class ValidateService(
 	[GeneratedRegex(@"^[^:;""#\\&\]\p{C}]\P{C}*$")]
 	private partial Regex FunctionNameRegex();
 
-	private bool CheckAttributeRegex(string name, string regex, string value)
-	{
-		var reg = _regexCache.GetOrAdd(name, _ => SoftcodeRegex.Create(regex, RegexOptions.Compiled));
-		return SoftcodeRegex.IsMatch(reg, value);
-	}
-
 	/// <summary>
-	/// Checks if an attribute value is valid against a SharpAttributeEntry.
-	/// Supports enum validation with wildcard globbing patterns.
-	/// Enforces maximum attribute value length from configuration.
+	/// Whether <paramref name="value"/> may be stored in the attribute <paramref name="attribute"/>
+	/// describes: within the configured byte limit, and accepted by its <c>@attribute/limit</c> and
+	/// <c>@attribute/enum</c> (<see cref="AttributeValueRestriction"/>).
 	/// </summary>
-	/// <param name="value">Value</param>
-	/// <param name="attribute">Attribute Entry</param>
-	/// <returns>True or false</returns>
 	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute)
-	{
-		// Convert to plain text and measure UTF-8 bytes for multi-byte character support
-		var plainValue = value.ToPlainText();
-		var maxBytes = (int)configuration.CurrentValue.Limit.MaxAttributeValueLength;
-
-		if (Encoding.UTF8.GetByteCount(plainValue) > maxBytes)
-		{
-			return false;
-		}
-
-		return attribute switch
-		{
-			{ Limit: null } and { Enum: null } => true,
-			{ Limit: not null } and { Enum: not null }
-				=> MatchesEnumWithGlobbing(plainValue, attribute.Enum)
-					 && CheckAttributeRegex(attribute.Name, attribute.Limit, plainValue),
-			{ Enum: not null }
-				=> MatchesEnumWithGlobbing(plainValue, attribute.Enum),
-			{ Limit: not null }
-				=> CheckAttributeRegex(attribute.Name, attribute.Limit, plainValue),
-			_ => false
-		};
-	}
+		=> ValidateAttributeValueBasic(value)
+			&& AttributeValueRestriction.Check(attribute, value.ToPlainText()) is string;
 
 	/// <summary>
 	/// Validates an attribute value without a specific target attribute — only checks byte length.
@@ -169,46 +136,6 @@ public partial class ValidateService(
 		var plainValue = value.ToPlainText();
 		var maxBytes = (int)configuration.CurrentValue.Limit.MaxAttributeValueLength;
 		return Encoding.UTF8.GetByteCount(plainValue) <= maxBytes;
-	}
-
-	/// <summary>
-	/// Checks if a value matches any of the enum patterns, supporting glob wildcards (* and ?).
-	/// Uses thread-safe caching to avoid recompiling regex patterns.
-	/// </summary>
-	/// <param name="value">The value to check</param>
-	/// <param name="enumPatterns">Array of allowed patterns (can include * and ? wildcards)</param>
-	/// <returns>True if value matches any pattern</returns>
-	private bool MatchesEnumWithGlobbing(string value, string[] enumPatterns)
-	{
-		foreach (var pattern in enumPatterns)
-		{
-			// If pattern has no wildcards, do exact match for performance
-			if (!pattern.Contains('*') && !pattern.Contains('?'))
-			{
-				if (value.Equals(pattern, StringComparison.Ordinal))
-				{
-					return true;
-				}
-				continue;
-			}
-
-			var regex = _globCache.GetOrAdd(pattern, p =>
-			{
-				var regexPattern = "^" + Regex.Escape(p)
-					.Replace("\\*", ".*")  // * matches any characters
-					.Replace("\\?", ".")   // ? matches single character
-					+ "$";
-
-				return SoftcodeRegex.Create(regexPattern, RegexOptions.Compiled);
-			});
-
-			if (SoftcodeRegex.IsMatch(regex, value))
-			{
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	/// <summary>

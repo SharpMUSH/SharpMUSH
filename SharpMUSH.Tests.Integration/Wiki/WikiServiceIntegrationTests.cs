@@ -11,16 +11,14 @@ namespace SharpMUSH.Tests.Integration.Wiki;
 /// Relies on <see cref="ServerWebAppFactory"/> which spins up the appropriate container
 /// (via Testcontainers) and boots the full application stack. The backend is selected
 ///
-/// IWikiService is exposed through the ISharpDatabase singleton; all tests retrieve it
-/// from the DI container.
+/// IWikiService is WikiStoreService over the provider's IWikiStore; all tests retrieve it from the DI container.
 /// </summary>
 public class WikiServiceIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactory { get; init; }
 
-	private IWikiService Wiki => WebAppFactory.Services.GetRequiredService<ISharpDatabase>() as IWikiService
-			?? throw new InvalidOperationException("ISharpDatabase does not implement IWikiService in this configuration.");
+	private IWikiService Wiki => WebAppFactory.Services.GetRequiredService<IWikiService>();
 
 	/// <summary>Creates a page, asserts success, returns the resulting <see cref="WikiPage"/>.</summary>
 	private async Task<WikiPage> CreatePageAsync(

@@ -6,9 +6,9 @@ namespace SharpMUSH.Library.Models.Wiki;
 /// is why the HTTP boundary answers all of them with 409 and none of them with 400.
 /// </summary>
 /// <remarks>
-/// This exists as a type rather than a phrase because the four <c>IWikiService</c> implementations each
-/// detect these cases separately. Classifying them by matching on error text made the status code depend on
-/// four backends wording their messages identically, which they did only by coincidence — and one of them
+/// This exists as a type rather than a phrase because each <c>IWikiStore</c> detects these cases inside its
+/// own compare-and-swap. Classifying them by matching on error text made the status code depend on every
+/// store wording its messages identically, which they did only by coincidence.
 /// </remarks>
 public enum WikiWriteConflict
 {

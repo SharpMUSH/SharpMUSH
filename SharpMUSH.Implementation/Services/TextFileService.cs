@@ -165,8 +165,8 @@ public class TextFileService : ITextFileService
 		await _initializationTask.WithCancellation(CancellationToken.None);
 
 		var category = ResolveEntryCategory(fileReference);
-		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-		var regex = SoftcodeRegex.Create(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+		// The general MUSH wildcard: case-insensitive, \ making the next character literal.
+		var regex = SoftcodeRegex.Wildcard(pattern);
 
 		lock (_indexLock)
 		{

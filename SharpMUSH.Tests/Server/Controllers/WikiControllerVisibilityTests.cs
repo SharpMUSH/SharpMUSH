@@ -30,13 +30,13 @@ public class WikiControllerVisibilityTests
 	/// an anonymous caller.
 	/// </summary>
 	private static WikiEndpoints MakeEndpoints(
-		InMemoryWikiService wiki, bool authenticated, bool canReadDrafts = true, string callerDbref = "#42") =>
+		WikiStoreService wiki, bool authenticated, bool canReadDrafts = true, string callerDbref = "#42") =>
 		WikiControllerTestHarness.Build(wiki, authenticated, callerDbref,
 			canReadDrafts ? [PortalPermission.WikiRead] : []).Wiki;
 
-	private static async Task<(InMemoryWikiService Wiki, string Slug)> SeedUnpublishedPage()
+	private static async Task<(WikiStoreService Wiki, string Slug)> SeedUnpublishedPage()
 	{
-		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var wiki = InMemoryWikiStore.CreateService();
 		var page = (await wiki.CreateAsync("Draft Page", "# draft", "#1")).Expect<WikiPage>();
 		await wiki.SetMetadataAsync(page.Id, null, [], published: false);
 		return (wiki, page.Slug);
@@ -67,7 +67,7 @@ public class WikiControllerVisibilityTests
 	[Test]
 	public async Task GetPage_Published_Anonymous_Returns200()
 	{
-		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var wiki = InMemoryWikiStore.CreateService();
 		var created = (await wiki.CreateAsync("Public Page", "# public", "#1")).Expect<WikiPage>();
 		var endpoints = MakeEndpoints(wiki, authenticated: false);
 

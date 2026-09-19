@@ -133,7 +133,7 @@ internal static class DatabaseRegistration
 	}
 
 	private static void RegisterDatabaseProvider<TProvider>(IServiceCollection services)
-		where TProvider : class, ISharpDatabase, IWikiService, IPackageRegistryService,
+		where TProvider : class, ISharpDatabase, IWikiStore, IPackageRegistryService,
 		IApplicationRegistryService, ILayoutRegistryService, IRoleRegistryService
 	{
 		services.AddSingleton<ISharpDatabase>(sp => sp.GetRequiredService<TProvider>());
@@ -148,9 +148,10 @@ internal static class DatabaseRegistration
 		services.AddSingleton<IAccountStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IServerStateStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<ISessionRecordStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IWikiStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IWikiService, WikiStoreService>();
 
-		// Portal subsystems the provider also backs: wiki, package registry, layout registry, RBAC roles.
-		services.AddSingleton<IWikiService>(sp => sp.GetRequiredService<TProvider>());
+		// Portal subsystems the provider also backs: package registry, layout registry, RBAC roles.
 		services.AddSingleton<IPackageRegistryService>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<ILayoutRegistryService>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IRoleRegistryService>(sp => sp.GetRequiredService<TProvider>());

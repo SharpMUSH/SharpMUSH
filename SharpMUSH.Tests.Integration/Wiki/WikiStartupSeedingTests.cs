@@ -24,9 +24,7 @@ public class WikiStartupSeedingTests
 	public required ServerWebAppFactory WebAppFactory { get; init; }
 
 	private IWikiService Wiki =>
-		WebAppFactory.Services.GetRequiredService<ISharpDatabase>() as IWikiService
-		?? throw new InvalidOperationException(
-			"ISharpDatabase does not implement IWikiService in this backend configuration.");
+		WebAppFactory.Services.GetRequiredService<IWikiService>();
 
 	[Test]
 	public async Task HomePageIsSeeded_GetBySlugReturnsFound()
