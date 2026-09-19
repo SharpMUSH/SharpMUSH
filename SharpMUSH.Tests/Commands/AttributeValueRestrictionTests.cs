@@ -223,6 +223,39 @@ public class AttributeValueRestrictionTests
 			$"@attribute/enum | {stem}X=a b|c")).IsTrue();
 	}
 
+	// ---- As a mortal: God passes every permission check vacuously ----------------------------------
+
+	[Test]
+	public async Task Mortal_CannotSetARestriction()
+	{
+		var attr = await TableAttributeAsync("MORTLIM");
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), ConnectionService, "LimitMortal");
+
+		await CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@attribute/limit {attr}=^x$"));
+		await CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@attribute/enum {attr}=x"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.PermissionDenied), mortal.DbRef)).IsTrue();
+		await Assert.That(await FunctionAsync($"valid(attrvalue,anything,{attr})")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task Mortal_WritesAreHeldToTheLimit()
+	{
+		var attr = await TableAttributeAsync("MORTWRITE");
+		await CommandAsync($"@attribute/limit {attr}=^%[0-9%]+$");
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), ConnectionService, "LimitWriter");
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "LimitMortalThing");
+		await CommandAsync($"@chown {thing}={mortal.DbRef}");
+
+		await CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"&{attr} {thing}=42"));
+		await CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"&{attr} {thing}=forty-two"));
+
+		await Assert.That(await FunctionAsync($"get({thing}/{attr})")).IsEqualTo("42");
+	}
+
 	private ValueTask<CallState> CommandAsync(string command) =>
 		CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
