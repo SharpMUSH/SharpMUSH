@@ -18,7 +18,7 @@ namespace SharpMUSH.Tests.Server.Controllers;
 /// </summary>
 public class SeoControllerTests
 {
-	private static SeoController MakeController(InMemoryWikiService wiki)
+	private static SeoController MakeController(WikiStoreService wiki)
 	{
 		// A real localization service over the same storage, not a substitute: a double would return an
 		// empty locale list for every page and the sitemap's alternates would never be exercised.
@@ -49,7 +49,7 @@ public class SeoControllerTests
 	[Test]
 	public async Task Sitemap_PublishedMainPage_IncludedWithWikiUrl()
 	{
-		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var wiki = InMemoryWikiStore.CreateService();
 		var page = (await wiki.CreateAsync("Getting Started", "# hello", "#1")).Expect<WikiPage>();
 
 		var xml = await GetSitemapXml(MakeController(wiki));
@@ -61,7 +61,7 @@ public class SeoControllerTests
 	[Test]
 	public async Task Sitemap_UnpublishedPage_Excluded()
 	{
-		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var wiki = InMemoryWikiStore.CreateService();
 		var published = (await wiki.CreateAsync("Visible Page", "# visible", "#1")).Expect<WikiPage>();
 		var draft = (await wiki.CreateAsync("Secret Draft", "# hidden", "#1")).Expect<WikiPage>();
 		await wiki.SetMetadataAsync(draft.Id, null, [], published: false);
@@ -75,7 +75,7 @@ public class SeoControllerTests
 	[Test]
 	public async Task Sitemap_Lastmod_UsesIsoDateFormat()
 	{
-		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var wiki = InMemoryWikiStore.CreateService();
 		var page = (await wiki.CreateAsync("Dated Page", "# dated", "#1")).Expect<WikiPage>();
 
 		var xml = await GetSitemapXml(MakeController(wiki));
@@ -88,7 +88,7 @@ public class SeoControllerTests
 	[Test]
 	public async Task Sitemap_CharacterNamespacePage_MapsToCharacterUrl()
 	{
-		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var wiki = InMemoryWikiStore.CreateService();
 		var page = (await wiki.CreateAsync("Aria Stormwind", "# bio", "#1", WikiNamespace.Character)).Expect<WikiPage>();
 
 		var xml = await GetSitemapXml(MakeController(wiki));
@@ -99,7 +99,7 @@ public class SeoControllerTests
 	[Test]
 	public async Task Sitemap_IncludesRootAndWikiEntries()
 	{
-		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var wiki = InMemoryWikiStore.CreateService();
 
 		var xml = await GetSitemapXml(MakeController(wiki));
 
@@ -111,7 +111,7 @@ public class SeoControllerTests
 	[Test]
 	public async Task Robots_ContainsSitemapAndDisallowRules()
 	{
-		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var wiki = InMemoryWikiStore.CreateService();
 		var controller = MakeController(wiki);
 
 		var result = controller.Robots();

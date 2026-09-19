@@ -29,7 +29,7 @@ public partial class LightningDatabase(
 	IObjectRelationLoader? relations,
 	IReadOnlyList<IMigrationSource>? migrationSources = null,
 	IReadOnlyList<PluginFlag>? pluginFlags = null)
-	: ISharpDatabase, IWikiService, IPackageRegistryService, IRoleRegistryService, ILayoutRegistryService,
+	: ISharpDatabase, IPackageRegistryService, IRoleRegistryService, ILayoutRegistryService,
 		IApplicationRegistryService, ILightningStorageAccessor, IAsyncDisposable
 {
 	/// <summary>Serializes <c>Migrate()</c> across concurrent callers; migration itself is idempotent, but
