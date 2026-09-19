@@ -628,27 +628,49 @@ public partial class Functions
 	public ValueTask<CallState> PlayerMem(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(0);
 
-	[SharpFunction(Name = "quota", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	/// <summary>
+	/// PennMUSH's fun_quota (src/wiz.c:1864-1896). It matches a player only, so a thing cannot stand in
+	/// for its owner; it refuses unless <c>Do_Quotas(executor) || See_All(executor) || controls(executor,
+	/// who)</c>, the gate @quota applies at wiz.c:179; and it answers one integer, 99999 for a No_Quota
+	/// holder. Penn's <c>owned + get_current_quota(who)</c> is the player's limit, which SharpMUSH
+	/// stores directly as <see cref="SharpPlayer.Quota"/>. Where Penn returns a bare <c>#-1</c> and
+	/// notifies the reason, this returns the reason instead: the match's own error, or
+	/// <c>#-1 PERMISSION DENIED</c>.
+	/// </summary>
+	[SharpFunction(Name = "quota", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player"])]
 	public async ValueTask<CallState> Quota(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var obj = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
+		var name = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, obj, LocateFlags.All,
-			async found =>
-			{
-				var owner = await found.Object().Owner.WithCancellation(CancellationToken.None);
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, name, QuotaMatchFlags) switch
+		{
+			AnySharpObject and SharpPlayer player => await QuotaOfAsync(executor, player),
+			AnySharpObject => throw new InvalidOperationException("A player-only locate matched something that is not a player."),
+			Error<CallState> error => error.Value
+		};
+	}
 
-				if (owner is null)
-				{
-					return new CallState("0 0");
-				}
+	/// <summary>
+	/// wiz.c:1869 — <c>TYPE_PLAYER, MAT_TYPE | MAT_PMATCH | MAT_ME</c>. LocateService's player flag set
+	/// models <c>lookup_player</c> alone, so <c>MAT_ME</c> is added here. <c>AbsoluteMatch</c> stays even
+	/// though <c>MAT_ABSOLUTE</c> is absent: <c>MAT_PMATCH</c> goes through <c>lookup_player</c>, which
+	/// takes a <c>#dbref</c> when it names a player (<c>src/plyrlist.c:169</c>).
+	/// </summary>
+	private const LocateFlags QuotaMatchFlags =
+		LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.MatchMeForLooker |
+		LocateFlags.AbsoluteMatch | LocateFlags.EnglishStyleMatching | LocateFlags.MatchOptionalWildCardForPlayerName;
 
-				var ownedCount = await Mediator.Send(new GetOwnedObjectCountQuery(owner));
+	private async ValueTask<CallState> QuotaOfAsync(AnySharpObject executor, SharpPlayer player)
+	{
+		if (!await PermissionService.CanSeeQuota(executor, player))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
-				return new CallState($"{ownedCount} {owner.Quota}");
-			});
+		return await player.Object.HasPower("No_Quota")
+			? new CallState(99999)
+			: new CallState(player.Quota);
 	}
 
 	[SharpFunction(Name = "type", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

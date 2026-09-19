@@ -85,12 +85,9 @@ public class InformationFunctionUnitTests
 	public async Task Quota()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("quota(%#)")))?.Message!;
-		var text = result.ToPlainText();
-		// Format is "<owned_count> <max_quota>". Owned count varies by test order; max quota is always 999999.
-		var parts = text.Split(' ');
-		await Assert.That(parts).Count().IsEqualTo(2);
-		await Assert.That(int.TryParse(parts[0], out var owned) && owned >= 3).IsTrue();
-		await Assert.That(parts[1]).IsEqualTo("999999");
+		// One integer, the player's limit (src/wiz.c:1895). The permission and No_Quota cases are in
+		// QuotaFunctionPermissionTests, driven by mortals.
+		await Assert.That(result.ToPlainText()).IsEqualTo("999999");
 	}
 
 	[Test]

@@ -42,6 +42,20 @@ public class QuotaVisibilityTests
 	}
 
 	[Test]
+	public async Task TheRefusalSaysWhyInPennsWords()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, ConnectionService, "QuotaTold");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, ConnectionService, "QuotaToldSubject");
+
+		var before = Factory.Notifications.CountFor(mortal.DbRef);
+		await Factory.CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@quota {target.Name}"));
+
+		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before))
+			.Contains("You can't look at someone else's quota.")
+			.Because("wiz.c:180");
+	}
+
+	[Test]
 	public async Task AMortalCanReadTheirOwnQuota()
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, ConnectionService, "QuotaSelf");

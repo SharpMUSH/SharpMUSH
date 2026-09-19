@@ -645,4 +645,10 @@ public class PermissionService(
 
 	public async ValueTask<bool> CanSpoofAs(AnySharpObject executor, AnySharpObject enactor)
 		=> await CanNoSpoof(executor) || await Controls(executor, enactor);
+
+	// IsSee_All covers Hasprivs, so it subsumes the Wizard half of Do_Quotas.
+	public async ValueTask<bool> CanSeeQuota(AnySharpObject executor, AnySharpObject player)
+		=> await executor.IsSee_All()
+			|| await executor.HasPower("Quotas")
+			|| await Controls(executor, player);
 }
