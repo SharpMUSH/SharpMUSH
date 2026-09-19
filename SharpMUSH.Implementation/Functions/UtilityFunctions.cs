@@ -298,49 +298,6 @@ public partial class Functions
 		return new CallState(MarkupText.Join(delimiter, truthyValues)) { HadErrors = hadErrors };
 	}
 
-	[SharpFunction(Name = "atrlock", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public async ValueTask<CallState> AtrLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var attributeName = args["0"].Message!.ToPlainText();
-
-		AnySharpObjectOrErrorCallState target = args.TryGetValue("1", out var objectArg)
-			? await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-				executor, executor, objectArg.Message!.ToPlainText(), LocateFlags.All)
-			: executor;
-
-		return target switch
-		{
-			Error<CallState> error => error.Value,
-			AnySharpObject targetObj => await AttributeLockPasses(targetObj)
-		};
-
-		async ValueTask<CallState> AttributeLockPasses(AnySharpObject targetObj)
-		{
-			// Get the attribute's lock (stored in attrname`lock attribute)
-			var lockAttrName = $"{attributeName}`LOCK";
-			var lockAttr = await AttributeService.GetAttributeAsync(
-				executor, targetObj, lockAttrName,
-				mode: IAttributeService.AttributeMode.Read,
-				parent: false);
-
-			if (lockAttr is not SharpAttribute[] lockChain)
-			{
-				return "0"; // No lock set means no restriction
-			}
-
-			var lockString = lockChain.Last().Value.ToPlainText();
-			if (string.IsNullOrWhiteSpace(lockString))
-			{
-				return "0";
-			}
-
-			var passes = await LockService.Evaluate(lockString, targetObj, executor);
-			return new CallState(passes ? "1" : "0");
-		}
-	}
-
 	[SharpFunction(Name = "beep", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.AdminOnly | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> Beep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -1259,32 +1216,6 @@ public partial class Functions
 		}
 
 		return previous[target.Length];
-	}
-
-	[SharpFunction(Name = "testlock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public async ValueTask<CallState> TestLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		// PennMUSH: testlock(<lock key>, <victim>) - test a lock expression against a victim
-		var lockString = args["0"].Message!.ToPlainText();
-		var victimName = args["1"].Message!.ToPlainText();
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, victimName, LocateFlags.All,
-			async victim =>
-			{
-				if (await BooleanExpressionParser.BindAsync(lockString, executor) is not string expression)
-				{
-					return new CallState("#-1 INVALID BOOLEXP");
-				}
-
-				// Evaluate the lock: does victim pass the lock expression?
-				if (!await PermissionService.CanLocate(executor, victim)) return new CallState(ErrorMessages.Returns.PermissionDenied);
-				var passes = await LockService.Evaluate(expression, executor, victim);
-				return new CallState(passes ? "1" : "0");
-			});
 	}
 
 	[SharpFunction(Name = "textentries", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
