@@ -65,6 +65,33 @@ public class MarkupNegotiationConsumerTests
 			.Because("the client did send the Pueblo handshake");
 	}
 
+	/// <summary>
+	/// The two consumers run concurrently, so the Pueblo one decides from the value it writes rather than
+	/// from one it read a moment earlier: a read, then a write, can put "pueblo" over an "mxp" that
+	/// landed in between.
+	/// </summary>
+	[Test]
+	public async Task TheFormatIsDecidedInTheWriteItself()
+	{
+		var service = await RegisteredAsync();
+		var seen = new List<string?>();
+
+		service.Update(Handle, "OUTPUT_FORMAT", current =>
+		{
+			seen.Add(current);
+			return "mxp";
+		});
+		service.Update(Handle, "OUTPUT_FORMAT", current =>
+		{
+			seen.Add(current);
+			return current == "mxp" ? "mxp" : "pueblo";
+		});
+
+		await Assert.That(seen).IsEquivalentTo(new string?[] { null, "mxp" })
+			.Because("the change sees the value in place at the moment it writes");
+		await Assert.That(service.Get(Handle)!.Metadata["OUTPUT_FORMAT"]).IsEqualTo("mxp");
+	}
+
 	[Test]
 	[Arguments(OutputFormat.Ansi, OutputFormat.Pueblo, OutputFormat.Pueblo)]
 	[Arguments(OutputFormat.Ansi, OutputFormat.Mxp, OutputFormat.Mxp)]

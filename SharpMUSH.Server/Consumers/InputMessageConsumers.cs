@@ -291,11 +291,10 @@ public class PuebloNegotiatedConsumer(ILogger<PuebloNegotiatedConsumer> logger, 
 			return;
 		}
 
-		var conn = connectionService.Get(message.Handle);
-		if (conn?.Metadata.GetValueOrDefault("OUTPUT_FORMAT", "ansi") != "mxp")
-		{
-			connectionService.Update(message.Handle, "OUTPUT_FORMAT", "pueblo");
-		}
+		// One atomic step, not a read and a write: the MXP consumer writes the same key, and the two run
+		// concurrently, so a client answering both could otherwise have its MXP overwritten here.
+		connectionService.Update(message.Handle, "OUTPUT_FORMAT",
+			current => current == "mxp" ? "mxp" : "pueblo");
 
 		connectionService.Update(message.Handle, "PUEBLO", "1");
 	}

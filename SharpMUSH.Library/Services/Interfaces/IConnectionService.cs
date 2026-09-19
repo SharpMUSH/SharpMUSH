@@ -95,6 +95,13 @@ public interface IConnectionService
 	void Update(long handle, string key, string value);
 
 	/// <summary>
+	/// Sets a metadata value from its current one, atomically, for a key two writers can reach at once —
+	/// the negotiated output format, which the Pueblo and MXP consumers both write.
+	/// </summary>
+	/// <param name="change">Receives the current value, or <see langword="null"/> when the key is unset.</param>
+	void Update(long handle, string key, Func<string?, string> change);
+
+	/// <summary>
 	/// Atomically increments an integer metadata value for a connection handle.
 	/// Uses a thread-safe compare-and-update pattern to avoid race conditions.
 	/// </summary>

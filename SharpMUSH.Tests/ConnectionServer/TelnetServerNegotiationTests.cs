@@ -383,7 +383,8 @@ public class TelnetServerNegotiationTests
 	[Test]
 	public async Task PuebloHandshake_IsAnsweredWithTheStartSequence()
 	{
-		var (toServer, fromServer, handler, _, cts) = StartServer(new ConnectionServerOptions { PuebloEnabled = true });
+		var (toServer, fromServer, handler, _, cancellation) = StartServer(new ConnectionServerOptions { PuebloEnabled = true });
+		using var cts = cancellation;
 		try
 		{
 			await ReadUntilAsync(fromServer, seen => Encoding.ASCII.GetString(seen).Contains(ProtocolConstants.PuebloHello));
@@ -402,7 +403,6 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 

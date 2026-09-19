@@ -310,12 +310,15 @@ public class TelnetServer : ConnectionHandler
 
 		builder.UsePipe(connection.Transport);
 		var telnet = await builder.BuildAsync();
+
+		// Before the read loop starts, not after: the loop can deliver a line — a Pueblo handshake buffered
+		// with the client's first packet — before an assignment below it would have run, and every callback
+		// that reaches for the interpreter would find null.
+		telnetInterpreter = telnet;
 		var readTask = ReadAndObserveNegotiationAsync(
 			telnet, connection.Transport.Input, AnnounceTelnetIfNegotiatedAsync, ct);
 		try
 		{
-			telnetInterpreter = telnet;
-
 			// The read loop is already running by now, so a fast client could have negotiated in the gap
 			// above and found nothing to sample. Re-sampling here closes it without needing a lock.
 			await AnnounceTelnetIfNegotiatedAsync();
