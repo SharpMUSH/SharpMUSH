@@ -18,12 +18,15 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
 using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Reality;
+using DotNext;
+using System.Text.RegularExpressions;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-
 	[SharpFunction(Name = "accname", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
 	public async ValueTask<CallState> AccName(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -1233,5 +1236,443 @@ public partial class Functions
 		}
 
 		return ValueTask.FromResult<CallState>(ErrorMessages.Returns.NoSuchOption);
+	}
+
+	[SharpFunction(Name = "benchmark", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse)]
+	public async ValueTask<CallState> Benchmark(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+
+		var code = args["0"].Message!;
+
+		if (!int.TryParse((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var iterations) || iterations <= 0)
+		{
+			return new CallState(ErrorMessages.Returns.Numbers);
+		}
+
+		var outputFormat = "ms";
+		if (args.Count >= 3 && args.TryGetValue("2", out var formatArg))
+		{
+			outputFormat = (formatArg.Message ?? MarkupText.Empty).ToPlainText().ToLower();
+		}
+
+		var hadErrors = false;
+		var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+		for (int i = 0; i < iterations; i++)
+		{
+			hadErrors |= (await parser.FunctionParse(code))?.HadErrors == true;
+		}
+		stopwatch.Stop();
+
+		var elapsed = stopwatch.Elapsed.TotalMilliseconds;
+		if (outputFormat == "s" || outputFormat == "seconds")
+		{
+			return new CallState((elapsed / 1000.0).ToString("F6")) { HadErrors = hadErrors };
+		}
+		else
+		{
+			return new CallState(elapsed.ToString("F3")) { HadErrors = hadErrors };
+		}
+	}
+
+	[SharpFunction(Name = "fn", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
+	public async ValueTask<CallState> Fn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var functionName = (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText();
+		if (string.IsNullOrWhiteSpace(functionName))
+		{
+			return new CallState("#-1 FUNCTION (No function name given)");
+		}
+
+		if (parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out var targetFunction))
+		{
+			EvaluationRestrictions.Demand(targetFunction.LibraryInformation, parser.CurrentState.Restrictions);
+			using var retainedSource = RestrictedTextRetention.Enter(parser.CurrentState);
+			if (retainedSource is not null)
+			{
+				// Reserve before ToPlainText/Join allocate; the recursive parse keeps
+				// this source live until it returns, including chains of fn targets.
+				retainedSource.Add(functionName.Length + 2L);
+				var first = true;
+				foreach (var argument in parser.CurrentState.ArgumentsOrdered.Skip(1))
+				{
+					retainedSource.Add((argument.Value.Message?.Length ?? 0) + (first ? 0L : 1L));
+					first = false;
+				}
+			}
+			// Build function call string and re-parse: fn(add,1,2) -> add(1,2)
+			var fnArgs = parser.CurrentState.ArgumentsOrdered
+				.Skip(1)
+				.Select(x => (x.Value.Message ?? MarkupText.Empty).ToPlainText());
+			var callString = $"{functionName}({string.Join(",", fnArgs)})";
+			var result = await parser.FunctionParse(MarkupText.Plain(callString));
+			return result ?? CallState.Empty;
+		}
+
+		// Fall back to user-defined attribute function only when object-data access is allowed.
+		EvaluationRestrictions.DemandObjectDataAccess(parser.CurrentState.Restrictions);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var result2 = await AttributeService.EvaluateAttributeFunctionResultAsync(
+			parser,
+			executor,
+			objAndAttribute: parser.CurrentState.Arguments["0"].Message!,
+			args: parser.CurrentState.Arguments.Skip(1)
+				.Select((value, i) => new KeyValuePair<string, CallState>(i.ToString(), value.Value))
+				.ToDictionary(),
+			ignoreLambda: true);
+
+		// If attribute lookup returned nothing, report function not found
+		if (result2.Message is null || result2.Message.ToPlainText().Length == 0)
+		{
+			return new CallState($"#-1 FUNCTION ({functionName.ToUpper()}) NOT FOUND") { HadErrors = result2.HadErrors };
+		}
+
+		return result2;
+	}
+
+	[SharpFunction(Name = "functions", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public ValueTask<CallState> FFunctions(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var functionLibrary = parser.FunctionLibrary;
+
+		var pattern = "*";
+		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg0))
+		{
+			var patternArg = (arg0.Message ?? MarkupText.Empty).ToPlainText();
+			if (!string.IsNullOrWhiteSpace(patternArg))
+			{
+				pattern = patternArg;
+			}
+		}
+
+		var allFunctions = functionLibrary.Keys.OrderBy(x => x);
+
+		IEnumerable<string> filteredFunctions;
+		if (pattern == "*")
+		{
+			filteredFunctions = allFunctions;
+		}
+		else
+		{
+			var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+			var regex = SoftcodeRegex.Create(regexPattern, RegexOptions.IgnoreCase);
+			filteredFunctions = allFunctions.Where(name => SoftcodeRegex.IsMatch(regex, name));
+		}
+
+		return ValueTask.FromResult(new CallState(string.Join(" ", filteredFunctions)));
+	}
+
+	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public async ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		if (args.Count == 0)
+		{
+			return CallState.Empty;
+		}
+
+		var option = args.TryGetValue("0", out var a0) ? (a0.Message ?? MarkupText.Empty).ToPlainText().Trim().ToLowerInvariant() : string.Empty;
+		var type = args.TryGetValue("1", out var a1) ? (a1.Message ?? MarkupText.Empty).ToPlainText().Trim().ToLowerInvariant() : string.Empty;
+
+		static string JoinSpace(IEnumerable<string> items) => string.Join(' ', items.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+		switch (option)
+		{
+			case "motd":
+				{
+					return await Motd(parser, default!);
+				}
+			case "wizmotd":
+			case "downmotd":
+			case "fullmotd":
+				{
+					return await GetWizardMotdAsync(parser, option);
+				}
+			case "functions":
+				{
+					var funcPairs = type switch
+					{
+						"builtin" => parser.FunctionLibrary.AsEnumerable().Where(kv => kv.Value.IsSystem),
+						"local" => parser.FunctionLibrary.AsEnumerable().Where(kv => !kv.Value.IsSystem),
+						_ => parser.FunctionLibrary.AsEnumerable()
+					};
+
+					var names = funcPairs
+						.Select(kv => kv.Value.LibraryInformation.Attribute.Name)
+						.Distinct(StringComparer.OrdinalIgnoreCase)
+						.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+						.Select(s => s.ToLowerInvariant());
+					return new CallState(JoinSpace(names));
+				}
+			case "commands":
+				{
+					var cmdPairs = type switch
+					{
+						"builtin" => parser.CommandLibrary.AsEnumerable().Where(kv => kv.Value.IsSystem),
+						"local" => parser.CommandLibrary.AsEnumerable().Where(kv => !kv.Value.IsSystem),
+						_ => parser.CommandLibrary.AsEnumerable()
+					};
+
+					var names = cmdPairs
+						.Select(kv => kv.Value.LibraryInformation.Attribute.Name)
+						.Distinct(StringComparer.OrdinalIgnoreCase)
+						.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+						.Select(s => s.ToLowerInvariant());
+					return new CallState(JoinSpace(names));
+				}
+			case "attribs":
+				return await SortedNames(Mediator.CreateStream(new GetAllAttributeEntriesQuery()).Select(x => x.Name));
+			case "locks":
+				{
+					var lockNames = Enum.GetNames(typeof(LockType))
+						.Select(n => n.ToLowerInvariant())
+						.OrderBy(x => x);
+					return new CallState(JoinSpace(lockNames));
+				}
+			case "flags":
+				return await SortedNames(Mediator.CreateStream(new GetAllObjectFlagsQuery()).Select(x => x.Name));
+			case "powers":
+				return await SortedNames(Mediator.CreateStream(new GetPowersQuery()).Select(x => x.Name));
+			default:
+				return CallState.Empty;
+		}
+
+		static async ValueTask<CallState> SortedNames(IAsyncEnumerable<string> names)
+		{
+			var list = await names.Select(name => name.ToLowerInvariant()).ToListAsync();
+			list.Sort(StringComparer.OrdinalIgnoreCase);
+			return new CallState(JoinSpace(list));
+		}
+
+		async ValueTask<CallState> GetWizardMotdAsync(IMUSHCodeParser parser, string option)
+		{
+			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+			if (!await executor.IsWizard())
+			{
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			}
+
+			return option switch
+			{
+				"wizmotd" => await WizMotd(parser, default!),
+				"downmotd" => await DownMotd(parser, default!),
+				"fullmotd" => await FullMotd(parser, default!),
+				_ => CallState.Empty
+			};
+		}
+	}
+
+	[SharpFunction(Name = "scan", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public async ValueTask<CallState> Scan(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		// Parse arguments based on PennMUSH signature: scan(<looker>, <command>[, <switches>]) or scan(<command>)
+		AnySharpObject looker;
+		MString command;
+		string switches;
+
+		if (args.Count == 1)
+		{
+			// scan(<command>) - looker defaults to executor
+			looker = executor;
+			command = args["0"].Message!;
+			switches = "all";
+		}
+		else
+		{
+			// scan(<looker>, <command>[, <switches>])
+			var lookerName = args["0"].Message!.ToPlainText();
+			command = args["1"].Message!;
+			switches = args.ContainsKey("2") ? args["2"].Message!.ToPlainText() : "all";
+
+			var locateResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, lookerName, LocateFlags.All);
+			if (locateResult is not AnySharpObject located)
+			{
+				return CallState.Empty;
+			}
+			looker = located;
+		}
+
+		if (!await PermissionService.Controls(executor, looker))
+		{
+			return ErrorMessages.Returns.PermissionDenied;
+		}
+
+		var objectsToScan = new List<AnySharpObject>();
+		var switchList = switches.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+		bool checkMe = switchList.Contains("me") || switchList.Contains("all") || switchList.Contains("self");
+		bool checkInventory = switchList.Contains("inventory") || switchList.Contains("all") || switchList.Contains("self");
+		bool checkRoom = switchList.Contains("room") || switchList.Contains("all");
+		bool checkGlobals = switchList.Contains("globals") || switchList.Contains("all");
+
+		if (checkMe)
+		{
+			objectsToScan.Add(looker);
+		}
+
+		async ValueTask AddContents(AnySharpContainer container)
+		{
+			await foreach (var item in Mediator.CreateStream(new GetContentsQuery(container)))
+			{
+				objectsToScan.Add(item.WithRoomOption());
+			}
+		}
+
+		if (checkInventory && looker.IsContainer)
+		{
+			await AddContents(looker.AsContainer);
+		}
+
+		if (checkRoom)
+		{
+			var locationOpt = await Mediator.Send(new GetLocationQuery(looker.Object().DBRef));
+
+			if (locationOpt is AnySharpContainer location)
+			{
+				objectsToScan.Add(location.WithExitOption());
+				await AddContents(location);
+			}
+		}
+
+		if (checkGlobals)
+		{
+			if (await Mediator.Send(new GetObjectNodeQuery(new DBRef(0))) is AnySharpObject masterRoom)
+			{
+				objectsToScan.Add(masterRoom);
+
+				if (masterRoom.IsContainer)
+				{
+					await AddContents(masterRoom.AsContainer);
+				}
+			}
+		}
+
+		var perceive = await ObserveProjectionRealityAsync(parser, executor.Object().DBRef);
+		var uniqueObjects = objectsToScan
+			.Distinct()
+			.ToAsyncEnumerable()
+			.Where(async (obj, _) => await perceive(obj.Object().DBRef, ExecutionBudget.CurrentToken));
+
+		var matchResult = await CommandDiscoveryService.MatchUserDefinedCommand(
+			parser,
+			uniqueObjects,
+			command);
+
+		if (!matchResult.TryGetValue(out var matches))
+		{
+			return CallState.Empty;
+		}
+
+		// Format results as "dbref/attribute" pairs
+		var results = matches.Select(match =>
+			$"{match.SObject.Object().DBRef}/{match.Attribute.Name}");
+
+		return string.Join(" ", results);
+	}
+
+	private static async ValueTask<Func<DBRef, CancellationToken, ValueTask<bool>>> ObserveProjectionRealityAsync(
+		IMUSHCodeParser parser, DBRef receiver)
+	{
+		var reality = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
+		return reality is IRealityObservationProvider observations
+			? await observations.ObserveAsync(receiver, ExecutionBudget.CurrentToken)
+			: (target, token) => reality.CanPerceiveAsync(receiver, target, token);
+	}
+
+	[SharpFunction(Name = "valid", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["type", "name"])]
+	public async ValueTask<CallState> Valid(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var category = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var str = parser.CurrentState.Arguments["1"].Message!;
+		var target = parser.CurrentState.Arguments.Count >= 3
+			? parser.CurrentState.Arguments["2"].Message!.ToPlainText()
+			: null;
+		// valid() runs as the executor: its optional <target> is located, and the default validation
+		// context, relative to the executor (PennMUSH matches function arguments to the executor) — not
+		// the caller one frame up the u() chain.
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		var validationType = category switch
+		{
+			"name" => IValidateService.ValidationType.Name,
+			"attrname" => IValidateService.ValidationType.AttributeName,
+			"attrvalue" => IValidateService.ValidationType.AttributeValue,
+			"playername" => IValidateService.ValidationType.PlayerName,
+			"password" => IValidateService.ValidationType.Password,
+			"command" => IValidateService.ValidationType.CommandName,
+			"function" => IValidateService.ValidationType.FunctionName,
+			"flag" => IValidateService.ValidationType.FlagName,
+			"qreg" => IValidateService.ValidationType.QRegisterName,
+			"colorname" => IValidateService.ValidationType.ColorName,
+			"ansicodes" => IValidateService.ValidationType.AnsiCode,
+			"channel" => IValidateService.ValidationType.ChannelName,
+			"timezone" => IValidateService.ValidationType.Timezone,
+			"locktype" => IValidateService.ValidationType.LockType,
+			"lockkey" => IValidateService.ValidationType.LockKey,
+			_ => IValidateService.ValidationType.Invalid
+		};
+
+		if (validationType == IValidateService.ValidationType.Invalid)
+		{
+			return string.Format(ErrorMessages.Returns.BadArgumentFormat, "valid");
+		}
+
+		return validationType switch
+		{
+			IValidateService.ValidationType.AttributeValue when target is not null
+				=> new CallState(await ValidateService.Valid(validationType, str, await GetAttributeEntry(target)) ? "1" : "0"),
+			IValidateService.ValidationType.AttributeValue
+				=> new CallState(await ValidateService.Valid(validationType, str, new None()) ? "1" : "0"),
+
+			IValidateService.ValidationType.PlayerName when target is null
+				=> new CallState(await ValidateService.Valid(validationType, str, executor) ? "1" : "0"),
+			IValidateService.ValidationType.PlayerName
+				when await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, target, LocateFlags.All)
+					is AnySharpObject obj
+				=> new CallState(await ValidateService.Valid(validationType, str, obj) ? "1" : "0"),
+			IValidateService.ValidationType.PlayerName => ErrorMessages.Returns.CantSeeThat,
+
+			IValidateService.ValidationType.ChannelName
+				=> new CallState(await ValidateService.Valid(validationType, str, await GetChannel(target ?? string.Empty)) ? "1" : "0"),
+
+			IValidateService.ValidationType.LockType when target is null
+				=> new CallState(await ValidateService.Valid(validationType, str, executor) ? "1" : "0"),
+			IValidateService.ValidationType.LockType
+				when await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, target, LocateFlags.All)
+					is AnySharpObject obj
+				=> new CallState(await ValidateService.Valid(validationType, str, obj) ? "1" : "0"),
+			IValidateService.ValidationType.LockType => ErrorMessages.Returns.CantSeeThat,
+			_ => new CallState(await ValidateService.Valid(validationType, str, new None()) ? "1" : "0")
+		};
+
+		async ValueTask<ValidationTarget> GetChannel(string t)
+		{
+			var channel = await Mediator.Send(new GetChannelQuery(t));
+			return channel is null
+				? new None()
+				: channel;
+		}
+
+		async ValueTask<ValidationTarget> GetAttributeEntry(string name)
+		{
+			var entry = await Mediator.Send(new GetAttributeEntryQuery(name));
+			return entry is null
+				? new None()
+				: entry;
+		}
+	}
+
+	[SharpFunction(Name = "version", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
+	public ValueTask<CallState> Version(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ValueTask.FromResult<CallState>(Implementation.Generated.VersionInfo.Version);
+
+	[SharpFunction(Name = "poll", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
+	public async ValueTask<CallState> Poll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var pollData = await ObjectDataService.GetExpandedServerDataAsync<PollData>();
+		return new CallState(pollData?.Message ?? string.Empty);
 	}
 }
