@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.Wiki;
 public class WikiMetadataServiceTests
 {
 	private static IWikiService BuildService() =>
-		new InMemoryWikiService(new WikiMarkdigPipeline());
+		InMemoryWikiStore.CreateService();
 
 	private static async Task<WikiPage> CreatePageAsync(
 		IWikiService svc, string title, WikiNamespace ns = WikiNamespace.Main)

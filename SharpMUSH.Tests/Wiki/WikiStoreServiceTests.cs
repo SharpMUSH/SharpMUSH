@@ -6,14 +6,14 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Wiki;
 
 /// <summary>
-/// Unit tests for <see cref="InMemoryWikiService"/>.
+/// Unit tests for <see cref="WikiStoreService"/>.
 /// All tests run against a fresh service instance to ensure isolation.
 /// Note: CreateAsync derives the slug from the title via Slugify(title).
 /// </summary>
-public class InMemoryWikiServiceTests
+public class WikiStoreServiceTests
 {
 	private static IWikiService BuildService() =>
-		new InMemoryWikiService(new WikiMarkdigPipeline());
+		InMemoryWikiStore.CreateService();
 
 	/// <summary>
 	/// Creates a page and asserts it succeeded, returning the <see cref="WikiPage"/>.
@@ -688,6 +688,23 @@ public class InMemoryWikiServiceTests
 			.IsEqualTo(2)
 			.Because("GetRevisionsAsync must keep returning only the source stream for its five existing callers");
 		await Assert.That(source.All(r => r.Locale.Length == 0)).IsTrue();
+	}
+
+	/// <summary>
+	/// An unrecognised tag names no stream. It used to normalise to empty, which is the source stream's
+	/// marker, so a junk <c>lang</c> read the source page's history as if it were a translation's.
+	/// </summary>
+	[Test]
+	public async Task LocaleRevisionReads_WithAnUnrecognisedTag_FindNothing()
+	{
+		var svc = BuildService();
+		var page = await CreatePageAsync(svc, "Wyverns", markdown: "source v1");
+
+		await Assert.That(await svc.GetRevisionsForLocaleAsync(page.Id, "not a locale", 0, 20)).IsEmpty();
+		await Assert.That(await svc.GetRevisionForLocaleAsync(page.Id, "not a locale", 1) is NotFound).IsTrue();
+		await Assert.That((await svc.GetRevisionsForLocaleAsync(page.Id, string.Empty, 0, 20)).Count)
+			.IsEqualTo(1)
+			.Because("empty is still the source stream");
 	}
 
 	[Test]

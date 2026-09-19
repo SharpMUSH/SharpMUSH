@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Text.RegularExpressions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.Services;
@@ -122,22 +123,24 @@ public static class SitelockMatcher
 	/// </summary>
 	/// <remarks>
 	/// A cache of its own rather than relying on the bounded one inside <see cref="SoftcodeRegex"/>:
-	/// that one stops admitting once player-authored patterns have filled it, and a sitelock rule first
-	/// seen after that would be recompiled on every request — on the path that decides whether a
-	/// connection is allowed. Its keys are admin-authored rules, so this is bounded by the rule set.
-	/// The patterns still come from <see cref="SoftcodeRegex"/>, so they still carry its match timeout.
+	/// that one is least-recently-used and shared with player-authored patterns, so a sitelock rule could
+	/// be evicted and recompiled on the path that decides whether a connection is allowed. Its keys are
+	/// admin-authored rules, so this is bounded by the rule set. The regex is built here rather than by
+	/// <see cref="SoftcodeRegex.Create"/>, which shortens the timeout to whatever is left of a running
+	/// command's execution budget — a value that must not be cached for every later connection.
 	/// </remarks>
 	private static readonly ConcurrentDictionary<string, Regex> GlobCache = new();
 
 	/// <summary>
-	/// Simple wildcard matching for sitelock patterns (<c>*</c> and <c>?</c> wildcards), lifted
-	/// from the former private <c>WizardCommands.WildcardMatch</c> so it is shared across the
-	/// connect-time check and ban-enforcement matchers.
+	/// Whether <paramref name="text"/> matches the sitelock rule <paramref name="pattern"/>, read as a
+	/// general MUSH wildcard (<see cref="MushText.Glob"/>) — PennMUSH's <c>site_check_access</c> uses
+	/// <c>quick_wild</c> (<c>src/access.c</c>). Case-insensitive; <c>\</c> makes the next character
+	/// literal. The non-backtracking engine keeps a many-star rule linear on every connection.
 	/// </summary>
 	private static bool WildcardMatch(string text, string pattern)
 		=> SoftcodeRegex.IsMatch(
-			GlobCache.GetOrAdd(pattern, static p => SoftcodeRegex.Create(
-				"^" + Regex.Escape(p).Replace("\\*", ".*").Replace("\\?", ".") + "$",
-				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)),
+			GlobCache.GetOrAdd(pattern, static p => new Regex(MushText.Glob.ToRegex(p),
+				RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking,
+				SoftcodeRegex.MatchTimeout)),
 			text);
 }

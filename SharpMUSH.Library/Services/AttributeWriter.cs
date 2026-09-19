@@ -104,6 +104,22 @@ internal sealed class AttributeWriter(
 			}
 		}
 
+		// check_attr_value runs here in Penn's do_set_atr (src/attrib.c:2363): @attribute/limit and
+		// @attribute/enum refuse the set outright, and an enum stores the choice as the enum spells it.
+		if (await mediator.Send(new GetAttributeEntryQuery(string.Join('`', attrPath).ToUpperInvariant()))
+			is SharpAttributeEntry entry)
+		{
+			var plain = value.ToPlainText();
+			switch (AttributeValueRestriction.Check(entry, plain))
+			{
+				case Error<string> refused:
+					return refused;
+				case string stored when !stored.Equals(plain, StringComparison.Ordinal):
+					value = MarkupText.Plain(stored);
+					break;
+			}
+		}
+
 		await mediator.Send(new SetAttributeCommand(obj.Object().DBRef, attrPath, value, creator));
 
 		// Advisory-only set-time validation: PennMUSH never validates softcode at set time, and

@@ -1,16 +1,17 @@
 using System.Globalization;
+using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// <see cref="IWikiService"/>: wiki pages, their revision streams and their translations.
+/// <see cref="IWikiStore"/>: wiki pages, their revision streams and their translations. Normalisation,
+/// rendering and locale validation happen above this, in <c>WikiStoreService</c>.
 /// </summary>
 /// <remarks>
 /// Four tables carry the area. <see cref="Tables.WikiPage"/> holds the page rows, keyed by an id drawn
@@ -27,16 +28,14 @@ namespace SharpMUSH.Database.Lightning;
 /// range and gives the <c>(pageId, locale)</c> uniqueness the contract asks for for free.
 /// </para>
 /// <para>
-/// Every mutation is one write job on the single writer thread, so <c>UpsertTranslationAsync</c>'s
+/// Every mutation is one write job on the single writer thread, so <c>WriteTranslationAsync</c>'s
 /// compare-and-swap reads the stored revision number and appends its revision inside the same
 /// transaction: two writers holding the same <c>expectedRevisionNumber</c> cannot both win, and the
 /// loser leaves no revision behind.
 /// </para>
 /// </remarks>
-public partial class LightningDatabase
+public partial class LightningDatabase : IWikiStore
 {
-	private static readonly WikiMarkdigPipeline WikiRenderer = new();
-
 	private const string WikiPageIdPrefix = "wiki_page/";
 
 	private static string WikiPageId(long key) => $"{WikiPageIdPrefix}{key.ToString(CultureInfo.InvariantCulture)}";
@@ -201,25 +200,20 @@ public partial class LightningDatabase
 		=> tx.Range(Tables.WikiRev, WikiRevPrefix(pageId, locale))
 			.Select(entry => MapWikiRevision(Codec.Deserialize<WikiRevisionRecord>(entry.Value)));
 
-	public Task<Found<WikiPage>> GetBySlugAsync(string slug, string? category, WikiNamespace ns = WikiNamespace.Main)
-	{
-		var nsStr = ns.ToString().ToLowerInvariant();
-		var key = WikiSlugKey(nsStr, category, WikiHelpers.Slugify(slug));
-
-		return Task.FromResult(Store.Read<Found<WikiPage>>(tx =>
+	public Task<Found<WikiPage>> GetPageBySlugAsync(string ns, string category, string slug)
+		=> Task.FromResult(Store.Read<Found<WikiPage>>(tx =>
 		{
-			if (!tx.TryGet(Tables.WikiSlug, key, out var idBytes)) return new NotFound();
+			if (!tx.TryGet(Tables.WikiSlug, WikiSlugKey(ns, category, slug), out var idBytes)) return new NotFound();
 
 			var pageKey = Keys.ReadDbref(idBytes);
 			return TryReadWikiPage(tx, pageKey) is { } record ? MapWikiPage(pageKey, record) : new NotFound();
 		}));
-	}
 
-	public Task<Found<WikiPage>> GetByIdAsync(string id)
+	public Task<Found<WikiPage>> GetPageByIdAsync(string id)
 		=> Task.FromResult(Store.Read<Found<WikiPage>>(tx =>
 			TryReadWikiPage(tx, id) is { } found ? MapWikiPage(found.Key, found.Record) : new NotFound()));
 
-	public Task<IReadOnlyList<WikiPage>> GetRecentChangesAsync(int count = 20)
+	public Task<IReadOnlyList<WikiPage>> GetRecentPagesAsync(int count)
 		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => AllWikiPagesMapped(tx)
 			.OrderByDescending(p => p.UpdatedAt)
 			// Id descending as the tie-break so two pages written inside one timestamp tick still order
@@ -228,166 +222,106 @@ public partial class LightningDatabase
 			.Take(count)
 			.ToList()));
 
-	public Task<IReadOnlyList<WikiPage>> GetByNamespaceAsync(WikiNamespace ns, int skip = 0, int take = 50)
-	{
-		var nsStr = ns.ToString().ToLowerInvariant();
-		return Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => AllWikiPagesMapped(tx)
-			.Where(p => p.Namespace.Equals(nsStr, StringComparison.OrdinalIgnoreCase))
-			.OrderBy(p => p.Slug, StringComparer.Ordinal)
-			.Skip(skip)
-			.Take(take)
-			.ToList()));
-	}
-
-	public Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null)
-	{
-		var nsStr = ns?.ToString().ToLowerInvariant();
-		return Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => AllWikiPagesMapped(tx)
-			.Where(p => nsStr is null || p.Namespace.Equals(nsStr, StringComparison.OrdinalIgnoreCase))
+	public Task<IReadOnlyList<WikiPage>> GetPagesAsync(string? ns, int skip, int take)
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => AllWikiPagesMapped(tx)
+			.Where(p => ns is null || p.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase))
 			.OrderBy(p => p.Namespace, StringComparer.Ordinal)
 			.ThenBy(p => p.Slug, StringComparer.Ordinal)
 			.Skip(skip)
 			.Take(take)
 			.ToList()));
-	}
 
-	public Task<int> CountPagesAsync(WikiNamespace? ns, bool includeDrafts)
-	{
-		var nsStr = ns?.ToString().ToLowerInvariant();
-		// `Published ?? true` rather than `== true`, so a row written before the field existed counts the
-		// same way it displays. Defence in depth: every write path here sets it.
-		return Task.FromResult(Store.Read(tx => AllWikiPages(tx)
-			.Count(p => (nsStr is null || p.Record.Namespace.Equals(nsStr, StringComparison.OrdinalIgnoreCase))
+	// `Published ?? true` rather than `== true`, so a row written before the field existed counts the
+	// same way it displays. Defence in depth: every write path here sets it.
+	public Task<int> CountPagesAsync(string? ns, bool includeDrafts)
+		=> Task.FromResult(Store.Read(tx => AllWikiPages(tx)
+			.Count(p => (ns is null || p.Record.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase))
 				&& (includeDrafts || (p.Record.Published ?? true)))));
-	}
 
-	public Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50)
-	{
-		var normalized = WikiHelpers.NormalizeCategory(category);
-		return Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => AllWikiPagesMapped(tx)
-			.Where(p => p.Category is not null && p.Category.Equals(normalized, StringComparison.OrdinalIgnoreCase))
+	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take)
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => AllWikiPagesMapped(tx)
+			.Where(p => p.Category is not null && p.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
 			.OrderBy(p => p.Title, StringComparer.Ordinal)
 			.Skip(skip)
 			.Take(take)
 			.ToList()));
-	}
 
-	public Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50)
-	{
-		var normalized = tag.Trim().ToLowerInvariant();
-		return Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => AllWikiPagesMapped(tx)
-			.Where(p => p.Tags.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+	public Task<IReadOnlyList<WikiPage>> GetPagesByTagAsync(string tag, int skip, int take)
+		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx => AllWikiPagesMapped(tx)
+			.Where(p => p.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
 			.OrderBy(p => p.Title, StringComparer.Ordinal)
 			.Skip(skip)
 			.Take(take)
 			.ToList()));
-	}
 
-	public async Task<Result<WikiPage>> CreateAsync(
-		string title,
-		string markdown,
-		string authorDbref,
-		WikiNamespace ns = WikiNamespace.Main,
-		string? category = null,
-		string? sourceLocale = null)
+	public async Task<Result<WikiPage>> CreatePageAsync(WikiPage page)
 	{
-		// SourceLocale is materialised once and never re-derived, so a junk tag must not reach storage.
-		// Null or blank is the "not stamped" case, left to the migration backfill rather than an error;
-		// a non-blank tag that is not a locale is an error, because storing it would corrupt every later read.
-		var stampedLocale = string.Empty;
-		if (!string.IsNullOrWhiteSpace(sourceLocale))
-		{
-			switch (WikiHelpers.NormalizeLocale(sourceLocale))
-			{
-				case Error<string> error:
-					return error;
-				case string normalizedSource:
-					stampedLocale = normalizedSource;
-					break;
-			}
-		}
-
-		var nsStr = ns.ToString().ToLowerInvariant();
-		var slug = WikiHelpers.Slugify(title);
-		var cat = WikiHelpers.NormalizeCategory(category);
-		var now = DateTimeOffset.UtcNow;
-		var stamp = WikiTimestamp(now);
-
 		var record = new WikiPageRecord
 		{
-			Slug = slug,
-			Title = title,
-			Namespace = nsStr,
-			MarkdownSource = markdown,
-			RenderedHtml = WikiRenderer.RenderToHtml(markdown),
-			PlainText = WikiRenderer.ExtractPlainText(markdown),
-			AuthorDbref = authorDbref,
-			LastEditorDbref = authorDbref,
-			CreatedAt = stamp,
-			UpdatedAt = stamp,
-			IsProtected = false,
+			Slug = page.Slug,
+			Title = page.Title,
+			Namespace = page.Namespace,
+			MarkdownSource = page.MarkdownSource,
+			RenderedHtml = page.RenderedHtml,
+			PlainText = page.PlainText,
+			AuthorDbref = page.AuthorDbref,
+			LastEditorDbref = page.LastEditorDbref,
+			CreatedAt = WikiTimestamp(page.CreatedAt),
+			UpdatedAt = WikiTimestamp(page.UpdatedAt),
+			IsProtected = page.IsProtected,
 			RevisionNumber = 1,
-			Category = cat,
-			Tags = [],
-			Published = true,
-			SourceLocale = stampedLocale
+			Category = page.Category,
+			Tags = [.. page.Tags],
+			Published = page.Published,
+			SourceLocale = page.SourceLocale
 		};
 
 		// The duplicate check and the insert share one write job, so two creators of the same
 		// (namespace, category, slug) cannot both pass the check.
 		return await Store.WriteAsync<Result<WikiPage>>(tx =>
 		{
-			var slugKey = WikiSlugKey(nsStr, cat, slug);
+			var slugKey = WikiSlugKey(record.Namespace, record.Category, record.Slug);
 			if (tx.TryGet(Tables.WikiSlug, slugKey, out _))
 			{
 				return new Error<string>(
-					$"A wiki page with slug '{slug}' already exists in namespace '{nsStr}' category '{cat}'.");
+					$"A wiki page with slug '{record.Slug}' already exists in namespace '{record.Namespace}' category '{record.Category}'.");
 			}
 
 			var key = AllocateWikiId(tx);
 			tx.Put(Tables.WikiPage, WikiPageKey(key), Codec.Serialize(record));
 			tx.Put(Tables.WikiSlug, slugKey, Keys.Dbref(key));
 
-			var page = MapWikiPage(key, record);
-			AppendWikiRevision(tx, page.Id, string.Empty, 1, markdown, authorDbref, null, now);
-			return page;
+			var stored = MapWikiPage(key, record);
+			AppendWikiRevision(tx, stored.Id, string.Empty, 1, record.MarkdownSource, record.AuthorDbref, null, page.CreatedAt);
+			return stored;
 		});
 	}
 
-	public async Task<Found<WikiPage>> UpdateAsync(
-		string id,
-		string markdown,
-		string editorDbref,
-		string? editSummary = null)
-	{
-		var now = DateTimeOffset.UtcNow;
-		var html = WikiRenderer.RenderToHtml(markdown);
-		var plain = WikiRenderer.ExtractPlainText(markdown);
-
-		return await Store.WriteAsync<Found<WikiPage>>(tx =>
+	public async Task<Found<WikiPage>> UpdatePageBodyAsync(string id, WikiBody body, string editorDbref, string? editSummary,
+		DateTimeOffset at)
+		=> await Store.WriteAsync<Found<WikiPage>>(tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
 			var revision = found.Record.RevisionNumber + 1;
 			var updated = found.Record with
 			{
-				MarkdownSource = markdown,
-				RenderedHtml = html,
-				PlainText = plain,
+				MarkdownSource = body.Markdown,
+				RenderedHtml = body.Html,
+				PlainText = body.PlainText,
 				LastEditorDbref = editorDbref,
-				UpdatedAt = WikiTimestamp(now),
+				UpdatedAt = WikiTimestamp(at),
 				RevisionNumber = revision
 			};
 
 			tx.Put(Tables.WikiPage, WikiPageKey(found.Key), Codec.Serialize(updated));
 
 			var page = MapWikiPage(found.Key, updated);
-			AppendWikiRevision(tx, page.Id, string.Empty, revision, markdown, editorDbref, editSummary, now);
+			AppendWikiRevision(tx, page.Id, string.Empty, revision, body.Markdown, editorDbref, editSummary, at);
 			return page;
 		});
-	}
 
-	public async Task<Found<None>> DeleteAsync(string id, string editorDbref)
+	public async Task<Found<None>> DeletePageAsync(string id)
 		=> await Store.WriteAsync<Found<None>>(tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
@@ -403,7 +337,7 @@ public partial class LightningDatabase
 			return new None();
 		});
 
-	public async Task<Found<None>> SetProtectionAsync(string id, bool isProtected)
+	public async Task<Found<None>> SetPageProtectionAsync(string id, bool isProtected)
 		=> await Store.WriteAsync<Found<None>>(tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
@@ -413,31 +347,26 @@ public partial class LightningDatabase
 			return new None();
 		});
 
-	public async Task<Found<WikiPage>> SetMetadataAsync(
-		string id,
-		string? category,
-		IReadOnlyList<string> tags,
+	public async Task<Found<WikiPage>> SetPageMetadataAsync(string id, string category, IReadOnlyList<string> tags,
 		bool published)
-	{
-		var normalizedCategory = WikiHelpers.NormalizeCategory(category);
-		var normalizedTags = WikiHelpers.NormalizeTags(tags).ToArray();
-
-		return await Store.WriteAsync<Found<WikiPage>>(tx =>
+		=> await Store.WriteAsync<Found<WikiPage>>(tx =>
 		{
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
+			// A row written before categories were stamped reads as the default category, which is the key its
+			// slug index entry was written under.
 			var existingCategory = WikiHelpers.NormalizeCategory(found.Record.Category);
-			var recategorized = !string.Equals(normalizedCategory, existingCategory, StringComparison.OrdinalIgnoreCase);
+			var recategorized = !string.Equals(category, existingCategory, StringComparison.OrdinalIgnoreCase);
 			var oldSlugKey = WikiSlugKey(found.Record.Namespace, existingCategory, found.Record.Slug);
-			var newSlugKey = WikiSlugKey(found.Record.Namespace, normalizedCategory, found.Record.Slug);
+			var newSlugKey = WikiSlugKey(found.Record.Namespace, category, found.Record.Slug);
 
 			// Category is part of page identity, so a recategorization that would collide is refused.
 			if (recategorized && tx.TryGet(Tables.WikiSlug, newSlugKey, out _)) return new NotFound();
 
 			var updated = found.Record with
 			{
-				Category = normalizedCategory,
-				Tags = normalizedTags,
+				Category = category,
+				Tags = [.. tags],
 				Published = published
 			};
 
@@ -450,22 +379,29 @@ public partial class LightningDatabase
 			tx.Put(Tables.WikiPage, WikiPageKey(found.Key), Codec.Serialize(updated));
 			return MapWikiPage(found.Key, updated);
 		});
-	}
 
-	public Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, int skip = 0, int take = 20)
-		=> GetRevisionsForLocaleAsync(pageId, string.Empty, skip, take);
+	public Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, string locale, int skip, int take)
+		=> Task.FromResult<IReadOnlyList<WikiRevision>>(Store.Read(tx =>
+			RangeWikiRevisions(tx, CanonicalWikiPageId(pageId), locale)
+				.OrderByDescending(r => r.RevisionNumber)
+				.Skip(skip)
+				.Take(take)
+				.ToList()));
 
-	public Task<Found<WikiRevision>> GetRevisionAsync(string pageId, int revisionNumber)
-		=> GetRevisionForLocaleAsync(pageId, string.Empty, revisionNumber);
+	public Task<Found<WikiRevision>> GetRevisionAsync(string pageId, string locale, int revisionNumber)
+		=> Task.FromResult(Store.Read<Found<WikiRevision>>(tx =>
+			tx.TryGet(Tables.WikiRev, WikiRevKey(CanonicalWikiPageId(pageId), locale, revisionNumber), out var bytes)
+				? MapWikiRevision(Codec.Deserialize<WikiRevisionRecord>(bytes))
+				: new NotFound()));
 
-	public Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationsAsync(string pageId)
+	public Task<IReadOnlyList<WikiTranslationSummary>> GetTranslationSummariesAsync(string pageId)
 		=> Task.FromResult<IReadOnlyList<WikiTranslationSummary>>(Store.Read(tx =>
 			tx.Range(Tables.WikiTr, WikiPagePrefix(CanonicalWikiPageId(pageId)))
 				.Select(entry => MapWikiTranslation(Codec.Deserialize<WikiTranslationRecord>(entry.Value)))
 				.Select(t => new WikiTranslationSummary(t.Locale, t.Title, t.Published, t.UpdatedAt, t.RevisionNumber))
 				.ToList()));
 
-	public Task<IReadOnlyList<WikiTranslation>> GetAllTranslationsAsync(int skip = 0, int take = 50)
+	public Task<IReadOnlyList<WikiTranslation>> GetTranslationsAsync(int skip, int take)
 		// The key is (pageId, locale), so the natural scan order is already "page then locale".
 		=> Task.FromResult<IReadOnlyList<WikiTranslation>>(Store.Read(tx =>
 			tx.Range(Tables.WikiTr, [])
@@ -475,50 +411,19 @@ public partial class LightningDatabase
 				.ToList()));
 
 	public Task<Found<WikiTranslation>> GetTranslationAsync(string pageId, string locale)
-	{
-		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
-		if (normalized.Length == 0) return Task.FromResult<Found<WikiTranslation>>(new NotFound());
-
-		return Task.FromResult(Store.Read<Found<WikiTranslation>>(tx =>
-			tx.TryGet(Tables.WikiTr, WikiTranslationKey(CanonicalWikiPageId(pageId), normalized), out var bytes)
+		=> Task.FromResult(Store.Read<Found<WikiTranslation>>(tx =>
+			tx.TryGet(Tables.WikiTr, WikiTranslationKey(CanonicalWikiPageId(pageId), locale), out var bytes)
 				? MapWikiTranslation(Codec.Deserialize<WikiTranslationRecord>(bytes))
 				: new NotFound()));
-	}
-
-	public async Task<TranslationWriteResult> UpsertTranslationAsync(
-		string pageId,
-		string locale,
-		string title,
-		string markdown,
-		string editorDbref,
-		string? editSummary,
-		bool published,
-		int? expectedRevisionNumber)
-		=> WikiHelpers.NormalizeLocale(locale) switch
-		{
-			string normalized => await WriteTranslationAsync(
-				pageId, normalized, title, markdown, editorDbref, editSummary, published, expectedRevisionNumber),
-			Error<string> error => error,
-		};
 
 	/// <summary>
-	/// Writes a translation under an already-normalized locale, as a create or a compare-and-swap on the
-	/// revision the editor loaded.
+	/// Writes a translation as a create or a compare-and-swap on the revision the editor loaded.
 	/// </summary>
-	private async Task<TranslationWriteResult> WriteTranslationAsync(
-		string pageId,
-		string normalized,
-		string title,
-		string markdown,
-		string editorDbref,
-		string? editSummary,
-		bool published,
-		int? expectedRevisionNumber)
+	public async Task<TranslationWriteResult> WriteTranslationAsync(string pageId, string locale, string title,
+		WikiBody body, string editorDbref, string? editSummary, bool published, int? expectedRevisionNumber,
+		DateTimeOffset at)
 	{
-		var now = DateTimeOffset.UtcNow;
-		var stamp = WikiTimestamp(now);
-		var html = WikiRenderer.RenderToHtml(markdown);
-		var plain = WikiRenderer.ExtractPlainText(markdown);
+		var stamp = WikiTimestamp(at);
 
 		// The compare-and-swap, the row write and the revision append are one job on the writer thread.
 		// Never make this an unconditional write: two translators who both loaded revision 4 would both
@@ -528,14 +433,7 @@ public partial class LightningDatabase
 			if (TryReadWikiPage(tx, pageId) is not { } found) return new Error<string>($"No wiki page with id '{pageId}'.");
 
 			var canonicalPageId = WikiPageId(found.Key);
-			var sourceLocale = found.Record.SourceLocale ?? string.Empty;
-			if (sourceLocale.Length > 0 && string.Equals(sourceLocale, normalized, StringComparison.OrdinalIgnoreCase))
-			{
-				return new Error<string>(
-					$"'{normalized}' is the page's source locale; edit the page itself rather than adding a translation.");
-			}
-
-			var key = WikiTranslationKey(canonicalPageId, normalized);
+			var key = WikiTranslationKey(canonicalPageId, locale);
 			var existing = tx.TryGet(Tables.WikiTr, key, out var bytes)
 				? Codec.Deserialize<WikiTranslationRecord>(bytes)
 				: null;
@@ -562,11 +460,11 @@ public partial class LightningDatabase
 			var record = new WikiTranslationRecord
 			{
 				PageId = canonicalPageId,
-				Locale = normalized,
+				Locale = locale,
 				Title = title,
-				MarkdownSource = markdown,
-				RenderedHtml = html,
-				PlainText = plain,
+				MarkdownSource = body.Markdown,
+				RenderedHtml = body.Html,
+				PlainText = body.PlainText,
 				LastEditorDbref = editorDbref,
 				CreatedAt = created,
 				UpdatedAt = stamp,
@@ -575,47 +473,20 @@ public partial class LightningDatabase
 			};
 
 			tx.Put(Tables.WikiTr, key, Codec.Serialize(record));
-			AppendWikiRevision(tx, canonicalPageId, normalized, revision, markdown, editorDbref, editSummary, now);
+			AppendWikiRevision(tx, canonicalPageId, locale, revision, body.Markdown, editorDbref, editSummary, at);
 			return MapWikiTranslation(record);
 		});
 	}
 
-	public async Task<Found<None>> DeleteTranslationAsync(string pageId, string locale, string editorDbref)
-	{
-		var normalized = WikiHelpers.NormalizeLocaleOrEmpty(locale);
-		if (normalized.Length == 0) return new NotFound();
-
-		return await Store.WriteAsync<Found<None>>(tx =>
+	public async Task<Found<None>> DeleteTranslationAsync(string pageId, string locale)
+		=> await Store.WriteAsync<Found<None>>(tx =>
 		{
 			var canonicalPageId = CanonicalWikiPageId(pageId);
-			var key = WikiTranslationKey(canonicalPageId, normalized);
+			var key = WikiTranslationKey(canonicalPageId, locale);
 			if (!tx.TryGet(Tables.WikiTr, key, out _)) return new NotFound();
 
-			tx.DeletePrefix(Tables.WikiRev, WikiRevPrefix(canonicalPageId, normalized));
+			tx.DeletePrefix(Tables.WikiRev, WikiRevPrefix(canonicalPageId, locale));
 			tx.Delete(Tables.WikiTr, key);
 			return new None();
 		});
-	}
-
-	public Task<IReadOnlyList<WikiRevision>> GetRevisionsForLocaleAsync(string pageId, string locale, int skip, int take)
-	{
-		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
-		return Task.FromResult<IReadOnlyList<WikiRevision>>(Store.Read(tx =>
-			RangeWikiRevisions(tx, CanonicalWikiPageId(pageId), wanted)
-				.OrderByDescending(r => r.RevisionNumber)
-				.Skip(skip)
-				.Take(take)
-				.ToList()));
-	}
-
-	public Task<Found<WikiRevision>> GetRevisionForLocaleAsync(string pageId, string locale, int revisionNumber)
-	{
-		var wanted = locale.Length == 0 ? string.Empty : WikiHelpers.NormalizeLocaleOrEmpty(locale);
-		if (revisionNumber < 0) return Task.FromResult<Found<WikiRevision>>(new NotFound());
-
-		return Task.FromResult(Store.Read<Found<WikiRevision>>(tx =>
-			tx.TryGet(Tables.WikiRev, WikiRevKey(CanonicalWikiPageId(pageId), wanted, revisionNumber), out var bytes)
-				? MapWikiRevision(Codec.Deserialize<WikiRevisionRecord>(bytes))
-				: new NotFound()));
-	}
 }

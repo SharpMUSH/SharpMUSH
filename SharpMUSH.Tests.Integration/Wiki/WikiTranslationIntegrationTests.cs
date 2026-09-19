@@ -20,8 +20,7 @@ public class WikiTranslationIntegrationTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactory { get; init; }
 
-	private IWikiService Wiki => WebAppFactory.Services.GetRequiredService<ISharpDatabase>() as IWikiService
-		?? throw new InvalidOperationException("ISharpDatabase does not implement IWikiService in this configuration.");
+	private IWikiService Wiki => WebAppFactory.Services.GetRequiredService<IWikiService>();
 
 	/// <summary>Creates a uniquely-named English source page and returns it.</summary>
 	private async Task<WikiPage> CreateSourcePageAsync(string label, string sourceLocale = "en", IWikiService? wiki = null)

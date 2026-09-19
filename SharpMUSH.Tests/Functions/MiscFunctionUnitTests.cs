@@ -10,9 +10,9 @@ public class MiscFunctionUnitTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
 	[Test]
-	[Arguments("list(functions)", "list")]
-	[Arguments("list(commands)", "@emit")]
-	[Arguments("list(locks)", "basic")] // lock type names are lowercased
+	[Arguments("list(functions)", "LIST")]
+	[Arguments("list(commands)", "@EMIT")]
+	[Arguments("list(locks)", "BASIC")] // Penn upper-cases every name list() returns
 	public async Task List(string str, string expectedContains)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

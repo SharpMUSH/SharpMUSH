@@ -44,7 +44,7 @@ public class WikiLocalizationServiceTests
 	{
 		var monitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 		monitor.CurrentValue.Returns(TestSharpMushOptions.Create(wikiDefaultLocale: defaultLocale));
-		var storage = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var storage = InMemoryWikiStore.CreateService();
 		var resolver = new WikiLocaleResolver(monitor);
 		return (storage, new WikiLocalizationService(
 			storage, resolver, NullLogger<WikiLocalizationService>.Instance));
@@ -199,7 +199,7 @@ public class WikiLocalizationServiceTests
 		// that never ran the backfill indistinguishable from a healthy one.
 		var monitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 		monitor.CurrentValue.Returns(TestSharpMushOptions.Create(wikiDefaultLocale: "fr"));
-		var storage = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var storage = InMemoryWikiStore.CreateService();
 		var logger = new RecordingLogger<WikiLocalizationService>();
 		var service = new WikiLocalizationService(storage, new WikiLocaleResolver(monitor), logger);
 		var page = await SeedAsync(storage, sourceLocale: null);
@@ -216,7 +216,7 @@ public class WikiLocalizationServiceTests
 	{
 		var monitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 		monitor.CurrentValue.Returns(TestSharpMushOptions.Create());
-		var storage = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var storage = InMemoryWikiStore.CreateService();
 		var logger = new RecordingLogger<WikiLocalizationService>();
 		var service = new WikiLocalizationService(storage, new WikiLocaleResolver(monitor), logger);
 		await SeedAsync(storage);

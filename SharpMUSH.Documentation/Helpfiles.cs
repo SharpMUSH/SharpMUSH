@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Utilities;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -23,14 +24,13 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	}
 
 	/// <summary>
-	/// Finds all help entries that match a wildcard pattern
+	/// Finds all help entries whose topic matches <paramref name="pattern"/>, a general MUSH wildcard
+	/// (<see cref="SoftcodeRegex.Wildcard"/>): case-insensitive, with <c>\</c> making the next character literal.
 	/// </summary>
 	public IEnumerable<string> FindMatchingTopics(string pattern)
 	{
-		var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*").Replace("\\?", ".") + "$";
-		var compiledRegex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-		return IndexedHelp.Keys.Where(k => compiledRegex.IsMatch(k));
+		var regex = SoftcodeRegex.Wildcard(pattern);
+		return IndexedHelp.Keys.Where(k => SoftcodeRegex.IsMatch(regex, k));
 	}
 
 	/// <summary>

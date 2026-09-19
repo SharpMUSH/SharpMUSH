@@ -121,26 +121,35 @@ public class UtilityFunctionUnitTests
 		var result = (await Parser.FunctionParse(MarkupText.Plain("functions()")))?.Message!;
 		var functions = result.ToPlainText();
 		await Assert.That(functions).IsNotEmpty();
-		await Assert.That(functions).Contains("rand");
-		await Assert.That(functions).Contains("add");
+		await Assert.That(functions.Split(' ')).Contains("RAND");
+		await Assert.That(functions.Split(' ')).Contains("ADD");
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>functions([&lt;type&gt;])</c> takes a type, not a pattern (<c>src/function.c</c>
+	/// <c>list_functions</c>): "builtin", "local" (@functions) or "all"; anything else is an error.
+	/// </summary>
+	[Test]
+	public async Task Functions_Builtin()
+	{
+		var functions = (await Parser.FunctionParse(MarkupText.Plain("functions(builtin)")))!.Message!.ToPlainText();
+		await Assert.That(functions.Split(' ')).Contains("ADD");
 	}
 
 	[Test]
-	public async Task Functions_Wildcard()
+	public async Task Functions_Local_ExcludesBuiltins()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("functions(add*)")))?.Message!;
-		var functions = result.ToPlainText();
-		await Assert.That(functions).IsNotEmpty();
-		await Assert.That(functions).Contains("add");
+		var functions = (await Parser.FunctionParse(MarkupText.Plain("functions(local)")))!.Message!.ToPlainText();
+		await Assert.That(functions.Split(' ')).DoesNotContain("ADD");
 	}
 
 	[Test]
-	public async Task Functions_Exact()
+	[Arguments("add*")]
+	[Arguments("rand")]
+	public async Task Functions_AnythingButAType_IsAnError(string argument)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("functions(rand)")))?.Message!;
-		var functions = result.ToPlainText();
-		await Assert.That(functions).IsNotEmpty();
-		await Assert.That(functions).Contains("rand");
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"functions({argument})")))!.Message!.ToPlainText();
+		await Assert.That(result).IsEqualTo("#-1 INVALID ARGUMENT");
 	}
 
 	[Test]

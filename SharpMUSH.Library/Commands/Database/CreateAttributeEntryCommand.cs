@@ -4,7 +4,8 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
 
-public record CreateAttributeEntryCommand(string Name, string[] DefaultFlags, string? Limit = null, string[]? EnumValues = null)
+public record CreateAttributeEntryCommand(string Name, string[] DefaultFlags, string? Limit = null, string[]? EnumValues = null,
+	char EnumDelimiter = ' ')
 	: ICommand<SharpAttributeEntry?>, ICacheInvalidating
 {
 	public string[] CacheKeys => [];

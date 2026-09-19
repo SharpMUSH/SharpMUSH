@@ -9,7 +9,8 @@ public class CreateAttributeEntryCommandHandler(IAttributeStore database) : ICom
 {
 	public async ValueTask<SharpAttributeEntry?> Handle(CreateAttributeEntryCommand request, CancellationToken cancellationToken)
 	{
-		return await database.CreateOrUpdateAttributeEntryAsync(request.Name, request.DefaultFlags, request.Limit, request.EnumValues, cancellationToken);
+		return await database.CreateOrUpdateAttributeEntryAsync(request.Name, request.DefaultFlags, request.Limit, request.EnumValues,
+			request.EnumDelimiter, cancellationToken);
 	}
 }
 
@@ -18,6 +19,7 @@ public class CreateAttributeEntryIfAbsentCommandHandler(IAttributeStore database
 {
 	public async ValueTask<SharpAttributeEntry?> Handle(CreateAttributeEntryIfAbsentCommand request, CancellationToken cancellationToken)
 	{
-		return await database.CreateAttributeEntryIfAbsentAsync(request.Name, request.DefaultFlags, request.Limit, request.EnumValues, cancellationToken);
+		return await database.CreateAttributeEntryIfAbsentAsync(request.Name, request.DefaultFlags, request.Limit, request.EnumValues,
+			cancellationToken: cancellationToken);
 	}
 }

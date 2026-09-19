@@ -23,6 +23,7 @@ public class RenameAttributeEntryCommandHandler(IAttributeStore database) : ICom
 			oldEntry.DefaultFlags,
 			oldEntry.Limit,
 			oldEntry.Enum,
+			oldEntry.EnumDelimiter,
 			cancellationToken);
 	}
 }
