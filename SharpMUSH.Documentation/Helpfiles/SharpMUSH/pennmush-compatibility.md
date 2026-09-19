@@ -21,8 +21,9 @@ Every entry here can be checked from inside the game; the examples are lines you
   [COMPATIBILITY MATCHED]   differences that used to exist and no longer do
 
 # COMPATIBILITY CONFIG
-Three configuration options change how existing code evaluates. All three are read at evaluation
-time, so changing one takes effect on the next call rather than at the next restart.
+These configuration options change how existing code evaluates. All of them are read at evaluation
+time, so changing one takes effect on the next call rather than at the next restart. They are set in
+the game's configuration file; `@config/set` cannot change them yet (#1123).
 
 ## Boolean compatibility — `tiny_booleans`
 
@@ -36,11 +37,10 @@ while `1.2text` is true. The compatibility conversion uses a signed 64-bit prefi
 overflow, then takes its low 32 bits. For example, `4294967296` is false.
 
 ```sharp
-> think t(0.1)
-0
-> @config/set tiny_booleans=1
-> think t(1.2text)
+> think t(-0.1)
 1
+> think t(-0)
+0
 ```
 
 `neq()` is the numeric inverse of `eq()`: it is true when not all arguments are equal. `condall()`
@@ -78,6 +78,35 @@ package needs a fixed argument order regardless of game configuration.
 ```sharp
 > think trimpenn(xxhixx,x,l)
 hixx
+```
+
+## Parenthesis groups — `paren_groups`
+
+**A choice.** Off by default; importing a PennMUSH database turns it on.
+
+**PennMUSH** treats a `(` that starts no function call as opening a literal group: its commas are
+text, and its `)` does not close the call around it, so `cat(x,(a,b)c)` has two arguments.<br>
+**SharpMUSH**, with `paren_groups` off, treats that `(` as plain text. The first unescaped `)` closes
+the call and the commas inside separate arguments, so the same call has three.<br>
+**Why.** Whether a parenthesis groups then depends only on whether it follows a function name, and a
+literal parenthesis is always written the same way. Imported worlds keep Penn's behaviour so migrated
+softcode runs unchanged.<br>
+**Workaround.** Escape literal parentheses inside function arguments with `\(` `\)` or `%(` `%)`.
+
+```sharp
+> think cat(x,(a,b)c)
+x (a bc)
+> think cat(x,%(a%,b%)c)
+x (a,b)c
+> think cat(x,\(a\,b\)c)
+x (a,b)c
+```
+
+With the option on, the unescaped form groups as PennMUSH's does:
+
+```sharp paren_groups
+> think cat(x,(a,b)c)
+x (a,b)c
 ```
 
 # COMPATIBILITY PARSER
@@ -206,7 +235,7 @@ which is false for anything starting `#-`. Code that compares with `=` or `eq()`
 `#-1` needs the prefix test instead. `namelist()` keeps one-word `#-1` and `#-2` entries, because each
 entry is a position in a list.
 
-```
+```sharp
 > think zone(me)
 #-1 NO ZONE SET
 > think [strmatch(zone(me),#-*)] [t(zone(me))]
@@ -233,7 +262,7 @@ to seconds would make `[num(%0)]:[csecs(%0)]` fail to reconstruct an objid. Rath
 PennMUSH call returns, the finer value is a separate request.<br>
 **Workaround.** Omit the argument for PennMUSH behaviour.
 
-```sharp
+```sharp unchecked
 > think secs()
 1789000000
 > think secs(ms)
@@ -265,7 +294,7 @@ a `?` in the query.<br>
 **Why.** The alternative is softcode concatenating values into query text.<br>
 **Workaround.** None needed; a four-argument call behaves as PennMUSH's does.
 
-```sharp
+```sharp unchecked
 > think sql(lit(SELECT name FROM people WHERE id = ?),%b,%b,%b,7)
 ```
 
@@ -292,11 +321,18 @@ The consequence worth knowing: an objid carries the millisecond value, so
 `[num(<obj>)]:[csecs(<obj>)]` does **not** reconstruct one here, where in PennMUSH it does. Ask for
 the field the objid actually holds:
 
-```sharp
+```sharp unchecked
 > think [num(me)]:[csecs(me,ms)]
 #1:1789000000123
 ```
-and compare it with `objid(me)`, which is the same two fields.
+That is the same two fields as `objid(me)`; whole seconds are not:
+
+```sharp
+> think strmatch(objid(me),[num(me)]:[csecs(me,ms)])
+1
+> think strmatch(objid(me),[num(me)]:[csecs(me)])
+0
+```
 
 ## Objids and stamped dbrefs
 
@@ -307,17 +343,22 @@ representation choice is deliberate and tracked separately in #1006 item 13.
 
 ## Number precision
 
-`float_precision` sets how many significant digits floating-point output carries. PennMUSH defaults
-to 6; **SharpMUSH defaults to 15**, and clamps the setting to 0–15. Code that formatted PennMUSH
-output by relying on its rounding will see more digits here.
+`float_precision` is the number of decimal places every floating-point result is written with,
+trailing zeros dropped, as in PennMUSH. PennMUSH defaults to 6; **SharpMUSH defaults to 15**, and
+caps the setting at 15. Code that formatted PennMUSH output by relying on its rounding will see more
+digits here. `round()` cannot ask for more places than the setting allows.
+
+A result that rounds to zero from below is written `0`, where PennMUSH writes `-0`.
 
 **Workaround.** `round()` to the precision you want rather than relying on the default.
 
 ```sharp
-> think fdiv(1,3)
-0.333333333333333
-> think round(fdiv(1,3),6)
-0.333333
+> think pi()
+3.141592653589793
+> think round(pi(),6)
+3.141593
+> think fdiv(-1,10000000000000000)
+0
 ```
 
 # COMPATIBILITY OUTPUT
@@ -332,7 +373,7 @@ is accepted and changes nothing.
 
 ```sharp
 > think render(ansi(r,a<b>c),html)
-(the text with < and > escaped to &lt; and &gt;, wrapped in the markup the html format emits)
+<span style="color: #aa0000">a&lt;b&gt;c</span>
 > think render(ansi(r,red),markup)
 red
 ```
@@ -358,7 +399,9 @@ requires migrating code you already have.
 consistently across the pair.<br>
 **Workaround.** Swap the arguments when importing channel softcode.
 
-```sharp
+On a game with a `Public` channel you have joined:
+
+```sharp unchecked
 > think cstatus(me,Public)
 ON
 ```

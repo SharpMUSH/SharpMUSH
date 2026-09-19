@@ -81,10 +81,10 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("atan2(0, -1)", "3.14159265358979")]
+	[Arguments("atan2(0, -1)", "3.141592653589793")]
 	[Arguments("atan2(0, 1)", "0")]
-	[Arguments("atan2(-0.0001, 0)", "-1.5707963267949")]
-	[Arguments("atan2(0.0001, 0)", "1.5707963267949")]
+	[Arguments("atan2(-0.0001, 0)", "-1.570796326794897")]
+	[Arguments("atan2(0.0001, 0)", "1.570796326794897")]
 	public async Task Atan2(string expr, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
@@ -92,7 +92,7 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("ctu(90,d,r)", "1.5707963267949")]
+	[Arguments("ctu(90,d,r)", "1.570796326794897")]
 	[Arguments("ctu(pi(),r,d)", "180")]
 	public async Task Ctu(string expr, string expected)
 	{
@@ -114,7 +114,7 @@ public class MathFunctionUnitTests
 	[Arguments("root(-1,2)", "#-1 IMAGINARY NUMBER")]
 	[Arguments("root(27, 3)", "3")]
 	[Arguments("root(-27, 3)", "-3")]
-	[Arguments("root(125, 5)", "2.62652780440377")]
+	[Arguments("root(125, 5)", "2.626527804403767")]
 	public async Task Root(string expr, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
@@ -221,7 +221,7 @@ public class MathFunctionUnitTests
 	[Arguments("log(1)", "0")]
 	[Arguments("log(100)", "2")]
 	[Arguments("log(8,2)", "3")]
-	[Arguments("log(10,e)", "2.30258509299405")]
+	[Arguments("log(10,e)", "2.302585092994046")]
 	[Arguments("log(9,3)", "2")]
 	[Arguments("log(9,foo)", "#-1 ARGUMENTS MUST BE NUMBERS")]
 	[Arguments("log(-5)", "#-1 OUT OF RANGE")]
@@ -232,7 +232,7 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("ln(10)", "2.30258509299405")]
+	[Arguments("ln(10)", "2.302585092994046")]
 	public async Task Ln(string expr, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
