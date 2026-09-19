@@ -13,7 +13,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
-using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -405,92 +404,6 @@ public partial class Commands
 		}
 
 		return new CallState(obj.DBRef.ToString());
-	}
-
-	[SharpCommand(Name = "DOING", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["message"])]
-	public async ValueTask<Option<CallState>> Doing(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-
-		var isAdmin = await executor.IsWizard() ||
-									await executor.IsRoyalty() ||
-									await executor.IsSee_All();
-
-		var pattern = args.ContainsKey("0") ? args["0"].Message?.ToPlainText() : null;
-
-		var everyone = ConnectionService.GetAll();
-		const string fmt = "{0,-18} {1,10} {2,6}  {3,-32}";
-		var header = string.Format(fmt, "Player Name", "On For", "Idle", "Doing");
-
-		var playerList = new List<string>();
-		await foreach (var connection in everyone.Where(player => player.Ref.HasValue))
-		{
-			if (!isAdmin && connection.PresenceClass == PresenceClasses.Portal)
-			{
-				continue;
-			}
-
-			// Like WHO, a descriptor whose player is gone is left out rather than failing the listing.
-			if (await Mediator.Send(new GetObjectNodeQuery(connection.Ref!.Value)) is not AnySharpObject obj)
-			{
-				continue;
-			}
-
-			var playerName = obj.Object().Name;
-
-			if (!isAdmin && await obj.HasFlag("DARK"))
-			{
-				continue;
-			}
-
-			if (!string.IsNullOrWhiteSpace(pattern) && !MatchesPattern(playerName, pattern))
-			{
-				continue;
-			}
-
-			var doingText = await GetDoingText(executor, obj);
-
-			playerList.Add(string.Format(
-				fmt,
-				playerName,
-				TimeHelpers.TimeString(connection.Connected!.Value, accuracy: 3),
-				TimeHelpers.TimeString(connection.Idle!.Value),
-				doingText));
-		}
-
-		var footer = $"{playerList.Count} players logged in.";
-		var message = $"{header}\n{string.Join('\n', playerList)}\n{footer}";
-
-		await NotifyService.Notify(executor, message, executor);
-
-		return new None();
-	}
-
-	private bool MatchesPattern(string playerName, string pattern)
-	{
-		if (pattern.Contains('*') || pattern.Contains('?'))
-		{
-			return MushText.IsWildcardMatch(MarkupText.Plain(playerName), pattern);
-		}
-
-		return playerName.StartsWith(pattern, StringComparison.OrdinalIgnoreCase);
-	}
-
-	private async ValueTask<string> GetDoingText(AnySharpObject executor, AnySharpObject player)
-	{
-		var doingAttr = await AttributeService.GetAttributeAsync(
-			executor,
-			player,
-			"DOING",
-			mode: IAttributeService.AttributeMode.Read,
-			parent: false);
-
-		return doingAttr switch
-		{
-			SharpAttribute[] chain => chain.Last().Value.ToPlainText(),
-			None or Error<string> => string.Empty
-		};
 	}
 
 	[SharpCommand(Name = "SESSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
