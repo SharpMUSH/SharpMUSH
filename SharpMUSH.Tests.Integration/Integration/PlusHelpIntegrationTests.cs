@@ -34,11 +34,9 @@ public class PlusHelpIntegrationTests
 
 	private const long ReaderHandle = 9600;
 	private const long StaffHandle = 9601;
-	private const long PuebloHandle = 9602;
 
 	private string? _reader;
 	private string? _staff;
-	private string? _pueblo;
 
 	/// <summary>
 	/// A plain mortal — every reading test drives this. Never God: #1 passes every lock, so a
@@ -57,12 +55,6 @@ public class PlusHelpIntegrationTests
 		return StaffHandle;
 	}
 
-	/// <summary>A reader whose client announces Pueblo, for the one test that asserts link markup.</summary>
-	private async Task<long> PuebloAsync()
-	{
-		_pueblo ??= await CreatePlayerAsync($"Pueb{Tag}", PuebloHandle, pueblo: true);
-		return PuebloHandle;
-	}
 	private readonly ConcurrentDictionary<long, DBRef> _actors = new();
 
 	private async Task<CallState> God1(string command) =>
@@ -84,7 +76,7 @@ public class PlusHelpIntegrationTests
 
 	private static string Joined(IReadOnlyList<string> lines) => string.Join("\n", lines);
 
-	private async Task<string> CreatePlayerAsync(string name, long handle, bool wizard = false, bool pueblo = false)
+	private async Task<string> CreatePlayerAsync(string name, long handle, bool wizard = false)
 	{
 		await God1($"@pcreate {name}=pw-{Tag}-1");
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
@@ -99,10 +91,7 @@ public class PlusHelpIntegrationTests
 		}
 
 		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
-			pueblo
-				? new ConcurrentDictionary<string, string>(new Dictionary<string, string> { ["PUEBLO"] = "1" })
-				: null);
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, null);
 		await ConnectionService.Bind(handle, parsed.Value);
 		_actors[handle] = parsed.Value;
 		return dbref;
@@ -395,24 +384,48 @@ public class PlusHelpIntegrationTests
 	public async Task ASubtopicLink_RunsTheFullTopicName()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var handle = await PuebloAsync();
+		var shown = await ShownAsync(await ReaderAsync(), "+help scene");
 
-		// Read the RAW notification: For() has already flattened the MString to text, and the MXP
-		// markup a command link is made of only exists in the unflattened form.
+		await Assert.That(shown.Render(MarkupFormat.Pueblo)).Contains("<A XCH_CMD=\"+help scene/scene join\" XCH_HINT=\"+help scene/scene join\">join</A>")
+			.Because("a subtopic is labelled by its short name but runs the QUALIFIED full name");
+		await Assert.That(shown.Render(MarkupFormat.Mxp)).Contains("<SEND HREF=\"+help scene/scene join\" HINT=\"+help scene/scene join\">join</SEND>")
+			.Because("an MXP client gets MXP's own command link, not Pueblo's");
+	}
+
+	/// <summary>
+	/// The front page as a reader saw it: every link in it — a source row, and a <c>[topic]</c>
+	/// cross-reference in the index text, which runs through the markdown LINK template as the reader
+	/// — is a link in each client's own dialect, and none is a tag written into the text, which every
+	/// client showed literally as <c>&lt;a xch_cmd=…&gt;</c>.
+	/// </summary>
+	[Test]
+	public async Task TheFrontPage_LinksInEachClientsDialect_AndPrintsNoTagAsText()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var shown = await ShownAsync(await ReaderAsync(), "+help");
+
+		await Assert.That(shown.ToPlainText()).DoesNotContain("<a ")
+			.Because("a tag in the text reaches every client as literal text");
+		await Assert.That(shown.Render(MarkupFormat.Mxp)).DoesNotContain("XCH_CMD")
+			.Because("XCH_CMD is Pueblo's; an MXP client cannot follow it");
+		await Assert.That(shown.Render(MarkupFormat.Mxp)).Contains("<SEND HREF=\"+help/list scene\"")
+			.Because("a source row is a link to its listing");
+		await Assert.That(shown.Render(MarkupFormat.Pueblo)).Contains("<A XCH_CMD=\"+help write\"")
+			.Because("[write] in the index text is a +help cross-reference, made by helplink() for a reader without Send_OOB");
+	}
+
+	/// <summary>Every raw notification <paramref name="command"/> sent the reader, as one string of markup.</summary>
+	private async Task<MString> ShownAsync(long handle, string command)
+	{
 		var actor = _actors[handle];
 		var before = Notifications.RawCountFor(actor);
-		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("+help scene"));
-		var markup = string.Join("\n", Notifications.RawFor(actor).Skip(before)
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
+		return MarkupText.Join(MarkupText.Plain("\n"), Notifications.RawFor(actor).Skip(before)
 			.Select(m => m switch
 			{
-				MString markup => markup.ToString(),
-				string text => text,
+				MString markup => markup,
+				string text => MarkupText.Plain(text),
 			}));
-
-		await Assert.That(markup).Contains(">join<")
-			.Because("a subtopic is labelled by its short name");
-		await Assert.That(markup).Contains("xch_cmd=\"+help scene/scene join\"")
-			.Because("but it runs the QUALIFIED full name, which resolves whatever else is installed");
 	}
 
 	/// <summary>

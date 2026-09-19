@@ -1,6 +1,6 @@
 format: 1
 package: plus-help
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -39,8 +39,9 @@ objects:
     # See_All, not WIZARD: the librarian reads HELP trees on objects it does not own — a
     # hand-registered +help/source target can belong to anyone — and See_All is what skips the
     # attribute-read check. It deliberately goes no further, because reading is a different gate
-    # from evaluating and no power lifts the second one.
-    powers: [See_All]
+    # from evaluating and no power lifts the second one. Send_OOB is what cmdlink() asks of whoever
+    # writes a command link, as PennMUSH asks it of XCH_CMD.
+    powers: [See_All, Send_OOB]
     attributes:
 
       # ── The registry ────────────────────────────────────────────────────────
@@ -215,11 +216,11 @@ objects:
         flags: [funsyntax]
 
       # ── Display ─────────────────────────────────────────────────────────────
-      # cmdtag() is common-functions'. It takes WHO IS READING rather than assuming %#, and asks the
-      # client whether it can render a command link at all before writing one.
+      # cmdlink() names the link; each reader's client writes it in its own dialect (Pueblo XCH_CMD,
+      # MXP SEND, the portal's anchor) or shows the bare name, so nothing here asks which client it is.
       FUN`DISPLAY`REF:
         value: |-
-          [@@(%0 a record — its qualified name, clickable)][cmdtag(%#,[u(%!/FUN`GET`RNAME,%0)],+help [u(%!/FUN`GET`RNAME,%0)])]
+          [@@(%0 a record — its qualified name, clickable)][cmdlink([u(%!/FUN`GET`RNAME,%0)],+help [u(%!/FUN`GET`RNAME,%0)])]
         flags: [funsyntax]
       FUN`DISPLAY`ROW:
         value: |-
@@ -227,7 +228,7 @@ objects:
         flags: [funsyntax]
       FUN`DISPLAY`SRCROW:
         value: |-
-          [@@(%0 a source — one index row: what it is called, and what it covers)][ljust(cmdtag(%#,%0,+help/list %0),18)]%b[left(u(%!/FUN`GET`SRCDESC,%0),sub(width(%#,78),20))]
+          [@@(%0 a source — one index row: what it is called, and what it covers)][ljust(cmdlink(%0,+help/list %0),18)]%b[left(u(%!/FUN`GET`SRCDESC,%0),sub(width(%#,78),20))]
         flags: [funsyntax]
       FUN`DISPLAY`SYNTAX:
         value: |-
@@ -248,14 +249,14 @@ objects:
       # One subtopic, named as it is known under its parent, running the full +help for it.
       FUN`DISPLAY`CHILD:
         value: |-
-          [@@(%0 a child record — its short name, clickable)][cmdtag(%#,[u(%!/FUN`GET`LEAFNAME,%0)],+help [u(%!/FUN`GET`RNAME,%0)])]
+          [@@(%0 a child record — its short name, clickable)][cmdlink([u(%!/FUN`GET`LEAFNAME,%0)],+help [u(%!/FUN`GET`RNAME,%0)])]
         flags: [funsyntax]
       # One see-also entry. The name is as the author wrote it — bare or qualified — and is shown
       # that way; a name nothing resolves to is still listed, because saying so is more use to a
       # reader than dropping it silently.
       FUN`DISPLAY`SEEONE:
         value: |-
-          [@@(%0 a topic name as written)][cmdtag(%#,%0,+help %0)]
+          [@@(%0 a topic name as written)][cmdlink(%0,+help %0)]
         flags: [funsyntax]
       FUN`DISPLAY`NAV:
         value: |-
@@ -281,7 +282,8 @@ objects:
       # inside one — and a manifest {{ref}} is no help either, since it installs as a
       # [v(PM`REFS`NAME)] recall that resolves against the executor too. So no template may reach
       # back into the librarian by either route. A global @function is the way out: it runs as ITS
-      # backing object whoever calls it, which is why LINK below can use cmdtag().
+      # backing object whoever calls it, which is why LINK below uses helplink() — the reader has no
+      # Send_OOB for cmdlink(), and the librarian does.
       RENDERMARKUP`H1:
         value: |-
           [ansi(hw,%0)]
@@ -308,8 +310,22 @@ objects:
       # is a live "+help join". A topic that means the ENGINE's help says so in prose.
       RENDERMARKUP`LINK:
         value: |-
-          [if(%2,[ansi(hc,[cmdtag(%#,%0,[if(strmatch(%1,help *),+%1,%1)],%0)])],%0)]
+          [if(and(%2,strmatch(%1,help *)),[ansi(hc,[helplink(%0,after(%1,help%b))])],%0)]
         flags: [funsyntax]
+
+      # helplink(<text>, <topic>) — registered globally by STARTUP, so it runs as this librarian for
+      # any caller. It can only ever write a link running "+help <topic>", which is why lending the
+      # librarian's Send_OOB to every caller through it lends nothing more.
+      FUN`HELPLINK:
+        value: |-
+          [@@(%0 the text · %1 a +help topic — a link running +help <topic>)][cmdlink(%0,+help %1)]
+        flags: [funsyntax]
+      AINSTALL: |-
+        @trigger %!/STARTUP
+      AUPDATE: |-
+        @trigger %!/STARTUP
+      STARTUP: |-
+        @function helplink=%!,FUN`HELPLINK,2,2
 
       # ── Shared command steps ────────────────────────────────────────────────
       INC`DISPLAY`ERROR:
@@ -324,7 +340,7 @@ objects:
       # answer "does this GAME document this?", which a fallthrough would cost.
       INC`DISPLAY`MISS:
         value: |-
-          @@ %0 the query that matched nothing; @pemit %#=[ansi(hr,Help>)] No local topic '%0'.%b%bTry:%b%b[cmdtag(%#,help %0,help %0)]
+          @@ %0 the query that matched nothing; @pemit %#=[ansi(hr,Help>)] No local topic '%0'.%b%bTry:%b%b[cmdlink(help %0,help %0)]
         flags: [cmdsyntax]
       INC`IS`STAFF:
         value: |-

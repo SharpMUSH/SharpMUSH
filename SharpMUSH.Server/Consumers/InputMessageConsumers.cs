@@ -248,8 +248,9 @@ public class ConnectionEstablishedConsumer(
 }
 
 /// <summary>
-/// Consumes Pueblo negotiated messages — sets OUTPUT_FORMAT metadata on the connection.
-/// Only upgrades to Pueblo if not already MXP (MXP is a superset of Pueblo).
+/// Consumes Pueblo negotiated messages: PUEBLO=1, which is what <c>pueblo()</c> and <c>terminfo()</c>
+/// report, and OUTPUT_FORMAT=pueblo unless the client already negotiated MXP. A client that speaks
+/// both keeps MXP, the same rule the socket server applies to the format it renders in.
 /// </summary>
 public class PuebloNegotiatedConsumer(ILogger<PuebloNegotiatedConsumer> logger, IConnectionService connectionService)
 	: IMessageConsumer<PuebloNegotiatedMessage>
@@ -296,15 +297,14 @@ public class PuebloNegotiatedConsumer(ILogger<PuebloNegotiatedConsumer> logger, 
 			connectionService.Update(message.Handle, "OUTPUT_FORMAT", "pueblo");
 		}
 
-		// Keep PUEBLO=1 for backward compat (pueblo() function reads it)
 		connectionService.Update(message.Handle, "PUEBLO", "1");
-
 	}
 }
 
 /// <summary>
-/// Consumes MXP negotiated messages — sets OUTPUT_FORMAT to "mxp" on the connection.
-/// MXP is a superset of Pueblo, so it takes priority over any prior Pueblo negotiation.
+/// Consumes MXP negotiated messages — sets OUTPUT_FORMAT to "mxp" on the connection, over any prior
+/// Pueblo negotiation. PUEBLO is left alone: MXP writes a command link as &lt;SEND&gt;, not Pueblo's
+/// &lt;A XCH_CMD&gt;, so an MXP client is not a Pueblo client and <c>pueblo()</c> must not say it is.
 /// </summary>
 public class MxpNegotiatedConsumer(ILogger<MxpNegotiatedConsumer> logger, IConnectionService connectionService)
 	: IMessageConsumer<MxpNegotiatedMessage>
@@ -320,8 +320,6 @@ public class MxpNegotiatedConsumer(ILogger<MxpNegotiatedConsumer> logger, IConne
 		}
 
 		connectionService.Update(message.Handle, "OUTPUT_FORMAT", "mxp");
-		// MXP clients also understand Pueblo tags, so set PUEBLO=1 for pueblo() compat
-		connectionService.Update(message.Handle, "PUEBLO", "1");
 	}
 }
 

@@ -62,6 +62,42 @@ public class LookServiceTests
 	}
 
 	/// <summary>
+	/// An exit in the room's exit list is a command link written in the client's own dialect. Pueblo's
+	/// command link is <c>&lt;A XCH_CMD&gt;</c> and MXP's is <c>&lt;SEND HREF&gt;</c>; each client prints the
+	/// other's as literal text, so one tag cannot serve both.
+	/// </summary>
+	[Test]
+	public async ValueTask ExitLinksAreWrittenInEachClientsOwnDialect()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExitDialect");
+		var exitName = TestIsolationHelpers.GenerateUniqueName("Northward");
+		// The return exit of @dig is the one that lives in the new room.
+		var dig = await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("DialectRoom")}=,{exitName};nw"));
+		var roomDbRef = DBRef.Parse(dig.Message!.ToPlainText().Trim());
+
+		var room = await Mediator.Send(new GetObjectNodeQuery(roomDbRef));
+		var looker = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
+
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.RawCountFor(player.DbRef);
+		await LookService.LookRoom(GodParser, looker, room, LookKey.Auto);
+		var exitLine = recorder.RawFor(player.DbRef).Skip(before)
+			.Select(m => m is MString markup ? markup : null)
+			.OfType<MString>()
+			.Single(m => m.ToPlainText().Contains(exitName));
+
+		var pueblo = exitLine.Render(MarkupFormat.Pueblo);
+		var mxp = exitLine.Render(MarkupFormat.Mxp);
+
+		await Assert.That(pueblo).Contains($"<A XCH_CMD=\"{exitName}\" XCH_HINT=\"Go {exitName}\">{exitName}</A>");
+		await Assert.That(pueblo).DoesNotContain("<SEND");
+		await Assert.That(mxp).Contains($"<SEND HREF=\"{exitName}\" HINT=\"Go {exitName}\">{exitName}</SEND>");
+		await Assert.That(mxp).DoesNotContain("XCH_CMD");
+	}
+
+	/// <summary>
 	/// The description is evaluated on the caller's parser state, so
 	/// <c>ParserState.FunctionRecursionDepths</c> bounds a <c>@describe</c> that evaluates itself.
 	/// </summary>

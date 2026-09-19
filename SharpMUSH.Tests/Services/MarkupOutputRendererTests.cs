@@ -121,9 +121,9 @@ public partial class MarkupOutputRendererTests
 	}
 
 	/// <summary>
-	/// An HtmlMarkup span (what `look` wraps every exit name in) must not reach a client that
-	/// negotiated no Pueblo/MXP: a plain telnet client has no idea what &lt;send&gt; is and prints
-	/// the tag literally. Rendering an ANSI connection natively rather than as ANSI leaked the tags.
+	/// An HtmlMarkup span (what <c>tagwrap()</c> returns) must not reach a client that negotiated no
+	/// Pueblo/MXP: a plain telnet client has no idea what &lt;send&gt; is and prints the tag literally.
+	/// Rendering an ANSI connection natively rather than as ANSI leaked the tags.
 	/// </summary>
 	[Test]
 	public async Task Ansi_StripsHtmlMarkupTags()
@@ -141,9 +141,9 @@ public partial class MarkupOutputRendererTests
 	}
 
 	/// <summary>
-	/// The exits line as `look` actually builds it: an unmarked label followed by send-wrapped exit
-	/// names. The leading plain run means the first markup in the string is the HtmlMarkup, which is
-	/// what selected the native (tag-emitting) render strategy.
+	/// An unmarked label followed by a tag-wrapped name. The leading plain run means the first markup
+	/// in the string is the HtmlMarkup, which is what selected the native (tag-emitting) render
+	/// strategy.
 	/// </summary>
 	[Test]
 	public async Task Ansi_StripsHtmlMarkupTagsInAMixedLine()

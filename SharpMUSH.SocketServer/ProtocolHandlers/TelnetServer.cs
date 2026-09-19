@@ -510,7 +510,7 @@ public class TelnetServer : ConnectionHandler
 			{
 				// True only when the format actually changed; a client that negotiates the same format
 				// twice is not a failure, so a no-op counts as success here.
-				_connectionService.UpdateCapabilities(handle, current => current with { Format = format });
+				_connectionService.UpdateCapabilities(handle, current => current with { Format = current.Format.Negotiate(format) });
 				return true;
 			}
 

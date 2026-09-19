@@ -191,6 +191,7 @@ public static class ErrorMessages
 		public const string InvalidSeconds = "#-1 INVALID SECONDS";
 		public const string InvalidSpecPair = "#-1 INVALID SPEC PAIR";
 		public const string InvalidSpecType = "#-1 INVALID SPEC TYPE";
+		public const string InvalidTagName = "#-1 INVALID TAG NAME";
 		public const string InvalidTimezone = "#-1 INVALID TIMEZONE";
 		public const string InvalidTimestring = "#-1 INVALID TIMESTRING";
 		public const string InvalidType = "#-1 INVALID TYPE";

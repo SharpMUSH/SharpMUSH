@@ -1,8 +1,8 @@
 format: 1
 package: common-functions
-version: 1.4.0
+version: 2.0.0
 authors: [SharpMUSH]
-description: "Global UI-helper functions: header(), footer(), line() — full-width rules with an optional title, justified center (default) / left / right — and cmdtag(), a clickable command link."
+description: "Global UI-helper functions: header(), footer(), line() — full-width rules with an optional title, justified center (default) / left / right."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH-Packages
 keywords: [ui, formatting, functions]
@@ -67,28 +67,6 @@ objects:
         0
       FUN`LINE`MAXARGS: |-
         2
-
-      # cmdtag(<person>, <visible>, <command>[, <hint>]) — text that runs <command> when clicked.
-      #
-      # <person> is WHO IS READING, passed rather than taken from %#: the object rendering a line is
-      # often not the enactor — a global building one row per occupant, an attribute evaluated on
-      # someone else's behalf — so %# would name the wrong client to ask about.
-      #
-      # tagwrap() writes the anchor as Pueblo/MXP markup, which a client understanding neither would
-      # show literally, so the capability is asked for rather than assumed and everyone else gets
-      # plain <visible> back. No colour is applied: that is the caller's decision.
-      #
-      # Command and hint go into QUOTED attributes, so both are entity-encoded through
-      # FUN`CMDTAG`ATTR — a bare quote in `say "hi"` would close xch_cmd early. & before ", or the
-      # ampersand of &quot; is encoded again.
-      FUN`CMDTAG: |-
-        [switch(or(pueblo(%0),t(match(terminfo(%0),mxp))),1,[tagwrap(a,xch_cmd="[u(%!/FUN`CMDTAG`ATTR,%2)]" xch_hint="[u(%!/FUN`CMDTAG`ATTR,if(strlen(%3),%3,%2))]",%1)],%1)]
-      FUN`CMDTAG`ATTR: |-
-        [edit(%0,&,&amp;,",&quot;)]
-      FUN`CMDTAG`MINARGS: |-
-        3
-      FUN`CMDTAG`MAXARGS: |-
-        4
 
       # AINSTALL (once): just run STARTUP. The function body u()s its own object's FUN`<NAME>`DISPLAY`<TYPE>
       # leaf, which is safe for ANY caller: a global @function "runs as the backing object, with its
