@@ -21,8 +21,9 @@ Every entry here can be checked from inside the game; the examples are lines you
   [COMPATIBILITY MATCHED]   differences that used to exist and no longer do
 
 # COMPATIBILITY CONFIG
-Three configuration options change how existing code evaluates. All three are read at evaluation
-time, so changing one takes effect on the next call rather than at the next restart.
+These configuration options change how existing code evaluates. All of them are read at evaluation
+time, so changing one takes effect on the next call rather than at the next restart. They are set in
+the game's configuration file; `@config/set` cannot change them yet (#1123).
 
 ## Boolean compatibility — `tiny_booleans`
 
@@ -36,11 +37,10 @@ while `1.2text` is true. The compatibility conversion uses a signed 64-bit prefi
 overflow, then takes its low 32 bits. For example, `4294967296` is false.
 
 ```sharp
-> think t(0.1)
-0
-> @config/set tiny_booleans=1
-> think t(1.2text)
+> think t(-0.1)
 1
+> think t(-0)
+0
 ```
 
 `neq()` is the numeric inverse of `eq()`: it is true when not all arguments are equal. `condall()`
@@ -78,6 +78,28 @@ package needs a fixed argument order regardless of game configuration.
 ```sharp
 > think trimpenn(xxhixx,x,l)
 hixx
+```
+
+## Parenthesis groups — `paren_groups`
+
+**A choice.** Off by default; importing a PennMUSH database turns it on.
+
+**PennMUSH** treats a `(` that starts no function call as opening a literal group: its commas are
+text, and its `)` does not close the call around it, so `cat(x,(a,b)c)` has two arguments.<br>
+**SharpMUSH**, with `paren_groups` off, treats that `(` as plain text. The first unescaped `)` closes
+the call and the commas inside separate arguments, so the same call has three.<br>
+**Why.** Whether a parenthesis groups then depends only on whether it follows a function name, and a
+literal parenthesis is always written the same way. Imported worlds keep Penn's behaviour so migrated
+softcode runs unchanged.<br>
+**Workaround.** Escape literal parentheses inside function arguments with `\(` `\)` or `%(` `%)`.
+
+With the option on, the first line instead returns `x (a,b)c`.
+
+```sharp
+> think cat(x,(a,b)c)
+x (a bc)
+> think cat(x,%(a%,b%)c)
+x (a,b)c
 ```
 
 # COMPATIBILITY PARSER
