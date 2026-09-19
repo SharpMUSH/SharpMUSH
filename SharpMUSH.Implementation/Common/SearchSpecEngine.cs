@@ -6,7 +6,10 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Common;
 
@@ -280,18 +283,10 @@ public static class SearchSpecEngine
 				var attributesResult = await attributeService.GetVisibleAttributesAsync(executor, typedObj);
 				if (attributesResult is SharpAttribute[] attributes)
 				{
-					var hasMatchingListen = false;
-
-					foreach (var attr in attributes.Where(a => a.Name.Equals("LISTEN", StringComparison.OrdinalIgnoreCase) ||
-																										 a.Name.StartsWith("LISTEN`", StringComparison.OrdinalIgnoreCase)))
-					{
-						var attrValue = attr.Value?.ToPlainText() ?? "";
-						if (IsWildcardMatch(attrValue, listenPattern!))
-						{
-							hasMatchingListen = true;
-							break;
-						}
-					}
+					var hasMatchingListen = attributes.Any(attr =>
+						(attr.LongName.Equals("LISTEN", StringComparison.OrdinalIgnoreCase)
+							&& PatternAccepts(attr, attr.Value.ToPlainText(), listenPattern!))
+						|| StoredPatternAccepts(attr, CommandDiscoveryService.ListenPatternRegex(), listenPattern!));
 
 					if (!hasMatchingListen)
 					{
@@ -309,27 +304,8 @@ public static class SearchSpecEngine
 				var attributesResult = await attributeService.GetVisibleAttributesAsync(executor, typedObj);
 				if (attributesResult is SharpAttribute[] attributes)
 				{
-					var hasMatchingCommand = false;
-
-					foreach (var attr in attributes)
-					{
-						var attrValue = attr.Value?.ToPlainText() ?? "";
-						// $-commands are in format: $command-pattern:action
-						var dollarIndex = attrValue.IndexOf('$');
-						if (dollarIndex >= 0)
-						{
-							var colonIndex = attrValue.IndexOf(':', dollarIndex);
-							if (colonIndex > dollarIndex)
-							{
-								var commandPart = attrValue.AsSpan(dollarIndex + 1, colonIndex - dollarIndex - 1).ToString();
-								if (IsWildcardMatch(commandPart, commandPattern))
-								{
-									hasMatchingCommand = true;
-									break;
-								}
-							}
-						}
-					}
+					var hasMatchingCommand = attributes.Any(attr =>
+						StoredPatternAccepts(attr, CommandDiscoveryService.CommandPatternRegex(), commandPattern!));
 
 					if (!hasMatchingCommand)
 					{
@@ -360,14 +336,40 @@ public static class SearchSpecEngine
 	}
 
 	/// <summary>
-	/// Simple wildcard pattern matching for LISTEN and COMMAND searches.
-	/// Supports * as a wildcard that matches any sequence of characters.
+	/// Whether the <c>$</c>- or <c>^</c>-pattern stored in <paramref name="attribute"/> accepts
+	/// <paramref name="text"/>. The object's pattern is the glob and the search restriction is the
+	/// subject, as in PennMUSH's <c>raw_search</c> (<c>src/wiz.c</c>), which hands the restriction to
+	/// <c>atr_comm_match</c> as the text a player typed or said. A <c>no_command</c> attribute is
+	/// skipped, as <c>atr_comm_match</c> skips <c>AF_NOPROG</c>.
 	/// </summary>
-	private static bool IsWildcardMatch(string value, string pattern)
+	private static bool StoredPatternAccepts(SharpAttribute attribute, Regex patternRegex, string text)
 	{
-		var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*") + "$";
-		return System.Text.RegularExpressions.Regex.IsMatch(value, regexPattern,
-			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+		if (attribute.IsNoprog()) return false;
+		var match = patternRegex.Match(attribute.Value.ToPlainText());
+		return match.Success && PatternAccepts(attribute,
+			CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value), text);
+	}
+
+	/// <summary>
+	/// <paramref name="pattern"/> compiled the way the attribute's flags say — a regexp under
+	/// <c>REGEXP</c>, otherwise the general MUSH wildcard (<see cref="SoftcodeRegex.Wildcard"/>), and
+	/// case-insensitive unless <c>CASE</c> is set — then matched against <paramref name="text"/>.
+	/// A pattern that does not compile accepts nothing.
+	/// </summary>
+	private static bool PatternAccepts(SharpAttribute attribute, string pattern, string text)
+	{
+		var caseSensitive = attribute.IsCase();
+		try
+		{
+			var regex = attribute.IsRegexp()
+				? SoftcodeRegex.Create(pattern, caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase)
+				: SoftcodeRegex.Wildcard(pattern, caseSensitive: caseSensitive);
+			return SoftcodeRegex.IsMatch(regex, text);
+		}
+		catch (ArgumentException)
+		{
+			return false;
+		}
 	}
 
 	/// <summary>
