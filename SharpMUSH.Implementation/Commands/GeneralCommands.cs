@@ -1062,34 +1062,4 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MailBadArguments), executor);
 		return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToMailCommand);
 	}
-
-
-	[SharpCommand(Name = "@PASSWORD", Switches = [],
-		Behavior = CB.Player | CB.EqSplit | CB.NoParse | CB.RSNoParse | CB.NoGuest, MinArgs = 2, MaxArgs = 0, ParameterNames = ["old", "new"])]
-	public async ValueTask<Option<CallState>> Password(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var oldPassword = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var newPassword = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-		if (executor is not SharpPlayer player)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PasswordOnlyPlayersHavePasswords), executor);
-			return new CallState(ErrorMessages.Returns.InvalidObjectType);
-		}
-
-		var isValidPassword = PasswordService.PasswordIsValid(executor.Object().DBRef.ToString(), oldPassword,
-			player.PasswordHash);
-		if (!isValidPassword)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PasswordInvalid), executor);
-			return new CallState(ErrorMessages.Returns.InvalidPassword);
-		}
-
-		var hashedPassword = PasswordService.HashPassword(executor.Object().DBRef.ToString(), newPassword);
-		await PasswordService.SetPassword(player, hashedPassword);
-
-		return new CallState(string.Empty);
-	}
 }
