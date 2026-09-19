@@ -64,7 +64,7 @@ public class StartupHandler(
 		logger.LogInformation("Initializing configurable aliases and restrictions from database.");
 		var currentOptions = options.CurrentValue;
 		Configurable.Initialize(currentOptions.Alias, currentOptions.Restriction);
-		Configurable.FloatPrecision = (int)currentOptions.Cosmetic.FloatPrecision;
+		Configurable.ReadFloatPrecisionFrom(() => options.CurrentValue.Cosmetic.FloatPrecision);
 
 	}
 
