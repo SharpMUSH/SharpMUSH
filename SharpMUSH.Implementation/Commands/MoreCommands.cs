@@ -1,9 +1,7 @@
 ﻿using System.Buffers;
-using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -18,83 +16,6 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-	[SharpCommand(Name = "@CLOCK", Switches = ["JOIN", "SPEAK", "MOD", "SEE", "HIDE"], Behavior = CB.Default | CB.EqSplit,
-		MinArgs = 1, MaxArgs = 2, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> ChannelLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches;
-
-		var channelName = args["0"].Message!;
-		var lockKey = args.TryGetValue("1", out var arg1) ? arg1.Message!.ToPlainText() : string.Empty;
-
-		var lockType = switches.FirstOrDefault() ?? "JOIN";
-		lockType = lockType.ToUpper();
-
-		// Setting a lock on a channel you cannot see must be refused the same way as setting one on a
-		// channel that does not exist, or @clock reports which names are taken. notify: true because the
-		// gate emits ONE refusal for both cases: suppressing it does not make the two cases more alike, it
-		// only makes a mistyped channel name fail in silence.
-		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
-			NotifyService, executor, channelName, notify: true) switch
-		{
-			SharpChannel channel => await SetChannelLockAsync(executor, channel, lockType, lockKey),
-			Error<CallState> error => error.Value
-		};
-	}
-
-	private async ValueTask<Option<CallState>> SetChannelLockAsync(AnySharpObject executor, SharpChannel channel,
-		string lockType, string lockKey)
-	{
-		// An absent modify lock grants no additional rights beyond the owner and wizard gates.
-		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		if (lockType is not ("JOIN" or "SPEAK" or "SEE" or "HIDE" or "MOD"))
-		{
-			await NotifyService.Notify(executor, $"Invalid lock type: {lockType}", executor);
-			return new CallState(ErrorMessages.Returns.InvalidLockType);
-		}
-
-		if (!string.IsNullOrEmpty(lockKey))
-		{
-			if (await BooleanExpressionParser.BindAsync(lockKey, executor, ExecutionBudget.CurrentToken) is not string bound)
-			{
-				await NotifyService.Notify(executor, "CHAT: I don't understand that key.", executor);
-				return new CallState(ErrorMessages.Returns.InvalidLock);
-			}
-			lockKey = bound;
-		}
-
-		UpdateChannelCommand updateCommand = lockType switch
-		{
-			"JOIN" => new UpdateChannelCommand(channel, null, null, null, lockKey, null, null, null, null, null, null),
-			"SPEAK" => new UpdateChannelCommand(channel, null, null, null, null, lockKey, null, null, null, null, null),
-			"SEE" => new UpdateChannelCommand(channel, null, null, null, null, null, lockKey, null, null, null, null),
-			"HIDE" => new UpdateChannelCommand(channel, null, null, null, null, null, null, lockKey, null, null, null),
-			"MOD" => new UpdateChannelCommand(channel, null, null, null, null, null, null, null, lockKey, null, null),
-			_ => new UpdateChannelCommand(channel, null, null, null, null, null, null, null, null, null, null)
-		};
-
-		await Mediator.Send(updateCommand, ExecutionBudget.CurrentToken);
-
-		if (string.IsNullOrEmpty(lockKey))
-		{
-			await NotifyService.Notify(executor, $"{lockType} lock removed from channel {channel.Name.ToPlainText()}.", executor);
-		}
-		else
-		{
-			await NotifyService.Notify(executor, $"{lockType} lock set on channel {channel.Name.ToPlainText()}.", executor);
-		}
-
-		return CallState.Empty;
-	}
-
 	/// <summary>
 	/// <c>@sockset [&lt;descriptor&gt;]=&lt;option&gt;,&lt;value&gt;[,&lt;option&gt;,&lt;value&gt;…]</c> —
 	/// PennMUSH <c>cmd_sockset</c> (src/cmds.c). The in-game face of the same option engine the

@@ -10,6 +10,8 @@ using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using System.Collections.Immutable;
+using System.Buffers;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -387,5 +389,194 @@ public partial class Commands
 
 		await NotifyService.Notify(executor, MarkupText.Concat(outputLines), executor);
 		return new CallState(string.Empty);
+	}
+
+	[SharpCommand(Name = "@CHANNEL",
+		Switches =
+		[
+			"LIST", "ADD", "DELETE", "RENAME", "MOGRIFIER", "NAME", "PRIVS", "QUIET", "DECOMPILE", "DESCRIBE", "CHOWN",
+			"WIPE", "MUTE", "UNMUTE", "GAG", "UNGAG", "HIDE", "UNHIDE", "WHAT", "TITLE", "BRIEF", "RECALL", "BUFFER",
+			"COMBINE", "UNCOMBINE", "ON", "JOIN", "OFF", "LEAVE", "WHO"
+		], Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSArgs, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "options..."])]
+	public async ValueTask<Option<CallState>> Channel(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches.ToArray();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		// /quiet only pairs with /list or /recall — it is invalid alongside anything else.
+		if (switches.Contains("QUIET") && !switches.Contains("LIST") && !switches.Contains("RECALL"))
+		{
+			await NotifyService.Notify(executor, "CHAT: Incorrect combination of switches.", executor);
+			return new CallState("CHAT: INCORRECT COMBINATION OF SWITCHES");
+		}
+
+		// sharpchat.md:179-181 documents `@channel/list[/on|/off][/quiet] [<prefix>]` and
+		// `@channel/what [<prefix>]` — the argument is OPTIONAL there and required everywhere else.
+		// Reading Arguments["0"] unconditionally turned every argument-less switched form into a
+		// KeyNotFoundException, so read through the dictionary and let the arms state their own arity.
+		var arg0 = args.GetValueOrDefault("0")?.Message;
+		var arg1 = args.GetValueOrDefault("1")?.Message;
+		var emptyIfMissing0 = arg0 ?? MarkupText.Empty;
+		var emptyIfMissing1 = arg1 ?? MarkupText.Empty;
+
+		// Note: Channel visibility checking is handled by PermissionService.ChannelCanSeeAsync in each handler
+		return switches switch
+		{
+			// /list, /recall and /decompile combine with other switches (`@channel/list/on/quiet`), so they
+			// match on membership rather than on a positional list pattern that only fires when they are last.
+			_ when switches.Contains("LIST") => await ChannelCommand.ChannelList.Handle(parser, LocateService,
+				PermissionService, Mediator, NotifyService, ConnectionService, emptyIfMissing0, emptyIfMissing1,
+				switches),
+			// CB.RSArgs comma-splits the right-hand side, so `@channel/recall <chan>=<lines>,<start>` arrives
+			// as two arguments — PennMUSH reads the same pair out of its lineinfo array (src/extchat.c:4008).
+			_ when switches.Contains("RECALL") && arg0 is not null => await ChannelRecall.Handle(parser, LocateService,
+				PermissionService, Mediator, NotifyService, arg0, emptyIfMissing1,
+				args.GetValueOrDefault("2")?.Message ?? MarkupText.Empty, switches),
+			_ when switches.Contains("DECOMPILE") && arg0 is not null => await ChannelDecompile.Handle(parser,
+				LocateService, PermissionService, Mediator, NotifyService, ConnectionService, arg0, emptyIfMissing1,
+				switches),
+			["WHAT"] => await ChannelWhat.Handle(parser, LocateService, PermissionService, Mediator, NotifyService,
+				emptyIfMissing0),
+			["WHO"] when arg0 is not null => await ChannelWho.Handle(parser, LocateService, PermissionService, Mediator,
+				NotifyService, ConnectionService, arg0),
+			(["ON"] or ["JOIN"]) when arg0 is not null => await ChannelOn.Handle(parser, LocateService, PermissionService,
+				Mediator, NotifyService, arg0, arg1),
+			(["OFF"] or ["LEAVE"]) when arg0 is not null => await ChannelOff.Handle(parser, LocateService,
+				PermissionService, Mediator, NotifyService, arg0, arg1),
+			// The eight per-member switches are one operation in PennMUSH (do_chan_user_flags,
+			// src/extchat.c:1900), and the un-forms are it with "n" for an answer (cmd_channel, :3628-3640).
+			// The channel is OPTIONAL in every one of them: omitted, they act on every channel you are on.
+			["GAG"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Gag, forceOff: false),
+			["UNGAG"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Gag, forceOff: true),
+			["MUTE"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Quiet, forceOff: false),
+			["UNMUTE"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Quiet, forceOff: true),
+			["HIDE"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Hide, forceOff: false),
+			["UNHIDE"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Hide, forceOff: true),
+			["COMBINE"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Combine, forceOff: false),
+			["UNCOMBINE"] => await ChannelUserFlags.Handle(parser, PermissionService, Mediator, NotifyService,
+				arg0, arg1, ChannelUserFlags.UserFlag.Combine, forceOff: true),
+			// arg1 is null when no `=` was typed at all, which is the QUERY form — distinct from an `=` with
+			// nothing after it, which clears the title (do_chan_title's rhs_present, src/extchat.c:3145).
+			["TITLE"] when arg0 is not null => await ChannelTitle.Handle(parser, LocateService, PermissionService,
+				Mediator, NotifyService, Configuration, arg0, arg1),
+			["ADD"] when arg0 is not null && arg1 is not null
+				=> await ChannelAdd.Handle(parser, LocateService, PermissionService, Mediator, NotifyService,
+					Configuration, arg0, arg1),
+			["PRIVS"] when arg0 is not null && arg1 is not null
+				=> await ChannelPrivs.Handle(parser, LocateService, PermissionService, Mediator, NotifyService,
+					arg0, arg1),
+			["DESCRIBE"] when arg0 is not null && arg1 is not null
+				=> await ChannelDescribe.Handle(parser, LocateService, PermissionService, Mediator, NotifyService,
+					arg0, arg1),
+			["BUFFER"] when arg0 is not null && arg1 is not null
+				=> await ChannelBuffer.Handle(parser, LocateService, PermissionService, Mediator, NotifyService,
+					Configuration, arg0, arg1),
+			["CHOWN"] when arg0 is not null => await ChannelChown.Handle(parser, LocateService, PermissionService,
+				Mediator, NotifyService, arg0, emptyIfMissing1),
+			// NAME and RENAME are the same operation, as in PennMUSH (src/extchat.c:3605-3608, where both
+			// switches call do_chan_admin with CH_ADMIN_RENAME). NAME was declared in the switch list above
+			// but had no arm, so `@channel/name` fell through to the "What do you want to do" usage line.
+			(["RENAME"] or ["NAME"]) when arg0 is not null && arg1 is not null
+				=> await ChannelRename.Handle(parser, LocateService, PermissionService, Mediator, NotifyService,
+					Configuration, arg0, arg1),
+			["WIPE"] when arg0 is not null => await ChannelWipe.Handle(parser, LocateService, PermissionService, Mediator,
+				NotifyService, arg0, emptyIfMissing1),
+			["DELETE"] when arg0 is not null => await ChannelDelete.Handle(parser, LocateService, PermissionService,
+				Mediator, NotifyService, arg0, emptyIfMissing1),
+			["MOGRIFIER"] when arg0 is not null => await ChannelMogrifier.Handle(parser, LocateService, PermissionService,
+				Mediator, NotifyService, arg0, arg1),
+			_ => await NotifyAndReturnChannelUsage(executor)
+		};
+	}
+
+	private async ValueTask<CallState> NotifyAndReturnChannelUsage(AnySharpObject executor)
+	{
+		await NotifyService.Notify(executor, "What do you want to do with the channel?", executor);
+		return new CallState("What do you want to do with the channel?");
+	}
+
+	[SharpCommand(Name = "@CLOCK", Switches = ["JOIN", "SPEAK", "MOD", "SEE", "HIDE"], Behavior = CB.Default | CB.EqSplit,
+		MinArgs = 1, MaxArgs = 2, ParameterNames = [])]
+	public async ValueTask<Option<CallState>> ChannelLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var args = parser.CurrentState.Arguments;
+		var switches = parser.CurrentState.Switches;
+
+		var channelName = args["0"].Message!;
+		var lockKey = args.TryGetValue("1", out var arg1) ? arg1.Message!.ToPlainText() : string.Empty;
+
+		var lockType = switches.FirstOrDefault() ?? "JOIN";
+		lockType = lockType.ToUpper();
+
+		// Setting a lock on a channel you cannot see must be refused the same way as setting one on a
+		// channel that does not exist, or @clock reports which names are taken. notify: true because the
+		// gate emits ONE refusal for both cases: suppressing it does not make the two cases more alike, it
+		// only makes a mistyped channel name fail in silence.
+		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
+			NotifyService, executor, channelName, notify: true) switch
+		{
+			SharpChannel channel => await SetChannelLockAsync(executor, channel, lockType, lockKey),
+			Error<CallState> error => error.Value
+		};
+	}
+
+	private async ValueTask<Option<CallState>> SetChannelLockAsync(AnySharpObject executor, SharpChannel channel,
+		string lockType, string lockKey)
+	{
+		// An absent modify lock grants no additional rights beyond the owner and wizard gates.
+		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (lockType is not ("JOIN" or "SPEAK" or "SEE" or "HIDE" or "MOD"))
+		{
+			await NotifyService.Notify(executor, $"Invalid lock type: {lockType}", executor);
+			return new CallState(ErrorMessages.Returns.InvalidLockType);
+		}
+
+		if (!string.IsNullOrEmpty(lockKey))
+		{
+			if (await BooleanExpressionParser.BindAsync(lockKey, executor, ExecutionBudget.CurrentToken) is not string bound)
+			{
+				await NotifyService.Notify(executor, "CHAT: I don't understand that key.", executor);
+				return new CallState(ErrorMessages.Returns.InvalidLock);
+			}
+			lockKey = bound;
+		}
+
+		UpdateChannelCommand updateCommand = lockType switch
+		{
+			"JOIN" => new UpdateChannelCommand(channel, null, null, null, lockKey, null, null, null, null, null, null),
+			"SPEAK" => new UpdateChannelCommand(channel, null, null, null, null, lockKey, null, null, null, null, null),
+			"SEE" => new UpdateChannelCommand(channel, null, null, null, null, null, lockKey, null, null, null, null),
+			"HIDE" => new UpdateChannelCommand(channel, null, null, null, null, null, null, lockKey, null, null, null),
+			"MOD" => new UpdateChannelCommand(channel, null, null, null, null, null, null, null, lockKey, null, null),
+			_ => new UpdateChannelCommand(channel, null, null, null, null, null, null, null, null, null, null)
+		};
+
+		await Mediator.Send(updateCommand, ExecutionBudget.CurrentToken);
+
+		if (string.IsNullOrEmpty(lockKey))
+		{
+			await NotifyService.Notify(executor, $"{lockType} lock removed from channel {channel.Name.ToPlainText()}.", executor);
+		}
+		else
+		{
+			await NotifyService.Notify(executor, $"{lockType} lock set on channel {channel.Name.ToPlainText()}.", executor);
+		}
+
+		return CallState.Empty;
 	}
 }
