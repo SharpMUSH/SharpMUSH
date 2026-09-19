@@ -5,6 +5,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Text;
@@ -20,7 +21,6 @@ public partial class ValidateService(
 	: IValidateService
 {
 	private readonly ConcurrentDictionary<string, Regex> _regexCache = new();
-	private readonly ConcurrentDictionary<string, Regex> _globCache = new();
 
 	/// <summary>Names that always resolve to something else, so nothing may be called by them.</summary>
 	private static readonly HashSet<string> MagicCookies = new(["me", "here", "!", "home"], StringComparer.Ordinal);
@@ -172,44 +172,20 @@ public partial class ValidateService(
 	}
 
 	/// <summary>
-	/// Checks if a value matches any of the enum patterns, supporting glob wildcards (* and ?).
-	/// Uses thread-safe caching to avoid recompiling regex patterns.
+	/// Whether <paramref name="value"/> matches any of <paramref name="enumPatterns"/>, each a general
+	/// MUSH wildcard (<see cref="SoftcodeRegex.Wildcard"/>) matched case-sensitively. A pattern with no
+	/// <c>*</c>, <c>?</c> or <c>\</c> is compared ordinally without compiling anything.
 	/// </summary>
-	/// <param name="value">The value to check</param>
-	/// <param name="enumPatterns">Array of allowed patterns (can include * and ? wildcards)</param>
-	/// <returns>True if value matches any pattern</returns>
-	private bool MatchesEnumWithGlobbing(string value, string[] enumPatterns)
-	{
-		foreach (var pattern in enumPatterns)
-		{
-			// If pattern has no wildcards, do exact match for performance
-			if (!pattern.Contains('*') && !pattern.Contains('?'))
-			{
-				if (value.Equals(pattern, StringComparison.Ordinal))
-				{
-					return true;
-				}
-				continue;
-			}
+	/// <remarks>
+	/// Globbing enum entries is SharpMUSH's own. PennMUSH's <c>@attribute/enum</c> is a delimited list
+	/// matched case-insensitively by prefix, storing the entry's own case (<c>src/atr_tab.c</c>).
+	/// </remarks>
+	private static bool MatchesEnumWithGlobbing(string value, string[] enumPatterns)
+		=> enumPatterns.Any(pattern => pattern.AsSpan().IndexOfAny(GlobMetacharacters) < 0
+			? value.Equals(pattern, StringComparison.Ordinal)
+			: SoftcodeRegex.IsMatch(SoftcodeRegex.Wildcard(pattern, caseSensitive: true), value));
 
-			var regex = _globCache.GetOrAdd(pattern, p =>
-			{
-				var regexPattern = "^" + Regex.Escape(p)
-					.Replace("\\*", ".*")  // * matches any characters
-					.Replace("\\?", ".")   // ? matches single character
-					+ "$";
-
-				return SoftcodeRegex.Create(regexPattern, RegexOptions.Compiled);
-			});
-
-			if (SoftcodeRegex.IsMatch(regex, value))
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
+	private static readonly SearchValues<char> GlobMetacharacters = SearchValues.Create("*?\\");
 
 	/// <summary>
 	/// Validates an attribute name: must match the character set regex AND must not have
