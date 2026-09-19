@@ -11,6 +11,8 @@ using System.Globalization;
 using System.Numerics;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 using SharpMUSH.Library.Markup;
+using DotNext.Collections.Generic;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -1465,5 +1467,93 @@ public partial class Functions
 		}
 
 		return (p1, q1);
+	}
+
+	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public ValueTask<CallState> Die(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+
+		if (!int.TryParse((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var count) || count < 0)
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+		}
+		if (!int.TryParse((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var sides) || sides <= 0)
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+		}
+
+		// Optional third argument for how many rolls to show (vs just return sum)
+		var showCount = count;
+		if (args.Count == 3)
+		{
+			if (!int.TryParse((args["2"].Message ?? MarkupText.Empty).ToPlainText(), out showCount) || showCount < 0)
+			{
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+			}
+		}
+
+		var rolls = new List<int>();
+		var total = 0;
+
+		for (int i = 0; i < count; i++)
+		{
+			var roll = Random.Shared.Next(1, sides + 1);
+			rolls.Add(roll);
+			total += roll;
+		}
+
+		if (showCount < count)
+		{
+			return ValueTask.FromResult(new CallState(total.ToString()));
+		}
+
+		return ValueTask.FromResult(new CallState(string.Join(" ", rolls)));
+	}
+
+	[SharpFunction(Name = "rand", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public ValueTask<CallState> Rand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+
+		// Check if first argument exists and is not empty
+		if (!args.TryGetValue("0", out var arg0) || string.IsNullOrWhiteSpace((arg0.Message ?? MarkupText.Empty).ToPlainText()))
+		{
+			// No arguments: random number between 0 and 2^31-1
+			return ValueTask.FromResult(new CallState(Random.Shared.Next(0, int.MaxValue)));
+		}
+
+		// Check if second argument exists and is not empty
+		if (!args.TryGetValue("1", out var arg1) || string.IsNullOrWhiteSpace((arg1.Message ?? MarkupText.Empty).ToPlainText()))
+		{
+			// One argument: random number from 0 to arg-1
+			if (!int.TryParse((arg0.Message ?? MarkupText.Empty).ToPlainText(), out var maxVal))
+			{
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+			}
+			// PennMUSH behavior: rand(0) is an error (empty range), negative values return 0
+			if (maxVal == 0)
+			{
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ResultOutOfRange));
+			}
+			if (maxVal < 0)
+			{
+				return ValueTask.FromResult(new CallState(0));
+			}
+			return ValueTask.FromResult(new CallState(Random.Shared.Next(0, maxVal)));
+		}
+
+		// Two arguments: random number between min and max (inclusive)
+		if (!int.TryParse((arg0.Message ?? MarkupText.Empty).ToPlainText(), out var minVal) ||
+				!int.TryParse((arg1.Message ?? MarkupText.Empty).ToPlainText(), out var maxVal2))
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+		}
+		if (minVal > maxVal2)
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+		}
+		// Next is exclusive of upper bound, so add 1
+		return ValueTask.FromResult(new CallState(Random.Shared.Next(minVal, maxVal2 + 1)));
 	}
 }
