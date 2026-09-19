@@ -92,7 +92,7 @@ public static class CommandAttributeScanner
 			// either compiler sees it — without that, a regexp pattern's own (?\:...) is not a legal
 			// .NET construct and the whole $-command is thrown away by the catch below.
 			var pattern = CommandDiscoveryService.UnescapePatternSeparator(match.Groups["pattern"].Value);
-			var isRegex = attr.Flags.Any(flag => flag.Name.Equals("REGEXP", StringComparison.OrdinalIgnoreCase));
+			var isRegex = attr.IsRegexp();
 			// Skip any optional leading whitespace so that "$cmd: @pemit" and "$cmd:@pemit" are
 			// both handled correctly — a leading space would otherwise cause an empty command name
 			// when EvaluateCommands strips the first token at its space boundary.
@@ -102,9 +102,12 @@ public static class CommandAttributeScanner
 
 			try
 			{
+				// Caseless unless the attribute is CASE, for both kinds: atr_single_match_r passes AF_Case to
+				// regexp_match_case_r and wild_match_case_r alike (src/attrib.c:1813-1821).
+				var caseSensitive = attr.IsCase();
 				var regex = isRegex
-					? SoftcodeRegex.Create(pattern, RegexOptions.Compiled)
-					: SoftcodeRegex.Wildcard(pattern, RegexOptions.Compiled);
+					? SoftcodeRegex.Create(pattern, RegexOptions.Compiled | (caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase))
+					: SoftcodeRegex.Wildcard(pattern, RegexOptions.Compiled, caseSensitive);
 
 				commandAttributes.Add(new CommandAttributeCache(
 					attr with { CommandListIndex = commandBodyStart },
