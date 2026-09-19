@@ -557,12 +557,17 @@ public class RecurringJobTests
 		accounts.GetCharactersAsync(account.Id!, Arg.Any<CancellationToken>()).Returns(new ValueTask<IReadOnlyList<SharpPlayer>>([player]));
 		var registry = Substitute.For<IRoleRegistryService>();
 		var backing = Get<IRoleRegistryService>();
-		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var armed = false;
 		registry.GetRoleAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(async call =>
 		{
-			if (armed) await release.Task.WaitAsync(call.Arg<CancellationToken>());
-			return await backing.GetRoleAsync(call.Arg<string>(), call.Arg<CancellationToken>());
+			var ct = call.Arg<CancellationToken>();
+			if (armed)
+			{
+				entered.TrySetResult(ct);
+				await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+			}
+			return await backing.GetRoleAsync(call.Arg<string>(), ct);
 		});
 		registry.GetRolesForAccountAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
 			.Returns(call => backing.GetRolesForAccountAsync(call.Arg<string>(), call.Arg<CancellationToken>()));
@@ -573,18 +578,16 @@ public class RecurringJobTests
 		context.Clock.Now = context.Clock.Now.AddMinutes(1);
 		await service.RunDueAsync();
 		armed = true;
-		using var budget = new ExecutionBudget(TimeSpan.FromMilliseconds(100));
-		using var scope = budget.Enter();
-		var firing = context.Callbacks.Single()().AsTask();
-		try
-		{
-			await firing.WaitAsync(TimeSpan.FromSeconds(2));
-		}
-		finally
-		{
-			release.TrySetResult();
-			await firing;
-		}
+		// Cancel once the lookup is blocked: a wall-clock deadline can lapse before the lookup is reached,
+		// which passes without proving the budget arrives there.
+		using var cancellation = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancellation.Token);
+		Task<CallState?> firing;
+		using (budget.Enter()) firing = context.Callbacks.Single()().AsTask();
+		var observed = await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+		await cancellation.CancelAsync();
+		await firing.WaitAsync(TimeSpan.FromSeconds(10));
+		await Assert.That(observed).IsEqualTo(budget.Token);
 		await Assert.That((await Get<IAttributeStore>().GetAttributeAsync(context.Target, ["FIRED"]).ToArrayAsync()).Length).IsEqualTo(0);
 		var document = await Get<IExpandedDataStore>().GetExpandedServerData<RecurringJobDocument>(RecurringJobService.StorageKey);
 		await Assert.That(document!.Jobs.Single().Status).IsEqualTo("failed");

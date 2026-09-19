@@ -99,6 +99,7 @@ internal static class DatabaseRegistration
 		var lightningMapSizeSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE");
 		var lightningSyncSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_SYNC");
 		var lightningFlushSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_FLUSH_MS");
+		services.AddSingleton(new LightningWorldPath(lightningPath));
 		services.AddSingleton<LightningDatabase>(x =>
 		{
 			var dbLogger = x.GetRequiredService<ILogger<LightningDatabase>>();
@@ -107,7 +108,7 @@ internal static class DatabaseRegistration
 			var db = new LightningDatabase(dbLogger,
 				new LightningStoreOptions
 				{
-					Path = lightningPath,
+					Path = x.GetRequiredService<LightningWorldPath>().Value,
 					MapSize = ResolveLightningMapSize(lightningMapSizeSetting, dbLogger),
 					Sync = ResolveLightningSyncMode(lightningSyncSetting, dbLogger),
 					FlushInterval = ResolveLightningFlushInterval(lightningFlushSetting, dbLogger)
@@ -124,7 +125,7 @@ internal static class DatabaseRegistration
 		var lightningCompactSetting = Environment.GetEnvironmentVariable("SHARPMUSH_LIGHTNING_BACKUP_COMPACT");
 		services.AddSingleton<IWorldBackupService>(sp => new LightningWorldBackupService(
 			sp.GetRequiredService<SharpMUSH.Library.Plugins.Storage.ILightningStorageAccessor>(),
-			ResolveBackupOptions(lightningPath, sp.GetRequiredService<ILogger<LightningDatabase>>()),
+			ResolveBackupOptions(sp.GetRequiredService<LightningWorldPath>().Value, sp.GetRequiredService<ILogger<LightningDatabase>>()),
 			compact: !string.Equals(lightningCompactSetting, "false", StringComparison.OrdinalIgnoreCase),
 			sp.GetRequiredService<ILogger<LightningWorldBackupService>>()));
 
