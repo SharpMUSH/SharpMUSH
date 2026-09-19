@@ -15,6 +15,7 @@ using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Markup;
+using System.Buffers;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -133,66 +134,6 @@ public partial class Commands
 
 		return await SetHelpers.DoSet(parser, LocateService, AttributeService, ManipulateSharpObjectService,
 			NotifyService, executor, args["0"].Message!, args["1"].Message!);
-	}
-
-
-	[SharpCommand(Name = "@CHOWN", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
-		MaxArgs = 2, ParameterNames = ["object", "player"])]
-	public async ValueTask<Option<CallState>> ChangeOwner(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var targetName = args["0"].Message!.ToPlainText();
-		var newOwnerName = args["1"].Message!.ToPlainText();
-		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, targetName, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-					executor, executor, newOwnerName, LocateFlags.All,
-					async newOwnerObj =>
-					{
-						if (newOwnerObj is not SharpPlayer newOwnerPlayer)
-						{
-							return await NotifyService.NotifyAndReturn(
-								executor.Object().DBRef,
-								errorReturn: ErrorMessages.Returns.InvalidPlayer,
-								notifyMessage: ErrorMessages.Notifications.MustBePlayer,
-								shouldNotify: true);
-						}
-
-						var result = await ManipulateSharpObjectService.SetOwner(executor, obj, newOwnerPlayer, true);
-
-						if (!preserve)
-						{
-							if (await obj.HasFlag("WIZARD"))
-							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
-							}
-							if (await obj.HasFlag("ROYALTY"))
-							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
-							}
-							await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "HALT", false);
-						}
-
-						return result;
-					}
-				);
-			}
-		);
 	}
 
 	[SharpCommand(Name = "@DESTROY", Switches = ["OVERRIDE"], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
@@ -905,134 +846,6 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@CHZONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
-		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "zone"])]
-	public async ValueTask<Option<CallState>> ChangeZone(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var targetName = args["0"].Message!.ToPlainText();
-		var zoneName = args["1"].Message!.ToPlainText();
-		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, targetName, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
-				{
-					await Mediator.Send(new UnsetObjectZoneCommand(obj));
-					await NotifyService.Notify(executor, "Zone cleared.", executor);
-					return CallState.Empty;
-				}
-
-				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-					executor, executor, zoneName, LocateFlags.All,
-					async zoneObj =>
-					{
-						// PennMUSH do_chzone (src/set.c:408-420) gates this on
-						// `has_lock && eval_lock_with(...)`, with has_lock computed as
-						// `getlock(zone, Chzone_Lock) != TRUE_BOOLEXP` and the comment "Note that an
-						// object with no chzone-lock isn't valid". An unset lock evaluates #TRUE, so
-						// asking only for the verdict hands every never-zone-locked object to every
-						// mortal as a zone. The lock has to be *present* before its verdict counts.
-						if (!await PermissionService.Controls(executor, zoneObj))
-						{
-							var zoneLock = await LockService.LookupAsync(zoneObj, nameof(LockType.ChZone), ExecutionBudget.CurrentToken);
-							if (zoneLock is not ResolvedLock resolved ||
-								!await LockService.Evaluate(resolved.Data.LockString, zoneObj, executor))
-							{
-								// Penn runs fail_lock() when the lock exists and refused, and a bare
-								// notify when there was no lock to fail.
-								if (zoneLock is ResolvedLock)
-								{
-									await DidItService.FailLockLocalized(parser, executor, zoneObj, LockType.ChZone,
-										new LocalizedNotification(nameof(ErrorMessages.Notifications.PermissionDeniedCannotZoneTo)));
-									return new CallState(ErrorMessages.Returns.PermissionDenied);
-								}
-
-								return await NotifyService.NotifyAndReturn(
-										executor.Object().DBRef,
-										errorReturn: ErrorMessages.Returns.PermissionDenied,
-										notifyMessage: ErrorMessages.Notifications.PermissionDeniedCannotZoneTo,
-										shouldNotify: true);
-							}
-						}
-
-						// Check for cycles before setting the zone
-						if (!await HelperFunctions.SafeToAddZone(Mediator, Database, obj, zoneObj))
-						{
-							return await NotifyService.NotifyAndReturn(
-								executor.Object().DBRef,
-								errorReturn: ErrorMessages.Returns.ZoneLoop,
-								notifyMessage: ErrorMessages.Notifications.CantMakeCircularZones,
-								shouldNotify: true);
-						}
-
-						// Clear privileged flags and powers unless /preserve is used.
-						//
-						// Ahead of the zone change, and not after it as PennMUSH's do_chzone (src/set.c:373)
-						// writes it: PennMUSH strips with clear_flag_internal() and destroy_flag_bitmask(),
-						// which ask nobody's permission, so its one controls() check above is the whole
-						// authorization. These go through ManipulateSharpObjectService, which checks Controls
-						// itself — and Controls reads the object's *current* zone (PermissionService.Controls,
-						// Zone Master Object branch). Once the zone has moved, an executor who held the object
-						// only through the zone it is leaving no longer controls it, the strip is refused, and
-						// @CHZONE reports "Zone changed." over an object that kept every power. Running the
-						// strip first is what keeps the authorization checked at the top of this command the
-						// one that governs it. Nothing below can fail, so the observable order is PennMUSH's.
-						if (!preserve && !obj.IsPlayer)
-						{
-							if (await obj.HasFlag("WIZARD"))
-							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
-							}
-							if (await obj.HasFlag("ROYALTY"))
-							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
-							}
-							if (await obj.HasFlag("TRUST"))
-							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!TRUST", false);
-							}
-
-							// Same clearing @CHZONEALL uses: it materializes the collection before
-							// unsetting and publishes ObjectFlagChangedNotification per power, which
-							// the hand-rolled loop here did not.
-							await ManipulateSharpObjectService.ClearAllPowers(executor, obj, false);
-						}
-
-						await Mediator.Send(new SetObjectZoneCommand(obj, zoneObj));
-
-						// PennMUSH check_zone_lock (src/lock.c:962): a zone that has never been
-						// zone-locked gets `=me` installed on it, written as GOD. It is a system
-						// write on purpose — the executor who most needs it is the one who reached
-						// this zone through its lock rather than through control, and so cannot
-						// write to it.
-						if (!zoneObj.Object().Locks.ContainsKey(nameof(LockType.ChZone)))
-						{
-							await LockService.SetSystemAsync(zoneObj, nameof(LockType.ChZone),
-								$"=#{zoneObj.Object().DBRef.Number}", ExecutionBudget.CurrentToken);
-						}
-
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneChanged), executor);
-						return CallState.Empty;
-					}
-				);
-			}
-		);
-	}
-
 	[SharpCommand(Name = "@DIG", Switches = ["TELEPORT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 6, ParameterNames = ["name", "exits"])]
 	public async ValueTask<Option<CallState>> Dig(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -1126,88 +939,6 @@ public partial class Commands
 		}
 
 		return new CallState(response.ToString());
-	}
-
-	[SharpCommand(Name = "@LOCK", Switches = ["*"], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "key"])]
-	public ValueTask<Option<CallState>> Lock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
-		=> ChangeLockAsync(parser, null, false);
-
-	[SharpCommand(Name = "@UNLOCK", Switches = ["*"], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object", "key"])]
-	public ValueTask<Option<CallState>> Unlock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
-		=> ChangeLockAsync(parser, null, true);
-
-	[SharpCommand(Name = "@ELOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "key"])]
-	public ValueTask<Option<CallState>> ELock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
-		=> ChangeLockAsync(parser, "Enter", false);
-
-	[SharpCommand(Name = "@EUNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object", "key"])]
-	public ValueTask<Option<CallState>> EUnlock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
-		=> ChangeLockAsync(parser, "Enter", true);
-
-	[SharpCommand(Name = "@ULOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "key"])]
-	public ValueTask<Option<CallState>> ULock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
-		=> ChangeLockAsync(parser, "Use", false);
-
-	[SharpCommand(Name = "@UUNLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 1, ParameterNames = ["object", "key"])]
-	public ValueTask<Option<CallState>> UUnlock(IMUSHCodeParser parser, SharpCommandAttribute attribute)
-		=> ChangeLockAsync(parser, "Use", true);
-
-	private async ValueTask<Option<CallState>> ChangeLockAsync(IMUSHCodeParser parser, string? fixedType, bool unlock)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		if (!args.TryGetValue("0", out var targetArg)) return new CallState(ErrorMessages.Returns.InvalidArguments);
-		var targetText = targetArg.Message!.ToPlainText();
-		var slash = targetText.IndexOf('/');
-		var attributeName = slash < 0 ? null : targetText[(slash + 1)..];
-		if (slash >= 0) targetText = targetText[..slash];
-		var expression = args.TryGetValue("1", out var key) ? key.Message!.ToPlainText() : string.Empty;
-		var type = fixedType ?? parser.CurrentState.Switches.FirstOrDefault() ?? "Basic";
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetText, LocateFlags.All,
-			async target =>
-			{
-				if (attributeName is not null)
-				{
-					var attributeArgs = new Dictionary<string, CallState> { ["1"] = new CallState(unlock ? "off" : "on") };
-					var result = await AttributeLockAsync(executor, target, attributeArgs, attributeName);
-					return result is CallState state ? state : CallState.Empty;
-				}
-				var removing = unlock || expression.Length == 0;
-				var nameResult = await LockService.ResolveWriteNameAsync(target, type, ExecutionBudget.CurrentToken);
-				if (nameResult is Error<string> nameError)
-				{
-					await NotifyService.Notify(executor, nameError.Value, executor);
-					return CallState.Empty;
-				}
-				var name = nameResult is string value ? value : type;
-				var existed = target.Object().Locks.ContainsKey(name);
-				var changed = removing
-					? await LockService.UnsetAsync(executor, target, type)
-					: await LockService.SetAsync(executor, target, type, expression);
-				if (changed is Error<string> error)
-				{
-					await NotifyService.Notify(executor, error.Value, executor);
-					return CallState.Empty;
-				}
-				if (!await target.Object().AreQuietAsync(executor))
-				{
-					if (removing && !existed)
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ObjectAlreadyUnlocked), executor,
-							target.Object().Name, target.Object().DBRef.Number, LockNames.Display(name));
-					else
-						await NotifyService.NotifyLocalized(executor, removing
-							? nameof(ErrorMessages.Notifications.ObjectUnlocked)
-							: nameof(ErrorMessages.Notifications.ObjectLocked), executor,
-							target.Object().Name, target.Object().DBRef.Number, LockNames.Display(name));
-				}
-				return CallState.Empty;
-			});
 	}
 
 	private ValueTask<bool> CanLinkTo(AnySharpObject executor, AnySharpObject destination)
@@ -1665,5 +1396,22 @@ public partial class Commands
 					shouldNotify: true);
 			}
 		);
+	}
+
+	[SharpCommand(Name = "@UNRECYCLE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object"])]
+	public async ValueTask<Option<CallState>> UnRecycle(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		if (!await executor.IsWizard())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		await NotifyService.Notify(executor, "@UNRECYCLE: Object recovery system not yet implemented.", executor);
+		await NotifyService.Notify(executor, "This command would restore objects from the recycle bin.", executor);
+
+		return CallState.Empty;
 	}
 }
