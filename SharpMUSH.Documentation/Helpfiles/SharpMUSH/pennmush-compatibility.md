@@ -93,12 +93,19 @@ literal parenthesis is always written the same way. Imported worlds keep Penn's 
 softcode runs unchanged.<br>
 **Workaround.** Escape literal parentheses inside function arguments with `\(` `\)` or `%(` `%)`.
 
-With the option on, the first line instead returns `x (a,b)c`.
-
 ```sharp
 > think cat(x,(a,b)c)
 x (a bc)
 > think cat(x,%(a%,b%)c)
+x (a,b)c
+> think cat(x,\(a\,b\)c)
+x (a,b)c
+```
+
+With the option on, the unescaped form groups as PennMUSH's does:
+
+```sharp paren_groups
+> think cat(x,(a,b)c)
 x (a,b)c
 ```
 
@@ -228,7 +235,7 @@ which is false for anything starting `#-`. Code that compares with `=` or `eq()`
 `#-1` needs the prefix test instead. `namelist()` keeps one-word `#-1` and `#-2` entries, because each
 entry is a position in a list.
 
-```
+```sharp
 > think zone(me)
 #-1 NO ZONE SET
 > think [strmatch(zone(me),#-*)] [t(zone(me))]
@@ -255,7 +262,7 @@ to seconds would make `[num(%0)]:[csecs(%0)]` fail to reconstruct an objid. Rath
 PennMUSH call returns, the finer value is a separate request.<br>
 **Workaround.** Omit the argument for PennMUSH behaviour.
 
-```sharp
+```sharp unchecked
 > think secs()
 1789000000
 > think secs(ms)
@@ -287,7 +294,7 @@ a `?` in the query.<br>
 **Why.** The alternative is softcode concatenating values into query text.<br>
 **Workaround.** None needed; a four-argument call behaves as PennMUSH's does.
 
-```sharp
+```sharp unchecked
 > think sql(lit(SELECT name FROM people WHERE id = ?),%b,%b,%b,7)
 ```
 
@@ -314,11 +321,18 @@ The consequence worth knowing: an objid carries the millisecond value, so
 `[num(<obj>)]:[csecs(<obj>)]` does **not** reconstruct one here, where in PennMUSH it does. Ask for
 the field the objid actually holds:
 
-```sharp
+```sharp unchecked
 > think [num(me)]:[csecs(me,ms)]
 #1:1789000000123
 ```
-and compare it with `objid(me)`, which is the same two fields.
+That is the same two fields as `objid(me)`; whole seconds are not:
+
+```sharp
+> think strmatch(objid(me),[num(me)]:[csecs(me,ms)])
+1
+> think strmatch(objid(me),[num(me)]:[csecs(me)])
+0
+```
 
 ## Objids and stamped dbrefs
 
@@ -336,10 +350,10 @@ output by relying on its rounding will see more digits here.
 **Workaround.** `round()` to the precision you want rather than relying on the default.
 
 ```sharp
-> think fdiv(1,3)
-0.333333333333333
-> think round(fdiv(1,3),6)
-0.333333
+> think pi()
+3.14159265358979
+> think round(pi(),6)
+3.141593
 ```
 
 # COMPATIBILITY OUTPUT
@@ -354,7 +368,7 @@ is accepted and changes nothing.
 
 ```sharp
 > think render(ansi(r,a<b>c),html)
-(the text with < and > escaped to &lt; and &gt;, wrapped in the markup the html format emits)
+<span style="color: #aa0000">a&lt;b&gt;c</span>
 > think render(ansi(r,red),markup)
 red
 ```
@@ -380,7 +394,9 @@ requires migrating code you already have.
 consistently across the pair.<br>
 **Workaround.** Swap the arguments when importing channel softcode.
 
-```sharp
+On a game with a `Public` channel you have joined:
+
+```sharp unchecked
 > think cstatus(me,Public)
 ON
 ```
