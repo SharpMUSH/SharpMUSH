@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Implementation.Definitions;
@@ -11,7 +10,6 @@ using MarkupString.Html;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
@@ -28,32 +26,6 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	// This is not directly compatible with functions that expect just a DBREF (#1234).
-	// Consider adding a configuration option for backward compatibility mode.
-	[SharpFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.WizardOnly)]
-	public async ValueTask<CallState> PCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
-		var defaultHomeDbref = new DBRef((int)defaultHome);
-		var startingQuota = (int)Configuration.CurrentValue.Limit.StartingQuota;
-		var args = parser.CurrentState.Arguments;
-		var location = await Mediator.Send(new GetObjectNodeQuery(new DBRef
-		{
-			Number = Convert.ToInt32(Configuration.CurrentValue.Database.PlayerStart)
-		}));
-
-		var trueLocation = location.Object()?.Key ?? -1;
-
-		var created = await Mediator.Send(new CreatePlayerCommand(
-			args["0"].Message!.ToPlainText(),
-			args["1"].Message!.ToPlainText(),
-			new DBRef(trueLocation == -1 ? 1 : trueLocation),
-			defaultHomeDbref,
-			startingQuota));
-
-		return new CallState($"#{created.Number}:{created.CreationMilliseconds}");
-	}
-
 	[SharpFunction(Name = "ansi", MinArgs = 2, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> ANSI(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -445,140 +417,6 @@ public partial class Functions
 					: "0"));
 	}
 
-	[SharpFunction(Name = "clone", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
-	public async ValueTask<CallState> Clone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var targetName = args["0"].Message!.ToPlainText();
-
-		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
-		var defaultHomeDbref = new DBRef((int)defaultHome);
-		if (await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref)) is not AnySharpObject location || location.IsExit)
-		{
-			return ErrorMessages.Returns.InvalidRoom;
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, targetName, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return ErrorMessages.Returns.PermissionDenied;
-				}
-
-				if (obj.IsPlayer)
-				{
-					return ErrorMessages.Returns.InvalidObjectType;
-				}
-
-				var newName = obj.Object().Name;
-				if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
-				{
-					newName = args["1"].Message!.ToPlainText();
-				}
-
-				DBRef cloneDbRef;
-				var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
-
-				if (obj.IsThing)
-				{
-					cloneDbRef = await Mediator.Send(new CreateThingCommand(
-						newName,
-						await executor.Where(),
-						owner,
-						location.AsContainer
-					));
-				}
-				else if (obj.IsRoom)
-				{
-					cloneDbRef = await Mediator.Send(new CreateRoomCommand(
-						newName,
-						owner
-					));
-				}
-				else if (obj.IsExit)
-				{
-					var nameParts = newName.Split(';');
-					cloneDbRef = await Mediator.Send(new CreateExitCommand(
-						nameParts[0],
-						nameParts[1..],
-						await executor.Where(),
-						owner
-					));
-				}
-				else
-				{
-					return ErrorMessages.Returns.InvalidObjectType;
-				}
-
-				if (await Mediator.Send(new GetObjectNodeQuery(cloneDbRef)) is not AnySharpObject clonedObj)
-				{
-					throw new InvalidOperationException($"The clone {cloneDbRef} was not found after it was created.");
-				}
-
-				var preserve = args.ContainsKey("3") &&
-					args["3"].Message!.ToPlainText().Equals("preserve", StringComparison.OrdinalIgnoreCase);
-
-				await foreach (var attr in obj.Object().Attributes.Value)
-				{
-					if (!attr.Name.StartsWith("_"))
-					{
-						await AttributeService.SetAttributeAsync(executor, clonedObj,
-							attr.Name, attr.Value);
-					}
-				}
-
-				// Synchronised to the source, not unioned with it. The clone is created through the same
-				// path as any other object and therefore arrives carrying the configured creation
-				// defaults, so copying only what the source has would leave a NO_COMMAND that the source
-				// had deliberately cleared — and the $-commands just copied onto the clone would not run.
-				// The attribute-flag sync above works the same way, for the same reason.
-				var copyable = await obj.Object().Flags.Value
-					.Where(flag => preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
-					.Select(flag => flag.Name)
-					.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
-
-				// Materialized: the clone's flags are unset while this list is walked.
-				var clonedObjectFlags = await clonedObj.Object().Flags.Value.ToArrayAsync();
-				foreach (var flag in clonedObjectFlags.Where(flag => !copyable.Contains(flag.Name)))
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, $"!{flag.Name}", false);
-				}
-
-				foreach (var flagName in copyable)
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, flagName, false);
-				}
-
-				await EventService.TriggerEventAsync(
-					parser,
-					"OBJECT`CREATE",
-					executor.Object().DBRef,
-					cloneDbRef.ToString(),
-					obj.Object().DBRef.ToString()); // cloned-from
-
-				return new CallState(cloneDbRef.ToString());
-			}
-		);
-	}
-
-	[SharpFunction(Name = "create", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
-	public async ValueTask<CallState> Create(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		return await BuildingHelpers.CreateThingAsync(parser, Mediator, Database, Configuration, ValidateService,
-			NotifyService, EventService, executor, parser.CurrentState.Arguments["0"].Message!) switch
-		{
-			// PennMUSH fun_create hands do_create's dbref to safe_dbref, which writes #n and not an
-			// objid (src/fundb.c).
-			DBRef thing => new CallState($"#{thing.Number}"),
-			Error<string> error => new CallState(error.Value)
-		};
-	}
-
 	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> Die(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -619,25 +457,6 @@ public partial class Functions
 		}
 
 		return ValueTask.FromResult(new CallState(string.Join(" ", rolls)));
-	}
-
-	[SharpFunction(Name = "dig", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
-	public async ValueTask<CallState> Dig(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var roomName = args["0"].Message!.ToPlainText();
-
-		if (string.IsNullOrWhiteSpace(roomName))
-		{
-			return ErrorMessages.Returns.BadObjectName;
-		}
-
-		var response = await Mediator.Send(new CreateRoomCommand(
-			roomName,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
-
-		return new CallState(response.ToString());
 	}
 
 	[SharpFunction(Name = "fn", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
@@ -865,108 +684,6 @@ public partial class Functions
 		return new CallState(ErrorMessages.Returns.BadRegName);
 	}
 
-	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi)]
-	public async ValueTask<CallState> Link(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objectName = args["0"].Message!.ToPlainText();
-		var destName = args["1"].Message!.ToPlainText();
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, objectName, LocateFlags.All,
-			async exitObj =>
-			{
-				if (!await PermissionService.Controls(executor, exitObj))
-				{
-					return ErrorMessages.Returns.PermissionDenied;
-				}
-
-				if (exitObj is SharpExit exit)
-				{
-					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
-					{
-						await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Plain(LinkTypeHome));
-						return "1";
-					}
-					else if (destName.Equals(LinkTypeVariable, StringComparison.InvariantCultureIgnoreCase))
-					{
-						await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Plain(LinkTypeVariable));
-						return "1";
-					}
-
-					// Link to a room
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-						executor, executor, destName, LocateFlags.All,
-						async destObj =>
-						{
-							if (destObj is not SharpRoom destinationRoom)
-							{
-								return ErrorMessages.Returns.InvalidDestination;
-							}
-
-							if (!await PermissionService.Controls(executor, destObj) && !await destObj.HasFlag("LINK_OK"))
-							{
-								return ErrorMessages.Returns.PermissionDenied;
-							}
-
-							await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Empty);
-							await Mediator.Send(new LinkExitCommand(exit, destinationRoom));
-
-							return "1";
-						}
-					);
-				}
-				else if (exitObj is SharpThing or SharpPlayer)
-				{
-					// Set home for thing or player
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-						executor, executor, destName, LocateFlags.All,
-						async destObj =>
-						{
-							// create.c:395-399: a home is anything that is not an exit, and not the object itself.
-							if (!destObj.IsContainer || destObj.Object().DBRef.Equals(exitObj.Object().DBRef))
-							{
-								return ErrorMessages.Returns.InvalidDestination;
-							}
-
-							// create.c:404. ABODE is ROOM-only in the flag seed, as in PennMUSH, so a
-							// player or thing destination is gated on control alone. Penn's following
-							// room == HOME guard (create.c:412) is unreachable: this branch matches
-							// with MAT_EVERYTHING, which has no home entry, and only
-							// parse_linkable_room ever yields HOME.
-							if (!await PermissionService.Controls(executor, destObj) && !await destObj.HasFlag("ABODE"))
-							{
-								return ErrorMessages.Returns.PermissionDenied;
-							}
-
-							await Mediator.Send(new SetObjectHomeCommand(exitObj.AsContent, destObj.AsContainer));
-							return "1";
-						}
-					);
-				}
-				else if (exitObj is SharpRoom room)
-				{
-					// Set drop-to for room
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-						executor, executor, destName, LocateFlags.All,
-						async destObj =>
-						{
-							if (destObj is not SharpRoom dropTo)
-							{
-								return ErrorMessages.Returns.InvalidDestination;
-							}
-
-							await Mediator.Send(new LinkRoomCommand(room, dropTo));
-							return "1";
-						}
-					);
-				}
-
-				return ErrorMessages.Returns.InvalidObjectType;
-			});
-	}
-
 	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -1126,40 +843,6 @@ public partial class Functions
 	[SharpFunction(Name = "null", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> Null(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult(CallState.Empty);
-
-	[SharpFunction(Name = "open", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
-	public async ValueTask<CallState> Open(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var exitName = args["0"].Message!.ToPlainText();
-
-		// Parse exit name and aliases
-		var exitParts = exitName.Split(';');
-		var primaryName = exitParts[0];
-		var aliases = exitParts[1..];
-
-		// Get source location (default to executor's location)
-		var sourceRoom = await executor.Where();
-
-		// Optional: arg 1 could be destination, arg 2 could be source room
-		// For now, keep it simple - create exit at executor's location
-
-		// Check permissions
-		if (!await PermissionService.Controls(executor, sourceRoom.WithExitOption()))
-		{
-			return ErrorMessages.Returns.PermissionDenied;
-		}
-
-		// Create the exit
-		var exitDbRef = await Mediator.Send(new CreateExitCommand(
-			primaryName,
-			aliases,
-			sourceRoom,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
-
-		return new CallState(exitDbRef.ToString());
-	}
 
 	// r(<register>[, <type>]) — read a register. <type> (default "qregisters") selects the store, per
 	// `help r`: qregisters (setq/setr), args (the %0-%9 stack + named regexp $-command captures), iter
@@ -1922,64 +1605,6 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(item ?? MarkupText.Empty));
 	}
 
-	[SharpFunction(Name = "tel", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi)]
-	public async ValueTask<CallState> Tel(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objectName = args["0"].Message!.ToPlainText();
-		var destName = args["1"].Message!.ToPlainText();
-
-		// fundb.c:2321-2322: the third argument is TEL_SILENT, which safe_tel passes through as
-		// nomovemsgs. TEL_DEFAULT carries no silence, so an unqualified tel() announces the move.
-		// The fourth, TEL_INSIDE, only decides the player-into-player case, which this does not model.
-		var quiet = args.TryGetValue("2", out var quietArg) && quietArg.Message!.Truthy();
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, objectName, LocateFlags.All,
-			async targetObj =>
-			{
-				if (targetObj.IsRoom)
-				{
-					return ErrorMessages.Returns.CannotTeleport;
-				}
-
-				if (!await PermissionService.Controls(executor, targetObj))
-				{
-					return ErrorMessages.Returns.CannotTeleport;
-				}
-
-				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-					executor, executor, destName, LocateFlags.All,
-					async destObj =>
-					{
-						if (destObj.IsExit)
-						{
-							return ErrorMessages.Returns.InvalidDestination;
-						}
-
-						var destinationContainer = destObj.AsContainer;
-						var targetContent = targetObj.AsContent;
-
-						if (await MoveService.WouldCreateLoop(targetContent, destinationContainer))
-						{
-							return ErrorMessages.Returns.WouldCreateLoop;
-						}
-
-						// fundb.c:2326 hands the whole thing to do_teleport, whose move is safe_tel
-						// (wiz.c:578): the move triads fire, and STICKY luggage is stripped on a
-						// cross-owner hop.
-						var moveResult = await MoveService.SafeTel(
-							parser, targetContent, destinationContainer, quiet,
-							executor.Object().DBRef, "tel()");
-
-						return moveResult is Error<string>
-							? ErrorMessages.Returns.CannotTeleport
-							: "1";
-					});
-			});
-	}
-
 	[SharpFunction(Name = "testlock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> TestLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -2086,51 +1711,6 @@ public partial class Functions
 		}
 
 		return ValueTask.FromResult<CallState>(new(string.Empty));
-	}
-
-	[SharpFunction(Name = "wipe", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX)]
-	public async ValueTask<CallState> Wipe(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objAttr = args["0"].Message!.ToPlainText();
-
-		// wipe(<object>[/<attribute pattern>]) - the same argument @wipe takes, because
-		// PennMUSH's fun_wipe hands it straight to do_wipe (src/set.c). The pattern half is not
-		// optional decoration: without it every call wiped the whole object.
-		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttr) is not { Object: var objectName, Attribute: var maybeAttribute })
-		{
-			return new CallState(ErrorMessages.Returns.InvalidObject);
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, objectName, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return ErrorMessages.Returns.PermissionDenied;
-				}
-
-				if (await obj.HasFlag("SAFE"))
-				{
-					await NotifyService.NotifyLocalized(executor,
-						nameof(ErrorMessages.Notifications.ObjectIsProtectedSafe), executor);
-					return ErrorMessages.Returns.Safe;
-				}
-
-				// Everything else - the per-match write gate, the ancestor walk, the wizard- and
-				// safe-attribute guards, and do_wipe's own per-match/tally reporting - belongs to
-				// ClearAttributeAsync's wipe branch, exactly as it does for @WIPE. Enumerating the
-				// attributes here and firing raw ClearAttributeCommands skipped all of it.
-				var attributePattern = string.IsNullOrEmpty(maybeAttribute) ? "**" : maybeAttribute;
-				await AttributeService.ClearAttributeAsync(executor, obj, attributePattern,
-					IAttributeService.AttributePatternMode.Wildcard);
-
-				// PennMUSH's wipe() "returns nothing" (help WIPE()); it is @wipe's side effect
-				// exposed as a function, not a reporting call.
-				return string.Empty;
-			});
 	}
 
 	/// <summary>
