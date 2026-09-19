@@ -93,6 +93,7 @@ public class TelnetServer : ConnectionHandler
 		// interpreter has to exist before it can hand any of them anything.
 		TelnetInterpreter? telnetInterpreter = null;
 		var telnetAnnounced = 0;
+		var puebloStarted = false;
 
 		// Anything that writes connection metadata in the main process has to arrive after the handle
 		// is registered there, because every one of those consumers gives up on an unregistered handle
@@ -220,6 +221,21 @@ public class TelnetServer : ConnectionHandler
 					// line for the whole session, so a client that repeats it would otherwise flood the
 					// log at Information with content it chose.
 					_logger.LogDebug("Pueblo handshake detected on handle {Handle}", nextPort);
+
+					// PennMUSH's do_command answers with PUEBLO_SEND, and that answer is what switches the
+					// client into HTML mode; a repeat gets the short form, without the clear.
+					if (telnetInterpreter is not null)
+					{
+						await telnetInterpreter.SendAsync(Encoding.ASCII.GetBytes(
+							puebloStarted ? ProtocolConstants.PuebloRestart : ProtocolConstants.PuebloStart));
+					}
+
+					var firstHandshake = !puebloStarted;
+					puebloStarted = true;
+					if (!firstHandshake)
+					{
+						return;
+					}
 
 					if (await TryUpdateFormatAsync(nextPort, OutputFormat.Pueblo, ct))
 					{
