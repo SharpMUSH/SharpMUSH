@@ -1250,45 +1250,6 @@ public partial class Functions
 		return new CallState(string.Join(" ", await playersInZone.ToArrayAsync()));
 	}
 
-	[SharpFunction(Name = "zfind", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["zone", "flags"])]
-	public async ValueTask<CallState> ZoneFind(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = args["0"].Message!.ToPlainText();
-
-		var maybeZone = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All);
-		if (maybeZone is not AnySharpObject zone)
-		{
-			return new CallState(maybeZone is Error<string> error ? error.Value : ErrorMessages.Returns.NoMatch);
-		}
-
-		var hasSeeAll = await executor.IsSee_All();
-		if (!hasSeeAll)
-		{
-			if (!await LockService.Evaluate(LockType.Zone, zone, executor))
-			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-		}
-
-		var objectList = await Mediator.CreateStream(new GetObjectsByZoneQuery(zone))
-			.Where(async (obj, _) =>
-			{
-				return await Mediator.Send(new GetObjectNodeQuery(new DBRef(obj.Key))) is AnySharpObject fullObj
-					&& (hasSeeAll || await PermissionService.CanExamine(executor, fullObj));
-			})
-			.Select(obj => $"#{obj.Key}")
-			.ToArrayAsync();
-
-		var separator = args.TryGetValue("1", out var arg1Value) && arg1Value.Message!.ToPlainText() is { } format
-			&& !string.IsNullOrWhiteSpace(format)
-				? format
-				: " ";
-
-		return new CallState(string.Join(separator, objectList));
-	}
-
 	[SharpFunction(Name = "ports", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Ports(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
