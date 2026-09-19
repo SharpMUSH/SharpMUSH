@@ -1,6 +1,5 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -8,114 +7,15 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using SharpMUSH.Library.Utilities;
+using System.Collections.Immutable;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-	[SharpCommand(Name = "@ATRLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object/attribute", "on-off"])]
-	public async ValueTask<Option<CallState>> AttributeLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
-
-		if (!args.TryGetValue("0", out var objAttrArg))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
-		}
-
-		var objAttrText = objAttrArg.Message!.ToPlainText();
-		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText) is not { Object: var dbref, Attribute: { } attrName })
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
-			return new CallState(ErrorMessages.Returns.InvalidFormat);
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, dbref, LocateFlags.All) switch
-		{
-			AnySharpObject targetObject => await AttributeLockAsync(executor, targetObject, args, attrName),
-			Error<CallState> error => error.Value
-		};
-	}
-
-	private async ValueTask<Option<CallState>> AttributeLockAsync(AnySharpObject executor, AnySharpObject targetObject,
-		Dictionary<string, CallState> args, string attrName)
-	{
-		if (!await PermissionService.Controls(executor, targetObject))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		if (await AttributeService.GetAttributeAsync(executor, targetObject, attrName,
-				IAttributeService.AttributeMode.Read, false) is not SharpAttribute[] attribute)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
-			return new CallState(ErrorMessages.Returns.NoMatch);
-		}
-
-		if (!args.TryGetValue("1", out var valueArg) || string.IsNullOrEmpty(valueArg.Message?.ToPlainText()))
-		{
-			var isLocked = attribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
-			await NotifyService.NotifyLocalized(executor,
-				isLocked
-					? nameof(ErrorMessages.Notifications.AttributeIsLocked)
-					: nameof(ErrorMessages.Notifications.AttributeIsUnlocked),
-				executor);
-			return new CallState(string.Empty);
-		}
-
-		var lockValue = valueArg.Message!.ToPlainText().ToLowerInvariant();
-		bool shouldLock;
-
-		if (lockValue == "on" || lockValue == "1" || lockValue == "yes")
-		{
-			shouldLock = true;
-		}
-		else if (lockValue == "off" || lockValue == "0" || lockValue == "no")
-		{
-			shouldLock = false;
-		}
-		else
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgument), executor);
-			return new CallState(ErrorMessages.Returns.InvalidValue);
-		}
-
-		if (!await PermissionService.CanSet(executor, targetObject, attribute))
-		{
-			await NotifyService.Notify(executor, "You need to be able to set the attribute to change its lock.", executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		var changed = shouldLock
-			? await AttributeService.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED")
-			: await AttributeService.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
-		if (changed is Error<string> error)
-		{
-			await NotifyService.Notify(executor, error.Value, executor);
-			return new CallState(error.Value);
-		}
-		if (shouldLock)
-		{
-			var owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-			if (!await Mediator.Send(new SetAttributeOwnerCommand(targetObject.Object().DBRef,
-				attribute.Select(item => item.Name).ToArray(), owner), ExecutionBudget.CurrentToken))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
-				return new CallState(ErrorMessages.Returns.NoMatch);
-			}
-		}
-		await NotifyService.NotifyLocalized(executor, shouldLock
-			? nameof(ErrorMessages.Notifications.AttributeLocked)
-			: nameof(ErrorMessages.Notifications.AttributeUnlocked), executor);
-
-		return new CallState(string.Empty);
-	}
-
 	[SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
 	public async ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -516,6 +416,328 @@ public partial class Commands
 			IAttributeService.AttributePatternMode.Wildcard);
 
 		return new CallState(string.Empty);
+	}
+
+	[SharpCommand(Name = "@EDIT", Switches = ["FIRST", "CHECK", "QUIET", "REGEXP", "NOCASE", "ALL"],
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 1, MaxArgs = 0, ParameterNames = ["object/attribute", "from", "to"])]
+	public async ValueTask<Option<CallState>> Edit(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var switches = parser.CurrentState.Switches;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
+
+		var objAttrArg = args.ElementAtOrDefault(0).Value;
+		if (objAttrArg == null || objAttrArg.Message == null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidArguments), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		var objAttrText = objAttrArg.Message.ToPlainText();
+		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText) is not { Object: var dbref, Attribute: { } attrPattern })
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditInvalidFormat), executor);
+			return new CallState(ErrorMessages.Returns.InvalidFormat);
+		}
+
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+			executor, executor, dbref, LocateFlags.All) switch
+		{
+			AnySharpObject targetObject => await EditAttributesAsync(parser, executor, targetObject, args, switches, attrPattern),
+			Error<CallState> error => error.Value
+		};
+	}
+
+	private async ValueTask<Option<CallState>> EditAttributesAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject targetObject, ImmutableSortedDictionary<string, CallState> args, IEnumerable<string> switches,
+		string attrPattern)
+	{
+		var canModify = await PermissionService.Controls(executor, targetObject);
+		if (!canModify)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		// With RSArgs, the arguments after = are split by comma
+		var searchArg = args.ElementAtOrDefault(1).Value;
+		var replaceArg = args.ElementAtOrDefault(2).Value;
+
+		if (searchArg == null || searchArg.Message == null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditMustSpecifySearchAndReplace), executor);
+			return new CallState(ErrorMessages.Returns.MissingArguments);
+		}
+
+		var search = searchArg.Message.ToPlainText();
+		var replace = replaceArg?.Message != null ? replaceArg.Message.ToPlainText() : string.Empty;
+
+		return await AttributeService.GetAttributePatternAsync(
+			executor, targetObject, attrPattern, false, IAttributeService.AttributePatternMode.Wildcard) switch
+		{
+			SharpAttribute[] attributes => await EditMatchedAttributesAsync(parser, executor, targetObject, switches,
+				attributes.ToList(), search, replace),
+			Error<string> error => await NotifyAndReturnAsync(executor, error.Value)
+		};
+	}
+
+	private async ValueTask<Option<CallState>> NotifyAndReturnAsync(AnySharpObject executor, string message)
+	{
+		await NotifyService.Notify(executor, message, executor);
+		return new CallState(message);
+	}
+
+	/// <summary>Applies the edit to each attribute the pattern matched.</summary>
+	private async ValueTask<Option<CallState>> EditMatchedAttributesAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject targetObject, IEnumerable<string> switches, List<SharpAttribute> attrList, string search,
+		string replace)
+	{
+		if (attrList.Count == 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditNoMatchingAttributesFound), executor);
+			return new CallState(ErrorMessages.Returns.NoMatch);
+		}
+
+		var hadErrors = false;
+		int modifiedCount = 0;
+		int unchangedCount = 0;
+		var isRegexp = switches.Contains("REGEXP");
+		var isFirst = switches.Contains("FIRST");
+		var isCheck = switches.Contains("CHECK");
+		var isQuiet = switches.Contains("QUIET");
+		var isAll = switches.Contains("ALL");
+		var isNoCase = switches.Contains("NOCASE");
+
+		foreach (var attr in attrList)
+		{
+			var attrName = attr.LongName!;
+			var attrValue = attr.Value;
+			var originalText = attrValue.ToPlainText();
+			string newText;
+
+			if (isRegexp)
+			{
+				var edited = await PerformRegexEdit(parser, originalText, search, replace, isAll, isNoCase);
+				newText = edited.Message!.ToPlainText();
+				hadErrors |= edited.HadErrors;
+			}
+			else
+			{
+				newText = PerformSimpleEdit(originalText, search, replace, isFirst);
+			}
+
+			if (newText == originalText)
+			{
+				unchangedCount++;
+				continue;
+			}
+
+			modifiedCount++;
+
+			if (!isQuiet && !isCheck)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditAttributeSetFormat), executor, attrName);
+			}
+			else if (!isQuiet && isCheck)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EditWouldChangeToFormat), executor, attrName, newText);
+			}
+
+			if (!isCheck)
+			{
+				await AttributeService.SetAttributeAsync(executor, targetObject, attrName, MarkupText.Plain(newText));
+			}
+		}
+
+		if (isQuiet || (modifiedCount + unchangedCount > 1))
+		{
+			var checkPrefix = isCheck ? "Would edit" : "Edited";
+			await NotifyService.Notify(executor,
+				$"{checkPrefix} {modifiedCount} attribute{(modifiedCount != 1 ? "s" : "")}. {unchangedCount} unchanged.", executor);
+		}
+
+		return new CallState(string.Empty) { HadErrors = hadErrors };
+	}
+
+	/// <summary>
+	/// Split search/replace text by comma, respecting curly brace escaping
+	/// </summary>
+	private string[] SplitSearchReplace(string text)
+	{
+		var parts = new List<string>();
+		var current = new StringBuilder();
+		int braceDepth = 0;
+
+		for (int i = 0; i < text.Length; i++)
+		{
+			char c = text[i];
+
+			if (c == '{')
+			{
+				braceDepth++;
+				current.Append(c);
+			}
+			else if (c == '}')
+			{
+				braceDepth--;
+				current.Append(c);
+			}
+			else if (c == ',' && braceDepth == 0)
+			{
+				parts.Add(current.ToString());
+				current.Clear();
+			}
+			else
+			{
+				current.Append(c);
+			}
+		}
+
+		parts.Add(current.ToString());
+
+		for (int i = 0; i < parts.Count; i++)
+		{
+			var part = parts[i].Trim();
+			if (part.StartsWith('{') && part.EndsWith('}'))
+			{
+				part = part[1..^1];
+			}
+			parts[i] = part;
+		}
+
+		return [.. parts];
+	}
+
+	/// <summary>
+	/// Perform simple string replacement
+	/// </summary>
+	private string PerformSimpleEdit(string text, string search, string replace, bool firstOnly)
+	{
+		if (search == "^")
+		{
+			return replace + text;
+		}
+		else if (search == "$")
+		{
+			return text + replace;
+		}
+		else if (firstOnly)
+		{
+			int index = text.IndexOf(search);
+			if (index >= 0)
+			{
+				return text[..index] + replace + text[(index + search.Length)..];
+			}
+			return text;
+		}
+		else
+		{
+			return text.Replace(search, replace);
+		}
+	}
+
+	/// <summary>
+	/// Perform regex replacement with evaluation: PennMUSH's <c>do_edit_regexp</c> (<c>src/set.c</c>).
+	/// Each replacement is evaluated inside a regexp capture context holding its match, and the capture
+	/// text is never pasted into the replacement.
+	/// </summary>
+	private async ValueTask<CallState> PerformRegexEdit(IMUSHCodeParser parser, string text,
+		string pattern, string replaceTemplate, bool all, bool nocase)
+	{
+		var hadErrors = false;
+		Match[] matches = [];
+		var replacements = Array.Empty<string>();
+		var firstEvaluated = 0;
+		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
+		parser.CurrentState.RegexRegisters.Push(captures);
+		try
+		{
+			var options = RegexOptions.None;
+			if (nocase)
+			{
+				options |= RegexOptions.IgnoreCase;
+			}
+
+			var regex = SoftcodeRegex.Create(pattern, options);
+
+			if (all)
+			{
+				// Evaluated last match first, as the replacements may have side effects; spliced once.
+				matches = regex.Matches(text).ToArray();
+				replacements = new string[matches.Length];
+				firstEvaluated = matches.Length;
+				for (var i = matches.Length - 1; i >= 0; i--)
+				{
+					var replacement = await EvaluateRegexReplacement(parser, captures, regex, matches[i], replaceTemplate, text);
+					hadErrors |= replacement.HadErrors;
+					replacements[i] = replacement.Message!.ToPlainText();
+					firstEvaluated = i;
+				}
+
+				text = SpliceReplacements(text, matches, replacements, firstEvaluated);
+			}
+			else
+			{
+				var match = regex.Match(text);
+				if (match.Success)
+				{
+					var replacement = await EvaluateRegexReplacement(parser, captures, regex, match, replaceTemplate, text);
+					hadErrors |= replacement.HadErrors;
+					text = text[..match.Index] + replacement.Message!.ToPlainText() + text[(match.Index + match.Length)..];
+				}
+			}
+
+			return new CallState(text) { HadErrors = hadErrors };
+		}
+		catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+		{
+			// Same answer as an unusable pattern: the text keeps only the replacements evaluated before the failure.
+			return new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors };
+		}
+		catch (ArgumentException)
+		{
+			return new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors };
+		}
+		finally
+		{
+			parser.CurrentState.RegexRegisters.TryPop(out _);
+		}
+	}
+
+	/// <summary>
+	/// Builds <paramref name="text"/> with <c>matches[from..]</c> replaced by the matching
+	/// <paramref name="replacements"/>, copying each unchanged stretch once.
+	/// </summary>
+	private static string SpliceReplacements(string text, Match[] matches, string[] replacements, int from)
+	{
+		if (from >= matches.Length)
+		{
+			return text;
+		}
+
+		var builder = new StringBuilder(text.Length);
+		var position = 0;
+		for (var i = from; i < matches.Length; i++)
+		{
+			builder.Append(text, position, matches[i].Index - position).Append(replacements[i]);
+			position = matches[i].Index + matches[i].Length;
+		}
+
+		return builder.Append(text, position, text.Length - position).ToString();
+	}
+
+	/// <summary>
+	/// The replacement for one match, evaluated with that match as the innermost regexp context.
+	/// </summary>
+	private static async ValueTask<CallState> EvaluateRegexReplacement(IMUSHCodeParser parser,
+		RegexpCaptureFrame captures, Regex regex, Match match, string template, string text)
+	{
+		captures.Fill(regex, match, MarkupText.Plain(text));
+
+		var evaluatedReplacement = await parser.FunctionParse(MarkupText.Plain(template));
+		return new CallState(evaluatedReplacement?.Message?.ToPlainText() ?? string.Empty)
+		{ HadErrors = evaluatedReplacement?.HadErrors == true };
 	}
 
 }
