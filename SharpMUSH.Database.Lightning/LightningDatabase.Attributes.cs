@@ -199,30 +199,20 @@ public partial class LightningDatabase
 		=> new(Store.Read(tx => ReadAttributeEntry(tx, name)));
 
 	public async ValueTask<SharpAttributeEntry?> CreateOrUpdateAttributeEntryAsync(string name, string[] defaultFlags,
-		string? limit = null, string[]? enumValues = null, CancellationToken cancellationToken = default)
+		string? limit = null, string[]? enumValues = null, char enumDelimiter = ' ',
+		CancellationToken cancellationToken = default)
 	{
-		var record = new AttributeEntryRecord
-		{
-			Name = name,
-			DefaultFlags = defaultFlags,
-			Limit = limit,
-			Enum = enumValues
-		};
+		var record = NewAttributeEntryRecord(name, defaultFlags, limit, enumValues, enumDelimiter);
 
 		await Store.WriteAsync(tx => tx.Put(Tables.AttrEntry, Keys.Upper(name), Codec.Serialize(record)), cancellationToken);
 		return MapEntry(record);
 	}
 
 	public async ValueTask<SharpAttributeEntry?> CreateAttributeEntryIfAbsentAsync(string name, string[] defaultFlags,
-		string? limit = null, string[]? enumValues = null, CancellationToken cancellationToken = default)
+		string? limit = null, string[]? enumValues = null, char enumDelimiter = ' ',
+		CancellationToken cancellationToken = default)
 	{
-		var record = new AttributeEntryRecord
-		{
-			Name = name,
-			DefaultFlags = defaultFlags,
-			Limit = limit,
-			Enum = enumValues
-		};
+		var record = NewAttributeEntryRecord(name, defaultFlags, limit, enumValues, enumDelimiter);
 
 		var created = await Store.WriteAsync(tx =>
 		{
@@ -914,8 +904,20 @@ public partial class LightningDatabase
 		Name = record.Name,
 		DefaultFlags = record.DefaultFlags,
 		Limit = string.IsNullOrEmpty(record.Limit) ? null : record.Limit,
-		Enum = record.Enum is { Length: > 0 } ? record.Enum : null
+		Enum = record.Enum is { Length: > 0 } ? record.Enum : null,
+		EnumDelimiter = record.EnumDelimiter is { Length: 1 } delimiter ? delimiter[0] : ' '
 	};
+
+	/// <summary>A space delimiter is the default and is not written, so older rows and new ones read alike.</summary>
+	private static AttributeEntryRecord NewAttributeEntryRecord(string name, string[] defaultFlags, string? limit,
+		string[]? enumValues, char enumDelimiter) => new()
+		{
+			Name = name,
+			DefaultFlags = defaultFlags,
+			Limit = limit,
+			Enum = enumValues,
+			EnumDelimiter = enumDelimiter == ' ' ? null : enumDelimiter.ToString()
+		};
 
 	/// <summary>The identity <see cref="SetAttributeFlagAsync(SharpAttribute,SharpAttributeFlag,CancellationToken)"/>
 	/// reads back: <c>dbref_LONGNAME</c>, split at the first underscore (the dbref half is all digits, so a

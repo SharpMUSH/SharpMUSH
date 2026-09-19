@@ -1983,38 +1983,26 @@
   <data name="AttributeCommandRenamedFormat" xml:space="preserve">
     <value>Attribute '{0}' renamed to '{1}' in standard attribute table.</value>
   </data>
-  <data name="AttributeCommandMustSpecifyPattern" xml:space="preserve">
-    <value>You must specify a regexp pattern.</value>
+  <data name="AttributeCommandRestrictionSetFormat" xml:space="preserve">
+    <value>{0} -- Attribute {1} set to: {2}</value>
   </data>
-  <data name="AttributeCommandLimitSettingPatternFormat" xml:space="preserve">
-    <value>@attribute/limit: Setting pattern for '{0}'</value>
+  <data name="AttributeCommandRestrictionUnsetFormat" xml:space="preserve">
+    <value>{0} -- Attribute limit or enum unset.</value>
   </data>
-  <data name="AttributeCommandLimitPatternFormat" xml:space="preserve">
-    <value>  Pattern: {0}</value>
+  <data name="AttributeCommandRestrictionAlreadyUnsetFormat" xml:space="preserve">
+    <value>{0} -- Attribute limit or enum already unset.</value>
   </data>
-  <data name="AttributeCommandLimitNewValuesMustMatch" xml:space="preserve">
-    <value>  New values must match this pattern (case insensitive)</value>
+  <data name="AttributeCommandNotInTableUseAccess" xml:space="preserve">
+    <value>I don't know that attribute. Please use @attribute/access to create it, first.</value>
   </data>
-  <data name="AttributeCommandValidationNotImplemented" xml:space="preserve">
-    <value>Note: Attribute validation not yet implemented.</value>
+  <data name="AttributeCommandInvalidRegexp" xml:space="preserve">
+    <value>Invalid Regular Expression.</value>
   </data>
-  <data name="AttributeCommandMustSpecifyChoices" xml:space="preserve">
-    <value>You must specify a list of choices.</value>
-  </data>
-  <data name="AttributeCommandMustSpecifyAtLeastOneChoice" xml:space="preserve">
-    <value>You must specify at least one choice.</value>
+  <data name="AttributeCommandDelimiterOneCharacter" xml:space="preserve">
+    <value>Delimiter must be one character.</value>
   </data>
   <data name="AttributeCommandFailedToUpdate" xml:space="preserve">
     <value>Failed to update attribute entry.</value>
-  </data>
-  <data name="AttributeCommandEnumSetChoicesFormat" xml:space="preserve">
-    <value>@attribute/enum: Set choices for '{0}'</value>
-  </data>
-  <data name="AttributeCommandEnumChoicesFormat" xml:space="preserve">
-    <value>  Choices: {0}</value>
-  </data>
-  <data name="AttributeCommandEnumNewValuesMustMatch" xml:space="preserve">
-    <value>  New values must match one of these choices</value>
   </data>
   <data name="AttributeCommandNotFoundNotErrorFormat" xml:space="preserve">
     <value>Attribute '{0}' not found in standard attribute table.</value>

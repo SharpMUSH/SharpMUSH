@@ -619,14 +619,13 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "*";
+			var pattern = args.GetValueOrDefault("0")?.Message?.ToPlainText() is { Length: > 0 } given ? given : "*";
 			var retroactive = switches.Contains("RETROACTIVE");
 
+			// quick_wild over the whole name (src/atr_tab.c:1017): the general MUSH wildcard, caseless.
+			var matcher = SoftcodeRegex.Wildcard(pattern);
 			var matchingEntries = await Mediator.CreateStream(new GetAllAttributeEntriesQuery())
-				.Where(entry =>
-					pattern == "*" ||
-					entry.Name.Contains(pattern, StringComparison.OrdinalIgnoreCase) ||
-					(pattern.Contains('*') && MatchesWildcard(entry.Name, pattern)))
+				.Where(entry => SoftcodeRegex.IsMatch(matcher, entry.Name))
 				.ToArrayAsync();
 
 			if (matchingEntries.Length == 0)
@@ -648,10 +647,11 @@ public partial class Commands
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileLimitFormat), executor, entry.Name, entry.Limit);
 				}
 
-				if (entry.Enum != null && entry.Enum.Length > 0)
+				if (entry.Enum is { Length: > 0 } choices)
 				{
-					var enumList = string.Join(" ", entry.Enum);
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileEnumFormat), executor, entry.Name, enumList);
+					// A delimiter other than space is written back, so the line re-creates the same enum.
+					var target = entry.EnumDelimiter == ' ' ? entry.Name : $"{entry.EnumDelimiter} {entry.Name}";
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDecompileEnumFormat), executor, target, string.Join(entry.EnumDelimiter, choices));
 				}
 			}
 
@@ -702,7 +702,10 @@ public partial class Commands
 				}
 			}
 
-			var entry = await Mediator.Send(new CreateAttributeEntryCommand(attrName.ToUpper(), flagNames));
+			// Permissions only: the entry's limit or enum survives, as in Penn's do_attribute_access.
+			var current = await Mediator.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
+			var entry = await Mediator.Send(new CreateAttributeEntryCommand(attrName.ToUpper(), flagNames,
+				current?.Limit, current?.Enum, current?.EnumDelimiter ?? ' '));
 			if (entry == null)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandFailedToCreate), executor);
@@ -783,7 +786,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (switches.Contains("LIMIT"))
+		if (switches.Contains("LIMIT") || switches.Contains("ENUM"))
 		{
 			if (!await executor.IsWizard())
 			{
@@ -791,72 +794,9 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			if (args.Count < 2)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyPattern), executor);
-				return new CallState(ErrorMessages.Returns.NoPatternSpecified);
-			}
-
-			var pattern = args["1"].Message?.ToPlainText();
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitSettingPatternFormat), executor, attrName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitPatternFormat), executor, pattern ?? string.Empty);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandLimitNewValuesMustMatch), executor);
-
-			// TODO: Attribute validation via regex patterns.
-			// Requirements:
-			// - Store regexp pattern with attribute in table
-			// - Validate all new attribute values against pattern
-			// - Pattern is case insensitive unless (?-i) is used
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandValidationNotImplemented), executor);
-
-			return new CallState(ErrorMessages.Returns.NotImplemented);
-		}
-
-		if (switches.Contains("ENUM"))
-		{
-			if (!await executor.IsWizard())
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
-			if (args.Count < 2)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyChoices), executor);
-				return new CallState(ErrorMessages.Returns.NoChoicesSpecified);
-			}
-
-			var choices = args["1"].Message?.ToPlainText();
-			var choiceArray = choices?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
-
-			if (choiceArray.Length == 0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandMustSpecifyAtLeastOneChoice), executor);
-				return new CallState(ErrorMessages.Returns.NoChoicesSpecified);
-			}
-
-			var existingEntry = await Mediator.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
-			var defaultFlags = existingEntry?.DefaultFlags ?? [];
-			var limit = existingEntry?.Limit;
-
-			// Note: Command parameter is EnumValues, model property is Enum
-			var enumAttrEntry = await Mediator.Send(new CreateAttributeEntryCommand(
-				attrName.ToUpper(),
-				defaultFlags,
-				Limit: limit,
-				EnumValues: choiceArray));
-
-			if (enumAttrEntry == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandFailedToUpdate), executor);
-				return new CallState(ErrorMessages.Returns.UpdateFailed);
-			}
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumSetChoicesFormat), executor, attrName);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumChoicesFormat), executor, string.Join(" ", choiceArray));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumNewValuesMustMatch), executor);
-
-			return CallState.Empty;
+			// Penn's cmds.c tries /limit before /enum.
+			return await SetAttributeRestrictionAsync(executor, attrName,
+				args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? string.Empty, isEnum: !switches.Contains("LIMIT"));
 		}
 
 		var attrEntry = await Mediator.Send(new GetAttributeEntryQuery(attrName.ToUpper()));
@@ -886,23 +826,79 @@ public partial class Commands
 
 		if (attrEntry.Enum != null && attrEntry.Enum.Any())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumValuesFormat), executor, string.Join(" ", attrEntry.Enum));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandEnumValuesFormat), executor, string.Join(attrEntry.EnumDelimiter, attrEntry.Enum));
 		}
 
 		return CallState.Empty;
 	}
 
 	/// <summary>
-	/// Simple wildcard matching helper for attribute name patterns.
-	/// Supports * as wildcard character.
+	/// PennMUSH's <c>do_attribute_limit</c> (<c>src/atr_tab.c:629-743</c>): <c>@attribute/limit</c> sets a
+	/// caseless regexp every value must match, <c>@attribute/enum [&lt;delim&gt;] &lt;attr&gt;=&lt;list&gt;</c> the
+	/// choices a value must name, and an empty restriction unsets either. The two replace each other, and
+	/// the attribute must already be in the table. <see cref="SharpMUSH.Library.Services.AttributeValueRestriction"/> enforces them.
 	/// </summary>
-	private bool MatchesWildcard(string text, string pattern)
+	private async ValueTask<Option<CallState>> SetAttributeRestrictionAsync(AnySharpObject executor, string target,
+		string restriction, bool isEnum)
 	{
-		var regexPattern = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
-		.Replace("\\*", ".*") + "$";
+		var name = target;
+		var delimiter = ' ';
+		string? limit = null;
+		string[]? choices = null;
 
-		return System.Text.RegularExpressions.Regex.IsMatch(text, regexPattern,
-		System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+		if (restriction.Length > 0 && !isEnum)
+		{
+			try
+			{
+				SoftcodeRegex.Create(restriction, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+			}
+			catch (ArgumentException)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandInvalidRegexp), executor);
+				return new CallState(ErrorMessages.Returns.InvalidRegexp);
+			}
+
+			limit = restriction;
+		}
+		else if (restriction.Length > 0)
+		{
+			// "@attribute/enum | NAME=a|b": a delimiter is exactly one character before a space.
+			if (target.IndexOf(' ') is var space and >= 0)
+			{
+				if (space != 1)
+				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandDelimiterOneCharacter), executor);
+					return new CallState(ErrorMessages.Returns.InvalidArguments);
+				}
+
+				delimiter = target[0];
+				name = target[2..];
+			}
+
+			choices = restriction.Split(delimiter, StringSplitOptions.RemoveEmptyEntries) is { Length: > 0 } split ? split : null;
+		}
+
+		name = name.Trim().TrimStart('@').ToUpperInvariant();
+		if (await Mediator.Send(new GetAttributeEntryQuery(name)) is not SharpAttributeEntry entry)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandNotInTableUseAccess), executor);
+			return new CallState(ErrorMessages.Returns.NotFound);
+		}
+
+		var wasRestricted = !string.IsNullOrEmpty(entry.Limit) || entry.Enum is { Length: > 0 };
+		await Mediator.Send(new CreateAttributeEntryCommand(entry.Name, entry.DefaultFlags, limit, choices, delimiter));
+
+		if (limit is null && choices is null)
+		{
+			await NotifyService.NotifyLocalized(executor, wasRestricted
+				? nameof(ErrorMessages.Notifications.AttributeCommandRestrictionUnsetFormat)
+				: nameof(ErrorMessages.Notifications.AttributeCommandRestrictionAlreadyUnsetFormat), executor, entry.Name);
+			return CallState.Empty;
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRestrictionSetFormat),
+			executor, entry.Name, isEnum ? "enum" : "limit", limit ?? string.Join(delimiter, choices!));
+		return CallState.Empty;
 	}
 
 	private enum DefinitionOperation { Default, List, Add, Delete, Letter, Type, Alias, Restrict, Decompile, Disable, Enable, Debug }

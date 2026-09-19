@@ -94,7 +94,7 @@ public interface IAttributeStore
 	/// <param name="enumValues">Optional enumeration of allowed values</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>The created or updated attribute entry</returns>
-	ValueTask<SharpAttributeEntry?> CreateOrUpdateAttributeEntryAsync(string name, string[] defaultFlags, string? limit = null, string[]? enumValues = null, CancellationToken cancellationToken = default);
+	ValueTask<SharpAttributeEntry?> CreateOrUpdateAttributeEntryAsync(string name, string[] defaultFlags, string? limit = null, string[]? enumValues = null, char enumDelimiter = ' ', CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Create an attribute entry only if the name is free, in one atomic step.
@@ -114,7 +114,7 @@ public interface IAttributeStore
 	/// <param name="enumValues">Optional enumeration of allowed values</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>The created entry, or null if the table already named it</returns>
-	ValueTask<SharpAttributeEntry?> CreateAttributeEntryIfAbsentAsync(string name, string[] defaultFlags, string? limit = null, string[]? enumValues = null, CancellationToken cancellationToken = default);
+	ValueTask<SharpAttributeEntry?> CreateAttributeEntryIfAbsentAsync(string name, string[] defaultFlags, string? limit = null, string[]? enumValues = null, char enumDelimiter = ' ', CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Delete an attribute entry from the attribute table.

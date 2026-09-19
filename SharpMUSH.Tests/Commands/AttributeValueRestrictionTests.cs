@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -24,12 +25,23 @@ public class AttributeValueRestrictionTests
 	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
 	private IMUSHCodeParser FunctionParser => WebAppFactoryArg.FunctionParser;
 
-	private async Task<string> EnumAttributeAsync(string choices)
+	/// <summary>A fresh attribute-table entry. Penn's /limit and /enum refuse an attribute that is not in the table.</summary>
+	private async Task<string> TableAttributeAsync(string prefix)
 	{
-		var name = TestIsolationHelpers.GenerateUniqueName("ENUM").ToUpperInvariant();
-		await CommandAsync($"@attribute/enum {name}={choices}");
+		var name = TestIsolationHelpers.GenerateUniqueName(prefix).ToUpperInvariant();
+		await CommandAsync($"@attribute/access {name}=");
 		return name;
 	}
+
+	private async Task<string> EnumAttributeAsync(string choices, string delimiter = "")
+	{
+		var name = await TableAttributeAsync("ENUM");
+		await CommandAsync($"@attribute/enum {delimiter}{(delimiter.Length > 0 ? " " : "")}{name}={choices}");
+		return name;
+	}
+
+	private bool Told(string key, string text) =>
+		TestHelpers.ReceivedNotifyLocalizedRendering(NotifyService, key, text);
 
 	[Test]
 	[Arguments("green", "Green")]
@@ -87,6 +99,128 @@ public class AttributeValueRestrictionTests
 		var attr = await EnumAttributeAsync("Red Green Blue");
 
 		await Assert.That(await FunctionAsync($"valid(attrvalue,{typed},{attr})")).IsEqualTo(expected);
+	}
+
+	// ---- @attribute/limit and /enum as commands (src/atr_tab.c do_attribute_limit) ----------------
+
+	[Test]
+	public async Task Limit_IsSetAndEnforcedCaselessly()
+	{
+		var attr = await TableAttributeAsync("LIMIT");
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "LimitSet");
+
+		await CommandAsync($"@attribute/limit {attr}=^%[a-z%]+$");
+		await CommandAsync($"&{attr} {thing}=ABC");
+		await CommandAsync($"&{attr} {thing}=abc1");
+
+		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandRestrictionSetFormat),
+			$"{attr} -- Attribute limit set to: ^[a-z]+$")).IsTrue();
+		await Assert.That(await FunctionAsync($"get({thing}/{attr})")).IsEqualTo("ABC");
+	}
+
+	[Test]
+	public async Task Limit_ThatDoesNotCompile_IsRefused()
+	{
+		var attr = await TableAttributeAsync("LIMITBAD");
+
+		await CommandAsync($"@attribute/limit {attr}=(unclosed");
+
+		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandInvalidRegexp), "Invalid Regular Expression."))
+			.IsTrue();
+		await Assert.That(await FunctionAsync($"valid(attrvalue,anything,{attr})")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task Enum_TakesADelimiter_AndItsChoicesMayHoldSpaces()
+	{
+		var attr = await EnumAttributeAsync("light blue|dark red", delimiter: "|");
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "EnumDelim");
+
+		await CommandAsync($"&{attr} {thing}=dark");
+		await Assert.That(await FunctionAsync($"get({thing}/{attr})")).IsEqualTo("dark red");
+
+		await CommandAsync($"&{attr} {thing}=LIGHT BLUE");
+		await Assert.That(await FunctionAsync($"get({thing}/{attr})")).IsEqualTo("light blue");
+
+		await Assert.That(await FunctionAsync($"valid(attrvalue,light|dark,{attr})")).IsEqualTo("0");
+	}
+
+	[Test]
+	public async Task Enum_DelimiterMustBeOneCharacter()
+	{
+		var attr = await TableAttributeAsync("ENUMDELIM");
+
+		await CommandAsync($"@attribute/enum || {attr}=a||b");
+
+		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandDelimiterOneCharacter),
+			"Delimiter must be one character.")).IsTrue();
+		await Assert.That(await FunctionAsync($"valid(attrvalue,zzz,{attr})")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task EmptyRestriction_Unsets()
+	{
+		var attr = await EnumAttributeAsync("Red Green");
+
+		await CommandAsync($"@attribute/enum {attr}=");
+
+		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandRestrictionUnsetFormat),
+			$"{attr} -- Attribute limit or enum unset.")).IsTrue();
+		await Assert.That(await FunctionAsync($"valid(attrvalue,purple,{attr})")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task Restriction_OnAnAttributeNotInTheTable_IsRefused()
+	{
+		var attr = TestIsolationHelpers.GenerateUniqueName("NOTABLE").ToUpperInvariant();
+
+		await CommandAsync($"@attribute/enum {attr}=a b");
+
+		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandNotInTableUseAccess),
+			"I don't know that attribute. Please use @attribute/access to create it, first.")).IsTrue();
+		await Assert.That(await FunctionAsync($"valid(attrvalue,zzz,{attr})")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task LimitAndEnum_ReplaceEachOther()
+	{
+		var attr = await EnumAttributeAsync("Red Green");
+
+		await CommandAsync($"@attribute/limit {attr}=^%[0-9%]+$");
+
+		await Assert.That(await FunctionAsync($"valid(attrvalue,red,{attr})")).IsEqualTo("0");
+		await Assert.That(await FunctionAsync($"valid(attrvalue,42,{attr})")).IsEqualTo("1");
+	}
+
+	[Test]
+	public async Task Access_KeepsTheEnum()
+	{
+		var attr = await EnumAttributeAsync("Red Green");
+
+		await CommandAsync($"@attribute/access {attr}=no_clone");
+
+		await Assert.That(await FunctionAsync($"valid(attrvalue,purple,{attr})")).IsEqualTo("0");
+	}
+
+	// ---- @attribute/decompile <pattern> is quick_wild (src/atr_tab.c:1017) -------------------------
+
+	[Test]
+	public async Task Decompile_MatchesTheWholeNameAsAWildcard()
+	{
+		var stem = TestIsolationHelpers.GenerateUniqueName("DECO").ToUpperInvariant();
+		await CommandAsync($"@attribute/access {stem}=");
+		await CommandAsync($"@attribute/access {stem}X=");
+		await CommandAsync($"@attribute/enum | {stem}X=a b|c");
+
+		await CommandAsync($"@attribute/decompile {stem}");
+		await CommandAsync($"@attribute/decompile {stem}?");
+
+		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandDecompileHeaderFormat),
+			$"@attribute/decompile: 1 attributes match pattern '{stem}'")).IsTrue();
+		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandDecompileHeaderFormat),
+			$"@attribute/decompile: 1 attributes match pattern '{stem}?'")).IsTrue();
+		await Assert.That(Told(nameof(ErrorMessages.Notifications.AttributeCommandDecompileEnumFormat),
+			$"@attribute/enum | {stem}X=a b|c")).IsTrue();
 	}
 
 	private ValueTask<CallState> CommandAsync(string command) =>

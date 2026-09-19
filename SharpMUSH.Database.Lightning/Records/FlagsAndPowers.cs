@@ -42,4 +42,5 @@ public sealed record AttributeEntryRecord
 	public string[] DefaultFlags { get; init; } = [];
 	public string? Limit { get; init; }
 	public string[]? Enum { get; init; }
+	public string? EnumDelimiter { get; init; }
 }

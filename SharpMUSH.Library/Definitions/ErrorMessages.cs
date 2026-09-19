@@ -304,7 +304,6 @@ public static class ErrorMessages
 		public const string NoAliasSpecified = "#-1 NO ALIAS SPECIFIED";
 		public const string NoAttribute = "#-1 NO ATTRIBUTE";
 		public const string NoAttributeSpecified = "#-1 NO ATTRIBUTE SPECIFIED";
-		public const string NoChoicesSpecified = "#-1 NO CHOICES SPECIFIED";
 		public const string NoCloneNameSpecified = "#-1 NO CLONE NAME SPECIFIED";
 		public const string NoCommandSpecified = "#-1 NO COMMAND SPECIFIED";
 		public const string NoFlagsSpecified = "#-1 NO FLAGS SPECIFIED";
@@ -316,7 +315,6 @@ public static class ErrorMessages
 		public const string NoNewNameSpecified = "#-1 NO NEW NAME SPECIFIED";
 		public const string NoObject = "#-1 NO OBJECT";
 		public const string NoObjectSpecified = "#-1 NO OBJECT SPECIFIED";
-		public const string NoPatternSpecified = "#-1 NO PATTERN SPECIFIED";
 		public const string NoPidSpecified = "#-1 NO PID SPECIFIED";
 		public const string NoPlayerSpecified = "#-1 NO PLAYER SPECIFIED";
 		public const string NoRoomNameSpecified = "#-1 NO ROOM NAME SPECIFIED";
@@ -1700,21 +1698,17 @@ public static class ErrorMessages
 		public const string AttributeCommandMustSpecifyNewName = "You must specify a new name.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandRenamedFormat = "Attribute '{0}' renamed to '{1}' in standard attribute table.";
-		public const string AttributeCommandMustSpecifyPattern = "You must specify a regexp pattern.";
+		// PennMUSH src/atr_tab.c do_attribute_limit.
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandLimitSettingPatternFormat = "@attribute/limit: Setting pattern for '{0}'";
+		public const string AttributeCommandRestrictionSetFormat = "{0} -- Attribute {1} set to: {2}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandLimitPatternFormat = "  Pattern: {0}";
-		public const string AttributeCommandLimitNewValuesMustMatch = "  New values must match this pattern (case insensitive)";
-		public const string AttributeCommandValidationNotImplemented = "Note: Attribute validation not yet implemented.";
-		public const string AttributeCommandMustSpecifyChoices = "You must specify a list of choices.";
-		public const string AttributeCommandMustSpecifyAtLeastOneChoice = "You must specify at least one choice.";
+		public const string AttributeCommandRestrictionUnsetFormat = "{0} -- Attribute limit or enum unset.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandRestrictionAlreadyUnsetFormat = "{0} -- Attribute limit or enum already unset.";
+		public const string AttributeCommandNotInTableUseAccess = "I don't know that attribute. Please use @attribute/access to create it, first.";
+		public const string AttributeCommandInvalidRegexp = "Invalid Regular Expression.";
+		public const string AttributeCommandDelimiterOneCharacter = "Delimiter must be one character.";
 		public const string AttributeCommandFailedToUpdate = "Failed to update attribute entry.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandEnumSetChoicesFormat = "@attribute/enum: Set choices for '{0}'";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandEnumChoicesFormat = "  Choices: {0}";
-		public const string AttributeCommandEnumNewValuesMustMatch = "  New values must match one of these choices";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandNotFoundNotErrorFormat = "Attribute '{0}' not found in standard attribute table.";
 		public const string AttributeCommandNotFoundNotError2 = "This is not an error - the attribute may still be used on objects.";

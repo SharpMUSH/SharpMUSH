@@ -14,9 +14,6 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public static class AttributeValueRestriction
 {
-	/// <summary>The enum's delimiter. <c>@attribute/enum</c> takes no other yet.</summary>
-	private const char EnumDelimiter = ' ';
-
 	/// <summary>
 	/// The value to store — <paramref name="value"/> itself, or the enum choice it names spelled as the
 	/// enum spells it — or the message Penn gives for refusing it.
@@ -35,7 +32,7 @@ public static class AttributeValueRestriction
 		if (entry.Enum is not { Length: > 0 } choices)
 			return value;
 
-		var choice = value.Length == 0 || value.Contains(EnumDelimiter)
+		var choice = value.Length == 0 || value.Contains(entry.EnumDelimiter)
 			? null
 			: choices.FirstOrDefault(c => c.Equals(value, StringComparison.OrdinalIgnoreCase))
 				?? choices.FirstOrDefault(c => c.StartsWith(value, StringComparison.OrdinalIgnoreCase));
@@ -43,7 +40,7 @@ public static class AttributeValueRestriction
 		return choice is not null
 			? choice
 			: new Error<string>(string.Format(ErrorMessages.Notifications.AttributeValueNotInEnumFormat,
-				entry.Name, string.Join(EnumDelimiter, choices)));
+				entry.Name, string.Join(entry.EnumDelimiter, choices)));
 	}
 
 	private static bool MatchesLimit(string limit, string value)
