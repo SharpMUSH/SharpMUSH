@@ -1,6 +1,5 @@
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -13,109 +12,6 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-	[SharpCommand(Name = "@ATRLOCK", Switches = [], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object/attribute", "on-off"])]
-	public async ValueTask<Option<CallState>> AttributeLock(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
-
-		if (!args.TryGetValue("0", out var objAttrArg))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
-		}
-
-		var objAttrText = objAttrArg.Message!.ToPlainText();
-		if (HelperFunctions.SplitDbRefAndOptionalAttr(objAttrText) is not { Object: var dbref, Attribute: { } attrName })
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NeedObjectAttributePair), executor);
-			return new CallState(ErrorMessages.Returns.InvalidFormat);
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-		executor, executor, dbref, LocateFlags.All) switch
-		{
-			AnySharpObject targetObject => await AttributeLockAsync(executor, targetObject, args, attrName),
-			Error<CallState> error => error.Value
-		};
-	}
-
-	private async ValueTask<Option<CallState>> AttributeLockAsync(AnySharpObject executor, AnySharpObject targetObject,
-		Dictionary<string, CallState> args, string attrName)
-	{
-		if (!await PermissionService.Controls(executor, targetObject))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		if (await AttributeService.GetAttributeAsync(executor, targetObject, attrName,
-				IAttributeService.AttributeMode.Read, false) is not SharpAttribute[] attribute)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
-			return new CallState(ErrorMessages.Returns.NoMatch);
-		}
-
-		if (!args.TryGetValue("1", out var valueArg) || string.IsNullOrEmpty(valueArg.Message?.ToPlainText()))
-		{
-			var isLocked = attribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
-			await NotifyService.NotifyLocalized(executor,
-				isLocked
-					? nameof(ErrorMessages.Notifications.AttributeIsLocked)
-					: nameof(ErrorMessages.Notifications.AttributeIsUnlocked),
-				executor);
-			return new CallState(string.Empty);
-		}
-
-		var lockValue = valueArg.Message!.ToPlainText().ToLowerInvariant();
-		bool shouldLock;
-
-		if (lockValue == "on" || lockValue == "1" || lockValue == "yes")
-		{
-			shouldLock = true;
-		}
-		else if (lockValue == "off" || lockValue == "0" || lockValue == "no")
-		{
-			shouldLock = false;
-		}
-		else
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgument), executor);
-			return new CallState(ErrorMessages.Returns.InvalidValue);
-		}
-
-		if (!await PermissionService.CanSet(executor, targetObject, attribute))
-		{
-			await NotifyService.Notify(executor, "You need to be able to set the attribute to change its lock.", executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		var changed = shouldLock
-			? await AttributeService.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED")
-			: await AttributeService.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
-		if (changed is Error<string> error)
-		{
-			await NotifyService.Notify(executor, error.Value, executor);
-			return new CallState(error.Value);
-		}
-		if (shouldLock)
-		{
-			var owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-			if (!await Mediator.Send(new SetAttributeOwnerCommand(targetObject.Object().DBRef,
-				attribute.Select(item => item.Name).ToArray(), owner), ExecutionBudget.CurrentToken))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
-				return new CallState(ErrorMessages.Returns.NoMatch);
-			}
-		}
-		await NotifyService.NotifyLocalized(executor, shouldLock
-			? nameof(ErrorMessages.Notifications.AttributeLocked)
-			: nameof(ErrorMessages.Notifications.AttributeUnlocked), executor);
-
-		return new CallState(string.Empty);
-	}
-
 	[SharpCommand(Name = "@CPATTR", Switches = ["CONVERT", "NOFLAGCOPY"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 	MinArgs = 2, MaxArgs = int.MaxValue, ParameterNames = ["source/attribute", "destination/attribute"])]
 	public async ValueTask<Option<CallState>> CopyAttribute(IMUSHCodeParser parser, SharpCommandAttribute _2)

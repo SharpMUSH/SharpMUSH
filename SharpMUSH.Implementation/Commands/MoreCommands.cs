@@ -95,35 +95,6 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@LSET", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
-		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object/lock", "flags"])]
-	public async ValueTask<Option<CallState>> LockSet(IMUSHCodeParser parser, SharpCommandAttribute attribute)
-	{
-		if (await RejectIfTooFewArguments(parser, attribute) is { } error) return error;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var target = args["0"].Message!.ToPlainText();
-		var slash = target.IndexOf('/');
-		if (slash < 0)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoLockNameGiven), executor);
-			return CallState.Empty;
-		}
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, target[..slash], LocateFlags.All,
-			async obj =>
-			{
-				var flags = args["1"].Message!.ToPlainText();
-				var result = await LockService.SetFlagsAsync(executor, obj, target[(slash + 1)..], flags);
-				if (result is Error<string> failure) await NotifyService.Notify(executor, failure.Value, executor);
-				else if (!await obj.Object().AreQuietAsync(executor))
-					await NotifyService.NotifyLocalized(executor, flags.StartsWith('!')
-						? nameof(ErrorMessages.Notifications.LockFlagsUnset)
-						: nameof(ErrorMessages.Notifications.LockFlagsSet), executor,
-						obj.Object().Name, LockNames.Display(target[(slash + 1)..]));
-				return CallState.Empty;
-			});
-	}
-
 	[SharpCommand(Name = "@MALIAS",
 		Switches =
 		[
