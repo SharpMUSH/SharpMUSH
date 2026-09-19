@@ -12,6 +12,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
+using DotNext;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -534,60 +535,6 @@ public partial class Functions
 
 		return ValueTask.FromResult<CallState>(
 			MarkupText.Join(MarkupText.Concat(punctuation, space), splitList));
-	}
-
-	[SharpFunction(Name = "ibreak", MinArgs = 0, MaxArgs = 1,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["levels"])]
-	public ValueTask<CallState> IterationBreak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var text = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "1").ToPlainText();
-		if (!long.TryParse(text, out var levels))
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
-		if (levels < 0 || levels > parser.CurrentState.IterationRegisters.Count)
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.OutOfRange));
-		foreach (var iteration in parser.CurrentState.IterationRegisters.Take((int)levels))
-			iteration.Break = true;
-		return ValueTask.FromResult(CallState.Empty);
-	}
-
-	[SharpFunction(Name = "ilev", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
-	public ValueTask<CallState> IterationLevel(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var depth = parser.CurrentState.IterationRegisters.Count;
-		return ValueTask.FromResult(new CallState(depth > 0 ? depth - 1 : -1));
-	}
-
-	[SharpFunction(Name = "inum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
-	public ValueTask<CallState> IterationNumber(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var levelArg = args["0"].Message!.ToPlainText();
-		var maxCount = parser.CurrentState.IterationRegisters.Count;
-
-		if (levelArg.Equals("L", StringComparison.OrdinalIgnoreCase))
-		{
-			// "L" refers to the outermost iteration
-			if (maxCount == 0)
-			{
-				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
-			}
-			return ValueTask.FromResult(new CallState(parser.CurrentState.IterationRegisters.Last().Iteration));
-		}
-
-		if (!int.TryParse(levelArg, out var level))
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
-		}
-
-		if (level < 0 || level >= maxCount)
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
-		}
-
-		// The stack enumerates innermost-first, so the level IS the index: 0 = current, 1 = parent.
-		var iteration = parser.CurrentState.IterationRegisters.ElementAt(level).Iteration;
-		return ValueTask.FromResult(new CallState(iteration));
 	}
 
 	[SharpFunction(Name = "last", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
@@ -1688,5 +1635,53 @@ public partial class Functions
 		}
 
 		return results;
+	}
+
+	[SharpFunction(Name = "listset", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public ValueTask<CallState> ListSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+
+		if (!args.TryGetValue("0", out var arg0))
+		{
+			return ValueTask.FromResult(CallState.Empty);
+		}
+		var listStr = arg0.Message!;
+
+		if (!args.TryGetValue("1", out var arg1) ||
+				!int.TryParse((arg1.Message ?? MarkupText.Empty).ToPlainText(), out var position))
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+		}
+
+		if (!args.TryGetValue("2", out var arg2))
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+		}
+		var newValue = arg2.Message!;
+
+		var inputDelimiter = " ";
+		if (args.TryGetValue("3", out var arg3))
+		{
+			inputDelimiter = (arg3.Message ?? MarkupText.Empty).ToPlainText();
+		}
+
+		var outputDelimiter = inputDelimiter;
+		if (args.TryGetValue("4", out var arg4))
+		{
+			outputDelimiter = (arg4.Message ?? MarkupText.Empty).ToPlainText();
+		}
+
+		var items = MushText.SplitList(MarkupText.Plain(inputDelimiter), listStr);
+
+		if (position < 1 || position > items.Length)
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
+		}
+
+		// Set the item at the position (convert to 0-based)
+		items[position - 1] = newValue;
+
+		return ValueTask.FromResult(new CallState(MarkupText.Join(MarkupText.Plain(outputDelimiter), items)));
 	}
 }

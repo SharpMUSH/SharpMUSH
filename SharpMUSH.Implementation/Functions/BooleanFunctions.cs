@@ -3,6 +3,12 @@ using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
+using DotNext.Collections.Generic;
+using SharpMUSH.Library;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -127,4 +133,78 @@ public partial class Functions
 			.Count(value => value.Truthy(parser)) == 1
 			? "1"
 			: "0");
+
+	[SharpFunction(Name = "isdbref", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public async ValueTask<CallState> IsDbRef(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		if (HelperFunctions.ParseDbRef((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText()) is not DBRef dbref) return new("0");
+		return new CallState(await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject);
+	}
+
+	/// <summary>
+	/// 64-bit, as <c>fun_isint</c> is (<c>parse_ival_full</c> = <c>parse_int64</c>,
+	/// <c>src/funmath.c:82-84</c>). A 32-bit parse said no to every value above 2147483647 that
+	/// <c>add()</c>, <c>sub()</c> and <c>div()</c> all handled as an integer.
+	/// </summary>
+	[SharpFunction(Name = "isint", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public ValueTask<CallState> IsInt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+		ValueTask.FromResult<CallState>(new(long.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
+
+	[SharpFunction(Name = "isnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public ValueTask<CallState> IsNum(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+		ValueTask.FromResult<CallState>(new(decimal.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
+
+	[SharpFunction(Name = "isobjid", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public ValueTask<CallState> IsObjId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var arg = (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText();
+		// Object ID format is #dbref:timestamp (e.g., #123:456789)
+		var match = ObjIdRegex().Match(arg);
+		return ValueTask.FromResult(new CallState(match.Success ? "1" : "0"));
+	}
+
+	[GeneratedRegex(@"^#\d+:\d+$")]
+	private static partial Regex ObjIdRegex();
+
+	[SharpFunction(Name = "isregexp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public ValueTask<CallState> isregexp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var arg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+
+		if (string.IsNullOrWhiteSpace(arg)) return ValueTask.FromResult<CallState>(new("0"));
+
+		// Validate regex by attempting to construct it with timeout to prevent ReDoS
+		// Use a helper method to avoid exception-based control flow
+		var isValid = IsValidRegexPattern(arg);
+		return ValueTask.FromResult<CallState>(new(isValid ? "1" : "0"));
+	}
+
+	private bool IsValidRegexPattern(string pattern)
+	{
+		try
+		{
+			// Use a timeout to prevent catastrophic backtracking (ReDoS)
+			// This is a validation step, not control flow - we're checking validity
+			_ = new Regex(pattern, RegexOptions.None, TimeSpan.FromMilliseconds(100));
+			return true;
+		}
+		catch (ArgumentException)
+		{
+			return false;
+		}
+		catch (RegexMatchTimeoutException)
+		{
+			return false;
+		}
+	}
+
+	[SharpFunction(Name = "isword", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	public ValueTask<CallState> IsWord(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var str = (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText();
+		return ValueTask.FromResult(new CallState(IsWordRegex().IsMatch(str)));
+	}
+
+	[GeneratedRegex(@"^[a-zA-Z]+$")]
+	private static partial Regex IsWordRegex();
 }

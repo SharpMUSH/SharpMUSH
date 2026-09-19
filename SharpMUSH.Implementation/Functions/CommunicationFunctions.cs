@@ -112,4 +112,20 @@ public partial class Functions
 	[SharpFunction(Name = "zemit", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged, ParameterNames = ["zone", "message"])]
 	public async ValueTask<CallState> ZoneEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await RunEmitFunction(parser, EmitScope.Zone, false);
+
+	[SharpFunction(Name = "beep", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.AdminOnly | FunctionFlags.StripAnsi)]
+	public ValueTask<CallState> Beep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var count = 1;
+		if (!parser.CurrentState.Arguments.TryGetValue("0", out var arg))
+		{
+			return ValueTask.FromResult(new CallState(new string('\a', count)));
+		}
+
+		var str = arg.Message!.ToPlainText();
+		if (int.TryParse(str, out var parsed) && parsed is >= 1 and <= 5)
+			count = parsed;
+
+		return ValueTask.FromResult(new CallState(new string('\a', count)));
+	}
 }
