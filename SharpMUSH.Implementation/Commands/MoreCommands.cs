@@ -95,25 +95,6 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@MALIAS",
-		Switches =
-		[
-			"SET", "CREATE", "DESTROY", "DESCRIBE", "RENAME", "STATS", "CHOWN", "NUKE", "ADD", "REMOVE", "LIST", "ALL", "WHO",
-			"MEMBERS", "USEFLAG", "SEEFLAG"
-		], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["alias", "list"])]
-	public async ValueTask<Option<CallState>> MailAlias(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches;
-
-		var action = switches.FirstOrDefault() ?? "LIST";
-
-		await NotifyService.Notify(executor, $"@MALIAS/{action}: Mail alias system not yet implemented.", executor);
-		await NotifyService.Notify(executor, "This command would manage mail distribution lists and aliases.", executor);
-
-		return CallState.Empty;
-	}
-
 	/// <summary>
 	/// <c>@sockset [&lt;descriptor&gt;]=&lt;option&gt;,&lt;value&gt;[,&lt;option&gt;,&lt;value&gt;…]</c> —
 	/// PennMUSH <c>cmd_sockset</c> (src/cmds.c). The in-game face of the same option engine the
