@@ -1,5 +1,4 @@
-﻿using SharpMUSH.Library.Markup;
-using SharpMUSH.Implementation.Definitions;
+﻿using SharpMUSH.Implementation.Definitions;
 using DotNext;
 using MarkupString;
 using MarkupString.Ansi;
@@ -326,54 +325,6 @@ public partial class Functions
 					player.PasswordHash)
 					? "1"
 					: "0"));
-	}
-
-	[SharpFunction(Name = "listset", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public ValueTask<CallState> ListSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-
-		if (!args.TryGetValue("0", out var arg0))
-		{
-			return ValueTask.FromResult(CallState.Empty);
-		}
-		var listStr = arg0.Message!;
-
-		if (!args.TryGetValue("1", out var arg1) ||
-				!int.TryParse((arg1.Message ?? MarkupText.Empty).ToPlainText(), out var position))
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
-		}
-
-		if (!args.TryGetValue("2", out var arg2))
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
-		}
-		var newValue = arg2.Message!;
-
-		var inputDelimiter = " ";
-		if (args.TryGetValue("3", out var arg3))
-		{
-			inputDelimiter = (arg3.Message ?? MarkupText.Empty).ToPlainText();
-		}
-
-		var outputDelimiter = inputDelimiter;
-		if (args.TryGetValue("4", out var arg4))
-		{
-			outputDelimiter = (arg4.Message ?? MarkupText.Empty).ToPlainText();
-		}
-
-		var items = MushText.SplitList(MarkupText.Plain(inputDelimiter), listStr);
-
-		if (position < 1 || position > items.Length)
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
-		}
-
-		// Set the item at the position (convert to 0-based)
-		items[position - 1] = newValue;
-
-		return ValueTask.FromResult(new CallState(MarkupText.Join(MarkupText.Plain(outputDelimiter), items)));
 	}
 
 	[SharpFunction(Name = "null", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
