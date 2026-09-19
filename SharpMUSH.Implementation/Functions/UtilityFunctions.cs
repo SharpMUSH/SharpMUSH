@@ -11,22 +11,6 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "beep", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.AdminOnly | FunctionFlags.StripAnsi)]
-	public ValueTask<CallState> Beep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var count = 1;
-		if (!parser.CurrentState.Arguments.TryGetValue("0", out var arg))
-		{
-			return ValueTask.FromResult(new CallState(new string('\a', count)));
-		}
-
-		var str = arg.Message!.ToPlainText();
-		if (int.TryParse(str, out var parsed) && parsed is >= 1 and <= 5)
-			count = parsed;
-
-		return ValueTask.FromResult(new CallState(new string('\a', count)));
-	}
-
 	/// <remarks>
 	/// PennMUSH's <c>fun_checkpass</c> resolves its first argument with <c>lookup_player</c>, so a name
 	/// works as well as a dbref; resolving it with a dbref parse alone answered
