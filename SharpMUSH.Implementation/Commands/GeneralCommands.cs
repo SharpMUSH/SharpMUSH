@@ -51,33 +51,6 @@ public partial class Commands
 				: 78;
 	}
 
-	[SharpCommand(Name = "@@", Switches = [], Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 0, ParameterNames = ["comment"])]
-	public ValueTask<Option<CallState>> At(IMUSHCodeParser parser, SharpCommandAttribute _2)
-		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
-
-	// PennMUSH src/command.c: {"THINK", "NOEVAL", cmd_think, CMD_T_ANY | CMD_T_NOGAGGED, 0, 0}.
-	[SharpCommand(Name = "THINK", Switches = ["NOEVAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1,
-		ParameterNames = ["expression"])]
-	public async ValueTask<Option<CallState>> Think(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		// PennMUSH cmd_think (cmds.c:1769) is an unconditional notify, so a bare `think` prints a
-		// blank line rather than nothing at all. A bare `think` has no "0" argument at all, so the
-		// return has to come off the same check as the notify.
-		if (!parser.CurrentState.Arguments.TryGetValue("0", out var thought))
-		{
-			await NotifyService.Notify(executor, string.Empty, executor);
-			return CallState.Empty;
-		}
-
-		// The MString, NOT ToString(): rendering it here bakes the colour into the text as ANSI escape
-		// characters and hands a plain string onward, so the markup is gone before the transport sees
-		// it. A browser has no ANSI decoder and printed the escapes as literal text.
-		await NotifyService.Notify(executor, thought.Message!, executor);
-		return thought;
-	}
-
 	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
