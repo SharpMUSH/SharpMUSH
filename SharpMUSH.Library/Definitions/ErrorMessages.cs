@@ -1005,6 +1005,11 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCleared = "{0}/{1} - Cleared.";
 
+		// PennMUSH src/atr_tab.c check_attr_value: a set refused by @attribute/enum or @attribute/limit.
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeValueNotInEnumFormat = "Value for {0} needs to be one of: {1}";
+		public const string AttributeValueFailsLimit = "Attribute value does not match the /limit regexp.";
+
 		public const string Connected = "Connected!";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WelcomeBackFormat = "Welcome back, {0}!";

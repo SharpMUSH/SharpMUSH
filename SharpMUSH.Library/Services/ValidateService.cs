@@ -5,8 +5,6 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Buffers;
-using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -20,7 +18,6 @@ public partial class ValidateService(
 	ILockService lockService)
 	: IValidateService
 {
-	private readonly ConcurrentDictionary<string, Regex> _regexCache = new();
 
 	/// <summary>Names that always resolve to something else, so nothing may be called by them.</summary>
 	private static readonly HashSet<string> MagicCookies = new(["me", "here", "!", "home"], StringComparer.Ordinal);
@@ -122,44 +119,14 @@ public partial class ValidateService(
 	[GeneratedRegex(@"^[^:;""#\\&\]\p{C}]\P{C}*$")]
 	private partial Regex FunctionNameRegex();
 
-	private bool CheckAttributeRegex(string name, string regex, string value)
-	{
-		var reg = _regexCache.GetOrAdd(name, _ => SoftcodeRegex.Create(regex, RegexOptions.Compiled));
-		return SoftcodeRegex.IsMatch(reg, value);
-	}
-
 	/// <summary>
-	/// Checks if an attribute value is valid against a SharpAttributeEntry.
-	/// Supports enum validation with wildcard globbing patterns.
-	/// Enforces maximum attribute value length from configuration.
+	/// Whether <paramref name="value"/> may be stored in the attribute <paramref name="attribute"/>
+	/// describes: within the configured byte limit, and accepted by its <c>@attribute/limit</c> and
+	/// <c>@attribute/enum</c> (<see cref="AttributeValueRestriction"/>).
 	/// </summary>
-	/// <param name="value">Value</param>
-	/// <param name="attribute">Attribute Entry</param>
-	/// <returns>True or false</returns>
 	private bool ValidateAttributeValue(MString value, SharpAttributeEntry attribute)
-	{
-		// Convert to plain text and measure UTF-8 bytes for multi-byte character support
-		var plainValue = value.ToPlainText();
-		var maxBytes = (int)configuration.CurrentValue.Limit.MaxAttributeValueLength;
-
-		if (Encoding.UTF8.GetByteCount(plainValue) > maxBytes)
-		{
-			return false;
-		}
-
-		return attribute switch
-		{
-			{ Limit: null } and { Enum: null } => true,
-			{ Limit: not null } and { Enum: not null }
-				=> MatchesEnumWithGlobbing(plainValue, attribute.Enum)
-					 && CheckAttributeRegex(attribute.Name, attribute.Limit, plainValue),
-			{ Enum: not null }
-				=> MatchesEnumWithGlobbing(plainValue, attribute.Enum),
-			{ Limit: not null }
-				=> CheckAttributeRegex(attribute.Name, attribute.Limit, plainValue),
-			_ => false
-		};
-	}
+		=> ValidateAttributeValueBasic(value)
+			&& AttributeValueRestriction.Check(attribute, value.ToPlainText()) is string;
 
 	/// <summary>
 	/// Validates an attribute value without a specific target attribute — only checks byte length.
@@ -170,22 +137,6 @@ public partial class ValidateService(
 		var maxBytes = (int)configuration.CurrentValue.Limit.MaxAttributeValueLength;
 		return Encoding.UTF8.GetByteCount(plainValue) <= maxBytes;
 	}
-
-	/// <summary>
-	/// Whether <paramref name="value"/> matches any of <paramref name="enumPatterns"/>, each a general
-	/// MUSH wildcard (<see cref="SoftcodeRegex.Wildcard"/>) matched case-sensitively. A pattern with no
-	/// <c>*</c>, <c>?</c> or <c>\</c> is compared ordinally without compiling anything.
-	/// </summary>
-	/// <remarks>
-	/// Globbing enum entries is SharpMUSH's own. PennMUSH's <c>@attribute/enum</c> is a delimited list
-	/// matched case-insensitively by prefix, storing the entry's own case (<c>src/atr_tab.c</c>).
-	/// </remarks>
-	private static bool MatchesEnumWithGlobbing(string value, string[] enumPatterns)
-		=> enumPatterns.Any(pattern => pattern.AsSpan().IndexOfAny(GlobMetacharacters) < 0
-			? value.Equals(pattern, StringComparison.Ordinal)
-			: SoftcodeRegex.IsMatch(SoftcodeRegex.Wildcard(pattern, caseSensitive: true), value));
-
-	private static readonly SearchValues<char> GlobMetacharacters = SearchValues.Create("*?\\");
 
 	/// <summary>
 	/// Validates an attribute name: must match the character set regex AND must not have
