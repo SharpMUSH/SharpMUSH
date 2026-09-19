@@ -2840,6 +2840,44 @@ public class SharpMUSHParserVisitor(
 		?? new CallState(GetContextText(context),
 			context.Depth());
 
+	/// <summary>
+	/// <c>$&lt;digit&gt;</c> or <c>$&lt;name&gt;</c>: PennMUSH's evaluator case for <c>'$'</c>
+	/// (<c>src/parse.c</c>). While a regexp context holds captures, the capture from the innermost one;
+	/// otherwise a literal <c>$</c> followed by the rest, with a name still evaluated. A capture is
+	/// output, never source: nothing here is parsed again.
+	/// </summary>
+	public override async ValueTask<CallState?> VisitRegexpCapture([NotNull] RegexpCaptureContext context)
+	{
+		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
+		{
+			return new CallState(GetContextText(context), context.Depth());
+		}
+
+		var state = parser.CurrentState;
+		if (context.REGEXP_NUM() is { } number)
+		{
+			return new CallState(state.HasRegexpCaptures
+				? state.RegexpCapture(number.GetText()[1..])
+				: MarkupText.Plain(number.GetText()), context.Depth());
+		}
+
+		var nameContext = context.explicitEvaluationString();
+		var named = nameContext is null
+			? CallState.Empty
+			: await Visit(nameContext) ?? new CallState(GetContextText(nameContext), nameContext.Depth());
+		var name = named.Message ?? MarkupText.Empty;
+
+		if (state.HasRegexpCaptures)
+		{
+			return named with { Message = state.RegexpCapture(name.ToPlainText()) };
+		}
+
+		MString[] literal = context.CCARET() is null
+			? [MarkupText.Plain("$<"), name]
+			: [MarkupText.Plain("$<"), name, MarkupText.Plain(">")];
+		return named with { Message = MarkupText.Concat(literal) };
+	}
+
 	public override async ValueTask<CallState?> VisitBracePattern(
 		[NotNull] BracePatternContext context)
 	{

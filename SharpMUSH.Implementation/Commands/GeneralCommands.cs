@@ -2125,6 +2125,10 @@ public partial class Commands
 		var hasLocalize = switches.Contains("LOCALIZE") || isInplace;
 		var hasClearRegs = switches.Contains("CLEARREGS");
 
+		// do_switch (src/predicat.c) runs each matched action with a PE_REGS_SWITCH | PE_REGS_CAPTURE
+		// frame, so $0-$9 in it read the match; a queued action takes a copy of the frame with it.
+		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
+		parser.CurrentState.RegexRegisters.Push(captures);
 		parser.CurrentState.SwitchStack.Push(strArg.Message!);
 
 		try
@@ -2143,21 +2147,18 @@ public partial class Commands
 				var patternText = evaluatedPattern.ToPlainText();
 
 				bool patternMatched;
-				if (isRegexp)
+				try
 				{
-					try
-					{
-						patternMatched = Regex.IsMatch(testString, patternText, RegexOptions.IgnoreCase);
-					}
-					catch (ArgumentException ex)
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SwitchInvalidRegexpFormat), executor, patternText, ex.Message);
-						continue;
-					}
+					patternMatched = SwitchPatterns.Matches(strArg.Message!, patternText, isRegexp, captures);
 				}
-				else
+				catch (ArgumentException ex)
 				{
-					patternMatched = MushText.IsWildcardMatch(strArg.Message!, evaluatedPattern);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SwitchInvalidRegexpFormat), executor, patternText, ex.Message);
+					continue;
+				}
+				catch (RegexMatchTimeoutException)
+				{
+					continue;
 				}
 
 				if (patternMatched)
@@ -2174,6 +2175,7 @@ public partial class Commands
 
 			if (defaultArg.TryGetValue(out var defaultValue) && !matched)
 			{
+				captures.Clear();
 				var defaultText = defaultValue.ToPlainText().Replace("#$", testString);
 				hadErrors |= await RunControlFlowAction(parser, executor, MarkupText.Plain(defaultText),
 					isInline, noBreak, hasLocalize, hasClearRegs);
@@ -2195,6 +2197,7 @@ public partial class Commands
 		finally
 		{
 			parser.CurrentState.SwitchStack.TryPop(out _);
+			parser.CurrentState.RegexRegisters.TryPop(out _);
 		}
 	}
 
@@ -3501,7 +3504,9 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// Perform regex replacement with evaluation
+	/// Perform regex replacement with evaluation: PennMUSH's <c>do_edit_regexp</c> (<c>src/set.c</c>).
+	/// Each replacement is evaluated inside a regexp capture context holding its match, and the capture
+	/// text is never pasted into the replacement.
 	/// </summary>
 	private async ValueTask<CallState> PerformRegexEdit(IMUSHCodeParser parser, string text,
 		string pattern, string replaceTemplate, bool all, bool nocase)
@@ -3510,6 +3515,8 @@ public partial class Commands
 		Match[] matches = [];
 		var replacements = Array.Empty<string>();
 		var firstEvaluated = 0;
+		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
+		parser.CurrentState.RegexRegisters.Push(captures);
 		try
 		{
 			var options = RegexOptions.None;
@@ -3528,7 +3535,7 @@ public partial class Commands
 				firstEvaluated = matches.Length;
 				for (var i = matches.Length - 1; i >= 0; i--)
 				{
-					var replacement = await EvaluateRegexReplacement(parser, regex, matches[i], replaceTemplate);
+					var replacement = await EvaluateRegexReplacement(parser, captures, regex, matches[i], replaceTemplate, text);
 					hadErrors |= replacement.HadErrors;
 					replacements[i] = replacement.Message!.ToPlainText();
 					firstEvaluated = i;
@@ -3541,7 +3548,7 @@ public partial class Commands
 				var match = regex.Match(text);
 				if (match.Success)
 				{
-					var replacement = await EvaluateRegexReplacement(parser, regex, match, replaceTemplate);
+					var replacement = await EvaluateRegexReplacement(parser, captures, regex, match, replaceTemplate, text);
 					hadErrors |= replacement.HadErrors;
 					text = text[..match.Index] + replacement.Message!.ToPlainText() + text[(match.Index + match.Length)..];
 				}
@@ -3557,6 +3564,10 @@ public partial class Commands
 		catch (ArgumentException)
 		{
 			return new CallState(SpliceReplacements(text, matches, replacements, firstEvaluated)) { HadErrors = hadErrors };
+		}
+		finally
+		{
+			parser.CurrentState.RegexRegisters.TryPop(out _);
 		}
 	}
 
@@ -3583,29 +3594,15 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// Evaluate replacement template with captured groups
+	/// The replacement for one match, evaluated with that match as the innermost regexp context.
 	/// </summary>
-	private async ValueTask<CallState> EvaluateRegexReplacement(IMUSHCodeParser parser,
-		Regex regex, Match match, string template)
+	private static async ValueTask<CallState> EvaluateRegexReplacement(IMUSHCodeParser parser,
+		RegexpCaptureFrame captures, Regex regex, Match match, string template, string text)
 	{
-		var replacement = template;
+		captures.Fill(regex, match, MarkupText.Plain(text));
 
-		for (int j = 0; j < match.Groups.Count; j++)
-		{
-			replacement = replacement.Replace($"${j}", match.Groups[j].Value);
-		}
-
-		foreach (var groupName in regex.GetGroupNames().Where(groupName => !int.TryParse(groupName, out _)))
-		{
-			var group = match.Groups[groupName];
-			if (group.Success)
-			{
-				replacement = replacement.Replace($"$<{groupName}>", group.Value);
-			}
-		}
-
-		var evaluatedReplacement = await parser.FunctionParse(MarkupText.Plain(replacement));
-		return new CallState(evaluatedReplacement?.Message?.ToPlainText() ?? replacement)
+		var evaluatedReplacement = await parser.FunctionParse(MarkupText.Plain(template));
+		return new CallState(evaluatedReplacement?.Message?.ToPlainText() ?? string.Empty)
 		{ HadErrors = evaluatedReplacement?.HadErrors == true };
 	}
 
@@ -4285,6 +4282,9 @@ public partial class Commands
 
 		// cmd_select builds the same queue_type as cmd_switch (src/cmds.c:1390-1403), so /LOCALIZE and
 		// /CLEARREGS only bite on an INLINE action; RunControlFlowAction applies them around it.
+		// Like @switch, the matched action runs with the match's captures for $0-$9.
+		var captures = new RegexpCaptureFrame(parser.CurrentState.CurrentEvaluation);
+		parser.CurrentState.RegexRegisters.Push(captures);
 		parser.CurrentState.SwitchStack.Push(args["0"].Message!);
 
 		try
@@ -4302,29 +4302,19 @@ public partial class Commands
 				var pattern = args[exprIndex.ToString()].Message?.ToPlainText() ?? "";
 				var action = args[actionIndex.ToString()].Message;
 
-				bool matches = false;
-				if (isRegexp)
+				bool matches;
+				try
 				{
-					try
-					{
-						var regex = SoftcodeRegex.Create(pattern, RegexOptions.None);
-						matches = regex.IsMatch(testString);
-					}
-					catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat), executor, pattern);
-						continue;
-					}
-					catch (ArgumentException)
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat), executor, pattern);
-						continue;
-					}
+					matches = SwitchPatterns.Matches(args["0"].Message!, pattern, isRegexp, captures);
 				}
-				else
+				catch (ArgumentException)
 				{
-					var regex = SoftcodeRegex.Wildcard(pattern);
-					matches = SoftcodeRegex.IsMatch(regex, testString);
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat), executor, pattern);
+					continue;
+				}
+				catch (RegexMatchTimeoutException)
+				{
+					continue;
 				}
 
 				if (matches && action != null)
@@ -4343,6 +4333,7 @@ public partial class Commands
 
 			if (!matchFound && hasDefault)
 			{
+				captures.Clear();
 				var defaultIndex = args.Count - 1;
 				var defaultAction = args[defaultIndex.ToString()].Message;
 
@@ -4372,6 +4363,7 @@ public partial class Commands
 		finally
 		{
 			parser.CurrentState.SwitchStack.TryPop(out _);
+			parser.CurrentState.RegexRegisters.TryPop(out _);
 		}
 	}
 

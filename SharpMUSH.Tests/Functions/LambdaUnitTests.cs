@@ -11,8 +11,9 @@ public class LambdaUnitTests
 
 	[Test]
 	[Arguments(@"ulambda(#lambda/add\(1\,2\))", "3")]
-	// Without paren depth tracking (PennMUSH-compatible): bare ( in #lambda/add( is just text,
-	// and the first ) closes lit() instead of matching the bare (. Use escaped parens or brackets instead.
+	// With paren_groups off (the default), a bare ( in #lambda/add( is just text, and the first )
+	// closes lit() instead of matching it. Use escaped parens or brackets instead. PennMUSH, and
+	// paren_groups on, give 3 here: see ParenthesisGroupTests.
 	// With strict parsing: the unbalanced body "add(1,2" is now a PARSER FAILURE (previously ANTLR recovered silently).
 	[Arguments("ulambda(lit(#lambda/add(1,2)))", "#-1 PARSER FAILURE: Expected ) or , at end of expression)")]
 	[Arguments("ulambda(#lambda/[add(1,2)])", "3")]

@@ -56,6 +56,9 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 
 	public ISharpDatabase Database => _services.GetRequiredService<ISharpDatabase>();
 
+	/// <summary>The world's server-data documents, where its configuration is stored.</summary>
+	public IExpandedDataStore ExpandedData => _services.GetRequiredService<IExpandedDataStore>();
+
 	/// <summary>The world's engine, whose object cache fronts <see cref="Database"/>.</summary>
 	public IMediator Mediator => _services.GetRequiredService<IMediator>();
 

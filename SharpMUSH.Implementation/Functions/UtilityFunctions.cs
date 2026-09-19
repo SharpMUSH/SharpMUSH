@@ -1199,13 +1199,10 @@ public partial class Functions
 						? new CallState(aval.Message!)
 						: CallState.Empty);
 
-			// %$0 and named captures from re*() regexp functions.
+			// $0-$9 and named captures from switch(), reswitch() and regedit(). PennMUSH's fun_r has no
+			// case for this type and always returns nothing; this returns the capture, as `help r` says.
 			case "regexp":
-				return ValueTask.FromResult(
-					parser.CurrentState.RegexRegisters.TryPeek(out var rxregs)
-					&& rxregs.TryGetValue(registerName, out var rxval)
-						? new CallState(rxval)
-						: CallState.Empty);
+				return ValueTask.FromResult(new CallState(parser.CurrentState.RegexpCapture(registerName)));
 
 			// itext() context — int level, or "L" for the outermost iteration.
 			case "iter":
@@ -1311,7 +1308,7 @@ public partial class Functions
 				if (value.Length > 0)
 					yield return ($"Q{name}", name);
 
-		if (kinds.HasFlag(RegisterKinds.Regexp) && state.RegexRegisters.TryPeek(out var rxregs))
+		if (kinds.HasFlag(RegisterKinds.Regexp) && state.RegexpCaptures is { } rxregs)
 			foreach (var (name, value) in rxregs)
 				if (value.Length > 0)
 					yield return ($"R{name.ToUpperInvariant()}", name.ToUpperInvariant());

@@ -285,6 +285,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				Interpreter = { PredictionMode = mode },
 				Trace = debug,
 				ErrorHandler = strategy,
+				parenGroups = Configuration.CurrentValue.Compatibility.ParenGroups,
 			};
 			parser.RemoveErrorListeners();
 			var errors = new ParserErrorListener(inputText);
@@ -874,6 +875,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
+			parenGroups = Configuration.CurrentValue.Compatibility.ParenGroups,
 			Interpreter =
 			{
 				PredictionMode = GetPredictionMode()
@@ -969,6 +971,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		SharpMUSHParser sharpParser = new(bufferedTokenSpanStream)
 		{
+			parenGroups = Configuration.CurrentValue.Compatibility.ParenGroups,
 			Interpreter =
 			{
 				PredictionMode = GetPredictionMode()
@@ -1143,6 +1146,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 			// %q<register> — opening token (q<) and closing > are both Register
 			SharpMUSHParser.ComplexSubstitutionSymbolContext
+				=> SemanticTokenType.Register,
+
+			// $0-$9 and $<name> read regexp captures; $< and its > are Register too.
+			SharpMUSHParser.RegexpCaptureContext
 				=> SemanticTokenType.Register,
 
 			// EQUALS here means %=; DBREF means %#; CALLED_DBREF means %@ — all Substitution.

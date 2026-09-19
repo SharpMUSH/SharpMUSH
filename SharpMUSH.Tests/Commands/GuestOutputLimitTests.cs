@@ -76,7 +76,7 @@ public class GuestOutputLimitTests
 	// lambda's body, an iter pattern rewritten for ##) runs under the state pushed for that call.
 	// The oversized value stays in a register, so no caller's result check sees it.
 	[Test]
-	[Arguments("u(#lambda/setq(0,repeat(x,{0})))")]
+	[Arguments(@"ulambda(#lambda/setq\(0\,repeat\(x\,{0}\)\))")]
 	[Arguments("iter(1,setq(0,repeat(x,{0}))[null(##)])")]
 	public async Task Guest_ParsedFunctionBody_KeepsTheGuestLimit(string body)
 	{

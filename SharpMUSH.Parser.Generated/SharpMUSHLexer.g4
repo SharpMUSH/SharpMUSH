@@ -24,8 +24,15 @@ OANSI: '\u001b' -> pushMode(ANSI);
 FUNCHAR: [0-9a-zA-Z_~@`]+ '(' WS ; 
 OPAREN: '(' WS;
 
+// Regexp captures: $0-$9 (one digit, as in PennMUSH) and $<name>. They read the regexp context that
+// reswitch() opens, and are a plain '$' outside one (src/parse.c, case '$').
+REGEXP_NUM: '$' [0-9];
+REGEXP_STARTCARET: '$<';
+// Any other '$' is text. OTHER stops at every '$' so that it cannot swallow a following $0.
+DOLLAR: '$';
+
 // Greedy way of grabbing non-special characters which the parser does not care about, and can thus fast-forward through.
-OTHER: ~( '\\' | '[' | ']' | '{' | '}' | '(' | ')' | '>' | ',' | '=' | '%' | ';' | '\u001b' )+;
+OTHER: ~( '\\' | '[' | ']' | '{' | '}' | '(' | ')' | '>' | ',' | '=' | '%' | ';' | '\u001b' | '$' )+;
 
 // --------------- SUBSTITUTION MODE -------------
 mode SUBSTITUTION;

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -268,6 +269,53 @@ public class ControlFlowCommandTests
 
 		await Assert.That(newMessages).Contains("BreakQueued_Before_36489");
 		await Assert.That(newMessages).DoesNotContain("BreakQueued_After_36489");
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>do_switch</c> (<c>src/predicat.c</c>) queues the matched action with a
+	/// <c>PE_REGS_SWITCH | PE_REGS_CAPTURE</c> frame, so <c>$0</c>-<c>$9</c> read the wildcard or regexp
+	/// captures in it, inline or queued; and a <c>&gt;</c>/<c>&lt;</c> pattern orders the subject against it
+	/// (<c>help switch wildcards</c>). A capture is text: it is never evaluated.
+	/// </summary>
+	[Test]
+	[Arguments("@switch/inline foo=f*,@pemit #1=SwCap_$0_81234", "SwCap_oo_81234")]
+	[Arguments("@switch/regexp/inline abc=a(b)c,@pemit #1=SwRxCap_$1_81235", "SwRxCap_b_81235")]
+	[Arguments("@select/inline foo=f*,@pemit #1=SelCap_$0_81236", "SelCap_oo_81236")]
+	[Arguments("@select/regexp/inline abc=a(b)c,@pemit #1=SelRxCap_$1_81237", "SelRxCap_b_81237")]
+	[Arguments("@switch foo=f*,@pemit #1=SwCapQueued_$0_81238", "SwCapQueued_oo_81238")]
+	[Arguments("@switch/inline [lit([add(1,1)])]=*,@pemit #1=SwNoEval_$0_81239", "SwNoEval_[add(1,1)]_81239")]
+	[Arguments("@switch/inline 6=>5,@pemit #1=SwGt_A_81240,@pemit #1=SwGt_B_81240", "SwGt_A_81240")]
+	[Arguments("@switch/inline 4=>5,@pemit #1=SwGtNo_A_81241,@pemit #1=SwGtNo_B_81241", "SwGtNo_B_81241")]
+	[Arguments("@select/inline 5=<=5,@pemit #1=SelLe_A_81242,@pemit #1=SelLe_B_81242", "SelLe_A_81242")]
+	// @select/regexp is case-insensitive, as @switch/regexp is: both are do_switch's regexp_match_case_r.
+	[Arguments("@select/regexp/inline HELLO=hel+o,@pemit #1=SelRxCi_A_81243,@pemit #1=SelRxCi_B_81243", "SelRxCi_A_81243")]
+	public async ValueTask Switch_ActionReadsTheMatch(string command, string expected)
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
+
+		await Assert.That(await WaitForMessage(executor, expected)).IsTrue();
+	}
+
+	/// <summary>
+	/// A regexp that cannot finish in time is a pattern that did not match, as it is for
+	/// <c>@switch</c>: the default runs, and nobody is told the pattern is invalid, because it is not.
+	/// </summary>
+	[Test]
+	public async ValueTask Select_RegexpTimeoutIsNoMatch()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var subject = new string('a', 40) + "!";
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(
+			$"@select/regexp/inline {subject}=(a+)+$|z81244,@pemit #1=SelTimeout_A_81244,@pemit #1=SelTimeout_B_81244"));
+
+		await Assert.That(await WaitForMessage(executor, "SelTimeout_B_81244")).IsTrue();
+		var saidInvalid = NotifyService.ReceivedCalls().Any(call =>
+			call.GetMethodInfo().Name is "NotifyLocalized" or "NotifyLocalizedMarkup"
+			&& call.GetArguments() is [_, string key, ..] arguments
+			&& key == nameof(ErrorMessages.Notifications.SelectInvalidRegexPatternFormat)
+			&& arguments.SelectMany(argument => argument as object?[] ?? [argument]).Any(argument => argument?.ToString()?.Contains("z81244") == true));
+		await Assert.That(saidInvalid).IsFalse();
 	}
 
 	[Test]

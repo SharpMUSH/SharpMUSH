@@ -57,6 +57,12 @@ public class QueuedControlFlowStateTests
 		await Assert.That(result?.Message?.ToPlainText()).IsEqualTo(EvaluationRestrictions.Error);
 	}
 
+	/// <summary>
+	/// A queued action carries copies of the iteration and regexp frames it was queued under, so it reads
+	/// them after the caller has unwound and cannot change the caller's. The switch's own capture frame is
+	/// the innermost one (<c>do_switch</c>, <c>src/predicat.c</c>), so <c>$0</c> reads its match and the
+	/// enclosing context's <c>NAME</c> capture is not visible (<c>PE_Get_re</c> reads only the innermost).
+	/// </summary>
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
@@ -64,7 +70,7 @@ public class QueuedControlFlowStateTests
 	{
 		var state = ParserState.RootFor(Factory.ExecutorDBRef) with
 		{
-			Arguments = new() { ["0"] = new("match"), ["1"] = new("match"), ["2"] = new("think %i0|%i1|[r(NAME,regexp)]") }
+			Arguments = new() { ["0"] = new("match"), ["1"] = new("m*"), ["2"] = new("think %i0|%i1|$0|[r(NAME,regexp)]") }
 		};
 		await state.KnownExecutorObject(Factory.Services.GetRequiredService<IMediator>());
 		var outer = new IterationWrapper<MString> { Value = MarkupText.Plain("outer"), Iteration = 2, Break = false, NoBreak = true };
@@ -96,16 +102,17 @@ public class QueuedControlFlowStateTests
 		state.IterationRegisters.Clear();
 		state.RegexRegisters.Clear();
 
-		var output = await Factory.FunctionParser.FromState(saved).FunctionParse(MarkupText.Plain("%i0|%i1|[r(NAME,regexp)]"));
-		await Assert.That(output?.Message?.ToPlainText()).IsEqualTo("inner|outer|inner capture");
+		var output = await Factory.FunctionParser.FromState(saved).FunctionParse(MarkupText.Plain("%i0|%i1|$0|[r(NAME,regexp)]"));
+		await Assert.That(output?.Message?.ToPlainText()).IsEqualTo("inner|outer|atch|");
 		await Factory.CommandParser.FromState(saved).CommandListParse(queued.Command);
 		await Factory.Services.GetRequiredService<INotifyService>().Received().Notify(
-			TestHelpers.MatchingObject(Factory.ExecutorDBRef), TestHelpers.MatchingMessage("inner|outer|inner capture"),
+			TestHelpers.MatchingObject(Factory.ExecutorDBRef), TestHelpers.MatchingMessage("inner|outer|atch|"),
 			TestHelpers.MatchingObject(Factory.ExecutorDBRef), INotifyService.NotificationType.Announce);
 		await Assert.That(saved.IterationRegisters.First().Iteration).IsEqualTo(3u);
 		await Assert.That(saved.IterationRegisters.First().Break).IsFalse();
 		await Assert.That(saved.IterationRegisters.Last().NoBreak).IsTrue();
-		await Assert.That(saved.RegexRegisters.First()["NAME"].ToPlainText()).IsEqualTo("inner capture");
+		await Assert.That(saved.RegexRegisters.First()["0"].ToPlainText()).IsEqualTo("atch");
+		await Assert.That(saved.RegexRegisters.ElementAt(1)["NAME"].ToPlainText()).IsEqualTo("inner capture");
 		await Assert.That(saved.RegexRegisters.Last()["NAME"].ToPlainText()).IsEqualTo("outer capture");
 		saved.IterationRegisters.Last().Value = MarkupText.Plain("queued mutation");
 		saved.RegexRegisters.Last()["name"] = MarkupText.Plain("queued mutation");

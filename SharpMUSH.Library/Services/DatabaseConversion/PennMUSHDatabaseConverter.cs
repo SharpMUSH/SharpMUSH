@@ -21,17 +21,20 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private readonly ILogger<PennMUSHDatabaseConverter> _logger;
 	private readonly IMediator _mediator;
 	private readonly IOptionsWrapper<SharpMUSHOptions> _options;
+	private readonly ConfigurationReloadService? _configurationReload;
 
 	public PennMUSHDatabaseConverter(
 		PennMUSHDatabaseParser parser,
 		IMediator mediator,
 		IOptionsWrapper<SharpMUSHOptions> options,
-		ILogger<PennMUSHDatabaseConverter> logger)
+		ILogger<PennMUSHDatabaseConverter> logger,
+		ConfigurationReloadService? configurationReload = null)
 	{
 		_parser = parser;
 		_mediator = mediator;
 		_options = options;
 		_logger = logger;
+		_configurationReload = configurationReload;
 	}
 
 	public async Task<ConversionResult> ConvertDatabaseAsync(string databaseFilePath, CancellationToken cancellationToken = default)
@@ -133,6 +136,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			locksConverted = await CreateLocksAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Locks created", 1.0);
 
+			await EnableParenGroupsAsync(warnings, cancellationToken);
+
 			stopwatch.Stop();
 
 			result = result with
@@ -161,6 +166,36 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		return result;
+	}
+
+	/// <summary>
+	/// Turns on <c>paren_groups</c> in the configuration of the world being written. PennMUSH softcode
+	/// writes a literal parenthesis inside a function's arguments unescaped, which SharpMUSH reads as
+	/// PennMUSH does only with that option on. Written through the Mediator, like the objects, so it
+	/// lands in the same world, and signalled so a running game rereads its configuration.
+	/// </summary>
+	/// <remarks>
+	/// It runs after the whole world is written, so a failure here is a warning: the conversion stands,
+	/// and the option is left for the administrator to set.
+	/// </remarks>
+	private async ValueTask EnableParenGroupsAsync(List<string> warnings, CancellationToken cancellationToken)
+	{
+		try
+		{
+			var options = _options.CurrentValue;
+			if (options.Compatibility.ParenGroups) return;
+
+			await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
+				options with { Compatibility = options.Compatibility with { ParenGroups = true } }), cancellationToken);
+			_configurationReload?.SignalChange();
+			_logger.LogInformation("Turned on paren_groups for the imported PennMUSH softcode");
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			_logger.LogWarning(ex, "Could not turn on paren_groups for the imported PennMUSH softcode");
+			warnings.Add($"paren_groups could not be turned on ({ex.Message}); imported softcode that writes literal " +
+				"parentheses unescaped needs it: set paren_groups to yes in the configuration and reload it.");
+		}
 	}
 
 	/// <summary>

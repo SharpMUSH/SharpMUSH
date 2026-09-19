@@ -10,6 +10,11 @@ options {
     public int inBracketDepth = 0;
     public int inFunctionInsideBrace = 0;
     public System.Collections.Generic.Stack<int> savedFunctionInsideBrace = new();
+    // Literal '(' groups open at the current call or brace level; see beginGenericText.
+    // Counted only when parenGroups is set (the paren_groups compatibility option).
+    public bool parenGroups = false;
+    public int inParenDepth = 0;
+    public System.Collections.Generic.Stack<int> savedParenDepth = new();
     public System.Collections.Generic.Stack<int> savedFunction = new();
     public bool inCommandList = false;
     public bool lookingForCommandArgCommas = false;
@@ -68,11 +73,12 @@ evaluationString:
 ;
 
 explicitEvaluationString:
-    (bracePattern|bracketPattern|beginGenericText|PERCENT validSubstitution) 
+    (bracePattern|bracketPattern|beginGenericText|PERCENT validSubstitution|regexpCapture) 
     (
         bracePattern
       | bracketPattern
       | PERCENT validSubstitution
+      | regexpCapture
       | genericText
     )*
 ;
@@ -83,17 +89,27 @@ explicitEvaluationString:
 // Cannot use evaluationString here as it introduces recursive prediction
 // paths through the function rule that cause AdaptivePredict to hang on complex inputs.
 braceExplicitEvaluationString:
-    (bracePattern|bracketPattern|genericText|PERCENT validSubstitution) 
+    (bracePattern|bracketPattern|genericText|PERCENT validSubstitution|regexpCapture) 
     (
         bracePattern
       | bracketPattern
       | PERCENT validSubstitution
+      | regexpCapture
       | genericText
     )*
 ;
 
+// $0-$9 or $<name>. The name is evaluated up to the '>', whether or not a regexp context is live:
+// PennMUSH only decides afterwards whether to look it up or to print it after a literal '$'.
+regexpCapture
+    locals [bool outerCaret]
+    : REGEXP_NUM
+    | REGEXP_STARTCARET { $outerCaret = lookingForRegisterCaret; lookingForRegisterCaret = true; }
+      explicitEvaluationString? CCARET? { lookingForRegisterCaret = $outerCaret; }
+;
+
 bracePattern:
-    OBRACE { ++inBraceDepth; savedFunctionInsideBrace.Push(inFunctionInsideBrace); inFunctionInsideBrace = 0; savedFunction.Push(inFunction); inFunction = 0; } braceExplicitEvaluationString? CBRACE { --inBraceDepth; inFunctionInsideBrace = savedFunctionInsideBrace.Pop(); inFunction = savedFunction.Pop(); }
+    OBRACE { ++inBraceDepth; savedFunctionInsideBrace.Push(inFunctionInsideBrace); inFunctionInsideBrace = 0; savedFunction.Push(inFunction); inFunction = 0; savedParenDepth.Push(inParenDepth); inParenDepth = 0; } braceExplicitEvaluationString? CBRACE { --inBraceDepth; inFunctionInsideBrace = savedFunctionInsideBrace.Pop(); inFunction = savedFunction.Pop(); inParenDepth = savedParenDepth.Pop(); }
 ;
 
 bracketPattern:
@@ -101,9 +117,9 @@ bracketPattern:
 ;
 
 function: 
-    FUNCHAR {++inFunction; ++inFunctionInsideBrace;} 
+    FUNCHAR {++inFunction; ++inFunctionInsideBrace; savedParenDepth.Push(inParenDepth); inParenDepth = 0;} 
     (evaluationString? (COMMAWS evaluationString?)*)?
-    CPAREN {--inFunction; --inFunctionInsideBrace;} 
+    CPAREN {--inFunction; --inFunctionInsideBrace; inParenDepth = savedParenDepth.Pop();} 
 ;
 
 validSubstitution:
@@ -151,15 +167,23 @@ substitutionSymbol: (
     )
 ;
 
-genericText: beginGenericText | FUNCHAR;
+// A name whose '(' is not in call position is text, and its '(' opens a literal group.
+genericText: beginGenericText | FUNCHAR { if (parenGroups) ++inParenDepth; };
 
+// A '(' that does not start a function call opens a literal group. PennMUSH copies the '(',
+// evaluates up to the matching ')' with that as the only terminator, and copies the ')' (src/parse.c,
+// case '('), so the group's commas are text and its ')' does not close an enclosing call. Groups are
+// counted, not nested as rules, so a bare '(' costs no parser recursion however deep it goes; a call
+// or brace saves the count and starts its own. Only with parenGroups: otherwise a '(' is plain text
+// and a literal parenthesis inside a call's arguments has to be escaped.
 beginGenericText:
-      { inFunction == 0 }? CPAREN
+      { inFunction == 0 || inParenDepth > 0 }? CPAREN { if (inParenDepth > 0) --inParenDepth; }
     | { !inCommandList || inBraceDepth > 0 }? SEMICOLON
-    | { (!lookingForCommandArgCommas && inFunction == 0) || (inBraceDepth > 0 && inFunctionInsideBrace == 0) }? COMMAWS
+    | { (!lookingForCommandArgCommas && inFunction == 0) || (inBraceDepth > 0 && inFunctionInsideBrace == 0) || inParenDepth > 0 }? COMMAWS
     | { !lookingForCommandArgEquals || inFunction > 0 }? EQUALS
     | { !lookingForRegisterCaret }? CCARET
-    | (escapedText|OPAREN|OTHER|ansi) 
+    | OPAREN { if (parenGroups) ++inParenDepth; }
+    | (escapedText|OTHER|DOLLAR|ansi) 
 ;
 
 escapedText: ESCAPE ANY;

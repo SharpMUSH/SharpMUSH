@@ -1,9 +1,15 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.DatabaseConversion;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -464,4 +470,47 @@ public class PennMUSHDatabaseConverterTests
 
 	private static async Task<SharpObject> FindNamedAsync(IsolatedImportWorld world, string name)
 		=> await world.Database.GetAllObjectsAsync().SingleAsync(obj => obj.Name == name);
+
+	/// <summary>
+	/// Imported PennMUSH softcode writes literal parentheses unescaped, so the import turns on
+	/// <c>paren_groups</c> in the world it writes, alongside the objects.
+	/// </summary>
+	[Test]
+	public async ValueTask ImportTurnsOnParenGroups()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var store = world.ExpandedData;
+		await Assert.That((await store.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)))?.Compatibility.ParenGroups ?? false).IsFalse();
+
+		var result = await world.Converter.ConvertDatabaseAsync(new PennMUSHDatabase { Version = "Test Version", Objects = [] });
+
+		await Assert.That(result.IsSuccessful).IsTrue();
+		var stored = await store.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions));
+		await Assert.That(stored?.Compatibility.ParenGroups ?? false).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>paren_groups</c> is turned on after every object, attribute and lock is written. Failing to
+	/// turn it on leaves a converted world that needs the option set by hand, so the import succeeds
+	/// with a warning saying so, instead of reporting the world it wrote as a fatal failure.
+	/// </summary>
+	[Test]
+	public async ValueTask ParenGroupsFailureIsAWarning()
+	{
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(_ => throw new InvalidOperationException("configuration unavailable"));
+		await using var world = await IsolatedImportWorld.CreateAsync(services =>
+		{
+			services.RemoveAll<IPennMUSHDatabaseConverter>();
+			services.AddSingleton<IPennMUSHDatabaseConverter>(provider => new PennMUSHDatabaseConverter(
+				provider.GetRequiredService<PennMUSHDatabaseParser>(), provider.GetRequiredService<IMediator>(), options,
+				NullLogger<PennMUSHDatabaseConverter>.Instance));
+		});
+
+		var result = await world.Converter.ConvertDatabaseAsync(new PennMUSHDatabase { Version = "Test Version", Objects = [] });
+
+		await Assert.That(result.Errors).IsEmpty();
+		await Assert.That(result.IsSuccessful).IsTrue();
+		await Assert.That(result.Warnings).Contains(warning => warning.Contains("paren_groups"));
+	}
 }

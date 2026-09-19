@@ -3,6 +3,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Utilities;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Text;
@@ -297,7 +298,10 @@ public sealed class CommandText
 /// </summary>
 /// <param name="Registers">The current standard registers (%0, %1, named arguments)</param>
 /// <param name="IterationRegisters">The current iteration registers: %i0, #@, etc</param>
-/// <param name="RegexRegisters">The current regex registers, %$0 and named ones.</param>
+/// <param name="RegexRegisters">
+/// The regexp capture frames that <c>$0</c>-<c>$9</c> and <c>$&lt;name&gt;</c> read, innermost on top
+/// (see <see cref="RegexpCaptureFrame"/>). Not <c>%$0</c>, which is the switch text in <see cref="SwitchStack"/>.
+/// </param>
 /// <param name="SwitchStack">The switch context stack for stext() and slev() functions. Tracks the string being matched in nested switch statements.</param>
 /// <param name="CurrentEvaluation">The current evaluation context</param>
 /// <param name="ParserFunctionDepth">The function depth.</param>
@@ -415,7 +419,9 @@ public partial record ParserState(
 			Break = frame.Break,
 			NoBreak = frame.NoBreak
 		})),
-		RegexRegisters = new(RegexRegisters.Reverse().Select(frame => new Dictionary<string, MString>(frame, frame.Comparer))),
+		RegexRegisters = new(RegexRegisters.Reverse().Select(frame => frame is RegexpCaptureFrame owned
+			? owned.Clone()
+			: new Dictionary<string, MString>(frame, frame.Comparer))),
 		SwitchStack = new(SwitchStack.Reverse()),
 		EnvironmentRegisters = new(EnvironmentRegisters, EnvironmentRegisters.Comparer),
 		ExecutionStack = [],
@@ -663,4 +669,95 @@ public partial record ParserState(
 
 	[GeneratedRegex(@"^[A-Z0-9_.\-]+$")]
 	private static partial Regex RegisterNameRegex();
+
+	/// <summary>
+	/// The regexp capture frames this evaluation can see, innermost first. A frame opened while another
+	/// attribute was being evaluated is out of sight: PennMUSH marks a called attribute
+	/// <c>PE_REGS_NEWATTR</c>, and <c>pi_regs_get_rx</c> (<c>src/parse.c</c>) stops walking there.
+	/// </summary>
+	private IEnumerable<Dictionary<string, MString>> VisibleRegexpFrames
+		=> RegexRegisters.TakeWhile(frame => frame is not RegexpCaptureFrame owned
+			|| ReferenceEquals(owned.Evaluation, CurrentEvaluation));
+
+	/// <summary>
+	/// Whether <c>$&lt;digit&gt;</c> and <c>$&lt;name&gt;</c> are substitutions here rather than text:
+	/// some visible regexp context holds a capture (PennMUSH's <c>PE_HAS_REGTYPE(pe_info, PE_REGS_REGEXP)</c>).
+	/// </summary>
+	public bool HasRegexpCaptures => !RegexRegisters.IsEmpty && VisibleRegexpFrames.Any(frame => frame.Count > 0);
+
+	/// <summary>
+	/// The innermost visible regexp context, which is the only one <c>PE_Get_re</c> reads; null when
+	/// there is none. What <c>$n</c>, <c>r(&lt;n&gt;, regexp)</c> and <c>registers(, regexp)</c> see.
+	/// </summary>
+	public IReadOnlyDictionary<string, MString>? RegexpCaptures => VisibleRegexpFrames.FirstOrDefault();
+
+	/// <summary>
+	/// The capture <paramref name="name"/> — a group number or a group name, in any case — from the
+	/// innermost visible regexp context only, as <c>PE_Get_re</c> reads it. Empty when that context
+	/// has no such capture, even if an outer one does.
+	/// </summary>
+	public MString RegexpCapture(string name)
+		=> RegexpCaptures is { } frame && frame.TryGetValue(name, out var value)
+			? value
+			: MarkupText.Empty;
+}
+
+/// <summary>
+/// One regexp capture context: PennMUSH's <c>PE_REGS_REGEXP</c> frame, which <c>reswitch()</c> opens
+/// around its bodies and <c>$&lt;digit&gt;</c> / <c>$&lt;name&gt;</c> read while they are evaluated.
+/// Keys are case-insensitive, as <c>pe_regs_get</c> upper-cases them.
+/// </summary>
+/// <param name="evaluation">
+/// The attribute being evaluated when the frame was opened, compared by reference: every attribute
+/// evaluation creates its own <see cref="DBAttribute"/>, so a <c>u()</c> of the same attribute is still
+/// a different one.
+/// </param>
+public sealed class RegexpCaptureFrame(DBAttribute? evaluation)
+	: Dictionary<string, MString>(StringComparer.OrdinalIgnoreCase)
+{
+	public DBAttribute? Evaluation { get; } = evaluation;
+
+	/// <summary>
+	/// Replaces the frame's captures with <paramref name="match"/>'s, as <c>pe_regs_set_rx_context</c>
+	/// does: every numbered group, numbered as PCRE numbers them, and each named group that took part.
+	/// Values are slices of <paramref name="subject"/>, so they keep its markup.
+	/// </summary>
+	public void Fill(Regex regex, Match match, MString subject)
+	{
+		Clear();
+		foreach (var (number, dotNetNumber) in SoftcodeRegex.PcreGroupNumbers(regex).Index())
+		{
+			var group = match.Groups[dotNetNumber];
+			this[number.ToString()] = group.Success ? subject.Substring(group.Index, group.Length) : MarkupText.Empty;
+		}
+
+		foreach (var name in regex.GetGroupNames().Where(name => !int.TryParse(name, out _)))
+		{
+			var group = match.Groups[name];
+			if (group.Success)
+				this[name] = subject.Substring(group.Index, group.Length);
+		}
+	}
+
+	/// <summary>
+	/// Replaces the frame's captures with a wildcard match's: one per <c>*</c> or <c>?</c>, numbered
+	/// from 0, as <c>local_wild_match</c> stores them (<c>src/wild.c</c>).
+	/// </summary>
+	public void FillWildcard(Match match, MString subject)
+	{
+		Clear();
+		for (var number = 1; number < match.Groups.Count; number++)
+		{
+			var group = match.Groups[number];
+			this[(number - 1).ToString()] = group.Success ? subject.Substring(group.Index, group.Length) : MarkupText.Empty;
+		}
+	}
+
+	public RegexpCaptureFrame Clone()
+	{
+		var copy = new RegexpCaptureFrame(Evaluation);
+		foreach (var (name, value) in this)
+			copy[name] = value;
+		return copy;
+	}
 }
