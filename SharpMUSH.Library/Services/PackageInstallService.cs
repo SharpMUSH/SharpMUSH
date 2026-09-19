@@ -38,23 +38,40 @@ public partial class PackageInstallService(
 
 	// ── Shared helpers ───────────────────────────────────────────────────────
 
-	private async Task MarkGoingAsync(string objid, List<string> notes, CancellationToken cancellationToken)
+	/// <summary>Opens the undo log one package operation writes through; see <see cref="PackageWriteTransaction"/>.</summary>
+	private PackageWriteTransaction BeginWrites(SharpPlayer packageManager) =>
+		new(mediator, database, attributeStore, flags, registry, applications, packageManager);
+
+	private async Task MarkGoingAsync(
+		PackageWriteTransaction writes, string objid, List<string> notes, CancellationToken cancellationToken)
 	{
-		var node = await GetKnownAsync(objid, cancellationToken);
-		if (node is null)
+		if (await GetKnownAsync(objid, cancellationToken) is not AnySharpObject node)
 		{
 			return;
 		}
 
-		var going = await flags.GetObjectFlagAsync("GOING", cancellationToken);
-		if (going is null)
+		if (await flags.GetObjectFlagAsync("GOING", cancellationToken) is not SharpObjectFlag going)
 		{
 			notes.Add($"{objid}: GOING flag unavailable; object left in place.");
 			return;
 		}
 
-		await mediator.Send(new SetObjectFlagCommand(node, going), cancellationToken);
+		await writes.SetFlagAsync(node, going, cancellationToken);
 		notes.Add($"{objid}: marked GOING for garbage collection.");
+	}
+
+	private async Task ClearGoingAsync(
+		PackageWriteTransaction writes, string objid, List<string> notes, CancellationToken cancellationToken)
+	{
+		if (await GetKnownAsync(objid, cancellationToken) is not AnySharpObject node
+			|| await flags.GetObjectFlagAsync("GOING", cancellationToken) is not SharpObjectFlag going
+			|| !await node.Object().Flags.Value.AnyAsync(f => f.Name == going.Name, cancellationToken))
+		{
+			return;
+		}
+
+		await writes.UnsetFlagAsync(node, going, cancellationToken);
+		notes.Add($"{objid}: GOING cleared; restored to the package.");
 	}
 
 	private async Task<AnySharpObject?> GetKnownAsync(string objid, CancellationToken cancellationToken)
@@ -65,26 +82,6 @@ public partial class PackageInstallService(
 		}
 
 		return await database.GetObjectNodeAsync(dbref, cancellationToken) is AnySharpObject node ? node : null;
-	}
-
-	/// <summary>
-	/// The leaf attribute at <paramref name="path"/> on <paramref name="objid"/>, or null when the
-	/// path does not fully resolve. The attribute-flag commands are keyed on a
-	/// <see cref="SharpAttribute"/>, so this is both the existence check and the value they need.
-	/// </summary>
-	private async Task<SharpAttribute?> ResolveAttributeLeafAsync(
-		string objid, string[] path, CancellationToken cancellationToken)
-	{
-		if (HelperFunctions.ParseDbRef(objid) is not DBRef dbref)
-		{
-			return null;
-		}
-
-		var chain = await mediator.CreateStream(new GetAttributeQuery(dbref, path))
-			.ToArrayAsync(cancellationToken);
-
-		// A partial chain is not a hit: the leaf named by the last segment does not exist.
-		return chain.Length == path.Length ? chain[^1] : null;
 	}
 
 	private async Task<AnySharpContainer?> ResolveContainerAsync(

@@ -20,15 +20,13 @@ namespace SharpMUSH.Library.Services;
 public partial class PackageInstallService
 {
 	private async Task<Result<string>> CreateObjectAsync(
+		PackageWriteTransaction writes,
 		PackageObjectSpec spec,
 		SharpPlayer pmWizard,
 		Func<PackageRef, string?> resolve,
 		List<string> notes,
 		CancellationToken cancellationToken)
 	{
-		var pmContainer = ToContainer(pmWizard);
-		DBRef createdDbref;
-
 		// Through the Mediator, not straight at the store: the create commands are what carry the
 		// cache policy, and the one that matters here is the destination's ContentsTag. A package
 		// whose object lands in the master room and is created behind the cache's back is inert —
@@ -37,38 +35,36 @@ public partial class PackageInstallService
 		//
 		// ApplyDefaultFlags stays off: the manifest is the whole truth about a package object's
 		// flags, and the stock thing_flags is no_command.
+		ICommand<DBRef> create;
 		switch (spec.Type)
 		{
 			case PackageObjectType.Room:
-				createdDbref = await mediator.Send(new CreateRoomCommand(PrimaryName(spec.Name), pmWizard, ApplyDefaultFlags: false), cancellationToken);
+				create = new CreateRoomCommand(PrimaryName(spec.Name), pmWizard, ApplyDefaultFlags: false);
 				break;
 			case PackageObjectType.Thing:
 				{
-					var location = await ResolveContainerAsync(spec.Location, resolve, cancellationToken) ?? pmContainer;
-					createdDbref = await mediator.Send(
-						new CreateThingCommand(PrimaryName(spec.Name), location, pmWizard, location, ApplyDefaultFlags: false), cancellationToken);
+					var location = await ResolveContainerAsync(spec.Location, resolve, cancellationToken) ?? ToContainer(pmWizard);
+					create = new CreateThingCommand(PrimaryName(spec.Name), location, pmWizard, location, ApplyDefaultFlags: false);
 					break;
 				}
 			case PackageObjectType.Exit:
 				{
-					var location = await ResolveContainerAsync(spec.Location, resolve, cancellationToken);
-					if (location is null)
+					if (await ResolveContainerAsync(spec.Location, resolve, cancellationToken) is not AnySharpContainer location)
 					{
-						return new Error<string>($"Exit {{{{{spec.Ref}}}}}: source room is not resolvable.");
+						return new Error<string>(ExitSourceUnresolved(spec.Ref));
 					}
 
 					var parts = spec.Name.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-					createdDbref = await mediator.Send(
-						new CreateExitCommand(parts[0], parts.Skip(1).ToArray(), location, pmWizard, ApplyDefaultFlags: false), cancellationToken);
+					create = new CreateExitCommand(parts[0], parts.Skip(1).ToArray(), location, pmWizard, ApplyDefaultFlags: false);
 					break;
 				}
 			default:
 				return new Error<string>($"Object type '{spec.Type}' is not supported by the apply engine.");
 		}
 
-		if (await database.GetObjectNodeAsync(createdDbref, cancellationToken) is not AnySharpObject created)
+		if (await writes.CreateAsync(create, cancellationToken) is not AnySharpObject created)
 		{
-			return new Error<string>($"Internal error: object {{{{{spec.Ref}}}}} ({createdDbref}) vanished during apply.");
+			return new Error<string>($"Internal error: object {{{{{spec.Ref}}}}} vanished during apply.");
 		}
 
 		var objid = created.Object().DBRef.ToString();
@@ -77,6 +73,7 @@ public partial class PackageInstallService
 	}
 
 	private async Task<string?> ApplyObjectWiringAsync(
+		PackageWriteTransaction writes,
 		PackageObjectSpec spec,
 		string objid,
 		bool isNew,
@@ -96,7 +93,7 @@ public partial class PackageInstallService
 			var destination = await ResolveContainerAsync(spec.Destination, resolve, cancellationToken);
 			if (destination is null)
 			{
-				return $"Exit {{{{{spec.Ref}}}}}: destination is not resolvable.";
+				return ExitDestinationUnresolved(spec.Ref);
 			}
 
 			if (node is not SharpExit exit)
@@ -104,21 +101,16 @@ public partial class PackageInstallService
 				return $"Internal error: exit {{{{{spec.Ref}}}}} ({objid}) is not an exit.";
 			}
 
-			await mediator.Send(new LinkExitCommand(exit, destination), cancellationToken);
+			await writes.LinkCreatedExitAsync(exit, destination, cancellationToken);
 		}
 
-		// Name updates for metadata drift.
-		var metadataChange = changeset.Objects.FirstOrDefault(c =>
-			c.Ref == spec.Ref && c.Action == PackageObjectAction.UpdateMetadata);
-		if (metadataChange is not null)
+		// Name updates for metadata drift. PrimaryName, as the create path uses: a manifest name
+		// carries its aliases ("Out;out;o"), and nothing on the write path splits them, so passing
+		// the whole string here would rename an object the install itself created as "Out" to
+		// "Out;out;o" on the next run.
+		if (changeset.Objects.Any(c => c.Ref == spec.Ref && c.Action == PackageObjectAction.UpdateMetadata))
 		{
-			// Through the Mediator for the same reason as the create commands above: the object
-			// entry is the cache unit, and only the command declares the key that expires it.
-			// PrimaryName, as the create path uses: a manifest name carries its aliases
-			// ("Out;out;o"), and nothing on the write path splits them, so passing the whole string
-			// here would rename an object the install itself created as "Out" to "Out;out;o" on the
-			// next run.
-			await mediator.Send(new SetNameCommand(node, MarkupText.Plain(PrimaryName(spec.Name))), cancellationToken);
+			await writes.SetNameAsync(node, PrimaryName(spec.Name), cancellationToken);
 		}
 
 		// Parent.
@@ -128,10 +120,10 @@ public partial class PackageInstallService
 			var parentNode = parentObjid is null ? null : await GetKnownAsync(parentObjid, cancellationToken);
 			if (parentNode is null)
 			{
-				return $"Object {{{{{spec.Ref}}}}}: parent {spec.Parent} is not resolvable.";
+				return ParentUnresolved(spec.Ref, spec.Parent);
 			}
 
-			await mediator.Send(new SetObjectParentCommand(node, parentNode), cancellationToken);
+			await writes.SetParentAsync(node, parentNode, cancellationToken);
 		}
 
 		// Object flags, powers, locks, and attribute flags are applied in the
@@ -140,6 +132,7 @@ public partial class PackageInstallService
 	}
 
 	private async Task<string?> ApplyAttributeChangeAsync(
+		PackageWriteTransaction writes,
 		PackageManifest manifest,
 		PackageAttributeChange change,
 		string objid,
@@ -165,12 +158,12 @@ public partial class PackageInstallService
 				preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue));
 			}
 
-			await mediator.Send(new SetAttributeCommand(target, path, MarkupText.Plain(value), pmWizard), cancellationToken);
+			await writes.SetAttributeAsync(target, path, MarkupText.Plain(value), pmWizard, cancellationToken);
 		}
 
 		async Task BaselineAsync(string packageValue, string? effectiveValue)
 		{
-			await registry.UpsertManagedAttributeAsync(new ManagedAttributeRecord(
+			await writes.UpsertManagedAttributeAsync(new ManagedAttributeRecord(
 				manifest.Name, objid, change.Attribute.ToUpperInvariant(),
 				packageValue, ContentHash.Sha256Hex(packageValue), manifest.Version.ToString()));
 			if (effectiveValue is not null)
@@ -205,12 +198,12 @@ public partial class PackageInstallService
 
 			case PackageAttributeAction.Delete:
 				preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue!));
-				await mediator.Send(new ClearAttributeCommand(target, path), cancellationToken);
-				await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
+				await writes.ClearAttributeAsync(target, path, cancellationToken);
+				await writes.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
 				return null;
 
 			case PackageAttributeAction.RemoveBaseline:
-				await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
+				await writes.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
 				return null;
 
 			case PackageAttributeAction.Conflict:
@@ -221,8 +214,8 @@ public partial class PackageInstallService
 						case PackageConflictResolution.TakeTheirs when change.Conflict == PackageConflictKind.ModifyDelete:
 							// "Theirs" is the deletion.
 							preApply.Add(new PackageRevisionSnapshotAttribute(objid, change.Attribute, change.LiveValue!));
-							await mediator.Send(new ClearAttributeCommand(target, path), cancellationToken);
-							await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
+							await writes.ClearAttributeAsync(target, path, cancellationToken);
+							await writes.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
 							return null;
 						case PackageConflictResolution.TakeTheirs:
 							await WriteAsync(newValue!);
@@ -233,12 +226,12 @@ public partial class PackageInstallService
 							await BaselineAsync(newValue ?? decision.CustomValue, decision.CustomValue);
 							return null;
 						case PackageConflictResolution.UseCustom:
-							return $"Conflict {change.TargetRef}/{change.Attribute}: UseCustom requires a value.";
+							return CustomValueMissing($"Conflict {change.TargetRef}/{change.Attribute}");
 						default: // KeepMine
 							if (change.Conflict == PackageConflictKind.ModifyDelete)
 							{
 								// Keep the local value; the package no longer manages it.
-								await registry.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
+								await writes.RemoveManagedAttributeAsync(manifest.Name, objid, change.Attribute.ToUpperInvariant());
 								notes.Add($"{change.TargetRef}/{change.Attribute}: kept local value; no longer package-managed.");
 								return null;
 							}

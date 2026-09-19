@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace SharpMUSH.Library.Models.Packages;
 
 /// <summary>How the admin resolved one attribute conflict on the review screen.</summary>
@@ -82,7 +84,29 @@ public sealed record PackageRevisionSnapshot(
 	IReadOnlyList<PackageRevisionSnapshotStructure>? Structure = null);
 
 /// <summary>One object in a revision snapshot.</summary>
-public sealed record PackageRevisionSnapshotObject(string Ref, string Objid, string Type);
+/// <param name="Ref">The manifest ref that produced or targets the object.</param>
+/// <param name="Objid">Stable object id (<c>#dbref:created-secs</c>).</param>
+/// <param name="Type">Game object type name (a placeholder for an attached object).</param>
+/// <param name="Relation">
+/// Whether the package owned the object or only attached to it at this revision. Rollback registers
+/// what was owned and never registers what was attached. A snapshot written before this was recorded
+/// deserializes as <see cref="PackageObjectRelation.Unrecorded"/>.
+/// </param>
+public sealed record PackageRevisionSnapshotObject(string Ref, string Objid, string Type, PackageObjectRelation Relation);
+
+/// <summary>How a package related to an object at one revision.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<PackageObjectRelation>))]
+public enum PackageObjectRelation
+{
+	/// <summary>The snapshot predates recording the relation: the object may have been either kind.</summary>
+	Unrecorded,
+
+	/// <summary>The package created the object: it is registered to the package and destroyed on uninstall.</summary>
+	Owned,
+
+	/// <summary>The package manages attributes on an object it does not own (decision 20.3): never registered, never destroyed.</summary>
+	Attached
+}
 
 /// <summary>One managed attribute's final effective value in a revision snapshot.</summary>
 public sealed record PackageRevisionSnapshotAttribute(string Objid, string Attribute, string Value);
