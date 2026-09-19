@@ -536,60 +536,6 @@ public partial class Functions
 			MarkupText.Join(MarkupText.Concat(punctuation, space), splitList));
 	}
 
-	[SharpFunction(Name = "ibreak", MinArgs = 0, MaxArgs = 1,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["levels"])]
-	public ValueTask<CallState> IterationBreak(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var text = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "1").ToPlainText();
-		if (!long.TryParse(text, out var levels))
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
-		if (levels < 0 || levels > parser.CurrentState.IterationRegisters.Count)
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.OutOfRange));
-		foreach (var iteration in parser.CurrentState.IterationRegisters.Take((int)levels))
-			iteration.Break = true;
-		return ValueTask.FromResult(CallState.Empty);
-	}
-
-	[SharpFunction(Name = "ilev", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
-	public ValueTask<CallState> IterationLevel(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var depth = parser.CurrentState.IterationRegisters.Count;
-		return ValueTask.FromResult(new CallState(depth > 0 ? depth - 1 : -1));
-	}
-
-	[SharpFunction(Name = "inum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
-	public ValueTask<CallState> IterationNumber(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var levelArg = args["0"].Message!.ToPlainText();
-		var maxCount = parser.CurrentState.IterationRegisters.Count;
-
-		if (levelArg.Equals("L", StringComparison.OrdinalIgnoreCase))
-		{
-			// "L" refers to the outermost iteration
-			if (maxCount == 0)
-			{
-				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
-			}
-			return ValueTask.FromResult(new CallState(parser.CurrentState.IterationRegisters.Last().Iteration));
-		}
-
-		if (!int.TryParse(levelArg, out var level))
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
-		}
-
-		if (level < 0 || level >= maxCount)
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
-		}
-
-		// The stack enumerates innermost-first, so the level IS the index: 0 = current, 1 = parent.
-		var iteration = parser.CurrentState.IterationRegisters.ElementAt(level).Iteration;
-		return ValueTask.FromResult(new CallState(iteration));
-	}
-
 	[SharpFunction(Name = "last", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter"])]
 	public ValueTask<CallState> Last(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
