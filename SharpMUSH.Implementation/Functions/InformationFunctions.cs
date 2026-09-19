@@ -1346,7 +1346,7 @@ public partial class Functions
 			: new CallState(ErrorMessages.Returns.InvalidArgument));
 	}
 
-	/// <summary>Function names of one type — "builtin", "local", or anything else for both — sorted, lower-case.</summary>
+	/// <summary>Function names of one type — "builtin", "local", or anything else for both — sorted, upper-case.</summary>
 	private static IEnumerable<string> FunctionNames(IMUSHCodeParser parser, string type)
 		=> (type switch
 		{
@@ -1355,79 +1355,56 @@ public partial class Functions
 			_ => parser.FunctionLibrary.AsEnumerable()
 		})
 			.Select(kv => kv.Value.LibraryInformation.Attribute.Name)
-			.Distinct(StringComparer.OrdinalIgnoreCase)
-			.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
-			.Select(s => s.ToLowerInvariant());
+			.Select(name => name.ToUpperInvariant())
+			.Distinct(StringComparer.Ordinal)
+			.Order(StringComparer.Ordinal);
 
+	/// <summary>
+	/// PennMUSH's <c>fun_list</c> (<c>src/funmisc.c:1288-1327</c>). The motds are named exactly; every
+	/// other option answers to any prefix of its name, tried in Penn's order, so <c>list(f)</c> is
+	/// functions. A type other than builtin, local or all, an empty option and an unknown one are
+	/// <c>#-1</c>. Names come back upper-case.
+	/// </summary>
 	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		if (args.Count == 0)
+		var option = args.TryGetValue("0", out var a0) ? (a0.Message ?? MarkupText.Empty).ToPlainText() : string.Empty;
+		var type = "all";
+		if (args.TryGetValue("1", out var a1))
 		{
-			return CallState.Empty;
+			type = (a1.Message ?? MarkupText.Empty).ToPlainText().ToLowerInvariant();
+			if (type is not ("builtin" or "local" or "all"))
+				return new CallState("#-1");
 		}
 
-		var option = args.TryGetValue("0", out var a0) ? (a0.Message ?? MarkupText.Empty).ToPlainText().Trim().ToLowerInvariant() : string.Empty;
-		var type = args.TryGetValue("1", out var a1) ? (a1.Message ?? MarkupText.Empty).ToPlainText().Trim().ToLowerInvariant() : string.Empty;
+		bool Names(string full) => full.StartsWith(option, StringComparison.OrdinalIgnoreCase);
 
-		static string JoinSpace(IEnumerable<string> items) => string.Join(' ', items.Where(s => !string.IsNullOrWhiteSpace(s)));
-
-		switch (option)
+		return option switch
 		{
-			case "motd":
-				{
-					return await Motd(parser, default!);
-				}
-			case "wizmotd":
-			case "downmotd":
-			case "fullmotd":
-				{
-					return await GetWizardMotdAsync(parser, option);
-				}
-			case "functions":
-				return new CallState(JoinSpace(FunctionNames(parser, type)));
-			case "commands":
-				{
-					var cmdPairs = type switch
-					{
-						"builtin" => parser.CommandLibrary.AsEnumerable().Where(kv => kv.Value.IsSystem),
-						"local" => parser.CommandLibrary.AsEnumerable().Where(kv => !kv.Value.IsSystem),
-						_ => parser.CommandLibrary.AsEnumerable()
-					};
+			"" => new CallState("#-1"),
+			_ when option.Equals("motd", StringComparison.OrdinalIgnoreCase) => await Motd(parser, default!),
+			_ when option.ToLowerInvariant() is "wizmotd" or "downmotd" or "fullmotd"
+				=> await GetWizardMotdAsync(parser, option.ToLowerInvariant()),
+			_ when Names("functions") => new CallState(string.Join(' ', FunctionNames(parser, type))),
+			_ when Names("@functions") => new CallState(string.Join(' ', FunctionNames(parser, "local"))),
+			_ when Names("commands") => new CallState(string.Join(' ', CommandNames(parser, type))),
+			_ when Names("attribs") => await UpperSorted(Mediator.CreateStream(new GetAllAttributeEntriesQuery()).Select(x => x.Name)),
+			_ when Names("locks") => await UpperSorted(Enum.GetNames<LockType>().ToAsyncEnumerable()),
+			_ when Names("flags") => new CallState(await FlagListAsync(parser,
+				Mediator.CreateStream(new GetAllObjectFlagsQuery()).Select(f => (f.Name, f.Symbol, f.SetPermissions, f.Disabled)))),
+			_ when Names("powers") => new CallState(await FlagListAsync(parser,
+				Mediator.CreateStream(new GetPowersQuery()).Select(p => (p.Name, p.Symbol, p.SetPermissions, p.Disabled)))),
+			_ => new CallState("#-1")
+		};
 
-					var names = cmdPairs
-						.Select(kv => kv.Value.LibraryInformation.Attribute.Name)
-						.Distinct(StringComparer.OrdinalIgnoreCase)
-						.OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
-						.Select(s => s.ToLowerInvariant());
-					return new CallState(JoinSpace(names));
-				}
-			case "attribs":
-				return await SortedNames(Mediator.CreateStream(new GetAllAttributeEntriesQuery()).Select(x => x.Name));
-			case "locks":
-				{
-					var lockNames = Enum.GetNames(typeof(LockType))
-						.Select(n => n.ToLowerInvariant())
-						.OrderBy(x => x);
-					return new CallState(JoinSpace(lockNames));
-				}
-			case "flags":
-				return await SortedNames(Mediator.CreateStream(new GetAllObjectFlagsQuery()).Select(x => x.Name));
-			case "powers":
-				return await SortedNames(Mediator.CreateStream(new GetPowersQuery()).Select(x => x.Name));
-			default:
-				return CallState.Empty;
-		}
+		static async ValueTask<CallState> UpperSorted(IAsyncEnumerable<string> names)
+			=> new(string.Join(' ', (await names.ToArrayAsync())
+				.Select(name => name.ToUpperInvariant())
+				.Distinct(StringComparer.Ordinal)
+				.Order(StringComparer.Ordinal)));
 
-		static async ValueTask<CallState> SortedNames(IAsyncEnumerable<string> names)
-		{
-			var list = await names.Select(name => name.ToLowerInvariant()).ToListAsync();
-			list.Sort(StringComparer.OrdinalIgnoreCase);
-			return new CallState(JoinSpace(list));
-		}
-
-		async ValueTask<CallState> GetWizardMotdAsync(IMUSHCodeParser parser, string option)
+		async ValueTask<CallState> GetWizardMotdAsync(IMUSHCodeParser parser, string which)
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 			if (!await executor.IsWizard())
@@ -1435,14 +1412,52 @@ public partial class Functions
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			return option switch
+			return which switch
 			{
 				"wizmotd" => await WizMotd(parser, default!),
 				"downmotd" => await DownMotd(parser, default!),
-				"fullmotd" => await FullMotd(parser, default!),
-				_ => CallState.Empty
+				_ => await FullMotd(parser, default!)
 			};
 		}
+	}
+
+	/// <summary>Command names of one type — "builtin", "local", or anything else for both — sorted, upper-case.</summary>
+	private static IEnumerable<string> CommandNames(IMUSHCodeParser parser, string type)
+		=> (type switch
+		{
+			"builtin" => parser.CommandLibrary.AsEnumerable().Where(kv => kv.Value.IsSystem),
+			"local" => parser.CommandLibrary.AsEnumerable().Where(kv => !kv.Value.IsSystem),
+			_ => parser.CommandLibrary.AsEnumerable()
+		})
+			.Select(kv => kv.Value.LibraryInformation.Attribute.Name.ToUpperInvariant())
+			.Distinct(StringComparer.Ordinal)
+			.Order(StringComparer.Ordinal);
+
+	/// <summary>
+	/// Penn's <c>list_all_flags</c> with <c>FLAG_LIST_NAMECHAR</c>: <c>NAME (c), NAME</c>, sorted. God sees
+	/// everything but internal flags; a wizard or royalty also loses the disabled ones; anyone else also
+	/// loses dark and mdark ones.
+	/// </summary>
+	private async ValueTask<string> FlagListAsync(IMUSHCodeParser parser,
+		IAsyncEnumerable<(string Name, string Symbol, string[] SetPermissions, bool Disabled)> flags)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var god = executor.IsGod();
+		var privileged = await executor.IsPriv();
+
+		bool Has(string[] permissions, string permission)
+			=> permissions.Contains(permission, StringComparer.OrdinalIgnoreCase);
+
+		var visible = (await flags.ToArrayAsync())
+			.Where(f => !Has(f.SetPermissions, "internal"))
+			.Where(f => god || !(f.Disabled || Has(f.SetPermissions, "disabled")))
+			.Where(f => privileged || !(Has(f.SetPermissions, "dark") || Has(f.SetPermissions, "mdark")))
+			.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+			.Select(f => f.Name.ToUpperInvariant()
+				+ (f.Symbol is { Length: 1 } letter ? $" ({letter})" : string.Empty)
+				+ (f.Disabled ? " (disabled)" : string.Empty));
+
+		return string.Join(", ", visible);
 	}
 
 	[SharpFunction(Name = "scan", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]

@@ -121,8 +121,8 @@ public class UtilityFunctionUnitTests
 		var result = (await Parser.FunctionParse(MarkupText.Plain("functions()")))?.Message!;
 		var functions = result.ToPlainText();
 		await Assert.That(functions).IsNotEmpty();
-		await Assert.That(functions).Contains("rand");
-		await Assert.That(functions).Contains("add");
+		await Assert.That(functions.Split(' ')).Contains("RAND");
+		await Assert.That(functions.Split(' ')).Contains("ADD");
 	}
 
 	/// <summary>
@@ -133,14 +133,14 @@ public class UtilityFunctionUnitTests
 	public async Task Functions_Builtin()
 	{
 		var functions = (await Parser.FunctionParse(MarkupText.Plain("functions(builtin)")))!.Message!.ToPlainText();
-		await Assert.That(functions.Split(' ')).Contains("add");
+		await Assert.That(functions.Split(' ')).Contains("ADD");
 	}
 
 	[Test]
 	public async Task Functions_Local_ExcludesBuiltins()
 	{
 		var functions = (await Parser.FunctionParse(MarkupText.Plain("functions(local)")))!.Message!.ToPlainText();
-		await Assert.That(functions.Split(' ')).DoesNotContain("add");
+		await Assert.That(functions.Split(' ')).DoesNotContain("ADD");
 	}
 
 	[Test]
