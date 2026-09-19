@@ -4,21 +4,19 @@ namespace SharpMUSH.Library.Definitions;
 
 public static class Configurable
 {
-	private const int MinFloatPrecision = 0;
-	private const int MaxFloatPrecision = 15;
-	private const int DefaultFloatPrecision = 15;
-	private static int _floatPrecision = DefaultFloatPrecision;
+	private const uint MaxFloatPrecision = 15;
+	private const uint DefaultFloatPrecision = 15;
+	private static Func<uint> _floatPrecision = () => DefaultFloatPrecision;
 
 	/// <summary>
-	/// Number of significant digits for floating-point output.
-	/// Clamped to [0, 15]. PennMUSH default: 6, SharpMUSH default: 15.
-	/// Set via float_precision config option (Cosmetic category).
+	/// Decimal places in floating-point output, as <c>float_precision</c> sets it: read on every call,
+	/// so a configuration change applies to the next result. At most 15. PennMUSH default: 6,
+	/// SharpMUSH default: 15. See <see cref="Utilities.MushNumber"/>.
 	/// </summary>
-	public static int FloatPrecision
-	{
-		get => _floatPrecision;
-		set => _floatPrecision = Math.Clamp(value, MinFloatPrecision, MaxFloatPrecision);
-	}
+	public static int FloatPrecision => (int)Math.Min(_floatPrecision(), MaxFloatPrecision);
+
+	/// <summary>Reads <see cref="FloatPrecision"/> from the live configuration; called once at startup.</summary>
+	public static void ReadFloatPrecisionFrom(Func<uint> source) => _floatPrecision = source;
 	/// <inheritdoc cref="AliasOptions.Default"/>
 	public static Dictionary<string, string[]> DefaultFunctionAliases => AliasOptions.Default.FunctionAliases;
 

@@ -79,16 +79,7 @@ public static partial class ArgHelpers
 			result = result is { } accumulated ? aggregateFunction(accumulated, value) : value;
 		}
 
-		return ValueTask.FromResult<CallState>(FormatDecimal(result ?? 0));
-	}
-
-	/// <summary>
-	/// Formats a decimal number to remove unnecessary trailing zeros and decimal point.
-	/// E.g., 10.0 -> "10", 10.5 -> "10.5", 10.123 -> "10.123"
-	/// </summary>
-	private static string FormatDecimal(decimal value)
-	{
-		return value.ToString("0.##########", CultureInfo.InvariantCulture);
+		return ValueTask.FromResult<CallState>(result ?? 0);
 	}
 
 	/// <summary>
@@ -144,7 +135,7 @@ public static partial class ArgHelpers
 		}
 
 		var result = func(value);
-		return ValueTask.FromResult<CallState>(FormatDecimal(result));
+		return ValueTask.FromResult<CallState>(result);
 	}
 
 	public static ValueTask<CallState> EvaluateDecimalToInteger(IMUSHCodeParser parser,

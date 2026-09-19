@@ -489,13 +489,13 @@ public partial class Functions
 
 		string result = operation switch
 		{
-			"add" => values.Sum().ToString(CultureInfo.InvariantCulture),
-			"sub" => values.Aggregate((acc, val) => acc - val).ToString(CultureInfo.InvariantCulture),
-			"mul" => values.Aggregate((acc, val) => acc * val).ToString(CultureInfo.InvariantCulture),
-			"fdiv" => values.Aggregate((acc, val) => acc / val).ToString(CultureInfo.InvariantCulture),
+			"add" => MushNumber.Unparse(values.Sum()),
+			"sub" => MushNumber.Unparse(values.Aggregate((acc, val) => acc - val)),
+			"mul" => MushNumber.Unparse(values.Aggregate((acc, val) => acc * val)),
+			"fdiv" => MushNumber.Unparse(values.Aggregate((acc, val) => acc / val)),
 
-			"max" => values.Max().ToString(CultureInfo.InvariantCulture),
-			"min" => values.Min().ToString(CultureInfo.InvariantCulture),
+			"max" => MushNumber.Unparse(values.Max()),
+			"min" => MushNumber.Unparse(values.Min()),
 			"eq" => (values.All(v => v == values[0]) ? 1 : 0).ToString(),
 			"neq" => (values.Zip(values.Skip(1), (a, b) => a != b).Any(x => x) ? 1 : 0).ToString(),
 			"gt" => (values.Zip(values.Skip(1), (a, b) => a > b).All(x => x) ? 1 : 0).ToString(),
@@ -510,16 +510,16 @@ public partial class Functions
 			"nand" => (!values.All(v => v != 0) ? 1 : 0).ToString(),
 			"nor" => (!values.Any(v => v != 0) ? 1 : 0).ToString(),
 
-			"mean" => values.Average().ToString(CultureInfo.InvariantCulture),
-			"median" => CalculateMedian(values).ToString(CultureInfo.InvariantCulture),
-			"stddev" => CalculateStdDev(values).ToString(CultureInfo.InvariantCulture),
+			"mean" => MushNumber.Unparse(values.Average()),
+			"median" => MushNumber.Unparse(CalculateMedian(values)),
+			"stddev" => MushNumber.Unparse(CalculateStdDev(values)),
 
 			// Distance operations (requires exactly 4 or 6 values)
 			"dist2d" when values.Count == 4
-				=> ((decimal)Math.Sqrt((double)((values[2] - values[0]) * (values[2] - values[0]) + (values[3] - values[1]) * (values[3] - values[1])))).ToString(CultureInfo.InvariantCulture),
+				=> MushNumber.Unparse(Math.Sqrt((double)((values[2] - values[0]) * (values[2] - values[0]) + (values[3] - values[1]) * (values[3] - values[1])))),
 			"dist2d" => ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "lmath"),
 			"dist3d" when values.Count == 6
-				=> ((decimal)Math.Sqrt((double)((values[3] - values[0]) * (values[3] - values[0]) + (values[4] - values[1]) * (values[4] - values[1]) + (values[5] - values[2]) * (values[5] - values[2])))).ToString(CultureInfo.InvariantCulture),
+				=> MushNumber.Unparse(Math.Sqrt((double)((values[3] - values[0]) * (values[3] - values[0]) + (values[4] - values[1]) * (values[4] - values[1]) + (values[5] - values[2]) * (values[5] - values[2])))),
 			"dist3d" => ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "lmath"),
 
 			_ => ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "lmath")
@@ -609,7 +609,7 @@ public partial class Functions
 			for (var i = start; i <= end + step * 0.0001; i += step)
 			{
 				if (i > end + step * 0.5) break;
-				results.Add(useIntegers ? ((long)Math.Round(i)).ToString(CultureInfo.InvariantCulture) : FormatDouble(i));
+				results.Add(useIntegers ? ((long)Math.Round(i)).ToString(CultureInfo.InvariantCulture) : MushNumber.Unparse(i));
 			}
 		}
 		else
@@ -617,19 +617,13 @@ public partial class Functions
 			for (var i = start; i >= end + step * 0.0001; i += step)
 			{
 				if (i < end + step * 0.5) break;
-				results.Add(useIntegers ? ((long)Math.Round(i)).ToString(CultureInfo.InvariantCulture) : FormatDouble(i));
+				results.Add(useIntegers ? ((long)Math.Round(i)).ToString(CultureInfo.InvariantCulture) : MushNumber.Unparse(i));
 			}
 		}
 
 		return new CallState(string.Join(delim, results));
 	}
 
-	private string FormatDouble(double value)
-	{
-		if (Math.Abs(value - Math.Floor(value)) < 1e-10)
-			return ((long)value).ToString(CultureInfo.InvariantCulture);
-		return value.ToString($"G{Library.Definitions.Configurable.FloatPrecision}", CultureInfo.InvariantCulture);
-	}
 
 	[SharpFunction(Name = "mean", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number..."])]
@@ -876,7 +870,7 @@ public partial class Functions
 		var arg1 = arguments.TryGetValue("0", out var value) ? value.Message?.ToPlainText() : null;
 
 		return ValueTask.FromResult<CallState>(new(numbers.TryDouble(string.IsNullOrEmpty(arg1) ? "1" : arg1, out var dec)
-			? Math.Exp(dec).ToString(CultureInfo.InvariantCulture)
+			? MushNumber.Unparse(Math.Exp(dec))
 			: ErrorMessages.Returns.Number));
 	}
 
@@ -992,11 +986,18 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 
 		if (!numbers.TryDouble((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var value) ||
-				!numbers.TryInt32((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var decimals))
+				!numbers.TryInt32((args["1"].Message ?? MarkupText.Empty).ToPlainText(), out var places))
 		{
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
+		// fun_round takes an unsigned place count and caps it at FLOAT_PRECISION (src/funmath.c:898, 909).
+		if (places < 0)
+		{
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integer);
+		}
+
+		var decimals = Math.Min(places, Configurable.FloatPrecision);
 		var rounded = Math.Round(value, decimals);
 
 		if (args.Count == 3)
@@ -1189,7 +1190,7 @@ public partial class Functions
 			VectorPair pair => new CallState(Number(fold(pair.Left, pair.Right)))
 		});
 
-	private static MString Number(decimal value) => MarkupText.Plain(value.ToString(CultureInfo.InvariantCulture));
+	private static MString Number(decimal value) => MarkupText.Plain(MushNumber.Unparse(value));
 
 	[SharpFunction(Name = "vadd", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["vector1", "vector2", "delimiter", "sep"])]
 	public ValueTask<CallState> VAdd(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1224,7 +1225,7 @@ public partial class Functions
 		var y = list1[2].result * list2[0].result - list2[2].result * list1[0].result;
 		var z = list1[0].result * list2[1].result - list2[0].result * list1[1].result;
 
-		var output = new[] { x, y, z }.Select(v => MarkupText.Plain(v.ToString(CultureInfo.InvariantCulture)));
+		var output = new[] { x, y, z }.Select(v => MarkupText.Plain(MushNumber.Unparse(v)));
 		return ValueTask.FromResult(new CallState(MarkupText.Join(sep, output)));
 	}
 
@@ -1296,7 +1297,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.DivisionByZero));
 		}
 
-		var output = list.Select(x => MarkupText.Plain((x.result / magnitude).ToString(CultureInfo.InvariantCulture)));
+		var output = list.Select(x => MarkupText.Plain(MushNumber.Unparse(x.result / magnitude)));
 		return ValueTask.FromResult(new CallState(MarkupText.Join(delimiter, output)));
 	}
 
@@ -1325,23 +1326,6 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.OutOfRange);
 		}
 
-		// Round very small numbers (floating point errors) to 0
-		// This handles cases like cos(90 degrees) which should be 0 but gives tiny values
-		if (Math.Abs(result) < 1e-6)
-		{
-			return new CallState("0");
-		}
-
-		// Round very close to 1 or -1 to exactly 1 or -1
-		if (Math.Abs(result - 1.0) < 1e-10)
-		{
-			return new CallState("1");
-		}
-		if (Math.Abs(result + 1.0) < 1e-10)
-		{
-			return new CallState("-1");
-		}
-
 		return new CallState(result);
 	}
 
@@ -1362,28 +1346,7 @@ public partial class Functions
 			_ => resultRadians // null or "r" = radians (default)
 		};
 
-		// Round very small numbers (floating point errors) to 0
-		if (Math.Abs(result) < 1e-6)
-		{
-			return new CallState("0");
-		}
-
-		// Round to nearby integers if very close
-		var rounded = Math.Round(result);
-		if (Math.Abs(result - rounded) < 1e-10)
-		{
-			return new CallState(((int)rounded).ToString(CultureInfo.InvariantCulture));
-		}
-
-		// Format without scientific notation
-		var formatted = result.ToString(CultureInfo.InvariantCulture);
-
-		if (formatted.Contains('E') || formatted.Contains('e'))
-		{
-			formatted = result.ToString("F15", CultureInfo.InvariantCulture).TrimEnd('0').TrimEnd('.');
-		}
-
-		return new CallState(formatted);
+		return new CallState(result);
 	}
 
 	[SharpFunction(Name = "RNUM", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular,

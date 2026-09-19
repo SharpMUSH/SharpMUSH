@@ -1,7 +1,7 @@
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
-using System.Globalization;
+using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Library.ParserInterfaces;
 
@@ -32,11 +32,9 @@ public record CallState(MString? Message, int Depth, MString[]? Arguments, Func<
 
 	public CallState(DBRef Message) : this(Message.ToString()) { }
 
-	public CallState(double Message) : this(
-		Message.ToString($"G{Definitions.Configurable.FloatPrecision}", CultureInfo.InvariantCulture))
-	{ }
+	public CallState(double Message) : this(MushNumber.Unparse(Message)) { }
 
-	public CallState(decimal Message) : this(Message.ToString(CultureInfo.InvariantCulture)) { }
+	public CallState(decimal Message) : this(MushNumber.Unparse(Message)) { }
 
 	public CallState(string Message)
 		: this(
