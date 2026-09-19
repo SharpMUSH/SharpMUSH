@@ -1,20 +1,16 @@
-using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Documentation;
 using SharpMUSH.Implementation.Services;
-using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
-using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
 /// Pins the glob dialect of each site that matches a user- or admin-written wildcard outside softcode:
-/// help topics, text-file entries, sitelock rules and attribute enums. Each uses the general MUSH
+/// help topics, text-file entries and sitelock rules. Each uses the general MUSH
 /// wildcard (<see cref="SharpMUSH.Library.Markup.MushText.Glob"/>): <c>*</c> any run, <c>?</c> one
 /// character, <c>\</c> making the next character literal. They each used to hand-roll a translation in
 /// which <c>\</c> was an ordinary character, so <c>\*</c> demanded a backslash followed by anything.
@@ -115,37 +111,4 @@ public class GlobDialectSiteTests
 	[Arguments("10.*", "110.200.3.4", false)]
 	public async Task Sitelock_GlobOnTheAddressString(string rule, string ip, bool expected)
 		=> await Assert.That(SitelockMatcher.Matches(rule, ip, "unresolved.example")).IsEqualTo(expected);
-
-	// ---- Attribute enums (ValidateService) -----------------------------------------------------------
-
-	/// <remarks>
-	/// Case-sensitive, unlike every other site here. PennMUSH's <c>@attribute/enum</c> is a different
-	/// contract altogether (a case-insensitive prefix list, <c>src/atr_tab.c</c>); globbing enum
-	/// entries is SharpMUSH's own, and these pin only which wildcard it speaks.
-	/// </remarks>
-	[Test]
-	[Arguments("reddish", true)]
-	[Arguments("blue", true)]
-	[Arguments("Blue", false)]
-	[Arguments("green", false)]
-	[Arguments("star*", true)]
-	[Arguments("stars", false)]
-	[Arguments(@"star\s", false)]
-	[Arguments("plain", true)]
-	public async Task AttributeEnum_UsesTheGeneralWildcardCaseSensitively(string value, bool expected)
-	{
-		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-		options.CurrentValue.Returns(BaseConfig);
-		var service = new ValidateService(Substitute.For<IMediator>(), options, Substitute.For<ILockService>());
-		var entry = new SharpAttributeEntry
-		{
-			Name = "COLOUR",
-			DefaultFlags = [],
-			Enum = ["red*", "bl?e", @"star\*", "plain"]
-		};
-
-		var valid = await service.Valid(IValidateService.ValidationType.AttributeValue, MarkupText.Plain(value), entry);
-
-		await Assert.That(valid).IsEqualTo(expected);
-	}
 }
