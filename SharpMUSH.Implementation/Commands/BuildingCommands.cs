@@ -15,6 +15,7 @@ using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using SharpMUSH.Library.Markup;
+using System.Buffers;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -1395,5 +1396,22 @@ public partial class Commands
 					shouldNotify: true);
 			}
 		);
+	}
+
+	[SharpCommand(Name = "@UNRECYCLE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object"])]
+	public async ValueTask<Option<CallState>> UnRecycle(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		if (!await executor.IsWizard())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		await NotifyService.Notify(executor, "@UNRECYCLE: Object recovery system not yet implemented.", executor);
+		await NotifyService.Notify(executor, "This command would restore objects from the recycle bin.", executor);
+
+		return CallState.Empty;
 	}
 }
