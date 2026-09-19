@@ -22,7 +22,7 @@ using SharpMUSH.Tests.BUnit.Resources;
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>
-/// HttpMessageHandler that routes wiki API calls directly to an InMemoryWikiService.
+/// HttpMessageHandler that routes wiki API calls directly to a WikiStoreService.
 /// This gives tests a fully working WikiService without a real server or stub 404s.
 /// </summary>
 file sealed class InMemoryWikiHandler(IWikiService wikiService) : HttpMessageHandler
@@ -121,10 +121,10 @@ file static class WikiServiceSetup
 	{
 		var auth = ctx.AddAuthorization();
 
-		// One InMemoryWikiService instance shared between the handler and the test
+		// One WikiStoreService instance shared between the handler and the test
 		// so tests can seed pages directly via IWikiService and have WikiService
 		// (the HTTP client wrapper) read them back through the same data store.
-		var wikiSvc = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var wikiSvc = InMemoryWikiStore.CreateService();
 
 		var apiClient = ctx.Track(new HttpClient(new InMemoryWikiHandler(wikiSvc))
 		{
@@ -228,7 +228,7 @@ public class WikiPageRouteTests : TrackingBunitContext
 	public async Task WikiPageEdit_RendersWikiViewInEditModeWithSeededContent()
 	{
 		// Seed via IWikiService so the HTTP handler can return real data.
-		// InMemoryWikiService.Slugify: "Magic System" -> "magic_system"
+		// WikiHelpers.Slugify: "Magic System" -> "magic_system"
 		var wikiSvc = Services.GetRequiredService<IWikiService>();
 		await wikiSvc.CreateAsync("Magic System", "Content here.", authorDbref: "#1", WikiNamespace.Main);
 

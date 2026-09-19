@@ -15,7 +15,7 @@ namespace SharpMUSH.Tests.Server.Controllers;
 /// </summary>
 /// <remarks>
 /// The <see cref="LocalizedWikiPage"/> under test is built by a real <see cref="WikiLocalizationService"/>
-/// over an <see cref="InMemoryWikiService"/> rather than by hand. That service is the only thing allowed to
+/// over an <see cref="WikiStoreService"/> rather than by hand. That service is the only thing allowed to
 /// construct the record, and its own normalisation is what makes the record's locale invariants hold —
 /// hand-building one here would let these tests pass against a state the production path cannot produce.
 /// </remarks>
@@ -23,9 +23,9 @@ public class WikiPrerenderLocaleTests
 {
 	private const string Canonical = "https://x/wiki/main/general/dragons";
 
-	private static (InMemoryWikiService Storage, WikiLocalizationService Localization) Build()
+	private static (WikiStoreService Storage, WikiLocalizationService Localization) Build()
 	{
-		var storage = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var storage = InMemoryWikiStore.CreateService();
 		var monitor = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 		monitor.CurrentValue.Returns(TestSharpMushOptions.Create());
 		var localization = new WikiLocalizationService(

@@ -191,7 +191,7 @@ internal static class EngineRegistration
 		services.AddSingleton<PennMUSHDatabaseParser>();
 		services.AddSingleton<IPennMUSHDatabaseConverter, PennMUSHDatabaseConverter>();
 
-		// Wiki subsystem — IWikiService is the database provider (see RegisterDatabaseProvider).
+		// Wiki subsystem — WikiStoreService over the database provider's IWikiStore (see RegisterDatabaseProvider).
 		services.AddSingleton<WikiMarkdigPipeline>();
 
 		// Locale fallback rules (pure) and the one localized-read service every reader path goes through.

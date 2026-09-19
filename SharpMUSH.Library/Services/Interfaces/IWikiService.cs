@@ -4,9 +4,8 @@ using SharpMUSH.Library.Models.Wiki;
 namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
-/// CRUD service for wiki pages and their revision history.
-/// The in-memory implementation is for testing and development;
-/// database implementations follow in a later phase.
+/// CRUD service for wiki pages, their revision history and their translations. Implemented once, by
+/// <see cref="WikiStoreService"/> over the database provider's <see cref="IWikiStore"/>.
 /// </summary>
 /// <remarks>
 /// All methods that might not find a resource return <see cref="Found{T}"/> rather
@@ -160,7 +159,7 @@ public interface IWikiService
 	/// <remarks>
 	/// Deliberately symmetric with <see cref="GetAllPagesAsync"/> and deliberately not a query: in-game
 	/// search is an in-process scan, so making the translation stream readable in bulk is the whole of what
-	/// the four backends have to provide. Bodies are included because that is what search matches on —
+	/// each store has to provide. Bodies are included because that is what search matches on —
 	/// <see cref="GetTranslationsAsync"/> returns bodyless summaries and cannot serve this.
 	/// </remarks>
 	Task<IReadOnlyList<WikiTranslation>> GetAllTranslationsAsync(int skip = 0, int take = 50);
@@ -218,7 +217,8 @@ public interface IWikiService
 	/// <summary>
 	/// Returns the revision history for one <c>(pageId, locale)</c> stream, newest first.
 	/// Pass <see cref="string.Empty"/> for the source-locale stream, which is what
-	/// <see cref="GetRevisionsAsync"/> returns.
+	/// <see cref="GetRevisionsAsync"/> returns. A tag that is not a recognised locale names no stream, and
+	/// yields an empty list rather than the source stream.
 	/// </summary>
 	/// <remarks>
 	/// A distinct name rather than an overload of <see cref="GetRevisionsAsync"/>: an overload differing
@@ -231,7 +231,8 @@ public interface IWikiService
 	/// Returns one revision snapshot from a single <c>(pageId, locale)</c> stream.
 	/// Pass <see cref="string.Empty"/> for the source-locale stream, which is what
 	/// <see cref="GetRevisionAsync"/> returns.
-	/// Returns <c>NotFound</c> if that stream has no such revision number.
+	/// Returns <c>NotFound</c> if that stream has no such revision number, or if <paramref name="locale"/> is
+	/// not a recognised tag.
 	/// </summary>
 	/// <remarks>
 	/// Revision numbering restarts at 1 in every locale, so <c>revisionNumber</c> alone does not identify a

@@ -24,12 +24,12 @@ public class WikiControllerProtectionTests
 {
 	// Callers are identified by their granted permission scopes (the protected-page check authorizes
 	// on the wiki.admin claim, not on a role name).
-	private static WikiEndpoints MakeEndpoints(InMemoryWikiService wiki, params string[] scopes) =>
+	private static WikiEndpoints MakeEndpoints(WikiStoreService wiki, params string[] scopes) =>
 		WikiControllerTestHarness.Build(wiki, authenticated: true, "#42", scopes).Wiki;
 
-	private static async Task<(InMemoryWikiService Wiki, string Slug)> SeedProtectedPage(bool isProtected)
+	private static async Task<(WikiStoreService Wiki, string Slug)> SeedProtectedPage(bool isProtected)
 	{
-		var wiki = new InMemoryWikiService(new WikiMarkdigPipeline());
+		var wiki = InMemoryWikiStore.CreateService();
 		if (await wiki.CreateAsync("Protected Page", "# original", "#1") is not WikiPage page)
 		{
 			throw new InvalidOperationException("Seeding the protected page failed.");
