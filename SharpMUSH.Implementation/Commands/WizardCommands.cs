@@ -1,6 +1,5 @@
 using DotNext.Collections.Generic;
 using Humanizer;
-using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -15,89 +14,13 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Messaging.Messages;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
-using ConfigGenerated = SharpMUSH.Configuration.Generated;
 
 namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
-	[SharpCommand(Name = "@LOG", Switches = ["CHECK", "CMD", "CONN", "ERR", "TRACE", "WIZ", "RECALL"],
-		Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["type", "message"])]
-	public async ValueTask<Option<CallState>> Log(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches;
-
-		var category = switches.Contains("CHECK") ? "Check" :
-									 switches.Contains("CMD") ? "Command" :
-									 switches.Contains("CONN") ? "Connection" :
-									 switches.Contains("ERR") ? "Error" :
-									 switches.Contains("TRACE") ? "Trace" :
-									 switches.Contains("WIZ") ? "Wizard" :
-									 "Command"; // Default to Command log
-
-		if (switches.Contains("RECALL"))
-		{
-			var countArg = parser.CurrentState.Arguments.TryGetValue("0", out var countCallState)
-				? countCallState!.Message!.ToPlainText()
-				: "100";
-
-			if (!int.TryParse(countArg, out var count))
-			{
-				count = 100;
-			}
-
-			count = Math.Max(1, Math.Min(count, 1000));
-
-			var shown = 0;
-			var lines = new System.Text.StringBuilder();
-			await foreach (var log in Mediator.CreateStream(new GetConnectionLogsQuery(category, 0, count)))
-			{
-				shown++;
-				var timestamp = log.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
-				var message = log.Message ?? log.MessageTemplate ?? "(no message)";
-				lines.AppendLine($"[{timestamp}] {message}");
-			}
-
-			if (shown == 0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoLogEntriesForCategoryFormat), executor, category);
-				return CallState.Empty;
-			}
-
-			await NotifyService.Notify(executor,
-				$"--- Log entries for {category} (showing {shown}) ---{Environment.NewLine}{lines.ToString().TrimEnd()}", executor);
-			return CallState.Empty;
-		}
-
-		var logMessageArg = parser.CurrentState.Arguments.TryGetValue("0", out var logCallState);
-
-		if (!logMessageArg || string.IsNullOrWhiteSpace(logCallState!.Message!.ToPlainText()))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LogUsage), executor);
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
-		}
-
-		var logMessage = logCallState!.Message!;
-
-		using (Logger.BeginScope(new Dictionary<string, string>
-		{
-			["Category"] = category,
-			["ExecutorDBRef"] = executor.Object().DBRef.ToString(),
-			["ExecutorName"] = executor.Object().Name
-		}))
-		{
-			Logger.LogInformation("{LogMessage}", MarkupTextSerializer.Serialize(logMessage));
-		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.MessageLoggedToCategoryFormat), executor, category);
-		return CallState.Empty;
-	}
-
 	[SharpCommand(Name = "@POOR", Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["player"])]
 	public async ValueTask<Option<CallState>> Poor(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -334,14 +257,6 @@ public partial class Commands
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SetQuotaForPlayersFormat), executor, amount, count);
 
-		return CallState.Empty;
-	}
-
-	[SharpCommand(Name = "@DBCK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> DatabaseCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NotSupportedForSharpMUSH), executor);
 		return CallState.Empty;
 	}
 
@@ -658,101 +573,6 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@BOOT", Switches = ["PORT", "ME", "SILENT"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = ["player"])]
-	public async ValueTask<Option<CallState>> Boot(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches.ToHashSet();
-		var args = parser.CurrentState.Arguments;
-		var silent = switches.Contains("SILENT");
-
-		List<long> targetHandles = [];
-
-		if (switches.Contains("ME"))
-		{
-			if (parser.CurrentState.Handle is { } h)
-				targetHandles.Add(h);
-		}
-		else if (switches.Contains("PORT"))
-		{
-			if (args.Count == 0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootPortUsage), executor);
-				return new CallState(ErrorMessages.Returns.InvalidArguments);
-			}
-			var portText = args["0"].Message!.ToPlainText();
-			if (!long.TryParse(portText, out var handle))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootDescriptorMustBeNumber), executor);
-				return new CallState(ErrorMessages.Returns.InvalidArguments);
-			}
-			if (ConnectionService.Get(handle) is not null)
-			{
-				targetHandles.Add(handle);
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootNoSuchDescriptorFormat), executor, handle);
-				return CallState.Empty;
-			}
-		}
-		else
-		{
-			if (args.Count == 0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BootUsage), executor);
-				return new CallState(ErrorMessages.Returns.InvalidArguments);
-			}
-			var playerArg = args["0"].Message!.ToPlainText();
-			switch (await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg))
-			{
-				case AnySharpObject and SharpPlayer playerObj:
-					// Boot only the last active connection to match PennMUSH behavior
-					var lastConnection = await ConnectionService.Get(playerObj.Object.DBRef).LastOrDefaultAsync();
-					if (lastConnection is not null)
-					{
-						targetHandles.Add(lastConnection.Handle);
-					}
-
-					break;
-				case AnySharpObject:
-					throw new InvalidOperationException("A player lookup found something that is not a player.");
-				case Error<CallState> error:
-					return error.Value;
-			}
-
-			if (targetHandles.Count == 0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNotConnected), executor);
-				return CallState.Empty;
-			}
-		}
-
-		foreach (var handle in targetHandles)
-		{
-			if (!silent)
-			{
-				await NotifyService.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.YouHaveBeenDisconnected));
-			}
-			await ConnectionService.Disconnect(handle);
-
-			// Tell ConnectionServer to close the actual socket connection (mirrors the QUIT path in
-			// SocketCommands.cs) — ConnectionService.Disconnect alone only updates server-side state
-			// and does not close the socket.
-			if (MessageBus != null)
-			{
-				await MessageBus.Publish(new DisconnectConnectionMessage(handle, "BOOT"));
-			}
-		}
-
-		return CallState.Empty;
-	}
-
-	[SharpCommand(Name = "@DISABLE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
-		MinArgs = 1, MaxArgs = 1, ParameterNames = ["command"])]
-	public async ValueTask<Option<CallState>> Disable(IMUSHCodeParser parser, SharpCommandAttribute _2)
-		=> await ConfigSetHelper(parser, isEnable: false);
-
 	[SharpCommand(Name = "@NEWPASSWORD", Switches = ["GENERATE"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse,
 		CommandLock = "FLAG^WIZARD", MinArgs = 1, ParameterNames = ["player", "password"])]
 	public async ValueTask<Option<CallState>> NewPassword(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -806,134 +626,6 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordSetFormat), executor, asPlayer.Object.Name, arg1);
 
 		return new CallState(arg1);
-	}
-
-	/// <remarks>
-	/// PennMUSH <c>purge()</c> (<c>src/destroy.c</c>): one pass over the database, advancing objects
-	/// marked <c>GOING</c> to <c>GOING_TWICE</c> and freeing the ones that already reached
-	/// <c>GOING_TWICE</c>. Two passes, so an accidental <c>@destroy</c> stays recoverable via
-	/// <c>@undestroy</c> for a whole purge interval. A special object that somehow got marked is
-	/// spared rather than freed.
-	/// </remarks>
-	[SharpCommand(Name = "@PURGE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> Purge(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		await ObjectDestructionService.PurgeAsync(parser);
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PurgeComplete), executor);
-
-		return CallState.Empty;
-	}
-
-	[SharpCommand(Name = "@SHUTDOWN", Switches = ["PANIC", "REBOOT", "PARANOID"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["type"])]
-	public async ValueTask<Option<CallState>> Shutdown(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches;
-		var executorName = executor.Object().Name;
-
-		if (switches.Contains("PANIC"))
-		{
-			if (!executor.IsGod())
-			{
-				return await NotifyService.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.PermissionDenied,
-					notifyMessage: ErrorMessages.Notifications.ShutdownOnlyGodPanic,
-					shouldNotify: true);
-			}
-
-			await GameBroadcastService.BroadcastShutdownAsync(executorName, isReboot: false);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownPanicInitiated), executor);
-			// In a web-based environment, panic shutdown should trigger immediate termination
-			// This would typically be handled by orchestration (Kubernetes, Docker, etc.)
-			Logger.LogCritical("PANIC SHUTDOWN initiated by {Executor}", executorName);
-		}
-		else if (switches.Contains("REBOOT"))
-		{
-			// Broadcast reboot to all connected players (PennMUSH src/bsd.c).
-			await GameBroadcastService.BroadcastAsync(
-				string.Format(ErrorMessages.Notifications.GameRebootBy, executorName));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootInitiated), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootDocker), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootStandalone), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownRebootRedis), executor);
-			Logger.LogWarning("REBOOT requested by {Executor}", executorName);
-		}
-		else if (switches.Contains("PARANOID"))
-		{
-			await GameBroadcastService.BroadcastAsync(ErrorMessages.Notifications.GameSavingDatabase);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownParanoidInitiated), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownParanoidDatabase), executor);
-			Logger.LogWarning("PARANOID SHUTDOWN requested by {Executor}", executorName);
-		}
-		else
-		{
-			// Broadcast shutdown to all connected players (PennMUSH src/bsd.c).
-			await GameBroadcastService.BroadcastShutdownAsync(executorName, isReboot: false);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownInitiated), executor);
-			Logger.LogWarning("SHUTDOWN requested by {Executor}", executorName);
-		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownNoteWebApp), executor);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownNoteOrchestration), executor);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ShutdownNoteNoSave), executor);
-
-		return CallState.Empty;
-	}
-
-	[SharpCommand(Name = "@UPTIME", Switches = ["MORTAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> Uptime(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var data = (await ObjectDataService.GetExpandedServerDataAsync<UptimeData>())!;
-		var upSince = data.StartTime;
-		var lastReboot = data.LastRebootTime.Humanize();
-		var reboots = data.Reboots.ToString();
-		var now = DateTimeOffset.UtcNow;
-		var nextPurge = (data.NextPurgeTime - DateTimeOffset.Now).Humanize();
-		var nextWarning = (data.NextWarningTime - DateTimeOffset.Now).Humanize();
-		var uptime = (DateTimeOffset.Now - data.StartTime).Humanize();
-
-		var details = $"""
-		                          Up since: {upSince}
-		                       Last Reboot: {lastReboot}
-		                     Total Reboots: {reboots}
-		                          Time now: {now}
-		                        Next Purge: {nextPurge}
-		                     Next Warnings: {nextWarning}
-		                  SharpMUSH Uptime: {uptime}
-		               """;
-
-		await NotifyService.Notify(executor, details, executor);
-
-		if (!await executor.IsWizard() || parser.CurrentState.Switches.Contains("MORTAL"))
-		{
-			return new CallState(details);
-		}
-
-		var process = Process.GetCurrentProcess();
-		var pid = process.Id;
-		var memoryUsage = process.WorkingSet64.Bytes().Humanize("0.00");
-		var peakMemoryUsage = process.PeakWorkingSet64.Bytes().Humanize("0.00");
-		var paged = process.PagedMemorySize64.Bytes().Humanize("0.00");
-		var peakPaged = process.PeakPagedMemorySize64.Bytes().Humanize("0.00");
-
-		var extra = $"""
-
-		                    Process ID: {pid}
-		                  Memory Usage: {memoryUsage}
-		             Peak Memory Usage: {peakMemoryUsage}
-		                  Paged Memory: {paged}
-		             Peak Paged Memory: {peakPaged}
-		             """;
-
-		await NotifyService.Notify(executor, extra, executor);
-
-		return new CallState(details);
 	}
 
 	[SharpCommand(Name = "@CHOWNALL", Switches = ["PRESERVE", "THINGS", "ROOMS", "EXITS"],
@@ -1037,93 +729,6 @@ public partial class Commands
 
 		return CallState.Empty;
 	}
-
-	[SharpCommand(Name = "@DUMP", Switches = ["PARANOID", "DEBUG", "NOFORK"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["type"])]
-	public async ValueTask<Option<CallState>> Dump(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DumpDoesNothing), executor);
-		return new None();
-	}
-
-	/// <summary>
-	/// Takes a hot copy of the world into the backup directory, so a snapshot tool has a consistent
-	/// one to read while the game runs. This is what <c>@dump</c> would be if SharpMUSH kept the world
-	/// in memory: it does not, so <c>@dump</c> has nothing to write out and this copies instead.
-	///
-	/// <para><c>/LIST</c> reports the copies already on disk, newest first. A provider that cannot copy
-	/// its own world says why, in its own terms — a database server this game only talks to is not the
-	/// same situation as one whose support is not written yet.</para>
-	/// </summary>
-	[SharpCommand(Name = "@BACKUP", Switches = ["LIST"], Behavior = CB.Default,
-		CommandLock = "FLAG^WIZARD", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> Backup(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		if (!WorldBackupService.IsSupported)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupUnavailableFormat),
-				executor, WorldBackupService.UnavailableReason);
-			return new None();
-		}
-
-		if (parser.CurrentState.Switches.Contains("LIST"))
-		{
-			var existing = WorldBackupService.List();
-			if (existing.Count == 0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListEmpty), executor);
-				return new None();
-			}
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListHeaderFormat),
-				executor, WorldBackupService.Root);
-			foreach (var backup in existing)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupListRowFormat),
-					executor, backup.Name, DescribeBytes(backup.SizeBytes));
-			}
-
-			return new None();
-		}
-
-		// Said before the copy starts, because a large world takes long enough that silence reads as a
-		// wedged command.
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupStarted), executor);
-
-		return await WorldBackupService.CreateAsync() switch
-		{
-			WorldBackup written => await BackupWrittenAsync(executor, written),
-			Error<string> failure => await BackupFailedAsync(executor, failure.Value),
-		};
-	}
-
-	/// <summary>Reports a finished <c>@backup</c> copy and returns its name.</summary>
-	private async ValueTask<Option<CallState>> BackupWrittenAsync(AnySharpObject executor, WorldBackup written)
-	{
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupCompleteFormat),
-			executor, written.Name, DescribeBytes(written.SizeBytes), WorldBackupService.Keep);
-		return new CallState(written.Name);
-	}
-
-	/// <summary>Reports why <c>@backup</c> wrote no copy.</summary>
-	private async ValueTask<Option<CallState>> BackupFailedAsync(AnySharpObject executor, string reason)
-	{
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BackupFailedFormat), executor,
-			reason);
-		return new None();
-	}
-
-	/// <summary>Byte count at a size a wizard reading it in a terminal can take in at a glance.</summary>
-	private static string DescribeBytes(long bytes) => bytes switch
-	{
-		>= 1024L * 1024 * 1024 => $"{bytes / (double)(1024L * 1024 * 1024):F1} GB",
-		>= 1024 * 1024 => $"{bytes / (double)(1024 * 1024):F1} MB",
-		>= 1024 => $"{bytes / 1024.0:F1} KB",
-		_ => $"{bytes} B"
-	};
 
 	/// <remarks>
 	/// Creating on the DBRef is not implemented.
@@ -1640,52 +1245,6 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@ENABLE", Switches = [], Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD",
-		MinArgs = 1, MaxArgs = 1, ParameterNames = ["command"])]
-	public async ValueTask<Option<CallState>> Enable(IMUSHCodeParser parser, SharpCommandAttribute _2)
-		=> await ConfigSetHelper(parser, isEnable: true);
-
-	[SharpCommand(Name = "@KICK", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["player"])]
-	public async ValueTask<Option<CallState>> Kick(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-
-		if (args.Count == 0)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.KickUsage), executor);
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
-		}
-
-		var playerArg = args["0"].Message!.ToPlainText();
-		return await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, playerArg) switch
-		{
-			AnySharpObject and SharpPlayer playerObj => await KickAsync(executor, playerObj),
-			AnySharpObject => throw new InvalidOperationException("A player lookup found something that is not a player."),
-			Error<CallState> error => error.Value
-		};
-	}
-
-	private async ValueTask<Option<CallState>> KickAsync(AnySharpObject executor, SharpPlayer playerObj)
-	{
-		var targetDbRef = playerObj.Object.DBRef;
-
-		var any = false;
-		await foreach (var cd in ConnectionService.Get(targetDbRef))
-		{
-			any = true;
-			await NotifyService.NotifyLocalized(cd.Handle, nameof(ErrorMessages.Notifications.YouHaveBeenDisconnected));
-			await ConnectionService.Disconnect(cd.Handle);
-		}
-
-		if (!any)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNotConnected), executor);
-		}
-
-		return CallState.Empty;
-	}
-
 	[SharpCommand(Name = "@POLL", Switches = ["CLEAR"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Poll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1741,35 +1300,6 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@READCACHE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> ReadCache(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		if (TextFileService == null)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ReadCacheServiceNotAvailable), executor);
-			return CallState.Empty;
-		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ReadCacheReindexing), executor);
-
-		var startTime = DateTime.UtcNow;
-		try
-		{
-			await TextFileService.ReindexAsync();
-			var elapsed = DateTime.UtcNow - startTime;
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ReadCacheCompleteFormat), executor, elapsed.TotalMilliseconds.ToString("F0"));
-		}
-		catch (Exception ex)
-		{
-			var elapsed = DateTime.UtcNow - startTime;
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ReadCacheErrorFormat), executor, elapsed.TotalMilliseconds.ToString("F0"), ex.Message);
-		}
-
-		return CallState.Empty;
-	}
-
 	[SharpCommand(Name = "@WIZMOTD", Switches = ["CLEAR"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
 		MinArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> WizardMessageOfTheDay(IMUSHCodeParser parser,
@@ -1801,51 +1331,6 @@ public partial class Commands
 		}
 
 		return CallState.Empty;
-	}
-
-	/// <summary>
-	/// Helper method for @ENABLE and @DISABLE commands.
-	/// Mimics @config/set behavior for boolean options.
-	/// </summary>
-	private async ValueTask<Option<CallState>> ConfigSetHelper(IMUSHCodeParser parser, bool isEnable)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-
-		var optionName = args.GetValueOrDefault("0")?.Message?.ToPlainText();
-		if (string.IsNullOrWhiteSpace(optionName))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, isEnable ? "enable" : "disable");
-			return new CallState(ErrorMessages.Returns.InvalidArguments);
-		}
-
-		var matchingProperty = ConfigGenerated.ConfigMetadata.PropertyToAttributeName
-			.FirstOrDefault(kvp => kvp.Value.Equals(optionName, StringComparison.OrdinalIgnoreCase));
-
-		if (matchingProperty.Key == null)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, optionName);
-			return new CallState(ErrorMessages.Returns.NotFound);
-		}
-
-		var propertyType = ConfigGenerated.ConfigAccessor.GetPropertyType(matchingProperty.Key);
-		if (propertyType != typeof(bool))
-		{
-			var attr = ConfigGenerated.ConfigMetadata.PropertyMetadata[matchingProperty.Key];
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor, attr.Name);
-			return new CallState(ErrorMessages.Returns.InvalidType);
-		}
-
-		var value = ConfigGenerated.ConfigAccessor.GetValue(Configuration.CurrentValue, matchingProperty.Key);
-		var attr2 = ConfigGenerated.ConfigMetadata.PropertyMetadata[matchingProperty.Key];
-
-		// Note: Runtime configuration modification is not yet fully implemented
-		// This would require writing to a configuration file or database and reloading
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor, isEnable ? "enable" : "disable", attr2.Name, isEnable ? "yes" : "no");
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RuntimeConfigNotImplemented), executor);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCurrentValueFormat), executor, attr2.Name, value?.ToString() ?? "null");
-
-		return new CallState(ErrorMessages.Returns.NotImplemented);
 	}
 
 }

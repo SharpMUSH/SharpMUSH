@@ -97,48 +97,6 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@LOGWIPE", Switches = ["CHECK", "CMD", "CONN", "ERR", "TRACE", "WIZ", "ROTATE", "TRIM", "WIPE"],
-		Behavior = CB.Default | CB.NoGagged | CB.God, MinArgs = 0, MaxArgs = 0, ParameterNames = ["type"])]
-	public async ValueTask<Option<CallState>> LogWipe(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches;
-
-		if (!executor.IsGod())
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		var logTypes = new[] { "CMD", "CONN", "ERR", "TRACE", "WIZ" };
-		var actions = new[] { "ROTATE", "TRIM", "WIPE", "CHECK" };
-
-		var specifiedLogType = switches.FirstOrDefault(s => logTypes.Contains(s));
-		var specifiedAction = switches.FirstOrDefault(s => actions.Contains(s)) ?? "CHECK";
-
-		if (specifiedLogType == null && specifiedAction == "CHECK")
-		{
-			await NotifyService.Notify(executor, "Log Management Status:", executor);
-			await NotifyService.Notify(executor, "  SharpMUSH uses .NET logging infrastructure", executor);
-			await NotifyService.Notify(executor, "  Logs are managed by configured logging providers", executor);
-			await NotifyService.Notify(executor, "  Available log types: CMD, CONN, ERR, TRACE, WIZ", executor);
-			await NotifyService.Notify(executor, "  Available actions: ROTATE, TRIM, WIPE", executor);
-			await NotifyService.Notify(executor, "  Note: Direct log file manipulation not yet implemented", executor);
-			Logger?.LogInformation("@LOGWIPE/CHECK executed by {Executor}", executor.Object().Name);
-		}
-		else
-		{
-			var logDesc = specifiedLogType ?? "all logs";
-			await NotifyService.Notify(executor, $"@LOGWIPE/{specifiedAction}: Would {specifiedAction.ToLower()} {logDesc}", executor);
-			await NotifyService.Notify(executor, "Direct log file manipulation not yet implemented.", executor);
-			await NotifyService.Notify(executor, "Configure log rotation through appsettings.json or hosting provider.", executor);
-			Logger?.LogWarning("@LOGWIPE/{Action} requested for {LogType} by {Executor} - not implemented",
-				specifiedAction, logDesc, executor.Object().Name);
-		}
-
-		return CallState.Empty;
-	}
-
 	[SharpCommand(Name = "@LSET", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object/lock", "flags"])]
 	public async ValueTask<Option<CallState>> LockSet(IMUSHCodeParser parser, SharpCommandAttribute attribute)
@@ -301,15 +259,6 @@ public partial class Commands
 	/// <inheritdoc cref="ArgHelpers.LeastIdleConnectionAsync"/>
 	private ValueTask<IConnectionService.ConnectionData?> LeastIdleConnection(DBRef who)
 		=> ArgHelpers.LeastIdleConnectionAsync(ConnectionService, who);
-
-	[SharpCommand(Name = "@SLAVE", Switches = ["RESTART"], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
-		MinArgs = 0, ParameterNames = ["object"])]
-	public async ValueTask<Option<CallState>> Slave(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		await NotifyService.Notify(executor, "Slave command does nothing for SharpMUSH.", executor);
-		return new None();
-	}
 
 	[SharpCommand(Name = "@UNRECYCLE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> UnRecycle(IMUSHCodeParser parser, SharpCommandAttribute _2)

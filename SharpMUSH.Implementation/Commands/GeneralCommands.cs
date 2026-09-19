@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.Configuration;
-using SharpMUSH.Database;
+﻿using SharpMUSH.Database;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Commands.MailCommand;
 using SharpMUSH.Implementation.Tools;
@@ -15,7 +13,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
-using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
@@ -29,7 +26,6 @@ using MarkupString.Ansi;
 using static MarkupString.MStringInterpolation;
 using static SharpMUSH.Library.Services.Interfaces.IPermissionService;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
-using ConfigGenerated = SharpMUSH.Configuration.Generated;
 using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -488,102 +484,6 @@ public partial class Commands
 		}
 
 		return new CallState(obj.DBRef.ToString());
-	}
-
-	[SharpCommand(Name = "@CONFIG", Switches = ["SET", "SAVE", "LOWERCASE", "LIST"], Behavior = CB.Default | CB.EqSplit,
-		MinArgs = 0, MaxArgs = 2, ParameterNames = ["option", "value"])]
-	public async ValueTask<Option<CallState>> Config(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
-		var useLowercase = switches.Contains("LOWERCASE");
-
-		var allCategories = ConfigGenerated.ConfigAccessor.Categories.ToList();
-
-		IEnumerable<(string Category, string PropertyName, SharpConfigAttribute ConfigAttr, object? Value)> getAllOptions() =>
-			ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys.Select(propName => (
-				Category: ConfigGenerated.ConfigAccessor.GetCategoryForProperty(propName) ?? "",
-				PropertyName: propName,
-				ConfigAttr: ConfigGenerated.ConfigMetadata.PropertyMetadata[propName],
-				Value: ConfigGenerated.ConfigAccessor.GetValue(Configuration.CurrentValue, propName)));
-
-		if (switches.Contains("SET") || switches.Contains("SAVE"))
-		{
-			if (!await executor.IsWizard())
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
-			if (switches.Contains("SAVE") && !executor.IsGod())
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOnlyGodCanUseSave), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigSetSaveNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
-		}
-
-		if (args.Count == 0)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCategoriesHeader), executor);
-			foreach (var cat in allCategories)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCategoryItemFormat), executor, cat);
-			}
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigUseCategoryHelp), executor);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigUseOptionHelp), executor);
-			return CallState.Empty;
-		}
-
-		var searchTerm = args.GetValueOrDefault("0")?.Message?.ToPlainText() ?? "";
-
-		var matchingCategory = allCategories.FirstOrDefault(c =>
-			c.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
-
-		if (matchingCategory != null)
-		{
-			var categoryOptions = getAllOptions()
-				.Where(opt => opt.Category.Equals(matchingCategory, StringComparison.OrdinalIgnoreCase))
-				.OrderBy(opt => opt.ConfigAttr.Name)
-				.ToList();
-
-			if (categoryOptions.Count == 0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoOptionsInCategoryFormat), executor, matchingCategory);
-				return CallState.Empty;
-			}
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat), executor, matchingCategory);
-			foreach (var opt in categoryOptions)
-			{
-				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
-				var value = opt.Value?.ToString() ?? "null";
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);
-			}
-			return CallState.Empty;
-		}
-
-		var allOptions = getAllOptions();
-		var matchingOption = allOptions.FirstOrDefault(opt =>
-			opt.ConfigAttr.Name.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
-
-		if (matchingOption.PropertyName != null)
-		{
-			var name = useLowercase ? matchingOption.ConfigAttr.Name.ToLower() : matchingOption.ConfigAttr.Name;
-			var value = matchingOption.Value?.ToString() ?? "null";
-			var desc = matchingOption.ConfigAttr.Description;
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionDescriptionFormat), executor, desc);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionCategoryFormat), executor, matchingOption.Category);
-			return new CallState(value);
-		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), executor, searchTerm);
-		return new CallState(ErrorMessages.Returns.NotFound);
 	}
 
 	[SharpCommand(Name = "@EDIT", Switches = ["FIRST", "CHECK", "QUIET", "REGEXP", "NOCASE", "ALL"],
@@ -1069,64 +969,6 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@STATS", Switches = ["CHUNKS", "FREESPACE", "PAGING", "REGIONS", "TABLES", "FLAGS"],
-		Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["player"])]
-	public async ValueTask<Option<CallState>> Stats(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
-
-		if (switches.Contains("TABLES"))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsTablesNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
-		}
-
-		if (switches.Contains("FLAGS"))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsFlagsNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
-		}
-
-		if (switches.Contains("CHUNKS") || switches.Contains("FREESPACE") ||
-				switches.Contains("PAGING") || switches.Contains("REGIONS"))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsMemorySwitchesNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
-		}
-
-		string? playerName = null;
-		if (args.Count > 0 && args.ContainsKey("0"))
-		{
-			playerName = args["0"].Message?.ToPlainText();
-		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsDatabaseStatisticsHeader), executor);
-
-		if (playerName != null)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsForPlayerFormat), executor, playerName);
-		}
-
-		var countsByType = await Mediator.CreateStream(new GetAllObjectsQuery())
-			.CountBy(o => o.Type)
-			.ToDictionaryAsync(x => x.Key, x => x.Value);
-		var roomCount = countsByType.GetValueOrDefault("ROOM");
-		var exitCount = countsByType.GetValueOrDefault("EXIT");
-		var thingCount = countsByType.GetValueOrDefault("THING");
-		var playerCount = countsByType.GetValueOrDefault("PLAYER");
-		var totalCount = roomCount + exitCount + thingCount + playerCount;
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsRoomsFormat), executor, roomCount);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsExitsFormat), executor, exitCount);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsThingsFormat), executor, thingCount);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsPlayersFormat), executor, playerCount);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsTotalFormat), executor, totalCount);
-
-		return CallState.Empty;
-	}
-
 	[SharpCommand(Name = "@MAIL",
 		Switches =
 		[
@@ -1249,147 +1091,5 @@ public partial class Commands
 		await PasswordService.SetPassword(player, hashedPassword);
 
 		return new CallState(string.Empty);
-	}
-
-	[SharpCommand(Name = "@RESTART", Switches = ["ALL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 1, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> Restart(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
-		var scheduler = parser.ServiceProvider.GetRequiredService<ITaskScheduler>();
-
-		if (switches.Contains("ALL"))
-		{
-			if (!await executor.IsWizard())
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
-			await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
-			{
-				await Mediator.Send(new HaltObjectQueueRequest(obj.Object().DBRef));
-			}
-
-			// Then run @STARTUP on every object — the same pass used at boot, so global
-			// @function registrations etc. re-establish identically. Errors are swallowed.
-			await StartupAttributeRunner.RunAllAsync(parser, Mediator, AttributeService, executor);
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AllObjectsRestarted), executor);
-			return CallState.Empty;
-		}
-
-		if (args.Count == 0)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartMustSpecifyObject), executor);
-			return new CallState(ErrorMessages.Returns.NoObjectSpecified);
-		}
-
-		var targetName = args["0"].Message!.ToPlainText();
-
-		var maybeTarget = await LocateService.LocateAndNotifyIfInvalid(
-			parser,
-			executor,
-			executor,
-			targetName,
-			LocateFlags.All);
-
-		if (maybeTarget is not AnySharpObject target)
-		{
-			return new CallState(ErrorMessages.Returns.NotFound);
-		}
-
-		if (!await PermissionService.Controls(executor, target))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		var targetObject = target.Object();
-
-		await Mediator.Send(new HaltObjectQueueRequest(targetObject.DBRef));
-
-		if (target.IsPlayer)
-		{
-			await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
-			{
-				var owner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
-				if (owner.Object.DBRef == targetObject.DBRef)
-				{
-					await Mediator.Send(new HaltObjectQueueRequest(obj.Object().DBRef));
-
-					// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
-					try
-					{
-						await AttributeService.EvaluateAttributeFunctionAsync(
-							parser, executor, obj, "STARTUP",
-							new Dictionary<string, CallState>(),
-							evalParent: false);
-					}
-					catch
-					{
-						// Ignore @STARTUP errors - they're non-fatal
-					}
-				}
-			}
-
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartedPlayerAndObjectsFormat), executor, targetObject.Name);
-		}
-		else
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RestartedObjectFormat), executor, targetObject.Name);
-		}
-
-		// Trigger @STARTUP attribute if it exists (never inherited per PennMUSH spec)
-		try
-		{
-			await AttributeService.EvaluateAttributeFunctionAsync(
-				parser, executor, target, "STARTUP",
-				new Dictionary<string, CallState>(),
-				evalParent: false);
-		}
-		catch
-		{
-			// Ignore @STARTUP errors - they're non-fatal
-		}
-
-		return CallState.Empty;
-	}
-
-	/// <summary>
-	/// Line-for-line the shape of PennMUSH's <c>do_version</c> (src/version.c): the game's name, the
-	/// address <em>only when one is configured</em>, the restart time, then the version banner — which is
-	/// the very string <c>version()</c> returns, exactly as PennMUSH's <c>fun_version</c> and
-	/// <c>do_version</c> both format from VERSION/PATCHLEVEL/PATCHDATE.
-	/// </summary>
-	[SharpCommand(Name = "@VERSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> Version(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var uptimeData = await ObjectDataService.GetExpandedServerDataAsync<UptimeData>();
-		var net = Configuration.CurrentValue.Net;
-
-		var lines = new List<MString> { MarkupText.Plain($"You are connected to {net.MudName}") };
-
-		// PennMUSH: `if (MUDURL && *MUDURL)`. An unset mud_url means the game has no published address,
-		// which is not the same fact as "the address is Unknown" — so the line is omitted, not filled in.
-		if (!string.IsNullOrWhiteSpace(net.MudUrl))
-		{
-			lines.Add(MarkupText.Plain($"Address: {net.MudUrl}"));
-		}
-
-		if (uptimeData != null)
-		{
-			lines.Add(MarkupText.Plain($"Last restarted: {uptimeData.LastRebootTime:ddd MMM dd HH:mm:ss yyyy}"));
-		}
-
-		lines.Add(MarkupText.Plain(Implementation.Generated.VersionInfo.Version));
-
-		var result = MarkupText.Join(MarkupText.NewLine, lines);
-
-		await NotifyService.Notify(executor, result, executor);
-
-		return new CallState(result);
 	}
 }
