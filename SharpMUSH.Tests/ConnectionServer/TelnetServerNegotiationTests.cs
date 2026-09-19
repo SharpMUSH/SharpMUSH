@@ -375,6 +375,37 @@ public class TelnetServerNegotiationTests
 		}
 	}
 
+	/// <summary>
+	/// PennMUSH answers <c>PUEBLOCLIENT</c> with <c>PUEBLO_SEND</c>, and that answer is what moves the
+	/// client into HTML mode. Recognising the handshake without sending it left a real Pueblo client in
+	/// text mode, showing every tag as text. A repeat gets the short form, without the clear.
+	/// </summary>
+	[Test]
+	public async Task PuebloHandshake_IsAnsweredWithTheStartSequence()
+	{
+		var (toServer, fromServer, handler, _, cancellation) = StartServer(new ConnectionServerOptions { PuebloEnabled = true });
+		using var cts = cancellation;
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Encoding.ASCII.GetString(seen).Contains(ProtocolConstants.PuebloHello));
+			await WriteAsync(toServer, Encoding.ASCII.GetBytes("PUEBLOCLIENT 2.50\r\n"));
+			var answered = await ReadUntilAsync(fromServer,
+				seen => Encoding.ASCII.GetString(seen).Contains(ProtocolConstants.PuebloStart));
+			await Assert.That(Encoding.ASCII.GetString(answered)).Contains(ProtocolConstants.PuebloStart);
+
+			await WriteAsync(toServer, Encoding.ASCII.GetBytes("PUEBLOCLIENT 2.50\r\n"));
+			var again = await ReadUntilAsync(fromServer,
+				seen => Encoding.ASCII.GetString(seen).Contains(ProtocolConstants.PuebloRestart));
+			await Assert.That(Encoding.ASCII.GetString(again)).Contains(ProtocolConstants.PuebloRestart);
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
 	[Test]
 	public async Task ServerOmitsMxp_WhenDisabled()
 	{

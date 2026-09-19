@@ -296,20 +296,20 @@ You say, "is"
 |------------------|------------------|------------------|------------------|
 | [@@()]           | [allof()]        | [ansi()]         | [atrlock()]      |
 | [beep()]         | [benchmark()]    | [checkpass()]    | [clone()]        |
-| [create()]       | [die()]          | [dig()]          | [endtag()]       |
-| [firstof()]      | [fn()]           | [functions()]    | [html()]         |
-| [ibreak()]       | [ilev()]         | [inum()]         | [isdbref()]      |
-| [isint()]        | [isnum()]        | [isobjid()]      | [isregexp()]     |
-| [isword()]       | [itext()]        | [letq()]         | [link()]         |
-| [list()]         | [listq()]        | [lnum()]         | [localize()]     |
-| [lset()]         | [null()]         | [numversion()]   | [objeval()]      |
-| [open()]         | [pcreate()]      | [r()]            | [rand()]         |
-| [s()]            | [scan()]         | [set()]          | [setq()]         |
-| [setr()]         | [slev()]         | [soundex()]      | [soundslike()]   |
-| [speak()]        | [stext()]        | [suggest()]      | [tag()]          |
-| [tagwrap()]      | [tel()]          | [testlock()]     | [textentries()]  |
-| [textfile()]     | [unsetq()]       | [uptime()]       | [valid()]        |
-| [wipe()]         |                  |                  |                  |
+| [cmdlink()]      | [create()]       | [die()]          | [dig()]          |
+| [endtag()]       | [firstof()]      | [fn()]           | [functions()]    |
+| [html()]         | [ibreak()]       | [ilev()]         | [inum()]         |
+| [isdbref()]      | [isint()]        | [isnum()]        | [isobjid()]      |
+| [isregexp()]     | [isword()]       | [itext()]        | [letq()]         |
+| [link()]         | [list()]         | [listq()]        | [lnum()]         |
+| [localize()]     | [lset()]         | [null()]         | [numversion()]   |
+| [objeval()]      | [open()]         | [pcreate()]      | [r()]            |
+| [rand()]         | [s()]            | [scan()]         | [set()]          |
+| [setq()]         | [setr()]         | [slev()]         | [soundex()]      |
+| [soundslike()]   | [speak()]        | [stext()]        | [suggest()]      |
+| [tag()]          | [tagwrap()]      | [tel()]          | [testlock()]     |
+| [textentries()]  | [textfile()]     | [unsetq()]       | [uptime()]       |
+| [valid()]        | [wipe()]         |                  |                  |
 
 # Wiki functions
   Wiki functions read the shared wiki — the same pages the web portal serves.

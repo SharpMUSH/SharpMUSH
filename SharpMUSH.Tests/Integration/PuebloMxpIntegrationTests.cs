@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using MarkupString;
-using MarkupString.Html;
+using MarkupString.Ansi;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.ConnectionServer.Models;
 using SharpMUSH.ConnectionServer.Services;
@@ -42,8 +42,10 @@ public class PuebloMxpIntegrationTests
 		await WaitForFormatAsync(client.Handle, OutputFormat.Pueblo, cancellationToken);
 
 		var output = await PublishKnownMarkupAsync(client, cancellationToken);
-		await Assert.That(output.ToUpperInvariant()).Contains("<SEND");
-		await Assert.That(output.ToUpperInvariant()).Contains("HREF=\"LOOK\"");
+		await Assert.That(output).Contains("<A XCH_CMD=\"look\">")
+			.Because("Pueblo's command link is an anchor with XCH_CMD");
+		await Assert.That(output.ToUpperInvariant()).DoesNotContain("<SEND")
+			.Because("<SEND> is MXP's; a Pueblo client shows it as text");
 	}
 
 	[Test]
@@ -58,7 +60,7 @@ public class PuebloMxpIntegrationTests
 		await WaitForFormatAsync(client.Handle, OutputFormat.Pueblo, cancellationToken);
 
 		var output = await PublishKnownMarkupAsync(client, cancellationToken);
-		await Assert.That(output.ToUpperInvariant()).Contains("<SEND");
+		await Assert.That(output).Contains("<A XCH_CMD=\"look\">");
 	}
 
 	[Test]
@@ -71,6 +73,7 @@ public class PuebloMxpIntegrationTests
 		var output = await PublishKnownMarkupAsync(client, cancellationToken);
 		await Assert.That(output).Contains("known-link");
 		await Assert.That(output.ToUpperInvariant()).DoesNotContain("<SEND");
+		await Assert.That(output.ToUpperInvariant()).DoesNotContain("XCH_CMD");
 		await Assert.That(output.ToUpperInvariant()).DoesNotContain("<FONT");
 	}
 
@@ -99,7 +102,41 @@ public class PuebloMxpIntegrationTests
 
 		var output = await PublishKnownMarkupAsync(client, cancellationToken);
 		await Assert.That(output).Contains("\x1b[1z");
-		await Assert.That(output.ToUpperInvariant()).Contains("<SEND");
+		await Assert.That(output).Contains("<SEND HREF=\"look\">");
+		await Assert.That(output.ToUpperInvariant()).DoesNotContain("XCH_CMD")
+			.Because("XCH_CMD is Pueblo's; MXP has no such attribute");
+	}
+
+	/// <summary>
+	/// A client that answers both keeps MXP, and the socket server and the engine agree about it: the
+	/// Pueblo handshake arriving second must not flip the renderer to Pueblo while the engine still
+	/// reports MXP.
+	/// </summary>
+	[Test]
+	[Timeout(60_000)]
+	public async Task MxpThenPuebloHandshake_StaysMxp(CancellationToken cancellationToken)
+	{
+		await using var client = await ConnectAsync(cancellationToken);
+		await client.ReadRawUntilAsync(data => data.AsSpan().IndexOf(new byte[] { 0xFF, 0xFB, 0x5B }) >= 0,
+			cancellationToken);
+		await client.Stream.WriteAsync(new byte[] { 0xFF, 0xFD, 0x5B }, cancellationToken);
+		await client.ReadRawUntilAsync(data => data.AsSpan().IndexOf(MxpStartMarker) >= 0, cancellationToken);
+		await WaitForFormatAsync(client.Handle, OutputFormat.Mxp, cancellationToken);
+
+		await client.SendLineAsync("PUEBLOCLIENT 2.01", cancellationToken);
+		var engine = Fixture.ServerServices.GetRequiredService<IConnectionService>();
+		using (var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+		{
+			deadline.CancelAfter(ReceiveTimeoutMs);
+			while (engine.Get(client.Handle)?.Metadata.GetValueOrDefault("PUEBLO", "0") != "1")
+			{
+				await Task.Delay(20, deadline.Token);
+			}
+		}
+
+		await WaitForFormatAsync(client.Handle, OutputFormat.Mxp, cancellationToken);
+		var output = await PublishKnownMarkupAsync(client, cancellationToken);
+		await Assert.That(output).Contains("<SEND HREF=\"look\">");
 	}
 
 	/// <summary>IAC SB MXP IAC SE -- the marker that starts MXP mode.</summary>
@@ -188,7 +225,7 @@ public class PuebloMxpIntegrationTests
 		var marker = Guid.NewGuid().ToString("N");
 		var begin = "begin-" + marker;
 		var end = "end-" + marker;
-		var link = MarkupText.Wrap(HtmlMarkup.Create("send", "href=\"look\""), MarkupText.Plain("known-link"));
+		var link = MarkupText.Wrap(AnsiMarkup.Create(linkUrl: "look", linkKind: LinkKind.Command), MarkupText.Plain("known-link"));
 		var markup = MarkupText.Concat(MarkupText.Concat(MarkupText.Plain(begin + "\n"), link), MarkupText.Plain("\n" + end));
 		await Fixture.ServerServices.GetRequiredService<IMessageBus>().Publish(
 			new MarkupOutputMessage(client.Handle, MarkupTextSerializer.Serialize(markup)), ct);

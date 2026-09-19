@@ -1,7 +1,5 @@
-﻿using System.Net;
-using Mediator;
+﻿using Mediator;
 using MarkupString;
-using MarkupString.Html;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -334,7 +332,7 @@ public class LookService(
 						var exitObj = exit.WithRoomOption().Object();
 						var destName = await DestinationNameAsync(exit);
 
-						var exitMString = WrapExitInSendTag(exitObj.Name);
+						var exitMString = ExitLink(exitObj.Name);
 
 						if (await exit.WithRoomOption().IsOpaque())
 						{
@@ -349,7 +347,7 @@ public class LookService(
 				}
 				else
 				{
-					var exitMStrings = visibleExits.Select(x => WrapExitInSendTag(x.Object().Name)).ToList();
+					var exitMStrings = visibleExits.Select(x => ExitLink(x.Object().Name)).ToList();
 					defaultExits = MarkupText.Concat(MarkupText.Plain("Obvious exits:\n"), MessageFormatting.FormatMStringsWithOxfordComma(exitMStrings));
 				}
 
@@ -364,7 +362,7 @@ public class LookService(
 						var exitObj = exit.WithRoomOption().Object();
 						var destName = await DestinationNameAsync(exit);
 
-						var exitMString = WrapExitInSendTag(exitObj.Name);
+						var exitMString = ExitLink(exitObj.Name);
 
 						if (await exit.WithRoomOption().IsOpaque())
 						{
@@ -397,21 +395,19 @@ public class LookService(
 			: "*UNLINKED*";
 
 	/// <summary>
-	/// Wraps an exit name in a &lt;send&gt; HtmlMarkup tag for Pueblo/MXP clients.
-	/// The first alias (before ';') is used as the href command.
-	/// All aliases are pipe-delimited in the hint for right-click menus (BeipMU pattern).
-	/// For ANSI clients, HtmlMarkup passes through as plain text (only the display name).
+	/// An exit name as a command link that walks through it. The renderer writes it in the client's own
+	/// dialect — <c>&lt;A XCH_CMD&gt;</c> for Pueblo, <c>&lt;SEND HREF&gt;</c> for MXP, a clickable anchor
+	/// in the portal — and as the bare name for everyone else. The first alias (before ';') is the
+	/// command; every alias, pipe-delimited, is the hint, which BeipMU offers as a right-click menu.
 	/// </summary>
-	private static MString WrapExitInSendTag(string exitName)
+	private static MString ExitLink(string exitName)
 	{
 		var aliases = exitName.Split(';');
-		var displayName = aliases[0];
-		var command = WebUtility.HtmlEncode(aliases[0]);
-		var hint = aliases.Length > 1
-			? WebUtility.HtmlEncode(string.Join("|", aliases))
-			: $"Go {command}";
-		var sendMarkup = HtmlMarkup.Create("send", $"href=\"{command}\" hint=\"{hint}\"");
-		return MarkupText.Wrap(sendMarkup, MarkupText.Plain(displayName));
+		var command = aliases[0];
+		var hint = aliases.Length > 1 ? string.Join("|", aliases) : $"Go {command}";
+		return MarkupText.Wrap(
+			AnsiMarkup.Create(linkUrl: command, linkKind: LinkKind.Command, linkText: hint),
+			MarkupText.Plain(command));
 	}
 
 	private MString FormatExitNameToDestination(MString exitName, string destName, string? locale = null)

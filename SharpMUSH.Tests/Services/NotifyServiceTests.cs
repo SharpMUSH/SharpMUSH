@@ -82,7 +82,7 @@ public class NotifyServiceTests
 			}));
 
 		var exitMarkup = MarkupText.Wrap(
-			HtmlMarkup.Create("send", "href=\"North\""),
+			AnsiMarkup.Create(linkUrl: "North", linkKind: LinkKind.Command),
 			MarkupText.Plain("North"));
 
 		await notify.NotifyLocalizedMarkup(
@@ -95,6 +95,6 @@ public class NotifyServiceTests
 		await messageBus.Received(1).HandlePublish(
 			Arg.Is<MarkupOutputMessage>(msg =>
 				msg.Handle == 7 &&
-				MarkupTextSerializer.Deserialize(msg.Markup).Render(MarkupFormat.Pueblo).Contains("<send href=\"North\">North</send> to Room Zero")));
+				MarkupTextSerializer.Deserialize(msg.Markup).Render(MarkupFormat.Pueblo).Contains("<A XCH_CMD=\"North\">North</A> to Room Zero")));
 	}
 }

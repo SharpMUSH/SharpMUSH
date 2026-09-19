@@ -7,10 +7,29 @@ public enum OutputFormat
 {
 	/// <summary>Standard ANSI escape codes (default)</summary>
 	Ansi,
-	/// <summary>Pueblo HTML subset (B, I, FONT, A, SEND tags)</summary>
+	/// <summary>
+	/// Pueblo: an HTML subset, with command links written <c>&lt;A XCH_CMD&gt;</c>. Pueblo has no
+	/// <c>&lt;SEND&gt;</c>.
+	/// </summary>
 	Pueblo,
-	/// <summary>Full MXP with line security modes</summary>
+	/// <summary>
+	/// MXP: its own tag set under line security modes, with command links written
+	/// <c>&lt;SEND HREF&gt;</c>. MXP has no <c>XCH_CMD</c>; it is a different dialect from Pueblo, not an
+	/// extension of it.
+	/// </summary>
 	Mxp
+}
+
+public static class OutputFormatNegotiation
+{
+	/// <summary>
+	/// The format a connection renders in after a client offers <paramref name="offered"/> on top of
+	/// <paramref name="current"/>. A client that answers both the MXP telnet option and the Pueblo
+	/// handshake keeps MXP whichever arrives first — the engine's negotiation consumers apply the same
+	/// rule, so the renderer and <c>terminfo()</c> cannot disagree about which dialect is on the wire.
+	/// </summary>
+	public static OutputFormat Negotiate(this OutputFormat current, OutputFormat offered)
+		=> current == OutputFormat.Mxp && offered == OutputFormat.Pueblo ? OutputFormat.Mxp : offered;
 }
 
 /// <summary>

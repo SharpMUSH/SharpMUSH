@@ -158,6 +158,12 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 			await Assert.That(after.InstalledCommit).IsEqualTo(BundledPackages.SourceCommit);
 
 			await AssertTheNewObjectIsLiveInTheMasterRoom(applied.CreatedObjects["wiki_global"]);
+
+			// AINSTALL registered wikilink(), the command link an article's [[Page]] becomes; it has to
+			// be a link in each client's own dialect.
+			var link = (await factory.FunctionParser.FunctionParse(MarkupText.Plain("wikilink(Main,main)")))!.Message!;
+			await Assert.That(link.Render(MarkupFormat.Pueblo)).Contains("<A XCH_CMD=\"+wiki main\"");
+			await Assert.That(link.Render(MarkupFormat.Mxp)).Contains("<SEND HREF=\"+wiki main\"");
 		}
 		finally
 		{

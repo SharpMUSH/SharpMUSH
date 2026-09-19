@@ -246,6 +246,36 @@ public class ConnectionService(
 		}
 	}
 
+	public void Update(long handle, string key, Func<string?, string> change)
+	{
+		if (Get(handle) is null) return;
+
+		string? newValue = null;
+		_sessionState.AddOrUpdate(handle,
+			_ => throw new InvalidDataException("Tried to add a new handle during update."),
+			(_, y) =>
+			{
+				newValue = y.Metadata.AddOrUpdate(key, _ => change(null), (_, existing) => change(existing));
+				return y;
+			});
+
+		// Persist noncritical metadata asynchronously; authentication changes are awaited above.
+		if (stateStore is null || newValue is null) return;
+
+		var captured = newValue;
+		_ = Task.Run(async () =>
+		{
+			try
+			{
+				await stateStore.UpdateMetadataAsync(handle, key, captured);
+			}
+			catch
+			{
+				// Best-effort metadata must not fault the detached task; durable binding changes propagate failures.
+			}
+		});
+	}
+
 	public void IncrementMetadata(long handle, string key)
 	{
 		if (Get(handle) is null) return;

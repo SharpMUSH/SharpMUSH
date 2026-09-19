@@ -34,9 +34,9 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 		{
 			OutputFormat.Pueblo => ms.Render(MarkupFormat.Pueblo),
 			OutputFormat.Mxp => ApplyMxpLinePrefix(ms.Render(MarkupFormat.Mxp)),
-			// The ANSI render for everything else, which maps an HtmlMarkup span — every exit name is
-			// wrapped in <send> — to its ANSI equivalent, or to plain text when it has none. A client
-			// that negotiated neither Pueblo nor MXP must never see a literal tag.
+			// The ANSI render for everything else, which maps a command link or a tagwrap() span to its
+			// ANSI equivalent, or to plain text when it has none. A client that negotiated neither
+			// Pueblo nor MXP must never see a literal tag.
 			_ => ms.Render(MarkupFormat.Ansi)
 		};
 

@@ -93,6 +93,7 @@ public class TelnetServer : ConnectionHandler
 		// interpreter has to exist before it can hand any of them anything.
 		TelnetInterpreter? telnetInterpreter = null;
 		var telnetAnnounced = 0;
+		var puebloStarted = false;
 
 		// Anything that writes connection metadata in the main process has to arrive after the handle
 		// is registered there, because every one of those consumers gives up on an unregistered handle
@@ -221,6 +222,21 @@ public class TelnetServer : ConnectionHandler
 					// log at Information with content it chose.
 					_logger.LogDebug("Pueblo handshake detected on handle {Handle}", nextPort);
 
+					// PennMUSH's do_command answers with PUEBLO_SEND, and that answer is what switches the
+					// client into HTML mode; a repeat gets the short form, without the clear.
+					if (telnetInterpreter is not null)
+					{
+						await telnetInterpreter.SendAsync(Encoding.ASCII.GetBytes(
+							puebloStarted ? ProtocolConstants.PuebloRestart : ProtocolConstants.PuebloStart));
+					}
+
+					var firstHandshake = !puebloStarted;
+					puebloStarted = true;
+					if (!firstHandshake)
+					{
+						return;
+					}
+
 					if (await TryUpdateFormatAsync(nextPort, OutputFormat.Pueblo, ct))
 					{
 						_logger.LogDebug("Updated Pueblo capabilities for handle {Handle}", nextPort);
@@ -294,12 +310,15 @@ public class TelnetServer : ConnectionHandler
 
 		builder.UsePipe(connection.Transport);
 		var telnet = await builder.BuildAsync();
+
+		// Before the read loop starts, not after: the loop can deliver a line — a Pueblo handshake buffered
+		// with the client's first packet — before an assignment below it would have run, and every callback
+		// that reaches for the interpreter would find null.
+		telnetInterpreter = telnet;
 		var readTask = ReadAndObserveNegotiationAsync(
 			telnet, connection.Transport.Input, AnnounceTelnetIfNegotiatedAsync, ct);
 		try
 		{
-			telnetInterpreter = telnet;
-
 			// The read loop is already running by now, so a fast client could have negotiated in the gap
 			// above and found nothing to sample. Re-sampling here closes it without needing a lock.
 			await AnnounceTelnetIfNegotiatedAsync();
@@ -510,7 +529,7 @@ public class TelnetServer : ConnectionHandler
 			{
 				// True only when the format actually changed; a client that negotiates the same format
 				// twice is not a failure, so a no-op counts as success here.
-				_connectionService.UpdateCapabilities(handle, current => current with { Format = format });
+				_connectionService.UpdateCapabilities(handle, current => current with { Format = current.Format.Negotiate(format) });
 				return true;
 			}
 

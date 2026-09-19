@@ -74,7 +74,7 @@ public record PuebloNegotiatedMessage(long Handle, string ClientResponse) : IHan
 
 /// <summary>
 /// Message sent from ConnectionServer to MainProcess when MXP (telnet option 91) is negotiated.
-/// MXP is a superset of Pueblo — if both negotiate, MXP takes priority.
+/// A client that negotiates both MXP and Pueblo renders as MXP.
 /// </summary>
 public record MxpNegotiatedMessage(long Handle) : IHandleMessage;
 

@@ -1,7 +1,6 @@
 using System.Text;
 using MarkupString;
 using MarkupString.Ansi;
-using MarkupString.Html;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -42,12 +41,13 @@ public class RenderingWorkerMarkupTests
 		try
 		{
 			await worker.StartAsync(timeout.Token);
-			var link = MarkupText.Wrap(HtmlMarkup.Create("send", "href=\"look\""), MarkupText.Plain("known-link"));
+			var link = MarkupText.Wrap(AnsiMarkup.Create(linkUrl: "look", linkKind: LinkKind.Command), MarkupText.Plain("known-link"));
 			var markup = MarkupText.Concat(link, MarkupText.Plain(" <script>&\nsecond-line"));
 			await consumer.HandleAsync(new MarkupOutputMessage(42, MarkupTextSerializer.Serialize(markup)), timeout.Token);
 			var text = Encoding.UTF8.GetString(await output.Task.WaitAsync(timeout.Token));
-			await Assert.That(text.ToUpperInvariant()).Contains("<SEND");
-			await Assert.That(text.ToUpperInvariant()).Contains("HREF=\"LOOK\"");
+			// Each dialect's own command link: Pueblo has no <SEND>, MXP has no XCH_CMD.
+			await Assert.That(text).Contains(format == OutputFormat.Mxp ? "<SEND HREF=\"look\">" : "<A XCH_CMD=\"look\">");
+			await Assert.That(text).DoesNotContain(format == OutputFormat.Mxp ? "XCH_CMD" : "<SEND");
 			await Assert.That(text).Contains("known-link");
 			await Assert.That(text).Contains("&lt;script&gt;&amp;");
 			await Assert.That(text).Contains("\r\n");

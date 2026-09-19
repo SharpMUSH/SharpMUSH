@@ -58,6 +58,7 @@ public class FormattingFunctionUnitTests
 
 	[Test]
 	[Arguments("tag(b,text)", "#-1 USE TAGWRAP INSTEAD")]
+	[Arguments("html(b)", "#-1 USE TAGWRAP INSTEAD")]
 	public async Task Tag(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
@@ -68,11 +69,10 @@ public class FormattingFunctionUnitTests
 	[Arguments("tagwrap(b,text)", "<b>text</b>")]
 	// help tagwrap: tagwrap(<name>[, <parameters>], <string>) — the wrapped string is LAST.
 	[Arguments("tagwrap(a,href=\"https://sharpmush.com\",SharpMUSH)", "<a href=\"https://sharpmush.com\">SharpMUSH</a>")]
-	[Arguments("tagwrap(a,xch_cmd=\"+help scene\",Read it)", "<a xch_cmd=\"+help scene\">Read it</a>")]
 	public async Task Tagwrap(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+		await Assert.That(result.Render(MarkupFormat.Html)).IsEqualTo(expected);
 	}
 
 	[Test]
