@@ -1,4 +1,11 @@
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -19,14 +26,76 @@ public class MiscFunctionUnitTests
 		await Assert.That(result.ToPlainText()).Contains(expectedContains);
 	}
 
+	/// <summary>
+	/// <c>foreach()</c> is <c>map()</c> over characters, not over a list: the ufun runs once per
+	/// character with the character as <c>%0</c> and its zero-based position as <c>%1</c>, and the
+	/// results are concatenated with nothing between them (help FOREACH, PennMUSH funstr.c:1123).
+	/// </summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	[Arguments("foreach(a b c,##)", "a b c")]
+	[Arguments(@"foreach(#lambda/x,abc)", "xxx")]
+	[Arguments(@"foreach(#lambda/\%0\%0,abc)", "aabbcc")]
+	[Arguments(@"foreach(#lambda/\%1,abcde)", "01234")]
+	[Arguments(@"foreach(#lambda/\%0,)", "")]
+	[Arguments(@"foreach(#lambda/add\(\%0\,1\),54321)", "65432")]
+	// <start> and <end> bracket the transformed span. What falls outside is copied through
+	// untouched, the markers themselves are dropped, and %1 keeps counting positions in the
+	// original string, so the first transformed character of "This is #0# number" is at 9.
+	[Arguments(@"foreach(#lambda/add\(\%0\,1\),This is #0# number,#,#)", "This is 1 number")]
+	[Arguments(@"foreach(#lambda/\%1,abcde,b,d)", "a2e")]
+	[Arguments(@"foreach(#lambda/x,abcde,b)", "axxx")]
+	// No opening marker anywhere means nothing is transformed at all.
+	[Arguments(@"foreach(#lambda/x,abcde,z)", "abcde")]
+	[Arguments(@"foreach(#lambda/x,abcde,bc)", "#-1 SEPARATOR MUST BE ONE CHARACTER")]
+	[Arguments(@"foreach(#lambda/x,abcde,b,cd)", "#-1 SEPARATOR MUST BE ONE CHARACTER")]
 	public async Task Foreach(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// The stored-attribute form, which is the one the helpfile documents; <c>#lambda</c> only
+	/// spares the test a database write.
+	/// </summary>
+	[Test]
+	public async Task ForeachCallsAStoredAttributeOncePerCharacter()
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var attributes = WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
+		var actor = (await mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Expect<AnySharpObject>();
+		var name = "FOREACH" + Guid.NewGuid().ToString("N");
+		await attributes.SetAttributeAsync(actor, actor, name, MarkupText.Plain("<%1:[ucstr(%0)]>"));
+
+		var result = await Parser.FunctionParse(MarkupText.Plain($"foreach(me/{name},abc)"));
+
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("<0:A><1:B><2:C>");
+	}
+
+	/// <summary>
+	/// Every character keeps the markup it arrived with, both the ones handed to the ufun and the
+	/// ones copied through outside the markers.
+	/// </summary>
+	[Test]
+	public async Task ForeachPreservesMarkupOnBothTransformedAndCopiedCharacters()
+	{
+		var red = (await Parser.FunctionParse(MarkupText.Plain("[ansi(r,ab)]")))!.Message!.Render(MarkupFormat.Ansi);
+		var redThenX = (await Parser.FunctionParse(MarkupText.Plain("[ansi(r,ab)]x")))!.Message!.Render(MarkupFormat.Ansi);
+
+		var transformed = await Parser.FunctionParse(MarkupText.Plain(@"foreach(#lambda/\%0,[ansi(r,ab)])"));
+		await Assert.That(transformed!.Message!.Render(MarkupFormat.Ansi)).IsEqualTo(red);
+
+		var copied = await Parser.FunctionParse(MarkupText.Plain("foreach(#lambda/x,[ansi(r,ab)]-c,-)"));
+		await Assert.That(copied!.Message!.Render(MarkupFormat.Ansi)).IsEqualTo(redThenX);
+	}
+
+	/// <summary>
+	/// A missing attribute is refused rather than silently producing the input back.
+	/// </summary>
+	[Test]
+	public async Task ForeachRefusesAnAttributeThatDoesNotExist()
+	{
+		var result = await Parser.FunctionParse(MarkupText.Plain("foreach(me/NOSUCHFOREACHATTR,abc)"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#-1 NO SUCH ATTRIBUTE");
 	}
 
 	[Test]

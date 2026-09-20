@@ -845,53 +845,108 @@ public partial class Functions
 		return new ValueTask<CallState>(new CallState(MarkupText.Concat(pieces)));
 	}
 
-	[SharpFunction(Name = "foreach", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.NoParse, ParameterNames = ["list", "pattern", "delimiter", "output-separator"])]
+	/// <summary>
+	/// map() over the characters of a string rather than over the words of a list: the ufun runs
+	/// once per grapheme cluster with the character as <c>%0</c> and its zero-based position in the
+	/// string as <c>%1</c>, and the results are concatenated with nothing between them.
+	/// <c>&lt;start&gt;</c> and <c>&lt;end&gt;</c> bracket the transformed span — what lies outside
+	/// it is copied through untouched and the markers themselves are dropped (PennMUSH
+	/// <c>fun_foreach</c>, funstr.c:1123).
+	/// </summary>
+	[SharpFunction(Name = "foreach", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "string", "start", "end"])]
 	public async ValueTask<CallState> ForEach(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var listResult = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
-		var listArg = listResult.Message ?? MarkupText.Empty;
-		var hadErrors = listResult.HadErrors;
-
 		var args = parser.CurrentState.Arguments;
-		var delimiterResult = args.TryGetValue("2", out var delimiterArg) && delimiterArg.Message!.Length > 0
-			? await delimiterArg.GetParsedResultAsync() : new CallState(MarkupText.Space);
-		var delim = delimiterResult.Message ?? MarkupText.Empty;
-		var separatorResult = args.TryGetValue("3", out var separatorArg) && separatorArg.Message!.Length > 0
-			? await separatorArg.GetParsedResultAsync() : new CallState(delim);
-		var sep = separatorResult.Message ?? MarkupText.Empty;
-		hadErrors |= delimiterResult.HadErrors || separatorResult.HadErrors;
-		var list = MushText.SplitList(delim, listArg);
-		var wrappedIteration = new IterationWrapper<MString>
-		{ Value = MarkupText.Empty, Break = false, NoBreak = false, Iteration = 0 };
-		var result = new List<MString>();
 
-		// Replace ## with %iL in the pattern for PennMUSH backward compatibility
-		var patternArg = parser.CurrentState.Arguments["1"];
-		var modifiedPattern = patternArg.Message!.Text.Contains("##")
-			? patternArg.Message.ReplaceAll("##", MarkupText.Plain("%iL"))
-			: null;
-
-		parser.CurrentState.IterationRegisters.Push(wrappedIteration);
-
-		foreach (var item in list)
+		// Penn checks both markers before it fetches the ufun, and an argument that is present but
+		// empty is a space rather than "no marker at all" (delim_check, function.c:248).
+		if (!TryForEachMarker(args, "2", out var start) || !TryForEachMarker(args, "3", out var end))
 		{
-			wrappedIteration.Value = item!;
-			wrappedIteration.Iteration++;
-			var parsed = modifiedPattern != null
-				? await parser.FunctionParse(modifiedPattern)
-				: await patternArg.GetParsedResultAsync();
-			hadErrors |= parsed?.HadErrors == true;
-			result.Add(parsed?.Message ?? MarkupText.Empty);
-
-			if (wrappedIteration.Break)
-			{
-				break;
-			}
+			return new CallState(ErrorMessages.Returns.SeparatorMustBeOneChar);
 		}
 
-		parser.CurrentState.IterationRegisters.TryPop(out _);
+		var text = args["1"].Message ?? MarkupText.Empty;
+		var rawAttrArg = args["0"].Message!;
+		var rawAttrStr = rawAttrArg.ToPlainText();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		return new CallState(MarkupText.Join(sep, result)) { HadErrors = hadErrors };
+		if (HelperFunctions.IsLambdaOrApply(rawAttrStr))
+		{
+			return await ForEachTransformAsync(text, start, end, (character, position) =>
+				AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor, rawAttrArg,
+					ForEachEnvironment(character, position)));
+		}
+
+		return await AttributeService.FetchAttributeFunctionAsync(parser, executor, rawAttrStr) switch
+		{
+			AttributeFunction function => await ForEachTransformAsync(text, start, end, (character, position) =>
+				AttributeService.CallAttributeFunctionAsync(parser.Push(parser.CurrentState with
+				{
+					Arguments = ForEachEnvironment(character, position),
+					EnvironmentRegisters = ForEachEnvironment(character, position)
+				}), function)),
+			CallState refusal => refusal,
+		};
+	}
+
+	private static Dictionary<string, CallState> ForEachEnvironment(MString character, int position)
+		=> new() { ["0"] = new CallState(character), ["1"] = new CallState(position) };
+
+	/// <summary>
+	/// A <c>foreach()</c> marker argument: absent gives <see langword="null"/>, present but empty
+	/// gives a space, and anything longer than one character is refused.
+	/// </summary>
+	private static bool TryForEachMarker(IReadOnlyDictionary<string, CallState> args, string index, out string? marker)
+	{
+		marker = null;
+		if (!args.TryGetValue(index, out var argument)) return true;
+
+		var value = argument.Message ?? MarkupText.Empty;
+		if (value.Length == 0)
+		{
+			marker = " ";
+			return true;
+		}
+
+		var graphemes = SplitIntoGraphemes(value);
+		if (graphemes.Length != 1) return false;
+
+		marker = graphemes[0].ToPlainText();
+		return true;
+	}
+
+	private static async ValueTask<CallState> ForEachTransformAsync(MString text, string? start, string? end,
+		Func<MString, int, ValueTask<CallState>> call)
+	{
+		var graphemes = SplitIntoGraphemes(text);
+		var errors = new ListEvaluationErrors();
+		var pieces = new List<MString>();
+		var position = 0;
+
+		if (start is not null)
+		{
+			var opening = Array.FindIndex(graphemes, grapheme => grapheme.ToPlainText() == start);
+			// No opening marker anywhere means the string is handed back untransformed.
+			if (opening < 0) return new CallState(text);
+			pieces.Add(MarkupText.Concat(graphemes[..opening]));
+			position = opening + 1;
+		}
+
+		while (position < graphemes.Length)
+		{
+			if (end is not null && graphemes[position].ToPlainText() == end)
+			{
+				position++;
+				break;
+			}
+
+			pieces.Add(errors.Record(await call(graphemes[position], position)));
+			position++;
+		}
+
+		if (position < graphemes.Length) pieces.Add(MarkupText.Concat(graphemes[position..]));
+
+		return errors.Complete(new CallState(MarkupText.Concat(pieces)));
 	}
 
 	[SharpFunction(Name = "decomposeweb", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]

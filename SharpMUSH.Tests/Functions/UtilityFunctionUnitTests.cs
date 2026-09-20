@@ -562,7 +562,7 @@ public class UtilityFunctionUnitTests
 		"1:red 1:red 2:blue 2:blue 3:green 3:green")]
 	[Arguments("iter(red blue green,iter(fish shoe,%iL))", "red red blue blue green green")]
 	[Arguments("iter(red blue green,iter(fish shoe,[itext(L)]))", "red red blue blue green green")]
-	// ## and #@ are rewritten to %iL by iter()/foreach()/@dolist, so a nested one names the
+	// ## and #@ are rewritten to %iL by iter()/@dolist, so a nested one names the
 	// OUTERMOST loop — help ITEXT2's first worked example.
 	[Arguments("iter(red blue green,iter(fish shoe,##))", "red red blue blue green green")]
 	[Arguments("iter(a b,ilev())", "0 0")]
