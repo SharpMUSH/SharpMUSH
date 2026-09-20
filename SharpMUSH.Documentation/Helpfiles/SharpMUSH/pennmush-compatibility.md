@@ -478,9 +478,6 @@ Differences that are **bugs**, tracked and expected to change. Listed so they ar
 choices.
 
   **`pcreate()` takes no third argument.** PennMUSH accepts an optional dbref to reuse. (#974)<br>
-  **`textentries()` is `textentries(<type>[, <osep>])`** — it lists every entry. PennMUSH is
-  `textentries(<type>, <pattern>[, <osep>])`, where `<pattern>` is required and filters the list;
-  SharpMUSH has no way to filter. (#974)<br>
   **`attrib_set#()` cannot be called.** The parser's function-name token does not admit `#`, so the
   text is returned unchanged. Use `attrib_set()`. (#974)<br>
   **`objmem()` always answers 0.** (#974)<br>
@@ -496,6 +493,11 @@ These once differed and now match PennMUSH; noted here only because earlier Shar
 behaved differently.
 
 - Lock operator precedence: `&` binds tighter than `|`, so `a & b | c` is `(a & b) | c`.
+- `textentries()` is `textentries(<type>, <pattern>[, <osep>])`: the pattern is required and
+  filters the topic names. `textentries()` and `textfile()` also refuse an unknown `<type>` and
+  gate the administrator-only `ahelp` corpus on wizard or royalty, as PennMUSH's `admin` help
+  files are. SharpMUSH words the first refusal `#-1 FILE NOT FOUND`, where PennMUSH says
+  `#-1 NO SUCH FILE`.
 - `hasattr()`, `hasattrp()`, `hasattrval()` and `hasattrpval()` take the whole
   `<object>/<attribute>` spec in one argument as well as the two-argument form; one argument
   carrying no `/` is `#-1 BAD ARGUMENT FORMAT TO <function>`.
