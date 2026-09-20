@@ -97,6 +97,12 @@
   <data name="CannotClonePlayers" xml:space="preserve">
     <value>You cannot clone players.</value>
   </data>
+  <data name="ClonePreserveWizardOnly" xml:space="preserve">
+    <value>You cannot @CLONE/PRESERVE. Use normal @CLONE instead.</value>
+  </data>
+  <data name="ClonePreserveCarriedPrivileges" xml:space="preserve">
+    <value>Warning: @CLONE/PRESERVE on an object with WIZ, ROY, @powers, or @warnings.</value>
+  </data>
   <data name="CannotCloneThisObjectType" xml:space="preserve">
     <value>Cannot clone this object type.</value>
   </data>

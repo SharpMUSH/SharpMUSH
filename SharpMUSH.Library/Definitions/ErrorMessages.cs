@@ -443,6 +443,10 @@ public static class ErrorMessages
 		public const string InvalidObjectTypeForLinking = "Invalid object type for linking.";
 		public const string InvalidObjectTypeGeneric = "Invalid object type.";
 		public const string CannotClonePlayers = "You cannot clone players.";
+		/// <summary>PennMUSH <c>do_clone</c> (<c>src/create.c:712</c>): /PRESERVE is wizard-only, and refused rather than downgraded.</summary>
+		public const string ClonePreserveWizardOnly = "You cannot @CLONE/PRESERVE. Use normal @CLONE instead.";
+		/// <summary>PennMUSH <c>clone_object</c> (<c>src/create.c:653-654</c>), on what /PRESERVE actually carried across.</summary>
+		public const string ClonePreserveCarriedPrivileges = "Warning: @CLONE/PRESERVE on an object with WIZ, ROY, @powers, or @warnings.";
 		public const string CannotCloneThisObjectType = "Cannot clone this object type.";
 		public const string NotMarkedForDestruction = "That object is not marked for destruction.";
 
