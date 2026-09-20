@@ -86,10 +86,11 @@ public class WebFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("wshtml(<b>bold</b> <a href=\"https://x\">link</a>)")))!.Message!;
 
-		// The library's own SGR for bold, rather than ansi(h,...)'s: the shared God parser is left with
-		// colour stripped by other tests in a full run, which makes ansi() an unstable oracle here.
+		// The emitter's own SGR for bold rather than ansi()'s: ansi(h,...) is not bold — h on its own
+		// modifies the colour letter after it (hr is bright red) and carries nothing alone.
 		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("\u001b[1mbold\u001b[0m link");
 		await Assert.That(result.ToPlainText()).IsEqualTo("bold link");
+		await Assert.That(result.Render(MarkupFormat.Plain)).IsEqualTo(result.ToPlainText());
 	}
 
 	/// <summary>
