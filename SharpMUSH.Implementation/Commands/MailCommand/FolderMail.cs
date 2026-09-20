@@ -30,13 +30,13 @@ public static class FolderMail
 
 		switch (switches)
 		{
-			case ["FOLDER"] when (arg0, arg1) is (null, null):
+			case ["FOLDERS"] or ["FOLDER"] when (arg0, arg1) is (null, null):
 				return await GetMailFolderInfo(parser, objectDataService, mediator, notifyService, executor, executorPlayer, folderInfo);
 
-			case ["FOLDER"] when (arg0, arg1) is ({ } folder, null):
+			case ["FOLDERS"] or ["FOLDER"] when (arg0, arg1) is ({ } folder, null):
 				return await SetCurrentMailFolder(parser, objectDataService, folderInfo, folder, executor);
 
-			case ["FOLDER"] when (arg0, arg1) is ({ } folder, { } newName):
+			case ["FOLDERS"] or ["FOLDER"] when (arg0, arg1) is ({ } folder, { } newName):
 				return await RenameMailFolder(parser, objectDataService, mediator, notifyService, folder, executor, executorPlayer, newName, folderInfo);
 
 			case ["UNFOLDER"] when (arg0, arg1) is ({ } folder, null):
