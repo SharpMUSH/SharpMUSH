@@ -54,6 +54,7 @@ public record AliasOptions(
 			{ "randword", ["pickrand"] },
 			{ "soundslike", ["soundlike"] },
 			{ "speak", ["speakpenn"] },
+			{ "strdelete", ["delete"] },
 			{ "textfile", ["dynhelp"] },
 			{ "trunc", ["val"] },
 			{ "ufun", ["u"] },
