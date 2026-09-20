@@ -54,7 +54,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(result));
 	}
 
-	[SharpFunction(Name = "lit", MinArgs = 1, Flags = FunctionFlags.Literal | FunctionFlags.NoParse, ParameterNames = ["argument..."])]
+	[SharpFunction(Name = "lit", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Literal | FunctionFlags.NoParse, ParameterNames = ["argument..."])]
 	public ValueTask<CallState> Lit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lit() with Literal flag: args are already the raw unevaluated text (set by visitor's Literal branch).
@@ -347,7 +347,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(result));
 	}
 
-	[SharpFunction(Name = "strcat", MinArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
+	[SharpFunction(Name = "strcat", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public ValueTask<CallState> Concat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var values = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message ?? MarkupText.Empty);
@@ -355,7 +355,7 @@ public partial class Functions
 			? FunctionLimits.RejectOutput(parser.CurrentState) : new CallState(MarkupText.Concat(values)));
 	}
 
-	[SharpFunction(Name = "cat", MinArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
+	[SharpFunction(Name = "cat", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public ValueTask<CallState> Cat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var values = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message ?? MarkupText.Empty);
@@ -2056,7 +2056,7 @@ public partial class Functions
 		return new CallState(MarkupText.Join(delimiter, truthyValues)) { HadErrors = hadErrors };
 	}
 
-	[SharpFunction(Name = "ansi", MinArgs = 2, Flags = FunctionFlags.Regular)]
+	[SharpFunction(Name = "ansi", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["codes", "string..."])]
 	public ValueTask<CallState> ANSI(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -2289,7 +2289,14 @@ public partial class Functions
 			LinkUrl = null
 		};
 
-		return ValueTask.FromResult(new CallState(MarkupText.Wrap(new Ansi(details), args["1"].Message ?? MarkupText.Empty)));
+		// PennMUSH registers ANSI with a negative maximum (2, -2 at function.c:365), which means the
+		// last argument is not comma-split: ansi(h,a,b) colours the text "a,b". SharpMUSH splits every
+		// call, so everything past <codes> is rejoined here — the text is the whole tail, not one
+		// argument of it.
+		var text = MarkupText.Join(MarkupText.Plain(","), parser.CurrentState.ArgumentsOrdered.Skip(1)
+			.Select(argument => argument.Value.Message ?? MarkupText.Empty));
+
+		return ValueTask.FromResult(new CallState(MarkupText.Wrap(new Ansi(details), text)));
 	}
 
 	/// <summary>

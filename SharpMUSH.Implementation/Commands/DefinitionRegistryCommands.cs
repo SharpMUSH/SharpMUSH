@@ -20,6 +20,18 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
+	/// <summary>
+	/// PennMUSH's <c>DEF_FUNCTION_ARGS</c> (hdrs/function.h:133) — what <c>@function</c> gives a
+	/// definition that names no maximum.
+	/// </summary>
+	private const int DefaultUserFunctionArguments = 10;
+
+	/// <summary>
+	/// PennMUSH's <c>MAX_STACK_ARGS</c> (hdrs/conf.h:29) — the positional arguments an invocation can
+	/// carry as <c>%0</c>-<c>%9</c> and <c>v(N)</c>, and so the ceiling on either declared bound.
+	/// </summary>
+	private const int MaximumStackArguments = 30;
+
 	[SharpCommand(Name = "@COMMAND",
 		Switches =
 		[
@@ -493,16 +505,20 @@ public partial class Commands
 					return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, functionName.ToUpperInvariant()));
 				}
 
-				// Parse min/max arg bounds (default 0..32, the engine-wide max).
+				// Bounds follow PennMUSH's do_function (function.c:1703-1721): an omitted maximum is
+				// DEF_FUNCTION_ARGS, a negative one keeps its magnitude (PennMUSH's "do not split the
+				// last argument" marker, which a user function has no way to honour), and either bound
+				// is clamped to MAX_STACK_ARGS — the engine carries no more positional arguments than
+				// that, so a larger number would be a promise it cannot keep.
 				var minArgs = 0;
-				var maxArgs = 32;
+				var maxArgs = DefaultUserFunctionArguments;
 				if (args.Count >= 4 && int.TryParse(args.GetValueOrDefault("3")?.Message?.ToPlainText(), out var parsedMin))
 				{
-					minArgs = parsedMin;
+					minArgs = Math.Clamp(parsedMin, 0, MaximumStackArguments);
 				}
 				if (args.Count >= 5 && int.TryParse(args.GetValueOrDefault("4")?.Message?.ToPlainText(), out var parsedMax))
 				{
-					maxArgs = parsedMax;
+					maxArgs = Math.Min(Math.Abs(parsedMax), MaximumStackArguments);
 				}
 
 				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(

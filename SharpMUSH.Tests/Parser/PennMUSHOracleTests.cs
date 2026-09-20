@@ -32,6 +32,9 @@ public class PennMUSHOracleTests
 	// Skipped: requires @function myfn setup (object state)
 	[Arguments("fn.case", "[fn(ADD,1,2)]", "3")]
 	[Arguments("fn.zero_args_add", "[fn(add)]", "#-1 FUNCTION (ADD) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1")]
+	// {"ADD", fun_add, 2, INT_MAX, …} (function.c:442): PennMUSH puts no ceiling on the operands,
+	// and 33 is one past the accidental 32 SharpMUSH used to enforce (#1102).
+	[Arguments("add.thirty_three", "[add(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)]", "33")]
 	[Arguments("lit.1", "lit(hello world)", "hello world")]
 	[Arguments("lit.2", "lit(%#)", "%#")]
 	[Arguments("lit.4", "lit(near       far)", "near       far")]

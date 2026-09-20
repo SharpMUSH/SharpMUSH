@@ -14,7 +14,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "chain", MinArgs = 2, MaxArgs = 32, Flags = FunctionFlags.Regular, ParameterNames = ["attributes", "base", "arguments..."])]
+	[SharpFunction(Name = "chain", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["attributes", "base", "arguments..."])]
 	public async ValueTask<CallState> Chain(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var errors = new ListEvaluationErrors();
@@ -32,7 +32,8 @@ public partial class Functions
 		}
 
 		// Fixed side-arguments: chain(<list>, <base>, <arg0>, <arg1>, ...) exposes <arg0> as %1, <arg1> as
-		// %2, ... to EVERY attribute in the chain (carried down each step, as in PennMUSH's chain()).
+		// %2, ... to EVERY attribute in the chain, carried down each step. PennMUSH has no chain(), so the
+		// count is bounded by nothing but the caller.
 		var sideArgs = new Dictionary<string, CallState>();
 		for (var i = 2; i < parser.CurrentState.Arguments.Count; i++)
 		{
