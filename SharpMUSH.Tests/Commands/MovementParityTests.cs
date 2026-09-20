@@ -1924,4 +1924,57 @@ public class MovementParityTests
 		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(destination))
 			.Because("the victim is who the destination's TELEPORT lock is read against");
 	}
+
+	/// <summary>
+	/// <c>wiz.c:450-479</c>: teleporting an exit relocates its SOURCE — the exit now leads out of the
+	/// destination room — and keeps where it leads. There was no such branch, so an exit fell through
+	/// to <c>safe_tel</c> and was refused by <c>enter_room</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportingAnExitRewritesItsSourceRoomAndKeepsItsDestination()
+	{
+		var (_, from, to, exit) = await Corridor("ExitRelocate");
+		var newSource = await Dig("ExitRelocateSource");
+
+		await God($"@teleport {exit}={newSource}");
+
+		var relocated = (await Node(exit)).Expect<SharpExit>();
+		var source = await relocated.Location.WithCancellation(CancellationToken.None);
+		var leadsTo = await relocated.Home.WithCancellation(CancellationToken.None);
+
+		await Assert.That(BareDbref(source.Object().DBRef.ToString())).IsEqualTo(BareDbref(newSource));
+		await Assert.That(BareDbref(leadsTo.Expect<AnySharpContainer>().Object().DBRef.ToString()))
+			.IsEqualTo(BareDbref(to))
+			.Because("only the source moves; where the exit leads is untouched");
+
+		var newSourceExits = await Mediator.CreateStream(new GetExitsQuery(DBRef.Parse(newSource)))
+			.Select(x => x.Object.DBRef.Number).ToListAsync();
+		var oldSourceExits = await Mediator.CreateStream(new GetExitsQuery(DBRef.Parse(from)))
+			.Select(x => x.Object.DBRef.Number).ToListAsync();
+
+		await Assert.That(newSourceExits).Contains(DBRef.Parse(exit).Number);
+		await Assert.That(oldSourceExits).DoesNotContain(DBRef.Parse(exit).Number)
+			.Because("remove_first(Exits(loc), victim) takes it off the old room's list (wiz.c:471)");
+	}
+
+	/// <summary>
+	/// <c>wiz.c:453</c>: an exit is sourced in a room or nowhere.
+	/// </summary>
+	[Test]
+	public async ValueTask AnExitCanOnlyBeTeleportedToARoom()
+	{
+		var god = (await Node("#1")).Object().DBRef;
+		var (_, from, _, exit) = await Corridor("ExitToThing");
+		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ExitToThingBox");
+
+		var godSaw = await MessagesWhile(god, async () =>
+			await God($"@teleport {exit}=#{box.Number}"));
+
+		await Assert.That(godSaw.Any(m => m == ErrorMessages.Notifications.ExitsOnlyTeleportToRooms)).IsTrue();
+
+		var stillThere = (await Node(exit)).Expect<SharpExit>();
+		var source = await stillThere.Location.WithCancellation(CancellationToken.None);
+
+		await Assert.That(BareDbref(source.Object().DBRef.ToString())).IsEqualTo(BareDbref(from));
+	}
 }
