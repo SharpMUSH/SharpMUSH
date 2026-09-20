@@ -111,6 +111,23 @@ public interface IObjectStore
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Create a new thing at a dbref the caller names, the storage half of PennMUSH's
+	/// <c>make_first_free_wrapper</c> (<c>src/destroy.c:928</c>) followed by <c>new_object()</c>.
+	/// The provider decides which ids are free to take; when <paramref name="requested"/> is not one
+	/// of them nothing is written at all, and the error explains why rather than quietly allocating
+	/// somewhere else. The check and the write share one transaction.
+	/// </summary>
+	/// <param name="requested">The dbref the new thing must have</param>
+	/// <param name="name">Thing name</param>
+	/// <param name="location">Location for the thing</param>
+	/// <param name="creator">Owner of the thing</param>
+	/// <param name="home">Home location for the thing</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>The requested <see cref="DBRef"/>, or why it could not be used</returns>
+	ValueTask<Result<DBRef>> CreateThingAtAsync(DBRef requested, string name, AnySharpContainer location,
+		SharpPlayer creator, AnySharpContainer home, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Create a new exit.
 	/// </summary>
 	/// <param name="name">Exit name</param>

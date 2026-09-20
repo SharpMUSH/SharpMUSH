@@ -109,29 +109,59 @@ public partial class LightningDatabase
 		var ownerKey = (long)creator.Object.Key;
 		var (now, modified) = Timestamps(creationTime, modifiedTime);
 
-		return await Store.WriteAsync(tx =>
+		return await Store.WriteAsync(
+			tx => WriteThing(tx, AllocateDbref(tx), name, locKey, homeKey, ownerKey, now, modified),
+			cancellationToken);
+	}
+
+	/// <summary>
+	/// As <see cref="CreateThingAsync"/>, but into the dbref the caller names rather than the next one
+	/// the counter hands out. The id must be free to take — see <see cref="AllocateDbrefAt"/> for what
+	/// that means here and how it relates to PennMUSH's free list — and when it is not, nothing at all
+	/// is written and the error says so. Allocation and object write share the one transaction, so two
+	/// callers racing for the same hole cannot both be told they got it.
+	/// </summary>
+	public async ValueTask<Result<DBRef>> CreateThingAtAsync(DBRef requested, string name, AnySharpContainer location,
+		SharpPlayer creator, AnySharpContainer home, CancellationToken cancellationToken = default)
+	{
+		var locKey = (long)location.Object().Key;
+		var homeKey = (long)home.Object().Key;
+		var ownerKey = (long)creator.Object.Key;
+		var (now, modified) = Timestamps(null, null);
+
+		return await Store.WriteAsync<Result<DBRef>>(tx =>
 		{
-			var dbref = AllocateDbref(tx);
-
-			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(new ObjectRecord
+			if (AllocateDbrefAt(tx, requested.Number) is not { } dbref)
 			{
-				Name = name,
-				Type = DatabaseConstants.TypeThing,
-				Aliases = [],
-				CreationTime = now,
-				ModifiedTime = modified,
-				Quota = 0,
-				Warnings = null,
-				Locks = new Dictionary<string, LockRecord>()
-			}));
-			tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+				return new Error<string>(ErrorMessages.Returns.InvalidDbref);
+			}
 
-			SetSingleEdge(tx, Tables.Location, dbref, locKey);
-			SetSingleEdge(tx, Tables.Home, dbref, homeKey);
-			SetSingleEdge(tx, Tables.Owner, dbref, ownerKey);
-
-			return new DBRef((int)dbref, now);
+			return WriteThing(tx, dbref, name, locKey, homeKey, ownerKey, now, modified);
 		}, cancellationToken);
+	}
+
+	/// <summary>The thing rows themselves, once a dbref has been settled on.</summary>
+	private static DBRef WriteThing(ITx tx, long dbref, string name, long locKey, long homeKey, long ownerKey,
+		long now, long modified)
+	{
+		tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(new ObjectRecord
+		{
+			Name = name,
+			Type = DatabaseConstants.TypeThing,
+			Aliases = [],
+			CreationTime = now,
+			ModifiedTime = modified,
+			Quota = 0,
+			Warnings = null,
+			Locks = new Dictionary<string, LockRecord>()
+		}));
+		tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+
+		SetSingleEdge(tx, Tables.Location, dbref, locKey);
+		SetSingleEdge(tx, Tables.Home, dbref, homeKey);
+		SetSingleEdge(tx, Tables.Owner, dbref, ownerKey);
+
+		return new DBRef((int)dbref, now);
 	}
 
 	public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,

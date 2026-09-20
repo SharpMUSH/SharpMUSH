@@ -37,7 +37,8 @@ public static class BuildingHelpers
 		IEventService eventService,
 		IPermissionService permissionService,
 		AnySharpObject executor,
-		MString name)
+		MString name,
+		MString? requestedDbref = null)
 	{
 		if (await HomeForNewObjectAsync(mediator, configuration, permissionService, executor) is not AnySharpContainer home)
 		{
@@ -58,12 +59,57 @@ public static class BuildingHelpers
 		// builds into the room the exit is in. @CREATE threw outright in that case; create() had
 		// the fallback and lost it when the two were merged.
 		var into = executor.IsContainer ? executor.AsContainer : await executor.Where();
+		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 
-		var thing = await mediator.Send(new CreateThingCommand(name.ToPlainText(),
-			into,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None),
-			home));
+		var requested = requestedDbref?.ToPlainText();
+		if (string.IsNullOrWhiteSpace(requested))
+		{
+			return await CreatedAsync(parser, mediator, database, notifyService, eventService, executor, name,
+				await mediator.Send(new CreateThingCommand(name.ToPlainText(), into, owner, home)));
+		}
 
+		// make_first_free_wrapper (src/destroy.c:930-943), in its own order: the power first, then
+		// whether the id can be had at all. Both refuse outright — Penn returns NOTHING from do_create
+		// and never falls back to the next free dbref, and neither does this.
+		if (!await executor.IsWizard() && !await executor.Object().HasPower("Pick_DBRefs"))
+		{
+			await notifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (ParseDbref(requested) is not { } wanted)
+		{
+			await notifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);
+			return new Error<string>(ErrorMessages.Returns.InvalidDbref);
+		}
+
+		if (await mediator.Send(new CreateThingAtCommand(wanted, name.ToPlainText(), into, owner, home))
+				is not DBRef at)
+		{
+			await notifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);
+			return new Error<string>(ErrorMessages.Returns.InvalidDbref);
+		}
+
+		return await CreatedAsync(parser, mediator, database, notifyService, eventService, executor, name, at);
+	}
+
+	/// <summary>
+	/// Everything <c>do_create</c> does once the object exists, whichever dbref it landed on: the
+	/// creator's zone, the report, the <c>OBJECT`CREATE</c> event and the object-lifecycle hook.
+	/// </summary>
+	private static async ValueTask<Result<DBRef>> CreatedAsync(
+		IMUSHCodeParser parser,
+		IMediator mediator,
+		IObjectStore database,
+		INotifyService notifyService,
+		IEventService eventService,
+		AnySharpObject executor,
+		MString name,
+		DBRef thing)
+	{
 		// A new object inherits its creator's zone, once the cycle guard allows it.
 		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone &&
 			await mediator.Send(new GetObjectNodeQuery(thing)) is AnySharpObject created &&
@@ -85,6 +131,19 @@ public static class BuildingHelpers
 		}
 
 		return thing;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>parse_dbref</c> (<c>src/parse.c:120-138</c>) — strictly <c>#nnn</c>, because
+	/// anything looser would swallow a possessive. The <c>GoodObject</c> half of its check is the
+	/// provider's to answer, and <c>CreateThingAtCommand</c> answers it.
+	/// </summary>
+	private static DBRef? ParseDbref(string requested)
+	{
+		var trimmed = requested.Trim();
+		return trimmed.Length > 1 && trimmed[0] == '#' && int.TryParse(trimmed[1..], out var number) && number >= 0
+			? new DBRef(number)
+			: null;
 	}
 
 	/// <summary>

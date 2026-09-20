@@ -1301,6 +1301,9 @@
   <data name="DefaultHomeLocationInvalid" xml:space="preserve">
     <value>Default home location is invalid.</value>
   </data>
+  <data name="CreateDbrefUnavailable" xml:space="preserve">
+    <value>That is not a valid dbref.</value>
+  </data>
   <data name="MoneyFunctionNotSupported" xml:space="preserve">
     <value>The money() function is not supported. SharpMUSH does not track money or pennies.</value>
   </data>
