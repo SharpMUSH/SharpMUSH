@@ -592,7 +592,7 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// PennMUSH <c>tport_control_ok</c> (<c>src/wiz.c:331</c>): may <paramref name="player"/> move
+	/// PennMUSH <c>tport_control_ok</c> (<c>src/wiz.c:330</c>): may <paramref name="player"/> move
 	/// <paramref name="victim"/> out of <paramref name="loc"/> at all. Owning the room something is
 	/// standing in is authority enough to evict it — that is how a room owner clears their own room —
 	/// except for a HEAVY object belonging to someone else.
@@ -616,7 +616,7 @@ public partial class Commands
 			return false;
 		}
 
-		// wiz.c:347: "mortals can't @tel HEAVY players just on basis of location ownership".
+		// wiz.c:345: "mortals can't @tel HEAVY players just on basis of location ownership".
 		if (!await victim.HasFlag("HEAVY"))
 		{
 			return true;
@@ -649,13 +649,13 @@ public partial class Commands
 			return true;
 		}
 
-		// wiz.c:312: past here, something you do not control and that is not a room is hopeless.
+		// wiz.c:313: past here, something you do not control and that is not a room is hopeless.
 		if (!destination.IsRoom)
 		{
 			return false;
 		}
 
-		// wiz.c:319: the unlocker is the VICTIM, not the teleporter — the room says who may arrive,
+		// wiz.c:320: the unlocker is the VICTIM, not the teleporter — the room says who may arrive,
 		// not who may send.
 		if (!await LockService.Evaluate(LockType.Teleport, destinationObject, victim))
 		{
@@ -666,7 +666,7 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// PennMUSH <c>wiz.c:570</c>. A FIXED player is pinned: nothing they own is teleported, and they
+	/// PennMUSH <c>wiz.c:572</c>. A FIXED player is pinned: nothing they own is teleported, and they
 	/// teleport nothing — unless the teleporter has Tel_Anything, or is Tel_Anywhere and is moving
 	/// only themselves, or the destination is the victim's own owner.
 	/// </summary>
@@ -869,7 +869,7 @@ public partial class Commands
 					targetContent, destinationContainer, oldSource.Object().DBRef,
 					executor.Object().DBRef, IsSilent: true, Cause: "teleport"));
 
-				// wiz.c:476: the exit branch has no victim==player case to exclude, so AreQuiet is the
+				// wiz.c:478: the exit branch has no victim==player case to exclude, so AreQuiet is the
 				// whole of it.
 				if (!await target.Object().AreQuietAsync(executor))
 				{
@@ -905,14 +905,14 @@ public partial class Commands
 				var absoluteRoomObject = absoluteRoom.WithExitOption();
 				var sourceExempt = telAnywhere || await PermissionService.Controls(executor, absoluteRoomObject);
 
-				// wiz.c:519.
+				// wiz.c:543.
 				if (!sourceExempt && await absoluteRoomObject.HasFlag("NO_TEL"))
 				{
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TeleportsNotAllowed), executor);
 					continue;
 				}
 
-				// wiz.c:543: the room's LEAVE lock, evaluated against the teleporter, with its failure
+				// wiz.c:549: the room's LEAVE lock, evaluated against the teleporter, with its failure
 				// triad run once.
 				if (!sourceExempt
 						&& !await PermissionService.PassesLock(executor, absoluteRoomObject, LockType.Leave))
@@ -950,9 +950,9 @@ public partial class Commands
 			var currentLocation = await targetContent.Location();
 			var changesRoom = !currentLocation.Object().DBRef.Equals(destinationContainer.Object().DBRef);
 
-			// wiz.c:568-571. One conjunction authorises the whole move: authority over the victim where
+			// wiz.c:570-574. One conjunction authorises the whole move: authority over the victim where
 			// it stands, authority over where it is going, and the FIXED rule. Any of the three failing
-			// is the same refusal, and it is the destination's ENTER lock failure triad (wiz.c:588) —
+			// is the same refusal, and it is the destination's ENTER lock failure triad (wiz.c:590) —
 			// not a bare notification — shown to the room the teleporter is standing in.
 			if (!await TportControlOk(executor, target, currentLocation, telAnything)
 					|| !await TportDestOk(executor, target, destinationContainer, telAnywhere)

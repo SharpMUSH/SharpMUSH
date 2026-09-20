@@ -616,7 +616,7 @@ public static class ErrorMessages
 		/// </summary>
 		public const string ExitsOnlyTeleportToRooms = "Exits can only be teleported to other rooms.";
 
-		/// <summary>PennMUSH <c>src/wiz.c:457</c>: the would-be new source room is already GOING.</summary>
+		/// <summary>PennMUSH <c>src/wiz.c:456</c>: the would-be new source room is already GOING.</summary>
 		public const string ExitDestinationCrumbling = "You can't move an exit to someplace that's crumbling.";
 		public const string InTheVoid = "You're in the Void. This is not a good thing.";
 		public const string VoidSendingHome = "You're in the void - sending you home.";
