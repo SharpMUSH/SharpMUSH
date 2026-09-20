@@ -1,4 +1,5 @@
 using SharpMUSH.Configuration;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.ParserInterfaces;
@@ -69,8 +70,16 @@ public class FloatPrecisionTests
 	/// <summary>
 	/// Every place the shipped default is written down has to say the same thing: the code default,
 	/// the fallbacks the PennMUSH config importer uses for an option a <c>mush.cnf</c> does not set,
-	/// and the <c>mushcnf.dst</c> this repository ships.
+	/// the <c>mushcnf.dst</c> this repository ships, and the precision
+	/// <see cref="Configurable.FloatPrecision"/> answers before a host wires it to the live
+	/// configuration.
 	/// </summary>
+	/// <remarks>
+	/// <see cref="Configurable.DefaultFloatPrecision"/> cannot be asserted through
+	/// <see cref="Configurable.FloatPrecision"/>: that is process-wide static state which the test
+	/// host has already pointed at its own configuration, and re-pointing it here would change the
+	/// game under every test running in parallel.
+	/// </remarks>
 	[Test]
 	public async Task SixPlacesEverywhereTheDefaultIsWrittenDown()
 	{
@@ -79,6 +88,7 @@ public class FloatPrecisionTests
 		await Assert.That(OptionsService.Default().Cosmetic.FloatPrecision).IsEqualTo(6u);
 		await Assert.That(ReadPennMushConfig.Create(EmptyConfigFile()).Cosmetic.FloatPrecision).IsEqualTo(6u);
 		await Assert.That(ReadPennMushConfig.Create(shipped).Cosmetic.FloatPrecision).IsEqualTo(6u);
+		await Assert.That(Configurable.DefaultFloatPrecision).IsEqualTo(6u);
 	}
 
 	private static string EmptyConfigFile()

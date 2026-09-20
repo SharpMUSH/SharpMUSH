@@ -5,13 +5,26 @@ namespace SharpMUSH.Library.Definitions;
 public static class Configurable
 {
 	private const uint MaxFloatPrecision = 15;
-	private const uint DefaultFloatPrecision = 15;
+
+	/// <summary>
+	/// The precision answered before a host calls <see cref="ReadFloatPrecisionFrom"/> — in a tool, a
+	/// test that boots no server, or any read before startup has wired the live configuration.
+	/// </summary>
+	/// <remarks>
+	/// Read from <see cref="Services.OptionsService.Default"/> rather than written down again, the
+	/// same way the alias tables below dereference <see cref="AliasOptions.Default"/>. It was a
+	/// separate literal and it had drifted: 15 here and in two other places, where PennMUSH and the
+	/// <c>mushcnf.dst</c> this repository ships both say 6 (#1194). Evaluated once, because
+	/// <see cref="FloatPrecision"/> is read for every number the server formats.
+	/// </remarks>
+	public static readonly uint DefaultFloatPrecision = Services.OptionsService.Default().Cosmetic.FloatPrecision;
+
 	private static Func<uint> _floatPrecision = () => DefaultFloatPrecision;
 
 	/// <summary>
 	/// Decimal places in floating-point output, as <c>float_precision</c> sets it: read on every call,
-	/// so a configuration change applies to the next result. At most 15. PennMUSH default: 6,
-	/// SharpMUSH default: 15. See <see cref="Utilities.MushNumber"/>.
+	/// so a configuration change applies to the next result. At most 15, and 6 until a host wires it.
+	/// See <see cref="Utilities.MushNumber"/>.
 	/// </summary>
 	public static int FloatPrecision => (int)Math.Min(_floatPrecision(), MaxFloatPrecision);
 
