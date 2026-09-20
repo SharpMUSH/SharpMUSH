@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -180,18 +181,7 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		var lockValue = valueArg.Message!.ToPlainText().ToLowerInvariant();
-		bool shouldLock;
-
-		if (lockValue == "on" || lockValue == "1" || lockValue == "yes")
-		{
-			shouldLock = true;
-		}
-		else if (lockValue == "off" || lockValue == "0" || lockValue == "no")
-		{
-			shouldLock = false;
-		}
-		else
+		if (AttributeLockSwitch.Parse(valueArg.Message!.ToPlainText()) is not bool shouldLock)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.InvalidArgument), executor);
 			return new CallState(ErrorMessages.Returns.InvalidValue);
