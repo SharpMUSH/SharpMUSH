@@ -344,17 +344,14 @@ representation choice is deliberate and tracked separately in #1006 item 13.
 ## Number precision
 
 `float_precision` is the number of decimal places every floating-point result is written with,
-trailing zeros dropped, as in PennMUSH. PennMUSH defaults to 6; **SharpMUSH defaults to 15**, and
-caps the setting at 15. Code that formatted PennMUSH output by relying on its rounding will see more
-digits here. `round()` cannot ask for more places than the setting allows.
+trailing zeros dropped, as in PennMUSH. SharpMUSH defaults to 6, the same as PennMUSH, and caps the
+setting at 15. `round()` cannot ask for more places than the setting allows.
 
 A result that rounds to zero from below is written `0`, where PennMUSH writes `-0`.
 
-**Workaround.** `round()` to the precision you want rather than relying on the default.
-
 ```sharp
 > think pi()
-3.141592653589793
+3.141593
 > think round(pi(),6)
 3.141593
 > think fdiv(-1,10000000000000000)
