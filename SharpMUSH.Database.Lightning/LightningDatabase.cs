@@ -73,10 +73,30 @@ public partial class LightningDatabase(
 	/// <summary>Reads and increments the <c>next_dbref</c> counter inside a write job, returning the id allocated to the caller.</summary>
 	internal long AllocateDbref(ITx tx)
 	{
-		var current = tx.TryGet(Tables.Meta, Keys.Str("next_dbref"), out var v) ? Keys.ReadDbref(v) : 0;
+		var current = ReadNextDbref(tx);
 		tx.Put(Tables.Meta, Keys.Str("next_dbref"), Keys.Dbref(current + 1));
 		return current;
 	}
+
+	/// <summary>
+	/// Allocates the dbref the caller named, or nothing when that id is not free to take.
+	/// <para>PennMUSH's <c>make_first_free_wrapper</c> (<c>src/destroy.c:928-949</c>) only hands back a
+	/// slot that is already on the free list: a dbref below <c>db_top</c> whose object has been recycled
+	/// into garbage. SharpMUSH keeps no garbage rows — <c>@destroy</c> removes the row outright, which is
+	/// why <c>stats()</c> reports a garbage count of zero — so the free slots are exactly the holes:
+	/// below the counter, and holding no object. An id at or above the counter is refused rather than
+	/// jumping the counter to reach it, so one mistyped argument cannot strand a block of dbrefs.</para>
+	/// <para>Runs inside the caller's write job, which is what makes this check and the object write that
+	/// follows it atomic against a second creation racing for the same hole. The counter is left alone:
+	/// a hole is below it by construction.</para>
+	/// </summary>
+	internal long? AllocateDbrefAt(ITx tx, long requested)
+		=> requested >= 0 && requested < ReadNextDbref(tx) && !tx.TryGet(Tables.Obj, Keys.Dbref(requested), out _)
+			? requested
+			: null;
+
+	private static long ReadNextDbref(ITx tx)
+		=> tx.TryGet(Tables.Meta, Keys.Str("next_dbref"), out var v) ? Keys.ReadDbref(v) : 0;
 
 	internal static void PutEdge(ITx tx, (TableDef Forward, TableDef Reverse) edge, long from, long to)
 	{

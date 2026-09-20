@@ -1333,6 +1333,12 @@ public static class ErrorMessages
 		public const string ObjectScheduledDestroyedFormat = "{0} is scheduled to be destroyed.";
 
 		public const string DefaultHomeLocationInvalid = "Default home location is invalid.";
+		/// <summary>
+		/// PennMUSH <c>make_first_free_wrapper</c> (<c>src/destroy.c:940</c>) for every way a requested
+		/// dbref can fail to be one the player may build on: unparseable, out of range, or in use. The
+		/// wording deliberately does not distinguish them, so it cannot be used to probe the database.
+		/// </summary>
+		public const string CreateDbrefUnavailable = "That is not a valid dbref.";
 		public const string MoneyFunctionNotSupported = "The money() function is not supported. SharpMUSH does not track money or pennies.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MessageSentToRecipientsFormat = "Message sent to {0} recipient(s).";

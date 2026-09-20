@@ -40,13 +40,20 @@ public partial class Functions
 		return new CallState($"#{created.Number}:{created.CreationMilliseconds}");
 	}
 
+	/// <remarks>
+	/// <c>fun_create</c> (<c>src/fundb.c</c>) passes <c>args[2]</c> straight to <c>do_create</c>, so the
+	/// function's third argument is the same requested dbref the command's is, under the same
+	/// <c>Pick_DBRefs</c> gate.
+	/// </remarks>
 	[SharpFunction(Name = "create", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
 	public async ValueTask<CallState> Create(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var args = parser.CurrentState.Arguments;
 
 		return await BuildingHelpers.CreateThingAsync(parser, Mediator, Database, Configuration, ValidateService,
-			NotifyService, EventService, PermissionService, executor, parser.CurrentState.Arguments["0"].Message!) switch
+			NotifyService, EventService, PermissionService, executor, args["0"].Message!,
+			args.TryGetValue("2", out var requestedDbref) ? requestedDbref.Message : null) switch
 		{
 			// PennMUSH fun_create hands do_create's dbref to safe_dbref, which writes #n and not an
 			// objid (src/fundb.c).

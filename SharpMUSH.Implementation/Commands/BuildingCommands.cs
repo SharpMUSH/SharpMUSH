@@ -30,17 +30,21 @@ public partial class Commands
 	}
 
 	/// <remarks>
-	/// Creating on the DBRef is not implemented.
+	/// <c>CB.RSArgs</c> matches PennMUSH's <c>CMD_T_RS_ARGS</c> on <c>@CREATE</c>
+	/// (<c>src/command.c:124</c>): the right side is <c>&lt;cost&gt;,&lt;dbref&gt;</c>, and without the
+	/// split the whole of it arrived as one argument, so the dbref could not be read at all.
 	/// NOTE: Cost parameter requires economy/quota system implementation.
 	/// </remarks>
-	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 3, ParameterNames = ["name", "cost", "dbref"])]
+	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 1, MaxArgs = 3, ParameterNames = ["name", "cost", "dbref"])]
 	public async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var args = parser.CurrentState.Arguments;
 
 		return await BuildingHelpers.CreateThingAsync(parser, Mediator, Database, Configuration, ValidateService,
-			NotifyService, EventService, PermissionService, executor, parser.CurrentState.Arguments["0"].Message!) switch
+			NotifyService, EventService, PermissionService, executor, args["0"].Message!,
+			args.TryGetValue("2", out var requestedDbref) ? requestedDbref.Message : null) switch
 		{
 			DBRef thing => new CallState(thing.ToString()),
 			Error<string> error => new CallState(error.Value)
