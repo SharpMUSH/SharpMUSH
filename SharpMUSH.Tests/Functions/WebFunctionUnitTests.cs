@@ -1,4 +1,13 @@
+using System.Text;
+using System.Text.Json;
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -40,20 +49,97 @@ public class WebFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// wshtml()/wsjson() embed their payload in the value they return, for a later emit to deliver —
+	/// they do not send anything themselves and argument two is the plain-text fallback, not a target
+	/// player (help WSHTML, PennMUSH src/websock.c:648). The value a listener without a WebSocket
+	/// reads is exactly that fallback.
+	/// </summary>
 	[Test]
+	[Arguments("wshtml(<b>test</b>,plain test)", "plain test")]
+	[Arguments("wsjson({\"test\":\"value\"},plain test)", "plain test")]
+	// With no payload there is no channel region, so the fallback stands alone; with no fallback
+	// there is no text for the layer to cover, and nothing is carried.
+	[Arguments("wshtml(,plain test)", "plain test")]
 	[Arguments("wshtml(<b>test</b>)", "")]
-	public async Task Wshtml(string str, string expected)
+	[Arguments("wsjson({\"test\":\"value\"})", "")]
+	public async Task WebSocketFunctionsReturnTheFallbackAsTheirText(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
 	[Test]
-	[Arguments("wsjson({\"test\":\"value\"})", "")]
-	public async Task Wsjson(string str, string expected)
+	[Arguments("wshtml(<b>test</b>,plain test)", "html", "<b>test</b>")]
+	// A brace-wrapped argument is a MUSH grouping and the braces come off before the function ever
+	// sees it, so a JSON object literal reaches wsjson() through lit().
+	[Arguments("wsjson([lit({\"test\":\"value\"})],plain test)", "json", "{\"test\":\"value\"}")]
+	public async Task WebSocketFunctionsCarryThePayloadAsAMarkupLayer(string str, string channel, string data)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message!;
+
+		await Assert.That(result.Runs.Length).IsEqualTo(1);
+		await Assert.That(result.Runs[0].Markups.OfType<WebSocketMarkup>().Single())
+			.IsEqualTo(new WebSocketMarkup(channel, data));
+	}
+
+	/// <summary>
+	/// The one emission reaches both readings. A renderer that knows nothing of the kind — the socket
+	/// owner's, which does not register the codec — still hands a terminal the fallback and only the
+	/// fallback, because the payload rides on the layer and never in the text.
+	/// </summary>
+	[Test]
+	public async Task OneEmissionCarriesBothTheFallbackAndTheWebSocketPayload()
+	{
+		var emitted = (await Parser.FunctionParse(MarkupText.Plain("wshtml(<b>test</b>,plain test)")))!.Message!;
+		var wire = MarkupTextSerializer.Serialize(emitted);
+		var socketOwner = MarkupRegistry.Empty.WithAnsi().WithHtml();
+
+		var terminal = new MarkupOutputRenderer().Render(wire,
+			new RenderContext("telnet", new ProtocolCapabilities(), null));
+		await Assert.That(Encoding.UTF8.GetString(terminal.Data)).IsEqualTo("plain test");
+
+		await Assert.That(MarkupTextSerializer.Deserialize(wire, socketOwner).Render(MarkupFormat.Ansi))
+			.IsEqualTo("plain test");
+
+		// The portal is handed the markup itself inside the out-of-band envelope, payload and all.
+		var portal = new MarkupOutputRenderer().Render(wire,
+			new RenderContext(MarkupOutputRenderer.WebSocketConnectionType, new ProtocolCapabilities(), null));
+		var envelope = JsonDocument.Parse(Encoding.UTF8.GetString(portal.Data)).RootElement;
+		await Assert.That(envelope.GetProperty("type").GetString()).IsEqualTo("markup");
+		var delivered = MarkupTextSerializer.Deserialize(envelope.GetProperty("data").GetString()!);
+		await Assert.That(delivered.Runs[0].Markups.OfType<WebSocketMarkup>().Single())
+			.IsEqualTo(new WebSocketMarkup(WebSocketMarkup.HtmlChannel, "<b>test</b>"));
+	}
+
+	/// <summary>
+	/// PennMUSH gates both on <c>Can_Pueblo_Send</c> — a wizard or the Send_OOB power
+	/// (<c>hdrs/mushdb.h:61</c>). The test fixtures run as God, so this has to drive a mortal.
+	/// </summary>
+	[Test]
+	[NotInParallel]
+	public async Task AMortalWithoutSendOobCannotEmbedWebSocketMarkup()
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var connections = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, mediator, connections, "WsGate");
+
+		var refused = await WebAppFactoryArg.FunctionParserFor(mortal.DbRef)
+			.FunctionParse(MarkupText.Plain("wshtml(<b>test</b>,plain test)"));
+		await Assert.That(refused!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+
+		// The control: God is a wizard, so the same call answers.
+		var allowed = await Parser.FunctionParse(MarkupText.Plain("wshtml(<b>test</b>,plain test)"));
+		await Assert.That(allowed!.Message!.ToPlainText()).IsEqualTo("plain test");
+	}
+
+	/// <summary>Penn's <c>#-1 NESTED TAG</c>: a payload that already carries markup is refused.</summary>
+	[Test]
+	public async Task APayloadThatAlreadyCarriesMarkupIsRefused()
+	{
+		var result = await Parser.FunctionParse(MarkupText.Plain("wshtml([tagwrap(b,test)],plain test)"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NestedTag);
 	}
 
 	[Test]

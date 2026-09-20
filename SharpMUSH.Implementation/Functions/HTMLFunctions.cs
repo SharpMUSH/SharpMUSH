@@ -110,134 +110,52 @@ public partial class Functions
 	private static async ValueTask<bool> CanSendOob(AnySharpObject executor)
 		=> await executor.IsWizard() || await executor.HasPower("Send_OOB");
 
-	[SharpFunction(Name = "wsjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["message"])]
-	public async ValueTask<CallState> websocket_json(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	/// <summary>
+	/// <c>wsjson(&lt;json string&gt;[, &lt;default string&gt;])</c> — embeds JSON for a WebSocket client
+	/// and hands it back for a later <c>@emit</c>/<c>@pemit</c> to deliver; the default string is what
+	/// every other listener sees (<c>help wsjson</c>, PennMUSH <c>fun_websocket_json</c>,
+	/// <c>src/websock.c:677</c>).
+	/// </summary>
+	[SharpFunction(Name = "wsjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["json", "default"])]
+	public ValueTask<CallState> websocket_json(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> EmbedWebSocketChannel(parser, WebSocketMarkup.JsonChannel);
+
+	/// <summary>
+	/// <c>wshtml(&lt;html string&gt;[, &lt;default string&gt;])</c> — as <see cref="websocket_json"/>, on
+	/// the HTML channel (PennMUSH <c>fun_websocket_html</c>, <c>src/websock.c:683</c>).
+	/// </summary>
+	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["html", "default"])]
+	public ValueTask<CallState> websocket_html(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> EmbedWebSocketChannel(parser, WebSocketMarkup.HtmlChannel);
+
+	/// <summary>
+	/// PennMUSH's <c>do_fun_markup_websocket</c> (<c>src/websock.c:648</c>): gated on
+	/// <c>Can_Pueblo_Send</c>, refusing a payload that already carries markup, and returning the
+	/// fallback under a <see cref="WebSocketMarkup"/> layer rather than sending anything itself.
+	/// </summary>
+	private async ValueTask<CallState> EmbedWebSocketChannel(IMUSHCodeParser parser, string channel)
 	{
-		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var args = parser.CurrentState.Arguments;
+		var data = args["0"].Message!;
+		var fallback = args.TryGetValue("1", out var defaultArg) ? defaultArg.Message! : MarkupText.Empty;
 
-		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
-			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
-			: "me";
-
-		var locate = await LocateService.LocateAndNotifyIfInvalid(
-			parser,
-			executor,
-			executor,
-			playerStr,
-			PlayersPreference | AbsoluteMatch);
-
-		if (locate is not AnySharpObject located)
+		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
 		{
-			return CallState.Empty;
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (!located.IsPlayer)
+		// Penn refuses a payload holding a TAG_END, which would close the region it is written into.
+		// Markup here is a layer rather than characters, so the same thing is asked directly.
+		if (data.Runs.Length > 0)
 		{
-			return CallState.Empty;
+			return new CallState(ErrorMessages.Returns.NestedTag);
 		}
 
-		var isWizard = await executor.IsWizard();
-		var isSelf = executor.Object().DBRef == located.Object().DBRef;
-
-		if (!isWizard && !isSelf)
-		{
-			return CallState.Empty;
-		}
-
-		// Try to parse as JSON, but if it fails, send as-is
-		object? dataObj;
-		try
-		{
-			dataObj = System.Text.Json.JsonSerializer.Deserialize<object>(jsonContent);
-		}
-		catch (System.Text.Json.JsonException)
-		{
-			dataObj = jsonContent;
-		}
-		catch (System.NotSupportedException)
-		{
-			dataObj = jsonContent;
-		}
-
-		var wsMessage = System.Text.Json.JsonSerializer.Serialize(new
-		{
-			type = "json",
-			data = dataObj
-		});
-
-		await foreach (var connection in ConnectionService.Get(located.Object().DBRef))
-		{
-			if (connection.ConnectionType != "websocket")
-			{
-				continue;
-			}
-
-			await Mediator.Publish(new SharpMUSH.Messaging.Messages.WebSocketOutputMessage(
-				connection.Handle,
-				wsMessage));
-		}
-
-		// Return empty string - OOB data doesn't produce visible output
-		return CallState.Empty;
-	}
-
-	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["html"])]
-	public async ValueTask<CallState> websocket_html(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
-			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
-			: "me";
-
-		var locate = await LocateService.LocateAndNotifyIfInvalid(
-			parser,
-			executor,
-			executor,
-			playerStr,
-			PlayersPreference | AbsoluteMatch);
-
-		if (locate is not AnySharpObject located)
-		{
-			return CallState.Empty;
-		}
-
-		if (!located.IsPlayer)
-		{
-			return CallState.Empty;
-		}
-
-		// Check permissions
-		var isWizard = await executor.IsWizard();
-		var isSelf = executor.Object().DBRef == located.Object().DBRef;
-
-		if (!isWizard && !isSelf)
-		{
-			return CallState.Empty;
-		}
-
-		var wsMessage = System.Text.Json.JsonSerializer.Serialize(new
-		{
-			type = "html",
-			data = htmlContent
-		});
-
-		await foreach (var connection in ConnectionService.Get(located.Object().DBRef))
-		{
-			if (connection.ConnectionType != "websocket")
-			{
-				continue;
-			}
-
-			await Mediator.Publish(new SharpMUSH.Messaging.Messages.WebSocketOutputMessage(
-				connection.Handle,
-				wsMessage));
-		}
-
-		// Return empty string - OOB data doesn't produce visible output
-		return CallState.Empty;
+		// Penn writes no channel region for an empty payload, leaving the fallback alone; and a layer
+		// needs text to cover, so an empty fallback carries nothing either way.
+		return data.Length == 0 || fallback.Length == 0
+			? new CallState(fallback)
+			: new CallState(MarkupText.Wrap(new WebSocketMarkup(channel, data.ToPlainText()), fallback));
 	}
 
 	[SharpFunction(Name = "WEBSOCKET_HTML", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,

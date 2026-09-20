@@ -21,7 +21,7 @@ if (!MarkupRegistry.IsConfigured)
 {
 	// WithHtml(policy): a tag rendered here lands in a browser, so every one is held to the portal's
 	// policy as it is written — including markup built before it reached us.
-	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml(TagwrapPolicy.Portal);
+	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml(TagwrapPolicy.Portal).WithWebSocket();
 }
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);

@@ -94,8 +94,8 @@ public class FunctionFlagDispatchTests
 	[Arguments("lemit(hello)")]
 	[Arguments("nsemit(hello)")]
 	[Arguments("nslemit(hello)")]
-	[Arguments("wsjson({})")]
-	[Arguments("wshtml(hello)")]
+	// wsjson()/wshtml() are not here: they embed markup in a value the caller emits later, so under
+	// PennMUSH's contract they have no side effect to disable (issue #1120).
 	[Arguments("oob(me,test)")]
 	[Arguments("create(FlagSideEffectProbe)")]
 	[Arguments("pcreate(FlagSideEffectProbe,password)")]

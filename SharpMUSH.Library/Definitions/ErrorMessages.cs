@@ -137,6 +137,8 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ParserFailure = "#-1 PARSER FAILURE: {0}";
 
+		public const string NestedTag = "#-1 NESTED TAG";
+
 		public const string NothingToEvaluate = "#-1 NOTHING TO EVALUATE";
 		public const string NothingToDo = "#-1 NOTHING TO DO";
 		public const string ExitsCannotContainThings = "#-1 EXITS CANNOT CONTAIN THINGS";

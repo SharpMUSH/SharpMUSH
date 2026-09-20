@@ -20,6 +20,10 @@ public static class Program
 
 	public static WebApplication CreateApplication(string[] args, string? socketPath = null)
 	{
+		// No WithWebSocket() here: WebSocketMarkup lives in SharpMUSH.Contracts, which the socket owner
+		// deliberately does not reference. It costs nothing — the layer reads back as an UnknownMarkup,
+		// which renders as nothing and passes its body (the plain-text fallback) through, and a WebSocket
+		// connection is handed the serialised markup verbatim for the portal to read the payload off.
 		if (!MarkupRegistry.IsConfigured)
 			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();
 

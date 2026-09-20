@@ -1,6 +1,7 @@
 using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Html;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Tests;
 
@@ -16,7 +17,7 @@ public static class MarkupRegistryBootstrap
 	{
 		if (!MarkupRegistry.IsConfigured)
 		{
-			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();
+			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithWebSocket();
 		}
 	}
 }
