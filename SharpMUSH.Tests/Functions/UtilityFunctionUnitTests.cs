@@ -567,6 +567,15 @@ public class UtilityFunctionUnitTests
 	[Arguments("iter(red blue green,iter(fish shoe,##))", "red red blue blue green green")]
 	[Arguments("iter(a b,ilev())", "0 0")]
 	[Arguments("iter(a,iter(b,ilev()))", "1")]
+	// r(<n>,iter) reads the same stack and must index it the same way; it counted from the
+	// outermost instead, so r(0,iter) answered the outer loop where itext(0) answered the inner.
+	[Arguments("iter(red blue green,iter(fish shoe,[r(1,iter)]:[r(0,iter)]))",
+		"red:fish red:shoe blue:fish blue:shoe green:fish green:shoe")]
+	[Arguments("iter(red blue green,iter(fish shoe,strcat(r(0,iter),/,itext(0))))",
+		"fish/fish shoe/shoe fish/fish shoe/shoe fish/fish shoe/shoe")]
+	[Arguments("iter(red blue green,iter(fish shoe,strcat(r(1,iter),/,itext(1))))",
+		"red/red red/red blue/blue blue/blue green/green green/green")]
+	[Arguments("iter(red blue green,iter(fish shoe,[r(L,iter)]))", "red red blue blue green green")]
 	public async Task ITextAndINum_CountFromTheInnermostIteration(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
