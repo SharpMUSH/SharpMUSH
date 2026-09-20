@@ -847,52 +847,53 @@ public partial class Commands
 				destinationContainer = await destinationContainer.Location();
 			}
 
-			// Zone teleport restriction: check if the source room blocks teleporting out.
-			// PennMUSH src/wiz.c: NO_TEL flag prevents all non-wizard teleports from the room.
-			// Zone mismatch with Zone lock failure prevents teleporting out of the zone.
-			if (!telAnywhere)
+			// wiz.c:519-566. Every restriction here reads the victim's ABSOLUTE room — the room at the
+			// end of the containment walk, not the immediate container — so nesting inside a vehicle is
+			// no way around the room's policy. Penn checks the VICTIM's room rather than the
+			// teleporter's, which is what stops someone in a NO_TEL room having one of their objects
+			// @tel them out; the exemption, though, is the command-giving player's, and it is waived
+			// for a teleporter who controls that room or holds Tel_Anywhere.
+			var absoluteRoom = await MoveService.AbsoluteRoom(target);
+
+			if (absoluteRoom is not null)
 			{
-				AnySharpContainer? sourceLocation = null;
-				try
+				var absoluteRoomObject = absoluteRoom.WithExitOption();
+				var sourceExempt = telAnywhere || await PermissionService.Controls(executor, absoluteRoomObject);
+
+				// wiz.c:519.
+				if (!sourceExempt && await absoluteRoomObject.HasFlag("NO_TEL"))
 				{
-					sourceLocation = target.IsContent
-						? await target.AsContent.Location()
-						: null;
-				}
-				catch
-				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TeleportsNotAllowed), executor);
+					continue;
 				}
 
-				if (sourceLocation is not null)
+				// wiz.c:543: the room's LEAVE lock, evaluated against the teleporter, with its failure
+				// triad run once.
+				if (!sourceExempt
+						&& !await PermissionService.PassesLock(executor, absoluteRoomObject, LockType.Leave))
 				{
-					var sourceObj = sourceLocation.WithExitOption();
+					await DidItService.FailLock(parser, executor, absoluteRoomObject, LockType.Leave,
+						MarkupText.Plain(ErrorMessages.Notifications.TeleportsNotAllowed));
+					continue;
+				}
 
-					if (await sourceObj.HasFlag("NO_TEL"))
+				// wiz.c:561: Z_TEL on the room, or on the room's zone object, pins the victim inside
+				// that zone. The Zone lock has no part in this — where it matters is `controls`, which
+				// `sourceExempt` already went through.
+				if (!sourceExempt
+						&& await absoluteRoomObject.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject sourceZone
+						&& (await absoluteRoomObject.HasFlag("Z_TEL") || await sourceZone.HasFlag("Z_TEL")))
+				{
+					var destinationZone = await destinationContainer.WithExitOption().Object().Zone
+						.WithCancellation(CancellationToken.None);
+
+					var sameZone = destinationZone is AnySharpObject destinationZoneObject
+						&& sourceZone.Object().DBRef.Equals(destinationZoneObject.Object().DBRef);
+
+					if (!sameZone)
 					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TeleportsNotAllowed), executor);
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoZoneTeleport), executor);
 						continue;
-					}
-
-					// Zone mismatch check: if source room has a zone that differs from destination's zone,
-					// evaluate the Zone lock on the source room. Failure blocks teleport.
-					var sourceZone = await sourceObj.Object().Zone.WithCancellation(CancellationToken.None);
-					if (sourceZone is AnySharpObject sourceZoneObject)
-					{
-						var destObj = destinationContainer.WithExitOption();
-						var destZone = await destObj.Object().Zone.WithCancellation(CancellationToken.None);
-						var sourceZoneDbRef = sourceZoneObject.Object().DBRef;
-						var destZoneDbRef = destZone is AnySharpObject destZoneObject
-							? destZoneObject.Object().DBRef
-							: new DBRef(-1);
-
-						if (!sourceZoneDbRef.Equals(destZoneDbRef))
-						{
-							if (!await LockService.Evaluate(LockType.Zone, sourceObj, executor))
-							{
-								await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoZoneTeleport), executor);
-								continue;
-							}
-						}
 					}
 				}
 			}

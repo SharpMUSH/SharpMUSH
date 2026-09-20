@@ -1705,6 +1705,166 @@ public class MovementParityTests
 	}
 
 	/// <summary>
+	/// <c>wiz.c:519</c> reads NO_TEL off <c>absolute_room(victim)</c>. Reading the immediate container
+	/// instead let anyone step around a room's NO_TEL by standing inside a vehicle parked in it.
+	/// </summary>
+	[Test]
+	public async ValueTask NoTelIsReadOnTheAbsoluteRoomNotTheImmediateContainer()
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NoTelNestedMover");
+		var room = await Dig("NoTelNestedRoom");
+		var destination = await OpenRoom("NoTelNestedDest");
+		var vehicle = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "NoTelVehicle");
+
+		await God($"@teleport/silent {vehicle}={room}");
+		await God($"@set {vehicle}=ENTER_OK");
+		await God($"@teleport/silent {mover.DbRef}={room}");
+		await As(mover.Handle, $"enter {vehicle}");
+
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(vehicle.ToString()))
+			.Because("the whole point is that the immediate container is not the room");
+
+		await God($"@set {room}=NO_TEL");
+
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await As(mover.Handle, $"@teleport {destination}"));
+
+		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.TeleportsNotAllowed)).IsTrue();
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(vehicle.ToString()));
+
+		await God($"@set {room}=!NO_TEL");
+		await As(mover.Handle, $"@teleport {destination}");
+
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(destination))
+			.Because("the refusal has to come from the room's NO_TEL and nothing else");
+	}
+
+	/// <summary>
+	/// <c>wiz.c:519</c>: <c>!controls(player, absroom)</c>. A player is not shut inside their own
+	/// NO_TEL room.
+	/// </summary>
+	[Test]
+	public async ValueTask ControllingTheSourceRoomWaivesItsNoTel()
+	{
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "NoTelOwner");
+		var room = await OwnedRoom("NoTelOwnRoom", owner.DbRef);
+		var destination = await OpenRoom("NoTelOwnDest");
+
+		await God($"@teleport/silent {owner.DbRef}={room}");
+		await God($"@set {room}=NO_TEL");
+
+		await As(owner.Handle, $"@teleport {destination}");
+
+		await Assert.That(await LocationOf(owner.DbRef.ToString())).IsEqualTo(BareDbref(destination))
+			.Because("controlling the room is the exemption wiz.c:519 spells out");
+	}
+
+	/// <summary>
+	/// <c>wiz.c:543</c>: <c>@teleport</c> evaluates the source room's LEAVE lock and answers a refusal
+	/// with <c>fail_lock</c>, exactly as GOTO and LEAVE do. It evaluated it nowhere.
+	/// </summary>
+	[Test]
+	public async ValueTask TheSourceRoomsLeaveLockRefusesATeleportAndRunsItsTriadOnce()
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LeaveLockMover");
+		var stranger = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LeaveLockStranger");
+		var room = await Dig("LeaveLockRoom");
+		var destination = await OpenRoom("LeaveLockDest");
+
+		await God($"@teleport/silent {mover.DbRef}={room}");
+		await God($"@lock/leave {room}==#{stranger.DbRef.Number}");
+		await God($"&LFAIL {room}=The walls hold you.");
+
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await As(mover.Handle, $"@teleport {destination}"));
+
+		await Assert.That(moverSaw.Count(m => m == "The walls hold you.")).IsEqualTo(1)
+			.Because("fail_lock runs the failure triad once");
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
+	}
+
+	/// <summary>
+	/// <c>wiz.c:543</c>: <c>!controls(player, absroom)</c> again — the room's own owner is not held by
+	/// its LEAVE lock.
+	/// </summary>
+	[Test]
+	public async ValueTask ControllingTheSourceRoomWaivesItsLeaveLock()
+	{
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LeaveOwner");
+		var stranger = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LeaveOwnerStranger");
+		var room = await OwnedRoom("LeaveOwnRoom", owner.DbRef);
+		var destination = await OpenRoom("LeaveOwnDest");
+
+		await God($"@teleport/silent {owner.DbRef}={room}");
+		await God($"@lock/leave {room}==#{stranger.DbRef.Number}");
+
+		await As(owner.Handle, $"@teleport {destination}");
+
+		await Assert.That(await LocationOf(owner.DbRef.ToString())).IsEqualTo(BareDbref(destination));
+	}
+
+	/// <summary>
+	/// <c>wiz.c:561</c>: Z_TEL on the room — or on its zone object — is what pins a victim inside the
+	/// zone. The command compared zone dbrefs and then evaluated the ZONE lock instead, so an unset
+	/// ZONE lock (which evaluates true) made Z_TEL do nothing at all.
+	/// </summary>
+	[Test]
+	public async ValueTask ZTelOnTheSourceRoomRefusesACrossZoneTeleport()
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ZTelMover");
+		var zone = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ZTelZone");
+		var room = await Dig("ZTelRoom");
+		var destination = await OpenRoom("ZTelDest");
+
+		await God($"@chzone {room}=#{zone.Number}");
+		await God($"@set {room}=Z_TEL");
+		await God($"@teleport/silent {mover.DbRef}={room}");
+
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await As(mover.Handle, $"@teleport {destination}"));
+
+		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.NoZoneTeleport)).IsTrue();
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
+
+		await God($"@set {room}=!Z_TEL");
+		await As(mover.Handle, $"@teleport {destination}");
+
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(destination))
+			.Because("Z_TEL is the flag that decides this, and it is the only thing that changed");
+	}
+
+	/// <summary>
+	/// The other half of <c>wiz.c:561</c>: without Z_TEL, crossing out of a zone is not restricted at
+	/// all — and in particular a ZONE lock that refuses the mover does not block the crossing, because
+	/// the ZONE lock is not what this check reads.
+	/// </summary>
+	[Test]
+	public async ValueTask AZoneMismatchWithoutZTelDoesNotRefuse()
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ZoneLockMover");
+		var zone = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ZoneLockZone");
+		var room = await Dig("ZoneLockRoom");
+		var destination = await OpenRoom("ZoneLockDest");
+
+		await God($"@chzone {room}=#{zone.Number}");
+		await God($"@lock/zone {room}=#FALSE");
+		await God($"@teleport/silent {mover.DbRef}={room}");
+
+		await As(mover.Handle, $"@teleport {destination}");
+
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(destination))
+			.Because("no Z_TEL anywhere means wiz.c:561 never fires, whatever the ZONE lock says");
+	}
+
+	/// <summary>
 	/// <c>tport_dest_ok</c> (<c>wiz.c:302</c>): a room the teleporter does not control takes a stranger
 	/// only when it is JUMP_OK. The command had no destination-control check and read JUMP_OK nowhere,
 	/// so an unset TELEPORT lock let a mortal into any room in the database.
