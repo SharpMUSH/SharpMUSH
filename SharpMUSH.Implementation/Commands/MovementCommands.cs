@@ -925,6 +925,14 @@ public partial class Commands
 				// wiz.c:561: Z_TEL on the room, or on the room's zone object, pins the victim inside
 				// that zone. The Zone lock has no part in this — where it matters is `controls`, which
 				// `sourceExempt` already went through.
+				//
+				// The zone test comes FIRST, and deliberately: Penn opens the condition with
+				// `GoodObject(Zone(absroom))`, so a Z_TEL room carrying no zone is not restricted at
+				// all, because `ZTel(absroom)` is never reached. That reads like an oversight and is
+				// not one — Z_TEL confines you to a zone, and a room in none has none to confine you
+				// to — and it is also what makes reading the zone object's own Z_TEL safe, which
+				// would otherwise be the zone of NOTHING. Penn never compares a missing source zone
+				// against the destination's.
 				if (!sourceExempt
 						&& await absoluteRoomObject.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject sourceZone
 						&& (await absoluteRoomObject.HasFlag("Z_TEL") || await sourceZone.HasFlag("Z_TEL")))
