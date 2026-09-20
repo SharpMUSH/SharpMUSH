@@ -1253,23 +1253,44 @@ public partial class Functions
 		return errors.Complete(new CallState(errors.Record(await argsArray[^1].Value.GetParsedResultAsync())));
 	}
 
-	[SharpFunction(Name = "strallof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["expression..."])]
-	public ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	/// <summary>
+	/// The non-empty candidates joined by the trailing delimiter.
+	/// </summary>
+	/// <remarks>
+	/// <c>FN_NOPARSE</c> in PennMUSH (<c>{"STRALLOF", fun_allof, 2, INT_MAX, FN_NOPARSE}</c>,
+	/// <c>src/function.c:765</c>): <c>do_whichof</c> parses the trailing delimiter before any
+	/// candidate (<c>src/funmisc.c:1405-1413</c>), so a side effect written there is visible to
+	/// every candidate. Registered <c>Regular</c>, the parser pre-evaluated the arguments left to
+	/// right and the candidates ran first.
+	///
+	/// <para>This is <see cref="AllOf"/> with PennMUSH's <c>isbool</c> flag off — one C function
+	/// serves both, differing only in whether a candidate counts because it is true or because it
+	/// is non-empty. The two bodies are apart here only because they sit in different files.</para>
+	/// </remarks>
+	[SharpFunction(Name = "strallof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression..."])]
+	public async ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		// Last arg is the output delimiter; return all non-empty results joined by it.
 		if (args.Count < 2)
 		{
-			return ValueTask.FromResult(CallState.Empty);
+			return CallState.Empty;
 		}
 
-		var delimiter = args[(args.Count - 1).ToString()].Message ?? MarkupText.Empty;
-		var nonEmptyValues = Enumerable.Range(0, args.Count - 1)
-			.Select(i => args[i.ToString()].Message ?? MarkupText.Empty)
-			.Where(value => value.Length > 0);
+		var delimParsed = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!);
+		var delimiter = delimParsed?.Message ?? MarkupText.Empty;
+		var hadErrors = delimParsed?.HadErrors == true;
 
-		return ValueTask.FromResult(new CallState(MarkupText.Join(delimiter, nonEmptyValues)));
+		var nonEmptyValues = new List<MString>();
+		for (var i = 0; i < args.Count - 1; i++)
+		{
+			var parsed = await parser.FunctionParse(args[i.ToString()].Message!);
+			hadErrors |= parsed?.HadErrors == true;
+			var value = parsed?.Message ?? MarkupText.Empty;
+			if (value.Length > 0) nonEmptyValues.Add(value);
+		}
+
+		return new CallState(MarkupText.Join(delimiter, nonEmptyValues)) { HadErrors = hadErrors };
 	}
 
 	[SharpFunction(Name = "table", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "width", "delimiter", "line-delimiter"])]
