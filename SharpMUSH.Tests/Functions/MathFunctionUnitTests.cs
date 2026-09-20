@@ -1,3 +1,4 @@
+using System.Numerics;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
@@ -242,25 +243,9 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("fraction(.75)", "3/4")]
-	// fraction() is handed the written form of pi(), which at six places is exactly
-	// 3141593/1000000 — so this answer is exact, and PennMUSH's documented 348987/111086 is off by
-	// 1.8e-11. PennMUSH's frac() stops at the first convergent within a fixed 1.0e-10 relative
-	// error (src/funmath.c:1350-1359): it wants the simplest fraction that is close enough, which
-	// its own help says outright ("will not always return the original <number>, but something
-	// close to it").
-	//
-	// Being exact here is luck, not design. SharpMUSH stops on a denominator cap of 1000000
-	// (MathFunctions.ContinuedFractionApprox), which is exactly enough for a six-place decimal and
-	// nothing more: fraction(0.3333334) answers 1/3, wrong by 1.8e-7, where PennMUSH answers
-	// 1666667/5000000 exactly. The cap is the defect, not this expectation; it is reported on the
-	// pull request together with fraction() of a negative number below -1 answering the wrong
-	// value outright.
+	// pi() written at six places is exactly 3141593/1000000. PennMUSH's help documents
+	// 348987/111086 for this call, which is off by 1.8e-11; see FractionIsExact.
 	[Arguments("fraction(pi())", "3141593/1000000")]
-	[Arguments("fraction(2)", "2")]
-	[Arguments("fraction(2.75)", "11/4")]
-	[Arguments("fraction(2.75, 1)", "2 3/4")]
-	[Arguments("fraction(2, 1)", "2")]
 	public async Task Fraction(string expr, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
@@ -386,19 +371,6 @@ public class MathFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	/// <summary>
-	/// The whole part of a fraction is 64-bit. PennMUSH prints it through a 32-bit conversion,
-	/// so its fraction(3000000000.5,1) overflows to -2147483648.
-	/// </summary>
-	[Test]
-	[Arguments("fraction(3000000000.5)", "6000000001/2")]
-	[Arguments("fraction(3000000000.5,1)", "3000000000 1/2")]
-	public async Task FractionWholePartIs64Bit(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
-	}
-
 	[Test]
 	[Arguments("lmath(band,-1 1)", "#-1 ARGUMENTS MUST BE POSITIVE INTEGERS")]
 	[Arguments("lmath(div,7.5 2)", "#-1 ARGUMENTS MUST BE INTEGERS")]
@@ -440,15 +412,131 @@ public class MathFunctionUnitTests
 	/// Converting a decimal outside the long range throws rather than wrapping, so the conversion
 	/// saturates. PennMUSH saturates too, at its own 32-bit bounds.
 	/// </summary>
+	/// <remarks>
+	/// <c>fraction()</c> used to be in this list. It is not a conversion to <c>long</c> any more —
+	/// saturating its whole part answered a different number — so its cases moved to
+	/// <see cref="FractionIsExact"/>.
+	/// </remarks>
 	[Test]
 	[Arguments("trunc(100000000000000000000)", "9223372036854775807")]
 	[Arguments("trunc(-100000000000000000000)", "-9223372036854775808")]
-	[Arguments("fraction(100000000000000000000.5,1)", "9223372036854775807 1/2")]
-	[Arguments("fraction(100000000000000000000.5)", "9223372036854775807")]
 	public async Task ConversionsOutsideInt64Saturate(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// <c>fraction()</c> answers the exact rational of the number it was given, reduced.
+	/// </summary>
+	/// <remarks>
+	/// <para>Three things were wrong. A negative number below -1 came back as a <em>different
+	/// number</em>: the fractional part was taken as <c>Math.Abs</c> and then added to a negative
+	/// whole part, so <c>fraction(-2.75)</c> answered <c>-5/4</c>, which is -1.25. Anything below
+	/// 1e-6 answered <c>0</c>, from a hardcoded early-out unrelated to <c>float_precision</c>. And
+	/// the search stopped at a denominator cap of 1000000, returning the convergent <em>before</em>
+	/// the one that overran it and discarding all of its accuracy — <c>fraction(0.3333334)</c>
+	/// answered <c>1/3</c>, wrong by 1.8e-7.</para>
+	///
+	/// <para>PennMUSH deliberately approximates here: <c>frac()</c> stops at the first convergent
+	/// within a fixed 1e-10 relative error (<c>src/funmath.c:1350-1359</c>), which its help states
+	/// outright. Where PennMUSH's answer is exact — <c>0.3333334</c>, <c>0.6666667</c>, every value
+	/// of six decimal places or fewer — this agrees with it. Where PennMUSH settles for close
+	/// enough, this does not: <c>fraction(pi())</c> at six places is <c>3141593/1000000</c> exactly,
+	/// against PennMUSH's <c>348987/111086</c>, which is off by 1.8e-11. The divergence is recorded
+	/// in <c>pennmush-compatibility.md</c>.</para>
+	/// </remarks>
+	[Test]
+	[Arguments("fraction(.75)", "3/4")]
+	[Arguments("fraction(0.50)", "1/2")]
+	[Arguments("fraction(1.0)", "1")]
+	[Arguments("fraction(0)", "0")]
+	[Arguments("fraction(2)", "2")]
+	[Arguments("fraction(-2)", "-2")]
+	[Arguments("fraction(2.75)", "11/4")]
+	[Arguments("fraction(2.75, 1)", "2 3/4")]
+	[Arguments("fraction(2, 1)", "2")]
+	[Arguments("fraction(0.75,1)", "3/4")]
+	[Arguments("fraction(-0.75,1)", "-3/4")]
+	// A negative number below -1: the answer has to be the number, not its mirror image.
+	[Arguments("fraction(-2.75)", "-11/4")]
+	[Arguments("fraction(-1.5)", "-3/2")]
+	[Arguments("fraction(-10.25)", "-41/4")]
+	[Arguments("fraction(-2.75,1)", "-2 3/4")]
+	[Arguments("fraction(-3.141593)", "-3141593/1000000")]
+	// Below the old 1e-6 early-out, which answered 0.
+	[Arguments("fraction(0.0000001)", "1/10000000")]
+	[Arguments("fraction(0.1)", "1/10")]
+	// Past the old denominator cap of 1000000, which answered 1/3, 2/3 and 100/81.
+	[Arguments("fraction(0.3333334)", "1666667/5000000")]
+	[Arguments("fraction(0.6666667)", "6666667/10000000")]
+	[Arguments("fraction(1.23456789)", "123456789/100000000")]
+	// The whole part is not a long: saturating it answered a different number.
+	[Arguments("fraction(3000000000.5)", "6000000001/2")]
+	[Arguments("fraction(3000000000.5,1)", "3000000000 1/2")]
+	[Arguments("fraction(100000000000000000000.5)", "200000000000000000001/2")]
+	[Arguments("fraction(100000000000000000000.5,1)", "100000000000000000000 1/2")]
+	public async Task FractionIsExact(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// The property the cases above are examples of: whatever <c>fraction()</c> answers, dividing it
+	/// out gives back exactly the number it was handed. Nothing asserted this, which is how
+	/// <c>fraction(-2.75)</c> could answer -1.25 unnoticed.
+	/// </summary>
+	[Test]
+	[Arguments("2.75")]
+	[Arguments("-2.75")]
+	[Arguments("-1.5")]
+	[Arguments("-10.25")]
+	[Arguments("3.141593")]
+	[Arguments("-3.141593")]
+	[Arguments("0.3333334")]
+	[Arguments("0.6666667")]
+	[Arguments("1.23456789")]
+	[Arguments("0.0000001")]
+	[Arguments("0.1")]
+	[Arguments("100000000000000000000.5")]
+	public async Task FractionDividesBackOutToItsArgument(string number)
+	{
+		foreach (var call in new[] { $"fraction({number})", $"fraction({number},1)" })
+		{
+			var answered = (await Parser.FunctionParse(MarkupText.Plain($"[{call}]")))!.Message!.ToPlainText();
+
+			await Assert.That(Cross(AsRational(answered), AsDecimal(number))).IsTrue()
+				.Because($"{call} answered {answered}");
+		}
+	}
+
+	/// <summary>Cross-multiplied equality, so neither side has to be evaluated as a real.</summary>
+	private static bool Cross((BigInteger Numerator, BigInteger Denominator) left,
+		(BigInteger Numerator, BigInteger Denominator) right)
+		=> left.Numerator * right.Denominator == right.Numerator * left.Denominator;
+
+	/// <summary>Reads back what fraction() writes: <c>n</c>, <c>n/d</c> or <c>w n/d</c>, any of them signed.</summary>
+	private static (BigInteger Numerator, BigInteger Denominator) AsRational(string text)
+	{
+		var negative = text.StartsWith('-');
+		var parts = (negative ? text[1..] : text).Split(' ');
+		var whole = parts.Length == 2 ? BigInteger.Parse(parts[0]) : BigInteger.Zero;
+		var halves = parts[^1].Split('/');
+		var numerator = BigInteger.Parse(halves[0]);
+		var denominator = halves.Length == 2 ? BigInteger.Parse(halves[1]) : BigInteger.One;
+		var total = whole * denominator + numerator;
+
+		return (negative ? -total : total, denominator);
+	}
+
+	/// <summary>The exact rational a decimal literal names.</summary>
+	private static (BigInteger Numerator, BigInteger Denominator) AsDecimal(string text)
+	{
+		var point = text.IndexOf('.');
+		var places = point < 0 ? 0 : text.Length - point - 1;
+
+		return (BigInteger.Parse(text.Replace(".", string.Empty)), BigInteger.Pow(10, places));
 	}
 
 	/// <summary>

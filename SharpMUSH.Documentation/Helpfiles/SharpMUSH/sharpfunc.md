@@ -2214,7 +2214,12 @@ You say, "This is 1 number"
 # FRACTION()
 `fraction(<number>[, <whole>])`
 
-  This function returns a fraction representing the floating-point `<number>`. Since not all numbers can be expressed as a fraction, dividing the numerator by the denominator of the results will not always return the original `<number>`, but something close to it.
+  This function returns a fraction representing the floating-point `<number>`, reduced to its
+  lowest terms. Dividing the numerator by the denominator gives back exactly `<number>`.
+
+  PennMUSH answers the *simplest* fraction within one part in 10^10 instead, which is not always
+  the number you gave it — `fraction(pi())` is `348987/111086` there. Round `<number>` first if
+  you want a simpler fraction than the one it names.
 
   If `<whole>` is true, and `<number>` is greater than 1.0 (or less than -1.0), the return value will be a whole number followed by the fraction representation of the decimal.
 
@@ -2225,7 +2230,7 @@ think fraction(.75)
 ```
 
     > think fraction(pi())<br>
-    348987/111086
+    3141593/1000000
 
     > think fraction(2)<br>
     2

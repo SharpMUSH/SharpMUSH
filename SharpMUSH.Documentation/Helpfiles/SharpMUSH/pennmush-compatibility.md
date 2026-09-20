@@ -358,6 +358,32 @@ A result that rounds to zero from below is written `0`, where PennMUSH writes `-
 0
 ```
 
+## Fraction representation
+
+`fraction()` answers the **exact** rational of its argument, reduced. Every number softcode can hand
+it is a decimal, so an exact rational always exists, and dividing the result out gives back exactly
+the number that went in.
+
+PennMUSH answers the *simplest* fraction within one part in 10^10 instead: `frac()` walks the
+convergents of a continued fraction and stops at the first one inside that tolerance, which its own
+help states — "dividing the numerator by the denominator of the results will not always return the
+original `<number>`, but something close to it". Where no simpler fraction is that close the two
+agree, which covers every number of six decimal places or fewer; where one is, SharpMUSH stays exact
+and PennMUSH does not.
+
+**Workaround.** `round()` the number first if you want a simpler fraction than the one it names.
+
+```sharp
+> think fraction(pi())
+3141593/1000000
+> think fraction(0.3333334)
+1666667/5000000
+> think fraction(-2.75)
+-11/4
+```
+
+PennMUSH answers `348987/111086` for the first of those, off by 1.8e-11.
+
 # COMPATIBILITY OUTPUT
 `render(<string>, <formats>)` converts a string's markup for something outside the game — a bot, a
 web page, an SQL column. The formats are `ansi`, `html`, `noaccents` and `markup`, as in PennMUSH,
