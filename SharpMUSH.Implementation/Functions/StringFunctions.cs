@@ -2056,7 +2056,11 @@ public partial class Functions
 		return new CallState(MarkupText.Join(delimiter, truthyValues)) { HadErrors = hadErrors };
 	}
 
-	[SharpFunction(Name = "ansi", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["codes", "string..."])]
+	// PennMUSH registers ANSI as 2, -2 (function.c:365): the negative maximum means the text is not
+	// comma-split, so ansi(h,a,b) colours "a,b". SharpMUSH splits every call and colours the second
+	// argument, which is two arguments' worth of contract, so the second is where it stops: a third
+	// argument is refused by name rather than evaluated and discarded.
+	[SharpFunction(Name = "ansi", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["codes", "string"])]
 	public ValueTask<CallState> ANSI(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -2289,14 +2293,7 @@ public partial class Functions
 			LinkUrl = null
 		};
 
-		// PennMUSH registers ANSI with a negative maximum (2, -2 at function.c:365), which means the
-		// last argument is not comma-split: ansi(h,a,b) colours the text "a,b". SharpMUSH splits every
-		// call, so everything past <codes> is rejoined here — the text is the whole tail, not one
-		// argument of it.
-		var text = MarkupText.Join(MarkupText.Plain(","), parser.CurrentState.ArgumentsOrdered.Skip(1)
-			.Select(argument => argument.Value.Message ?? MarkupText.Empty));
-
-		return ValueTask.FromResult(new CallState(MarkupText.Wrap(new Ansi(details), text)));
+		return ValueTask.FromResult(new CallState(MarkupText.Wrap(new Ansi(details), args["1"].Message ?? MarkupText.Empty)));
 	}
 
 	/// <summary>
