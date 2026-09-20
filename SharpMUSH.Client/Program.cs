@@ -10,6 +10,7 @@ using SharpMUSH.Client.Authentication;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Client.Widgets;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using Slugify;
@@ -18,7 +19,9 @@ using Slugify;
 // MarkupRegistry.Default, which throws until something sets it.
 if (!MarkupRegistry.IsConfigured)
 {
-	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();
+	// WithHtml(policy): a tag rendered here lands in a browser, so every one is held to the portal's
+	// policy as it is written — including markup built before it reached us.
+	MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml(TagwrapPolicy.Portal);
 }
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);

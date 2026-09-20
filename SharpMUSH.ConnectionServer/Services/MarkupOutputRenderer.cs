@@ -33,7 +33,7 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 		var text = connection.Capabilities.Format switch
 		{
 			OutputFormat.Pueblo => ms.Render(MarkupFormat.Pueblo),
-			OutputFormat.Mxp => ApplyMxpLinePrefix(ms.Render(MarkupFormat.Mxp)),
+			OutputFormat.Mxp => ms.Render(MarkupFormat.Mxp, MxpWire.Value),
 			// The ANSI render for everything else, which maps a command link or a tagwrap() span to its
 			// ANSI equivalent, or to plain text when it has none. A client that negotiated neither
 			// Pueblo nor MXP must never see a literal tag.
@@ -45,12 +45,11 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	}
 
 	/// <summary>
-	/// Prepends secure mode (ESC[1z) on each non-empty line so SEND links are interpreted.
-	/// The markup renderer encodes plain text; only explicit markup spans emit tags.
+	/// The registry that renders for an MXP connection: the one the host installed, plus the framer that
+	/// opens each line in secure mode, which an MXP client needs before it reads the tags on that line.
+	/// Lazy because <see cref="MarkupRegistry.Default"/> is installed at startup, after this type loads.
 	/// </summary>
-	private static string ApplyMxpLinePrefix(string text) =>
-		string.Join('\n', text.Split('\n').Select(line =>
-			line.Length == 0 || line == "\r" ? line : ProtocolConstants.MxpLineSecure + line));
+	private static readonly Lazy<MarkupRegistry> MxpWire = new(() => MarkupRegistry.Default.WithMxpSecureLines());
 
 	/// <summary>
 	/// Normalizes line endings to \r\n and trims any trailing newline (mirrors the legacy

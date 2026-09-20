@@ -29,13 +29,6 @@ public class TelnetServer : ConnectionHandler
 	private readonly ConnectionServerOptions _options;
 	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 
-	/// <summary>
-	/// The Pueblo hello string sent to clients on connect.
-	/// Clients that support Pueblo respond with "PUEBLOCLIENT ...".
-	/// </summary>
-	private static readonly byte[] PuebloHelloBytes =
-		Encoding.UTF8.GetBytes(ProtocolConstants.PuebloHello);
-
 	public TelnetServer(
 		ILogger<TelnetServer> logger,
 		IConnectionServerService connectionService,
@@ -51,20 +44,6 @@ public class TelnetServer : ConnectionHandler
 		_descriptorGenerator = descriptorGenerator;
 		_telnetFactory = telnetFactory;
 		_options = options;
-	}
-
-	/// <summary>
-	/// PennMUSH <c>PUEBLO_COMMAND</c> (hdrs/conf.h): the literal <c>"PUEBLOCLIENT "</c>, matched with
-	/// <c>strncmp</c>. The trailing space is part of the constant, so the token has to be followed by
-	/// whitespace to count as the handshake.
-	/// </summary>
-	private static bool IsPuebloHandshake(string input)
-	{
-		const string command = "PUEBLOCLIENT";
-
-		return input.StartsWith(command, StringComparison.OrdinalIgnoreCase)
-					 && input.Length > command.Length
-					 && char.IsWhiteSpace(input[command.Length]);
 	}
 
 	public override async Task OnConnectedAsync(ConnectionContext connection)
@@ -93,7 +72,6 @@ public class TelnetServer : ConnectionHandler
 		// interpreter has to exist before it can hand any of them anything.
 		TelnetInterpreter? telnetInterpreter = null;
 		var telnetAnnounced = 0;
-		var puebloStarted = false;
 
 		// Anything that writes connection metadata in the main process has to arrive after the handle
 		// is registered there, because every one of those consumers gives up on an unregistered handle
@@ -205,50 +183,6 @@ public class TelnetServer : ConnectionHandler
 				// By the time a client has sent a line, whatever it was going to negotiate has settled.
 				await AnnounceTelnetIfNegotiatedAsync();
 
-				// PUEBLOCLIENT is a socket command, not a one-shot greeting: PennMUSH answers it in
-				// do_command (src/bsd.c) on any line, at any point in the session, and a client whose
-				// handshake was late — or that re-sends it because it thinks it is showing raw HTML —
-				// gets switched into Pueblo mode all the same. Restricting it to the first submitted
-				// line meant a slightly slow Pueblo client sent its handshake straight through to the
-				// parser, which answered "Huh?" and left the connection in plain-text mode forever.
-				// PennMUSH's PUEBLO_COMMAND is the literal "PUEBLOCLIENT " — trailing space included —
-				// matched with strncmp, so the token must be followed by whitespace. A bare
-				// StartsWith would also swallow "PUEBLOCLIENTX", suppressing it from the parser and
-				// switching the connection to Pueblo on a word that is not the handshake.
-				if (_options.PuebloEnabled && IsPuebloHandshake(input))
-				{
-					// Debug, and without the client-supplied text: this branch is reachable on every
-					// line for the whole session, so a client that repeats it would otherwise flood the
-					// log at Information with content it chose.
-					_logger.LogDebug("Pueblo handshake detected on handle {Handle}", nextPort);
-
-					// PennMUSH's do_command answers with PUEBLO_SEND, and that answer is what switches the
-					// client into HTML mode; a repeat gets the short form, without the clear.
-					if (telnetInterpreter is not null)
-					{
-						await telnetInterpreter.SendAsync(Encoding.ASCII.GetBytes(
-							puebloStarted ? ProtocolConstants.PuebloRestart : ProtocolConstants.PuebloStart));
-					}
-
-					var firstHandshake = !puebloStarted;
-					puebloStarted = true;
-					if (!firstHandshake)
-					{
-						return;
-					}
-
-					if (await TryUpdateFormatAsync(nextPort, OutputFormat.Pueblo, ct))
-					{
-						_logger.LogDebug("Updated Pueblo capabilities for handle {Handle}", nextPort);
-					}
-
-					await PublishAfterRegistrationAsync(() => _publishEndpoint.Publish(
-						new PuebloNegotiatedMessage(nextPort, input.TrimEnd()), ct));
-
-					// Suppress this line from reaching the command parser
-					return;
-				}
-
 				await ConnectionInputPublisher.PublishAsync(_publishEndpoint, _connectionService, _logger,
 					nextPort, new TelnetInputMessage(nextPort, input, _connectionService.Get(nextPort)?.SessionId), ct);
 			})
@@ -280,6 +214,25 @@ public class TelnetServer : ConnectionHandler
 			// RFC 1091 terminal type: the only way a client names itself over plain telnet, and what
 			// terminfo() reports as the client. Without it every connection is "unknown".
 			.AddPlugin(terminalTypeProtocol);
+
+		// The handshake itself — the hello, consuming PUEBLOCLIENT, and the start sequence that moves the
+		// client into HTML mode — is TelnetNegotiationCore's. What is left here is the part that is this
+		// server's: the render format for the connection, and telling the main process.
+		if (_options.PuebloEnabled)
+		{
+			builder = builder.AddPlugin<PuebloProtocol>().OnPuebloEnabled(async client =>
+			{
+				_logger.LogDebug("Pueblo negotiated on handle {Handle}", nextPort);
+
+				if (await TryUpdateFormatAsync(nextPort, OutputFormat.Pueblo, ct))
+				{
+					_logger.LogDebug("Updated Pueblo capabilities for handle {Handle}", nextPort);
+				}
+
+				await PublishAfterRegistrationAsync(() => _publishEndpoint.Publish(
+					new PuebloNegotiatedMessage(nextPort, PuebloProtocol.ClientCommand + client.Version), ct));
+			});
+		}
 
 		if (_options.MxpEnabled)
 		{
@@ -326,13 +279,6 @@ public class TelnetServer : ConnectionHandler
 			var remoteIp = connection.RemoteEndPoint is not IPEndPoint remoteEndpoint
 				? "unknown"
 				: $"{remoteEndpoint.Address}:{remoteEndpoint.Port}";
-
-			// Send Pueblo hello before registration so the client can respond
-			// before the welcome screen is sent by the main process.
-			if (_options.PuebloEnabled)
-			{
-				await telnet.SendAsync(PuebloHelloBytes);
-			}
 
 			// PennMUSH's CONN_SSL. Kestrel attaches ITlsHandshakeFeature only on an endpoint that actually
 			// terminated TLS, so this is the handshake that happened rather than anything the client says

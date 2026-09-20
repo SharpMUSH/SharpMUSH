@@ -76,7 +76,7 @@ public class PuppetRelayOutputTests
 			new MarkupOutputRenderer().Render(published.Markup, MxpConnection()).Data);
 
 		await Assert.That(published.Handle).IsEqualTo(OwnerHandle);
-		await Assert.That(rendered).StartsWith(ProtocolConstants.MxpLineSecure);
+		await Assert.That(rendered).StartsWith(MxpSecureLineFramer.SecureLine);
 		await Assert.That(rendered).Contains("&lt;color red&gt;");
 		await Assert.That(rendered).DoesNotContain("<color red>");
 		// The puppet's default @prefix, which the relay is also responsible for carrying.
