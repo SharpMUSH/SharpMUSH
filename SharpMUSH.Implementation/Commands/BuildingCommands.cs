@@ -1398,20 +1398,12 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@UNRECYCLE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object"])]
+	/// <summary>
+	/// PennMUSH maps @UNRECYCLE onto cmd_undestroy (src/command.c:324), the same handler @UNDESTROY
+	/// gets at :319 — the two are one command under two names. <see cref="SharpCommandAttribute"/>
+	/// carries no alias field, so the alias is a delegation.
+	/// </summary>
+	[SharpCommand(Name = "@UNRECYCLE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> UnRecycle(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		if (!await executor.IsWizard())
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		await NotifyService.Notify(executor, "@UNRECYCLE: Object recovery system not yet implemented.", executor);
-		await NotifyService.Notify(executor, "This command would restore objects from the recycle bin.", executor);
-
-		return CallState.Empty;
-	}
+		=> await UnDestroy(parser, _2);
 }
