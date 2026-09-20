@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
@@ -65,8 +66,13 @@ public static class BuildingHelpers
 		var requested = requestedDbref?.ToPlainText();
 		if (string.IsNullOrWhiteSpace(requested))
 		{
-			return await CreatedAsync(parser, mediator, database, notifyService, eventService, executor, name,
-				await mediator.Send(new CreateThingCommand(name.ToPlainText(), into, owner, home)));
+			return await WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
+					async () => await mediator.Send(new CreateThingCommand(name.ToPlainText(), into, owner, home))) switch
+			{
+				DBRef thing => await CreatedAsync(parser, mediator, database, notifyService, eventService, executor,
+					name, thing),
+				Error<string> refused => refused
+			};
 		}
 
 		// make_first_free_wrapper (src/destroy.c:930-943), in its own order: the power first, then
@@ -86,15 +92,21 @@ public static class BuildingHelpers
 			return new Error<string>(ErrorMessages.Returns.InvalidDbref);
 		}
 
-		if (await mediator.Send(new CreateThingAtCommand(wanted, name.ToPlainText(), into, owner, home))
-				is not DBRef at)
-		{
-			await notifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);
-			return new Error<string>(ErrorMessages.Returns.InvalidDbref);
-		}
+		// create.c:561 then :565 — the dbref is settled before can_pay_fees is asked for a slot.
+		var built = await WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
+			async () => await mediator.Send(new CreateThingAtCommand(wanted, name.ToPlainText(), into, owner, home)));
 
-		return await CreatedAsync(parser, mediator, database, notifyService, eventService, executor, name, at);
+		switch (built)
+		{
+			case Result<DBRef> and DBRef at:
+				return await CreatedAsync(parser, mediator, database, notifyService, eventService, executor, name, at);
+			case Error<string> refused:
+				return refused;
+			default:
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);
+				return new Error<string>(ErrorMessages.Returns.InvalidDbref);
+		}
 	}
 
 	/// <summary>
@@ -135,6 +147,104 @@ public static class BuildingHelpers
 	}
 
 	/// <summary>
+	/// One in-flight admission per owner. The count a build is measured against and the build it
+	/// admits have to be taken together, or two callers spending an owner's last slot both see it
+	/// free. PennMUSH needs no equivalent because it is single-threaded; SharpMUSH is single-process
+	/// (<c>docs/design/engine-data-trunk.md</c>) but not single-threaded, so the serialization is per
+	/// owner rather than global. The set is bounded by the number of players who have ever built.
+	/// </summary>
+	private static readonly ConcurrentDictionary<int, SemaphoreSlim> QuotaGates = new();
+
+	/// <summary>
+	/// PennMUSH's <c>can_pay_fees</c> (<c>src/predicat.c:435-463</c>) around one object's creation:
+	/// guests may not build at all, and otherwise <c>pay_quota</c> (<c>:601-613</c>) must have a slot
+	/// to charge. <paramref name="build"/> runs only if it does, so a refusal leaves nothing behind —
+	/// Penn returns NOTHING from <c>do_create</c> rather than rolling anything back.
+	/// <para>Every object is charged separately, as in Penn: <c>do_dig</c> charges the room
+	/// (<c>create.c:480</c>) and each exit is charged again inside <c>do_real_open</c>
+	/// (<c>:130</c>), so a dig that runs out mid-way keeps what it had already paid for.</para>
+	/// <para>The money half of <c>can_pay_fees</c> is deliberately absent: SharpMUSH tracks no
+	/// pennies. The database-size ceiling is absent for the same reason — there is no
+	/// <c>max_dbref</c> option to bound it with.</para>
+	/// </summary>
+	public static async ValueTask<Result<T>> WithBuildingQuotaAsync<T>(
+		IMediator mediator,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		Func<ValueTask<T>> build)
+	{
+		if (await executor.IsGuest())
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GuestCantBuild), executor);
+			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		var gate = QuotaGates.GetOrAdd(owner.Object.DBRef.Number, _ => new SemaphoreSlim(1, 1));
+
+		await gate.WaitAsync();
+		try
+		{
+			if (!await AdmitsBuildAsync(mediator, configuration, executor, owner))
+			{
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.BuildingQuotaExhausted), executor);
+				return new Error<string>(ErrorMessages.Returns.BuildingQuotaExhausted);
+			}
+
+			return await build();
+		}
+		finally
+		{
+			gate.Release();
+		}
+	}
+
+	/// <summary>
+	/// <c>pay_quota</c> (<c>src/predicat.c:601-613</c>): <c>USE_QUOTA &amp;&amp; !NoQuota(who) &amp;&amp;
+	/// (curr - cost &lt; 0)</c> is the refusal, so the system being off and the holder being exempt
+	/// each let anything through.
+	/// <para>Penn's <c>curr</c> is <c>get_current_quota</c>, the RQUOTA attribute it debits on every
+	/// build and credits back on destruction (<c>destroy.c:642</c>) and <c>@chown</c>
+	/// (<c>set.c:235</c>). SharpMUSH stores the limit instead and subtracts what the owner holds, which
+	/// is Penn's own fallback when RQUOTA is missing (<c>predicat.c:561-572</c>). The two admit the
+	/// same builds, and the derived form cannot drift out of step with reality, so nothing has to
+	/// refund it.</para>
+	/// </summary>
+	private static async ValueTask<bool> AdmitsBuildAsync(
+		IMediator mediator,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		AnySharpObject executor,
+		SharpPlayer owner)
+	{
+		if (!configuration.CurrentValue.Limit.UseQuota || await NoQuotaAsync(executor, owner))
+		{
+			return true;
+		}
+
+		var cost = (int)configuration.CurrentValue.Cost.QuotaCost;
+		var owned = await mediator.Send(new GetOwnedObjectCountQuery(owner));
+
+		return owner.Quota - owned >= cost;
+	}
+
+	/// <summary>
+	/// <c>NoQuota(x)</c> (<c>hdrs/mushdb.h:44-47</c>): privileged, or owned by someone privileged, or
+	/// holding No_Quota, or — unless MISTRUSTed, which is what stops an object borrowing its owner's
+	/// exemption — owned by a holder of it.
+	/// </summary>
+	private static async ValueTask<bool> NoQuotaAsync(AnySharpObject executor, SharpPlayer owner)
+	{
+		var ownerObject = new AnySharpObject(owner);
+
+		return await executor.IsPriv()
+			|| await ownerObject.IsPriv()
+			|| await executor.HasPower("No_Quota")
+			|| (!await executor.HasFlag("MISTRUST") && await ownerObject.HasPower("No_Quota"));
+	}
+
+	/// <summary>
 	/// The whole of PennMUSH's <c>do_clone</c> (<c>src/create.c:679-812</c>) and the
 	/// <c>clone_object</c> (<c>:614-668</c>) it calls. <c>fun_clone</c> is one line of <c>do_clone</c>
 	/// (<c>src/fundb.c</c>), so <c>@clone</c> and <c>clone()</c> are the same body with two different
@@ -156,6 +266,7 @@ public static class BuildingHelpers
 	public static async ValueTask<Result<DBRef>> CloneAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
 		IPermissionService permissionService,
 		IAttributeService attributeService,
@@ -201,37 +312,13 @@ public static class BuildingHelpers
 		// original's.
 		var modified = target.Object().ModifiedTime;
 
-		DBRef cloneDbRef;
-		switch (target)
+		// create.c:725, :741 — each type's branch asks can_pay_fees before it clones anything, and the
+		// exit branch reaches do_real_open, which asks for itself (:130).
+		if (await WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
+				async () => await CreateCloneAsync(mediator, target, name, into, owner, modified))
+			is not DBRef cloneDbRef)
 		{
-			case SharpThing thing:
-				cloneDbRef = await mediator.Send(new CreateThingCommand(name, into, owner,
-					// create.c:657 — Home(clone) = Home(thing), not the configured default home.
-					await thing.Home.WithCancellation(CancellationToken.None), ModifiedTime: modified));
-				break;
-			case SharpRoom:
-				// create.c:656 leaves a cloned room with no exits and, since a room's home slot is its
-				// exit list, nothing to carry. Its drop-to is Location, cleared at :656 alongside them.
-				cloneDbRef = await mediator.Send(new CreateRoomCommand(name, owner, ModifiedTime: modified));
-				break;
-			case SharpExit exit:
-				var nameParts = name.Split(';');
-				cloneDbRef = await mediator.Send(new CreateExitCommand(nameParts[0], nameParts[1..], into, owner,
-					ModifiedTime: modified));
-
-				// create.c:765-780 hands do_real_open the original's destination, so the clone leads
-				// where the original leads. An unlinked original clones to an unlinked exit.
-				if (await exit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
-					&& await mediator.Send(new GetObjectNodeQuery(cloneDbRef)) is AnySharpObject and SharpExit clonedExit)
-				{
-					await mediator.Send(new LinkExitCommand(clonedExit, destination));
-				}
-
-				break;
-			default:
-				await notifyService.NotifyLocalized(executor,
-					nameof(ErrorMessages.Notifications.CannotCloneThisObjectType), executor);
-				return new Error<string>(ErrorMessages.Returns.InvalidObjectType);
+			return new Error<string>(ErrorMessages.Returns.BuildingQuotaExhausted);
 		}
 
 		if (await mediator.Send(new GetObjectNodeQuery(cloneDbRef)) is not AnySharpObject clonedObj)
@@ -287,6 +374,49 @@ public static class BuildingHelpers
 		}
 
 		return cloneDbRef;
+	}
+
+	/// <summary>
+	/// The object itself, per type. A thing keeps the original's home (<c>create.c:657</c>); a room
+	/// arrives with no exits and no drop-to, which <c>create.c:656</c> clears and a fresh room does not
+	/// have; an exit is re-opened onto the original's destination, which is what <c>do_real_open</c>
+	/// does for <c>do_clone</c> at <c>create.c:765-780</c> and what SharpMUSH left out, so a cloned
+	/// exit led nowhere. An unlinked original still clones to an unlinked exit.
+	/// </summary>
+	private static async ValueTask<DBRef> CreateCloneAsync(
+		IMediator mediator,
+		AnySharpObject target,
+		string name,
+		AnySharpContainer into,
+		SharpPlayer owner,
+		long modified)
+	{
+		switch (target)
+		{
+			case SharpThing thing:
+				return await mediator.Send(new CreateThingCommand(name, into, owner,
+					await thing.Home.WithCancellation(CancellationToken.None), ModifiedTime: modified));
+
+			case SharpRoom:
+				return await mediator.Send(new CreateRoomCommand(name, owner, ModifiedTime: modified));
+
+			case SharpExit exit:
+				var nameParts = name.Split(';');
+				var cloned = await mediator.Send(new CreateExitCommand(nameParts[0], nameParts[1..], into, owner,
+					ModifiedTime: modified));
+
+				if (await exit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
+					&& await mediator.Send(new GetObjectNodeQuery(cloned)) is AnySharpObject and SharpExit clonedExit)
+				{
+					await mediator.Send(new LinkExitCommand(clonedExit, destination));
+				}
+
+				return cloned;
+
+			default:
+				// CloneAsync refuses a player before reaching here, and the union has no fifth case.
+				throw new InvalidOperationException($"Nothing can clone a {target.GetType().Name}.");
+		}
 	}
 
 	/// <summary>

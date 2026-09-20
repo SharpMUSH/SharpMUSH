@@ -38,6 +38,13 @@ public static class ErrorMessages
 		public const string PermissionDenied = "#-1 PERMISSION DENIED";
 
 		/// <summary>
+		/// <c>can_pay_fees</c> refusing <c>pay_quota</c> (<c>src/predicat.c:453-456</c>). Penn's building
+		/// functions answer a refusal with a bare <c>#-1</c> and leave the notification to carry the
+		/// reason; this says which of the several ways a build can be refused happened.
+		/// </summary>
+		public const string BuildingQuotaExhausted = "#-1 BUILDING QUOTA EXHAUSTED";
+
+		/// <summary>
 		/// PennMUSH <c>fun_ssl</c> / <c>fun_terminfo</c> (src/bsd.c) when <c>lookup_desc</c> finds no
 		/// descriptor. The rest of the connection family answers a miss with a bare <c>#-1</c> or
 		/// <c>-1</c> instead; the wording is per-function and not a house style.
@@ -550,6 +557,10 @@ public static class ErrorMessages
 
 		// --- Destruction edge-case notifications (PennMUSH src/destroy.c) ---
 		public const string GuestCantDestroy = "I'm sorry, Dave, I'm afraid I can't do that.";
+		/// <summary>PennMUSH <c>can_pay_fees</c> (<c>src/predicat.c:439</c>): a guest may not build at all.</summary>
+		public const string GuestCantBuild = "Sorry, you aren't allowed to build.";
+		/// <summary>PennMUSH <c>can_pay_fees</c> (<c>src/predicat.c:455</c>) when <c>pay_quota</c> refuses.</summary>
+		public const string BuildingQuotaExhausted = "Sorry, your building quota has run out.";
 		public const string DestroyGodBlasphemous = "Destroying God would be blasphemous.";
 		public const string TooSpecialToDestroy = "That is too special to be destroyed.";
 		public const string FloorDisappearsNothingness =

@@ -870,12 +870,18 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoRoomNameSpecified);
 		}
 
-		// NOTE: Additional permission checks needed:
-		// - Can executor create rooms (quota check)
-		// - Does executor have DIG permission
+		// NOTE: Additional permission check still needed: does executor have DIG permission.
 
-		var response = await Mediator.Send(new CreateRoomCommand(roomName.ToPlainText(),
-			await executor.Owner.WithCancellation(CancellationToken.None)));
+		// create.c:480 — do_dig charges the room before new_object(), and each exit below is charged
+		// again on its own inside do_real_open (:130).
+		if (await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executorBase,
+				async () => await Mediator.Send(new CreateRoomCommand(roomName.ToPlainText(),
+					await executor.Owner.WithCancellation(CancellationToken.None))))
+			is not DBRef response)
+		{
+			return new CallState(ErrorMessages.Returns.BuildingQuotaExhausted);
+		}
+
 		await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executorBase, roomName, response.Number);
 
 		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
@@ -897,9 +903,16 @@ public partial class Commands
 			// CAN CREATE EXIT HERE?
 			// CAN LINK TO DESTINATION?
 
-			var toExitResponse = await Mediator.Send(new CreateExitCommand(exitToName.First(),
-				exitToName.Skip(1).ToArray(), await executorBase.Where(),
-				await executor.Owner.WithCancellation(CancellationToken.None)));
+			if (await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executorBase,
+					async () => await Mediator.Send(new CreateExitCommand(exitToName.First(),
+						exitToName.Skip(1).ToArray(), await executorBase.Where(),
+						await executor.Owner.WithCancellation(CancellationToken.None))))
+				is not DBRef toExitResponse)
+			{
+				// do_dig keeps the room it has already paid for and stops here (create.c:507-510).
+				return new CallState(response.ToString());
+			}
+
 			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{toExitResponse.Number}");
 			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
 
@@ -925,9 +938,15 @@ public partial class Commands
 				throw new InvalidOperationException("The room just dug must exist.");
 			}
 
-			var fromExitResponse = await Mediator.Send(new CreateExitCommand(exitFromName.First(),
-				exitFromName.Skip(1).ToArray(), newRoomObject,
-				await executor.Owner.WithCancellation(CancellationToken.None)));
+			if (await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executorBase,
+					async () => await Mediator.Send(new CreateExitCommand(exitFromName.First(),
+						exitFromName.Skip(1).ToArray(), newRoomObject,
+						await executor.Owner.WithCancellation(CancellationToken.None))))
+				is not DBRef fromExitResponse)
+			{
+				return new CallState(response.ToString());
+			}
+
 			if (await Mediator.Send(new GetObjectNodeQuery(fromExitResponse)) is not (AnySharpObject and SharpExit newExitObject))
 			{
 				throw new InvalidOperationException("The exit just opened must exist.");
@@ -999,12 +1018,17 @@ public partial class Commands
 				shouldNotify: true);
 		}
 
-		var exitDbRef = await Mediator.Send(new CreateExitCommand(
-			primaryName,
-			aliases,
-			sourceRoom,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)
-		));
+		// do_real_open asks can_pay_fees once the name and the source room have passed (create.c:130).
+		if (await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executor,
+				async () => await Mediator.Send(new CreateExitCommand(
+					primaryName,
+					aliases,
+					sourceRoom,
+					await executor.Object().Owner.WithCancellation(CancellationToken.None))))
+			is not DBRef exitDbRef)
+		{
+			return new CallState(ErrorMessages.Returns.BuildingQuotaExhausted);
+		}
 
 		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
 		if (creatorZone is AnySharpObject zone)
@@ -1068,7 +1092,7 @@ public partial class Commands
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
-			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, NotifyService, PermissionService,
+			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Configuration, NotifyService, PermissionService,
 				AttributeService, ManipulateSharpObjectService, DidItService, EventService, Logger, executor, obj,
 				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve) switch
 			{

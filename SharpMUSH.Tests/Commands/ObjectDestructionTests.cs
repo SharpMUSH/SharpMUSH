@@ -352,8 +352,8 @@ public class ObjectDestructionTests
 		await Assert.That((await Mediator.Send(new GetObjectNodeQuery(exit))).IsNone).IsTrue();
 
 		var judgePlayer = (await Mediator.Send(new GetObjectNodeQuery(judge))).Expect<SharpPlayer>();
-		await Assert.That(await Mediator.Send(new GetOwnedObjectCountQuery(judgePlayer))).IsEqualTo(1)
-			.Because("the judge owns only itself; nothing survived to be handed over");
+		await Assert.That(await Mediator.Send(new GetOwnedObjectCountQuery(judgePlayer))).IsEqualTo(0)
+			.Because("nothing survived to be handed over, and a player never counts against its own quota");
 	}
 
 	/// <summary>

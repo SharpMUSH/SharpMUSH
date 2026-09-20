@@ -97,6 +97,12 @@
   <data name="CannotClonePlayers" xml:space="preserve">
     <value>You cannot clone players.</value>
   </data>
+  <data name="GuestCantBuild" xml:space="preserve">
+    <value>Sorry, you aren't allowed to build.</value>
+  </data>
+  <data name="BuildingQuotaExhausted" xml:space="preserve">
+    <value>Sorry, your building quota has run out.</value>
+  </data>
   <data name="ClonePreserveWizardOnly" xml:space="preserve">
     <value>You cannot @CLONE/PRESERVE. Use normal @CLONE instead.</value>
   </data>
