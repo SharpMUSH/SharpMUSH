@@ -73,7 +73,11 @@ public class FunctionArityParityTests : ServerTestBase
 		["hasattrval"] = "GAP (#974): PennMUSH also accepts the single-argument <object>/<attribute> form",
 		["hasattrpval"] = "GAP (#974): PennMUSH also accepts the single-argument <object>/<attribute> form",
 		["pcreate"] = "GAP (#974): PennMUSH takes an optional third <dbref> to reuse",
-		["textentries"] = "GAP (#974): PennMUSH is textentries(<type>, <pattern>[, <osep>]); SharpMUSH has no <pattern> and lists every entry"
+		["textentries"] = "GAP (#974): PennMUSH is textentries(<type>, <pattern>[, <osep>]); SharpMUSH has no <pattern> and lists every entry",
+
+		// PennMUSH's second argument is a plain-text fallback for a client without HTML. Here the fragment
+		// is parsed into markup whose own text is that reading, so there is nothing to supply.
+		["wshtml"] = "no <default string>: the HTML is parsed into markup and degrades to its own text"
 	};
 
 	/// <summary>
