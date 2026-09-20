@@ -1602,7 +1602,7 @@ public class MovementParityTests
 	}
 
 	/// <summary>
-	/// <c>tport_control_ok</c> (<c>wiz.c:342</c>): controlling the room something stands in is authority
+	/// <c>tport_control_ok</c> (<c>wiz.c:345</c>): controlling the room something stands in is authority
 	/// enough to evict it. The old gate was <c>controls(player, victim)</c> alone, which refused every
 	/// legitimate eviction a room owner could perform.
 	/// </summary>
@@ -1625,7 +1625,7 @@ public class MovementParityTests
 	}
 
 	/// <summary>
-	/// <c>wiz.c:347</c>: "mortals can't @tel HEAVY players just on basis of location ownership".
+	/// <c>wiz.c:345</c>: "mortals can't @tel HEAVY players just on basis of location ownership".
 	/// The room owner from <see cref="ARoomOwnerMayEvictAnObjectTheyDoNotOwn"/>, refused by one flag.
 	/// </summary>
 	[Test]
@@ -1677,7 +1677,7 @@ public class MovementParityTests
 	}
 
 	/// <summary>
-	/// <c>wiz.c:570</c>: a FIXED player moves nothing, including themselves. FIXED is read on the
+	/// <c>wiz.c:572</c>: a FIXED player moves nothing, including themselves. FIXED is read on the
 	/// OWNER (<c>hdrs/dbdefs.h:84</c>), and the teleport path read it nowhere at all.
 	/// </summary>
 	[Test]
@@ -1705,7 +1705,7 @@ public class MovementParityTests
 	}
 
 	/// <summary>
-	/// <c>wiz.c:519</c> reads NO_TEL off <c>absolute_room(victim)</c>. Reading the immediate container
+	/// <c>wiz.c:543</c> reads NO_TEL off <c>absolute_room(victim)</c>. Reading the immediate container
 	/// instead let anyone step around a room's NO_TEL by standing inside a vehicle parked in it.
 	/// </summary>
 	[Test]
@@ -1741,7 +1741,7 @@ public class MovementParityTests
 	}
 
 	/// <summary>
-	/// <c>wiz.c:519</c>: <c>!controls(player, absroom)</c>. A player is not shut inside their own
+	/// <c>wiz.c:543</c>: <c>!controls(player, absroom)</c>. A player is not shut inside their own
 	/// NO_TEL room.
 	/// </summary>
 	[Test]
@@ -1762,7 +1762,7 @@ public class MovementParityTests
 	}
 
 	/// <summary>
-	/// <c>wiz.c:543</c>: <c>@teleport</c> evaluates the source room's LEAVE lock and answers a refusal
+	/// <c>wiz.c:549</c>: <c>@teleport</c> evaluates the source room's LEAVE lock and answers a refusal
 	/// with <c>fail_lock</c>, exactly as GOTO and LEAVE do. It evaluated it nowhere.
 	/// </summary>
 	[Test]
@@ -1788,7 +1788,7 @@ public class MovementParityTests
 	}
 
 	/// <summary>
-	/// <c>wiz.c:543</c>: <c>!controls(player, absroom)</c> again — the room's own owner is not held by
+	/// <c>wiz.c:549</c>: <c>!controls(player, absroom)</c> again — the room's own owner is not held by
 	/// its LEAVE lock.
 	/// </summary>
 	[Test]
@@ -1892,7 +1892,7 @@ public class MovementParityTests
 	}
 
 	/// <summary>
-	/// <c>wiz.c:319</c>: <c>eval_lock_with(victim, dest, Tport_Lock, …)</c>. The destination's TELEPORT
+	/// <c>wiz.c:320</c>: <c>eval_lock_with(victim, dest, Tport_Lock, …)</c>. The destination's TELEPORT
 	/// lock says who may ARRIVE, so the unlocker is the victim; the command evaluated it against the
 	/// teleporter, which is the exact inverse for anyone moving someone other than themselves.
 	/// </summary>
@@ -1954,7 +1954,7 @@ public class MovementParityTests
 
 		await Assert.That(newSourceExits).Contains(DBRef.Parse(exit).Number);
 		await Assert.That(oldSourceExits).DoesNotContain(DBRef.Parse(exit).Number)
-			.Because("remove_first(Exits(loc), victim) takes it off the old room's list (wiz.c:471)");
+			.Because("remove_first(Exits(loc), victim) takes it off the old room's list (wiz.c:474)");
 	}
 
 	/// <summary>
