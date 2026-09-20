@@ -1474,49 +1474,74 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(string.Join(" ", rolls)));
 	}
 
-	[SharpFunction(Name = "rand", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
+	/// <summary>
+	/// A random number: a real in [0,1) with no argument, otherwise an integer in the given range.
+	/// </summary>
+	/// <remarks>
+	/// <c>fun_rand</c> (<c>src/funmisc.c:777-830</c>). The no-argument form is
+	/// <c>safe_number(get_random_d())</c> — a <em>real</em>, written at the configured float
+	/// precision, which is what makes <c>lt(rand(),0.5)</c> a coin flip. A single negative argument
+	/// counts down from zero rather than being refused, and a reversed two-argument pair is swapped
+	/// (<c>:814-818</c>) rather than being refused.
+	///
+	/// <para>The arithmetic is in <see cref="long"/> because PennMUSH's is not: its bounds are
+	/// <c>uint32_t</c> with an <c>int</c> offset, and <c>rand(-2147483648,-2147483648)</c> only
+	/// answers correctly there because two overflows cancel. Widening reaches the same answers for
+	/// every reachable input without relying on that.</para>
+	/// </remarks>
+	[SharpFunction(Name = "rand", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["low", "high"])]
 	public ValueTask<CallState> Rand(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 
-		// Check if first argument exists and is not empty
 		if (!args.TryGetValue("0", out var arg0) || string.IsNullOrWhiteSpace((arg0.Message ?? MarkupText.Empty).ToPlainText()))
 		{
-			// No arguments: random number between 0 and 2^31-1
-			return ValueTask.FromResult(new CallState(Random.Shared.Next(0, int.MaxValue)));
+			return ValueTask.FromResult(new CallState(Random.Shared.NextDouble()));
 		}
 
-		// Check if second argument exists and is not empty
+		if (!int.TryParse((arg0.Message ?? MarkupText.Empty).ToPlainText().Trim(), out var first))
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
+		}
+
+		long low;
+		long high;
+		long offset = 0;
+
 		if (!args.TryGetValue("1", out var arg1) || string.IsNullOrWhiteSpace((arg1.Message ?? MarkupText.Empty).ToPlainText()))
 		{
-			// One argument: random number from 0 to arg-1
-			if (!int.TryParse((arg0.Message ?? MarkupText.Empty).ToPlainText(), out var maxVal))
+			if (first == 0)
 			{
-				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.OutOfRange));
 			}
-			// PennMUSH behavior: rand(0) is an error (empty range), negative values return 0
-			if (maxVal == 0)
+
+			low = 0;
+			high = Math.Abs((long)first);
+			if (first < 0) offset = high - 1;
+			high -= 1;
+		}
+		else
+		{
+			if (!int.TryParse((arg1.Message ?? MarkupText.Empty).ToPlainText().Trim(), out var second))
 			{
-				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ResultOutOfRange));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integers));
 			}
-			if (maxVal < 0)
+
+			var (lower, upper) = first > second ? ((long)second, (long)first) : ((long)first, (long)second);
+
+			if (lower < 0)
 			{
-				return ValueTask.FromResult(new CallState(0));
+				offset = -lower;
+				low = 0;
+				high = upper + offset;
 			}
-			return ValueTask.FromResult(new CallState(Random.Shared.Next(0, maxVal)));
+			else
+			{
+				low = lower;
+				high = upper;
+			}
 		}
 
-		// Two arguments: random number between min and max (inclusive)
-		if (!int.TryParse((arg0.Message ?? MarkupText.Empty).ToPlainText(), out var minVal) ||
-				!int.TryParse((arg1.Message ?? MarkupText.Empty).ToPlainText(), out var maxVal2))
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
-		}
-		if (minVal > maxVal2)
-		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
-		}
-		// Next is exclusive of upper bound, so add 1
-		return ValueTask.FromResult(new CallState(Random.Shared.Next(minVal, maxVal2 + 1)));
+		return ValueTask.FromResult(new CallState(Random.Shared.NextInt64(low, high + 1) - offset));
 	}
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
@@ -334,13 +335,20 @@ public class UtilityFunctionUnitTests
 		await Assert.That(result).IsNotNull();
 	}
 
+	/// <summary>
+	/// <c>rand()</c> with no argument is a <em>real</em> in [0,1): <c>safe_number(get_random_d())</c>
+	/// (<c>src/funmisc.c:782-786</c>). SharpMUSH answered a 31-bit integer, so <c>lt(rand(),0.5)</c>
+	/// — the ordinary way to write a coin flip — was false essentially always. This asserted only
+	/// that the integer parsed, which is why it never noticed.
+	/// </summary>
 	[Test]
 	public async Task Rand_NoArgs()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("rand()")))?.Message!;
-		var value = int.Parse(result.ToPlainText());
-		await Assert.That(value).IsGreaterThanOrEqualTo(0);
-		await Assert.That(value).IsLessThan(int.MaxValue);
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rand()")))?.Message!.ToPlainText();
+
+		await Assert.That(double.TryParse(result, CultureInfo.InvariantCulture, out var value)).IsTrue();
+		await Assert.That(value).IsGreaterThanOrEqualTo(0d);
+		await Assert.That(value).IsLessThan(1d);
 	}
 
 	[Test]
