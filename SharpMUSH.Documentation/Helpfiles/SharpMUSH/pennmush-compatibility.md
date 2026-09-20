@@ -477,8 +477,6 @@ fourth argument is undecided.
 Differences that are **bugs**, tracked and expected to change. Listed so they are not mistaken for
 choices.
 
-  **`hasattr()`, `hasattrp()`, `hasattrval()`, `hasattrpval()` require two arguments.** PennMUSH also
-  accepts the single-argument `<object>/<attribute>` form. (#974)<br>
   **`pcreate()` takes no third argument.** PennMUSH accepts an optional dbref to reuse. (#974)<br>
   **`textentries()` is `textentries(<type>[, <osep>])`** — it lists every entry. PennMUSH is
   `textentries(<type>, <pattern>[, <osep>])`, where `<pattern>` is required and filters the list;
@@ -498,6 +496,9 @@ These once differed and now match PennMUSH; noted here only because earlier Shar
 behaved differently.
 
 - Lock operator precedence: `&` binds tighter than `|`, so `a & b | c` is `(a & b) | c`.
+- `hasattr()`, `hasattrp()`, `hasattrval()` and `hasattrpval()` take the whole
+  `<object>/<attribute>` spec in one argument as well as the two-argument form; one argument
+  carrying no `/` is `#-1 BAD ARGUMENT FORMAT TO <function>`.
 - `letq()` requires an odd number of arguments and `setr()` an even number; `case()`/`caseall()` have
   no parity requirement.
 - An unknown function name outside `[...]` is left as literal text (`think foo(bar)` prints

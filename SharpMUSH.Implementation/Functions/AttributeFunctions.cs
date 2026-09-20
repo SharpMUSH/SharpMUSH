@@ -351,13 +351,36 @@ public partial class Functions
 	/// switches out of <c>called_as</c> — <c>strchr(called_as, 'P')</c> for the parent walk and
 	/// <c>strstr(called_as, "VAL")</c> for "has a value" rather than "exists"
 	/// (<c>src/fundb.c:215-260</c>).
+	///
+	/// <para>Called with one argument, that argument is the whole
+	/// <c>&lt;object&gt;/&lt;attribute&gt;</c> spec (<c>src/fundb.c:222-231</c>); without a slash it
+	/// is <c>#-1 BAD ARGUMENT FORMAT TO &lt;called_as&gt;</c>, which is why
+	/// <paramref name="calledAs"/> is passed in rather than derived.</para>
 	/// </summary>
 	private async ValueTask<CallState> HasAttributeAsync(
-		IMUSHCodeParser parser, bool checkParents, bool requireValue)
+		IMUSHCodeParser parser, string calledAs, bool checkParents, bool requireValue)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var obj = parser.CurrentState.ArgumentsOrdered["0"].Message!.ToPlainText()!;
-		var attribute = parser.CurrentState.ArgumentsOrdered["1"].Message!.ToPlainText()!;
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var spec = args["0"].Message!.ToPlainText()!;
+
+		string obj;
+		string attribute;
+
+		if (args.Count > 1)
+		{
+			obj = spec;
+			attribute = args["1"].Message!.ToPlainText()!;
+		}
+		else if (HelperFunctions.SplitDbRefAndOptionalAttr(spec) is { Object: var only, Attribute: { } attr })
+		{
+			obj = only;
+			attribute = attr;
+		}
+		else
+		{
+			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, calledAs));
+		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
@@ -396,23 +419,23 @@ public partial class Functions
 	private bool HasValue(string value)
 		=> value.Length != 0 && !(value == " " && !Configuration.CurrentValue.Attribute.EmptyAttributes);
 
-	[SharpFunction(Name = "hasattr", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute"])]
+	[SharpFunction(Name = "hasattr", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object[/attribute]", "attribute"])]
 	public ValueTask<CallState> HasAttribute(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> HasAttributeAsync(parser, checkParents: false, requireValue: false);
+		=> HasAttributeAsync(parser, "HASATTR", checkParents: false, requireValue: false);
 
-	[SharpFunction(Name = "hasattrp", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute"])]
+	[SharpFunction(Name = "hasattrp", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object[/attribute]", "attribute"])]
 	public ValueTask<CallState> HasAttributeParent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> HasAttributeAsync(parser, checkParents: true, requireValue: false);
+		=> HasAttributeAsync(parser, "HASATTRP", checkParents: true, requireValue: false);
 
-	[SharpFunction(Name = "hasattrpval", MinArgs = 2, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute"])]
+	[SharpFunction(Name = "hasattrpval", MinArgs = 1, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object[/attribute]", "attribute"])]
 	public ValueTask<CallState> HasAttributeParentValue(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> HasAttributeAsync(parser, checkParents: true, requireValue: true);
+		=> HasAttributeAsync(parser, "HASATTRPVAL", checkParents: true, requireValue: true);
 
-	[SharpFunction(Name = "hasattrval", MinArgs = 2, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute"])]
+	[SharpFunction(Name = "hasattrval", MinArgs = 1, MaxArgs = 2,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object[/attribute]", "attribute"])]
 	public ValueTask<CallState> HasAttributeValue(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> HasAttributeAsync(parser, checkParents: false, requireValue: true);
+		=> HasAttributeAsync(parser, "HASATTRVAL", checkParents: false, requireValue: true);
 
 	[SharpFunction(Name = "hasflag", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flag"])]
 	public async ValueTask<CallState> HasFlag(IMUSHCodeParser parser, SharpFunctionAttribute _2)

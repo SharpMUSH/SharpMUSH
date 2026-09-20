@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Functions;
@@ -682,5 +684,82 @@ public class AttributeFunctionUnitTests
 		await Assert.That(ownerResult!.Message!.ToPlainText())
 			.IsEqualTo($"#{WebAppFactoryArg.ExecutorDBRef.Number}")
 			.Because("owner(obj/attr) must resolve the attribute on the LOCATED object (obj), not the calling executor - red before the fix, since the located object argument was discarded in favour of executor");
+	}
+
+	/// <summary>
+	/// <c>fun_hasattr</c> takes the <c>&lt;object&gt;/&lt;attribute&gt;</c> pair in one argument when
+	/// called with one (<c>src/fundb.c:222-231</c>), and answers
+	/// <c>#-1 BAD ARGUMENT FORMAT TO &lt;called_as&gt;</c> when that argument carries no slash. All
+	/// four names shared a body that read <c>ArgumentsOrdered["1"]</c> unconditionally, so the
+	/// one-argument form was an arity error.
+	/// </summary>
+	[Test]
+	[Arguments("hasattr", "1")]
+	[Arguments("hasattrp", "1")]
+	[Arguments("hasattrval", "1")]
+	[Arguments("hasattrpval", "1")]
+	public async Task HasattrTakesTheObjectAndAttributeInOneArgument(string function, string expected)
+	{
+		var result = await Parser.FunctionParse(MarkupText.Plain(
+			$"[attrib_set(me/HASATTRONEARG,value)][{function}(me/HASATTRONEARG)]"));
+
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("hasattr")]
+	[Arguments("hasattrp")]
+	[Arguments("hasattrval")]
+	[Arguments("hasattrpval")]
+	public async Task HasattrWithoutASlashIsABadArgumentFormat(string function)
+	{
+		var result = await Parser.FunctionParse(MarkupText.Plain($"{function}(me)"));
+
+		await Assert.That(result!.Message!.ToPlainText())
+			.IsEqualTo($"#-1 BAD ARGUMENT FORMAT TO {function.ToUpperInvariant()}");
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>empty_attrs</c> defaults on (<c>src/conf.c:1216</c>, <c>game/mushcnf.dst:779</c>),
+	/// and a value of exactly one space counts as a value only while it is on — that single space
+	/// being how an attribute set to nothing is stored when it is off (<c>src/fundb.c:245-250</c>).
+	/// The two places SharpMUSH writes the default down disagreed: the PennMUSH config importer said
+	/// true, <c>OptionsService</c> said false, so the same game answered differently depending on
+	/// whether it had ever read a <c>mush.cnf</c>.
+	/// </summary>
+	[Test]
+	public async Task HasattrvalCountsASingleSpaceOnlyWhileEmptyAttrsIsOn()
+	{
+		await Parser.FunctionParse(MarkupText.Plain("attrib_set(me/HASATTRVALSPACE,%b)"));
+
+		await Assert.That((await Parser.FunctionParse(MarkupText.Plain("strlen(get(me/HASATTRVALSPACE))")))!
+			.Message!.ToPlainText()).IsEqualTo("1").Because("the fixture must hold exactly one space");
+
+		using (TestOptionsOverride.Scope(o => o with { Attribute = o.Attribute with { EmptyAttributes = true } }))
+		{
+			var on = await Parser.FunctionParse(MarkupText.Plain("hasattrval(me/HASATTRVALSPACE)"));
+			await Assert.That(on!.Message!.ToPlainText()).IsEqualTo("1");
+		}
+
+		using (TestOptionsOverride.Scope(o => o with { Attribute = o.Attribute with { EmptyAttributes = false } }))
+		{
+			var off = await Parser.FunctionParse(MarkupText.Plain("hasattrval(me/HASATTRVALSPACE)"));
+			await Assert.That(off!.Message!.ToPlainText()).IsEqualTo("0");
+		}
+	}
+
+	/// <summary>The shipped default has to be the one PennMUSH ships, in both places that spell it.</summary>
+	[Test]
+	public async Task EmptyAttrsDefaultsOnEverywhereItIsWrittenDown()
+	{
+		await Assert.That(ReadPennMushConfig.Create(EmptyConfigFile()).Attribute.EmptyAttributes).IsTrue();
+		await Assert.That(OptionsService.Default().Attribute.EmptyAttributes).IsTrue();
+	}
+
+	private static string EmptyConfigFile()
+	{
+		var path = Path.Combine(Path.GetTempPath(), $"sharpmush-empty-attrs-{Guid.NewGuid():N}.cnf");
+		File.WriteAllText(path, string.Empty);
+		return path;
 	}
 }
