@@ -177,4 +177,32 @@ public class FormattingFunctionUnitTests
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	/// <summary>
+	/// <c>fun_table</c> clamps rather than refuses: a field width below 1 becomes 1
+	/// (<c>src/funlist.c:2483-2484</c>), a line length below 2 becomes 2 (<c>:2470-2471</c>), and a
+	/// field width at or above the line length becomes <c>line_length - 1</c> (<c>:2488-2489</c>).
+	/// SharpMUSH divided the line length by the field width to get a column count, so
+	/// <c>table(a b,0,10)</c> divided by zero and a field wider than the line answered
+	/// <c>#-1 FIELD WIDTH EXCEEDS LINE WIDTH</c>, which PennMUSH never says.
+	///
+	/// <para>The packing is incremental (<c>:2534-2544</c>) and counts the output separator, which
+	/// the column-count arithmetic ignored. Every expectation here is the 1.8.8 oracle's.</para>
+	/// </summary>
+	[Test]
+	[Arguments("table(a b,0,10)", "a b")]
+	[Arguments("table(a b c,20,10)", "a        \nb        \nc        ")]
+	[Arguments("table(a b c,5,1)", "a b\nc")]
+	[Arguments("table(a b c d e f g h,3,10)", "a   b   c  \nd   e   f  \ng   h  ")]
+	// A leading '-' is the centring prefix, not a sign: the width here is 5, centred.
+	[Arguments("table(a b c,-5,10)", "  a     b  \n  c  ")]
+	[Arguments("table(a b c d,5,10,%b,|)", "a    |b    \nc    |d    ")]
+	// An output separator given as empty is no separator at all, and takes no width with it.
+	[Arguments("table(a b c d,5,10,%b,)", "a    b    \nc    d    ")]
+	[Arguments("table(,5,10)", "")]
+	public async Task TableClampsItsWidths(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }
