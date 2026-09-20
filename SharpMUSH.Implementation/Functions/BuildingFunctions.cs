@@ -74,11 +74,15 @@ public partial class Functions
 			return ErrorMessages.Returns.BadObjectName;
 		}
 
-		var response = await Mediator.Send(new CreateRoomCommand(
-			roomName,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
-
-		return new CallState(response.ToString());
+		// fun_dig is a call to do_dig (src/fundb.c), so it is charged exactly as @dig is.
+		return await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executor,
+			async () => await Mediator.Send(new CreateRoomCommand(
+				roomName,
+				await executor.Object().Owner.WithCancellation(CancellationToken.None)))) switch
+		{
+			DBRef response => new CallState(response.ToString()),
+			Error<string> refused => new CallState(refused.Value)
+		};
 	}
 
 	[SharpFunction(Name = "open", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
@@ -105,14 +109,17 @@ public partial class Functions
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		// Create the exit
-		var exitDbRef = await Mediator.Send(new CreateExitCommand(
-			primaryName,
-			aliases,
-			sourceRoom,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
-
-		return new CallState(exitDbRef.ToString());
+		// fun_open is a call to do_real_open (src/fundb.c), which charges for itself (create.c:130).
+		return await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executor,
+			async () => await Mediator.Send(new CreateExitCommand(
+				primaryName,
+				aliases,
+				sourceRoom,
+				await executor.Object().Owner.WithCancellation(CancellationToken.None)))) switch
+		{
+			DBRef exitDbRef => new CallState(exitDbRef.ToString()),
+			Error<string> refused => new CallState(refused.Value)
+		};
 	}
 
 	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi)]
@@ -233,7 +240,7 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
-			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, NotifyService, PermissionService,
+			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Configuration, NotifyService, PermissionService,
 				AttributeService, ManipulateSharpObjectService, DidItService, EventService, Logger, executor, obj,
 				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve) switch
 			{

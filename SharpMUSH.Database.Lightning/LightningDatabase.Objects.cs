@@ -306,7 +306,11 @@ public partial class LightningDatabase
 		var count = Store.Read(tx => tx.CountDups(Tables.Owner.Reverse, Keys.Dbref(player.Object.Key)));
 		return ValueTask.FromResult(count switch
 		{
-			long owned => (int)owned,
+			// PennMUSH do_quota starts the count at -1 — "a player is never included in his own
+			// quota" (src/wiz.c:185-186) — and fun_quota and can_pay_fees measure against the same
+			// number. Every player owns itself here (CreatePlayerAsync writes that edge, as the
+			// migration seed does), so the self edge is always present and always the one dropped.
+			long owned => (int)owned - 1,
 			Error<string> error => throw new InvalidOperationException($"Owned-object count for #{player.Object.Key} failed: {error.Value}")
 		});
 	}
