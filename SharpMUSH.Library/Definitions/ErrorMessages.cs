@@ -609,6 +609,15 @@ public static class ErrorMessages
 		public const string Teleported = "Teleported.";
 		public const string TeleportsNotAllowed = "Teleports are not allowed in this room.";
 		public const string NoZoneTeleport = "You may not teleport out of the zone from this room.";
+
+		/// <summary>
+		/// PennMUSH <c>src/wiz.c:453</c>: teleporting an exit relocates its source, and only a room
+		/// can source an exit.
+		/// </summary>
+		public const string ExitsOnlyTeleportToRooms = "Exits can only be teleported to other rooms.";
+
+		/// <summary>PennMUSH <c>src/wiz.c:457</c>: the would-be new source room is already GOING.</summary>
+		public const string ExitDestinationCrumbling = "You can't move an exit to someplace that's crumbling.";
 		public const string InTheVoid = "You're in the Void. This is not a good thing.";
 		public const string VoidSendingHome = "You're in the void - sending you home.";
 		public const string TooManyContainers = "You're in too many containers.";

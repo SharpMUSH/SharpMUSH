@@ -834,6 +834,51 @@ public partial class Commands
 				continue;
 			}
 
+			// wiz.c:450-479: an exit is not carried to the destination. Its SOURCE is rewritten, so it
+			// now leads out of the destination room instead, keeping where it leads. Penn returns here
+			// and never reaches safe_tel, which is why safe_tel has nothing to say about exits.
+			if (target.IsExit)
+			{
+				if (!destinationContainer.IsRoom)
+				{
+					await NotifyService.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.ExitsOnlyTeleportToRooms), executor);
+					continue;
+				}
+
+				if (await destinationContainer.WithExitOption().HasFlag("GOING"))
+				{
+					await NotifyService.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.ExitDestinationCrumbling), executor);
+					continue;
+				}
+
+				var oldSource = await targetContent.Location();
+
+				// wiz.c:468: the room the exit sits in decides the eviction, and the new room has to be
+				// one the teleporter could have opened an exit in to begin with.
+				if (!await TportControlOk(executor, target, oldSource, telAnything)
+						|| !await CanOpenFrom(executor, destinationContainer))
+				{
+					await NotifyService.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+					continue;
+				}
+
+				await Mediator.Send(new MoveObjectCommand(
+					targetContent, destinationContainer, oldSource.Object().DBRef,
+					executor.Object().DBRef, IsSilent: true, Cause: "teleport"));
+
+				// wiz.c:476: the exit branch has no victim==player case to exclude, so AreQuiet is the
+				// whole of it.
+				if (!await target.Object().AreQuietAsync(executor))
+				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Teleported), executor);
+				}
+
+				continue;
+			}
+
 			// wiz.c:487: a Tel_Anywhere teleporter sending a player TO a player lands them beside that
 			// player rather than inside them. /INSIDE is what asks for the containment instead.
 			// DEVIATION: Penn's branch (wiz.c:487-497) does its own OXTPORT/safe_tel/TPORT and returns
