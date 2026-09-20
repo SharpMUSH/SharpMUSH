@@ -12,7 +12,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "localfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular,
+	[SharpFunction(Name = "localfun", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular,
 		ParameterNames = ["name", "arguments..."])]
 	public async ValueTask<CallState> LocalFunction(IMUSHCodeParser parser, SharpFunctionAttribute _)
 	{
