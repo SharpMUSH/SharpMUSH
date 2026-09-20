@@ -331,6 +331,30 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(result);
 	}
 
+	/// <summary>
+	/// The exact rational of <c>&lt;number&gt;</c>, reduced; with <c>&lt;whole&gt;</c> set, the whole
+	/// part and then the rational of what is left.
+	/// </summary>
+	/// <remarks>
+	/// <para>Every number this can be handed is a decimal literal, so it <em>has</em> an exact
+	/// rational — <c>p / 10^scale</c>, straight off <see cref="decimal.GetBits(decimal, Span{int})"/>
+	/// — and reducing it is the most accurate answer there is. PennMUSH instead walks the convergents
+	/// of a continued fraction and stops at the first within a fixed 1e-10 relative error
+	/// (<c>frac</c>, <c>src/funmath.c:1350-1359</c>), which its help states outright: "dividing the
+	/// numerator by the denominator of the results will not always return the original
+	/// &lt;number&gt;, but something close to it". Where PennMUSH's answer is exact this agrees with
+	/// it; where PennMUSH settles for close enough it does not, and
+	/// <c>pennmush-compatibility.md</c> records the difference.</para>
+	///
+	/// <para>The arithmetic is <see cref="Int128"/> because a <see cref="decimal"/>'s mantissa is 96
+	/// bits and its denominator can be 10^28; both fit, so no input needs approximating and nothing
+	/// saturates. The previous implementation searched convergents under a denominator cap of
+	/// 1000000 and was wrong three separate ways: it returned the convergent <em>before</em> the one
+	/// that overran the cap, so <c>fraction(0.3333334)</c> answered <c>1/3</c>; it discarded
+	/// anything below 1e-6 as no fraction at all; and it folded a positive fractional part into a
+	/// negative whole part, so <c>fraction(-2.75)</c> answered <c>-5/4</c> — not a different
+	/// spelling of -2.75 but a different number.</para>
+	/// </remarks>
 	[SharpFunction(Name = "fraction", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "whole"])]
 	public ValueTask<CallState> Fraction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -352,41 +376,64 @@ public partial class Functions
 			showWhole = wholeFlag != 0;
 		}
 
-		var wholePart = Math.Truncate(value);
-		var fractionalPart = Math.Abs(value - wholePart);
-
-		if (fractionalPart < 0.000001m)
+		if (value == 0m)
 		{
-			return ValueTask.FromResult<CallState>(TruncateToInt64(wholePart).ToString(CultureInfo.InvariantCulture));
+			return ValueTask.FromResult<CallState>("0");
 		}
 
-		// PennMUSH uses continued fraction approximation with a max denominator limit
-		var (numerator, denominator) = ContinuedFractionApprox((double)fractionalPart, 1000000);
+		// The sign is carried separately and the rest of the work is done on the magnitude, the way
+		// fun_fraction does it (src/funmath.c:1377-1383). Reuniting them at the end is what keeps
+		// the whole part and the fractional part pointing the same way.
+		var sign = value < 0m ? "-" : string.Empty;
+		var magnitude = Math.Abs(value);
+		var whole = showWhole ? decimal.Truncate(magnitude) : 0m;
+		var (numerator, denominator) = ExactRational(magnitude - whole);
 
-		if (value < 0 && wholePart == 0)
+		// A denominator of 1 leaves nothing to write as a fraction; PennMUSH prints the whole part
+		// alone when it has one, and the numerator otherwise (:1392-1396).
+		var body = (Whole: whole != 0m, Integral: denominator == Int128.One) switch
 		{
-			numerator = -numerator;
+			(true, true) => whole.ToString(CultureInfo.InvariantCulture),
+			(true, false) => $"{whole.ToString(CultureInfo.InvariantCulture)} {numerator.ToString(CultureInfo.InvariantCulture)}/{denominator.ToString(CultureInfo.InvariantCulture)}",
+			(false, true) => numerator.ToString(CultureInfo.InvariantCulture),
+			(false, false) => $"{numerator.ToString(CultureInfo.InvariantCulture)}/{denominator.ToString(CultureInfo.InvariantCulture)}"
+		};
+
+		return ValueTask.FromResult<CallState>(sign + body);
+	}
+
+	/// <summary>
+	/// The exact reduced rational of a non-negative <see cref="decimal"/>, which is by construction
+	/// its 96-bit mantissa over ten raised to its scale.
+	/// </summary>
+	private static (Int128 Numerator, Int128 Denominator) ExactRational(decimal value)
+	{
+		Span<int> bits = stackalloc int[4];
+		decimal.GetBits(value, bits);
+
+		var mantissa = ((Int128)(uint)bits[2] << 64) | ((Int128)(uint)bits[1] << 32) | (Int128)(uint)bits[0];
+		var scale = (bits[3] >> 16) & 0xFF;
+
+		var denominator = Int128.One;
+		for (var power = 0; power < scale; power++)
+		{
+			denominator *= 10;
 		}
 
-		if (Math.Abs(wholePart) >= 1 && showWhole)
-		{
-			return ValueTask.FromResult<CallState>($"{TruncateToInt64(wholePart)} {numerator}/{denominator}");
-		}
-		else if (Math.Abs(wholePart) >= 1 && !showWhole)
-		{
-			// Folding the whole part back in can exceed a long once wholePart has saturated, and the
-			// product would wrap silently. Widen to compute it, and fall back to the whole part.
-			var whole = TruncateToInt64(wholePart);
-			var improper = (Int128)whole * denominator + numerator;
+		var divisor = GreatestCommonDivisor(mantissa, denominator);
 
-			return ValueTask.FromResult<CallState>(improper < long.MinValue || improper > long.MaxValue
-				? whole.ToString(CultureInfo.InvariantCulture)
-				: $"{(long)improper}/{denominator}");
-		}
-		else
+		return (mantissa / divisor, denominator / divisor);
+	}
+
+	/// <summary>Euclid, with <c>gcd(0, d) == d</c> so a zero numerator reduces to <c>0/1</c>.</summary>
+	private static Int128 GreatestCommonDivisor(Int128 left, Int128 right)
+	{
+		while (right != Int128.Zero)
 		{
-			return ValueTask.FromResult<CallState>($"{numerator}/{denominator}");
+			(left, right) = (right, left % right);
 		}
+
+		return left;
 	}
 
 	[SharpFunction(Name = "inc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["integer"])]
@@ -1399,37 +1446,6 @@ public partial class Functions
 					return new CallState(ErrorMessages.Returns.AmbiguousMatch);
 				}
 			});
-	}
-
-	/// <summary>
-	/// Continued fraction approximation — finds the best rational approximation
-	/// with denominator not exceeding maxDenom. Matches PennMUSH's algorithm.
-	/// </summary>
-	private (long Numerator, long Denominator) ContinuedFractionApprox(double value, long maxDenom)
-	{
-		long p0 = 0, q0 = 1, p1 = 1, q1 = 0;
-		var x = value;
-
-		while (true)
-		{
-			var a = (long)Math.Floor(x);
-			var p2 = a * p1 + p0;
-			var q2 = a * q1 + q0;
-
-			if (q2 > maxDenom)
-				break;
-
-			p0 = p1; q0 = q1;
-			p1 = p2; q1 = q2;
-
-			var remainder = x - a;
-			if (Math.Abs(remainder) < 1e-10)
-				break;
-
-			x = 1.0 / remainder;
-		}
-
-		return (p1, q1);
 	}
 
 	[SharpFunction(Name = "die", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
