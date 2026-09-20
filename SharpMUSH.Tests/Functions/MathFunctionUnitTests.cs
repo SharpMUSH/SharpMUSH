@@ -81,10 +81,10 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("atan2(0, -1)", "3.141592653589793")]
+	[Arguments("atan2(0, -1)", "3.141593")]
 	[Arguments("atan2(0, 1)", "0")]
-	[Arguments("atan2(-0.0001, 0)", "-1.570796326794897")]
-	[Arguments("atan2(0.0001, 0)", "1.570796326794897")]
+	[Arguments("atan2(-0.0001, 0)", "-1.570796")]
+	[Arguments("atan2(0.0001, 0)", "1.570796")]
 	public async Task Atan2(string expr, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
@@ -92,8 +92,10 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("ctu(90,d,r)", "1.570796326794897")]
-	[Arguments("ctu(pi(),r,d)", "180")]
+	[Arguments("ctu(90,d,r)", "1.570796")]
+	// pi() is written at float_precision before ctu() reads it back, so the round trip does not
+	// land on 180. The 1.8.8 oracle answers 180.00002 here too.
+	[Arguments("ctu(pi(),r,d)", "180.00002")]
 	public async Task Ctu(string expr, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
@@ -114,7 +116,7 @@ public class MathFunctionUnitTests
 	[Arguments("root(-1,2)", "#-1 IMAGINARY NUMBER")]
 	[Arguments("root(27, 3)", "3")]
 	[Arguments("root(-27, 3)", "-3")]
-	[Arguments("root(125, 5)", "2.626527804403767")]
+	[Arguments("root(125, 5)", "2.626528")]
 	public async Task Root(string expr, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
@@ -209,7 +211,7 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("stddev(1,2,3,4,5)", "1.58113883008419")]
+	[Arguments("stddev(1,2,3,4,5)", "1.581139")]
 	public async Task Stddev(string expr, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
@@ -221,7 +223,7 @@ public class MathFunctionUnitTests
 	[Arguments("log(1)", "0")]
 	[Arguments("log(100)", "2")]
 	[Arguments("log(8,2)", "3")]
-	[Arguments("log(10,e)", "2.302585092994046")]
+	[Arguments("log(10,e)", "2.302585")]
 	[Arguments("log(9,3)", "2")]
 	[Arguments("log(9,foo)", "#-1 ARGUMENTS MUST BE NUMBERS")]
 	[Arguments("log(-5)", "#-1 OUT OF RANGE")]
@@ -232,7 +234,7 @@ public class MathFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("ln(10)", "2.302585092994046")]
+	[Arguments("ln(10)", "2.302585")]
 	public async Task Ln(string expr, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
@@ -241,7 +243,11 @@ public class MathFunctionUnitTests
 
 	[Test]
 	[Arguments("fraction(.75)", "3/4")]
-	[Arguments("fraction(pi())", "1146408/364913")]
+	// fraction() is handed the written form of pi(), which at six places is exactly
+	// 3141593/1000000. PennMUSH answers 348987/111086: its frac() stops at the first convergent
+	// within a fixed 1.0e-10 (src/funmath.c:1390), where SharpMUSH reduces exactly. That
+	// difference is fraction()'s, not float_precision's, and is not this change to make.
+	[Arguments("fraction(pi())", "3141593/1000000")]
 	[Arguments("fraction(2)", "2")]
 	[Arguments("fraction(2.75)", "11/4")]
 	[Arguments("fraction(2.75, 1)", "2 3/4")]
