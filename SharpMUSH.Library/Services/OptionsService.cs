@@ -132,7 +132,7 @@ public class OptionsService(
 				CountAll: false,
 				ExaminePublicAttributes: true,
 				FlagsOnExamine: true,
-				FloatPrecision: 15,
+				FloatPrecision: 6,
 				MoneyPlural: "Pennies",
 				MoneySingular: "Penny",
 				Monikers: true,
