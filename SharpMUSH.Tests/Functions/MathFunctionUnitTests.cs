@@ -244,9 +244,18 @@ public class MathFunctionUnitTests
 	[Test]
 	[Arguments("fraction(.75)", "3/4")]
 	// fraction() is handed the written form of pi(), which at six places is exactly
-	// 3141593/1000000. PennMUSH answers 348987/111086: its frac() stops at the first convergent
-	// within a fixed 1.0e-10 (src/funmath.c:1390), where SharpMUSH reduces exactly. That
-	// difference is fraction()'s, not float_precision's, and is not this change to make.
+	// 3141593/1000000 — so this answer is exact, and PennMUSH's documented 348987/111086 is off by
+	// 1.8e-11. PennMUSH's frac() stops at the first convergent within a fixed 1.0e-10 relative
+	// error (src/funmath.c:1350-1359): it wants the simplest fraction that is close enough, which
+	// its own help says outright ("will not always return the original <number>, but something
+	// close to it").
+	//
+	// Being exact here is luck, not design. SharpMUSH stops on a denominator cap of 1000000
+	// (MathFunctions.ContinuedFractionApprox), which is exactly enough for a six-place decimal and
+	// nothing more: fraction(0.3333334) answers 1/3, wrong by 1.8e-7, where PennMUSH answers
+	// 1666667/5000000 exactly. The cap is the defect, not this expectation; it is reported on the
+	// pull request together with fraction() of a negative number below -1 answering the wrong
+	// value outright.
 	[Arguments("fraction(pi())", "3141593/1000000")]
 	[Arguments("fraction(2)", "2")]
 	[Arguments("fraction(2.75)", "11/4")]
