@@ -116,4 +116,21 @@ public class ConditionalFunctionUnitTests
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	/// <summary>
+	/// PennMUSH registers STRALLOF as <c>FN_NOPARSE</c> (<c>{"STRALLOF", fun_allof, 2, INT_MAX,
+	/// FN_NOPARSE}</c>, <c>src/function.c:765</c>) and <c>do_whichof</c> parses the trailing
+	/// delimiter <em>before</em> any candidate (<c>src/funmisc.c:1405-1413</c>). Registered
+	/// <c>Regular</c>, SharpMUSH let the parser pre-evaluate the arguments left to right, so a
+	/// candidate read the register state from before the delimiter ran and this answered
+	/// <c>old</c>. The 1.8.8 oracle answers <c>new</c>.
+	/// </summary>
+	[Test]
+	public async Task StrallofParsesItsDelimiterBeforeItsCandidates()
+	{
+		var result = (await Parser.FunctionParse(
+			MarkupText.Plain("[setq(sallof,old)][strallof(%q<sallof>,setq(sallof,new))]")))?.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("new");
+	}
 }
