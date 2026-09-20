@@ -40,7 +40,7 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await BuildingHelpers.CreateThingAsync(parser, Mediator, Database, Configuration, ValidateService,
-			NotifyService, EventService, executor, parser.CurrentState.Arguments["0"].Message!) switch
+			NotifyService, EventService, PermissionService, executor, parser.CurrentState.Arguments["0"].Message!) switch
 		{
 			DBRef thing => new CallState(thing.ToString()),
 			Error<string> error => new CallState(error.Value)

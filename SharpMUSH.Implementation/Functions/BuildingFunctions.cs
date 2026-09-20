@@ -46,7 +46,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await BuildingHelpers.CreateThingAsync(parser, Mediator, Database, Configuration, ValidateService,
-			NotifyService, EventService, executor, parser.CurrentState.Arguments["0"].Message!) switch
+			NotifyService, EventService, PermissionService, executor, parser.CurrentState.Arguments["0"].Message!) switch
 		{
 			// PennMUSH fun_create hands do_create's dbref to safe_dbref, which writes #n and not an
 			// objid (src/fundb.c).

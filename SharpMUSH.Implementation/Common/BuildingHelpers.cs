@@ -35,11 +35,11 @@ public static class BuildingHelpers
 		IValidateService validateService,
 		INotifyService notifyService,
 		IEventService eventService,
+		IPermissionService permissionService,
 		AnySharpObject executor,
 		MString name)
 	{
-		var defaultHome = new DBRef((int)configuration.CurrentValue.Database.DefaultHome);
-		if (await mediator.Send(new GetObjectNodeQuery(defaultHome)) is not AnySharpObject home || home.IsExit)
+		if (await HomeForNewObjectAsync(mediator, configuration, permissionService, executor) is not AnySharpContainer home)
 		{
 			await notifyService.NotifyLocalized(executor,
 				nameof(ErrorMessages.Notifications.DefaultHomeLocationInvalid), executor);
@@ -62,7 +62,7 @@ public static class BuildingHelpers
 		var thing = await mediator.Send(new CreateThingCommand(name.ToPlainText(),
 			into,
 			await executor.Object().Owner.WithCancellation(CancellationToken.None),
-			home.AsContainer));
+			home));
 
 		// A new object inherits its creator's zone, once the cycle guard allows it.
 		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone &&
@@ -86,4 +86,55 @@ public static class BuildingHelpers
 
 		return thing;
 	}
+
+	/// <summary>
+	/// PennMUSH <c>do_create</c> (<c>src/create.c:589-597</c>) derives the new object's home from the
+	/// creator and never from a configured constant:
+	/// <code>
+	/// if ((loc = Location(player)) != NOTHING &amp;&amp; (controls(player, loc) || Abode(loc)))
+	///   Home(thing) = loc;
+	/// else
+	///   Home(thing) = Home(player);
+	/// </code>
+	/// <c>Database.DefaultHome</c> survives only as the last resort, for a creator whose own home is
+	/// unset — a room without a drop-to, or an exit that has never been linked. Penn cannot reach that
+	/// branch, because every one of its objects always carries a <c>home</c>.
+	/// </summary>
+	private static async ValueTask<AnyOptionalSharpContainer> HomeForNewObjectAsync(
+		IMediator mediator,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		IPermissionService permissionService,
+		AnySharpObject executor)
+	{
+		var where = await executor.Where();
+		if (await permissionService.Controls(executor, where.WithExitOption()) || await where.Object().HasFlag("ABODE"))
+		{
+			return new AnyOptionalSharpContainer(where);
+		}
+
+		if (await CreatorHomeAsync(executor) is AnySharpContainer own)
+		{
+			return new AnyOptionalSharpContainer(own);
+		}
+
+		var configured = new DBRef((int)configuration.CurrentValue.Database.DefaultHome);
+		return await mediator.Send(new GetObjectNodeQuery(configured)) is AnySharpObject { IsContainer: true } fallback
+			? new AnyOptionalSharpContainer(fallback.AsContainer)
+			: new AnyOptionalSharpContainer(new None());
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>home</c> field is one slot read differently per type, and <c>Home(player)</c> at
+	/// create.c:595 reads whichever applies to the creator: a player's or thing's home, an exit's
+	/// destination (<c>src/db.h</c> aliases <c>Destination</c> to it), or a room's drop-to.
+	/// </summary>
+	private static async ValueTask<AnyOptionalSharpContainer> CreatorHomeAsync(AnySharpObject executor) => executor switch
+	{
+		SharpPlayer player => new AnyOptionalSharpContainer(
+			await player.Home.WithCancellation(CancellationToken.None)),
+		SharpThing thing => new AnyOptionalSharpContainer(
+			await thing.Home.WithCancellation(CancellationToken.None)),
+		SharpExit exit => await exit.Home.WithCancellation(CancellationToken.None),
+		SharpRoom room => await room.Location.WithCancellation(CancellationToken.None)
+	};
 }
