@@ -17,7 +17,7 @@ Disabled, NoFixed, Localize, LogName, LogArgs and Deprecated describe dispatch b
 
 The existing @function/disable registry path hides disabled user definitions during resolution; its existing command regression remains applicable. It is separate from Disabled on a registered C# function.
 
-Live PennMUSH 1.8.8 checks confirmed `pemit()` with global side effects off returns `#-1 FUNCTION DISABLED`, localized q-register changes restore the caller, and the ibreak defaults above. `e()` and `e(null())` both default to exp(1); `e(0)` is 1. SharpMUSH direct-output extensions wsjson, wshtml and oob deliberately obey the same side-effect switch as pemit.
+Live PennMUSH 1.8.8 checks confirmed `pemit()` with global side effects off returns `#-1 FUNCTION DISABLED`, localized q-register changes restore the caller, and the ibreak defaults above. `e()` and `e(null())` both default to exp(1); `e(0)` is 1. SharpMUSH's direct-output extension oob() deliberately obeys the same side-effect switch as pemit; wshtml() returns markup and sends nothing, so it does not.
 
 ## Dispatcher contract
 
