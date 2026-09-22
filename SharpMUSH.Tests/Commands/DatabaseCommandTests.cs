@@ -441,19 +441,6 @@ public class DatabaseCommandTests
 	[Test]
 	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
-	public async ValueTask UnrecycleCommand()
-	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@unrecycle #100"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("@UNRECYCLE: Object recovery system not yet implemented."), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask DisableCommand()
 	{
 		var executor = SqlWebAppFactoryArg.ExecutorDBRef;

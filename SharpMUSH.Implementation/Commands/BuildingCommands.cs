@@ -30,17 +30,21 @@ public partial class Commands
 	}
 
 	/// <remarks>
-	/// Creating on the DBRef is not implemented.
+	/// <c>CB.RSArgs</c> matches PennMUSH's <c>CMD_T_RS_ARGS</c> on <c>@CREATE</c>
+	/// (<c>src/command.c:124</c>): the right side is <c>&lt;cost&gt;,&lt;dbref&gt;</c>, and without the
+	/// split the whole of it arrived as one argument, so the dbref could not be read at all.
 	/// NOTE: Cost parameter requires economy/quota system implementation.
 	/// </remarks>
-	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 3, ParameterNames = ["name", "cost", "dbref"])]
+	[SharpCommand(Name = "@CREATE", Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 1, MaxArgs = 3, ParameterNames = ["name", "cost", "dbref"])]
 	public async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var args = parser.CurrentState.Arguments;
 
 		return await BuildingHelpers.CreateThingAsync(parser, Mediator, Database, Configuration, ValidateService,
-			NotifyService, EventService, executor, parser.CurrentState.Arguments["0"].Message!) switch
+			NotifyService, EventService, PermissionService, executor, args["0"].Message!,
+			args.TryGetValue("2", out var requestedDbref) ? requestedDbref.Message : null) switch
 		{
 			DBRef thing => new CallState(thing.ToString()),
 			Error<string> error => new CallState(error.Value)
@@ -866,12 +870,18 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NoRoomNameSpecified);
 		}
 
-		// NOTE: Additional permission checks needed:
-		// - Can executor create rooms (quota check)
-		// - Does executor have DIG permission
+		// NOTE: Additional permission check still needed: does executor have DIG permission.
 
-		var response = await Mediator.Send(new CreateRoomCommand(roomName.ToPlainText(),
-			await executor.Owner.WithCancellation(CancellationToken.None)));
+		// create.c:480 — do_dig charges the room before new_object(), and each exit below is charged
+		// again on its own inside do_real_open (:130).
+		if (await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executorBase,
+				async () => await Mediator.Send(new CreateRoomCommand(roomName.ToPlainText(),
+					await executor.Owner.WithCancellation(CancellationToken.None))))
+			is not DBRef response)
+		{
+			return new CallState(ErrorMessages.Returns.BuildingQuotaExhausted);
+		}
+
 		await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executorBase, roomName, response.Number);
 
 		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
@@ -893,9 +903,16 @@ public partial class Commands
 			// CAN CREATE EXIT HERE?
 			// CAN LINK TO DESTINATION?
 
-			var toExitResponse = await Mediator.Send(new CreateExitCommand(exitToName.First(),
-				exitToName.Skip(1).ToArray(), await executorBase.Where(),
-				await executor.Owner.WithCancellation(CancellationToken.None)));
+			if (await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executorBase,
+					async () => await Mediator.Send(new CreateExitCommand(exitToName.First(),
+						exitToName.Skip(1).ToArray(), await executorBase.Where(),
+						await executor.Owner.WithCancellation(CancellationToken.None))))
+				is not DBRef toExitResponse)
+			{
+				// do_dig keeps the room it has already paid for and stops here (create.c:507-510).
+				return new CallState(response.ToString());
+			}
+
 			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{toExitResponse.Number}");
 			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
 
@@ -921,9 +938,15 @@ public partial class Commands
 				throw new InvalidOperationException("The room just dug must exist.");
 			}
 
-			var fromExitResponse = await Mediator.Send(new CreateExitCommand(exitFromName.First(),
-				exitFromName.Skip(1).ToArray(), newRoomObject,
-				await executor.Owner.WithCancellation(CancellationToken.None)));
+			if (await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executorBase,
+					async () => await Mediator.Send(new CreateExitCommand(exitFromName.First(),
+						exitFromName.Skip(1).ToArray(), newRoomObject,
+						await executor.Owner.WithCancellation(CancellationToken.None))))
+				is not DBRef fromExitResponse)
+			{
+				return new CallState(response.ToString());
+			}
+
 			if (await Mediator.Send(new GetObjectNodeQuery(fromExitResponse)) is not (AnySharpObject and SharpExit newExitObject))
 			{
 				throw new InvalidOperationException("The exit just opened must exist.");
@@ -995,12 +1018,17 @@ public partial class Commands
 				shouldNotify: true);
 		}
 
-		var exitDbRef = await Mediator.Send(new CreateExitCommand(
-			primaryName,
-			aliases,
-			sourceRoom,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)
-		));
+		// do_real_open asks can_pay_fees once the name and the source room have passed (create.c:130).
+		if (await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executor,
+				async () => await Mediator.Send(new CreateExitCommand(
+					primaryName,
+					aliases,
+					sourceRoom,
+					await executor.Object().Owner.WithCancellation(CancellationToken.None))))
+			is not DBRef exitDbRef)
+		{
+			return new CallState(ErrorMessages.Returns.BuildingQuotaExhausted);
+		}
 
 		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
 		if (creatorZone is AnySharpObject zone)
@@ -1049,6 +1077,10 @@ public partial class Commands
 		return new CallState(exitDbRef.ToString());
 	}
 
+	/// <remarks>
+	/// PennMUSH <c>cmd_clone</c> (<c>src/cmds.c</c>) is one call to <c>do_clone</c>, which
+	/// <see cref="BuildingHelpers.CloneAsync"/> is; <c>clone()</c> reaches the same body.
+	/// </remarks>
 	[SharpCommand(Name = "@CLONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "name", "cost"])]
 	public async ValueTask<Option<CallState>> Clone(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -1056,223 +1088,16 @@ public partial class Commands
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var targetName = args["0"].Message!.ToPlainText();
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
-		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
-		var defaultHomeDbref = new DBRef((int)defaultHome);
-		if (await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref)) is not AnySharpObject location
-				|| location.IsExit)
-		{
-			return await NotifyService.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.NotARoom,
-					notifyMessage: ErrorMessages.Notifications.DefaultHomeLocationInvalid,
-					shouldNotify: true);
-		}
-
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, targetName, LocateFlags.All,
-			async obj =>
+			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
+			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Configuration, NotifyService, PermissionService,
+				AttributeService, ManipulateSharpObjectService, DidItService, EventService, Logger, executor, obj,
+				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve) switch
 			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				if (obj.IsPlayer)
-				{
-					return await NotifyService.NotifyAndReturn(
-							executor.Object().DBRef,
-							errorReturn: ErrorMessages.Returns.InvalidObjectType,
-							notifyMessage: ErrorMessages.Notifications.CannotClonePlayers,
-							shouldNotify: true);
-				}
-
-				var newName = obj.Object().Name;
-				if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
-				{
-					newName = args["1"].Message!.ToPlainText();
-				}
-
-				DBRef cloneDbRef;
-				var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
-
-				if (obj.IsThing)
-				{
-					cloneDbRef = await Mediator.Send(new CreateThingCommand(
-						newName,
-						await executor.Where(),
-						owner,
-						location.AsContainer
-					));
-				}
-				else if (obj.IsRoom)
-				{
-					cloneDbRef = await Mediator.Send(new CreateRoomCommand(
-						newName,
-						owner
-					));
-				}
-				else if (obj.IsExit)
-				{
-					var nameParts = newName.Split(";");
-					cloneDbRef = await Mediator.Send(new CreateExitCommand(
-						nameParts[0],
-						nameParts.Skip(1).ToArray(),
-						await executor.Where(),
-						owner
-					));
-				}
-				else
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.InvalidObjectType,
-						notifyMessage: ErrorMessages.Notifications.CannotCloneThisObjectType,
-						shouldNotify: true);
-				}
-
-				if (await Mediator.Send(new GetObjectNodeQuery(cloneDbRef)) is not AnySharpObject clonedObj)
-				{
-					throw new InvalidOperationException("The clone just created must exist.");
-				}
-
-				// Penn's atr_cpy (attrib.c:1692-1710) walks the source's flat, sorted attribute
-				// list - branch vs. leaf is purely a naming convention over one namespace - and
-				// for each attribute checks AF_Nocopy, then calls atr_new_add(..., makeroots:
-				// false). With makeroots false, atr_new_add (attrib.c:756-820) silently aborts
-				// without adding when the immediate parent isn't already on the destination
-				// (:804-806). Because the list is sorted with parent before child, a no_clone
-				// BRANCH is itself skipped by atr_cpy, and its leaves then find no parent on the
-				// clone either and are dropped too - incidentally, via the missing-root abort,
-				// not via any permission walk of their own. GetAttributesByRegexAsync (via
-				// GetAttributesQuery in Regex mode) is used here rather than the depth-1
-				// enumeration above (or the unsorted GetAttributesAsync) because it walks the
-				// whole tree and sorts LongName ascending - parent before child - which this
-				// skip-propagation depends on.
-				var skippedAttributes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-				await foreach (var sourceAttribute in Mediator.CreateStream(
-					new GetAttributesQuery(obj.Object().DBRef, ".*", false,
-						IAttributeService.AttributePatternMode.Regex)))
-				{
-					var attr = sourceAttribute.Attribute;
-					var longName = attr.LongName!;
-					var attrPath = longName.Split('`');
-					var lastSeparator = longName.LastIndexOf('`');
-					var parentLongName = lastSeparator < 0 ? null : longName[..lastSeparator];
-					var parentSkipped = parentLongName is not null && skippedAttributes.Contains(parentLongName);
-
-					// The "_"-prefix skip is a pre-existing SharpMUSH-only filter, orthogonal to
-					// Penn's no_clone. It folds into the same skip set so that a "_"-prefixed
-					// branch's children don't get silently auto-vivified a stripped-down parent
-					// missing-root hazard the no_clone propagation above exists to avoid.
-					if (attr.IsNoCopy() || attr.Name.StartsWith("_") || parentSkipped)
-					{
-						skippedAttributes.Add(longName);
-						continue;
-					}
-
-					// AL_CREATOR(ptr) is passed through unchanged in atr_cpy (attrib.c:1706) - a
-					// cloned attribute keeps its original creator, not the cloner.
-					var creator = await attr.Owner.WithCancellation(CancellationToken.None) ?? owner;
-					var setResult = await AttributeService.SetAttributeAsync(executor, clonedObj, longName, attr.Value, creator);
-
-					// A failed set means the branch was NOT actually copied. Treating it as
-					// skipped keeps the invariant this whole loop depends on: a LongName only
-					// avoids the skip set if it genuinely landed on the clone. Without this, a
-					// child under a branch that failed to set would still see its parent as
-					// "not skipped" and auto-vivify a stripped-down stand-in via
-					// 608-675) - the exact hazard this propagation exists to prevent. Unreachable
-					// today (the clone's owner always controls the freshly-created destination),
-					// but one permission change away from live.
-					if (setResult is Error<string>)
-					{
-						skippedAttributes.Add(longName);
-						continue;
-					}
-
-					// AL_FLAGS(ptr) is assigned directly alongside AL_CREATOR on the very same
-					// atr_new_add call (attrib.c:1706-1707) - Penn copies the flags too, with no
-					// permission gate at all: atr_new_add is a deliberately "dangerous", bypass-
-					// everything helper reserved for database load and atr_cpy (its own doc
-					// comment, attrib.c:750-754). SetAttributeAsync only just created the
-					// destination attribute with whatever SharpAttributeEntry.DefaultFlags
-					// applies (AttributeService.cs, applied inside SetAttributeCommand's handler)
-					// - a SharpMUSH-only mechanism Penn has no equivalent of - so the destination
-					// flag set is forced to match the source's exactly, mirroring Penn's
-					// unconditional overwrite rather than a union. Goes straight through
-					// SetAttributeFlagCommand/UnsetAttributeFlagCommand (no permission checks in
-					// either handler) rather than AttributeService.SetAttributeFlagsAsync, for the
-					// same bypass reason atr_new_add itself bypasses can_write_attr.
-					var destAttribute = await Mediator.CreateStream(new GetAttributeQuery(clonedObj.Object().DBRef, attrPath))
-						.LastOrDefaultAsync();
-
-					if (destAttribute is not null)
-					{
-						var sourceFlagNames = attr.Flags.Select(f => f.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-						var destFlagNames = destAttribute.Flags.Select(f => f.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-						foreach (var flag in destAttribute.Flags.Where(f => !sourceFlagNames.Contains(f.Name)))
-						{
-							await Mediator.Send(new UnsetAttributeFlagCommand(clonedObj.Object().DBRef, destAttribute, flag));
-						}
-
-						foreach (var flag in attr.Flags.Where(f => !destFlagNames.Contains(f.Name)))
-						{
-							await Mediator.Send(new SetAttributeFlagCommand(clonedObj.Object().DBRef, destAttribute, flag));
-						}
-					}
-					else
-					{
-						// SetAttributeAsync above reported success, so the destination attribute
-						// should exist - this re-fetch failing is not the "copy failed" case
-						// handled above (that one still owns skippedAttributes so children don't
-						// auto-vivify a stripped parent). Here the value genuinely landed; only
-						// the flag sync had nothing to attach to. Surface it instead of silently
-						// leaving the clone's flags at SetAttributeAsync's defaults.
-						Logger?.LogWarning(
-							"Clone flag sync skipped for {LongName} on {CloneDbRef}: destination attribute was not found immediately after a successful set",
-							longName, clonedObj.Object().DBRef);
-					}
-				}
-
-				foreach (var (name, data) in obj.Object().Locks)
-				{
-					if (data.Flags.HasFlag(Library.Services.LockService.LockFlags.NoClone)) continue;
-					var copied = await Mediator.Send(new CopyLockCommand(obj.Object(), clonedObj.Object(), name, executor));
-					if (copied is Error<string> failure) await NotifyService.Notify(executor, $"Unable to clone {name} lock: {failure.Value}", executor);
-				}
-
-				// Synchronised to the source, not unioned with it. The clone is created through the same
-				// path as any other object and therefore arrives carrying the configured creation
-				// defaults, so copying only what the source has would leave a NO_COMMAND that the source
-				// had deliberately cleared — and the $-commands just copied onto the clone would not run.
-				// The attribute-flag sync above works the same way, for the same reason.
-				var copyable = await obj.Object().Flags.Value
-					.Where(flag => preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
-					.Select(flag => flag.Name)
-					.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
-
-				// The provider reads the flags in full when enumeration starts, and an unset swaps the
-				// object's Flags for a new list rather than editing the one being walked.
-				await foreach (var flag in clonedObj.Object().Flags.Value.Where(flag => !copyable.Contains(flag.Name)))
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, $"!{flag.Name}", false);
-				}
-
-				foreach (var flagName in copyable)
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, flagName, false);
-				}
-
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ClonedNewObjectFormat), executor, cloneDbRef.Number);
-				return new CallState(cloneDbRef.ToString());
+				DBRef clone => new CallState(clone.ToString()),
+				Error<string> error => new CallState(error.Value)
 			}
 		);
 	}
@@ -1398,20 +1223,12 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@UNRECYCLE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["object"])]
+	/// <summary>
+	/// PennMUSH maps @UNRECYCLE onto cmd_undestroy (src/command.c:324), the same handler @UNDESTROY
+	/// gets at :319 — the two are one command under two names. <see cref="SharpCommandAttribute"/>
+	/// carries no alias field, so the alias is a delegation.
+	/// </summary>
+	[SharpCommand(Name = "@UNRECYCLE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> UnRecycle(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		if (!await executor.IsWizard())
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		await NotifyService.Notify(executor, "@UNRECYCLE: Object recovery system not yet implemented.", executor);
-		await NotifyService.Notify(executor, "This command would restore objects from the recycle bin.", executor);
-
-		return CallState.Empty;
-	}
+		=> await UnDestroy(parser, _2);
 }

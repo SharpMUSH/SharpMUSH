@@ -15,9 +15,9 @@ public partial class Commands
 	[SharpCommand(Name = "@MAIL",
 		Switches =
 		[
-			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDER", "UNFOLDER", "LIST", "READ",
-			"UNREAD", "CLEAR", "UNCLEAR", "STATUS", "PURGE", "FILE", "TAG", "UNTAG", "FWD", "FORWARD", "SEND", "SILENT",
-			"URGENT", "REVIEW", "RETRACT"
+			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDERS", "FOLDER", "UNFOLDER",
+			"LIST", "READ", "UNREAD", "CLEAR", "UNCLEAR", "STATUS", "PURGE", "FILE", "TAG", "UNTAG", "FWD", "FORWARD",
+			"SEND", "SILENT", "URGENT", "REVIEW", "RETRACT"
 		], Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["player", "subject"])]
 	public async ValueTask<Option<CallState>> Mail(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -48,8 +48,10 @@ public partial class Commands
 
 		var response = switches.AsSpan() switch
 		{
-			[.., "FOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService, Mediator,
-				NotifyService, arg0, arg1, switches),
+			// PennMUSH declares FOLDERS (src/command.c:206-207) and no FOLDER; the singular is kept as an
+			// intentional alias. Switch validation is exact-match, so both must be declared.
+			[.., "FOLDERS"] or [.., "FOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService,
+				Mediator, NotifyService, arg0, arg1, switches),
 			[.., "UNFOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService, Mediator,
 				NotifyService, arg0, arg1, switches),
 			[.., "FILE"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService, Mediator,

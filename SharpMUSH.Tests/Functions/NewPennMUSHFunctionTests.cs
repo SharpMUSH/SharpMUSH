@@ -13,13 +13,42 @@ public class NewPennMUSHFunctionTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
-	#region DELETE/INSERT Tests (Aliases for ldelete/linsert)
+	#region DELETE (alias of strdelete) / INSERT (alias of linsert)
 
+	/// <summary>
+	/// PennMUSH's hardcoded alias table maps DELETE to STRDELETE (<c>src/function.c:335</c>), not to
+	/// LDELETE: zero-based deletion of <em>characters</em>. This asserted list semantics, so
+	/// <c>delete(abcdef,1,2)</c> answered the empty string where PennMUSH answers <c>adef</c>.
+	/// LDELETE keeps the list meaning and is tested below.
+	/// </summary>
 	[Test]
-	[Arguments("delete(a b c d,2)", "a c d")]
-	[Arguments("delete(a b c d,1)", "b c d")]
-	[Arguments("delete(one|two|three,2,|)", "one|three")]
-	public async Task DELETE_RemovesItemFromList(string input, string expected)
+	[Arguments("delete(abcdef,1,2)", "adef")]
+	[Arguments("delete(abcdefgh,3,2)", "abcfgh")]
+	[Arguments("strdelete(abcdef,1,2)", "adef")]
+	public async Task DELETE_IsAnAliasOfStrdelete(string input, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// <c>fun_delete</c> (<c>src/funstr.c:345</c>), against the live 1.8.8 oracle. A bare
+	/// <c>string.Remove</c> throws on every one of these. Note the negative length: the shipped
+	/// PennMUSH help claims it deletes backwards, but the code leaves <c>num</c> negative and
+	/// <c>ansi_string_delete</c> (<c>src/markup.c:2301</c>) returns early on <c>count &lt; 1</c>, so
+	/// the string comes back untouched. The oracle agrees with the code, so SharpMUSH follows it.
+	/// </summary>
+	[Test]
+	[Arguments("strdelete(abcdef,x,2)", "#-1 ARGUMENTS MUST BE INTEGERS")]
+	[Arguments("strdelete(abcdef,1,y)", "#-1 ARGUMENTS MUST BE INTEGERS")]
+	[Arguments("strdelete(abcdef,-1,2)", "#-1 OUT OF RANGE")]
+	[Arguments("strdelete(abcdef,10,2)", "abcdef")]
+	[Arguments("strdelete(abcdef,6,1)", "abcdef")]
+	[Arguments("strdelete(abcdef,2,0)", "abcdef")]
+	[Arguments("strdelete(abcdefgh,3,-2)", "abcdefgh")]
+	[Arguments("strdelete(abcdef,2,-99)", "abcdef")]
+	[Arguments("strdelete(abcdef,4,99)", "abcd")]
+	public async Task StrdeleteOutOfRange(string input, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(input)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);

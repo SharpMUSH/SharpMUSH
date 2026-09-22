@@ -1253,26 +1253,63 @@ public partial class Functions
 		return errors.Complete(new CallState(errors.Record(await argsArray[^1].Value.GetParsedResultAsync())));
 	}
 
-	[SharpFunction(Name = "strallof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["expression..."])]
-	public ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	/// <summary>
+	/// The non-empty candidates joined by the trailing delimiter.
+	/// </summary>
+	/// <remarks>
+	/// <c>FN_NOPARSE</c> in PennMUSH (<c>{"STRALLOF", fun_allof, 2, INT_MAX, FN_NOPARSE}</c>,
+	/// <c>src/function.c:765</c>): <c>do_whichof</c> parses the trailing delimiter before any
+	/// candidate (<c>src/funmisc.c:1405-1413</c>), so a side effect written there is visible to
+	/// every candidate. Registered <c>Regular</c>, the parser pre-evaluated the arguments left to
+	/// right and the candidates ran first.
+	///
+	/// <para>This is <see cref="AllOf"/> with PennMUSH's <c>isbool</c> flag off — one C function
+	/// serves both, differing only in whether a candidate counts because it is true or because it
+	/// is non-empty. The two bodies are apart here only because they sit in different files.</para>
+	/// </remarks>
+	[SharpFunction(Name = "strallof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression..."])]
+	public async ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		// Last arg is the output delimiter; return all non-empty results joined by it.
 		if (args.Count < 2)
 		{
-			return ValueTask.FromResult(CallState.Empty);
+			return CallState.Empty;
 		}
 
-		var delimiter = args[(args.Count - 1).ToString()].Message ?? MarkupText.Empty;
-		var nonEmptyValues = Enumerable.Range(0, args.Count - 1)
-			.Select(i => args[i.ToString()].Message ?? MarkupText.Empty)
-			.Where(value => value.Length > 0);
+		var delimParsed = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!);
+		var delimiter = delimParsed?.Message ?? MarkupText.Empty;
+		var hadErrors = delimParsed?.HadErrors == true;
 
-		return ValueTask.FromResult(new CallState(MarkupText.Join(delimiter, nonEmptyValues)));
+		var nonEmptyValues = new List<MString>();
+		for (var i = 0; i < args.Count - 1; i++)
+		{
+			var parsed = await parser.FunctionParse(args[i.ToString()].Message!);
+			hadErrors |= parsed?.HadErrors == true;
+			var value = parsed?.Message ?? MarkupText.Empty;
+			if (value.Length > 0) nonEmptyValues.Add(value);
+		}
+
+		return new CallState(MarkupText.Join(delimiter, nonEmptyValues)) { HadErrors = hadErrors };
 	}
 
-	[SharpFunction(Name = "table", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "width", "delimiter", "line-delimiter"])]
+	/// <summary>
+	/// The list laid out in columns.
+	/// </summary>
+	/// <remarks>
+	/// <c>fun_table</c> (<c>src/funlist.c:2440</c>) clamps every width rather than refusing one: a
+	/// field width below 1 becomes 1 (<c>:2483-2484</c>), a line length below 2 becomes 2
+	/// (<c>:2470-2471</c>), and a field width at or above the line length becomes
+	/// <c>line_length - 1</c> (<c>:2488-2489</c>).
+	///
+	/// <para>The packing is incremental (<c>:2533-2544</c>) rather than a column count: the width of
+	/// each field is added to the running column before the wrap test, and the output separator is
+	/// charged to the line only when one is actually written — which is why the separator can push a
+	/// line past <c>&lt;line length&gt;</c> by its own width but never causes the wrap itself. A
+	/// column count derived from <c>line / field</c> gets the same answer only while the separator is
+	/// one character and divides evenly.</para>
+	/// </remarks>
+	[SharpFunction(Name = "table", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "field width", "line length", "delimiter", "osep"])]
 	public async ValueTask<CallState> Table(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await ValueTask.CompletedTask;
@@ -1301,11 +1338,10 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.InvalidLineWidth);
 		}
 
-		var fieldsPerLine = lineWidth / fieldWidth;
-		if (fieldsPerLine < 1)
-		{
-			return new CallState(ErrorMessages.Returns.FieldWidthExceedsLineWidth);
-		}
+		if (lineWidth < 2) lineWidth = 2;
+		fieldWidth = Math.Clamp(fieldWidth, 1, PennBufferLength - 1);
+		if (fieldWidth >= lineWidth) fieldWidth = lineWidth - 1;
+
 		// Alignment rather than PadType: PadType names the side the *fill* lands on, which is the
 		// opposite of the side the text lands on, and this read the two the wrong way round.
 		var field = new ColumnFormat
@@ -1319,15 +1355,44 @@ public partial class Functions
 			},
 		};
 
-		var list = MushText.SplitList(delimiterArg, listArg ?? MarkupText.Empty);
-		var resultFields = list.Select(x => x.FormatColumn(field)[0]);
+		var cells = MushText.SplitList(delimiterArg, listArg ?? MarkupText.Empty)
+			.Select(x => x.FormatColumn(field)[0])
+			.ToList();
 
-		var lines = resultFields.Chunk(fieldsPerLine);
-		var linesWithSeparators = lines.Select(x => MarkupText.Join(separatorArg, x));
-		var result = MarkupText.Join(MarkupText.NewLine, linesWithSeparators);
+		if (cells.Count == 0)
+		{
+			return new CallState(MarkupText.Empty);
+		}
 
-		return new CallState(result);
+		var separatorWidth = separatorArg.Length;
+		var packed = new List<MString> { cells[0] };
+		var column = fieldWidth;
+
+		foreach (var cell in cells.Skip(1))
+		{
+			column += fieldWidth;
+			if (column > lineWidth)
+			{
+				packed.Add(MarkupText.NewLine);
+				column = fieldWidth;
+			}
+			else if (separatorWidth > 0)
+			{
+				packed.Add(separatorArg);
+				column += separatorWidth;
+			}
+
+			packed.Add(cell);
+		}
+
+		return new CallState(MarkupText.Join(MarkupText.Empty, packed));
 	}
+
+	/// <summary>
+	/// PennMUSH's <c>BUFFER_LEN</c>, which is what <c>fun_table</c> caps a field width against
+	/// (<c>src/funlist.c:2485-2486</c>) before the line-length clamp narrows it further.
+	/// </summary>
+	private const int PennBufferLength = 8192;
 
 	[SharpFunction(Name = "unique", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter", "osep"])]
 	public ValueTask<CallState> DistinctAndSort(IMUSHCodeParser parser, SharpFunctionAttribute _2)

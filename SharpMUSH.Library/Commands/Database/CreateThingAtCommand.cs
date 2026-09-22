@@ -1,0 +1,38 @@
+using Mediator;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
+
+namespace SharpMUSH.Library.Commands.Database;
+
+/// <summary>
+/// <see cref="CreateThingCommand"/> at a dbref the caller names — PennMUSH's
+/// <c>make_first_free_wrapper</c> (<c>src/destroy.c:928</c>) ahead of <c>do_create</c>'s
+/// <c>new_object()</c>. It is a command of its own rather than an option on
+/// <see cref="CreateThingCommand"/> because it can fail for a reason the caller has to report:
+/// <c>@create name=cost,#42</c> either lands on <c>#42</c> or creates nothing.
+/// </summary>
+/// <param name="Requested">The dbref the new thing must have</param>
+public record CreateThingAtCommand(DBRef Requested, string Name, AnySharpContainer Where, SharpPlayer Owner,
+	AnySharpContainer Home) : ICommand<Result<DBRef>>, ICacheInvalidating, ICacheInvalidatingByResult<Result<DBRef>>
+{
+	public string[] CacheKeys => [Definitions.CacheKeys.Contents(Where.Object().DBRef), Definitions.CacheKeys.Object(Owner.Object.DBRef), Definitions.CacheKeys.Object(Home.Object().DBRef)];
+
+	public string[] CacheTags => [
+		Definitions.CacheTags.ObjectList,
+		Definitions.CacheTags.ThingList,
+		Definitions.CacheTags.ObjectOwnership,
+		Definitions.CacheKeys.ContentsTag(Where.Object().DBRef.Number)
+	];
+
+	/// <summary>
+	/// The requested dbref was a hole, so every reader that looked it up while it was one cached a
+	/// miss. A refusal wrote nothing and invalidates nothing.
+	/// </summary>
+	public string[] CacheKeysFor(Result<DBRef> result) => result switch
+	{
+		DBRef created => [Definitions.CacheKeys.Object(created)],
+		Error<string> => []
+	};
+}

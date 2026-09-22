@@ -1,4 +1,7 @@
+using SharpMUSH.Configuration;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
@@ -48,13 +51,52 @@ public class FloatPrecisionTests
 	public async Task PennMUSHRootCaseAtTenPlaces()
 		=> await Assert.That(await Evaluate("[root(125, 5)]", precision: 10)).IsEqualTo("2.6265278044");
 
+	/// <summary>
+	/// The default is six places, which is what PennMUSH's <c>conf.c</c> and the <c>mushcnf.dst</c>
+	/// this repository ships both say. It was written down twice as 15, and 15 places of a
+	/// <c>double</c> is binary noise as soon as the value leaves the unit interval: the test this
+	/// replaces only ever looked at values below 10, where the noise falls off the end, so it stayed
+	/// green while <c>power(10.1,2)</c> printed <c>102.009999999999991</c>.
+	/// </summary>
 	[Test]
-	[Arguments("fdiv(1,3)", "0.333333333333333")]
-	[Arguments("pi()", "3.141592653589793")]
-	[Arguments("e()", "2.718281828459045")]
-	[Arguments("sqrt(2)", "1.414213562373095")]
-	public async Task DefaultIsFifteenPlaces(string code, string expected)
+	[Arguments("power(10.1,2)", "102.01")]
+	[Arguments("fdiv(1,3)", "0.333333")]
+	[Arguments("pi()", "3.141593")]
+	[Arguments("e()", "2.718282")]
+	[Arguments("sqrt(2)", "1.414214")]
+	public async Task TheDefaultIsSixPlaces(string code, string expected)
 		=> await Assert.That(await Evaluate($"[{code}]")).IsEqualTo(expected);
+
+	/// <summary>
+	/// Every place the shipped default is written down has to say the same thing: the code default,
+	/// the fallbacks the PennMUSH config importer uses for an option a <c>mush.cnf</c> does not set,
+	/// the <c>mushcnf.dst</c> this repository ships, and the precision
+	/// <see cref="Configurable.FloatPrecision"/> answers before a host wires it to the live
+	/// configuration.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="Configurable.DefaultFloatPrecision"/> cannot be asserted through
+	/// <see cref="Configurable.FloatPrecision"/>: that is process-wide static state which the test
+	/// host has already pointed at its own configuration, and re-pointing it here would change the
+	/// game under every test running in parallel.
+	/// </remarks>
+	[Test]
+	public async Task SixPlacesEverywhereTheDefaultIsWrittenDown()
+	{
+		var shipped = Path.Combine(TestPaths.RepositoryRoot, "SharpMUSH.Configuration", "mushcnf.dst");
+
+		await Assert.That(OptionsService.Default().Cosmetic.FloatPrecision).IsEqualTo(6u);
+		await Assert.That(ReadPennMushConfig.Create(EmptyConfigFile()).Cosmetic.FloatPrecision).IsEqualTo(6u);
+		await Assert.That(ReadPennMushConfig.Create(shipped).Cosmetic.FloatPrecision).IsEqualTo(6u);
+		await Assert.That(Configurable.DefaultFloatPrecision).IsEqualTo(6u);
+	}
+
+	private static string EmptyConfigFile()
+	{
+		var path = Path.Combine(Path.GetTempPath(), $"sharpmush-float-precision-{Guid.NewGuid():N}.cnf");
+		File.WriteAllText(path, string.Empty);
+		return path;
+	}
 
 	[Test]
 	[Arguments("add(0.1,0.2)", "0.3")]

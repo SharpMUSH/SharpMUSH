@@ -344,22 +344,45 @@ representation choice is deliberate and tracked separately in #1006 item 13.
 ## Number precision
 
 `float_precision` is the number of decimal places every floating-point result is written with,
-trailing zeros dropped, as in PennMUSH. PennMUSH defaults to 6; **SharpMUSH defaults to 15**, and
-caps the setting at 15. Code that formatted PennMUSH output by relying on its rounding will see more
-digits here. `round()` cannot ask for more places than the setting allows.
+trailing zeros dropped, as in PennMUSH. SharpMUSH defaults to 6, the same as PennMUSH, and caps the
+setting at 15. `round()` cannot ask for more places than the setting allows.
 
 A result that rounds to zero from below is written `0`, where PennMUSH writes `-0`.
 
-**Workaround.** `round()` to the precision you want rather than relying on the default.
-
 ```sharp
 > think pi()
-3.141592653589793
+3.141593
 > think round(pi(),6)
 3.141593
 > think fdiv(-1,10000000000000000)
 0
 ```
+
+## Fraction representation
+
+`fraction()` answers the **exact** rational of its argument, reduced. Every number softcode can hand
+it is a decimal, so an exact rational always exists, and dividing the result out gives back exactly
+the number that went in.
+
+PennMUSH answers the *simplest* fraction within one part in 10^10 instead: `frac()` walks the
+convergents of a continued fraction and stops at the first one inside that tolerance, which its own
+help states — "dividing the numerator by the denominator of the results will not always return the
+original `<number>`, but something close to it". Where no simpler fraction is that close the two
+agree, which covers every number of six decimal places or fewer; where one is, SharpMUSH stays exact
+and PennMUSH does not.
+
+**Workaround.** `round()` the number first if you want a simpler fraction than the one it names.
+
+```sharp
+> think fraction(pi())
+3141593/1000000
+> think fraction(0.3333334)
+1666667/5000000
+> think fraction(-2.75)
+-11/4
+```
+
+PennMUSH answers `348987/111086` for the first of those, off by 1.8e-11.
 
 # COMPATIBILITY OUTPUT
 `render(<string>, <formats>)` converts a string's markup for something outside the game — a bot, a
@@ -477,12 +500,7 @@ fourth argument is undecided.
 Differences that are **bugs**, tracked and expected to change. Listed so they are not mistaken for
 choices.
 
-  **`hasattr()`, `hasattrp()`, `hasattrval()`, `hasattrpval()` require two arguments.** PennMUSH also
-  accepts the single-argument `<object>/<attribute>` form. (#974)<br>
   **`pcreate()` takes no third argument.** PennMUSH accepts an optional dbref to reuse. (#974)<br>
-  **`textentries()` is `textentries(<type>[, <osep>])`** — it lists every entry. PennMUSH is
-  `textentries(<type>, <pattern>[, <osep>])`, where `<pattern>` is required and filters the list;
-  SharpMUSH has no way to filter. (#974)<br>
   **`attrib_set#()` cannot be called.** The parser's function-name token does not admit `#`, so the
   text is returned unchanged. Use `attrib_set()`. (#974)<br>
   **`objmem()` always answers 0.** (#974)<br>
@@ -498,6 +516,14 @@ These once differed and now match PennMUSH; noted here only because earlier Shar
 behaved differently.
 
 - Lock operator precedence: `&` binds tighter than `|`, so `a & b | c` is `(a & b) | c`.
+- `textentries()` is `textentries(<type>, <pattern>[, <osep>])`: the pattern is required and
+  filters the topic names. `textentries()` and `textfile()` also refuse an unknown `<type>` and
+  gate the administrator-only `ahelp` corpus on wizard or royalty, as PennMUSH's `admin` help
+  files are. SharpMUSH words the first refusal `#-1 FILE NOT FOUND`, where PennMUSH says
+  `#-1 NO SUCH FILE`.
+- `hasattr()`, `hasattrp()`, `hasattrval()` and `hasattrpval()` take the whole
+  `<object>/<attribute>` spec in one argument as well as the two-argument form; one argument
+  carrying no `/` is `#-1 BAD ARGUMENT FORMAT TO <function>`.
 - `letq()` requires an odd number of arguments and `setr()` an even number; `case()`/`caseall()` have
   no parity requirement.
 - An unknown function name outside `[...]` is left as literal text (`think foo(bar)` prints

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
@@ -334,13 +335,20 @@ public class UtilityFunctionUnitTests
 		await Assert.That(result).IsNotNull();
 	}
 
+	/// <summary>
+	/// <c>rand()</c> with no argument is a <em>real</em> in [0,1): <c>safe_number(get_random_d())</c>
+	/// (<c>src/funmisc.c:782-786</c>). SharpMUSH answered a 31-bit integer, so <c>lt(rand(),0.5)</c>
+	/// — the ordinary way to write a coin flip — was false essentially always. This asserted only
+	/// that the integer parsed, which is why it never noticed.
+	/// </summary>
 	[Test]
 	public async Task Rand_NoArgs()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("rand()")))?.Message!;
-		var value = int.Parse(result.ToPlainText());
-		await Assert.That(value).IsGreaterThanOrEqualTo(0);
-		await Assert.That(value).IsLessThan(int.MaxValue);
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rand()")))?.Message!.ToPlainText();
+
+		await Assert.That(double.TryParse(result, CultureInfo.InvariantCulture, out var value)).IsTrue();
+		await Assert.That(value).IsGreaterThanOrEqualTo(0d);
+		await Assert.That(value).IsLessThan(1d);
 	}
 
 	[Test]
@@ -567,6 +575,15 @@ public class UtilityFunctionUnitTests
 	[Arguments("iter(red blue green,iter(fish shoe,##))", "red red blue blue green green")]
 	[Arguments("iter(a b,ilev())", "0 0")]
 	[Arguments("iter(a,iter(b,ilev()))", "1")]
+	// r(<n>,iter) reads the same stack and must index it the same way; it counted from the
+	// outermost instead, so r(0,iter) answered the outer loop where itext(0) answered the inner.
+	[Arguments("iter(red blue green,iter(fish shoe,[r(1,iter)]:[r(0,iter)]))",
+		"red:fish red:shoe blue:fish blue:shoe green:fish green:shoe")]
+	[Arguments("iter(red blue green,iter(fish shoe,strcat(r(0,iter),/,itext(0))))",
+		"fish/fish shoe/shoe fish/fish shoe/shoe fish/fish shoe/shoe")]
+	[Arguments("iter(red blue green,iter(fish shoe,strcat(r(1,iter),/,itext(1))))",
+		"red/red red/red blue/blue blue/blue green/green green/green")]
+	[Arguments("iter(red blue green,iter(fish shoe,[r(L,iter)]))", "red red blue blue green green")]
 	public async Task ITextAndINum_CountFromTheInnermostIteration(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

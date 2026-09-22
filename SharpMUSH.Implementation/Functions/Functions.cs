@@ -39,6 +39,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private ITelemetryService TelemetryService { get; }
 	private IMoveService MoveService { get; }
 	private IEventService EventService { get; }
+	private IDidItService DidItService { get; }
 	private IBooleanExpressionParser BooleanExpressionParser { get; }
 	private ITextFileService TextFileService { get; }
 	private ILogger<Functions> Logger { get; }
@@ -75,7 +76,8 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		IMoveService moveService,
 		IEventService eventService,
 		IBooleanExpressionParser booleanExpressionParser,
-		ITextFileService textFileService)
+		ITextFileService textFileService,
+		IDidItService didItService)
 	{
 		Logger = logger;
 		Mediator = mediator;
@@ -102,6 +104,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		EventService = eventService;
 		BooleanExpressionParser = booleanExpressionParser;
 		TextFileService = textFileService;
+		DidItService = didItService;
 
 		Builtins = Generated.FunctionLibrary.Create(this).ToDictionary(pair => pair.Key, pair =>
 			pair.Value with { RestrictedOperation = RestrictedOperations.Contains(pair.Key) ? pair.Key.ToLowerInvariant() : null });

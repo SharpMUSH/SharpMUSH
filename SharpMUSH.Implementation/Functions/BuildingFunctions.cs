@@ -40,13 +40,20 @@ public partial class Functions
 		return new CallState($"#{created.Number}:{created.CreationMilliseconds}");
 	}
 
+	/// <remarks>
+	/// <c>fun_create</c> (<c>src/fundb.c</c>) passes <c>args[2]</c> straight to <c>do_create</c>, so the
+	/// function's third argument is the same requested dbref the command's is, under the same
+	/// <c>Pick_DBRefs</c> gate.
+	/// </remarks>
 	[SharpFunction(Name = "create", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
 	public async ValueTask<CallState> Create(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var args = parser.CurrentState.Arguments;
 
 		return await BuildingHelpers.CreateThingAsync(parser, Mediator, Database, Configuration, ValidateService,
-			NotifyService, EventService, executor, parser.CurrentState.Arguments["0"].Message!) switch
+			NotifyService, EventService, PermissionService, executor, args["0"].Message!,
+			args.TryGetValue("2", out var requestedDbref) ? requestedDbref.Message : null) switch
 		{
 			// PennMUSH fun_create hands do_create's dbref to safe_dbref, which writes #n and not an
 			// objid (src/fundb.c).
@@ -67,11 +74,15 @@ public partial class Functions
 			return ErrorMessages.Returns.BadObjectName;
 		}
 
-		var response = await Mediator.Send(new CreateRoomCommand(
-			roomName,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
-
-		return new CallState(response.ToString());
+		// fun_dig is a call to do_dig (src/fundb.c), so it is charged exactly as @dig is.
+		return await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executor,
+			async () => await Mediator.Send(new CreateRoomCommand(
+				roomName,
+				await executor.Object().Owner.WithCancellation(CancellationToken.None)))) switch
+		{
+			DBRef response => new CallState(response.ToString()),
+			Error<string> refused => new CallState(refused.Value)
+		};
 	}
 
 	[SharpFunction(Name = "open", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
@@ -98,14 +109,17 @@ public partial class Functions
 			return ErrorMessages.Returns.PermissionDenied;
 		}
 
-		// Create the exit
-		var exitDbRef = await Mediator.Send(new CreateExitCommand(
-			primaryName,
-			aliases,
-			sourceRoom,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None)));
-
-		return new CallState(exitDbRef.ToString());
+		// fun_open is a call to do_real_open (src/fundb.c), which charges for itself (create.c:130).
+		return await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executor,
+			async () => await Mediator.Send(new CreateExitCommand(
+				primaryName,
+				aliases,
+				sourceRoom,
+				await executor.Object().Owner.WithCancellation(CancellationToken.None)))) switch
+		{
+			DBRef exitDbRef => new CallState(exitDbRef.ToString()),
+			Error<string> refused => new CallState(refused.Value)
+		};
 	}
 
 	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi)]
@@ -210,121 +224,28 @@ public partial class Functions
 			});
 	}
 
+	/// <remarks>
+	/// <c>fun_clone</c> (<c>src/fundb.c</c>) is one call to <c>do_clone</c>, the same one
+	/// <c>@clone</c> makes, with <c>preserve</c> as a fourth argument instead of a switch. The third
+	/// argument is a requested dbref, which SharpMUSH does not yet read here (#1084 covers
+	/// <c>@create</c>/<c>create()</c> only).
+	/// </remarks>
 	[SharpFunction(Name = "clone", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
 	public async ValueTask<CallState> Clone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var targetName = args["0"].Message!.ToPlainText();
-
-		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
-		var defaultHomeDbref = new DBRef((int)defaultHome);
-		if (await Mediator.Send(new GetObjectNodeQuery(defaultHomeDbref)) is not AnySharpObject location || location.IsExit)
-		{
-			return ErrorMessages.Returns.InvalidRoom;
-		}
+		var preserve = args.TryGetValue("3", out var preserveArg) &&
+			preserveArg.Message!.ToPlainText().Equals("preserve", StringComparison.OrdinalIgnoreCase);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, targetName, LocateFlags.All,
-			async obj =>
+			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
+			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Configuration, NotifyService, PermissionService,
+				AttributeService, ManipulateSharpObjectService, DidItService, EventService, Logger, executor, obj,
+				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve) switch
 			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return ErrorMessages.Returns.PermissionDenied;
-				}
-
-				if (obj.IsPlayer)
-				{
-					return ErrorMessages.Returns.InvalidObjectType;
-				}
-
-				var newName = obj.Object().Name;
-				if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
-				{
-					newName = args["1"].Message!.ToPlainText();
-				}
-
-				DBRef cloneDbRef;
-				var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
-
-				if (obj.IsThing)
-				{
-					cloneDbRef = await Mediator.Send(new CreateThingCommand(
-						newName,
-						await executor.Where(),
-						owner,
-						location.AsContainer
-					));
-				}
-				else if (obj.IsRoom)
-				{
-					cloneDbRef = await Mediator.Send(new CreateRoomCommand(
-						newName,
-						owner
-					));
-				}
-				else if (obj.IsExit)
-				{
-					var nameParts = newName.Split(';');
-					cloneDbRef = await Mediator.Send(new CreateExitCommand(
-						nameParts[0],
-						nameParts[1..],
-						await executor.Where(),
-						owner
-					));
-				}
-				else
-				{
-					return ErrorMessages.Returns.InvalidObjectType;
-				}
-
-				if (await Mediator.Send(new GetObjectNodeQuery(cloneDbRef)) is not AnySharpObject clonedObj)
-				{
-					throw new InvalidOperationException($"The clone {cloneDbRef} was not found after it was created.");
-				}
-
-				var preserve = args.ContainsKey("3") &&
-					args["3"].Message!.ToPlainText().Equals("preserve", StringComparison.OrdinalIgnoreCase);
-
-				await foreach (var attr in obj.Object().Attributes.Value)
-				{
-					if (!attr.Name.StartsWith("_"))
-					{
-						await AttributeService.SetAttributeAsync(executor, clonedObj,
-							attr.Name, attr.Value);
-					}
-				}
-
-				// Synchronised to the source, not unioned with it. The clone is created through the same
-				// path as any other object and therefore arrives carrying the configured creation
-				// defaults, so copying only what the source has would leave a NO_COMMAND that the source
-				// had deliberately cleared — and the $-commands just copied onto the clone would not run.
-				// The attribute-flag sync above works the same way, for the same reason.
-				var copyable = await obj.Object().Flags.Value
-					.Where(flag => preserve || (!flag.Name.Contains("WIZARD") && !flag.Name.Contains("ROYALTY")))
-					.Select(flag => flag.Name)
-					.ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
-
-				// Materialized: the clone's flags are unset while this list is walked.
-				var clonedObjectFlags = await clonedObj.Object().Flags.Value.ToArrayAsync();
-				foreach (var flag in clonedObjectFlags.Where(flag => !copyable.Contains(flag.Name)))
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, $"!{flag.Name}", false);
-				}
-
-				foreach (var flagName in copyable)
-				{
-					await ManipulateSharpObjectService.SetOrUnsetFlag(executor, clonedObj, flagName, false);
-				}
-
-				await EventService.TriggerEventAsync(
-					parser,
-					"OBJECT`CREATE",
-					executor.Object().DBRef,
-					cloneDbRef.ToString(),
-					obj.Object().DBRef.ToString()); // cloned-from
-
-				return new CallState(cloneDbRef.ToString());
+				DBRef clone => new CallState(clone.ToString()),
+				Error<string> error => new CallState(error.Value)
 			}
 		);
 	}

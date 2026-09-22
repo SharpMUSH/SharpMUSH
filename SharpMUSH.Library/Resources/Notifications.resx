@@ -97,6 +97,18 @@
   <data name="CannotClonePlayers" xml:space="preserve">
     <value>You cannot clone players.</value>
   </data>
+  <data name="GuestCantBuild" xml:space="preserve">
+    <value>Sorry, you aren't allowed to build.</value>
+  </data>
+  <data name="BuildingQuotaExhausted" xml:space="preserve">
+    <value>Sorry, your building quota has run out.</value>
+  </data>
+  <data name="ClonePreserveWizardOnly" xml:space="preserve">
+    <value>You cannot @CLONE/PRESERVE. Use normal @CLONE instead.</value>
+  </data>
+  <data name="ClonePreserveCarriedPrivileges" xml:space="preserve">
+    <value>Warning: @CLONE/PRESERVE on an object with WIZ, ROY, @powers, or @warnings.</value>
+  </data>
   <data name="CannotCloneThisObjectType" xml:space="preserve">
     <value>Cannot clone this object type.</value>
   </data>
@@ -353,6 +365,12 @@
   </data>
   <data name="NoZoneTeleport" xml:space="preserve">
     <value>You may not teleport out of the zone from this room.</value>
+  </data>
+  <data name="ExitsOnlyTeleportToRooms" xml:space="preserve">
+    <value>Exits can only be teleported to other rooms.</value>
+  </data>
+  <data name="ExitDestinationCrumbling" xml:space="preserve">
+    <value>You can't move an exit to someplace that's crumbling.</value>
   </data>
   <data name="InTheVoid" xml:space="preserve">
     <value>You're in the Void. This is not a good thing.</value>
@@ -1300,6 +1318,9 @@
   <!-- Softcode functions -->
   <data name="DefaultHomeLocationInvalid" xml:space="preserve">
     <value>Default home location is invalid.</value>
+  </data>
+  <data name="CreateDbrefUnavailable" xml:space="preserve">
+    <value>That is not a valid dbref.</value>
   </data>
   <data name="MoneyFunctionNotSupported" xml:space="preserve">
     <value>The money() function is not supported. SharpMUSH does not track money or pennies.</value>

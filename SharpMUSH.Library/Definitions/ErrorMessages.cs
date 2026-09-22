@@ -38,6 +38,13 @@ public static class ErrorMessages
 		public const string PermissionDenied = "#-1 PERMISSION DENIED";
 
 		/// <summary>
+		/// <c>can_pay_fees</c> refusing <c>pay_quota</c> (<c>src/predicat.c:453-456</c>). Penn's building
+		/// functions answer a refusal with a bare <c>#-1</c> and leave the notification to carry the
+		/// reason; this says which of the several ways a build can be refused happened.
+		/// </summary>
+		public const string BuildingQuotaExhausted = "#-1 BUILDING QUOTA EXHAUSTED";
+
+		/// <summary>
 		/// PennMUSH <c>fun_ssl</c> / <c>fun_terminfo</c> (src/bsd.c) when <c>lookup_desc</c> finds no
 		/// descriptor. The rest of the connection family answers a miss with a bare <c>#-1</c> or
 		/// <c>-1</c> instead; the wording is per-function and not a house style.
@@ -443,6 +450,10 @@ public static class ErrorMessages
 		public const string InvalidObjectTypeForLinking = "Invalid object type for linking.";
 		public const string InvalidObjectTypeGeneric = "Invalid object type.";
 		public const string CannotClonePlayers = "You cannot clone players.";
+		/// <summary>PennMUSH <c>do_clone</c> (<c>src/create.c:712</c>): /PRESERVE is wizard-only, and refused rather than downgraded.</summary>
+		public const string ClonePreserveWizardOnly = "You cannot @CLONE/PRESERVE. Use normal @CLONE instead.";
+		/// <summary>PennMUSH <c>clone_object</c> (<c>src/create.c:653-654</c>), on what /PRESERVE actually carried across.</summary>
+		public const string ClonePreserveCarriedPrivileges = "Warning: @CLONE/PRESERVE on an object with WIZ, ROY, @powers, or @warnings.";
 		public const string CannotCloneThisObjectType = "Cannot clone this object type.";
 		public const string NotMarkedForDestruction = "That object is not marked for destruction.";
 
@@ -546,6 +557,10 @@ public static class ErrorMessages
 
 		// --- Destruction edge-case notifications (PennMUSH src/destroy.c) ---
 		public const string GuestCantDestroy = "I'm sorry, Dave, I'm afraid I can't do that.";
+		/// <summary>PennMUSH <c>can_pay_fees</c> (<c>src/predicat.c:439</c>): a guest may not build at all.</summary>
+		public const string GuestCantBuild = "Sorry, you aren't allowed to build.";
+		/// <summary>PennMUSH <c>can_pay_fees</c> (<c>src/predicat.c:455</c>) when <c>pay_quota</c> refuses.</summary>
+		public const string BuildingQuotaExhausted = "Sorry, your building quota has run out.";
 		public const string DestroyGodBlasphemous = "Destroying God would be blasphemous.";
 		public const string TooSpecialToDestroy = "That is too special to be destroyed.";
 		public const string FloorDisappearsNothingness =
@@ -594,6 +609,15 @@ public static class ErrorMessages
 		public const string Teleported = "Teleported.";
 		public const string TeleportsNotAllowed = "Teleports are not allowed in this room.";
 		public const string NoZoneTeleport = "You may not teleport out of the zone from this room.";
+
+		/// <summary>
+		/// PennMUSH <c>src/wiz.c:453</c>: teleporting an exit relocates its source, and only a room
+		/// can source an exit.
+		/// </summary>
+		public const string ExitsOnlyTeleportToRooms = "Exits can only be teleported to other rooms.";
+
+		/// <summary>PennMUSH <c>src/wiz.c:456</c>: the would-be new source room is already GOING.</summary>
+		public const string ExitDestinationCrumbling = "You can't move an exit to someplace that's crumbling.";
 		public const string InTheVoid = "You're in the Void. This is not a good thing.";
 		public const string VoidSendingHome = "You're in the void - sending you home.";
 		public const string TooManyContainers = "You're in too many containers.";
@@ -1333,6 +1357,12 @@ public static class ErrorMessages
 		public const string ObjectScheduledDestroyedFormat = "{0} is scheduled to be destroyed.";
 
 		public const string DefaultHomeLocationInvalid = "Default home location is invalid.";
+		/// <summary>
+		/// PennMUSH <c>make_first_free_wrapper</c> (<c>src/destroy.c:940</c>) for every way a requested
+		/// dbref can fail to be one the player may build on: unparseable, out of range, or in use. The
+		/// wording deliberately does not distinguish them, so it cannot be used to probe the database.
+		/// </summary>
+		public const string CreateDbrefUnavailable = "That is not a valid dbref.";
 		public const string MoneyFunctionNotSupported = "The money() function is not supported. SharpMUSH does not track money or pennies.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MessageSentToRecipientsFormat = "Message sent to {0} recipient(s).";

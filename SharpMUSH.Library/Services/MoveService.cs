@@ -448,9 +448,10 @@ public class MoveService(
 		}
 
 		// wiz.c:450-479: do_teleport_one handles an exit by rewriting its Source and returns, so Penn's
-		// safe_tel never sees one. SharpMUSH has no such branch, and an exit IS AnySharpContent, so one
-		// still arrives here — `@force <exit>=goto <exit leading to a thing>` (GeneralCommands' IsContent
-		// guard admits it) and `tel(<exit>,<thing>)` both reach this. An exit is not a container and has
+		// safe_tel never sees one, and neither does @TELEPORT's — MovementCommands' exit branch does the
+		// same. An exit IS AnySharpContent, though, so the callers that do not go through that branch
+		// still arrive here: `@force <exit>=goto <exit leading to a thing>` (MovementCommands' GOTO
+		// admits an exit as content) and `tel(<exit>,<thing>)`. An exit is not a container and has
 		// nothing to strip, so the stripping pass is skipped; EnterRoom below then refuses the move
 		// itself, because only a Mobile is moved by enter_room (move.c:243).
 		if (what.IsExit)

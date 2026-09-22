@@ -20,6 +20,7 @@ public class LockFunctionUnitTests
 	[Test, NotInParallel]
 	[Arguments("@LOCK", "lock(me,#FALSE)")]
 	[Arguments("@LSET", "lset(me,visual)")]
+	[Arguments("@ATRLOCK", "atrlock(me/ATRLOCKGATE,on)")]
 	public async Task LockFunctionsRespectTheirCommandLock(string command, string expression)
 	{
 		var attribute = Parser.CommandLibrary[command].LibraryInformation.Attribute;
@@ -186,13 +187,66 @@ public class LockFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
-	[Test]
-	[Arguments("atrlock(%#,testattr)", "")]
-	public async Task Atrlock(string str, string expected)
+	/// <summary>
+	/// <c>atrlock()</c> is an attribute-flag function, not a boolexp-lock one despite its name:
+	/// <c>fun_atrlock</c> (<c>src/fundb.c:2409</c>) takes <c>&lt;object&gt;/&lt;attribute&gt;</c> in
+	/// argument 0 and answers <c>AF_Locked</c>. SharpMUSH read argument 0 as an attribute name and
+	/// argument 1 as an object, then evaluated a synthetic <c>&lt;attr&gt;`LOCK</c> attribute as a
+	/// boolexp — a lock that nothing in the engine ever writes, so it answered 0 always, and the
+	/// two-argument side-effect form did not exist. Its only test asserted IsNotNull.
+	/// </summary>
+	[Test, NotInParallel]
+	public async Task AtrlockReadsAndWritesTheAttributeLockFlag()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		var thing = (await Parser.FunctionParse(MarkupText.Plain(
+			$"[setq(t,create(AtrlockProbe{Guid.NewGuid():N}))][attrib_set(%q<t>/PROBE,value)]%q<t>")))!
+			.Message!.ToPlainText();
+
+		await Assert.That(await Eval($"atrlock({thing}/PROBE)")).IsEqualTo("0");
+		await Assert.That(await Eval($"atrlock({thing}/PROBE,on)")).IsEqualTo(string.Empty);
+		await Assert.That(await Eval($"atrlock({thing}/PROBE)")).IsEqualTo("1");
+		await Assert.That(await Eval($"atrlock({thing}/PROBE,off)")).IsEqualTo(string.Empty);
+		await Assert.That(await Eval($"atrlock({thing}/PROBE)")).IsEqualTo("0");
 	}
+
+	/// <summary>
+	/// No slash is <c>#-1 ARGUMENT MUST BE OBJ/ATTR</c> (<c>src/fundb.c:2437,2441</c>), and an
+	/// attribute that is not there is a bare <c>#-1</c> (<c>:2456</c>).
+	/// </summary>
+	[Test]
+	[Arguments("atrlock(me)", "#-1 ARGUMENT MUST BE OBJ/ATTR")]
+	[Arguments("atrlock()", "#-1 ARGUMENT MUST BE OBJ/ATTR")]
+	[Arguments("atrlock(me/ATRLOCKNOSUCHATTRIBUTE)", "#-1")]
+	public async Task AtrlockArgumentFormat(string expression, string expected)
+		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
+
+	/// <summary>
+	/// <c>do_atrlock</c> refuses anyone who does not control the object
+	/// (<c>src/attrib.c:2506-2510</c>). The fixture's handle 1 is God, so this has to be driven by a
+	/// mortal or it proves nothing.
+	/// </summary>
+	[Test]
+	public async Task AtrlockRefusesAMortalWhoDoesNotControlTheObject()
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var connections = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, mediator, connections, "AtrlockMortal");
+
+		var thing = (await Parser.FunctionParse(MarkupText.Plain(
+			$"[setq(t,create(AtrlockOther{Guid.NewGuid():N}))][attrib_set(%q<t>/PROBE,value)]%q<t>")))!
+			.Message!.ToPlainText();
+
+		var refused = await WebAppFactoryArg.FunctionParserFor(mortal.DbRef)
+			.FunctionParse(MarkupText.Plain($"atrlock({thing}/PROBE,on)"));
+
+		await Assert.That(refused!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await Eval($"atrlock({thing}/PROBE)")).IsEqualTo("0")
+			.Because("the refusal has to have left the flag alone");
+	}
+
+	private async Task<string> Eval(string expression)
+		=> (await Parser.FunctionParse(MarkupText.Plain(expression)))?.Message!.ToPlainText() ?? "<null>";
 
 	[Test]
 	public async Task LockReturnsUnlocked()

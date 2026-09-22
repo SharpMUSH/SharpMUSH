@@ -128,7 +128,13 @@ public class SoftcodeEditorTabsTests : BunitContext
 
 		cut.Find(".sc-tab-close").Click();
 
-		await Assert.That(cut.FindAll(".sc-tab")).IsEmpty();
+		// CloseTabAsync reads the Monaco buffer before it removes the tab, so the removal lands
+		// after the click returns. Opening one is the other way round -- the tab is added before
+		// the first await -- which is why the setup above can read the strip at once and this
+		// cannot. Waiting asserts the same thing; it does not weaken it.
+		await cut.WaitForAssertionAsync(
+			async () => await Assert.That(cut.FindAll(".sc-tab")).IsEmpty(),
+			TimeSpan.FromSeconds(5));
 	}
 
 	[TUnit.Core.Test]
@@ -141,7 +147,9 @@ public class SoftcodeEditorTabsTests : BunitContext
 		// is no longer there.
 		cut.Find(".sc-tab-close").Click();
 
-		await Assert.That(cut.Markup).Contains("TermNoAttributeSelected");
+		await cut.WaitForAssertionAsync(
+			async () => await Assert.That(cut.Markup).Contains("TermNoAttributeSelected"),
+			TimeSpan.FromSeconds(5));
 	}
 
 	[TUnit.Core.Test]
