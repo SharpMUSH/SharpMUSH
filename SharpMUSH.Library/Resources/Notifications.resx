@@ -2063,35 +2063,38 @@
   </data>
 
   <!-- @stats command -->
-  <data name="StatsTablesNotImplemented" xml:space="preserve">
-    <value>@stats/tables: Internal table statistics not yet implemented.</value>
+  <data name="StatsObjectCountsFormat" xml:space="preserve">
+    <value>{0} objects = {1} rooms, {2} exits, {3} things, {4} players.</value>
   </data>
-  <data name="StatsFlagsNotImplemented" xml:space="preserve">
-    <value>@stats/flags: Flag system statistics not yet implemented.</value>
+  <data name="StatsNoSuchPlayerFormat" xml:space="preserve">
+    <value>{0}: No such player.</value>
   </data>
-  <data name="StatsMemorySwitchesNotImplemented" xml:space="preserve">
-    <value>@stats memory switches not yet implemented.</value>
+  <data name="StatsNeedSearchWarrant" xml:space="preserve">
+    <value>You need a search warrant to do that!</value>
   </data>
-  <data name="StatsDatabaseStatisticsHeader" xml:space="preserve">
-    <value>Database Statistics:</value>
+  <data name="StatsFlagspaceHeaderFormat" xml:space="preserve">
+    <value>Stats for flagspace {0}:</value>
   </data>
-  <data name="StatsForPlayerFormat" xml:space="preserve">
-    <value>  For player: {0}</value>
+  <data name="StatsFlagspaceEntriesFormat" xml:space="preserve">
+    <value>  {0} entries in flag table.</value>
   </data>
-  <data name="StatsRoomsFormat" xml:space="preserve">
-    <value>  Rooms: {0}</value>
+  <data name="StatsFlagspaceFlagsetsFormat" xml:space="preserve">
+    <value>  {0} different flagsets in use. {1} objects with no flags set.</value>
   </data>
-  <data name="StatsExitsFormat" xml:space="preserve">
-    <value>  Exits: {0}</value>
+  <data name="StatsFlagspaceMostCommonFormat" xml:space="preserve">
+    <value>  {0} objects share the most common set of flags.</value>
   </data>
-  <data name="StatsThingsFormat" xml:space="preserve">
-    <value>  Things: {0}</value>
+  <data name="StatsFlagspaceUniqueFormat" xml:space="preserve">
+    <value>  {0} objects have unique flagsets.</value>
   </data>
-  <data name="StatsPlayersFormat" xml:space="preserve">
-    <value>  Players: {0}</value>
+  <data name="StatsTablesHeader" xml:space="preserve">
+    <value>Table        Entries</value>
   </data>
-  <data name="StatsTotalFormat" xml:space="preserve">
-    <value>  Total: {0}</value>
+  <data name="StatsTablesRowFormat" xml:space="preserve">
+    <value>{0,-12} {1,7}</value>
+  </data>
+  <data name="StatsChunksUnsupportedFormat" xml:space="preserve">
+    <value>@stats/{0}: SharpMUSH has no chunk allocator. Attributes live in the database provider, which keeps no equivalent counters.</value>
   </data>
 
   <!-- @entrances command -->

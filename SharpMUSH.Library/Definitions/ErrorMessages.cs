@@ -1763,22 +1763,26 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandDecompileEnumFormat = "@attribute/enum {0}={1}";
 
-		public const string StatsTablesNotImplemented = "@stats/tables: Internal table statistics not yet implemented.";
-		public const string StatsFlagsNotImplemented = "@stats/flags: Flag system statistics not yet implemented.";
-		public const string StatsMemorySwitchesNotImplemented = "@stats memory switches not yet implemented.";
-		public const string StatsDatabaseStatisticsHeader = "Database Statistics:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsForPlayerFormat = "  For player: {0}";
+		public const string StatsObjectCountsFormat = "{0} objects = {1} rooms, {2} exits, {3} things, {4} players.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsRoomsFormat = "  Rooms: {0}";
+		public const string StatsNoSuchPlayerFormat = "{0}: No such player.";
+		public const string StatsNeedSearchWarrant = "You need a search warrant to do that!";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsExitsFormat = "  Exits: {0}";
+		public const string StatsFlagspaceHeaderFormat = "Stats for flagspace {0}:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsThingsFormat = "  Things: {0}";
+		public const string StatsFlagspaceEntriesFormat = "  {0} entries in flag table.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsPlayersFormat = "  Players: {0}";
+		public const string StatsFlagspaceFlagsetsFormat = "  {0} different flagsets in use. {1} objects with no flags set.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsTotalFormat = "  Total: {0}";
+		public const string StatsFlagspaceMostCommonFormat = "  {0} objects share the most common set of flags.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string StatsFlagspaceUniqueFormat = "  {0} objects have unique flagsets.";
+		public const string StatsTablesHeader = "Table        Entries";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string StatsTablesRowFormat = "{0,-12} {1,7}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string StatsChunksUnsupportedFormat = "@stats/{0}: SharpMUSH has no chunk allocator. Attributes live in the database provider, which keeps no equivalent counters.";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EntrancesToFormat = "Entrances to {0}:";

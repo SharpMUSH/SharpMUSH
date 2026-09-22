@@ -21,6 +21,7 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Library.Requests;
 using System.Collections.Immutable;
 using System.Buffers;
+using System.Runtime.InteropServices;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -679,60 +680,150 @@ public partial class Commands
 		return new CallState(result);
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>cmd_stats</c> (<c>src/cmds.c:1472</c>), open to everyone (<c>CMD_T_ANY</c>).
+	/// <c>/TABLES</c> and <c>/FLAGS</c> report the same tables Penn does, counted by the services that
+	/// hold them here. The four chunk switches describe Penn's attribute-chunk allocator, which
+	/// SharpMUSH does not have, and say so instead of printing a figure that measures something else.
+	/// </summary>
 	[SharpCommand(Name = "@STATS", Switches = ["CHUNKS", "FREESPACE", "PAGING", "REGIONS", "TABLES", "FLAGS"],
 		Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["player"])]
 	public async ValueTask<Option<CallState>> Stats(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
+		var switches = parser.CurrentState.Switches;
 
 		if (switches.Contains("TABLES"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsTablesNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			return await TableStatsAsync(executor);
 		}
 
 		if (switches.Contains("FLAGS"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsFlagsNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			return await FlagStatsAsync(executor);
 		}
 
-		if (switches.Contains("CHUNKS") || switches.Contains("FREESPACE") ||
-				switches.Contains("PAGING") || switches.Contains("REGIONS"))
+		if (switches.FirstOrDefault(sw => sw is "CHUNKS" or "FREESPACE" or "PAGING" or "REGIONS") is { } chunkSwitch)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsMemorySwitchesNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsChunksUnsupportedFormat),
+				executor, chunkSwitch.ToLowerInvariant());
+			return new CallState(ErrorMessages.Returns.ErrorNotSupported);
 		}
 
-		string? playerName = null;
-		if (args.Count > 0 && args.ContainsKey("0"))
+		var name = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText().Trim() ?? "";
+		if (name.Length == 0)
 		{
-			playerName = args["0"].Message?.ToPlainText();
+			return await ObjectStatsAsync(executor, owner: null);
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsDatabaseStatisticsHeader), executor);
-
-		if (playerName != null)
+		// do_stats resolves "me" to the executor itself before looking for a player.
+		if (name.Equals("me", StringComparison.OrdinalIgnoreCase))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsForPlayerFormat), executor, playerName);
+			return await ObjectStatsAsync(executor, executor.Object().DBRef);
 		}
 
-		var countsByType = await Mediator.CreateStream(new GetAllObjectsQuery())
+		if (await LocateService.LocatePlayer(parser, executor, executor, name) is not AnySharpObject owner)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsNoSuchPlayerFormat), executor, name);
+			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
+		}
+
+		// do_stats: without Search_All, only your own objects or the world's.
+		if (owner.Object().DBRef != executor.Object().DBRef
+				&& !await executor.IsPriv() && !await executor.HasPower("SEARCH"))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsNeedSearchWarrant), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		return await ObjectStatsAsync(executor, owner.Object().DBRef);
+	}
+
+	/// <summary>
+	/// <c>do_stats</c>: the object count by type, over the world or over one owner's objects. SharpMUSH
+	/// removes a destroyed object rather than keeping it as garbage, so there is no garbage figure and
+	/// no "next object" line.
+	/// </summary>
+	private async ValueTask<Option<CallState>> ObjectStatsAsync(AnySharpObject executor, DBRef? owner)
+	{
+		var countsByType = await Mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = owner }))
 			.CountBy(o => o.Type)
 			.ToDictionaryAsync(x => x.Key, x => x.Value);
-		var roomCount = countsByType.GetValueOrDefault("ROOM");
-		var exitCount = countsByType.GetValueOrDefault("EXIT");
-		var thingCount = countsByType.GetValueOrDefault("THING");
-		var playerCount = countsByType.GetValueOrDefault("PLAYER");
-		var totalCount = roomCount + exitCount + thingCount + playerCount;
+		var rooms = countsByType.GetValueOrDefault("ROOM");
+		var exits = countsByType.GetValueOrDefault("EXIT");
+		var things = countsByType.GetValueOrDefault("THING");
+		var players = countsByType.GetValueOrDefault("PLAYER");
+		var total = rooms + exits + things + players;
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsRoomsFormat), executor, roomCount);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsExitsFormat), executor, exitCount);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsThingsFormat), executor, thingCount);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsPlayersFormat), executor, playerCount);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsTotalFormat), executor, totalCount);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsObjectCountsFormat), executor,
+			total, rooms, exits, things, players);
+		return new CallState($"{total} {rooms} {exits} {things} {players}");
+	}
+
+	/// <summary>
+	/// <c>flag_stats</c> (<c>src/flags.c:1136</c>): per flagspace, the size of its table and how the
+	/// objects' flag sets are distributed. Penn's flagset byte width, slab and cache-bucket lines
+	/// describe its in-memory layout and have nothing to count here.
+	/// </summary>
+	private async ValueTask<Option<CallState>> FlagStatsAsync(AnySharpObject executor)
+	{
+		var flagSets = new Dictionary<string, int>();
+		var powerSets = new Dictionary<string, int>();
+
+		static async ValueTask Tally(Dictionary<string, int> sets, IAsyncEnumerable<string> names)
+		{
+			var key = string.Join(' ', (await names.ToArrayAsync()).Order(StringComparer.Ordinal));
+			CollectionsMarshal.GetValueRefOrAddDefault(sets, key, out _)++;
+		}
+
+		await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
+		{
+			await Tally(flagSets, obj.Flags.Value.Select(f => f.Name));
+			await Tally(powerSets, obj.Powers.Value.Select(p => p.Name));
+		}
+
+		await ReportFlagspaceAsync(executor, "FLAG", await Mediator.CreateStream(new GetAllObjectFlagsQuery()).CountAsync(), flagSets);
+		await ReportFlagspaceAsync(executor, "POWER", await Mediator.CreateStream(new GetPowersQuery()).CountAsync(), powerSets);
+		return CallState.Empty;
+	}
+
+	private async ValueTask ReportFlagspaceAsync(AnySharpObject executor, string flagspace, int entries, Dictionary<string, int> sets)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsFlagspaceHeaderFormat), executor, flagspace);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsFlagspaceEntriesFormat), executor, entries);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsFlagspaceFlagsetsFormat), executor,
+			sets.Count, sets.GetValueOrDefault(""));
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsFlagspaceMostCommonFormat), executor,
+			sets.Values.DefaultIfEmpty(0).Max());
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsFlagspaceUniqueFormat), executor,
+			sets.Values.Count(count => count == 1));
+	}
+
+	/// <summary>
+	/// <c>do_list_memstats</c> (<c>src/game.c:2663</c>): Penn's lookup tables by entry count. Each row
+	/// here is the count held by the service that owns that table. Penn's bucket, lookup-depth and
+	/// memory columns measure its own hash tables and are not reported.
+	/// </summary>
+	private async ValueTask<Option<CallState>> TableStatsAsync(AnySharpObject executor)
+	{
+		var builtinFunctions = FunctionLibrary.Values.Count(entry => entry.IsSystem);
+		(string Table, int Entries)[] rows =
+		[
+			("Functions", builtinFunctions),
+			("@Functions", FunctionLibrary.Count - builtinFunctions),
+			("Commands", CommandLibrary.Count),
+			("Flags", await Mediator.CreateStream(new GetAllObjectFlagsQuery()).CountAsync()),
+			("Powers", await Mediator.CreateStream(new GetPowersQuery()).CountAsync()),
+			("Attributes", await Mediator.CreateStream(new GetAllAttributeEntriesQuery()).CountAsync()),
+			("ConfigOpts", ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Count),
+			("Connections", await ConnectionService.GetAll().CountAsync())
+		];
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsTablesHeader), executor);
+		foreach (var (table, entries) in rows)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsTablesRowFormat), executor, table, entries);
+		}
 
 		return CallState.Empty;
 	}
