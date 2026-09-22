@@ -71,17 +71,53 @@ public class LogCommandTests
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.NoLogEntriesForCategoryFormat), executor, executor)).IsTrue();
 	}
 
+	private async Task<(List<string> Messages, CallState Result)> LogwipeAs(long handle, DBRef who, string command)
+	{
+		var before = WebAppFactoryArg.Notifications.CountFor(who);
+		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
+		return ([.. WebAppFactoryArg.Notifications.For(who).Skip(before)], result);
+	}
+
+	/// <summary>
+	/// <c>cmd_logwipe</c> (<c>src/cmds.c:971</c>) picks a log from its switches (default
+	/// <c>/err</c>) and a policy (default <c>/wipe</c>), then acts on that log file. SharpMUSH owns no
+	/// log file — its logs go to the configured Serilog sinks — so every policy is refused, by name,
+	/// rather than previewed with "Would …" as though it could be done.
+	/// </summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask LogwipeCommand()
+	[Arguments("@logwipe/wiz/rotate secret", "rotate", "wiz")]
+	[Arguments("@logwipe/conn/trim secret", "trim", "conn")]
+	[Arguments("@logwipe/cmd secret", "wipe", "cmd")]
+	[Arguments("@logwipe secret", "wipe", "err")]
+	public async ValueTask Logwipe_RefusesEveryPolicyItCannotPerform(string command, string policy, string log)
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@logwipe command"));
+		var (messages, result) = await LogwipeAs(1, executor, command);
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Log Management Status:", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(messages).Contains(string.Format(ErrorMessages.Notifications.LogWipeUnsupportedFormat, policy, log));
+		await Assert.That(messages.Any(m => m.Contains("Would", StringComparison.Ordinal))).IsFalse();
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.ErrorNotSupported);
+	}
+
+	/// <summary><c>/check</c> names Penn's LT_CHECK log; it is not a dry-run action.</summary>
+	[Test]
+	public async ValueTask Logwipe_CheckSwitch_NamesTheCheckLog()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var (messages, _) = await LogwipeAs(1, executor, "@logwipe/check secret");
+
+		await Assert.That(messages).Contains(string.Format(ErrorMessages.Notifications.LogWipeUnsupportedFormat, "wipe", "check"));
+	}
+
+	/// <summary><c>@logwipe</c> is <c>CMD_T_GOD</c> (<c>src/command.c:203</c>).</summary>
+	[Test]
+	public async ValueTask Logwipe_MortalIsRefusedBeforeAnything()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), ConnectionService, "LogwipeMortal");
+		var (messages, _) = await LogwipeAs(mortal.Handle, mortal.DbRef, "@logwipe/wiz secret");
+
+		await Assert.That(messages.Any(m => m.StartsWith("@logwipe", StringComparison.Ordinal))).IsFalse();
 	}
 
 	[Test]

@@ -2749,18 +2749,9 @@ Adding the `/recall` switch will display the last `<number>` lines written to th
 # @logwipe
 `@logwipe/<log>[/<switch>] <password>`
 
-This God-only command erases one of the MUSH logs.
+In PennMUSH this God-only command erases one of the game's log files: `<log>` is one of /check, /cmd, /conn, /err (default), /trace or /wiz, and the policy is /rotate, /trim or /wipe (default).
 
-`<log>` specifies which log file to erase, and must be one of:<br>
-/check, /cmd, /conn, /err (Default), /trace, and /wiz.
-
-The default policy of erasing a log can be changed by giving one of the following switches:
-
-- /rotate : copies the log to a backup file and then erases it.
-- /trim : deletes all but the most recent lines in the file.
-- /wipe : erases the file (Default)
-
-God must give the log wipe password from the MUSH's configuration file to use this command.
+SharpMUSH owns no log files. Its logs go to the logging sinks named in its configuration (the console, by default), and rotating, trimming or clearing them is done there. @logwipe therefore performs no operation: it tells God which policy on which log cannot be carried out, returns `#-1 NOT SUPPORTED`, and records the attempt in the server log.
 
 
 **See Also:**

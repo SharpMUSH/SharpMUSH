@@ -1764,6 +1764,9 @@ public static class ErrorMessages
 		public const string AttributeCommandDecompileEnumFormat = "@attribute/enum {0}={1}";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string LogWipeUnsupportedFormat = "@logwipe: SharpMUSH cannot {0} the {1} log. Its logs go to the logging sinks in its configuration, which the game does not own; rotate or clear them there.";
+
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string StatsObjectCountsFormat = "{0} objects = {1} rooms, {2} exits, {3} things, {4} players.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string StatsNoSuchPlayerFormat = "{0}: No such player.";

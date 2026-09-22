@@ -933,8 +933,14 @@ public partial class Commands
 		return new None();
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>cmd_logwipe</c> (<c>src/cmds.c:971</c>) rotates, trims or wipes one of the game's
+	/// log files. SharpMUSH owns no log file: its logs go to the logging sinks named in its
+	/// configuration, and neither database provider stores them. There is nothing here that could
+	/// honestly carry out any of the three policies, so each is refused by name.
+	/// </summary>
 	[SharpCommand(Name = "@LOGWIPE", Switches = ["CHECK", "CMD", "CONN", "ERR", "TRACE", "WIZ", "ROTATE", "TRIM", "WIPE"],
-		Behavior = CB.Default | CB.NoGagged | CB.God, MinArgs = 0, MaxArgs = 0, ParameterNames = ["type"])]
+		Behavior = CB.Default | CB.NoGagged | CB.God, MinArgs = 0, MaxArgs = 1, ParameterNames = ["password"])]
 	public async ValueTask<Option<CallState>> LogWipe(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -946,32 +952,14 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var logTypes = new[] { "CMD", "CONN", "ERR", "TRACE", "WIZ" };
-		var actions = new[] { "ROTATE", "TRIM", "WIPE", "CHECK" };
+		// logtype_from_switch(sw, LT_ERR) and the policy switches, each with Penn's default.
+		var log = switches.FirstOrDefault(sw => sw is "CHECK" or "CMD" or "CONN" or "ERR" or "TRACE" or "WIZ") ?? "ERR";
+		var policy = switches.FirstOrDefault(sw => sw is "ROTATE" or "TRIM" or "WIPE") ?? "WIPE";
 
-		var specifiedLogType = switches.FirstOrDefault(s => logTypes.Contains(s));
-		var specifiedAction = switches.FirstOrDefault(s => actions.Contains(s)) ?? "CHECK";
-
-		if (specifiedLogType == null && specifiedAction == "CHECK")
-		{
-			await NotifyService.Notify(executor, "Log Management Status:", executor);
-			await NotifyService.Notify(executor, "  SharpMUSH uses .NET logging infrastructure", executor);
-			await NotifyService.Notify(executor, "  Logs are managed by configured logging providers", executor);
-			await NotifyService.Notify(executor, "  Available log types: CMD, CONN, ERR, TRACE, WIZ", executor);
-			await NotifyService.Notify(executor, "  Available actions: ROTATE, TRIM, WIPE", executor);
-			await NotifyService.Notify(executor, "  Note: Direct log file manipulation not yet implemented", executor);
-			Logger?.LogInformation("@LOGWIPE/CHECK executed by {Executor}", executor.Object().Name);
-		}
-		else
-		{
-			var logDesc = specifiedLogType ?? "all logs";
-			await NotifyService.Notify(executor, $"@LOGWIPE/{specifiedAction}: Would {specifiedAction.ToLower()} {logDesc}", executor);
-			await NotifyService.Notify(executor, "Direct log file manipulation not yet implemented.", executor);
-			await NotifyService.Notify(executor, "Configure log rotation through appsettings.json or hosting provider.", executor);
-			Logger?.LogWarning("@LOGWIPE/{Action} requested for {LogType} by {Executor} - not implemented",
-				specifiedAction, logDesc, executor.Object().Name);
-		}
-
-		return CallState.Empty;
+		Logger.LogWarning("@logwipe/{Log}/{Policy} refused for {Executor}: no log file is owned by the game",
+			log, policy, executor.Object().Name);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LogWipeUnsupportedFormat), executor,
+			policy.ToLowerInvariant(), log.ToLowerInvariant());
+		return new CallState(ErrorMessages.Returns.ErrorNotSupported);
 	}
 }

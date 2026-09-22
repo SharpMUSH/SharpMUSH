@@ -2063,6 +2063,9 @@
   </data>
 
   <!-- @stats command -->
+  <data name="LogWipeUnsupportedFormat" xml:space="preserve">
+    <value>@logwipe: SharpMUSH cannot {0} the {1} log. Its logs go to the logging sinks in its configuration, which the game does not own; rotate or clear them there.</value>
+  </data>
   <data name="StatsObjectCountsFormat" xml:space="preserve">
     <value>{0} objects = {1} rooms, {2} exits, {3} things, {4} players.</value>
   </data>
