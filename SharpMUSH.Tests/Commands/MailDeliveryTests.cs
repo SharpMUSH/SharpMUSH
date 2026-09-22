@@ -1,11 +1,13 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Behaviors;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.Json;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -721,5 +723,34 @@ public class MailDeliveryTests
 
 		await Assert.That(heard).Contains($"MAIL: You sent your message to {owner.Name}.");
 		await Assert.That(await Mailbox(owner)).Count().IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// <c>SetExpandedDataAsync</c> replaces the folder array, so two deliveries filing into different new
+	/// folders must not each store only their own: the read and the write happen under the mailbox gate.
+	/// Read back through <see cref="ExpandedDataQuery"/> rather than
+	/// <c>GetExpandedDataAsync&lt;ExpandedMailData&gt;</c>, which cannot return typed data today (#1221).
+	/// </summary>
+	[Test]
+	public async ValueTask ConcurrentFilingKeepsEveryNewFolder()
+	{
+		var target = await Player("MdRaceFldTo");
+		await Run(target, "&MAILFILTER me=%1");
+		var senders = new List<TestIsolationHelpers.TestPlayer>();
+		for (var i = 0; i < 6; i++)
+		{
+			senders.Add(await Player($"MdRaceFld{i}"));
+		}
+
+		await Task.WhenAll(senders.Select((sender, i) =>
+			Run(sender, $"@mail #{target.DbRef.Number}=Folder{i}/Body.")));
+
+		var stored = await Mediator.Send(new ExpandedDataQuery(
+			(await Mediator.Send(new GetObjectNodeQuery(target.DbRef))).Expect<SharpPlayer>().Object,
+			nameof(ExpandedMailData)));
+
+		var folders = JsonSerializer.Deserialize<ExpandedMailData>(JsonSerializer.Serialize(stored))!.Folders!;
+
+		await Assert.That(folders).IsEquivalentTo(Enumerable.Range(0, 6).Select(i => $"Folder{i}"));
 	}
 }

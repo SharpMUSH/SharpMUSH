@@ -236,6 +236,17 @@ public static partial class MailDelivery
 				Subject = letter.Subject,
 				From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(sender.WithNoneOption())),
 			}));
+
+			// As @mail/file does, filing into a folder makes it one of the player's folders. Read and
+			// written under the gate: SetExpandedDataAsync replaces the array, so two deliveries filing
+			// into different new folders would otherwise each store only their own.
+			if (folder != Inbox)
+			{
+				var known = await services.ObjectData.GetExpandedDataAsync<ExpandedMailData>(target.Object);
+				await services.ObjectData.SetExpandedDataAsync(
+					new ExpandedMailData(Folders: [.. (known?.Folders ?? []).Append(folder).Distinct()]),
+					target.Object, ignoreNull: true);
+			}
 		}
 		finally
 		{
@@ -357,12 +368,6 @@ public static partial class MailDelivery
 			{
 				return (Inbox, FilterOutcome.Filed);
 			}
-
-			// As @mail/file does, filing into a folder makes it one of the player's folders.
-			var folders = await services.ObjectData.GetExpandedDataAsync<ExpandedMailData>(target.Object);
-			await services.ObjectData.SetExpandedDataAsync(
-				new ExpandedMailData(Folders: [.. (folders?.Folders ?? []).Append(folder).Distinct()]),
-				target.Object, ignoreNull: true);
 
 			return (folder, FilterOutcome.Filed);
 		}
