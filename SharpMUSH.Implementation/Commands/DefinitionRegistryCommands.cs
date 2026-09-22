@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -618,6 +619,78 @@ public partial class Commands
 		}
 	}
 
+	/// <summary>
+	/// The retroactive half of PennMUSH's <c>do_attribute_access</c> (<c>src/atr_tab.c:816-826</c>):
+	/// every object's own copy of <paramref name="name"/> gets exactly <paramref name="flags"/> — its
+	/// <c>branch</c> flag aside, which is Penn's AF_ROOT and is kept — and the executor as its creator.
+	/// </summary>
+	/// <remarks>
+	/// One pass over the world, streamed an object at a time, each change a cache-invalidating command.
+	/// The pass stops when the command's execution budget runs out; what it has changed stays changed,
+	/// and the report says how far it got rather than claiming every copy was reached.
+	/// </remarks>
+	private async ValueTask RetroactiveAttributeAccessAsync(AnySharpObject executor, string name, SharpAttributeFlag[] flags)
+	{
+		var cancellationToken = ExecutionBudget.CurrentToken;
+		var creator = await executor.Object().Owner.WithCancellation(cancellationToken);
+		var path = name.Split('`');
+		var (scanned, updated, failed) = (0, 0, 0);
+
+		try
+		{
+			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()).WithCancellation(cancellationToken))
+			{
+				scanned++;
+				var copy = await Mediator.CreateStream(new GetAttributeQuery(obj.DBRef, path)).LastOrDefaultAsync(cancellationToken);
+				if (copy is null || !copy.LongName.Equals(name, StringComparison.OrdinalIgnoreCase))
+				{
+					continue;
+				}
+
+				try
+				{
+					foreach (var flag in copy.Flags.Where(had => !IsBranchFlag(had) && !flags.Any(wanted => wanted.Name == had.Name)))
+					{
+						await Mediator.Send(new UnsetAttributeFlagCommand(obj.DBRef, copy, flag), cancellationToken);
+					}
+
+					foreach (var flag in flags.Where(wanted => !copy.Flags.Any(had => had.Name == wanted.Name)))
+					{
+						await Mediator.Send(new SetAttributeFlagCommand(obj.DBRef, copy, flag), cancellationToken);
+					}
+
+					await Mediator.Send(new SetAttributeOwnerCommand(obj.DBRef, path, creator), cancellationToken);
+					updated++;
+				}
+				catch (Exception ex) when (ex is not OperationCanceledException)
+				{
+					failed++;
+					Logger.LogWarning(ex, "@attribute/retroactive could not update {Attribute} on {Object}", name, obj.DBRef);
+				}
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRetroactivePartialFormat),
+				executor, scanned, updated, name, failed);
+			return;
+		}
+
+		if (failed > 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRetroactivePartialFormat),
+				executor, scanned, updated, name, failed);
+			return;
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRetroactiveUpdatedFormat),
+			executor, updated, name);
+	}
+
+	/// <summary>Penn's AF_ROOT: whether the attribute has branches below it, which is structure, not permission.</summary>
+	private static bool IsBranchFlag(SharpAttributeFlag flag)
+		=> flag.Name.Equals("branch", StringComparison.OrdinalIgnoreCase);
+
 	[SharpCommand(Name = "@ATTRIBUTE",
 		Switches = ["ACCESS", "DELETE", "RENAME", "RETROACTIVE", "LIMIT", "ENUM", "DECOMPILE"],
 		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2, ParameterNames = ["attribute", "options..."])]
@@ -704,9 +777,12 @@ public partial class Commands
 			var flagList = args["1"].Message?.ToPlainText() ?? "none";
 			var retroactive = switches.Contains("RETROACTIVE");
 
-			var flagNames = flagList.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-				.Select(f => f.ToUpper())
-				.ToArray();
+			// strcasecmp(perms, "none"): no permissions at all, not a flag called NONE.
+			var flagNames = flagList.Trim().Equals("none", StringComparison.OrdinalIgnoreCase)
+				? []
+				: flagList.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+					.Select(f => f.ToUpper())
+					.ToArray();
 
 			var allFlags = await Mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
 			foreach (var flagName in flagNames)
@@ -730,12 +806,10 @@ public partial class Commands
 
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandPermissionsNowFormat), executor, attrName.ToUpperInvariant(), string.Join(" ", flagNames.Select(f => f.ToLowerInvariant())));
 
-			// TODO: Retroactive flag updates to existing attribute instances.
-			// When /retroactive is set, should update flags on all existing copies of this attribute
-			// across all objects in the database. Requires bulk update operation.
 			if (retroactive)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRetroactiveNotImplemented), executor);
+				await RetroactiveAttributeAccessAsync(executor, attrName.ToUpperInvariant(),
+					[.. allFlags.Where(flag => flagNames.Contains(flag.Name, StringComparer.OrdinalIgnoreCase))]);
 			}
 
 			return CallState.Empty;

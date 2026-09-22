@@ -1729,7 +1729,10 @@ public static class ErrorMessages
 		public const string AttributeCommandFailedToCreate = "Failed to create attribute entry.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandPermissionsNowFormat = "{0} -- Attribute permissions now: {1}";
-		public const string AttributeCommandRetroactiveNotImplemented = "Note: Retroactive flag updating not yet implemented.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandRetroactiveUpdatedFormat = "{0} existing copies of {1} updated.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandRetroactivePartialFormat = "Stopped after {0} objects: {1} existing copies of {2} updated, {3} could not be. Run the command again to finish.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandRemovedFromTableFormat = "Attribute '{0}' removed from standard attribute table.";
 		public const string AttributeCommandExistingCopiesRemain = "Existing copies remain but are no longer \"standard\".";

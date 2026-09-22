@@ -2007,8 +2007,11 @@
   <data name="AttributeCommandPermissionsNowFormat" xml:space="preserve">
     <value>{0} -- Attribute permissions now: {1}</value>
   </data>
-  <data name="AttributeCommandRetroactiveNotImplemented" xml:space="preserve">
-    <value>Note: Retroactive flag updating not yet implemented.</value>
+  <data name="AttributeCommandRetroactiveUpdatedFormat" xml:space="preserve">
+    <value>{0} existing copies of {1} updated.</value>
+  </data>
+  <data name="AttributeCommandRetroactivePartialFormat" xml:space="preserve">
+    <value>Stopped after {0} objects: {1} existing copies of {2} updated, {3} could not be. Run the command again to finish.</value>
   </data>
   <data name="AttributeCommandRemovedFromTableFormat" xml:space="preserve">
     <value>Attribute '{0}' removed from standard attribute table.</value>
