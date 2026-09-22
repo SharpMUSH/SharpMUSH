@@ -215,4 +215,30 @@ public class MailDeliveryTests
 		await Assert.That(await Get(mortal.DbRef, "AMAILED")).IsEqualTo(string.Empty);
 		await Assert.That(await Get(royal.DbRef, "AMAILED")).StartsWith($"#{sender.DbRef.Number}");
 	}
+
+	/// <summary>
+	/// Penn is single-threaded, so counting the inbox and inserting the message are one step there. Here
+	/// deliveries run concurrently (the portal's command invoker among them), so two messages arriving
+	/// together must still be numbered apart.
+	/// </summary>
+	[Test]
+	public async ValueTask ConcurrentDeliveriesToOneMailboxAreNumberedApart()
+	{
+		var target = await Player("MdRaceTo");
+		var senders = new List<TestIsolationHelpers.TestPlayer>();
+		for (var i = 0; i < 8; i++)
+		{
+			senders.Add(await Player($"MdRace{i}"));
+		}
+
+		var heard = await Heard(target, () =>
+			Task.WhenAll(senders.Select(sender => Run(sender, $"@mail #{target.DbRef.Number}=Race/Body."))));
+
+		var numbers = heard
+			.Select(m => System.Text.RegularExpressions.Regex.Match(m, @"^MAIL: You have a new message \((\d+)\)"))
+			.Where(match => match.Success)
+			.Select(match => int.Parse(match.Groups[1].Value));
+
+		await Assert.That(numbers).IsEquivalentTo(Enumerable.Range(1, 8));
+	}
 }

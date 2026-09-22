@@ -35,6 +35,16 @@ public static class MailDelivery
 	private const string Inbox = "INBOX";
 
 	/// <summary>
+	/// Serializes counting a mailbox with writing to it. Penn is single-threaded, so the two are one step
+	/// there; here deliveries run concurrently, and a count taken outside the gate numbers two messages
+	/// alike. Striped by recipient so unrelated mailboxes do not wait on each other.
+	/// </summary>
+	private static readonly SemaphoreSlim[] MailboxGates = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
+
+	private static SemaphoreSlim GateFor(SharpPlayer target)
+		=> MailboxGates[(int)((uint)target.Object.DBRef.Number % MailboxGates.Length)];
+
+	/// <summary>
 	/// PennMUSH <c>send_mail</c>. Returns the mailboxes the message landed in, which is empty when it was
 	/// refused. <paramref name="silent"/> suppresses the sender's confirmation and refusals, never the
 	/// recipient's notice.
@@ -65,24 +75,34 @@ public static class MailDelivery
 			return false;
 		}
 
-		var inboxCount = await services.Mediator.CreateStream(new GetMailListQuery(target, Inbox)).CountAsync();
-
-		await services.Mediator.Send(new SendMailCommand(sender.Object(), target, new SharpMail
+		var gate = GateFor(target);
+		await gate.WaitAsync();
+		int inboxCount;
+		try
 		{
-			DateSent = DateTimeOffset.UtcNow,
-			Fresh = true,
-			Read = false,
-			Tagged = false,
-			Urgent = letter.Urgent,
-			Cleared = false,
-			Forwarded = letter.Forwarded,
-			Folder = Inbox,
-			Content = letter.Signature.Length > 0
-				? MarkupText.Concat([letter.Body, MarkupText.NewLine, letter.Signature])
-				: letter.Body,
-			Subject = letter.Subject,
-			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(sender.WithNoneOption())),
-		}));
+			inboxCount = await services.Mediator.CreateStream(new GetMailListQuery(target, Inbox)).CountAsync();
+
+			await services.Mediator.Send(new SendMailCommand(sender.Object(), target, new SharpMail
+			{
+				DateSent = DateTimeOffset.UtcNow,
+				Fresh = true,
+				Read = false,
+				Tagged = false,
+				Urgent = letter.Urgent,
+				Cleared = false,
+				Forwarded = letter.Forwarded,
+				Folder = Inbox,
+				Content = letter.Signature.Length > 0
+					? MarkupText.Concat([letter.Body, MarkupText.NewLine, letter.Signature])
+					: letter.Body,
+				Subject = letter.Subject,
+				From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(sender.WithNoneOption())),
+			}));
+		}
+		finally
+		{
+			gate.Release();
+		}
 
 		if (!silent)
 		{
