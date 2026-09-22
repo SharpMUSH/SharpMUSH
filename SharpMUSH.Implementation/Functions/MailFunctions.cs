@@ -346,7 +346,8 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 
 		await SendMail.Handle(parser, LocateService, Mediator, NotifyService,
-			new MailDelivery.Services(PermissionService, Mediator, NotifyService, DidItService, AttributeService, Configuration),
+			new MailDelivery.Services(PermissionService, Mediator, NotifyService, DidItService, AttributeService, ObjectDataService,
+			Configuration),
 			args["0"].Message!, args["1"].Message!, ["SILENT"]);
 
 		// do_mail_send notifies the sender about a bad recipient, so the function returns nothing.

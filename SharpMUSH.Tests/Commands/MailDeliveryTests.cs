@@ -409,4 +409,115 @@ public class MailDeliveryTests
 
 		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
 	}
+
+	/// <summary>
+	/// <c>filter_mail</c> (<c>extmail.c:3289</c>): a non-empty MAILFILTER result files the new message into
+	/// that folder. Captured: <c>MAIL: You have a new message (3) from LS309.</c> then
+	/// <c>MAIL: Msg 0:3 filed in folder 1 [STUFF]</c>. SharpMUSH folders are named, not numbered.
+	/// </summary>
+	[Test]
+	public async ValueTask AMailFilterFilesTheMessageIntoTheFolderItNames()
+	{
+		var sender = await Player("MdFltFile");
+		var target = await Player("MdFltFileTo");
+		await Run(target, "&MAILFILTER me=[if(strmatch(%1,*urgent*),Urgent)]");
+
+		var heard = await Heard(target, async () =>
+		{
+			await Run(sender, $"@mail #{target.DbRef.Number}=Not urgent at all/Body.");
+			await Run(sender, $"@mail #{target.DbRef.Number}=Plain/Body.");
+		});
+
+		await Assert.That(heard).Contains($"MAIL: You have a new message (1) from {sender.Name}.");
+		await Assert.That(heard).Contains("MAIL: Msg 1 filed in folder Urgent.");
+		await Assert.That((await Mailbox(target)).Select(m => m.Subject.ToPlainText())).IsEquivalentTo(["Plain"]);
+		await Assert.That((await Mailbox(target, "Urgent")).Select(m => m.Subject.ToPlainText()))
+			.IsEquivalentTo(["Not urgent at all"]);
+	}
+
+	/// <summary>
+	/// The filter runs as the recipient with the sender as enactor, and gets the sender's dbref, the
+	/// subject, the body as written and the U/F/R flags. Captured from
+	/// <c>[pemit(me,f:%0|%1|%2|%3|%#|%@|%!)]</c> on an urgent message:
+	/// <c>f:#6|flt1|filter body|U|#6|#8|#8</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask AMailFilterSeesTheSenderSubjectBodyAndFlags()
+	{
+		var sender = await Player("MdFltArgs");
+		var target = await Player("MdFltArgsTo");
+		await Run(sender, "&MAILSIGNATURE me=-- signed");
+		await Run(target, "&MAILFILTER me=[pemit(me,f:%0|%1|%2|%3|%#|%@|%!)]");
+
+		var heard = await Heard(target, () => Run(sender, $"@mail/urgent #{target.DbRef.Number}=Subject line/filter body"));
+
+		var s = sender.DbRef.Number;
+		var t = target.DbRef.Number;
+		await Assert.That(heard).Contains($"f:#{s}|Subject line|filter body|U|#{s}|#{t}|#{t}");
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+	}
+
+	/// <summary>A forward reaches the filter flagged <c>F</c> (<c>extmail.c:3306</c>).</summary>
+	[Test]
+	public async ValueTask AMailFilterSeesAForwardFlagged()
+	{
+		var sender = await Player("MdFltFwd");
+		var target = await Player("MdFltFwdTo");
+		await Run(target, "&MAILFILTER me=[pemit(me,flags:%3)]");
+		await Run(sender, "@mail me=Pass it on/Body.");
+
+		var heard = await Heard(target, () => Run(sender, $"@mail/fwd 1=#{target.DbRef.Number}"));
+
+		await Assert.That(heard).Contains("flags:F");
+	}
+
+	/// <summary>
+	/// A result that names no folder leaves the message in the inbox. Captured:
+	/// <c>MAIL: Invalid folder specification</c>. Penn folder names are alphanumeric
+	/// (<c>extmail.c:333</c>), which is also what keeps an error string from becoming a folder.
+	/// </summary>
+	[Test]
+	public async ValueTask AMailFilterResultThatIsNoFolderNameLeavesTheMessageInTheInbox()
+	{
+		var sender = await Player("MdFltBad");
+		var target = await Player("MdFltBadTo");
+		await Run(target, "&MAILFILTER me=not a folder!");
+
+		var heard = await Heard(target, () => Run(sender, $"@mail #{target.DbRef.Number}=Stays/Body."));
+
+		await Assert.That(heard).Contains("MAIL: Invalid folder specification");
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+	}
+
+	/// <summary>A refused message never reaches the filter: <c>filter_mail</c> runs after the store.</summary>
+	[Test]
+	public async ValueTask ARefusedMessageDoesNotRunTheFilter()
+	{
+		var sender = await Player("MdFltRefused");
+		var target = await Player("MdFltRefusedTo");
+		await Run(target, "&MAILFILTER me=[pemit(me,filter ran)]");
+		await Run(target, "@lock/mail me=#0");
+
+		var heard = await Heard(target, () => Run(sender, $"@mail #{target.DbRef.Number}=Refused/Body."));
+
+		await Assert.That(heard).DoesNotContain("filter ran");
+	}
+
+	/// <summary>
+	/// A filter that mails its owner is recursion PennMUSH does not bound: the captured run delivered 124
+	/// messages and then the server died ("Parent mush process exited unexpectedly"). Mail sent while a
+	/// filter is being evaluated is delivered without running filters, so the loop is one message deep.
+	/// </summary>
+	[Test]
+	public async ValueTask AMailFilterThatSendsMailDoesNotRecurse()
+	{
+		var sender = await Player("MdFltLoop");
+		var target = await Player("MdFltLoopTo");
+		await Run(target, "&MAILFILTER me=[mailsend(me,loop/loop)]");
+
+		await Run(sender, $"@mail #{target.DbRef.Number}=Start/Body.");
+
+		await Assert.That((await Mailbox(target)).Select(m => m.Subject.ToPlainText()))
+			.IsEquivalentTo(["Start", "loop"]);
+	}
 }

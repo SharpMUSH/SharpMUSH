@@ -4,6 +4,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -27,6 +28,7 @@ public static partial class MailDelivery
 		INotifyService Notify,
 		IDidItService DidIt,
 		IAttributeService Attributes,
+		IExpandedObjectDataService ObjectData,
 		IOptionsWrapper<SharpMUSHOptions> Configuration);
 
 	/// <summary>A message on its way to one or more mailboxes.</summary>
@@ -39,6 +41,17 @@ public static partial class MailDelivery
 	/// <summary><c>is_objid</c> (<c>src/parse.c:351</c>): what a forward list may name.</summary>
 	[GeneratedRegex(@"^#-?\d+(?::\d+)?$")]
 	private static partial Regex ObjidPattern();
+
+	/// <summary><c>extmail.c:333</c> — a folder name is alphanumeric.</summary>
+	[GeneratedRegex(@"^[A-Za-z0-9]+$")]
+	private static partial Regex FolderNamePattern();
+
+	/// <summary>
+	/// Set while a MAILFILTER is being evaluated. Mail that filter sends is delivered without running
+	/// filters, so a filter that mails its owner cannot recurse — PennMUSH does not bound this and the
+	/// captured run crashed the server.
+	/// </summary>
+	private static readonly AsyncLocal<bool> Filtering = new();
 
 	/// <summary>
 	/// PennMUSH <c>send_mail</c>. Returns the mailboxes the message landed in, which is empty when it was
@@ -160,6 +173,10 @@ public static partial class MailDelivery
 
 		var inboxCount = await services.Mediator.CreateStream(new GetMailListQuery(target, Inbox)).CountAsync();
 
+		// Chosen before the store, which hands back no id to move the message by afterwards, so the
+		// message is written once into the folder it belongs in.
+		var (folder, filterNotice) = await FolderForAsync(parser, services, sender, target, letter, inboxCount + 1);
+
 		await services.Mediator.Send(new SendMailCommand(sender.Object(), target, new SharpMail
 		{
 			DateSent = DateTimeOffset.UtcNow,
@@ -169,7 +186,7 @@ public static partial class MailDelivery
 			Urgent = letter.Urgent,
 			Cleared = false,
 			Forwarded = letter.Forwarded,
-			Folder = Inbox,
+			Folder = folder,
 			Content = letter.Signature.Length > 0
 				? MarkupText.Concat([letter.Body, MarkupText.NewLine, letter.Signature])
 				: letter.Body,
@@ -189,6 +206,11 @@ public static partial class MailDelivery
 		await services.Notify.Notify(target,
 			$"MAIL: You have a new message ({inboxCount + 1}) from {sender.Object().Name}.", sender);
 
+		if (filterNotice is not null)
+		{
+			await services.Notify.Notify(target, filterNotice);
+		}
+
 		// extmail.c:1700 — a privileged recipient's AMAIL, never for mail to oneself, queued by did_it.
 		if (services.Configuration.CurrentValue.Attribute.AMail
 				&& sender.Object().DBRef != target.Object.DBRef
@@ -198,5 +220,65 @@ public static partial class MailDelivery
 		}
 
 		return true;
+	}
+
+	/// <summary>
+	/// <c>filter_mail</c> (<c>extmail.c:3289</c>): the recipient's MAILFILTER, parents included, runs as the
+	/// recipient with the sender as enactor, and a non-empty result names the folder the message is filed in.
+	/// Returns the folder and the notice filing it produced, if any.
+	/// </summary>
+	private static async ValueTask<(string Folder, string? Notice)> FolderForAsync(IMUSHCodeParser parser,
+		Services services, AnySharpObject sender, SharpPlayer target, Letter letter, int messageNumber)
+	{
+		if (Filtering.Value)
+		{
+			return (Inbox, null);
+		}
+
+		Filtering.Value = true;
+		try
+		{
+			var recipient = new AnySharpObject(target);
+			var arguments = new Dictionary<string, CallState>
+			{
+				["0"] = new(MarkupText.Plain($"#{sender.Object().DBRef.Number}")),
+				["1"] = new(letter.Subject),
+				["2"] = new(letter.Body),
+				["3"] = new(MarkupText.Plain((letter.Urgent ? "U" : string.Empty) + (letter.Forwarded ? "F" : string.Empty)))
+			};
+
+			var result = await parser.With(
+				state => state with { Executor = target.Object.DBRef, Enactor = sender.Object().DBRef, Caller = target.Object.DBRef },
+				filterParser => services.Attributes.EvaluateAttributeFunctionAsync(filterParser, recipient, recipient,
+					"MAILFILTER", arguments, evalParent: true, ignorePermissions: true));
+
+			var folder = result.ToPlainText().Trim();
+			if (folder.Length == 0)
+			{
+				return (Inbox, null);
+			}
+
+			if (!FolderNamePattern().IsMatch(folder))
+			{
+				return (Inbox, "MAIL: Invalid folder specification");
+			}
+
+			if (folder.Equals(Inbox, StringComparison.OrdinalIgnoreCase))
+			{
+				return (Inbox, $"MAIL: Msg {messageNumber} filed in folder {Inbox}.");
+			}
+
+			// As @mail/file does, filing into a folder makes it one of the player's folders.
+			var folders = await services.ObjectData.GetExpandedDataAsync<ExpandedMailData>(target.Object);
+			await services.ObjectData.SetExpandedDataAsync(
+				new ExpandedMailData(Folders: [.. (folders?.Folders ?? []).Append(folder).Distinct()]),
+				target.Object, ignoreNull: true);
+
+			return (folder, $"MAIL: Msg {messageNumber} filed in folder {folder}.");
+		}
+		finally
+		{
+			Filtering.Value = false;
+		}
 	}
 }
