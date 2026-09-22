@@ -2006,8 +2006,12 @@ public static class ErrorMessages
 		public const string SitelockHostMatchesFormat = "Host '{0}' matches pattern '{1}' with options: {2}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SitelockHostNoMatchFormat = "Host '{0}' does not match any sitelock rules (default access allowed).";
-		public const string SitelockNameRequiresName = "@SITELOCK/NAME requires a player name.";
-		public const string SitelockNameNotImplemented = "@SITELOCK/NAME modification is not yet implemented. Use the admin UI to modify banned names.";
+		public const string SitelockNameListHeader = "Any name matching these wildcard patterns is banned:";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SitelockNameLockedFormat = "Name {0} locked.";
+		public const string SitelockNameRemoved = "Name removed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SitelockNameNotBannedFormat = "No banned name pattern is {0}.";
 		public const string SitelockBanRequiresPattern = "@SITELOCK/BAN requires a host pattern.";
 		public const string SitelockRegisterRequiresPattern = "@SITELOCK/REGISTER requires a host pattern.";
 		public const string SitelockRemoveRequiresPattern = "@SITELOCK/REMOVE requires a host pattern.";

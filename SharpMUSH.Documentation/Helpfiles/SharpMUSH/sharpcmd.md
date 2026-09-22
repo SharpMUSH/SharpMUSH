@@ -3672,7 +3672,7 @@ You can use this command to set yourself or any of your objects to be male, fema
 If the `/paranoid` switch is added, the shutdown dump will be a paranoid dump (see @dump).
 # @sitelock
 `@sitelock`<br>
-`@sitelock/name <name>`<br>
+`@sitelock/name [[!]<pattern>]`<br>
 `@sitelock[/player] <host-pattern>=<options>[, <name>]`<br>
 `@sitelock[/<ban|register>][/player] <host-pattern>`<br>
 `@sitelock/check <host>`<br>
@@ -3682,7 +3682,7 @@ The @sitelock command adds rules to the access.cnf file, controlling a host's le
 
 @sitelock without arguments lists all sites in access.cnf. Rules are processed in the order listed, and the first matching rule is applied. `@sitelock/check` tells you which rule will match for a given `<host>`.
 
-`@sitelock/name` adds a name to the list of banned player names. Use !`<name>` to remove a name from the list.
+`@sitelock/name <pattern>` bans player names matching `<pattern>`, which may use the wildcards "*" and "?" and is matched without regard to case. `@sitelock/name !<pattern>` lifts that ban, and `@sitelock/name` with no argument lists the banned patterns. A banned name is refused as a player name for anyone but a wizard or the player who already has it; `valid(playername, ...)` reports it. The list is kept with the game's configuration, so it survives a restart and is the same list the web portal's banned-names page edits.
 
 `@sitelock <host-pattern>=<options>[, <name>]` controls the access options for hosts which match `<host-pattern>`, which may include wildcard characters "*" and "?". See help @sitelock2 for the list of options, and help @sitelock3 for an explanation about the name argument.
 

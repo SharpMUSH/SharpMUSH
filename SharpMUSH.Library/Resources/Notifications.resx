@@ -2518,11 +2518,17 @@
   <data name="SitelockHostNoMatchFormat" xml:space="preserve">
     <value>Host '{0}' does not match any sitelock rules (default access allowed).</value>
   </data>
-  <data name="SitelockNameRequiresName" xml:space="preserve">
-    <value>@SITELOCK/NAME requires a player name.</value>
+  <data name="SitelockNameListHeader" xml:space="preserve">
+    <value>Any name matching these wildcard patterns is banned:</value>
   </data>
-  <data name="SitelockNameNotImplemented" xml:space="preserve">
-    <value>@SITELOCK/NAME modification is not yet implemented. Use the admin UI to modify banned names.</value>
+  <data name="SitelockNameLockedFormat" xml:space="preserve">
+    <value>Name {0} locked.</value>
+  </data>
+  <data name="SitelockNameRemoved" xml:space="preserve">
+    <value>Name removed.</value>
+  </data>
+  <data name="SitelockNameNotBannedFormat" xml:space="preserve">
+    <value>No banned name pattern is {0}.</value>
   </data>
   <data name="SitelockBanRequiresPattern" xml:space="preserve">
     <value>@SITELOCK/BAN requires a host pattern.</value>

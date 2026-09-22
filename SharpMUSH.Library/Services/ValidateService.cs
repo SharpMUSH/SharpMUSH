@@ -2,6 +2,7 @@ using Mediator;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -198,8 +199,14 @@ public partial class ValidateService(
 			return false;
 		}
 
-		// Check against forbidden names list (would require configuration: forbidden_player_names)
-		// For now, allow all names that pass other validation
+		// ok_player_name: a name matching a banned pattern is only for a wizard, or for the player
+		// who already has it.
+		if (IsBannedName(plainName)
+				&& !plainName.Equals(target.Object().Name, StringComparison.OrdinalIgnoreCase)
+				&& !await target.IsWizard())
+		{
+			return false;
+		}
 
 		var tryFindPlayerByName = mediator
 			.CreateStream(new GetPlayerQuery(plainName))
@@ -208,6 +215,14 @@ public partial class ValidateService(
 		return !await tryFindPlayerByName
 			.AnyAsync(x => x.Object.Name.Equals(plainName, StringComparison.InvariantCultureIgnoreCase));
 	}
+
+	/// <summary>
+	/// PennMUSH's <c>forbidden_name</c> (<c>src/predicat.c:622</c>): whether <paramref name="name"/>
+	/// matches any <c>@sitelock/name</c> pattern, as a caseless wildcard match of the whole name.
+	/// </summary>
+	private bool IsBannedName(string name)
+		=> configuration.CurrentValue.BannedNames.BannedNames
+			.Any(pattern => MushText.IsWildcardMatch(MarkupText.Plain(name), pattern));
 
 	/// <summary>
 	/// A legal object name: at least one character, no leading or trailing space, no control
