@@ -358,4 +358,81 @@ public class CommandManagementTests
 		await Assert.That(await As(wizard, $"{name} twice")).Contains("This command has not been implemented.");
 		await Assert.That(await As(wizard, $"{name} twice")).DoesNotContain("Hooked twice.");
 	}
+
+	/// <summary>A disabled command is still taken: <c>command_find</c> finds it, so /add refuses the name.</summary>
+	[Test]
+	public async ValueTask Add_OnADisabledCommandsName_SaysItAlreadyExists()
+	{
+		var wizard = await Wizard();
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+		await As(wizard, $"@command/disable {clone}");
+
+		var messages = await As(wizard, $"@command/add {clone}");
+
+		await Assert.That(messages).Contains($"Command {clone} already exists.");
+	}
+
+	/// <summary><c>command_find_exact</c> finds a disabled command, so God can delete one without enabling it.</summary>
+	[Test]
+	public async ValueTask Delete_ADisabledAddedCommand_RemovesIt()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		await As(wizard, $"@command/add {name}");
+		await As(wizard, $"@command/disable {name}");
+
+		var messages = await AsGod($"@command/delete {name}");
+
+		await Assert.That(messages).Contains($"Removed {name} from command table.");
+		await Assert.That(await As(wizard, $"@command/enable {name}")).Contains("No such command.");
+		await Assert.That(await As(wizard, $"{name} x")).Contains(Huh);
+	}
+
+	/// <summary>Deleting an alias takes that alias's hooks with it, as deleting a command does.</summary>
+	[Test]
+	public async ValueTask Delete_AnAlias_TakesTheAliasHooksWithIt()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		var alias = CommandName();
+		var machine = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AliasHooked");
+		// The hook is keyed by the typed name (the alias), but its input carries the command's own
+		// name, so the $-command matches on that. See #1223.
+		await As(wizard, $"&DO {machine}=${name} *:@pemit %#=Aliased %0.");
+		await As(wizard, $"@command/add {name}");
+		await As(wizard, $"@command/alias {name}={alias}");
+		await As(wizard, $"@hook/override {alias}={machine},DO");
+		await Assert.That(await As(wizard, $"{alias} once")).Contains("Aliased once.").Because("precondition");
+
+		await AsGod($"@command/delete {alias}");
+		await As(wizard, $"@command/alias {name}={alias}");
+
+		await Assert.That(await As(wizard, $"{alias} twice")).Contains("This command has not been implemented.");
+		await Assert.That(await As(wizard, $"{alias} twice")).DoesNotContain("Aliased twice.");
+	}
+
+	/// <summary><c>=nobody</c> is <c>/disable</c>, so it is refused for the commands the game runs itself.</summary>
+	[Test]
+	public async ValueTask Restrict_NobodyOnACommandTheGameRuns_IsRefused()
+	{
+		var wizard = await Wizard();
+
+		var messages = await As(wizard, "@command/restrict GOTO=nobody");
+
+		await Assert.That(messages).Contains("GOTO is run by the game itself and cannot be disabled.");
+		await Assert.That(await As(wizard, "@command GOTO")).Contains("Command: GOTO (Enabled)");
+	}
+
+	/// <summary>An added command is registered as a system entry so the trie matches it, but it is not built in.</summary>
+	[Test]
+	public async ValueTask Info_ForAnAddedCommand_SaysUserDefined()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		await As(wizard, $"@command/add {name}");
+
+		await Assert.That(await As(wizard, $"@command {name}")).Contains("  Type: User-defined");
+		await Assert.That(await As(wizard, "@command think")).Contains("  Type: Built-in");
+	}
 }

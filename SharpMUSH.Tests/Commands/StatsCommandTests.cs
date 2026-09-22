@@ -16,6 +16,11 @@ namespace SharpMUSH.Tests.Commands;
 /// Penn's chunk allocator. The command is <c>CMD_T_ANY</c> with no lock (<c>src/command.c:300</c>),
 /// so a mortal reaches every switch; only counting another player's objects needs Search_All.
 /// </summary>
+/// <remarks>
+/// The flag and table reports assert exact counts, so these share a parallel constraint with
+/// <see cref="FlagListTests"/>, which adds and deletes a flag in the same shared world.
+/// </remarks>
+[NotInParallel("FlagAndPowerRegistry")]
 public partial class StatsCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]

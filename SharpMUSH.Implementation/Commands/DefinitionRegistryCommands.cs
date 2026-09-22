@@ -137,7 +137,10 @@ public partial class Commands
 		var attr = definition.Attribute;
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoNameFormat), executor, attr.Name, disabled ? "Disabled" : "Enabled");
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoTypeFormat), executor, isSystem ? "Built-in" : "User-defined");
+		// A command @command/add made is registered as a system entry because only those are matched
+		// from the command trie, but it is not built in, and list_commands tells the two apart.
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoTypeFormat), executor,
+			isSystem && !IsAddedCommand(definition) ? "Built-in" : "User-defined");
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMinArgsFormat), executor, attr.MinArgs);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMaxArgsFormat), executor, attr.MaxArgs);
 
@@ -226,10 +229,10 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (CommandLibrary.TryGetValue(name, out var existing) || DisabledCommandFor(name) is not null)
+		if (FindCommand(name) is { } taken)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAlreadyExistsFormat), executor,
-				existing.LibraryInformation.Attribute?.Name ?? name);
+				taken.LibraryInformation.Attribute.Name);
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
@@ -365,7 +368,8 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (!CommandLibrary.TryGetValue(name, out var command))
+		// command_find_exact still finds a disabled command, so /delete reaches one too.
+		if (FindCommand(name) is not { } command)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNoSuchCommand), executor);
 			return new CallState(ErrorMessages.Returns.CommandNotFound);
@@ -374,12 +378,7 @@ public partial class Commands
 		var definition = command.LibraryInformation;
 		if (!definition.Attribute.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
 		{
-			lock (_commandTableLock)
-			{
-				CommandLibrary.Remove(name);
-				CommandTrie.Invalidate(CommandLibrary);
-			}
-
+			await ForgetCommandNamesAsync([name]);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRemovedFormat), executor, name);
 			return new CallState(name);
 		}
@@ -390,35 +389,85 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		string[] names;
-		lock (_commandTableLock)
-		{
-			names = [.. CommandLibrary.Where(entry => ReferenceEquals(entry.Value.LibraryInformation.Attribute, definition.Attribute))
-				.Select(entry => entry.Key)];
-			foreach (var each in names)
-			{
-				CommandLibrary.Remove(each);
-			}
-
-			CommandTrie.Invalidate(CommandLibrary);
-		}
-
-		// Penn frees the COMMAND_INFO, and its hooks with it (src/command.c:2100-2104), so a command
-		// added under the name again starts unhooked. Hooks here outlive the table entry unless cleared.
-		foreach (var each in names)
-		{
-			foreach (var (type, _) in await HookService.GetAllHooksAsync(each))
-			{
-				await HookService.ClearHookAsync(each, type);
-			}
-		}
-
-		var removed = names.Length;
+		var removed = await ForgetCommandNamesAsync(NamesOf(definition.Attribute));
 
 		await NotifyService.NotifyLocalized(executor,
 			removed > 1 ? nameof(ErrorMessages.Notifications.CommandRemovedWithAliasesFormat) : nameof(ErrorMessages.Notifications.CommandRemovedFormat),
 			executor, name);
 		return new CallState(name);
+	}
+
+	/// <summary>
+	/// The command <paramref name="name"/> names, whether it is in the table or <c>@command/disable</c>
+	/// has parked it — <c>command_find_exact</c> finds a disabled command too.
+	/// </summary>
+	private (CommandDefinition LibraryInformation, bool IsSystem)? FindCommand(string name)
+	{
+		if (CommandLibrary.TryGetValue(name, out var live))
+		{
+			return live;
+		}
+
+		lock (_commandTableLock)
+		{
+			return _disabledCommands.Values
+				.SelectMany(entries => entries)
+				.Where(entry => entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+				.Select(entry => ((CommandDefinition, bool)?)entry.Value)
+				.FirstOrDefault();
+		}
+	}
+
+	/// <summary>Every name <paramref name="attribute"/>'s command answers to, parked ones included.</summary>
+	private string[] NamesOf(SharpCommandAttribute attribute)
+	{
+		lock (_commandTableLock)
+		{
+			return
+			[
+				.. CommandLibrary.Where(entry => ReferenceEquals(entry.Value.LibraryInformation.Attribute, attribute)).Select(entry => entry.Key),
+				.. _disabledCommands.Values.SelectMany(entries => entries)
+					.Where(entry => ReferenceEquals(entry.Value.LibraryInformation.Attribute, attribute)).Select(entry => entry.Key)
+			];
+		}
+	}
+
+	/// <summary>
+	/// Forgets <paramref name="names"/> entirely: out of the table, out of the disabled parking, and
+	/// out of the hook service. Penn frees the COMMAND_INFO and its hooks with it
+	/// (<c>src/command.c:2100-2104</c>), so a name added again comes back unhooked — an alias as much
+	/// as the command itself.
+	/// </summary>
+	private async ValueTask<int> ForgetCommandNamesAsync(string[] names)
+	{
+		lock (_commandTableLock)
+		{
+			foreach (var name in names)
+			{
+				CommandLibrary.Remove(name);
+			}
+
+			foreach (var (parked, entries) in _disabledCommands.ToArray())
+			{
+				entries.RemoveAll(entry => names.Contains(entry.Key, StringComparer.OrdinalIgnoreCase));
+				if (entries.Count == 0)
+				{
+					_disabledCommands.Remove(parked);
+				}
+			}
+
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+
+		foreach (var name in names)
+		{
+			foreach (var (type, _) in await HookService.GetAllHooksAsync(name))
+			{
+				await HookService.ClearHookAsync(name, type);
+			}
+		}
+
+		return names.Length;
 	}
 
 	/// <summary>
@@ -500,7 +549,13 @@ public partial class Commands
 		switch (await RestrictionFromWords(words, attribute.Behavior))
 		{
 			case CommandRestriction { Disables: true }:
-				await DisableCommandAsync(executor, definition);
+				// "nobody" is CMD_T_DISABLED, so the refusals @command/disable answers with are this
+				// command's answers too.
+				if (await DisableCommandAsync(executor, definition) is CallState refused)
+				{
+					return refused;
+				}
+
 				break;
 			case CommandRestriction translated:
 				attribute.CommandLock = translated.Lock;

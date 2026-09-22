@@ -11,6 +11,11 @@ namespace SharpMUSH.Tests.Commands;
 /// wildcard over the names, and disabled definitions listed for God only. <c>@flag/list</c> used to
 /// ignore both.
 /// </summary>
+/// <remarks>
+/// Adding and deleting a flag changes the counts <see cref="StatsCommandTests"/> asserts exactly, so
+/// the two classes share a parallel constraint.
+/// </remarks>
+[NotInParallel("FlagAndPowerRegistry")]
 public class FlagListTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
