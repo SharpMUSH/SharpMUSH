@@ -17,6 +17,8 @@ using System.Diagnostics;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using ConfigGenerated = SharpMUSH.Configuration.Generated;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Configuration;
 using SharpMUSH.Library.Requests;
 using System.Collections.Immutable;
@@ -486,56 +488,214 @@ public partial class Commands
 	[SharpCommand(Name = "@ENABLE", Switches = [], Behavior = CB.Default | CB.NoGagged, CommandLock = "FLAG^WIZARD",
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["command"])]
 	public async ValueTask<Option<CallState>> Enable(IMUSHCodeParser parser, SharpCommandAttribute _2)
-		=> await ConfigSetHelper(parser, isEnable: true);
+		=> await ToggleConfigOptionAsync(parser, enable: true);
 
 	[SharpCommand(Name = "@DISABLE", Switches = [], Behavior = CB.Default, CommandLock = "FLAG^WIZARD",
 		MinArgs = 1, MaxArgs = 1, ParameterNames = ["command"])]
 	public async ValueTask<Option<CallState>> Disable(IMUSHCodeParser parser, SharpCommandAttribute _2)
-		=> await ConfigSetHelper(parser, isEnable: false);
+		=> await ToggleConfigOptionAsync(parser, enable: false);
 
 	/// <summary>
-	/// Helper method for @ENABLE and @DISABLE commands.
-	/// Mimics @config/set behavior for boolean options.
+	/// PennMUSH's <c>do_enable</c> (<c>src/conf.c:1780</c>): <c>@config/set &lt;option&gt;=yes|no</c> for
+	/// an on/off option, answered "Enabled." or "Disabled.".
 	/// </summary>
-	private async ValueTask<Option<CallState>> ConfigSetHelper(IMUSHCodeParser parser, bool isEnable)
+	private async ValueTask<Option<CallState>> ToggleConfigOptionAsync(IMUSHCodeParser parser, bool enable)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-
-		var optionName = args.GetValueOrDefault("0")?.Message?.ToPlainText();
-		if (string.IsNullOrWhiteSpace(optionName))
+		var optionName = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText().Trim();
+		if (string.IsNullOrEmpty(optionName))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, isEnable ? "enable" : "disable");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableUsageSyntaxFormat), executor, enable ? "enable" : "disable");
 			return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		var matchingProperty = ConfigGenerated.ConfigMetadata.PropertyToAttributeName
-			.FirstOrDefault(kvp => kvp.Value.Equals(optionName, StringComparison.OrdinalIgnoreCase));
-
-		if (matchingProperty.Key == null)
+		if (ConfigPropertyFor(optionName) is not { } property || !CanViewConfigOption(executor, property))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, optionName);
 			return new CallState(ErrorMessages.Returns.NotFound);
 		}
 
-		var propertyType = ConfigGenerated.ConfigAccessor.GetPropertyType(matchingProperty.Key);
-		if (propertyType != typeof(bool))
+		var name = ConfigGenerated.ConfigMetadata.PropertyMetadata[property].Name;
+		if (!IsConfigOptionSettable(property))
 		{
-			var attr = ConfigGenerated.ConfigMetadata.PropertyMetadata[matchingProperty.Key];
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor, attr.Name);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionNotSettableFormat), executor, name);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (ConfigGenerated.ConfigAccessor.GetPropertyType(property) != typeof(bool))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableNotBooleanFormat), executor, name);
 			return new CallState(ErrorMessages.Returns.InvalidType);
 		}
 
-		var value = ConfigGenerated.ConfigAccessor.GetValue(Configuration.CurrentValue, matchingProperty.Key);
-		var attr2 = ConfigGenerated.ConfigMetadata.PropertyMetadata[matchingProperty.Key];
+		return await StoreConfigValueAsync(parser, property, enable) switch
+		{
+			SharpMUSHOptions => await ConfigToggledAsync(executor, name, enable),
+			Error<string> error => await ConfigRefusedAsync(executor, name, enable ? "yes" : "no", error.Value)
+		};
+	}
 
-		// Note: Runtime configuration modification is not yet fully implemented
-		// This would require writing to a configuration file or database and reloading
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor, isEnable ? "enable" : "disable", attr2.Name, isEnable ? "yes" : "no");
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.RuntimeConfigNotImplemented), executor);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCurrentValueFormat), executor, attr2.Name, value?.ToString() ?? "null");
+	private async ValueTask<CallState> ConfigToggledAsync(AnySharpObject executor, string name, bool enable)
+	{
+		Logger.LogInformation("{Option} {State} by {Executor}", name, enable ? "ENABLED" : "DISABLED", executor.Object().Name);
+		await NotifyService.NotifyLocalized(executor,
+			enable ? nameof(ErrorMessages.Notifications.ConfigOptionEnabled) : nameof(ErrorMessages.Notifications.ConfigOptionDisabled), executor);
+		return new CallState(enable ? "1" : "0");
+	}
 
-		return new CallState(ErrorMessages.Returns.NotImplemented);
+	/// <summary>
+	/// <c>@config/set</c> and <c>@config/save</c>, after <c>cmd_config</c>'s permission checks: find the
+	/// option, refuse the ones <c>config_set</c> keeps out of a command's reach, parse the value for the
+	/// option's type, and store it.
+	/// </summary>
+	private async ValueTask<CallState> SetConfigOptionAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		string optionName, string? value, bool save)
+	{
+		if (ConfigPropertyFor(optionName) is not { } property || value is null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCouldntSet), executor);
+			return new CallState(ErrorMessages.Returns.NoSuchConfigOption);
+		}
+
+		var name = ConfigGenerated.ConfigMetadata.PropertyMetadata[property].Name;
+		if (!IsConfigOptionSettable(property))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionNotSettableFormat), executor, name);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (!TryParseConfigValue(ConfigGenerated.ConfigAccessor.GetPropertyType(property)!, value, out var parsed))
+		{
+			return await ConfigRefusedAsync(executor, name, value, reason: null);
+		}
+
+		return await StoreConfigValueAsync(parser, property, parsed) switch
+		{
+			SharpMUSHOptions => await ConfigSetAsync(executor, name, value, save),
+			Error<string> error => await ConfigRefusedAsync(executor, name, value, error.Value)
+		};
+	}
+
+	private async ValueTask<CallState> ConfigSetAsync(AnySharpObject executor, string name, string value, bool save)
+	{
+		Logger.LogInformation("Config option '{Option}' set to '{Value}'{Saved} by {Executor}",
+			name, value, save ? " and saved" : "", executor.Object().Name);
+		await NotifyService.NotifyLocalized(executor,
+			save ? nameof(ErrorMessages.Notifications.ConfigOptionSetAndSaved) : nameof(ErrorMessages.Notifications.ConfigOptionSet), executor);
+		return new CallState(value);
+	}
+
+	private async ValueTask<CallState> ConfigRefusedAsync(AnySharpObject executor, string name, string value, string? reason)
+	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigInvalidValueFormat), executor, name, value);
+		if (reason is not null)
+		{
+			await NotifyService.Notify(executor, reason, executor);
+		}
+
+		return new CallState(ErrorMessages.Returns.InvalidArguments);
+	}
+
+	/// <summary>
+	/// Writes one option into the stored configuration — the document every service reads its options
+	/// from, and the one the portal's configuration page edits — after the registered validators accept
+	/// the whole result, then signals the reload that makes it live.
+	/// </summary>
+	private async ValueTask<Result<SharpMUSHOptions>> StoreConfigValueAsync(IMUSHCodeParser parser, string property, object? value)
+	{
+		var updated = ConfigGenerated.ConfigAccessor.WithValue(await CurrentPersistedOptionsAsync(), property, value);
+
+		var failures = parser.ServiceProvider.GetServices<IValidateOptions<SharpMUSHOptions>>()
+			.Select(validator => validator.Validate(Options.DefaultName, updated))
+			.Where(result => result.Failed)
+			.SelectMany(result => result.Failures ?? [])
+			.ToArray();
+		if (failures.Length > 0)
+		{
+			return new Error<string>(string.Join(" ", failures));
+		}
+
+		await ObjectDataService.SetExpandedServerDataAsync(updated);
+		ConfigReloadService.SignalChange();
+		return updated;
+	}
+
+	/// <summary>The option's property name, for an option named the way <c>@config</c> lists it.</summary>
+	private static string? ConfigPropertyFor(string optionName)
+		=> ConfigGenerated.ConfigMetadata.PropertyToAttributeName
+			.FirstOrDefault(kvp => kvp.Value.Equals(optionName, StringComparison.OrdinalIgnoreCase)).Key;
+
+	/// <summary>
+	/// PennMUSH's CP_GODONLY options (<c>src/conf.c:153-158</c>): the SQL credentials, which
+	/// <c>can_view_config_option</c> hides from everyone but God.
+	/// </summary>
+	private static readonly HashSet<string> GodOnlyConfigOptions =
+		[nameof(NetOptions.SqlUsername), nameof(NetOptions.SqlPassword), nameof(NetOptions.SqlDatabase)];
+
+	private static bool CanViewConfigOption(AnySharpObject viewer, string property)
+		=> !GodOnlyConfigOptions.Contains(property) || viewer.IsGod();
+
+	/// <summary>
+	/// <c>config_set</c> lets a command reach every option except the <c>files</c> and <c>messages</c>
+	/// groups — file paths, which could be pointed anywhere — and the CP_GODONLY ones. The list-valued
+	/// options (banned names, sitelock rules, restrictions) have commands of their own.
+	/// </summary>
+	private static bool IsConfigOptionSettable(string property)
+		=> !GodOnlyConfigOptions.Contains(property)
+			 && ConfigGenerated.ConfigAccessor.GetCategoryForProperty(property) is not ("File" or "Message")
+			 && ConfigGenerated.ConfigAccessor.GetPropertyType(property) is { } type
+			 && (Nullable.GetUnderlyingType(type) ?? type) is var scalar
+			 && (scalar.IsEnum || scalar == typeof(bool) || scalar == typeof(uint) || scalar == typeof(int)
+					 || scalar == typeof(string) || scalar == typeof(char));
+
+	/// <summary>
+	/// A value as PennMUSH's handlers read it: <c>cf_bool</c> takes yes/true/1 and no/false/0 in any
+	/// case; <c>cf_int</c> and <c>cf_dbref</c> take a number with an optional leading <c>#</c>, and a
+	/// dbref option (<c>uint?</c> here) takes -1 for none; <c>cf_str</c> takes the text as it is.
+	/// </summary>
+	private static bool TryParseConfigValue(Type type, string text, out object? value)
+	{
+		value = null;
+		var number = text.StartsWith('#') ? text[1..] : text;
+
+		if (Nullable.GetUnderlyingType(type) is { } underlying)
+		{
+			if (number is "-1")
+			{
+				return true;
+			}
+
+			type = underlying;
+		}
+
+		switch (type)
+		{
+			case not null when type == typeof(bool):
+				value = text.ToLowerInvariant() switch
+				{
+					"yes" or "true" or "1" => true,
+					"no" or "false" or "0" => false,
+					_ => null
+				};
+				return value is not null;
+			case not null when type == typeof(uint):
+				value = uint.TryParse(number, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var unsigned) ? unsigned : null;
+				return value is not null;
+			case not null when type == typeof(int):
+				value = int.TryParse(number, System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture, out var signed) ? signed : null;
+				return value is not null;
+			case not null when type == typeof(char):
+				value = text.Length == 1 ? text[0] : null;
+				return value is not null;
+			case not null when type == typeof(string):
+				value = text;
+				return true;
+			case { IsEnum: true }:
+				value = Enum.TryParse(type, text, ignoreCase: true, out var member) && Enum.IsDefined(type, member!) && !char.IsDigit(text[0]) ? member : null;
+				return value is not null;
+			default:
+				return false;
+		}
 	}
 
 	[SharpCommand(Name = "@RESTART", Switches = ["ALL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 1, ParameterNames = [])]
@@ -840,28 +1000,32 @@ public partial class Commands
 		var allCategories = ConfigGenerated.ConfigAccessor.Categories.ToList();
 
 		IEnumerable<(string Category, string PropertyName, SharpConfigAttribute ConfigAttr, object? Value)> getAllOptions() =>
-			ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys.Select(propName => (
+			ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys
+				.Where(propName => CanViewConfigOption(executor, propName))
+				.Select(propName => (
 				Category: ConfigGenerated.ConfigAccessor.GetCategoryForProperty(propName) ?? "",
 				PropertyName: propName,
 				ConfigAttr: ConfigGenerated.ConfigMetadata.PropertyMetadata[propName],
 				Value: ConfigGenerated.ConfigAccessor.GetValue(Configuration.CurrentValue, propName)));
 
+		// cmd_config: /set needs a wizard, /save needs God, and both need an option.
 		if (switches.Contains("SET") || switches.Contains("SAVE"))
 		{
-			if (!await executor.IsWizard())
+			var save = switches.Contains("SAVE");
+			if (!await executor.IsWizard() || (save && !executor.IsGod()))
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCantRemakeWorld), executor);
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
 			}
 
-			if (switches.Contains("SAVE") && !executor.IsGod())
+			var optionName = args.GetValueOrDefault("0")?.Message?.ToPlainText().Trim() ?? "";
+			if (optionName.Length == 0)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOnlyGodCanUseSave), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigWhatToSet), executor);
+				return new CallState(ErrorMessages.Returns.InvalidArguments);
 			}
 
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigSetSaveNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
+			return await SetConfigOptionAsync(parser, executor, optionName, args.GetValueOrDefault("1")?.Message?.ToPlainText(), save);
 		}
 
 		if (args.Count == 0)

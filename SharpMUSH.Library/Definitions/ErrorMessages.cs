@@ -1547,8 +1547,17 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WhereIsObjectInLocationFormat = "{0} is in {1}.";
 
-		public const string ConfigOnlyGodCanUseSave = "Only God can use /save switch.";
-		public const string ConfigSetSaveNotImplemented = "@config/set and @config/save are not yet implemented.";
+		public const string ConfigCantRemakeWorld = "You can't remake the world in your image.";
+		public const string ConfigWhatToSet = "What did you want to set?";
+		public const string ConfigCouldntSet = "Couldn't set that option.";
+		public const string ConfigOptionSet = "Option set.";
+		public const string ConfigOptionSetAndSaved = "Option set and saved.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ConfigOptionNotSettableFormat = "{0} cannot be set from inside the game.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ConfigInvalidValueFormat = "'{1}' is not a valid value for {0}.";
+		public const string ConfigOptionEnabled = "Enabled.";
+		public const string ConfigOptionDisabled = "Disabled.";
 		public const string ConfigCategoriesHeader = "Configuration Categories:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ConfigCategoryItemFormat = "  {0}";
@@ -2048,10 +2057,5 @@ public static class ErrorMessages
 		public const string EnableDisableNoOptionFormat = "No configuration option named '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EnableDisableNotBooleanFormat = "Option '{0}' is not a boolean option. Use @config/set instead.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string EnableDisableEquivalentFormat = "@{0} is equivalent to @config/set {1}={2}";
-		public const string RuntimeConfigNotImplemented = "Runtime configuration modification is not yet implemented. Changes require server restart.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigCurrentValueFormat = "Current value: {0}={1}";
 	}
 }

@@ -155,24 +155,6 @@ public class ConfigCommandTests
 	}
 
 	[Test]
-	public async ValueTask Enable_BooleanOption_ShowsImplementationMessage()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@enable noisy_whisper"));
-
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor, executor)).IsTrue();
-	}
-
-	[Test]
-	public async ValueTask Disable_BooleanOption_ShowsImplementationMessage()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@disable noisy_whisper"));
-
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableEquivalentFormat), executor, executor)).IsTrue();
-	}
-
-	[Test]
 	public async ValueTask Enable_InvalidOption_ReturnsNotFound()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
