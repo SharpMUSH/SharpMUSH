@@ -30,8 +30,8 @@ public class FlagListTests
 	[Test]
 	public async ValueTask Pattern_ListsOnlyTheFlagsItMatches()
 	{
-		var god = WebAppFactoryArg.ExecutorDBRef;
-		var listing = await ListingFor(god, 1, "@flag/list WIZ*");
+		var lister = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "FlagPattern");
+		var listing = await ListingFor(lister.DbRef, lister.Handle, "@flag/list WIZ*");
 
 		await Assert.That(listing).Contains("WIZARD");
 		await Assert.That(listing).DoesNotContain("ROYALTY");
