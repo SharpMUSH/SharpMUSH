@@ -403,165 +403,312 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	/// <summary>
+	/// Ordinary GET's matcher: <c>MAT_NEIGHBOR | MAT_CHECK_KEYS | MAT_NEAR | MAT_ENGLISH</c>, preferring a
+	/// thing (<c>move.c:566</c>, <c>:578</c>). Long_Fingers adds <c>MAT_ABSOLUTE</c> (<c>move.c:575-576</c>).
+	/// </summary>
+	private const LocateFlags GetMatchFlags = LocateFlags.MatchObjectsInLookerLocation | LocateFlags.PreferLockPass
+		| LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.EnglishStyleMatching | LocateFlags.ThingsPreference;
+
+	/// <summary>
+	/// <c>parse_match_possessor</c>'s container match, <c>MAT_NEAR_THINGS | MAT_ENGLISH</c>
+	/// (<c>predicat.c:1186-1187</c>).
+	/// </summary>
+	private const LocateFlags GetPossessorMatchFlags = LocateFlags.MatchMeForLooker | LocateFlags.AbsoluteMatch
+		| LocateFlags.MatchWildCardForPlayerName | LocateFlags.MatchObjectsInLookerLocation
+		| LocateFlags.MatchObjectsInLookerInventory | LocateFlags.OnlyMatchObjectsInLookerLocation
+		| LocateFlags.EnglishStyleMatching;
+
+	/// <summary>
+	/// <c>MAT_OBJ_CONTENTS</c>, searched from the container on the taker's authority:
+	/// <c>match_result_relative(player, box, objname, NOTYPE, MAT_OBJ_CONTENTS)</c> (<c>move.c:595-596</c>).
+	/// </summary>
+	private const LocateFlags GetPossessedMatchFlags = LocateFlags.MatchObjectsInLookerInventory
+		| LocateFlags.MatchWildCardForPlayerName | LocateFlags.AbsoluteMatch
+		| LocateFlags.OnlyMatchObjectsInLookerInventory | LocateFlags.EnglishStyleMatching;
+
 	[SharpCommand(Name = "GET", Switches = [], Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 1, MaxArgs = 0, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Get(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
+		var what = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		var fullArg = args["0"].Message!.ToPlainText();
-
-		if (string.IsNullOrWhiteSpace(fullArg))
+		if (string.IsNullOrWhiteSpace(what))
 		{
 			await NotifyService.Notify(executor, "Get what?", executor);
 			return CallState.Empty;
 		}
 
-		string objectName;
-		AnySharpContainer sourceLocation;
-
-		var possessiveIndex = fullArg.IndexOf("'s ", StringComparison.OrdinalIgnoreCase);
-		if (possessiveIndex == -1)
+		// move.c:571-574: inside anything but a room, the taker must be let in or be in charge before
+		// anything is matched.
+		var surroundings = (await executor.Where()).WithExitOption();
+		if (!surroundings.IsRoom
+				&& !await surroundings.HasFlag("ENTER_OK")
+				&& !await PermissionService.Controls(executor, surroundings))
 		{
-			possessiveIndex = fullArg.IndexOf("'S ", StringComparison.Ordinal);
-		}
-
-		if (possessiveIndex > 0)
-		{
-			var containerName = fullArg[..possessiveIndex].Trim();
-			objectName = fullArg[(possessiveIndex + 3)..].Trim();
-
-			var containerResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, containerName, LocateFlags.All);
-
-			if (containerResult is not AnySharpObject container || (!container.IsPlayer && !container.IsThing))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
-				return CallState.Empty;
-			}
-
-			if (!await container.HasFlag("ENTER_OK") && !await PermissionService.Controls(executor, container))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return CallState.Empty;
-			}
-
-			sourceLocation = container.AsContainer;
-		}
-		else
-		{
-			objectName = fullArg;
-			sourceLocation = await executor.Where();
-		}
-
-		var locateResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, sourceLocation.WithExitOption(), objectName, LocateFlags.All);
-
-		if (locateResult is not AnySharpObject objectToGet || objectToGet.IsRoom || objectToGet.IsExit)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return CallState.Empty;
 		}
 
-		var objectLocation = await objectToGet.Where();
+		var matchFlags = await executor.HasLongFingers() ? GetMatchFlags | LocateFlags.AbsoluteMatch : GetMatchFlags;
 
-		var alreadyCarrying = objectLocation.Object().DBRef.Equals(executor.Object().DBRef);
-
-		if (alreadyCarrying)
+		// move.c:578-579: the whole argument is an ordinary name first, so a nearby item literally named
+		// "Bob's hat" beats whatever Bob carries. Only a miss falls back to the possessive form; an
+		// ambiguous match is reported as one.
+		switch (await LocateService.Locate(parser, executor, executor, what, matchFlags))
 		{
-			await NotifyService.Notify(executor, "You already have that.", executor);
-			return CallState.Empty;
+			case AnySharpObject thing:
+				await GetNearby(parser, executor, surroundings, thing);
+				break;
+			case Error<string>:
+				// noisy_match_result (move.c:647) matches again to say why.
+				await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, what, matchFlags);
+				break;
+			default:
+				if (Configuration.CurrentValue.Command.PossessiveGet)
+				{
+					await GetPossessed(parser, executor, what);
+				}
+				else
+				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+				}
+
+				break;
+		}
+
+		return CallState.Empty;
+	}
+
+	/// <summary>do_get's ordinary branch (<c>move.c:646-704</c>).</summary>
+	private async ValueTask GetNearby(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject surroundings,
+		AnySharpObject thing)
+	{
+		var oldLocation = await thing.Where();
+
+		if (await GetRefusal(executor, surroundings, thing, oldLocation) is { } refusal)
+		{
+			await NotifyService.Notify(executor, refusal, executor);
+			return;
 		}
 
 		// The take lock is evaluated and failed against the object's own location, not against the
-		// item and not against whatever container the player named: `box = Location(thing)`
-		// (move.c:615) on the possessive path and `oldloc = Location(thing)` (move.c:649) on the
-		// plain one, then `eval_lock_with(player, oldloc, Take_Lock, pe_info)` and
-		// `fail_lock(player, oldloc, Take_Lock, ...)` (move.c:670-673). Aiming it at the item would
-		// look for TAKE_LOCK`FAILURE on the item, so a container's own take-failure message and
-		// action would never run. On the plain path it is also checked BEFORE the item's own basic
-		// lock (move.c:668-675); the possessive path reports both as one failure, below.
-		var takeSource = objectLocation.WithExitOption();
-		var isPossessiveGet = possessiveIndex > 0;
+		// item: `oldloc = Location(thing)` (move.c:649), then `eval_lock_with(player, oldloc,
+		// Take_Lock, pe_info)` and `fail_lock(player, oldloc, Take_Lock, ...)` (move.c:668-671).
+		// Aiming it at the item would look for TAKE_LOCK`FAILURE on the item, so a container's own
+		// take-failure message and action would never run. It is checked BEFORE the item's own basic
+		// lock (move.c:668-675).
+		var takeSource = oldLocation.WithExitOption();
 
-		if (isPossessiveGet)
+		if (!await LockService.Evaluate(LockType.Take, takeSource, executor))
 		{
-			// The possessive path folds both locks into one `if` and has a single `else`
-			// (move.c:635-642), so every refusal — the item's own basic lock or the container's take
-			// lock — reports as `fail_lock(player, thing, Basic_Lock, "You can't take that from
-			// there.")`: the FAILURE family on the *item*, carrying the take lock's text.
-			var canSteal = await LockService.Evaluate(LockType.Basic, objectToGet, executor)
-										 && await LockService.Evaluate(LockType.Take, takeSource, executor);
-
-			if (!canSteal)
-			{
-				await DidItService.FailLock(parser, executor, objectToGet, LockType.Basic,
-					MarkupText.Plain(ErrorMessages.Notifications.CantTakeThatFromThere));
-				return CallState.Empty;
-			}
-		}
-		else
-		{
-			if (!await LockService.Evaluate(LockType.Take, takeSource, executor))
-			{
-				await DidItService.FailLock(parser, executor, takeSource, LockType.Take,
-					MarkupText.Plain(ErrorMessages.Notifications.CantTakeThatFromThere));
-				return CallState.Empty;
-			}
-
-			if (!await LockService.Evaluate(LockType.Basic, objectToGet, executor))
-			{
-				await DidItService.FailLock(parser, executor, objectToGet, LockType.Basic,
-					MarkupText.Plain(ErrorMessages.Notifications.CantPickThatUp));
-				return CallState.Empty;
-			}
+			await DidItService.FailLock(parser, executor, takeSource, LockType.Take,
+				MarkupText.Plain(ErrorMessages.Notifications.CantTakeThatFromThere));
+			return;
 		}
 
-		var executorContainer = executor.AsContainer;
-		var contentToGet = objectToGet.AsContent;
-		var takenName = objectToGet.Object().Name;
-
-		if (isPossessiveGet)
+		if (!await LockService.Evaluate(LockType.Basic, thing, executor))
 		{
-			// move.c:627 — the robbed container hears about it too.
-			await NotifyService.Notify(objectLocation.WithExitOption(),
-				string.Format(ErrorMessages.Notifications.WasTakenFromYou, takenName));
+			await DidItService.FailLock(parser, executor, thing, LockType.Basic,
+				MarkupText.Plain(ErrorMessages.Notifications.CantPickThatUp));
+			return;
 		}
 
-		await NotifyService.Notify(objectToGet,
+		if (!await MovedToTaker(parser, executor, thing))
+		{
+			return;
+		}
+
+		// move.c:676: plain GET tells the item after moveto, so the item has already had its look.
+		await NotifyService.Notify(thing,
 			string.Format(ErrorMessages.Notifications.TookYou, executor.Object().Name));
 
-		await MoveService.MoveIt(parser, contentToGet, executorContainer, noMoveMsgs: false,
-			executor.Object().DBRef, "get");
+		await GetSucceeded(parser, executor, thing, oldLocation, possessive: false);
+	}
 
-		// did_it_with(player, thing, "SUCCESS", …, "OSUCCESS", …, "ASUCCESS", NOTHING, box, NOTHING, 0)
-		// (move.c:634-636 possessive, :685-686 plain). The 8th argument is `loc` and the 9th is
-		// `env0`: `loc` is NOTHING, which real_did_it resolves to Location(player) (predicat.c:230),
-		// so the o-message audience is the taker's own room; the source container rides in %0. The
-		// final `flags` is 0 on both get paths, so this o-message consults no interaction lock —
-		// unlike the RECEIVE triad below, which Penn gives NA_INTER_HEAR.
+	/// <summary>
+	/// Why ordinary GET will not take <paramref name="thing"/> at all, in Penn's order and before either
+	/// lock (<c>move.c:651-666</c>, <c>:690-695</c>); null when nothing stands in the way.
+	/// </summary>
+	private async ValueTask<string?> GetRefusal(AnySharpObject executor, AnySharpObject surroundings,
+		AnySharpObject thing, AnySharpContainer oldLocation)
+	{
+		var executorRef = executor.Object().DBRef;
+		var thingRef = thing.Object().DBRef;
+		var isSelf = thingRef.Equals(executorRef);
+
+		if (thing is { IsRoom: false, IsExit: false } && oldLocation.Object().DBRef.Equals(executorRef))
+			return "You already have that!";
+		if (surroundings.Object().DBRef.Equals(thingRef)) return "It's all around you!";
+		if (await HoldsTaker(thing, executor, isSelf)) return ErrorMessages.Notifications.BadDestination;
+		if (thing.IsExit) return "You can't pick up exits.";
+		if (thing.IsRoom) return "You can't take that!";
+		return isSelf ? "You cannot get yourself!" : null;
+	}
+
+	/// <summary>
+	/// <c>recursive_member(player, thing, 0)</c> (<c>move.c:659</c>): the taker is somewhere inside
+	/// <paramref name="thing"/>. A room holds the taker when it is the taker's outermost room; anything
+	/// else is asked the containment-loop question a move into the taker would be.
+	/// </summary>
+	private async ValueTask<bool> HoldsTaker(AnySharpObject thing, AnySharpObject taker, bool isSelf)
+		=> thing switch
+		{
+			_ when isSelf || thing.IsExit => false,
+			{ IsRoom: true } => await MoveService.AbsoluteRoom(taker) is { } room
+				&& room.Object().DBRef.Equals(thing.Object().DBRef),
+			_ => await MoveService.WouldCreateLoop(thing.AsContent, taker.AsContainer)
+		};
+
+	/// <summary>
+	/// do_get's possessive branch (<c>move.c:580-642</c>): <c>get &lt;container&gt;'s &lt;object&gt;</c>,
+	/// reached only when the whole argument matched nothing.
+	/// </summary>
+	private async ValueTask GetPossessed(IMUSHCodeParser parser, AnySharpObject executor, string what)
+	{
+		// parse_match_possessor (predicat.c:1172-1184): up to the first apostrophe is the container, which
+		// must be followed by an 's' or 'S'; the object name starts after the whitespace that follows.
+		var apostrophe = what.IndexOf('\'');
+		if (apostrophe < 0 || apostrophe + 1 >= what.Length || what[apostrophe + 1] is not ('s' or 'S'))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			return;
+		}
+
+		var containerName = what[..apostrophe];
+		var objectName = what[(apostrophe + 2)..].TrimStart();
+
+		var containerResult = await LocateService.Locate(parser, executor, executor, containerName, GetPossessorMatchFlags);
+		if (containerResult is Error<string> { Value: ErrorMessages.Returns.AmbiguousMatch })
+		{
+			await NotifyService.Notify(executor, $"I can't tell which {what}.", executor);
+			return;
+		}
+
+		if (containerResult is not AnySharpObject container || (!container.IsPlayer && !container.IsThing))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			return;
+		}
+
+		if (!await container.HasFlag("ENTER_OK") && !await PermissionService.Controls(executor, container))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return;
+		}
+
+		var thingResult = await LocateService.Locate(parser, container, executor, objectName, GetPossessedMatchFlags);
+		if (thingResult is Error<string> { Value: ErrorMessages.Returns.AmbiguousMatch })
+		{
+			await NotifyService.Notify(executor, $"I can't tell which {what}.", executor);
+			return;
+		}
+
+		if (thingResult is not AnySharpObject thing || thing.IsRoom || thing.IsExit)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			return;
+		}
+
+		// move.c:603-610.
+		if (container.Object().DBRef.Equals(executor.Object().DBRef))
+		{
+			await NotifyService.Notify(executor, "You already have that!", executor);
+			return;
+		}
+
+		if (thing.Object().DBRef.Equals(executor.Object().DBRef))
+		{
+			await NotifyService.Notify(executor, "You cannot get yourself!", executor);
+			return;
+		}
+
+		// `box = Location(thing)` (move.c:614). Both locks and possessive_get_d fold into one `if` with a
+		// single `else` (move.c:615-642), so every refusal reports as `fail_lock(player, thing,
+		// Basic_Lock, "You can't take that from there.")`: the FAILURE family on the *item*, carrying
+		// the take lock's text. possessive_get_d is POSSGET_ON_DISCONNECTED (conf.h:491): without it a
+		// disconnected player cannot be robbed.
+		var source = await thing.Where();
+		var sourceObject = source.WithExitOption();
+		var canSteal = await LockService.Evaluate(LockType.Basic, thing, executor)
+									 && (Configuration.CurrentValue.Command.PossessiveGetD
+											 || !sourceObject.IsPlayer
+											 || await ConnectionService.IsConnected(sourceObject))
+									 && await LockService.Evaluate(LockType.Take, sourceObject, executor);
+
+		if (!canSteal)
+		{
+			await DidItService.FailLock(parser, executor, thing, LockType.Basic,
+				MarkupText.Plain(ErrorMessages.Notifications.CantTakeThatFromThere));
+			return;
+		}
+
+		// move.c:627-628 — the robbed container and the item hear about it before the move.
+		var takenName = thing.Object().Name;
+		await NotifyService.Notify(sourceObject, string.Format(ErrorMessages.Notifications.WasTakenFromYou, takenName));
+		await NotifyService.Notify(thing, string.Format(ErrorMessages.Notifications.TookYou, executor.Object().Name));
+
+		if (!await MovedToTaker(parser, executor, thing))
+		{
+			return;
+		}
+
+		await GetSucceeded(parser, executor, thing, source, possessive: true);
+	}
+
+	/// <summary>
+	/// <c>moveto(thing, player, player, "get")</c> (<c>move.c:633</c>, <c>:675</c>), which is
+	/// <c>enter_room</c> with movement messages on: the vacated room's drop-to and the item's automatic
+	/// look come with it. A move it refuses is reported to the taker and ends the GET, so a pickup that
+	/// did not happen never reports success.
+	/// </summary>
+	private async ValueTask<bool> MovedToTaker(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject thing)
+	{
+		switch (await MoveService.EnterRoom(parser, thing.AsContent, executor.AsContainer, noMoveMsgs: false,
+					executor.Object().DBRef, "get"))
+		{
+			case Error<string> refused:
+				await NotifyService.Notify(executor, refused.Value, executor);
+				return false;
+			default:
+				return true;
+		}
+	}
+
+	/// <summary>The SUCCESS and RECEIVE triads of a completed GET (<c>move.c:634-639</c>, <c>:684-689</c>).</summary>
+	private async ValueTask GetSucceeded(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject thing,
+		AnySharpContainer source, bool possessive)
+	{
+		var takenName = thing.Object().Name;
+		var sourceName = source.Object().Name;
+
+		// did_it_with(player, thing, "SUCCESS", …, "OSUCCESS", …, "ASUCCESS", NOTHING, box, NOTHING, 0).
+		// The 8th argument is `loc` and the 9th is `env0`: `loc` is NOTHING, which real_did_it resolves
+		// to Location(player) (predicat.c:230), so the o-message audience is the taker's own room; the
+		// source container rides in %0. The final `flags` is 0 on both get paths, so this o-message
+		// consults no interaction lock — unlike the RECEIVE triad below, which Penn gives NA_INTER_HEAR.
 		await DidItService.DidIt(parser, new DidItRequest(
-			Player: executor, Thing: objectToGet,
+			Player: executor, Thing: thing,
 			What: AttrSuccess,
-			Def: MarkupText.Plain(isPossessiveGet
-				? string.Format(ErrorMessages.Notifications.YouTakeFrom, takenName, objectLocation.Object().Name)
+			Def: MarkupText.Plain(possessive
+				? string.Format(ErrorMessages.Notifications.YouTakeFrom, takenName, sourceName)
 				: string.Format(ErrorMessages.Notifications.YouTake, takenName)),
 			OWhat: AttrOSuccess,
-			ODef: isPossessiveGet
-				? string.Format(ErrorMessages.Notifications.TakesFrom, takenName, objectLocation.Object().Name)
+			ODef: possessive
+				? string.Format(ErrorMessages.Notifications.TakesFrom, takenName, sourceName)
 				: string.Format(ErrorMessages.Notifications.Takes, takenName),
 			AWhat: AttrASuccess,
-			Env0: objectLocation.Object().DBRef.ToString(),
+			Env0: source.Object().DBRef.ToString(),
 			Interact: IPermissionService.InteractType.None));
 
 		// did_it_with(player, player, "RECEIVE", NULL, "ORECEIVE", NULL, "ARECEIVE", NOTHING, thing,
-		// NOTHING, NA_INTER_HEAR, AN_MOVE) (move.c:637-639, :687-689): the taker's own receive triad.
-		// `loc` is NOTHING — the room the taker is in — and the taken object is %0.
+		// NOTHING, NA_INTER_HEAR, AN_MOVE): the taker's own receive triad. `loc` is NOTHING — the room
+		// the taker is in — and the taken object is %0.
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: executor, Thing: executor,
 			What: AttrReceive, OWhat: AttrOReceive, AWhat: AttrAReceive,
-			Env0: objectToGet.Object().DBRef.ToString()));
-
-		return CallState.Empty;
+			Env0: thing.Object().DBRef.ToString()));
 	}
 
 	[SharpCommand(Name = "GIVE", Switches = ["SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
