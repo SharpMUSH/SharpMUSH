@@ -215,4 +215,198 @@ public class MailDeliveryTests
 		await Assert.That(await Get(mortal.DbRef, "AMAILED")).IsEqualTo(string.Empty);
 		await Assert.That(await Get(royal.DbRef, "AMAILED")).StartsWith($"#{sender.DbRef.Number}");
 	}
+
+	/// <summary>
+	/// <c>send_mail</c> (<c>extmail.c:1483</c>): a recipient with a <c>MAILFORWARDLIST</c> is not
+	/// delivered to; each listed player that passes <c>Can_MailForward</c> is, and the sender is told the
+	/// message went to the recipient they named. Captured: B locked <c>@lock/mailforward me=*A</c>, A set
+	/// <c>&amp;MAILFORWARDLIST me=#4</c>; S's mail to A reached only B, and S saw
+	/// <c>MAIL: You sent your message to LA127.</c>
+	/// </summary>
+	[Test]
+	public async ValueTask AForwardListDeliversToEachTargetThatAllowsIt()
+	{
+		var sender = await Player("MdFlSend");
+		var owner = await Player("MdFlOwner");
+		var target = await Player("MdFlTarget");
+		await Run(target, $"@lock/mailforward me=#{owner.DbRef.Number}");
+		await Run(owner, $"&MAILFORWARDLIST me=#{target.DbRef.Number}");
+
+		var ownerHeard = await Heard(owner, async () =>
+		{
+			var targetHeard = await Heard(target, async () =>
+			{
+				var senderHeard = await Heard(sender, () => Run(sender, $"@mail #{owner.DbRef.Number}=Forwarded/Body."));
+				await Assert.That(senderHeard).Contains($"MAIL: You sent your message to {owner.Name}.");
+			});
+			await Assert.That(targetHeard).Contains($"MAIL: You have a new message (1) from {sender.Name}.");
+		});
+
+		await Assert.That(ownerHeard).DoesNotContain(m => m.StartsWith("MAIL: You have a new message"));
+		await Assert.That(await Mailbox(owner)).IsEmpty();
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// <c>Can_MailForward</c> (<c>hdrs/mushdb.h:130</c>) needs control or a <em>set</em> mailforward lock
+	/// the owner passes: an unset lock is not permission. Captured after B unlocked: A heard
+	/// <c>Failed attempt to forward @mail to #4</c>, S heard
+	/// <c>MAIL: Your message was not sent to LA127 due to a mail forwarding problem.</c>, and a silent send
+	/// still told A.
+	/// </summary>
+	[Test]
+	public async ValueTask AForwardTargetThatNeverAllowedItIsReportedAndNotDelivered()
+	{
+		var sender = await Player("MdFlNoLock");
+		var owner = await Player("MdFlNoLockOwner");
+		var target = await Player("MdFlNoLockTarget");
+		await Run(owner, $"&MAILFORWARDLIST me=#{target.DbRef.Number}");
+
+		var senderHeard = await Heard(sender, async () =>
+		{
+			var ownerHeard = await Heard(owner, () => Run(sender, $"@mail #{owner.DbRef.Number}=Nowhere/Body."));
+			await Assert.That(ownerHeard).Contains($"Failed attempt to forward @mail to #{target.DbRef.Number}");
+		});
+		var silentOwnerHeard = await Heard(owner, async () =>
+		{
+			var silentSenderHeard = await Heard(sender, () => Run(sender, $"@mail/silent #{owner.DbRef.Number}=Nowhere/Body."));
+			await Assert.That(silentSenderHeard).IsEmpty();
+		});
+
+		await Assert.That(senderHeard)
+			.Contains($"MAIL: Your message was not sent to {owner.Name} due to a mail forwarding problem.");
+		await Assert.That(silentOwnerHeard).Contains($"Failed attempt to forward @mail to #{target.DbRef.Number}");
+		await Assert.That(await Mailbox(owner)).IsEmpty();
+		await Assert.That(await Mailbox(target)).IsEmpty();
+	}
+
+	/// <summary>
+	/// "don't check mailforward further" (<c>extmail.c:1479</c>): a forward target's own list is not
+	/// consulted, so two lists naming each other cannot bounce a message. Captured: A→B with B→C, and the
+	/// mail stopped at B.
+	/// </summary>
+	[Test]
+	public async ValueTask AForwardTargetsOwnListIsNotFollowed()
+	{
+		var sender = await Player("MdFlChain");
+		var first = await Player("MdFlChainA");
+		var second = await Player("MdFlChainB");
+		await Run(second, $"@lock/mailforward me=#{first.DbRef.Number}");
+		await Run(first, $"@lock/mailforward me=#{second.DbRef.Number}");
+		await Run(first, $"&MAILFORWARDLIST me=#{second.DbRef.Number}");
+		await Run(second, $"&MAILFORWARDLIST me=#{first.DbRef.Number}");
+
+		await Run(sender, $"@mail #{first.DbRef.Number}=Loop/Body.");
+
+		await Assert.That(await Mailbox(first)).IsEmpty();
+		await Assert.That(await Mailbox(second)).Count().IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// A list naming its owner keeps a copy there too — <c>controls(p, p)</c> passes. Captured:
+	/// <c>&amp;MAILFORWARDLIST me=#3 #4</c> delivered to both.
+	/// </summary>
+	[Test]
+	public async ValueTask AForwardListNamingItsOwnerKeepsACopy()
+	{
+		var sender = await Player("MdFlSelf");
+		var owner = await Player("MdFlSelfOwner");
+		var target = await Player("MdFlSelfTarget");
+		await Run(target, $"@lock/mailforward me=#{owner.DbRef.Number}");
+		await Run(owner, $"&MAILFORWARDLIST me=#{owner.DbRef.Number} #{target.DbRef.Number}");
+
+		await Run(sender, $"@mail #{owner.DbRef.Number}=Both/Body.");
+
+		await Assert.That(await Mailbox(owner)).Count().IsEqualTo(1);
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// Each forward goes through <c>real_send_mail</c> with silent=1, so it is the <em>target's</em> mail
+	/// lock that counts, and the owner's is never asked. Captured: B mail-locked gave S the forwarding
+	/// problem; A mail-locked still reached B.
+	/// </summary>
+	[Test]
+	public async ValueTask ForwardingChecksTheTargetsMailLockNotTheOwners()
+	{
+		var sender = await Player("MdFlLocks");
+		var owner = await Player("MdFlLocksOwner");
+		var target = await Player("MdFlLocksTarget");
+		await Run(target, $"@lock/mailforward me=#{owner.DbRef.Number}");
+		await Run(owner, $"&MAILFORWARDLIST me=#{target.DbRef.Number}");
+
+		await Run(owner, "@lock/mail me=#0");
+		await Run(sender, $"@mail #{owner.DbRef.Number}=Owner locked/Body.");
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+
+		await Run(owner, "@unlock/mail me");
+		await Run(target, "@lock/mail me=#0");
+		var heard = await Heard(sender, () => Run(sender, $"@mail #{owner.DbRef.Number}=Target locked/Body."));
+
+		await Assert.That(heard)
+			.Contains($"MAIL: Your message was not sent to {owner.Name} due to a mail forwarding problem.");
+		await Assert.That(heard).DoesNotContain(m => m.Contains("is not accepting mail"));
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// The list is read by <c>send_mail</c>, which every sender goes through. Captured: <c>mailsend()</c> and
+	/// <c>@mail/fwd</c> to A both reached B.
+	/// </summary>
+	[Test]
+	public async ValueTask MailsendAndForwardFollowTheForwardList()
+	{
+		var sender = await Player("MdFlPaths");
+		var owner = await Player("MdFlPathsOwner");
+		var target = await Player("MdFlPathsTarget");
+		await Run(target, $"@lock/mailforward me=#{owner.DbRef.Number}");
+		await Run(owner, $"&MAILFORWARDLIST me=#{target.DbRef.Number}");
+
+		await Run(sender, $"think [mailsend(#{owner.DbRef.Number},Function/Body.)]");
+		await Run(sender, "@mail me=Kept/Body.");
+		await Run(sender, $"@mail/fwd 1=#{owner.DbRef.Number}");
+
+		await Assert.That(await Mailbox(owner)).IsEmpty();
+		await Assert.That((await Mailbox(target)).Select(m => m.Subject.ToPlainText()))
+			.IsEquivalentTo(["Function", "Fwd: Kept"]);
+	}
+
+	/// <summary>
+	/// Only dbrefs are forward targets (<c>is_objid</c>, <c>extmail.c:1495</c>); other words are skipped
+	/// without comment, and a dbref that is no player — or no object — is reported to the owner.
+	/// </summary>
+	[Test]
+	public async ValueTask AForwardListIgnoresWordsAndReportsNonPlayers()
+	{
+		var sender = await Player("MdFlJunk");
+		var owner = await Player("MdFlJunkOwner");
+		var target = await Player("MdFlJunkTarget");
+		await Run(target, $"@lock/mailforward me=#{owner.DbRef.Number}");
+		await Run(owner, $"&MAILFORWARDLIST me={target.Name} garbage #0 #99999999 #{target.DbRef.Number}");
+
+		var ownerHeard = await Heard(owner, () => Run(sender, $"@mail #{owner.DbRef.Number}=Junk/Body."));
+
+		await Assert.That(ownerHeard).Contains("Failed attempt to forward @mail to #0");
+		await Assert.That(ownerHeard).Contains("Failed attempt to forward @mail to #-1");
+		await Assert.That(ownerHeard.Count(m => m.StartsWith("Failed attempt"))).IsEqualTo(2);
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// <c>controls(p, x)</c> is the other half of <c>Can_MailForward</c>: a wizard's list reaches a player
+	/// who set no mailforward lock at all.
+	/// </summary>
+	[Test]
+	public async ValueTask AForwardListOwnerWhoControlsTheTargetNeedsNoLock()
+	{
+		var sender = await Player("MdFlCtl");
+		var wizard = await Player("MdFlCtlWiz");
+		var target = await Player("MdFlCtlTarget");
+		await God($"@set #{wizard.DbRef.Number}=WIZARD");
+		await Run(wizard, $"&MAILFORWARDLIST me=#{target.DbRef.Number}");
+
+		await Run(sender, $"@mail #{wizard.DbRef.Number}=Controlled/Body.");
+
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+	}
 }

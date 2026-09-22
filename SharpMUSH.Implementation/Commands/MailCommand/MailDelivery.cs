@@ -9,6 +9,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
 
@@ -18,13 +19,14 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 /// through <c>real_send_mail</c> (<c>extmail.c:1557</c>). Every refusal is decided before the store is
 /// written, so a message is either delivered with its notices or not delivered at all.
 /// </summary>
-public static class MailDelivery
+public static partial class MailDelivery
 {
 	public sealed record Services(
 		IPermissionService Permissions,
 		IMediator Mediator,
 		INotifyService Notify,
 		IDidItService DidIt,
+		IAttributeService Attributes,
 		IOptionsWrapper<SharpMUSHOptions> Configuration);
 
 	/// <summary>A message on its way to one or more mailboxes.</summary>
@@ -34,14 +36,105 @@ public static class MailDelivery
 
 	private const string Inbox = "INBOX";
 
+	/// <summary><c>is_objid</c> (<c>src/parse.c:351</c>): what a forward list may name.</summary>
+	[GeneratedRegex(@"^#-?\d+(?::\d+)?$")]
+	private static partial Regex ObjidPattern();
+
 	/// <summary>
 	/// PennMUSH <c>send_mail</c>. Returns the mailboxes the message landed in, which is empty when it was
 	/// refused. <paramref name="silent"/> suppresses the sender's confirmation and refusals, never the
 	/// recipient's notice.
 	/// </summary>
+	/// <remarks>
+	/// A <c>MAILFORWARDLIST</c> on <paramref name="target"/> replaces delivery to it (<c>extmail.c:1483</c>):
+	/// each listed player that passes <see cref="MayForwardTo"/> gets the message silently, and the list's
+	/// owner hears about each one that does not. The targets' own lists are not read — "don't check
+	/// mailforward further" (<c>extmail.c:1479</c>) — which is what keeps two lists naming each other from
+	/// bouncing a message.
+	/// </remarks>
 	public static async ValueTask<SharpPlayer[]> SendAsync(IMUSHCodeParser parser, Services services,
 		AnySharpObject sender, SharpPlayer target, Letter letter, bool silent)
-		=> await DeliverAsync(parser, services, sender, target, letter, silent) ? [target] : [];
+	{
+		if (await ForwardListAsync(services, target) is not { } forwardList)
+		{
+			return await DeliverAsync(parser, services, sender, target, letter, silent) ? [target] : [];
+		}
+
+		var delivered = new List<SharpPlayer>();
+		foreach (var entry in forwardList.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		{
+			if (!ObjidPattern().IsMatch(entry))
+			{
+				continue;
+			}
+
+			switch (await ForwardTargetAsync(services, entry))
+			{
+				case AnySharpObject and SharpPlayer forward when await MayForwardTo(services, target, forward):
+					if (await DeliverAsync(parser, services, sender, forward, letter, silent: true))
+					{
+						delivered.Add(forward);
+					}
+
+					break;
+				case AnySharpObject other:
+					await services.Notify.Notify(target, $"Failed attempt to forward @mail to #{other.Object().DBRef.Number}");
+					break;
+				default:
+					await services.Notify.Notify(target, "Failed attempt to forward @mail to #-1");
+					break;
+			}
+		}
+
+		if (!silent)
+		{
+			await services.Notify.Notify(sender, delivered.Count > 0
+				? $"MAIL: You sent your message to {target.Object.Name}."
+				: $"MAIL: Your message was not sent to {target.Object.Name} due to a mail forwarding problem.", sender);
+		}
+
+		return [.. delivered];
+	}
+
+	/// <summary><c>atr_get_noparent(target, "MAILFORWARDLIST")</c>: a parent's list does not forward.</summary>
+	private static async ValueTask<string?> ForwardListAsync(Services services, SharpPlayer target)
+	{
+		var owner = new AnySharpObject(target);
+		return await services.Attributes.GetAttributeAsync(owner, owner, "MAILFORWARDLIST",
+				IAttributeService.AttributeMode.Read, parent: false) is SharpAttribute[] chain
+			? chain.Last().Value.ToPlainText()
+			: null;
+	}
+
+	/// <summary><c>parse_objid</c>: an objid whose creation time does not match names nothing.</summary>
+	private static async ValueTask<AnyOptionalSharpObject> ForwardTargetAsync(Services services, string entry)
+	{
+		if (!DBRef.TryParse(entry, out var dbref) || dbref is not { } reference)
+		{
+			return new None();
+		}
+
+		return await services.Mediator.Send(new GetObjectNodeQuery(reference)) switch
+		{
+			AnySharpObject found when found.Object().DBRef.SameObjectAs(reference) => found,
+			_ => new None()
+		};
+	}
+
+	/// <summary>
+	/// <c>Can_MailForward</c> (<c>hdrs/mushdb.h:130</c>): the list's owner controls the target, or the
+	/// target has <em>set</em> a mailforward lock the owner passes. An unset lock evaluates true, so its
+	/// verdict alone would let anyone fill another player's mailbox.
+	/// </summary>
+	private static async ValueTask<bool> MayForwardTo(Services services, SharpPlayer owner, SharpPlayer forward)
+	{
+		var from = new AnySharpObject(owner);
+		var to = new AnySharpObject(forward);
+
+		return await services.Permissions.Controls(from, to)
+					 || (forward.Object.Locks.ContainsKey(nameof(LockType.MailForward))
+							 && await services.Permissions.PassesLock(from, to, LockType.MailForward));
+	}
 
 	/// <summary>PennMUSH <c>real_send_mail</c>: one message into one mailbox, or a refusal.</summary>
 	private static async ValueTask<bool> DeliverAsync(IMUSHCodeParser parser, Services services,

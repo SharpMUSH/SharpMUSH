@@ -103,7 +103,7 @@ public partial class Commands
 	}
 
 	private MailDelivery.Services MailDeliveryServices
-		=> new(PermissionService, Mediator, NotifyService, DidItService, Configuration);
+		=> new(PermissionService, Mediator, NotifyService, DidItService, AttributeService, Configuration);
 
 	private async ValueTask<MString> NotifyAndReturnBadMailArguments(AnySharpObject executor)
 	{
