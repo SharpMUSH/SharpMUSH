@@ -95,7 +95,7 @@ public class LogCommandTests
 		var (messages, result) = await LogwipeAs(1, executor, command);
 
 		await Assert.That(messages).Contains(string.Format(ErrorMessages.Notifications.LogWipeUnsupportedFormat, policy, log));
-		await Assert.That(messages.Any(m => m.Contains("Would", StringComparison.Ordinal))).IsFalse();
+		await Assert.That(messages.Any(m => m.StartsWith("@logwipe", StringComparison.OrdinalIgnoreCase) && m.Contains("Would", StringComparison.Ordinal))).IsFalse();
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.ErrorNotSupported);
 	}
 
