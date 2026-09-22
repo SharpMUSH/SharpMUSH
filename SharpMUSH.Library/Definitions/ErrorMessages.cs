@@ -1440,28 +1440,36 @@ public static class ErrorMessages
 		public const string WaitInvalidTimeSpecified = "Invalid time specified.";
 
 		public const string CommandMustSpecifyName = "You must specify a command name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandAddNotImplementedFormat = "@command/add: Dynamic command creation not yet implemented.";
 		public const string CommandMustSpecifyAlias = "You must specify an alias name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandAliasNotImplementedFormat = "@command/alias: Dynamic command aliasing not yet implemented.";
 		public const string CommandMustSpecifyCloneName = "You must specify a clone name.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandCloneNotImplementedFormat = "@command/clone: Command cloning not yet implemented.";
-		public const string CommandOnlyGodCanDelete = "Only God can delete commands.";
+		public const string CommandAddedFormat = "Command {0} added.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandDeleteNotImplementedFormat = "@command/delete: Command deletion not yet implemented.";
+		public const string CommandAlreadyExistsFormat = "Command {0} already exists.";
+		public const string CommandBadName = "Bad command name.";
+		public const string CommandNoevalNoLongerNoparse = "WARNING: /NOEVAL no longer creates a Noparse command. Use /NOPARSE if that's what you meant.";
+		public const string CommandAliasBadName = "I can't alias a command to that!";
+		public const string CommandAliasFailed = "Unable to set alias.";
+		public const string CommandAliasSet = "Alias set.";
+		public const string CommandNoSuchCommand = "No such command.";
+		public const string CommandCloned = "Command cloned.";
+		public const string CommandCannotDeleteBuiltin = "You can't delete built-in commands. @command/disable instead.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandDisableNotImplementedFormat = "@command/disable: Command disabling not yet implemented.";
+		public const string CommandRemovedFormat = "Removed {0} from command table.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandEnableNotImplementedFormat = "@command/enable: Command enabling not yet implemented.";
+		public const string CommandRemovedWithAliasesFormat = "Removed {0} and aliases from command table.";
+		public const string CommandHowToRestrict = "How do you want to restrict the command?";
+		public const string CommandRestrictFailed = "Restrict attempt failed.";
+		public const string CommandRestrictMessageUnsupported = "A custom failure message is not supported; the restriction was set without it.";
+		public const string CommandAlwaysEnabled = "@command is ALWAYS enabled.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandRestrictNotImplementedFormat = "@command/restrict: Command restriction not yet implemented.";
+		public const string CommandCalledByTheGameFormat = "{0} is run by the game itself and cannot be disabled.";
+		public const string CommandNotImplemented = "This command has not been implemented.";
 		public const string CommandLibraryUnavailable = "Command library unavailable.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandNotFoundFormat = "Command '{0}' not found.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoNameFormat = "Command: {0}";
+		public const string CommandInfoNameFormat = "Command: {0} ({1})";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandInfoTypeFormat = "  Type: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

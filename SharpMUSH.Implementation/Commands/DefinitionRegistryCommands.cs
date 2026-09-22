@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -60,116 +61,81 @@ public partial class Commands
 
 		var isQuiet = switches.Contains("QUIET");
 
-		// Administrative switches - wizard only (except DELETE which requires God)
-		if (switches.Any(s => new[] { "ADD", "ALIAS", "CLONE", "DELETE", "DISABLE", "ENABLE", "RESTRICT" }.Contains(s)))
+		// cmd_command: /add, /alias and /clone are Wizard, /delete is God; each answers for itself.
+		if (switches.Contains("ADD"))
 		{
-			if (!await executor.IsWizard())
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
-			if (switches.Contains("ADD"))
-			{
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAddNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
-
-			if (switches.Contains("ALIAS"))
-			{
-				var aliasName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
-				if (string.IsNullOrEmpty(aliasName))
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyAlias), executor);
-					return new CallState(ErrorMessages.Returns.NoAliasSpecified);
-				}
-
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAliasNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
-
-			if (switches.Contains("CLONE"))
-			{
-				var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
-				if (string.IsNullOrEmpty(cloneName))
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyCloneName), executor);
-					return new CallState(ErrorMessages.Returns.NoCloneNameSpecified);
-				}
-
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandCloneNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
-
-			if (switches.Contains("DELETE"))
-			{
-				if (!executor.IsGod())
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandOnlyGodCanDelete), executor);
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
-				}
-
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandDeleteNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
-
-			if (switches.Contains("DISABLE"))
-			{
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandDisableNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
-
-			if (switches.Contains("ENABLE"))
-			{
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandEnableNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
-
-			if (switches.Contains("RESTRICT"))
-			{
-				var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRestrictNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
+			return await AddCommandAsync(executor, commandName, switches);
 		}
 
-		if (CommandLibrary == null)
+		if (switches.Contains("ALIAS"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandLibraryUnavailable), executor);
-			return new CallState(ErrorMessages.Returns.LibraryUnavailable);
+			return await AliasCommandAsync(executor, commandName, args.GetValueOrDefault("1")?.Message?.ToPlainText().Trim().ToUpperInvariant() ?? "", isQuiet);
 		}
 
-		if (!CommandLibrary.TryGetValue(commandName, out var commandInfo))
+		if (switches.Contains("CLONE"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNotFoundFormat), executor, commandName);
+			return await CloneCommandAsync(executor, commandName, args.GetValueOrDefault("1")?.Message?.ToPlainText().Trim().ToUpperInvariant() ?? "");
+		}
+
+		if (switches.Contains("DELETE"))
+		{
+			return await DeleteCommandAsync(executor, commandName);
+		}
+
+		// A disabled command is still found here, as command_find still finds it in Penn.
+		(CommandDefinition LibraryInformation, bool IsSystem) commandInfo;
+		var disabled = false;
+		if (CommandLibrary.TryGetValue(commandName, out var live))
+		{
+			commandInfo = live;
+		}
+		else if (DisabledCommandFor(commandName) is { } parked)
+		{
+			commandInfo = parked[0].Value;
+			disabled = true;
+		}
+		else
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNoSuchCommand), executor);
 			return new CallState(ErrorMessages.Returns.CommandNotFound);
+		}
+
+		// cmd_command: for a wizard, the state switches act, then the command is described.
+		if (await executor.IsWizard())
+		{
+			if (switches.Contains("ON") || switches.Contains("ENABLE"))
+			{
+				EnableCommand(commandName);
+			}
+			else if ((switches.Contains("OFF") || switches.Contains("DISABLE"))
+							 && await DisableCommandAsync(executor, commandInfo.LibraryInformation) is CallState disableRefused)
+			{
+				return disableRefused;
+			}
+
+			if (switches.Contains("RESTRICT")
+					&& await RestrictCommandAsync(executor, commandInfo.LibraryInformation, args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "") is CallState restrictRefused)
+			{
+				return restrictRefused;
+			}
+
+			disabled = !CommandLibrary.ContainsKey(commandName) && DisabledCommandFor(commandName) is not null;
+		}
+		else if (switches.Any(sw => sw is "ON" or "OFF" or "ENABLE" or "DISABLE" or "RESTRICT"))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (isQuiet)
+		{
+			return CallState.Empty;
 		}
 
 		var (definition, isSystem) = commandInfo;
 		var attr = definition.Attribute;
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoNameFormat), executor, attr.Name);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoNameFormat), executor, attr.Name, disabled ? "Disabled" : "Enabled");
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoTypeFormat), executor, isSystem ? "Built-in" : "User-defined");
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMinArgsFormat), executor, attr.MinArgs);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMaxArgsFormat), executor, attr.MaxArgs);
@@ -199,6 +165,427 @@ public partial class Commands
 		}
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// Commands <c>@command/disable</c> has taken out of the table, keyed by the command's name, with
+	/// every name (the command and its aliases) it was reachable by. Penn marks a disabled command
+	/// CMD_T_DISABLED and then treats it as no command at all (<c>src/command.c:1320</c>), so the line
+	/// falls through to $-commands and HUH; taking it out of the table is how that happens here.
+	/// </summary>
+	private readonly Dictionary<string, List<KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>>> _disabledCommands
+		= new(StringComparer.OrdinalIgnoreCase);
+
+	private readonly Lock _commandTableLock = new();
+
+	/// <summary>
+	/// The commands the engine invokes by name rather than by matching what was typed. They cannot be
+	/// taken out of the table: the engine would find nothing to run.
+	/// </summary>
+	private static readonly HashSet<string> CommandsTheGameRuns = new(["HUH_COMMAND", "@CHAT", "GOTO"], StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>What <c>@command/add</c> installs: Penn's <c>cmd_unimplemented</c>, for a hook to replace.</summary>
+	private async ValueTask<Option<CallState>> CommandAddedWithoutHook(IMUSHCodeParser parser)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNotImplemented), executor);
+		return new None();
+	}
+
+	/// <summary>Whether <paramref name="definition"/> was made by <c>@command/add</c> (or cloned from one).</summary>
+	private bool IsAddedCommand(CommandDefinition definition)
+		=> definition.Command.Method == ((Func<IMUSHCodeParser, ValueTask<Option<CallState>>>)CommandAddedWithoutHook).Method;
+
+	private List<KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>>? DisabledCommandFor(string name)
+	{
+		lock (_commandTableLock)
+		{
+			return _disabledCommands.Values.FirstOrDefault(entries => entries.Any(entry => entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase)));
+		}
+	}
+
+	private async ValueTask<bool> ValidCommandName(string name)
+		=> name.Length > 0 && await ValidateService.Valid(IValidateService.ValidationType.CommandName, MarkupText.Plain(name), new None());
+
+	/// <summary>
+	/// <c>do_command_add</c> (<c>src/command.c:1923</c>): a new command that does nothing until it is
+	/// hooked, parsed as its switches say. Unless it is /noparse and /rsnoparse both, it also takes a
+	/// /noeval switch, which leaves its arguments unevaluated for that one use.
+	/// </summary>
+	private async ValueTask<Option<CallState>> AddCommandAsync(AnySharpObject executor, string name, string[] switches)
+	{
+		if (switches.Contains("NOEVAL"))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNoevalNoLongerNoparse), executor);
+		}
+
+		if (!await executor.IsWizard())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (CommandLibrary.TryGetValue(name, out var existing) || DisabledCommandFor(name) is not null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAlreadyExistsFormat), executor,
+				existing.LibraryInformation.Attribute?.Name ?? name);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		if (!await ValidCommandName(name))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandBadName), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		var behavior = CommandBehavior.Default;
+		if (switches.Contains("NOPARSE")) behavior |= CommandBehavior.NoParse;
+		if (switches.Contains("RSARGS")) behavior |= CommandBehavior.RSArgs;
+		if (switches.Contains("LSARGS")) behavior |= CommandBehavior.LSArgs;
+		if (switches.Contains("EQSPLIT")) behavior |= CommandBehavior.EqSplit;
+		if (switches.Contains("RSNOPARSE")) behavior |= CommandBehavior.RSNoParse;
+
+		var attribute = new SharpCommandAttribute
+		{
+			Name = name,
+			Behavior = behavior,
+			Switches = behavior.HasFlag(CommandBehavior.NoParse) && behavior.HasFlag(CommandBehavior.RSNoParse) ? [] : ["NOEVAL"]
+		};
+
+		lock (_commandTableLock)
+		{
+			CommandLibrary[name] = (new CommandDefinition(attribute, CommandAddedWithoutHook), true);
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAddedFormat), executor, name);
+		return new CallState(name);
+	}
+
+	/// <summary><c>alias_command</c>: a second name for an existing command, which must not already be taken.</summary>
+	private async ValueTask<Option<CallState>> AliasCommandAsync(AnySharpObject executor, string name, string alias, bool quiet)
+	{
+		if (!await executor.IsWizard())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (!await ValidCommandName(alias))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAliasBadName), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		bool aliased;
+		lock (_commandTableLock)
+		{
+			aliased = CommandLibrary.TryGetValue(name, out var command) && CommandLibrary.TryAdd(alias, command);
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+
+		if (!aliased)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAliasFailed), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		if (!quiet)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAliasSet), executor);
+		}
+
+		return new CallState(alias);
+	}
+
+	/// <summary>
+	/// <c>do_command_clone</c> (<c>src/command.c:1960</c>): a separate command that starts as a copy of
+	/// the original — its parsing, switches, lock and hooks — and can then be restricted or hooked
+	/// on its own.
+	/// </summary>
+	private async ValueTask<Option<CallState>> CloneCommandAsync(AnySharpObject executor, string original, string clone)
+	{
+		if (!await executor.IsWizard())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (!CommandLibrary.TryGetValue(original, out var source))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNoSuchCommand), executor);
+			return new CallState(ErrorMessages.Returns.CommandNotFound);
+		}
+
+		if (!await ValidCommandName(clone) || CommandLibrary.ContainsKey(clone) || DisabledCommandFor(clone) is not null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandBadName), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		var from = source.LibraryInformation.Attribute;
+		var attribute = new SharpCommandAttribute
+		{
+			Name = clone,
+			MinArgs = from.MinArgs,
+			MaxArgs = from.MaxArgs,
+			CommandLock = from.CommandLock,
+			Behavior = from.Behavior,
+			Switches = from.Switches is null ? null : [.. from.Switches],
+			SingleArgumentSwitches = [.. from.SingleArgumentSwitches],
+			ParameterNames = [.. from.ParameterNames]
+		};
+
+		lock (_commandTableLock)
+		{
+			CommandLibrary[clone] = (source.LibraryInformation with { Attribute = attribute }, source.IsSystem);
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+
+		foreach (var (type, hook) in await HookService.GetAllHooksAsync(from.Name))
+		{
+			await HookService.SetHookAsync(clone, type, hook.TargetObject, hook.AttributeName,
+				hook.Inline, hook.NoBreak, hook.Localize, hook.ClearRegs);
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandCloned), executor);
+		return new CallState(clone);
+	}
+
+	/// <summary>
+	/// <c>do_command_delete</c> (<c>src/command.c:2067</c>), God only: an alias is simply removed; a
+	/// command is removed with all its aliases, and only if <c>@command/add</c> made it.
+	/// </summary>
+	private async ValueTask<Option<CallState>> DeleteCommandAsync(AnySharpObject executor, string name)
+	{
+		if (!executor.IsGod())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (!CommandLibrary.TryGetValue(name, out var command))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNoSuchCommand), executor);
+			return new CallState(ErrorMessages.Returns.CommandNotFound);
+		}
+
+		var definition = command.LibraryInformation;
+		if (!definition.Attribute.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+		{
+			lock (_commandTableLock)
+			{
+				CommandLibrary.Remove(name);
+				CommandTrie.Invalidate(CommandLibrary);
+			}
+
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRemovedFormat), executor, name);
+			return new CallState(name);
+		}
+
+		if (!IsAddedCommand(definition))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandCannotDeleteBuiltin), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		int removed;
+		lock (_commandTableLock)
+		{
+			var names = CommandLibrary.Where(entry => ReferenceEquals(entry.Value.LibraryInformation.Attribute, definition.Attribute))
+				.Select(entry => entry.Key)
+				.ToArray();
+			foreach (var each in names)
+			{
+				CommandLibrary.Remove(each);
+			}
+
+			removed = names.Length;
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+
+		await NotifyService.NotifyLocalized(executor,
+			removed > 1 ? nameof(ErrorMessages.Notifications.CommandRemovedWithAliasesFormat) : nameof(ErrorMessages.Notifications.CommandRemovedFormat),
+			executor, name);
+		return new CallState(name);
+	}
+
+	/// <summary>
+	/// Takes <paramref name="definition"/> out of the table under every name it has, keeping them for
+	/// <see cref="EnableCommand"/>. <c>@command</c> itself stays: "@command is ALWAYS enabled."
+	/// </summary>
+	private async ValueTask<Option<CallState>> DisableCommandAsync(AnySharpObject executor, CommandDefinition definition)
+	{
+		if (definition.Attribute.Name.Equals("@COMMAND", StringComparison.OrdinalIgnoreCase))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAlwaysEnabled), executor);
+			return new None();
+		}
+
+		if (CommandsTheGameRuns.Contains(definition.Attribute.Name))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandCalledByTheGameFormat), executor, definition.Attribute.Name);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		lock (_commandTableLock)
+		{
+			var entries = CommandLibrary.Where(entry => ReferenceEquals(entry.Value.LibraryInformation.Attribute, definition.Attribute)).ToList();
+			foreach (var entry in entries)
+			{
+				CommandLibrary.Remove(entry.Key);
+			}
+
+			if (entries.Count > 0)
+			{
+				_disabledCommands[definition.Attribute.Name] = entries;
+			}
+
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+
+		return new None();
+	}
+
+	/// <summary>Puts a disabled command back under every name it had.</summary>
+	private void EnableCommand(string name)
+	{
+		lock (_commandTableLock)
+		{
+			var parked = _disabledCommands.FirstOrDefault(disabled => disabled.Value.Any(entry => entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase)));
+			if (parked.Value is null)
+			{
+				return;
+			}
+
+			foreach (var (key, value) in parked.Value)
+			{
+				CommandLibrary.TryAdd(key, value);
+			}
+
+			_disabledCommands.Remove(parked.Key);
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+	}
+
+	/// <summary>
+	/// <c>restrict_command</c> (<c>src/command.c:1719</c>): who may use the command, given as a lock or
+	/// as Penn's restriction words — a flag or power name, <c>admin</c>, <c>player</c>/<c>thing</c>/
+	/// <c>room</c>/<c>exit</c>/<c>any</c>, <c>god</c>, <c>noguest</c>, <c>nogagged</c>, <c>nofixed</c>,
+	/// each negated with <c>!</c> — and <c>nobody</c>, which disables it.
+	/// </summary>
+	private async ValueTask<Option<CallState>> RestrictCommandAsync(AnySharpObject executor, CommandDefinition definition, string restriction)
+	{
+		var quote = restriction.IndexOf('"');
+		var hasMessage = quote >= 0 && restriction[(quote + 1)..].Trim().Length > 0;
+		var words = (quote >= 0 ? restriction[..quote] : restriction).Trim();
+		if (words.Length == 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandHowToRestrict), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		var attribute = definition.Attribute;
+		switch (await RestrictionFromWords(words, attribute.Behavior))
+		{
+			case CommandRestriction { Disables: true }:
+				await DisableCommandAsync(executor, definition);
+				break;
+			case CommandRestriction translated:
+				attribute.CommandLock = translated.Lock;
+				attribute.Behavior = translated.Behavior;
+				break;
+			case NotFound when LockService.Validate(words, executor):
+				attribute.CommandLock = words;
+				break;
+			default:
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRestrictFailed), executor);
+				return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		if (hasMessage)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRestrictMessageUnsupported), executor);
+		}
+
+		return new None();
+	}
+
+	private readonly record struct CommandRestriction(string Lock, CommandBehavior Behavior, bool Disables);
+
+	/// <summary>
+	/// Penn's old-style restriction words as a lock, the way <c>restrict_command</c> builds one: the
+	/// named flags and powers OR'ed, the allowed types OR'ed, and <c>!FLAG^FIXED</c> for
+	/// <c>nofixed</c>; <c>god</c>, <c>noguest</c> and <c>nogagged</c> become the command behaviours
+	/// that already enforce them. NotFound when any word is not one of these, so the text is a lock.
+	/// </summary>
+	private async ValueTask<Found<CommandRestriction>> RestrictionFromWords(string words, CommandBehavior behavior)
+	{
+		string[] allTypes = ["PLAYER", "THING", "ROOM", "EXIT"];
+		var types = new HashSet<string>(allTypes);
+		var flags = new List<string>();
+		var noFixed = false;
+		var disables = false;
+
+		foreach (var token in words.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		{
+			var clear = token.StartsWith('!');
+			var word = (clear ? token[1..] : token).ToUpperInvariant();
+			if (word == "NOPLAYER")
+			{
+				clear = !clear;
+				word = "PLAYER";
+			}
+
+			switch (word)
+			{
+				case "NOBODY":
+					disables = !clear;
+					break;
+				case "ANY":
+					if (clear) types.Clear(); else types.UnionWith(allTypes);
+					break;
+				case "PLAYER" or "THING" or "ROOM" or "EXIT":
+					if (clear) types.Remove(word); else types.Add(word);
+					break;
+				case "GOD":
+					behavior = clear ? behavior & ~CommandBehavior.God : behavior | CommandBehavior.God;
+					break;
+				case "NOGUEST":
+					behavior = clear ? behavior & ~CommandBehavior.NoGuest : behavior | CommandBehavior.NoGuest;
+					break;
+				case "NOGAGGED":
+					behavior = clear ? behavior & ~CommandBehavior.NoGagged : behavior | CommandBehavior.NoGagged;
+					break;
+				case "NOFIXED":
+					noFixed = !clear;
+					break;
+				case "ADMIN":
+					foreach (var admin in new[] { "FLAG^ROYALTY", "FLAG^WIZARD" })
+					{
+						if (clear) flags.Remove(admin); else if (!flags.Contains(admin)) flags.Add(admin);
+					}
+
+					break;
+				default:
+					var term = await Mediator.Send(new GetObjectFlagQuery(word)) is not null ? $"FLAG^{word}"
+						: await Mediator.Send(new GetPowerQuery(word)) is not null ? $"POWER^{word}"
+						: null;
+					if (term is null)
+					{
+						return new NotFound();
+					}
+
+					if (clear) flags.Remove(term); else if (!flags.Contains(term)) flags.Add(term);
+					break;
+			}
+		}
+
+		List<string> clauses = [];
+		if (flags.Count > 0) clauses.Add($"({string.Join('|', flags)})");
+		if (types.Count < allTypes.Length) clauses.Add($"({string.Join('|', allTypes.Where(types.Contains).Select(type => $"TYPE^{type}"))})");
+		if (noFixed) clauses.Add("!FLAG^FIXED");
+		return new CommandRestriction(string.Join('&', clauses), behavior, disables);
 	}
 
 	[SharpCommand(Name = "@FUNCTION",

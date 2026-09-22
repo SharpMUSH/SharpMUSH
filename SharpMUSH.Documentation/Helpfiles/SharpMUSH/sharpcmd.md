@@ -966,10 +966,14 @@ The `/alias` switch creates an alias for `<command>`, allowing players to type `
 Switches include:
 - /add : Add a new command that does nothing, but can be @hook'd.
 - /delete : Delete a command added with @command/add or /alias. God only.
-- /disable : Disable a command added in the hardcode.
+- /disable : Disable a command added in the hardcode. A disabled command is not a command at all: what was typed goes on to $-commands and then Huh?.
 - /enable : Re-enable a command disabled with @command/disable.
 
+`<restriction>` is a lock, or words naming who may use the command: flag and power names, `admin` (royalty or wizard), `player`, `thing`, `room`, `exit` or `any`, `god`, `noguest`, `nogagged`, `nofixed`, each negated with `!`, and `nobody`, which disables the command. SharpMUSH does not show a custom `<error message>`; the restriction is set without it.
+
 The `/quiet` switch can be used to suppress output from @command.
+
+Everything these switches change lasts until the server restarts. A permanent alias belongs in the `command_aliases` configuration option. HUH_COMMAND, @CHAT and GOTO are run by the game itself and cannot be disabled, and @command is always enabled.
 
 See [@command2].
 # @command2
@@ -983,9 +987,9 @@ You can use these additional switches, along with `@command/add`, to control how
 - /rsargs : When used with /eqsplit, the right-side arguments are comma-separated and are parsed individually
 - /rsnoparse : The command does not evaluate the rightside arg(s).
 
-Any command added with neither `/noparse` or `/rsnoparse` is provided with a `/noeval` switch automatically, so if you `@command/add` foo, then foo's arguments are parsed by default, but you can call foo/noeval. Note: when you @hook/override foo, its $-command pattern must be able to match "foo/noeval" as well for the switch to actually be used.
+Any command added without both `/noparse` and `/rsnoparse` is provided with a `/noeval` switch automatically, so if you `@command/add` foo, then foo's arguments are parsed by default, but you can call foo/noeval. Note: when you @hook/override foo, its $-command pattern must be able to match "foo/noeval" as well for the switch to actually be used.
 
-Commands added with `@command/add`, like other standard commands, are always case-insensitive. Commands can also be added in the alias.cnf file.
+Commands added with `@command/add`, like other standard commands, are always case-insensitive. Until it is hooked, an added command answers "This command has not been implemented."
 
 See [@command3] for examples.
 

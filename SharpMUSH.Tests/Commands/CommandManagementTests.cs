@@ -1,0 +1,289 @@
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
+
+namespace SharpMUSH.Tests.Commands;
+
+/// <summary>
+/// Runtime <c>@command</c> management — PennMUSH's <c>cmd_command</c>, <c>do_command_add</c>,
+/// <c>do_command_clone</c> and <c>do_command_delete</c> (<c>src/command.c:1923-2200</c>) and the
+/// examples in <c>help @command3</c>. Every test works on a command it adds or clones under a fresh
+/// name, so the shared command table other tests use is left as it was.
+/// </summary>
+public class CommandManagementTests
+{
+	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
+
+	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IHookService HookService => WebAppFactoryArg.Services.GetRequiredService<IHookService>();
+	private DBRef God => WebAppFactoryArg.ExecutorDBRef;
+
+	private const string Huh = "Huh?  (Type \"help\" for help.)";
+
+	private static string CommandName() => $"ZC{Guid.NewGuid():N}"[..12].ToUpperInvariant();
+
+	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
+	{
+		var before = WebAppFactoryArg.Notifications.CountFor(who);
+		await action();
+		return [.. WebAppFactoryArg.Notifications.For(who).Skip(before)];
+	}
+
+	private Task<List<string>> AsGod(string command)
+		=> MessagesWhile(God, async () => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command)));
+
+	private Task<List<string>> As(TestIsolationHelpers.TestPlayer player, string command)
+		=> MessagesWhile(player.DbRef, async () => await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command)));
+
+	private Task<TestIsolationHelpers.TestPlayer> Mortal(string prefix)
+		=> TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+
+	private async Task<TestIsolationHelpers.TestPlayer> Wizard()
+	{
+		var wizard = await Mortal("CmdWiz");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
+		return wizard;
+	}
+
+	/// <summary>
+	/// <c>help @command3</c>'s first example: a /noparse command, overridden by a $-command, receives its
+	/// argument unevaluated.
+	/// </summary>
+	[Test]
+	public async ValueTask Add_NoParseCommandHookedToADollarCommand_GetsItsArgumentUnevaluated()
+	{
+		var eat = CommandName();
+		var machine = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "DiningMachine");
+		try
+		{
+			await AsGod($"&EAT {machine}=${eat} *:@pemit %#=Bite of %0.");
+			var added = await AsGod($"@command/add/noparse {eat}");
+			await AsGod($"@hook/override {eat}={machine},EAT");
+
+			await Assert.That(added).Contains($"Command {eat} added.");
+			await Assert.That(await AsGod($"{eat} meat loaf")).Contains("Bite of meat loaf.");
+			await Assert.That(await AsGod($"{eat} randword(apple tomato pear)")).Contains("Bite of randword(apple tomato pear).");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(eat, "OVERRIDE");
+		}
+	}
+
+	/// <summary>
+	/// The second example: a command added without /noparse evaluates its arguments, and gets a /noeval
+	/// switch that turns that off.
+	/// </summary>
+	[Test]
+	public async ValueTask Add_ParsedCommand_EvaluatesItsArgumentsUnlessNoeval()
+	{
+		var drink = CommandName();
+		var machine = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "DrinkMachine");
+		try
+		{
+			await AsGod($"&DRINK {machine}=$^{drink.ToLowerInvariant()}(/noeval)? (.*)$:@pemit %#=Drinks %2.");
+			await AsGod($"@set {machine}/DRINK=regexp");
+			await AsGod($"@command/add {drink}");
+			await AsGod($"@hook/override {drink}={machine},DRINK");
+
+			await Assert.That(await AsGod($"{drink} reverse(tea)")).Contains("Drinks aet.");
+			await Assert.That(await AsGod($"{drink}/noeval reverse(tea)")).Contains("Drinks reverse(tea).");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(drink, "OVERRIDE");
+		}
+	}
+
+	/// <summary>An added command nothing hooks does nothing, and says so (<c>cmd_unimplemented</c>).</summary>
+	[Test]
+	public async ValueTask Add_UnhookedCommand_SaysItIsNotImplemented()
+	{
+		var name = CommandName();
+		await AsGod($"@command/add {name}");
+
+		await Assert.That(await AsGod($"{name} anything")).Contains("This command has not been implemented.");
+	}
+
+	[Test]
+	public async ValueTask Add_ExistingCommand_IsRefused()
+	{
+		var messages = await AsGod("@command/add think");
+
+		await Assert.That(messages).Contains("Command THINK already exists.");
+	}
+
+	[Test]
+	public async ValueTask Add_Mortal_IsRefusedAndNothingIsAdded()
+	{
+		var mortal = await Mortal("CmdAddMortal");
+		var name = CommandName();
+
+		var messages = await As(mortal, $"@command/add {name}");
+
+		await Assert.That(messages).Contains("Permission denied.");
+		await Assert.That(await AsGod($"{name} x")).Contains(Huh);
+	}
+
+	/// <summary><c>@command/alias</c> makes a second name for the same command.</summary>
+	[Test]
+	public async ValueTask Alias_RunsTheSameCommand_AndDeletingTheAliasLeavesTheCommand()
+	{
+		var alias = CommandName();
+
+		var set = await AsGod($"@command/alias think={alias}");
+		var viaAlias = await AsGod($"{alias} aliased hello");
+		var deleted = await AsGod($"@command/delete {alias}");
+		var afterDelete = await AsGod($"{alias} aliased hello");
+
+		await Assert.That(set).Contains("Alias set.");
+		await Assert.That(viaAlias).Contains("aliased hello");
+		await Assert.That(deleted).Contains($"Removed {alias} from command table.");
+		await Assert.That(afterDelete).Contains(Huh);
+		await Assert.That(await AsGod("think still here")).Contains("still here");
+	}
+
+	[Test]
+	public async ValueTask Alias_ToAnExistingName_IsRefused()
+	{
+		var messages = await AsGod("@command/alias think=say");
+
+		await Assert.That(messages).Contains("Unable to set alias.");
+	}
+
+	/// <summary>
+	/// <c>@command/clone</c> makes a separate copy that works the same and can be restricted apart from
+	/// the original: restricting the clone to wizards leaves <c>think</c> open to everyone.
+	/// </summary>
+	[Test]
+	public async ValueTask Clone_WorksLikeTheOriginal_AndIsRestrictedSeparately()
+	{
+		var clone = CommandName();
+		var mortal = await Mortal("CmdClone");
+
+		var cloned = await AsGod($"@command/clone think={clone}");
+		await AsGod($"@command/restrict {clone}=wizard");
+
+		await Assert.That(cloned).Contains("Command cloned.");
+		await Assert.That(await AsGod($"{clone} cloned hello")).Contains("cloned hello");
+		await Assert.That(await As(mortal, $"{clone} cloned hello")).DoesNotContain("cloned hello");
+		await Assert.That(await As(mortal, "think original hello")).Contains("original hello");
+	}
+
+	[Test]
+	public async ValueTask Clone_OfAnUnknownCommand_IsRefused()
+	{
+		var messages = await AsGod($"@command/clone {CommandName()}={CommandName()}");
+
+		await Assert.That(messages).Contains("No such command.");
+	}
+
+	/// <summary><c>@command/restrict</c> takes a lock as well as Penn's restriction words.</summary>
+	[Test]
+	public async ValueTask Restrict_TakesALock()
+	{
+		var clone = CommandName();
+		var mortal = await Mortal("CmdLock");
+		await AsGod($"@command/clone think={clone}");
+
+		await AsGod($"@command/restrict {clone}=#{mortal.DbRef.Number}");
+
+		await Assert.That(await As(mortal, $"{clone} locked hello")).Contains("locked hello");
+		var other = await Mortal("CmdLockOther");
+		await Assert.That(await As(other, $"{clone} locked hello")).DoesNotContain("locked hello");
+	}
+
+	[Test]
+	public async ValueTask Restrict_WithNothing_AsksHow()
+	{
+		var clone = CommandName();
+		await AsGod($"@command/clone think={clone}");
+
+		await Assert.That(await AsGod($"@command/restrict {clone}=")).Contains("How do you want to restrict the command?");
+	}
+
+	/// <summary>
+	/// A disabled command is not a command at all: the line falls through to $-commands and HUH
+	/// (<c>src/command.c:1320</c>). Enabling it brings it back.
+	/// </summary>
+	[Test]
+	public async ValueTask DisableAndEnable_TakeTheCommandOutOfTheTableAndBack()
+	{
+		var clone = CommandName();
+		await AsGod($"@command/clone think={clone}");
+
+		await AsGod($"@command/disable {clone}");
+		var whileDisabled = await AsGod($"{clone} disabled hello");
+		await AsGod($"@command/enable {clone}");
+		var afterEnable = await AsGod($"{clone} enabled hello");
+
+		await Assert.That(whileDisabled).Contains(Huh);
+		await Assert.That(whileDisabled).DoesNotContain("disabled hello");
+		await Assert.That(afterEnable).Contains("enabled hello");
+	}
+
+	[Test]
+	public async ValueTask Disable_CommandItself_IsAlwaysEnabled()
+	{
+		var messages = await AsGod("@command/disable @command");
+
+		await Assert.That(messages).Contains("@command is ALWAYS enabled.");
+		await Assert.That(await AsGod("@command think")).DoesNotContain(Huh);
+	}
+
+	[Test]
+	public async ValueTask Disable_Mortal_IsRefused()
+	{
+		var clone = CommandName();
+		await AsGod($"@command/clone think={clone}");
+		var mortal = await Mortal("CmdDisable");
+
+		await As(mortal, $"@command/disable {clone}");
+
+		await Assert.That(await AsGod($"{clone} still enabled")).Contains("still enabled");
+	}
+
+	/// <summary><c>do_command_delete</c>: God only, and never a built-in command.</summary>
+	[Test]
+	public async ValueTask Delete_ABuiltIn_IsRefused()
+	{
+		var messages = await AsGod("@command/delete think");
+
+		await Assert.That(messages).Contains("You can't delete built-in commands. @command/disable instead.");
+		await Assert.That(await AsGod("think survived")).Contains("survived");
+	}
+
+	[Test]
+	public async ValueTask Delete_ByAWizardWhoIsNotGod_IsRefused()
+	{
+		var name = CommandName();
+		await AsGod($"@command/add {name}");
+		var wizard = await Wizard();
+
+		var messages = await As(wizard, $"@command/delete {name}");
+
+		await Assert.That(messages).Contains("Permission denied.");
+		await Assert.That(await AsGod($"{name} x")).Contains("This command has not been implemented.");
+	}
+
+	[Test]
+	public async ValueTask Delete_AnAddedCommand_RemovesItAndItsAliases()
+	{
+		var name = CommandName();
+		var alias = CommandName();
+		await AsGod($"@command/add {name}");
+		await AsGod($"@command/alias {name}={alias}");
+
+		var messages = await AsGod($"@command/delete {name}");
+
+		await Assert.That(messages).Contains($"Removed {name} and aliases from command table.");
+		await Assert.That(await AsGod($"{name} x")).Contains(Huh);
+		await Assert.That(await AsGod($"{alias} x")).Contains(Huh);
+	}
+}
