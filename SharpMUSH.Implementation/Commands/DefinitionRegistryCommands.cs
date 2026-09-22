@@ -390,20 +390,30 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		int removed;
+		string[] names;
 		lock (_commandTableLock)
 		{
-			var names = CommandLibrary.Where(entry => ReferenceEquals(entry.Value.LibraryInformation.Attribute, definition.Attribute))
-				.Select(entry => entry.Key)
-				.ToArray();
+			names = [.. CommandLibrary.Where(entry => ReferenceEquals(entry.Value.LibraryInformation.Attribute, definition.Attribute))
+				.Select(entry => entry.Key)];
 			foreach (var each in names)
 			{
 				CommandLibrary.Remove(each);
 			}
 
-			removed = names.Length;
 			CommandTrie.Invalidate(CommandLibrary);
 		}
+
+		// Penn frees the COMMAND_INFO, and its hooks with it (src/command.c:2100-2104), so a command
+		// added under the name again starts unhooked. Hooks here outlive the table entry unless cleared.
+		foreach (var each in names)
+		{
+			foreach (var (type, _) in await HookService.GetAllHooksAsync(each))
+			{
+				await HookService.ClearHookAsync(each, type);
+			}
+		}
+
+		var removed = names.Length;
 
 		await NotifyService.NotifyLocalized(executor,
 			removed > 1 ? nameof(ErrorMessages.Notifications.CommandRemovedWithAliasesFormat) : nameof(ErrorMessages.Notifications.CommandRemovedFormat),
@@ -524,6 +534,10 @@ public partial class Commands
 	{
 		string[] allTypes = ["PLAYER", "THING", "ROOM", "EXIT"];
 		var types = new HashSet<string>(allTypes);
+		// "Commands can also give any flag, power or type, to restrict to objects ... of one of those
+		// types" (help restrict2): the first type named is the whole allowed set, and later ones add to
+		// it. A negated type subtracts from every type, which is what `noplayer` is for.
+		var narrowed = false;
 		var flags = new List<string>();
 		var noFixed = false;
 		var disables = false;
@@ -544,10 +558,33 @@ public partial class Commands
 					disables = !clear;
 					break;
 				case "ANY":
-					if (clear) types.Clear(); else types.UnionWith(allTypes);
+					if (clear)
+					{
+						types.Clear();
+					}
+					else
+					{
+						types.UnionWith(allTypes);
+						narrowed = false;
+					}
+
 					break;
 				case "PLAYER" or "THING" or "ROOM" or "EXIT":
-					if (clear) types.Remove(word); else types.Add(word);
+					if (clear)
+					{
+						types.Remove(word);
+					}
+					else
+					{
+						if (!narrowed)
+						{
+							types.Clear();
+							narrowed = true;
+						}
+
+						types.Add(word);
+					}
+
 					break;
 				case "GOD":
 					behavior = clear ? behavior & ~CommandBehavior.God : behavior | CommandBehavior.God;

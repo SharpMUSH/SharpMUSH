@@ -304,4 +304,58 @@ public class CommandManagementTests
 		await Assert.That(await As(wizard, $"{name} x")).Contains(Huh);
 		await Assert.That(await As(wizard, $"{alias} x")).Contains(Huh);
 	}
+
+	/// <summary>
+	/// "Commands can also give any flag, power or type, to restrict to objects ... of one of those
+	/// types" (<c>help restrict2</c>): naming a type is the whole allowed set, so the lock names that
+	/// type alone. (Penn's own <c>restrict_command</c> ORs it into a command that already allows every
+	/// type, which silently restricts nothing.)
+	/// </summary>
+	[Test]
+	public async ValueTask Restrict_ToAType_LocksToThatTypeAlone()
+	{
+		var wizard = await Wizard();
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+
+		await As(wizard, $"@command/restrict {clone}=player");
+
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains("  Lock: (TYPE^PLAYER)");
+		await Assert.That(await As(wizard, $"{clone} still mine")).Contains("still mine");
+	}
+
+	/// <summary>A negated type still subtracts from every type: that is what <c>noplayer</c> is for.</summary>
+	[Test]
+	public async ValueTask Restrict_WithANegatedType_KeepsTheOthers()
+	{
+		var wizard = await Wizard();
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+
+		await As(wizard, $"@command/restrict {clone}=noplayer");
+
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains("  Lock: (TYPE^THING|TYPE^ROOM|TYPE^EXIT)");
+	}
+
+	/// <summary>
+	/// <c>do_command_delete</c> frees the command and its hooks with it (<c>src/command.c:2100-2104</c>),
+	/// so a command added under the same name again starts unhooked.
+	/// </summary>
+	[Test]
+	public async ValueTask Delete_TakesTheCommandsHooksWithIt()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		var machine = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HookedThenDeleted");
+		await As(wizard, $"&DO {machine}=${name} *:@pemit %#=Hooked %0.");
+		await As(wizard, $"@command/add {name}");
+		await As(wizard, $"@hook/override {name}={machine},DO");
+		await Assert.That(await As(wizard, $"{name} once")).Contains("Hooked once.").Because("precondition");
+
+		await AsGod($"@command/delete {name}");
+		await As(wizard, $"@command/add {name}");
+
+		await Assert.That(await As(wizard, $"{name} twice")).Contains("This command has not been implemented.");
+		await Assert.That(await As(wizard, $"{name} twice")).DoesNotContain("Hooked twice.");
+	}
 }
