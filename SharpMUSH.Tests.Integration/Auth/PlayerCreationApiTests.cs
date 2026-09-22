@@ -37,7 +37,8 @@ public class PlayerCreationApiTests(ServerWebAppFactory factory)
 		return http;
 	}
 
-	private static string UniqueName(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
+	// Within player_name_len (15): character names are made from this too.
+	private static string UniqueName(string prefix) => $"{prefix[..Math.Min(prefix.Length, 4)]}{Guid.NewGuid():N}"[..15];
 
 	private async Task<(HttpClient Http, AccountLoginResponse Account)> RegisterAccountAsync()
 	{
@@ -79,5 +80,62 @@ public class PlayerCreationApiTests(ServerWebAppFactory factory)
 		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", account.AccountSessionToken);
 		using var response = await http.SendAsync(request);
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Forbidden);
+	}
+
+	private static async Task<HttpResponseMessage> CreateCharacterAsync(HttpClient http, string sessionToken, string name)
+	{
+		using var request = new HttpRequestMessage(HttpMethod.Post, "api/account/characters")
+		{
+			Content = JsonContent.Create(new CreateCharacterRequest(name, Password)),
+		};
+		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken);
+		return await http.SendAsync(request);
+	}
+
+	/// <summary>
+	/// The portal creates a character the way the connect screen does, so it asks
+	/// <c>ok_player_name(name, NOTHING, NOTHING)</c>: a name matching an <c>@sitelock/name</c> pattern
+	/// is not allowed.
+	/// </summary>
+	[Test]
+	public async Task CreateCharacter_WithABannedName_Returns400()
+	{
+		var (http, account) = await RegisterAccountAsync();
+		var name = UniqueName("Zban");
+
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			BannedNames = new SharpMUSH.Configuration.Options.BannedNamesOptions(["Zban*"])
+		});
+		using var response = await CreateCharacterAsync(http, account.AccountSessionToken, name);
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+		await Assert.That(await response.Content.ReadAsStringAsync()).Contains("That name is not allowed.");
+	}
+
+	/// <summary>A second character under a name another player already has is refused.</summary>
+	[Test]
+	public async Task CreateCharacter_WithATakenName_Returns409()
+	{
+		var (http, account) = await RegisterAccountAsync();
+		var name = UniqueName("Ztak");
+		using (var first = await CreateCharacterAsync(http, account.AccountSessionToken, name))
+		{
+			await Assert.That(first.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		}
+
+		using var second = await CreateCharacterAsync(http, account.AccountSessionToken, name);
+
+		await Assert.That(second.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+	}
+
+	[Test]
+	public async Task CreateCharacter_WithANameOverPlayerNameLen_Returns400()
+	{
+		var (http, account) = await RegisterAccountAsync();
+
+		using var response = await CreateCharacterAsync(http, account.AccountSessionToken, $"Zlong{Guid.NewGuid():N}"[..20]);
+
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
 	}
 }
