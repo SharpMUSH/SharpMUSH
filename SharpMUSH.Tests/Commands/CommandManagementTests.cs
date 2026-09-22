@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -418,9 +419,13 @@ public class CommandManagementTests
 	{
 		var wizard = await Wizard();
 
-		var messages = await As(wizard, "@command/restrict GOTO=nobody");
+		var before = WebAppFactoryArg.Notifications.CountFor(wizard.DbRef);
+		var result = await Parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain("@command/restrict GOTO=nobody"));
+		var messages = WebAppFactoryArg.Notifications.For(wizard.DbRef).Skip(before).ToList();
 
 		await Assert.That(messages).Contains("GOTO is run by the game itself and cannot be disabled.");
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+			.Because("the refusal is the command's result, not just a message");
 		await Assert.That(await As(wizard, "@command GOTO")).Contains("Command: GOTO (Enabled)");
 	}
 
