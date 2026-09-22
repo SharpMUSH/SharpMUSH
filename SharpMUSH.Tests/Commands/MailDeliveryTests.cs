@@ -657,4 +657,69 @@ public class MailDeliveryTests
 		await Assert.That(heard).DoesNotContain(m => m.Contains("mailbox is full"));
 		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
 	}
+
+	/// <summary>
+	/// Penn is single-threaded, so counting the inbox and inserting the message are one step there. Here
+	/// deliveries run concurrently (the portal's command invoker among them), so two messages arriving
+	/// together must still be numbered apart.
+	/// </summary>
+	[Test]
+	public async ValueTask ConcurrentDeliveriesToOneMailboxAreNumberedApart()
+	{
+		var target = await Player("MdRaceTo");
+		var senders = new List<TestIsolationHelpers.TestPlayer>();
+		for (var i = 0; i < 8; i++)
+		{
+			senders.Add(await Player($"MdRace{i}"));
+		}
+
+		var heard = await Heard(target, () =>
+			Task.WhenAll(senders.Select(sender => Run(sender, $"@mail #{target.DbRef.Number}=Race/Body."))));
+
+		var numbers = heard
+			.Select(m => System.Text.RegularExpressions.Regex.Match(m, @"^MAIL: You have a new message \((\d+)\)"))
+			.Where(match => match.Success)
+			.Select(match => int.Parse(match.Groups[1].Value));
+
+		await Assert.That(numbers).IsEquivalentTo(Enumerable.Range(1, 8));
+	}
+
+	/// <summary>
+	/// The quota is decided under the same gate as the store, so messages arriving together cannot all
+	/// pass a count taken before any of them was written.
+	/// </summary>
+	[Test]
+	public async ValueTask ConcurrentDeliveriesCannotOverfillAMailbox()
+	{
+		var target = await Player("MdRaceQtaTo");
+		await God($"&MAILQUOTA #{target.DbRef.Number}=1");
+		var senders = new List<TestIsolationHelpers.TestPlayer>();
+		for (var i = 0; i < 8; i++)
+		{
+			senders.Add(await Player($"MdRaceQta{i}"));
+		}
+
+		await Task.WhenAll(senders.Select(sender => Run(sender, $"@mail #{target.DbRef.Number}=Race/Body.")));
+
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// An empty MAILFORWARDLIST is no list. Penn (empty_attrs yes) keeps <c>&amp;MAILFORWARDLIST me=</c> as
+	/// an empty attribute, treats it as a list naming nobody, and drops every message: captured
+	/// <c>MAIL: Your message was not sent to LE707 due to a mail forwarding problem.</c> That is a trap with
+	/// no use, so this deviates.
+	/// </summary>
+	[Test]
+	public async ValueTask AnEmptyForwardListDeliversNormally()
+	{
+		var sender = await Player("MdFlEmpty");
+		var owner = await Player("MdFlEmptyOwner");
+		await Run(owner, "&MAILFORWARDLIST me=");
+
+		var heard = await Heard(sender, () => Run(sender, $"@mail #{owner.DbRef.Number}=Delivered/Body."));
+
+		await Assert.That(heard).Contains($"MAIL: You sent your message to {owner.Name}.");
+		await Assert.That(await Mailbox(owner)).Count().IsEqualTo(1);
+	}
 }
