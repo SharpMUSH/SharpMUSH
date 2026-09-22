@@ -51,9 +51,10 @@ public partial class StatsCommandTests
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain("@create StatsThingA"));
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain("@create StatsThingB"));
 
-		var god = WebAppFactoryArg.ExecutorDBRef;
-		var messages = await MessagesWhile(god,
-			async () => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@stats {owner.Name}")));
+		var wizard = await Mortal("StatsWiz");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
+		var messages = await MessagesWhile(wizard.DbRef,
+			async () => await Parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain($"@stats {owner.Name}")));
 
 		await Assert.That(messages).Contains("3 objects = 0 rooms, 0 exits, 2 things, 1 players.");
 	}
@@ -62,9 +63,10 @@ public partial class StatsCommandTests
 	[Test]
 	public async ValueTask NoArgument_CountsTheWholeWorld()
 	{
-		var god = WebAppFactoryArg.ExecutorDBRef;
-		var messages = await MessagesWhile(god,
-			async () => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@stats")));
+		// Anyone may count the world; a player of its own keeps other tests' @stats out of the window.
+		var counter = await Mortal("StatsWorld");
+		var messages = await MessagesWhile(counter.DbRef,
+			async () => await Parser.CommandParse(counter.Handle, ConnectionService, MarkupText.Plain("@stats")));
 
 		var line = messages.Select(m => CountLine().Match(m)).Single(m => m.Success);
 		var figures = Enumerable.Range(1, 5).Select(i => int.Parse(line.Groups[i].Value)).ToArray();
@@ -106,9 +108,9 @@ public partial class StatsCommandTests
 	[Test]
 	public async ValueTask UnknownPlayer_SaysSo()
 	{
-		var god = WebAppFactoryArg.ExecutorDBRef;
-		var messages = await MessagesWhile(god,
-			async () => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@stats NoSuchStatsPlayer")));
+		var asker = await Mortal("StatsUnknown");
+		var messages = await MessagesWhile(asker.DbRef,
+			async () => await Parser.CommandParse(asker.Handle, ConnectionService, MarkupText.Plain("@stats NoSuchStatsPlayer")));
 
 		await Assert.That(messages).Contains("NoSuchStatsPlayer: No such player.");
 	}
