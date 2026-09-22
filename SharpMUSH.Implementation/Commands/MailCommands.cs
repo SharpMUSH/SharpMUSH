@@ -84,12 +84,12 @@ public partial class Commands
 					arg0!.ToPlainText(), arg1!.ToPlainText()),
 			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) &&
 											 (arg1?.Length ?? 0) != 0
-				=> await ForwardMail.Handle(parser, ObjectDataService, LocateService, PermissionService, Mediator, number,
-					arg1!.ToPlainText()),
+				=> await ForwardMail.Handle(parser, ObjectDataService, LocateService, Mediator, NotifyService, MailDeliveryServices,
+					number, arg1!.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
-				=> await SendMail.Handle(parser, PermissionService, LocateService, ObjectDataService, Mediator, NotifyService,
-					AttributeService, Configuration, arg0!, arg1!, switches),
+				=> await SendMail.Handle(parser, LocateService, Mediator, NotifyService, MailDeliveryServices, arg0!, arg1!,
+					switches),
 			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
 															int.TryParse(arg0?.ToPlainText(), out var number)
 				=> await ReadMail.Handle(parser, ObjectDataService, Mediator, NotifyService, Math.Max(0, number - 1),
@@ -101,6 +101,9 @@ public partial class Commands
 
 		return new CallState(response);
 	}
+
+	private MailDelivery.Services MailDeliveryServices
+		=> new(PermissionService, Mediator, NotifyService, DidItService, Configuration);
 
 	private async ValueTask<MString> NotifyAndReturnBadMailArguments(AnySharpObject executor)
 	{

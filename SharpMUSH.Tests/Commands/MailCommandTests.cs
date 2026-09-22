@@ -182,12 +182,12 @@ public class MailCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You sent a message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You sent your message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You have received a message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextStartsWith(msg, "MAIL: You have a new message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
 	/// <summary>
@@ -206,8 +206,8 @@ public class MailCommandTests
 
 		var notifications = NotificationsTo(player.DbRef);
 
-		await Assert.That(notifications).Contains(m => m!.StartsWith("MAIL: You sent a message to "));
-		await Assert.That(notifications).Contains(m => m!.StartsWith("MAIL: You have received a message"));
+		await Assert.That(notifications).Contains(m => m!.StartsWith("MAIL: You sent your message to "));
+		await Assert.That(notifications).Contains(m => m!.StartsWith("MAIL: You have a new message"));
 	}
 
 	/// <summary>extmail.c:1382 — an unmatched name is reported, not dropped.</summary>
@@ -228,7 +228,7 @@ public class MailCommandTests
 			player.DbRef)).IsTrue();
 
 		await Assert.That(NotificationsTo(player.DbRef))
-			.DoesNotContain(m => m!.StartsWith("MAIL: You sent a message to "));
+			.DoesNotContain(m => m!.StartsWith("MAIL: You sent your message to "));
 	}
 
 	/// <summary>extmail.c:1337 — a doubled cookie is a literal, so a subject may contain a slash.</summary>
