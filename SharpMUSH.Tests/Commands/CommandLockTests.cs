@@ -25,7 +25,7 @@ public class CommandLockTests
 	[Test]
 	public async ValueTask PcreateCommandCreatesPlayer()
 	{
-		var uniqueName = TestIsolationHelpers.GenerateUniqueName("PcreateTest");
+		var uniqueName = $"Pct{Guid.NewGuid():N}"[..12];
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {uniqueName}=TestPassword123"));
 
 		var resultText = result.Message!.ToPlainText()!;
