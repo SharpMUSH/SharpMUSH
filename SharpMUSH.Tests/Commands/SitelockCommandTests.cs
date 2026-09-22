@@ -3,6 +3,9 @@ using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -290,10 +293,16 @@ public class SitelockCommandTests
 	{
 		// Short enough that every name tried stays inside player_name_len, so a 0 can only be the ban.
 		var stem = $"Zb{Guid.NewGuid():N}"[..8];
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), ConnectionService, "N");
+			WebAppFactoryArg.Services, mediator, ConnectionService, "N");
 
-		using var _ = TestOptionsOverride.Scope(o => o with { BannedNames = new BannedNamesOptions([$"{stem}*", $"{mortal.Name.ToLowerInvariant()}"]) });
+		// The generated name can outrun the test world's player_name_len of 15; give the player one that cannot.
+		var ownName = $"Zo{Guid.NewGuid():N}"[..8];
+		var mortalObject = (await mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<AnySharpObject>();
+		await mediator.Send(new SetNameCommand(mortalObject, MarkupText.Plain(ownName)));
+
+		using var _ = TestOptionsOverride.Scope(o => o with { BannedNames = new BannedNamesOptions([$"{stem}*", ownName.ToLowerInvariant()]) });
 
 		async Task<string> Valid(long handle, DBRef who, string name)
 			=> (await MessagesWhile(who, async () =>
@@ -301,7 +310,7 @@ public class SitelockCommandTests
 
 		await Assert.That(await Valid(mortal.Handle, mortal.DbRef, $"{stem}x")).IsEqualTo("0").Because("the name matches a banned pattern");
 		await Assert.That(await Valid(mortal.Handle, mortal.DbRef, $"Q{stem}")).IsEqualTo("1").Because("the pattern is anchored at the start");
-		await Assert.That(await Valid(mortal.Handle, mortal.DbRef, mortal.Name)).IsEqualTo("1").Because("a player may keep a name they already have");
+		await Assert.That(await Valid(mortal.Handle, mortal.DbRef, ownName)).IsEqualTo("1").Because("a player may keep a name they already have");
 		await Assert.That(await Valid(1, WebAppFactoryArg.ExecutorDBRef, $"{stem}x")).IsEqualTo("1").Because("a wizard is exempt");
 	}
 }
