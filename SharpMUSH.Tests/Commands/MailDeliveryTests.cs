@@ -520,4 +520,141 @@ public class MailDeliveryTests
 		await Assert.That((await Mailbox(target)).Select(m => m.Subject.ToPlainText()))
 			.IsEquivalentTo(["Start", "loop"]);
 	}
+
+	/// <summary>
+	/// <c>real_send_mail</c> (<c>extmail.c:1593</c>): a mailbox whose inbox holds its <c>mail_limit</c> takes
+	/// no more, and the quota binds a wizard sender too. Captured with <c>&amp;MAILQUOTA *LQ309=1</c>:
+	/// <c>MAIL: LQ309's mailbox is full. Can't send.</c> for S and for One, and nothing for
+	/// <c>mailsend()</c>, which is silent.
+	/// </summary>
+	[Test]
+	public async ValueTask AFullMailboxRefusesTheNextMessage()
+	{
+		var sender = await Player("MdQtaFull");
+		var wizard = await Player("MdQtaFullWiz");
+		var target = await Player("MdQtaFullTo");
+		await God($"@set #{wizard.DbRef.Number}=WIZARD");
+		await God($"&MAILQUOTA #{target.DbRef.Number}=1");
+		await Run(sender, $"@mail #{target.DbRef.Number}=First/Body.");
+
+		var senderHeard = await Heard(sender, () => Run(sender, $"@mail #{target.DbRef.Number}=Second/Body."));
+		var wizardHeard = await Heard(wizard, () => Run(wizard, $"@mail #{target.DbRef.Number}=Wizard/Body."));
+		var silentHeard = await Heard(sender, () => Run(sender, $"think [mailsend(#{target.DbRef.Number},Third/Body.)]"));
+
+		await Assert.That(senderHeard).Contains($"MAIL: {target.Name}'s mailbox is full. Can't send.");
+		await Assert.That(wizardHeard).Contains($"MAIL: {target.Name}'s mailbox is full. Can't send.");
+		await Assert.That(silentHeard).DoesNotContain(m => m.Contains("mailbox is full"));
+		await Assert.That((await Mailbox(target)).Select(m => m.Subject.ToPlainText())).IsEquivalentTo(["First"]);
+	}
+
+	/// <summary>
+	/// <c>count_mail(target, 0, ...)</c> counts the inbox only, so filing a message elsewhere makes room.
+	/// Captured: after <c>@mail/file 1=1</c> the next message was delivered.
+	/// </summary>
+	[Test]
+	public async ValueTask FilingOutOfTheInboxMakesRoom()
+	{
+		var sender = await Player("MdQtaFile");
+		var target = await Player("MdQtaFileTo");
+		await God($"&MAILQUOTA #{target.DbRef.Number}=1");
+		await Run(sender, $"@mail #{target.DbRef.Number}=First/Body.");
+		await Run(target, "@mail/file 1=Saved");
+
+		await Run(sender, $"@mail #{target.DbRef.Number}=Second/Body.");
+
+		await Assert.That((await Mailbox(target)).Select(m => m.Subject.ToPlainText())).IsEquivalentTo(["Second"]);
+	}
+
+	/// <summary>
+	/// <c>mail_limit</c> (<c>extmail.c:1534</c>): MAILQUOTA overrides the configured <c>mail_limit</c> when it
+	/// is a positive integer; anything else falls back to it. Captured with the default limit:
+	/// <c>abc</c> and <c>-5</c> both delivered.
+	/// </summary>
+	[Test]
+	[Arguments("abc")]
+	[Arguments("-5")]
+	[Arguments("0")]
+	public async ValueTask AQuotaThatIsNoPositiveIntegerFallsBackToTheConfiguredLimit(string quota)
+	{
+		using var _ = TestOptionsOverride.Scope(options => options with
+		{
+			Limit = options.Limit with { MailLimit = 1 }
+		});
+
+		var sender = await Player("MdQtaBad");
+		var target = await Player("MdQtaBadTo");
+		await God($"&MAILQUOTA #{target.DbRef.Number}={quota}");
+
+		await Run(sender, $"@mail #{target.DbRef.Number}=First/Body.");
+		var heard = await Heard(sender, () => Run(sender, $"@mail #{target.DbRef.Number}=Second/Body."));
+
+		await Assert.That(heard).Contains($"MAIL: {target.Name}'s mailbox is full. Can't send.");
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+	}
+
+	/// <summary>A valid MAILQUOTA raises the limit above the configured one as well as lowering it.</summary>
+	[Test]
+	public async ValueTask AQuotaRaisesTheConfiguredLimit()
+	{
+		using var _ = TestOptionsOverride.Scope(options => options with
+		{
+			Limit = options.Limit with { MailLimit = 1 }
+		});
+
+		var sender = await Player("MdQtaRaise");
+		var target = await Player("MdQtaRaiseTo");
+		await God($"&MAILQUOTA #{target.DbRef.Number}=3");
+
+		await Run(sender, $"@mail #{target.DbRef.Number}=First/Body.");
+		await Run(sender, $"@mail #{target.DbRef.Number}=Second/Body.");
+
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(2);
+	}
+
+	/// <summary>
+	/// MAILQUOTA is a wizard attribute (<c>AF_WIZARD | AF_LOCKED</c>, <c>atr_tab.h:113</c>). Captured:
+	/// <c>That attribute cannot be changed by you.</c> for a mortal setting their own.
+	/// </summary>
+	[Test]
+	[Skip("#1217: AttributeWriter does not apply a new standard attribute's wizard flag before the write.")]
+	public async ValueTask AMortalCannotRaiseTheirOwnQuota()
+	{
+		using var _ = TestOptionsOverride.Scope(options => options with
+		{
+			Limit = options.Limit with { MailLimit = 1 }
+		});
+
+		var sender = await Player("MdQtaMortal");
+		var target = await Player("MdQtaMortalTo");
+		await Run(target, "&MAILQUOTA me=100");
+
+		await Run(sender, $"@mail #{target.DbRef.Number}=First/Body.");
+		await Run(sender, $"@mail #{target.DbRef.Number}=Second/Body.");
+
+		await Assert.That(await Get(target.DbRef, "MAILQUOTA")).IsEqualTo(string.Empty);
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// A forward is its own <c>real_send_mail</c>, so a full forward target refuses it silently and the
+	/// sender hears about the forwarding problem.
+	/// </summary>
+	[Test]
+	public async ValueTask AFullForwardTargetIsAForwardingProblem()
+	{
+		var sender = await Player("MdQtaFwd");
+		var owner = await Player("MdQtaFwdOwner");
+		var target = await Player("MdQtaFwdTarget");
+		await God($"&MAILQUOTA #{target.DbRef.Number}=1");
+		await Run(target, $"@lock/mailforward me=#{owner.DbRef.Number}");
+		await Run(owner, $"&MAILFORWARDLIST me=#{target.DbRef.Number}");
+		await Run(sender, $"@mail #{owner.DbRef.Number}=First/Body.");
+
+		var heard = await Heard(sender, () => Run(sender, $"@mail #{owner.DbRef.Number}=Second/Body."));
+
+		await Assert.That(heard)
+			.Contains($"MAIL: Your message was not sent to {owner.Name} due to a mail forwarding problem.");
+		await Assert.That(heard).DoesNotContain(m => m.Contains("mailbox is full"));
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+	}
 }

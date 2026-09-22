@@ -10,6 +10,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Commands.MailCommand;
@@ -171,7 +172,17 @@ public static partial class MailDelivery
 			return false;
 		}
 
+		// extmail.c:1593 — only the inbox counts, and no sender, however privileged, passes a full one.
 		var inboxCount = await services.Mediator.CreateStream(new GetMailListQuery(target, Inbox)).CountAsync();
+		if (inboxCount >= await MailLimitAsync(services, target))
+		{
+			if (!silent)
+			{
+				await services.Notify.Notify(sender, $"MAIL: {target.Object.Name}'s mailbox is full. Can't send.", sender);
+			}
+
+			return false;
+		}
 
 		// Chosen before the store, which hands back no id to move the message by afterwards, so the
 		// message is written once into the folder it belongs in.
@@ -220,6 +231,27 @@ public static partial class MailDelivery
 		}
 
 		return true;
+	}
+
+	/// <summary><c>extmail.c:1547</c> — the hard cap a MAILQUOTA cannot exceed.</summary>
+	private const int QuotaCeiling = 50000;
+
+	/// <summary>
+	/// <c>mail_limit</c> (<c>extmail.c:1534</c>): the recipient's MAILQUOTA, parents included, when it is a
+	/// positive integer, capped at <see cref="QuotaCeiling"/>; otherwise the configured <c>mail_limit</c>.
+	/// </summary>
+	private static async ValueTask<long> MailLimitAsync(Services services, SharpPlayer target)
+	{
+		var configured = services.Configuration.CurrentValue.Limit.MailLimit;
+		var owner = new AnySharpObject(target);
+
+		return await services.Attributes.GetAttributeAsync(owner, owner, "MAILQUOTA",
+				IAttributeService.AttributeMode.Read, parent: true) is SharpAttribute[] chain
+			&& int.TryParse(chain.Last().Value.ToPlainText(), NumberStyles.Integer, CultureInfo.InvariantCulture,
+				out var quota)
+			&& quota > 0
+				? Math.Min(quota, QuotaCeiling)
+				: configured;
 	}
 
 	/// <summary>
