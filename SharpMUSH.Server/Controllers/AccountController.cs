@@ -26,6 +26,7 @@ public class AccountController(
 	IAccountSessionStore accountSessionStore,
 	IPasswordService passwordService,
 	IOptionsWrapper<SharpMUSHOptions> options,
+	IValidateService validateService,
 	ILogger<AccountController> logger) : ControllerBase
 {
 	/// <summary>
@@ -99,6 +100,14 @@ public class AccountController(
 
 		if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Password))
 			return BadRequest("Name and Password are required.");
+
+		// The connect screen's rule: ok_player_name(name, NOTHING, NOTHING), with bsd.c's refusals.
+		if (await mediator.CreateStream(new GetPlayerQuery(request.Name))
+				.AnyAsync(x => x.Object.Name.Equals(request.Name, StringComparison.InvariantCultureIgnoreCase)))
+			return Conflict("There is already a player with that name.");
+
+		if (!await validateService.ValidPlayerName(MarkupText.Plain(request.Name), new None(), new None()))
+			return BadRequest("That name is not allowed.");
 
 		try
 		{

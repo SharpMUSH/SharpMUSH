@@ -37,18 +37,18 @@ public partial class Commands
 		var password = args["1"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		// Note: We use ValidationType.Name instead of PlayerName because PlayerName requires
-		// an existing AnySharpObject target (for rename operations), which we don't have yet
-		if (!await ValidateService.Valid(IValidateService.ValidationType.Name, MarkupText.Plain(name), new None()))
+		// do_pcreate: "name in use" before "bad name", then ok_player_name with the creator as the
+		// one asking — a wizard, so banned names do not apply.
+		if (await Mediator.CreateStream(new GetPlayerQuery(name))
+				.AnyAsync(x => x.Object.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidName), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNameAlreadyExists), executor);
 			return CallState.Empty;
 		}
 
-		// This is necessary because ValidationType.Name only checks format, not uniqueness
-		if (await Mediator.CreateStream(new GetPlayerQuery(name)).AnyAsync())
+		if (!await ValidateService.ValidPlayerName(MarkupText.Plain(name), executor, new None()))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNameAlreadyExists), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidName), executor);
 			return CallState.Empty;
 		}
 

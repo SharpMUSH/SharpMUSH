@@ -2523,6 +2523,9 @@
   <data name="PlayerCreateInvalidName" xml:space="preserve">
     <value>That is not a valid player name.</value>
   </data>
+  <data name="PlayerNameNotAllowed" xml:space="preserve">
+    <value>You can't give a player that name.</value>
+  </data>
   <data name="PlayerNameAlreadyExists" xml:space="preserve">
     <value>That player name already exists.</value>
   </data>

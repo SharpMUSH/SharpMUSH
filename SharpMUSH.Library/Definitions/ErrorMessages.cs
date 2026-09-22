@@ -215,6 +215,9 @@ public static class ErrorMessages
 		public const string NoSuchWikiPage = "#-1 NO SUCH WIKI PAGE";
 		public const string NoSuchPid = "#-1 NO SUCH PID";
 		public const string NoSuchPlayer = "#-1 NO SUCH PLAYER";
+		public const string PlayerNameInUse = "#-1 PLAYER NAME ALREADY IN USE";
+		public const string BadPlayerName = "#-1 BAD PLAYER NAME";
+		public const string BadPassword = "#-1 BAD PASSWORD";
 		public const string NoSuchType = "#-1 NO SUCH TYPE";
 		public const string NoZoneSet = "#-1 NO ZONE SET";
 		public const string NoDropTo = "#-1 NO DROP-TO";
@@ -2001,6 +2004,7 @@ public static class ErrorMessages
 
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";
 		public const string PlayerNameAlreadyExists = "That player name already exists.";
+		public const string PlayerNameNotAllowed = "You can't give a player that name.";
 		public const string PlayerCreateInvalidPassword = "That is not a valid password.";
 		/// <summary>PennMUSH src/wiz.c do_pcreate: "New player '%s' (#%d) created with password '%s'".</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

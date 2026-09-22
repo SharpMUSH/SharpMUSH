@@ -33,8 +33,11 @@ public partial class ValidateService(
 				=> false,
 			IValidateService.ValidationType.Name
 				=> ValidateName(value),
+			// fun_valid asks ok_player_name(name, target, target); with no target, a new player's name.
 			IValidateService.ValidationType.PlayerName when target is AnySharpObject player
-				=> await ValidatePlayerName(value, player),
+				=> await ValidPlayerName(value, player, player),
+			IValidateService.ValidationType.PlayerName when target is None
+				=> await ValidPlayerName(value, new None(), new None()),
 			IValidateService.ValidationType.PlayerAlias when target is AnySharpObject player
 				=> ValidatePlayerAlias(value, player),
 			IValidateService.ValidationType.AttributeName
@@ -180,40 +183,34 @@ public partial class ValidateService(
 		return plainAlias.EnumerateRunes().All(x => x.IsAscii);
 	}
 
-	private async ValueTask<bool> ValidatePlayerName(MString name, AnySharpObject target)
+	public async ValueTask<bool> ValidPlayerName(MString name, AnyOptionalSharpObject player, AnyOptionalSharpObject thing)
 	{
 		var plainName = name.ToPlainText();
 
-		if (!ValidateName(name))
+		if (!ValidateName(name) || name.Length > configuration.CurrentValue.Limit.PlayerNameLen)
 		{
 			return false;
 		}
 
-		if (name.Length > configuration.CurrentValue.Limit.PlayerNameLen)
+		var privileged = player is AnySharpObject asker && await asker.IsWizard();
+		if (!configuration.CurrentValue.Cosmetic.PlayerNameSpaces && plainName.Contains(' ') && !privileged)
 		{
 			return false;
 		}
 
-		if (!configuration.CurrentValue.Cosmetic.PlayerNameSpaces && plainName.Contains(' ') && !await target.IsWizard())
+		DBRef? carrier = thing is AnySharpObject named ? named.Object().DBRef : null;
+		var holders = await mediator.CreateStream(new GetPlayerQuery(plainName))
+			.Where(x => x.Object.Name.Equals(plainName, StringComparison.InvariantCultureIgnoreCase))
+			.Select(x => x.Object.DBRef)
+			.ToArrayAsync();
+
+		// A player may only change to a banned name if they are already using it.
+		if (IsBannedName(plainName) && !privileged && !(carrier is { } own && holders.Contains(own)))
 		{
 			return false;
 		}
 
-		// ok_player_name: a name matching a banned pattern is only for a wizard, or for the player
-		// who already has it.
-		if (IsBannedName(plainName)
-				&& !plainName.Equals(target.Object().Name, StringComparison.OrdinalIgnoreCase)
-				&& !await target.IsWizard())
-		{
-			return false;
-		}
-
-		var tryFindPlayerByName = mediator
-			.CreateStream(new GetPlayerQuery(plainName))
-			.Where(x => x.Object.DBRef != target.Object().DBRef);
-
-		return !await tryFindPlayerByName
-			.AnyAsync(x => x.Object.Name.Equals(plainName, StringComparison.InvariantCultureIgnoreCase));
+		return holders.All(holder => holder == carrier);
 	}
 
 	/// <summary>
