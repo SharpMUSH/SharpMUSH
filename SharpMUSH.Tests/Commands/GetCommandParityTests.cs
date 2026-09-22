@@ -381,7 +381,17 @@ public class GetCommandParityTests
 		await God($"@chown {outer}={taker.DbRef}");
 		await WatchTriads(inner, taker);
 
+		var (outerHeard, innerHeard) = (WebAppFactoryArg.Notifications.CountFor(outer),
+			WebAppFactoryArg.Notifications.CountFor(inner));
+
 		var seen = await Get(taker, $"{outer}'s {await NameOf(inner)}");
+
+		await Assert.That(WebAppFactoryArg.Notifications.For(outer).Skip(outerHeard))
+			.DoesNotContain($"{await NameOf(inner)} was taken from you.")
+			.Because("nothing was taken, so the container is not told it was");
+		await Assert.That(WebAppFactoryArg.Notifications.For(inner).Skip(innerHeard))
+			.DoesNotContain($"{taker.Name} took you.")
+			.Because("the item did not move, so it is not told it was taken");
 
 		await Assert.That(seen).Contains(ErrorMessages.Notifications.CantGoThatWayContainmentLoop)
 			.Because("EnterRoom's refusal reaches the taker");

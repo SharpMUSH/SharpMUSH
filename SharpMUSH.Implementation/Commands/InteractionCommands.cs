@@ -644,15 +644,16 @@ public partial class Commands
 			return;
 		}
 
-		// move.c:627-628 — the robbed container and the item hear about it before the move.
-		var takenName = thing.Object().Name;
-		await NotifyService.Notify(sourceObject, string.Format(ErrorMessages.Notifications.WasTakenFromYou, takenName));
-		await NotifyService.Notify(thing, string.Format(ErrorMessages.Notifications.TookYou, executor.Object().Name));
-
 		if (!await MovedToTaker(parser, executor, thing))
 		{
 			return;
 		}
+
+		// Deviation from PennMUSH: move.c:627-628 tells the robbed container and the item before moveto,
+		// so a move enter_room refuses still announces a theft. They hear it once the item has moved.
+		await NotifyService.Notify(sourceObject,
+			string.Format(ErrorMessages.Notifications.WasTakenFromYou, thing.Object().Name));
+		await NotifyService.Notify(thing, string.Format(ErrorMessages.Notifications.TookYou, executor.Object().Name));
 
 		await GetSucceeded(parser, executor, thing, source, possessive: true);
 	}
