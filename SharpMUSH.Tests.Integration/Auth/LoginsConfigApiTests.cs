@@ -46,7 +46,8 @@ public class LoginsConfigApiTests(ServerWebAppFactory factory)
 		return http;
 	}
 
-	private static string UniqueName(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
+	// Within player_name_len (15): character names are made from this too.
+	private static string UniqueName(string prefix) => $"{prefix[..Math.Min(prefix.Length, 4)]}{Guid.NewGuid():N}"[..15];
 
 	private async Task<(HttpClient Http, AccountLoginResponse Account)> RegisterAccountAsync()
 	{

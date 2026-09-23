@@ -12,7 +12,7 @@ public record CommandOptions(
 	[property: SharpConfig(
 		Name = "possessive_get",
 		Category = "Command",
-		Description = "Allow 'get my object' syntax",
+		Description = "Allow 'get <container>'s <object>' to take from a container or player",
 		Group = "Syntax",
 		Order = 1)]
 	bool PossessiveGet,
@@ -20,7 +20,7 @@ public record CommandOptions(
 	[property: SharpConfig(
 		Name = "possessive_get_d",
 		Category = "Command",
-		Description = "Allow 'get my object' syntax for drop command",
+		Description = "Allow possessive get to take from disconnected players",
 		Group = "Syntax",
 		Order = 2)]
 	bool PossessiveGetD,

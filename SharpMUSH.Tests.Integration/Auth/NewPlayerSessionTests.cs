@@ -65,7 +65,8 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 		return http;
 	}
 
-	private static string UniqueName(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
+	// Within player_name_len (15): character names are made from this too.
+	private static string UniqueName(string prefix) => $"{prefix[..Math.Min(prefix.Length, 4)]}{Guid.NewGuid():N}"[..15];
 
 	/// <summary>Registers a brand-new account and returns the session token minted for it — the one
 	/// that names no character, because the account owns none at that moment.</summary>

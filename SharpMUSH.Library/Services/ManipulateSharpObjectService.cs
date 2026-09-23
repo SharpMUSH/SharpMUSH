@@ -66,6 +66,18 @@ public class ManipulateSharpObjectService(
 
 				var playerSplit = name.Split(";");
 
+				// ok_object_name → ok_player_name(name, player, thing): the renamer decides the
+				// exemptions, and the player may keep a banned name it already has.
+				if (!await validateService.ValidPlayerName(playerSplit[0], executor, obj))
+				{
+					if (notify)
+					{
+						await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PlayerNameNotAllowed), executor);
+					}
+
+					return ErrorMessages.Returns.BadPlayerName;
+				}
+
 				await mediator.Send(new SetNameCommand(obj, playerSplit[0]));
 
 				if (playerSplit.Length <= 1)

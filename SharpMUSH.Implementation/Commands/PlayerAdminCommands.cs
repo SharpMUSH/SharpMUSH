@@ -37,18 +37,18 @@ public partial class Commands
 		var password = args["1"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		// Note: We use ValidationType.Name instead of PlayerName because PlayerName requires
-		// an existing AnySharpObject target (for rename operations), which we don't have yet
-		if (!await ValidateService.Valid(IValidateService.ValidationType.Name, MarkupText.Plain(name), new None()))
+		// do_pcreate: "name in use" before "bad name", then ok_player_name with the creator as the
+		// one asking — a wizard, so banned names do not apply.
+		if (await Mediator.CreateStream(new GetPlayerQuery(name))
+				.AnyAsync(x => x.Object.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidName), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNameAlreadyExists), executor);
 			return CallState.Empty;
 		}
 
-		// This is necessary because ValidationType.Name only checks format, not uniqueness
-		if (await Mediator.CreateStream(new GetPlayerQuery(name)).AnyAsync())
+		if (!await ValidateService.ValidPlayerName(MarkupText.Plain(name), executor, new None()))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNameAlreadyExists), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidName), executor);
 			return CallState.Empty;
 		}
 
@@ -135,13 +135,14 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// Manages sitelock rules that control which hosts can connect, create players, or use guests.
+	/// Manages sitelock rules that control which hosts can connect, create players, or use guests,
+	/// and the patterns player names may not match.
 	/// @sitelock - Lists all rules and banned names
 	/// @sitelock/check &lt;host&gt; - Checks which rule matches a host
-	/// @sitelock/name &lt;name&gt; - Manages banned player names (not yet implemented)
-	/// @sitelock/ban &lt;pattern&gt; - Bans a host pattern (not yet implemented)
-	/// @sitelock/register &lt;pattern&gt; - Sets registration requirement (not yet implemented)
-	/// @sitelock/remove &lt;pattern&gt; - Removes a rule (not yet implemented)
+	/// @sitelock/name [[!]&lt;pattern&gt;] - Lists, bans or unbans a player-name pattern
+	/// @sitelock/ban &lt;pattern&gt; - Bans a host pattern
+	/// @sitelock/register &lt;pattern&gt; - Sets registration requirement
+	/// @sitelock/remove &lt;pattern&gt; - Removes a rule
 	/// </summary>
 	[SharpCommand(Name = "@SITELOCK", Switches = ["BAN", "CHECK", "REGISTER", "REMOVE", "NAME", "PLAYER", "LIST"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD", MinArgs = 0, ParameterNames = ["site", "rule"])]
@@ -153,6 +154,11 @@ public partial class Commands
 
 		var sitelockRules = Configuration.CurrentValue.SitelockRules;
 		var bannedNames = Configuration.CurrentValue.BannedNames;
+
+		if (switches.Contains("NAME"))
+		{
+			return await SitelockNameAsync(executor, args.GetValueOrDefault("0")?.Message?.ToPlainText().Trim() ?? "");
+		}
 
 		if (args.Count == 0 || switches.Contains("LIST"))
 		{
@@ -214,20 +220,6 @@ public partial class Commands
 			}
 
 			return CallState.Empty;
-		}
-
-		if (switches.Contains("NAME"))
-		{
-			if (args.Count == 0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameRequiresName), executor);
-				return new CallState(ErrorMessages.Returns.InvalidArguments);
-			}
-
-			// Note: Actual modification of configuration is not yet implemented
-			// This would require saving to the database
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameNotImplemented), executor);
-			return new CallState(ErrorMessages.Returns.NotImplemented);
 		}
 
 		// @sitelock/ban <pattern> - shorthand for !connect !create !guest
@@ -360,6 +352,61 @@ public partial class Commands
 		await ObjectDataService.SetExpandedServerDataAsync(updatedOptions);
 		ConfigReloadService.SignalChange();
 		return true;
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>do_sitelock_name</c> (<c>src/wiz.c:2082</c>): with no argument, list the banned
+	/// name patterns; <c>!&lt;pattern&gt;</c> unbans one; anything else bans it, once. Patterns compare
+	/// caselessly, as Penn's <c>strcasecmp</c> against the names file does. The list is the same
+	/// persisted option the portal edits, and <see cref="IValidateService"/> refuses player names that
+	/// match it.
+	/// </summary>
+	private async ValueTask<Option<CallState>> SitelockNameAsync(AnySharpObject executor, string pattern)
+	{
+		if (pattern.Length == 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameListHeader), executor);
+			foreach (var banned in (await CurrentPersistedOptionsAsync()).BannedNames.BannedNames)
+			{
+				await NotifyService.Notify(executor, banned, executor);
+			}
+
+			return CallState.Empty;
+		}
+
+		var currentOptions = await CurrentPersistedOptionsAsync();
+		var names = currentOptions.BannedNames.BannedNames;
+
+		if (pattern.StartsWith('!'))
+		{
+			var unban = pattern[1..];
+			if (!names.Contains(unban, StringComparer.OrdinalIgnoreCase))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameNotBannedFormat), executor, unban);
+				return new CallState(ErrorMessages.Returns.NoMatch);
+			}
+
+			await SetBannedNamesAsync(currentOptions,
+				[.. names.Where(name => !name.Equals(unban, StringComparison.OrdinalIgnoreCase))]);
+			Logger.LogInformation("*** UNLOCKED NAME *** {Pattern} by {Executor}", unban, executor.Object().Name);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameRemoved), executor);
+			return CallState.Empty;
+		}
+
+		if (!names.Contains(pattern, StringComparer.OrdinalIgnoreCase))
+		{
+			await SetBannedNamesAsync(currentOptions, [.. names, pattern]);
+		}
+
+		Logger.LogInformation("*** NAMELOCK *** {Pattern} by {Executor}", pattern, executor.Object().Name);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockNameLockedFormat), executor, pattern);
+		return CallState.Empty;
+	}
+
+	private async ValueTask SetBannedNamesAsync(SharpMUSHOptions currentOptions, string[] names)
+	{
+		await ObjectDataService.SetExpandedServerDataAsync(currentOptions with { BannedNames = new BannedNamesOptions(names) });
+		ConfigReloadService.SignalChange();
 	}
 
 	/// <summary>

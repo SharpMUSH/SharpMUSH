@@ -29,7 +29,7 @@ public class AdminCommandTests
 	[Test]
 	public async ValueTask PcreateCommand()
 	{
-		var name = $"PcreateTarget{Guid.NewGuid():N}"[..24];
+		var name = $"Pcr{Guid.NewGuid():N}"[..12];
 		var result = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {name}=passwordPcreate"));
 
 		var created = result.Message!.ToPlainText();

@@ -347,7 +347,7 @@ public class ExplicitFailureReturnTests
 	{
 		var mortal = await Mortal("ExplicitHostSnoop");
 		var other = await Mortal("ExplicitHostOther");
-		var offline = Unique("ExplicitOffline")[..20];
+		var offline = Unique("ExOff")[..14];
 		await God($"@pcreate {offline}=password");
 
 		await Assert.That(await EvalAs(mortal.DbRef, $"{function}({other.Name})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);

@@ -29,10 +29,30 @@ public partial class Functions
 		}));
 
 		var trueLocation = location.Object()?.Key ?? -1;
+		var name = args["0"].Message!.ToPlainText();
+		var password = args["1"].Message!.ToPlainText();
+
+		// do_pcreate's three refusals, in its order, with ok_player_name asked by the executor.
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (await Mediator.CreateStream(new GetPlayerQuery(name))
+				.AnyAsync(x => x.Object.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
+		{
+			return new CallState(ErrorMessages.Returns.PlayerNameInUse);
+		}
+
+		if (!await ValidateService.ValidPlayerName(MarkupText.Plain(name), executor, new None()))
+		{
+			return new CallState(ErrorMessages.Returns.BadPlayerName);
+		}
+
+		if (!await ValidateService.Valid(IValidateService.ValidationType.Password, MarkupText.Plain(password), new None()))
+		{
+			return new CallState(ErrorMessages.Returns.BadPassword);
+		}
 
 		var created = await Mediator.Send(new CreatePlayerCommand(
-			args["0"].Message!.ToPlainText(),
-			args["1"].Message!.ToPlainText(),
+			name,
+			password,
 			new DBRef(trueLocation == -1 ? 1 : trueLocation),
 			defaultHomeDbref,
 			startingQuota));
