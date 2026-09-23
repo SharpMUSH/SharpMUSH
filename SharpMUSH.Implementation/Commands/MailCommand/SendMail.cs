@@ -1,8 +1,5 @@
-﻿using DotNext.Threading;
-using Mediator;
-using SharpMUSH.Configuration.Options;
+﻿using Mediator;
 using SharpMUSH.Implementation.Common;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -70,10 +67,8 @@ public static class SendMail
 			: (subject, subjectAndMessage);
 	}
 
-	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IPermissionService permissionService,
-		ILocateService locateService, IExpandedObjectDataService objectDataService, IMediator mediator,
-		INotifyService notifyService, IAttributeService attributeService,
-		IOptionsWrapper<SharpMUSHOptions> configuration,
+	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, ILocateService locateService,
+		IMediator mediator, INotifyService notifyService, MailDelivery.Services delivery,
 		MString nameList, MString subjectAndMessage, string[] switches)
 	{
 		var urgent = switches.Contains("URGENT");
@@ -100,88 +95,20 @@ public static class SendMail
 
 		var (subject, message) = SplitSubject(subjectAndMessage);
 
-		if (!noSignature)
+		var signature = MarkupText.Empty;
+		if (!noSignature
+				&& await mediator.CreateStream(new GetAttributeQuery(sender.Object().DBRef, ["MAILSIGNATURE"]))
+					.FirstOrDefaultAsync() is { } signatureAttribute)
 		{
-			var attribute = mediator.CreateStream(new GetAttributeQuery(sender.Object().DBRef, ["MAILSIGNATURE"]));
-
-			var attributeOpportunity = await attribute.FirstOrDefaultAsync();
-			if (attributeOpportunity is not null)
-			{
-				var attributeValue = attributeOpportunity.Value;
-				if (attributeValue.Length > 0)
-				{
-					message = MarkupText.Concat([message, MarkupText.NewLine, attributeValue]);
-				}
-			}
+			signature = signatureAttribute.Value;
 		}
 
-		var mail = new SharpMail
-		{
-			DateSent = DateTimeOffset.UtcNow,
-			Fresh = true,
-			Read = false,
-			Tagged = false,
-			Urgent = urgent,
-			Cleared = false,
-			Forwarded = false,
-			Folder = "INBOX",
-			Content = message,
-			Subject = subject,
-			From = new AsyncLazy<AnyOptionalSharpObject>(async _ =>
-			{
-				await ValueTask.CompletedTask;
-				return sender.WithNoneOption();
-			}),
-		};
+		var letter = new MailDelivery.Letter(subject, message, signature, urgent, Forwarded: false);
 
 		var delivered = new List<SharpPlayer>();
-
 		foreach (var player in knownPlayerList)
 		{
-			if (!await permissionService.PassesLock(sender, player, LockType.Mail))
-			{
-				await notifyService.Notify(sender, $"MAIL: {player.Object.Name} does not wish to receive mail from you.", sender);
-				continue;
-			}
-
-			delivered.Add(player);
-			await mediator.Send(new SendMailCommand(sender.Object(), player, mail));
-
-			// real_send_mail gates the sender's confirmation on silent (extmail.c:127); the delivery
-			// notice at :138 sits outside that block and always fires.
-			if (!silent)
-			{
-				await notifyService.Notify(sender, $"MAIL: You sent a message to {player.Object.Name}.", sender);
-			}
-
-			var mailList = mediator.CreateStream(new GetMailListQuery(player, "INBOX"));
-			await notifyService.Notify(player,
-				$"MAIL: You have received a message ({await mailList.CountAsync()}) from {sender.Object().Name}.", sender);
-
-			if (configuration.CurrentValue.Attribute.AMail)
-			{
-				var playerAsAny = new AnySharpObject(player);
-				var amailAttr = await attributeService.GetAttributeAsync(
-					playerAsAny,
-					playerAsAny,
-					"AMAIL",
-					IAttributeService.AttributeMode.Read,
-					false);
-
-				if (amailAttr is SharpAttribute[] amailChain)
-				{
-					var attribute = amailChain.Last();
-					await parser.With(state => state with
-					{
-						Executor = player.Object.DBRef,
-						Enactor = sender.Object().DBRef,
-						Caller = state.Executor
-					}, async newParser =>
-					{
-						await newParser.CommandListParse(attribute.Value);
-					});
-				}
-			}
+			delivered.AddRange(await MailDelivery.SendAsync(parser, delivery, sender, player, letter, silent));
 		}
 
 		// Delivering to nobody has two causes an empty list cannot tell apart, and a non-interactive
