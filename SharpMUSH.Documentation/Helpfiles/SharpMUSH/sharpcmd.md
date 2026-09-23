@@ -646,7 +646,7 @@ See [@attribute2].
 
 `@attribute/access` adds `<attrib>` as a new standard attribute, with the default attribute flags `<flag list>`. If `<attrib>` is already a standard attribute, this command modifies its default attribute flags. Use "none" for `<flag list>` if you don't want any default attribute flags.
 
-If the `/retroactive` switch is given with `/access`, all existing copies of the attribute will be @atrchown'd to the player running the command, and will have its flags changed to `<flag list>`.
+If the `/retroactive` switch is given with `/access`, all existing copies of the attribute will be @atrchown'd to the player running the command, and will have its flags changed to `<flag list>`. A copy's `branch` flag, which marks that it has attributes below it, is kept. The command reports how many copies it changed; if it runs out of time before reaching every object, or some copies cannot be changed, it says how far it got, and running it again finishes the job.
 
 `@attribute/delete` removes a standard attribute from the table.<br>
 `@attribute/rename` renames a standard attribute.
@@ -966,10 +966,14 @@ The `/alias` switch creates an alias for `<command>`, allowing players to type `
 Switches include:
 - /add : Add a new command that does nothing, but can be @hook'd.
 - /delete : Delete a command added with @command/add or /alias. God only.
-- /disable : Disable a command added in the hardcode.
+- /disable : Disable a command added in the hardcode. A disabled command is not a command at all: what was typed goes on to $-commands and then Huh?.
 - /enable : Re-enable a command disabled with @command/disable.
 
+`<restriction>` is a lock, or words naming who may use the command: flag and power names, `admin` (royalty or wizard), `player`, `thing`, `room`, `exit` or `any`, `god`, `noguest`, `nogagged`, `nofixed`, each negated with `!`, and `nobody`, which disables the command. Naming a type restricts the command to it, so `@command/restrict foo=player thing` leaves it usable by players and things only, while `!player` (or `noplayer`) leaves every other type. SharpMUSH does not show a custom `<error message>`; the restriction is set without it.
+
 The `/quiet` switch can be used to suppress output from @command.
+
+Everything these switches change lasts until the server restarts. A permanent alias belongs in the `command_aliases` configuration option. HUH_COMMAND, @CHAT and GOTO are run by the game itself and cannot be disabled, and @command is always enabled.
 
 See [@command2].
 # @command2
@@ -983,9 +987,9 @@ You can use these additional switches, along with `@command/add`, to control how
 - /rsargs : When used with /eqsplit, the right-side arguments are comma-separated and are parsed individually
 - /rsnoparse : The command does not evaluate the rightside arg(s).
 
-Any command added with neither `/noparse` or `/rsnoparse` is provided with a `/noeval` switch automatically, so if you `@command/add` foo, then foo's arguments are parsed by default, but you can call foo/noeval. Note: when you @hook/override foo, its $-command pattern must be able to match "foo/noeval" as well for the switch to actually be used.
+Any command added without both `/noparse` and `/rsnoparse` is provided with a `/noeval` switch automatically, so if you `@command/add` foo, then foo's arguments are parsed by default, but you can call foo/noeval. Note: when you @hook/override foo, its $-command pattern must be able to match "foo/noeval" as well for the switch to actually be used.
 
-Commands added with `@command/add`, like other standard commands, are always case-insensitive. Commands can also be added in the alias.cnf file.
+Commands added with `@command/add`, like other standard commands, are always case-insensitive. Until it is hooked, an added command answers "This command has not been implemented."
 
 See [@command3] for examples.
 
@@ -1033,7 +1037,11 @@ This is a wizard-only command which sets a COMMENT attribute on `<object>`. The 
 
 With no arguments, @config lists the categories of configuration options for the MUSH. With an argument, @config lists the options in the given `<category>`, or shows the current value of the given `<option>`.
 
-The wizard-only `/set` switch changes the value of `<option>` to `<value>`. This change does not last across reboots. God can also use the `/save` switch, which attempts to save the new `<value>` in the mush.cnf configuration file, as well as changing it in-game.
+The wizard-only `/set` switch changes the value of `<option>` to `<value>`. Booleans take yes/no, true/false or 1/0; numbers may be written with a leading `#`; an object option takes -1 for none. A value that does not fit the option, or that the configuration's own checks reject, is refused and nothing changes. Options naming files (the File and Message categories), the SQL credentials, and list-valued options (banned names, sitelock rules, restrictions — see [@sitelock]) cannot be set this way.
+
+SharpMUSH keeps one stored configuration, which the web portal's configuration page also edits, and the game reads its options from it. So unlike PennMUSH, every `/set` is stored and lasts across restarts. God may also use `/save`, which does the same and says so; there is no mush.cnf to write back to. A few options are not read by the game at all — the listening addresses and ports belong to the connection server's own configuration — so setting them has no effect.
+
+Only God can see the SQL credentials (sql_username, sql_password, sql_database).
 
 For information about parameters, see [@config parameters]
 # @conformat
@@ -1757,10 +1765,12 @@ The `/noeval` switch prevents the MUSH from evaluating `<message>`. The `/spoof`
 `@enable <option>`<br>
 `@disable <option>`
 
-These wizard-only commands allow for any boolean @config options to be changed (see [@config paramaters] for a list).
+These wizard-only commands change any boolean @config option (see [@config parameters] for a list), answering "Enabled." or "Disabled.". An option that is not on/off, or that @config/set cannot change, is refused.
 
 `@enable <option>` is the same thing as `@config/set <option>=yes`<br>
 `@disable <option>` is the same thing as `@config/set <option>=no`
+
+Like @config/set, the change is stored and lasts across restarts.
 
 
 **See Also:**
@@ -2749,18 +2759,9 @@ Adding the `/recall` switch will display the last `<number>` lines written to th
 # @logwipe
 `@logwipe/<log>[/<switch>] <password>`
 
-This God-only command erases one of the MUSH logs.
+In PennMUSH this God-only command erases one of the game's log files: `<log>` is one of /check, /cmd, /conn, /err (default), /trace or /wiz, and the policy is /rotate, /trim or /wipe (default).
 
-`<log>` specifies which log file to erase, and must be one of:<br>
-/check, /cmd, /conn, /err (Default), /trace, and /wiz.
-
-The default policy of erasing a log can be changed by giving one of the following switches:
-
-- /rotate : copies the log to a backup file and then erases it.
-- /trim : deletes all but the most recent lines in the file.
-- /wipe : erases the file (Default)
-
-God must give the log wipe password from the MUSH's configuration file to use this command.
+SharpMUSH owns no log files. Its logs go to the logging sinks named in its configuration (the console, by default), and rotating, trimming or clearing them is done there. @logwipe therefore performs no operation: it tells God which policy on which log cannot be carried out, returns `#-1 NOT SUPPORTED`, and records the attempt in the server log.
 
 
 **See Also:**
@@ -3681,7 +3682,7 @@ You can use this command to set yourself or any of your objects to be male, fema
 If the `/paranoid` switch is added, the shutdown dump will be a paranoid dump (see @dump).
 # @sitelock
 `@sitelock`<br>
-`@sitelock/name <name>`<br>
+`@sitelock/name [[!]<pattern>]`<br>
 `@sitelock[/player] <host-pattern>=<options>[, <name>]`<br>
 `@sitelock[/<ban|register>][/player] <host-pattern>`<br>
 `@sitelock/check <host>`<br>
@@ -3691,7 +3692,7 @@ The @sitelock command adds rules to the access.cnf file, controlling a host's le
 
 @sitelock without arguments lists all sites in access.cnf. Rules are processed in the order listed, and the first matching rule is applied. `@sitelock/check` tells you which rule will match for a given `<host>`.
 
-`@sitelock/name` adds a name to the list of banned player names. Use !`<name>` to remove a name from the list.
+`@sitelock/name <pattern>` bans player names matching `<pattern>`, which may use the wildcards "*" and "?" and is matched without regard to case. `@sitelock/name !<pattern>` lifts that ban, and `@sitelock/name` with no argument lists the banned patterns. A banned name is refused as a player name for anyone but a wizard or the player who already has it; `valid(playername, ...)` reports it. The list is kept with the game's configuration, so it survives a restart and is the same list the web portal's banned-names page edits.
 
 `@sitelock <host-pattern>=<options>[, <name>]` controls the access options for hosts which match `<host-pattern>`, which may include wildcard characters "*" and "?". See help @sitelock2 for the list of options, and help @sitelock3 for an explanation about the name argument.
 
@@ -3936,12 +3937,12 @@ Note that @startups are NEVER inherited from parent objects.
 `@stats/paging`<br>
 `@stats/freespace`
 
-In its first form, display the number of objects in the game broken down by object types. Wizards can supply a player name to count only objects owned by that player.
+In its first form, display the number of objects in the game broken down by object types: `<total> objects = <rooms> rooms, <exits> exits, <things> things, <players> players.` With a `<player>`, only the objects that player owns are counted. Anyone may count their own objects (`@stats me`) or the whole game's; counting another player's objects needs the Search power or wizard/royalty privileges. A destroyed object is removed rather than kept as garbage, so there is no garbage count.
 
-`@stats/tables` displays statistics on internal tables.<br>
-`@stats/flags` displays statistics about the flag and power system.
+`@stats/tables` lists SharpMUSH's lookup tables — built-in functions, @functions, commands, flags, powers, attribute definitions, config options and connections — with the number of entries in each.<br>
+`@stats/flags` reports, for the FLAG and POWER flagspaces, how many definitions each has and how objects' sets of flags are distributed.
 
-In the remaining forms, display statistics or histograms about the chunk (attribute) memory system.
+`@stats/chunks`, `/regions`, `/paging` and `/freespace` report PennMUSH's attribute-chunk allocator. SharpMUSH keeps attributes in its database provider and has no chunk allocator, so these switches say so and return `#-1 NOT SUPPORTED`.
 # @sweep
 `@sweep [connected | here | inventory | exits ]`
 

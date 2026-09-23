@@ -101,7 +101,7 @@ public class LoginGreetingTests
 	public async Task MakeGreetsTheBrandNewCharacterAsNew()
 	{
 		var username = TestIsolationHelpers.GenerateUniqueName("greetmake");
-		var characterName = TestIsolationHelpers.GenerateUniqueName("GreetMade");
+		var characterName = $"Grt{Guid.NewGuid():N}"[..12];
 
 		var handle = await RegisterHandleAsync();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"register {username} some-password-1"));

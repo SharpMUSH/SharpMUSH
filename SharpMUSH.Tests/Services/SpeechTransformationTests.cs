@@ -77,7 +77,7 @@ public partial class SpeechTransformationTests
 	public async Task ExplicitAccentAndMonikerUseTheActualName()
 	{
 		var actor = await Player();
-		var suffix = Guid.NewGuid().ToString("N");
+		var suffix = Guid.NewGuid().ToString("N")[..12];
 		var name = "Joe" + suffix;
 		await Admin($"@name {actor.DbRef}={name}");
 		await Admin($"&NAMEACCENT {actor.DbRef}=-'-{new string('-', suffix.Length)}");

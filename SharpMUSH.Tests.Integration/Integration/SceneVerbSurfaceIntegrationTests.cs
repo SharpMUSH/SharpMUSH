@@ -350,8 +350,9 @@ public class SceneVerbSurfaceIntegrationTests
 		await PutLoggerInMasterRoomAsync();
 		const long ownerHandle = 9550;
 		const long guestHandle = 9551;
-		await CreatePlayerAsync($"Rue{Tag}{mode}", ownerHandle);
-		var guest = await CreatePlayerAsync($"Sabel{Tag}{mode}", guestHandle);
+		// Two letters of the mode keep each name unique and within player_name_len (15).
+		await CreatePlayerAsync($"Rue{Tag}{mode[..2]}", ownerHandle);
+		var guest = await CreatePlayerAsync($"Sabel{Tag}{mode[..2]}", guestHandle);
 
 		await RunAs(ownerHandle, $"+scene/create Rue Scene {Tag} {mode}");
 		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");

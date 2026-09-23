@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -231,6 +232,20 @@ public partial class Commands
 		if (string.IsNullOrWhiteSpace(charName) || string.IsNullOrWhiteSpace(charPassword))
 		{
 			await NotifyService.Notify(handle, "Usage: make <character-name> <password>");
+			return new None();
+		}
+
+		// create_player: ok_player_name(name, NOTHING, NOTHING), with bsd.c's two refusals.
+		if (await Mediator.CreateStream(new GetPlayerQuery(charName))
+				.AnyAsync(x => x.Object.Name.Equals(charName, StringComparison.InvariantCultureIgnoreCase)))
+		{
+			await NotifyService.Notify(handle, "There is already a player with that name.");
+			return new None();
+		}
+
+		if (!await ValidateService.ValidPlayerName(MarkupText.Plain(charName), new None(), new None()))
+		{
+			await NotifyService.Notify(handle, "That name is not allowed.");
 			return new None();
 		}
 

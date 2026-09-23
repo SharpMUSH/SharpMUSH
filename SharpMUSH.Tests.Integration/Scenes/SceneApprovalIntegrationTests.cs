@@ -306,7 +306,7 @@ public class SceneApprovalIntegrationTests
 	public async Task SceneWriteFunctions_AreUnreachableFromMortalSoftcode()
 	{
 		await God1("@set #1=WIZARD");
-		var mortal = await CreatePlayerAsync($"FnMortal_{Tag}", 62L);
+		var mortal = await CreatePlayerAsync($"FnMor_{Tag}", 62L);
 		var sceneId = await Eval($"scenecreate(,#1,Function Surface {Tag})");
 		await Assert.That(sceneId).DoesNotStartWith("#-1");
 

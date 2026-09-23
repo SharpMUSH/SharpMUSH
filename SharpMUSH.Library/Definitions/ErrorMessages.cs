@@ -215,6 +215,9 @@ public static class ErrorMessages
 		public const string NoSuchWikiPage = "#-1 NO SUCH WIKI PAGE";
 		public const string NoSuchPid = "#-1 NO SUCH PID";
 		public const string NoSuchPlayer = "#-1 NO SUCH PLAYER";
+		public const string PlayerNameInUse = "#-1 PLAYER NAME ALREADY IN USE";
+		public const string BadPlayerName = "#-1 BAD PLAYER NAME";
+		public const string BadPassword = "#-1 BAD PASSWORD";
 		public const string NoSuchType = "#-1 NO SUCH TYPE";
 		public const string NoZoneSet = "#-1 NO ZONE SET";
 		public const string NoDropTo = "#-1 NO DROP-TO";
@@ -1440,28 +1443,36 @@ public static class ErrorMessages
 		public const string WaitInvalidTimeSpecified = "Invalid time specified.";
 
 		public const string CommandMustSpecifyName = "You must specify a command name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandAddNotImplementedFormat = "@command/add: Dynamic command creation not yet implemented.";
 		public const string CommandMustSpecifyAlias = "You must specify an alias name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandAliasNotImplementedFormat = "@command/alias: Dynamic command aliasing not yet implemented.";
 		public const string CommandMustSpecifyCloneName = "You must specify a clone name.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandCloneNotImplementedFormat = "@command/clone: Command cloning not yet implemented.";
-		public const string CommandOnlyGodCanDelete = "Only God can delete commands.";
+		public const string CommandAddedFormat = "Command {0} added.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandDeleteNotImplementedFormat = "@command/delete: Command deletion not yet implemented.";
+		public const string CommandAlreadyExistsFormat = "Command {0} already exists.";
+		public const string CommandBadName = "Bad command name.";
+		public const string CommandNoevalNoLongerNoparse = "WARNING: /NOEVAL no longer creates a Noparse command. Use /NOPARSE if that's what you meant.";
+		public const string CommandAliasBadName = "I can't alias a command to that!";
+		public const string CommandAliasFailed = "Unable to set alias.";
+		public const string CommandAliasSet = "Alias set.";
+		public const string CommandNoSuchCommand = "No such command.";
+		public const string CommandCloned = "Command cloned.";
+		public const string CommandCannotDeleteBuiltin = "You can't delete built-in commands. @command/disable instead.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandDisableNotImplementedFormat = "@command/disable: Command disabling not yet implemented.";
+		public const string CommandRemovedFormat = "Removed {0} from command table.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandEnableNotImplementedFormat = "@command/enable: Command enabling not yet implemented.";
+		public const string CommandRemovedWithAliasesFormat = "Removed {0} and aliases from command table.";
+		public const string CommandHowToRestrict = "How do you want to restrict the command?";
+		public const string CommandRestrictFailed = "Restrict attempt failed.";
+		public const string CommandRestrictMessageUnsupported = "A custom failure message is not supported; the restriction was set without it.";
+		public const string CommandAlwaysEnabled = "@command is ALWAYS enabled.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandRestrictNotImplementedFormat = "@command/restrict: Command restriction not yet implemented.";
+		public const string CommandCalledByTheGameFormat = "{0} is run by the game itself and cannot be disabled.";
+		public const string CommandNotImplemented = "This command has not been implemented.";
 		public const string CommandLibraryUnavailable = "Command library unavailable.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandNotFoundFormat = "Command '{0}' not found.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoNameFormat = "Command: {0}";
+		public const string CommandInfoNameFormat = "Command: {0} ({1})";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandInfoTypeFormat = "  Type: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1547,8 +1558,17 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WhereIsObjectInLocationFormat = "{0} is in {1}.";
 
-		public const string ConfigOnlyGodCanUseSave = "Only God can use /save switch.";
-		public const string ConfigSetSaveNotImplemented = "@config/set and @config/save are not yet implemented.";
+		public const string ConfigCantRemakeWorld = "You can't remake the world in your image.";
+		public const string ConfigWhatToSet = "What did you want to set?";
+		public const string ConfigCouldntSet = "Couldn't set that option.";
+		public const string ConfigOptionSet = "Option set.";
+		public const string ConfigOptionSetAndSaved = "Option set and saved.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ConfigOptionNotSettableFormat = "{0} cannot be set from inside the game.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ConfigInvalidValueFormat = "'{1}' is not a valid value for {0}.";
+		public const string ConfigOptionEnabled = "Enabled.";
+		public const string ConfigOptionDisabled = "Disabled.";
 		public const string ConfigCategoriesHeader = "Configuration Categories:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ConfigCategoryItemFormat = "  {0}";
@@ -1720,7 +1740,10 @@ public static class ErrorMessages
 		public const string AttributeCommandFailedToCreate = "Failed to create attribute entry.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandPermissionsNowFormat = "{0} -- Attribute permissions now: {1}";
-		public const string AttributeCommandRetroactiveNotImplemented = "Note: Retroactive flag updating not yet implemented.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandRetroactiveUpdatedFormat = "{0} existing copies of {1} updated.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string AttributeCommandRetroactivePartialFormat = "Stopped after {0} objects: {1} existing copies of {2} updated, {3} could not be. Run the command again to finish.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandRemovedFromTableFormat = "Attribute '{0}' removed from standard attribute table.";
 		public const string AttributeCommandExistingCopiesRemain = "Existing copies remain but are no longer \"standard\".";
@@ -1763,22 +1786,29 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AttributeCommandDecompileEnumFormat = "@attribute/enum {0}={1}";
 
-		public const string StatsTablesNotImplemented = "@stats/tables: Internal table statistics not yet implemented.";
-		public const string StatsFlagsNotImplemented = "@stats/flags: Flag system statistics not yet implemented.";
-		public const string StatsMemorySwitchesNotImplemented = "@stats memory switches not yet implemented.";
-		public const string StatsDatabaseStatisticsHeader = "Database Statistics:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsForPlayerFormat = "  For player: {0}";
+		public const string LogWipeUnsupportedFormat = "@logwipe: SharpMUSH cannot {0} the {1} log. Its logs go to the logging sinks in its configuration, which the game does not own; rotate or clear them there.";
+
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsRoomsFormat = "  Rooms: {0}";
+		public const string StatsObjectCountsFormat = "{0} objects = {1} rooms, {2} exits, {3} things, {4} players.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsExitsFormat = "  Exits: {0}";
+		public const string StatsNoSuchPlayerFormat = "{0}: No such player.";
+		public const string StatsNeedSearchWarrant = "You need a search warrant to do that!";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsThingsFormat = "  Things: {0}";
+		public const string StatsFlagspaceHeaderFormat = "Stats for flagspace {0}:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsPlayersFormat = "  Players: {0}";
+		public const string StatsFlagspaceEntriesFormat = "  {0} entries in flag table.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsTotalFormat = "  Total: {0}";
+		public const string StatsFlagspaceFlagsetsFormat = "  {0} different flagsets in use. {1} objects with no flags set.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string StatsFlagspaceMostCommonFormat = "  {0} objects share the most common set of flags.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string StatsFlagspaceUniqueFormat = "  {0} objects have unique flagsets.";
+		public const string StatsTablesHeader = "Table        Entries";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string StatsTablesRowFormat = "{0,-12} {1,7}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string StatsChunksUnsupportedFormat = "@stats/{0}: SharpMUSH has no chunk allocator. Attributes live in the database provider, which keeps no equivalent counters.";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EntrancesToFormat = "Entrances to {0}:";
@@ -1974,6 +2004,7 @@ public static class ErrorMessages
 
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";
 		public const string PlayerNameAlreadyExists = "That player name already exists.";
+		public const string PlayerNameNotAllowed = "You can't give a player that name.";
 		public const string PlayerCreateInvalidPassword = "That is not a valid password.";
 		/// <summary>PennMUSH src/wiz.c do_pcreate: "New player '%s' (#%d) created with password '%s'".</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1999,8 +2030,12 @@ public static class ErrorMessages
 		public const string SitelockHostMatchesFormat = "Host '{0}' matches pattern '{1}' with options: {2}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SitelockHostNoMatchFormat = "Host '{0}' does not match any sitelock rules (default access allowed).";
-		public const string SitelockNameRequiresName = "@SITELOCK/NAME requires a player name.";
-		public const string SitelockNameNotImplemented = "@SITELOCK/NAME modification is not yet implemented. Use the admin UI to modify banned names.";
+		public const string SitelockNameListHeader = "Any name matching these wildcard patterns is banned:";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SitelockNameLockedFormat = "Name {0} locked.";
+		public const string SitelockNameRemoved = "Name removed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SitelockNameNotBannedFormat = "No banned name pattern is {0}.";
 		public const string SitelockBanRequiresPattern = "@SITELOCK/BAN requires a host pattern.";
 		public const string SitelockRegisterRequiresPattern = "@SITELOCK/REGISTER requires a host pattern.";
 		public const string SitelockRemoveRequiresPattern = "@SITELOCK/REMOVE requires a host pattern.";
@@ -2037,10 +2072,5 @@ public static class ErrorMessages
 		public const string EnableDisableNoOptionFormat = "No configuration option named '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EnableDisableNotBooleanFormat = "Option '{0}' is not a boolean option. Use @config/set instead.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string EnableDisableEquivalentFormat = "@{0} is equivalent to @config/set {1}={2}";
-		public const string RuntimeConfigNotImplemented = "Runtime configuration modification is not yet implemented. Changes require server restart.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigCurrentValueFormat = "Current value: {0}={1}";
 	}
 }
