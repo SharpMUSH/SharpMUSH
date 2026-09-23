@@ -1,6 +1,9 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -72,5 +75,66 @@ public class MailFolderSwitchTests
 		await Assert.That(result.Message!.ToPlainText())
 			.DoesNotContain("INVALID SWITCH", StringComparison.OrdinalIgnoreCase);
 		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is INBOX.", StringComparison.Ordinal));
+	}
+
+	/// <summary>
+	/// Switching the active folder has to change what the next <c>@mail</c> reads. It did not: the active
+	/// folder is kept in per-object expanded data, and <c>GetExpandedDataAsync&lt;T&gt;</c> cast a
+	/// <c>JsonElement</c> to its type and so always answered null, leaving
+	/// <c>MessageListHelper.CurrentMailFolder</c> fixed at INBOX and rewriting the stored folder on every
+	/// read (#1227). The switch reported success the whole time.
+	/// </summary>
+	[Test]
+	public async Task SwitchingTheActiveFolderChangesWhatMailReads()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailActiveFolder");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		async Task Run(string command) => await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+
+		await Run($"@mail #{player.DbRef.Number}=Kept In Saved/Filed away.");
+		await Run($"@mail #{player.DbRef.Number}=Stays In Inbox/Still here.");
+		await Run("@mail/file 1=SAVED");
+		await Run("@mail/folder SAVED");
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await Run("@mail/folder");
+		await Run("@mail");
+		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+
+		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is SAVED.", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("MAIL (folder SAVED)", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("Kept In Saved", StringComparison.Ordinal));
+		await Assert.That(told).DoesNotContain(m => m.Contains("Stays In Inbox", StringComparison.Ordinal));
+	}
+
+	/// <summary>
+	/// The same state read by a second command in a second session: a forward takes its message from the
+	/// active folder (<c>do_mail_fwd</c> folders the msglist, <c>extmail.c:1243</c>), so switching folders
+	/// decides which message is forwarded.
+	/// </summary>
+	[Test]
+	public async Task ForwardingTakesItsMessageFromTheActiveFolder()
+	{
+		var sender = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailFwdFolderFrom");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailFwdFolderTo");
+		var parser = WebAppFactoryArg.CommandParserFor(sender.DbRef, sender.Handle);
+
+		async Task Run(string command) => await parser.CommandParse(sender.Handle, ConnectionService, MarkupText.Plain(command));
+
+		await Run($"@mail #{sender.DbRef.Number}=Archived One/Archived body.");
+		await Run($"@mail #{sender.DbRef.Number}=Inbox One/Inbox body.");
+		await Run("@mail/file 1=ARCHIVE");
+		await Run("@mail/folder ARCHIVE");
+		await Run($"@mail/fwd 1=#{target.DbRef.Number}");
+
+		var forwarded = await Mediator.CreateStream(new GetMailListQuery(
+			(await Mediator.Send(new GetObjectNodeQuery(target.DbRef))).Expect<SharpPlayer>(), "INBOX")).ToArrayAsync();
+
+		await Assert.That(forwarded).Count().IsEqualTo(1);
+		await Assert.That(forwarded[0].Subject.ToPlainText()).IsEqualTo("Fwd: Archived One");
 	}
 }
