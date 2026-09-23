@@ -137,4 +137,60 @@ public class MailFolderSwitchTests
 		await Assert.That(forwarded).Count().IsEqualTo(1);
 		await Assert.That(forwarded[0].Subject.ToPlainText()).IsEqualTo("Fwd: Archived One");
 	}
+
+	/// <summary>
+	/// Renaming the folder you are reading moves your messages, so it has to move you with them. Penn
+	/// cannot have this: its active folder is a number and <c>@mail/folder N=name</c> only names it
+	/// (<c>extmail.c:340</c>). SharpMUSH folders are named, so the active name goes stale unless it is
+	/// retargeted — invisible until #1227 made the active folder readable at all.
+	/// </summary>
+	[Test]
+	public async Task RenamingTheActiveFolderFollowsIt()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailRenameActive");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		async Task Run(string command) => await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+
+		await Run($"@mail #{player.DbRef.Number}=Renamed Subject/Body.");
+		await Run("@mail/file 1=SAVED");
+		await Run("@mail/folder SAVED");
+		await Run("@mail/folder SAVED=ARCHIVE");
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await Run("@mail/folder");
+		await Run("@mail");
+		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+
+		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is ARCHIVE.", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("Renamed Subject", StringComparison.Ordinal));
+	}
+
+	/// <summary>
+	/// <c>@mail/unfolder</c> empties a folder back into INBOX, so reading it afterwards means reading
+	/// INBOX. The active folder followed the messages nowhere before.
+	/// </summary>
+	[Test]
+	public async Task UnfolderingTheActiveFolderReturnsToInbox()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailUnfolderActive");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		async Task Run(string command) => await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+
+		await Run($"@mail #{player.DbRef.Number}=Returned Subject/Body.");
+		await Run("@mail/file 1=TEMP");
+		await Run("@mail/folder TEMP");
+		await Run("@mail/unfolder TEMP");
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await Run("@mail/folder");
+		await Run("@mail");
+		var told = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+
+		await Assert.That(told).Contains(m => m.Contains("MAIL: Current folder is INBOX.", StringComparison.Ordinal));
+		await Assert.That(told).Contains(m => m.Contains("Returned Subject", StringComparison.Ordinal));
+	}
 }
