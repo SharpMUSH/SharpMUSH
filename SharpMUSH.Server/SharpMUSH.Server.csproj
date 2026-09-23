@@ -58,6 +58,8 @@
     <PackageReference Include="MarkupString" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="MarkupString.Mxp" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="MarkupString.Pueblo" Version="$(MarkupStringVersion)" />
     <ProjectReference Include="..\SharpMUSH.Messaging\SharpMUSH.Messaging.csproj" />
     <ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
     <!-- The Scene plugin (Phase-5 reference plugin) is loaded at runtime from plugins/scene/, NOT linked.

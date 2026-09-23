@@ -1,3 +1,5 @@
+using MarkupString.Mxp;
+using MarkupString.Pueblo;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -29,7 +31,7 @@ public class Program
 	{
 		if (!MarkupRegistry.IsConfigured)
 		{
-			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();
+			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo();
 		}
 	}
 
