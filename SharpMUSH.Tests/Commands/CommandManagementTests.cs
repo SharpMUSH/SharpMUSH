@@ -117,6 +117,23 @@ public class CommandManagementTests
 		await Assert.That(await As(wizard, $"{name} anything")).Contains("This command has not been implemented.");
 	}
 
+	/// <summary>
+	/// <c>UNIMPLEMENTED_COMMAND</c> is <c>cmd_unimplemented</c>, which says "This command has not
+	/// been implemented." (<c>src/command.c:1898-1911</c>) — it is not the HUH stub, and saying
+	/// "Huh?" there made an unhooked command indistinguishable from a command that does not exist.
+	/// See #1223.
+	/// </summary>
+	[Test]
+	public async ValueTask UnimplementedCommand_SaysItIsNotImplemented()
+	{
+		var wizard = await Wizard();
+
+		var messages = await As(wizard, "UNIMPLEMENTED_COMMAND");
+
+		await Assert.That(messages).Contains("This command has not been implemented.");
+		await Assert.That(messages).DoesNotContain(Huh);
+	}
+
 	[Test]
 	public async ValueTask Add_ExistingCommand_IsRefused()
 	{
