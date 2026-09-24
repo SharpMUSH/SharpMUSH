@@ -790,7 +790,8 @@ public static class BuildingHelpers
 				return await OpenExitAsync(mediator, database, configuration, notifyService, permissionService,
 					lockService, executor, MarkupText.Plain(name), into, requestedDbref, modified) switch
 				{
-					DBRef cloned => await ReopenedAsync(mediator, exit, cloned),
+					DBRef cloned => await ReopenedAsync(mediator, notifyService, permissionService, executor, exit,
+						cloned),
 					Error<string> refused => refused
 				};
 
@@ -800,11 +801,39 @@ public static class BuildingHelpers
 		}
 	}
 
-	/// <summary>The cloned exit's destination, which is the original's (create.c:765-780).</summary>
-	private static async ValueTask<Result<DBRef>> ReopenedAsync(IMediator mediator, SharpExit original, DBRef cloned)
+	/// <summary>
+	/// The cloned exit's destination, which is the original's (create.c:765-780) — but only if the
+	/// cloner may link there. <c>do_clone</c> hands that destination to <c>do_real_open</c> as its
+	/// <c>linkto</c>, and says why in as many words: "For exits, we don't want people to be able to
+	/// link it to a location they can't with <c>@open</c>. So, all this stuff." (create.c:753-756).
+	/// <c>do_real_open</c> resolves a <c>linkto</c> through <c>parse_linkable_room</c>
+	/// (<c>:41-67</c>), which is where <c>can_link_to</c> lives.
+	/// <para>A refusal keeps the exit and leaves it unlinked (<c>create.c:165-171</c>), as every other
+	/// link in this file does. Relinking unconditionally let someone who controls an exit mint more
+	/// exits into a destination that is no longer open to them — the room was LINK_OK when the
+	/// original was linked, or the exit was chowned to them afterwards.</para>
+	/// </summary>
+	private static async ValueTask<Result<DBRef>> ReopenedAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		AnySharpObject executor,
+		SharpExit original,
+		DBRef cloned)
 	{
-		if (await original.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
-			&& await mediator.Send(new GetObjectNodeQuery(cloned)) is AnySharpObject and SharpExit clonedExit)
+		if (await original.Home.WithCancellation(CancellationToken.None) is not AnySharpContainer destination)
+		{
+			// An unlinked original clones to an unlinked exit, with nothing to refuse.
+			return cloned;
+		}
+
+		if (!await permissionService.CanLinkToAsync(executor, destination.WithExitOption()))
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
+			return cloned;
+		}
+
+		if (await mediator.Send(new GetObjectNodeQuery(cloned)) is AnySharpObject and SharpExit clonedExit)
 		{
 			await mediator.Send(new LinkExitCommand(clonedExit, destination));
 		}

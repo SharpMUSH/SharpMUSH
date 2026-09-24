@@ -44,6 +44,11 @@ public class CloneStateParityTests
 
 	private async Task<DBRef> Create(string name) => Ref(await AsGod($"@create {name}"));
 
+	/// <summary>Where an exit leads — SharpMUSH's <c>Home</c>, PennMUSH's <c>Location</c>.</summary>
+	private async Task<int?> DestinationOf(DBRef exit)
+		=> AnyOptionalSharpContainer.RefOf(
+			await (await Node(exit)).Expect<SharpExit>().Home.WithCancellation(CancellationToken.None))?.Number;
+
 	/// <summary>How many objects currently answer to <paramref name="name"/>.</summary>
 	private async Task<string[]> Named(string name)
 		=> (await AsGod($"think lsearch(all,name,{name})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -536,6 +541,48 @@ public class CloneStateParityTests
 		var clonedZone = await (await Node(clone)).Object().Zone.WithCancellation(CancellationToken.None);
 		await Assert.That(clonedZone.IsNone).IsTrue()
 			.Because("create.c:788 assigns the original's zone unconditionally, and it had none");
+	}
+
+	/// <summary>
+	/// <c>do_clone</c>'s exit branch says why itself: "For exits, we don't want people to be able to
+	/// link it to a location they can't with <c>@open</c>. So, all this stuff." (create.c:753-756).
+	/// The destination goes to <c>do_real_open</c> as its <c>linkto</c>, which resolves it through
+	/// <c>parse_linkable_room</c> (<c>:41-67</c>) and so through <c>can_link_to</c>. Re-linking the
+	/// clone unconditionally let a mortal who controls an exit mint further exits into a destination
+	/// that is no longer open to them — the room was LINK_OK when the exit was first linked, or the
+	/// exit was chowned to them afterwards.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask ACloneOfAnExitIsNotLinkedWhereTheClonerMayNotLink(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CspNoLink");
+		var home = await Dig($"CspNoLinkHome{uid}");
+		await AsGod($"@chown {home}={mortal.DbRef}");
+		await AsGod($"@teleport {mortal.DbRef}={home}");
+
+		// LINK_OK while the exit is opened, so the original really is linked...
+		var destination = await Dig($"CspNoLinkDest{uid}");
+		await AsGod($"@set {destination}=LINK_OK");
+		var exit = Ref(await Run(mortal.Handle, $"@open CspNoLinkExit{uid}={destination}"));
+		await Assert.That(await DestinationOf(exit)).IsEqualTo(destination.Number)
+			.Because("the original has to be linked for the clone to have anywhere to be linked to");
+
+		// ...and closed again before the clone is taken.
+		await AsGod($"@set {destination}=!LINK_OK");
+
+		var newName = $"CspNoLinkClone{uid}";
+		var clone = Ref(await Run(mortal.Handle, throughTheFunction
+			? $"think clone({exit},{newName})"
+			: $"@clone {exit}={newName}"));
+
+		await Assert.That(await DestinationOf(clone)).IsNull()
+			.Because("create.c:165-171 keeps the exit and leaves it unlinked when can_link_to refuses");
+		await Assert.That((await Named(newName)).Length).IsEqualTo(1)
+			.Because("Penn keeps an exit it could not link, rather than refusing the clone outright");
 	}
 
 	/// <summary>
