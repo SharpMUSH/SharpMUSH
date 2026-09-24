@@ -13,6 +13,8 @@ public record ConversionResult
 	public int LocksConverted { get; init; }
 	public int MailAliasesConverted { get; init; }
 	public int MailMessagesConverted { get; init; }
+	public int ChannelsConverted { get; init; }
+	public int ChannelMembersConverted { get; init; }
 	public List<string> Errors { get; init; } = [];
 	public List<string> Warnings { get; init; } = [];
 	public TimeSpan Duration { get; init; }

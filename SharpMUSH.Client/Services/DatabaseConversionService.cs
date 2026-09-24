@@ -5,9 +5,13 @@ namespace SharpMUSH.Client.Services;
 
 public class DatabaseConversionService(ILogger<DatabaseConversionService> logger, IHttpClientFactory httpClient)
 {
-	/// <summary>Uploads the object database and, when given, the maildb (sent as <c>mailFile</c>).</summary>
+	/// <summary>
+	/// Uploads the object database and, when given, the maildb (sent as <c>mailFile</c>) and the chatdb
+	/// (sent as <c>chatFile</c>).
+	/// </summary>
 	public async Task<string?> UploadDatabaseAsync(Stream fileStream, string fileName, Stream? mailStream = null,
-		string? mailFileName = null, CancellationToken cancellationToken = default)
+		string? mailFileName = null, Stream? chatStream = null, string? chatFileName = null,
+		CancellationToken cancellationToken = default)
 	{
 		try
 		{
@@ -17,6 +21,11 @@ public class DatabaseConversionService(ILogger<DatabaseConversionService> logger
 			if (mailStream is not null)
 			{
 				content.Add(new StreamContent(mailStream), "mailFile", mailFileName ?? "maildb");
+			}
+
+			if (chatStream is not null)
+			{
+				content.Add(new StreamContent(chatStream), "chatFile", chatFileName ?? "chatdb");
 			}
 
 			var response = await httpClient

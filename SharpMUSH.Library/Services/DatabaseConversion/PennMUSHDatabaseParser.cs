@@ -91,7 +91,8 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 			var seePrivileges = await reader.ReadIntegerAsync(cancellationToken);
 			var size = await reader.ReadIntegerAsync(cancellationToken);
 
-			var members = new List<int>(Math.Max(size, 0));
+			// Not sized from the count: a corrupt one would be an allocation, not a FormatException.
+			var members = new List<int>();
 			for (var j = 0; j < size; j++)
 			{
 				members.Add(await reader.ReadIntegerAsync(cancellationToken));
@@ -149,6 +150,111 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 		{
 			mail.MessageReadError = ex.Message;
 		}
+	}
+
+	public async Task<PennMUSHChatDatabase> ParseChatAsync(Stream stream, CancellationToken cancellationToken = default)
+	{
+		using var reader = new StreamReader(stream);
+		return await ParseChatAsync(new PennMUSHDumpReader(reader), cancellationToken);
+	}
+
+	public async Task<PennMUSHChatDatabase> ParseChatFileAsync(string filePath, CancellationToken cancellationToken = default)
+	{
+		logger.LogInformation("Starting to parse PennMUSH chat database file: {FilePath}", filePath);
+
+		await using var stream = File.OpenRead(filePath);
+		return await ParseChatAsync(stream, cancellationToken);
+	}
+
+	/// <summary>
+	/// <c>load_chatdb</c>: a <c>+V</c> flags line, <c>savedtime</c>, <c>channels</c>, then per channel
+	/// <c>load_labeled_channel</c>'s fields (<c>buffer</c> and <c>mogrifier</c> only under
+	/// <c>CDB_SPIFFY</c>), its <c>lock</c>/<c>key</c> pairs, <c>users</c>, and per user <c>dbref</c>,
+	/// <c>flags</c> and <c>title</c>; then <c>***END OF DUMP***</c>.
+	/// </summary>
+	/// <remarks>
+	/// Members are read as written. What <c>load_labeled_chanusers</c> drops or changes on load is the
+	/// converter's to decide, since it needs the imported objects to decide it.
+	/// </remarks>
+	private async Task<PennMUSHChatDatabase> ParseChatAsync(PennMUSHDumpReader reader, CancellationToken cancellationToken)
+	{
+		var header = await reader.ReadLineAsync(cancellationToken);
+		if (header is null || !header.StartsWith("+V", StringComparison.Ordinal))
+		{
+			throw new FormatException(
+				"Not a PennMUSH chat database in the labeled format PennMUSH 1.8 writes, which begins with a '+V' line. " +
+				"An older chatdb loads into a current PennMUSH, which writes it back out labeled.");
+		}
+
+		var chat = new PennMUSHChatDatabase
+		{
+			Flags = int.TryParse(header.AsSpan(2), NumberStyles.Integer, CultureInfo.InvariantCulture, out var flags)
+				? flags
+				: throw reader.Error($"expected the chat database flags, found '{header}'"),
+			SavedTime = await reader.ReadLabeledAsync("savedtime", cancellationToken)
+		};
+
+		var count = Int(reader, await reader.ReadLabeledAsync("channels", cancellationToken));
+		for (var i = 0; i < count; i++)
+		{
+			chat.Channels.Add(await ParseChannelAsync(reader, chat.Flags, cancellationToken));
+		}
+
+		var end = await reader.ReadLineAsync(cancellationToken);
+		while (end is not null && string.IsNullOrWhiteSpace(end))
+		{
+			end = await reader.ReadLineAsync(cancellationToken);
+		}
+
+		if (end != EndOfDump)
+		{
+			throw reader.Error($"expected '{EndOfDump}' after {count} channel(s), found '{end}'");
+		}
+
+		logger.LogInformation("PennMUSH chat database flags {Flags}, {Count} channel(s)", chat.Flags, chat.Channels.Count);
+		return chat;
+	}
+
+	private static async Task<PennMUSHChannel> ParseChannelAsync(PennMUSHDumpReader reader, int chatFlags,
+		CancellationToken cancellationToken)
+	{
+		var name = await reader.ReadLabeledAsync("name", cancellationToken);
+		var description = await reader.ReadLabeledAsync("description", cancellationToken);
+		var flags = Int(reader, await reader.ReadLabeledAsync("flags", cancellationToken));
+		var creator = DbRef(reader, await reader.ReadLabeledAsync("creator", cancellationToken));
+		var cost = Int(reader, await reader.ReadLabeledAsync("cost", cancellationToken));
+		var buffer = 0;
+		var mogrifier = Nothing;
+		if ((chatFlags & PennMUSHChatDatabase.SpiffyFlag) != 0)
+		{
+			buffer = Int(reader, await reader.ReadLabeledAsync("buffer", cancellationToken));
+			mogrifier = DbRef(reader, await reader.ReadLabeledAsync("mogrifier", cancellationToken));
+		}
+
+		var locks = new Dictionary<string, string>(StringComparer.Ordinal);
+		var (label, value) = await reader.ReadLabeledAsync(cancellationToken);
+		while (label == "lock")
+		{
+			locks[value] = await reader.ReadLabeledAsync("key", cancellationToken);
+			(label, value) = await reader.ReadLabeledAsync(cancellationToken);
+		}
+
+		if (label != "users")
+		{
+			throw reader.Error($"expected 'users' for channel '{name}', found '{label}'");
+		}
+
+		var userCount = Int(reader, value);
+		var users = new List<PennMUSHChannelUser>();
+		for (var i = 0; i < userCount; i++)
+		{
+			var dbref = DbRef(reader, await reader.ReadLabeledAsync("dbref", cancellationToken));
+			var userFlags = Int(reader, await reader.ReadLabeledAsync("flags", cancellationToken));
+			var title = await reader.ReadLabeledAsync("title", cancellationToken);
+			users.Add(new PennMUSHChannelUser(dbref, userFlags, title));
+		}
+
+		return new PennMUSHChannel(name, description, flags, creator, cost, buffer, mogrifier, locks, users);
 	}
 
 	/// <summary><c>load_mail</c>'s message count line; <c>null</c> when it is missing or not a number.</summary>

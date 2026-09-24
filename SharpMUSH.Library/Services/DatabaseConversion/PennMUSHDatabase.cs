@@ -41,6 +41,11 @@ public class PennMUSHDatabase
 	public PennMUSHMailDatabase Mail { get; set; } = new();
 
 	/// <summary>
+	/// The game's chatdb, when one was given alongside the dump; empty otherwise.
+	/// </summary>
+	public PennMUSHChatDatabase Chat { get; set; } = new();
+
+	/// <summary>
 	/// God/Wizard player DBRef (usually #1)
 	/// </summary>
 	public int GodPlayer { get; set; } = 1;
