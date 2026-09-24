@@ -688,6 +688,13 @@ public partial record ParserState(
 	public bool HasRegexpContext => VisibleRegexpFrames.Any();
 
 	/// <summary>
+	/// Whether some visible regexp context holds a capture. Kept for plugins built against the published
+	/// contract; the server itself decides whether <c>$n</c> is a substitution by <see cref="HasRegexpContext"/>.
+	/// </summary>
+	[Obsolete("Whether $n is a substitution depends on HasRegexpContext; this reports only whether a visible regexp context holds a capture.")]
+	public bool HasRegexpCaptures => VisibleRegexpFrames.Any(frame => frame.Count > 0);
+
+	/// <summary>
 	/// The innermost visible regexp context, which is the only one <c>PE_Get_re</c> reads; null when
 	/// there is none. What <c>$n</c>, <c>r(&lt;n&gt;, regexp)</c> and <c>registers(, regexp)</c> see.
 	/// </summary>

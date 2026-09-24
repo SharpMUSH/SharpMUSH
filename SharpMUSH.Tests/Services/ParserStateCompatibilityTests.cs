@@ -72,6 +72,24 @@ public class ParserStateCompatibilityTests
 	}
 
 	[Test]
+	public async Task PublishedRegexpCaptureAccessorSupportsDirectPluginCall()
+	{
+		// A plugin compiled against 3.0.0 binds the getter by name; #1156 added HasRegexpContext beside it.
+		var getter = typeof(ParserState).GetProperty("HasRegexpCaptures", typeof(bool))?.GetMethod;
+		await Assert.That(getter).IsNotNull();
+
+		var state = ParserState.RootFor(new DBRef(42, 7));
+		await Assert.That((bool)getter!.Invoke(state, null)!).IsFalse();
+
+		state.RegexRegisters.Push([]);
+		await Assert.That((bool)getter.Invoke(state, null)!).IsFalse().Because("an empty context holds no capture");
+		await Assert.That(state.HasRegexpContext).IsTrue();
+
+		state.RegexRegisters.Push(new Dictionary<string, MarkupText> { ["0"] = MarkupText.Plain("abc") });
+		await Assert.That((bool)getter.Invoke(state, null)!).IsTrue();
+	}
+
+	[Test]
 	public async Task PublishedDeconstructionSupportsDirectPluginCall()
 	{
 		var deconstruct = typeof(ParserState).GetMethod("Deconstruct", PublishedParameters.Select(x => x.Type.MakeByRefType()).ToArray());
