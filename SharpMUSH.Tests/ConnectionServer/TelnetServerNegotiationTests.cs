@@ -446,7 +446,8 @@ public class TelnetServerNegotiationTests
 				return true;
 			});
 
-		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: connectionService);
+		var (toServer, fromServer, handler, _, cancellation) = StartServer(connectionService: connectionService);
+		using var cts = cancellation;
 		try
 		{
 			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, MXP));
@@ -473,7 +474,6 @@ public class TelnetServerNegotiationTests
 			await cts.CancelAsync();
 			await toServer.CompleteAsync();
 			await handler.WaitAsync(Timeout);
-			cts.Dispose();
 		}
 	}
 
