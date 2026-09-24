@@ -341,6 +341,14 @@ public class UtilityFunctionUnitTests
 	/// — the ordinary way to write a coin flip — was false essentially always. This asserted only
 	/// that the integer parsed, which is why it never noticed.
 	/// </summary>
+	/// <remarks>
+	/// The upper bound is <c>&lt;= 1</c> and has to be. The draw is written through
+	/// <c>MushNumber.Unparse</c> (<c>SharpMUSH.Library/Utilities/MushNumber.cs:14-22</c>), which is
+	/// <c>F{float_precision}</c> with trailing zeros stripped — six places by default — so every
+	/// draw from 0.9999995 up prints <c>1</c>. That is about one run in two million, and PennMUSH's
+	/// <c>safe_number</c> is the same <c>%.*f</c> and prints the same <c>1</c>, so the engine is
+	/// right and a <c>&lt; 1</c> assertion on the printed text is the thing that is wrong.
+	/// </remarks>
 	[Test]
 	public async Task Rand_NoArgs()
 	{
@@ -348,7 +356,40 @@ public class UtilityFunctionUnitTests
 
 		await Assert.That(double.TryParse(result, CultureInfo.InvariantCulture, out var value)).IsTrue();
 		await Assert.That(value).IsGreaterThanOrEqualTo(0d);
-		await Assert.That(value).IsLessThan(1d);
+		await Assert.That(value).IsLessThanOrEqualTo(1d);
+	}
+
+	/// <summary>
+	/// The real <c>rand()</c> answers is written at <c>float_precision</c> like every other real,
+	/// because it goes through the same <c>unparse_number</c> PennMUSH's <c>safe_number</c> does.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="TestOptionsOverride.Scope"/> rather than
+	/// <c>Configurable.ReadFloatPrecisionFrom</c>: the latter is process-wide static state and
+	/// re-pointing it here would change the game under every test running in parallel.
+	/// </remarks>
+	[Test]
+	[Arguments(2u)]
+	[Arguments(6u)]
+	[Arguments(10u)]
+	public async Task RandWritesItsRealAtTheConfiguredPrecision(uint places)
+	{
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Cosmetic = options.Cosmetic with { FloatPrecision = places }
+		});
+
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rand()")))!.Message!.ToPlainText();
+
+		await Assert.That(double.TryParse(result, CultureInfo.InvariantCulture, out var value)).IsTrue()
+			.Because($"rand() answered {result}");
+		await Assert.That(value).IsGreaterThanOrEqualTo(0d);
+		await Assert.That(value).IsLessThanOrEqualTo(1d);
+
+		var point = result.IndexOf('.');
+		var decimals = point < 0 ? 0 : result.Length - point - 1;
+		await Assert.That(decimals).IsLessThanOrEqualTo((int)places)
+			.Because($"float_precision is {places}, and rand() answered {result}");
 	}
 
 	[Test]
