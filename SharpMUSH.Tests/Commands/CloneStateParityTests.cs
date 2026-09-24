@@ -98,15 +98,31 @@ public class CloneStateParityTests
 			.Because("create.c:657 copies the original's home onto the clone");
 	}
 
-	/// <summary><c>Parent(clone) = Parent(thing)</c> (create.c:637).</summary>
+	/// <summary>An original of each clonable type, since <c>clone_object</c> is type-blind and the
+	/// exit branch sets the zone and parent of its own accord (create.c:636-637, :788-789).</summary>
+	private async Task<DBRef> OriginalOfKind(string kind, string name) => kind switch
+	{
+		"room" => await Dig(name),
+		"exit" => Ref(await AsGod($"@open {name}={await Dig($"{name}Dest")}")),
+		_ => await Create(name)
+	};
+
+	/// <summary>
+	/// <c>Parent(clone) = Parent(thing)</c> — <c>clone_object</c> at create.c:637 for a thing or a room,
+	/// and the exit branch again at :789.
+	/// </summary>
 	[Test]
-	[Arguments(true)]
-	[Arguments(false)]
-	public async ValueTask ACloneKeepsTheOriginalsParent(bool throughTheFunction)
+	[Arguments(true, "thing")]
+	[Arguments(false, "thing")]
+	[Arguments(true, "room")]
+	[Arguments(false, "room")]
+	[Arguments(true, "exit")]
+	[Arguments(false, "exit")]
+	public async ValueTask ACloneKeepsTheOriginalsParent(bool throughTheFunction, string kind)
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var parent = await Create($"CspParent{uid}");
-		var original = await Create($"CspChild{uid}");
+		var original = await OriginalOfKind(kind, $"CspChild{uid}");
 		await AsGod($"@parent {original}={parent}");
 
 		var clone = await Clone(throughTheFunction, original, $"CspParentClone{uid}");
@@ -116,15 +132,22 @@ public class CloneStateParityTests
 			.Because("create.c:637 copies the parent");
 	}
 
-	/// <summary><c>Zone(clone) = Zone(thing)</c> (create.c:636) — the original's zone, not the cloner's.</summary>
+	/// <summary>
+	/// <c>Zone(clone) = Zone(thing)</c> (create.c:636, and :788 for an exit) — the original's zone, not
+	/// the cloner's.
+	/// </summary>
 	[Test]
-	[Arguments(true)]
-	[Arguments(false)]
-	public async ValueTask ACloneKeepsTheOriginalsZone(bool throughTheFunction)
+	[Arguments(true, "thing")]
+	[Arguments(false, "thing")]
+	[Arguments(true, "room")]
+	[Arguments(false, "room")]
+	[Arguments(true, "exit")]
+	[Arguments(false, "exit")]
+	public async ValueTask ACloneKeepsTheOriginalsZone(bool throughTheFunction, string kind)
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var zone = await Create($"CspZone{uid}");
-		var original = await Create($"CspZoned{uid}");
+		var original = await OriginalOfKind(kind, $"CspZoned{uid}");
 		await AsGod($"@chzone {original}={zone}");
 
 		var clone = await Clone(throughTheFunction, original, $"CspZoneClone{uid}");
