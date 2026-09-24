@@ -819,20 +819,12 @@ public class AttributeFunctionUnitTests
 	/// a tab are values under both settings — a blanket whitespace test answers 0 for them, which is
 	/// the mistake this exists to catch, and the lone-space case alone cannot catch it.
 	/// </summary>
-	/// <remarks>
-	/// The tab is written through <see cref="IAttributeService"/> rather than as softcode because
-	/// nothing in the MUSH-code path can produce one: <c>%t</c> and <c>chr(9)</c> both evaluate to
-	/// zero characters here, and a literal tab inside an argument is eaten by the lexer. That is a
-	/// separate defect in the substitutions, which this lane does not own.
-	/// </remarks>
 	[Test]
 	[Arguments(true)]
 	[Arguments(false)]
 	public async Task HasattrvalCountsTwoSpacesAndATabAsValuesUnderEitherSetting(bool emptyAttributes)
 	{
-		var god = (await Mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Expect<AnySharpObject>();
-		await AttributeService.SetAttributeAsync(god, god, "HASATTRVALTAB", MarkupText.Plain("\t"));
-
+		await Parser.FunctionParse(MarkupText.Plain("attrib_set(me/HASATTRVALTAB,%t)"));
 		await Parser.FunctionParse(MarkupText.Plain("attrib_set(me/HASATTRVALTWOSPACES,%b%b)"));
 		await Parser.FunctionParse(MarkupText.Plain("attrib_set(me/HASATTRVALEMPTY,)"));
 

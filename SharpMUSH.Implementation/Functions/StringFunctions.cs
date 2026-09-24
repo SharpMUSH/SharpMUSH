@@ -1671,7 +1671,12 @@ public partial class Functions
 		// Display cells, not UTF-16 code units: softcode measures a string to lay it out against
 		// something else, and a combining mark or a wide character makes those two numbers differ
 		// wildly — "Text Editor" under a pile of diacritics is 66 code units and 11 columns.
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.DisplayWidth);
+		// A control character (tab, newline) is 0 columns wide but one character to PennMUSH
+		// (ansi_strlen, src/markup.c), so it counts here: strlen(%t) is 1.
+		=> ValueTask.FromResult<CallState>(StringLength(parser.CurrentState.Arguments["0"].Message!));
+
+	private static int StringLength(MString text)
+		=> text.DisplayWidth + text.ToPlainText().Count(char.IsControl);
 
 	[SharpFunction(Name = "strmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern"])]
 	public ValueTask<CallState> StringMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
