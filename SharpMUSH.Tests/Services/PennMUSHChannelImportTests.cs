@@ -174,6 +174,69 @@ public class PennMUSHChannelImportTests
 		await Assert.That(await MembersAsync(things)).IsEqualTo("#6:Gadget");
 	}
 
+	/// <summary>
+	/// A source #2 that is a thing cannot become the Master Room and is imported as #11. A channel lock that
+	/// names it follows it there, so it still gates on the Box and not on the Master Room; a number that is
+	/// an attribute value, not a reference, is left alone.
+	/// </summary>
+	[Test]
+	public async Task AChannelLockFollowsAnObjectImportedUnderANewNumber()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var database = new PennMUSHDatabase
+		{
+			Version = "Test Version",
+			Objects =
+			[
+				new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
+				new PennMUSHObject { DBRef = 1, Name = "One", Type = PennMUSHObjectType.Player },
+				new PennMUSHObject { DBRef = 2, Name = "Box", Type = PennMUSHObjectType.Thing },
+				new PennMUSHObject { DBRef = 10, Name = "Ten", Type = PennMUSHObjectType.Thing }
+			]
+		};
+		const string chatdb = """
+			+V1
+			savedtime "x"
+			channels 1
+			 name "Boxed"
+			  description ""
+			  flags 3
+			  creator #1
+			  cost 0
+			  buffer 0
+			  mogrifier #2
+			  lock "join"
+			  key "=#2|+#2|#10|NUM:#2"
+			  lock "speak"
+			  key "#1"
+			  users 2
+			   dbref #1
+			    flags 0
+			    title ""
+			   dbref #2
+			    flags 0
+			    title ""
+			***END OF DUMP***
+
+			""";
+		database.Chat = await world.Parser.ParseChatAsync(new MemoryStream(Encoding.UTF8.GetBytes(chatdb)));
+
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+
+		await Assert.That(result.Errors).IsEmpty();
+		var boxed = await ChannelAsync(world, "Boxed");
+		await Assert.That(boxed.JoinLock).IsEqualTo("=#11|+#11|#10|NUM:#2");
+		await Assert.That(boxed.SpeakLock).IsEqualTo("#1");
+		await Assert.That(result.Warnings).Contains(w =>
+			w.StartsWith("Channel Boxed: join lock names objects imported under new numbers (#2 as #11, #2 as #11)"));
+		await Assert.That(result.Warnings).DoesNotContain(w => w.StartsWith("Channel Boxed: speak lock"));
+		// The mogrifier and the member follow it the same way.
+		var box = await PennMUSHDbrefPreservationTests.NodeAsync(world, 11);
+		await Assert.That(box.Object().Name).IsEqualTo("Box");
+		await Assert.That(boxed.Mogrifier).IsEqualTo(box.Object().DBRef.ToString());
+		await Assert.That(await MembersAsync(boxed)).IsEqualTo("#1: #11:");
+	}
+
 	/// <summary>A dump imported without its chatdb imports no channels and says nothing about them.</summary>
 	[Test]
 	public async Task WithoutAChatdbThereAreNoChannels()

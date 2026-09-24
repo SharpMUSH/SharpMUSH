@@ -9,13 +9,15 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Diagnostics;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion;
 
 /// <summary>
 /// Converts PennMUSH database format to SharpMUSH objects.
 /// </summary>
-public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
+public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 {
 	private readonly PennMUSHDatabaseParser _parser;
 	private readonly ILogger<PennMUSHDatabaseConverter> _logger;
@@ -1450,11 +1452,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				Name: null,
 				Description: MarkupString.Ansi.AnsiEscapeParser.Parse(pennChannel.Description),
 				Privs: null,
-				JoinLock: ChannelLock(pennChannel, "join"),
-				SpeakLock: ChannelLock(pennChannel, "speak"),
-				SeeLock: ChannelLock(pennChannel, "see"),
-				HideLock: ChannelLock(pennChannel, "hide"),
-				ModLock: ChannelLock(pennChannel, "modify"),
+				JoinLock: ChannelLock(pennChannel, "join", label, context),
+				SpeakLock: ChannelLock(pennChannel, "speak", label, context),
+				SeeLock: ChannelLock(pennChannel, "see", label, context),
+				HideLock: ChannelLock(pennChannel, "hide", label, context),
+				ModLock: ChannelLock(pennChannel, "modify", label, context),
 				Mogrifier: await ChannelMogrifierAsync(pennChannel, label, context, cancellationToken),
 				Buffer: pennChannel.Buffer), cancellationToken);
 
@@ -1471,8 +1473,48 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return (channels, members);
 	}
 
-	private static string ChannelLock(PennMUSHChannel channel, string lockName)
-		=> channel.Locks.TryGetValue(lockName, out var key) && key != UnlockedKey ? key : string.Empty;
+	/// <summary>
+	/// A channel lock's key, with each object it names by dbref under the number that object was imported
+	/// as. Most keep their number; a source #0-#2 of the wrong type is imported elsewhere.
+	/// </summary>
+	private static string ChannelLock(PennMUSHChannel channel, string lockName, string label,
+		PennMUSHConversionContext context)
+	{
+		if (!channel.Locks.TryGetValue(lockName, out var key) || key == UnlockedKey)
+		{
+			return string.Empty;
+		}
+
+		var moved = new List<string>();
+		var remapped = LockObjectReference().Replace(key, match =>
+		{
+			var source = int.Parse(match.Groups["number"].ValueSpan, CultureInfo.InvariantCulture);
+			if (!context.DbrefMapping.TryGetValue(source, out var imported) || imported.Number == source)
+			{
+				return match.Value;
+			}
+
+			moved.Add($"#{source} as #{imported.Number}");
+			return $"#{imported.Number}";
+		});
+
+		if (moved.Count > 0)
+		{
+			context.Warnings.Add($"{label}: {lockName} lock names objects imported under new numbers ({string.Join(", ", moved)}); " +
+				$"'{key}' became '{remapped}'");
+		}
+
+		return remapped;
+	}
+
+	/// <summary>
+	/// An object reference in a key <c>unparse_boolexp</c> wrote with <c>UB_DBREF</c>: a <c>#N</c> standing
+	/// alone or after the <c>=</c>, <c>+</c>, <c>@</c> or <c>$</c> of an is, carry, indirect or owner lock.
+	/// A number after the <c>:</c>, <c>/</c> or <c>^</c> of an attribute, evaluation or flag-style lock is a
+	/// value, not a reference, and is left alone.
+	/// </summary>
+	[GeneratedRegex(@"(?<=^|[\s&|!()=+@$])#(?<number>\d+)(?=$|[\s&|!()])")]
+	private static partial Regex LockObjectReference();
 
 	/// <summary>The mogrifier as <c>@channel/mogrifier</c> stores it, or none when it was not imported.</summary>
 	private async Task<string> ChannelMogrifierAsync(PennMUSHChannel channel, string label,
