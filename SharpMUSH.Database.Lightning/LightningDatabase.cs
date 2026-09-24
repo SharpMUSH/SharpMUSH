@@ -86,14 +86,43 @@ public partial class LightningDatabase(
 	/// why <c>stats()</c> reports a garbage count of zero — so the free slots are exactly the holes:
 	/// below the counter, and holding no object. An id at or above the counter is refused rather than
 	/// jumping the counter to reach it, so one mistyped argument cannot strand a block of dbrefs.</para>
+	/// <para>An import (<paramref name="import"/>) is the one caller entitled to an id at or above the
+	/// counter: the source database's ids are what its softcode holds, so the counter follows the import
+	/// to one past the highest id it takes. The source's holes stay holes, as they are its garbage.</para>
 	/// <para>Runs inside the caller's write job, which is what makes this check and the object write that
-	/// follows it atomic against a second creation racing for the same hole. The counter is left alone:
-	/// a hole is below it by construction.</para>
+	/// follows it atomic against a second creation racing for the same hole.</para>
 	/// </summary>
-	internal long? AllocateDbrefAt(ITx tx, long requested)
-		=> requested >= 0 && requested < ReadNextDbref(tx) && !tx.TryGet(Tables.Obj, Keys.Dbref(requested), out _)
-			? requested
-			: null;
+	internal long? AllocateDbrefAt(ITx tx, long requested, bool import = false)
+	{
+		if (requested < 0 || tx.TryGet(Tables.Obj, Keys.Dbref(requested), out _))
+		{
+			return null;
+		}
+
+		var next = ReadNextDbref(tx);
+		if (requested < next)
+		{
+			return requested;
+		}
+
+		if (!import)
+		{
+			return null;
+		}
+
+		tx.Put(Tables.Meta, Keys.Str("next_dbref"), Keys.Dbref(requested + 1));
+		return requested;
+	}
+
+	/// <summary>
+	/// The dbref an import names, or the next one when it names none. An id that already holds an
+	/// object is refused, and nothing is written.
+	/// </summary>
+	private long AllocateDbrefFor(ITx tx, long? imported)
+		=> imported is not { } requested
+			? AllocateDbref(tx)
+			: AllocateDbrefAt(tx, requested, import: true)
+				?? throw new InvalidOperationException($"#{requested} is not free to take");
 
 	private static long ReadNextDbref(ITx tx)
 		=> tx.TryGet(Tables.Meta, Keys.Str("next_dbref"), out var v) ? Keys.ReadDbref(v) : 0;

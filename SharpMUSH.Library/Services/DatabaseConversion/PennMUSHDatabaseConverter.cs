@@ -701,7 +701,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				StoredVerbatim,
 				ApplyDefaultFlags: false,
 				godCreated,
-				godModified), cancellationToken);
+				godModified,
+				godPennObject.DBRef), cancellationToken);
 
 			dbrefMapping[1] = tempGodDbRef;
 			playersConverted++;
@@ -754,7 +755,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			var (room0Created, room0Modified) = PennTimestamps(room0Penn);
 			tempRoom0DbRef = await _mediator.Send(
-				new CreateRoomCommand(room0Penn.Name, godPlayer, ApplyDefaultFlags: false, room0Created, room0Modified),
+				new CreateRoomCommand(room0Penn.Name, godPlayer, ApplyDefaultFlags: false, room0Created, room0Modified,
+					room0Penn.DBRef),
 				cancellationToken);
 			dbrefMapping[0] = tempRoom0DbRef;
 			roomsConverted++;
@@ -819,7 +821,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								StoredVerbatim,
 								ApplyDefaultFlags: false,
 								created,
-								modified), cancellationToken);
+								modified,
+									pennObj.DBRef), cancellationToken);
 							playersConverted++;
 							break;
 						}
@@ -828,7 +831,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						{
 							// Rooms are created with God as owner initially
 							newDbRef = await _mediator.Send(
-								new CreateRoomCommand(pennObj.Name, godPlayer, ApplyDefaultFlags: false, created, modified),
+								new CreateRoomCommand(pennObj.Name, godPlayer, ApplyDefaultFlags: false, created, modified, pennObj.DBRef),
 								cancellationToken);
 							roomsConverted++;
 							break;
@@ -851,7 +854,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								room0, // Home is Limbo for now
 								ApplyDefaultFlags: false,
 								created,
-								modified), cancellationToken);
+								modified,
+								pennObj.DBRef), cancellationToken);
 							thingsConverted++;
 							break;
 						}
@@ -874,7 +878,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								godPlayer, // God owns it temporarily
 								ApplyDefaultFlags: false,
 								created,
-								modified), cancellationToken);
+								modified,
+								pennObj.DBRef), cancellationToken);
 							exitsConverted++;
 							break;
 						}

@@ -15,7 +15,7 @@ public class CreateExitCommandHandler(
 	public async ValueTask<DBRef> Handle(CreateExitCommand request, CancellationToken cancellationToken)
 	{
 		var created = await database.CreateExitAsync(request.Name, request.Aliases, request.Location, request.Creator,
-			request.CreationTime, request.ModifiedTime, cancellationToken);
+			request.CreationTime, request.ModifiedTime, request.RequestedDbref, cancellationToken);
 
 		if (request.ApplyDefaultFlags)
 		{

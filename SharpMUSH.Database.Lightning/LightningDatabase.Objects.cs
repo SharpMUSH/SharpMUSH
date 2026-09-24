@@ -33,14 +33,14 @@ public partial class LightningDatabase
 	}
 
 	public async ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
-		string? salt = null, long? creationTime = null, long? modifiedTime = null,
+		string? salt = null, long? creationTime = null, long? modifiedTime = null, int? requestedDbref = null,
 		CancellationToken cancellationToken = default)
 	{
 		var (created, modified) = Timestamps(creationTime, modifiedTime);
 
 		return await Store.WriteAsync(tx =>
 		{
-			var dbref = AllocateDbref(tx);
+			var dbref = AllocateDbrefFor(tx, requestedDbref);
 			// Hashed against the objid this object is about to have, not against the wall clock — an
 			// imported player carries its original creation time, and hashing before that is settled
 			// would key the hash to an objid the object never has.
@@ -71,12 +71,12 @@ public partial class LightningDatabase
 	}
 
 	public async ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, long? creationTime = null,
-		long? modifiedTime = null, CancellationToken cancellationToken = default)
+		long? modifiedTime = null, int? requestedDbref = null, CancellationToken cancellationToken = default)
 	{
 		var ownerKey = (long)creator.Object.Key;
 		var (now, modified) = Timestamps(creationTime, modifiedTime);
 
-		return await Store.WriteAsync(tx => WriteRoom(tx, AllocateDbref(tx), name, ownerKey, now, modified),
+		return await Store.WriteAsync(tx => WriteRoom(tx, AllocateDbrefFor(tx, requestedDbref), name, ownerKey, now, modified),
 			cancellationToken);
 	}
 
@@ -130,7 +130,7 @@ public partial class LightningDatabase
 	}
 
 	public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator,
-		AnySharpContainer home, long? creationTime = null, long? modifiedTime = null,
+		AnySharpContainer home, long? creationTime = null, long? modifiedTime = null, int? requestedDbref = null,
 		CancellationToken cancellationToken = default)
 	{
 		var locKey = (long)location.Object().Key;
@@ -139,7 +139,7 @@ public partial class LightningDatabase
 		var (now, modified) = Timestamps(creationTime, modifiedTime);
 
 		return await Store.WriteAsync(
-			tx => WriteThing(tx, AllocateDbref(tx), name, locKey, homeKey, ownerKey, now, modified),
+			tx => WriteThing(tx, AllocateDbrefFor(tx, requestedDbref), name, locKey, homeKey, ownerKey, now, modified),
 			cancellationToken);
 	}
 
@@ -195,7 +195,7 @@ public partial class LightningDatabase
 	}
 
 	public async ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
-		SharpPlayer creator, long? creationTime = null, long? modifiedTime = null,
+		SharpPlayer creator, long? creationTime = null, long? modifiedTime = null, int? requestedDbref = null,
 		CancellationToken cancellationToken = default)
 	{
 		var locKey = (long)location.Object().Key;
@@ -203,7 +203,7 @@ public partial class LightningDatabase
 		var (now, modified) = Timestamps(creationTime, modifiedTime);
 
 		return await Store.WriteAsync(
-			tx => WriteExit(tx, AllocateDbref(tx), name, aliases, locKey, ownerKey, now, modified),
+			tx => WriteExit(tx, AllocateDbrefFor(tx, requestedDbref), name, aliases, locKey, ownerKey, now, modified),
 			cancellationToken);
 	}
 

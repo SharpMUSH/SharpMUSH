@@ -30,6 +30,11 @@ public interface IObjectStore
 	/// the object ids its softcode holds.
 	/// </param>
 	/// <param name="modifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match <paramref name="creationTime"/>.</param>
+	/// <param name="requestedDbref">
+	/// Importer only: the dbref this object must have, taken wherever it falls — including at or above
+	/// the counter, which then follows it. <c>null</c> for the next dbref. Throws when the id already
+	/// holds an object, and writes nothing.
+	/// </param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New player <see cref="DBRef"/></returns>
 	/// <remarks>
@@ -38,7 +43,7 @@ public interface IObjectStore
 	/// with, the player cannot log in.
 	/// </remarks>
 	ValueTask<DBRef> CreatePlayerAsync(string name, string password, DBRef location, DBRef home, int quota,
-		string? salt = null, long? creationTime = null, long? modifiedTime = null,
+		string? salt = null, long? creationTime = null, long? modifiedTime = null, int? requestedDbref = null,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -89,7 +94,7 @@ public interface IObjectStore
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New room <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreateRoomAsync(string name, SharpPlayer creator, long? creationTime = null,
-		long? modifiedTime = null, CancellationToken cancellationToken = default);
+		long? modifiedTime = null, int? requestedDbref = null, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Create a new room at a dbref the caller names, the storage half of PennMUSH's
@@ -137,7 +142,7 @@ public interface IObjectStore
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New thing <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator,
-		AnySharpContainer home, long? creationTime = null, long? modifiedTime = null,
+		AnySharpContainer home, long? creationTime = null, long? modifiedTime = null, int? requestedDbref = null,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
@@ -175,7 +180,7 @@ public interface IObjectStore
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>New thing <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
-		SharpPlayer creator, long? creationTime = null, long? modifiedTime = null,
+		SharpPlayer creator, long? creationTime = null, long? modifiedTime = null, int? requestedDbref = null,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
