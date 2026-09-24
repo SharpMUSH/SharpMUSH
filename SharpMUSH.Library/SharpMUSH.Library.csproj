@@ -42,6 +42,15 @@
 		<!-- Version is aligned to PluginContractVersion.Current (3.0.0). Bump both together when the
 		     plugin contract surface changes. -->
 		<Version>3.0.0</Version>
+		<!-- NU5104: a stable package should not depend on a prerelease one, and Microsoft.Data.Sqlite
+		     below is pinned to $(DotNetPackageVersion), currently an 11.0 RC build, because .NET 11
+		     itself has not shipped stable yet (global.json). The contract surface this package ships
+		     is stable regardless of what preview SDK it was built against; forcing the package itself
+		     to be prerelease would mean every plugin author's simple Version="3.0.0" reference needs an
+		     explicit prerelease opt in, forever. SharpMUSH.Contracts.csproj suppresses NU1510 for a
+		     similar reason: a warning that is right in general and wrong for a deliberate, documented
+		     case here. Safe to drop once $(DotNetPackageVersion) moves off prerelease. -->
+		<NoWarn>$(NoWarn);NU5104</NoWarn>
 		<Authors>SharpMUSH Contributors</Authors>
 		<Description>SharpMUSH plugin contract surface (interim). External SharpMUSH plugins reference this package to write [SharpPlugin] : PluginBase entry types with [SharpCommand]/[SharpFunction] members. Aligned to PluginContractVersion 3.0.0.</Description>
 		<PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
