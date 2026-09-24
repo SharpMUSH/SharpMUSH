@@ -1,4 +1,4 @@
-﻿using DotNext.Threading;
+using DotNext.Threading;
 using Mediator;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -216,7 +216,7 @@ public static partial class MailDelivery
 		};
 
 		if (await services.Mediator.Send(new SendMailCommand(sender.Object(), target, mail,
-					await MailLimitAsync(services, target))) is not { } admission)
+					await MailLimitAsync(services, target))) is not AdmittedMail admission)
 		{
 			if (!silent)
 			{

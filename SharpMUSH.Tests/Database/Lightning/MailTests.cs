@@ -105,17 +105,17 @@ public class MailTests
 		var sender = await NewPlayer("MailNumberSender");
 		var recipient = await NewPlayer("MailNumberRecipient");
 
-		var first = await _db.SendMailAsync(sender.Object, recipient, NewMail("One", "a"));
-		var saved = await _db.SendMailAsync(sender.Object, recipient, NewMail("Saved", "b", "SAVED"));
-		var second = await _db.SendMailAsync(sender.Object, recipient, NewMail("Two", "c"));
-		await _db.DeleteMailAsync(first!.Value.Id);
-		var third = await _db.SendMailAsync(sender.Object, recipient, NewMail("Three", "d"));
+		var first = (await _db.SendMailAsync(sender.Object, recipient, NewMail("One", "a"))).Expect<AdmittedMail>();
+		var saved = (await _db.SendMailAsync(sender.Object, recipient, NewMail("Saved", "b", "SAVED"))).Expect<AdmittedMail>();
+		var second = (await _db.SendMailAsync(sender.Object, recipient, NewMail("Two", "c"))).Expect<AdmittedMail>();
+		await _db.DeleteMailAsync(first.Id);
+		var third = (await _db.SendMailAsync(sender.Object, recipient, NewMail("Three", "d"))).Expect<AdmittedMail>();
 
-		await Assert.That(first.Value.Number).IsEqualTo(1);
-		await Assert.That(saved!.Value.Number).IsEqualTo(1);
-		await Assert.That(second!.Value.Number).IsEqualTo(2);
-		await Assert.That(third!.Value.Number).IsEqualTo(2);
-		await Assert.That((await _db.GetIncomingMailAsync(recipient, "INBOX", 1))!.Id).IsEqualTo(third.Value.Id);
+		await Assert.That(first.Number).IsEqualTo(1);
+		await Assert.That(saved.Number).IsEqualTo(1);
+		await Assert.That(second.Number).IsEqualTo(2);
+		await Assert.That(third.Number).IsEqualTo(2);
+		await Assert.That((await _db.GetIncomingMailAsync(recipient, "INBOX", 1))!.Id).IsEqualTo(third.Id);
 	}
 
 	/// <summary>#1226: a folder holding its limit refuses the message in the write, storing nothing.</summary>
@@ -130,10 +130,10 @@ public class MailTests
 		var refused = await _db.SendMailAsync(sender.Object, recipient, NewMail("Refused", "c"), limit: 1);
 		var unlimited = await _db.SendMailAsync(sender.Object, recipient, NewMail("Unlimited", "d"));
 
-		await Assert.That(kept).IsNotNull();
-		await Assert.That(elsewhere).IsNotNull();
-		await Assert.That(refused).IsNull();
-		await Assert.That(unlimited!.Value.Number).IsEqualTo(2);
+		await Assert.That(kept.Expect<AdmittedMail>().Number).IsEqualTo(1);
+		await Assert.That(elsewhere.Expect<AdmittedMail>().Number).IsEqualTo(1);
+		refused.Expect<MailboxFull>();
+		await Assert.That(unlimited.Expect<AdmittedMail>().Number).IsEqualTo(2);
 
 		var subjects = new List<string>();
 		await foreach (var mail in _db.GetAllIncomingMailsAsync(recipient))
@@ -158,7 +158,7 @@ public class MailTests
 		var admitted = await Task.WhenAll(Enumerable.Range(0, 16).Select(i =>
 			_db.SendMailAsync(sender.Object, recipient, NewMail($"Race{i}", "x"), limit: 10).AsTask()));
 
-		await Assert.That(admitted.Where(a => a is not null).Select(a => a!.Value.Number))
+		await Assert.That(admitted.Select(a => a is AdmittedMail stored ? stored.Number : 0).Where(n => n > 0))
 			.IsEquivalentTo(Enumerable.Range(1, 10));
 		await Assert.That(await _db.GetIncomingMailsAsync(recipient, "INBOX").CountAsync()).IsEqualTo(10);
 	}

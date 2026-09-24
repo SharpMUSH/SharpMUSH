@@ -116,8 +116,8 @@ public class PennMUSHMailImportTests
 		var next = await world.Mediator.Send(new SendMailCommand(alice.Object, bob, Letter("Next")));
 		var refused = await world.Mediator.Send(new SendMailCommand(alice.Object, bob, Letter("Refused"), Limit: 5));
 
-		await Assert.That(next!.Value.Number).IsEqualTo(5);
-		await Assert.That(refused).IsNull();
+		await Assert.That(next.Expect<AdmittedMail>().Number).IsEqualTo(5);
+		refused.Expect<MailboxFull>();
 		await Assert.That((await MailboxAsync(world, 4)).Length).IsEqualTo(6);
 	}
 

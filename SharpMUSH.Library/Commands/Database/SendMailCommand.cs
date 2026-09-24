@@ -7,14 +7,11 @@ namespace SharpMUSH.Library.Commands.Database;
 
 /// <summary>
 /// Stores <paramref name="Mail"/> for <paramref name="Recipient"/>. With a <paramref name="Limit"/>, the message is
-/// refused (answering <see langword="null"/>) when its folder already holds that many, decided in the same write
+/// refused (answering <see cref="MailboxFull"/>) when its folder already holds that many, decided in the same write
 /// that stores it.
 /// </summary>
 public record SendMailCommand(SharpObject Sender, SharpPlayer Recipient, SharpMail Mail, long? Limit = null)
-	: ICommand<MailAdmission?>;
-
-/// <summary>A stored message: its id, and its 1-based number in its folder as of the write that stored it.</summary>
-public readonly record struct MailAdmission(string Id, int Number);
+	: ICommand<MailAdmission>;
 
 public record UpdateMailCommand(SharpMail Mail, MailUpdate Update) : ICommand;
 
