@@ -24,6 +24,30 @@ public class ListAttributeResultTests
 		await Assert.That(result.HadErrors).IsFalse();
 	}
 
+	// sortby() used to run each item's comparisons on its own thread pool task, all sharing the
+	// evaluation's recursion-depth dictionary and call counters. Concurrent writes to that
+	// dictionary threw, and CallFunction turned the exception into an empty, errored result
+	// (GRA-39, #1247). Before the fix, 24 items over a ufun comparator failed within ~450 runs.
+	[Test]
+	public async Task SortByAttributeComparatorIsNotRacy()
+	{
+		var mediator = Factory.Services.GetRequiredService<IMediator>();
+		var attributes = Factory.Services.GetRequiredService<IAttributeService>();
+		var actor = (await mediator.Send(new GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<AnySharpObject>();
+		var name = "SORTBYRACE" + Guid.NewGuid().ToString("N");
+		await attributes.SetAttributeAsync(actor, actor, name, MarkupText.Plain("sub(%0,%1)"));
+		var items = Enumerable.Range(1, 24).Reverse().ToArray();
+		var expression = $"sortby(me/{name},{string.Join(' ', items)})";
+
+		for (var run = 0; run < 200; run++)
+		{
+			var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
+			var observed = $"run {run}: errors={result!.HadErrors}; text={result.Message?.ToPlainText()}";
+			await Assert.That(result.HadErrors).IsFalse().Because(observed);
+			await Assert.That(result.Message!.ToPlainText()).IsEqualTo(string.Join(' ', items.Order())).Because(observed);
+		}
+	}
+
 	[Test]
 	[Arguments("filter", "attribute", "syntax")]
 	[Arguments("filter", "attribute", "literal")]
@@ -148,10 +172,11 @@ public class ListAttributeResultTests
 		TestDiagnostics.WriteLine($"{function}/{route}/{mode}: errors={result!.HadErrors}; text={result.Message}");
 
 		// The line above is routine output, so it is gated on SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING
-		// (TestDiagnostics.cs:18) and CI does not set it. This test was seen failing once in a full
-		// stack run and #1247 records the cause as untraced — with 99 cases sharing one name and no
-		// text expectation for several functions, a bare failure cannot even say which assertion
-		// went. Carried on the assertions too, where it is failure-only output and always survives.
+		// (TestDiagnostics.cs:18) and CI does not set it. The sortby case failed intermittently in
+		// full stack runs (#1247) until GRA-39 traced it to sortby's concurrent comparisons (see
+		// SortByAttributeComparatorIsNotRacy). With 99 cases sharing one name and no text
+		// expectation for several functions, a bare failure cannot even say which assertion went.
+		// Carried on the assertions too, where it is failure-only output and always survives.
 		var observed = $"{function}/{route}/{mode}: expression={expression}; "
 			+ $"errors={result.HadErrors}; text={result.Message?.ToPlainText()}";
 
