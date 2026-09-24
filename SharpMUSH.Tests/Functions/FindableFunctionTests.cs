@@ -35,6 +35,10 @@ public class FindableFunctionTests
 	private async Task God(string command)
 		=> await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
+	/// <summary>Whether <paramref name="who"/> controls <paramref name="what"/>, asked of the engine.</summary>
+	private async Task<bool> Controls(TestIsolationHelpers.TestPlayer who, DBRef what)
+		=> await As(who, $"[controls({who.DbRef},{what})]") == "1";
+
 	/// <summary>
 	/// Evaluates <paramref name="expression"/> as <paramref name="who"/> and returns the answer whole.
 	/// Whole, because <c>#-1 PERMISSION DENIED</c> contains a <c>1</c>: an assertion that merely
@@ -103,17 +107,25 @@ public class FindableFunctionTests
 			.Because("the item is in the other player's room, so they can locate it");
 	}
 
-	/// <summary>See_All is the first arm: a wizard is answered about anyone.</summary>
+	/// <summary>
+	/// See_All is the first arm, and it is asked of the executor alone. The asker carries the See_All
+	/// power and nothing else: a wizard would control both targets and clear the gate on the second
+	/// and third arms instead, so the test would pass with the See_All check deleted.
+	/// </summary>
 	[Test]
-	public async ValueTask AWizardIsAnsweredAboutAnyone()
+	public async ValueTask SeeAllAloneIsAnsweredAboutAnyone()
 	{
-		var wizard = await Mortal("FindableWiz");
-		var other = await Mortal("FindableWizOther");
-		var item = await Thing("FindableWizItem");
-		await Room("FindableWizAskerRoom", wizard.DbRef);
-		await Room("FindableWizRoom", other.DbRef, item);
-		await God($"@set {wizard.DbRef}=WIZARD");
+		var asker = await Mortal("FindableSeeAll");
+		var other = await Mortal("FindableSeeAllOther");
+		var item = await Thing("FindableSeeAllItem");
+		await Room("FindableSeeAllAskerRoom", asker.DbRef);
+		await Room("FindableSeeAllRoom", other.DbRef, item);
+		await God($"@power {asker.DbRef}=See_All");
 
-		await Assert.That(await As(wizard, $"[findable({other.DbRef},{item})]")).IsEqualTo("1");
+		await Assert.That(await Controls(asker, other.DbRef)).IsFalse()
+			.Because("the asker must not clear the gate on the controls arms");
+		await Assert.That(await Controls(asker, item)).IsFalse()
+			.Because("the asker must not clear the gate on the controls arms");
+		await Assert.That(await As(asker, $"[findable({other.DbRef},{item})]")).IsEqualTo("1");
 	}
 }
