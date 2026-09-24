@@ -236,17 +236,27 @@ public class MiscFunctionUnitTests
 	/// did anything is where the victim ended up. Asserting <c>IsNotNull</c> on the answer caught
 	/// neither: it passed while the function answered <c>"1"</c> and moved nobody.
 	/// </summary>
+	/// <remarks>
+	/// The victim is a thing of its own, dug a room of its own, rather than the shared executor sent to
+	/// <c>#0</c>: the executor already stands in <c>#0</c> — the whole session depends on it, see
+	/// <c>MovementParityTests.cs:100-104</c> — so that assertion held whether or not the move happened.
+	/// </remarks>
 	[Test]
 	public async Task Tel()
 	{
-		var result = await Parser.FunctionParse(MarkupText.Plain("tel(%#,#0)"));
+		var victim = (await Parser.FunctionParse(MarkupText.Plain("create(TelVictim)")))!
+			.Message!.ToPlainText().Trim();
+		var room = (await Parser.FunctionParse(MarkupText.Plain("dig(TelDestination)")))!
+			.Message!.ToPlainText().Trim().Split(':')[0];
+
+		var result = await Parser.FunctionParse(MarkupText.Plain($"tel({victim},{room})"));
 
 		await Assert.That(result!.Message!.ToPlainText()).IsEmpty();
 
-		var location = await Parser.FunctionParse(MarkupText.Plain("loc(%#)"));
+		var location = await Parser.FunctionParse(MarkupText.Plain($"loc({victim})"));
 
-		// loc() answers with an objid, and #0's creation stamp is not what is under test here.
-		await Assert.That(location!.Message!.ToPlainText().Trim().Split(':')[0]).IsEqualTo("#0");
+		// loc() answers with an objid, and the room's creation stamp is not what is under test here.
+		await Assert.That(location!.Message!.ToPlainText().Trim().Split(':')[0]).IsEqualTo(room);
 	}
 
 	[Test]

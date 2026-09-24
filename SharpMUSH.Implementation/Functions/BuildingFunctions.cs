@@ -1,5 +1,6 @@
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -372,10 +373,15 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		// fundb.c:2317: command_check_byname(executor, "@tel", …). There is no separate @TEL command
-		// and no alias for one, so the prefix table resolves it to @TELEPORT — whose restrictions,
-		// switches-as-flags and command lock this function is held to.
-		if (!await CanInvokeLockCommandAsync(parser, executor, "@TELEPORT"))
+		// fundb.c:2317: command_check_byname(executor, "@tel", …). Penn's command_find resolves that
+		// name through the same prefix table the dispatcher uses, so the restriction read is the one
+		// belonging to whatever `@tel` would actually run: normally @TELEPORT by abbreviation, but a
+		// game that registers an exact @TEL (@command/add, or a plugin) puts that command in front of
+		// it for typed dispatch, and tel() has to be held to the same one. A name that resolves to
+		// nothing is refused, as command_check_byname's null COMMAND_INFO is.
+		var telCommand = CommandTrie.For(parser.CommandLibrary).FindShortestMatch("@TEL")?.CommandName ?? "@TEL";
+
+		if (!await CanInvokeLockCommandAsync(parser, executor, telCommand))
 		{
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}

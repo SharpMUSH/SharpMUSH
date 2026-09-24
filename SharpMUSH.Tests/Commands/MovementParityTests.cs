@@ -2051,6 +2051,46 @@ public class MovementParityTests
 	}
 
 	/// <summary>
+	/// <c>fun_tel</c> checks <c>command_check_byname(executor, "@tel", …)</c> (<c>fundb.c:2317</c>), and
+	/// Penn resolves that name through the same prefix table command dispatch uses. Normally nothing
+	/// answers to <c>@TEL</c> and the abbreviation reaches <c>@TELEPORT</c> — but a game may register an
+	/// exact <c>@TEL</c>, which then takes typed dispatch, and <c>tel()</c> has to be held to that
+	/// command's restrictions rather than to the ones on the command it no longer runs.
+	/// </summary>
+	[Test]
+	public async ValueTask TelIsHeldToTheRestrictionsOfWhicheverCommandAtTelWouldRun()
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TelNameMover");
+		var room = await OpenRoom("TelNameStart");
+		var destination = await OpenRoom("TelNameDest");
+
+		await God($"@teleport/silent {mover.DbRef}={room}");
+
+		try
+		{
+			await God("@command/add @TEL");
+			await God("@command/restrict @TEL=wizard");
+
+			var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+				await As(mover.Handle, $"think <[tel(me,{destination})]>"));
+
+			await Assert.That(moverSaw).Contains($"<{ErrorMessages.Returns.PermissionDenied}>")
+				.Because("the restriction on the command @tel would run is the one fun_tel reads");
+			await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
+		}
+		finally
+		{
+			await God("@command/delete @TEL");
+		}
+
+		await As(mover.Handle, $"think [tel(me,{destination})]");
+
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(destination))
+			.Because("with @TEL gone the name abbreviates to @TELEPORT again, which restricts nobody");
+	}
+
+	/// <summary>
 	/// <c>tport_dest_ok</c> (<c>wiz.c:313</c>): past the control check, anything that is not a room is
 	/// hopeless — the return is before the TELEPORT lock at <c>wiz.c:320</c> is ever read, so no flag on
 	/// the thing can help. ENTER_OK is the flag that would, if anything did; JUMP_OK is ROOM-only in the
