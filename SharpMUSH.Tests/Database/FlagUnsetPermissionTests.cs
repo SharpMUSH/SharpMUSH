@@ -76,7 +76,7 @@ public class FlagUnsetPermissionTests
 	[Test]
 	public async Task PlainPlayer_CannotUnsetSuspectFromThemselves()
 	{
-		var name = TestIsolationHelpers.GenerateUniqueName("Suspect");
+		var name = $"Susp{Guid.NewGuid():N}"[..12];
 		var created = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {name}=pw_{name}"));
 		var playerDbRef = DBRef.Parse(created.Message!.ToPlainText()!);
 		var player = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();

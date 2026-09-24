@@ -30,13 +30,13 @@ public static class FolderMail
 
 		switch (switches)
 		{
-			case ["FOLDER"] when (arg0, arg1) is (null, null):
+			case ["FOLDERS"] or ["FOLDER"] when (arg0, arg1) is (null, null):
 				return await GetMailFolderInfo(parser, objectDataService, mediator, notifyService, executor, executorPlayer, folderInfo);
 
-			case ["FOLDER"] when (arg0, arg1) is ({ } folder, null):
+			case ["FOLDERS"] or ["FOLDER"] when (arg0, arg1) is ({ } folder, null):
 				return await SetCurrentMailFolder(parser, objectDataService, folderInfo, folder, executor);
 
-			case ["FOLDER"] when (arg0, arg1) is ({ } folder, { } newName):
+			case ["FOLDERS"] or ["FOLDER"] when (arg0, arg1) is ({ } folder, { } newName):
 				return await RenameMailFolder(parser, objectDataService, mediator, notifyService, folder, executor, executorPlayer, newName, folderInfo);
 
 			case ["UNFOLDER"] when (arg0, arg1) is ({ } folder, null):
@@ -88,9 +88,13 @@ public static class FolderMail
 	{
 		await mediator!.Send(new RenameMailFolderCommand(executorPlayer, folder.ToPlainText(), "INBOX"));
 		await notifyService!.Notify(executor, $"MAIL: {folder.ToPlainText()} folder renamed to INBOX.");
+
+		// The messages are in INBOX now, so a reader standing in the emptied folder comes with them.
+		// Penn cannot need this: its active folder is a number, and unfoldering leaves the number alone.
 		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(
-				Folders: [.. (folderInfo?.Folders ?? []).Where(name => name != folder.ToPlainText())]),
+				Folders: [.. (folderInfo?.Folders ?? []).Where(name => name != folder.ToPlainText())],
+				ActiveFolder: folderInfo?.ActiveFolder == folder.ToPlainText() ? "INBOX" : folderInfo?.ActiveFolder),
 			executor.Object(),
 			ignoreNull: true);
 		return MarkupText.Plain("");
@@ -108,12 +112,18 @@ public static class FolderMail
 		await mediator!.Send(new RenameMailFolderCommand(executorPlayer, folder.ToPlainText(), newName.ToPlainText()));
 		await notifyService!.Notify(executor,
 			$"MAIL: {folder.ToPlainText()} folder renamed to {newName.ToPlainText()}.");
+
+		// Renaming the folder being read moves its messages, so it moves the reader with them. The old
+		// name is gone from the mailbox, and an active folder left pointing at it would read nothing.
 		await objectDataService.SetExpandedDataAsync(
 			new ExpandedMailData(
 				Folders: [.. (folderInfo?.Folders ?? [])
 					.Where(name => name != folder.ToPlainText())
 					.Append(newName.ToPlainText())
-					.Distinct()]),
+					.Distinct()],
+				ActiveFolder: folderInfo?.ActiveFolder == folder.ToPlainText()
+					? newName.ToPlainText()
+					: folderInfo?.ActiveFolder),
 			executor.Object(),
 			ignoreNull: true);
 

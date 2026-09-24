@@ -183,8 +183,10 @@ public partial class Functions
 						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 					if (lvl < 0 || lvl >= maxCount)
 						return ValueTask.FromResult(new CallState(ErrorMessages.Returns.RegisterRange));
+					// The stack enumerates innermost-first, so the level IS the index — the same
+					// convention itext() and %i<n> use. r(<n>,iter) indexed it backwards.
 					return ValueTask.FromResult(
-						new CallState(parser.CurrentState.IterationRegisters.ElementAt(maxCount - lvl - 1).Value));
+						new CallState(parser.CurrentState.IterationRegisters.ElementAt(lvl).Value));
 				}
 
 			// stext() context — int depth, or "L" for the outermost switch.

@@ -69,7 +69,7 @@ public class CommandRestrictionTests
 		var player = await PlayerAsync("CmdRestricted", grant);
 		var original = await NameOf(player.DbRef);
 
-		var said = await Run(player, $"@name me={TestIsolationHelpers.GenerateUniqueName("Renamed")}");
+		var said = await Run(player, $"@name me={$"Ren{Guid.NewGuid():N}"[..12]}");
 
 		await Assert.That(await NameOf(player.DbRef)).IsEqualTo(original);
 		await Assert.That(said.Select(delivery => delivery.Message)).Contains("Permission denied.");
@@ -79,7 +79,7 @@ public class CommandRestrictionTests
 	public async Task Mortal_CanRename()
 	{
 		var player = await PlayerAsync("CmdMortal");
-		var renamed = TestIsolationHelpers.GenerateUniqueName("Renamed");
+		var renamed = $"Ren{Guid.NewGuid():N}"[..12];
 
 		await Run(player, $"@name me={renamed}");
 

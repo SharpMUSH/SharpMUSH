@@ -44,7 +44,8 @@ public class ObjectsApiTests(ServerWebAppFactory factory)
 		return http;
 	}
 
-	private static string UniqueName(string prefix) => $"{prefix}{Guid.NewGuid():N}"[..20];
+	// Within player_name_len (15): character names are made from this too.
+	private static string UniqueName(string prefix) => $"{prefix[..Math.Min(prefix.Length, 4)]}{Guid.NewGuid():N}"[..15];
 
 	/// <summary>An account with exactly one character, and a client bearing its session token.</summary>
 	private async Task<(HttpClient Http, int Dbref)> CharacterAsync(string prefix)

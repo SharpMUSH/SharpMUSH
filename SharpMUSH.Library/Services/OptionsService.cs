@@ -65,14 +65,24 @@ public class OptionsService(
 			: throw new OptionsValidationException(name, typeof(SharpMUSHOptions), failures);
 	}
 
-	private SharpMUSHOptions Default()
+	/// <summary>
+	/// The configuration a game starts with when nothing is stored yet.
+	/// </summary>
+	/// <remarks>
+	/// Public because it is one of the two places a shipped default is written down — the other being
+	/// <c>ReadPennMushConfig.Create</c>'s fallbacks, which serve a game imported from a PennMUSH
+	/// <c>mush.cnf</c> — and the two have to agree with each other and with the <c>mushcnf.dst</c>
+	/// this repository ships. They did not: <c>empty_attrs</c> and <c>float_precision</c> each had two
+	/// different answers, so the same game behaved differently depending on how it was first created.
+	/// </remarks>
+	public static SharpMUSHOptions Default()
 	{
 		return new SharpMUSHOptions
 		{
 			Attribute = new AttributeOptions(
 				ADestroy: false,
 				AMail: false,
-				EmptyAttributes: false,
+				EmptyAttributes: true,
 				GenderAttribute: "SEX",
 				PlayerAHear: true,
 				PlayerListen: true,
@@ -122,7 +132,7 @@ public class OptionsService(
 				CountAll: false,
 				ExaminePublicAttributes: true,
 				FlagsOnExamine: true,
-				FloatPrecision: 15,
+				FloatPrecision: 6,
 				MoneyPlural: "Pennies",
 				MoneySingular: "Penny",
 				Monikers: true,

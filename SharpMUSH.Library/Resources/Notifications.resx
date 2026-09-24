@@ -97,6 +97,18 @@
   <data name="CannotClonePlayers" xml:space="preserve">
     <value>You cannot clone players.</value>
   </data>
+  <data name="GuestCantBuild" xml:space="preserve">
+    <value>Sorry, you aren't allowed to build.</value>
+  </data>
+  <data name="BuildingQuotaExhausted" xml:space="preserve">
+    <value>Sorry, your building quota has run out.</value>
+  </data>
+  <data name="ClonePreserveWizardOnly" xml:space="preserve">
+    <value>You cannot @CLONE/PRESERVE. Use normal @CLONE instead.</value>
+  </data>
+  <data name="ClonePreserveCarriedPrivileges" xml:space="preserve">
+    <value>Warning: @CLONE/PRESERVE on an object with WIZ, ROY, @powers, or @warnings.</value>
+  </data>
   <data name="CannotCloneThisObjectType" xml:space="preserve">
     <value>Cannot clone this object type.</value>
   </data>
@@ -353,6 +365,12 @@
   </data>
   <data name="NoZoneTeleport" xml:space="preserve">
     <value>You may not teleport out of the zone from this room.</value>
+  </data>
+  <data name="ExitsOnlyTeleportToRooms" xml:space="preserve">
+    <value>Exits can only be teleported to other rooms.</value>
+  </data>
+  <data name="ExitDestinationCrumbling" xml:space="preserve">
+    <value>You can't move an exit to someplace that's crumbling.</value>
   </data>
   <data name="InTheVoid" xml:space="preserve">
     <value>You're in the Void. This is not a good thing.</value>
@@ -1301,6 +1319,9 @@
   <data name="DefaultHomeLocationInvalid" xml:space="preserve">
     <value>Default home location is invalid.</value>
   </data>
+  <data name="CreateDbrefUnavailable" xml:space="preserve">
+    <value>That is not a valid dbref.</value>
+  </data>
   <data name="MoneyFunctionNotSupported" xml:space="preserve">
     <value>The money() function is not supported. SharpMUSH does not track money or pennies.</value>
   </data>
@@ -1456,35 +1477,65 @@
   <data name="CommandMustSpecifyName" xml:space="preserve">
     <value>You must specify a command name.</value>
   </data>
-  <data name="CommandAddNotImplementedFormat" xml:space="preserve">
-    <value>@command/add: Dynamic command creation not yet implemented.</value>
-  </data>
   <data name="CommandMustSpecifyAlias" xml:space="preserve">
     <value>You must specify an alias name.</value>
-  </data>
-  <data name="CommandAliasNotImplementedFormat" xml:space="preserve">
-    <value>@command/alias: Dynamic command aliasing not yet implemented.</value>
   </data>
   <data name="CommandMustSpecifyCloneName" xml:space="preserve">
     <value>You must specify a clone name.</value>
   </data>
-  <data name="CommandCloneNotImplementedFormat" xml:space="preserve">
-    <value>@command/clone: Command cloning not yet implemented.</value>
+  <data name="CommandAddedFormat" xml:space="preserve">
+    <value>Command {0} added.</value>
   </data>
-  <data name="CommandOnlyGodCanDelete" xml:space="preserve">
-    <value>Only God can delete commands.</value>
+  <data name="CommandAlreadyExistsFormat" xml:space="preserve">
+    <value>Command {0} already exists.</value>
   </data>
-  <data name="CommandDeleteNotImplementedFormat" xml:space="preserve">
-    <value>@command/delete: Command deletion not yet implemented.</value>
+  <data name="CommandBadName" xml:space="preserve">
+    <value>Bad command name.</value>
   </data>
-  <data name="CommandDisableNotImplementedFormat" xml:space="preserve">
-    <value>@command/disable: Command disabling not yet implemented.</value>
+  <data name="CommandNoevalNoLongerNoparse" xml:space="preserve">
+    <value>WARNING: /NOEVAL no longer creates a Noparse command. Use /NOPARSE if that's what you meant.</value>
   </data>
-  <data name="CommandEnableNotImplementedFormat" xml:space="preserve">
-    <value>@command/enable: Command enabling not yet implemented.</value>
+  <data name="CommandAliasBadName" xml:space="preserve">
+    <value>I can't alias a command to that!</value>
   </data>
-  <data name="CommandRestrictNotImplementedFormat" xml:space="preserve">
-    <value>@command/restrict: Command restriction not yet implemented.</value>
+  <data name="CommandAliasFailed" xml:space="preserve">
+    <value>Unable to set alias.</value>
+  </data>
+  <data name="CommandAliasSet" xml:space="preserve">
+    <value>Alias set.</value>
+  </data>
+  <data name="CommandNoSuchCommand" xml:space="preserve">
+    <value>No such command.</value>
+  </data>
+  <data name="CommandCloned" xml:space="preserve">
+    <value>Command cloned.</value>
+  </data>
+  <data name="CommandCannotDeleteBuiltin" xml:space="preserve">
+    <value>You can't delete built-in commands. @command/disable instead.</value>
+  </data>
+  <data name="CommandRemovedFormat" xml:space="preserve">
+    <value>Removed {0} from command table.</value>
+  </data>
+  <data name="CommandRemovedWithAliasesFormat" xml:space="preserve">
+    <value>Removed {0} and aliases from command table.</value>
+  </data>
+  <data name="CommandHowToRestrict" xml:space="preserve">
+    <value>How do you want to restrict the command?</value>
+  </data>
+  <data name="CommandRestrictFailed" xml:space="preserve">
+    <value>Restrict attempt failed.</value>
+  </data>
+  <data name="CommandRestrictMessageUnsupported" xml:space="preserve">
+    <value>A custom failure message is not supported; the restriction was set without it.</value>
+  </data>
+  <data name="CommandAlwaysEnabled" xml:space="preserve">
+    <value>@command is ALWAYS enabled.</value>
+  </data>
+  <data name="CommandCalledByTheGameFormat" xml:space="preserve">
+    <value>{0} is run by the game itself and cannot be disabled.</value>
+  </data>
+  <data name="CommandNotImplemented" xml:space="preserve">
+    <value>This command has not been implemented.</value>
   </data>
   <data name="CommandLibraryUnavailable" xml:space="preserve">
     <value>Command library unavailable.</value>
@@ -1493,7 +1544,7 @@
     <value>Command '{0}' not found.</value>
   </data>
   <data name="CommandInfoNameFormat" xml:space="preserve">
-    <value>Command: {0}</value>
+    <value>Command: {0} ({1})</value>
   </data>
   <data name="CommandInfoTypeFormat" xml:space="preserve">
     <value>  Type: {0}</value>
@@ -1663,11 +1714,32 @@
   </data>
 
   <!-- @config command -->
-  <data name="ConfigOnlyGodCanUseSave" xml:space="preserve">
-    <value>Only God can use /save switch.</value>
+  <data name="ConfigCantRemakeWorld" xml:space="preserve">
+    <value>You can't remake the world in your image.</value>
   </data>
-  <data name="ConfigSetSaveNotImplemented" xml:space="preserve">
-    <value>@config/set and @config/save are not yet implemented.</value>
+  <data name="ConfigWhatToSet" xml:space="preserve">
+    <value>What did you want to set?</value>
+  </data>
+  <data name="ConfigCouldntSet" xml:space="preserve">
+    <value>Couldn't set that option.</value>
+  </data>
+  <data name="ConfigOptionSet" xml:space="preserve">
+    <value>Option set.</value>
+  </data>
+  <data name="ConfigOptionSetAndSaved" xml:space="preserve">
+    <value>Option set and saved.</value>
+  </data>
+  <data name="ConfigOptionNotSettableFormat" xml:space="preserve">
+    <value>{0} cannot be set from inside the game.</value>
+  </data>
+  <data name="ConfigInvalidValueFormat" xml:space="preserve">
+    <value>'{1}' is not a valid value for {0}.</value>
+  </data>
+  <data name="ConfigOptionEnabled" xml:space="preserve">
+    <value>Enabled.</value>
+  </data>
+  <data name="ConfigOptionDisabled" xml:space="preserve">
+    <value>Disabled.</value>
   </data>
   <data name="ConfigCategoriesHeader" xml:space="preserve">
     <value>Configuration Categories:</value>
@@ -1965,8 +2037,11 @@
   <data name="AttributeCommandPermissionsNowFormat" xml:space="preserve">
     <value>{0} -- Attribute permissions now: {1}</value>
   </data>
-  <data name="AttributeCommandRetroactiveNotImplemented" xml:space="preserve">
-    <value>Note: Retroactive flag updating not yet implemented.</value>
+  <data name="AttributeCommandRetroactiveUpdatedFormat" xml:space="preserve">
+    <value>{0} existing copies of {1} updated.</value>
+  </data>
+  <data name="AttributeCommandRetroactivePartialFormat" xml:space="preserve">
+    <value>Stopped after {0} objects: {1} existing copies of {2} updated, {3} could not be. Run the command again to finish.</value>
   </data>
   <data name="AttributeCommandRemovedFromTableFormat" xml:space="preserve">
     <value>Attribute '{0}' removed from standard attribute table.</value>
@@ -2042,35 +2117,41 @@
   </data>
 
   <!-- @stats command -->
-  <data name="StatsTablesNotImplemented" xml:space="preserve">
-    <value>@stats/tables: Internal table statistics not yet implemented.</value>
+  <data name="LogWipeUnsupportedFormat" xml:space="preserve">
+    <value>@logwipe: SharpMUSH cannot {0} the {1} log. Its logs go to the logging sinks in its configuration, which the game does not own; rotate or clear them there.</value>
   </data>
-  <data name="StatsFlagsNotImplemented" xml:space="preserve">
-    <value>@stats/flags: Flag system statistics not yet implemented.</value>
+  <data name="StatsObjectCountsFormat" xml:space="preserve">
+    <value>{0} objects = {1} rooms, {2} exits, {3} things, {4} players.</value>
   </data>
-  <data name="StatsMemorySwitchesNotImplemented" xml:space="preserve">
-    <value>@stats memory switches not yet implemented.</value>
+  <data name="StatsNoSuchPlayerFormat" xml:space="preserve">
+    <value>{0}: No such player.</value>
   </data>
-  <data name="StatsDatabaseStatisticsHeader" xml:space="preserve">
-    <value>Database Statistics:</value>
+  <data name="StatsNeedSearchWarrant" xml:space="preserve">
+    <value>You need a search warrant to do that!</value>
   </data>
-  <data name="StatsForPlayerFormat" xml:space="preserve">
-    <value>  For player: {0}</value>
+  <data name="StatsFlagspaceHeaderFormat" xml:space="preserve">
+    <value>Stats for flagspace {0}:</value>
   </data>
-  <data name="StatsRoomsFormat" xml:space="preserve">
-    <value>  Rooms: {0}</value>
+  <data name="StatsFlagspaceEntriesFormat" xml:space="preserve">
+    <value>  {0} entries in flag table.</value>
   </data>
-  <data name="StatsExitsFormat" xml:space="preserve">
-    <value>  Exits: {0}</value>
+  <data name="StatsFlagspaceFlagsetsFormat" xml:space="preserve">
+    <value>  {0} different flagsets in use. {1} objects with no flags set.</value>
   </data>
-  <data name="StatsThingsFormat" xml:space="preserve">
-    <value>  Things: {0}</value>
+  <data name="StatsFlagspaceMostCommonFormat" xml:space="preserve">
+    <value>  {0} objects share the most common set of flags.</value>
   </data>
-  <data name="StatsPlayersFormat" xml:space="preserve">
-    <value>  Players: {0}</value>
+  <data name="StatsFlagspaceUniqueFormat" xml:space="preserve">
+    <value>  {0} objects have unique flagsets.</value>
   </data>
-  <data name="StatsTotalFormat" xml:space="preserve">
-    <value>  Total: {0}</value>
+  <data name="StatsTablesHeader" xml:space="preserve">
+    <value>Table        Entries</value>
+  </data>
+  <data name="StatsTablesRowFormat" xml:space="preserve">
+    <value>{0,-12} {1,7}</value>
+  </data>
+  <data name="StatsChunksUnsupportedFormat" xml:space="preserve">
+    <value>@stats/{0}: SharpMUSH has no chunk allocator. Attributes live in the database provider, which keeps no equivalent counters.</value>
   </data>
 
   <!-- @entrances command -->
@@ -2442,6 +2523,9 @@
   <data name="PlayerCreateInvalidName" xml:space="preserve">
     <value>That is not a valid player name.</value>
   </data>
+  <data name="PlayerNameNotAllowed" xml:space="preserve">
+    <value>You can't give a player that name.</value>
+  </data>
   <data name="PlayerNameAlreadyExists" xml:space="preserve">
     <value>That player name already exists.</value>
   </data>
@@ -2491,11 +2575,17 @@
   <data name="SitelockHostNoMatchFormat" xml:space="preserve">
     <value>Host '{0}' does not match any sitelock rules (default access allowed).</value>
   </data>
-  <data name="SitelockNameRequiresName" xml:space="preserve">
-    <value>@SITELOCK/NAME requires a player name.</value>
+  <data name="SitelockNameListHeader" xml:space="preserve">
+    <value>Any name matching these wildcard patterns is banned:</value>
   </data>
-  <data name="SitelockNameNotImplemented" xml:space="preserve">
-    <value>@SITELOCK/NAME modification is not yet implemented. Use the admin UI to modify banned names.</value>
+  <data name="SitelockNameLockedFormat" xml:space="preserve">
+    <value>Name {0} locked.</value>
+  </data>
+  <data name="SitelockNameRemoved" xml:space="preserve">
+    <value>Name removed.</value>
+  </data>
+  <data name="SitelockNameNotBannedFormat" xml:space="preserve">
+    <value>No banned name pattern is {0}.</value>
   </data>
   <data name="SitelockBanRequiresPattern" xml:space="preserve">
     <value>@SITELOCK/BAN requires a host pattern.</value>
@@ -2572,15 +2662,6 @@
   </data>
   <data name="EnableDisableNotBooleanFormat" xml:space="preserve">
     <value>Option '{0}' is not a boolean option. Use @config/set instead.</value>
-  </data>
-  <data name="EnableDisableEquivalentFormat" xml:space="preserve">
-    <value>@{0} is equivalent to @config/set {1}={2}</value>
-  </data>
-  <data name="RuntimeConfigNotImplemented" xml:space="preserve">
-    <value>Runtime configuration modification is not yet implemented. Changes require server restart.</value>
-  </data>
-  <data name="ConfigCurrentValueFormat" xml:space="preserve">
-    <value>Current value: {0}={1}</value>
   </data>
   <data name="LocaleSetFormat" xml:space="preserve">
     <value>Locale set to {0}.</value>

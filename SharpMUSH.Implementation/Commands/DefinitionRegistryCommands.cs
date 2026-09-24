@@ -1,4 +1,7 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -20,6 +23,18 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
+	/// <summary>
+	/// PennMUSH's <c>DEF_FUNCTION_ARGS</c> (hdrs/function.h:133) — what <c>@function</c> gives a
+	/// definition that names no maximum.
+	/// </summary>
+	private const int DefaultUserFunctionArguments = 10;
+
+	/// <summary>
+	/// PennMUSH's <c>MAX_STACK_ARGS</c> (hdrs/conf.h:29) — the positional arguments an invocation can
+	/// carry as <c>%0</c>-<c>%9</c> and <c>v(N)</c>, and so the ceiling on either declared bound.
+	/// </summary>
+	private const int MaximumStackArguments = 30;
+
 	[SharpCommand(Name = "@COMMAND",
 		Switches =
 		[
@@ -47,117 +62,85 @@ public partial class Commands
 
 		var isQuiet = switches.Contains("QUIET");
 
-		// Administrative switches - wizard only (except DELETE which requires God)
-		if (switches.Any(s => new[] { "ADD", "ALIAS", "CLONE", "DELETE", "DISABLE", "ENABLE", "RESTRICT" }.Contains(s)))
+		// cmd_command: /add, /alias and /clone are Wizard, /delete is God; each answers for itself.
+		if (switches.Contains("ADD"))
 		{
-			if (!await executor.IsWizard())
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
-			if (switches.Contains("ADD"))
-			{
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAddNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
-
-			if (switches.Contains("ALIAS"))
-			{
-				var aliasName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
-				if (string.IsNullOrEmpty(aliasName))
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyAlias), executor);
-					return new CallState(ErrorMessages.Returns.NoAliasSpecified);
-				}
-
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAliasNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
-
-			if (switches.Contains("CLONE"))
-			{
-				var cloneName = args.GetValueOrDefault("1")?.Message?.ToPlainText();
-				if (string.IsNullOrEmpty(cloneName))
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandMustSpecifyCloneName), executor);
-					return new CallState(ErrorMessages.Returns.NoCloneNameSpecified);
-				}
-
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandCloneNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
-
-			if (switches.Contains("DELETE"))
-			{
-				if (!executor.IsGod())
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandOnlyGodCanDelete), executor);
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
-				}
-
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandDeleteNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
-
-			if (switches.Contains("DISABLE"))
-			{
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandDisableNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
-
-			if (switches.Contains("ENABLE"))
-			{
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandEnableNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
-
-			if (switches.Contains("RESTRICT"))
-			{
-				var restriction = args.GetValueOrDefault("1")?.Message?.ToPlainText();
-				if (!isQuiet)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRestrictNotImplementedFormat), executor);
-				}
-				return new CallState(ErrorMessages.Returns.NotImplemented);
-			}
+			return await AddCommandAsync(executor, commandName, switches);
 		}
 
-		if (CommandLibrary == null)
+		if (switches.Contains("ALIAS"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandLibraryUnavailable), executor);
-			return new CallState(ErrorMessages.Returns.LibraryUnavailable);
+			return await AliasCommandAsync(executor, commandName, args.GetValueOrDefault("1")?.Message?.ToPlainText().Trim().ToUpperInvariant() ?? "", isQuiet);
 		}
 
-		if (!CommandLibrary.TryGetValue(commandName, out var commandInfo))
+		if (switches.Contains("CLONE"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNotFoundFormat), executor, commandName);
+			return await CloneCommandAsync(executor, commandName, args.GetValueOrDefault("1")?.Message?.ToPlainText().Trim().ToUpperInvariant() ?? "");
+		}
+
+		if (switches.Contains("DELETE"))
+		{
+			return await DeleteCommandAsync(executor, commandName);
+		}
+
+		// A disabled command is still found here, as command_find still finds it in Penn.
+		(CommandDefinition LibraryInformation, bool IsSystem) commandInfo;
+		var disabled = false;
+		if (CommandLibrary.TryGetValue(commandName, out var live))
+		{
+			commandInfo = live;
+		}
+		else if (DisabledCommandFor(commandName) is { } parked)
+		{
+			commandInfo = parked[0].Value;
+			disabled = true;
+		}
+		else
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNoSuchCommand), executor);
 			return new CallState(ErrorMessages.Returns.CommandNotFound);
+		}
+
+		// cmd_command: for a wizard, the state switches act, then the command is described.
+		if (await executor.IsWizard())
+		{
+			if (switches.Contains("ON") || switches.Contains("ENABLE"))
+			{
+				EnableCommand(commandName);
+			}
+			else if ((switches.Contains("OFF") || switches.Contains("DISABLE"))
+							 && await DisableCommandAsync(executor, commandInfo.LibraryInformation) is CallState disableRefused)
+			{
+				return disableRefused;
+			}
+
+			if (switches.Contains("RESTRICT")
+					&& await RestrictCommandAsync(executor, commandInfo.LibraryInformation, args.GetValueOrDefault("1")?.Message?.ToPlainText() ?? "") is CallState restrictRefused)
+			{
+				return restrictRefused;
+			}
+
+			disabled = !CommandLibrary.ContainsKey(commandName) && DisabledCommandFor(commandName) is not null;
+		}
+		else if (switches.Any(sw => sw is "ON" or "OFF" or "ENABLE" or "DISABLE" or "RESTRICT"))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (isQuiet)
+		{
+			return CallState.Empty;
 		}
 
 		var (definition, isSystem) = commandInfo;
 		var attr = definition.Attribute;
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoNameFormat), executor, attr.Name);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoTypeFormat), executor, isSystem ? "Built-in" : "User-defined");
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoNameFormat), executor, attr.Name, disabled ? "Disabled" : "Enabled");
+		// A command @command/add made is registered as a system entry because only those are matched
+		// from the command trie, but it is not built in, and list_commands tells the two apart.
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoTypeFormat), executor,
+			isSystem && !IsAddedCommand(definition) ? "Built-in" : "User-defined");
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMinArgsFormat), executor, attr.MinArgs);
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMaxArgsFormat), executor, attr.MaxArgs);
 
@@ -186,6 +169,516 @@ public partial class Commands
 		}
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// Commands <c>@command/disable</c> has taken out of the table, keyed by the command's name, with
+	/// every name (the command and its aliases) it was reachable by. Penn marks a disabled command
+	/// CMD_T_DISABLED and then treats it as no command at all (<c>src/command.c:1320</c>), so the line
+	/// falls through to $-commands and HUH; taking it out of the table is how that happens here.
+	/// </summary>
+	private readonly Dictionary<string, List<KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>>> _disabledCommands
+		= new(StringComparer.OrdinalIgnoreCase);
+
+	private readonly Lock _commandTableLock = new();
+
+	/// <summary>
+	/// The commands the engine invokes by name rather than by matching what was typed. They cannot be
+	/// taken out of the table: the engine would find nothing to run.
+	/// </summary>
+	private static readonly HashSet<string> CommandsTheGameRuns = new(["HUH_COMMAND", "@CHAT", "GOTO"], StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>What <c>@command/add</c> installs: Penn's <c>cmd_unimplemented</c>, for a hook to replace.</summary>
+	private async ValueTask<Option<CallState>> CommandAddedWithoutHook(IMUSHCodeParser parser)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNotImplemented), executor);
+		return new None();
+	}
+
+	/// <summary>Whether <paramref name="definition"/> was made by <c>@command/add</c> (or cloned from one).</summary>
+	private bool IsAddedCommand(CommandDefinition definition)
+		=> definition.Command.Method == ((Func<IMUSHCodeParser, ValueTask<Option<CallState>>>)CommandAddedWithoutHook).Method;
+
+	private List<KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>>? DisabledCommandFor(string name)
+	{
+		lock (_commandTableLock)
+		{
+			return _disabledCommands.Values.FirstOrDefault(entries => entries.Any(entry => entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase)));
+		}
+	}
+
+	private async ValueTask<bool> ValidCommandName(string name)
+		=> name.Length > 0 && await ValidateService.Valid(IValidateService.ValidationType.CommandName, MarkupText.Plain(name), new None());
+
+	/// <summary>
+	/// <c>do_command_add</c> (<c>src/command.c:1923</c>): a new command that does nothing until it is
+	/// hooked, parsed as its switches say. Unless it is /noparse and /rsnoparse both, it also takes a
+	/// /noeval switch, which leaves its arguments unevaluated for that one use.
+	/// </summary>
+	private async ValueTask<Option<CallState>> AddCommandAsync(AnySharpObject executor, string name, string[] switches)
+	{
+		if (switches.Contains("NOEVAL"))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNoevalNoLongerNoparse), executor);
+		}
+
+		if (!await executor.IsWizard())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (FindCommand(name) is { } taken)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAlreadyExistsFormat), executor,
+				taken.LibraryInformation.Attribute.Name);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		if (!await ValidCommandName(name))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandBadName), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		var behavior = CommandBehavior.Default;
+		if (switches.Contains("NOPARSE")) behavior |= CommandBehavior.NoParse;
+		if (switches.Contains("RSARGS")) behavior |= CommandBehavior.RSArgs;
+		if (switches.Contains("LSARGS")) behavior |= CommandBehavior.LSArgs;
+		if (switches.Contains("EQSPLIT")) behavior |= CommandBehavior.EqSplit;
+		if (switches.Contains("RSNOPARSE")) behavior |= CommandBehavior.RSNoParse;
+
+		var attribute = new SharpCommandAttribute
+		{
+			Name = name,
+			Behavior = behavior,
+			Switches = behavior.HasFlag(CommandBehavior.NoParse) && behavior.HasFlag(CommandBehavior.RSNoParse) ? [] : ["NOEVAL"]
+		};
+
+		lock (_commandTableLock)
+		{
+			CommandLibrary[name] = (new CommandDefinition(attribute, CommandAddedWithoutHook), true);
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAddedFormat), executor, name);
+		return new CallState(name);
+	}
+
+	/// <summary><c>alias_command</c>: a second name for an existing command, which must not already be taken.</summary>
+	private async ValueTask<Option<CallState>> AliasCommandAsync(AnySharpObject executor, string name, string alias, bool quiet)
+	{
+		if (!await executor.IsWizard())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (!await ValidCommandName(alias))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAliasBadName), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		bool aliased;
+		lock (_commandTableLock)
+		{
+			aliased = CommandLibrary.TryGetValue(name, out var command) && CommandLibrary.TryAdd(alias, command);
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+
+		if (!aliased)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAliasFailed), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		if (!quiet)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAliasSet), executor);
+		}
+
+		return new CallState(alias);
+	}
+
+	/// <summary>
+	/// <c>do_command_clone</c> (<c>src/command.c:1960</c>): a separate command that starts as a copy of
+	/// the original — its parsing, switches, lock and hooks — and can then be restricted or hooked
+	/// on its own.
+	/// </summary>
+	private async ValueTask<Option<CallState>> CloneCommandAsync(AnySharpObject executor, string original, string clone)
+	{
+		if (!await executor.IsWizard())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (!CommandLibrary.TryGetValue(original, out var source))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNoSuchCommand), executor);
+			return new CallState(ErrorMessages.Returns.CommandNotFound);
+		}
+
+		if (!await ValidCommandName(clone) || CommandLibrary.ContainsKey(clone) || DisabledCommandFor(clone) is not null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandBadName), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		var from = source.LibraryInformation.Attribute;
+		var attribute = new SharpCommandAttribute
+		{
+			Name = clone,
+			MinArgs = from.MinArgs,
+			MaxArgs = from.MaxArgs,
+			CommandLock = from.CommandLock,
+			Behavior = from.Behavior,
+			Switches = from.Switches is null ? null : [.. from.Switches],
+			SingleArgumentSwitches = [.. from.SingleArgumentSwitches],
+			ParameterNames = [.. from.ParameterNames]
+		};
+
+		lock (_commandTableLock)
+		{
+			CommandLibrary[clone] = (source.LibraryInformation with { Attribute = attribute }, source.IsSystem);
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+
+		foreach (var (type, hook) in await HookService.GetAllHooksAsync(from.Name))
+		{
+			await HookService.SetHookAsync(clone, type, hook.TargetObject, hook.AttributeName,
+				hook.Inline, hook.NoBreak, hook.Localize, hook.ClearRegs);
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandCloned), executor);
+		return new CallState(clone);
+	}
+
+	/// <summary>
+	/// <c>do_command_delete</c> (<c>src/command.c:2067</c>), God only: an alias is simply removed; a
+	/// command is removed with all its aliases, and only if <c>@command/add</c> made it.
+	/// </summary>
+	private async ValueTask<Option<CallState>> DeleteCommandAsync(AnySharpObject executor, string name)
+	{
+		if (!executor.IsGod())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		// command_find_exact still finds a disabled command, so /delete reaches one too.
+		if (FindCommand(name) is not { } command)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNoSuchCommand), executor);
+			return new CallState(ErrorMessages.Returns.CommandNotFound);
+		}
+
+		var definition = command.LibraryInformation;
+		if (!definition.Attribute.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+		{
+			await ForgetCommandNamesAsync([name]);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRemovedFormat), executor, name);
+			return new CallState(name);
+		}
+
+		if (!IsAddedCommand(definition))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandCannotDeleteBuiltin), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		var removed = await ForgetCommandNamesAsync(NamesOf(definition.Attribute));
+
+		await NotifyService.NotifyLocalized(executor,
+			removed > 1 ? nameof(ErrorMessages.Notifications.CommandRemovedWithAliasesFormat) : nameof(ErrorMessages.Notifications.CommandRemovedFormat),
+			executor, name);
+		return new CallState(name);
+	}
+
+	/// <summary>
+	/// The command <paramref name="name"/> names, whether it is in the table or <c>@command/disable</c>
+	/// has parked it — <c>command_find_exact</c> finds a disabled command too.
+	/// </summary>
+	private (CommandDefinition LibraryInformation, bool IsSystem)? FindCommand(string name)
+	{
+		if (CommandLibrary.TryGetValue(name, out var live))
+		{
+			return live;
+		}
+
+		lock (_commandTableLock)
+		{
+			return _disabledCommands.Values
+				.SelectMany(entries => entries)
+				.Where(entry => entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+				.Select(entry => ((CommandDefinition, bool)?)entry.Value)
+				.FirstOrDefault();
+		}
+	}
+
+	/// <summary>Every name <paramref name="attribute"/>'s command answers to, parked ones included.</summary>
+	private string[] NamesOf(SharpCommandAttribute attribute)
+	{
+		lock (_commandTableLock)
+		{
+			return
+			[
+				.. CommandLibrary.Where(entry => ReferenceEquals(entry.Value.LibraryInformation.Attribute, attribute)).Select(entry => entry.Key),
+				.. _disabledCommands.Values.SelectMany(entries => entries)
+					.Where(entry => ReferenceEquals(entry.Value.LibraryInformation.Attribute, attribute)).Select(entry => entry.Key)
+			];
+		}
+	}
+
+	/// <summary>
+	/// Forgets <paramref name="names"/> entirely: out of the table, out of the disabled parking, and
+	/// out of the hook service. Penn frees the COMMAND_INFO and its hooks with it
+	/// (<c>src/command.c:2100-2104</c>), so a name added again comes back unhooked — an alias as much
+	/// as the command itself.
+	/// </summary>
+	private async ValueTask<int> ForgetCommandNamesAsync(string[] names)
+	{
+		lock (_commandTableLock)
+		{
+			foreach (var name in names)
+			{
+				CommandLibrary.Remove(name);
+			}
+
+			foreach (var (parked, entries) in _disabledCommands.ToArray())
+			{
+				entries.RemoveAll(entry => names.Contains(entry.Key, StringComparer.OrdinalIgnoreCase));
+				if (entries.Count == 0)
+				{
+					_disabledCommands.Remove(parked);
+				}
+			}
+
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+
+		foreach (var name in names)
+		{
+			foreach (var (type, _) in await HookService.GetAllHooksAsync(name))
+			{
+				await HookService.ClearHookAsync(name, type);
+			}
+		}
+
+		return names.Length;
+	}
+
+	/// <summary>
+	/// Takes <paramref name="definition"/> out of the table under every name it has, keeping them for
+	/// <see cref="EnableCommand"/>. <c>@command</c> itself stays: "@command is ALWAYS enabled."
+	/// </summary>
+	private async ValueTask<Option<CallState>> DisableCommandAsync(AnySharpObject executor, CommandDefinition definition)
+	{
+		if (definition.Attribute.Name.Equals("@COMMAND", StringComparison.OrdinalIgnoreCase))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAlwaysEnabled), executor);
+			return new None();
+		}
+
+		if (CommandsTheGameRuns.Contains(definition.Attribute.Name))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandCalledByTheGameFormat), executor, definition.Attribute.Name);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		lock (_commandTableLock)
+		{
+			var entries = CommandLibrary.Where(entry => ReferenceEquals(entry.Value.LibraryInformation.Attribute, definition.Attribute)).ToList();
+			foreach (var entry in entries)
+			{
+				CommandLibrary.Remove(entry.Key);
+			}
+
+			if (entries.Count > 0)
+			{
+				_disabledCommands[definition.Attribute.Name] = entries;
+			}
+
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+
+		return new None();
+	}
+
+	/// <summary>Puts a disabled command back under every name it had.</summary>
+	private void EnableCommand(string name)
+	{
+		lock (_commandTableLock)
+		{
+			var parked = _disabledCommands.FirstOrDefault(disabled => disabled.Value.Any(entry => entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase)));
+			if (parked.Value is null)
+			{
+				return;
+			}
+
+			foreach (var (key, value) in parked.Value)
+			{
+				CommandLibrary.TryAdd(key, value);
+			}
+
+			_disabledCommands.Remove(parked.Key);
+			CommandTrie.Invalidate(CommandLibrary);
+		}
+	}
+
+	/// <summary>
+	/// <c>restrict_command</c> (<c>src/command.c:1719</c>): who may use the command, given as a lock or
+	/// as Penn's restriction words — a flag or power name, <c>admin</c>, <c>player</c>/<c>thing</c>/
+	/// <c>room</c>/<c>exit</c>/<c>any</c>, <c>god</c>, <c>noguest</c>, <c>nogagged</c>, <c>nofixed</c>,
+	/// each negated with <c>!</c> — and <c>nobody</c>, which disables it.
+	/// </summary>
+	private async ValueTask<Option<CallState>> RestrictCommandAsync(AnySharpObject executor, CommandDefinition definition, string restriction)
+	{
+		var quote = restriction.IndexOf('"');
+		var hasMessage = quote >= 0 && restriction[(quote + 1)..].Trim().Length > 0;
+		var words = (quote >= 0 ? restriction[..quote] : restriction).Trim();
+		if (words.Length == 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandHowToRestrict), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		var attribute = definition.Attribute;
+		switch (await RestrictionFromWords(words, attribute.Behavior))
+		{
+			case CommandRestriction { Disables: true }:
+				// "nobody" is CMD_T_DISABLED, so the refusals @command/disable answers with are this
+				// command's answers too.
+				if (await DisableCommandAsync(executor, definition) is CallState refused)
+				{
+					return refused;
+				}
+
+				break;
+			case CommandRestriction translated:
+				attribute.CommandLock = translated.Lock;
+				attribute.Behavior = translated.Behavior;
+				break;
+			case NotFound when LockService.Validate(words, executor):
+				attribute.CommandLock = words;
+				break;
+			default:
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRestrictFailed), executor);
+				return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		if (hasMessage)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRestrictMessageUnsupported), executor);
+		}
+
+		return new None();
+	}
+
+	private readonly record struct CommandRestriction(string Lock, CommandBehavior Behavior, bool Disables);
+
+	/// <summary>
+	/// Penn's old-style restriction words as a lock, the way <c>restrict_command</c> builds one: the
+	/// named flags and powers OR'ed, the allowed types OR'ed, and <c>!FLAG^FIXED</c> for
+	/// <c>nofixed</c>; <c>god</c>, <c>noguest</c> and <c>nogagged</c> become the command behaviours
+	/// that already enforce them. NotFound when any word is not one of these, so the text is a lock.
+	/// </summary>
+	private async ValueTask<Found<CommandRestriction>> RestrictionFromWords(string words, CommandBehavior behavior)
+	{
+		string[] allTypes = ["PLAYER", "THING", "ROOM", "EXIT"];
+		var types = new HashSet<string>(allTypes);
+		// "Commands can also give any flag, power or type, to restrict to objects ... of one of those
+		// types" (help restrict2): the first type named is the whole allowed set, and later ones add to
+		// it. A negated type subtracts from every type, which is what `noplayer` is for.
+		var narrowed = false;
+		var flags = new List<string>();
+		var noFixed = false;
+		var disables = false;
+
+		foreach (var token in words.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		{
+			var clear = token.StartsWith('!');
+			var word = (clear ? token[1..] : token).ToUpperInvariant();
+			if (word == "NOPLAYER")
+			{
+				clear = !clear;
+				word = "PLAYER";
+			}
+
+			switch (word)
+			{
+				case "NOBODY":
+					disables = !clear;
+					break;
+				case "ANY":
+					if (clear)
+					{
+						types.Clear();
+					}
+					else
+					{
+						types.UnionWith(allTypes);
+						narrowed = false;
+					}
+
+					break;
+				case "PLAYER" or "THING" or "ROOM" or "EXIT":
+					if (clear)
+					{
+						types.Remove(word);
+					}
+					else
+					{
+						if (!narrowed)
+						{
+							types.Clear();
+							narrowed = true;
+						}
+
+						types.Add(word);
+					}
+
+					break;
+				case "GOD":
+					behavior = clear ? behavior & ~CommandBehavior.God : behavior | CommandBehavior.God;
+					break;
+				case "NOGUEST":
+					behavior = clear ? behavior & ~CommandBehavior.NoGuest : behavior | CommandBehavior.NoGuest;
+					break;
+				case "NOGAGGED":
+					behavior = clear ? behavior & ~CommandBehavior.NoGagged : behavior | CommandBehavior.NoGagged;
+					break;
+				case "NOFIXED":
+					noFixed = !clear;
+					break;
+				case "ADMIN":
+					foreach (var admin in new[] { "FLAG^ROYALTY", "FLAG^WIZARD" })
+					{
+						if (clear) flags.Remove(admin); else if (!flags.Contains(admin)) flags.Add(admin);
+					}
+
+					break;
+				default:
+					var term = await Mediator.Send(new GetObjectFlagQuery(word)) is not null ? $"FLAG^{word}"
+						: await Mediator.Send(new GetPowerQuery(word)) is not null ? $"POWER^{word}"
+						: null;
+					if (term is null)
+					{
+						return new NotFound();
+					}
+
+					if (clear) flags.Remove(term); else if (!flags.Contains(term)) flags.Add(term);
+					break;
+			}
+		}
+
+		List<string> clauses = [];
+		if (flags.Count > 0) clauses.Add($"({string.Join('|', flags)})");
+		if (types.Count < allTypes.Length) clauses.Add($"({string.Join('|', allTypes.Where(types.Contains).Select(type => $"TYPE^{type}"))})");
+		if (noFixed) clauses.Add("!FLAG^FIXED");
+		return new CommandRestriction(string.Join('&', clauses), behavior, disables);
 	}
 
 	[SharpCommand(Name = "@FUNCTION",
@@ -493,16 +986,20 @@ public partial class Commands
 					return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, functionName.ToUpperInvariant()));
 				}
 
-				// Parse min/max arg bounds (default 0..32, the engine-wide max).
+				// Bounds follow PennMUSH's do_function (function.c:1703-1721): an omitted maximum is
+				// DEF_FUNCTION_ARGS, a negative one keeps its magnitude (PennMUSH's "do not split the
+				// last argument" marker, which a user function has no way to honour), and either bound
+				// is clamped to MAX_STACK_ARGS — the engine carries no more positional arguments than
+				// that, so a larger number would be a promise it cannot keep.
 				var minArgs = 0;
-				var maxArgs = 32;
+				var maxArgs = DefaultUserFunctionArguments;
 				if (args.Count >= 4 && int.TryParse(args.GetValueOrDefault("3")?.Message?.ToPlainText(), out var parsedMin))
 				{
-					minArgs = parsedMin;
+					minArgs = Math.Clamp(parsedMin, 0, MaximumStackArguments);
 				}
 				if (args.Count >= 5 && int.TryParse(args.GetValueOrDefault("4")?.Message?.ToPlainText(), out var parsedMax))
 				{
-					maxArgs = parsedMax;
+					maxArgs = Math.Min(Math.Abs(parsedMax), MaximumStackArguments);
 				}
 
 				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
@@ -602,6 +1099,78 @@ public partial class Commands
 		}
 	}
 
+	/// <summary>
+	/// The retroactive half of PennMUSH's <c>do_attribute_access</c> (<c>src/atr_tab.c:816-826</c>):
+	/// every object's own copy of <paramref name="name"/> gets exactly <paramref name="flags"/> — its
+	/// <c>branch</c> flag aside, which is Penn's AF_ROOT and is kept — and the executor as its creator.
+	/// </summary>
+	/// <remarks>
+	/// One pass over the world, streamed an object at a time, each change a cache-invalidating command.
+	/// The pass stops when the command's execution budget runs out; what it has changed stays changed,
+	/// and the report says how far it got rather than claiming every copy was reached.
+	/// </remarks>
+	private async ValueTask RetroactiveAttributeAccessAsync(AnySharpObject executor, string name, SharpAttributeFlag[] flags)
+	{
+		var cancellationToken = ExecutionBudget.CurrentToken;
+		var creator = await executor.Object().Owner.WithCancellation(cancellationToken);
+		var path = name.Split('`');
+		var (scanned, updated, failed) = (0, 0, 0);
+
+		try
+		{
+			await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()).WithCancellation(cancellationToken))
+			{
+				scanned++;
+				var copy = await Mediator.CreateStream(new GetAttributeQuery(obj.DBRef, path)).LastOrDefaultAsync(cancellationToken);
+				if (copy is null || !copy.LongName.Equals(name, StringComparison.OrdinalIgnoreCase))
+				{
+					continue;
+				}
+
+				try
+				{
+					foreach (var flag in copy.Flags.Where(had => !IsBranchFlag(had) && !flags.Any(wanted => wanted.Name == had.Name)))
+					{
+						await Mediator.Send(new UnsetAttributeFlagCommand(obj.DBRef, copy, flag), cancellationToken);
+					}
+
+					foreach (var flag in flags.Where(wanted => !copy.Flags.Any(had => had.Name == wanted.Name)))
+					{
+						await Mediator.Send(new SetAttributeFlagCommand(obj.DBRef, copy, flag), cancellationToken);
+					}
+
+					await Mediator.Send(new SetAttributeOwnerCommand(obj.DBRef, path, creator), cancellationToken);
+					updated++;
+				}
+				catch (Exception ex) when (ex is not OperationCanceledException)
+				{
+					failed++;
+					Logger.LogWarning(ex, "@attribute/retroactive could not update {Attribute} on {Object}", name, obj.DBRef);
+				}
+			}
+		}
+		catch (OperationCanceledException)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRetroactivePartialFormat),
+				executor, scanned, updated, name, failed);
+			return;
+		}
+
+		if (failed > 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRetroactivePartialFormat),
+				executor, scanned, updated, name, failed);
+			return;
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRetroactiveUpdatedFormat),
+			executor, updated, name);
+	}
+
+	/// <summary>Penn's AF_ROOT: whether the attribute has branches below it, which is structure, not permission.</summary>
+	private static bool IsBranchFlag(SharpAttributeFlag flag)
+		=> flag.Name.Equals("branch", StringComparison.OrdinalIgnoreCase);
+
 	[SharpCommand(Name = "@ATTRIBUTE",
 		Switches = ["ACCESS", "DELETE", "RENAME", "RETROACTIVE", "LIMIT", "ENUM", "DECOMPILE"],
 		Behavior = CB.Default | CB.EqSplit, MinArgs = 0, MaxArgs = 2, ParameterNames = ["attribute", "options..."])]
@@ -688,9 +1257,12 @@ public partial class Commands
 			var flagList = args["1"].Message?.ToPlainText() ?? "none";
 			var retroactive = switches.Contains("RETROACTIVE");
 
-			var flagNames = flagList.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-				.Select(f => f.ToUpper())
-				.ToArray();
+			// strcasecmp(perms, "none"): no permissions at all, not a flag called NONE.
+			var flagNames = flagList.Trim().Equals("none", StringComparison.OrdinalIgnoreCase)
+				? []
+				: flagList.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+					.Select(f => f.ToUpper())
+					.ToArray();
 
 			var allFlags = await Mediator.CreateStream(new GetAttributeFlagsQuery()).ToArrayAsync();
 			foreach (var flagName in flagNames)
@@ -714,12 +1286,10 @@ public partial class Commands
 
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandPermissionsNowFormat), executor, attrName.ToUpperInvariant(), string.Join(" ", flagNames.Select(f => f.ToLowerInvariant())));
 
-			// TODO: Retroactive flag updates to existing attribute instances.
-			// When /retroactive is set, should update flags on all existing copies of this attribute
-			// across all objects in the database. Requires bulk update operation.
 			if (retroactive)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeCommandRetroactiveNotImplemented), executor);
+				await RetroactiveAttributeAccessAsync(executor, attrName.ToUpperInvariant(),
+					[.. allFlags.Where(flag => flagNames.Contains(flag.Name, StringComparer.OrdinalIgnoreCase))]);
 			}
 
 			return CallState.Empty;
@@ -939,486 +1509,11 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Flag(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches;
-		var operation = SelectDefinitionOperation(switches, power: false);
+		var operation = SelectDefinitionOperation(parser.CurrentState.Switches, power: false);
 
-		if (operation == DefinitionOperation.List)
+		if (operation != DefinitionOperation.Default)
 		{
-			var output = new System.Text.StringBuilder();
-			output.AppendLine("Object Flags:");
-			output.AppendLine("Name                 Symbol Type Restrictions");
-			output.AppendLine("-------------------- ------ -------------------");
-
-			var flags = Mediator.CreateStream(new GetAllObjectFlagsQuery());
-			await foreach (var flag in flags)
-			{
-				var types = string.Join(",", flag.TypeRestrictions);
-				output.AppendLine($"{flag.Name,-20} {flag.Symbol,-6} {types}");
-			}
-
-			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
-			return CallState.Empty;
-		}
-
-		// Authorize the selected operation, not an unrelated switch in the same request.
-		if (operation is not (DefinitionOperation.Default or DefinitionOperation.List or DefinitionOperation.Decompile or DefinitionOperation.Debug) && !executor.IsGod())
-		{
-			await NotifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.NotEnoughMagic), executor);
-			return CallState.Empty;
-		}
-
-		if (operation == DefinitionOperation.Debug && !await executor.IsWizard())
-		{
-			await NotifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return CallState.Empty;
-		}
-
-		if (operation == DefinitionOperation.Add)
-		{
-			if (parser.CurrentState.Arguments.Count < 2)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAddRequiresNameAndSymbol), executor);
-				return CallState.Empty;
-			}
-
-			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-			var symbol = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-			if (string.IsNullOrWhiteSpace(flagName) || string.IsNullOrWhiteSpace(symbol))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameAndSymbolCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			var existingFlag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
-			if (existingFlag != null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAlreadyExistsFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			var result = await Mediator.Send(new CreateObjectFlagCommand(
-				flagName.ToUpper(),
-				null, // aliases
-				symbol,
-				false, // system - user-created flags are NEVER system flags
-				["FLAG^WIZARD"], // default set permissions
-				["FLAG^WIZARD"], // default unset permissions
-				["PLAYER", "THING", "ROOM", "EXIT"] // default type restrictions
-			));
-
-			if (result != null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagCreatedWithSymbolFormat), executor, flagName, symbol);
-				return new CallState(MarkupText.Plain(flagName));
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCreateFlagFormat), executor, flagName);
-				return CallState.Empty;
-			}
-		}
-
-		if (operation == DefinitionOperation.Delete)
-		{
-			if (parser.CurrentState.Arguments.Count < 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDeleteRequiresName), executor);
-				return CallState.Empty;
-			}
-
-			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-
-			if (string.IsNullOrWhiteSpace(flagName))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
-			if (flag == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			if (flag.System)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			var result = await Mediator.Send(new DeleteObjectFlagCommand(flagName.ToUpper()));
-
-			if (result)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDeletedFormat), executor, flagName);
-				return new CallState(MarkupText.Plain(flagName));
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToDeleteFlagFormat), executor, flagName);
-				return CallState.Empty;
-			}
-		}
-
-		if (operation == DefinitionOperation.Letter)
-		{
-			// PennMUSH src/flags.c do_flag_letter, via src/cmds.c cmd_flag with ns "FLAG".
-			if (parser.CurrentState.Arguments.Count < 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterRequiresName), executor);
-				return CallState.Empty;
-			}
-
-			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
-
-			if (string.IsNullOrWhiteSpace(flagName))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			// do_flag_letter treats an absent and an empty letter alike: both clear it.
-			var newSymbol = parser.CurrentState.Arguments.Count > 1
-				? parser.CurrentState.Arguments["1"].Message!.ToPlainText().Trim()
-				: string.Empty;
-
-			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
-			if (flag == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			if (flag.System)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			if (newSymbol.Length > 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagCharactersMustBeSingleCharacters), executor);
-				return CallState.Empty;
-			}
-
-			if (newSymbol.Length == 1)
-			{
-				var conflict = await FindLetterConflict(
-					Mediator.CreateStream(new GetAllObjectFlagsQuery())
-						.Select(x => (x.Name, x.Symbol, x.TypeRestrictions)),
-					flag.Name, newSymbol, flag.TypeRestrictions);
-
-				if (conflict is not null)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterConflictFormat), executor, conflict);
-					return CallState.Empty;
-				}
-			}
-
-			var result = await Mediator.Send(new UpdateObjectFlagCommand(
-				flag.Name,
-				flag.Aliases,
-				newSymbol,
-				flag.SetPermissions,
-				flag.UnsetPermissions,
-				flag.TypeRestrictions
-			));
-
-			if (!result)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			if (newSymbol.Length == 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterSetFormat), executor, flag.Name, newSymbol);
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagLetterClearedFormat), executor, flag.Name);
-			}
-
-			return new CallState(MarkupText.Plain(flag.Name));
-		}
-
-		if (operation == DefinitionOperation.Type)
-		{
-			if (parser.CurrentState.Arguments.Count < 2)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagTypeRequiresNameAndTypes), executor);
-				return CallState.Empty;
-			}
-
-			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-			var typesArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-			if (string.IsNullOrWhiteSpace(flagName) || string.IsNullOrWhiteSpace(typesArg))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameAndTypesCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
-			if (flag == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			if (flag.System)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			var types = typesArg.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries)
-				.Select(t => t.ToUpper())
-				.ToArray();
-
-			var result = await Mediator.Send(new UpdateObjectFlagCommand(
-				flagName.ToUpper(),
-				flag.Aliases,
-				flag.Symbol,
-				flag.SetPermissions,
-				flag.UnsetPermissions,
-				types
-			));
-
-			if (result)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagTypeUpdatedFormat), executor, flagName, string.Join(", ", types));
-				return new CallState(MarkupText.Plain(flagName));
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
-				return CallState.Empty;
-			}
-		}
-
-		if (operation == DefinitionOperation.Alias)
-		{
-			if (parser.CurrentState.Arguments.Count < 2)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAliasRequiresNameAndAliases), executor);
-				return CallState.Empty;
-			}
-
-			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-			var aliasesArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-			if (string.IsNullOrWhiteSpace(flagName))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
-			if (flag == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			if (flag.System)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			string[]? aliases = null;
-			if (!string.IsNullOrWhiteSpace(aliasesArg))
-			{
-				aliases = aliasesArg.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries)
-					.Select(a => a.ToUpper())
-					.ToArray();
-			}
-
-			var result = await Mediator.Send(new UpdateObjectFlagCommand(
-				flagName.ToUpper(),
-				aliases,
-				flag.Symbol,
-				flag.SetPermissions,
-				flag.UnsetPermissions,
-				flag.TypeRestrictions
-			));
-
-			if (result)
-			{
-				var aliasStr = aliases != null && aliases.Length > 0 ? string.Join(", ", aliases) : "none";
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagAliasesSetFormat), executor, flagName, aliasStr);
-				return new CallState(MarkupText.Plain(flagName));
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
-				return CallState.Empty;
-			}
-		}
-
-		if (operation == DefinitionOperation.Restrict)
-		{
-			if (parser.CurrentState.Arguments.Count < 2)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagRestrictRequiresNameAndPermissions), executor);
-				return CallState.Empty;
-			}
-
-			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-			var permsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-			if (string.IsNullOrWhiteSpace(flagName) || string.IsNullOrWhiteSpace(permsArg))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameAndPermissionsCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
-			if (flag == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			if (flag.System)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			var perms = permsArg.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
-
-			var result = await Mediator.Send(new UpdateObjectFlagCommand(
-				flagName.ToUpper(),
-				flag.Aliases,
-				flag.Symbol,
-				perms,
-				perms,
-				flag.TypeRestrictions
-			));
-
-			if (result)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagPermissionsUpdatedFormat), executor, flagName, string.Join(", ", perms));
-				return new CallState(MarkupText.Plain(flagName));
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat), executor, flagName);
-				return CallState.Empty;
-			}
-		}
-
-		if (operation == DefinitionOperation.Decompile)
-		{
-			if (parser.CurrentState.Arguments.Count < 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDecompileRequiresName), executor);
-				return CallState.Empty;
-			}
-
-			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-
-			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
-			if (flag == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			var output = new System.Text.StringBuilder();
-			output.AppendLine($"Flag: {flag.Name}");
-			output.AppendLine($"Symbol: {flag.Symbol}");
-			output.AppendLine($"System: {(flag.System ? "Yes" : "No")}");
-			output.AppendLine($"Disabled: {(flag.Disabled ? "Yes" : "No")}");
-			output.AppendLine($"Aliases: {(flag.Aliases != null && flag.Aliases.Length > 0 ? string.Join(", ", flag.Aliases) : "none")}");
-			output.AppendLine($"Type Restrictions: {string.Join(", ", flag.TypeRestrictions)}");
-			output.AppendLine($"Set Permissions: {string.Join(", ", flag.SetPermissions)}");
-			output.AppendLine($"Unset Permissions: {string.Join(", ", flag.UnsetPermissions)}");
-
-			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
-			return CallState.Empty;
-		}
-
-		if (operation == DefinitionOperation.Disable || operation == DefinitionOperation.Enable)
-		{
-			if (parser.CurrentState.Arguments.Count < 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDisableEnableRequiresNameFormat), executor, operation == DefinitionOperation.Disable ? "DISABLE" : "ENABLE");
-				return CallState.Empty;
-			}
-
-			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-
-			if (string.IsNullOrWhiteSpace(flagName))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
-			if (flag == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			if (flag.System)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			bool disable = operation == DefinitionOperation.Disable;
-			var result = await Mediator.Send(new SetObjectFlagDisabledCommand(flagName.ToUpper(), disable));
-
-			if (result)
-			{
-				await NotifyService.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.FlagDisabledFormat : ErrorMessages.Notifications.FlagEnabledFormat, flagName), executor);
-				return new CallState(MarkupText.Plain(flagName));
-			}
-			else
-			{
-				await NotifyService.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.FailedToDisableFlagFormat : ErrorMessages.Notifications.FailedToEnableFlagFormat, flagName), executor);
-				return CallState.Empty;
-			}
-		}
-
-		if (operation == DefinitionOperation.Debug)
-		{
-			if (parser.CurrentState.Arguments.Count < 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagDebugRequiresName), executor);
-				return CallState.Empty;
-			}
-
-			var flagName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-
-			var flag = await Mediator.Send(new GetObjectFlagQuery(flagName.ToUpper()));
-			if (flag == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagNotFoundFormat), executor, flagName);
-				return CallState.Empty;
-			}
-
-			var output = new System.Text.StringBuilder();
-			output.AppendLine($"DEBUG - Flag: {flag.Name}");
-			output.AppendLine($"ID: {flag.Id ?? "N/A"}");
-			output.AppendLine($"Symbol: {flag.Symbol}");
-			output.AppendLine($"System: {(flag.System ? "Yes" : "No")}");
-			output.AppendLine($"Disabled: {(flag.Disabled ? "Yes" : "No")}");
-			output.AppendLine($"Aliases: {(flag.Aliases != null && flag.Aliases.Length > 0 ? string.Join(", ", flag.Aliases) : "none")}");
-			output.AppendLine($"Type Restrictions: {string.Join(", ", flag.TypeRestrictions)}");
-			output.AppendLine($"Set Permissions: {string.Join(", ", flag.SetPermissions)}");
-			output.AppendLine($"Unset Permissions: {string.Join(", ", flag.UnsetPermissions)}");
-
-			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
-			return CallState.Empty;
+			return await EditDefinitionAsync(FlagRegistry, parser, executor, operation);
 		}
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FlagUsage), executor);
@@ -1434,455 +1529,9 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches;
 		var operation = SelectDefinitionOperation(switches, power: true);
 
-		if (operation == DefinitionOperation.List)
+		if (operation != DefinitionOperation.Default)
 		{
-			// list_all_flags hides disabled definitions from everyone but God.
-			var pattern = parser.CurrentState.Arguments.Count > 0
-				? parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim()
-				: string.Empty;
-			var patternRegex = string.IsNullOrEmpty(pattern)
-				? null
-				: SoftcodeRegex.Wildcard(pattern);
-			var showDisabled = executor.IsGod();
-
-			var output = new System.Text.StringBuilder();
-			output.AppendLine("Object Powers:");
-			output.AppendLine("Name                 Symbol Alias              Type Restrictions");
-			output.AppendLine("-------------------- ------ ------------------ -------------------");
-
-			var powers = Mediator.CreateStream(new GetPowersQuery());
-			await foreach (var power in powers)
-			{
-				if (power.Disabled && !showDisabled)
-				{
-					continue;
-				}
-
-				if (patternRegex is not null && !SoftcodeRegex.IsMatch(patternRegex, power.Name))
-				{
-					continue;
-				}
-
-				var types = string.Join(",", power.TypeRestrictions);
-				output.AppendLine($"{power.Name,-20} {power.Symbol,-6} {power.Alias,-18} {types}");
-			}
-
-			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
-			return CallState.Empty;
-		}
-
-		// Authorize the selected operation, not an unrelated switch in the same request.
-		if (operation is not (DefinitionOperation.Default or DefinitionOperation.List or DefinitionOperation.Decompile) && !executor.IsGod())
-		{
-			await NotifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.NotEnoughMagic), executor);
-			return CallState.Empty;
-		}
-
-		if (operation == DefinitionOperation.Add)
-		{
-			if (parser.CurrentState.Arguments.Count < 2)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerAddRequiresNameAndAlias), executor);
-				return CallState.Empty;
-			}
-
-			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-			var alias = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-			if (string.IsNullOrWhiteSpace(powerName) || string.IsNullOrWhiteSpace(alias))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndAliasCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			if (await Mediator.Send(new GetPowerQuery(powerName.ToUpperInvariant())) is not null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerAlreadyExistsFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			var result = await Mediator.Send(new CreatePowerCommand(
-				powerName.ToUpper(),
-				alias.ToUpper(),
-				string.Empty, // PennMUSH @power/add defaults <letter> to none
-				false, // system - user-created powers are NEVER system powers
-				["FLAG^WIZARD"], // default set permissions
-				["FLAG^WIZARD"], // default unset permissions
-				["PLAYER"] // default type restrictions (powers typically only on players)
-			));
-
-			if (result != null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerCreatedWithAliasFormat), executor, powerName, alias);
-				return new CallState(MarkupText.Plain(powerName));
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToCreatePowerFormat), executor, powerName);
-				return CallState.Empty;
-			}
-		}
-
-		if (operation == DefinitionOperation.Delete)
-		{
-			if (parser.CurrentState.Arguments.Count < 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDeleteRequiresName), executor);
-				return CallState.Empty;
-			}
-
-			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-
-			if (string.IsNullOrWhiteSpace(powerName))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
-			if (power == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			if (power.System)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotDeleteSystemPowerFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			var result = await Mediator.Send(new DeletePowerCommand(powerName.ToUpper()));
-
-			if (result)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDeletedFormat), executor, powerName);
-				return new CallState(MarkupText.Plain(powerName));
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToDeletePowerFormat), executor, powerName);
-				return CallState.Empty;
-			}
-		}
-
-		if (operation == DefinitionOperation.Alias)
-		{
-			if (parser.CurrentState.Arguments.Count < 2)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerAliasRequiresNameAndAlias), executor);
-				return CallState.Empty;
-			}
-
-			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-			var newAlias = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-			if (string.IsNullOrWhiteSpace(powerName) || string.IsNullOrWhiteSpace(newAlias))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndAliasCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
-			if (power == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			if (power.System)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			var result = await Mediator.Send(new UpdatePowerCommand(
-				powerName.ToUpper(),
-				newAlias.ToUpper(),
-				power.Symbol,
-				power.SetPermissions,
-				power.UnsetPermissions,
-				power.TypeRestrictions
-			));
-
-			if (result)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerAliasChangedFormat), executor, powerName, newAlias);
-				return new CallState(MarkupText.Plain(powerName));
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
-				return CallState.Empty;
-			}
-		}
-
-		if (operation == DefinitionOperation.Letter)
-		{
-			// PennMUSH src/flags.c do_flag_letter, via src/cmds.c cmd_power with ns "POWER".
-			if (parser.CurrentState.Arguments.Count < 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterRequiresName), executor);
-				return CallState.Empty;
-			}
-
-			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
-
-			if (string.IsNullOrWhiteSpace(powerName))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			// do_flag_letter treats an absent and an empty letter alike: both clear it.
-			var newLetter = parser.CurrentState.Arguments.Count > 1
-				? parser.CurrentState.Arguments["1"].Message!.ToPlainText().Trim()
-				: string.Empty;
-
-			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
-			if (power == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			if (power.System)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			if (newLetter.Length > 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerCharactersMustBeSingleCharacters), executor);
-				return CallState.Empty;
-			}
-
-			if (newLetter.Length == 1)
-			{
-				// letter_to_flagptr's `n->tab == &ptab_flag` guard makes this unreachable for the POWER
-				// flagspace; it is implemented as written, not as reached.
-				var conflict = await FindLetterConflict(
-					Mediator.CreateStream(new GetPowersQuery())
-						.Select(x => (x.Name, x.Symbol, x.TypeRestrictions)),
-					power.Name, newLetter, power.TypeRestrictions);
-
-				if (conflict is not null)
-				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterConflictFormat), executor, conflict);
-					return CallState.Empty;
-				}
-			}
-
-			var lettered = await Mediator.Send(new UpdatePowerCommand(
-				power.Name,
-				power.Alias,
-				newLetter,
-				power.SetPermissions,
-				power.UnsetPermissions,
-				power.TypeRestrictions
-			));
-
-			if (!lettered)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			if (newLetter.Length == 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterSetFormat), executor, power.Name, newLetter);
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerLetterClearedFormat), executor, power.Name);
-			}
-
-			return new CallState(MarkupText.Plain(power.Name));
-		}
-
-		if (operation == DefinitionOperation.Type)
-		{
-			if (parser.CurrentState.Arguments.Count < 2)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerTypeRequiresNameAndTypes), executor);
-				return CallState.Empty;
-			}
-
-			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-			var typesArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-			if (string.IsNullOrWhiteSpace(powerName) || string.IsNullOrWhiteSpace(typesArg))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndTypesCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
-			if (power == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			if (power.System)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			var types = typesArg.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries)
-				.Select(t => t.ToUpper())
-				.ToArray();
-
-			var result = await Mediator.Send(new UpdatePowerCommand(
-				powerName.ToUpper(),
-				power.Alias,
-				power.Symbol,
-				power.SetPermissions,
-				power.UnsetPermissions,
-				types
-			));
-
-			if (result)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerTypeUpdatedFormat), executor, powerName, string.Join(", ", types));
-				return new CallState(MarkupText.Plain(powerName));
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
-				return CallState.Empty;
-			}
-		}
-
-		if (operation == DefinitionOperation.Restrict)
-		{
-			if (parser.CurrentState.Arguments.Count < 2)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerRestrictRequiresNameAndPermissions), executor);
-				return CallState.Empty;
-			}
-
-			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-			var permsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-			if (string.IsNullOrWhiteSpace(powerName) || string.IsNullOrWhiteSpace(permsArg))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameAndPermissionsCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
-			if (power == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			if (power.System)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			var perms = permsArg.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
-
-			var result = await Mediator.Send(new UpdatePowerCommand(
-				powerName.ToUpper(),
-				power.Alias,
-				power.Symbol,
-				perms,
-				perms,
-				power.TypeRestrictions
-			));
-
-			if (result)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerPermissionsUpdatedFormat), executor, powerName, string.Join(", ", perms));
-				return new CallState(MarkupText.Plain(powerName));
-			}
-			else
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat), executor, powerName);
-				return CallState.Empty;
-			}
-		}
-
-		if (operation == DefinitionOperation.Decompile)
-		{
-			if (parser.CurrentState.Arguments.Count < 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDecompileRequiresName), executor);
-				return CallState.Empty;
-			}
-
-			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-
-			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
-			if (power == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			var output = new System.Text.StringBuilder();
-			output.AppendLine($"Power: {power.Name}");
-			output.AppendLine($"Symbol: {power.Symbol}");
-			output.AppendLine($"Alias: {power.Alias}");
-			output.AppendLine($"System: {(power.System ? "Yes" : "No")}");
-			output.AppendLine($"Disabled: {(power.Disabled ? "Yes" : "No")}");
-			output.AppendLine($"Type Restrictions: {string.Join(", ", power.TypeRestrictions)}");
-			output.AppendLine($"Set Permissions: {string.Join(", ", power.SetPermissions)}");
-			output.AppendLine($"Unset Permissions: {string.Join(", ", power.UnsetPermissions)}");
-
-			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
-			return CallState.Empty;
-		}
-
-		if (operation == DefinitionOperation.Disable || operation == DefinitionOperation.Enable)
-		{
-			if (parser.CurrentState.Arguments.Count < 1)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerDisableEnableRequiresNameFormat), executor, operation == DefinitionOperation.Disable ? "DISABLE" : "ENABLE");
-				return CallState.Empty;
-			}
-
-			var powerName = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-
-			if (string.IsNullOrWhiteSpace(powerName))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNameCannotBeEmpty), executor);
-				return CallState.Empty;
-			}
-
-			var power = await Mediator.Send(new GetPowerQuery(powerName.ToUpper()));
-			if (power == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PowerNotFoundFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			if (power.System)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CannotDisableSystemPowerFormat), executor, powerName);
-				return CallState.Empty;
-			}
-
-			bool disable = operation == DefinitionOperation.Disable;
-			var result = await Mediator.Send(new SetPowerDisabledCommand(powerName.ToUpper(), disable));
-
-			if (result)
-			{
-				await NotifyService.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.PowerDisabledFormat : ErrorMessages.Notifications.PowerEnabledFormat, powerName), executor);
-				return new CallState(MarkupText.Plain(powerName));
-			}
-			else
-			{
-				await NotifyService.Notify(executor, string.Format(disable ? ErrorMessages.Notifications.FailedToDisablePowerFormat : ErrorMessages.Notifications.FailedToEnablePowerFormat, powerName), executor);
-				return CallState.Empty;
-			}
+			return await EditDefinitionAsync(PowerRegistry, parser, executor, operation);
 		}
 
 		// A declared-but-unhandled switch must not fall through into the grant form below.
@@ -1940,6 +1589,375 @@ public partial class Commands
 
 		await ManipulateSharpObjectService.SetOrUnsetPowers(executor, target, powerArg, true);
 		return CallState.Empty;
+	}
+
+	/// <summary>One flag or power definition, as the definition-registry editor handles it.</summary>
+	private sealed record RegistryEntry(string Name, string[]? Aliases, string Symbol, bool System, bool Disabled,
+		string[] TypeRestrictions, string[] SetPermissions, string[] UnsetPermissions, string? Id);
+
+	/// <summary>
+	/// What <c>@flag</c> and <c>@power</c> differ in — PennMUSH runs both through one set of
+	/// <c>src/flags.c</c> routines, parameterised by flagspace: where the definitions are stored, what
+	/// <c>/add</c>'s second argument is (a flag's letter, a power's alias), whether a definition has one
+	/// alias or a list, how one is listed and described, and the message keys each speaks with.
+	/// </summary>
+	private sealed record DefinitionRegistry(
+		Func<IMediator, string, ValueTask<RegistryEntry?>> Find,
+		Func<IMediator, IAsyncEnumerable<RegistryEntry>> All,
+		Func<IMediator, string, string, ValueTask<bool>> Create,
+		Func<IMediator, RegistryEntry, ValueTask<bool>> Update,
+		Func<IMediator, string, ValueTask<bool>> Delete,
+		Func<IMediator, string, bool, ValueTask<bool>> SetDisabled,
+		bool SingleAlias,
+		string[] ListHeader,
+		Func<RegistryEntry, string> ListRow,
+		Func<RegistryEntry, string[]> Describe,
+		RegistryMessages Messages);
+
+	/// <summary>The message keys (and, for the three unlocalised results, formats) of one registry.</summary>
+	private sealed record RegistryMessages(
+		string AddRequires, string NameAndSecondEmpty, string AlreadyExists, string Created, string FailedToCreate,
+		string DeleteRequires, string NameEmpty, string NotFound, string CannotDeleteSystem, string Deleted, string FailedToDelete,
+		string LetterRequires, string CannotModifySystem, string SingleCharacters, string LetterConflict, string FailedToUpdate,
+		string LetterSet, string LetterCleared, string TypeRequires, string NameAndTypesEmpty, string TypeUpdated,
+		string AliasRequires, string AliasSet, string RestrictRequires, string NameAndPermissionsEmpty, string PermissionsUpdated,
+		string DecompileRequires, string DisableEnableRequires, string CannotDisableSystem,
+		string DisabledFormat, string EnabledFormat, string FailedToDisableFormat, string FailedToEnableFormat);
+
+	private static readonly DefinitionRegistry FlagRegistry = new(
+		Find: async (mediator, name) => await mediator.Send(new GetObjectFlagQuery(name)) is { } flag ? FromFlag(flag) : null,
+		All: mediator => mediator.CreateStream(new GetAllObjectFlagsQuery()).Select(FromFlag),
+		Create: async (mediator, name, symbol) => await mediator.Send(new CreateObjectFlagCommand(
+			name, null, symbol,
+			false, // user-created flags are never system flags
+			["FLAG^WIZARD"], ["FLAG^WIZARD"], ["PLAYER", "THING", "ROOM", "EXIT"])) is not null,
+		Update: async (mediator, flag) => await mediator.Send(new UpdateObjectFlagCommand(
+			flag.Name, flag.Aliases, flag.Symbol, flag.SetPermissions, flag.UnsetPermissions, flag.TypeRestrictions)),
+		Delete: async (mediator, name) => await mediator.Send(new DeleteObjectFlagCommand(name)),
+		SetDisabled: async (mediator, name, disabled) => await mediator.Send(new SetObjectFlagDisabledCommand(name, disabled)),
+		SingleAlias: false,
+		ListHeader:
+		[
+			"Object Flags:",
+			"Name                 Symbol Type Restrictions",
+			"-------------------- ------ -------------------"
+		],
+		ListRow: flag => $"{flag.Name,-20} {flag.Symbol,-6} {string.Join(",", flag.TypeRestrictions)}",
+		Describe: flag =>
+		[
+			$"Flag: {flag.Name}",
+			$"Symbol: {flag.Symbol}",
+			$"System: {(flag.System ? "Yes" : "No")}",
+			$"Disabled: {(flag.Disabled ? "Yes" : "No")}",
+			$"Aliases: {(flag.Aliases is { Length: > 0 } aliases ? string.Join(", ", aliases) : "none")}",
+			$"Type Restrictions: {string.Join(", ", flag.TypeRestrictions)}",
+			$"Set Permissions: {string.Join(", ", flag.SetPermissions)}",
+			$"Unset Permissions: {string.Join(", ", flag.UnsetPermissions)}"
+		],
+		Messages: new(
+			AddRequires: nameof(ErrorMessages.Notifications.FlagAddRequiresNameAndSymbol),
+			NameAndSecondEmpty: nameof(ErrorMessages.Notifications.FlagNameAndSymbolCannotBeEmpty),
+			AlreadyExists: nameof(ErrorMessages.Notifications.FlagAlreadyExistsFormat),
+			Created: nameof(ErrorMessages.Notifications.FlagCreatedWithSymbolFormat),
+			FailedToCreate: nameof(ErrorMessages.Notifications.FailedToCreateFlagFormat),
+			DeleteRequires: nameof(ErrorMessages.Notifications.FlagDeleteRequiresName),
+			NameEmpty: nameof(ErrorMessages.Notifications.FlagNameCannotBeEmpty),
+			NotFound: nameof(ErrorMessages.Notifications.FlagNotFoundFormat),
+			CannotDeleteSystem: nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat),
+			Deleted: nameof(ErrorMessages.Notifications.FlagDeletedFormat),
+			FailedToDelete: nameof(ErrorMessages.Notifications.FailedToDeleteFlagFormat),
+			LetterRequires: nameof(ErrorMessages.Notifications.FlagLetterRequiresName),
+			CannotModifySystem: nameof(ErrorMessages.Notifications.CannotModifySystemFlagFormat),
+			SingleCharacters: nameof(ErrorMessages.Notifications.FlagCharactersMustBeSingleCharacters),
+			LetterConflict: nameof(ErrorMessages.Notifications.FlagLetterConflictFormat),
+			FailedToUpdate: nameof(ErrorMessages.Notifications.FailedToUpdateFlagFormat),
+			LetterSet: nameof(ErrorMessages.Notifications.FlagLetterSetFormat),
+			LetterCleared: nameof(ErrorMessages.Notifications.FlagLetterClearedFormat),
+			TypeRequires: nameof(ErrorMessages.Notifications.FlagTypeRequiresNameAndTypes),
+			NameAndTypesEmpty: nameof(ErrorMessages.Notifications.FlagNameAndTypesCannotBeEmpty),
+			TypeUpdated: nameof(ErrorMessages.Notifications.FlagTypeUpdatedFormat),
+			AliasRequires: nameof(ErrorMessages.Notifications.FlagAliasRequiresNameAndAliases),
+			AliasSet: nameof(ErrorMessages.Notifications.FlagAliasesSetFormat),
+			RestrictRequires: nameof(ErrorMessages.Notifications.FlagRestrictRequiresNameAndPermissions),
+			NameAndPermissionsEmpty: nameof(ErrorMessages.Notifications.FlagNameAndPermissionsCannotBeEmpty),
+			PermissionsUpdated: nameof(ErrorMessages.Notifications.FlagPermissionsUpdatedFormat),
+			DecompileRequires: nameof(ErrorMessages.Notifications.FlagDecompileRequiresName),
+			DisableEnableRequires: nameof(ErrorMessages.Notifications.FlagDisableEnableRequiresNameFormat),
+			CannotDisableSystem: nameof(ErrorMessages.Notifications.CannotDeleteSystemFlagFormat),
+			DisabledFormat: ErrorMessages.Notifications.FlagDisabledFormat,
+			EnabledFormat: ErrorMessages.Notifications.FlagEnabledFormat,
+			FailedToDisableFormat: ErrorMessages.Notifications.FailedToDisableFlagFormat,
+			FailedToEnableFormat: ErrorMessages.Notifications.FailedToEnableFlagFormat));
+
+	private static readonly DefinitionRegistry PowerRegistry = new(
+		Find: async (mediator, name) => await mediator.Send(new GetPowerQuery(name)) is { } power ? FromPower(power) : null,
+		All: mediator => mediator.CreateStream(new GetPowersQuery()).Select(FromPower),
+		Create: async (mediator, name, alias) => await mediator.Send(new CreatePowerCommand(
+			name, alias,
+			string.Empty, // PennMUSH @power/add defaults <letter> to none
+			false, // user-created powers are never system powers
+			["FLAG^WIZARD"], ["FLAG^WIZARD"], ["PLAYER"])) is not null,
+		Update: async (mediator, power) => await mediator.Send(new UpdatePowerCommand(
+			power.Name, power.Aliases is [var alias, ..] ? alias : string.Empty, power.Symbol,
+			power.SetPermissions, power.UnsetPermissions, power.TypeRestrictions)),
+		Delete: async (mediator, name) => await mediator.Send(new DeletePowerCommand(name)),
+		SetDisabled: async (mediator, name, disabled) => await mediator.Send(new SetPowerDisabledCommand(name, disabled)),
+		SingleAlias: true,
+		ListHeader:
+		[
+			"Object Powers:",
+			"Name                 Symbol Alias              Type Restrictions",
+			"-------------------- ------ ------------------ -------------------"
+		],
+		ListRow: power => $"{power.Name,-20} {power.Symbol,-6} {power.Aliases?.FirstOrDefault(),-18} {string.Join(",", power.TypeRestrictions)}",
+		Describe: power =>
+		[
+			$"Power: {power.Name}",
+			$"Symbol: {power.Symbol}",
+			$"Alias: {power.Aliases?.FirstOrDefault()}",
+			$"System: {(power.System ? "Yes" : "No")}",
+			$"Disabled: {(power.Disabled ? "Yes" : "No")}",
+			$"Type Restrictions: {string.Join(", ", power.TypeRestrictions)}",
+			$"Set Permissions: {string.Join(", ", power.SetPermissions)}",
+			$"Unset Permissions: {string.Join(", ", power.UnsetPermissions)}"
+		],
+		Messages: new(
+			AddRequires: nameof(ErrorMessages.Notifications.PowerAddRequiresNameAndAlias),
+			NameAndSecondEmpty: nameof(ErrorMessages.Notifications.PowerNameAndAliasCannotBeEmpty),
+			AlreadyExists: nameof(ErrorMessages.Notifications.PowerAlreadyExistsFormat),
+			Created: nameof(ErrorMessages.Notifications.PowerCreatedWithAliasFormat),
+			FailedToCreate: nameof(ErrorMessages.Notifications.FailedToCreatePowerFormat),
+			DeleteRequires: nameof(ErrorMessages.Notifications.PowerDeleteRequiresName),
+			NameEmpty: nameof(ErrorMessages.Notifications.PowerNameCannotBeEmpty),
+			NotFound: nameof(ErrorMessages.Notifications.PowerNotFoundFormat),
+			CannotDeleteSystem: nameof(ErrorMessages.Notifications.CannotDeleteSystemPowerFormat),
+			Deleted: nameof(ErrorMessages.Notifications.PowerDeletedFormat),
+			FailedToDelete: nameof(ErrorMessages.Notifications.FailedToDeletePowerFormat),
+			LetterRequires: nameof(ErrorMessages.Notifications.PowerLetterRequiresName),
+			CannotModifySystem: nameof(ErrorMessages.Notifications.CannotModifySystemPowerFormat),
+			SingleCharacters: nameof(ErrorMessages.Notifications.PowerCharactersMustBeSingleCharacters),
+			LetterConflict: nameof(ErrorMessages.Notifications.PowerLetterConflictFormat),
+			FailedToUpdate: nameof(ErrorMessages.Notifications.FailedToUpdatePowerFormat),
+			LetterSet: nameof(ErrorMessages.Notifications.PowerLetterSetFormat),
+			LetterCleared: nameof(ErrorMessages.Notifications.PowerLetterClearedFormat),
+			TypeRequires: nameof(ErrorMessages.Notifications.PowerTypeRequiresNameAndTypes),
+			NameAndTypesEmpty: nameof(ErrorMessages.Notifications.PowerNameAndTypesCannotBeEmpty),
+			TypeUpdated: nameof(ErrorMessages.Notifications.PowerTypeUpdatedFormat),
+			AliasRequires: nameof(ErrorMessages.Notifications.PowerAliasRequiresNameAndAlias),
+			AliasSet: nameof(ErrorMessages.Notifications.PowerAliasChangedFormat),
+			RestrictRequires: nameof(ErrorMessages.Notifications.PowerRestrictRequiresNameAndPermissions),
+			NameAndPermissionsEmpty: nameof(ErrorMessages.Notifications.PowerNameAndPermissionsCannotBeEmpty),
+			PermissionsUpdated: nameof(ErrorMessages.Notifications.PowerPermissionsUpdatedFormat),
+			DecompileRequires: nameof(ErrorMessages.Notifications.PowerDecompileRequiresName),
+			DisableEnableRequires: nameof(ErrorMessages.Notifications.PowerDisableEnableRequiresNameFormat),
+			CannotDisableSystem: nameof(ErrorMessages.Notifications.CannotDisableSystemPowerFormat),
+			DisabledFormat: ErrorMessages.Notifications.PowerDisabledFormat,
+			EnabledFormat: ErrorMessages.Notifications.PowerEnabledFormat,
+			FailedToDisableFormat: ErrorMessages.Notifications.FailedToDisablePowerFormat,
+			FailedToEnableFormat: ErrorMessages.Notifications.FailedToEnablePowerFormat));
+
+	private static RegistryEntry FromFlag(SharpObjectFlag flag)
+		=> new(flag.Name, flag.Aliases, flag.Symbol, flag.System, flag.Disabled,
+			flag.TypeRestrictions, flag.SetPermissions, flag.UnsetPermissions, flag.Id);
+
+	private static RegistryEntry FromPower(SharpPower power)
+		=> new(power.Name, string.IsNullOrEmpty(power.Alias) ? [] : [power.Alias], power.Symbol, power.System, power.Disabled,
+			power.TypeRestrictions, power.SetPermissions, power.UnsetPermissions, power.Id);
+
+	/// <summary>
+	/// The switches <c>@flag</c> and <c>@power</c> share — PennMUSH's <c>do_list_flags</c>,
+	/// <c>do_flag_info</c>, <c>do_flag_add</c>, <c>do_flag_delete</c>, <c>do_flag_letter</c>,
+	/// <c>do_flag_type</c>, <c>do_flag_alias</c>, <c>do_flag_restrict</c> and <c>do_flag_disable</c>
+	/// (<c>src/flags.c</c>) — over whichever <paramref name="registry"/> the command edits.
+	/// </summary>
+	private async ValueTask<Option<CallState>> EditDefinitionAsync(DefinitionRegistry registry, IMUSHCodeParser parser,
+		AnySharpObject executor, DefinitionOperation operation)
+	{
+		var arguments = parser.CurrentState.Arguments;
+		var keys = registry.Messages;
+		string Argument(int index) => arguments.Count > index ? arguments[index.ToString()].Message!.ToPlainText() : string.Empty;
+
+		async ValueTask<CallState> Say(string key, params object[] values)
+		{
+			await NotifyService.NotifyLocalized(executor, key, executor, values);
+			return CallState.Empty;
+		}
+
+		if (operation == DefinitionOperation.List)
+		{
+			// list_all_flags: a wildcard over the names, and disabled definitions only for God.
+			var pattern = Argument(0).Trim();
+			var matcher = pattern.Length == 0 ? null : SoftcodeRegex.Wildcard(pattern);
+			var rows = await registry.All(Mediator)
+				.Where(entry => (!entry.Disabled || executor.IsGod()) && (matcher is null || SoftcodeRegex.IsMatch(matcher, entry.Name)))
+				.Select(registry.ListRow)
+				.ToArrayAsync();
+			await NotifyService.Notify(executor, string.Join(Environment.NewLine, [.. registry.ListHeader, .. rows]), executor);
+			return CallState.Empty;
+		}
+
+		// Authorize the selected operation, not an unrelated switch in the same request.
+		if (operation is not (DefinitionOperation.Decompile or DefinitionOperation.Debug) && !executor.IsGod())
+		{
+			return await Say(nameof(ErrorMessages.Notifications.NotEnoughMagic));
+		}
+
+		if (operation == DefinitionOperation.Debug && !await executor.IsWizard())
+		{
+			return await Say(nameof(ErrorMessages.Notifications.PermissionDenied));
+		}
+
+		if (operation == DefinitionOperation.Add)
+		{
+			if (arguments.Count < 2) return await Say(keys.AddRequires);
+			var (name, second) = (Argument(0), Argument(1));
+			if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(second)) return await Say(keys.NameAndSecondEmpty);
+			if (await registry.Find(Mediator, name.ToUpperInvariant()) is not null) return await Say(keys.AlreadyExists, name);
+
+			// A flag's second argument is its letter, kept as typed; a power's is its alias.
+			if (!await registry.Create(Mediator, name.ToUpperInvariant(), registry.SingleAlias ? second.ToUpperInvariant() : second))
+			{
+				return await Say(keys.FailedToCreate, name);
+			}
+
+			await Say(keys.Created, name, second);
+			return new CallState(MarkupText.Plain(name));
+		}
+
+		var requires = operation switch
+		{
+			DefinitionOperation.Delete => keys.DeleteRequires,
+			DefinitionOperation.Letter => keys.LetterRequires,
+			DefinitionOperation.Type => keys.TypeRequires,
+			DefinitionOperation.Alias => keys.AliasRequires,
+			DefinitionOperation.Restrict => keys.RestrictRequires,
+			DefinitionOperation.Decompile => keys.DecompileRequires,
+			DefinitionOperation.Debug => nameof(ErrorMessages.Notifications.FlagDebugRequiresName),
+			_ => keys.DisableEnableRequires
+		};
+		var needed = operation is DefinitionOperation.Type or DefinitionOperation.Alias or DefinitionOperation.Restrict ? 2 : 1;
+		if (arguments.Count < needed)
+		{
+			return operation is DefinitionOperation.Disable or DefinitionOperation.Enable
+				? await Say(requires, operation == DefinitionOperation.Disable ? "DISABLE" : "ENABLE")
+				: await Say(requires);
+		}
+
+		var typed = operation == DefinitionOperation.Letter ? Argument(0).Trim() : Argument(0);
+		var value = Argument(1);
+		var blank = operation switch
+		{
+			DefinitionOperation.Type when string.IsNullOrWhiteSpace(typed) || string.IsNullOrWhiteSpace(value) => keys.NameAndTypesEmpty,
+			DefinitionOperation.Restrict when string.IsNullOrWhiteSpace(typed) || string.IsNullOrWhiteSpace(value) => keys.NameAndPermissionsEmpty,
+			DefinitionOperation.Alias when registry.SingleAlias && (string.IsNullOrWhiteSpace(typed) || string.IsNullOrWhiteSpace(value)) => keys.NameAndSecondEmpty,
+			DefinitionOperation.Decompile or DefinitionOperation.Debug => null,
+			_ when string.IsNullOrWhiteSpace(typed) => keys.NameEmpty,
+			_ => null
+		};
+		if (blank is not null) return await Say(blank);
+
+		if (await registry.Find(Mediator, typed.ToUpperInvariant()) is not { } entry)
+		{
+			return await Say(keys.NotFound, typed);
+		}
+
+		if (operation is DefinitionOperation.Decompile or DefinitionOperation.Debug)
+		{
+			var lines = registry.Describe(entry);
+			string[] output = operation == DefinitionOperation.Debug
+				? [$"DEBUG - {lines[0]}", $"ID: {entry.Id ?? "N/A"}", .. lines[1..]]
+				: lines;
+			await NotifyService.Notify(executor, string.Join(Environment.NewLine, output), executor);
+			return CallState.Empty;
+		}
+
+		if (entry.System)
+		{
+			return await Say(operation switch
+			{
+				DefinitionOperation.Delete => keys.CannotDeleteSystem,
+				DefinitionOperation.Disable or DefinitionOperation.Enable => keys.CannotDisableSystem,
+				_ => keys.CannotModifySystem
+			}, typed);
+		}
+
+		return operation switch
+		{
+			DefinitionOperation.Delete => await DeleteDefinitionAsync(registry, entry, typed, Say),
+			DefinitionOperation.Letter => await LetterDefinitionAsync(registry, entry, value.Trim(), typed, Say),
+			DefinitionOperation.Disable or DefinitionOperation.Enable
+				=> await DisableDefinitionAsync(registry, executor, entry, typed, operation == DefinitionOperation.Disable),
+			_ => await UpdateDefinitionAsync(registry, operation, entry, typed, value, Say)
+		};
+	}
+
+	private async ValueTask<CallState> DeleteDefinitionAsync(DefinitionRegistry registry, RegistryEntry entry, string typed,
+		Func<string, object[], ValueTask<CallState>> say)
+	{
+		if (!await registry.Delete(Mediator, entry.Name)) return await say(registry.Messages.FailedToDelete, [typed]);
+		await say(registry.Messages.Deleted, [typed]);
+		return new CallState(MarkupText.Plain(typed));
+	}
+
+	/// <summary><c>do_flag_letter</c>: an absent and an empty letter alike clear it; a letter is one character.</summary>
+	private async ValueTask<CallState> LetterDefinitionAsync(DefinitionRegistry registry, RegistryEntry entry, string letter, string typed,
+		Func<string, object[], ValueTask<CallState>> say)
+	{
+		var keys = registry.Messages;
+		if (letter.Length > 1) return await say(keys.SingleCharacters, []);
+
+		// letter_to_flagptr's `n->tab == &ptab_flag` guard makes this unreachable for the POWER
+		// flagspace; it is implemented as written, not as reached.
+		if (letter.Length == 1
+				&& await FindLetterConflict(registry.All(Mediator).Select(x => (x.Name, x.Symbol, x.TypeRestrictions)),
+					entry.Name, letter, entry.TypeRestrictions) is { } conflict)
+		{
+			return await say(keys.LetterConflict, [conflict]);
+		}
+
+		if (!await registry.Update(Mediator, entry with { Symbol = letter })) return await say(keys.FailedToUpdate, [typed]);
+
+		await (letter.Length == 1 ? say(keys.LetterSet, [entry.Name, letter]) : say(keys.LetterCleared, [entry.Name]));
+		return new CallState(MarkupText.Plain(entry.Name));
+	}
+
+	/// <summary><c>do_flag_type</c>, <c>do_flag_alias</c> and <c>do_flag_restrict</c>: one field replaced.</summary>
+	private async ValueTask<CallState> UpdateDefinitionAsync(DefinitionRegistry registry, DefinitionOperation operation,
+		RegistryEntry entry, string typed, string value, Func<string, object[], ValueTask<CallState>> say)
+	{
+		var keys = registry.Messages;
+		var words = value.Split([',', ' '], StringSplitOptions.RemoveEmptyEntries);
+		var (updated, key, shown) = operation switch
+		{
+			DefinitionOperation.Type => (entry with { TypeRestrictions = [.. words.Select(t => t.ToUpper())] }, keys.TypeUpdated,
+				string.Join(", ", words.Select(t => t.ToUpper()))),
+			DefinitionOperation.Restrict => (entry with { SetPermissions = words, UnsetPermissions = words }, keys.PermissionsUpdated,
+				string.Join(", ", words)),
+			_ when registry.SingleAlias => (entry with { Aliases = [value.ToUpper()] }, keys.AliasSet, value),
+			_ => (entry with { Aliases = words.Length > 0 ? [.. words.Select(a => a.ToUpper())] : null }, keys.AliasSet,
+				words.Length > 0 ? string.Join(", ", words.Select(a => a.ToUpper())) : "none")
+		};
+
+		if (!await registry.Update(Mediator, updated)) return await say(keys.FailedToUpdate, [typed]);
+		await say(key, [typed, shown]);
+		return new CallState(MarkupText.Plain(typed));
+	}
+
+	private async ValueTask<CallState> DisableDefinitionAsync(DefinitionRegistry registry, AnySharpObject executor,
+		RegistryEntry entry, string typed, bool disable)
+	{
+		var keys = registry.Messages;
+		var done = await registry.SetDisabled(Mediator, entry.Name, disable);
+		var format = (done, disable) switch
+		{
+			(true, true) => keys.DisabledFormat,
+			(true, false) => keys.EnabledFormat,
+			(false, true) => keys.FailedToDisableFormat,
+			(false, false) => keys.FailedToEnableFormat
+		};
+
+		await NotifyService.Notify(executor, string.Format(format, typed), executor);
+		return done ? new CallState(MarkupText.Plain(typed)) : CallState.Empty;
 	}
 
 	[SharpCommand(Name = "@HOOK",

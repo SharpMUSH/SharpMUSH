@@ -15,9 +15,9 @@ public partial class Commands
 	[SharpCommand(Name = "@MAIL",
 		Switches =
 		[
-			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDER", "UNFOLDER", "LIST", "READ",
-			"UNREAD", "CLEAR", "UNCLEAR", "STATUS", "PURGE", "FILE", "TAG", "UNTAG", "FWD", "FORWARD", "SEND", "SILENT",
-			"URGENT", "REVIEW", "RETRACT"
+			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDERS", "FOLDER", "UNFOLDER",
+			"LIST", "READ", "UNREAD", "CLEAR", "UNCLEAR", "STATUS", "PURGE", "FILE", "TAG", "UNTAG", "FWD", "FORWARD",
+			"SEND", "SILENT", "URGENT", "REVIEW", "RETRACT"
 		], Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["player", "subject"])]
 	public async ValueTask<Option<CallState>> Mail(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -48,8 +48,10 @@ public partial class Commands
 
 		var response = switches.AsSpan() switch
 		{
-			[.., "FOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService, Mediator,
-				NotifyService, arg0, arg1, switches),
+			// PennMUSH declares FOLDERS (src/command.c:206-207) and no FOLDER; the singular is kept as an
+			// intentional alias. Switch validation is exact-match, so both must be declared.
+			[.., "FOLDERS"] or [.., "FOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService,
+				Mediator, NotifyService, arg0, arg1, switches),
 			[.., "UNFOLDER"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService, Mediator,
 				NotifyService, arg0, arg1, switches),
 			[.., "FILE"] when executor.IsPlayer => await FolderMail.Handle(parser, ObjectDataService, Mediator,
@@ -82,12 +84,12 @@ public partial class Commands
 					arg0!.ToPlainText(), arg1!.ToPlainText()),
 			[.., "FWD"] when executor.IsPlayer && int.TryParse(arg0?.ToPlainText(), out var number) &&
 											 (arg1?.Length ?? 0) != 0
-				=> await ForwardMail.Handle(parser, ObjectDataService, LocateService, PermissionService, Mediator, number,
-					arg1!.ToPlainText()),
+				=> await ForwardMail.Handle(parser, ObjectDataService, LocateService, Mediator, NotifyService, MailDeliveryServices,
+					number, arg1!.ToPlainText()),
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
-				=> await SendMail.Handle(parser, PermissionService, LocateService, ObjectDataService, Mediator, NotifyService,
-					AttributeService, Configuration, arg0!, arg1!, switches),
+				=> await SendMail.Handle(parser, LocateService, Mediator, NotifyService, MailDeliveryServices, arg0!, arg1!,
+					switches),
 			[.., "READ"] or [] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 &&
 															int.TryParse(arg0?.ToPlainText(), out var number)
 				=> await ReadMail.Handle(parser, ObjectDataService, Mediator, NotifyService, Math.Max(0, number - 1),
@@ -99,6 +101,10 @@ public partial class Commands
 
 		return new CallState(response);
 	}
+
+	private MailDelivery.Services MailDeliveryServices
+		=> new(PermissionService, Mediator, NotifyService, DidItService, AttributeService, ObjectDataService,
+			Configuration);
 
 	private async ValueTask<MString> NotifyAndReturnBadMailArguments(AnySharpObject executor)
 	{

@@ -1,6 +1,7 @@
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -590,6 +591,133 @@ public partial class Commands
 		return thingOwner.Equals(playerOwner);
 	}
 
+	/// <summary>
+	/// PennMUSH <c>tport_control_ok</c> (<c>src/wiz.c:330</c>): may <paramref name="player"/> move
+	/// <paramref name="victim"/> out of <paramref name="loc"/> at all. Owning the room something is
+	/// standing in is authority enough to evict it — that is how a room owner clears their own room —
+	/// except for a HEAVY object belonging to someone else.
+	/// </summary>
+	private async ValueTask<bool> TportControlOk(
+		AnySharpObject player, AnySharpObject victim, AnySharpContainer loc, bool telAnything)
+	{
+		// wiz.c:334: nobody but God moves God.
+		if (victim.IsGod() && !player.IsGod())
+		{
+			return false;
+		}
+
+		if (telAnything || await PermissionService.Controls(player, victim))
+		{
+			return true;
+		}
+
+		if (!await PermissionService.Controls(player, loc.WithExitOption()))
+		{
+			return false;
+		}
+
+		// wiz.c:345: "mortals can't @tel HEAVY players just on basis of location ownership".
+		if (!await victim.HasFlag("HEAVY"))
+		{
+			return true;
+		}
+
+		var playerOwner = (await player.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+		var victimOwner = (await victim.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+
+		return playerOwner.Equals(victimOwner);
+	}
+
+	/// <summary>
+	/// PennMUSH <c>tport_dest_ok</c> (<c>src/wiz.c:302</c>): may <paramref name="player"/> legitimately
+	/// send <paramref name="victim"/> to <paramref name="destination"/>. Controlling the destination is
+	/// enough on its own; short of that only a room takes a stranger, and only one that is JUMP_OK and
+	/// whose TELEPORT lock admits the victim.
+	/// </summary>
+	private async ValueTask<bool> TportDestOk(
+		AnySharpObject player, AnySharpObject victim, AnySharpContainer destination, bool telAnywhere)
+	{
+		if (telAnywhere)
+		{
+			return true;
+		}
+
+		var destinationObject = destination.WithExitOption();
+
+		if (await PermissionService.Controls(player, destinationObject))
+		{
+			return true;
+		}
+
+		// wiz.c:313: past here, something you do not control and that is not a room is hopeless.
+		if (!destination.IsRoom)
+		{
+			return false;
+		}
+
+		// wiz.c:320: the unlocker is the VICTIM, not the teleporter — the room says who may arrive,
+		// not who may send.
+		if (!await LockService.Evaluate(LockType.Teleport, destinationObject, victim))
+		{
+			return false;
+		}
+
+		return await destinationObject.HasFlag("JUMP_OK");
+	}
+
+	/// <summary>
+	/// PennMUSH <c>wiz.c:572</c>. A FIXED player is pinned: nothing they own is teleported, and they
+	/// teleport nothing — unless the teleporter has Tel_Anything, or is Tel_Anywhere and is moving
+	/// only themselves, or the destination is the victim's own owner.
+	/// </summary>
+	private async ValueTask<bool> FixedAllows(
+		AnySharpObject player, AnySharpObject victim, AnySharpContainer destination,
+		bool telAnywhere, bool telAnything)
+	{
+		if (telAnything || (telAnywhere && player.Object().DBRef.Equals(victim.Object().DBRef)))
+		{
+			return true;
+		}
+
+		// dbdefs.h:84: Fixed() is read on the OWNER, never on the object itself.
+		AnySharpObject victimOwner = await victim.Object().Owner.WithCancellation(CancellationToken.None);
+
+		if (destination.Object().DBRef.Equals(victimOwner.Object().DBRef))
+		{
+			return true;
+		}
+
+		AnySharpObject playerOwner = await player.Object().Owner.WithCancellation(CancellationToken.None);
+
+		return !await victimOwner.HasFlag("FIXED") && !await playerOwner.HasFlag("FIXED");
+	}
+
+	/// <summary>
+	/// PennMUSH <c>can_open_from</c> (<c>hdrs/mushdb.h:94</c>): may <paramref name="player"/> source an
+	/// exit in <paramref name="room"/>. Relocating an exit is held to the same standard as opening one
+	/// there in the first place (<c>wiz.c:469</c>).
+	/// </summary>
+	private async ValueTask<bool> CanOpenFrom(AnySharpObject player, AnySharpContainer room)
+	{
+		if (!room.IsRoom || await player.IsGuest())
+		{
+			return false;
+		}
+
+		var roomObject = room.WithExitOption();
+
+		if (await PermissionService.Controls(player, roomObject)
+				|| await player.IsWizard()
+				|| await player.IsRoyalty()
+				|| await player.HasPower("Open_Anywhere"))
+		{
+			return true;
+		}
+
+		return await roomObject.HasFlag("OPEN_OK")
+			&& await LockService.Evaluate(LockType.Open, roomObject, player);
+	}
+
 	[SharpCommand(Name = "@TELEPORT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2,
 		Switches = ["LIST", "INSIDE", "SILENT"], ParameterNames = ["object", "destination"])]
 	public async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -655,11 +783,6 @@ public partial class Commands
 				continue;
 			}
 			var targetContent = target.AsContent;
-			if (!await PermissionService.Controls(executor, target))
-			{
-				await NotifyService.Notify(executor, ErrorMessages.Returns.CannotTeleport, executor);
-				continue;
-			}
 
 			AnySharpContainer destinationContainer;
 
@@ -695,19 +818,64 @@ public partial class Commands
 				continue;
 			}
 
-			// Every check from here to the end of the command is gated on Tel_Anywhere in PennMUSH
-			// (wiz.c:442, 487, 541, 549, 563): Hasprivs(x) || has_power_by_name(x, "TPORT_ANYWHERE")
-			// (hdrs/mushdb.h:17-18), where Hasprivs is Wizard or Royalty. SharpMUSH seeds the matching
-			// power as Tport_Anywhere (SharpMUSH.Database/Seed/PowerSeed.cs:48).
-			var telAnywhere = await executor.IsWizard()
-				|| await executor.IsRoyalty()
-				|| await executor.HasPower("Tport_Anywhere");
+			// Two privilege sets run through the rest of the command, and they are not the same one.
+			// Tel_Anywhere (hdrs/mushdb.h:17) waives the restrictions on WHERE something may go;
+			// Tel_Anything (hdrs/mushdb.h:19) waives the restrictions on WHAT may be moved. Each is
+			// Hasprivs — Wizard or Royalty — or the matching power (SharpMUSH.Database/Seed/PowerSeed.cs:50-51).
+			var hasPrivs = await executor.IsWizard() || await executor.IsRoyalty();
+			var telAnywhere = hasPrivs || await executor.HasPower("Tport_Anywhere");
+			var telAnything = hasPrivs || await executor.HasPower("Tport_Anything");
 
 			// wiz.c:442: without Tel_Anywhere, another player is not a destination at all — the
 			// /INSIDE question below only arises for someone who could have gone there.
 			if (!telAnywhere && target.IsPlayer && destinationContainer.IsPlayer)
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BadDestination), executor);
+				continue;
+			}
+
+			// wiz.c:450-479: an exit is not carried to the destination. Its SOURCE is rewritten, so it
+			// now leads out of the destination room instead, keeping where it leads. Penn returns here
+			// and never reaches safe_tel, which is why safe_tel has nothing to say about exits.
+			if (target.IsExit)
+			{
+				if (!destinationContainer.IsRoom)
+				{
+					await NotifyService.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.ExitsOnlyTeleportToRooms), executor);
+					continue;
+				}
+
+				if (await destinationContainer.WithExitOption().HasFlag("GOING"))
+				{
+					await NotifyService.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.ExitDestinationCrumbling), executor);
+					continue;
+				}
+
+				var oldSource = await targetContent.Location();
+
+				// wiz.c:468: the room the exit sits in decides the eviction, and the new room has to be
+				// one the teleporter could have opened an exit in to begin with.
+				if (!await TportControlOk(executor, target, oldSource, telAnything)
+						|| !await CanOpenFrom(executor, destinationContainer))
+				{
+					await NotifyService.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+					continue;
+				}
+
+				await Mediator.Send(new MoveObjectCommand(
+					targetContent, destinationContainer, oldSource.Object().DBRef,
+					executor.Object().DBRef, IsSilent: true, Cause: "teleport"));
+
+				// wiz.c:478: the exit branch has no victim==player case to exclude, so AreQuiet is the
+				// whole of it.
+				if (!await target.Object().AreQuietAsync(executor))
+				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Teleported), executor);
+				}
+
 				continue;
 			}
 
@@ -724,65 +892,62 @@ public partial class Commands
 				destinationContainer = await destinationContainer.Location();
 			}
 
-			// Zone teleport restriction: check if the source room blocks teleporting out.
-			// PennMUSH src/wiz.c: NO_TEL flag prevents all non-wizard teleports from the room.
-			// Zone mismatch with Zone lock failure prevents teleporting out of the zone.
-			if (!telAnywhere)
+			// wiz.c:519-566. Every restriction here reads the victim's ABSOLUTE room — the room at the
+			// end of the containment walk, not the immediate container — so nesting inside a vehicle is
+			// no way around the room's policy. Penn checks the VICTIM's room rather than the
+			// teleporter's, which is what stops someone in a NO_TEL room having one of their objects
+			// @tel them out; the exemption, though, is the command-giving player's, and it is waived
+			// for a teleporter who controls that room or holds Tel_Anywhere.
+			var absoluteRoom = await MoveService.AbsoluteRoom(target);
+
+			if (absoluteRoom is not null)
 			{
-				AnySharpContainer? sourceLocation = null;
-				try
-				{
-					sourceLocation = target.IsContent
-						? await target.AsContent.Location()
-						: null;
-				}
-				catch
-				{
-				}
+				var absoluteRoomObject = absoluteRoom.WithExitOption();
+				var sourceExempt = telAnywhere || await PermissionService.Controls(executor, absoluteRoomObject);
 
-				if (sourceLocation is not null)
-				{
-					var sourceObj = sourceLocation.WithExitOption();
-
-					if (await sourceObj.HasFlag("NO_TEL"))
-					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TeleportsNotAllowed), executor);
-						continue;
-					}
-
-					// Zone mismatch check: if source room has a zone that differs from destination's zone,
-					// evaluate the Zone lock on the source room. Failure blocks teleport.
-					var sourceZone = await sourceObj.Object().Zone.WithCancellation(CancellationToken.None);
-					if (sourceZone is AnySharpObject sourceZoneObject)
-					{
-						var destObj = destinationContainer.WithExitOption();
-						var destZone = await destObj.Object().Zone.WithCancellation(CancellationToken.None);
-						var sourceZoneDbRef = sourceZoneObject.Object().DBRef;
-						var destZoneDbRef = destZone is AnySharpObject destZoneObject
-							? destZoneObject.Object().DBRef
-							: new DBRef(-1);
-
-						if (!sourceZoneDbRef.Equals(destZoneDbRef))
-						{
-							if (!await LockService.Evaluate(LockType.Zone, sourceObj, executor))
-							{
-								await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoZoneTeleport), executor);
-								continue;
-							}
-						}
-					}
-				}
-			}
-
-			// Check TPort lock on the destination (PennMUSH src/wiz.c).
-			// Wizards bypass the TPort lock check.
-			if (!telAnywhere)
-			{
-				var destObj = destinationContainer.WithExitOption();
-				if (!await LockService.Evaluate(LockType.Teleport, destObj, executor))
+				// wiz.c:543.
+				if (!sourceExempt && await absoluteRoomObject.HasFlag("NO_TEL"))
 				{
 					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TeleportsNotAllowed), executor);
 					continue;
+				}
+
+				// wiz.c:549: the room's LEAVE lock, evaluated against the teleporter, with its failure
+				// triad run once.
+				if (!sourceExempt
+						&& !await PermissionService.PassesLock(executor, absoluteRoomObject, LockType.Leave))
+				{
+					await DidItService.FailLock(parser, executor, absoluteRoomObject, LockType.Leave,
+						MarkupText.Plain(ErrorMessages.Notifications.TeleportsNotAllowed));
+					continue;
+				}
+
+				// wiz.c:561: Z_TEL on the room, or on the room's zone object, pins the victim inside
+				// that zone. The Zone lock has no part in this — where it matters is `controls`, which
+				// `sourceExempt` already went through.
+				//
+				// The zone test comes FIRST, and deliberately: Penn opens the condition with
+				// `GoodObject(Zone(absroom))`, so a Z_TEL room carrying no zone is not restricted at
+				// all, because `ZTel(absroom)` is never reached. That reads like an oversight and is
+				// not one — Z_TEL confines you to a zone, and a room in none has none to confine you
+				// to — and it is also what makes reading the zone object's own Z_TEL safe, which
+				// would otherwise be the zone of NOTHING. Penn never compares a missing source zone
+				// against the destination's.
+				if (!sourceExempt
+						&& await absoluteRoomObject.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject sourceZone
+						&& (await absoluteRoomObject.HasFlag("Z_TEL") || await sourceZone.HasFlag("Z_TEL")))
+				{
+					var destinationZone = await destinationContainer.WithExitOption().Object().Zone
+						.WithCancellation(CancellationToken.None);
+
+					var sameZone = destinationZone is AnySharpObject destinationZoneObject
+						&& sourceZone.Object().DBRef.Equals(destinationZoneObject.Object().DBRef);
+
+					if (!sameZone)
+					{
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoZoneTeleport), executor);
+						continue;
+					}
 				}
 			}
 
@@ -792,6 +957,20 @@ public partial class Commands
 			var isSilent = parser.CurrentState.Switches.Contains("SILENT");
 			var currentLocation = await targetContent.Location();
 			var changesRoom = !currentLocation.Object().DBRef.Equals(destinationContainer.Object().DBRef);
+
+			// wiz.c:570-574. One conjunction authorises the whole move: authority over the victim where
+			// it stands, authority over where it is going, and the FIXED rule. Any of the three failing
+			// is the same refusal, and it is the destination's ENTER lock failure triad (wiz.c:590) —
+			// not a bare notification — shown to the room the teleporter is standing in.
+			if (!await TportControlOk(executor, target, currentLocation, telAnything)
+					|| !await TportDestOk(executor, target, destinationContainer, telAnywhere)
+					|| !await FixedAllows(executor, target, destinationContainer, telAnywhere, telAnything))
+			{
+				await DidItService.FailLock(parser, executor, destinationContainer.WithExitOption(), LockType.Enter,
+					MarkupText.Plain(ErrorMessages.Notifications.PermissionDenied),
+					await executor.Where());
+				continue;
+			}
 
 			if (!isSilent && changesRoom)
 			{

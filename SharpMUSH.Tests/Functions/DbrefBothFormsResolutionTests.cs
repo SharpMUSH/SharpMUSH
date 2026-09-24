@@ -45,7 +45,7 @@ public class DbrefBothFormsResolutionTests
 	public async ValueTask Player_NameAndLoc_ResolveByBothShortAndFullDbref()
 	{
 		var tag = Guid.NewGuid().ToString("N")[..8];
-		var name = $"DualRef_{tag}";
+		var name = $"DRef_{tag}";
 
 		await Cmd("@set #1=WIZARD");
 		await Cmd($"@pcreate {name}=pw_{tag}");

@@ -54,7 +54,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(result));
 	}
 
-	[SharpFunction(Name = "lit", MinArgs = 1, Flags = FunctionFlags.Literal | FunctionFlags.NoParse, ParameterNames = ["argument..."])]
+	[SharpFunction(Name = "lit", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Literal | FunctionFlags.NoParse, ParameterNames = ["argument..."])]
 	public ValueTask<CallState> Lit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		// lit() with Literal flag: args are already the raw unevaluated text (set by visitor's Literal branch).
@@ -347,7 +347,7 @@ public partial class Functions
 		return ValueTask.FromResult(new CallState(result));
 	}
 
-	[SharpFunction(Name = "strcat", MinArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
+	[SharpFunction(Name = "strcat", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public ValueTask<CallState> Concat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var values = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message ?? MarkupText.Empty);
@@ -355,7 +355,7 @@ public partial class Functions
 			? FunctionLimits.RejectOutput(parser.CurrentState) : new CallState(MarkupText.Concat(values)));
 	}
 
-	[SharpFunction(Name = "cat", MinArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
+	[SharpFunction(Name = "cat", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["string..."])]
 	public ValueTask<CallState> Cat(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var values = parser.CurrentState.ArgumentsOrdered.Values.Select(x => x.Message ?? MarkupText.Empty);
@@ -1992,10 +1992,23 @@ public partial class Functions
 		return [head[0], .. text.Substring(consumed).WrapLines(width, WrapMode.Word)];
 	}
 
+	/// <summary>
+	/// Deletes <c>&lt;len&gt;</c> characters from <c>&lt;string&gt;</c> starting at the zero-based
+	/// <c>&lt;first&gt;</c>. PennMUSH aliases <c>delete()</c> onto this (<c>src/function.c:335</c>);
+	/// the list-flavoured deletion is <c>ldelete()</c>.
+	/// </summary>
+	/// <remarks>
+	/// The range handling is <c>fun_delete</c>'s (<c>src/funstr.c:345</c>): a non-integer argument is
+	/// <c>#-1 ARGUMENTS MUST BE INTEGERS</c>, a negative position is <c>#-1 OUT OF RANGE</c>, and a
+	/// position past the end, a zero length or a negative length all answer the string untouched.
+	/// The negative length is PennMUSH's code rather than its help: <c>fun_delete</c> shifts the
+	/// position but leaves the count negative, and <c>ansi_string_delete</c> (<c>src/markup.c:2301</c>)
+	/// returns early on <c>count &lt; 1</c>. The 1.8.8 oracle answers the input unchanged, so that is
+	/// what this reproduces.
+	/// </remarks>
 	[SharpFunction(Name = "strdelete", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "position", "length"])]
-	public async ValueTask<CallState> StrDelete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> StrDelete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		await ValueTask.CompletedTask;
 		var str = parser.CurrentState.Arguments["0"].Message!;
 		var first = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var len = parser.CurrentState.Arguments["2"].Message!.ToPlainText();
@@ -2003,17 +2016,17 @@ public partial class Functions
 		if (!int.TryParse(first, out var index)
 				|| !int.TryParse(len, out var length))
 		{
-			return ErrorMessages.Returns.Integer;
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Integers);
 		}
 
-		return str.Remove(index, length);
-	}
+		if (index < 0)
+		{
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.OutOfRange);
+		}
 
-	[SharpFunction(Name = "DELETE", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular,
-		ParameterNames = ["list", "position", "delimiter", "output-separator"])]
-	public ValueTask<CallState> Delete(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		return ListDelete(parser, _2);
+		return ValueTask.FromResult<CallState>(index >= str.Length || length < 1
+			? str
+			: str.Remove(index, Math.Min(length, str.Length - index)));
 	}
 
 	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular,
@@ -2111,7 +2124,11 @@ public partial class Functions
 		return new CallState(MarkupText.Join(delimiter, truthyValues)) { HadErrors = hadErrors };
 	}
 
-	[SharpFunction(Name = "ansi", MinArgs = 2, Flags = FunctionFlags.Regular)]
+	// PennMUSH registers ANSI as 2, -2 (function.c:365): the negative maximum means the text is not
+	// comma-split, so ansi(h,a,b) colours "a,b". SharpMUSH splits every call and colours the second
+	// argument, which is two arguments' worth of contract, so the second is where it stops: a third
+	// argument is refused by name rather than evaluated and discarded.
+	[SharpFunction(Name = "ansi", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["codes", "string"])]
 	public ValueTask<CallState> ANSI(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;

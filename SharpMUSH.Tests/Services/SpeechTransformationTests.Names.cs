@@ -29,7 +29,7 @@ public partial class SpeechTransformationTests
 	public async Task AutomaticMonikerConfigurationDoesNotDisableExplicitNames(bool enabled)
 	{
 		var actor = await Player();
-		var suffix = Guid.NewGuid().ToString("N");
+		var suffix = Guid.NewGuid().ToString("N")[..12];
 		await Admin($"@name {actor.DbRef}=A{suffix}");
 		await Admin($"&NAMEACCENT {actor.DbRef}='{new string('-', suffix.Length)}");
 		await Admin($"@moniker {actor.DbRef}=[ansi(r,x)][ansi(g,y)]");

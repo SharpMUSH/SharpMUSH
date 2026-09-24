@@ -1,6 +1,7 @@
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Models.SchedulerModels;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Requests;
 using Mediator;
@@ -439,42 +440,21 @@ public class DatabaseCommandTests
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask UnrecycleCommand()
-	{
-		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@unrecycle #100"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("@UNRECYCLE: Object recovery system not yet implemented."), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask DisableCommand()
 	{
 		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@disable TestCommand"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("No configuration option named 'TestCommand'."), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask EnableCommand()
 	{
 		var executor = SqlWebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@enable TestCommand"));
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("No configuration option named 'TestCommand'."), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.EnableDisableNoOptionFormat), executor, executor)).IsTrue();
 	}
 
 	[Test]

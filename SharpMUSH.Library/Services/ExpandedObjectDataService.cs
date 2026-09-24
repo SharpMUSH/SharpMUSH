@@ -23,9 +23,18 @@ public class ExpandedObjectDataService(IMediator mediator) : IExpandedObjectData
 
 	public async ValueTask<T?> GetExpandedDataAsync<T>(SharpObject obj) where T : class
 	{
+		// The query handler deserializes the stored JSON as `object?`, so what comes back is a
+		// JsonElement and never a T: casting it away returned null for every read, which left
+		// per-object data write-only. Re-serialize into the asked-for type, as the server-data
+		// read beneath this one already does.
 		var result = await mediator.Send(new ExpandedDataQuery(obj, typeof(T).Name));
-		var resultAsT = result as T;
-		return resultAsT;
+
+		return result switch
+		{
+			null => null,
+			T typed => typed,
+			_ => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(result))
+		};
 	}
 
 	public async ValueTask SetExpandedDataAsync<T>(T data, SharpObject obj, bool ignoreNull = false) where T : class

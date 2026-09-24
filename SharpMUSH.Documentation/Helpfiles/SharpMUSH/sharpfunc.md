@@ -1519,8 +1519,15 @@ You say, "abcfgh"
 ```
 ```sharp
     > say strdelete(abcdefgh, 3, -2)
-    You say, "abefgh"
+    You say, "abcdefgh"
 ```
+  A negative `<len>` deletes nothing. PennMUSH's own help claims it deletes backwards from
+  `<first>`, but fun_delete leaves the count negative and ansi_string_delete returns early on it,
+  so 1.8.8 answers the string untouched; SharpMUSH follows the code.
+
+  A `<first>` past the end of the string, and a `<len>` of zero, likewise answer the string
+  untouched. A negative `<first>` is `#-1 OUT OF RANGE`.
+
   delete() is an alias for strdelete(), for backwards compatability.
 
 
@@ -2207,7 +2214,12 @@ You say, "This is 1 number"
 # FRACTION()
 `fraction(<number>[, <whole>])`
 
-  This function returns a fraction representing the floating-point `<number>`. Since not all numbers can be expressed as a fraction, dividing the numerator by the denominator of the results will not always return the original `<number>`, but something close to it.
+  This function returns a fraction representing the floating-point `<number>`, reduced to its
+  lowest terms. Dividing the numerator by the denominator gives back exactly `<number>`.
+
+  PennMUSH answers the *simplest* fraction within one part in 10^10 instead, which is not always
+  the number you gave it — `fraction(pi())` is `348987/111086` there. Round `<number>` first if
+  you want a simpler fraction than the one it names.
 
   If `<whole>` is true, and `<number>` is greater than 1.0 (or less than -1.0), the return value will be a whole number followed by the fraction representation of the decimal.
 
@@ -2218,7 +2230,7 @@ think fraction(.75)
 ```
 
     > think fraction(pi())<br>
-    348987/111086
+    3141593/1000000
 
     > think fraction(2)<br>
     2
@@ -2392,10 +2404,10 @@ You say "This is"
 # HASATTRP()
 # HASATTRVAL()
 # HASATTRPVAL()
-`hasattr(<object>, <attribute>)`<br>
-`hasattrp(<object>, <attribute>)`<br>
-`hasattrval(<object>, <attribute>)`<br>
-`hasattrpval(<object>, <attribute>)`
+`hasattr(<object>[/<attribute>][, <attribute>])`<br>
+`hasattrp(<object>[/<attribute>][, <attribute>])`<br>
+`hasattrval(<object>[/<attribute>][, <attribute>])`<br>
+`hasattrpval(<object>[/<attribute>][, <attribute>])`
 
   The hasattr*() functions check to see if `<object>` has a given attribute. They return #-1 if the object does not exist or the attribute can't be examined by the player. Otherwise, they return 1 if the attribute is present and 0 if it is not.
 
@@ -2407,7 +2419,8 @@ You say "This is"
 
   hasattrpval() is like hasattrval() but also checks parents.
 
-  All four functions will also work with one argument in the form of `<object>`/`<attribute>`.
+  All four functions will also work with one argument in the form of `<object>`/`<attribute>`. A
+  single argument carrying no `/` is `#-1 BAD ARGUMENT FORMAT TO <function>`.
 
 
 **See Also:**
@@ -6843,12 +6856,14 @@ think testlock(\\+FOO:BAR,*Walker)
 # TEXTSEARCH()
 # DYNHELP()
 `textfile(<type>, <entry>)`<br>
-`textentries(<type>[, <osep>])`<br>
+`textentries(<type>, <pattern>[, <osep>])`<br>
 `textsearch(<type>, <pattern>[, <osep>])`
 
   textfile() returns the text of entries from cached text files (such as "help", "news", "events", etc.) All whitespace and newlines are included, so you may want to edit %r's and squish the result if you plan to use the text as a list of words rather than a display.
 
-  textentries() returns every topic name in `<type>`, separated by `<osep>` (a space by default). PennMUSH takes a required `<pattern>` here and returns only the topics matching it; SharpMUSH does not, so filter the result yourself, or use textsearch() where you want matching by content.
+  textentries() returns the topic names in `<type>` matching `<pattern>`, separated by `<osep>` (a space by default). `<pattern>` is a wildcard pattern matched against the topic name; use `*` for every topic, or textsearch() where you want matching by content instead.
+
+  Both textfile() and textentries() return #-1 FILE NOT FOUND for a `<type>` that is not a text-file category, and #-1 PERMISSION DENIED for an administrator-only one (ahelp) to anyone who is not a wizard or royalty.
 
   textsearch() returns the names of all topics whose contents matches the given `<pattern>`, the same as "help/search `<pattern>`", with topic names separated by `<osep>`.
 
