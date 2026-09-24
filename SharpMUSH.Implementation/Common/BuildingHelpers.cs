@@ -171,7 +171,8 @@ public static class BuildingHelpers
 	{
 		if (string.IsNullOrWhiteSpace(roomName.ToPlainText()))
 		{
-			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DigWhat), executor);
+			await notifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.DigWhat),
+				executor);
 			return new Error<string>(ErrorMessages.Returns.NoRoomNameSpecified);
 		}
 
@@ -209,7 +210,7 @@ public static class BuildingHelpers
 			return new Error<string>(ErrorMessages.Returns.BuildingQuotaExhausted);
 		}
 
-		await notifyService.NotifyLocalized(executor,
+		await notifyService.NotifyLocalized(executor.Object().DBRef,
 			nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executor, roomName, dug.Number);
 
 		if (await mediator.Send(new GetObjectNodeQuery(dug)) is not (AnySharpObject and SharpRoom room))
@@ -265,9 +266,10 @@ public static class BuildingHelpers
 			return false;
 		}
 
-		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OpenedExit), executor,
-			$"#{opened.Number}");
-		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TryingToLink), executor);
+		await notifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.OpenedExit),
+			executor, $"#{opened.Number}");
+		await notifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.TryingToLink),
+			executor);
 
 		if (await mediator.Send(new GetObjectNodeQuery(opened)) is not (AnySharpObject and SharpExit exit))
 		{
@@ -275,8 +277,8 @@ public static class BuildingHelpers
 		}
 
 		await mediator.Send(new LinkExitCommand(exit, to));
-		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor,
-			opened.Number, to.Object().DBRef.Number);
+		await notifyService.NotifyLocalized(executor.Object().DBRef,
+			nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, opened.Number, to.Object().DBRef.Number);
 
 		return true;
 	}
