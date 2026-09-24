@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -64,8 +64,10 @@ public class DidItServiceTests
 		var thing = await Thing("Loud");
 		await GodParser.CommandParse(1, ConnectionService,
 			MarkupText.Plain($"@set {thing}=AUDIBLE"));
+		// Forwards to itself: Can_Forward(thing, fwd) is checked at set time (#1218) and nothing
+		// controls God, so "#1" is a value PennMUSH refuses and the list would never be stored.
 		await GodParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"&FORWARDLIST {thing}=#1"));
+			MarkupText.Plain($"&FORWARDLIST {thing}=#{thing.Number}"));
 		await Assert.That(await PermissionService.IsHearer(await Node(thing))).IsTrue();
 	}
 
@@ -73,8 +75,10 @@ public class DidItServiceTests
 	public async ValueTask ForwardListWithoutAudibleIsNotAHearer()
 	{
 		var thing = await Thing("Quiet");
+		// Self-forward for the same reason as above - with "#1" the list was refused outright, so the
+		// assertion held for want of a FORWARDLIST rather than for want of AUDIBLE.
 		await GodParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"&FORWARDLIST {thing}=#1"));
+			MarkupText.Plain($"&FORWARDLIST {thing}=#{thing.Number}"));
 		await Assert.That(await PermissionService.IsHearer(await Node(thing))).IsFalse();
 	}
 

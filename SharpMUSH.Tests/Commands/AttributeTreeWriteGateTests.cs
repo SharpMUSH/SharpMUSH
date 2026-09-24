@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.Definitions;
@@ -60,6 +60,14 @@ public class AttributeTreeWriteGateTests
 		var result = await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think {expression}"));
 		return result?.Message?.ToPlainText() ?? string.Empty;
 	}
+
+	/// <summary>
+	/// Reads <paramref name="attribute"/> off <paramref name="who"/> as God, so a wizard-flagged
+	/// attribute is still readable when the test's own executor is a mortal. An attribute that was
+	/// never created reads as the empty string.
+	/// </summary>
+	private async Task<string> GodGet(DBRef who, string attribute)
+		=> (await Parser.FunctionParse(MarkupText.Plain($"[get(#{who.Number}/{attribute})]")))!.Message!.ToPlainText();
 
 	/// <summary>
 	/// Penn's <c>Cannot_Write_This_Attr</c> applies to EVERY ancestor node
@@ -484,5 +492,109 @@ public class AttributeTreeWriteGateTests
 			IAttributeService.AttributeMode.Read, false);
 		await Assert.That(survivor.IsAttribute).IsTrue()
 			.Because("a safe attribute must survive the wipe that reported it");
+	}
+
+	/// <summary>
+	/// #1217. <c>AMAIL</c> is <c>AF_WIZARD</c> in the standard attribute table, and a standard
+	/// attribute's flags are applied by the provider as it creates the node - one line AFTER the
+	/// write they should have refused. PennMUSH closes that window in <c>can_create_attr</c>
+	/// (<c>src/attrib.c:946</c>, <c>446-486</c>): <c>set_default_flags</c> ORs the table's flags onto
+	/// a synthetic <c>ATTR</c> and <c>Cannot_Write_This_Attr</c> is asked about that first. Captured
+	/// live on 2026-09-22 as a mortal: <c>&amp;AMAIL me=...</c> -&gt; "That attribute cannot be
+	/// changed by you." A mortal creating their own <c>AMAIL</c> is arbitrary code the game then runs
+	/// on their behalf.
+	/// </summary>
+	[Test]
+	public async ValueTask MortalCannotCreateAWizardFlaggedStandardAttribute()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGCrAmailMortal");
+
+		// Control: a standard-table attribute the mortal MAY set still gets created, so the refusal
+		// below is the wizard flag rather than the gate refusing every creation.
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain("&SEX me=ordinary"));
+		await Assert.That(await GodGet(mortal.DbRef, "SEX")).IsEqualTo("ordinary")
+			.Because("an unprivileged standard attribute must still be creatable by a mortal");
+
+		await Parser.CommandParse(mortal.Handle, ConnectionService,
+			MarkupText.Plain("&AMAIL me=@pemit me=AMAIL FIRED"));
+
+		await Assert.That(await GodGet(mortal.DbRef, "AMAIL")).IsEqualTo(string.Empty)
+			.Because("a mortal must not be able to create a wizard-flagged standard attribute on themselves");
+	}
+
+	/// <summary>
+	/// The other side of #1217: the create gate is <c>Cannot_Write_This_Attr</c>, so <c>Wizard(p)</c>
+	/// passes the <c>AF_Wizard(a)</c> clause (<c>src/attrib.c:364-368</c>) and God passes everything.
+	/// Without this the fix would simply have made <c>AMAIL</c> unwritable.
+	/// </summary>
+	[Test]
+	public async ValueTask WizardAndGodCanCreateAWizardFlaggedStandardAttribute()
+	{
+		var wiz = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGCrAmailWiz");
+		var target = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGCrAmailGod");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wiz.DbRef}=WIZARD"));
+
+		await Parser.CommandParse(wiz.Handle, ConnectionService, MarkupText.Plain("&AMAIL me=wizardwrote"));
+		await Assert.That(await GodGet(wiz.DbRef, "AMAIL")).IsEqualTo("wizardwrote")
+			.Because("Wizard(p) passes Cannot_Write_This_Attr's AF_Wizard clause");
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&AMAIL #{target.DbRef.Number}=godwrote"));
+		await Assert.That(await GodGet(target.DbRef, "AMAIL")).IsEqualTo("godwrote")
+			.Because("God bypasses every per-flag gate");
+	}
+
+	/// <summary>
+	/// <c>can_create_attr</c> runs <c>set_default_flags</c> for EVERY prefix it has to create
+	/// (<c>src/attrib.c:461-486</c>), not just the leaf, because the provider applies
+	/// <c>DefaultFlags</c> at every level too (<c>LightningDatabase.Attributes.cs:330-342</c>). A new
+	/// leaf under a branch whose own table entry carries <c>wizard</c> must be refused at that
+	/// branch, even though the leaf's name has no entry at all.
+	/// </summary>
+	[Test]
+	public async ValueTask MortalCannotCreateALeafUnderAWizardFlaggedEntry()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGCrLeaf");
+
+		// Control: a two-level path whose branch has no standard-table entry is auto-vivified
+		// normally, so the miss below is the branch's wizard flag and not a broken create path.
+		await Parser.CommandParse(mortal.Handle, ConnectionService,
+			MarkupText.Plain($"&WGCL{uid}`LEAF me=okleaf"));
+		await Assert.That(await GodGet(mortal.DbRef, $"WGCL{uid}`LEAF")).IsEqualTo("okleaf")
+			.Because("a mortal can still create a leaf under a branch that carries no table flags");
+
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain("&AMAIL`SUB me=sneaky"));
+
+		await Assert.That(await GodGet(mortal.DbRef, "AMAIL`SUB")).IsEqualTo(string.Empty)
+			.Because("the wizard-flagged AMAIL level must refuse the whole write");
+		await Assert.That(await GodGet(mortal.DbRef, "AMAIL")).IsEqualTo(string.Empty)
+			.Because("a refused create must not have auto-vivified the wizard-flagged branch either");
+	}
+
+	/// <summary>
+	/// The case the code already got right, pinned so the create gate cannot grow into it: once an
+	/// attribute exists, the gate that applies is the <c>existing</c> walk over its STORED flags, and
+	/// re-setting a standard attribute a mortal owns must keep working.
+	/// </summary>
+	[Test]
+	public async ValueTask OverwritingAStandardAttributeYouMaySet_StillWorks()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "WGCrOverwrite");
+
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain("&SEX me=first"));
+		await Assert.That(await GodGet(mortal.DbRef, "SEX")).IsEqualTo("first")
+			.Because("the precondition must hold before the overwrite means anything");
+
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain("&SEX me=second"));
+
+		await Assert.That(await GodGet(mortal.DbRef, "SEX")).IsEqualTo("second")
+			.Because("an existing attribute a mortal may set must still be overwritable");
 	}
 }

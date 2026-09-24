@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -183,32 +183,11 @@ internal sealed class AttributeFlagWriter(
 	/// not merely to share one with it.
 	/// </summary>
 	/// <remarks>
-	/// The object half is spelled out here rather than delegated to
-	/// <c>SharpObjectExtensions.AreQuietAsync</c>: that helper reads the flag as
-	/// <c>x.Name == "QUIET"</c>, which is case-sensitive and blind to flag aliases, while every
-	/// gate in this class goes through <c>HelperFunctions.HasFlag</c>, which is neither. Folding
-	/// the two together is a change to the extension, not to this call site.
+	/// The object half is <c>SharpObjectExtensions.AreQuietAsync</c> now that it reads the flag
+	/// through <c>HelperFunctions.HasFlag</c> (#1175); only the attribute's own <c>AF_QUIET</c>,
+	/// which the extension has no counterpart for, is left here.
 	/// </remarks>
 	private static async ValueTask<bool> IsQuietForAsync(AnySharpObject executor, AnySharpObject obj,
 		SharpAttribute attribute)
-	{
-		if (attribute.IsQuiet())
-		{
-			return true;
-		}
-
-		if (await executor.HasFlag("QUIET"))
-		{
-			return true;
-		}
-
-		if (!await obj.HasFlag("QUIET"))
-		{
-			return false;
-		}
-
-		var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
-
-		return objOwner?.Object.Id == executor.Object().Id;
-	}
+		=> attribute.IsQuiet() || await obj.Object().AreQuietAsync(executor);
 }

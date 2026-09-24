@@ -2072,5 +2072,16 @@ public static class ErrorMessages
 		public const string EnableDisableNoOptionFormat = "No configuration option named '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EnableDisableNotBooleanFormat = "Option '{0}' is not a boolean option. Use @config/set instead.";
+
+		// PennMUSH's forward-list validation in do_set_atr (src/attrib.c:2326-2358), refusing the whole
+		// set before atr_add ever runs. Captured live on 2026-09-22.
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ForwardListRequiresDbrefsFormat = "{0} should contain only dbrefs.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ForwardListInvalidDbrefFormat = "Invalid dbref #{0} in {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ForwardListTargetRefusesSpeechFormat = "I don't think #{0} wants to hear from {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ForwardListTargetRefusesMailFormat = "I don't think #{0} wants {1}'s mail.";
 	}
 }

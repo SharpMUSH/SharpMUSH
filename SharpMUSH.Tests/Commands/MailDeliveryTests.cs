@@ -1,6 +1,7 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Behaviors;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -262,7 +263,13 @@ public class MailDeliveryTests
 		var sender = await Player("MdFlNoLock");
 		var owner = await Player("MdFlNoLockOwner");
 		var target = await Player("MdFlNoLockTarget");
+		// The list is set while the lock still permits it and the lock is then dropped, which is the
+		// order the capture describes and the only order Penn allows: since #1218 an unwilling target
+		// is refused at set time too (do_set_atr, src/attrib.c:2352), so what delivery has to cope
+		// with is a list that was valid when it was written.
+		await Run(target, $"@lock/mailforward me=#{owner.DbRef.Number}");
 		await Run(owner, $"&MAILFORWARDLIST me=#{target.DbRef.Number}");
+		await Run(target, "@unlock/mailforward me");
 
 		var senderHeard = await Heard(sender, async () =>
 		{
@@ -384,7 +391,13 @@ public class MailDeliveryTests
 		var owner = await Player("MdFlJunkOwner");
 		var target = await Player("MdFlJunkTarget");
 		await Run(target, $"@lock/mailforward me=#{owner.DbRef.Number}");
-		await Run(owner, $"&MAILFORWARDLIST me={target.Name} garbage #0 #99999999 #{target.DbRef.Number}");
+		// Penn refuses a list holding words and dead dbrefs at set time (#1218), so this one is
+		// planted through the store directly - atr_add without do_set_atr, which is how such a list
+		// exists in a real database (a load, an @clone, a target that has since gone away). The
+		// delivery-time skip (extmail.c:1495) is what this test is about and still has to hold.
+		var ownerPlayer = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Expect<SharpPlayer>();
+		await Mediator.Send(new SetAttributeCommand(owner.DbRef, ["MAILFORWARDLIST"],
+			MarkupText.Plain($"{target.Name} garbage #0 #99999999 #{target.DbRef.Number}"), ownerPlayer));
 
 		var ownerHeard = await Heard(owner, () => Run(sender, $"@mail #{owner.DbRef.Number}=Junk/Body."));
 
@@ -618,7 +631,6 @@ public class MailDeliveryTests
 	/// <c>That attribute cannot be changed by you.</c> for a mortal setting their own.
 	/// </summary>
 	[Test]
-	[Skip("#1217: AttributeWriter does not apply a new standard attribute's wizard flag before the write.")]
 	public async ValueTask AMortalCannotRaiseTheirOwnQuota()
 	{
 		using var _ = TestOptionsOverride.Scope(options => options with

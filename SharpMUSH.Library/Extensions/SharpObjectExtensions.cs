@@ -1,4 +1,4 @@
-using SharpMUSH.Library.DiscriminatedUnions;
+﻿using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Extensions;
@@ -6,10 +6,16 @@ namespace SharpMUSH.Library.Extensions;
 public static class SharpObjectExtensions
 {
 	/// <summary>
-	/// Check if an object has the NO_WARN flag set
+	/// Check if an object has the NO_WARN flag set.
 	/// </summary>
+	/// <remarks>
+	/// Through <see cref="HelperFunctions.HasFlag(SharpObject,string)"/>, like every other flag test
+	/// here: PennMUSH's <c>has_flag_by_name</c> resolves the name through <c>ptab_flag</c>, "Table of
+	/// flags by name, inc. aliases", caselessly. This compared <c>x.Name == "NO_WARN"</c>, so the
+	/// seeded <c>NOWARN</c> alias and any spelling <c>@flag/alias</c> adds read as "not set". #1175.
+	/// </remarks>
 	public static async Task<bool> HasNoWarnFlagAsync(this SharpObject obj)
-		=> await obj.Flags.Value.AnyAsync(x => x.Name == "NO_WARN");
+		=> await obj.HasFlag("NO_WARN");
 
 	/// <summary>
 	/// PennMUSH's <c>AreQuiet(&lt;player&gt;, &lt;thing&gt;)</c> (<c>hdrs/dbdefs.h:198</c>): the player
@@ -27,14 +33,16 @@ public static class SharpObjectExtensions
 	}
 
 	/// <summary>Check if an object has the QUIET flag set.</summary>
+	/// <remarks>See <see cref="HasNoWarnFlagAsync"/> for why this goes through <c>HasFlag</c>.</remarks>
 	public static async Task<bool> HasQuietFlagAsync(this SharpObject obj)
-		=> await obj.Flags.Value.AnyAsync(x => x.Name == "QUIET");
+		=> await obj.HasFlag("QUIET");
 
 	/// <summary>
-	/// Check if an object is marked as GOING (being destroyed)
+	/// Check if an object is marked as GOING (being destroyed).
 	/// </summary>
+	/// <remarks>See <see cref="HasNoWarnFlagAsync"/> for why this goes through <c>HasFlag</c>.</remarks>
 	public static async Task<bool> IsGoingAsync(this SharpObject obj)
-		=> await obj.Flags.Value.AnyAsync(x => x.Name == "GOING");
+		=> await obj.HasFlag("GOING");
 
 	/// <summary>
 	/// Get the zone chain for an object, walking up the zone hierarchy

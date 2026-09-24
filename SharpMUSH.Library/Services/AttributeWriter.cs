@@ -1,4 +1,5 @@
-﻿using Mediator;
+﻿using DotNext.Threading;
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -31,7 +32,7 @@ internal sealed class AttributeWriter(
 		string attribute,
 		MString value)
 		=> await SetAttributeAsync(executor, obj, attribute, value,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None));
+			await executor.Object().Owner.WithCancellation(CancellationToken.None), isAttributeCopy: false);
 
 	/// <summary>
 	/// As the four-argument overload, but stamps <paramref name="creator"/> as the attribute's
@@ -45,6 +46,23 @@ internal sealed class AttributeWriter(
 		string attribute,
 		MString value,
 		SharpPlayer creator)
+		=> await SetAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy: true);
+
+	/// <param name="isAttributeCopy">
+	/// Whether this write is PennMUSH's <c>atr_cpy</c> (<c>src/attrib.c:1706</c>) rather than an
+	/// ordinary set. <c>atr_cpy</c> reaches the database through <c>atr_new_add</c>, the deliberately
+	/// "dangerous" helper that bypasses both <c>can_create_attr</c>'s default-flag gate and
+	/// <c>do_set_atr</c>'s forward-list validation, so a clone carries the source's attributes across
+	/// whether or not the cloner could have written them itself. <c>@CLONE</c> is the only caller.
+	/// The <c>Controls</c>, stored-flag and <c>check_attr_value</c> gates still run: only the two
+	/// checks Penn reaches exclusively through <c>do_set_atr</c>/<c>atr_add</c> are skipped.
+	/// </param>
+	private async ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor,
+		AnySharpObject obj,
+		string attribute,
+		MString value,
+		SharpPlayer creator,
+		bool isAttributeCopy)
 	{
 		if (!await permissionService.Controls(executor, obj))
 		{
@@ -82,6 +100,11 @@ internal sealed class AttributeWriter(
 		// Check each existing prefix of the path, longest first, stopping at the first one that
 		// resolves: its own path covers every shorter prefix. When `existing` resolved, it IS the
 		// whole path and every prefix was already checked above.
+
+		// Where the path stops existing: every level from here down is one this call has to create,
+		// and so is gated below against the standard table's flags rather than a stored node's.
+		var createdFrom = existing.Count > 0 ? attrPath.Length : 0;
+
 		if (attrPath.Length > 1 && existing.Count == 0)
 		{
 			for (var i = attrPath.Length - 1; i >= 1; i--)
@@ -99,15 +122,70 @@ internal sealed class AttributeWriter(
 
 				if (prefix.Count > 0)
 				{
+					createdFrom = i;
 					break;
 				}
 			}
 		}
 
+		// PennMUSH's can_create_attr (src/attrib.c:446-486) gates every level of the path that does
+		// not exist yet, one at a time, against the flags the standard attribute table gives that
+		// level - set_default_flags (src/attrib.c:424-432) ORs them onto a synthetic ATTR and
+		// Cannot_Write_This_Attr is asked about THAT, before atr_add writes anything. The provider
+		// here applies SharpAttributeEntry.DefaultFlags to each level it creates
+		// (LightningDatabase.Attributes.cs:330-342), so without this the flags that should have
+		// refused the write only come into existence one line AFTER it happened: a mortal could
+		// create their own MAILQUOTA (lifting their mailbox limit) or AMAIL (code the game runs on
+		// their behalf), neither of which they could have overwritten once it existed. #1217.
+		SharpAttributeEntry? leafEntry = null;
+
+		for (var level = createdFrom; level < attrPath.Length; level++)
+		{
+			var levelName = string.Join('`', attrPath[..(level + 1)]).ToUpperInvariant();
+
+			if (await mediator.Send(new GetAttributeEntryQuery(levelName)) is not { } levelEntry)
+			{
+				continue;
+			}
+
+			if (level == attrPath.Length - 1)
+			{
+				leafEntry = levelEntry;
+			}
+
+			if (!isAttributeCopy && !await permissionService.CanSet(executor, obj,
+						CreatedAttributeFor(levelEntry, attrPath[level], levelName, creator)))
+			{
+				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
+			}
+		}
+
+		// The forward lists are validated here, four lines ahead of check_attr_value, exactly where
+		// Penn's do_set_atr puts them (src/attrib.c:2326-2358): an entry that is not an objid, does not
+		// name a live object, or names one unwilling to hear from THIS object refuses the whole set.
+		// Delivery re-checks per entry anyway (MailDelivery.MayForwardTo), so without this the player
+		// only learns their list is wrong when some sender is told of "a mail forwarding problem". #1218.
+		// Not on the @CLONE path: Can_Forward's subject is the object being written, so a list the
+		// SOURCE was allowed to hold can be one the clone could not have created - a forward lock
+		// naming the source passes for the source and not for the copy - and refusing it there would
+		// silently drop the attribute from the clone. Penn never validates a copy at all.
+		var fullName = string.Join('`', attrPath).ToUpperInvariant();
+
+		if (!isAttributeCopy && ForwardListRestriction.Applies(fullName)
+				&& await ForwardListRestriction.CheckAsync(mediator, permissionService, obj, fullName,
+					value.ToPlainText()) is Error<string> badList)
+		{
+			return badList;
+		}
+
 		// check_attr_value runs here in Penn's do_set_atr (src/attrib.c:2363): @attribute/limit and
 		// @attribute/enum refuse the set outright, and an enum stores the choice as the enum spells it.
-		if (await mediator.Send(new GetAttributeEntryQuery(string.Join('`', attrPath).ToUpperInvariant()))
-			is SharpAttributeEntry entry)
+		// The leaf's entry was already fetched above whenever the leaf itself is being created, which
+		// is the only case the pre-set `existing` snapshot cannot answer for.
+		if ((createdFrom < attrPath.Length
+					? leafEntry
+					: await mediator.Send(new GetAttributeEntryQuery(fullName)))
+				is { } entry)
 		{
 			var plain = value.ToPlainText();
 			switch (AttributeValueRestriction.Check(entry, plain))
@@ -154,6 +232,40 @@ internal sealed class AttributeWriter(
 
 		return new Success();
 	}
+
+	/// <summary>
+	/// The attribute one level of a path WOULD be once created, for the benefit of the one permission
+	/// ladder that already implements PennMUSH's <c>Cannot_Write_This_Attr</c>
+	/// (<see cref="IPermissionService.CanSet"/>) - exactly the synthetic <c>ATTR</c>
+	/// <c>can_create_attr</c> builds and runs <c>set_default_flags</c> over before testing it
+	/// (<c>src/attrib.c:446-458</c>). Reusing that ladder is the point: a second copy of the
+	/// God/internal/safe/nodump/wizard/locked ordering living here would be one to drift.
+	/// </summary>
+	/// <remarks>
+	/// <c>AL_CREATOR</c> is <paramref name="creator"/> because Penn stamps it before the test
+	/// (<c>src/attrib.c:453</c>), so <c>locked</c> on its own never refuses a creation to the very
+	/// player being recorded as the creator - only <c>wizard</c>, <c>safe</c>, <c>internal</c> and
+	/// <c>nodump</c> do.
+	/// </remarks>
+	private static SharpAttribute CreatedAttributeFor(SharpAttributeEntry entry, string name, string longName,
+		SharpPlayer creator)
+		=> new(
+			Id: string.Empty,
+			Key: string.Empty,
+			Name: name,
+			Flags: [.. entry.DefaultFlags.Select(flag => new SharpAttributeFlag
+			{
+				Name = flag,
+				Symbol = string.Empty,
+				System = true,
+				Inheritable = false
+			})],
+			CommandListIndex: null,
+			LongName: longName,
+			Leaves: new AsyncLazy<IAsyncEnumerable<SharpAttribute>>(
+				_ => Task.FromResult(AsyncEnumerable.Empty<SharpAttribute>())),
+			Owner: new AsyncLazy<SharpPlayer?>(_ => Task.FromResult<SharpPlayer?>(creator)),
+			SharpAttributeEntry: new AsyncLazy<SharpAttributeEntry?>(_ => Task.FromResult<SharpAttributeEntry?>(entry)));
 
 	/// <summary>
 	/// Clears attributes matching <paramref name="attributePattern"/>. In

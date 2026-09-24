@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -2770,5 +2770,17 @@
   <data name="PemitTargetWishesAlone" xml:space="preserve"><value>I'm sorry, but {0} wishes to be left alone now.</value></data>
   <data name="PowerAlreadyExistsFormat" xml:space="preserve">
     <value>Power '{0}' already exists.</value>
+  </data>
+  <data name="ForwardListRequiresDbrefsFormat" xml:space="preserve">
+    <value>{0} should contain only dbrefs.</value>
+  </data>
+  <data name="ForwardListInvalidDbrefFormat" xml:space="preserve">
+    <value>Invalid dbref #{0} in {1}.</value>
+  </data>
+  <data name="ForwardListTargetRefusesSpeechFormat" xml:space="preserve">
+    <value>I don't think #{0} wants to hear from {1}.</value>
+  </data>
+  <data name="ForwardListTargetRefusesMailFormat" xml:space="preserve">
+    <value>I don't think #{0} wants {1}'s mail.</value>
   </data>
 </root>

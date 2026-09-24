@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.Definitions;
@@ -649,6 +649,14 @@ public class DebugVerboseTests
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MarkupText.Plain("&test_fwd DbgFwdObj=$dbgfwdcmd:@pemit me=[add(10,20)]"));
 
+		// Can_Forward(thing, fwd) is checked at set time (#1218) and its subject is the OBJECT, not the
+		// player setting the list; an object never controls a player (src/predicat.c:405), so the
+		// forward target has to have set a forward lock the object passes.
+		var fwdObj = (await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
+			MarkupText.Plain("think [num(DbgFwdObj)]")))?.Message?.ToPlainText();
+		await Parser.CommandParse(forwardPlayer.Handle, ConnectionService,
+			MarkupText.Plain($"@lock/forward me={fwdObj}"));
+
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MarkupText.Plain($"&DEBUGFORWARDLIST DbgFwdObj=#{forwardPlayer.DbRef.Number}"));
 
@@ -684,6 +692,14 @@ public class DebugVerboseTests
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@set DbgMFwdObj=!no_command"));
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MarkupText.Plain("&test_mfwd DbgMFwdObj=$dbgmfwdcmd:@pemit me=[mul(3,7)]"));
+
+		// Both targets must allow the object through a forward lock - see the single-target test.
+		var mfwdObj = (await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
+			MarkupText.Plain("think [num(DbgMFwdObj)]")))?.Message?.ToPlainText();
+		await Parser.CommandParse(target1.Handle, ConnectionService,
+			MarkupText.Plain($"@lock/forward me={mfwdObj}"));
+		await Parser.CommandParse(target2.Handle, ConnectionService,
+			MarkupText.Plain($"@lock/forward me={mfwdObj}"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MarkupText.Plain($"&DEBUGFORWARDLIST DbgMFwdObj=#{target1.DbRef.Number} #{target2.DbRef.Number}"));
@@ -748,6 +764,9 @@ public class DebugVerboseTests
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MarkupText.Plain("&test_badfwd DbgBadFwdObj=$dbgbadfwdcmd:@pemit me=[add(5,5)]"));
 
+		// #99999 names no object, so since #1218 the list is refused at set time rather than being
+		// stored and skipped at forward time. Either way the object's own debug output still reaches
+		// its owner, which is what this test is about.
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService,
 			MarkupText.Plain("&DEBUGFORWARDLIST DbgBadFwdObj=#99999"));
 
