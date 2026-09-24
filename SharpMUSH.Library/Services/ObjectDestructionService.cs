@@ -242,6 +242,9 @@ public class ObjectDestructionService(
 			await mediator.Send(new UpdateChannelOwnerCommand(channel, probate), ct);
 		}
 
+		// malias.c malias_cleanup: off every alias, and any it owned go to the probate player.
+		await mediator.Send(new ReleaseMailAliasesCommand(playerDbRef.Number, probate.Object.DBRef.Number), ct);
+
 		// Materialised: freeing a possession deletes rows the live stream would still be reading.
 		var owned = await mediator
 			.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = playerDbRef }), ct)

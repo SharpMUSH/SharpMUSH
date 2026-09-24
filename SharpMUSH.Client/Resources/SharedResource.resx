@@ -684,6 +684,9 @@
   <data name="SelectedFile" xml:space="preserve">
     <value>Selected File</value>
   </data>
+  <data name="MailDatabaseOptional" xml:space="preserve">
+    <value>Mail database (optional): the PennMUSH maildb, for mail aliases</value>
+  </data>
   <data name="PreviewFileContent" xml:space="preserve">
     <value>Preview File Content</value>
   </data>
@@ -759,6 +762,9 @@
   </data>
   <data name="Locks" xml:space="preserve">
     <value>Locks:</value>
+  </data>
+  <data name="MailAliasesLabel" xml:space="preserve">
+    <value>Mail aliases:</value>
   </data>
   <data name="Issues" xml:space="preserve">
     <value>Issues</value>

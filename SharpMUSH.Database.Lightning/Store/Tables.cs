@@ -38,6 +38,7 @@ public static class Tables
 	public static readonly TableDef Mail = TableDef.Node("mail");
 	public static readonly TableDef MailBox = TableDef.Index("mail.box");
 	public static readonly TableDef MailSent = TableDef.Index("mail.sent");
+	public static readonly TableDef MailAlias = TableDef.Node("malias");
 	public static readonly TableDef Account = TableDef.Node("account");
 	public static readonly TableDef AccountEmail = TableDef.Index("account.email");
 	public static readonly TableDef AccountUser = TableDef.Index("account.user");
