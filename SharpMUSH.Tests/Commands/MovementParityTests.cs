@@ -2149,4 +2149,41 @@ public class MovementParityTests
 		await Assert.That(refused!.Message!.ToPlainText().Trim()).IsEqualTo("yes")
 			.Because("fail_lock queues the action attribute rather than running it inline");
 	}
+
+	/// <summary>
+	/// <c>wiz.c:549</c> reads the LEAVE lock off <c>absolute_room(victim)</c>, which is what makes
+	/// nesting no escape: sitting in a vehicle parked in the room does not put the victim outside the
+	/// room's policy.
+	/// </summary>
+	[Test]
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask TheSourceRoomsLeaveLockHoldsAVictimInsideAVehicle(Via via)
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LeaveVehicleMover");
+		var stranger = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "LeaveVehicleStranger");
+		var room = await Dig("LeaveVehicleRoom");
+		var destination = await OpenRoom("LeaveVehicleDest");
+		var vehicle = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "LeaveVehicle");
+
+		await God($"@teleport/silent #{vehicle.Number}={room}");
+		await God($"@set #{vehicle.Number}=ENTER_OK");
+		await God($"@teleport/silent {mover.DbRef}={room}");
+		await As(mover.Handle, $"enter #{vehicle.Number}");
+
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(vehicle.ToString()))
+			.Because("the whole point is that the immediate container is not the room");
+
+		await God($"@lock/leave {room}==#{stranger.DbRef.Number}");
+		await God($"&LFAIL {room}=The walls hold you.");
+
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await Teleport(mover.Handle, via, "me", destination));
+
+		await Assert.That(moverSaw.Count(m => m == "The walls hold you.")).IsEqualTo(1)
+			.Because("the absolute room's LEAVE lock is read, and its triad runs once");
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(vehicle.ToString()));
+	}
 }
