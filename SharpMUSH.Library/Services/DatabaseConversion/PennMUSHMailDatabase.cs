@@ -20,6 +20,9 @@ public class PennMUSHMailDatabase
 	/// line is missing or unreadable. The messages themselves are not read yet (#1110).
 	/// </summary>
 	public int? MessageCount { get; set; } = 0;
+
+	/// <summary>Why the maildb could not be read; <c>null</c> when it was. A maildb that fails leaves the rest empty.</summary>
+	public string? ReadError { get; set; }
 }
 
 /// <summary>

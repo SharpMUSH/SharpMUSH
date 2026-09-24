@@ -106,6 +106,32 @@ public class PennMUSHMailAliasImportTests
 		await Assert.That(await world.Mediator.CreateStream(new GetMailAliasesQuery()).CountAsync()).IsEqualTo(0);
 	}
 
+	/// <summary>The maildb is optional: one that cannot be read costs its aliases, not the world, and says so.</summary>
+	[Test]
+	public async Task AnUnreadableMaildbStillImportsTheWorld()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var badMaildb = Path.Join(Path.GetTempPath(), $"bad-{Guid.NewGuid():N}.maildb");
+		// An alias section cut off after its owner.
+		await File.WriteAllTextAsync(badMaildb, "+15\n1\n3\n");
+
+		try
+		{
+			var result = await world.Converter.ConvertDatabaseAsync(PennMUSHDbrefPreservationTests.FixturePath,
+				badMaildb, new Progress<ConversionProgress>());
+
+			await Assert.That(result.Errors).IsEmpty();
+			await Assert.That(result.PlayersConverted).IsGreaterThan(0);
+			await Assert.That(result.MailAliasesConverted).IsEqualTo(0);
+			await Assert.That(result.Warnings).Contains(w => w.StartsWith("The maildb could not be read"));
+			await Assert.That((await PennMUSHDbrefPreservationTests.NodeAsync(world, 3)).Object().Name).IsEqualTo("Alice");
+		}
+		finally
+		{
+			File.Delete(badMaildb);
+		}
+	}
+
 	/// <summary>malias_cleanup: a destroyed player leaves every alias, and one it owned passes on.</summary>
 	[Test]
 	public async Task ReleasingAPlayerTakesItOffAliasesAndHandsOnWhatItOwned()

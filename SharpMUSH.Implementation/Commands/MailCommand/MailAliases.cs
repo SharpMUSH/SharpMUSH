@@ -349,8 +349,28 @@ public static class MailAliases
 			return;
 		}
 
-		await services.Mediator.Send(new UpdateMailAliasCommand(alias.Name, alias with { Members = [.. members] }));
+		if (!await UpdateAsync(services, executor, alias, alias with { Members = [.. members] }))
+		{
+			return;
+		}
+
 		await Tell(services, executor, "MAIL: Alias list set.");
+	}
+
+	/// <summary>
+	/// Writes a changed alias. Another command can destroy or rename the alias between its read and this
+	/// write; then this says so and returns false, so the caller reports no success.
+	/// </summary>
+	private static async ValueTask<bool> UpdateAsync(Services services, AnySharpObject executor, SharpMailAlias alias,
+		SharpMailAlias updated)
+	{
+		if (await services.Mediator.Send(new UpdateMailAliasCommand(alias.Name, updated)) is SharpMailAlias)
+		{
+			return true;
+		}
+
+		await Tell(services, executor, $"MAIL: Mail Alias '{Token}{alias.Name}' not found.");
+		return false;
 	}
 
 	/// <summary>The owner, or a wizard: who may change an alias.</summary>
@@ -397,8 +417,12 @@ public static class MailAliases
 			return;
 		}
 
-		await services.Mediator.Send(new UpdateMailAliasCommand(alias.Name,
-			alias with { Members = [.. alias.Members, .. added] }));
+		if (!await UpdateAsync(services, executor, alias,
+			alias with { Members = [.. alias.Members, .. added] }))
+		{
+			return;
+		}
+
 		await Tell(services, executor, $"MAIL: Alias set '{name}' redefined.");
 	}
 
@@ -439,7 +463,11 @@ public static class MailAliases
 				$"MAIL: {await UnparseAsync(services, executor, target)} removed from alias {name}");
 		}
 
-		await services.Mediator.Send(new UpdateMailAliasCommand(alias.Name, alias with { Members = [.. members] }));
+		if (!await UpdateAsync(services, executor, alias, alias with { Members = [.. members] }))
+		{
+			return;
+		}
+
 		await Tell(services, executor, $"MAIL: Alias set '{name}' redefined.");
 	}
 
@@ -459,7 +487,11 @@ public static class MailAliases
 			return;
 		}
 
-		await services.Mediator.Send(new UpdateMailAliasCommand(alias.Name, alias with { Description = description }));
+		if (!await UpdateAsync(services, executor, alias, alias with { Description = description }))
+		{
+			return;
+		}
+
 		await Tell(services, executor, "MAIL: Description changed.");
 	}
 
@@ -491,9 +523,12 @@ public static class MailAliases
 		}
 
 		var renamed = await services.Mediator.Send(new UpdateMailAliasCommand(alias.Name, alias with { Name = newName[1..] }));
+		// A failed rename lost a race: either the alias went away or another took the new name first.
 		await Tell(services, executor, renamed is SharpMailAlias
 			? "MAIL: Mail Alias renamed."
-			: "MAIL: That name already exists!");
+			: await FindAsync(services, null, $"{Token}{alias.Name}") is null
+				? "MAIL: I cannot find that alias!"
+				: "MAIL: That name already exists!");
 	}
 
 	/// <summary>do_malias_stats. Penn's "allocated slots" is its array's capacity; here it is the count.</summary>
@@ -531,8 +566,12 @@ public static class MailAliases
 			return;
 		}
 
-		await services.Mediator.Send(new UpdateMailAliasCommand(alias.Name,
-			alias with { Owner = newOwner.Object.DBRef.Number }));
+		if (!await UpdateAsync(services, executor, alias,
+			alias with { Owner = newOwner.Object.DBRef.Number }))
+		{
+			return;
+		}
+
 		await Tell(services, executor, "MAIL: Owner changed for alias.");
 	}
 
@@ -553,9 +592,13 @@ public static class MailAliases
 		}
 
 		var parsed = ParsePrivileges(privileges);
-		await services.Mediator.Send(new UpdateMailAliasCommand(alias.Name, members
+		if (!await UpdateAsync(services, executor, alias, members
 			? alias with { SeePrivileges = parsed }
-			: alias with { UsePrivileges = parsed }));
+			: alias with { UsePrivileges = parsed }))
+		{
+			return;
+		}
+
 		await Tell(services, executor,
 			$"MAIL: Permission to see/use alias '{name}' changed to {PrivilegesToString(parsed)}");
 	}

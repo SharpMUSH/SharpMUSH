@@ -763,6 +763,9 @@
   <data name="Locks" xml:space="preserve">
     <value>Locks:</value>
   </data>
+  <data name="MailAliasesLabel" xml:space="preserve">
+    <value>Mail aliases:</value>
+  </data>
   <data name="Issues" xml:space="preserve">
     <value>Issues</value>
   </data>

@@ -67,7 +67,16 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var pennDatabase = await _parser.ParseFileAsync(databaseFilePath, cancellationToken);
 		if (!string.IsNullOrEmpty(mailDatabaseFilePath))
 		{
-			pennDatabase.Mail = await _parser.ParseMailFileAsync(mailDatabaseFilePath, cancellationToken);
+			try
+			{
+				pennDatabase.Mail = await _parser.ParseMailFileAsync(mailDatabaseFilePath, cancellationToken);
+			}
+			catch (FormatException ex)
+			{
+				// The maildb is optional and holds only mail: a bad one costs the aliases, not the world.
+				_logger.LogWarning(ex, "Could not read the PennMUSH mail database: {FilePath}", mailDatabaseFilePath);
+				pennDatabase.Mail = new PennMUSHMailDatabase { ReadError = ex.Message };
+			}
 		}
 
 		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
@@ -1276,6 +1285,12 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// <summary>Mail messages are not imported yet (#1110); say so, so the summary does not read as a full mail import.</summary>
 	private static void ReportUnimportedMail(PennMUSHMailDatabase mail, PennMUSHConversionContext context)
 	{
+		if (mail.ReadError is not null)
+		{
+			context.Warnings.Add($"The maildb could not be read, so no mail aliases or messages were imported: {mail.ReadError}");
+			return;
+		}
+
 		switch (mail.MessageCount)
 		{
 			case > 0 and var count:

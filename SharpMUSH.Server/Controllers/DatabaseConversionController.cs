@@ -16,11 +16,18 @@ public class DatabaseConversionController(
 	ILogger<DatabaseConversionController> logger)
 	: ControllerBase
 {
+	/// <summary>The most either file may be; the admin page allows the same.</summary>
+	private const long MaxUploadFileSize = 100 * 1024 * 1024;
+
+	/// <summary>Room for the multipart boundaries and headers around the two files.</summary>
+	private const long MultipartOverhead = 1024 * 1024;
+
 	/// <summary>
 	/// Upload and convert a PennMUSH database file, with its maildb (<c>mailFile</c>) optionally alongside
 	/// </summary>
 	[HttpPost("upload")]
-	[RequestSizeLimit(104857600)] // 100 MB
+	[RequestSizeLimit(2 * MaxUploadFileSize + MultipartOverhead)] // Both files at their limit, and the form around them
+	[RequestFormLimits(MultipartBodyLengthLimit = MaxUploadFileSize)] // Each file
 	public async Task<ActionResult<string>> UploadDatabase([FromForm] IFormFile file, [FromForm] IFormFile? mailFile,
 		CancellationToken cancellationToken)
 	{
@@ -29,7 +36,7 @@ public class DatabaseConversionController(
 			return BadRequest("No file uploaded");
 		}
 
-		var tempPath = Path.Combine(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
+		var tempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
 		string? mailTempPath = null;
 		try
 		{
@@ -43,7 +50,7 @@ public class DatabaseConversionController(
 
 			if (mailFile is { Length: > 0 })
 			{
-				mailTempPath = Path.Combine(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.maildb");
+				mailTempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.maildb");
 				await using var mailStream = System.IO.File.Create(mailTempPath);
 				await mailFile.CopyToAsync(mailStream, cancellationToken);
 				logger.LogInformation("Uploaded PennMUSH mail database file: {FileName} ({Size} bytes)", mailFile.FileName,

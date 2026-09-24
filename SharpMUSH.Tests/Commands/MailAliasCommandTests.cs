@@ -1,7 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -20,7 +18,6 @@ public class MailAliasCommandTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
@@ -153,9 +150,7 @@ public class MailAliasCommandTests
 
 		var output = await RunAsync(outsider, $"@mail {alias}=Denied/Denied body");
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(NotifyService,
-			nameof(ErrorMessages.Notifications.MailNoSuchUniquePlayer), $"No such unique player: {alias}.",
-			outsider.DbRef)).IsTrue();
+		await Assert.That(output).Contains($"No such unique player: {alias}.");
 		await Assert.That(output).DoesNotContain(m => m.StartsWith("MAIL: You sent your message to"));
 		await Assert.That(NotificationsTo(member.DbRef).Count(m => m.StartsWith("MAIL: You have a new message")))
 			.IsEqualTo(memberMailBefore);
@@ -177,9 +172,7 @@ public class MailAliasCommandTests
 
 		var output = await RunAsync(outsider, $"@mail {alias}=Open/Open body");
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(NotifyService,
-			nameof(ErrorMessages.Notifications.MailNoSuchUniquePlayer), $"No such unique player: {alias}.",
-			outsider.DbRef)).IsFalse();
+		await Assert.That(NotificationsTo(outsider.DbRef)).DoesNotContain($"No such unique player: {alias}.");
 		await Assert.That(output).Contains($"You sent your message to the '{alias[1..]}' alias");
 	}
 
@@ -241,17 +234,6 @@ public class MailAliasCommandTests
 		await Assert.That(await RunAsync(mortal, "@malias =me")).Contains("MAIL: Invalid malias command.");
 	}
 
-	private string[] NotificationsTo(DBRef target) =>
-		NotifyService.ReceivedCalls()
-			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Where(call => call.GetArguments() is [AnySharpObject obj, ..] && obj.Object().DBRef == target)
-			.Select(TextOf)
-			.Where(text => text is not null)
-			.Select(text => text!)
-			.ToArray();
-
-	private static string? TextOf(ICall call) =>
-		call.GetArguments() is [_, SharpMessage msg, ..]
-			? msg switch { MString markup => markup.ToPlainText(), string text => text }
-			: null;
+	/// <summary>The recipient-keyed recorder: the shared substitute's ReceivedCalls() is unsafe while parallel tests record.</summary>
+	private string[] NotificationsTo(DBRef target) => [.. WebAppFactoryArg.Notifications.For(target)];
 }
