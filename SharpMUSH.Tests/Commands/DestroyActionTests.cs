@@ -121,7 +121,7 @@ public class DestroyActionTests
 		var player = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "DAT_Cascade");
 		var room = await DigAsync("DAT_CascadeRoom");
 		var elsewhere = await DigAsync("DAT_CascadeElsewhere");
-		var exit = Parse(await AsGod($"@open {TestIsolationHelpers.GenerateUniqueName("DAT_CascadeExit")}={elsewhere},{room}"));
+		var exit = Parse(await AsGod($"@open {TestIsolationHelpers.GenerateUniqueName("DAT_CascadeExit")}={elsewhere},,{room}"));
 		foreach (var obj in new[] { room, exit })
 		{
 			await AsGod($"&ADESTROY {obj}=&HITS me=[get(me/HITS)]x");
@@ -174,7 +174,7 @@ public class DestroyActionTests
 	{
 		var room = await DigAsync("DAT_SparedRoom");
 		var elsewhere = await DigAsync("DAT_SparedElsewhere");
-		var exit = Parse(await AsGod($"@open {TestIsolationHelpers.GenerateUniqueName("DAT_SparedExit")}={elsewhere},{room}"));
+		var exit = Parse(await AsGod($"@open {TestIsolationHelpers.GenerateUniqueName("DAT_SparedExit")}={elsewhere},,{room}"));
 		await AsGod($"&STARTUP {room}=&BACK me=[get(me/BACK)]y");
 		await AsGod($"&STARTUP {exit}=&BACK me=[get(me/BACK)]y");
 

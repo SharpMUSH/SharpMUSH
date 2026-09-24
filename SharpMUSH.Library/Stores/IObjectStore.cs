@@ -92,6 +92,36 @@ public interface IObjectStore
 		long? modifiedTime = null, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Create a new room at a dbref the caller names, the storage half of PennMUSH's
+	/// <c>make_first_free_wrapper</c> (<c>src/destroy.c:928</c>) followed by <c>new_object()</c>.
+	/// The provider decides which ids are free to take; when <paramref name="requested"/> is not one
+	/// of them nothing is written at all. The check and the write share one transaction.
+	/// </summary>
+	/// <param name="requested">The dbref the new room must have</param>
+	/// <param name="name">Room Name</param>
+	/// <param name="creator">Room Player-Creator</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>The requested <see cref="DBRef"/>, or why it could not be used</returns>
+	ValueTask<Result<DBRef>> CreateRoomAtAsync(DBRef requested, string name, SharpPlayer creator,
+		long? modifiedTime = null, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Whether <paramref name="requested"/> is a dbref a <c>Create*AtAsync</c> could take right now —
+	/// the read-only half of PennMUSH's <c>make_first_free_wrapper</c> (<c>src/destroy.c:939-947</c>),
+	/// which asks <c>IsGarbage</c> and then pushes the slot onto the free list <i>before</i>
+	/// <c>new_object()</c> so a multi-object build refuses without leaving anything behind.
+	/// </summary>
+	/// <remarks>
+	/// Advisory only: it takes no lock and reserves nothing, so the authority remains the availability
+	/// check inside the write that takes the id. It exists so that <c>@dig name=to,from,#a,#b,#c</c>
+	/// refuses before it digs, rather than digging the room and then failing on the exit.
+	/// </remarks>
+	/// <param name="requested">The dbref to ask about</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns><c>true</c> if a build could take it now</returns>
+	ValueTask<bool> IsDbrefAvailableAsync(DBRef requested, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Create a new thing.
 	/// </summary>
 	/// <param name="name">Thing name</param>
@@ -124,8 +154,10 @@ public interface IObjectStore
 	/// <param name="home">Home location for the thing</param>
 	/// <param name="cancellationToken">Cancellation Token</param>
 	/// <returns>The requested <see cref="DBRef"/>, or why it could not be used</returns>
+	/// <param name="modifiedTime">Modification time in Unix milliseconds, or <c>null</c> for now.</param>
 	ValueTask<Result<DBRef>> CreateThingAtAsync(DBRef requested, string name, AnySharpContainer location,
-		SharpPlayer creator, AnySharpContainer home, CancellationToken cancellationToken = default);
+		SharpPlayer creator, AnySharpContainer home, long? modifiedTime = null,
+		CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Create a new exit.
@@ -144,6 +176,23 @@ public interface IObjectStore
 	/// <returns>New thing <see cref="DBRef"/></returns>
 	ValueTask<DBRef> CreateExitAsync(string name, string[] aliases, AnySharpContainer location,
 		SharpPlayer creator, long? creationTime = null, long? modifiedTime = null,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Create a new exit at a dbref the caller names, the storage half of PennMUSH's
+	/// <c>make_first_free_wrapper</c> (<c>src/destroy.c:928</c>) followed by <c>new_object()</c>.
+	/// The provider decides which ids are free to take; when <paramref name="requested"/> is not one
+	/// of them nothing is written at all. The check and the write share one transaction.
+	/// </summary>
+	/// <param name="requested">The dbref the new exit must have</param>
+	/// <param name="name">Exit name</param>
+	/// <param name="aliases">Exit Aliases</param>
+	/// <param name="location">Location for the Exit</param>
+	/// <param name="creator">Owner to the exit</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>The requested <see cref="DBRef"/>, or why it could not be used</returns>
+	ValueTask<Result<DBRef>> CreateExitAtAsync(DBRef requested, string name, string[] aliases,
+		AnySharpContainer location, SharpPlayer creator, long? modifiedTime = null,
 		CancellationToken cancellationToken = default);
 
 	/// <summary>

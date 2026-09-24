@@ -43,8 +43,14 @@ public class DestroyCascadeTests
 	private async Task<DBRef> DigAsync(string prefix)
 		=> Parse(await AsGod($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
 
+	/// <summary>
+	/// <c>@open &lt;name&gt;=&lt;destination&gt;,&lt;return exit&gt;,&lt;source room&gt;</c> — the third
+	/// argument is the source room (<c>create.c:210-217</c>). This helper used to write the source in
+	/// the second slot, which is PennMUSH's return exit, and only worked because SharpMUSH read the
+	/// second slot as the source too (#1211).
+	/// </summary>
 	private async Task<DBRef> OpenAsync(string prefix, DBRef source, DBRef destination)
-		=> Parse(await AsGod($"@open {TestIsolationHelpers.GenerateUniqueName(prefix)}={destination},{source}"));
+		=> Parse(await AsGod($"@open {TestIsolationHelpers.GenerateUniqueName(prefix)}={destination},,{source}"));
 
 	private Task<DBRef> PlayerAsync(string prefix)
 		=> TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, prefix);

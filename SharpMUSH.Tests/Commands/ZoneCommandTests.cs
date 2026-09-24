@@ -391,7 +391,7 @@ public class ZoneCommandTests
 		var roomZone = (await zonedRoom.Object().Zone.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
 		await Assert.That(roomZone.Object().DBRef.Number).IsEqualTo(zmrDbRef.Number);
 
-		await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@open zmr_exit_{Random.Shared.Next(1000, 9999)}={room1DbRef},{zmrDbRef}"));
+		await Parser.CommandParse(testPlayer.Number, ConnectionService, MarkupText.Plain($"@open zmr_exit_{Random.Shared.Next(1000, 9999)}={room1DbRef},,{zmrDbRef}"));
 
 		var zmrVerify = await Mediator.Send(new GetObjectNodeQuery(zmrDbRef));
 		await Assert.That(zmrVerify.IsNone).IsFalse();

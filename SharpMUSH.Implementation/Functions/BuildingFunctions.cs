@@ -82,64 +82,101 @@ public partial class Functions
 		};
 	}
 
+	/// <remarks>
+	/// <c>fun_dig</c> (<c>src/fundb.c:2177-2189</c>) hands <c>args</c> straight to <c>do_dig</c>, so it
+	/// opens and links both exits and reads all three requested dbrefs. SharpMUSH wrote a thinner copy
+	/// that dug the room and nothing else.
+	/// </remarks>
 	[SharpFunction(Name = "dig", MinArgs = 1, MaxArgs = 6, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
 	public async ValueTask<CallState> Dig(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var roomName = args["0"].Message!.ToPlainText();
 
-		if (string.IsNullOrWhiteSpace(roomName))
+		return await BuildingHelpers.DigAsync(Mediator, Database, Configuration, NotifyService, PermissionService,
+			LockService, executor, args["0"].Message!,
+			BuildingHelpers.Argument(args, "1"), BuildingHelpers.Argument(args, "2"),
+			BuildingHelpers.Argument(args, "3"), BuildingHelpers.Argument(args, "4"),
+			BuildingHelpers.Argument(args, "5")) switch
 		{
-			return ErrorMessages.Returns.BadObjectName;
-		}
-
-		// fun_dig is a call to do_dig (src/fundb.c), so it is charged exactly as @dig is.
-		return await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executor,
-			async () => await Mediator.Send(new CreateRoomCommand(
-				roomName,
-				await executor.Object().Owner.WithCancellation(CancellationToken.None)))) switch
-		{
-			DBRef response => new CallState(response.ToString()),
+			DBRef room => new CallState(room.ToString()),
 			Error<string> refused => new CallState(refused.Value)
 		};
 	}
 
+	/// <remarks>
+	/// <c>fun_open</c> (<c>src/fundb.c:2144-2173</c>) is <em>not</em> <c>@open</c>'s argument mapping:
+	/// it is exit, destination, source room, requested dbref, and it has no return exit at all. A
+	/// source room that matches nothing is <c>#-1 INVALID SOURCE ROOM</c>. SharpMUSH declared all four
+	/// and read none of them, so every call opened an unlinked exit wherever the caller stood.
+	/// </remarks>
 	[SharpFunction(Name = "open", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
 	public async ValueTask<CallState> Open(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var exitName = args["0"].Message!.ToPlainText();
 
-		// Parse exit name and aliases
-		var exitParts = exitName.Split(';');
-		var primaryName = exitParts[0];
-		var aliases = exitParts[1..];
-
-		// Get source location (default to executor's location)
 		var sourceRoom = await executor.Where();
-
-		// Optional: arg 1 could be destination, arg 2 could be source room
-		// For now, keep it simple - create exit at executor's location
-
-		// Check permissions
-		if (!await PermissionService.Controls(executor, sourceRoom.WithExitOption()))
+		if (BuildingHelpers.Argument(args, "2") is { } sourceRoomName)
 		{
-			return ErrorMessages.Returns.PermissionDenied;
+			if (await LocateService.Locate(parser, executor, executor, sourceRoomName.ToPlainText(),
+					LocateFlags.All) is not (AnySharpObject and SharpRoom namedRoom))
+			{
+				return new CallState(ErrorMessages.Returns.InvalidSourceRoom);
+			}
+
+			sourceRoom = namedRoom;
 		}
 
-		// fun_open is a call to do_real_open (src/fundb.c), which charges for itself (create.c:130).
-		return await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executor,
-			async () => await Mediator.Send(new CreateExitCommand(
-				primaryName,
-				aliases,
-				sourceRoom,
-				await executor.Object().Owner.WithCancellation(CancellationToken.None)))) switch
+		return await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
+			[BuildingHelpers.Argument(args, "3")],
+			async at => await OpenedExitAsync(parser, executor, args, sourceRoom, at[0])) switch
 		{
 			DBRef exitDbRef => new CallState(exitDbRef.ToString()),
 			Error<string> refused => new CallState(refused.Value)
 		};
+	}
+
+	/// <summary>The exit itself, and on success the link <c>fun_open</c>'s second argument asks for.</summary>
+	private async ValueTask<Result<DBRef>> OpenedExitAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		IReadOnlyDictionary<string, CallState> args, AnySharpContainer sourceRoom, DBRef? requestedDbref)
+		=> await BuildingHelpers.OpenExitAsync(Mediator, Database, Configuration, NotifyService,
+			PermissionService, LockService, executor, args["0"].Message!, sourceRoom, requestedDbref) switch
+		{
+			DBRef exitDbRef => await LinkOpenedExitAsync(parser, executor, args, exitDbRef),
+			Error<string> refused => refused
+		};
+
+	/// <summary>
+	/// <c>fun_open</c>'s second argument, which <c>do_real_open</c> links the new exit to
+	/// (<c>create.c:160-172</c>). An exit may lead to any container; anywhere else, or anywhere the
+	/// executor may not link into, leaves the exit unlinked and says so, as Penn does.
+	/// </summary>
+	private async ValueTask<DBRef> LinkOpenedExitAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		IReadOnlyDictionary<string, CallState> args, DBRef exit)
+	{
+		if (BuildingHelpers.Argument(args, "1") is not { } destinationName)
+		{
+			return exit;
+		}
+
+		if (await LocateService.Locate(parser, executor, executor, destinationName.ToPlainText(), LocateFlags.All)
+				is not AnySharpObject destination
+			|| !destination.IsContainer
+			|| !await PermissionService.CanLinkToAsync(executor, destination))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
+			return exit;
+		}
+
+		if (await Mediator.Send(new GetObjectNodeQuery(exit)) is not (AnySharpObject and SharpExit exitObj))
+		{
+			throw new InvalidOperationException("The exit just opened must exist.");
+		}
+
+		await Mediator.Send(new LinkExitCommand(exitObj, destination.AsContainer));
+
+		return exit;
 	}
 
 	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi)]
@@ -246,9 +283,8 @@ public partial class Functions
 
 	/// <remarks>
 	/// <c>fun_clone</c> (<c>src/fundb.c</c>) is one call to <c>do_clone</c>, the same one
-	/// <c>@clone</c> makes, with <c>preserve</c> as a fourth argument instead of a switch. The third
-	/// argument is a requested dbref, which SharpMUSH does not yet read here (#1084 covers
-	/// <c>@create</c>/<c>create()</c> only).
+	/// <c>@clone</c> makes, with <c>preserve</c> as a fourth argument instead of a switch and
+	/// <c>args[2]</c> as the requested dbref (<c>fundb.c:2192-2212</c>).
 	/// </remarks>
 	[SharpFunction(Name = "clone", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged)]
 	public async ValueTask<CallState> Clone(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -260,9 +296,11 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
-			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Configuration, NotifyService, PermissionService,
-				AttributeService, ManipulateSharpObjectService, DidItService, EventService, Logger, executor, obj,
-				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve) switch
+			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Database, Configuration, NotifyService,
+				PermissionService, LockService, AttributeService, ManipulateSharpObjectService, DidItService,
+				EventService, Logger, executor, obj,
+				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve,
+				BuildingHelpers.Argument(args, "2")) switch
 			{
 				DBRef clone => new CallState(clone.ToString()),
 				Error<string> error => new CallState(error.Value)

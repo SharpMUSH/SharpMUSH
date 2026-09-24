@@ -146,9 +146,18 @@ public class BuildingQuotaTests
 	public async ValueTask AMultiObjectDigStopsWhereTheQuotaDoes()
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8];
-		var mortal = await MortalWithSlotsAsync("BqtDig", 1);
-		var start = await AsGod($"@dig BqtDigStart{uid}");
-		await AsGod($"@teleport {mortal.DbRef}={DBRef.Parse(start.Trim())}");
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "BqtDig");
+		var start = DBRef.Parse((await AsGod($"@dig BqtDigStart{uid}")).Trim());
+
+		// do_dig's exits are do_real_open calls, so can_open_from (create.c:127) is asked before
+		// can_pay_fees (:130). The digger has to own the room they stand in or permission, not quota,
+		// is what refuses the forward exit and this test proves nothing.
+		await AsGod($"@chown {start}={mortal.DbRef}");
+		await AsGod($"@teleport {mortal.DbRef}={start}");
+
+		var player = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<SharpPlayer>();
+		await AsGod($"@quota/set {mortal.DbRef}={await Mediator.Send(new GetOwnedObjectCountQuery(player)) + 1}");
 
 		await Run(mortal.Handle, $"@dig BqtDigRoom{uid}=BqtDigTo{uid},BqtDigBack{uid}");
 
@@ -157,6 +166,110 @@ public class BuildingQuotaTests
 		await Assert.That((await Named($"BqtDigTo{uid}")).Length).IsEqualTo(0)
 			.Because("do_real_open's own can_pay_fees had nothing left to charge");
 		await Assert.That((await Named($"BqtDigBack{uid}")).Length).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// <c>@open</c> reaches <c>can_pay_fees</c> inside <c>do_real_open</c> (<c>create.c:130</c>), behind
+	/// <c>can_open_from</c> (<c>:127</c>) — so the builder has to own the room they stand in for the
+	/// quota to be what refuses them, exactly as in <see cref="TheFunctionFormsAreChargedToo"/>.
+	/// </summary>
+	[Test]
+	public async ValueTask AZeroQuotaRefusesTheOpenCommand()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "BqtOpenCmd");
+		var room = DBRef.Parse((await AsGod($"@dig BqtOpenCmdHome{uid}")).Trim());
+		await AsGod($"@chown {room}={mortal.DbRef}");
+		await AsGod($"@teleport {mortal.DbRef}={room}");
+
+		var player = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<SharpPlayer>();
+		await AsGod($"@quota/set {mortal.DbRef}={await Mediator.Send(new GetOwnedObjectCountQuery(player))}");
+
+		var name = $"BqtOpenCmdExit{uid}";
+		await Assert.That(await Run(mortal.Handle, $"@open {name}"))
+			.IsEqualTo(ErrorMessages.Returns.BuildingQuotaExhausted);
+		await Assert.That((await Named(name)).Length).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// <c>@open &lt;exit&gt;=&lt;destination&gt;,&lt;return exit&gt;</c> is two objects and two calls to
+	/// <c>do_real_open</c>, each asking <c>can_pay_fees</c> for itself (<c>create.c:130</c>, <c>:236</c>).
+	/// With one slot the forward exit is opened and the return exit is refused, the same way
+	/// <see cref="AMultiObjectDigStopsWhereTheQuotaDoes"/> pins it for <c>@dig</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask TheReturnExitIsChargedOnItsOwn()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await MortalWithSlotsAsync("BqtBack", 1);
+		var room = DBRef.Parse((await AsGod($"@dig BqtBackHome{uid}")).Trim());
+		var destination = DBRef.Parse((await AsGod($"@dig BqtBackDest{uid}")).Trim());
+		await AsGod($"@chown {room}={mortal.DbRef}");
+		await AsGod($"@chown {destination}={mortal.DbRef}");
+		await AsGod($"@teleport {mortal.DbRef}={room}");
+
+		// The two rooms are now the mortal's, so the two slots they cost come off the limit first.
+		var player = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<SharpPlayer>();
+		await AsGod($"@quota/set {mortal.DbRef}={await Mediator.Send(new GetOwnedObjectCountQuery(player)) + 1}");
+
+		await Run(mortal.Handle, $"@open BqtBackTo{uid}={destination},BqtBackFrom{uid}");
+
+		await Assert.That((await Named($"BqtBackTo{uid}")).Length).IsEqualTo(1)
+			.Because("the one slot paid for the forward exit");
+		await Assert.That((await Named($"BqtBackFrom{uid}")).Length).IsEqualTo(0)
+			.Because("the return exit's own can_pay_fees had nothing left to charge");
+	}
+
+	/// <summary>
+	/// <c>can_pay_fees</c> refuses a guest and an exhausted quota for different reasons
+	/// (<c>predicat.c:438-441</c> against <c>:453-456</c>), and <c>@dig</c> reaches the guest branch
+	/// with nothing in the way — unlike <c>@clone</c>, whose <c>controls</c> check gets there first.
+	/// The lifted <c>@dig</c> body reported both as the quota.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask AGuestDigSaysPermissionAndNotQuota(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var guest = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "BqtGuestDig");
+		await AsGod($"@power {guest.DbRef}=Guest");
+
+		var name = $"BqtGuestDug{uid}";
+		await Assert.That(await Run(guest.Handle, throughTheFunction
+				? $"think dig({name})"
+				: $"@dig {name}"))
+			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That((await Named(name)).Length).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// A guest is refused a clone, but not by <c>can_pay_fees</c>: <c>Controls</c> answers false for
+	/// any holder of the guest power (<c>PermissionService.cs:390</c>), and <c>do_clone</c> asks that
+	/// first (<c>create.c:700-704</c>). The guest branch of <c>can_pay_fees</c>
+	/// (<c>predicat.c:438-441</c>) is therefore unreachable from here — <c>@create</c> is where it
+	/// bites, which <see cref="AGuestMayNotBuildAtAll"/> pins.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask AGuestMayNotClone(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var guest = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "BqtGuestClone");
+		// Built before the power is granted, so the object really is the guest's own.
+		var original = DBRef.Parse((await Run(guest.Handle, $"@create BqtGuestCloneSource{uid}")).Trim());
+		await AsGod($"@power {guest.DbRef}=Guest");
+
+		var name = $"BqtGuestCloned{uid}";
+		await Assert.That(await Run(guest.Handle, throughTheFunction
+				? $"think clone({original},{name})"
+				: $"@clone {original}={name}"))
+			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That((await Named(name)).Length).IsEqualTo(0);
 	}
 
 	/// <summary>Cloning allocates an object and is charged like any other build (<c>create.c:725, :741</c>).</summary>

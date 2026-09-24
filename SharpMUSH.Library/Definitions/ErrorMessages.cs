@@ -27,6 +27,13 @@ public static class ErrorMessages
 		public const string InvalidDbref = "#-1 INVALID DBREF";
 
 		public const string NotARoom = "#-1 NOT A ROOM";
+
+		/// <summary>
+		/// <c>fun_open</c> (<c>src/fundb.c:2144-2173</c>) when its third argument names nothing that can
+		/// source an exit. The command form reports <see cref="Notifications.ExitsOnlyFromRooms"/> instead;
+		/// the function has no one to notify, so the reason is the return value.
+		/// </summary>
+		public const string InvalidSourceRoom = "#-1 INVALID SOURCE ROOM";
 		public const string NotAnExit = "#-1 NOT AN EXIT";
 		public const string NotAThing = "#-1 NOT A THING";
 		public const string NotAPlayer = "#-1 NOT A PLAYER";
@@ -1099,6 +1106,12 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SparedFromDestructionFormat = "Spared from destruction: {0}";
 		public const string SourceMustBeARoom = "Source must be a room.";
+		/// <summary>
+		/// <c>do_real_open</c>'s first refusal (<c>src/create.c:108-110</c>): an exit is sourced in a
+		/// room or nowhere. Reached by <c>@open</c> with a source that is not a room, and by cloning an
+		/// exit while standing somewhere that is not one.
+		/// </summary>
+		public const string ExitsOnlyFromRooms = "You can only make exits out of rooms.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string LinkedToNameFormat = "Linked to {0}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

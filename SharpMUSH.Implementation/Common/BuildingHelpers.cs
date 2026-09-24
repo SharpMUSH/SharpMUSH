@@ -63,50 +63,18 @@ public static class BuildingHelpers
 		var into = executor.IsContainer ? executor.AsContainer : await executor.Where();
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 
-		var requested = requestedDbref?.ToPlainText();
-		if (string.IsNullOrWhiteSpace(requested))
+		// do_create.c:561-565 — make_first_free_wrapper, which asks IsGarbage as well as the power,
+		// runs before can_pay_fees. A requested slot that is already taken is therefore reported as
+		// such, and not as an exhausted quota, whichever of the two would also have refused.
+		return await WithRequestedDbrefsAsync(mediator, notifyService, executor, [requestedDbref],
+			async at => await ThingChargedAsync(mediator, configuration, notifyService, executor, name.ToPlainText(),
+				into, owner, home, at[0])) switch
 		{
-			return await WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
-					async () => await mediator.Send(new CreateThingCommand(name.ToPlainText(), into, owner, home))) switch
-			{
-				DBRef thing => await CreatedAsync(parser, mediator, database, notifyService, eventService, executor,
-					name, thing),
-				Error<string> refused => refused
-			};
-		}
-
-		// make_first_free_wrapper (src/destroy.c:930-943), in its own order: the power first, then
-		// whether the id can be had at all. Both refuse outright — Penn returns NOTHING from do_create
-		// and never falls back to the next free dbref, and neither does this.
-		if (!await executor.IsWizard() && !await executor.Object().HasPower("Pick_DBRefs"))
-		{
-			await notifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		if (ParseDbref(requested) is not { } wanted)
-		{
-			await notifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);
-			return new Error<string>(ErrorMessages.Returns.InvalidDbref);
-		}
-
-		// create.c:561 then :565 — the dbref is settled before can_pay_fees is asked for a slot.
-		var built = await WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
-			async () => await mediator.Send(new CreateThingAtCommand(wanted, name.ToPlainText(), into, owner, home)));
-
-		switch (built)
-		{
-			case Result<DBRef> and DBRef at:
-				return await CreatedAsync(parser, mediator, database, notifyService, eventService, executor, name, at);
-			case Error<string> refused:
-				return refused;
-			default:
-				await notifyService.NotifyLocalized(executor,
-					nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);
-				return new Error<string>(ErrorMessages.Returns.InvalidDbref);
-		}
+			// Outside the gate: CreatedAsync fires OBJECT`CREATE, which runs its handler inline.
+			DBRef thing => await CreatedAsync(parser, mediator, database, notifyService, eventService, executor,
+				name, thing),
+			Error<string> refused => refused
+		};
 	}
 
 	/// <summary>
@@ -144,6 +112,367 @@ public static class BuildingHelpers
 		}
 
 		return thing;
+	}
+
+	/// <summary>
+	/// The whole of PennMUSH's <c>do_dig</c> (<c>src/create.c:466-522</c>): a room, optionally an exit
+	/// to it from where the digger stands and an exit back, each charged on its own and each able to
+	/// stop the dig where the quota runs out without taking back what was already paid for.
+	/// <para><c>fun_dig</c> hands <c>args</c> straight to <c>do_dig</c> (<c>src/fundb.c:2177-2189</c>),
+	/// so <c>dig()</c> is this same body and not the thinner copy it used to be — it opened no exits at
+	/// all.</para>
+	/// </summary>
+	/// <remarks>
+	/// <c>@dig/teleport</c> (<c>create.c:518-521</c>) is not here: Penn re-runs the whole of
+	/// <c>@teleport</c> so NO_TEL and Z_TEL still apply, which belongs with the teleport seam rather
+	/// than with the digging.
+	/// </remarks>
+	public static async ValueTask<Result<DBRef>> DigAsync(
+		IMediator mediator,
+		IObjectStore database,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
+		AnySharpObject executor,
+		MString roomName,
+		MString? exitTo,
+		MString? exitFrom,
+		MString? roomDbref,
+		MString? toDbref,
+		MString? fromDbref)
+	{
+		if (string.IsNullOrWhiteSpace(roomName.ToPlainText()))
+		{
+			await notifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.DigWhat),
+				executor);
+			return new Error<string>(ErrorMessages.Returns.NoRoomNameSpecified);
+		}
+
+		// create.c:480-490 settles all three requested dbrefs before new_object(), so one that cannot be
+		// honoured digs nothing at all rather than leaving a room behind.
+		return await WithRequestedDbrefsAsync(mediator, notifyService, executor,
+			[roomDbref, toDbref, fromDbref],
+			async at => await DugAsync(mediator, database, configuration, notifyService, permissionService,
+				lockService, executor, roomName, exitTo, exitFrom, at[0], at[1], at[2]));
+	}
+
+	/// <summary>The digging itself, once every requested dbref has passed its gate.</summary>
+	private static async ValueTask<Result<DBRef>> DugAsync(
+		IMediator mediator,
+		IObjectStore database,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
+		AnySharpObject executor,
+		MString roomName,
+		MString? exitTo,
+		MString? exitFrom,
+		DBRef? roomAt,
+		DBRef? toAt,
+		DBRef? fromAt)
+	{
+		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+
+		// create.c:480 — do_dig charges the room before new_object(), and each exit below is charged
+		// again on its own inside do_real_open (:130). An exhausted quota and a dbref the provider
+		// would not give up are different answers, so the one actually handed back is the one reported.
+		return await RoomChargedAsync(mediator, configuration, notifyService, executor, roomName.ToPlainText(),
+			owner, roomAt) switch
+		{
+			DBRef dug => await RoomDugAsync(mediator, database, configuration, notifyService, permissionService,
+				lockService, executor, roomName, exitTo, exitFrom, dug, toAt, fromAt),
+			Error<string> refused => refused
+		};
+	}
+
+	/// <summary>
+	/// The zone, the report and the two exits, once the room exists — <c>do_dig</c> from
+	/// <c>create.c:492</c> onwards. The answer is the room either way, as it is in Penn: an exit the
+	/// quota or the permission check turns down stops the dig and leaves what was already paid for.
+	/// </summary>
+	private static async ValueTask<Result<DBRef>> RoomDugAsync(
+		IMediator mediator,
+		IObjectStore database,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
+		AnySharpObject executor,
+		MString roomName,
+		MString? exitTo,
+		MString? exitFrom,
+		DBRef dug,
+		DBRef? toAt,
+		DBRef? fromAt)
+	{
+		await notifyService.NotifyLocalized(executor.Object().DBRef,
+			nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executor, roomName, dug.Number);
+
+		if (await mediator.Send(new GetObjectNodeQuery(dug)) is not (AnySharpObject and SharpRoom room))
+		{
+			throw new InvalidOperationException("The room just dug must exist.");
+		}
+
+		// Zone(room) = Zone(player) (create.c:494), once the cycle guard allows it.
+		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone
+			&& await HelperFunctions.SafeToAddZone(mediator, database, room, zone))
+		{
+			await mediator.Send(new SetObjectZoneCommand(room, zone));
+		}
+
+		var where = await executor.Where();
+
+		// create.c:507-517 — the exit to the new room is sourced where the digger stands, and the exit
+		// back is sourced in the new room and linked to "here", which parse_linkable_room resolves to
+		// speech_loc(player). An exit that is refused stops the dig, and the room stays.
+		if (Given(exitTo) is not null
+			&& !await DugExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
+				executor, exitTo!, where, room, toAt))
+		{
+			return dug;
+		}
+
+		if (Given(exitFrom) is not null)
+		{
+			await DugExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
+				executor, exitFrom!, room, where, fromAt);
+		}
+
+		return dug;
+	}
+
+	/// <summary>
+	/// One of <c>do_dig</c>'s two exits. It is a <c>do_real_open</c> like any other
+	/// (<c>create.c:507</c>, <c>:518</c>), so it is held to <c>can_open_from</c> on its source and
+	/// <c>can_link_to</c> on its destination (<c>parse_linkable_room</c>, <c>create.c:61</c>) — which
+	/// <c>@dig</c> never asked, and which matters more now that <c>dig()</c> reaches the same code from
+	/// softcode.
+	/// </summary>
+	private static async ValueTask<bool> DugExitAsync(
+		IMediator mediator,
+		IObjectStore database,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
+		AnySharpObject executor,
+		MString exitName,
+		AnySharpContainer from,
+		AnySharpContainer to,
+		DBRef? requestedDbref)
+	{
+		if (await OpenExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
+				executor, exitName, from, requestedDbref) is not DBRef opened)
+		{
+			return false;
+		}
+
+		await notifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.TryingToLink),
+			executor);
+
+		// parse_linkable_room refuses a destination the digger may not link into and leaves the exit
+		// unlinked, exactly as do_real_open's own link step does (create.c:165-171).
+		if (!await permissionService.CanLinkToAsync(executor, to.WithExitOption()))
+		{
+			await notifyService.NotifyLocalized(executor.Object().DBRef,
+				nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
+			return true;
+		}
+
+		if (await mediator.Send(new GetObjectNodeQuery(opened)) is not (AnySharpObject and SharpExit exit))
+		{
+			throw new InvalidOperationException("The exit just opened must exist.");
+		}
+
+		await mediator.Send(new LinkExitCommand(exit, to));
+		await notifyService.NotifyLocalized(executor.Object().DBRef,
+			nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, opened.Number, to.Object().DBRef.Number);
+
+		return true;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>can_open_from</c> (<c>hdrs/mushdb.h:94</c>): may <paramref name="player"/> source an
+	/// exit in <paramref name="room"/>? Control, wizardry, royalty and the <c>Open_Anywhere</c> power
+	/// each say yes outright; otherwise the room has to be OPEN_OK and its <c>@lock/open</c> has to
+	/// pass. A guest may source one nowhere, and neither may anybody in something that is not a room.
+	/// </summary>
+	/// <remarks>
+	/// <c>Commands.CanOpenFrom</c> (<c>MovementCommands.cs</c>) is the same rule for <c>@teleport</c>'s
+	/// exit relocation (<c>wiz.c:469</c>); the building path keeps its copy here because
+	/// <c>Functions</c> is a different partial class and <c>open()</c> is held to the same standard as
+	/// <c>@open</c>.
+	/// </remarks>
+	public static async ValueTask<bool> CanOpenFromAsync(
+		IPermissionService permissionService,
+		ILockService lockService,
+		AnySharpObject player,
+		AnySharpContainer room)
+	{
+		if (!room.IsRoom || await player.IsGuest())
+		{
+			return false;
+		}
+
+		var roomObject = room.WithExitOption();
+
+		if (await permissionService.Controls(player, roomObject)
+				|| await player.IsWizard()
+				|| await player.IsRoyalty()
+				|| await player.HasPower("Open_Anywhere"))
+		{
+			return true;
+		}
+
+		return await roomObject.HasFlag("OPEN_OK")
+			&& await lockService.Evaluate(LockType.Open, roomObject, player);
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>do_real_open</c> (<c>src/create.c:96-180</c>) up to but not including the link:
+	/// the source has to be a room (<c>:108-110</c>) the executor may open in (<c>:127</c>), a quota
+	/// slot has to be payable (<c>:130</c>), the new exit inherits the executor's zone, and the opener
+	/// is told which dbref it got.
+	/// </summary>
+	/// <remarks>
+	/// The link itself stays with the callers: <c>@open</c> and <c>open()</c> resolve their destination
+	/// through <see cref="ILocateService"/> with different reporting, and <c>@open</c> then reuses the
+	/// destination as the second exit's source room (<c>create.c:236</c>).
+	/// </remarks>
+	public static async ValueTask<Result<DBRef>> OpenExitAsync(
+		IMediator mediator,
+		IObjectStore database,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
+		AnySharpObject executor,
+		MString exitName,
+		AnySharpContainer sourceRoom,
+		DBRef? requestedDbref = null,
+		long? modified = null)
+	{
+		if (!sourceRoom.IsRoom)
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitsOnlyFromRooms), executor);
+			return new Error<string>(ErrorMessages.Returns.NotARoom);
+		}
+
+		// create.c:127 then :130 — who may open here is settled before a slot is charged for it.
+		if (!await CanOpenFromAsync(permissionService, lockService, executor, sourceRoom))
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		var parts = exitName.ToPlainText().Split(';');
+		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+
+		return await ExitChargedAsync(mediator, configuration, notifyService, executor, parts[0], parts[1..],
+			sourceRoom, owner, requestedDbref, modified) switch
+		{
+			DBRef opened => await OpenedAsync(mediator, database, notifyService, executor, opened),
+			Error<string> refused => refused
+		};
+	}
+
+	/// <summary>
+	/// Unwraps the two unions a build at a requested dbref produces — the quota's refusal outside, the
+	/// provider's refusal to give up the id inside — into the one a caller cares about.
+	/// </summary>
+	private static async ValueTask<Result<DBRef>> ChargedAtAsync(
+		IMediator mediator,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		Func<ValueTask<Result<DBRef>>> build)
+	{
+		switch (await WithBuildingQuotaAsync(mediator, configuration, notifyService, executor, build))
+		{
+			case Result<DBRef> and DBRef created:
+				return created;
+			case Error<string> refused:
+				return refused;
+			default:
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);
+				return new Error<string>(ErrorMessages.Returns.InvalidDbref);
+		}
+	}
+
+	/// <summary>A room, at the dbref asked for or at the next one the counter hands out, charged either way.</summary>
+	private static ValueTask<Result<DBRef>> RoomChargedAsync(
+		IMediator mediator,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		string name,
+		SharpPlayer owner,
+		DBRef? requestedDbref,
+		long? modified = null)
+		=> requestedDbref is { } wanted
+			? ChargedAtAsync(mediator, configuration, notifyService, executor,
+				async () => await mediator.Send(new CreateRoomAtCommand(wanted, name, owner, modified)))
+			: WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
+				async () => await mediator.Send(new CreateRoomCommand(name, owner, ModifiedTime: modified)));
+
+	/// <summary>An exit, at the dbref asked for or at the next one the counter hands out, charged either way.</summary>
+	private static ValueTask<Result<DBRef>> ExitChargedAsync(
+		IMediator mediator,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		string name,
+		string[] aliases,
+		AnySharpContainer where,
+		SharpPlayer owner,
+		DBRef? requestedDbref,
+		long? modified = null)
+		=> requestedDbref is { } wanted
+			? ChargedAtAsync(mediator, configuration, notifyService, executor,
+				async () => await mediator.Send(new CreateExitAtCommand(wanted, name, aliases, where, owner, modified)))
+			: WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
+				async () => await mediator.Send(new CreateExitCommand(name, aliases, where, owner, ModifiedTime: modified)));
+
+	/// <summary>A thing, at the dbref asked for or at the next one the counter hands out, charged either way.</summary>
+	private static ValueTask<Result<DBRef>> ThingChargedAsync(
+		IMediator mediator,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		string name,
+		AnySharpContainer into,
+		SharpPlayer owner,
+		AnySharpContainer home,
+		DBRef? requestedDbref,
+		long? modified = null)
+		=> requestedDbref is { } wanted
+			? ChargedAtAsync(mediator, configuration, notifyService, executor,
+				async () => await mediator.Send(new CreateThingAtCommand(wanted, name, into, owner, home, modified)))
+			: WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
+				async () => await mediator.Send(new CreateThingCommand(name, into, owner, home, ModifiedTime: modified)));
+
+	/// <summary>The bookkeeping every freshly opened exit gets: the opener's zone, and the report.</summary>
+	private static async ValueTask<Result<DBRef>> OpenedAsync(
+		IMediator mediator,
+		IObjectStore database,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		DBRef exit)
+	{
+		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone &&
+			await mediator.Send(new GetObjectNodeQuery(exit)) is AnySharpObject opened &&
+			await HelperFunctions.SafeToAddZone(mediator, database, opened, zone))
+		{
+			await mediator.Send(new SetObjectZoneCommand(opened, zone));
+		}
+
+		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OpenedExit), executor,
+			$"#{exit.Number}");
+
+		return exit;
 	}
 
 	/// <summary>
@@ -266,9 +595,11 @@ public static class BuildingHelpers
 	public static async ValueTask<Result<DBRef>> CloneAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
+		IObjectStore database,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
 		IPermissionService permissionService,
+		ILockService lockService,
 		IAttributeService attributeService,
 		IManipulateSharpObjectService manipulateSharpObjectService,
 		IDidItService didItService,
@@ -277,7 +608,8 @@ public static class BuildingHelpers
 		AnySharpObject executor,
 		AnySharpObject target,
 		MString? newName,
-		bool preserve)
+		bool preserve,
+		MString? requestedDbref = null)
 	{
 		if (!await permissionService.Controls(executor, target))
 		{
@@ -305,7 +637,15 @@ public static class BuildingHelpers
 			? given
 			: target.Object().Name;
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
-		var into = executor.IsContainer ? executor.AsContainer : await executor.Where();
+
+		// create.c:728-731 for a thing or a room — `if (IsRoom(player)) moveto(clone, player) else
+		// moveto(clone, Location(player))` — and create.c:771-773 for an exit, whose do_real_open is
+		// handed a pseudo of NOTHING and so sources from speech_loc(player) (create.c:97; speech.c:109:
+		// a room is itself, an exit is its source, anything else is its location). The two agree, so one
+		// expression serves both. @create's rule — hand it to the executor whenever the executor can hold
+		// something — is the wrong one here: it is true of every player, so a player's clone landed in
+		// their own inventory instead of beside the original.
+		var into = executor.IsRoom ? executor.AsContainer : await executor.Where();
 
 		// "We give the clone the same modification time that its other clone has, but update the
 		// creation time" (create.c:653-655). A null creation time is now; the modification time is the
@@ -314,13 +654,39 @@ public static class BuildingHelpers
 
 		// create.c:725, :741 — each type's branch asks can_pay_fees before it clones anything, and the
 		// exit branch reaches do_real_open, which asks for itself (:130).
-		if (await WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
-				async () => await CreateCloneAsync(mediator, target, name, into, owner, modified))
-			is not DBRef cloneDbRef)
+		// cmd_clone passes args_right[2] as newdbref (cmds.c:382-386), and fun_clone args[2]
+		// (fundb.c:2192-2212); both reach make_first_free_wrapper — power, syntax and availability —
+		// before do_clone builds anything, and hold the slot for as long as the build takes.
+		return await WithRequestedDbrefsAsync(mediator, notifyService, executor, [requestedDbref],
+			async at => await CreateCloneAsync(mediator, database, configuration, notifyService, permissionService,
+				lockService, executor, target, name, into, owner, modified, at[0])) switch
 		{
-			return new Error<string>(ErrorMessages.Returns.BuildingQuotaExhausted);
-		}
+			// Outside the gate: ClonedAsync fires OBJECT`CREATE and the plugin hook, and queues ACLONE.
+			DBRef cloneDbRef => await ClonedAsync(parser, mediator, notifyService, attributeService,
+				manipulateSharpObjectService, didItService, eventService, logger, executor, target, owner, preserve,
+				cloneDbRef),
+			// A guest refusal, an exhausted quota and a dbref the provider would not give up are
+			// three different answers; the caller is handed the one it was actually given.
+			Error<string> refused => refused
+		};
+	}
 
+	/// <summary>Everything <c>do_clone</c> carries across once the clone itself exists.</summary>
+	private static async ValueTask<Result<DBRef>> ClonedAsync(
+		IMUSHCodeParser parser,
+		IMediator mediator,
+		INotifyService notifyService,
+		IAttributeService attributeService,
+		IManipulateSharpObjectService manipulateSharpObjectService,
+		IDidItService didItService,
+		IEventService eventService,
+		ILogger? logger,
+		AnySharpObject executor,
+		AnySharpObject target,
+		SharpPlayer owner,
+		bool preserve,
+		DBRef cloneDbRef)
+	{
 		if (await mediator.Send(new GetObjectNodeQuery(cloneDbRef)) is not AnySharpObject clonedObj)
 		{
 			throw new InvalidOperationException("The clone just created must exist.");
@@ -342,10 +708,18 @@ public static class BuildingHelpers
 		await CopyPrivilegesAsync(mediator, manipulateSharpObjectService, notifyService, executor, target, clonedObj,
 			preserve);
 
-		// create.c:636-637 — the clone inherits the original's zone and parent, and not the cloner's.
-		if (await target.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone)
+		// create.c:636 and :788 — `Zone(clone) = Zone(thing)`, an unconditional assignment, so an
+		// original with no zone leaves the clone with none. That matters for an exit, which reaches
+		// here through do_real_open and so arrives carrying the cloner's zone (create.c:131); copying
+		// only a zone that exists would leave the cloner's behind.
+		switch (await target.Object().Zone.WithCancellation(CancellationToken.None))
 		{
-			await mediator.Send(new SetObjectZoneCommand(clonedObj, zone));
+			case AnySharpObject zone:
+				await mediator.Send(new SetObjectZoneCommand(clonedObj, zone));
+				break;
+			default:
+				await mediator.Send(new UnsetObjectZoneCommand(clonedObj));
+				break;
 		}
 
 		if (await target.Object().Parent.WithCancellation(CancellationToken.None) is AnySharpObject parent)
@@ -383,40 +757,88 @@ public static class BuildingHelpers
 	/// does for <c>do_clone</c> at <c>create.c:765-780</c> and what SharpMUSH left out, so a cloned
 	/// exit led nowhere. An unlinked original still clones to an unlinked exit.
 	/// </summary>
-	private static async ValueTask<DBRef> CreateCloneAsync(
+	private static async ValueTask<Result<DBRef>> CreateCloneAsync(
 		IMediator mediator,
+		IObjectStore database,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
+		AnySharpObject executor,
 		AnySharpObject target,
 		string name,
 		AnySharpContainer into,
 		SharpPlayer owner,
-		long modified)
+		long modified,
+		DBRef? requestedDbref)
 	{
 		switch (target)
 		{
 			case SharpThing thing:
-				return await mediator.Send(new CreateThingCommand(name, into, owner,
-					await thing.Home.WithCancellation(CancellationToken.None), ModifiedTime: modified));
+				return await ThingChargedAsync(mediator, configuration, notifyService, executor, name, into, owner,
+					await thing.Home.WithCancellation(CancellationToken.None), requestedDbref, modified);
 
 			case SharpRoom:
-				return await mediator.Send(new CreateRoomCommand(name, owner, ModifiedTime: modified));
+				return await RoomChargedAsync(mediator, configuration, notifyService, executor, name, owner,
+					requestedDbref, modified);
 
 			case SharpExit exit:
-				var nameParts = name.Split(';');
-				var cloned = await mediator.Send(new CreateExitCommand(nameParts[0], nameParts[1..], into, owner,
-					ModifiedTime: modified));
-
-				if (await exit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
-					&& await mediator.Send(new GetObjectNodeQuery(cloned)) is AnySharpObject and SharpExit clonedExit)
+				// create.c:771-773 — the exit branch is a do_real_open, so it is held to everything one
+				// is: the source must be a room (:108-110), can_open_from must admit the cloner (:127),
+				// and only then is a slot charged (:130). Charging the clone directly skipped the first
+				// two, so a mortal could clone an exit into a room they may not open in.
+				return await OpenExitAsync(mediator, database, configuration, notifyService, permissionService,
+					lockService, executor, MarkupText.Plain(name), into, requestedDbref, modified) switch
 				{
-					await mediator.Send(new LinkExitCommand(clonedExit, destination));
-				}
-
-				return cloned;
+					DBRef cloned => await ReopenedAsync(mediator, notifyService, permissionService, executor, exit,
+						cloned),
+					Error<string> refused => refused
+				};
 
 			default:
 				// CloneAsync refuses a player before reaching here, and the union has no fifth case.
 				throw new InvalidOperationException($"Nothing can clone a {target.GetType().Name}.");
 		}
+	}
+
+	/// <summary>
+	/// The cloned exit's destination, which is the original's (create.c:765-780) — but only if the
+	/// cloner may link there. <c>do_clone</c> hands that destination to <c>do_real_open</c> as its
+	/// <c>linkto</c>, and says why in as many words: "For exits, we don't want people to be able to
+	/// link it to a location they can't with <c>@open</c>. So, all this stuff." (create.c:753-756).
+	/// <c>do_real_open</c> resolves a <c>linkto</c> through <c>parse_linkable_room</c>
+	/// (<c>:41-67</c>), which is where <c>can_link_to</c> lives.
+	/// <para>A refusal keeps the exit and leaves it unlinked (<c>create.c:165-171</c>), as every other
+	/// link in this file does. Relinking unconditionally let someone who controls an exit mint more
+	/// exits into a destination that is no longer open to them — the room was LINK_OK when the
+	/// original was linked, or the exit was chowned to them afterwards.</para>
+	/// </summary>
+	private static async ValueTask<Result<DBRef>> ReopenedAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		AnySharpObject executor,
+		SharpExit original,
+		DBRef cloned)
+	{
+		if (await original.Home.WithCancellation(CancellationToken.None) is not AnySharpContainer destination)
+		{
+			// An unlinked original clones to an unlinked exit, with nothing to refuse.
+			return cloned;
+		}
+
+		if (!await permissionService.CanLinkToAsync(executor, destination.WithExitOption()))
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
+			return cloned;
+		}
+
+		if (await mediator.Send(new GetObjectNodeQuery(cloned)) is AnySharpObject and SharpExit clonedExit)
+		{
+			await mediator.Send(new LinkExitCommand(clonedExit, destination));
+		}
+
+		return cloned;
 	}
 
 	/// <summary>
@@ -597,6 +1019,162 @@ public static class BuildingHelpers
 			await notifyService.NotifyLocalized(executor,
 				nameof(ErrorMessages.Notifications.ClonePreserveCarriedPrivileges), executor);
 		}
+	}
+
+	/// <summary>An argument that was supplied and is not blank, or nothing.</summary>
+	public static string? Given(MString? argument)
+		=> argument?.ToPlainText() is { } text && !string.IsNullOrWhiteSpace(text) ? text : null;
+
+	/// <summary>The argument at <paramref name="index"/>, if one was supplied and is not blank.</summary>
+	public static MString? Argument(IReadOnlyDictionary<string, CallState> args, string index)
+		=> args.TryGetValue(index, out var argument) && Given(argument.Message) is not null
+			? argument.Message
+			: null;
+
+	/// <summary>
+	/// The permission-and-parse half of PennMUSH's <c>make_first_free_wrapper</c>
+	/// (<c>src/destroy.c:930-943</c>), in its own order: the power first, then whether the id could
+	/// name a slot at all. Both refuse outright — Penn returns NOTHING from the command and never falls
+	/// back to the next free dbref, and neither does this. Whether the id is genuinely free is the
+	/// provider's to answer, inside the same transaction as the write that takes it.
+	/// </summary>
+	public static async ValueTask<Result<DBRef>> RequestedDbrefAsync(
+		INotifyService notifyService,
+		AnySharpObject executor,
+		string requested)
+	{
+		if (!await executor.IsWizard() && !await executor.Object().HasPower("Pick_DBRefs"))
+		{
+			await notifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (ParseDbref(requested) is not { } wanted)
+		{
+			await notifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);
+			return new Error<string>(ErrorMessages.Returns.InvalidDbref);
+		}
+
+		return wanted;
+	}
+
+	/// <summary>
+	/// Every requested dbref a command names, settled before any object is built. <c>do_dig</c>
+	/// (<c>create.c:480-490</c>) pushes <c>argv[5]</c>, <c>argv[4]</c> and <c>argv[3]</c> onto the free
+	/// list before <c>new_object()</c>, and a push that cannot be honoured returns NOTHING with nothing
+	/// dug; <c>do_open</c> (<c>:219-226</c>) does the same for its two. A slot not asked for comes back
+	/// null.
+	/// </summary>
+	/// <summary>
+	/// Serialises builds that name their own dbrefs, so the availability check below is worth
+	/// something. Only these builds can take a hole at all — <c>AllocateDbref</c> hands out the next
+	/// id from the counter and <c>AllocateDbrefAt</c> takes an id below it, so a build that names
+	/// nothing can never contend for one. Process-wide rather than per owner, because two different
+	/// owners can name the same slot; the engine is single-process by design
+	/// (<c>docs/design/engine-data-trunk.md</c>), and naming a dbref is a wizard's rare act.
+	/// <para>Always taken outside <see cref="QuotaGates"/>, never the other way round.</para>
+	/// </summary>
+	private static readonly SemaphoreSlim RequestedDbrefGate = new(1, 1);
+
+	/// <summary>
+	/// <see cref="RequestedDbrefsAsync"/> held across the whole of <paramref name="build"/>, which is
+	/// what makes the availability check binding rather than advisory for a multi-object build: no
+	/// other build that names a dbref can take one of these slots between the check and the last
+	/// write, so <c>@dig name=to,from,#a,#b,#c</c> either gets all three or builds nothing.
+	/// </summary>
+	/// <remarks>
+	/// <paramref name="build"/> <b>allocates, and does nothing else</b>. No <c>OBJECT`CREATE</c>, no
+	/// plugin hook, no <c>real_did_it</c> — every one of those runs code the game's own softcode can
+	/// supply, and <see cref="IEventService.TriggerEventAsync"/> runs its handler inline
+	/// (<c>await evalParser.CommandListParse(...)</c>) rather than queueing it. A handler that then
+	/// built at a requested dbref would re-enter this gate on the same call stack, and
+	/// <see cref="SemaphoreSlim"/> is not reentrant: a deadlock, not a slow path. Everything after
+	/// the object exists belongs to the caller, outside.
+	/// <para>The contract this gate owes is only what check-then-allocate needs. PennMUSH has no lock
+	/// here at all, being single-threaded.</para>
+	/// </remarks>
+	public static async ValueTask<Result<DBRef>> WithRequestedDbrefsAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		MString?[] requested,
+		Func<DBRef?[], ValueTask<Result<DBRef>>> build)
+	{
+		// A build that names nothing cannot take a hole, so it neither needs the gate nor should
+		// queue behind one: serialising every @create in the game on a wizard's rare @dig would be a
+		// bad trade for a guarantee it does not use.
+		if (Array.TrueForAll(requested, argument => Given(argument) is null))
+		{
+			return await build(new DBRef?[requested.Length]);
+		}
+
+		await RequestedDbrefGate.WaitAsync();
+		try
+		{
+			return await RequestedDbrefsAsync(mediator, notifyService, executor, requested) switch
+			{
+				DBRef?[] at => await build(at),
+				Error<string> refused => refused
+			};
+		}
+		finally
+		{
+			RequestedDbrefGate.Release();
+		}
+	}
+
+	public static async ValueTask<Result<DBRef?[]>> RequestedDbrefsAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		params MString?[] requested)
+	{
+		var wanted = new DBRef?[requested.Length];
+
+		for (var i = 0; i < requested.Length; i++)
+		{
+			if (Given(requested[i]) is not { } text)
+			{
+				continue;
+			}
+
+			switch (await RequestedDbrefAsync(notifyService, executor, text))
+			{
+				case DBRef at:
+					wanted[i] = at;
+					break;
+				case Error<string> refused:
+					return refused;
+			}
+		}
+
+		// make_first_free_wrapper asks IsGarbage and pushes the slot onto the free list before
+		// new_object() runs (destroy.c:939-947), so every id a multi-object build names is settled
+		// before the first object exists. Without this the room would be dug and the exit then refused.
+		// Advisory: the authority is still the check inside the write that takes the id.
+		for (var i = 0; i < wanted.Length; i++)
+		{
+			if (wanted[i] is not { } at)
+			{
+				continue;
+			}
+
+			// Penn's free list silently tolerates the same slot pushed twice and hands the second
+			// object whatever came next instead. Building somewhere other than where you asked is the
+			// whole thing a requested dbref exists to prevent, so a repeat is refused here.
+			var repeated = Array.FindIndex(wanted, other => other is { } o && o.Number == at.Number) != i;
+
+			if (repeated || !await mediator.Send(new DbrefAvailableQuery(at)))
+			{
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);
+				return new Error<string>(ErrorMessages.Returns.InvalidDbref);
+			}
+		}
+
+		return wanted;
 	}
 
 	/// <summary>

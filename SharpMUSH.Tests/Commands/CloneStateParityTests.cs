@@ -43,6 +43,15 @@ public class CloneStateParityTests
 	private static DBRef Ref(string reported) => DBRef.Parse(reported.Trim());
 
 	private async Task<DBRef> Create(string name) => Ref(await AsGod($"@create {name}"));
+
+	/// <summary>Where an exit leads — SharpMUSH's <c>Home</c>, PennMUSH's <c>Location</c>.</summary>
+	private async Task<int?> DestinationOf(DBRef exit)
+		=> AnyOptionalSharpContainer.RefOf(
+			await (await Node(exit)).Expect<SharpExit>().Home.WithCancellation(CancellationToken.None))?.Number;
+
+	/// <summary>How many objects currently answer to <paramref name="name"/>.</summary>
+	private async Task<string[]> Named(string name)
+		=> (await AsGod($"think lsearch(all,name,{name})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
 	private async Task<DBRef> Dig(string name) => Ref(await AsGod($"@dig {name}"));
 
 	/// <summary>The clone request, phrased for the command and for the function.</summary>
@@ -94,15 +103,31 @@ public class CloneStateParityTests
 			.Because("create.c:657 copies the original's home onto the clone");
 	}
 
-	/// <summary><c>Parent(clone) = Parent(thing)</c> (create.c:637).</summary>
+	/// <summary>An original of each clonable type, since <c>clone_object</c> is type-blind and the
+	/// exit branch sets the zone and parent of its own accord (create.c:636-637, :788-789).</summary>
+	private async Task<DBRef> OriginalOfKind(string kind, string name) => kind switch
+	{
+		"room" => await Dig(name),
+		"exit" => Ref(await AsGod($"@open {name}={await Dig($"{name}Dest")}")),
+		_ => await Create(name)
+	};
+
+	/// <summary>
+	/// <c>Parent(clone) = Parent(thing)</c> — <c>clone_object</c> at create.c:637 for a thing or a room,
+	/// and the exit branch again at :789.
+	/// </summary>
 	[Test]
-	[Arguments(true)]
-	[Arguments(false)]
-	public async ValueTask ACloneKeepsTheOriginalsParent(bool throughTheFunction)
+	[Arguments(true, "thing")]
+	[Arguments(false, "thing")]
+	[Arguments(true, "room")]
+	[Arguments(false, "room")]
+	[Arguments(true, "exit")]
+	[Arguments(false, "exit")]
+	public async ValueTask ACloneKeepsTheOriginalsParent(bool throughTheFunction, string kind)
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var parent = await Create($"CspParent{uid}");
-		var original = await Create($"CspChild{uid}");
+		var original = await OriginalOfKind(kind, $"CspChild{uid}");
 		await AsGod($"@parent {original}={parent}");
 
 		var clone = await Clone(throughTheFunction, original, $"CspParentClone{uid}");
@@ -112,15 +137,22 @@ public class CloneStateParityTests
 			.Because("create.c:637 copies the parent");
 	}
 
-	/// <summary><c>Zone(clone) = Zone(thing)</c> (create.c:636) — the original's zone, not the cloner's.</summary>
+	/// <summary>
+	/// <c>Zone(clone) = Zone(thing)</c> (create.c:636, and :788 for an exit) — the original's zone, not
+	/// the cloner's.
+	/// </summary>
 	[Test]
-	[Arguments(true)]
-	[Arguments(false)]
-	public async ValueTask ACloneKeepsTheOriginalsZone(bool throughTheFunction)
+	[Arguments(true, "thing")]
+	[Arguments(false, "thing")]
+	[Arguments(true, "room")]
+	[Arguments(false, "room")]
+	[Arguments(true, "exit")]
+	[Arguments(false, "exit")]
+	public async ValueTask ACloneKeepsTheOriginalsZone(bool throughTheFunction, string kind)
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var zone = await Create($"CspZone{uid}");
-		var original = await Create($"CspZoned{uid}");
+		var original = await OriginalOfKind(kind, $"CspZoned{uid}");
 		await AsGod($"@chzone {original}={zone}");
 
 		var clone = await Clone(throughTheFunction, original, $"CspZoneClone{uid}");
@@ -346,6 +378,211 @@ public class CloneStateParityTests
 		await Assert.That(await plainNode.Object().HasPower("Halt")).IsFalse()
 			.Because("create.c:646-647 zaps powers and warnings without /PRESERVE");
 		await Assert.That(plainNode.Object().Warnings).IsEqualTo(WarningType.None);
+	}
+
+	/// <summary>
+	/// <c>do_clone</c>'s thing branch (create.c:728-731): <c>if (IsRoom(player)) moveto(clone, player)
+	/// else moveto(clone, Location(player))</c>. SharpMUSH used <c>@create</c>'s rule instead — hand the
+	/// object to the executor when the executor can hold one — which is true of every player, so a
+	/// player's clone landed in their own inventory rather than beside the original.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask ACloneLandsInTheClonersRoomAndNotTheirInventory(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CspWhere");
+		var room = await Dig($"CspWhereRoom{uid}");
+		await AsGod($"@teleport {mortal.DbRef}={room}");
+
+		var original = Ref(await Run(mortal.Handle, $"@create CspWhereSource{uid}"));
+		var newName = $"CspWhereClone{uid}";
+		var clone = Ref(await Run(mortal.Handle, throughTheFunction
+			? $"think clone({original},{newName})"
+			: $"@clone {original}={newName}"));
+
+		var where = (await (await Node(clone)).Where()).Object().DBRef;
+		await Assert.That(where.Number).IsEqualTo(room.Number)
+			.Because("create.c:731 moves the clone to Location(player), not into the player");
+	}
+
+	/// <summary>
+	/// The other half of create.c:728-731: code owned by a room builds into the room itself, because a
+	/// room has no location of its own to fall back to.
+	/// </summary>
+	[Test]
+	public async ValueTask ACloneMadeByARoomLandsInThatRoom()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var room = await Dig($"CspRoomCloner{uid}");
+		var original = await Create($"CspRoomClonerSource{uid}");
+
+		var newName = $"CspRoomClonerClone{uid}";
+		await AsGod($"@force {room}=@clone {original}={newName}");
+
+		var found = await Named(newName);
+		await Assert.That(found.Length).IsEqualTo(1);
+
+		var where = (await (await Node(Ref(found[0]))).Where()).Object().DBRef;
+		await Assert.That(where.Number).IsEqualTo(room.Number)
+			.Because("create.c:729 moves a room's clone into the room itself");
+	}
+
+	/// <summary>
+	/// The exit branch (create.c:771-773) hands <c>do_real_open</c> a <c>pseudo</c> of NOTHING, so the
+	/// source is <c>speech_loc(player)</c> (create.c:97, speech.c:109) and <c>do_real_open</c> refuses a
+	/// source that is not a room outright (create.c:108-110), before <c>can_pay_fees</c> is reached
+	/// (<c>:130</c>). Driven from a thing sitting inside another thing, because that is the only cloner
+	/// this server will put somewhere that is not a room — <c>@teleport</c> refuses to move a player
+	/// into one.
+	/// </summary>
+	[Test]
+	public async ValueTask CloningAnExitFromSomewhereThatIsNotARoomIsRefused()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CspInside");
+		var room = await Dig($"CspInsideRoom{uid}");
+		await AsGod($"@chown {room}={mortal.DbRef}");
+		await AsGod($"@teleport {mortal.DbRef}={room}");
+
+		var destination = await Dig($"CspInsideDest{uid}");
+		var exit = Ref(await Run(mortal.Handle, $"@open CspInsideExit{uid}={destination}"));
+
+		var vehicle = Ref(await Run(mortal.Handle, $"@create CspInsideThing{uid}"));
+		var rider = Ref(await Run(mortal.Handle, $"@create CspInsideRider{uid}"));
+		await Run(mortal.Handle, $"@teleport {rider}={vehicle}");
+
+		var standingIn = (await (await Node(rider)).Where()).Object().DBRef;
+		await Assert.That(standingIn.Number).IsEqualTo(vehicle.Number)
+			.Because("the cloner has to actually be somewhere that is not a room");
+
+		var commandName = $"CspInsideCmdClone{uid}";
+		await Run(mortal.Handle, $"@force {rider}=@clone {exit}={commandName}");
+		await Assert.That((await Named(commandName)).Length).IsEqualTo(0)
+			.Because("create.c:108-110 refuses before anything is built");
+
+		var functionName = $"CspInsideFnClone{uid}";
+		await Run(mortal.Handle, $"@force {rider}=&CLONERESULT {rider}=clone({exit},{functionName})");
+		await Assert.That(await GetAsync(rider, "CLONERESULT")).IsEqualTo(ErrorMessages.Returns.NotARoom);
+		await Assert.That((await Named(functionName)).Length).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// <c>do_clone</c>'s exit branch is a <c>do_real_open</c> (<c>create.c:771-773</c>), so it is held
+	/// to <c>can_open_from</c> (<c>:127</c>) like any other exit and not merely to "the source is a
+	/// room". Charging the clone directly let a mortal who controls an exit clone it into a room they
+	/// may not open in.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask CloningAnExitWhereTheClonerMayNotOpenIsRefused(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CspNoOpen");
+
+		// The exit is the mortal's own, opened in a room they own, so do_clone's controls check passes.
+		var home = await Dig($"CspNoOpenHome{uid}");
+		await AsGod($"@chown {home}={mortal.DbRef}");
+		await AsGod($"@teleport {mortal.DbRef}={home}");
+		var destination = await Dig($"CspNoOpenDest{uid}");
+		await AsGod($"@set {destination}=LINK_OK");
+		var exit = Ref(await Run(mortal.Handle, $"@open CspNoOpenExit{uid}={destination}"));
+
+		// Now stand somewhere God owns, which is neither controlled nor OPEN_OK.
+		var elsewhere = await Dig($"CspNoOpenElsewhere{uid}");
+		await AsGod($"@teleport {mortal.DbRef}={elsewhere}");
+
+		var newName = $"CspNoOpenClone{uid}";
+		await Assert.That(await Run(mortal.Handle, throughTheFunction
+				? $"think clone({exit},{newName})"
+				: $"@clone {exit}={newName}"))
+			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That((await Named(newName)).Length).IsEqualTo(0)
+			.Because("can_open_from refuses before can_pay_fees, so nothing is built");
+	}
+
+	/// <summary>
+	/// <c>Zone(clone) = Zone(thing)</c> (create.c:636, :788) is an unconditional assignment, so an
+	/// original with no zone leaves the clone with none. An exit clone is the case that bites:
+	/// it is built by <c>do_real_open</c>, which sets <c>Zone(new_exit) = Zone(player)</c>
+	/// (create.c:131), so copying only a zone that exists would leave the cloner's behind.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask ACloneOfAZonelessExitHasNoZoneEitherAsync(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CspZoneless");
+		var home = await Dig($"CspZonelessHome{uid}");
+		await AsGod($"@chown {home}={mortal.DbRef}");
+		await AsGod($"@teleport {mortal.DbRef}={home}");
+
+		// The cloner has a zone; the exit they are about to clone has none.
+		var clonerZone = await Create($"CspZonelessZone{uid}");
+		await AsGod($"@chzone {mortal.DbRef}={clonerZone}");
+
+		var destination = await Dig($"CspZonelessDest{uid}");
+		await AsGod($"@set {destination}=LINK_OK");
+		var exit = Ref(await Run(mortal.Handle, $"@open CspZonelessExit{uid}={destination}"));
+		await AsGod($"@chzone {exit}=none");
+
+		var newName = $"CspZonelessClone{uid}";
+		var clone = Ref(await Run(mortal.Handle, throughTheFunction
+			? $"think clone({exit},{newName})"
+			: $"@clone {exit}={newName}"));
+
+		var clonedZone = await (await Node(clone)).Object().Zone.WithCancellation(CancellationToken.None);
+		await Assert.That(clonedZone.IsNone).IsTrue()
+			.Because("create.c:788 assigns the original's zone unconditionally, and it had none");
+	}
+
+	/// <summary>
+	/// <c>do_clone</c>'s exit branch says why itself: "For exits, we don't want people to be able to
+	/// link it to a location they can't with <c>@open</c>. So, all this stuff." (create.c:753-756).
+	/// The destination goes to <c>do_real_open</c> as its <c>linkto</c>, which resolves it through
+	/// <c>parse_linkable_room</c> (<c>:41-67</c>) and so through <c>can_link_to</c>. Re-linking the
+	/// clone unconditionally let a mortal who controls an exit mint further exits into a destination
+	/// that is no longer open to them — the room was LINK_OK when the exit was first linked, or the
+	/// exit was chowned to them afterwards.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask ACloneOfAnExitIsNotLinkedWhereTheClonerMayNotLink(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CspNoLink");
+		var home = await Dig($"CspNoLinkHome{uid}");
+		await AsGod($"@chown {home}={mortal.DbRef}");
+		await AsGod($"@teleport {mortal.DbRef}={home}");
+
+		// LINK_OK while the exit is opened, so the original really is linked...
+		var destination = await Dig($"CspNoLinkDest{uid}");
+		await AsGod($"@set {destination}=LINK_OK");
+		var exit = Ref(await Run(mortal.Handle, $"@open CspNoLinkExit{uid}={destination}"));
+		await Assert.That(await DestinationOf(exit)).IsEqualTo(destination.Number)
+			.Because("the original has to be linked for the clone to have anywhere to be linked to");
+
+		// ...and closed again before the clone is taken.
+		await AsGod($"@set {destination}=!LINK_OK");
+
+		var newName = $"CspNoLinkClone{uid}";
+		var clone = Ref(await Run(mortal.Handle, throughTheFunction
+			? $"think clone({exit},{newName})"
+			: $"@clone {exit}={newName}"));
+
+		await Assert.That(await DestinationOf(clone)).IsNull()
+			.Because("create.c:165-171 keeps the exit and leaves it unlinked when can_link_to refuses");
+		await Assert.That((await Named(newName)).Length).IsEqualTo(1)
+			.Because("Penn keeps an exit it could not link, rather than refusing the clone outright");
 	}
 
 	/// <summary>

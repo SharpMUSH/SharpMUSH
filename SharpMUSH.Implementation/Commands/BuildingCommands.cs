@@ -850,118 +850,31 @@ public partial class Commands
 		);
 	}
 
+	/// <remarks>
+	/// PennMUSH <c>do_dig</c> (<c>src/create.c:466-522</c>), which <c>fun_dig</c> calls with the same
+	/// arguments (<c>src/fundb.c:2177-2189</c>), so the whole body lives in
+	/// <see cref="BuildingHelpers.DigAsync"/> and <c>dig()</c> reaches it too.
+	/// <para><c>/TELEPORT</c> (<c>create.c:518-521</c>) is declared and not read: Penn re-runs the whole
+	/// of <c>@teleport</c> so NO_TEL and Z_TEL still apply, which belongs with the teleport seam.</para>
+	/// </remarks>
 	[SharpCommand(Name = "@DIG", Switches = ["TELEPORT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 6, ParameterNames = ["name", "exits"])]
+		MinArgs = 1, MaxArgs = 6,
+		ParameterNames = ["name", "exit to", "exit from", "room dbref", "to dbref", "from dbref"])]
 	public async ValueTask<Option<CallState>> Dig(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
-		// NOTE: We discard arguments 4-6.
-		var executorBase = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var executor = executorBase.Object();
-		var roomName = parser.CurrentState.Arguments["0"].Message!;
-		parser.CurrentState.Arguments.TryGetValue("1", out var exitToCallState);
-		parser.CurrentState.Arguments.TryGetValue("2", out var exitFromCallState);
-		var exitTo = exitToCallState?.Message;
-		var exitFrom = exitFromCallState?.Message;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var args = parser.CurrentState.Arguments;
 
-		if (string.IsNullOrWhiteSpace(parser.CurrentState.Arguments["0"].Message!.ToPlainText()))
+		return await BuildingHelpers.DigAsync(Mediator, Database, Configuration, NotifyService, PermissionService,
+			LockService, executor, args["0"].Message!,
+			BuildingHelpers.Argument(args, "1"), BuildingHelpers.Argument(args, "2"),
+			BuildingHelpers.Argument(args, "3"), BuildingHelpers.Argument(args, "4"),
+			BuildingHelpers.Argument(args, "5")) switch
 		{
-			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.DigWhat), executorBase);
-			return new CallState(ErrorMessages.Returns.NoRoomNameSpecified);
-		}
-
-		// NOTE: Additional permission check still needed: does executor have DIG permission.
-
-		// create.c:480 — do_dig charges the room before new_object(), and each exit below is charged
-		// again on its own inside do_real_open (:130).
-		if (await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executorBase,
-				async () => await Mediator.Send(new CreateRoomCommand(roomName.ToPlainText(),
-					await executor.Owner.WithCancellation(CancellationToken.None))))
-			is not DBRef response)
-		{
-			return new CallState(ErrorMessages.Returns.BuildingQuotaExhausted);
-		}
-
-		await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executorBase, roomName, response.Number);
-
-		var creatorZone = await executor.Zone.WithCancellation(CancellationToken.None);
-		if (creatorZone is AnySharpObject zone)
-		{
-			if (await Mediator.Send(new GetObjectNodeQuery(response)) is AnySharpObject newRoom)
-			{
-				// Check for cycles before inheriting zone from creator
-				if (await HelperFunctions.SafeToAddZone(Mediator, Database, newRoom, zone))
-				{
-					await Mediator.Send(new SetObjectZoneCommand(newRoom, zone));
-				}
-			}
-		}
-
-		if (!string.IsNullOrWhiteSpace(exitTo?.ToPlainText()))
-		{
-			var exitToName = exitTo.ToPlainText().Split(";");
-			// CAN CREATE EXIT HERE?
-			// CAN LINK TO DESTINATION?
-
-			if (await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executorBase,
-					async () => await Mediator.Send(new CreateExitCommand(exitToName.First(),
-						exitToName.Skip(1).ToArray(), await executorBase.Where(),
-						await executor.Owner.WithCancellation(CancellationToken.None))))
-				is not DBRef toExitResponse)
-			{
-				// do_dig keeps the room it has already paid for and stops here (create.c:507-510).
-				return new CallState(response.ToString());
-			}
-
-			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{toExitResponse.Number}");
-			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
-
-			if (await Mediator.Send(new GetObjectNodeQuery(response)) is not (AnySharpObject and SharpRoom newRoomObject)
-					|| await Mediator.Send(new GetObjectNodeQuery(toExitResponse)) is not (AnySharpObject and SharpExit newExitObject))
-			{
-				throw new InvalidOperationException("The room and exit just dug must exist.");
-			}
-
-			await Mediator.Send(new LinkExitCommand(newExitObject, newRoomObject));
-
-			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, toExitResponse.Number, response.Number);
-		}
-
-		if (!string.IsNullOrWhiteSpace(exitFrom?.ToPlainText()))
-		{
-			// CAN CREATE EXIT THERE?
-			// CAN LINK BACK TO CURRENT ROOM?
-
-			var exitFromName = exitFrom.ToPlainText().Split(";");
-			if (await Mediator.Send(new GetObjectNodeQuery(response)) is not (AnySharpObject and SharpRoom newRoomObject))
-			{
-				throw new InvalidOperationException("The room just dug must exist.");
-			}
-
-			if (await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executorBase,
-					async () => await Mediator.Send(new CreateExitCommand(exitFromName.First(),
-						exitFromName.Skip(1).ToArray(), newRoomObject,
-						await executor.Owner.WithCancellation(CancellationToken.None))))
-				is not DBRef fromExitResponse)
-			{
-				return new CallState(response.ToString());
-			}
-
-			if (await Mediator.Send(new GetObjectNodeQuery(fromExitResponse)) is not (AnySharpObject and SharpExit newExitObject))
-			{
-				throw new InvalidOperationException("The exit just opened must exist.");
-			}
-
-			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.OpenedExit), executorBase, $"#{fromExitResponse.Number}");
-			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.TryingToLink), executorBase);
-
-			var where = await executorBase.Where();
-			await Mediator.Send(new LinkExitCommand(newExitObject, where));
-
-			await NotifyService.NotifyLocalized(executor.DBRef, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executorBase, fromExitResponse.Number, where.Object().DBRef.Number);
-		}
-
-		return new CallState(response.ToString());
+			DBRef room => new CallState(room.ToString()),
+			Error<string> refused => new CallState(refused.Value)
+		};
 	}
 
 	private ValueTask<bool> CanLinkTo(AnySharpObject executor, AnySharpObject destination)
@@ -983,98 +896,128 @@ public partial class Commands
 		return await destination.HasFlag("ABODE");
 	}
 
+	/// <summary>
+	/// PennMUSH <c>do_open</c> (<c>src/create.c:205-237</c>), which reads a 1-based <c>links</c> array
+	/// whose index N is this command's argument N: <c>links[1]</c> destination, <c>links[2]</c> an exit
+	/// back (<c>:229-236</c>), <c>links[3]</c> the source room (<c>:210-217</c>), <c>links[4]</c> and
+	/// <c>links[5]</c> requested dbrefs (<c>:219-226</c>). Penn ships the command
+	/// <c>CMD_T_EQSPLIT | CMD_T_RS_ARGS</c> with five right-hand slots (<c>src/command.c:249-250</c>).
+	/// </summary>
+	/// <remarks>
+	/// One deliberate difference: Penn opens the return exit through a second <c>do_real_open</c> whose
+	/// <c>pseudo</c> is <c>Location(forward)</c>, and when the forward exit could not be linked that is
+	/// <c>NOTHING</c>, which <c>do_real_open</c> silently reads as "no pseudo" and falls back to the
+	/// opener's own room — a second exit in the room you are standing in, leading to the room you are
+	/// standing in. That is an artifact of <c>NOTHING</c> doing double duty as a sentinel, not a
+	/// contract, so an unlinked forward exit refuses the return one instead.
+	/// </remarks>
 	[SharpCommand(Name = "@OPEN", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 5, ParameterNames = ["exit", "destination"])]
+		MinArgs = 1, MaxArgs = 6,
+		ParameterNames = ["exit", "destination", "return exit", "source room", "dbref", "return dbref"])]
 	public async ValueTask<Option<CallState>> Open(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
-		var exitName = args["0"].Message!.ToPlainText();
-
-		var exitParts = exitName.Split(";");
-		var primaryName = exitParts[0];
-		var aliases = exitParts.Skip(1).ToArray();
 
 		var sourceRoom = await executor.Where();
-		if (args.ContainsKey("2") && !string.IsNullOrWhiteSpace(args["2"].Message!.ToPlainText()))
+		if (BuildingHelpers.Argument(args, "3") is { } sourceRoomName)
 		{
-			var sourceRoomName = args["2"].Message!.ToPlainText();
 			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-					executor, executor, sourceRoomName, LocateFlags.All) is not (AnySharpObject and SharpRoom namedRoom))
+					executor, executor, sourceRoomName.ToPlainText(), LocateFlags.All) is not (AnySharpObject and SharpRoom namedRoom))
 			{
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SourceMustBeARoom), executor);
 				return new CallState(ErrorMessages.Returns.NotARoom);
 			}
+
 			sourceRoom = namedRoom;
 		}
 
-		if (!await PermissionService.Controls(executor, sourceRoom.WithExitOption()))
+		// create.c:219-226 settles both requested dbrefs before either exit is opened, and holds them
+		// for the whole of the build.
+		return await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
+			[BuildingHelpers.Argument(args, "4"), BuildingHelpers.Argument(args, "5")],
+			async at => await OpenBothAsync(parser, executor, args, sourceRoom, at[0], at[1])) switch
 		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-				shouldNotify: true);
+			DBRef forward => new CallState(forward.ToString()),
+			Error<string> refused => new CallState(refused.Value)
+		};
+	}
+
+	/// <summary>The forward exit, and on success the rest of <c>do_open</c>.</summary>
+	private async ValueTask<Result<DBRef>> OpenBothAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		IReadOnlyDictionary<string, CallState> args, AnySharpContainer sourceRoom, DBRef? forwardAt, DBRef? backAt)
+		=> await BuildingHelpers.OpenExitAsync(Mediator, Database, Configuration, NotifyService,
+			PermissionService, LockService, executor, args["0"].Message!, sourceRoom, forwardAt) switch
+		{
+			DBRef forward => await LinkForwardAndOpenBackAsync(parser, executor, args, forward, sourceRoom, backAt),
+			Error<string> refused => refused
+		};
+
+	/// <summary>
+	/// The rest of <c>do_open</c> once the forward exit exists: link it to <c>links[1]</c>, and on a
+	/// destination that took the link, open <c>links[2]</c> back from there to the source room
+	/// (<c>create.c:229-236</c>). The return exit pays for itself inside its own <c>do_real_open</c>
+	/// (<c>:130</c>), so a builder with one slot left gets the forward exit and is refused the return.
+	/// Either way the answer is the forward exit, as it is in Penn.
+	/// </summary>
+	private async ValueTask<DBRef> LinkForwardAndOpenBackAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		IReadOnlyDictionary<string, CallState> args, DBRef forward, AnySharpContainer sourceRoom, DBRef? backAt)
+	{
+		if (BuildingHelpers.Argument(args, "1") is not { } destinationName)
+		{
+			return forward;
 		}
 
-		// do_real_open asks can_pay_fees once the name and the source room have passed (create.c:130).
-		if (await BuildingHelpers.WithBuildingQuotaAsync(Mediator, Configuration, NotifyService, executor,
-				async () => await Mediator.Send(new CreateExitCommand(
-					primaryName,
-					aliases,
-					sourceRoom,
-					await executor.Object().Owner.WithCancellation(CancellationToken.None))))
-			is not DBRef exitDbRef)
+		// Penn keeps an exit it could not link (create.c:167-171); LinkNewExitAsync has said why.
+		if (await LinkNewExitAsync(parser, executor, forward, destinationName.ToPlainText()) is not AnySharpContainer destination)
 		{
-			return new CallState(ErrorMessages.Returns.BuildingQuotaExhausted);
+			return forward;
 		}
 
-		var creatorZone = await executor.Object().Zone.WithCancellation(CancellationToken.None);
-		if (creatorZone is AnySharpObject zone)
+		if (BuildingHelpers.Argument(args, "2") is { } returnName
+				&& await BuildingHelpers.OpenExitAsync(Mediator, Database, Configuration, NotifyService,
+					PermissionService, LockService, executor, returnName, destination, backAt) is DBRef back)
 		{
-			if (await Mediator.Send(new GetObjectNodeQuery(exitDbRef)) is AnySharpObject newExit)
-			{
-				// Check for cycles before inheriting zone from creator
-				if (await HelperFunctions.SafeToAddZone(Mediator, Database, newExit, zone))
-				{
-					await Mediator.Send(new SetObjectZoneCommand(newExit, zone));
-				}
-			}
+			// unparse_dbref(source) (create.c:236) — the bare #N, not the objid, so the report reads
+			// "Linked to #12" rather than "Linked to #12:1790216...".
+			await LinkNewExitAsync(parser, executor, back, $"#{sourceRoom.Object().DBRef.Number}");
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.OpenedExit), executor, $"#{exitDbRef.Number}");
+		return forward;
+	}
 
-		if (args.ContainsKey("1") && !string.IsNullOrWhiteSpace(args["1"].Message!.ToPlainText()))
+	/// <summary>
+	/// The link half of <c>do_real_open</c> (<c>create.c:160-172</c>): an exit may lead to any
+	/// container — room, player or thing (<c>can_link_to</c>) — and anywhere else, or anywhere the
+	/// executor may not link into, is reported and leaves the exit unlinked.
+	/// </summary>
+	private async ValueTask<AnyOptionalSharpContainer> LinkNewExitAsync(IMUSHCodeParser parser,
+		AnySharpObject executor, DBRef exit, string destinationName)
+	{
+		if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
+				executor, executor, destinationName, LocateFlags.All) is not AnySharpObject destination)
 		{
-			var destName = args["1"].Message!.ToPlainText();
-			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-					executor, executor, destName, LocateFlags.All) is not AnySharpObject destination)
-			{
-				// LocateAndNotifyIfInvalidWithCallState has already said why.
-				return new CallState(exitDbRef.ToString());
-			}
-
-			// An exit may lead to any container — room, player or thing (PennMUSH can_link_to). Anything
-			// else, or anywhere the executor may not link into, is reported rather than leaving the exit
-			// silently unlinked.
-			if (!destination.IsContainer
-					|| !await CanLinkTo(executor, destination))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
-				return new CallState(exitDbRef.ToString());
-			}
-
-			if (await Mediator.Send(new GetObjectNodeQuery(exitDbRef)) is not (AnySharpObject and SharpExit exitObj))
-			{
-				throw new InvalidOperationException("The exit just opened must exist.");
-			}
-
-			await Mediator.Send(new LinkExitCommand(exitObj, destination.AsContainer));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToNameFormat), executor, destName);
+			// LocateAndNotifyIfInvalidWithCallState has already said why.
+			return new AnyOptionalSharpContainer(new None());
 		}
 
-		return new CallState(exitDbRef.ToString());
+		if (!destination.IsContainer || !await CanLinkTo(executor, destination))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
+			return new AnyOptionalSharpContainer(new None());
+		}
+
+		if (await Mediator.Send(new GetObjectNodeQuery(exit)) is not (AnySharpObject and SharpExit exitObj))
+		{
+			throw new InvalidOperationException("The exit just opened must exist.");
+		}
+
+		await Mediator.Send(new LinkExitCommand(exitObj, destination.AsContainer));
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToNameFormat), executor,
+			destinationName);
+
+		return new AnyOptionalSharpContainer(destination.AsContainer);
 	}
 
 	/// <remarks>
@@ -1082,7 +1025,7 @@ public partial class Commands
 	/// <see cref="BuildingHelpers.CloneAsync"/> is; <c>clone()</c> reaches the same body.
 	/// </remarks>
 	[SharpCommand(Name = "@CLONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
-		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "name", "cost"])]
+		MinArgs = 1, MaxArgs = 3, ParameterNames = ["object", "name", "dbref"])]
 	public async ValueTask<Option<CallState>> Clone(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -1092,9 +1035,11 @@ public partial class Commands
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
-			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Configuration, NotifyService, PermissionService,
-				AttributeService, ManipulateSharpObjectService, DidItService, EventService, Logger, executor, obj,
-				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve) switch
+			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Database, Configuration, NotifyService,
+				PermissionService, LockService, AttributeService, ManipulateSharpObjectService, DidItService,
+				EventService, Logger, executor, obj,
+				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve,
+				BuildingHelpers.Argument(args, "2")) switch
 			{
 				DBRef clone => new CallState(clone.ToString()),
 				Error<string> error => new CallState(error.Value)

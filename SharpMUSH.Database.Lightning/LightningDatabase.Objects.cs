@@ -76,28 +76,57 @@ public partial class LightningDatabase
 		var ownerKey = (long)creator.Object.Key;
 		var (now, modified) = Timestamps(creationTime, modifiedTime);
 
-		return await Store.WriteAsync(tx =>
+		return await Store.WriteAsync(tx => WriteRoom(tx, AllocateDbref(tx), name, ownerKey, now, modified),
+			cancellationToken);
+	}
+
+	/// <summary>
+	/// As <see cref="CreateRoomAsync"/>, but into the dbref the caller names rather than the next one
+	/// the counter hands out. See <see cref="AllocateDbrefAt"/> for which ids are free to take;
+	/// allocation and object write share the one transaction, so two callers racing for the same hole
+	/// cannot both be told they got it.
+	/// </summary>
+	public async ValueTask<Result<DBRef>> CreateRoomAtAsync(DBRef requested, string name, SharpPlayer creator,
+		long? modifiedTime = null, CancellationToken cancellationToken = default)
+	{
+		var ownerKey = (long)creator.Object.Key;
+		var (now, modified) = Timestamps(null, modifiedTime);
+
+		return await Store.WriteAsync<Result<DBRef>>(tx =>
 		{
-			var dbref = AllocateDbref(tx);
-
-			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(new ObjectRecord
+			if (AllocateDbrefAt(tx, requested.Number) is not { } dbref)
 			{
-				Name = name,
-				Type = DatabaseConstants.TypeRoom,
-				Aliases = [],
-				CreationTime = now,
-				ModifiedTime = modified,
-				Quota = 0,
-				Warnings = null,
-				Locks = new Dictionary<string, LockRecord>()
-			}));
-			tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+				return new Error<string>(ErrorMessages.Returns.InvalidDbref);
+			}
 
-			// Rooms carry no location/home edge of their own; LinkRoomAsync sets a drop-to later.
-			SetSingleEdge(tx, Tables.Owner, dbref, ownerKey);
-
-			return new DBRef((int)dbref, now);
+			return WriteRoom(tx, dbref, name, ownerKey, now, modified);
 		}, cancellationToken);
+	}
+
+	/// <inheritdoc />
+	public ValueTask<bool> IsDbrefAvailableAsync(DBRef requested, CancellationToken cancellationToken = default)
+		=> ValueTask.FromResult(Store.Read(tx => AllocateDbrefAt(tx, requested.Number) is not null));
+
+	/// <summary>The room rows themselves, once a dbref has been settled on.</summary>
+	private static DBRef WriteRoom(ITx tx, long dbref, string name, long ownerKey, long now, long modified)
+	{
+		tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(new ObjectRecord
+		{
+			Name = name,
+			Type = DatabaseConstants.TypeRoom,
+			Aliases = [],
+			CreationTime = now,
+			ModifiedTime = modified,
+			Quota = 0,
+			Warnings = null,
+			Locks = new Dictionary<string, LockRecord>()
+		}));
+		tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+
+		// Rooms carry no location/home edge of their own; LinkRoomAsync sets a drop-to later.
+		SetSingleEdge(tx, Tables.Owner, dbref, ownerKey);
+
+		return new DBRef((int)dbref, now);
 	}
 
 	public async ValueTask<DBRef> CreateThingAsync(string name, AnySharpContainer location, SharpPlayer creator,
@@ -122,12 +151,13 @@ public partial class LightningDatabase
 	/// callers racing for the same hole cannot both be told they got it.
 	/// </summary>
 	public async ValueTask<Result<DBRef>> CreateThingAtAsync(DBRef requested, string name, AnySharpContainer location,
-		SharpPlayer creator, AnySharpContainer home, CancellationToken cancellationToken = default)
+		SharpPlayer creator, AnySharpContainer home, long? modifiedTime = null,
+		CancellationToken cancellationToken = default)
 	{
 		var locKey = (long)location.Object().Key;
 		var homeKey = (long)home.Object().Key;
 		var ownerKey = (long)creator.Object.Key;
-		var (now, modified) = Timestamps(null, null);
+		var (now, modified) = Timestamps(null, modifiedTime);
 
 		return await Store.WriteAsync<Result<DBRef>>(tx =>
 		{
@@ -172,37 +202,66 @@ public partial class LightningDatabase
 		var ownerKey = (long)creator.Object.Key;
 		var (now, modified) = Timestamps(creationTime, modifiedTime);
 
-		return await Store.WriteAsync(tx =>
-		{
-			var dbref = AllocateDbref(tx);
+		return await Store.WriteAsync(
+			tx => WriteExit(tx, AllocateDbref(tx), name, aliases, locKey, ownerKey, now, modified),
+			cancellationToken);
+	}
 
-			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(new ObjectRecord
+	/// <summary>
+	/// As <see cref="CreateExitAsync"/>, but into the dbref the caller names rather than the next one
+	/// the counter hands out. See <see cref="AllocateDbrefAt"/> for which ids are free to take;
+	/// allocation and object write share the one transaction, so two callers racing for the same hole
+	/// cannot both be told they got it.
+	/// </summary>
+	public async ValueTask<Result<DBRef>> CreateExitAtAsync(DBRef requested, string name, string[] aliases,
+		AnySharpContainer location, SharpPlayer creator, long? modifiedTime = null,
+		CancellationToken cancellationToken = default)
+	{
+		var locKey = (long)location.Object().Key;
+		var ownerKey = (long)creator.Object.Key;
+		var (now, modified) = Timestamps(null, modifiedTime);
+
+		return await Store.WriteAsync<Result<DBRef>>(tx =>
+		{
+			if (AllocateDbrefAt(tx, requested.Number) is not { } dbref)
 			{
-				Name = name,
-				Type = DatabaseConstants.TypeExit,
-				Aliases = aliases,
-				CreationTime = now,
-				ModifiedTime = modified,
-				Quota = 0,
-				Warnings = null,
-				Locks = new Dictionary<string, LockRecord>()
-			}));
-			tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
-			foreach (var alias in aliases)
-			{
-				tx.Put(Tables.ObjName, Keys.Lower(alias), Keys.Dbref(dbref));
+				return new Error<string>(ErrorMessages.Returns.InvalidDbref);
 			}
 
-			// The exit's own location is its source room (at_location, same table Location() reads).
-			// The room->exit direction is a second, dedicated edge (Tables.Exit) so "exits at this
-			// room" is a cheap point lookup instead of a type-filtered scan of every reverse-location
-			// entry, which a flat key-value store cannot afford.
-			SetSingleEdge(tx, Tables.Location, dbref, locKey);
-			PutEdge(tx, Tables.Exit, locKey, dbref);
-			SetSingleEdge(tx, Tables.Owner, dbref, ownerKey);
-
-			return new DBRef((int)dbref, now);
+			return WriteExit(tx, dbref, name, aliases, locKey, ownerKey, now, modified);
 		}, cancellationToken);
+	}
+
+	/// <summary>The exit rows themselves, once a dbref has been settled on.</summary>
+	private static DBRef WriteExit(ITx tx, long dbref, string name, string[] aliases, long locKey, long ownerKey,
+		long now, long modified)
+	{
+		tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(new ObjectRecord
+		{
+			Name = name,
+			Type = DatabaseConstants.TypeExit,
+			Aliases = aliases,
+			CreationTime = now,
+			ModifiedTime = modified,
+			Quota = 0,
+			Warnings = null,
+			Locks = new Dictionary<string, LockRecord>()
+		}));
+		tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
+		foreach (var alias in aliases)
+		{
+			tx.Put(Tables.ObjName, Keys.Lower(alias), Keys.Dbref(dbref));
+		}
+
+		// The exit's own location is its source room (at_location, same table Location() reads).
+		// The room->exit direction is a second, dedicated edge (Tables.Exit) so "exits at this
+		// room" is a cheap point lookup instead of a type-filtered scan of every reverse-location
+		// entry, which a flat key-value store cannot afford.
+		SetSingleEdge(tx, Tables.Location, dbref, locKey);
+		PutEdge(tx, Tables.Exit, locKey, dbref);
+		SetSingleEdge(tx, Tables.Owner, dbref, ownerKey);
+
+		return new DBRef((int)dbref, now);
 	}
 
 	#endregion

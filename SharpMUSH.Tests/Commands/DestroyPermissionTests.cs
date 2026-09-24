@@ -140,7 +140,7 @@ public class DestroyPermissionTests
 		var theirs = await DigAsync("DPT_TheirRoom");
 		var godsRoom = await DigAsync("DPT_GodRoom");
 		await AsGod($"@chown {theirs}={builder.DbRef}");
-		var exit = Parse(await AsGod($"@open {TestIsolationHelpers.GenerateUniqueName("DPT_Inbound")}={theirs},{godsRoom}"));
+		var exit = Parse(await AsGod($"@open {TestIsolationHelpers.GenerateUniqueName("DPT_Inbound")}={theirs},,{godsRoom}"));
 
 		await As(builder, $"@destroy {exit}");
 
@@ -161,7 +161,7 @@ public class DestroyPermissionTests
 		var theirs = await DigAsync("DPT_TheirSource");
 		var godsRoom = await DigAsync("DPT_GodTarget");
 		await AsGod($"@chown {theirs}={builder.DbRef}");
-		var exit = Parse(await AsGod($"@open {TestIsolationHelpers.GenerateUniqueName("DPT_Outbound")}={godsRoom},{theirs}"));
+		var exit = Parse(await AsGod($"@open {TestIsolationHelpers.GenerateUniqueName("DPT_Outbound")}={godsRoom},,{theirs}"));
 
 		await As(builder, $"@nuke {exit}");
 
