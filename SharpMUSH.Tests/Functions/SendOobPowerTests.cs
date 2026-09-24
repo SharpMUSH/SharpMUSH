@@ -24,11 +24,20 @@ public class SendOobPowerTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
+	/// <summary>The output of <paramref name="who"/>'s own <c>think</c>.</summary>
+	/// <remarks>
+	/// Chosen by sender, never by position (#1247). <c>.LastOrDefault()</c> over the window is the
+	/// same bug that broke <c>MarkupTagFunctionTests</c>: test players share a room, so another
+	/// test's "<c>X has left.</c>" can land in this bucket after the think's own output and win.
+	/// <c>think</c> notifies its executor, so the mortal is both sender and recipient of the one
+	/// message this test may read.
+	/// </remarks>
 	private async Task<string> ThinkAs(TestIsolationHelpers.TestPlayer who, string code)
 	{
-		var before = WebAppFactoryArg.Notifications.CountFor(who.DbRef);
+		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(who.DbRef);
 		await Parser.CommandParse(who.Handle, ConnectionService, MarkupText.Plain($"think {code}"));
-		return WebAppFactoryArg.Notifications.For(who.DbRef).Skip(before).LastOrDefault() ?? string.Empty;
+		return WebAppFactoryArg.Notifications.DeliveriesFor(who.DbRef).Skip(before)
+			.LastOrDefault(delivery => delivery.Sender == who.DbRef)?.Message ?? string.Empty;
 	}
 
 	[Test]

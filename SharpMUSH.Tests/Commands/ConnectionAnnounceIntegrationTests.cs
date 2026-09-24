@@ -245,20 +245,27 @@ public class ConnectionAnnounceIntegrationTests
 		// A mortal viewer's WHO must not list the hidden connection...
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceMortalWho5");
+		// Asserted across the whole window by content, not on whichever line happened to be last
+		// (#1247). For the mortal that is the stronger claim anyway: no line it received names the
+		// hidden player. For the wizard it is a necessary one, because handle 1 is God's connection
+		// and every test running as God writes into that same bucket.
 		var mortalBefore = WebAppFactoryArg.Notifications.CountForHandle(mortal.Handle);
 		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain("WHO"));
-		var mortalListing = WebAppFactoryArg.Notifications.ForHandle(mortal.Handle).Skip(mortalBefore).LastOrDefault();
+		var mortalListing = WebAppFactoryArg.Notifications.ForHandle(mortal.Handle).Skip(mortalBefore).ToList();
 
-		await Assert.That(mortalListing).IsNotNull();
-		await Assert.That(mortalListing!).DoesNotContain(playerName);
+		await Assert.That(mortalListing).IsNotEmpty().Because("the mortal's WHO has to have answered something");
+		await Assert.That(mortalListing.Where(line => line.Contains(playerName, StringComparison.Ordinal)))
+			.IsEmpty()
+			.Because("a mortal's WHO must not list the hidden connection, on any line of it");
 
 		// ...but a wizard's WHO must.
 		var wizardBefore = WebAppFactoryArg.Notifications.CountForHandle(1);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("WHO"));
-		var wizardListing = WebAppFactoryArg.Notifications.ForHandle(1).Skip(wizardBefore).LastOrDefault();
+		var wizardListing = WebAppFactoryArg.Notifications.ForHandle(1).Skip(wizardBefore).ToList();
 
-		await Assert.That(wizardListing).IsNotNull();
-		await Assert.That(wizardListing!).Contains(playerName);
+		await Assert.That(wizardListing.Any(line => line.Contains(playerName, StringComparison.Ordinal)))
+			.IsTrue()
+			.Because("a wizard's WHO must list the hidden connection");
 	}
 
 	// --- Test 6: "cd" wording + DARK flag ------------------------------------------------------------

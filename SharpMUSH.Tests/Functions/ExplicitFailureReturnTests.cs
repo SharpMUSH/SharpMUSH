@@ -354,14 +354,36 @@ public class ExplicitFailureReturnTests
 		await Assert.That(await EvalAsGod($"{function}(*{offline})")).IsEqualTo(ErrorMessages.Returns.NotConnected);
 	}
 
+	/// <summary>
+	/// <c>hidden()</c> answers its caller with a return value and emits nothing.
+	/// </summary>
+	/// <remarks>
+	/// "Nothing arrived" is not a claim a test can make about a shared bucket (#1247): the mortal
+	/// shares a room, so another test's "<c>X has left.</c>" lands here too, and a bare
+	/// <see cref="TUnit.Assertions.AssertionBuilders.IsEmpty"/> over the window failed a full stack
+	/// run on exactly that. Scoped two ways instead, because either alone can be fooled: nothing the
+	/// mortal sent to itself, which is the only thing <c>hidden()</c> could have emitted; and nothing
+	/// at all carrying the refusal, in either spelling, whatever sender a regression might attribute
+	/// it to.
+	/// </remarks>
 	[Test]
 	public async Task HiddenSaysWhyInItsReturnValueAndNotifiesNothing()
 	{
 		var mortal = await Mortal("ExplicitHiddenSnoop");
 
-		var before = Factory.Notifications.CountFor(mortal.DbRef);
+		var deliveredBefore = Factory.Notifications.DeliveryCountFor(mortal.DbRef);
+		var messagesBefore = Factory.Notifications.CountFor(mortal.DbRef);
+
 		await Assert.That(await EvalAs(mortal.DbRef, "hidden(me)")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
-		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before)).IsEmpty();
+
+		await Assert.That(Factory.Notifications.DeliveriesFor(mortal.DbRef).Skip(deliveredBefore)
+				.Where(delivery => delivery.Sender == mortal.DbRef))
+			.IsEmpty()
+			.Because("hidden() emits nothing of its own, and its own is what the caller sends to itself");
+		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(messagesBefore)
+				.Where(message => message.Contains("permission denied", StringComparison.OrdinalIgnoreCase)))
+			.IsEmpty()
+			.Because("the refusal in particular must not reach the caller's output as well as being returned");
 
 		await Assert.That(await EvalAsGod("hidden(987654321)")).IsEqualTo(ErrorMessages.Returns.NoSuchDescriptor);
 	}
