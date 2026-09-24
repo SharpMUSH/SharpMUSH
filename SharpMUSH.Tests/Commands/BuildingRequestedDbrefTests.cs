@@ -462,6 +462,48 @@ public class BuildingRequestedDbrefTests
 		await Assert.That((await Named(name)).Length).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// The requested-dbref gate covers the allocation and nothing after it.
+	/// <c>IEventService.TriggerEventAsync</c> runs its handler inline
+	/// (<c>await evalParser.CommandListParse(...)</c>, <c>EventService.cs:153</c>), so an
+	/// <c>OBJECT`CREATE</c> handler that itself builds at a requested dbref re-enters the gate on the
+	/// same call stack — and <c>SemaphoreSlim</c> is not reentrant. Holding the gate across the event
+	/// deadlocked the server, not merely the caller.
+	/// </summary>
+	/// <remarks>
+	/// Bounded rather than left to hang: a regression here would otherwise wedge the whole suite,
+	/// because the gate is process-wide and would never be released.
+	/// </remarks>
+	[Test]
+	[NotInParallel]
+	public async ValueTask ACreationEventMayItselfBuildAtARequestedDbref()
+	{
+		const int EventHandlerDbRefNumber = 9;
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var outerHole = await Hole($"{uid}A");
+		var innerHole = await Hole($"{uid}B");
+
+		try
+		{
+			// The handler builds at a requested dbref of its own, which is the re-entrant case.
+			await Run(1, $"&OBJECT`CREATE #{EventHandlerDbRefNumber}="
+				+ $"@create BrdReentrantInner{uid}=,#{innerHole.Number}");
+
+			var build = Task.Run(() => Run(1, $"@create BrdReentrantOuter{uid}=,#{outerHole.Number}"));
+			var finished = await Task.WhenAny(build, Task.Delay(TimeSpan.FromSeconds(30)));
+
+			await Assert.That(finished).IsSameReferenceAs(build)
+				.Because("the gate must be released before the creation event runs its handler");
+			await Assert.That(DBRef.Parse(await build).Number).IsEqualTo(outerHole.Number);
+			await Assert.That(await NumbersNamed($"BrdReentrantInner{uid}")).IsEquivalentTo([innerHole.Number])
+				.Because("the handler's own requested build has to have gone through");
+		}
+		finally
+		{
+			await Run(1, $"@wipe #{EventHandlerDbRefNumber}/OBJECT`CREATE");
+		}
+	}
+
 	/// <summary>Asking for nothing is still the ordinary path: the counter hands out the next dbref.</summary>
 	[Test]
 	[Arguments(true)]

@@ -67,37 +67,12 @@ public static class BuildingHelpers
 		// runs before can_pay_fees. A requested slot that is already taken is therefore reported as
 		// such, and not as an exhausted quota, whichever of the two would also have refused.
 		return await WithRequestedDbrefsAsync(mediator, notifyService, executor, [requestedDbref],
-			async at => at[0] is { } wanted
-				? await ThingAtAsync(parser, mediator, database, configuration, notifyService, eventService,
-					executor, name, into, owner, home, wanted)
-				: await WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
-					async () => await mediator.Send(new CreateThingCommand(name.ToPlainText(), into, owner, home))) switch
-				{
-					DBRef thing => await CreatedAsync(parser, mediator, database, notifyService, eventService, executor,
-						name, thing),
-					Error<string> refused => refused
-				});
-	}
-
-	/// <summary>The rest of <see cref="CreateThingAsync"/> once a requested dbref has passed its gate.</summary>
-	private static async ValueTask<Result<DBRef>> ThingAtAsync(
-		IMUSHCodeParser parser,
-		IMediator mediator,
-		IObjectStore database,
-		IOptionsWrapper<SharpMUSHOptions> configuration,
-		INotifyService notifyService,
-		IEventService eventService,
-		AnySharpObject executor,
-		MString name,
-		AnySharpContainer into,
-		SharpPlayer owner,
-		AnySharpContainer home,
-		DBRef wanted)
-	{
-		return await ChargedAtAsync(mediator, configuration, notifyService, executor,
-			async () => await mediator.Send(new CreateThingAtCommand(wanted, name.ToPlainText(), into, owner, home))) switch
+			async at => await ThingChargedAsync(mediator, configuration, notifyService, executor, name.ToPlainText(),
+				into, owner, home, at[0])) switch
 		{
-			DBRef at => await CreatedAsync(parser, mediator, database, notifyService, eventService, executor, name, at),
+			// Outside the gate: CreatedAsync fires OBJECT`CREATE, which runs its handler inline.
+			DBRef thing => await CreatedAsync(parser, mediator, database, notifyService, eventService, executor,
+				name, thing),
 			Error<string> refused => refused
 		};
 	}
@@ -684,15 +659,16 @@ public static class BuildingHelpers
 		// before do_clone builds anything, and hold the slot for as long as the build takes.
 		return await WithRequestedDbrefsAsync(mediator, notifyService, executor, [requestedDbref],
 			async at => await CreateCloneAsync(mediator, database, configuration, notifyService, permissionService,
-				lockService, executor, target, name, into, owner, modified, at[0]) switch
-			{
-				DBRef cloneDbRef => await ClonedAsync(parser, mediator, notifyService, attributeService,
-					manipulateSharpObjectService, didItService, eventService, logger, executor, target, owner, preserve,
-					cloneDbRef),
-				// A guest refusal, an exhausted quota and a dbref the provider would not give up are
-				// three different answers; the caller is handed the one it was actually given.
-				Error<string> refused => refused
-			});
+				lockService, executor, target, name, into, owner, modified, at[0])) switch
+		{
+			// Outside the gate: ClonedAsync fires OBJECT`CREATE and the plugin hook, and queues ACLONE.
+			DBRef cloneDbRef => await ClonedAsync(parser, mediator, notifyService, attributeService,
+				manipulateSharpObjectService, didItService, eventService, logger, executor, target, owner, preserve,
+				cloneDbRef),
+			// A guest refusal, an exhausted quota and a dbref the provider would not give up are
+			// three different answers; the caller is handed the one it was actually given.
+			Error<string> refused => refused
+		};
 	}
 
 	/// <summary>Everything <c>do_clone</c> carries across once the clone itself exists.</summary>
@@ -1079,6 +1055,17 @@ public static class BuildingHelpers
 	/// other build that names a dbref can take one of these slots between the check and the last
 	/// write, so <c>@dig name=to,from,#a,#b,#c</c> either gets all three or builds nothing.
 	/// </summary>
+	/// <remarks>
+	/// <paramref name="build"/> <b>allocates, and does nothing else</b>. No <c>OBJECT`CREATE</c>, no
+	/// plugin hook, no <c>real_did_it</c> — every one of those runs code the game's own softcode can
+	/// supply, and <see cref="IEventService.TriggerEventAsync"/> runs its handler inline
+	/// (<c>await evalParser.CommandListParse(...)</c>) rather than queueing it. A handler that then
+	/// built at a requested dbref would re-enter this gate on the same call stack, and
+	/// <see cref="SemaphoreSlim"/> is not reentrant: a deadlock, not a slow path. Everything after
+	/// the object exists belongs to the caller, outside.
+	/// <para>The contract this gate owes is only what check-then-allocate needs. PennMUSH has no lock
+	/// here at all, being single-threaded.</para>
+	/// </remarks>
 	public static async ValueTask<Result<DBRef>> WithRequestedDbrefsAsync(
 		IMediator mediator,
 		INotifyService notifyService,
