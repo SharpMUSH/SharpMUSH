@@ -15,6 +15,7 @@ public interface ISharpDatabase :
 	INavigationStore,
 	IAttributeStore,
 	IMailStore,
+	IMailAliasStore,
 	IExpandedDataStore,
 	IChannelStore,
 	IAccountStore,

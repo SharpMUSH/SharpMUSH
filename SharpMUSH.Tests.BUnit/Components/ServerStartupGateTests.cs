@@ -18,12 +18,13 @@ namespace SharpMUSH.Tests.BUnit.Components;
 /// </summary>
 file sealed class FlakyThenHealthyHandler(int failCount) : HttpMessageHandler
 {
-	public int CallCount { get; private set; }
+	private int _callCount;
+	public int CallCount => Volatile.Read(ref _callCount);
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
-		CallCount++;
-		var response = CallCount > failCount
+		var call = Interlocked.Increment(ref _callCount);
+		var response = call > failCount
 			? new HttpResponseMessage(HttpStatusCode.OK)
 			: new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
 		return Task.FromResult(response);
@@ -33,11 +34,12 @@ file sealed class FlakyThenHealthyHandler(int failCount) : HttpMessageHandler
 /// <summary>Always fails — the server never comes up during the test.</summary>
 file sealed class AlwaysFailingHandler : HttpMessageHandler
 {
-	public int CallCount { get; private set; }
+	private int _callCount;
+	public int CallCount => Volatile.Read(ref _callCount);
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
-		CallCount++;
+		Interlocked.Increment(ref _callCount);
 		return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
 	}
 }
@@ -83,11 +85,16 @@ public class ServerStartupGateTests : TrackingBunitContext
 				builder.CloseElement();
 			})));
 
-		// Give the poll loop a few iterations to run — it must keep failing and keep showing
+		// Wait for the poll loop to run a few iterations — it must keep failing and keep showing
 		// the startup screen throughout. A failed probe never calls StateHasChanged (nothing
 		// visually changes), so bUnit's render-driven WaitForAssertion has nothing to react to
-		// here — a plain delay is the right tool.
-		await Task.Delay(TimeSpan.FromMilliseconds(300));
+		// here. Poll the probe count instead of sleeping a fixed time: on a loaded CI runner a
+		// fixed 300ms delay saw only one probe (GRA-17).
+		var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+		while (handler.CallCount < 3 && DateTime.UtcNow < deadline)
+		{
+			await Task.Delay(TimeSpan.FromMilliseconds(10));
+		}
 
 		await Assert.That(handler.CallCount).IsGreaterThanOrEqualTo(3);
 		await Assert.That(cut.Markup).DoesNotContain(ChildMarker);

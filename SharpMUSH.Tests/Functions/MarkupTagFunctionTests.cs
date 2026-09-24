@@ -1,9 +1,13 @@
+using System.Text;
 using Microsoft.Extensions.DependencyInjection;
+using NATS.Client.Core;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
+using SharpMUSH.Messaging.NATS;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -374,5 +378,79 @@ public class MarkupTagFunctionTests
 
 		await Assert.That(said.ToPlainText()).IsEqualTo("a  1");
 		await Assert.That(said.Render(MarkupFormat.Pueblo)).Contains("<xch_mudtext>");
+	}
+
+	/// <summary>
+	/// <c>wshtml()</c> returns markup and sends nothing itself; whatever emits it decides what each client
+	/// reads (#1120). The message is composed with the text around it and reaches the recipient as one
+	/// value that still carries the element, so the HTML, Pueblo and MXP renderers write it as a tag and a
+	/// plain client gets the text — the mixed-client behaviour PennMUSH's second argument was for.
+	/// </summary>
+	[Test]
+	[Arguments("think ")]
+	[Arguments("@pemit %#=")]
+	public async Task Wshtml_IsComposedIntoTheEmissionAndRenderedPerClient(string emitter)
+	{
+		var marker = Marker();
+		var mortal = await MortalAsync("WshtmlEmitMortal");
+
+		var window = OpenWindow(mortal);
+		await CommandParser.CommandParse(mortal.Handle, ConnectionService,
+			MarkupText.Plain($"{emitter}[wshtml(<b>{marker}</b>)] and more"));
+		var said = OwnOutput(mortal, window);
+
+		await Assert.That(said.Render(MarkupFormat.Html)).IsEqualTo($"<b>{marker}</b> and more");
+		await Assert.That(said.Render(MarkupFormat.Pueblo)).IsEqualTo($"<b>{marker}</b> and more");
+		await Assert.That(said.Render(MarkupFormat.Ansi)).IsEqualTo($"\u001b[1m{marker}\u001b[0m and more");
+		await Assert.That(said.Render(MarkupFormat.Plain)).IsEqualTo($"{marker} and more")
+			.Because("a client that negotiated neither HTML nor Pueblo reads the text and never a literal tag");
+	}
+
+	/// <summary>
+	/// Nothing reaches the player's notifications or their websocket (portal) connection, the channel
+	/// out-of-band functions such as <c>oob()</c> write to. An <c>oob()</c> probe sent afterwards on the
+	/// same connection shows the socket was being watched: everything published before it has arrived.
+	/// </summary>
+	[Test]
+	public async Task Wshtml_SendsNothingByItself()
+	{
+		var marker = Marker();
+		var probe = Marker();
+		var mortal = await MortalAsync("WshtmlQuietMortal");
+		var socket = TestIsolationHelpers.GenerateUniqueHandle();
+		await ConnectionService.Register(socket, "localhost", "localhost", "websocket",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		await ConnectionService.Bind(socket, mortal.DbRef);
+
+		await using var nats = new NatsConnection(new NatsOpts
+		{
+			Url = $"nats://localhost:{WebAppFactoryArg.NatsTestServer.Instance.GetMappedPublicPort(4222)}"
+		});
+		var subject = NatsSubjects.For(typeof(WebSocketOutputMessage),
+			WebAppFactoryArg.Services.GetRequiredService<NatsOptions>().SubjectPrefix);
+		await using var published = await nats.SubscribeCoreAsync(subject,
+			serializer: CompressingNatsSerializer<WebSocketOutputMessage>.Default);
+		// The subscription is in place on the server before anything is published.
+		await nats.PingAsync();
+
+		var window = OpenWindow(mortal);
+		await CommandParser.CommandParse(socket, ConnectionService,
+			MarkupText.Plain($"think [null(wshtml(<b>{marker}</b>))]"));
+		await CommandParser.CommandParse(socket, ConnectionService, MarkupText.Plain($"think [oob(%#,{probe})]"));
+
+		var toSocket = new List<string>();
+		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+		await foreach (var message in published.Msgs.ReadAllAsync(timeout.Token))
+		{
+			if (message.Data is not { } output || output.Handle != socket) continue;
+			if (output.Data.Contains(probe, StringComparison.Ordinal)) break;
+			toSocket.Add(output.Data);
+		}
+
+		await Assert.That(toSocket).IsEmpty()
+			.Because("the value is for whatever emits it; the function itself publishes nothing out of band");
+		await Assert.That(WebAppFactoryArg.Notifications.RawFor(mortal.DbRef).Skip(window.Raw)
+				.Any(message => TestHelpers.MessagePlainTextContains(message, marker)))
+			.IsFalse().Because("the value is for whatever emits it; the function itself notifies nobody");
 	}
 }

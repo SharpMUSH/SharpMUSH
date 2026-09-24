@@ -126,6 +126,57 @@ public partial class MarkupOutputRendererTests
 			.Because("a gated registry is still the wire registry, and a tag is only read on a secure line");
 	}
 
+	/// <summary>
+	/// A Pueblo client renders the stream as HTML, where the CRLF the telnet layer puts after each
+	/// message is whitespace — so without a break of its own every message runs into the next. This is
+	/// PennMUSH's <c>queue_eol</c> in HTML mode.
+	/// </summary>
+	[Test]
+	public async Task Pueblo_EndsAMessageWithABreak()
+	{
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain("You see nothing special."));
+
+		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Pueblo));
+
+		await Assert.That(Encoding.UTF8.GetString(result.Data)).IsEqualTo("You see nothing special.<BR>");
+	}
+
+	[Test]
+	public async Task Pueblo_DoesNotEndAPrompt()
+	{
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain("Password:"));
+
+		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Pueblo), prompt: true);
+
+		await Assert.That(Encoding.UTF8.GetString(result.Data)).IsEqualTo("Password:")
+			.Because("what follows a prompt is the player's own typing, on the same line");
+	}
+
+	[Test]
+	public async Task Pueblo_DoesNotDoubleABreakTheTextAlreadyEndsWith()
+	{
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain("Look out!\n"));
+
+		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Pueblo));
+		var text = Encoding.UTF8.GetString(result.Data);
+
+		await Assert.That(text.EndsWith("<BR>", StringComparison.Ordinal)).IsTrue();
+		await Assert.That(text.EndsWith("<BR><BR>", StringComparison.Ordinal)).IsFalse();
+	}
+
+	[Test]
+	[Arguments(OutputFormat.Ansi)]
+	[Arguments(OutputFormat.Mxp)]
+	public async Task EveryOtherFormatEndsAMessageWithTheWiresOwnEnding(OutputFormat format)
+	{
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain("You see nothing special."));
+
+		var result = new MarkupOutputRenderer().Render(markup, Connection(format));
+
+		await Assert.That(Encoding.UTF8.GetString(result.Data)).DoesNotContain("<BR>")
+			.Because("a terminal and an MXP client both read the CRLF the telnet layer writes");
+	}
+
 	[Test]
 	public async Task Pueblo_HtmlEncodesPlainText()
 	{

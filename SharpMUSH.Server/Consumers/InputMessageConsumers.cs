@@ -1,5 +1,8 @@
+using Mediator;
 using MarkupString;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
@@ -250,9 +253,13 @@ public class ConnectionEstablishedConsumer(
 /// <summary>
 /// Consumes Pueblo negotiated messages: PUEBLO=1, which is what <c>pueblo()</c> and <c>terminfo()</c>
 /// report, and OUTPUT_FORMAT=pueblo unless the client already negotiated MXP. A client that speaks
-/// both keeps MXP, the same rule the socket server applies to the format it renders in.
+/// both keeps MXP, the same rule the socket server applies to the format it renders in. What the
+/// connection was shown at the login prompt is then replayed, because the handshake cleared its screen.
 /// </summary>
-public class PuebloNegotiatedConsumer(ILogger<PuebloNegotiatedConsumer> logger, IConnectionService connectionService)
+public class PuebloNegotiatedConsumer(
+	ILogger<PuebloNegotiatedConsumer> logger,
+	IConnectionService connectionService,
+	IMediator mediator)
 	: IMessageConsumer<PuebloNegotiatedMessage>
 {
 	internal static async Task<bool> WaitForConnectionRegistration(
@@ -297,6 +304,23 @@ public class PuebloNegotiatedConsumer(ILogger<PuebloNegotiatedConsumer> logger, 
 			current => current == "mxp" ? "mxp" : "pueblo");
 
 		connectionService.Update(message.Handle, "PUEBLO", "1");
+
+		// The start sequence the socket owner just sent ends with <xch_page clear=text>, which wipes
+		// everything the connection has been shown — the configured connect file as well as the greeting.
+		// Arriving at the login prompt is what puts all of it on screen, so that is what is replayed,
+		// rather than one handler's share of it: PennMUSH calls welcome_user again here for the same
+		// reason (src/bsd.c). SOCKET`CONNECT does not fire again, being tied to a connection opening.
+		// A connection that has since logged in is past the greeting and is left alone.
+		if (connectionService.Get(message.Handle) is { State: IConnectionService.ConnectionState.Connected })
+		{
+			await mediator.Publish(
+				new ConnectionStateChangeNotification(
+					message.Handle,
+					PlayerRef: null,
+					OldState: IConnectionService.ConnectionState.Connected,
+					NewState: IConnectionService.ConnectionState.Connected),
+				cancellationToken);
+		}
 	}
 }
 

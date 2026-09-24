@@ -684,6 +684,12 @@
   <data name="SelectedFile" xml:space="preserve">
     <value>Selected File</value>
   </data>
+  <data name="MailDatabaseOptional" xml:space="preserve">
+    <value>Mail database (optional): the PennMUSH maildb, for mail aliases</value>
+  </data>
+  <data name="ChatDatabaseOptional" xml:space="preserve">
+    <value>Chat database (optional): the PennMUSH chatdb, for channels</value>
+  </data>
   <data name="PreviewFileContent" xml:space="preserve">
     <value>Preview File Content</value>
   </data>
@@ -759,6 +765,18 @@
   </data>
   <data name="Locks" xml:space="preserve">
     <value>Locks:</value>
+  </data>
+  <data name="MailAliasesLabel" xml:space="preserve">
+    <value>Mail aliases:</value>
+  </data>
+  <data name="MailMessagesLabel" xml:space="preserve">
+    <value>Mail messages:</value>
+  </data>
+  <data name="ChannelsLabel" xml:space="preserve">
+    <value>Channels:</value>
+  </data>
+  <data name="ChannelMembersLabel" xml:space="preserve">
+    <value>Channel members:</value>
   </data>
   <data name="Issues" xml:space="preserve">
     <value>Issues</value>

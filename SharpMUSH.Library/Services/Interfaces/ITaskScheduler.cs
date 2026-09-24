@@ -217,6 +217,19 @@ public interface ITaskScheduler
 	ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
 		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
 
+	/// <summary>
+	/// Admits work that arrived on a socket of its own rather than from an object or a player, as an
+	/// inbound HTTP request does. PennMUSH queues such an entry <c>QUEUE_SOCKET</c> and <c>do_entry</c>
+	/// charges it to no one (<c>src/cque.c</c>, <c>run_http_command</c>), so it counts against the global
+	/// queue limit only, never against an owner's quota or the shared system bucket.
+	/// </summary>
+	/// <param name="onReleased">
+	/// Runs once the entry leaves the queue, whether it ran, was halted before it ran, or was dropped at
+	/// shutdown, so a caller waiting on the work always has an answer.
+	/// </param>
+	ValueTask<QueueAdmissionResult> AdmitSocketWork(Func<ValueTask<CallState?>> action, string triggerName, string group, Action? onReleased = null)
+		=> throw new NotSupportedException("This scheduler does not support admission-aware queue operations.");
+
 	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
 		=> ReleaseScheduledWork(pid, semaphoreTimeout, null);
 	ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout, long? generation)

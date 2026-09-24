@@ -31,7 +31,7 @@ public class OrderedPromptTests
 		var connections = Substitute.For<IConnectionServerService>();
 		connections.Get(1).Returns(connection);
 		var renderer = Substitute.For<IMarkupOutputRenderer>();
-		renderer.RenderAsync(Arg.Any<string>(), Arg.Any<ConnectionServerService.ConnectionData>(), Arg.Any<CancellationToken>())
+		renderer.RenderAsync(Arg.Any<string>(), Arg.Any<ConnectionServerService.ConnectionData>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
 			.Returns(ValueTask.FromResult(new RenderedOutput("text"u8.ToArray(), false)));
 		var consumer = new MarkupOutputConsumer(connections, renderer, Substitute.For<IOutputTransformService>(), NullLogger<MarkupOutputConsumer>.Instance);
 

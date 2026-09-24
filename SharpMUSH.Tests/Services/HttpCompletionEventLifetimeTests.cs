@@ -75,7 +75,7 @@ public class HttpCompletionEventLifetimeTests
 			var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
 			options.CurrentValue.Returns(baseline with { Database = baseline.Database with { HttpHandler = 8, EventHandler = 9 }, Limit = baseline.Limit with { QueueEntryCpuTime = milliseconds } });
 			Events = new EventService(Mediator, Attributes, options, NullLogger<EventService>.Instance);
-			Service = new(Mediator, Attributes, Parser, new HttpOutputCapture(), Events, options, NullLogger<HttpHandlerCommandService>.Instance);
+			Service = new(Mediator, Attributes, Parser, new HttpOutputCapture(), Events, InlineTaskScheduler.Create(), options, NullLogger<HttpHandlerCommandService>.Instance);
 		}
 	}
 

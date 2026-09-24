@@ -13,16 +13,16 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	public const string WebSocketConnectionType = "websocket";
 
 	public ValueTask<RenderedOutput> RenderAsync(string markup, ConnectionServerService.ConnectionData connection,
-		CancellationToken ct = default)
+		bool prompt = false, CancellationToken ct = default)
 	{
 		ct.ThrowIfCancellationRequested();
-		return ValueTask.FromResult(Render(markup, connection));
+		return ValueTask.FromResult(Render(markup, connection, prompt));
 	}
 
-	public RenderedOutput Render(string markup, ConnectionServerService.ConnectionData connection) =>
-		Render(markup, new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences));
+	public RenderedOutput Render(string markup, ConnectionServerService.ConnectionData connection, bool prompt = false) =>
+		Render(markup, new RenderContext(connection.ConnectionType, connection.Capabilities, connection.Preferences), prompt);
 
-	public RenderedOutput Render(string markup, RenderContext connection)
+	public RenderedOutput Render(string markup, RenderContext connection, bool prompt = false)
 	{
 		if (connection.ConnectionType == WebSocketConnectionType)
 		{
@@ -43,6 +43,17 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 		};
 
 		text = NormalizeLineEnding(text);
+
+		// A Pueblo client renders the stream as HTML, where the CRLF the telnet layer puts after each
+		// message is whitespace: without a break of its own every message would run into the next.
+		// PennMUSH ends a line the same way in HTML mode (queue_eol, src/notify.c). A prompt gets none —
+		// what follows it is the player's own typing, on the same line.
+		if (connection.Capabilities.Format == OutputFormat.Pueblo && !prompt
+			&& !text.EndsWith(PuebloLineBreak, StringComparison.Ordinal))
+		{
+			text += PuebloLineBreak;
+		}
+
 		return new RenderedOutput(Encoding.UTF8.GetBytes(text), ApplyOutputTransform: true);
 	}
 
@@ -52,6 +63,9 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	/// Lazy because <see cref="MarkupRegistry.Default"/> is installed at startup, after this type loads.
 	/// </summary>
 	private static readonly Lazy<MarkupRegistry> MxpWire = new(() => MarkupRegistry.Default.WithMxpSecureLines());
+
+	/// <summary>The break a Pueblo client reads as the end of a line.</summary>
+	private const string PuebloLineBreak = "<BR>";
 
 	/// <summary>
 	/// One registry per set of answers, since a registry is immutable and connections that answered the
