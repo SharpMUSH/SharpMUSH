@@ -1,8 +1,18 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
 using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Server;
+using SharpMUSH.Tests.Services;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -71,15 +81,8 @@ public class FloatPrecisionTests
 	/// Every place the shipped default is written down has to say the same thing: the code default,
 	/// the fallbacks the PennMUSH config importer uses for an option a <c>mush.cnf</c> does not set,
 	/// the <c>mushcnf.dst</c> this repository ships, and the precision
-	/// <see cref="Configurable.FloatPrecision"/> answers before a host wires it to the live
-	/// configuration.
+	/// <see cref="Configurable.FloatPrecision"/> answers outside an engine's evaluation.
 	/// </summary>
-	/// <remarks>
-	/// <see cref="Configurable.DefaultFloatPrecision"/> cannot be asserted through
-	/// <see cref="Configurable.FloatPrecision"/>: that is process-wide static state which the test
-	/// host has already pointed at its own configuration, and re-pointing it here would change the
-	/// game under every test running in parallel.
-	/// </remarks>
 	[Test]
 	public async Task SixPlacesEverywhereTheDefaultIsWrittenDown()
 	{
@@ -89,6 +92,40 @@ public class FloatPrecisionTests
 		await Assert.That(ReadPennMushConfig.Create(EmptyConfigFile()).Cosmetic.FloatPrecision).IsEqualTo(6u);
 		await Assert.That(ReadPennMushConfig.Create(shipped).Cosmetic.FloatPrecision).IsEqualTo(6u);
 		await Assert.That(Configurable.DefaultFloatPrecision).IsEqualTo(6u);
+		await Assert.That(Configurable.FloatPrecision).IsEqualTo(6);
+	}
+
+	/// <summary>
+	/// Each engine writes numbers at its own <c>float_precision</c>. The precision was a process-wide
+	/// static that every host re-pointed at its own options as it started, so the test process formatted
+	/// every number at the precision of whichever host started last, and kept doing so after that host
+	/// was gone (#1245). Starting a second engine here is what an import world, the readiness tests or
+	/// the telnet tests do alongside the shared host.
+	/// </summary>
+	[Test]
+	public async Task AnotherEngineStartingDoesNotChangeThisOnesPrecision()
+	{
+		var twoPlaces = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		var configured = ReadPennMushConfig.Create(Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
+		twoPlaces.CurrentValue.Returns(configured with { Cosmetic = configured.Cosmetic with { FloatPrecision = 2 } });
+		await using var other = await IsolatedImportWorld.CreateAsync(services =>
+		{
+			services.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
+			services.AddSingleton(twoPlaces);
+		});
+		await ActivatorUtilities.CreateInstance<StartupHandler>(other.Services).StartAsync(CancellationToken.None);
+
+		var otherParser = new MUSHCodeParser(
+			other.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
+			other.Services.GetRequiredService<LibraryService<string, FunctionDefinition>>(),
+			other.Services.GetRequiredService<LibraryService<string, CommandDefinition>>(),
+			twoPlaces,
+			other.Services,
+			ParserState.RootFor(new DBRef(1)));
+
+		await Assert.That(await Evaluate("[fdiv(1,3)]")).IsEqualTo("0.333333");
+		await Assert.That((await otherParser.FunctionParse(MarkupText.Plain("[fdiv(1,3)]")))!.Message!.ToPlainText())
+			.IsEqualTo("0.33");
 	}
 
 	private static string EmptyConfigFile()
