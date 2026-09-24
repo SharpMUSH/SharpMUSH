@@ -146,7 +146,16 @@ public class ListAttributeResultTests
 		};
 		var result = await Factory.FunctionParser.FunctionParse(MarkupText.Plain(expression));
 		TestDiagnostics.WriteLine($"{function}/{route}/{mode}: errors={result!.HadErrors}; text={result.Message}");
-		await Assert.That(result.HadErrors).IsEqualTo(mode == "syntax");
+
+		// The line above is routine output, so it is gated on SHARPMUSH_ENABLE_TEST_CONSOLE_LOGGING
+		// (TestDiagnostics.cs:18) and CI does not set it. This test was seen failing once in a full
+		// stack run and #1247 records the cause as untraced — with 99 cases sharing one name and no
+		// text expectation for several functions, a bare failure cannot even say which assertion
+		// went. Carried on the assertions too, where it is failure-only output and always survives.
+		var observed = $"{function}/{route}/{mode}: expression={expression}; "
+			+ $"errors={result.HadErrors}; text={result.Message?.ToPlainText()}";
+
+		await Assert.That(result.HadErrors).IsEqualTo(mode == "syntax").Because(observed);
 		if (mode != "syntax")
 		{
 			var expected = function switch
@@ -159,7 +168,7 @@ public class ListAttributeResultTests
 				"sortkey" => "a b",
 				_ => null
 			};
-			if (expected is not null) await Assert.That(result.Message!.Text).IsEqualTo(expected);
+			if (expected is not null) await Assert.That(result.Message!.Text).IsEqualTo(expected).Because(observed);
 		}
 	}
 }
