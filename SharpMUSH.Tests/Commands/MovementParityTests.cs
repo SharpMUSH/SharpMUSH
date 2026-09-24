@@ -2468,4 +2468,90 @@ public class MovementParityTests
 		await Assert.That(await ExitEnds(exit)).IsEqualTo(before)
 			.Because("owning where the exit is going is not authority to take it from where it is");
 	}
+
+	// --- #1253: a victim nested past max_depth ----------------------------------------------------
+
+	/// <summary>
+	/// Nests <paramref name="victim"/> inside <c>Limit.MaxDepth</c> things standing in
+	/// <paramref name="room"/>, deep enough that <c>absolute_room</c> runs out before it reaches the
+	/// room. Built from the inside out, so every move is of something standing directly in the room
+	/// and neither the loop check nor the source-room walk ever sees the chain it is building.
+	/// Returns the innermost container.
+	/// </summary>
+	private async Task<string> NestPastMaxDepth(string prefix, DBRef victim, string room)
+	{
+		var depth = (int)Configuration.CurrentValue.Limit.MaxDepth;
+		var inner = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, $"{prefix}0");
+		await God($"@teleport/silent #{inner.Number}={room}");
+		await God($"@teleport/silent {victim}=#{inner.Number}");
+
+		var outer = inner;
+		for (var i = 1; i < depth; i++)
+		{
+			var next = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, $"{prefix}{i}");
+			await God($"@teleport/silent #{next.Number}={room}");
+			await God($"@teleport/silent #{outer.Number}=#{next.Number}");
+			outer = next;
+		}
+
+		return $"#{inner.Number}";
+	}
+
+	/// <summary>
+	/// <c>wiz.c:529</c>: <c>absolute_room</c> answering AMBIGUOUS is a refusal. SharpMUSH read "no
+	/// absolute room" as "nothing to check", so a victim nested past <c>max_depth</c> inside a NO_TEL
+	/// room was teleported straight out of it. Penn tells the victim they are in too many containers
+	/// and sends them home instead.
+	/// </summary>
+	[Test]
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask AVictimNestedPastMaxDepthIsSentHomeNotTeleportedOut(Via via)
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TooDeepMover");
+		var room = await Dig("TooDeepRoom");
+		var destination = await OpenRoom("TooDeepDest");
+		var home = BareDbref((await GodParser.FunctionParse(MarkupText.Plain($"[home({mover.DbRef})]")))!
+			.Message!.ToPlainText().Trim());
+
+		await God($"@set {room}=NO_TEL");
+		var innermost = await NestPastMaxDepth("TooDeepBox", mover.DbRef, room);
+
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(innermost);
+
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await Teleport(mover.Handle, via, "me", destination));
+
+		await Assert.That(moverSaw).Contains(ErrorMessages.Notifications.TooManyContainers);
+		await Assert.That(moverSaw.Count(m => m == ErrorMessages.Notifications.NoPlaceLikeHome)).IsEqualTo(3)
+			.Because("wiz.c:533 sends the victim home through do_move, which says it three times");
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(home)
+			.Because("the source room's NO_TEL is never skipped for a chain too deep to walk");
+	}
+
+	/// <summary>
+	/// <c>wiz.c:531</c>: a victim whose home is the container they are stuck in would be sent straight
+	/// back into it, so Penn moves their home to PLAYER_START first.
+	/// </summary>
+	[Test]
+	public async ValueTask AVictimNestedPastMaxDepthWhoseHomeIsTheirContainerGoesToPlayerStart()
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TooDeepHomeMover");
+		var room = await Dig("TooDeepHomeRoom");
+		var destination = await OpenRoom("TooDeepHomeDest");
+		var innermost = await NestPastMaxDepth("TooDeepHomeBox", mover.DbRef, room);
+		var playerStart = $"#{Configuration.CurrentValue.Database.PlayerStart}";
+
+		await God($"@link {mover.DbRef}={innermost}");
+		await Assert.That(BareDbref((await GodParser.FunctionParse(MarkupText.Plain($"[home({mover.DbRef})]")))!
+			.Message!.ToPlainText().Trim())).IsEqualTo(innermost);
+
+		await As(mover.Handle, $"@teleport {destination}");
+
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(playerStart);
+		await Assert.That(BareDbref((await GodParser.FunctionParse(MarkupText.Plain($"[home({mover.DbRef})]")))!
+			.Message!.ToPlainText().Trim())).IsEqualTo(playerStart);
+	}
 }
