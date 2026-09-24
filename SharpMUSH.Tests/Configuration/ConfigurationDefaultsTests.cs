@@ -73,7 +73,7 @@ public class ConfigurationDefaultsTests
 	};
 
 	private static string ShippedConfig =>
-		Path.Combine(TestPaths.RepositoryRoot, "SharpMUSH.Configuration", "mushcnf.dst");
+		Path.Join(TestPaths.RepositoryRoot, "SharpMUSH.Configuration", "mushcnf.dst");
 
 	/// <summary>
 	/// The configuration a fresh world is created with and the configuration a <c>mush.cnf</c> that
@@ -213,7 +213,7 @@ public class ConfigurationDefaultsTests
 
 	private static string EmptyConfigFile()
 	{
-		var path = Path.Combine(Path.GetTempPath(), $"sharpmush-defaults-{Guid.NewGuid():N}.cnf");
+		var path = Path.Join(Path.GetTempPath(), $"sharpmush-defaults-{Guid.NewGuid():N}.cnf");
 		File.WriteAllText(path, string.Empty);
 		return path;
 	}

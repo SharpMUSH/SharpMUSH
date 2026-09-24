@@ -22,7 +22,7 @@ public partial class MushDefsCrossReferenceTests
 	private static partial Regex FunctionReference();
 
 	private static string DefinitionsFile =>
-		Path.Combine(TestPaths.RepositoryRoot, "SharpMUSH.Client", "wwwroot", "data", "mush-defs.json");
+		Path.Join(TestPaths.RepositoryRoot, "SharpMUSH.Client", "wwwroot", "data", "mush-defs.json");
 
 	[Test]
 	public async Task EveryFunctionCrossReferenceNamesARegisteredFunction()
