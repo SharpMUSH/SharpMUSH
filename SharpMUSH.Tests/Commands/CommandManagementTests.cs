@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -390,27 +390,98 @@ public class CommandManagementTests
 		await Assert.That(await As(wizard, $"{name} x")).Contains(Huh);
 	}
 
-	/// <summary>Deleting an alias takes that alias's hooks with it, as deleting a command does.</summary>
+	/// <summary>
+	/// A hook lives on the command every alias points at, so it fires whichever of that command's
+	/// names was typed. Penn keeps hooks on the <c>COMMAND_INFO</c> (<c>src/command.h:161</c>) and
+	/// <c>do_hook</c> reaches it with <c>command_find</c> (<c>src/command.c:2589</c>), which resolves
+	/// an alias to the command it aliases and reports <c>cmd->name</c> back. That is why
+	/// <c>@hook/override say</c> also fires for <c>"</c>. See #1223.
+	/// </summary>
 	[Test]
-	public async ValueTask Delete_AnAlias_TakesTheAliasHooksWithIt()
+	public async ValueTask Hook_SetOnACommand_FiresForItsAliasesToo()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		var alias = CommandName();
+		var machine = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AliasShared");
+		try
+		{
+			await As(wizard, $"&DO {machine}=${name} *:@pemit %#=Shared %0.");
+			await As(wizard, $"@command/add {name}");
+			await As(wizard, $"@command/alias {name}={alias}");
+			await As(wizard, $"@hook/override {name}={machine},DO");
+
+			await Assert.That(await As(wizard, $"{name} once")).Contains("Shared once.").Because("precondition");
+			await Assert.That(await As(wizard, $"{alias} twice")).Contains("Shared twice.");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(name, "OVERRIDE");
+		}
+	}
+
+	/// <summary>
+	/// Naming an alias to <c>@hook</c> hooks the command it aliases, because <c>do_hook</c> resolves
+	/// the name with <c>command_find</c> before touching <c>cmd->hooks</c>
+	/// (<c>src/command.c:2589</c>) — so the hook fires under the command's own name too.
+	/// </summary>
+	[Test]
+	public async ValueTask Hook_SetThroughAnAlias_HooksTheCommandItself()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		var alias = CommandName();
+		var machine = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AliasHookedThrough");
+		try
+		{
+			await As(wizard, $"&DO {machine}=${name} *:@pemit %#=Through %0.");
+			await As(wizard, $"@command/add {name}");
+			await As(wizard, $"@command/alias {name}={alias}");
+			await As(wizard, $"@hook/override {alias}={machine},DO");
+
+			await Assert.That(await As(wizard, $"{alias} once")).Contains("Through once.").Because("precondition");
+			await Assert.That(await As(wizard, $"{name} twice")).Contains("Through twice.");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(name, "OVERRIDE");
+		}
+	}
+
+	/// <summary>
+	/// Deleting an alias frees only that name. The hooks belong to the command, which is still there
+	/// — Penn frees a <c>COMMAND_INFO</c> and its hooks only when the command itself goes
+	/// (<c>src/command.c:2100-2104</c>), and <c>do_command_delete</c> takes an alias out of the table
+	/// without touching what it pointed at. Rewritten for #1223: it used to assert the opposite,
+	/// because the hook was keyed by the name as typed.
+	/// </summary>
+	[Test]
+	public async ValueTask Delete_AnAlias_LeavesTheCommandsHooksAlone()
 	{
 		var wizard = await Wizard();
 		var name = CommandName();
 		var alias = CommandName();
 		var machine = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AliasHooked");
-		// The hook is keyed by the typed name (the alias), but its input carries the command's own
-		// name, so the $-command matches on that. See #1223.
-		await As(wizard, $"&DO {machine}=${name} *:@pemit %#=Aliased %0.");
-		await As(wizard, $"@command/add {name}");
-		await As(wizard, $"@command/alias {name}={alias}");
-		await As(wizard, $"@hook/override {alias}={machine},DO");
-		await Assert.That(await As(wizard, $"{alias} once")).Contains("Aliased once.").Because("precondition");
+		try
+		{
+			await As(wizard, $"&DO {machine}=${name} *:@pemit %#=Aliased %0.");
+			await As(wizard, $"@command/add {name}");
+			await As(wizard, $"@command/alias {name}={alias}");
+			await As(wizard, $"@hook/override {alias}={machine},DO");
+			await Assert.That(await As(wizard, $"{alias} once")).Contains("Aliased once.").Because("precondition");
 
-		await AsGod($"@command/delete {alias}");
-		await As(wizard, $"@command/alias {name}={alias}");
+			await AsGod($"@command/delete {alias}");
 
-		await Assert.That(await As(wizard, $"{alias} twice")).Contains("This command has not been implemented.");
-		await Assert.That(await As(wizard, $"{alias} twice")).DoesNotContain("Aliased twice.");
+			await Assert.That(await As(wizard, $"{name} twice")).Contains("Aliased twice.")
+				.Because("the command keeps its hooks when one of its aliases is deleted");
+
+			await As(wizard, $"@command/alias {name}={alias}");
+			await Assert.That(await As(wizard, $"{alias} thrice")).Contains("Aliased thrice.");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(name, "OVERRIDE");
+		}
 	}
 
 	/// <summary><c>=nobody</c> is <c>/disable</c>, so it is refused for the commands the game runs itself.</summary>

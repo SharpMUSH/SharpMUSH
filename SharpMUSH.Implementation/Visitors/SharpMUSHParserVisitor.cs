@@ -1,4 +1,4 @@
-using Antlr4.Runtime;
+﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using Mediator;
@@ -2042,6 +2042,11 @@ public class SharpMUSHParserVisitor(
 			},
 			async newParser =>
 			{
+				// A hook lives on the command, not on the name that reached it. Penn stores it on the
+				// COMMAND_INFO every alias points at (command.h:161) and do_hook gets there with
+				// command_find (command.c:2589), so `@hook/override say` fires for `"` as well. Keyed by
+				// what was typed, a hook fired for one spelling of its command and no other (#1223).
+				var hookedCommand = libraryCommandDefinition.Attribute.Name;
 				var hookHadErrors = false;
 				async ValueTask<Option<CallState>> EvaluateHook(CommandHook hook, Option<MString> input = null!)
 				{
@@ -2056,7 +2061,7 @@ public class SharpMUSHParserVisitor(
 				}
 
 				// 1. Check for /ignore hook
-				var ignoreHook = await HookService.GetHookAsync(rootCommand, "IGNORE");
+				var ignoreHook = await HookService.GetHookAsync(hookedCommand, "IGNORE");
 				if (ignoreHook is CommandHook ignoreCode)
 				{
 					var ignoreResult = await EvaluateHook(ignoreCode);
@@ -2070,7 +2075,7 @@ public class SharpMUSHParserVisitor(
 				}
 
 				// 2. Check for /before hook
-				var beforeHook = await HookService.GetHookAsync(rootCommand, "BEFORE");
+				var beforeHook = await HookService.GetHookAsync(hookedCommand, "BEFORE");
 				if (beforeHook is CommandHook beforeCode)
 				{
 					await EvaluateHook(beforeCode);
@@ -2094,14 +2099,14 @@ public class SharpMUSHParserVisitor(
 				}
 
 				// 3. Check for /override hook with $-command matching
-				var overrideHook = await HookService.GetHookAsync(rootCommand, "OVERRIDE");
+				var overrideHook = await HookService.GetHookAsync(hookedCommand, "OVERRIDE");
 				if (overrideHook is CommandHook overrideCode)
 				{
 					var overrideResult = await EvaluateHook(overrideCode, HookInput());
 					if (overrideResult is CallState overridden)
 					{
 						// 5. Check for /after hook before returning
-						var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
+						var afterHook = await HookService.GetHookAsync(hookedCommand, "AFTER");
 						if (afterHook is CommandHook afterCode)
 						{
 							await EvaluateHook(afterCode);
@@ -2119,7 +2124,7 @@ public class SharpMUSHParserVisitor(
 					var pluginOverride = await pluginHooks.CommandTryOverrideAsync(newParser, pluginCommandText);
 					if (pluginOverride is not null)
 					{
-						var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
+						var afterHook = await HookService.GetHookAsync(hookedCommand, "AFTER");
 						if (afterHook is CommandHook afterCode)
 						{
 							await EvaluateHook(afterCode);
@@ -2139,14 +2144,14 @@ public class SharpMUSHParserVisitor(
 				if (invalidSwitches.Length > 0)
 				{
 					// Check for /extend hook to handle invalid switches
-					var extendHook = await HookService.GetHookAsync(rootCommand, "EXTEND");
+					var extendHook = await HookService.GetHookAsync(hookedCommand, "EXTEND");
 					if (extendHook is CommandHook extendCode)
 					{
 						var extendResult = await EvaluateHook(extendCode, HookInput());
 						if (extendResult is CallState extended)
 						{
 							// Execute /after hook before returning
-							var afterHook = await HookService.GetHookAsync(rootCommand, "AFTER");
+							var afterHook = await HookService.GetHookAsync(hookedCommand, "AFTER");
 							if (afterHook is CommandHook afterCode)
 							{
 								await EvaluateHook(afterCode);
@@ -2219,7 +2224,7 @@ public class SharpMUSHParserVisitor(
 				}
 
 				// 5. Check for /after hook
-				var afterHookFinal = await HookService.GetHookAsync(rootCommand, "AFTER");
+				var afterHookFinal = await HookService.GetHookAsync(hookedCommand, "AFTER");
 				if (afterHookFinal is CommandHook afterFinalCode)
 				{
 					await EvaluateHook(afterFinalCode);

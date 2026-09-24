@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Services;
@@ -1993,6 +1993,11 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HookMustSpecifyCommandName), executor);
 			return new CallState(ErrorMessages.Returns.NoCommandSpecified);
 		}
+
+		// do_hook resolves the name with command_find and then works on cmd->hooks, so naming an alias
+		// hooks the command it aliases (command.c:2589) — and reports cmd->name back. A name no command
+		// answers to is left as typed, so nothing that hooks an unknown name changes meaning here.
+		commandName = FindCommand(commandName)?.LibraryInformation.Attribute.Name ?? commandName;
 
 		if (switches.Contains("LIST"))
 		{
