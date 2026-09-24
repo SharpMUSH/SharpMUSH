@@ -1,3 +1,4 @@
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion;
@@ -17,6 +18,12 @@ internal sealed class PennMUSHConversionContext
 {
 	/// <summary>Where each source PennMUSH dbref ended up in the SharpMUSH database.</summary>
 	public Dictionary<int, DBRef> DbrefMapping { get; } = [];
+
+	/// <summary>
+	/// The database options this conversion has already written, so a later write of the whole options
+	/// record keeps them rather than restoring what the running configuration read before the reload.
+	/// </summary>
+	public DatabaseOptions? WrittenDatabaseOptions { get; set; }
 
 	/// <summary>Failures that cost the conversion an object, an attribute or a lock.</summary>
 	public List<string> Errors { get; } = [];

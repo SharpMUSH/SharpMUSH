@@ -15,7 +15,7 @@ public class CreatePlayerCommandHandler(
 	public async ValueTask<DBRef> Handle(CreatePlayerCommand request, CancellationToken cancellationToken)
 	{
 		var created = await database.CreatePlayerAsync(request.Name, request.Password, request.Location, request.Home,
-			request.Quota, request.Salt, request.CreationTime, request.ModifiedTime, cancellationToken);
+			request.Quota, request.Salt, request.CreationTime, request.ModifiedTime, request.RequestedDbref, cancellationToken);
 
 		if (request.ApplyDefaultFlags)
 		{

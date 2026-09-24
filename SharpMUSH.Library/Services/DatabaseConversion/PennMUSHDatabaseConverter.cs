@@ -136,7 +136,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			locksConverted = await CreateLocksAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Locks created", 1.0);
 
-			await EnableParenGroupsAsync(warnings, cancellationToken);
+			await EnableParenGroupsAsync(context, cancellationToken);
 
 			stopwatch.Stop();
 
@@ -178,15 +178,20 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// It runs after the whole world is written, so a failure here is a warning: the conversion stands,
 	/// and the option is left for the administrator to set.
 	/// </remarks>
-	private async ValueTask EnableParenGroupsAsync(List<string> warnings, CancellationToken cancellationToken)
+	private async ValueTask EnableParenGroupsAsync(PennMUSHConversionContext context, CancellationToken cancellationToken)
 	{
+		var warnings = context.Warnings;
 		try
 		{
 			var options = _options.CurrentValue;
 			if (options.Compatibility.ParenGroups) return;
 
 			await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
-				options with { Compatibility = options.Compatibility with { ParenGroups = true } }), cancellationToken);
+				options with
+				{
+					Compatibility = options.Compatibility with { ParenGroups = true },
+					Database = context.WrittenDatabaseOptions ?? options.Database
+				}), cancellationToken);
 			_configurationReload?.SignalChange();
 			_logger.LogInformation("Turned on paren_groups for the imported PennMUSH softcode");
 		}
@@ -196,6 +201,126 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			warnings.Add($"paren_groups could not be turned on ({ex.Message}); imported softcode that writes literal " +
 				"parentheses unescaped needs it: set paren_groups to yes in the configuration and reload it.");
 		}
+	}
+
+	/// <summary>
+	/// SharpMUSH's own system objects past the three PennMUSH also has, as migration seeds them. None
+	/// of them exists in PennMUSH, whose dumps put players and objects at these numbers.
+	/// </summary>
+	private static readonly (int Number, string Name, string Type)[] SeededSystemObjects =
+	[
+		(3, "Ancestor Room", "ROOM"), (4, "Ancestor Player", "THING"), (5, "Ancestor Exit", "THING"),
+		(6, "Ancestor Thing", "THING"), (7, "Package Manager", "PLAYER"), (8, "HTTP Handler", "THING"),
+		(9, "Event Handler", "THING")
+	];
+
+	/// <summary>
+	/// Clears #3-#9 so every source object keeps its own dbref: the imported world is PennMUSH's, and
+	/// PennMUSH has no ancestors, package manager or HTTP/event handlers (its defaults leave the
+	/// ancestor options unset). The options that named the removed objects are unset with them, so
+	/// nothing points at a number that now belongs to an imported object. An administrator who wants
+	/// those extras creates them again and sets the options. The dbref counter is then lowered to one
+	/// past #2, so it ends one past the highest imported object rather than at the seeds' 10.
+	/// </summary>
+	/// <remarks>
+	/// Only a world still as migration seeded it is cleared: #0-#9 all present and all carrying the one
+	/// creation time migration stamped them with, and #3-#9 still the seeds' names and types. Nothing a
+	/// user does changes a creation time, and an import stamps #0-#2 and everything it creates with the
+	/// source's times, so a second import finds no seeds and deletes nothing; its source objects that
+	/// need #3-#9 are reported as numbers already taken.
+	/// </remarks>
+	private async Task RemoveSeededSystemObjectsAsync(PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		if (!await IsSeededWorldAsync(cancellationToken))
+		{
+			return;
+		}
+
+		var removed = new HashSet<uint>();
+		foreach (var (number, name, _) in SeededSystemObjects)
+		{
+			if (!await _mediator.Send(new DeleteObjectCommand(new DBRef(number)), cancellationToken))
+			{
+				context.Warnings.Add($"SharpMUSH's seeded {name} (#{number}) could not be removed before the import.");
+				continue;
+			}
+
+			removed.Add((uint)number);
+			context.Warnings.Add($"Removed SharpMUSH's seeded {name} (#{number}) so the imported object numbers are kept; " +
+				"PennMUSH has no such object.");
+		}
+
+		await _mediator.Send(new ReleaseTrailingDbrefsCommand(), cancellationToken);
+
+		if (removed.Count == 0) return;
+
+		uint? Unset(uint? value) => value is { } v && removed.Contains(v) ? null : value;
+		try
+		{
+			var options = _options.CurrentValue;
+			var database = options.Database;
+			var cleared = database with
+			{
+				AncestorRoom = Unset(database.AncestorRoom),
+				AncestorExit = Unset(database.AncestorExit),
+				AncestorThing = Unset(database.AncestorThing),
+				AncestorPlayer = Unset(database.AncestorPlayer),
+				PackageManager = Unset(database.PackageManager),
+				HttpHandler = Unset(database.HttpHandler),
+				EventHandler = Unset(database.EventHandler)
+			};
+			if (cleared == database) return;
+
+			await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
+				options with { Database = cleared }), cancellationToken);
+			context.WrittenDatabaseOptions = cleared;
+			_configurationReload?.SignalChange();
+			context.Warnings.Add("Unset the ancestor, package_manager, http_handler and event_handler options that named " +
+				"the removed objects.");
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			_logger.LogWarning(ex, "Could not unset the options that named SharpMUSH's seeded system objects");
+			context.Warnings.Add($"The ancestor, package_manager, http_handler and event_handler options could not be " +
+				$"unset ({ex.Message}); they still name #3-#9, which now hold imported objects. Unset them in the configuration.");
+		}
+	}
+
+	/// <summary>
+	/// Whether #0-#9 are still the objects migration seeded: all ten present with one shared creation
+	/// time, and #3-#9 still named and typed as seeded.
+	/// </summary>
+	private async Task<bool> IsSeededWorldAsync(CancellationToken cancellationToken)
+	{
+		long? seededAt = null;
+		for (var number = 0; number <= 9; number++)
+		{
+			if (await _mediator.Send(new GetObjectNodeQuery(new DBRef(number)), cancellationToken) is not AnySharpObject node)
+			{
+				return false;
+			}
+
+			var obj = node.Object();
+			seededAt ??= obj.CreationTime;
+			if (obj.CreationTime != seededAt)
+			{
+				return false;
+			}
+
+			if (number < 3)
+			{
+				continue;
+			}
+
+			var (_, name, type) = SeededSystemObjects[number - 3];
+			if (!obj.Name.Equals(name, StringComparison.Ordinal) || !obj.Type.Equals(type, StringComparison.Ordinal))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/// <summary>
@@ -665,6 +790,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return (0, 0, 0, 0);
 		}
 
+		await RemoveSeededSystemObjectsAsync(context, cancellationToken);
+
 		// Migration seeds #0-#2 the way PennMUSH's create_minimal_db lays out every database: Room Zero,
 		// God (PennMUSH hardcodes GOD as #1) and the Master Room (MASTER_ROOM must be a room). A seeded
 		// object stands in for the source's only when both are the same type; a source object of any
@@ -701,7 +828,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				StoredVerbatim,
 				ApplyDefaultFlags: false,
 				godCreated,
-				godModified), cancellationToken);
+				godModified,
+				godPennObject.DBRef), cancellationToken);
 
 			dbrefMapping[1] = tempGodDbRef;
 			playersConverted++;
@@ -754,7 +882,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			var (room0Created, room0Modified) = PennTimestamps(room0Penn);
 			tempRoom0DbRef = await _mediator.Send(
-				new CreateRoomCommand(room0Penn.Name, godPlayer, ApplyDefaultFlags: false, room0Created, room0Modified),
+				new CreateRoomCommand(room0Penn.Name, godPlayer, ApplyDefaultFlags: false, room0Created, room0Modified,
+					room0Penn.DBRef),
 				cancellationToken);
 			dbrefMapping[0] = tempRoom0DbRef;
 			roomsConverted++;
@@ -790,7 +919,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		SharpRoom? room0 = null; // Cache the limbo room to avoid repeated lookups
 
-		foreach (var pennObj in pennDatabase.Objects)
+		// A stable sort: every source object in dump order, then the #0-#2 that cannot keep their number.
+		foreach (var pennObj in pennDatabase.Objects.OrderBy(o => o.DBRef <= 2))
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
@@ -804,6 +934,10 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				DBRef newDbRef;
 				var (created, modified) = PennTimestamps(pennObj);
+				// Only a source #0-#2 of another type than the seeded Room Zero, God or Master Room gets here,
+				// and those three stay: it takes the next free number instead, and the summary says so. These
+				// come last, so that number is past every source object's.
+				int? requested = pennObj.DBRef > 2 ? pennObj.DBRef : null;
 
 				switch (pennObj.Type)
 				{
@@ -819,7 +953,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								StoredVerbatim,
 								ApplyDefaultFlags: false,
 								created,
-								modified), cancellationToken);
+								modified,
+								requested), cancellationToken);
 							playersConverted++;
 							break;
 						}
@@ -828,7 +963,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						{
 							// Rooms are created with God as owner initially
 							newDbRef = await _mediator.Send(
-								new CreateRoomCommand(pennObj.Name, godPlayer, ApplyDefaultFlags: false, created, modified),
+								new CreateRoomCommand(pennObj.Name, godPlayer, ApplyDefaultFlags: false, created, modified, requested),
 								cancellationToken);
 							roomsConverted++;
 							break;
@@ -851,7 +986,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								room0, // Home is Limbo for now
 								ApplyDefaultFlags: false,
 								created,
-								modified), cancellationToken);
+								modified,
+								requested), cancellationToken);
 							thingsConverted++;
 							break;
 						}
@@ -874,7 +1010,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								godPlayer, // God owns it temporarily
 								ApplyDefaultFlags: false,
 								created,
-								modified), cancellationToken);
+								modified,
+								requested), cancellationToken);
 							exitsConverted++;
 							break;
 						}
@@ -885,6 +1022,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				}
 
 				dbrefMapping[pennObj.DBRef] = newDbRef;
+				if (requested is null)
+				{
+					warnings.Add($"#{pennObj.DBRef} ({pennObj.Name}) is a {pennObj.Type}, but SharpMUSH's #{pennObj.DBRef} " +
+						$"must stay a {(pennObj.DBRef == 1 ? "player" : "room")}; it was imported as #{newDbRef.Number}.");
+				}
 
 				_logger.LogDebug("Created object #{PennDBRef} -> {SharpDBRef}: {Name}",
 					pennObj.DBRef, newDbRef, pennObj.Name);

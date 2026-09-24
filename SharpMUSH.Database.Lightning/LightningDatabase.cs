@@ -86,14 +86,43 @@ public partial class LightningDatabase(
 	/// why <c>stats()</c> reports a garbage count of zero — so the free slots are exactly the holes:
 	/// below the counter, and holding no object. An id at or above the counter is refused rather than
 	/// jumping the counter to reach it, so one mistyped argument cannot strand a block of dbrefs.</para>
+	/// <para>An import (<paramref name="import"/>) is the one caller entitled to an id at or above the
+	/// counter: the source database's ids are what its softcode holds, so the counter follows the import
+	/// to one past the highest id it takes. The source's holes stay holes, as they are its garbage.</para>
 	/// <para>Runs inside the caller's write job, which is what makes this check and the object write that
-	/// follows it atomic against a second creation racing for the same hole. The counter is left alone:
-	/// a hole is below it by construction.</para>
+	/// follows it atomic against a second creation racing for the same hole.</para>
 	/// </summary>
-	internal long? AllocateDbrefAt(ITx tx, long requested)
-		=> requested >= 0 && requested < ReadNextDbref(tx) && !tx.TryGet(Tables.Obj, Keys.Dbref(requested), out _)
-			? requested
-			: null;
+	internal long? AllocateDbrefAt(ITx tx, long requested, bool import = false)
+	{
+		if (requested < 0 || tx.TryGet(Tables.Obj, Keys.Dbref(requested), out _))
+		{
+			return null;
+		}
+
+		var next = ReadNextDbref(tx);
+		if (requested < next)
+		{
+			return requested;
+		}
+
+		if (!import)
+		{
+			return null;
+		}
+
+		tx.Put(Tables.Meta, Keys.Str("next_dbref"), Keys.Dbref(requested + 1));
+		return requested;
+	}
+
+	/// <summary>
+	/// The dbref an import names, or the next one when it names none. An id that already holds an
+	/// object is refused, and nothing is written.
+	/// </summary>
+	private long AllocateDbrefFor(ITx tx, long? imported)
+		=> imported is not { } requested
+			? AllocateDbref(tx)
+			: AllocateDbrefAt(tx, requested, import: true)
+				?? throw new InvalidOperationException($"#{requested} is not free to take");
 
 	private static long ReadNextDbref(ITx tx)
 		=> tx.TryGet(Tables.Meta, Keys.Str("next_dbref"), out var v) ? Keys.ReadDbref(v) : 0;
@@ -191,6 +220,10 @@ public partial class LightningDatabase(
 	/// <see cref="Keys.Dbref"/> blobs; <see cref="Tables.Account"/> is keyed by decimal string instead and
 	/// has <see cref="RecomputeAccountCounter"/>.</summary>
 	private static void RecomputeCounter(ITx tx, string counterKey, TableDef table)
+		=> RaiseCounter(tx, counterKey, HighestKey(tx, table));
+
+	/// <summary>The highest <see cref="Keys.Dbref"/> key in <paramref name="table"/>, or -1 when it is empty.</summary>
+	private static long HighestKey(ITx tx, TableDef table)
 	{
 		var highest = -1L;
 		foreach (var (key, _) in tx.Range(table, []))
@@ -199,8 +232,16 @@ public partial class LightningDatabase(
 			if (id > highest) highest = id;
 		}
 
-		RaiseCounter(tx, counterKey, highest);
+		return highest;
 	}
+
+	public async ValueTask<int> ReleaseTrailingDbrefsAsync(CancellationToken cancellationToken = default)
+		=> await Store.WriteAsync(tx =>
+		{
+			var next = HighestKey(tx, Tables.Obj) + 1;
+			tx.Put(Tables.Meta, Keys.Str("next_dbref"), Keys.Dbref(next));
+			return (int)next;
+		}, cancellationToken);
 
 	/// <summary>The account table's keys are the decimal strings <see cref="AllocateAccountId"/> hands out,
 	/// so they sort and decode as text rather than as fixed-width dbrefs and need their own scan.</summary>
