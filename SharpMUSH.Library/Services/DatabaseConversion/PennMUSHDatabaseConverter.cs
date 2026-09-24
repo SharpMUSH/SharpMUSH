@@ -81,7 +81,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				pennDatabase.Mail = await _parser.ParseMailFileAsync(mailDatabaseFilePath, cancellationToken);
 			}
-			catch (FormatException ex)
+			catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException)
 			{
 				// The maildb is optional and holds only mail: a bad one costs the aliases, not the world.
 				_logger.LogWarning(ex, "Could not read the PennMUSH mail database: {FilePath}", mailDatabaseFilePath);
@@ -95,7 +95,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				pennDatabase.Chat = await _parser.ParseChatFileAsync(chatDatabaseFilePath, cancellationToken);
 			}
-			catch (FormatException ex)
+			catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException)
 			{
 				// Like the maildb: a bad chatdb costs the channels, not the world.
 				_logger.LogWarning(ex, "Could not read the PennMUSH chat database: {FilePath}", chatDatabaseFilePath);
@@ -1509,11 +1509,12 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 	/// <summary>
 	/// An object reference in a key <c>unparse_boolexp</c> wrote with <c>UB_DBREF</c>: a <c>#N</c> standing
-	/// alone or after the <c>=</c>, <c>+</c>, <c>@</c> or <c>$</c> of an is, carry, indirect or owner lock.
+	/// alone or after the <c>=</c>, <c>+</c>, <c>@</c> or <c>$</c> of an is, carry, indirect or owner lock,
+	/// including the object of an indirect lock that names its lock (<c>@#N/Basic</c>).
 	/// A number after the <c>:</c>, <c>/</c> or <c>^</c> of an attribute, evaluation or flag-style lock is a
 	/// value, not a reference, and is left alone.
 	/// </summary>
-	[GeneratedRegex(@"(?<=^|[\s&|!()=+@$])#(?<number>\d+)(?=$|[\s&|!()])")]
+	[GeneratedRegex(@"(?<=^|[\s&|!()=+@$])#(?<number>\d+)(?=$|[\s&|!()/])")]
 	private static partial Regex LockObjectReference();
 
 	/// <summary>The mogrifier as <c>@channel/mogrifier</c> stores it, or none when it was not imported.</summary>

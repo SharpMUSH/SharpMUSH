@@ -85,6 +85,9 @@ public class PennMUSHChannelImportTests
 		await Assert.That(await world.Permissions.ChannelCanJoin(await PennMUSHDbrefPreservationTests.NodeAsync(world, 4), secret)).IsTrue();
 		await Assert.That(await world.Permissions.ChannelCanJoin(await PennMUSHDbrefPreservationTests.NodeAsync(world, 5), secret)).IsFalse();
 		await Assert.That(await world.Permissions.ChannelCanJoin(await PennMUSHDbrefPreservationTests.NodeAsync(world, 5), @public)).IsTrue();
+		// Its speak lock too.
+		await Assert.That(await world.Permissions.ChannelCanSpeak(await PennMUSHDbrefPreservationTests.NodeAsync(world, 4), secret)).IsTrue();
+		await Assert.That(await world.Permissions.ChannelCanSpeak(await PennMUSHDbrefPreservationTests.NodeAsync(world, 5), secret)).IsFalse();
 
 		// A member finds the channel from its side too.
 		var carolsChannels = await world.Mediator
@@ -206,7 +209,7 @@ public class PennMUSHChannelImportTests
 			  buffer 0
 			  mogrifier #2
 			  lock "join"
-			  key "=#2|+#2|#10|NUM:#2"
+			  key "=#2|+#2|#10|NUM:#2|@#2/Basic"
 			  lock "speak"
 			  key "#1"
 			  users 2
@@ -225,10 +228,10 @@ public class PennMUSHChannelImportTests
 
 		await Assert.That(result.Errors).IsEmpty();
 		var boxed = await ChannelAsync(world, "Boxed");
-		await Assert.That(boxed.JoinLock).IsEqualTo("=#11|+#11|#10|NUM:#2");
+		await Assert.That(boxed.JoinLock).IsEqualTo("=#11|+#11|#10|NUM:#2|@#11/Basic");
 		await Assert.That(boxed.SpeakLock).IsEqualTo("#1");
 		await Assert.That(result.Warnings).Contains(w =>
-			w.StartsWith("Channel Boxed: join lock names objects imported under new numbers (#2 as #11, #2 as #11)"));
+			w.StartsWith("Channel Boxed: join lock names objects imported under new numbers (#2 as #11, #2 as #11, #2 as #11)"));
 		await Assert.That(result.Warnings).DoesNotContain(w => w.StartsWith("Channel Boxed: speak lock"));
 		// The mogrifier and the member follow it the same way.
 		var box = await PennMUSHDbrefPreservationTests.NodeAsync(world, 11);
@@ -274,6 +277,37 @@ public class PennMUSHChannelImportTests
 		finally
 		{
 			File.Delete(badChatdb);
+		}
+	}
+
+	/// <summary>
+	/// An empty chatdb (an admin picked a zero-byte file) and one that cannot be opened are reported the
+	/// same way as a malformed one, and the world still imports.
+	/// </summary>
+	[Test]
+	public async Task AnEmptyOrMissingChatdbIsReportedAndTheWorldStillImports()
+	{
+		var emptyChatdb = Path.Join(Path.GetTempPath(), $"empty-{Guid.NewGuid():N}.chatdb");
+		await File.WriteAllTextAsync(emptyChatdb, string.Empty);
+		var missingChatdb = Path.Join(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.chatdb");
+
+		try
+		{
+			foreach (var chatdb in new[] { emptyChatdb, missingChatdb })
+			{
+				await using var world = await IsolatedImportWorld.CreateAsync();
+				var result = await world.Converter.ConvertDatabaseAsync(PennMUSHDbrefPreservationTests.FixturePath, null,
+					chatdb, new Progress<ConversionProgress>());
+
+				await Assert.That(result.Errors).IsEmpty();
+				await Assert.That(result.ChannelsConverted).IsEqualTo(0);
+				await Assert.That(result.Warnings).Contains(w => w.StartsWith("The chatdb could not be read"));
+				await Assert.That((await PennMUSHDbrefPreservationTests.NodeAsync(world, 3)).Object().Name).IsEqualTo("Alice");
+			}
+		}
+		finally
+		{
+			File.Delete(emptyChatdb);
 		}
 	}
 

@@ -91,7 +91,8 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 			var seePrivileges = await reader.ReadIntegerAsync(cancellationToken);
 			var size = await reader.ReadIntegerAsync(cancellationToken);
 
-			var members = new List<int>(Math.Max(size, 0));
+			// Not sized from the count: a corrupt one would be an allocation, not a FormatException.
+			var members = new List<int>();
 			for (var j = 0; j < size; j++)
 			{
 				members.Add(await reader.ReadIntegerAsync(cancellationToken));
@@ -206,7 +207,7 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 		}
 
 		var userCount = Int(reader, value);
-		var users = new List<PennMUSHChannelUser>(Math.Max(userCount, 0));
+		var users = new List<PennMUSHChannelUser>();
 		for (var i = 0; i < userCount; i++)
 		{
 			var dbref = DbRef(reader, await reader.ReadLabeledAsync("dbref", cancellationToken));

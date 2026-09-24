@@ -50,7 +50,8 @@ public class DatabaseConversionController(
 
 			logger.LogInformation("Uploaded PennMUSH database file: {FileName} ({Size} bytes)", file.FileName, file.Length);
 
-			if (mailFile is { Length: > 0 })
+			// An empty file is still passed on, so the import reports it rather than dropping it unmentioned.
+			if (mailFile is not null)
 			{
 				mailTempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.maildb");
 				await using var mailStream = System.IO.File.Create(mailTempPath);
@@ -59,7 +60,7 @@ public class DatabaseConversionController(
 					mailFile.Length);
 			}
 
-			if (chatFile is { Length: > 0 })
+			if (chatFile is not null)
 			{
 				chatTempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.chatdb");
 				await using var chatStream = System.IO.File.Create(chatTempPath);
