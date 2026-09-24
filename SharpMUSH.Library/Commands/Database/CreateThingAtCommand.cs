@@ -14,8 +14,10 @@ namespace SharpMUSH.Library.Commands.Database;
 /// <c>@create name=cost,#42</c> either lands on <c>#42</c> or creates nothing.
 /// </summary>
 /// <param name="Requested">The dbref the new thing must have</param>
+/// <param name="ModifiedTime">Modification time in Unix milliseconds, or <c>null</c> for now — a clone
+/// keeps the original's (<c>create.c:653-655</c>).</param>
 public record CreateThingAtCommand(DBRef Requested, string Name, AnySharpContainer Where, SharpPlayer Owner,
-	AnySharpContainer Home) : ICommand<Result<DBRef>>, ICacheInvalidating, ICacheInvalidatingByResult<Result<DBRef>>
+	AnySharpContainer Home, long? ModifiedTime = null) : ICommand<Result<DBRef>>, ICacheInvalidating, ICacheInvalidatingByResult<Result<DBRef>>
 {
 	public string[] CacheKeys => [Definitions.CacheKeys.Contents(Where.Object().DBRef), Definitions.CacheKeys.Object(Owner.Object.DBRef), Definitions.CacheKeys.Object(Home.Object().DBRef)];
 
