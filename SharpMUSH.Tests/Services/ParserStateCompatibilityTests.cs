@@ -78,15 +78,18 @@ public class ParserStateCompatibilityTests
 		var getter = typeof(ParserState).GetProperty("HasRegexpCaptures", typeof(bool))?.GetMethod;
 		await Assert.That(getter).IsNotNull();
 
+		var accessor = getter!;
+		bool Read(ParserState target) => (bool)accessor.Invoke(target, null)!;
+
 		var state = ParserState.RootFor(new DBRef(42, 7));
-		await Assert.That((bool)getter!.Invoke(state, null)!).IsFalse();
+		await Assert.That(Read(state)).IsFalse();
 
 		state.RegexRegisters.Push([]);
-		await Assert.That((bool)getter.Invoke(state, null)!).IsFalse().Because("an empty context holds no capture");
+		await Assert.That(Read(state)).IsFalse().Because("an empty context holds no capture");
 		await Assert.That(state.HasRegexpContext).IsTrue();
 
 		state.RegexRegisters.Push(new Dictionary<string, MarkupText> { ["0"] = MarkupText.Plain("abc") });
-		await Assert.That((bool)getter.Invoke(state, null)!).IsTrue();
+		await Assert.That(Read(state)).IsTrue();
 	}
 
 	[Test]
