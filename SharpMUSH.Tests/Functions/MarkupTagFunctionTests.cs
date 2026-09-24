@@ -245,4 +245,134 @@ public class MarkupTagFunctionTests
 		await Assert.That(said.ToPlainText()).IsEqualTo(marker)
 			.Because("the label is unique to this run, so the helper cannot have matched another test's output");
 	}
+
+	// ── The shared vocabulary from softcode ──────────────────────────────────────
+
+	/// <summary>
+	/// One object, written for each client the way that client has it. A terminal is sent nothing at
+	/// all, and nothing is left in the plain text for a listen pattern to match either.
+	/// </summary>
+	[Test]
+	public async Task Sound_IsWrittenForEachClientInItsOwnWay()
+	{
+		var result = await Eval("sound(door.wav,80)");
+
+		await Assert.That(result.Render(MarkupFormat.Mxp)).IsEqualTo("<SOUND door.wav V=80>");
+		await Assert.That(result.Render(MarkupFormat.Pueblo))
+			.IsEqualTo("<img xch_sound=\"play\" href=\"door.wav\" xch_volume=\"80\">");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEmpty();
+		await Assert.That(result.ToPlainText()).IsEmpty();
+	}
+
+	[Test]
+	public async Task Music_PlaysOnItsOwnChannel()
+	{
+		var result = await Eval("music(theme.mid,,-1)");
+
+		await Assert.That(result.Render(MarkupFormat.Mxp)).IsEqualTo("<MUSIC theme.mid L=-1>");
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).Contains("xch_sound=\"loop\"");
+	}
+
+	[Test]
+	public async Task StopSound_SilencesTheChannelAskedFor()
+	{
+		await Assert.That((await Eval("stopsound(music)")).Render(MarkupFormat.Mxp)).IsEqualTo("<MUSIC Off>");
+		await Assert.That((await Eval("stopsound()")).Render(MarkupFormat.Mxp)).IsEqualTo("<SOUND Off><MUSIC Off>");
+		await Assert.That((await Eval("stopsound(sideways)")).ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidArgument);
+	}
+
+	/// <summary>A picture stands in its description for a client that shows none, which is the point of writing one.</summary>
+	[Test]
+	public async Task Image_LeavesItsDescriptionForAClientWithNoPictures()
+	{
+		var result = await Eval("image(map.png,A map of the city,200)");
+
+		await Assert.That(result.Render(MarkupFormat.Mxp)).IsEqualTo("<IMAGE map.png W=200>");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("A map of the city");
+		await Assert.That(result.ToPlainText()).IsEqualTo("A map of the city");
+	}
+
+	[Test]
+	public async Task Image_WithNoDescriptionLeavesItsAddress()
+		=> await Assert.That((await Eval("image(map.png)")).Render(MarkupFormat.Ansi)).IsEqualTo("map.png");
+
+	/// <summary>A picture inside a command link is a picture that runs a command, in every dialect.</summary>
+	[Test]
+	public async Task Image_InsideCmdlink_IsALink()
+	{
+		var result = await Eval("cmdlink(image(map.png,A map),look map)");
+
+		await Assert.That(result.Render(MarkupFormat.Pueblo))
+			.IsEqualTo("<A XCH_CMD=\"look map\" XCH_HINT=\"look map\"><img src=\"map.png\" alt=\"A map\"></A>");
+	}
+
+	[Test]
+	public async Task Pane_KeepsItsTextForAClientWithNoPanes()
+	{
+		var result = await Eval("pane(North: the gate,map,The Map)");
+
+		await Assert.That(result.Render(MarkupFormat.Mxp))
+			.IsEqualTo("<FRAME map TITLE=\"The Map\"><DEST map>North: the gate</DEST>");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("North: the gate");
+	}
+
+	/// <summary>
+	/// Softcode that draws its own columns can say so, the way align() and table() already do for
+	/// themselves.
+	/// </summary>
+	[Test]
+	public async Task Preformat_SaysTheSpacingIsTheLayout()
+	{
+		var result = await Eval("preformat(a%b%b1%rb%b%b2)");
+
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).IsEqualTo("<xch_mudtext>a  1\nb  2</xch_mudtext>");
+		await Assert.That(result.Render(MarkupFormat.Html)).StartsWith("<pre");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("a  1\nb  2");
+	}
+
+	[Test]
+	public async Task ClearScreenAndPrefetchAndExpire_AreWrittenWhereTheyAreUnderstood()
+	{
+		await Assert.That((await Eval("clearscreen()")).Render(MarkupFormat.Pueblo)).IsEqualTo("<xch_page clear=\"text\">");
+		await Assert.That((await Eval("clearscreen()")).Render(MarkupFormat.Mxp)).IsEmpty();
+		await Assert.That((await Eval("prefetch(https://example.test/map.png)")).Render(MarkupFormat.Pueblo))
+			.Contains("<xch_prefetch href=\"https://example.test/map.png\"");
+		await Assert.That((await Eval("expirelinks(exits)")).Render(MarkupFormat.Mxp)).IsEqualTo("<EXPIRE exits>");
+	}
+
+	[Test]
+	[Arguments("sound(a.wav,101)")]
+	[Arguments("sound(a.wav,,0)")]
+	[Arguments("image(a.png,alt,0)")]
+	public async Task AnArgumentOutOfRangeIsRefused(string code)
+		=> await Assert.That((await Eval(code)).ToPlainText()).IsEqualTo(ErrorMessages.Returns.OutOfRange);
+
+	/// <summary>
+	/// Gated where <c>tagwrap()</c> is gated: these make a client fetch a file, play it, or wipe the
+	/// screen. Laying text out does not, so <c>preformat()</c> is not gated.
+	/// </summary>
+	[Test]
+	[Arguments("sound(door.wav)")]
+	[Arguments("image(map.png,A map)")]
+	[Arguments("clearscreen()")]
+	[Arguments("prefetch(https://example.test/x.png)")]
+	public async Task AMortalIsRefusedWhatMakesAClientFetchOrPlay(string code)
+	{
+		var mortal = await MortalAsync("VocabularyMortal");
+
+		var said = await ThinkAs(mortal, code);
+
+		await Assert.That(said.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+	}
+
+	[Test]
+	public async Task AMortalMayStillSayHowTextIsLaidOut()
+	{
+		var mortal = await MortalAsync("PreformatMortal");
+
+		var said = await ThinkAs(mortal, "preformat(a%b%b1)");
+
+		await Assert.That(said.ToPlainText()).IsEqualTo("a  1");
+		await Assert.That(said.Render(MarkupFormat.Pueblo)).Contains("<xch_mudtext>");
+	}
 }
