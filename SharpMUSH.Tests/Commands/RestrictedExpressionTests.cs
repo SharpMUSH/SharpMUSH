@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using Microsoft.Extensions.Logging;
@@ -213,7 +213,9 @@ public class RestrictedExpressionTests
 		using (setupBudget.Enter())
 		{
 			target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, connection, "RestrictedDebug");
-			await Cmd($"&DEBUGFORWARDLIST {target}=#1");
+			// Self-forward: Can_Forward(thing, fwd) is checked at set time (#1218) and nothing controls
+			// God, so "#1" was refused and "nothing was forwarded" held for want of a list.
+			await Cmd($"&DEBUGFORWARDLIST {target}=#{target.Number}");
 			await Cmd($"@set {target}=DEBUG");
 			await Assert.That(await Eval($"hasflag({target},DEBUG)")).IsEqualTo("1");
 		}

@@ -1,4 +1,4 @@
-using SharpMUSH.Library;
+﻿using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -37,9 +37,13 @@ public partial class SpeechTransformationTests
 			target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "ForwardParent");
 			await Admin($"@parent {reference}={target}");
 		}
+		// The list forwards to the object being set, not to #1: Can_Forward(thing, fwd) is checked at
+		// set time (#1218) and nothing controls God, so "#1" is a value PennMUSH refuses. `what == who`
+		// is controls()' first grant (src/predicat.c:387), and what this test needs is only that a
+		// local root FORWARDLIST exists.
 		if (source != "none")
 			await Assert.That(await Attributes.SetAttributeAsync(await Node(new DBRef(1)), await Node(target), source == "nested" ? "BRANCH`FORWARDLIST" : "FORWARDLIST",
-				source == "empty" ? MarkupText.Empty : MarkupText.Plain("#1")) is Success).IsTrue();
+				source == "empty" ? MarkupText.Empty : MarkupText.Plain($"#{target.Number}")) is Success).IsTrue();
 		var node = await Node(reference);
 		if (source == "parent")
 			await Assert.That((await node.Object().Parent.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>().Object().DBRef).IsEqualTo(target);

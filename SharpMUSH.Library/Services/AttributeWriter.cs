@@ -159,13 +159,27 @@ internal sealed class AttributeWriter(
 			}
 		}
 
+		// The forward lists are validated here, four lines ahead of check_attr_value, exactly where
+		// Penn's do_set_atr puts them (src/attrib.c:2326-2358): an entry that is not an objid, does not
+		// name a live object, or names one unwilling to hear from THIS object refuses the whole set.
+		// Delivery re-checks per entry anyway (MailDelivery.MayForwardTo), so without this the player
+		// only learns their list is wrong when some sender is told of "a mail forwarding problem". #1218.
+		var fullName = string.Join('`', attrPath).ToUpperInvariant();
+
+		if (ForwardListRestriction.Applies(fullName)
+				&& await ForwardListRestriction.CheckAsync(mediator, permissionService, obj, fullName,
+					value.ToPlainText()) is Error<string> badList)
+		{
+			return badList;
+		}
+
 		// check_attr_value runs here in Penn's do_set_atr (src/attrib.c:2363): @attribute/limit and
 		// @attribute/enum refuse the set outright, and an enum stores the choice as the enum spells it.
 		// The leaf's entry was already fetched above whenever the leaf itself is being created, which
 		// is the only case the pre-set `existing` snapshot cannot answer for.
 		if ((createdFrom < attrPath.Length
 					? leafEntry
-					: await mediator.Send(new GetAttributeEntryQuery(string.Join('`', attrPath).ToUpperInvariant())))
+					: await mediator.Send(new GetAttributeEntryQuery(fullName)))
 				is { } entry)
 		{
 			var plain = value.ToPlainText();
