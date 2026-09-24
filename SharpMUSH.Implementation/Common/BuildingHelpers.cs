@@ -180,12 +180,10 @@ public static class BuildingHelpers
 
 		// create.c:480-490 settles all three requested dbrefs before new_object(), so one that cannot be
 		// honoured digs nothing at all rather than leaving a room behind.
-		return await RequestedDbrefsAsync(database, notifyService, executor, roomDbref, toDbref, fromDbref) switch
-		{
-			DBRef?[] at => await DugAsync(mediator, database, configuration, notifyService, permissionService,
-				lockService, executor, roomName, exitTo, exitFrom, at[0], at[1], at[2]),
-			Error<string> refused => refused
-		};
+		return await WithRequestedDbrefsAsync(mediator, notifyService, executor,
+			[roomDbref, toDbref, fromDbref],
+			async at => await DugAsync(mediator, database, configuration, notifyService, permissionService,
+				lockService, executor, roomName, exitTo, exitFrom, at[0], at[1], at[2]));
 	}
 
 	/// <summary>The digging itself, once every requested dbref has passed its gate.</summary>
@@ -382,7 +380,8 @@ public static class BuildingHelpers
 		AnySharpObject executor,
 		MString exitName,
 		AnySharpContainer sourceRoom,
-		DBRef? requestedDbref = null)
+		DBRef? requestedDbref = null,
+		long? modified = null)
 	{
 		if (!sourceRoom.IsRoom)
 		{
@@ -401,7 +400,7 @@ public static class BuildingHelpers
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 
 		return await ExitChargedAsync(mediator, configuration, notifyService, executor, parts[0], parts[1..],
-			sourceRoom, owner, requestedDbref) switch
+			sourceRoom, owner, requestedDbref, modified) switch
 		{
 			DBRef opened => await OpenedAsync(mediator, database, notifyService, executor, opened),
 			Error<string> refused => refused
@@ -625,9 +624,11 @@ public static class BuildingHelpers
 	public static async ValueTask<Result<DBRef>> CloneAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
+		IObjectStore database,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
 		IPermissionService permissionService,
+		ILockService lockService,
 		IAttributeService attributeService,
 		IManipulateSharpObjectService manipulateSharpObjectService,
 		IDidItService didItService,
@@ -690,14 +691,6 @@ public static class BuildingHelpers
 		// their own inventory instead of beside the original.
 		var into = executor.IsRoom ? executor.AsContainer : await executor.Where();
 
-		// do_real_open's first refusal (create.c:108-110), ahead of can_pay_fees (:130): an exit is
-		// sourced in a room or nowhere, so a cloner standing inside a thing clones no exit at all.
-		if (target.IsExit && !into.IsRoom)
-		{
-			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitsOnlyFromRooms), executor);
-			return new Error<string>(ErrorMessages.Returns.NotARoom);
-		}
-
 		// "We give the clone the same modification time that its other clone has, but update the
 		// creation time" (create.c:653-655). A null creation time is now; the modification time is the
 		// original's.
@@ -705,8 +698,8 @@ public static class BuildingHelpers
 
 		// create.c:725, :741 — each type's branch asks can_pay_fees before it clones anything, and the
 		// exit branch reaches do_real_open, which asks for itself (:130).
-		return await CreateCloneAsync(mediator, configuration, notifyService, executor, target, name, into, owner,
-			modified, cloneAt) switch
+		return await CreateCloneAsync(mediator, database, configuration, notifyService, permissionService, lockService,
+			executor, target, name, into, owner, modified, cloneAt) switch
 		{
 			DBRef cloneDbRef => await ClonedAsync(parser, mediator, notifyService, attributeService,
 				manipulateSharpObjectService, didItService, eventService, logger, executor, target, owner, preserve,
@@ -797,8 +790,11 @@ public static class BuildingHelpers
 	/// </summary>
 	private static async ValueTask<Result<DBRef>> CreateCloneAsync(
 		IMediator mediator,
+		IObjectStore database,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
 		AnySharpObject executor,
 		AnySharpObject target,
 		string name,
@@ -818,9 +814,12 @@ public static class BuildingHelpers
 					requestedDbref, modified);
 
 			case SharpExit exit:
-				var nameParts = name.Split(';');
-				return await ExitChargedAsync(mediator, configuration, notifyService, executor, nameParts[0],
-					nameParts[1..], into, owner, requestedDbref, modified) switch
+				// create.c:771-773 — the exit branch is a do_real_open, so it is held to everything one
+				// is: the source must be a room (:108-110), can_open_from must admit the cloner (:127),
+				// and only then is a slot charged (:130). Charging the clone directly skipped the first
+				// two, so a mortal could clone an exit into a room they may not open in.
+				return await OpenExitAsync(mediator, database, configuration, notifyService, permissionService,
+					lockService, executor, MarkupText.Plain(name), into, requestedDbref, modified) switch
 				{
 					DBRef cloned => await ReopenedAsync(mediator, exit, cloned),
 					Error<string> refused => refused
@@ -1070,8 +1069,47 @@ public static class BuildingHelpers
 	/// dug; <c>do_open</c> (<c>:219-226</c>) does the same for its two. A slot not asked for comes back
 	/// null.
 	/// </summary>
+	/// <summary>
+	/// Serialises builds that name their own dbrefs, so the availability check below is worth
+	/// something. Only these builds can take a hole at all — <c>AllocateDbref</c> hands out the next
+	/// id from the counter and <c>AllocateDbrefAt</c> takes an id below it, so a build that names
+	/// nothing can never contend for one. Process-wide rather than per owner, because two different
+	/// owners can name the same slot; the engine is single-process by design
+	/// (<c>docs/design/engine-data-trunk.md</c>), and naming a dbref is a wizard's rare act.
+	/// <para>Always taken outside <see cref="QuotaGates"/>, never the other way round.</para>
+	/// </summary>
+	private static readonly SemaphoreSlim RequestedDbrefGate = new(1, 1);
+
+	/// <summary>
+	/// <see cref="RequestedDbrefsAsync"/> held across the whole of <paramref name="build"/>, which is
+	/// what makes the availability check binding rather than advisory for a multi-object build: no
+	/// other build that names a dbref can take one of these slots between the check and the last
+	/// write, so <c>@dig name=to,from,#a,#b,#c</c> either gets all three or builds nothing.
+	/// </summary>
+	public static async ValueTask<Result<DBRef>> WithRequestedDbrefsAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		AnySharpObject executor,
+		MString?[] requested,
+		Func<DBRef?[], ValueTask<Result<DBRef>>> build)
+	{
+		await RequestedDbrefGate.WaitAsync();
+		try
+		{
+			return await RequestedDbrefsAsync(mediator, notifyService, executor, requested) switch
+			{
+				DBRef?[] at => await build(at),
+				Error<string> refused => refused
+			};
+		}
+		finally
+		{
+			RequestedDbrefGate.Release();
+		}
+	}
+
 	public static async ValueTask<Result<DBRef?[]>> RequestedDbrefsAsync(
-		IObjectStore database,
+		IMediator mediator,
 		INotifyService notifyService,
 		AnySharpObject executor,
 		params MString?[] requested)
@@ -1111,7 +1149,7 @@ public static class BuildingHelpers
 			// whole thing a requested dbref exists to prevent, so a repeat is refused here.
 			var repeated = Array.FindIndex(wanted, other => other is { } o && o.Number == at.Number) != i;
 
-			if (repeated || !await database.IsDbrefAvailableAsync(at))
+			if (repeated || !await mediator.Send(new DbrefAvailableQuery(at)))
 			{
 				await notifyService.NotifyLocalized(executor,
 					nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);

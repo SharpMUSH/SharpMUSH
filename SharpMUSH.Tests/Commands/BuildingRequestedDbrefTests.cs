@@ -404,6 +404,36 @@ public class BuildingRequestedDbrefTests
 		await Assert.That(results.Count(r => r == ErrorMessages.Returns.InvalidDbref)).IsEqualTo(5);
 	}
 
+	/// <summary>
+	/// Two multi-object digs whose requested slots cross: each wants the other's room dbref for its
+	/// exit. The availability check and the whole build it admits are taken together, so one dig gets
+	/// both of its objects and the other builds nothing — rather than both committing a room and then
+	/// failing on an exit, which is what an availability check that reserved nothing allowed.
+	/// <para>Only a build that names its dbrefs can take a hole at all: the counter never hands one
+	/// back, so nothing else contends for these slots.</para>
+	/// </summary>
+	[Test]
+	public async ValueTask ConcurrentMultiObjectBuildsDoNotHalfCommit()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var first = await Hole($"{uid}A");
+		var second = await Hole($"{uid}B");
+
+		var results = await Task.WhenAll(
+			Run(1, $"@dig BrdCrossRoomA{uid}=BrdCrossToA{uid},,#{first.Number},#{second.Number}"),
+			Run(1, $"@dig BrdCrossRoomB{uid}=BrdCrossToB{uid},,#{second.Number},#{first.Number}"));
+
+		await Assert.That(results.Count(Built)).IsEqualTo(1)
+			.Because("one of the two digs owns both slots for the whole of its build");
+		await Assert.That(results.Count(r => r == ErrorMessages.Returns.InvalidDbref)).IsEqualTo(1);
+
+		var rooms = (await Named($"BrdCrossRoomA{uid}")).Length + (await Named($"BrdCrossRoomB{uid}")).Length;
+		var exits = (await Named($"BrdCrossToA{uid}")).Length + (await Named($"BrdCrossToB{uid}")).Length;
+		await Assert.That(rooms).IsEqualTo(1);
+		await Assert.That(exits).IsEqualTo(1)
+			.Because("the dig that was admitted finished; the one that was refused left nothing behind");
+	}
+
 	/// <summary>Asking for nothing is still the ordinary path: the counter hands out the next dbref.</summary>
 	[Test]
 	[Arguments(true)]

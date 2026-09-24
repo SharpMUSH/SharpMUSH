@@ -128,22 +128,23 @@ public partial class Functions
 			sourceRoom = namedRoom;
 		}
 
-		return await BuildingHelpers.RequestedDbrefsAsync(Database, NotifyService, executor,
-			BuildingHelpers.Argument(args, "3")) switch
+		return await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
+			[BuildingHelpers.Argument(args, "3")],
+			async at => await OpenedExitAsync(parser, executor, args, sourceRoom, at[0])) switch
 		{
-			DBRef?[] at => await OpenedExitAsync(parser, executor, args, sourceRoom, at[0]),
+			DBRef exitDbRef => new CallState(exitDbRef.ToString()),
 			Error<string> refused => new CallState(refused.Value)
 		};
 	}
 
 	/// <summary>The exit itself, and on success the link <c>fun_open</c>'s second argument asks for.</summary>
-	private async ValueTask<CallState> OpenedExitAsync(IMUSHCodeParser parser, AnySharpObject executor,
+	private async ValueTask<Result<DBRef>> OpenedExitAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		IReadOnlyDictionary<string, CallState> args, AnySharpContainer sourceRoom, DBRef? requestedDbref)
 		=> await BuildingHelpers.OpenExitAsync(Mediator, Database, Configuration, NotifyService,
 			PermissionService, LockService, executor, args["0"].Message!, sourceRoom, requestedDbref) switch
 		{
-			DBRef exitDbRef => new CallState(await LinkOpenedExitAsync(parser, executor, args, exitDbRef)),
-			Error<string> refused => new CallState(refused.Value)
+			DBRef exitDbRef => await LinkOpenedExitAsync(parser, executor, args, exitDbRef),
+			Error<string> refused => refused
 		};
 
 	/// <summary>
@@ -151,12 +152,12 @@ public partial class Functions
 	/// (<c>create.c:160-172</c>). An exit may lead to any container; anywhere else, or anywhere the
 	/// executor may not link into, leaves the exit unlinked and says so, as Penn does.
 	/// </summary>
-	private async ValueTask<string> LinkOpenedExitAsync(IMUSHCodeParser parser, AnySharpObject executor,
+	private async ValueTask<DBRef> LinkOpenedExitAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		IReadOnlyDictionary<string, CallState> args, DBRef exit)
 	{
 		if (BuildingHelpers.Argument(args, "1") is not { } destinationName)
 		{
-			return exit.ToString();
+			return exit;
 		}
 
 		if (await LocateService.Locate(parser, executor, executor, destinationName.ToPlainText(), LocateFlags.All)
@@ -165,7 +166,7 @@ public partial class Functions
 			|| !await PermissionService.CanLinkToAsync(executor, destination))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
-			return exit.ToString();
+			return exit;
 		}
 
 		if (await Mediator.Send(new GetObjectNodeQuery(exit)) is not (AnySharpObject and SharpExit exitObj))
@@ -175,7 +176,7 @@ public partial class Functions
 
 		await Mediator.Send(new LinkExitCommand(exitObj, destination.AsContainer));
 
-		return exit.ToString();
+		return exit;
 	}
 
 	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi)]
@@ -295,8 +296,9 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
-			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Configuration, NotifyService, PermissionService,
-				AttributeService, ManipulateSharpObjectService, DidItService, EventService, Logger, executor, obj,
+			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Database, Configuration, NotifyService,
+				PermissionService, LockService, AttributeService, ManipulateSharpObjectService, DidItService,
+				EventService, Logger, executor, obj,
 				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve,
 				BuildingHelpers.Argument(args, "2")) switch
 			{

@@ -933,24 +933,25 @@ public partial class Commands
 			sourceRoom = namedRoom;
 		}
 
-		// create.c:219-226 settles both requested dbrefs before either exit is opened.
-		return await BuildingHelpers.RequestedDbrefsAsync(Database, NotifyService, executor,
-			BuildingHelpers.Argument(args, "4"), BuildingHelpers.Argument(args, "5")) switch
+		// create.c:219-226 settles both requested dbrefs before either exit is opened, and holds them
+		// for the whole of the build.
+		return await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
+			[BuildingHelpers.Argument(args, "4"), BuildingHelpers.Argument(args, "5")],
+			async at => await OpenBothAsync(parser, executor, args, sourceRoom, at[0], at[1])) switch
 		{
-			DBRef?[] at => await OpenBothAsync(parser, executor, args, sourceRoom, at[0], at[1]),
+			DBRef forward => new CallState(forward.ToString()),
 			Error<string> refused => new CallState(refused.Value)
 		};
 	}
 
 	/// <summary>The forward exit, and on success the rest of <c>do_open</c>.</summary>
-	private async ValueTask<CallState> OpenBothAsync(IMUSHCodeParser parser, AnySharpObject executor,
+	private async ValueTask<Result<DBRef>> OpenBothAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		IReadOnlyDictionary<string, CallState> args, AnySharpContainer sourceRoom, DBRef? forwardAt, DBRef? backAt)
 		=> await BuildingHelpers.OpenExitAsync(Mediator, Database, Configuration, NotifyService,
 			PermissionService, LockService, executor, args["0"].Message!, sourceRoom, forwardAt) switch
 		{
-			DBRef forward => new CallState(
-				await LinkForwardAndOpenBackAsync(parser, executor, args, forward, sourceRoom, backAt)),
-			Error<string> refused => new CallState(refused.Value)
+			DBRef forward => await LinkForwardAndOpenBackAsync(parser, executor, args, forward, sourceRoom, backAt),
+			Error<string> refused => refused
 		};
 
 	/// <summary>
@@ -960,18 +961,18 @@ public partial class Commands
 	/// (<c>:130</c>), so a builder with one slot left gets the forward exit and is refused the return.
 	/// Either way the answer is the forward exit, as it is in Penn.
 	/// </summary>
-	private async ValueTask<string> LinkForwardAndOpenBackAsync(IMUSHCodeParser parser, AnySharpObject executor,
+	private async ValueTask<DBRef> LinkForwardAndOpenBackAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		IReadOnlyDictionary<string, CallState> args, DBRef forward, AnySharpContainer sourceRoom, DBRef? backAt)
 	{
 		if (BuildingHelpers.Argument(args, "1") is not { } destinationName)
 		{
-			return forward.ToString();
+			return forward;
 		}
 
 		// Penn keeps an exit it could not link (create.c:167-171); LinkNewExitAsync has said why.
 		if (await LinkNewExitAsync(parser, executor, forward, destinationName.ToPlainText()) is not AnySharpContainer destination)
 		{
-			return forward.ToString();
+			return forward;
 		}
 
 		if (BuildingHelpers.Argument(args, "2") is { } returnName
@@ -983,7 +984,7 @@ public partial class Commands
 			await LinkNewExitAsync(parser, executor, back, $"#{sourceRoom.Object().DBRef.Number}");
 		}
 
-		return forward.ToString();
+		return forward;
 	}
 
 	/// <summary>
@@ -1034,8 +1035,9 @@ public partial class Commands
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
-			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Configuration, NotifyService, PermissionService,
-				AttributeService, ManipulateSharpObjectService, DidItService, EventService, Logger, executor, obj,
+			async obj => await BuildingHelpers.CloneAsync(parser, Mediator, Database, Configuration, NotifyService,
+				PermissionService, LockService, AttributeService, ManipulateSharpObjectService, DidItService,
+				EventService, Logger, executor, obj,
 				args.TryGetValue("1", out var newName) ? newName.Message : null, preserve,
 				BuildingHelpers.Argument(args, "2")) switch
 			{

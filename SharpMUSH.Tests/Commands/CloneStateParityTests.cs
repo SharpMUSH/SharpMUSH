@@ -466,6 +466,42 @@ public class CloneStateParityTests
 	}
 
 	/// <summary>
+	/// <c>do_clone</c>'s exit branch is a <c>do_real_open</c> (<c>create.c:771-773</c>), so it is held
+	/// to <c>can_open_from</c> (<c>:127</c>) like any other exit and not merely to "the source is a
+	/// room". Charging the clone directly let a mortal who controls an exit clone it into a room they
+	/// may not open in.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask CloningAnExitWhereTheClonerMayNotOpenIsRefused(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CspNoOpen");
+
+		// The exit is the mortal's own, opened in a room they own, so do_clone's controls check passes.
+		var home = await Dig($"CspNoOpenHome{uid}");
+		await AsGod($"@chown {home}={mortal.DbRef}");
+		await AsGod($"@teleport {mortal.DbRef}={home}");
+		var destination = await Dig($"CspNoOpenDest{uid}");
+		await AsGod($"@set {destination}=LINK_OK");
+		var exit = Ref(await Run(mortal.Handle, $"@open CspNoOpenExit{uid}={destination}"));
+
+		// Now stand somewhere God owns, which is neither controlled nor OPEN_OK.
+		var elsewhere = await Dig($"CspNoOpenElsewhere{uid}");
+		await AsGod($"@teleport {mortal.DbRef}={elsewhere}");
+
+		var newName = $"CspNoOpenClone{uid}";
+		await Assert.That(await Run(mortal.Handle, throughTheFunction
+				? $"think clone({exit},{newName})"
+				: $"@clone {exit}={newName}"))
+			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That((await Named(newName)).Length).IsEqualTo(0)
+			.Because("can_open_from refuses before can_pay_fees, so nothing is built");
+	}
+
+	/// <summary>
 	/// "We give the clone the same modification time that its other clone has, but update the creation
 	/// time" (create.c:653-655).
 	/// </summary>
