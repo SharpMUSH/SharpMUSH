@@ -361,10 +361,19 @@ public class ExplicitFailureReturnTests
 	/// "Nothing arrived" is not a claim a test can make about a shared bucket (#1247): the mortal
 	/// shares a room, so another test's "<c>X has left.</c>" lands here too, and a bare
 	/// <see cref="TUnit.Assertions.AssertionBuilders.IsEmpty"/> over the window failed a full stack
-	/// run on exactly that. Scoped two ways instead, because either alone can be fooled: nothing the
-	/// mortal sent to itself, which is the only thing <c>hidden()</c> could have emitted; and nothing
-	/// at all carrying the refusal, in either spelling, whatever sender a regression might attribute
-	/// it to.
+	/// run on exactly that. Teleporting the mortal somewhere fresh first does not rescue that
+	/// assertion either: the bucket is keyed by recipient, not by room, so anything that notifies
+	/// this player reaches it wherever the player stands.
+	/// <para>
+	/// Scoped two ways instead, because either alone can be fooled. The first is the load-bearing
+	/// one: everything the mortal sent to itself, <em>and</em> everything with no sender at all,
+	/// must be absent. <c>hidden()</c> runs as the mortal, so those are the only two attributions an
+	/// emission of its own can carry — which closes the gap a self-sender-only filter leaves, where a
+	/// future path notifies with no sender and text this test does not recognise. Foreign traffic is
+	/// excluded only when it is attributable to some other object, which is what the broadcasts that
+	/// broke this are. The second axis is the refusal itself, in either spelling, whatever sender
+	/// might carry it.
+	/// </para>
 	/// </remarks>
 	[Test]
 	public async Task HiddenSaysWhyInItsReturnValueAndNotifiesNothing()
@@ -377,9 +386,9 @@ public class ExplicitFailureReturnTests
 		await Assert.That(await EvalAs(mortal.DbRef, "hidden(me)")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 
 		await Assert.That(Factory.Notifications.DeliveriesFor(mortal.DbRef).Skip(deliveredBefore)
-				.Where(delivery => delivery.Sender == mortal.DbRef))
+				.Where(delivery => delivery.Sender is null || delivery.Sender == mortal.DbRef))
 			.IsEmpty()
-			.Because("hidden() emits nothing of its own, and its own is what the caller sends to itself");
+			.Because("hidden() emits nothing of its own, and its own would be sent by the caller or by nobody");
 		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(messagesBefore)
 				.Where(message => message.Contains("permission denied", StringComparison.OrdinalIgnoreCase)))
 			.IsEmpty()

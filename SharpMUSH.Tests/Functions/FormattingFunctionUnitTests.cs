@@ -237,12 +237,22 @@ public class FormattingFunctionUnitTests
 	/// <c>#-1 SEPARATOR MUST BE ONE CHARACTER</c>, and <c>col += 1</c> (<c>src/funlist.c:2541</c>)
 	/// is hardcoded to that width. Refusing a wider one here would buy parity on an error string and
 	/// nothing else, so SharpMUSH accepts it — but then the only arithmetic that keeps a line inside
-	/// <c>&lt;line length&gt;</c> is charging the separator what it actually costs, which is what
-	/// this pins. Field 5 and line 12: <c>a</c> at 5, <c>b</c> at 10 which fits, then the two-wide
-	/// separator takes the line to exactly 12; <c>c</c> would reach 17 and wraps.
+	/// <c>&lt;line length&gt;</c> is charging the separator what it actually costs.
+	/// <para>
+	/// Line 16 is the case that pins it, and line 12 is why it had to be added: at 12 the wrap falls
+	/// in the same place whether the separator costs one column or two — <c>a</c> 5, <c>b</c> 10 plus
+	/// the separator, <c>c</c> would reach 17 or 16 and wraps either way — so that case alone proves
+	/// nothing about the charge. At 16 the two part company: charged its real 2, <c>c</c> reaches 17
+	/// and wraps; charged Penn's hardcoded 1 it reaches 16, stays, and the answer becomes
+	/// <c>a    --b    --c    \nd    </c>. Watched: with <c>column += 1</c> substituted in
+	/// <c>ListFunctions.cs</c>, the line-12 case still passes and the line-16 case fails with exactly
+	/// that. Both are kept — the boundary is worth recording next to the case that discriminates.
+	/// </para>
 	/// </remarks>
 	[Test]
 	[Arguments("table(a b c d,5,12,%b,--)", "a    --b    \nc    --d    ")]
+	[Arguments("table(a b c d,5,16,%b,--)", "a    --b    \nc    --d    ")]
+	[Arguments("table(a b c d,5,16,%b,--)", "a    --b    \nc    --d    ")]
 	public async Task TableChargesAMultiCharacterSeparatorItsOwnWidth(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

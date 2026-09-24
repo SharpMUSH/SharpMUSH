@@ -31,13 +31,20 @@ public class SendOobPowerTests
 	/// test's "<c>X has left.</c>" can land in this bucket after the think's own output and win.
 	/// <c>think</c> notifies its executor, so the mortal is both sender and recipient of the one
 	/// message this test may read.
+	/// <para>
+	/// <c>Last</c> rather than <c>LastOrDefault(...) ?? string.Empty</c>: the granted-power cases
+	/// assert only that the answer is not <c>#-1 PERMISSION DENIED</c>, and an empty fallback
+	/// satisfies that, so no output at all would have read as a pass. Verified there is always
+	/// something to find — a granted <c>think oob(...)</c> records exactly one delivery, sender and
+	/// recipient both the mortal — so a missing one now fails the test instead of passing it.
+	/// </para>
 	/// </remarks>
 	private async Task<string> ThinkAs(TestIsolationHelpers.TestPlayer who, string code)
 	{
 		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(who.DbRef);
 		await Parser.CommandParse(who.Handle, ConnectionService, MarkupText.Plain($"think {code}"));
 		return WebAppFactoryArg.Notifications.DeliveriesFor(who.DbRef).Skip(before)
-			.LastOrDefault(delivery => delivery.Sender == who.DbRef)?.Message ?? string.Empty;
+			.Last(delivery => delivery.Sender == who.DbRef).Message;
 	}
 
 	[Test]
