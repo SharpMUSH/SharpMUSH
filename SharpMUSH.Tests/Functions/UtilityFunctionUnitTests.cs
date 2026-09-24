@@ -344,10 +344,19 @@ public class UtilityFunctionUnitTests
 	/// <remarks>
 	/// The upper bound is <c>&lt;= 1</c> and has to be. The draw is written through
 	/// <c>MushNumber.Unparse</c> (<c>SharpMUSH.Library/Utilities/MushNumber.cs:14-22</c>), which is
-	/// <c>F{float_precision}</c> with trailing zeros stripped — six places by default — so every
-	/// draw from 0.9999995 up prints <c>1</c>. That is about one run in two million, and PennMUSH's
-	/// <c>safe_number</c> is the same <c>%.*f</c> and prints the same <c>1</c>, so the engine is
-	/// right and a <c>&lt; 1</c> assertion on the printed text is the thing that is wrong.
+	/// <c>F{float_precision}</c> with trailing zeros stripped, so a draw close enough to 1 prints
+	/// <c>1</c>. PennMUSH's <c>safe_number</c> is the same <c>%.*f</c> and prints the same <c>1</c>,
+	/// so the engine is right and a <c>&lt; 1</c> assertion on the printed text is the thing that is
+	/// wrong.
+	/// <para>
+	/// How close is "close enough" is not a fixed figure, and it is worth knowing why before reading
+	/// a failure here as luck. At the shipped six places it takes a draw of 0.9999995 or above,
+	/// about one run in two million. But <c>Configurable.FloatPrecision</c> is a process-wide static
+	/// that the last host to start overwrites (#1245), so the precision actually in force in a test
+	/// run is whichever host won that race — and PR #1242's CI hit exactly this on a first run,
+	/// which is far too likely for six places. This assertion is the right contract either way; it
+	/// is not, and must not be read as, a fix for #1245.
+	/// </para>
 	/// </remarks>
 	[Test]
 	public async Task Rand_NoArgs()
@@ -367,6 +376,12 @@ public class UtilityFunctionUnitTests
 	/// <see cref="TestOptionsOverride.Scope"/> rather than
 	/// <c>Configurable.ReadFloatPrecisionFrom</c>: the latter is process-wide static state and
 	/// re-pointing it here would change the game under every test running in parallel.
+	/// <para>
+	/// This shares <c>FloatPrecisionTests</c>' exposure to #1245. The scope is AsyncLocal and
+	/// correct, but it is read through whichever host's options monitor
+	/// <c>Configurable.FloatPrecision</c> last pointed at, so if this ever fails with more places
+	/// than it asked for, that is #1245 and not this test.
+	/// </para>
 	/// </remarks>
 	[Test]
 	[Arguments(2u)]
