@@ -1,5 +1,9 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -13,7 +17,10 @@ public class AttributeFunctionUnitTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
+	private IMUSHCodeParser CommandParser => WebAppFactoryArg.CommandParser;
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 
 	[Test]
 	[NotInParallel]
@@ -746,6 +753,107 @@ public class AttributeFunctionUnitTests
 			var off = await Parser.FunctionParse(MarkupText.Plain("hasattrval(me/HASATTRVALSPACE)"));
 			await Assert.That(off!.Message!.ToPlainText()).IsEqualTo("0");
 		}
+	}
+
+	/// <summary>
+	/// An attribute the caller may not read is <c>e_perm</c>, not "no" (<c>src/fundb.c:243-256</c>),
+	/// and the one-argument and two-argument spellings have to say the same thing — they are the same
+	/// <c>fun_hasattr</c> reached two ways.
+	/// </summary>
+	/// <remarks>
+	/// Driven as a MORTAL on purpose. The fixtures run as God, who may examine anything, so the
+	/// refusal branch is unreachable from <see cref="HasattrTakesTheObjectAndAttributeInOneArgument"/>
+	/// and every one of these four names would answer <c>1</c> there whatever the branch did.
+	/// Reporting <c>0</c> instead would tell a mortal the attribute is not there, which is a
+	/// different and wrong answer.
+	/// </remarks>
+	[Test]
+	[Arguments("hasattr")]
+	[Arguments("hasattrp")]
+	[Arguments("hasattrval")]
+	[Arguments("hasattrpval")]
+	public async Task HasattrRefusesAnUnreadableAttributeIdenticallyInBothForms(string function)
+	{
+		await Parser.FunctionParse(MarkupText.Plain("attrib_set(me/HASATTRUNREADABLE,hidden)"));
+
+		var god = WebAppFactoryArg.ExecutorDBRef.Number;
+		var mortal = WebAppFactoryArg.FunctionParserFor(await MintMortalAsync("HasAttrM"));
+
+		var oneArgument = await mortal.FunctionParse(MarkupText.Plain($"{function}(#{god}/HASATTRUNREADABLE)"));
+		var twoArguments = await mortal.FunctionParse(MarkupText.Plain($"{function}(#{god},HASATTRUNREADABLE)"));
+
+		await Assert.That(oneArgument!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.AttrPermissions)
+			.Because("an attribute that exists but cannot be read is a refusal, not an absence");
+		await Assert.That(twoArguments!.Message!.ToPlainText()).IsEqualTo(oneArgument.Message!.ToPlainText())
+			.Because("obj/attr in one argument and obj,attr in two are the same call");
+	}
+
+	/// <summary>
+	/// The <c>P</c> forms walk the parent in the one-argument spelling too — the switch comes out of
+	/// <c>called_as</c> (<c>strchr(called_as, 'P')</c>, <c>src/fundb.c:215-260</c>) and has nothing
+	/// to do with how many arguments arrived. The two-argument parent case is pinned in
+	/// <c>AttributeTreeParentPermissionTests.Parent_HasattrInherited</c>; this is the other spelling.
+	/// </summary>
+	[Test]
+	[Arguments("hasattr", "0")]
+	[Arguments("hasattrval", "0")]
+	[Arguments("hasattrp", "1")]
+	[Arguments("hasattrpval", "1")]
+	public async Task HasattrpFollowsTheParentInTheOneArgumentForm(string function, string expected)
+	{
+		var attribute = $"HAP{Guid.NewGuid():N}"[..11].ToUpperInvariant();
+		var parent = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "HasAttrPP");
+		var child = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "HasAttrPC");
+
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{attribute} {parent}=inherited"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {child}={parent}"));
+
+		var result = await Parser.FunctionParse(MarkupText.Plain($"{function}({child}/{attribute})"));
+
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// What the <c>VAL</c> forms count as a value: only the empty string is empty, plus a value of
+	/// exactly one space while <c>empty_attrs</c> is off (<c>src/fundb.c:245-250</c>). Two spaces and
+	/// a tab are values under both settings — a blanket whitespace test answers 0 for them, which is
+	/// the mistake this exists to catch, and the lone-space case alone cannot catch it.
+	/// </summary>
+	/// <remarks>
+	/// The tab is written through <see cref="IAttributeService"/> rather than as softcode because
+	/// nothing in the MUSH-code path can produce one: <c>%t</c> and <c>chr(9)</c> both evaluate to
+	/// zero characters here, and a literal tab inside an argument is eaten by the lexer. That is a
+	/// separate defect in the substitutions, which this lane does not own.
+	/// </remarks>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task HasattrvalCountsTwoSpacesAndATabAsValuesUnderEitherSetting(bool emptyAttributes)
+	{
+		var god = (await Mediator.Send(new GetObjectNodeQuery(WebAppFactoryArg.ExecutorDBRef))).Expect<AnySharpObject>();
+		await AttributeService.SetAttributeAsync(god, god, "HASATTRVALTAB", MarkupText.Plain("\t"));
+
+		await Parser.FunctionParse(MarkupText.Plain("attrib_set(me/HASATTRVALTWOSPACES,%b%b)"));
+		await Parser.FunctionParse(MarkupText.Plain("attrib_set(me/HASATTRVALEMPTY,)"));
+
+		using (TestOptionsOverride.Scope(o => o with { Attribute = o.Attribute with { EmptyAttributes = emptyAttributes } }))
+		{
+			await Assert.That((await Parser.FunctionParse(MarkupText.Plain("hasattrval(me/HASATTRVALTWOSPACES)")))!
+				.Message!.ToPlainText()).IsEqualTo("1").Because("two spaces are a value under either setting");
+			await Assert.That((await Parser.FunctionParse(MarkupText.Plain("hasattrval(me/HASATTRVALTAB)")))!
+				.Message!.ToPlainText()).IsEqualTo("1").Because("a tab is a value under either setting");
+			await Assert.That((await Parser.FunctionParse(MarkupText.Plain("hasattr(me/HASATTRVALEMPTY)")))!
+				.Message!.ToPlainText()).IsEqualTo("1").Because("the attribute is there; it just holds nothing");
+			await Assert.That((await Parser.FunctionParse(MarkupText.Plain("hasattrval(me/HASATTRVALEMPTY)")))!
+				.Message!.ToPlainText()).IsEqualTo("0").Because("the empty string is the one value that is not one");
+		}
+	}
+
+	private async Task<DBRef> MintMortalAsync(string prefix)
+	{
+		var name = $"{prefix}{Guid.NewGuid():N}"[..14];
+		var created = await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pcreate {name}=pw_{name}"));
+		return DBRef.Parse(created.Message!.ToPlainText()!);
 	}
 
 	/// <summary>The shipped default has to be the one PennMUSH ships, in both places that spell it.</summary>
