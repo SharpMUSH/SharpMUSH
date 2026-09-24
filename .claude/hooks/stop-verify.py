@@ -216,7 +216,9 @@ def project_graph(root: Path, files: list[str]) -> tuple[dict[str, str], dict[st
     wildcard, so a changed file under it selects the project.
     """
     csprojs = [p for p in git(root, "ls-files", "-z", "*.csproj").split("\0") if p]
-    csprojs += [f for f in files if f.endswith(".csproj") and f not in csprojs and (root / f).is_file()]
+    # Changed projects the index no longer lists: new untracked ones, and deletions that were
+    # staged or committed. A deleted one has no file to parse but is still "touched".
+    csprojs += [f for f in files if f.endswith(".csproj") and f not in csprojs]
     by_dir = {str(Path(p).parent): p for p in csprojs}
     refs: dict[str, set[str]] = {}
     linked: dict[str, list[str]] = {}
