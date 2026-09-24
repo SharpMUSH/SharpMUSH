@@ -163,6 +163,91 @@ public class MailTests
 		await Assert.That(await _db.GetIncomingMailsAsync(recipient, "INBOX").CountAsync()).IsEqualTo(10);
 	}
 
+	/// <summary>The stored per-folder counts for a recipient, as <c>Tables.MailCount</c> holds them.</summary>
+	private Dictionary<string, long> StoredFolderCounts(SharpPlayer recipient)
+	{
+		var prefix = Keys.Dbref((long)recipient.Object.Key);
+		return _db.Store.Read(tx => tx.Range(Tables.MailCount, prefix)
+			.ToDictionary(e => Keys.ReadStr(e.Key.AsSpan(8)), e => Keys.ReadDbref(e.Value)));
+	}
+
+	/// <summary>The same counts taken from the mailbox itself.</summary>
+	private async Task<Dictionary<string, long>> ListedFolderCounts(SharpPlayer recipient)
+		=> (await _db.GetAllIncomingMailsAsync(recipient).ToListAsync())
+			.GroupBy(m => m.Folder)
+			.ToDictionary(g => g.Key, g => (long)g.Count());
+
+	private async Task AssertFolderCounts(SharpPlayer recipient, Dictionary<string, long> expected)
+	{
+		await Assert.That(StoredFolderCounts(recipient)).IsEquivalentTo(expected);
+		await Assert.That(await ListedFolderCounts(recipient)).IsEquivalentTo(expected);
+	}
+
+	/// <summary>
+	/// GRA-43: admission reads a folder's count instead of the mailbox, so every write that adds, removes
+	/// or refiles a box entry has to keep that count equal to what the mailbox lists.
+	/// </summary>
+	[Test]
+	public async Task FolderCountsFollowEverySendDeleteMoveAndRename()
+	{
+		var sender = await NewPlayer("MailCountSender");
+		var recipient = await NewPlayer("MailCountRecipient");
+		var other = await NewPlayer("MailCountOther");
+
+		var a = (await _db.SendMailAsync(sender.Object, recipient, NewMail("A", "a"))).Expect<AdmittedMail>();
+		var b = (await _db.SendMailAsync(sender.Object, recipient, NewMail("B", "b"))).Expect<AdmittedMail>();
+		var c = (await _db.SendMailAsync(sender.Object, recipient, NewMail("C", "c", "SAVED"))).Expect<AdmittedMail>();
+		await _db.SendMailAsync(sender.Object, other, NewMail("Other", "o"));
+		await AssertFolderCounts(recipient, new() { ["INBOX"] = 2, ["SAVED"] = 1 });
+
+		await _db.DeleteMailAsync(a.Id);
+		await _db.DeleteMailAsync(a.Id);
+		await AssertFolderCounts(recipient, new() { ["INBOX"] = 1, ["SAVED"] = 1 });
+
+		await _db.MoveMailFolderAsync(b.Id, "SAVED");
+		await _db.MoveMailFolderAsync(c.Id, "SAVED");
+		await AssertFolderCounts(recipient, new() { ["SAVED"] = 2 });
+
+		await _db.RenameMailFolderAsync(recipient, "SAVED", "ARCHIVE");
+		await _db.RenameMailFolderAsync(recipient, "ARCHIVE", "ARCHIVE");
+		await _db.RenameMailFolderAsync(recipient, "EMPTY", "ARCHIVE");
+		await AssertFolderCounts(recipient, new() { ["ARCHIVE"] = 2 });
+
+		await _db.SendMailAsync(sender.Object, recipient, NewMail("D", "d", "ARCHIVE"));
+		await _db.SendMailAsync(sender.Object, recipient, NewMail("Refused", "r", "ARCHIVE"), limit: 3);
+		await AssertFolderCounts(recipient, new() { ["ARCHIVE"] = 3 });
+		await AssertFolderCounts(other, new() { ["INBOX"] = 1 });
+
+		await _db.DeleteObjectAsync(recipient.Object.DBRef);
+		await Assert.That(StoredFolderCounts(recipient)).IsEmpty();
+		await AssertFolderCounts(other, new() { ["INBOX"] = 1 });
+	}
+
+	/// <summary>
+	/// GRA-43: a world whose mail predates <c>Tables.MailCount</c> gets its counts rebuilt from the
+	/// mailbox on the next migrate, so the first send after the upgrade still refuses a full folder.
+	/// </summary>
+	[Test]
+	public async Task MigrateRebuildsFolderCountsForMailThatPredatesThem()
+	{
+		var sender = await NewPlayer("MailBackfillSender");
+		var recipient = await NewPlayer("MailBackfillRecipient");
+		await _db.SendMailAsync(sender.Object, recipient, NewMail("A", "a"));
+		await _db.SendMailAsync(sender.Object, recipient, NewMail("B", "b"));
+		await _db.SendMailAsync(sender.Object, recipient, NewMail("C", "c", "SAVED"));
+
+		await _db.Store.WriteAsync(tx =>
+		{
+			tx.DeletePrefix(Tables.MailCount, []);
+			tx.Put(Tables.MailCount, Keys.Concat(Keys.Dbref((long)recipient.Object.Key), Keys.Str("STALE")), Keys.Dbref(9));
+			tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.MailFolderCountMigrationId));
+		});
+		await _db.Migrate();
+
+		await AssertFolderCounts(recipient, new() { ["INBOX"] = 2, ["SAVED"] = 1 });
+		(await _db.SendMailAsync(sender.Object, recipient, NewMail("Refused", "r"), limit: 2)).Expect<MailboxFull>();
+	}
+
 	[Test]
 	public async Task PositionalAccessCountsWithinTheFolderOnly()
 	{

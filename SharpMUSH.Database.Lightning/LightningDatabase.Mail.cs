@@ -16,7 +16,9 @@ namespace SharpMUSH.Database.Lightning;
 /// unrelated sequences); <see cref="Tables.MailBox"/> and <see cref="Tables.MailSent"/> are ordered
 /// per-recipient / per-sender indexes (recipient-or-sender dbref + mail id -> empty), so <c>@mail N</c>
 /// positional access is "the Nth entry of the recipient's <see cref="Tables.MailBox"/> range, filtered to
-/// the requested folder" rather than a stored ordinal.
+/// the requested folder" rather than a stored ordinal. <see cref="Tables.MailCount"/> holds how many
+/// box entries each (recipient, folder) has, kept in the same write as every change to a box entry or
+/// its folder, so admission checks a folder's limit without reading the mailbox.
 /// </summary>
 public partial class LightningDatabase
 {
@@ -25,6 +27,31 @@ public partial class LightningDatabase
 	private static byte[] MailBoxKey(long recipient, long mailId) => Keys.Concat(Keys.Dbref(recipient), Keys.Dbref(mailId));
 
 	private static byte[] MailSentKey(long sender, long mailId) => Keys.Concat(Keys.Dbref(sender), Keys.Dbref(mailId));
+
+	private static byte[] MailCountKey(long recipient, string folder) => Keys.Concat(Keys.Dbref(recipient), Keys.Str(folder));
+
+	private static long ReadMailCount(ITx tx, long recipient, string folder)
+		=> tx.TryGet(Tables.MailCount, MailCountKey(recipient, folder), out var v) ? Keys.ReadDbref(v) : 0;
+
+	/// <summary>Moves a folder's count by <paramref name="delta"/>; a folder that empties loses its row.</summary>
+	private static void AdjustMailCount(ITx tx, long recipient, string folder, long delta)
+	{
+		if (delta == 0)
+		{
+			return;
+		}
+
+		var key = MailCountKey(recipient, folder);
+		var count = ReadMailCount(tx, recipient, folder) + delta;
+		if (count > 0)
+		{
+			tx.Put(Tables.MailCount, key, Keys.Dbref(count));
+		}
+		else
+		{
+			tx.Delete(Tables.MailCount, key);
+		}
+	}
 
 	private static string MailId(long id) => $"Mail/{id}";
 
@@ -183,7 +210,7 @@ public partial class LightningDatabase
 
 		return await Store.WriteAsync<MailAdmission>(tx =>
 		{
-			var held = RangeMailBox(tx, recipientKey).Count(m => m.Record.Folder == mail.Folder);
+			var held = ReadMailCount(tx, recipientKey, mail.Folder);
 			if (held >= limit)
 			{
 				return new MailboxFull();
@@ -209,7 +236,8 @@ public partial class LightningDatabase
 			tx.Put(Tables.Mail, MailKey(mailId), Codec.Serialize(record));
 			tx.Put(Tables.MailBox, MailBoxKey(recipientKey, mailId), []);
 			tx.Put(Tables.MailSent, MailSentKey(senderKey, mailId), []);
-			return new AdmittedMail(MailId(mailId), held + 1);
+			AdjustMailCount(tx, recipientKey, mail.Folder, 1);
+			return new AdmittedMail(MailId(mailId), (int)held + 1);
 		}, cancellationToken);
 	}
 
@@ -253,6 +281,11 @@ public partial class LightningDatabase
 			}
 
 			var record = Codec.Deserialize<MailRecord>(bytes);
+			if (tx.TryGet(Tables.MailBox, MailBoxKey(record.Recipient, id), out _))
+			{
+				AdjustMailCount(tx, record.Recipient, record.Folder, -1);
+			}
+
 			tx.Delete(Tables.MailBox, MailBoxKey(record.Recipient, id));
 			tx.Delete(Tables.MailSent, MailSentKey(record.Sender, id));
 			tx.Delete(Tables.Mail, MailKey(id));
@@ -265,9 +298,16 @@ public partial class LightningDatabase
 
 		await Store.WriteAsync(tx =>
 		{
-			foreach (var (mailId, record) in RangeMailBox(tx, recipient).Where(m => m.Record.Folder == folder).ToList())
+			var moved = RangeMailBox(tx, recipient).Where(m => m.Record.Folder == folder).ToList();
+			foreach (var (mailId, record) in moved)
 			{
 				tx.Put(Tables.Mail, MailKey(mailId), Codec.Serialize(record with { Folder = newFolder }));
+			}
+
+			if (folder != newFolder)
+			{
+				AdjustMailCount(tx, recipient, folder, -moved.Count);
+				AdjustMailCount(tx, recipient, newFolder, moved.Count);
 			}
 		}, cancellationToken);
 	}
@@ -285,6 +325,11 @@ public partial class LightningDatabase
 
 			var record = Codec.Deserialize<MailRecord>(bytes);
 			tx.Put(Tables.Mail, MailKey(id), Codec.Serialize(record with { Folder = newFolder }));
+			if (record.Folder != newFolder && tx.TryGet(Tables.MailBox, MailBoxKey(record.Recipient, id), out _))
+			{
+				AdjustMailCount(tx, record.Recipient, record.Folder, -1);
+				AdjustMailCount(tx, record.Recipient, newFolder, 1);
+			}
 		}, cancellationToken);
 	}
 

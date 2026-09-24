@@ -736,6 +736,7 @@ public partial class LightningDatabase
 			}
 
 			tx.DeletePrefix(Tables.MailSent, key);
+			tx.DeletePrefix(Tables.MailCount, key);
 
 			// Channel membership.
 			foreach (var (_, chanNameBytes) in tx.Range(Tables.RevChanMember, key).ToList())
