@@ -651,6 +651,17 @@
         "null_eq_zero": true,
         "tiny_trim_fun": false
       },
+      "expression": "table(a b,0,10)",
+      "expected": "a b",
+      "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
       "expression": "iter(outer,iter(inner,strcat(r(0,iter),/,itext(0))))",
       "expected": "inner/inner",
       "intent": "parity"

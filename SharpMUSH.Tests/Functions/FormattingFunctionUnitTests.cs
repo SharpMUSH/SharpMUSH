@@ -205,4 +205,68 @@ public class FormattingFunctionUnitTests
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	/// <summary>
+	/// The packing arithmetic itself: <c>col</c> starts at one field width, each further field adds a
+	/// field width <em>before</em> the wrap test, and the output separator is charged only when one
+	/// is actually written (<c>src/funlist.c:2533-2544</c>).
+	/// </summary>
+	/// <remarks>
+	/// This expectation is DERIVED from that loop rather than observed on PennMUSH — the issue's
+	/// acceptance names the case but carries no capture for it. Walked out: <c>a</c> puts col at 5;
+	/// <c>b</c> takes it to 10, which is inside 15, so a separator goes in and col becomes 11;
+	/// <c>c</c> takes it to 16, which is past 15, so the line wraps and col resets to 5; <c>d</c>
+	/// takes it to 10 and takes a separator. The same walk reproduces every observed case in
+	/// <see cref="TableClampsItsWidths"/>, which is what makes it worth trusting here.
+	/// </remarks>
+	[Test]
+	[Arguments("table(a b c d,5,15)", "a     b    \nc     d    ")]
+	public async Task TablePacksByTheRunningColumn(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// An output separator wider than one character is a deliberate SharpMUSH extension, and the
+	/// column is charged its real width.
+	/// </summary>
+	/// <remarks>
+	/// PennMUSH takes its <c>osep</c> through <c>delim_check</c> (<c>src/function.c:248-265</c>),
+	/// which refuses anything but a single character with
+	/// <c>#-1 SEPARATOR MUST BE ONE CHARACTER</c>, and <c>col += 1</c> (<c>src/funlist.c:2541</c>)
+	/// is hardcoded to that width. Refusing a wider one here would buy parity on an error string and
+	/// nothing else, so SharpMUSH accepts it — but then the only arithmetic that keeps a line inside
+	/// <c>&lt;line length&gt;</c> is charging the separator what it actually costs, which is what
+	/// this pins. Field 5 and line 12: <c>a</c> at 5, <c>b</c> at 10 which fits, then the two-wide
+	/// separator takes the line to exactly 12; <c>c</c> would reach 17 and wraps.
+	/// </remarks>
+	[Test]
+	[Arguments("table(a b c d,5,12,%b,--)", "a    --b    \nc    --d    ")]
+	public async Task TableChargesAMultiCharacterSeparatorItsOwnWidth(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// A cell is padded to its DISPLAY width and keeps its colour across the join: a two-character
+	/// red cell in a four-wide field is the coloured text followed by two <em>plain</em> spaces.
+	/// </summary>
+	/// <remarks>
+	/// Asserted on the rendered ANSI, because <c>ToPlainText()</c> cannot tell the two failures
+	/// apart: padding against the escape sequence's byte length would leave the cell short, and
+	/// padding inside the colour span would paint the trailing spaces red. Both read identically as
+	/// plain text.
+	/// </remarks>
+	[Test]
+	public async Task TablePadsTheDisplayWidthAndKeepsTheColour()
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain("table(ansi(r,ab) cd,4,10)")))!.Message!;
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("ab   cd  ")
+			.Because("each cell is four wide and the separator is one, so the line is nine characters");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("\e[31mab\e[0m   cd  ")
+			.Because("the colour covers 'ab' and stops there; the two pad spaces and the separator are plain");
+	}
 }
