@@ -1,6 +1,7 @@
 ﻿using System.Buffers;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Common;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -153,13 +154,18 @@ public partial class Commands
 		return new None();
 	}
 
+	/// <summary>
+	/// <c>cmd_unimplemented</c> (<c>src/command.c:1898-1911</c>): the stub a command added without a
+	/// hook runs. It is not the HUH stub — saying "Huh?" here made a command that exists but does
+	/// nothing read as a command that does not exist.
+	/// </summary>
 	[SharpCommand(Name = "UNIMPLEMENTED_COMMAND", Switches = [],
 		Behavior = CB.Default | CB.NoParse | CB.Internal | CB.NoOp, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> UnimplementedCommand(IMUSHCodeParser parser,
 		SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownEnactorObject(Mediator);
-		await NotifyService.Notify(executor, "Huh?  (Type \"help\" for help.)", executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNotImplemented), executor);
 		return new None();
 	}
 }

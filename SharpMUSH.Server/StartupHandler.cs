@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Configuration.Options;
@@ -65,7 +65,6 @@ public class StartupHandler(
 		var currentOptions = options.CurrentValue;
 		Configurable.Initialize(currentOptions.Alias, currentOptions.Restriction);
 		Configurable.ReadFloatPrecisionFrom(() => options.CurrentValue.Cosmetic.FloatPrecision);
-
 	}
 
 	/// <summary>

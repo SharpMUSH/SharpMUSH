@@ -1,4 +1,4 @@
-using Asp.Versioning;
+﻿using Asp.Versioning;
 using Mediator;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -67,6 +67,10 @@ internal static class HostedServiceRegistration
 		// Load C# plugins before softcode packages/startup attributes run, so plugin commands/functions
 		// are present in the libraries when later bootstrap stages execute.
 		services.AddHostedService<Services.PluginBootstrapService>();
+		// Apply configured command_restrictions here and nowhere else: after plugin commands are in the
+		// library, so a restriction naming one is not skipped, and before any service runs softcode, so
+		// a command a restriction disables cannot be used by boot @STARTUP (#1224).
+		services.AddHostedService<Services.CommandRestrictionBootstrapService>();
 		services.AddHostedService<Services.DefaultPackagesBootstrapService>();
 		services.AddHostedService<Services.DefaultApplicationsBootstrapService>();
 		// Run @STARTUP on all objects at boot — registered after the other bootstrap services so

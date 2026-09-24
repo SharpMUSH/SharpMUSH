@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using NSubstitute;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -520,8 +520,19 @@ public class LocateServiceCompatibilityTests
 		await Assert.That(result.IsNone).IsTrue();
 	}
 
+	/// <summary>
+	/// A search relative to a looker the executor neither controls nor stands beside still runs.
+	/// <c>match_result_relative(who, where, ...)</c> goes straight to <c>match_result_internal</c>
+	/// (<c>match.c:314-325</c>), whose only permission questions are <c>can_interact</c> per candidate
+	/// and <c>nearby || controls</c> under <c>MAT_NEAR</c> — there is no looker gate.
+	///
+	/// Rewritten for #1222: this asserted the opposite, pinning <c>fun_locate</c>'s gate onto every
+	/// caller of the service. That gate is <c>fun_locate</c>'s alone and stays in
+	/// <c>fun_locate</c> (DbrefFunctions.cs), which applies it to <c>executor</c> against
+	/// <c>looker</c> before matching.
+	/// </summary>
 	[Test]
-	public async Task LocateMatch_DifferentExecutorAndLooker_ShouldCheckNearby()
+	public async Task LocateMatch_DifferentExecutorAndLooker_SearchesRelativeToTheLooker()
 	{
 		var room1 = _factory.CreateRoom(1001, "Room 1");
 		var room2 = _factory.CreateRoom(1002, "Room 2");
@@ -530,17 +541,17 @@ public class LocateServiceCompatibilityTests
 		var executor = _factory.CreatePlayer(2, "ExecutorPlayer", room2);
 		var thing = _factory.CreateThing(3, "TestObject", room1, looker);
 
-		var contents = new[] { thing }.ToAsyncEnumerable();
+		var contents = new[] { thing, looker }.ToAsyncEnumerable();
 
-		Holds(room2, contents);
+		Holds(room1, contents);
 
 		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
 			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
-		// Set up permissions - executor doesn't control looker (critical for this test)
-		_permissionService.Controls(executor, looker)
+		// The executor controls neither the looker nor the object, and stands in another room: the
+		// three arms of the gate that used to stand here.
+		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(false);
-
 		_permissionService.Controls(looker, looker)
 			.Returns(true);
 		_permissionService.Controls(executor, executor)
@@ -554,10 +565,10 @@ public class LocateServiceCompatibilityTests
 			.Returns(true);
 
 		var result = await _locateService.Locate(_parser, looker, executor, "TestObject",
-			LocateFlags.MatchObjectsInLookerInventory);
+			LocateFlags.MatchObjectsInLookerLocation);
 
-		await Assert.That(result.IsError).IsTrue();
-		await Assert.That(result.Expect<Error<string>>().Value).Contains("NOT PERMITTED");
+		await Assert.That(result.IsError).IsFalse();
+		await Assert.That(result.Expect<AnySharpObject>().Object().DBRef).IsEqualTo(new DBRef(3, 0));
 	}
 
 	[Test]

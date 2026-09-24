@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System.Buffers;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -244,22 +244,56 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "findable", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "looker"])]
+	/// <summary>
+	/// <c>fun_findable</c> (<c>fundb.c:1438-1452</c>): whether the first object could find the second.
+	/// Both are resolved as the executor, the way <c>match_thing(executor, ...)</c> does, and the
+	/// answer is gated on <c>See_All(executor) || controls(executor, obj) || controls(executor,
+	/// victim)</c>. That gate is the function's own — the matcher has none (#1222), and without it
+	/// here findable() would answer for anyone about anyone.
+	/// </summary>
+	[SharpFunction(Name = "findable", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "victim"])]
 	public async ValueTask<CallState> Findable(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var lookerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
 		var targetArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText()!;
 
-		var maybeLooker = await LocateService.LocateAndNotifyIfInvalidWithCallState(
-			parser, executor, executor, lookerArg, LocateFlags.All);
-
-		return maybeLooker switch
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(
+			parser, executor, executor, lookerArg, LocateFlags.All) switch
 		{
 			Error<CallState> error => error.Value,
-			AnySharpObject looker => new CallState(
-				await LocateService.Locate(parser, looker, executor, targetArg, LocateFlags.All) is AnySharpObject)
+			AnySharpObject looker => await FindableVictim(parser, executor, looker, targetArg)
 		};
+	}
+
+	/// <summary>The victim half of <see cref="Findable"/>, once the object asked about has resolved.</summary>
+	private async ValueTask<CallState> FindableVictim(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject looker, string targetArg)
+		=> await LocateService.LocateAndNotifyIfInvalidWithCallState(
+			parser, executor, executor, targetArg, LocateFlags.All) switch
+		{
+			Error<CallState> error => error.Value,
+			AnySharpObject victim => await FindableAnswer(executor, looker, victim)
+		};
+
+	/// <summary>
+	/// <c>safe_boolean(Can_Locate(obj, victim))</c> behind the gate (<c>fundb.c:1447-1451</c>). Both
+	/// objects are already resolved, and the answer is about those two objects: <c>fun_findable</c>
+	/// never matches a name a second time, so a context-sensitive argument (<c>me</c>, <c>here</c>)
+	/// cannot mean one thing to the gate and another to the answer, and two objects sharing a name
+	/// cannot be swapped between them.
+	/// </summary>
+	private async ValueTask<CallState> FindableAnswer(AnySharpObject executor, AnySharpObject looker,
+		AnySharpObject victim)
+	{
+		if (!await executor.IsSee_All()
+				&& !await PermissionService.Controls(executor, looker)
+				&& !await PermissionService.Controls(executor, victim))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		return new CallState(await PermissionService.CanLocate(looker, victim));
 	}
 
 	[SharpFunction(Name = "fullalias", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

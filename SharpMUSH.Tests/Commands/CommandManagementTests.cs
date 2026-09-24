@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
@@ -25,6 +25,13 @@ public class CommandManagementTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IHookService HookService => WebAppFactoryArg.Services.GetRequiredService<IHookService>();
+
+	/// <summary>
+	/// The seam startup applies <c>command_restrictions</c> through. The command table is the
+	/// <c>Commands</c> singleton, so the applier is that same singleton.
+	/// </summary>
+	private ICommandRestrictionApplier Restrictions
+		=> (ICommandRestrictionApplier)WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<CommandDefinition>>();
 	private DBRef God => WebAppFactoryArg.ExecutorDBRef;
 
 	private const string Huh = "Huh?  (Type \"help\" for help.)";
@@ -115,6 +122,23 @@ public class CommandManagementTests
 		await As(wizard, $"@command/add {name}");
 
 		await Assert.That(await As(wizard, $"{name} anything")).Contains("This command has not been implemented.");
+	}
+
+	/// <summary>
+	/// <c>UNIMPLEMENTED_COMMAND</c> is <c>cmd_unimplemented</c>, which says "This command has not
+	/// been implemented." (<c>src/command.c:1898-1911</c>) — it is not the HUH stub, and saying
+	/// "Huh?" there made an unhooked command indistinguishable from a command that does not exist.
+	/// See #1223.
+	/// </summary>
+	[Test]
+	public async ValueTask UnimplementedCommand_SaysItIsNotImplemented()
+	{
+		var wizard = await Wizard();
+
+		var messages = await As(wizard, "UNIMPLEMENTED_COMMAND");
+
+		await Assert.That(messages).Contains("This command has not been implemented.");
+		await Assert.That(messages).DoesNotContain(Huh);
 	}
 
 	[Test]
@@ -325,6 +349,69 @@ public class CommandManagementTests
 		await Assert.That(await As(wizard, $"{clone} still mine")).Contains("still mine");
 	}
 
+	/// <summary>
+	/// <c>restrict_command</c> keeps everything after the first <c>"</c> as the command's
+	/// <c>restrict_message</c> (<c>src/command.c:1740-1750</c>), and <c>command_check_with</c> sends
+	/// it in place of "Permission denied." (<c>src/command.c:2337-2341</c>). <c>@command</c> shows it
+	/// as <c>Failure Msg:</c> (<c>src/command.c:2218</c>). A mortal drives the refusal: God passes
+	/// every lock, so a God-typed attempt would prove nothing.
+	/// </summary>
+	[Test]
+	public async ValueTask Restrict_WithAFailureMessage_SendsItInsteadOfPermissionDenied()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdRestrictMsg");
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+
+		var set = await As(wizard, $"@command/restrict {clone}=wizard \"The {clone} is not for you.");
+
+		await Assert.That(set).Contains($"  Failure Msg: The {clone} is not for you.");
+
+		var refused = await As(mortal, $"{clone} nope");
+		await Assert.That(refused).Contains($"The {clone} is not for you.");
+		await Assert.That(refused).DoesNotContain("Permission denied.");
+		await Assert.That(refused).DoesNotContain("nope");
+	}
+
+	/// <summary>
+	/// Without a message the refusal is still "Permission denied.", and restricting again with a bare
+	/// <c>"</c> clears a message that was set: <c>restrict_command</c> frees the old one whenever the
+	/// restriction carries a quote at all (<c>src/command.c:1741-1750</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask Restrict_WithAnEmptyMessage_ClearsItAndGoesBackToPermissionDenied()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdRestrictClr");
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+		await As(wizard, $"@command/restrict {clone}=wizard \"Not yours.");
+		await Assert.That(await As(mortal, $"{clone} nope")).Contains("Not yours.").Because("precondition");
+
+		var cleared = await As(wizard, $"@command/restrict {clone}=wizard \"");
+
+		await Assert.That(cleared).DoesNotContain("  Failure Msg: Not yours.");
+		await Assert.That(await As(mortal, $"{clone} nope")).Contains("Permission denied.");
+	}
+
+	/// <summary><c>clone_command</c> copies the failure message with the lock (<c>src/command.c:2032-2034</c>).</summary>
+	[Test]
+	public async ValueTask Clone_CopiesTheFailureMessage()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdRestrictCln");
+		var original = CommandName();
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={original}");
+		await As(wizard, $"@command/restrict {original}=wizard \"Copied refusal.");
+
+		await As(wizard, $"@command/clone {original}={clone}");
+
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains("  Failure Msg: Copied refusal.");
+		await Assert.That(await As(mortal, $"{clone} nope")).Contains("Copied refusal.");
+	}
+
 	/// <summary>A negated type still subtracts from every type: that is what <c>noplayer</c> is for.</summary>
 	[Test]
 	public async ValueTask Restrict_WithANegatedType_KeepsTheOthers()
@@ -390,27 +477,164 @@ public class CommandManagementTests
 		await Assert.That(await As(wizard, $"{name} x")).Contains(Huh);
 	}
 
-	/// <summary>Deleting an alias takes that alias's hooks with it, as deleting a command does.</summary>
+	/// <summary>
+	/// A hook lives on the command every alias points at, so it fires whichever of that command's
+	/// names was typed. Penn keeps hooks on the <c>COMMAND_INFO</c> (<c>src/command.h:161</c>) and
+	/// <c>do_hook</c> reaches it with <c>command_find</c> (<c>src/command.c:2589</c>), which resolves
+	/// an alias to the command it aliases and reports <c>cmd->name</c> back. That is why
+	/// <c>@hook/override say</c> also fires for <c>"</c>. See #1223.
+	/// </summary>
 	[Test]
-	public async ValueTask Delete_AnAlias_TakesTheAliasHooksWithIt()
+	public async ValueTask Hook_SetOnACommand_FiresForItsAliasesToo()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		var alias = CommandName();
+		var machine = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AliasShared");
+		try
+		{
+			await As(wizard, $"&DO {machine}=${name} *:@pemit %#=Shared %0.");
+			await As(wizard, $"@command/add {name}");
+			await As(wizard, $"@command/alias {name}={alias}");
+			await As(wizard, $"@hook/override {name}={machine},DO");
+
+			await Assert.That(await As(wizard, $"{name} once")).Contains("Shared once.").Because("precondition");
+			await Assert.That(await As(wizard, $"{alias} twice")).Contains("Shared twice.");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(name, "OVERRIDE");
+		}
+	}
+
+	/// <summary>
+	/// Naming an alias to <c>@hook</c> hooks the command it aliases, because <c>do_hook</c> resolves
+	/// the name with <c>command_find</c> before touching <c>cmd->hooks</c>
+	/// (<c>src/command.c:2589</c>) — so the hook fires under the command's own name too.
+	/// </summary>
+	[Test]
+	public async ValueTask Hook_SetThroughAnAlias_HooksTheCommandItself()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+		var alias = CommandName();
+		var machine = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AliasHookedThrough");
+		try
+		{
+			await As(wizard, $"&DO {machine}=${name} *:@pemit %#=Through %0.");
+			await As(wizard, $"@command/add {name}");
+			await As(wizard, $"@command/alias {name}={alias}");
+			await As(wizard, $"@hook/override {alias}={machine},DO");
+
+			await Assert.That(await As(wizard, $"{alias} once")).Contains("Through once.").Because("precondition");
+			await Assert.That(await As(wizard, $"{name} twice")).Contains("Through twice.");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(name, "OVERRIDE");
+		}
+	}
+
+	/// <summary>
+	/// Deleting an alias frees only that name. The hooks belong to the command, which is still there
+	/// — Penn frees a <c>COMMAND_INFO</c> and its hooks only when the command itself goes
+	/// (<c>src/command.c:2100-2104</c>), and <c>do_command_delete</c> takes an alias out of the table
+	/// without touching what it pointed at. Rewritten for #1223: it used to assert the opposite,
+	/// because the hook was keyed by the name as typed.
+	/// </summary>
+	[Test]
+	public async ValueTask Delete_AnAlias_LeavesTheCommandsHooksAlone()
 	{
 		var wizard = await Wizard();
 		var name = CommandName();
 		var alias = CommandName();
 		var machine = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "AliasHooked");
-		// The hook is keyed by the typed name (the alias), but its input carries the command's own
-		// name, so the $-command matches on that. See #1223.
-		await As(wizard, $"&DO {machine}=${name} *:@pemit %#=Aliased %0.");
-		await As(wizard, $"@command/add {name}");
-		await As(wizard, $"@command/alias {name}={alias}");
-		await As(wizard, $"@hook/override {alias}={machine},DO");
-		await Assert.That(await As(wizard, $"{alias} once")).Contains("Aliased once.").Because("precondition");
+		try
+		{
+			await As(wizard, $"&DO {machine}=${name} *:@pemit %#=Aliased %0.");
+			await As(wizard, $"@command/add {name}");
+			await As(wizard, $"@command/alias {name}={alias}");
+			await As(wizard, $"@hook/override {alias}={machine},DO");
+			await Assert.That(await As(wizard, $"{alias} once")).Contains("Aliased once.").Because("precondition");
 
-		await AsGod($"@command/delete {alias}");
-		await As(wizard, $"@command/alias {name}={alias}");
+			await AsGod($"@command/delete {alias}");
 
-		await Assert.That(await As(wizard, $"{alias} twice")).Contains("This command has not been implemented.");
-		await Assert.That(await As(wizard, $"{alias} twice")).DoesNotContain("Aliased twice.");
+			await Assert.That(await As(wizard, $"{name} twice")).Contains("Aliased twice.")
+				.Because("the command keeps its hooks when one of its aliases is deleted");
+
+			await As(wizard, $"@command/alias {name}={alias}");
+			await Assert.That(await As(wizard, $"{alias} thrice")).Contains("Aliased thrice.");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(name, "OVERRIDE");
+		}
+	}
+
+	/// <summary>
+	/// A <c>command_restrictions</c> entry has to reach the command table. PennMUSH applies the
+	/// <c>restrict_command</c> lines of <c>mush.cnf</c> through the very function
+	/// <c>@command/restrict</c> uses (the <c>restrict_command</c> branch of <c>config_set</c>,
+	/// <c>src/conf.c</c>); the configuration was loaded into <c>Configurable.CommandRestrictions</c>
+	/// and never read, so it restricted nobody (#1224).
+	///
+	/// Driven through the seam startup calls, because the shared test host is built once and a test
+	/// cannot rewrite the configuration it booted with. A mortal takes the refusal: God passes every
+	/// lock.
+	/// </summary>
+	[Test]
+	public async ValueTask ConfiguredRestrictions_ReachTheCommandTable()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdCfgRestrict");
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+		await Assert.That(await As(mortal, $"{clone} mine")).Contains("mine").Because("precondition");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]>
+		{
+			[clone] = ["wizard", "\"Configured refusal."]
+		});
+
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains("  Lock: (FLAG^WIZARD)");
+		var refused = await As(mortal, $"{clone} mine");
+		await Assert.That(refused).Contains("Configured refusal.");
+		await Assert.That(refused).DoesNotContain("mine");
+	}
+
+	/// <summary><c>nobody</c> is <c>CMD_T_DISABLED</c> from the configuration as much as from <c>@command/restrict</c>.</summary>
+	[Test]
+	public async ValueTask ConfiguredRestrictions_NobodyDisablesTheCommand()
+	{
+		var wizard = await Wizard();
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]> { [clone] = ["nobody"] });
+
+		await Assert.That(await As(wizard, $"{clone} gone")).Contains(Huh);
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains($"Command: {clone} (Disabled)");
+	}
+
+	/// <summary>
+	/// <c>restrict_command</c> returns 0 for a command name it cannot find rather than failing the
+	/// configuration, so an entry naming no command is skipped and the rest still apply.
+	/// </summary>
+	[Test]
+	public async ValueTask ConfiguredRestrictions_SkipEntriesThatNameNoCommand()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdCfgSkip");
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]>
+		{
+			[CommandName()] = ["wizard"],
+			[clone] = ["wizard"]
+		});
+
+		await Assert.That(await As(mortal, $"{clone} mine")).Contains("Permission denied.");
 	}
 
 	/// <summary><c>=nobody</c> is <c>/disable</c>, so it is refused for the commands the game runs itself.</summary>
