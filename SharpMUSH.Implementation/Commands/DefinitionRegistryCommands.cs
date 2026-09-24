@@ -21,7 +21,7 @@ using System.Buffers;
 
 namespace SharpMUSH.Implementation.Commands;
 
-public partial class Commands
+public partial class Commands : ICommandRestrictionApplier
 {
 	/// <summary>
 	/// PennMUSH's <c>DEF_FUNCTION_ARGS</c> (hdrs/function.h:133) — what <c>@function</c> gives a
@@ -494,6 +494,13 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		ParkCommand(definition);
+		return new None();
+	}
+
+	/// <summary>Takes a command out of the table under every name it has, keeping them for <see cref="EnableCommand"/>.</summary>
+	private void ParkCommand(CommandDefinition definition)
+	{
 		lock (_commandTableLock)
 		{
 			var entries = CommandLibrary.Where(entry => ReferenceEquals(entry.Value.LibraryInformation.Attribute, definition.Attribute)).ToList();
@@ -509,8 +516,6 @@ public partial class Commands
 
 			CommandTrie.Invalidate(CommandLibrary);
 		}
-
-		return new None();
 	}
 
 	/// <summary>Puts a disabled command back under every name it had.</summary>
@@ -583,6 +588,68 @@ public partial class Commands
 		}
 
 		return new None();
+	}
+
+	/// <inheritdoc />
+	/// <remarks>
+	/// The same translation <c>@command/restrict</c> uses, with the refusals taken out: there is no
+	/// executor to answer to at startup, which is also why <c>restrict_command</c> is called with
+	/// <c>NOTHING</c> for the player when commands are loaded (<c>src/command.c:1735-1737</c>). An
+	/// entry naming no command is skipped, as <c>restrict_command</c> returns 0 for one rather than
+	/// failing the configuration; so is one whose text is neither Penn's restriction words nor a
+	/// valid lock, which would otherwise leave the command with a lock nothing can pass.
+	/// </remarks>
+	public async ValueTask ApplyConfiguredRestrictionsAsync(IReadOnlyDictionary<string, string[]> restrictions)
+	{
+		// Only a lock-shaped restriction needs one, and Validate never reads it — but the signature
+		// asks, so it is fetched once and only if some entry gets that far.
+		AnySharpObject? lockee = null;
+
+		foreach (var (name, words) in restrictions)
+		{
+			if (FindCommand(name) is not { } found)
+			{
+				continue;
+			}
+
+			var restriction = string.Join(' ', words).Trim();
+			var quote = restriction.IndexOf('"');
+			var message = quote >= 0 ? restriction[(quote + 1)..].Trim() : null;
+			var terms = (quote >= 0 ? restriction[..quote] : restriction).Trim();
+			var attribute = found.LibraryInformation.Attribute;
+
+			if (terms.Length > 0)
+			{
+				lockee ??= await Mediator.Send(new GetObjectNodeQuery(new DBRef(1))) is AnySharpObject god ? god : null;
+				switch (await RestrictionFromWords(terms, attribute.Behavior))
+				{
+					case CommandRestriction { Disables: true }:
+						// "nobody" is CMD_T_DISABLED. The commands the game runs by name cannot go: the
+						// engine would find nothing to run, which is what @command/restrict refuses over.
+						if (!CommandsTheGameRuns.Contains(attribute.Name)
+								&& !attribute.Name.Equals("@COMMAND", StringComparison.OrdinalIgnoreCase))
+						{
+							ParkCommand(found.LibraryInformation);
+						}
+
+						break;
+					case CommandRestriction translated:
+						attribute.CommandLock = translated.Lock;
+						attribute.Behavior = translated.Behavior;
+						break;
+					case NotFound when lockee is { } subject && LockService.Validate(terms, subject):
+						attribute.CommandLock = terms;
+						break;
+					default:
+						continue;
+				}
+			}
+
+			if (message is not null)
+			{
+				attribute.RestrictMessage = message;
+			}
+		}
 	}
 
 	private readonly record struct CommandRestriction(string Lock, CommandBehavior Behavior, bool Disables);

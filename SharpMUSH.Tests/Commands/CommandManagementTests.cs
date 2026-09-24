@@ -25,6 +25,13 @@ public class CommandManagementTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IHookService HookService => WebAppFactoryArg.Services.GetRequiredService<IHookService>();
+
+	/// <summary>
+	/// The seam startup applies <c>command_restrictions</c> through. The command table is the
+	/// <c>Commands</c> singleton, so the applier is that same singleton.
+	/// </summary>
+	private ICommandRestrictionApplier Restrictions
+		=> (ICommandRestrictionApplier)WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<CommandDefinition>>();
 	private DBRef God => WebAppFactoryArg.ExecutorDBRef;
 
 	private const string Huh = "Huh?  (Type \"help\" for help.)";
@@ -562,6 +569,72 @@ public class CommandManagementTests
 		{
 			await HookService.ClearHookAsync(name, "OVERRIDE");
 		}
+	}
+
+	/// <summary>
+	/// A <c>command_restrictions</c> entry has to reach the command table. PennMUSH applies the
+	/// <c>restrict_command</c> lines of <c>mush.cnf</c> through the very function
+	/// <c>@command/restrict</c> uses (the <c>restrict_command</c> branch of <c>config_set</c>,
+	/// <c>src/conf.c</c>); the configuration was loaded into <c>Configurable.CommandRestrictions</c>
+	/// and never read, so it restricted nobody (#1224).
+	///
+	/// Driven through the seam startup calls, because the shared test host is built once and a test
+	/// cannot rewrite the configuration it booted with. A mortal takes the refusal: God passes every
+	/// lock.
+	/// </summary>
+	[Test]
+	public async ValueTask ConfiguredRestrictions_ReachTheCommandTable()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdCfgRestrict");
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+		await Assert.That(await As(mortal, $"{clone} mine")).Contains("mine").Because("precondition");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]>
+		{
+			[clone] = ["wizard", "\"Configured refusal."]
+		});
+
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains("  Lock: (FLAG^WIZARD)");
+		var refused = await As(mortal, $"{clone} mine");
+		await Assert.That(refused).Contains("Configured refusal.");
+		await Assert.That(refused).DoesNotContain("mine");
+	}
+
+	/// <summary><c>nobody</c> is <c>CMD_T_DISABLED</c> from the configuration as much as from <c>@command/restrict</c>.</summary>
+	[Test]
+	public async ValueTask ConfiguredRestrictions_NobodyDisablesTheCommand()
+	{
+		var wizard = await Wizard();
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]> { [clone] = ["nobody"] });
+
+		await Assert.That(await As(wizard, $"{clone} gone")).Contains(Huh);
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains($"Command: {clone} (Disabled)");
+	}
+
+	/// <summary>
+	/// <c>restrict_command</c> returns 0 for a command name it cannot find rather than failing the
+	/// configuration, so an entry naming no command is skipped and the rest still apply.
+	/// </summary>
+	[Test]
+	public async ValueTask ConfiguredRestrictions_SkipEntriesThatNameNoCommand()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdCfgSkip");
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]>
+		{
+			[CommandName()] = ["wizard"],
+			[clone] = ["wizard"]
+		});
+
+		await Assert.That(await As(mortal, $"{clone} mine")).Contains("Permission denied.");
 	}
 
 	/// <summary><c>=nobody</c> is <c>/disable</c>, so it is refused for the commands the game runs itself.</summary>

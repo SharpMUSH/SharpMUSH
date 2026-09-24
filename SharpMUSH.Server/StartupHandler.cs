@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Configuration.Options;
@@ -18,7 +18,8 @@ public class StartupHandler(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IWikiService wikiService,
 	IMessageBus messageBus,
-	SharpMUSH.Messaging.NATS.NatsConsumerRegistry? consumers = null)
+	SharpMUSH.Messaging.NATS.NatsConsumerRegistry? consumers = null,
+	ILibraryProvider<CommandDefinition>? commandLibrary = null)
 	: IHostedLifecycleService, IDisposable
 {
 	private const string ServerVersion = "1.0.0";
@@ -65,6 +66,15 @@ public class StartupHandler(
 		var currentOptions = options.CurrentValue;
 		Configurable.Initialize(currentOptions.Alias, currentOptions.Restriction);
 		Configurable.ReadFloatPrecisionFrom(() => options.CurrentValue.Cosmetic.FloatPrecision);
+
+		// PennMUSH applies mush.cnf's restrict_command lines through the same restrict_command() that
+		// @command/restrict uses (the restrict_command branch of config_set, src/conf.c). Reading the
+		// option into Configurable is not applying it: until this call, a restriction set in the
+		// configuration or the portal restricted nobody (#1224).
+		if (commandLibrary is ICommandRestrictionApplier restrictions)
+		{
+			await restrictions.ApplyConfiguredRestrictionsAsync(currentOptions.Restriction.CommandRestrictions);
+		}
 
 	}
 
