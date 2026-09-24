@@ -766,6 +766,9 @@
   <data name="MailAliasesLabel" xml:space="preserve">
     <value>Mail aliases:</value>
   </data>
+  <data name="MailMessagesLabel" xml:space="preserve">
+    <value>Mail messages:</value>
+  </data>
   <data name="Issues" xml:space="preserve">
     <value>Issues</value>
   </data>
