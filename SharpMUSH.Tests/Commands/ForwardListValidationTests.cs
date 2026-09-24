@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -30,9 +30,13 @@ public class ForwardListValidationTests
 	private Task<TestIsolationHelpers.TestPlayer> Player(string prefix)
 		=> TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
 
-	private async Task Run(TestIsolationHelpers.TestPlayer who, string command)
+	private async Task<CallState> Run(TestIsolationHelpers.TestPlayer who, string command)
 		=> await WebAppFactoryArg.CommandParserFor(who.DbRef, who.Handle)
 			.CommandParse(who.Handle, ConnectionService, MarkupText.Plain(command));
+
+	/// <summary>The dbref <paramref name="who"/> resolves <paramref name="name"/> to.</summary>
+	private async Task<DBRef> Num(TestIsolationHelpers.TestPlayer who, string name)
+		=> DBRef.Parse((await Run(who, $"think [num({name})]")).Message!.ToPlainText());
 
 	/// <summary>
 	/// Everything <paramref name="who"/> was told while <paramref name="action"/> ran. Reads the
@@ -204,5 +208,35 @@ public class ForwardListValidationTests
 
 		await Assert.That(await Get(owner.DbRef, "FORWARDLIST")).IsEqualTo($"#{target.DbRef.Number}")
 			.Because("a forward lock that is set and passes is what Can_Forward's third term allows");
+	}
+
+	/// <summary>
+	/// <c>@CLONE</c> copies attributes through <c>atr_cpy</c> (<c>src/attrib.c:1706</c>), which reaches
+	/// the database via <c>atr_new_add</c> and never runs <c>do_set_atr</c>'s validation at all. It has
+	/// to stay that way: <c>Can_Forward</c>'s subject is the object being written, so a list the SOURCE
+	/// was allowed to hold - here because the target's forward lock names the source - is one the clone
+	/// could not have created, and validating the copy would silently drop the attribute.
+	/// </summary>
+	[Test]
+	public async ValueTask CloningKeepsAForwardListTheCloneCouldNotHaveCreated()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8].ToUpper();
+		var owner = await Player("FlClone");
+		var target = await Player("FlCloneTo");
+
+		await Run(owner, $"@create FlSrc{uid}");
+		var source = await Num(owner, $"FlSrc{uid}");
+		await Run(target, $"@lock/forward me=#{source.Number}");
+		await Run(owner, $"&FORWARDLIST FlSrc{uid}=#{target.DbRef.Number}");
+		await Assert.That(await Get(source, "FORWARDLIST")).IsEqualTo($"#{target.DbRef.Number}")
+			.Because("the source's own list is valid: the target's forward lock names it");
+
+		await Run(owner, $"@clone FlSrc{uid}=FlCln{uid}");
+		var clone = await Num(owner, $"FlCln{uid}");
+
+		await Assert.That(clone.Number).IsNotEqualTo(source.Number)
+			.Because("the clone has to be a different object for the assertion below to mean anything");
+		await Assert.That(await Get(clone, "FORWARDLIST")).IsEqualTo($"#{target.DbRef.Number}")
+			.Because("a copy is not a set - the clone carries the list across even though it could not have written it");
 	}
 }

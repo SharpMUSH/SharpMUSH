@@ -32,7 +32,7 @@ internal sealed class AttributeWriter(
 		string attribute,
 		MString value)
 		=> await SetAttributeAsync(executor, obj, attribute, value,
-			await executor.Object().Owner.WithCancellation(CancellationToken.None), gateCreation: true);
+			await executor.Object().Owner.WithCancellation(CancellationToken.None), isAttributeCopy: false);
 
 	/// <summary>
 	/// As the four-argument overload, but stamps <paramref name="creator"/> as the attribute's
@@ -46,22 +46,23 @@ internal sealed class AttributeWriter(
 		string attribute,
 		MString value,
 		SharpPlayer creator)
-		=> await SetAttributeAsync(executor, obj, attribute, value, creator, gateCreation: false);
+		=> await SetAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy: true);
 
-	/// <param name="gateCreation">
-	/// Whether the levels of the path that do not exist yet are gated against the flags the standard
-	/// attribute table would give them - see <see cref="CreatedAttributeFor"/>. True for an ordinary
-	/// set; false for <c>@CLONE</c>, whose PennMUSH counterpart <c>atr_cpy</c> reaches the database
-	/// through <c>atr_new_add</c> (<c>src/attrib.c:1706</c>), the deliberately "dangerous" helper that
-	/// bypasses <c>can_create_attr</c> outright - a clone carries the source's flags across whether or
-	/// not the cloner could have created them.
+	/// <param name="isAttributeCopy">
+	/// Whether this write is PennMUSH's <c>atr_cpy</c> (<c>src/attrib.c:1706</c>) rather than an
+	/// ordinary set. <c>atr_cpy</c> reaches the database through <c>atr_new_add</c>, the deliberately
+	/// "dangerous" helper that bypasses both <c>can_create_attr</c>'s default-flag gate and
+	/// <c>do_set_atr</c>'s forward-list validation, so a clone carries the source's attributes across
+	/// whether or not the cloner could have written them itself. <c>@CLONE</c> is the only caller.
+	/// The <c>Controls</c>, stored-flag and <c>check_attr_value</c> gates still run: only the two
+	/// checks Penn reaches exclusively through <c>do_set_atr</c>/<c>atr_add</c> are skipped.
 	/// </param>
 	private async ValueTask<Result<Success>> SetAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj,
 		string attribute,
 		MString value,
 		SharpPlayer creator,
-		bool gateCreation)
+		bool isAttributeCopy)
 	{
 		if (!await permissionService.Controls(executor, obj))
 		{
@@ -152,7 +153,7 @@ internal sealed class AttributeWriter(
 				leafEntry = levelEntry;
 			}
 
-			if (gateCreation && !await permissionService.CanSet(executor, obj,
+			if (!isAttributeCopy && !await permissionService.CanSet(executor, obj,
 						CreatedAttributeFor(levelEntry, attrPath[level], levelName, creator)))
 			{
 				return new Error<string>(ErrorMessages.Returns.AttrSetPermissions);
@@ -164,9 +165,13 @@ internal sealed class AttributeWriter(
 		// name a live object, or names one unwilling to hear from THIS object refuses the whole set.
 		// Delivery re-checks per entry anyway (MailDelivery.MayForwardTo), so without this the player
 		// only learns their list is wrong when some sender is told of "a mail forwarding problem". #1218.
+		// Not on the @CLONE path: Can_Forward's subject is the object being written, so a list the
+		// SOURCE was allowed to hold can be one the clone could not have created - a forward lock
+		// naming the source passes for the source and not for the copy - and refusing it there would
+		// silently drop the attribute from the clone. Penn never validates a copy at all.
 		var fullName = string.Join('`', attrPath).ToUpperInvariant();
 
-		if (ForwardListRestriction.Applies(fullName)
+		if (!isAttributeCopy && ForwardListRestriction.Applies(fullName)
 				&& await ForwardListRestriction.CheckAsync(mediator, permissionService, obj, fullName,
 					value.ToPlainText()) is Error<string> badList)
 		{
