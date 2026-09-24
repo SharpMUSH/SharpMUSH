@@ -1548,9 +1548,10 @@ public class MovementParityTests
 	/// <summary>
 	/// <c>do_teleport_one</c> moves an exit by rewriting its <c>Source</c> and returns before
 	/// <c>safe_tel</c> is reached (<c>src/wiz.c:450-479</c>), so neither Penn's <c>safe_tel</c> nor
-	/// SharpMUSH's sees one by way of <c>@TELEPORT</c>. An exit IS <c>AnySharpContent</c> though, so
-	/// the callers that reach <c>SafeTel</c> directly — <c>tel()</c> among them — still hand it one;
-	/// it is not a container, and reading its contents to strip them throws.
+	/// SharpMUSH's sees one by way of <c>@TELEPORT</c> — nor of <c>tel()</c>, which shares that branch
+	/// through <c>TeleportHelpers</c>. An exit IS <c>AnySharpContent</c> though, so the callers that
+	/// reach <c>SafeTel</c> directly — <c>GOTO</c>'s non-room destination, and this test — still hand it
+	/// one; it is not a container, and reading its contents to strip them throws.
 	/// </summary>
 	[Test]
 	public async ValueTask SafeTelRefusesAnExitRatherThanReadingItAsAContainer()
@@ -1976,5 +1977,56 @@ public class MovementParityTests
 		var source = await stillThere.Location.WithCancellation(CancellationToken.None);
 
 		await Assert.That(BareDbref(source.Object().DBRef.ToString())).IsEqualTo(BareDbref(from));
+	}
+
+	// --- Lane BB: one teleport for @TELEPORT and tel() (issues #1212, #1068, #1070, #1071, #1073) ---
+
+	/// <summary>
+	/// <c>@teleport</c> answers with the destination it resolved — what a <c>$</c>-command's body reads
+	/// back from it. The shared operation hands that destination out so the command does not resolve it
+	/// twice, which is the one thing about the command's own shape the refactor could have dropped.
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportAnswersWithTheDestinationItResolved()
+	{
+		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "TelAnswerBox");
+		var destination = await Dig("TelAnswerDest");
+
+		var result = await GodParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@teleport/silent #{box.Number}={destination}"));
+
+		await Assert.That(BareDbref(result.Message!.ToPlainText().Trim())).IsEqualTo(BareDbref(destination));
+		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(destination));
+	}
+
+	/// <summary>
+	/// <c>fun_tel</c> reached none of <c>do_teleport</c>'s policy: it checked control over the victim
+	/// and called <c>safe_tel</c>, so any mortal could move anything they owned into any room in the
+	/// database. It also answered <c>"1"</c>, where <c>fun_tel</c> (<c>src/fundb.c:2309-2327</c>) writes
+	/// nothing to the buffer at all.
+	/// </summary>
+	[Test]
+	public async ValueTask TelIsRefusedByTheDestinationGateAndWritesNothing()
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TelGateMover");
+		var room = await OpenRoom("TelGateStart");
+		var destination = await Dig("TelGateDest");
+
+		await God($"@teleport/silent {mover.DbRef}={room}");
+
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await As(mover.Handle, $"think <[tel(me,{destination})]>"));
+
+		await Assert.That(moverSaw).Contains("<>")
+			.Because("fun_tel is do_teleport's side effect and writes nothing to the buffer");
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room))
+			.Because("tport_dest_ok admits a stranger only to a JUMP_OK room (wiz.c:302)");
+
+		await God($"@set {destination}=JUMP_OK");
+		await As(mover.Handle, $"think [tel(me,{destination})]");
+
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(destination))
+			.Because("JUMP_OK is the only thing that changed, so it is what the gate was reading");
 	}
 }

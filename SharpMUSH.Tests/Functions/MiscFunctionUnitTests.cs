@@ -230,12 +230,23 @@ public class MiscFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsNotNull();
 	}
 
+	/// <summary>
+	/// <c>fun_tel</c> (<c>src/fundb.c:2309-2327</c>) is <c>do_teleport</c>'s side effect exposed as a
+	/// function and writes nothing to the buffer, so the answer is the empty string and the evidence it
+	/// did anything is where the victim ended up. Asserting <c>IsNotNull</c> on the answer caught
+	/// neither: it passed while the function answered <c>"1"</c> and moved nobody.
+	/// </summary>
 	[Test]
-	[Arguments("tel(%#,#0)", "")]
-	public async Task Tel(string str, string expected)
+	public async Task Tel()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		var result = await Parser.FunctionParse(MarkupText.Plain("tel(%#,#0)"));
+
+		await Assert.That(result!.Message!.ToPlainText()).IsEmpty();
+
+		var location = await Parser.FunctionParse(MarkupText.Plain("loc(%#)"));
+
+		// loc() answers with an objid, and #0's creation stamp is not what is under test here.
+		await Assert.That(location!.Message!.ToPlainText().Trim().Split(':')[0]).IsEqualTo("#0");
 	}
 
 	[Test]
