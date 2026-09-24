@@ -1982,6 +1982,26 @@ public class MovementParityTests
 	// --- Lane BB: one teleport for @TELEPORT and tel() (issues #1212, #1068, #1070, #1071, #1073) ---
 
 	/// <summary>
+	/// The two spellings of one operation. <c>fun_tel</c> (<c>src/fundb.c:2326</c>) is a call to
+	/// <c>do_teleport</c>, the routine the command calls, so every case below has to come out the same
+	/// whichever one asked for the move.
+	/// </summary>
+	public enum Via
+	{
+		/// <summary><c>@teleport &lt;victim&gt;=&lt;destination&gt;</c>.</summary>
+		Command,
+
+		/// <summary><c>tel(&lt;victim&gt;,&lt;destination&gt;)</c>.</summary>
+		Function
+	}
+
+	/// <inheritdoc cref="Via"/>
+	private async Task Teleport(long handle, Via via, string victim, string destination)
+		=> await As(handle, via == Via.Command
+			? $"@teleport {victim}={destination}"
+			: $"think [tel({victim},{destination})]");
+
+	/// <summary>
 	/// <c>@teleport</c> answers with the destination it resolved — what a <c>$</c>-command's body reads
 	/// back from it. The shared operation hands that destination out so the command does not resolve it
 	/// twice, which is the one thing about the command's own shape the refactor could have dropped.
@@ -2028,5 +2048,105 @@ public class MovementParityTests
 
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(destination))
 			.Because("JUMP_OK is the only thing that changed, so it is what the gate was reading");
+	}
+
+	/// <summary>
+	/// <c>tport_dest_ok</c> (<c>wiz.c:313</c>): past the control check, anything that is not a room is
+	/// hopeless — the return is before the TELEPORT lock at <c>wiz.c:320</c> is ever read, so no flag on
+	/// the thing can help. ENTER_OK is the flag that would, if anything did; JUMP_OK is ROOM-only in the
+	/// flag table, here as in PennMUSH, so it cannot even be set on one.
+	/// </summary>
+	[Test]
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask ADestinationThingYouDoNotControlRefusesTheVictim(Via via)
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DestThingMover");
+		var room = await OpenRoom("DestThingRoom");
+		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "DestThingBox");
+
+		await God($"@teleport/silent #{box.Number}={room}");
+		await God($"@set #{box.Number}=ENTER_OK");
+		await God($"@teleport/silent {mover.DbRef}={room}");
+
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await Teleport(mover.Handle, via, "me", $"#{box.Number}"));
+
+		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.PermissionDenied)).IsTrue();
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room))
+			.Because("ENTER_OK is what `enter` reads, and this is not `enter`");
+	}
+
+	/// <summary>
+	/// <c>tport_dest_ok</c> (<c>wiz.c:308</c>): controlling the destination returns true before the
+	/// TELEPORT lock is reached, so a room's own owner is not shut out of it by their own lock.
+	/// </summary>
+	[Test]
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask ControllingTheDestinationBypassesItsFailingTeleportLock(Via via)
+	{
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DestCtrlOwner");
+		var room = await OpenRoom("DestCtrlStart");
+		var stranger = await OpenRoom("DestCtrlStranger");
+		var own = await OwnedRoom("DestCtrlOwn", owner.DbRef);
+
+		await God($"@teleport/silent {owner.DbRef}={room}");
+		await God($"@lock/tport {stranger}=#FALSE");
+		await God($"@lock/tport {own}=#FALSE");
+
+		// The control: the same lock on a JUMP_OK room they do not control is what refuses.
+		await Teleport(owner.Handle, via, "me", stranger);
+		await Assert.That(await LocationOf(owner.DbRef.ToString())).IsEqualTo(BareDbref(room))
+			.Because("a TELEPORT lock that refuses the victim refuses the arrival (wiz.c:320)");
+
+		await Teleport(owner.Handle, via, "me", own);
+
+		await Assert.That(await LocationOf(owner.DbRef.ToString())).IsEqualTo(BareDbref(own))
+			.Because("control is decided at wiz.c:308, before the lock at wiz.c:320 is read");
+	}
+
+	/// <summary>
+	/// <c>wiz.c:590</c>: a refused <c>@teleport</c> is answered with
+	/// <c>fail_lock(player, dest, Enter_Lock, "Permission denied.", loc(player))</c> — the destination's
+	/// ENTER failure triad, run once, shown in the room the teleporter is standing in. It is not a bare
+	/// notification.
+	/// </summary>
+	[Test]
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask ARefusedTeleportRunsTheDestinationsEnterFailureTriadOnce(Via via)
+	{
+		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TelEfailMover");
+		var watcher = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TelEfailWatch");
+		var room = await OpenRoom("TelEfailRoom");
+		var destination = await Dig("TelEfailDest");
+
+		await God($"@teleport/silent {mover.DbRef}={room}");
+		await God($"@teleport/silent {watcher.DbRef}={room}");
+		await God($"&EFAIL {destination}=The door is [switch(1,1,barred)].");
+		await God($"&OEFAIL {destination}=rattles the door.");
+		await God($"&AEFAIL {destination}=&REFUSED me=yes");
+
+		var watcherBefore = WebAppFactoryArg.Notifications.CountFor(watcher.DbRef);
+
+		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
+			await Teleport(mover.Handle, via, "me", destination));
+
+		await Assert.That(moverSaw.Count(m => m == "The door is barred.")).IsEqualTo(1)
+			.Because("fail_lock evaluates the failure attribute and runs the triad once");
+		await Assert.That(WebAppFactoryArg.Notifications.For(watcher.DbRef).Skip(watcherBefore)
+			.Count(m => m.Contains("rattles the door."))).IsEqualTo(1)
+			.Because("the o-message is shown where the teleporter stands, not in the destination");
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
+
+		await Scheduler.DrainImmediateQueueForTests();
+		var refused = await GodParser.FunctionParse(MarkupText.Plain($"[get({destination}/REFUSED)]"));
+		await Assert.That(refused!.Message!.ToPlainText().Trim()).IsEqualTo("yes")
+			.Because("fail_lock queues the action attribute rather than running it inline");
 	}
 }
