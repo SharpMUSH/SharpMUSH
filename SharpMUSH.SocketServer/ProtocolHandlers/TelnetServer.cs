@@ -516,6 +516,8 @@ public class TelnetServer : ConnectionHandler
 			}
 			catch (Exception ex)
 			{
+				// Broad on purpose: nothing awaits this task, so whatever the plugin or a closing pipe
+				// throws would otherwise go unobserved, and none of it should reach the connection.
 				_logger.LogDebug(ex, "Asking handle {Handle} what MXP it renders failed", handle);
 			}
 		}, cancellationToken);
@@ -544,7 +546,15 @@ public class TelnetServer : ConnectionHandler
 			{
 				// True only when the format actually changed; a client that negotiates the same format
 				// twice is not a failure, so a no-op counts as success here.
-				_connectionService.UpdateCapabilities(handle, current => current with { Format = current.Format.Negotiate(format) });
+				// An MXP connection starts out rendering none of the elements it is about to be asked about,
+				// in the same update that makes it MXP: output that races the question — the welcome, a
+				// login — must not carry a tag the client may be unable to read. An answer that already
+				// landed is kept.
+				_connectionService.UpdateCapabilities(handle, current => current with
+				{
+					Format = current.Format.Negotiate(format),
+					MxpSupported = format == OutputFormat.Mxp ? current.MxpSupported ?? string.Empty : current.MxpSupported
+				});
 				return true;
 			}
 

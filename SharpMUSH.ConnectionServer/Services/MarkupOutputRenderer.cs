@@ -65,9 +65,9 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	/// answer about leaves the text that would have gone in it where the player can read it.
 	/// </summary>
 	/// <param name="supported">
-	/// The elements the client said it renders, space separated. Null when it was never asked or never
-	/// answered — an older connection, or one negotiated before this server asked — in which case every
-	/// element is written, which is what a client that was never asked is owed.
+	/// The elements the client said it renders, space separated. Empty while the question is outstanding
+	/// or when the client never answered. Null when it was never asked — a connection negotiated before
+	/// this server asked — in which case every element is written, which is what such a client is owed.
 	/// </param>
 	private static MarkupRegistry MxpWireFor(string? supported)
 	{
