@@ -221,10 +221,12 @@ def project_graph(root: Path, files: list[str]) -> tuple[dict[str, str], dict[st
     refs: dict[str, set[str]] = {}
     linked: dict[str, list[str]] = {}
     for proj in csprojs:
-        text = (root / proj).read_text(encoding="utf-8", errors="replace")
         folder = str(Path(proj).parent)
         refs[proj] = set()
         linked[proj] = []
+        if not (root / proj).is_file():
+            continue  # deleted in the working tree: still "touched", so its dependents are tested
+        text = (root / proj).read_text(encoding="utf-8", errors="replace")
         for kind, include in re.findall(r'<(\w+)\s+(?:Include|Update|Project)="([^"]+)"', text):
             include = include.replace("$(MSBuildThisFileDirectory)", "").replace("$(MSBuildProjectDirectory)", "")
             target = os.path.normpath(os.path.join(folder, include.replace("\\", "/")))
@@ -253,7 +255,7 @@ def is_test_project(proj: str) -> bool:
 
 def affected_test_projects(root: Path, files: list[str]) -> list[str]:
     by_dir, refs, linked = project_graph(root, files)
-    tests = [p for p in refs if is_test_project(p)]
+    tests = [p for p in refs if is_test_project(p) and (root / p).is_file()]
 
     if any(Path(f).name in GLOBAL_INPUTS for f in files if "/" not in f):
         return sorted(tests)
@@ -302,6 +304,8 @@ def kill_group(proc: subprocess.Popen) -> None:
 
 
 def check_format(root: Path, cs_files: list[str], whole_repo: bool, log: Path) -> str | None:
+    """A blocking message if formatting differs; None if clean. Raises FormatUnavailable if the
+    tool itself failed, which is neither a pass nor a failure of the change."""
     cmd = ["dotnet", "format", "whitespace", "--folder", ".", *FORMAT_EXCLUDES]
     if not whole_repo:
         cmd += ["--include", *cs_files]
@@ -315,8 +319,12 @@ def check_format(root: Path, cs_files: list[str], whole_repo: bool, log: Path) -
             f"{tail}"
         )
     if code != 0:
-        print(f"stop hook: dotnet format could not run (exit {code}); see {log}", file=sys.stderr)
+        raise FormatUnavailable(f"`dotnet format` could not run (exit {code}); see {log}")
     return None
+
+
+class FormatUnavailable(Exception):
+    pass
 
 
 def check_tests(root: Path, projects: list[str], client: bool, state_dir: Path) -> str | None:
@@ -456,8 +464,15 @@ def main() -> None:
         # trap the agent. Say so loudly and let CI be the gate.
         allow("Stop hook could not verify: no usable .NET SDK for global.json (`dotnet --version` failed).")
 
+    unverified = []
     if "format" in checks:
-        failure = check_format(root, cs_files, format_whole_repo, state_dir / "format.log")
+        try:
+            failure = check_format(root, cs_files, format_whole_repo, state_dir / "format.log")
+        except FormatUnavailable as error:
+            # A broken tool must not block (CI's format job is authoritative), but it must not
+            # be remembered as a pass either.
+            failure = None
+            unverified.append(str(error))
         if failure:
             block(failure, state_dir, session)
 
@@ -466,8 +481,11 @@ def main() -> None:
         if failure:
             block(failure, state_dir, session)
 
-    stamp.write_text(current)
     note = f" Not run (no Docker; CI runs them): {', '.join(Path(p).stem for p in skipped)}." if skipped else ""
+    if unverified:
+        passed = [c for c in checks if c != "format"]
+        allow(f"Stop hook could not verify formatting: {'; '.join(unverified)}. Passed: {', '.join(Path(c).stem for c in passed) or 'nothing else'}.{note}")
+    stamp.write_text(current)
     allow(f"Stop hook verified: {', '.join(Path(c).stem for c in checks)}.{note}")
 
 
