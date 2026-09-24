@@ -56,9 +56,17 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
 	}
 
+	public Task<ConversionResult> ConvertDatabaseAsync(
+		string databaseFilePath,
+		string? mailDatabaseFilePath,
+		IProgress<ConversionProgress> progress,
+		CancellationToken cancellationToken = default)
+		=> ConvertDatabaseAsync(databaseFilePath, mailDatabaseFilePath, null, progress, cancellationToken);
+
 	public async Task<ConversionResult> ConvertDatabaseAsync(
 		string databaseFilePath,
 		string? mailDatabaseFilePath,
+		string? chatDatabaseFilePath,
 		IProgress<ConversionProgress> progress,
 		CancellationToken cancellationToken = default)
 	{
@@ -76,6 +84,20 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				// The maildb is optional and holds only mail: a bad one costs the aliases, not the world.
 				_logger.LogWarning(ex, "Could not read the PennMUSH mail database: {FilePath}", mailDatabaseFilePath);
 				pennDatabase.Mail = new PennMUSHMailDatabase { ReadError = ex.Message };
+			}
+		}
+
+		if (!string.IsNullOrEmpty(chatDatabaseFilePath))
+		{
+			try
+			{
+				pennDatabase.Chat = await _parser.ParseChatFileAsync(chatDatabaseFilePath, cancellationToken);
+			}
+			catch (FormatException ex)
+			{
+				// Like the maildb: a bad chatdb costs the channels, not the world.
+				_logger.LogWarning(ex, "Could not read the PennMUSH chat database: {FilePath}", chatDatabaseFilePath);
+				pennDatabase.Chat = new PennMUSHChatDatabase { ReadError = ex.Message };
 			}
 		}
 
@@ -109,6 +131,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var attributesConverted = 0;
 		var locksConverted = 0;
 		var mailAliasesConverted = 0;
+		var channelsConverted = 0;
+		var channelMembersConverted = 0;
 
 		_logger.LogInformation("Converting {Count} PennMUSH objects to SharpMUSH format", totalObjects);
 
@@ -167,6 +191,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportUnimportedMail(pennDatabase.Mail, context);
 			ReportProgress("Mail aliases imported", 0.95);
 
+			(channelsConverted, channelMembersConverted) = await ImportChannelsAsync(pennDatabase, context, cancellationToken);
+			ReportProgress("Channels imported", 0.97);
+
 			await EnableParenGroupsAsync(context, cancellationToken);
 			// Last: the admin page takes 100% as the end of the import and stops polling.
 			ReportProgress("Complete", 1.0);
@@ -182,6 +209,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				AttributesConverted = attributesConverted,
 				LocksConverted = locksConverted,
 				MailAliasesConverted = mailAliasesConverted,
+				ChannelsConverted = channelsConverted,
+				ChannelMembersConverted = channelMembersConverted,
 				Errors = errors,
 				Warnings = warnings,
 				Duration = stopwatch.Elapsed
@@ -1301,6 +1330,223 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				context.Warnings.Add("The maildb's message count could not be read; its messages were not imported (#1110)");
 				break;
 		}
+	}
+
+	/// <summary>
+	/// The <c>CHANNEL_*</c> bits (<c>hdrs/extchat.h</c>) and the privilege each is in SharpMUSH, named as
+	/// <c>ChannelHelper</c>'s table names them, since the permission checks compare those names.
+	/// </summary>
+	private static readonly (int Bit, string Name)[] ChannelPrivilegeBits =
+	[
+		(0x1, "Player"),
+		(0x2, "Object"),
+		(0x4, "Disabled"),
+		(0x8, "Quiet"),
+		(0x10, "Admin"),
+		(0x20, "Wizard"),
+		(0x40, "Hide_Ok"),
+		(0x80, "Open"),
+		(0x100, "NoTitles"),
+		(0x200, "NoNames"),
+		(0x400, "NoCemit"),
+		(0x800, "Interact")
+	];
+
+	/// <summary>The <c>CU_*</c> bits (<c>hdrs/extchat.h</c>).</summary>
+	private const int ChannelUserQuiet = 0x1, ChannelUserHide = 0x2, ChannelUserCombine = 0x8;
+
+	/// <summary>What <c>unparse_boolexp</c> writes for a channel lock that is not set.</summary>
+	private const string UnlockedKey = "*UNLOCKED*";
+
+	/// <summary>
+	/// The chatdb's channels, read as <c>load_labeled_channel</c> reads them: the creator becomes the
+	/// owner (the probate judge when it is no imported player), the <c>CHANNEL_*</c> bits become
+	/// privileges, the five locks keep their keys, and the members keep their dbrefs, flags and titles.
+	/// <c>load_labeled_chanusers</c> drops a member that is not a player on a player channel or a thing
+	/// on an object channel, and clears <c>CU_GAG</c> on any load that is not a reboot; so does this.
+	/// Everything that did not come across as PennMUSH had it is a warning.
+	/// </summary>
+	private async Task<(int Channels, int Members)> ImportChannelsAsync(PennMUSHDatabase pennDatabase,
+		PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		var chat = pennDatabase.Chat;
+		if (chat.ReadError is not null)
+		{
+			context.Warnings.Add($"The chatdb could not be read, so no channels were imported: {chat.ReadError}");
+			return (0, 0);
+		}
+
+		if (chat.Channels.Count > 0 && chat.SavedTime is { } chatSaved
+			&& pennDatabase.Configuration.TryGetValue("savedtime", out var dumpSaved) && chatSaved != dumpSaved)
+		{
+			// load_chatdb's own warning: the two files are not one save of the game.
+			context.Warnings.Add($"The chatdb was saved at {chatSaved} and the database at {dumpSaved}; " +
+				"channel members may name objects as they were at a different time");
+		}
+
+		var channels = 0;
+		var members = 0;
+		var costs = new List<string>();
+		foreach (var pennChannel in chat.Channels)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			var label = $"Channel {pennChannel.Name}";
+
+			SharpPlayer owner;
+			if (await MappedAsync(pennChannel.Creator, context, cancellationToken) is AnySharpObject and SharpPlayer creator)
+			{
+				owner = creator;
+			}
+			else if (await _mediator.Send(new GetObjectNodeQuery(new DBRef(await ProbateJudgeAsync(cancellationToken))),
+					cancellationToken) is AnySharpObject and SharpPlayer judge)
+			{
+				owner = judge;
+				context.Warnings.Add(
+					$"{label}: owner #{pennChannel.Creator} is not an imported player; given to #{judge.Object.DBRef.Number}");
+			}
+			else
+			{
+				context.Warnings.Add($"{label} not imported: owner #{pennChannel.Creator} is not an imported player, " +
+					"and neither the probate judge nor God is one to give it to");
+				continue;
+			}
+
+			var privileges = ChannelPrivilegeBits.Where(p => (pennChannel.Flags & p.Bit) != 0).Select(p => p.Name).ToArray();
+			var unknownBits = pennChannel.Flags & ~ChannelPrivilegeBits.Sum(p => p.Bit);
+			if (unknownBits != 0)
+			{
+				context.Warnings.Add($"{label}: unknown channel flag bits 0x{unknownBits:x} were dropped");
+			}
+
+			var name = MarkupString.Ansi.AnsiEscapeParser.Parse(pennChannel.Name);
+			var creation = await _mediator.Send(new CreateChannelCommand(name, privileges, owner), cancellationToken);
+			if (!creation.IsSuccess)
+			{
+				context.Warnings.Add(creation.Value is Error<string> error
+					? $"{label} not imported: {error.Value}"
+					: $"{label} not imported: a channel of that name already exists");
+				continue;
+			}
+
+			var channel = await _mediator.Send(new GetChannelQuery(name.ToPlainText()), cancellationToken);
+			if (channel is null)
+			{
+				context.Warnings.Add($"{label} not imported: it could not be read back after it was created");
+				continue;
+			}
+
+			channels++;
+			if (pennChannel.Cost != 0)
+			{
+				costs.Add($"{pennChannel.Name} ({pennChannel.Cost})");
+			}
+
+			foreach (var lockName in pennChannel.Locks.Keys.Except(["join", "speak", "modify", "see", "hide"]))
+			{
+				context.Warnings.Add($"{label}: unknown lock '{lockName}' was dropped");
+			}
+
+			await _mediator.Send(new UpdateChannelCommand(channel,
+				Name: null,
+				Description: MarkupString.Ansi.AnsiEscapeParser.Parse(pennChannel.Description),
+				Privs: null,
+				JoinLock: ChannelLock(pennChannel, "join"),
+				SpeakLock: ChannelLock(pennChannel, "speak"),
+				SeeLock: ChannelLock(pennChannel, "see"),
+				HideLock: ChannelLock(pennChannel, "hide"),
+				ModLock: ChannelLock(pennChannel, "modify"),
+				Mogrifier: await ChannelMogrifierAsync(pennChannel, label, context, cancellationToken),
+				Buffer: pennChannel.Buffer), cancellationToken);
+
+			members += await ImportChannelMembersAsync(pennChannel, channel, owner, label, context, cancellationToken);
+		}
+
+		if (costs.Count > 0)
+		{
+			// SharpMUSH neither charges for a channel nor refunds one on @channel/delete, so the price paid has nowhere to go.
+			context.Warnings.Add($"Channel creation costs were not kept, as SharpMUSH does not refund them: {string.Join(", ", costs)}");
+		}
+
+		_logger.LogInformation("Imported {Channels} channel(s) with {Members} member(s)", channels, members);
+		return (channels, members);
+	}
+
+	private static string ChannelLock(PennMUSHChannel channel, string lockName)
+		=> channel.Locks.TryGetValue(lockName, out var key) && key != UnlockedKey ? key : string.Empty;
+
+	/// <summary>The mogrifier as <c>@channel/mogrifier</c> stores it, or none when it was not imported.</summary>
+	private async Task<string> ChannelMogrifierAsync(PennMUSHChannel channel, string label,
+		PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		if (channel.Mogrifier < 0)
+		{
+			return string.Empty;
+		}
+
+		if (await MappedAsync(channel.Mogrifier, context, cancellationToken) is AnySharpObject mogrifier)
+		{
+			return mogrifier.Object().DBRef.ToString();
+		}
+
+		context.Warnings.Add($"{label}: mogrifier #{channel.Mogrifier} is not an imported object and was dropped");
+		return string.Empty;
+	}
+
+	private async Task<int> ImportChannelMembersAsync(PennMUSHChannel pennChannel, SharpChannel channel,
+		SharpPlayer owner, string label, PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		var players = (pennChannel.Flags & 0x1) != 0;
+		var things = (pennChannel.Flags & 0x2) != 0;
+		var joined = new HashSet<int>();
+		var dropped = new List<int>();
+		foreach (var user in pennChannel.Users)
+		{
+			var mapped = await MappedAsync(user.DBRef, context, cancellationToken);
+			var member = mapped switch
+			{
+				AnySharpObject { IsPlayer: true } player when players => player,
+				AnySharpObject { IsThing: true } thing when things => thing,
+				_ => null
+			};
+
+			if (member is null)
+			{
+				dropped.Add(user.DBRef);
+				continue;
+			}
+
+			if (!joined.Add(member.Object().DBRef.Number))
+			{
+				continue;
+			}
+
+			// CreateChannelCommand has already made the owner a member.
+			if (member.Object().DBRef.Number != owner.Object.DBRef.Number)
+			{
+				await _mediator.Send(new AddUserToChannelCommand(channel, member), cancellationToken);
+			}
+
+			await _mediator.Send(new UpdateChannelUserStatusCommand(channel, member, new SharpChannelStatus(
+				Combine: (user.Flags & ChannelUserCombine) != 0,
+				// Cleared as load_labeled_chanusers clears it on any load that is not a reboot.
+				Gagged: false,
+				Hide: (user.Flags & ChannelUserHide) != 0,
+				Mute: (user.Flags & ChannelUserQuiet) != 0,
+				Title: MarkupString.Ansi.AnsiEscapeParser.Parse(user.Title))), cancellationToken);
+		}
+
+		if (!joined.Contains(owner.Object.DBRef.Number))
+		{
+			await _mediator.Send(new RemoveUserFromChannelCommand(channel, owner), cancellationToken);
+		}
+
+		if (dropped.Count > 0)
+		{
+			context.Warnings.Add($"{label}: dropped member(s) that are not an imported " +
+				$"{(things ? players ? "player or thing" : "thing" : "player")} ({string.Join(" ", dropped.Select(d => $"#{d}"))})");
+		}
+
+		return joined.Count;
 	}
 
 	/// <summary><c>options.probate_judge</c> when it is a player, otherwise God.</summary>

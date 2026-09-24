@@ -19,17 +19,18 @@ public class DatabaseConversionController(
 	/// <summary>The most either file may be; the admin page allows the same.</summary>
 	private const long MaxUploadFileSize = 100 * 1024 * 1024;
 
-	/// <summary>Room for the multipart boundaries and headers around the two files.</summary>
+	/// <summary>Room for the multipart boundaries and headers around the files.</summary>
 	private const long MultipartOverhead = 1024 * 1024;
 
 	/// <summary>
-	/// Upload and convert a PennMUSH database file, with its maildb (<c>mailFile</c>) optionally alongside
+	/// Upload and convert a PennMUSH database file, with its maildb (<c>mailFile</c>) and chatdb
+	/// (<c>chatFile</c>) optionally alongside
 	/// </summary>
 	[HttpPost("upload")]
-	[RequestSizeLimit(2 * MaxUploadFileSize + MultipartOverhead)] // Both files at their limit, and the form around them
+	[RequestSizeLimit(3 * MaxUploadFileSize + MultipartOverhead)] // All three files at their limit, and the form around them
 	[RequestFormLimits(MultipartBodyLengthLimit = MaxUploadFileSize)] // Each file
 	public async Task<ActionResult<string>> UploadDatabase([FromForm] IFormFile file, [FromForm] IFormFile? mailFile,
-		CancellationToken cancellationToken)
+		[FromForm] IFormFile? chatFile, CancellationToken cancellationToken)
 	{
 		if (file == null || file.Length == 0)
 		{
@@ -38,6 +39,7 @@ public class DatabaseConversionController(
 
 		var tempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
 		string? mailTempPath = null;
+		string? chatTempPath = null;
 		try
 		{
 
@@ -57,16 +59,26 @@ public class DatabaseConversionController(
 					mailFile.Length);
 			}
 
+			if (chatFile is { Length: > 0 })
+			{
+				chatTempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.chatdb");
+				await using var chatStream = System.IO.File.Create(chatTempPath);
+				await chatFile.CopyToAsync(chatStream, cancellationToken);
+				logger.LogInformation("Uploaded PennMUSH chat database file: {FileName} ({Size} bytes)", chatFile.FileName,
+					chatFile.Length);
+			}
+
 			var sessionId = Guid.NewGuid().ToString();
 
-			DatabaseConversionSession.StartConversion(sessionId, converter, tempPath, mailTempPath, logger, cancellationToken);
+			DatabaseConversionSession.StartConversion(sessionId, converter, tempPath, mailTempPath, chatTempPath, logger,
+				cancellationToken);
 
 			return Ok(new { sessionId, message = "Conversion started" });
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error uploading PennMUSH database file");
-			DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath], logger);
+			DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath, chatTempPath], logger);
 			return StatusCode(500, $"Error uploading file: {ex.Message}");
 		}
 	}
@@ -130,7 +142,7 @@ public static class DatabaseConversionSession
 		public ConversionProgress? CurrentProgress { get; set; }
 		public ConversionResult? Result { get; set; }
 		public CancellationTokenSource CancellationSource { get; set; } = new();
-		/// <summary>The uploaded database and, when one came with it, the maildb.</summary>
+		/// <summary>The uploaded database and, when they came with it, the maildb and chatdb.</summary>
 		public string?[] TempFilePaths { get; init; } = [];
 	}
 
@@ -158,12 +170,13 @@ public static class DatabaseConversionSession
 		IPennMUSHDatabaseConverter converter,
 		string tempFilePath,
 		string? mailTempFilePath,
+		string? chatTempFilePath,
 		ILogger logger,
 		CancellationToken cancellationToken)
 	{
 		var sessionData = new SessionData
 		{
-			TempFilePaths = [tempFilePath, mailTempFilePath]
+			TempFilePaths = [tempFilePath, mailTempFilePath, chatTempFilePath]
 		};
 
 		var progress = new Progress<ConversionProgress>(p =>
@@ -178,7 +191,8 @@ public static class DatabaseConversionSession
 			cancellationToken,
 			sessionData.CancellationSource.Token);
 
-		sessionData.ConversionTask = converter.ConvertDatabaseAsync(tempFilePath, mailTempFilePath, progress, linkedCts.Token)
+		sessionData.ConversionTask = converter.ConvertDatabaseAsync(tempFilePath, mailTempFilePath, chatTempFilePath, progress,
+				linkedCts.Token)
 			.ContinueWith(task =>
 			{
 				// Every way out — success, fault, cancellation — is done with the uploaded files.
