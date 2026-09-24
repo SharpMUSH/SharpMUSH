@@ -2189,7 +2189,18 @@ public class SharpMUSHParserVisitor(
 					if (!await SharpMUSH.Library.Services.CommandRestrictions.PermitsAsync(libraryCommandDefinition.Attribute, lockedExecutor)
 						|| (!string.IsNullOrEmpty(commandLockStr) && !await LockService.Evaluate(commandLockStr, lockedExecutor, lockedExecutor)))
 					{
-						await NotifyService.NotifyLocalized(lockedExecutor, nameof(ErrorMessages.Notifications.PermissionDenied));
+						// command_check_with sends the command's restrict_message in place of "Permission
+						// denied." when it has one (command.c:2337-2341).
+						var restrictMessage = libraryCommandDefinition.Attribute.RestrictMessage;
+						if (string.IsNullOrEmpty(restrictMessage))
+						{
+							await NotifyService.NotifyLocalized(lockedExecutor, nameof(ErrorMessages.Notifications.PermissionDenied));
+						}
+						else
+						{
+							await NotifyService.Notify(lockedExecutor, restrictMessage, lockedExecutor);
+						}
+
 						return PreserveHookErrors(new CallState(ErrorMessages.Returns.PermissionDenied));
 					}
 				}

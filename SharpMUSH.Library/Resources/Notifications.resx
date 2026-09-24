@@ -1528,9 +1528,6 @@
   <data name="CommandRestrictFailed" xml:space="preserve">
     <value>Restrict attempt failed.</value>
   </data>
-  <data name="CommandRestrictMessageUnsupported" xml:space="preserve">
-    <value>A custom failure message is not supported; the restriction was set without it.</value>
-  </data>
   <data name="CommandAlwaysEnabled" xml:space="preserve">
     <value>@command is ALWAYS enabled.</value>
   </data>
@@ -1566,6 +1563,9 @@
   </data>
   <data name="CommandInfoLockFormat" xml:space="preserve">
     <value>  Lock: {0}</value>
+  </data>
+  <data name="CommandInfoFailureMsgFormat" xml:space="preserve">
+    <value>  Failure Msg: {0}</value>
   </data>
 
   <!-- @drain command -->

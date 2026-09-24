@@ -168,6 +168,11 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoLockFormat), executor, attr.CommandLock);
 		}
 
+		if (!string.IsNullOrEmpty(attr.RestrictMessage))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoFailureMsgFormat), executor, attr.RestrictMessage);
+		}
+
 		return CallState.Empty;
 	}
 
@@ -334,6 +339,7 @@ public partial class Commands
 			MinArgs = from.MinArgs,
 			MaxArgs = from.MaxArgs,
 			CommandLock = from.CommandLock,
+			RestrictMessage = from.RestrictMessage,
 			Behavior = from.Behavior,
 			Switches = from.Switches is null ? null : [.. from.Switches],
 			SingleArgumentSwitches = [.. from.SingleArgumentSwitches],
@@ -537,7 +543,7 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> RestrictCommandAsync(AnySharpObject executor, CommandDefinition definition, string restriction)
 	{
 		var quote = restriction.IndexOf('"');
-		var hasMessage = quote >= 0 && restriction[(quote + 1)..].Trim().Length > 0;
+		var message = quote >= 0 ? restriction[(quote + 1)..].Trim() : null;
 		var words = (quote >= 0 ? restriction[..quote] : restriction).Trim();
 		if (words.Length == 0)
 		{
@@ -569,9 +575,11 @@ public partial class Commands
 				return new CallState(ErrorMessages.Returns.InvalidArguments);
 		}
 
-		if (hasMessage)
+		// restrict_command frees the old message whenever the restriction carries a quote at all, and
+		// stores what follows only if anything does (command.c:1741-1750), so a bare `"` clears it.
+		if (message is not null)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandRestrictMessageUnsupported), executor);
+			attribute.RestrictMessage = message;
 		}
 
 		return new None();

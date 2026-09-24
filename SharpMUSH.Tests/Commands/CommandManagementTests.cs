@@ -325,6 +325,69 @@ public class CommandManagementTests
 		await Assert.That(await As(wizard, $"{clone} still mine")).Contains("still mine");
 	}
 
+	/// <summary>
+	/// <c>restrict_command</c> keeps everything after the first <c>"</c> as the command's
+	/// <c>restrict_message</c> (<c>src/command.c:1740-1750</c>), and <c>command_check_with</c> sends
+	/// it in place of "Permission denied." (<c>src/command.c:2337-2341</c>). <c>@command</c> shows it
+	/// as <c>Failure Msg:</c> (<c>src/command.c:2218</c>). A mortal drives the refusal: God passes
+	/// every lock, so a God-typed attempt would prove nothing.
+	/// </summary>
+	[Test]
+	public async ValueTask Restrict_WithAFailureMessage_SendsItInsteadOfPermissionDenied()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdRestrictMsg");
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+
+		var set = await As(wizard, $"@command/restrict {clone}=wizard \"The {clone} is not for you.");
+
+		await Assert.That(set).Contains($"  Failure Msg: The {clone} is not for you.");
+
+		var refused = await As(mortal, $"{clone} nope");
+		await Assert.That(refused).Contains($"The {clone} is not for you.");
+		await Assert.That(refused).DoesNotContain("Permission denied.");
+		await Assert.That(refused).DoesNotContain("nope");
+	}
+
+	/// <summary>
+	/// Without a message the refusal is still "Permission denied.", and restricting again with a bare
+	/// <c>"</c> clears a message that was set: <c>restrict_command</c> frees the old one whenever the
+	/// restriction carries a quote at all (<c>src/command.c:1741-1750</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask Restrict_WithAnEmptyMessage_ClearsItAndGoesBackToPermissionDenied()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdRestrictClr");
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+		await As(wizard, $"@command/restrict {clone}=wizard \"Not yours.");
+		await Assert.That(await As(mortal, $"{clone} nope")).Contains("Not yours.").Because("precondition");
+
+		var cleared = await As(wizard, $"@command/restrict {clone}=wizard \"");
+
+		await Assert.That(cleared).DoesNotContain("  Failure Msg: Not yours.");
+		await Assert.That(await As(mortal, $"{clone} nope")).Contains("Permission denied.");
+	}
+
+	/// <summary><c>clone_command</c> copies the failure message with the lock (<c>src/command.c:2032-2034</c>).</summary>
+	[Test]
+	public async ValueTask Clone_CopiesTheFailureMessage()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdRestrictCln");
+		var original = CommandName();
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={original}");
+		await As(wizard, $"@command/restrict {original}=wizard \"Copied refusal.");
+
+		await As(wizard, $"@command/clone {original}={clone}");
+
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains("  Failure Msg: Copied refusal.");
+		await Assert.That(await As(mortal, $"{clone} nope")).Contains("Copied refusal.");
+	}
+
 	/// <summary>A negated type still subtracts from every type: that is what <c>noplayer</c> is for.</summary>
 	[Test]
 	public async ValueTask Restrict_WithANegatedType_KeepsTheOthers()

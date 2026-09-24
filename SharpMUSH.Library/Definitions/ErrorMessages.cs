@@ -1476,7 +1476,6 @@ public static class ErrorMessages
 		public const string CommandRemovedWithAliasesFormat = "Removed {0} and aliases from command table.";
 		public const string CommandHowToRestrict = "How do you want to restrict the command?";
 		public const string CommandRestrictFailed = "Restrict attempt failed.";
-		public const string CommandRestrictMessageUnsupported = "A custom failure message is not supported; the restriction was set without it.";
 		public const string CommandAlwaysEnabled = "@command is ALWAYS enabled.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandCalledByTheGameFormat = "{0} is run by the game itself and cannot be disabled.";
@@ -1498,6 +1497,7 @@ public static class ErrorMessages
 		public const string CommandInfoBehaviorFormat = "  Behavior: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandInfoLockFormat = "  Lock: {0}";
+		public const string CommandInfoFailureMsgFormat = "  Failure Msg: {0}";
 
 		public const string DrainInvalidNumber = "Invalid number specified.";
 		public const string DrainCannotSpecifyBothAnyAndAttribute = "You may not specify both /any and a specific attribute.";
