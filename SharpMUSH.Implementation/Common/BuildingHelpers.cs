@@ -63,24 +63,20 @@ public static class BuildingHelpers
 		var into = executor.IsContainer ? executor.AsContainer : await executor.Where();
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 
-		if (Given(requestedDbref) is not { } requested)
-		{
-			return await WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
+		// do_create.c:561-565 — make_first_free_wrapper, which asks IsGarbage as well as the power,
+		// runs before can_pay_fees. A requested slot that is already taken is therefore reported as
+		// such, and not as an exhausted quota, whichever of the two would also have refused.
+		return await WithRequestedDbrefsAsync(mediator, notifyService, executor, [requestedDbref],
+			async at => at[0] is { } wanted
+				? await ThingAtAsync(parser, mediator, database, configuration, notifyService, eventService,
+					executor, name, into, owner, home, wanted)
+				: await WithBuildingQuotaAsync(mediator, configuration, notifyService, executor,
 					async () => await mediator.Send(new CreateThingCommand(name.ToPlainText(), into, owner, home))) switch
-			{
-				DBRef thing => await CreatedAsync(parser, mediator, database, notifyService, eventService, executor,
-					name, thing),
-				Error<string> refused => refused
-			};
-		}
-
-		// create.c:561 then :565 — the dbref is settled before can_pay_fees is asked for a slot.
-		return await RequestedDbrefAsync(notifyService, executor, requested) switch
-		{
-			DBRef wanted => await ThingAtAsync(parser, mediator, database, configuration, notifyService, eventService,
-				executor, name, into, owner, home, wanted),
-			Error<string> refused => refused
-		};
+				{
+					DBRef thing => await CreatedAsync(parser, mediator, database, notifyService, eventService, executor,
+						name, thing),
+					Error<string> refused => refused
+				});
 	}
 
 	/// <summary>The rest of <see cref="CreateThingAsync"/> once a requested dbref has passed its gate.</summary>
@@ -662,21 +658,6 @@ public static class BuildingHelpers
 			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		// cmd_clone passes args_right[2] as newdbref (cmds.c:382-386), and fun_clone args[2]
-		// (fundb.c:2192-2212); both reach make_first_free_wrapper before do_clone builds anything.
-		DBRef? cloneAt = null;
-		if (Given(requestedDbref) is { } requested)
-		{
-			switch (await RequestedDbrefAsync(notifyService, executor, requested))
-			{
-				case DBRef at:
-					cloneAt = at;
-					break;
-				case Error<string> refused:
-					return refused;
-			}
-		}
-
 		var name = newName?.ToPlainText() is { } given && !string.IsNullOrWhiteSpace(given)
 			? given
 			: target.Object().Name;
@@ -698,16 +679,20 @@ public static class BuildingHelpers
 
 		// create.c:725, :741 — each type's branch asks can_pay_fees before it clones anything, and the
 		// exit branch reaches do_real_open, which asks for itself (:130).
-		return await CreateCloneAsync(mediator, database, configuration, notifyService, permissionService, lockService,
-			executor, target, name, into, owner, modified, cloneAt) switch
-		{
-			DBRef cloneDbRef => await ClonedAsync(parser, mediator, notifyService, attributeService,
-				manipulateSharpObjectService, didItService, eventService, logger, executor, target, owner, preserve,
-				cloneDbRef),
-			// A guest refusal, an exhausted quota and a dbref the provider would not give up are three
-			// different answers; the caller is handed the one it was actually given.
-			Error<string> refused => refused
-		};
+		// cmd_clone passes args_right[2] as newdbref (cmds.c:382-386), and fun_clone args[2]
+		// (fundb.c:2192-2212); both reach make_first_free_wrapper — power, syntax and availability —
+		// before do_clone builds anything, and hold the slot for as long as the build takes.
+		return await WithRequestedDbrefsAsync(mediator, notifyService, executor, [requestedDbref],
+			async at => await CreateCloneAsync(mediator, database, configuration, notifyService, permissionService,
+				lockService, executor, target, name, into, owner, modified, at[0]) switch
+			{
+				DBRef cloneDbRef => await ClonedAsync(parser, mediator, notifyService, attributeService,
+					manipulateSharpObjectService, didItService, eventService, logger, executor, target, owner, preserve,
+					cloneDbRef),
+				// A guest refusal, an exhausted quota and a dbref the provider would not give up are
+				// three different answers; the caller is handed the one it was actually given.
+				Error<string> refused => refused
+			});
 	}
 
 	/// <summary>Everything <c>do_clone</c> carries across once the clone itself exists.</summary>
@@ -747,10 +732,18 @@ public static class BuildingHelpers
 		await CopyPrivilegesAsync(mediator, manipulateSharpObjectService, notifyService, executor, target, clonedObj,
 			preserve);
 
-		// create.c:636-637 — the clone inherits the original's zone and parent, and not the cloner's.
-		if (await target.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone)
+		// create.c:636 and :788 — `Zone(clone) = Zone(thing)`, an unconditional assignment, so an
+		// original with no zone leaves the clone with none. That matters for an exit, which reaches
+		// here through do_real_open and so arrives carrying the cloner's zone (create.c:131); copying
+		// only a zone that exists would leave the cloner's behind.
+		switch (await target.Object().Zone.WithCancellation(CancellationToken.None))
 		{
-			await mediator.Send(new SetObjectZoneCommand(clonedObj, zone));
+			case AnySharpObject zone:
+				await mediator.Send(new SetObjectZoneCommand(clonedObj, zone));
+				break;
+			default:
+				await mediator.Send(new UnsetObjectZoneCommand(clonedObj));
+				break;
 		}
 
 		if (await target.Object().Parent.WithCancellation(CancellationToken.None) is AnySharpObject parent)
@@ -1093,6 +1086,14 @@ public static class BuildingHelpers
 		MString?[] requested,
 		Func<DBRef?[], ValueTask<Result<DBRef>>> build)
 	{
+		// A build that names nothing cannot take a hole, so it neither needs the gate nor should
+		// queue behind one: serialising every @create in the game on a wizard's rare @dig would be a
+		// bad trade for a guarantee it does not use.
+		if (Array.TrueForAll(requested, argument => Given(argument) is null))
+		{
+			return await build(new DBRef?[requested.Length]);
+		}
+
 		await RequestedDbrefGate.WaitAsync();
 		try
 		{

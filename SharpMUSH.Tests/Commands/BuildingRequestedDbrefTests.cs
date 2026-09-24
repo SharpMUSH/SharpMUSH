@@ -434,6 +434,34 @@ public class BuildingRequestedDbrefTests
 			.Because("the dig that was admitted finished; the one that was refused left nothing behind");
 	}
 
+	/// <summary>
+	/// <c>do_create</c> calls <c>make_first_free_wrapper</c> — which asks <c>IsGarbage</c> as well as
+	/// the power — before <c>can_pay_fees</c> (<c>create.c:561-565</c>). A builder who is both out of
+	/// quota and asking for a taken slot is told which one they asked for, not which one they ran out
+	/// of. The single-object paths skipped the availability half entirely, so the quota answered first.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask AnOccupiedDbrefIsReportedAheadOfAnExhaustedQuota(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var occupant = DBRef.Parse(await Run(1, $"@create BrdOrderOccupant{uid}"));
+
+		// A wizard, so the Pick_DBRefs half passes, but with no quota left to spend.
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "BrdOrder");
+		await Run(1, $"@power {wizard.DbRef}=Pick_DBRefs");
+		var player = (await Mediator.Send(new GetObjectNodeQuery(wizard.DbRef))).Expect<SharpPlayer>();
+		await Run(1, $"@quota/set {wizard.DbRef}={await Mediator.Send(new GetOwnedObjectCountQuery(player))}");
+
+		var name = $"BrdOrder{uid}";
+		await Assert.That(await Build(wizard.Handle, throughTheFunction, name, $"#{occupant.Number}"))
+			.IsEqualTo(ErrorMessages.Returns.InvalidDbref)
+			.Because("create.c:561 settles the slot before :565 asks can_pay_fees");
+		await Assert.That((await Named(name)).Length).IsEqualTo(0);
+	}
+
 	/// <summary>Asking for nothing is still the ordinary path: the counter hands out the next dbref.</summary>
 	[Test]
 	[Arguments(true)]

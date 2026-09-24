@@ -502,6 +502,43 @@ public class CloneStateParityTests
 	}
 
 	/// <summary>
+	/// <c>Zone(clone) = Zone(thing)</c> (create.c:636, :788) is an unconditional assignment, so an
+	/// original with no zone leaves the clone with none. An exit clone is the case that bites:
+	/// it is built by <c>do_real_open</c>, which sets <c>Zone(new_exit) = Zone(player)</c>
+	/// (create.c:131), so copying only a zone that exists would leave the cloner's behind.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask ACloneOfAZonelessExitHasNoZoneEitherAsync(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CspZoneless");
+		var home = await Dig($"CspZonelessHome{uid}");
+		await AsGod($"@chown {home}={mortal.DbRef}");
+		await AsGod($"@teleport {mortal.DbRef}={home}");
+
+		// The cloner has a zone; the exit they are about to clone has none.
+		var clonerZone = await Create($"CspZonelessZone{uid}");
+		await AsGod($"@chzone {mortal.DbRef}={clonerZone}");
+
+		var destination = await Dig($"CspZonelessDest{uid}");
+		await AsGod($"@set {destination}=LINK_OK");
+		var exit = Ref(await Run(mortal.Handle, $"@open CspZonelessExit{uid}={destination}"));
+		await AsGod($"@chzone {exit}=none");
+
+		var newName = $"CspZonelessClone{uid}";
+		var clone = Ref(await Run(mortal.Handle, throughTheFunction
+			? $"think clone({exit},{newName})"
+			: $"@clone {exit}={newName}"));
+
+		var clonedZone = await (await Node(clone)).Object().Zone.WithCancellation(CancellationToken.None);
+		await Assert.That(clonedZone.IsNone).IsTrue()
+			.Because("create.c:788 assigns the original's zone unconditionally, and it had none");
+	}
+
+	/// <summary>
 	/// "We give the clone the same modification time that its other clone has, but update the creation
 	/// time" (create.c:653-655).
 	/// </summary>
