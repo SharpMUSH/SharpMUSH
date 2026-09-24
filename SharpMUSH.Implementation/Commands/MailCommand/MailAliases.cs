@@ -169,6 +169,14 @@ public static class MailAliases
 	private static ValueTask Tell(Services services, AnySharpObject executor, string message)
 		=> services.Notify.Notify(executor, message, executor);
 
+	private static async ValueTask TellAllAsync(Services services, AnySharpObject executor, IEnumerable<string> lines)
+	{
+		foreach (var line in lines)
+		{
+			await Tell(services, executor, line);
+		}
+	}
+
 	/// <summary>do_malias: no switch lists, lists one alias's members, or creates.</summary>
 	private static async ValueTask DefaultAsync(Services services, AnySharpObject executor, string left, string right)
 	{
@@ -306,9 +314,10 @@ public static class MailAliases
 			return;
 		}
 
-		var members = await ResolveListAsync(services, executor, name, list, existing: null);
+		var (members, lines) = await ResolveListAsync(services, executor, name, list, existing: null);
 		if (members.Count == 0)
 		{
+			await TellAllAsync(services, executor, lines);
 			return;
 		}
 
@@ -317,9 +326,14 @@ public static class MailAliases
 			executor.Object().DBRef.Number, [.. members], MailAliasPrivileges.Owner | MailAliasPrivileges.Members,
 			MailAliasPrivileges.Owner)));
 
-		await Tell(services, executor, created is SharpMailAlias
-			? $"MAIL: Alias set '{name}' defined."
-			: $"MAIL: Mail Alias '{name}' already exists.");
+		if (created is not SharpMailAlias)
+		{
+			await Tell(services, executor, $"MAIL: Mail Alias '{name}' already exists.");
+			return;
+		}
+
+		await TellAllAsync(services, executor, lines);
+		await Tell(services, executor, $"MAIL: Alias set '{name}' defined.");
 	}
 
 	/// <summary>do_malias_set: replaces the member list.</summary>
@@ -343,9 +357,10 @@ public static class MailAliases
 			return;
 		}
 
-		var members = await ResolveListAsync(services, executor, name, list, existing: null);
+		var (members, lines) = await ResolveListAsync(services, executor, name, list, existing: null);
 		if (members.Count == 0)
 		{
+			await TellAllAsync(services, executor, lines);
 			return;
 		}
 
@@ -354,6 +369,7 @@ public static class MailAliases
 			return;
 		}
 
+		await TellAllAsync(services, executor, lines);
 		await Tell(services, executor, "MAIL: Alias list set.");
 	}
 
@@ -411,9 +427,10 @@ public static class MailAliases
 			return;
 		}
 
-		var added = await ResolveListAsync(services, executor, name, list, existing: alias);
+		var (added, lines) = await ResolveListAsync(services, executor, name, list, existing: alias);
 		if (added.Count == 0)
 		{
+			await TellAllAsync(services, executor, lines);
 			return;
 		}
 
@@ -423,6 +440,7 @@ public static class MailAliases
 			return;
 		}
 
+		await TellAllAsync(services, executor, lines);
 		await Tell(services, executor, $"MAIL: Alias set '{name}' redefined.");
 	}
 
@@ -441,26 +459,27 @@ public static class MailAliases
 			return;
 		}
 
+		// Penn tells each line as it goes; these wait for the write, so a lost race claims no removal.
 		var members = alias.Members.ToList();
+		var lines = new List<string>();
 		foreach (var entry in SplitList(list))
 		{
 			if (await ResolvePlayerAsync(services, executor, entry) is not { } target)
 			{
-				await Tell(services, executor, $"MAIL: No such player '{entry}'.");
+				lines.Add($"MAIL: No such player '{entry}'.");
 				continue;
 			}
 
 			var index = members.IndexOf(target.Object.DBRef.Number);
 			if (index < 0)
 			{
-				await Tell(services, executor, $"MAIL: player '{entry}' is not in alias {name}.");
+				lines.Add($"MAIL: player '{entry}' is not in alias {name}.");
 				continue;
 			}
 
 			members[index] = members[^1];
 			members.RemoveAt(members.Count - 1);
-			await Tell(services, executor,
-				$"MAIL: {await UnparseAsync(services, executor, target)} removed from alias {name}");
+			lines.Add($"MAIL: {await UnparseAsync(services, executor, target)} removed from alias {name}");
 		}
 
 		if (!await UpdateAsync(services, executor, alias, alias with { Members = [.. members] }))
@@ -468,6 +487,7 @@ public static class MailAliases
 			return;
 		}
 
+		await TellAllAsync(services, executor, lines);
 		await Tell(services, executor, $"MAIL: Alias set '{name}' redefined.");
 	}
 
@@ -683,14 +703,15 @@ public static class MailAliases
 	}
 
 	/// <summary>
-	/// Resolves a member list, telling the executor about each entry as Penn does. With
-	/// <paramref name="existing"/>, a player already on it is refused (do_malias_add). Empty, with the
-	/// executor told, when nothing resolved.
+	/// Resolves a member list, with a line about each entry as Penn tells them. With
+	/// <paramref name="existing"/>, a player already on it is refused (do_malias_add). The caller tells the
+	/// lines once the alias is written, so a lost race claims no member; with no members, it tells them at once.
 	/// </summary>
-	private static async ValueTask<List<int>> ResolveListAsync(Services services, AnySharpObject executor,
-		string name, string list, SharpMailAlias? existing)
+	private static async ValueTask<(List<int> Members, List<string> Lines)> ResolveListAsync(Services services,
+		AnySharpObject executor, string name, string list, SharpMailAlias? existing)
 	{
 		var members = new List<int>();
+		var lines = new List<string>();
 		var entries = SplitList(list).ToList();
 		var consumed = 0;
 
@@ -699,15 +720,15 @@ public static class MailAliases
 			consumed++;
 			if (await ResolvePlayerAsync(services, executor, entry) is not { } target)
 			{
-				await Tell(services, executor, $"MAIL: No such player '{entry}'.");
+				lines.Add($"MAIL: No such player '{entry}'.");
 			}
 			else if (existing is not null && existing.Members.Contains(target.Object.DBRef.Number))
 			{
-				await Tell(services, executor, $"MAIL: player '{entry}' exists already in alias {name}.");
+				lines.Add($"MAIL: player '{entry}' exists already in alias {name}.");
 			}
 			else
 			{
-				await Tell(services, executor, $"MAIL: {await UnparseAsync(services, executor, target)} added to alias {name}");
+				lines.Add($"MAIL: {await UnparseAsync(services, executor, target)} added to alias {name}");
 				members.Add(target.Object.DBRef.Number);
 			}
 
@@ -716,15 +737,15 @@ public static class MailAliases
 
 		if (consumed < entries.Count)
 		{
-			await Tell(services, executor, "MAIL: Alias list is restricted to maximal 100 entries!");
+			lines.Add("MAIL: Alias list is restricted to maximal 100 entries!");
 		}
 
 		if (members.Count == 0)
 		{
-			await Tell(services, executor, "MAIL: No valid recipients for alias-list!");
+			lines.Add("MAIL: No valid recipients for alias-list!");
 		}
 
-		return members;
+		return (members, lines);
 	}
 
 	/// <summary>An entry of a member list: <c>me</c>, <c>#dbref</c>, or what lookup_player finds; players only.</summary>
