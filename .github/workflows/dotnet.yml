@@ -17,8 +17,10 @@ on:
     # lane/ among them, rather than whichever stack happens to be open, so a new
     # stack is covered the day it is cut instead of after someone remembers to
     # edit this file. Every link is verified while it is still reviewable, not
-    # after it has already been approved on trust.
-    branches: [ "main", "codex/**", "fix/**", "feat/**", "feature/**", "chore/**", "refactor/**", "docs/**", "test/**", "lane/**" ]
+    # after it has already been approved on trust. GRA-** covers agent branches
+    # cut from Paperclip issues (GRA-12-malias-...); ** rather than * so a slash
+    # in the name cannot quietly drop a stack out of CI.
+    branches: [ "main", "codex/**", "fix/**", "feat/**", "feature/**", "chore/**", "refactor/**", "docs/**", "test/**", "lane/**", "parity/**", "GRA-**" ]
 
 jobs:
   build-and-test:
