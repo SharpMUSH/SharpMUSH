@@ -233,6 +233,16 @@ public class AttributeRetroactiveTests
 				return new ValueTask<bool>(true);
 			});
 
+		// The owner write is the last thing a copy gets and the line `updated++` sits behind, so an
+		// object counted as updated must have had one. A test that overrides this stub has to keep
+		// recording, or it stops answering for the objects it did not break.
+		mediator.Send(Arg.Any<SetAttributeOwnerCommand>(), Arg.Any<CancellationToken>())
+			.Returns(call =>
+			{
+				ownerWrites.Add(call.Arg<SetAttributeOwnerCommand>().DBRef);
+				return new ValueTask<bool>(true);
+			});
+
 		return new RetroactiveHarness
 		{
 			Executor = executor,
@@ -303,6 +313,8 @@ public class AttributeRetroactiveTests
 			.Because("the partial report has to name what the pass actually reached");
 		await Assert.That(harness.FlagWrites).IsEquivalentTo([first.DBRef, second.DBRef])
 			.Because("the copies the pass did reach keep their new permissions, and the one past the cancellation is untouched");
+		await Assert.That(harness.OwnerWrites).IsEquivalentTo([first.DBRef, second.DBRef])
+			.Because("`updated` counts objects that got the executor as creator, which is the write after the flags");
 	}
 
 	/// <summary>
@@ -320,9 +332,17 @@ public class AttributeRetroactiveTests
 
 		var harness = Harness(new[] { broken, intact }.ToAsyncEnumerable(), broken.DBRef, intact.DBRef);
 		harness.Mediator.Send(Arg.Any<SetAttributeOwnerCommand>(), Arg.Any<CancellationToken>())
-			.Returns(call => call.Arg<SetAttributeOwnerCommand>().DBRef == broken.DBRef
-				? throw new InvalidOperationException("the store refused this one")
-				: new ValueTask<bool>(true));
+			.Returns(call =>
+			{
+				var dbref = call.Arg<SetAttributeOwnerCommand>().DBRef;
+				if (dbref == broken.DBRef)
+				{
+					throw new InvalidOperationException("the store refused this one");
+				}
+
+				harness.OwnerWrites.Add(dbref);
+				return new ValueTask<bool>(true);
+			});
 
 		var messages = await RunRetroactive(harness, cancellation);
 
@@ -331,5 +351,7 @@ public class AttributeRetroactiveTests
 			.Because("a write that threw is reported as one that could not be updated, not swallowed");
 		await Assert.That(harness.FlagWrites).Contains(intact.DBRef)
 			.Because("a failure on one object must not stop the rest of the pass");
+		await Assert.That(harness.OwnerWrites).IsEquivalentTo([intact.DBRef])
+			.Because("only the object that was actually updated got the executor as its creator");
 	}
 }

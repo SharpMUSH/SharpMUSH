@@ -91,12 +91,23 @@ public class ObjectFlagLookupTests
 	{
 		var quietPlayer = WithFlag(9104, "QuietPlayer", "Quiet");
 		var plainPlayer = new TestObjectFactory().CreatePlayer(9105, "PlainPlayer");
+		var stranger = new TestObjectFactory().CreatePlayer(9107, "Stranger");
+
+		// Owned by plainPlayer, not by itself: an object that owns itself would be answered by the
+		// player half above and never reach the ownership term this is about.
 		var quietThing = WithFlag(9106, "QuietThing", "SILENT", ["QUIET"]);
+		quietThing.Object().Owner = new(async _ =>
+		{
+			await ValueTask.CompletedTask;
+			return plainPlayer.Expect<SharpPlayer>();
+		});
 
 		await Assert.That(await plainPlayer.Object().AreQuietAsync(quietPlayer)).IsTrue()
 			.Because("the player half is Quiet(x)");
-		await Assert.That(await quietThing.Object().AreQuietAsync(quietThing)).IsTrue()
-			.Because("the thing half is Quiet(y) && Owner(y) == x, and the factory's object owns itself");
+		await Assert.That(await quietThing.Object().AreQuietAsync(plainPlayer)).IsTrue()
+			.Because("the thing half is Quiet(y) && Owner(y) == x");
+		await Assert.That(await quietThing.Object().AreQuietAsync(stranger)).IsFalse()
+			.Because("Owner(y) == x needs the player to BE the owner, not merely to share one with it");
 		await Assert.That(await plainPlayer.Object().AreQuietAsync(plainPlayer)).IsFalse()
 			.Because("neither half holds, so the confirmation must still be printed");
 	}
