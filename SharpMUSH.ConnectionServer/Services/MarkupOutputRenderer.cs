@@ -1,4 +1,6 @@
 using SharpMUSH.ConnectionServer.ProtocolHandlers;
+using MarkupString.Mxp;
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using SharpMUSH.ConnectionServer.Models;
@@ -33,7 +35,7 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 		var text = connection.Capabilities.Format switch
 		{
 			OutputFormat.Pueblo => ms.Render(MarkupFormat.Pueblo),
-			OutputFormat.Mxp => ms.Render(MarkupFormat.Mxp, MxpWire.Value),
+			OutputFormat.Mxp => ms.Render(MarkupFormat.Mxp, MxpWireFor(connection.Capabilities.MxpSupported)),
 			// The ANSI render for everything else, which maps a command link or a tagwrap() span to its
 			// ANSI equivalent, or to plain text when it has none. A client that negotiated neither
 			// Pueblo nor MXP must never see a literal tag.
@@ -50,6 +52,35 @@ public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 	/// Lazy because <see cref="MarkupRegistry.Default"/> is installed at startup, after this type loads.
 	/// </summary>
 	private static readonly Lazy<MarkupRegistry> MxpWire = new(() => MarkupRegistry.Default.WithMxpSecureLines());
+
+	/// <summary>
+	/// One registry per set of answers, since a registry is immutable and connections that answered the
+	/// same thing — which most clients of the same make do — can share one.
+	/// </summary>
+	private static readonly ConcurrentDictionary<string, MarkupRegistry> MxpWiresByAnswer = new(StringComparer.Ordinal);
+
+	/// <summary>
+	/// The registry for a connection whose client answered <paramref name="supported"/>: the elements it
+	/// named, and nothing else. A sound it did not answer about writes nothing, and a frame it did not
+	/// answer about leaves the text that would have gone in it where the player can read it.
+	/// </summary>
+	/// <param name="supported">
+	/// The elements the client said it renders, space separated. Null when it was never asked or never
+	/// answered — an older connection, or one negotiated before this server asked — in which case every
+	/// element is written, which is what a client that was never asked is owed.
+	/// </param>
+	private static MarkupRegistry MxpWireFor(string? supported)
+	{
+		if (supported is null) return MxpWire.Value;
+
+		return MxpWiresByAnswer.GetOrAdd(supported, static answer =>
+		{
+			var elements = new HashSet<string>(
+				answer.Split(' ', StringSplitOptions.RemoveEmptyEntries), StringComparer.OrdinalIgnoreCase);
+
+			return MarkupRegistry.Default.WithMxp(elements.Contains).WithMxpSecureLines();
+		});
+	}
 
 	/// <summary>
 	/// Normalizes line endings to \r\n and trims any trailing newline (mirrors the legacy

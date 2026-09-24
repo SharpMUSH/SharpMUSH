@@ -10,6 +10,7 @@ using SharpMUSH.Messaging.Abstractions;
 using System.Net;
 using System.Text;
 using TelnetNegotiationCore.Builders;
+using MarkupString.Mxp;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Protocols;
 using TelnetNegotiationCore.Models;
@@ -247,6 +248,7 @@ public class TelnetServer : ConnectionHandler
 					if (await TryUpdateFormatAsync(nextPort, OutputFormat.Mxp, ct))
 					{
 						_logger.LogDebug("Updated MXP capabilities for handle {Handle}", nextPort);
+						await AskWhatMxpClientRendersAsync(nextPort, telnetInterpreter, ct);
 					}
 					else if (!ct.IsCancellationRequested)
 					{
@@ -465,6 +467,51 @@ public class TelnetServer : ConnectionHandler
 				handle, reported.Ansi && !reported.ScreenReader, reported.Xterm256 && !reported.ScreenReader,
 				reported.Truecolor && !reported.ScreenReader, reported.Utf8);
 		}
+	}
+
+	/// <summary>
+	/// Asks the client which of the elements this server writes it can render, and records the answer on
+	/// the connection so the renderer sends it nothing else.
+	/// </summary>
+	/// <remarks>
+	/// <para>MXP has this exchange for a reason: a client that cannot open a frame is better off with
+	/// the text that would have gone in it than with a tag it shows to the player. The answer belongs to
+	/// one connection, so it is kept with that connection's capabilities.</para>
+	/// <para>A client need not answer. What is waited for is the answer to this question, and what is
+	/// recorded is what came back — an element nobody answered about is one the client does not get,
+	/// which is the safe way round. A client that answers late has its reply recorded then, and it
+	/// governs everything sent after it.</para>
+	/// </remarks>
+	private async ValueTask AskWhatMxpClientRendersAsync(long handle, TelnetInterpreter? interpreter, CancellationToken cancellationToken)
+	{
+		if (interpreter?.PluginManager?.GetPlugin<MXPProtocol>() is not { } mxp) return;
+
+		var asked = MxpRegistration.Elements.ToArray();
+		mxp.OnMxpSupports(_ =>
+		{
+			RecordMxpSupport(handle, mxp, asked);
+			return ValueTask.CompletedTask;
+		});
+
+		try
+		{
+			await mxp.RequestSupportAsync(TimeSpan.FromMilliseconds(Math.Max(0, _options.MxpSupportTimeoutMilliseconds)), asked);
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			_logger.LogDebug(ex, "Asking handle {Handle} what MXP it renders failed", handle);
+			return;
+		}
+
+		if (!cancellationToken.IsCancellationRequested) RecordMxpSupport(handle, mxp, asked);
+	}
+
+	private void RecordMxpSupport(long handle, MXPProtocol mxp, string[] asked)
+	{
+		var supported = string.Join(' ', asked.Where(mxp.Support.Supports));
+		_connectionService.UpdateCapabilities(handle, current => current with { MxpSupported = supported });
+		_logger.LogDebug("Handle {Handle} renders MXP: {Supported}",
+			handle, supported.Length == 0 ? "(nothing it was asked about)" : supported);
 	}
 
 	private async ValueTask<bool> TryUpdateFormatAsync(long handle, OutputFormat format, CancellationToken cancellationToken)
