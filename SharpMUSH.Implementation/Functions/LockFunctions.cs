@@ -1,7 +1,6 @@
-using MoreLinq.Extensions;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -85,45 +84,13 @@ public partial class Functions
 			return new CallState("#-1");
 		}
 
-		var locked = chain.Last().Flags.Any(flag => flag.Name.Equals(LockedAttributeFlag, StringComparison.OrdinalIgnoreCase));
-
 		if (shouldLock is not bool lockIt)
 		{
-			return new CallState(locked ? "1" : "0");
+			return new CallState(AttributeLockHelpers.IsLocked(chain) ? "1" : "0");
 		}
 
-		if (!await PermissionService.CanSet(executor, target, chain))
-		{
-			await NotifyService.Notify(executor, "You need to be able to set the attribute to change its lock.", executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		var changed = lockIt
-			? await AttributeService.SetAttributeFlagAsync(executor, target, attributeName, LockedAttributeFlag)
-			: await AttributeService.UnsetAttributeFlagAsync(executor, target, attributeName, LockedAttributeFlag);
-
-		if (changed is Error<string> error)
-		{
-			await NotifyService.Notify(executor, error.Value, executor);
-			return new CallState(error.Value);
-		}
-
-		if (lockIt)
-		{
-			var owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-			if (!await Mediator.Send(new SetAttributeOwnerCommand(target.Object().DBRef,
-				chain.Select(item => item.Name).ToArray(), owner), ExecutionBudget.CurrentToken))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
-				return new CallState(ErrorMessages.Returns.NoMatch);
-			}
-		}
-
-		await NotifyService.NotifyLocalized(executor, lockIt
-			? nameof(ErrorMessages.Notifications.AttributeLocked)
-			: nameof(ErrorMessages.Notifications.AttributeUnlocked), executor);
-
-		return CallState.Empty;
+		return await AttributeLockHelpers.ChangeAsync(PermissionService, AttributeService, NotifyService, Mediator,
+			executor, target, attributeName, chain, lockIt);
 	}
 
 	/// <summary>
@@ -132,9 +99,6 @@ public partial class Functions
 	/// reason to touch.
 	/// </summary>
 	private const string ArgumentMustBeObjectAttribute = "#-1 ARGUMENT MUST BE OBJ/ATTR";
-
-	/// <summary>PennMUSH's <c>AF_LOCKED</c>, as SharpMUSH spells its attribute flags.</summary>
-	private const string LockedAttributeFlag = "LOCKED";
 
 	[SharpFunction(Name = "testlock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> TestLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
