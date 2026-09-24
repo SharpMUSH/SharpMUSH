@@ -4,7 +4,10 @@ using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Server.Consumers;
 
@@ -33,9 +36,38 @@ public class MarkupNegotiationConsumerTests
 		new MxpNegotiatedConsumer(NullLogger<MxpNegotiatedConsumer>.Instance, service)
 			.HandleAsync(new MxpNegotiatedMessage(Handle));
 
-	private static Task Pueblo(ConnectionService service) =>
-		new PuebloNegotiatedConsumer(NullLogger<PuebloNegotiatedConsumer>.Instance, service)
+	private static Task Pueblo(ConnectionService service, INotifyService? notifyService = null) =>
+		new PuebloNegotiatedConsumer(NullLogger<PuebloNegotiatedConsumer>.Instance, service,
+				notifyService ?? Substitute.For<INotifyService>())
 			.HandleAsync(new PuebloNegotiatedMessage(Handle, "PUEBLOCLIENT 2.50"));
+
+	/// <summary>
+	/// The handshake's start sequence ends with <c>&lt;xch_page clear=text&gt;</c>, which wipes the
+	/// greeting the player was just shown. PennMUSH redraws the connect screen at the same point
+	/// (<c>welcome_user</c>, <c>src/bsd.c</c>).
+	/// </summary>
+	[Test]
+	public async Task Pueblo_GreetsAgainAfterTheHandshakeClearedTheScreen()
+	{
+		var service = await RegisteredAsync();
+		var notify = Substitute.For<INotifyService>();
+
+		await Pueblo(service, notify);
+
+		await notify.Received(1).NotifyLocalized(Handle, nameof(ErrorMessages.Notifications.Connected));
+	}
+
+	[Test]
+	public async Task Pueblo_LeavesALoggedInConnectionAlone()
+	{
+		var service = await RegisteredAsync();
+		await service.Bind(Handle, new DBRef(1));
+		var notify = Substitute.For<INotifyService>();
+
+		await Pueblo(service, notify);
+
+		await notify.DidNotReceive().NotifyLocalized(Handle, Arg.Any<string>());
+	}
 
 	[Test]
 	public async Task Mxp_DoesNotClaimPueblo()
