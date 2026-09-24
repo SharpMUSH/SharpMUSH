@@ -1,4 +1,4 @@
-using DotNext.Threading;
+﻿using DotNext.Threading;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Lightning;
@@ -93,6 +93,74 @@ public class MailTests
 
 		var from = (await mails[0].From.WithCancellation(CancellationToken.None)).Expect<SharpPlayer>();
 		await Assert.That(from.Object.DBRef.Number).IsEqualTo(sender.Object.DBRef.Number);
+	}
+
+	/// <summary>
+	/// #1226: the store answers the number the message has in its folder as of the write that stored it, so
+	/// a delete committed before the send is already counted.
+	/// </summary>
+	[Test]
+	public async Task SendMailAsyncAnswersTheNumberTheMessageHasInItsFolder()
+	{
+		var sender = await NewPlayer("MailNumberSender");
+		var recipient = await NewPlayer("MailNumberRecipient");
+
+		var first = await _db.SendMailAsync(sender.Object, recipient, NewMail("One", "a"));
+		var saved = await _db.SendMailAsync(sender.Object, recipient, NewMail("Saved", "b", "SAVED"));
+		var second = await _db.SendMailAsync(sender.Object, recipient, NewMail("Two", "c"));
+		await _db.DeleteMailAsync(first!.Value.Id);
+		var third = await _db.SendMailAsync(sender.Object, recipient, NewMail("Three", "d"));
+
+		await Assert.That(first.Value.Number).IsEqualTo(1);
+		await Assert.That(saved!.Value.Number).IsEqualTo(1);
+		await Assert.That(second!.Value.Number).IsEqualTo(2);
+		await Assert.That(third!.Value.Number).IsEqualTo(2);
+		await Assert.That((await _db.GetIncomingMailAsync(recipient, "INBOX", 1))!.Id).IsEqualTo(third.Value.Id);
+	}
+
+	/// <summary>#1226: a folder holding its limit refuses the message in the write, storing nothing.</summary>
+	[Test]
+	public async Task SendMailAsyncRefusesAFolderThatHoldsItsLimit()
+	{
+		var sender = await NewPlayer("MailLimitSender");
+		var recipient = await NewPlayer("MailLimitRecipient");
+
+		var kept = await _db.SendMailAsync(sender.Object, recipient, NewMail("Kept", "a"), limit: 1);
+		var elsewhere = await _db.SendMailAsync(sender.Object, recipient, NewMail("Elsewhere", "b", "SAVED"), limit: 1);
+		var refused = await _db.SendMailAsync(sender.Object, recipient, NewMail("Refused", "c"), limit: 1);
+		var unlimited = await _db.SendMailAsync(sender.Object, recipient, NewMail("Unlimited", "d"));
+
+		await Assert.That(kept).IsNotNull();
+		await Assert.That(elsewhere).IsNotNull();
+		await Assert.That(refused).IsNull();
+		await Assert.That(unlimited!.Value.Number).IsEqualTo(2);
+
+		var subjects = new List<string>();
+		await foreach (var mail in _db.GetAllIncomingMailsAsync(recipient))
+		{
+			subjects.Add(mail.Subject.ToPlainText());
+		}
+
+		await Assert.That(subjects).IsEquivalentTo(["Kept", "Elsewhere", "Unlimited"]);
+		await Assert.That(await _db.GetAllSentMailsAsync(sender.Object).CountAsync()).IsEqualTo(3);
+	}
+
+	/// <summary>
+	/// #1226: sends racing one mailbox each get their own number and a limit is never overrun, with no
+	/// gate outside the store.
+	/// </summary>
+	[Test]
+	public async Task ConcurrentSendsAreNumberedApartAndCannotOverrunTheLimit()
+	{
+		var sender = await NewPlayer("MailRaceSender");
+		var recipient = await NewPlayer("MailRaceRecipient");
+
+		var admitted = await Task.WhenAll(Enumerable.Range(0, 16).Select(i =>
+			_db.SendMailAsync(sender.Object, recipient, NewMail($"Race{i}", "x"), limit: 10).AsTask()));
+
+		await Assert.That(admitted.Where(a => a is not null).Select(a => a!.Value.Number))
+			.IsEquivalentTo(Enumerable.Range(1, 10));
+		await Assert.That(await _db.GetIncomingMailsAsync(recipient, "INBOX").CountAsync()).IsEqualTo(10);
 	}
 
 	[Test]

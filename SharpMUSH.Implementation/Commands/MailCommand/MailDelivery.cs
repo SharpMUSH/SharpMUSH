@@ -1,4 +1,4 @@
-using DotNext.Threading;
+﻿using DotNext.Threading;
 using Mediator;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -47,10 +47,10 @@ public static partial class MailDelivery
 	}
 
 	/// <summary>
-	/// Serializes counting a mailbox with writing to it. Penn is single-threaded, so the two are one step
-	/// there; here deliveries run concurrently, and a count taken outside the gate numbers two messages
-	/// alike and lets two through a quota of one. Striped by recipient so unrelated mailboxes do not wait
-	/// on each other. Nothing that can deliver mail runs while a gate is held.
+	/// Serializes reading a player's folder list with replacing it, since <c>SetExpandedDataAsync</c> stores
+	/// the whole array and two deliveries filing into different new folders would otherwise each keep only
+	/// their own. Admission needs no gate: the store counts and writes in one step. Striped by recipient so
+	/// unrelated mailboxes do not wait on each other. Nothing that can deliver mail runs while a gate is held.
 	/// </summary>
 	private static readonly SemaphoreSlim[] MailboxGates = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
 
@@ -196,61 +196,34 @@ public static partial class MailDelivery
 			return false;
 		}
 
-		// extmail.c:1593 — only the inbox counts, and no sender, however privileged, passes a full one.
-		// Asked once here so a full mailbox never runs the recipient's filter, and again under the gate,
-		// which is the answer that counts.
-		if (!await HasRoomAsync(services, target))
+		// extmail.c:1592 — only the inbox counts, and no sender, however privileged, passes a full one. The
+		// store counts and writes in one step, so the number it answers is the one the message has.
+		var mail = new SharpMail
 		{
-			return await MailboxFullAsync(services, sender, target, silent);
-		}
+			DateSent = DateTimeOffset.UtcNow,
+			Fresh = true,
+			Read = false,
+			Tagged = false,
+			Urgent = letter.Urgent,
+			Cleared = false,
+			Forwarded = letter.Forwarded,
+			Folder = Inbox,
+			Content = letter.Signature.Length > 0
+				? MarkupText.Concat([letter.Body, MarkupText.NewLine, letter.Signature])
+				: letter.Body,
+			Subject = letter.Subject,
+			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(sender.WithNoneOption())),
+		};
 
-		// Chosen before the store, which hands back no id to move the message by afterwards, so the
-		// message is written once into the folder it belongs in. Outside the gate: a filter may itself
-		// send mail to this mailbox.
-		var (folder, filtered) = await FolderForAsync(parser, services, sender, target, letter);
-
-		var gate = GateFor(target);
-		await gate.WaitAsync();
-		int inboxCount;
-		try
+		if (await services.Mediator.Send(new SendMailCommand(sender.Object(), target, mail,
+					await MailLimitAsync(services, target))) is not { } admission)
 		{
-			inboxCount = await InboxCountAsync(services, target);
-			if (inboxCount >= await MailLimitAsync(services, target))
+			if (!silent)
 			{
-				return await MailboxFullAsync(services, sender, target, silent);
+				await services.Notify.Notify(sender, $"MAIL: {target.Object.Name}'s mailbox is full. Can't send.", sender);
 			}
 
-			await services.Mediator.Send(new SendMailCommand(sender.Object(), target, new SharpMail
-			{
-				DateSent = DateTimeOffset.UtcNow,
-				Fresh = true,
-				Read = false,
-				Tagged = false,
-				Urgent = letter.Urgent,
-				Cleared = false,
-				Forwarded = letter.Forwarded,
-				Folder = folder,
-				Content = letter.Signature.Length > 0
-					? MarkupText.Concat([letter.Body, MarkupText.NewLine, letter.Signature])
-					: letter.Body,
-				Subject = letter.Subject,
-				From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(sender.WithNoneOption())),
-			}));
-
-			// As @mail/file does, filing into a folder makes it one of the player's folders. Read and
-			// written under the gate: SetExpandedDataAsync replaces the array, so two deliveries filing
-			// into different new folders would otherwise each store only their own.
-			if (folder != Inbox)
-			{
-				var known = await services.ObjectData.GetExpandedDataAsync<ExpandedMailData>(target.Object);
-				await services.ObjectData.SetExpandedDataAsync(
-					new ExpandedMailData(Folders: [.. (known?.Folders ?? []).Append(folder).Distinct()]),
-					target.Object, ignoreNull: true);
-			}
-		}
-		finally
-		{
-			gate.Release();
+			return false;
 		}
 
 		if (!silent)
@@ -263,12 +236,21 @@ public static partial class MailDelivery
 		}
 
 		await services.Notify.Notify(target,
-			$"MAIL: You have a new message ({inboxCount + 1}) from {sender.Object().Name}.", sender);
+			$"MAIL: You have a new message ({admission.Number}) from {sender.Object().Name}.", sender);
 
+		// extmail.c:1695 — filter_mail runs on the stored message, so a refused one never filters, and files
+		// it by id rather than by the number, which the filter's own side effects may have moved.
+		var (folder, filtered) = await FolderForAsync(parser, services, sender, target, letter);
 		switch (filtered)
 		{
 			case FilterOutcome.Filed:
-				await services.Notify.Notify(target, $"MAIL: Msg {inboxCount + 1} filed in folder {folder}.");
+				if (folder != Inbox)
+				{
+					mail.Id = admission.Id;
+					await FileAsync(services, target, mail, folder);
+				}
+
+				await services.Notify.Notify(target, $"MAIL: Msg {admission.Number} filed in folder {folder}.");
 				break;
 			case FilterOutcome.NoSuchFolder:
 				await services.Notify.Notify(target, "MAIL: Invalid folder specification");
@@ -286,21 +268,27 @@ public static partial class MailDelivery
 		return true;
 	}
 
-	private static ValueTask<int> InboxCountAsync(Services services, SharpPlayer target)
-		=> services.Mediator.CreateStream(new GetMailListQuery(target, Inbox)).CountAsync();
-
-	private static async ValueTask<bool> HasRoomAsync(Services services, SharpPlayer target)
-		=> await InboxCountAsync(services, target) < await MailLimitAsync(services, target);
-
-	private static async ValueTask<bool> MailboxFullAsync(Services services, AnySharpObject sender, SharpPlayer target,
-		bool silent)
+	/// <summary>
+	/// Moves a delivered message into <paramref name="folder"/> and, as <c>@mail/file</c> does, makes that one of
+	/// the player's folders.
+	/// </summary>
+	private static async ValueTask FileAsync(Services services, SharpPlayer target, SharpMail mail, string folder)
 	{
-		if (!silent)
-		{
-			await services.Notify.Notify(sender, $"MAIL: {target.Object.Name}'s mailbox is full. Can't send.", sender);
-		}
+		await services.Mediator.Send(new MoveMailFolderCommand(mail, folder));
 
-		return false;
+		var gate = GateFor(target);
+		await gate.WaitAsync();
+		try
+		{
+			var known = await services.ObjectData.GetExpandedDataAsync<ExpandedMailData>(target.Object);
+			await services.ObjectData.SetExpandedDataAsync(
+				new ExpandedMailData(Folders: [.. (known?.Folders ?? []).Append(folder).Distinct()]),
+				target.Object, ignoreNull: true);
+		}
+		finally
+		{
+			gate.Release();
+		}
 	}
 
 	/// <summary><c>extmail.c:1547</c> — the hard cap a MAILQUOTA cannot exceed.</summary>

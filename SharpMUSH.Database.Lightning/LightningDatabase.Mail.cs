@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using DotNext.Threading;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
@@ -175,13 +175,20 @@ public partial class LightningDatabase
 		return ValueTask.FromResult(result);
 	}
 
-	public async ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail, CancellationToken cancellationToken = default)
+	public async ValueTask<MailAdmission?> SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail, long? limit = null,
+		CancellationToken cancellationToken = default)
 	{
 		var senderKey = (long)from.Key;
 		var recipientKey = (long)to.Object.Key;
 
-		await Store.WriteAsync(tx =>
+		return await Store.WriteAsync<MailAdmission?>(tx =>
 		{
+			var held = RangeMailBox(tx, recipientKey).Count(m => m.Record.Folder == mail.Folder);
+			if (held >= limit)
+			{
+				return null;
+			}
+
 			var mailId = AllocateMailId(tx);
 			var record = new MailRecord
 			{
@@ -202,6 +209,7 @@ public partial class LightningDatabase
 			tx.Put(Tables.Mail, MailKey(mailId), Codec.Serialize(record));
 			tx.Put(Tables.MailBox, MailBoxKey(recipientKey, mailId), []);
 			tx.Put(Tables.MailSent, MailSentKey(senderKey, mailId), []);
+			return new MailAdmission(MailId(mailId), held + 1);
 		}, cancellationToken);
 	}
 

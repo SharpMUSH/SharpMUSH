@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
@@ -1389,6 +1389,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				folderNames[message.To] = names = MailFolderNames(pennObjects.GetValueOrDefault(message.To));
 			}
 
+			// No limit: load_mail keeps every message whatever the recipient's mail_limit.
 			await _mediator.Send(new SendMailCommand(from.Object(), recipient, new SharpMail
 			{
 				DateSent = sent,

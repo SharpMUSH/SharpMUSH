@@ -519,6 +519,49 @@ public class MailDeliveryTests
 	}
 
 	/// <summary>
+	/// #1226: <c>filter_mail</c> runs only after <c>real_send_mail</c> has stored the message, so a message
+	/// refused by a full mailbox never runs the filter and its side effects.
+	/// </summary>
+	[Test]
+	public async ValueTask AMessageRefusedByAFullMailboxDoesNotRunTheFilter()
+	{
+		var sender = await Player("MdFltFull");
+		var target = await Player("MdFltFullTo");
+		await God($"&MAILQUOTA #{target.DbRef.Number}=1");
+		await Run(target, "&MAILFILTER me=[pemit(me,filter ran %1)]");
+
+		var heard = await Heard(target, async () =>
+		{
+			await Run(sender, $"@mail #{target.DbRef.Number}=First/Body.");
+			await Run(sender, $"@mail #{target.DbRef.Number}=Second/Body.");
+		});
+
+		await Assert.That(heard).Contains("filter ran First");
+		await Assert.That(heard).DoesNotContain("filter ran Second");
+		await Assert.That((await Mailbox(target)).Select(m => m.Subject.ToPlainText())).IsEquivalentTo(["First"]);
+	}
+
+	/// <summary>
+	/// #1226: a filter that fills the mailbox's last slot does not take back the message it is filtering:
+	/// that message was stored, and numbered, before the filter ran, as in <c>real_send_mail</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask AFilterThatFillsTheMailboxKeepsTheMessageItFilters()
+	{
+		var sender = await Player("MdFltFill");
+		var target = await Player("MdFltFillTo");
+		await God($"&MAILQUOTA #{target.DbRef.Number}=2");
+		await Run(target, "&MAILFILTER me=[mailsend(me,Filler/Body.)]");
+
+		var heard = await Heard(target, () => Run(sender, $"@mail #{target.DbRef.Number}=Start/Body."));
+
+		await Assert.That(heard).Contains($"MAIL: You have a new message (1) from {sender.Name}.");
+		await Assert.That(heard).Contains($"MAIL: You have a new message (2) from {target.Name}.");
+		await Assert.That((await Mailbox(target)).Select(m => m.Subject.ToPlainText()))
+			.IsEquivalentTo(["Start", "Filler"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	/// <summary>
 	/// A filter that mails its owner is recursion PennMUSH does not bound: the captured run delivered 124
 	/// messages and then the server died ("Parent mush process exited unexpectedly"). Mail sent while a
 	/// filter is being evaluated is delivered without running filters, so the loop is one message deep.
@@ -699,7 +742,7 @@ public class MailDeliveryTests
 	}
 
 	/// <summary>
-	/// The quota is decided under the same gate as the store, so messages arriving together cannot all
+	/// The quota is decided in the same write as the store (#1226), so messages arriving together cannot all
 	/// pass a count taken before any of them was written.
 	/// </summary>
 	[Test]
