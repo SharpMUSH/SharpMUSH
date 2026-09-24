@@ -86,6 +86,32 @@ internal sealed class PennMUSHDumpReader(TextReader reader)
 		return read == label ? value : throw Error($"expected '{label}', found '{read}'");
 	}
 
+	/// <summary>
+	/// Takes one unlabeled value, as <c>getstring</c> reads the maildb: quoted if it starts with <c>"</c>,
+	/// otherwise the rest of the line.
+	/// </summary>
+	public async ValueTask<string> ReadStringAsync(CancellationToken cancellationToken)
+	{
+		var c = await ReadAsync(cancellationToken);
+		return c switch
+		{
+			-1 => throw Error("unexpected end of the database"),
+			'"' => await ReadQuotedAsync(cancellationToken),
+			'\n' => string.Empty,
+			_ => await ReadBareAsync((char)c, cancellationToken)
+		};
+	}
+
+	/// <summary>Takes one line holding an integer, as <c>getref</c> reads it.</summary>
+	public async ValueTask<int> ReadIntegerAsync(CancellationToken cancellationToken)
+	{
+		var line = await ReadLineAsync(cancellationToken) ?? throw Error("unexpected end of the database");
+		return int.TryParse(line.Trim(), System.Globalization.NumberStyles.AllowLeadingSign,
+			System.Globalization.CultureInfo.InvariantCulture, out var value)
+			? value
+			: throw Error($"expected a number, found '{line}'");
+	}
+
 	public FormatException Error(string message) => new($"PennMUSH database, line {Line}: {message}.");
 
 	private async ValueTask<string> ReadQuotedAsync(CancellationToken cancellationToken)

@@ -34,6 +34,20 @@ public interface IPennMUSHDatabaseConverter
 		CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Convert a PennMUSH database file, and its maildb when one is given, with progress reporting.
+	/// </summary>
+	/// <param name="databaseFilePath">Path to the PennMUSH database file</param>
+	/// <param name="mailDatabaseFilePath">Path to the PennMUSH maildb, or null to import no mail data</param>
+	/// <param name="progress">Progress reporter for real-time updates</param>
+	/// <param name="cancellationToken">Cancellation token</param>
+	/// <returns>Conversion statistics</returns>
+	Task<ConversionResult> ConvertDatabaseAsync(
+		string databaseFilePath,
+		string? mailDatabaseFilePath,
+		IProgress<ConversionProgress> progress,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Convert a parsed PennMUSH database to SharpMUSH objects with progress reporting.
 	/// </summary>
 	/// <param name="pennDatabase">Parsed PennMUSH database</param>

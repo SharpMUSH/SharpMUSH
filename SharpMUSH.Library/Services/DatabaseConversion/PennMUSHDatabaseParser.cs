@@ -42,6 +42,72 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 		return await ParseAsync(stream, cancellationToken);
 	}
 
+	public async Task<PennMUSHMailDatabase> ParseMailAsync(Stream stream, CancellationToken cancellationToken = default)
+	{
+		using var reader = new StreamReader(stream);
+		return await ParseMailAsync(new PennMUSHDumpReader(reader), cancellationToken);
+	}
+
+	public async Task<PennMUSHMailDatabase> ParseMailFileAsync(string filePath, CancellationToken cancellationToken = default)
+	{
+		logger.LogInformation("Starting to parse PennMUSH mail database file: {FilePath}", filePath);
+
+		await using var stream = File.OpenRead(filePath);
+		return await ParseMailAsync(stream, cancellationToken);
+	}
+
+	/// <summary>
+	/// <c>load_mail</c>'s flags line and <c>load_malias</c>'s section: a count, then per alias its owner,
+	/// name, description, use and see bits, member count and members, then <c>"*** End of MALIAS ***"</c>.
+	/// The messages that follow are not read here.
+	/// </summary>
+	private async Task<PennMUSHMailDatabase> ParseMailAsync(PennMUSHDumpReader reader, CancellationToken cancellationToken)
+	{
+		var mail = new PennMUSHMailDatabase();
+		if (await reader.PeekAsync(cancellationToken) != '+')
+		{
+			return mail;
+		}
+
+		var flagsLine = await reader.ReadLineAsync(cancellationToken) ?? string.Empty;
+		mail.Flags = int.TryParse(flagsLine.AsSpan(1), NumberStyles.Integer, CultureInfo.InvariantCulture, out var flags)
+			? flags
+			: throw reader.Error($"expected the mail flags, found '{flagsLine}'");
+
+		if ((mail.Flags & PennMUSHMailDatabase.AliasesFlag) == 0)
+		{
+			return mail;
+		}
+
+		var count = await reader.ReadIntegerAsync(cancellationToken);
+		for (var i = 0; i < count; i++)
+		{
+			var owner = await reader.ReadIntegerAsync(cancellationToken);
+			var name = await reader.ReadStringAsync(cancellationToken);
+			var description = await reader.ReadStringAsync(cancellationToken);
+			var usePrivileges = await reader.ReadIntegerAsync(cancellationToken);
+			var seePrivileges = await reader.ReadIntegerAsync(cancellationToken);
+			var size = await reader.ReadIntegerAsync(cancellationToken);
+
+			var members = new List<int>(Math.Max(size, 0));
+			for (var j = 0; j < size; j++)
+			{
+				members.Add(await reader.ReadIntegerAsync(cancellationToken));
+			}
+
+			mail.Aliases.Add(new PennMUSHMailAlias(owner, name, description, usePrivileges, seePrivileges, members));
+		}
+
+		var end = await reader.ReadStringAsync(cancellationToken);
+		if (end != "*** End of MALIAS ***")
+		{
+			throw reader.Error($"expected the end of the mail aliases, found '{end}'");
+		}
+
+		logger.LogInformation("PennMUSH mail database flags {Flags}, {Count} mail alias(es)", mail.Flags, mail.Aliases.Count);
+		return mail;
+	}
+
 	private async Task<PennMUSHDatabase> ParseAsync(PennMUSHDumpReader reader, CancellationToken cancellationToken)
 	{
 		var header = await reader.ReadLineAsync(cancellationToken);

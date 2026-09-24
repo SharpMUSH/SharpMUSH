@@ -17,11 +17,12 @@ public class DatabaseConversionController(
 	: ControllerBase
 {
 	/// <summary>
-	/// Upload and convert a PennMUSH database file
+	/// Upload and convert a PennMUSH database file, with its maildb (<c>mailFile</c>) optionally alongside
 	/// </summary>
 	[HttpPost("upload")]
 	[RequestSizeLimit(104857600)] // 100 MB
-	public async Task<ActionResult<string>> UploadDatabase([FromForm] IFormFile file, CancellationToken cancellationToken)
+	public async Task<ActionResult<string>> UploadDatabase([FromForm] IFormFile file, [FromForm] IFormFile? mailFile,
+		CancellationToken cancellationToken)
 	{
 		if (file == null || file.Length == 0)
 		{
@@ -39,9 +40,19 @@ public class DatabaseConversionController(
 
 			logger.LogInformation("Uploaded PennMUSH database file: {FileName} ({Size} bytes)", file.FileName, file.Length);
 
+			string? mailTempPath = null;
+			if (mailFile is { Length: > 0 })
+			{
+				mailTempPath = Path.Combine(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.maildb");
+				await using var mailStream = System.IO.File.Create(mailTempPath);
+				await mailFile.CopyToAsync(mailStream, cancellationToken);
+				logger.LogInformation("Uploaded PennMUSH mail database file: {FileName} ({Size} bytes)", mailFile.FileName,
+					mailFile.Length);
+			}
+
 			var sessionId = Guid.NewGuid().ToString();
 
-			DatabaseConversionSession.StartConversion(sessionId, converter, tempPath, logger, cancellationToken);
+			DatabaseConversionSession.StartConversion(sessionId, converter, tempPath, mailTempPath, logger, cancellationToken);
 
 			return Ok(new { sessionId, message = "Conversion started" });
 		}
@@ -118,6 +129,7 @@ public static class DatabaseConversionSession
 		string sessionId,
 		IPennMUSHDatabaseConverter converter,
 		string tempFilePath,
+		string? mailTempFilePath,
 		ILogger logger,
 		CancellationToken cancellationToken)
 	{
@@ -138,7 +150,7 @@ public static class DatabaseConversionSession
 			cancellationToken,
 			sessionData.CancellationSource.Token);
 
-		sessionData.ConversionTask = converter.ConvertDatabaseAsync(tempFilePath, progress, linkedCts.Token)
+		sessionData.ConversionTask = converter.ConvertDatabaseAsync(tempFilePath, mailTempFilePath, progress, linkedCts.Token)
 			.ContinueWith(task =>
 			{
 				try
@@ -153,9 +165,12 @@ public static class DatabaseConversionSession
 
 						try
 						{
-							if (File.Exists(tempFilePath))
+							foreach (var path in new[] { tempFilePath, mailTempFilePath })
 							{
-								File.Delete(tempFilePath);
+								if (path is not null && File.Exists(path))
+								{
+									File.Delete(path);
+								}
 							}
 						}
 						catch (Exception ex)

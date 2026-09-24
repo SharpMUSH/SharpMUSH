@@ -56,6 +56,23 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
 	}
 
+	public async Task<ConversionResult> ConvertDatabaseAsync(
+		string databaseFilePath,
+		string? mailDatabaseFilePath,
+		IProgress<ConversionProgress> progress,
+		CancellationToken cancellationToken = default)
+	{
+		_logger.LogInformation("Starting conversion of PennMUSH database from: {FilePath}", databaseFilePath);
+
+		var pennDatabase = await _parser.ParseFileAsync(databaseFilePath, cancellationToken);
+		if (!string.IsNullOrEmpty(mailDatabaseFilePath))
+		{
+			pennDatabase.Mail = await _parser.ParseMailFileAsync(mailDatabaseFilePath, cancellationToken);
+		}
+
+		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
+	}
+
 	public async Task<ConversionResult> ConvertDatabaseAsync(PennMUSHDatabase pennDatabase, CancellationToken cancellationToken = default)
 	{
 		return await ConvertDatabaseAsync(pennDatabase, null, cancellationToken);
@@ -82,6 +99,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var exitsConverted = 0;
 		var attributesConverted = 0;
 		var locksConverted = 0;
+		var mailAliasesConverted = 0;
 
 		_logger.LogInformation("Converting {Count} PennMUSH objects to SharpMUSH format", totalObjects);
 
@@ -136,6 +154,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			locksConverted = await CreateLocksAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Locks created", 1.0);
 
+			mailAliasesConverted = await ImportMailAliasesAsync(pennDatabase, context, cancellationToken);
+
 			await EnableParenGroupsAsync(context, cancellationToken);
 
 			stopwatch.Stop();
@@ -148,6 +168,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				ExitsConverted = exitsConverted,
 				AttributesConverted = attributesConverted,
 				LocksConverted = locksConverted,
+				MailAliasesConverted = mailAliasesConverted,
 				Errors = errors,
 				Warnings = warnings,
 				Duration = stopwatch.Elapsed
@@ -1190,6 +1211,72 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		=> context.DbrefMapping.TryGetValue(pennDbref, out var dbref)
 			? await _mediator.Send(new GetObjectNodeQuery(dbref), cancellationToken)
 			: new None();
+
+	/// <summary>
+	/// The maildb's aliases, checked as <c>load_malias</c> checks them: an owner that is no imported player
+	/// passes to the probate judge (God when that is no player either), and a member that is no imported
+	/// player is dropped. Each change is a warning, so the summary says what did not come across as it was.
+	/// </summary>
+	private async Task<int> ImportMailAliasesAsync(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		var imported = 0;
+		foreach (var alias in pennDatabase.Mail.Aliases)
+		{
+			var owner = await MappedAsync(alias.Owner, context, cancellationToken) is AnySharpObject and SharpPlayer ownerPlayer
+				? ownerPlayer.Object.DBRef.Number
+				: await ProbateJudgeAsync(cancellationToken);
+			if (!context.DbrefMapping.TryGetValue(alias.Owner, out var mappedOwner) || mappedOwner.Number != owner)
+			{
+				context.Warnings.Add($"Mail alias +{alias.Name}: owner #{alias.Owner} is not an imported player; given to #{owner}");
+			}
+
+			var members = new List<int>();
+			var dropped = new List<int>();
+			foreach (var member in alias.Members)
+			{
+				if (await MappedAsync(member, context, cancellationToken) is AnySharpObject and SharpPlayer player)
+				{
+					members.Add(player.Object.DBRef.Number);
+				}
+				else
+				{
+					dropped.Add(member);
+				}
+			}
+
+			if (dropped.Count > 0)
+			{
+				context.Warnings.Add(
+					$"Mail alias +{alias.Name}: dropped member(s) that are not imported players ({string.Join(" ", dropped.Select(d => $"#{d}"))})");
+			}
+
+			var created = await _mediator.Send(new CreateMailAliasCommand(new SharpMailAlias(alias.Name, alias.Description,
+				owner, [.. members], (MailAliasPrivileges)alias.UsePrivileges, (MailAliasPrivileges)alias.SeePrivileges)),
+				cancellationToken);
+
+			switch (created)
+			{
+				case SharpMailAlias:
+					imported++;
+					break;
+				case Error<string> error:
+					context.Warnings.Add($"Mail alias +{alias.Name} not imported: {error.Value}");
+					break;
+			}
+		}
+
+		return imported;
+	}
+
+	/// <summary><c>options.probate_judge</c> when it is a player, otherwise God.</summary>
+	private async Task<int> ProbateJudgeAsync(CancellationToken cancellationToken)
+	{
+		var configured = (int)_options.CurrentValue.Command.ProbateJudge;
+		return await _mediator.Send(new GetObjectNodeQuery(new DBRef(configured)), cancellationToken) is AnySharpObject and SharpPlayer
+			? configured
+			: 1;
+	}
 
 	/// <summary>The source owner, resolved through the conversion's mapping. A player owns itself.</summary>
 	private async Task SetOwnerAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
