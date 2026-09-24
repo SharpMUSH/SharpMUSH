@@ -1363,7 +1363,8 @@ public partial class Functions
 			packed.Add(cell);
 		}
 
-		return new CallState(MarkupText.Join(MarkupText.Empty, packed));
+		// The packing is by column width, so the result is laid out by its own spacing. See align().
+		return new CallState(MarkupText.Preformatted(MarkupText.Join(MarkupText.Empty, packed)));
 	}
 
 	/// <summary>
