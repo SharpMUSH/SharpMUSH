@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -35,13 +35,16 @@ public class FindableFunctionTests
 	private async Task God(string command)
 		=> await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command));
 
-	/// <summary>Evaluates <paramref name="expression"/> as <paramref name="who"/> and returns what they were told.</summary>
+	/// <summary>
+	/// Evaluates <paramref name="expression"/> as <paramref name="who"/> and returns the answer whole.
+	/// Whole, because <c>#-1 PERMISSION DENIED</c> contains a <c>1</c>: an assertion that merely
+	/// looked for one would pass on the refusal these tests exist to tell apart.
+	/// <para>The value is read off the evaluation rather than out of the notification stream, which
+	/// carries whatever else the session-shared world says to this player while the test runs.</para>
+	/// </summary>
 	private async Task<string> As(TestIsolationHelpers.TestPlayer who, string expression)
-	{
-		var before = WebAppFactoryArg.Notifications.CountFor(who.DbRef);
-		await Parser.CommandParse(who.Handle, ConnectionService, MarkupText.Plain($"think {expression}"));
-		return string.Join("\n", WebAppFactoryArg.Notifications.For(who.DbRef).Skip(before));
-	}
+		=> (await WebAppFactoryArg.CommandParserFor(who.DbRef, who.Handle)
+			.FunctionParse(MarkupText.Plain(expression)))!.Message!.ToPlainText().Trim();
 
 	/// <summary>A room of its own, so nothing another test leaves lying around is nearby.</summary>
 	private async Task<string> Room(string prefix, params object[] occupants)
@@ -65,7 +68,7 @@ public class FindableFunctionTests
 		var item = await Thing("FindableSelfItem");
 		await Room("FindableSelfRoom", asker.DbRef, item);
 
-		await Assert.That(await As(asker, $"[findable({asker.DbRef},{item})]")).Contains("1");
+		await Assert.That(await As(asker, $"[findable({asker.DbRef},{item})]")).IsEqualTo("1");
 	}
 
 	/// <summary>
@@ -79,9 +82,10 @@ public class FindableFunctionTests
 		var asker = await Mortal("FindableNosy");
 		var other = await Mortal("FindableOther");
 		var item = await Thing("FindableOtherItem");
+		await Room("FindableNosyRoom", asker.DbRef);
 		await Room("FindableOtherRoom", other.DbRef, item);
 
-		await Assert.That(await As(asker, $"[findable({other.DbRef},{item})]")).Contains("#-1 PERMISSION DENIED");
+		await Assert.That(await As(asker, $"[findable({other.DbRef},{item})]")).IsEqualTo("#-1 PERMISSION DENIED");
 	}
 
 	/// <summary>Controlling the victim alone is enough, as it is the second arm of the gate.</summary>
@@ -91,13 +95,12 @@ public class FindableFunctionTests
 		var asker = await Mortal("FindableOwner");
 		var other = await Mortal("FindableOwnerOther");
 		var item = await Thing("FindableOwnerItem");
+		await Room("FindableOwnerAskerRoom", asker.DbRef);
 		await Room("FindableOwnerRoom", other.DbRef, item);
 		await God($"@chown/preserve {item}={asker.DbRef}");
 
-		var answer = await As(asker, $"[findable({other.DbRef},{item})]");
-
-		await Assert.That(answer).DoesNotContain("#-1 PERMISSION DENIED");
-		await Assert.That(answer).Contains("1").Because("the item is in the other player's room, so they can locate it");
+		await Assert.That(await As(asker, $"[findable({other.DbRef},{item})]")).IsEqualTo("1")
+			.Because("the item is in the other player's room, so they can locate it");
 	}
 
 	/// <summary>See_All is the first arm: a wizard is answered about anyone.</summary>
@@ -107,12 +110,10 @@ public class FindableFunctionTests
 		var wizard = await Mortal("FindableWiz");
 		var other = await Mortal("FindableWizOther");
 		var item = await Thing("FindableWizItem");
+		await Room("FindableWizAskerRoom", wizard.DbRef);
 		await Room("FindableWizRoom", other.DbRef, item);
 		await God($"@set {wizard.DbRef}=WIZARD");
 
-		var answer = await As(wizard, $"[findable({other.DbRef},{item})]");
-
-		await Assert.That(answer).DoesNotContain("#-1 PERMISSION DENIED");
-		await Assert.That(answer).Contains("1");
+		await Assert.That(await As(wizard, $"[findable({other.DbRef},{item})]")).IsEqualTo("1");
 	}
 }

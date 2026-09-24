@@ -273,11 +273,18 @@ public partial class Functions
 			parser, executor, executor, targetArg, LocateFlags.All) switch
 		{
 			Error<CallState> error => error.Value,
-			AnySharpObject victim => await FindableAnswer(parser, executor, looker, victim, targetArg)
+			AnySharpObject victim => await FindableAnswer(executor, looker, victim)
 		};
 
-	private async ValueTask<CallState> FindableAnswer(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject looker, AnySharpObject victim, string targetArg)
+	/// <summary>
+	/// <c>safe_boolean(Can_Locate(obj, victim))</c> behind the gate (<c>fundb.c:1447-1451</c>). Both
+	/// objects are already resolved, and the answer is about those two objects: <c>fun_findable</c>
+	/// never matches a name a second time, so a context-sensitive argument (<c>me</c>, <c>here</c>)
+	/// cannot mean one thing to the gate and another to the answer, and two objects sharing a name
+	/// cannot be swapped between them.
+	/// </summary>
+	private async ValueTask<CallState> FindableAnswer(AnySharpObject executor, AnySharpObject looker,
+		AnySharpObject victim)
 	{
 		if (!await executor.IsSee_All()
 				&& !await PermissionService.Controls(executor, looker)
@@ -286,8 +293,7 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		return new CallState(
-			await LocateService.Locate(parser, looker, executor, targetArg, LocateFlags.All) is AnySharpObject);
+		return new CallState(await PermissionService.CanLocate(looker, victim));
 	}
 
 	[SharpFunction(Name = "fullalias", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

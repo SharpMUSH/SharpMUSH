@@ -18,8 +18,7 @@ public class StartupHandler(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IWikiService wikiService,
 	IMessageBus messageBus,
-	SharpMUSH.Messaging.NATS.NatsConsumerRegistry? consumers = null,
-	ILibraryProvider<CommandDefinition>? commandLibrary = null)
+	SharpMUSH.Messaging.NATS.NatsConsumerRegistry? consumers = null)
 	: IHostedLifecycleService, IDisposable
 {
 	private const string ServerVersion = "1.0.0";
@@ -168,36 +167,12 @@ public class StartupHandler(
 
 	public Task StartingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-	/// <summary>
-	/// Applies the configured command restrictions, then announces the engine.
-	/// </summary>
-	/// <remarks>
-	/// PennMUSH applies <c>mush.cnf</c>'s <c>restrict_command</c> lines through the same
-	/// <c>restrict_command()</c> that <c>@command/restrict</c> uses (the <c>restrict_command</c>
-	/// branch of <c>config_set</c>, src/conf.c). Reading the option into <see cref="Configurable"/> is
-	/// not applying it: until this call a restriction set in the configuration or the portal
-	/// restricted nobody (#1224).
-	///
-	/// <para>It runs here rather than in <see cref="StartAsync"/> because a command a plugin
-	/// contributes is not in the table yet at that point: <c>PluginBootstrapService</c> is registered
-	/// after this service (HostedServiceRegistration.cs:66, :69) and registers its commands from its
-	/// own <c>StartAsync</c>. The host makes three passes — every <c>StartingAsync</c>, then every
-	/// <c>StartAsync</c>, then every <c>StartedAsync</c> — so by here every plugin command is
-	/// registered, and this is still before the readiness message the ConnectionServer waits on
-	/// before it accepts a login. The ordering is pinned by
-	/// <c>HostedLifecycleOrderingTests</c>.</para>
-	/// </remarks>
-	public async Task StartedAsync(CancellationToken cancellationToken)
+	public Task StartedAsync(CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
-
-		if (commandLibrary is ICommandRestrictionApplier restrictions)
-		{
-			await restrictions.ApplyConfiguredRestrictionsAsync(options.CurrentValue.Restriction.CommandRestrictions);
-		}
-
 		var ct = _readinessCancellation.Token;
 		_ready = Task.Run(() => PublishReadinessAsync(ct), CancellationToken.None);
+		return Task.CompletedTask;
 	}
 
 	private async Task PublishReadinessAsync(CancellationToken ct)
