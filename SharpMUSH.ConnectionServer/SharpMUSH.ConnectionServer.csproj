@@ -11,5 +11,7 @@
     <PackageReference Include="MarkupString" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Ansi" Version="$(MarkupStringVersion)" />
     <PackageReference Include="MarkupString.Html" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="MarkupString.Mxp" Version="$(MarkupStringVersion)" />
+    <PackageReference Include="MarkupString.Pueblo" Version="$(MarkupStringVersion)" />
   </ItemGroup>
 </Project>

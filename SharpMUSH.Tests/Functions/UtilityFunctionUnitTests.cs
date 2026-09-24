@@ -101,11 +101,26 @@ public class UtilityFunctionUnitTests
 		await Assert.That(PasswordService.PasswordIsValid(result, "SomePassword2", player.PasswordHash)).IsFalse();
 	}
 
+	/// <summary>
+	/// A bell is markup, not a character in the text: each client is asked for attention the way it has
+	/// one, and nothing is left in the plain text for a listen pattern to trip over.
+	/// </summary>
 	[Test]
 	public async Task Beep()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("beep()")))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo("\a");
+
+		await Assert.That(result.ToPlainText()).IsEmpty();
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("\a");
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("ms-bell");
+	}
+
+	[Test]
+	public async Task BeepCounted()
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain("beep(3)")))?.Message!;
+
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("\a\a\a");
 	}
 
 	[Test]

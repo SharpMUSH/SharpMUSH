@@ -113,19 +113,23 @@ public partial class Functions
 	public async ValueTask<CallState> ZoneEmit(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await RunEmitFunction(parser, EmitScope.Zone, false);
 
+	/// <summary>
+	/// A bell, as markup rather than as a character: each client is then asked for attention in the way
+	/// it has — U+0007 down a telnet connection, an <c>ms-bell</c> element in the portal — and the
+	/// encodings that drop control characters from text no longer drop this one. It is a point in the
+	/// string, so it is not text a listen pattern or a %-substitution sees either.
+	/// </summary>
 	[SharpFunction(Name = "beep", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.AdminOnly | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> Beep(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var count = 1;
-		if (!parser.CurrentState.Arguments.TryGetValue("0", out var arg))
+		if (parser.CurrentState.Arguments.TryGetValue("0", out var arg)
+			&& int.TryParse(arg.Message!.ToPlainText(), out var parsed)
+			&& parsed is >= 1 and <= 5)
 		{
-			return ValueTask.FromResult(new CallState(new string('\a', count)));
+			count = parsed;
 		}
 
-		var str = arg.Message!.ToPlainText();
-		if (int.TryParse(str, out var parsed) && parsed is >= 1 and <= 5)
-			count = parsed;
-
-		return ValueTask.FromResult(new CallState(new string('\a', count)));
+		return ValueTask.FromResult(new CallState(MString.Concat(Enumerable.Repeat(MString.Bell(), count))));
 	}
 }

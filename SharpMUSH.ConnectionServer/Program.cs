@@ -1,3 +1,5 @@
+using MarkupString.Mxp;
+using MarkupString.Pueblo;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using System.Net.Sockets;
 using SharpMUSH.ConnectionServer.Services;
@@ -21,7 +23,7 @@ public static class Program
 	public static WebApplication CreateApplication(string[] args, string? socketPath = null)
 	{
 		if (!MarkupRegistry.IsConfigured)
-			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml();
+			MarkupRegistry.Default = MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo();
 
 		var builder = WebApplication.CreateBuilder(args);
 		builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);

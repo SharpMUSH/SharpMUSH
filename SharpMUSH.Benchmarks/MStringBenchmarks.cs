@@ -1,6 +1,8 @@
 using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Html;
+using MarkupString.Mxp;
+using MarkupString.Pueblo;
 using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.Benchmarks;
@@ -47,7 +49,7 @@ public class MStringBenchmarks
 	private static readonly MarkupText ColSep = MarkupText.Space;
 	private static readonly MarkupText RowSep = MarkupText.NewLine;
 
-	private static MarkupRegistry Registry => MarkupRegistry.Empty.WithAnsi().WithHtml();
+	private static MarkupRegistry Registry => MarkupRegistry.Empty.WithAnsi().WithHtml().WithMxp().WithPueblo();
 
 	/// <summary>
 	/// Rendering and serialisation resolve their emitters through <see cref="MarkupRegistry.Default"/>,
