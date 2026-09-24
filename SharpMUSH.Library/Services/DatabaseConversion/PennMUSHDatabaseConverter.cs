@@ -1309,6 +1309,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var reusedSender = new SortedDictionary<int, int>();
 		var badTime = 0;
 		var folderNames = new Dictionary<int, Dictionary<int, string>>();
+		var pennObjects = new Dictionary<int, PennMUSHObject>();
+		foreach (var pennObject in pennDatabase.Objects)
+		{
+			pennObjects.TryAdd(pennObject.DBRef, pennObject);
+		}
 
 		foreach (var message in pennDatabase.Mail.Messages)
 		{
@@ -1331,7 +1336,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				}
 			}
 			else if (message.FromCreationTime != 0
-							 && pennDatabase.GetObject(message.From) is { } source
+							 && pennObjects.GetValueOrDefault(message.From) is { } source
 							 && source.CreationTime != message.FromCreationTime)
 			{
 				reusedSender[message.From] = reusedSender.GetValueOrDefault(message.From) + 1;
@@ -1351,7 +1356,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			if (!folderNames.TryGetValue(message.To, out var names))
 			{
-				folderNames[message.To] = names = MailFolderNames(pennDatabase.GetObject(message.To));
+				folderNames[message.To] = names = MailFolderNames(pennObjects.GetValueOrDefault(message.To));
 			}
 
 			await _mediator.Send(new SendMailCommand(from.Object(), recipient, new SharpMail
@@ -1410,9 +1415,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	{
 		var names = new Dictionary<int, string>();
 		var value = player?.Attributes.FirstOrDefault(a => a.Name.Equals("MAILFOLDERS", StringComparison.OrdinalIgnoreCase))?.Value;
-		foreach (var entry in (value ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		foreach (var parts in (value ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(e => e.Split(':')))
 		{
-			var parts = entry.Split(':');
 			if (parts.Length == 3 && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)
 					&& parts[1].Length > 0)
 			{
