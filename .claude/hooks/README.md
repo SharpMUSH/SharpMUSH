@@ -14,6 +14,8 @@ refuses (exit 2, with the reason fed back to the agent) while:
    because the formatter needs two passes to converge.
 3. **A test project that depends on the changed files fails.** Changed files are mapped to their
    project, then to every `SharpMUSH.Tests*` project that references it directly or indirectly.
+   Files a project links in from outside its own directory, such as help files, oracle fixtures
+   and embedded package YAML, count for that project too.
    A change to `Directory.Build.*`, `global.json` or `.editorconfig` selects every test project.
    `node --test tools/client-tests/*.test.mjs` runs when `SharpMUSH.Client/wwwroot/` or
    `tools/client-tests/` changes.
