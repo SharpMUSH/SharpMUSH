@@ -1,0 +1,68 @@
+name: PennMUSH parity harness
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/parity/**'
+      - '.github/workflows/parity.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: parity-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The reference the harness compares against. Bump deliberately, together with the sample report.
+  PENNMUSH_REF: 80a1d5b
+
+jobs:
+  parity:
+    name: PennMUSH vs SharpMUSH
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Harness unit tests (no servers)
+        run: python3 -m unittest discover -s tools/parity/tests
+
+      - name: Setup Java (required for ANTLR parser generation)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Build.props
+
+      - name: Build reference PennMUSH
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libssl-dev zlib1g-dev libpcre2-dev libicu-dev
+          git clone https://github.com/pennmush/pennmush pennmush
+          git -C pennmush checkout "$PENNMUSH_REF"
+          cd pennmush
+          ./configure
+          make -j"$(nproc)"
+
+      - name: Differential run
+        run: tools/parity/run.sh --baseline
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-report
+          path: |
+            tools/parity/reports/latest/
+            tools/parity/.work/*/logs/

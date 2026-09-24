@@ -1,0 +1,23 @@
+# The imported world: everything setup.mush created must survive the flatfile round trip.
+::case import.players  players, flags, passwords
+::login wiz Wiz wizpass
+think [name(*Wiz)] [name(*Alice)] [name(*Bob)] [name(*One)]
+think [flags(*Wiz)] [flags(*Alice)]
+think [type(*Wiz)] [type(*Alice)]
+
+::case import.rooms  rooms and descriptions
+think [name(loc(*Alice))] [type(loc(*Alice))] [get(loc(*Alice)/DESC)]
+look
+@teleport me=[loc(*Alice)]
+look
+@teleport me=#0
+
+::case import.things  things, attributes, locations
+think [name(first(lcon(*Alice)))] [get(first(lcon(*Alice))/COLOR)] [get(first(lcon(*Alice))/SIZE)]
+think [get(first(lcon(*Alice))/GREET)]
+think [loc(first(lcon(*Alice)))=loc(*Alice)] [owner(first(lcon(*Alice)))=owner(*Alice)]
+think [get(first(lcon(*Alice))/DESC)]
+
+::case import.owners  ownership and money
+think [owner(*Alice)=num(*Alice)] [owner(loc(*Alice))=num(*One)]
+think [money(*Alice)] [money(*Wiz)]

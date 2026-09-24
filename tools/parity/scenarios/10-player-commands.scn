@@ -1,0 +1,79 @@
+# Everyday player commands, two players in the same room and one apart.
+::case setup.sessions  Alice and Bob meet in the Lab
+::login alice Alice alicepass
+::login bob Bob bobpass
+::as bob
+@tel me=[loc(*Alice)]
+::as alice
+
+::case comm.say  say, pose, semipose and emit reach the room
+say hello there
+:waves.
+;'s cat purrs.
+"quoted shortcut
+@emit A bell rings.
+think [name(%#)]
+
+::case comm.pemit  @pemit to a player, to oneself, and to nobody
+@pemit *Bob=A private hello.
+@pemit me=Note to self.
+@pemit *Nobody=lost
+@pemit/silent *Bob=silent hello
+
+::case comm.page  page and whisper
+page Bob=Are you there?
+whisper Bob=psst
+page Nobody=hello
+
+::case obj.inventory  inventory and examine of a carried object
+inventory
+look Widget
+examine Widget
+think [get(Widget/COLOR)] [get(Widget/SIZE)] [u(Widget/GREET,World)]
+
+::case obj.create  create, describe, rename and destroy an object
+@create Gizmo
+@desc Gizmo=A gleaming gizmo.
+look Gizmo
+@name Gizmo=Gadget
+look Gadget
+@destroy Gadget
+look Gadget
+
+::case obj.attrs  set, read, wipe attributes
+&FOO Widget=bar
+think [get(Widget/FOO)]
+&FOO Widget=
+think [get(Widget/FOO)]
+@set Widget/COLOR=no_command
+examine Widget/COLOR
+@set Widget/COLOR=!no_command
+
+::case obj.give  get, drop, give
+drop Widget
+look
+get Widget
+give *Bob=1
+give *Nobody=1
+
+::case room.dig  dig a room, open exits, walk through them
+@dig Annex=Annex Door,Back
+@open North;n=here
+look
+Annex Door
+look
+Back
+think [name(loc(%#))]
+
+::case flags.set  set and clear a flag on oneself
+@set me=HAVEN
+think [hasflag(me,HAVEN)] [flags(me)]
+@set me=!HAVEN
+think [hasflag(me,HAVEN)]
+@set me=BOGUS
+
+::case misc.unknown  unknown commands and bad syntax
+frobnicate
+@frobnicate
+huh
+think

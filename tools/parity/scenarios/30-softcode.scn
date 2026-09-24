@@ -1,0 +1,52 @@
+# Softcode: evaluation, math, strings, lists, control flow, registers, attributes.
+::case sc.login
+::login wiz Wiz wizpass
+think ok
+
+::case sc.math  arithmetic and comparison
+think [add(1,2,3)] [sub(10,4)] [mul(2,3,4)] [div(7,2)] [fdiv(7,2)] [mod(-7,3)] [remainder(-7,3)]
+think [inc(5)] [dec(5)] [abs(-3)] [sign(-9)] [max(1,9,3)] [min(4,2,8)] [power(2,10)] [sqrt(16)]
+think [round(3.14159,2)] [floor(-1.5)] [ceil(-1.5)] [trunc(-1.5)] [bound(15,1,10)]
+think [eq(1,1.0)] [gt(2,1)] [lte(3,3)] [cand(1,0)] [cor(0,1)] [not(0)] [xor(1,1)]
+think [add(1,foo)] [div(1,0)] [sqrt(-1)]
+
+::case sc.strings  string functions
+think [strlen(hello)] [mid(abcdef,1,3)] [left(abcdef,2)] [right(abcdef,2)] [reverse(abc)] [repeat(ab,3)]
+think [upcstr(abc)] [lcstr(ABC)] [capstr(abc def)] [trim(  a b  )] [trim(xxaxx,x,b)]
+think [pos(c,abcd)] [strmatch(hello,h*o)] [match(a b c,b)] [comp(a,b)] [ljust(a,3)]|[rjust(a,3)]|[center(a,5)]
+think [edit(banana,a,A)] [replace(a b c,2,X)] [delete(abcdef,1,2)] [squish(a   b)] [escape(a[b])]
+think [before(a-b-c,-)] [after(a-b-c,-)] [wrap(aaa bbb ccc,5)]
+
+::case sc.lists  list functions
+think [words(a b c)] [first(a b c)] [rest(a b c)] [last(a b c)] [extract(a b c d,2,2)]
+think [sort(c a b)] [sort(10 9 100,n)] [sortby(#lambda/comp(%%0,%%1),c b a)] [setunion(a b,b c)] [setinter(a b,b c)] [setdiff(a b,b c)]
+think [lnum(5)] [lnum(2,4)] [revwords(a b c)] [remove(a b c,b)] [member(a b c,c)] [splice(a b c,x y z,b)]
+think [iter(a b c,##-#@)] [map(#lambda/strlen(%%0),aa b cccc)] [fold(#lambda/add(%%0,%%1),1 2 3)] [filter(#lambda/gt(%%0,1),0 1 2 3)]
+think [itemize(a b c)] [elements(a b c d,2 4)] [ldelete(a b c,2)] [insert(a b c,2,X)]
+
+::case sc.control  switch, if, registers, evaluation order
+think [if(1,yes,no)] [if(0,yes,no)] [ifelse(,a,b)] [switch(2,1,one,2,two,other)] [case(3,1,x,3,y)]
+think [setq(0,hi)][r(0)] [setr(1,there)] [r(1)] [%q0 %q1]
+think [null(x)][s(%b)] [lit([add(1,2)])] [eval(add(1,2))]
+think [u(#lambda/[add(%0,1)],5)]
+think [ulocal(#lambda/[setq(0,inner)]%q0,x)]
+@dolist a b c=think item ##
+::settle
+think [t()] [t(0)] [t(00)] [t(a)] [t(#-1)] [isnum(1.5)] [isint(1.5)] [isdbref(#1)]
+
+::case sc.attrs  attribute functions on the fixture object
+think [get([first(lcon(*Alice))]/COLOR)]
+think [name(first(lcon(*Alice)))] [type(first(lcon(*Alice)))] [owner(first(lcon(*Alice)))=owner(*Alice)]
+think [hasattr(first(lcon(*Alice)),COLOR)] [hasattr(first(lcon(*Alice)),NOPE)]
+think [lattr(first(lcon(*Alice)))]
+think [xget(first(lcon(*Alice)),SIZE)] [grep(first(lcon(*Alice)),*,lu)]
+think [u(first(lcon(*Alice))/GREET,Bob)]
+
+::case sc.identity  who-am-I substitutions
+think %n %# %! %l %0 [name(%#)]
+think [name(%!)] [hasflag(%#,WIZARD)] [flags()] [type(%#)]
+
+::case sc.errors  error strings
+think [nosuchfunction(1)]
+think [add()] [strlen()] [mid(abc)]
+think [get(nothing/nothing)] [name(#9999)] [loc(#9999)]
