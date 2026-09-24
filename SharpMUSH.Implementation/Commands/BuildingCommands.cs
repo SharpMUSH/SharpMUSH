@@ -978,7 +978,9 @@ public partial class Commands
 				&& await BuildingHelpers.OpenExitAsync(Mediator, Database, Configuration, NotifyService,
 					PermissionService, LockService, executor, returnName, destination, backAt) is DBRef back)
 		{
-			await LinkNewExitAsync(parser, executor, back, sourceRoom.Object().DBRef.ToString());
+			// unparse_dbref(source) (create.c:236) — the bare #N, not the objid, so the report reads
+			// "Linked to #12" rather than "Linked to #12:1790216...".
+			await LinkNewExitAsync(parser, executor, back, $"#{sourceRoom.Object().DBRef.Number}");
 		}
 
 		return forward.ToString();

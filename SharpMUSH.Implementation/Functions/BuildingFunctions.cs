@@ -117,9 +117,9 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		var sourceRoom = await executor.Where();
-		if (args.TryGetValue("2", out var sourceArg) && !string.IsNullOrWhiteSpace(sourceArg.Message!.ToPlainText()))
+		if (BuildingHelpers.Argument(args, "2") is { } sourceRoomName)
 		{
-			if (await LocateService.Locate(parser, executor, executor, sourceArg.Message!.ToPlainText(),
+			if (await LocateService.Locate(parser, executor, executor, sourceRoomName.ToPlainText(),
 					LocateFlags.All) is not (AnySharpObject and SharpRoom namedRoom))
 			{
 				return new CallState(ErrorMessages.Returns.InvalidSourceRoom);
@@ -154,12 +154,12 @@ public partial class Functions
 	private async ValueTask<string> LinkOpenedExitAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		IReadOnlyDictionary<string, CallState> args, DBRef exit)
 	{
-		if (!args.TryGetValue("1", out var destArg) || string.IsNullOrWhiteSpace(destArg.Message!.ToPlainText()))
+		if (BuildingHelpers.Argument(args, "1") is not { } destinationName)
 		{
 			return exit.ToString();
 		}
 
-		if (await LocateService.Locate(parser, executor, executor, destArg.Message!.ToPlainText(), LocateFlags.All)
+		if (await LocateService.Locate(parser, executor, executor, destinationName.ToPlainText(), LocateFlags.All)
 				is not AnySharpObject destination
 			|| !destination.IsContainer
 			|| !await PermissionService.CanLinkToAsync(executor, destination))
