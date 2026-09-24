@@ -161,6 +161,8 @@ public static class BuildingHelpers
 		IObjectStore database,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
 		AnySharpObject executor,
 		MString roomName,
 		MString? exitTo,
@@ -178,10 +180,10 @@ public static class BuildingHelpers
 
 		// create.c:480-490 settles all three requested dbrefs before new_object(), so one that cannot be
 		// honoured digs nothing at all rather than leaving a room behind.
-		return await RequestedDbrefsAsync(notifyService, executor, roomDbref, toDbref, fromDbref) switch
+		return await RequestedDbrefsAsync(database, notifyService, executor, roomDbref, toDbref, fromDbref) switch
 		{
-			DBRef?[] at => await DugAsync(mediator, database, configuration, notifyService, executor, roomName,
-				exitTo, exitFrom, at[0], at[1], at[2]),
+			DBRef?[] at => await DugAsync(mediator, database, configuration, notifyService, permissionService,
+				lockService, executor, roomName, exitTo, exitFrom, at[0], at[1], at[2]),
 			Error<string> refused => refused
 		};
 	}
@@ -192,6 +194,8 @@ public static class BuildingHelpers
 		IObjectStore database,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
 		AnySharpObject executor,
 		MString roomName,
 		MString? exitTo,
@@ -203,13 +207,37 @@ public static class BuildingHelpers
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 
 		// create.c:480 — do_dig charges the room before new_object(), and each exit below is charged
-		// again on its own inside do_real_open (:130).
-		if (await RoomChargedAsync(mediator, configuration, notifyService, executor, roomName.ToPlainText(),
-				owner, roomAt) is not DBRef dug)
+		// again on its own inside do_real_open (:130). An exhausted quota and a dbref the provider
+		// would not give up are different answers, so the one actually handed back is the one reported.
+		return await RoomChargedAsync(mediator, configuration, notifyService, executor, roomName.ToPlainText(),
+			owner, roomAt) switch
 		{
-			return new Error<string>(ErrorMessages.Returns.BuildingQuotaExhausted);
-		}
+			DBRef dug => await RoomDugAsync(mediator, database, configuration, notifyService, permissionService,
+				lockService, executor, roomName, exitTo, exitFrom, dug, toAt, fromAt),
+			Error<string> refused => refused
+		};
+	}
 
+	/// <summary>
+	/// The zone, the report and the two exits, once the room exists — <c>do_dig</c> from
+	/// <c>create.c:492</c> onwards. The answer is the room either way, as it is in Penn: an exit the
+	/// quota or the permission check turns down stops the dig and leaves what was already paid for.
+	/// </summary>
+	private static async ValueTask<Result<DBRef>> RoomDugAsync(
+		IMediator mediator,
+		IObjectStore database,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
+		AnySharpObject executor,
+		MString roomName,
+		MString? exitTo,
+		MString? exitFrom,
+		DBRef dug,
+		DBRef? toAt,
+		DBRef? fromAt)
+	{
 		await notifyService.NotifyLocalized(executor.Object().DBRef,
 			nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executor, roomName, dug.Number);
 
@@ -218,7 +246,7 @@ public static class BuildingHelpers
 			throw new InvalidOperationException("The room just dug must exist.");
 		}
 
-		// A new room inherits its digger's zone, once the cycle guard allows it.
+		// Zone(room) = Zone(player) (create.c:494), once the cycle guard allows it.
 		if (await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone
 			&& await HelperFunctions.SafeToAddZone(mediator, database, room, zone))
 		{
@@ -227,49 +255,62 @@ public static class BuildingHelpers
 
 		var where = await executor.Where();
 
-		// create.c:507-510 — an exit the quota cannot pay for stops the dig, and the room that was
-		// already paid for stays.
+		// create.c:507-517 — the exit to the new room is sourced where the digger stands, and the exit
+		// back is sourced in the new room and linked to "here", which parse_linkable_room resolves to
+		// speech_loc(player). An exit that is refused stops the dig, and the room stays.
 		if (Given(exitTo) is not null
-			&& !await DugExitAsync(mediator, configuration, notifyService, executor, exitTo!, where, room, owner, toAt))
+			&& !await DugExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
+				executor, exitTo!, where, room, toAt))
 		{
 			return dug;
 		}
 
 		if (Given(exitFrom) is not null)
 		{
-			await DugExitAsync(mediator, configuration, notifyService, executor, exitFrom!, room, where, owner, fromAt);
+			await DugExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
+				executor, exitFrom!, room, where, fromAt);
 		}
 
 		return dug;
 	}
 
 	/// <summary>
-	/// One of <c>do_dig</c>'s two exits: opened in <paramref name="from"/>, linked to
-	/// <paramref name="to"/>, and reported the way <c>do_dig</c> reports them (<c>create.c:504-517</c>).
+	/// One of <c>do_dig</c>'s two exits. It is a <c>do_real_open</c> like any other
+	/// (<c>create.c:507</c>, <c>:518</c>), so it is held to <c>can_open_from</c> on its source and
+	/// <c>can_link_to</c> on its destination (<c>parse_linkable_room</c>, <c>create.c:61</c>) — which
+	/// <c>@dig</c> never asked, and which matters more now that <c>dig()</c> reaches the same code from
+	/// softcode.
 	/// </summary>
 	private static async ValueTask<bool> DugExitAsync(
 		IMediator mediator,
+		IObjectStore database,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
 		AnySharpObject executor,
 		MString exitName,
 		AnySharpContainer from,
 		AnySharpContainer to,
-		SharpPlayer owner,
 		DBRef? requestedDbref)
 	{
-		var parts = exitName.ToPlainText().Split(';');
-
-		if (await ExitChargedAsync(mediator, configuration, notifyService, executor, parts[0], parts[1..], from,
-				owner, requestedDbref) is not DBRef opened)
+		if (await OpenExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
+				executor, exitName, from, requestedDbref) is not DBRef opened)
 		{
 			return false;
 		}
 
-		await notifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.OpenedExit),
-			executor, $"#{opened.Number}");
 		await notifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.TryingToLink),
 			executor);
+
+		// parse_linkable_room refuses a destination the digger may not link into and leaves the exit
+		// unlinked, exactly as do_real_open's own link step does (create.c:165-171).
+		if (!await permissionService.CanLinkToAsync(executor, to.WithExitOption()))
+		{
+			await notifyService.NotifyLocalized(executor.Object().DBRef,
+				nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
+			return true;
+		}
 
 		if (await mediator.Send(new GetObjectNodeQuery(opened)) is not (AnySharpObject and SharpExit exit))
 		{
@@ -1030,6 +1071,7 @@ public static class BuildingHelpers
 	/// null.
 	/// </summary>
 	public static async ValueTask<Result<DBRef?[]>> RequestedDbrefsAsync(
+		IObjectStore database,
 		INotifyService notifyService,
 		AnySharpObject executor,
 		params MString?[] requested)
@@ -1050,6 +1092,30 @@ public static class BuildingHelpers
 					break;
 				case Error<string> refused:
 					return refused;
+			}
+		}
+
+		// make_first_free_wrapper asks IsGarbage and pushes the slot onto the free list before
+		// new_object() runs (destroy.c:939-947), so every id a multi-object build names is settled
+		// before the first object exists. Without this the room would be dug and the exit then refused.
+		// Advisory: the authority is still the check inside the write that takes the id.
+		for (var i = 0; i < wanted.Length; i++)
+		{
+			if (wanted[i] is not { } at)
+			{
+				continue;
+			}
+
+			// Penn's free list silently tolerates the same slot pushed twice and hands the second
+			// object whatever came next instead. Building somewhere other than where you asked is the
+			// whole thing a requested dbref exists to prevent, so a repeat is refused here.
+			var repeated = Array.FindIndex(wanted, other => other is { } o && o.Number == at.Number) != i;
+
+			if (repeated || !await database.IsDbrefAvailableAsync(at))
+			{
+				await notifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);
+				return new Error<string>(ErrorMessages.Returns.InvalidDbref);
 			}
 		}
 

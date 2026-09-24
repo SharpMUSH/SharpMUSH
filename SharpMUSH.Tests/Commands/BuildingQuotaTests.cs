@@ -146,9 +146,18 @@ public class BuildingQuotaTests
 	public async ValueTask AMultiObjectDigStopsWhereTheQuotaDoes()
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8];
-		var mortal = await MortalWithSlotsAsync("BqtDig", 1);
-		var start = await AsGod($"@dig BqtDigStart{uid}");
-		await AsGod($"@teleport {mortal.DbRef}={DBRef.Parse(start.Trim())}");
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "BqtDig");
+		var start = DBRef.Parse((await AsGod($"@dig BqtDigStart{uid}")).Trim());
+
+		// do_dig's exits are do_real_open calls, so can_open_from (create.c:127) is asked before
+		// can_pay_fees (:130). The digger has to own the room they stand in or permission, not quota,
+		// is what refuses the forward exit and this test proves nothing.
+		await AsGod($"@chown {start}={mortal.DbRef}");
+		await AsGod($"@teleport {mortal.DbRef}={start}");
+
+		var player = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<SharpPlayer>();
+		await AsGod($"@quota/set {mortal.DbRef}={await Mediator.Send(new GetOwnedObjectCountQuery(player)) + 1}");
 
 		await Run(mortal.Handle, $"@dig BqtDigRoom{uid}=BqtDigTo{uid},BqtDigBack{uid}");
 
@@ -210,6 +219,30 @@ public class BuildingQuotaTests
 			.Because("the one slot paid for the forward exit");
 		await Assert.That((await Named($"BqtBackFrom{uid}")).Length).IsEqualTo(0)
 			.Because("the return exit's own can_pay_fees had nothing left to charge");
+	}
+
+	/// <summary>
+	/// <c>can_pay_fees</c> refuses a guest and an exhausted quota for different reasons
+	/// (<c>predicat.c:438-441</c> against <c>:453-456</c>), and <c>@dig</c> reaches the guest branch
+	/// with nothing in the way — unlike <c>@clone</c>, whose <c>controls</c> check gets there first.
+	/// The lifted <c>@dig</c> body reported both as the quota.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask AGuestDigSaysPermissionAndNotQuota(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var guest = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "BqtGuestDig");
+		await AsGod($"@power {guest.DbRef}=Guest");
+
+		var name = $"BqtGuestDug{uid}";
+		await Assert.That(await Run(guest.Handle, throughTheFunction
+				? $"think dig({name})"
+				: $"@dig {name}"))
+			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That((await Named(name)).Length).IsEqualTo(0);
 	}
 
 	/// <summary>

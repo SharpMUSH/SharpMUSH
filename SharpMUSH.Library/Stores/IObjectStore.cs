@@ -106,6 +106,22 @@ public interface IObjectStore
 		long? modifiedTime = null, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Whether <paramref name="requested"/> is a dbref a <c>Create*AtAsync</c> could take right now —
+	/// the read-only half of PennMUSH's <c>make_first_free_wrapper</c> (<c>src/destroy.c:939-947</c>),
+	/// which asks <c>IsGarbage</c> and then pushes the slot onto the free list <i>before</i>
+	/// <c>new_object()</c> so a multi-object build refuses without leaving anything behind.
+	/// </summary>
+	/// <remarks>
+	/// Advisory only: it takes no lock and reserves nothing, so the authority remains the availability
+	/// check inside the write that takes the id. It exists so that <c>@dig name=to,from,#a,#b,#c</c>
+	/// refuses before it digs, rather than digging the room and then failing on the exit.
+	/// </remarks>
+	/// <param name="requested">The dbref to ask about</param>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns><c>true</c> if a build could take it now</returns>
+	ValueTask<bool> IsDbrefAvailableAsync(DBRef requested, CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Create a new thing.
 	/// </summary>
 	/// <param name="name">Thing name</param>

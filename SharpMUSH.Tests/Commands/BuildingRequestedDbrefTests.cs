@@ -297,6 +297,73 @@ public class BuildingRequestedDbrefTests
 	}
 
 	/// <summary>
+	/// <c>make_first_free_wrapper</c> asks <c>IsGarbage</c> and pushes the slot onto the free list
+	/// <i>before</i> <c>new_object()</c> (<c>destroy.c:939-947</c>, <c>create.c:480-490</c>), so every
+	/// id a dig names is settled before the room exists. Checking only permission and syntax up front
+	/// dug the room and then failed on the exit.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask ADigWithAnOccupiedExitDbrefDigsNothingAtAll(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var roomHole = await Hole($"{uid}R");
+		var occupant = DBRef.Parse(await Run(1, $"@create BrdDigTaken{uid}"));
+
+		await Assert.That(await Run(1, throughTheFunction
+				? $"think dig(BrdDigTakenRoom{uid},BrdDigTakenTo{uid},,#{roomHole.Number},#{occupant.Number})"
+				: $"@dig BrdDigTakenRoom{uid}=BrdDigTakenTo{uid},,#{roomHole.Number},#{occupant.Number}"))
+			.IsEqualTo(ErrorMessages.Returns.InvalidDbref);
+		await Assert.That((await Named($"BrdDigTakenRoom{uid}")).Length).IsEqualTo(0)
+			.Because("the room dbref was free, but the exit's was not, and Penn pushes both before it digs");
+		await Assert.That((await Named($"BrdDigTakenTo{uid}")).Length).IsEqualTo(0);
+
+		// The room's hole was never consumed by the refusal.
+		await Assert.That(DBRef.Parse(await Run(1, $"@dig BrdDigTakenLater{uid}=,,#{roomHole.Number}")).Number)
+			.IsEqualTo(roomHole.Number);
+	}
+
+	/// <summary>
+	/// A dig refused over its room dbref says so. The lifted <c>@dig</c> body reported every refusal
+	/// from the room's creation as an exhausted quota, which is wrong when the quota admitted the
+	/// attempt and only the requested slot was turned down.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask ADigRefusedOverItsRoomDbrefSaysSoAndNotTheQuota(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var occupant = DBRef.Parse(await Run(1, $"@create BrdDigRoomTaken{uid}"));
+
+		await Assert.That(await Run(1, throughTheFunction
+				? $"think dig(BrdDigRoomTakenNew{uid},,,#{occupant.Number})"
+				: $"@dig BrdDigRoomTakenNew{uid}=,,#{occupant.Number}"))
+			.IsEqualTo(ErrorMessages.Returns.InvalidDbref);
+		await Assert.That((await Named($"BrdDigRoomTakenNew{uid}")).Length).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// Penn's free list silently tolerates the same slot pushed twice and hands the second object
+	/// whatever came next (<c>make_first_free</c>, <c>destroy.c</c>, returns 1 when the object is
+	/// already at the head). Building somewhere other than where you asked is what a requested dbref
+	/// exists to prevent, so a repeat is refused outright here.
+	/// </summary>
+	[Test]
+	public async ValueTask ADigNamingOneDbrefTwiceIsRefused()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var hole = await Hole(uid);
+
+		await Assert.That(await Run(1,
+				$"@dig BrdDigTwiceRoom{uid}=BrdDigTwiceTo{uid},,#{hole.Number},#{hole.Number}"))
+			.IsEqualTo(ErrorMessages.Returns.InvalidDbref);
+		await Assert.That((await Named($"BrdDigTwiceRoom{uid}")).Length).IsEqualTo(0);
+		await Assert.That((await Named($"BrdDigTwiceTo{uid}")).Length).IsEqualTo(0);
+	}
+
+	/// <summary>
 	/// A build refused for the dbref says so, and is not flattened into the quota's answer. Cloning
 	/// mapped every refusal it was handed onto <c>#-1 BUILDING QUOTA EXHAUSTED</c>, which is the wrong
 	/// thing to tell a wizard whose slot was simply taken.

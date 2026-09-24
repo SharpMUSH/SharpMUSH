@@ -153,6 +153,59 @@ public class OpenArgumentParityTests
 	}
 
 	/// <summary>
+	/// <c>do_dig</c> opens its exits through <c>do_real_open</c> (<c>create.c:507</c>, <c>:518</c>), so
+	/// they are held to <c>can_open_from</c> like any other exit. <c>@dig</c> never asked, and
+	/// <c>dig()</c> now reaches the same code from softcode, so a digger standing in someone else's
+	/// room could have opened an exit there.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask ADigsForwardExitIsHeldToCanOpenFrom(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "OapDigPerm");
+		// God's room, neither controlled nor OPEN_OK.
+		var room = Ref(await AsGod($"@dig OapDigPermRoom{uid}"));
+		await AsGod($"@teleport {mortal.DbRef}={room}");
+
+		var dug = Ref(await Run(mortal.Handle, throughTheFunction
+			? $"think dig(OapDigPermNew{uid},OapDigPermTo{uid})"
+			: $"@dig OapDigPermNew{uid}=OapDigPermTo{uid}"));
+
+		await Assert.That((await Named($"OapDigPermNew{uid}")).Length).IsEqualTo(1)
+			.Because("create.c:507-510 keeps the room the dig already paid for");
+		await Assert.That(dug.Number).IsGreaterThan(0);
+		await Assert.That((await Named($"OapDigPermTo{uid}")).Length).IsEqualTo(0)
+			.Because("can_open_from refuses an exit sourced in a room the digger may not open in");
+	}
+
+	/// <summary>
+	/// The exit back is sourced in the room just dug — which the digger owns — and linked to "here",
+	/// which <c>parse_linkable_room</c> (<c>create.c:41-67</c>) puts through <c>can_link_to</c>. A
+	/// digger who may not link into the room they are standing in gets the exit and no link, which is
+	/// what <c>do_real_open</c>'s own link step does (<c>create.c:165-171</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask ADigsReturnExitWillNotLinkWhereTheDiggerMayNot()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "OapDigLink");
+		var room = Ref(await AsGod($"@dig OapDigLinkRoom{uid}"));
+		await AsGod($"@teleport {mortal.DbRef}={room}");
+
+		await Run(mortal.Handle, $"@dig OapDigLinkNew{uid}=,OapDigLinkBack{uid}");
+
+		var back = await Named($"OapDigLinkBack{uid}");
+		await Assert.That(back.Length).IsEqualTo(1)
+			.Because("the exit is sourced in the new room, which the digger owns");
+		await Assert.That(await DestinationOf(Ref(back[0]))).IsNull()
+			.Because("can_link_to refuses the room the digger is standing in, and Penn leaves the exit unlinked");
+	}
+
+	/// <summary>
 	/// <c>fun_open</c>'s third argument is the source room, and a name that matches nothing there is
 	/// <c>#-1 INVALID SOURCE ROOM</c> (<c>fundb.c:2160-2166</c>). SharpMUSH ignored arguments 1-3
 	/// entirely and always opened, unlinked, where the caller stood.

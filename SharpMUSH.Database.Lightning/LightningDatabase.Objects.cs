@@ -103,6 +103,10 @@ public partial class LightningDatabase
 		}, cancellationToken);
 	}
 
+	/// <inheritdoc />
+	public ValueTask<bool> IsDbrefAvailableAsync(DBRef requested, CancellationToken cancellationToken = default)
+		=> ValueTask.FromResult(Store.Read(tx => AllocateDbrefAt(tx, requested.Number) is not null));
+
 	/// <summary>The room rows themselves, once a dbref has been settled on.</summary>
 	private static DBRef WriteRoom(ITx tx, long dbref, string name, long ownerKey, long now, long modified)
 	{

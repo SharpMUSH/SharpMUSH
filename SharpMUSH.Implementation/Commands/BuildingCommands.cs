@@ -866,8 +866,8 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		return await BuildingHelpers.DigAsync(Mediator, Database, Configuration, NotifyService, executor,
-			args["0"].Message!,
+		return await BuildingHelpers.DigAsync(Mediator, Database, Configuration, NotifyService, PermissionService,
+			LockService, executor, args["0"].Message!,
 			BuildingHelpers.Argument(args, "1"), BuildingHelpers.Argument(args, "2"),
 			BuildingHelpers.Argument(args, "3"), BuildingHelpers.Argument(args, "4"),
 			BuildingHelpers.Argument(args, "5")) switch
@@ -934,7 +934,7 @@ public partial class Commands
 		}
 
 		// create.c:219-226 settles both requested dbrefs before either exit is opened.
-		return await BuildingHelpers.RequestedDbrefsAsync(NotifyService, executor,
+		return await BuildingHelpers.RequestedDbrefsAsync(Database, NotifyService, executor,
 			BuildingHelpers.Argument(args, "4"), BuildingHelpers.Argument(args, "5")) switch
 		{
 			DBRef?[] at => await OpenBothAsync(parser, executor, args, sourceRoom, at[0], at[1]),
