@@ -406,6 +406,77 @@ public class TelnetServerNegotiationTests
 		}
 	}
 
+	/// <summary>
+	/// MXP's <c>&lt;SUPPORT&gt;</c> question, and the answer recorded on the connection so the renderer
+	/// can hold the client to it.
+	/// </summary>
+	/// <remarks>
+	/// The first thing recorded has to be the client's answer. The question is asked from the callback
+	/// that runs while the interpreter is processing the bytes which started MXP mode, and the read loop
+	/// is waiting on that processing — so waiting there for the reply would stall the loop that delivers
+	/// it, time out, and write down that a client which answered at once supports nothing. Until the
+	/// deadline passes that is what the renderer would have gone by.
+	/// </remarks>
+	[Test]
+	public async Task MxpSupport_IsAskedAndTheAnswerRecorded()
+	{
+		var recorded = new List<string?>();
+		var answered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var capabilities = new ProtocolCapabilities();
+
+		var connectionService = Substitute.For<IConnectionServerService>();
+		connectionService.Get(42).Returns(_ => new ConnectionServerService.ConnectionData(
+			42, null, ConnectionServerService.ConnectionState.Connected,
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+			() => Encoding.UTF8, () => { }, null, capabilities, null));
+		connectionService
+			.UpdateCapabilities(Arg.Any<long>(), Arg.Any<Func<ProtocolCapabilities, ProtocolCapabilities>>())
+			.Returns(call =>
+			{
+				capabilities = call.Arg<Func<ProtocolCapabilities, ProtocolCapabilities>>()(capabilities);
+				lock (recorded)
+				{
+					if (capabilities.MxpSupported is not null)
+					{
+						recorded.Add(capabilities.MxpSupported);
+						answered.TrySetResult();
+					}
+				}
+
+				return true;
+			});
+
+		var (toServer, fromServer, handler, _, cts) = StartServer(connectionService: connectionService);
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, MXP));
+			await WriteAsync(toServer, IAC, DO, MXP);
+
+			// The question goes out on a secure line, since that is the only mode a tag is read in.
+			var asked = await ReadUntilAsync(fromServer, seen => Encoding.ASCII.GetString(seen).Contains("<SUPPORT "));
+			await Assert.That(Encoding.ASCII.GetString(asked)).Contains("IMAGE")
+				.Because("the question names the elements this server writes");
+
+			await WriteAsync(toServer, Encoding.ASCII.GetBytes("\u001b[1z<SUPPORTS +SOUND +IMAGE -FRAME>\r\n"));
+			await answered.Task.WaitAsync(Timeout);
+
+			string first;
+			lock (recorded) first = recorded[0]!;
+
+			await Assert.That(first).Contains("SOUND");
+			await Assert.That(first).Contains("IMAGE");
+			await Assert.That(first).DoesNotContain("FRAME")
+				.Because("an element the client refused is one the renderer must not write");
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+			cts.Dispose();
+		}
+	}
+
 	[Test]
 	public async Task ServerOmitsMxp_WhenDisabled()
 	{
