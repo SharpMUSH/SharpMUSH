@@ -34,6 +34,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -207,19 +208,31 @@ def fingerprint(root: Path, base: str | None, files: list[str], checks: list[str
 # --- which tests -----------------------------------------------------------------------------
 
 
-def project_graph(root: Path, files: list[str]) -> tuple[dict[str, str], dict[str, set[str]]]:
-    """Project directory -> csproj path, and csproj -> the csprojs it references."""
+def project_graph(root: Path, files: list[str]) -> tuple[dict[str, str], dict[str, set[str]], dict[str, list[str]]]:
+    """Project directory -> csproj; csproj -> the csprojs it references; csproj -> linked inputs.
+
+    Linked inputs are items a project pulls in from outside its own directory (help files,
+    oracle fixtures, embedded package YAML, ...). Each is kept as the path up to its first
+    wildcard, so a changed file under it selects the project.
+    """
     csprojs = [p for p in git(root, "ls-files", "-z", "*.csproj").split("\0") if p]
     csprojs += [f for f in files if f.endswith(".csproj") and f not in csprojs and (root / f).is_file()]
     by_dir = {str(Path(p).parent): p for p in csprojs}
     refs: dict[str, set[str]] = {}
+    linked: dict[str, list[str]] = {}
     for proj in csprojs:
         text = (root / proj).read_text(encoding="utf-8", errors="replace")
+        folder = str(Path(proj).parent)
         refs[proj] = set()
-        for include in re.findall(r'<ProjectReference\s+Include="([^"]+)"', text):
-            target = os.path.normpath(os.path.join(str(Path(proj).parent), include.replace("\\", "/")))
-            refs[proj].add(target)
-    return by_dir, refs
+        linked[proj] = []
+        for kind, include in re.findall(r'<(\w+)\s+(?:Include|Update|Project)="([^"]+)"', text):
+            include = include.replace("$(MSBuildThisFileDirectory)", "").replace("$(MSBuildProjectDirectory)", "")
+            target = os.path.normpath(os.path.join(folder, include.replace("\\", "/")))
+            if kind == "ProjectReference":
+                refs[proj].add(target)
+            elif ".." in include and "$(" not in include:
+                linked[proj].append(re.split(r"[*?]", target, maxsplit=1)[0])
+    return by_dir, refs, linked
 
 
 def owning_project(path: str, by_dir: dict[str, str]) -> str | None:
@@ -239,13 +252,14 @@ def is_test_project(proj: str) -> bool:
 
 
 def affected_test_projects(root: Path, files: list[str]) -> list[str]:
-    by_dir, refs = project_graph(root, files)
+    by_dir, refs, linked = project_graph(root, files)
     tests = [p for p in refs if is_test_project(p)]
 
     if any(Path(f).name in GLOBAL_INPUTS for f in files if "/" not in f):
         return sorted(tests)
 
     touched = {proj for f in files if (proj := owning_project(f, by_dir))}
+    touched |= {proj for proj, prefixes in linked.items() for f in files for prefix in prefixes if f.startswith(prefix)}
 
     def depends_on_touched(proj: str, seen: set[str]) -> bool:
         if proj in touched:
@@ -260,13 +274,31 @@ def affected_test_projects(root: Path, files: list[str]) -> list[str]:
 
 
 def run_logged(root: Path, cmd: list[str], log: Path, timeout: int) -> tuple[int | None, str]:
+    """Run cmd in its own process group; on timeout or when the hook is killed, end the group.
+
+    `dotnet run` starts the test executable as a child, so killing only `dotnet` would orphan
+    the suite outside Claude Code's process tree, where the background-job check cannot see it.
+    """
     with log.open("w") as out:
+        proc = subprocess.Popen(cmd, cwd=root, stdout=out, stderr=subprocess.STDOUT, start_new_session=True)
+        previous = signal.signal(signal.SIGTERM, lambda *_: (kill_group(proc), sys.exit(1)))
         try:
-            code = subprocess.run(cmd, cwd=root, stdout=out, stderr=subprocess.STDOUT, timeout=timeout).returncode
+            code = proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
+            kill_group(proc)
             code = None
+        finally:
+            signal.signal(signal.SIGTERM, previous)
     lines = log.read_text(errors="replace").splitlines()
     return code, "\n".join(lines[-LOG_TAIL_LINES:])
+
+
+def kill_group(proc: subprocess.Popen) -> None:
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError, AttributeError):
+        proc.kill()
+    proc.wait()
 
 
 def check_format(root: Path, cs_files: list[str], whole_repo: bool, log: Path) -> str | None:
