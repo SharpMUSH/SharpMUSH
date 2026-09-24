@@ -1,6 +1,6 @@
-using DotNext.Collections.Generic;
 using Humanizer;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -889,8 +889,7 @@ public partial class Commands
 		}
 
 		// do_stats: without Search_All, only your own objects or the world's.
-		if (owner.Object().DBRef != executor.Object().DBRef
-				&& !await executor.IsPriv() && !await executor.HasPower("SEARCH"))
+		if (owner.Object().DBRef != executor.Object().DBRef && !await ObjectStatsHelpers.CanSearchAll(executor))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsNeedSearchWarrant), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -906,18 +905,11 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask<Option<CallState>> ObjectStatsAsync(AnySharpObject executor, DBRef? owner)
 	{
-		var countsByType = await Mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = owner }))
-			.CountBy(o => o.Type)
-			.ToDictionaryAsync(x => x.Key, x => x.Value);
-		var rooms = countsByType.GetValueOrDefault("ROOM");
-		var exits = countsByType.GetValueOrDefault("EXIT");
-		var things = countsByType.GetValueOrDefault("THING");
-		var players = countsByType.GetValueOrDefault("PLAYER");
-		var total = rooms + exits + things + players;
+		var counts = await ObjectStatsHelpers.CountAsync(Mediator, owner);
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsObjectCountsFormat), executor,
-			total, rooms, exits, things, players);
-		return new CallState($"{total} {rooms} {exits} {things} {players}");
+			counts.Total, counts.Rooms, counts.Exits, counts.Things, counts.Players);
+		return new CallState(counts.ForOnePlayer());
 	}
 
 	/// <summary>

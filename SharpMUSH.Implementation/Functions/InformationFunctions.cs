@@ -474,43 +474,60 @@ public partial class Functions
 		}
 	}
 
-	[SharpFunction(Name = "lstats", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["type"])]
+	/// <summary>
+	/// <c>@stats</c> as a function: the object census over the whole database, or over one player's
+	/// objects.
+	/// </summary>
+	/// <remarks>
+	/// <c>fun_lstats</c> (<c>src/fundb.c:2376-2405</c>) takes a <em>player</em>: absent, empty or
+	/// <c>all</c> is <c>ANY_OWNER</c>, <c>me</c> is the executor, and anything else goes through
+	/// <c>lookup_player</c>, which resolves a name or a <c>#dbref</c> and insists on a player — a
+	/// miss being <c>e_notvis</c>. This read the argument as an object <em>type</em> instead and
+	/// answered a single count, which is a contract nothing in PennMUSH has: it ignored the owner
+	/// entirely, so there was no permission question to ask and it never asked one.
+	///
+	/// <para>The gate is <c>Search_All(executor) || who == ANY_OWNER || controls(executor, who)</c>
+	/// (<c>:2396-2398</c>). Note which way the middle term runs: a mortal asking for the whole
+	/// database's figures is allowed, and it is asking about somebody else in particular that needs
+	/// the warrant. That is a different rule from <c>do_stats</c>'s <c>owner != player</c>
+	/// (<c>src/wiz.c:770-774</c>), which is why <c>@stats</c> keeps its own.</para>
+	///
+	/// <para>The whole-database form is six fields and the one-player form five — PennMUSH's
+	/// one-player line drops the garbage column (<c>:2400-2404</c>).</para>
+	/// </remarks>
+	[SharpFunction(Name = "lstats", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player"])]
 	public async ValueTask<CallState> LStats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
-		var typeFilter = args.TryGetValue("0", out var typeArg)
-			? typeArg.Message!.ToPlainText().ToUpperInvariant()
-			: null;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var name = parser.CurrentState.Arguments.GetValueOrDefault("0")?.Message?.ToPlainText().Trim() ?? "";
 
-		// One pass over the database, counting each type as it streams by.
-		var countByType = new Dictionary<string, int>();
-		await foreach (var obj in Mediator.CreateStream(new GetAllObjectsQuery()))
+		AnySharpObject? who = null;
+		if (name.Length > 0 && !name.Equals("all", StringComparison.OrdinalIgnoreCase))
 		{
-			CollectionsMarshal.GetValueRefOrAddDefault(countByType, obj.Type, out _)++;
-		}
-
-		var players = countByType.GetValueOrDefault("PLAYER");
-		var things = countByType.GetValueOrDefault("THING");
-		var exits = countByType.GetValueOrDefault("EXIT");
-		var rooms = countByType.GetValueOrDefault("ROOM");
-		const int garbage = 0; // SharpMUSH doesn't track garbage separately
-
-		if (!string.IsNullOrEmpty(typeFilter))
-		{
-			var count = typeFilter switch
+			if (name.Equals("me", StringComparison.OrdinalIgnoreCase))
 			{
-				"PLAYER" or "PLAYERS" => players,
-				"THING" or "THINGS" => things,
-				"EXIT" or "EXITS" => exits,
-				"ROOM" or "ROOMS" => rooms,
-				"GARBAGE" => garbage,
-				_ => -1
-			};
-
-			return count >= 0 ? new CallState(count.ToString()) : new CallState(ErrorMessages.Returns.InvalidType);
+				who = executor;
+			}
+			else if (await LocateService.LocatePlayer(parser, executor, executor, name) is AnySharpObject located
+							 && located is SharpPlayer)
+			{
+				who = located;
+			}
+			else
+			{
+				return new CallState(ErrorMessages.Returns.NotVisible);
+			}
 		}
 
-		return new CallState($"{players} {things} {exits} {rooms} {garbage}");
+		if (who is { } subject
+				&& !await ObjectStatsHelpers.CanSearchAll(executor)
+				&& !await PermissionService.Controls(executor, subject))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		var counts = await ObjectStatsHelpers.CountAsync(Mediator, who?.Object().DBRef);
+		return new CallState(who is null ? counts.ForEveryone() : counts.ForOnePlayer());
 	}
 
 	[SharpFunction(Name = "money", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
