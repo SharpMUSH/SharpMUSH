@@ -1,3 +1,4 @@
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -50,7 +51,7 @@ public class PennMUSHDbrefPreservationTests
 		await Assert.That(keys).IsEquivalentTo([0, 1, 2, 3, 4, 5, 6, 9, 11, 12, 13, 14]);
 		foreach (var hole in (int[])[7, 8, 10])
 		{
-			await Assert.That(await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(hole)))).IsTypeOf<None>();
+			await Assert.That((await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(hole)))).IsNone).IsTrue();
 		}
 	}
 
@@ -82,10 +83,16 @@ public class PennMUSHDbrefPreservationTests
 		await Assert.That((await widget.Object().Zone.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>().Object().Key).IsEqualTo(9);
 		await Assert.That((await widget.Expect<SharpThing>().Location.WithCancellation(CancellationToken.None)).Object().Key).IsEqualTo(11);
 		await Assert.That((await widget.Expect<SharpThing>().Home.WithCancellation(CancellationToken.None)).Object().Key).IsEqualTo(11);
-		await Assert.That((await hall.Expect<SharpRoom>().Location.WithCancellation(CancellationToken.None)).Object()!.Key).IsEqualTo(12);
+		// Oracle Hall's PennMUSH location (its drop-to) is #-1.
+		await Assert.That((await hall.Expect<SharpRoom>().Location.WithCancellation(CancellationToken.None)).IsNone).IsTrue();
 
+		// A PennMUSH exit's `exits` field is its source and its `location` its destination: both exits
+		// leave Room Zero, Hall for #11 and North for #12.
+		var hallExit = (await NodeAsync(world, 13)).Expect<SharpExit>();
+		await Assert.That((await hallExit.Location.WithCancellation(CancellationToken.None)).Object().Key).IsEqualTo(0);
+		await Assert.That((await hallExit.Home.WithCancellation(CancellationToken.None)).Object()!.Key).IsEqualTo(11);
 		var north = (await NodeAsync(world, 14)).Expect<SharpExit>();
-		await Assert.That((await north.Location.WithCancellation(CancellationToken.None)).Object().Key).IsEqualTo(12);
+		await Assert.That((await north.Location.WithCancellation(CancellationToken.None)).Object().Key).IsEqualTo(0);
 		await Assert.That((await north.Home.WithCancellation(CancellationToken.None)).Object()!.Key).IsEqualTo(12);
 		var alice = await NodeAsync(world, 3);
 		await Assert.That((await alice.Object().Owner.WithCancellation(CancellationToken.None)).Object.Key).IsEqualTo(3);
@@ -155,14 +162,46 @@ public class PennMUSHDbrefPreservationTests
 		await using var world = await IsolatedImportWorld.CreateAsync();
 		var god = (await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
 		var limbo = (await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)))).Expect<SharpRoom>();
-		var squatter = await world.Database.CreateThingAsync("Squatter", limbo, god, limbo, requestedDbref: 6);
-		await Assert.That(squatter.Number).IsEqualTo(6);
+		var squatter = await world.Database.CreateThingAsync("Squatter", limbo, god, limbo, requestedDbref: 11);
+		await Assert.That(squatter.Number).IsEqualTo(11);
 
 		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath));
 
-		await Assert.That(result.Errors.Any(e => e.Contains("#6") && e.Contains("Widget"))).IsTrue();
-		await Assert.That((await NodeAsync(world, 6)).Object().Name).IsEqualTo("Squatter");
+		await Assert.That(result.Errors.Any(e => e.Contains("#11") && e.Contains("Oracle Hall"))).IsTrue();
+		await Assert.That((await NodeAsync(world, 11)).Object().Name).IsEqualTo("Squatter");
 		await Assert.That((await NodeAsync(world, 9)).Object().Name).IsEqualTo("Gadget");
+		await Assert.That((await NodeAsync(world, 12)).Object().Name).IsEqualTo("Attic");
+	}
+
+	/// <summary>
+	/// PennMUSH has no ancestors, package manager or HTTP/event handlers, so the import removes the
+	/// seeded ones that sat at #3-#9 and unsets the options that named them, rather than leaving the
+	/// options pointing at imported players and things.
+	/// </summary>
+	[Test]
+	public async Task TheSeededSystemObjectsAndTheirOptionsAreGone()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+
+		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath));
+
+		var names = await world.Database.GetAllObjectsAsync().Select(o => o.Name).ToListAsync();
+		foreach (var seeded in (string[])["Ancestor Room", "Ancestor Player", "Ancestor Exit", "Ancestor Thing",
+			         "Package Manager", "HTTP Handler", "Event Handler"])
+		{
+			await Assert.That(names).DoesNotContain(seeded);
+			await Assert.That(result.Warnings.Any(w => w.Contains(seeded))).IsTrue();
+		}
+
+		var stored = (await world.ExpandedData.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)))!;
+		await Assert.That(stored.Database.AncestorRoom).IsNull();
+		await Assert.That(stored.Database.AncestorExit).IsNull();
+		await Assert.That(stored.Database.AncestorThing).IsNull();
+		await Assert.That(stored.Database.AncestorPlayer).IsNull();
+		await Assert.That(stored.Database.PackageManager).IsNull();
+		await Assert.That(stored.Database.HttpHandler).IsNull();
+		await Assert.That(stored.Database.EventHandler).IsNull();
+		await Assert.That(stored.Compatibility.ParenGroups).IsTrue();
 	}
 
 	private static async Task<IsolatedImportWorld> ImportAsync()
