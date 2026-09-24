@@ -1,9 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.Server;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -70,7 +75,38 @@ public class HttpHandlerQueueTests
 		finally
 		{
 			release.TrySetResult();
-			if (request is not null) try { await request.WaitAsync(TimeSpan.FromSeconds(10)); } catch (Exception) { }
+			// Only to let the request finish before the next test; its outcome was asserted above.
+			if (request is not null) await ((Task)request.WaitAsync(TimeSpan.FromSeconds(10))).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 		}
+	}
+
+	/// <summary>
+	/// An entry that leaves the queue without running — halted with <c>@halt/pid</c>, or dropped at
+	/// shutdown — still answers the request rather than leaving it waiting on a token that may never fire.
+	/// </summary>
+	[Test]
+	public async Task AHandlerRequestWhoseEntryIsHaltedBeforeItRunsIsAnswered()
+	{
+		var scheduler = Substitute.For<ITaskScheduler>();
+		scheduler.AdmitSocketWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Action?>())
+			.Returns(call =>
+			{
+				// Halted while it waited: released, never run.
+				call.Arg<Action?>()?.Invoke();
+				return ValueTask.FromResult(new QueueAdmissionResult(1, QueueRejectionReason.None));
+			});
+		var baseline = TestSharpMushOptions.Create();
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(baseline with { Database = baseline.Database with { HttpHandler = 8, HttpRequestsPerSecond = 30 } });
+		var dispatcher = new HttpHandlerCommandService(Substitute.For<Mediator.IMediator>(), Substitute.For<IAttributeService>(),
+			Substitute.For<IMUSHCodeParser>(),
+			new HttpOutputCapture(), Substitute.For<IEventService>(), scheduler, options, NullLogger<HttpHandlerCommandService>.Instance);
+
+		var result = (await dispatcher.DispatchAsync("GET", "/halted", "", []).AsTask().WaitAsync(TimeSpan.FromSeconds(5)))
+			.Expect<HttpHandlerResult>();
+
+		await Assert.That(result.Status).IsEqualTo(503);
+		await Assert.That(result.Body).IsEqualTo(HttpHandlerCommandService.Halted);
+		await scheduler.DidNotReceive().AdmitWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>());
 	}
 }

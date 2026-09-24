@@ -167,10 +167,11 @@ public partial class TaskScheduler(
 
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null,
-	 Action? onReleased = null, string? sourceAttribute = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true, PendingInputCommand? pendingInput = null)
+	 Action? onReleased = null, string? sourceAttribute = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true, PendingInputCommand? pendingInput = null,
+	 bool chargesOwner = true)
 	{
 		// Actorless host callbacks share a bounded system bucket; they do not bypass fairness.
-		string owner = handle is null ? "system" : SchedulerKeys.Owner(handle);
+		string owner = !chargesOwner ? SchedulerKeys.SocketOwner : handle is null ? SchedulerKeys.SystemOwner : SchedulerKeys.Owner(handle);
 		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
 		var executorIsPlayer = false;
 		if (executor is not null)
@@ -191,7 +192,7 @@ public partial class TaskScheduler(
 		{
 			if (_stopping) result = Reject(QueueRejectionReason.ShuttingDown);
 			else if (_pendingEntries.Count >= (configuration?.CurrentValue.Limit.GlobalQueueLimit ?? 10000)) result = Reject(QueueRejectionReason.GlobalLimit);
-			else if (_pendingEntries.Values.Count(e => e.Owner == owner) >= ownerLimit) result = Reject(QueueRejectionReason.OwnerLimit);
+			else if (chargesOwner && _pendingEntries.Values.Count(e => e.Owner == owner) >= ownerLimit) result = Reject(QueueRejectionReason.OwnerLimit);
 			else
 			{
 				var pid = NextPid();
@@ -615,6 +616,9 @@ public partial class TaskScheduler(
 
 	public ValueTask<QueueAdmissionResult> AdmitWork(Func<ValueTask<CallState?>> action, string triggerName, string group, DBRef executor, bool notifyOnRejection = true)
 	 => Admit(action, triggerName, group, executor, notifyOnRejection: notifyOnRejection);
+
+	public ValueTask<QueueAdmissionResult> AdmitSocketWork(Func<ValueTask<CallState?>> action, string triggerName, string group, Action? onReleased = null)
+	 => Admit(action, triggerName, group, null, onReleased: onReleased, notifyOnRejection: false, chargesOwner: false);
 
 	public ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
 		=> ReleaseScheduledWork(pid, semaphoreTimeout, null);

@@ -6,8 +6,9 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// A scheduler for unit tests that construct a queue user without a queue: <c>AdmitWork</c> runs the
-/// work where it is called, so what the test sees is the work's own behaviour, not the consumer's.
+/// A scheduler for unit tests that construct a queue user without a queue: <c>AdmitWork</c> and
+/// <c>AdmitSocketWork</c> run the work where it is called, so what the test sees is the work's own
+/// behaviour, not the consumer's.
 /// </summary>
 internal static class InlineTaskScheduler
 {
@@ -16,12 +17,15 @@ internal static class InlineTaskScheduler
 		var scheduler = Substitute.For<ITaskScheduler>();
 		scheduler.AdmitWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>())
 			.Returns(call => Run(call.Arg<Func<ValueTask<CallState?>>>()));
+		scheduler.AdmitSocketWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Action?>())
+			.Returns(call => Run(call.Arg<Func<ValueTask<CallState?>>>(), call.Arg<Action?>()));
 		return scheduler;
 	}
 
-	private static async ValueTask<QueueAdmissionResult> Run(Func<ValueTask<CallState?>> work)
+	private static async ValueTask<QueueAdmissionResult> Run(Func<ValueTask<CallState?>> work, Action? onReleased = null)
 	{
 		await work();
+		onReleased?.Invoke();
 		return new QueueAdmissionResult(1, QueueRejectionReason.None);
 	}
 }

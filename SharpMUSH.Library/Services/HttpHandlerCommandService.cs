@@ -63,21 +63,27 @@ public class HttpHandlerCommandService(
 
 		// PennMUSH runs the request as a queue entry in the main loop (run_http_command, src/cque.c:1092),
 		// never beside softcode. It is a socket-type entry, so like run_user_input it is not charged to a
-		// queue quota (pay_queue is skipped) — no executor is named here for the same reason. The
-		// consumer is a single reader, so the handler cannot interleave with another queue entry.
+		// queue quota (do_entry skips it for QUEUE_SOCKET) — hence AdmitSocketWork, which counts it against
+		// the global limit only. The consumer is a single reader, so the handler cannot interleave with
+		// another queue entry.
 		ct.ThrowIfCancellationRequested();
+		var handler = handlerDbRef.Value;
 		var parentBudget = ExecutionBudget.Current;
 		var completion = new TaskCompletionSource<Found<HttpHandlerResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var abandoned = false;
-		var admission = await scheduler.AdmitWork(async () =>
+		var admission = await scheduler.AdmitSocketWork(async () =>
 		{
 			// A request that gave up while waiting its turn (or whose token has since been disposed) has
 			// nothing left to answer.
 			if (Volatile.Read(ref abandoned)) return null;
-			try { completion.TrySetResult(await ExecuteAsync(method, path, body, headers, clientIp, handlerDbRef.Value, parentBudget, ct)); }
-			catch (Exception ex) { completion.TrySetException(ex); }
+			var execution = ExecuteAsync(method, path, body, headers, clientIp, handler, parentBudget, ct).AsTask();
+			// The outcome, a fault included, belongs to the request waiting on it, not to the queue.
+			await ((Task)execution).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+			completion.TrySetFromTask(execution);
 			return null;
-		}, "http-handler", "http");
+		}, "http-handler", "http",
+			// An entry halted before it ran, or dropped at shutdown, still answers the request.
+			onReleased: () => completion.TrySetResult(new HttpHandlerResult(503, "Service Unavailable", "text/plain", [], Halted)));
 		if (!admission.Accepted)
 		{
 			logger.LogWarning("Inbound HTTP request refused by the queue: {Reason}.", admission.Reason);
@@ -87,6 +93,9 @@ public class HttpHandlerCommandService(
 		try { return await completion.Task.WaitAsync(ct); }
 		finally { Volatile.Write(ref abandoned, true); }
 	}
+
+	/// <summary>The body of a request whose queue entry left the queue without running.</summary>
+	internal const string Halted = "#-1 QUEUE ENTRY HALTED";
 
 	private async ValueTask<Found<HttpHandlerResult>> ExecuteAsync(
 		string method,
