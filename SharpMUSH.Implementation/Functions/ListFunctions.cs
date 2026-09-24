@@ -1265,33 +1265,11 @@ public partial class Functions
 	///
 	/// <para>This is <see cref="AllOf"/> with PennMUSH's <c>isbool</c> flag off — one C function
 	/// serves both, differing only in whether a candidate counts because it is true or because it
-	/// is non-empty. The two bodies are apart here only because they sit in different files.</para>
+	/// is non-empty, so both names run the one shared body.</para>
 	/// </remarks>
 	[SharpFunction(Name = "strallof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["expression..."])]
-	public async ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-
-		if (args.Count < 2)
-		{
-			return CallState.Empty;
-		}
-
-		var delimParsed = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!);
-		var delimiter = delimParsed?.Message ?? MarkupText.Empty;
-		var hadErrors = delimParsed?.HadErrors == true;
-
-		var nonEmptyValues = new List<MString>();
-		for (var i = 0; i < args.Count - 1; i++)
-		{
-			var parsed = await parser.FunctionParse(args[i.ToString()].Message!);
-			hadErrors |= parsed?.HadErrors == true;
-			var value = parsed?.Message ?? MarkupText.Empty;
-			if (value.Length > 0) nonEmptyValues.Add(value);
-		}
-
-		return new CallState(MarkupText.Join(delimiter, nonEmptyValues)) { HadErrors = hadErrors };
-	}
+	public ValueTask<CallState> StringAllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> WhichOfAllAsync(parser, isBool: false);
 
 	/// <summary>
 	/// The list laid out in columns.

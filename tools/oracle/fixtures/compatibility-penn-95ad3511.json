@@ -632,6 +632,17 @@
       "expression": "delete(abcdef,1,2)",
       "expected": "adef",
       "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "[setq(x,old)][strallof(%qx,setq(x,new))]",
+      "expected": "new",
+      "intent": "parity"
     }
   ]
 }
