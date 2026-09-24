@@ -258,6 +258,15 @@ honoured by folder-mode formatting — it is a semantic option. Compact anonymou
 initializers will be expanded to one member per line by the formatter, and re-compacting them
 fails the gate.
 
+### Claude Code Stop hook
+
+`.claude/settings.json` registers `.claude/hooks/stop-verify.py` as a Stop hook. A turn cannot end
+while a build or test job you started in the background is still running, while changed `.cs` files
+fail the formatting gate above, or while a test project that depends on your changes fails. That
+includes the client `node --test` suite when `SharpMUSH.Client/wwwroot/` changes. A pass is cached
+until the changed files change again. When it blocks, fix the cause; don't disable the hook. Details
+and the human escape hatch (`SHARPMUSH_STOP_HOOK=off`) are in `.claude/hooks/README.md`.
+
 ## Design Documents
 
 `docs/design/` contains binding architectural decisions for the portal:
