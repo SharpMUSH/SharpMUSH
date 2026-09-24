@@ -2,6 +2,9 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -2051,11 +2054,40 @@ public class MovementParityTests
 	}
 
 	/// <summary>
+	/// A parser with its own copy of the command library, so a test about what <c>@tel</c> resolves to
+	/// mutates nothing the rest of the session reads. <c>FunctionFlagDispatchTests.Parser</c> does the
+	/// same for the function library, and <c>docs/guides/testing.md</c> asks for exactly this rather
+	/// than a global mutation serialised against some tests and not others: <c>@command/add @TEL</c>
+	/// would make every concurrent <c>@tel</c> reach an unimplemented command and every concurrent
+	/// mortal <c>tel()</c> hit the restriction.
+	/// </summary>
+	private IMUSHCodeParser ParserWithCommand(DBRef executor, params (string Name, string Lock)[] extra)
+	{
+		var original = (MUSHCodeParser)WebAppFactoryArg.FunctionParser;
+		var library = new CommandLibraryService();
+
+		foreach (var entry in original.CommandLibrary)
+		{
+			library.Add(entry.Key, entry.Value);
+		}
+
+		foreach (var (name, commandLock) in extra)
+		{
+			library.Add(name, (new CommandDefinition(
+				new SharpCommandAttribute { Name = name, Behavior = CommandBehavior.Default, CommandLock = commandLock },
+				_ => ValueTask.FromResult<Option<CallState>>(new None())), true));
+		}
+
+		return (original with { CommandLibrary = library }).FromState(ParserState.RootFor(executor));
+	}
+
+	/// <summary>
 	/// <c>fun_tel</c> checks <c>command_check_byname(executor, "@tel", …)</c> (<c>fundb.c:2317</c>), and
 	/// Penn resolves that name through the same prefix table command dispatch uses. Normally nothing
 	/// answers to <c>@TEL</c> and the abbreviation reaches <c>@TELEPORT</c> — but a game may register an
-	/// exact <c>@TEL</c>, which then takes typed dispatch, and <c>tel()</c> has to be held to that
-	/// command's restrictions rather than to the ones on the command it no longer runs.
+	/// exact <c>@TEL</c> (<c>@command/add</c>, or a plugin), which then takes typed dispatch, and
+	/// <c>tel()</c> has to be held to that command's restrictions rather than to the ones on the command
+	/// it no longer runs.
 	/// </summary>
 	[Test]
 	public async ValueTask TelIsHeldToTheRestrictionsOfWhicheverCommandAtTelWouldRun()
@@ -2067,27 +2099,19 @@ public class MovementParityTests
 
 		await God($"@teleport/silent {mover.DbRef}={room}");
 
-		try
-		{
-			await God("@command/add @TEL");
-			await God("@command/restrict @TEL=wizard");
+		var wizardsOnly = ParserWithCommand(mover.DbRef, ("@TEL", "FLAG^WIZARD"));
+		var refused = await wizardsOnly.FunctionParse(MarkupText.Plain($"tel(me,{destination})"));
 
-			var moverSaw = await MessagesWhile(mover.DbRef, async () =>
-				await As(mover.Handle, $"think <[tel(me,{destination})]>"));
+		await Assert.That(refused!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+			.Because("the restriction on the command @tel would run is the one fun_tel reads");
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
 
-			await Assert.That(moverSaw).Contains($"<{ErrorMessages.Returns.PermissionDenied}>")
-				.Because("the restriction on the command @tel would run is the one fun_tel reads");
-			await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
-		}
-		finally
-		{
-			await God("@command/delete @TEL");
-		}
+		var byAbbreviation = ParserWithCommand(mover.DbRef);
+		var allowed = await byAbbreviation.FunctionParse(MarkupText.Plain($"tel(me,{destination})"));
 
-		await As(mover.Handle, $"think [tel(me,{destination})]");
-
+		await Assert.That(allowed!.Message!.ToPlainText()).IsEmpty();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(destination))
-			.Because("with @TEL gone the name abbreviates to @TELEPORT again, which restricts nobody");
+			.Because("with nothing answering to @TEL the name abbreviates to @TELEPORT, which restricts nobody");
 	}
 
 	/// <summary>
