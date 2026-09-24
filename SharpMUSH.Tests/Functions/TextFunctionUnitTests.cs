@@ -46,13 +46,13 @@ public class TextFunctionUnitTests
 
 	/// <summary>
 	/// An unknown file is refused before anything is read (<c>src/help.c:1177-1181</c>) rather than
-	/// falling through to "search every category". PennMUSH words it <c>#-1 NO SUCH FILE</c>.
+	/// falling through to "search every category".
 	/// </summary>
 	[Test]
 	[Arguments("textentries(nosuchfile,*)")]
 	[Arguments("textfile(nosuchfile,SOMETHING)")]
 	public async Task AnUnknownTextFileIsRefused(string expression)
-		=> await Assert.That(await Eval(expression)).IsEqualTo(ErrorMessages.Returns.FileNotFound);
+		=> await Assert.That(await Eval(expression)).IsEqualTo(ErrorMessages.Returns.NoSuchFile);
 
 	/// <summary>
 	/// The <c>ahelp</c> corpus is PennMUSH's <c>admin</c> help file, gated on <c>Hasprivs</c>

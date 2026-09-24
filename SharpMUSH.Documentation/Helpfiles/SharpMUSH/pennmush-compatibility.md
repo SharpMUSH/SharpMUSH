@@ -16,6 +16,7 @@ Every entry here can be checked from inside the game; the examples are lines you
   [COMPATIBILITY IDENTITY]  dbrefs, objids, time precision and number precision<br>
   [COMPATIBILITY OUTPUT]    rendering a string for something outside the game<br>
   [COMPATIBILITY NAMES]     functions and commands that exist here and not there<br>
+  [COMPATIBILITY MAIL]      @mail forwarding, filters and folders<br>
   [COMPATIBILITY UNRESOLVED] known differences with no decision yet<br>
   [COMPATIBILITY DEFECTS]   known differences that are bugs, with their issue<br>
   [COMPATIBILITY MATCHED]   differences that used to exist and no longer do
@@ -472,6 +473,61 @@ arguments and return an error. Use `oob()` for GMCP. `objmem()` always answers 0
   does not.<br>
   `~<command>` — run one command under strict parsing.
 
+# COMPATIBILITY MAIL
+`@mail` matches PennMUSH's commands and switches. Four differences are deliberate, and all four are
+about what happens to a message between the sender's `@mail` and the recipient's folder.
+
+## A refused forward is reported — `@mail/fwd`
+
+**A choice.**
+
+**PennMUSH** forwards with `silent=1` (`extmail.c:1296`) and then counts the recipients it tried, so a
+forward to somebody who does not accept your mail reads as a success.<br>
+**SharpMUSH** forwards with refusals reported, counts the recipients the message actually reached, and
+answers `#-1 RECIPIENT DOES NOT ACCEPT MAIL FROM YOU` when that count is zero.<br>
+**Why.** A forward that silently went nowhere is the one case where the sender most needs to be told:
+unlike `@mail`, they are forwarding something they cannot re-send from memory.<br>
+**Workaround.** Read the count in `MAIL: <n> messages forwarded.` rather than assuming the forward
+arrived. Code that tested only for a dbref answer sees an error string instead.
+
+## A `MAILFILTER` that mails its owner does not recurse
+
+**A choice.**
+
+**PennMUSH** runs `filter_mail` (`extmail.c:3289`) on every delivery with no reentrancy guard, so a
+filter that sends mail to its own owner filters that message too, and so on.<br>
+**SharpMUSH** delivers mail sent from inside a filter unfiltered: the message lands in the inbox and
+no filter runs for it.<br>
+**Why.** The captured PennMUSH run crashed the server. Nothing useful depends on the recursion.<br>
+**Workaround.** None needed. A filter that files its own notifications must do so by sending to the
+folder it wants rather than by expecting its own filter to run again.
+
+## Folders are named freely and created on delivery
+
+**A choice.**
+
+**PennMUSH** routes a filter's answer through `do_mail_file` (`extmail.c:616-630`), whose
+`parse_folder` (`extmail.c:2839-2855`) accepts a digit `0`–`MAX_FOLDERS` or the name of a folder the
+player has already used, and answers `MAIL: Invalid folder specification` otherwise.<br>
+**SharpMUSH** accepts any alphanumeric name (`extmail.c:333`'s own rule for one) and makes it one of
+the player's folders as the message is filed, exactly as `@mail/file` does.<br>
+**Why.** A filter is written before the folder it files into exists; requiring the player to create it
+first means the first message that matches is the one that goes astray.<br>
+**Workaround.** Filters written for PennMUSH keep working. A filter that returns a name PennMUSH would
+have rejected files here instead of erroring, so check the spelling — a typo makes a folder.
+
+## An empty `MAILFORWARDLIST` is no list
+
+**A choice.**
+
+**PennMUSH** reads `&MAILFORWARDLIST me=` as a forward list naming nobody, and `empty_attrs`
+(`extmail.c:1479`, `:1483`) means every message to that player is then dropped.<br>
+**SharpMUSH** treats a whitespace-only value as no list at all, and mail is delivered normally. The
+list is read without parents either way, so a parent's list never forwards a child's mail.<br>
+**Why.** One `&MAILFORWARDLIST me=` should not silently stop a player's mail.<br>
+**Workaround.** Nothing to change in code that never wrote an empty list. Do not reach for an empty
+`MAILFORWARDLIST` as a way to stop receiving mail: it stops nothing here.
+
 # COMPATIBILITY UNRESOLVED
 Known differences with **no decision recorded**. Do not write code that depends on either behaviour;
 either may change.
@@ -531,8 +587,7 @@ behaved differently.
 - `textentries()` is `textentries(<type>, <pattern>[, <osep>])`: the pattern is required and
   filters the topic names. `textentries()` and `textfile()` also refuse an unknown `<type>` and
   gate the administrator-only `ahelp` corpus on wizard or royalty, as PennMUSH's `admin` help
-  files are. SharpMUSH words the first refusal `#-1 FILE NOT FOUND`, where PennMUSH says
-  `#-1 NO SUCH FILE`.
+  files are.
 - `hasattr()`, `hasattrp()`, `hasattrval()` and `hasattrpval()` take the whole
   `<object>/<attribute>` spec in one argument as well as the two-argument form; one argument
   carrying no `/` is `#-1 BAD ARGUMENT FORMAT TO <function>`.

@@ -9,7 +9,10 @@ public sealed class EvaluationRestrictions
 {
 	private static readonly AsyncLocal<EvaluationRestrictions?> Ambient = new();
 	private readonly FrozenSet<string> _operations;
-	// The audited targets accept at most 32 arguments; fn adds its target name.
+	// The most arguments one call inside a restricted expression may take. The number is not derived
+	// from what it may call: the audited targets accepted at most 32 arguments plus fn()'s target name
+	// when it was written, and #1199 lifted that ceiling. It stays a fixed bound because a restricted
+	// expression runs outside a queue entry, so nothing else limits the work one call can ask for.
 	public const int MaximumArguments = 33;
 	public const string Error = "#-1 RESTRICTED EXPRESSION";
 	public static EvaluationRestrictions? Current => Ambient.Value;
