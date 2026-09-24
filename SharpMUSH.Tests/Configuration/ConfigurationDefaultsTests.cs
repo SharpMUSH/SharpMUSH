@@ -3,6 +3,7 @@ using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services;
 using System.Collections;
+using System.Reflection;
 
 namespace SharpMUSH.Tests.Configuration;
 
@@ -111,10 +112,11 @@ public class ConfigurationDefaultsTests
 	}
 
 	/// <summary>
-	/// An option record may still declare a constructor-parameter default, because a parameter default
-	/// is a compile-time constant and some of them are wanted as one elsewhere. When it does, it has to
-	/// say what <see cref="SharpMUSHOptions.Default"/> says: an argument omitted at the one call site
-	/// that matters silently takes the record's answer instead, which is how <c>Net.Mxp</c> came to be
+	/// An option record may still declare a default of its own, because a parameter default is a
+	/// compile-time constant and some of them are wanted as one elsewhere — and because the admin
+	/// config schema reports them per property. When it does, it has to say what
+	/// <see cref="SharpMUSHOptions.Default"/> says: an argument omitted at the one call site that
+	/// matters silently takes the record's answer instead, which is how <c>Net.Mxp</c> came to be
 	/// <c>false</c> in a new world and <c>true</c> in an imported one.
 	/// </summary>
 	[Test]
@@ -123,14 +125,46 @@ public class ConfigurationDefaultsTests
 		var created = OptionsService.Default();
 
 		var mismatches = ConfigMetadata.PropertyNames
+			.Where(DeclaresADefault)
 			.Select(name => (Name: name, Declared: AsPropertyType(name, ConfigAccessor.GetDeclaredDefault(name)),
 				Created: ConfigAccessor.GetValue(created, name)))
-			.Where(x => x.Declared is not null && !Same(x.Declared, x.Created))
-			.Select(x => $"{x.Name}: the record declares {Show(x.Declared)}, the default is {Show(x.Created)}")
+			.Where(x => !Same(x.Declared, x.Created))
+			// Declared is null here only when the record declares `= null`, never "declares nothing":
+			// the filter above already established that a default is written down.
+			.Select(x => $"{x.Name}: the record declares {(x.Declared is null ? "null" : Show(x.Declared))}, "
+				+ $"the default is {Show(x.Created)}")
 			.ToArray();
 
 		await Assert.That(string.Join("\n", mismatches)).IsEmpty();
 	}
+
+	/// <summary>
+	/// Whether the option's record declares a default at all, asked separately from what that default
+	/// is. <see cref="ConfigAccessor.GetDeclaredDefault"/> answers <c>null</c> for both "declares
+	/// nothing" and "declares <c>null</c>", so filtering on its value alone skips every parameter
+	/// written <c>= null</c> — seven of <see cref="NetOptions"/>' own, <c>SqlHost</c> among them. A
+	/// default later moving off <c>null</c> in one place and not the other is exactly the divergence
+	/// this file exists to catch, so presence is read off the constructor parameter instead.
+	/// </summary>
+	private static bool DeclaresADefault(string propertyName)
+		=> Parameter(propertyName) is { HasDefaultValue: true }
+			|| ConfigAccessor.GetDeclaredDefault(propertyName) is not null;
+
+	/// <summary>
+	/// The primary-constructor parameter behind a configured property, chosen the same way the accessor
+	/// generator chooses it: the longest constructor, by parameter name. Null for a property that is not
+	/// a constructor parameter at all — <c>GlobalQueueLimit</c> and <c>GuestOutputLimit</c> are
+	/// initializers, and their declared default is never null, so the value branch covers them.
+	/// </summary>
+	private static ParameterInfo? Parameter(string propertyName)
+		=> ConfigAccessor.GetCategoryForProperty(propertyName) is { } category
+			&& typeof(SharpMUSHOptions).GetProperty(category)?.PropertyType is { } categoryType
+				? categoryType.GetConstructors()
+					.OrderByDescending(constructor => constructor.GetParameters().Length)
+					.FirstOrDefault()
+					?.GetParameters()
+					.FirstOrDefault(parameter => parameter.Name == propertyName)
+				: null;
 
 	/// <summary>
 	/// Every key the shipped configuration sets is either an option SharpMUSH reads or a PennMUSH key
