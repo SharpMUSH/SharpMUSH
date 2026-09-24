@@ -8,7 +8,9 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using DotNext.Threading;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion;
 
@@ -109,6 +111,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var attributesConverted = 0;
 		var locksConverted = 0;
 		var mailAliasesConverted = 0;
+		var mailMessagesConverted = 0;
 
 		_logger.LogInformation("Converting {Count} PennMUSH objects to SharpMUSH format", totalObjects);
 
@@ -164,8 +167,9 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Locks created", 0.90);
 
 			mailAliasesConverted = await ImportMailAliasesAsync(pennDatabase, context, cancellationToken);
-			ReportUnimportedMail(pennDatabase.Mail, context);
-			ReportProgress("Mail aliases imported", 0.95);
+			mailMessagesConverted = await ImportMailMessagesAsync(pennDatabase, context, cancellationToken);
+			ReportUnreadMail(pennDatabase.Mail, context);
+			ReportProgress("Mail imported", 0.95);
 
 			await EnableParenGroupsAsync(context, cancellationToken);
 			// Last: the admin page takes 100% as the end of the import and stops polling.
@@ -182,6 +186,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				AttributesConverted = attributesConverted,
 				LocksConverted = locksConverted,
 				MailAliasesConverted = mailAliasesConverted,
+				MailMessagesConverted = mailMessagesConverted,
 				Errors = errors,
 				Warnings = warnings,
 				Duration = stopwatch.Elapsed
@@ -1282,8 +1287,166 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return imported;
 	}
 
-	/// <summary>Mail messages are not imported yet (#1110); say so, so the summary does not read as a full mail import.</summary>
-	private static void ReportUnimportedMail(PennMUSHMailDatabase mail, PennMUSHConversionContext context)
+	/// <summary>
+	/// The maildb's messages, checked as <c>load_mail</c> and its <c>@mail/debug fix</c> check them: a message
+	/// to anything but an imported player is dropped, and one from a sender that was not imported is kept
+	/// as from #0. Each recipient's messages are written in file order, which is the order PennMUSH lists
+	/// them in. Folder 0 is <c>INBOX</c>; another folder takes the name the recipient's <c>MAILFOLDERS</c>
+	/// gave it, or its number when it has none.
+	/// </summary>
+	/// <remarks>
+	/// PennMUSH writes the time sent in the game's local time and reads it back in the local time of the
+	/// machine loading it; this does the same. A sender whose creation time differs from the one the
+	/// message recorded was destroyed and its dbref reused: PennMUSH shows such a message as from
+	/// <c>!Purged!</c>, SharpMUSH has no record of the original, so the message keeps the dbref and is reported.
+	/// </remarks>
+	private async Task<int> ImportMailMessagesAsync(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		var imported = 0;
+		var noRecipient = new SortedDictionary<int, int>();
+		var noSender = new SortedDictionary<int, int>();
+		var reusedSender = new SortedDictionary<int, int>();
+		var badTime = 0;
+		var folderNames = new Dictionary<int, Dictionary<int, string>>();
+		var pennObjects = new Dictionary<int, PennMUSHObject>();
+		foreach (var pennObject in pennDatabase.Objects)
+		{
+			pennObjects.TryAdd(pennObject.DBRef, pennObject);
+		}
+
+		foreach (var message in pennDatabase.Mail.Messages)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+
+			if (await MappedAsync(message.To, context, cancellationToken) is not (AnySharpObject and SharpPlayer recipient))
+			{
+				noRecipient[message.To] = noRecipient.GetValueOrDefault(message.To) + 1;
+				continue;
+			}
+
+			var sender = await MappedAsync(message.From, context, cancellationToken);
+			if (sender is not AnySharpObject)
+			{
+				noSender[message.From] = noSender.GetValueOrDefault(message.From) + 1;
+				sender = await MappedAsync(0, context, cancellationToken);
+				if (sender is not AnySharpObject)
+				{
+					sender = await _mediator.Send(new GetObjectNodeQuery(new DBRef(pennDatabase.GodPlayer)), cancellationToken);
+				}
+			}
+			else if (message.FromCreationTime != 0
+							 && pennObjects.GetValueOrDefault(message.From) is { } source
+							 && source.CreationTime != message.FromCreationTime)
+			{
+				reusedSender[message.From] = reusedSender.GetValueOrDefault(message.From) + 1;
+			}
+
+			if (sender is not AnySharpObject from)
+			{
+				context.Errors.Add($"Mail message to #{message.To} from #{message.From} not imported: neither #0 nor God was imported to send it");
+				continue;
+			}
+
+			if (!TryParsePennTime(message.Time, out var sent))
+			{
+				badTime++;
+				sent = DateTimeOffset.UtcNow;
+			}
+
+			if (!folderNames.TryGetValue(message.To, out var names))
+			{
+				folderNames[message.To] = names = MailFolderNames(pennObjects.GetValueOrDefault(message.To));
+			}
+
+			await _mediator.Send(new SendMailCommand(from.Object(), recipient, new SharpMail
+			{
+				DateSent = sent,
+				Fresh = !message.IsRead,
+				Read = message.IsRead,
+				Tagged = message.IsTagged,
+				Urgent = message.IsUrgent,
+				Forwarded = message.IsForwarded,
+				Cleared = message.IsCleared,
+				Folder = message.Folder == 0 ? "INBOX" : names.GetValueOrDefault(message.Folder, $"{message.Folder}"),
+				Content = MarkupString.Ansi.AnsiEscapeParser.Parse(message.Body),
+				Subject = MarkupString.Ansi.AnsiEscapeParser.Parse(message.Subject),
+				From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(from.WithNoneOption()))
+			}), cancellationToken);
+			imported++;
+		}
+
+		if (noRecipient.Count > 0)
+		{
+			context.Warnings.Add($"{noRecipient.Values.Sum()} mail message(s) not imported: the recipient is not an imported player " +
+				$"({Tally(noRecipient)})");
+		}
+
+		if (noSender.Count > 0)
+		{
+			context.Warnings.Add($"{noSender.Values.Sum()} mail message(s) from a sender that was not imported are from #0, " +
+				$"as @mail/debug fix leaves them ({Tally(noSender)})");
+		}
+
+		if (reusedSender.Count > 0)
+		{
+			context.Warnings.Add($"{reusedSender.Values.Sum()} mail message(s) name a sender whose creation time differs from " +
+				$"the one the message recorded, so PennMUSH showed them as from !Purged!; they are imported as from that dbref " +
+				$"({Tally(reusedSender)})");
+		}
+
+		if (badTime > 0)
+		{
+			context.Warnings.Add($"{badTime} mail message(s) had a time sent that could not be read and are dated at the import, " +
+				"as load_mail dates them");
+		}
+
+		return imported;
+
+		static string Tally(SortedDictionary<int, int> counts)
+			=> string.Join(" ", counts.Select(c => $"#{c.Key}: {c.Value}"));
+	}
+
+	/// <summary>
+	/// A player's <c>MAILFOLDERS</c> attribute, <c>N:NAME:N</c> entries as <c>add_folder_name</c> writes
+	/// them, as folder number to name.
+	/// </summary>
+	private static Dictionary<int, string> MailFolderNames(PennMUSHObject? player)
+	{
+		var names = new Dictionary<int, string>();
+		var value = player?.Attributes.FirstOrDefault(a => a.Name.Equals("MAILFOLDERS", StringComparison.OrdinalIgnoreCase))?.Value;
+		foreach (var parts in (value ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(e => e.Split(':')))
+		{
+			if (parts.Length == 3 && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)
+					&& parts[1].Length > 0)
+			{
+				names[number] = parts[1];
+			}
+		}
+
+		return names;
+	}
+
+	/// <summary>
+	/// A time as <c>show_time</c> writes it (<c>asctime</c>'s <c>Thu Sep  4 12:01:45 2026</c>), read in the
+	/// local time zone as <c>do_convtime</c> and <c>mktime</c> read it.
+	/// </summary>
+	internal static bool TryParsePennTime(string text, out DateTimeOffset time)
+	{
+		var collapsed = string.Join(' ', text.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+		if (DateTime.TryParseExact(collapsed, ["ddd MMM d HH:mm:ss yyyy", "MMM d HH:mm:ss yyyy"],
+					CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed))
+		{
+			time = new DateTimeOffset(parsed);
+			return true;
+		}
+
+		time = default;
+		return false;
+	}
+
+	/// <summary>Says what of the maildb could not be read, so the summary does not read as a full mail import.</summary>
+	private static void ReportUnreadMail(PennMUSHMailDatabase mail, PennMUSHConversionContext context)
 	{
 		if (mail.ReadError is not null)
 		{
@@ -1291,15 +1454,14 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return;
 		}
 
-		switch (mail.MessageCount)
+		if (mail.MessageCount is null)
 		{
-			case > 0 and var count:
-				context.Warnings.Add($"{count} mail message(s) in the maildb were not imported: only mail aliases are imported " +
-					"so far (#1110)");
-				break;
-			case null:
-				context.Warnings.Add("The maildb's message count could not be read; its messages were not imported (#1110)");
-				break;
+			context.Warnings.Add("The maildb's message count could not be read; its messages were not imported");
+		}
+		else if (mail.MessageReadError is not null)
+		{
+			context.Warnings.Add($"The maildb holds {mail.MessageCount} mail message(s) but only {mail.Messages.Count} could be read: " +
+				mail.MessageReadError);
 		}
 	}
 
