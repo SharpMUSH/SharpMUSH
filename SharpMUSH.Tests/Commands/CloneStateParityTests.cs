@@ -43,6 +43,10 @@ public class CloneStateParityTests
 	private static DBRef Ref(string reported) => DBRef.Parse(reported.Trim());
 
 	private async Task<DBRef> Create(string name) => Ref(await AsGod($"@create {name}"));
+
+	/// <summary>How many objects currently answer to <paramref name="name"/>.</summary>
+	private async Task<string[]> Named(string name)
+		=> (await AsGod($"think lsearch(all,name,{name})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
 	private async Task<DBRef> Dig(string name) => Ref(await AsGod($"@dig {name}"));
 
 	/// <summary>The clone request, phrased for the command and for the function.</summary>
@@ -346,6 +350,96 @@ public class CloneStateParityTests
 		await Assert.That(await plainNode.Object().HasPower("Halt")).IsFalse()
 			.Because("create.c:646-647 zaps powers and warnings without /PRESERVE");
 		await Assert.That(plainNode.Object().Warnings).IsEqualTo(WarningType.None);
+	}
+
+	/// <summary>
+	/// <c>do_clone</c>'s thing branch (create.c:728-731): <c>if (IsRoom(player)) moveto(clone, player)
+	/// else moveto(clone, Location(player))</c>. SharpMUSH used <c>@create</c>'s rule instead — hand the
+	/// object to the executor when the executor can hold one — which is true of every player, so a
+	/// player's clone landed in their own inventory rather than beside the original.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask ACloneLandsInTheClonersRoomAndNotTheirInventory(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CspWhere");
+		var room = await Dig($"CspWhereRoom{uid}");
+		await AsGod($"@teleport {mortal.DbRef}={room}");
+
+		var original = Ref(await Run(mortal.Handle, $"@create CspWhereSource{uid}"));
+		var newName = $"CspWhereClone{uid}";
+		var clone = Ref(await Run(mortal.Handle, throughTheFunction
+			? $"think clone({original},{newName})"
+			: $"@clone {original}={newName}"));
+
+		var where = (await (await Node(clone)).Where()).Object().DBRef;
+		await Assert.That(where.Number).IsEqualTo(room.Number)
+			.Because("create.c:731 moves the clone to Location(player), not into the player");
+	}
+
+	/// <summary>
+	/// The other half of create.c:728-731: code owned by a room builds into the room itself, because a
+	/// room has no location of its own to fall back to.
+	/// </summary>
+	[Test]
+	public async ValueTask ACloneMadeByARoomLandsInThatRoom()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var room = await Dig($"CspRoomCloner{uid}");
+		var original = await Create($"CspRoomClonerSource{uid}");
+
+		var newName = $"CspRoomClonerClone{uid}";
+		await AsGod($"@force {room}=@clone {original}={newName}");
+
+		var found = await Named(newName);
+		await Assert.That(found.Length).IsEqualTo(1);
+
+		var where = (await (await Node(Ref(found[0]))).Where()).Object().DBRef;
+		await Assert.That(where.Number).IsEqualTo(room.Number)
+			.Because("create.c:729 moves a room's clone into the room itself");
+	}
+
+	/// <summary>
+	/// The exit branch (create.c:771-773) hands <c>do_real_open</c> a <c>pseudo</c> of NOTHING, so the
+	/// source is <c>speech_loc(player)</c> (create.c:97, speech.c:109) and <c>do_real_open</c> refuses a
+	/// source that is not a room outright (create.c:108-110), before <c>can_pay_fees</c> is reached
+	/// (<c>:130</c>). Driven from a thing sitting inside another thing, because that is the only cloner
+	/// this server will put somewhere that is not a room — <c>@teleport</c> refuses to move a player
+	/// into one.
+	/// </summary>
+	[Test]
+	public async ValueTask CloningAnExitFromSomewhereThatIsNotARoomIsRefused()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "CspInside");
+		var room = await Dig($"CspInsideRoom{uid}");
+		await AsGod($"@chown {room}={mortal.DbRef}");
+		await AsGod($"@teleport {mortal.DbRef}={room}");
+
+		var destination = await Dig($"CspInsideDest{uid}");
+		var exit = Ref(await Run(mortal.Handle, $"@open CspInsideExit{uid}={destination}"));
+
+		var vehicle = Ref(await Run(mortal.Handle, $"@create CspInsideThing{uid}"));
+		var rider = Ref(await Run(mortal.Handle, $"@create CspInsideRider{uid}"));
+		await Run(mortal.Handle, $"@teleport {rider}={vehicle}");
+
+		var standingIn = (await (await Node(rider)).Where()).Object().DBRef;
+		await Assert.That(standingIn.Number).IsEqualTo(vehicle.Number)
+			.Because("the cloner has to actually be somewhere that is not a room");
+
+		var commandName = $"CspInsideCmdClone{uid}";
+		await Run(mortal.Handle, $"@force {rider}=@clone {exit}={commandName}");
+		await Assert.That((await Named(commandName)).Length).IsEqualTo(0)
+			.Because("create.c:108-110 refuses before anything is built");
+
+		var functionName = $"CspInsideFnClone{uid}";
+		await Run(mortal.Handle, $"@force {rider}=&CLONERESULT {rider}=clone({exit},{functionName})");
+		await Assert.That(await GetAsync(rider, "CLONERESULT")).IsEqualTo(ErrorMessages.Returns.NotARoom);
+		await Assert.That((await Named(functionName)).Length).IsEqualTo(0);
 	}
 
 	/// <summary>

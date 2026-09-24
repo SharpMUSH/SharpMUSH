@@ -828,6 +828,9 @@
   <data name="SourceMustBeARoom" xml:space="preserve">
     <value>Source must be a room.</value>
   </data>
+  <data name="ExitsOnlyFromRooms" xml:space="preserve">
+    <value>You can only make exits out of rooms.</value>
+  </data>
   <data name="LinkedToNameFormat" xml:space="preserve">
     <value>Linked to {0}.</value>
   </data>

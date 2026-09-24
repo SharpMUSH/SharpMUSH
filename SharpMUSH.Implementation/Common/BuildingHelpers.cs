@@ -305,7 +305,23 @@ public static class BuildingHelpers
 			? given
 			: target.Object().Name;
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
-		var into = executor.IsContainer ? executor.AsContainer : await executor.Where();
+
+		// create.c:728-731 for a thing or a room — `if (IsRoom(player)) moveto(clone, player) else
+		// moveto(clone, Location(player))` — and create.c:771-773 for an exit, whose do_real_open is
+		// handed a pseudo of NOTHING and so sources from speech_loc(player) (create.c:97; speech.c:109:
+		// a room is itself, an exit is its source, anything else is its location). The two agree, so one
+		// expression serves both. @create's rule — hand it to the executor whenever the executor can hold
+		// something — is the wrong one here: it is true of every player, so a player's clone landed in
+		// their own inventory instead of beside the original.
+		var into = executor.IsRoom ? executor.AsContainer : await executor.Where();
+
+		// do_real_open's first refusal (create.c:108-110), ahead of can_pay_fees (:130): an exit is
+		// sourced in a room or nowhere, so a cloner standing inside a thing clones no exit at all.
+		if (target.IsExit && !into.IsRoom)
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ExitsOnlyFromRooms), executor);
+			return new Error<string>(ErrorMessages.Returns.NotARoom);
+		}
 
 		// "We give the clone the same modification time that its other clone has, but update the
 		// creation time" (create.c:653-655). A null creation time is now; the modification time is the
