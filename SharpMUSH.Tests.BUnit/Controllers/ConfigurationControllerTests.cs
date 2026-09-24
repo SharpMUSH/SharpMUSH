@@ -95,7 +95,7 @@ public class ConfigurationControllerTests
 			WizMessageOfTheDayHtmlFile: "wizmotd.html"),
 		Net = new NetOptions(
 			Guests: true, IpAddr: null, JsonUnsafeUnescape: false,
-			Logins: true, MudName: "SharpMUSH", MudUrl: null,
+			Logins: true, MudName: "SharpMUSH", MudUrl: null, Mxp: true,
 			PlayerCreation: true, Port: 4201, PortalPort: 5117,
 			Pueblo: true, SslPortalPort: 7296, SocketFile: "netmush.sock",
 			SqlHost: null, SqlPlatform: null, SqlPassword: null,

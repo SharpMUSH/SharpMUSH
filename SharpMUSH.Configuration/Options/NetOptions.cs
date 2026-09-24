@@ -1,5 +1,16 @@
-﻿namespace SharpMUSH.Configuration.Options;
+namespace SharpMUSH.Configuration.Options;
 
+/// <summary>
+/// Every parameter declares its default because the configuration schema the admin pages read reports
+/// them per property (<c>SchemaBuilder.BuildProperties</c>), and that is what a "reset to default"
+/// there writes back.
+/// </summary>
+/// <remarks>
+/// They therefore have to say what <see cref="SharpMUSHOptions.Default()"/> says, which is checked by
+/// <c>ConfigurationDefaultsTests</c>: an omitted argument at the one call site that matters silently
+/// takes the value written here instead. One did — <c>Mxp</c> was left out of that default and took
+/// <c>false</c>, while a game imported from a PennMUSH <c>mush.cnf</c> got <c>true</c>.
+/// </remarks>
 public record NetOptions(
 	[property: SharpConfig(Name = "mud_name", Category = "Net", Description = "Name of your MUSH as displayed to players", Group = "General", Order = 1)]
 	string MudName = "SharpMUSH",
@@ -20,19 +31,19 @@ public record NetOptions(
 	uint SslPort = 4203,
 
 	[property: SharpConfig(Name = "portal_port", Category = "Net", Description = "Port for portal connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 6, Min = 0, Max = 65535)]
-	uint PortalPort = 0,
+	uint PortalPort = 5117,
 
 	[property: SharpConfig(Name = "ssl_portal_port", Category = "Net", Description = "Port for secure portal connections", ValidationPattern = @"^\d+$", Group = "Connection Settings", Order = 7, Min = 0, Max = 65535)]
-	uint SslPortalPort = 0,
+	uint SslPortalPort = 7296,
 
 	[property: SharpConfig(Name = "socket_file", Category = "Net", Description = "Unix domain socket file for SSL slave communication", Group = "Connection Settings", Order = 8)]
-	string SocketFile = "/var/run/sharpmush.sock",
+	string SocketFile = "netmush.sock",
 
 	[property: SharpConfig(Name = "use_ws", Category = "Net", Description = "Enable WebSocket support for web clients", Group = "Network Protocol", Order = 4)]
-	bool UseWebsockets = false,
+	bool UseWebsockets = true,
 
 	[property: SharpConfig(Name = "ws_url", Category = "Net", Description = "URL path for WebSocket connections", Group = "Network Protocol", Order = 5)]
-	string? WebsocketUrl = "/ws",
+	string? WebsocketUrl = "/wsclient",
 
 	[property: SharpConfig(Name = "use_dns", Category = "Net", Description = "Resolve IP numbers to hostnames (affects WHO display)", Group = "Network Protocol", Order = 6)]
 	bool UseDns = true,
@@ -50,7 +61,7 @@ public record NetOptions(
 	bool Pueblo = false,
 
 	[property: SharpConfig(Name = "mxp", Category = "Net", Description = "Enable MXP (MUD eXtension Protocol) support", Group = "Network Protocol", Order = 2)]
-	bool Mxp = false,
+	bool Mxp = true,
 
 	[property: SharpConfig(Name = "sql_platform", Category = "Net", Description = "SQL database platform to use", Group = "Database", Order = 1)]
 	string? SqlPlatform = null,
@@ -70,36 +81,6 @@ public record NetOptions(
 	[property: SharpConfig(Name = "json_unsafe_unescape", Category = "Net", Description = "Allow unsafe JSON unescaping", Group = "Advanced", Order = 1)]
 	bool JsonUnsafeUnescape = false,
 
-	[property: SharpConfig(Name = "ssl_require_clientcert", Category = "Net", Description = "Require clients to present valid SSL certificates", Group = "Connection Settings", Order = 3, Tooltip = "Enhanced security but requires client certificate setup")]
+	[property: SharpConfig(Name = "ssl_require_client_cert", Category = "Net", Description = "Require clients to present valid SSL certificates", Group = "Connection Settings", Order = 3, Tooltip = "Enhanced security but requires client certificate setup")]
 	bool SslRequireClientCert = false
-)
-{
-	// Constructor needed for default values
-	public NetOptions() : this(
-		MudName: "SharpMUSH",
-		MudUrl: null,
-		IpAddr: null,
-		SslIpAddr: null,
-		Port: 4201,
-		SslPort: 4203,
-		PortalPort: 0,
-		SslPortalPort: 0,
-		SocketFile: "/var/run/sharpmush.sock",
-		UseWebsockets: false,
-		WebsocketUrl: "/ws",
-		UseDns: true,
-		Logins: true,
-		PlayerCreation: true,
-		Guests: true,
-		Pueblo: false,
-		Mxp: false,
-		SqlPlatform: null,
-		SqlHost: null,
-		SqlDatabase: null,
-		SqlUsername: null,
-		SqlPassword: null,
-		JsonUnsafeUnescape: false,
-		SslRequireClientCert: false
-	)
-	{ }
-}
+);

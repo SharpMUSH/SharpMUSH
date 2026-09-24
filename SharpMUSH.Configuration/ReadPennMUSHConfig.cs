@@ -1,4 +1,4 @@
-﻿using SharpMUSH.Configuration.Generated;
+using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Configuration.Options;
 using System.Text.RegularExpressions;
 using FileOptions = SharpMUSH.Configuration.Options.FileOptions;
@@ -7,6 +7,13 @@ namespace SharpMUSH.Configuration;
 
 public static partial class ReadPennMushConfig
 {
+	/// <summary>
+	/// Reads a PennMUSH <c>mush.cnf</c> into the engine's configuration. Every option the file does not
+	/// mention keeps the value <see cref="Options.SharpMUSHOptions.Default()"/> gives it, which is the one
+	/// place a shipped default is written down — this used to restate all of them and had drifted from
+	/// the default on fourteen options, so a world imported from a <c>mush.cnf</c> was not the world a
+	/// fresh <c>@config</c> described.
+	/// </summary>
 	public static SharpMUSHOptions Create(string configFile)
 	{
 		string[] text;
@@ -26,124 +33,126 @@ public static partial class ReadPennMushConfig
 			throw;
 		}
 
-		foreach (var configLine in text
-							 .Where(line => configDictionary.Keys.Any(line.Trim().StartsWith))
+		// Keys the configuration file names but SharpMUSH has no option for are ignored: a PennMUSH
+		// mush.cnf carries plenty of them (chunk_swap_file, forking_dump, compress_program...). The
+		// lookup has to be a miss rather than an indexer, because the previous prefix filter admitted
+		// any line merely starting with a known key and then indexed the unknown one.
+		foreach (var groups in text
 							 .Select(line => splitter.Match(line.Trim()))
 							 .Where(match => match.Success)
-							 .Select(match => match.Groups))
+							 .Select(match => match.Groups)
+							 .Where(groups => configDictionary.ContainsKey(groups["Key"].Value)))
 		{
-			configDictionary[configLine["Key"].Value] = configLine["Value"].Value;
+			configDictionary[groups["Key"].Value] = groups["Value"].Value;
 		}
+
+		var d = SharpMUSHOptions.Default();
 
 		var work = new SharpMUSHOptions()
 		{
 			Attribute = new AttributeOptions(
-				Boolean(Get(nameof(AttributeOptions.ADestroy)), false),
-				Boolean(Get(nameof(AttributeOptions.AMail)), false),
-				Boolean(Get(nameof(AttributeOptions.PlayerListen)), true),
-				Boolean(Get(nameof(AttributeOptions.PlayerAHear)), true),
-				Boolean(Get(nameof(AttributeOptions.Startups)), true),
-				Boolean(Get(nameof(AttributeOptions.ReadRemoteDesc)), false),
-				Boolean(Get(nameof(AttributeOptions.RoomConnects)), true),
-				Boolean(Get(nameof(AttributeOptions.ReverseShs)), true),
-				Boolean(Get(nameof(AttributeOptions.EmptyAttributes)), true),
-				String(Get(nameof(AttributeOptions.GenderAttribute)), "SEX"),
-				String(Get(nameof(AttributeOptions.PossessivePronounAttribute)), null),
-				String(Get(nameof(AttributeOptions.AbsolutePossessivePronounAttribute)), null),
-				String(Get(nameof(AttributeOptions.ObjectivePronounAttribute)), null),
-				String(Get(nameof(AttributeOptions.SubjectivePronounAttribute)), null)
+				Boolean(Get(nameof(AttributeOptions.ADestroy)), d.Attribute.ADestroy),
+				Boolean(Get(nameof(AttributeOptions.AMail)), d.Attribute.AMail),
+				Boolean(Get(nameof(AttributeOptions.PlayerListen)), d.Attribute.PlayerListen),
+				Boolean(Get(nameof(AttributeOptions.PlayerAHear)), d.Attribute.PlayerAHear),
+				Boolean(Get(nameof(AttributeOptions.Startups)), d.Attribute.Startups),
+				Boolean(Get(nameof(AttributeOptions.ReadRemoteDesc)), d.Attribute.ReadRemoteDesc),
+				Boolean(Get(nameof(AttributeOptions.RoomConnects)), d.Attribute.RoomConnects),
+				Boolean(Get(nameof(AttributeOptions.ReverseShs)), d.Attribute.ReverseShs),
+				Boolean(Get(nameof(AttributeOptions.EmptyAttributes)), d.Attribute.EmptyAttributes),
+				String(Get(nameof(AttributeOptions.GenderAttribute)), d.Attribute.GenderAttribute),
+				String(Get(nameof(AttributeOptions.PossessivePronounAttribute)), d.Attribute.PossessivePronounAttribute),
+				String(Get(nameof(AttributeOptions.AbsolutePossessivePronounAttribute)), d.Attribute.AbsolutePossessivePronounAttribute),
+				String(Get(nameof(AttributeOptions.ObjectivePronounAttribute)), d.Attribute.ObjectivePronounAttribute),
+				String(Get(nameof(AttributeOptions.SubjectivePronounAttribute)), d.Attribute.SubjectivePronounAttribute)
 			),
 			Chat = new ChatOptions(
-				Get(nameof(ChatOptions.ChatTokenAlias)).FirstOrDefault('+'),
-				Boolean(Get(nameof(ChatOptions.UseMuxComm)), true),
-				UnsignedInteger(Get(nameof(ChatOptions.MaxChannels)), 200),
-				UnsignedInteger(Get(nameof(ChatOptions.MaxPlayerChannels)), 0),
-				UnsignedInteger(Get(nameof(ChatOptions.ChannelCost)), 1000),
-				Boolean(Get(nameof(ChatOptions.NoisyCEmit)), false),
-				UnsignedInteger(Get(nameof(ChatOptions.ChannelTitleLength)), 80)
+				Get(nameof(ChatOptions.ChatTokenAlias)).FirstOrDefault(d.Chat.ChatTokenAlias),
+				Boolean(Get(nameof(ChatOptions.UseMuxComm)), d.Chat.UseMuxComm),
+				UnsignedInteger(Get(nameof(ChatOptions.MaxChannels)), d.Chat.MaxChannels),
+				UnsignedInteger(Get(nameof(ChatOptions.MaxPlayerChannels)), d.Chat.MaxPlayerChannels),
+				UnsignedInteger(Get(nameof(ChatOptions.ChannelCost)), d.Chat.ChannelCost),
+				Boolean(Get(nameof(ChatOptions.NoisyCEmit)), d.Chat.NoisyCEmit),
+				UnsignedInteger(Get(nameof(ChatOptions.ChannelTitleLength)), d.Chat.ChannelTitleLength)
 			),
 			Command = new CommandOptions(
-				Boolean(Get(nameof(CommandOptions.NoisyWhisper)), false),
-				Boolean(Get(nameof(CommandOptions.PossessiveGet)), true),
-				Boolean(Get(nameof(CommandOptions.PossessiveGetD)), false),
-				Boolean(Get(nameof(CommandOptions.LinkToObject)), true),
-				Boolean(Get(nameof(CommandOptions.OwnerQueues)), false),
-				Boolean(Get(nameof(CommandOptions.FullInvisibility)), false),
-				Boolean(Get(nameof(CommandOptions.WizardNoAEnter)), false),
-				Boolean(Get(nameof(CommandOptions.ReallySafe)), true),
-				Boolean(Get(nameof(CommandOptions.DestroyPossessions)), true),
-				RequiredDatabaseReference(Get(nameof(CommandOptions.ProbateJudge)), 1)
+				Boolean(Get(nameof(CommandOptions.NoisyWhisper)), d.Command.NoisyWhisper),
+				Boolean(Get(nameof(CommandOptions.PossessiveGet)), d.Command.PossessiveGet),
+				Boolean(Get(nameof(CommandOptions.PossessiveGetD)), d.Command.PossessiveGetD),
+				Boolean(Get(nameof(CommandOptions.LinkToObject)), d.Command.LinkToObject),
+				Boolean(Get(nameof(CommandOptions.OwnerQueues)), d.Command.OwnerQueues),
+				Boolean(Get(nameof(CommandOptions.FullInvisibility)), d.Command.FullInvisibility),
+				Boolean(Get(nameof(CommandOptions.WizardNoAEnter)), d.Command.WizardNoAEnter),
+				Boolean(Get(nameof(CommandOptions.ReallySafe)), d.Command.ReallySafe),
+				Boolean(Get(nameof(CommandOptions.DestroyPossessions)), d.Command.DestroyPossessions),
+				RequiredDatabaseReference(Get(nameof(CommandOptions.ProbateJudge)), d.Command.ProbateJudge)
 			),
 			Compatibility = new CompatibilityOptions(
-				Boolean(Get(nameof(CompatibilityOptions.NullEqualsZero)), true),
-				Boolean(Get(nameof(CompatibilityOptions.TinyBooleans)), false),
-				Boolean(Get(nameof(CompatibilityOptions.TinyTrimFun)), false),
-				Boolean(Get(nameof(CompatibilityOptions.TinyMath)), false),
-				Boolean(Get(nameof(CompatibilityOptions.SilentPEmit)), false),
-				Boolean(Get(nameof(CompatibilityOptions.ParenGroups)), false)
+				Boolean(Get(nameof(CompatibilityOptions.NullEqualsZero)), d.Compatibility.NullEqualsZero),
+				Boolean(Get(nameof(CompatibilityOptions.TinyBooleans)), d.Compatibility.TinyBooleans),
+				Boolean(Get(nameof(CompatibilityOptions.TinyTrimFun)), d.Compatibility.TinyTrimFun),
+				Boolean(Get(nameof(CompatibilityOptions.TinyMath)), d.Compatibility.TinyMath),
+				Boolean(Get(nameof(CompatibilityOptions.SilentPEmit)), d.Compatibility.SilentPEmit),
+				Boolean(Get(nameof(CompatibilityOptions.ParenGroups)), d.Compatibility.ParenGroups)
 			),
 			Cosmetic = new CosmeticOptions(
-				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), "Penny").Trim(),
-				RequiredString(Get(nameof(CosmeticOptions.MoneyPlural)), "Pennies").Trim(),
-				Boolean(Get(nameof(CosmeticOptions.PlayerNameSpaces)), true),
-				Boolean(Get(nameof(CosmeticOptions.AnsiNames)), true),
-				Boolean(Get(nameof(CosmeticOptions.OnlyAsciiInNames)), true),
-				Boolean(Get(nameof(CosmeticOptions.Monikers)), true),
-				UnsignedInteger(Get(nameof(CosmeticOptions.FloatPrecision)), 6),
-				Boolean(Get(nameof(CosmeticOptions.CommaExitList)), true),
-				Boolean(Get(nameof(CosmeticOptions.CountAll)), false),
-				Boolean(Get(nameof(CosmeticOptions.PageAliases)), false),
-				Boolean(Get(nameof(CosmeticOptions.FlagsOnExamine)), true),
-				Boolean(Get(nameof(CosmeticOptions.ExaminePublicAttributes)), true),
-				RequiredString(Get(nameof(CosmeticOptions.WizardWallPrefix)), "Broadcast:").Trim(),
-				RequiredString(Get(nameof(CosmeticOptions.RoyaltyWallPrefix)), "Admin:").Trim(),
-				RequiredString(Get(nameof(CosmeticOptions.WallPrefix)), "Announcement:").Trim(),
-				Boolean(Get(nameof(CosmeticOptions.AnnounceConnects)), true),
-				Boolean(Get(nameof(CosmeticOptions.ChatStripQuote)), true)
+				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), d.Cosmetic.MoneySingular).Trim(),
+				RequiredString(Get(nameof(CosmeticOptions.MoneyPlural)), d.Cosmetic.MoneyPlural).Trim(),
+				Boolean(Get(nameof(CosmeticOptions.PlayerNameSpaces)), d.Cosmetic.PlayerNameSpaces),
+				Boolean(Get(nameof(CosmeticOptions.AnsiNames)), d.Cosmetic.AnsiNames),
+				Boolean(Get(nameof(CosmeticOptions.OnlyAsciiInNames)), d.Cosmetic.OnlyAsciiInNames),
+				Boolean(Get(nameof(CosmeticOptions.Monikers)), d.Cosmetic.Monikers),
+				UnsignedInteger(Get(nameof(CosmeticOptions.FloatPrecision)), d.Cosmetic.FloatPrecision),
+				Boolean(Get(nameof(CosmeticOptions.CommaExitList)), d.Cosmetic.CommaExitList),
+				Boolean(Get(nameof(CosmeticOptions.CountAll)), d.Cosmetic.CountAll),
+				Boolean(Get(nameof(CosmeticOptions.PageAliases)), d.Cosmetic.PageAliases),
+				Boolean(Get(nameof(CosmeticOptions.FlagsOnExamine)), d.Cosmetic.FlagsOnExamine),
+				Boolean(Get(nameof(CosmeticOptions.ExaminePublicAttributes)), d.Cosmetic.ExaminePublicAttributes),
+				RequiredString(Get(nameof(CosmeticOptions.WizardWallPrefix)), d.Cosmetic.WizardWallPrefix).Trim(),
+				RequiredString(Get(nameof(CosmeticOptions.RoyaltyWallPrefix)), d.Cosmetic.RoyaltyWallPrefix).Trim(),
+				RequiredString(Get(nameof(CosmeticOptions.WallPrefix)), d.Cosmetic.WallPrefix).Trim(),
+				Boolean(Get(nameof(CosmeticOptions.AnnounceConnects)), d.Cosmetic.AnnounceConnects),
+				Boolean(Get(nameof(CosmeticOptions.ChatStripQuote)), d.Cosmetic.ChatStripQuote)
 			),
 			Cost = new CostOptions(
-				UnsignedInteger(Get(nameof(CostOptions.ObjectCost)), 10),
-				UnsignedInteger(Get(nameof(CostOptions.ExitCost)), 1),
-				UnsignedInteger(Get(nameof(CostOptions.LinkCost)), 1),
-				UnsignedInteger(Get(nameof(CostOptions.RoomCost)), 10),
-				UnsignedInteger(Get(nameof(CostOptions.QueueCost)), 10),
-				UnsignedInteger(Get(nameof(CostOptions.QuotaCost)), 1),
-				UnsignedInteger(Get(nameof(CostOptions.FindCost)), 100)
+				UnsignedInteger(Get(nameof(CostOptions.ObjectCost)), d.Cost.ObjectCost),
+				UnsignedInteger(Get(nameof(CostOptions.ExitCost)), d.Cost.ExitCost),
+				UnsignedInteger(Get(nameof(CostOptions.LinkCost)), d.Cost.LinkCost),
+				UnsignedInteger(Get(nameof(CostOptions.RoomCost)), d.Cost.RoomCost),
+				UnsignedInteger(Get(nameof(CostOptions.QueueCost)), d.Cost.QueueCost),
+				UnsignedInteger(Get(nameof(CostOptions.QuotaCost)), d.Cost.QuotaCost),
+				UnsignedInteger(Get(nameof(CostOptions.FindCost)), d.Cost.FindCost)
 			),
 			Database = new DatabaseOptions(
-				RequiredDatabaseReference(Get(nameof(DatabaseOptions.PlayerStart)), 0),
-				RequiredDatabaseReference(Get(nameof(DatabaseOptions.MasterRoom)), 2),
-				RequiredDatabaseReference(Get(nameof(DatabaseOptions.BaseRoom)), 0),
-				RequiredDatabaseReference(Get(nameof(DatabaseOptions.DefaultHome)), 0),
-				Boolean(Get(nameof(DatabaseOptions.ExitsConnectRooms)), false),
-				Boolean(Get(nameof(DatabaseOptions.ZoneControlZmpOnly)), true),
-				// Default to the ancestor objects seeded by Migration_CreateDatabase:
-				// #3 Ancestor Room, #4 Ancestor Player, #5 Ancestor Exit, #6 Ancestor Thing.
-				// Matches OptionsService.Default(). A value of -1 in the config disables that ancestor.
-				DatabaseReference(Get(nameof(DatabaseOptions.AncestorRoom)), 3u),
-				DatabaseReference(Get(nameof(DatabaseOptions.AncestorExit)), 5u),
-				DatabaseReference(Get(nameof(DatabaseOptions.AncestorThing)), 6u),
-				DatabaseReference(Get(nameof(DatabaseOptions.AncestorPlayer)), 4u),
-				// Default to the system objects seeded by Migration_CreateDatabase:
-				// #7 Package Manager, #8 HTTP Handler, #9 Event Handler. Matches OptionsService.Default().
-				DatabaseReference(Get(nameof(DatabaseOptions.EventHandler)), 9u),
-				DatabaseReference(Get(nameof(DatabaseOptions.HttpHandler)), 8u),
-				DatabaseReference(Get(nameof(DatabaseOptions.PackageManager)), 7u),
-				UnsignedInteger(Get(nameof(DatabaseOptions.HttpRequestsPerSecond)), 30),
-				Boolean(Get(nameof(DatabaseOptions.AllowBrowserCode)), false)
+				RequiredDatabaseReference(Get(nameof(DatabaseOptions.PlayerStart)), d.Database.PlayerStart),
+				RequiredDatabaseReference(Get(nameof(DatabaseOptions.MasterRoom)), d.Database.MasterRoom),
+				RequiredDatabaseReference(Get(nameof(DatabaseOptions.BaseRoom)), d.Database.BaseRoom),
+				RequiredDatabaseReference(Get(nameof(DatabaseOptions.DefaultHome)), d.Database.DefaultHome),
+				Boolean(Get(nameof(DatabaseOptions.ExitsConnectRooms)), d.Database.ExitsConnectRooms),
+				Boolean(Get(nameof(DatabaseOptions.ZoneControlZmpOnly)), d.Database.ZoneControlZmpOnly),
+				// A value of -1 in the config disables that ancestor.
+				DatabaseReference(Get(nameof(DatabaseOptions.AncestorRoom)), d.Database.AncestorRoom),
+				DatabaseReference(Get(nameof(DatabaseOptions.AncestorExit)), d.Database.AncestorExit),
+				DatabaseReference(Get(nameof(DatabaseOptions.AncestorThing)), d.Database.AncestorThing),
+				DatabaseReference(Get(nameof(DatabaseOptions.AncestorPlayer)), d.Database.AncestorPlayer),
+				DatabaseReference(Get(nameof(DatabaseOptions.EventHandler)), d.Database.EventHandler),
+				DatabaseReference(Get(nameof(DatabaseOptions.HttpHandler)), d.Database.HttpHandler),
+				DatabaseReference(Get(nameof(DatabaseOptions.PackageManager)), d.Database.PackageManager),
+				UnsignedInteger(Get(nameof(DatabaseOptions.HttpRequestsPerSecond)), d.Database.HttpRequestsPerSecond),
+				Boolean(Get(nameof(DatabaseOptions.AllowBrowserCode)), d.Database.AllowBrowserCode)
 			),
 			Dump = new DumpOptions(
-				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), "10m1s")
+				RequiredString(Get(nameof(DumpOptions.PurgeInterval)), d.Dump.PurgeInterval)
 			),
 			File = new FileOptions(
-				RequiredString(Get(nameof(FileOptions.AccessFile)), "access.cnf"),
-				RequiredString(Get(nameof(FileOptions.NamesFile)), "names.cnf"),
-				RequiredString(Get(nameof(FileOptions.SSLPrivateKeyFile)), string.Empty),
-				RequiredString(Get(nameof(FileOptions.SSLCertificateFile)), string.Empty),
-				RequiredString(Get(nameof(FileOptions.SSLCAFile)), string.Empty),
-				RequiredString(Get(nameof(FileOptions.SSLCADirectory)), string.Empty),
-				RequiredString(Get(nameof(FileOptions.DictionaryFile)), string.Empty),
-				RequiredString(Get(nameof(FileOptions.ColorsFile)), "colors.json")
+				RequiredString(Get(nameof(FileOptions.AccessFile)), d.File.AccessFile),
+				RequiredString(Get(nameof(FileOptions.NamesFile)), d.File.NamesFile),
+				String(Get(nameof(FileOptions.SSLPrivateKeyFile)), d.File.SSLPrivateKeyFile),
+				String(Get(nameof(FileOptions.SSLCertificateFile)), d.File.SSLCertificateFile),
+				String(Get(nameof(FileOptions.SSLCAFile)), d.File.SSLCAFile),
+				String(Get(nameof(FileOptions.SSLCADirectory)), d.File.SSLCADirectory),
+				String(Get(nameof(FileOptions.DictionaryFile)), d.File.DictionaryFile),
+				String(Get(nameof(FileOptions.ColorsFile)), d.File.ColorsFile)
 			),
 			Flag = new FlagOptions(
 				PlayerFlags: FlagOptions.Defaults.Split(RequiredString(Get(nameof(FlagOptions.PlayerFlags)), FlagOptions.Defaults.Player)),
@@ -153,115 +162,116 @@ public static partial class ReadPennMushConfig
 				ChannelFlags: FlagOptions.Defaults.Split(RequiredString(Get(nameof(FlagOptions.ChannelFlags)), FlagOptions.Defaults.Channel))
 			),
 			Function = new FunctionOptions(
-				SaferUserFunctions: Boolean(Get(nameof(FunctionOptions.SaferUserFunctions)), true),
-				FunctionSideEffects: Boolean(Get(nameof(FunctionOptions.FunctionSideEffects)), true)
+				SaferUserFunctions: Boolean(Get(nameof(FunctionOptions.SaferUserFunctions)), d.Function.SaferUserFunctions),
+				FunctionSideEffects: Boolean(Get(nameof(FunctionOptions.FunctionSideEffects)), d.Function.FunctionSideEffects)
 			),
 			Limit = new LimitOptions(
-				UnsignedInteger(Get(nameof(LimitOptions.MaxAliases)), 3),
-				DatabaseReference(Get(nameof(LimitOptions.MaxDbReference)), null),
-				UnsignedInteger(Get(nameof(LimitOptions.MaxAttributesPerObj)), 2048),
-				UnsignedInteger(Get(nameof(LimitOptions.MaxLogins)), 120),
-				Integer(Get(nameof(LimitOptions.MaxGuests)), -1),
-				UnsignedInteger(Get(nameof(LimitOptions.MaxNamedQRegisters)), 100),
-				UnsignedInteger(Get(nameof(LimitOptions.ConnectFailLimit)), 10),
-				UnsignedInteger(Get(nameof(LimitOptions.IdleTimeout)), 0),
-				UnsignedInteger(Get(nameof(LimitOptions.UnconnectedIdleTimeout)), 300),
-				UnsignedInteger(Get(nameof(LimitOptions.KeepaliveTimeout)), 300),
-				UnsignedInteger(Get(nameof(LimitOptions.WhisperLoudness)), 100),
-				UnsignedInteger(Get(nameof(LimitOptions.StartingQuota)), 20),
-				UnsignedInteger(Get(nameof(LimitOptions.StartingMoney)), 150),
-				UnsignedInteger(Get(nameof(LimitOptions.Paycheck)), 50),
-				UnsignedInteger(Get(nameof(LimitOptions.GuestPaycheck)), 0),
-				UnsignedInteger(Get(nameof(LimitOptions.MaxPennies)), 1000000000),
-				UnsignedInteger(Get(nameof(LimitOptions.MaxGuestPennies)), 1000000000),
-				UnsignedInteger(Get(nameof(LimitOptions.MaxParents)), 10),
-				UnsignedInteger(Get(nameof(LimitOptions.MailLimit)), 300),
-				UnsignedInteger(Get(nameof(LimitOptions.MaxDepth)), 10),
-				UnsignedInteger(Get(nameof(LimitOptions.PlayerQueueLimit)), 100),
-				UnsignedInteger(Get(nameof(LimitOptions.QueueLoss)), 63),
-				UnsignedInteger(Get(nameof(LimitOptions.QueueChunk)), 3),
-				UnsignedInteger(Get(nameof(LimitOptions.FunctionRecursionLimit)), 100),
-				UnsignedInteger(Get(nameof(LimitOptions.FunctionInvocationLimit)), 100000),
-				UnsignedInteger(Get(nameof(LimitOptions.CallLimit)), 1000),
-				UnsignedInteger(Get(nameof(LimitOptions.PlayerNameLen)), 21),
-				UnsignedInteger(Get(nameof(LimitOptions.QueueEntryCpuTime)), LimitOptions.DefaultQueueEntryCpuTime),
-				Boolean(Get(nameof(LimitOptions.UseQuota)), true),
-				UnsignedInteger(Get(nameof(LimitOptions.ChunkMigrate)), 150),
-				UnsignedInteger(Get(nameof(LimitOptions.MaxAttributeValueLength)), 8192))
+				UnsignedInteger(Get(nameof(LimitOptions.MaxAliases)), d.Limit.MaxAliases),
+				DatabaseReference(Get(nameof(LimitOptions.MaxDbReference)), d.Limit.MaxDbReference),
+				UnsignedInteger(Get(nameof(LimitOptions.MaxAttributesPerObj)), d.Limit.MaxAttributesPerObj),
+				UnsignedInteger(Get(nameof(LimitOptions.MaxLogins)), d.Limit.MaxLogins),
+				Integer(Get(nameof(LimitOptions.MaxGuests)), d.Limit.MaxGuests),
+				UnsignedInteger(Get(nameof(LimitOptions.MaxNamedQRegisters)), d.Limit.MaxNamedQRegisters),
+				UnsignedInteger(Get(nameof(LimitOptions.ConnectFailLimit)), d.Limit.ConnectFailLimit),
+				UnsignedInteger(Get(nameof(LimitOptions.IdleTimeout)), d.Limit.IdleTimeout),
+				UnsignedInteger(Get(nameof(LimitOptions.UnconnectedIdleTimeout)), d.Limit.UnconnectedIdleTimeout),
+				UnsignedInteger(Get(nameof(LimitOptions.KeepaliveTimeout)), d.Limit.KeepaliveTimeout),
+				UnsignedInteger(Get(nameof(LimitOptions.WhisperLoudness)), d.Limit.WhisperLoudness),
+				UnsignedInteger(Get(nameof(LimitOptions.StartingQuota)), d.Limit.StartingQuota),
+				UnsignedInteger(Get(nameof(LimitOptions.StartingMoney)), d.Limit.StartingMoney),
+				UnsignedInteger(Get(nameof(LimitOptions.Paycheck)), d.Limit.Paycheck),
+				UnsignedInteger(Get(nameof(LimitOptions.GuestPaycheck)), d.Limit.GuestPaycheck),
+				UnsignedInteger(Get(nameof(LimitOptions.MaxPennies)), d.Limit.MaxPennies),
+				UnsignedInteger(Get(nameof(LimitOptions.MaxGuestPennies)), d.Limit.MaxGuestPennies),
+				UnsignedInteger(Get(nameof(LimitOptions.MaxParents)), d.Limit.MaxParents),
+				UnsignedInteger(Get(nameof(LimitOptions.MailLimit)), d.Limit.MailLimit),
+				UnsignedInteger(Get(nameof(LimitOptions.MaxDepth)), d.Limit.MaxDepth),
+				UnsignedInteger(Get(nameof(LimitOptions.PlayerQueueLimit)), d.Limit.PlayerQueueLimit),
+				UnsignedInteger(Get(nameof(LimitOptions.QueueLoss)), d.Limit.QueueLoss),
+				UnsignedInteger(Get(nameof(LimitOptions.QueueChunk)), d.Limit.QueueChunk),
+				UnsignedInteger(Get(nameof(LimitOptions.FunctionRecursionLimit)), d.Limit.FunctionRecursionLimit),
+				UnsignedInteger(Get(nameof(LimitOptions.FunctionInvocationLimit)), d.Limit.FunctionInvocationLimit),
+				UnsignedInteger(Get(nameof(LimitOptions.CallLimit)), d.Limit.CallLimit),
+				UnsignedInteger(Get(nameof(LimitOptions.PlayerNameLen)), d.Limit.PlayerNameLen),
+				UnsignedInteger(Get(nameof(LimitOptions.QueueEntryCpuTime)), d.Limit.QueueEntryCpuTime),
+				Boolean(Get(nameof(LimitOptions.UseQuota)), d.Limit.UseQuota),
+				UnsignedInteger(Get(nameof(LimitOptions.ChunkMigrate)), d.Limit.ChunkMigrate),
+				UnsignedInteger(Get(nameof(LimitOptions.MaxAttributeValueLength)), d.Limit.MaxAttributeValueLength))
 			{
-				GlobalQueueLimit = UnsignedInteger(Get(nameof(LimitOptions.GlobalQueueLimit)), 10000),
-				GuestOutputLimit = UnsignedInteger(Get(nameof(LimitOptions.GuestOutputLimit)), LimitOptions.DefaultGuestOutputLimit)
+				GlobalQueueLimit = UnsignedInteger(Get(nameof(LimitOptions.GlobalQueueLimit)), d.Limit.GlobalQueueLimit),
+				GuestOutputLimit = UnsignedInteger(Get(nameof(LimitOptions.GuestOutputLimit)), d.Limit.GuestOutputLimit)
 			},
 			Log = new LogOptions(
-				Boolean(Get(nameof(LogOptions.UseSyslog)), false),
-				Boolean(Get(nameof(LogOptions.LogCommands)), false),
-				Boolean(Get(nameof(LogOptions.LogForces)), true),
-				RequiredString(Get(nameof(LogOptions.ErrorLog)), "log/netmush.log"),
-				RequiredString(Get(nameof(LogOptions.CommandLog)), "log/command.log"),
-				RequiredString(Get(nameof(LogOptions.WizardLog)), "log/wizard.log"),
-				RequiredString(Get(nameof(LogOptions.CheckpointLog)), "log/checkpoint.log"),
-				RequiredString(Get(nameof(LogOptions.TraceLog)), "log/trace.log"),
-				RequiredString(Get(nameof(LogOptions.ConnectLog)), "log/connect.log"),
-				Boolean(Get(nameof(LogOptions.MemoryCheck)), false),
-				Boolean(Get(nameof(LogOptions.UseConnLog)), true)
+				Boolean(Get(nameof(LogOptions.UseSyslog)), d.Log.UseSyslog),
+				Boolean(Get(nameof(LogOptions.LogCommands)), d.Log.LogCommands),
+				Boolean(Get(nameof(LogOptions.LogForces)), d.Log.LogForces),
+				RequiredString(Get(nameof(LogOptions.ErrorLog)), d.Log.ErrorLog),
+				RequiredString(Get(nameof(LogOptions.CommandLog)), d.Log.CommandLog),
+				RequiredString(Get(nameof(LogOptions.WizardLog)), d.Log.WizardLog),
+				RequiredString(Get(nameof(LogOptions.CheckpointLog)), d.Log.CheckpointLog),
+				RequiredString(Get(nameof(LogOptions.TraceLog)), d.Log.TraceLog),
+				RequiredString(Get(nameof(LogOptions.ConnectLog)), d.Log.ConnectLog),
+				Boolean(Get(nameof(LogOptions.MemoryCheck)), d.Log.MemoryCheck),
+				Boolean(Get(nameof(LogOptions.UseConnLog)), d.Log.UseConnLog)
 			),
 			Message = new MessageOptions(
-				RequiredString(Get(nameof(MessageOptions.ConnectFile)), "connect.txt"),
-				RequiredString(Get(nameof(MessageOptions.MessageOfTheDayFile)), "motd.txt"),
-				RequiredString(Get(nameof(MessageOptions.WizMessageOfTheDayFile)), "wizmotd.txt"),
-				RequiredString(Get(nameof(MessageOptions.NewUserFile)), "newuser.txt"),
-				RequiredString(Get(nameof(MessageOptions.RegisterCreateFile)), "register.txt"),
-				RequiredString(Get(nameof(MessageOptions.QuitFile)), "quit.txt"),
-				RequiredString(Get(nameof(MessageOptions.DownFile)), "down.txt"),
-				RequiredString(Get(nameof(MessageOptions.FullFile)), "full.txt"),
-				RequiredString(Get(nameof(MessageOptions.GuestFile)), "guest.txt"),
-				RequiredString(Get(nameof(MessageOptions.WhoFile)), "who.txt"),
-				RequiredString(Get(nameof(MessageOptions.ConnectHtmlFile)), "connect.html"),
-				RequiredString(Get(nameof(MessageOptions.MessageOfTheDayHtmlFile)), "motd.html"),
-				RequiredString(Get(nameof(MessageOptions.WizMessageOfTheDayHtmlFile)), "wizmotd.html"),
-				RequiredString(Get(nameof(MessageOptions.NewUserHtmlFile)), "newuser.html"),
-				RequiredString(Get(nameof(MessageOptions.RegisterCreateHtmlFile)), "register.html"),
-				RequiredString(Get(nameof(MessageOptions.QuitHtmlFile)), "quit.html"),
-				RequiredString(Get(nameof(MessageOptions.DownHtmlFile)), "down.html"),
-				RequiredString(Get(nameof(MessageOptions.FullHtmlFile)), "full.html"),
-				RequiredString(Get(nameof(MessageOptions.GuestHtmlFile)), "guest.html"),
-				RequiredString(Get(nameof(MessageOptions.WhoHtmlFile)), "who.html"),
-				RequiredString(Get(nameof(MessageOptions.IndexHtmlFile)), "index.html")
+				RequiredString(Get(nameof(MessageOptions.ConnectFile)), d.Message.ConnectFile),
+				RequiredString(Get(nameof(MessageOptions.MessageOfTheDayFile)), d.Message.MessageOfTheDayFile),
+				RequiredString(Get(nameof(MessageOptions.WizMessageOfTheDayFile)), d.Message.WizMessageOfTheDayFile),
+				RequiredString(Get(nameof(MessageOptions.NewUserFile)), d.Message.NewUserFile),
+				RequiredString(Get(nameof(MessageOptions.RegisterCreateFile)), d.Message.RegisterCreateFile),
+				RequiredString(Get(nameof(MessageOptions.QuitFile)), d.Message.QuitFile),
+				RequiredString(Get(nameof(MessageOptions.DownFile)), d.Message.DownFile),
+				RequiredString(Get(nameof(MessageOptions.FullFile)), d.Message.FullFile),
+				RequiredString(Get(nameof(MessageOptions.GuestFile)), d.Message.GuestFile),
+				RequiredString(Get(nameof(MessageOptions.WhoFile)), d.Message.WhoFile),
+				RequiredString(Get(nameof(MessageOptions.ConnectHtmlFile)), d.Message.ConnectHtmlFile),
+				RequiredString(Get(nameof(MessageOptions.MessageOfTheDayHtmlFile)), d.Message.MessageOfTheDayHtmlFile),
+				RequiredString(Get(nameof(MessageOptions.WizMessageOfTheDayHtmlFile)), d.Message.WizMessageOfTheDayHtmlFile),
+				RequiredString(Get(nameof(MessageOptions.NewUserHtmlFile)), d.Message.NewUserHtmlFile),
+				RequiredString(Get(nameof(MessageOptions.RegisterCreateHtmlFile)), d.Message.RegisterCreateHtmlFile),
+				RequiredString(Get(nameof(MessageOptions.QuitHtmlFile)), d.Message.QuitHtmlFile),
+				RequiredString(Get(nameof(MessageOptions.DownHtmlFile)), d.Message.DownHtmlFile),
+				RequiredString(Get(nameof(MessageOptions.FullHtmlFile)), d.Message.FullHtmlFile),
+				RequiredString(Get(nameof(MessageOptions.GuestHtmlFile)), d.Message.GuestHtmlFile),
+				RequiredString(Get(nameof(MessageOptions.WhoHtmlFile)), d.Message.WhoHtmlFile),
+				RequiredString(Get(nameof(MessageOptions.IndexHtmlFile)), d.Message.IndexHtmlFile)
 			),
 			Net = new NetOptions(
-				RequiredString(Get(nameof(NetOptions.MudName)), "SharpMUSH"),
-				String(Get(nameof(NetOptions.MudUrl)), null),
-				String(Get(nameof(NetOptions.IpAddr)), null),
-				String(Get(nameof(NetOptions.SslIpAddr)), null),
-				UnsignedInteger(Get(nameof(NetOptions.Port)), 4201),
-				UnsignedInteger(Get(nameof(NetOptions.SslPort)), 4203),
-				UnsignedInteger(Get(nameof(NetOptions.PortalPort)), 5117),
-				UnsignedInteger(Get(nameof(NetOptions.SslPortalPort)), 7296),
-				RequiredString(Get(nameof(NetOptions.SocketFile)), "netmush.sock"),
-				Boolean(Get(nameof(NetOptions.UseWebsockets)), true),
-				RequiredString(Get(nameof(NetOptions.WebsocketUrl)), "/wsclient"),
-				Boolean(Get(nameof(NetOptions.UseDns)), true),
-				Boolean(Get(nameof(NetOptions.Logins)), true),
-				Boolean(Get(nameof(NetOptions.PlayerCreation)), true),
-				Boolean(Get(nameof(NetOptions.Guests)), true),
-				Boolean(Get(nameof(NetOptions.Pueblo)), true),
-				Boolean(Get(nameof(NetOptions.Mxp)), true),
-				String(Get(nameof(NetOptions.SqlPlatform)), null),
-				String(Get(nameof(NetOptions.SqlHost)), "localhost"),
-				String(Get(nameof(NetOptions.SqlDatabase)), null),
-				String(Get(nameof(NetOptions.SqlUsername)), null),
-				String(Get(nameof(NetOptions.SqlPassword)), null),
-				Boolean(Get(nameof(NetOptions.JsonUnsafeUnescape)), false),
-				Boolean(Get(nameof(NetOptions.SslRequireClientCert)), false)
+				RequiredString(Get(nameof(NetOptions.MudName)), d.Net.MudName),
+				String(Get(nameof(NetOptions.MudUrl)), d.Net.MudUrl),
+				String(Get(nameof(NetOptions.IpAddr)), d.Net.IpAddr),
+				String(Get(nameof(NetOptions.SslIpAddr)), d.Net.SslIpAddr),
+				UnsignedInteger(Get(nameof(NetOptions.Port)), d.Net.Port),
+				UnsignedInteger(Get(nameof(NetOptions.SslPort)), d.Net.SslPort),
+				UnsignedInteger(Get(nameof(NetOptions.PortalPort)), d.Net.PortalPort),
+				UnsignedInteger(Get(nameof(NetOptions.SslPortalPort)), d.Net.SslPortalPort),
+				RequiredString(Get(nameof(NetOptions.SocketFile)), d.Net.SocketFile),
+				Boolean(Get(nameof(NetOptions.UseWebsockets)), d.Net.UseWebsockets),
+				String(Get(nameof(NetOptions.WebsocketUrl)), d.Net.WebsocketUrl),
+				Boolean(Get(nameof(NetOptions.UseDns)), d.Net.UseDns),
+				Boolean(Get(nameof(NetOptions.Logins)), d.Net.Logins),
+				Boolean(Get(nameof(NetOptions.PlayerCreation)), d.Net.PlayerCreation),
+				Boolean(Get(nameof(NetOptions.Guests)), d.Net.Guests),
+				Boolean(Get(nameof(NetOptions.Pueblo)), d.Net.Pueblo),
+				Boolean(Get(nameof(NetOptions.Mxp)), d.Net.Mxp),
+				String(Get(nameof(NetOptions.SqlPlatform)), d.Net.SqlPlatform),
+				String(Get(nameof(NetOptions.SqlHost)), d.Net.SqlHost),
+				String(Get(nameof(NetOptions.SqlDatabase)), d.Net.SqlDatabase),
+				String(Get(nameof(NetOptions.SqlUsername)), d.Net.SqlUsername),
+				String(Get(nameof(NetOptions.SqlPassword)), d.Net.SqlPassword),
+				Boolean(Get(nameof(NetOptions.JsonUnsafeUnescape)), d.Net.JsonUnsafeUnescape),
+				Boolean(Get(nameof(NetOptions.SslRequireClientCert)), d.Net.SslRequireClientCert)
 			),
 			Debug = new DebugOptions(
-				Boolean(Get(nameof(DebugOptions.DebugSharpParser)), false)
+				Boolean(Get(nameof(DebugOptions.DebugSharpParser)), d.Debug.DebugSharpParser),
+				Enumeration(Get(nameof(DebugOptions.ParserPredictionMode)), d.Debug.ParserPredictionMode)
 			),
-			Alias = AliasOptions.Default,
-			Restriction = new RestrictionOptions(
-				CommandRestrictions: new Dictionary<string, string[]>(),
-				FunctionRestrictions: new Dictionary<string, string[]>()
-			),
+			Alias = d.Alias,
+			Restriction = d.Restriction,
+			// The two the default seeds with examples start empty for an import: the game being
+			// imported brings its own names.cnf and access.cnf, and seeding a PennMUSH game with
+			// SharpMUSH's example rules would lock a site nobody asked to lock.
 			BannedNames = new BannedNamesOptions(
 				BannedNames: []
 			),
@@ -269,15 +279,15 @@ public static partial class ReadPennMushConfig
 				Rules: new Dictionary<string, string[]>()
 			),
 			Warning = new WarningOptions(
-				WarnInterval: RequiredString(Get(nameof(WarningOptions.WarnInterval)), "1h")
+				WarnInterval: RequiredString(Get(nameof(WarningOptions.WarnInterval)), d.Warning.WarnInterval)
 			),
 			TextFile = new TextFileOptions(
-				TextFilesDirectory: RequiredString(Get(nameof(TextFileOptions.TextFilesDirectory)), "TextFiles"),
-				EnableMarkdownRendering: Boolean(Get(nameof(TextFileOptions.EnableMarkdownRendering)), true),
-				CacheOnStartup: Boolean(Get(nameof(TextFileOptions.CacheOnStartup)), true)
+				TextFilesDirectory: RequiredString(Get(nameof(TextFileOptions.TextFilesDirectory)), d.TextFile.TextFilesDirectory),
+				EnableMarkdownRendering: Boolean(Get(nameof(TextFileOptions.EnableMarkdownRendering)), d.TextFile.EnableMarkdownRendering),
+				CacheOnStartup: Boolean(Get(nameof(TextFileOptions.CacheOnStartup)), d.TextFile.CacheOnStartup)
 			),
 			Wiki = new WikiOptions(
-				DefaultLocale: RequiredString(Get(nameof(WikiOptions.DefaultLocale)), WikiOptions.DefaultLocaleFallback)
+				DefaultLocale: RequiredString(Get(nameof(WikiOptions.DefaultLocale)), d.Wiki.DefaultLocale)
 			)
 		};
 
@@ -308,6 +318,12 @@ public static partial class ReadPennMushConfig
 				? result
 				: fallback;
 
+
+	/// <summary>A named enumeration member, case-insensitively; anything else keeps the default.</summary>
+	private static TEnum Enumeration<TEnum>(string value, TEnum fallback) where TEnum : struct, Enum =>
+		Enum.TryParse<TEnum>(value, ignoreCase: true, out var result) && Enum.IsDefined(result)
+			? result
+			: fallback;
 
 	private static int Integer(string value, int fallback) =>
 		string.IsNullOrWhiteSpace(value)

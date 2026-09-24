@@ -50,7 +50,7 @@ public record LogOptions(
 	string WizardLog,
 
 	[property: SharpConfig(
-		Name = "chkpt_log",
+		Name = "checkpt_log",
 		Category = "Log",
 		Description = "File path for database checkpoint logs",
 		Group = "Log Files",
