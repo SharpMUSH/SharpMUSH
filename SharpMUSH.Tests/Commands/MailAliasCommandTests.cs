@@ -214,6 +214,23 @@ public class MailAliasCommandTests
 		await Assert.That(await EvaluateAsync(owner, $"malias({renamed})")).IsEqualTo("#-1 NO MATCH");
 	}
 
+	/// <summary>The short switches the help documents; Penn reaches them as prefixes of the long ones.</summary>
+	[Test]
+	public async ValueTask TheDocumentedShortSwitchesWork()
+	{
+		var (owner, member, outsider, alias) = await AliasAsync("MalShort");
+
+		await Assert.That(await RunAsync(owner, $"@malias/desc {alias}=Short crew")).Contains("MAIL: Description changed.");
+		await Assert.That(await RunAsync(owner, $"@malias/see {alias}=members"))
+			.Contains($"MAIL: Permission to see/use alias '{alias}' changed to Members");
+		await Assert.That(await RunAsync(member, $"@malias/members {alias}"))
+			.Contains($"MAIL: Alias {alias}: {owner.Name}, {member.Name}");
+		await Assert.That(await RunAsync(owner, $"@malias/use {alias}="))
+			.Contains(m => m.StartsWith($"MAIL: Permission to see/use alias '{alias}' changed to"));
+		await Assert.That((await EvaluateAsync(outsider, "malias()")).Split(' ')).Contains(alias);
+		await Assert.That(await RunAsync(outsider, "@malias/stat")).Contains("MAIL: Permission denied.");
+	}
+
 	[Test]
 	public async ValueTask MortalsCannotStatOrNuke()
 	{

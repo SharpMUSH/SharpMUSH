@@ -28,6 +28,7 @@ public class PennMUSHMailAliasImportTests
 		await Assert.That(string.Join(",", mail.Aliases.Select(a => a.Name))).IsEqualTo("Team,Pair,Staff");
 		await Assert.That(string.Join(" ", mail.Aliases[0].Members)).IsEqualTo("3 4 5");
 		await Assert.That(mail.Aliases[0].Description).IsEqualTo("The whole team");
+		await Assert.That(mail.MessageCount).IsEqualTo(11);
 	}
 
 	/// <summary>
@@ -39,12 +40,21 @@ public class PennMUSHMailAliasImportTests
 	{
 		await using var world = await IsolatedImportWorld.CreateAsync();
 
+		var progress = new RecordingProgress();
 		var result = await world.Converter.ConvertDatabaseAsync(PennMUSHDbrefPreservationTests.FixturePath,
-			MailFixturePath, new Progress<ConversionProgress>());
+			MailFixturePath, progress);
 
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.MailAliasesConverted).IsEqualTo(3);
 		await Assert.That(result.Warnings).DoesNotContain(w => w.StartsWith("Mail alias"));
+		// The messages are #1110's; the summary must not read as a full mail import.
+		await Assert.That(result.Warnings).Contains(w => w.StartsWith("11 mail message(s) in the maildb were not imported"));
+
+		// The admin page stops polling at 100%, so nothing may report it before the aliases are in.
+		var phases = progress.Reports.Select(p => p.CurrentPhase).ToList();
+		await Assert.That(phases.IndexOf("Mail aliases imported")).IsGreaterThan(phases.IndexOf("Locks created"));
+		await Assert.That(progress.Reports[^1].CurrentPhase).IsEqualTo("Complete");
+		await Assert.That(progress.Reports.Count(p => p.PercentageComplete >= 100)).IsEqualTo(1);
 
 		var aliases = await world.Mediator.CreateStream(new GetMailAliasesQuery()).ToListAsync();
 
@@ -103,6 +113,8 @@ public class PennMUSHMailAliasImportTests
 		await using var world = await IsolatedImportWorld.CreateAsync();
 		await world.Converter.ConvertDatabaseAsync(PennMUSHDbrefPreservationTests.FixturePath, MailFixturePath,
 			new Progress<ConversionProgress>());
+		// Read first so the listing is cached: the release has to invalidate it.
+		await Assert.That(await world.Mediator.CreateStream(new GetMailAliasesQuery()).CountAsync()).IsEqualTo(3);
 
 		await world.Mediator.Send(new ReleaseMailAliasesCommand(3, 1));
 
@@ -116,4 +128,12 @@ public class PennMUSHMailAliasImportTests
 
 	private static string Describe(SharpMailAlias alias)
 		=> $"{alias.Name}|{alias.Description}|#{alias.Owner}|{string.Join(" ", alias.Members)}|{alias.UsePrivileges}|{alias.SeePrivileges}";
+
+	/// <summary>Records each report as it is made; <see cref="Progress{T}"/> posts them, so their order is lost.</summary>
+	private sealed class RecordingProgress : IProgress<ConversionProgress>
+	{
+		public List<ConversionProgress> Reports { get; } = [];
+
+		public void Report(ConversionProgress value) => Reports.Add(value);
+	}
 }

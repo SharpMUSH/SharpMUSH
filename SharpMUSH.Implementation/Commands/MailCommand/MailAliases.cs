@@ -137,6 +137,10 @@ public static class MailAliases
 	}
 
 	/// <summary>cmd_malias (<c>src/cmds.c:1052</c>): the switch picks the action, the first one Penn tests winning.</summary>
+	/// <remarks>
+	/// Penn takes any unique switch prefix; SharpMUSH matches switches exactly, so the short forms the help
+	/// documents (<c>/desc</c>, <c>/stat</c>, <c>/use</c>, <c>/see</c>) are registered as switches of their own.
+	/// </remarks>
 	public static async ValueTask<MString> Handle(Services services, AnySharpObject executor, string[] switches,
 		string left, string right)
 	{
@@ -150,12 +154,12 @@ public static class MailAliases
 		else if (Has("DESTROY")) await DestroyAsync(services, executor, left);
 		else if (Has("ADD")) await AddAsync(services, executor, left, right);
 		else if (Has("REMOVE")) await RemoveAsync(services, executor, left, right);
-		else if (Has("DESCRIBE")) await DescribeAsync(services, executor, left, right);
+		else if (Has("DESCRIBE") || Has("DESC")) await DescribeAsync(services, executor, left, right);
 		else if (Has("RENAME")) await RenameAsync(services, executor, left, right);
-		else if (Has("STATS")) await StatsAsync(services, executor);
+		else if (Has("STATS") || Has("STAT")) await StatsAsync(services, executor);
 		else if (Has("CHOWN")) await ChownAsync(services, executor, left, right);
-		else if (Has("USEFLAG")) await PrivilegesAsync(services, executor, left, right, members: false);
-		else if (Has("SEEFLAG")) await PrivilegesAsync(services, executor, left, right, members: true);
+		else if (Has("USEFLAG") || Has("USE")) await PrivilegesAsync(services, executor, left, right, members: false);
+		else if (Has("SEEFLAG") || Has("SEE")) await PrivilegesAsync(services, executor, left, right, members: true);
 		else if (Has("NUKE")) await NukeAsync(services, executor);
 		else await DefaultAsync(services, executor, left, right);
 

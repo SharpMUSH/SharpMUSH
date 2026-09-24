@@ -29,9 +29,10 @@ public class DatabaseConversionController(
 			return BadRequest("No file uploaded");
 		}
 
+		var tempPath = Path.Combine(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
+		string? mailTempPath = null;
 		try
 		{
-			var tempPath = Path.Combine(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
 
 			await using (var stream = System.IO.File.Create(tempPath))
 			{
@@ -40,7 +41,6 @@ public class DatabaseConversionController(
 
 			logger.LogInformation("Uploaded PennMUSH database file: {FileName} ({Size} bytes)", file.FileName, file.Length);
 
-			string? mailTempPath = null;
 			if (mailFile is { Length: > 0 })
 			{
 				mailTempPath = Path.Combine(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.maildb");
@@ -59,6 +59,7 @@ public class DatabaseConversionController(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error uploading PennMUSH database file");
+			DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath], logger);
 			return StatusCode(500, $"Error uploading file: {ex.Message}");
 		}
 	}
@@ -122,7 +123,27 @@ public static class DatabaseConversionSession
 		public ConversionProgress? CurrentProgress { get; set; }
 		public ConversionResult? Result { get; set; }
 		public CancellationTokenSource CancellationSource { get; set; } = new();
-		public string TempFilePath { get; set; } = string.Empty;
+		/// <summary>The uploaded database and, when one came with it, the maildb.</summary>
+		public string?[] TempFilePaths { get; init; } = [];
+	}
+
+	/// <summary>Deletes the upload's temporary files; one that is still in use is logged and left.</summary>
+	public static void DeleteTempFiles(IEnumerable<string?> paths, ILogger logger)
+	{
+		foreach (var path in paths)
+		{
+			try
+			{
+				if (path is not null && File.Exists(path))
+				{
+					File.Delete(path);
+				}
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+			{
+				logger.LogWarning(ex, "Failed to delete temporary file: {Path}", path);
+			}
+		}
 	}
 
 	public static void StartConversion(
@@ -135,7 +156,7 @@ public static class DatabaseConversionSession
 	{
 		var sessionData = new SessionData
 		{
-			TempFilePath = tempFilePath
+			TempFilePaths = [tempFilePath, mailTempFilePath]
 		};
 
 		var progress = new Progress<ConversionProgress>(p =>
@@ -153,6 +174,8 @@ public static class DatabaseConversionSession
 		sessionData.ConversionTask = converter.ConvertDatabaseAsync(tempFilePath, mailTempFilePath, progress, linkedCts.Token)
 			.ContinueWith(task =>
 			{
+				// Every way out — success, fault, cancellation — is done with the uploaded files.
+				DeleteTempFiles(sessionData.TempFilePaths, logger);
 				try
 				{
 					if (task.IsCompletedSuccessfully)
@@ -161,21 +184,6 @@ public static class DatabaseConversionSession
 						if (_sessions.TryGetValue(sessionId, out var session))
 						{
 							session.Result = result;
-						}
-
-						try
-						{
-							foreach (var path in new[] { tempFilePath, mailTempFilePath })
-							{
-								if (path is not null && File.Exists(path))
-								{
-									File.Delete(path);
-								}
-							}
-						}
-						catch (Exception ex)
-						{
-							logger.LogWarning(ex, "Failed to delete temporary file: {Path}", tempFilePath);
 						}
 
 						return result;
@@ -213,16 +221,9 @@ public static class DatabaseConversionSession
 
 					removedSession?.CancellationSource?.Dispose();
 
-					if (removedSession != null && File.Exists(removedSession.TempFilePath))
+					if (removedSession != null)
 					{
-						try
-						{
-							File.Delete(removedSession.TempFilePath);
-						}
-						catch (IOException ex)
-						{
-							logger.LogWarning(ex, "Failed to delete temp file during cleanup: {Path}", removedSession.TempFilePath);
-						}
+						DeleteTempFiles(removedSession.TempFilePaths, logger);
 					}
 				}
 				catch (Exception ex)
@@ -279,24 +280,8 @@ public static class DatabaseConversionSession
 			return false;
 		}
 
+		// The conversion's continuation deletes the uploaded files once the import has let go of them.
 		session.CancellationSource.Cancel();
-
-		try
-		{
-			if (File.Exists(session.TempFilePath))
-			{
-				File.Delete(session.TempFilePath);
-			}
-		}
-		catch (IOException)
-		{
-			// File is in use or access denied - expected during cancellation, ignore
-		}
-		catch (UnauthorizedAccessException)
-		{
-			// No permission to delete - expected, ignore
-		}
-
 		return true;
 	}
 }

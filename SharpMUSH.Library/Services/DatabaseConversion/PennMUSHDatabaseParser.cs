@@ -59,13 +59,14 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 	/// <summary>
 	/// <c>load_mail</c>'s flags line and <c>load_malias</c>'s section: a count, then per alias its owner,
 	/// name, description, use and see bits, member count and members, then <c>"*** End of MALIAS ***"</c>.
-	/// The messages that follow are not read here.
+	/// Of the messages that follow only their count is read.
 	/// </summary>
 	private async Task<PennMUSHMailDatabase> ParseMailAsync(PennMUSHDumpReader reader, CancellationToken cancellationToken)
 	{
 		var mail = new PennMUSHMailDatabase();
 		if (await reader.PeekAsync(cancellationToken) != '+')
 		{
+			mail.MessageCount = await ReadMessageCountAsync(reader, cancellationToken);
 			return mail;
 		}
 
@@ -76,6 +77,7 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 
 		if ((mail.Flags & PennMUSHMailDatabase.AliasesFlag) == 0)
 		{
+			mail.MessageCount = await ReadMessageCountAsync(reader, cancellationToken);
 			return mail;
 		}
 
@@ -104,9 +106,19 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 			throw reader.Error($"expected the end of the mail aliases, found '{end}'");
 		}
 
-		logger.LogInformation("PennMUSH mail database flags {Flags}, {Count} mail alias(es)", mail.Flags, mail.Aliases.Count);
+		mail.MessageCount = await ReadMessageCountAsync(reader, cancellationToken);
+
+		logger.LogInformation("PennMUSH mail database flags {Flags}, {Count} mail alias(es), {Messages} message(s)",
+			mail.Flags, mail.Aliases.Count, mail.MessageCount);
 		return mail;
 	}
+
+	/// <summary><c>load_mail</c>'s message count line; <c>null</c> when it is missing or not a number.</summary>
+	private static async ValueTask<int?> ReadMessageCountAsync(PennMUSHDumpReader reader, CancellationToken cancellationToken)
+		=> int.TryParse(await reader.ReadLineAsync(cancellationToken), NumberStyles.Integer, CultureInfo.InvariantCulture,
+			out var count)
+			? count
+			: null;
 
 	private async Task<PennMUSHDatabase> ParseAsync(PennMUSHDumpReader reader, CancellationToken cancellationToken)
 	{

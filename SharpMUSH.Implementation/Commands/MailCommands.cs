@@ -116,7 +116,7 @@ public partial class Commands
 		Switches =
 		[
 			"SET", "CREATE", "DESTROY", "DESCRIBE", "RENAME", "STATS", "CHOWN", "NUKE", "ADD", "REMOVE", "LIST", "ALL", "WHO",
-			"MEMBERS", "USEFLAG", "SEEFLAG"
+			"MEMBERS", "USEFLAG", "SEEFLAG", "DESC", "STAT", "USE", "SEE"
 		], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["alias", "list"])]
 	public async ValueTask<Option<CallState>> MailAlias(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

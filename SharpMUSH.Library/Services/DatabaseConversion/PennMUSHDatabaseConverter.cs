@@ -152,11 +152,15 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Attributes created", 0.75);
 
 			locksConverted = await CreateLocksAsync(pennDatabase, context, cancellationToken);
-			ReportProgress("Locks created", 1.0);
+			ReportProgress("Locks created", 0.90);
 
 			mailAliasesConverted = await ImportMailAliasesAsync(pennDatabase, context, cancellationToken);
+			ReportUnimportedMail(pennDatabase.Mail, context);
+			ReportProgress("Mail aliases imported", 0.95);
 
 			await EnableParenGroupsAsync(context, cancellationToken);
+			// Last: the admin page takes 100% as the end of the import and stops polling.
+			ReportProgress("Complete", 1.0);
 
 			stopwatch.Stop();
 
@@ -1267,6 +1271,21 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		return imported;
+	}
+
+	/// <summary>Mail messages are not imported yet (#1110); say so, so the summary does not read as a full mail import.</summary>
+	private static void ReportUnimportedMail(PennMUSHMailDatabase mail, PennMUSHConversionContext context)
+	{
+		switch (mail.MessageCount)
+		{
+			case > 0 and var count:
+				context.Warnings.Add($"{count} mail message(s) in the maildb were not imported: only mail aliases are imported " +
+					"so far (#1110)");
+				break;
+			case null:
+				context.Warnings.Add("The maildb's message count could not be read; its messages were not imported (#1110)");
+				break;
+		}
 	}
 
 	/// <summary><c>options.probate_judge</c> when it is a player, otherwise God.</summary>

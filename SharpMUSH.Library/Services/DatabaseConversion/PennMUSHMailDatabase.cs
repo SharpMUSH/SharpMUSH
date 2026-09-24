@@ -14,6 +14,12 @@ public class PennMUSHMailDatabase
 
 	/// <summary>The alias section, in file order.</summary>
 	public List<PennMUSHMailAlias> Aliases { get; set; } = [];
+
+	/// <summary>
+	/// <c>mdb_top</c>, the message count <c>dump_mail</c> writes after the aliases; <c>null</c> when that
+	/// line is missing or unreadable. The messages themselves are not read yet (#1110).
+	/// </summary>
+	public int? MessageCount { get; set; } = 0;
 }
 
 /// <summary>
