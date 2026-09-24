@@ -1,7 +1,7 @@
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Functions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
-using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -131,7 +131,6 @@ public partial class Commands
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
 		if (!args.TryGetValue("0", out var objAttrArg))
 		{
@@ -172,9 +171,8 @@ public partial class Commands
 
 		if (!args.TryGetValue("1", out var valueArg) || string.IsNullOrEmpty(valueArg.Message?.ToPlainText()))
 		{
-			var isLocked = attribute.Last().Flags.Any(f => f.Name.Equals("LOCKED", StringComparison.OrdinalIgnoreCase));
 			await NotifyService.NotifyLocalized(executor,
-				isLocked
+				AttributeLockHelpers.IsLocked(attribute)
 					? nameof(ErrorMessages.Notifications.AttributeIsLocked)
 					: nameof(ErrorMessages.Notifications.AttributeIsUnlocked),
 				executor);
@@ -187,34 +185,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.InvalidValue);
 		}
 
-		if (!await PermissionService.CanSet(executor, targetObject, attribute))
-		{
-			await NotifyService.Notify(executor, "You need to be able to set the attribute to change its lock.", executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		var changed = shouldLock
-			? await AttributeService.SetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED")
-			: await AttributeService.UnsetAttributeFlagAsync(executor, targetObject, attrName, "LOCKED");
-		if (changed is Error<string> error)
-		{
-			await NotifyService.Notify(executor, error.Value, executor);
-			return new CallState(error.Value);
-		}
-		if (shouldLock)
-		{
-			var owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-			if (!await Mediator.Send(new SetAttributeOwnerCommand(targetObject.Object().DBRef,
-				attribute.Select(item => item.Name).ToArray(), owner), ExecutionBudget.CurrentToken))
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeNotFound), executor);
-				return new CallState(ErrorMessages.Returns.NoMatch);
-			}
-		}
-		await NotifyService.NotifyLocalized(executor, shouldLock
-			? nameof(ErrorMessages.Notifications.AttributeLocked)
-			: nameof(ErrorMessages.Notifications.AttributeUnlocked), executor);
-
-		return new CallState(string.Empty);
+		return await AttributeLockHelpers.ChangeAsync(PermissionService, AttributeService, NotifyService, Mediator,
+			executor, targetObject, attrName, attribute, shouldLock);
 	}
 }

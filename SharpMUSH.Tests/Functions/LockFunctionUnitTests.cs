@@ -74,6 +74,38 @@ public class LockFunctionUnitTests
 		await Assert.That(flags?.Message?.ToPlainText()).IsEqualTo("#-1 NO SUCH LOCK");
 	}
 
+	/// <summary>
+	/// A mortal locking an attribute of their own succeeds, and reads the lock back.
+	/// </summary>
+	/// <remarks>
+	/// Driven as a MORTAL on purpose: <c>CanSet</c>
+	/// (<c>SharpMUSH.Library/Services/PermissionService.cs:52-100</c>) answers true for God before
+	/// any per-flag gate is consulted, so a God-driven <c>atrlock()</c> would pass whatever the gate
+	/// did and says nothing about the path a player takes. This is the only test that reaches the
+	/// gate the function and <c>@ATRLOCK</c> now share.
+	/// </remarks>
+	[Test]
+	public async Task MortalCanLockAndUnlockTheirOwnAttribute()
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var player = await mediator.Send(new CreatePlayerCommand($"AtrLock{Guid.NewGuid():N}"[..20], "password", new DBRef(0), new DBRef(0), 100));
+		var mortal = Parser.Push(Parser.CurrentState with { Executor = player, Caller = player, Enactor = player });
+
+		await mortal.FunctionParse(MarkupText.Plain("attrib_set(me/MORTALATRLOCK,value)"));
+		await Assert.That((await mortal.FunctionParse(MarkupText.Plain("atrlock(me/MORTALATRLOCK)")))!.Message!.ToPlainText())
+			.IsEqualTo("0").Because("a freshly set attribute is not locked");
+
+		var locked = await mortal.FunctionParse(MarkupText.Plain("atrlock(me/MORTALATRLOCK,on)"));
+		await Assert.That(locked!.Message!.ToPlainText()).IsEqualTo("")
+			.Because("the side-effect form answers nothing on success");
+		await Assert.That((await mortal.FunctionParse(MarkupText.Plain("atrlock(me/MORTALATRLOCK)")))!.Message!.ToPlainText())
+			.IsEqualTo("1").Because("a mortal may lock an attribute they can set");
+
+		await mortal.FunctionParse(MarkupText.Plain("atrlock(me/MORTALATRLOCK,off)"));
+		await Assert.That((await mortal.FunctionParse(MarkupText.Plain("atrlock(me/MORTALATRLOCK)")))!.Message!.ToPlainText())
+			.IsEqualTo("0").Because("and may take the lock back off again");
+	}
+
 	[Test]
 	public async Task MortalCanSetOwnVisualFlagButCannotSetWizardFlag()
 	{

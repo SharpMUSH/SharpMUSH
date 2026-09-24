@@ -2092,36 +2092,54 @@ public partial class Functions
 	public ValueTask<CallState> AtAt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ValueTask.FromResult<CallState>(new(string.Empty));
 
+	/// <summary>
+	/// The truthy candidates joined by the trailing delimiter.
+	/// </summary>
+	/// <remarks>
+	/// <c>allof()</c> is <see cref="WhichOfAllAsync"/> with PennMUSH's <c>isbool</c> flag on;
+	/// <see cref="StringAllOf"/> is the same body with it off.
+	/// </remarks>
 	[SharpFunction(Name = "allof", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["value..."])]
-	public async ValueTask<CallState> AllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> AllOf(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> WhichOfAllAsync(parser, isBool: true);
+
+	/// <summary>
+	/// <c>do_whichof</c> with <c>allof</c>'s <c>all</c> set (<c>src/funmisc.c:1390-1420</c>): the
+	/// trailing argument is the output delimiter and is parsed first, then every candidate is parsed
+	/// left to right and the ones that count are joined by it.
+	/// </summary>
+	/// <remarks>
+	/// PennMUSH registers <c>ALLOF</c> and <c>STRALLOF</c> on the one <c>fun_allof</c>
+	/// (<c>src/function.c:765</c>) and branches on <c>called_as</c>'s <c>isbool</c> flag, which is
+	/// the whole of the difference: a candidate counts because it is true, or because it is
+	/// non-empty. Written out twice here, the two bodies could drift in the twenty lines they share
+	/// and only differ in one expression.
+	/// </remarks>
+	/// <param name="isBool">PennMUSH's <c>isbool</c>: keep the truthy candidates rather than the non-empty ones.</param>
+	private static async ValueTask<CallState> WhichOfAllAsync(IMUSHCodeParser parser, bool isBool)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		// PennMUSH allof(val1, val2, ..., valN, delimiter):
-		// The last argument is the output delimiter.
-		// Evaluate each of the remaining arguments.
-		// Return all truthy values joined by the delimiter.
+		// With 0 or 1 argument there is no delimiter, so there are no candidates either.
 		if (args.Count < 2)
 		{
-			// With 0 or 1 arg, there's no delimiter — just return empty
 			return CallState.Empty;
 		}
 
-		var delimArg = args[(args.Count - 1).ToString()];
-		var delimParsed = await parser.FunctionParse(delimArg.Message!);
+		var delimParsed = await parser.FunctionParse(args[(args.Count - 1).ToString()].Message!);
 		var delimiter = delimParsed?.Message ?? MarkupText.Empty;
 		var hadErrors = delimParsed?.HadErrors == true;
 
-		var truthyValues = new List<MString>();
+		var kept = new List<MString>();
 		for (var i = 0; i < args.Count - 1; i++)
 		{
 			var parsed = await parser.FunctionParse(args[i.ToString()].Message!);
 			hadErrors |= parsed?.HadErrors == true;
 			var value = parsed?.Message ?? MarkupText.Empty;
-			if (value.Truthy(parser)) truthyValues.Add(value);
+			if (isBool ? value.Truthy(parser) : value.Length > 0) kept.Add(value);
 		}
 
-		return new CallState(MarkupText.Join(delimiter, truthyValues)) { HadErrors = hadErrors };
+		return new CallState(MarkupText.Join(delimiter, kept)) { HadErrors = hadErrors };
 	}
 
 	// PennMUSH registers ANSI as 2, -2 (function.c:365): the negative maximum means the text is not

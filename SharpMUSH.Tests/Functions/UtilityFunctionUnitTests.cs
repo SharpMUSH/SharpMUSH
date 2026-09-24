@@ -341,6 +341,23 @@ public class UtilityFunctionUnitTests
 	/// — the ordinary way to write a coin flip — was false essentially always. This asserted only
 	/// that the integer parsed, which is why it never noticed.
 	/// </summary>
+	/// <remarks>
+	/// The upper bound is <c>&lt;= 1</c> and has to be. The draw is written through
+	/// <c>MushNumber.Unparse</c> (<c>SharpMUSH.Library/Utilities/MushNumber.cs:14-22</c>), which is
+	/// <c>F{float_precision}</c> with trailing zeros stripped, so a draw close enough to 1 prints
+	/// <c>1</c>. PennMUSH's <c>safe_number</c> is the same <c>%.*f</c> and prints the same <c>1</c>,
+	/// so the engine is right and a <c>&lt; 1</c> assertion on the printed text is the thing that is
+	/// wrong.
+	/// <para>
+	/// How close is "close enough" is not a fixed figure, and it is worth knowing why before reading
+	/// a failure here as luck. At the shipped six places it takes a draw of 0.9999995 or above,
+	/// about one run in two million. But <c>Configurable.FloatPrecision</c> is a process-wide static
+	/// that the last host to start overwrites (#1245), so the precision actually in force in a test
+	/// run is whichever host won that race — and PR #1242's CI hit exactly this on a first run,
+	/// which is far too likely for six places. This assertion is the right contract either way; it
+	/// is not, and must not be read as, a fix for #1245.
+	/// </para>
+	/// </remarks>
 	[Test]
 	public async Task Rand_NoArgs()
 	{
@@ -348,7 +365,46 @@ public class UtilityFunctionUnitTests
 
 		await Assert.That(double.TryParse(result, CultureInfo.InvariantCulture, out var value)).IsTrue();
 		await Assert.That(value).IsGreaterThanOrEqualTo(0d);
-		await Assert.That(value).IsLessThan(1d);
+		await Assert.That(value).IsLessThanOrEqualTo(1d);
+	}
+
+	/// <summary>
+	/// The real <c>rand()</c> answers is written at <c>float_precision</c> like every other real,
+	/// because it goes through the same <c>unparse_number</c> PennMUSH's <c>safe_number</c> does.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="TestOptionsOverride.Scope"/> rather than
+	/// <c>Configurable.ReadFloatPrecisionFrom</c>: the latter is process-wide static state and
+	/// re-pointing it here would change the game under every test running in parallel.
+	/// <para>
+	/// This shares <c>FloatPrecisionTests</c>' exposure to #1245. The scope is AsyncLocal and
+	/// correct, but it is read through whichever host's options monitor
+	/// <c>Configurable.FloatPrecision</c> last pointed at, so if this ever fails with more places
+	/// than it asked for, that is #1245 and not this test.
+	/// </para>
+	/// </remarks>
+	[Test]
+	[Arguments(2u)]
+	[Arguments(6u)]
+	[Arguments(10u)]
+	public async Task RandWritesItsRealAtTheConfiguredPrecision(uint places)
+	{
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Cosmetic = options.Cosmetic with { FloatPrecision = places }
+		});
+
+		var result = (await Parser.FunctionParse(MarkupText.Plain("rand()")))!.Message!.ToPlainText();
+
+		await Assert.That(double.TryParse(result, CultureInfo.InvariantCulture, out var value)).IsTrue()
+			.Because($"rand() answered {result}");
+		await Assert.That(value).IsGreaterThanOrEqualTo(0d);
+		await Assert.That(value).IsLessThanOrEqualTo(1d);
+
+		var point = result.IndexOf('.');
+		var decimals = point < 0 ? 0 : result.Length - point - 1;
+		await Assert.That(decimals).IsLessThanOrEqualTo((int)places)
+			.Because($"float_precision is {places}, and rand() answered {result}");
 	}
 
 	[Test]
@@ -584,10 +640,33 @@ public class UtilityFunctionUnitTests
 	[Arguments("iter(red blue green,iter(fish shoe,strcat(r(1,iter),/,itext(1))))",
 		"red/red red/red blue/blue blue/blue green/green green/green")]
 	[Arguments("iter(red blue green,iter(fish shoe,[r(L,iter)]))", "red red blue blue green green")]
+	// Two levels cannot tell "innermost-first" from "the reverse of outermost-first" in the middle of
+	// the stack — at depth two both readings put the same item at index 1. Three can, and all three
+	// spellings of the same stack have to agree at every level of it.
+	[Arguments("iter(a,iter(b,iter(c,%i0%i1%i2)))", "cba")]
+	[Arguments("iter(a,iter(b,iter(c,[itext(0)][itext(1)][itext(2)])))", "cba")]
+	[Arguments("iter(a,iter(b,iter(c,[r(0,iter)][r(1,iter)][r(2,iter)])))", "cba")]
+	[Arguments("iter(a,iter(b,iter(c,[itext(L)]-[r(L,iter)]-%iL)))", "a-a-a")]
 	public async Task ITextAndINum_CountFromTheInnermostIteration(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// <c>r(&lt;n&gt;,iter)</c> reads the iteration stack, so a level the stack does not have is
+	/// <c>#-1 REGISTER OUT OF RANGE</c> (<c>RegisterFunctions.cs:181,185</c>) — including level 0
+	/// outside any <c>iter()</c> at all, where the stack is empty and there is no level 0 to read.
+	/// </summary>
+	[Test]
+	[Arguments("iter(a,r(1,iter))")]
+	[Arguments("iter(a,iter(b,r(2,iter)))")]
+	[Arguments("r(0,iter)")]
+	[Arguments("r(L,iter)")]
+	public async Task RIterOutsideTheIterationStackIsOutOfRange(string str)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.RegisterRange);
 	}
 
 	/// <summary>

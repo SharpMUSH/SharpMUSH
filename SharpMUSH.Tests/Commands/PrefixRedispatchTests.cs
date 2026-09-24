@@ -99,12 +99,18 @@ public class PrefixRedispatchTests
 	[Arguments("]@emit ")]
 	public async Task PrefixKeepsOriginalMarkup(string prefix)
 	{
-		var styled = (await Factory.FunctionParser.FunctionParse(MarkupText.Plain("[ansi(r,Red)]")))!.Message!;
+		// Unique text, and selected by it rather than by being the only thing in the window (#1247):
+		// the actor shares a room, so another test's broadcast can land in this bucket too, and
+		// .Single() over everything that arrived throws rather than failing an assertion.
+		var marker = $"Red{Guid.NewGuid():N}"[..11];
+		var styled = (await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"[ansi(r,{marker})]")))!.Message!;
 		var before = Factory.Notifications.RawCountFor(_actor!.DbRef);
 		await Factory.CommandParserFor(_actor.DbRef, _actor.Handle).CommandParse(_actor.Handle, Connections,
 			MarkupText.Concat(MarkupText.Plain(prefix), styled));
-		var delivered = Factory.Notifications.RawFor(_actor.DbRef).Skip(before).Single();
-		await Assert.That(delivered is MString text && text.Render(MarkupFormat.Ansi) == styled.Render(MarkupFormat.Ansi)).IsTrue();
+		var delivered = Factory.Notifications.RawFor(_actor.DbRef).Skip(before)
+			.SingleOrDefault(message => message is MString markup && markup.ToPlainText() == marker);
+		await Assert.That(delivered is MString text && text.Render(MarkupFormat.Ansi) == styled.Render(MarkupFormat.Ansi))
+			.IsTrue().Because($"the redispatched line must reach the actor as markup carrying {marker}");
 	}
 
 	[Test]
