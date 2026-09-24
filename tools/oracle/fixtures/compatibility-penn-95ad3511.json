@@ -621,6 +621,17 @@
       "expression": "trimtiny(xxabcxx,r,x)",
       "expected": "xxabc",
       "intent": "parity"
+    },
+    {
+      "configuration": {
+        "tiny_booleans": false,
+        "tiny_math": false,
+        "null_eq_zero": true,
+        "tiny_trim_fun": false
+      },
+      "expression": "delete(abcdef,1,2)",
+      "expected": "adef",
+      "intent": "parity"
     }
   ]
 }
