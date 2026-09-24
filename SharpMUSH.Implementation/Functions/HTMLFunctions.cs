@@ -389,6 +389,12 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var group = args.TryGetValue("0", out var arg) ? arg.Message!.ToPlainText().Trim() : string.Empty;
 
+		// A line break inside the group would end the <EXPIRE> tag early and leave the links working.
+		if (group.Any(char.IsControl))
+		{
+			return new CallState(ErrorMessages.Returns.InvalidArgument);
+		}
+
 		return new CallState(MarkupText.ExpireLinks(group.Length == 0 ? null : group));
 	}
 }

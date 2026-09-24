@@ -345,6 +345,12 @@ public class MarkupTagFunctionTests
 	}
 
 	[Test]
+	[Arguments("expirelinks(exits%rmore)")]
+	[Arguments("expirelinks(exits%tmore)")]
+	public async Task AnExpireGroupWithAControlCharacterIsRefused(string code)
+		=> await Assert.That((await Eval(code)).ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidArgument);
+
+	[Test]
 	[Arguments("sound(a.wav,101)")]
 	[Arguments("sound(a.wav,,0)")]
 	[Arguments("image(a.png,alt,0)")]
