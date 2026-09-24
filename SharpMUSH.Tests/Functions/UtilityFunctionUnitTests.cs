@@ -625,10 +625,33 @@ public class UtilityFunctionUnitTests
 	[Arguments("iter(red blue green,iter(fish shoe,strcat(r(1,iter),/,itext(1))))",
 		"red/red red/red blue/blue blue/blue green/green green/green")]
 	[Arguments("iter(red blue green,iter(fish shoe,[r(L,iter)]))", "red red blue blue green green")]
+	// Two levels cannot tell "innermost-first" from "the reverse of outermost-first" in the middle of
+	// the stack — at depth two both readings put the same item at index 1. Three can, and all three
+	// spellings of the same stack have to agree at every level of it.
+	[Arguments("iter(a,iter(b,iter(c,%i0%i1%i2)))", "cba")]
+	[Arguments("iter(a,iter(b,iter(c,[itext(0)][itext(1)][itext(2)])))", "cba")]
+	[Arguments("iter(a,iter(b,iter(c,[r(0,iter)][r(1,iter)][r(2,iter)])))", "cba")]
+	[Arguments("iter(a,iter(b,iter(c,[itext(L)]-[r(L,iter)]-%iL)))", "a-a-a")]
 	public async Task ITextAndINum_CountFromTheInnermostIteration(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// <c>r(&lt;n&gt;,iter)</c> reads the iteration stack, so a level the stack does not have is
+	/// <c>#-1 REGISTER OUT OF RANGE</c> (<c>RegisterFunctions.cs:181,185</c>) — including level 0
+	/// outside any <c>iter()</c> at all, where the stack is empty and there is no level 0 to read.
+	/// </summary>
+	[Test]
+	[Arguments("iter(a,r(1,iter))")]
+	[Arguments("iter(a,iter(b,r(2,iter)))")]
+	[Arguments("r(0,iter)")]
+	[Arguments("r(L,iter)")]
+	public async Task RIterOutsideTheIterationStackIsOutOfRange(string str)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.RegisterRange);
 	}
 
 	/// <summary>
