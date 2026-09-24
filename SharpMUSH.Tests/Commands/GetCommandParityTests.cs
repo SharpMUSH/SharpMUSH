@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -191,6 +191,60 @@ public class GetCommandParityTests
 		await Get(taker, $"{await NameOf(box)}'s {await NameOf(hat)}");
 
 		await Assert.That(await LocationOf(hat)).IsEqualTo($"#{taker.DbRef.Number}");
+	}
+
+	/// <summary>
+	/// A Long_Fingers mortal reaches into a remote ENTER_OK container it does not own. The container
+	/// matches by dbref, which Long_Fingers permits under <c>MAT_NEAR</c> (<c>match.c:417</c>), and
+	/// the item search inside it is <c>match_result_relative(player, box, objname, NOTYPE,
+	/// MAT_OBJ_CONTENTS)</c> (<c>move.c:595-596</c>) — which goes straight to
+	/// <c>match_result_internal</c> (<c>match.c:314-325</c>) and asks only <c>can_interact</c> per
+	/// candidate. LocateService put <c>fun_locate</c>'s looker gate on that search, so the take was
+	/// refused because the taker is not near the box. See #1222.
+	///
+	/// The taker deliberately does not own the box: owning it clears the gate by controlling the
+	/// looker, which is how the refused-move test below avoids it, and a test that repeats the dodge
+	/// proves nothing.
+	/// </summary>
+	[Test]
+	public async ValueTask LongFingersMortalTakesFromARemoteContainerItDoesNotControl()
+	{
+		var taker = await Mortal("GetFarPossTaker");
+		var box = await Thing("GetFarPossBox");
+		var hat = await Thing("GetFarPossHat");
+		await Room("GetFarPossHere", taker.DbRef);
+		var elsewhere = await Room("GetFarPossThere", box);
+		await God($"@set {box}=ENTER_OK");
+		await God($"@teleport/silent {hat}={box}");
+		await God($"@power {taker.DbRef}=Long_Fingers");
+		await Assert.That(await LocationOf(box)).IsEqualTo(Bare(elsewhere)).Because("precondition: the box is not here");
+
+		await Get(taker, $"{box}'s {await NameOf(hat)}");
+
+		await Assert.That(await LocationOf(hat)).IsEqualTo($"#{taker.DbRef.Number}");
+	}
+
+	/// <summary>
+	/// Without Long_Fingers the same take is refused, and refused at the container match: a mortal
+	/// cannot reach a remote box by dbref at all (<c>match.c:415-417</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask MortalWithoutLongFingersCannotTakeFromARemoteContainer()
+	{
+		var taker = await Mortal("GetFarNoPossTaker");
+		var box = await Thing("GetFarNoPossBox");
+		var hat = await Thing("GetFarNoPossHat");
+		await Room("GetFarNoPossHere", taker.DbRef);
+		await Room("GetFarNoPossThere", box);
+		await God($"@set {box}=ENTER_OK");
+		await God($"@teleport/silent {hat}={box}");
+		await WatchTriads(hat, taker);
+
+		var seen = await Get(taker, $"{box}'s {await NameOf(hat)}");
+
+		await Assert.That(await LocationOf(hat)).IsEqualTo($"#{box.Number}");
+		await Assert.That(seen).Contains("I don't see that here.");
+		await AssertNoTriads(hat, taker);
 	}
 
 	/// <summary><c>possessive_get</c> off: no possessive fallback at all (<c>move.c:579</c>, <c>:643-645</c>).</summary>

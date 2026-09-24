@@ -187,13 +187,11 @@ public class LocateService(
 			: flags;
 
 	/// <summary>
-	/// The scopes that make a search depend on where the looker stands, and so require the executor to
-	/// be able to stand there too. fun_locate gates on exactly this set (fundb.c: <c>MAT_NEIGHBOR |
-	/// MAT_CONTAINER | MAT_POSSESSION | MAT_HERE | MAT_EXIT | MAT_CARRIED_EXIT</c>).
-	///
-	/// Public because <c>fun_locate</c> has to apply this gate itself: it asks it of <c>executor</c>
-	/// against <c>looker</c>, while passing <c>looker</c> as the match subject, so the two cannot be
-	/// folded into one call.
+	/// The scopes that make a search depend on where the looker stands. <c>fun_locate</c> gates on
+	/// exactly this set (fundb.c: <c>MAT_NEIGHBOR | MAT_CONTAINER | MAT_POSSESSION | MAT_HERE |
+	/// MAT_EXIT | MAT_CARRIED_EXIT</c>) and is the only caller that does: it asks it of
+	/// <c>executor</c> against <c>looker</c>, while passing <c>looker</c> as the match subject, so the
+	/// two cannot be folded into one call. It is public for that one caller.
 	/// </summary>
 	public const LocateFlags LookerRelativeScopes =
 		LocateFlags.MatchObjectsInLookerLocation | LocateFlags.MatchAgainstLookerLocationName |
@@ -213,14 +211,14 @@ public class LocateService(
 	{
 		flags = ApplyDefaultScopes(flags);
 
-		if ((flags & LookerRelativeScopes) != 0
-				// Cheapest first: See_All is a flag read, Nearby resolves up to two locations.
-				&& !await executor.IsSee_All() && !await Nearby(executor, looker)
-				&& !await permissionService.Controls(executor, looker))
-		{
-			return (new Error<string>(ErrorMessages.Returns.CannotEvaluateOnLooker), false);
-		}
-
+		// No gate here. match_result_relative(who, where, ...) goes straight to match_result_internal
+		// (match.c:314-325), and the only permission questions inside are can_interact per candidate and
+		// `nearby || controls` under MAT_NEAR (match.c:399, :417). The relative-scope gate that used to
+		// stand here is fun_locate's, and it stays in fun_locate: on every other caller it refused
+		// searches PennMUSH performs — a Long_Fingers mortal's possessive GET (#1222, #1215) and
+		// `@oemit <room>/<list>`, which drops the recipient without a word. findable(), which had no
+		// permission check of its own, now asks fun_findable's (fundb.c:1447-1449).
+		//
 		// match.c parses `abs` once, from the name as typed and before english matching. It is asked for
 		// three times over a search — here, in the dbref scope, and once per candidate — and every one
 		// of those was re-running the same GeneratedRegex over the same string.
