@@ -220,6 +220,10 @@ public partial class LightningDatabase(
 	/// <see cref="Keys.Dbref"/> blobs; <see cref="Tables.Account"/> is keyed by decimal string instead and
 	/// has <see cref="RecomputeAccountCounter"/>.</summary>
 	private static void RecomputeCounter(ITx tx, string counterKey, TableDef table)
+		=> RaiseCounter(tx, counterKey, HighestKey(tx, table));
+
+	/// <summary>The highest <see cref="Keys.Dbref"/> key in <paramref name="table"/>, or -1 when it is empty.</summary>
+	private static long HighestKey(ITx tx, TableDef table)
 	{
 		var highest = -1L;
 		foreach (var (key, _) in tx.Range(table, []))
@@ -228,8 +232,16 @@ public partial class LightningDatabase(
 			if (id > highest) highest = id;
 		}
 
-		RaiseCounter(tx, counterKey, highest);
+		return highest;
 	}
+
+	public async ValueTask<int> ReleaseTrailingDbrefsAsync(CancellationToken cancellationToken = default)
+		=> await Store.WriteAsync(tx =>
+		{
+			var next = HighestKey(tx, Tables.Obj) + 1;
+			tx.Put(Tables.Meta, Keys.Str("next_dbref"), Keys.Dbref(next));
+			return (int)next;
+		}, cancellationToken);
 
 	/// <summary>The account table's keys are the decimal strings <see cref="AllocateAccountId"/> hands out,
 	/// so they sort and decode as text rather than as fixed-width dbrefs and need their own scan.</summary>

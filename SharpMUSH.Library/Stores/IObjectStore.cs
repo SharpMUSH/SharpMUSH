@@ -223,6 +223,15 @@ public interface IObjectStore
 	ValueTask<bool> DeleteObjectAsync(DBRef dbref, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Importer only: lowers the dbref counter to one past the highest object, so the numbers above it
+	/// that no object holds are handed out again. Nothing else ever lowers the counter; the importer
+	/// needs it once, after removing seeded objects that PennMUSH's numbering has no room for.
+	/// </summary>
+	/// <param name="cancellationToken">Cancellation Token</param>
+	/// <returns>The counter's new value: the dbref the next creation takes.</returns>
+	ValueTask<int> ReleaseTrailingDbrefsAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// Link an exit to a destination location.
 	/// </summary>
 	/// <param name="exit"><see cref="SharpExit"/></param>

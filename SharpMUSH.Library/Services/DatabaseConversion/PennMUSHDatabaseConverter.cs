@@ -207,10 +207,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// SharpMUSH's own system objects past the three PennMUSH also has, as migration seeds them. None
 	/// of them exists in PennMUSH, whose dumps put players and objects at these numbers.
 	/// </summary>
-	private static readonly (int Number, string Name)[] SeededSystemObjects =
+	private static readonly (int Number, string Name, string Type)[] SeededSystemObjects =
 	[
-		(3, "Ancestor Room"), (4, "Ancestor Player"), (5, "Ancestor Exit"), (6, "Ancestor Thing"),
-		(7, "Package Manager"), (8, "HTTP Handler"), (9, "Event Handler")
+		(3, "Ancestor Room", "ROOM"), (4, "Ancestor Player", "THING"), (5, "Ancestor Exit", "THING"),
+		(6, "Ancestor Thing", "THING"), (7, "Package Manager", "PLAYER"), (8, "HTTP Handler", "THING"),
+		(9, "Event Handler", "THING")
 	];
 
 	/// <summary>
@@ -218,24 +219,27 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// PennMUSH has no ancestors, package manager or HTTP/event handlers (its defaults leave the
 	/// ancestor options unset). The options that named the removed objects are unset with them, so
 	/// nothing points at a number that now belongs to an imported object. An administrator who wants
-	/// those extras creates them again and sets the options.
+	/// those extras creates them again and sets the options. The dbref counter is then lowered to one
+	/// past #2, so it ends one past the highest imported object rather than at the seeds' 10.
 	/// </summary>
 	/// <remarks>
-	/// Only an object that still carries its seed name is removed; anything else at those numbers was
-	/// put there by someone, and is left for the import to report when a source object needs the number.
+	/// Only a world still as migration seeded it is cleared: #0-#9 all present and all carrying the one
+	/// creation time migration stamped them with, and #3-#9 still the seeds' names and types. Nothing a
+	/// user does changes a creation time, and an import stamps #0-#2 and everything it creates with the
+	/// source's times, so a second import finds no seeds and deletes nothing; its source objects that
+	/// need #3-#9 are reported as numbers already taken.
 	/// </remarks>
 	private async Task RemoveSeededSystemObjectsAsync(PennMUSHConversionContext context,
 		CancellationToken cancellationToken)
 	{
-		var removed = new HashSet<uint>();
-		foreach (var (number, name) in SeededSystemObjects)
+		if (!await IsSeededWorldAsync(cancellationToken))
 		{
-			if (await _mediator.Send(new GetObjectNodeQuery(new DBRef(number)), cancellationToken) is not AnySharpObject seeded
-			    || !seeded.Object().Name.Equals(name, StringComparison.Ordinal))
-			{
-				continue;
-			}
+			return;
+		}
 
+		var removed = new HashSet<uint>();
+		foreach (var (number, name, _) in SeededSystemObjects)
+		{
 			if (!await _mediator.Send(new DeleteObjectCommand(new DBRef(number)), cancellationToken))
 			{
 				context.Warnings.Add($"SharpMUSH's seeded {name} (#{number}) could not be removed before the import.");
@@ -246,6 +250,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			context.Warnings.Add($"Removed SharpMUSH's seeded {name} (#{number}) so the imported object numbers are kept; " +
 				"PennMUSH has no such object.");
 		}
+
+		await _mediator.Send(new ReleaseTrailingDbrefsCommand(), cancellationToken);
 
 		if (removed.Count == 0) return;
 
@@ -279,6 +285,42 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			context.Warnings.Add($"The ancestor, package_manager, http_handler and event_handler options could not be " +
 				$"unset ({ex.Message}); they still name #3-#9, which now hold imported objects. Unset them in the configuration.");
 		}
+	}
+
+	/// <summary>
+	/// Whether #0-#9 are still the objects migration seeded: all ten present with one shared creation
+	/// time, and #3-#9 still named and typed as seeded.
+	/// </summary>
+	private async Task<bool> IsSeededWorldAsync(CancellationToken cancellationToken)
+	{
+		long? seededAt = null;
+		for (var number = 0; number <= 9; number++)
+		{
+			if (await _mediator.Send(new GetObjectNodeQuery(new DBRef(number)), cancellationToken) is not AnySharpObject node)
+			{
+				return false;
+			}
+
+			var obj = node.Object();
+			seededAt ??= obj.CreationTime;
+			if (obj.CreationTime != seededAt)
+			{
+				return false;
+			}
+
+			if (number < 3)
+			{
+				continue;
+			}
+
+			var (_, name, type) = SeededSystemObjects[number - 3];
+			if (!obj.Name.Equals(name, StringComparison.Ordinal) || !obj.Type.Equals(type, StringComparison.Ordinal))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/// <summary>
@@ -877,7 +919,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		SharpRoom? room0 = null; // Cache the limbo room to avoid repeated lookups
 
-		foreach (var pennObj in pennDatabase.Objects)
+		// A stable sort: every source object in dump order, then the #0-#2 that cannot keep their number.
+		foreach (var pennObj in pennDatabase.Objects.OrderBy(o => o.DBRef <= 2))
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
@@ -892,7 +935,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				DBRef newDbRef;
 				var (created, modified) = PennTimestamps(pennObj);
 				// Only a source #0-#2 of another type than the seeded Room Zero, God or Master Room gets here,
-				// and those three stay: it takes the next free number instead, and the summary says so.
+				// and those three stay: it takes the next free number instead, and the summary says so. These
+				// come last, so that number is past every source object's.
 				int? requested = pennObj.DBRef > 2 ? pennObj.DBRef : null;
 
 				switch (pennObj.Type)
@@ -910,7 +954,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								ApplyDefaultFlags: false,
 								created,
 								modified,
-									requested), cancellationToken);
+								requested), cancellationToken);
 							playersConverted++;
 							break;
 						}

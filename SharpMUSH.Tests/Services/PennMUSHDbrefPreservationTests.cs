@@ -187,7 +187,7 @@ public class PennMUSHDbrefPreservationTests
 
 		var names = await world.Database.GetAllObjectsAsync().Select(o => o.Name).ToListAsync();
 		foreach (var seeded in (string[])["Ancestor Room", "Ancestor Player", "Ancestor Exit", "Ancestor Thing",
-			         "Package Manager", "HTTP Handler", "Event Handler"])
+							 "Package Manager", "HTTP Handler", "Event Handler"])
 		{
 			await Assert.That(names).DoesNotContain(seeded);
 			await Assert.That(result.Warnings.Any(w => w.Contains(seeded))).IsTrue();
@@ -203,6 +203,80 @@ public class PennMUSHDbrefPreservationTests
 		await Assert.That(stored.Database.EventHandler).IsNull();
 		await Assert.That(stored.Compatibility.ParenGroups).IsTrue();
 	}
+
+	/// <summary>
+	/// A seed is known by the creation time migration stamped on all of #0-#9, not by its name: a second
+	/// import into a world whose #7 is an imported player named <c>Package Manager</c> deletes nothing.
+	/// </summary>
+	[Test]
+	public async Task ASecondImportLeavesAnImportedObjectWithASeedNameAlone()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var first = await world.Converter.ConvertDatabaseAsync(Dump(
+			new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject { DBRef = 1, Name = "One", Type = PennMUSHObjectType.Player },
+			new PennMUSHObject { DBRef = 2, Name = "Master Room", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject { DBRef = 7, Name = "Package Manager", Type = PennMUSHObjectType.Player }));
+		await Assert.That(first.Errors).IsEmpty();
+		var imported = await NodeAsync(world, 7);
+
+		var second = await world.Converter.ConvertDatabaseAsync(Dump(
+			new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject { DBRef = 1, Name = "One", Type = PennMUSHObjectType.Player },
+			new PennMUSHObject { DBRef = 20, Name = "Later", Type = PennMUSHObjectType.Thing }));
+
+		await Assert.That(second.Warnings.Any(w => w.StartsWith("Removed SharpMUSH's seeded"))).IsFalse();
+		var survivor = await NodeAsync(world, 7);
+		await Assert.That(survivor.Object().Name).IsEqualTo("Package Manager");
+		await Assert.That(survivor.Object().CreationTime).IsEqualTo(imported.Object().CreationTime);
+	}
+
+	/// <summary>
+	/// A source #2 that is not a room cannot become the Master Room, so it is imported under a new
+	/// number — past every source object's, never onto a number a later source object keeps.
+	/// </summary>
+	[Test]
+	public async Task ARelocatedLowObjectGoesPastTheHighestSourceDbref()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+
+		var result = await world.Converter.ConvertDatabaseAsync(Dump(
+			new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject { DBRef = 1, Name = "One", Type = PennMUSHObjectType.Player },
+			new PennMUSHObject { DBRef = 2, Name = "Box", Type = PennMUSHObjectType.Thing },
+			new PennMUSHObject { DBRef = 10, Name = "Ten", Type = PennMUSHObjectType.Thing }));
+
+		await Assert.That(result.Errors).IsEmpty();
+		await Assert.That((await NodeAsync(world, 10)).Object().Name).IsEqualTo("Ten");
+		await Assert.That((await NodeAsync(world, 11)).Object().Name).IsEqualTo("Box");
+		await Assert.That((await NodeAsync(world, 2)).IsRoom).IsTrue();
+		await Assert.That(result.Warnings.Any(w => w.Contains("#2 (Box)") && w.Contains("#11"))).IsTrue();
+	}
+
+	/// <summary>
+	/// A minimal PennMUSH world is #0-#2. With the seeds at #3-#9 gone, the next object is #3, one past
+	/// the highest imported object, not the 10 the seeds had pushed the counter to.
+	/// </summary>
+	[Test]
+	public async Task AMinimalDumpLeavesTheCounterOnePastItsHighestObject()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+
+		var result = await world.Converter.ConvertDatabaseAsync(Dump(
+			new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject { DBRef = 1, Name = "One", Type = PennMUSHObjectType.Player },
+			new PennMUSHObject { DBRef = 2, Name = "Master Room", Type = PennMUSHObjectType.Room }));
+		await Assert.That(result.Errors).IsEmpty();
+		var god = (await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
+		var limbo = (await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(0)))).Expect<SharpRoom>();
+
+		var created = await world.Database.CreateThingAsync("After Import", limbo, god, limbo);
+
+		await Assert.That(created.Number).IsEqualTo(3);
+	}
+
+	private static PennMUSHDatabase Dump(params PennMUSHObject[] objects)
+		=> new() { Version = "Test Version", Objects = [.. objects] };
 
 	private static async Task<IsolatedImportWorld> ImportAsync()
 	{
