@@ -618,7 +618,6 @@ public class MailDeliveryTests
 	/// <c>That attribute cannot be changed by you.</c> for a mortal setting their own.
 	/// </summary>
 	[Test]
-	[Skip("#1217: AttributeWriter does not apply a new standard attribute's wizard flag before the write.")]
 	public async ValueTask AMortalCannotRaiseTheirOwnQuota()
 	{
 		using var _ = TestOptionsOverride.Scope(options => options with
