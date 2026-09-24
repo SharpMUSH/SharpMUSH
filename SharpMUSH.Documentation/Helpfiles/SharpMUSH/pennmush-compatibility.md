@@ -531,8 +531,7 @@ behaved differently.
 - `textentries()` is `textentries(<type>, <pattern>[, <osep>])`: the pattern is required and
   filters the topic names. `textentries()` and `textfile()` also refuse an unknown `<type>` and
   gate the administrator-only `ahelp` corpus on wizard or royalty, as PennMUSH's `admin` help
-  files are. SharpMUSH words the first refusal `#-1 FILE NOT FOUND`, where PennMUSH says
-  `#-1 NO SUCH FILE`.
+  files are.
 - `hasattr()`, `hasattrp()`, `hasattrval()` and `hasattrpval()` take the whole
   `<object>/<attribute>` spec in one argument as well as the two-argument form; one argument
   carrying no `/` is `#-1 BAD ARGUMENT FORMAT TO <function>`.

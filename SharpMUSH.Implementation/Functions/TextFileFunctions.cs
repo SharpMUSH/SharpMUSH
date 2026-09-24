@@ -100,14 +100,14 @@ public partial class Functions
 	/// PennMUSH looks the file up in its <c>help_files</c> table and answers
 	/// <c>#-1 NO SUCH FILE</c> when it is not there, then refuses an <c>admin</c> file to anyone
 	/// without <c>Hasprivs</c> (<c>src/help.c:1142-1150</c>). SharpMUSH's corpora are the category
-	/// directories, and its wording for the first is <c>#-1 FILE NOT FOUND</c>.
+	/// directories, and it answers with the same two strings.
 	/// </remarks>
 	private async ValueTask<Result<string>> ReadableCorpusAsync(IMUSHCodeParser parser, string fileReference)
 	{
 		var corpus = (await TextFileService.ListCategoriesAsync())
 			.FirstOrDefault(category => string.Equals(category, fileReference, StringComparison.OrdinalIgnoreCase));
 
-		if (corpus is null) return new Error<string>(ErrorMessages.Returns.FileNotFound);
+		if (corpus is null) return new Error<string>(ErrorMessages.Returns.NoSuchFile);
 		if (!string.Equals(corpus, HelpCorpora.Admin, StringComparison.OrdinalIgnoreCase)) return corpus;
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

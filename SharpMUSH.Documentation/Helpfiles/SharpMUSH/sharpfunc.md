@@ -6869,7 +6869,7 @@ think testlock(\\+FOO:BAR,*Walker)
 
   textentries() returns the topic names in `<type>` matching `<pattern>`, separated by `<osep>` (a space by default). `<pattern>` is a wildcard pattern matched against the topic name; use `*` for every topic, or textsearch() where you want matching by content instead.
 
-  Both textfile() and textentries() return #-1 FILE NOT FOUND for a `<type>` that is not a text-file category, and #-1 PERMISSION DENIED for an administrator-only one (ahelp) to anyone who is not a wizard or royalty.
+  Both textfile() and textentries() return #-1 NO SUCH FILE for a `<type>` that is not a text-file category, and #-1 PERMISSION DENIED for an administrator-only one (ahelp) to anyone who is not a wizard or royalty.
 
   textsearch() returns the names of all topics whose contents matches the given `<pattern>`, the same as "help/search `<pattern>`", with topic names separated by `<osep>`.
 
