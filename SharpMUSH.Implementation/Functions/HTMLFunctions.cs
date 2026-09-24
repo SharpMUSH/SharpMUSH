@@ -110,135 +110,37 @@ public partial class Functions
 	private static async ValueTask<bool> CanSendOob(AnySharpObject executor)
 		=> await executor.IsWizard() || await executor.HasPower("Send_OOB");
 
-	[SharpFunction(Name = "wsjson", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["message"])]
-	public async ValueTask<CallState> websocket_json(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	/// <summary>
+	/// <c>wshtml(&lt;html&gt;)</c> — an HTML fragment as markup (<see cref="HtmlFragment"/>): text nodes
+	/// become the text, each element a layer over what it encloses. It sends nothing; the value is for
+	/// whatever emits it, and every client reads it the way it reads <c>tagwrap()</c> output. Each element
+	/// is held to the same gate: anything well-formed with Send_OOB, <see cref="TagwrapPolicy"/> without.
+	///
+	/// <para>What is malformed is repaired the way a browser repairs it, not refused.</para>
+	///
+	/// <para>PennMUSH's <c>wshtml(&lt;html&gt;, &lt;default&gt;)</c> carries a second, plain-text reading
+	/// because its buffer holds raw bytes and cannot degrade a tag on its own. Markup can, so the second
+	/// argument has no counterpart: the fragment's own text is what a client without HTML sees.</para>
+	/// </summary>
+	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["html"])]
+	public async ValueTask<CallState> WsHtml(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var jsonContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var html = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var privileged = await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator));
 
-		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
-			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
-			: "me";
-
-		var locate = await LocateService.LocateAndNotifyIfInvalid(
-			parser,
-			executor,
-			executor,
-			playerStr,
-			PlayersPreference | AbsoluteMatch);
-
-		if (locate is not AnySharpObject located)
+		return HtmlFragment.Parse(html, privileged ? AnyElement : TagwrapPolicy.Wrap) switch
 		{
-			return CallState.Empty;
-		}
-
-		if (!located.IsPlayer)
-		{
-			return CallState.Empty;
-		}
-
-		var isWizard = await executor.IsWizard();
-		var isSelf = executor.Object().DBRef == located.Object().DBRef;
-
-		if (!isWizard && !isSelf)
-		{
-			return CallState.Empty;
-		}
-
-		// Try to parse as JSON, but if it fails, send as-is
-		object? dataObj;
-		try
-		{
-			dataObj = System.Text.Json.JsonSerializer.Deserialize<object>(jsonContent);
-		}
-		catch (System.Text.Json.JsonException)
-		{
-			dataObj = jsonContent;
-		}
-		catch (System.NotSupportedException)
-		{
-			dataObj = jsonContent;
-		}
-
-		var wsMessage = System.Text.Json.JsonSerializer.Serialize(new
-		{
-			type = "json",
-			data = dataObj
-		});
-
-		await foreach (var connection in ConnectionService.Get(located.Object().DBRef))
-		{
-			if (connection.ConnectionType != "websocket")
-			{
-				continue;
-			}
-
-			await Mediator.Publish(new SharpMUSH.Messaging.Messages.WebSocketOutputMessage(
-				connection.Handle,
-				wsMessage));
-		}
-
-		// Return empty string - OOB data doesn't produce visible output
-		return CallState.Empty;
+			MString markup => new CallState(markup),
+			Error<string> error => new CallState(error.Value),
+		};
 	}
 
-	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["html"])]
-	public async ValueTask<CallState> websocket_html(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var htmlContent = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		var playerStr = parser.CurrentState.Arguments.ContainsKey("1")
-			? parser.CurrentState.Arguments["1"].Message!.ToPlainText()
-			: "me";
-
-		var locate = await LocateService.LocateAndNotifyIfInvalid(
-			parser,
-			executor,
-			executor,
-			playerStr,
-			PlayersPreference | AbsoluteMatch);
-
-		if (locate is not AnySharpObject located)
-		{
-			return CallState.Empty;
-		}
-
-		if (!located.IsPlayer)
-		{
-			return CallState.Empty;
-		}
-
-		// Check permissions
-		var isWizard = await executor.IsWizard();
-		var isSelf = executor.Object().DBRef == located.Object().DBRef;
-
-		if (!isWizard && !isSelf)
-		{
-			return CallState.Empty;
-		}
-
-		var wsMessage = System.Text.Json.JsonSerializer.Serialize(new
-		{
-			type = "html",
-			data = htmlContent
-		});
-
-		await foreach (var connection in ConnectionService.Get(located.Object().DBRef))
-		{
-			if (connection.ConnectionType != "websocket")
-			{
-				continue;
-			}
-
-			await Mediator.Publish(new SharpMUSH.Messaging.Messages.WebSocketOutputMessage(
-				connection.Handle,
-				wsMessage));
-		}
-
-		// Return empty string - OOB data doesn't produce visible output
-		return CallState.Empty;
-	}
+	/// <summary>
+	/// The Send_OOB reading of an element: any tag, every attribute, re-encoded the way
+	/// <see cref="TagwrapPolicy.Wrap(string, IReadOnlyList{HtmlAttribute})"/> re-encodes the ones it keeps.
+	/// </summary>
+	private static HtmlMarkup AnyElement(string tagName, IReadOnlyList<HtmlAttribute> attributes)
+		=> HtmlMarkup.Tag(tagName, [.. attributes]);
 
 	[SharpFunction(Name = "WEBSOCKET_HTML", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
 		ParameterNames = ["html", "player"])]

@@ -6518,9 +6518,9 @@ a          b          areallylon d
 
 `isjson()    json()     json_array()     json_group_by()     json_map()     json_query()     json_mod()`
 
-  These functions are used to output JSON objects to GMCP and WebSocket connections.
+  This function sends a JSON object to GMCP and WebSocket connections.
 
-`wsjson()     oob()`
+`oob()`
 
 
 **See Also:**
@@ -6559,7 +6559,6 @@ a          b          areallylon d
 
 **See Also:**
 - [json()]
-- [wsjson()]
 # ISJSON()
 `isjson(<text>)`
 

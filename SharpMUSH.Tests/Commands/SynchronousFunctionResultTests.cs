@@ -82,12 +82,9 @@ public class SynchronousFunctionResultTests
 	[Arguments("switchall", "syntax")]
 	[Arguments("switchall", "literal")]
 	[Arguments("switchall", "success")]
-	[Arguments("foreachlegacy", "syntax")]
-	[Arguments("foreachlegacy", "literal")]
-	[Arguments("foreachlegacy", "success")]
-	[Arguments("foreachlist", "syntax")]
-	[Arguments("foreachlist", "literal")]
-	[Arguments("foreachlist", "success")]
+	[Arguments("foreachattribute", "syntax")]
+	[Arguments("foreachattribute", "literal")]
+	[Arguments("foreachattribute", "success")]
 	[Arguments("sqlquery", "syntax")]
 	[Arguments("sqlquery", "literal")]
 	[Arguments("sqlquery", "success")]
@@ -97,12 +94,12 @@ public class SynchronousFunctionResultTests
 	[Arguments("jsonarray", "syntax")]
 	[Arguments("jsonarray", "literal")]
 	[Arguments("jsonarray", "success")]
-	[Arguments("foreachdelimiter", "syntax")]
-	[Arguments("foreachdelimiter", "literal")]
-	[Arguments("foreachdelimiter", "success")]
-	[Arguments("foreachseparator", "syntax")]
-	[Arguments("foreachseparator", "literal")]
-	[Arguments("foreachseparator", "success")]
+	[Arguments("foreachstart", "syntax")]
+	[Arguments("foreachstart", "literal")]
+	[Arguments("foreachstart", "success")]
+	[Arguments("foreachend", "syntax")]
+	[Arguments("foreachend", "literal")]
+	[Arguments("foreachend", "success")]
 	[Arguments("jsonseparatorinvalid", "syntax")]
 	[Arguments("jsonseparatorinvalid", "literal")]
 	[Arguments("jsonseparatorinvalid", "success")]
@@ -121,6 +118,15 @@ public class SynchronousFunctionResultTests
 		var value = mode switch { "syntax" => "[", "literal" => "#-1 EXCEPTION: ordinary text", _ => "valid" };
 		await attributes.SetAttributeAsync(actor, actor, name, MarkupText.Plain(value));
 		await attributes.SetAttributeAsync(actor, actor, name + "TRANSFORM", MarkupText.Plain("transformed"));
+		if (kind.StartsWith("foreach"))
+		{
+			// foreach() transforms characters through a ufun, so its error-carrying argument has to
+			// be the string or a marker, not a pattern: an attribute that echoes the character back
+			// leaves the whole string recognisable in the result.
+			await attributes.SetAttributeAsync(actor, actor, name + "ECHO", MarkupText.Plain("%0"));
+			await attributes.SetAttributeAsync(actor, actor, name + "OPEN", MarkupText.Plain(mode == "syntax" ? "[" : "<"));
+			await attributes.SetAttributeAsync(actor, actor, name + "CLOSE", MarkupText.Plain(mode == "syntax" ? "[" : ">"));
+		}
 		var child = $"ufun(me/{name})";
 		var expression = kind switch
 		{
@@ -140,9 +146,9 @@ public class SynchronousFunctionResultTests
 			"benchmark" => $"benchmark({child},1)",
 			"cond" => $"cond({child},selected,default)",
 			"condall" => $"condall(1,{child},1,tail)",
-			"foreach" => $"foreach(a,{child})",
-			"foreachdelimiter" => $"foreach(a b,value,{child})",
-			"foreachseparator" => $"foreach(a b,value,,{child})",
+			"foreach" => $"foreach(me/{name}ECHO,{child})",
+			"foreachstart" => $"foreach(me/{name}ECHO,a<b,[ufun(me/{name}OPEN)])",
+			"foreachend" => $"foreach(me/{name}ECHO,a<b>c,<,[ufun(me/{name}CLOSE)])",
 			"jsonseparatorinvalid" => $"json_map(me/{name}TRANSFORM,invalid,{child})",
 			"jsonseparator" => $"json_map(me/{name}TRANSFORM,1,{child})",
 			"jsonarrayseparator" => $"json_array(1,{child})",
@@ -150,8 +156,7 @@ public class SynchronousFunctionResultTests
 			"caseall" => $"caseall(x,x,{child},default)",
 			"switch" => $"switch({child},never,selected,default)",
 			"switchall" => $"switchall(x,x,{child},default)",
-			"foreachlegacy" => $"foreach(a,##[{child}])",
-			"foreachlist" => $"foreach({child},value)",
+			"foreachattribute" => $"foreach({child},value)",
 			"sqlquery" => $"sql({child})",
 			"sqlparameter" => $"sql(SELECT ?,,,,{child})",
 			"jsonarray" => $"json_array({child})",
@@ -182,7 +187,8 @@ public class SynchronousFunctionResultTests
 				"cond" or "if" or "ifelse" => mode == "literal" ? "default" : "selected",
 				"condall" => value + "tail",
 				"foreach" or "caseall" or "switchall" or "sql" => value,
-				"foreachlegacy" => "a" + value,
+				"foreachstart" => "ab",
+				"foreachend" => "abc",
 				"sqlheader" => value + value,
 				"case" or "switch" => "default",
 				_ => null

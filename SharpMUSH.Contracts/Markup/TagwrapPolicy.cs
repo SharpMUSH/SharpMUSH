@@ -48,11 +48,23 @@ public static class TagwrapPolicy
 	/// </summary>
 	public static HtmlMarkup? Wrap(string tagName, string parameters)
 	{
-		if (!Tags.Contains(tagName)) return null;
-		if (parameters.Length == 0) return HtmlMarkup.Tag(tagName);
+		if (parameters.Length == 0) return Wrap(tagName, []);
 
-		return HtmlMarkup.TryParseAttributes(parameters, out var parsed) && parsed.All(Allows)
-			? HtmlMarkup.Tag(tagName, [.. parsed])
+		return HtmlMarkup.TryParseAttributes(parameters, out var parsed)
+			? Wrap(tagName, parsed)
+			: Wrap(tagName, []);
+	}
+
+	/// <summary>
+	/// As <see cref="Wrap(string, string)"/>, for attributes already read — the way an HTML parser
+	/// hands them over.
+	/// </summary>
+	public static HtmlMarkup? Wrap(string tagName, IReadOnlyList<HtmlAttribute> attributes)
+	{
+		if (!Tags.Contains(tagName)) return null;
+
+		return attributes.Count > 0 && attributes.All(Allows)
+			? HtmlMarkup.Tag(tagName, [.. attributes])
 			: HtmlMarkup.Tag(tagName);
 	}
 

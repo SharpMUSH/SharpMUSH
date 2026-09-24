@@ -71,7 +71,11 @@ public class FunctionArityParityTests : ServerTestBase
 
 		// Tracked gaps, not decisions — SharpMUSH is narrower than PennMUSH here and the fix is
 		// implementation work rather than a number in the attribute. See #974.
-		["pcreate"] = "GAP (#974): PennMUSH takes an optional third <dbref> to reuse"
+		["pcreate"] = "GAP (#974): PennMUSH takes an optional third <dbref> to reuse",
+
+		// PennMUSH's second argument is a plain-text fallback for a client without HTML. Here the fragment
+		// is parsed into markup whose own text is that reading, so there is nothing to supply.
+		["wshtml"] = "no <default string>: the HTML is parsed into markup and degrades to its own text"
 	};
 
 	/// <summary>

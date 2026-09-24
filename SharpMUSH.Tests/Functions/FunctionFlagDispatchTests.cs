@@ -94,8 +94,6 @@ public class FunctionFlagDispatchTests
 	[Arguments("lemit(hello)")]
 	[Arguments("nsemit(hello)")]
 	[Arguments("nslemit(hello)")]
-	[Arguments("wsjson({})")]
-	[Arguments("wshtml(hello)")]
 	[Arguments("oob(me,test)")]
 	[Arguments("create(FlagSideEffectProbe)")]
 	[Arguments("pcreate(FlagSideEffectProbe,password)")]

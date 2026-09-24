@@ -7407,19 +7407,10 @@
     "wshtml": {
       "helpFull": "",
       "helpPreview": "",
-      "maxArgs": 2,
+      "maxArgs": "1",
       "minArgs": 1,
       "parameterNames": [
         "html"
-      ]
-    },
-    "wsjson": {
-      "helpFull": "",
-      "helpPreview": "",
-      "maxArgs": 2,
-      "minArgs": 1,
-      "parameterNames": [
-        "message"
       ]
     },
     "xattr": {

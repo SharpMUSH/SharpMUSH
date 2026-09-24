@@ -193,7 +193,7 @@ For clickable command links, use [cmdlink()], e.g. `cmdlink(Who is online?,+who)
 You can also send data encapsulated in a JSON object.
 
 See [json()] for information about formatting data into JSON object strings.<br>
-See [wsjson()] for help sending formatted JSON object strings to WebSocket clients as a JavaScript object.
+See [oob()] for sending a JSON object to a WebSocket client as a JavaScript object, or to a telnet client over GMCP.
 
 See [@prompt] for information about sending telnet GOAHEAD prompts. Support for prompts depends on the WebSocket client. The example client above shows prompts on their own line, separating the input and output windows, but requires PROMPT_NEWLINES to be turned off.
 
@@ -203,40 +203,27 @@ See [@prompt] for information about sending telnet GOAHEAD prompts. Support for 
 - [json()]
 - [pueblo]
 - [wshtml()]
-- [wsjson()]
+- [oob()]
 
 # WSHTML()
-# WSJSON()
 
-`wshtml(<html string>[, <default string>])`<br>
-`wsjson(<json string>[, <default string>])`
+`wshtml(<html>)`
 
-These functions are used to embed HTML and JSON markup into the output for WebSocket-enabled clients. You must have the Pueblo_Send power to use them.
+  Turns an HTML fragment into markup and returns it, for whatever emits it to deliver: text becomes the text, each element becomes a tag over what it encloses, exactly as [tagwrap()] builds one tag at a time. A WebSocket, Pueblo or MXP client receives the tags; an ANSI client gets the styling it can show for `<b>`, `<i>`, `<u>` and `<s>` and the words for everything else; everything else gets the words. Nothing is sent by the function itself, and the value stores, slices and re-evaluates like any other string.
 
-**wshtml()** embeds *<html string>* as HTML markup, to be rendered as HTML by a WebSocket client.
+  The fragment is read the way a browser reads it: an unclosed tag closes at the end, a stray closing tag is dropped, a bare `<` is text. An element that encloses nothing is dropped, since a tag has to cover something; `<br>` is a line break.
 
-**wsjson()** embeds *<json string>* as a JSON object which can be captured by a WebSocket client. See [json()] for information about formatting JSON object strings.
+  The gate is [tagwrap()]'s. With the Send_OOB power (Pueblo_Send is its older name), any tag and any attribute. Without it, only the tags PennMUSH's `tagwrap()` allows — one forbidden tag refuses the whole fragment — and only attributes a browser cannot be made to run, one forbidden attribute dropping them all from that tag.
 
-In both cases, the *<default string>* is shown as plain text if the recipient is not WebSocket-enabled.
+  PennMUSH's `wshtml(<html>, <default>)` takes a second, plain-text string for clients without HTML, and its `wsjson()` embeds a JSON object the same way. Neither exists here. The markup's own text is what a client without HTML sees, so there is nothing to supply; and JSON is data for a program rather than text with a plain reading, so it goes by [oob()], which sends it where a connection can receive it.
 
-For example, if one uses:
+  For example:
 
 ```sharp
-@emit [wshtml(<a href="https://sharpmush.com">SharpMUSH</a>,Go to https://sharpmush.com)]
+@emit [wshtml(<a href="https://sharpmush.com">SharpMUSH</a>)]
 ```
 
-then any players in the room with a WebSocket connection would see (rendered as HTML)
-
-```html
-<a href="https://sharpmush.com">SharpMUSH</a>
-```
-
-while non-WebSocket connections and listening objects would see
-
-```text
-Go to https://sharpmush.com
-```
-
+  A player on the web portal or a Pueblo/MXP client sees a link reading SharpMUSH; a telnet player, and any listening object, sees `SharpMUSH`.
 
 **See Also:**
 - [WebSockets]

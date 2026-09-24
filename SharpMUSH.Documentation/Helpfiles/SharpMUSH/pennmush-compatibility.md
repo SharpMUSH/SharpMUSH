@@ -429,6 +429,18 @@ On a game with a `Public` channel you have joined:
 ON
 ```
 
+## `wshtml()` takes no `<default string>`; there is no `wsjson()`
+
+PennMUSH's `wshtml(<html>, <default>)` and `wsjson(<json>, <default>)` write the payload into the
+line as an out-of-band region and the `<default>` as the reading for a client without WebSockets,
+because its output buffer holds raw bytes and cannot degrade a tag on its own. SharpMUSH's output is
+markup, which can. `wshtml(<html>)` parses the fragment into tags over text, the same value
+`tagwrap()` builds one tag at a time: a WebSocket, Pueblo or MXP client gets the tags, an ANSI
+client gets the styling it can show for `<b>`, `<i>`, `<u>` and `<s>` and the words for everything
+else, and everything else gets the words — so there is no second string to supply. `wsjson()` does not exist — JSON is
+data for a program, not text with a plain reading — and `oob()` sends it where a connection can
+receive it, over GMCP or the WebSocket.
+
 ## SharpMUSH-only functions
 
   `motd() wizmotd() downmotd() fullmotd()` — the Messages of the Day `@motd` set. Only `motd()` is

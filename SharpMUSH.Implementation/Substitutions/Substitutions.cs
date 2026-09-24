@@ -140,7 +140,7 @@ public static partial class Substitutions
 
 	/// <summary>
 	/// <c>%iL</c> — the OUTERMOST iteration, matching <c>itext(L)</c> and <c>itext(ilev())</c>
-	/// (<c>help ITEXT()</c>). It is also what <c>##</c> resolves to: iter(), foreach() and @dolist
+	/// (<c>help ITEXT()</c>). It is also what <c>##</c> resolves to: iter() and @dolist
 	/// rewrite <c>##</c> to <c>%iL</c>, and PennMUSH's <c>##</c> is spliced textually before
 	/// evaluation, so a nested one names the outermost loop — the documented
 	/// <c>iter(red blue green, iter(fish shoe, #@:##))</c> answers red red blue blue green green.
