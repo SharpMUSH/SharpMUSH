@@ -156,11 +156,24 @@ public class RestrictedExpressionTests
 	}
 
 	[Test]
-	[Arguments("first", "first(%0)")]
-	[Arguments("rest", "rest(%0)")]
-	[Arguments("extract", "extract(%0,1,1)")]
-	[Arguments("words", "words(%0)")]
-	public async Task AllocationHeavyListOperationsCannotEnterTheRestrictedProfile(string name, string expression)
+	[Arguments("first", "first(%0)", "a")]
+	[Arguments("rest", "rest(%0)", "b c")]
+	[Arguments("extract", "extract(%0,2,1)", "b")]
+	[Arguments("words", "words(%0)", "3")]
+	[Arguments("fn first", "fn(first,%0)", "a")]
+	[Arguments("fn words", "fn(words,%0)", "3")]
+	public async Task TheBoundedListOperationsAreInTheRestrictedProfile(string name, string expression, string expected)
+	{
+		await Assert.That(await Eval($"restrictedexpr({name},{expression},a b c)")).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("words", "first(%0)")]
+	[Arguments("first", "words(%0)")]
+	[Arguments("first", "rest(%0)")]
+	[Arguments("rest extract", "first(%0)")]
+	[Arguments("fn", "fn(first,%0)")]
+	public async Task AnAllowlistAdmitsOnlyTheListOperationsItNames(string name, string expression)
 	{
 		await Assert.That(await Eval($"restrictedexpr({name},{expression},a b c)")).IsEqualTo(EvaluationRestrictions.Error);
 	}
@@ -620,7 +633,7 @@ public class RestrictedExpressionTests
 	public async Task ExtractHandlesMinimumSignedPositionsWithoutAnException(string start, string length, string expected)
 	{
 		await Assert.That(await Eval($"extract(a b,{start},{length})")).IsEqualTo(expected);
-		await Assert.That(await Eval($"restrictedexpr(extract,extract(a b,{start},{length}))")).IsEqualTo(EvaluationRestrictions.Error);
+		await Assert.That(await Eval($"restrictedexpr(extract,extract(a b,{start},{length}))")).IsEqualTo(expected);
 	}
 
 	[Test]
