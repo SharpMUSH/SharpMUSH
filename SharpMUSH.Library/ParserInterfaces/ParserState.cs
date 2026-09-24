@@ -681,9 +681,11 @@ public partial record ParserState(
 
 	/// <summary>
 	/// Whether <c>$&lt;digit&gt;</c> and <c>$&lt;name&gt;</c> are substitutions here rather than text:
-	/// some visible regexp context holds a capture (PennMUSH's <c>PE_HAS_REGTYPE(pe_info, PE_REGS_REGEXP)</c>).
+	/// a regexp context is visible, even one holding no captures (PennMUSH's
+	/// <c>PE_HAS_REGTYPE(pe_info, PE_REGS_REGEXP)</c>; <c>fun_reswitch</c> and <c>fun_switch</c> localize the frame
+	/// before matching, so a default branch sees it empty and <c>$0</c> there is empty, not literal).
 	/// </summary>
-	public bool HasRegexpCaptures => !RegexRegisters.IsEmpty && VisibleRegexpFrames.Any(frame => frame.Count > 0);
+	public bool HasRegexpContext => VisibleRegexpFrames.Any();
 
 	/// <summary>
 	/// The innermost visible regexp context, which is the only one <c>PE_Get_re</c> reads; null when
