@@ -1,5 +1,6 @@
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -353,61 +354,49 @@ public partial class Functions
 			});
 	}
 
-	[SharpFunction(Name = "tel", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi)]
+	/// <summary>
+	/// The services <see cref="TeleportHelpers"/> works through, the same bundle <c>@TELEPORT</c>
+	/// hands it from <c>Commands</c>.
+	/// </summary>
+	private TeleportServices TeleportServices => new(Mediator, NotifyService, LocateService, AttributeService,
+		PermissionService, LockService, MoveService, DidItService);
+
+	/// <remarks>
+	/// <c>fun_tel</c> (<c>src/fundb.c:2309-2327</c>) is the side-effect gate, the <c>@tel</c> command
+	/// restriction, the two flags, then one call to <c>do_teleport</c> — the same routine
+	/// <c>@teleport</c> calls. It is therefore the whole of <c>@teleport</c>'s policy, and shares it
+	/// through <see cref="TeleportHelpers"/> rather than owning a second copy.
+	/// </remarks>
+	[SharpFunction(Name = "tel", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi, ParameterNames = ["object", "destination", "silent", "inside"])]
 	public async ValueTask<CallState> Tel(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objectName = args["0"].Message!.ToPlainText();
-		var destName = args["1"].Message!.ToPlainText();
 
-		// fundb.c:2321-2322: the third argument is TEL_SILENT, which safe_tel passes through as
-		// nomovemsgs. TEL_DEFAULT carries no silence, so an unqualified tel() announces the move.
-		// The fourth, TEL_INSIDE, only decides the player-into-player case, which this does not model.
-		var quiet = args.TryGetValue("2", out var quietArg) && quietArg.Message!.Truthy();
+		// fundb.c:2317: command_check_byname(executor, "@tel", …). Penn's command_find resolves that
+		// name through the same prefix table the dispatcher uses, so the restriction read is the one
+		// belonging to whatever `@tel` would actually run: normally @TELEPORT by abbreviation, but a
+		// game that registers an exact @TEL (@command/add, or a plugin) puts that command in front of
+		// it for typed dispatch, and tel() has to be held to the same one. A name that resolves to
+		// nothing is refused, as command_check_byname's null COMMAND_INFO is.
+		var telCommand = CommandTrie.For(parser.CommandLibrary).FindShortestMatch("@TEL")?.CommandName ?? "@TEL";
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, objectName, LocateFlags.All,
-			async targetObj =>
-			{
-				if (targetObj.IsRoom)
-				{
-					return ErrorMessages.Returns.CannotTeleport;
-				}
+		if (!await CanInvokeLockCommandAsync(parser, executor, telCommand))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
-				if (!await PermissionService.Controls(executor, targetObj))
-				{
-					return ErrorMessages.Returns.CannotTeleport;
-				}
+		// fundb.c:2320-2323: argument 3 is TEL_SILENT and argument 4 is TEL_INSIDE, the /SILENT and
+		// /INSIDE switches under other names.
+		var silent = args.TryGetValue("2", out var silentArg) && silentArg.Message!.Truthy();
+		var inside = args.TryGetValue("3", out var insideArg) && insideArg.Message!.Truthy();
 
-				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-					executor, executor, destName, LocateFlags.All,
-					async destObj =>
-					{
-						if (destObj.IsExit)
-						{
-							return ErrorMessages.Returns.InvalidDestination;
-						}
+		await TeleportHelpers.TeleportAsync(parser, TeleportServices, executor,
+			args["0"].Message!.ToPlainText(), args["1"].Message!.ToPlainText(),
+			new TeleportOptions(List: false, Inside: inside, Silent: silent));
 
-						var destinationContainer = destObj.AsContainer;
-						var targetContent = targetObj.AsContent;
-
-						if (await MoveService.WouldCreateLoop(targetContent, destinationContainer))
-						{
-							return ErrorMessages.Returns.WouldCreateLoop;
-						}
-
-						// fundb.c:2326 hands the whole thing to do_teleport, whose move is safe_tel
-						// (wiz.c:578): the move triads fire, and STICKY luggage is stripped on a
-						// cross-owner hop.
-						var moveResult = await MoveService.SafeTel(
-							parser, targetContent, destinationContainer, quiet,
-							executor.Object().DBRef, "tel()");
-
-						return moveResult is Error<string>
-							? ErrorMessages.Returns.CannotTeleport
-							: "1";
-					});
-			});
+		// fun_tel writes nothing to the buffer: every refusal is reported to the executor by
+		// do_teleport itself, exactly as the command reports it, and success says nothing either.
+		return CallState.Empty;
 	}
 }
