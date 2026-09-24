@@ -45,7 +45,7 @@ public static class Program
 				(request.Markup is null) == (request.Data is null))
 				return Results.BadRequest();
 			var rendered = request.Markup is not null
-				? renderer.Render(request.Markup, request.Context)
+				? renderer.Render(request.Markup, request.Context, request.Prompt)
 				: new RenderedOutput(request.Data!, true);
 			var bytes = rendered.ApplyOutputTransform
 				? transform.Transform(rendered.Data, request.Context.Capabilities, request.Context.Preferences)

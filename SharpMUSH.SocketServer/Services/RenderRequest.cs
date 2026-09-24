@@ -7,4 +7,5 @@ public sealed record RenderContext(
 	ProtocolCapabilities Capabilities,
 	PlayerOutputPreferences? Preferences);
 
-public sealed record RenderRequest(string? Markup, byte[]? Data, RenderContext Context);
+/// <param name="Prompt">Whether the markup is a prompt, which is not given a line ending.</param>
+public sealed record RenderRequest(string? Markup, byte[]? Data, RenderContext Context, bool Prompt = false);

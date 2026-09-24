@@ -47,12 +47,10 @@ public class PennMUSHMailAliasImportTests
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.MailAliasesConverted).IsEqualTo(3);
 		await Assert.That(result.Warnings).DoesNotContain(w => w.StartsWith("Mail alias"));
-		// The messages are #1110's; the summary must not read as a full mail import.
-		await Assert.That(result.Warnings).Contains(w => w.StartsWith("11 mail message(s) in the maildb were not imported"));
 
 		// The admin page stops polling at 100%, so nothing may report it before the aliases are in.
 		var phases = progress.Reports.Select(p => p.CurrentPhase).ToList();
-		await Assert.That(phases.IndexOf("Mail aliases imported")).IsGreaterThan(phases.IndexOf("Locks created"));
+		await Assert.That(phases.IndexOf("Mail imported")).IsGreaterThan(phases.IndexOf("Locks created"));
 		await Assert.That(progress.Reports[^1].CurrentPhase).IsEqualTo("Complete");
 		await Assert.That(progress.Reports.Count(p => p.PercentageComplete >= 100)).IsEqualTo(1);
 

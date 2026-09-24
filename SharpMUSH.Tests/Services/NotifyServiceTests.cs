@@ -54,6 +54,39 @@ public class NotifyServiceTests
 				MarkupTextSerializer.Deserialize(msg.Markup).ToPlainText() == raw));
 	}
 
+	/// <summary>
+	/// A bell carries no plain text, only a point riding on the character it marks. Nothing on the way
+	/// out may mistake that for an empty message: <c>@pemit me=[beep()]</c> is the whole of what a
+	/// player asked for.
+	/// </summary>
+	[Test]
+	public async Task PointOnlyMarkup_IsStillPublished()
+	{
+		var publisher = Substitute.For<IPublisher>();
+		var messageBus = Substitute.For<IMessageBus>();
+		var connections = new ConnectionService(publisher);
+		var notify = new NotifyService(messageBus, connections, new LocalizationService(), DisabledRealityPolicy.Instance);
+
+		await connections.Register(1, "127.0.0.1", "localhost", "telnet",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
+			new ConcurrentDictionary<string, string>(new Dictionary<string, string>
+			{
+				["ConnectionStartTime"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
+				["LastConnectionSignal"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
+				["InternetProtocolAddress"] = "127.0.0.1",
+				["HostName"] = "localhost",
+				["ConnectionType"] = "telnet"
+			}));
+
+		await notify.Notify(1, MString.Bell(), sender: null);
+
+		await messageBus.Received(1).HandlePublish(
+			Arg.Is<MarkupOutputMessage>(msg =>
+				msg.Handle == 1 &&
+				MarkupTextSerializer.Deserialize(msg.Markup).Render(MarkupFormat.Ansi) == "\a"),
+			Arg.Any<CancellationToken>());
+	}
+
 	[Test]
 	public async Task NotifyLocalizedMarkup_PreservesMarkupWhenFormattingLocalizedText()
 	{

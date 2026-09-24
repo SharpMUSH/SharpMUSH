@@ -58,15 +58,15 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 
 	/// <summary>
 	/// <c>load_mail</c>'s flags line and <c>load_malias</c>'s section: a count, then per alias its owner,
-	/// name, description, use and see bits, member count and members, then <c>"*** End of MALIAS ***"</c>.
-	/// Of the messages that follow only their count is read.
+	/// name, description, use and see bits, member count and members, then <c>"*** End of MALIAS ***"</c>;
+	/// then the message count and the messages.
 	/// </summary>
 	private async Task<PennMUSHMailDatabase> ParseMailAsync(PennMUSHDumpReader reader, CancellationToken cancellationToken)
 	{
 		var mail = new PennMUSHMailDatabase();
 		if (await reader.PeekAsync(cancellationToken) != '+')
 		{
-			mail.MessageCount = await ReadMessageCountAsync(reader, cancellationToken);
+			await ReadMessagesAsync(reader, mail, cancellationToken);
 			return mail;
 		}
 
@@ -77,7 +77,7 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 
 		if ((mail.Flags & PennMUSHMailDatabase.AliasesFlag) == 0)
 		{
-			mail.MessageCount = await ReadMessageCountAsync(reader, cancellationToken);
+			await ReadMessagesAsync(reader, mail, cancellationToken);
 			return mail;
 		}
 
@@ -107,11 +107,49 @@ public class PennMUSHDatabaseParser(ILogger<PennMUSHDatabaseParser> logger)
 			throw reader.Error($"expected the end of the mail aliases, found '{end}'");
 		}
 
-		mail.MessageCount = await ReadMessageCountAsync(reader, cancellationToken);
+		await ReadMessagesAsync(reader, mail, cancellationToken);
 
 		logger.LogInformation("PennMUSH mail database flags {Flags}, {Count} mail alias(es), {Messages} message(s)",
-			mail.Flags, mail.Aliases.Count, mail.MessageCount);
+			mail.Flags, mail.Aliases.Count, mail.Messages.Count);
 		return mail;
+	}
+
+	/// <summary>
+	/// <c>load_mail</c>'s count and messages: per message the recipient, sender, sender's creation time
+	/// (<c>MDBF_SENDERCTIME</c>), time sent, subject (<c>MDBF_SUBJECT</c>; otherwise the body's first
+	/// <c>SUBJECT_LEN</c> - 1 characters, as <c>chopstr</c> takes them), body and flags. A message that
+	/// cannot be read ends the section: the ones before it are kept and <see cref="PennMUSHMailDatabase.MessageReadError"/>
+	/// says why the rest are missing.
+	/// </summary>
+	private static async ValueTask ReadMessagesAsync(PennMUSHDumpReader reader, PennMUSHMailDatabase mail,
+		CancellationToken cancellationToken)
+	{
+		const int subjectLength = 60;
+
+		mail.MessageCount = await ReadMessageCountAsync(reader, cancellationToken);
+		var hasSubject = (mail.Flags & PennMUSHMailDatabase.SubjectFlag) != 0;
+		var hasSenderCreationTime = (mail.Flags & PennMUSHMailDatabase.SenderCreationTimeFlag) != 0;
+
+		try
+		{
+			for (var i = 0; i < (mail.MessageCount ?? 0); i++)
+			{
+				var to = await reader.ReadIntegerAsync(cancellationToken);
+				var from = await reader.ReadIntegerAsync(cancellationToken);
+				long fromCreationTime = hasSenderCreationTime ? await reader.ReadIntegerAsync(cancellationToken) : 0;
+				var time = await reader.ReadStringAsync(cancellationToken);
+				var subject = hasSubject ? await reader.ReadStringAsync(cancellationToken) : null;
+				var body = await reader.ReadStringAsync(cancellationToken);
+				var flags = await reader.ReadIntegerAsync(cancellationToken);
+
+				subject ??= body.Length < subjectLength ? body : body[..(subjectLength - 1)];
+				mail.Messages.Add(new PennMUSHMailMessage(to, from, fromCreationTime, time, subject, body, flags));
+			}
+		}
+		catch (FormatException ex)
+		{
+			mail.MessageReadError = ex.Message;
+		}
 	}
 
 	public async Task<PennMUSHChatDatabase> ParseChatAsync(Stream stream, CancellationToken cancellationToken = default)
