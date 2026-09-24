@@ -2302,4 +2302,106 @@ public class MovementParityTests
 		await Assert.That(await LocationOf(owner.DbRef.ToString())).IsEqualTo(BareDbref(destination))
 			.Because("controlling the absolute room is the exemption wiz.c:519 spells out");
 	}
+
+	/// <summary>An exit sourced in a room the mortal owns, leading to another room they own.</summary>
+	private async Task<(string Source, string LeadsTo, string Exit)> OwnedCorridor(
+		string prefix, TestIsolationHelpers.TestPlayer owner)
+	{
+		var source = await OwnedRoom($"{prefix}Source", owner.DbRef);
+		var leadsTo = await OwnedRoom($"{prefix}LeadsTo", owner.DbRef);
+
+		await God($"@teleport/silent {owner.DbRef}={source}");
+
+		var open = await GodParser.CommandParse(owner.Handle, ConnectionService,
+			MarkupText.Plain($"@open {TestIsolationHelpers.GenerateUniqueName("out")}={leadsTo}"));
+
+		return (source, leadsTo, open.Message!.ToPlainText().Trim());
+	}
+
+	/// <summary>Where an exit is sourced and where it leads, read back through the store.</summary>
+	private async Task<(string Source, string LeadsTo)> ExitEnds(string exit)
+	{
+		var found = (await Node(exit)).Expect<SharpExit>();
+		var source = await found.Location.WithCancellation(CancellationToken.None);
+		var leadsTo = await found.Home.WithCancellation(CancellationToken.None);
+
+		return (BareDbref(source.Object().DBRef.ToString()),
+			BareDbref(leadsTo.Expect<AnySharpContainer>().Object().DBRef.ToString()));
+	}
+
+	/// <summary>
+	/// <c>wiz.c:849</c>-equivalent guard at <c>wiz.c:456</c>: an exit is not relocated into a room that
+	/// is being destroyed.
+	/// </summary>
+	[Test]
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask AnExitCannotBeTeleportedIntoACrumblingRoom(Via via)
+	{
+		var god = (await Node("#1")).Object().DBRef;
+		var (_, _, _, exit) = await Corridor("ExitCrumbling");
+		var before = await ExitEnds(exit);
+		var destination = await Dig("ExitCrumblingDest");
+
+		await God($"@set {destination}=GOING");
+
+		var godSaw = await MessagesWhile(god, async () =>
+			await Teleport(1, via, exit, destination));
+
+		await Assert.That(godSaw.Any(m => m == ErrorMessages.Notifications.ExitDestinationCrumbling)).IsTrue();
+		await Assert.That(await ExitEnds(exit)).IsEqualTo(before)
+			.Because("a refused relocation moves neither end of the exit");
+	}
+
+	/// <summary>
+	/// <c>wiz.c:469</c>: <c>can_open_from(player, dest)</c>. Relocating an exit into a room is held to
+	/// the same standard as opening one there, so a room that is neither controlled nor OPEN_OK refuses.
+	/// The two green tests for this branch are God-driven, and God passes every gate in it.
+	/// </summary>
+	[Test]
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask AMortalCannotTeleportAnExitIntoARoomTheyCannotOpenIn(Via via)
+	{
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExitOpenOwner");
+		var (source, leadsTo, exit) = await OwnedCorridor("ExitOpen", owner);
+		var destination = await Dig("ExitOpenDest");
+
+		var ownerSaw = await MessagesWhile(owner.DbRef, async () =>
+			await Teleport(owner.Handle, via, exit, destination));
+
+		await Assert.That(ownerSaw.Any(m => m == ErrorMessages.Notifications.PermissionDenied)).IsTrue();
+		await Assert.That(await ExitEnds(exit)).IsEqualTo((BareDbref(source), BareDbref(leadsTo)))
+			.Because("can_open_from refuses a room that is neither theirs nor OPEN_OK");
+
+		await God($"@set {destination}=OPEN_OK");
+		await Teleport(owner.Handle, via, exit, destination);
+
+		await Assert.That(await ExitEnds(exit)).IsEqualTo((BareDbref(destination), BareDbref(leadsTo)))
+			.Because("only the source moves; where the exit leads is untouched (wiz.c:474)");
+	}
+
+	/// <summary>
+	/// <c>wiz.c:468</c>: <c>tport_control_ok(player, victim, Home(victim))</c> — the room the exit sits
+	/// in decides the eviction, so an exit in someone else's room stays there.
+	/// </summary>
+	[Test]
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask AMortalCannotTeleportAnExitOutOfARoomTheyDoNotControl(Via via)
+	{
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "ExitEvictOwner");
+		var (_, _, _, exit) = await Corridor("ExitEvict");
+		var before = await ExitEnds(exit);
+		var destination = await OwnedRoom("ExitEvictDest", owner.DbRef);
+
+		var ownerSaw = await MessagesWhile(owner.DbRef, async () =>
+			await Teleport(owner.Handle, via, exit, destination));
+
+		await Assert.That(ownerSaw.Any(m => m == ErrorMessages.Notifications.PermissionDenied)).IsTrue();
+		await Assert.That(await ExitEnds(exit)).IsEqualTo(before)
+			.Because("owning where the exit is going is not authority to take it from where it is");
+	}
 }
