@@ -30,6 +30,8 @@ public class MushListTests
 		MarkupText.Concat([Red("a"), Plain(" b "), Red("c")]),
 		MarkupText.Concat([Plain("a"), Red("|"), Plain("b"), Red("|"), Plain("c")]),
 		MarkupText.Concat([Plain("x "), Red(" "), Plain(" y")]),
+		MarkupText.Concat([Plain("a  "), Red("b c"), Plain("  d")]),
+		MarkupText.Concat([Red("a|"), Plain("b|c"), Red("|d")]),
 	];
 
 	private static readonly MarkupText[] Delimiters =
@@ -60,13 +62,17 @@ public class MushListTests
 
 	private static string Describe(MarkupText text) => $"'{text.Text}'/{text.Render(MarkupFormat.Html)}";
 
+	/// <summary><see cref="MarkupText.Equals(MarkupText?)"/> compares the text alone, so the markup is compared as rendered.</summary>
+	private static bool Same(MarkupText expected, MarkupText actual)
+		=> expected.Equals(actual) && expected.Render(MarkupFormat.Html) == actual.Render(MarkupFormat.Html);
+
 	[Test]
 	public async Task TheSharedScanAgreesWithSplittingTheWholeList()
 	{
 		var differences = new List<string>();
 		void Check(string what, MarkupText delimiter, MarkupText text, MarkupText expected, MarkupText actual)
 		{
-			if (!expected.Equals(actual))
+			if (!Same(expected, actual))
 				differences.Add($"{what}({Describe(text)}, {Describe(delimiter)}): expected {Describe(expected)}, got {Describe(actual)}");
 		}
 
@@ -96,15 +102,17 @@ public class MushListTests
 		var differences = new List<string>();
 		for (var i = 0; i < 2000; i++)
 		{
-			var text = Plain(string.Concat(Enumerable.Range(0, random.Next(0, 14)).Select(_ => alphabet[random.Next(alphabet.Length)])));
-			var delimiter = Plain(delimiters[random.Next(delimiters.Length)]);
+			var text = MarkupText.Concat(Enumerable.Range(0, random.Next(0, 14))
+				.Select(_ => alphabet[random.Next(alphabet.Length)])
+				.Select(piece => random.Next(4) == 0 ? Red(piece) : Plain(piece)));
+			var delimiter = delimiters[random.Next(delimiters.Length)] is var raw && random.Next(6) == 0 ? Red(raw) : Plain(raw);
 			var first = random.Next(-4, 6);
 			var length = random.Next(-4, 6);
 
 			if (MushList.Count(delimiter, text) != Split(delimiter, text).Length
-				|| !OldFirst(delimiter, text).Equals(MushList.First(delimiter, text))
-				|| !OldRest(delimiter, text).Equals(MushList.Rest(delimiter, text))
-				|| !OldExtract(delimiter, text, first, length).Equals(MushList.Extract(delimiter, text, first, length)))
+				|| !Same(OldFirst(delimiter, text), MushList.First(delimiter, text))
+				|| !Same(OldRest(delimiter, text), MushList.Rest(delimiter, text))
+				|| !Same(OldExtract(delimiter, text, first, length), MushList.Extract(delimiter, text, first, length)))
 				differences.Add($"{Describe(text)} on {Describe(delimiter)} extract({first},{length})");
 		}
 
@@ -117,7 +125,6 @@ public class MushListTests
 
 	private static long Allocated(Action action)
 	{
-		GC.Collect();
 		var before = GC.GetAllocatedBytesForCurrentThread();
 		action();
 		return GC.GetAllocatedBytesForCurrentThread() - before;
@@ -157,6 +164,55 @@ public class MushListTests
 		var allocated = Allocated(() => MushList.Rest(Plain("|"), text));
 
 		await Assert.That(allocated).IsLessThan(4L * text.Length * sizeof(char));
+	}
+
+	/// <summary>
+	/// Markup on the list or on the delimiter changes what is spliced into the answer, not what it costs:
+	/// the gaps with markup are replaced, and the rest of the run is still one slice.
+	/// </summary>
+	[Test]
+	public async Task RestOfAMarkedListCostsAboutTheSizeOfItsAnswer()
+	{
+		var plain = NearCeiling("a|");
+		var marked = MarkupText.Concat([Red("a|"), plain.Substring(2), Red("|a")]);
+
+		var allocated = Allocated(() => MushList.Rest(Plain("|"), marked));
+
+		await Assert.That(allocated).IsLessThan(6L * plain.Length * sizeof(char));
+	}
+
+	/// <summary>A long range is put together a piece at a time and joined, which is the same as joining every item.</summary>
+	[Test]
+	public async Task ALongRangeWithMarkupAgreesWithSplittingTheWholeList()
+	{
+		var items = Enumerable.Range(0, 10_000).Select(i => i % 3 == 0 ? Red($"{i}") : Plain($"{i}")).ToArray();
+		var markedDelimiters = MarkupText.Join(Red("|"), items);
+		var markedCuts = MarkupText.Join(Plain("|́"), items);
+
+		foreach (var (text, delimiter) in new[]
+		{
+			(markedDelimiters, Plain("|")), (markedDelimiters, Red("|")), (MarkupText.Join(Plain("|"), items), Red("|")),
+			(markedCuts, Plain("|")),
+		})
+		{
+			await Assert.That(Same(OldRest(delimiter, text), MushList.Rest(delimiter, text))).IsTrue();
+			await Assert.That(Same(OldExtract(delimiter, text, 7, 9_000), MushList.Extract(delimiter, text, 7, 9_000))).IsTrue();
+		}
+	}
+
+	/// <summary>One item as long as the whole text is searched under the budget too, not in one go.</summary>
+	[Test]
+	public async Task ALongItemIsScannedUnderTheExecutionBudget()
+	{
+		var text = NearCeiling("a");
+		using var cancelled = new CancellationTokenSource();
+		using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, cancelled.Token);
+		using var scope = budget.Enter();
+		cancelled.Cancel();
+
+		await Assert.That(() => MushList.First(Plain("|"), text)).Throws<OperationCanceledException>();
+		await Assert.That(() => MushList.Count(Plain("|"), text)).Throws<OperationCanceledException>();
+		await Assert.That(() => MushList.Extract(Plain("|"), text, 1, 1)).Throws<OperationCanceledException>();
 	}
 
 	/// <summary>
