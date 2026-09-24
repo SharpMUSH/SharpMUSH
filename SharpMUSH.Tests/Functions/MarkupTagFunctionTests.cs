@@ -245,4 +245,46 @@ public class MarkupTagFunctionTests
 		await Assert.That(said.ToPlainText()).IsEqualTo(marker)
 			.Because("the label is unique to this run, so the helper cannot have matched another test's output");
 	}
+	/// <summary>
+	/// <c>wshtml()</c> returns markup and sends nothing itself; whatever emits it decides what each client
+	/// reads (#1120). The message is composed with the text around it and reaches the recipient as one
+	/// value that still carries the element, so the HTML, Pueblo and MXP renderers write it as a tag and a
+	/// plain client gets the text — the mixed-client behaviour PennMUSH's second argument was for.
+	/// </summary>
+	[Test]
+	[Arguments("think ")]
+	[Arguments("@pemit %#=")]
+	public async Task Wshtml_IsComposedIntoTheEmissionAndRenderedPerClient(string emitter)
+	{
+		var marker = Marker();
+		var mortal = await MortalAsync("WshtmlEmitMortal");
+
+		var window = OpenWindow(mortal);
+		await CommandParser.CommandParse(mortal.Handle, ConnectionService,
+			MarkupText.Plain($"{emitter}[wshtml(<b>{marker}</b>)] and more"));
+		var said = OwnOutput(mortal, window);
+
+		await Assert.That(said.Render(MarkupFormat.Html)).IsEqualTo($"<b>{marker}</b> and more");
+		await Assert.That(said.Render(MarkupFormat.Pueblo)).IsEqualTo($"<b>{marker}</b> and more");
+		await Assert.That(said.Render(MarkupFormat.Ansi)).IsEqualTo($"\u001b[1m{marker}\u001b[0m and more");
+		await Assert.That(said.Render(MarkupFormat.Plain)).IsEqualTo($"{marker} and more")
+			.Because("a client that negotiated neither HTML nor Pueblo reads the text and never a literal tag");
+	}
+
+	[Test]
+	public async Task Wshtml_SendsNothingByItself()
+	{
+		var marker = Marker();
+		var mortal = await MortalAsync("WshtmlQuietMortal");
+
+		var window = OpenWindow(mortal);
+		await CommandParser.CommandParse(mortal.Handle, ConnectionService,
+			MarkupText.Plain($"think [null(wshtml(<b>{marker}</b>))]"));
+
+		var sent = WebAppFactoryArg.Notifications.RawFor(mortal.DbRef).Skip(window.Raw)
+			.Select(message => message is MString markup ? markup.ToPlainText() : message.ToString());
+
+		await Assert.That(sent.Any(text => text!.Contains(marker, StringComparison.Ordinal)))
+			.IsFalse().Because("the value is for whatever emits it; the function itself notifies nobody");
+	}
 }
