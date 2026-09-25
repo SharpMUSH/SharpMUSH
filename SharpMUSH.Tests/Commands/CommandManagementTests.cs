@@ -119,6 +119,29 @@ public class CommandManagementTests
 		}
 	}
 
+	/// <summary>
+	/// <c>@command/add</c> and <c>/delete</c> change the live table other connections are dispatching
+	/// through, so a reader part-way through it must not fail (#1251: "Collection was modified").
+	/// </summary>
+	[Test]
+	public async ValueTask AddAndDelete_WhileTheTableIsBeingRead_DoNotBreakTheReader()
+	{
+		var wizard = await Wizard();
+		var name = CommandName();
+
+		using var reader = Parser.CommandLibrary.GetEnumerator();
+		await Assert.That(reader.MoveNext()).IsTrue();
+
+		await As(wizard, $"@command/add {name}");
+		await Assert.That(Parser.CommandLibrary.ContainsKey(name)).IsTrue();
+		await AsGod($"@command/delete {name}");
+		await Assert.That(Parser.CommandLibrary.ContainsKey(name)).IsFalse();
+
+		var read = 1;
+		while (reader.MoveNext()) read++;
+		await Assert.That(read).IsGreaterThan(1);
+	}
+
 	/// <summary>An added command nothing hooks does nothing, and says so (<c>cmd_unimplemented</c>).</summary>
 	[Test]
 	public async ValueTask Add_UnhookedCommand_SaysItIsNotImplemented()

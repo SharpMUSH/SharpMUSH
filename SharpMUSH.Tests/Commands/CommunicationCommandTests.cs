@@ -665,18 +665,13 @@ public class CommunicationCommandTests
 		var createResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@create {targetName}"));
 		var targetDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pemit/silent {targetName}=Quietly"));
+		var message = TestIsolationHelpers.GenerateUniqueName("Quietly");
+		var notified = await NotifiedGodWhile($"@pemit/silent {targetName}={message}");
 
 		// /silent suppresses the sender's echo, not the delivery — without this a no-op would pass.
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(targetDbRef), Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextEquals(msg, "Quietly")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsFalse();
+		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(targetDbRef)
+			.Count(d => d.Message == message && d.Type == INotifyService.NotificationType.PrivateEmit)).IsEqualTo(1);
+		await Assert.That(notified.Any(m => m.Contains(message))).IsFalse();
 	}
 
 	/// <summary>
@@ -688,17 +683,11 @@ public class CommunicationCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@pemit #{executor.Number}=Talking to myself"));
+		var message = TestIsolationHelpers.GenerateUniqueName("TalkingToMyself");
+		var notified = await NotifiedGodWhile($"@pemit #{executor.Number}={message}");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-					TestHelpers.MessagePlainTextEquals(msg, "Talking to myself")),
-				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.PrivateEmit);
-
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.YouPemitToObjectFormat), executor, executor)).IsFalse();
+		// Heard once, as the message itself, and never as a "You pemit" echo.
+		await Assert.That(notified.Where(m => m.Contains(message))).IsEquivalentTo([message]);
 	}
 
 	/// <summary>
@@ -768,11 +757,10 @@ public class CommunicationCommandTests
 		var digResult = await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
 		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
 
-		NotifyService.ClearReceivedCalls();
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@remit/silent {roomDbRef}=Hush"));
+		var message = TestIsolationHelpers.GenerateUniqueName("Hush");
+		var notified = await NotifiedGodWhile($"@remit/silent {roomDbRef}={message}");
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.YouRemitInFormat), executor, executor)).IsFalse();
+		await Assert.That(notified.Any(m => m.Contains(message))).IsFalse();
 	}
 
 	/// <summary>

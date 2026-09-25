@@ -107,8 +107,16 @@ public class ChannelPermissionTests
 	/// captured windows - that is the whole point, an attacker must not be able to tell "hidden" from
 	/// "missing" apart from ANY difference in what they were told - so weakening them to a substring
 	/// check would hide the very asymmetry they exist to catch. The fix has to be on the noise, not the
-	/// assertion: move every mortal this file creates into its own freshly dug, single-occupant room
-	/// before any window opens, so nothing else in the game session can ever put a stray body in it.
+	/// assertion: create every mortal this file uses directly in its own freshly dug, single-occupant
+	/// room, so it never stands in the shared room at all.
+	/// <para>
+	/// Creating it at DefaultHome and teleporting it out was not enough (#1251). Leaving broadcasts
+	/// "X has left." to the old room even with <c>@teleport/silent</c> (PennMUSH does the same:
+	/// <c>moveit</c> in <c>src/move.c</c> says it for any hearer, whatever <c>nomovemsgs</c> is). A
+	/// mortal already teleported out of DefaultHome still received another test's "has left." from
+	/// it inside its window (lane BB, #1239), so standing in the shared room at all, however briefly,
+	/// is the exposure.
+	/// </para>
 	/// <para>
 	/// This does not fix the shared-DefaultHome pattern itself - other test files' players still meet
 	/// there - it only makes THIS file's players unreachable by it.
@@ -116,19 +124,12 @@ public class ChannelPermissionTests
 	/// </summary>
 	private async Task<TestIsolationHelpers.TestPlayer> CreateMortal(string prefix)
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
-
 		var roomName = TestIsolationHelpers.GenerateUniqueName($"{prefix}Room");
 		var digResult = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
-		var roomDbRef = digResult.Message!.ToPlainText()!.Trim();
+		var room = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
 
-		// /SILENT so the arrival produces no movement messages inside another test's assertion
-		// window. The automatic look still runs, but it runs inline, so it cannot land later.
-		await GodParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"@teleport/silent {player.DbRef}={roomDbRef}"));
-
-		return player;
+		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
 	}
 
 	private async Task<TestIsolationHelpers.TestPlayer> CreateFlagged(string prefix, string flag)
