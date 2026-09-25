@@ -10,6 +10,7 @@ using SharpMUSH.Messaging.Abstractions;
 using System.Net;
 using System.Text;
 using TelnetNegotiationCore.Builders;
+using MarkupString.Mxp;
 using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Protocols;
 using TelnetNegotiationCore.Models;
@@ -236,7 +237,15 @@ public class TelnetServer : ConnectionHandler
 
 		if (_options.MxpEnabled)
 		{
-			builder = builder.AddPlugin<MXPProtocol>().OnMXPEnabled(() =>
+			builder = builder.AddPlugin<MXPProtocol>()
+				// Registered with the plugin rather than when the question goes out: a client can answer
+				// the moment MXP mode starts, and the reply must never arrive before anything is listening.
+				.OnMxpSupports(_ =>
+				{
+					RecordMxpSupport(nextPort, telnetInterpreter);
+					return ValueTask.CompletedTask;
+				})
+				.OnMXPEnabled(() =>
 			{
 				_logger.LogInformation("MXP negotiated on handle {Handle}", nextPort);
 
@@ -247,6 +256,7 @@ public class TelnetServer : ConnectionHandler
 					if (await TryUpdateFormatAsync(nextPort, OutputFormat.Mxp, ct))
 					{
 						_logger.LogDebug("Updated MXP capabilities for handle {Handle}", nextPort);
+						StartAskingWhatMxpClientRenders(nextPort, telnetInterpreter, ct);
 					}
 					else if (!ct.IsCancellationRequested)
 					{
@@ -467,6 +477,67 @@ public class TelnetServer : ConnectionHandler
 		}
 	}
 
+	/// <summary>
+	/// Asks the client which of the elements this server writes it can render, and records the answer on
+	/// the connection so the renderer sends it nothing else.
+	/// </summary>
+	/// <remarks>
+	/// <para>MXP has this exchange for a reason: a client that cannot open a frame is better off with
+	/// the text that would have gone in it than with a tag it shows to the player. The answer belongs to
+	/// one connection, so it is kept with that connection's capabilities.</para>
+	/// <para><b>Not awaited from the callback that starts it.</b> That callback runs inside the
+	/// interpreter's processing of the bytes that began MXP mode, and the read loop is waiting for that
+	/// processing to finish — so waiting here for a reply that can only arrive through the next read
+	/// would stall the loop until the deadline and then record silence from a client that had answered
+	/// at once. The question is asked on a task of its own, leaving the loop free to deliver the
+	/// answer.</para>
+	/// <para>A client need not answer. What is waited for is the answer to this question, and what is
+	/// recorded is what came back — an element nobody answered about is one the client does not get,
+	/// which is the safe way round. An answer after the deadline is recorded when it lands, through the
+	/// handler registered with the plugin, and governs everything sent after it.</para>
+	/// </remarks>
+	private void StartAskingWhatMxpClientRenders(long handle, TelnetInterpreter? interpreter, CancellationToken cancellationToken)
+	{
+		if (interpreter?.PluginManager?.GetPlugin<MXPProtocol>() is not { } mxp) return;
+
+		_ = Task.Run(async () =>
+		{
+			try
+			{
+				await mxp.RequestSupportAsync(
+					TimeSpan.FromMilliseconds(Math.Max(0, _options.MxpSupportTimeoutMilliseconds)),
+					MxpRegistration.Elements.ToArray());
+
+				if (!cancellationToken.IsCancellationRequested) RecordMxpSupport(handle, interpreter);
+			}
+			catch (OperationCanceledException)
+			{
+				// The connection went away while the question was outstanding.
+			}
+			catch (Exception ex)
+			{
+				// Broad on purpose: nothing awaits this task, so whatever the plugin or a closing pipe
+				// throws would otherwise go unobserved, and none of it should reach the connection.
+				_logger.LogDebug(ex, "Asking handle {Handle} what MXP it renders failed", handle);
+			}
+		}, cancellationToken);
+	}
+
+	/// <summary>
+	/// Writes what the client has said it renders onto the connection: the elements it named, of those
+	/// it was asked about. Called both when a reply lands and when the wait for one runs out, and either
+	/// may be first.
+	/// </summary>
+	private void RecordMxpSupport(long handle, TelnetInterpreter? interpreter)
+	{
+		if (interpreter?.PluginManager?.GetPlugin<MXPProtocol>() is not { } mxp) return;
+
+		var supported = string.Join(' ', MxpRegistration.Elements.Where(mxp.Support.Supports));
+		_connectionService.UpdateCapabilities(handle, current => current with { MxpSupported = supported });
+		_logger.LogDebug("Handle {Handle} renders MXP: {Supported}",
+			handle, supported.Length == 0 ? "(nothing it was asked about)" : supported);
+	}
+
 	private async ValueTask<bool> TryUpdateFormatAsync(long handle, OutputFormat format, CancellationToken cancellationToken)
 	{
 		for (var attempt = 0; attempt < ConnectionRetryPolicy.MaxAttempts; attempt++)
@@ -475,7 +546,15 @@ public class TelnetServer : ConnectionHandler
 			{
 				// True only when the format actually changed; a client that negotiates the same format
 				// twice is not a failure, so a no-op counts as success here.
-				_connectionService.UpdateCapabilities(handle, current => current with { Format = current.Format.Negotiate(format) });
+				// An MXP connection starts out rendering none of the elements it is about to be asked about,
+				// in the same update that makes it MXP: output that races the question — the welcome, a
+				// login — must not carry a tag the client may be unable to read. An answer that already
+				// landed is kept.
+				_connectionService.UpdateCapabilities(handle, current => current with
+				{
+					Format = current.Format.Negotiate(format),
+					MxpSupported = format == OutputFormat.Mxp ? current.MxpSupported ?? string.Empty : current.MxpSupported
+				});
 				return true;
 			}
 

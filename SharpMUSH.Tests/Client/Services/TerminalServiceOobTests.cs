@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
 
 namespace SharpMUSH.Tests.Client.Services;
@@ -25,6 +26,43 @@ public class TerminalServiceOobTests
 
 		await Assert.That(svc.OobChannels.Get("room.contents")).IsEqualTo("{\"who\":[\"#7\"]}");
 		await Assert.That(svc.Lines.Any(l => l.Text.Contains("room.contents"))).IsFalse();
+	}
+
+	/// <summary>
+	/// A <c>sound()</c> has no plain text, only the element that plays it; the frame must still reach
+	/// the page, or the portal never plays anything.
+	/// </summary>
+	[Test]
+	public async Task MarkupFrameWithNoPlainTextIsStillAdded()
+	{
+		var (svc, ws) = NewService();
+		await svc.ConnectAsync("ws://localhost:4202/ws");
+
+		var sound = MString.Sound("ding.wav");
+		await Assert.That(sound.ToPlainText()).IsEqualTo(string.Empty);
+
+		ws.MessageReceived += Raise.Event<EventHandler<string>>(ws, System.Text.Json.JsonSerializer.Serialize(new
+		{
+			type = "markup",
+			data = MarkupTextSerializer.Serialize(sound)
+		}));
+
+		await Assert.That(svc.Lines.Count(l => l.Html.Contains("ding.wav"))).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task EmptyMarkupFrameIsNotAdded()
+	{
+		var (svc, ws) = NewService();
+		await svc.ConnectAsync("ws://localhost:4202/ws");
+
+		ws.MessageReceived += Raise.Event<EventHandler<string>>(ws, System.Text.Json.JsonSerializer.Serialize(new
+		{
+			type = "markup",
+			data = MarkupTextSerializer.Serialize(MString.Plain("\r\n"))
+		}));
+
+		await Assert.That(svc.Lines.Any(l => l.Source == TerminalLineSource.Server)).IsFalse();
 	}
 
 	[Test]

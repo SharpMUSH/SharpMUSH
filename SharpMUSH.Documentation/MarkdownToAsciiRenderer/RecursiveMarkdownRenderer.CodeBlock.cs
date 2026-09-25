@@ -13,7 +13,13 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 public partial class RecursiveMarkdownRenderer
 {
-	protected virtual MString RenderCodeBlock(CodeBlock code)
+	/// <summary>
+	/// A code block is preformatted by definition — its indentation is the code. See
+	/// <see cref="RenderTable"/> for why that has to be said rather than left to the client.
+	/// </summary>
+	protected virtual MString RenderCodeBlock(CodeBlock code) => MarkupText.Preformatted(RenderCodeBlockLines(code));
+
+	private MString RenderCodeBlockLines(CodeBlock code)
 	{
 		// Apply syntax highlighting to 'sharp' fenced code blocks when a parser is available.
 		// Background colour is applied per-line inside RenderSharpCodeBlock so that each

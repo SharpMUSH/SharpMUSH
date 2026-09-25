@@ -14,6 +14,46 @@ public class RecursiveMarkdownRendererTests
 	private const string Clear = "\u001b[0m";
 	private static string Foreground(byte r, byte g, byte b) => $"\u001b[38;2;{r};{g};{b}m";
 
+	/// <summary>
+	/// Help and wiki text is rendered once and sent to every kind of client. A table and a code block
+	/// are laid out by their own spacing, and a Pueblo client reads the stream as HTML, where runs of
+	/// spaces collapse and a proportional font ignores every column width — so the layout has to say
+	/// what it is.
+	/// </summary>
+	[Test]
+	public async Task RenderTable_IsPreformatted()
+	{
+		var markdown = "| a | b |\n|---|---|\n| 1 | 2 |";
+
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).Contains("<xch_mudtext>");
+		await Assert.That(result.Render(MarkupFormat.Html)).Contains("<pre");
+	}
+
+	[Test]
+	public async Task RenderCodeBlock_IsPreformatted()
+	{
+		var markdown = "```\nthink hello\n  indented\n```";
+
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		var pueblo = result.Render(MarkupFormat.Pueblo);
+
+		await Assert.That(pueblo).Contains("<xch_mudtext>");
+		await Assert.That(pueblo).Contains("  indented")
+			.Because("the indentation is the code, and inside the region it survives");
+	}
+
+	/// <summary>Prose around them is ordinary text, and ends its lines the way the format does.</summary>
+	[Test]
+	public async Task RenderProse_IsNotPreformatted()
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown("Hello, world!");
+
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).DoesNotContain("<xch_mudtext>");
+	}
+
 	[Test]
 	public async Task RenderPlainText_ShouldWork()
 	{
