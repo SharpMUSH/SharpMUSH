@@ -1611,7 +1611,9 @@ public class MovementParityTests
 	/// legitimate eviction a room owner could perform.
 	/// </summary>
 	[Test]
-	public async ValueTask ARoomOwnerMayEvictAnObjectTheyDoNotOwn()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask ARoomOwnerMayEvictAnObjectTheyDoNotOwn(Via via)
 	{
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "EvictOwner");
@@ -1622,7 +1624,7 @@ public class MovementParityTests
 		await God($"@teleport/silent {box}={room}");
 		await God($"@teleport/silent {owner.DbRef}={room}");
 
-		await As(owner.Handle, $"@teleport {box}={destination}");
+		await Teleport(owner.Handle, via, box.ToString(), destination);
 
 		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(destination))
 			.Because("owning the room the box stands in is authority to move it out of that room");
@@ -1633,7 +1635,9 @@ public class MovementParityTests
 	/// The room owner from <see cref="ARoomOwnerMayEvictAnObjectTheyDoNotOwn"/>, refused by one flag.
 	/// </summary>
 	[Test]
-	public async ValueTask ARoomOwnerMayNotEvictAHeavyObjectTheyDoNotOwn()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask ARoomOwnerMayNotEvictAHeavyObjectTheyDoNotOwn(Via via)
 	{
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "HeavyOwner");
@@ -1646,7 +1650,7 @@ public class MovementParityTests
 		await God($"@set {box}=HEAVY");
 
 		var ownerSaw = await MessagesWhile(owner.DbRef, async () =>
-			await As(owner.Handle, $"@teleport {box}={destination}"));
+			await Teleport(owner.Handle, via, box.ToString(), destination));
 
 		await Assert.That(ownerSaw.Any(m => m == ErrorMessages.Notifications.PermissionDenied)).IsTrue();
 		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(room))
@@ -1658,7 +1662,9 @@ public class MovementParityTests
 	/// was read nowhere: it waives the authority check over the victim entirely.
 	/// </summary>
 	[Test]
-	public async ValueTask TportAnythingMovesSomethingTheTeleporterDoesNotControl()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask TportAnythingMovesSomethingTheTeleporterDoesNotControl(Via via)
 	{
 		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnythingMover");
@@ -1670,11 +1676,11 @@ public class MovementParityTests
 		await God($"@teleport/silent {mover.DbRef}={room}");
 
 		// The control: without the power, neither the box nor the room it stands in is theirs.
-		await As(mover.Handle, $"@teleport {box}={destination}");
+		await Teleport(mover.Handle, via, box.ToString(), destination);
 		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(room));
 
 		await God($"@power {mover.DbRef}=Tport_Anything");
-		await As(mover.Handle, $"@teleport {box}={destination}");
+		await Teleport(mover.Handle, via, box.ToString(), destination);
 
 		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(destination))
 			.Because("Tel_Anything is the whole of tport_control_ok for a holder");
@@ -1685,7 +1691,9 @@ public class MovementParityTests
 	/// OWNER (<c>hdrs/dbdefs.h:84</c>), and the teleport path read it nowhere at all.
 	/// </summary>
 	[Test]
-	public async ValueTask AFixedPlayerTeleportsNothingAtAll()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask AFixedPlayerTeleportsNothingAtAll(Via via)
 	{
 		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FixedMover");
@@ -1696,13 +1704,13 @@ public class MovementParityTests
 		await God($"@set {mover.DbRef}=FIXED");
 
 		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
-			await As(mover.Handle, $"@teleport {destination}"));
+			await Teleport(mover.Handle, via, "me", destination));
 
 		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.PermissionDenied)).IsTrue();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
 
 		await God($"@set {mover.DbRef}=!FIXED");
-		await As(mover.Handle, $"@teleport {destination}");
+		await Teleport(mover.Handle, via, "me", destination);
 
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(destination))
 			.Because("the refusal has to come from FIXED and nothing else in the setup");
@@ -1713,7 +1721,9 @@ public class MovementParityTests
 	/// instead let anyone step around a room's NO_TEL by standing inside a vehicle parked in it.
 	/// </summary>
 	[Test]
-	public async ValueTask NoTelIsReadOnTheAbsoluteRoomNotTheImmediateContainer()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask NoTelIsReadOnTheAbsoluteRoomNotTheImmediateContainer(Via via)
 	{
 		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "NoTelNestedMover");
@@ -1732,13 +1742,13 @@ public class MovementParityTests
 		await God($"@set {room}=NO_TEL");
 
 		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
-			await As(mover.Handle, $"@teleport {destination}"));
+			await Teleport(mover.Handle, via, "me", destination));
 
 		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.TeleportsNotAllowed)).IsTrue();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(vehicle.ToString()));
 
 		await God($"@set {room}=!NO_TEL");
-		await As(mover.Handle, $"@teleport {destination}");
+		await Teleport(mover.Handle, via, "me", destination);
 
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(destination))
 			.Because("the refusal has to come from the room's NO_TEL and nothing else");
@@ -1749,7 +1759,9 @@ public class MovementParityTests
 	/// NO_TEL room.
 	/// </summary>
 	[Test]
-	public async ValueTask ControllingTheSourceRoomWaivesItsNoTel()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask ControllingTheSourceRoomWaivesItsNoTel(Via via)
 	{
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "NoTelOwner");
@@ -1759,7 +1771,7 @@ public class MovementParityTests
 		await God($"@teleport/silent {owner.DbRef}={room}");
 		await God($"@set {room}=NO_TEL");
 
-		await As(owner.Handle, $"@teleport {destination}");
+		await Teleport(owner.Handle, via, "me", destination);
 
 		await Assert.That(await LocationOf(owner.DbRef.ToString())).IsEqualTo(BareDbref(destination))
 			.Because("controlling the room is the exemption wiz.c:519 spells out");
@@ -1770,7 +1782,9 @@ public class MovementParityTests
 	/// with <c>fail_lock</c>, exactly as GOTO and LEAVE do. It evaluated it nowhere.
 	/// </summary>
 	[Test]
-	public async ValueTask TheSourceRoomsLeaveLockRefusesATeleportAndRunsItsTriadOnce()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask TheSourceRoomsLeaveLockRefusesATeleportAndRunsItsTriadOnce(Via via)
 	{
 		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LeaveLockMover");
@@ -1784,7 +1798,7 @@ public class MovementParityTests
 		await God($"&LFAIL {room}=The walls hold you.");
 
 		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
-			await As(mover.Handle, $"@teleport {destination}"));
+			await Teleport(mover.Handle, via, "me", destination));
 
 		await Assert.That(moverSaw.Count(m => m == "The walls hold you.")).IsEqualTo(1)
 			.Because("fail_lock runs the failure triad once");
@@ -1796,7 +1810,9 @@ public class MovementParityTests
 	/// its LEAVE lock.
 	/// </summary>
 	[Test]
-	public async ValueTask ControllingTheSourceRoomWaivesItsLeaveLock()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask ControllingTheSourceRoomWaivesItsLeaveLock(Via via)
 	{
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LeaveOwner");
@@ -1808,7 +1824,7 @@ public class MovementParityTests
 		await God($"@teleport/silent {owner.DbRef}={room}");
 		await God($"@lock/leave {room}==#{stranger.DbRef.Number}");
 
-		await As(owner.Handle, $"@teleport {destination}");
+		await Teleport(owner.Handle, via, "me", destination);
 
 		await Assert.That(await LocationOf(owner.DbRef.ToString())).IsEqualTo(BareDbref(destination));
 	}
@@ -1819,7 +1835,9 @@ public class MovementParityTests
 	/// ZONE lock (which evaluates true) made Z_TEL do nothing at all.
 	/// </summary>
 	[Test]
-	public async ValueTask ZTelOnTheSourceRoomRefusesACrossZoneTeleport()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask ZTelOnTheSourceRoomRefusesACrossZoneTeleport(Via via)
 	{
 		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ZTelMover");
@@ -1832,13 +1850,13 @@ public class MovementParityTests
 		await God($"@teleport/silent {mover.DbRef}={room}");
 
 		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
-			await As(mover.Handle, $"@teleport {destination}"));
+			await Teleport(mover.Handle, via, "me", destination));
 
 		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.NoZoneTeleport)).IsTrue();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
 
 		await God($"@set {room}=!Z_TEL");
-		await As(mover.Handle, $"@teleport {destination}");
+		await Teleport(mover.Handle, via, "me", destination);
 
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(destination))
 			.Because("Z_TEL is the flag that decides this, and it is the only thing that changed");
@@ -1850,7 +1868,9 @@ public class MovementParityTests
 	/// the ZONE lock is not what this check reads.
 	/// </summary>
 	[Test]
-	public async ValueTask AZoneMismatchWithoutZTelDoesNotRefuse()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask AZoneMismatchWithoutZTelDoesNotRefuse(Via via)
 	{
 		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "ZoneLockMover");
@@ -1862,7 +1882,7 @@ public class MovementParityTests
 		await God($"@lock/zone {room}=#FALSE");
 		await God($"@teleport/silent {mover.DbRef}={room}");
 
-		await As(mover.Handle, $"@teleport {destination}");
+		await Teleport(mover.Handle, via, "me", destination);
 
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(destination))
 			.Because("no Z_TEL anywhere means wiz.c:561 never fires, whatever the ZONE lock says");
@@ -1874,7 +1894,9 @@ public class MovementParityTests
 	/// so an unset TELEPORT lock let a mortal into any room in the database.
 	/// </summary>
 	[Test]
-	public async ValueTask AStrangersRoomRefusesATeleportUnlessItIsJumpOk()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask AStrangersRoomRefusesATeleportUnlessItIsJumpOk(Via via)
 	{
 		var mover = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "JumpOkMover");
@@ -1884,13 +1906,13 @@ public class MovementParityTests
 		await God($"@teleport/silent {mover.DbRef}={room}");
 
 		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
-			await As(mover.Handle, $"@teleport {destination}"));
+			await Teleport(mover.Handle, via, "me", destination));
 
 		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.PermissionDenied)).IsTrue();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
 
 		await God($"@set {destination}=JUMP_OK");
-		await As(mover.Handle, $"@teleport {destination}");
+		await Teleport(mover.Handle, via, "me", destination);
 
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(destination));
 	}
@@ -1901,7 +1923,9 @@ public class MovementParityTests
 	/// teleporter, which is the exact inverse for anyone moving someone other than themselves.
 	/// </summary>
 	[Test]
-	public async ValueTask TheDestinationsTeleportLockIsEvaluatedAgainstTheVictim()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask TheDestinationsTeleportLockIsEvaluatedAgainstTheVictim(Via via)
 	{
 		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "TportLockOwner");
@@ -1917,13 +1941,13 @@ public class MovementParityTests
 		// Locked against the teleporter rather than the box: reading the lock with the wrong unlocker
 		// is what lets this one through.
 		await God($"@lock/tport {destination}==#{owner.DbRef.Number}");
-		await As(owner.Handle, $"@teleport #{box.Number}={destination}");
+		await Teleport(owner.Handle, via, $"#{box.Number}", destination);
 
 		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(room))
 			.Because("the box is not the player the room admits");
 
 		await God($"@lock/tport {destination}==#{box.Number}");
-		await As(owner.Handle, $"@teleport #{box.Number}={destination}");
+		await Teleport(owner.Handle, via, $"#{box.Number}", destination);
 
 		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(destination))
 			.Because("the victim is who the destination's TELEPORT lock is read against");
@@ -1935,12 +1959,14 @@ public class MovementParityTests
 	/// to <c>safe_tel</c> and was refused by <c>enter_room</c>.
 	/// </summary>
 	[Test]
-	public async ValueTask TeleportingAnExitRewritesItsSourceRoomAndKeepsItsDestination()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask TeleportingAnExitRewritesItsSourceRoomAndKeepsItsDestination(Via via)
 	{
 		var (_, from, to, exit) = await Corridor("ExitRelocate");
 		var newSource = await Dig("ExitRelocateSource");
 
-		await God($"@teleport {exit}={newSource}");
+		await Teleport(1, via, exit, newSource);
 
 		var relocated = (await Node(exit)).Expect<SharpExit>();
 		var source = await relocated.Location.WithCancellation(CancellationToken.None);
@@ -1965,14 +1991,16 @@ public class MovementParityTests
 	/// <c>wiz.c:453</c>: an exit is sourced in a room or nowhere.
 	/// </summary>
 	[Test]
-	public async ValueTask AnExitCanOnlyBeTeleportedToARoom()
+	[Arguments(Via.Command)]
+	[Arguments(Via.Function)]
+	public async ValueTask AnExitCanOnlyBeTeleportedToARoom(Via via)
 	{
 		var god = (await Node("#1")).Object().DBRef;
 		var (_, from, _, exit) = await Corridor("ExitToThing");
 		var box = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "ExitToThingBox");
 
 		var godSaw = await MessagesWhile(god, async () =>
-			await God($"@teleport {exit}=#{box.Number}"));
+			await Teleport(1, via, exit, $"#{box.Number}"));
 
 		await Assert.That(godSaw.Any(m => m == ErrorMessages.Notifications.ExitsOnlyTeleportToRooms)).IsTrue();
 
