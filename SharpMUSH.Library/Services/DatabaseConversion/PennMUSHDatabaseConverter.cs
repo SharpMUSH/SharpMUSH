@@ -211,7 +211,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			(channelsConverted, channelMembersConverted) = await ImportChannelsAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Channels imported", 0.97);
 
-			await ReinstallPackagesAsync(context, cancellationToken);
+			await ReinstallPackagesAsync(context);
 			await EnableParenGroupsAsync(context, cancellationToken);
 			// Last: the admin page takes 100% as the end of the import and stops polling.
 			ReportProgress("Complete", 1.0);
@@ -243,6 +243,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			_logger.LogError(ex, "Error during database conversion");
 			errors.Add($"Fatal error: {ex.Message}");
+			// The packages were uninstalled before the failure; don't leave the world without them.
+			await ReinstallPackagesAsync(context);
 			stopwatch.Stop();
 			result = result with { Errors = errors, Warnings = warnings, Duration = stopwatch.Elapsed };
 		}

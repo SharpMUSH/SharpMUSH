@@ -101,19 +101,25 @@ public partial class PennMUSHDatabaseConverter
 	/// </summary>
 	/// <remarks>
 	/// Like the seeded one, the Package Manager is a WIZARD player that owns itself and has no password,
-	/// so nobody logs in as it. A package that is not bundled cannot be fetched again here and is reported
-	/// for the administrator to reinstall.
+	/// so nobody logs in as it. It takes a name no imported player has. A package that is not bundled
+	/// cannot be fetched again here and is reported for the administrator to reinstall.
+	///
+	/// It runs once, whether the import finished or stopped part way: the packages are gone either way.
+	/// It takes no cancellation token, since stopping it part way would leave them gone.
 	/// </remarks>
-	private async Task ReinstallPackagesAsync(PennMUSHConversionContext context, CancellationToken cancellationToken)
+	private async Task ReinstallPackagesAsync(PennMUSHConversionContext context)
 	{
-		if (context.UninstalledPackages.Count == 0)
+		if (context.UninstalledPackages.Count == 0 || context.PackagesReinstalled)
 		{
 			return;
 		}
 
+		context.PackagesReinstalled = true;
+		var cancellationToken = CancellationToken.None;
 		try
 		{
-			var packageManager = await _mediator.Send(new CreatePlayerCommand("Package Manager", string.Empty,
+			var name = await FreePlayerNameAsync("Package Manager", cancellationToken);
+			var packageManager = await _mediator.Send(new CreatePlayerCommand(name, string.Empty,
 				new DBRef(0), new DBRef(0), 999999, StoredVerbatim, ApplyDefaultFlags: false), cancellationToken);
 			if (await _mediator.Send(new GetObjectFlagQuery("WIZARD"), cancellationToken) is { } wizard &&
 				await _mediator.Send(new GetObjectNodeQuery(packageManager), cancellationToken) is AnySharpObject node)
@@ -130,7 +136,7 @@ public partial class PennMUSHDatabaseConverter
 				options with { Database = database }), cancellationToken);
 			context.WrittenDatabaseOptions = database;
 			_configurationReload?.SignalChange();
-			context.Warnings.Add($"Created a new Package Manager at #{packageManager.Number}, past the imported " +
+			context.Warnings.Add($"Created a new Package Manager '{name}' at #{packageManager.Number}, past the imported " +
 				"objects, and set package_manager to it.");
 
 			var reinstalled = _bundledPackages is null
@@ -148,11 +154,28 @@ public partial class PennMUSHDatabaseConverter
 					"install them from the package manager.");
 			}
 		}
-		catch (Exception ex) when (ex is not OperationCanceledException)
+		catch (Exception ex)
 		{
 			_logger.LogWarning(ex, "Could not reinstall the packages uninstalled before the import");
 			context.Warnings.Add($"The package(s) {string.Join(", ", context.UninstalledPackages)} could not be " +
 				$"installed again ({ex.Message}): install them from the package manager.");
 		}
+	}
+
+	/// <summary>
+	/// <paramref name="name"/>, or it followed by the first number from 2 up that makes it a name (or
+	/// alias) no player has, since player names are unique and the source may already have this one.
+	/// </summary>
+	private async Task<string> FreePlayerNameAsync(string name, CancellationToken cancellationToken)
+	{
+		var candidate = name;
+		for (var suffix = 2;
+			await _mediator.CreateStream(new GetPlayerQuery(candidate), cancellationToken).AnyAsync(cancellationToken);
+			suffix++)
+		{
+			candidate = $"{name} {suffix}";
+		}
+
+		return candidate;
 	}
 }

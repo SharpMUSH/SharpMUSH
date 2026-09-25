@@ -300,6 +300,71 @@ public class PennMUSHDbrefPreservationTests
 		}
 	}
 
+	/// <summary>
+	/// Player names are unique, so the new Package Manager doesn't take the name of a source player that
+	/// already has it.
+	/// </summary>
+	[Test]
+	public async Task TheNewPackageManagerLeavesAnImportedPlayersNameAlone()
+	{
+		string[] bundled = ["common-functions"];
+		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptions);
+		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
+		await Assert.That(await bootstrap.InstallBundledAsync(bundled, CancellationToken.None)).IsEquivalentTo(bundled);
+
+		var result = await world.Converter.ConvertDatabaseAsync(Dump(
+			new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject { DBRef = 1, Name = "One", Type = PennMUSHObjectType.Player },
+			new PennMUSHObject { DBRef = 2, Name = "Master Room", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject { DBRef = 3, Name = "Package Manager", Type = PennMUSHObjectType.Player }));
+
+		await Assert.That(result.Errors).IsEmpty();
+		await Assert.That((await NodeAsync(world, 3)).Object().Name).IsEqualTo("Package Manager");
+		var stored = (await world.ExpandedData.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)))!;
+		var packageManager = (await NodeAsync(world, (int)stored.Database.PackageManager!.Value)).Expect<SharpPlayer>();
+		await Assert.That(packageManager.Object.Key).IsNotEqualTo(3);
+		await Assert.That(packageManager.Object.Name).IsEqualTo("Package Manager 2");
+		await PackageObjectNumbersAsync(world.Services.GetRequiredService<IPackageRegistryService>(), bundled);
+	}
+
+	/// <summary>
+	/// An import that stops after the packages were uninstalled (here, cancelled once the objects are
+	/// written) still installs them again, so the world isn't left without them.
+	/// </summary>
+	[Test]
+	public async Task AnImportThatStopsPartWayStillPutsThePackagesBack()
+	{
+		string[] bundled = ["common-functions", "plus-help", "scene"];
+		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptions);
+		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
+		var registry = world.Services.GetRequiredService<IPackageRegistryService>();
+		await Assert.That(await bootstrap.InstallBundledAsync(bundled, CancellationToken.None)).IsEquivalentTo(bundled);
+
+		using var cancellation = new CancellationTokenSource();
+		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath),
+			new CancelOnPhase("Objects created", cancellation), cancellation.Token);
+
+		await Assert.That(cancellation.IsCancellationRequested).IsTrue();
+		await Assert.That(result.Errors).Contains(e => e.StartsWith("Fatal error:"));
+		var stored = (await world.ExpandedData.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)))!;
+		var packageManager = (await NodeAsync(world, (int)stored.Database.PackageManager!.Value)).Expect<SharpPlayer>();
+		await Assert.That(await SharpMUSH.Library.HelperFunctions.HasFlag(packageManager, "WIZARD")).IsTrue();
+		var after = await PackageObjectNumbersAsync(registry, bundled);
+		await Assert.That(after.Min()).IsGreaterThan(packageManager.Object.Key);
+	}
+
+	/// <summary>Cancels the import as it reports reaching <paramref name="phase"/>, on the reporting thread.</summary>
+	private sealed class CancelOnPhase(string phase, CancellationTokenSource cancellation) : IProgress<ConversionProgress>
+	{
+		public void Report(ConversionProgress value)
+		{
+			if (value.CurrentPhase == phase)
+			{
+				cancellation.Cancel();
+			}
+		}
+	}
+
 	/// <summary>The packages' objects as the registry records them, which fails unless every one is installed.</summary>
 	private static async Task<List<int>> PackageObjectNumbersAsync(IPackageRegistryService registry, string[] packages)
 	{
