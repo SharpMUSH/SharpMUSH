@@ -1678,10 +1678,8 @@ public partial class Functions
 		// wildly — "Text Editor" under a pile of diacritics is 66 code units and 11 columns.
 		// A control character (tab, newline) is 0 columns wide but one character to PennMUSH
 		// (ansi_strlen, src/markup.c), so it counts here: strlen(%t) is 1.
-		=> ValueTask.FromResult<CallState>(StringLength(parser.CurrentState.Arguments["0"].Message!));
-
-	private static int StringLength(MString text)
-		=> text.DisplayWidth + text.ToPlainText().Count(char.IsControl);
+		=> ValueTask.FromResult<CallState>(
+			parser.CurrentState.Arguments["0"].Message!.GetDisplayWidth(ControlCharacterWidth.One));
 
 	[SharpFunction(Name = "strmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern"])]
 	public ValueTask<CallState> StringMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
