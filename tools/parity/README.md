@@ -99,9 +99,12 @@ routing. Those are behaviour and appear as differences.
 
 ## Known differences and the baseline
 
-- `known-differences.json` is the **allowlist of deliberate differences**, tied to the compatibility
-  profile (#1134). Each entry needs `id`, `scenario`, `case`, optional `step`, `reason`, `tracking`, and, when
-  `step` is given, that step's `command`.
+- `known-differences.json` is the **allowlist of deliberate differences**. Each one is an entry in the
+  compatibility profile, `SharpMUSH.Documentation/Helpfiles/SharpMUSH/pennmush-compatibility.md`
+  (`help pennmush compatibility`, #1134): a difference that is not written up there is not deliberate,
+  it is a bug for `baseline.json`. Each entry needs `id`, `scenario`, `case`, optional `step`,
+  `reason`, `tracking`, `profile` (the text of the profile's `## ` heading that documents it; the
+  harness refuses a heading that is not there) and, when `step` is given, that step's `command`.
   A step that differs *and* is allowlisted is reported as `known-difference`; an entry whose steps all
   match again is reported as **stale** and fails the run (delete it). Anything else that differs is a
   failure.

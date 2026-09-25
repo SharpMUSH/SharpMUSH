@@ -55,6 +55,26 @@ public class MessageCommandTests
 	}
 
 	[Test]
+	public async ValueTask MessageRecipientTokenIsShortDbref()
+	{
+		// PennMUSH replaces a `##` argument with unparse_dbref(recipient) -- "#N", not the objid
+		// (src/notify.c) -- so FORMAT`SAY's strmatch(%1,%#) can tell the speaker apart.
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MsgRecipientToken");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&TESTFORMAT_MSGTOKEN_51837 {objDbRef}=Token_51837:%0"));
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@message {objDbRef}=Default,TESTFORMAT_MSGTOKEN_51837,##"));
+
+		await NotifyService
+			.Received(1)
+			.Notify(
+				TestHelpers.MatchingObject(objDbRef),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, $"Token_51837:#{objDbRef.Number}")),
+				TestHelpers.MatchingObject(executor),
+				INotifyService.NotificationType.Announce);
+	}
+
+	[Test]
 
 	public async ValueTask MessageUsesDefaultWhenAttributeMissing()
 	{
