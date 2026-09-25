@@ -62,6 +62,7 @@ class Session:
         self._seq = 0
         self._text = b""     # received so far, telnet negotiation removed
         self._partial = b""  # an IAC sequence split across reads, still raw
+        self.logged_in = False  # set by the runner after a successful `connect`
         self._sock = socket.create_connection((host, port), timeout=timeout)
         self._sock.setblocking(True)
 

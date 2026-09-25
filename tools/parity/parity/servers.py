@@ -51,7 +51,7 @@ def can_connect(port: int) -> bool:
 
 def log_contains(path: Path, needle: str) -> bool:
     try:
-        return needle in path.read_text(errors="replace")
+        return needle in path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return False
 
@@ -114,7 +114,7 @@ class PennMush:
                                    ("restrict.cnf", "restrictcnf.dst"), ("names.cnf", "namescnf.dst")):
             shutil.copyfile(self.src / "game" / dst_name, self.game / cnf_name)
         cnf = self.game / "mush.cnf"
-        text = cnf.read_text()
+        text = cnf.read_text(encoding="utf-8")
         lines = []
         for line in text.splitlines():
             if line.startswith("port "):
@@ -122,7 +122,7 @@ class PennMush:
             elif line.startswith("ssl_port "):
                 line = "ssl_port 0"
             lines.append(line)
-        cnf.write_text("\n".join(lines) + "\n")
+        cnf.write_text("\n".join(lines) + "\n", encoding="utf-8")
         # --disable-socket-quota: netmud allows a connection 100 commands then 1 per second (a
         # compile-time constant); sentinel traffic exhausts that and stalls a session mid-scenario.
         self.proc = Process("pennmush", ["./netmush", "--no-session", "--disable-socket-quota", "mush.cnf"], self.game, self.logs / "pennmush.out")
@@ -200,14 +200,14 @@ class SharpMush:
             for project in ("SharpMUSH.Server", "SharpMUSH.SocketServer", "SharpMUSH.ConnectionServer"):
                 r = subprocess.run([self.dotnet, "build", "-v", "q", "-nologo", project],
                                    cwd=self.repo, capture_output=True, text=True)
-                (self.logs / f"dotnet-build-{project}.out").write_text(r.stdout + r.stderr)
+                (self.logs / f"dotnet-build-{project}.out").write_text(r.stdout + r.stderr, encoding="utf-8")
                 if r.returncode != 0:
                     raise StartupError(f"dotnet build {project} failed; see {self.logs / f'dotnet-build-{project}.out'}")
         nats_port, http_port, server_port = free_port(), free_port(), free_port()
         nats_dir = self.work / "nats"
         nats_dir.mkdir(parents=True)
         conf = self.work / "nats.conf"
-        conf.write_text(f'max_payload: 6291456\njetstream: true\nstore_dir: "{nats_dir}"\nport: {nats_port}\nhost: 127.0.0.1\n')
+        conf.write_text(f'max_payload: 6291456\njetstream: true\nstore_dir: "{nats_dir}"\nport: {nats_port}\nhost: 127.0.0.1\n', encoding="utf-8")
         nats = self._run("nats", [str(fetch_nats(self.cache)), "-c", str(conf)], self.work, {})
         wait_for(lambda: can_connect(nats_port), "nats-server", 30, [nats])
         nats_url = f"nats://127.0.0.1:{nats_port}"

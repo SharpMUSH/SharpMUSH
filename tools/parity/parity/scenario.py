@@ -58,6 +58,8 @@ def load(path: Path) -> Scenario:
                 cid, _, desc = rest.partition(" ")
                 if not cid:
                     raise ScenarioError(f"{path}:{lineno}: ::case needs an id")
+                if any(c.id == cid for c in cases):  # keys are scenario/case#index: ids must be unique
+                    raise ScenarioError(f"{path}:{lineno}: duplicate ::case id {cid!r}")
                 cases.append(Case(cid, desc.strip()))
                 continue
             if not cases:

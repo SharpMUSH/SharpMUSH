@@ -65,6 +65,13 @@ def main(argv=None) -> int:
     if not files:
         raise SystemExit("no scenario files selected")
     scenarios = [scenario.load(p) for p in files]
+    if args.write_baseline and args.only:
+        raise SystemExit("--write-baseline needs a full run: it would drop every scenario --only left out")
+    unknown = [f"{scn.name}/{c}" for scn in scenarios for c in sorted(wanted.get(scn.name) or ())
+               if c not in {case.id for case in scn.cases}]
+    unknown += [s for s in wanted if s not in {scn.name for scn in scenarios}]
+    if unknown:
+        raise SystemExit("--only names no such scenario or case: " + ", ".join(unknown))
     allowlist = cmp.load_allowlist(HERE / "known-differences.json")
     baseline_path = HERE / "baseline.json"
     baseline = cmp.load_baseline(baseline_path) if args.baseline else {}
@@ -82,7 +89,7 @@ def main(argv=None) -> int:
         penn.start()
         ptarget = runner.Target("PennMUSH", "127.0.0.1", penn.port, "PSYNCp")
         print("[parity] building the world on PennMUSH from world/setup.mush")
-        (work / "logs" / "setup-transcript.txt").write_text("\n".join(world.run_setup(ptarget, setup_cmds)))
+        (work / "logs" / "setup-transcript.txt").write_text("\n".join(world.run_setup(ptarget, setup_cmds)), encoding="utf-8")
         flatfile = work / "world.db"
         dump = penn.game / "data" / "outdb.gz"
         servers.wait_for(dump.exists, "PennMUSH to write outdb.gz", 30, [penn.proc])
@@ -106,18 +113,27 @@ def main(argv=None) -> int:
         pcanon = world.canonicalizer(p_anchor, p_anchor, p_free)
         scanon = world.canonicalizer(s_anchor, p_anchor, s_free, foreign_tag="S")
         def site(d: Path):
-            return [(d / n).read_text(errors="replace") for n in ("connect.txt", "motd.txt", "wizmotd.txt") if (d / n).exists()]
+            return [(d / n).read_text(encoding="utf-8", errors="replace") for n in ("connect.txt", "motd.txt", "wizmotd.txt") if (d / n).exists()]
         results, stale, fixed = cmp.compare(all_p, all_s, pcanon, scanon, allowlist,
                                      site(penn.game / "txt"), site(REPO / "SharpMUSH.Server"), baseline)
         orphans = cmp.orphaned(baseline, allowlist, results)
+        not_run = []
         if any(wanted.values()):
-            results = [r for r in results if wanted.get(r.penn.scenario) is None or r.penn.case in wanted[r.penn.scenario]]
+            # An ERROR stays in the report even outside the selected cases: it can be why they did not run.
+            results = [r for r in results if r.status == cmp.ERROR or wanted.get(r.penn.scenario) is None
+                       or r.penn.case in wanted[r.penn.scenario]]
             stale, fixed, orphans = [], [], []
+            ran = {(r.penn.scenario, r.penn.case) for r in results}
+            not_run = [f"{s}/{c}" for s, cs in wanted.items() for c in sorted(cs or ()) if (s, c) not in ran]
+            if not_run:
+                print(f"[parity] selected cases that did not run (an earlier step failed): {', '.join(not_run)}")
 
-        if args.write_baseline:
+        if args.write_baseline and any(r.status == cmp.ERROR for r in results):
+            print("[parity] not writing baseline.json: some steps did not run (ERROR); fix them first")
+        elif args.write_baseline:
             steps = [{"key": r.key, "command": r.penn.command}
                      for r in sorted(results, key=lambda r: r.key) if r.status in (cmp.DIFF, cmp.OPEN)]
-            baseline_path.write_text(json.dumps({"steps": steps}, indent=1) + "\n")
+            baseline_path.write_text(json.dumps({"steps": steps}, indent=1) + "\n", encoding="utf-8")
             print(f"[parity] wrote {len(steps)} open gaps to {baseline_path}")
         cov = {}
         try:
@@ -137,7 +153,7 @@ def main(argv=None) -> int:
         totals = report.write_reports(out, meta, results, stale, fixed, orphans, anchor_table, cov, "tools/parity/scenarios")
         print(f"[parity] report: {out / 'report.md'}")
         print(f"[parity] {totals}")
-        bad = totals[cmp.DIFF] + totals[cmp.ERROR] + len(stale) + len(fixed) + len(orphans)
+        bad = totals[cmp.DIFF] + totals[cmp.ERROR] + len(stale) + len(fixed) + len(orphans) + len(not_run)
         return 0 if (bad == 0 or args.allow_failures) else 1
     finally:
         sharp.stop()

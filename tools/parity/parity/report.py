@@ -94,7 +94,7 @@ def write_reports(out: Path, meta: dict, results, stale, fixed, orphans, anchors
              "objects created during scenarios become `#NEW<k>` in order of first appearance; any other "
              "SharpMUSH dbref is one of its own system objects and becomes `#S<n>`, so it never matches "
              "the PennMUSH object that happens to share its number.")
-    (out / "report.md").write_text("\n".join(L) + "\n")
+    (out / "report.md").write_text("\n".join(L) + "\n", encoding="utf-8")
 
     def dump(r):
         return {"key": r.key, "status": r.status, "command": r.penn.command, "session": r.penn.session,
@@ -102,7 +102,7 @@ def write_reports(out: Path, meta: dict, results, stale, fixed, orphans, anchors
                 "known": r.entry.id if r.entry else None}
     (out / "report.json").write_text(json.dumps({
         "meta": meta, "totals": total, "stale": [e.id for e in stale], "fixed": fixed, "orphaned": orphans,
-        "results": [dump(r) for r in results]}, indent=1))
+        "results": [dump(r) for r in results]}, indent=1), encoding="utf-8")
     (out / "coverage.json").write_text(json.dumps(
-        {k: {"used": sorted(u), "penn_total": len(uni), "covered": sorted(u & uni)} for k, (u, uni) in coverage.items()}, indent=1))
+        {k: {"used": sorted(u), "penn_total": len(uni), "covered": sorted(u & uni)} for k, (u, uni) in coverage.items()}, indent=1), encoding="utf-8")
     return total

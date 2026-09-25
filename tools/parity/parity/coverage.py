@@ -15,7 +15,7 @@ _SWITCH = re.compile(r"^\s*([@+]?\w+)(?:/[\w/]+)?")
 def used_in_scenarios(paths: list[Path]) -> tuple[set[str], set[str]]:
     commands, functions = set(), set()
     for path in paths:
-        for line in path.read_text().splitlines():
+        for line in path.read_text(encoding="utf-8").splitlines():
             if not line.strip() or line.startswith("#") or line.startswith("::"):
                 continue
             m = _SWITCH.match(line)

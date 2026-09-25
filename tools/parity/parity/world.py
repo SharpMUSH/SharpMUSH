@@ -13,7 +13,7 @@ GOD = ("One", "godpass")
 
 def load_setup(path: Path):
     commands, anchors = [], []
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip() or line.startswith("#"):
             continue
         if line.startswith("::anchor "):

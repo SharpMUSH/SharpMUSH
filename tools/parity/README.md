@@ -108,7 +108,8 @@ routing. Those are behaviour and appear as differences.
 - `baseline.json` is **not** an allowlist. It lists steps that differ today because of *open parity
   bugs*, so CI can ratchet: `--baseline` fails only on differences outside it, and also fails when a
   baseline step starts matching, so the fixing PR must delete the entry. Regenerate with
-  `tools/parity/run.sh --write-baseline --allow-failures`. Fix PRs should shrink it.
+  `tools/parity/run.sh --write-baseline --allow-failures` (a full run: it refuses `--only`, and it
+  does not write while any step is an ERROR). Fix PRs should shrink it.
 - Step keys are positional (`scenario/case#index`), so both files also record each step's command.
   If a step is inserted or removed and a key now points at a different command (or at nothing), the
   entry is reported as **orphaned** and the run fails; re-key it (for the baseline, regenerate it).

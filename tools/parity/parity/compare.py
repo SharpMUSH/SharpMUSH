@@ -29,7 +29,7 @@ class Entry:
 
 
 def load_allowlist(path: Path) -> list[Entry]:
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     out = []
     for e in data["entries"]:
         for required in ("id", "scenario", "case", "reason", "tracking"):
@@ -44,7 +44,7 @@ def load_allowlist(path: Path) -> list[Entry]:
 
 def load_baseline(path: Path) -> dict[str, str]:
     """baseline.json: open gaps as {key: command}. The command pins each positional key."""
-    return {s["key"]: s["command"] for s in json.loads(path.read_text())["steps"]}
+    return {s["key"]: s["command"] for s in json.loads(path.read_text(encoding="utf-8"))["steps"]}
 
 
 def orphaned(baseline: dict[str, str], allowlist: list[Entry], results) -> list[str]:

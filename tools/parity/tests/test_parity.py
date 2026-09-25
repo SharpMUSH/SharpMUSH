@@ -74,6 +74,11 @@ class ScenarioTests(unittest.TestCase):
         self.assertEqual(s.cases[0].description, "desc here")
         self.assertEqual(s.cases[0].steps[1].session, "w")
 
+    def test_duplicate_case_ids_are_rejected(self):
+        # Step keys are scenario/case#index, so a repeated id would pair the wrong steps.
+        with self.assertRaises(scenario.ScenarioError):
+            self.load("::case a\n::login w Wiz x\n::case a\n::login w Wiz x\n")
+
     def test_command_before_login_is_an_error(self):
         with self.assertRaises(scenario.ScenarioError):
             self.load("::case a\nthink hi\n")
