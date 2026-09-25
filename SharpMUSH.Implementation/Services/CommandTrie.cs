@@ -26,11 +26,12 @@ public class CommandTrie
 	/// </summary>
 	private sealed class CachedTrie
 	{
-		public volatile CommandTrie? Trie;
-
-		/// <summary>The library's entry count when <see cref="Trie"/> was built.</summary>
-		public int BuiltFromCount;
+		/// <summary>Published as one object so a lookup never pairs one build's trie with another's version.</summary>
+		public volatile Built? Current;
 	}
+
+	/// <param name="Version">The library's <see cref="LibraryService{TKey,TValue}.Version"/>, read before the build.</param>
+	private sealed record Built(CommandTrie Trie, long Version);
 
 	private static readonly ConditionalWeakTable<LibraryService<string, CommandDefinition>, CachedTrie> Cache = new();
 
@@ -40,52 +41,50 @@ public class CommandTrie
 	/// so it is not something to do per parse: rebuilding it on every parser copy was four fifths of
 	/// all bytes allocated by a trivial evaluation.
 	/// <para>
-	/// Staleness is caught two ways. Any add or remove changes the library's count, which is compared
-	/// on every lookup, so a command registered by whoever holds the library - a plugin, a test -
-	/// is visible to the next parse without that code knowing a trie exists. A plugin reload
-	/// removes and re-adds the same number of names, which a count cannot see; the plugin manager
-	/// calls <see cref="Invalidate"/> for that.
+	/// Any add, replace or remove bumps the library's version, which is compared on every lookup, so a
+	/// command registered by whoever holds the library - a plugin, a test - is visible to the next
+	/// parse without that code knowing a trie exists. The version is read before the build: the
+	/// library's enumeration is not a snapshot, so a change made during it may be missed, and a version
+	/// read afterwards would vouch for a trie that lacks it.
 	/// </para>
 	/// </summary>
 	public static CommandTrie For(LibraryService<string, CommandDefinition> commandLibrary)
 	{
 		var cached = Cache.GetValue(commandLibrary, static _ => new CachedTrie());
-		var trie = cached.Trie;
-		if (trie is not null && cached.BuiltFromCount == commandLibrary.Count)
+		if (cached.Current is { } built && built.Version == commandLibrary.Version)
 		{
-			return trie;
+			return built.Trie;
 		}
 
 		lock (cached)
 		{
-			if (cached.Trie is { } current && cached.BuiltFromCount == commandLibrary.Count)
+			var version = commandLibrary.Version;
+			if (cached.Current is { } current && current.Version == version)
 			{
-				return current;
+				return current.Trie;
 			}
 
-			// The library is safe to enumerate while it changes; the count is read after the build
-			// so the next lookup catches anything added or removed during it.
-			var built = Build(commandLibrary);
-			cached.BuiltFromCount = commandLibrary.Count;
-			cached.Trie = built;
-			return built;
+			// A change landing during the build bumps the version past the one recorded here, so the
+			// next lookup rebuilds rather than trusting a trie the enumeration may have built without it.
+			var trie = Build(commandLibrary);
+			cached.Current = new Built(trie, version);
+			return trie;
 		}
 	}
 
 	/// <summary>
 	/// Discards the cached trie for <paramref name="commandLibrary"/>; the next lookup rebuilds it
-	/// from the live library. Needed only where a change leaves the count unchanged.
+	/// from the live library. Changes made through the library are already seen by version; this is for
+	/// callers that want the next lookup rebuilt regardless.
 	/// </summary>
 	public static void Invalidate(LibraryService<string, CommandDefinition> commandLibrary)
 	{
 		if (Cache.TryGetValue(commandLibrary, out var cached))
 		{
-			// Under the build lock: a build that finished enumerating the library before this
-			// invalidation but publishes after it would otherwise install a trie holding the removed
-			// commands, with a count that matches the library.
+			// Under the build lock, so a build already under way cannot publish over the invalidation.
 			lock (cached)
 			{
-				cached.Trie = null;
+				cached.Current = null;
 			}
 		}
 	}

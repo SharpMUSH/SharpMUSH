@@ -127,7 +127,9 @@ public class CommandManagementTests
 		await Assert.That(reader.MoveNext()).IsTrue();
 
 		await As(wizard, $"@command/add {name}");
+		await Assert.That(Parser.CommandLibrary.ContainsKey(name)).IsTrue();
 		await AsGod($"@command/delete {name}");
+		await Assert.That(Parser.CommandLibrary.ContainsKey(name)).IsFalse();
 
 		var read = 1;
 		while (reader.MoveNext()) read++;
