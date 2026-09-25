@@ -78,6 +78,30 @@ public class QueuedUserCommandTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task SoftcodeMatchRedispatchedByAPrefixStillQueues()
+	{
+		// A prefix such as `~` redispatches its command in the same queue entry, so a list from the queue keeps
+		// its origin: the match is not QUEUE_INPLACE even though the entry still knows the connection.
+		await Run($"&CMD {_commands}=${_token}:@pemit %#={_token} body");
+
+		await RunQueued($"~{_token};@pemit me={_token} after");
+
+		await Assert.That(Heard()).IsEquivalentTo([$"{_token} after", $"{_token} body"], CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task SoftcodeMatchDoesNotRunWhenTheObjectIsHaltedBeforeItStarts()
+	{
+		// The rest of the list halts the command object before the queued body gets its turn; the queue
+		// re-checks HALT when an entry starts (src/cque.c:1136), so the body never runs.
+		await Run($"&CMD {_commands}=${_token}:@pemit %#={_token} body");
+
+		await RunQueued($"{_token};@set {_commands}=halt;@pemit me={_token} after");
+
+		await Assert.That(Heard()).IsEquivalentTo([$"{_token} after"]);
+	}
+
+	[Test]
 	public async Task SoftcodeMatchStartsWithFreshRegistersAndKeepsItsOwn()
 	{
 		// PennMUSH: `think setq(0,before);+setq;think q0-after=[r(0)];+hi` prints `q0-after=before`, then
