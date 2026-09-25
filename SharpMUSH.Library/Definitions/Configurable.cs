@@ -63,26 +63,4 @@ public static class Configurable
 
 	/// <inheritdoc cref="AliasOptions.Default"/>
 	public static Dictionary<string, string[]> DefaultCommandAliases => AliasOptions.Default.CommandAliases;
-
-	public static Dictionary<string, string[]> FunctionAliases { get; private set; } = DefaultFunctionAliases;
-
-	public static Dictionary<string, string[]> CommandAliases { get; private set; } = DefaultCommandAliases;
-
-	public static Dictionary<string, string[]> CommandRestrictions { get; private set; } = new();
-
-	public static Dictionary<string, string[]> FunctionRestrictions { get; private set; } = new();
-
-	/// <summary>
-	/// Initialize configurable aliases and restrictions from database-backed options.
-	/// This should be called once during application startup.
-	/// </summary>
-	/// <param name="aliasOptions">Alias options from database</param>
-	/// <param name="restrictionOptions">Restriction options from database</param>
-	public static void Initialize(AliasOptions aliasOptions, RestrictionOptions restrictionOptions)
-	{
-		FunctionAliases = aliasOptions.FunctionAliases;
-		CommandAliases = aliasOptions.CommandAliases;
-		CommandRestrictions = restrictionOptions.CommandRestrictions;
-		FunctionRestrictions = restrictionOptions.FunctionRestrictions;
-	}
 }

@@ -54,9 +54,8 @@ public static class RegistryInventory
 	/// aliases. A name-coverage check that skips the aliases passes while <c>u()</c> is undocumented.
 	/// </summary>
 	/// <remarks>
-	/// Deliberately the shipped defaults rather than the live <see cref="Configurable.FunctionAliases"/>,
-	/// which any host overwrites from the database at startup. A parity test that reads the live table
-	/// answers differently depending on which fixture booted first — and a game is free to configure
+	/// Deliberately the shipped defaults rather than the aliases an engine is configured with, which
+	/// differ from one game (and one test host) to the next — and a game is free to configure
 	/// aliases the shipped help says nothing about, which is not a defect. What has to agree is the
 	/// help this repository ships and the aliases this repository ships.
 	/// </remarks>

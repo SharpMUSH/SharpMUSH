@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
@@ -18,7 +17,7 @@ public class EngineReadinessTests
 		var registry = new NatsConsumerRegistry();
 		registry.Registrations.Add(new(typeof(TelnetInputMessage), "input", "input", (_, _, _) => Task.CompletedTask));
 		using var handler = new StartupHandler(NullLogger<StartupHandler>.Instance,
-			Substitute.For<IExpandedObjectDataService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(),
+			Substitute.For<IExpandedObjectDataService>(),
 			Substitute.For<IWikiService>(), bus, registry);
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 		var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -40,7 +39,7 @@ public class EngineReadinessTests
 		var registry = new NatsConsumerRegistry();
 		registry.Registrations.Add(new(typeof(TelnetInputMessage), "input", "input", (_, _, _) => Task.CompletedTask));
 		using var handler = new StartupHandler(NullLogger<StartupHandler>.Instance,
-			Substitute.For<IExpandedObjectDataService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(),
+			Substitute.For<IExpandedObjectDataService>(),
 			Substitute.For<IWikiService>(), bus, registry);
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 		await handler.StartedAsync(timeout.Token).WaitAsync(timeout.Token);
@@ -65,7 +64,7 @@ public class EngineReadinessTests
 				return Task.CompletedTask;
 			});
 		using var handler = new StartupHandler(NullLogger<StartupHandler>.Instance,
-			Substitute.For<IExpandedObjectDataService>(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>(),
+			Substitute.For<IExpandedObjectDataService>(),
 			Substitute.For<IWikiService>(), bus);
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(8));
 		await handler.StartedAsync(timeout.Token).WaitAsync(timeout.Token);

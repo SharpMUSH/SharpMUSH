@@ -179,11 +179,13 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		FunctionLibrary = functions.Get();
 
 		Builtins = Generated.CommandLibrary.Create(this);
+		// This engine's aliases: see the same loop in Functions.
+		var aliases = configuration.CurrentValue.Alias.CommandAliases;
 		foreach (var command in Builtins)
 		{
 			_commandLibrary.Add(command.Key, (command.Value, true));
 
-			foreach (var alias in Configurable.CommandAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
+			foreach (var alias in aliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
 			{
 				_commandLibrary.Add(alias, (command.Value, true));
 			}
