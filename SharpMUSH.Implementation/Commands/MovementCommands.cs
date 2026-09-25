@@ -27,7 +27,7 @@ public partial class Commands
 	/// hand it. <c>tel()</c> assembles the same bundle out of <c>Functions</c>'s own members.
 	/// </summary>
 	private TeleportServices TeleportServices => new(Mediator, NotifyService, LocateService, AttributeService,
-		PermissionService, LockService, MoveService, DidItService);
+		PermissionService, LockService, MoveService, DidItService, CommunicationService, Configuration);
 
 	private const string AttrFollowing = "FOLLOWING";
 
@@ -618,63 +618,9 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		// move.c:402-404: !Mobile, no home, a home the mover is carrying, and being its own home are
-		// one refusal — "Bad destination.".
-		if (!executor.IsPlayer && !executor.IsThing)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BadDestination), executor);
-			return CallState.Empty;
-		}
-
-		// Guarded above: only players and things reach here, and both always have a home.
-		if (await executor.MinusRoom().Home() is not AnySharpContainer homeLocation)
-		{
-			throw new InvalidOperationException("Players and things always have a home.");
-		}
-
-		var homeObj = homeLocation.Object();
-
-		if (homeObj.DBRef.Number < 0
-				|| homeObj.DBRef.Equals(executor.Object().DBRef)
-				|| await MoveService.WouldCreateLoop(executor.AsContent, homeLocation))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BadDestination), executor);
-			return CallState.Empty;
-		}
-
-		var currentLocation = await executor.Where();
-
-		// move.c:407-412: neither the mover nor the room it stands in may be Dark for the room to be
-		// told.
-		if (!await executor.IsDark() && !await currentLocation.WithExitOption().IsDark())
-		{
-			await CommunicationService.SendToRoomAsync(
-				executor,
-				currentLocation,
-				_ => MarkupText.Plain(string.Format(ErrorMessages.Notifications.GoesHomeFormat, executor.Object().Name)),
-				INotifyService.NotificationType.Emit,
-				excludeObjects: [executor],
-				interact: IPermissionService.InteractType.See);
-		}
-
-		// PennMUSH sends all three (move.c:415-417); that is not a transcription slip.
-		for (var i = 0; i < 3; i++)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NoPlaceLikeHome), executor);
-		}
-
-		// move.c:418. safe_tel steals the possessions the mover does not control, and the automatic
-		// look it reaches through enter_room is the only one the command needs.
-		var moveResult = await MoveService.SafeTel(parser, executor.AsContent, homeLocation,
-			noMoveMsgs: false, executor.Object().DBRef, "home");
-
-		if (moveResult is Error<string> error)
-		{
-			await NotifyService.Notify(executor, error.Value, executor);
-			return CallState.Empty;
-		}
-
-		return new CallState(homeObj.DBRef.ToString());
+		return await TeleportHelpers.SendHomeAsync(parser, TeleportServices, executor) is { } home
+			? new CallState(home.ToString())
+			: CallState.Empty;
 	}
 
 	[SharpCommand(Name = "FOLLOW", Switches = [], Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 0,
