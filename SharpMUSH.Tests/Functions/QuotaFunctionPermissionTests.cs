@@ -50,6 +50,9 @@ public class QuotaFunctionPermissionTests
 	/// <summary>
 	/// The refusal is carried by the return value, so the function does not also notify — Penn's
 	/// "You can't see someone else's quota!" would land once per call from inside an <c>iter()</c>.
+	/// <para>A function notifies its executor as the executor or with no sender. The mortal stands in
+	/// the shared starting room, so a parallel test's player leaving it is heard as "&lt;name&gt; has
+	/// left." from that player; only deliveries this call could have made are counted.</para>
 	/// </summary>
 	[Test]
 	public async Task TheRefusalIsTheReturnValueNotANotification()
@@ -57,10 +60,13 @@ public class QuotaFunctionPermissionTests
 		var mortal = await Mortal("QuotaFnTold");
 		var target = await Mortal("QuotaFnToldSubject");
 
-		var before = Factory.Notifications.CountFor(mortal.DbRef);
+		var before = Factory.Notifications.DeliveryCountFor(mortal.DbRef);
 		await EvalAs(mortal.DbRef, $"quota({target.Name})");
 
-		await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before)).IsEmpty();
+		var fromTheCall = Factory.Notifications.DeliveriesFor(mortal.DbRef).Skip(before)
+			.Where(delivery => delivery.Sender is not { } sender || sender.Number == mortal.DbRef.Number)
+			.Select(delivery => delivery.Message);
+		await Assert.That(fromTheCall).IsEmpty();
 	}
 
 	[Test]
