@@ -293,7 +293,8 @@ public class PennMUSHDbrefPreservationTests
 
 	/// <summary>
 	/// A lock naming a relocated object follows it to its new number, so <c>=#2</c> still gates on the
-	/// thing that was #2 and not on the Master Room. Attribute text is softcode and stays as written,
+	/// thing that was #2 and not on the Master Room; a number in an attribute lock's value, even after a space, is a
+	/// literal and is kept. Attribute text is softcode and stays as written,
 	/// but the import names each attribute that mentions the old number.
 	/// </summary>
 	[Test]
@@ -304,11 +305,19 @@ public class PennMUSHDbrefPreservationTests
 		var result = await world.Converter.ConvertDatabaseAsync(Dump(
 			new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
 			new PennMUSHObject { DBRef = 1, Name = "One", Type = PennMUSHObjectType.Player },
-			new PennMUSHObject { DBRef = 2, Name = "Box", Type = PennMUSHObjectType.Thing },
+			new PennMUSHObject
+			{
+				DBRef = 2, Name = "Box", Type = PennMUSHObjectType.Thing,
+				Attributes = [new PennMUSHAttribute { Name = "SELF", Value = "@pemit #2=hi" }]
+			},
 			new PennMUSHObject
 			{
 				DBRef = 10, Name = "Ten", Type = PennMUSHObjectType.Thing,
-				Locks = new() { ["Basic"] = "=#2|#1", ["Use"] = "@#2/Basic", ["Enter"] = "COUNT:#2" },
+				Locks = new()
+				{
+					["Basic"] = "=#2|#1", ["Use"] = "@#2/Basic", ["Enter"] = "COUNT:#2",
+					["Page"] = "TAG:foo #2|!(#2 & $#2)"
+				},
 				Attributes = [new PennMUSHAttribute { Name = "FOO", Value = "[name(#2)] #20 ##2" }]
 			}));
 
@@ -317,12 +326,13 @@ public class PennMUSHDbrefPreservationTests
 		await Assert.That(ten.Object().Locks["Basic"].LockString).IsEqualTo("=#11|#1");
 		await Assert.That(ten.Object().Locks["Use"].LockString).IsEqualTo("@#11/Basic");
 		await Assert.That(ten.Object().Locks["Enter"].LockString).IsEqualTo("COUNT:#2");
+		await Assert.That(ten.Object().Locks["Page"].LockString).IsEqualTo("TAG:foo #2|!(#11 & $#11)");
 		await Assert.That(result.Warnings.Any(w => w.Contains("#10 Basic lock") && w.Contains("'=#2|#1' became '=#11|#1'"))).IsTrue();
 		await Assert.That(result.Warnings.Any(w => w.Contains("#10 Enter lock"))).IsFalse();
 
 		await Assert.That(await AttributeAsync(world, 10, "FOO")).IsEqualTo("[name(#2)] #20 ##2");
-		await Assert.That(result.Warnings.Any(w => w.StartsWith("1 attribute(s) mention #2, which was imported as #11")
-			&& w.EndsWith(": #10/FOO"))).IsTrue();
+		await Assert.That(result.Warnings.Any(w => w.StartsWith("2 attribute(s) mention #2, which was imported as #11")
+			&& w.EndsWith(": #11/SELF, #10/FOO"))).IsTrue();
 	}
 
 	/// <summary>
