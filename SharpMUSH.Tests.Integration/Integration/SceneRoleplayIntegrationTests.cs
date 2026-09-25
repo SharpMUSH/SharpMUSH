@@ -730,7 +730,7 @@ public class SceneRoleplayIntegrationTests
 		await RunAndCollectAs(91L, $"+scene/create SenderTest_{Tag}");
 		await RunAndCollectAs(91L, "+scene/start");
 
-		// SAY — Eve has no FORMAT`SAY, so the built-in default literal is used for all recipients.
+		// SAY — Eve has no FORMAT`SAY, so the built-in default literals are used ("You say…" / "Name says…").
 		var sayNotes = await RunAndCollectNotificationsAs(91L, "say I am the speaker.");
 		var sayHeard = sayNotes.Where(n => n.Message.Contains("I am the speaker.")).ToList();
 		await Assert.That(sayHeard).IsNotEmpty().Because("the say must be broadcast to the room");
@@ -778,10 +778,9 @@ public class SceneRoleplayIntegrationTests
 		await RunAndCollectAs(92L, "+scene/start");
 
 		// Fred sets a FORMAT`SAY that splits speaker (You) vs observer (Name) per recipient.
-		// %0 = message, %1 = the recipient's FULL objid (#N:creation via the @message ## token),
-		// %# = the speaker (short #N). Compare the dbref NUMBER (before the ':') so the speaker
-		// matches. Literal commas inside the format use chr(44) (raw `,`/`\,` is unreliable here).
-		await God1($"&FORMAT`SAY {fred}=if(strmatch(before(%1,:),%#),You say[chr(44)] \"%0\",[name(%#)] says[chr(44)] \"%0\")");
+		// %0 = message, %1 = the recipient's short #N (the @message ## token), %# = the speaker.
+		// Literal commas inside the format use chr(44) (raw `,`/`\,` is unreliable here).
+		await God1($"&FORMAT`SAY {fred}=if(strmatch(%1,%#),You say[chr(44)] \"%0\",[name(%#)] says[chr(44)] \"%0\")");
 
 		var sayNotes = await RunAndCollectNotificationsAs(92L, "say hi all");
 		var speakerLine = sayNotes.FirstOrDefault(n => n.Recipient == Num(fred) && n.Message.Contains("hi all"));
@@ -793,6 +792,46 @@ public class SceneRoleplayIntegrationTests
 			.Because("the speaker sees the first-person 'You say…' form");
 		await Assert.That(observerLine!.Message).Contains($"Fred_{Tag} says")
 			.Because("the observer sees the third-person 'Name says…' form");
+	}
+
+	/// <summary>
+	/// Without a FORMAT`SAY, the hooked say still matches PennMUSH's do_say (src/speech.c): the speaker
+	/// hears <c>You say, "…"</c> and everyone else in the room hears <c>Name says, "…"</c>, for both the
+	/// <c>say</c> command and the <c>"</c> shortcut. The say is still captured in the scene.
+	/// </summary>
+	[Test]
+	public async Task SceneCapture_SayWithoutFormat_SpeakerHearsYouSay()
+	{
+		await God1("@set #1=WIZARD");
+		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var packageObjects = await registry.GetPackageObjectsAsync("scene");
+		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
+
+		var digOut = (await God1($"@dig YouSayRoom_{Tag}")).Message!.ToPlainText().Trim();
+		var jane = await CreatePlayerAsync($"Jane_{Tag}", "pw_jane_123", 96L);
+		var kurt = await CreatePlayerAsync($"Kurt_{Tag}", "pw_kurt_123", 97L);
+		foreach (var p in new[] { jane, kurt }) await God1($"@tel {p}={digOut}");
+		await God1($"@tel {loggerDbref}={digOut}");
+
+		await RunAndCollectAs(96L, $"+scene/create YouSayTest_{Tag}");
+		await RunAndCollectAs(96L, "+scene/start");
+		var sceneId = await Eval($"get({jane}/MY.SID)");
+
+		foreach (var (command, text) in new[] { ("say hello there", "hello there"), ("\"quoted shortcut", "quoted shortcut") })
+		{
+			var notes = await RunAndCollectNotificationsAs(96L, command);
+			var speakerLines = notes.Where(n => n.Recipient == Num(jane) && n.Message.Contains(text)).Select(n => n.Message).ToList();
+			var observerLines = notes.Where(n => n.Recipient == Num(kurt) && n.Message.Contains(text)).Select(n => n.Message).ToList();
+
+			await Assert.That(speakerLines).IsEquivalentTo(new[] { $"You say, \"{text}\"" })
+				.Because($"PennMUSH do_say sends the speaker the first-person line only ({command})");
+			await Assert.That(observerLines).IsEquivalentTo(new[] { $"Jane_{Tag} says, \"{text}\"" })
+				.Because($"PennMUSH do_say sends everyone else the third-person line ({command})");
+		}
+
+		var contents = await Eval($"iter(sceneposes({sceneId}),scenepose({sceneId},##,content),,|)");
+		await Assert.That(contents).IsEqualTo($"Jane_{Tag} says, \"hello there\"|Jane_{Tag} says, \"quoted shortcut\"")
+			.Because("the scene still records both says in the third-person form");
 	}
 
 	/// <summary>

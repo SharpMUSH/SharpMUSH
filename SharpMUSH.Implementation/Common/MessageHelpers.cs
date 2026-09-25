@@ -216,9 +216,11 @@ public static class MessageHelpers
 			var value = kvp.Value.Message?.ToPlainText() ?? string.Empty;
 			if (value == RecipientReplacementToken)
 			{
+				// PennMUSH substitutes unparse_dbref(target) -- the short "#N", not the objid
+				// (src/notify.c) -- so a format can compare it against %#.
 				return new KeyValuePair<string, CallState>(
 					kvp.Key,
-					new CallState(MarkupText.Plain(recipient.Object().DBRef.ToString()!)));
+					new CallState(MarkupText.Plain($"#{recipient.Object().DBRef.Number}")));
 			}
 			return kvp;
 		}).ToDictionary();
