@@ -76,10 +76,11 @@ public class RealityLiveCommandDispatchTests
 			}
 			await policy.SaveObjectAsync(host.Object().Id!, ObjectReality.Default(host.Object().DBRef) with { Transmit = [visible ? "normal" : "ghost"] }, default);
 			await policy.SaveConfigurationAsync(new(1, enabled, ["normal", "ghost"]), default);
-			var output = new HttpResponseContext();
-			using (Get<IHttpOutputCapture>().BeginCapture((fallback ?? host).Object().Key, output))
-				await Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)).CommandListParse(MarkupText.Plain(word));
-			await Assert.That(output.Body.ToString().Contains(marker)).IsEqualTo(fallback is not null || !enabled || visible);
+			await Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)).CommandListParse(MarkupText.Plain(word));
+			// A match from an action list is its own queue entry (#1132), so its output arrives once the queue drains.
+			await Get<ITaskScheduler>().DrainImmediateQueueForTests();
+			await Assert.That(Factory.Notifications.For((fallback ?? host).Object().DBRef).Contains(marker))
+				.IsEqualTo(fallback is not null || !enabled || visible);
 		}
 		finally
 		{

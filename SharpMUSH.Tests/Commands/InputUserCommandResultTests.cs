@@ -90,12 +90,11 @@ public class InputUserCommandResultTests
 			await parser.CommandParse(player.Handle, connections, MarkupText.Plain("@input/start me/CALLBACK=Answer:,120"));
 			var session = sessions.GetCapturing(player.Handle)!;
 			await Assert.That(session).IsNotNull();
-			var output = new HttpResponseContext();
-			CallState? result;
-			using (Get<IHttpOutputCapture>().BeginCapture(host.Object().Key, output))
-				result = await sessions.DeliverAsync(parser, session, MarkupText.Plain("reply"));
-			TestDiagnostics.WriteLine($"{scope}/{mode}: errors={result?.HadErrors}, output={output.Body}, capture={sessions.GetCapturing(player.Handle)?.Id}");
-			await Assert.That(output.Body.ToString().Contains(marker)).IsEqualTo(scope != "unmatched");
+			var result = await sessions.DeliverAsync(parser, session, MarkupText.Plain("reply"));
+			// The callback is an action list, so the $-command it matches is its own queue entry (#1132).
+			await Get<ITaskScheduler>().DrainImmediateQueueForTests();
+			TestDiagnostics.WriteLine($"{scope}/{mode}: errors={result?.HadErrors}, capture={sessions.GetCapturing(player.Handle)?.Id}");
+			await Assert.That(Factory.Notifications.For(host.Object().DBRef).Contains(marker)).IsEqualTo(scope != "unmatched");
 			await Assert.That(result?.HadErrors).IsEqualTo(mode == "syntax");
 			await Assert.That(sessions.GetCapturing(player.Handle)?.Id).IsEqualTo(mode == "syntax" ? null : session.Id);
 		}

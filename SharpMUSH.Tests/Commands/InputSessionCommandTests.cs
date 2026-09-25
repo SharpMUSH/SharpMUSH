@@ -92,9 +92,9 @@ public class InputSessionCommandTests
 	[Arguments("throw", true)]
 	[Arguments("throw-list", true)]
 	[Arguments("literal", false)]
-	[Arguments("nested-syntax", true)]
-	[Arguments("nested-throw", true)]
-	[Arguments("nested-multiple", true)]
+	[Arguments("nested-syntax", false)]
+	[Arguments("nested-throw", false)]
+	[Arguments("nested-multiple", false)]
 	[Arguments("speech", true)]
 	[Arguments("ifelse-true", true)]
 	[Arguments("ifelse-false", true)]
@@ -194,7 +194,9 @@ public class InputSessionCommandTests
 			await Assert.That(session).IsNotNull();
 			var result = await Sessions.DeliverAsync(parser, session!, MarkupText.Plain("reply"));
 			await Assert.That(result).IsNotNull();
-			if (mode == "nested-throw" || mode == "nested-multiple") await Assert.That(invocations).IsEqualTo(mode == "nested-multiple" ? 2 : 1);
+			// The callback is an action list, so a $-command it matches is queued as its own entry (#1132):
+			// the body, and whatever fails in it, is not part of the callback.
+			if (mode.StartsWith("nested-", StringComparison.Ordinal)) await Assert.That(invocations).IsEqualTo(0);
 			if (mode is "ifelse-true" or "ifelse-false" or "skip" or "switch" or "select" or "force" or "break" or "assert" or "teach" or "teach-list" or "trigger" or "verb" or "include-invalid") await Assert.That(invocations).IsEqualTo(1);
 			if (mode is "dolist-multiple" or "map-multiple" or "include-multiple") await Assert.That(invocations).IsEqualTo(2);
 			await Assert.That(Sessions.GetCapturing(player.Handle) is null).IsEqualTo(failed);
