@@ -1,7 +1,6 @@
 """Replays scenarios against one target (PennMUSH or SharpMUSH) and records transcripts."""
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from typing import Optional
 

@@ -81,7 +81,7 @@ class Process:
                 try:
                     os.killpg(self.popen.pid, signal.SIGKILL)
                 except ProcessLookupError:
-                    pass
+                    pass  # the group exited between the timeout and the kill: already stopped
         self._fh.close()
 
 

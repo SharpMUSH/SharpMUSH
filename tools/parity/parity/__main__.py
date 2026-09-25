@@ -53,7 +53,14 @@ def main(argv=None) -> int:
 
     pennmush = find_pennmush(args.pennmush_dir)
     scn_dir = HERE / "scenarios"
-    wanted = {o.split("/")[0]: (o.split("/")[1] if "/" in o else None) for o in args.only}
+    # scenario -> the cases asked for, or None for the whole file
+    wanted: dict[str, set[str] | None] = {}
+    for o in args.only:
+        scn, _, case = o.partition("/")
+        if not case or (scn in wanted and wanted[scn] is None):
+            wanted[scn] = None
+        else:
+            wanted.setdefault(scn, set()).add(case)
     files = sorted(p for p in scn_dir.glob("*.scn") if not wanted or p.stem in wanted)
     if not files:
         raise SystemExit("no scenario files selected")
@@ -66,7 +73,7 @@ def main(argv=None) -> int:
     old_runs = sorted(Path(args.work).glob("run-*")) if Path(args.work).exists() else []
     for old in old_runs[:-2]:  # keep the last two runs' logs, drop the rest
         shutil.rmtree(old, ignore_errors=True)
-    work = Path(args.work) / time.strftime("run-%Y%m%d-%H%M%S")
+    work = Path(args.work) / (time.strftime("run-%Y%m%d-%H%M%S") + f"-{os.getpid()}")
     work.mkdir(parents=True)
     penn = servers.PennMush(pennmush, work)
     sharp = servers.SharpMush(REPO, work, HERE / ".cache", args.dotnet, build=not args.no_build)
@@ -104,7 +111,7 @@ def main(argv=None) -> int:
                                      site(penn.game / "txt"), site(REPO / "SharpMUSH.Server"), baseline)
         orphans = cmp.orphaned(baseline, allowlist, results)
         if any(wanted.values()):
-            results = [r for r in results if wanted.get(r.penn.scenario) in (None, r.penn.case)]
+            results = [r for r in results if wanted.get(r.penn.scenario) is None or r.penn.case in wanted[r.penn.scenario]]
             stale, fixed, orphans = [], [], []
 
         if args.write_baseline:

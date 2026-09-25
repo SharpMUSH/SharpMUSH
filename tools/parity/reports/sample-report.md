@@ -1,10 +1,10 @@
 # PennMUSH vs SharpMUSH parity report
 
-- Generated: 2026-09-25 04:27:45Z
-- SharpMUSH commit: beb9ab2be
+- Generated: 2026-09-25 04:31:42Z
+- SharpMUSH commit: 2d551cefd
 - PennMUSH commit: 80a1d5b
 - Scenarios: 00-login, 05-import, 10-player-commands, 20-admin-commands, 30-softcode
-- **Steps: 150 — 71 match, 1 known difference, 78 open gap (baseline), 0 UNEXPECTED DIFFERENCE, 0 error; 0 stale allowlist entries, 0 baseline entries now fixed, 0 orphaned entries**
+- **Steps: 150 — 72 match, 1 known difference, 77 open gap (baseline), 0 UNEXPECTED DIFFERENCE, 0 error; 0 stale allowlist entries, 0 baseline entries now fixed, 0 orphaned entries**
 
 | Scenario | Steps | Match | Known | Open gap | Unexpected | Error |
 |---|---:|---:|---:|---:|---:|---:|
@@ -12,9 +12,9 @@
 | 05-import | 15 | 5 | 1 | 9 | 0 | 0 |
 | 10-player-commands | 55 | 23 | 0 | 32 | 0 | 0 |
 | 20-admin-commands | 34 | 16 | 0 | 18 | 0 | 0 |
-| 30-softcode | 36 | 24 | 0 | 12 | 0 | 0 |
+| 30-softcode | 36 | 25 | 0 | 11 | 0 | 0 |
 
-## Differences (78; open gaps are tracked in baseline.json)
+## Differences (77; open gaps are tracked in baseline.json)
 
 ### `00-login/login.player#0` — open-gap
 
@@ -899,9 +899,12 @@
 ```diff
 --- PennMUSH
 +++ SharpMUSH
-@@ -1 +1 @@
--No such attribute.
-+No such attribute: TRIG
+@@ -1,3 +1,2 @@
+-Alice - Triggered.
+-Alice says, "triggered 1"
+-[alice] You say, "triggered 1"
++Wiz says, "triggered 1"
++[alice] Wiz says, "triggered 1"
 ```
 
 ### `20-admin-commands/admin.denied#0` — open-gap
@@ -1198,30 +1201,17 @@
 + [add(1,2)] #-1 FUNCTION (EVAL) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1
 ```
 
-### `30-softcode/sc.control#3` — open-gap
-
-- Repro: `tools/parity/run.sh --only 30-softcode/sc.control` — tools/parity/scenarios/30-softcode.scn:31, session `wiz`, command `think [u(#lambda/[add(%0,1)],5)]`
-
-```diff
---- PennMUSH
-+++ SharpMUSH
-@@ -1,2 +1,2 @@
- I can't see that here.
--#-1 INVALID OBJECT
-+#-1 NO MATCH
-```
-
 ### `30-softcode/sc.control#4` — open-gap
 
-- Repro: `tools/parity/run.sh --only 30-softcode/sc.control` — tools/parity/scenarios/30-softcode.scn:32, session `wiz`, command `think [ulocal(#lambda/[setq(0,inner)]%q0,x)]`
+- Repro: `tools/parity/run.sh --only 30-softcode/sc.control` — tools/parity/scenarios/30-softcode.scn:32, session `wiz`, command `think [setq(0,outer)][ulocal(#lambda/setq(0,inner)%%q0,x)] [r(0)]`
 
 ```diff
 --- PennMUSH
 +++ SharpMUSH
 @@ -1,2 +1 @@
 -I can't see that here.
--#-1 INVALID OBJECT
-+inner
+-#-1 INVALID OBJECT outer
++inner outer
 ```
 
 ### `30-softcode/sc.identity#1` — open-gap
@@ -1293,7 +1283,7 @@
 ## Coverage
 
 - commands: 30 of 176 PennMUSH commands exercised (17%). Full list in coverage.json.
-- functions: 100 of 527 PennMUSH functions exercised (18%). Full list in coverage.json.
+- functions: 101 of 527 PennMUSH functions exercised (19%). Full list in coverage.json.
 
 ## Normalization rules applied to both sides
 

@@ -269,12 +269,8 @@
    "command": "think [null(x)][s(%b)] [lit([add(1,2)])] [eval(add(1,2))]"
   },
   {
-   "key": "30-softcode/sc.control#3",
-   "command": "think [u(#lambda/[add(%0,1)],5)]"
-  },
-  {
    "key": "30-softcode/sc.control#4",
-   "command": "think [ulocal(#lambda/[setq(0,inner)]%q0,x)]"
+   "command": "think [setq(0,outer)][ulocal(#lambda/setq(0,inner)%%q0,x)] [r(0)]"
   },
   {
    "key": "30-softcode/sc.errors#0",

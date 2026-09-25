@@ -28,7 +28,7 @@ think [haspower(*Alice,GUEST)]
 
 ::case admin.force  @force and @trigger
 @force *Alice=say forced hello
-&TRIG Widget=say triggered
+&TRIG *Alice=say triggered %0
 @trigger *Alice/TRIG=1
 ::settle
 

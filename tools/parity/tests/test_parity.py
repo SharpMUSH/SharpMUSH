@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from parity import compare, scenario
 from parity.normalize import DbrefCanonicalizer, normalize
 from parity.runner import StepRecord
-from parity.session import strip_telnet
+from parity.session import split_telnet, strip_telnet
 
 
 class NormalizeTests(unittest.TestCase):
@@ -22,6 +22,16 @@ class NormalizeTests(unittest.TestCase):
 
     def test_other_text_is_untouched(self):
         self.assertEqual(normalize("a  b\tc"), "a  b\tc")
+
+    def test_a_sequence_split_across_reads_is_completed_by_the_next_read(self):
+        text, rest = split_telnet(b"ab\xff\xfb")
+        self.assertEqual((text, rest), (b"ab", b"\xff\xfb"))
+        self.assertEqual(split_telnet(rest + b"\xc9cd"), (b"cd", b""))
+
+    def test_an_escaped_iac_is_stripped_once(self):
+        # Stripped text must not be stripped again: 0xFF 0xFF is one data byte, not an IAC.
+        text, _ = split_telnet(b"x\xff\xff\xfby")
+        self.assertEqual(text, b"x\xff\xfby")
 
     def test_telnet_negotiation_is_stripped(self):
         self.assertEqual(strip_telnet(b"\xff\xfb\xc9hi\xff\xfa\x18\x00x\xff\xf0!\xff\xff"), b"hi!\xff")

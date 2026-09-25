@@ -7,7 +7,6 @@ belongs to the step (or to earlier queued work) and nothing later can be lost or
 """
 from __future__ import annotations
 
-import re
 import socket
 import time
 
@@ -18,8 +17,12 @@ class SessionError(RuntimeError):
     pass
 
 
-def strip_telnet(data: bytes) -> bytes:
-    """Remove telnet negotiation (IAC sequences) from raw bytes; keep everything else."""
+def split_telnet(data: bytes) -> tuple[bytes, bytes]:
+    """Remove telnet negotiation (IAC sequences) from raw bytes; keep everything else.
+
+    Returns (text, rest): `rest` is an IAC sequence cut off at the end of `data`, to be completed
+    by the next read. Stripped text is never stripped again, so an escaped 0xFF stays one byte.
+    """
     out = bytearray()
     i, n = 0, len(data)
     while i < n:
@@ -27,17 +30,28 @@ def strip_telnet(data: bytes) -> bytes:
         if b != IAC:
             out.append(b)
             i += 1
-        elif i + 1 < n and data[i + 1] == IAC:  # escaped 0xFF
+        elif i + 1 >= n:
+            return bytes(out), data[i:]
+        elif data[i + 1] == IAC:  # escaped 0xFF
             out.append(IAC)
             i += 2
-        elif i + 1 < n and data[i + 1] in (DO, DONT, WILL, WONT):
+        elif data[i + 1] in (DO, DONT, WILL, WONT):
+            if i + 2 >= n:
+                return bytes(out), data[i:]
             i += 3
-        elif i + 1 < n and data[i + 1] == SB:
+        elif data[i + 1] == SB:
             j = data.find(bytes([IAC, SE]), i + 2)
-            i = n if j < 0 else j + 2
+            if j < 0:
+                return bytes(out), data[i:]
+            i = j + 2
         else:
             i += 2
-    return bytes(out)
+    return bytes(out), b""
+
+
+def strip_telnet(data: bytes) -> bytes:
+    """`split_telnet` for a complete stream: an unfinished trailing sequence is dropped."""
+    return split_telnet(data)[0]
 
 
 class Session:
@@ -46,7 +60,8 @@ class Session:
         self._prefix = token_prefix
         self._timeout = timeout
         self._seq = 0
-        self._raw = b""
+        self._text = b""     # received so far, telnet negotiation removed
+        self._partial = b""  # an IAC sequence split across reads, still raw
         self._sock = socket.create_connection((host, port), timeout=timeout)
         self._sock.setblocking(True)
 
@@ -60,18 +75,15 @@ class Session:
     def _read_until(self, marker: bytes) -> bytes:
         deadline = time.monotonic() + self._timeout
         while True:
-            clean = strip_telnet(self._raw)
-            idx = clean.find(marker)
+            idx = self._text.find(marker)
             if idx >= 0:
-                end = idx + len(marker)
-                consumed = clean[:end]
-                # The remainder of the stream is kept raw-clean for the next read.
-                self._raw = clean[end:]
-                return consumed[:idx]
+                consumed = self._text[:idx]
+                self._text = self._text[idx + len(marker):]
+                return consumed
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise SessionError(f"session {self.name}: timed out waiting for {marker!r}; "
-                                   f"received so far: {clean[-300:]!r}")
+                                   f"received so far: {self._text[-300:]!r}")
             self._sock.settimeout(remaining)
             try:
                 chunk = self._sock.recv(65536)
@@ -79,7 +91,8 @@ class Session:
                 continue
             if not chunk:
                 raise SessionError(f"session {self.name}: connection closed while waiting for {marker!r}")
-            self._raw += chunk
+            text, self._partial = split_telnet(self._partial + chunk)
+            self._text += text
 
     def sync_start(self) -> str:
         """Queue the sentinel; pair with `sync_finish`. Sending to every session first lets
@@ -131,6 +144,6 @@ class Session:
                 except socket.timeout:
                     continue
         except OSError:
-            pass
+            pass  # the server already dropped the connection: nothing left to wait for
         finally:
             self._sock.close()

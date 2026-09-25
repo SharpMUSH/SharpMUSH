@@ -91,7 +91,7 @@ def _strip_site_text(text: str, site_texts: list[str]) -> str:
         t = normalize(t)
         if t:
             text = text.replace(t, "", 1)
-    return "\n".join(text.split("\n"))
+    return text
 
 
 def _render(rec: StepRecord, canon: DbrefCanonicalizer, site_texts: list[str]) -> str:

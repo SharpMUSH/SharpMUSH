@@ -9,7 +9,6 @@ from .session import Session
 from .world import GOD
 
 _FUNC = re.compile(r"(?<![A-Za-z0-9_])([A-Za-z_][A-Za-z0-9_]*)\(")
-_WORD = re.compile(r"^\s*([@+&]?[A-Za-z_][A-Za-z0-9_@+.\-]*)")
 _SWITCH = re.compile(r"^\s*([@+]?\w+)(?:/[\w/]+)?")
 
 
