@@ -49,14 +49,14 @@ public class ParenthesisGroupTests
 		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
 
 	/// <summary>
-	/// PennMUSH answers <c>6</c> here, because a comma in the final argument of a function that takes
+	/// PennMUSH answers <c>X,(A)B</c> here, because a comma in the final argument of a function that takes
 	/// the rest of the line is kept (<c>PT_NOT_COMMA</c>). That is a separate rule; what this pins is
 	/// the split, which no longer leaves <c>b)</c> behind.
 	/// </summary>
 	[Test]
 	public async Task GroupEndsWhereItsParenthesisCloses()
-		=> await Assert.That(await Evaluate("[strlen(x,(a)b)]"))
-			.IsEqualTo("#-1 FUNCTION (STRLEN) EXPECTS AT MOST 1 ARGUMENTS BUT GOT 2");
+		=> await Assert.That(await Evaluate("[ucstr(x,(a)b)]"))
+			.IsEqualTo("#-1 FUNCTION (UCSTR) EXPECTS AT MOST 1 ARGUMENTS BUT GOT 2");
 
 	[Test]
 	[Arguments("[cat(x,(a,b)c)]", "x (a,b)c")]

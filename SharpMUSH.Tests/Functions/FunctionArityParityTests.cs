@@ -69,6 +69,10 @@ public class FunctionArityParityTests : ServerTestBase
 		// <status> argument works in both. SharpMUSH declares the pair alike.
 		["lwhoid"] = "accepts the <status> argument LWHO takes, which fun_lwho honours either way",
 
+		// Opt-out of PennMUSH's one-per-control-character count, measuring tabs and newlines as the
+		// zero columns they occupy (#1256). Omitted, strlen() answers as PennMUSH does.
+		["strlen"] = "trailing <count controls> argument; a false value counts control characters as zero",
+
 		// Tracked gaps, not decisions — SharpMUSH is narrower than PennMUSH here and the fix is
 		// implementation work rather than a number in the attribute. See #974.
 		["pcreate"] = "GAP (#974): PennMUSH takes an optional third <dbref> to reuse",
