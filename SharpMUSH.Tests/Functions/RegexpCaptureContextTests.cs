@@ -74,8 +74,9 @@ public class RegexpCaptureContextTests
 	[Arguments("[reswitch(abc,a(b)c,[reswitch(xyz,x(y)z,$1)]$1)]", "yb")]
 	// A nested reswitch that falls to its default still owns the innermost context, which is empty.
 	[Arguments("[reswitch(abc,a(b)c,[reswitch(xyz,q,no,<$1>)])]", "<>")]
-	// Without any context the default sees a literal '$1'.
-	[Arguments("[reswitch(abc,q,no,$1)]", "$1")]
+	// The regexp context exists before matching (fun_reswitch, src/funmisc.c:1036), so a default branch
+	// sees it empty: '$1' is empty there, not literal.
+	[Arguments("[reswitch(abc,q,no,$1)]", "")]
 	// reswitchall rebinds the context for each match.
 	[Arguments("[reswitchall(abc,a(b),$1,b(c),$1)]", "bc")]
 	public async Task ContextsNest(string code, string expected)
@@ -119,11 +120,12 @@ public class RegexpCaptureContextTests
 	[Arguments("[switch(foo,f*,[registers(,regexp)])]", "0")] // Penn
 	[Arguments("[setq(alpha,1)][switch(foo,f*,registers())]", "ALPHA 0 0")] // Penn
 	[Arguments("[switch(foo,foo,registers(,regexp))]", "")] // Penn
-	[Arguments("[switch(foo,foo,$0)]", "$0")]
+	[Arguments("[switch(foo,foo,$0)]", "")] // fun_switch localizes the capture context for every non-case call (funmisc.c:30-34)
 	[Arguments("[switch(abc,a?c,$0)]", "b")]
 	[Arguments("[switch(a-b-c,*-*-*,$2$1$0)]", "cba")]
 	[Arguments("[switch(ABC,a*,$0)]", "BC")]
-	[Arguments("[switch(foo,x*,no,$0)]", "$0")]
+	[Arguments("[switch(foo,x*,no,$0)]", "")]
+	[Arguments("[case(foo,foo,$0)]", "$0")] // case() opens no capture context
 	[Arguments("[switchall(foo,f*,$0,*o,$0)]", "oofo")]
 	public async Task SwitchRecordsWildcardCaptures(string code, string expected)
 		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);

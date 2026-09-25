@@ -8,14 +8,17 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using DotNext.Threading;
 using System.Diagnostics;
+using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion;
 
 /// <summary>
 /// Converts PennMUSH database format to SharpMUSH objects.
 /// </summary>
-public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
+public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 {
 	private readonly PennMUSHDatabaseParser _parser;
 	private readonly ILogger<PennMUSHDatabaseConverter> _logger;
@@ -56,6 +59,54 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
 	}
 
+	public Task<ConversionResult> ConvertDatabaseAsync(
+		string databaseFilePath,
+		string? mailDatabaseFilePath,
+		IProgress<ConversionProgress> progress,
+		CancellationToken cancellationToken = default)
+		=> ConvertDatabaseAsync(databaseFilePath, mailDatabaseFilePath, null, progress, cancellationToken);
+
+	public async Task<ConversionResult> ConvertDatabaseAsync(
+		string databaseFilePath,
+		string? mailDatabaseFilePath,
+		string? chatDatabaseFilePath,
+		IProgress<ConversionProgress> progress,
+		CancellationToken cancellationToken = default)
+	{
+		_logger.LogInformation("Starting conversion of PennMUSH database from: {FilePath}", databaseFilePath);
+
+		var pennDatabase = await _parser.ParseFileAsync(databaseFilePath, cancellationToken);
+		if (!string.IsNullOrEmpty(mailDatabaseFilePath))
+		{
+			try
+			{
+				pennDatabase.Mail = await _parser.ParseMailFileAsync(mailDatabaseFilePath, cancellationToken);
+			}
+			catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException)
+			{
+				// The maildb is optional and holds only mail: a bad one costs the aliases, not the world.
+				_logger.LogWarning(ex, "Could not read the PennMUSH mail database: {FilePath}", mailDatabaseFilePath);
+				pennDatabase.Mail = new PennMUSHMailDatabase { ReadError = ex.Message };
+			}
+		}
+
+		if (!string.IsNullOrEmpty(chatDatabaseFilePath))
+		{
+			try
+			{
+				pennDatabase.Chat = await _parser.ParseChatFileAsync(chatDatabaseFilePath, cancellationToken);
+			}
+			catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException)
+			{
+				// Like the maildb: a bad chatdb costs the channels, not the world.
+				_logger.LogWarning(ex, "Could not read the PennMUSH chat database: {FilePath}", chatDatabaseFilePath);
+				pennDatabase.Chat = new PennMUSHChatDatabase { ReadError = ex.Message };
+			}
+		}
+
+		return await ConvertDatabaseAsync(pennDatabase, progress, cancellationToken);
+	}
+
 	public async Task<ConversionResult> ConvertDatabaseAsync(PennMUSHDatabase pennDatabase, CancellationToken cancellationToken = default)
 	{
 		return await ConvertDatabaseAsync(pennDatabase, null, cancellationToken);
@@ -82,6 +133,10 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var exitsConverted = 0;
 		var attributesConverted = 0;
 		var locksConverted = 0;
+		var mailAliasesConverted = 0;
+		var mailMessagesConverted = 0;
+		var channelsConverted = 0;
+		var channelMembersConverted = 0;
 
 		_logger.LogInformation("Converting {Count} PennMUSH objects to SharpMUSH format", totalObjects);
 
@@ -134,9 +189,19 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Attributes created", 0.75);
 
 			locksConverted = await CreateLocksAsync(pennDatabase, context, cancellationToken);
-			ReportProgress("Locks created", 1.0);
+			ReportProgress("Locks created", 0.90);
 
-			await EnableParenGroupsAsync(warnings, cancellationToken);
+			mailAliasesConverted = await ImportMailAliasesAsync(pennDatabase, context, cancellationToken);
+			mailMessagesConverted = await ImportMailMessagesAsync(pennDatabase, context, cancellationToken);
+			ReportUnreadMail(pennDatabase.Mail, context);
+			ReportProgress("Mail imported", 0.95);
+
+			(channelsConverted, channelMembersConverted) = await ImportChannelsAsync(pennDatabase, context, cancellationToken);
+			ReportProgress("Channels imported", 0.97);
+
+			await EnableParenGroupsAsync(context, cancellationToken);
+			// Last: the admin page takes 100% as the end of the import and stops polling.
+			ReportProgress("Complete", 1.0);
 
 			stopwatch.Stop();
 
@@ -148,6 +213,10 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				ExitsConverted = exitsConverted,
 				AttributesConverted = attributesConverted,
 				LocksConverted = locksConverted,
+				MailAliasesConverted = mailAliasesConverted,
+				MailMessagesConverted = mailMessagesConverted,
+				ChannelsConverted = channelsConverted,
+				ChannelMembersConverted = channelMembersConverted,
 				Errors = errors,
 				Warnings = warnings,
 				Duration = stopwatch.Elapsed
@@ -178,15 +247,20 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// It runs after the whole world is written, so a failure here is a warning: the conversion stands,
 	/// and the option is left for the administrator to set.
 	/// </remarks>
-	private async ValueTask EnableParenGroupsAsync(List<string> warnings, CancellationToken cancellationToken)
+	private async ValueTask EnableParenGroupsAsync(PennMUSHConversionContext context, CancellationToken cancellationToken)
 	{
+		var warnings = context.Warnings;
 		try
 		{
 			var options = _options.CurrentValue;
 			if (options.Compatibility.ParenGroups) return;
 
 			await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
-				options with { Compatibility = options.Compatibility with { ParenGroups = true } }), cancellationToken);
+				options with
+				{
+					Compatibility = options.Compatibility with { ParenGroups = true },
+					Database = context.WrittenDatabaseOptions ?? options.Database
+				}), cancellationToken);
 			_configurationReload?.SignalChange();
 			_logger.LogInformation("Turned on paren_groups for the imported PennMUSH softcode");
 		}
@@ -196,6 +270,126 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			warnings.Add($"paren_groups could not be turned on ({ex.Message}); imported softcode that writes literal " +
 				"parentheses unescaped needs it: set paren_groups to yes in the configuration and reload it.");
 		}
+	}
+
+	/// <summary>
+	/// SharpMUSH's own system objects past the three PennMUSH also has, as migration seeds them. None
+	/// of them exists in PennMUSH, whose dumps put players and objects at these numbers.
+	/// </summary>
+	private static readonly (int Number, string Name, string Type)[] SeededSystemObjects =
+	[
+		(3, "Ancestor Room", "ROOM"), (4, "Ancestor Player", "THING"), (5, "Ancestor Exit", "THING"),
+		(6, "Ancestor Thing", "THING"), (7, "Package Manager", "PLAYER"), (8, "HTTP Handler", "THING"),
+		(9, "Event Handler", "THING")
+	];
+
+	/// <summary>
+	/// Clears #3-#9 so every source object keeps its own dbref: the imported world is PennMUSH's, and
+	/// PennMUSH has no ancestors, package manager or HTTP/event handlers (its defaults leave the
+	/// ancestor options unset). The options that named the removed objects are unset with them, so
+	/// nothing points at a number that now belongs to an imported object. An administrator who wants
+	/// those extras creates them again and sets the options. The dbref counter is then lowered to one
+	/// past #2, so it ends one past the highest imported object rather than at the seeds' 10.
+	/// </summary>
+	/// <remarks>
+	/// Only a world still as migration seeded it is cleared: #0-#9 all present and all carrying the one
+	/// creation time migration stamped them with, and #3-#9 still the seeds' names and types. Nothing a
+	/// user does changes a creation time, and an import stamps #0-#2 and everything it creates with the
+	/// source's times, so a second import finds no seeds and deletes nothing; its source objects that
+	/// need #3-#9 are reported as numbers already taken.
+	/// </remarks>
+	private async Task RemoveSeededSystemObjectsAsync(PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		if (!await IsSeededWorldAsync(cancellationToken))
+		{
+			return;
+		}
+
+		var removed = new HashSet<uint>();
+		foreach (var (number, name, _) in SeededSystemObjects)
+		{
+			if (!await _mediator.Send(new DeleteObjectCommand(new DBRef(number)), cancellationToken))
+			{
+				context.Warnings.Add($"SharpMUSH's seeded {name} (#{number}) could not be removed before the import.");
+				continue;
+			}
+
+			removed.Add((uint)number);
+			context.Warnings.Add($"Removed SharpMUSH's seeded {name} (#{number}) so the imported object numbers are kept; " +
+				"PennMUSH has no such object.");
+		}
+
+		await _mediator.Send(new ReleaseTrailingDbrefsCommand(), cancellationToken);
+
+		if (removed.Count == 0) return;
+
+		uint? Unset(uint? value) => value is { } v && removed.Contains(v) ? null : value;
+		try
+		{
+			var options = _options.CurrentValue;
+			var database = options.Database;
+			var cleared = database with
+			{
+				AncestorRoom = Unset(database.AncestorRoom),
+				AncestorExit = Unset(database.AncestorExit),
+				AncestorThing = Unset(database.AncestorThing),
+				AncestorPlayer = Unset(database.AncestorPlayer),
+				PackageManager = Unset(database.PackageManager),
+				HttpHandler = Unset(database.HttpHandler),
+				EventHandler = Unset(database.EventHandler)
+			};
+			if (cleared == database) return;
+
+			await _mediator.Send(new SetExpandedServerDataCommand(nameof(SharpMUSHOptions),
+				options with { Database = cleared }), cancellationToken);
+			context.WrittenDatabaseOptions = cleared;
+			_configurationReload?.SignalChange();
+			context.Warnings.Add("Unset the ancestor, package_manager, http_handler and event_handler options that named " +
+				"the removed objects.");
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException)
+		{
+			_logger.LogWarning(ex, "Could not unset the options that named SharpMUSH's seeded system objects");
+			context.Warnings.Add($"The ancestor, package_manager, http_handler and event_handler options could not be " +
+				$"unset ({ex.Message}); they still name #3-#9, which now hold imported objects. Unset them in the configuration.");
+		}
+	}
+
+	/// <summary>
+	/// Whether #0-#9 are still the objects migration seeded: all ten present with one shared creation
+	/// time, and #3-#9 still named and typed as seeded.
+	/// </summary>
+	private async Task<bool> IsSeededWorldAsync(CancellationToken cancellationToken)
+	{
+		long? seededAt = null;
+		for (var number = 0; number <= 9; number++)
+		{
+			if (await _mediator.Send(new GetObjectNodeQuery(new DBRef(number)), cancellationToken) is not AnySharpObject node)
+			{
+				return false;
+			}
+
+			var obj = node.Object();
+			seededAt ??= obj.CreationTime;
+			if (obj.CreationTime != seededAt)
+			{
+				return false;
+			}
+
+			if (number < 3)
+			{
+				continue;
+			}
+
+			var (_, name, type) = SeededSystemObjects[number - 3];
+			if (!obj.Name.Equals(name, StringComparison.Ordinal) || !obj.Type.Equals(type, StringComparison.Ordinal))
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/// <summary>
@@ -665,6 +859,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return (0, 0, 0, 0);
 		}
 
+		await RemoveSeededSystemObjectsAsync(context, cancellationToken);
+
 		// Migration seeds #0-#2 the way PennMUSH's create_minimal_db lays out every database: Room Zero,
 		// God (PennMUSH hardcodes GOD as #1) and the Master Room (MASTER_ROOM must be a room). A seeded
 		// object stands in for the source's only when both are the same type; a source object of any
@@ -701,7 +897,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				StoredVerbatim,
 				ApplyDefaultFlags: false,
 				godCreated,
-				godModified), cancellationToken);
+				godModified,
+				godPennObject.DBRef), cancellationToken);
 
 			dbrefMapping[1] = tempGodDbRef;
 			playersConverted++;
@@ -754,7 +951,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			var (room0Created, room0Modified) = PennTimestamps(room0Penn);
 			tempRoom0DbRef = await _mediator.Send(
-				new CreateRoomCommand(room0Penn.Name, godPlayer, ApplyDefaultFlags: false, room0Created, room0Modified),
+				new CreateRoomCommand(room0Penn.Name, godPlayer, ApplyDefaultFlags: false, room0Created, room0Modified,
+					room0Penn.DBRef),
 				cancellationToken);
 			dbrefMapping[0] = tempRoom0DbRef;
 			roomsConverted++;
@@ -790,7 +988,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		SharpRoom? room0 = null; // Cache the limbo room to avoid repeated lookups
 
-		foreach (var pennObj in pennDatabase.Objects)
+		// A stable sort: every source object in dump order, then the #0-#2 that cannot keep their number.
+		foreach (var pennObj in pennDatabase.Objects.OrderBy(o => o.DBRef <= 2))
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 
@@ -804,6 +1003,10 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				DBRef newDbRef;
 				var (created, modified) = PennTimestamps(pennObj);
+				// Only a source #0-#2 of another type than the seeded Room Zero, God or Master Room gets here,
+				// and those three stay: it takes the next free number instead, and the summary says so. These
+				// come last, so that number is past every source object's.
+				int? requested = pennObj.DBRef > 2 ? pennObj.DBRef : null;
 
 				switch (pennObj.Type)
 				{
@@ -819,7 +1022,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								StoredVerbatim,
 								ApplyDefaultFlags: false,
 								created,
-								modified), cancellationToken);
+								modified,
+								requested), cancellationToken);
 							playersConverted++;
 							break;
 						}
@@ -828,7 +1032,7 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						{
 							// Rooms are created with God as owner initially
 							newDbRef = await _mediator.Send(
-								new CreateRoomCommand(pennObj.Name, godPlayer, ApplyDefaultFlags: false, created, modified),
+								new CreateRoomCommand(pennObj.Name, godPlayer, ApplyDefaultFlags: false, created, modified, requested),
 								cancellationToken);
 							roomsConverted++;
 							break;
@@ -851,7 +1055,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								room0, // Home is Limbo for now
 								ApplyDefaultFlags: false,
 								created,
-								modified), cancellationToken);
+								modified,
+								requested), cancellationToken);
 							thingsConverted++;
 							break;
 						}
@@ -874,7 +1079,8 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 								godPlayer, // God owns it temporarily
 								ApplyDefaultFlags: false,
 								created,
-								modified), cancellationToken);
+								modified,
+								requested), cancellationToken);
 							exitsConverted++;
 							break;
 						}
@@ -885,6 +1091,11 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				}
 
 				dbrefMapping[pennObj.DBRef] = newDbRef;
+				if (requested is null)
+				{
+					warnings.Add($"#{pennObj.DBRef} ({pennObj.Name}) is a {pennObj.Type}, but SharpMUSH's #{pennObj.DBRef} " +
+						$"must stay a {(pennObj.DBRef == 1 ? "player" : "room")}; it was imported as #{newDbRef.Number}.");
+				}
 
 				_logger.LogDebug("Created object #{PennDBRef} -> {SharpDBRef}: {Name}",
 					pennObj.DBRef, newDbRef, pennObj.Name);
@@ -1048,6 +1259,509 @@ public class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		=> context.DbrefMapping.TryGetValue(pennDbref, out var dbref)
 			? await _mediator.Send(new GetObjectNodeQuery(dbref), cancellationToken)
 			: new None();
+
+	/// <summary>
+	/// The maildb's aliases, checked as <c>load_malias</c> checks them: an owner that is no imported player
+	/// passes to the probate judge (God when that is no player either), and a member that is no imported
+	/// player is dropped. Each change is a warning, so the summary says what did not come across as it was.
+	/// </summary>
+	private async Task<int> ImportMailAliasesAsync(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		var imported = 0;
+		foreach (var alias in pennDatabase.Mail.Aliases)
+		{
+			var owner = await MappedAsync(alias.Owner, context, cancellationToken) is AnySharpObject and SharpPlayer ownerPlayer
+				? ownerPlayer.Object.DBRef.Number
+				: await ProbateJudgeAsync(cancellationToken);
+			if (!context.DbrefMapping.TryGetValue(alias.Owner, out var mappedOwner) || mappedOwner.Number != owner)
+			{
+				context.Warnings.Add($"Mail alias +{alias.Name}: owner #{alias.Owner} is not an imported player; given to #{owner}");
+			}
+
+			var members = new List<int>();
+			var dropped = new List<int>();
+			foreach (var member in alias.Members)
+			{
+				if (await MappedAsync(member, context, cancellationToken) is AnySharpObject and SharpPlayer player)
+				{
+					members.Add(player.Object.DBRef.Number);
+				}
+				else
+				{
+					dropped.Add(member);
+				}
+			}
+
+			if (dropped.Count > 0)
+			{
+				context.Warnings.Add(
+					$"Mail alias +{alias.Name}: dropped member(s) that are not imported players ({string.Join(" ", dropped.Select(d => $"#{d}"))})");
+			}
+
+			var created = await _mediator.Send(new CreateMailAliasCommand(new SharpMailAlias(alias.Name, alias.Description,
+				owner, [.. members], (MailAliasPrivileges)alias.UsePrivileges, (MailAliasPrivileges)alias.SeePrivileges)),
+				cancellationToken);
+
+			switch (created)
+			{
+				case SharpMailAlias:
+					imported++;
+					break;
+				case Error<string> error:
+					context.Warnings.Add($"Mail alias +{alias.Name} not imported: {error.Value}");
+					break;
+			}
+		}
+
+		return imported;
+	}
+
+	/// <summary>
+	/// The maildb's messages, checked as <c>load_mail</c> and its <c>@mail/debug fix</c> check them: a message
+	/// to anything but an imported player is dropped, and one from a sender that was not imported is kept
+	/// as from #0. Each recipient's messages are written in file order, which is the order PennMUSH lists
+	/// them in. Folder 0 is <c>INBOX</c>; another folder takes the name the recipient's <c>MAILFOLDERS</c>
+	/// gave it, or its number when it has none.
+	/// </summary>
+	/// <remarks>
+	/// PennMUSH writes the time sent in the game's local time and reads it back in the local time of the
+	/// machine loading it; this does the same. A sender whose creation time differs from the one the
+	/// message recorded was destroyed and its dbref reused: PennMUSH shows such a message as from
+	/// <c>!Purged!</c>, SharpMUSH has no record of the original, so the message keeps the dbref and is reported.
+	/// </remarks>
+	private async Task<int> ImportMailMessagesAsync(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		var imported = 0;
+		var noRecipient = new SortedDictionary<int, int>();
+		var noSender = new SortedDictionary<int, int>();
+		var reusedSender = new SortedDictionary<int, int>();
+		var badTime = 0;
+		var folderNames = new Dictionary<int, Dictionary<int, string>>();
+		var pennObjects = new Dictionary<int, PennMUSHObject>();
+		foreach (var pennObject in pennDatabase.Objects)
+		{
+			pennObjects.TryAdd(pennObject.DBRef, pennObject);
+		}
+
+		foreach (var message in pennDatabase.Mail.Messages)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+
+			if (await MappedAsync(message.To, context, cancellationToken) is not (AnySharpObject and SharpPlayer recipient))
+			{
+				noRecipient[message.To] = noRecipient.GetValueOrDefault(message.To) + 1;
+				continue;
+			}
+
+			var sender = await MappedAsync(message.From, context, cancellationToken);
+			if (sender is not AnySharpObject)
+			{
+				noSender[message.From] = noSender.GetValueOrDefault(message.From) + 1;
+				sender = await MappedAsync(0, context, cancellationToken);
+				if (sender is not AnySharpObject)
+				{
+					sender = await _mediator.Send(new GetObjectNodeQuery(new DBRef(pennDatabase.GodPlayer)), cancellationToken);
+				}
+			}
+			else if (message.FromCreationTime != 0
+							 && pennObjects.GetValueOrDefault(message.From) is { } source
+							 && source.CreationTime != message.FromCreationTime)
+			{
+				reusedSender[message.From] = reusedSender.GetValueOrDefault(message.From) + 1;
+			}
+
+			if (sender is not AnySharpObject from)
+			{
+				context.Errors.Add($"Mail message to #{message.To} from #{message.From} not imported: neither #0 nor God was imported to send it");
+				continue;
+			}
+
+			if (!TryParsePennTime(message.Time, out var sent))
+			{
+				badTime++;
+				sent = DateTimeOffset.UtcNow;
+			}
+
+			if (!folderNames.TryGetValue(message.To, out var names))
+			{
+				folderNames[message.To] = names = MailFolderNames(pennObjects.GetValueOrDefault(message.To));
+			}
+
+			// No limit: load_mail keeps every message whatever the recipient's mail_limit.
+			await _mediator.Send(new SendMailCommand(from.Object(), recipient, new SharpMail
+			{
+				DateSent = sent,
+				Fresh = !message.IsRead,
+				Read = message.IsRead,
+				Tagged = message.IsTagged,
+				Urgent = message.IsUrgent,
+				Forwarded = message.IsForwarded,
+				Cleared = message.IsCleared,
+				Folder = message.Folder == 0 ? "INBOX" : names.GetValueOrDefault(message.Folder, $"{message.Folder}"),
+				Content = MarkupString.Ansi.AnsiEscapeParser.Parse(message.Body),
+				Subject = MarkupString.Ansi.AnsiEscapeParser.Parse(message.Subject),
+				From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(from.WithNoneOption()))
+			}), cancellationToken);
+			imported++;
+		}
+
+		if (noRecipient.Count > 0)
+		{
+			context.Warnings.Add($"{noRecipient.Values.Sum()} mail message(s) not imported: the recipient is not an imported player " +
+				$"({Tally(noRecipient)})");
+		}
+
+		if (noSender.Count > 0)
+		{
+			context.Warnings.Add($"{noSender.Values.Sum()} mail message(s) from a sender that was not imported are from #0, " +
+				$"as @mail/debug fix leaves them ({Tally(noSender)})");
+		}
+
+		if (reusedSender.Count > 0)
+		{
+			context.Warnings.Add($"{reusedSender.Values.Sum()} mail message(s) name a sender whose creation time differs from " +
+				$"the one the message recorded, so PennMUSH showed them as from !Purged!; they are imported as from that dbref " +
+				$"({Tally(reusedSender)})");
+		}
+
+		if (badTime > 0)
+		{
+			context.Warnings.Add($"{badTime} mail message(s) had a time sent that could not be read and are dated at the import, " +
+				"as load_mail dates them");
+		}
+
+		return imported;
+
+		static string Tally(SortedDictionary<int, int> counts)
+			=> string.Join(" ", counts.Select(c => $"#{c.Key}: {c.Value}"));
+	}
+
+	/// <summary>
+	/// A player's <c>MAILFOLDERS</c> attribute, <c>N:NAME:N</c> entries as <c>add_folder_name</c> writes
+	/// them, as folder number to name.
+	/// </summary>
+	private static Dictionary<int, string> MailFolderNames(PennMUSHObject? player)
+	{
+		var names = new Dictionary<int, string>();
+		var value = player?.Attributes.FirstOrDefault(a => a.Name.Equals("MAILFOLDERS", StringComparison.OrdinalIgnoreCase))?.Value;
+		foreach (var parts in (value ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(e => e.Split(':')))
+		{
+			if (parts.Length == 3 && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)
+					&& parts[1].Length > 0)
+			{
+				names[number] = parts[1];
+			}
+		}
+
+		return names;
+	}
+
+	/// <summary>
+	/// A time as <c>show_time</c> writes it (<c>asctime</c>'s <c>Thu Sep  4 12:01:45 2026</c>), read in the
+	/// local time zone as <c>do_convtime</c> and <c>mktime</c> read it.
+	/// </summary>
+	internal static bool TryParsePennTime(string text, out DateTimeOffset time)
+	{
+		var collapsed = string.Join(' ', text.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+		if (DateTime.TryParseExact(collapsed, ["ddd MMM d HH:mm:ss yyyy", "MMM d HH:mm:ss yyyy"],
+					CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var parsed))
+		{
+			time = new DateTimeOffset(parsed);
+			return true;
+		}
+
+		time = default;
+		return false;
+	}
+
+	/// <summary>Says what of the maildb could not be read, so the summary does not read as a full mail import.</summary>
+	private static void ReportUnreadMail(PennMUSHMailDatabase mail, PennMUSHConversionContext context)
+	{
+		if (mail.ReadError is not null)
+		{
+			context.Warnings.Add($"The maildb could not be read, so no mail aliases or messages were imported: {mail.ReadError}");
+			return;
+		}
+
+		if (mail.MessageCount is null)
+		{
+			context.Warnings.Add("The maildb's message count could not be read; its messages were not imported");
+		}
+		else if (mail.MessageReadError is not null)
+		{
+			context.Warnings.Add($"The maildb holds {mail.MessageCount} mail message(s) but only {mail.Messages.Count} could be read: " +
+				mail.MessageReadError);
+		}
+	}
+
+	/// <summary>
+	/// The <c>CHANNEL_*</c> bits (<c>hdrs/extchat.h</c>) and the privilege each is in SharpMUSH, named as
+	/// <c>ChannelHelper</c>'s table names them, since the permission checks compare those names.
+	/// </summary>
+	private static readonly (int Bit, string Name)[] ChannelPrivilegeBits =
+	[
+		(0x1, "Player"),
+		(0x2, "Object"),
+		(0x4, "Disabled"),
+		(0x8, "Quiet"),
+		(0x10, "Admin"),
+		(0x20, "Wizard"),
+		(0x40, "Hide_Ok"),
+		(0x80, "Open"),
+		(0x100, "NoTitles"),
+		(0x200, "NoNames"),
+		(0x400, "NoCemit"),
+		(0x800, "Interact")
+	];
+
+	/// <summary>The <c>CU_*</c> bits (<c>hdrs/extchat.h</c>).</summary>
+	private const int ChannelUserQuiet = 0x1, ChannelUserHide = 0x2, ChannelUserCombine = 0x8;
+
+	/// <summary>What <c>unparse_boolexp</c> writes for a channel lock that is not set.</summary>
+	private const string UnlockedKey = "*UNLOCKED*";
+
+	/// <summary>
+	/// The chatdb's channels, read as <c>load_labeled_channel</c> reads them: the creator becomes the
+	/// owner (the probate judge when it is no imported player), the <c>CHANNEL_*</c> bits become
+	/// privileges, the five locks keep their keys, and the members keep their dbrefs, flags and titles.
+	/// <c>load_labeled_chanusers</c> drops a member that is not a player on a player channel or a thing
+	/// on an object channel, and clears <c>CU_GAG</c> on any load that is not a reboot; so does this.
+	/// Everything that did not come across as PennMUSH had it is a warning.
+	/// </summary>
+	private async Task<(int Channels, int Members)> ImportChannelsAsync(PennMUSHDatabase pennDatabase,
+		PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		var chat = pennDatabase.Chat;
+		if (chat.ReadError is not null)
+		{
+			context.Warnings.Add($"The chatdb could not be read, so no channels were imported: {chat.ReadError}");
+			return (0, 0);
+		}
+
+		if (chat.Channels.Count > 0 && chat.SavedTime is { } chatSaved
+			&& pennDatabase.Configuration.TryGetValue("savedtime", out var dumpSaved) && chatSaved != dumpSaved)
+		{
+			// load_chatdb's own warning: the two files are not one save of the game.
+			context.Warnings.Add($"The chatdb was saved at {chatSaved} and the database at {dumpSaved}; " +
+				"channel members may name objects as they were at a different time");
+		}
+
+		var channels = 0;
+		var members = 0;
+		var costs = new List<string>();
+		foreach (var pennChannel in chat.Channels)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			var label = $"Channel {pennChannel.Name}";
+
+			SharpPlayer owner;
+			if (await MappedAsync(pennChannel.Creator, context, cancellationToken) is AnySharpObject and SharpPlayer creator)
+			{
+				owner = creator;
+			}
+			else if (await _mediator.Send(new GetObjectNodeQuery(new DBRef(await ProbateJudgeAsync(cancellationToken))),
+					cancellationToken) is AnySharpObject and SharpPlayer judge)
+			{
+				owner = judge;
+				context.Warnings.Add(
+					$"{label}: owner #{pennChannel.Creator} is not an imported player; given to #{judge.Object.DBRef.Number}");
+			}
+			else
+			{
+				context.Warnings.Add($"{label} not imported: owner #{pennChannel.Creator} is not an imported player, " +
+					"and neither the probate judge nor God is one to give it to");
+				continue;
+			}
+
+			var privileges = ChannelPrivilegeBits.Where(p => (pennChannel.Flags & p.Bit) != 0).Select(p => p.Name).ToArray();
+			var unknownBits = pennChannel.Flags & ~ChannelPrivilegeBits.Sum(p => p.Bit);
+			if (unknownBits != 0)
+			{
+				context.Warnings.Add($"{label}: unknown channel flag bits 0x{unknownBits:x} were dropped");
+			}
+
+			var name = MarkupString.Ansi.AnsiEscapeParser.Parse(pennChannel.Name);
+			var creation = await _mediator.Send(new CreateChannelCommand(name, privileges, owner), cancellationToken);
+			if (!creation.IsSuccess)
+			{
+				context.Warnings.Add(creation.Value is Error<string> error
+					? $"{label} not imported: {error.Value}"
+					: $"{label} not imported: a channel of that name already exists");
+				continue;
+			}
+
+			var channel = await _mediator.Send(new GetChannelQuery(name.ToPlainText()), cancellationToken);
+			if (channel is null)
+			{
+				context.Warnings.Add($"{label} not imported: it could not be read back after it was created");
+				continue;
+			}
+
+			channels++;
+			if (pennChannel.Cost != 0)
+			{
+				costs.Add($"{pennChannel.Name} ({pennChannel.Cost})");
+			}
+
+			foreach (var lockName in pennChannel.Locks.Keys.Except(["join", "speak", "modify", "see", "hide"]))
+			{
+				context.Warnings.Add($"{label}: unknown lock '{lockName}' was dropped");
+			}
+
+			await _mediator.Send(new UpdateChannelCommand(channel,
+				Name: null,
+				Description: MarkupString.Ansi.AnsiEscapeParser.Parse(pennChannel.Description),
+				Privs: null,
+				JoinLock: ChannelLock(pennChannel, "join", label, context),
+				SpeakLock: ChannelLock(pennChannel, "speak", label, context),
+				SeeLock: ChannelLock(pennChannel, "see", label, context),
+				HideLock: ChannelLock(pennChannel, "hide", label, context),
+				ModLock: ChannelLock(pennChannel, "modify", label, context),
+				Mogrifier: await ChannelMogrifierAsync(pennChannel, label, context, cancellationToken),
+				Buffer: pennChannel.Buffer), cancellationToken);
+
+			members += await ImportChannelMembersAsync(pennChannel, channel, owner, label, context, cancellationToken);
+		}
+
+		if (costs.Count > 0)
+		{
+			// SharpMUSH neither charges for a channel nor refunds one on @channel/delete, so the price paid has nowhere to go.
+			context.Warnings.Add($"Channel creation costs were not kept, as SharpMUSH does not refund them: {string.Join(", ", costs)}");
+		}
+
+		_logger.LogInformation("Imported {Channels} channel(s) with {Members} member(s)", channels, members);
+		return (channels, members);
+	}
+
+	/// <summary>
+	/// A channel lock's key, with each object it names by dbref under the number that object was imported
+	/// as. Most keep their number; a source #0-#2 of the wrong type is imported elsewhere.
+	/// </summary>
+	private static string ChannelLock(PennMUSHChannel channel, string lockName, string label,
+		PennMUSHConversionContext context)
+	{
+		if (!channel.Locks.TryGetValue(lockName, out var key) || key == UnlockedKey)
+		{
+			return string.Empty;
+		}
+
+		var moved = new List<string>();
+		var remapped = LockObjectReference().Replace(key, match =>
+		{
+			var source = int.Parse(match.Groups["number"].ValueSpan, CultureInfo.InvariantCulture);
+			if (!context.DbrefMapping.TryGetValue(source, out var imported) || imported.Number == source)
+			{
+				return match.Value;
+			}
+
+			moved.Add($"#{source} as #{imported.Number}");
+			return $"#{imported.Number}";
+		});
+
+		if (moved.Count > 0)
+		{
+			context.Warnings.Add($"{label}: {lockName} lock names objects imported under new numbers ({string.Join(", ", moved)}); " +
+				$"'{key}' became '{remapped}'");
+		}
+
+		return remapped;
+	}
+
+	/// <summary>
+	/// An object reference in a key <c>unparse_boolexp</c> wrote with <c>UB_DBREF</c>: a <c>#N</c> standing
+	/// alone or after the <c>=</c>, <c>+</c>, <c>@</c> or <c>$</c> of an is, carry, indirect or owner lock,
+	/// including the object of an indirect lock that names its lock (<c>@#N/Basic</c>).
+	/// A number after the <c>:</c>, <c>/</c> or <c>^</c> of an attribute, evaluation or flag-style lock is a
+	/// value, not a reference, and is left alone.
+	/// </summary>
+	[GeneratedRegex(@"(?<=^|[\s&|!()=+@$])#(?<number>\d+)(?=$|[\s&|!()/])")]
+	private static partial Regex LockObjectReference();
+
+	/// <summary>The mogrifier as <c>@channel/mogrifier</c> stores it, or none when it was not imported.</summary>
+	private async Task<string> ChannelMogrifierAsync(PennMUSHChannel channel, string label,
+		PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		if (channel.Mogrifier < 0)
+		{
+			return string.Empty;
+		}
+
+		if (await MappedAsync(channel.Mogrifier, context, cancellationToken) is AnySharpObject mogrifier)
+		{
+			return mogrifier.Object().DBRef.ToString();
+		}
+
+		context.Warnings.Add($"{label}: mogrifier #{channel.Mogrifier} is not an imported object and was dropped");
+		return string.Empty;
+	}
+
+	private async Task<int> ImportChannelMembersAsync(PennMUSHChannel pennChannel, SharpChannel channel,
+		SharpPlayer owner, string label, PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		var players = (pennChannel.Flags & 0x1) != 0;
+		var things = (pennChannel.Flags & 0x2) != 0;
+		var joined = new HashSet<int>();
+		var dropped = new List<int>();
+		foreach (var user in pennChannel.Users)
+		{
+			var mapped = await MappedAsync(user.DBRef, context, cancellationToken);
+			var member = mapped switch
+			{
+				AnySharpObject { IsPlayer: true } player when players => player,
+				AnySharpObject { IsThing: true } thing when things => thing,
+				_ => null
+			};
+
+			if (member is null)
+			{
+				dropped.Add(user.DBRef);
+				continue;
+			}
+
+			if (!joined.Add(member.Object().DBRef.Number))
+			{
+				continue;
+			}
+
+			// CreateChannelCommand has already made the owner a member.
+			if (member.Object().DBRef.Number != owner.Object.DBRef.Number)
+			{
+				await _mediator.Send(new AddUserToChannelCommand(channel, member), cancellationToken);
+			}
+
+			await _mediator.Send(new UpdateChannelUserStatusCommand(channel, member, new SharpChannelStatus(
+				Combine: (user.Flags & ChannelUserCombine) != 0,
+				// Cleared as load_labeled_chanusers clears it on any load that is not a reboot.
+				Gagged: false,
+				Hide: (user.Flags & ChannelUserHide) != 0,
+				Mute: (user.Flags & ChannelUserQuiet) != 0,
+				Title: MarkupString.Ansi.AnsiEscapeParser.Parse(user.Title))), cancellationToken);
+		}
+
+		if (!joined.Contains(owner.Object.DBRef.Number))
+		{
+			await _mediator.Send(new RemoveUserFromChannelCommand(channel, owner), cancellationToken);
+		}
+
+		if (dropped.Count > 0)
+		{
+			context.Warnings.Add($"{label}: dropped member(s) that are not an imported " +
+				$"{(things ? players ? "player or thing" : "thing" : "player")} ({string.Join(" ", dropped.Select(d => $"#{d}"))})");
+		}
+
+		return joined.Count;
+	}
+
+	/// <summary><c>options.probate_judge</c> when it is a player, otherwise God.</summary>
+	private async Task<int> ProbateJudgeAsync(CancellationToken cancellationToken)
+	{
+		var configured = (int)_options.CurrentValue.Command.ProbateJudge;
+		return await _mediator.Send(new GetObjectNodeQuery(new DBRef(configured)), cancellationToken) is AnySharpObject and SharpPlayer
+			? configured
+			: 1;
+	}
 
 	/// <summary>The source owner, resolved through the conversion's mapping. A player owns itself.</summary>
 	private async Task SetOwnerAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,

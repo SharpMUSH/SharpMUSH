@@ -7,7 +7,14 @@ namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 
 public partial class RecursiveMarkdownRenderer
 {
-	protected virtual MString RenderTable(Table table)
+	/// <summary>
+	/// A table is laid out by its own spacing, which is what <see cref="MarkupText.Preformatted"/> says:
+	/// a Pueblo client reads the stream as HTML, where runs of spaces collapse and a proportional font
+	/// ignores every column width, and the portal gets a <c>&lt;pre&gt;</c>. A terminal is unaffected.
+	/// </summary>
+	protected virtual MString RenderTable(Table table) => MarkupText.Preformatted(RenderTableRows(table));
+
+	private MString RenderTableRows(Table table)
 	{
 		var borderStyle = _dimStyle;
 

@@ -549,12 +549,16 @@ public partial class Functions
 
 		return new CallState(mail.DateSent.ToUnixTimeSeconds().ToString());
 	}
-	[SharpFunction(Name = "malias", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["alias"])]
+	/// <summary>fun_malias (<c>src/malias.c</c>): aliases, or one alias's members, with an optional delimiter.</summary>
+	[SharpFunction(Name = "malias", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["alias", "delimiter"])]
 	public async ValueTask<CallState> malias(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		// Mail aliases are not yet implemented in the system
-		// Return empty result as per documentation behavior when no aliases exist
-		await Task.CompletedTask;
-		return new CallState(string.Empty);
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var args = parser.CurrentState.ArgumentsOrdered
+			.Select(arg => arg.Value.Message?.ToPlainText() ?? string.Empty)
+			.ToArray();
+
+		return new CallState(await MailAliases.FunctionAsync(new MailAliases.Services(Mediator, NotifyService, PermissionService),
+			executor, args));
 	}
 }

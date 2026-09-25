@@ -2251,4 +2251,57 @@ public class QueueAdmissionTests
 		await Assert.That(await executed.Task.WaitAsync(TimeSpan.FromSeconds(5))).IsTrue();
 	}
 
+	/// <summary>
+	/// Socket work — an inbound HTTP request — is charged to no owner (PennMUSH <c>do_entry</c> skips
+	/// <c>QUEUE_SOCKET</c> entries): it neither fills the shared system bucket nor is refused by it, and
+	/// only the global limit applies (#1184).
+	/// </summary>
+	[Test]
+	public async Task SocketWorkIsChargedToNoOwnerOnlyToTheGlobalLimit()
+	{
+		await using var queue = Create(global: 6, owner: 2);
+		var started = Signal(); var release = Signal();
+		await queue.AdmitWork(async () => { started.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		try
+		{
+			await started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+			for (var i = 0; i < 3; i++)
+				await Assert.That((await queue.AdmitSocketWork(() => ValueTask.FromResult<CallState?>(null), $"socket-{i}", "http")).Accepted)
+					.IsTrue().Because("three socket entries are past the owner limit of two, but they belong to no owner");
+
+			await Assert.That((await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null), "system", "test")).Accepted)
+				.IsTrue().Because("the socket entries took nothing from the system bucket: the blocker is its only other entry");
+			await Assert.That((await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null), "system-over", "test")).Reason)
+				.IsEqualTo(QueueRejectionReason.OwnerLimit).Because("the system bucket itself is still bounded");
+			await Assert.That((await queue.AdmitSocketWork(() => ValueTask.FromResult<CallState?>(null), "socket-last", "http")).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitSocketWork(() => ValueTask.FromResult<CallState?>(null), "socket-over", "http")).Reason)
+				.IsEqualTo(QueueRejectionReason.GlobalLimit);
+		}
+		finally { release.TrySetResult(); }
+	}
+
+	/// <summary>A socket entry halted before it runs still reports its release, so whoever waits on it has an answer.</summary>
+	[Test]
+	public async Task SocketWorkHaltedBeforeItRunsIsReleased()
+	{
+		await using var queue = Create(global: 3);
+		var started = Signal(); var release = Signal(); var released = Signal();
+		var ran = false;
+		await queue.AdmitWork(async () => { started.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		try
+		{
+			await started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+			var socket = await queue.AdmitSocketWork(() => { ran = true; return ValueTask.FromResult<CallState?>(null); },
+				"socket", "http", onReleased: () => released.TrySetResult());
+			await Assert.That(socket.Accepted).IsTrue();
+
+			await queue.HaltByPid(socket.Pid!.Value);
+			release.TrySetResult();
+
+			await released.Task.WaitAsync(TimeSpan.FromSeconds(5));
+			await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(5));
+			await Assert.That(ran).IsFalse();
+		}
+		finally { release.TrySetResult(); }
+	}
 }

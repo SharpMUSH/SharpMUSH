@@ -26,7 +26,7 @@ public class OutputConsumerResilienceTests
 		var current = Connection(1, _ => { writes++; return ValueTask.CompletedTask; }) with { SessionId = replacedBeforeReceive ? "replacement" : "original" };
 		connections.Get(1).Returns(_ => current);
 		var renderer = Substitute.For<IMarkupOutputRenderer>();
-		renderer.RenderAsync(Arg.Any<string>(), Arg.Any<ConnectionServerService.ConnectionData>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		renderer.RenderAsync(Arg.Any<string>(), Arg.Any<ConnectionServerService.ConnectionData>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns(_ =>
 		{
 			if (replacedDuringRender) current = current with { SessionId = "replacement" };
 			return ValueTask.FromResult(new RenderedOutput("prompt"u8.ToArray(), false));
@@ -48,7 +48,7 @@ public class OutputConsumerResilienceTests
 		var current = Connection(1, _ => { writes++; return ValueTask.CompletedTask; }) with { SessionId = replacedBeforeReceive ? "replacement" : "original" };
 		connections.Get(1).Returns(_ => current);
 		var renderer = Substitute.For<IMarkupOutputRenderer>();
-		renderer.RenderAsync(Arg.Any<string>(), Arg.Any<ConnectionServerService.ConnectionData>(), Arg.Any<CancellationToken>()).Returns(_ =>
+		renderer.RenderAsync(Arg.Any<string>(), Arg.Any<ConnectionServerService.ConnectionData>(), Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns(_ =>
 		{
 			if (replacedDuringRender) current = current with { SessionId = "replacement" };
 			return ValueTask.FromResult(new RenderedOutput("status"u8.ToArray(), false));
@@ -111,7 +111,7 @@ public class OutputConsumerResilienceTests
 				return new ValueTask<byte[]>(Task.FromCanceled<byte[]>(call.Arg<CancellationToken>()));
 			});
 		var renderer = Substitute.For<IMarkupOutputRenderer>();
-		renderer.RenderAsync(Arg.Any<string>(), client, caller.Token)
+		renderer.RenderAsync(Arg.Any<string>(), client, Arg.Any<bool>(), caller.Token)
 			.Returns(new RenderedOutput("rendered"u8.ToArray(), true));
 		Task Handle() => kind switch
 		{

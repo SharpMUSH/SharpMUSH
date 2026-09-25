@@ -2858,7 +2858,7 @@ public class SharpMUSHParserVisitor(
 
 	/// <summary>
 	/// <c>$&lt;digit&gt;</c> or <c>$&lt;name&gt;</c>: PennMUSH's evaluator case for <c>'$'</c>
-	/// (<c>src/parse.c</c>). While a regexp context holds captures, the capture from the innermost one;
+	/// (<c>src/parse.c</c>). While a regexp context is visible, the capture from the innermost one;
 	/// otherwise a literal <c>$</c> followed by the rest, with a name still evaluated. A capture is
 	/// output, never source: nothing here is parsed again.
 	/// </summary>
@@ -2872,7 +2872,7 @@ public class SharpMUSHParserVisitor(
 		var state = parser.CurrentState;
 		if (context.REGEXP_NUM() is { } number)
 		{
-			return new CallState(state.HasRegexpCaptures
+			return new CallState(state.HasRegexpContext
 				? state.RegexpCapture(number.GetText()[1..])
 				: MarkupText.Plain(number.GetText()), context.Depth());
 		}
@@ -2883,7 +2883,7 @@ public class SharpMUSHParserVisitor(
 			: await Visit(nameContext) ?? new CallState(GetContextText(nameContext), nameContext.Depth());
 		var name = named.Message ?? MarkupText.Empty;
 
-		if (state.HasRegexpCaptures)
+		if (state.HasRegexpContext)
 		{
 			return named with { Message = state.RegexpCapture(name.ToPlainText()) };
 		}

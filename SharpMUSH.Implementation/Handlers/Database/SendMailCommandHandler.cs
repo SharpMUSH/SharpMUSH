@@ -1,16 +1,14 @@
 ﻿using Mediator;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Implementation.Handlers.Database;
 
-public class SendMailCommandHandler(IMailStore database) : ICommandHandler<SendMailCommand>
+public class SendMailCommandHandler(IMailStore database) : ICommandHandler<SendMailCommand, MailAdmission>
 {
-	public async ValueTask<Unit> Handle(SendMailCommand command, CancellationToken cancellationToken)
-	{
-		await database.SendMailAsync(command.Sender, command.Recipient, command.Mail, cancellationToken);
-		return Unit.Value;
-	}
+	public ValueTask<MailAdmission> Handle(SendMailCommand command, CancellationToken cancellationToken)
+		=> database.SendMailAsync(command.Sender, command.Recipient, command.Mail, command.Limit, cancellationToken);
 }
 
 public class UpdateMailCommandHandler(IMailStore database) : ICommandHandler<UpdateMailCommand>

@@ -30,7 +30,8 @@ public partial class MarkupOutputRendererTests
 
 	private static ConnectionServerService.ConnectionData Connection(
 		OutputFormat format = OutputFormat.Ansi,
-		string connectionType = "telnet") =>
+		string connectionType = "telnet",
+		string? mxpSupported = null) =>
 		new(
 			Handle: 1,
 			PlayerDbRef: null,
@@ -40,9 +41,141 @@ public partial class MarkupOutputRendererTests
 			EncodingFunction: () => Encoding.UTF8,
 			DisconnectFunction: () => { },
 			GMCPFunction: null,
-			Capabilities: new ProtocolCapabilities(Format: format),
+			Capabilities: new ProtocolCapabilities(Format: format, MxpSupported: mxpSupported),
 			Preferences: null,
 			ConnectionType: connectionType);
+
+	// ── MXP: what the client said it can render ─────────────────────────────────
+
+	/// <summary>
+	/// MXP asks with <c>&lt;SUPPORT&gt;</c> for a reason: a client that cannot show a picture is better
+	/// off without the tag, and one that cannot open a frame is better off with the text that would have
+	/// gone in it.
+	/// </summary>
+	[Test]
+	public async Task Mxp_WritesOnlyWhatTheClientAnsweredFor()
+	{
+		var line = MarkupText.Concat([
+			MarkupText.Sound("door.wav"),
+			MarkupText.Image("map.png", "A map"),
+			MarkupText.Plain(" It creaks.")]);
+		var markup = MarkupTextSerializer.Serialize(line);
+
+		var rendered = Encoding.UTF8.GetString(
+			new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Mxp, mxpSupported: "SOUND")).Data);
+
+		await Assert.That(rendered).Contains("<SOUND door.wav>");
+		await Assert.That(rendered).DoesNotContain("<IMAGE");
+		await Assert.That(rendered).Contains("A map")
+			.Because("a picture the client cannot show still leaves its description");
+		await Assert.That(rendered).Contains("It creaks.");
+	}
+
+	[Test]
+	public async Task Mxp_KeepsThePaneTextWhenTheClientCannotOpenOne()
+	{
+		var markup = MarkupTextSerializer.Serialize(
+			MarkupText.Pane(MarkupText.Plain("North: the gate"), "map"));
+
+		var rendered = Encoding.UTF8.GetString(
+			new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Mxp, mxpSupported: "SOUND")).Data);
+
+		await Assert.That(rendered).DoesNotContain("<FRAME");
+		await Assert.That(rendered).Contains("North: the gate")
+			.Because("a frame the client cannot open would otherwise take its text somewhere the player never sees");
+	}
+
+	/// <summary>A client that answered nothing gets nothing it did not answer for.</summary>
+	[Test]
+	public async Task Mxp_AnAnswerOfNothingGatesEverything()
+	{
+		var markup = MarkupTextSerializer.Serialize(
+			MarkupText.Concat([MarkupText.Sound("door.wav"), MarkupText.Plain("It creaks.")]));
+
+		var rendered = Encoding.UTF8.GetString(
+			new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Mxp, mxpSupported: "")).Data);
+
+		await Assert.That(rendered).DoesNotContain("<SOUND");
+		await Assert.That(rendered).Contains("It creaks.");
+	}
+
+	/// <summary>
+	/// A connection that was never asked is not a connection that refused — an older one, or one
+	/// negotiated before the question was put.
+	/// </summary>
+	[Test]
+	public async Task Mxp_WithNoAnswerAtAllEverythingIsWritten()
+	{
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Sound("door.wav"));
+
+		var rendered = Encoding.UTF8.GetString(
+			new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Mxp)).Data);
+
+		await Assert.That(rendered).Contains("<SOUND door.wav>");
+	}
+
+	[Test]
+	public async Task Mxp_SecureLinesStillFrameTheOutput()
+	{
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain("Hello"));
+
+		var rendered = Encoding.UTF8.GetString(
+			new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Mxp, mxpSupported: "SOUND")).Data);
+
+		await Assert.That(rendered).StartsWith("\u001b[1z")
+			.Because("a gated registry is still the wire registry, and a tag is only read on a secure line");
+	}
+
+	/// <summary>
+	/// A Pueblo client renders the stream as HTML, where the CRLF the telnet layer puts after each
+	/// message is whitespace — so without a break of its own every message runs into the next. This is
+	/// PennMUSH's <c>queue_eol</c> in HTML mode.
+	/// </summary>
+	[Test]
+	public async Task Pueblo_EndsAMessageWithABreak()
+	{
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain("You see nothing special."));
+
+		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Pueblo));
+
+		await Assert.That(Encoding.UTF8.GetString(result.Data)).IsEqualTo("You see nothing special.<BR>");
+	}
+
+	[Test]
+	public async Task Pueblo_DoesNotEndAPrompt()
+	{
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain("Password:"));
+
+		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Pueblo), prompt: true);
+
+		await Assert.That(Encoding.UTF8.GetString(result.Data)).IsEqualTo("Password:")
+			.Because("what follows a prompt is the player's own typing, on the same line");
+	}
+
+	[Test]
+	public async Task Pueblo_DoesNotDoubleABreakTheTextAlreadyEndsWith()
+	{
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain("Look out!\n"));
+
+		var result = new MarkupOutputRenderer().Render(markup, Connection(OutputFormat.Pueblo));
+		var text = Encoding.UTF8.GetString(result.Data);
+
+		await Assert.That(text.EndsWith("<BR>", StringComparison.Ordinal)).IsTrue();
+		await Assert.That(text.EndsWith("<BR><BR>", StringComparison.Ordinal)).IsFalse();
+	}
+
+	[Test]
+	[Arguments(OutputFormat.Ansi)]
+	[Arguments(OutputFormat.Mxp)]
+	public async Task EveryOtherFormatEndsAMessageWithTheWiresOwnEnding(OutputFormat format)
+	{
+		var markup = MarkupTextSerializer.Serialize(MarkupText.Plain("You see nothing special."));
+
+		var result = new MarkupOutputRenderer().Render(markup, Connection(format));
+
+		await Assert.That(Encoding.UTF8.GetString(result.Data)).DoesNotContain("<BR>")
+			.Because("a terminal and an MXP client both read the CRLF the telnet layer writes");
+	}
 
 	[Test]
 	public async Task Pueblo_HtmlEncodesPlainText()

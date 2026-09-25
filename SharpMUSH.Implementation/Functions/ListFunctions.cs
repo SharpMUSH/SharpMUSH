@@ -122,15 +122,7 @@ public partial class Functions
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "LENGTH (arg 3)"));
 		}
 
-		var list = MushText.SplitList(delimiter, listArg ?? MarkupText.Empty);
-		var range = firstNumber > 0
-			? list.Skip(firstNumber - 1)
-			: Enumerable.TakeLast(list, (int)Math.Min(int.MaxValue, Math.Abs((long)firstNumber)));
-		var result = lengthNumber > 0
-			? range.Take(lengthNumber)
-			: Enumerable.TakeLast(range, (int)Math.Min(int.MaxValue, Math.Abs((long)lengthNumber)));
-
-		return new CallState(MarkupText.Join(delimiter, result));
+		return new CallState(MushList.Extract(delimiter, listArg ?? MarkupText.Empty, firstNumber, lengthNumber));
 	}
 
 	[SharpFunction(Name = "filter", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter"])]
@@ -230,10 +222,8 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, MarkupText.Space);
 		var listArg = parser.CurrentState.Arguments["0"].Message;
-		var list = MushText.SplitList(delim, listArg ?? MarkupText.Empty);
-		var first = list.FirstOrDefault() ?? MarkupText.Empty;
 
-		return ValueTask.FromResult(new CallState(first));
+		return ValueTask.FromResult(new CallState(MushList.First(delim, listArg ?? MarkupText.Empty)));
 	}
 
 	[SharpFunction(Name = "firstof", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse, ParameterNames = ["object..."])]
@@ -947,9 +937,8 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var delim = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, " ");
-		var list = MushText.SplitList(delim, parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty);
 
-		return ValueTask.FromResult(new CallState(MarkupText.Join(delim, list.Skip(1))));
+		return ValueTask.FromResult(new CallState(MushList.Rest(delim, parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty)));
 	}
 
 	[SharpFunction(Name = "revwords", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "delimiter", "output-separator"])]
@@ -1059,22 +1048,28 @@ public partial class Functions
 
 	/// <summary>
 	/// fun_sortby's order: every item is compared against every other, its rank is the sum of those
-	/// results, and equal ranks keep list order. One item's comparisons run as a unit, the items
-	/// concurrently.
+	/// results, and equal ranks keep list order.
 	/// </summary>
+	/// <remarks>
+	/// Comparisons run one at a time, in list order, as PennMUSH's do. Every comparison shares the
+	/// evaluation's call counters and recursion-depth dictionary, which are not thread-safe: running
+	/// items concurrently corrupted that dictionary, and the throw surfaced as an empty, errored
+	/// sortby() (GRA-39). It also made a comparator's side effects run in no fixed order.
+	/// </remarks>
 	private static async Task<IEnumerable<MString>> SortByComparisons(MString[] list,
 		Func<MString, MString, Task<int>> compare)
 	{
-		var ranked = await Task.WhenAll(list.Select((item, index) => Task.Run(async () =>
+		var ranked = new (MString Item, int Rank)[list.Length];
+		for (var index = 0; index < list.Length; index++)
 		{
 			var rank = 0;
-			foreach (var other in list.Where((_, j) => j != index))
+			for (var j = 0; j < list.Length; j++)
 			{
-				rank += await compare(item, other);
+				if (j != index) rank += await compare(list[index], list[j]);
 			}
 
-			return (Item: item, Rank: rank);
-		})));
+			ranked[index] = (list[index], rank);
+		}
 
 		return ranked.OrderBy(r => r.Rank).Select(r => r.Item);
 	}
@@ -1363,7 +1358,8 @@ public partial class Functions
 			packed.Add(cell);
 		}
 
-		return new CallState(MarkupText.Join(MarkupText.Empty, packed));
+		// The packing is by column width, so the result is laid out by its own spacing. See align().
+		return new CallState(MarkupText.Preformatted(MarkupText.Join(MarkupText.Empty, packed)));
 	}
 
 	/// <summary>
@@ -1441,9 +1437,9 @@ public partial class Functions
 		// it from 2 meant a delimiter was never seen and words(a|b|c,|) always counted space-separated
 		// words.
 		var delim = await errors.DefaultArgumentAsync(parser, 1, MarkupText.Space);
-		var list = MushText.SplitList(delim, errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync()));
+		var count = MushList.Count(delim, errors.Record(await parser.CurrentState.Arguments["0"].GetParsedResultAsync()));
 
-		return errors.Complete(new CallState(list.Length.ToString()));
+		return errors.Complete(new CallState(count.ToString()));
 	}
 
 	[SharpFunction(Name = "linsert", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "position", "new-item", "delim"])]

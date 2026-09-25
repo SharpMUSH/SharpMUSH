@@ -116,18 +116,18 @@ public partial class Commands
 		Switches =
 		[
 			"SET", "CREATE", "DESTROY", "DESCRIBE", "RENAME", "STATS", "CHOWN", "NUKE", "ADD", "REMOVE", "LIST", "ALL", "WHO",
-			"MEMBERS", "USEFLAG", "SEEFLAG"
-		], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["alias", "list"])]
+			"MEMBERS", "USEFLAG", "SEEFLAG", "DESC", "STAT", "USE", "SEE"
+		], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["alias", "list"])]
 	public async ValueTask<Option<CallState>> MailAlias(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var switches = parser.CurrentState.Switches;
+		var args = parser.CurrentState.Arguments;
+		var left = args.TryGetValue("0", out var leftArg) ? leftArg.Message?.ToPlainText() ?? string.Empty : string.Empty;
+		var right = args.TryGetValue("1", out var rightArg) ? rightArg.Message?.ToPlainText() ?? string.Empty : string.Empty;
 
-		var action = switches.FirstOrDefault() ?? "LIST";
-
-		await NotifyService.Notify(executor, $"@MALIAS/{action}: Mail alias system not yet implemented.", executor);
-		await NotifyService.Notify(executor, "This command would manage mail distribution lists and aliases.", executor);
-
+		await MailAliases.Handle(MailAliasServices, executor, [.. parser.CurrentState.Switches], left.Trim(), right.Trim());
 		return CallState.Empty;
 	}
+
+	private MailAliases.Services MailAliasServices => new(Mediator, NotifyService, PermissionService);
 }

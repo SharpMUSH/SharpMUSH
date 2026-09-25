@@ -143,6 +143,7 @@ internal static class DatabaseRegistration
 		services.AddSingleton<INavigationStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IAttributeStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IMailStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IMailAliasStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IExpandedDataStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IChannelStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IAccountStore>(sp => sp.GetRequiredService<TProvider>());

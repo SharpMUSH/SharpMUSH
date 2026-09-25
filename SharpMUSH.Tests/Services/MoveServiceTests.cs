@@ -39,7 +39,7 @@ public class MoveServiceTests
 			GodParser, ConnectionService, "AbsThing");
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {thing}={room}"));
 
-		var absolute = await MoveService.AbsoluteRoom(await Node(thing));
+		var absolute = (await MoveService.AbsoluteRoom(await Node(thing))).Room;
 
 		await Assert.That(absolute).IsNotNull();
 		await Assert.That(absolute!.Object().DBRef).IsEqualTo(room);
@@ -57,7 +57,7 @@ public class MoveServiceTests
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {box}={room}"));
 		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {coin}={box}"));
 
-		var absolute = await MoveService.AbsoluteRoom(await Node(coin));
+		var absolute = (await MoveService.AbsoluteRoom(await Node(coin))).Room;
 
 		await Assert.That(absolute!.Object().DBRef).IsEqualTo(room);
 	}
@@ -66,7 +66,7 @@ public class MoveServiceTests
 	public async ValueTask AbsoluteRoomOfARoomIsItself()
 	{
 		var room = await Dig("SelfRoom");
-		var absolute = await MoveService.AbsoluteRoom(await Node(room));
+		var absolute = (await MoveService.AbsoluteRoom(await Node(room))).Room;
 		await Assert.That(absolute!.Object().DBRef).IsEqualTo(room);
 	}
 }

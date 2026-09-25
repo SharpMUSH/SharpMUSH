@@ -556,8 +556,9 @@ public partial class Commands
 		=> thing switch
 		{
 			_ when isSelf || thing.IsExit => false,
-			{ IsRoom: true } => await MoveService.AbsoluteRoom(taker) is { } room
-				&& room.Object().DBRef.Equals(thing.Object().DBRef),
+			// utils.c:513: a walk that runs out of depth answers 1, so too many containers holds.
+			{ IsRoom: true } => await MoveService.AbsoluteRoom(taker) is var walk
+				&& (walk.TooManyContainers || walk.Room is { } room && room.Object().DBRef.Equals(thing.Object().DBRef)),
 			_ => await MoveService.WouldCreateLoop(thing.AsContent, taker.AsContainer)
 		};
 

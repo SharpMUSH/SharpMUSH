@@ -5,7 +5,13 @@ using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Commands.Database;
 
-public record SendMailCommand(SharpObject Sender, SharpPlayer Recipient, SharpMail Mail) : ICommand;
+/// <summary>
+/// Stores <paramref name="Mail"/> for <paramref name="Recipient"/>. With a <paramref name="Limit"/>, the message is
+/// refused (answering <see cref="MailboxFull"/>) when its folder already holds that many, decided in the same write
+/// that stores it.
+/// </summary>
+public record SendMailCommand(SharpObject Sender, SharpPlayer Recipient, SharpMail Mail, long? Limit = null)
+	: ICommand<MailAdmission>;
 
 public record UpdateMailCommand(SharpMail Mail, MailUpdate Update) : ICommand;
 

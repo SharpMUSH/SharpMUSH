@@ -1,9 +1,13 @@
+using System.Text;
 using Microsoft.Extensions.DependencyInjection;
+using NATS.Client.Core;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
+using SharpMUSH.Messaging.NATS;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -244,5 +248,215 @@ public class MarkupTagFunctionTests
 		await Assert.That(said.Render(MarkupFormat.Mxp)).Contains("<SEND HREF=\"look\"");
 		await Assert.That(said.ToPlainText()).IsEqualTo(marker)
 			.Because("the label is unique to this run, so the helper cannot have matched another test's output");
+	}
+
+	// ── The shared vocabulary from softcode ──────────────────────────────────────
+
+	/// <summary>
+	/// One object, written for each client the way that client has it. A terminal is sent nothing at
+	/// all, and nothing is left in the plain text for a listen pattern to match either.
+	/// </summary>
+	[Test]
+	public async Task Sound_IsWrittenForEachClientInItsOwnWay()
+	{
+		var result = await Eval("sound(door.wav,80)");
+
+		await Assert.That(result.Render(MarkupFormat.Mxp)).IsEqualTo("<SOUND door.wav V=80>");
+		await Assert.That(result.Render(MarkupFormat.Pueblo))
+			.IsEqualTo("<img xch_sound=\"play\" href=\"door.wav\" xch_volume=\"80\">");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEmpty();
+		await Assert.That(result.ToPlainText()).IsEmpty();
+	}
+
+	[Test]
+	public async Task Music_PlaysOnItsOwnChannel()
+	{
+		var result = await Eval("music(theme.mid,,-1)");
+
+		await Assert.That(result.Render(MarkupFormat.Mxp)).IsEqualTo("<MUSIC theme.mid L=-1>");
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).Contains("xch_sound=\"loop\"");
+	}
+
+	[Test]
+	public async Task StopSound_SilencesTheChannelAskedFor()
+	{
+		await Assert.That((await Eval("stopsound(music)")).Render(MarkupFormat.Mxp)).IsEqualTo("<MUSIC Off>");
+		await Assert.That((await Eval("stopsound()")).Render(MarkupFormat.Mxp)).IsEqualTo("<SOUND Off><MUSIC Off>");
+		await Assert.That((await Eval("stopsound(sideways)")).ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidArgument);
+	}
+
+	/// <summary>A picture stands in its description for a client that shows none, which is the point of writing one.</summary>
+	[Test]
+	public async Task Image_LeavesItsDescriptionForAClientWithNoPictures()
+	{
+		var result = await Eval("image(map.png,A map of the city,200)");
+
+		await Assert.That(result.Render(MarkupFormat.Mxp)).IsEqualTo("<IMAGE map.png W=200>");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("A map of the city");
+		await Assert.That(result.ToPlainText()).IsEqualTo("A map of the city");
+	}
+
+	[Test]
+	public async Task Image_WithNoDescriptionLeavesItsAddress()
+		=> await Assert.That((await Eval("image(map.png)")).Render(MarkupFormat.Ansi)).IsEqualTo("map.png");
+
+	/// <summary>A picture inside a command link is a picture that runs a command, in every dialect.</summary>
+	[Test]
+	public async Task Image_InsideCmdlink_IsALink()
+	{
+		var result = await Eval("cmdlink(image(map.png,A map),look map)");
+
+		await Assert.That(result.Render(MarkupFormat.Pueblo))
+			.IsEqualTo("<A XCH_CMD=\"look map\" XCH_HINT=\"look map\"><img src=\"map.png\" alt=\"A map\"></A>");
+	}
+
+	[Test]
+	public async Task Pane_KeepsItsTextForAClientWithNoPanes()
+	{
+		var result = await Eval("pane(North: the gate,map,The Map)");
+
+		await Assert.That(result.Render(MarkupFormat.Mxp))
+			.IsEqualTo("<FRAME map TITLE=\"The Map\"><DEST map>North: the gate</DEST>");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("North: the gate");
+	}
+
+	/// <summary>
+	/// Softcode that draws its own columns can say so, the way align() and table() already do for
+	/// themselves.
+	/// </summary>
+	[Test]
+	public async Task Preformat_SaysTheSpacingIsTheLayout()
+	{
+		var result = await Eval("preformat(a%b%b1%rb%b%b2)");
+
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).IsEqualTo("<xch_mudtext>a  1\nb  2</xch_mudtext>");
+		await Assert.That(result.Render(MarkupFormat.Html)).StartsWith("<pre");
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("a  1\nb  2");
+	}
+
+	[Test]
+	public async Task ClearScreenAndPrefetchAndExpire_AreWrittenWhereTheyAreUnderstood()
+	{
+		await Assert.That((await Eval("clearscreen()")).Render(MarkupFormat.Pueblo)).IsEqualTo("<xch_page clear=\"text\">");
+		await Assert.That((await Eval("clearscreen()")).Render(MarkupFormat.Mxp)).IsEmpty();
+		await Assert.That((await Eval("prefetch(https://example.test/map.png)")).Render(MarkupFormat.Pueblo))
+			.Contains("<xch_prefetch href=\"https://example.test/map.png\"");
+		await Assert.That((await Eval("expirelinks(exits)")).Render(MarkupFormat.Mxp)).IsEqualTo("<EXPIRE exits>");
+	}
+
+	[Test]
+	[Arguments("expirelinks(exits%rmore)")]
+	[Arguments("expirelinks(exits%tmore)")]
+	public async Task AnExpireGroupWithAControlCharacterIsRefused(string code)
+		=> await Assert.That((await Eval(code)).ToPlainText()).IsEqualTo(ErrorMessages.Returns.InvalidArgument);
+
+	[Test]
+	[Arguments("sound(a.wav,101)")]
+	[Arguments("sound(a.wav,,0)")]
+	[Arguments("image(a.png,alt,0)")]
+	public async Task AnArgumentOutOfRangeIsRefused(string code)
+		=> await Assert.That((await Eval(code)).ToPlainText()).IsEqualTo(ErrorMessages.Returns.OutOfRange);
+
+	/// <summary>
+	/// Gated where <c>tagwrap()</c> is gated: these make a client fetch a file, play it, or wipe the
+	/// screen. Laying text out does not, so <c>preformat()</c> is not gated.
+	/// </summary>
+	[Test]
+	[Arguments("sound(door.wav)")]
+	[Arguments("image(map.png,A map)")]
+	[Arguments("clearscreen()")]
+	[Arguments("prefetch(https://example.test/x.png)")]
+	public async Task AMortalIsRefusedWhatMakesAClientFetchOrPlay(string code)
+	{
+		var mortal = await MortalAsync("VocabularyMortal");
+
+		var said = await ThinkAs(mortal, code);
+
+		await Assert.That(said.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+	}
+
+	[Test]
+	public async Task AMortalMayStillSayHowTextIsLaidOut()
+	{
+		var mortal = await MortalAsync("PreformatMortal");
+
+		var said = await ThinkAs(mortal, "preformat(a%b%b1)");
+
+		await Assert.That(said.ToPlainText()).IsEqualTo("a  1");
+		await Assert.That(said.Render(MarkupFormat.Pueblo)).Contains("<xch_mudtext>");
+	}
+
+	/// <summary>
+	/// <c>wshtml()</c> returns markup and sends nothing itself; whatever emits it decides what each client
+	/// reads (#1120). The message is composed with the text around it and reaches the recipient as one
+	/// value that still carries the element, so the HTML, Pueblo and MXP renderers write it as a tag and a
+	/// plain client gets the text — the mixed-client behaviour PennMUSH's second argument was for.
+	/// </summary>
+	[Test]
+	[Arguments("think ")]
+	[Arguments("@pemit %#=")]
+	public async Task Wshtml_IsComposedIntoTheEmissionAndRenderedPerClient(string emitter)
+	{
+		var marker = Marker();
+		var mortal = await MortalAsync("WshtmlEmitMortal");
+
+		var window = OpenWindow(mortal);
+		await CommandParser.CommandParse(mortal.Handle, ConnectionService,
+			MarkupText.Plain($"{emitter}[wshtml(<b>{marker}</b>)] and more"));
+		var said = OwnOutput(mortal, window);
+
+		await Assert.That(said.Render(MarkupFormat.Html)).IsEqualTo($"<b>{marker}</b> and more");
+		await Assert.That(said.Render(MarkupFormat.Pueblo)).IsEqualTo($"<b>{marker}</b> and more");
+		await Assert.That(said.Render(MarkupFormat.Ansi)).IsEqualTo($"\u001b[1m{marker}\u001b[0m and more");
+		await Assert.That(said.Render(MarkupFormat.Plain)).IsEqualTo($"{marker} and more")
+			.Because("a client that negotiated neither HTML nor Pueblo reads the text and never a literal tag");
+	}
+
+	/// <summary>
+	/// Nothing reaches the player's notifications or their websocket (portal) connection, the channel
+	/// out-of-band functions such as <c>oob()</c> write to. An <c>oob()</c> probe sent afterwards on the
+	/// same connection shows the socket was being watched: everything published before it has arrived.
+	/// </summary>
+	[Test]
+	public async Task Wshtml_SendsNothingByItself()
+	{
+		var marker = Marker();
+		var probe = Marker();
+		var mortal = await MortalAsync("WshtmlQuietMortal");
+		var socket = TestIsolationHelpers.GenerateUniqueHandle();
+		await ConnectionService.Register(socket, "localhost", "localhost", "websocket",
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		await ConnectionService.Bind(socket, mortal.DbRef);
+
+		await using var nats = new NatsConnection(new NatsOpts
+		{
+			Url = $"nats://localhost:{WebAppFactoryArg.NatsTestServer.Instance.GetMappedPublicPort(4222)}"
+		});
+		var subject = NatsSubjects.For(typeof(WebSocketOutputMessage),
+			WebAppFactoryArg.Services.GetRequiredService<NatsOptions>().SubjectPrefix);
+		await using var published = await nats.SubscribeCoreAsync(subject,
+			serializer: CompressingNatsSerializer<WebSocketOutputMessage>.Default);
+		// The subscription is in place on the server before anything is published.
+		await nats.PingAsync();
+
+		var window = OpenWindow(mortal);
+		await CommandParser.CommandParse(socket, ConnectionService,
+			MarkupText.Plain($"think [null(wshtml(<b>{marker}</b>))]"));
+		await CommandParser.CommandParse(socket, ConnectionService, MarkupText.Plain($"think [oob(%#,{probe})]"));
+
+		var toSocket = new List<string>();
+		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+		await foreach (var message in published.Msgs.ReadAllAsync(timeout.Token))
+		{
+			if (message.Data is not { } output || output.Handle != socket) continue;
+			if (output.Data.Contains(probe, StringComparison.Ordinal)) break;
+			toSocket.Add(output.Data);
+		}
+
+		await Assert.That(toSocket).IsEmpty()
+			.Because("the value is for whatever emits it; the function itself publishes nothing out of band");
+		await Assert.That(WebAppFactoryArg.Notifications.RawFor(mortal.DbRef).Skip(window.Raw)
+				.Any(message => TestHelpers.MessagePlainTextContains(message, marker)))
+			.IsFalse().Because("the value is for whatever emits it; the function itself notifies nobody");
 	}
 }

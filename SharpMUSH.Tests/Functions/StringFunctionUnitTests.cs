@@ -44,6 +44,36 @@ public class StringFunctionUnitTests
 	}
 
 
+	/// <summary>
+	/// Columns are laid out by their own spacing, and a Pueblo client reads the stream as HTML, where
+	/// runs of spaces collapse and a proportional font ignores every width. Marking the result
+	/// preformatted is what <c>&lt;xch_mudtext&gt;</c> is for, and it is what PennMUSH leaves to the game.
+	/// </summary>
+	[Test]
+	[Arguments("align(5 5,a1%ra2,b1)")]
+	[Arguments("lalign(5 5,a1|b1,|)")]
+	[Arguments("table(one two three,5,20)")]
+	public async Task AlignedOutputIsPreformatted(string code)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(code)))?.Message!;
+
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).StartsWith("<xch_mudtext>");
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).EndsWith("</xch_mudtext>");
+		await Assert.That(result.Render(MarkupFormat.Pueblo)).DoesNotContain("<BR>")
+			.Because("inside the region the client breaks the lines itself");
+		await Assert.That(result.Render(MarkupFormat.Html)).StartsWith("<pre");
+	}
+
+	/// <summary>The terminal is unaffected: it lays text out this way already.</summary>
+	[Test]
+	public async Task AlignedOutputIsUnchangedForATerminal()
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain("align(5 5,a1%ra2,b1)")))?.Message!;
+
+		await Assert.That(result.Render(MarkupFormat.Ansi)).IsEqualTo("a1    b1   \na2         ");
+		await Assert.That(result.ToPlainText()).IsEqualTo("a1    b1   \na2         ");
+	}
+
 	[Test]
 	[Arguments("align(30 30,a,b)",
 		"a                              b                             ")]

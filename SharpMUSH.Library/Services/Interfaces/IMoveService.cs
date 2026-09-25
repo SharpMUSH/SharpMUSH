@@ -18,11 +18,12 @@ public interface IMoveService
 
 	/// <summary>
 	/// The outermost room containing <paramref name="obj"/>, walking out through containers.
-	/// PennMUSH <c>absolute_room</c> (<c>src/utils.c:794</c>). Null when the chain exceeds
-	/// <c>Limit.MaxDepth</c> or ends somewhere that is not a room — Penn's "too many containers"
-	/// and void cases.
+	/// PennMUSH <c>absolute_room</c> (<c>src/utils.c:794</c>). The walk has three answers, and the
+	/// two without a room are kept apart because Penn's callers do different things with them: a
+	/// chain that ends somewhere that is not a room is Penn's <c>NOTHING</c>, and one longer than
+	/// <c>Limit.MaxDepth</c> is its <c>AMBIGUOUS</c> — "too many containers".
 	/// </summary>
-	ValueTask<AnySharpContainer?> AbsoluteRoom(AnySharpObject obj);
+	ValueTask<AbsoluteRoomResult> AbsoluteRoom(AnySharpObject obj);
 
 	/// <summary>
 	/// Sends an object somewhere and fires every triad the move produces, in PennMUSH's order.
@@ -100,3 +101,14 @@ public interface IMoveService
 	/// <returns>True if the player was rescued from the void, false if location was valid</returns>
 	ValueTask<bool> RescueFromVoidAsync(AnySharpObject player, DBRef fallbackHome);
 }
+
+/// <summary>
+/// What <see cref="IMoveService.AbsoluteRoom"/> found. <see cref="Room"/> is null both in the void
+/// and when the walk ran out of depth; <see cref="TooManyContainers"/> tells those apart, and a
+/// caller that decides anything on the room has to fail closed on it rather than treat the missing
+/// room as nothing to check.
+/// </summary>
+/// <param name="Room">The outermost room, or null when there is none to report.</param>
+/// <param name="TooManyContainers">The walk ran out of <c>Limit.MaxDepth</c> before reaching a room —
+/// PennMUSH's <c>AMBIGUOUS</c> (<c>src/utils.c:813</c>).</param>
+public readonly record struct AbsoluteRoomResult(AnySharpContainer? Room, bool TooManyContainers = false);

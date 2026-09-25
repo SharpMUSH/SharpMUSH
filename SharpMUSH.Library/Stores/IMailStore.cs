@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library;
@@ -22,7 +23,14 @@ public interface IMailStore
 
 	ValueTask<string[]> GetMailFoldersAsync(SharpPlayer id, CancellationToken cancellationToken = default);
 
-	ValueTask SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail, CancellationToken cancellationToken = default);
+	/// <summary>
+	/// Admits <paramref name="mail"/> to <paramref name="to"/>'s mailbox in one write: counts the messages already
+	/// in its folder, refuses when that is <paramref name="limit"/> or more, and otherwise stores it. PennMUSH's
+	/// <c>real_send_mail</c> (<c>extmail.c:1592</c>) counts and inserts in one step; this is that step.
+	/// </summary>
+	/// <returns>The stored message's id and number, or <see cref="MailboxFull"/> when the folder was full.</returns>
+	ValueTask<MailAdmission> SendMailAsync(SharpObject from, SharpPlayer to, SharpMail mail, long? limit = null,
+		CancellationToken cancellationToken = default);
 
 	ValueTask UpdateMailAsync(string mailId, MailUpdate commandMail, CancellationToken cancellationToken = default);
 
