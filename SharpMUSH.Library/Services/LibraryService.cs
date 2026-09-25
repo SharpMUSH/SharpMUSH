@@ -1,8 +1,13 @@
+using System.Collections.Concurrent;
 using SharpMUSH.Library.Definitions;
 
 namespace SharpMUSH.Library.Services;
 
-public class LibraryService<TKey, TValue> : Dictionary<TKey, (TValue LibraryInformation, bool IsSystem)>
+/// <summary>
+/// A live command or function table. <c>@command</c>, <c>@function</c> and plugin loads change it while
+/// other connections are dispatching through it, so it is safe to read and enumerate during a change.
+/// </summary>
+public class LibraryService<TKey, TValue> : ConcurrentDictionary<TKey, (TValue LibraryInformation, bool IsSystem)>
 	where TKey : notnull
 {
 	private readonly HashSet<TKey> _systemNames;
@@ -11,10 +16,28 @@ public class LibraryService<TKey, TValue> : Dictionary<TKey, (TValue LibraryInfo
 	{
 	}
 
-	protected LibraryService(IEqualityComparer<TKey>? comparer) : base(comparer)
+	/// <remarks>
+	/// One lock stripe: changes are rare and already serialised by their callers, and
+	/// <see cref="ConcurrentDictionary{TKey,TValue}.Count"/>, which the command trie reads on every
+	/// lookup, takes every stripe. Reads and enumeration never lock.
+	/// </remarks>
+	protected LibraryService(IEqualityComparer<TKey>? comparer) : base(concurrencyLevel: 1, capacity: 31, comparer)
 	{
 		_systemNames = new HashSet<TKey>(Comparer);
 	}
+
+	/// <summary>Adds an entry, throwing if the name is taken, as <see cref="Dictionary{TKey,TValue}.Add"/> does.</summary>
+	public void Add(TKey key, (TValue LibraryInformation, bool IsSystem) value)
+	{
+		if (!TryAdd(key, value))
+		{
+			throw new ArgumentException($"An entry named '{key}' already exists.", nameof(key));
+		}
+	}
+
+	public bool Remove(TKey key) => TryRemove(key, out _);
+
+	public bool Remove(TKey key, out (TValue LibraryInformation, bool IsSystem) value) => TryRemove(key, out value);
 
 	/// <summary>Reserve a compiled contribution's name for this library's lifetime, including softcode deletion.</summary>
 	public void ReserveSystemName(TKey name) { lock (_systemNames) _systemNames.Add(name); }

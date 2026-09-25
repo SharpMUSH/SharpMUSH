@@ -63,24 +63,12 @@ public class CommandTrie
 				return current;
 			}
 
-			// The library is a plain dictionary that the plugin manager mutates without a shared lock.
-			// A rebuild that lands mid-mutation sees the enumeration invalidated; it retries, and the
-			// count it records is read after the build so the next lookup catches anything later.
-			for (var attempt = 0; ; attempt++)
-			{
-				try
-				{
-					var built = Build(commandLibrary);
-					cached.BuiltFromCount = commandLibrary.Count;
-					cached.Trie = built;
-					return built;
-				}
-				catch (InvalidOperationException) when (attempt < 5)
-				{
-					// Let the mutating thread finish before enumerating again.
-					Thread.Yield();
-				}
-			}
+			// The library is safe to enumerate while it changes; the count is read after the build
+			// so the next lookup catches anything added or removed during it.
+			var built = Build(commandLibrary);
+			cached.BuiltFromCount = commandLibrary.Count;
+			cached.Trie = built;
+			return built;
 		}
 	}
 
