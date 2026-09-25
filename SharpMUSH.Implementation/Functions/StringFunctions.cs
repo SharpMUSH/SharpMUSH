@@ -1671,15 +1671,22 @@ public partial class Functions
 	public ValueTask<CallState> StripAnsi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message!.ToPlainText());
 
-	[SharpFunction(Name = "strlen", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
+	[SharpFunction(Name = "strlen", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "count-controls"])]
 	public ValueTask<CallState> StringLen(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
 		// Display cells, not UTF-16 code units: softcode measures a string to lay it out against
 		// something else, and a combining mark or a wide character makes those two numbers differ
 		// wildly — "Text Editor" under a pile of diacritics is 66 code units and 11 columns.
 		// A control character (tab, newline) is 0 columns wide but one character to PennMUSH
-		// (ansi_strlen, src/markup.c), so it counts here: strlen(%t) is 1.
-		=> ValueTask.FromResult<CallState>(
-			parser.CurrentState.Arguments["0"].Message!.GetDisplayWidth(ControlCharacterWidth.One));
+		// (ansi_strlen, src/markup.c), so by default it counts here: strlen(%t) is 1. A false
+		// second argument opts out and measures controls as the 0 columns they occupy.
+		var countControls = !parser.CurrentState.Arguments.TryGetValue("1", out var arg1)
+			|| arg1.Message.Truthy(parser);
+
+		return ValueTask.FromResult<CallState>(
+			parser.CurrentState.Arguments["0"].Message!.GetDisplayWidth(
+				countControls ? ControlCharacterWidth.One : ControlCharacterWidth.Zero));
+	}
 
 	[SharpFunction(Name = "strmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern"])]
 	public ValueTask<CallState> StringMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)

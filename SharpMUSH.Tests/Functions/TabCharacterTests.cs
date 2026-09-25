@@ -46,6 +46,18 @@ public class TabCharacterTests
 		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
 
 	[Test]
+	[Arguments("strlen(a%tb,1)", "3")]
+	[Arguments("strlen(a%rb,1)", "3")]
+	[Arguments("strlen(a%tb,0)", "2")]
+	[Arguments("strlen(a%rb,0)", "2")]
+	[Arguments("strlen(%t,0)", "0")]
+	[Arguments("strlen(a%tb,)", "2")]
+	[Arguments("strlen(界%t,0)", "2")]
+	[Arguments("strlen(界%t,1)", "3")]
+	public async Task StrlenCountsControlsUnlessTheSecondArgumentIsFalse(string code, string expected)
+		=> await Assert.That(await Evaluate(code)).IsEqualTo(expected);
+
+	[Test]
 	public async Task AStoredTabSurvivesAReadBack()
 	{
 		await Evaluate("attrib_set(me/TAB1256,a%tb)");
