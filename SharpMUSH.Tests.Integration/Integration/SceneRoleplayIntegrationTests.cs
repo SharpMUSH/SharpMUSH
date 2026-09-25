@@ -151,11 +151,18 @@ public class SceneRoleplayIntegrationTests
 			.ToList();
 	}
 
+	/// <summary>
+	/// The scene package's capture hooks are <c>@hook/override</c> without <c>/inline</c>, so a matched pose is
+	/// its own queue entry (<c>run_cmd_hook</c>, <c>src/command.c:2454</c>); wait for it before reading.
+	/// </summary>
+	private ValueTask DrainQueue() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
+
 	/// <summary>Runs a command as a connection handle and returns every notification it produced.</summary>
 	private async Task<IReadOnlyList<string>> RunAndCollectAs(long handle, string command)
 	{
 		var before = NotificationCount();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
+		await DrainQueue();
 		return MessagesSince(before);
 	}
 
@@ -164,6 +171,7 @@ public class SceneRoleplayIntegrationTests
 	{
 		var before = NotificationCount();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
+		await DrainQueue();
 		return NotificationsSince(before);
 	}
 

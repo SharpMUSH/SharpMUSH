@@ -1706,7 +1706,8 @@ public class SharpMUSHParserVisitor(
 	/// <c>parse_que_attr</c>, so it runs after the list that matched it, with its own q-registers and
 	/// budget, and <c>@halt</c> can drop it. <see cref="ParserStateFlags.DirectInput"/> is set only for a
 	/// command typed at a connection, so it stands for the socket here. <see cref="ExecuteHookCode"/>'s
-	/// OVERRIDE/EXTEND path always runs in place.
+	/// OVERRIDE/EXTEND path runs in place only for an <c>/inline</c> hook (<c>run_cmd_hook</c>,
+	/// <c>src/command.c:2454</c>).
 	/// </remarks>
 	private async ValueTask<Option<CallState>> HandleUserDefinedCommand(
 		IMUSHCodeParser prs,
@@ -2345,10 +2346,10 @@ public class SharpMUSHParserVisitor(
 					return new None();
 				}
 
-				// Dispatch is the same whether or not the hook is /inline: the matched $-command's body
-				// runs here on this call stack either way. The flag only selects the register handling
-				// above (/localize, /clearregs).
-				return await HandleUserDefinedCommand(localParser, matches);
+				// run_cmd_hook (command.c:2454) hands hook->inplace to atr_comm_match as the queue type, so
+				// the matched body runs in place only for an /inline hook. Otherwise parse_que_attr queues
+				// it as its own entry, after the current action list, with fresh q-registers.
+				return await HandleUserDefinedCommand(localParser, matches, inPlace: hook.Inline);
 			}
 
 			return await AttributeService.EvaluateAttributeFunctionResultAsync(localParser, executorObj, targetObj,

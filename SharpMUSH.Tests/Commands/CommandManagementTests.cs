@@ -54,8 +54,16 @@ public class CommandManagementTests
 	private Task<List<string>> AsGod(string command)
 		=> MessagesWhile(God, async () => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command)));
 
+	/// <summary>
+	/// Also waits for what the command queued: a non-<c>/inline</c> hook's matched <c>$</c>-command is its
+	/// own queue entry (<c>run_cmd_hook</c>, <c>src/command.c:2454</c>).
+	/// </summary>
 	private Task<List<string>> As(TestIsolationHelpers.TestPlayer player, string command)
-		=> MessagesWhile(player.DbRef, async () => await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command)));
+		=> MessagesWhile(player.DbRef, async () =>
+		{
+			await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+			await WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
+		});
 
 	private Task<TestIsolationHelpers.TestPlayer> Mortal(string prefix)
 		=> TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);

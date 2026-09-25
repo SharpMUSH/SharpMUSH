@@ -1,8 +1,10 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests;
 
@@ -22,6 +24,23 @@ public class HookOverrideBehaviorTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 	private IHookService HookService => WebAppFactoryArg.Services.GetRequiredService<IHookService>();
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+
+	/// <summary>
+	/// Runs <paramref name="list"/> as #1 from the queue and waits for it and everything it queued. A command
+	/// parsed on the test thread would race the queue consumer that runs what it queues.
+	/// </summary>
+	private async Task RunQueued(string list)
+	{
+		await WebAppFactoryArg.Services.GetRequiredService<IMediator>().Send(new AdmitCommandListRequest(
+			MString.Plain(list),
+			WebAppFactoryArg.CommandParserFor(new DBRef(1), 1).CurrentState,
+			new DbRefAttribute(new DBRef(1), ["QUEUED_TEST"]),
+			-1));
+		await DrainQueue();
+	}
+
+	/// <summary>A non-<c>/inline</c> hook's matched body is its own queue entry; wait for it to run.</summary>
+	private ValueTask DrainQueue() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
 
 	private async Task<string> ReadAttributeAsync(DBRef obj, string attribute) =>
 		(await Database.GetAttributeAsync(obj, attribute.Split('`'), CancellationToken.None).LastOrDefaultAsync())
@@ -53,6 +72,7 @@ public class HookOverrideBehaviorTests
 				MarkupText.Plain($"@hook/{hookType} {command}={obj},OVR"));
 			await Parser.CommandParse(1, ConnectionService,
 				MarkupText.Plain($"{command}{switches} {input}"));
+			await DrainQueue();
 			await Assert.That(await ReadAttributeAsync(obj, "RESULT")).IsEqualTo(expected);
 			if (input == "ansi(hr,rawr)")
 			{
@@ -83,6 +103,7 @@ public class HookOverrideBehaviorTests
 			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/override @EMIT={obj},OVR"));
 
 			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@emit hello world"));
+			await DrainQueue();
 
 			await Assert.That(await ReadAttributeAsync(obj, "RESULT")).IsEqualTo("hello world")
 				.Because("the @EMIT override should capture the command's argument");
@@ -117,6 +138,7 @@ public class HookOverrideBehaviorTests
 			await Parser.CommandParse(1, ConnectionService,
 				MarkupText.Plain($"&WRAP {obj}=${token} *:@emit payload=%0"));
 			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"{token} hello"));
+			await DrainQueue();
 
 			await Assert.That(await ReadAttributeAsync(obj, "RESULT")).IsEqualTo("payload=hello")
 				.Because("the override must receive the EVALUATED @emit argument, not the raw pre-substitution text");
@@ -129,11 +151,9 @@ public class HookOverrideBehaviorTests
 
 	/// <summary>
 	/// Same contract as <see cref="Override_CapturesEvaluatedArgument_NotRawSubstitution"/>, but through
-	/// <c>@hook/override/inline</c>. Both spellings now reach the matched <c>$</c>-command through one
-	/// dispatch path; <c>hook.Inline</c> survives only as a register-handling flag, gating the
-	/// <c>/localize</c> save-restore and the <c>/clearregs</c> wipe around that dispatch. This test holds
-	/// the two spellings to the same result, so the shared path cannot regress into treating them
-	/// differently: nothing about a matched <c>$</c>-command's execution depends on the inline flag.
+	/// <c>@hook/override/inline</c>. The inline flag decides only WHEN the matched <c>$</c>-command runs (in
+	/// place, or as its own queue entry; see <see cref="HookedMatch_IsQueuedUnlessTheHookIsInline"/>), not
+	/// what argument it sees, so both spellings capture the same text.
 	/// </summary>
 	[Test]
 	public async ValueTask OverrideInline_CapturesEvaluatedArgument_SameAsNonInline()
@@ -157,6 +177,46 @@ public class HookOverrideBehaviorTests
 		finally
 		{
 			await HookService.ClearHookAsync("@EMIT", "OVERRIDE");
+		}
+	}
+
+	/// <summary>
+	/// <c>run_cmd_hook</c> (<c>src/command.c:2454</c>) hands the hook's <c>inplace</c> flags to
+	/// <c>atr_comm_match</c> as the queue type, so an OVERRIDE/EXTEND hook's matched <c>$</c>-command runs in
+	/// place only when the hook was set with <c>/inline</c>. Otherwise <c>parse_que_attr</c> queues it: it
+	/// runs after the rest of the action list, and with its own, empty q-registers (#1284).
+	/// </summary>
+	/// <remarks>
+	/// PennMUSH 1.8.8 p0 (rev <c>80a1d5b</c>), with <c>@set Hk=!no_command</c>, <c>&amp;LIST Hk=think setq(0,parent);@emit x;&amp;ORDER
+	/// Hk=[get(Hk/ORDER)]list</c> and <c>&amp;OVR Hk=$@emit *:&amp;ORDER Hk=[get(Hk/ORDER)]hook(%q0)</c>, then
+	/// <c>@trigger Hk/LIST</c>: <c>@hook/override</c> leaves <c>listhook()</c>, <c>@hook/override/inline</c>
+	/// leaves <c>hook(parent)list</c>. The EXTEND rows are the same transcript through <c>say/x y</c>:
+	/// <c>listext()</c> and <c>ext(parent)list</c>.
+	/// </remarks>
+	[Test]
+	[Arguments("@EMIT", "OVERRIDE", "override", "@emit *", "@emit x", "listhook()")]
+	[Arguments("@EMIT", "OVERRIDE", "override/inline", "@emit *", "@emit x", "hook(parent)list")]
+	[Arguments("SAY", "EXTEND", "extend", "say/x *", "say/x y", "listhook()")]
+	[Arguments("SAY", "EXTEND", "extend/inline", "say/x *", "say/x y", "hook(parent)list")]
+	public async ValueTask HookedMatch_IsQueuedUnlessTheHookIsInline(string command, string hookType,
+		string hookSwitches, string pattern, string invocation, string expected)
+	{
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HookQueue");
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"&OVR {obj}=${pattern}:&ORDER {obj}=[get({obj}/ORDER)]hook(%q0)"));
+			await Parser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"&LIST {obj}=think setq(0,parent);{invocation};&ORDER {obj}=[get({obj}/ORDER)]list"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/{hookSwitches} {command}={obj},OVR"));
+
+			await RunQueued($"@trigger {obj}/LIST");
+
+			await Assert.That(await ReadAttributeAsync(obj, "ORDER")).IsEqualTo(expected);
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(command, hookType);
 		}
 	}
 
@@ -187,6 +247,7 @@ public class HookOverrideBehaviorTests
 			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&RESULT {obj}=UNSET"));
 
 			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@emit alpha%rbeta"));
+			await DrainQueue();
 
 			await Assert.That(await ReadAttributeAsync(obj, "RESULT")).IsEqualTo(expected)
 				.Because($"'{flags}' decides whether the override sees a two-line emit at all");
