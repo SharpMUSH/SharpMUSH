@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.21.0
+version: 1.21.1
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -133,14 +133,14 @@ objects:
       #   recipients = lcon(loc(%#)) — everyone in the speaker's room hears it (per-recipient).
       #   <default>  = the built-in third-person literal, used verbatim when the speaker has
       #                no FORMAT`<TYPE>` attribute (it is NOT re-evaluated per recipient, so the
-      #                fallback is a single observer-form line for everyone, including %#).
+      #                fallback is a single line for every recipient of that call; SAY therefore
+      #                makes a separate call for %#).
       #   <obj>/<attr> = %#/FORMAT`<TYPE>` — the per-player render read off the SPEAKER. When set,
-      #                it receives %0 = the message text and %1 = the recipient's FULL objid
-      #                (#N:creation, via the @message `##` recipient token), and %# = the speaker
-      #                (short #N). To split "You…" vs "Name…", compare the dbref NUMBER:
-      #                strmatch(before(%1,:),%#) — true only for the speaker's own copy. FORMAT`<TYPE>`
-      #                defaults are seeded by the Ancestor Player (sibling effort); absent it, the
-      #                <default> literal (a single third-person line) is used for everyone.
+      #                it receives %0 = the message text and %1 = the recipient's dbref (short #N,
+      #                via the @message `##` recipient token, as PennMUSH's unparse_dbref), and
+      #                %# = the speaker. To split "You…" vs "Name…", strmatch(%1,%#) is true only
+      #                for the speaker's own copy. FORMAT`<TYPE>` defaults are seeded by the
+      #                Ancestor Player; absent it, the <default> literal is used.
       #   commas inside the <default> literal use [chr(44)] (NOT a literal `,`): @message is
       #   CB.RSArgs and splits its RHS on commas BEFORE evaluating each arg, and a backslash-escaped
       #   `\,` does not survive the $-command body parse + RSArgs split (it shifts the obj/attr arg,
@@ -192,10 +192,13 @@ objects:
         flags: [REGEXP]
 
       # Built-in SAY (MoreCommands.Say) emits "You say, \"<msg>\"" to the speaker
-      # and "<name> says, \"<msg>\"" to everyone else in the room.
+      # and "<name> says, \"<msg>\"" to everyone else in the room (PennMUSH do_say, src/speech.c).
+      # Unlike the other hooks, the <default> literal differs per recipient, so SAY sends two
+      # @message/spoof calls: the first-person line to %#, the third-person line to the rest of
+      # lcon() (the speaker is filtered out by dbref number, since lcon() may list objids).
       CMD`CAPTURE`SAY:
         value: |-
-          $(?is)^(say |")(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,say,,[name(%#)] says\, "%2"; @include %!/INC`CAP_HEADER}; @message/spoof [lcon(%q<RoomID>)]=[name(%#)] says[chr(44)] "%2",%#/FORMAT`SAY,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
+          $(?is)^(say |")(.*)$: @if setr(WillCaptureAsPose,and(strmatch(scenefocus(%#),setr(SceneID,scenewhere(setr(RoomID,loc(%#))))),not(strmatch(%q<SceneID>,#-1*)),u(%!/FUN`IS`APPROVED,%#)))={@scene/addpose %q<SceneID>=%#,[scenemember(%q<SceneID>,%#,showas)],%q<RoomID>,say,,[name(%#)] says\, "%2"; @include %!/INC`CAP_HEADER}; @message/spoof %#=You say[chr(44)] "%2",%#/FORMAT`SAY,%2,##; @message/spoof [iter(lcon(%q<RoomID>),if(strmatch(before(%i0,:),%#),,%i0))]=[name(%#)] says[chr(44)] "%2",%#/FORMAT`SAY,%2,##; @if %q<WillCaptureAsPose>={@include %!/INC`CAP_FOOTER}
         flags: [REGEXP]
 
       # Built-in SEMIPOSE (MoreCommands.SemiPose) emits "<name><message>" (no space).
@@ -270,7 +273,7 @@ objects:
         $+scene/pose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/focus %#=%0; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],pose,,[name(%#)] %1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] %1,%#/FORMAT`POSE,%1,##}
 
       CMD`WEB`SAY: |-
-        $+scene/say *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/focus %#=%0; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],say,,[name(%#)] says\, "%1"; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)] says[chr(44)] "%1",%#/FORMAT`SAY,%1,##}
+        $+scene/say *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/focus %#=%0; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],say,,[name(%#)] says\, "%1"; @if strmatch(loc(%#),scene(%0,room))={@message/spoof %#=You say[chr(44)] "%1",%#/FORMAT`SAY,%1,##; @message/spoof [iter(lcon(scene(%0,room)),if(strmatch(before(%i0,:),%#),,%i0))]=[name(%#)] says[chr(44)] "%1",%#/FORMAT`SAY,%1,##}
 
       CMD`WEB`SEMIPOSE: |-
         $+scene/semipose *=*: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=[get(%!/DATA`DENY_APPROVAL)]; @assert not(strmatch(scene(%0,status),#-1*))=@pemit %#=No such scene: %0; @if strmatch(scenemember(%0,%#,role),#-1*)={@scene/member %0/participant=%#}; @scene/focus %#=%0; @scene/addpose %0=%#,[scenemember(%0,%#,showas)],[scene(%0,room)],semipose,,[name(%#)]%1; @if strmatch(loc(%#),scene(%0,room))={@message/spoof [lcon(scene(%0,room))]=[name(%#)]%1,%#/FORMAT`SEMIPOSE,%1,##}
