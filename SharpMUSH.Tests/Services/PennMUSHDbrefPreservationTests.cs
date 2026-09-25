@@ -205,6 +205,44 @@ public class PennMUSHDbrefPreservationTests
 	}
 
 	/// <summary>
+	/// A fresh server's bundled packages create their objects owned by, inside and homed at the Package
+	/// Manager, among them the Scene Logger that SAY/POSE/@EMIT are hooked to. Removing the seeds must not
+	/// leave such an object ownerless: every command it runs would throw "No owner found" and the hooked
+	/// speech commands would say nothing. They go to God, as PennMUSH's dbck gives an ownerless object,
+	/// and keep their flags.
+	/// </summary>
+	[Test]
+	public async Task WhatTheSeedsOwnedOrHeldGoesToGod()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var packageManager = (await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(7)))).Expect<SharpPlayer>();
+		var logger = await world.Database.CreateThingAsync("Scene Logger", packageManager, packageManager, packageManager);
+		var loggerNode = await NodeAsync(world, logger.Number);
+		var wizard = (await world.Database.GetObjectFlagAsync("WIZARD"))!;
+		await world.Database.SetObjectFlagAsync(loggerNode, wizard);
+		await world.Database.SetAttributeAsync(logger, ["CMD`SAY"], MarkupText.Plain("$say *:@message/spoof"), packageManager);
+
+		var result = await world.Converter.ConvertDatabaseAsync(Dump(
+			new PennMUSHObject { DBRef = 0, Name = "Room Zero", Type = PennMUSHObjectType.Room },
+			new PennMUSHObject { DBRef = 1, Name = "One", Type = PennMUSHObjectType.Player },
+			new PennMUSHObject { DBRef = 2, Name = "Master Room", Type = PennMUSHObjectType.Room }));
+
+		await Assert.That(result.Errors).IsEmpty();
+		var imported = await NodeAsync(world, logger.Number);
+		await Assert.That(imported.Object().Name).IsEqualTo("Scene Logger");
+		await Assert.That((await imported.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number)
+			.IsEqualTo(1);
+		await Assert.That((await imported.AsContent.Location()).Object().DBRef.Number).IsEqualTo(1);
+		await Assert.That((await imported.AsContent.Home()).Object()!.DBRef.Number).IsEqualTo(1);
+		await Assert.That(await SharpMUSH.Library.HelperFunctions.HasFlag(imported, "WIZARD")).IsTrue();
+		var attribute = (await world.Database.GetAttributeAsync(logger, ["CMD`SAY"]).ToListAsync()).Single();
+		await Assert.That((await attribute.Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number)
+			.IsEqualTo(1);
+		await Assert.That(result.Warnings.Any(w => w.StartsWith("Gave God (#1)") && w.Contains($"#{logger.Number}")))
+			.IsTrue();
+	}
+
+	/// <summary>
 	/// A seed is known by the creation time migration stamped on all of #0-#9, not by its name: a second
 	/// import into a world whose #7 is an imported player named <c>Package Manager</c> deletes nothing.
 	/// </summary>
