@@ -32,11 +32,11 @@ public class MoveService(
 	private const int MaxMoveDepth = 15;
 
 	/// <inheritdoc />
-	public async ValueTask<AnySharpContainer?> AbsoluteRoom(AnySharpObject obj)
+	public async ValueTask<AbsoluteRoomResult> AbsoluteRoom(AnySharpObject obj)
 	{
 		if (obj is SharpRoom room)
 		{
-			return room;
+			return new AbsoluteRoomResult(room);
 		}
 
 		// The walk starts at an exit's home — its destination — and at everything else's location
@@ -47,7 +47,7 @@ public class MoveService(
 		{
 			if (await exit.Home.WithCancellation(CancellationToken.None) is not AnySharpContainer home)
 			{
-				return null;
+				return new AbsoluteRoomResult(null);
 			}
 
 			current = home;
@@ -65,20 +65,21 @@ public class MoveService(
 		{
 			if (current.IsRoom)
 			{
-				return current;
+				return new AbsoluteRoomResult(current);
 			}
 
 			var next = await current.Location();
 
 			if (next.Object().DBRef.Equals(current.Object().DBRef))
 			{
-				return null;
+				return new AbsoluteRoomResult(null);
 			}
 
 			current = next;
 		}
 
-		return null;
+		// utils.c:813: out of depth is AMBIGUOUS, not NOTHING.
+		return new AbsoluteRoomResult(null, TooManyContainers: true);
 	}
 
 	/// <summary>
@@ -163,12 +164,13 @@ public class MoveService(
 
 		// The absolute room is walked once before the write and once after, and each side's zone is
 		// read once from it. Both are handed to the zone triads, which re-walk nothing.
-		var absOld = await AbsoluteRoom(mover);
+		// Out of depth has no zone, as Zone(AMBIGUOUS) is no GoodObject in Penn.
+		var absOld = (await AbsoluteRoom(mover)).Room;
 
 		await mediator.Send(new MoveObjectCommand(
 			what, where, old, enactor, noMoveMsgs, cause));
 
-		var absNew = await AbsoluteRoom(mover);
+		var absNew = (await AbsoluteRoom(mover)).Room;
 		var oldZone = absOld is null ? null : await ZoneOf(absOld);
 		var newZone = absNew is null ? null : await ZoneOf(absNew);
 

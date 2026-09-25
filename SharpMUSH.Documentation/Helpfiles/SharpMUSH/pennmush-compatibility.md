@@ -12,9 +12,11 @@ Every entry here can be checked from inside the game; the examples are lines you
 
   [COMPATIBILITY CONFIG]    settings that change how your code evaluates<br>
   [COMPATIBILITY PARSER]    evaluation, dispatch and error handling<br>
+  [COMPATIBILITY COMMANDS]  command tables, configuration and handlers<br>
   [COMPATIBILITY ARGUMENTS] functions that take a different number of arguments<br>
   [COMPATIBILITY IDENTITY]  dbrefs, objids, time precision and number precision<br>
   [COMPATIBILITY OUTPUT]    rendering a string for something outside the game<br>
+  [COMPATIBILITY ECONOMY]   money, pennies and costs<br>
   [COMPATIBILITY NAMES]     functions and commands that exist here and not there<br>
   [COMPATIBILITY MAIL]      @mail forwarding, filters and folders<br>
   [COMPATIBILITY UNRESOLVED] known differences with no decision yet<br>
@@ -23,8 +25,8 @@ Every entry here can be checked from inside the game; the examples are lines you
 
 # COMPATIBILITY CONFIG
 These configuration options change how existing code evaluates. All of them are read at evaluation
-time, so changing one takes effect on the next call rather than at the next restart. They are set in
-the game's configuration file; `@config/set` cannot change them yet (#1123).
+time, so changing one takes effect on the next call rather than at the next restart. Set them with
+`@config/set` or on the web portal's configuration page.
 
 ## Boolean compatibility — `tiny_booleans`
 
@@ -243,6 +245,89 @@ entry is a position in a list.
 1 0
 ```
 
+# COMPATIBILITY COMMANDS
+Deliberate differences in the command table, the configuration and the objects the game starts with.
+
+## Added commands do not run `UNIMPLEMENTED_COMMAND`
+
+**A choice.**
+
+**PennMUSH** runs a command made with `@command/add` and never `@hook`ed through the
+`UNIMPLEMENTED_COMMAND` entry (`command.c:1900-1903`), so a hook on `UNIMPLEMENTED_COMMAND` changes
+what every such command does.<br>
+**SharpMUSH** has the added command print "This command has not been implemented." itself. A hook on
+`UNIMPLEMENTED_COMMAND` changes only what typing `UNIMPLEMENTED_COMMAND` does, and that can be typed
+directly.<br>
+**Why.** Both print the same text, so only a hook on `UNIMPLEMENTED_COMMAND` can tell them apart.
+Re-entering hook dispatch by command name from inside a command body needs a mechanism only
+`HUH_COMMAND` has. (#1257)<br>
+**Workaround.** `@hook` the added command itself rather than `UNIMPLEMENTED_COMMAND`.
+
+```sharp unchecked
+> @command/add foo
+> foo
+This command has not been implemented.
+```
+
+## `@config/set` is stored
+
+**A choice.**
+
+**PennMUSH** changes the running value; the change is lost at restart unless it is also written to
+`mush.cnf`.<br>
+**SharpMUSH** keeps one stored configuration, which the portal also edits, and every `/set` is written
+to it and lasts across restarts. `/save` does the same and says so.<br>
+**Why.** There is no `mush.cnf` for a running game to fall back to.<br>
+**Workaround.** Set the value back when a change was meant to be temporary.
+
+## `command_restrictions` will reapply without a restart (#1250)
+
+**A choice, not yet in effect.**
+
+**PennMUSH** reads `command_restrictions` only at startup and restart (`game.c:757`, `bsd.c:1284`).<br>
+**SharpMUSH** applies it at startup, before `@STARTUP` runs, as PennMUSH does. The decision
+recorded on #1250 is that a runtime change will reapply in both directions, tightening and loosening,
+without a restart. Until #1250 is done, a change needs a restart, as in PennMUSH.<br>
+**Why.** The configuration can already be changed while the game is running, from `@config/set` or
+the portal; a restriction that waits for a restart looks as if it had been ignored.<br>
+**Workaround.** Use `@command/restrict` for a change that must take effect now.
+
+## PennMUSH's file and allocator housekeeping answers `NOT SUPPORTED`
+
+**A choice.**
+
+**PennMUSH** trims its own log files with `@logwipe` and reports its attribute-chunk allocator with
+`@stats/chunks`, `/regions`, `/paging` and `/freespace`.<br>
+**SharpMUSH** writes its logs to the sinks named in its configuration and stores attributes in its
+database, so it has neither. Those commands return `#-1 NOT SUPPORTED`, and `@logwipe` also records
+the attempt in the server log.<br>
+**Why.** Nothing in the game owns the resource those commands manage.<br>
+**Workaround.** Rotate logs where they are configured.
+
+## The HTTP and event handlers exist from the start
+
+**A choice.**
+
+**PennMUSH** has no HTTP or event handler until a wizard creates an object and points
+`http_handler` or `event_handler` at it.<br>
+**SharpMUSH** creates the HTTP Handler (#8) and the Event Handler (#9) in a new database, with the
+options already pointing at them and the default HTTP verb attributes installed.<br>
+**Why.** The web portal is built on handler routes and needs them present.<br>
+**Workaround.** Extend the shipped handlers rather than creating new ones. See `help http` and
+`help event`.
+
+## A drop-to move's event names who caused it
+
+**A choice.**
+
+**PennMUSH** reports the move of an object sent through a drop-to as caused by `SYSEVENT`
+(`move.c:187`).<br>
+**SharpMUSH** has no `SYSEVENT` object and passes on the enactor whose action caused the move. This
+shows only in the enactor of the `OBJECT`MOVE` event. (#1006 item 9)<br>
+**Why.** There is no `SYSEVENT` dbref to name.<br>
+**Workaround.** Do not rely on an `OBJECT`MOVE` handler's enactor to tell a drop-to move from any
+other.
+
 # COMPATIBILITY ARGUMENTS
 Functions that accept a different number of arguments here. Every one of these is **additive**: the
 call you would write for PennMUSH keeps its PennMUSH meaning, and the extra argument is optional.
@@ -405,6 +490,23 @@ red
 Rendering to a format the game does not otherwise use is how you get a portable string: `html` for a
 web page, `ansi` for a terminal capture, neither for plain text.
 
+# COMPATIBILITY ECONOMY
+## `money()` is not supported
+
+**A choice.**
+
+**PennMUSH** keeps a penny balance on every player: `money()` reports it, and building, `give`,
+`@pay` and `buy` spend it.<br>
+**SharpMUSH** keeps no balance. `money()` returns `#-1 NOT SUPPORTED` and tells you why.<br>
+**Why.** SharpMUSH does not track pennies, so there is no balance to report.<br>
+**Workaround.** Keep balances in attributes. Code that only displays `money()` should test it for
+`#-1` first.
+
+```sharp
+> think money(me)
+#-1 NOT SUPPORTED
+```
+
 # COMPATIBILITY NAMES
 Functions and commands that exist in SharpMUSH and not in PennMUSH, or that take their arguments in a
 different order.
@@ -558,6 +660,27 @@ SharpMUSH writes `EXPECTS AT LEAST <min>` or `EXPECTS AT MOST <max>`. Softcode t
 text of an arity error will not port. No decision has been recorded on whether to adopt PennMUSH's
 four forms.
 
+## HALT and players (#1006 items 1 and 2)
+
+**PennMUSH** queues an object's `@a`-action even when it is `HALT`ed, exempts players from the halted
+check (`cque.c:530`), and sets `HALT` on any runaway, a player included (`cque.c:303-313`).<br>
+**SharpMUSH** queues no action for a `HALT`ed object of any type, so that `@halt` stops an object
+completely. As a consequence it never sets `HALT` on a runaway player, which would silence them.<br>
+**Status.** The code records both as deliberate. #1006 asks whether to adopt PennMUSH's player
+exemption, which would let a runaway player be halted too. The two change together.
+
+## `EMPTY` on a `STICKY` item (#1006 item 4)
+
+**PennMUSH**'s `do_empty` sends the *container* home in that case (`move.c:845-847`).<br>
+**SharpMUSH** sends the item home.<br>
+**Status.** #1006 asks for an explicit decision rather than copying PennMUSH's surprising behaviour.
+
+## Queue fairness between owners (#1006 item 15)
+
+Admission is bounded by global and per-owner limits, and a refused entry is reported with its reason.
+Whether one owner's backlog should be able to delay another's, as it can in PennMUSH, is an open
+design question.
+
 ## `regrabi()`
 
 PennMUSH declares `REGRAB` and `REGRABALL` as taking up to four arguments and `REGRABI` as taking
@@ -572,17 +695,17 @@ choices.
   **`attrib_set#()` cannot be called.** The parser's function-name token does not admit `#`, so the
   text is returned unchanged. Use `attrib_set()`. (#974)<br>
   **`objmem()` always answers 0.** (#974)<br>
-  **Lock creator and flags are lost on import.** A PennMUSH dump's protected, inheritable, visual and
-  no_clone locks lose those semantics, and a lock whose creator differs from the object's owner is
-  not round-tripped. (#1108)
+  **`buy` has no economy.** It is a stub. (#1006 item 10)
 
-Movement, queue and economy gaps left by the movement work are enumerated in #1006 rather than
-repeated here.
+The other movement and queue gaps left by the movement work are enumerated in #1006 rather than
+repeated here; its items 1, 2, 4 and 15 are in [COMPATIBILITY UNRESOLVED].
 
 # COMPATIBILITY MATCHED
 These once differed and now match PennMUSH; noted here only because earlier SharpMUSH releases
 behaved differently.
 
+- Imported locks keep PennMUSH's creator and its protected, inheritable, visual and no_clone
+  flags (#1108).
 - Lock operator precedence: `&` binds tighter than `|`, so `a & b | c` is `(a & b) | c`.
 - `textentries()` is `textentries(<type>, <pattern>[, <osep>])`: the pattern is required and
   filters the topic names. `textentries()` and `textfile()` also refuse an unknown `<type>` and

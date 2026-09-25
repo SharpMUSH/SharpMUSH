@@ -1,0 +1,52 @@
+# Administrator commands. Wizards act on players and objects the ordinary player cannot touch.
+::case admin.wizard  a wizard logs in and inspects a player
+::login wiz Wiz wizpass
+::login alice Alice alicepass
+::as wiz
+think [hasflag(*Alice,WIZARD)] [type(*Alice)] [owner(*Alice)=owner(*Alice)]
+examine *Alice
+@teleport *Alice=here
+@teleport *Alice=[loc(*Alice)]
+
+::case admin.pcreate  @pcreate, @newpassword, and a new player logging in
+@pcreate Carol=carolpw
+@newpassword Carol=carolpw2
+::login carol Carol carolpw2
+think [name(%#)]
+::logout carol
+::as wiz
+@toad Carol
+think [type(*Carol)]
+
+::case admin.set  wizard-only flags and powers
+@set *Alice=ROYALTY
+think [hasflag(*Alice,ROYALTY)]
+@set *Alice=!ROYALTY
+@power *Alice=Guest
+think [haspower(*Alice,GUEST)]
+@power *Alice=!Guest
+
+::case admin.force  @force and @trigger
+@force *Alice=say forced hello
+&TRIG *Alice=say triggered %0
+@trigger *Alice/TRIG=1
+::settle
+
+::case admin.denied  a plain player cannot use wizard commands
+::as alice
+@pcreate Mallory=x
+@newpassword Bob=pwn
+@force *Wiz=say hi
+@toad Bob
+::as wiz
+
+::case admin.lists  @list and @config queries
+@list flags
+@list powers
+@config/list=names
+@config names
+
+::case admin.search  @search and @find
+@search name=Widget
+@find Widget
+@stats

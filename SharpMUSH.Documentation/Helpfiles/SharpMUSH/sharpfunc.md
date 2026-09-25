@@ -3999,25 +3999,13 @@ You say, "es"
 `money(<integer>)`<br>
 `money(<object>)`
 
-  If given an integer, money() returns the appropriate name (either singular or plural) for that amount of money, as set in the money_singular and money_plural @config options.
+  SharpMUSH does not track money, so money() always returns `#-1 NOT SUPPORTED` and tells you so. In PennMUSH it returns the name of an amount of money, or the pennies `<object>` holds. See [COMPATIBILITY ECONOMY].
 
-  Otherwise, it returns the amount of money `<object>` has. If `<object>` has the no_pay power, the value of the 'max_pennies' @config option is returned. `<object>` must have the power itself, rather than inheriting it from its owner, in this case.
-
-  Examples:
+  Example:
 ```sharp
-say money(Javelin)
-You say, "150"
+> think money(me)
+#-1 NOT SUPPORTED
 ```
-
-    > say money(1)<br>
-    You say, "Penny"
-
-    > say money(2)<br>
-    You say, "Pennies"
-
-    > &counter CvC=$count *: @say %0 [money(%0)]. Ah.. ah.. ah.<br>
-    > count 2<br>
-    Count von Count says, "2 Pennies. Ah.. ah.. ah."
 
 
 **See Also:**
@@ -6196,7 +6184,7 @@ printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))
 # DISPLAYWIDTH()
 `displaywidth(<string>)`
 
-  Returns the terminal columns occupied by the text, ignoring its markup. A wide CJK character occupies two columns. Combining marks add no columns; joined emoji are measured as whole clusters by MarkupString. Empty text returns 0. This uses the same existing measurement as [strlen()].
+  Returns the terminal columns occupied by the text, ignoring its markup. A wide CJK character occupies two columns. Combining marks add no columns; joined emoji are measured as whole clusters by MarkupString. Empty text returns 0. Control characters such as tabs and newlines occupy no columns. This is the same as `strlen(<string>,0)`; plain [strlen()] also counts each control character as one.
 
   A display column differs from a Unicode scalar (one code point), a grapheme cluster (a base plus its combining marks, or a joined emoji sequence), and a UTF-16 code unit (the indexing unit used by the .NET string API). Use [graphemecount()] and [graphemes()] for cluster operations. These functions do not normalize or repair text.
 
@@ -6233,14 +6221,20 @@ printf(lit(%4s|%-4s),ansi(r,界),ansi(b,😀))
 - [flip()]
 
 # STRLEN()
-`strlen(<string>)`
+`strlen(<string>[, <count controls>])`
 
-  Returns terminal display columns, ignoring markup. Wide CJK characters count as two columns and combining marks add no columns. This existing behavior is unchanged; [displaywidth()] names the unit explicitly. Use [graphemecount()] to count whole grapheme clusters.
+  Returns terminal display columns, ignoring markup. Wide CJK characters count as two columns and combining marks add no columns. Use [graphemecount()] to count whole grapheme clusters.
 
-  Example:
+  By default each control character, such as a tab (`%t`) or a newline (`%r`), counts as one, as it does in PennMUSH. If `<count controls>` is false, control characters count as zero, because they take up no columns. That matches [displaywidth()]. If `<count controls>` is true or omitted, the default applies.
+
+  Examples:
 ```sharp
 say strlen(foobar)
 You say, "6"
+say strlen(a%tb)
+You say, "3"
+say strlen(a%tb,0)
+You say, "2"
 ```
 
 

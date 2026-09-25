@@ -182,8 +182,10 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		{
 			case TerminalFrameKind.Markup:
 				{
+					// A frame can be all action and no text — a sound(), a stopsound(), a clearscreen() —
+					// and its HTML still has to reach the page.
 					var plainTrimmed = frame.Plain.TrimEnd('\r', '\n');
-					if (!string.IsNullOrEmpty(plainTrimmed))
+					if (!string.IsNullOrEmpty(plainTrimmed) || !string.IsNullOrWhiteSpace(frame.Html))
 						AddLine(frame.Plain, frame.Html, TerminalLineSource.Server);
 					return;
 				}

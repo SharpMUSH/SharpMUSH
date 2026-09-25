@@ -59,5 +59,6 @@ public record ProtocolCapabilities(
 	int MaxLineLength = -1,
 	OutputFormat Format = OutputFormat.Ansi,
 	bool ScreenReader = false,
-	string? ColorStylePin = null
+	string? ColorStylePin = null,
+	string? MxpSupported = null
 );

@@ -1,0 +1,4 @@
+.work/
+.cache/
+__pycache__/
+reports/latest/

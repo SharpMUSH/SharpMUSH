@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "KD-0001",
+      "scenario": "05-import",
+      "case": "import.owners",
+      "step": 1,
+      "reason": "money() is deliberately unsupported: SharpMUSH does not track pennies (function answers '#-1 NOT SUPPORTED').",
+      "tracking": "#1134",
+      "profile": "`money()` is not supported",
+      "command": "think [money(*Alice)] [money(*Wiz)]"
+    }
+  ]
+}

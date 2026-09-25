@@ -406,6 +406,135 @@ public class TelnetServerNegotiationTests
 		}
 	}
 
+	/// <summary>
+	/// MXP's <c>&lt;SUPPORT&gt;</c> question, and the answer recorded on the connection so the renderer
+	/// can hold the client to it.
+	/// </summary>
+	/// <remarks>
+	/// The first thing recorded has to be the client's answer. The question is asked from the callback
+	/// that runs while the interpreter is processing the bytes which started MXP mode, and the read loop
+	/// is waiting on that processing — so waiting there for the reply would stall the loop that delivers
+	/// it, time out, and write down that a client which answered at once supports nothing. Until the
+	/// deadline passes that is what the renderer would have gone by.
+	/// </remarks>
+	[Test]
+	public async Task MxpSupport_IsAskedAndTheAnswerRecorded()
+	{
+		var recorded = new List<string?>();
+		var answered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var capabilities = new ProtocolCapabilities();
+
+		var connectionService = Substitute.For<IConnectionServerService>();
+		connectionService.Get(42).Returns(_ => new ConnectionServerService.ConnectionData(
+			42, null, ConnectionServerService.ConnectionState.Connected,
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+			() => Encoding.UTF8, () => { }, null, capabilities, null));
+		connectionService
+			.UpdateCapabilities(Arg.Any<long>(), Arg.Any<Func<ProtocolCapabilities, ProtocolCapabilities>>())
+			.Returns(call =>
+			{
+				capabilities = call.Arg<Func<ProtocolCapabilities, ProtocolCapabilities>>()(capabilities);
+				lock (recorded)
+				{
+					// The empty placeholder written when MXP starts is not an answer.
+					if (!string.IsNullOrEmpty(capabilities.MxpSupported))
+					{
+						recorded.Add(capabilities.MxpSupported);
+						answered.TrySetResult();
+					}
+				}
+
+				return true;
+			});
+
+		// A deadline past the test's own, so a loop stalled until the deadline fails here rather than
+		// recording the answer late.
+		var (toServer, fromServer, handler, _, cancellation) = StartServer(
+			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000 }, connectionService);
+		using var cts = cancellation;
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, MXP));
+			await WriteAsync(toServer, IAC, DO, MXP);
+
+			// The question goes out on a secure line, since that is the only mode a tag is read in.
+			var asked = await ReadUntilAsync(fromServer, seen => Encoding.ASCII.GetString(seen).Contains("<SUPPORT "));
+			await Assert.That(Encoding.ASCII.GetString(asked)).Contains("IMAGE")
+				.Because("the question names the elements this server writes");
+
+			await WriteAsync(toServer, Encoding.ASCII.GetBytes("\u001b[1z<SUPPORTS +SOUND +IMAGE -FRAME>\r\n"));
+			await answered.Task.WaitAsync(Timeout);
+
+			string first;
+			lock (recorded) first = recorded[0]!;
+
+			await Assert.That(first).Contains("SOUND");
+			await Assert.That(first).Contains("IMAGE");
+			await Assert.That(first).DoesNotContain("FRAME")
+				.Because("an element the client refused is one the renderer must not write");
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	/// <summary>
+	/// While the <c>&lt;SUPPORT&gt;</c> question is outstanding, the connection is MXP and renders none
+	/// of the elements asked about. A client that is slow to answer, or never does, would otherwise be
+	/// sent a SOUND, IMAGE or FRAME tag by whatever output raced the question — the welcome, a login —
+	/// since a connection with no answer on record is written every element.
+	/// </summary>
+	[Test]
+	public async Task MxpSupport_WhileUnanswered_NoElementIsWritten()
+	{
+		var capabilities = new ProtocolCapabilities();
+
+		var connectionService = Substitute.For<IConnectionServerService>();
+		connectionService.Get(42).Returns(_ => new ConnectionServerService.ConnectionData(
+			42, null, ConnectionServerService.ConnectionState.Connected,
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+			() => Encoding.UTF8, () => { }, null, capabilities, null));
+		connectionService
+			.UpdateCapabilities(Arg.Any<long>(), Arg.Any<Func<ProtocolCapabilities, ProtocolCapabilities>>())
+			.Returns(call =>
+			{
+				lock (connectionService)
+				{
+					capabilities = call.Arg<Func<ProtocolCapabilities, ProtocolCapabilities>>()(capabilities);
+				}
+
+				return true;
+			});
+
+		var (toServer, fromServer, handler, _, cancellation) = StartServer(
+			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000 }, connectionService);
+		using var cts = cancellation;
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, MXP));
+			await WriteAsync(toServer, IAC, DO, MXP);
+
+			// The question is asked only after the connection became MXP; the client does not answer.
+			await ReadUntilAsync(fromServer, seen => Encoding.ASCII.GetString(seen).Contains("<SUPPORT "));
+
+			ProtocolCapabilities seen;
+			lock (connectionService) seen = capabilities;
+
+			await Assert.That(seen.Format).IsEqualTo(OutputFormat.Mxp);
+			await Assert.That(seen.MxpSupported).IsEqualTo(string.Empty)
+				.Because("an unanswered question must not leave every element enabled");
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
 	[Test]
 	public async Task ServerOmitsMxp_WhenDisabled()
 	{

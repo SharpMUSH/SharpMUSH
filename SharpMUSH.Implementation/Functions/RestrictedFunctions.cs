@@ -9,10 +9,12 @@ public partial class Functions
 {
 	// Deliberately small: each operation transforms explicit text or bounded decimal operands.
 	// Data access, attribute evaluation, plugins, deferred work and side effects have no entry.
+	// first/rest/extract/words scan through MushList, which allocates nothing for an item it does not
+	// return and checks the execution budget as it goes (#977).
 	private static readonly FrozenSet<string> RestrictedOperations = new[]
 	{
 		"add", "sub", "mul", "div", "cat", "strcat", "strlen", "ucstr", "lcstr", "trim",
-		"space", "fn", "restrictedexpr"
+		"space", "first", "rest", "extract", "words", "fn", "restrictedexpr"
 	}.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
 	[SharpFunction(Name = "restrictedexpr", MinArgs = 2, MaxArgs = 12, Flags = FunctionFlags.NoParse,

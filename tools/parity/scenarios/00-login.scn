@@ -1,0 +1,16 @@
+# Player and admin login.
+::case login.player  A player connects and lands in their location
+::login alice Alice alicepass
+think [name(%#)]
+think [loc(%#)]
+look
+::case login.admin  A wizard connects
+::login wiz Wiz wizpass
+think [name(%#)] [hasflag(%#,WIZARD)]
+::case login.god  God connects
+::login god One godpass
+think [name(%#)] [hasflag(%#,WIZARD)] [hasflag(%#,ROYALTY)]
+::case login.badpassword  A wrong password is refused
+::login-fail bad Alice wrong
+::case login.unknown  An unknown player is refused
+::login-fail nobody Nobody whatever

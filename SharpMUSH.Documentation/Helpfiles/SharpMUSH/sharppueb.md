@@ -75,6 +75,8 @@ Available functions:
 - wshtml()
 - html(), tag() and endtag() (see their entries)
 
+Things a client may have that are not tags — a sound, a picture, a pane, a screen to clear — are written once and rendered by each client in its own way. See [MEDIA FUNCTIONS].
+
 ### Examples
 ```sharp
 > say tagwrap(a,href="https://sharpmush.com",SharpMUSH)
@@ -169,6 +171,135 @@ cmdlink() is SharpMUSH's own. It needs a Wizard or the Send_OOB @power, as PennM
 **See Also:**
 - [tagwrap()]
 - [HTML Functions]
+
+# MEDIA FUNCTIONS
+
+Sounds, pictures, panes and the rest are said once, and each client is told about them in the way that client has. An MXP client gets MXP's elements, a Pueblo client its `xch_` ones, the web portal an HTML element it can act on, and a plain telnet client either nothing or the words that stand in for what it cannot show.
+
+Available functions:
+- sound() and music()
+- stopsound()
+- image()
+- pane()
+- preformat()
+- clearscreen()
+- prefetch()
+- expirelinks()
+
+None of them leaves anything in the plain text, so `strlen()` and listen patterns see what they saw before — except where a function stands words in for what a client cannot show, such as a picture's description.
+
+All but preformat() need a Wizard or the Send_OOB @power, as [cmdlink()] does: they make a client fetch a file, play it, or clear what the player is looking at. Laying text out does not, so preformat() is open to anyone.
+
+**See Also:**
+- [HTML Functions]
+
+# SOUND()
+
+`sound(<file>[, <volume>[, <repeats>]])`
+
+Plays a sound effect. *<file>* is a file the client resolves against the game's own sound directory, or an absolute address. *<volume>* is 0 to 100. *<repeats>* is how many times to play it, or `-1` to play it until it is stopped.
+
+MXP gets `<SOUND>`, Pueblo `<img xch_sound>`, the web portal an `<audio>` element the page decides whether to play, and a plain telnet client nothing at all.
+
+### Example
+```sharp
+> @pemit %#=[sound(door.wav,80)]The door creaks open.
+```
+
+**See Also:**
+- [music()]
+- [stopsound()]
+- [MEDIA FUNCTIONS]
+
+# MUSIC()
+
+`music(<file>[, <volume>[, <repeats>]])`
+
+As [sound()], for background music: one piece plays at a time, and MXP has a channel of its own for it. `music(theme.mid,,-1)` plays until something stops it.
+
+**See Also:**
+- [sound()]
+- [stopsound()]
+
+# STOPSOUND()
+
+`stopsound([<channel>])`
+
+Silences what is playing. *<channel>* is `effects` or `music`; with none, both stop.
+
+**See Also:**
+- [sound()]
+- [music()]
+
+# IMAGE()
+
+`image(<address>[, <description>[, <width>[, <height>]]])`
+
+A picture. *<width>* and *<height>* are in pixels.
+
+*<description>* is what a client with no pictures shows instead — the address itself when none is given — so it is worth writing. MXP gets `<IMAGE>`, Pueblo and the portal `<img>`, and a terminal the words.
+
+Put it inside [cmdlink()] for a picture that runs a command when clicked.
+
+### Example
+```sharp
+> @pemit %#=image(map.png,A map of the city,200)
+> @pemit %#=cmdlink(image(map.png,A map),look map)
+```
+
+# PANE()
+
+`pane(<text>, <name>[, <title>])`
+
+Sends *<text>* to a pane of its own — a window or region the client keeps apart from the main output — opening it if the client has none by that name. *<title>* is what the pane is labelled.
+
+A client with no panes shows the text where it is, which is why the text is inside the function rather than sent after it.
+
+### Example
+```sharp
+> @pemit %#=pane(u(fun`map),map,The Map)
+```
+
+# PREFORMAT()
+
+`preformat(<text>)`
+
+Says *<text>* is laid out by its own spacing: a table, a map, a listing.
+
+A client reading the stream as HTML — a Pueblo client, the portal — collapses runs of spaces and uses a variable width font, so anything drawn with spaces needs this around it or its columns will not line up. Pueblo gets `<xch_mudtext>`, the portal `<pre>`, and a terminal the text unchanged, since a terminal lays it out that way already.
+
+[align()], [lalign()] and [table()] already say it for themselves, as do tables and code blocks in help and wiki text. This is for columns you draw yourself.
+
+### Example
+```sharp
+> &cmd`who Globals=$+who: @nspemit %#=preformat(u(fun`who))
+```
+
+**See Also:**
+- [align()]
+- [table()]
+- [pueblo2]
+
+# CLEARSCREEN()
+
+`clearscreen()`
+
+Clears what the player has been shown. A terminal is sent the ANSI sequence for it, Pueblo `<xch_page clear="text">`, and the portal an element it acts on. MXP has no such instruction, and an MXP client is sent nothing.
+
+# PREFETCH()
+
+`prefetch(<address>)`
+
+Asks the client to fetch something now that it will want soon, so it is already there when it is used. Pueblo and the portal act on it; every other client is sent nothing.
+
+# EXPIRELINKS()
+
+`expirelinks([<group>])`
+
+Makes links already on the player's screen stop working: those in *<group>*, or every one when no group is named. MXP acts on it, the portal is told, and a client with neither leaves its old links working.
+
+**See Also:**
+- [cmdlink()]
 
 # WEBSOCKETS
 

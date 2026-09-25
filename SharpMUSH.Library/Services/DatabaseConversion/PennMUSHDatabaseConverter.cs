@@ -306,6 +306,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return;
 		}
 
+		await GiveSeedHoldingsToGodAsync(context, cancellationToken);
+
 		var removed = new HashSet<uint>();
 		foreach (var (number, name, _) in SeededSystemObjects)
 		{
@@ -353,6 +355,99 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			_logger.LogWarning(ex, "Could not unset the options that named SharpMUSH's seeded system objects");
 			context.Warnings.Add($"The ancestor, package_manager, http_handler and event_handler options could not be " +
 				$"unset ({ex.Message}); they still name #3-#9, which now hold imported objects. Unset them in the configuration.");
+		}
+	}
+
+	/// <summary>
+	/// Hands God (#1) everything the seeds own, carry or are home to, before the seeds are deleted and
+	/// every edge pointing at them goes with them. A fresh server's bundled packages create their objects
+	/// owned by, inside and homed at the Package Manager: among them the Scene Logger that SAY, POSE,
+	/// SEMIPOSE and @EMIT are @hook/override'd to. Left ownerless, every command such an object runs
+	/// throws, and the hooked speech commands say nothing at all.
+	/// </summary>
+	/// <remarks>
+	/// PennMUSH gives an object with no valid owner to God (dbck, src/destroy.c) and a destroyed player's
+	/// surviving possessions to the probate judge, God by default. Flags are kept as dbck keeps them: the
+	/// Scene Logger has to stay WIZARD to run its hooks.
+	/// </remarks>
+	private async Task GiveSeedHoldingsToGodAsync(PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		if (await _mediator.Send(new GetObjectNodeQuery(new DBRef(1)), cancellationToken) is not
+			(AnySharpObject and SharpPlayer god))
+		{
+			return;
+		}
+
+		var seeds = SeededSystemObjects.Select(seed => seed.Number).ToHashSet();
+
+		// Materialised: the writes below change the rows the stream would still be reading.
+		var survivors = await _mediator.CreateStream(new GetFilteredObjectsQuery(), cancellationToken)
+			.Where(candidate => !seeds.Contains(candidate.Key))
+			.Select(candidate => candidate.DBRef)
+			.ToListAsync(cancellationToken);
+
+		var handed = new List<int>();
+		foreach (var dbref in survivors)
+		{
+			if (await _mediator.Send(new GetObjectNodeQuery(dbref), cancellationToken) is not AnySharpObject survivor)
+			{
+				continue;
+			}
+
+			var changed = false;
+			var owner = await survivor.Object().Owner.WithCancellation(cancellationToken);
+			if (seeds.Contains(owner.Object.Key))
+			{
+				await _mediator.Send(new SetObjectOwnerCommand(survivor, god), cancellationToken);
+				changed = true;
+			}
+
+			if (survivor.IsContent)
+			{
+				var content = survivor.AsContent;
+				if (seeds.Contains((await content.Location()).Object().Key))
+				{
+					await _mediator.Send(new SetObjectLocationCommand(content, god), cancellationToken);
+					changed = true;
+				}
+
+				// An exit's home is its destination, which is not a possession to hand over.
+				if (!survivor.IsExit && await content.Home() is AnySharpContainer home && seeds.Contains(home.Object().Key))
+				{
+					await _mediator.Send(new SetObjectHomeCommand(content, god), cancellationToken);
+					changed = true;
+				}
+			}
+
+			if (changed)
+			{
+				handed.Add(dbref.Number);
+			}
+		}
+
+		foreach (var (number, _, type) in SeededSystemObjects)
+		{
+			if (type != "PLAYER" ||
+				await _mediator.Send(new GetObjectNodeQuery(new DBRef(number)), cancellationToken) is not
+					(AnySharpObject and SharpPlayer seededPlayer))
+			{
+				continue;
+			}
+
+			await foreach (var channel in _mediator.CreateStream(new GetChannelsOwnedByQuery(seededPlayer.Object.DBRef),
+								cancellationToken))
+			{
+				await _mediator.Send(new UpdateChannelOwnerCommand(channel, god), cancellationToken);
+			}
+
+			await _mediator.Send(new ReassignAttributeOwnerCommand(seededPlayer, god), cancellationToken);
+		}
+
+		if (handed.Count > 0)
+		{
+			context.Warnings.Add($"Gave God (#1) {handed.Count} object(s) that SharpMUSH's seeded system objects owned or " +
+				$"held, so they keep working once the seeds are removed: {string.Join(", ", handed.Select(n => $"#{n}"))}.");
 		}
 	}
 
@@ -1389,6 +1484,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				folderNames[message.To] = names = MailFolderNames(pennObjects.GetValueOrDefault(message.To));
 			}
 
+			// No limit: load_mail keeps every message whatever the recipient's mail_limit.
 			await _mediator.Send(new SendMailCommand(from.Object(), recipient, new SharpMail
 			{
 				DateSent = sent,

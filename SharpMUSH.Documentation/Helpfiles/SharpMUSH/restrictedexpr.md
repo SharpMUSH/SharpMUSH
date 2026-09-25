@@ -19,7 +19,7 @@ Examples:
     hello world
 
 The initial profile supports `add`, `sub`, `mul`, `div`, `cat`, `strcat`, `strlen`,
-`ucstr`, `lcstr`, `trim`, `space`, `fn`, and
+`ucstr`, `lcstr`, `trim`, `space`, `first`, `rest`, `extract`, `words`, `fn`, and
 `restrictedexpr`. Each must be explicitly allowed. Function aliases and builtin
 clones resolve to the original operation before the allowlist is checked. A
 nested `restrictedexpr()` intersects its requested operations with the caller's
@@ -66,6 +66,6 @@ Call this wrapper with direct function syntax. `#apply` entry, including aliases
 and `fn` indirection, is rejected because those arguments have already been
 evaluated by the caller and cannot supply the required raw expression and inputs.
 
-List tokenization functions (`first`, `rest`, `extract`, and `words`) are excluded
-until their scanning is allocation-bounded and interruptible. Progress and readmission
-criteria are tracked in [issue #977](https://github.com/SharpMUSH/SharpMUSH/issues/977).
+The list functions (`first`, `rest`, `extract`, and `words`) scan the list once without allocating
+for the items they skip, and stop when the execution budget runs out, so a very long list cannot
+tie up a restricted evaluation.
