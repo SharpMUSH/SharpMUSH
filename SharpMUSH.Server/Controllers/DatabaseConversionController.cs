@@ -16,21 +16,32 @@ public class DatabaseConversionController(
 	ILogger<DatabaseConversionController> logger)
 	: ControllerBase
 {
+	/// <summary>The most either file may be; the admin page allows the same.</summary>
+	private const long MaxUploadFileSize = 100 * 1024 * 1024;
+
+	/// <summary>Room for the multipart boundaries and headers around the files.</summary>
+	private const long MultipartOverhead = 1024 * 1024;
+
 	/// <summary>
-	/// Upload and convert a PennMUSH database file
+	/// Upload and convert a PennMUSH database file, with its maildb (<c>mailFile</c>) and chatdb
+	/// (<c>chatFile</c>) optionally alongside
 	/// </summary>
 	[HttpPost("upload")]
-	[RequestSizeLimit(104857600)] // 100 MB
-	public async Task<ActionResult<string>> UploadDatabase([FromForm] IFormFile file, CancellationToken cancellationToken)
+	[RequestSizeLimit(3 * MaxUploadFileSize + MultipartOverhead)] // All three files at their limit, and the form around them
+	[RequestFormLimits(MultipartBodyLengthLimit = MaxUploadFileSize)] // Each file
+	public async Task<ActionResult<string>> UploadDatabase([FromForm] IFormFile file, [FromForm] IFormFile? mailFile,
+		[FromForm] IFormFile? chatFile, CancellationToken cancellationToken)
 	{
 		if (file == null || file.Length == 0)
 		{
 			return BadRequest("No file uploaded");
 		}
 
+		var tempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
+		string? mailTempPath = null;
+		string? chatTempPath = null;
 		try
 		{
-			var tempPath = Path.Combine(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.db");
 
 			await using (var stream = System.IO.File.Create(tempPath))
 			{
@@ -39,15 +50,36 @@ public class DatabaseConversionController(
 
 			logger.LogInformation("Uploaded PennMUSH database file: {FileName} ({Size} bytes)", file.FileName, file.Length);
 
+			// An empty file is still passed on, so the import reports it rather than dropping it unmentioned.
+			if (mailFile is not null)
+			{
+				mailTempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.maildb");
+				await using var mailStream = System.IO.File.Create(mailTempPath);
+				await mailFile.CopyToAsync(mailStream, cancellationToken);
+				logger.LogInformation("Uploaded PennMUSH mail database file: {FileName} ({Size} bytes)", mailFile.FileName,
+					mailFile.Length);
+			}
+
+			if (chatFile is not null)
+			{
+				chatTempPath = Path.Join(Path.GetTempPath(), $"pennmush_{Guid.NewGuid()}.chatdb");
+				await using var chatStream = System.IO.File.Create(chatTempPath);
+				await chatFile.CopyToAsync(chatStream, cancellationToken);
+				logger.LogInformation("Uploaded PennMUSH chat database file: {FileName} ({Size} bytes)", chatFile.FileName,
+					chatFile.Length);
+			}
+
 			var sessionId = Guid.NewGuid().ToString();
 
-			DatabaseConversionSession.StartConversion(sessionId, converter, tempPath, logger, cancellationToken);
+			DatabaseConversionSession.StartConversion(sessionId, converter, tempPath, mailTempPath, chatTempPath, logger,
+				cancellationToken);
 
 			return Ok(new { sessionId, message = "Conversion started" });
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Error uploading PennMUSH database file");
+			DatabaseConversionSession.DeleteTempFiles([tempPath, mailTempPath, chatTempPath], logger);
 			return StatusCode(500, $"Error uploading file: {ex.Message}");
 		}
 	}
@@ -111,19 +143,41 @@ public static class DatabaseConversionSession
 		public ConversionProgress? CurrentProgress { get; set; }
 		public ConversionResult? Result { get; set; }
 		public CancellationTokenSource CancellationSource { get; set; } = new();
-		public string TempFilePath { get; set; } = string.Empty;
+		/// <summary>The uploaded database and, when they came with it, the maildb and chatdb.</summary>
+		public string?[] TempFilePaths { get; init; } = [];
+	}
+
+	/// <summary>Deletes the upload's temporary files; one that is still in use is logged and left.</summary>
+	public static void DeleteTempFiles(IEnumerable<string?> paths, ILogger logger)
+	{
+		foreach (var path in paths)
+		{
+			try
+			{
+				if (path is not null && File.Exists(path))
+				{
+					File.Delete(path);
+				}
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+			{
+				logger.LogWarning(ex, "Failed to delete temporary file: {Path}", path);
+			}
+		}
 	}
 
 	public static void StartConversion(
 		string sessionId,
 		IPennMUSHDatabaseConverter converter,
 		string tempFilePath,
+		string? mailTempFilePath,
+		string? chatTempFilePath,
 		ILogger logger,
 		CancellationToken cancellationToken)
 	{
 		var sessionData = new SessionData
 		{
-			TempFilePath = tempFilePath
+			TempFilePaths = [tempFilePath, mailTempFilePath, chatTempFilePath]
 		};
 
 		var progress = new Progress<ConversionProgress>(p =>
@@ -138,9 +192,12 @@ public static class DatabaseConversionSession
 			cancellationToken,
 			sessionData.CancellationSource.Token);
 
-		sessionData.ConversionTask = converter.ConvertDatabaseAsync(tempFilePath, progress, linkedCts.Token)
+		sessionData.ConversionTask = converter.ConvertDatabaseAsync(tempFilePath, mailTempFilePath, chatTempFilePath, progress,
+				linkedCts.Token)
 			.ContinueWith(task =>
 			{
+				// Every way out — success, fault, cancellation — is done with the uploaded files.
+				DeleteTempFiles(sessionData.TempFilePaths, logger);
 				try
 				{
 					if (task.IsCompletedSuccessfully)
@@ -149,18 +206,6 @@ public static class DatabaseConversionSession
 						if (_sessions.TryGetValue(sessionId, out var session))
 						{
 							session.Result = result;
-						}
-
-						try
-						{
-							if (File.Exists(tempFilePath))
-							{
-								File.Delete(tempFilePath);
-							}
-						}
-						catch (Exception ex)
-						{
-							logger.LogWarning(ex, "Failed to delete temporary file: {Path}", tempFilePath);
 						}
 
 						return result;
@@ -198,16 +243,9 @@ public static class DatabaseConversionSession
 
 					removedSession?.CancellationSource?.Dispose();
 
-					if (removedSession != null && File.Exists(removedSession.TempFilePath))
+					if (removedSession != null)
 					{
-						try
-						{
-							File.Delete(removedSession.TempFilePath);
-						}
-						catch (IOException ex)
-						{
-							logger.LogWarning(ex, "Failed to delete temp file during cleanup: {Path}", removedSession.TempFilePath);
-						}
+						DeleteTempFiles(removedSession.TempFilePaths, logger);
 					}
 				}
 				catch (Exception ex)
@@ -264,24 +302,8 @@ public static class DatabaseConversionSession
 			return false;
 		}
 
+		// The conversion's continuation deletes the uploaded files once the import has let go of them.
 		session.CancellationSource.Cancel();
-
-		try
-		{
-			if (File.Exists(session.TempFilePath))
-			{
-				File.Delete(session.TempFilePath);
-			}
-		}
-		catch (IOException)
-		{
-			// File is in use or access denied - expected during cancellation, ignore
-		}
-		catch (UnauthorizedAccessException)
-		{
-			// No permission to delete - expected, ignore
-		}
-
 		return true;
 	}
 }

@@ -32,4 +32,5 @@ public static class CacheTags
 	public const string ConnectionLogs = "connection-logs";
 	public const string ZoneObjects = "zone-objects";
 	public const string AttributeEntry = "attribute-entry";
+	public const string MailAliasList = "mail-alias-list";
 }

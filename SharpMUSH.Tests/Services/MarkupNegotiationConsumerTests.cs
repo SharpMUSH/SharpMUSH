@@ -4,7 +4,11 @@ using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Server.Consumers;
 
@@ -33,9 +37,44 @@ public class MarkupNegotiationConsumerTests
 		new MxpNegotiatedConsumer(NullLogger<MxpNegotiatedConsumer>.Instance, service)
 			.HandleAsync(new MxpNegotiatedMessage(Handle));
 
-	private static Task Pueblo(ConnectionService service) =>
-		new PuebloNegotiatedConsumer(NullLogger<PuebloNegotiatedConsumer>.Instance, service)
+	private static Task Pueblo(ConnectionService service, IMediator? mediator = null) =>
+		new PuebloNegotiatedConsumer(NullLogger<PuebloNegotiatedConsumer>.Instance, service,
+				mediator ?? Substitute.For<IMediator>())
 			.HandleAsync(new PuebloNegotiatedMessage(Handle, "PUEBLOCLIENT 2.50"));
+
+	/// <summary>
+	/// The handshake's start sequence ends with <c>&lt;xch_page clear=text&gt;</c>, which wipes
+	/// everything the connection was shown — the configured connect file as much as the greeting. What
+	/// is replayed is arriving at the login prompt, which is what put all of it on screen; PennMUSH
+	/// calls <c>welcome_user</c> again at the same point (<c>src/bsd.c</c>).
+	/// </summary>
+	[Test]
+	public async Task Pueblo_ShowsTheLoginPromptAgainAfterTheHandshakeClearedTheScreen()
+	{
+		var service = await RegisteredAsync();
+		var mediator = Substitute.For<IMediator>();
+
+		await Pueblo(service, mediator);
+
+		await mediator.Received(1).Publish(
+			Arg.Is<ConnectionStateChangeNotification>(n =>
+				n.Handle == Handle
+				&& n.NewState == IConnectionService.ConnectionState.Connected
+				&& n.OldState == IConnectionService.ConnectionState.Connected),
+			Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task Pueblo_LeavesALoggedInConnectionAlone()
+	{
+		var service = await RegisteredAsync();
+		await service.Bind(Handle, new DBRef(1));
+		var mediator = Substitute.For<IMediator>();
+
+		await Pueblo(service, mediator);
+
+		await mediator.DidNotReceive().Publish(Arg.Any<ConnectionStateChangeNotification>(), Arg.Any<CancellationToken>());
+	}
 
 	[Test]
 	public async Task Mxp_DoesNotClaimPueblo()

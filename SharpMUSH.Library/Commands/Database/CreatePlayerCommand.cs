@@ -19,8 +19,12 @@ namespace SharpMUSH.Library.Commands.Database;
 /// objid is <c>#N:&lt;creation time&gt;</c> and softcode in the imported database holds those.
 /// </param>
 /// <param name="ModifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match the creation time.</param>
+/// <param name="RequestedDbref">
+/// Import only: the dbref the new object must have, so the source database's ids — which its softcode
+/// holds — survive. <c>null</c> takes the next one.
+/// </param>
 public record CreatePlayerCommand(string Name, string Password, DBRef Location, DBRef Home, int Quota, string? Salt = null,
-	bool ApplyDefaultFlags = true, long? CreationTime = null, long? ModifiedTime = null) : ICommand<DBRef>, ICacheInvalidating, ICacheInvalidatingByResult<DBRef>
+	bool ApplyDefaultFlags = true, long? CreationTime = null, long? ModifiedTime = null, int? RequestedDbref = null) : ICommand<DBRef>, ICacheInvalidating, ICacheInvalidatingByResult<DBRef>
 {
 	public string[] CacheKeys => [Definitions.CacheKeys.Contents(Location)];
 

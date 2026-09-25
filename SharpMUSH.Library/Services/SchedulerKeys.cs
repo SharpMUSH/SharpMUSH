@@ -43,6 +43,9 @@ internal static class SchedulerKeys
 	/// <summary>The owner of work no connection and no object asked for.</summary>
 	public const string SystemOwner = "system";
 
+	/// <summary>The owner of work that arrived on a socket of its own; it is charged to no quota.</summary>
+	public const string SocketOwner = "socket";
+
 	/// <summary>The group an entry waiting on <paramref name="target"/>'s semaphore belongs to.</summary>
 	public static string Semaphore(DbRefAttribute target) => $"{SemaphoreGroup}:{target}";
 

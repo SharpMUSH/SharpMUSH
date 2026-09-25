@@ -37,7 +37,7 @@ public class HttpHandlerBudgetTests
 			Limit = baseline.Limit with { QueueEntryCpuTime = milliseconds }
 		});
 		var capture = new HttpOutputCapture();
-		return (new(mediator, attributes, parser, capture, Substitute.For<IEventService>(), options,
+		return (new(mediator, attributes, parser, capture, Substitute.For<IEventService>(), InlineTaskScheduler.Create(), options,
 			NullLogger<HttpHandlerCommandService>.Instance), parser, capture);
 	}
 

@@ -77,7 +77,8 @@ public static class SendMail
 
 		var sender = await parser.CurrentState.KnownExecutorObject(mediator);
 
-		var knownPlayerList = new List<SharpPlayer>();
+		var aliases = new MailAliases.Services(delivery.Mediator, delivery.Notify, delivery.Permissions);
+		var knownPlayerList = new List<(SharpPlayer Player, bool Silent)>();
 		foreach (var name in ArgHelpers.NameListString(nameList.ToPlainText()))
 		{
 			var located = await locateService.Locate(parser, sender, sender, name, RecipientMatchFlags);
@@ -85,7 +86,14 @@ public static class SendMail
 			// extmail.c:1382 — an unmatched name is reported, not skipped.
 			if (located is AnySharpObject and SharpPlayer found)
 			{
-				knownPlayerList.Add(found);
+				knownPlayerList.Add((found, silent));
+				continue;
+			}
+
+			// extmail.c:1386 — a name that is no player may be a +alias, mailed to each member.
+			if (await MailAliases.RecipientsAsync(aliases, sender, name) is MailAliases.Recipients recipients)
+			{
+				knownPlayerList.AddRange(recipients.Members.Select(member => (member, silent || recipients.Silent)));
 				continue;
 			}
 
@@ -106,9 +114,9 @@ public static class SendMail
 		var letter = new MailDelivery.Letter(subject, message, signature, urgent, Forwarded: false);
 
 		var delivered = new List<SharpPlayer>();
-		foreach (var player in knownPlayerList)
+		foreach (var (player, quiet) in knownPlayerList)
 		{
-			delivered.AddRange(await MailDelivery.SendAsync(parser, delivery, sender, player, letter, silent));
+			delivered.AddRange(await MailDelivery.SendAsync(parser, delivery, sender, player, letter, quiet));
 		}
 
 		// Delivering to nobody has two causes an empty list cannot tell apart, and a non-interactive

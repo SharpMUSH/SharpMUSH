@@ -359,7 +359,7 @@ public partial class Functions
 	/// hands it from <c>Commands</c>.
 	/// </summary>
 	private TeleportServices TeleportServices => new(Mediator, NotifyService, LocateService, AttributeService,
-		PermissionService, LockService, MoveService, DidItService);
+		PermissionService, LockService, MoveService, DidItService, CommunicationService, Configuration);
 
 	/// <remarks>
 	/// <c>fun_tel</c> (<c>src/fundb.c:2309-2327</c>) is the side-effect gate, the <c>@tel</c> command

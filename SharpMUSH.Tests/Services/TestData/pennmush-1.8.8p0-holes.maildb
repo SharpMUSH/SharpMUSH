@@ -1,0 +1,107 @@
++15
+3
+3
+"Team"
+"The whole team"
+5
+4
+3
+3
+4
+5
+4
+"Pair"
+"Pair"
+0
+0
+2
+4
+3
+1
+"Staff"
+"Staff only"
+6
+4
+1
+1
+"*** End of MALIAS ***"
+11
+3
+5
+1790269202
+"Thu Sep 24 12:01:45 2026"
+"Team meeting"
+"Meeting at #11 tonight"
+0
+3
+4
+1790269201
+"Thu Sep 24 12:01:46 2026"
+"Re: Welcome"
+"Thanks Alice!"
+1
+3
+1
+1790269182
+"Thu Sep 24 12:01:48 2026"
+"Staff notice"
+"From god: see #12"
+0
+3
+3
+1790269200
+"Thu Sep 24 12:03:01 2026"
+"Alias test"
+"Sent through the alias"
+0
+4
+3
+1790269200
+"Thu Sep 24 12:01:43 2026"
+"Welcome Bob"
+"Hello Bob, welcome to the game. See #9 and #11."
+1
+4
+3
+1790269200
+"Thu Sep 24 12:01:44 2026"
+"Second note"
+"Second body with 
+newline"
+256
+4
+3
+1790269200
+"Thu Sep 24 12:01:45 2026"
+"Urgent thing"
+"Please read #6 now"
+4
+4
+5
+1790269202
+"Thu Sep 24 12:01:45 2026"
+"Team meeting"
+"Meeting at #11 tonight"
+64
+4
+3
+1790269200
+"Thu Sep 24 12:03:01 2026"
+"Alias test"
+"Sent through the alias"
+0
+5
+3
+1790269200
+"Thu Sep 24 12:01:59 2026"
+"Fwd: Team meeting"
+"Meeting at #11 tonight"
+128
+5
+3
+1790269200
+"Thu Sep 24 12:03:01 2026"
+"Alias test"
+"Sent through the alias"
+0
+***END OF DUMP***

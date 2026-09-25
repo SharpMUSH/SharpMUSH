@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Common;
@@ -50,7 +51,9 @@ public sealed record TeleportServices(
 	IPermissionService PermissionService,
 	ILockService LockService,
 	IMoveService MoveService,
-	IDidItService DidItService);
+	IDidItService DidItService,
+	ICommunicationService CommunicationService,
+	IOptionsWrapper<SharpMUSHOptions> Configuration);
 
 /// <summary>
 /// The teleport <c>@teleport</c> and <c>tel()</c> share, and the exit-destination resolution
@@ -237,7 +240,9 @@ public static class TeleportHelpers
 		// DEVIATION: Penn's branch (wiz.c:487-497) does its own OXTPORT/safe_tel/TPORT and returns
 		// before wiz.c:585, so it never prints "Teleported." here. This falls through to the shared
 		// path below instead, which does print it.
-		if (telAnywhere && target.IsPlayer && destinationContainer.IsPlayer && !options.Inside)
+		var besidePlayer = telAnywhere && target.IsPlayer && destinationContainer.IsPlayer && !options.Inside;
+
+		if (besidePlayer)
 		{
 			destinationContainer = await destinationContainer.Location();
 		}
@@ -247,8 +252,10 @@ public static class TeleportHelpers
 		// no way around the room's policy. Penn checks the VICTIM's room rather than the
 		// teleporter's, which is what stops someone in a NO_TEL room having one of their objects
 		// @tel them out; the exemption, though, is the command-giving player's, and it is waived
-		// for a teleporter who controls that room or holds Tel_Anywhere.
-		if (!await SourceRoomAllowsAsync(parser, services, executor, target, destinationContainer, telAnywhere))
+		// for a teleporter who controls that room or holds Tel_Anywhere. Penn's player-to-player
+		// branch returned before any of it (wiz.c:497), so that branch skips it here too.
+		if (!besidePlayer
+				&& !await SourceRoomAllowsAsync(parser, services, executor, target, destinationContainer, telAnywhere))
 		{
 			return;
 		}
@@ -361,9 +368,73 @@ public static class TeleportHelpers
 	}
 
 	/// <summary>
+	/// PennMUSH <c>do_move(mover, "home")</c> (<c>move.c:399-419</c>): the HOME command, and where
+	/// <c>@teleport</c> sends a victim it cannot place. Returns the home the mover was sent to, or
+	/// null once the mover has been told why not.
+	/// </summary>
+	public static async ValueTask<DBRef?> SendHomeAsync(
+		IMUSHCodeParser parser,
+		TeleportServices services,
+		AnySharpObject mover)
+	{
+		// move.c:402-404: !Mobile, no home, a home the mover is carrying, and being its own home are
+		// one refusal — "Bad destination.".
+		if ((!mover.IsPlayer && !mover.IsThing)
+				|| await mover.AsContent.Home() is not AnySharpContainer homeLocation
+				|| homeLocation.Object().DBRef.Number < 0
+				|| homeLocation.Object().DBRef.Equals(mover.Object().DBRef)
+				|| await services.MoveService.WouldCreateLoop(mover.AsContent, homeLocation))
+		{
+			await services.NotifyService.NotifyLocalized(mover,
+				nameof(ErrorMessages.Notifications.BadDestination), mover);
+			return null;
+		}
+
+		var currentLocation = await mover.Where();
+
+		// move.c:407-412: neither the mover nor the room it stands in may be Dark for the room to be
+		// told.
+		if (!await mover.IsDark() && !await currentLocation.WithExitOption().IsDark())
+		{
+			await services.CommunicationService.SendToRoomAsync(
+				mover,
+				currentLocation,
+				_ => MarkupText.Plain(string.Format(ErrorMessages.Notifications.GoesHomeFormat, mover.Object().Name)),
+				INotifyService.NotificationType.Emit,
+				excludeObjects: [mover],
+				interact: IPermissionService.InteractType.See);
+		}
+
+		// PennMUSH sends all three (move.c:415-417); that is not a transcription slip.
+		for (var i = 0; i < 3; i++)
+		{
+			await services.NotifyService.NotifyLocalized(mover,
+				nameof(ErrorMessages.Notifications.NoPlaceLikeHome), mover);
+		}
+
+		// move.c:418. safe_tel steals the possessions the mover does not control, and the automatic
+		// look it reaches through enter_room is the only one the command needs.
+		var moveResult = await services.MoveService.SafeTel(parser, mover.AsContent, homeLocation,
+			noMoveMsgs: false, mover.Object().DBRef, "home");
+
+		if (moveResult is Error<string> error)
+		{
+			await services.NotifyService.Notify(mover, error.Value, mover);
+			return null;
+		}
+
+		return homeLocation.Object().DBRef;
+	}
+
+	/// <summary>
 	/// PennMUSH <c>wiz.c:519-566</c>: NO_TEL, the LEAVE lock and Z_TEL, each read off the victim's
 	/// absolute room. Returns <see langword="false"/> once the victim has been refused and told why.
 	/// </summary>
+	/// <remarks>
+	/// A victim nested past <c>Limit.MaxDepth</c> has no absolute room to read the checks off, and
+	/// is not let through for it: <c>wiz.c:529</c> tells them they are in too many containers and
+	/// sends them home instead, before any exemption — a wizard's teleport goes the same way.
+	/// </remarks>
 	private static async ValueTask<bool> SourceRoomAllowsAsync(
 		IMUSHCodeParser parser,
 		TeleportServices services,
@@ -372,7 +443,32 @@ public static class TeleportHelpers
 		AnySharpContainer destinationContainer,
 		bool telAnywhere)
 	{
-		if (await services.MoveService.AbsoluteRoom(target) is not { } absoluteRoom)
+		var walk = await services.MoveService.AbsoluteRoom(target);
+
+		if (walk.TooManyContainers)
+		{
+			await services.NotifyService.NotifyLocalized(target,
+				nameof(ErrorMessages.Notifications.TooManyContainers), target);
+
+			// wiz.c:531: a home that is the container they are stuck in would leave them stuck.
+			var targetContent = target.AsContent;
+			if (await targetContent.Home() is AnySharpContainer home
+					&& home.Object().DBRef.Equals((await targetContent.Location()).Object().DBRef)
+					&& await services.Mediator.Send(new GetObjectNodeQuery(
+						new DBRef((int)services.Configuration.CurrentValue.Database.PlayerStart)))
+						is AnySharpObject { IsContainer: true } playerStart)
+			{
+				await services.Mediator.Send(new SetObjectHomeCommand(targetContent, playerStart.AsContainer));
+			}
+
+			await SendHomeAsync(parser, services, target);
+			return false;
+		}
+
+		// DEVIATION: Penn sends a victim in the void home too (wiz.c:521). A SharpMUSH object always
+		// has a location, so the void is a chain that loops without reaching a room, and has nothing
+		// to read the checks off.
+		if (walk.Room is not { } absoluteRoom)
 		{
 			return true;
 		}

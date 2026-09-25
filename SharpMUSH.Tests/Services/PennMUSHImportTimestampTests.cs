@@ -187,14 +187,15 @@ public class PennMUSHImportTimestampTests
 		await using var world = await IsolatedImportWorld.CreateAsync();
 		const long pennCreatedSeconds = 1_111_111_111L;
 
-		PennMUSHDatabase Fixture(string name) => new()
+		// Each import keeps its source dbref, so the second copy is numbered apart from the first.
+		PennMUSHDatabase Fixture(string name, int dbref) => new()
 		{
 			Version = "Reimport Fixture",
 			Objects =
 			[
 				new PennMUSHObject
 				{
-					DBRef = 4243,
+					DBRef = dbref,
 					Name = name,
 					Type = PennMUSHObjectType.Thing,
 					CreationTime = pennCreatedSeconds,
@@ -203,13 +204,13 @@ public class PennMUSHImportTimestampTests
 			]
 		};
 
-		await world.Converter.ConvertDatabaseAsync(Fixture("ReimportedThingA"));
-		await world.Converter.ConvertDatabaseAsync(Fixture("ReimportedThingB"));
+		await world.Converter.ConvertDatabaseAsync(Fixture("ReimportedThingA", 4243));
+		await world.Converter.ConvertDatabaseAsync(Fixture("ReimportedThingB", 4343));
 
 		var first = (await FindByNameAsync(world.Database, "ReimportedThingA")).DBRef;
 		var second = (await FindByNameAsync(world.Database, "ReimportedThingB")).DBRef;
 
-		// Different dbref numbers — the two imports allocate their own — but the same creation stamp,
+		// Different dbref numbers but the same creation stamp,
 		// which is the half of the objid the import controls.
 		await Assert.That(first.CreationMilliseconds).IsEqualTo(second.CreationMilliseconds);
 		await Assert.That(first.CreationMilliseconds).IsEqualTo(pennCreatedSeconds * 1000);
@@ -226,14 +227,14 @@ public class PennMUSHImportTimestampTests
 	{
 		await using var world = await IsolatedImportWorld.CreateAsync();
 
-		PennMUSHDatabase Fixture(string name) => new()
+		PennMUSHDatabase Fixture(string name, int dbref) => new()
 		{
 			Version = "Repeat Fixture",
 			Objects =
 			[
 				new PennMUSHObject
 				{
-					DBRef = 4244,
+					DBRef = dbref,
 					Name = name,
 					Type = PennMUSHObjectType.Thing,
 					CreationTime = 1_222_222_222L,
@@ -242,8 +243,8 @@ public class PennMUSHImportTimestampTests
 			]
 		};
 
-		var first = await world.Converter.ConvertDatabaseAsync(Fixture("RepeatImportThingA"));
-		var second = await world.Converter.ConvertDatabaseAsync(Fixture("RepeatImportThingB"));
+		var first = await world.Converter.ConvertDatabaseAsync(Fixture("RepeatImportThingA", 4244));
+		var second = await world.Converter.ConvertDatabaseAsync(Fixture("RepeatImportThingB", 4344));
 
 		await Assert.That(first.ThingsConverted).IsEqualTo(1);
 		await Assert.That(second.ThingsConverted).IsEqualTo(1);

@@ -9,5 +9,18 @@
 			"Bash(dotnet run --project SharpMUSH.Tests.BUnit *)",
 			"Bash(dotnet run --project SharpMUSH.Tests.BUnit)"
 		]
+	},
+	"hooks": {
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-verify.py\"",
+						"timeout": 3600
+					}
+				]
+			}
+		]
 	}
 }
