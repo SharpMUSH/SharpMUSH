@@ -7,6 +7,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -67,26 +68,28 @@ public class RealityLiveCommandDispatchTests
 		try
 		{
 			await setup.CommandListParse(MarkupText.Plain($"@set {host.Object().DBRef}=!NO_COMMAND"));
-			await setup.CommandListParse(MarkupText.Plain($"&{commandAttribute} {host.Object().DBRef}=${word}:think {marker}"));
+			await setup.CommandListParse(MarkupText.Plain($"&{commandAttribute} {host.Object().DBRef}=${word}:&{marker} me=1"));
 			if (source == "precedence")
 			{
 				fallback = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("visible fallback", master.AsContainer, actor, room)))).Expect<AnySharpObject>();
 				await setup.CommandListParse(MarkupText.Plain($"@set {fallback.Object().DBRef}=!NO_COMMAND"));
-				await setup.CommandListParse(MarkupText.Plain($"&{commandAttribute} {fallback.Object().DBRef}=${word}:think {marker}"));
+				await setup.CommandListParse(MarkupText.Plain($"&{commandAttribute} {fallback.Object().DBRef}=${word}:&{marker} me=1"));
 			}
 			await policy.SaveObjectAsync(host.Object().Id!, ObjectReality.Default(host.Object().DBRef) with { Transmit = [visible ? "normal" : "ghost"] }, default);
 			await policy.SaveConfigurationAsync(new(1, enabled, ["normal", "ghost"]), default);
 			await Factory.CommandParser.FromState(ParserState.RootFor(actor.Object.DBRef)).CommandListParse(MarkupText.Plain(word));
 			// A match from an action list is its own queue entry (#1132), so its output arrives once the queue drains.
 			await Get<ITaskScheduler>().DrainImmediateQueueForTests();
-			await Assert.That(Factory.Notifications.For((fallback ?? host).Object().DBRef).Contains(marker))
-				.IsEqualTo(fallback is not null || !enabled || visible);
+			// Queued work runs outside any capture scope, so the body leaves an attribute behind instead of output.
+			var ran = await mediator.CreateStream(new GetAttributeQuery((fallback ?? host).Object().DBRef, [marker])).AnyAsync();
+			await Assert.That(ran).IsEqualTo(fallback is not null || !enabled || visible);
 		}
 		finally
 		{
 			await policy.SaveConfigurationAsync(originalConfiguration, default);
 			await policy.SaveObjectAsync(host.Object().Id!, originalProfile ?? ObjectReality.Default(host.Object().DBRef), default);
 			await setup.CommandListParse(MarkupText.Plain($"@wipe {host.Object().DBRef}/{commandAttribute}"));
+			await setup.CommandListParse(MarkupText.Plain($"@wipe {host.Object().DBRef}/{marker}"));
 			if (noCommand) await setup.CommandListParse(MarkupText.Plain($"@set {host.Object().DBRef}=NO_COMMAND"));
 		}
 	}
