@@ -137,6 +137,81 @@ public class QueuedUserCommandTests : ServerTestBase
 		await Assert.That(Heard()).IsEquivalentTo([$"{_token} typed"]);
 	}
 
+	// The next four compare a register set while the command line is evaluated for matching: in place the
+	// body shares it, queued it starts empty. PennMUSH 1.8.8 (80a1d5b) typed at a connection, with
+	// `&CMD obj=$+hi:@pemit %#=body me=%! enactor=%# caller=%@ q0=[r(0)]`:
+	//   +hi[setq(0,typed)]                 -> body me=#3 enactor=#1 caller=#1 q0=typed
+	//   teach +hi[setq(0,typed)]           -> One types --> +hi[setq(0,typed)]
+	//                                         body me=#3 enactor=#1 caller=#1 q0=
+	//   with obj=+hi[setq(0,typed)]        -> body me=#3 enactor=#1 caller=#1 q0=
+	//   teach &FOO me=[add(1,2)]           -> FOO holds [add(1,2)]
+	private const string RegisterProbe = "@pemit %#={0} body me=%! enactor=%# caller=%@ q0=[r(0)]";
+
+	private List<string> HeardBodies() => Heard().Where(message => message.StartsWith($"{_token} body", StringComparison.Ordinal)).ToList();
+
+	[Test]
+	public async Task TypedMatchSharesTheRegistersOfItsLine()
+	{
+		await Run($"&CMD {_commands}=${_token}:{string.Format(RegisterProbe, _token)}");
+
+		await Run($"{_token}[setq(0,typed)]");
+
+		await Assert.That(HeardBodies()).IsEquivalentTo(
+			[$"{_token} body me=#{_commands.Number} enactor=#{_actor.DbRef.Number} caller=#{_actor.DbRef.Number} q0=typed"]);
+	}
+
+	[Test]
+	public async Task TaughtMatchIsQueued()
+	{
+		// do_teach (src/speech.c) runs the lesson without QUEUE_SOCKET, so a $-command it reaches is queued.
+		await Run($"&CMD {_commands}=${_token}:{string.Format(RegisterProbe, _token)}");
+
+		await Run($"teach {_token}[setq(0,typed)]");
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(HeardBodies()).IsEquivalentTo(
+			[$"{_token} body me=#{_commands.Number} enactor=#{_actor.DbRef.Number} caller=#{_actor.DbRef.Number} q0="]);
+	}
+
+	[Test]
+	public async Task TaughtBuiltinStillStoresTheValueUnevaluated()
+	{
+		// The lesson keeps QUEUE_NOLIST, so & stores its value as typed.
+		await Run("teach &TAUGHT me=[add(1,2)]");
+
+		await Assert.That(await EvalAs(_actor.DbRef, "get(me/TAUGHT)")).IsEqualTo("[add(1,2)]");
+	}
+
+	[Test]
+	public async Task WithMatchIsQueuedWithTheTyperAsEnactorAndCaller()
+	{
+		// cmd_with (src/game.c) matches with QUEUE_DEFAULT, never in place, and the typer is the matcher.
+		await Run($"&CMD {_commands}=${_token}:{string.Format(RegisterProbe, _token)}");
+
+		await Run($"with {_commands}={_token}[setq(0,typed)]");
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(HeardBodies()).IsEquivalentTo(
+			[$"{_token} body me=#{_commands.Number} enactor=#{_actor.DbRef.Number} caller=#{_actor.DbRef.Number} q0="]);
+	}
+
+	[Test]
+	public async Task WithMatchesOnlyTheTargetsCommands()
+	{
+		// PennMUSH 1.8.8 (80a1d5b): with another object nearby holding the same $+hi, `with Obj=+hi` runs
+		// only Obj's body, and a built-in is not a match: `with Obj=@pemit me=builtin` -> No matching command.
+		var other = await CreateThing("QueuedCmdOther");
+		await Run($"&CMD {_commands}=${_token}:@pemit %#={_token} body me=%!");
+		await Run($"&CMD {other}=${_token}:@pemit %#={_token} other me=%!");
+
+		await Run($"with {_commands}={_token}");
+		await Run($"with {_commands}=@pemit me={_token} builtin");
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(Heard()).IsEquivalentTo([$"{_token} body me=#{_commands.Number}"]);
+		await Assert.That(Notifications.For(_actor.DbRef)).Contains("No matching command.");
+	}
+
 	[Test]
 	public async Task HaltStopsAMatchThatKeepsQueueingItself()
 	{
