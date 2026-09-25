@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
-using SharpMUSH.Configuration.Options;
-using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
@@ -15,7 +13,6 @@ namespace SharpMUSH.Server;
 public class StartupHandler(
 	ILogger<StartupHandler> logger,
 	IExpandedObjectDataService data,
-	IOptionsWrapper<SharpMUSHOptions> options,
 	IWikiService wikiService,
 	IMessageBus messageBus,
 	SharpMUSH.Messaging.NATS.NatsConsumerRegistry? consumers = null)
@@ -60,10 +57,6 @@ public class StartupHandler(
 		{
 			logger.LogError(ex, "Wiki page seeding failed; continuing startup without it.");
 		}
-
-		logger.LogInformation("Initializing configurable aliases and restrictions from database.");
-		var currentOptions = options.CurrentValue;
-		Configurable.Initialize(currentOptions.Alias, currentOptions.Restriction);
 	}
 
 	/// <summary>

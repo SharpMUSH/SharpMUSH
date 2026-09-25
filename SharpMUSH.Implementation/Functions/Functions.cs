@@ -108,12 +108,15 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 
 		Builtins = Generated.FunctionLibrary.Create(this).ToDictionary(pair => pair.Key, pair =>
 			pair.Value with { RestrictedOperation = RestrictedOperations.Contains(pair.Key) ? pair.Key.ToLowerInvariant() : null });
+		// This engine's aliases, not a process-wide table: that was a static each host overwrote as it
+		// started, so an engine built after another had started took that engine's aliases.
+		var aliases = configuration.CurrentValue.Alias.FunctionAliases;
 		foreach (var command in Builtins)
 		{
 			_functionLibrary.Add(command.Key, (command.Value, true));
 			_functionLibrary.ReserveSystemName(command.Key);
 
-			foreach (var alias in Configurable.FunctionAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
+			foreach (var alias in aliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
 			{
 				_functionLibrary.Add(alias, (command.Value, true));
 				_functionLibrary.ReserveSystemName(alias);
