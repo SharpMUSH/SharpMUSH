@@ -36,13 +36,13 @@ public partial class PennMUSHDatabaseConverter
 
 		foreach (var package in await _packageRegistry.GetInstalledPackagesAsync())
 		{
-			foreach (var record in await _packageRegistry.GetPackageObjectsAsync(package.Id))
-			{
-				if (HelperFunctions.ParseDbRef(record.Objid) is DBRef dbref)
-				{
-					packageObjects.Add(dbref.Number);
-				}
-			}
+			// Read before the uninstall drops the registry rows, but only deleted once it has worked: a
+			// package still registered keeps its objects, or its next upgrade would write to source objects.
+			var objects = (await _packageRegistry.GetPackageObjectsAsync(package.Id))
+				.Select(record => HelperFunctions.ParseDbRef(record.Objid))
+				.Where(parsed => parsed.IsSome())
+				.Select(parsed => ((DBRef)parsed.Value!).Number)
+				.ToList();
 
 			// Forced: the packages all go, so neither a dependent nor an attachment is left behind.
 			if (await _packageInstaller.UninstallAsync(package.Id, force: true, cancellationToken) is Error<string> error)
@@ -51,6 +51,7 @@ public partial class PennMUSHDatabaseConverter
 				continue;
 			}
 
+			packageObjects.UnionWith(objects);
 			context.UninstalledPackages.Add(package.Id);
 		}
 
