@@ -77,8 +77,20 @@
    "command": "say hello there"
   },
   {
+   "key": "10-player-commands/comm.say#1",
+   "command": ":waves."
+  },
+  {
+   "key": "10-player-commands/comm.say#2",
+   "command": ";'s cat purrs."
+  },
+  {
    "key": "10-player-commands/comm.say#3",
    "command": "\"quoted shortcut"
+  },
+  {
+   "key": "10-player-commands/comm.say#4",
+   "command": "@emit A bell rings."
   },
   {
    "key": "10-player-commands/flags.set#1",

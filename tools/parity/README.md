@@ -63,8 +63,9 @@ think [add(1,2)]                       a command on the acting session
 **Adding a regression case for a parity fix**: add a `::case` (or steps) to the matching scenario file
 using the PennMUSH behaviour as the spec, run it, confirm the diff shows the bug, and after the fix
 confirm it disappears. Reference fixture objects by lookup (`*Alice`, `first(lcon(*Alice))`,
-`loc(*Alice)`), never by literal dbref: SharpMUSH's importer places imported objects after its own
-system objects, so numbers differ. New scenarios should be robust to earlier files having changed
+`loc(*Alice)`), never by literal dbref: whether SharpMUSH's importer keeps PennMUSH's dbrefs is
+itself under test (it keeps them since #1107; before that it placed them after its own system
+objects), and the anchors make the comparison independent of it. New scenarios should be robust to earlier files having changed
 the world (files run in name order; `05-import` runs before anything mutates state).
 
 ## How output is attributed to a command (no sleeps)

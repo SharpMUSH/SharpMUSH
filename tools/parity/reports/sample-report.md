@@ -1,20 +1,20 @@
 # PennMUSH vs SharpMUSH parity report
 
-- Generated: 2026-09-25 04:31:42Z
-- SharpMUSH commit: 2d551cefd
+- Generated: 2026-09-25 04:37:34Z
+- SharpMUSH commit: 14a3b9b66
 - PennMUSH commit: 80a1d5b
 - Scenarios: 00-login, 05-import, 10-player-commands, 20-admin-commands, 30-softcode
-- **Steps: 150 — 72 match, 1 known difference, 77 open gap (baseline), 0 UNEXPECTED DIFFERENCE, 0 error; 0 stale allowlist entries, 0 baseline entries now fixed, 0 orphaned entries**
+- **Steps: 150 — 69 match, 1 known difference, 80 open gap (baseline), 0 UNEXPECTED DIFFERENCE, 0 error; 0 stale allowlist entries, 0 baseline entries now fixed, 0 orphaned entries**
 
 | Scenario | Steps | Match | Known | Open gap | Unexpected | Error |
 |---|---:|---:|---:|---:|---:|---:|
 | 00-login | 10 | 3 | 0 | 7 | 0 | 0 |
 | 05-import | 15 | 5 | 1 | 9 | 0 | 0 |
-| 10-player-commands | 55 | 23 | 0 | 32 | 0 | 0 |
+| 10-player-commands | 55 | 20 | 0 | 35 | 0 | 0 |
 | 20-admin-commands | 34 | 16 | 0 | 18 | 0 | 0 |
 | 30-softcode | 36 | 25 | 0 | 11 | 0 | 0 |
 
-## Differences (77; open gaps are tracked in baseline.json)
+## Differences (80; open gaps are tracked in baseline.json)
 
 ### `00-login/login.player#0` — open-gap
 
@@ -319,7 +319,31 @@
 +++ SharpMUSH
 @@ -1 +1 @@
 -You say, "hello there"
-+Alice says, "hello there"
++
+```
+
+### `10-player-commands/comm.say#1` — open-gap
+
+- Repro: `tools/parity/run.sh --only 10-player-commands/comm.say` — tools/parity/scenarios/10-player-commands.scn:11, session `alice`, command `:waves.`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1 +1 @@
+-Alice waves.
++
+```
+
+### `10-player-commands/comm.say#2` — open-gap
+
+- Repro: `tools/parity/run.sh --only 10-player-commands/comm.say` — tools/parity/scenarios/10-player-commands.scn:12, session `alice`, command `;'s cat purrs.`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1 +1 @@
+-Alice's cat purrs.
++
 ```
 
 ### `10-player-commands/comm.say#3` — open-gap
@@ -331,7 +355,19 @@
 +++ SharpMUSH
 @@ -1 +1 @@
 -You say, "quoted shortcut"
-+Alice says, "quoted shortcut"
++
+```
+
+### `10-player-commands/comm.say#4` — open-gap
+
+- Repro: `tools/parity/run.sh --only 10-player-commands/comm.say` — tools/parity/scenarios/10-player-commands.scn:14, session `alice`, command `@emit A bell rings.`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1 +1 @@
+-A bell rings.
++
 ```
 
 ### `10-player-commands/comm.page#0` — open-gap
@@ -756,9 +792,9 @@
 -Basic Lock [#1i]: =Alice(#4PenAc)
 -Enter Lock [#1i]: =Alice(#4PenAc)
 -Use Lock [#1i]: =Alice(#4PenAc)
-+Basic Lock [#1i]: =Ancestor Player(#S4T)
-+Enter Lock [#1i]: =Ancestor Player(#S4T)
-+Use Lock [#1i]: =Ancestor Player(#S4T)
++Basic Lock [#1i]: =Alice(#4AenP)
++Enter Lock [#1i]: =Alice(#4AenP)
++Use Lock [#1i]: =Alice(#4AenP)
  Powers:
 -Channels: *NONE*
  Warnings checked: normal
@@ -885,11 +921,10 @@
 ```diff
 --- PennMUSH
 +++ SharpMUSH
-@@ -1,2 +1,2 @@
+@@ -1,2 +1 @@
 -Alice says, "forced hello"
 -[alice] You say, "forced hello"
-+Wiz says, "forced hello"
-+[alice] Wiz says, "forced hello"
++
 ```
 
 ### `20-admin-commands/admin.force#2` — open-gap
@@ -899,12 +934,11 @@
 ```diff
 --- PennMUSH
 +++ SharpMUSH
-@@ -1,3 +1,2 @@
+@@ -1,3 +1 @@
 -Alice - Triggered.
 -Alice says, "triggered 1"
 -[alice] You say, "triggered 1"
-+Wiz says, "triggered 1"
-+[alice] Wiz says, "triggered 1"
++
 ```
 
 ### `20-admin-commands/admin.denied#0` — open-gap
@@ -1117,7 +1151,7 @@
 +++ SharpMUSH
 @@ -1 +1 @@
 -13 objects = 4 rooms, 1 exits, 3 things, 5 players, 0 garbage.
-+25 objects = 5 rooms, 0 exits, 14 things, 6 players.
++18 objects = 4 rooms, 0 exits, 9 things, 5 players.
 ```
 
 ### `30-softcode/sc.login#0` — open-gap
@@ -1274,11 +1308,11 @@
 |---|---:|---:|
 | room0 | #0 | #0 |
 | god | #1 | #1 |
-| wiz | #3 | #16 |
-| alice | #4 | #17 |
-| bob | #5 | #18 |
-| lab | #6 | #19 |
-| widget | #7 | #20 |
+| wiz | #3 | #3 |
+| alice | #4 | #4 |
+| bob | #5 | #5 |
+| lab | #6 | #6 |
+| widget | #7 | #7 |
 
 ## Coverage
 

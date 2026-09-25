@@ -57,8 +57,8 @@ _ROOM_NUMBER = re.compile(r"(?i)\b(room number )(\d+)")
 class DbrefCanonicalizer:
     """Maps one server's dbrefs onto a comparable numbering (rule `dbref`).
 
-    * Anchors: objects the world fixture creates. SharpMUSH's importer places imported objects
-      after its own system objects, so PennMUSH's #3 is SharpMUSH's #16. Each side reports where
+    * Anchors: objects the world fixture creates. SharpMUSH's importer may number them differently
+      (before #1107 PennMUSH's #3 became SharpMUSH's #16). Each side reports where
       every anchor lives; anchor dbrefs are rewritten to the PennMUSH dbref, the reference.
     * New objects: anything at or above `first_free` was created by a scenario. It becomes
       #NEW<k>, numbered by first appearance on that side, so creation order is compared but
