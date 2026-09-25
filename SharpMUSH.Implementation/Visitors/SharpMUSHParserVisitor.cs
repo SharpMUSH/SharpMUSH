@@ -1714,6 +1714,15 @@ public class SharpMUSHParserVisitor(
 		bool inPlace = true)
 	{
 		CallState? failure = null;
+		// A `]` or `~` in front of the typed command only governs how that command is read and matched
+		// (src/command.c:1160-1166 strips NOEVAL_TOKEN, then matches the unevaluated line). The body is its
+		// own queue entry and runs with default evaluation, so the modifier's parse state stops here.
+		var bodyState = prs.CurrentState with
+		{
+			ParseMode = ParseMode.Default,
+			Flags = prs.CurrentState.Flags & ~(ParserStateFlags.PreserveBraces | ParserStateFlags.StrictParse),
+			CommandModifierDepth = 0
+		};
 		foreach (var (obj, attr, arguments) in matches)
 		{
 			// A HALTED object runs no softcode (PennMUSH PE_NOTHING for a Halted executor), so its
@@ -1733,7 +1742,7 @@ public class SharpMUSHParserVisitor(
 				var executor = prs.CurrentState.Executor;
 				await Mediator.Send(new AdmitCommandListRequest(
 					body,
-					prs.CurrentState.SnapshotForQueuedAction() with
+					bodyState.SnapshotForQueuedAction() with
 					{
 						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
 						Registers = new([[]]),
@@ -1755,7 +1764,7 @@ public class SharpMUSHParserVisitor(
 
 			// In place, the body is still its own queue entry in PennMUSH (PE_INFO_DEFAULT): it starts with
 			// no %c/%u, and what it runs never reaches the command that matched it.
-			var newParser = prs.Push(prs.CurrentState with
+			var newParser = prs.Push(bodyState with
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
 				EnvironmentRegisters = arguments,
