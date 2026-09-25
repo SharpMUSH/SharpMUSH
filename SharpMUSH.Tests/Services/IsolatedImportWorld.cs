@@ -62,6 +62,9 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 	/// <summary>The world's engine, whose object cache fronts <see cref="Database"/>.</summary>
 	public IMediator Mediator => _services.GetRequiredService<IMediator>();
 
+	/// <summary>The world's own services, for a test that has to reach one the members here do not name.</summary>
+	public IServiceProvider Services => _services;
+
 	public IPasswordService Passwords => _services.GetRequiredService<IPasswordService>();
 
 	public IPermissionService Permissions => _services.GetRequiredService<IPermissionService>();

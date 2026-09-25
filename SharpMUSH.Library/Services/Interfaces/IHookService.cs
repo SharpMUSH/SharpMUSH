@@ -38,6 +38,13 @@ public interface IHookService
 	ValueTask<bool> ClearHookAsync(string commandName, string hookType);
 
 	/// <summary>
+	/// Clears every hook, on any command, whose target is one of <paramref name="targetObjects"/>: those
+	/// objects are going, and their numbers may be given to other objects.
+	/// </summary>
+	/// <returns>How many hooks were cleared.</returns>
+	ValueTask<int> ClearHooksOnAsync(IReadOnlySet<int> targetObjects);
+
+	/// <summary>
 	/// Gets all hooks for a specific command.
 	/// </summary>
 	/// <param name="commandName">The name of the command</param>

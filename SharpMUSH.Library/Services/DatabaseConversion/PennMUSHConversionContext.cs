@@ -25,6 +25,9 @@ internal sealed class PennMUSHConversionContext
 	/// </summary>
 	public DatabaseOptions? WrittenDatabaseOptions { get; set; }
 
+	/// <summary>The packages uninstalled so their objects' numbers are free, to be installed again afterwards.</summary>
+	public List<string> UninstalledPackages { get; } = [];
+
 	/// <summary>Failures that cost the conversion an object, an attribute or a lock.</summary>
 	public List<string> Errors { get; } = [];
 

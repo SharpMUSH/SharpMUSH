@@ -28,7 +28,7 @@ public class DefaultPackagesBootstrapService(
 	IPackageRegistryService registry,
 	IPackageInstallService installer,
 	IOptionsWrapper<SharpMUSHOptions> options,
-	ILogger<DefaultPackagesBootstrapService> logger) : IHostedService
+	ILogger<DefaultPackagesBootstrapService> logger) : IHostedService, IBundledPackageBootstrap
 {
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
@@ -43,22 +43,10 @@ public class DefaultPackagesBootstrapService(
 			return;
 		}
 
-		var database = options.CurrentValue.Database;
-
 		foreach (var package in BundledPackages.All)
 		{
-			var handler = package.Requires switch
+			if (!HasHandler(package))
 			{
-				BundledPackageHandler.Http => database.HttpHandler,
-				BundledPackageHandler.Event => database.EventHandler,
-				_ => null
-			};
-
-			if (package.Requires is not BundledPackageHandler.None && handler is null or 0)
-			{
-				logger.LogDebug("No {Handler} configured; skipping attach-mode package {PackageId}.",
-					package.Requires is BundledPackageHandler.Http ? "http_handler" : "event_handler",
-					package.PackageId);
 				continue;
 			}
 
@@ -76,6 +64,56 @@ public class DefaultPackagesBootstrapService(
 
 			await InstallOrUpgradeAsync(package.PackageId, cancellationToken);
 		}
+	}
+
+	/// <inheritdoc />
+	/// <remarks>
+	/// Not gated by <c>SHARPMUSH_BOOTSTRAP_BUNDLED_PACKAGES</c>: that decides what a boot installs, and a
+	/// caller asking for these packages by name is putting back what the game already had.
+	/// </remarks>
+	public async Task<IReadOnlyList<string>> InstallBundledAsync(IReadOnlyCollection<string> packageIds,
+		CancellationToken cancellationToken)
+	{
+		foreach (var package in BundledPackages.All.Where(p => packageIds.Contains(p.PackageId) && HasHandler(p)))
+		{
+			await InstallOrUpgradeAsync(package.PackageId, cancellationToken);
+		}
+
+		var installed = new List<string>();
+		foreach (var packageId in packageIds)
+		{
+			if (await registry.GetInstalledPackageAsync(packageId) is InstalledPackageRecord)
+			{
+				installed.Add(packageId);
+			}
+		}
+
+		return installed;
+	}
+
+	/// <summary>
+	/// Whether the handler object an attach-mode package lands on is configured; a create-mode package
+	/// needs none.
+	/// </summary>
+	private bool HasHandler(BundledPackages.Descriptor package)
+	{
+		var database = options.CurrentValue.Database;
+		var handler = package.Requires switch
+		{
+			BundledPackageHandler.Http => database.HttpHandler,
+			BundledPackageHandler.Event => database.EventHandler,
+			_ => null
+		};
+
+		if (package.Requires is BundledPackageHandler.None || handler is not (null or 0))
+		{
+			return true;
+		}
+
+		logger.LogDebug("No {Handler} configured; skipping attach-mode package {PackageId}.",
+			package.Requires is BundledPackageHandler.Http ? "http_handler" : "event_handler",
+			package.PackageId);
+		return false;
 	}
 
 	private async Task InstallOrUpgradeAsync(string packageId, CancellationToken cancellationToken)

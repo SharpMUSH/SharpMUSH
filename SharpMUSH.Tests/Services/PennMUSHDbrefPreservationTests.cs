@@ -1,9 +1,15 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Services.DatabaseConversion;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -240,6 +246,97 @@ public class PennMUSHDbrefPreservationTests
 			.IsEqualTo(1);
 		await Assert.That(result.Warnings.Any(w => w.StartsWith("Gave God (#1)") && w.Contains($"#{logger.Number}")))
 			.IsTrue();
+	}
+
+	/// <summary>
+	/// A fresh server installs its bundled packages at first boot, and their objects take #10 and up, where
+	/// every PennMUSH database has objects of its own. The import uninstalls them with the seeds, so each
+	/// source object keeps its number, and installs them again once the source is written: a new Package
+	/// Manager past the imported objects, and the packages' objects past it.
+	/// </summary>
+	[Test]
+	public async Task TheBundledPackagesMakeWayForTheSourceAndComeBackPastIt()
+	{
+		string[] bundled = ["common-functions", "plus-help", "scene"];
+		await using var world = await IsolatedImportWorld.CreateAsync(StoredOptions);
+		var bootstrap = world.Services.GetRequiredService<IBundledPackageBootstrap>();
+		var registry = world.Services.GetRequiredService<IPackageRegistryService>();
+		await Assert.That(await bootstrap.InstallBundledAsync(bundled, CancellationToken.None)).IsEquivalentTo(bundled);
+		var before = await PackageObjectNumbersAsync(registry, bundled);
+		await Assert.That(before.Min()).IsLessThanOrEqualTo(14);
+
+		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath));
+
+		await Assert.That(result.Errors).IsEmpty();
+		foreach (var (number, name) in ((int, string)[])[(3, "Alice"), (4, "Bob"), (5, "Carol"),
+					 (6, "Widget"), (9, "Gadget"), (11, "Oracle Hall"), (12, "Attic"), (13, "Hall"), (14, "North")])
+		{
+			await Assert.That((await NodeAsync(world, number)).Object().Name).IsEqualTo(name);
+		}
+
+		var stored = (await world.ExpandedData.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)))!;
+		var packageManager = (await NodeAsync(world, (int)stored.Database.PackageManager!.Value)).Expect<SharpPlayer>();
+		await Assert.That(packageManager.Object.Name).IsEqualTo("Package Manager");
+		await Assert.That(packageManager.Object.Key).IsGreaterThan(14);
+		await Assert.That(await SharpMUSH.Library.HelperFunctions.HasFlag(packageManager, "WIZARD")).IsTrue();
+
+		var after = await PackageObjectNumbersAsync(registry, bundled);
+		await Assert.That(after.Min()).IsGreaterThan(packageManager.Object.Key);
+		foreach (var number in after)
+		{
+			var packageObject = await NodeAsync(world, number);
+			await Assert.That((await packageObject.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number)
+				.IsEqualTo(packageManager.Object.Key);
+		}
+
+		// The speech hooks the scene package captures poses with point at its new logger, not at the
+		// imported object that now holds the old logger's number.
+		var logger = (await registry.GetPackageObjectsAsync("scene")).Single(o => o.Ref == "logger");
+		var hooks = world.Services.GetRequiredService<IHookService>();
+		foreach (var command in (string[])["SAY", "POSE", "SEMIPOSE", "@EMIT"])
+		{
+			var hook = (await hooks.GetHookAsync(command, "OVERRIDE")).Expect<CommandHook>();
+			await Assert.That($"#{hook.TargetObject.Number}").IsEqualTo(logger.Objid.Split(':')[0]);
+		}
+	}
+
+	/// <summary>The packages' objects as the registry records them, which fails unless every one is installed.</summary>
+	private static async Task<List<int>> PackageObjectNumbersAsync(IPackageRegistryService registry, string[] packages)
+	{
+		var numbers = new List<int>();
+		foreach (var package in packages)
+		{
+			await Assert.That(await registry.GetInstalledPackageAsync(package) is InstalledPackageRecord).IsTrue();
+			foreach (var record in await registry.GetPackageObjectsAsync(package))
+			{
+				numbers.Add(SharpMUSH.Library.HelperFunctions.ParseDbRef(record.Objid) is DBRef dbref ? dbref.Number : -1);
+			}
+		}
+
+		await Assert.That(numbers).IsNotEmpty();
+		await Assert.That(numbers).DoesNotContain(-1);
+		return numbers;
+	}
+
+	/// <summary>
+	/// The world's configuration as the running game reads it: what is stored, as the server rereads it on a
+	/// reload. The package manager installs as whoever <c>package_manager</c> names at the time.
+	/// </summary>
+	private static void StoredOptions(IServiceCollection services)
+	{
+		var configured = ReadPennMushConfig.Create(
+			Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
+		services.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
+		services.AddSingleton<IOptionsWrapper<SharpMUSHOptions>>(sp =>
+			new StoredOptionsWrapper(sp.GetRequiredService<IExpandedDataStore>(), configured));
+	}
+
+	private sealed class StoredOptionsWrapper(IExpandedDataStore store, SharpMUSHOptions configured)
+		: IOptionsWrapper<SharpMUSHOptions>
+	{
+		public SharpMUSHOptions CurrentValue =>
+			store.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)).AsTask().GetAwaiter().GetResult()
+			?? configured;
 	}
 
 	/// <summary>
