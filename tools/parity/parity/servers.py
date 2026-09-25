@@ -107,6 +107,12 @@ class PennMush:
         for name, target in (("netmush", "netmud"), ("info_slave", "info_slave"), ("ssl_slave", "ssl_slave")):
             if (self.src / "src" / target).exists():
                 (self.game / name).symlink_to(self.src / "src" / target)
+        # Config always comes from the shipped defaults (*.dst). `make` only generates mush.cnf and
+        # `make update-conf` the rest, so a checkout's *.cnf depend on which targets ran there: CI
+        # had no alias.cnf and lost `function_alias modulo mod`, while a local build did.
+        for cnf_name, dst_name in (("mush.cnf", "mushcnf.dst"), ("alias.cnf", "aliascnf.dst"),
+                                   ("restrict.cnf", "restrictcnf.dst"), ("names.cnf", "namescnf.dst")):
+            shutil.copyfile(self.src / "game" / dst_name, self.game / cnf_name)
         cnf = self.game / "mush.cnf"
         text = cnf.read_text()
         lines = []

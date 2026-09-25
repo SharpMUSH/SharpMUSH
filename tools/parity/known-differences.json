@@ -7,7 +7,8 @@
       "case": "import.owners",
       "step": 1,
       "reason": "money() is deliberately unsupported: SharpMUSH does not track pennies (function answers '#-1 NOT SUPPORTED').",
-      "tracking": "#1134"
+      "tracking": "#1134",
+      "command": "think [money(*Alice)] [money(*Wiz)]"
     }
   ]
 }

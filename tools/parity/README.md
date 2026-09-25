@@ -91,7 +91,7 @@ Only genuinely non-deterministic or purely presentational output is normalized.
 | `timestamp` | `Thu Sep 24 16:59:11 2026` → `<TIMESTAMP>` | wall clock |
 | `trailing-ws` | trailing spaces/tabs and trailing blank lines dropped | |
 | `site-text` | on login steps, each server's `connect.txt`, `motd.txt`, `wizmotd.txt` text (and SharpMUSH's `Connected!` line) removed | site content, not behaviour |
-| `dbref` | fixture objects mapped to PennMUSH's dbrefs (anchors in `world/setup.mush`); dbrefs of objects created during a scenario become `#NEW<k>` by order of first appearance; `#12:1790269900000` objids keep their form, the creation time becomes `<CTIME>` | dbref allocation and creation time are not behaviour. The import offset is visible in the report's anchor table, not hidden |
+| `dbref` | fixture objects mapped to PennMUSH's dbrefs (anchors in `world/setup.mush`); dbrefs of objects created during a scenario become `#NEW<k>` by order of first appearance; `#12:1790269900000` objids keep their form, the creation time becomes `<CTIME>`; any other SharpMUSH dbref is one of its own system objects and becomes `#S<n>` | dbref allocation and creation time are not behaviour. The import offset is visible in the report's anchor table, not hidden |
 
 Not normalized, on purpose: flag letter order, whether a dbref is shown, error wording, message
 routing. Those are behaviour and appear as differences.
@@ -99,7 +99,8 @@ routing. Those are behaviour and appear as differences.
 ## Known differences and the baseline
 
 - `known-differences.json` is the **allowlist of deliberate differences**, tied to the compatibility
-  profile (#1134). Each entry needs `id`, `scenario`, `case`, optional `step`, `reason`, `tracking`.
+  profile (#1134). Each entry needs `id`, `scenario`, `case`, optional `step`, `reason`, `tracking`, and, when
+  `step` is given, that step's `command`.
   A step that differs *and* is allowlisted is reported as `known-difference`; an entry whose steps all
   match again is reported as **stale** and fails the run (delete it). Anything else that differs is a
   failure.
@@ -107,6 +108,9 @@ routing. Those are behaviour and appear as differences.
   bugs*, so CI can ratchet: `--baseline` fails only on differences outside it, and also fails when a
   baseline step starts matching, so the fixing PR must delete the entry. Regenerate with
   `tools/parity/run.sh --write-baseline --allow-failures`. Fix PRs should shrink it.
+- Step keys are positional (`scenario/case#index`), so both files also record each step's command.
+  If a step is inserted or removed and a key now points at a different command (or at nothing), the
+  entry is reported as **orphaned** and the run fails; re-key it (for the baseline, regenerate it).
 
 ## Coverage map
 
@@ -116,5 +120,11 @@ routing. Those are behaviour and appear as differences.
 ## CI
 
 `.github/workflows/parity.yml` runs the offline tests, builds PennMUSH at a pinned commit, runs the
-harness with `--baseline`, and uploads the report. It is manual (`workflow_dispatch`) and runs on
-changes under `tools/parity/`.
+harness with `--baseline`, and uploads the report. It runs on every pull request to `main` and every
+push to `main` that touches server code (`SharpMUSH.*/`, `Directory.Build.*`, `global.json`,
+`SharpMUSH.sln`) or the harness itself, and can also be started by hand (`workflow_dispatch`).
+
+The reference PennMUSH always runs with the shipped default config (`game/*.dst` copied to
+`mush.cnf`, `alias.cnf`, `restrict.cnf`, `names.cnf`), never with a checkout's own `*.cnf`: `make`
+generates only `mush.cnf`, so which aliases (e.g. `mod` for `modulo`) exist would otherwise depend
+on which make targets had run in that checkout.

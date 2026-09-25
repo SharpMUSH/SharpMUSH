@@ -64,12 +64,16 @@ class DbrefCanonicalizer:
       #NEW<k>, numbered by first appearance on that side, so creation order is compared but
       allocation policy is not.
     * Objids (`#12:1790269900000`) keep their form but the creation time becomes <CTIME>.
+    * Any other dbref on a non-reference side (`foreign_tag`, e.g. "S" for SharpMUSH) is that
+      server's own system object, not PennMUSH's object with the same number: SharpMUSH's #3 is
+      not PennMUSH's #3 (Wiz). It becomes #S3, so it can never match by accident.
     The import offset itself is reported by the `import.anchors` check, not hidden.
     """
 
-    def __init__(self, anchors: dict[int, int], first_free: int):
+    def __init__(self, anchors: dict[int, int], first_free: int, foreign_tag: str = ""):
         self._anchors = anchors
         self._first_free = first_free
+        self._foreign_tag = foreign_tag
         self._new: dict[int, int] = {}
 
     def _canon(self, n: int) -> str:
@@ -77,7 +81,7 @@ class DbrefCanonicalizer:
             return str(self._anchors[n])
         if n >= self._first_free:
             return "NEW" + str(self._new.setdefault(n, len(self._new) + 1))
-        return str(n)
+        return self._foreign_tag + str(n)
 
     def apply(self, text: str) -> str:
         text = _ROOM_NUMBER.sub(lambda m: m.group(1) + self._canon(int(m.group(2))), text)

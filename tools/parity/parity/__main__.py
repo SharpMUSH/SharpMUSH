@@ -60,7 +60,7 @@ def main(argv=None) -> int:
     scenarios = [scenario.load(p) for p in files]
     allowlist = cmp.load_allowlist(HERE / "known-differences.json")
     baseline_path = HERE / "baseline.json"
-    baseline = frozenset(json.loads(baseline_path.read_text())["steps"]) if args.baseline else frozenset()
+    baseline = cmp.load_baseline(baseline_path) if args.baseline else {}
     setup_cmds, anchors = world.load_setup(HERE / "world" / "setup.mush")
 
     old_runs = sorted(Path(args.work).glob("run-*")) if Path(args.work).exists() else []
@@ -97,17 +97,19 @@ def main(argv=None) -> int:
             all_p += pr
             all_s += sr
         pcanon = world.canonicalizer(p_anchor, p_anchor, p_free)
-        scanon = world.canonicalizer(s_anchor, p_anchor, s_free)
+        scanon = world.canonicalizer(s_anchor, p_anchor, s_free, foreign_tag="S")
         def site(d: Path):
             return [(d / n).read_text(errors="replace") for n in ("connect.txt", "motd.txt", "wizmotd.txt") if (d / n).exists()]
         results, stale, fixed = cmp.compare(all_p, all_s, pcanon, scanon, allowlist,
                                      site(penn.game / "txt"), site(REPO / "SharpMUSH.Server"), baseline)
+        orphans = cmp.orphaned(baseline, allowlist, results)
         if any(wanted.values()):
             results = [r for r in results if wanted.get(r.penn.scenario) in (None, r.penn.case)]
-            stale, fixed = [], []
+            stale, fixed, orphans = [], [], []
 
         if args.write_baseline:
-            steps = sorted(r.key for r in results if r.status in (cmp.DIFF, cmp.OPEN))
+            steps = [{"key": r.key, "command": r.penn.command}
+                     for r in sorted(results, key=lambda r: r.key) if r.status in (cmp.DIFF, cmp.OPEN)]
             baseline_path.write_text(json.dumps({"steps": steps}, indent=1) + "\n")
             print(f"[parity] wrote {len(steps)} open gaps to {baseline_path}")
         cov = {}
@@ -125,10 +127,10 @@ def main(argv=None) -> int:
         out = Path(args.out)
         if out.exists():
             shutil.rmtree(out)
-        totals = report.write_reports(out, meta, results, stale, fixed, anchor_table, cov, "tools/parity/scenarios")
+        totals = report.write_reports(out, meta, results, stale, fixed, orphans, anchor_table, cov, "tools/parity/scenarios")
         print(f"[parity] report: {out / 'report.md'}")
         print(f"[parity] {totals}")
-        bad = totals[cmp.DIFF] + totals[cmp.ERROR] + len(stale) + len(fixed)
+        bad = totals[cmp.DIFF] + totals[cmp.ERROR] + len(stale) + len(fixed) + len(orphans)
         return 0 if (bad == 0 or args.allow_failures) else 1
     finally:
         sharp.stop()

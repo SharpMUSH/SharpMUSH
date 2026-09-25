@@ -3,7 +3,24 @@ name: PennMUSH parity harness
 on:
   workflow_dispatch:
   pull_request:
+    branches: [main]
+    # Any change that can alter server output, so product PRs are ratcheted against baseline.json.
     paths:
+      - 'SharpMUSH.*/**'
+      - 'Directory.Build.props'
+      - 'Directory.Build.targets'
+      - 'global.json'
+      - 'SharpMUSH.sln'
+      - 'tools/parity/**'
+      - '.github/workflows/parity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'SharpMUSH.*/**'
+      - 'Directory.Build.props'
+      - 'Directory.Build.targets'
+      - 'global.json'
+      - 'SharpMUSH.sln'
       - 'tools/parity/**'
       - '.github/workflows/parity.yml'
 

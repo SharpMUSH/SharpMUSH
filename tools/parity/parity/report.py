@@ -13,7 +13,7 @@ def _fence(text: str) -> str:
     return "```\n" + (text if text else "(no output)") + "\n```"
 
 
-def write_reports(out: Path, meta: dict, results, stale, fixed, anchors, coverage, scenario_dir: str):
+def write_reports(out: Path, meta: dict, results, stale, fixed, orphans, anchors, coverage, scenario_dir: str):
     out.mkdir(parents=True, exist_ok=True)
     by_scn: "OrderedDict[str, list]" = OrderedDict()
     for r in results:
@@ -32,7 +32,8 @@ def write_reports(out: Path, meta: dict, results, stale, fixed, anchors, coverag
         L.append(f"- {k}: {v}")
     L.append(f"- **Steps: {sum(total.values())} — {total[MATCH]} match, {total[KNOWN]} known difference, "
              f"{total[OPEN]} open gap (baseline), {total[DIFF]} UNEXPECTED DIFFERENCE, {total[ERROR]} error; "
-             f"{len(stale)} stale allowlist entries, {len(fixed)} baseline entries now fixed**\n")
+             f"{len(stale)} stale allowlist entries, {len(fixed)} baseline entries now fixed, "
+             f"{len(orphans)} orphaned entries**\n")
     L.append("| Scenario | Steps | Match | Known | Open gap | Unexpected | Error |\n|---|---:|---:|---:|---:|---:|---:|")
     for s, c in counts.items():
         L.append(f"| {s} | {sum(c.values())} | {c[MATCH]} | {c[KNOWN]} | {c[OPEN]} | {c[DIFF]} | {c[ERROR]} |")
@@ -65,6 +66,11 @@ def write_reports(out: Path, meta: dict, results, stale, fixed, anchors, coverag
             L.append(f"- {e.id} `{e.scenario}/{e.case}`: {e.reason}")
         L.append("")
 
+    if orphans:
+        L.append("## Orphaned baseline/allowlist entries (a step was inserted or removed — re-key them)\n")
+        L.extend(f"- {o}" for o in orphans)
+        L.append("")
+
     L.append("## Import anchors (dbref on each server)\n")
     L.append("| Anchor | PennMUSH | SharpMUSH |\n|---|---:|---:|")
     for label, (p, s) in anchors.items():
@@ -85,7 +91,9 @@ def write_reports(out: Path, meta: dict, results, stale, fixed, anchors, coverag
              "(connect.txt, motd.txt, wizmotd.txt) and SharpMUSH's `Connected!` line are removed: they are "
              "site content, not behaviour.")
     L.append("- `dbref`: dbrefs of world-fixture objects are mapped to PennMUSH's numbering; dbrefs of "
-             "objects created during scenarios become `#NEW<k>` in order of first appearance.")
+             "objects created during scenarios become `#NEW<k>` in order of first appearance; any other "
+             "SharpMUSH dbref is one of its own system objects and becomes `#S<n>`, so it never matches "
+             "the PennMUSH object that happens to share its number.")
     (out / "report.md").write_text("\n".join(L) + "\n")
 
     def dump(r):
@@ -93,7 +101,7 @@ def write_reports(out: Path, meta: dict, results, stale, fixed, anchors, coverag
                 "penn": r.penn_text, "sharp": r.sharp_text, "diff": r.diff,
                 "known": r.entry.id if r.entry else None}
     (out / "report.json").write_text(json.dumps({
-        "meta": meta, "totals": total, "stale": [e.id for e in stale], "fixed": fixed,
+        "meta": meta, "totals": total, "stale": [e.id for e in stale], "fixed": fixed, "orphaned": orphans,
         "results": [dump(r) for r in results]}, indent=1))
     (out / "coverage.json").write_text(json.dumps(
         {k: {"used": sorted(u), "penn_total": len(uni), "covered": sorted(u & uni)} for k, (u, uni) in coverage.items()}, indent=1))

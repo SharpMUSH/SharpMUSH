@@ -41,6 +41,11 @@ class DbrefTests(unittest.TestCase):
         c = DbrefCanonicalizer({}, first_free=30)
         self.assertEqual(c.apply("#0 #1 #-1"), "#0 #1 #-1")
 
+    def test_a_non_reference_sides_own_system_objects_are_tagged(self):
+        # SharpMUSH's #3 is one of its system objects, not PennMUSH's #3 (Wiz, anchored at #16).
+        c = DbrefCanonicalizer({16: 3, 0: 0}, first_free=30, foreign_tag="S")
+        self.assertEqual(c.apply("#16 #3 #0 #31 #-1"), "#3 #S3 #0 #NEW1 #-1")
+
     def test_room_number_text(self):
         c = DbrefCanonicalizer({}, first_free=30)
         self.assertEqual(c.apply("Foo created with room number 31."), "Foo created with room number NEW1.")
@@ -95,6 +100,27 @@ class CompareTests(unittest.TestCase):
         self.assertEqual((r[0].status, fixed), (compare.OPEN, []))
         r, _, fixed = self.run_compare(self.rec("1"), self.rec("1"), baseline=["s/c#0"])
         self.assertEqual((r[0].status, fixed), (compare.MATCH, ["s/c#0"]))
+
+    def test_entries_whose_step_moved_are_orphaned(self):
+        results, _, _ = self.run_compare(self.rec("1"), self.rec("2"))
+        self.assertEqual(compare.orphaned({"s/c#0": "think x"}, [], results), [])
+        # A step inserted before it: the key now points at another command.
+        self.assertEqual(compare.orphaned({"s/c#0": "think y"}, [], results),
+                         ["baseline `s/c#0` was `think y`, now `think x`"])
+        self.assertEqual(compare.orphaned({"s/c#1": "think x"}, [], results),
+                         ["baseline `s/c#1` was `think x`, now missing"])
+        entry = compare.Entry("KD-1", "s", "c", 0, "why", "#1134", "think y")
+        self.assertEqual(len(compare.orphaned({}, [entry], results)), 1)
+        # Scenarios that did not run are not judged.
+        self.assertEqual(compare.orphaned({"other/c#0": "think y"}, [], results), [])
+
+    def test_step_specific_allowlist_entries_need_their_command(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "k.json"
+            p.write_text(json.dumps({"entries": [{"id": "KD-1", "scenario": "s", "case": "c", "step": 0,
+                                                  "reason": "r", "tracking": "#1134"}]}))
+            with self.assertRaises(ValueError):
+                compare.load_allowlist(p)
 
     def test_error_is_never_a_match(self):
         bad = self.rec("")

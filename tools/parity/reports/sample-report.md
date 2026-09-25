@@ -1,22 +1,22 @@
 # PennMUSH vs SharpMUSH parity report
 
-- Generated: 2026-09-24 17:22:39Z
-- SharpMUSH commit: 11fc7efcf
+- Generated: 2026-09-25 04:27:45Z
+- SharpMUSH commit: beb9ab2be
 - PennMUSH commit: 80a1d5b
 - Scenarios: 00-login, 05-import, 10-player-commands, 20-admin-commands, 30-softcode
-- **Steps: 150 — 71 match, 1 known difference, 0 open gap (baseline), 78 UNEXPECTED DIFFERENCE, 0 error; 0 stale allowlist entries, 0 baseline entries now fixed**
+- **Steps: 150 — 71 match, 1 known difference, 78 open gap (baseline), 0 UNEXPECTED DIFFERENCE, 0 error; 0 stale allowlist entries, 0 baseline entries now fixed, 0 orphaned entries**
 
 | Scenario | Steps | Match | Known | Open gap | Unexpected | Error |
 |---|---:|---:|---:|---:|---:|---:|
-| 00-login | 10 | 3 | 0 | 0 | 7 | 0 |
-| 05-import | 15 | 5 | 1 | 0 | 9 | 0 |
-| 10-player-commands | 55 | 23 | 0 | 0 | 32 | 0 |
-| 20-admin-commands | 34 | 16 | 0 | 0 | 18 | 0 |
-| 30-softcode | 36 | 24 | 0 | 0 | 12 | 0 |
+| 00-login | 10 | 3 | 0 | 7 | 0 | 0 |
+| 05-import | 15 | 5 | 1 | 9 | 0 | 0 |
+| 10-player-commands | 55 | 23 | 0 | 32 | 0 | 0 |
+| 20-admin-commands | 34 | 16 | 0 | 18 | 0 | 0 |
+| 30-softcode | 36 | 24 | 0 | 12 | 0 | 0 |
 
 ## Differences (78; open gaps are tracked in baseline.json)
 
-### `00-login/login.player#0` — DIFFERENCE
+### `00-login/login.player#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 00-login/login.player` — tools/parity/scenarios/00-login.scn:3, session `alice`, login `Alice alicepass`
 
@@ -38,7 +38,7 @@
 +Alice
 ```
 
-### `00-login/login.player#2` — DIFFERENCE
+### `00-login/login.player#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 00-login/login.player` — tools/parity/scenarios/00-login.scn:5, session `alice`, command `think [loc(%#)]`
 
@@ -50,7 +50,7 @@
 +#6:<CTIME>
 ```
 
-### `00-login/login.player#3` — DIFFERENCE
+### `00-login/login.player#3` — open-gap
 
 - Repro: `tools/parity/run.sh --only 00-login/login.player` — tools/parity/scenarios/00-login.scn:6, session `alice`, command `look`
 
@@ -65,7 +65,7 @@
 +Alice
 ```
 
-### `00-login/login.admin#0` — DIFFERENCE
+### `00-login/login.admin#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 00-login/login.admin` — tools/parity/scenarios/00-login.scn:8, session `wiz`, login `Wiz wizpass`
 
@@ -87,7 +87,7 @@
 +Wiz(#3AenWP)
 ```
 
-### `00-login/login.god#0` — DIFFERENCE
+### `00-login/login.god#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 00-login/login.god` — tools/parity/scenarios/00-login.scn:11, session `god`, login `One godpass`
 
@@ -111,7 +111,7 @@
  [wiz] One has connected.
 ```
 
-### `00-login/login.badpassword#0` — DIFFERENCE
+### `00-login/login.badpassword#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 00-login/login.badpassword` — tools/parity/scenarios/00-login.scn:14, session `bad`, login-fail `Alice wrong`
 
@@ -123,7 +123,7 @@
 +Invalid Password.
 ```
 
-### `00-login/login.unknown#0` — DIFFERENCE
+### `00-login/login.unknown#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 00-login/login.unknown` — tools/parity/scenarios/00-login.scn:16, session `nobody`, login-fail `Nobody whatever`
 
@@ -135,7 +135,7 @@
 +Could not find that player.
 ```
 
-### `05-import/import.players#0` — DIFFERENCE
+### `05-import/import.players#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 05-import/import.players` — tools/parity/scenarios/05-import.scn:3, session `wiz`, login `Wiz wizpass`
 
@@ -156,7 +156,7 @@
 +Wiz(#3AenWP)
 ```
 
-### `05-import/import.players#2` — DIFFERENCE
+### `05-import/import.players#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 05-import/import.players` — tools/parity/scenarios/05-import.scn:5, session `wiz`, command `think [flags(*Wiz)] [flags(*Alice)]`
 
@@ -168,7 +168,7 @@
 +AenWP AenP
 ```
 
-### `05-import/import.rooms#0` — DIFFERENCE
+### `05-import/import.rooms#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 05-import/import.rooms` — tools/parity/scenarios/05-import.scn:9, session `wiz`, command `think [name(loc(*Alice))] [type(loc(*Alice))] [get(loc(*Alice)/DESC)]`
 
@@ -180,7 +180,7 @@
 +Lab ROOM
 ```
 
-### `05-import/import.rooms#1` — DIFFERENCE
+### `05-import/import.rooms#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 05-import/import.rooms` — tools/parity/scenarios/05-import.scn:10, session `wiz`, command `look`
 
@@ -195,7 +195,7 @@
 +Wiz(#3AenWP)
 ```
 
-### `05-import/import.rooms#2` — DIFFERENCE
+### `05-import/import.rooms#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 05-import/import.rooms` — tools/parity/scenarios/05-import.scn:11, session `wiz`, command `@teleport me=[loc(*Alice)]`
 
@@ -211,7 +211,7 @@
 +Wiz(#3AenWP)
 ```
 
-### `05-import/import.rooms#3` — DIFFERENCE
+### `05-import/import.rooms#3` — open-gap
 
 - Repro: `tools/parity/run.sh --only 05-import/import.rooms` — tools/parity/scenarios/05-import.scn:12, session `wiz`, command `look`
 
@@ -226,7 +226,7 @@
 +Wiz(#3AenWP)
 ```
 
-### `05-import/import.rooms#4` — DIFFERENCE
+### `05-import/import.rooms#4` — open-gap
 
 - Repro: `tools/parity/run.sh --only 05-import/import.rooms` — tools/parity/scenarios/05-import.scn:13, session `wiz`, command `@teleport me=#0`
 
@@ -242,7 +242,7 @@
 +Wiz(#3AenWP)
 ```
 
-### `05-import/import.things#2` — DIFFERENCE
+### `05-import/import.things#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 05-import/import.things` — tools/parity/scenarios/05-import.scn:18, session `wiz`, command `think [loc(first(lcon(*Alice)))=loc(*Alice)] [owner(first(lcon(*Alice)))=owner(*Alice)]`
 
@@ -254,7 +254,7 @@
 +#4:<CTIME>=loc(*Alice) #1=owner(*Alice)
 ```
 
-### `05-import/import.things#3` — DIFFERENCE
+### `05-import/import.things#3` — open-gap
 
 - Repro: `tools/parity/run.sh --only 05-import/import.things` — tools/parity/scenarios/05-import.scn:19, session `wiz`, command `think [get(first(lcon(*Alice))/DESC)]`
 
@@ -266,7 +266,7 @@
 +
 ```
 
-### `10-player-commands/setup.sessions#0` — DIFFERENCE
+### `10-player-commands/setup.sessions#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/setup.sessions` — tools/parity/scenarios/10-player-commands.scn:3, session `alice`, login `Alice alicepass`
 
@@ -288,7 +288,7 @@
 +Alice
 ```
 
-### `10-player-commands/setup.sessions#1` — DIFFERENCE
+### `10-player-commands/setup.sessions#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/setup.sessions` — tools/parity/scenarios/10-player-commands.scn:4, session `bob`, login `Bob bobpass`
 
@@ -310,7 +310,7 @@
 +Bob
 ```
 
-### `10-player-commands/comm.say#0` — DIFFERENCE
+### `10-player-commands/comm.say#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/comm.say` — tools/parity/scenarios/10-player-commands.scn:10, session `alice`, command `say hello there`
 
@@ -322,7 +322,7 @@
 +Alice says, "hello there"
 ```
 
-### `10-player-commands/comm.say#3` — DIFFERENCE
+### `10-player-commands/comm.say#3` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/comm.say` — tools/parity/scenarios/10-player-commands.scn:13, session `alice`, command `"quoted shortcut`
 
@@ -334,7 +334,7 @@
 +Alice says, "quoted shortcut"
 ```
 
-### `10-player-commands/comm.page#0` — DIFFERENCE
+### `10-player-commands/comm.page#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/comm.page` — tools/parity/scenarios/10-player-commands.scn:24, session `alice`, command `page Bob=Are you there?`
 
@@ -348,7 +348,7 @@
 +No one to page.
 ```
 
-### `10-player-commands/comm.page#2` — DIFFERENCE
+### `10-player-commands/comm.page#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/comm.page` — tools/parity/scenarios/10-player-commands.scn:26, session `alice`, command `page Nobody=hello`
 
@@ -362,7 +362,7 @@
 +No one to page.
 ```
 
-### `10-player-commands/obj.inventory#0` — DIFFERENCE
+### `10-player-commands/obj.inventory#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.inventory` — tools/parity/scenarios/10-player-commands.scn:29, session `alice`, command `inventory`
 
@@ -376,7 +376,7 @@
 +Widget(#7nT)
 ```
 
-### `10-player-commands/obj.inventory#1` — DIFFERENCE
+### `10-player-commands/obj.inventory#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.inventory` — tools/parity/scenarios/10-player-commands.scn:30, session `alice`, command `look Widget`
 
@@ -389,7 +389,7 @@
  A small widget.
 ```
 
-### `10-player-commands/obj.inventory#2` — DIFFERENCE
+### `10-player-commands/obj.inventory#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.inventory` — tools/parity/scenarios/10-player-commands.scn:31, session `alice`, command `examine Widget`
 
@@ -402,7 +402,7 @@
 +Widget is owned by One.
 ```
 
-### `10-player-commands/obj.inventory#3` — DIFFERENCE
+### `10-player-commands/obj.inventory#3` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.inventory` — tools/parity/scenarios/10-player-commands.scn:32, session `alice`, command `think [get(Widget/COLOR)] [get(Widget/SIZE)] [u(Widget/GREET,World)]`
 
@@ -414,7 +414,7 @@
 +#-1 NO PERMISSION TO GET ATTRIBUTE #-1 NO PERMISSION TO GET ATTRIBUTE Hello, World! I am Widget.
 ```
 
-### `10-player-commands/obj.create#0` — DIFFERENCE
+### `10-player-commands/obj.create#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.create` — tools/parity/scenarios/10-player-commands.scn:35, session `alice`, command `@create Gizmo`
 
@@ -426,7 +426,7 @@
 +Created Gizmo (#NEW1:<CTIME>).
 ```
 
-### `10-player-commands/obj.create#2` — DIFFERENCE
+### `10-player-commands/obj.create#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.create` — tools/parity/scenarios/10-player-commands.scn:37, session `alice`, command `look Gizmo`
 
@@ -439,7 +439,7 @@
  A gleaming gizmo.
 ```
 
-### `10-player-commands/obj.create#3` — DIFFERENCE
+### `10-player-commands/obj.create#3` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.create` — tools/parity/scenarios/10-player-commands.scn:38, session `alice`, command `@name Gizmo=Gadget`
 
@@ -451,7 +451,7 @@
 +
 ```
 
-### `10-player-commands/obj.create#4` — DIFFERENCE
+### `10-player-commands/obj.create#4` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.create` — tools/parity/scenarios/10-player-commands.scn:39, session `alice`, command `look Gadget`
 
@@ -464,7 +464,7 @@
  A gleaming gizmo.
 ```
 
-### `10-player-commands/obj.create#5` — DIFFERENCE
+### `10-player-commands/obj.create#5` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.create` — tools/parity/scenarios/10-player-commands.scn:40, session `alice`, command `@destroy Gadget`
 
@@ -476,7 +476,7 @@
 +Gadget is scheduled to be destroyed.
 ```
 
-### `10-player-commands/obj.create#6` — DIFFERENCE
+### `10-player-commands/obj.create#6` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.create` — tools/parity/scenarios/10-player-commands.scn:41, session `alice`, command `look Gadget`
 
@@ -489,7 +489,7 @@
  A gleaming gizmo.
 ```
 
-### `10-player-commands/obj.attrs#0` — DIFFERENCE
+### `10-player-commands/obj.attrs#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.attrs` — tools/parity/scenarios/10-player-commands.scn:44, session `alice`, command `&FOO Widget=bar`
 
@@ -501,7 +501,7 @@
 +#-1 NO PERMISSION TO SET ATTRIBUTE
 ```
 
-### `10-player-commands/obj.attrs#1` — DIFFERENCE
+### `10-player-commands/obj.attrs#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.attrs` — tools/parity/scenarios/10-player-commands.scn:45, session `alice`, command `think [get(Widget/FOO)]`
 
@@ -513,7 +513,7 @@
 +
 ```
 
-### `10-player-commands/obj.attrs#2` — DIFFERENCE
+### `10-player-commands/obj.attrs#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.attrs` — tools/parity/scenarios/10-player-commands.scn:46, session `alice`, command `&FOO Widget=`
 
@@ -525,7 +525,7 @@
 +#-1 NO PERMISSION TO SET ATTRIBUTE
 ```
 
-### `10-player-commands/obj.attrs#3` — DIFFERENCE
+### `10-player-commands/obj.attrs#3` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.attrs` — tools/parity/scenarios/10-player-commands.scn:47, session `alice`, command `think [get(Widget/FOO)]`
 
@@ -537,7 +537,7 @@
 +
 ```
 
-### `10-player-commands/obj.attrs#4` — DIFFERENCE
+### `10-player-commands/obj.attrs#4` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.attrs` — tools/parity/scenarios/10-player-commands.scn:48, session `alice`, command `@set Widget/COLOR=no_command`
 
@@ -549,7 +549,7 @@
 +#-1 NO PERMISSION TO SET ATTRIBUTE
 ```
 
-### `10-player-commands/obj.attrs#5` — DIFFERENCE
+### `10-player-commands/obj.attrs#5` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.attrs` — tools/parity/scenarios/10-player-commands.scn:49, session `alice`, command `examine Widget/COLOR`
 
@@ -561,7 +561,7 @@
 +Widget is owned by One.
 ```
 
-### `10-player-commands/obj.attrs#6` — DIFFERENCE
+### `10-player-commands/obj.attrs#6` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.attrs` — tools/parity/scenarios/10-player-commands.scn:50, session `alice`, command `@set Widget/COLOR=!no_command`
 
@@ -573,7 +573,7 @@
 +#-1 NO PERMISSION TO SET ATTRIBUTE
 ```
 
-### `10-player-commands/obj.give#1` — DIFFERENCE
+### `10-player-commands/obj.give#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.give` — tools/parity/scenarios/10-player-commands.scn:54, session `alice`, command `look`
 
@@ -589,7 +589,7 @@
  Widget
 ```
 
-### `10-player-commands/obj.give#2` — DIFFERENCE
+### `10-player-commands/obj.give#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.give` — tools/parity/scenarios/10-player-commands.scn:55, session `alice`, command `get Widget`
 
@@ -601,7 +601,7 @@
 +Alice takes Widget.
 ```
 
-### `10-player-commands/obj.give#3` — DIFFERENCE
+### `10-player-commands/obj.give#3` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.give` — tools/parity/scenarios/10-player-commands.scn:56, session `alice`, command `give *Bob=1`
 
@@ -613,7 +613,7 @@
 +Money transfer will not be implemented.
 ```
 
-### `10-player-commands/obj.give#4` — DIFFERENCE
+### `10-player-commands/obj.give#4` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/obj.give` — tools/parity/scenarios/10-player-commands.scn:57, session `alice`, command `give *Nobody=1`
 
@@ -626,7 +626,7 @@
 +I don't see that here.
 ```
 
-### `10-player-commands/room.dig#0` — DIFFERENCE
+### `10-player-commands/room.dig#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/room.dig` — tools/parity/scenarios/10-player-commands.scn:60, session `alice`, command `@dig Annex=Annex Door,Back`
 
@@ -641,7 +641,7 @@
 -You can't link to that.
 ```
 
-### `10-player-commands/room.dig#2` — DIFFERENCE
+### `10-player-commands/room.dig#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/room.dig` — tools/parity/scenarios/10-player-commands.scn:62, session `alice`, command `look`
 
@@ -656,7 +656,7 @@
 +Alice
 ```
 
-### `10-player-commands/room.dig#4` — DIFFERENCE
+### `10-player-commands/room.dig#4` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/room.dig` — tools/parity/scenarios/10-player-commands.scn:64, session `alice`, command `look`
 
@@ -671,7 +671,7 @@
 +Alice
 ```
 
-### `10-player-commands/flags.set#1` — DIFFERENCE
+### `10-player-commands/flags.set#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/flags.set` — tools/parity/scenarios/10-player-commands.scn:70, session `alice`, command `think [hasflag(me,HAVEN)] [flags(me)]`
 
@@ -683,7 +683,7 @@
 +1 AeHnP
 ```
 
-### `10-player-commands/flags.set#4` — DIFFERENCE
+### `10-player-commands/flags.set#4` — open-gap
 
 - Repro: `tools/parity/run.sh --only 10-player-commands/flags.set` — tools/parity/scenarios/10-player-commands.scn:73, session `alice`, command `@set me=BOGUS`
 
@@ -695,7 +695,7 @@
 +Alice - I don't recognize that flag.
 ```
 
-### `20-admin-commands/admin.wizard#0` — DIFFERENCE
+### `20-admin-commands/admin.wizard#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.wizard` — tools/parity/scenarios/20-admin-commands.scn:3, session `wiz`, login `Wiz wizpass`
 
@@ -716,7 +716,7 @@
 +Wiz(#3AenWP)
 ```
 
-### `20-admin-commands/admin.wizard#1` — DIFFERENCE
+### `20-admin-commands/admin.wizard#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.wizard` — tools/parity/scenarios/20-admin-commands.scn:4, session `alice`, login `Alice alicepass`
 
@@ -737,7 +737,7 @@
 +Alice
 ```
 
-### `20-admin-commands/admin.wizard#3` — DIFFERENCE
+### `20-admin-commands/admin.wizard#3` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.wizard` — tools/parity/scenarios/20-admin-commands.scn:7, session `wiz`, command `examine *Alice`
 
@@ -756,9 +756,9 @@
 -Basic Lock [#1i]: =Alice(#4PenAc)
 -Enter Lock [#1i]: =Alice(#4PenAc)
 -Use Lock [#1i]: =Alice(#4PenAc)
-+Basic Lock [#1i]: =Ancestor Player(#4T)
-+Enter Lock [#1i]: =Ancestor Player(#4T)
-+Use Lock [#1i]: =Ancestor Player(#4T)
++Basic Lock [#1i]: =Ancestor Player(#S4T)
++Enter Lock [#1i]: =Ancestor Player(#S4T)
++Use Lock [#1i]: =Ancestor Player(#S4T)
  Powers:
 -Channels: *NONE*
  Warnings checked: normal
@@ -792,7 +792,7 @@
 +Location: Lab(#6nR)
 ```
 
-### `20-admin-commands/admin.wizard#4` — DIFFERENCE
+### `20-admin-commands/admin.wizard#4` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.wizard` — tools/parity/scenarios/20-admin-commands.scn:8, session `wiz`, command `@teleport *Alice=here`
 
@@ -811,7 +811,7 @@
 +[alice] Alice
 ```
 
-### `20-admin-commands/admin.wizard#5` — DIFFERENCE
+### `20-admin-commands/admin.wizard#5` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.wizard` — tools/parity/scenarios/20-admin-commands.scn:9, session `wiz`, command `@teleport *Alice=[loc(*Alice)]`
 
@@ -828,7 +828,7 @@
 +[alice] Alice
 ```
 
-### `20-admin-commands/admin.pcreate#0` — DIFFERENCE
+### `20-admin-commands/admin.pcreate#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.pcreate` — tools/parity/scenarios/20-admin-commands.scn:12, session `wiz`, command `@pcreate Carol=carolpw`
 
@@ -840,7 +840,7 @@
 +New player 'Carol' (#NEW3) created with password 'carolpw'
 ```
 
-### `20-admin-commands/admin.pcreate#1` — DIFFERENCE
+### `20-admin-commands/admin.pcreate#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.pcreate` — tools/parity/scenarios/20-admin-commands.scn:13, session `wiz`, command `@newpassword Carol=carolpw2`
 
@@ -852,7 +852,7 @@
 +Set new password for Carol: carolpw2
 ```
 
-### `20-admin-commands/admin.pcreate#2` — DIFFERENCE
+### `20-admin-commands/admin.pcreate#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.pcreate` — tools/parity/scenarios/20-admin-commands.scn:14, session `carol`, login `Carol carolpw2`
 
@@ -878,7 +878,7 @@
  [wiz] Carol has connected.
 ```
 
-### `20-admin-commands/admin.force#0` — DIFFERENCE
+### `20-admin-commands/admin.force#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.force` — tools/parity/scenarios/20-admin-commands.scn:30, session `wiz`, command `@force *Alice=say forced hello`
 
@@ -892,7 +892,7 @@
 +[alice] Wiz says, "forced hello"
 ```
 
-### `20-admin-commands/admin.force#2` — DIFFERENCE
+### `20-admin-commands/admin.force#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.force` — tools/parity/scenarios/20-admin-commands.scn:32, session `wiz`, command `@trigger *Alice/TRIG=1`
 
@@ -904,7 +904,7 @@
 +No such attribute: TRIG
 ```
 
-### `20-admin-commands/admin.denied#0` — DIFFERENCE
+### `20-admin-commands/admin.denied#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.denied` — tools/parity/scenarios/20-admin-commands.scn:37, session `alice`, command `@pcreate Mallory=x`
 
@@ -916,7 +916,7 @@
 +Permission denied.
 ```
 
-### `20-admin-commands/admin.denied#2` — DIFFERENCE
+### `20-admin-commands/admin.denied#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.denied` — tools/parity/scenarios/20-admin-commands.scn:39, session `alice`, command `@force *Wiz=say hi`
 
@@ -929,7 +929,7 @@
 +Permission denied. You do not control the target.
 ```
 
-### `20-admin-commands/admin.lists#0` — DIFFERENCE
+### `20-admin-commands/admin.lists#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.lists` — tools/parity/scenarios/20-admin-commands.scn:44, session `wiz`, command `@list flags`
 
@@ -1008,7 +1008,7 @@
 +Z_TEL                Z      ROOM,THING
 ```
 
-### `20-admin-commands/admin.lists#1` — DIFFERENCE
+### `20-admin-commands/admin.lists#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.lists` — tools/parity/scenarios/20-admin-commands.scn:45, session `wiz`, command `@list powers`
 
@@ -1059,7 +1059,7 @@
 +Unkillable
 ```
 
-### `20-admin-commands/admin.lists#3` — DIFFERENCE
+### `20-admin-commands/admin.lists#3` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.lists` — tools/parity/scenarios/20-admin-commands.scn:47, session `wiz`, command `@config names`
 
@@ -1071,7 +1071,7 @@
 +No configuration category or option named 'names'.
 ```
 
-### `20-admin-commands/admin.search#0` — DIFFERENCE
+### `20-admin-commands/admin.search#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.search` — tools/parity/scenarios/20-admin-commands.scn:50, session `wiz`, command `@search name=Widget`
 
@@ -1090,7 +1090,7 @@
 +1 objects found.
 ```
 
-### `20-admin-commands/admin.search#1` — DIFFERENCE
+### `20-admin-commands/admin.search#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.search` — tools/parity/scenarios/20-admin-commands.scn:51, session `wiz`, command `@find Widget`
 
@@ -1105,7 +1105,7 @@
 +Found 1 matching objects.
 ```
 
-### `20-admin-commands/admin.search#2` — DIFFERENCE
+### `20-admin-commands/admin.search#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 20-admin-commands/admin.search` — tools/parity/scenarios/20-admin-commands.scn:52, session `wiz`, command `@stats`
 
@@ -1117,7 +1117,7 @@
 +25 objects = 5 rooms, 0 exits, 14 things, 6 players.
 ```
 
-### `30-softcode/sc.login#0` — DIFFERENCE
+### `30-softcode/sc.login#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 30-softcode/sc.login` — tools/parity/scenarios/30-softcode.scn:3, session `wiz`, login `Wiz wizpass`
 
@@ -1138,7 +1138,7 @@
 +Wiz(#3AenWP)
 ```
 
-### `30-softcode/sc.strings#1` — DIFFERENCE
+### `30-softcode/sc.strings#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 30-softcode/sc.strings` — tools/parity/scenarios/30-softcode.scn:15, session `wiz`, command `think [upcstr(abc)] [lcstr(ABC)] [capstr(abc def)] [trim(  a b  )] [trim(xxaxx,x,b)]`
 
@@ -1150,7 +1150,7 @@
 +#-1 FUNCTION (UPCSTR) NOT FOUND DID YOU MEAN 'UCSTR' abc Abc def a b a
 ```
 
-### `30-softcode/sc.strings#2` — DIFFERENCE
+### `30-softcode/sc.strings#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 30-softcode/sc.strings` — tools/parity/scenarios/30-softcode.scn:16, session `wiz`, command `think [pos(c,abcd)] [strmatch(hello,h*o)] [match(a b c,b)] [comp(a,b)] [ljust(a,3)]|[rjust(a,3)]|[center(a,5)]`
 
@@ -1162,7 +1162,7 @@
 +0 1 2 -1 a  |  a|  a
 ```
 
-### `30-softcode/sc.lists#2` — DIFFERENCE
+### `30-softcode/sc.lists#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 30-softcode/sc.lists` — tools/parity/scenarios/30-softcode.scn:23, session `wiz`, command `think [lnum(5)] [lnum(2,4)] [revwords(a b c)] [remove(a b c,b)] [member(a b c,c)] [splice(a b c,x y z,b)]`
 
@@ -1174,7 +1174,7 @@
 +0 1 2 3 4 2 3 4 c b a a c 3 a x  b y  c z
 ```
 
-### `30-softcode/sc.lists#3` — DIFFERENCE
+### `30-softcode/sc.lists#3` — open-gap
 
 - Repro: `tools/parity/run.sh --only 30-softcode/sc.lists` — tools/parity/scenarios/30-softcode.scn:24, session `wiz`, command `think [iter(a b c,##-#@)] [map(#lambda/strlen(%%0),aa b cccc)] [fold(#lambda/add(%%0,%%1),1 2 3)] [filter(#lambda/gt(%%0,1),0 1 2 3)]`
 
@@ -1186,7 +1186,7 @@
 +a-#@ b-#@ c-#@ 2 1 4 6 2 3
 ```
 
-### `30-softcode/sc.control#2` — DIFFERENCE
+### `30-softcode/sc.control#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 30-softcode/sc.control` — tools/parity/scenarios/30-softcode.scn:30, session `wiz`, command `think [null(x)][s(%b)] [lit([add(1,2)])] [eval(add(1,2))]`
 
@@ -1198,7 +1198,7 @@
 + [add(1,2)] #-1 FUNCTION (EVAL) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1
 ```
 
-### `30-softcode/sc.control#3` — DIFFERENCE
+### `30-softcode/sc.control#3` — open-gap
 
 - Repro: `tools/parity/run.sh --only 30-softcode/sc.control` — tools/parity/scenarios/30-softcode.scn:31, session `wiz`, command `think [u(#lambda/[add(%0,1)],5)]`
 
@@ -1211,7 +1211,7 @@
 +#-1 NO MATCH
 ```
 
-### `30-softcode/sc.control#4` — DIFFERENCE
+### `30-softcode/sc.control#4` — open-gap
 
 - Repro: `tools/parity/run.sh --only 30-softcode/sc.control` — tools/parity/scenarios/30-softcode.scn:32, session `wiz`, command `think [ulocal(#lambda/[setq(0,inner)]%q0,x)]`
 
@@ -1224,7 +1224,7 @@
 +inner
 ```
 
-### `30-softcode/sc.identity#1` — DIFFERENCE
+### `30-softcode/sc.identity#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 30-softcode/sc.identity` — tools/parity/scenarios/30-softcode.scn:47, session `wiz`, command `think [name(%!)] [hasflag(%#,WIZARD)] [flags()] [type(%#)]`
 
@@ -1236,7 +1236,7 @@
 +Wiz 1 AA+aCxCDbdeFFgGhHJJjklL^mMm~"nNNwoOipQrXSZSstIUu?vVWZ PLAYER
 ```
 
-### `30-softcode/sc.errors#0` — DIFFERENCE
+### `30-softcode/sc.errors#0` — open-gap
 
 - Repro: `tools/parity/run.sh --only 30-softcode/sc.errors` — tools/parity/scenarios/30-softcode.scn:50, session `wiz`, command `think [nosuchfunction(1)]`
 
@@ -1248,7 +1248,7 @@
 +#-1 FUNCTION (NOSUCHFUNCTION) NOT FOUND
 ```
 
-### `30-softcode/sc.errors#1` — DIFFERENCE
+### `30-softcode/sc.errors#1` — open-gap
 
 - Repro: `tools/parity/run.sh --only 30-softcode/sc.errors` — tools/parity/scenarios/30-softcode.scn:51, session `wiz`, command `think [add()] [strlen()] [mid(abc)]`
 
@@ -1260,7 +1260,7 @@
 +#-1 FUNCTION (ADD) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1 0 #-1 FUNCTION (MID) EXPECTS AT LEAST 3 ARGUMENTS BUT GOT 1
 ```
 
-### `30-softcode/sc.errors#2` — DIFFERENCE
+### `30-softcode/sc.errors#2` — open-gap
 
 - Repro: `tools/parity/run.sh --only 30-softcode/sc.errors` — tools/parity/scenarios/30-softcode.scn:52, session `wiz`, command `think [get(nothing/nothing)] [name(#9999)] [loc(#9999)]`
 
@@ -1282,6 +1282,7 @@
 
 | Anchor | PennMUSH | SharpMUSH |
 |---|---:|---:|
+| room0 | #0 | #0 |
 | god | #1 | #1 |
 | wiz | #3 | #16 |
 | alice | #4 | #17 |
@@ -1302,4 +1303,4 @@
 - `sync-token`: The harness's own sync sentinels never appear in transcripts; if one leaks into a line it becomes <SYNC>.
 - `trailing-ws`: Trailing spaces/tabs on each line are removed; a trailing blank line is dropped.
 - `site-text`: on login steps the connect screen, MOTD and wizard MOTD text of each server (connect.txt, motd.txt, wizmotd.txt) and SharpMUSH's `Connected!` line are removed: they are site content, not behaviour.
-- `dbref`: dbrefs of world-fixture objects are mapped to PennMUSH's numbering; dbrefs of objects created during scenarios become `#NEW<k>` in order of first appearance.
+- `dbref`: dbrefs of world-fixture objects are mapped to PennMUSH's numbering; dbrefs of objects created during scenarios become `#NEW<k>` in order of first appearance; any other SharpMUSH dbref is one of its own system objects and becomes `#S<n>`, so it never matches the PennMUSH object that happens to share its number.

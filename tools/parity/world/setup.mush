@@ -17,6 +17,7 @@
 @tel Widget=*Alice
 @tel me=#0
 # ::anchor <label> <softcode expression returning a dbref, valid from anywhere>
+::anchor room0 [loc(*Wiz)]
 ::anchor god  [num(*One)]
 ::anchor wiz  [num(*Wiz)]
 ::anchor alice [num(*Alice)]

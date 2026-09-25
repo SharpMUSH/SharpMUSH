@@ -1,82 +1,316 @@
 {
  "steps": [
-  "00-login/login.admin#0",
-  "00-login/login.badpassword#0",
-  "00-login/login.god#0",
-  "00-login/login.player#0",
-  "00-login/login.player#2",
-  "00-login/login.player#3",
-  "00-login/login.unknown#0",
-  "05-import/import.players#0",
-  "05-import/import.players#2",
-  "05-import/import.rooms#0",
-  "05-import/import.rooms#1",
-  "05-import/import.rooms#2",
-  "05-import/import.rooms#3",
-  "05-import/import.rooms#4",
-  "05-import/import.things#2",
-  "05-import/import.things#3",
-  "10-player-commands/comm.page#0",
-  "10-player-commands/comm.page#2",
-  "10-player-commands/comm.say#0",
-  "10-player-commands/comm.say#3",
-  "10-player-commands/flags.set#1",
-  "10-player-commands/flags.set#4",
-  "10-player-commands/obj.attrs#0",
-  "10-player-commands/obj.attrs#1",
-  "10-player-commands/obj.attrs#2",
-  "10-player-commands/obj.attrs#3",
-  "10-player-commands/obj.attrs#4",
-  "10-player-commands/obj.attrs#5",
-  "10-player-commands/obj.attrs#6",
-  "10-player-commands/obj.create#0",
-  "10-player-commands/obj.create#2",
-  "10-player-commands/obj.create#3",
-  "10-player-commands/obj.create#4",
-  "10-player-commands/obj.create#5",
-  "10-player-commands/obj.create#6",
-  "10-player-commands/obj.give#1",
-  "10-player-commands/obj.give#2",
-  "10-player-commands/obj.give#3",
-  "10-player-commands/obj.give#4",
-  "10-player-commands/obj.inventory#0",
-  "10-player-commands/obj.inventory#1",
-  "10-player-commands/obj.inventory#2",
-  "10-player-commands/obj.inventory#3",
-  "10-player-commands/room.dig#0",
-  "10-player-commands/room.dig#2",
-  "10-player-commands/room.dig#4",
-  "10-player-commands/setup.sessions#0",
-  "10-player-commands/setup.sessions#1",
-  "20-admin-commands/admin.denied#0",
-  "20-admin-commands/admin.denied#2",
-  "20-admin-commands/admin.force#0",
-  "20-admin-commands/admin.force#2",
-  "20-admin-commands/admin.lists#0",
-  "20-admin-commands/admin.lists#1",
-  "20-admin-commands/admin.lists#3",
-  "20-admin-commands/admin.pcreate#0",
-  "20-admin-commands/admin.pcreate#1",
-  "20-admin-commands/admin.pcreate#2",
-  "20-admin-commands/admin.search#0",
-  "20-admin-commands/admin.search#1",
-  "20-admin-commands/admin.search#2",
-  "20-admin-commands/admin.wizard#0",
-  "20-admin-commands/admin.wizard#1",
-  "20-admin-commands/admin.wizard#3",
-  "20-admin-commands/admin.wizard#4",
-  "20-admin-commands/admin.wizard#5",
-  "30-softcode/sc.control#2",
-  "30-softcode/sc.control#3",
-  "30-softcode/sc.control#4",
-  "30-softcode/sc.errors#0",
-  "30-softcode/sc.errors#1",
-  "30-softcode/sc.errors#2",
-  "30-softcode/sc.identity#1",
-  "30-softcode/sc.lists#2",
-  "30-softcode/sc.lists#3",
-  "30-softcode/sc.login#0",
-  "30-softcode/sc.strings#1",
-  "30-softcode/sc.strings#2"
+  {
+   "key": "00-login/login.admin#0",
+   "command": "Wiz wizpass"
+  },
+  {
+   "key": "00-login/login.badpassword#0",
+   "command": "Alice wrong"
+  },
+  {
+   "key": "00-login/login.god#0",
+   "command": "One godpass"
+  },
+  {
+   "key": "00-login/login.player#0",
+   "command": "Alice alicepass"
+  },
+  {
+   "key": "00-login/login.player#2",
+   "command": "think [loc(%#)]"
+  },
+  {
+   "key": "00-login/login.player#3",
+   "command": "look"
+  },
+  {
+   "key": "00-login/login.unknown#0",
+   "command": "Nobody whatever"
+  },
+  {
+   "key": "05-import/import.players#0",
+   "command": "Wiz wizpass"
+  },
+  {
+   "key": "05-import/import.players#2",
+   "command": "think [flags(*Wiz)] [flags(*Alice)]"
+  },
+  {
+   "key": "05-import/import.rooms#0",
+   "command": "think [name(loc(*Alice))] [type(loc(*Alice))] [get(loc(*Alice)/DESC)]"
+  },
+  {
+   "key": "05-import/import.rooms#1",
+   "command": "look"
+  },
+  {
+   "key": "05-import/import.rooms#2",
+   "command": "@teleport me=[loc(*Alice)]"
+  },
+  {
+   "key": "05-import/import.rooms#3",
+   "command": "look"
+  },
+  {
+   "key": "05-import/import.rooms#4",
+   "command": "@teleport me=#0"
+  },
+  {
+   "key": "05-import/import.things#2",
+   "command": "think [loc(first(lcon(*Alice)))=loc(*Alice)] [owner(first(lcon(*Alice)))=owner(*Alice)]"
+  },
+  {
+   "key": "05-import/import.things#3",
+   "command": "think [get(first(lcon(*Alice))/DESC)]"
+  },
+  {
+   "key": "10-player-commands/comm.page#0",
+   "command": "page Bob=Are you there?"
+  },
+  {
+   "key": "10-player-commands/comm.page#2",
+   "command": "page Nobody=hello"
+  },
+  {
+   "key": "10-player-commands/comm.say#0",
+   "command": "say hello there"
+  },
+  {
+   "key": "10-player-commands/comm.say#3",
+   "command": "\"quoted shortcut"
+  },
+  {
+   "key": "10-player-commands/flags.set#1",
+   "command": "think [hasflag(me,HAVEN)] [flags(me)]"
+  },
+  {
+   "key": "10-player-commands/flags.set#4",
+   "command": "@set me=BOGUS"
+  },
+  {
+   "key": "10-player-commands/obj.attrs#0",
+   "command": "&FOO Widget=bar"
+  },
+  {
+   "key": "10-player-commands/obj.attrs#1",
+   "command": "think [get(Widget/FOO)]"
+  },
+  {
+   "key": "10-player-commands/obj.attrs#2",
+   "command": "&FOO Widget="
+  },
+  {
+   "key": "10-player-commands/obj.attrs#3",
+   "command": "think [get(Widget/FOO)]"
+  },
+  {
+   "key": "10-player-commands/obj.attrs#4",
+   "command": "@set Widget/COLOR=no_command"
+  },
+  {
+   "key": "10-player-commands/obj.attrs#5",
+   "command": "examine Widget/COLOR"
+  },
+  {
+   "key": "10-player-commands/obj.attrs#6",
+   "command": "@set Widget/COLOR=!no_command"
+  },
+  {
+   "key": "10-player-commands/obj.create#0",
+   "command": "@create Gizmo"
+  },
+  {
+   "key": "10-player-commands/obj.create#2",
+   "command": "look Gizmo"
+  },
+  {
+   "key": "10-player-commands/obj.create#3",
+   "command": "@name Gizmo=Gadget"
+  },
+  {
+   "key": "10-player-commands/obj.create#4",
+   "command": "look Gadget"
+  },
+  {
+   "key": "10-player-commands/obj.create#5",
+   "command": "@destroy Gadget"
+  },
+  {
+   "key": "10-player-commands/obj.create#6",
+   "command": "look Gadget"
+  },
+  {
+   "key": "10-player-commands/obj.give#1",
+   "command": "look"
+  },
+  {
+   "key": "10-player-commands/obj.give#2",
+   "command": "get Widget"
+  },
+  {
+   "key": "10-player-commands/obj.give#3",
+   "command": "give *Bob=1"
+  },
+  {
+   "key": "10-player-commands/obj.give#4",
+   "command": "give *Nobody=1"
+  },
+  {
+   "key": "10-player-commands/obj.inventory#0",
+   "command": "inventory"
+  },
+  {
+   "key": "10-player-commands/obj.inventory#1",
+   "command": "look Widget"
+  },
+  {
+   "key": "10-player-commands/obj.inventory#2",
+   "command": "examine Widget"
+  },
+  {
+   "key": "10-player-commands/obj.inventory#3",
+   "command": "think [get(Widget/COLOR)] [get(Widget/SIZE)] [u(Widget/GREET,World)]"
+  },
+  {
+   "key": "10-player-commands/room.dig#0",
+   "command": "@dig Annex=Annex Door,Back"
+  },
+  {
+   "key": "10-player-commands/room.dig#2",
+   "command": "look"
+  },
+  {
+   "key": "10-player-commands/room.dig#4",
+   "command": "look"
+  },
+  {
+   "key": "10-player-commands/setup.sessions#0",
+   "command": "Alice alicepass"
+  },
+  {
+   "key": "10-player-commands/setup.sessions#1",
+   "command": "Bob bobpass"
+  },
+  {
+   "key": "20-admin-commands/admin.denied#0",
+   "command": "@pcreate Mallory=x"
+  },
+  {
+   "key": "20-admin-commands/admin.denied#2",
+   "command": "@force *Wiz=say hi"
+  },
+  {
+   "key": "20-admin-commands/admin.force#0",
+   "command": "@force *Alice=say forced hello"
+  },
+  {
+   "key": "20-admin-commands/admin.force#2",
+   "command": "@trigger *Alice/TRIG=1"
+  },
+  {
+   "key": "20-admin-commands/admin.lists#0",
+   "command": "@list flags"
+  },
+  {
+   "key": "20-admin-commands/admin.lists#1",
+   "command": "@list powers"
+  },
+  {
+   "key": "20-admin-commands/admin.lists#3",
+   "command": "@config names"
+  },
+  {
+   "key": "20-admin-commands/admin.pcreate#0",
+   "command": "@pcreate Carol=carolpw"
+  },
+  {
+   "key": "20-admin-commands/admin.pcreate#1",
+   "command": "@newpassword Carol=carolpw2"
+  },
+  {
+   "key": "20-admin-commands/admin.pcreate#2",
+   "command": "Carol carolpw2"
+  },
+  {
+   "key": "20-admin-commands/admin.search#0",
+   "command": "@search name=Widget"
+  },
+  {
+   "key": "20-admin-commands/admin.search#1",
+   "command": "@find Widget"
+  },
+  {
+   "key": "20-admin-commands/admin.search#2",
+   "command": "@stats"
+  },
+  {
+   "key": "20-admin-commands/admin.wizard#0",
+   "command": "Wiz wizpass"
+  },
+  {
+   "key": "20-admin-commands/admin.wizard#1",
+   "command": "Alice alicepass"
+  },
+  {
+   "key": "20-admin-commands/admin.wizard#3",
+   "command": "examine *Alice"
+  },
+  {
+   "key": "20-admin-commands/admin.wizard#4",
+   "command": "@teleport *Alice=here"
+  },
+  {
+   "key": "20-admin-commands/admin.wizard#5",
+   "command": "@teleport *Alice=[loc(*Alice)]"
+  },
+  {
+   "key": "30-softcode/sc.control#2",
+   "command": "think [null(x)][s(%b)] [lit([add(1,2)])] [eval(add(1,2))]"
+  },
+  {
+   "key": "30-softcode/sc.control#3",
+   "command": "think [u(#lambda/[add(%0,1)],5)]"
+  },
+  {
+   "key": "30-softcode/sc.control#4",
+   "command": "think [ulocal(#lambda/[setq(0,inner)]%q0,x)]"
+  },
+  {
+   "key": "30-softcode/sc.errors#0",
+   "command": "think [nosuchfunction(1)]"
+  },
+  {
+   "key": "30-softcode/sc.errors#1",
+   "command": "think [add()] [strlen()] [mid(abc)]"
+  },
+  {
+   "key": "30-softcode/sc.errors#2",
+   "command": "think [get(nothing/nothing)] [name(#9999)] [loc(#9999)]"
+  },
+  {
+   "key": "30-softcode/sc.identity#1",
+   "command": "think [name(%!)] [hasflag(%#,WIZARD)] [flags()] [type(%#)]"
+  },
+  {
+   "key": "30-softcode/sc.lists#2",
+   "command": "think [lnum(5)] [lnum(2,4)] [revwords(a b c)] [remove(a b c,b)] [member(a b c,c)] [splice(a b c,x y z,b)]"
+  },
+  {
+   "key": "30-softcode/sc.lists#3",
+   "command": "think [iter(a b c,##-#@)] [map(#lambda/strlen(%%0),aa b cccc)] [fold(#lambda/add(%%0,%%1),1 2 3)] [filter(#lambda/gt(%%0,1),0 1 2 3)]"
+  },
+  {
+   "key": "30-softcode/sc.login#0",
+   "command": "Wiz wizpass"
+  },
+  {
+   "key": "30-softcode/sc.strings#1",
+   "command": "think [upcstr(abc)] [lcstr(ABC)] [capstr(abc def)] [trim(  a b  )] [trim(xxaxx,x,b)]"
+  },
+  {
+   "key": "30-softcode/sc.strings#2",
+   "command": "think [pos(c,abcd)] [strmatch(hello,h*o)] [match(a b c,b)] [comp(a,b)] [ljust(a,3)]|[rjust(a,3)]|[center(a,5)]"
+  }
  ]
 }

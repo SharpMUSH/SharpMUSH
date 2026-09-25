@@ -69,5 +69,6 @@ def resolve_anchors(target: Target, anchors) -> tuple[dict[str, int], int]:
     return found, first_free
 
 
-def canonicalizer(side: dict[str, int], reference: dict[str, int], first_free: int) -> DbrefCanonicalizer:
-    return DbrefCanonicalizer({side[k]: reference[k] for k in side}, first_free)
+def canonicalizer(side: dict[str, int], reference: dict[str, int], first_free: int,
+                  foreign_tag: str = "") -> DbrefCanonicalizer:
+    return DbrefCanonicalizer({side[k]: reference[k] for k in side}, first_free, foreign_tag)

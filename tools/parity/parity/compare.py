@@ -21,6 +21,7 @@ class Entry:
     step: Optional[int]
     reason: str
     tracking: str
+    command: Optional[str] = None  # required with `step`: pins the positional key to its command
 
     def covers(self, rec: StepRecord) -> bool:
         return (self.scenario == rec.scenario and self.case == rec.case
@@ -34,8 +35,42 @@ def load_allowlist(path: Path) -> list[Entry]:
         for required in ("id", "scenario", "case", "reason", "tracking"):
             if not e.get(required):
                 raise ValueError(f"{path}: entry {e.get('id', e)!r} is missing '{required}'")
-        out.append(Entry(e["id"], e["scenario"], e["case"], e.get("step"), e["reason"], e["tracking"]))
+        if e.get("step") is not None and not e.get("command"):
+            raise ValueError(f"{path}: entry {e['id']!r} names a step, so it needs that step's 'command'")
+        out.append(Entry(e["id"], e["scenario"], e["case"], e.get("step"), e["reason"], e["tracking"],
+                         e.get("command")))
     return out
+
+
+def load_baseline(path: Path) -> dict[str, str]:
+    """baseline.json: open gaps as {key: command}. The command pins each positional key."""
+    return {s["key"]: s["command"] for s in json.loads(path.read_text())["steps"]}
+
+
+def orphaned(baseline: dict[str, str], allowlist: list[Entry], results) -> list[str]:
+    """Baseline/allowlist entries whose step no longer exists or now runs a different command.
+
+    Keys are positional (`case#index`): inserting or removing a step shifts every later key, which
+    would silently re-point an entry at another step. Each entry records its command, so a shift
+    shows up here (and fails the run) instead. Only scenarios that ran are checked.
+    """
+    command = {r.key: r.penn.command for r in results}
+    ran = {r.penn.scenario for r in results}
+    out = []
+    for key, cmd in sorted(baseline.items()):
+        if key.split("/", 1)[0] in ran and command.get(key) != cmd:
+            out.append(f"baseline `{key}` was `{cmd}`, now {_now(command.get(key))}")
+    for e in allowlist:
+        if e.step is None or e.scenario not in ran:
+            continue
+        key = f"{e.scenario}/{e.case}#{e.step}"
+        if command.get(key) != e.command:
+            out.append(f"allowlist {e.id} `{key}` was `{e.command}`, now {_now(command.get(key))}")
+    return out
+
+
+def _now(cmd: Optional[str]) -> str:
+    return "missing" if cmd is None else f"`{cmd}`"
 
 
 @dataclass
@@ -72,7 +107,7 @@ def _render(rec: StepRecord, canon: DbrefCanonicalizer, site_texts: list[str]) -
 
 
 def compare(penn: list[StepRecord], sharp: list[StepRecord], penn_canon, sharp_canon, allowlist,
-            penn_site: list[str], sharp_site: list[str], baseline: frozenset = frozenset()):
+            penn_site: list[str], sharp_site: list[str], baseline=frozenset()):
     results: list[Result] = []
     used: set[str] = set()
     by_key = {r.key(): r for r in sharp}
