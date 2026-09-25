@@ -1742,6 +1742,15 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return string.Empty;
 		}
 
+		return RemappedLockKey(key, $"{label}: {lockName} lock", context);
+	}
+
+	/// <summary>
+	/// A lock key with each object it names by dbref under the number that object was imported as,
+	/// with a warning naming what moved when any did.
+	/// </summary>
+	private static string RemappedLockKey(string key, string label, PennMUSHConversionContext context)
+	{
 		var moved = new List<string>();
 		var remapped = LockObjectReference().Replace(key, match =>
 		{
@@ -1757,7 +1766,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (moved.Count > 0)
 		{
-			context.Warnings.Add($"{label}: {lockName} lock names objects imported under new numbers ({string.Join(", ", moved)}); " +
+			context.Warnings.Add($"{label} names objects imported under new numbers ({string.Join(", ", moved)}); " +
 				$"'{key}' became '{remapped}'");
 		}
 
@@ -2006,6 +2015,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var flagTable = await _mediator.CreateStream(new GetAttributeFlagsQuery(), cancellationToken)
 			.ToArrayAsync(cancellationToken);
 		var creators = new Dictionary<int, SharpPlayer?>();
+		var relocated = dbrefMapping.Where(m => m.Key != m.Value.Number).ToDictionary(m => m.Key, _ => new List<string>());
 
 		foreach (var pennObj in pennDatabase.Objects)
 		{
@@ -2014,6 +2024,11 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (!dbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
 			{
 				continue;
+			}
+
+			if (relocated.Count > 0)
+			{
+				NoteRelocatedReferences(pennObj, relocated);
 			}
 
 			if (pennObj.Attributes.Count == 0)
@@ -2073,9 +2088,43 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 		}
 
+		foreach (var (source, attributes) in relocated.Where(r => r.Value.Count > 0))
+		{
+			const int shown = 20;
+			var more = attributes.Count > shown ? $" and {attributes.Count - shown} more" : string.Empty;
+			warnings.Add($"{attributes.Count} attribute(s) mention #{source}, which was imported as #{dbrefMapping[source].Number}; " +
+				$"softcode is not rewritten, so check them by hand: {string.Join(", ", attributes.Take(shown))}{more}");
+		}
+
 		_logger.LogInformation("Created {Count} attributes", count);
 		return count;
 	}
+
+	/// <summary>
+	/// Records each of the object's attributes whose text mentions a source dbref that was imported under
+	/// a new number. Attribute text is softcode, which cannot be told apart from prose reliably enough to
+	/// rewrite, so it is reported instead.
+	/// </summary>
+	private static void NoteRelocatedReferences(PennMUSHObject pennObj, Dictionary<int, List<string>> relocated)
+	{
+		foreach (var pennAttr in pennObj.Attributes)
+		{
+			var mentioned = new HashSet<int>();
+			foreach (Match match in TextDbref().Matches(pennAttr.Value))
+			{
+				if (int.TryParse(match.Groups["number"].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out var number)
+					&& relocated.TryGetValue(number, out var attributes)
+					&& mentioned.Add(number))
+				{
+					attributes.Add($"#{pennObj.DBRef}/{pennAttr.Name}");
+				}
+			}
+		}
+	}
+
+	/// <summary>A <c>#N</c> in attribute text that is not part of a longer number.</summary>
+	[GeneratedRegex(@"(?<![\d#])#(?<number>\d+)(?!\d)")]
+	private static partial Regex TextDbref();
 
 	/// <summary>
 	/// The player who set an attribute in the source (PennMUSH's <c>AL_CREATOR</c>), or null when it names
@@ -2191,8 +2240,9 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					{
 						var creator = importedLock.Creator is { } creatorNumber && context.DbrefMapping.TryGetValue(creatorNumber, out var mappedCreator)
 							? (DBRef?)mappedCreator : null;
+						var key = RemappedLockKey(importedLock.Expression, $"#{pennObj.DBRef} {lockName} lock", context);
 						await _mediator.Send(new ImportLockCommand(sharpObj.Object(), lockName,
-							importedLock.ToSharpLockData(creator)), cancellationToken);
+							(importedLock with { Expression = key }).ToSharpLockData(creator)), cancellationToken);
 
 						count++;
 						_logger.LogTrace("Set lock {LockName} on object #{DBRef}", lockName, pennObj.DBRef);
