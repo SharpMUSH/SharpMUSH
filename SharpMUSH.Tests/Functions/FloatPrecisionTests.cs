@@ -113,7 +113,8 @@ public class FloatPrecisionTests
 			services.RemoveAll<IOptionsWrapper<SharpMUSHOptions>>();
 			services.AddSingleton(twoPlaces);
 		});
-		await ActivatorUtilities.CreateInstance<StartupHandler>(other.Services).StartAsync(CancellationToken.None);
+		using var startup = ActivatorUtilities.CreateInstance<StartupHandler>(other.Services);
+		await startup.StartAsync(CancellationToken.None);
 
 		var otherParser = new MUSHCodeParser(
 			other.Services.GetRequiredService<ILogger<MUSHCodeParser>>(),
@@ -126,6 +127,23 @@ public class FloatPrecisionTests
 		await Assert.That(await Evaluate("[fdiv(1,3)]")).IsEqualTo("0.333333");
 		await Assert.That((await otherParser.FunctionParse(MarkupText.Plain("[fdiv(1,3)]")))!.Message!.ToPlainText())
 			.IsEqualTo("0.33");
+	}
+
+	/// <summary>
+	/// The precision follows the options a parser evaluates with, so a copy made with other options
+	/// writes at their precision rather than at that of the parser it was copied from.
+	/// </summary>
+	[Test]
+	public async Task ACopyWithOtherOptionsWritesAtTheirPrecision()
+	{
+		var threePlaces = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		var configured = ReadPennMushConfig.Create(Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
+		threePlaces.CurrentValue.Returns(configured with { Cosmetic = configured.Cosmetic with { FloatPrecision = 3 } });
+		var copy = (MUSHCodeParser)Parser with { Configuration = threePlaces };
+
+		await Assert.That((await copy.FunctionParse(MarkupText.Plain("[fdiv(1,3)]")))!.Message!.ToPlainText())
+			.IsEqualTo("0.333");
+		await Assert.That(await Evaluate("[fdiv(1,3)]")).IsEqualTo("0.333333");
 	}
 
 	private static string EmptyConfigFile()

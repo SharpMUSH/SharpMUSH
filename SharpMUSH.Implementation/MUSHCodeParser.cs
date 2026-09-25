@@ -52,13 +52,6 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	private readonly IHookService _hookService = ServiceProvider.GetRequiredService<IHookService>();
 	private readonly ILockService _lockService = ServiceProvider.GetRequiredService<ILockService>();
 
-	/// <summary>
-	/// This engine's <c>float_precision</c>, entered around every evaluation (see
-	/// <see cref="Configurable.UseFloatPrecisionOf"/>). One instance per parser, and a record copy
-	/// keeps it, so a nested evaluation finds it already in force.
-	/// </summary>
-	private readonly Func<uint> _floatPrecision = () => Configuration.CurrentValue.Cosmetic.FloatPrecision;
-
 	// Lexer vocabulary is static and immutable — cached once to avoid allocating a new lexer on every fallback classification
 	private static readonly IVocabulary LexerVocabulary =
 		new SharpMUSHLexer(new StringSpanInputStream(string.Empty, string.Empty)).Vocabulary;
@@ -375,7 +368,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		where TContext : ParserRuleContext
 	{
 		parser ??= this;
-		using var precisionScope = Configurable.UseFloatPrecisionOf(_floatPrecision);
+		using var precisionScope = Configurable.UseFloatPrecisionOf(Configuration);
 		using var restrictionScope = parser.State.IsEmpty ? null : parser.CurrentState.Restrictions?.Enter();
 		using var ceilingScope = parser.State.IsEmpty ? null : OutputCeiling.Enter(parser.CurrentState);
 		if (EvaluationRestrictions.Current is not null && methodName != nameof(FunctionParse))
@@ -705,7 +698,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 
 		return async () =>
 		{
-			using var precisionScope = Configurable.UseFloatPrecisionOf(_floatPrecision);
+			using var precisionScope = Configurable.UseFloatPrecisionOf(Configuration);
 			return await visitor.Visit(chatContext);
 		};
 	}

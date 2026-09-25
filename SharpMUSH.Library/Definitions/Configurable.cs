@@ -1,4 +1,5 @@
 ﻿using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Definitions;
 
@@ -19,9 +20,7 @@ public static class Configurable
 	/// </remarks>
 	public static readonly uint DefaultFloatPrecision = Services.OptionsService.Default().Cosmetic.FloatPrecision;
 
-	private static readonly Func<uint> DefaultFloatPrecisionSource = () => DefaultFloatPrecision;
-
-	private static readonly AsyncLocal<Func<uint>?> EngineFloatPrecision = new();
+	private static readonly AsyncLocal<IOptionsWrapper<SharpMUSHOptions>?> EngineOptions = new();
 
 	/// <summary>
 	/// Decimal places in floating-point output, as <c>float_precision</c> sets it: read on every call,
@@ -29,30 +28,34 @@ public static class Configurable
 	/// evaluating engine's setting (see <see cref="UseFloatPrecisionOf"/>); anywhere else it is
 	/// <see cref="DefaultFloatPrecision"/>. See <see cref="Utilities.MushNumber"/>.
 	/// </summary>
-	public static int FloatPrecision => (int)Math.Min((EngineFloatPrecision.Value ?? DefaultFloatPrecisionSource)(), MaxFloatPrecision);
+	public static int FloatPrecision =>
+		(int)Math.Min(EngineOptions.Value?.CurrentValue.Cosmetic.FloatPrecision ?? DefaultFloatPrecision, MaxFloatPrecision);
 
 	/// <summary>
-	/// Makes <paramref name="source"/> the <see cref="FloatPrecision"/> of this async flow until the
-	/// returned scope is disposed. The parser enters it for every evaluation, with its own options.
+	/// Makes the <c>float_precision</c> of <paramref name="options"/> the <see cref="FloatPrecision"/>
+	/// of this async flow until the returned scope is disposed. The parser enters it for every
+	/// evaluation, with its own options.
 	/// </summary>
 	/// <remarks>
 	/// Scoped to the flow rather than set once for the process: that was a static each host re-pointed
 	/// at its own options as it started, so in a process running more than one engine (the test run
 	/// does) every number was written at the precision of whichever host started last (#1245).
-	/// Answers <see langword="null"/> when the flow already reads <paramref name="source"/>, which is
+	/// Keyed on the options instance, not on the parser, so a parser copied with other options
+	/// (<c>parser with { Configuration = ... }</c>) writes at the precision of those options.
+	/// Answers <see langword="null"/> when the flow already reads <paramref name="options"/>, which is
 	/// every nested evaluation, so those cost nothing.
 	/// </remarks>
-	public static IDisposable? UseFloatPrecisionOf(Func<uint> source)
+	public static IDisposable? UseFloatPrecisionOf(IOptionsWrapper<SharpMUSHOptions> options)
 	{
-		var previous = EngineFloatPrecision.Value;
-		if (ReferenceEquals(previous, source)) return null;
-		EngineFloatPrecision.Value = source;
+		var previous = EngineOptions.Value;
+		if (ReferenceEquals(previous, options)) return null;
+		EngineOptions.Value = options;
 		return new FloatPrecisionScope(previous);
 	}
 
-	private sealed class FloatPrecisionScope(Func<uint>? previous) : IDisposable
+	private sealed class FloatPrecisionScope(IOptionsWrapper<SharpMUSHOptions>? previous) : IDisposable
 	{
-		public void Dispose() => EngineFloatPrecision.Value = previous;
+		public void Dispose() => EngineOptions.Value = previous;
 	}
 
 	/// <inheritdoc cref="AliasOptions.Default"/>
