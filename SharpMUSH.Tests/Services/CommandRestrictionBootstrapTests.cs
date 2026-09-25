@@ -1,6 +1,13 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using NSubstitute;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests.Services;
@@ -80,5 +87,81 @@ public class CommandRestrictionBootstrapTests
 			"DefinitionRegistryCommands.cs",
 			"ICommandRestrictionApplier.cs"
 		}).Because("the declaration, the implementation, and exactly one production caller");
+	}
+
+	/// <summary>
+	/// A change to <c>command_restrictions</c> reaches the command table without a restart, and a
+	/// change to anything else does not reapply them, which would discard live
+	/// <c>@command/restrict</c>s for nothing (#1250). PennMUSH reads them only at boot
+	/// (<c>game.c:757</c>, <c>bsd.c:1284</c>). Driven with its own options monitor: the shared test
+	/// host's configuration is every other test's too.
+	/// </summary>
+	[Test]
+	public async Task AChangeToTheRestrictionsIsReappliedAndOtherChangesAreNot()
+	{
+		var library = Substitute.For<ILibraryProvider<CommandDefinition>, ICommandRestrictionApplier>();
+		var applied = new List<IReadOnlyDictionary<string, string[]>>();
+		_ = ((ICommandRestrictionApplier)library).ApplyConfiguredRestrictionsAsync(Arg.Do<IReadOnlyDictionary<string, string[]>>(applied.Add));
+
+		var restricted = WithRestrictions(new() { ["THINK"] = ["wizard"] });
+		var monitor = new ChangingOptions(restricted);
+		using var service = new CommandRestrictionBootstrapService(library, monitor, NullLogger<CommandRestrictionBootstrapService>.Instance);
+
+		await service.StartAsync(CancellationToken.None);
+		await Assert.That(applied).Count().IsEqualTo(1).Because("the configured restrictions are applied at boot");
+
+		await monitor.Change(restricted with { Cosmetic = restricted.Cosmetic with { FloatPrecision = 3 } });
+		await Assert.That(applied).Count().IsEqualTo(1).Because("another option changed, and the restrictions did not");
+
+		await monitor.Change(WithRestrictions([]));
+		await Assert.That(applied).Count().IsEqualTo(2).Because("removing the entry loosens the command at runtime");
+		await Assert.That(applied[1]).IsEmpty();
+
+		await monitor.Change(restricted);
+		await Assert.That(applied).Count().IsEqualTo(3).Because("adding it back tightens the command at runtime");
+		await Assert.That(applied[2].Keys).IsEquivalentTo(new[] { "THINK" });
+
+		await service.StopAsync(CancellationToken.None);
+		await monitor.Change(WithRestrictions([]));
+		await Assert.That(applied).Count().IsEqualTo(3).Because("a stopped service no longer listens");
+	}
+
+	private static SharpMUSHOptions WithRestrictions(Dictionary<string, string[]> restrictions)
+	{
+		var options = SharpMUSHOptions.Default();
+		return options with { Restriction = options.Restriction with { CommandRestrictions = restrictions } };
+	}
+
+	/// <summary>An options monitor whose value a test changes, calling the listeners as the real one does.</summary>
+	private sealed class ChangingOptions(SharpMUSHOptions initial) : IOptionsMonitor<SharpMUSHOptions>
+	{
+		private readonly List<Action<SharpMUSHOptions, string?>> _listeners = [];
+
+		public SharpMUSHOptions CurrentValue { get; private set; } = initial;
+
+		public SharpMUSHOptions Get(string? name) => CurrentValue;
+
+		public IDisposable OnChange(Action<SharpMUSHOptions, string?> listener)
+		{
+			_listeners.Add(listener);
+			return new Unsubscribe(() => _listeners.Remove(listener));
+		}
+
+		/// <summary>Changes the value and calls every listener; the service's reapply runs to completion inline.</summary>
+		public Task Change(SharpMUSHOptions options)
+		{
+			CurrentValue = options;
+			foreach (var listener in _listeners.ToArray())
+			{
+				listener(options, Options.DefaultName);
+			}
+
+			return Task.CompletedTask;
+		}
+
+		private sealed class Unsubscribe(Action dispose) : IDisposable
+		{
+			public void Dispose() => dispose();
+		}
 	}
 }

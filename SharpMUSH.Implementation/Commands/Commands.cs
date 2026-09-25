@@ -191,6 +191,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 		// Store reference to this command library for @command introspection
 		CommandLibrary = _commandLibrary;
+		RememberBuiltinRestrictions();
 	}
 
 	/// <summary>

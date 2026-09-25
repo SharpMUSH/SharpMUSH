@@ -18,6 +18,7 @@ using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using DotNext.Collections.Generic;
 using System.Diagnostics;
 using System.Buffers;
+using System.Collections.Concurrent;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -267,6 +268,8 @@ public partial class Commands : ICommandRestrictionApplier
 			CommandTrie.Invalidate(CommandLibrary);
 		}
 
+		RememberRestriction(attribute);
+
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandAddedFormat), executor, name);
 		return new CallState(name);
 	}
@@ -351,6 +354,8 @@ public partial class Commands : ICommandRestrictionApplier
 			CommandLibrary[clone] = (source.LibraryInformation with { Attribute = attribute }, source.IsSystem);
 			CommandTrie.Invalidate(CommandLibrary);
 		}
+
+		RememberRestriction(attribute);
 
 		foreach (var (type, hook) in await HookService.GetAllHooksAsync(from.Name))
 		{
@@ -520,10 +525,17 @@ public partial class Commands : ICommandRestrictionApplier
 
 	/// <summary>Puts a disabled command back under every name it had.</summary>
 	private void EnableCommand(string name)
+		=> EnableParked(entry => entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>Puts the command <paramref name="attribute"/> belongs to back, if it is disabled.</summary>
+	private void EnableCommand(SharpCommandAttribute attribute)
+		=> EnableParked(entry => ReferenceEquals(entry.Value.LibraryInformation.Attribute, attribute));
+
+	private void EnableParked(Func<KeyValuePair<string, (CommandDefinition LibraryInformation, bool IsSystem)>, bool> names)
 	{
 		lock (_commandTableLock)
 		{
-			var parked = _disabledCommands.FirstOrDefault(disabled => disabled.Value.Any(entry => entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase)));
+			var parked = _disabledCommands.FirstOrDefault(disabled => disabled.Value.Any(names));
 			if (parked.Value is null)
 			{
 				return;
@@ -590,6 +602,34 @@ public partial class Commands : ICommandRestrictionApplier
 		return new None();
 	}
 
+	/// <summary>
+	/// Each command's restriction as it was made: as <c>[SharpCommand]</c> declared it, or as
+	/// <c>@command/add</c> or <c>/clone</c> created it. Keyed by the attribute instance, which the
+	/// command table shares between a command and its aliases; <see cref="Attribute"/> compares by
+	/// value, so the key compares by reference.
+	/// </summary>
+	private readonly ConcurrentDictionary<SharpCommandAttribute, CommandRestrictionBaseline> _restrictionBaselines = new(ReferenceEqualityComparer.Instance);
+
+	/// <summary>The commands the configured layer currently restricts, and which of them it disabled.</summary>
+	private readonly Dictionary<SharpCommandAttribute, bool> _configuredRestrictions = new(ReferenceEqualityComparer.Instance);
+
+	private readonly SemaphoreSlim _configuredRestrictionsGate = new(1, 1);
+
+	private readonly record struct CommandRestrictionBaseline(string Lock, string Message, CommandBehavior Behavior);
+
+	/// <summary>Remembers every built-in command's restriction before anything can change one.</summary>
+	private void RememberBuiltinRestrictions()
+	{
+		foreach (var definition in Builtins.Values)
+		{
+			RememberRestriction(definition.Attribute);
+		}
+	}
+
+	/// <summary>Remembers <paramref name="attribute"/>'s restriction as it is now, unless one is already remembered.</summary>
+	private void RememberRestriction(SharpCommandAttribute attribute)
+		=> _restrictionBaselines.TryAdd(attribute, new CommandRestrictionBaseline(attribute.CommandLock, attribute.RestrictMessage, attribute.Behavior));
+
 	/// <inheritdoc />
 	/// <remarks>
 	/// The same translation <c>@command/restrict</c> uses, with the refusals taken out: there is no
@@ -598,8 +638,65 @@ public partial class Commands : ICommandRestrictionApplier
 	/// entry naming no command is skipped, as <c>restrict_command</c> returns 0 for one rather than
 	/// failing the configuration; so is one whose text is neither Penn's restriction words nor a
 	/// valid lock, which would otherwise leave the command with a lock nothing can pass.
+	/// <para>
+	/// PennMUSH reads <c>restrict_command</c> only at boot and has no way to undo one (#1250). Here the
+	/// set replaces the previous one: every command the previous set restricted goes back to its
+	/// restriction it was made with — re-enabled if the set had disabled it — before the new set is
+	/// applied. That is what lets a restriction be loosened. A command the new set names starts from
+	/// that restriction too, so a live <c>@command/restrict</c> on any command either set names is
+	/// discarded (the maintainer's decision on #1250); commands neither set names are left alone.
+	/// </para>
 	/// </remarks>
 	public async ValueTask ApplyConfiguredRestrictionsAsync(IReadOnlyDictionary<string, string[]> restrictions)
+	{
+		await _configuredRestrictionsGate.WaitAsync();
+		try
+		{
+			// A plugin's commands join the table after the built-ins, and before the first call at boot.
+			lock (_commandTableLock)
+			{
+				foreach (var (definition, _) in CommandLibrary.Values)
+				{
+					RememberRestriction(definition.Attribute);
+				}
+			}
+
+			RevertConfiguredRestrictions();
+			await ApplyConfiguredLayerAsync(restrictions);
+		}
+		finally
+		{
+			_configuredRestrictionsGate.Release();
+		}
+	}
+
+	/// <summary>Puts every command the configured layer restricted back to its baseline.</summary>
+	private void RevertConfiguredRestrictions()
+	{
+		foreach (var (attribute, disabled) in _configuredRestrictions)
+		{
+			if (_restrictionBaselines.TryGetValue(attribute, out var baseline))
+			{
+				RestoreBaseline(attribute, baseline);
+			}
+
+			if (disabled)
+			{
+				EnableCommand(attribute);
+			}
+		}
+
+		_configuredRestrictions.Clear();
+	}
+
+	private static void RestoreBaseline(SharpCommandAttribute attribute, CommandRestrictionBaseline baseline)
+	{
+		attribute.CommandLock = baseline.Lock;
+		attribute.RestrictMessage = baseline.Message;
+		attribute.Behavior = baseline.Behavior;
+	}
+
+	private async ValueTask ApplyConfiguredLayerAsync(IReadOnlyDictionary<string, string[]> restrictions)
 	{
 		// Only a lock-shaped restriction needs one, and Validate never reads it — but the signature
 		// asks, so it is fetched once and only if some entry gets that far.
@@ -617,6 +714,11 @@ public partial class Commands : ICommandRestrictionApplier
 			var message = quote >= 0 ? restriction[(quote + 1)..].Trim() : null;
 			var terms = (quote >= 0 ? restriction[..quote] : restriction).Trim();
 			var attribute = found.LibraryInformation.Attribute;
+			var disabled = false;
+
+			// The configured restriction replaces whatever the command has, a live one included.
+			RememberRestriction(attribute);
+			RestoreBaseline(attribute, _restrictionBaselines[attribute]);
 
 			if (terms.Length > 0)
 			{
@@ -626,10 +728,13 @@ public partial class Commands : ICommandRestrictionApplier
 					case CommandRestriction { Disables: true }:
 						// "nobody" is CMD_T_DISABLED. The commands the game runs by name cannot go: the
 						// engine would find nothing to run, which is what @command/restrict refuses over.
+						// One @command/disable already took out stays the wizard's to put back.
 						if (!CommandsTheGameRuns.Contains(attribute.Name)
-								&& !attribute.Name.Equals("@COMMAND", StringComparison.OrdinalIgnoreCase))
+								&& !attribute.Name.Equals("@COMMAND", StringComparison.OrdinalIgnoreCase)
+								&& CommandLibrary.ContainsKey(name))
 						{
 							ParkCommand(found.LibraryInformation);
+							disabled = true;
 						}
 
 						break;
@@ -649,6 +754,8 @@ public partial class Commands : ICommandRestrictionApplier
 			{
 				attribute.RestrictMessage = message;
 			}
+
+			_configuredRestrictions[attribute] = disabled || _configuredRestrictions.GetValueOrDefault(attribute);
 		}
 	}
 

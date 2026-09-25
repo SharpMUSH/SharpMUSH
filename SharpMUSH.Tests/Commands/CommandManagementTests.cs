@@ -36,6 +36,12 @@ public class CommandManagementTests
 
 	private const string Huh = "Huh?  (Type \"help\" for help.)";
 
+	/// <summary>
+	/// Each call to the applier replaces the configured layer the last one set, so the tests that
+	/// call it take turns.
+	/// </summary>
+	private const string ConfiguredRestrictionsKey = "ConfiguredCommandRestrictions";
+
 	private static string CommandName() => $"ZC{Guid.NewGuid():N}"[..12].ToUpperInvariant();
 
 	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
@@ -582,7 +588,7 @@ public class CommandManagementTests
 	/// cannot rewrite the configuration it booted with. A mortal takes the refusal: God passes every
 	/// lock.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel(ConfiguredRestrictionsKey)]
 	public async ValueTask ConfiguredRestrictions_ReachTheCommandTable()
 	{
 		var wizard = await Wizard();
@@ -603,7 +609,7 @@ public class CommandManagementTests
 	}
 
 	/// <summary><c>nobody</c> is <c>CMD_T_DISABLED</c> from the configuration as much as from <c>@command/restrict</c>.</summary>
-	[Test]
+	[Test, NotInParallel(ConfiguredRestrictionsKey)]
 	public async ValueTask ConfiguredRestrictions_NobodyDisablesTheCommand()
 	{
 		var wizard = await Wizard();
@@ -620,7 +626,7 @@ public class CommandManagementTests
 	/// <c>restrict_command</c> returns 0 for a command name it cannot find rather than failing the
 	/// configuration, so an entry naming no command is skipped and the rest still apply.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel(ConfiguredRestrictionsKey)]
 	public async ValueTask ConfiguredRestrictions_SkipEntriesThatNameNoCommand()
 	{
 		var wizard = await Wizard();
@@ -635,6 +641,89 @@ public class CommandManagementTests
 		});
 
 		await Assert.That(await As(mortal, $"{clone} mine")).Contains("Permission denied.");
+	}
+
+	/// <summary>
+	/// Removing an entry from <c>command_restrictions</c> at runtime loosens the command again. PennMUSH
+	/// reads <c>restrict_command</c> only at boot (<c>game.c:757</c>, <c>bsd.c:1284</c>) and cannot
+	/// undo one; SharpMUSH reapplies the whole setting on a change, in both directions (#1250).
+	/// </summary>
+	[Test, NotInParallel(ConfiguredRestrictionsKey)]
+	public async ValueTask ConfiguredRestrictions_RemovedAtRuntime_LoosenAndTightenAgain()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdCfgLoosen");
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]>
+		{
+			[clone] = ["wizard", "\"Configured refusal."]
+		});
+		await Assert.That(await As(mortal, $"{clone} first")).Contains("Configured refusal.").Because("precondition");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]>());
+
+		var loosened = await As(mortal, $"{clone} second");
+		await Assert.That(loosened).Contains("second").Because("the entry is gone, so the command is as it was made");
+		await Assert.That(loosened).DoesNotContain("Configured refusal.");
+		await Assert.That(await As(wizard, $"@command {clone}")).DoesNotContain("FLAG^WIZARD");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]> { [clone] = ["wizard"] });
+
+		await Assert.That(await As(mortal, $"{clone} third")).Contains("Permission denied.")
+			.Because("adding the entry back tightens the command at runtime too");
+	}
+
+	/// <summary>A command the configuration disabled with <c>nobody</c> comes back when the entry goes.</summary>
+	[Test, NotInParallel(ConfiguredRestrictionsKey)]
+	public async ValueTask ConfiguredRestrictions_NobodyRemovedAtRuntime_EnablesTheCommand()
+	{
+		var wizard = await Wizard();
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]> { [clone] = ["nobody"] });
+		await Assert.That(await As(wizard, $"{clone} gone")).Contains(Huh).Because("precondition");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]>());
+
+		await Assert.That(await As(wizard, $"{clone} back")).Contains("back");
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains($"Command: {clone} (Enabled)");
+	}
+
+	/// <summary>
+	/// The rule for a live <c>@command/restrict</c> across a change (the maintainer's decision on
+	/// #1250): a command the setting names starts again from the restriction it was made with, so a
+	/// live restriction on it is lost; one on a command the setting does not name stays.
+	/// </summary>
+	[Test, NotInParallel(ConfiguredRestrictionsKey)]
+	public async ValueTask ConfiguredRestrictions_Change_DiscardsLiveRestrictionsOnlyOnTheCommandsItNames()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdCfgLive");
+		var named = CommandName();
+		var untouched = CommandName();
+		await As(wizard, $"@command/clone think={named}");
+		await As(wizard, $"@command/clone think={untouched}");
+		await As(wizard, $"@command/restrict {named}=wizard \"Live refusal.");
+		await As(wizard, $"@command/restrict {untouched}=wizard \"Live refusal.");
+		await Assert.That(await As(mortal, $"{named} first")).Contains("Live refusal.").Because("precondition");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]> { [named] = ["wizard"] });
+
+		var configured = await As(mortal, $"{named} second");
+		await Assert.That(configured).Contains("Permission denied.")
+			.Because("the configured restriction replaces the live one, message and all, rather than adding to it");
+		await Assert.That(configured).DoesNotContain("Live refusal.");
+		await Assert.That(await As(mortal, $"{untouched} second")).Contains("Live refusal.")
+			.Because("a command the setting does not name keeps its live restriction");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]>());
+
+		await Assert.That(await As(mortal, $"{named} third")).Contains("third")
+			.Because("the live restriction is not restored when the entry goes");
+		await Assert.That(await As(mortal, $"{untouched} third")).Contains("Live refusal.");
 	}
 
 	/// <summary><c>=nobody</c> is <c>/disable</c>, so it is refused for the commands the game runs itself.</summary>
