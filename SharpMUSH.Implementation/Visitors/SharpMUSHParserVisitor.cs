@@ -1367,8 +1367,7 @@ public class SharpMUSHParserVisitor(
 				}
 			}
 
-			var singleTokenLookup = parser.CommandLibrary.GetAlternateLookup<ReadOnlySpan<char>>();
-			if (singleTokenLookup.TryGetValue(command.AsSpan(0, 1), out var singleTokenCandidate)
+			if (parser.CommandLibrary.TryGetAlternateValue(command.AsSpan(0, 1), out var singleTokenCandidate)
 					&& singleTokenCandidate.IsSystem
 					&& singleTokenCandidate.LibraryInformation.Attribute.Behavior.HasFlag(CommandBehavior.SingleToken))
 			{
