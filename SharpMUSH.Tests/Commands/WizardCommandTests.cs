@@ -756,9 +756,14 @@ public class WizardCommandTests
 		var thingName = TestIsolationHelpers.GenerateUniqueName("ChownallThing");
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@create {thingName}"));
 
+		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(executor);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chownall #{owner.DbRef.Number}"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ChownAllCompleteFormat), executor, executor)).IsTrue();
+		// Read from the recorder, keyed on this test's own player: the session-shared substitute's
+		// call list is not this test's to rely on (#1251).
+		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(executor).Skip(before).Any(delivery =>
+			delivery.Message.StartsWith("Changed ownership of ", StringComparison.Ordinal)
+			&& delivery.Message.Contains($" from {owner.Name} to ", StringComparison.Ordinal))).IsTrue();
 	}
 
 	[Test]

@@ -217,6 +217,13 @@ public static class TestHelpers
 		public List<Delivery> DeliveriesFor(DBRef who)
 			=> _deliveriesByRecipient.TryGetValue(who, out var queue) ? [.. queue] : [];
 
+		/// <summary>
+		/// Every sender-aware delivery to anyone, so a test can assert what one of its own objects did
+		/// not say without reading the session-shared substitute's call list.
+		/// </summary>
+		public IEnumerable<Delivery> AllDeliveries()
+			=> _deliveriesByRecipient.Values.SelectMany(queue => queue);
+
 		/// <summary>How many sender-aware deliveries <paramref name="who"/> has had, for windowing.</summary>
 		public int DeliveryCountFor(DBRef who)
 			=> _deliveriesByRecipient.TryGetValue(who, out var queue) ? queue.Count : 0;
