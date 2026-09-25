@@ -54,7 +54,8 @@ def write_reports(out: Path, meta: dict, results, stale, fixed, orphans, anchors
     known = [r for r in results if r.status == KNOWN]
     L.append(f"## Known differences observed ({len(known)})\n")
     for r in known:
-        L.append(f"- `{r.key}` — {r.entry.id}: {r.entry.reason} (tracking: {r.entry.tracking})")
+        L.append(f"- `{r.key}` — {r.entry.id}: {r.entry.reason} (tracking: {r.entry.tracking}; "
+                 f"profile entry: {r.entry.profile})")
     L.append("")
     if fixed:
         L.append("## Fixed since the baseline (remove from baseline.json)\n")
