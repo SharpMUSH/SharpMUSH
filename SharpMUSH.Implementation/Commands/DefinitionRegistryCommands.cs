@@ -702,23 +702,29 @@ public partial class Commands : ICommandRestrictionApplier
 		// asks, so it is fetched once and only if some entry gets that far.
 		AnySharpObject? lockee = null;
 
-		foreach (var (name, words) in restrictions)
-		{
-			if (FindCommand(name) is not { } found)
-			{
-				continue;
-			}
+		var named = restrictions
+			.Select(entry => (Name: entry.Key, Words: entry.Value, Found: FindCommand(entry.Key)))
+			.Where(entry => entry.Found is not null)
+			.Select(entry => (entry.Name, entry.Words, Found: entry.Found!.Value))
+			.ToList();
 
+		// The configured restriction replaces whatever the command has, a live one included. Once per
+		// command, not per entry: entries naming a command and one of its aliases add up, as they do
+		// when restrict_command runs for each line of mush.cnf.
+		foreach (var attribute in named.Select(entry => entry.Found.LibraryInformation.Attribute).Distinct(ReferenceEqualityComparer.Instance).Cast<SharpCommandAttribute>())
+		{
+			RememberRestriction(attribute);
+			RestoreBaseline(attribute, _restrictionBaselines[attribute]);
+		}
+
+		foreach (var (name, words, found) in named)
+		{
 			var restriction = string.Join(' ', words).Trim();
 			var quote = restriction.IndexOf('"');
 			var message = quote >= 0 ? restriction[(quote + 1)..].Trim() : null;
 			var terms = (quote >= 0 ? restriction[..quote] : restriction).Trim();
 			var attribute = found.LibraryInformation.Attribute;
 			var disabled = false;
-
-			// The configured restriction replaces whatever the command has, a live one included.
-			RememberRestriction(attribute);
-			RestoreBaseline(attribute, _restrictionBaselines[attribute]);
 
 			if (terms.Length > 0)
 			{

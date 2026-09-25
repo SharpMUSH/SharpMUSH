@@ -726,6 +726,32 @@ public class CommandManagementTests
 		await Assert.That(await As(mortal, $"{untouched} third")).Contains("Live refusal.");
 	}
 
+	/// <summary>
+	/// Entries naming a command and one of its aliases add up: each <c>restrict_command</c> line of
+	/// <c>mush.cnf</c> changes the same COMMAND_INFO in turn, so a later one does not undo an earlier.
+	/// </summary>
+	[Test, NotInParallel(ConfiguredRestrictionsKey)]
+	public async ValueTask ConfiguredRestrictions_ForACommandAndItsAlias_AddUp()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdCfgAlias");
+		var clone = CommandName();
+		var alias = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+		await As(wizard, $"@command/alias {clone}={alias}");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]>
+		{
+			[clone] = ["wizard"],
+			[alias] = ["\"Configured refusal."]
+		});
+
+		var refused = await As(mortal, $"{clone} mine");
+		await Assert.That(refused).Contains("Configured refusal.")
+			.Because("the alias's entry adds its message to the lock the command's entry set");
+		await Assert.That(refused).DoesNotContain("mine");
+	}
+
 	/// <summary><c>=nobody</c> is <c>/disable</c>, so it is refused for the commands the game runs itself.</summary>
 	[Test]
 	public async ValueTask Restrict_NobodyOnACommandTheGameRuns_IsRefused()
