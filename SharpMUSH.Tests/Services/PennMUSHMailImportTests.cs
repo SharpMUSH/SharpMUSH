@@ -122,6 +122,48 @@ public class PennMUSHMailImportTests
 	}
 
 	/// <summary>
+	/// GRA-43: each imported message is admitted against a stored per-folder count, not a scan of the
+	/// mailbox it is joining, so one recipient holding 5000 messages imports in linear time and the
+	/// counts it leaves number the next delivery.
+	/// </summary>
+	[Test]
+	public async Task AFiveThousandMessageMailboxImportsAndNumbersTheNextDelivery()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var database = await world.Parser.ParseFileAsync(PennMUSHDbrefPreservationTests.FixturePath);
+		var template = (await world.Parser.ParseMailFileAsync(MailFixturePath)).Messages[0];
+		database.Mail = new PennMUSHMailDatabase
+		{
+			MessageCount = 5000,
+			Messages = [.. Enumerable.Range(0, 5000).Select(i => template with
+			{
+				To = 4, From = 3, Subject = $"Bulk {i}", Flags = i % 5 == 0 ? 0x100 : 0
+			})]
+		};
+
+		var timer = System.Diagnostics.Stopwatch.StartNew();
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+		timer.Stop();
+		Console.WriteLine($"Imported {result.MailMessagesConverted} messages into one mailbox in {timer.ElapsedMilliseconds} ms");
+
+		await Assert.That(result.MailMessagesConverted).IsEqualTo(5000);
+		var alice = (await PennMUSHDbrefPreservationTests.NodeAsync(world, 3)).Expect<SharpPlayer>();
+		var bob = (await PennMUSHDbrefPreservationTests.NodeAsync(world, 4)).Expect<SharpPlayer>();
+		var mailbox = await world.Mediator.CreateStream(new GetAllMailListQuery(bob)).ToListAsync();
+		await Assert.That(mailbox.Count).IsEqualTo(5000);
+		await Assert.That(mailbox.Count(m => m.Folder == "INBOX")).IsEqualTo(4000);
+
+		var next = await world.Mediator.Send(new SendMailCommand(alice.Object, bob, new SharpMail
+		{
+			DateSent = DateTimeOffset.UtcNow, Fresh = true, Read = false, Tagged = false, Urgent = false,
+			Forwarded = false, Cleared = false, Folder = "INBOX",
+			Content = MarkupText.Plain("After the import"), Subject = MarkupText.Plain("Next"),
+			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(new AnySharpObject(alice).WithNoneOption()))
+		}));
+		await Assert.That(next.Expect<AdmittedMail>().Number).IsEqualTo(4001);
+	}
+
+	/// <summary>
 	/// @mail/debug fix, which load_mail runs: a message to anything but a player is dropped, and one from a
 	/// sender that no longer exists is from #0. Here one goes to #6, the Widget thing, and one comes from #7,
 	/// a hole in the dump; a third names Alice with a creation time that is not hers.
