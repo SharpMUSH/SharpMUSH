@@ -105,7 +105,7 @@ class CompareTests(unittest.TestCase):
         self.assertIn("-1", r[0].diff)
 
     def test_allowlisted_difference_is_known_and_a_fixed_one_is_stale(self):
-        entry = compare.Entry("KD-1", "s", "c", None, "why", "#1134")
+        entry = compare.Entry("KD-1", "s", "c", None, "why", "#1134", profile="p")
         r, stale, _ = self.run_compare(self.rec("1"), self.rec("2"), [entry])
         self.assertEqual((r[0].status, stale), (compare.KNOWN, []))
         r, stale, _ = self.run_compare(self.rec("1"), self.rec("1"), [entry])
@@ -143,6 +143,22 @@ class CompareTests(unittest.TestCase):
         bad.error = "timed out"
         r, _, _ = self.run_compare(self.rec("x"), bad)
         self.assertEqual(r[0].status, compare.ERROR)
+
+    def test_allowlist_entries_name_a_profile_entry_that_exists(self):
+        with tempfile.TemporaryDirectory() as d:
+            profile, p = Path(d) / "profile.md", Path(d) / "k.json"
+            profile.write_text("# SECTION\n## A choice\ntext\n")
+            entry = {"id": "KD-1", "scenario": "s", "case": "c", "reason": "r", "tracking": "#1134"}
+            for missing in ({}, {"profile": "Not a heading"}, {"profile": "SECTION"}):
+                p.write_text(json.dumps({"entries": [{**entry, **missing}]}))
+                with self.assertRaises(ValueError, msg=missing):
+                    compare.load_allowlist(p, profile)
+            p.write_text(json.dumps({"entries": [{**entry, "profile": "A choice"}]}))
+            self.assertEqual(compare.load_allowlist(p, profile)[0].profile, "A choice")
+
+    def test_the_shipped_allowlist_names_real_profile_entries(self):
+        allowlist = compare.load_allowlist(Path(__file__).resolve().parent.parent / "known-differences.json")
+        self.assertTrue(allowlist)
 
     def test_allowlist_entries_need_a_reason_and_tracking(self):
         with tempfile.TemporaryDirectory() as d:

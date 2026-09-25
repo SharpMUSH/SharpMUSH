@@ -969,7 +969,7 @@ Switches include:
 - /disable : Disable a command added in the hardcode. A disabled command is not a command at all: what was typed goes on to $-commands and then Huh?.
 - /enable : Re-enable a command disabled with @command/disable.
 
-`<restriction>` is a lock, or words naming who may use the command: flag and power names, `admin` (royalty or wizard), `player`, `thing`, `room`, `exit` or `any`, `god`, `noguest`, `nogagged`, `nofixed`, each negated with `!`, and `nobody`, which disables the command. Naming a type restricts the command to it, so `@command/restrict foo=player thing` leaves it usable by players and things only, while `!player` (or `noplayer`) leaves every other type. SharpMUSH does not show a custom `<error message>`; the restriction is set without it.
+`<restriction>` is a lock, or words naming who may use the command: flag and power names, `admin` (royalty or wizard), `player`, `thing`, `room`, `exit` or `any`, `god`, `noguest`, `nogagged`, `nofixed`, each negated with `!`, and `nobody`, which disables the command. Naming a type restricts the command to it, so `@command/restrict foo=player thing` leaves it usable by players and things only, while `!player` (or `noplayer`) leaves every other type. A `<error message>` after a `"` is shown instead of "Permission denied." to anyone the restriction refuses; a bare `"` clears it.
 
 The `/quiet` switch can be used to suppress output from @command.
 
@@ -5129,9 +5129,9 @@ By default it sends the owner of the offending object a message, so they can fix
 - [huh_command]
 - [unimplemented_command]
 # UNIMPLEMENTED_COMMAND
-This internal command is run when someone attempts to use an unimplemented command. Currently, this only occurs when a command has been added with @command/add but has not been properly @hooked to run softcode. UNIMPLEMENTED_COMMAND cannot be run directly.
+This command shows the message "This command has not been implemented." It can be typed directly and @hooked like any other command.
 
-By default, the command just shows the message "This command has not been implemented.", but you can @hook it to perform other actions.
+A command added with @command/add and not @hooked shows the same message, but it does so itself: it does not run UNIMPLEMENTED_COMMAND, so a hook on UNIMPLEMENTED_COMMAND does not change it. To change what an added command does, @hook the added command. This differs from PennMUSH; see [COMPATIBILITY COMMANDS].
 
 
 **See Also:**

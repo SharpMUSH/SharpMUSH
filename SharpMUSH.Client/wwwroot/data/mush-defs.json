@@ -2342,8 +2342,8 @@
       "switches": []
     },
     "UNIMPLEMENTED_COMMAND": {
-      "helpFull": "This internal command is run when someone attempts to use an unimplemented command. Currently, this only occurs when a command has been added with @command/add but has not been properly @hooked to run softcode. UNIMPLEMENTED_COMMAND cannot be run directly.\n\nBy default, the command just shows the message \"This command has not been implemented.\", but you can @hook it to perform other actions.\n\n\n**See Also:**\n- [huh_command]\n- [warn_on_missing]\n- [@command]\n- [@hook]",
-      "helpPreview": "This internal command is run when someone attempts to use an unimplemented command. Currently, this only occurs when a command has been added with @command/add but has not been properly @hooked to run softcode. UNIMPLEMENTED_COMMAND cannot be run directly.\nBy default, the command just shows the message \"This command has not been implemented.\", but you can @hook it to perform other actions.\n**See Also:**",
+      "helpFull": "This command shows the message \"This command has not been implemented.\" It can be typed directly and @hooked like any other command.\n\nA command added with @command/add and not @hooked shows the same message, but it does so itself: it does not run UNIMPLEMENTED_COMMAND, so a hook on UNIMPLEMENTED_COMMAND does not change it. To change what an added command does, @hook the added command. This differs from PennMUSH; see [COMPATIBILITY COMMANDS].\n\n\n**See Also:**\n- [huh_command]\n- [warn_on_missing]\n- [@command]\n- [@hook]",
+      "helpPreview": "This command shows the message \"This command has not been implemented.\" It can be typed directly and @hooked like any other command.\nA command added with @command/add and not @hooked shows the same message, but it does so itself: it does not run UNIMPLEMENTED_COMMAND, so a hook on UNIMPLEMENTED_COMMAND does not change it. To change what an added command does, @hook the added command. This differs from PennMUSH; see [COMPATIBILITY COMMANDS].\n**See Also:**",
       "maxArgs": 0,
       "minArgs": 0,
       "parameterNames": [],
@@ -5072,8 +5072,8 @@
       ]
     },
     "money": {
-      "helpFull": "`money(<integer>)`<br>\n`money(<object>)`\n\n  If given an integer, money() returns the appropriate name (either singular or plural) for that amount of money, as set in the money_singular and money_plural @config options.\n\n  Otherwise, it returns the amount of money `<object>` has. If `<object>` has the no_pay power, the value of the 'max_pennies' @config option is returned. `<object>` must have the power itself, rather than inheriting it from its owner, in this case.\n\n  Examples:\n```sharp\nsay money(Javelin)\nYou say, \"150\"\n```\n\n    > say money(1)<br>\n    You say, \"Penny\"\n\n    > say money(2)<br>\n    You say, \"Pennies\"\n\n    > &counter CvC=$count *: @say %0 [money(%0)]. Ah.. ah.. ah.<br>\n    > count 2<br>\n    Count von Count says, \"2 Pennies. Ah.. ah.. ah.\"\n\n\n**See Also:**\n- [score]",
-      "helpPreview": "`money(<integer>)`<br>\n`money(<object>)`\n  If given an integer, money() returns the appropriate name (either singular or plural) for that amount of money, as set in the money_singular and money_plural @config options.",
+      "helpFull": "`money(<integer>)`<br>\n`money(<object>)`\n\n  SharpMUSH does not track money, so money() always returns `#-1 NOT SUPPORTED` and tells you so. In PennMUSH it returns the name of an amount of money, or the pennies `<object>` holds. See [COMPATIBILITY ECONOMY].\n\n  Example:\n```sharp\n> think money(me)\n#-1 NOT SUPPORTED\n```\n\n\n**See Also:**\n- [score]",
+      "helpPreview": "`money(<integer>)`<br>\n`money(<object>)`\n  SharpMUSH does not track money, so money() always returns `#-1 NOT SUPPORTED` and tells you so. In PennMUSH it returns the name of an amount of money, or the pennies `<object>` holds. See [COMPATIBILITY ECONOMY].",
       "maxArgs": 1,
       "minArgs": 1,
       "parameterNames": [
