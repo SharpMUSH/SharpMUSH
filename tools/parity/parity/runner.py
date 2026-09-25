@@ -78,7 +78,8 @@ def _execute(target, sessions, banners, step, rec):
         _sync_others(sessions, step.session, rec)
         return
     if step.kind == "settle":
-        rec.output = session.settle()
+        # Before login there is no queue to wait for, and no `@wait`/`think`: INFO is the sentinel.
+        rec.output = session.settle() if session.logged_in else session.sync_prelogin()
         _sync_others(sessions, step.session, rec)
         return
     session.send(step.text)

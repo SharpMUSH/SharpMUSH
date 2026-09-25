@@ -9,7 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from parity import compare, scenario
 from parity.normalize import DbrefCanonicalizer, normalize
-from parity.runner import StepRecord
+from parity.runner import StepRecord, _execute
+from parity.scenario import Step
 from parity.session import split_telnet, strip_telnet
 
 
@@ -149,6 +150,33 @@ class CompareTests(unittest.TestCase):
             p.write_text(json.dumps({"entries": [{"id": "KD-1", "scenario": "s", "case": "c"}]}))
             with self.assertRaises(ValueError):
                 compare.load_allowlist(p)
+
+
+class RunnerTests(unittest.TestCase):
+    class FakeSession:
+        def __init__(self, logged_in):
+            self.logged_in, self.calls = logged_in, []
+
+        def settle(self):
+            self.calls.append("settle")
+            return "settled"
+
+        def sync_prelogin(self):
+            self.calls.append("prelogin")
+            return "prelogin"
+
+    def test_settle_before_login_uses_the_prelogin_sentinel(self):
+        bad = self.FakeSession(logged_in=False)
+        rec = StepRecord("s", "c", 0, "settle", "bad", "")
+        _execute(None, {"bad": bad}, {}, Step(kind="settle", session="bad"), rec)
+        self.assertEqual(bad.calls, ["prelogin"])
+        self.assertEqual(rec.output, "prelogin")
+
+    def test_settle_after_login_waits_on_the_queue(self):
+        wiz = self.FakeSession(logged_in=True)
+        rec = StepRecord("s", "c", 0, "settle", "wiz", "")
+        _execute(None, {"wiz": wiz}, {}, Step(kind="settle", session="wiz"), rec)
+        self.assertEqual(wiz.calls, ["settle"])
 
 
 if __name__ == "__main__":
