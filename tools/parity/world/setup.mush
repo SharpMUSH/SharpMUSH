@@ -1,0 +1,26 @@
+# World fixture: commands run as One (God) on the reference PennMUSH, then @dump. SharpMUSH
+# imports the resulting flatfile (the DB-import path), so both servers start from one world.
+# Keep object creation order stable: anchors below map SharpMUSH's imported dbrefs back to PennMUSH's.
+@newpassword One=godpass
+@pcreate Wiz=wizpass
+@set *Wiz=WIZARD
+@pcreate Alice=alicepass
+@pcreate Bob=bobpass
+@dig/teleport Lab
+@desc here=A tidy laboratory.
+@tel *Alice=here
+@create Widget
+&COLOR Widget=blue
+&SIZE Widget=42
+&GREET Widget=Hello, %0! I am [name(me)].
+@desc Widget=A small widget.
+@tel Widget=*Alice
+@tel me=#0
+# ::anchor <label> <softcode expression returning a dbref, valid from anywhere>
+::anchor room0 [loc(*Wiz)]
+::anchor god  [num(*One)]
+::anchor wiz  [num(*Wiz)]
+::anchor alice [num(*Alice)]
+::anchor bob  [num(*Bob)]
+::anchor lab  [loc(*Alice)]
+::anchor widget [first(lcon(*Alice))]

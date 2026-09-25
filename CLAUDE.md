@@ -57,6 +57,10 @@ SHARPMUSH_ENABLE_TEST_TELEMETRY=true dotnet run --project SharpMUSH.Tests
 
 The test framework is **TUnit** (not xUnit or MSTest). The `--treenode-filter` format is `/<assembly>/<namespace>/<class>/<method>` with `*` wildcards.
 
+## PennMUSH Parity Harness
+
+`tools/parity/run.sh` replays the same scripted telnet sessions (DB import, login, player/admin commands, softcode) against a reference PennMUSH built from `pennmush/` and against SharpMUSH, and reports every output difference. Each parity fix adds a case to `tools/parity/scenarios/`. See `tools/parity/README.md` (normalization rules, known-differences allowlist, baseline).
+
 ## Running the Server
 
 The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMUSH.ConnectionServer`. The compose stack runs both on the embedded `lightning` provider with NATS, and is what `deploy/` ships to production:
