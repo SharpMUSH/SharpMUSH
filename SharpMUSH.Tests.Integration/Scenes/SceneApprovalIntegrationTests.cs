@@ -98,8 +98,6 @@ public class SceneApprovalIntegrationTests
 	{
 		var before = NotificationCount();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command));
-		// The capture hooks are not /inline, so a matched pose is its own queue entry; wait for it.
-		await WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
 		var all = NotifyService.ReceivedCalls().Where(IsNotification).ToList();
 		return string.Join("\n", all.Skip(before).Select(ExtractMessageText).OfType<string>());
 	}

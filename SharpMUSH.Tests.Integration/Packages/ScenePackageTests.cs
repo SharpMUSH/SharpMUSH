@@ -34,7 +34,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 	{
 		if (await Registry.GetInstalledPackageAsync("scene") is not InstalledPackageRecord package)
 			throw new InvalidOperationException("scene is not installed.");
-		await Assert.That(package.Version).IsEqualTo("1.21.1");
+		await Assert.That(package.Version).IsEqualTo("1.21.2");
 
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		// Two created objects: the WIZARD Logger that runs the verbs and the @hook overrides, and
@@ -76,7 +76,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		var loggerDbref = DBRef.Parse(objects.Single(o => o.Ref == "logger").Objid);
 
-		// STARTUP sets @hook/override on POSE, SAY, SEMIPOSE, and @EMIT, all targeting
+		// STARTUP sets @hook/override/inline on POSE, SAY, SEMIPOSE, and @EMIT, all targeting
 		// the Scene Logger with its CMD`CAPTURE`* capture attributes.
 		await AssertOverrideHook("POSE", loggerDbref.Number, "CMD`CAPTURE`POSE");
 		await AssertOverrideHook("SAY", loggerDbref.Number, "CMD`CAPTURE`SAY");
@@ -90,5 +90,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 			throw new InvalidOperationException($"{command} has no OVERRIDE hook.");
 		await Assert.That(hook.TargetObject.Number).IsEqualTo(expectedTargetNumber);
 		await Assert.That(hook.AttributeName.ToUpperInvariant()).IsEqualTo(expectedAttribute);
+		// /inline, so the capture runs in place like the built-in it replaces instead of being queued.
+		await Assert.That(hook.Inline).IsTrue();
 	}
 }
