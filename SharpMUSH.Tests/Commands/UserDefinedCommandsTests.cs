@@ -17,6 +17,9 @@ public class UserDefinedCommandsTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.Services.GetRequiredService<IMUSHCodeParser>();
 
+	/// <summary>A $-command matched from an action list is its own queue entry (#1132); wait for it to run.</summary>
+	private ValueTask DrainQueue() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
+
 	[Test]
 	public async ValueTask WildcardEqSplitCommandPassesArgsToEmit()
 	{
@@ -585,6 +588,7 @@ public class UserDefinedCommandsTests
 			MarkupText.Plain($"&UTEST_LEAD_LIST {obj}=${token}:@emit {token} Matched"));
 
 		await listParser.CommandListParse(MarkupText.Plain($" {token}"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -608,6 +612,7 @@ public class UserDefinedCommandsTests
 			MarkupText.Plain($"&UTEST_LEAD_SEMI {obj}=${token}:@emit {token} Matched"));
 
 		await listParser.CommandListParse(MarkupText.Plain($"@@ ignore;  {token}"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -635,6 +640,7 @@ public class UserDefinedCommandsTests
 			MarkupText.Plain($"&UTEST_SEMI_NOSPACE {obj}=${token}:@emit {token} Matched"));
 
 		await listParser.CommandListParse(MarkupText.Plain($"@@ ignore;{token}"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -679,6 +685,7 @@ public class UserDefinedCommandsTests
 			MarkupText.Plain($"&UTEST_TRAIL_LIST {obj}=${token}:@emit {token} Matched"));
 
 		await listParser.CommandListParse(MarkupText.Plain($"{token} "));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -702,6 +709,7 @@ public class UserDefinedCommandsTests
 			MarkupText.Plain($"&UTEST_SEMI_FIRST {obj}=${token}:@emit {token} Matched"));
 
 		await listParser.CommandListParse(MarkupText.Plain($"{token};@emit TAIL"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -728,6 +736,7 @@ public class UserDefinedCommandsTests
 			MarkupText.Plain($"&UTEST_SEMI_LAST {obj}=${last}:@emit {last} LastMatched"));
 
 		await listParser.CommandListParse(MarkupText.Plain($"@emit HEAD;{mid};{last}"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -757,6 +766,7 @@ public class UserDefinedCommandsTests
 			MarkupText.Plain($"&UTEST_SEMI_ARG {obj}=${token} *:@emit GREET=<%0>"));
 
 		await listParser.CommandListParse(MarkupText.Plain($"@emit AAAAAAAAAA;{token} Bob"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -780,6 +790,7 @@ public class UserDefinedCommandsTests
 			MarkupText.Plain($"&UTEST_SEMI_ARG2 {obj}=${token} * to *:@emit MSG=<%0>-<%1>"));
 
 		await listParser.CommandListParse(MarkupText.Plain($"@emit IGNORE;{token} Alice to Bob"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)

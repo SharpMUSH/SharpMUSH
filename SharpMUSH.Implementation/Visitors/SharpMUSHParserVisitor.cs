@@ -16,6 +16,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Reality;
+using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -1469,6 +1470,9 @@ public class SharpMUSHParserVisitor(
 				return (result is CallState value ? value : CallState.Empty) with { HadErrors = true };
 			}
 
+			// Only a command typed at a connection runs its $-command in place (QUEUE_INPLACE).
+			var inPlace = parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput);
+
 			// Live discovery uses the invoking executor's perception before handlers can match.
 			// Explicit configured hooks keep their separate administrative dispatch path.
 			var reality = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
@@ -1487,7 +1491,7 @@ public class SharpMUSHParserVisitor(
 
 			if (userDefinedCommandMatches.TryGetValue(out var nearbyMatches))
 			{
-				return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, nearbyMatches));
+				return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, nearbyMatches, inPlace));
 			}
 
 			// Step 10: Zone Exit Name and Aliases - handled in LocateService
@@ -1513,7 +1517,7 @@ public class SharpMUSHParserVisitor(
 
 					if (userDefinedCommandMatchesOnZMR.TryGetValue(out var zoneMatches))
 					{
-						return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, zoneMatches));
+						return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, zoneMatches, inPlace));
 					}
 				}
 			}
@@ -1529,7 +1533,7 @@ public class SharpMUSHParserVisitor(
 
 				if (userDefinedCommandMatchesOnLocation.TryGetValue(out var locationMatches))
 				{
-					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, locationMatches));
+					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, locationMatches, inPlace));
 				}
 			}
 
@@ -1550,7 +1554,7 @@ public class SharpMUSHParserVisitor(
 
 				if (userDefinedCommandMatchesOnPersonalZMR.TryGetValue(out var personalZoneMatches))
 				{
-					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, personalZoneMatches));
+					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, personalZoneMatches, inPlace));
 				}
 			}
 
@@ -1572,7 +1576,7 @@ public class SharpMUSHParserVisitor(
 
 				if (userDefinedCommandMatchesOnGlobal.TryGetValue(out var globalMatches))
 				{
-					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, globalMatches));
+					return PreserveCommandEvaluationErrors(await HandleUserDefinedCommand(parser, globalMatches, inPlace));
 				}
 			}
 
@@ -1693,14 +1697,22 @@ public class SharpMUSHParserVisitor(
 	}
 
 	/// <summary>
-	/// Runs the bodies of every matched <c>$</c>-command, each as its own <c>Push</c>ed parser frame with the
-	/// matching object as executor. Execution is immediate on the current call stack for every caller —
-	/// the ordinary dispatch path and <see cref="ExecuteHookCode"/>'s OVERRIDE/EXTEND path alike, whether
-	/// or not that hook is <c>/inline</c>. Nothing here queues.
+	/// Runs the bodies of every matched <c>$</c>-command, with the matching object as executor.
 	/// </summary>
+	/// <remarks>
+	/// PennMUSH's <c>atr_comm_match</c> (<c>src/attrib.c:2056-2093</c>) runs a match in place only when
+	/// the command carries <c>QUEUE_INPLACE</c>, which <c>process_command</c> sets for a command that
+	/// arrived on a socket (<c>src/game.c:1224-1225</c>). Every other match — one reached from
+	/// <c>@force</c>, <c>@trigger</c> or any other action list — is queued as a new entry by
+	/// <c>parse_que_attr</c>, so it runs after the list that matched it, with its own q-registers and
+	/// budget, and <c>@halt</c> can drop it. <see cref="ParserStateFlags.DirectInput"/> is set only for a
+	/// command typed at a connection, so it stands for the socket here. <see cref="ExecuteHookCode"/>'s
+	/// OVERRIDE/EXTEND path always runs in place.
+	/// </remarks>
 	private async ValueTask<Option<CallState>> HandleUserDefinedCommand(
 		IMUSHCodeParser prs,
-		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches)
+		IEnumerable<(AnySharpObject Obj, SharpAttribute Attr, Dictionary<string, CallState> Arguments)> matches,
+		bool inPlace = true)
 	{
 		CallState? failure = null;
 		foreach (var (obj, attr, arguments) in matches)
@@ -1713,8 +1725,37 @@ public class SharpMUSHParserVisitor(
 				continue;
 			}
 
-			// The body is its own queue entry in PennMUSH (PE_INFO_DEFAULT): it starts with no %c/%u, and
-			// what it runs never reaches the command that matched it.
+			var body = attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value);
+
+			if (!inPlace)
+			{
+				// parse_que_attr queues with PE_INFO_DEFAULT and the matching command's executor as both
+				// enactor and caller: fresh q-registers and no iteration, regex or switch context.
+				var executor = prs.CurrentState.Executor;
+				await Mediator.Send(new AdmitCommandListRequest(
+					body,
+					prs.CurrentState.SnapshotForQueuedAction() with
+					{
+						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
+						Registers = new([[]]),
+						IterationRegisters = [],
+						RegexRegisters = [],
+						SwitchStack = [],
+						EnvironmentRegisters = arguments,
+						Arguments = arguments,
+						Function = null,
+						Executor = obj.Object().DBRef,
+						Enactor = executor,
+						Caller = executor,
+						HttpResponse = null
+					},
+					new DbRefAttribute(obj.Object().DBRef, attr.LongName?.Split('`') ?? [attr.Name]),
+					-1), ExecutionBudget.CurrentToken);
+				continue;
+			}
+
+			// In place, the body is still its own queue entry in PennMUSH (PE_INFO_DEFAULT): it starts with
+			// no %c/%u, and what it runs never reaches the command that matched it.
 			var newParser = prs.Push(prs.CurrentState with
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
@@ -1726,7 +1767,7 @@ public class SharpMUSHParserVisitor(
 				CommandText = new CommandText()
 			});
 
-			var result = await newParser.CommandListParse(attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value));
+			var result = await newParser.CommandListParse(body);
 			if (result?.HadErrors == true) failure ??= result;
 		}
 

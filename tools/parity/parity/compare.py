@@ -22,23 +22,38 @@ class Entry:
     reason: str
     tracking: str
     command: Optional[str] = None  # required with `step`: pins the positional key to its command
+    profile: Optional[str] = None  # the `## ` heading in the compatibility profile that explains it
 
     def covers(self, rec: StepRecord) -> bool:
         return (self.scenario == rec.scenario and self.case == rec.case
                 and (self.step is None or self.step == rec.index))
 
 
-def load_allowlist(path: Path) -> list[Entry]:
+PROFILE = (Path(__file__).resolve().parents[3]
+           / "SharpMUSH.Documentation/Helpfiles/SharpMUSH/pennmush-compatibility.md")
+
+
+def profile_headings(path: Path = PROFILE) -> set[str]:
+    """The `## ` entry headings of the compatibility profile, which an allowlist entry must name."""
+    return {line[3:].strip() for line in path.read_text(encoding="utf-8").splitlines() if line.startswith("## ")}
+
+
+def load_allowlist(path: Path, profile: Path = PROFILE) -> list[Entry]:
+    """Every entry is a deliberate difference, so it must name the profile entry that documents it."""
     data = json.loads(path.read_text(encoding="utf-8"))
+    headings = profile_headings(profile)
     out = []
     for e in data["entries"]:
-        for required in ("id", "scenario", "case", "reason", "tracking"):
+        for required in ("id", "scenario", "case", "reason", "tracking", "profile"):
             if not e.get(required):
                 raise ValueError(f"{path}: entry {e.get('id', e)!r} is missing '{required}'")
         if e.get("step") is not None and not e.get("command"):
             raise ValueError(f"{path}: entry {e['id']!r} names a step, so it needs that step's 'command'")
+        if e["profile"] not in headings:
+            raise ValueError(f"{path}: entry {e['id']!r} names profile entry {e['profile']!r}, "
+                             f"which is not a '## ' heading in {profile.name}")
         out.append(Entry(e["id"], e["scenario"], e["case"], e.get("step"), e["reason"], e["tracking"],
-                         e.get("command")))
+                         e.get("command"), e["profile"]))
     return out
 
 
