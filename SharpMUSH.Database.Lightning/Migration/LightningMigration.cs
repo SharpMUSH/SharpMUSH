@@ -10,13 +10,14 @@ public partial class LightningDatabase
 	private const string InitialSeedMigrationId = "0001_initial_seed";
 	private const string AncestorFormatsMigrationId = "0002_ancestor_formats";
 	internal const string ExitSourceIndexMigrationId = "0003_exit_source_index";
+	internal const string MailFolderCountMigrationId = "0004_mail_folder_count";
 
 	/// <summary>
 	/// Idempotent world seed, run under <see cref="MigrateLock"/>:
 	/// 1. upsert the shared flag/power/attribute-flag/attribute-entry definitions (always, cheap, and
 	///    the only step a fresh install and a long-lived world both need every time);
 	/// 2. seed objects #0-#9 once, gated on <see cref="InitialSeedMigrationId"/>;
-	/// 3. apply pending core repairs, including the atomic exit source-index rebuild;
+	/// 3. apply pending core repairs, including the atomic exit source-index and mail folder-count rebuilds;
 	/// 4. run every plugin's not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
 	/// 5. recompute <c>next_dbref</c> from the objects actually on disk;
 	/// 6. ensure the singleton server-state row exists.
@@ -45,6 +46,7 @@ public partial class LightningDatabase
 			}
 
 			await Store.WriteAsync(tx => RebuildExitSourceIndex(tx, cancellationToken), cancellationToken);
+			await Store.WriteAsync(tx => RebuildMailFolderCounts(tx, cancellationToken), cancellationToken);
 
 			foreach (var source in _migrationSources)
 			{
@@ -116,6 +118,35 @@ public partial class LightningDatabase
 				}
 			}
 		}
+	}
+
+	/// <summary>Counts every recipient's box entries per folder into <see cref="Tables.MailCount"/>, once,
+	/// for worlds whose mail predates the table. Counts the same entries <see cref="RangeMailBox"/> yields:
+	/// a box entry whose mail row is missing is not held mail.</summary>
+	internal void RebuildMailFolderCounts(ITx tx, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		var marker = Keys.Str("mig:" + MailFolderCountMigrationId);
+		if (tx.TryGet(Tables.Meta, marker, out _)) return;
+		var counts = new Dictionary<(long Recipient, string Folder), long>();
+		foreach (var (key, _) in tx.Range(Tables.MailBox, []))
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			var recipient = Keys.ReadDbref(key.AsSpan(0, 8));
+			var mailId = Keys.ReadDbref(key.AsSpan(key.Length - 8, 8));
+			if (!tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes)) continue;
+			var folder = Codec.Deserialize<MailRecord>(bytes).Folder;
+			counts[(recipient, folder)] = counts.GetValueOrDefault((recipient, folder)) + 1;
+		}
+		tx.DeletePrefix(Tables.MailCount, []);
+		foreach (var ((recipient, folder), count) in counts)
+		{
+			tx.Put(Tables.MailCount, MailCountKey(recipient, folder), Keys.Dbref(count));
+		}
+		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord
+		{
+			Id = MailFolderCountMigrationId, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+		}));
 	}
 
 	private async ValueTask RecordMigrationAsync(string id, CancellationToken cancellationToken)

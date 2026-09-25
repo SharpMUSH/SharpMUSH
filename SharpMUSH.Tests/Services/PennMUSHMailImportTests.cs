@@ -1,4 +1,7 @@
-using System.Text;
+﻿using System.Text;
+using DotNext.Threading;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
@@ -80,6 +83,84 @@ public class PennMUSHMailImportTests
 		var alice = (await PennMUSHDbrefPreservationTests.NodeAsync(world, 3)).Expect<SharpPlayer>();
 		await Assert.That((await world.Mediator.CreateStream(new GetAllSentMailListQuery(alice.Object)).ToListAsync()).Count)
 			.IsEqualTo(7);
+	}
+
+	/// <summary>
+	/// #1226: load_mail applies no mail_limit, so an import keeps every message even past the recipient's
+	/// MAILQUOTA; mail delivered afterwards is numbered after, and refused by, the inbox the import left.
+	/// Bob (#4) has four imported messages in his inbox and one in ARCHIVE.
+	/// </summary>
+	[Test]
+	public async Task ImportedMailIsNotBoundByTheQuotaButLaterMailIs()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var database = await world.Parser.ParseFileAsync(PennMUSHDbrefPreservationTests.FixturePath);
+		database.GetObject(4)!.Attributes.Add(new PennMUSHAttribute { Name = "MAILQUOTA", Value = "1" });
+		database.Mail = await world.Parser.ParseMailFileAsync(MailFixturePath);
+
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+
+		await Assert.That(result.MailMessagesConverted).IsEqualTo(11);
+		await Assert.That((await MailboxAsync(world, 4)).Length).IsEqualTo(5);
+
+		var alice = (await PennMUSHDbrefPreservationTests.NodeAsync(world, 3)).Expect<SharpPlayer>();
+		var bob = (await PennMUSHDbrefPreservationTests.NodeAsync(world, 4)).Expect<SharpPlayer>();
+		SharpMail Letter(string subject) => new()
+		{
+			DateSent = DateTimeOffset.UtcNow, Fresh = true, Read = false, Tagged = false, Urgent = false,
+			Forwarded = false, Cleared = false, Folder = "INBOX",
+			Content = MarkupText.Plain("After the import"), Subject = MarkupText.Plain(subject),
+			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(new AnySharpObject(alice).WithNoneOption()))
+		};
+
+		var next = await world.Mediator.Send(new SendMailCommand(alice.Object, bob, Letter("Next")));
+		var refused = await world.Mediator.Send(new SendMailCommand(alice.Object, bob, Letter("Refused"), Limit: 5));
+
+		await Assert.That(next.Expect<AdmittedMail>().Number).IsEqualTo(5);
+		refused.Expect<MailboxFull>();
+		await Assert.That((await MailboxAsync(world, 4)).Length).IsEqualTo(6);
+	}
+
+	/// <summary>
+	/// GRA-43: each imported message is admitted against a stored per-folder count, not a scan of the
+	/// mailbox it is joining, so one recipient holding 5000 messages imports in linear time and the
+	/// counts it leaves number the next delivery.
+	/// </summary>
+	[Test]
+	public async Task AFiveThousandMessageMailboxImportsAndNumbersTheNextDelivery()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var database = await world.Parser.ParseFileAsync(PennMUSHDbrefPreservationTests.FixturePath);
+		var template = (await world.Parser.ParseMailFileAsync(MailFixturePath)).Messages[0];
+		database.Mail = new PennMUSHMailDatabase
+		{
+			MessageCount = 5000,
+			Messages = [.. Enumerable.Range(0, 5000).Select(i => template with
+			{
+				To = 4, From = 3, Subject = $"Bulk {i}", Flags = i % 5 == 0 ? 0x100 : 0
+			})]
+		};
+
+		var timer = System.Diagnostics.Stopwatch.StartNew();
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+		timer.Stop();
+		Console.WriteLine($"Imported {result.MailMessagesConverted} messages into one mailbox in {timer.ElapsedMilliseconds} ms");
+
+		await Assert.That(result.MailMessagesConverted).IsEqualTo(5000);
+		var alice = (await PennMUSHDbrefPreservationTests.NodeAsync(world, 3)).Expect<SharpPlayer>();
+		var bob = (await PennMUSHDbrefPreservationTests.NodeAsync(world, 4)).Expect<SharpPlayer>();
+		var mailbox = await world.Mediator.CreateStream(new GetAllMailListQuery(bob)).ToListAsync();
+		await Assert.That(mailbox.Count).IsEqualTo(5000);
+		await Assert.That(mailbox.Count(m => m.Folder == "INBOX")).IsEqualTo(4000);
+
+		var next = await world.Mediator.Send(new SendMailCommand(alice.Object, bob, new SharpMail
+		{
+			DateSent = DateTimeOffset.UtcNow, Fresh = true, Read = false, Tagged = false, Urgent = false,
+			Forwarded = false, Cleared = false, Folder = "INBOX",
+			Content = MarkupText.Plain("After the import"), Subject = MarkupText.Plain("Next"),
+			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(new AnySharpObject(alice).WithNoneOption()))
+		}));
+		await Assert.That(next.Expect<AdmittedMail>().Number).IsEqualTo(4001);
 	}
 
 	/// <summary>
