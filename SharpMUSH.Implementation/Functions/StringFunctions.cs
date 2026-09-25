@@ -418,11 +418,15 @@ public partial class Functions
 			.Select(x => x.Value.Message!)
 			.ToArray();
 
-		return TextAligner.Align(widths,
+		// Columns are laid out by their own spacing, which is what Preformatted says: a Pueblo client
+		// reads the stream as HTML, where runs of spaces collapse and a proportional font ignores the
+		// widths, and the portal gets a <pre> rather than leaning on the page's stylesheet. A terminal
+		// is unaffected — it already lays text out this way.
+		return MarkupText.Preformatted(TextAligner.Align(widths,
 			columnArguments,
 			filler: remainder.ElementAtOrDefault(0) ?? MarkupText.Space,
 			columnSeparator: remainder.ElementAtOrDefault(1) ?? MarkupText.Space,
-			rowSeparator: remainder.ElementAtOrDefault(2) ?? MarkupText.NewLine);
+			rowSeparator: remainder.ElementAtOrDefault(2) ?? MarkupText.NewLine));
 	}
 
 	[SharpFunction(Name = "lalign", MinArgs = 2, MaxArgs = 6, Flags = FunctionFlags.Regular, ParameterNames = ["widths", "colList", "delim", "filler", "colsep", "rowsep"])]
@@ -444,7 +448,8 @@ public partial class Functions
 			return ErrorMessages.Returns.InvalidAlignString;
 		}
 
-		return TextAligner.Align(widths, cols.Split(colDelim), filler, columnSeparator, rowSeparator);
+		return MarkupText.Preformatted(
+			TextAligner.Align(widths, cols.Split(colDelim), filler, columnSeparator, rowSeparator));
 	}
 
 	[SharpFunction(Name = "alphamax", MinArgs = 1, MaxArgs = int.MaxValue,

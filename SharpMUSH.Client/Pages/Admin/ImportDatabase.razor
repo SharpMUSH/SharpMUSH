@@ -40,6 +40,34 @@
 					<span class="dbimport-file-size">(@($"{_selectedFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
 				</div>
 
+				<div class="dbimport-section-label">@Loc["MailDatabaseOptional"]</div>
+				<MudFileUpload T="IBrowserFile"
+				               FilesChanged="OnMailFileSelected"
+				               MaximumFileCount="1"
+				               MaxFileSize="104857600" />
+				@if (_selectedMailFile != null)
+				{
+					<div class="dbimport-file-row">
+						<MudIcon Icon="Icons.Material.Filled.Mail" Class="dbimport-file-icon" />
+						<span class="dbimport-file-name">@_selectedMailFile.Name</span>
+						<span class="dbimport-file-size">(@($"{_selectedMailFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
+					</div>
+				}
+
+				<div class="dbimport-section-label">@Loc["ChatDatabaseOptional"]</div>
+				<MudFileUpload T="IBrowserFile"
+				               FilesChanged="OnChatFileSelected"
+				               MaximumFileCount="1"
+				               MaxFileSize="104857600" />
+				@if (_selectedChatFile != null)
+				{
+					<div class="dbimport-file-row">
+						<MudIcon Icon="Icons.Material.Filled.Forum" Class="dbimport-file-icon" />
+						<span class="dbimport-file-name">@_selectedChatFile.Name</span>
+						<span class="dbimport-file-size">(@($"{_selectedChatFile.Size / 1024.0 / 1024.0:F1}") MB)</span>
+					</div>
+				}
+
 				<div class="dbimport-actions">
 					<MudButton StartIcon="Icons.Material.Filled.Clear"
 					           Class="dbimport-btn dbimport-btn-ghost"
@@ -171,6 +199,10 @@
 					<div class="dbimport-stat-list">
 						<div class="dbimport-stat"><span>@Loc["AttributesLabel"]</span><strong>@_result.AttributesConverted</strong></div>
 						<div class="dbimport-stat"><span>@Loc["Locks"]</span><strong>@_result.LocksConverted</strong></div>
+						<div class="dbimport-stat"><span>@Loc["MailAliasesLabel"]</span><strong>@_result.MailAliasesConverted</strong></div>
+						<div class="dbimport-stat"><span>@Loc["MailMessagesLabel"]</span><strong>@_result.MailMessagesConverted</strong></div>
+						<div class="dbimport-stat"><span>@Loc["ChannelsLabel"]</span><strong>@_result.ChannelsConverted</strong></div>
+						<div class="dbimport-stat"><span>@Loc["ChannelMembersLabel"]</span><strong>@_result.ChannelMembersConverted</strong></div>
 						<div class="dbimport-stat"><span>@Loc["Duration"]</span><strong>@FormatTimeSpan(_result.Duration)</strong></div>
 					</div>
 				</div>
@@ -219,6 +251,8 @@
 
 @code {
 	private IBrowserFile? _selectedFile;
+	private IBrowserFile? _selectedMailFile;
+	private IBrowserFile? _selectedChatFile;
 	private bool _isUploading;
 	private bool _isConverting;
 	private bool _isUpdatingProgress;
@@ -229,7 +263,16 @@
 
 	private void OnFileSelected(IBrowserFile? file) => _selectedFile = file;
 
-	private void ClearSelection() => _selectedFile = null;
+	private void OnMailFileSelected(IBrowserFile? file) => _selectedMailFile = file;
+
+	private void OnChatFileSelected(IBrowserFile? file) => _selectedChatFile = file;
+
+	private void ClearSelection()
+	{
+		_selectedFile = null;
+		_selectedMailFile = null;
+		_selectedChatFile = null;
+	}
 
 	private async Task StartConversion()
 	{
@@ -241,7 +284,10 @@
 		try
 		{
 			await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 104857600); // 100MB
-			_sessionId = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name);
+			await using var mailStream = _selectedMailFile?.OpenReadStream(maxAllowedSize: 104857600);
+			await using var chatStream = _selectedChatFile?.OpenReadStream(maxAllowedSize: 104857600);
+			_sessionId = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name, mailStream,
+				_selectedMailFile?.Name, chatStream, _selectedChatFile?.Name);
 
 			if (_sessionId != null)
 			{
@@ -287,9 +333,11 @@
 		{
 			_progress = await ConversionService.GetProgressAsync(_sessionId);
 
-			if (_progress?.PercentageComplete >= 100)
+			// 100% can arrive a moment before the server has stored the result; keep polling until it has.
+			if (_progress?.PercentageComplete >= 100
+			    && await ConversionService.GetResultAsync(_sessionId) is { } result)
 			{
-				_result = await ConversionService.GetResultAsync(_sessionId);
+				_result = result;
 				_isConverting = false;
 				_progressTimer?.Dispose();
 			}
@@ -330,6 +378,8 @@
 	private void Reset()
 	{
 		_selectedFile = null;
+		_selectedMailFile = null;
+		_selectedChatFile = null;
 		_sessionId = null;
 		_progress = null;
 		_result = null;

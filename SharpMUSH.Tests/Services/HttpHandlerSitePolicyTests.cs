@@ -86,7 +86,7 @@ public class HttpHandlerSitePolicyTests
 			});
 
 			Service = new(Mediator, Attributes, Parser, new HttpOutputCapture(),
-				new EventService(Mediator, Attributes, options, NullLogger<EventService>.Instance),
+				new EventService(Mediator, Attributes, options, NullLogger<EventService>.Instance), InlineTaskScheduler.Create(),
 				options, NullLogger<HttpHandlerCommandService>.Instance);
 		}
 	}

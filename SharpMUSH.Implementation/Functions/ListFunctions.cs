@@ -1059,22 +1059,28 @@ public partial class Functions
 
 	/// <summary>
 	/// fun_sortby's order: every item is compared against every other, its rank is the sum of those
-	/// results, and equal ranks keep list order. One item's comparisons run as a unit, the items
-	/// concurrently.
+	/// results, and equal ranks keep list order.
 	/// </summary>
+	/// <remarks>
+	/// Comparisons run one at a time, in list order, as PennMUSH's do. Every comparison shares the
+	/// evaluation's call counters and recursion-depth dictionary, which are not thread-safe: running
+	/// items concurrently corrupted that dictionary, and the throw surfaced as an empty, errored
+	/// sortby() (GRA-39). It also made a comparator's side effects run in no fixed order.
+	/// </remarks>
 	private static async Task<IEnumerable<MString>> SortByComparisons(MString[] list,
 		Func<MString, MString, Task<int>> compare)
 	{
-		var ranked = await Task.WhenAll(list.Select((item, index) => Task.Run(async () =>
+		var ranked = new (MString Item, int Rank)[list.Length];
+		for (var index = 0; index < list.Length; index++)
 		{
 			var rank = 0;
-			foreach (var other in list.Where((_, j) => j != index))
+			for (var j = 0; j < list.Length; j++)
 			{
-				rank += await compare(item, other);
+				if (j != index) rank += await compare(list[index], list[j]);
 			}
 
-			return (Item: item, Rank: rank);
-		})));
+			ranked[index] = (list[index], rank);
+		}
 
 		return ranked.OrderBy(r => r.Rank).Select(r => r.Item);
 	}
@@ -1363,7 +1369,8 @@ public partial class Functions
 			packed.Add(cell);
 		}
 
-		return new CallState(MarkupText.Join(MarkupText.Empty, packed));
+		// The packing is by column width, so the result is laid out by its own spacing. See align().
+		return new CallState(MarkupText.Preformatted(MarkupText.Join(MarkupText.Empty, packed)));
 	}
 
 	/// <summary>

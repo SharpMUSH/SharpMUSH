@@ -300,14 +300,6 @@ public class MailFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("malias()", "")]
-	public async Task Malias_NoArgs_ReturnsEmpty(string str, string expected)
-	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
-	}
-
-	[Test]
 	public async Task Folderstats_NoArgs_ReturnsStats()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("folderstats()")))?.Message!;

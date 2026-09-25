@@ -25,5 +25,9 @@ public readonly record struct RenderedOutput(byte[] Data, bool ApplyOutputTransf
 /// </summary>
 public interface IMarkupOutputRenderer
 {
-	ValueTask<RenderedOutput> RenderAsync(string markup, ConnectionServerService.ConnectionData connection, CancellationToken ct = default);
+	/// <param name="prompt">
+	/// Whether this is a prompt rather than a line of output. A prompt is not ended: what follows it is
+	/// the player's own typing, on the same line.
+	/// </param>
+	ValueTask<RenderedOutput> RenderAsync(string markup, ConnectionServerService.ConnectionData connection, bool prompt = false, CancellationToken ct = default);
 }
