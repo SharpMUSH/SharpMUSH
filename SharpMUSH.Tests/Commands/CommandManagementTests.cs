@@ -54,11 +54,15 @@ public class CommandManagementTests
 	private Task<List<string>> AsGod(string command)
 		=> MessagesWhile(God, async () => await Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command)));
 
+	private Task<List<string>> As(TestIsolationHelpers.TestPlayer player, string command)
+		=> MessagesWhile(player.DbRef, async () => await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command)));
+
 	/// <summary>
 	/// Also waits for what the command queued: a non-<c>/inline</c> hook's matched <c>$</c>-command is its
-	/// own queue entry (<c>run_cmd_hook</c>, <c>src/command.c:2454</c>).
+	/// own queue entry (<c>run_cmd_hook</c>, <c>src/command.c:2454</c>). The drain waits on the shared
+	/// queue, so a test using this is <c>[NotInParallel]</c> with the others that fill or drain it.
 	/// </summary>
-	private Task<List<string>> As(TestIsolationHelpers.TestPlayer player, string command)
+	private Task<List<string>> AsQueued(TestIsolationHelpers.TestPlayer player, string command)
 		=> MessagesWhile(player.DbRef, async () =>
 		{
 			await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
@@ -79,7 +83,7 @@ public class CommandManagementTests
 	/// <c>help @command3</c>'s first example: a /noparse command, overridden by a $-command, receives its
 	/// argument unevaluated.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel]
 	public async ValueTask Add_NoParseCommandHookedToADollarCommand_GetsItsArgumentUnevaluated()
 	{
 		var wizard = await Wizard();
@@ -92,8 +96,8 @@ public class CommandManagementTests
 			await As(wizard, $"@hook/override {eat}={machine},EAT");
 
 			await Assert.That(added).Contains($"Command {eat} added.");
-			await Assert.That(await As(wizard, $"{eat} meat loaf")).Contains("Bite of meat loaf.");
-			await Assert.That(await As(wizard, $"{eat} randword(apple tomato pear)")).Contains("Bite of randword(apple tomato pear).");
+			await Assert.That(await AsQueued(wizard, $"{eat} meat loaf")).Contains("Bite of meat loaf.");
+			await Assert.That(await AsQueued(wizard, $"{eat} randword(apple tomato pear)")).Contains("Bite of randword(apple tomato pear).");
 		}
 		finally
 		{
@@ -105,7 +109,7 @@ public class CommandManagementTests
 	/// The second example: a command added without /noparse evaluates its arguments, and gets a /noeval
 	/// switch that turns that off.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel]
 	public async ValueTask Add_ParsedCommand_EvaluatesItsArgumentsUnlessNoeval()
 	{
 		var wizard = await Wizard();
@@ -118,8 +122,8 @@ public class CommandManagementTests
 			await As(wizard, $"@command/add {drink}");
 			await As(wizard, $"@hook/override {drink}={machine},DRINK");
 
-			await Assert.That(await As(wizard, $"{drink} reverse(tea)")).Contains("Drinks aet.");
-			await Assert.That(await As(wizard, $"{drink}/noeval reverse(tea)")).Contains("Drinks reverse(tea).");
+			await Assert.That(await AsQueued(wizard, $"{drink} reverse(tea)")).Contains("Drinks aet.");
+			await Assert.That(await AsQueued(wizard, $"{drink}/noeval reverse(tea)")).Contains("Drinks reverse(tea).");
 		}
 		finally
 		{
@@ -466,7 +470,7 @@ public class CommandManagementTests
 	/// <c>do_command_delete</c> frees the command and its hooks with it (<c>src/command.c:2100-2104</c>),
 	/// so a command added under the same name again starts unhooked.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel]
 	public async ValueTask Delete_TakesTheCommandsHooksWithIt()
 	{
 		var wizard = await Wizard();
@@ -475,13 +479,13 @@ public class CommandManagementTests
 		await As(wizard, $"&DO {machine}=${name} *:@pemit %#=Hooked %0.");
 		await As(wizard, $"@command/add {name}");
 		await As(wizard, $"@hook/override {name}={machine},DO");
-		await Assert.That(await As(wizard, $"{name} once")).Contains("Hooked once.").Because("precondition");
+		await Assert.That(await AsQueued(wizard, $"{name} once")).Contains("Hooked once.").Because("precondition");
 
 		await AsGod($"@command/delete {name}");
 		await As(wizard, $"@command/add {name}");
 
-		await Assert.That(await As(wizard, $"{name} twice")).Contains("This command has not been implemented.");
-		await Assert.That(await As(wizard, $"{name} twice")).DoesNotContain("Hooked twice.");
+		await Assert.That(await AsQueued(wizard, $"{name} twice")).Contains("This command has not been implemented.");
+		await Assert.That(await AsQueued(wizard, $"{name} twice")).DoesNotContain("Hooked twice.");
 	}
 
 	/// <summary>A disabled command is still taken: <c>command_find</c> finds it, so /add refuses the name.</summary>
@@ -521,7 +525,7 @@ public class CommandManagementTests
 	/// an alias to the command it aliases and reports <c>cmd->name</c> back. That is why
 	/// <c>@hook/override say</c> also fires for <c>"</c>. See #1223.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel]
 	public async ValueTask Hook_SetOnACommand_FiresForItsAliasesToo()
 	{
 		var wizard = await Wizard();
@@ -535,8 +539,8 @@ public class CommandManagementTests
 			await As(wizard, $"@command/alias {name}={alias}");
 			await As(wizard, $"@hook/override {name}={machine},DO");
 
-			await Assert.That(await As(wizard, $"{name} once")).Contains("Shared once.").Because("precondition");
-			await Assert.That(await As(wizard, $"{alias} twice")).Contains("Shared twice.");
+			await Assert.That(await AsQueued(wizard, $"{name} once")).Contains("Shared once.").Because("precondition");
+			await Assert.That(await AsQueued(wizard, $"{alias} twice")).Contains("Shared twice.");
 		}
 		finally
 		{
@@ -549,7 +553,7 @@ public class CommandManagementTests
 	/// the name with <c>command_find</c> before touching <c>cmd->hooks</c>
 	/// (<c>src/command.c:2589</c>) — so the hook fires under the command's own name too.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel]
 	public async ValueTask Hook_SetThroughAnAlias_HooksTheCommandItself()
 	{
 		var wizard = await Wizard();
@@ -563,8 +567,8 @@ public class CommandManagementTests
 			await As(wizard, $"@command/alias {name}={alias}");
 			await As(wizard, $"@hook/override {alias}={machine},DO");
 
-			await Assert.That(await As(wizard, $"{alias} once")).Contains("Through once.").Because("precondition");
-			await Assert.That(await As(wizard, $"{name} twice")).Contains("Through twice.");
+			await Assert.That(await AsQueued(wizard, $"{alias} once")).Contains("Through once.").Because("precondition");
+			await Assert.That(await AsQueued(wizard, $"{name} twice")).Contains("Through twice.");
 		}
 		finally
 		{
@@ -579,7 +583,7 @@ public class CommandManagementTests
 	/// without touching what it pointed at. Rewritten for #1223: it used to assert the opposite,
 	/// because the hook was keyed by the name as typed.
 	/// </summary>
-	[Test]
+	[Test, NotInParallel]
 	public async ValueTask Delete_AnAlias_LeavesTheCommandsHooksAlone()
 	{
 		var wizard = await Wizard();
@@ -592,15 +596,15 @@ public class CommandManagementTests
 			await As(wizard, $"@command/add {name}");
 			await As(wizard, $"@command/alias {name}={alias}");
 			await As(wizard, $"@hook/override {alias}={machine},DO");
-			await Assert.That(await As(wizard, $"{alias} once")).Contains("Aliased once.").Because("precondition");
+			await Assert.That(await AsQueued(wizard, $"{alias} once")).Contains("Aliased once.").Because("precondition");
 
 			await AsGod($"@command/delete {alias}");
 
-			await Assert.That(await As(wizard, $"{name} twice")).Contains("Aliased twice.")
+			await Assert.That(await AsQueued(wizard, $"{name} twice")).Contains("Aliased twice.")
 				.Because("the command keeps its hooks when one of its aliases is deleted");
 
 			await As(wizard, $"@command/alias {name}={alias}");
-			await Assert.That(await As(wizard, $"{alias} thrice")).Contains("Aliased thrice.");
+			await Assert.That(await AsQueued(wizard, $"{alias} thrice")).Contains("Aliased thrice.");
 		}
 		finally
 		{
