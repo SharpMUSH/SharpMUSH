@@ -21,6 +21,9 @@ public class DebugVerboseTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+
+	/// <summary>A $-command reached through @force is its own queue entry (#1132); wait for it to run.</summary>
+	private ValueTask DrainQueue() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
 	private IAttributeService AttributeService => WebAppFactoryArg.Services.GetRequiredService<IAttributeService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
@@ -37,6 +40,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&test_cmd_eval DebugEvalObj=$test1command:@pemit me=[add(123,456)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugEvalObj=test1command"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -65,6 +69,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&test_cmd_nest DebugNestObj=$test2command:@pemit me=[mul(add(11,22),3)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugNestObj=test2command"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -279,6 +284,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&test_cmd_noreg DebugNoRegObj=$test3command:@pemit me=[setq(a,Hello)][setq(b,World)][strlen(%qa)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugNoRegObj=test3command"));
+		await DrainQueue();
 
 		await NotifyService
 			.DidNotReceive()
@@ -312,6 +318,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&dbg_fmt_pre DebugFmtPre=$dbgfmtprecmd:@pemit me=[add(7,8)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugFmtPre=dbgfmtprecmd"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -333,6 +340,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&dbg_fmt_post DebugFmtPost=$dbgfmtpostcmd:@pemit me=[add(7,8)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugFmtPost=dbgfmtpostcmd"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -354,6 +362,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&dbg_nest_fmt DebugNestFmt=$dbgnestfmtcmd:@pemit me=[strlen(add(2,3))]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugNestFmt=dbgnestfmtcmd"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -446,6 +455,7 @@ public class DebugVerboseTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&dbg_owner DebugOwnerObj=$dbgownercmd:@pemit me=[add(1,1)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugOwnerObj=dbgownercmd"));
+		await DrainQueue();
 
 		var debugCalls = NotifyService.ReceivedCalls()
 			.Where(c =>
@@ -481,6 +491,7 @@ public class DebugVerboseTests
 			MarkupText.Plain("&pctq_cmd DebugPctQ=$pctqcmd:@pemit me=[setq(a,Hello)][strlen(%qa)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugPctQ=pctqcmd"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -510,6 +521,7 @@ public class DebugVerboseTests
 			MarkupText.Plain("&pct0_cmd DebugPct0=$pct0testcmd *:@pemit me=[strlen(%0)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugPct0=pct0testcmd World"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -539,6 +551,7 @@ public class DebugVerboseTests
 			MarkupText.Plain("&pctiter_cmd DebugPctIter=$pctitercmd:@pemit me=[iter(Hello,strlen(##))]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugPctIter=pctitercmd"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -574,6 +587,7 @@ public class DebugVerboseTests
 			MarkupText.Plain("&setq_cmd DebugSetq=$setqcmd:@pemit me=[setq(a,TestVal123)]"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugSetq=setqcmd"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received(1)
@@ -623,6 +637,7 @@ public class DebugVerboseTests
 			MarkupText.Plain("&subst_cmd DebugSubst=$substcmd:@pemit me=%# and %#"));
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@force DebugSubst=substcmd"));
+		await DrainQueue();
 
 		// PennMUSH substitution-only debug format: "#dbref! %# and %# => #<dbref> and #<dbref>"
 		// Single line, no colon — fires when argument has substitutions but no function calls.
@@ -661,6 +676,7 @@ public class DebugVerboseTests
 			MarkupText.Plain($"&DEBUGFORWARDLIST DbgFwdObj=#{forwardPlayer.DbRef.Number}"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@force DbgFwdObj=dbgfwdcmd"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received()
@@ -705,6 +721,7 @@ public class DebugVerboseTests
 			MarkupText.Plain($"&DEBUGFORWARDLIST DbgMFwdObj=#{target1.DbRef.Number} #{target2.DbRef.Number}"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@force DbgMFwdObj=dbgmfwdcmd"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received()
@@ -736,6 +753,7 @@ public class DebugVerboseTests
 			MarkupText.Plain("&test_nofwd DbgNoFwdObj=$dbgnofwdcmd:@pemit me=[sub(9,4)]"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@force DbgNoFwdObj=dbgnofwdcmd"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received()
@@ -771,6 +789,7 @@ public class DebugVerboseTests
 			MarkupText.Plain("&DEBUGFORWARDLIST DbgBadFwdObj=#99999"));
 
 		await Parser.CommandParse(ownerPlayer.Handle, ConnectionService, MarkupText.Plain("@force DbgBadFwdObj=dbgbadfwdcmd"));
+		await DrainQueue();
 
 		await NotifyService
 			.Received()

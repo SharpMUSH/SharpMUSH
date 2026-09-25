@@ -767,13 +767,15 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// <returns>A completed task.</returns>
 	public async ValueTask<CallState> CommandParse(MString text)
 	{
-		// Derive DirectInput from the presence of a Handle: a live Handle means this is direct
-		// player input (equivalent to PennMUSH's QUEUE_NOLIST). No Handle means it is running
-		// in a programmatic or queue context where the RHS of & should be evaluated.
+		// A command redispatched from another one (`]`, `~`, a speech token, WITH, TEACH) keeps the
+		// origin it inherited: DirectInput only if the running command itself came from a connection.
+		// A Handle alone is no proof — queued work keeps the connection it was started from — so
+		// re-deriving the flag from it would run a queued list's $-matches in place (#1132). No Handle
+		// means a programmatic or queue context where the RHS of & should be evaluated.
 		var baseFlags = State.IsEmpty ? ParserStateFlags.None : CurrentState.Flags;
 		var handle = State.IsEmpty ? null : CurrentState.Handle;
 		var derivedFlags = handle.HasValue
-			? baseFlags | ParserStateFlags.DirectInput
+			? baseFlags
 			: baseFlags & ~ParserStateFlags.DirectInput;
 
 		var parserToUse = State.IsEmpty ? this : Push(CurrentState with

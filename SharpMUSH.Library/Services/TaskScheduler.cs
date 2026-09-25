@@ -538,7 +538,14 @@ public partial class TaskScheduler(
 	}
 	private async ValueTask<CallState?> ExecuteList(MString command, ParserState state)
 	{
-		if (state.Executor is not null && await mediator.Send(new GetObjectNodeQuery(state.Executor.Value), ExecutionBudget.CurrentToken) is None) return null;
+		if (state.Executor is not null)
+		{
+			var executor = await mediator.Send(new GetObjectNodeQuery(state.Executor.Value), ExecutionBudget.CurrentToken);
+			if (executor is None) return null;
+			// run_queue_entry re-checks HALT when the entry starts (src/cque.c:1136): an object halted after
+			// its work was queued — by the rest of the list that queued it, say — runs none of it. Players are exempt.
+			if (executor is AnySharpObject { IsPlayer: false } thing && await thing.HasFlag("HALT", ExecutionBudget.CurrentToken)) return null;
+		}
 		// Deferred bodies cannot consume the submitting command list's break/include state.
 		return await parser.FromState(state with { ExecutionStack = [], BreakPropagation = null, CommandModifierDepth = 0 }).CommandListParse(command);
 	}
