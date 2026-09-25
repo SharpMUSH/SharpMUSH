@@ -280,17 +280,23 @@ to it and lasts across restarts. `/save` does the same and says so.<br>
 **Why.** There is no `mush.cnf` for a running game to fall back to.<br>
 **Workaround.** Set the value back when a change was meant to be temporary.
 
-## `command_restrictions` will reapply without a restart (#1250)
+## `command_restrictions` reapplies without a restart
 
-**A choice, not yet in effect.**
+**A choice.**
 
-**PennMUSH** reads `command_restrictions` only at startup and restart (`game.c:757`, `bsd.c:1284`).<br>
-**SharpMUSH** applies it at startup, before `@STARTUP` runs, as PennMUSH does. The decision
-recorded on #1250 is that a runtime change will reapply in both directions, tightening and loosening,
-without a restart. Until #1250 is done, a change needs a restart, as in PennMUSH.<br>
-**Why.** The configuration can already be changed while the game is running, from `@config/set` or
-the portal; a restriction that waits for a restart looks as if it had been ignored.<br>
-**Workaround.** Use `@command/restrict` for a change that must take effect now.
+**PennMUSH** reads `command_restrictions` only at startup and restart (`game.c:757`, `bsd.c:1284`),
+and has no way to undo a restriction once it is applied.<br>
+**SharpMUSH** applies it at startup, before `@STARTUP` runs, as PennMUSH does, and applies it again
+whenever it is changed from the portal or `@config/set`, in both directions: a command the change no
+longer restricts goes back to the restriction it was made with, and is enabled again if the
+configuration had disabled it with `nobody`. Every command the old or the new setting names starts
+again from the restriction it was made with, so a live `@command/restrict` on one of those commands
+is lost. Commands the setting does not name, and changes to other options, leave live restrictions
+alone. (#1250)<br>
+**Why.** The configuration can be changed while the game is running; a restriction that waits for a
+restart looks as if it had been ignored.<br>
+**Workaround.** After changing `command_restrictions`, repeat any `@command/restrict` that should
+still apply to a command it names, or put the restriction in `command_restrictions` itself.
 
 ## PennMUSH's file and allocator housekeeping answers `NOT SUPPORTED`
 

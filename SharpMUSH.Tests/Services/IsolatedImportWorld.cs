@@ -71,6 +71,9 @@ public sealed class IsolatedImportWorld : IAsyncDisposable
 
 	internal string LightningPath => _lightningPath;
 
+	/// <summary>The world's engine, for a test that needs a service the properties above do not name.</summary>
+	internal IServiceProvider Services => _services;
+
 	public static async Task<IsolatedImportWorld> CreateAsync(Action<IServiceCollection>? configureServices = null)
 	{
 		var environment = Substitute.For<IHostEnvironment>();

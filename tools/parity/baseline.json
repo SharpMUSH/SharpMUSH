@@ -73,14 +73,6 @@
    "command": "page Nobody=hello"
   },
   {
-   "key": "10-player-commands/comm.say#0",
-   "command": "say hello there"
-  },
-  {
-   "key": "10-player-commands/comm.say#3",
-   "command": "\"quoted shortcut"
-  },
-  {
    "key": "10-player-commands/flags.set#1",
    "command": "think [hasflag(me,HAVEN)] [flags(me)]"
   },

@@ -76,12 +76,15 @@ public class QueueAdmissionTests
 		await Assert.That(diagnostics.Recent().Count).IsEqualTo(0);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(1);
 		await queue.HaltByPid(admission.Pid!.Value);
-		await Assert.That(diagnostics.Recent().Single().Outcome).IsEqualTo(QueueOutcome.Cancelled);
 		await Assert.That(queue.GetQueueUsage().Total).IsEqualTo(0);
+		// The settling halt hands the cancelled entry to the consumer, which races this halt to release
+		// it. The quota is released under the admission lock either way, but when the consumer wins, it
+		// completes the observation after HaltByPid has returned (#1251). The consumer is sequential, so
+		// once the sentinel has run, the halted entry has been released and observed.
 		var drained = Signal();
 		await queue.AdmitWork(() => { drained.TrySetResult(); return ValueTask.FromResult<CallState?>(null); }, "sentinel", "test");
 		await drained.Task.WaitAsync(TimeSpan.FromSeconds(5));
-		await Assert.That(diagnostics.Recent().Count(row => row.Pid == admission.Pid)).IsEqualTo(1);
+		await Assert.That(diagnostics.Recent().Single(row => row.Pid == admission.Pid).Outcome).IsEqualTo(QueueOutcome.Cancelled);
 		await Assert.That(count).IsEqualTo(2);
 		await Assert.That(writes).IsEqualTo(1);
 	}

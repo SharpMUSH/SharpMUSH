@@ -368,6 +368,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		where TContext : ParserRuleContext
 	{
 		parser ??= this;
+		using var precisionScope = Configurable.UseFloatPrecisionOf(Configuration);
 		using var restrictionScope = parser.State.IsEmpty ? null : parser.CurrentState.Restrictions?.Enter();
 		using var ceilingScope = parser.State.IsEmpty ? null : OutputCeiling.Enter(parser.CurrentState);
 		if (EvaluationRestrictions.Current is not null && methodName != nameof(FunctionParse))
@@ -695,7 +696,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			_attributeService,
 			_hookService, _lockService, text);
 
-		return () => visitor.Visit(chatContext);
+		return async () =>
+		{
+			using var precisionScope = Configurable.UseFloatPrecisionOf(Configuration);
+			return await visitor.Visit(chatContext);
+		};
 	}
 
 	/// <summary>A handle not yet logged in has no player, and gets the full ceiling.</summary>

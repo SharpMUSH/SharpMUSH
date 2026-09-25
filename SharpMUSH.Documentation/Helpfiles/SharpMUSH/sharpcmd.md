@@ -973,7 +973,7 @@ Switches include:
 
 The `/quiet` switch can be used to suppress output from @command.
 
-Everything these switches change lasts until the server restarts. A permanent alias belongs in the `command_aliases` configuration option. HUH_COMMAND, @CHAT and GOTO are run by the game itself and cannot be disabled, and @command is always enabled.
+Everything these switches change lasts until the server restarts. A permanent alias belongs in the `command_aliases` configuration option, and a permanent restriction in `command_restrictions`. Changing `command_restrictions` takes effect at once, and puts every command it names, before or after the change, back to the restriction it was made with before applying the new setting, so a live `@command/restrict` on one of those commands lasts only until the next restart or change to `command_restrictions`. HUH_COMMAND, @CHAT and GOTO are run by the game itself and cannot be disabled, and @command is always enabled.
 
 See [@command2].
 # @command2

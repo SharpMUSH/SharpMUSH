@@ -364,13 +364,11 @@ public class UtilityFunctionUnitTests
 	/// so the engine is right and a <c>&lt; 1</c> assertion on the printed text is the thing that is
 	/// wrong.
 	/// <para>
-	/// How close is "close enough" is not a fixed figure, and it is worth knowing why before reading
-	/// a failure here as luck. At the shipped six places it takes a draw of 0.9999995 or above,
-	/// about one run in two million. But <c>Configurable.FloatPrecision</c> is a process-wide static
-	/// that the last host to start overwrites (#1245), so the precision actually in force in a test
-	/// run is whichever host won that race — and PR #1242's CI hit exactly this on a first run,
-	/// which is far too likely for six places. This assertion is the right contract either way; it
-	/// is not, and must not be read as, a fix for #1245.
+	/// At the shipped six places it takes a draw of 0.9999995 or above, about one run in two million.
+	/// PR #1242's CI hit it on a first run because <c>Configurable.FloatPrecision</c> was then a
+	/// process-wide static that the last host to start overwrote, so the precision in force was
+	/// whichever host won that race (#1245, now scoped to the evaluating engine). This assertion is
+	/// the right contract either way.
 	/// </para>
 	/// </remarks>
 	[Test]
@@ -388,15 +386,8 @@ public class UtilityFunctionUnitTests
 	/// because it goes through the same <c>unparse_number</c> PennMUSH's <c>safe_number</c> does.
 	/// </summary>
 	/// <remarks>
-	/// <see cref="TestOptionsOverride.Scope"/> rather than
-	/// <c>Configurable.ReadFloatPrecisionFrom</c>: the latter is process-wide static state and
-	/// re-pointing it here would change the game under every test running in parallel.
-	/// <para>
-	/// This shares <c>FloatPrecisionTests</c>' exposure to #1245. The scope is AsyncLocal and
-	/// correct, but it is read through whichever host's options monitor
-	/// <c>Configurable.FloatPrecision</c> last pointed at, so if this ever fails with more places
-	/// than it asked for, that is #1245 and not this test.
-	/// </para>
+	/// <see cref="TestOptionsOverride.Scope"/> sets the precision for this test's flow only; the parser
+	/// reads it through its own engine's options (#1245).
 	/// </remarks>
 	[Test]
 	[Arguments(2u)]
