@@ -39,6 +39,22 @@ public class BuildingQuotaTests
 
 	private Task<string> AsGod(string command) => Run(1, command);
 
+	private readonly List<DBRef> _guests = [];
+
+	// A leftover Guest power would count as a guest character in GuestLoginTests.
+	[After(Test)]
+	public async Task RevokeGuestPower()
+	{
+		foreach (var guest in _guests)
+			await AsGod($"@power {guest}=!Guest");
+	}
+
+	private async Task MakeGuestAsync(DBRef player)
+	{
+		_guests.Add(player);
+		await AsGod($"@power {player}=Guest");
+	}
+
 	/// <summary>A mortal whose limit is exactly <paramref name="slots"/> objects beyond what it owns now.</summary>
 	private async Task<TestIsolationHelpers.TestPlayer> MortalWithSlotsAsync(string prefix, int slots)
 	{
@@ -228,6 +244,7 @@ public class BuildingQuotaTests
 	/// The lifted <c>@dig</c> body reported both as the quota.
 	/// </summary>
 	[Test]
+	[NotInParallel(GuestLoginTests.GuestCharacters)]
 	[Arguments(true)]
 	[Arguments(false)]
 	public async ValueTask AGuestDigSaysPermissionAndNotQuota(bool throughTheFunction)
@@ -235,7 +252,7 @@ public class BuildingQuotaTests
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var guest = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "BqtGuestDig");
-		await AsGod($"@power {guest.DbRef}=Guest");
+		await MakeGuestAsync(guest.DbRef);
 
 		var name = $"BqtGuestDug{uid}";
 		await Assert.That(await Run(guest.Handle, throughTheFunction
@@ -253,6 +270,7 @@ public class BuildingQuotaTests
 	/// bites, which <see cref="AGuestMayNotBuildAtAll"/> pins.
 	/// </summary>
 	[Test]
+	[NotInParallel(GuestLoginTests.GuestCharacters)]
 	[Arguments(true)]
 	[Arguments(false)]
 	public async ValueTask AGuestMayNotClone(bool throughTheFunction)
@@ -262,7 +280,7 @@ public class BuildingQuotaTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "BqtGuestClone");
 		// Built before the power is granted, so the object really is the guest's own.
 		var original = DBRef.Parse((await Run(guest.Handle, $"@create BqtGuestCloneSource{uid}")).Trim());
-		await AsGod($"@power {guest.DbRef}=Guest");
+		await MakeGuestAsync(guest.DbRef);
 
 		var name = $"BqtGuestCloned{uid}";
 		await Assert.That(await Run(guest.Handle, throughTheFunction
@@ -383,12 +401,13 @@ public class BuildingQuotaTests
 	/// of any quota arithmetic.
 	/// </summary>
 	[Test]
+	[NotInParallel(GuestLoginTests.GuestCharacters)]
 	public async ValueTask AGuestMayNotBuildAtAll()
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var guest = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "BqtGuest");
-		await AsGod($"@power {guest.DbRef}=Guest");
+		await MakeGuestAsync(guest.DbRef);
 
 		var name = $"BqtGuestThing{uid}";
 		await Assert.That(await Run(guest.Handle, $"@create {name}"))
