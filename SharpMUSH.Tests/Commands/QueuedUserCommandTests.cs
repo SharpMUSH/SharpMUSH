@@ -212,6 +212,40 @@ public class QueuedUserCommandTests : ServerTestBase
 		await Assert.That(Notifications.For(_actor.DbRef)).Contains("No matching command.");
 	}
 
+	// The `]` cases below were checked against a disposable PennMUSH 1.8.8 world (80a1d5b9) with
+	// `&CMD Cmd=$+hi *:@pemit %#=got:[%0]|raw:%0` on a !no_command thing. command_parse strips the
+	// NOEVAL_TOKEN (src/command.c:1160-1166) and goes on to $-command matching with the line unevaluated:
+	//   +hi [add(1,2)]      -> got:3|raw:3
+	//   ]+hi [add(1,2)]     -> got:[add(1,2)]|raw:[add(1,2)]
+	//   ]+hi %n             -> got:%n|raw:%n
+	//   ]+hi   spaced   out -> got:  spaced   out|raw:  spaced   out
+	//   ] +hi x             -> got:x|raw:x
+	//   &T me=]+hi [add(1,2)];@pemit me=after, @trigger me/T -> after, then got:[add(1,2)]|raw:[add(1,2)]
+	[Test]
+	[Arguments("]{0} [add(1,2)]", "{0} got:[add(1,2)]|raw:[add(1,2)]")]
+	[Arguments("]{0} %n", "{0} got:%n|raw:%n")]
+	[Arguments("]{0}   spaced   out", "{0} got:  spaced   out|raw:  spaced   out")]
+	[Arguments("] {0} x", "{0} got:x|raw:x")]
+	[Arguments("{0} [add(1,2)]", "{0} got:3|raw:3")]
+	public async Task TypedNoEvalTokenMatchesADollarCommandWithoutEvaluating(string typed, string expected)
+	{
+		await Run($"&CMD {_commands}=${_token} *:@pemit %#={_token} got:[%0]|raw:%0");
+
+		await Run(string.Format(typed, _token));
+
+		await Assert.That(Heard()).IsEquivalentTo([string.Format(expected, _token)]);
+	}
+
+	[Test]
+	public async Task SoftcodeNoEvalTokenMatchStillQueues()
+	{
+		await Run($"&CMD {_commands}=${_token} *:@pemit %#={_token} got:[%0]");
+
+		await RunQueued($"]{_token} [add(1,2)];@pemit me={_token} after");
+
+		await Assert.That(Heard()).IsEquivalentTo([$"{_token} after", $"{_token} got:[add(1,2)]"], CollectionOrdering.Matching);
+	}
+
 	[Test]
 	public async Task HaltStopsAMatchThatKeepsQueueingItself()
 	{
