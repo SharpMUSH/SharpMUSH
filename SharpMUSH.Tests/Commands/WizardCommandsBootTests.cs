@@ -34,7 +34,7 @@ public class WizardCommandsBootTests
 		var natsUrl = Environment.GetEnvironmentVariable("NATS_URL");
 		await Assert.That(natsUrl).IsNotNull();
 
-		var handle = Random.Shared.NextInt64(900_000, 999_999);
+		var handle = TestIsolationHelpers.GenerateUniqueHandle();
 		await ConnectionService.Register(handle, "127.0.0.1", "localhost", "test",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 

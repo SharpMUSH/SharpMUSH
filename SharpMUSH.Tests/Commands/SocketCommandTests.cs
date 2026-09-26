@@ -30,7 +30,7 @@ public class SocketCommandTests
 	/// <summary>A registered but unbound handle — a client sitting on the connect screen.</summary>
 	private async ValueTask<long> AnonymousHandleAsync()
 	{
-		var handle = Random.Shared.NextInt64(900_000, 999_999);
+		var handle = TestIsolationHelpers.GenerateUniqueHandle();
 		await ConnectionService.Register(handle, "localhost", "localhost", "telnet",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		return handle;
@@ -47,7 +47,7 @@ public class SocketCommandTests
 	{
 		var handle = await AnonymousHandleAsync();
 
-		var reply = await RunForLastAsync(handle, "INFO");
+		var reply = await RunForLineAsync(handle, "INFO", "### Begin INFO");
 
 		await Assert.That(reply).IsNotNull();
 		await Assert.That(reply!).Contains("### Begin INFO 1.1");
@@ -65,7 +65,7 @@ public class SocketCommandTests
 	{
 		var handle = await LoggedInHandleAsync("InfoConn");
 
-		await Assert.That(await RunForLastAsync(handle, "INFO")).IsNotNull().And.Contains("### Begin INFO");
+		await Assert.That(await RunForLineAsync(handle, "INFO", "### Begin INFO")).IsNotNull().And.Contains("### Begin INFO");
 	}
 
 	// --- MSSP-REQUEST ------------------------------------------------------------------------
@@ -77,7 +77,7 @@ public class SocketCommandTests
 	{
 		var handle = loggedIn ? await LoggedInHandleAsync("MsspConn") : await AnonymousHandleAsync();
 
-		var reply = await RunForLastAsync(handle, "MSSP-REQUEST");
+		var reply = await RunForLineAsync(handle, "MSSP-REQUEST", "MSSP-REPLY-START");
 
 		await Assert.That(reply).IsNotNull();
 		await Assert.That(reply!).Contains("MSSP-REPLY-START");
@@ -98,7 +98,7 @@ public class SocketCommandTests
 	{
 		var handle = loggedIn ? await LoggedInHandleAsync("VerConn") : await AnonymousHandleAsync();
 
-		await Assert.That(await RunForLastAsync(handle, "VERSION")).IsNotNull().And.Contains("You are connected to");
+		await Assert.That(await RunForLineAsync(handle, "VERSION", "You are connected to")).IsNotNull().And.Contains("You are connected to");
 	}
 
 	// --- IDLE --------------------------------------------------------------------------------
@@ -111,7 +111,8 @@ public class SocketCommandTests
 	public async Task IdleEchoesItsArgumentAndIsOtherwiseSilent()
 	{
 		var withArgument = await LoggedInHandleAsync("IdleEcho");
-		await Assert.That(await RunForLastAsync(withArgument, "IDLE keepalive")).IsEqualTo("keepalive");
+		var keepalive = TestIsolationHelpers.GenerateUniqueName("keepalive");
+		await Assert.That(await RunAsync(withArgument, $"IDLE {keepalive}")).Contains(keepalive);
 
 		var bare = await AnonymousHandleAsync();
 		await Assert.That(await RunAsync(bare, "IDLE")).IsEmpty();
@@ -143,7 +144,8 @@ public class SocketCommandTests
 	[Arguments("PROMPT_NEWLINES 0", "PROMPT_NEWLINES", "0")]
 	public async Task DescriptorSettingsWriteTheirMetadataSilently(string input, string key, string expected)
 	{
-		var handle = await LoggedInHandleAsync("Descriptor");
+		// At the connect screen: no @wall or GAME: broadcast reaches it, so its output can be asserted empty (#1247).
+		var handle = await AnonymousHandleAsync();
 
 		var said = await RunAsync(handle, input);
 
@@ -162,7 +164,7 @@ public class SocketCommandTests
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "TwoClients");
 
-		var second = Random.Shared.NextInt64(900_000, 999_999);
+		var second = TestIsolationHelpers.GenerateUniqueHandle();
 		await ConnectionService.Register(second, "localhost", "localhost", "telnet",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		await ConnectionService.Bind(second, player.DbRef);
@@ -198,7 +200,7 @@ public class SocketCommandTests
 	{
 		var handle = await LoggedInHandleAsync("SocksetShow");
 
-		var report = await RunForLastAsync(handle, "SOCKSET");
+		var report = await RunForLineAsync(handle, "SOCKSET", "Prompt Newlines");
 
 		await Assert.That(report).IsNotNull();
 		await Assert.That(report!).Contains("Width");
@@ -212,7 +214,7 @@ public class SocketCommandTests
 	{
 		var handle = await LoggedInHandleAsync("SocksetSet");
 
-		await Assert.That(await RunForLastAsync(handle, "SOCKSET WIDTH=100")).IsEqualTo("Width set.");
+		await Assert.That(await RunAsync(handle, "SOCKSET WIDTH=100")).Contains("Width set.");
 		await Assert.That(ConnectionService.Get(handle)!.Metadata.GetValueOrDefault("WIDTH")).IsEqualTo("100");
 	}
 
@@ -225,7 +227,7 @@ public class SocketCommandTests
 	{
 		var handle = await LoggedInHandleAsync("SocksetBad");
 
-		await Assert.That(await RunForLastAsync(handle, input)).IsEqualTo(expected);
+		await Assert.That(await RunAsync(handle, input)).Contains(expected);
 	}
 
 	/// <summary>
@@ -241,7 +243,8 @@ public class SocketCommandTests
 	public async Task DescriptorSettingsTakeUnparseableValuesAsZeroWithoutComplaining(
 		string input, string key, string expected)
 	{
-		var handle = await LoggedInHandleAsync("BadDescriptor");
+		// At the connect screen, for the same reason as above (#1247).
+		var handle = await AnonymousHandleAsync();
 
 		var said = await RunAsync(handle, input);
 
@@ -261,8 +264,8 @@ public class SocketCommandTests
 		await RunAsync(handle, "SCREENWIDTH wide");
 		await Assert.That(ConnectionService.Get(handle)!.Metadata.GetValueOrDefault("WIDTH")).IsEqualTo("0");
 
-		await Assert.That(await RunForLastAsync(handle, "SOCKSET WIDTH=wide"))
-			.IsEqualTo("Width expects a positive integer.");
+		await Assert.That(await RunAsync(handle, "SOCKSET WIDTH=wide"))
+			.Contains("Width expects a positive integer.");
 		await Assert.That(ConnectionService.Get(handle)!.Metadata.GetValueOrDefault("WIDTH")).IsEqualTo("0");
 	}
 
@@ -277,8 +280,8 @@ public class SocketCommandTests
 		var handle = await LoggedInHandleAsync("PrefixBlank");
 
 		await RunAsync(handle, "OUTPUTPREFIX >>");
-		await Assert.That(await RunForLastAsync(handle, "SOCKSET OUTPUTPREFIX=   "))
-			.IsEqualTo("OUTPUTPREFIX cleared.");
+		await Assert.That(await RunAsync(handle, "SOCKSET OUTPUTPREFIX=   "))
+			.Contains("OUTPUTPREFIX cleared.");
 		await Assert.That(ConnectionService.Get(handle)!.Metadata.ContainsKey("OutputPrefix")).IsFalse();
 	}
 
@@ -357,7 +360,7 @@ public class SocketCommandTests
 
 		// DOING only shows the WHO listing for a connection with no executor, so a listing here proves
 		// the parser now treats this handle as sitting at the connect screen.
-		var listing = await RunForLastAsync(player.Handle, "DOING");
+		var listing = await RunForLineAsync(player.Handle, "DOING", "Player Name");
 
 		await Assert.That(listing).IsNotNull().And.Contains("Player Name");
 	}
@@ -394,7 +397,7 @@ public class SocketCommandTests
 	{
 		var handle = await AnonymousHandleAsync();
 
-		var listing = await RunForLastAsync(handle, input);
+		var listing = await RunForLineAsync(handle, input, "Player Name");
 
 		await Assert.That(listing).IsNotNull();
 		await Assert.That(listing!).Contains("Player Name");
@@ -420,6 +423,12 @@ public class SocketCommandTests
 		return [.. WebAppFactoryArg.Notifications.ForHandle(handle).Skip(before)];
 	}
 
-	private async ValueTask<string?> RunForLastAsync(long handle, string input)
-		=> (await RunAsync(handle, input)).LastOrDefault();
+	/// <summary>
+	/// Runs one line and returns the line of its output that carries <paramref name="mark"/>, the text
+	/// only that reply contains. A logged-in socket also gets every <c>@wall</c> and <c>GAME:</c>
+	/// broadcast, so another test's broadcast can land in the window; picking the reply by its own
+	/// text, not by position, keeps it out (#1247).
+	/// </summary>
+	private async ValueTask<string?> RunForLineAsync(long handle, string input, string mark)
+		=> (await RunAsync(handle, input)).FirstOrDefault(line => line.Contains(mark));
 }
