@@ -159,7 +159,9 @@ public class BuildingQuotaTests
 	/// the room back.
 	/// </summary>
 	[Test]
-	public async ValueTask AMultiObjectDigStopsWhereTheQuotaDoes()
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask AMultiObjectDigStopsWhereTheQuotaDoes(bool throughTheFunction)
 	{
 		var uid = Guid.NewGuid().ToString("N")[..8];
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -175,7 +177,9 @@ public class BuildingQuotaTests
 		var player = (await Mediator.Send(new GetObjectNodeQuery(mortal.DbRef))).Expect<SharpPlayer>();
 		await AsGod($"@quota/set {mortal.DbRef}={await Mediator.Send(new GetOwnedObjectCountQuery(player)) + 1}");
 
-		await Run(mortal.Handle, $"@dig BqtDigRoom{uid}=BqtDigTo{uid},BqtDigBack{uid}");
+		await Run(mortal.Handle, throughTheFunction
+			? $"think dig(BqtDigRoom{uid},BqtDigTo{uid},BqtDigBack{uid})"
+			: $"@dig BqtDigRoom{uid}=BqtDigTo{uid},BqtDigBack{uid}");
 
 		await Assert.That((await Named($"BqtDigRoom{uid}")).Length).IsEqualTo(1)
 			.Because("the one slot paid for the room");
