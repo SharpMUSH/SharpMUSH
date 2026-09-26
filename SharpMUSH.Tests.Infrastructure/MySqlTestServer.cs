@@ -31,6 +31,7 @@ public class MySqlTestServer : IAsyncInitializer, IAsyncDisposable
 		.WithUsername("testuser")
 		.WithPassword("testpass")
 		.WithReuse(false)
+		.WithLogger(TestDiagnostics.ContainerLogger)
 		.WithWaitStrategy(Wait.ForUnixContainer()
 			.AddCustomWaitStrategy(new BoundedMySqlProbe(), o => o.WithTimeout(ReadinessTimeout)))
 		.Build();
