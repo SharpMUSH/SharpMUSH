@@ -67,6 +67,21 @@ public class HookService : IHookService
 		return ValueTask.FromResult(false);
 	}
 
+	public ValueTask<int> ClearHooksOnAsync(IReadOnlySet<int> targetObjects)
+	{
+		var cleared = 0;
+		foreach (var commandHooks in _hooks.Values)
+		{
+			foreach (var (hookType, hook) in commandHooks.Where(pair => targetObjects.Contains(pair.Value.TargetObject.Number)).ToList())
+			{
+				commandHooks.Remove(hookType);
+				cleared++;
+			}
+		}
+
+		return ValueTask.FromResult(cleared);
+	}
+
 	public ValueTask<Dictionary<string, CommandHook>> GetAllHooksAsync(string commandName)
 	{
 		var upperCommand = commandName.ToUpper();

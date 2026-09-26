@@ -25,19 +25,31 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private readonly IMediator _mediator;
 	private readonly IOptionsWrapper<SharpMUSHOptions> _options;
 	private readonly ConfigurationReloadService? _configurationReload;
+	private readonly IPackageRegistryService? _packageRegistry;
+	private readonly IPackageInstallService? _packageInstaller;
+	private readonly IBundledPackageBootstrap? _bundledPackages;
+	private readonly IHookService? _hooks;
 
 	public PennMUSHDatabaseConverter(
 		PennMUSHDatabaseParser parser,
 		IMediator mediator,
 		IOptionsWrapper<SharpMUSHOptions> options,
 		ILogger<PennMUSHDatabaseConverter> logger,
-		ConfigurationReloadService? configurationReload = null)
+		ConfigurationReloadService? configurationReload = null,
+		IPackageRegistryService? packageRegistry = null,
+		IPackageInstallService? packageInstaller = null,
+		IBundledPackageBootstrap? bundledPackages = null,
+		IHookService? hooks = null)
 	{
 		_parser = parser;
 		_mediator = mediator;
 		_options = options;
 		_logger = logger;
 		_configurationReload = configurationReload;
+		_packageRegistry = packageRegistry;
+		_packageInstaller = packageInstaller;
+		_bundledPackages = bundledPackages;
+		_hooks = hooks;
 	}
 
 	public async Task<ConversionResult> ConvertDatabaseAsync(string databaseFilePath, CancellationToken cancellationToken = default)
@@ -199,6 +211,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			(channelsConverted, channelMembersConverted) = await ImportChannelsAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Channels imported", 0.97);
 
+			await ReinstallPackagesAsync(context);
 			await EnableParenGroupsAsync(context, cancellationToken);
 			// Last: the admin page takes 100% as the end of the import and stops polling.
 			ReportProgress("Complete", 1.0);
@@ -230,6 +243,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			_logger.LogError(ex, "Error during database conversion");
 			errors.Add($"Fatal error: {ex.Message}");
+			// The packages were uninstalled before the failure; don't leave the world without them.
+			await ReinstallPackagesAsync(context);
 			stopwatch.Stop();
 			result = result with { Errors = errors, Warnings = warnings, Duration = stopwatch.Elapsed };
 		}
@@ -288,8 +303,10 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// PennMUSH has no ancestors, package manager or HTTP/event handlers (its defaults leave the
 	/// ancestor options unset). The options that named the removed objects are unset with them, so
 	/// nothing points at a number that now belongs to an imported object. An administrator who wants
-	/// those extras creates them again and sets the options. The dbref counter is then lowered to one
-	/// past #2, so it ends one past the highest imported object rather than at the seeds' 10.
+	/// those extras creates them again and sets the options. The installed packages go first, since the
+	/// bundled ones a fresh server installs put their objects at #10 and up; they are installed again
+	/// once the import is written (<see cref="ReinstallPackagesAsync"/>). The dbref counter is then
+	/// lowered to one past #2, so it ends one past the highest imported object rather than at the seeds' 10.
 	/// </summary>
 	/// <remarks>
 	/// Only a world still as migration seeded it is cleared: #0-#9 all present and all carrying the one
@@ -306,7 +323,9 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return;
 		}
 
-		await GiveSeedHoldingsToGodAsync(context, cancellationToken);
+		var packageObjects = await UninstallPackagesAsync(context, cancellationToken);
+		await GiveSeedHoldingsToGodAsync(context, packageObjects, cancellationToken);
+		await DeletePackageObjectsAsync(context, packageObjects, cancellationToken);
 
 		var removed = new HashSet<uint>();
 		foreach (var (number, name, _) in SeededSystemObjects)
@@ -370,7 +389,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// surviving possessions to the probate judge, God by default. Flags are kept as dbck keeps them: the
 	/// Scene Logger has to stay WIZARD to run its hooks.
 	/// </remarks>
-	private async Task GiveSeedHoldingsToGodAsync(PennMUSHConversionContext context,
+	private async Task GiveSeedHoldingsToGodAsync(PennMUSHConversionContext context, IReadOnlySet<int> packageObjects,
 		CancellationToken cancellationToken)
 	{
 		if (await _mediator.Send(new GetObjectNodeQuery(new DBRef(1)), cancellationToken) is not
@@ -379,7 +398,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return;
 		}
 
-		var seeds = SeededSystemObjects.Select(seed => seed.Number).ToHashSet();
+		// The package objects go too, and whatever their lifecycle softcode made keeps working the same way.
+		var seeds = SeededSystemObjects.Select(seed => seed.Number).Concat(packageObjects).ToHashSet();
 
 		// Materialised: the writes below change the rows the stream would still be reading.
 		var survivors = await _mediator.CreateStream(new GetFilteredObjectsQuery(), cancellationToken)

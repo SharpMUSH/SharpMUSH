@@ -71,7 +71,10 @@ internal static class HostedServiceRegistration
 		// library, so a restriction naming one is not skipped, and before any service runs softcode, so
 		// a command a restriction disables cannot be used by boot @STARTUP (#1224).
 		services.AddHostedService<Services.CommandRestrictionBootstrapService>();
-		services.AddHostedService<Services.DefaultPackagesBootstrapService>();
+		// One instance: the PennMUSH importer reinstalls through it the bundled packages it clears.
+		services.AddSingleton<Services.DefaultPackagesBootstrapService>();
+		services.AddSingleton<IBundledPackageBootstrap>(sp => sp.GetRequiredService<Services.DefaultPackagesBootstrapService>());
+		services.AddHostedService(sp => sp.GetRequiredService<Services.DefaultPackagesBootstrapService>());
 		services.AddHostedService<Services.DefaultApplicationsBootstrapService>();
 		// Run @STARTUP on all objects at boot — registered after the other bootstrap services so
 		// any objects/attributes they seed already exist. Re-establishes in-memory @function regs.
