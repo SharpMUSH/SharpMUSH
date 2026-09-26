@@ -261,7 +261,10 @@ public class QueuedUserCommandTests : ServerTestBase
 		await Run($"&CMD {_commands}=${_token}:@pemit %#={_token} body me=%!");
 		var start = Notifications.CountFor(_actor.DbRef);
 
+		// Drained between the lines: the first one's match is queued, so its body would otherwise race
+		// the second one's `No matching command.`
 		await Run($"with/room here={_token}");
+		await Scheduler.DrainImmediateQueueForTests();
 		await Run($"with/room here={_token}nope");
 		await Scheduler.DrainImmediateQueueForTests();
 
@@ -342,6 +345,38 @@ public class QueuedUserCommandTests : ServerTestBase
 
 		await Assert.That(HeardSince(start)).IsEquivalentTo(["I can't see that here."]);
 		await Assert.That(Notifications.For(roomRef).Skip(roomStart)).IsEmpty();
+	}
+
+	[Test]
+	public async Task WithLocatesByTheNamesThePlayerCanSeeNotTheRooms()
+	{
+		// The looker half of #1237, which a nonexistent target cannot pin: a miss is a miss whoever
+		// looked. Something carried is in the player's match scope and not in the room's, so a room in
+		// the looker position turns both of the first two lines into `I can't see that here.`
+		// Live PennMUSH 1.8.8 (80a1d5b), mortal alone in a room with an undropped `Satchel` holding
+		// $scmd:
+		//   with Satchel=scmd      -> SATCHELBODY from #5
+		//   with/room Satchel=scmd -> Make room! Make room!  (found, then refused for not being a room)
+		//   with/room here=scmd    -> No matching command.   (inventory is not the room's contents)
+		var carriedName = TestIsolationHelpers.GenerateUniqueName("QueuedCmdCarried");
+		var carried = DBRef.Parse(await Run($"@create {carriedName}"));
+		await Run($"@set {carried}=!no_command");
+		await Run($"&CMD {carried}=${_token}:@pemit %#={_token} body me=%!");
+		var start = Notifications.CountFor(_actor.DbRef);
+
+		// By name, not by dbref: a dbref resolves outside the looker's scope and would not tell them apart.
+		// Drained between the lines, as PennMUSH's queue is: the first line's match is queued rather than
+		// run in place, so without a drain its body races the next two lines' own output.
+		await Run($"with {carriedName}={_token}");
+		await Scheduler.DrainImmediateQueueForTests();
+		await Run($"with/room {carriedName}={_token}");
+		await Scheduler.DrainImmediateQueueForTests();
+		await Run($"with/room here={_token}");
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(HeardSince(start)).IsEquivalentTo(
+			[$"{_token} body me=#{carried.Number}", "Make room! Make room!", "No matching command."],
+			CollectionOrdering.Matching);
 	}
 
 	// The `]` cases below were checked against a disposable PennMUSH 1.8.8 world (80a1d5b9) with
