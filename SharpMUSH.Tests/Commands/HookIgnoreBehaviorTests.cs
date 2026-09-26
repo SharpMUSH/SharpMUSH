@@ -34,6 +34,9 @@ public class HookIgnoreBehaviorTests
 	private IHookService HookService => WebAppFactoryArg.Services.GetRequiredService<IHookService>();
 	private ISharpDatabase Database => WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
 
+	/// <summary>The override is not <c>/inline</c>, so its matched body is its own queue entry; wait for it.</summary>
+	private ValueTask DrainQueue() => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
+
 	private async Task<string> ReadAttributeAsync(DBRef obj, string attribute) =>
 		(await Database.GetAttributeAsync(obj, attribute.Split('`'), CancellationToken.None).LastOrDefaultAsync())
 			?.Value.ToPlainText() ?? "";
@@ -57,6 +60,7 @@ public class HookIgnoreBehaviorTests
 			await ArmAsync(obj, "1");
 
 			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@emit hello"));
+			await DrainQueue();
 
 			await Assert.That(await ReadAttributeAsync(obj, "RAN")).IsEqualTo("yes")
 				.Because("a TRUE /ignore lets @emit proceed — execution reaches the downstream override");
@@ -85,6 +89,7 @@ public class HookIgnoreBehaviorTests
 			var options = new TestOptions(baseline with { Compatibility = baseline.Compatibility with { TinyBooleans = tinyBooleans } });
 			var parser = original with { ServiceProvider = new OptionsProvider(original.ServiceProvider, options) };
 			await parser.CommandParse(1, ConnectionService, MarkupText.Plain("@emit hello"));
+			await DrainQueue();
 
 			await Assert.That(await ReadAttributeAsync(obj, "RAN")).IsEqualTo("")
 				.Because("a FALSE /ignore SKIPS @emit entirely — execution never reaches the override or built-in");

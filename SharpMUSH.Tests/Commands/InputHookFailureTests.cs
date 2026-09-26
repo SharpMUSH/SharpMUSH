@@ -81,9 +81,10 @@ public class InputHookFailureTests
 			.Returns(ValueTask.FromResult<Option<CommandHook>>(new SharpMUSH.Library.DiscriminatedUnions.None()));
 		hooks.GetHookAsync(Arg.Is<string>(s => s.Equals(commandName, StringComparison.OrdinalIgnoreCase)), hookType)
 			.Returns(ValueTask.FromResult<Option<CommandHook>>(new CommandHook(hookType, player.DbRef, "HOOKBODY")));
+		// /inline, so the matched body runs on this parser's command table; a queued match would run on the server's.
 		if (mode is "branch-override" or "branch-extend")
 			hooks.GetHookAsync(Arg.Is<string>(s => s.Equals(commandName, StringComparison.OrdinalIgnoreCase)), mode == "branch-override" ? "OVERRIDE" : "EXTEND")
-				.Returns(ValueTask.FromResult<Option<CommandHook>>(new CommandHook(mode == "branch-override" ? "OVERRIDE" : "EXTEND", player.DbRef, "OVERRIDE")));
+				.Returns(ValueTask.FromResult<Option<CommandHook>>(new CommandHook(mode == "branch-override" ? "OVERRIDE" : "EXTEND", player.DbRef, "OVERRIDE", Inline: true)));
 		var plugin = Substitute.For<IPluginHookDispatcher>();
 		plugin.HasCommandInterceptors.Returns(true);
 		plugin.CommandBeforeAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<string>()).Returns(ValueTask.FromResult(mode != "branch-veto"));

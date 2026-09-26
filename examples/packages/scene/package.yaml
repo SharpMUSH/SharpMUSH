@@ -1,6 +1,6 @@
 format: 1
 package: scene
-version: 1.21.1
+version: 1.21.2
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -535,10 +535,13 @@ objects:
 
       # ---- lifecycle: (re-)establish the three OVERRIDE capture hooks -----------
       # PennMUSH form: @hook/<type> <command> = <object>, <attribute> (RSArgs comma-split).
+      # /inline: the capture stands in for the built-in command, so it runs in place as the built-in
+      # would. Without it the matched $-command is queued (run_cmd_hook, src/command.c) and the room
+      # sees the pose after the rest of the poser's action list.
       AINSTALL: |-
         @teleport %!=#2; @trigger %!/STARTUP
       STARTUP: |-
-        @hook/override POSE=%!,CMD`CAPTURE`POSE; @hook/override SAY=%!,CMD`CAPTURE`SAY; @hook/override SEMIPOSE=%!,CMD`CAPTURE`SEMI; @hook/override @EMIT=%!,CMD`CAPTURE`EMIT
+        @hook/override/inline POSE=%!,CMD`CAPTURE`POSE; @hook/override/inline SAY=%!,CMD`CAPTURE`SAY; @hook/override/inline SEMIPOSE=%!,CMD`CAPTURE`SEMI; @hook/override/inline @EMIT=%!,CMD`CAPTURE`EMIT
 
   # ---- help storage -------------------------------------------------------
   # An ordinary, unflagged thing holding the +help topics, deliberately NOT the Scene Logger: the
