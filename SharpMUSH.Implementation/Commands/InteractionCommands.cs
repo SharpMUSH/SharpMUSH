@@ -1089,7 +1089,9 @@ public partial class Commands
 				return CallState.Empty;
 			}
 
-			candidates = target.AsContainer.Content(Mediator).Select(x => x.WithRoomOption());
+			// Exits live on their own chain in PennMUSH (Exits(x), hdrs/dbdefs.h:36), so Contents(x) never
+			// hands one to list_match. GetContentsQuery returns them, so the exclusion has to be ours.
+			candidates = target.AsContainer.Content(Mediator).Where(x => !x.IsExit).Select(x => x.WithRoomOption());
 		}
 
 		// Only $-commands are tried, with the player as the matcher and QUEUE_DEFAULT: each match is a

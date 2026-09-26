@@ -270,6 +270,29 @@ public class QueuedUserCommandTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task WithRoomSkipsTheRoomsExits()
+	{
+		// Contents(x) and Exits(x) are different db fields (hdrs/dbdefs.h:33,36), so the list_match at
+		// src/game.c:1427 never reaches an exit. Live PennMUSH 1.8.8 (80a1d5b), an unlinked exit in the
+		// room carrying `$xcmd` and nothing else matching:
+		//   with/room here=xcmd -> No matching command.
+		//   with XExit=xcmd     -> EXITBODY from #4   (naming the exit itself still runs it)
+		// The actor digs and stands in this one, so it owns the room @open needs to control.
+		var ownRoom = await Run($"@dig {TestIsolationHelpers.GenerateUniqueName("QueuedCmdExitRoom")}");
+		await Cmd($"@tel {_actor.DbRef}={ownRoom}");
+		var exit = DBRef.Parse(await Run($"@open {TestIsolationHelpers.GenerateUniqueName("QueuedCmdExit")}"));
+		await Run($"&CMD {exit}=${_token}:@pemit %#={_token} body me=%!");
+		var start = Notifications.CountFor(_actor.DbRef);
+
+		await Run($"with/room here={_token}");
+		await Run($"with {exit}={_token}");
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(HeardSince(start))
+			.IsEquivalentTo(["No matching command.", $"{_token} body me=#{exit.Number}"], CollectionOrdering.Matching);
+	}
+
+	[Test]
 	public async Task WithRoomOnSomethingThatIsNotARoomMakesRoom()
 	{
 		// PennMUSH 1.8.8 (80a1d5b): `with/room Widget=wcmd` on a thing, and `with/room me=wcmd`, both
