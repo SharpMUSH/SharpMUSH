@@ -183,6 +183,18 @@ public partial class TaskScheduler(
 			}
 			executor = target.Object().DBRef;
 			executorIsPlayer = target.IsPlayer;
+			// insert_que drops a halted non-player before it allocates a PID (src/cque.c:530), as
+			// new_queue_actionlist_int does before that (:621), so an already-halted object's work never
+			// reaches the queue at all: a live PennMUSH shows nothing in @ps and charges nothing. Silent,
+			// like Penn's — the owner hears about a halted object only when a command of its own is
+			// refused. Players are exempt; only the socket path can carry a non-player here, and it
+			// never does, because a non-player has no connection.
+			if (!executorIsPlayer && await target.HasFlag("HALT", ExecutionBudget.CurrentToken))
+			{
+				diagnostics?.Rejected(executor, (await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef,
+					SchedulerKeys.KindOf(group), QueueOutcome.Halted);
+				return Reject(QueueRejectionReason.Halted);
+			}
 			if (await target.IsWizard(ExecutionBudget.CurrentToken) || await target.HasPower("Queue", ExecutionBudget.CurrentToken))
 				ownerLimit += Math.Max(0, await mediator.Send(new GetObjectCountQuery(), ExecutionBudget.CurrentToken));
 			owner = (await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef.ToString();
