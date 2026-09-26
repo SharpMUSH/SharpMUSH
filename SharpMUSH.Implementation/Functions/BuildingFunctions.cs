@@ -94,8 +94,8 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		return await BuildingHelpers.DigAsync(Mediator, Database, Configuration, NotifyService, PermissionService,
-			LockService, executor, args["0"].Message!,
+		return await BuildingHelpers.DigAsync(parser, Mediator, Database, Configuration, NotifyService, EventService,
+			PermissionService, LockService, executor, args["0"].Message!,
 			BuildingHelpers.Argument(args, "1"), BuildingHelpers.Argument(args, "2"),
 			BuildingHelpers.Argument(args, "3"), BuildingHelpers.Argument(args, "4"),
 			BuildingHelpers.Argument(args, "5")) switch
@@ -129,9 +129,17 @@ public partial class Functions
 			sourceRoom = namedRoom;
 		}
 
-		return await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
+		var opened = await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
 			[BuildingHelpers.Argument(args, "3")],
-			async at => await OpenedExitAsync(parser, executor, args, sourceRoom, at[0])) switch
+			async at => await OpenedExitAsync(parser, executor, args, sourceRoom, at[0]));
+
+		// Outside the gate: do_real_open's OBJECT`CREATE (create.c:181) runs its handler inline.
+		if (opened is DBRef exit)
+		{
+			await BuildingHelpers.AnnounceCreatedAsync(parser, EventService, executor, exit);
+		}
+
+		return opened switch
 		{
 			DBRef exitDbRef => new CallState(exitDbRef.ToString()),
 			Error<string> refused => new CallState(refused.Value)

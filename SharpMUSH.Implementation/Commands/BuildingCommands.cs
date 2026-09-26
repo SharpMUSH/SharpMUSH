@@ -867,8 +867,8 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		return await BuildingHelpers.DigAsync(Mediator, Database, Configuration, NotifyService, PermissionService,
-			LockService, executor, args["0"].Message!,
+		return await BuildingHelpers.DigAsync(parser, Mediator, Database, Configuration, NotifyService, EventService,
+			PermissionService, LockService, executor, args["0"].Message!,
 			BuildingHelpers.Argument(args, "1"), BuildingHelpers.Argument(args, "2"),
 			BuildingHelpers.Argument(args, "3"), BuildingHelpers.Argument(args, "4"),
 			BuildingHelpers.Argument(args, "5")) switch
@@ -947,9 +947,18 @@ public partial class Commands
 
 		// create.c:219-226 settles both requested dbrefs before either exit is opened, and holds them
 		// for the whole of the build.
-		return await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
+		var opened = new List<DBRef>();
+		var built = await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
 			[BuildingHelpers.Argument(args, "4"), BuildingHelpers.Argument(args, "5")],
-			async at => await OpenBothAsync(parser, executor, args, sourceRoom, at[0], at[1])) switch
+			async at => await OpenBothAsync(parser, executor, args, sourceRoom, at[0], at[1], opened));
+
+		// Outside the gate: each do_real_open queues its own OBJECT`CREATE (create.c:181), forward first.
+		foreach (var exit in opened)
+		{
+			await BuildingHelpers.AnnounceCreatedAsync(parser, EventService, executor, exit);
+		}
+
+		return built switch
 		{
 			DBRef forward => new CallState(forward.ToString()),
 			Error<string> refused => new CallState(refused.Value)
@@ -958,13 +967,19 @@ public partial class Commands
 
 	/// <summary>The forward exit, and on success the rest of <c>do_open</c>.</summary>
 	private async ValueTask<Result<DBRef>> OpenBothAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		IReadOnlyDictionary<string, CallState> args, AnySharpContainer sourceRoom, DBRef? forwardAt, DBRef? backAt)
-		=> await BuildingHelpers.OpenExitAsync(Mediator, Database, Configuration, NotifyService,
-			PermissionService, LockService, executor, args["0"].Message!, sourceRoom, forwardAt) switch
+		IReadOnlyDictionary<string, CallState> args, AnySharpContainer sourceRoom, DBRef? forwardAt, DBRef? backAt,
+		List<DBRef> opened)
+	{
+		var result = await BuildingHelpers.OpenExitAsync(Mediator, Database, Configuration, NotifyService,
+			PermissionService, LockService, executor, args["0"].Message!, sourceRoom, forwardAt);
+		if (result is not DBRef forward)
 		{
-			DBRef forward => await LinkForwardAndOpenBackAsync(parser, executor, args, forward, sourceRoom, backAt),
-			Error<string> refused => refused
-		};
+			return result;
+		}
+
+		opened.Add(forward);
+		return await LinkForwardAndOpenBackAsync(parser, executor, args, forward, sourceRoom, backAt, opened);
+	}
 
 	/// <summary>
 	/// The rest of <c>do_open</c> once the forward exit exists: link it to <c>links[1]</c>, and on a
@@ -974,7 +989,8 @@ public partial class Commands
 	/// Either way the answer is the forward exit, as it is in Penn.
 	/// </summary>
 	private async ValueTask<DBRef> LinkForwardAndOpenBackAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		IReadOnlyDictionary<string, CallState> args, DBRef forward, AnySharpContainer sourceRoom, DBRef? backAt)
+		IReadOnlyDictionary<string, CallState> args, DBRef forward, AnySharpContainer sourceRoom, DBRef? backAt,
+		List<DBRef> opened)
 	{
 		if (BuildingHelpers.Argument(args, "1") is not { } destinationName)
 		{
@@ -991,6 +1007,8 @@ public partial class Commands
 				&& await BuildingHelpers.OpenExitAsync(Mediator, Database, Configuration, NotifyService,
 					PermissionService, LockService, executor, returnName, destination, backAt) is DBRef back)
 		{
+			opened.Add(back);
+
 			// unparse_dbref(source) (create.c:236) — the bare #N, not the objid, so the report reads
 			// "Linked to #12" rather than "Linked to #12:1790216...".
 			await LinkNewExitAsync(parser, executor, back, $"#{sourceRoom.Object().DBRef.Number}");
