@@ -1470,7 +1470,8 @@ public class SharpMUSHParserVisitor(
 			}
 
 			// Only a command typed at a connection runs its $-command in place (QUEUE_INPLACE).
-			var inPlace = parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput);
+			var inPlace = parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)
+				&& !parser.CurrentState.Flags.HasFlag(ParserStateFlags.QueueMatches);
 
 			// Live discovery uses the invoking executor's perception before handlers can match.
 			// Explicit configured hooks keep their separate administrative dispatch path.
@@ -1733,34 +1734,15 @@ public class SharpMUSHParserVisitor(
 				continue;
 			}
 
-			var body = attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value);
-
 			if (!inPlace)
 			{
-				// parse_que_attr queues with PE_INFO_DEFAULT and the matching command's executor as both
-				// enactor and caller: fresh q-registers and no iteration, regex or switch context.
-				var executor = prs.CurrentState.Executor;
-				await Mediator.Send(new AdmitCommandListRequest(
-					body,
-					bodyState.SnapshotForQueuedAction() with
-					{
-						CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
-						Registers = new([[]]),
-						IterationRegisters = [],
-						RegexRegisters = [],
-						SwitchStack = [],
-						EnvironmentRegisters = arguments,
-						Arguments = arguments,
-						Function = null,
-						Executor = obj.Object().DBRef,
-						Enactor = executor,
-						Caller = executor,
-						HttpResponse = null
-					},
-					new DbRefAttribute(obj.Object().DBRef, attr.LongName?.Split('`') ?? [attr.Name]),
-					-1), ExecutionBudget.CurrentToken);
+				// parse_que_attr queues with the matching command's executor as both enactor and caller.
+				await QueuedCommandMatch.Admit(Mediator, bodyState, obj, attr, arguments,
+					prs.CurrentState.Executor, ExecutionBudget.CurrentToken);
 				continue;
 			}
+
+			var body = attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value);
 
 			// In place, the body is still its own queue entry in PennMUSH (PE_INFO_DEFAULT): it starts with
 			// no %c/%u, and what it runs never reaches the command that matched it.

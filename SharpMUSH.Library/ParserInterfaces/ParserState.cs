@@ -78,6 +78,13 @@ public enum ParserStateFlags
 	/// By default, command argument parsing is lenient. This flag overrides that default.
 	/// </summary>
 	StrictParse = 1 << 4,
+
+	/// <summary>
+	/// A command redispatched by <c>TEACH</c>: it keeps <see cref="DirectInput"/>'s <c>QUEUE_NOLIST</c>
+	/// meaning, but not the socket's, so a <c>$</c>-command it reaches is queued rather than run in place.
+	/// PennMUSH's <c>do_teach</c> queues the lesson without <c>QUEUE_SOCKET</c> (<c>src/speech.c:130-163</c>).
+	/// </summary>
+	QueueMatches = 1 << 5,
 }
 
 /// <summary>

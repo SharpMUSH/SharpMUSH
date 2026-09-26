@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Common;
@@ -958,7 +959,10 @@ public partial class Commands
 			_ => MarkupText.Plain($"{executor.Object().Name} types --> {command}"),
 			INotifyService.NotificationType.Emit);
 
-		var commandResult = await parser.CommandParse(MarkupText.Plain(command));
+		// The lesson runs without QUEUE_SOCKET, so a $-command it reaches is queued.
+		var commandResult = await parser.With(
+			s => s with { Flags = s.Flags | ParserStateFlags.QueueMatches },
+			np => np.CommandParse(MarkupText.Plain(command)));
 
 		return CallState.Empty with { HadErrors = commandResult.HadErrors };
 	}
@@ -1058,13 +1062,24 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// Switch context: target becomes executor, original executor becomes enactor
-		await parser.With(s => s with
+		// cmd_with (src/game.c:1389) runs only the target's $-commands, with the player as the matcher and
+		// QUEUE_DEFAULT: each match is a new queue entry, even for a line typed at a connection.
+		var matches = await CommandDiscoveryService.MatchUserDefinedCommand(
+			parser, new[] { target }.ToAsyncEnumerable(), command);
+
+		if (!matches.TryGetValue(out var matched))
 		{
-			Executor = target.Object().DBRef,
-			Enactor = executor.Object().DBRef
-		},
-		async np => await np.CommandParse(command));
+			await NotifyService.Notify(executor, "No matching command.", executor);
+			return CallState.Empty;
+		}
+
+		foreach (var (obj, attr, arguments) in matched)
+		{
+			if (await obj.HasFlag("HALT")) continue;
+
+			await QueuedCommandMatch.Admit(Mediator, parser.CurrentState, obj, attr, arguments,
+				executor.Object().DBRef, ExecutionBudget.CurrentToken);
+		}
 
 		return CallState.Empty;
 	}
