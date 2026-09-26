@@ -94,6 +94,7 @@ public class TelnetServer : ConnectionHandler
 		// Input is held too (see OnSubmit), but a client decides how much of it there is, so what it may
 		// send before registration is capped rather than buffered for as long as registration takes.
 		var heldInputChars = 0;
+		var heldInputDropped = false;
 
 		async ValueTask PublishAfterRegistrationAsync(Func<Task> publish, int inputChars = 0)
 		{
@@ -103,8 +104,13 @@ public class TelnetServer : ConnectionHandler
 				{
 					if (inputChars > 0 && (heldInputChars += inputChars) > MaxInputHeldBeforeRegistration)
 					{
-						_logger.LogWarning("Dropping input on handle {Handle}: over {Limit} characters sent before it was registered",
-							nextPort, MaxInputHeldBeforeRegistration);
+						if (!heldInputDropped)
+						{
+							heldInputDropped = true;
+							_logger.LogWarning("Dropping input on handle {Handle}: over {Limit} characters sent before it was registered",
+								nextPort, MaxInputHeldBeforeRegistration);
+						}
+
 						return;
 					}
 
@@ -217,7 +223,8 @@ public class TelnetServer : ConnectionHandler
 				await PublishAfterRegistrationAsync(() => ConnectionInputPublisher.PublishAsync(_publishEndpoint,
 					_connectionService, _logger, nextPort,
 					new TelnetInputMessage(nextPort, input, _connectionService.Get(nextPort)?.SessionId), ct),
-					input.Length);
+					// A blank line is still a queued message, so it counts too.
+					Math.Max(input.Length, 1));
 			})
 			// Each of these callbacks is also a sampling point for AnnounceTelnetIfNegotiatedAsync,
 			// which asks every plugin rather than just the one that fired: reaching any of them means

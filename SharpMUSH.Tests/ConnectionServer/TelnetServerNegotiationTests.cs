@@ -790,12 +790,59 @@ public class TelnetServerNegotiationTests
 			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, TTYPE, SEND, IAC, SE));
 
 			releaseRegistration.TrySetResult();
+			// Until what was held has been flushed, the cap still applies to anything new.
+			await WaitForInputsAsync(published, lines - 1);
 			await WriteAsync(toServer, [.. Encoding.ASCII.GetBytes("WHO\r\n")]);
 
 			var inputs = await WaitForInputsAsync(published, lines);
 			await Assert.That(inputs.Length).IsEqualTo(lines)
 				.Because("every line under the cap, then the one sent after registration; the one over it is dropped");
 			await Assert.That(inputs[^1].Input).IsEqualTo("WHO");
+		}
+		finally
+		{
+			releaseRegistration.TrySetResult();
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+			cts.Dispose();
+		}
+	}
+
+	/// <summary>Blank lines are queued messages too, so they count against the cap.</summary>
+	[Test]
+	public async Task BlankInputBeforeRegistration_IsCapped()
+	{
+		var (connectionService, releaseRegistration) = HeldRegistration();
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: connectionService);
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, DO, TTYPE));
+
+			var blanks = string.Concat(Enumerable.Repeat("\r\n", TelnetServer.MaxInputHeldBeforeRegistration + 100));
+			await WriteAsync(toServer, [.. Encoding.ASCII.GetBytes(blanks)]);
+			await WriteAsync(toServer, IAC, WILL, TTYPE);
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, TTYPE, SEND, IAC, SE));
+
+			releaseRegistration.TrySetResult();
+
+			// Everything held goes out before anything sent after registration, so once WHO arrives the
+			// count of blanks ahead of it is final.
+			await WaitForInputsAsync(published, TelnetServer.MaxInputHeldBeforeRegistration);
+			await WriteAsync(toServer, [.. Encoding.ASCII.GetBytes("WHO\r\n")]);
+			var deadline = DateTimeOffset.UtcNow + Timeout;
+			TelnetInputMessage[] inputs = [];
+			while (inputs.LastOrDefault()?.Input != "WHO" && DateTimeOffset.UtcNow < deadline)
+			{
+				await Task.Delay(25);
+				lock (published)
+				{
+					inputs = [.. published.OfType<TelnetInputMessage>()];
+				}
+			}
+
+			await Assert.That(inputs.LastOrDefault()?.Input).IsEqualTo("WHO");
+			await Assert.That(inputs.Length - 1).IsEqualTo(TelnetServer.MaxInputHeldBeforeRegistration);
 		}
 		finally
 		{
