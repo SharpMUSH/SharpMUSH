@@ -854,8 +854,9 @@ public partial class Commands
 	/// PennMUSH <c>do_dig</c> (<c>src/create.c:466-522</c>), which <c>fun_dig</c> calls with the same
 	/// arguments (<c>src/fundb.c:2177-2189</c>), so the whole body lives in
 	/// <see cref="BuildingHelpers.DigAsync"/> and <c>dig()</c> reaches it too.
-	/// <para><c>/TELEPORT</c> (<c>create.c:518-521</c>) is declared and not read: Penn re-runs the whole
-	/// of <c>@teleport</c> so NO_TEL and Z_TEL still apply, which belongs with the teleport seam.</para>
+	/// <para><c>/TELEPORT</c> (<c>create.c:518-521</c>) runs the whole of <c>@teleport me=#room</c> after the
+	/// dig, so NO_TEL and Z_TEL still apply and a refused teleport leaves the room dug. <c>dig()</c>
+	/// passes no teleport flag (<c>fundb.c:2188</c>), so this lives here and not in the helper.</para>
 	/// </remarks>
 	[SharpCommand(Name = "@DIG", Switches = ["TELEPORT"], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 6,
@@ -866,15 +867,24 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		return await BuildingHelpers.DigAsync(Mediator, Database, Configuration, NotifyService, PermissionService,
+		var dug = await BuildingHelpers.DigAsync(Mediator, Database, Configuration, NotifyService, PermissionService,
 			LockService, executor, args["0"].Message!,
 			BuildingHelpers.Argument(args, "1"), BuildingHelpers.Argument(args, "2"),
 			BuildingHelpers.Argument(args, "3"), BuildingHelpers.Argument(args, "4"),
-			BuildingHelpers.Argument(args, "5")) switch
+			BuildingHelpers.Argument(args, "5"));
+
+		if (dug is not DBRef room)
 		{
-			DBRef room => new CallState(room.ToString()),
-			Error<string> refused => new CallState(refused.Value)
-		};
+			return new CallState(((Error<string>)dug.Value).Value);
+		}
+
+		if (parser.CurrentState.Switches.Contains("TELEPORT"))
+		{
+			await TeleportHelpers.TeleportAsync(parser, TeleportServices, executor, "me", room.ToString(),
+				new TeleportOptions(List: false, Inside: false, Silent: false));
+		}
+
+		return new CallState(room.ToString());
 	}
 
 	private ValueTask<bool> CanLinkTo(AnySharpObject executor, AnySharpObject destination)
