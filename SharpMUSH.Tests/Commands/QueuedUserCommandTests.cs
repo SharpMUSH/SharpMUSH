@@ -18,6 +18,7 @@ public class QueuedUserCommandTests : ServerTestBase
 	private TestIsolationHelpers.TestPlayer _actor = null!;
 	private DBRef _commands;
 	private string _token = "";
+	private string _room = "";
 
 	private ITaskScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
 
@@ -26,8 +27,8 @@ public class QueuedUserCommandTests : ServerTestBase
 	{
 		_actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "QueuedCmd");
-		var room = await Cmd($"@dig {TestIsolationHelpers.GenerateUniqueName("QueuedCmdRoom")}");
-		await Cmd($"@tel {_actor.DbRef}={room}");
+		_room = await Cmd($"@dig {TestIsolationHelpers.GenerateUniqueName("QueuedCmdRoom")}");
+		await Cmd($"@tel {_actor.DbRef}={_room}");
 		_commands = await CreateThing("QueuedCmdObj");
 		_token = TestIsolationHelpers.GenerateUniqueName("qc").ToLowerInvariant();
 	}
@@ -210,6 +211,137 @@ public class QueuedUserCommandTests : ServerTestBase
 
 		await Assert.That(Heard()).IsEquivalentTo([$"{_token} body me=#{_commands.Number}"]);
 		await Assert.That(Notifications.For(_actor.DbRef)).Contains("No matching command.");
+	}
+
+	/// <summary>A thing God owns, dropped into <paramref name="room"/>: the actor neither owns nor controls it.</summary>
+	private async Task<DBRef> CreateForeignThing(string prefix, string room)
+	{
+		var thing = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+		await Cmd($"@set {thing}=!no_command");
+		await Cmd($"@tel {thing}={room}");
+		return thing;
+	}
+
+	private List<string> HeardSince(int start) => Notifications.For(_actor.DbRef).Skip(start).ToList();
+
+	[Test]
+	public async Task WithRunsANearbyObjectThePlayerDoesNotControl()
+	{
+		// cmd_with (src/game.c:1398) admits anything nearby, not only what the player controls. PennMUSH
+		// 1.8.8 (80a1d5b): a mortal's `with Widget=wcmd` on God's !no_command Widget in the same room
+		// prints nothing and queues Widget's $wcmd.
+		var foreign = await CreateForeignThing("QueuedCmdForeign", _room);
+		await Cmd($"&CMD {foreign}=${_token}:@pemit %#={_token} body me=%!");
+		var start = Notifications.CountFor(_actor.DbRef);
+
+		await Run($"with {foreign}={_token}");
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(HeardSince(start)).IsEquivalentTo([$"{_token} body me=#{foreign.Number}"]);
+	}
+
+	[Test]
+	public async Task WithTriesARoomItself()
+	{
+		// PennMUSH 1.8.8 (80a1d5b): a mortal's `with #0=wcmd` from inside #0 -> No matching command.
+		// The room is a legal target; it simply has no $wcmd.
+		var start = Notifications.CountFor(_actor.DbRef);
+
+		await Run($"with here={_token}");
+
+		await Assert.That(HeardSince(start)).IsEquivalentTo(["No matching command."]);
+	}
+
+	[Test]
+	public async Task WithRoomRunsTheRoomsContents()
+	{
+		// /ROOM tries the contents of the room as a master room would be tried (src/game.c:1419-1427).
+		// PennMUSH 1.8.8 (80a1d5b): `with/room here=wcmd` with a $wcmd thing in the room prints nothing
+		// and queues it; `with/room here=wnope` -> No matching command.
+		await Run($"&CMD {_commands}=${_token}:@pemit %#={_token} body me=%!");
+		var start = Notifications.CountFor(_actor.DbRef);
+
+		await Run($"with/room here={_token}");
+		await Run($"with/room here={_token}nope");
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(HeardSince(start))
+			.IsEquivalentTo([$"{_token} body me=#{_commands.Number}", "No matching command."]);
+	}
+
+	[Test]
+	public async Task WithRoomSkipsTheRoomsExits()
+	{
+		// Contents(x) and Exits(x) are different db fields (hdrs/dbdefs.h:33,36), so the list_match at
+		// src/game.c:1427 never reaches an exit. Live PennMUSH 1.8.8 (80a1d5b), an unlinked exit in the
+		// room carrying `$xcmd` and nothing else matching:
+		//   with/room here=xcmd -> No matching command.
+		//   with XExit=xcmd     -> EXITBODY from #4   (naming the exit itself still runs it)
+		// The actor digs and stands in this one, so it owns the room @open needs to control.
+		var ownRoom = await Run($"@dig {TestIsolationHelpers.GenerateUniqueName("QueuedCmdExitRoom")}");
+		await Cmd($"@tel {_actor.DbRef}={ownRoom}");
+		var exit = DBRef.Parse(await Run($"@open {TestIsolationHelpers.GenerateUniqueName("QueuedCmdExit")}"));
+		await Run($"&CMD {exit}=${_token}:@pemit %#={_token} body me=%!");
+		var start = Notifications.CountFor(_actor.DbRef);
+
+		await Run($"with/room here={_token}");
+		await Run($"with {exit}={_token}");
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(HeardSince(start))
+			.IsEquivalentTo(["No matching command.", $"{_token} body me=#{exit.Number}"], CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task WithRoomOnSomethingThatIsNotARoomMakesRoom()
+	{
+		// PennMUSH 1.8.8 (80a1d5b): `with/room Widget=wcmd` on a thing, and `with/room me=wcmd`, both
+		// print `Make room! Make room!` and run nothing.
+		await Run($"&CMD {_commands}=${_token}:@pemit %#={_token} body me=%!");
+		var start = Notifications.CountFor(_actor.DbRef);
+
+		await Run($"with/room {_commands}={_token}");
+		await Run($"with/room me={_token}");
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(HeardSince(start)).IsEquivalentTo(["Make room! Make room!", "Make room! Make room!"]);
+	}
+
+	[Test]
+	[Arguments("with")]
+	[Arguments("with/room")]
+	public async Task WithOutOfReachIsRefused(string command)
+	{
+		// PennMUSH 1.8.8 (80a1d5b): a mortal naming God's thing in another room by dbref -> I don't see
+		// that here., for both forms (src/game.c:1398-1411).
+		var elsewhere = await Cmd($"@dig {TestIsolationHelpers.GenerateUniqueName("QueuedCmdFar")}");
+		var far = await CreateForeignThing("QueuedCmdFarThing", elsewhere);
+		await Cmd($"&CMD {far}=${_token}:@pemit %#={_token} body me=%!");
+		var start = Notifications.CountFor(_actor.DbRef);
+
+		await Run($"{command} {far}={_token}");
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(HeardSince(start)).IsEquivalentTo(["I don't see that here."]);
+	}
+
+	[Test]
+	[Arguments("with")]
+	[Arguments("with/room")]
+	public async Task WithMissIsReportedToThePlayerOnce(string command)
+	{
+		// #1237: /ROOM put the room in the executor position of the locate, so the miss went to the room
+		// and the player got a second message of SharpMUSH's own. cmd_with matches as the player for
+		// both forms and adds nothing to the match error. PennMUSH 1.8.8 (80a1d5b): `with WNoSuch=wcmd`
+		// and `with/room WNoSuch=wcmd` -> I can't see that here.
+		var roomRef = DBRef.Parse(_room);
+		var start = Notifications.CountFor(_actor.DbRef);
+		var roomStart = Notifications.CountFor(roomRef);
+
+		await Run($"{command} {_token}nosuchthing={_token}");
+
+		await Assert.That(HeardSince(start)).IsEquivalentTo(["I can't see that here."]);
+		await Assert.That(Notifications.For(roomRef).Skip(roomStart)).IsEmpty();
 	}
 
 	// The `]` cases below were checked against a disposable PennMUSH 1.8.8 world (80a1d5b9) with
