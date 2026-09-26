@@ -1037,35 +1037,66 @@ public partial class Commands
 		var targetName = args["0"].Message!.ToPlainText();
 		var command = arg1.Message!;
 
-		AnySharpObject searchLocation = switches.Contains("ROOM")
-			? (await executor.Where()).WithExitOption()
-			: executor;
+		var roomSwitch = switches.Contains("ROOM");
 
+		// cmd_with (src/game.c:1389) matches as the player whether or not /ROOM is given: the player is
+		// both the looker and the one the miss is reported to, and /ROOM only changes what is done with
+		// the match. A miss has already been reported by the locate.
 		var targetResult = await LocateService.LocateAndNotifyIfInvalid(
-			parser, executor, searchLocation, targetName, LocateFlags.All);
+			parser, executor, executor, targetName, LocateFlags.All);
 
 		if (targetResult is not AnySharpObject target)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
-		if (!target.IsPlayer && !target.IsThing)
+		var targetRef = target.Object().DBRef.Number;
+
+		if (!await global::SharpMUSH.Library.Services.LocateService.Nearby(executor, target)
+				&& !await executor.HasLongFingers()
+				&& !await PermissionService.Controls(executor, target))
 		{
-			await NotifyService.Notify(executor, "You can't do that with that.", executor);
-			return CallState.Empty;
+			// Out of reach, only the player's own ZMO or (with /ROOM) the master room may still be used.
+			var isZone = await executor.Object().Zone.WithCancellation(CancellationToken.None) is AnySharpObject zone
+				&& zone.Object().DBRef.Number == targetRef;
+			var isMasterRoom = targetRef == Convert.ToInt32(Configuration.CurrentValue.Database.MasterRoom);
+
+			if ((roomSwitch && !isMasterRoom && !isZone) || (!roomSwitch && (!isZone || target.IsRoom)))
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+				return CallState.Empty;
+			}
+
+			if (roomSwitch && isZone && !target.IsRoom)
+			{
+				await NotifyService.Notify(executor, "Make room! Make room!", executor);
+				return CallState.Empty;
+			}
 		}
 
-		if (!await PermissionService.Controls(executor, target))
+		IAsyncEnumerable<AnySharpObject> candidates;
+		if (!roomSwitch)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return CallState.Empty;
+			candidates = new[] { target }.ToAsyncEnumerable();
+		}
+		else
+		{
+			// /ROOM treats a room, or wherever the player stands, as a master room and tries its contents.
+			var isLocation = executor.IsContent && (await executor.AsContent.Location()).Object().DBRef.Number == targetRef;
+			if ((!target.IsRoom && !isLocation) || !target.IsContainer)
+			{
+				await NotifyService.Notify(executor, "Make room! Make room!", executor);
+				return CallState.Empty;
+			}
+
+			// Exits live on their own chain in PennMUSH (Exits(x), hdrs/dbdefs.h:36), so Contents(x) never
+			// hands one to list_match. GetContentsQuery returns them, so the exclusion has to be ours.
+			candidates = target.AsContainer.Content(Mediator).Where(x => !x.IsExit).Select(x => x.WithRoomOption());
 		}
 
-		// cmd_with (src/game.c:1389) runs only the target's $-commands, with the player as the matcher and
-		// QUEUE_DEFAULT: each match is a new queue entry, even for a line typed at a connection.
-		var matches = await CommandDiscoveryService.MatchUserDefinedCommand(
-			parser, new[] { target }.ToAsyncEnumerable(), command);
+		// Only $-commands are tried, with the player as the matcher and QUEUE_DEFAULT: each match is a
+		// new queue entry, even for a line typed at a connection.
+		var matches = await CommandDiscoveryService.MatchUserDefinedCommand(parser, candidates, command);
 
 		if (!matches.TryGetValue(out var matched))
 		{
