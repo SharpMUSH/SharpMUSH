@@ -998,4 +998,108 @@ public class FlagAndPowerCommandTests
 			.Because($"the store must resolve '{asked}' in any case and by alias, not only where the name happens to match");
 		await Assert.That(flag!.Name).IsEqualTo(expected);
 	}
+
+	// PennMUSH src/flags.c do_flag_alias: "That alias already matches the %s %s." ptab_flag holds names
+	// and aliases in one namespace, so an alias may not spell another flag's name (#1249).
+	[Test]
+	public async ValueTask Flag_Alias_RejectsNameOfAnotherFlag()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var flagName = await CreateLetterlessFlag();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/alias {flagName}=quiet"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Aliases ?? []).IsEmpty();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.FlagAliasConflictFormat), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	// ...nor another flag's alias, in any case.
+	[Test]
+	public async ValueTask Flag_Alias_RejectsAliasOfAnotherFlag()
+	{
+		var holder = await CreateLetterlessFlag();
+		var claimant = await CreateLetterlessFlag();
+		var alias = $"FA_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/alias {holder}={alias}"));
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(holder)))!.Aliases).IsEquivalentTo([alias]);
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@flag/alias {claimant}=OTHER_{alias} {alias.ToLowerInvariant()}"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(claimant)))!.Aliases ?? []).IsEmpty();
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(alias)))!.Name).IsEqualTo(holder);
+
+		await Mediator.Send(new DeleteObjectFlagCommand(holder));
+		await Mediator.Send(new DeleteObjectFlagCommand(claimant));
+	}
+
+	// match_flag_ns resolves a flag's own name too, so Penn refuses aliasing a flag to itself.
+	[Test]
+	public async ValueTask Flag_Alias_RejectsItsOwnName()
+	{
+		var flagName = await CreateLetterlessFlag();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/alias {flagName}={flagName.ToLowerInvariant()}"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Aliases ?? []).IsEmpty();
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	// @flag/alias replaces the whole alias list, so restating the flag's own aliases is not a collision.
+	[Test]
+	public async ValueTask Flag_Alias_AllowsRestatingItsOwnAliases()
+	{
+		var flagName = await CreateLetterlessFlag();
+		var first = $"FA_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var second = $"FB_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/alias {flagName}={first}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/alias {flagName}={first} {second}"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Aliases).IsEquivalentTo([first, second]);
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	// @power/alias shares do_flag_alias, in the POWER flagspace (#1249).
+	[Test]
+	public async ValueTask Power_Alias_RejectsNameOfAnotherPower()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var alias = $"PA_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/alias {powerName}=builder"));
+
+		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Alias).IsEqualTo(alias);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.PowerAliasConflictFormat), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeletePowerCommand(powerName));
+	}
+
+	[Test]
+	public async ValueTask Power_Alias_RejectsAliasOfAnotherPower()
+	{
+		var holder = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var claimant = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var holderAlias = $"PA_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var claimantAlias = $"PB_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {holder}={holderAlias}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {claimant}={claimantAlias}"));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@power/alias {claimant}={holderAlias.ToLowerInvariant()}"));
+
+		await Assert.That((await Mediator.Send(new GetPowerQuery(claimant)))!.Alias).IsEqualTo(claimantAlias);
+
+		await Mediator.Send(new DeletePowerCommand(holder));
+		await Mediator.Send(new DeletePowerCommand(claimant));
+	}
 }

@@ -1170,6 +1170,9 @@
   <data name="FlagAliasesSetFormat" xml:space="preserve">
     <value>Flag '{0}' aliases set to: {1}.</value>
   </data>
+  <data name="FlagAliasConflictFormat" xml:space="preserve">
+    <value>That alias already matches the {0} flag.</value>
+  </data>
   <data name="FlagRestrictRequiresNameAndPermissions" xml:space="preserve">
     <value>@FLAG/RESTRICT requires flag name and permissions.</value>
   </data>
@@ -1231,6 +1234,9 @@
   </data>
   <data name="PowerAliasChangedFormat" xml:space="preserve">
     <value>Power '{0}' alias changed to '{1}'.</value>
+  </data>
+  <data name="PowerAliasConflictFormat" xml:space="preserve">
+    <value>That alias already matches the {0} power.</value>
   </data>
   <data name="FailedToUpdatePowerFormat" xml:space="preserve">
     <value>Failed to update power '{0}'.</value>

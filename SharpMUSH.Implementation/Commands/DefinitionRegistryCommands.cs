@@ -1808,7 +1808,8 @@ public partial class Commands : ICommandRestrictionApplier
 		string DeleteRequires, string NameEmpty, string NotFound, string CannotDeleteSystem, string Deleted, string FailedToDelete,
 		string LetterRequires, string CannotModifySystem, string SingleCharacters, string LetterConflict, string FailedToUpdate,
 		string LetterSet, string LetterCleared, string TypeRequires, string NameAndTypesEmpty, string TypeUpdated,
-		string AliasRequires, string AliasSet, string RestrictRequires, string NameAndPermissionsEmpty, string PermissionsUpdated,
+		string AliasRequires, string AliasSet, string AliasConflict, string RestrictRequires,
+		string NameAndPermissionsEmpty, string PermissionsUpdated,
 		string DecompileRequires, string DisableEnableRequires, string CannotDisableSystem,
 		string DisabledFormat, string EnabledFormat, string FailedToDisableFormat, string FailedToEnableFormat);
 
@@ -1866,6 +1867,7 @@ public partial class Commands : ICommandRestrictionApplier
 			TypeUpdated: nameof(ErrorMessages.Notifications.FlagTypeUpdatedFormat),
 			AliasRequires: nameof(ErrorMessages.Notifications.FlagAliasRequiresNameAndAliases),
 			AliasSet: nameof(ErrorMessages.Notifications.FlagAliasesSetFormat),
+			AliasConflict: nameof(ErrorMessages.Notifications.FlagAliasConflictFormat),
 			RestrictRequires: nameof(ErrorMessages.Notifications.FlagRestrictRequiresNameAndPermissions),
 			NameAndPermissionsEmpty: nameof(ErrorMessages.Notifications.FlagNameAndPermissionsCannotBeEmpty),
 			PermissionsUpdated: nameof(ErrorMessages.Notifications.FlagPermissionsUpdatedFormat),
@@ -1933,6 +1935,7 @@ public partial class Commands : ICommandRestrictionApplier
 			TypeUpdated: nameof(ErrorMessages.Notifications.PowerTypeUpdatedFormat),
 			AliasRequires: nameof(ErrorMessages.Notifications.PowerAliasRequiresNameAndAlias),
 			AliasSet: nameof(ErrorMessages.Notifications.PowerAliasChangedFormat),
+			AliasConflict: nameof(ErrorMessages.Notifications.PowerAliasConflictFormat),
 			RestrictRequires: nameof(ErrorMessages.Notifications.PowerRestrictRequiresNameAndPermissions),
 			NameAndPermissionsEmpty: nameof(ErrorMessages.Notifications.PowerNameAndPermissionsCannotBeEmpty),
 			PermissionsUpdated: nameof(ErrorMessages.Notifications.PowerPermissionsUpdatedFormat),
@@ -2126,9 +2129,35 @@ public partial class Commands : ICommandRestrictionApplier
 				words.Length > 0 ? string.Join(", ", words.Select(a => a.ToUpper())) : "none")
 		};
 
+		if (operation == DefinitionOperation.Alias
+				&& await FindAliasConflict(registry.All(Mediator), entry.Name, updated.Aliases ?? []) is { } conflict)
+		{
+			return await say(keys.AliasConflict, [conflict]);
+		}
+
 		if (!await registry.Update(Mediator, updated)) return await say(keys.FailedToUpdate, [typed]);
 		await say(key, [typed, shown]);
 		return new CallState(MarkupText.Plain(typed));
+	}
+
+	/// <summary>
+	/// <c>do_flag_alias</c> (<c>src/flags.c</c>) refuses an alias that <c>match_flag_ns</c> already
+	/// resolves — "That alias already matches the %s %s." — because <c>ptab_flag</c> holds names and
+	/// aliases in one namespace. Here each definition carries its own alias list and the switch replaces
+	/// it whole, so the edited definition's current aliases may be restated; its name may not.
+	/// </summary>
+	/// <returns>The name of the definition an alias already matches, or null.</returns>
+	private static async ValueTask<string?> FindAliasConflict(IAsyncEnumerable<RegistryEntry> all, string name,
+		IEnumerable<string> aliases)
+	{
+		var proposed = aliases.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		if (proposed.Contains(name)) return name;
+
+		return await all
+			.Where(other => !string.Equals(other.Name, name, StringComparison.OrdinalIgnoreCase))
+			.Where(other => proposed.Contains(other.Name) || (other.Aliases ?? []).Any(proposed.Contains))
+			.Select(other => other.Name)
+			.FirstOrDefaultAsync();
 	}
 
 	private async ValueTask<CallState> DisableDefinitionAsync(DefinitionRegistry registry, AnySharpObject executor,
