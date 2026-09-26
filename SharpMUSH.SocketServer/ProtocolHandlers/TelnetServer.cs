@@ -74,7 +74,7 @@ public class TelnetServer : ConnectionHandler
 		TelnetInterpreter? telnetInterpreter = null;
 		var telnetAnnounced = 0;
 
-		// Anything that writes connection metadata in the main process has to arrive after the handle
+		// Anything that writes connection metadata in the main process, and any line of input, has to arrive after the handle
 		// is registered there, because every one of those consumers gives up on an unregistered handle
 		// after ConnectionRetryPolicy's five 50ms attempts. The read loop starts before RegisterAsync
 		// below, so a client that answers TTYPE within one round trip
@@ -184,8 +184,13 @@ public class TelnetServer : ConnectionHandler
 				// By the time a client has sent a line, whatever it was going to negotiate has settled.
 				await AnnounceTelnetIfNegotiatedAsync();
 
-				await ConnectionInputPublisher.PublishAsync(_publishEndpoint, _connectionService, _logger,
-					nextPort, new TelnetInputMessage(nextPort, input, _connectionService.Get(nextPort)?.SessionId), ct);
+				// Held like the negotiation messages: a client that types as soon as it connects can
+				// deliver a line before RegisterAsync, and published then it carries no SessionId, so the
+				// engine skips its registration wait and parses it for a handle it does not know yet — the
+				// line is lost. The SessionId is read when the message goes out, after registration.
+				await PublishAfterRegistrationAsync(() => ConnectionInputPublisher.PublishAsync(_publishEndpoint,
+					_connectionService, _logger, nextPort,
+					new TelnetInputMessage(nextPort, input, _connectionService.Get(nextPort)?.SessionId), ct));
 			})
 			// Each of these callbacks is also a sampling point for AnnounceTelnetIfNegotiatedAsync,
 			// which asks every plugin rather than just the one that fired: reaching any of them means

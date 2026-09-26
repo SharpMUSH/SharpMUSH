@@ -653,9 +653,7 @@ public class TelnetServerNegotiationTests
 
 			lock (published)
 			{
-				var leaked = published
-					.Where(message => message is not TelnetInputMessage)
-					.ToArray();
+				var leaked = published.ToArray();
 
 				Assert.That(leaked).IsEmpty()
 					.Because("a consumer would drop these: the handle is not registered yet")
@@ -675,6 +673,88 @@ public class TelnetServerNegotiationTests
 				42, Arg.Any<Func<ProtocolCapabilities, ProtocolCapabilities>>());
 
 			await Assert.That(await WaitForPublishedAsync<TelnetNegotiatedMessage>(published)).IsNotNull();
+		}
+		finally
+		{
+			releaseRegistration.TrySetResult();
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+			cts.Dispose();
+		}
+	}
+
+	/// <summary>
+	/// GRA-83: a client that types as soon as it connects — the parity harness sends INFO the moment
+	/// the socket opens — could deliver its first line before RegisterAsync. Published then, the line
+	/// carried no SessionId, so the engine skipped its registration wait and parsed it for a handle it
+	/// had not registered: about one connection in five never got an answer. The line has to be held
+	/// until registration and go out stamped with the session it belongs to, in the order typed.
+	/// </summary>
+	[Test]
+	public async Task InputBeforeRegistration_IsHeldAndCarriesItsSession()
+	{
+		var registrationStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var releaseRegistration = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var registrationComplete = 0;
+
+		var connectionService = Substitute.For<IConnectionServerService>();
+		connectionService
+			.RegisterAsync(
+				Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+				Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
+				Arg.Any<Func<Encoding>>(), Arg.Any<Action>(),
+				Arg.Any<Func<string, string, ValueTask>>(),
+				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>(), cancellationToken: Arg.Any<CancellationToken>())
+			.Returns(async _ =>
+			{
+				registrationStarted.TrySetResult();
+				await releaseRegistration.Task;
+				Volatile.Write(ref registrationComplete, 1);
+			});
+		connectionService.Get(42).Returns(_ => Volatile.Read(ref registrationComplete) == 0
+			? null
+			: new ConnectionServerService.ConnectionData(
+				42, null, ConnectionServerService.ConnectionState.Connected,
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+				() => Encoding.UTF8, () => { }, null, new ProtocolCapabilities(), null, SessionId: "session-1"));
+
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: connectionService);
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, DO, TTYPE));
+			await registrationStarted.Task.WaitAsync(Timeout);
+
+			await WriteAsync(toServer, [.. Encoding.ASCII.GetBytes("INFO\r\nWHO\r\n")]);
+			// The read loop handles bytes in order, so once the server answers this WILL, both lines
+			// above have been submitted.
+			await WriteAsync(toServer, IAC, WILL, TTYPE);
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, TTYPE, SEND, IAC, SE));
+
+			lock (published)
+			{
+				Assert.That(published.OfType<TelnetInputMessage>().ToArray()).IsEmpty()
+					.Because("published now, the line has no session and the engine loses it")
+					.GetAwaiter().GetResult();
+			}
+
+			releaseRegistration.TrySetResult();
+
+			var deadline = DateTimeOffset.UtcNow + Timeout;
+			TelnetInputMessage[] inputs = [];
+			while (inputs.Length < 2 && DateTimeOffset.UtcNow < deadline)
+			{
+				await Task.Delay(25);
+				lock (published)
+				{
+					inputs = [.. published.OfType<TelnetInputMessage>()];
+				}
+			}
+
+			await Assert.That(inputs.Select(input => input.Input)).IsEquivalentTo(["INFO", "WHO"]);
+			await Assert.That(inputs[0].Input).IsEqualTo("INFO");
+			await Assert.That(inputs.All(input => input.SessionId == "session-1")).IsTrue()
+				.Because("the engine matches input to a registration by its session");
 		}
 		finally
 		{
