@@ -1755,6 +1755,57 @@ public class MovementParityTests
 	}
 
 	/// <summary>
+	/// PennMUSH <c>do_dig</c> (<c>src/create.c:518-521</c>): <c>@dig/teleport</c> runs
+	/// <c>@teleport me=#room</c> once the room is dug. The switch was declared and never read.
+	/// </summary>
+	[Test]
+	public async ValueTask DigTeleportMovesTheBuilderIntoTheRoomItDug()
+	{
+		var builder = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DigTelBuilder");
+		var start = await OpenRoom("DigTelStart");
+		await God($"@teleport/silent {builder.DbRef}={start}");
+
+		var dug = await GodParser.CommandParse(builder.Handle, ConnectionService,
+			MarkupText.Plain($"@dig/teleport {TestIsolationHelpers.GenerateUniqueName("DigTelRoom")}"));
+		var room = BareDbref(dug.Message!.ToPlainText().Trim());
+
+		await Assert.That(room).StartsWith("#");
+		await Assert.That(await LocationOf(builder.DbRef.ToString())).IsEqualTo(room);
+	}
+
+	/// <summary>
+	/// Penn digs first and teleports through the full <c>@teleport</c> (<c>create.c:518-520</c>: "we need
+	/// NO_TEL and Z_TEL checking"), so a NO_TEL room the builder does not control keeps them where
+	/// they are, tells them why, and the room is still dug.
+	/// </summary>
+	[Test]
+	public async ValueTask DigTeleportFromANoTelRoomDigsButDoesNotMoveTheBuilder()
+	{
+		var builder = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DigTelNoTelBuilder");
+		var start = await Dig("DigTelNoTelStart");
+		await God($"@teleport/silent {builder.DbRef}={start}");
+		await God($"@set {start}=NO_TEL");
+
+		var name = TestIsolationHelpers.GenerateUniqueName("DigTelNoTelRoom");
+		string room = string.Empty;
+		var builderSaw = await MessagesWhile(builder.DbRef, async () =>
+		{
+			var dug = await GodParser.CommandParse(builder.Handle, ConnectionService,
+				MarkupText.Plain($"@dig/teleport {name}"));
+			room = BareDbref(dug.Message!.ToPlainText().Trim());
+		});
+
+		await Assert.That(room).StartsWith("#");
+		var roomName = await GodParser.FunctionParse(MarkupText.Plain($"[name({room})]"));
+		await Assert.That(roomName!.Message!.ToPlainText()).IsEqualTo(name)
+			.Because("the dig happens before the teleport and is not undone by its refusal");
+		await Assert.That(builderSaw.Any(m => m == ErrorMessages.Notifications.TeleportsNotAllowed)).IsTrue();
+		await Assert.That(await LocationOf(builder.DbRef.ToString())).IsEqualTo(BareDbref(start));
+	}
+
+	/// <summary>
 	/// <c>wiz.c:543</c>: <c>!controls(player, absroom)</c>. A player is not shut inside their own
 	/// NO_TEL room.
 	/// </summary>
