@@ -153,6 +153,33 @@ public class OpenArgumentParityTests
 	}
 
 	/// <summary>
+	/// <c>fun_dig</c> hands its arguments straight to <c>do_dig</c> (<c>fundb.c:2177-2189</c>), which
+	/// opens <c>argv[1]</c> here linked to the new room and <c>argv[2]</c> in the new room linked back
+	/// "here" (<c>create.c:505-512</c>). The function and the command build the same three objects.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask ADigOpensAndLinksBothExits(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var (mortal, home) = await BuilderAsync("OapDigBoth", uid);
+
+		var dug = Ref(await Run(mortal.Handle, throughTheFunction
+			? $"think dig(OapDigBothRoom{uid},OapDigBothTo{uid},OapDigBothFrom{uid})"
+			: $"@dig OapDigBothRoom{uid}=OapDigBothTo{uid},OapDigBothFrom{uid}"));
+
+		var to = await Named($"OapDigBothTo{uid}");
+		var from = await Named($"OapDigBothFrom{uid}");
+		await Assert.That(to.Length).IsEqualTo(1);
+		await Assert.That(from.Length).IsEqualTo(1);
+		await Assert.That(await SourceOf(Ref(to[0]))).IsEqualTo(home.Number);
+		await Assert.That(await DestinationOf(Ref(to[0]))).IsEqualTo(dug.Number);
+		await Assert.That(await SourceOf(Ref(from[0]))).IsEqualTo(dug.Number);
+		await Assert.That(await DestinationOf(Ref(from[0]))).IsEqualTo(home.Number);
+	}
+
+	/// <summary>
 	/// <c>do_dig</c> opens its exits through <c>do_real_open</c> (<c>create.c:507</c>, <c>:518</c>), so
 	/// they are held to <c>can_open_from</c> like any other exit. <c>@dig</c> never asked, and
 	/// <c>dig()</c> now reaches the same code from softcode, so a digger standing in someone else's

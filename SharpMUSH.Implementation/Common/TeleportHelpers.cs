@@ -347,7 +347,8 @@ public static class TeleportHelpers
 		// wiz.c:468: the room the exit sits in decides the eviction, and the new room has to be
 		// one the teleporter could have opened an exit in to begin with.
 		if (!await TportControlOk(services, executor, target, oldSource, telAnything)
-				|| !await CanOpenFrom(services, executor, destinationContainer))
+				|| !await BuildingHelpers.CanOpenFromAsync(services.PermissionService, services.LockService,
+					executor, destinationContainer))
 		{
 			await services.NotifyService.NotifyLocalized(executor,
 				nameof(ErrorMessages.Notifications.PermissionDenied), executor);
@@ -648,33 +649,6 @@ public static class TeleportHelpers
 		AnySharpObject playerOwner = await player.Object().Owner.WithCancellation(CancellationToken.None);
 
 		return !await victimOwner.HasFlag("FIXED") && !await playerOwner.HasFlag("FIXED");
-	}
-
-	/// <summary>
-	/// PennMUSH <c>can_open_from</c> (<c>hdrs/mushdb.h:94</c>): may <paramref name="player"/> source an
-	/// exit in <paramref name="room"/>. Relocating an exit is held to the same standard as opening one
-	/// there in the first place (<c>wiz.c:469</c>).
-	/// </summary>
-	public static async ValueTask<bool> CanOpenFrom(
-		TeleportServices services, AnySharpObject player, AnySharpContainer room)
-	{
-		if (!room.IsRoom || await player.IsGuest())
-		{
-			return false;
-		}
-
-		var roomObject = room.WithExitOption();
-
-		if (await services.PermissionService.Controls(player, roomObject)
-				|| await player.IsWizard()
-				|| await player.IsRoyalty()
-				|| await player.HasPower("Open_Anywhere"))
-		{
-			return true;
-		}
-
-		return await roomObject.HasFlag("OPEN_OK")
-			&& await services.LockService.Evaluate(LockType.Open, roomObject, player);
 	}
 
 	/// <summary>
