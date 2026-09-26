@@ -871,22 +871,16 @@ public partial class Commands
 			PermissionService, LockService, executor, args["0"].Message!,
 			BuildingHelpers.Argument(args, "1"), BuildingHelpers.Argument(args, "2"),
 			BuildingHelpers.Argument(args, "3"), BuildingHelpers.Argument(args, "4"),
-			BuildingHelpers.Argument(args, "5")) switch
+			BuildingHelpers.Argument(args, "5"),
+			parser.CurrentState.Switches.Contains("TELEPORT") ? Teleport : null) switch
 		{
-			DBRef room => await Dug(room),
+			DBRef room => new CallState(room.ToString()),
 			Error<string> refused => new CallState(refused.Value)
 		};
 
-		async ValueTask<CallState> Dug(DBRef room)
-		{
-			if (parser.CurrentState.Switches.Contains("TELEPORT"))
-			{
-				await TeleportHelpers.TeleportAsync(parser, TeleportServices, executor, "me", room.ToString(),
-					new TeleportOptions(List: false, Inside: false, Silent: false));
-			}
-
-			return new CallState(room.ToString());
-		}
+		async ValueTask Teleport(DBRef room)
+			=> await TeleportHelpers.TeleportAsync(parser, TeleportServices, executor, "me", room.ToString(),
+				new TeleportOptions(List: false, Inside: false, Silent: false));
 	}
 
 	private ValueTask<bool> CanLinkTo(AnySharpObject executor, AnySharpObject destination)

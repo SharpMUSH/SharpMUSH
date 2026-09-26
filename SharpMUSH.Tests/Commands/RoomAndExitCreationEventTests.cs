@@ -102,6 +102,33 @@ public class RoomAndExitCreationEventTests
 	}
 
 	/// <summary>
+	/// <c>@dig/teleport</c> moves the digger (<c>create.c:518-525</c>) before <c>do_dig</c> queues the
+	/// room's event (<c>:526</c>), so a handler sees the enactor already in the new room.
+	/// </summary>
+	[Test]
+	public async ValueTask DigTeleportMovesTheDiggerBeforeTheRoomsEvent()
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var home = (await AsGod("think loc(me)")).Trim();
+
+		try
+		{
+			await AsGod($"&OBJECT`CREATE #{EventHandlerDbRefNumber}="
+				+ $"think set(#{EventHandlerDbRefNumber},CREATELOC:[loc(%#)])");
+
+			var room = DBRef.Parse(await AsGod($"@dig/teleport RxeTelRoom{uid}")).Number;
+
+			await Assert.That(DBRef.Parse(await Get("CREATELOC")).Number).IsEqualTo(room);
+		}
+		finally
+		{
+			await AsGod($"@wipe #{EventHandlerDbRefNumber}/OBJECT`CREATE");
+			await AsGod($"@wipe #{EventHandlerDbRefNumber}/CREATELOC");
+			await AsGod($"@tel me={home}");
+		}
+	}
+
+	/// <summary>
 	/// <c>do_open</c> is one <c>do_real_open</c> for the exit and a second for the return exit
 	/// (<c>create.c:229-236</c>), and each queues <c>OBJECT`CREATE</c> (<c>:181</c>).
 	/// </summary>
@@ -163,10 +190,8 @@ public class RoomAndExitCreationEventTests
 		var named = new List<int> { first };
 		foreach (var name in new[] { $"RxeHookTo{uid}", $"RxeHookFrom{uid}", $"RxeHookBack{uid}" })
 		{
-			if ((await AsGod($"think lsearch(all,name,{name})")).Trim() is { Length: > 0 } found)
-			{
-				named.Add(DBRef.Parse(found).Number);
-			}
+			var found = (await AsGod($"think lsearch(all,name,{name})")).Trim();
+			named.AddRange(found.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(f => DBRef.Parse(f).Number));
 		}
 
 		await Assert.That(named.Count).IsEqualTo(created);

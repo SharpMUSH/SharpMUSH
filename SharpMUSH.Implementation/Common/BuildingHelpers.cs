@@ -164,7 +164,8 @@ public static class BuildingHelpers
 		MString? exitFrom,
 		MString? roomDbref,
 		MString? toDbref,
-		MString? fromDbref)
+		MString? fromDbref,
+		Func<DBRef, ValueTask>? beforeRoomEvent = null)
 	{
 		if (string.IsNullOrWhiteSpace(roomName.ToPlainText()))
 		{
@@ -190,6 +191,12 @@ public static class BuildingHelpers
 
 		if (dug is DBRef room)
 		{
+			// @dig/teleport moves the digger (:518-525) before the room's event is queued.
+			if (beforeRoomEvent is not null)
+			{
+				await beforeRoomEvent(room);
+			}
+
 			await AnnounceCreatedAsync(parser, eventService, executor, room);
 		}
 
