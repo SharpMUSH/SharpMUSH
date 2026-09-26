@@ -867,24 +867,26 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		var dug = await BuildingHelpers.DigAsync(Mediator, Database, Configuration, NotifyService, PermissionService,
+		return await BuildingHelpers.DigAsync(Mediator, Database, Configuration, NotifyService, PermissionService,
 			LockService, executor, args["0"].Message!,
 			BuildingHelpers.Argument(args, "1"), BuildingHelpers.Argument(args, "2"),
 			BuildingHelpers.Argument(args, "3"), BuildingHelpers.Argument(args, "4"),
-			BuildingHelpers.Argument(args, "5"));
-
-		if (dug is not DBRef room)
+			BuildingHelpers.Argument(args, "5")) switch
 		{
-			return new CallState(((Error<string>)dug.Value).Value);
-		}
+			DBRef room => await Dug(room),
+			Error<string> refused => new CallState(refused.Value)
+		};
 
-		if (parser.CurrentState.Switches.Contains("TELEPORT"))
+		async ValueTask<CallState> Dug(DBRef room)
 		{
-			await TeleportHelpers.TeleportAsync(parser, TeleportServices, executor, "me", room.ToString(),
-				new TeleportOptions(List: false, Inside: false, Silent: false));
-		}
+			if (parser.CurrentState.Switches.Contains("TELEPORT"))
+			{
+				await TeleportHelpers.TeleportAsync(parser, TeleportServices, executor, "me", room.ToString(),
+					new TeleportOptions(List: false, Inside: false, Silent: false));
+			}
 
-		return new CallState(room.ToString());
+			return new CallState(room.ToString());
+		}
 	}
 
 	private ValueTask<bool> CanLinkTo(AnySharpObject executor, AnySharpObject destination)
