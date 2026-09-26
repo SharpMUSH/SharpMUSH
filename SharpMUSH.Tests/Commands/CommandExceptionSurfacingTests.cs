@@ -187,7 +187,7 @@ public class CommandExceptionSurfacingTests
 	[Test]
 	public async Task ACommandWithNoResolvableExecutorNotifiesTheConnectionHandle()
 	{
-		var handle = Random.Shared.NextInt64(900_000, 999_999);
+		var handle = TestIsolationHelpers.GenerateUniqueHandle();
 		await ConnectionService.Register(handle, "localhost", "localhost", "test",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 		await ConnectionService.Bind(handle, new DBRef(999_999_999));
