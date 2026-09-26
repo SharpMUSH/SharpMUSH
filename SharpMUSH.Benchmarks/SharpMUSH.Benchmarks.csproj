@@ -26,6 +26,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- The generator the import tests use, so the benchmark imports the same shape of database. -->
+		<Compile Include="..\SharpMUSH.Tests\Services\PennMUSHDatabaseGenerator.cs" Link="Shared\PennMUSHDatabaseGenerator.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <Content Update="mushcnf.dst">
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </Content>

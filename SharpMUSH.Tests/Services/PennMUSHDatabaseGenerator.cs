@@ -20,15 +20,15 @@ public static class PennMUSHDatabaseGenerator
 
 	private static readonly string[] AttributeFlags = ["no_command", "visual", "regexp", "case", "locked", "mortal_dark", "hidden", "prefixmatch", "veiled", "debug"];
 
-	private static readonly Random Random = new();
-
 	/// <summary>
 	/// Generates a fake PennMUSH database file with the specified target size.
 	/// </summary>
 	/// <param name="targetSizeBytes">Target file size in bytes (e.g., 10MB = 10 * 1024 * 1024)</param>
+	/// <param name="seed">Seeds the generator, so every call with the same seed writes the same objects</param>
 	/// <returns>Path to the generated database file</returns>
-	public static async Task<string> GenerateLargeDatabaseFileAsync(int targetSizeBytes = 10 * 1024 * 1024)
+	public static async Task<string> GenerateLargeDatabaseFileAsync(int targetSizeBytes = 10 * 1024 * 1024, int? seed = null)
 	{
+		var random = CreateRandom(seed);
 		var tempFile = Path.Combine(Path.GetTempPath(), $"pennmush_test_{Guid.NewGuid()}.db");
 		await using (var writer = new StreamWriter(tempFile, false, new UTF8Encoding(false)))
 		{
@@ -37,7 +37,7 @@ public static class PennMUSHDatabaseGenerator
 			var dbref = 0;
 			while (writer.BaseStream.Length < targetSizeBytes)
 			{
-				await WriteObjectAsync(writer, dbref, TypeFor(dbref));
+				await WriteObjectAsync(writer, random, dbref, TypeFor(random, dbref));
 				dbref++;
 
 				if (dbref % 10 == 0)
@@ -56,9 +56,11 @@ public static class PennMUSHDatabaseGenerator
 	/// Generates a PennMUSH database with a specific number of objects.
 	/// </summary>
 	/// <param name="objectCount">Number of objects to generate</param>
+	/// <param name="seed">Seeds the generator, so every call with the same seed writes the same objects</param>
 	/// <returns>Path to the generated database file</returns>
-	public static async Task<string> GenerateDatabaseWithObjectCountAsync(int objectCount)
+	public static async Task<string> GenerateDatabaseWithObjectCountAsync(int objectCount, int? seed = null)
 	{
+		var random = CreateRandom(seed);
 		var tempFile = Path.Combine(Path.GetTempPath(), $"pennmush_test_{Guid.NewGuid()}.db");
 		await using (var writer = new StreamWriter(tempFile, false, new UTF8Encoding(false)))
 		{
@@ -67,7 +69,7 @@ public static class PennMUSHDatabaseGenerator
 
 			for (var dbref = 0; dbref < objectCount; dbref++)
 			{
-				await WriteObjectAsync(writer, dbref, TypeFor(dbref));
+				await WriteObjectAsync(writer, random, dbref, TypeFor(random, dbref));
 			}
 
 			await writer.WriteLineAsync("***END OF DUMP***");
@@ -75,6 +77,12 @@ public static class PennMUSHDatabaseGenerator
 
 		return tempFile;
 	}
+
+	/// <summary>
+	/// A generator of its own for each file: <see cref="Random"/> is not safe to share between threads,
+	/// and a seeded one gives a benchmark the same database every run.
+	/// </summary>
+	private static Random CreateRandom(int? seed) => seed is { } value ? new Random(value) : new Random();
 
 	/// <summary>
 	/// The header a real dump opens with. The flag, power and attribute tables that follow it in a real
@@ -91,18 +99,18 @@ public static class PennMUSHDatabaseGenerator
 	/// #0-#2 have the shape PennMUSH's <c>create_minimal_db</c> gives every database — Room Zero, God and
 	/// the Master Room — and everything after them is random.
 	/// </summary>
-	private static PennMUSHObjectType TypeFor(int dbref) => dbref switch
+	private static PennMUSHObjectType TypeFor(Random random, int dbref) => dbref switch
 	{
 		0 or 2 => PennMUSHObjectType.Room,
 		1 => PennMUSHObjectType.Player,
-		_ => (PennMUSHObjectType)Random.Next(0, 4)
+		_ => (PennMUSHObjectType)random.Next(0, 4)
 	};
 
-	private static async Task WriteObjectAsync(StreamWriter writer, int dbref, PennMUSHObjectType type)
+	private static async Task WriteObjectAsync(StreamWriter writer, Random random, int dbref, PennMUSHObjectType type)
 	{
 		// Somewhere earlier in the database, or nowhere. For an exit that is its source, which PennMUSH
 		// keeps in the exits field; for a thing or player it is its location.
-		var placedIn = dbref > 0 ? Random.Next(-1, dbref) : -1;
+		var placedIn = dbref > 0 ? random.Next(-1, dbref) : -1;
 		var (location, exits) = type switch
 		{
 			PennMUSHObjectType.Room => (-1, -1),
@@ -118,75 +126,75 @@ public static class PennMUSHDatabaseGenerator
 		await writer.WriteLineAsync("next #-1");
 		await writer.WriteLineAsync("parent #-1");
 
-		var lockCount = Random.Next(1, 6);
+		var lockCount = random.Next(1, 6);
 		await writer.WriteLineAsync($"lockcount {lockCount}");
 		for (var i = 0; i < lockCount; i++)
 		{
-			await WriteLockAsync(writer);
+			await WriteLockAsync(writer, random);
 		}
 
 		// Every object is God's: in a real database most belong to players, but #1 is the one owner
 		// every generated database is sure to have.
 		await writer.WriteLineAsync("owner #1");
 		await writer.WriteLineAsync("zone #-1");
-		await writer.WriteLineAsync($"pennies {Random.Next(0, 10000)}");
+		await writer.WriteLineAsync($"pennies {random.Next(0, 10000)}");
 		await writer.WriteLineAsync($"type {TypeBits(type)}");
-		await WriteLabeledAsync(writer, "flags", RandomWords(CommonFlags, 6));
-		await WriteLabeledAsync(writer, "powers", RandomWords(CommonPowers, 4));
+		await WriteLabeledAsync(writer, "flags", RandomWords(random, CommonFlags, 6));
+		await WriteLabeledAsync(writer, "powers", RandomWords(random, CommonPowers, 4));
 		await WriteLabeledAsync(writer, "warnings", "");
-		await writer.WriteLineAsync($"created {DateTimeOffset.UtcNow.AddDays(-Random.Next(0, 365)).ToUnixTimeSeconds()}");
-		await writer.WriteLineAsync($"modified {DateTimeOffset.UtcNow.AddDays(-Random.Next(0, 30)).ToUnixTimeSeconds()}");
+		await writer.WriteLineAsync($"created {DateTimeOffset.UtcNow.AddDays(-random.Next(0, 365)).ToUnixTimeSeconds()}");
+		await writer.WriteLineAsync($"modified {DateTimeOffset.UtcNow.AddDays(-random.Next(0, 30)).ToUnixTimeSeconds()}");
 
-		var attributeCount = Random.Next(10, 101);
+		var attributeCount = random.Next(10, 101);
 		var isPlayer = type == PennMUSHObjectType.Player;
 		await writer.WriteLineAsync($"attrcount {attributeCount + (isPlayer ? 1 : 0)}");
 		for (var i = 0; i < attributeCount; i++)
 		{
-			await WriteAttributeAsync(writer);
+			await WriteAttributeAsync(writer, random);
 		}
 
 		if (isPlayer)
 		{
-			await WriteAttributeAsync(writer, "XYXXY", "no_command no_clone wizard locked internal",
+			await WriteAttributeAsync(writer, random, "XYXXY", "no_command no_clone wizard locked internal",
 				"2:sha512:ab" + Convert.ToHexStringLower(Guid.NewGuid().ToByteArray()) + ":" + DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 		}
 	}
 
-	private static async Task WriteAttributeAsync(StreamWriter writer)
+	private static async Task WriteAttributeAsync(StreamWriter writer, Random random)
 	{
-		var name = AttributeNames[Random.Next(AttributeNames.Length)];
-		if (Random.Next(0, 10) < 2)
+		var name = AttributeNames[random.Next(AttributeNames.Length)];
+		if (random.Next(0, 10) < 2)
 		{
-			name += "`" + Random.Next(1, 100);
+			name += "`" + random.Next(1, 100);
 		}
 
-		var value = GenerateRandomText(Random.Next(50, 501));
-		if (Random.Next(0, 10) < 3)
+		var value = GenerateRandomText(random, random.Next(50, 501));
+		if (random.Next(0, 10) < 3)
 		{
-			value = $"\x1b[{Random.Next(30, 38)}m{value}\x1b[0m";
+			value = $"\x1b[{random.Next(30, 38)}m{value}\x1b[0m";
 		}
 
-		await WriteAttributeAsync(writer, name, RandomWords(AttributeFlags, 3), value);
+		await WriteAttributeAsync(writer, random, name, RandomWords(random, AttributeFlags, 3), value);
 	}
 
-	private static async Task WriteAttributeAsync(StreamWriter writer, string name, string flags, string value)
+	private static async Task WriteAttributeAsync(StreamWriter writer, Random random, string name, string flags, string value)
 	{
 		await WriteLabeledAsync(writer, " name", name);
 		await writer.WriteLineAsync("  owner #1");
 		await WriteLabeledAsync(writer, "  flags", flags);
-		await writer.WriteLineAsync($"  derefs {Random.Next(0, 100)}");
+		await writer.WriteLineAsync($"  derefs {random.Next(0, 100)}");
 		await WriteLabeledAsync(writer, "  value", value);
 	}
 
-	private static async Task WriteLockAsync(StreamWriter writer)
+	private static async Task WriteLockAsync(StreamWriter writer, Random random)
 	{
-		var key = $"#{Random.Next(0, 100)}";
-		if (Random.Next(0, 10) < 4)
+		var key = $"#{random.Next(0, 100)}";
+		if (random.Next(0, 10) < 4)
 		{
-			key += $"|#{Random.Next(0, 100)}";
+			key += $"|#{random.Next(0, 100)}";
 		}
 
-		await WriteLabeledAsync(writer, " type", CommonLockTypes[Random.Next(CommonLockTypes.Length)]);
+		await WriteLabeledAsync(writer, " type", CommonLockTypes[random.Next(CommonLockTypes.Length)]);
 		await writer.WriteLineAsync("  creator #1");
 		await WriteLabeledAsync(writer, "  flags", "");
 		await writer.WriteLineAsync("  derefs 0");
@@ -218,17 +226,17 @@ public static class PennMUSHDatabaseGenerator
 		_ => $"Player{dbref}"
 	};
 
-	private static string RandomWords(string[] from, int atMost)
-		=> string.Join(" ", Enumerable.Range(0, Random.Next(0, atMost)).Select(_ => from[Random.Next(from.Length)]).Distinct());
+	private static string RandomWords(Random random, string[] from, int atMost)
+		=> string.Join(" ", Enumerable.Range(0, random.Next(0, atMost)).Select(_ => from[random.Next(from.Length)]).Distinct());
 
-	private static string GenerateRandomText(int length)
+	private static string GenerateRandomText(Random random, int length)
 	{
 		const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,;:!?-'\"()[]{}";
 		var sb = new StringBuilder(length);
 
 		for (var i = 0; i < length; i++)
 		{
-			sb.Append(chars[Random.Next(chars.Length)]);
+			sb.Append(chars[random.Next(chars.Length)]);
 		}
 
 		return sb.ToString();
