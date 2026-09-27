@@ -1345,7 +1345,7 @@ You say, "0"
 - [sin()]
 - [tan()]
 # PCREATE()
-`pcreate(<name>, <password>)`
+`pcreate(<name>, <password>[, <dbref>])`
 
   Creates a player with a given `<name>` and `<password>`. This function can only be used by wizards.
 

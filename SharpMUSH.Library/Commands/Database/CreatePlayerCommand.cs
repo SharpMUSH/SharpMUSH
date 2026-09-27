@@ -20,8 +20,9 @@ namespace SharpMUSH.Library.Commands.Database;
 /// </param>
 /// <param name="ModifiedTime">Modification time in Unix milliseconds, or <c>null</c> to match the creation time.</param>
 /// <param name="RequestedDbref">
-/// Import only: the dbref the new object must have, so the source database's ids — which its softcode
-/// holds — survive. <c>null</c> takes the next one.
+/// The dbref the new object must have: an import's, so the source database's ids — which its softcode
+/// holds — survive, or the one <c>@pcreate</c> names, which <c>BuildingHelpers.WithRequestedDbrefsAsync</c>
+/// has already checked free under its gate. <c>null</c> takes the next one.
 /// </param>
 public record CreatePlayerCommand(string Name, string Password, DBRef Location, DBRef Home, int Quota, string? Salt = null,
 	bool ApplyDefaultFlags = true, long? CreationTime = null, long? ModifiedTime = null, int? RequestedDbref = null) : ICommand<DBRef>, ICacheInvalidating, ICacheInvalidatingByResult<DBRef>

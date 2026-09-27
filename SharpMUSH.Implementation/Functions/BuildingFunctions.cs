@@ -17,8 +17,28 @@ public partial class Functions
 {
 	// This is not directly compatible with functions that expect just a DBREF (#1234).
 	// Consider adding a configuration option for backward compatibility mode.
-	[SharpFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.WizardOnly)]
+	/// <remarks>
+	/// <c>fun_pcreate</c> (<c>src/fundb.c:2129-2141</c>) hands <c>args[2]</c> to <c>do_pcreate</c>, which
+	/// settles it through <c>make_first_free_wrapper</c> before the name and the password
+	/// (<c>src/wiz.c:120</c>).
+	/// </remarks>
+	[SharpFunction(Name = "pcreate", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.WizardOnly)]
 	public async ValueTask<CallState> PCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		return await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
+			[BuildingHelpers.Argument(parser.CurrentState.Arguments, "2")],
+			async at => await CreatedPlayerAsync(parser, executor, at[0])) switch
+		{
+			DBRef created => new CallState($"#{created.Number}:{created.CreationMilliseconds}"),
+			Error<string> refused => new CallState(refused.Value)
+		};
+	}
+
+	/// <summary>do_pcreate's three refusals, in its order, with ok_player_name asked by the executor.</summary>
+	private async ValueTask<Result<DBRef>> CreatedPlayerAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		DBRef? requested)
 	{
 		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);
@@ -33,32 +53,29 @@ public partial class Functions
 		var name = args["0"].Message!.ToPlainText();
 		var password = args["1"].Message!.ToPlainText();
 
-		// do_pcreate's three refusals, in its order, with ok_player_name asked by the executor.
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await Mediator.CreateStream(new GetPlayerQuery(name))
 				.AnyAsync(x => x.Object.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
 		{
-			return new CallState(ErrorMessages.Returns.PlayerNameInUse);
+			return new Error<string>(ErrorMessages.Returns.PlayerNameInUse);
 		}
 
 		if (!await ValidateService.ValidPlayerName(MarkupText.Plain(name), executor, new None()))
 		{
-			return new CallState(ErrorMessages.Returns.BadPlayerName);
+			return new Error<string>(ErrorMessages.Returns.BadPlayerName);
 		}
 
 		if (!await ValidateService.Valid(IValidateService.ValidationType.Password, MarkupText.Plain(password), new None()))
 		{
-			return new CallState(ErrorMessages.Returns.BadPassword);
+			return new Error<string>(ErrorMessages.Returns.BadPassword);
 		}
 
-		var created = await Mediator.Send(new CreatePlayerCommand(
+		return await Mediator.Send(new CreatePlayerCommand(
 			name,
 			password,
 			new DBRef(trueLocation == -1 ? 1 : trueLocation),
 			defaultHomeDbref,
-			startingQuota));
-
-		return new CallState($"#{created.Number}:{created.CreationMilliseconds}");
+			startingQuota,
+			RequestedDbref: requested?.Number));
 	}
 
 	/// <remarks>

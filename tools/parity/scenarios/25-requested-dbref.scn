@@ -1,0 +1,79 @@
+# Building at a requested dbref (#1084). Wizards and Pick_Dbref holders may name a garbage dbref for
+# @create, @dig, @open, @clone, @pcreate and their functions (make_first_free_wrapper, src/destroy.c);
+# anything else is refused and builds nothing.
+# Holes are made by creating an object and recycling it twice (the second @recycle of a GOING object frees
+# it at once, src/destroy.c), and every hole is kept in an attribute so steps never name a literal dbref.
+# Every build after the holes exist names its dbref, or is refused: PennMUSH's new_object() reuses the most
+# recently freed slot for a build that names none, SharpMUSH takes the counter's next id, and that is not
+# what is under test.
+# Wiz takes No_Pay first: PennMUSH charges even a wizard for building and queueing, and money is not what is
+# under test. set() evaluates, where & would store the text unevaluated. @dolist/inline runs the recycling
+# before the step's sync, so its output cannot straddle two steps as a queued @dolist's can.
+# Checks compare with num() and test refusals by prefix (strmatch(...,#-1*)), as the compatibility profile
+# advises: SharpMUSH's objids and its "#-1 <REASON>" returns are deliberate, and a destroyed object leaves no
+# garbage row to test with isdbref(). The requested-dbref behaviour is what these steps compare.
+::case dbref.holes  a wizard makes garbage slots to build into
+::login wiz Wiz wizpass
+::as wiz
+@power me=No_Pay
+think [set(me,HOLES:[create(RqA)] [create(RqB)] [create(RqC)] [create(RqD)] [create(RqE)] [create(RqF)] [create(RqG)] [create(RqH)] [create(RqI)] [create(RqJ)] [create(RqK)] [create(RqL)] [create(RqM)] [create(RqN)] [create(RqO)] [create(RqP)] [create(RqQ)])]
+@dolist/inline [v(HOLES)]={@recycle ##;@recycle ##}
+think [words(v(HOLES))]
+
+::case dbref.create  @create and create() take the hole they ask for
+@create RqThing=,[elements(v(HOLES),1)]
+think [strmatch(num(RqThing),elements(v(HOLES),1))]
+think [strmatch(num(create(RqFun,,elements(v(HOLES),2))),elements(v(HOLES),2))]
+@create RqCost=10,[elements(v(HOLES),3)]
+think [strmatch(num(RqCost),elements(v(HOLES),3))]
+
+::case dbref.refused  occupied, out-of-range and malformed dbrefs are refused and build nothing
+@create RqTaken=,[num(me)]
+think [strmatch(create(RqTaken,,num(me)),#-1*)]
+@create RqFar=,#99999
+think [strmatch(create(RqFar,,#99999),#-1*)]
+@create RqBare=,42
+@create RqJunk=,#notanumber
+think [strmatch(create(RqJunk,,#notanumber),#-1*)]
+@create RqNeg=,#-1
+think [isdbref(num(RqTaken))] [isdbref(num(RqFar))] [isdbref(num(RqBare))] [isdbref(num(RqJunk))] [isdbref(num(RqNeg))]
+
+::case dbref.mortal  a mortal without Pick_Dbref is refused and the hole survives
+&HOLE *Alice=[elements(v(HOLES),4)]
+::login alice Alice alicepass
+::as alice
+@create RqMine=,[v(HOLE)]
+think [strmatch(create(RqMine,,v(HOLE)),#-1*)]
+@dig RqMineRoom=,,[v(HOLE)]
+think [strmatch(clone(Widget,RqMineClone,v(HOLE)),#-1*)]
+::as wiz
+think [isdbref(num(RqMine))] [isdbref(num(RqMineClone))]
+@create RqAfter=,[get(*Alice/HOLE)]
+think [strmatch(num(RqAfter),get(*Alice/HOLE))]
+
+::case dbref.dig  @dig and dig() take all three dbrefs, and a refusal digs nothing
+@dig RqRoom=RqOut,RqBack,[elements(v(HOLES),5)],[elements(v(HOLES),6)],[elements(v(HOLES),14)]
+think [strmatch(num(RqOut),elements(v(HOLES),6))] [strmatch(num(loc(RqOut)),elements(v(HOLES),5))] [strmatch(num(lexits(elements(v(HOLES),5))),elements(v(HOLES),14))]
+@dig RqBadRoom=RqBadOut,RqBadBack,[elements(v(HOLES),7)],[num(me)]
+think [isdbref(num(RqBadOut))]
+think [strmatch(num(dig(RqFunRoom,RqFunOut,RqFunBack,elements(v(HOLES),7),elements(v(HOLES),8),elements(v(HOLES),9))),elements(v(HOLES),7))]
+think [strmatch(num(RqFunOut),elements(v(HOLES),8))] [strmatch(num(lexits(elements(v(HOLES),7))),elements(v(HOLES),9))]
+
+::case dbref.open  @open and open() take the dbrefs they ask for
+@open RqExit=here,RqExitBack,here,[elements(v(HOLES),10)],[elements(v(HOLES),13)]
+think [strmatch(num(RqExit),elements(v(HOLES),10))] [strmatch(num(RqExitBack),elements(v(HOLES),13))]
+think [strmatch(num(open(RqFunExit,here,here,elements(v(HOLES),11))),elements(v(HOLES),11))]
+think [strmatch(open(RqBadExit,here,here,num(me)),#-1*)] [isdbref(num(RqBadExit))]
+
+::case dbref.clone  @clone and clone() take the dbref they ask for
+@clone RqThing=RqCopy,[elements(v(HOLES),12)]
+think [strmatch(num(RqCopy),elements(v(HOLES),12))]
+think [strmatch(num(clone(RqThing,RqFunCopy,elements(v(HOLES),17))),elements(v(HOLES),17))]
+think [strmatch(clone(RqThing,RqBadCopy,num(me)),#-1*)] [isdbref(num(RqBadCopy))]
+
+::case dbref.pcreate  @pcreate and pcreate() take the dbref they ask for
+@pcreate RqPlayer=rqpass,[elements(v(HOLES),15)]
+think [strmatch(num(*RqPlayer),elements(v(HOLES),15))] [checkpass(*RqPlayer,rqpass)]
+think [strmatch(num(pcreate(RqFunPlayer,rqpass,elements(v(HOLES),16))),elements(v(HOLES),16))]
+@pcreate RqBadPlayer=rqpass,[num(me)]
+think [strmatch(pcreate(RqBadPlayer,rqpass,num(me)),#-1*)] [isdbref(num(*RqBadPlayer))]
