@@ -437,23 +437,27 @@ representation choice is deliberate and tracked separately in #1006 item 13.
 
 **A choice.**
 
-**PennMUSH** turns a destroyed object into garbage and puts its dbref on a free list;
-`new_object()` takes the next object from that list (`free_get()`, `src/db.c`, `src/destroy.c`), so
-the most recently destroyed dbref is the next one created. `isdbref()` answers 1 for a garbage dbref,
-because `parse_objid()` accepts any dbref inside the database (`fun_isdbref`, `src/fundb.c`).<br>
-**SharpMUSH** keeps no garbage objects. A new object takes the next dbref after the highest one ever
-allocated, so a destroyed object's dbref is not handed out again unless a wizard names it
-(`@create <name>=<cost>,<dbref>`), and `isdbref()` answers 0 for it.<br>
+**PennMUSH** turns a destroyed object into garbage when it is purged and puts its dbref on a free
+list; `new_object()` takes the next object from that list (`free_get()`, `src/db.c`,
+`src/destroy.c`), so the most recently purged dbref is the next one created. `isdbref()` answers 1
+for a garbage dbref, because `parse_objid()` accepts any dbref inside the database (`fun_isdbref`,
+`src/fundb.c`).<br>
+**SharpMUSH** keeps no garbage objects: a purged object's row is removed. A new object takes the next
+dbref after the highest one ever allocated, so a purged object's dbref is not handed out again unless
+a wizard or a holder of the `Pick_DBRefs` power names it (`@create <name>=<cost>,<dbref>`), and
+`isdbref()` answers 0 for it.<br>
 **Why.** A dbref stored in an attribute, a lock or a list keeps pointing at nothing once its object
 is gone, instead of silently pointing at whatever was created next.<br>
 **Workaround.** Do not rely on a new object taking a destroyed object's dbref, and test whether a
-dbref still names an object with `isdbref()`, not by comparing against old dbrefs. Where it matters
-that the object is the same one, store its objid: `isobjid()` answers 0 for a destroyed object on
-both servers.
+dbref still names an object with `isdbref()`, not by comparing against old dbrefs.
+
+Until the purge, the object is only set `GOING`, and both servers answer `isdbref()` with 1. Here the
+second `@nuke` of a `GOING` object purges it at once:
 
 ```sharp unchecked
 > @create Scratch
 Created Scratch (#50:1789000000123).
+> @nuke #50
 > @nuke #50
 > think isdbref(#50)
 0
@@ -461,7 +465,7 @@ Created Scratch (#50:1789000000123).
 Created Scratch (#51:1789000000456).
 ```
 
-In PennMUSH, once `#50` has been purged, the same lines answer `1` and create `#50` again.
+In PennMUSH the same lines answer `1` and create `#50` again.
 
 ## Number precision
 
