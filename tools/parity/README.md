@@ -43,6 +43,10 @@ free ports, and torn down afterwards, so runs neither collide with each other no
 
 Coverage of the five areas: DB import (`05-import`), player and admin login (`00-login`), player
 commands (`10-player-commands`), admin commands (`20-admin-commands`), softcode (`30-softcode`).
+`40-compat-choices` is the example for each deliberate difference in the compatibility profile that
+needs a second player, God or a server setting: one case per profile entry, whose differing step is in
+`known-differences.json` under that entry's heading. The entry names the case in an `**Example.**` line,
+and `CompatibilityProfileStructureTests` checks that the case exists and is allowlisted there.
 
 ## Scenario format (`scenarios/*.scn`)
 

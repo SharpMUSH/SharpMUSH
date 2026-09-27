@@ -8,7 +8,9 @@ three things, and this profile keeps them apart:
   depends on either behaviour.<br>
   **A defect.** Tracked by an issue. It will change.
 
-Every entry here can be checked from inside the game; the examples are lines you can type.
+Every entry here can be checked from inside the game; the examples are lines you can type. Where an
+example needs a second player, God or a server setting, the entry names the case in the parity harness
+(`tools/parity/scenarios/`) that runs it on PennMUSH and SharpMUSH side by side.
 
   [COMPATIBILITY CONFIG]    settings that change how your code evaluates<br>
   [COMPATIBILITY PARSER]    evaluation, dispatch and error handling<br>
@@ -280,7 +282,8 @@ the player with the same text.<br>
 **Why.** Producing no output at all is indistinguishable from a command that did nothing on
 purpose.<br>
 **Workaround.** See `help exception` for the payload and what a mortal versus a wizard is shown.<br>
-**No example.** A command that crashes is a defect, and none is kept around to show this with.
+**No example.** A command that crashes is a defect, and none is kept around to show this with. Once
+one is found it is fixed, so there is no command whose output could stand as the example.
 
 ## A failing function says why
 
@@ -341,16 +344,21 @@ This command has not been implemented.
 to it and lasts across restarts. `/save` does the same and says so.<br>
 **Why.** There is no `mush.cnf` for a running game to fall back to.<br>
 **Workaround.** Set the value back when a change was meant to be temporary.<br>
-**No example.** The difference shows only after a restart.
+**No example.** The difference shows only after a restart, and the parity harness starts each server
+once per run.
 
 ## `command_restrictions` reapplies without a restart
 
 **A choice.**
 
-**PennMUSH** reads `command_restrictions` only at startup and restart (`game.c:757`, `bsd.c:1284`),
-and has no way to undo a restriction once it is applied.<br>
-**SharpMUSH** applies it at startup, before `@STARTUP` runs, as PennMUSH does, and applies it again
-whenever it is changed from the portal or `@config/set`, in both directions: a command the change no
+**PennMUSH** applies the `restrict_command` lines of `mush.cnf` at startup and restart (`game.c:757`,
+`bsd.c:1284`). `@config/set restrict_command=<command> <restriction>` applies one more while the game
+runs (`cmds.c:334-335`, `conf.c:866-896`). Each one replaces the command's restriction
+(`command.c:1752-1760`). There is no list to take a line back out of, so nothing returns a command to the
+restriction it was made with.<br>
+**SharpMUSH** keeps the lines as one setting, `command_restrictions`. It applies it at startup, before
+`@STARTUP` runs, as PennMUSH does, and applies it again whenever it is changed from the portal, in both
+directions: a command the change no
 longer restricts goes back to the restriction it was made with, and is enabled again if the
 configuration had disabled it with `nobody`. Every command the old or the new setting names starts
 again from the restriction it was made with, so a live `@command/restrict` on one of those commands
@@ -360,7 +368,9 @@ alone. (#1250)<br>
 restart looks as if it had been ignored.<br>
 **Workaround.** After changing `command_restrictions`, repeat any `@command/restrict` that should
 still apply to a command it names, or put the restriction in `command_restrictions` itself.<br>
-**No example.** Changing `command_restrictions` changes the command table for every player.
+**No example.** SharpMUSH changes `command_restrictions` only from the portal, which the parity harness
+does not drive. PennMUSH's in-game route, `@config/set restrict_command`, is refused here; that is a
+defect (see [COMPATIBILITY DEFECTS]), not this choice.
 
 ## PennMUSH's file and allocator housekeeping answers `NOT SUPPORTED`
 
@@ -373,7 +383,7 @@ database, so it has neither. Those commands return `#-1 NOT SUPPORTED`, and `@lo
 the attempt in the server log.<br>
 **Why.** Nothing in the game owns the resource those commands manage.<br>
 **Workaround.** Rotate logs where they are configured.<br>
-**No example.** The commands are God-only and answer with a message, not a value `think` can show.
+**Example.** The parity case `choice.housekeeping` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
 
 ## The HTTP and event handlers exist from the start
 
@@ -405,7 +415,7 @@ shows only in the enactor of the `OBJECT`MOVE` event. (#1006 item 9)<br>
 **Why.** There is no `SYSEVENT` dbref to name.<br>
 **Workaround.** Do not rely on an `OBJECT`MOVE` handler's enactor to tell a drop-to move from any
 other.<br>
-**No example.** It needs an event handler, a room with a drop-to and a second object moving.
+**Example.** The parity case `choice.dropto` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
 
 ## Typed input is bounded by a pending count, not a replenishing rate
 
@@ -815,7 +825,7 @@ answers `#-1 RECIPIENT DOES NOT ACCEPT MAIL FROM YOU` when that count is zero.<b
 unlike `@mail`, they are forwarding something they cannot re-send from memory.<br>
 **Workaround.** Read the count in `MAIL: <n> messages forwarded.` rather than assuming the forward
 arrived. Code that tested only for a dbref answer sees an error string instead.<br>
-**No example.** It needs a second player to send or receive the mail.
+**Example.** The parity case `choice.mail-fwd` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
 
 ## A `MAILFILTER` that mails its owner does not recurse
 
@@ -828,7 +838,8 @@ no filter runs for it.<br>
 **Why.** The captured PennMUSH run crashed the server. Nothing useful depends on the recursion.<br>
 **Workaround.** None needed. A filter that files its own notifications must do so by sending to the
 folder it wants rather than by expecting its own filter to run again.<br>
-**No example.** It needs a second player to send or receive the mail.
+**No example.** PennMUSH's side crashed the server when it was captured, and a crash would end the
+parity run.
 
 ## Folders are named freely and created on delivery
 
@@ -843,7 +854,7 @@ the player's folders as the message is filed, exactly as `@mail/file` does.<br>
 first means the first message that matches is the one that goes astray.<br>
 **Workaround.** Filters written for PennMUSH keep working. A filter that returns a name PennMUSH would
 have rejected files here instead of erroring, so check the spelling — a typo makes a folder.<br>
-**No example.** It needs a second player to send or receive the mail.
+**Example.** The parity case `choice.mail-folder` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
 
 ## An empty `MAILFORWARDLIST` is no list
 
@@ -856,7 +867,7 @@ list is read without parents either way, so a parent's list never forwards a chi
 **Why.** One `&MAILFORWARDLIST me=` should not silently stop a player's mail.<br>
 **Workaround.** Nothing to change in code that never wrote an empty list. Do not reach for an empty
 `MAILFORWARDLIST` as a way to stop receiving mail: it stops nothing here.<br>
-**No example.** It needs a second player to send or receive the mail.
+**Example.** The parity case `choice.mail-forwardlist` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
 
 # COMPATIBILITY UNRESOLVED
 Known differences with **no decision recorded**. Do not write code that depends on either behaviour;
@@ -923,7 +934,9 @@ choices.
   **`attrib_set#()` cannot be called.** The parser's function-name token does not admit `#`, so the
   text is returned unchanged. Use `attrib_set()`. (#974)<br>
   **`objmem()` always answers 0.** (#974)<br>
-  **`buy` has no economy.** It is a stub. (#1006 item 10)
+  **`buy` has no economy.** It is a stub. (#1006 item 10)<br>
+  **`@config/set restrict_command` is refused.** PennMUSH restricts the command while the game runs;
+  SharpMUSH answers "Couldn't set that option." (parity case `admin.restrict-command`)
 
 The other movement and queue gaps left by the movement work are enumerated in #1006 rather than
 repeated here; its items 1, 2, 4 and 15 are in [COMPATIBILITY UNRESOLVED].
