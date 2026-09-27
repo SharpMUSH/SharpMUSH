@@ -50,3 +50,14 @@ think [haspower(*Alice,GUEST)]
 @search name=Widget
 @find Widget
 @stats
+
+::case admin.restrict-command  @config/set restrict_command restricts a command live
+# PennMUSH applies it through config_set's restrict_command branch (conf.c:866, reached from cmds.c:335).
+::login god One godpass
+::as god
+@config/set restrict_command=@find wizard
+::as alice
+@find Widget
+::as god
+@command/restrict @find=!FLAG^GAGGED
+::as wiz

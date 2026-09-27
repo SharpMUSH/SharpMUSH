@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Tests.Documentation;
 
@@ -12,8 +13,10 @@ namespace SharpMUSH.Tests.Documentation;
 /// decided difference unless its section says otherwise ([COMPATIBILITY UNRESOLVED], [COMPATIBILITY
 /// DEFECTS], [COMPATIBILITY MATCHED]) or <see cref="NotADifference"/> names it with the reason. A
 /// decided difference says <c>**A choice.**</c> and gives what PennMUSH does, what SharpMUSH does, why,
-/// a workaround and an example. An entry that cannot be shown from a single session says
-/// <c>**No example.**</c> and why, so the gap is visible rather than silent.</para>
+/// a workaround and an example. The example is a <c>```sharp</c> block, or, when it needs a second
+/// player, God or a server setting, an <c>**Example.**</c> line naming the parity harness case that runs
+/// it on both servers. Only the entries in <see cref="NoExample"/> may say <c>**No example.**</c>
+/// instead, each with the reason there is none.</para>
 ///
 /// <para>The differential harness's allowlist, <c>tools/parity/known-differences.json</c>, may only
 /// excuse a difference the profile records as a choice: a difference that is not written up there is
@@ -46,6 +49,23 @@ public class CompatibilityProfileStructureTests
 		["SharpMUSH-only commands"] = "additions: PennMUSH softcode cannot call a name it never had",
 	};
 
+	/// <summary>
+	/// Decided differences that no example can show, and why. Anything else needs one, so a new entry
+	/// cannot leave the example out by writing <c>**No example.**</c>.
+	/// </summary>
+	private static readonly Dictionary<string, string> NoExample = new()
+	{
+		["A command that crashes says so"] = "a crash is a defect, fixed once found, so none is kept to show it",
+		["`@config/set` is stored"] = "shows only after a restart; the parity harness starts each server once",
+		["`command_restrictions` reapplies without a restart"] = "SharpMUSH changes it only from the portal",
+		["A `MAILFILTER` that mails its owner does not recurse"] = "PennMUSH's side crashes the server",
+	};
+
+	/// <summary>An <c>**Example.**</c> line: the parity case and the scenario file it is in.</summary>
+	private static readonly Regex ParityExample = new(
+		@"\*\*Example\.\*\* The parity case `(?<case>[^`]+)` in `tools/parity/scenarios/(?<scenario>[^`/]+)\.scn`",
+		RegexOptions.Compiled);
+
 	/// <summary>One <c>## </c> entry: its section (the <c>#</c> heading above it), heading and text.</summary>
 	public sealed record ProfileEntry(int Line, string Section, string Heading, string Body)
 	{
@@ -65,10 +85,67 @@ public class CompatibilityProfileStructureTests
 			await Assert.That(entry.Body).Contains(part).Because($"{entry} is a decided difference");
 		}
 
-		var hasExample = entry.Body.Contains("```sharp", StringComparison.Ordinal)
-			|| entry.Body.Contains("**No example.**", StringComparison.Ordinal);
+		var hasExample = entry.Body.Contains("```sharp", StringComparison.Ordinal) || ParityExample.IsMatch(entry.Body);
+		if (NoExample.ContainsKey(entry.Heading))
+		{
+			await Assert.That(hasExample).IsFalse().Because($"{entry} has an example; take it out of NoExample");
+			await Assert.That(entry.Body).Contains("**No example.**").Because($"{entry} is in NoExample and must say why");
+			return;
+		}
+
 		await Assert.That(hasExample).IsTrue()
-			.Because($"{entry} needs a ```sharp example, or a **No example.** line saying why it has none");
+			.Because($"{entry} needs a ```sharp example or an **Example.** line naming its parity case");
+		await Assert.That(entry.Body).DoesNotContain("**No example.**")
+			.Because($"{entry} is not in NoExample, so it may not go without an example");
+	}
+
+	/// <summary>
+	/// A parity case only shows a difference if the harness runs it and allowlists the step that differs
+	/// under this entry. A case that is missing, or a difference excused under another heading, would
+	/// leave the entry pointing at nothing.
+	/// </summary>
+	[Test]
+	public async ValueTask ParityExamplesAreAllowlistedUnderTheirEntry()
+	{
+		var scenarios = Path.Combine(TestPaths.RepositoryRoot, "tools", "parity", "scenarios");
+		using var allowlist = JsonDocument.Parse(
+			File.ReadAllText(Path.Combine(TestPaths.RepositoryRoot, "tools", "parity", "known-differences.json")));
+		var allowed = allowlist.RootElement.GetProperty("entries").EnumerateArray()
+			.Select(known => (
+				Scenario: known.GetProperty("scenario").GetString(),
+				Case: known.GetProperty("case").GetString(),
+				Profile: known.GetProperty("profile").GetString()))
+			.ToList();
+
+		var examples = ReadEntries()
+			.SelectMany(entry => ParityExample.Matches(entry.Body).Select(match => (entry, match)))
+			.ToList();
+		await Assert.That(examples).IsNotEmpty();
+
+		foreach (var (entry, match) in examples)
+		{
+			var scenario = match.Groups["scenario"].Value;
+			var caseId = match.Groups["case"].Value;
+			var file = Path.Combine(scenarios, scenario + ".scn");
+
+			await Assert.That(File.Exists(file)).IsTrue().Because($"{entry} names {scenario}.scn");
+			var declared = File.ReadLines(file).Any(line => line.StartsWith($"::case {caseId} ", StringComparison.Ordinal));
+			await Assert.That(declared).IsTrue().Because($"{entry} names case {caseId}, which {scenario}.scn does not declare");
+			await Assert.That(allowed).Contains((scenario, caseId, entry.Heading))
+				.Because($"{entry}: known-differences.json must allowlist a step of {caseId} under this heading");
+		}
+	}
+
+	/// <summary>An exception whose entry has gone would otherwise sit in the list unnoticed.</summary>
+	[Test]
+	public async ValueTask EveryNoExampleNamesADecidedDifference()
+	{
+		var decided = DecidedDifferences().Select(entry => entry().Heading).ToHashSet();
+
+		foreach (var heading in NoExample.Keys)
+		{
+			await Assert.That(decided).Contains(heading).Because($"NoExample names \"{heading}\"");
+		}
 	}
 
 	[Test]
