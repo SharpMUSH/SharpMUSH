@@ -25,7 +25,6 @@ public class ChannelBroadcastService(
 {
 	public async ValueTask BroadcastAsync(ChannelMessageNotification notification, CancellationToken cancellationToken)
 	{
-		var chanName = notification.Channel.Name;
 		var sender = notification.Source is AnySharpObject found ? found : null;
 		// extchat.c:3944-3948 - %7 is one of two literals for every send, never the raw switch list:
 		// a /silent send reports "silent", everything else reports "noisy".
@@ -33,175 +32,15 @@ public class ChannelBroadcastService(
 			? "silent"
 			: "noisy";
 
-		// extchat.c:3781-3791 picks the type character in this order: CB_PRESENCE "@", CB_POSE ":",
-		// CB_SEMIPOSE ";", CB_EMIT "|", anything else speech. Announce is the presence message
-		// (ConnectionAnnounceService sends connect and disconnect lines with it, the way
-		// chat_player_announce sends CB_PRESENCE) and Emit is @cemit's CB_EMIT, so those two are "@"
-		// and "|" respectively. Both render alike in BuildDefaultMessage; the character only reaches
-		// the mogrifier and @chatformat callbacks as %0.
-		var chatType = notification.MessageType switch
+		var line = await MogrifyAsync(notification, sender, ChatTypeFor(notification.MessageType), options, cancellationToken);
+
+		if (line.BlockMessage != null && sender is not null)
 		{
-			INotifyService.NotificationType.Announce => "@",
-			INotifyService.NotificationType.NSAnnounce => "@",
-			INotifyService.NotificationType.Pose => ":",
-			INotifyService.NotificationType.NSPose => ":",
-			INotifyService.NotificationType.SemiPose => ";",
-			INotifyService.NotificationType.NSSemiPose => ";",
-			INotifyService.NotificationType.Emit => "|",
-			INotifyService.NotificationType.NSEmit => "|",
-			INotifyService.NotificationType.Say => "\"",
-			INotifyService.NotificationType.NSSay => "\"",
-			_ => throw new ArgumentOutOfRangeException()
-		};
-
-		// CB_SPEECH (extchat.h:75) is speech alone, and it is the only thing that carries a speech verb.
-		var isSpeech = notification.MessageType
-			is INotifyService.NotificationType.Say or INotifyService.NotificationType.NSSay;
-
-		var mogrifiedChanName = MarkupText.Concat([MarkupText.Plain("<"), chanName, MarkupText.Plain(">")]);
-		var mogrifiedTitle = notification.Title;
-		var mogrifiedPlayerName = notification.PlayerName;
-		var mogrifiedSays = notification.Says;
-		var mogrifiedMessage = notification.Message;
-		var skipChatFormat = false;
-		var skipBuffer = false;
-		MString? blockMessage = null;
-		MString? formatOverride = null;
-
-		if (!string.IsNullOrEmpty(notification.Channel.Mogrifier))
-		{
-			var mogrifierResult = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(notification.Channel.Mogrifier)), cancellationToken);
-			if (mogrifierResult is AnySharpObject mogrifierObj)
-			{
-				var source = sender ?? mogrifierObj;
-
-				var passesUseLock = await permissionService.PassesLock(source, mogrifierObj, LockType.Use);
-
-				if (passesUseLock)
-				{
-					// Common arguments for control mogrifiers (BLOCK, OVERRIDE, NOBUFFER)
-					var controlArgs = new Dictionary<string, CallState>
-					{
-						["0"] = new CallState(MarkupText.Plain(chatType)),
-						["1"] = new CallState(chanName),
-						["2"] = new CallState(notification.Message),
-						["3"] = new CallState(notification.PlayerName),
-						["4"] = new CallState(notification.Title)
-					};
-
-					// extchat.c:3806 - BLOCK refuses on any non-empty result, tested as text.
-					var blockResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`BLOCK", controlArgs);
-					if (blockResult.Length > 0)
-					{
-						blockMessage = blockResult;
-					}
-
-					if (blockMessage == null)
-					{
-						// extchat.c:3811,3817 - OVERRIDE and NOBUFFER go through parse_boolean, which is
-						// Predicates.Truthy. It is not "non-empty": "0" is false, and so is anything starting
-						// "#-", which is how an error message from the mogrifier fails to switch these on.
-						var overrideResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`OVERRIDE", controlArgs);
-						skipChatFormat = overrideResult.Truthy();
-
-						var nobufferResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`NOBUFFER", controlArgs);
-						skipBuffer = nobufferResult.Truthy();
-
-						// extchat.c:3822-3858. %1 (channel), %2 (type), %3 (message) and %7 hold still for the
-						// whole sequence; %4, %5 and %6 are pointers into the very buffers TITLE, PLAYERNAME
-						// and SPEECHTEXT write into, so each callback is handed what the earlier ones made of
-						// them. %3 is the raw message throughout, including for MESSAGE itself, because
-						// MESSAGE is written last.
-						var partArgs = new Dictionary<string, CallState>
-						{
-							// %0 varies by mogrifier (set individually)
-							["1"] = new CallState(chanName),
-							["2"] = new CallState(MarkupText.Plain(chatType)),
-							["3"] = new CallState(notification.Message),
-							["4"] = new CallState(notification.Title),
-							["5"] = new CallState(notification.PlayerName),
-							["6"] = new CallState(notification.Says),
-							["7"] = new CallState(MarkupText.Plain(options))
-						};
-
-						partArgs["0"] = new CallState(mogrifiedChanName);
-						var chanNameResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`CHANNAME", partArgs);
-						if (chanNameResult.Length > 0)
-						{
-							mogrifiedChanName = chanNameResult;
-						}
-
-						partArgs["0"] = new CallState(mogrifiedTitle);
-						var titleResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`TITLE", partArgs);
-						if (titleResult.Length > 0)
-						{
-							mogrifiedTitle = titleResult;
-						}
-						partArgs["4"] = new CallState(mogrifiedTitle);
-
-						partArgs["0"] = new CallState(mogrifiedPlayerName);
-						var playerNameResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`PLAYERNAME", partArgs);
-						if (playerNameResult.Length > 0)
-						{
-							mogrifiedPlayerName = playerNameResult;
-						}
-						partArgs["5"] = new CallState(mogrifiedPlayerName);
-
-						// extchat.c:3847 - only speech has a speech verb to rewrite, so a pose or an emit
-						// leaves SPEECHTEXT unread and hands the untouched "says" on as %6.
-						if (isSpeech)
-						{
-							partArgs["0"] = new CallState(mogrifiedSays);
-							var saysResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`SPEECHTEXT", partArgs);
-							if (saysResult.Length > 0)
-							{
-								mogrifiedSays = saysResult;
-							}
-							partArgs["6"] = new CallState(mogrifiedSays);
-						}
-
-						partArgs["0"] = new CallState(mogrifiedMessage);
-						var messageResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`MESSAGE", partArgs);
-						if (messageResult.Length > 0)
-						{
-							mogrifiedMessage = messageResult;
-						}
-
-						// MOGRIFY`FORMAT - the channel-wide line, extchat.c:3905-3920.
-						// %0=type, %1=channel, %2=message, %3=name, %4=title, %5=default, %6=says, %7=noisiness.
-						// %1 here is argv[1] = channame, the bracketed name AFTER MOGRIFY`CHANNAME has run -
-						// not ChanName(channel). @chatformat's %1 is the raw name (extchat.c:3939), and the
-						// two differ on purpose: a FORMAT that rebuilds the line has to be able to keep what
-						// CHANNAME produced.
-						var defaultMessage = BuildDefaultMessage(chatType, mogrifiedChanName, mogrifiedPlayerName, mogrifiedTitle, mogrifiedSays, mogrifiedMessage);
-						var formatArgs = new Dictionary<string, CallState>
-						{
-							["0"] = new CallState(MarkupText.Plain(chatType)),
-							["1"] = new CallState(mogrifiedChanName),
-							["2"] = new CallState(mogrifiedMessage),
-							["3"] = new CallState(mogrifiedPlayerName),
-							["4"] = new CallState(mogrifiedTitle),
-							["5"] = new CallState(defaultMessage),
-							["6"] = new CallState(mogrifiedSays),
-							["7"] = new CallState(MarkupText.Plain(options))
-						};
-						var formatResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`FORMAT", formatArgs);
-						if (formatResult.Length > 0)
-						{
-							formatOverride = formatResult;
-						}
-					}
-				}
-			}
-		}
-
-		if (blockMessage != null && sender is not null)
-		{
-			await notifyService.Notify(sender, blockMessage, sender, notification.MessageType);
+			await notifyService.Notify(sender, line.BlockMessage, sender, notification.MessageType);
 			return;
 		}
 
-		var message = formatOverride ?? BuildDefaultMessage(chatType, mogrifiedChanName, mogrifiedPlayerName, mogrifiedTitle, mogrifiedSays, mogrifiedMessage);
+		var message = line.FormatOverride ?? BuildDefaultMessage(line);
 
 		using (logger.BeginScope(new Dictionary<string, string>
 		{
@@ -210,89 +49,285 @@ public class ChannelBroadcastService(
 			["Category"] = "logs"
 		}))
 		{
-			var sourceNumber = sender?.Object().DBRef.Number;
+			await DeliverAsync(notification, sender, line, message, cancellationToken);
 
-			await foreach (var (member, status) in notification.Channel.Members.Value.WithCancellation(cancellationToken))
+			if (!line.SkipBuffer)
 			{
-				// CB_SEEALL (src/extchat.c:3958): a privileged-only line reaches See_All members and the
-				// source, nobody else. Used for the connect/disconnect announcement of a hidden player.
-				// Checked before the interaction lock so a skipped member costs no permission query.
-				if (notification.SeeAllOnly
-						&& member.Object().DBRef.Number != sourceNumber
-						&& !await member.IsSee_All())
-				{
-					continue;
-				}
-
-				// CB_CHECKQUIET (src/extchat.c:3957): a presence announcement is withheld from a member who
-				// muted the channel. This is the only reader of that flag.
-				if (notification.CheckQuiet && (status.Mute ?? false))
-				{
-					continue;
-				}
-
-				var isGagged = status.Gagged ?? false;
-				var wantsToHear = sender is null ||
-													await permissionService.CanInteract(sender, member,
-														IPermissionService.InteractType.Hear);
-
-				if (!isGagged && wantsToHear)
-				{
-					// Apply individual @chatformat unless MOGRIFY`OVERRIDE was set
-					var finalMessage = message;
-					if (!skipChatFormat)
-					{
-						var formatted = await ApplyPlayerChatFormat(
-							member,
-							sender,
-							chatType,
-							notification.Channel.Name,
-							mogrifiedMessage,
-							mogrifiedPlayerName,
-							mogrifiedTitle,
-							message,
-							mogrifiedSays,
-							options);
-
-						switch (formatted)
-						{
-							// notify.c:1291 - a CHATFORMAT that deliberately evaluates to nothing silences the
-							// line for THIS member. Everyone else still hears it and it is still buffered, so
-							// this is a per-member mute written in softcode, not a block.
-							case Suppressed:
-								continue;
-							case MString line:
-								finalMessage = line;
-								break;
-						}
-					}
-
-					await notifyService.Notify(member, finalMessage, sender, notification.MessageType);
-				}
-			}
-
-			if (!skipBuffer)
-			{
-				logger.LogInformation("{ChannelMessage}", MarkupTextSerializer.Serialize(message));
-
-				// Add to channel recall buffer - only if there's an actual source
-				if (sender is not null)
-				{
-					var sourceDbRef = sender.Object().DBRef;
-
-					var channelMessage = new SharpChannelMessage
-					{
-						ChannelId = notification.Channel.Id ?? string.Empty,
-						Timestamp = DateTimeOffset.UtcNow,
-						Sender = sourceDbRef,
-						Message = message,
-						MessageType = notification.MessageType.ToString(),
-						SeeAllOnly = notification.SeeAllOnly
-					};
-					await mediator.Send(new AddChannelMessageCommand(channelMessage), cancellationToken);
-				}
+				await BufferAsync(notification, sender, message, cancellationToken);
 			}
 		}
+	}
+
+	/// <summary>
+	/// The parts of one channel line, after the mogrifier has had its say. <see cref="ChanName"/> is the
+	/// bracketed name, <c>&lt;Public&gt;</c>, and the raw name stays on the channel.
+	/// </summary>
+	private sealed record ChannelLine(
+		string ChatType,
+		string Options,
+		MString ChanName,
+		MString Title,
+		MString PlayerName,
+		MString Says,
+		MString Message,
+		bool SkipChatFormat = false,
+		bool SkipBuffer = false,
+		MString? BlockMessage = null,
+		MString? FormatOverride = null);
+
+	/// <summary>
+	/// extchat.c:3781-3791 picks the type character in this order: CB_PRESENCE "@", CB_POSE ":",
+	/// CB_SEMIPOSE ";", CB_EMIT "|", anything else speech. Announce is the presence message
+	/// (ConnectionAnnounceService sends connect and disconnect lines with it, the way
+	/// chat_player_announce sends CB_PRESENCE) and Emit is @cemit's CB_EMIT, so those two are "@"
+	/// and "|" respectively. Both render alike in BuildDefaultMessage; the character only reaches
+	/// the mogrifier and @chatformat callbacks as %0.
+	/// </summary>
+	private static string ChatTypeFor(INotifyService.NotificationType messageType) => messageType switch
+	{
+		INotifyService.NotificationType.Announce => "@",
+		INotifyService.NotificationType.NSAnnounce => "@",
+		INotifyService.NotificationType.Pose => ":",
+		INotifyService.NotificationType.NSPose => ":",
+		INotifyService.NotificationType.SemiPose => ";",
+		INotifyService.NotificationType.NSSemiPose => ";",
+		INotifyService.NotificationType.Emit => "|",
+		INotifyService.NotificationType.NSEmit => "|",
+		INotifyService.NotificationType.Say => "\"",
+		INotifyService.NotificationType.NSSay => "\"",
+		_ => throw new ArgumentOutOfRangeException(nameof(messageType))
+	};
+
+	/// <summary>
+	/// Runs the channel's <c>MOGRIFY`*</c> chain (extchat.c:3800-3920). A channel with no mogrifier, a
+	/// mogrifier that no longer exists, or one whose <c>@lock/use</c> the speaker fails leaves every
+	/// part as sent.
+	/// </summary>
+	private async ValueTask<ChannelLine> MogrifyAsync(
+		ChannelMessageNotification notification,
+		AnySharpObject? sender,
+		string chatType,
+		string options,
+		CancellationToken cancellationToken)
+	{
+		var chanName = notification.Channel.Name;
+		var line = new ChannelLine(
+			chatType,
+			options,
+			MarkupText.Concat([MarkupText.Plain("<"), chanName, MarkupText.Plain(">")]),
+			notification.Title,
+			notification.PlayerName,
+			notification.Says,
+			notification.Message);
+
+		if (string.IsNullOrEmpty(notification.Channel.Mogrifier))
+		{
+			return line;
+		}
+
+		var mogrifierResult = await mediator.Send(new GetObjectNodeQuery(DBRef.Parse(notification.Channel.Mogrifier)), cancellationToken);
+		if (mogrifierResult is not AnySharpObject mogrifierObj)
+		{
+			return line;
+		}
+
+		var source = sender ?? mogrifierObj;
+
+		if (!await permissionService.PassesLock(source, mogrifierObj, LockType.Use))
+		{
+			return line;
+		}
+
+		// Common arguments for control mogrifiers (BLOCK, OVERRIDE, NOBUFFER)
+		var controlArgs = new Dictionary<string, CallState>
+		{
+			["0"] = new CallState(MarkupText.Plain(chatType)),
+			["1"] = new CallState(chanName),
+			["2"] = new CallState(notification.Message),
+			["3"] = new CallState(notification.PlayerName),
+			["4"] = new CallState(notification.Title)
+		};
+
+		// extchat.c:3806 - BLOCK refuses on any non-empty result, tested as text.
+		var blockResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`BLOCK", controlArgs);
+		if (blockResult.Length > 0)
+		{
+			return line with { BlockMessage = blockResult };
+		}
+
+		// extchat.c:3811,3817 - OVERRIDE and NOBUFFER go through parse_boolean, which is
+		// Predicates.Truthy. It is not "non-empty": "0" is false, and so is anything starting
+		// "#-", which is how an error message from the mogrifier fails to switch these on.
+		var overrideResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`OVERRIDE", controlArgs);
+		var nobufferResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`NOBUFFER", controlArgs);
+		line = line with { SkipChatFormat = overrideResult.Truthy(), SkipBuffer = nobufferResult.Truthy() };
+
+		// extchat.c:3822-3858. %1 (channel), %2 (type), %3 (message) and %7 hold still for the
+		// whole sequence; %4, %5 and %6 are pointers into the very buffers TITLE, PLAYERNAME
+		// and SPEECHTEXT write into, so each callback is handed what the earlier ones made of
+		// them. %3 is the raw message throughout, including for MESSAGE itself, because
+		// MESSAGE is written last.
+		var partArgs = new Dictionary<string, CallState>
+		{
+			// %0 varies by mogrifier (set individually)
+			["1"] = new CallState(chanName),
+			["2"] = new CallState(MarkupText.Plain(chatType)),
+			["3"] = new CallState(notification.Message),
+			["4"] = new CallState(notification.Title),
+			["5"] = new CallState(notification.PlayerName),
+			["6"] = new CallState(notification.Says),
+			["7"] = new CallState(MarkupText.Plain(options))
+		};
+
+		async ValueTask<MString> MogrifyPart(string attributeName, MString current)
+		{
+			partArgs["0"] = new CallState(current);
+			var result = await EvaluateMogrifyAttribute(source, mogrifierObj, attributeName, partArgs);
+			return result.Length > 0 ? result : current;
+		}
+
+		line = line with { ChanName = await MogrifyPart("MOGRIFY`CHANNAME", line.ChanName) };
+
+		line = line with { Title = await MogrifyPart("MOGRIFY`TITLE", line.Title) };
+		partArgs["4"] = new CallState(line.Title);
+
+		line = line with { PlayerName = await MogrifyPart("MOGRIFY`PLAYERNAME", line.PlayerName) };
+		partArgs["5"] = new CallState(line.PlayerName);
+
+		// CB_SPEECH (extchat.h:75) is speech alone, and it is the only thing that carries a speech verb.
+		// extchat.c:3847 - so a pose or an emit leaves SPEECHTEXT unread and hands the untouched "says"
+		// on as %6.
+		if (notification.MessageType is INotifyService.NotificationType.Say or INotifyService.NotificationType.NSSay)
+		{
+			line = line with { Says = await MogrifyPart("MOGRIFY`SPEECHTEXT", line.Says) };
+			partArgs["6"] = new CallState(line.Says);
+		}
+
+		line = line with { Message = await MogrifyPart("MOGRIFY`MESSAGE", line.Message) };
+
+		// MOGRIFY`FORMAT - the channel-wide line, extchat.c:3905-3920.
+		// %0=type, %1=channel, %2=message, %3=name, %4=title, %5=default, %6=says, %7=noisiness.
+		// %1 here is argv[1] = channame, the bracketed name AFTER MOGRIFY`CHANNAME has run -
+		// not ChanName(channel). @chatformat's %1 is the raw name (extchat.c:3939), and the
+		// two differ on purpose: a FORMAT that rebuilds the line has to be able to keep what
+		// CHANNAME produced.
+		var formatArgs = new Dictionary<string, CallState>
+		{
+			["0"] = new CallState(MarkupText.Plain(chatType)),
+			["1"] = new CallState(line.ChanName),
+			["2"] = new CallState(line.Message),
+			["3"] = new CallState(line.PlayerName),
+			["4"] = new CallState(line.Title),
+			["5"] = new CallState(BuildDefaultMessage(line)),
+			["6"] = new CallState(line.Says),
+			["7"] = new CallState(MarkupText.Plain(options))
+		};
+		var formatResult = await EvaluateMogrifyAttribute(source, mogrifierObj, "MOGRIFY`FORMAT", formatArgs);
+		return formatResult.Length > 0 ? line with { FormatOverride = formatResult } : line;
+	}
+
+	/// <summary>
+	/// Hands <paramref name="message"/> to each member who may hear it, through that member's own
+	/// <c>@chatformat</c> unless <c>MOGRIFY`OVERRIDE</c> switched that off.
+	/// </summary>
+	private async ValueTask DeliverAsync(
+		ChannelMessageNotification notification,
+		AnySharpObject? sender,
+		ChannelLine line,
+		MString message,
+		CancellationToken cancellationToken)
+	{
+		var sourceNumber = sender?.Object().DBRef.Number;
+
+		await foreach (var (member, status) in notification.Channel.Members.Value.WithCancellation(cancellationToken))
+		{
+			// CB_SEEALL (src/extchat.c:3958): a privileged-only line reaches See_All members and the
+			// source, nobody else. Used for the connect/disconnect announcement of a hidden player.
+			// Checked before the interaction lock so a skipped member costs no permission query.
+			if (notification.SeeAllOnly
+					&& member.Object().DBRef.Number != sourceNumber
+					&& !await member.IsSee_All())
+			{
+				continue;
+			}
+
+			// CB_CHECKQUIET (src/extchat.c:3957): a presence announcement is withheld from a member who
+			// muted the channel. This is the only reader of that flag.
+			if (notification.CheckQuiet && (status.Mute ?? false))
+			{
+				continue;
+			}
+
+			var isGagged = status.Gagged ?? false;
+			var wantsToHear = sender is null ||
+												await permissionService.CanInteract(sender, member,
+													IPermissionService.InteractType.Hear);
+
+			if (isGagged || !wantsToHear)
+			{
+				continue;
+			}
+
+			// Apply individual @chatformat unless MOGRIFY`OVERRIDE was set
+			var finalMessage = message;
+			if (!line.SkipChatFormat)
+			{
+				var formatted = await ApplyPlayerChatFormat(
+					member,
+					sender,
+					line.ChatType,
+					notification.Channel.Name,
+					line.Message,
+					line.PlayerName,
+					line.Title,
+					message,
+					line.Says,
+					line.Options);
+
+				switch (formatted)
+				{
+					// notify.c:1291 - a CHATFORMAT that deliberately evaluates to nothing silences the
+					// line for THIS member. Everyone else still hears it and it is still buffered, so
+					// this is a per-member mute written in softcode, not a block.
+					case Suppressed:
+						continue;
+					case MString formattedLine:
+						finalMessage = formattedLine;
+						break;
+				}
+			}
+
+			await notifyService.Notify(member, finalMessage, sender, notification.MessageType);
+		}
+	}
+
+	/// <summary>
+	/// Logs the line and adds it to the channel's recall buffer. A sourceless line (a server notice) is
+	/// logged but not recalled, since a recall entry names its sender.
+	/// </summary>
+	private async ValueTask BufferAsync(
+		ChannelMessageNotification notification,
+		AnySharpObject? sender,
+		MString message,
+		CancellationToken cancellationToken)
+	{
+		logger.LogInformation("{ChannelMessage}", MarkupTextSerializer.Serialize(message));
+
+		if (sender is null)
+		{
+			return;
+		}
+
+		var channelMessage = new SharpChannelMessage
+		{
+			ChannelId = notification.Channel.Id ?? string.Empty,
+			Timestamp = DateTimeOffset.UtcNow,
+			Sender = sender.Object().DBRef,
+			Message = message,
+			MessageType = notification.MessageType.ToString(),
+			SeeAllOnly = notification.SeeAllOnly
+		};
+		await mediator.Send(new AddChannelMessageCommand(channelMessage), cancellationToken);
 	}
 
 	/// <summary>
@@ -414,9 +449,10 @@ public class ChannelBroadcastService(
 	/// <summary>
 	/// Builds the default channel message format
 	/// </summary>
-	private static MString BuildDefaultMessage(string chatType, MString chanName, MString playerName, MString title, MString says, MString message)
+	private static MString BuildDefaultMessage(ChannelLine line)
 	{
-		return chatType switch
+		var (chanName, playerName, title, says, message) = (line.ChanName, line.PlayerName, line.Title, line.Says, line.Message);
+		return line.ChatType switch
 		{
 			"@" or "|" => MarkupText.Concat([chanName, MarkupText.Space, message]),
 			":" => MarkupText.Concat([chanName, MarkupText.Space, title.Length > 0 ? MarkupText.Concat([title, MarkupText.Space]) : MarkupText.Empty, playerName, MarkupText.Space, message]),
