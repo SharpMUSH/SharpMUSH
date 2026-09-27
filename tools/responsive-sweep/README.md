@@ -8,7 +8,8 @@ horizontal overflow.
 ```bash
 docker compose up -d                                # SharpMUSH + NATS
 dotnet run --project SharpMUSH.Server               # https://localhost:8081
-dotnet run --project SharpMUSH.ConnectionServer     # :4201 telnet, :4202 http
+dotnet run --project SharpMUSH.SocketServer         # :4201 telnet, :4202 http
+dotnet run --project SharpMUSH.RenderingWorker      # renders output for SocketServer
 dotnet run --project SharpMUSH.Client               # https://localhost:7102
 ```
 

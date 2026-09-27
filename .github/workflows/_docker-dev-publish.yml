@@ -79,7 +79,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push ConnectionServer (dev)
+      - name: Build and push ConnectionServer rendering worker (dev)
         id: push_conn
         if: >-
           steps.changes.outputs.connectionserver == 'true' ||
