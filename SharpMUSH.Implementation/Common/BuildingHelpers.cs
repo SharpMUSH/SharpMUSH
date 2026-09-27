@@ -115,6 +115,28 @@ public static class BuildingHelpers
 	}
 
 	/// <summary>
+	/// The <c>OBJECT`CREATE</c> event and the object-lifecycle hook for a room or an exit.
+	/// <c>do_real_open</c> and <c>do_dig</c> queue the event with the new object alone
+	/// (<c>queue_event(player, "OBJECT`CREATE", "%s", unparse_objid(...))</c>, <c>src/create.c:181</c>,
+	/// <c>:526</c>).
+	/// </summary>
+	/// <remarks>
+	/// Callers run this after <see cref="WithRequestedDbrefsAsync"/> has released its gate: the event's
+	/// handler runs inline, and one that builds at a requested dbref of its own would otherwise wait on
+	/// the gate its caller is holding.
+	/// </remarks>
+	public static async ValueTask AnnounceCreatedAsync(IMUSHCodeParser parser, IEventService eventService,
+		AnySharpObject executor, DBRef created)
+	{
+		await eventService.TriggerEventAsync(parser, "OBJECT`CREATE", executor.Object().DBRef, created.ToString());
+
+		if (parser.ServiceProvider.GetService<IPluginHookDispatcher>() is { } createHooks)
+		{
+			await createHooks.ObjectCreatedAsync(created, executor.Object().DBRef);
+		}
+	}
+
+	/// <summary>
 	/// The whole of PennMUSH's <c>do_dig</c> (<c>src/create.c:466-522</c>): a room, optionally an exit
 	/// to it from where the digger stands and an exit back, each charged on its own and each able to
 	/// stop the dig where the quota runs out without taking back what was already paid for.
@@ -128,10 +150,12 @@ public static class BuildingHelpers
 	/// than with the digging.
 	/// </remarks>
 	public static async ValueTask<Result<DBRef>> DigAsync(
+		IMUSHCodeParser parser,
 		IMediator mediator,
 		IObjectStore database,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
 		INotifyService notifyService,
+		IEventService eventService,
 		IPermissionService permissionService,
 		ILockService lockService,
 		AnySharpObject executor,
@@ -140,7 +164,8 @@ public static class BuildingHelpers
 		MString? exitFrom,
 		MString? roomDbref,
 		MString? toDbref,
-		MString? fromDbref)
+		MString? fromDbref,
+		Func<DBRef, ValueTask>? beforeRoomEvent = null)
 	{
 		if (string.IsNullOrWhiteSpace(roomName.ToPlainText()))
 		{
@@ -151,10 +176,31 @@ public static class BuildingHelpers
 
 		// create.c:480-490 settles all three requested dbrefs before new_object(), so one that cannot be
 		// honoured digs nothing at all rather than leaving a room behind.
-		return await WithRequestedDbrefsAsync(mediator, notifyService, executor,
+		var openedExits = new List<DBRef>();
+		var dug = await WithRequestedDbrefsAsync(mediator, notifyService, executor,
 			[roomDbref, toDbref, fromDbref],
 			async at => await DugAsync(mediator, database, configuration, notifyService, permissionService,
-				lockService, executor, roomName, exitTo, exitFrom, at[0], at[1], at[2]));
+				lockService, executor, roomName, exitTo, exitFrom, at[0], at[1], at[2], openedExits));
+
+		// Outside the gate. Each exit's do_real_open queues its own event (create.c:181) before do_dig
+		// queues the room's (:526), so the exits come first.
+		foreach (var exit in openedExits)
+		{
+			await AnnounceCreatedAsync(parser, eventService, executor, exit);
+		}
+
+		if (dug is DBRef room)
+		{
+			// @dig/teleport moves the digger (:518-525) before the room's event is queued.
+			if (beforeRoomEvent is not null)
+			{
+				await beforeRoomEvent(room);
+			}
+
+			await AnnounceCreatedAsync(parser, eventService, executor, room);
+		}
+
+		return dug;
 	}
 
 	/// <summary>The digging itself, once every requested dbref has passed its gate.</summary>
@@ -171,7 +217,8 @@ public static class BuildingHelpers
 		MString? exitFrom,
 		DBRef? roomAt,
 		DBRef? toAt,
-		DBRef? fromAt)
+		DBRef? fromAt,
+		List<DBRef> openedExits)
 	{
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 
@@ -182,7 +229,7 @@ public static class BuildingHelpers
 			owner, roomAt) switch
 		{
 			DBRef dug => await RoomDugAsync(mediator, database, configuration, notifyService, permissionService,
-				lockService, executor, roomName, exitTo, exitFrom, dug, toAt, fromAt),
+				lockService, executor, roomName, exitTo, exitFrom, dug, toAt, fromAt, openedExits),
 			Error<string> refused => refused
 		};
 	}
@@ -205,7 +252,8 @@ public static class BuildingHelpers
 		MString? exitFrom,
 		DBRef dug,
 		DBRef? toAt,
-		DBRef? fromAt)
+		DBRef? fromAt,
+		List<DBRef> openedExits)
 	{
 		await notifyService.NotifyLocalized(executor.Object().DBRef,
 			nameof(ErrorMessages.Notifications.RoomCreatedWithNumberFormat), executor, roomName, dug.Number);
@@ -229,7 +277,7 @@ public static class BuildingHelpers
 		// speech_loc(player). An exit that is refused stops the dig, and the room stays.
 		if (Given(exitTo) is not null
 			&& !await DugExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
-				executor, exitTo!, where, room, toAt))
+				executor, exitTo!, where, room, toAt, openedExits))
 		{
 			return dug;
 		}
@@ -237,7 +285,7 @@ public static class BuildingHelpers
 		if (Given(exitFrom) is not null)
 		{
 			await DugExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
-				executor, exitFrom!, room, where, fromAt);
+				executor, exitFrom!, room, where, fromAt, openedExits);
 		}
 
 		return dug;
@@ -261,13 +309,16 @@ public static class BuildingHelpers
 		MString exitName,
 		AnySharpContainer from,
 		AnySharpContainer to,
-		DBRef? requestedDbref)
+		DBRef? requestedDbref,
+		List<DBRef> openedExits)
 	{
 		if (await OpenExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
 				executor, exitName, from, requestedDbref) is not DBRef opened)
 		{
 			return false;
 		}
+
+		openedExits.Add(opened);
 
 		await notifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.TryingToLink),
 			executor);
@@ -338,6 +389,8 @@ public static class BuildingHelpers
 	/// The link itself stays with the callers: <c>@open</c> and <c>open()</c> resolve their destination
 	/// through <see cref="ILocateService"/> with different reporting, and <c>@open</c> then reuses the
 	/// destination as the second exit's source room (<c>create.c:236</c>).
+	/// <para>So does <c>OBJECT`CREATE</c> (<c>create.c:181</c>): callers usually hold the requested-dbref
+	/// gate here, and fire <see cref="AnnounceCreatedAsync"/> once it is released.</para>
 	/// </remarks>
 	public static async ValueTask<Result<DBRef>> OpenExitAsync(
 		IMediator mediator,
