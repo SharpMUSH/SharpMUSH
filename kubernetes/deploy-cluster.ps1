@@ -72,7 +72,7 @@ if (-not $SkipBuild) {
     
     # Build ConnectionServer
     Write-Host "Building ConnectionServer image..." -ForegroundColor Cyan
-    docker build -t sharpmush/sharpmush-connectionserver:dev -f SharpMUSH.ConnectionServer/Dockerfile .
+    docker build -t sharpmush/sharpmush-connectionserver:dev -f SharpMUSH.RenderingWorker/Dockerfile .
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Failed to build ConnectionServer image" -ForegroundColor Red
         exit 1

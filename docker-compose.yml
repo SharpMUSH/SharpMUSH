@@ -50,7 +50,7 @@ services:
   renderer:
     build:
       context: ./
-      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
+      dockerfile: SharpMUSH.RenderingWorker/Dockerfile
     stop_grace_period: 60s
     labels:
       - com.centurylinklabs.watchtower.enable=true

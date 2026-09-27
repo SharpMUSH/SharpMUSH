@@ -7,7 +7,7 @@ class ImageImpactTests(unittest.TestCase):
     def setUp(self):
         self.files = {
             "Dockerfile": "COPY . .\nRUN dotnet publish Game/Game.csproj -c Release",
-            "SharpMUSH.ConnectionServer/Dockerfile": "RUN dotnet publish Conn/Conn.csproj",
+            "SharpMUSH.RenderingWorker/Dockerfile": "RUN dotnet publish Conn/Conn.csproj",
             "SharpMUSH.SocketServer/Dockerfile": "RUN dotnet publish Socket/Socket.csproj",
             "Socket/Socket.csproj": '<Project><ProjectReference Include="../Shared/Shared.csproj"/></Project>',
             "Game/Game.csproj": '<Project><ProjectReference Include="../Shared/Shared.csproj"/><EmbeddedResource Include="../resources/*.txt"/></Project>',
@@ -90,7 +90,7 @@ class ImageImpactTests(unittest.TestCase):
 
     def test_real_renderer_sources_do_not_publish_socket_owner(self):
         root = Path(__file__).resolve().parents[2]
-        result = analyze(["SharpMUSH.ConnectionServer/Services/MarkupOutputRenderer.cs"],
+        result = analyze(["SharpMUSH.RenderingWorker/Services/MarkupOutputRenderer.cs"],
                          [lambda path: (root / path).read_text()])
         self.assertTrue(result["connectionserver"])
         self.assertFalse(result["socketserver"])

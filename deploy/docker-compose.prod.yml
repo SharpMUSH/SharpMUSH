@@ -70,7 +70,7 @@ services:
   renderer:
     build:
       context: ../
-      dockerfile: SharpMUSH.ConnectionServer/Dockerfile
+      dockerfile: SharpMUSH.RenderingWorker/Dockerfile
     image: sharpmush/sharpmush-connectionserver:latest
     stop_grace_period: 60s
     labels:
