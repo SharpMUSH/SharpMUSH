@@ -92,6 +92,8 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BadArgumentFormat = "#-1 BAD ARGUMENT FORMAT TO {0}";
 		public const string ArgRange = "#-1 ARGUMENT OUT OF RANGE";
+		/// <summary>PennMUSH's <c>chr()</c> answer for a control character (<c>fun_chr</c>, src/funstr.c).</summary>
+		public const string UnprintableCharacter = "#-1 UNPRINTABLE CHARACTER";
 		public const string TimeInteger = "#-1 TIME INTEGER OUT OF RANGE";
 
 		public const string NoSuchAttribute = "#-1 NO SUCH ATTRIBUTE";

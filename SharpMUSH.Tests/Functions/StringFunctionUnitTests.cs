@@ -233,6 +233,22 @@ public class StringFunctionUnitTests
 	[Test]
 	[Arguments("chr(65)", "A")]
 	[Arguments("chr(97)", "a")]
+	// Observed on PennMUSH 1.8.8 (80a1d5b) via pennmush/test/runtest.pl, #1287.
+	[Arguments("chr(0)", "#-1 UNPRINTABLE CHARACTER")]
+	[Arguments("chr(7)", "#-1 UNPRINTABLE CHARACTER")]
+	[Arguments("chr(9)", "#-1 UNPRINTABLE CHARACTER")]
+	[Arguments("chr(10)", "#-1 UNPRINTABLE CHARACTER")]
+	[Arguments("chr(27)", "#-1 UNPRINTABLE CHARACTER")]
+	[Arguments("chr(127)", "#-1 UNPRINTABLE CHARACTER")]
+	[Arguments("chr(128)", "#-1 UNPRINTABLE CHARACTER")]
+	[Arguments("chr(159)", "#-1 UNPRINTABLE CHARACTER")]
+	[Arguments("strlen(a[chr(9)]b)", "27")]
+	[Arguments("chr(32)", " ")]
+	[Arguments("chr(126)", "~")]
+	[Arguments("ord(chr(160))", "160")]
+	[Arguments("ord(chr(255))", "255")]
+	[Arguments("chr(-1)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
+	[Arguments("chr(abc)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Chr(string str, string expectedText)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
