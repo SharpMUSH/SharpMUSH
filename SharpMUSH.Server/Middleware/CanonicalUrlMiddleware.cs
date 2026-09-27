@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services;
-using SharpMUSH.Server.Helpers;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Server.Middleware;
 

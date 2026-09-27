@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using SharpMUSH.Client.Models.Applications;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Client.Services;
 
@@ -37,7 +38,7 @@ public class ApplicationRegistryClient(IHttpClientFactory httpClientFactory, ILo
 		}
 		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
 		{
-			logger.LogWarning(ex, "Failed to fetch application {Slug}.", slug);
+			logger.LogWarning(ex, "Failed to fetch application {Slug}.", LogSanitizer.Sanitize(slug));
 			return null;
 		}
 	}

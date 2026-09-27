@@ -83,7 +83,7 @@ public class AccountClaimsService(
 		{
 			logger.LogWarning(ex,
 				"Could not derive account-level role for account {AccountId}; using the active character's role.",
-				Helpers.LogSanitizer.Sanitize(accountId));
+				Library.Logging.LogSanitizer.Sanitize(accountId));
 			return activeRole;
 		}
 	}

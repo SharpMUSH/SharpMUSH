@@ -9,7 +9,7 @@ using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Server.Helpers;
+using SharpMUSH.Library.Logging;
 using SharpMUSH.Server.Services;
 using MarkupString;
 using SharpMUSH.Server.Authentication;

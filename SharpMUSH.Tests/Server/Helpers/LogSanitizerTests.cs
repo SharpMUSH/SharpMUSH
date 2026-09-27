@@ -1,4 +1,4 @@
-using SharpMUSH.Server.Helpers;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Tests.Server.Helpers;
 
@@ -37,6 +37,16 @@ public class LogSanitizerTests
 		var result = LogSanitizer.Sanitize(input);
 
 		await Assert.That(result).IsEqualTo("Hello World");
+	}
+
+	[Test]
+	public async Task Sanitize_NothingToStrip_ReturnsSameInstance()
+	{
+		var input = string.Concat("Hello ", "World");
+
+		var result = LogSanitizer.Sanitize(input);
+
+		await Assert.That(ReferenceEquals(result, input)).IsTrue();
 	}
 
 	[Test]

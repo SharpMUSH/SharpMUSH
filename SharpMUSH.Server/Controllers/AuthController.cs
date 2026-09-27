@@ -14,6 +14,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -119,7 +120,7 @@ public class AuthController(
 
 		if (player is null)
 		{
-			logger.LogInformation("OTT request: player {Name} not found", Sanitize(request.PlayerName));
+			logger.LogInformation("OTT request: player {Name} not found", LogSanitizer.Sanitize(request.PlayerName));
 			return Unauthorized("Invalid credentials.");
 		}
 
@@ -130,7 +131,7 @@ public class AuthController(
 
 		if (!valid && !string.IsNullOrEmpty(player.PasswordHash))
 		{
-			logger.LogInformation("OTT request: invalid password for player {Name}", Sanitize(request.PlayerName));
+			logger.LogInformation("OTT request: invalid password for player {Name}", LogSanitizer.Sanitize(request.PlayerName));
 			return Unauthorized("Invalid credentials.");
 		}
 
@@ -237,7 +238,7 @@ public class AuthController(
 		var account = await accountService.AuthenticateAsync(request.UsernameOrEmail, request.Password);
 		if (account is null)
 		{
-			logger.LogInformation("Account login failed for {Identifier}", Sanitize(request.UsernameOrEmail));
+			logger.LogInformation("Account login failed for {Identifier}", LogSanitizer.Sanitize(request.UsernameOrEmail));
 			return Unauthorized("Invalid account credentials.");
 		}
 
@@ -261,7 +262,7 @@ public class AuthController(
 			actingKey: primary?.Object.Key, actingCreationTime: primary?.Object.CreationTime);
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp(),
 			primary?.Object.Key, primary?.Object.CreationTime);
-		logger.LogInformation("Account login success for {Username} ({Id})", Sanitize(account.Username), Sanitize(account.Id));
+		logger.LogInformation("Account login success for {Username} ({Id})", LogSanitizer.Sanitize(account.Username), LogSanitizer.Sanitize(account.Id));
 		return Ok(new AccountLoginResponse(account.Id!, account.Username, charSummaries, sessionToken,
 			account.MustChangePassword, role.ToString(), permissions.ToList()));
 	}
@@ -302,7 +303,7 @@ public class AuthController(
 
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp());
 
-		logger.LogInformation("Account registered: {Username} ({Id})", Sanitize(account.Username), Sanitize(account.Id));
+		logger.LogInformation("Account registered: {Username} ({Id})", LogSanitizer.Sanitize(account.Username), LogSanitizer.Sanitize(account.Id));
 		return Ok(new AccountLoginResponse(account.Id!, account.Username, [], sessionToken,
 			account.MustChangePassword, role.ToString(), permissions.ToList()));
 	}
@@ -343,7 +344,7 @@ public class AuthController(
 				player.Object.Key, player.Object.CreationTime);
 
 		logger.LogInformation("Debug OTT issued for {Name} (#{Key}), account: {AccountId}",
-			Sanitize(player.Object.Name), player.Object.Key, Sanitize(account?.Id ?? "none"));
+			LogSanitizer.Sanitize(player.Object.Name), player.Object.Key, LogSanitizer.Sanitize(account?.Id ?? "none"));
 
 		return Ok(new DebugOttResponse(token, ttl, player.Object.Name,
 			account?.Id, account?.Username, accountSessionToken, account?.MustChangePassword ?? false));
@@ -356,14 +357,5 @@ public class AuthController(
 	private async Task<bool> AnyStaffCharacterAsync(IReadOnlyList<SharpPlayer> characters) =>
 		await characters.ToAsyncEnumerable().AnyAsync(async (character, ct) =>
 			roleDerivation.DeriveRole(character.Object.Key, await character.Object.Flags.Value.ToListAsync(ct)) >= PortalRole.Wizard);
-
-	/// <summary>
-	/// Strip newlines and control characters from user-supplied strings before logging
-	/// to prevent log injection (CodeQL cs/log-injection).
-	/// </summary>
-	private static string Sanitize(string? value) =>
-		string.IsNullOrEmpty(value)
-			? "(empty)"
-			: new string(value.Where(c => !char.IsControl(c)).ToArray());
 }
 

@@ -4,6 +4,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Library.Services;
 
@@ -135,12 +136,12 @@ public sealed class ManagedPackageInstaller(
 		switch (await pluginManager.UnloadAsync(packageId))
 		{
 			case Success:
-				logger.LogInformation("Unloaded managed package '{PackageId}' before removing its directory.", packageId);
+				logger.LogInformation("Unloaded managed package '{PackageId}' before removing its directory.", LogSanitizer.Sanitize(packageId));
 				break;
 			case Error<string> error:
 				logger.LogDebug(
 					"Managed package '{PackageId}' not unloaded at runtime ({Reason}); removing its directory so it does not load on next boot.",
-					packageId, error.Value);
+					LogSanitizer.Sanitize(packageId), error.Value);
 				break;
 		}
 
@@ -150,14 +151,14 @@ public sealed class ManagedPackageInstaller(
 			if (Directory.Exists(targetDirectory))
 			{
 				Directory.Delete(targetDirectory, recursive: true);
-				logger.LogInformation("Removed managed package directory {Directory}.", targetDirectory);
+				logger.LogInformation("Removed managed package directory {Directory}.", LogSanitizer.Sanitize(targetDirectory));
 			}
 
 			return new Success();
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 		{
-			logger.LogError(ex, "Failed to remove managed package directory {Directory}.", targetDirectory);
+			logger.LogError(ex, "Failed to remove managed package directory {Directory}.", LogSanitizer.Sanitize(targetDirectory));
 			return new Error<string>($"Managed package '{packageId}': failed to remove binaries — {ex.Message}");
 		}
 	}

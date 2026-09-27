@@ -6,7 +6,7 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.Server.Helpers;
+using SharpMUSH.Library.Logging;
 using SharpMUSH.Server.Authentication;
 using System.Text.RegularExpressions;
 

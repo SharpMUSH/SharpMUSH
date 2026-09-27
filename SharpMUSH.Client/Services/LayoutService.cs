@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using SharpMUSH.Library.Models.Portal.Widgets;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Client.Services;
 
@@ -40,7 +41,7 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 			var response = await http.PutAsJsonAsync($"api/layouts/{Uri.EscapeDataString(scope)}", layout, JsonOptions);
 			if (!response.IsSuccessStatusCode)
 			{
-				logger.LogWarning("Saving layout for scope {Scope} failed (HTTP {Status}).", scope, (int)response.StatusCode);
+				logger.LogWarning("Saving layout for scope {Scope} failed (HTTP {Status}).", LogSanitizer.Sanitize(scope), (int)response.StatusCode);
 				return false;
 			}
 
@@ -50,7 +51,7 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 		}
 		catch (HttpRequestException ex)
 		{
-			logger.LogWarning(ex, "Could not reach the server saving layout for scope {Scope}.", scope);
+			logger.LogWarning(ex, "Could not reach the server saving layout for scope {Scope}.", LogSanitizer.Sanitize(scope));
 			return false;
 		}
 	}
@@ -63,7 +64,7 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 			var response = await http.DeleteAsync($"api/layouts/{Uri.EscapeDataString(scope)}");
 			if (!response.IsSuccessStatusCode)
 			{
-				logger.LogWarning("Resetting layout for scope {Scope} failed (HTTP {Status}).", scope, (int)response.StatusCode);
+				logger.LogWarning("Resetting layout for scope {Scope} failed (HTTP {Status}).", LogSanitizer.Sanitize(scope), (int)response.StatusCode);
 				return false;
 			}
 
@@ -73,7 +74,7 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 		}
 		catch (HttpRequestException ex)
 		{
-			logger.LogWarning(ex, "Could not reach the server resetting layout for scope {Scope}.", scope);
+			logger.LogWarning(ex, "Could not reach the server resetting layout for scope {Scope}.", LogSanitizer.Sanitize(scope));
 			return false;
 		}
 	}
@@ -110,7 +111,7 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 
 			if (!response.IsSuccessStatusCode)
 			{
-				logger.LogWarning("Loading layout for scope {Scope} failed (HTTP {Status}).", scope, (int)response.StatusCode);
+				logger.LogWarning("Loading layout for scope {Scope} failed (HTTP {Status}).", LogSanitizer.Sanitize(scope), (int)response.StatusCode);
 				return null;
 			}
 
@@ -118,7 +119,7 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 		}
 		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
 		{
-			logger.LogWarning(ex, "Loading layout for scope {Scope} failed.", scope);
+			logger.LogWarning(ex, "Loading layout for scope {Scope} failed.", LogSanitizer.Sanitize(scope));
 			return null;
 		}
 	}

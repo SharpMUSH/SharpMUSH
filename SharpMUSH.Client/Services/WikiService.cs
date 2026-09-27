@@ -2,6 +2,7 @@ using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Client.Models;
 using System.Net.Http.Json;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Client.Services;
 
@@ -157,7 +158,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "GetRevisionsAsync failed for slug={Slug}", slug);
+			logger.LogError(ex, "GetRevisionsAsync failed for slug={Slug}", LogSanitizer.Sanitize(slug));
 			return [];
 		}
 	}
@@ -181,7 +182,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "GetRevisionAsync failed for slug={Slug} rev={Rev}", slug, revisionNumber);
+			logger.LogError(ex, "GetRevisionAsync failed for slug={Slug} rev={Rev}", LogSanitizer.Sanitize(slug), revisionNumber);
 			return new None();
 		}
 	}
@@ -201,7 +202,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "GetTranslationsAsync failed for slug={Slug}", slug);
+			logger.LogError(ex, "GetTranslationsAsync failed for slug={Slug}", LogSanitizer.Sanitize(slug));
 			return [];
 		}
 	}
@@ -404,7 +405,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "RollbackAsync failed for slug={Slug} rev={Rev}", slug, revisionNumber);
+			logger.LogError(ex, "RollbackAsync failed for slug={Slug} rev={Rev}", LogSanitizer.Sanitize(slug), revisionNumber);
 			return ex.Message;
 		}
 	}

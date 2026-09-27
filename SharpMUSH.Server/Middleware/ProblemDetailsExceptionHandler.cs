@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using SharpMUSH.Server.Helpers;
+using SharpMUSH.Library.Logging;
 using System.Text.Json;
 
 namespace SharpMUSH.Server.Middleware;
