@@ -3,6 +3,7 @@ namespace SharpMUSH.Configuration.Options;
 public record DatabaseOptions(
 	[property: SharpConfig(
 		Name = "player_start",
+		Dbref = true,
 		Category = "Database",
 		Description = "Room where new players start",
 		ValidationPattern = @"^\d+$",
@@ -13,6 +14,7 @@ public record DatabaseOptions(
 
 	[property: SharpConfig(
 		Name = "master_room",
+		Dbref = true,
 		Category = "Database",
 		Description = "Master room that controls global settings",
 		ValidationPattern = @"^\d+$",
@@ -23,6 +25,7 @@ public record DatabaseOptions(
 
 	[property: SharpConfig(
 		Name = "base_room",
+		Dbref = true,
 		Category = "Database",
 		Description = "Base room used as fallback for homeless objects",
 		ValidationPattern = @"^\d+$",
@@ -33,6 +36,7 @@ public record DatabaseOptions(
 
 	[property: SharpConfig(
 		Name = "default_home",
+		Dbref = true,
 		Category = "Database",
 		Description = "Default home for players without a set home",
 		ValidationPattern = @"^\d+$",
@@ -59,6 +63,7 @@ public record DatabaseOptions(
 
 	[property: SharpConfig(
 		Name = "ancestor_room",
+		Dbref = true,
 		Category = "Database",
 		Description = "Parent object for all room objects",
 		ValidationPattern = @"^\d*$",
@@ -70,6 +75,7 @@ public record DatabaseOptions(
 
 	[property: SharpConfig(
 		Name = "ancestor_exit",
+		Dbref = true,
 		Category = "Database",
 		Description = "Parent object for all exit objects",
 		ValidationPattern = @"^\d*$",
@@ -81,6 +87,7 @@ public record DatabaseOptions(
 
 	[property: SharpConfig(
 		Name = "ancestor_thing",
+		Dbref = true,
 		Category = "Database",
 		Description = "Parent object for all thing objects",
 		ValidationPattern = @"^\d*$",
@@ -92,6 +99,7 @@ public record DatabaseOptions(
 
 	[property: SharpConfig(
 		Name = "ancestor_player",
+		Dbref = true,
 		Category = "Database",
 		Description = "Parent object for all player objects",
 		ValidationPattern = @"^\d*$",
@@ -103,6 +111,7 @@ public record DatabaseOptions(
 
 	[property: SharpConfig(
 		Name = "event_handler",
+		Dbref = true,
 		Category = "Database",
 		Description = "Wizard object that handles global events (default: the seeded Event Handler, #9)",
 		ValidationPattern = @"^\d*$",
@@ -113,6 +122,7 @@ public record DatabaseOptions(
 
 	[property: SharpConfig(
 		Name = "http_handler",
+		Dbref = true,
 		Category = "Database",
 		Description = "Wizard object that handles HTTP requests (default: the seeded HTTP Handler, #8)",
 		ValidationPattern = @"^\d*$",
@@ -123,6 +133,7 @@ public record DatabaseOptions(
 
 	[property: SharpConfig(
 		Name = "package_manager",
+		Dbref = true,
 		Category = "Database",
 		Description = "Wizard object that owns softcode-package-managed objects",
 		ValidationPattern = @"^\d*$",

@@ -37,4 +37,13 @@ public class SharpConfigAttribute : Attribute
 	/// Additional tooltip text (shown in addition to Description)
 	/// </summary>
 	public string? Tooltip { get; set; }
+
+	/// <summary>
+	/// The option names an object, so <c>config()</c> and <c>@config</c> print its value as a dbref.
+	/// PennMUSH decides this by handler: an option registered with <c>cf_dbref</c> is displayed as
+	/// <c>#&lt;n&gt;</c> (<c>src/conf.c:1707</c>), and an unset one holds <c>NOTHING</c>, printing
+	/// <c>#-1</c>. The property's CLR type cannot carry that — a dbref option and a plain count are
+	/// both <c>uint</c> — so it is declared here. See <see cref="ConfigValueDisplay"/>.
+	/// </summary>
+	public bool Dbref { get; set; }
 }

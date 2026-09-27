@@ -139,7 +139,8 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 			+ $"Min = {Emit.Literal(Named(attr, "Min"))}, "
 			+ $"Max = {Emit.Literal(Named(attr, "Max"))}, "
 			+ $"Tooltip = {Emit.Quote(tooltip) ?? "null"}, "
-			+ $"ValidationPattern = {Emit.Quote(validationPattern) ?? "null"}"
+			+ $"ValidationPattern = {Emit.Quote(validationPattern) ?? "null"}, "
+			+ $"Dbref = {(Named(attr, "Dbref") is true ? "true" : "false")}"
 			+ " } }";
 	}
 

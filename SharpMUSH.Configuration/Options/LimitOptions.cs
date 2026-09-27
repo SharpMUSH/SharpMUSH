@@ -14,6 +14,7 @@ public record LimitOptions(
 
 	[property: SharpConfig(
 		Name = "max_dbref",
+		Dbref = true,
 		Category = "Limit",
 		Description = "Maximum database reference number (highest object number)",
 		ValidationPattern = @"^\d*$",
