@@ -2,28 +2,28 @@ using System.Collections.Immutable;
 using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using SharpMUSH.Implementation.Handlers;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
 
-namespace SharpMUSH.Tests.Handlers;
+namespace SharpMUSH.Tests.Services;
 
-public class ChannelMessageRequestHandlerTests
+public class ChannelBroadcastServiceTests
 {
 	[Test]
 	public async Task SourcelessMessageReachesMembersWithNoSender()
 	{
 		var notifyService = Substitute.For<INotifyService>();
-		var handler = new ChannelMessageRequestHandler(
+		var service = new ChannelBroadcastService(
 			Substitute.For<IPermissionService>(),
 			notifyService,
 			Substitute.For<IMediator>(),
 			Substitute.For<IAttributeService>(),
 			Substitute.For<IMUSHCodeParser>(),
-			NullLogger<ChannelMessageRequestHandler>.Instance);
+			NullLogger<ChannelBroadcastService>.Instance);
 
 		var member = new AnySharpObject(Thing(300, "Listener"));
 		var channel = new SharpChannel
@@ -35,7 +35,7 @@ public class ChannelMessageRequestHandlerTests
 			Privs = []
 		};
 
-		await handler.Handle(new ChannelMessageNotification(
+		await service.BroadcastAsync(new ChannelMessageNotification(
 			channel,
 			new None(),
 			INotifyService.NotificationType.Emit,

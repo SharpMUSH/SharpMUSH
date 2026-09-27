@@ -35,10 +35,3 @@ public class GetObjectNodeByNumberQueryHandler(IObjectStore database)
 	public async ValueTask<AnyOptionalSharpObject> Handle(GetObjectNodeByNumberQuery request, CancellationToken cancellationToken)
 		=> await database.GetObjectNodeAsync(new DBRef(request.Number), cancellationToken);
 }
-
-public class GetBaseObjectNodeQueryHandler(IObjectStore database)
-	: IQueryHandler<GetBaseObjectNodeQuery, SharpObject?>
-{
-	public async ValueTask<SharpObject?> Handle(GetBaseObjectNodeQuery request, CancellationToken cancellationToken)
-		 => await database.GetBaseObjectNodeAsync(request.DBRef, cancellationToken);
-}

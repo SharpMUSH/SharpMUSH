@@ -106,3 +106,42 @@ tag index, `AsyncRelation` and the snapshot rule all assume one engine process p
 a second engine node would leave the first node's entries stale. The path to more than one node
 is a configured FusionCache backplane, which carries key and tag removals between nodes, with
 `ObjectVersions` moved into the shared cache. Until that is configured, run one engine process.
+
+## 9. Eager and lazy request pairs stay pairs; no policy means no cache
+
+**Decision:** The three attribute reads that come in an eager and a lazy form stay two request
+types each: `GetAttributeQuery`/`GetLazyAttributeQuery`, `GetAttributesQuery`/`GetLazyAttributesQuery`
+and `GetAttributeWithInheritanceQuery`/`GetLazyAttributeWithInheritanceQuery`. The element type is
+the contract (a lazy attribute defers loading its value), each form maps to its own store method,
+and the cached forms keep separate keys (`CacheKeys.Attribute` and `CacheKeys.LazyAttribute`) so an
+eager entry never answers a lazy read. What the pairs must not do is behave differently: the parent
+walk both `GetAttributesQuery` handlers run is `AttributeAncestry.MatchesWithParentsAsync`, pinned
+by `LazyAttributeParentParityTests`. A new pair shares its logic the same way, and the lazy record
+takes its documentation from the eager one with `inheritdoc`.
+
+A request that differs from another only in return shape is not a pair and is not kept:
+`GetBaseObjectNodeQuery` answered the same "is `#N` (with this objid) live?" question as
+`GetObjectNodeQuery`, uncached and with no documented reason, and its one caller now uses
+`GetObjectNodeQuery`. `GetObjectNodeQuery` and `GetObjectNodeByNumberQuery` are a deliberate
+split (the objid check runs outside the number-keyed cache) and stay.
+
+A query without `ICacheable` reads its store on every request. That is the default, not an
+omission, and the lack of a cache is not a bug report on its own. The uncached queries fall into
+these groups:
+
+- **Scans:** `GetAllObjectsQuery`, `GetAllPlayersQuery`, `GetAllTypedObjectsQuery`,
+  `GetFilteredObjectsQuery`. A cached scan would hold a copy of the database.
+- **Counts the store computes:** `GetObjectCountQuery`, `GetOwnedObjectCountQuery`. Every create,
+  destroy and `@chown` would have to invalidate them.
+- **Pattern listings:** `GetAttributesQuery` and its lazy pair. The key would be an arbitrary
+  wildcard or regex and, with `CheckParents`, the result depends on every ancestor.
+- **Navigation listings:** `GetExitsQuery`, `GetEntrancesQuery`, `GetNearbyObjectsQuery`.
+  (`GetContentsQuery` and `GetLocationQuery` are cached, and their writes invalidate them.)
+- **Mail, expanded data and server state:** the `GetMail*` family, `ExpandedDataQuery`,
+  `ExpandedServerDataQuery`, `GetServerStateQuery`. Their writes go through their own stores and
+  commands, none of which carries invalidation.
+- **Delegates:** `GetObjectNodeQuery` resolves through the cached `GetObjectNodeByNumberQuery`.
+
+Whether any of these should be cached is a measurement question. If one is, it gets
+`ICacheable` together with `ICacheInvalidating` on every write that can change its answer, and
+`CacheEntryProfileTests` covers it like any other entry.

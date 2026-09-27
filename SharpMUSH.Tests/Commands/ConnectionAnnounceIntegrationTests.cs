@@ -19,7 +19,7 @@ namespace SharpMUSH.Tests.Commands;
 /// parser and DI container (not a mock of the service itself), must produce the PennMUSH-worded
 /// broadcasts documented in <c>ErrorMessages.Notifications</c> — on the room broadcast path
 /// (<c>CommunicationService.SendToRoomAsync</c>) and on the channel-announce path
-/// (<c>ChannelMessageRequestHandler</c>) alike.
+/// (<c>ChannelBroadcastService</c>) alike.
 ///
 /// <para>Every scenario uses freshly created, uniquely-named players and a fresh room/channel per
 /// test, and reads back only that test's own witness's notification queue via

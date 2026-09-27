@@ -629,9 +629,9 @@ public partial class Functions
 			switch (item)
 			{
 				case DBRef dbref:
-					var exists = await Mediator.Send(new GetBaseObjectNodeQuery(dbref));
+					var exists = await Mediator.Send(new GetObjectNodeQuery(dbref));
 
-					if (exists != null)
+					if (!exists.IsNone)
 					{
 						resolvedDbref = dbref;
 					}
