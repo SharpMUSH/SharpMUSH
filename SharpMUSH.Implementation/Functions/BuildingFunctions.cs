@@ -220,6 +220,13 @@ public partial class Functions
 		return exit;
 	}
 
+	/// <remarks>
+	/// <c>fun_link</c> (<c>src/fundb.c:2219-2237</c>) is one call to <c>do_link</c>, the same routine
+	/// <c>@link</c> reaches, with <c>parse_boolean(args[2])</c> standing in for <c>/PRESERVE</c>.
+	/// SharpMUSH wrote a second, thinner copy: only a room was a legal exit destination, there was no
+	/// link-lock path and so no ownership seizure, the third argument was declared and never read, and
+	/// a room's drop-to needed no control at all.
+	/// </remarks>
 	[SharpFunction(Name = "link", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.NoGagged | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> Link(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -227,98 +234,16 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var objectName = args["0"].Message!.ToPlainText();
 		var destName = args["1"].Message!.ToPlainText();
+		var preserve = args.TryGetValue("2", out var preserveArg) && preserveArg.Message!.Truthy();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, objectName, LocateFlags.All,
-			async exitObj =>
+			async target => await LinkHelpers.LinkAsync(parser, Mediator, NotifyService, LocateService,
+				PermissionService, LockService, AttributeService, ManipulateSharpObjectService, executor, target,
+				destName, preserve) switch
 			{
-				if (!await PermissionService.Controls(executor, exitObj))
-				{
-					return ErrorMessages.Returns.PermissionDenied;
-				}
-
-				if (exitObj is SharpExit exit)
-				{
-					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
-					{
-						await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Plain(LinkTypeHome));
-						return "1";
-					}
-					else if (destName.Equals(LinkTypeVariable, StringComparison.InvariantCultureIgnoreCase))
-					{
-						await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Plain(LinkTypeVariable));
-						return "1";
-					}
-
-					// Link to a room
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-						executor, executor, destName, LocateFlags.All,
-						async destObj =>
-						{
-							if (destObj is not SharpRoom destinationRoom)
-							{
-								return ErrorMessages.Returns.InvalidDestination;
-							}
-
-							if (!await PermissionService.Controls(executor, destObj) && !await destObj.HasFlag("LINK_OK"))
-							{
-								return ErrorMessages.Returns.PermissionDenied;
-							}
-
-							await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Empty);
-							await Mediator.Send(new LinkExitCommand(exit, destinationRoom));
-
-							return "1";
-						}
-					);
-				}
-				else if (exitObj is SharpThing or SharpPlayer)
-				{
-					// Set home for thing or player
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-						executor, executor, destName, LocateFlags.All,
-						async destObj =>
-						{
-							// create.c:395-399: a home is anything that is not an exit, and not the object itself.
-							if (!destObj.IsContainer || destObj.Object().DBRef.Equals(exitObj.Object().DBRef))
-							{
-								return ErrorMessages.Returns.InvalidDestination;
-							}
-
-							// create.c:404. ABODE is ROOM-only in the flag seed, as in PennMUSH, so a
-							// player or thing destination is gated on control alone. Penn's following
-							// room == HOME guard (create.c:412) is unreachable: this branch matches
-							// with MAT_EVERYTHING, which has no home entry, and only
-							// parse_linkable_room ever yields HOME.
-							if (!await PermissionService.Controls(executor, destObj) && !await destObj.HasFlag("ABODE"))
-							{
-								return ErrorMessages.Returns.PermissionDenied;
-							}
-
-							await Mediator.Send(new SetObjectHomeCommand(exitObj.AsContent, destObj.AsContainer));
-							return "1";
-						}
-					);
-				}
-				else if (exitObj is SharpRoom room)
-				{
-					// Set drop-to for room
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-						executor, executor, destName, LocateFlags.All,
-						async destObj =>
-						{
-							if (destObj is not SharpRoom dropTo)
-							{
-								return ErrorMessages.Returns.InvalidDestination;
-							}
-
-							await Mediator.Send(new LinkRoomCommand(room, dropTo));
-							return "1";
-						}
-					);
-				}
-
-				return ErrorMessages.Returns.InvalidObjectType;
+				Success => new CallState("1"),
+				Error<string> refused => new CallState(refused.Value)
 			});
 	}
 
