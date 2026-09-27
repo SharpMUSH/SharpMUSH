@@ -26,7 +26,8 @@ namespace SharpMUSH.Library.Services;
 /// This is compensation, not isolation: nothing spans the stores, so other writers see intermediate
 /// state, and a process that dies part way through keeps what it had written. An operation commits
 /// with its last write, made straight to the registry and not through here, because it cannot be
-/// reversed: a revision record, or the package's removal.
+/// reversed: a revision record, or the package's removal. This is the permanent contract (#1186):
+/// docs/design/world-transactions.md §0 says what a crash leaves behind and how an operator recovers.
 /// </remarks>
 public sealed class PackageWriteTransaction(
 	IMediator mediator,

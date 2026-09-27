@@ -1,9 +1,93 @@
 # World Transactions
 
-**Status:** Proposed only. Deferred and not scheduled: this records the design so it is not
-lost, and is not a plan of work. Nothing here is built. Package operations use the compensation log
-(`PackageWriteTransaction`) until this is taken up. If it is ever accepted, it amends
-`engine-data-trunk.md` §1 (cache policy) and §8 (one engine process).
+**Status:** Rejected (2026-09-27, #1186). Nothing here is built, and nothing here is planned.
+Compensation (`PackageWriteTransaction`) is the permanent contract for package operations; §0
+states that contract, what a crash leaves behind, and how an operator recovers. The rest of this
+document is kept as the record of what was proposed, so that a later proposal starts from it
+rather than from nothing. It does not amend `engine-data-trunk.md`.
+
+## 0. Decision: compensation is the contract
+
+### Why the design is rejected
+
+- **It buys little for what it costs.** Package apply, rollback and uninstall are rare, wizard-only
+  operations. They run from the portal (`PackagesController`), at startup
+  (`DefaultPackagesBootstrapService`) and inside a PennMUSH import (`PennMUSHDatabaseConverter`),
+  never from softcode, and each runs for as long as its package's writes take. The crash window
+  is that run. Against it, a world transaction needs a world gate enforced on every
+  write, a writer-thread session in `LightningWriter`, cache deferral in the Mediator behaviours,
+  an outbox in `INotifyService`, the NATS publisher and `ITaskScheduler`, and amendments to
+  `engine-data-trunk.md` §1 and §8, which are binding on every lane that writes.
+- **Lightning being the only provider (#1182) removes one cost, not the main ones.** It makes the
+  storage half one LMDB commit. The gate, the cache (§5) and the outbox (§6) are unchanged, and
+  §5 is the part the design itself says breaks first.
+- **No PennMUSH behaviour depends on it.** Softcode keeps P2 and P3 either way (§1). Penn has no
+  package manager, so there is no Penn behaviour for a package operation to diverge from.
+- **The cheap half of the value is available without it.** P1 exclusion (a package operation not
+  interleaving with a queue entry) needs only that the operation run as a queue entry, as HTTP
+  handler commands now do (#1184). A crash-time restore point needs only `@backup`, which is
+  already a consistent LMDB hot copy (`LightningWorldBackupService`).
+
+Reopen this only on new evidence: a package operation long enough that the crash window matters
+in practice, a need for phase 2's P4 parity, or a second writer path that compensation cannot
+cover.
+
+### The contract
+
+An operation's writes go through `PackageWriteTransaction`, each recorded with its inverse. The
+operation commits with its last write, made straight to the registry: the revision record for an
+apply or rollback, the removal of the package's rows for an uninstall. Then:
+
+- **A failure the process survives** (an error result or an exception) replays the inverses newest
+  first. The world is back where it started, and the error names any write that could not be
+  reverted.
+- **Other code is not isolated from the operation.** A queue entry, portal request or HTTP handler
+  that runs while the operation does can see, and write over, its intermediate state.
+- **A crash part way through keeps every write made so far, and replays nothing.** Every write is
+  durable on its own (P4, §1), and the inverses were in memory only.
+
+### What a crash leaves behind
+
+The writes happen in a fixed order, so the residue depends on how far the operation got:
+
+| Operation | Order of writes | Left behind by a crash before the commit write |
+|---|---|---|
+| **Apply** (install or upgrade) | create objects → link exits, names, parents → attributes, with their managed-attribute rows → locks and flags → retire objects the package dropped → package-object, structure, installed-package, dependency and application rows → revision record | Objects the apply created, owned by the package-manager wizard. Until the package-object rows are written the registry does not know them, so applying again creates a second copy. Attributes on existing and attached objects hold a mix of old and new values. For an upgrade, the installed-package row may already name the new version with no revision record behind it. |
+| **Rollback** | package-object rows → attributes and structure → release objects the revision did not own → installed-package row → revision record | A mix of the two revisions' values, and possibly an installed-package row naming a revision number that was never recorded. |
+| **Uninstall** | clear this package's attributes on other packages' objects → mark its own objects `GOING` → remove its applications → remove its rows | The package is still listed as installed, with some of its objects `GOING` (and purged by the usual `@destroy` cycle) and some applications gone. |
+
+An apply's lifecycle hooks (`AINSTALL`, `AUPDATE`) run only after its commit, so a crash never
+runs them for a half-applied one.
+
+### How an operator recovers
+
+1. **Before a package operation on a live game, take `@backup`.** It is a point-in-time copy that
+   does not stop the game, and it is the only restore point that is exact.
+2. **After a crash during a package operation, restore that backup.** Stop the server and put the
+   backup directory back as the Lightning data directory (`SHARPMUSH_LIGHTNING_PATH`); the
+   deployment steps are in `deploy/README.md`, *To restore for real*. Everything written after the
+   backup is lost with the half-applied operation, exactly as a Penn crash loses everything after
+   its last dump.
+3. **Without a backup, repair by hand, then repeat the operation.** Repeating it on its own is not
+   guaranteed to converge: a repeated install creates a second copy of the objects the first one
+   created. Use the residue table above: `@destroy` the orphaned objects the apply created (owned
+   by the package-manager wizard, not listed by the package), then re-run the apply, rollback or
+   uninstall (`force` for an uninstall whose dependents or attachments block it).
+
+### Follow-ups this decision leaves
+
+These are separate issues, not part of this decision:
+
+- **Run portal package operations as queue entries**, as #1184 did for HTTP handler commands.
+  That gives package operations P1 exclusion from softcode without a provider transaction. It
+  needs care with the lifecycle hooks, which queue work of their own.
+- **Offer an automatic `@backup` before a portal package operation**, so step 1 above is not left
+  to memory. It needs a retention decision, so that pre-operation copies do not evict the
+  scheduled ones.
+
+---
+
+The proposal below is the rejected design, as it was written.
 
 Package operations are atomic today only by compensation (`PackageWriteTransaction`). Each write
 records its inverse, and a failure replays the inverses. That covers failures the process lives
@@ -26,9 +110,8 @@ PennMUSH has no transactions. What it guarantees comes from being single-threade
 Where SharpMUSH stands:
 
 - **P1** holds for the command queue, which has a single consumer (`TaskScheduler.ProcessQueueAsync`).
-  It does not hold for HTTP handler commands, which `HttpHandlerCommandService` evaluates on the
-  request thread (`CommandListParse`, line 120). Portal writes and package operations don't hold
-  it either. All three can interleave with a running queue entry.
+  HTTP handler commands are queue entries too since #1184. Portal writes and package operations
+  don't hold it: both can interleave with a running queue entry.
 - **P2** and **P3** hold.
 - **P4** differs in both directions. Every write is durable on its own, which is stronger than
   Penn's hourly dump. But a crash part way through an entry persists half of it, which Penn never
