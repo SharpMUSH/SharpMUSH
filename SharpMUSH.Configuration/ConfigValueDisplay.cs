@@ -20,6 +20,9 @@ public static class ConfigValueDisplay
 	/// <summary>PennMUSH's <c>NOTHING</c>, which is what an unset dbref option holds.</summary>
 	private const string Nothing = "#-1";
 
+	/// <summary>The text <c>config()</c> and <c>@config</c> print for one option's stored value.</summary>
+	/// <param name="value">The value read off the live options, null when the option is unset.</param>
+	/// <param name="metadata">The option's declaration, which says whether it names an object.</param>
 	public static string Format(object? value, SharpConfigAttribute metadata)
 		=> metadata.Dbref
 			? value is null ? Nothing : $"#{value}"

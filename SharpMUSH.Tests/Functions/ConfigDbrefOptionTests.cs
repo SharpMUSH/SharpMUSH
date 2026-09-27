@@ -41,6 +41,10 @@ public class ConfigDbrefOptionTests
 		"event_handler", "http_handler", "max_dbref", "probate_judge"
 	];
 
+	/// <summary>
+	/// Each dbref option's value as <c>config()</c> prints it. The numbers are SharpMUSH's seeded
+	/// objects, from the shipped <c>mushcnf.dst</c>; the <c>#</c> in front of each is PennMUSH's.
+	/// </summary>
 	[Test]
 	[Arguments("player_start", "#0")]
 	[Arguments("master_room", "#2")]
@@ -112,6 +116,7 @@ public class ConfigDbrefOptionTests
 	public async Task FormatterWritesNonDbrefValues(object? value, string expected)
 		=> await Assert.That(ConfigValueDisplay.Format(value, DbrefMetadata(dbref: false))).IsEqualTo(expected);
 
+	/// <summary>An option declaration that differs from its neighbours only in naming an object.</summary>
 	private static SharpConfigAttribute DbrefMetadata(bool dbref) => new()
 	{
 		Name = "test_option",
