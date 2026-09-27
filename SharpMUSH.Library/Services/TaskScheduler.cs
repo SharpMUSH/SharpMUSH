@@ -73,6 +73,15 @@ public partial class TaskScheduler(
 		public QueueOutcome? DeferredReleaseOutcome { get; init; }
 		public bool HaltAccountingSettled { get; init; }
 		public PendingInputCommand? PendingInput { get; init; }
+
+		/// <summary>
+		/// Whether this entry is part of <see cref="Owner"/>'s queue quota. False for a typed line and
+		/// for host socket work, which PennMUSH's <c>add_to</c> tally never sees.
+		/// </summary>
+		public bool ChargesOwner { get; init; } = true;
+
+		/// <summary>The connection this entry was typed on, for the per-connection burst cap.</summary>
+		public long? Handle { get; init; }
 	}
 
 	// Stored only on admitted entries. An escape cannot retain a future-start tombstone.
@@ -170,8 +179,19 @@ public partial class TaskScheduler(
 	 Action? onReleased = null, string? sourceAttribute = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true, PendingInputCommand? pendingInput = null,
 	 bool chargesOwner = true)
 	{
-		// Actorless host callbacks share a bounded system bucket; they do not bypass fairness.
-		string owner = !chargesOwner ? SchedulerKeys.SocketOwner : handle is null ? SchedulerKeys.SystemOwner : SchedulerKeys.Owner(handle);
+		// A typed line is invisible to the owner quota, as it is in PennMUSH: run_user_input builds its
+		// entry with QUEUE_SOCKET and hands it straight to do_entry (src/cque.c:1076-1088), so it never
+		// reaches insert_que, never reaches pay_queue, and never touches the add_to tally queue_limit
+		// reads (:226-235). It can therefore neither be refused by the quota nor be the reason someone
+		// else is. What bounds it instead is per-connection, as Penn's descriptor quota is
+		// (COMMAND_BURST_SIZE, src/bsd.c:197,1000-1004). #1320.
+		chargesOwner &= group != DirectInputGroup;
+		// Actorless host callbacks share a bounded system bucket; they do not bypass fairness. A
+		// connection still names its own bucket even when it is not charged, so an execution-limit
+		// notice reaches the handle that typed the line.
+		string owner = handle is not null ? SchedulerKeys.Owner(handle)
+			: chargesOwner ? SchedulerKeys.SystemOwner
+			: SchedulerKeys.SocketOwner;
 		long ownerLimit = configuration?.CurrentValue.Limit.PlayerQueueLimit ?? 100;
 		var executorIsPlayer = false;
 		if (executor is not null)
@@ -204,7 +224,11 @@ public partial class TaskScheduler(
 		{
 			if (_stopping) result = Reject(QueueRejectionReason.ShuttingDown);
 			else if (_pendingEntries.Count >= (configuration?.CurrentValue.Limit.GlobalQueueLimit ?? 10000)) result = Reject(QueueRejectionReason.GlobalLimit);
-			else if (chargesOwner && _pendingEntries.Values.Count(e => e.Owner == owner) >= ownerLimit) result = Reject(QueueRejectionReason.OwnerLimit);
+			// Only charged entries are in the tally, so a typed line cannot make its owner a runaway.
+			else if (chargesOwner && _pendingEntries.Values.Count(e => e.ChargesOwner && e.Owner == owner) >= ownerLimit) result = Reject(QueueRejectionReason.OwnerLimit);
+			else if (!chargesOwner && handle is { } typist
+				&& _pendingEntries.Values.Count(e => e.Handle == typist) >= (configuration?.CurrentValue.Limit.CommandBurstSize ?? LimitOptions.DefaultCommandBurstSize))
+				result = Reject(QueueRejectionReason.ConnectionLimit);
 			else
 			{
 				var pid = NextPid();
@@ -212,7 +236,9 @@ public partial class TaskScheduler(
 				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget, OnReleased: onReleased, ManagesSemaphoreCount: managesSemaphoreCount)
 				{
 					Observation = diagnostics?.Admitted(pid, executor, diagnosticOwner, SchedulerKeys.KindOf(group), sourceAttribute),
-					PendingInput = pendingInput
+					PendingInput = pendingInput,
+					ChargesOwner = chargesOwner,
+					Handle = chargesOwner ? null : handle
 				};
 				_pendingEntries[pid] = entry;
 				_orderedPids.Add(pid);
@@ -228,6 +254,7 @@ public partial class TaskScheduler(
 			{
 				QueueRejectionReason.GlobalLimit => QueueOutcome.GlobalLimit,
 				QueueRejectionReason.OwnerLimit => QueueOutcome.OwnerLimit,
+				QueueRejectionReason.ConnectionLimit => QueueOutcome.ConnectionLimit,
 				QueueRejectionReason.ShuttingDown => QueueOutcome.ShuttingDown,
 				_ => QueueOutcome.InvalidTarget
 			});
@@ -238,11 +265,12 @@ public partial class TaskScheduler(
 		// entry with QUEUE_SOCKET and hands it straight to do_entry (src/cque.c:1076-1088), so a typed
 		// line never reaches insert_que and so never reaches pay_queue, whoever typed it. That is also
 		// what makes the flag safe on a player — they can still type, and process_command
-		// (src/game.c:1181) refuses only what the queue carries for them.
+		// (src/game.c:1181) refuses only what the queue carries for them. An uncharged entry can no
+		// longer be refused for the owner limit at all, so no group test is needed here.
 		//
 		// Scheduled before the rejection notice, which is best-effort and can fail: telling nobody
 		// about a runaway is survivable, leaving one running is not.
-		if (result.Reason == QueueRejectionReason.OwnerLimit && group != DirectInputGroup && executor is { } offender)
+		if (result.Reason == QueueRejectionReason.OwnerLimit && executor is { } offender)
 			QueueRunawayHalt(offender, owner);
 		if (!result.Accepted && notifyOnRejection && notifyService is not null)
 		{

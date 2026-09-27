@@ -3,7 +3,7 @@ namespace SharpMUSH.Library.Models.Diagnostics;
 public enum QueueOutcome
 {
 	Completed, InvocationFailure, Failed, Cancelled, ExecutionLimit,
-	GlobalLimit, OwnerLimit, InvalidTarget, ShuttingDown, ScheduleFailed, Halted
+	GlobalLimit, OwnerLimit, InvalidTarget, ShuttingDown, ScheduleFailed, Halted, ConnectionLimit
 }
 
 /// <summary>Closed, non-executable metadata. A rejected admission has no PID.</summary>
