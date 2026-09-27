@@ -57,6 +57,9 @@ SHARPMUSH_ENABLE_TEST_TELEMETRY=true dotnet run --project SharpMUSH.Tests
 
 The test framework is **TUnit** (not xUnit or MSTest). The `--treenode-filter` format is `/<assembly>/<namespace>/<class>/<method>` with `*` wildcards.
 
+**Tests share one world and one `NotifyService` substitute, and run in parallel.** A test that asserts what someone heard (or didn't hear) creates that receiver in a room of its own, not `DefaultHome`. It reads output through `TestHelpers.NotificationRecorder` (`Notifications` on the factory), matched on a unique string from `TestIsolationHelpers.GenerateUniqueName` (socket handles from `GenerateUniqueHandle`), never by position or "last line". It never calls `ClearReceivedCalls()` or `Received()` on the shared substitute.
+Product code keeps per-engine settings off `static` fields; the test run starts several hosts in one process (#1245).
+
 ## PennMUSH Parity Harness
 
 `tools/parity/run.sh` replays the same scripted telnet sessions (DB import, login, player/admin commands, softcode) against a reference PennMUSH built from `pennmush/` and against SharpMUSH, and reports every output difference. Each parity fix adds a case to `tools/parity/scenarios/`. See `tools/parity/README.md` (normalization rules, known-differences allowlist, baseline).
