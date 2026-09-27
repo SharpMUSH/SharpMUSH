@@ -1,7 +1,7 @@
 using SharpMUSH.Library.Services.Interfaces;
-using SharpMUSH.ConnectionServer.ProtocolHandlers;
+using SharpMUSH.SocketServer.ProtocolHandlers;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>Restores resumable browser sessions and removes records with no surviving transport.</summary>
 public class ConnectionCleanupService(

@@ -1,9 +1,9 @@
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using SharpMUSH.ConnectionServer.Configuration;
-using SharpMUSH.ConnectionServer.ProtocolHandlers;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Configuration;
+using SharpMUSH.SocketServer.ProtocolHandlers;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;

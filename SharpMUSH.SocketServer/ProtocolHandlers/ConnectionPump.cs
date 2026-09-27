@@ -1,9 +1,9 @@
 using System.Text;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
 
-namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
+namespace SharpMUSH.SocketServer.ProtocolHandlers;
 
 /// <summary>
 /// Owns the shared connection lifecycle. Output is sequence-wrapped and buffered for replay, routed

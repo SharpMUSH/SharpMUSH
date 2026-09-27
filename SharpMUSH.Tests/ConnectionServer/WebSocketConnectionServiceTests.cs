@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Abstractions;
 using System.Text;
 

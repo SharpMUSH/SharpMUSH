@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
 /// In-memory <see cref="ITerminalReplayStore"/>: a per-session bounded, short-lived output buffer.

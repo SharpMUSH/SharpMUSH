@@ -1,11 +1,12 @@
-using SharpMUSH.ConnectionServer.ProtocolHandlers;
+using SharpMUSH.SocketServer.ProtocolHandlers;
 using MarkupString.Mxp;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
-using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.SocketServer.Models;
+using SharpMUSH.SocketServer.Services;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.RenderingWorker.Services;
 
 public sealed class MarkupOutputRenderer : IMarkupOutputRenderer
 {

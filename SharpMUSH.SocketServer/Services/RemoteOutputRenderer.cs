@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Net.Sockets;
-using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.SocketServer.Models;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>Retries pure rendering across worker restarts; socket writes remain in this process.</summary>
 public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransformService, IDisposable

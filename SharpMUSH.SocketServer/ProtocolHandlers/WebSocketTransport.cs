@@ -2,7 +2,7 @@ using System.Buffers;
 using System.Net.WebSockets;
 using System.Text;
 
-namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
+namespace SharpMUSH.SocketServer.ProtocolHandlers;
 
 /// <summary>Adapts a <see cref="WebSocket"/> to <see cref="IDuplexTransport"/> using native text framing.</summary>
 public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string hostname, bool isSecure = false)

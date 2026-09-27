@@ -1,4 +1,4 @@
-namespace SharpMUSH.ConnectionServer.Models;
+namespace SharpMUSH.SocketServer.Models;
 
 /// <summary>
 /// Output format for a connection — determines how MarkupString content is rendered.

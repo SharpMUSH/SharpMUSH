@@ -3,10 +3,10 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.ResourceDetectors.Container;
 using Serilog;
-using SharpMUSH.ConnectionServer.Configuration;
-using SharpMUSH.ConnectionServer.Consumers;
-using SharpMUSH.ConnectionServer.ProtocolHandlers;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Configuration;
+using SharpMUSH.SocketServer.Consumers;
+using SharpMUSH.SocketServer.ProtocolHandlers;
+using SharpMUSH.SocketServer.Services;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -14,7 +14,7 @@ using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.NATS;
 using SharpMUSH.Messaging.NATS.Strategy;
 
-namespace SharpMUSH.ConnectionServer;
+namespace SharpMUSH.SocketServer;
 
 public class Program
 {
@@ -156,9 +156,9 @@ public class Program
 		// callbacks are configured in TelnetServer.OnConnectedAsync via CreateBuilder().
 		builder.Services.AddTelnetServer();
 
-		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.HealthMonitoringService>();
+		builder.Services.AddHostedService<SharpMUSH.SocketServer.Services.HealthMonitoringService>();
 
-		builder.Services.AddHostedService<SharpMUSH.ConnectionServer.Services.ConnectionCleanupService>();
+		builder.Services.AddHostedService<SharpMUSH.SocketServer.Services.ConnectionCleanupService>();
 		builder.Services.AddHostedService<ConnectionStateRefreshService>();
 
 		// Configure NATS messaging (URL resolved lazily for the same reason as above)

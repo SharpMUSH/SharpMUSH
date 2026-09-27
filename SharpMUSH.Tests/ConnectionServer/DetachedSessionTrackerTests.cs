@@ -1,4 +1,4 @@
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Tests.ConnectionServer.TestSchedulers;
 
 namespace SharpMUSH.Tests.ConnectionServer;

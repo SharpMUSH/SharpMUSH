@@ -1,4 +1,4 @@
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
 /// Per-session terminal output history for reconnect replay. Each append assigns a monotonic

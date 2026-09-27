@@ -1,8 +1,8 @@
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 
-namespace SharpMUSH.ConnectionServer.Consumers;
+namespace SharpMUSH.SocketServer.Consumers;
 
 public class MainProcessReadyConsumer(EngineLifecycleNoticeService notices)
 	: IMessageConsumer<MainProcessReadyMessage>

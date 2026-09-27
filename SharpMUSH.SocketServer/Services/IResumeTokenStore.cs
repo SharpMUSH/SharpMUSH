@@ -1,4 +1,4 @@
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
 /// Mints and resolves opaque resume tokens binding a fresh reconnect back to a prior connection within a

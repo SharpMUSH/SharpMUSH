@@ -4,7 +4,7 @@ using NATS.Client.JetStream;
 using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
 using Microsoft.Extensions.Logging.Abstractions;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.NATS.Strategy;
 
 namespace SharpMUSH.Tests.ConnectionServer;

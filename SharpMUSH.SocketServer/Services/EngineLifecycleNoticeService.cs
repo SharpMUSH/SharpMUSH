@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>Orders lifecycle events from separate NATS subjects before notifying sockets.</summary>
 public sealed class EngineLifecycleNoticeService(

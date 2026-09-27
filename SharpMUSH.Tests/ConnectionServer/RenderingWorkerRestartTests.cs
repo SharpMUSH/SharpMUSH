@@ -3,8 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using SharpMUSH.ConnectionServer.Models;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Models;
+using SharpMUSH.SocketServer.Services;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 

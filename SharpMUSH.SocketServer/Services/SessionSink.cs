@@ -1,6 +1,6 @@
-using SharpMUSH.ConnectionServer.ProtocolHandlers;
+using SharpMUSH.SocketServer.ProtocolHandlers;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
 /// Per-handle holder of the currently-attached transport. The registered output delegate routes

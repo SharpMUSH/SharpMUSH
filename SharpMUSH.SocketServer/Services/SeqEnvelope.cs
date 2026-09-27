@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
 /// Server-side codec for the terminal control frames exchanged with the client, all serialized via
