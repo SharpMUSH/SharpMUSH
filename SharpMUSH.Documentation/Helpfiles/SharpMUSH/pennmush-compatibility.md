@@ -118,6 +118,8 @@ to change any of these to match PennMUSH.
 
 ## The command word is not evaluated for built-in dispatch
 
+**A choice.**
+
 **PennMUSH** evaluates the first word of a command line before matching it, so
 `[strcat(th,ink)] hello` runs `think`.<br>
 **SharpMUSH** matches the built-in command word literally.<br>
@@ -136,6 +138,8 @@ against the fully evaluated line — a separate, later stage.
 
 ## Malformed expressions are an error, not silent text
 
+**A choice.**
+
 **PennMUSH** evaluates almost anything — an unclosed `[`, `(`, or `{`, or a trailing `\` still
 produces output.<br>
 **SharpMUSH** answers `#-1 PARSER FAILURE` for an unbalanced expression.<br>
@@ -152,6 +156,8 @@ still literal text, as in PennMUSH.
 
 ## Function arguments are not evaluated before an argument-count error
 
+**A choice.**
+
 **PennMUSH** runs the arguments for their side effects first: `not(setq(0,x),1)` sets `%q0` and then
 reports the arity error.<br>
 **SharpMUSH** validates the argument count first, so those side effects do not happen.<br>
@@ -165,12 +171,25 @@ reports the arity error.<br>
 
 ## Evaluation stops at the first limit
 
+**A choice.**
+
 **PennMUSH** continues past a function-invocation, recursion, call-depth or output limit.<br>
 **SharpMUSH** stops evaluating the rest of the expression.<br>
 **Why.** The limits exist to bound the work a single line can cause; continuing past one does not.<br>
 **Workaround.** Expect no output after the point where a limit is reached.
 
+An attribute that calls itself reaches the recursion limit. PennMUSH goes on to append an `x` for
+every call that had already started and counts the result, answering 86 here; SharpMUSH stops:
+
+```sharp
+> &RECURSE me=[u(me/RECURSE)]x
+> think strlen(u(me/RECURSE))
+#-1 FUNCTION RECURSION LIMIT EXCEEDED
+```
+
 ## `##` in `iter()` is data, not code
+
+**A choice.**
 
 **PennMUSH** splices each list element into the pattern as text and then evaluates it, so element
 text containing softcode executes.<br>
@@ -190,6 +209,8 @@ a b
 
 ## Function names cannot be produced by evaluation
 
+**A choice.**
+
 **PennMUSH** builds the called function's name from evaluated output, so `[setq(0,add)]%q0(1,2)`
 calls `add`.<br>
 **SharpMUSH** recognises function names lexically; a name that only appears after substitution is
@@ -198,7 +219,39 @@ ordinary text.<br>
 restricted.<br>
 **Workaround.** `switch()` on the name, or store the call in an attribute and `u()` it.
 
+PennMUSH answers `3` to the first line:
+
+```sharp
+> think [setq(0,add)]%q0(1,2)
+add(1,2)
+> think switch(add,add,add(1,2),sub,sub(1,2))
+3
+```
+
+## A literal tab after `(` or `,` is layout
+
+**A choice.**
+
+**PennMUSH** keeps a tab character typed straight after a function's `(` or an argument's `,`, and
+trims only spaces there, so `strlen(<tab>a)` is 2.<br>
+**SharpMUSH** treats a tab in that position like a newline, as layout that separates tokens, and
+drops it: `strlen(<tab>a)` is 1, and `strlen(<tab>)` is 0 where PennMUSH answers 1. A tab anywhere
+else in an argument is kept, so `strlen(a<tab>b)` is 3 on both.<br>
+**Why.** It lets softcode be indented over several lines, with tabs, without changing what it
+evaluates to.<br>
+**Workaround.** Write the tab as `%t`, or put anything evaluated, even an empty `[space(0)]`, in front
+of it. `%t` is kept in every position on both servers:
+
+```sharp
+> think strlen(%ta)
+2
+> think strlen(a%tb)
+3
+```
+
 ## Unescaped commas are never absorbed by a final argument
+
+**A choice.**
 
 **PennMUSH** lets the last argument of functions such as `pemit()`, `emit()` and `capstr()` swallow
 extra unescaped commas — `capstr(a,b,c)` capitalises the string `a,b,c` — though it now warns that
@@ -213,16 +266,25 @@ too-many-arguments error.<br>
 A,b,c
 ```
 
+Where SharpMUSH gives a function an optional argument PennMUSH does not have (see
+[COMPATIBILITY ARGUMENTS]), a PennMUSH-era call with an unescaped comma does not fail: it passes that
+argument instead. `strlen()` is one.
+
 ## A command that crashes says so
+
+**A choice.**
 
 **PennMUSH** has no equivalent.<br>
 **SharpMUSH** answers `#-1 EXCEPTION: <json>` when an internal error escapes a command, and notifies
 the player with the same text.<br>
 **Why.** Producing no output at all is indistinguishable from a command that did nothing on
 purpose.<br>
-**Workaround.** See `help exception` for the payload and what a mortal versus a wizard is shown.
+**Workaround.** See `help exception` for the payload and what a mortal versus a wizard is shown.<br>
+**No example.** A command that crashes is a defect, and none is kept around to show this with.
 
 ## A failing function says why
+
+**A choice.**
 
 **PennMUSH** answers many failures with a bare `#-1` (or `#-2`, `#-3`), sometimes notifying the
 reason separately and often not giving one at all.<br>
@@ -278,7 +340,8 @@ This command has not been implemented.
 **SharpMUSH** keeps one stored configuration, which the portal also edits, and every `/set` is written
 to it and lasts across restarts. `/save` does the same and says so.<br>
 **Why.** There is no `mush.cnf` for a running game to fall back to.<br>
-**Workaround.** Set the value back when a change was meant to be temporary.
+**Workaround.** Set the value back when a change was meant to be temporary.<br>
+**No example.** The difference shows only after a restart.
 
 ## `command_restrictions` reapplies without a restart
 
@@ -296,7 +359,8 @@ alone. (#1250)<br>
 **Why.** The configuration can be changed while the game is running; a restriction that waits for a
 restart looks as if it had been ignored.<br>
 **Workaround.** After changing `command_restrictions`, repeat any `@command/restrict` that should
-still apply to a command it names, or put the restriction in `command_restrictions` itself.
+still apply to a command it names, or put the restriction in `command_restrictions` itself.<br>
+**No example.** Changing `command_restrictions` changes the command table for every player.
 
 ## PennMUSH's file and allocator housekeeping answers `NOT SUPPORTED`
 
@@ -308,7 +372,8 @@ still apply to a command it names, or put the restriction in `command_restrictio
 database, so it has neither. Those commands return `#-1 NOT SUPPORTED`, and `@logwipe` also records
 the attempt in the server log.<br>
 **Why.** Nothing in the game owns the resource those commands manage.<br>
-**Workaround.** Rotate logs where they are configured.
+**Workaround.** Rotate logs where they are configured.<br>
+**No example.** The commands are God-only and answer with a message, not a value `think` can show.
 
 ## The HTTP and event handlers exist from the start
 
@@ -322,6 +387,13 @@ options already pointing at them and the default HTTP verb attributes installed.
 **Workaround.** Extend the shipped handlers rather than creating new ones. See `help http` and
 `help event`.
 
+A new PennMUSH database has no `#8` or `#9`, and answers `#-1 NO SUCH OBJECT VISIBLE` twice:
+
+```sharp
+> think [name(#8)]|[name(#9)]
+HTTP Handler|Event Handler
+```
+
 ## A drop-to move's event names who caused it
 
 **A choice.**
@@ -332,7 +404,8 @@ options already pointing at them and the default HTTP verb attributes installed.
 shows only in the enactor of the `OBJECT`MOVE` event. (#1006 item 9)<br>
 **Why.** There is no `SYSEVENT` dbref to name.<br>
 **Workaround.** Do not rely on an `OBJECT`MOVE` handler's enactor to tell a drop-to move from any
-other.
+other.<br>
+**No example.** It needs an event handler, a room with a drop-to and a second object moving.
 
 ## Typed input is bounded by a pending count, not a replenishing rate
 
@@ -353,6 +426,13 @@ run.<br>
 **Workaround.** None needed for softcode. Raise `command_burst_size` if a client that sends large
 scripted bursts is refused.
 
+PennMUSH answers `#-1 NO SUCH CONFIG OPTION`:
+
+```sharp
+> think config(command_burst_size)
+100
+```
+
 # COMPATIBILITY ARGUMENTS
 Functions that accept a different number of arguments here. Every one of these is **additive**: the
 call you would write for PennMUSH keeps its PennMUSH meaning, and the extra argument is optional.
@@ -362,6 +442,8 @@ function, and a test compares it against the registered arity on every run, so t
 silently grow. See `docs/guides/registry-parity-and-coverage.md`.
 
 ## A trailing `<precision>` on the time functions
+
+**A choice.**
 
 **Affects** `convtime() convutctime() csecs() etime() etimefmt() idle() msecs() secs() stringsecs()
 timestring() uptime()`.<br>
@@ -384,6 +466,8 @@ more digits.)
 
 ## A trailing `<osep>` on the vector functions
 
+**A choice.**
+
 **Affects** `vadd() vsub() vmul() vdot() vmax() vmin() vcross()`.<br>
 **PennMUSH** joins the answer with the same `<delimiter>` it split the inputs on.<br>
 **SharpMUSH** takes a fourth argument that overrides it, defaulting to `<delimiter>`.<br>
@@ -399,6 +483,8 @@ more digits.)
 
 ## Prepared-statement parameters on `sql()` and `mapsql()`
 
+**A choice.**
+
 **PennMUSH** takes at most four arguments and rejects a fifth.<br>
 **SharpMUSH** binds every argument past the fourth as a prepared-statement parameter, substituted for
 a `?` in the query.<br>
@@ -409,11 +495,56 @@ a `?` in the query.<br>
 > think sql(lit(SELECT name FROM people WHERE id = ?),%b,%b,%b,7)
 ```
 
+## A trailing `<count controls>` on `strlen()`
+
+**A choice.**
+
+**PennMUSH** takes one argument. A second one is joined to the first, commas and all, with a
+warning that this is deprecated: `strlen(a%tb,0)` warns, then answers 5.<br>
+**SharpMUSH** takes an optional second argument. A false value counts control characters such as
+`%t` and `%r` as zero, as `displaywidth()` does, so `strlen(a%tb,0)` is 2. Omitted or true, each
+control character counts as one, as in PennMUSH. (#1256)<br>
+**Why.** A tab or a newline takes up no columns, and code that pads a table needs that width.<br>
+**Workaround.** Omit the argument for PennMUSH behaviour. A PennMUSH-era call that relied on an
+unescaped comma being kept needs it escaped: `strlen(a\,0)`.
+
+```sharp
+> think strlen(a%tb)
+3
+> think strlen(a%tb,0)
+2
+> think strlen(a\,0)
+3
+```
+
+For Latin-1 text the two servers count alike. Beyond it, PennMUSH counts the bytes of the UTF-8
+encoding and SharpMUSH counts display columns: a wide CJK character is two and a combining mark is
+none. PennMUSH answers `6` here:
+
+```sharp
+> think strlen(漢字)
+4
+```
+
 ## Argument-less forms PennMUSH does not offer
 
-`config()` with no argument lists every option name. `stext()` with no argument is the current
-switch, the same as `stext(0)`. `lwhoid()` accepts the `<status>` argument `lwho()` takes — PennMUSH
-declares the pair differently although one C function serves both.
+**A choice.**
+
+**PennMUSH** answers `stext()` with `#-1 ARGUMENT MUST BE INTEGER`, and declares `lwhoid()` with at
+most one argument, so `lwhoid(me,online)` is an argument-count error.<br>
+**SharpMUSH** treats `stext()` as `stext(0)`, the innermost switch, and lets `lwhoid()` take the
+`<status>` argument `lwho()` takes.<br>
+**Why.** An omitted level means the innermost one everywhere else. PennMUSH serves `lwho()` and
+`lwhoid()` with one C function and only declares them differently.<br>
+**Workaround.** Write `stext(0)`, and give `lwhoid()` at most one argument, for code that has to run
+on both.
+
+```sharp
+> think switch(a,a,stext())
+a
+> think switch(a,a,stext(0))
+a
+```
 
 ## `ansi()` and `lit()`
 
@@ -492,30 +623,45 @@ In PennMUSH the same lines answer `1` and create `#50` again.
 trailing zeros dropped, as in PennMUSH. SharpMUSH defaults to 6, the same as PennMUSH, and caps the
 setting at 15. `round()` cannot ask for more places than the setting allows.
 
-A result that rounds to zero from below is written `0`, where PennMUSH writes `-0`.
-
 ```sharp
 > think pi()
 3.141593
 > think round(pi(),6)
 3.141593
+```
+
+## A result that rounds to zero from below is `0`
+
+**A choice.**
+
+**PennMUSH** writes it `-0`, the sign C's `printf` leaves on it.<br>
+**SharpMUSH** writes `0`.<br>
+**Why.** `-0` and `0` are the same number, but compared as text, by `switch()`, `strmatch()` or a
+`$`-command pattern, they are different answers.<br>
+**Workaround.** Compare numbers with `eq()`, which is true for `-0` and `0` on both servers.
+
+PennMUSH answers `-0` to the first line:
+
+```sharp
 > think fdiv(-1,10000000000000000)
 0
+> think eq(-0,0)
+1
 ```
 
 ## Fraction representation
 
-`fraction()` answers the **exact** rational of its argument, reduced. Every number softcode can hand
-it is a decimal, so an exact rational always exists, and dividing the result out gives back exactly
-the number that went in.
+**A choice.**
 
-PennMUSH answers the *simplest* fraction within one part in 10^10 instead: `frac()` walks the
+**PennMUSH** answers the *simplest* fraction within one part in 10^10: `frac()` walks the
 convergents of a continued fraction and stops at the first one inside that tolerance, which its own
 help states — "dividing the numerator by the denominator of the results will not always return the
-original `<number>`, but something close to it". Where no simpler fraction is that close the two
-agree, which covers every number of six decimal places or fewer; where one is, SharpMUSH stays exact
-and PennMUSH does not.
-
+original `<number>`, but something close to it".<br>
+**SharpMUSH** answers the **exact** rational of its argument, reduced. Where no simpler fraction is
+within PennMUSH's tolerance the two agree, which covers every number of six decimal places or fewer;
+where one is, SharpMUSH stays exact and PennMUSH does not.<br>
+**Why.** Every number softcode can hand it is a decimal, so an exact rational always exists, and
+dividing the result out gives back exactly the number that went in.<br>
 **Workaround.** `round()` the number first if you want a simpler fraction than the one it names.
 
 ```sharp
@@ -579,9 +725,13 @@ requires migrating code you already have.
 
 ## Argument order: `ctitle()` and `cstatus()`
 
+**A choice.**
+
 **PennMUSH** is `ctitle(<channel>, <object>)` and `cstatus(<channel>, <object>)`.<br>
 **SharpMUSH** is `ctitle(<object>, <channel>)` and `cstatus(<object>, <channel>)` — object first,
 consistently across the pair.<br>
+**Why.** No reason was recorded when the order was chosen. It stays because reversing it now would
+break code written for SharpMUSH.<br>
 **Workaround.** Swap the arguments when importing channel softcode.
 
 On a game with a `Public` channel you have joined:
@@ -593,15 +743,27 @@ ON
 
 ## `wshtml()` takes no `<default string>`; there is no `wsjson()`
 
-PennMUSH's `wshtml(<html>, <default>)` and `wsjson(<json>, <default>)` write the payload into the
+**A choice.**
+
+**PennMUSH**'s `wshtml(<html>, <default>)` and `wsjson(<json>, <default>)` write the payload into the
 line as an out-of-band region and the `<default>` as the reading for a client without WebSockets,
-because its output buffer holds raw bytes and cannot degrade a tag on its own. SharpMUSH's output is
-markup, which can. `wshtml(<html>)` parses the fragment into tags over text, the same value
-`tagwrap()` builds one tag at a time: a WebSocket, Pueblo or MXP client gets the tags, an ANSI
-client gets the styling it can show for `<b>`, `<i>`, `<u>` and `<s>` and the words for everything
-else, and everything else gets the words — so there is no second string to supply. `wsjson()` does not exist — JSON is
-data for a program, not text with a plain reading — and `oob()` sends it where a connection can
-receive it, over GMCP or the WebSocket.
+because its output buffer holds raw bytes and cannot degrade a tag on its own. `think` shows only the
+`<default>`.<br>
+**SharpMUSH**'s output is markup, which can. `wshtml(<html>)` parses the fragment into tags over text,
+the same value `tagwrap()` builds one tag at a time: a WebSocket, Pueblo or MXP client gets the tags,
+an ANSI client gets the styling it can show for `<b>`, `<i>`, `<u>` and `<s>` and the words for
+everything else, and everything else gets the words. `wsjson()` does not exist.<br>
+**Why.** The words of the fragment are already its plain reading, so there is no second string to
+supply. JSON is data for a program, not text with a plain reading.<br>
+**Workaround.** Drop the `<default>` argument, and send JSON with `oob()`, which delivers it where a
+connection can receive it, over GMCP or the WebSocket.
+
+PennMUSH shows nothing for the first line:
+
+```sharp
+> think wshtml(<b>hi</b>)
+hi
+```
 
 ## SharpMUSH-only functions
 
@@ -649,7 +811,8 @@ answers `#-1 RECIPIENT DOES NOT ACCEPT MAIL FROM YOU` when that count is zero.<b
 **Why.** A forward that silently went nowhere is the one case where the sender most needs to be told:
 unlike `@mail`, they are forwarding something they cannot re-send from memory.<br>
 **Workaround.** Read the count in `MAIL: <n> messages forwarded.` rather than assuming the forward
-arrived. Code that tested only for a dbref answer sees an error string instead.
+arrived. Code that tested only for a dbref answer sees an error string instead.<br>
+**No example.** It needs a second player to send or receive the mail.
 
 ## A `MAILFILTER` that mails its owner does not recurse
 
@@ -661,7 +824,8 @@ filter that sends mail to its own owner filters that message too, and so on.<br>
 no filter runs for it.<br>
 **Why.** The captured PennMUSH run crashed the server. Nothing useful depends on the recursion.<br>
 **Workaround.** None needed. A filter that files its own notifications must do so by sending to the
-folder it wants rather than by expecting its own filter to run again.
+folder it wants rather than by expecting its own filter to run again.<br>
+**No example.** It needs a second player to send or receive the mail.
 
 ## Folders are named freely and created on delivery
 
@@ -675,7 +839,8 @@ the player's folders as the message is filed, exactly as `@mail/file` does.<br>
 **Why.** A filter is written before the folder it files into exists; requiring the player to create it
 first means the first message that matches is the one that goes astray.<br>
 **Workaround.** Filters written for PennMUSH keep working. A filter that returns a name PennMUSH would
-have rejected files here instead of erroring, so check the spelling — a typo makes a folder.
+have rejected files here instead of erroring, so check the spelling — a typo makes a folder.<br>
+**No example.** It needs a second player to send or receive the mail.
 
 ## An empty `MAILFORWARDLIST` is no list
 
@@ -687,7 +852,8 @@ have rejected files here instead of erroring, so check the spelling — a typo m
 list is read without parents either way, so a parent's list never forwards a child's mail.<br>
 **Why.** One `&MAILFORWARDLIST me=` should not silently stop a player's mail.<br>
 **Workaround.** Nothing to change in code that never wrote an empty list. Do not reach for an empty
-`MAILFORWARDLIST` as a way to stop receiving mail: it stops nothing here.
+`MAILFORWARDLIST` as a way to stop receiving mail: it stops nothing here.<br>
+**No example.** It needs a second player to send or receive the mail.
 
 # COMPATIBILITY UNRESOLVED
 Known differences with **no decision recorded**. Do not write code that depends on either behaviour;
