@@ -7407,10 +7407,11 @@
     "wshtml": {
       "helpFull": "",
       "helpPreview": "",
-      "maxArgs": "1",
+      "maxArgs": "2",
       "minArgs": 1,
       "parameterNames": [
-        "html"
+        "html",
+        "default"
       ]
     },
     "xattr": {
