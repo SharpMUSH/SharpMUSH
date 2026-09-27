@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -102,6 +103,64 @@ public class MailDeliveryTests
 		await Assert.That(mail[0].Read).IsFalse();
 		await Assert.That(mail[0].Forwarded).IsTrue();
 		await Assert.That(mail[0].Subject.ToPlainText()).IsEqualTo("Fwd: Seen");
+	}
+
+	/// <summary>
+	/// <c>do_mail_fwd</c> matches each recipient with <c>MAT_ME | MAT_ABSOLUTE | MAT_PMATCH | MAT_TYPE</c>
+	/// (<c>extmail.c:1283</c>): a player by name wherever they are. The forward used to look the name up
+	/// among nearby objects and answer <c>I can't see that here.</c> Captured from PennMUSH 1.8.8 (80a1d5b)
+	/// by <c>tools/parity/scenarios/50-mail.scn</c>: <c>MAIL: 1 messages forwarded.</c>
+	/// </summary>
+	[Test]
+	public async ValueTask ForwardingMatchesARecipientByNameInAnotherRoom()
+	{
+		var sender = await Player("MdFwdName");
+		var target = await Player("MdFwdNameTo");
+		await Run(sender, "@mail me=Named/Forward me.");
+
+		var heard = await Heard(sender, () => Run(sender, $"@mail/fwd 1={target.Name}"));
+
+		await Assert.That(heard).Contains("MAIL: 1 messages forwarded.");
+		await Assert.That(heard).DoesNotContain("I can't see that here.");
+		await Assert.That(await Mailbox(target)).Count().IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// <c>extmail.c:1286</c> — a name that matches no player is reported and the rest of the forward goes
+	/// on. Captured: <c>No such unique player: Nobody.</c>, then <c>MAIL: 0 messages forwarded.</c>
+	/// </summary>
+	[Test]
+	public async ValueTask ForwardingToAnUnknownNameReportsNoSuchUniquePlayer()
+	{
+		var sender = await Player("MdFwdNobody");
+		await Run(sender, "@mail me=Nobody/Forward me.");
+
+		CallState? result = null;
+		var heard = await Heard(sender, async () => result = await Run(sender, "@mail/fwd 1=MdFwdNoSuchPlayer"));
+
+		await Assert.That(heard).IsEquivalentTo(
+			["No such unique player: MdFwdNoSuchPlayer.", "MAIL: 0 messages forwarded."]);
+		// Nobody matched, which is not the same answer as a recipient refusing the mail.
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchPlayer);
+	}
+
+	/// <summary>
+	/// <c>extmail.c:1261</c> — the recipient list is split with <c>next_in_list</c> and each name forwarded
+	/// to in turn. Captured for <c>@mail/fwd 1=Bob Alice</c>: <c>MAIL: 2 messages forwarded.</c>
+	/// </summary>
+	[Test]
+	public async ValueTask ForwardingToAListOfNamesReachesEachOne()
+	{
+		var sender = await Player("MdFwdList");
+		var first = await Player("MdFwdListA");
+		var second = await Player("MdFwdListB");
+		await Run(sender, "@mail me=Listed/Forward me.");
+
+		var heard = await Heard(sender, () => Run(sender, $"@mail/fwd 1={first.Name} {second.Name}"));
+
+		await Assert.That(heard).Contains("MAIL: 2 messages forwarded.");
+		await Assert.That(await Mailbox(first)).Count().IsEqualTo(1);
+		await Assert.That(await Mailbox(second)).Count().IsEqualTo(1);
 	}
 
 	/// <summary><c>extmail.c:1621</c> — the prefix is added only if the subject does not already carry it.</summary>
