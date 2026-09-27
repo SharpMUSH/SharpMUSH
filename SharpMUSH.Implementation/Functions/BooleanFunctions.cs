@@ -8,6 +8,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -156,17 +157,28 @@ public partial class Functions
 	public ValueTask<CallState> IsNum(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ValueTask.FromResult<CallState>(new(decimal.TryParse(parser.CurrentState.Arguments["0"].Message!.ToString(), out var _) ? "1" : "0"));
 
+	/// <summary>
+	/// <c>fun_isobjid</c> is <c>real_parse_objid(args[0], 1) != NOTHING</c> (<c>src/fundb.c</c>,
+	/// <c>src/parse.c</c>): the dbref half must name a live object and the part after the first
+	/// <c>:</c> must be a strict integer equal to its creation time. A bare dbref, a malformed objid,
+	/// a nonexistent object or a mismatched (recycled) creation time all answer 0.
+	/// </summary>
 	[SharpFunction(Name = "isobjid", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public ValueTask<CallState> IsObjId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> IsObjId(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var arg = (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText();
-		// Object ID format is #dbref:timestamp (e.g., #123:456789)
-		var match = ObjIdRegex().Match(arg);
-		return ValueTask.FromResult(new CallState(match.Success ? "1" : "0"));
-	}
+		var colon = arg.IndexOf(':');
+		// is_strict_integer is strtol-based, so a leading sign or whitespace is accepted.
+		if (colon < 0
+			|| HelperFunctions.ParseDbRef(arg[..colon]) is not DBRef dbref
+			|| !long.TryParse(arg.AsSpan(colon + 1), NumberStyles.AllowLeadingWhite | NumberStyles.AllowLeadingSign,
+				CultureInfo.InvariantCulture, out var created))
+		{
+			return new("0");
+		}
 
-	[GeneratedRegex(@"^#\d+:\d+$")]
-	private static partial Regex ObjIdRegex();
+		return new CallState(await Mediator.Send(new GetObjectNodeQuery(new DBRef(dbref.Number, created))) is AnySharpObject);
+	}
 
 	[SharpFunction(Name = "isregexp", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public ValueTask<CallState> isregexp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
