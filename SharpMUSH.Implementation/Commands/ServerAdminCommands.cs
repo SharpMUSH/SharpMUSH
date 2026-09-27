@@ -1054,7 +1054,7 @@ public partial class Commands
 			foreach (var opt in categoryOptions)
 			{
 				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
-				var value = opt.Value?.ToString() ?? "null";
+				var value = ConfigValueDisplay.Format(opt.Value, opt.ConfigAttr);
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);
 			}
 			return CallState.Empty;
@@ -1067,7 +1067,7 @@ public partial class Commands
 		if (matchingOption.PropertyName != null)
 		{
 			var name = useLowercase ? matchingOption.ConfigAttr.Name.ToLower() : matchingOption.ConfigAttr.Name;
-			var value = matchingOption.Value?.ToString() ?? "null";
+			var value = ConfigValueDisplay.Format(matchingOption.Value, matchingOption.ConfigAttr);
 			var desc = matchingOption.ConfigAttr.Description;
 
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);

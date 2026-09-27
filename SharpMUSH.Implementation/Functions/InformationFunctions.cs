@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -1282,7 +1283,8 @@ public partial class Functions
 		if (matchingProperty.Key != null)
 		{
 			var value = ConfigGenerated.ConfigAccessor.GetValue(Configuration.CurrentValue, matchingProperty.Key);
-			return ValueTask.FromResult<CallState>(value?.ToString() ?? "");
+			var metadata = ConfigGenerated.ConfigMetadata.PropertyMetadata[matchingProperty.Key];
+			return ValueTask.FromResult<CallState>(ConfigValueDisplay.Format(value, metadata));
 		}
 
 		return ValueTask.FromResult<CallState>(ErrorMessages.Returns.NoSuchOption);

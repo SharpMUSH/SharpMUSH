@@ -75,6 +75,7 @@ public record CommandOptions(
 
 	[property: SharpConfig(
 		Name = "probate_judge",
+		Dbref = true,
 		Category = "Command",
 		Description = "Player who handles ownership of orphaned objects",
 		ValidationPattern = @"^\d+$",
