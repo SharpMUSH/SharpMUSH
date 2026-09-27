@@ -70,6 +70,22 @@ public class ChannelPermissionTests
 	}
 
 	/// <summary>
+	/// <see cref="MessagesWhile"/> with each message's sender and type kept, for the disclosure oracles
+	/// that compare two windows for exact equality. A stray notification in one window then fails the
+	/// comparison showing who sent it, not just that the window had one item too many (#1229).
+	/// </summary>
+	private async Task<List<TestHelpers.NotificationRecorder.Delivery>> DeliveriesWhile(DBRef who, Func<Task> action)
+	{
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.DeliveryCountFor(who);
+		await action();
+		return [.. recorder.DeliveriesFor(who).Skip(before)];
+	}
+
+	private static IEnumerable<string> Texts(IEnumerable<TestHelpers.NotificationRecorder.Delivery> deliveries)
+		=> deliveries.Select(delivery => delivery.Message);
+
+	/// <summary>
 	/// Channel names must be unique across the whole session — <see cref="ServerWebAppFactory"/> is
 	/// <see cref="SharedType.PerTestSession"/>, so every test in this class shares one database, and
 	/// several of these tests create channels in a loop. A bare random suffix collides often enough to
@@ -546,12 +562,12 @@ public class ChannelPermissionTests
 			.IsEqualTo(ErrorMessages.Returns.NoSuchChannel);
 
 		// And the same for the notification the command surface emits.
-		var afterInvisible = await MessagesWhile(mortal.DbRef, () => Run(mortal, $"@channel/on {invisible}"));
-		var afterMissing = await MessagesWhile(mortal.DbRef, () => Run(mortal, $"@channel/on {missing}"));
+		var afterInvisible = await DeliveriesWhile(mortal.DbRef, () => Run(mortal, $"@channel/on {invisible}"));
+		var afterMissing = await DeliveriesWhile(mortal.DbRef, () => Run(mortal, $"@channel/on {missing}"));
 
 		await Assert.That(afterInvisible).IsEquivalentTo(afterMissing);
-		await Assert.That(afterInvisible).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
-		await Assert.That(afterInvisible).DoesNotContain("Channel not found.");
+		await Assert.That(Texts(afterInvisible)).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
+		await Assert.That(Texts(afterInvisible)).DoesNotContain("Channel not found.");
 	}
 
 	/// <summary>
@@ -819,14 +835,14 @@ public class ChannelPermissionTests
 
 		var mortal = await CreateMortal("ChanPermClockCmd");
 
-		var afterHidden = await MessagesWhile(mortal.DbRef,
+		var afterHidden = await DeliveriesWhile(mortal.DbRef,
 			() => Run(mortal, $"@clock/join {hidden}=#{mortal.DbRef.Number}"));
-		var afterMissing = await MessagesWhile(mortal.DbRef,
+		var afterMissing = await DeliveriesWhile(mortal.DbRef,
 			() => Run(mortal, $"@clock/join {missing}=#{mortal.DbRef.Number}"));
 
 		await Assert.That(afterHidden).IsEquivalentTo(afterMissing);
-		await Assert.That(afterHidden).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
-		await Assert.That(afterMissing).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
+		await Assert.That(Texts(afterHidden)).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
+		await Assert.That(Texts(afterMissing)).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
 
 		// The lock must not have been set either.
 		// A channel that was never given a lock reads back null, not "".
@@ -886,13 +902,13 @@ public class ChannelPermissionTests
 
 		var mortal = await CreateMortal($"ChanPermAdm{switchName}");
 
-		var afterHidden = await MessagesWhile(mortal.DbRef,
+		var afterHidden = await DeliveriesWhile(mortal.DbRef,
 			() => Run(mortal, $"@channel/{switchName} {hidden}{rhs}"));
-		var afterMissing = await MessagesWhile(mortal.DbRef,
+		var afterMissing = await DeliveriesWhile(mortal.DbRef,
 			() => Run(mortal, $"@channel/{switchName} {missing}{rhs}"));
 
 		await Assert.That(afterHidden).IsEquivalentTo(afterMissing);
-		await Assert.That(afterHidden).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
+		await Assert.That(Texts(afterHidden)).Contains(ErrorMessages.Notifications.DontRecognizeThatChannel);
 
 		// The hidden channel must still be there — /delete and /wipe are in this list.
 		await Assert.That(await Mediator.Send(new GetChannelQuery(hidden))).IsNotNull();
