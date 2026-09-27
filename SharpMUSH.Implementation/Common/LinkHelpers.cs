@@ -91,7 +91,7 @@ public static class LinkHelpers
 
 		if (keyword is not null)
 		{
-			if (await ControlsOrSeizesAsync(mediator, notifyService, permissionService, lockService,
+			if (await ControlsOrSeizesAsync(mediator, notifyService, permissionService, lockService, attributeService,
 					manipulateSharpObjectService, executor, target, exit, preserve) is Error<string> refusedKeyword)
 			{
 				return refusedKeyword;
@@ -106,14 +106,29 @@ public static class LinkHelpers
 			return new Success();
 		}
 
-		// do_link matches the destination with noisy_match_result/parse_linkable_room, which reports
-		// its own failure and leaves do_link returning 0 (src/create.c:336, :387, :417).
-		if (await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, destinationName, LocateFlags.All)
-			is not AnySharpObject destination)
+		return await LocatedAsync(parser, locateService, executor, destinationName) switch
 		{
-			return new Error<string>(ErrorMessages.Returns.NoSuchObject);
-		}
+			AnySharpObject destination => await LinkedExitToAsync(mediator, notifyService, permissionService,
+				lockService, attributeService, manipulateSharpObjectService, executor, target, exit, destination,
+				preserve),
+			Error<string> unmatched => unmatched
+		};
+	}
 
+	/// <inheritdoc cref="LinkedExitAsync"/>
+	private static async ValueTask<Result<Success>> LinkedExitToAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
+		IAttributeService attributeService,
+		IManipulateSharpObjectService manipulateSharpObjectService,
+		AnySharpObject executor,
+		AnySharpObject target,
+		SharpExit exit,
+		AnySharpObject destination,
+		bool preserve)
+	{
 		// An exit may lead to any container — room, player or thing (PennMUSH can_link_to). Only
 		// another exit is not a place you can end up.
 		if (!destination.IsContainer)
@@ -129,7 +144,7 @@ public static class LinkHelpers
 				ErrorMessages.Notifications.CantLinkToThat);
 		}
 
-		if (await ControlsOrSeizesAsync(mediator, notifyService, permissionService, lockService,
+		if (await ControlsOrSeizesAsync(mediator, notifyService, permissionService, lockService, attributeService,
 				manipulateSharpObjectService, executor, target, exit, preserve) is Error<string> refused)
 		{
 			return refused;
@@ -162,6 +177,7 @@ public static class LinkHelpers
 		INotifyService notifyService,
 		IPermissionService permissionService,
 		ILockService lockService,
+		IAttributeService attributeService,
 		IManipulateSharpObjectService manipulateSharpObjectService,
 		AnySharpObject executor,
 		AnySharpObject target,
@@ -173,8 +189,7 @@ public static class LinkHelpers
 		// create.c:344-345: only an exit that leads nowhere is open to whoever passes its link lock.
 		if (!controls)
 		{
-			var unlinked = await exit.Home.WithCancellation(CancellationToken.None) is None;
-			if (!unlinked)
+			if (!await LeadsNowhereAsync(attributeService, executor, target, exit))
 			{
 				return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
 					ErrorMessages.Notifications.PermissionDenied);
@@ -201,25 +216,51 @@ public static class LinkHelpers
 			return new Success();
 		}
 
-		// create.c:371. Only a player can own anything, so an exit seized by a non-player object is
-		// not handed to something that cannot hold it.
-		if (executor is SharpPlayer executorPlayer)
+		// create.c:371 into chown_object, whose non-God branch writes Owner(newowner) rather than
+		// newowner itself (src/set.c:303-307): a thing running a forced @link hands the exit to the
+		// thing's owner, not to the thing.
+		var seizedBy = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+
+		try
 		{
-			try
-			{
-				await mediator.Send(new SetObjectOwnerCommand(target, executorPlayer));
-			}
-			catch (Exception)
-			{
-				return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-					ErrorMessages.Notifications.FailedToTransferOwnership);
-			}
+			await mediator.Send(new SetObjectOwnerCommand(target, seizedBy));
+		}
+		catch (Exception)
+		{
+			// The transfer is a store write with no failure the caller can act on beyond reporting
+			// it, and do_link's seizure is not a step it can skip: an exit left with its old owner
+			// but a new destination is worse than a refusal.
+			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
+				ErrorMessages.Notifications.FailedToTransferOwnership);
 		}
 
 		// chown_object's non-preserve half (src/set.c:332-340) sets HALT, so the exit's code stops
 		// running for the owner who just lost it.
 		await manipulateSharpObjectService.SetOrUnsetFlag(executor, target, "HALT", true);
 		return new Success();
+	}
+
+	/// <summary>
+	/// <c>Location(thing) == NOTHING</c> for an exit (<c>src/create.c:344</c>) — it leads nowhere.
+	/// </summary>
+	/// <remarks>
+	/// SharpMUSH splits an exit's destination in two: an ordinary one is the <c>Home</c> relation, and
+	/// <c>HOME</c>/<c>VARIABLE</c> live in <c>_LINKTYPE</c> with no relation written
+	/// (<see cref="TeleportHelpers.ResolveExitDestination"/> reads both). Penn has one field —
+	/// <c>check_var_link</c> hands <c>do_link</c> a pseudo-dbref, which is not <c>NOTHING</c> — so
+	/// asking only about <c>Home</c> would offer a variable exit to anyone who passes its link lock.
+	/// </remarks>
+	private static async ValueTask<bool> LeadsNowhereAsync(IAttributeService attributeService,
+		AnySharpObject executor, AnySharpObject target, SharpExit exit)
+	{
+		if (await exit.Home.WithCancellation(CancellationToken.None) is not None)
+		{
+			return false;
+		}
+
+		return await attributeService.GetAttributeAsync(executor, target, TeleportHelpers.AttrLinkType,
+				IAttributeService.AttributeMode.Read, false) is not SharpAttribute[] { Length: > 0 } linkType
+			|| string.IsNullOrEmpty(linkType[0].Value.ToPlainText().Trim());
 	}
 
 	/// <summary>
@@ -237,14 +278,23 @@ public static class LinkHelpers
 		AnySharpObject target,
 		string destinationName)
 	{
-		// do_link matches the destination with noisy_match_result/parse_linkable_room, which reports
-		// its own failure and leaves do_link returning 0 (src/create.c:336, :387, :417).
-		if (await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, destinationName, LocateFlags.All)
-			is not AnySharpObject destination)
+		return await LocatedAsync(parser, locateService, executor, destinationName) switch
 		{
-			return new Error<string>(ErrorMessages.Returns.NoSuchObject);
-		}
+			AnySharpObject destination => await HomedToAsync(mediator, notifyService, permissionService, executor,
+				target, destination),
+			Error<string> unmatched => unmatched
+		};
+	}
 
+	/// <inheritdoc cref="HomedAsync"/>
+	private static async ValueTask<Result<Success>> HomedToAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		AnySharpObject executor,
+		AnySharpObject target,
+		AnySharpObject destination)
+	{
 		// create.c:395: a home is any object that is not an exit — a room, a player or a thing.
 		// safe_tel's "homed to the mover" case (move.c:311) is only reachable because a player can
 		// be a home.
@@ -298,14 +348,24 @@ public static class LinkHelpers
 		SharpRoom room,
 		string destinationName)
 	{
-		// do_link matches the destination with noisy_match_result/parse_linkable_room, which reports
-		// its own failure and leaves do_link returning 0 (src/create.c:336, :387, :417).
-		if (await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, destinationName, LocateFlags.All)
-			is not AnySharpObject destination)
+		return await LocatedAsync(parser, locateService, executor, destinationName) switch
 		{
-			return new Error<string>(ErrorMessages.Returns.NoSuchObject);
-		}
+			AnySharpObject destination => await DroppedToRoomAsync(mediator, notifyService, permissionService, executor,
+				target, room, destination),
+			Error<string> unmatched => unmatched
+		};
+	}
 
+	/// <inheritdoc cref="DroppedToAsync"/>
+	private static async ValueTask<Result<Success>> DroppedToRoomAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		AnySharpObject executor,
+		AnySharpObject target,
+		SharpRoom room,
+		AnySharpObject destination)
+	{
 		// create.c:420.
 		if (destination is not SharpRoom destinationRoom)
 		{
@@ -324,6 +384,21 @@ public static class LinkHelpers
 		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToSet), executor);
 		return new Success();
 	}
+
+	/// <summary>
+	/// <c>do_link</c>'s destination match (<c>src/create.c:336</c>, <c>:387</c>, <c>:417</c>), which
+	/// reports its own failure and leaves <c>do_link</c> returning 0. The locator's error is the one
+	/// that comes back, so an ambiguous name still says it was ambiguous.
+	/// </summary>
+	private static async ValueTask<Result<AnySharpObject>> LocatedAsync(IMUSHCodeParser parser,
+		ILocateService locateService, AnySharpObject executor, string destinationName)
+		=> await locateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, destinationName,
+			LocateFlags.All) switch
+		{
+			AnySharpObject found => found,
+			Error<CallState> reported => new Error<string>(reported.Value.Message?.ToPlainText()
+				?? ErrorMessages.Returns.NoSuchObject)
+		};
 
 	/// <summary>
 	/// A <c>do_link</c> refusal: it says why to the linker and returns 0, which the command reports as

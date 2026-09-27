@@ -234,7 +234,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var objectName = args["0"].Message!.ToPlainText();
 		var destName = args["1"].Message!.ToPlainText();
-		var preserve = args.TryGetValue("2", out var preserveArg) && preserveArg.Message!.Truthy();
+		var preserve = args.TryGetValue("2", out var preserveArg) && preserveArg.Message!.Truthy(parser);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, objectName, LocateFlags.All,
@@ -353,8 +353,8 @@ public partial class Functions
 
 		// fundb.c:2320-2323: argument 3 is TEL_SILENT and argument 4 is TEL_INSIDE, the /SILENT and
 		// /INSIDE switches under other names.
-		var silent = args.TryGetValue("2", out var silentArg) && silentArg.Message!.Truthy();
-		var inside = args.TryGetValue("3", out var insideArg) && insideArg.Message!.Truthy();
+		var silent = args.TryGetValue("2", out var silentArg) && silentArg.Message!.Truthy(parser);
+		var inside = args.TryGetValue("3", out var insideArg) && insideArg.Message!.Truthy(parser);
 
 		await TeleportHelpers.TeleportAsync(parser, TeleportServices, executor,
 			args["0"].Message!.ToPlainText(), args["1"].Message!.ToPlainText(),
