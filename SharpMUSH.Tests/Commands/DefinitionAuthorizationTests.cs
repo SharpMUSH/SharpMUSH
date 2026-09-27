@@ -240,12 +240,15 @@ public class DefinitionAuthorizationTests
 	{
 		var actor = await Actor(wizard);
 		var name = "AUTH" + Guid.NewGuid().ToString("N").ToUpperInvariant();
+		// A flag's second argument is its letter and collides with nothing; a power's is its alias,
+		// which is unique per flagspace, so the two power cases may not share one literal.
+		var second = kind == "flag" ? "Z" : $"Z{name}";
 		try
 		{
-			await Factory.CommandParser.CommandParse(actor.Handle, Connections, MarkupText.Plain($"@{kind}/{switches} {name}=Z"));
+			await Factory.CommandParser.CommandParse(actor.Handle, Connections, MarkupText.Plain($"@{kind}/{switches} {name}={second}"));
 			if (kind == "flag") await Assert.That(await Mediator.Send(new GetObjectFlagQuery(name))).IsNull();
 			else await Assert.That(await Mediator.Send(new GetPowerQuery(name))).IsNull();
-			await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@{kind}/{switches} {name}=Z"));
+			await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@{kind}/{switches} {name}={second}"));
 			if (kind == "flag") await Assert.That(await Mediator.Send(new GetObjectFlagQuery(name))).IsNotNull();
 			else await Assert.That(await Mediator.Send(new GetPowerQuery(name))).IsNotNull();
 		}
