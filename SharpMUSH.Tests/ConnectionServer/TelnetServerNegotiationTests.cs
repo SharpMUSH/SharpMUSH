@@ -653,9 +653,7 @@ public class TelnetServerNegotiationTests
 
 			lock (published)
 			{
-				var leaked = published
-					.Where(message => message is not TelnetInputMessage)
-					.ToArray();
+				var leaked = published.ToArray();
 
 				Assert.That(leaked).IsEmpty()
 					.Because("a consumer would drop these: the handle is not registered yet")
@@ -684,6 +682,257 @@ public class TelnetServerNegotiationTests
 			await handler.WaitAsync(Timeout);
 			cts.Dispose();
 		}
+	}
+
+	/// <summary>
+	/// GRA-83: a client that types as soon as it connects — the parity harness sends INFO the moment
+	/// the socket opens — could deliver its first line before RegisterAsync. Published then, the line
+	/// carried no SessionId, so the engine skipped its registration wait and parsed it for a handle it
+	/// had not registered: about one connection in five never got an answer. The line has to be held
+	/// until registration and go out stamped with the session it belongs to, in the order typed.
+	/// </summary>
+	[Test]
+	public async Task InputBeforeRegistration_IsHeldAndCarriesItsSession()
+	{
+		var registrationStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var releaseRegistration = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var registrationComplete = 0;
+
+		var connectionService = Substitute.For<IConnectionServerService>();
+		connectionService
+			.RegisterAsync(
+				Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+				Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
+				Arg.Any<Func<Encoding>>(), Arg.Any<Action>(),
+				Arg.Any<Func<string, string, ValueTask>>(),
+				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>(), cancellationToken: Arg.Any<CancellationToken>())
+			.Returns(async _ =>
+			{
+				registrationStarted.TrySetResult();
+				await releaseRegistration.Task;
+				Volatile.Write(ref registrationComplete, 1);
+			});
+		connectionService.Get(42).Returns(_ => Volatile.Read(ref registrationComplete) == 0
+			? null
+			: new ConnectionServerService.ConnectionData(
+				42, null, ConnectionServerService.ConnectionState.Connected,
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+				() => Encoding.UTF8, () => { }, null, new ProtocolCapabilities(), null, SessionId: "session-1"));
+
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: connectionService);
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, DO, TTYPE));
+			await registrationStarted.Task.WaitAsync(Timeout);
+
+			await WriteAsync(toServer, [.. Encoding.ASCII.GetBytes("INFO\r\nWHO\r\n")]);
+			// The read loop handles bytes in order, so once the server answers this WILL, both lines
+			// above have been submitted.
+			await WriteAsync(toServer, IAC, WILL, TTYPE);
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, TTYPE, SEND, IAC, SE));
+
+			lock (published)
+			{
+				Assert.That(published.OfType<TelnetInputMessage>().ToArray()).IsEmpty()
+					.Because("published now, the line has no session and the engine loses it")
+					.GetAwaiter().GetResult();
+			}
+
+			releaseRegistration.TrySetResult();
+
+			var deadline = DateTimeOffset.UtcNow + Timeout;
+			TelnetInputMessage[] inputs = [];
+			while (inputs.Length < 2 && DateTimeOffset.UtcNow < deadline)
+			{
+				await Task.Delay(25);
+				lock (published)
+				{
+					inputs = [.. published.OfType<TelnetInputMessage>()];
+				}
+			}
+
+			await Assert.That(inputs.Select(input => input.Input)).IsEquivalentTo(["INFO", "WHO"]);
+			await Assert.That(inputs[0].Input).IsEqualTo("INFO");
+			await Assert.That(inputs.All(input => input.SessionId == "session-1")).IsTrue()
+				.Because("the engine matches input to a registration by its session");
+		}
+		finally
+		{
+			releaseRegistration.TrySetResult();
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+			cts.Dispose();
+		}
+	}
+
+	/// <summary>
+	/// Registration held back while a client floods: what it may send first is capped, so a slow
+	/// registration cannot make the server buffer input at network speed. Past the cap lines are
+	/// dropped; once registered, input flows as normal.
+	/// </summary>
+	[Test]
+	public async Task InputBeforeRegistration_IsCapped()
+	{
+		var (connectionService, releaseRegistration) = HeldRegistration();
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: connectionService);
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, DO, TTYPE));
+
+			var line = new string('x', 1024);
+			var lines = TelnetServer.MaxInputHeldBeforeRegistration / line.Length + 1;
+			foreach (var _ in Enumerable.Range(0, lines))
+			{
+				await WriteAsync(toServer, [.. Encoding.ASCII.GetBytes(line + "\r\n")]);
+			}
+			await WriteAsync(toServer, IAC, WILL, TTYPE);
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, TTYPE, SEND, IAC, SE));
+
+			releaseRegistration.TrySetResult();
+			// Until what was held has been flushed, the cap still applies to anything new.
+			await WaitForInputsAsync(published, lines - 1);
+			await WriteAsync(toServer, [.. Encoding.ASCII.GetBytes("WHO\r\n")]);
+
+			var inputs = await WaitForInputsAsync(published, lines);
+			await Assert.That(inputs.Length).IsEqualTo(lines)
+				.Because("every line under the cap, then the one sent after registration; the one over it is dropped");
+			await Assert.That(inputs[^1].Input).IsEqualTo("WHO");
+		}
+		finally
+		{
+			releaseRegistration.TrySetResult();
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+			cts.Dispose();
+		}
+	}
+
+	/// <summary>Blank lines are queued messages too, so they count against the cap.</summary>
+	[Test]
+	public async Task BlankInputBeforeRegistration_IsCapped()
+	{
+		var (connectionService, releaseRegistration) = HeldRegistration();
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: connectionService);
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, DO, TTYPE));
+
+			var blanks = string.Concat(Enumerable.Repeat("\r\n", TelnetServer.MaxInputHeldBeforeRegistration + 100));
+			await WriteAsync(toServer, [.. Encoding.ASCII.GetBytes(blanks)]);
+			await WriteAsync(toServer, IAC, WILL, TTYPE);
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, TTYPE, SEND, IAC, SE));
+
+			releaseRegistration.TrySetResult();
+
+			// Everything held goes out before anything sent after registration, so once WHO arrives the
+			// count of blanks ahead of it is final.
+			await WaitForInputsAsync(published, TelnetServer.MaxInputHeldBeforeRegistration);
+			await WriteAsync(toServer, [.. Encoding.ASCII.GetBytes("WHO\r\n")]);
+			var deadline = DateTimeOffset.UtcNow + Timeout;
+			TelnetInputMessage[] inputs = [];
+			while (inputs.LastOrDefault()?.Input != "WHO" && DateTimeOffset.UtcNow < deadline)
+			{
+				await Task.Delay(25);
+				lock (published)
+				{
+					inputs = [.. published.OfType<TelnetInputMessage>()];
+				}
+			}
+
+			await Assert.That(inputs.LastOrDefault()?.Input).IsEqualTo("WHO");
+			await Assert.That(inputs.Length - 1).IsEqualTo(TelnetServer.MaxInputHeldBeforeRegistration);
+		}
+		finally
+		{
+			releaseRegistration.TrySetResult();
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+			cts.Dispose();
+		}
+	}
+
+	/// <summary>
+	/// A negotiation report held for registration that then fails to publish must not take the input
+	/// queued behind it down with it.
+	/// </summary>
+	[Test]
+	public async Task HeldInput_IsPublishedEvenWhenAHeldNegotiationReportFails()
+	{
+		var (connectionService, releaseRegistration) = HeldRegistration();
+		var (toServer, fromServer, handler, published, cts) = StartServer(
+			connectionService: connectionService,
+			beforePublish: message => message is TelnetNegotiatedMessage or TerminalTypeNegotiatedMessage
+				? Task.FromException(new InvalidOperationException("publish timed out"))
+				: Task.CompletedTask);
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, DO, TTYPE));
+			await WriteAsync(toServer, IAC, WILL, TTYPE);
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, TTYPE, SEND, IAC, SE));
+			// The telnet report is queued first; INFO behind it, then the terminal type. The second SEND
+			// answers the terminal type, so INFO has been read by the time it arrives.
+			await WriteAsync(toServer, [.. Encoding.ASCII.GetBytes("INFO\r\n"), IAC, SB, TTYPE, IS, .. Encoding.ASCII.GetBytes("SharpMUTerm"), IAC, SE]);
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, TTYPE, SEND, IAC, SE));
+
+			releaseRegistration.TrySetResult();
+
+			var inputs = await WaitForInputsAsync(published, 1);
+			await Assert.That(inputs.Select(input => input.Input).ToArray()).IsEquivalentTo(["INFO"]);
+		}
+		finally
+		{
+			releaseRegistration.TrySetResult();
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+			cts.Dispose();
+		}
+	}
+
+	/// <summary>A connection service whose RegisterAsync waits for the returned source; handle 42.</summary>
+	private static (IConnectionServerService Service, TaskCompletionSource Release) HeldRegistration()
+	{
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var complete = 0;
+		var connectionService = Substitute.For<IConnectionServerService>();
+		connectionService
+			.RegisterAsync(
+				Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+				Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
+				Arg.Any<Func<Encoding>>(), Arg.Any<Action>(),
+				Arg.Any<Func<string, string, ValueTask>>(),
+				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>(), cancellationToken: Arg.Any<CancellationToken>())
+			.Returns(async _ =>
+			{
+				await release.Task;
+				Volatile.Write(ref complete, 1);
+			});
+		connectionService.Get(42).Returns(_ => Volatile.Read(ref complete) == 0
+			? null
+			: new ConnectionServerService.ConnectionData(
+				42, null, ConnectionServerService.ConnectionState.Connected,
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+				() => Encoding.UTF8, () => { }, null, new ProtocolCapabilities(), null, SessionId: "session-1"));
+		return (connectionService, release);
+	}
+
+	private static async Task<TelnetInputMessage[]> WaitForInputsAsync(List<object> published, int count)
+	{
+		var deadline = DateTimeOffset.UtcNow + Timeout;
+		TelnetInputMessage[] inputs = [];
+		while (inputs.Length < count && DateTimeOffset.UtcNow < deadline)
+		{
+			await Task.Delay(25);
+			lock (published)
+			{
+				inputs = [.. published.OfType<TelnetInputMessage>()];
+			}
+		}
+
+		return inputs;
 	}
 
 	[Test]

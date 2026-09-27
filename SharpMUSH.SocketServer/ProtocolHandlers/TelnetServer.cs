@@ -30,6 +30,13 @@ public class TelnetServer : ConnectionHandler
 	private readonly ConnectionServerOptions _options;
 	private readonly MSSPConfig _msspConfig = new() { Name = "SharpMUSH", UTF_8 = true };
 
+	/// <summary>
+	/// How much a client may type before its connection is registered. Registration normally takes
+	/// milliseconds, so this is only reached by a client flooding a connection the engine is slow to
+	/// register; past it, input is dropped rather than buffered.
+	/// </summary>
+	internal const int MaxInputHeldBeforeRegistration = 16 * 1024;
+
 	public TelnetServer(
 		ILogger<TelnetServer> logger,
 		IConnectionServerService connectionService,
@@ -74,7 +81,7 @@ public class TelnetServer : ConnectionHandler
 		TelnetInterpreter? telnetInterpreter = null;
 		var telnetAnnounced = 0;
 
-		// Anything that writes connection metadata in the main process has to arrive after the handle
+		// Anything that writes connection metadata in the main process, and any line of input, has to arrive after the handle
 		// is registered there, because every one of those consumers gives up on an unregistered handle
 		// after ConnectionRetryPolicy's five 50ms attempts. The read loop starts before RegisterAsync
 		// below, so a client that answers TTYPE within one round trip
@@ -84,13 +91,29 @@ public class TelnetServer : ConnectionHandler
 		var pendingLock = new object();
 		using var publishGate = new SemaphoreSlim(1, 1);
 		List<Func<Task>>? pendingPublishes = [];
+		// Input is held too (see OnSubmit), but a client decides how much of it there is, so what it may
+		// send before registration is capped rather than buffered for as long as registration takes.
+		var heldInputChars = 0;
+		var heldInputDropped = false;
 
-		async ValueTask PublishAfterRegistrationAsync(Func<Task> publish)
+		async ValueTask PublishAfterRegistrationAsync(Func<Task> publish, int inputChars = 0)
 		{
 			lock (pendingLock)
 			{
 				if (pendingPublishes is not null)
 				{
+					if (inputChars > 0 && (heldInputChars += inputChars) > MaxInputHeldBeforeRegistration)
+					{
+						if (!heldInputDropped)
+						{
+							heldInputDropped = true;
+							_logger.LogWarning("Dropping input on handle {Handle}: over {Limit} characters sent before it was registered",
+								nextPort, MaxInputHeldBeforeRegistration);
+						}
+
+						return;
+					}
+
 					pendingPublishes.Add(publish);
 					return;
 				}
@@ -121,9 +144,18 @@ public class TelnetServer : ConnectionHandler
 
 				// In the order they were produced: a client's terminal-type list is reported once per entry,
 				// and the last report is the complete one.
+				// Each on its own: a negotiation report that fails must not keep the input queued behind it
+				// from going out.
 				foreach (var publish in queued)
 				{
-					await publish();
+					try
+					{
+						await publish();
+					}
+					catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+					{
+						_logger.LogWarning(ex, "A message held for registration could not be published for handle {Handle}", nextPort);
+					}
 				}
 			}
 			finally
@@ -184,8 +216,15 @@ public class TelnetServer : ConnectionHandler
 				// By the time a client has sent a line, whatever it was going to negotiate has settled.
 				await AnnounceTelnetIfNegotiatedAsync();
 
-				await ConnectionInputPublisher.PublishAsync(_publishEndpoint, _connectionService, _logger,
-					nextPort, new TelnetInputMessage(nextPort, input, _connectionService.Get(nextPort)?.SessionId), ct);
+				// Held like the negotiation messages: a client that types as soon as it connects can
+				// deliver a line before RegisterAsync, and published then it carries no SessionId, so the
+				// engine skips its registration wait and parses it for a handle it does not know yet — the
+				// line is lost. The SessionId is read when the message goes out, after registration.
+				await PublishAfterRegistrationAsync(() => ConnectionInputPublisher.PublishAsync(_publishEndpoint,
+					_connectionService, _logger, nextPort,
+					new TelnetInputMessage(nextPort, input, _connectionService.Get(nextPort)?.SessionId), ct),
+					// A blank line is still a queued message, so it counts too.
+					Math.Max(input.Length, 1));
 			})
 			// Each of these callbacks is also a sampling point for AnnounceTelnetIfNegotiatedAsync,
 			// which asks every plugin rather than just the one that fired: reaching any of them means
