@@ -1,4 +1,3 @@
-using System.Text;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -30,9 +29,7 @@ public class LoginBootstrapBudgetTests
 		var connections = services.GetRequiredService<IConnectionService>();
 		var mediator = services.GetRequiredService<IMediator>();
 		var player = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(Factory.ExecutorDBRef))).Expect<SharpPlayer>();
-		var handle = Random.Shared.NextInt64(80000000, 90000000);
-		await connections.Register(handle, "localhost", "localhost", "telnet", _ => ValueTask.CompletedTask,
-			_ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(connections, "telnet");
 		var events = Substitute.For<IEventService>();
 		var bus = Substitute.For<IMessageBus>();
 		var notify = Substitute.For<INotifyService>();

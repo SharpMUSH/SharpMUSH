@@ -101,10 +101,7 @@ public class HideCommandTests
 
 		// A second connection for the same player, already hidden; the first (testPlayer.Handle)
 		// starts visible.
-		var secondHandle = testPlayer.Handle + 500_000;
-		await ConnectionService.Register(secondHandle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8);
-		await ConnectionService.Bind(secondHandle, testPlayer.DbRef);
+		var secondHandle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, testPlayer.DbRef);
 		ConnectionService.Update(secondHandle, "Hidden", "1");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@hide"));
@@ -140,9 +137,7 @@ public class HideCommandTests
 		// for every alias under test, including cv (which never hides regardless of permission).
 		await GrantWizardAsync(playerDbRef);
 
-		var handle = Random.Shared.NextInt64(800_000, 899_999);
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8);
+		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
 
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"{connectWord} {playerDbRef} TestPassword123"));
 
@@ -167,9 +162,7 @@ public class HideCommandTests
 	{
 		var playerDbRef = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "CdNoPriv");
 
-		var handle = Random.Shared.NextInt64(800_000, 899_999);
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8);
+		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
 
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"cd {playerDbRef} TestPassword123"));
 
