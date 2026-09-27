@@ -3784,6 +3784,7 @@
   <data name="DiagStatus_InvalidTarget" xml:space="preserve"><value>Invalid target</value></data>
   <data name="DiagStatus_ShuttingDown" xml:space="preserve"><value>Shutting down</value></data>
   <data name="DiagStatus_ScheduleFailed" xml:space="preserve"><value>Scheduling failed</value></data>
+  <data name="DiagStatus_Halted" xml:space="preserve"><value>Halted</value></data>
   <data name="JobsTitle" xml:space="preserve"><value>Recurring jobs</value></data>
   <data name="JobsIntro" xml:space="preserve"><value>Schedule attribute calls as the linked active player. Times below are UTC. Missed firings are skipped; edits and revocation apply before queued work starts.</value></data>
   <data name="JobsAll" xml:space="preserve"><value>Show all accounts (administrator)</value></data>

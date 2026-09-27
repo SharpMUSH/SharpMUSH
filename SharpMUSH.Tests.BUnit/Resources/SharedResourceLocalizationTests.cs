@@ -4,9 +4,11 @@ using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models.Diagnostics;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Models.Portal.Widgets;
+using SharpMUSH.Library.Models.SchedulerModels;
 
 namespace SharpMUSH.Tests.BUnit.Resources;
 
@@ -133,6 +135,27 @@ public class SharedResourceLocalizationTests
 			.SelectMany(d => new[] { d.LabelKey, d.GroupKey, d.DescriptionKey })
 			.Distinct()
 			.Where(k => loc[k].ResourceNotFound)
+			.ToList();
+
+		await Assert.That(missing).IsEmpty();
+	}
+
+	/// <summary>
+	/// <c>DiagnosticsQueueTable</c> renders a row's status as <c>Loc[$"DiagStatus_{row.Status}"]</c>, and
+	/// <c>QueueDiagnosticsService</c> fills that from <see cref="QueueEntryState"/> for a live entry and
+	/// <see cref="QueueOutcome"/> for a historical one. So adding a member to either enum without its key
+	/// makes the admin table print the key — which is how <c>DiagStatus_Halted</c> came to be missing.
+	/// </summary>
+	[Test]
+	public async Task Every_queue_diagnostics_status_has_a_label_in_the_resx()
+	{
+		var loc = PortalLocalizer.Create();
+
+		var missing = Enum.GetNames<QueueEntryState>()
+			.Concat(Enum.GetNames<QueueOutcome>())
+			.Distinct()
+			.Select(name => $"DiagStatus_{name}")
+			.Where(key => loc[key].ResourceNotFound)
 			.ToList();
 
 		await Assert.That(missing).IsEmpty();

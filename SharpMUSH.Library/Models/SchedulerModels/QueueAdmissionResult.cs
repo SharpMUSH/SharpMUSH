@@ -1,6 +1,6 @@
 namespace SharpMUSH.Library.Models.SchedulerModels;
 
-public enum QueueRejectionReason { None, GlobalLimit, OwnerLimit, ShuttingDown, InvalidTarget, AlreadyReleased }
+public enum QueueRejectionReason { None, GlobalLimit, OwnerLimit, ShuttingDown, InvalidTarget, AlreadyReleased, Halted }
 
 /// <summary>A rejected submission never owns a PID or queue capacity.</summary>
 public readonly record struct QueueAdmissionResult(long? Pid, QueueRejectionReason Reason)
