@@ -105,6 +105,8 @@ routing. Those are behaviour and appear as differences.
   it is a bug for `baseline.json`. Each entry needs `id`, `scenario`, `case`, optional `step`,
   `reason`, `tracking`, `profile` (the text of the profile's `## ` heading that documents it; the
   harness refuses a heading that is not there) and, when `step` is given, that step's `command`.
+  `CompatibilityProfileStructureTests` (in `SharpMUSH.Tests`) also checks, without a PennMUSH build,
+  that each `profile` heading is an entry marked **A choice.**, not an unresolved question.
   A step that differs *and* is allowlisted is reported as `known-difference`; an entry whose steps all
   match again is reported as **stale** and fails the run (delete it). Anything else that differs is a
   failure.
