@@ -18,11 +18,16 @@ public class AdaptiveBenchmarkConfig : ManualConfig
 	public static bool IsCi() =>
 		string.Equals(Environment.GetEnvironmentVariable("SHARPMUSH_CI_BENCHMARK"), "true", StringComparison.OrdinalIgnoreCase);
 
-	public AdaptiveBenchmarkConfig()
+	public AdaptiveBenchmarkConfig() : this(job => job)
 	{
-		AddJob(IsCi()
+	}
+
+	/// <param name="adjust">Changes the chosen job for a benchmark class the defaults do not fit.</param>
+	protected AdaptiveBenchmarkConfig(Func<Job, Job> adjust)
+	{
+		AddJob(adjust(IsCi()
 			? Job.ShortRun.WithId("CI")
-			: Job.Default.WithId("Nightly"));
+			: Job.Default.WithId("Nightly")));
 
 		AddDiagnoser(MemoryDiagnoser.Default);
 		AddDiagnoser(ThreadingDiagnoser.Default);
