@@ -20,8 +20,18 @@ public sealed partial class WorldBackupWriter(
 	WorldBackupOptions options,
 	Func<string, CancellationToken, ValueTask> writePayload,
 	ILogger logger,
-	TimeProvider? time = null)
+	TimeProvider time)
 {
+	/// <summary>
+	/// On the system clock. Kept as its own overload rather than an optional parameter so providers
+	/// already compiled against the three-argument constructor still bind to it.
+	/// </summary>
+	public WorldBackupWriter(WorldBackupOptions options, Func<string, CancellationToken, ValueTask> writePayload,
+		ILogger logger)
+		: this(options, writePayload, logger, TimeProvider.System)
+	{
+	}
+
 	/// <summary>Prefix for a copy still being written. Hidden, and never matched by <see cref="NameRegex"/>.</summary>
 	private const string IncomingPrefix = ".incoming-";
 
@@ -118,7 +128,7 @@ public sealed partial class WorldBackupWriter(
 	/// </summary>
 	private string NextName()
 	{
-		var clock = (time ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+		var clock = time.GetUtcNow().UtcDateTime;
 		// To the millisecond the name carries, so "later than the newest" means a different name.
 		var now = clock.AddTicks(-(clock.Ticks % TimeSpan.TicksPerMillisecond));
 		var newest = BackupDirectories().Select(d => d.Name).Max(StringComparer.Ordinal);
