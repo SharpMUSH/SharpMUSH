@@ -286,7 +286,11 @@ public class DatabaseCommandTests
 		try
 		{
 			await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
-			for (var i = 2; i < options.CurrentValue.Limit.PlayerQueueLimit; i++)
+			// Room for the completion reservation and BOTH row callbacks. Filling one slot tighter
+			// leaves the second row over the owner quota, and an over-quota executor is halted and its
+			// queue wiped (pay_queue, src/cque.c:303-313) — which would take the marker with it and
+			// test the runaway path rather than the completion credit this is about.
+			for (var i = 3; i < options.CurrentValue.Limit.PlayerQueueLimit; i++)
 			{
 				var admission = await scheduler.AdmitCommandList(MarkupText.Plain("think reserved"), ParserState.RootFor(player.DbRef), TimeSpan.FromHours(1));
 				await Assert.That(admission.Accepted).IsTrue();

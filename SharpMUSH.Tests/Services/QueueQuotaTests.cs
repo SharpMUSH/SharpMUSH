@@ -159,9 +159,10 @@ public class QueueQuotaTests
 	/// A player's own typed line is charged to nobody, so their objects filling the owner quota
 	/// cannot make the player the offender. PennMUSH's <c>run_user_input</c>
 	/// (<c>src/cque.c:1076-1088</c>) builds its entry and calls <c>do_entry</c> directly, never
-	/// reaching <c>insert_que</c> or <c>pay_queue</c>. The HALT flag stays off for the same reason
-	/// Penn's two halted gates test <c>!IsPlayer(executor)</c> first (<c>src/cque.c:530</c>,
-	/// <c>:1136</c>): a player who cannot type is not a quota outcome anyone wants.
+	/// reaching <c>insert_que</c> or <c>pay_queue</c>. What decides that is the entry, not the
+	/// executor's type — a runaway player is halted like anything else (<c>src/cque.c:312</c>,
+	/// <c>QueueAdmissionTests.ARunawayPlayerIsHaltedLikeAnyOtherOffender</c>) — so the flag stays off
+	/// here because the offender is the object that filled the quota, not the person at the keyboard.
 	/// </summary>
 	[Test]
 	public async ValueTask APlayerCanStillTypeWhenTheirObjectsHaveFilledTheQuota()

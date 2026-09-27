@@ -194,13 +194,18 @@ public class DidItService(
 	{
 		var thing = request.Thing;
 
-		// SharpMUSH deviation from PennMUSH: queue_attribute_useatr queues the action list without
-		// consulting the object's flags, so in Penn a HALTed object still runs its @a-attributes.
-		// SharpMUSH treats HALT as "runs none of its softcode" everywhere — the same rule
-		// AttributeService applies to u() and the $-command matcher — because @halt is what an owner
-		// reaches for to stop a runaway object, and an object whose actions keep queueing is not
-		// stopped. The o-message is plain text and still goes out.
-		if (await thing.HasFlag("HALT"))
+		// queue_attribute_useatr queues the action list without consulting the object's flags, but
+		// insert_que then drops it for a halted executor that is not a player (src/cque.c:530), so a
+		// halted object's @a-attributes never run. Refusing them here reaches the same place one step
+		// earlier, and keeps HALT meaning "runs none of its softcode" — the same rule AttributeService
+		// applies to u() and the $-command matcher.
+		//
+		// A halted PLAYER is exempt, exactly as insert_que exempts one: the entry is queued and runs
+		// far enough to be refused by process_command (src/game.c:1181), which tells the owner
+		// `Attempt to execute command by halted object #N` — audible where a drop here is silent.
+		// Without this the runaway path could not set HALT on a player at all (src/cque.c:312).
+		// The o-message is plain text and goes out either way.
+		if (!thing.IsPlayer && await thing.HasFlag("HALT"))
 		{
 			return false;
 		}

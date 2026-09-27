@@ -232,6 +232,18 @@ public partial class TaskScheduler(
 				_ => QueueOutcome.InvalidTarget
 			});
 		}
+		// pay_queue wipes and halts whatever executor tripped the quota, player or not
+		// (do_halt(Owner(player), "", player) then set_flag_internal(player, "HALT"),
+		// src/cque.c:303-313). What decides it is the entry, not the type: run_user_input builds its
+		// entry with QUEUE_SOCKET and hands it straight to do_entry (src/cque.c:1076-1088), so a typed
+		// line never reaches insert_que and so never reaches pay_queue, whoever typed it. That is also
+		// what makes the flag safe on a player — they can still type, and process_command
+		// (src/game.c:1181) refuses only what the queue carries for them.
+		//
+		// Scheduled before the rejection notice, which is best-effort and can fail: telling nobody
+		// about a runaway is survivable, leaving one running is not.
+		if (result.Reason == QueueRejectionReason.OwnerLimit && group != DirectInputGroup && executor is { } offender)
+			QueueRunawayHalt(offender, owner);
 		if (!result.Accepted && notifyOnRejection && notifyService is not null)
 		{
 			if (handle is not null) await notifyService.NotifyLocalized(handle.Value, "QueueRejected", result.Reason);
@@ -239,13 +251,6 @@ public partial class TaskScheduler(
 				await foreach (var connection in connectionService.Get(player!.Value))
 					await notifyService.NotifyLocalized(connection.Handle, "QueueRejected", result.Reason);
 		}
-		// Deviation: PennMUSH's pay_queue wipes whatever executor tripped the quota, player or not
-		// (do_halt(Owner(player), "", player), src/cque.c:311). Its message names an object, and a
-		// player only ever reaches that branch through queued work, since run_user_input bypasses
-		// pay_queue entirely (src/cque.c:1076-1088). Here the refusal already stopped the new entry,
-		// and wiping a player's queue on top of it would take out work they did not run away with.
-		if (result.Reason == QueueRejectionReason.OwnerLimit && !executorIsPlayer && executor is { } offender)
-			QueueRunawayHalt(offender, owner);
 		return result;
 	}
 
@@ -274,9 +279,13 @@ public partial class TaskScheduler(
 			try
 			{
 				// The refused admission's budget is disposed the moment it returns, and the ambient one
-				// flows into this task. The wipe gets a lifetime of its own, bounded by shutdown.
-				var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000;
-				using var budget = ExecutionBudget.FromMilliseconds(milliseconds == 0 ? 1000 : milliseconds, _shutdownCts.Token);
+				// flows into this task. The wipe gets a lifetime of its own, bounded by shutdown and by
+				// nothing else: pay_queue's do_halt and set_flag_internal sit outside start_cpu_timer,
+				// which bounds an entry's evaluation rather than the queue's bookkeeping
+				// (src/cque.c:303-313 against :1141). A per-entry deadline here would abandon a long wipe
+				// part-done and leave the offender unhalted with its backlog intact — the one outcome
+				// this path exists to prevent, and one nothing retries.
+				using var budget = ExecutionBudget.FromMilliseconds(0, _shutdownCts.Token);
 				using var scope = budget.Enter();
 				await HaltRunaway(offender, owner);
 			}
@@ -292,13 +301,14 @@ public partial class TaskScheduler(
 
 		// The wipe has to happen: without it the backlog the object already built keeps running, each
 		// entry freeing a slot the next one takes, and the quota alone never brings the loop to a stop.
-		await Halt(offender);
+		await HaltQueuedWork(offender);
 
-		// Penn exempts players from the halted gate at both ends — insert_que (src/cque.c:530) and the
-		// dequeue re-check (:1136) each test !IsPlayer(executor) first. SharpMUSH's DidItService
-		// honours HALT on everyone, so the flag on a player would silence them outright. Admission
-		// already refuses to send a player down this path; this is the second lock on that door.
-		if (node is AnySharpObject haltable and not SharpPlayer)
+		// set_flag_internal(player, "HALT") (src/cque.c:312) names no type and excludes none. A halted
+		// player is not a silenced player: the queue exempts them (insert_que, src/cque.c:530; the
+		// dequeue re-check, :1136), and what reaches process_command is refused there (src/game.c:1181)
+		// unless the player typed it. So the flag stops the runaway's queued work and leaves the
+		// person at the keyboard able to type — including `@set me=!halt`.
+		if (node is AnySharpObject haltable)
 		{
 			var haltFlag = await mediator.Send(new GetObjectFlagQuery("HALT"), ExecutionBudget.CurrentToken);
 			if (haltFlag is not null) await mediator.Send(new SetObjectFlagCommand(haltable, haltFlag), ExecutionBudget.CurrentToken);
@@ -1034,12 +1044,28 @@ public partial class TaskScheduler(
 		return removed.Length;
 	}
 
-	public async ValueTask Halt(DBRef dbRef)
+	public ValueTask Halt(DBRef dbRef) => HaltWhere(dbRef, _ => true);
+
+	/// <summary>
+	/// The runaway wipe: everything the offender has queued, except what it typed.
+	/// </summary>
+	/// <remarks>
+	/// <c>do_halt(Owner(player), "", player)</c> (<c>src/cque.c:311</c>) walks the queue, and a typed
+	/// line is not on it: <c>run_user_input</c> hands its entry straight to <c>do_entry</c> without
+	/// ever inserting it (<c>:1076-1088</c>). SharpMUSH does queue typed input, in
+	/// <see cref="DirectInputGroup"/>, so sparing that group is what reproduces the same set — and it
+	/// is what the halted gate promises, since the flag this wipe accompanies leaves a player able to
+	/// type. A line already admitted and waiting its turn is as typed as the next one.
+	/// </remarks>
+	private ValueTask HaltQueuedWork(DBRef dbRef) => HaltWhere(dbRef, entry => entry.Group != DirectInputGroup);
+
+	private async ValueTask HaltWhere(DBRef dbRef, Func<QueueEntry, bool> include)
 	{
 		long[] pids;
 		lock (_admissionLock) pids = _pendingEntries.Values
-			.Where(entry => entry.Executor?.Matches(dbRef) == true
-				|| (SchedulerKeys.IsSemaphore(entry.Group) && entry.SemaphoreTarget?.Matches(dbRef) == true))
+			.Where(entry => include(entry)
+				&& (entry.Executor?.Matches(dbRef) == true
+					|| (SchedulerKeys.IsSemaphore(entry.Group) && entry.SemaphoreTarget?.Matches(dbRef) == true)))
 			.Select(entry => entry.Pid).ToArray();
 		foreach (var pid in pids) await HaltByPid(pid);
 	}

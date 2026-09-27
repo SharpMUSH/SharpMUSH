@@ -34,9 +34,10 @@ namespace SharpMUSH.Tests.Commands;
 /// <para>A halted <em>player's</em> queued body does not ultimately run either, but PennMUSH stops it
 /// one layer further down, in <c>process_command</c> (<c>src/game.c:1181</c>), which refuses any
 /// command whose executor is halted unless it came from a socket and tells the owner
-/// <c>Attempt to execute command by halted object #6</c>. That gate is player HALT policy and belongs
-/// to #1006; these tests pin only what #1086 owns — that the queue exempts players, so the entry is
-/// admitted and reaches execution rather than being dropped as an object's would be.</para>
+/// <c>Attempt to execute command by halted object #6</c>. That gate is player HALT policy, belongs to
+/// #1006 and is pinned by <see cref="HaltedExecutorGateTests"/>; these tests pin only what #1086 owns
+/// — that the queue exempts players, so the entry is admitted and reaches execution rather than being
+/// dropped as an object's would be.</para>
 /// </summary>
 [NotInParallel]
 public class QueuedHaltTests : ServerTestBase
