@@ -1102,4 +1102,30 @@ public class FlagAndPowerCommandTests
 		await Mediator.Send(new DeletePowerCommand(holder));
 		await Mediator.Send(new DeletePowerCommand(claimant));
 	}
+
+	/// <summary>
+	/// One alias admits one flag however many callers claim it at once. PennMUSH is single-threaded, so
+	/// <c>do_flag_alias</c>'s check and its <c>ptab_insert_one</c> cannot interleave; here they are two
+	/// Mediator round trips taken under one gate, which is what makes the check binding rather than
+	/// advisory — otherwise every caller passes the check and every caller writes.
+	/// </summary>
+	[Test]
+	public async ValueTask Flag_Alias_ConcurrentClaimsOnOneAliasLeaveOneHolder()
+	{
+		var alias = $"FR_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var flags = await Task.WhenAll(Enumerable.Range(0, 6).Select(async _ => await CreateLetterlessFlag()));
+
+		// Task.Run, not a bare Select: the command path completes synchronously against the test
+		// provider, so lazily enumerated ValueTasks would run one after another and race nothing.
+		await Task.WhenAll(flags.Select(flag => Task.Run(async () =>
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/alias {flag}={alias}")))));
+
+		var holders = await Task.WhenAll(flags.Select(async flag =>
+			(flag, aliases: (await Mediator.Send(new GetObjectFlagQuery(flag)))!.Aliases ?? [])));
+
+		await Assert.That(holders.Count(h => h.aliases.Contains(alias, StringComparer.OrdinalIgnoreCase))).IsEqualTo(1)
+			.Because("exactly one caller may claim the alias");
+
+		foreach (var flag in flags) await Mediator.Send(new DeleteObjectFlagCommand(flag));
+	}
 }

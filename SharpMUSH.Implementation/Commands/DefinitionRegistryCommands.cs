@@ -2099,14 +2099,14 @@ public partial class Commands : ICommandRestrictionApplier
 
 		// letter_to_flagptr's `n->tab == &ptab_flag` guard makes this unreachable for the POWER
 		// flagspace; it is implemented as written, not as reached.
-		if (letter.Length == 1
-				&& await FindLetterConflict(registry.All(Mediator).Select(x => (x.Name, x.Symbol, x.TypeRestrictions)),
-					entry.Name, letter, entry.TypeRestrictions) is { } conflict)
-		{
-			return await say(keys.LetterConflict, [conflict]);
-		}
+		var (conflict, written) = await CheckedUpdateAsync(registry, entry with { Symbol = letter },
+			letter.Length == 1
+				? () => FindLetterConflict(registry.All(Mediator).Select(x => (x.Name, x.Symbol, x.TypeRestrictions)),
+					entry.Name, letter, entry.TypeRestrictions)
+				: null);
 
-		if (!await registry.Update(Mediator, entry with { Symbol = letter })) return await say(keys.FailedToUpdate, [typed]);
+		if (conflict is not null) return await say(keys.LetterConflict, [conflict]);
+		if (!written) return await say(keys.FailedToUpdate, [typed]);
 
 		await (letter.Length == 1 ? say(keys.LetterSet, [entry.Name, letter]) : say(keys.LetterCleared, [entry.Name]));
 		return new CallState(MarkupText.Plain(entry.Name));
@@ -2129,15 +2129,47 @@ public partial class Commands : ICommandRestrictionApplier
 				words.Length > 0 ? string.Join(", ", words.Select(a => a.ToUpper())) : "none")
 		};
 
-		if (operation == DefinitionOperation.Alias
-				&& await FindAliasConflict(registry.All(Mediator), entry.Name, updated.Aliases ?? []) is { } conflict)
-		{
-			return await say(keys.AliasConflict, [conflict]);
-		}
+		var (conflict, written) = await CheckedUpdateAsync(registry, updated,
+			operation == DefinitionOperation.Alias
+				? () => FindAliasConflict(registry.All(Mediator), entry.Name, updated.Aliases ?? [])
+				: null);
 
-		if (!await registry.Update(Mediator, updated)) return await say(keys.FailedToUpdate, [typed]);
+		if (conflict is not null) return await say(keys.AliasConflict, [conflict]);
+		if (!written) return await say(keys.FailedToUpdate, [typed]);
+
 		await say(key, [typed, shown]);
 		return new CallState(MarkupText.Plain(typed));
+	}
+
+	/// <summary>
+	/// PennMUSH is single-threaded, so <c>do_flag_alias</c>'s "does anything already answer to this
+	/// alias?" and the <c>ptab_insert_one</c> that follows cannot be interleaved; <c>do_flag_letter</c>
+	/// is the same shape. Here each is a pair of Mediator round trips, and this gate is what makes the
+	/// check binding rather than advisory: without it two God sessions can both pass the check and both
+	/// write, leaving exactly the duplicate the check exists to refuse.
+	/// <para>Nothing between the check and the write runs softcode, so the gate cannot be re-entered on
+	/// one call stack — <see cref="SemaphoreSlim"/> is not reentrant. Speaking the result happens
+	/// outside it.</para>
+	/// </summary>
+	private static readonly SemaphoreSlim DefinitionMutationGate = new(1, 1);
+
+	/// <summary>
+	/// Runs <paramref name="findConflict"/> (when there is one) and the write as one critical section.
+	/// </summary>
+	/// <returns>The conflicting definition's name, or whether the write landed.</returns>
+	private async ValueTask<(string? Conflict, bool Written)> CheckedUpdateAsync(DefinitionRegistry registry,
+		RegistryEntry updated, Func<ValueTask<string?>>? findConflict)
+	{
+		await DefinitionMutationGate.WaitAsync();
+		try
+		{
+			if (findConflict is not null && await findConflict() is { } conflict) return (conflict, false);
+			return (null, await registry.Update(Mediator, updated));
+		}
+		finally
+		{
+			DefinitionMutationGate.Release();
+		}
 	}
 
 	/// <summary>

@@ -112,10 +112,13 @@ public class DefinitionAuthorizationTests
 	public async Task AggregateSpecificAliasAndLetterPrecedenceIsPreserved(string kind, string switches)
 	{
 		var name = "AUTH" + Guid.NewGuid().ToString("N").ToUpperInvariant();
+		// An alias namespace is unique per flagspace (do_flag_alias, src/flags.c:2667), so each case
+		// claims its own: the two power cases run in parallel and a shared literal would collide.
+		var alias = "R_" + name;
 		try
 		{
 			await Create(kind, name);
-			await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@{kind}/{switches} {name}={(kind == "flag" ? "" : "R")}"));
+			await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@{kind}/{switches} {name}={(kind == "flag" ? "" : alias)}"));
 			if (kind == "flag")
 			{
 				var flag = await Mediator.Send(new GetObjectFlagQuery(name));
@@ -125,7 +128,7 @@ public class DefinitionAuthorizationTests
 			else
 			{
 				var power = await Mediator.Send(new GetPowerQuery(name));
-				await Assert.That(power!.Alias).IsEqualTo("R");
+				await Assert.That(power!.Alias).IsEqualTo(alias);
 				await Assert.That(power.Symbol).IsEqualTo(DefinitionSymbol);
 			}
 		}
