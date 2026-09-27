@@ -74,41 +74,6 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// PennMUSH's <c>first_visible</c> (src/predicat.c:292), as a per-candidate predicate.
-	/// </summary>
-	/// <remarks>
-	/// Penn's version is a loop with an <c>lck</c> latch, because it is called to skip forward over a
-	/// contents list; the latch only avoids re-testing the location half while scanning past consecutive
-	/// hidden objects, and <c>DOLIST_VISIBLE</c> calls it afresh (latch reset) for each item, so per
-	/// candidate the two forms agree.
-	/// <para>
-	/// Penn documents its own bug here and keeps it, so this keeps it too: the <c>controls</c> escape
-	/// means a DARK object <em>is</em> listed to someone who owns it. "The behavior is left as is because
-	/// so many functions in fundb.c rely on the incorrect behavior to return expected values."
-	/// </para>
-	/// <para>
-	/// <c>ldark</c> is <c>Opaque</c> for a player and <c>Dark</c> — not <c>DarkLegal</c> — for anything
-	/// else, and the location half is asked about the container, not the candidate.
-	/// </para>
-	/// </remarks>
-	private async ValueTask<bool> FirstVisible(AnySharpObject executor, AnySharpObject loc,
-		AnySharpObject thing, bool locIsDark)
-	{
-		if (!await PermissionService.CanInteract(executor, thing, IPermissionService.InteractType.See))
-		{
-			return false;
-		}
-
-		var hidden = await thing.IsDarkLegal() || (locIsDark && !await thing.IsLight());
-		if (!hidden) return true;
-
-		return await executor.IsSee_All()
-					 || loc.Object().DBRef == executor.Object().DBRef
-					 || await PermissionService.Controls(executor, loc)
-					 || await PermissionService.Controls(executor, thing);
-	}
-
-	/// <summary>
 	/// Walks <paramref name="loc"/>'s contents as <c>dbwalk</c> does.
 	/// </summary>
 	/// <returns>
@@ -133,7 +98,7 @@ public partial class Functions
 			var thing = item.WithRoomOption();
 
 			if (!TypeMatches(item, spec.Types)) continue;
-			if (!await FirstVisible(executor, loc, thing, locIsDark)) continue;
+			if (!await PermissionService.FirstVisible(executor, loc, thing, locIsDark)) continue;
 
 			// The lv* forms' extra pass: hide anything dark outright, and disconnected players.
 			if (spec.SkipDark)

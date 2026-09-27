@@ -67,6 +67,14 @@ public interface IPermissionService
 	ValueTask<bool> CanInteract(AnySharpObject interactor, AnySharpContent interacted, InteractType type);
 
 	/// <summary>
+	/// PennMUSH <c>first_visible</c> (<c>src/predicat.c:292</c>), as a per-candidate predicate: whether
+	/// <paramref name="looker"/> sees <paramref name="thing"/> among <paramref name="loc"/>'s contents.
+	/// </summary>
+	/// <param name="locIsDark">Penn's <c>ldark</c>: <c>Opaque(loc)</c> for a player, <c>Dark(loc)</c>
+	/// otherwise. Passed in so a walk over one container reads it once.</param>
+	ValueTask<bool> FirstVisible(AnySharpObject looker, AnySharpObject loc, AnySharpObject thing, bool locIsDark);
+
+	/// <summary>
 	/// PennMUSH <c>Hearer</c> (<c>src/game.c:1564</c>): a connected player, a <c>PUPPET</c>, an
 	/// <c>AUDIBLE</c> object carrying a <c>FORWARDLIST</c>, or anything with a <c>LISTEN</c>.
 	/// A move by a non-hearer fires action attributes only, never messages.

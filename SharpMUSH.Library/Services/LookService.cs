@@ -386,7 +386,46 @@ public class LookService(
 			}
 		}
 
+		// look_simple (look.c:430-440): an exit set TRANSPARENT or CLOUDY is looked through, after its
+		// own name and description, at the room it leads to. CLOUDY alone under LOOK_NOCONTENTS would
+		// show nothing there, so it is not looked at all.
+		if (realViewing.IsExit)
+		{
+			var throughKey = key;
+			if (await realViewing.IsTransparent()) throughKey |= LookKey.Trans;
+			if (await realViewing.IsCloudy()) throughKey |= LookKey.Cloudy;
+			var through = throughKey & (LookKey.Trans | LookKey.Cloudy);
+
+			if (through != 0
+					&& (!throughKey.HasFlag(LookKey.NoContents) || through != LookKey.Cloudy)
+					&& await ExitLookDestinationAsync(god, looker, realViewing.AsContent) is AnySharpContainer beyond)
+			{
+				await LookRoom(parser, looker, beyond.WithExitOption().WithNoneOption(), throughKey);
+			}
+		}
+
 		return new CallState(viewingObject.DBRef.ToString());
+	}
+
+	/// <summary>
+	/// Where look_simple looks through an exit (<c>look.c:437-440</c>): the looker's own home for an exit
+	/// linked to HOME, the stored destination otherwise, and nowhere for a variable or unlinked exit.
+	/// SharpMUSH records HOME and variable links in <c>_LINKTYPE</c> rather than in the destination.
+	/// </summary>
+	private async ValueTask<AnyOptionalSharpContainer> ExitLookDestinationAsync(
+		AnySharpObject god, AnySharpObject looker, AnySharpContent exit)
+	{
+		var linkType = await attributeService.GetAttributeAsync(god, exit.WithRoomOption(), "_LINKTYPE",
+			IAttributeService.AttributeMode.Read, false) is SharpAttribute[] { Length: > 0 } chain
+			? chain[0].Value.ToPlainText().Trim().ToLowerInvariant()
+			: string.Empty;
+
+		return linkType switch
+		{
+			"variable" => new None(),
+			"home" => looker.IsContent ? await looker.AsContent.Home() : new None(),
+			_ => await exit.Home()
+		};
 	}
 
 	private static async ValueTask<string> DestinationNameAsync(AnySharpContent exit)
