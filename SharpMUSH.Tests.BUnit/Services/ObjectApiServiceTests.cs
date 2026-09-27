@@ -4,6 +4,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.BUnit.Services;
 
@@ -16,35 +17,16 @@ namespace SharpMUSH.Tests.BUnit.Services;
 /// </summary>
 public class ObjectApiServiceTests
 {
-	/// <summary>Captures the one request the service makes and replies with a canned response.</summary>
-	private sealed class CapturingHandler(HttpStatusCode status, string? responseJson = null) : HttpMessageHandler
-	{
-		public HttpRequestMessage? Request { get; private set; }
-		public string? RequestBody { get; private set; }
-
-		protected override async Task<HttpResponseMessage> SendAsync(
-			HttpRequestMessage request, CancellationToken cancellationToken)
-		{
-			Request = request;
-			RequestBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
-
-			return new HttpResponseMessage(status)
-			{
-				Content = new StringContent(responseJson ?? string.Empty, Encoding.UTF8, "application/json")
-			};
-		}
-	}
-
 	private sealed class SingleClientFactory(HttpMessageHandler handler) : IHttpClientFactory
 	{
 		public HttpClient CreateClient(string name) =>
 			new(handler, disposeHandler: false) { BaseAddress = new Uri("https://localhost/") };
 	}
 
-	private static (ObjectApiService Service, CapturingHandler Handler) Build(
+	private static (ObjectApiService Service, CapturingHttpHandler Handler) Build(
 		HttpStatusCode status = HttpStatusCode.NoContent, string? responseJson = null)
 	{
-		var handler = new CapturingHandler(status, responseJson);
+		var handler = CapturingHttpHandler.WithJson(status, responseJson);
 		return (new ObjectApiService(new SingleClientFactory(handler)), handler);
 	}
 
@@ -74,7 +56,7 @@ public class ObjectApiServiceTests
 
 		await service.SetAttributeAsync(7, "CMD_GREET", value);
 
-		var sent = JsonDocument.Parse(handler.RequestBody!).RootElement.GetProperty("value").GetString();
+		var sent = JsonDocument.Parse(handler.LastBody!).RootElement.GetProperty("value").GetString();
 
 		await Assert.That(sent).IsEqualTo(value);
 	}
@@ -86,7 +68,7 @@ public class ObjectApiServiceTests
 
 		await service.SetAttributeAsync(7, "DESC", "line one\nline two");
 
-		await Assert.That(handler.RequestBody).DoesNotContain("%r")
+		await Assert.That(handler.LastBody).DoesNotContain("%r")
 			.Because("a newline must reach the server as a newline, not as %r");
 	}
 
@@ -97,7 +79,7 @@ public class ObjectApiServiceTests
 
 		await service.SetAttributeAsync(7, "DESC", "line one%rline two");
 
-		var sent = JsonDocument.Parse(handler.RequestBody!).RootElement.GetProperty("value").GetString();
+		var sent = JsonDocument.Parse(handler.LastBody!).RootElement.GetProperty("value").GetString();
 
 		await Assert.That(sent).IsEqualTo("line one%rline two");
 		await Assert.That(sent).DoesNotContain("\n")
@@ -111,8 +93,8 @@ public class ObjectApiServiceTests
 
 		await service.SetAttributeAsync(42, "BRANCH`LEAF", "x");
 
-		await Assert.That(handler.Request!.Method).IsEqualTo(HttpMethod.Put);
-		await Assert.That(handler.Request.RequestUri!.AbsolutePath)
+		await Assert.That(handler.LastRequest!.Method).IsEqualTo(HttpMethod.Put);
+		await Assert.That(handler.LastRequest.RequestUri!.AbsolutePath)
 			.IsEqualTo("/api/objects/42/attributes/BRANCH%60LEAF");
 	}
 

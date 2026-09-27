@@ -1,42 +1,13 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Reflection;
 using Bunit;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.JSInterop;
 using NSubstitute;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.BUnit.Services;
-
-/// <summary>
-/// A minimal, fully mutable fake of <see cref="IAccountAuthState"/> — lets a test flip
-/// <see cref="AccountSessionToken"/> after a consumer (e.g. <see cref="GameHubConnectionFactory"/>)
-/// has already been constructed against it, to prove that consumer reads the property live rather
-/// than capturing a snapshot.
-/// </summary>
-file sealed class FakeAccountAuthState : IAccountAuthState
-{
-	public bool IsLoggedIn => AccountSessionToken is not null;
-	public string? AccountSessionToken { get; set; }
-	public string? Username { get; set; }
-	public string? Role { get; set; }
-	public IReadOnlyList<string> Permissions { get; set; } = [];
-	public bool ExplicitlyLoggedOut { get; set; }
-	public event Action? AuthStateChanged;
-	public AccountAuthService.CharacterSummary? ActiveCharacter { get; set; }
-	public event Action? ActiveCharacterChanged;
-	public Task InitAsync() => Task.CompletedTask;
-	public Task<AccountAuthService.DebugOttResponse?> GetDebugOttAsync() =>
-		Task.FromResult<AccountAuthService.DebugOttResponse?>(null);
-
-	// Keep the compiler from warning about the never-invoked events on this test double.
-	public void Touch()
-	{
-		AuthStateChanged?.Invoke();
-		ActiveCharacterChanged?.Invoke();
-	}
-}
 
 /// <summary>
 /// Task 9 (auth-consolidation, Phase 2): pins the client-side contract that the SignalR game-hub
@@ -119,23 +90,6 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 		await Assert.That(await factory.ResolveAccessTokenAsync()).IsNull();
 	}
 
-	/// <summary>Captures the outgoing request so the test can assert method/URL/headers/body.</summary>
-	private sealed class CapturingHandler(HttpStatusCode status, object? responseBody) : HttpMessageHandler
-	{
-		public HttpRequestMessage? LastRequest { get; private set; }
-		public string? LastBody { get; private set; }
-
-		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-		{
-			LastRequest = request;
-			LastBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
-			return new HttpResponseMessage(status)
-			{
-				Content = responseBody is null ? null : JsonContent.Create(responseBody)
-			};
-		}
-	}
-
 	/// <summary>
 	/// Character switching must go through <c>POST api/auth/switch-character</c> (Task 7's
 	/// session-based replacement for <c>jwt-switch-character</c>), authenticated via the
@@ -155,7 +109,7 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.loggedOut").SetResult(null);
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session-token-1");
 
-		var handler = new CapturingHandler(HttpStatusCode.OK,
+		var handler = CapturingHttpHandler.WithBody(HttpStatusCode.OK,
 			new { ott = "one-time-token", expiresIn = 60, accountSessionToken = "session-token-2" });
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
 		var service = new AccountAuthService(httpClientFactory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
@@ -233,7 +187,7 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 		JSInterop.SetupVoid("sessionStorage.setItem", "sharpmush.account.sessionToken", "session-token-2")
 			.SetException(new JSException("storage unavailable"));
 
-		var handler = new CapturingHandler(HttpStatusCode.OK,
+		var handler = CapturingHttpHandler.WithBody(HttpStatusCode.OK,
 			new { ott = "one-time-token", expiresIn = 60, accountSessionToken = "session-token-2" });
 		using var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
 		var httpClientFactory = Substitute.For<IHttpClientFactory>();
@@ -257,7 +211,7 @@ public class AccountAuthServiceHubTokenTests : TrackingBunitContext
 		JSInterop.SetupVoid("sessionStorage.setItem", "sharpmush.account.sessionToken", "session-token-1")
 			.SetException(new JSException("storage unavailable"));
 
-		var handler = new CapturingHandler(HttpStatusCode.OK, new
+		var handler = CapturingHttpHandler.WithBody(HttpStatusCode.OK, new
 		{
 			accountId = "account-1",
 			username = "alice",

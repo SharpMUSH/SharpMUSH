@@ -1,35 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.BUnit.Services;
-
-/// <summary>
-/// A minimal, mutable fake of <see cref="IAccountAuthState"/> so a test can flip
-/// <see cref="AccountSessionToken"/> after the handler has been constructed, proving the handler
-/// reads the token live per request rather than capturing it once.
-/// </summary>
-file sealed class FakeAccountAuthState : IAccountAuthState
-{
-	public bool IsLoggedIn => AccountSessionToken is not null;
-	public string? AccountSessionToken { get; set; }
-	public string? Username { get; set; }
-	public string? Role { get; set; }
-	public IReadOnlyList<string> Permissions { get; set; } = [];
-	public bool ExplicitlyLoggedOut { get; set; }
-	public event Action? AuthStateChanged;
-	public AccountAuthService.CharacterSummary? ActiveCharacter { get; set; }
-	public event Action? ActiveCharacterChanged;
-	public Task InitAsync() => Task.CompletedTask;
-	public Task<AccountAuthService.DebugOttResponse?> GetDebugOttAsync() =>
-		Task.FromResult<AccountAuthService.DebugOttResponse?>(null);
-
-	public void Touch()
-	{
-		AuthStateChanged?.Invoke();
-		ActiveCharacterChanged?.Invoke();
-	}
-}
 
 /// <summary>
 /// Captures what the handler forwarded. Records the header value rather than keeping the

@@ -1,53 +1,18 @@
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging.Abstractions;
-using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
-using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.BUnit.Services;
-
-file sealed class FakeHubConnection : IGameHubConnection
-{
-	public int StartCount { get; private set; }
-	public int StopCount { get; private set; }
-	public HubConnectionState State { get; private set; } = HubConnectionState.Disconnected;
-
-	public Task StartAsync(CancellationToken cancellationToken = default)
-	{
-		StartCount++;
-		State = HubConnectionState.Connected;
-		return Task.CompletedTask;
-	}
-
-	public Task StopAsync(CancellationToken cancellationToken = default)
-	{
-		StopCount++;
-		State = HubConnectionState.Disconnected;
-		return Task.CompletedTask;
-	}
-
-	public Task InvokeAsync(string methodName, string arg, CancellationToken cancellationToken = default) => Task.CompletedTask;
-	public IDisposable On(string methodName, Action<GameOutputMessage> handler) => new Noop();
-	public IDisposable On(string methodName, Action<RoomEventMessage> handler) => new Noop();
-	public IDisposable On(string methodName, Action<SceneEventMessage> handler) => new Noop();
-	public IDisposable On(string methodName, Action handler) => new Noop();
-	public event Func<Exception?, Task>? Closed { add { } remove { } }
-	public event Func<Exception?, Task>? Reconnecting { add { } remove { } }
-	public event Func<string?, Task>? Reconnected { add { } remove { } }
-	public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-	private sealed class Noop : IDisposable { public void Dispose() { } }
-}
 
 file sealed class CountingHubFactory : IGameHubConnectionFactory
 {
 	public int CreateCount { get; private set; }
-	public List<FakeHubConnection> Hubs { get; } = [];
+	public List<FakeGameHubConnection> Hubs { get; } = [];
 
 	public IGameHubConnection Create()
 	{
 		CreateCount++;
-		var hub = new FakeHubConnection();
+		var hub = new FakeGameHubConnection();
 		Hubs.Add(hub);
 		return hub;
 	}

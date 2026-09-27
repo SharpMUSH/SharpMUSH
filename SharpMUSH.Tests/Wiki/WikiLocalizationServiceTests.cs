@@ -8,6 +8,7 @@ using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Server;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.Wiki;
 
@@ -19,26 +20,6 @@ namespace SharpMUSH.Tests.Wiki;
 /// </summary>
 public class WikiLocalizationServiceTests
 {
-	/// <summary>
-	/// Captures Warning-level messages so the unstamped-row diagnostic can be asserted on. A substitute
-	/// would only prove <c>Log</c> was called; the point of that branch is that a human can tell which
-	/// page is broken, so the test reads the rendered text.
-	/// </summary>
-	private sealed class RecordingLogger<T> : ILogger<T>
-	{
-		public List<string> Warnings { get; } = [];
-
-		public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-
-		public bool IsEnabled(LogLevel logLevel) => true;
-
-		public void Log<TState>(
-			LogLevel logLevel, EventId eventId, TState state, Exception? exception,
-			Func<TState, Exception?, string> formatter)
-		{
-			if (logLevel == LogLevel.Warning) Warnings.Add(formatter(state, exception));
-		}
-	}
 
 	private static (IWikiService Storage, IWikiLocalizationService Service) Build(string defaultLocale = "en")
 	{

@@ -4,49 +4,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Client.Models;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.BUnit.Services;
 
-/// <summary>A scene connection that reports itself Connected and throws whatever a test hands it.</summary>
-file sealed class ThrowingSceneConnection(Exception? onInvoke) : IGameHubConnection
-{
-	public List<string> Invoked { get; } = [];
-	public HubConnectionState State { get; private set; } = HubConnectionState.Disconnected;
-
-	public Task StartAsync(CancellationToken cancellationToken = default)
-	{
-		State = HubConnectionState.Connected;
-		return Task.CompletedTask;
-	}
-
-	public Task StopAsync(CancellationToken cancellationToken = default)
-	{
-		State = HubConnectionState.Disconnected;
-		return Task.CompletedTask;
-	}
-
-	public Task InvokeAsync(string methodName, string arg, CancellationToken cancellationToken = default)
-	{
-		Invoked.Add($"{methodName}:{arg}");
-		return onInvoke is null ? Task.CompletedTask : Task.FromException(onInvoke);
-	}
-
-	public IDisposable On(string methodName, Action<GameOutputMessage> handler) => new Noop();
-	public IDisposable On(string methodName, Action<RoomEventMessage> handler) => new Noop();
-	public IDisposable On(string methodName, Action<SceneEventMessage> handler) => new Noop();
-	public IDisposable On(string methodName, Action handler) => new Noop();
-	public event Func<Exception?, Task>? Closed { add { } remove { } }
-	public event Func<Exception?, Task>? Reconnecting { add { } remove { } }
-	public event Func<string?, Task>? Reconnected { add { } remove { } }
-	public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-	private sealed class Noop : IDisposable { public void Dispose() { } }
-}
-
 file sealed class SceneHubFactory(Exception? onInvoke) : IGameHubConnectionFactory
 {
-	public ThrowingSceneConnection Game { get; } = new(null);
-	public ThrowingSceneConnection Scene { get; } = new(onInvoke);
+	public FakeGameHubConnection Game { get; } = new();
+	public FakeGameHubConnection Scene { get; } = new(onInvoke);
 
 	public IGameHubConnection Create() => Game;
 	public IGameHubConnection? CreateScene() => Scene;

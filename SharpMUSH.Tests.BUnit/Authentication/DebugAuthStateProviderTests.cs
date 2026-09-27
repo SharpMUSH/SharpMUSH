@@ -1,5 +1,6 @@
 using SharpMUSH.Client.Authentication;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.BUnit.Authentication;
 
@@ -15,49 +16,14 @@ namespace SharpMUSH.Tests.BUnit.Authentication;
 /// </summary>
 public class DebugAuthStateProviderTests
 {
-	/// <summary>
-	/// Fake <see cref="IAccountAuthState"/> that never actually reaches an HTTP/JS-backed
-	/// <see cref="AccountAuthService"/> — this is the narrow-interface seam the provider now
-	/// depends on (it used to hard-depend on the concrete service, which made this fake
-	/// impossible to construct it against).
-	/// </summary>
-	private sealed class FakeAccountAuthState : IAccountAuthState
-	{
-		public bool IsLoggedIn { get; set; }
-		public string? AccountSessionToken { get; set; }
-		public string? Username { get; set; }
-		public string? Role { get; set; }
-		public IReadOnlyList<string> Permissions { get; set; } = [];
-		public bool ExplicitlyLoggedOut { get; set; }
-		public event Action? AuthStateChanged;
-		public AccountAuthService.CharacterSummary? ActiveCharacter { get; set; }
-		public event Action? ActiveCharacterChanged;
-		public void Fire()
-		{
-			AuthStateChanged?.Invoke();
-			ActiveCharacterChanged?.Invoke();
-		}
-
-		/// <summary>No-op: this fake is always constructed already "hydrated" via its properties.</summary>
-		public Task InitAsync() => Task.CompletedTask;
-
-		/// <summary>How many times the provider actually called through for a debug OTT.</summary>
-		public int DebugOttCallCount { get; private set; }
-
-		public AccountAuthService.DebugOttResponse? NextDebugOtt { get; set; } =
-			new("token", 900, "God", "acct-1", "headwiz", "session-token", false);
-
-		public Task<AccountAuthService.DebugOttResponse?> GetDebugOttAsync()
-		{
-			DebugOttCallCount++;
-			return Task.FromResult(NextDebugOtt);
-		}
-	}
+	/// <summary>The debug OTT the fake hands out unless a test says otherwise.</summary>
+	private static readonly AccountAuthService.DebugOttResponse DevOtt =
+		new("token", 900, "God", "acct-1", "headwiz", "session-token", false);
 
 	[Test]
 	public async Task ExplicitlyLoggedOut_ReturnsAnonymous_WithoutFetchingDebugOtt()
 	{
-		var fake = new FakeAccountAuthState { ExplicitlyLoggedOut = true };
+		var fake = new FakeAccountAuthState { NextDebugOtt = DevOtt, ExplicitlyLoggedOut = true };
 		var provider = new DebugAuthStateProvider(fake);
 
 		var state = await provider.GetAuthenticationStateAsync();
@@ -81,7 +47,7 @@ public class DebugAuthStateProviderTests
 	[Test]
 	public async Task NotLoggedOut_DelegatesToAccountAuthServiceEachQuery()
 	{
-		var fake = new FakeAccountAuthState { ExplicitlyLoggedOut = false };
+		var fake = new FakeAccountAuthState { NextDebugOtt = DevOtt, ExplicitlyLoggedOut = false };
 		var provider = new DebugAuthStateProvider(fake);
 
 		var state = await provider.GetAuthenticationStateAsync();
@@ -97,7 +63,7 @@ public class DebugAuthStateProviderTests
 	[Test]
 	public async Task AuthStateChanged_NotifiesSubscribers()
 	{
-		var fake = new FakeAccountAuthState();
+		var fake = new FakeAccountAuthState { NextDebugOtt = DevOtt };
 		var provider = new DebugAuthStateProvider(fake);
 
 		var notified = false;
@@ -140,7 +106,7 @@ public class DebugAuthStateProviderTests
 	[Test]
 	public async Task LoggedOutTransition_ClearsCache_SoNextLoginRefetches()
 	{
-		var fake = new FakeAccountAuthState { ExplicitlyLoggedOut = false };
+		var fake = new FakeAccountAuthState { NextDebugOtt = DevOtt, ExplicitlyLoggedOut = false };
 		var provider = new DebugAuthStateProvider(fake);
 
 		await provider.GetAuthenticationStateAsync();

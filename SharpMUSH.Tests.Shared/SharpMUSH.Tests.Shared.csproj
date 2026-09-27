@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		Test doubles shared by more than one test project. Deliberately light: no TUnit, no
+		Testcontainers, no test host. SharpMUSH.Tests.Infrastructure carries the server fixture and its
+		container dependencies, which is why BUnit cannot reference it; the fakes that BUnit and
+		SharpMUSH.Tests both need live here instead of being copied into each.
+
+		TUnit hooks ([Before(TestSession)] and friends) are discovered per test assembly, so they stay in
+		the test projects; only plain types belong here.
+	-->
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\SharpMUSH.Client\SharpMUSH.Client.csproj" />
+		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
+	</ItemGroup>
+
+</Project>

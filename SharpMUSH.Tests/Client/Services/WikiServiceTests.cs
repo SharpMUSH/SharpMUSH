@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.Client.Services;
 
@@ -22,29 +23,6 @@ namespace SharpMUSH.Tests.Client.Services;
 /// </summary>
 public class WikiServiceTests : TrackingTestContext
 {
-	/// <summary>
-	/// Returns a canned HTTP response and records the request for later inspection.
-	/// </summary>
-	private sealed class CapturingHandler(HttpStatusCode statusCode, string responseBody) : HttpMessageHandler
-	{
-		public HttpRequestMessage? CapturedRequest { get; private set; }
-		public string? CapturedRequestBody { get; private set; }
-
-		protected override async Task<HttpResponseMessage> SendAsync(
-			HttpRequestMessage request,
-			CancellationToken cancellationToken)
-		{
-			CapturedRequest = request;
-			if (request.Content is not null)
-				CapturedRequestBody = await request.Content.ReadAsStringAsync(cancellationToken);
-
-			return new HttpResponseMessage(statusCode)
-			{
-				Content = new StringContent(responseBody, Encoding.UTF8, "application/json")
-			};
-		}
-	}
-
 	/// <summary>Builds a minimal valid WikiPageDto JSON string.</summary>
 	private static string PageDtoJson(
 		string id = "node_wiki_pages/1",
@@ -70,9 +48,9 @@ public class WikiServiceTests : TrackingTestContext
 		}
 		""";
 
-	private WikiService BuildService(HttpMessageHandler handler, out CapturingHandler? capturing)
+	private WikiService BuildService(HttpMessageHandler handler, out CapturingHttpHandler? capturing)
 	{
-		capturing = handler as CapturingHandler;
+		capturing = handler as CapturingHttpHandler;
 		var http = Track(new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
@@ -80,9 +58,9 @@ public class WikiServiceTests : TrackingTestContext
 		return new WikiService(factory, logger);
 	}
 
-	private WikiService BuildService(HttpStatusCode code, string body, out CapturingHandler capturing)
+	private WikiService BuildService(HttpStatusCode code, string body, out CapturingHttpHandler capturing)
 	{
-		var handler = new CapturingHandler(code, body);
+		var handler = CapturingHttpHandler.WithJson(code, body);
 		capturing = handler;
 		return BuildService(handler, out _);
 	}
@@ -149,9 +127,9 @@ public class WikiServiceTests : TrackingTestContext
 
 		await service.UpdatePageAsync("home", "# Home", null);
 
-		await Assert.That(handler!.CapturedRequest).IsNotNull();
-		await Assert.That(handler.CapturedRequest!.Method).IsEqualTo(HttpMethod.Put);
-		await Assert.That(handler.CapturedRequest.RequestUri!.ToString())
+		await Assert.That(handler!.LastRequest).IsNotNull();
+		await Assert.That(handler.LastRequest!.Method).IsEqualTo(HttpMethod.Put);
+		await Assert.That(handler.LastRequest.RequestUri!.ToString())
 			.Contains("api/wiki/home");
 	}
 
@@ -163,7 +141,7 @@ public class WikiServiceTests : TrackingTestContext
 		await service.UpdatePageAsync("hello world", "# X", null);
 
 		// Use AbsoluteUri (percent-encoded form) — Uri.ToString() returns the unescaped form.
-		var uri = handler!.CapturedRequest!.RequestUri!.AbsoluteUri;
+		var uri = handler!.LastRequest!.RequestUri!.AbsoluteUri;
 		await Assert.That(uri).Contains("hello%20world");
 		await Assert.That(uri).DoesNotContain("hello world");
 	}
@@ -175,9 +153,9 @@ public class WikiServiceTests : TrackingTestContext
 
 		await service.UpdatePageAsync("home", "# Hello", "my summary");
 
-		await Assert.That(handler!.CapturedRequestBody).IsNotNull();
+		await Assert.That(handler!.LastBody).IsNotNull();
 
-		using var doc = JsonDocument.Parse(handler.CapturedRequestBody!);
+		using var doc = JsonDocument.Parse(handler.LastBody!);
 		var root = doc.RootElement;
 		await Assert.That(root.GetProperty("markdown").GetString()).IsEqualTo("# Hello");
 		await Assert.That(root.GetProperty("editSummary").GetString()).IsEqualTo("my summary");
@@ -190,7 +168,7 @@ public class WikiServiceTests : TrackingTestContext
 
 		await service.UpdatePageAsync("home", "# Home", null);
 
-		var contentType = handler!.CapturedRequest!.Content!.Headers.ContentType!.MediaType;
+		var contentType = handler!.LastRequest!.Content!.Headers.ContentType!.MediaType;
 		await Assert.That(contentType).IsEqualTo("application/json");
 	}
 
@@ -223,8 +201,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		await service.GetWikiArticle("home");
 
-		await Assert.That(handler!.CapturedRequest!.Method).IsEqualTo(HttpMethod.Get);
-		await Assert.That(handler.CapturedRequest.RequestUri!.ToString())
+		await Assert.That(handler!.LastRequest!.Method).IsEqualTo(HttpMethod.Get);
+		await Assert.That(handler.LastRequest.RequestUri!.ToString())
 			.Contains("api/wiki/ns/main/general/home");
 	}
 
@@ -258,8 +236,8 @@ public class WikiServiceTests : TrackingTestContext
 
 		await service.CreatePageAsync("Test", "# Test");
 
-		await Assert.That(handler!.CapturedRequest!.Method).IsEqualTo(HttpMethod.Post);
-		await Assert.That(handler.CapturedRequest.RequestUri!.ToString())
+		await Assert.That(handler!.LastRequest!.Method).IsEqualTo(HttpMethod.Post);
+		await Assert.That(handler.LastRequest.RequestUri!.ToString())
 			.EndsWith("api/wiki");
 	}
 
@@ -270,9 +248,9 @@ public class WikiServiceTests : TrackingTestContext
 
 		await service.CreatePageAsync("My Title", "# Content", "Character");
 
-		await Assert.That(handler!.CapturedRequestBody).IsNotNull();
+		await Assert.That(handler!.LastBody).IsNotNull();
 
-		using var doc = JsonDocument.Parse(handler.CapturedRequestBody!);
+		using var doc = JsonDocument.Parse(handler.LastBody!);
 		var root = doc.RootElement;
 		await Assert.That(root.GetProperty("title").GetString()).IsEqualTo("My Title");
 		await Assert.That(root.GetProperty("markdown").GetString()).IsEqualTo("# Content");
