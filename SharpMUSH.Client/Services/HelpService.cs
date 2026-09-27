@@ -13,7 +13,14 @@ public record HelpEntry(
 		string[] ParameterNames,
 		int MinArgs,
 		int MaxArgs,
-		string[] Switches);
+		string[] Switches)
+{
+	/// <summary>
+	/// The name <see cref="HelpService.Get"/> resolves to this entry and no other. A function is keyed
+	/// <c>NAME()</c> because a command may share its bare name: <c>idle()</c> and <c>IDLE</c>.
+	/// </summary>
+	public string Key => IsCommand ? Name : Name + "()";
+}
 
 /// <summary>
 /// Singleton service that owns the MUSH helpfile data loaded from mush-defs.json.
@@ -61,7 +68,9 @@ public sealed class HelpService
 						def.ParameterNames ?? [],
 						def.MinArgs, def.MaxArgs,
 						def.Switches ?? []);
-				idx[name.ToUpperInvariant()] = e;
+				idx[e.Key] = e;
+				// The bare name too, unless a command claims it below.
+				idx[e.Name] = e;
 			}
 		}
 
@@ -85,9 +94,13 @@ public sealed class HelpService
 
 	/// <summary>All entries, sorted alphabetically with functions before commands.</summary>
 	public IReadOnlyList<HelpEntry> AllEntries =>
-			(_index?.Values.OrderBy(e => e.IsCommand).ThenBy(e => e.Name).ToList()
+			(_index?.Values.Distinct().OrderBy(e => e.IsCommand).ThenBy(e => e.Name).ToList()
 			 ?? (IReadOnlyList<HelpEntry>)[]);
 
+	/// <summary>
+	/// The entry for <paramref name="name"/>: <c>NAME()</c> for a function, the bare name for a command
+	/// (or for a function no command shares its name with).
+	/// </summary>
 	public HelpEntry? Get(string name)
 	{
 		if (_index is null) return null;
