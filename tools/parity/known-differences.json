@@ -70,6 +70,16 @@
       "tracking": "#1134",
       "profile": "An empty `MAILFORWARDLIST` is no list",
       "command": "@mail Bob=Listed/Does this arrive?"
+    },
+    {
+      "id": "KD-0008",
+      "scenario": "40-compat-choices",
+      "case": "choice.restrictions-reapply",
+      "step": 3,
+      "reason": "PennMUSH applied @find's restrict_command line once, so the @command/restrict after it stands; SharpMUSH applies command_restrictions again when it changes, which puts @find back to the line's wizard restriction.",
+      "tracking": "#1250",
+      "profile": "`command_restrictions` reapplies without a restart",
+      "command": "@find Widget"
     }
   ]
 }

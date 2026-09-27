@@ -765,6 +765,25 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 	}
 
+	/// <summary>
+	/// Whether <paramref name="name"/> finds a command and <paramref name="restriction"/> is one the
+	/// configured layer would apply to it, rather than skip: restriction words, a lock, or only a
+	/// <c>"</c> message.
+	/// </summary>
+	private async ValueTask<bool> IsValidRestrictionAsync(AnySharpObject executor, string name, string restriction)
+	{
+		if (name.Length == 0 || FindCommand(name) is not { } found)
+		{
+			return false;
+		}
+
+		var quote = restriction.IndexOf('"');
+		var terms = (quote >= 0 ? restriction[..quote] : restriction).Trim();
+		return terms.Length == 0
+					 || await RestrictionFromWords(terms, found.LibraryInformation.Attribute.Behavior) is CommandRestriction
+					 || LockService.Validate(terms, executor);
+	}
+
 	private readonly record struct CommandRestriction(string Lock, CommandBehavior Behavior, bool Disables);
 
 	/// <summary>
