@@ -364,9 +364,12 @@ longer restricts goes back to the restriction it was made with, and is enabled a
 configuration had disabled it with `nobody`. Every command the old or the new setting names starts
 again from the restriction it was made with, so a live `@command/restrict` on one of those commands
 is lost. Commands the setting does not name, and changes to other options, leave live restrictions
-alone. (#1250)<br>
+alone. (#1250) `@config/set restrict_command` with words that are neither restriction words nor a
+valid lock says `Couldn't set that option.`; PennMUSH says `Option set.` and leaves the command
+unlocked.<br>
 **Why.** The configuration can be changed while the game is running; a restriction that waits for a
-restart looks as if it had been ignored.<br>
+restart looks as if it had been ignored. A mistyped restriction is refused rather than leaving the command
+open to everyone.<br>
 **Workaround.** After changing `command_restrictions`, repeat any `@command/restrict` that should
 still apply to a command it names, or put the restriction in `command_restrictions` itself.<br>
 **Example.** The parity case `choice.restrictions-reapply` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
