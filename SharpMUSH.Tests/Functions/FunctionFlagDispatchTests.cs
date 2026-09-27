@@ -15,6 +15,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -183,15 +184,6 @@ public class FunctionFlagDispatchTests
 		var result = await parser.FunctionParse(MarkupText.Plain("uldefault(me/NONEXISTENTFLAGDEFAULT,%qx[setq(x,inner)]%qx)"));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("outerinner");
 		await Assert.That(parser.CurrentState.Registers.First()["X"].ToPlainText()).IsEqualTo("outer");
-	}
-
-	private sealed class RecordingLogger : ILogger
-	{
-		public List<string> Messages { get; } = [];
-		public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-		public bool IsEnabled(LogLevel logLevel) => true;
-		public void Log<TState>(LogLevel level, EventId id, TState state, Exception? error,
-			Func<TState, Exception?, string> formatter) => Messages.Add(formatter(state, error));
 	}
 
 	[Test]

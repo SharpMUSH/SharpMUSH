@@ -1,40 +1,15 @@
 using SharpMUSH.Client.Authentication;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.BUnit.Authentication;
 
 public class AccountAuthStateProviderTests
 {
-	/// <summary>Tiny fake so the provider can be tested without a real HTTP/JS-backed <see cref="AccountAuthService"/>.</summary>
-	private sealed class FakeAccountAuthState(
-		bool isLoggedIn, string? username, string? role, IReadOnlyList<string> permissions) : IAccountAuthState
-	{
-		public bool IsLoggedIn { get; } = isLoggedIn;
-		public string? AccountSessionToken { get; set; }
-		public string? Username { get; } = username;
-		public string? Role { get; } = role;
-		public IReadOnlyList<string> Permissions { get; } = permissions;
-		public bool ExplicitlyLoggedOut { get; set; }
-		public event Action? AuthStateChanged;
-		public AccountAuthService.CharacterSummary? ActiveCharacter { get; set; }
-		public event Action? ActiveCharacterChanged;
-		public void Fire()
-		{
-			AuthStateChanged?.Invoke();
-			ActiveCharacterChanged?.Invoke();
-		}
-
-		/// <summary>No-op: this fake is always constructed already "hydrated" via its constructor args.</summary>
-		public Task InitAsync() => Task.CompletedTask;
-
-		public Task<AccountAuthService.DebugOttResponse?> GetDebugOttAsync() =>
-			Task.FromResult<AccountAuthService.DebugOttResponse?>(null);
-	}
-
 	private static FakeAccountAuthState CreateAuthService(
 		bool loggedIn, string? username = null, string? role = null, IReadOnlyList<string>? permissions = null) =>
-		new(loggedIn, username, role, permissions ?? []);
+		new() { IsLoggedIn = loggedIn, Username = username, Role = role, Permissions = permissions ?? [] };
 
 	[Test]
 	public async Task LoggedOut_ReturnsAnonymous()

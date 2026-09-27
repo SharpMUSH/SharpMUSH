@@ -5,6 +5,7 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.Plugins;
 
@@ -69,7 +70,7 @@ public class ApplicationSourceOverlayTests
 	[Test]
 	public async Task Overlay_UnionsPluginApp_WhenLoaded_AndOmitsIt_WhenCatalogEmpty()
 	{
-		var inner = new FakeRegistry();
+		var inner = new FakeApplicationRegistry();
 		await inner.UpsertApplicationAsync(DbApp("db-page", order: 10));
 
 		var withoutPlugin = new PluginApplicationRegistryDecorator(
@@ -78,7 +79,7 @@ public class ApplicationSourceOverlayTests
 		await Assert.That(none.Select(a => a.Slug)).IsEquivalentTo(new[] { "db-page" });
 
 		var withPlugin = new PluginApplicationRegistryDecorator(
-			inner, PluginCatalog.ForPlugins([new StubAppPlugin(PluginApp("plugin-page", order: 5))]),
+			inner, PluginCatalog.ForPlugins([new StubApplicationPlugin(PluginApp("plugin-page", order: 5))]),
 			NullLogger<PluginApplicationRegistryDecorator>.Instance);
 		var merged = await withPlugin.GetApplicationsAsync();
 		await Assert.That(merged.Select(a => a.Slug)).IsEquivalentTo(new[] { "plugin-page", "db-page" });
@@ -90,11 +91,11 @@ public class ApplicationSourceOverlayTests
 	[Test]
 	public async Task Overlay_SlugCollision_DbWins_PluginSkipped()
 	{
-		var inner = new FakeRegistry();
+		var inner = new FakeApplicationRegistry();
 		await inner.UpsertApplicationAsync(DbApp("shared", order: 1, display: "DB Owns This"));
 
 		var decorator = new PluginApplicationRegistryDecorator(
-			inner, PluginCatalog.ForPlugins([new StubAppPlugin(PluginApp("shared", order: 99, display: "Plugin Loses"))]),
+			inner, PluginCatalog.ForPlugins([new StubApplicationPlugin(PluginApp("shared", order: 99, display: "Plugin Loses"))]),
 			NullLogger<PluginApplicationRegistryDecorator>.Instance);
 
 		var all = await decorator.GetApplicationsAsync();
@@ -108,9 +109,9 @@ public class ApplicationSourceOverlayTests
 	[Test]
 	public async Task Overlay_Writes_PassThroughForDbSlugs_ButIgnorePluginOwnedSlugs()
 	{
-		var inner = new FakeRegistry();
+		var inner = new FakeApplicationRegistry();
 		var decorator = new PluginApplicationRegistryDecorator(
-			inner, PluginCatalog.ForPlugins([new StubAppPlugin(PluginApp(PluginSlug, order: 5))]),
+			inner, PluginCatalog.ForPlugins([new StubApplicationPlugin(PluginApp(PluginSlug, order: 5))]),
 			NullLogger<PluginApplicationRegistryDecorator>.Instance);
 
 		await decorator.UpsertApplicationAsync(DbApp("editable", order: 2));
@@ -135,44 +136,4 @@ public class ApplicationSourceOverlayTests
 	private static RegisteredApplication PluginApp(string slug, int order, string? display = null) =>
 		new(slug, display ?? "Plugin Demo", "Extension", ApplicationKind.Page, $"http/{slug}/schema",
 			$"http/{slug}/data", null, PortalRole.Player, "Plugins", null, order);
-
-	private sealed class StubAppPlugin(params RegisteredApplication[] apps) : IPlugin, IApplicationSource
-	{
-		public string Id => "stub-app";
-		public string Version => "1.0.0";
-		public IReadOnlyList<string> Dependencies => [];
-		public int Priority => 0;
-		public void Initialize(IServiceProvider services) { }
-		public IEnumerable<RegisteredApplication> GetApplications() => apps;
-	}
-
-	/// <summary>An in-memory <see cref="IApplicationRegistryService"/> standing in for the DB-backed inner.</summary>
-	private sealed class FakeRegistry : IApplicationRegistryService
-	{
-		private readonly Dictionary<string, RegisteredApplication> _store =
-			new(StringComparer.OrdinalIgnoreCase);
-
-		public Task UpsertApplicationAsync(RegisteredApplication application)
-		{
-			_store[application.Slug] = application;
-			return Task.CompletedTask;
-		}
-
-		public Task<Found<RegisteredApplication>> GetApplicationAsync(string slug) =>
-			Task.FromResult(_store.TryGetValue(slug, out var app)
-				? (Found<RegisteredApplication>)app
-				: new NotFound());
-
-		public Task<IReadOnlyList<RegisteredApplication>> GetApplicationsAsync() =>
-			Task.FromResult<IReadOnlyList<RegisteredApplication>>(_store.Values
-				.OrderBy(a => a.Order)
-				.ThenBy(a => a.Slug, StringComparer.OrdinalIgnoreCase)
-				.ToList());
-
-		public Task RemoveApplicationAsync(string slug)
-		{
-			_store.Remove(slug);
-			return Task.CompletedTask;
-		}
-	}
 }

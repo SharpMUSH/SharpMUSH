@@ -6,6 +6,7 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.Server;
 
@@ -26,11 +27,11 @@ public class ApplicationsControllerOverlayTests
 	[Test]
 	public async Task List_IncludesPluginOverlayApp()
 	{
-		var inner = new FakeRegistry();
+		var inner = new FakeApplicationRegistry();
 		await inner.UpsertApplicationAsync(DbApp("db-page"));
 
 		var decorator = new PluginApplicationRegistryDecorator(
-			inner, PluginCatalog.ForPlugins([new StubAppPlugin(PluginApp(PluginSlug))]),
+			inner, PluginCatalog.ForPlugins([new StubApplicationPlugin(PluginApp(PluginSlug))]),
 			NullLogger<PluginApplicationRegistryDecorator>.Instance);
 
 		var controller = NewController(decorator);
@@ -51,9 +52,9 @@ public class ApplicationsControllerOverlayTests
 	[Test]
 	public async Task Get_ResolvesPluginOverlayApp()
 	{
-		var inner = new FakeRegistry();
+		var inner = new FakeApplicationRegistry();
 		var decorator = new PluginApplicationRegistryDecorator(
-			inner, PluginCatalog.ForPlugins([new StubAppPlugin(PluginApp(PluginSlug))]),
+			inner, PluginCatalog.ForPlugins([new StubApplicationPlugin(PluginApp(PluginSlug))]),
 			NullLogger<PluginApplicationRegistryDecorator>.Instance);
 
 		var controller = NewController(decorator);
@@ -72,28 +73,6 @@ public class ApplicationsControllerOverlayTests
 	private static RegisteredApplication PluginApp(string slug) =>
 		new(slug, "Plugin Widget Demo", "Extension", ApplicationKind.Page, $"http/{slug}/schema",
 			$"http/{slug}/data", null, PortalRole.Player, "Plugins", null, 50);
-
-	private sealed class StubAppPlugin(params RegisteredApplication[] apps)
-		: SharpMUSH.Library.Plugins.IPlugin, SharpMUSH.Library.Plugins.IApplicationSource
-	{
-		public string Id => "stub-app";
-		public string Version => "1.0.0";
-		public IReadOnlyList<string> Dependencies => [];
-		public int Priority => 0;
-		public void Initialize(IServiceProvider services) { }
-		public IEnumerable<RegisteredApplication> GetApplications() => apps;
-	}
-
-	private sealed class FakeRegistry : IApplicationRegistryService
-	{
-		private readonly Dictionary<string, RegisteredApplication> _store = new(StringComparer.OrdinalIgnoreCase);
-		public Task UpsertApplicationAsync(RegisteredApplication application) { _store[application.Slug] = application; return Task.CompletedTask; }
-		public Task<Found<RegisteredApplication>> GetApplicationAsync(string slug) =>
-			Task.FromResult(_store.TryGetValue(slug, out var app) ? (Found<RegisteredApplication>)app : new NotFound());
-		public Task<IReadOnlyList<RegisteredApplication>> GetApplicationsAsync() =>
-			Task.FromResult<IReadOnlyList<RegisteredApplication>>(_store.Values.OrderBy(a => a.Order).ToList());
-		public Task RemoveApplicationAsync(string slug) { _store.Remove(slug); return Task.CompletedTask; }
-	}
 
 	/// <summary>The controller's read paths never dispatch; this guard fails loudly if that ever changes.</summary>
 	private sealed class ThrowingDispatcher : IHttpHandlerCommandDispatcher
