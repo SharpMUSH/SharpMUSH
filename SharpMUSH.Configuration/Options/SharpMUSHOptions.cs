@@ -39,10 +39,13 @@ public record SharpMUSHOptions
 	/// <c>max_depth</c> was 50 in a new world and 10 in an imported one.
 	/// </para>
 	/// <para>
-	/// A default therefore belongs in exactly one of two places: here, or as a constructor-parameter
-	/// default on the option record when a compile-time constant is wanted elsewhere too
-	/// (<see cref="WikiOptions.DefaultLocaleFallback"/>, <see cref="LimitOptions.GlobalQueueLimit"/>).
-	/// <c>ConfigurationDefaultsTests</c> holds the two kinds to each other.
+	/// A default therefore belongs here, and option records declare no constructor-parameter defaults:
+	/// every argument below is required, so leaving one out is a compile error rather than a value
+	/// silently taken from a second copy (#1246). A compile-time constant wanted elsewhere is a named
+	/// <c>const</c> on the record that this passes explicitly (<see cref="WikiOptions.DefaultLocaleFallback"/>).
+	/// The only other defaults are the property initializers on options that are not constructor
+	/// parameters (<see cref="LimitOptions.GlobalQueueLimit"/>), which this inherits rather than restates.
+	/// <c>ConfigurationDefaultsTests</c> holds both rules.
 	/// </para>
 	/// <para>
 	/// A method rather than a property because the configuration source generators enumerate this
@@ -147,7 +150,8 @@ public record SharpMUSHOptions
 			AllowBrowserCode: false
 		),
 		Debug = new DebugOptions(
-			DebugSharpParser: false
+			DebugSharpParser: false,
+			ParserPredictionMode: ParserPredictionMode.TwoStage
 		),
 		Dump = new DumpOptions(
 			PurgeInterval: "10m1s"
@@ -300,6 +304,8 @@ public record SharpMUSHOptions
 			EnableMarkdownRendering: true,
 			CacheOnStartup: true
 		),
-		Wiki = new WikiOptions()
+		Wiki = new WikiOptions(
+			DefaultLocale: WikiOptions.DefaultLocaleFallback
+		)
 	};
 };

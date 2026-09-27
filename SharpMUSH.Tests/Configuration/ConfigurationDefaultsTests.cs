@@ -112,12 +112,28 @@ public class ConfigurationDefaultsTests
 	}
 
 	/// <summary>
-	/// An option record may still declare a default of its own, because a parameter default is a
-	/// compile-time constant and some of them are wanted as one elsewhere — and because the admin
-	/// config schema reports them per property. When it does, it has to say what
-	/// <see cref="SharpMUSHOptions.Default"/> says: an argument omitted at the one call site that
-	/// matters silently takes the record's answer instead, which is how <c>Net.Mxp</c> came to be
-	/// <c>false</c> in a new world and <c>true</c> in an imported one.
+	/// No option record declares a constructor-parameter default (#1246). One would be a second copy of
+	/// what <see cref="SharpMUSHOptions.Default"/> says, and an argument omitted at the one call site that
+	/// matters silently takes the record's answer instead — which is how <c>Net.Mxp</c> came to be
+	/// <c>false</c> in a new world and <c>true</c> in an imported one. Without one, the omission does not
+	/// compile. They existed for the admin configuration schema, which now reads <c>Default()</c> itself.
+	/// </summary>
+	[Test]
+	public async Task OptionRecordsDeclareNoParameterDefaults()
+	{
+		var declared = ConfigMetadata.PropertyNames
+			.Where(name => Parameter(name) is { HasDefaultValue: true })
+			.ToArray();
+
+		await Assert.That(string.Join(", ", declared)).IsEmpty();
+	}
+
+	/// <summary>
+	/// The defaults an option record can still declare are initializers on options that are not
+	/// constructor parameters (<c>GlobalQueueLimit</c>, <c>GuestOutputLimit</c>), which
+	/// <see cref="SharpMUSHOptions.Default"/> inherits rather than restates. Whatever an option record
+	/// declares has to say what <c>Default()</c> says; this also catches a parameter default that
+	/// <see cref="OptionRecordsDeclareNoParameterDefaults"/> is meant to keep out.
 	/// </summary>
 	[Test]
 	public async Task DeclaredParameterDefaultsSayWhatTheDefaultSays()
@@ -141,8 +157,8 @@ public class ConfigurationDefaultsTests
 	/// <summary>
 	/// Whether the option's record declares a default at all, asked separately from what that default
 	/// is. <see cref="ConfigAccessor.GetDeclaredDefault"/> answers <c>null</c> for both "declares
-	/// nothing" and "declares <c>null</c>", so filtering on its value alone skips every parameter
-	/// written <c>= null</c> — seven of <see cref="NetOptions"/>' own, <c>SqlHost</c> among them. A
+	/// nothing" and "declares <c>null</c>", so filtering on its value alone would skip a parameter
+	/// written <c>= null</c> — <see cref="NetOptions"/> had seven, <c>SqlHost</c> among them. A
 	/// default later moving off <c>null</c> in one place and not the other is exactly the divergence
 	/// this file exists to catch, so presence is read off the constructor parameter instead.
 	/// </summary>

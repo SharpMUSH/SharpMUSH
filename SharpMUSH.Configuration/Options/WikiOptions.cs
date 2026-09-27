@@ -9,11 +9,11 @@ public record WikiOptions(
 		Order = 1,
 		Tooltip = "A BCP-47 language tag, e.g. 'en', 'fr' or 'pt-BR'",
 		ValidationPattern = @"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")]
-	string DefaultLocale = WikiOptions.DefaultLocaleFallback
+	string DefaultLocale
 )
 {
 	/// <summary>
-	/// The locale used when nothing else supplies one: the parameter default above, the resolver's
+	/// The locale used when nothing else supplies one: the shipped default in <see cref="SharpMUSHOptions.Default"/>, the resolver's
 	/// last resort when a configured value is unusable, and what the wiki-translation migration stamps
 	/// on rows that predate <c>WikiPage.SourceLocale</c>.
 	/// </summary>

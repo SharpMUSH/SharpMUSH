@@ -16,7 +16,7 @@ public record DebugOptions(
 		Group = "Parser Configuration",
 		Order = 1,
 		Tooltip = "TwoStage runs SLL first and only re-runs LL if SLL reports a syntax error — LL's result whenever they could differ, at SLL's speed the rest of the time. SLL and LL force a single mode, for diagnostics.")]
-	ParserPredictionMode ParserPredictionMode = ParserPredictionMode.TwoStage
+	ParserPredictionMode ParserPredictionMode
 );
 
 /// <summary>
