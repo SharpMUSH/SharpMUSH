@@ -1,6 +1,6 @@
 using SharpMUSH.Messaging.Abstractions;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 public static class ConnectionInputPublisher
 {

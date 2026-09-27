@@ -14,7 +14,7 @@ public class TcpWriteBenchmark
 		TestDiagnostics.WriteLine("=== Batching Service Metrics ===\n");
 
 		// Try to get the batching service via reflection since we don't have direct reference
-		var batchingServiceType = Type.GetType("SharpMUSH.ConnectionServer.Services.TelnetOutputBatchingService, SharpMUSH.ConnectionServer");
+		var batchingServiceType = Type.GetType("SharpMUSH.SocketServer.Services.TelnetOutputBatchingService, SharpMUSH.SocketServer");
 
 		if (batchingServiceType == null)
 		{

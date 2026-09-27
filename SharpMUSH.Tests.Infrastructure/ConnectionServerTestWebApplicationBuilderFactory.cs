@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.RenderingWorker.Services;
+using SharpMUSH.SocketServer.Services;
 using Microsoft.AspNetCore.TestHost;
 using Serilog;
 using TUnit.AspNetCore;
@@ -8,7 +9,7 @@ using TUnit.AspNetCore;
 namespace SharpMUSH.Tests;
 
 /// <summary>
-/// Test factory for SharpMUSH.ConnectionServer that configures the test environment.
+/// Test factory for SharpMUSH.SocketServer that configures the test environment.
 /// </summary>
 public class ConnectionServerTestWebApplicationBuilderFactory<TProgram>(
 	string natsUrl) :

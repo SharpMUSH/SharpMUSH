@@ -21,7 +21,19 @@
         </option>
         <option name="executable">
           <ExecutableSnapshot>
-            <option name="id" value="runConfig:.NET Launch Settings Profile.SharpMUSH.ConnectionServer: https" />
+            <option name="id" value="runConfig:.NET Launch Settings Profile.SharpMUSH.SocketServer: https" />
+          </ExecutableSnapshot>
+        </option>
+      </ExecutableRowSnapshot>
+      <ExecutableRowSnapshot>
+        <option name="condition">
+          <ConditionSnapshot>
+            <option name="type" value="immediately" />
+          </ConditionSnapshot>
+        </option>
+        <option name="executable">
+          <ExecutableSnapshot>
+            <option name="id" value="runConfig:.NET Launch Settings Profile.SharpMUSH.RenderingWorker: worker" />
           </ExecutableSnapshot>
         </option>
       </ExecutableRowSnapshot>

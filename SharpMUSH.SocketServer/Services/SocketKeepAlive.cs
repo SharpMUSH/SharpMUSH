@@ -1,6 +1,6 @@
 using System.Net.Sockets;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
 /// Applies OS-level TCP keep-alive + <c>TCP_USER_TIMEOUT</c> to a socket so a half-open connection

@@ -197,7 +197,7 @@ class SharpMush:
     def start(self, flatfile: Path):
         if self.build:
             self.logs.mkdir(parents=True, exist_ok=True)
-            for project in ("SharpMUSH.Server", "SharpMUSH.SocketServer", "SharpMUSH.ConnectionServer"):
+            for project in ("SharpMUSH.Server", "SharpMUSH.SocketServer", "SharpMUSH.RenderingWorker"):
                 r = subprocess.run([self.dotnet, "build", "-v", "q", "-nologo", project],
                                    cwd=self.repo, capture_output=True, text=True)
                 (self.logs / f"dotnet-build-{project}.out").write_text(r.stdout + r.stderr, encoding="utf-8")
@@ -214,7 +214,7 @@ class SharpMush:
         # Unix socket paths are limited to 108 bytes, so it cannot live in the (deep) run directory.
         self._sock_dir = Path(tempfile.mkdtemp(prefix="parity-"))
         render_sock = self._sock_dir / "render.sock"
-        render = self._run("renderer", [self.dotnet, "run", "--no-build", "--no-launch-profile"], self.repo / "SharpMUSH.ConnectionServer",
+        render = self._run("renderer", [self.dotnet, "run", "--no-build", "--no-launch-profile"], self.repo / "SharpMUSH.RenderingWorker",
                            {"Rendering__SocketPath": str(render_sock)})
         wait_for(render_sock.exists, "the renderer socket", 90, [render])
         world = self.work / "world"

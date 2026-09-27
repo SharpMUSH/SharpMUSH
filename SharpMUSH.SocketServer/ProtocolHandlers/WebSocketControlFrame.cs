@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
+namespace SharpMUSH.SocketServer.ProtocolHandlers;
 
 /// <summary>
 /// Discriminates browser-sent JSON control frames from ordinary command text on the WebSocket.

@@ -1,9 +1,9 @@
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Text;
 
-namespace SharpMUSH.ConnectionServer.Consumers;
+namespace SharpMUSH.SocketServer.Consumers;
 
 /// <summary>
 /// Consumes WebSocket output messages from NATS JetStream and sends to connections.

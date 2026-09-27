@@ -1,9 +1,9 @@
-using SharpMUSH.ConnectionServer.Models;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Models;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 
-namespace SharpMUSH.ConnectionServer.Consumers;
+namespace SharpMUSH.SocketServer.Consumers;
 
 /// <summary>
 /// Consumes player preference update messages from MainProcess

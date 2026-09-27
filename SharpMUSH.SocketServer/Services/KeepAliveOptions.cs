@@ -1,4 +1,4 @@
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
 /// Dead-connection detection tuning. <see cref="WsInterval"/>/<see cref="WsTimeout"/> drive the

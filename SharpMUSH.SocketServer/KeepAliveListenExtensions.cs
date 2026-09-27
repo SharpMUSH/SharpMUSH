@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 
-namespace SharpMUSH.ConnectionServer;
+namespace SharpMUSH.SocketServer;
 
 /// <summary>Adds OS-level TCP keep-alive + TCP_USER_TIMEOUT to every connection on a Kestrel listener.</summary>
 public static class KeepAliveListenExtensions

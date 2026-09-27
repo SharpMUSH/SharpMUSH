@@ -1,5 +1,5 @@
 using System.Net.WebSockets;
-using SharpMUSH.ConnectionServer.ProtocolHandlers;
+using SharpMUSH.SocketServer.ProtocolHandlers;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 

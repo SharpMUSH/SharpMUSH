@@ -3,7 +3,7 @@ using TUnit.Core.Interfaces;
 namespace SharpMUSH.Tests;
 
 /// <summary>
-/// Integration test factory for SharpMUSH.ConnectionServer.
+/// Integration test factory for SharpMUSH.SocketServer.
 /// Manages test infrastructure lifecycle and provides access to services.
 /// </summary>
 public class ConnectionServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
@@ -15,14 +15,14 @@ public class ConnectionServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	public required NatsTestServer NatsTestServer { get; init; }
 
 	public IServiceProvider Services => _server!.Services;
-	private ConnectionServerTestWebApplicationBuilderFactory<SharpMUSH.ConnectionServer.Program>? _server;
+	private ConnectionServerTestWebApplicationBuilderFactory<SharpMUSH.SocketServer.Program>? _server;
 
 	public virtual Task InitializeAsync()
 	{
 		var natsPort = NatsTestServer.Instance.GetMappedPublicPort(4222);
 		var natsUrl = $"nats://localhost:{natsPort}";
 
-		_server = new ConnectionServerTestWebApplicationBuilderFactory<SharpMUSH.ConnectionServer.Program>(natsUrl);
+		_server = new ConnectionServerTestWebApplicationBuilderFactory<SharpMUSH.SocketServer.Program>(natsUrl);
 		return Task.CompletedTask;
 	}
 

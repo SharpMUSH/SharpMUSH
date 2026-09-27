@@ -37,7 +37,8 @@ public class HostRuntimeConfigurationTests
 
 	[Test]
 	[Arguments("SharpMUSH.Server")]
-	[Arguments("SharpMUSH.ConnectionServer")]
+	[Arguments("SharpMUSH.RenderingWorker")]
+	[Arguments("SharpMUSH.SocketServer")]
 	public async Task TheHostAsksForTheServerGarbageCollector(string host)
 		=> await Assert.That(ServerGarbageCollection(host)).IsTrue()
 			.Because($"{host} is a long-lived server process, and the workstation collector is the default");

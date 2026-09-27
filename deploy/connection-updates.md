@@ -1,6 +1,8 @@
 # Connections during deployment
 
-The stable SocketServer owns telnet and `/ws` sockets, their protocol state, and NATS subscriptions. ConnectionServer is now a replaceable rendering worker reached over HTTP/2 on the private Unix socket `/run/sharpmush/render.sock`. The engine talks to it through NATS, not through a client TCP connection that needs reconnecting after an engine update. Keep NATS and SocketServer running during engine and rendering-worker updates. The Compose service stays named `connectionserver` so existing proxy routes keep working; its image is now `sharpmush/sharpmush-socketserver`. The new `renderer` service uses `sharpmush/sharpmush-connectionserver`.
+The stable SocketServer owns telnet and `/ws` sockets, their protocol state, and NATS subscriptions. The rendering worker (project `SharpMUSH.RenderingWorker`, image `sharpmush/sharpmush-connectionserver`) is a replaceable process reached over HTTP/2 on the private Unix socket `/run/sharpmush/render.sock`. The engine talks to it through NATS, not through a client TCP connection that needs reconnecting after an engine update. Keep NATS and SocketServer running during engine and rendering-worker updates. The Compose service stays named `connectionserver` so existing proxy routes keep working; its image is now `sharpmush/sharpmush-socketserver`. The new `renderer` service uses `sharpmush/sharpmush-connectionserver`.
+
+The image names predate the project names and are kept on purpose. Renaming an image changes which process an existing Compose file pulls under an unchanged tag, which is the Watchtower hazard the migration section below describes. The source project was renamed from `SharpMUSH.ConnectionServer` to `SharpMUSH.RenderingWorker` without touching any image, service or configuration key; `ConnectionServer__*` settings still configure SocketServer.
 
 ## What players see
 

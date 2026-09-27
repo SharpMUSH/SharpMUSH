@@ -3,7 +3,7 @@ using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>Reserves durable blocks of opaque handles, so delayed output cannot reach a later socket.</summary>
 public sealed class DurableDescriptorGeneratorService : IDescriptorGeneratorService, IAsyncDisposable

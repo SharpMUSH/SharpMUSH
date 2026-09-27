@@ -1,6 +1,6 @@
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 
-namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
+namespace SharpMUSH.SocketServer.ProtocolHandlers;
 
 /// <summary>
 /// Accepts WebSocket terminal connections and runs them through the shared

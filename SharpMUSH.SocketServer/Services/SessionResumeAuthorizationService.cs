@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
-using SharpMUSH.ConnectionServer.ProtocolHandlers;
+using SharpMUSH.SocketServer.ProtocolHandlers;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.NATS;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 public interface ISessionResumeAuthorizationService
 {

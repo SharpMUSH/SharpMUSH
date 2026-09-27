@@ -3,7 +3,7 @@ using NATS.Client.Core;
 using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>Durable, atomically consumed resume tokens. KV keys contain hashes, never bearer credentials.</summary>
 public sealed class NatsKvResumeTokenStore : IResumeTokenStore, IAsyncDisposable

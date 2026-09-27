@@ -41,7 +41,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Configuration.Gen
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.Messaging", "SharpMUSH.Messaging\SharpMUSH.Messaging.csproj", "{221EB31E-F820-41B4-8E85-3898CE30163B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.ConnectionServer", "SharpMUSH.ConnectionServer\SharpMUSH.ConnectionServer.csproj", "{E7826749-FD50-4598-87B4-B55B8B7FF122}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.RenderingWorker", "SharpMUSH.RenderingWorker\SharpMUSH.RenderingWorker.csproj", "{E7826749-FD50-4598-87B4-B55B8B7FF122}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpMUSH.LanguageServer", "SharpMUSH.LanguageServer\SharpMUSH.LanguageServer.csproj", "{12066B11-9DDC-4278-85A0-A724EE99E5D9}"
 EndProject

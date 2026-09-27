@@ -1,5 +1,5 @@
-using SharpMUSH.ConnectionServer.ProtocolHandlers;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.ProtocolHandlers;
+using SharpMUSH.SocketServer.Services;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 

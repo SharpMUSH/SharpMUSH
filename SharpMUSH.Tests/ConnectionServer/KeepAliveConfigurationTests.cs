@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Configuration;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 

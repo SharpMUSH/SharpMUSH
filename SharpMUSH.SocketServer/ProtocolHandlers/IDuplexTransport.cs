@@ -1,4 +1,4 @@
-namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
+namespace SharpMUSH.SocketServer.ProtocolHandlers;
 
 /// <summary>
 /// Transport-agnostic duplex byte pipe for a single terminal-play connection. Implemented today by

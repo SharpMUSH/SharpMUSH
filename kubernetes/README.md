@@ -36,7 +36,7 @@ If you prefer to run commands manually:
 ```powershell
 # Build Docker images
 docker build -t sharpmush/sharpmush-server:dev -f Dockerfile .
-docker build -t sharpmush/sharpmush-connectionserver:dev -f SharpMUSH.ConnectionServer/Dockerfile .
+docker build -t sharpmush/sharpmush-connectionserver:dev -f SharpMUSH.RenderingWorker/Dockerfile .
 
 # Deploy to Kubernetes
 kubectl apply -f kubernetes/dev-k8s.yaml

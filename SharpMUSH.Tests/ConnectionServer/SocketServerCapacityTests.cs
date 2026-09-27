@@ -12,7 +12,7 @@ public class SocketServerCapacityTests
 	[Test]
 	public async Task UpgradedConnectionLimitUsesConfiguration()
 	{
-		await using var app = await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync(
+		await using var app = await SharpMUSH.SocketServer.Program.CreateHostBuilderAsync(
 			[.. TestDiagnostics.HostArguments, "--ConnectionServer:MaxConcurrentUpgradedConnections=123"],
 			$"nats://localhost:{Broker.Instance.GetMappedPublicPort(4222)}");
 		var options = app.Services.GetRequiredService<IOptions<KestrelServerOptions>>().Value;
@@ -24,7 +24,7 @@ public class SocketServerCapacityTests
 	[Arguments("-1")]
 	public async Task NonPositiveLimitIsRejected(string limit)
 	{
-		await Assert.That(async () => await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync(
+		await Assert.That(async () => await SharpMUSH.SocketServer.Program.CreateHostBuilderAsync(
 			[.. TestDiagnostics.HostArguments, $"--ConnectionServer:MaxConcurrentUpgradedConnections={limit}"]))
 			.Throws<ArgumentOutOfRangeException>();
 	}

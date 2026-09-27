@@ -3,7 +3,7 @@ using System.Text;
 using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.SocketServer.Models;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;

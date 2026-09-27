@@ -1,10 +1,11 @@
-using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.SocketServer.Models;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Library.Utilities;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.RenderingWorker.Services;
 
 /// <summary>
 /// Implementation of output transformation service

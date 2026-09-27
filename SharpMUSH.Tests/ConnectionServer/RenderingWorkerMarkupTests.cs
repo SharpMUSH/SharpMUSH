@@ -5,9 +5,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using SharpMUSH.ConnectionServer.Consumers;
-using SharpMUSH.ConnectionServer.Models;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Consumers;
+using SharpMUSH.SocketServer.Models;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.Tests.ConnectionServer;
