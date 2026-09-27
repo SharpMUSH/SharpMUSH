@@ -1003,8 +1003,7 @@ public partial class Commands
 		{
 			opened.Add(back);
 
-			// unparse_dbref(source) (create.c:236) — the bare #N, not the objid, so the report reads
-			// "Linked to #12" rather than "Linked to #12:1790216...".
+			// unparse_dbref(source) (create.c:236) — the bare #N, not the objid.
 			await LinkNewExitAsync(parser, executor, back, $"#{sourceRoom.Object().DBRef.Number}");
 		}
 
@@ -1012,13 +1011,16 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// The link half of <c>do_real_open</c> (<c>create.c:160-172</c>): an exit may lead to any
+	/// The link half of <c>do_real_open</c> (<c>create.c:160-176</c>): an exit may lead to any
 	/// container — room, player or thing (<c>can_link_to</c>) — and anywhere else, or anywhere the
-	/// executor may not link into, is reported and leaves the exit unlinked.
+	/// executor may not link into, is reported and leaves the exit unlinked. Penn says
+	/// "Trying to link..." first and "Linked exit #N to #M" on success, dbrefs rather than names.
 	/// </summary>
 	private async ValueTask<AnyOptionalSharpContainer> LinkNewExitAsync(IMUSHCodeParser parser,
 		AnySharpObject executor, DBRef exit, string destinationName)
 	{
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TryingToLink), executor);
+
 		if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
 				executor, executor, destinationName, LocateFlags.All) is not AnySharpObject destination)
 		{
@@ -1038,8 +1040,8 @@ public partial class Commands
 		}
 
 		await Mediator.Send(new LinkExitCommand(exitObj, destination.AsContainer));
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToNameFormat), executor,
-			destinationName);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor,
+			exit.Number, destination.Object().DBRef.Number);
 
 		return new AnyOptionalSharpContainer(destination.AsContainer);
 	}

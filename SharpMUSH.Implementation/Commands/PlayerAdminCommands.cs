@@ -49,21 +49,10 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// PennMUSH src/wiz.c do_pcreate ends with exactly this notify — including the password, which the
-		// wizard has to be able to pass on to the new player and just typed anyway.
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreatedFormat), executor,
-			name, player.Number, password);
-
-		// PennMUSH spec: player`create (objid, name, how, descriptor, email)
-		await EventService.TriggerEventAsync(
-			parser,
-			"PLAYER`CREATE",
-			executor.Object().DBRef, // Enactor is the wizard who did @pcreate
-			player.ToString(),
-			name,
-			"pcreate",
-			"", // descriptor (not applicable for @pcreate)
-			""); // email (not applicable for @pcreate)
+		// PennMUSH src/wiz.c do_pcreate ends with this notify — including the password, which the wizard
+		// has to be able to pass on to the new player and just typed anyway — and PLAYER`CREATE.
+		await BuildingHelpers.AnnouncePlayerCreatedAsync(parser, NotifyService, EventService, executor,
+			name, password, player);
 
 		return new CallState(player.ToString());
 	}

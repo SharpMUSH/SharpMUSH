@@ -26,10 +26,21 @@ public partial class Functions
 	public async ValueTask<CallState> PCreate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var args = parser.CurrentState.Arguments;
 
-		return await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
-			[BuildingHelpers.Argument(parser.CurrentState.Arguments, "2")],
-			async at => await CreatedPlayerAsync(parser, executor, at[0])) switch
+		var result = await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
+			[BuildingHelpers.Argument(args, "2")],
+			async at => await CreatedPlayerAsync(parser, executor, at[0]));
+
+		// do_pcreate itself says what it made and queues PLAYER`CREATE (src/wiz.c:140-144), so the
+		// function does too: fun_pcreate is nothing but a call to it.
+		if (result is DBRef player)
+		{
+			await BuildingHelpers.AnnouncePlayerCreatedAsync(parser, NotifyService, EventService, executor,
+				args["0"].Message!.ToPlainText(), args["1"].Message!.ToPlainText(), player);
+		}
+
+		return result switch
 		{
 			DBRef created => new CallState($"#{created.Number}:{created.CreationMilliseconds}"),
 			Error<string> refused => new CallState(refused.Value)
@@ -186,6 +197,8 @@ public partial class Functions
 			return exit;
 		}
 
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TryingToLink), executor);
+
 		if (await LocateService.Locate(parser, executor, executor, destinationName.ToPlainText(), LocateFlags.All)
 				is not AnySharpObject destination
 			|| !destination.IsContainer
@@ -201,6 +214,8 @@ public partial class Functions
 		}
 
 		await Mediator.Send(new LinkExitCommand(exitObj, destination.AsContainer));
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor,
+			exit.Number, destination.Object().DBRef.Number);
 
 		return exit;
 	}

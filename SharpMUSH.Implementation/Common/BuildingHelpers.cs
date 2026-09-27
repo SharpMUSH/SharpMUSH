@@ -137,6 +137,30 @@ public static class BuildingHelpers
 	}
 
 	/// <summary>
+	/// The end of PennMUSH's <c>do_pcreate</c> (<c>src/wiz.c:140-144</c>): the creator is told the new
+	/// player's dbref and password, and <c>PLAYER`CREATE</c> is queued. <c>@pcreate</c> and
+	/// <c>pcreate()</c> (<c>src/fundb.c:2140</c>) both end here.
+	/// </summary>
+	/// <remarks>Like <see cref="AnnounceCreatedAsync"/>, callers run this once the requested-dbref gate is released.</remarks>
+	public static async ValueTask AnnouncePlayerCreatedAsync(IMUSHCodeParser parser, INotifyService notifyService,
+		IEventService eventService, AnySharpObject executor, string name, string password, DBRef player)
+	{
+		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreatedFormat), executor,
+			name, player.Number, password);
+
+		// PennMUSH spec: player`create (objid, name, how, descriptor, email)
+		await eventService.TriggerEventAsync(
+			parser,
+			"PLAYER`CREATE",
+			executor.Object().DBRef, // Enactor is the wizard who did the creating
+			player.ToString(),
+			name,
+			"pcreate",
+			"", // descriptor (not applicable for pcreate)
+			""); // email (not applicable for pcreate)
+	}
+
+	/// <summary>
 	/// The whole of PennMUSH's <c>do_dig</c> (<c>src/create.c:466-522</c>): a room, optionally an exit
 	/// to it from where the digger stands and an exit back, each charged on its own and each able to
 	/// stop the dig where the quota runs out without taking back what was already paid for.
