@@ -382,6 +382,49 @@ public class MathFunctionUnitTests
 	}
 
 	/// <summary>
+	/// lmath() runs the routine its scalar function runs (src/funmath.c fun_lmath,
+	/// src/lmathtab.gperf), so its operator names, their aliases and each routine's own answer to a
+	/// short list are PennMUSH's. Expected values observed on PennMUSH 1.8.8 @ 80a1d5b through
+	/// pennmush/test/runtest.pl, 2026-09-27.
+	/// </summary>
+	[Test]
+	[Arguments("lmath(nosuchop, 1 2)", "#-1 UNKNOWN OPERATION")]
+	[Arguments("lmath(ADD, 1 2 3)", "6")]
+	[Arguments("lmath(add,)", "0")]
+	[Arguments("lmath(add, 1 x)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	[Arguments("lmath(add, 1|2|3, |)", "6")]
+	[Arguments("lmath(sub,)", "0")]
+	[Arguments("lmath(and, a b)", "1")]
+	[Arguments("lmath(and,)", "0")]
+	[Arguments("lmath(or, 0 a)", "1")]
+	[Arguments("lmath(or,)", "0")]
+	[Arguments("lmath(nand, 1 0)", "1")]
+	[Arguments("lmath(nand,)", "0")]
+	[Arguments("lmath(nor,)", "1")]
+	[Arguments("lmath(xor, 1 1 0)", "0")]
+	[Arguments("lmath(xor,)", "0")]
+	[Arguments("lmath(eq, 1)", "#-1 COMPARISON REQUIRES 2 OR MORE NUMBERS")]
+	[Arguments("lmath(dist2d, 1 2 3)", "#-1 FUNCTION (DIST2D) EXPECTS 4 ARGUMENTS")]
+	[Arguments("lmath(dist3d, 1 2)", "#-1 FUNCTION (DIST3D) EXPECTS 6 ARGUMENTS")]
+	[Arguments("lmath(mod, 7 3)", "1")]
+	[Arguments("lmath(modulus, -7 3)", "2")]
+	[Arguments("lmath(floordiv, -7 2)", "-4")]
+	[Arguments("lmath(div, 5)", "5")]
+	[Arguments("lmath(div, 7 a)", "#-1 ARGUMENTS MUST BE INTEGERS")]
+	[Arguments("lmath(band, 3 -1)", "#-1 ARGUMENTS MUST BE POSITIVE INTEGERS")]
+	[Arguments("lmath(fdiv, 1 0)", "#-1 DIVISION BY ZERO")]
+	[Arguments("lmath(max,)", "0")]
+	[Arguments("lmath(mean,)", "0")]
+	[Arguments("lmath(median, 1 2 3 4)", "2.5")]
+	[Arguments("lmath(median,)", "0")]
+	[Arguments("lmath(stddev, 5)", "0")]
+	public async Task LMathRunsTheScalarRoutine(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
 	/// The naive floor-mod, ((a % b) + b) % b, overflows when the remainder and divisor share a
 	/// sign. PennMUSH sign-normalises instead, and answers 5 here.
 	/// </summary>

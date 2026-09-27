@@ -6,7 +6,10 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using System.Collections.Frozen;
 using System.Collections.Immutable;
+using System.Reflection;
+using SharpMUSH.Library.Services;
 using System.Globalization;
 using System.Numerics;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
@@ -462,144 +465,109 @@ public partial class Functions
 		catch (OverflowException) { return ValueTask.FromResult<CallState>(ErrorMessages.Returns.OutOfRange); }
 	}
 
+	/// <summary>
+	/// PennMUSH's lmath() operators, each the routine its scalar function runs: fun_add is
+	/// math_add, and lmath looks the same math_add up by name (src/funmath.c fun_lmath,
+	/// src/lmathtab.gperf). So lmath(op, list) is op() over the list's items, and the two cannot
+	/// drift. Names match case-insensitively, as the gperf table's %ignore-case does.
+	/// </summary>
+	private static readonly FrozenDictionary<string, LMathOperation> LMathOperations =
+		new Dictionary<string, LMathOperation>(StringComparer.OrdinalIgnoreCase)
+		{
+			["add"] = LMathOperation.Of(nameof(Add)),
+			["sub"] = LMathOperation.Of(nameof(Sub)),
+			["mul"] = LMathOperation.Of(nameof(Mul)),
+			["div"] = LMathOperation.Of(nameof(Div)),
+			["floordiv"] = LMathOperation.Of(nameof(FloorDiv)),
+			["mod"] = LMathOperation.Of(nameof(Modulo)),
+			["modulo"] = LMathOperation.Of(nameof(Modulo)),
+			["modulus"] = LMathOperation.Of(nameof(Modulo)),
+			["remainder"] = LMathOperation.Of(nameof(Remainder)),
+			["min"] = LMathOperation.Of(nameof(Min)),
+			["max"] = LMathOperation.Of(nameof(Max)),
+			["and"] = LMathOperation.Of(nameof(And)),
+			["nand"] = LMathOperation.Of(nameof(NegativeAnd)),
+			["or"] = LMathOperation.Of(nameof(Or)),
+			["nor"] = LMathOperation.Of(nameof(Nor)),
+			["xor"] = LMathOperation.Of(nameof(Xor)),
+			["band"] = LMathOperation.Of(nameof(BAnd)),
+			["bor"] = LMathOperation.Of(nameof(Bor)),
+			["bxor"] = LMathOperation.Of(nameof(BXor)),
+			["fdiv"] = LMathOperation.Of(nameof(FDiv)),
+			["mean"] = LMathOperation.Of(nameof(Mean)),
+			["median"] = LMathOperation.Of(nameof(Median)),
+			["stddev"] = LMathOperation.Of(nameof(StdDev)),
+			["dist2d"] = LMathOperation.Of(nameof(Distance2d)),
+			["dist3d"] = LMathOperation.Of(nameof(Distance3d)),
+			["lt"] = LMathOperation.Comparison(nameof(LessThan)),
+			["lte"] = LMathOperation.Comparison(nameof(LessThanOrEquals)),
+			["gt"] = LMathOperation.Comparison(nameof(GreaterThan)),
+			["gte"] = LMathOperation.Comparison(nameof(GreaterThanOrEquals)),
+			["eq"] = LMathOperation.Comparison(nameof(ExactEquals)),
+			["neq"] = LMathOperation.Comparison(nameof(Neq)),
+		}.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>A scalar math function, reached from lmath() without going through the parser.</summary>
+	/// <remarks>
+	/// <see cref="IsComparison"/> marks the operators PennMUSH runs through lmathcomp, which
+	/// refuses a list of fewer than two numbers.
+	/// </remarks>
+	private sealed record LMathOperation(
+		SharpFunctionAttribute Attribute,
+		Func<Functions, IMUSHCodeParser, SharpFunctionAttribute, ValueTask<CallState>> Invoke,
+		bool IsComparison)
+	{
+		public static LMathOperation Of(string method) => Create(method, false);
+
+		public static LMathOperation Comparison(string method) => Create(method, true);
+
+		private static LMathOperation Create(string method, bool isComparison)
+		{
+			var info = typeof(Functions).GetMethod(method)!;
+			return new LMathOperation(info.GetCustomAttribute<SharpFunctionAttribute>()!,
+				info.CreateDelegate<Func<Functions, IMUSHCodeParser, SharpFunctionAttribute, ValueTask<CallState>>>(),
+				isComparison);
+		}
+	}
+
 	[SharpFunction(Name = "lmath", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["op", "list", "delim"])]
 	public async ValueTask<CallState> LMath(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var numbers = NumericEvaluation.For(parser);
-		await ValueTask.CompletedTask;
 		var args = parser.CurrentState.ArgumentsOrdered;
 
-		var operation = (args["0"].Message ?? MarkupText.Empty).ToPlainText().ToLower();
 		var delimiter = args.Count == 3 ? args["2"].Message ?? MarkupText.Empty : MarkupText.Space;
 		var list = MushText.SplitList(delimiter, args["1"].Message ?? MarkupText.Empty);
 
-		// The integer operations are 64-bit, matching PennMUSH's IVAL and UIVAL, so they are
-		// folded before the list is reinterpreted as decimals for everything else.
-		if (operation is "band" or "bor" or "bxor")
+		if (!LMathOperations.TryGetValue((args["0"].Message ?? MarkupText.Empty).ToPlainText(), out var operation))
 		{
-			var unsigned = new List<ulong>();
-			foreach (var item in list)
-			{
-				if (!numbers.TryUInt64(item.ToPlainText(), out var parsed))
-				{
-					return ErrorMessages.Returns.UIntegers;
-				}
-				unsigned.Add(parsed);
-			}
-
-			if (unsigned.Count == 0)
-			{
-				return new CallState("0");
-			}
-
-			var bitwise = operation switch
-			{
-				"band" => unsigned.Aggregate((acc, val) => acc & val),
-				"bor" => unsigned.Aggregate((acc, val) => acc | val),
-				_ => unsigned.Aggregate((acc, val) => acc ^ val)
-			};
-
-			return new CallState(unchecked((long)bitwise).ToString(CultureInfo.InvariantCulture));
+			return ErrorMessages.Returns.UnknownOperation;
 		}
 
-		if (operation is "div" or "modulo" or "remainder")
+		// lmath() skips the function table's arity check, so each PennMUSH routine answers a list
+		// of the wrong length itself; the scalar functions here leave that to the dispatcher.
+		var attribute = operation.Attribute;
+		if (operation.IsComparison && list.Length < 2)
 		{
-			var operands = list.Select(item => item.ToPlainText());
-
-			return operation switch
-			{
-				"div" => AggregateIntegerDivision(parser, operands, (acc, val) => acc / val, DivisionOverflows),
-				"modulo" => AggregateIntegerDivision(parser, operands, FloorMod),
-				_ => AggregateIntegerDivision(parser, operands, TruncatedRemainder)
-			};
+			return ErrorMessages.Returns.ComparisonRequiresTwoNumbers;
 		}
 
-		var values = new List<decimal>();
-		foreach (var item in list)
+		if (attribute.MinArgs == attribute.MaxArgs && list.Length != attribute.MinArgs)
 		{
-			if (!numbers.TryDecimal(item.ToPlainText(), out var parsedValue))
-			{
-				return ErrorMessages.Returns.Numbers;
-			}
-			values.Add(parsedValue);
+			return string.Format(ErrorMessages.Returns.ExpectsExactArguments,
+				attribute.Name.ToUpperInvariant(), attribute.MinArgs);
 		}
 
-		if (values.Count == 0)
+		var operands = parser.Push(parser.CurrentState with
 		{
-			return new CallState("0");
-		}
+			Arguments = list
+				.Select((item, index) => (Key: index.ToString(), Value: new CallState(item)))
+				.ToDictionary(pair => pair.Key, pair => pair.Value)
+		});
 
-		if (operation == "fdiv" && values.Skip(1).Any(v => v == 0))
-		{
-			return ErrorMessages.Returns.DivisionByZero;
-		}
-
-		string result = operation switch
-		{
-			"add" => MushNumber.Unparse(values.Sum()),
-			"sub" => MushNumber.Unparse(values.Aggregate((acc, val) => acc - val)),
-			"mul" => MushNumber.Unparse(values.Aggregate((acc, val) => acc * val)),
-			"fdiv" => MushNumber.Unparse(values.Aggregate((acc, val) => acc / val)),
-
-			"max" => MushNumber.Unparse(values.Max()),
-			"min" => MushNumber.Unparse(values.Min()),
-			"eq" => (values.All(v => v == values[0]) ? 1 : 0).ToString(),
-			"neq" => (values.Zip(values.Skip(1), (a, b) => a != b).Any(x => x) ? 1 : 0).ToString(),
-			"gt" => (values.Zip(values.Skip(1), (a, b) => a > b).All(x => x) ? 1 : 0).ToString(),
-			"gte" => (values.Zip(values.Skip(1), (a, b) => a >= b).All(x => x) ? 1 : 0).ToString(),
-			"lt" => (values.Zip(values.Skip(1), (a, b) => a < b).All(x => x) ? 1 : 0).ToString(),
-			"lte" => (values.Zip(values.Skip(1), (a, b) => a <= b).All(x => x) ? 1 : 0).ToString(),
-
-			// Logical operations (treat non-zero as true)
-			"and" => (values.All(v => v != 0) ? 1 : 0).ToString(),
-			"or" => (values.Any(v => v != 0) ? 1 : 0).ToString(),
-			"xor" => (values.Count(v => v != 0) == 1 ? 1 : 0).ToString(),
-			"nand" => (!values.All(v => v != 0) ? 1 : 0).ToString(),
-			"nor" => (!values.Any(v => v != 0) ? 1 : 0).ToString(),
-
-			"mean" => MushNumber.Unparse(values.Average()),
-			"median" => MushNumber.Unparse(CalculateMedian(values)),
-			"stddev" => MushNumber.Unparse(CalculateStdDev(values)),
-
-			// Distance operations (requires exactly 4 or 6 values)
-			"dist2d" when values.Count == 4
-				=> MushNumber.Unparse(Math.Sqrt((double)((values[2] - values[0]) * (values[2] - values[0]) + (values[3] - values[1]) * (values[3] - values[1])))),
-			"dist2d" => ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "lmath"),
-			"dist3d" when values.Count == 6
-				=> MushNumber.Unparse(Math.Sqrt((double)((values[3] - values[0]) * (values[3] - values[0]) + (values[4] - values[1]) * (values[4] - values[1]) + (values[5] - values[2]) * (values[5] - values[2])))),
-			"dist3d" => ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "lmath"),
-
-			_ => ErrorMessages.Returns.BadArgumentFormat.Replace("{0}", "lmath")
-		};
-
-		return new CallState(result);
-	}
-
-	private decimal CalculateMedian(List<decimal> values)
-	{
-		var sorted = values.OrderBy(x => x).ToList();
-		int count = sorted.Count;
-		if (count % 2 == 1)
-		{
-			return sorted[count / 2];
-		}
-		else
-		{
-			return (sorted[count / 2 - 1] + sorted[count / 2]) / 2.0m;
-		}
-	}
-
-	private decimal CalculateStdDev(List<decimal> values)
-	{
-		if (values.Count <= 1)
-		{
-			return 0;
-		}
-		var mean = values.Average();
-		var sumOfSquaredDifferences = values.Select(val => (val - mean) * (val - mean)).Sum();
-		// PennMUSH uses sample stddev (÷(n-1)), not population stddev (÷n)
-		var variance = sumOfSquaredDifferences / (values.Count - 1);
-		return (decimal)Math.Sqrt((double)variance);
+		return FunctionDispatcher.ValidateNumericArguments(attribute, operands.CurrentState.ArgumentsOrdered.Values, operands)
+			is { } error
+			? error
+			: await operation.Invoke(this, operands, attribute);
 	}
 
 	[SharpFunction(Name = "lnum", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["start", "end", "separator", "step"])]
@@ -689,8 +657,8 @@ public partial class Functions
 			values.Add(value);
 		}
 
-		var mean = values.Average();
-		return ValueTask.FromResult<CallState>(mean);
+		// Only lmath() can pass an empty list; PennMUSH's math_mean answers 0 for it.
+		return ValueTask.FromResult<CallState>(values.Count == 0 ? 0 : values.Average());
 	}
 
 	[SharpFunction(Name = "median", MinArgs = 1, MaxArgs = int.MaxValue,

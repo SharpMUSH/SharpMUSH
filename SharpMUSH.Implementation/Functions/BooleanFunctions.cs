@@ -19,10 +19,12 @@ namespace SharpMUSH.Implementation.Functions;
 public partial class Functions
 {
 	[SharpFunction(Name = "and", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["boolean..."])]
+	// Only lmath() can pass no arguments; PennMUSH's math_and answers 0 for them.
 	public ValueTask<CallState> And(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments
-			.Select(x => x.Value.Message!)
-			.All(value => value.Truthy(parser))
+		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments.Count > 0
+			&& parser.CurrentState.Arguments
+				.Select(x => x.Value.Message!)
+				.All(value => value.Truthy(parser))
 			? "1"
 			: "0");
 

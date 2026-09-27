@@ -123,6 +123,10 @@ public static class ErrorMessages
 
 		public const string NoSuchConfigOption = "#-1 NO SUCH CONFIG OPTION";
 		public const string InvalidZone = "#-1 INVALID ZONE";
+		/// <summary>lmath() given an operator it does not know (<c>fun_lmath</c>, src/funmath.c).</summary>
+		public const string UnknownOperation = "#-1 UNKNOWN OPERATION";
+		/// <summary>An lmath() comparison over fewer than two numbers (<c>lmathcomp</c>, src/funmath.c).</summary>
+		public const string ComparisonRequiresTwoNumbers = "#-1 COMPARISON REQUIRES 2 OR MORE NUMBERS";
 		public const string SeparatorMustBeOneChar = "#-1 SEPARATOR MUST BE ONE CHARACTER";
 		public const string MissingArguments = "#-1 MISSING ARGUMENTS";
 		public const string NoSuchRecord = "#-1 NO SUCH RECORD";
@@ -146,6 +150,9 @@ public static class ErrorMessages
 		public const string GotEvenArgs = "#-1 FUNCTION ({0}) EXPECTS AN ODD NUMBER OF ARGUMENTS";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GotUnEvenArgs = "#-1 FUNCTION ({0}) EXPECTS AN EVEN NUMBER OF ARGUMENTS";
+		/// <summary>An lmath() distance over the wrong number of values (<c>math_dist2d</c>, src/funmath.c).</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ExpectsExactArguments = "#-1 FUNCTION ({0}) EXPECTS {1} ARGUMENTS";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WrongArgumentsRange = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS AND AT MOST {2} BUT GOT {3}";
 
