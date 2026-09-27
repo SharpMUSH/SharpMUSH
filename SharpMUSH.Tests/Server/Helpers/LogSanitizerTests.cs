@@ -40,6 +40,16 @@ public class LogSanitizerTests
 	}
 
 	[Test]
+	public async Task Sanitize_NothingToStrip_ReturnsSameInstance()
+	{
+		var input = string.Concat("Hello ", "World");
+
+		var result = LogSanitizer.Sanitize(input);
+
+		await Assert.That(ReferenceEquals(result, input)).IsTrue();
+	}
+
+	[Test]
 	public async Task Sanitize_NewlineInInput_EscapesNewline()
 	{
 		var input = "Line1\nLine2";

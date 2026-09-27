@@ -39,10 +39,10 @@ public static partial class LogSanitizer
 		if (string.IsNullOrWhiteSpace(input))
 			return "[empty]";
 
-		// Most values are short and carry nothing to strip; those go back as they came.
-		if (input.Length <= MaxLogLength && !ControlCharacter().IsMatch(input))
-			return input;
-
+		// Every non-empty value goes through Regex.Replace, even one with nothing to strip. When there
+		// is no match it hands back the input without allocating, and it is the call CodeQL's
+		// cs/log-forging query recognises as a sanitizer. An early `return input` would be flagged
+		// at every call site as unsanitized (#657).
 		var result = ControlCharacter().Replace(input, Replacement);
 
 		return result.Length > MaxLogLength
