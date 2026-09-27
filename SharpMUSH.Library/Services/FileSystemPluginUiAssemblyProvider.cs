@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Library.Services;
 
@@ -27,7 +28,7 @@ public sealed class FileSystemPluginUiAssemblyProvider(
 		if (!IsFlatName(pluginId) || !IsFlatName(assembly))
 		{
 			logger.LogWarning("Rejected plugin UI assembly request with non-flat id/assembly: '{Plugin}'/'{Assembly}'.",
-				pluginId, assembly);
+				LogSanitizer.Sanitize(pluginId), LogSanitizer.Sanitize(assembly));
 			return new NotFound();
 		}
 
@@ -46,7 +47,7 @@ public sealed class FileSystemPluginUiAssemblyProvider(
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 		{
-			logger.LogWarning(ex, "Failed to read plugin UI sidecar for '{Plugin}'.", pluginId);
+			logger.LogWarning(ex, "Failed to read plugin UI sidecar for '{Plugin}'.", LogSanitizer.Sanitize(pluginId));
 			return new NotFound();
 		}
 
@@ -70,7 +71,7 @@ public sealed class FileSystemPluginUiAssemblyProvider(
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 		{
-			logger.LogWarning(ex, "Failed to read plugin UI assembly '{Assembly}' for '{Plugin}'.", assembly, pluginId);
+			logger.LogWarning(ex, "Failed to read plugin UI assembly '{Assembly}' for '{Plugin}'.", LogSanitizer.Sanitize(assembly), LogSanitizer.Sanitize(pluginId));
 			return new NotFound();
 		}
 
@@ -79,7 +80,7 @@ public sealed class FileSystemPluginUiAssemblyProvider(
 		{
 			logger.LogWarning(
 				"Plugin UI assembly '{Assembly}' for '{Plugin}' failed hash verification (expected {Expected}, actual {Actual}); refusing to serve.",
-				assembly, pluginId, expected, actual);
+				LogSanitizer.Sanitize(assembly), LogSanitizer.Sanitize(pluginId), expected, actual);
 			return new NotFound();
 		}
 

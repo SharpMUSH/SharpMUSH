@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Implementation.Services;
 
@@ -103,7 +104,7 @@ public sealed class PluginApplicationRegistryDecorator(
 		{
 			logger.LogWarning(
 				"Refusing to upsert application '{Slug}': it is contributed by a loaded plugin and is not admin-editable.",
-				application.Slug);
+				LogSanitizer.Sanitize(application.Slug));
 			return;
 		}
 
@@ -116,7 +117,7 @@ public sealed class PluginApplicationRegistryDecorator(
 		{
 			logger.LogWarning(
 				"Refusing to remove application '{Slug}': it is a plugin-contributed overlay (not persisted; it disappears when its plugin unloads).",
-				slug);
+				LogSanitizer.Sanitize(slug));
 			return;
 		}
 

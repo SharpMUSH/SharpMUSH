@@ -2,6 +2,7 @@ using System.Net.WebSockets;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using SharpMUSH.Client.Models;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Client.Services;
 
@@ -63,7 +64,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		wsService.ConnectionStateChanged += HandleStateChange;
 		wsService.Reattached += HandleReattached;
 
-		_logger.LogInformation("Connecting to {ServerUri}", serverUri);
+		_logger.LogInformation("Connecting to {ServerUri}", LogSanitizer.Sanitize(serverUri));
 		await wsService.ConnectAsync(serverUri);
 		AddSystemLine($"Connected to {serverUri}");
 	}

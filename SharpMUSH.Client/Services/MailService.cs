@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Client.Services;
 
@@ -58,7 +59,7 @@ public class MailService(IHttpClientFactory httpClientFactory, ILogger<MailServi
 		}
 		catch (HttpRequestException ex)
 		{
-			logger.LogWarning(ex, "Failed to read mail {Folder}/{Number}.", folder, number);
+			logger.LogWarning(ex, "Failed to read mail {Folder}/{Number}.", LogSanitizer.Sanitize(folder), number);
 			return null;
 		}
 	}
@@ -90,7 +91,7 @@ public class MailService(IHttpClientFactory httpClientFactory, ILogger<MailServi
 		}
 		catch (HttpRequestException ex)
 		{
-			logger.LogWarning(ex, "Failed to delete mail {Folder}/{Number}.", folder, number);
+			logger.LogWarning(ex, "Failed to delete mail {Folder}/{Number}.", LogSanitizer.Sanitize(folder), number);
 			return false;
 		}
 	}

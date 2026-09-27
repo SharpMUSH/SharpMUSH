@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Client.Services;
 
@@ -105,7 +106,7 @@ public class WebSocketClientService : IWebSocketClientService
 
 			_cancellationTokenSource = new CancellationTokenSource();
 
-			_logger.LogInformation("Connecting to WebSocket server: {ServerUri}", _serverUri);
+			_logger.LogInformation("Connecting to WebSocket server: {ServerUri}", LogSanitizer.Sanitize(_serverUri));
 			await _webSocket.ConnectAsync(new Uri(_serverUri), _cancellationTokenSource.Token);
 
 			ConnectionStateChanged?.Invoke(this, _webSocket.State);

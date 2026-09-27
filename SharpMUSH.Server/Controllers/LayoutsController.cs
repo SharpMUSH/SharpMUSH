@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -63,7 +64,7 @@ public class LayoutsController(
 		}
 
 		await layouts.UpsertLayoutAsync(scope.Trim(), layout);
-		logger.LogInformation("Saved layout for scope '{Scope}'.", scope);
+		logger.LogInformation("Saved layout for scope '{Scope}'.", LogSanitizer.Sanitize(scope));
 		return Ok(layout);
 	}
 
@@ -72,7 +73,7 @@ public class LayoutsController(
 	public async Task<IActionResult> Delete(string scope)
 	{
 		await layouts.RemoveLayoutAsync(scope.Trim());
-		logger.LogInformation("Reset layout for scope '{Scope}' to default.", scope);
+		logger.LogInformation("Reset layout for scope '{Scope}' to default.", LogSanitizer.Sanitize(scope));
 		return Ok(new { reset = true });
 	}
 }

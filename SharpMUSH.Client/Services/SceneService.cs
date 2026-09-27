@@ -1,5 +1,6 @@
 using SharpMUSH.Client.Models;
 using System.Net.Http.Json;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Client.Services;
 
@@ -104,7 +105,7 @@ public class SceneService(IHttpClientFactory httpClientFactory, ILogger<SceneSer
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "GetSceneAsync failed for id={Id}", id);
+			logger.LogError(ex, "GetSceneAsync failed for id={Id}", LogSanitizer.Sanitize(id));
 			return null;
 		}
 	}
@@ -126,7 +127,7 @@ public class SceneService(IHttpClientFactory httpClientFactory, ILogger<SceneSer
 		}
 		catch (Exception ex)
 		{
-			logger.LogError(ex, "GetPosesAsync failed for id={Id}", id);
+			logger.LogError(ex, "GetPosesAsync failed for id={Id}", LogSanitizer.Sanitize(id));
 			return [];
 		}
 	}

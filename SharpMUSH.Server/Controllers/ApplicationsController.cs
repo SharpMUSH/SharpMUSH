@@ -7,6 +7,7 @@ using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -134,7 +135,7 @@ public class ApplicationsController(
 			string.IsNullOrWhiteSpace(dto.ComponentTypeName) ? null : dto.ComponentTypeName.Trim());
 
 		await registry.UpsertApplicationAsync(application);
-		logger.LogInformation("Registered application '{Slug}' ({Kind}).", application.Slug, application.Kind);
+		logger.LogInformation("Registered application '{Slug}' ({Kind}).", LogSanitizer.Sanitize(application.Slug), application.Kind);
 		return Ok(ToDto(application));
 	}
 
@@ -143,7 +144,7 @@ public class ApplicationsController(
 	public async Task<IActionResult> Delete(string slug)
 	{
 		await registry.RemoveApplicationAsync(slug);
-		logger.LogInformation("Removed application '{Slug}'.", slug);
+		logger.LogInformation("Removed application '{Slug}'.", LogSanitizer.Sanitize(slug));
 		return Ok(new { deleted = true });
 	}
 
@@ -184,7 +185,7 @@ public class ApplicationsController(
 		}
 		catch (Exception ex)
 		{
-			logger.LogWarning(ex, "Schema endpoint validation threw for {SchemaUrl}.", schemaUrl);
+			logger.LogWarning(ex, "Schema endpoint validation threw for {SchemaUrl}.", LogSanitizer.Sanitize(schemaUrl));
 			return (false, "the handler threw while producing the schema.");
 		}
 	}

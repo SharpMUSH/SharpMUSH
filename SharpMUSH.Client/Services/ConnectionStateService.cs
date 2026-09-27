@@ -6,6 +6,7 @@ using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Services.Interfaces;
 using SignalRState = Microsoft.AspNetCore.SignalR.Client.HubConnectionState;
 using LibraryState = SharpMUSH.Library.Services.Interfaces.HubConnectionState;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Client.Services;
 
@@ -257,7 +258,7 @@ public sealed class ConnectionStateService : IConnectionStateService, ISceneHubC
 		catch (Exception ex) when (ex is InvalidOperationException or OperationCanceledException)
 		{
 			_logger.LogDebug(ex, "[ConnectionStateService] Scene hub {Method}({SceneId}) lost the connection mid-call",
-				method, sceneId);
+				method, LogSanitizer.Sanitize(sceneId));
 		}
 	}
 

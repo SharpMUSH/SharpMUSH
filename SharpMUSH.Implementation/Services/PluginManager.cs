@@ -5,6 +5,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Implementation.Services;
 
@@ -251,7 +252,7 @@ public sealed class PluginManager(
 		logger.LogInformation(
 			"{Action} plugin '{Id}': removed {Commands} command(s), {Functions} function(s); collectible context disposed.",
 			forReload ? "Unloaded (for reload)" : "Unloaded",
-			pluginId, tracked.CommandNames.Count, tracked.FunctionNames.Count);
+			LogSanitizer.Sanitize(pluginId), tracked.CommandNames.Count, tracked.FunctionNames.Count);
 
 		return new Success();
 	}
