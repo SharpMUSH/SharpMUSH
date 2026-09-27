@@ -237,9 +237,8 @@ public static class TeleportHelpers
 
 		// wiz.c:487: a Tel_Anywhere teleporter sending a player TO a player lands them beside that
 		// player rather than inside them. /INSIDE is what asks for the containment instead.
-		// DEVIATION: Penn's branch (wiz.c:487-497) does its own OXTPORT/safe_tel/TPORT and returns
-		// before wiz.c:585, so it never prints "Teleported." here. This falls through to the shared
-		// path below instead, which does print it.
+		// Penn's branch (wiz.c:487-497) does its own OXTPORT/safe_tel/TPORT and returns before
+		// wiz.c:585, so it never prints "Teleported."; this shares the path below and skips only that.
 		var besidePlayer = telAnywhere && target.IsPlayer && destinationContainer.IsPlayer && !options.Inside;
 
 		if (besidePlayer)
@@ -308,7 +307,9 @@ public static class TeleportHelpers
 
 		// wiz.c:585-588: the teleporter is told the move happened, unless they were the one moved,
 		// unless the victim is their own puppet (which reports for itself), and unless AreQuiet.
-		if (!target.Object().DBRef.Equals(executor.Object().DBRef)
+		// The beside-a-player branch returned before reaching it (wiz.c:497).
+		if (!besidePlayer
+				&& !target.Object().DBRef.Equals(executor.Object().DBRef)
 				&& !await IsOwnPuppet(target, executor)
 				&& !await target.Object().AreQuietAsync(executor))
 		{

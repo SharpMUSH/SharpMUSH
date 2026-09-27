@@ -2633,4 +2633,90 @@ public class MovementParityTests
 		await Assert.That(BareDbref((await GodParser.FunctionParse(MarkupText.Plain($"[home({mover.DbRef})]")))!
 			.Message!.ToPlainText().Trim())).IsEqualTo(playerStart);
 	}
+
+	/// <summary>
+	/// <c>do_enter</c> hands an exit it matched to <c>do_move</c> with the same text
+	/// (<c>src/move.c:938-940</c>), so <c>enter &lt;exit&gt;</c> walks it exactly as <c>GOTO</c> would.
+	/// </summary>
+	[Test]
+	public async ValueTask EnteringAnExitWalksIt()
+	{
+		var (mover, _, to, _) = await Corridor("EnterExit");
+
+		await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("enter out"));
+
+		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(to));
+	}
+
+	/// <summary>
+	/// <c>do_enter</c> answers a room with <c>"Permission denied."</c> (<c>src/move.c:935-937</c>).
+	/// Only a Hasprivs enterer can match a room at all (<c>MAT_ABSOLUTE</c>, <c>move.c:930-931</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask EnteringARoomIsPermissionDenied()
+	{
+		var god = (await Node("#1")).Object().DBRef;
+		var room = await Dig("EnterRoomTarget");
+
+		var godSaw = await MessagesWhile(god, async () =>
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"enter {room}")));
+
+		await Assert.That(godSaw).Contains(ErrorMessages.Notifications.PermissionDenied);
+		await Assert.That(godSaw).DoesNotContain("You can't enter that.");
+		await Assert.That(await LocationOf("#1")).IsNotEqualTo(BareDbref(room));
+	}
+
+	/// <summary>
+	/// <c>do_teleport_one</c>'s Tel_Anywhere player-to-player branch (<c>src/wiz.c:487-497</c>) does
+	/// its own OXTPORT/safe_tel/TPORT and returns before <c>wiz.c:585</c>, so the teleporter is not
+	/// told <c>"Teleported."</c>. <c>/inside</c> takes the ordinary path, which does tell them.
+	/// </summary>
+	[Test]
+	public async ValueTask TeleportingAPlayerBesideAPlayerDoesNotConfirm()
+	{
+		var god = (await Node("#1")).Object().DBRef;
+		var room = await Dig("BesideRoom");
+		var host = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "BesideHost");
+		var guest = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "BesideGuest");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {host.DbRef}={room}"));
+
+		var beside = await MessagesWhile(god, async () =>
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport {guest.DbRef}={host.DbRef}")));
+
+		await Assert.That(await LocationOf(guest.DbRef.ToString())).IsEqualTo(BareDbref(room))
+			.Because("the beside branch has to have run for its silence to mean anything");
+		await Assert.That(beside).DoesNotContain(ErrorMessages.Notifications.Teleported);
+
+		var inside = await MessagesWhile(god, async () =>
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/inside {guest.DbRef}={host.DbRef}")));
+
+		await Assert.That(inside).Contains(ErrorMessages.Notifications.Teleported);
+	}
+
+	/// <summary>
+	/// <c>look_simple</c> (<c>src/look.c:430-440</c>): looking at a TRANSPARENT exit shows the room it
+	/// leads to after the exit itself — its description, not its name, which <c>look_room</c> leaves
+	/// out when looking through an exit (<c>look.c:469</c>). An ordinary exit shows only itself.
+	/// </summary>
+	[Test]
+	public async ValueTask LookingAtATransparentExitLooksThroughIt()
+	{
+		var (mover, _, to, exit) = await Corridor("LookThrough");
+		var beyond = TestIsolationHelpers.GenerateUniqueName("BeyondTheExit");
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@describe {to}={beyond}"));
+
+		var plain = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("look out")));
+		await Assert.That(plain).DoesNotContain(beyond)
+			.Because("an exit that is neither TRANSPARENT nor CLOUDY is not looked through");
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {exit}=TRANSPARENT"));
+
+		var through = await MessagesWhile(mover.DbRef, async () =>
+			await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain("look out")));
+		await Assert.That(through).Contains(beyond);
+	}
 }

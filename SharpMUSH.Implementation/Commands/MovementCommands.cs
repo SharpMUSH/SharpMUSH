@@ -497,9 +497,17 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (!objectToEnter.IsThing && !objectToEnter.IsPlayer)
+		// move.c:935-941: do_enter dispatches on the type it matched. A room is refused outright, and an
+		// exit is handed to do_move with the same text, so "enter <exit>" walks it exactly as GOTO would.
+		if (objectToEnter.IsRoom)
 		{
-			await NotifyService.Notify(executor, "You can't enter that.", executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return CallState.Empty;
+		}
+
+		if (objectToEnter.IsExit)
+		{
+			await GoTo(parser, _2);
 			return CallState.Empty;
 		}
 

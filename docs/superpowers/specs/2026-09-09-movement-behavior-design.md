@@ -343,8 +343,6 @@ Deliberately not closed, each verified against PennMUSH and recorded rather than
 
 - **`BUY` has no economy.** The command is a stub; its triad needs `PRICELIST`, `@cost`, the Pay
   lock and a penny transfer before it means anything.
-- **`AUSE` always runs.** PennMUSH gates it on `CHARGES` via `charge_action` (`predicat.c:88`);
-  SharpMUSH has neither `CHARGES` nor `RUNOUT`.
 - **Connect and disconnect hooks run inline** where PennMUSH queues them (`bsd.c:5987`, `:6073`
   call `queue_attribute_base`). `DidIt` cannot be used there: `QueueAction` reads
   `parser.CurrentState`, and that path runs on an empty stack. Closing it rewrites
@@ -352,10 +350,6 @@ Deliberately not closed, each verified against PennMUSH and recorded rather than
 - **`DBRef.ToString()` emits `#N:creation`** where PennMUSH's `unparse_dbref` emits `#N`, so
   softcode reading a triad's `%0` gets a stamped dbref. Tests strip the stamp rather than the code
   matching Penn.
-- **`EMPTY` walks the whole contents list**, where PennMUSH walks `first_visible`
-  (`predicat.c:292`), so an item the emptier cannot see is emptied here and skipped there. The
-  visibility walk belongs to `LookService` and has no shared seam yet.
-- **Possessive `GET` does not honour PennMUSH's `controls()` bypass.**
 - **`GetExitsQuery` is not `ICacheable`**, so the automatic look's exit listing is an uncached store
   read on every move. Making it cacheable needs its own invalidation design spanning `@open`,
   `@dig`, `@link`, `@unlink`, `@destroy`, `@firstexit` and exit teleport.

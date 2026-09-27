@@ -273,6 +273,34 @@ public class GetCommandParityTests
 	}
 
 	/// <summary>
+	/// <c>src/move.c:618-620</c>: the container's ENTER_OK and take lock are asked only of a taker who
+	/// does not control the item. There is no separate container gate, so a stranger's refusal is
+	/// <c>fail_lock</c>'s <c>"You can't take that from there."</c>, not <c>"Permission denied."</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask PossessiveGetLetsAControllerTakeFromAContainerThatIsNotEnterOk()
+	{
+		var taker = await Mortal("GetCtlTaker");
+		var box = await Thing("GetCtlBox");
+		var mine = await Thing("GetCtlMine");
+		var theirs = await Thing("GetCtlTheirs");
+		await Room("GetCtlRoom", taker.DbRef, box);
+		await God($"@teleport/silent {mine}={box}");
+		await God($"@teleport/silent {theirs}={box}");
+		await God($"@chown {mine}={taker.DbRef}");
+		await God($"@lock/take {box}=#0");
+
+		var stranger = await Get(taker, $"{await NameOf(box)}'s {await NameOf(theirs)}");
+		await Assert.That(await LocationOf(theirs)).IsEqualTo($"#{box.Number}");
+		await Assert.That(stranger).Contains("You can't take that from there.");
+		await Assert.That(stranger).DoesNotContain("Permission denied.");
+
+		await Get(taker, $"{await NameOf(box)}'s {await NameOf(mine)}");
+		await Assert.That(await LocationOf(mine)).IsEqualTo($"#{taker.DbRef.Number}")
+			.Because("controls(player, thing) bypasses ENTER_OK and the take lock");
+	}
+
+	/// <summary>
 	/// <c>possessive_get_d</c> is <c>POSSGET_ON_DISCONNECTED</c> (<c>conf.h:491</c>): off, nothing is
 	/// taken from a disconnected player (<c>move.c:617</c>).
 	/// </summary>

@@ -456,6 +456,39 @@ public class ObjectTriadParityTests
 			.Because("the refusal is attributed to the container, so the container's @afailure runs");
 	}
 
+	/// <summary>
+	/// <c>do_empty</c> walks the container with <c>first_visible</c> (<c>src/move.c:820</c>,
+	/// <c>src/predicat.c:292-304</c>): a DARK item the emptier neither controls nor sees for any other
+	/// reason is skipped and stays where it is, while its visible neighbour is emptied.
+	/// </summary>
+	[Test]
+	public async ValueTask EmptyingAContainerSkipsADarkItemTheEmptierCannotSee()
+	{
+		var emptier = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "EmptyDarkActor");
+		var room = await Room("EmptyDarkRoom", emptier.DbRef);
+		var box = await Thing("EmptyDarkContainer");
+		var shown = await Thing("EmptyDarkShown");
+		var hidden = await Thing("EmptyDarkHidden");
+
+		await God($"@teleport/silent {box}={room}");
+		await God($"@teleport/silent {shown}={box}");
+		await God($"@teleport/silent {hidden}={box}");
+		await God($"@set {box}=ENTER_OK");
+		await God($"@set {hidden}=DARK");
+
+		await GodParser.CommandParse(emptier.Handle, ConnectionService, MarkupText.Plain($"empty {box}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		var hiddenAt = await GodParser.FunctionParse(MarkupText.Plain($"[loc({hidden})]"));
+		await Assert.That(BareDbrefs(hiddenAt!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(box.ToString()))
+			.Because("first_visible skips a DARK item the emptier does not control");
+
+		var shownAt = await GodParser.FunctionParse(MarkupText.Plain($"[loc({shown})]"));
+		await Assert.That(BareDbrefs(shownAt!.Message!.ToPlainText().Trim())).IsEqualTo(BareDbrefs(room))
+			.Because("the visible item beside it is still emptied");
+	}
+
 	// --- GIVE -----------------------------------------------------------------------------------
 
 	/// <summary>
@@ -565,6 +598,39 @@ public class ObjectTriadParityTests
 
 		await Scheduler.DrainImmediateQueueForTests();
 		await Assert.That(await Read(gadget, "USED")).IsEqualTo($"#{user.DbRef.Number}");
+	}
+
+	/// <summary>
+	/// <c>charge_action</c> (<c>src/predicat.c:88-114</c>), called from <c>do_use</c>
+	/// (<c>src/set.c:1416-1417</c>): an object with CHARGES left spends one and runs AUSE; at zero it
+	/// runs RUNOUT instead and the count stays at zero.
+	/// </summary>
+	[Test]
+	public async ValueTask UseSpendsAChargeAndRunsRunoutOnceTheyAreGone()
+	{
+		var user = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "UseChargeUser");
+		var gadget = await Thing("UseChargeGadget");
+		await Room("UseChargeRoom", user.DbRef, gadget);
+
+		await God($"&CHARGES {gadget}=1");
+		await God($"&AUSE {gadget}=&USES me=[add(0[get(me/USES)],1)]");
+		await God($"&RUNOUT {gadget}=&RANOUT me=[add(0[get(me/RANOUT)],1)]");
+
+		await GodParser.CommandParse(user.Handle, ConnectionService, MarkupText.Plain($"use {gadget}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(await Read(gadget, "CHARGES")).IsEqualTo("0");
+		await Assert.That(await Read(gadget, "USES")).IsEqualTo("1");
+		await Assert.That(await Read(gadget, "RANOUT")).IsEqualTo(string.Empty);
+
+		await GodParser.CommandParse(user.Handle, ConnectionService, MarkupText.Plain($"use {gadget}"));
+		await Scheduler.DrainImmediateQueueForTests();
+
+		await Assert.That(await Read(gadget, "CHARGES")).IsEqualTo("0");
+		await Assert.That(await Read(gadget, "USES")).IsEqualTo("1")
+			.Because("with no charges left AUSE does not run");
+		await Assert.That(await Read(gadget, "RANOUT")).IsEqualTo("1");
 	}
 
 	/// <summary>

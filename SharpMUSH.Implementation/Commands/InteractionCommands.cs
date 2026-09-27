@@ -1,5 +1,7 @@
+using System.Globalization;
 using SharpMUSH.Implementation.Visitors;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
@@ -7,6 +9,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
@@ -206,12 +209,8 @@ public partial class Commands
 	/// <remarks>
 	/// The locks are re-evaluated per item rather than once for the whole container, which is Penn's
 	/// documented choice (<c>src/move.c:783-789</c>): a lock that counts what is left has to see each
-	/// move.
-	/// <para>
-	/// DEVIATION: Penn walks <c>first_visible</c> (<c>src/predicat.c:292</c>), so an item the emptier
-	/// cannot see is skipped. SharpMUSH walks the whole contents list — the visibility walk is
-	/// <c>LookService</c>'s and has no shared seam yet.
-	/// </para>
+	/// move. Only the items <c>first_visible</c> (<c>src/predicat.c:292</c>) shows the emptier are
+	/// walked, so an item they cannot see stays where it is.
 	/// </remarks>
 	[SharpCommand(Name = "EMPTY", Switches = [], CommandLock = "(TYPE^PLAYER|TYPE^THING)&!FLAG^GAGGED",
 		Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
@@ -260,11 +259,13 @@ public partial class Commands
 
 		var emptyingSelf = objectToEmpty.Object().DBRef.Equals(executor.Object().DBRef);
 
-		// move.c:820 walks the contents with first_visible, which skips anything the emptier cannot
-		// interact with: can_interact(item, player, INTERACT_SEE) (predicat.c:306).
+		// move.c:820 walks the contents with first_visible (predicat.c:292), which skips anything the
+		// emptier cannot see: a DARK item, or any unLIGHT item in a DARK container (OPAQUE, for a
+		// player), unless the emptier is See_All, is the container, or controls it or the item.
+		var containerIsDark = objectToEmpty.IsPlayer ? await objectToEmpty.IsOpaque() : await objectToEmpty.IsDark();
 		var contents = await objectToEmpty.AsContainer.Content(Mediator)
 			.Where(async (item, _) =>
-				await PermissionService.CanInteract(executor, item.WithRoomOption(), IPermissionService.InteractType.See))
+				await PermissionService.FirstVisible(executor, objectToEmpty, item.WithRoomOption(), containerIsDark))
 			.ToListAsync();
 		var count = 0;
 
@@ -594,12 +595,6 @@ public partial class Commands
 			return;
 		}
 
-		if (!await container.HasFlag("ENTER_OK") && !await PermissionService.Controls(executor, container))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return;
-		}
-
 		var thingResult = await LocateService.Locate(parser, container, executor, objectName, GetPossessedMatchFlags);
 		if (thingResult is Error<string> { Value: ErrorMessages.Returns.AmbiguousMatch })
 		{
@@ -630,14 +625,17 @@ public partial class Commands
 		// single `else` (move.c:615-642), so every refusal reports as `fail_lock(player, thing,
 		// Basic_Lock, "You can't take that from there.")`: the FAILURE family on the *item*, carrying
 		// the take lock's text. possessive_get_d is POSSGET_ON_DISCONNECTED (conf.h:491): without it a
-		// disconnected player cannot be robbed.
+		// disconnected player cannot be robbed. The container's ENTER_OK and take lock are asked only of
+		// a taker who does not control the item (move.c:618-620); there is no separate container gate.
 		var source = await thing.Where();
 		var sourceObject = source.WithExitOption();
 		var canSteal = await LockService.Evaluate(LockType.Basic, thing, executor)
 									 && (Configuration.CurrentValue.Command.PossessiveGetD
 											 || !sourceObject.IsPlayer
 											 || await ConnectionService.IsConnected(sourceObject))
-									 && await LockService.Evaluate(LockType.Take, sourceObject, executor);
+									 && (await PermissionService.Controls(executor, thing)
+											 || (await sourceObject.HasFlag("ENTER_OK")
+													 && await LockService.Evaluate(LockType.Take, sourceObject, executor)));
 
 		if (!canSteal)
 		{
@@ -1000,18 +998,81 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		// did_it(player, thing, "USE", T("Used."), "OUSE", NULL, "AUSE", NOTHING, AN_SYS)
-		// (set.c:1416-1417). PennMUSH picks AUSE or RUNOUT there by charge_action (predicat.c:88),
-		// which decrements a CHARGES attribute; SharpMUSH has no CHARGES at all, so there is nothing
-		// yet to switch on and AUSE always runs.
+		// did_it(player, thing, "USE", T("Used."), "OUSE", NULL, charge_action(thing) ? "AUSE" : "RUNOUT",
+		// NOTHING, AN_SYS) (set.c:1416-1417). The charge is spent before the triad runs.
+		var charged = await ChargeAction(objectToUse);
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: executor, Thing: objectToUse,
 			What: "USE",
 			Def: MarkupText.Plain(ErrorMessages.Notifications.Used),
 			OWhat: "OUSE",
-			AWhat: "AUSE"));
+			AWhat: charged ? "AUSE" : "RUNOUT"));
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>charge_action</c> (<c>src/predicat.c:88</c>): an object with no <c>CHARGES</c> of its
+	/// own (parents are not consulted) always runs <c>AUSE</c>. One with charges left spends one and runs
+	/// <c>AUSE</c>; at zero or below it runs <c>RUNOUT</c> instead and the count is left alone.
+	/// </summary>
+	/// <remarks>
+	/// The count is read the way <c>atoi</c> reads it, so a value that does not start with a number is
+	/// zero. The decremented value is written under the attribute's existing owner, as Penn's
+	/// <c>atr_add(..., Owner(b->creator), 0)</c> does. Penn's queue is single-threaded; here two
+	/// <c>USE</c>s of one object can run at once, so the read and the write share a gate striped by
+	/// object, as <c>MailDelivery</c>'s mailbox gates are, and one charge buys one <c>AUSE</c>.
+	/// </remarks>
+	private async ValueTask<bool> ChargeAction(AnySharpObject thing)
+	{
+		var token = ExecutionBudget.CurrentToken;
+		var dbref = thing.Object().DBRef;
+		var gate = ChargeGates[(int)((uint)dbref.Number % ChargeGates.Length)];
+		await gate.WaitAsync(token);
+		try
+		{
+			return await SpendCharge(thing, dbref, token);
+		}
+		finally
+		{
+			gate.Release();
+		}
+	}
+
+	private static readonly SemaphoreSlim[] ChargeGates = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
+
+	private async ValueTask<bool> SpendCharge(AnySharpObject thing, DBRef dbref, CancellationToken token)
+	{
+		var charges = await Mediator.CreateStream(new GetAttributeQuery(dbref, ["CHARGES"]), token)
+			.LastOrDefaultAsync(token);
+
+		if (charges is null || !charges.Name.Equals("CHARGES", StringComparison.OrdinalIgnoreCase))
+		{
+			return true;
+		}
+
+		var remaining = LeadingInteger(charges.Value.ToPlainText());
+		if (remaining <= 0)
+		{
+			return false;
+		}
+
+		var owner = await charges.Owner.WithCancellation(token)
+								?? await thing.Object().Owner.WithCancellation(token);
+		await Mediator.Send(new SetAttributeCommand(dbref, ["CHARGES"],
+			MarkupText.Plain((remaining - 1).ToString(CultureInfo.InvariantCulture)), owner), token);
+		return true;
+	}
+
+	/// <summary>C's <c>atoi</c>: optional leading whitespace and sign, then digits up to the first non-digit.</summary>
+	private static long LeadingInteger(string text)
+	{
+		var span = text.AsSpan().TrimStart();
+		var end = span.Length > 0 && span[0] is '-' or '+' ? 1 : 0;
+		while (end < span.Length && char.IsAsciiDigit(span[end])) end++;
+		return long.TryParse(span[..end], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value)
+			? value
+			: 0;
 	}
 
 	[SharpCommand(Name = "WITH", Switches = ["NOEVAL", "ROOM"], Behavior = CB.Player | CB.Thing | CB.EqSplit, MinArgs = 0,
