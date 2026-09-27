@@ -162,6 +162,66 @@ public class LazyAttributeParentParityTests
 			.IsEquivalentTo(expected);
 	}
 
+	/// <summary>
+	/// The single-attribute reads share one gate (<c>AttributeService.ReadAttributeAsync</c>), so the
+	/// eager and lazy lookup of every fixture name must agree on found / none / error and, when
+	/// found, on the resolved root..leaf path.
+	/// </summary>
+	[Test]
+	[Timeout(30_000)]
+	public async ValueTask LazySingleAttributeRead_MatchesTheEagerRead(CancellationToken ct)
+	{
+		const string label = "PARITYONE";
+		var (child, _) = await BuildFixtureAsync(label);
+
+		(string Name, string Expected)[] cases =
+		[
+			($"{label}_INHERITED", "found"),
+			($"{label}_SHADOWED", "found"),
+			($"{label}_OWN", "found"),
+			($"{label}_SECRET", "none"),
+			($"{label}_TREE`LEAF", "none"),
+			($"{label}_OPEN`LEAF", "found"),
+			($"{label}_MISSING", "none")
+		];
+
+		foreach (var (name, expected) in cases)
+		{
+			var eager = await AttributeService.GetAttributeAsync(child, child, name, IAttributeService.AttributeMode.Read);
+			var lazy = await AttributeService.LazilyGetAttributeAsync(child, child, name, IAttributeService.AttributeMode.Read);
+
+			var eagerKind = eager.IsAttribute ? "found" : eager.IsNone ? "none" : "error";
+			var lazyKind = lazy.IsAttribute ? "found" : lazy.IsNone ? "none" : "error";
+			await Assert.That(eagerKind).IsEqualTo(expected).Because(name);
+			await Assert.That(lazyKind).IsEqualTo(eagerKind).Because(name);
+
+			if (eager.IsAttribute)
+			{
+				var eagerPath = eager.Expect<SharpAttribute[]>().Select(a => a.LongName!).ToArray();
+				var lazyPath = lazy.Expect<LazySharpAttribute[]>().Select(a => a.LongName).ToArray();
+				await Assert.That(lazyPath).IsEquivalentTo(eagerPath).Because(name);
+			}
+		}
+	}
+
+	/// <summary>
+	/// The lazy read serves <c>Read</c> and <c>Execute</c> only; a write mode is a caller bug, not
+	/// a permission failure, and still throws now that it shares the eager read's gate.
+	/// </summary>
+	[Test]
+	[Timeout(30_000)]
+	public async ValueTask LazySingleAttributeRead_RejectsWriteModes(CancellationToken ct)
+	{
+		var obj = await CreateAsync("LazyWriteMode");
+
+		foreach (var mode in new[] { IAttributeService.AttributeMode.Set, IAttributeService.AttributeMode.SystemSet })
+		{
+			await Assert.That(async () =>
+					await AttributeService.LazilyGetAttributeAsync(obj, obj, "LAZYWRITEMODE", mode))
+				.Throws<InvalidOperationException>();
+		}
+	}
+
 	[Test]
 	[Timeout(30_000)]
 	public async ValueTask LazyPatternReadWithCheckParents_TerminatesOnAParentCycle(CancellationToken ct)

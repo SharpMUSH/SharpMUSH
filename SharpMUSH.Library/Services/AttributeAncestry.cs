@@ -238,7 +238,7 @@ public static class AttributeAncestry
 		=> CanReadAsync(leaf, source, chain, origin, fetch, permits,
 			static x => x.LongName, static x => x.IsNoInherit());
 
-	private static async ValueTask<bool> CanReadAsync<T>(
+	internal static async ValueTask<bool> CanReadAsync<T>(
 		T leaf,
 		DBRef source,
 		IReadOnlyList<DBRef> chain,
