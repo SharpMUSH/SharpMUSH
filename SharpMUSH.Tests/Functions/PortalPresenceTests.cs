@@ -5,7 +5,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Concurrent;
-using System.Text;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -21,10 +20,6 @@ public class PortalPresenceTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
-	// Session-shared connection registry, so handles must not collide with other tests
-	// (TestIsolationHelpers hands out handles from 100 upward).
-	private static long _handleSeq = 900_000;
-
 	private static ConcurrentDictionary<string, string> ConnectionMetadata(string presenceClass) =>
 		new(new Dictionary<string, string>
 		{
@@ -39,12 +34,8 @@ public class PortalPresenceTests
 	private async Task<long> ConnectAsAsync(DBRef player, string presenceClass)
 	{
 		var connectionService = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-		var handle = Interlocked.Increment(ref _handleSeq);
-		await connectionService.Register(handle, "127.0.0.1", "localhost", "websocket",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
-			ConnectionMetadata(presenceClass));
-		await connectionService.Bind(handle, player);
-		return handle;
+		return await TestIsolationHelpers.ConnectTestHandleAsync(
+			connectionService, player, "websocket", ConnectionMetadata(presenceClass));
 	}
 
 	private async Task<string[]> WhoAsync(string function)

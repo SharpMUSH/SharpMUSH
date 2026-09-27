@@ -9,7 +9,6 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Text;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -58,12 +57,7 @@ public class ConnectionAnnounceIntegrationTests
 
 	/// <summary>A registered but unbound handle — a client sitting on the connect screen.</summary>
 	private async ValueTask<long> AnonymousHandleAsync()
-	{
-		var handle = Random.Shared.NextInt64(500_000, 599_999);
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
-		return handle;
-	}
+		=> await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
 
 	/// <summary>Resolves an object already known to exist (created earlier in the same test) to its <see cref="AnySharpObject"/>.</summary>
 	private async ValueTask<AnySharpObject> KnownObjectAsync(DBRef dbRef)

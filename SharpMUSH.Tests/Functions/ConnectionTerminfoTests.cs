@@ -6,7 +6,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using System.Collections.Concurrent;
-using System.Text;
 
 namespace SharpMUSH.Tests.Functions;
 
@@ -21,13 +20,10 @@ public class ConnectionTerminfoTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
-	private static long _handleSeq = 950_000;
-
 	private async Task<long> ConnectAsAsync(DBRef player, string connectionType,
 		string presenceClass = PresenceClasses.Play, string? terminalType = null, bool telnetNegotiated = false)
 	{
 		var connectionService = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
-		var handle = Interlocked.Increment(ref _handleSeq);
 		var metadata = new ConcurrentDictionary<string, string>(new Dictionary<string, string>
 		{
 			["ConnectionStartTime"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
@@ -48,10 +44,7 @@ public class ConnectionTerminfoTests
 			metadata["TELNET"] = "1";
 		}
 
-		await connectionService.Register(handle, "127.0.0.1", "localhost", connectionType,
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, metadata);
-		await connectionService.Bind(handle, player);
-		return handle;
+		return await TestIsolationHelpers.ConnectTestHandleAsync(connectionService, player, connectionType, metadata);
 	}
 
 	private async Task<string> TerminfoAsync(DBRef player) =>

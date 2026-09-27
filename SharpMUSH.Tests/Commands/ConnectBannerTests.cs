@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Tests.Commands;
@@ -62,9 +61,7 @@ public class ConnectBannerTests
 	[Test]
 	public async Task AFreshConnectionReceivesTheBanner()
 	{
-		var handle = Random.Shared.NextInt64(600_000, 699_999);
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
+		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
 
 		var messages = ConnectScreenTests.NotificationsTo(WebAppFactoryArg, handle);
 

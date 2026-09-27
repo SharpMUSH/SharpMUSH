@@ -9,7 +9,6 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Tests.Server;
@@ -37,12 +36,7 @@ public class LoginGreetingTests
 	private static readonly Regex RawDbRef = new(@"#\d+(:\d+)?");
 
 	private async ValueTask<long> RegisterHandleAsync()
-	{
-		var handle = Random.Shared.NextInt64(800_000, 899_999);
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
-		return handle;
-	}
+		=> await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
 
 	[Test]
 	public async Task AReturningPlayerIsGreetedByNameAndNotByDbref()

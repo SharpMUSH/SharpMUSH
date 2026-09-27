@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
@@ -114,16 +115,49 @@ public static class TestIsolationHelpers
 	{
 		var name = GenerateUniqueName(namePrefix);
 		var playerDbRef = await CreateNamedTestPlayerAsync(services, mediator, name, initialHome);
-		var handle = GenerateUniqueHandle();
-
-		await connectionService.Register(
-			handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask,
-			_ => ValueTask.CompletedTask,
-			() => Encoding.UTF8);
-		await connectionService.Bind(handle, playerDbRef);
+		var handle = await ConnectTestHandleAsync(connectionService, playerDbRef);
 
 		return new TestPlayer(playerDbRef, handle, name);
+	}
+
+	/// <summary>
+	/// Registers a fresh connection handle that nobody is logged in on yet — a client sitting on the
+	/// connect screen. The connection service is shared by the whole test session, so the handle comes
+	/// from <see cref="GenerateUniqueHandle"/>: a random or hard-coded handle can land on another test's
+	/// live connection and take it over.
+	/// </summary>
+	/// <param name="connectionService">The connection service to register the handle on.</param>
+	/// <param name="connectionType">The transport the connection claims to be (<c>telnet</c>, <c>websocket</c>…).</param>
+	/// <param name="metadata">Connection metadata to register with, or null for the service's defaults.</param>
+	/// <returns>The registered handle.</returns>
+	public static async Task<long> RegisterTestHandleAsync(
+		IConnectionService connectionService,
+		string connectionType = "test",
+		ConcurrentDictionary<string, string>? metadata = null)
+	{
+		var handle = GenerateUniqueHandle();
+		await connectionService.Register(
+			handle, "localhost", "localhost", connectionType,
+			_ => ValueTask.CompletedTask,
+			_ => ValueTask.CompletedTask,
+			() => Encoding.UTF8,
+			metadata);
+		return handle;
+	}
+
+	/// <summary>
+	/// As <see cref="RegisterTestHandleAsync"/>, then binds the handle to <paramref name="player"/>, so
+	/// <c>CommandParse(handle, …)</c> runs as that player and connection functions see it online.
+	/// </summary>
+	public static async Task<long> ConnectTestHandleAsync(
+		IConnectionService connectionService,
+		DBRef player,
+		string connectionType = "test",
+		ConcurrentDictionary<string, string>? metadata = null)
+	{
+		var handle = await RegisterTestHandleAsync(connectionService, connectionType, metadata);
+		await connectionService.Bind(handle, player);
+		return handle;
 	}
 
 	/// <summary>

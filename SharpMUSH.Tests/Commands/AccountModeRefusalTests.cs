@@ -1,10 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Text;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -21,16 +18,11 @@ public class AccountModeRefusalTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	private const string LoginPrompt = "You must be logged in to an account first.";
 	private const string ReconnectAdvice = "To play a different one, disconnect and connect again.";
-
-	private async Task RegisterAsync(long handle) =>
-		await ConnectionService.Register(handle, "127.0.0.1", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
 
 	/// <summary>
 	/// Drops the handle again. <c>IConnectionService</c> is a session-wide singleton, so a handle left
@@ -39,29 +31,18 @@ public class AccountModeRefusalTests
 	/// </summary>
 	private async Task DisconnectAsync(long handle) => await ConnectionService.Disconnect(handle);
 
-	private async Task<bool> SawAsync(long handle, string fragment)
-	{
-		var received = NotifyService.ReceivedCalls()
-			.Where(c => c.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Select(c => c.GetArguments())
-			.Where(a => a.Length > 1 && a[0] is long h && h == handle)
-			.Select(a => a[1])
-			.OfType<SharpMessage>()
-			.Any(m => TestHelpers.MessagePlainTextContains(m, fragment));
-
-		return await Task.FromResult(received);
-	}
+	private bool Saw(long handle, string fragment)
+		=> WebAppFactoryArg.Notifications.ForHandle(handle).Any(message => message.Contains(fragment, StringComparison.Ordinal));
 
 	[Test]
 	public async ValueTask Play_WhenNeverAuthenticated_SaysToLogIn()
 	{
-		const long handle = 24601L;
-		await RegisterAsync(handle);
+		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
 		try
 		{
 			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("play Someone"));
 
-			await Assert.That(await SawAsync(handle, LoginPrompt)).IsTrue()
+			await Assert.That(Saw(handle, LoginPrompt)).IsTrue()
 				.Because("a connection that never authenticated genuinely does need to log in first");
 		}
 		finally
@@ -73,8 +54,7 @@ public class AccountModeRefusalTests
 	[Test]
 	public async ValueTask Play_WhenAlreadyPlayingACharacter_SaysReconnectInstead()
 	{
-		const long handle = 24602L;
-		await RegisterAsync(handle);
+		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
 		try
 		{
 			await ConnectionService.BindAccount(handle, "accounts/refusal-play");
@@ -82,9 +62,9 @@ public class AccountModeRefusalTests
 
 			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("play Someone"));
 
-			await Assert.That(await SawAsync(handle, ReconnectAdvice)).IsTrue()
+			await Assert.That(Saw(handle, ReconnectAdvice)).IsTrue()
 				.Because("switching characters on telnet means reconnecting — that is the actual rule");
-			await Assert.That(await SawAsync(handle, LoginPrompt)).IsFalse()
+			await Assert.That(Saw(handle, LoginPrompt)).IsFalse()
 				.Because("this connection IS logged in; telling it to log in is the misleading refusal");
 		}
 		finally
@@ -96,8 +76,7 @@ public class AccountModeRefusalTests
 	[Test]
 	public async ValueTask Make_WhenAlreadyPlayingACharacter_SaysReconnectInstead()
 	{
-		const long handle = 24603L;
-		await RegisterAsync(handle);
+		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
 		try
 		{
 			await ConnectionService.BindAccount(handle, "accounts/refusal-make");
@@ -105,8 +84,8 @@ public class AccountModeRefusalTests
 
 			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("make Newbie secretpassword"));
 
-			await Assert.That(await SawAsync(handle, ReconnectAdvice)).IsTrue();
-			await Assert.That(await SawAsync(handle, LoginPrompt)).IsFalse();
+			await Assert.That(Saw(handle, ReconnectAdvice)).IsTrue();
+			await Assert.That(Saw(handle, LoginPrompt)).IsFalse();
 		}
 		finally
 		{
