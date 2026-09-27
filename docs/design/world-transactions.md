@@ -34,13 +34,18 @@ cover.
 
 ### The contract
 
+This covers softcode and application packages. Managed packages (plugin binaries) are outside it;
+see *Managed packages* below.
+
 An operation's writes go through `PackageWriteTransaction`, each recorded with its inverse. The
 operation commits with its last write, made straight to the registry: the revision record for an
 apply or rollback, the removal of the package's rows for an uninstall. Then:
 
 - **A failure the process survives** (an error result or an exception) replays the inverses newest
-  first. The world is back where it started, and the error names any write that could not be
-  reverted.
+  first, which puts the world back where it started unless an inverse itself fails. For an error
+  result, the error names every write that could not be reverted. For an exception, a write that
+  could not be reverted is dropped without a report, so that the original exception is what
+  surfaces (`PackageWriteTransaction.DisposeAsync`).
 - **Other code is not isolated from the operation.** A queue entry, portal request or HTTP handler
   that runs while the operation does can see, and write over, its intermediate state.
 - **A crash part way through keeps every write made so far, and replays nothing.** Every write is
@@ -73,6 +78,22 @@ runs them for a half-applied one.
    created. Use the residue table above: `@destroy` the orphaned objects the apply created (owned
    by the package-manager wizard, not listed by the package), then re-run the apply, rollback or
    uninstall (`force` for an uninstall whose dependents or attachments block it).
+
+### Managed packages
+
+A managed package's apply and uninstall do not go through `PackageWriteTransaction`, and nothing
+reverts them. They change files first and the registry second:
+
+- **Apply** (`ManagedPackageInstaller.DeployAsync`) deletes `plugins/<id>/`, writes the verified
+  binaries into it, and then records the installed-package row, dependencies and revision.
+- **Uninstall** deletes `plugins/<id>/` and then removes the package's rows.
+
+A failure or crash between the two leaves the directory and the registry disagreeing: a partial
+or new set of binaries under an old registry row, or a registry row whose directory is gone. The
+plugin loader reads `plugins/<id>/` on the next boot. `@backup` copies the world only, not
+`plugins/`, so restoring a backup does not repair this. Both steps are safe to repeat, since
+deploy replaces the whole directory and removal checks it exists. To recover, re-run the install
+of the version you want, or re-run the uninstall, before relying on the plugin again.
 
 ### Follow-ups this decision leaves
 
