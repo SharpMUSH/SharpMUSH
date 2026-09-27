@@ -642,7 +642,7 @@
     {
         foreach (var prop in _categoryProperties.Values)
         {
-            _currentValues[prop.Path] = prop.DefaultValue;
+            _currentValues[prop.Path] = ConfigValues.DefaultOf(prop);
         }
         _dictDrafts.Clear();
         _listDrafts.Clear();

@@ -194,4 +194,34 @@ public class ConfigValuesTests
 		await Assert.That(ConfigValues.IntBound(null)).IsNull();
 		await Assert.That(ConfigValues.IntBound("5")).IsNull();
 	}
+
+	/// <summary>
+	/// A schema default arrives as a <see cref="JsonElement"/>, because <c>DefaultValue</c> is typed
+	/// <see cref="object"/>, while a loaded value arrives as the option's own CLR type. "Reset to
+	/// defaults" wrote the element straight into the value map, where <see cref="ConfigValues.Bool"/>
+	/// did not recognise it: a <c>true</c> default rendered as off while the save sent <c>true</c>.
+	/// </summary>
+	[Test]
+	public async Task DefaultOfReturnsTheOptionsOwnTypeForAValueOffTheWire()
+	{
+		var reallySafe = new PropertyMetadata
+		{ Name = "ReallySafe", Path = "Command.ReallySafe", Type = "boolean", DefaultValue = Json("true") };
+		var port = new PropertyMetadata
+		{ Name = "Port", Path = "Net.Port", Type = "integer", DefaultValue = Json("4201") };
+		var flags = new PropertyMetadata
+		{ Name = "PlayerFlags", Path = "Flag.PlayerFlags", Type = "array", DefaultValue = Json("[\"ENTER_OK\"]") };
+
+		await Assert.That(ConfigValues.DefaultOf(reallySafe)).IsTypeOf<bool>();
+		await Assert.That((bool)ConfigValues.DefaultOf(reallySafe)!).IsTrue();
+		await Assert.That(ConfigValues.DefaultOf(port)).IsEqualTo((object)4201u);
+		await Assert.That(ConfigValues.DefaultOf(flags)).IsTypeOf<string[]>();
+		await Assert.That(ConfigValues.Bool(new Dictionary<string, object?>(), reallySafe)).IsTrue();
+	}
+
+	[Test]
+	public async Task DefaultOfLeavesAnAlreadyTypedDefaultAlone()
+	{
+		await Assert.That(ConfigValues.DefaultOf(Property("integer", defaultValue: 4201u))).IsEqualTo((object)4201u);
+		await Assert.That(ConfigValues.DefaultOf(Property("integer"))).IsNull();
+	}
 }

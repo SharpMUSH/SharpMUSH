@@ -1,5 +1,8 @@
 using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Generated;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.API;
+using System.Text.Json;
 
 namespace SharpMUSH.Tests.Configuration;
 
@@ -71,29 +74,41 @@ public class SchemaBuilderTests
 	}
 
 	/// <summary>
-	/// A property reports the default its own declaration gives it, independently of its siblings. This
-	/// used to be all-or-nothing per category: defaults came from a default-constructed instance of the
-	/// category record, so a record with any parameter lacking a default could not be constructed at all
-	/// and every one of its properties reported null — including those declaring a default. Only NetOptions
-	/// and WikiOptions gave every parameter one, so only they reported defaults.
+	/// Every property reports the default <see cref="SharpMUSHOptions.Default"/> gives it — the one place a
+	/// shipped default is written down. The schema used to read the record's constructor-parameter default
+	/// instead, so the ~170 options whose record declares none (all of CommandOptions, DebugSharpParser)
+	/// reported null and the admin page's "reset to default" had nothing to reset them to.
 	/// </summary>
 	[Test]
-	public async Task DefaultValue_ComesFromTheDeclarationOnTheProperty()
+	public async Task DefaultValue_ComesFromTheShippedDefault()
 	{
 		var schema = BuildSchema();
 
 		await Assert.That(schema.Properties["Net.MudName"].DefaultValue).IsEqualTo("SharpMUSH");
 		await Assert.That(schema.Properties["Net.Port"].DefaultValue).IsEqualTo(4201u);
-
-		// DebugOptions is the mixed case that used to report null for both: one parameter declares a
-		// default, the other does not, and each now answers for itself.
-		await Assert.That(schema.Properties["Debug.ParserPredictionMode"].DefaultValue).IsEqualTo(2);
-		await Assert.That(schema.Properties["Debug.DebugSharpParser"].DefaultValue).IsNull();
-
 		await Assert.That((bool?)schema.Properties["Database.AllowBrowserCode"].DefaultValue).IsFalse();
 
-		// CommandOptions declares no defaults at all, so its properties still have none to report.
-		await Assert.That(schema.Properties["Command.NoisyWhisper"].DefaultValue).IsNull();
+		// Neither declares a parameter default on its record.
+		await Assert.That((bool?)schema.Properties["Command.NoisyWhisper"].DefaultValue).IsFalse();
+		await Assert.That((bool?)schema.Properties["Debug.DebugSharpParser"].DefaultValue).IsFalse();
+	}
+
+	/// <summary>Holds the claim above for every option, not just the ones named there.</summary>
+	[Test]
+	public async Task DefaultValue_MatchesTheShippedDefaultForEveryProperty()
+	{
+		var schema = BuildSchema();
+		var shipped = SharpMUSHOptions.Default();
+
+		var mismatches = schema.Properties.Values
+			// Compared as JSON because arrays and dictionaries are fresh instances on every Default() call,
+			// and JSON is how the admin page receives the default anyway.
+			.Where(property => JsonSerializer.Serialize(property.DefaultValue)
+				!= JsonSerializer.Serialize(ConfigAccessor.GetValue(shipped, property.Name)))
+			.Select(property => property.Path)
+			.ToArray();
+
+		await Assert.That(string.Join(", ", mismatches)).IsEmpty();
 	}
 
 	[Test]

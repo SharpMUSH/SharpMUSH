@@ -152,5 +152,5 @@ public record DatabaseOptions(
 		Group = "Behavior",
 		Order = 3,
 		Tooltip = "Off by default. Enabling lets operator-trusted plugins run arbitrary compiled C# in the browser; gives up client AOT/trimming.")]
-	bool AllowBrowserCode = false
+	bool AllowBrowserCode
 );

@@ -52,15 +52,15 @@ public class ConfigurationTests
 	}
 
 	[Test]
-	public async Task WikiDefaultLocale_IsARealParameterDefaultNotARequiredMember()
+	public async Task WikiDefaultLocale_ShippedDefaultIsTheFallbackConstant()
 	{
-		// Constructing WikiOptions with no argument must compile and must yield the documented default.
-		// If someone later makes DefaultLocale `required`, this line stops compiling — which is the point.
+		// The record no longer declares a parameter default (#1246), so SharpMUSHOptions.Default() is what
+		// ties the shipped value to the constant the resolver and the wiki-translation migration fall back on.
 		//
 		// The const's literal value is pinned by WikiDefaultLocale_DefaultsToEnglish instead of here:
 		// ReadPennMushConfig uses DefaultLocaleFallback as its fallback, so that test fails if the const
 		// stops being "en". Asserting the const against "en" directly trips TUnitAssertions0005.
-		await Assert.That(new WikiOptions().DefaultLocale).IsEqualTo(WikiOptions.DefaultLocaleFallback);
+		await Assert.That(SharpMUSHOptions.Default().Wiki.DefaultLocale).IsEqualTo(WikiOptions.DefaultLocaleFallback);
 	}
 
 	[Test]

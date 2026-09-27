@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using SharpMUSH.Configuration.Generated;
 using SharpMUSH.Library.API;
 
 namespace SharpMUSH.Client.Models.Configuration;
@@ -38,10 +39,21 @@ public sealed class ConfigDictEntry
 /// </remarks>
 public static class ConfigValues
 {
+	/// <summary>
+	/// The property's shipped default as the option's own CLR type — the type a loaded value has. Off
+	/// the wire, <see cref="PropertyMetadata.DefaultValue"/> is a <see cref="JsonElement"/>, because it
+	/// is typed <see cref="object"/>; stored into the value map as-is, a <c>true</c> default rendered as
+	/// off and counted as changed against an identical loaded value.
+	/// </summary>
+	public static object? DefaultOf(PropertyMetadata property) =>
+		property.DefaultValue is JsonElement element && ConfigAccessor.GetPropertyType(property.Name) is { } type
+			? element.Deserialize(type, JsonSerializerOptions.Web)
+			: property.DefaultValue;
+
 	public static bool Bool(IReadOnlyDictionary<string, object?> values, PropertyMetadata property) =>
 		values.TryGetValue(property.Path, out var value) && value is bool current
 			? current
-			: property.DefaultValue is bool fallback && fallback;
+			: DefaultOf(property) is bool fallback && fallback;
 
 	/// <summary>
 	/// Null only when the stored value is explicitly null — an absent or unusable one falls back to
@@ -63,7 +75,7 @@ public static class ConfigValues
 			}
 		}
 
-		return property.DefaultValue switch
+		return DefaultOf(property) switch
 		{
 			int fallback => fallback,
 			uint fallback => (int)fallback,
@@ -84,13 +96,13 @@ public static class ConfigValues
 			}
 		}
 
-		return property.DefaultValue is double fallback ? fallback : 0.0;
+		return DefaultOf(property) is double fallback ? fallback : 0.0;
 	}
 
 	public static string String(IReadOnlyDictionary<string, object?> values, PropertyMetadata property) =>
 		values.TryGetValue(property.Path, out var value) && value is not null
 			? value.ToString() ?? string.Empty
-			: property.DefaultValue?.ToString() ?? string.Empty;
+			: DefaultOf(property)?.ToString() ?? string.Empty;
 
 	public static List<string> StringList(IReadOnlyDictionary<string, object?> values, PropertyMetadata property) =>
 		values.TryGetValue(property.Path, out var value) && value is not null
