@@ -213,10 +213,6 @@
    "command": "@config names"
   },
   {
-   "key": "20-admin-commands/admin.pcreate#0",
-   "command": "@pcreate Carol=carolpw"
-  },
-  {
    "key": "20-admin-commands/admin.pcreate#1",
    "command": "@newpassword Carol=carolpw2"
   },
@@ -277,14 +273,6 @@
    "command": "@create RqCost=10,[elements(v(HOLES),3)]"
   },
   {
-   "key": "25-requested-dbref/dbref.dig#0",
-   "command": "@dig RqRoom=RqOut,RqBack,[elements(v(HOLES),5)],[elements(v(HOLES),6)],[elements(v(HOLES),14)]"
-  },
-  {
-   "key": "25-requested-dbref/dbref.dig#4",
-   "command": "think [strmatch(num(dig(RqFunRoom,RqFunOut,RqFunBack,elements(v(HOLES),7),elements(v(HOLES),8),elements(v(HOLES),9))),elements(v(HOLES),7))]"
-  },
-  {
    "key": "25-requested-dbref/dbref.holes#0",
    "command": "Wiz wizpass"
   },
@@ -307,10 +295,6 @@
   {
    "key": "25-requested-dbref/dbref.open#2",
    "command": "think [strmatch(num(open(RqFunExit,here,here,elements(v(HOLES),11))),elements(v(HOLES),11))]"
-  },
-  {
-   "key": "25-requested-dbref/dbref.pcreate#0",
-   "command": "@pcreate RqPlayer=rqpass,[elements(v(HOLES),15)]"
   },
   {
    "key": "25-requested-dbref/dbref.pcreate#2",

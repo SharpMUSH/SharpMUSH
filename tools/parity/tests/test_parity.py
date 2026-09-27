@@ -95,6 +95,16 @@ class CompareTests(unittest.TestCase):
     def run_compare(self, p, s, allow=(), baseline=()):
         return compare.compare([p], [s], self.canon(), self.canon(), list(allow), [], [], frozenset(baseline))
 
+    def test_new_dbref_numbering_restarts_per_scenario(self):
+        # Scenario "a" shows a created object only on PennMUSH; scenario "b" must still match.
+        def rec(scn, out):
+            return StepRecord(scn, "c", 0, "command", "a", "think x", output=out)
+        p = [rec("a", "#1001"), rec("b", "#1002 #1003")]
+        s = [rec("a", ""), rec("b", "#1502 #1503")]
+        r, _, _ = compare.compare(p, s, self.canon(), self.canon(), [], [], [], frozenset())
+        self.assertEqual([x.status for x in r], [compare.DIFF, compare.MATCH])
+        self.assertEqual(r[1].sharp_text, "#NEW1 #NEW2")
+
     def test_match_ignores_colour(self):
         r, stale, _ = self.run_compare(self.rec("Room\r\n"), self.rec("\x1b[1mRoom\x1b[0m\r\n"))
         self.assertEqual(r[0].status, compare.MATCH)
