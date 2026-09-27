@@ -1019,12 +1019,30 @@ public partial class Commands
 	/// <remarks>
 	/// The count is read the way <c>atoi</c> reads it, so a value that does not start with a number is
 	/// zero. The decremented value is written under the attribute's existing owner, as Penn's
-	/// <c>atr_add(..., Owner(b->creator), 0)</c> does.
+	/// <c>atr_add(..., Owner(b->creator), 0)</c> does. Penn's queue is single-threaded; here two
+	/// <c>USE</c>s of one object can run at once, so the read and the write share a gate striped by
+	/// object, as <c>MailDelivery</c>'s mailbox gates are, and one charge buys one <c>AUSE</c>.
 	/// </remarks>
 	private async ValueTask<bool> ChargeAction(AnySharpObject thing)
 	{
 		var token = ExecutionBudget.CurrentToken;
 		var dbref = thing.Object().DBRef;
+		var gate = ChargeGates[(int)((uint)dbref.Number % ChargeGates.Length)];
+		await gate.WaitAsync(token);
+		try
+		{
+			return await SpendCharge(thing, dbref, token);
+		}
+		finally
+		{
+			gate.Release();
+		}
+	}
+
+	private static readonly SemaphoreSlim[] ChargeGates = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
+
+	private async ValueTask<bool> SpendCharge(AnySharpObject thing, DBRef dbref, CancellationToken token)
+	{
 		var charges = await Mediator.CreateStream(new GetAttributeQuery(dbref, ["CHARGES"]), token)
 			.LastOrDefaultAsync(token);
 
