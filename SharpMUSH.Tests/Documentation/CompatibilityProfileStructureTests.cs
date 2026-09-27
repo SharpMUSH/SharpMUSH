@@ -63,7 +63,7 @@ public class CompatibilityProfileStructureTests
 
 	/// <summary>An <c>**Example.**</c> line: the parity case and the scenario file it is in.</summary>
 	private static readonly Regex ParityExample = new(
-		@"\*\*Example\.\*\* The parity case `(?<case>[^`]+)` in `tools/parity/scenarios/(?<scenario>[^`/]+)\.scn`",
+		@"\*\*Example\.\*\* The parity case `(?<case>[^`]+)` in `tools/parity/scenarios/(?<scenario>[A-Za-z0-9._-]+)\.scn`",
 		RegexOptions.Compiled);
 
 	/// <summary>One <c>## </c> entry: its section (the <c>#</c> heading above it), heading and text.</summary>
