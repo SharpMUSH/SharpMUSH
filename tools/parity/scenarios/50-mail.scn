@@ -1,0 +1,14 @@
+# @mail between two players in different rooms. Runs last: the mail it sends stays in the mailboxes.
+::case mail.fwd-by-name  @mail/fwd matches recipients by player name, not by what is nearby
+::login alice Alice alicepass
+::login bob Bob bobpass
+::as bob
+home
+::as alice
+@mail Alice=Forward me/A note to pass on.
+@mail/fwd 1=Bob
+@mail/fwd 1=Nobody
+@mail/fwd 1=Bob Alice
+::as bob
+@tel me=[loc(*Alice)]
+::as alice

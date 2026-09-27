@@ -331,6 +331,26 @@
   {
    "key": "30-softcode/sc.strings#2",
    "command": "think [pos(c,abcd)] [strmatch(hello,h*o)] [match(a b c,b)] [comp(a,b)] [ljust(a,3)]|[rjust(a,3)]|[center(a,5)]"
+  },
+  {
+   "key": "50-mail/mail.fwd-by-name#0",
+   "command": "Alice alicepass"
+  },
+  {
+   "key": "50-mail/mail.fwd-by-name#1",
+   "command": "Bob bobpass"
+  },
+  {
+   "key": "50-mail/mail.fwd-by-name#2",
+   "command": "home"
+  },
+  {
+   "key": "50-mail/mail.fwd-by-name#4",
+   "command": "@mail/fwd 1=Bob"
+  },
+  {
+   "key": "50-mail/mail.fwd-by-name#6",
+   "command": "@mail/fwd 1=Bob Alice"
   }
  ]
 }
