@@ -147,7 +147,8 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-		var alias = "TPOW";
+		// Unique per test: an alias namespace is unique per flagspace, and these run in parallel.
+		var alias = $"TPOW_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
 
@@ -166,7 +167,8 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Add_PreventsSystemPowerCreation()
 	{
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-		var alias = "TPOW";
+		// Unique per test: an alias namespace is unique per flagspace, and these run in parallel.
+		var alias = $"TPOW_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
 
@@ -182,7 +184,8 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-		var alias = "TPOW";
+		// Unique per test: an alias namespace is unique per flagspace, and these run in parallel.
+		var alias = $"TPOW_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 
 		var createdPower = await Mediator.Send(new CreatePowerCommand(
 			powerName, alias, string.Empty, false,
@@ -303,7 +306,8 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = $"TEST_POWER_DISABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-		var alias = "TPOW";
+		// Unique per test: an alias namespace is unique per flagspace, and these run in parallel.
+		var alias = $"TPOW_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
 
@@ -326,7 +330,8 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = $"TEST_POWER_ENABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-		var alias = "TPOW";
+		// Unique per test: an alias namespace is unique per flagspace, and these run in parallel.
+		var alias = $"TPOW_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/disable {powerName}"));
@@ -997,5 +1002,185 @@ public class FlagAndPowerCommandTests
 		await Assert.That(flag).IsNotNull()
 			.Because($"the store must resolve '{asked}' in any case and by alias, not only where the name happens to match");
 		await Assert.That(flag!.Name).IsEqualTo(expected);
+	}
+
+	// PennMUSH src/flags.c do_flag_alias: "That alias already matches the %s %s." ptab_flag holds names
+	// and aliases in one namespace, so an alias may not spell another flag's name (#1249).
+	[Test]
+	public async ValueTask Flag_Alias_RejectsNameOfAnotherFlag()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var flagName = await CreateLetterlessFlag();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/alias {flagName}=quiet"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Aliases ?? []).IsEmpty();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.FlagAliasConflictFormat), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	// ...nor another flag's alias, in any case.
+	[Test]
+	public async ValueTask Flag_Alias_RejectsAliasOfAnotherFlag()
+	{
+		var holder = await CreateLetterlessFlag();
+		var claimant = await CreateLetterlessFlag();
+		var alias = $"FA_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/alias {holder}={alias}"));
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(holder)))!.Aliases).IsEquivalentTo([alias]);
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@flag/alias {claimant}=OTHER_{alias} {alias.ToLowerInvariant()}"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(claimant)))!.Aliases ?? []).IsEmpty();
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(alias)))!.Name).IsEqualTo(holder);
+
+		await Mediator.Send(new DeleteObjectFlagCommand(holder));
+		await Mediator.Send(new DeleteObjectFlagCommand(claimant));
+	}
+
+	// match_flag_ns resolves a flag's own name too, so Penn refuses aliasing a flag to itself.
+	[Test]
+	public async ValueTask Flag_Alias_RejectsItsOwnName()
+	{
+		var flagName = await CreateLetterlessFlag();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/alias {flagName}={flagName.ToLowerInvariant()}"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Aliases ?? []).IsEmpty();
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	// @flag/alias replaces the whole alias list, so restating the flag's own aliases is not a collision.
+	[Test]
+	public async ValueTask Flag_Alias_AllowsRestatingItsOwnAliases()
+	{
+		var flagName = await CreateLetterlessFlag();
+		var first = $"FA_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var second = $"FB_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/alias {flagName}={first}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/alias {flagName}={first} {second}"));
+
+		await Assert.That((await Mediator.Send(new GetObjectFlagQuery(flagName)))!.Aliases).IsEquivalentTo([first, second]);
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	// @power/alias shares do_flag_alias, in the POWER flagspace (#1249).
+	[Test]
+	public async ValueTask Power_Alias_RejectsNameOfAnotherPower()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var alias = $"PA_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/alias {powerName}=builder"));
+
+		await Assert.That((await Mediator.Send(new GetPowerQuery(powerName)))!.Alias).IsEqualTo(alias);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.PowerAliasConflictFormat), executor, executor)).IsTrue();
+
+		await Mediator.Send(new DeletePowerCommand(powerName));
+	}
+
+	[Test]
+	public async ValueTask Power_Alias_RejectsAliasOfAnotherPower()
+	{
+		var holder = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var claimant = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var holderAlias = $"PA_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var claimantAlias = $"PB_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {holder}={holderAlias}"));
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {claimant}={claimantAlias}"));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@power/alias {claimant}={holderAlias.ToLowerInvariant()}"));
+
+		await Assert.That((await Mediator.Send(new GetPowerQuery(claimant)))!.Alias).IsEqualTo(claimantAlias);
+
+		await Mediator.Send(new DeletePowerCommand(holder));
+		await Mediator.Send(new DeletePowerCommand(claimant));
+	}
+
+	// @power/add's second argument is the new power's alias, so it enters the same namespace
+	// @power/alias does and owes it the same uniqueness — otherwise the check is only a front door
+	// and `@power/add NEW=BUILDER` still makes an object carrying only NEW answer to BUILDER (#1249).
+	[Test]
+	public async ValueTask Power_Add_RejectsNameOfAnotherPowerAsItsAlias()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}=builder"));
+
+		await Assert.That(await Mediator.Send(new GetPowerQuery(powerName))).IsNull();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.PowerAliasConflictFormat), executor, executor)).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask Power_Add_RejectsAliasOfAnotherPower()
+	{
+		var holder = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var claimant = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var holderAlias = $"PA_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {holder}={holderAlias}"));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@power/add {claimant}={holderAlias.ToLowerInvariant()}"));
+
+		await Assert.That(await Mediator.Send(new GetPowerQuery(claimant))).IsNull();
+		await Assert.That((await Mediator.Send(new GetPowerQuery(holderAlias)))!.Name).IsEqualTo(holder);
+
+		await Mediator.Send(new DeletePowerCommand(holder));
+	}
+
+	// A flag's second argument is its letter, not an alias, so @flag/add creates none to collide.
+	[Test]
+	public async ValueTask Flag_Add_LetterIsNotTreatedAsAnAlias()
+	{
+		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		// A private-use letter, so parallel letter-allocation tests keep their ASCII symbols free.
+		const string letter = "";
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/add {flagName}={letter}"));
+
+		var created = await Mediator.Send(new GetObjectFlagQuery(flagName));
+		await Assert.That(created).IsNotNull();
+		await Assert.That(created!.Aliases ?? []).IsEmpty();
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
+	}
+
+	/// <summary>
+	/// One alias admits one flag however many callers claim it at once. PennMUSH is single-threaded, so
+	/// <c>do_flag_alias</c>'s check and its <c>ptab_insert_one</c> cannot interleave; here they are two
+	/// Mediator round trips taken under one gate, which is what makes the check binding rather than
+	/// advisory — otherwise every caller passes the check and every caller writes.
+	/// </summary>
+	[Test]
+	public async ValueTask Flag_Alias_ConcurrentClaimsOnOneAliasLeaveOneHolder()
+	{
+		var alias = $"FR_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var flags = await Task.WhenAll(Enumerable.Range(0, 6).Select(async _ => await CreateLetterlessFlag()));
+
+		// Task.Run, not a bare Select: the command path completes synchronously against the test
+		// provider, so lazily enumerated ValueTasks would run one after another and race nothing.
+		await Task.WhenAll(flags.Select(flag => Task.Run(async () =>
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/alias {flag}={alias}")))));
+
+		var holders = await Task.WhenAll(flags.Select(async flag =>
+			(flag, aliases: (await Mediator.Send(new GetObjectFlagQuery(flag)))!.Aliases ?? [])));
+
+		await Assert.That(holders.Count(h => h.aliases.Contains(alias, StringComparer.OrdinalIgnoreCase))).IsEqualTo(1)
+			.Because("exactly one caller may claim the alias");
+
+		foreach (var flag in flags) await Mediator.Send(new DeleteObjectFlagCommand(flag));
 	}
 }

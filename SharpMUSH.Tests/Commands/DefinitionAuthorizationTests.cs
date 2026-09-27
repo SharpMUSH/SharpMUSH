@@ -112,10 +112,13 @@ public class DefinitionAuthorizationTests
 	public async Task AggregateSpecificAliasAndLetterPrecedenceIsPreserved(string kind, string switches)
 	{
 		var name = "AUTH" + Guid.NewGuid().ToString("N").ToUpperInvariant();
+		// An alias namespace is unique per flagspace (do_flag_alias, src/flags.c:2667), so each case
+		// claims its own: the two power cases run in parallel and a shared literal would collide.
+		var alias = "R_" + name;
 		try
 		{
 			await Create(kind, name);
-			await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@{kind}/{switches} {name}={(kind == "flag" ? "" : "R")}"));
+			await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@{kind}/{switches} {name}={(kind == "flag" ? "" : alias)}"));
 			if (kind == "flag")
 			{
 				var flag = await Mediator.Send(new GetObjectFlagQuery(name));
@@ -125,7 +128,7 @@ public class DefinitionAuthorizationTests
 			else
 			{
 				var power = await Mediator.Send(new GetPowerQuery(name));
-				await Assert.That(power!.Alias).IsEqualTo("R");
+				await Assert.That(power!.Alias).IsEqualTo(alias);
 				await Assert.That(power.Symbol).IsEqualTo(DefinitionSymbol);
 			}
 		}
@@ -237,12 +240,15 @@ public class DefinitionAuthorizationTests
 	{
 		var actor = await Actor(wizard);
 		var name = "AUTH" + Guid.NewGuid().ToString("N").ToUpperInvariant();
+		// A flag's second argument is its letter and collides with nothing; a power's is its alias,
+		// which is unique per flagspace, so the two power cases may not share one literal.
+		var second = kind == "flag" ? "Z" : $"Z{name}";
 		try
 		{
-			await Factory.CommandParser.CommandParse(actor.Handle, Connections, MarkupText.Plain($"@{kind}/{switches} {name}=Z"));
+			await Factory.CommandParser.CommandParse(actor.Handle, Connections, MarkupText.Plain($"@{kind}/{switches} {name}={second}"));
 			if (kind == "flag") await Assert.That(await Mediator.Send(new GetObjectFlagQuery(name))).IsNull();
 			else await Assert.That(await Mediator.Send(new GetPowerQuery(name))).IsNull();
-			await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@{kind}/{switches} {name}=Z"));
+			await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@{kind}/{switches} {name}={second}"));
 			if (kind == "flag") await Assert.That(await Mediator.Send(new GetObjectFlagQuery(name))).IsNotNull();
 			else await Assert.That(await Mediator.Send(new GetPowerQuery(name))).IsNotNull();
 		}

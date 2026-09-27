@@ -1301,6 +1301,8 @@ public static class ErrorMessages
 		public const string FlagAliasRequiresNameAndAliases = "@FLAG/ALIAS requires flag name and aliases.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FlagAliasesSetFormat = "Flag '{0}' aliases set to: {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string FlagAliasConflictFormat = "That alias already matches the {0} flag.";
 		public const string FlagRestrictRequiresNameAndPermissions = "@FLAG/RESTRICT requires flag name and permissions.";
 		public const string FlagNameAndPermissionsCannotBeEmpty = "Flag name and permissions cannot be empty.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1336,6 +1338,8 @@ public static class ErrorMessages
 		public const string PowerAliasRequiresNameAndAlias = "@POWER/ALIAS requires power name and new alias.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PowerAliasChangedFormat = "Power '{0}' alias changed to '{1}'.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PowerAliasConflictFormat = "That alias already matches the {0} power.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToUpdatePowerFormat = "Failed to update power '{0}'.";
 

@@ -1808,7 +1808,8 @@ public partial class Commands : ICommandRestrictionApplier
 		string DeleteRequires, string NameEmpty, string NotFound, string CannotDeleteSystem, string Deleted, string FailedToDelete,
 		string LetterRequires, string CannotModifySystem, string SingleCharacters, string LetterConflict, string FailedToUpdate,
 		string LetterSet, string LetterCleared, string TypeRequires, string NameAndTypesEmpty, string TypeUpdated,
-		string AliasRequires, string AliasSet, string RestrictRequires, string NameAndPermissionsEmpty, string PermissionsUpdated,
+		string AliasRequires, string AliasSet, string AliasConflict, string RestrictRequires,
+		string NameAndPermissionsEmpty, string PermissionsUpdated,
 		string DecompileRequires, string DisableEnableRequires, string CannotDisableSystem,
 		string DisabledFormat, string EnabledFormat, string FailedToDisableFormat, string FailedToEnableFormat);
 
@@ -1866,6 +1867,7 @@ public partial class Commands : ICommandRestrictionApplier
 			TypeUpdated: nameof(ErrorMessages.Notifications.FlagTypeUpdatedFormat),
 			AliasRequires: nameof(ErrorMessages.Notifications.FlagAliasRequiresNameAndAliases),
 			AliasSet: nameof(ErrorMessages.Notifications.FlagAliasesSetFormat),
+			AliasConflict: nameof(ErrorMessages.Notifications.FlagAliasConflictFormat),
 			RestrictRequires: nameof(ErrorMessages.Notifications.FlagRestrictRequiresNameAndPermissions),
 			NameAndPermissionsEmpty: nameof(ErrorMessages.Notifications.FlagNameAndPermissionsCannotBeEmpty),
 			PermissionsUpdated: nameof(ErrorMessages.Notifications.FlagPermissionsUpdatedFormat),
@@ -1933,6 +1935,7 @@ public partial class Commands : ICommandRestrictionApplier
 			TypeUpdated: nameof(ErrorMessages.Notifications.PowerTypeUpdatedFormat),
 			AliasRequires: nameof(ErrorMessages.Notifications.PowerAliasRequiresNameAndAlias),
 			AliasSet: nameof(ErrorMessages.Notifications.PowerAliasChangedFormat),
+			AliasConflict: nameof(ErrorMessages.Notifications.PowerAliasConflictFormat),
 			RestrictRequires: nameof(ErrorMessages.Notifications.PowerRestrictRequiresNameAndPermissions),
 			NameAndPermissionsEmpty: nameof(ErrorMessages.Notifications.PowerNameAndPermissionsCannotBeEmpty),
 			PermissionsUpdated: nameof(ErrorMessages.Notifications.PowerPermissionsUpdatedFormat),
@@ -2003,10 +2006,11 @@ public partial class Commands : ICommandRestrictionApplier
 			if (await registry.Find(Mediator, name.ToUpperInvariant()) is not null) return await Say(keys.AlreadyExists, name);
 
 			// A flag's second argument is its letter, kept as typed; a power's is its alias.
-			if (!await registry.Create(Mediator, name.ToUpperInvariant(), registry.SingleAlias ? second.ToUpperInvariant() : second))
-			{
-				return await Say(keys.FailedToCreate, name);
-			}
+			var (addConflict, created) = await CheckedCreateAsync(registry, name.ToUpperInvariant(),
+				registry.SingleAlias ? second.ToUpperInvariant() : second);
+
+			if (addConflict is not null) return await Say(keys.AliasConflict, addConflict);
+			if (!created) return await Say(keys.FailedToCreate, name);
 
 			await Say(keys.Created, name, second);
 			return new CallState(MarkupText.Plain(name));
@@ -2096,14 +2100,14 @@ public partial class Commands : ICommandRestrictionApplier
 
 		// letter_to_flagptr's `n->tab == &ptab_flag` guard makes this unreachable for the POWER
 		// flagspace; it is implemented as written, not as reached.
-		if (letter.Length == 1
-				&& await FindLetterConflict(registry.All(Mediator).Select(x => (x.Name, x.Symbol, x.TypeRestrictions)),
-					entry.Name, letter, entry.TypeRestrictions) is { } conflict)
-		{
-			return await say(keys.LetterConflict, [conflict]);
-		}
+		var (conflict, written) = await CheckedUpdateAsync(registry, entry with { Symbol = letter },
+			letter.Length == 1
+				? () => FindLetterConflict(registry.All(Mediator).Select(x => (x.Name, x.Symbol, x.TypeRestrictions)),
+					entry.Name, letter, entry.TypeRestrictions)
+				: null);
 
-		if (!await registry.Update(Mediator, entry with { Symbol = letter })) return await say(keys.FailedToUpdate, [typed]);
+		if (conflict is not null) return await say(keys.LetterConflict, [conflict]);
+		if (!written) return await say(keys.FailedToUpdate, [typed]);
 
 		await (letter.Length == 1 ? say(keys.LetterSet, [entry.Name, letter]) : say(keys.LetterCleared, [entry.Name]));
 		return new CallState(MarkupText.Plain(entry.Name));
@@ -2126,9 +2130,94 @@ public partial class Commands : ICommandRestrictionApplier
 				words.Length > 0 ? string.Join(", ", words.Select(a => a.ToUpper())) : "none")
 		};
 
-		if (!await registry.Update(Mediator, updated)) return await say(keys.FailedToUpdate, [typed]);
+		var (conflict, written) = await CheckedUpdateAsync(registry, updated,
+			operation == DefinitionOperation.Alias
+				? () => FindAliasConflict(registry.All(Mediator), entry.Name, updated.Aliases ?? [])
+				: null);
+
+		if (conflict is not null) return await say(keys.AliasConflict, [conflict]);
+		if (!written) return await say(keys.FailedToUpdate, [typed]);
+
 		await say(key, [typed, shown]);
 		return new CallState(MarkupText.Plain(typed));
+	}
+
+	/// <summary>
+	/// PennMUSH is single-threaded, so <c>do_flag_alias</c>'s "does anything already answer to this
+	/// alias?" and the <c>ptab_insert_one</c> that follows cannot be interleaved; <c>do_flag_letter</c>
+	/// is the same shape. Here each is a pair of Mediator round trips, and this gate is what makes the
+	/// check binding rather than advisory: without it two God sessions can both pass the check and both
+	/// write, leaving exactly the duplicate the check exists to refuse.
+	/// <para>Nothing between the check and the write runs softcode, so the gate cannot be re-entered on
+	/// one call stack — <see cref="SemaphoreSlim"/> is not reentrant. Speaking the result happens
+	/// outside it.</para>
+	/// </summary>
+	private static readonly SemaphoreSlim DefinitionMutationGate = new(1, 1);
+
+	/// <summary>
+	/// <c>@power/add</c>'s second argument is the new power's alias. PennMUSH's is a letter
+	/// (<c>do_flag_add</c>, <c>src/flags.c:2505</c>, reads <c>args_right[1]</c> as one character), so
+	/// Penn has no alias to validate here — but SharpMUSH's creation enters the very namespace
+	/// <c>@power/alias</c> does, and owes it the same uniqueness or the alias check is only a front
+	/// door. A flag's second argument really is its letter, and creates no alias.
+	/// </summary>
+	/// <returns>The conflicting definition's name, or whether the definition was created.</returns>
+	private async ValueTask<(string? Conflict, bool Created)> CheckedCreateAsync(DefinitionRegistry registry,
+		string name, string second)
+	{
+		await DefinitionMutationGate.WaitAsync();
+		try
+		{
+			if (registry.SingleAlias && await FindAliasConflict(registry.All(Mediator), name, [second]) is { } conflict)
+			{
+				return (conflict, false);
+			}
+
+			return (null, await registry.Create(Mediator, name, second));
+		}
+		finally
+		{
+			DefinitionMutationGate.Release();
+		}
+	}
+
+	/// <summary>
+	/// Runs <paramref name="findConflict"/> (when there is one) and the write as one critical section.
+	/// </summary>
+	/// <returns>The conflicting definition's name, or whether the write landed.</returns>
+	private async ValueTask<(string? Conflict, bool Written)> CheckedUpdateAsync(DefinitionRegistry registry,
+		RegistryEntry updated, Func<ValueTask<string?>>? findConflict)
+	{
+		await DefinitionMutationGate.WaitAsync();
+		try
+		{
+			if (findConflict is not null && await findConflict() is { } conflict) return (conflict, false);
+			return (null, await registry.Update(Mediator, updated));
+		}
+		finally
+		{
+			DefinitionMutationGate.Release();
+		}
+	}
+
+	/// <summary>
+	/// <c>do_flag_alias</c> (<c>src/flags.c</c>) refuses an alias that <c>match_flag_ns</c> already
+	/// resolves — "That alias already matches the %s %s." — because <c>ptab_flag</c> holds names and
+	/// aliases in one namespace. Here each definition carries its own alias list and the switch replaces
+	/// it whole, so the edited definition's current aliases may be restated; its name may not.
+	/// </summary>
+	/// <returns>The name of the definition an alias already matches, or null.</returns>
+	private static async ValueTask<string?> FindAliasConflict(IAsyncEnumerable<RegistryEntry> all, string name,
+		IEnumerable<string> aliases)
+	{
+		var proposed = aliases.ToHashSet(StringComparer.OrdinalIgnoreCase);
+		if (proposed.Contains(name)) return name;
+
+		return await all
+			.Where(other => !string.Equals(other.Name, name, StringComparison.OrdinalIgnoreCase))
+			.Where(other => proposed.Contains(other.Name) || (other.Aliases ?? []).Any(proposed.Contains))
+			.Select(other => other.Name)
+			.FirstOrDefaultAsync();
 	}
 
 	private async ValueTask<CallState> DisableDefinitionAsync(DefinitionRegistry registry, AnySharpObject executor,
