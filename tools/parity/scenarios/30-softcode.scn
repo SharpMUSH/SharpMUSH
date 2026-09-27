@@ -50,3 +50,7 @@ think [name(%!)] [hasflag(%#,WIZARD)] [flags()] [type(%#)]
 think [nosuchfunction(1)]
 think [add()] [strlen()] [mid(abc)]
 think [get(nothing/nothing)] [name(#9999)] [loc(#9999)]
+
+::case sc.wshtml-default  wshtml() takes PennMUSH's <default string> (#1282)
+think [wshtml(<b>x</b>,x)]
+@pemit me=[wshtml(<b>x</b>,x)] and more

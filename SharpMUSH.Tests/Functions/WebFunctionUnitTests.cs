@@ -46,7 +46,7 @@ public class WebFunctionUnitTests
 
 	/// <summary>
 	/// <c>wshtml(&lt;html&gt;)</c> turns an HTML fragment into markup: text nodes become the text, elements
-	/// become <c>HtmlMarkup</c> layers over what they enclose. It sends nothing and takes no fallback —
+	/// become <c>HtmlMarkup</c> layers over what they enclose. It sends nothing and uses no fallback —
 	/// the plain reading of the value is its own text, so a client without HTML gets that.
 	/// </summary>
 	[Test]
@@ -61,6 +61,22 @@ public class WebFunctionUnitTests
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>wshtml(&lt;html&gt;[, &lt;default&gt;])</c> takes a second argument (<c>help wshtml()</c>,
+	/// <c>src/function.c</c>), and imported softcode passes one as its help example does. It is accepted and
+	/// not used: the value is the fragment's markup, whose own text is the plain reading (#1282).
+	/// </summary>
+	[Test]
+	[Arguments("wshtml(<b>x</b>,x)", "x", "<b>x</b>")]
+	[Arguments("wshtml(<a href=\"http://pennmush.org\">PennMUSH</a>,Go to http://pennmush.org)", "PennMUSH", "<a href=\"http://pennmush.org\">PennMUSH</a>")]
+	[Arguments("wshtml(<b>x</b>,)", "x", "<b>x</b>")]
+	public async Task WshtmlAcceptsPennMUSHsDefaultArgument(string str, string plain, string html)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))!.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(plain);
+		await Assert.That(result.Render(MarkupFormat.Html)).IsEqualTo(html);
 	}
 
 	[Test]

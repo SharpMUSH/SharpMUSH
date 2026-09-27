@@ -120,9 +120,11 @@ public partial class Functions
 	///
 	/// <para>PennMUSH's <c>wshtml(&lt;html&gt;, &lt;default&gt;)</c> carries a second, plain-text reading
 	/// because its buffer holds raw bytes and cannot degrade a tag on its own. Markup can, so the second
-	/// argument has no counterpart: the fragment's own text is what a client without HTML sees.</para>
+	/// argument has no counterpart: the fragment's own text is what a client without HTML sees. It is
+	/// still accepted (PennMUSH's arity, <c>src/function.c</c>) so imported softcode that passes one runs
+	/// instead of erroring, and is evaluated like any other argument but not used (#1282).</para>
 	/// </summary>
-	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["html"])]
+	[SharpFunction(Name = "wshtml", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["html", "default"])]
 	public async ValueTask<CallState> WsHtml(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var html = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
