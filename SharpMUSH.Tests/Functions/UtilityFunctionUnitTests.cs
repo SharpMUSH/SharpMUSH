@@ -220,8 +220,16 @@ public class UtilityFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("isobjid(#1:0)", "1")]
-	[Arguments("isobjid(#123:456789)", "1")]
+	// fun_isobjid is real_parse_objid(args[0], 1) != NOTHING (src/fundb.c, src/parse.c): the object
+	// must exist and the creation time must match. Expected values observed on PennMUSH 1.8.8 via
+	// pennmush/test/runtest.pl: own objid 1, bare dbref 0, #1:9876543210 0, #99999:1 0, #1: 0,
+	// #-1:0 0, and a strtol-style "+" before the creation time 1.
+	[Arguments("isobjid(objid(#1))", "1")]
+	[Arguments("isobjid(#1:+[after(objid(#1),:)])", "1")]
+	[Arguments("isobjid(#1:9876543210)", "0")]
+	[Arguments("isobjid(#1:0)", "0")]
+	[Arguments("isobjid(#99999:1)", "0")]
+	[Arguments("isobjid(#-1:0)", "0")]
 	[Arguments("isobjid(notvalid)", "0")]
 	[Arguments("isobjid(#1)", "0")]
 	[Arguments("isobjid(#1:)", "0")]
