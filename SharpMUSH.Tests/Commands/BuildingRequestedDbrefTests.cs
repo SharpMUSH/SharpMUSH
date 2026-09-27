@@ -504,6 +504,56 @@ public class BuildingRequestedDbrefTests
 		}
 	}
 
+	/// <summary>
+	/// <c>@PCREATE</c> is <c>CMD_T_EQSPLIT | CMD_T_RS_ARGS</c> (<c>src/command.c:256</c>), so
+	/// <c>cmd_pcreate</c> reads the password from <c>args_right[1]</c> and the dbref from
+	/// <c>args_right[2]</c> (<c>src/cmds.c:1228-1238</c>); <c>fun_pcreate</c> passes <c>args[2]</c>
+	/// (<c>src/fundb.c:2129-2141</c>). Both reach <c>make_first_free_wrapper</c> in <c>do_pcreate</c>
+	/// (<c>src/wiz.c:120</c>). SharpMUSH kept the whole right side as the password and built wherever the
+	/// counter pointed.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask APlayerIsCreatedInTheHoleItAsksFor(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var hole = await Hole(uid);
+		var name = $"BrdPc{uid}";
+
+		await Run(1, throughTheFunction
+			? $"think pcreate({name},brdpass,#{hole.Number})"
+			: $"@pcreate {name}=brdpass,#{hole.Number}");
+
+		await Assert.That(await NumbersNamed(name)).IsEquivalentTo(new[] { hole.Number })
+			.Because("destroy.c:945 makes the requested slot the next one new_object() hands out");
+		await Assert.That(await Run(1, $"think checkpass(*{name},brdpass)")).IsEqualTo("1")
+			.Because("the dbref is the third argument, not the tail of the password");
+	}
+
+	/// <summary><c>make_first_free_wrapper</c> refuses before <c>create_player</c> runs, so nothing is created.</summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask APlayerAskingForAnOccupiedDbrefIsRefusedAndNotCreated(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var occupant = DBRef.Parse(await Run(1, $"@create BrdPcOccupant{uid}"));
+		var name = $"BrdPcNo{uid}";
+
+		var reported = await Run(1, throughTheFunction
+			? $"think pcreate({name},brdpass,#{occupant.Number})"
+			: $"@pcreate {name}=brdpass,#{occupant.Number}");
+
+		if (throughTheFunction)
+		{
+			await Assert.That(reported).IsEqualTo(ErrorMessages.Returns.InvalidDbref);
+		}
+
+		await Assert.That((await Named(name)).Length).IsEqualTo(0)
+			.Because("a refused request must not quietly create the player at a different dbref");
+	}
+
 	/// <summary>Asking for nothing is still the ordinary path: the counter hands out the next dbref.</summary>
 	[Test]
 	[Arguments(true)]

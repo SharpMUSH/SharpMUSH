@@ -1,5 +1,6 @@
 using DotNext.Collections.Generic;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -22,10 +23,13 @@ namespace SharpMUSH.Implementation.Commands;
 public partial class Commands
 {
 	/// <remarks>
-	/// Creating on the DBRef is not implemented.
+	/// <c>@PCREATE</c> is <c>CMD_T_EQSPLIT | CMD_T_RS_ARGS</c> in PennMUSH (<c>src/command.c:256</c>):
+	/// <c>cmd_pcreate</c> (<c>src/cmds.c:1228</c>) takes the password from <c>args_right[1]</c> and the
+	/// requested dbref from <c>args_right[2]</c>, and <c>do_pcreate</c> (<c>src/wiz.c:108-146</c>) settles
+	/// that dbref through <c>make_first_free_wrapper</c> before it looks at the name or the password.
 	/// </remarks>
-	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD",
-		MinArgs = 2, MaxArgs = 3, ParameterNames = ["name", "password"])]
+	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD",
+		MinArgs = 2, MaxArgs = 3, ParameterNames = ["name", "password", "dbref"])]
 	public async ValueTask<Option<CallState>> PlayerCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -37,28 +41,13 @@ public partial class Commands
 		var password = args["1"].Message!.ToPlainText();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		// do_pcreate: "name in use" before "bad name", then ok_player_name with the creator as the
-		// one asking — a wizard, so banned names do not apply.
-		if (await Mediator.CreateStream(new GetPlayerQuery(name))
-				.AnyAsync(x => x.Object.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
+		if (await BuildingHelpers.WithRequestedDbrefsAsync(Mediator, NotifyService, executor,
+				[BuildingHelpers.Argument(args, "2")],
+				async at => await CreatePlayerAtAsync(executor, name, password, defaultHomeDbref, startingQuota, at[0]))
+			is not DBRef player)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNameAlreadyExists), executor);
 			return CallState.Empty;
 		}
-
-		if (!await ValidateService.ValidPlayerName(MarkupText.Plain(name), executor, new None()))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidName), executor);
-			return CallState.Empty;
-		}
-
-		if (!await ValidateService.Valid(IValidateService.ValidationType.Password, MarkupText.Plain(password), new None()))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidPassword), executor);
-			return CallState.Empty;
-		}
-
-		var player = await Mediator.Send(new CreatePlayerCommand(name, password, defaultHomeDbref, defaultHomeDbref, startingQuota));
 
 		// PennMUSH src/wiz.c do_pcreate ends with exactly this notify — including the password, which the
 		// wizard has to be able to pass on to the new player and just typed anyway.
@@ -77,6 +66,38 @@ public partial class Commands
 			""); // email (not applicable for @pcreate)
 
 		return new CallState(player.ToString());
+	}
+
+	/// <summary>
+	/// do_pcreate's refusals after the dbref, in its order: "name in use" before "bad name", then
+	/// ok_player_name with the creator as the one asking — a wizard, so banned names do not apply —
+	/// then the password. <paramref name="requested"/> has already been checked free under the
+	/// requested-dbref gate, which this runs inside.
+	/// </summary>
+	private async ValueTask<Result<DBRef>> CreatePlayerAtAsync(AnySharpObject executor, string name, string password,
+		DBRef home, int quota, DBRef? requested)
+	{
+		if (await Mediator.CreateStream(new GetPlayerQuery(name))
+				.AnyAsync(x => x.Object.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerNameAlreadyExists), executor);
+			return new Error<string>(ErrorMessages.Returns.PlayerNameInUse);
+		}
+
+		if (!await ValidateService.ValidPlayerName(MarkupText.Plain(name), executor, new None()))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidName), executor);
+			return new Error<string>(ErrorMessages.Returns.BadPlayerName);
+		}
+
+		if (!await ValidateService.Valid(IValidateService.ValidationType.Password, MarkupText.Plain(password), new None()))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PlayerCreateInvalidPassword), executor);
+			return new Error<string>(ErrorMessages.Returns.BadPassword);
+		}
+
+		return await Mediator.Send(new CreatePlayerCommand(name, password, home, home, quota,
+			RequestedDbref: requested?.Number));
 	}
 
 	[SharpCommand(Name = "@NEWPASSWORD", Switches = ["GENERATE"], Behavior = CB.Default | CB.EqSplit | CB.RSNoParse,
