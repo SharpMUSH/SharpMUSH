@@ -152,7 +152,7 @@ public partial class ValidateService(
 		&& !name.EndsWith('`')
 		&& !name.Contains("``");
 
-	[GeneratedRegex("^[!\"#%&\\(\\)\\+,\\-\\./0-9A-Za-z:;\\<\\>=\\?@`_]+$")]
+	[GeneratedRegex("^" + HelperFunctions.AttributeNameCharacters + "+$")]
 	private static partial Regex ValidAttributeNameRegex();
 
 	[GeneratedRegex("^[^:;\"#\\\\&\\]\\[\\p{C}]+$")]

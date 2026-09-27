@@ -575,7 +575,7 @@ public static partial class HelperFunctions
 	/// A regular expression that takes the form of 'Object/attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"^(?<Object>#\d+(?::\d+)?)/(?<Attribute>[a-zA-Z0-9#@_\-\.`\?\*\[\]\(\)\+\<\>\^\$]+)$")]
+	[GeneratedRegex(@"^(?<Object>#\d+(?::\d+)?)/(?<Attribute>" + AttributePatternCharacters + "+)$")]
 	private static partial Regex DatabaseReferenceWithAttribute();
 
 	/// <summary>
@@ -586,35 +586,47 @@ public static partial class HelperFunctions
 	/// (e.g. bb_post_bdy_#1, produced by &amp; attr_%# obj=value patterns).
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+)$")]
+	[GeneratedRegex(@"^(?<Object>[^/]+)/(?<Attribute>" + AttributePatternCharacters + "+)$")]
 	private static partial Regex ObjectWithAttribute();
 
 	/// <summary>
 	/// A regular expression that takes the form of '[Object/]attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"^(?:(?<Object>[^/]+)/)?(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+)$")]
+	[GeneratedRegex(@"^(?:(?<Object>[^/]+)/)?(?<Attribute>" + AttributePatternCharacters + "+)$")]
 	private static partial Regex OptionalDatabaseReferenceWithAttribute();
 
 	/// <summary>
 	/// A regular expression that takes the form of '[Object/]attributeName'.
 	/// </summary>
 	/// <returns>A regex that has a named group for the Object and Attribute.</returns>
-	[GeneratedRegex(@"^(?<Object>[^/]+)(?:/(?<Attribute>[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+))?$")]
+	[GeneratedRegex(@"^(?<Object>[^/]+)(?:/(?<Attribute>" + AttributePatternCharacters + "+))?$")]
 	private static partial Regex DatabaseReferenceWithOptionalAttribute();
 
 	/// <summary>
-	/// Validates basic attribute name format. Matches PennMUSH good_atr_name() which permits
-	/// any printable character except backtick, pipe, semicolon, and braces.
-	/// Includes # because attribute names set via &amp; attr_%# obj=val expand the dbref into the name.
+	/// The characters an attribute NAME may contain: PennMUSH's <c>atr_name_table</c>
+	/// (<c>utils/gentables.c</c>), which backs <c>good_atr_name</c>, <c>good_flag_name</c> and
+	/// q-register and user-lock names. Penn upper-cases before it checks, so lower case is here too.
+	/// A regex character class, for <see cref="Services.ValidateService"/>.
 	/// </summary>
-	[GeneratedRegex(@"^[a-zA-Z0-9@_\-\.`\?\*\[\]\(\)\+\<\>\^\$#]+$")]
+	public const string AttributeNameCharacters = @"[!""#$&'*+,\-./0-9;<=>?@A-Z_`|~a-z]";
+
+	/// <summary>
+	/// The characters the attribute half of <c>obj/attr</c> may contain. That half is a PATTERN for
+	/// <c>@wipe</c>, <c>lattr()</c> and the rest, so this is every <see cref="AttributeNameCharacters"/>
+	/// character plus the regex metacharacters <c>[ ] ( ) ^</c> (the wildcards <c>* ?</c> and <c>$</c> are
+	/// already legal in a name). <c>/</c> is left out: it ends the object half, and every splitter here
+	/// has always read <c>a/b/c</c> as no match rather than as attribute <c>b/c</c>.
+	/// </summary>
+	public const string AttributePatternCharacters = @"[!""#$&'*+,\-.0-9;<=>?@A-Z_`|~a-z\[\]()^]";
+
+	[GeneratedRegex("^" + AttributePatternCharacters + "+$")]
 	private static partial Regex AttributeNameValidation();
 
 	/// <summary>
-	/// Validates that an attribute name is well-formed
+	/// Validates that the attribute half of <c>obj/attr</c> is a well-formed pattern.
 	/// </summary>
-	/// <param name="attributeName">The attribute name to validate</param>
+	/// <param name="attributeName">The attribute name or pattern to validate</param>
 	/// <returns>True if valid, false otherwise</returns>
 	private static bool IsValidAttributeName(string attributeName)
 	{
