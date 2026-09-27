@@ -28,8 +28,20 @@ public class MailDeliveryTests
 	private ITaskScheduler Scheduler => WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>();
 	private IMUSHCodeParser GodParser => WebAppFactoryArg.CommandParser;
 
-	private Task<TestIsolationHelpers.TestPlayer> Player(string prefix)
-		=> TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+	/// <summary>
+	/// Each player gets a room of its own. In the shared DefaultHome a player hears other tests'
+	/// "has connected."/"has disconnected." broadcasts, which broke the emptiness check on a silent
+	/// send (a PageCommandTests disconnect landed in its window).
+	/// </summary>
+	private async Task<TestIsolationHelpers.TestPlayer> Player(string prefix)
+	{
+		var roomName = TestIsolationHelpers.GenerateUniqueName($"{prefix}Room");
+		var digResult = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
+		var room = DBRef.Parse(digResult.Message!.ToPlainText()!.Trim());
+
+		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
+	}
 
 	private async Task<CallState> Run(TestIsolationHelpers.TestPlayer who, string command)
 		=> await WebAppFactoryArg.CommandParserFor(who.DbRef, who.Handle)

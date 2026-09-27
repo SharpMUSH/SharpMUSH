@@ -377,8 +377,11 @@ public class ConnectionAnnounceIntegrationTests
 	{
 		var (_, channel) = await CreateChannelAsync("AnnounceQuietChan9", "Open", "Quiet");
 
+		// Its window is checked for emptiness, so it must not stand in the shared DefaultHome, where
+		// other tests' "has connected."/"has disconnected." would land in it.
 		var channelWitness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceChanWitness9");
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceChanWitness9",
+			await DigRoomAsync("AnnounceChanWitnessRoom9"));
 		await JoinChannelAsync(channel, channelWitness.DbRef);
 
 		var roomWitness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
