@@ -1,20 +1,21 @@
 # PennMUSH vs SharpMUSH parity report
 
-- Generated: 2026-09-25 04:37:34Z
-- SharpMUSH commit: 14a3b9b66
+- Generated: 2026-09-27 06:01:32Z
+- SharpMUSH commit: fae5ab24b
 - PennMUSH commit: 80a1d5b
-- Scenarios: 00-login, 05-import, 10-player-commands, 20-admin-commands, 30-softcode
-- **Steps: 150 — 69 match, 1 known difference, 80 open gap (baseline), 0 UNEXPECTED DIFFERENCE, 0 error; 0 stale allowlist entries, 0 baseline entries now fixed, 0 orphaned entries**
+- Scenarios: 00-login, 05-import, 10-player-commands, 20-admin-commands, 25-requested-dbref, 30-softcode
+- **Steps: 197 — 110 match, 1 known difference, 86 open gap (baseline), 0 UNEXPECTED DIFFERENCE, 0 error; 0 stale allowlist entries, 0 baseline entries now fixed, 0 orphaned entries**
 
 | Scenario | Steps | Match | Known | Open gap | Unexpected | Error |
 |---|---:|---:|---:|---:|---:|---:|
 | 00-login | 10 | 3 | 0 | 7 | 0 | 0 |
 | 05-import | 15 | 5 | 1 | 9 | 0 | 0 |
-| 10-player-commands | 55 | 20 | 0 | 35 | 0 | 0 |
-| 20-admin-commands | 34 | 16 | 0 | 18 | 0 | 0 |
+| 10-player-commands | 55 | 25 | 0 | 30 | 0 | 0 |
+| 20-admin-commands | 34 | 17 | 0 | 17 | 0 | 0 |
+| 25-requested-dbref | 47 | 35 | 0 | 12 | 0 | 0 |
 | 30-softcode | 36 | 25 | 0 | 11 | 0 | 0 |
 
-## Differences (80; open gaps are tracked in baseline.json)
+## Differences (86; open gaps are tracked in baseline.json)
 
 ### `00-login/login.player#0` — open-gap
 
@@ -308,66 +309,6 @@
  You are in Room Zero.
 +Contents:
 +Bob
-```
-
-### `10-player-commands/comm.say#0` — open-gap
-
-- Repro: `tools/parity/run.sh --only 10-player-commands/comm.say` — tools/parity/scenarios/10-player-commands.scn:10, session `alice`, command `say hello there`
-
-```diff
---- PennMUSH
-+++ SharpMUSH
-@@ -1 +1 @@
--You say, "hello there"
-+
-```
-
-### `10-player-commands/comm.say#1` — open-gap
-
-- Repro: `tools/parity/run.sh --only 10-player-commands/comm.say` — tools/parity/scenarios/10-player-commands.scn:11, session `alice`, command `:waves.`
-
-```diff
---- PennMUSH
-+++ SharpMUSH
-@@ -1 +1 @@
--Alice waves.
-+
-```
-
-### `10-player-commands/comm.say#2` — open-gap
-
-- Repro: `tools/parity/run.sh --only 10-player-commands/comm.say` — tools/parity/scenarios/10-player-commands.scn:12, session `alice`, command `;'s cat purrs.`
-
-```diff
---- PennMUSH
-+++ SharpMUSH
-@@ -1 +1 @@
--Alice's cat purrs.
-+
-```
-
-### `10-player-commands/comm.say#3` — open-gap
-
-- Repro: `tools/parity/run.sh --only 10-player-commands/comm.say` — tools/parity/scenarios/10-player-commands.scn:13, session `alice`, command `"quoted shortcut`
-
-```diff
---- PennMUSH
-+++ SharpMUSH
-@@ -1 +1 @@
--You say, "quoted shortcut"
-+
-```
-
-### `10-player-commands/comm.say#4` — open-gap
-
-- Repro: `tools/parity/run.sh --only 10-player-commands/comm.say` — tools/parity/scenarios/10-player-commands.scn:14, session `alice`, command `@emit A bell rings.`
-
-```diff
---- PennMUSH
-+++ SharpMUSH
-@@ -1 +1 @@
--A bell rings.
-+
 ```
 
 ### `10-player-commands/comm.page#0` — open-gap
@@ -819,11 +760,11 @@
 +MAILFOLDERS [$cw+ #1]: 0:INBOX:0
  Carrying:
 -Widget(#7Tn)
--Gadget(#NEW1Tn)
+-Gadget(#NEW1@10-player-commandsTn)
 -Home: Room Zero(#0RL)
 -Location: Lab(#6Rn)
 +Widget(#7nT)
-+Gadget(#NEW1GnT)
++Gadget(#NEW1@10-player-commandsGnT)
 +Home: Room Zero(#0LR)
 +Location: Lab(#6nR)
 ```
@@ -862,18 +803,6 @@
  [alice] Contents:
  [alice] Wiz
 +[alice] Alice
-```
-
-### `20-admin-commands/admin.pcreate#0` — open-gap
-
-- Repro: `tools/parity/run.sh --only 20-admin-commands/admin.pcreate` — tools/parity/scenarios/20-admin-commands.scn:12, session `wiz`, command `@pcreate Carol=carolpw`
-
-```diff
---- PennMUSH
-+++ SharpMUSH
-@@ -1 +1 @@
--New player 'Carol' (#NEW4) created with password 'carolpw'
-+New player 'Carol' (#NEW3) created with password 'carolpw'
 ```
 
 ### `20-admin-commands/admin.pcreate#1` — open-gap
@@ -921,10 +850,11 @@
 ```diff
 --- PennMUSH
 +++ SharpMUSH
-@@ -1,2 +1 @@
+@@ -1,2 +1,2 @@
 -Alice says, "forced hello"
 -[alice] You say, "forced hello"
-+
++You say, "forced hello"
++[alice] Wiz says, "forced hello"
 ```
 
 ### `20-admin-commands/admin.force#2` — open-gap
@@ -934,11 +864,12 @@
 ```diff
 --- PennMUSH
 +++ SharpMUSH
-@@ -1,3 +1 @@
+@@ -1,3 +1,2 @@
 -Alice - Triggered.
 -Alice says, "triggered 1"
 -[alice] You say, "triggered 1"
-+
++You say, "triggered 1"
++[alice] Wiz says, "triggered 1"
 ```
 
 ### `20-admin-commands/admin.denied#0` — open-gap
@@ -1151,12 +1082,12 @@
 +++ SharpMUSH
 @@ -1 +1 @@
 -13 objects = 4 rooms, 1 exits, 3 things, 5 players, 0 garbage.
-+18 objects = 4 rooms, 0 exits, 9 things, 5 players.
++19 objects = 4 rooms, 0 exits, 9 things, 6 players.
 ```
 
-### `30-softcode/sc.login#0` — open-gap
+### `25-requested-dbref/dbref.holes#0` — open-gap
 
-- Repro: `tools/parity/run.sh --only 30-softcode/sc.login` — tools/parity/scenarios/30-softcode.scn:3, session `wiz`, login `Wiz wizpass`
+- Repro: `tools/parity/run.sh --only 25-requested-dbref/dbref.holes` — tools/parity/scenarios/25-requested-dbref.scn:16, session `wiz`, login `Wiz wizpass`
 
 ```diff
 --- PennMUSH
@@ -1173,6 +1104,303 @@
  You are in Room Zero.
 +Contents:
 +Wiz(#3AenWP)
+```
+
+### `25-requested-dbref/dbref.holes#2` — open-gap
+
+- Repro: `tools/parity/run.sh --only 25-requested-dbref/dbref.holes` — tools/parity/scenarios/25-requested-dbref.scn:19, session `wiz`, command `think [set(me,HOLES:[create(RqA)] [create(RqB)] [create(RqC)] [create(RqD)] [create(RqE)] [create(RqF)] [create(RqG)] [create(RqH)] [create(RqI)] [create(RqJ)] [create(RqK)] [create(RqL)] [create(RqM)] [create(RqN)] [create(RqO)] [create(RqP)] [create(RqQ)])]`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1,18 +1,18 @@
+-Created: Object #NEW1.
+-Created: Object #NEW2.
+-Created: Object #NEW3.
+-Created: Object #NEW4.
+-Created: Object #NEW5.
+-Created: Object #NEW6.
+-Created: Object #NEW7.
+-Created: Object #NEW8.
+-Created: Object #NEW9.
+-Created: Object #NEW10.
+-Created: Object #NEW11.
+-Created: Object #NEW12.
+-Created: Object #NEW13.
+-Created: Object #NEW14.
+-Created: Object #NEW15.
+-Created: Object #NEW16.
+-Created: Object #NEW17.
++Created RqA (#NEW1:<CTIME>).
++Created RqB (#NEW2:<CTIME>).
++Created RqC (#NEW3:<CTIME>).
++Created RqD (#NEW4:<CTIME>).
++Created RqE (#NEW5:<CTIME>).
++Created RqF (#NEW6:<CTIME>).
++Created RqG (#NEW7:<CTIME>).
++Created RqH (#NEW8:<CTIME>).
++Created RqI (#NEW9:<CTIME>).
++Created RqJ (#NEW10:<CTIME>).
++Created RqK (#NEW11:<CTIME>).
++Created RqL (#NEW12:<CTIME>).
++Created RqM (#NEW13:<CTIME>).
++Created RqN (#NEW14:<CTIME>).
++Created RqO (#NEW15:<CTIME>).
++Created RqP (#NEW16:<CTIME>).
++Created RqQ (#NEW17:<CTIME>).
+ Wiz/HOLES - Set.
+```
+
+### `25-requested-dbref/dbref.holes#3` — open-gap
+
+- Repro: `tools/parity/run.sh --only 25-requested-dbref/dbref.holes` — tools/parity/scenarios/25-requested-dbref.scn:20, session `wiz`, command `@dolist/inline [v(HOLES)]={@recycle ##;@recycle ##}`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1,68 +1,34 @@
+-RqA(#NEW1Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqA(#NEW1TGn).
+-Halted: RqA(#NEW1)
++RqA is scheduled to be destroyed.
+ Destroyed.
+-RqB(#NEW2Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqB(#NEW2TGn).
+-Halted: RqB(#NEW2)
++RqB is scheduled to be destroyed.
+ Destroyed.
+-RqC(#NEW3Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqC(#NEW3TGn).
+-Halted: RqC(#NEW3)
++RqC is scheduled to be destroyed.
+ Destroyed.
+-RqD(#NEW4Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqD(#NEW4TGn).
+-Halted: RqD(#NEW4)
++RqD is scheduled to be destroyed.
+ Destroyed.
+-RqE(#NEW5Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqE(#NEW5TGn).
+-Halted: RqE(#NEW5)
++RqE is scheduled to be destroyed.
+ Destroyed.
+-RqF(#NEW6Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqF(#NEW6TGn).
+-Halted: RqF(#NEW6)
++RqF is scheduled to be destroyed.
+ Destroyed.
+-RqG(#NEW7Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqG(#NEW7TGn).
+-Halted: RqG(#NEW7)
++RqG is scheduled to be destroyed.
+ Destroyed.
+-RqH(#NEW8Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqH(#NEW8TGn).
+-Halted: RqH(#NEW8)
++RqH is scheduled to be destroyed.
+ Destroyed.
+-RqI(#NEW9Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqI(#NEW9TGn).
+-Halted: RqI(#NEW9)
++RqI is scheduled to be destroyed.
+ Destroyed.
+-RqJ(#NEW10Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqJ(#NEW10TGn).
+-Halted: RqJ(#NEW10)
++RqJ is scheduled to be destroyed.
+ Destroyed.
+-RqK(#NEW11Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqK(#NEW11TGn).
+-Halted: RqK(#NEW11)
++RqK is scheduled to be destroyed.
+ Destroyed.
+-RqL(#NEW12Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqL(#NEW12TGn).
+-Halted: RqL(#NEW12)
++RqL is scheduled to be destroyed.
+ Destroyed.
+-RqM(#NEW13Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqM(#NEW13TGn).
+-Halted: RqM(#NEW13)
++RqM is scheduled to be destroyed.
+ Destroyed.
+-RqN(#NEW14Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqN(#NEW14TGn).
+-Halted: RqN(#NEW14)
++RqN is scheduled to be destroyed.
+ Destroyed.
+-RqO(#NEW15Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqO(#NEW15TGn).
+-Halted: RqO(#NEW15)
++RqO is scheduled to be destroyed.
+ Destroyed.
+-RqP(#NEW16Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqP(#NEW16TGn).
+-Halted: RqP(#NEW16)
++RqP is scheduled to be destroyed.
+ Destroyed.
+-RqQ(#NEW17Tn) is scheduled to be destroyed.
+-You get your 10 Pennies deposit back for RqQ(#NEW17TGn).
+-Halted: RqQ(#NEW17)
++RqQ is scheduled to be destroyed.
+ Destroyed.
+```
+
+### `25-requested-dbref/dbref.create#0` — open-gap
+
+- Repro: `tools/parity/run.sh --only 25-requested-dbref/dbref.create` — tools/parity/scenarios/25-requested-dbref.scn:24, session `wiz`, command `@create RqThing=,[elements(v(HOLES),1)]`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1 +1 @@
+-Created: Object #NEW1.
++Created RqThing (#NEW1:<CTIME>).
+```
+
+### `25-requested-dbref/dbref.create#2` — open-gap
+
+- Repro: `tools/parity/run.sh --only 25-requested-dbref/dbref.create` — tools/parity/scenarios/25-requested-dbref.scn:26, session `wiz`, command `think [strmatch(num(create(RqFun,,elements(v(HOLES),2))),elements(v(HOLES),2))]`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1,2 +1,2 @@
+-Created: Object #NEW2.
++Created RqFun (#NEW2:<CTIME>).
+ 1
+```
+
+### `25-requested-dbref/dbref.create#3` — open-gap
+
+- Repro: `tools/parity/run.sh --only 25-requested-dbref/dbref.create` — tools/parity/scenarios/25-requested-dbref.scn:27, session `wiz`, command `@create RqCost=10,[elements(v(HOLES),3)]`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1 +1 @@
+-Created: Object #NEW3.
++Created RqCost (#NEW3:<CTIME>).
+```
+
+### `25-requested-dbref/dbref.mortal#1` — open-gap
+
+- Repro: `tools/parity/run.sh --only 25-requested-dbref/dbref.mortal` — tools/parity/scenarios/25-requested-dbref.scn:43, session `alice`, login `Alice alicepass`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1,10 +1,8 @@
+-Last connect was from localhost on <TIMESTAMP>.
++Welcome back, Alice!
+ 
+-
+-MAIL: You have no mail.
+-
+-Room Zero(#0RL)
++Room Zero(#0LR)
+ You are in Room Zero.
+ Contents:
+ Wiz
++Alice
+ [wiz] Alice has connected.
+```
+
+### `25-requested-dbref/dbref.open#0` — open-gap
+
+- Repro: `tools/parity/run.sh --only 25-requested-dbref/dbref.open` — tools/parity/scenarios/25-requested-dbref.scn:63, session `wiz`, command `@open RqExit=here,RqExitBack,here,[elements(v(HOLES),10)],[elements(v(HOLES),13)]`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1,6 +1,4 @@
+ Opened exit #NEW10
+-Trying to link...
+-Linked exit #NEW10 to #0
++Linked to here.
+ Opened exit #NEW13
+-Trying to link...
+-Linked exit #NEW13 to #0
++Linked to #0.
+```
+
+### `25-requested-dbref/dbref.open#2` — open-gap
+
+- Repro: `tools/parity/run.sh --only 25-requested-dbref/dbref.open` — tools/parity/scenarios/25-requested-dbref.scn:65, session `wiz`, command `think [strmatch(num(open(RqFunExit,here,here,elements(v(HOLES),11))),elements(v(HOLES),11))]`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1,4 +1,2 @@
+ Opened exit #NEW11
+-Trying to link...
+-Linked exit #NEW11 to #0
+ 1
+```
+
+### `25-requested-dbref/dbref.clone#0` — open-gap
+
+- Repro: `tools/parity/run.sh --only 25-requested-dbref/dbref.clone` — tools/parity/scenarios/25-requested-dbref.scn:69, session `wiz`, command `@clone RqThing=RqCopy,[elements(v(HOLES),12)]`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1 +1 @@
+-Cloned: Object #NEW12.
++Cloned. New object: #NEW12.
+```
+
+### `25-requested-dbref/dbref.clone#2` — open-gap
+
+- Repro: `tools/parity/run.sh --only 25-requested-dbref/dbref.clone` — tools/parity/scenarios/25-requested-dbref.scn:71, session `wiz`, command `think [strmatch(num(clone(RqThing,RqFunCopy,elements(v(HOLES),17))),elements(v(HOLES),17))]`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1,2 +1,2 @@
+-Cloned: Object #NEW17.
++Cloned. New object: #NEW17.
+ 1
+```
+
+### `25-requested-dbref/dbref.pcreate#2` — open-gap
+
+- Repro: `tools/parity/run.sh --only 25-requested-dbref/dbref.pcreate` — tools/parity/scenarios/25-requested-dbref.scn:77, session `wiz`, command `think [strmatch(num(pcreate(RqFunPlayer,rqpass,elements(v(HOLES),16))),elements(v(HOLES),16))]`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1,2 +1 @@
+-New player 'RqFunPlayer' (#NEW16) created with password 'rqpass'
+ 1
+```
+
+### `30-softcode/sc.login#0` — open-gap
+
+- Repro: `tools/parity/run.sh --only 30-softcode/sc.login` — tools/parity/scenarios/30-softcode.scn:3, session `wiz`, login `Wiz wizpass`
+
+```diff
+--- PennMUSH
++++ SharpMUSH
+@@ -1,12 +1,11 @@
+-Last connect was from localhost on <TIMESTAMP>.
++Welcome back, Wiz!
+ 
+ 
+-MAIL: You have no mail.
+-
+-Room Zero(#0RL)
++Room Zero(#0LR)
+ You are in Room Zero.
+ Contents:
+-RqFunCopy(#NEW17@25-requested-dbrefTn)
+-RqCopy(#NEW12@25-requested-dbrefTn)
++Wiz(#3AenWP)
++RqCopy(#NEW12@25-requested-dbrefnT)
++RqFunCopy(#NEW17@25-requested-dbrefnT)
+ Obvious exits:
+-RqFunExit, RqExitBack, RqExit, RqFunOut, and RqOut
++RqOut, RqFunOut, RqExit, RqFunExit, and RqExitBack
 ```
 
 ### `30-softcode/sc.strings#1` — open-gap
@@ -1300,7 +1528,7 @@
 
 ## Known differences observed (1)
 
-- `05-import/import.owners#1` — KD-0001: money() is deliberately unsupported: SharpMUSH does not track pennies (function answers '#-1 NOT SUPPORTED'). (tracking: #1134)
+- `05-import/import.owners#1` — KD-0001: money() is deliberately unsupported: SharpMUSH does not track pennies (function answers '#-1 NOT SUPPORTED'). (tracking: #1134; profile entry: `money()` is not supported)
 
 ## Import anchors (dbref on each server)
 
@@ -1316,8 +1544,8 @@
 
 ## Coverage
 
-- commands: 30 of 176 PennMUSH commands exercised (17%). Full list in coverage.json.
-- functions: 101 of 527 PennMUSH functions exercised (19%). Full list in coverage.json.
+- commands: 31 of 176 PennMUSH commands exercised (17%). Full list in coverage.json.
+- functions: 110 of 527 PennMUSH functions exercised (20%). Full list in coverage.json.
 
 ## Normalization rules applied to both sides
 
@@ -1327,4 +1555,4 @@
 - `sync-token`: The harness's own sync sentinels never appear in transcripts; if one leaks into a line it becomes <SYNC>.
 - `trailing-ws`: Trailing spaces/tabs on each line are removed; a trailing blank line is dropped.
 - `site-text`: on login steps the connect screen, MOTD and wizard MOTD text of each server (connect.txt, motd.txt, wizmotd.txt) and SharpMUSH's `Connected!` line are removed: they are site content, not behaviour.
-- `dbref`: dbrefs of world-fixture objects are mapped to PennMUSH's numbering; dbrefs of objects created during scenarios become `#NEW<k>` in order of first appearance; any other SharpMUSH dbref is one of its own system objects and becomes `#S<n>`, so it never matches the PennMUSH object that happens to share its number.
+- `dbref`: dbrefs of world-fixture objects are mapped to PennMUSH's numbering; dbrefs of objects created during scenarios become `#NEW<k>` in order of first appearance within each scenario file (an object first shown in an earlier file stays `#NEW<k>@<scenario>`); any other SharpMUSH dbref is one of its own system objects and becomes `#S<n>`, so it never matches the PennMUSH object that happens to share its number.
