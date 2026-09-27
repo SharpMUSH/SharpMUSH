@@ -350,4 +350,13 @@ public record LimitOptions(
 
 	[SharpConfig(Name = "guest_output_limit", Category = "Limit", Description = "Maximum characters one function may produce while a guest's input is evaluated; everyone else has 5242880", Group = "Players", Order = 4, Min = 1024, Max = 5242880)]
 	public uint GuestOutputLimit { get; init; } = DefaultGuestOutputLimit;
+
+	/// <summary>
+	/// Default burst of typed lines one connection may hold, matching PennMUSH's
+	/// <c>COMMAND_BURST_SIZE</c> (<c>hdrs/conf.h:99</c>).
+	/// </summary>
+	public const uint DefaultCommandBurstSize = 100;
+
+	[SharpConfig(Name = "command_burst_size", Category = "Limit", Description = "Maximum typed lines one connection may have admitted and unfinished; typed input is never charged to the owner queue", Group = "Performance", Order = 10, Min = 1, Max = 1000000)]
+	public uint CommandBurstSize { get; init; } = DefaultCommandBurstSize;
 }

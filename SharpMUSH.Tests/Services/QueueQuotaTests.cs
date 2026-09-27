@@ -164,13 +164,24 @@ public class QueueQuotaTests
 	/// <c>QueueAdmissionTests.ARunawayPlayerIsHaltedLikeAnyOtherOffender</c>) — so the flag stays off
 	/// here because the offender is the object that filled the quota, not the person at the keyboard.
 	/// </summary>
+	/// <remarks>
+	/// The line is typed on the filling owner's own connection, and the filler's quota is asserted to
+	/// be genuinely full. Typed on God's handle the line would be charged to God, and with the filler
+	/// left <c>HALT</c>ed by <c>@chown</c> nothing would be pending at all; either way the test would
+	/// pass without ever reaching the case it names (#1320).
+	/// </remarks>
 	[Test]
 	public async ValueTask APlayerCanStillTypeWhenTheirObjectsHaveFilledTheQuota()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerAsync(
-			WebAppFactoryArg.Services, Mediator, "TypistOwner");
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "TypistOwner");
 		var thing = await TestIsolationHelpers.CreateTestThingAsync(GodParser, ConnectionService, "Filler");
-		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {thing}={player}"));
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {thing}={player.DbRef}"));
+
+		// @chown without /preserve sets HALT (BuildingCommands.cs, PennMUSH do_chown), and admission
+		// refuses a halted non-player outright — every filler below would be rejected and the quota
+		// would never fill.
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {thing}=!HALT"));
 
 		var limit = (int)WebAppFactoryArg.Services
 			.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>().CurrentValue.Limit.PlayerQueueLimit;
@@ -183,20 +194,22 @@ public class QueueQuotaTests
 			// the next admission charged to this owner is the one that would trip.
 			for (var i = 0; i < limit; i++)
 			{
-				await Scheduler.AdmitWork(() => ValueTask.FromResult<CallState?>(null),
+				var filler = await Scheduler.AdmitWork(() => ValueTask.FromResult<CallState?>(null),
 					$"queue-quota-filler-{i}", TaskScheduler.EnqueueGroup, thing);
+				await Assert.That(filler.Accepted).IsTrue()
+					.Because("the quota has to be genuinely full for the typed line to be the case under test");
 			}
 
 			var typed = GodParser.CurrentState with
 			{
-				Executor = player,
-				Enactor = player,
-				Caller = player,
-				Handle = 1,
+				Executor = player.DbRef,
+				Enactor = player.DbRef,
+				Caller = player.DbRef,
+				Handle = player.Handle,
 				ConnectionSessionId = null
 			};
 
-			await Scheduler.WriteUserCommand(1, MarkupText.Plain($"&TYPED {thing}=ran"), typed);
+			await Scheduler.WriteUserCommand(player.Handle, MarkupText.Plain($"&TYPED {thing}=ran"), typed);
 		}
 		finally
 		{
@@ -205,7 +218,7 @@ public class QueueQuotaTests
 
 		await Scheduler.DrainImmediateQueueForTests(DrainTimeout);
 
-		var halted = await GodParser.FunctionParse(MarkupText.Plain($"[hasflag({player},HALT)]"));
+		var halted = await GodParser.FunctionParse(MarkupText.Plain($"[hasflag({player.DbRef},HALT)]"));
 		await Assert.That(halted!.Message!.ToPlainText().Trim()).IsEqualTo("0")
 			.Because("a player is never the runaway, and the flag would leave them unable to act");
 

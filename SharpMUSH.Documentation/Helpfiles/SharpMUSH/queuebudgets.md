@@ -7,20 +7,34 @@ until the immediate consumer removes the cancelled entry, preventing repeated
 queue-and-cancel operations from retaining unlimited command bodies.
 
 `global_queue_limit` defaults to 10000 admitted jobs. `player_queue_limit` defaults
-to 100 and applies to the executor's owner, across that owner's objects and
-connections. Wizards and executors with Queue power add the current database
-object count (including garbage) to that owner allowance. The global ceiling
-still applies. Before login, the connection handle supplies the owner bucket.
-Host callbacks submitted without an executor or connection share the `system`
-bucket, which also obeys `player_queue_limit`. Use the executor-aware admission
-overload for player-owned work; omitting an actor never bypasses the owner cap.
+to 100 and applies to the executor's owner, across that owner's objects. Wizards
+and executors with Queue power add the current database object count (including
+garbage) to that owner allowance. The global ceiling still applies. Host
+callbacks submitted without an executor or connection share the `system` bucket,
+which also obeys `player_queue_limit`. Use the executor-aware admission overload
+for player-owned work; omitting an actor never bypasses the owner cap.
 Reducing a limit does not discard existing work; new submissions are rejected
 until usage falls below the limit. Capacity rejection never waits for room in
 the queue, including when a running command submits another command.
 
+A line a player types is not part of `player_queue_limit`, as it is not part of
+PennMUSH's: `run_user_input` hands its `QUEUE_SOCKET` entry straight to
+`do_entry`, so it never reaches the tally `queue_limit` reads. A full owner queue
+therefore never stops its owner typing, and a typed line is never the reason
+another of that owner's commands is refused or its object halted as a runaway.
+What bounds typed input instead is the connection it arrived on:
+`command_burst_size` (default 100, PennMUSH's `COMMAND_BURST_SIZE`) typed lines
+may be admitted and unfinished on one connection at a time. A running line still
+occupies one of them, as it does for the other two limits. The count is per
+socket, not per handle number: a reconnection on a reused handle starts with the
+whole allowance, and logging in does not reset a burst already under way.
+SharpMUSH applies this as a ceiling on outstanding lines rather than as
+PennMUSH's replenishing per-second rate.
+
 A rejected submission has no PID. Game users receive a queue rejection notice;
 service callers receive `QueueAdmissionResult` with a reason and no PID. Reasons
-are global capacity, owner capacity, shutdown, and a missing executor. A delayed
+are global capacity, owner capacity, connection capacity, shutdown, and a
+missing executor. A delayed
 or semaphore job retains its original reservation and PID when released. It
 does not need to compete for capacity a second time. Immediate work is FIFO;
 semaphore notifications and partial drains select ascending PIDs.
@@ -49,7 +63,7 @@ operations can continue. Ordinary queued commands remain available.
 
 Wizards can use `@ps/all` to inspect admitted totals, configured limits, and
 rejection counts by reason. Counts last for the lifetime of the engine process.
-The configuration interface exposes both queue limits in the Limit category.
+The configuration interface exposes all three limits in the Limit category.
 
 # execution budget
 

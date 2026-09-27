@@ -9,6 +9,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Diagnostics;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Utilities;
+using System.Collections.Concurrent;
+using System.Text;
 using System.Text.RegularExpressions;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -21,11 +23,11 @@ namespace SharpMUSH.Tests.Services;
 
 public class QueueAdmissionTests
 {
-	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000, QueueDiagnosticsRecorder? diagnostics = null, IConnectionService? connections = null, INotifyService? notifications = null)
+	private static Scheduler Create(uint global = 2, uint owner = 10, IMediator? mediator = null, IMUSHCodeParser? parser = null, IScheduler? scheduler = null, uint milliseconds = 1000, QueueDiagnosticsRecorder? diagnostics = null, IConnectionService? connections = null, INotifyService? notifications = null, uint burst = LimitOptions.DefaultCommandBurstSize)
 	{
 		var config = ReadPennMushConfig.Create(Path.Combine(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst"));
 		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
-		options.CurrentValue.Returns(config with { Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = milliseconds } });
+		options.CurrentValue.Returns(config with { Limit = config.Limit with { GlobalQueueLimit = global, PlayerQueueLimit = owner, QueueEntryCpuTime = milliseconds, CommandBurstSize = burst } });
 		var factory = Substitute.For<ISchedulerFactory>();
 		if (scheduler is not null) factory.GetScheduler().Returns(scheduler);
 		return new(parser ?? Substitute.For<IMUSHCodeParser>(), connections ?? Substitute.For<IConnectionService>(),
@@ -2443,7 +2445,9 @@ public class QueueAdmissionTests
 		// The flag is set after the wipe, so that signal is the wipe's completion signal. Without it
 		// the test would race the detached halt and pass on a typed entry that simply ran first.
 		var (mediator, wiped) = RunawayMediator();
-		await using var queue = Create(global: 6, owner: 2, mediator: mediator);
+		// One charged slot: the typed line below is uncharged (#1320), so the queued command takes the
+		// slot and the third admission is the one that trips.
+		await using var queue = Create(global: 6, owner: 1, mediator: mediator);
 		var offender = new DBRef(10);
 		var blocked = Signal(); var release = Signal(); var typedRan = false;
 
@@ -2470,11 +2474,12 @@ public class QueueAdmissionTests
 	/// <summary>
 	/// <c>run_user_input</c> builds its entry with <c>QUEUE_SOCKET</c> and hands it to <c>do_entry</c>
 	/// directly (<c>src/cque.c:1076-1088</c>), so a typed line never passes through <c>insert_que</c>
-	/// and never reaches <c>pay_queue</c>. Whoever typed it, it cannot be the runaway — and a player
-	/// whose own objects filled the quota must not be halted for still being at the keyboard.
+	/// and never reaches <c>pay_queue</c>. It is therefore never refused by the owner quota, and
+	/// whoever typed it is never the runaway — a player whose own objects filled the quota can still
+	/// type, and is not halted for being at the keyboard. #1320.
 	/// </summary>
 	[Test]
-	public async Task ATypedLineOverTheQuotaIsRefusedWithoutHaltingWhoTypedIt()
+	public async Task ATypedLineIsAdmittedOverTheOwnerQuotaAndHaltsNobody()
 	{
 		var (mediator, _) = RunawayMediator();
 		await using var queue = Create(global: 4, owner: 1, mediator: mediator);
@@ -2483,10 +2488,141 @@ public class QueueAdmissionTests
 		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think pending"),
 			ParserState.RootFor(typist), TimeSpan.FromHours(1))).Accepted).IsTrue();
 		await Assert.That((await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null),
-			"typed", Scheduler.DirectInputGroup, typist)).Reason).IsEqualTo(QueueRejectionReason.OwnerLimit);
+			"typed", Scheduler.DirectInputGroup, typist)).Accepted).IsTrue()
+			.Because("queue_limit reads the add_to tally, which run_user_input never touches");
 		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
 
 		await mediator.DidNotReceive().Send(Arg.Any<SetObjectFlagCommand>(), Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// The tally <c>queue_limit</c> reads is kept by <c>add_to</c> alone (<c>src/cque.c:226-235</c>),
+	/// and only <c>insert_que</c> adds to it. A typed line is not in it, so it cannot be the reason
+	/// the owner's next queued command is refused — nor, therefore, the reason the owner is halted as
+	/// a runaway. #1320.
+	/// </summary>
+	[Test]
+	public async Task TypedInputIsNotCountedAgainstTheOwnersNextQueuedCommand()
+	{
+		var (mediator, _) = RunawayMediator();
+		await using var queue = Create(global: 6, owner: 1, mediator: mediator);
+		var offender = new DBRef(10);
+		var blocked = Signal(); var release = Signal();
+
+		// Park the consumer, so the typed line below is still pending when the quota is tested.
+		await queue.AdmitWork(async () => { blocked.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			await Assert.That((await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null),
+				"typed", Scheduler.DirectInputGroup, offender)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think queued"),
+				ParserState.RootFor(offender), TimeSpan.FromHours(1))).Accepted).IsTrue()
+				.Because("the owner's single slot is still free — the typed line does not occupy it");
+		}
+		finally { release.TrySetResult(); }
+
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+
+		await mediator.DidNotReceive().Send(Arg.Any<SetObjectFlagCommand>(), Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// What bounds typed input in PennMUSH is the descriptor's own command quota — a burst of
+	/// <c>COMMAND_BURST_SIZE</c> that replenishes at <c>COMMANDS_PER_SECOND</c>
+	/// (<c>hdrs/conf.h:99-100</c>, <c>src/bsd.c:197,1000-1004</c>) — not the owner queue. SharpMUSH
+	/// bounds the same thing by connection, as <c>command_burst_size</c> pending typed lines. One
+	/// connection filling its burst leaves another connection's, and the owner's queue, untouched.
+	/// </summary>
+	[Test]
+	public async Task OneConnectionsTypedBurstIsBoundedWithoutTouchingAnother()
+	{
+		await using var queue = Create(global: 20, owner: 10, burst: 2);
+		var blocked = Signal(); var release = Signal();
+
+		await queue.AdmitWork(async () => { blocked.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Reason)
+				.IsEqualTo(QueueRejectionReason.ConnectionLimit);
+			await Assert.That((await queue.AdmitUserCommand(21, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue()
+				.Because("the burst is per connection, as Penn's descriptor quota is");
+		}
+		finally { release.TrySetResult(); }
+
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+	}
+
+	private static IConnectionService.ConnectionData Incarnation(long handle) => new(handle, null,
+		IConnectionService.ConnectionState.Connected, _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+		() => Encoding.UTF8, new ConcurrentDictionary<string, string>());
+
+	/// <summary>
+	/// A dropped socket's handle is reused by whoever registers on it next, and the lines the previous
+	/// occupant left queued stay pending until the consumer reaches them and their own session check
+	/// discards them. The burst is therefore counted per connection incarnation, not per handle
+	/// number: a replacement connection starts with its whole allowance.
+	/// </summary>
+	[Test]
+	public async Task AReplacedConnectionDoesNotInheritTheBurstOfTheSocketBeforeIt()
+	{
+		var connections = Substitute.For<IConnectionService>();
+		var first = Incarnation(20);
+		connections.Get(20).Returns(first);
+		await using var queue = Create(global: 20, owner: 10, connections: connections, burst: 2);
+		var blocked = Signal(); var release = Signal();
+
+		await queue.AdmitWork(async () => { blocked.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Reason)
+				.IsEqualTo(QueueRejectionReason.ConnectionLimit);
+
+			connections.Get(20).Returns(Incarnation(20));
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue()
+				.Because("the new socket is a different incarnation and owes nothing to the old one's backlog");
+		}
+		finally { release.TrySetResult(); }
+
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+	}
+
+	/// <summary>
+	/// The other half of that identity: <c>Bind</c>, <c>Unbind</c> and <c>BindAccount</c> replace the
+	/// stored <c>ConnectionData</c> with a <c>with</c> copy on the same handle, so logging in mid-burst
+	/// must not hand the same socket a second allowance.
+	/// </summary>
+	[Test]
+	public async Task LoggingInDoesNotResetABurstAlreadyUnderWay()
+	{
+		var connections = Substitute.For<IConnectionService>();
+		var connected = Incarnation(20);
+		connections.Get(20).Returns(connected);
+		await using var queue = Create(global: 20, owner: 10, connections: connections, burst: 2);
+		var blocked = Signal(); var release = Signal();
+
+		await queue.AdmitWork(async () => { blocked.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+
+			// What ConnectionService.Bind stores: a copy carrying the same Metadata instance.
+			connections.Get(20).Returns(connected with { Ref = new DBRef(10), State = IConnectionService.ConnectionState.LoggedIn });
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Reason)
+				.IsEqualTo(QueueRejectionReason.ConnectionLimit)
+				.Because("binding a player to a socket does not make it a different socket");
+		}
+		finally { release.TrySetResult(); }
+
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
 	}
 
 	/// <summary>
