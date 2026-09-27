@@ -94,6 +94,21 @@ public partial class TaskScheduler(
 		public bool EscapeRequested { get; set; }
 	}
 
+	/// <summary>
+	/// Whether two typed lines belong to the same socket incarnation, for the per-connection burst.
+	/// </summary>
+	/// <remarks>
+	/// Not <c>ReferenceEquals</c> on the <see cref="IConnectionService.ConnectionData"/> itself:
+	/// <c>Bind</c>, <c>Unbind</c> and <c>BindAccount</c> replace it with a <c>with</c> copy on the same
+	/// handle, and logging in mid-burst is not a new socket. A <c>with</c> copy carries the same
+	/// <c>Metadata</c> instance, and only <c>Register</c> (or startup reconciliation) builds a new one,
+	/// so that dictionary is the identity that survives a state change and is replaced by a new socket.
+	/// The transport session id separates two registrations that the state store can tell apart.
+	/// </remarks>
+	private static bool SameIncarnation(PendingInputCommand queued, PendingInputCommand typed)
+		=> ReferenceEquals(queued.Connection?.Metadata, typed.Connection?.Metadata)
+			&& (queued.Transport ?? "") == (typed.Transport ?? "");
+
 	private sealed record SemaphoreRepairIdentity(string Id, string Key, string Name,
 		string LongName, int? CommandListIndex, DBRef? Owner, string Flags);
 
@@ -225,13 +240,11 @@ public partial class TaskScheduler(
 			else if (chargesOwner && _pendingEntries.Values.Count(e => e.ChargesOwner && e.Owner == owner) >= ownerLimit) result = Reject(QueueRejectionReason.OwnerLimit);
 			// Per connection incarnation, not per numeric handle: a replaced socket reuses the handle,
 			// and work the previous occupant left behind (which the entry's own session check will
-			// discard when it reaches the consumer) must not spend the new one's allowance. Same
-			// identity test as the escape scan below — the connection instance and its transport.
+			// discard when it reaches the consumer) must not spend the new one's allowance.
 			else if (!chargesOwner && pendingInput is { } typed
 				&& _pendingEntries.Values.Count(e => e.PendingInput is { } queued
 					&& queued.Handle == typed.Handle
-					&& ReferenceEquals(queued.Connection, typed.Connection)
-					&& (queued.Transport ?? "") == (typed.Transport ?? ""))
+					&& SameIncarnation(queued, typed))
 					>= (configuration?.CurrentValue.Limit.CommandBurstSize ?? LimitOptions.DefaultCommandBurstSize))
 				result = Reject(QueueRejectionReason.ConnectionLimit);
 			else

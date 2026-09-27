@@ -357,6 +357,6 @@ public record LimitOptions(
 	/// </summary>
 	public const uint DefaultCommandBurstSize = 100;
 
-	[SharpConfig(Name = "command_burst_size", Category = "Limit", Description = "Maximum typed lines one connection may have waiting to run; typed input is never charged to the owner queue", Group = "Performance", Order = 10, Min = 1, Max = 1000000)]
+	[SharpConfig(Name = "command_burst_size", Category = "Limit", Description = "Maximum typed lines one connection may have admitted and unfinished; typed input is never charged to the owner queue", Group = "Performance", Order = 10, Min = 1, Max = 1000000)]
 	public uint CommandBurstSize { get; init; } = DefaultCommandBurstSize;
 }

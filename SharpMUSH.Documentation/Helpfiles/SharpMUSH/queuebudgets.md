@@ -24,8 +24,12 @@ therefore never stops its owner typing, and a typed line is never the reason
 another of that owner's commands is refused or its object halted as a runaway.
 What bounds typed input instead is the connection it arrived on:
 `command_burst_size` (default 100, PennMUSH's `COMMAND_BURST_SIZE`) typed lines
-may be waiting to run on one connection at a time. SharpMUSH applies that as a
-ceiling on pending lines rather than as PennMUSH's replenishing per-second rate.
+may be admitted and unfinished on one connection at a time. A running line still
+occupies one of them, as it does for the other two limits. The count is per
+socket, not per handle number: a reconnection on a reused handle starts with the
+whole allowance, and logging in does not reset a burst already under way.
+SharpMUSH applies this as a ceiling on outstanding lines rather than as
+PennMUSH's replenishing per-second rate.
 
 A rejected submission has no PID. Game users receive a queue rejection notice;
 service callers receive `QueueAdmissionResult` with a reason and no PID. Reasons

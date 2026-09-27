@@ -2594,6 +2594,38 @@ public class QueueAdmissionTests
 	}
 
 	/// <summary>
+	/// The other half of that identity: <c>Bind</c>, <c>Unbind</c> and <c>BindAccount</c> replace the
+	/// stored <c>ConnectionData</c> with a <c>with</c> copy on the same handle, so logging in mid-burst
+	/// must not hand the same socket a second allowance.
+	/// </summary>
+	[Test]
+	public async Task LoggingInDoesNotResetABurstAlreadyUnderWay()
+	{
+		var connections = Substitute.For<IConnectionService>();
+		var connected = Incarnation(20);
+		connections.Get(20).Returns(connected);
+		await using var queue = Create(global: 20, owner: 10, connections: connections, burst: 2);
+		var blocked = Signal(); var release = Signal();
+
+		await queue.AdmitWork(async () => { blocked.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+
+			// What ConnectionService.Bind stores: a copy carrying the same Metadata instance.
+			connections.Get(20).Returns(connected with { Ref = new DBRef(10), State = IConnectionService.ConnectionState.LoggedIn });
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Reason)
+				.IsEqualTo(QueueRejectionReason.ConnectionLimit)
+				.Because("binding a player to a socket does not make it a different socket");
+		}
+		finally { release.TrySetResult(); }
+
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+	}
+
+	/// <summary>
 	/// <c>@halt &lt;object&gt;</c> is <c>do_halt</c>, which walks the run, wait and semaphore queues
 	/// (<c>src/cque.c:2179-2218</c>). A typed line is on none of them — <c>run_user_input</c> hands its
 	/// <c>QUEUE_SOCKET</c> entry straight to <c>do_entry</c> (<c>:1076-1090</c>) — so no halt in Penn

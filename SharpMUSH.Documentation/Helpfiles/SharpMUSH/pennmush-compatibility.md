@@ -344,9 +344,9 @@ other.
 commands that replenishes at `COMMANDS_PER_SECOND` (`conf.h:99-100`, `bsd.c:197,1000-1004`).<br>
 **SharpMUSH** also keeps typed input out of `player_queue_limit`, so a full owner queue never stops
 its owner typing and a typed line is never why another of that owner's commands is refused. It
-bounds it by connection with `command_burst_size`, which defaults to the same 100 but caps the
-number of typed lines *waiting to run* rather than the rate at which they start. A connection over
-that cap is told `Queue admission rejected: ConnectionLimit.` (#1320)<br>
+bounds it by socket with `command_burst_size`, which defaults to the same 100 but caps the number
+of typed lines *outstanding* rather than the rate at which they start. A connection over that cap
+is told `Queue admission rejected: ConnectionLimit.` (#1320)<br>
 **Why.** SharpMUSH queues typed input rather than running it inside the network loop, so a pending
 count is the quantity it has; a replenishing rate would delay input the queue is already ready to
 run.<br>
