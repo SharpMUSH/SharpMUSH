@@ -9,6 +9,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Diagnostics;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Utilities;
+using System.Collections.Concurrent;
+using System.Text;
 using System.Text.RegularExpressions;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -2548,6 +2550,43 @@ public class QueueAdmissionTests
 				.IsEqualTo(QueueRejectionReason.ConnectionLimit);
 			await Assert.That((await queue.AdmitUserCommand(21, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue()
 				.Because("the burst is per connection, as Penn's descriptor quota is");
+		}
+		finally { release.TrySetResult(); }
+
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+	}
+
+	private static IConnectionService.ConnectionData Incarnation(long handle) => new(handle, null,
+		IConnectionService.ConnectionState.Connected, _ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+		() => Encoding.UTF8, new ConcurrentDictionary<string, string>());
+
+	/// <summary>
+	/// A dropped socket's handle is reused by whoever registers on it next, and the lines the previous
+	/// occupant left queued stay pending until the consumer reaches them and their own session check
+	/// discards them. The burst is therefore counted per connection incarnation, not per handle
+	/// number: a replacement connection starts with its whole allowance.
+	/// </summary>
+	[Test]
+	public async Task AReplacedConnectionDoesNotInheritTheBurstOfTheSocketBeforeIt()
+	{
+		var connections = Substitute.For<IConnectionService>();
+		var first = Incarnation(20);
+		connections.Get(20).Returns(first);
+		await using var queue = Create(global: 20, owner: 10, connections: connections, burst: 2);
+		var blocked = Signal(); var release = Signal();
+
+		await queue.AdmitWork(async () => { blocked.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Reason)
+				.IsEqualTo(QueueRejectionReason.ConnectionLimit);
+
+			connections.Get(20).Returns(Incarnation(20));
+			await Assert.That((await queue.AdmitUserCommand(20, MarkupText.Plain("look"), ParserState.Empty)).Accepted).IsTrue()
+				.Because("the new socket is a different incarnation and owes nothing to the old one's backlog");
 		}
 		finally { release.TrySetResult(); }
 

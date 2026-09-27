@@ -79,9 +79,6 @@ public partial class TaskScheduler(
 		/// for host socket work, which PennMUSH's <c>add_to</c> tally never sees.
 		/// </summary>
 		public bool ChargesOwner { get; init; } = true;
-
-		/// <summary>The connection this entry was typed on, for the per-connection burst cap.</summary>
-		public long? Handle { get; init; }
 	}
 
 	// Stored only on admitted entries. An escape cannot retain a future-start tombstone.
@@ -226,8 +223,16 @@ public partial class TaskScheduler(
 			else if (_pendingEntries.Count >= (configuration?.CurrentValue.Limit.GlobalQueueLimit ?? 10000)) result = Reject(QueueRejectionReason.GlobalLimit);
 			// Only charged entries are in the tally, so a typed line cannot make its owner a runaway.
 			else if (chargesOwner && _pendingEntries.Values.Count(e => e.ChargesOwner && e.Owner == owner) >= ownerLimit) result = Reject(QueueRejectionReason.OwnerLimit);
-			else if (!chargesOwner && handle is { } typist
-				&& _pendingEntries.Values.Count(e => e.Handle == typist) >= (configuration?.CurrentValue.Limit.CommandBurstSize ?? LimitOptions.DefaultCommandBurstSize))
+			// Per connection incarnation, not per numeric handle: a replaced socket reuses the handle,
+			// and work the previous occupant left behind (which the entry's own session check will
+			// discard when it reaches the consumer) must not spend the new one's allowance. Same
+			// identity test as the escape scan below — the connection instance and its transport.
+			else if (!chargesOwner && pendingInput is { } typed
+				&& _pendingEntries.Values.Count(e => e.PendingInput is { } queued
+					&& queued.Handle == typed.Handle
+					&& ReferenceEquals(queued.Connection, typed.Connection)
+					&& (queued.Transport ?? "") == (typed.Transport ?? ""))
+					>= (configuration?.CurrentValue.Limit.CommandBurstSize ?? LimitOptions.DefaultCommandBurstSize))
 				result = Reject(QueueRejectionReason.ConnectionLimit);
 			else
 			{
@@ -237,8 +242,7 @@ public partial class TaskScheduler(
 				{
 					Observation = diagnostics?.Admitted(pid, executor, diagnosticOwner, SchedulerKeys.KindOf(group), sourceAttribute),
 					PendingInput = pendingInput,
-					ChargesOwner = chargesOwner,
-					Handle = chargesOwner ? null : handle
+					ChargesOwner = chargesOwner
 				};
 				_pendingEntries[pid] = entry;
 				_orderedPids.Add(pid);
