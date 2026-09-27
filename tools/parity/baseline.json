@@ -257,6 +257,66 @@
    "command": "@teleport *Alice=[loc(*Alice)]"
   },
   {
+   "key": "25-requested-dbref/dbref.clone#0",
+   "command": "@clone RqThing=RqCopy,[elements(v(HOLES),12)]"
+  },
+  {
+   "key": "25-requested-dbref/dbref.clone#2",
+   "command": "think [strmatch(num(clone(RqThing,RqFunCopy,elements(v(HOLES),17))),elements(v(HOLES),17))]"
+  },
+  {
+   "key": "25-requested-dbref/dbref.create#0",
+   "command": "@create RqThing=,[elements(v(HOLES),1)]"
+  },
+  {
+   "key": "25-requested-dbref/dbref.create#2",
+   "command": "think [strmatch(num(create(RqFun,,elements(v(HOLES),2))),elements(v(HOLES),2))]"
+  },
+  {
+   "key": "25-requested-dbref/dbref.create#3",
+   "command": "@create RqCost=10,[elements(v(HOLES),3)]"
+  },
+  {
+   "key": "25-requested-dbref/dbref.dig#0",
+   "command": "@dig RqRoom=RqOut,RqBack,[elements(v(HOLES),5)],[elements(v(HOLES),6)],[elements(v(HOLES),14)]"
+  },
+  {
+   "key": "25-requested-dbref/dbref.dig#4",
+   "command": "think [strmatch(num(dig(RqFunRoom,RqFunOut,RqFunBack,elements(v(HOLES),7),elements(v(HOLES),8),elements(v(HOLES),9))),elements(v(HOLES),7))]"
+  },
+  {
+   "key": "25-requested-dbref/dbref.holes#0",
+   "command": "Wiz wizpass"
+  },
+  {
+   "key": "25-requested-dbref/dbref.holes#2",
+   "command": "think [set(me,HOLES:[create(RqA)] [create(RqB)] [create(RqC)] [create(RqD)] [create(RqE)] [create(RqF)] [create(RqG)] [create(RqH)] [create(RqI)] [create(RqJ)] [create(RqK)] [create(RqL)] [create(RqM)] [create(RqN)] [create(RqO)] [create(RqP)] [create(RqQ)])]"
+  },
+  {
+   "key": "25-requested-dbref/dbref.holes#3",
+   "command": "@dolist/inline [v(HOLES)]={@recycle ##;@recycle ##}"
+  },
+  {
+   "key": "25-requested-dbref/dbref.mortal#1",
+   "command": "Alice alicepass"
+  },
+  {
+   "key": "25-requested-dbref/dbref.open#0",
+   "command": "@open RqExit=here,RqExitBack,here,[elements(v(HOLES),10)],[elements(v(HOLES),13)]"
+  },
+  {
+   "key": "25-requested-dbref/dbref.open#2",
+   "command": "think [strmatch(num(open(RqFunExit,here,here,elements(v(HOLES),11))),elements(v(HOLES),11))]"
+  },
+  {
+   "key": "25-requested-dbref/dbref.pcreate#0",
+   "command": "@pcreate RqPlayer=rqpass,[elements(v(HOLES),15)]"
+  },
+  {
+   "key": "25-requested-dbref/dbref.pcreate#2",
+   "command": "think [strmatch(num(pcreate(RqFunPlayer,rqpass,elements(v(HOLES),16))),elements(v(HOLES),16))]"
+  },
+  {
    "key": "30-softcode/sc.control#2",
    "command": "think [null(x)][s(%b)] [lit([add(1,2)])] [eval(add(1,2))]"
   },
