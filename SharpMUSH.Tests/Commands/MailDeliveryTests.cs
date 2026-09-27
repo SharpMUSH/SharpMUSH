@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Behaviors;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -134,10 +135,13 @@ public class MailDeliveryTests
 		var sender = await Player("MdFwdNobody");
 		await Run(sender, "@mail me=Nobody/Forward me.");
 
-		var heard = await Heard(sender, () => Run(sender, "@mail/fwd 1=MdFwdNoSuchPlayer"));
+		CallState? result = null;
+		var heard = await Heard(sender, async () => result = await Run(sender, "@mail/fwd 1=MdFwdNoSuchPlayer"));
 
 		await Assert.That(heard).IsEquivalentTo(
 			["No such unique player: MdFwdNoSuchPlayer.", "MAIL: 0 messages forwarded."]);
+		// Nobody matched, which is not the same answer as a recipient refusing the mail.
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.NoSuchPlayer);
 	}
 
 	/// <summary>

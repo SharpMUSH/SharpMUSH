@@ -86,8 +86,14 @@ public static class ForwardMail
 
 		await notifyService.Notify(executor, $"MAIL: {delivered.Count} messages forwarded.", executor);
 
-		return delivered.Count == 0
-			? MarkupText.Plain(ErrorMessages.Returns.RecipientDoesNotAcceptMail)
-			: MarkupText.Plain(string.Join(' ', delivered.Select(player => player.Object.DBRef.ToString())));
+		// As for @mail: a caller that sees only this return value can tell no match from a refusal.
+		if (delivered.Count == 0)
+		{
+			return MarkupText.Plain(recipients.Count == 0
+				? ErrorMessages.Returns.NoSuchPlayer
+				: ErrorMessages.Returns.RecipientDoesNotAcceptMail);
+		}
+
+		return MarkupText.Plain(string.Join(' ', delivered.Select(player => player.Object.DBRef.ToString())));
 	}
 }
