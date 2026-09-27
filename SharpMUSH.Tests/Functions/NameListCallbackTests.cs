@@ -48,4 +48,14 @@ public class NameListCallbackTests
 			MarkupText.Plain($"hasattr({obj},COMMAND_EXECUTED)"));
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("0");
 	}
+
+	[Test]
+	public async Task DbrefEntriesResolveOnlyLiveObjects()
+	{
+		// A bare dbref names a live object; a number nothing holds, or an objid whose creation time is
+		// not the live object's, does not.
+		var result = await WebAppFactoryArg.FunctionParser.FunctionParse(
+			MarkupText.Plain("namelist(#1 #99999999 #1:1)"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("#1 #-1 #-1");
+	}
 }
