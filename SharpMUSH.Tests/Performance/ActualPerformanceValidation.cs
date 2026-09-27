@@ -9,7 +9,7 @@ namespace SharpMUSH.Tests.Performance;
 /// before making optimization assumptions.
 /// 
 /// TO RUN THIS TEST:
-/// 1. Start the ConnectionServer: cd SharpMUSH.ConnectionServer && dotnet run
+/// 1. Start the ConnectionServer: cd SharpMUSH.SocketServer && dotnet run
 /// 2. Start the Server: cd SharpMUSH.Server && dotnet run  
 /// 3. Run this test manually (it's skipped by default)
 /// 

@@ -1,6 +1,6 @@
-using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.SocketServer.Models;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
 /// Service for transforming output based on client capabilities and player preferences

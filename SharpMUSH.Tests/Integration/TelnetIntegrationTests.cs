@@ -12,7 +12,7 @@ using Quartz;
 using Serilog;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
-using SharpMUSH.ConnectionServer.ProtocolHandlers;
+using SharpMUSH.SocketServer.ProtocolHandlers;
 using SharpMUSH.Database.Lightning;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models.RecurringJobs;
@@ -198,7 +198,7 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 		};
 
 		// Integration tests exercise the production Unix-socket rendering path, including Pueblo/MXP.
-		_connectionServerApp = await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync([.. csArgs, .. TestDiagnostics.HostArguments], natsUrl);
+		_connectionServerApp = await SharpMUSH.SocketServer.Program.CreateHostBuilderAsync([.. csArgs, .. TestDiagnostics.HostArguments], natsUrl);
 
 		_connectionServerApp.UseWebSockets();
 		var wsHandler = _connectionServerApp.Services.GetRequiredService<WebSocketServer>();

@@ -150,20 +150,20 @@ public partial class PrivateListenerTests
 	{
 		var writes = new List<byte[]>();
 		var outputWrites = 0;
-		var connections = Substitute.For<SharpMUSH.ConnectionServer.Services.IConnectionServerService>();
-		var client = new SharpMUSH.ConnectionServer.Services.ConnectionServerService.ConnectionData(prompt.Handle, null,
-			SharpMUSH.ConnectionServer.Services.ConnectionServerService.ConnectionState.Connected,
+		var connections = Substitute.For<SharpMUSH.SocketServer.Services.IConnectionServerService>();
+		var client = new SharpMUSH.SocketServer.Services.ConnectionServerService.ConnectionData(prompt.Handle, null,
+			SharpMUSH.SocketServer.Services.ConnectionServerService.ConnectionState.Connected,
 			_ => { outputWrites++; return ValueTask.CompletedTask; }, bytes => { writes.Add(bytes); return ValueTask.CompletedTask; },
-			() => Encoding.UTF8, () => { }, null, new SharpMUSH.ConnectionServer.Models.ProtocolCapabilities(), null, "telnet")
+			() => Encoding.UTF8, () => { }, null, new SharpMUSH.SocketServer.Models.ProtocolCapabilities(), null, "telnet")
 		{ SessionId = sessionId };
 		connections.Get(prompt.Handle).Returns(client);
-		var transform = Substitute.For<SharpMUSH.ConnectionServer.Services.IOutputTransformService>();
-		transform.TransformAsync(Arg.Any<byte[]>(), Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities>(),
-			Arg.Any<SharpMUSH.ConnectionServer.Models.PlayerOutputPreferences?>(), Arg.Any<CancellationToken>())
+		var transform = Substitute.For<SharpMUSH.SocketServer.Services.IOutputTransformService>();
+		transform.TransformAsync(Arg.Any<byte[]>(), Arg.Any<SharpMUSH.SocketServer.Models.ProtocolCapabilities>(),
+			Arg.Any<SharpMUSH.SocketServer.Models.PlayerOutputPreferences?>(), Arg.Any<CancellationToken>())
 			.Returns(call => ValueTask.FromResult(call.Arg<byte[]>()));
-		await new SharpMUSH.ConnectionServer.Consumers.MarkupPromptConsumer(connections,
-			new SharpMUSH.ConnectionServer.Services.MarkupOutputRenderer(), transform,
-			NullLogger<SharpMUSH.ConnectionServer.Consumers.MarkupPromptConsumer>.Instance).HandleAsync(prompt);
+		await new SharpMUSH.SocketServer.Consumers.MarkupPromptConsumer(connections,
+			new SharpMUSH.RenderingWorker.Services.MarkupOutputRenderer(), transform,
+			NullLogger<SharpMUSH.SocketServer.Consumers.MarkupPromptConsumer>.Instance).HandleAsync(prompt);
 		await Assert.That(writes.Count).IsEqualTo(1);
 		await Assert.That(Encoding.UTF8.GetString(writes.Single())).IsEqualTo(expected);
 		await Assert.That(outputWrites).IsEqualTo(0);

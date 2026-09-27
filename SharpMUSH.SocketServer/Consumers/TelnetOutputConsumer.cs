@@ -1,8 +1,8 @@
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 
-namespace SharpMUSH.ConnectionServer.Consumers;
+namespace SharpMUSH.SocketServer.Consumers;
 
 /// <summary>
 /// Consumes <see cref="TelnetOutputMessage"/> from NATS JetStream, applies output

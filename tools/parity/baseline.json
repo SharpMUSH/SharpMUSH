@@ -225,14 +225,6 @@
    "command": "One godpass"
   },
   {
-   "key": "20-admin-commands/admin.restrict-command#1",
-   "command": "@config/set restrict_command=@find wizard"
-  },
-  {
-   "key": "20-admin-commands/admin.restrict-command#2",
-   "command": "@find Widget"
-  },
-  {
    "key": "20-admin-commands/admin.restrict-command#3",
    "command": "@command/restrict @find=!FLAG^GAGGED"
   },
@@ -407,6 +399,14 @@
   {
    "key": "50-mail/mail.fwd-by-name#6",
    "command": "@mail/fwd 1=Bob Alice"
+  },
+  {
+   "key": "40-compat-choices/choice.restrictions-reapply#1",
+   "command": "@command/restrict @find=!FLAG^GAGGED"
+  },
+  {
+   "key": "40-compat-choices/choice.restrictions-reapply#4",
+   "command": "@command/restrict @find=!FLAG^GAGGED"
   }
  ]
 }

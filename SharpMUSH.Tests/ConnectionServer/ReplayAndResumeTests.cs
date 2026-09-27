@@ -1,5 +1,5 @@
 using System.Text;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 

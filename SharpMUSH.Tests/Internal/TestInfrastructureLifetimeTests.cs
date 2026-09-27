@@ -19,7 +19,7 @@ public class TestInfrastructureLifetimeTests
 
 	// No server or container is started: this tests ownership at the disposal boundary only.
 	private sealed class RecordingConnectionFactory() :
-		ConnectionServerTestWebApplicationBuilderFactory<SharpMUSH.ConnectionServer.Program>("unused")
+		ConnectionServerTestWebApplicationBuilderFactory<SharpMUSH.SocketServer.Program>("unused")
 	{
 		public int DisposalCount { get; private set; }
 		public override ValueTask DisposeAsync()

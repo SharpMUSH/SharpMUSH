@@ -102,7 +102,7 @@ public class InProcessPerformanceMeasurement
 		TestDiagnostics.WriteLine("3. NOT the parsing or execution time");
 
 		// via reflection to avoid assembly reference
-		var batchingServiceType = Type.GetType("SharpMUSH.ConnectionServer.Services.TelnetOutputBatchingService, SharpMUSH.ConnectionServer");
+		var batchingServiceType = Type.GetType("SharpMUSH.SocketServer.Services.TelnetOutputBatchingService, SharpMUSH.SocketServer");
 		if (batchingServiceType != null)
 		{
 			var batchingService = WebAppFactoryArg.Services.GetService(batchingServiceType);

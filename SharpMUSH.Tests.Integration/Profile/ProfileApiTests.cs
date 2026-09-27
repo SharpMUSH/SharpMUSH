@@ -10,7 +10,6 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Tests.Infrastructure;
 using System.Collections.Concurrent;
 using System.Net;
-using System.Text;
 using System.Text.Json;
 
 namespace SharpMUSH.Tests.Integration.Profile;
@@ -248,9 +247,7 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		var connectionService = factory.Services.GetRequiredService<IConnectionService>();
 
 		// A second connection bound to the same character as the factory's own login.
-		const long handle = 810_001;
-		await connectionService.Register(handle, "127.0.0.1", "localhost", "websocket",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
+		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(connectionService, new DBRef(1, null), "websocket",
 			new ConcurrentDictionary<string, string>(new Dictionary<string, string>
 			{
 				["ConnectionStartTime"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
@@ -260,7 +257,6 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 				["ConnectionType"] = "websocket",
 				["PresenceClass"] = PresenceClasses.Play
 			}));
-		await connectionService.Bind(handle, new DBRef(1, null));
 
 		try
 		{

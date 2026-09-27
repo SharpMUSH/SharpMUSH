@@ -1,6 +1,6 @@
 using SharpMUSH.Library.Services.Interfaces;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
 /// Background service that monitors the health of the ConnectionServer and reports it to telemetry.

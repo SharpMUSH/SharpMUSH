@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
-using SharpMUSH.ConnectionServer.ProtocolHandlers;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.ProtocolHandlers;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Tests.ConnectionServer.TestSchedulers;
@@ -169,7 +169,7 @@ public class ConnectionPumpTests
 			Arg.Any<Func<System.Text.Encoding>>(),
 			Arg.Do<Action>(a => forcedDisconnect = a),
 			Arg.Any<Func<string, string, ValueTask>?>(),
-			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
+			Arg.Any<SharpMUSH.SocketServer.Models.ProtocolCapabilities?>(),
 			sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 
 		var pump = MakePump(bus, conn, desc);
@@ -220,7 +220,7 @@ public class ConnectionPumpTests
 			Arg.Any<Func<byte[], ValueTask>>(),
 			Arg.Any<Func<System.Text.Encoding>>(), Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
-			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
+			Arg.Any<SharpMUSH.SocketServer.Models.ProtocolCapabilities?>(),
 			sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 
 		var pump = MakePump(bus, conn, desc, replay);
@@ -309,7 +309,7 @@ public class ConnectionPumpTests
 			Arg.Any<Func<System.Text.Encoding>>(),
 			Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
-			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
+			Arg.Any<SharpMUSH.SocketServer.Models.ProtocolCapabilities?>(),
 			sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 	}
 
@@ -331,7 +331,7 @@ public class ConnectionPumpTests
 			Arg.Any<Func<System.Text.Encoding>>(),
 			Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
-			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
+			Arg.Any<SharpMUSH.SocketServer.Models.ProtocolCapabilities?>(),
 			"portal", sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 	}
 
@@ -353,7 +353,7 @@ public class ConnectionPumpTests
 			Arg.Any<Func<System.Text.Encoding>>(),
 			Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
-			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
+			Arg.Any<SharpMUSH.SocketServer.Models.ProtocolCapabilities?>(),
 			"play", sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 	}
 
@@ -373,7 +373,7 @@ public class ConnectionPumpTests
 			9, null, ConnectionServerService.ConnectionState.Connected,
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
 			() => System.Text.Encoding.UTF8, () => { }, null,
-			new SharpMUSH.ConnectionServer.Models.ProtocolCapabilities(), null, "websocket"));
+			new SharpMUSH.SocketServer.Models.ProtocolCapabilities(), null, "websocket"));
 		var sink9 = registry.GetOrCreate(9);
 		sink9.Detach();
 		const string session9 = "live-incarnation-9";
@@ -393,7 +393,7 @@ public class ConnectionPumpTests
 			Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
 			Arg.Any<Func<System.Text.Encoding>>(), Arg.Any<Action>(),
 			Arg.Any<Func<string, string, ValueTask>?>(),
-			Arg.Any<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities?>(),
+			Arg.Any<SharpMUSH.SocketServer.Models.ProtocolCapabilities?>(),
 			sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
 		desc.Received(1).ReleaseWebSocketDescriptor(99);
 
@@ -426,7 +426,7 @@ public class ConnectionPumpTests
 			9, null, ConnectionServerService.ConnectionState.Connected,
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
 			() => System.Text.Encoding.UTF8, () => { }, null,
-			new SharpMUSH.ConnectionServer.Models.ProtocolCapabilities(), null, "websocket"));
+			new SharpMUSH.SocketServer.Models.ProtocolCapabilities(), null, "websocket"));
 		registry.GetOrCreate(9).Detach();
 		registry.GetOrCreate(9).SessionId = "live-incarnation-9";
 		var oldToken = await resume.MintAsync(9, "live-incarnation-9");

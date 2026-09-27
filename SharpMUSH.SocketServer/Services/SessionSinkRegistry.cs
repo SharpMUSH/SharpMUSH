@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>Maps a handle to its <see cref="SessionSink"/> so a reconnecting pump can rebind it.</summary>
 public sealed class SessionSinkRegistry

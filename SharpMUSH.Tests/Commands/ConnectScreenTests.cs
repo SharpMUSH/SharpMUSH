@@ -1,11 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Core;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Text;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -25,12 +21,7 @@ public class ConnectScreenTests
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	private async ValueTask<long> AnonymousHandleAsync()
-	{
-		var handle = Random.Shared.NextInt64(700_000, 799_999);
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
-		return handle;
-	}
+		=> await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
 
 	[Test]
 	public async Task WhoAtTheConnectScreenListsPlayersInsteadOfThrowing()
@@ -90,19 +81,10 @@ public class ConnectScreenTests
 		NotificationsTo(WebAppFactoryArg, handle).LastOrDefault();
 
 	/// <summary>
-	/// Plain text of every <c>Notify</c> aimed at <paramref name="handle"/>. The INotifyService
-	/// substitute is shared for the whole test session, hence filtering by an isolated handle.
+	/// Plain text of everything sent to connection <paramref name="handle"/>, in order. The factory's
+	/// recorder indexes handle-addressed output, so this does not scan the session-shared substitute's
+	/// whole call list.
 	/// </summary>
 	internal static string[] NotificationsTo(ServerWebAppFactory factory, long handle) =>
-		factory.Services.GetRequiredService<INotifyService>().ReceivedCalls()
-			.Where(call => call.GetMethodInfo().Name == nameof(INotifyService.Notify))
-			.Where(call => call.GetArguments() is [long h, ..] && h == handle)
-			.Select(TextOf)
-			.OfType<string>()
-			.ToArray();
-
-	private static string? TextOf(ICall call) =>
-		call.GetArguments() is [_, SharpMessage message, ..]
-			? message switch { MString markup => markup.ToPlainText(), string text => text }
-			: null;
+		[.. factory.Notifications.ForHandle(handle)];
 }

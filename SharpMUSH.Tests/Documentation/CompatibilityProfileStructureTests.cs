@@ -57,7 +57,6 @@ public class CompatibilityProfileStructureTests
 	{
 		["A command that crashes says so"] = "a crash is a defect, fixed once found, so none is kept to show it",
 		["`@config/set` is stored"] = "shows only after a restart; the parity harness starts each server once",
-		["`command_restrictions` reapplies without a restart"] = "SharpMUSH changes it only from the portal",
 		["A `MAILFILTER` that mails its owner does not recurse"] = "PennMUSH's side crashes the server",
 	};
 

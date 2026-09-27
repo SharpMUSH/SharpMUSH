@@ -1,4 +1,4 @@
-namespace SharpMUSH.ConnectionServer.Models;
+namespace SharpMUSH.SocketServer.Models;
 
 /// <summary>
 /// Represents player preferences for output formatting

@@ -3,7 +3,7 @@ using NATS.Client.Core;
 using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
 using NSubstitute;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 

@@ -6,9 +6,10 @@ horizontal overflow.
 ## Prerequisites
 
 ```bash
-docker compose up -d                                # SharpMUSH + NATS
+docker compose up -d nats                           # NATS only; the hosts below run locally
 dotnet run --project SharpMUSH.Server               # https://localhost:8081
-dotnet run --project SharpMUSH.ConnectionServer     # :4201 telnet, :4202 http
+dotnet run --project SharpMUSH.SocketServer         # :4201 telnet, :4202 http
+dotnet run --project SharpMUSH.RenderingWorker      # renders output for SocketServer
 dotnet run --project SharpMUSH.Client               # https://localhost:7102
 ```
 

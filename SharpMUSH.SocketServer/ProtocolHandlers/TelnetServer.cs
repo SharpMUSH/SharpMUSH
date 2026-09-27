@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
 using System.IO.Pipelines;
-using SharpMUSH.ConnectionServer.Configuration;
-using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.SocketServer.Configuration;
+using SharpMUSH.SocketServer.Models;
 using SharpMUSH.Library.Utilities;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
 using System.Net;
@@ -15,7 +15,7 @@ using TelnetNegotiationCore.Interpreters;
 using TelnetNegotiationCore.Protocols;
 using TelnetNegotiationCore.Models;
 
-namespace SharpMUSH.ConnectionServer.ProtocolHandlers;
+namespace SharpMUSH.SocketServer.ProtocolHandlers;
 
 /// <summary>
 /// Handles Telnet protocol connections and publishes messages to the message queue

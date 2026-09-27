@@ -1,4 +1,4 @@
-using SharpMUSH.ConnectionServer.Models;
+using SharpMUSH.SocketServer.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
@@ -6,7 +6,7 @@ using SharpMUSH.Messaging.Abstractions;
 using System.Collections.Concurrent;
 using System.Text;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
 /// Manages active connections in the ConnectionServer
@@ -319,7 +319,7 @@ public interface IConnectionServerService
 		Func<Encoding> encodingFunction,
 		Action disconnectFunction,
 		Func<string, string, ValueTask>? gmcpFunction = null,
-		SharpMUSH.ConnectionServer.Models.ProtocolCapabilities? capabilities = null,
+		SharpMUSH.SocketServer.Models.ProtocolCapabilities? capabilities = null,
 		string presenceClass = "play",
 		bool isSecure = false,
 		string? sessionId = null,
@@ -333,13 +333,13 @@ public interface IConnectionServerService
 
 	IEnumerable<ConnectionServerService.ConnectionData> GetAll();
 
-	bool UpdatePreferences(long handle, SharpMUSH.ConnectionServer.Models.PlayerOutputPreferences preferences);
+	bool UpdatePreferences(long handle, SharpMUSH.SocketServer.Models.PlayerOutputPreferences preferences);
 
 	bool ClearPreferences(long handle);
 
 	bool UpdateColorStyle(long handle, string? style);
 
 	bool UpdateCapabilities(long handle,
-		Func<SharpMUSH.ConnectionServer.Models.ProtocolCapabilities,
-			SharpMUSH.ConnectionServer.Models.ProtocolCapabilities> change);
+		Func<SharpMUSH.SocketServer.Models.ProtocolCapabilities,
+			SharpMUSH.SocketServer.Models.ProtocolCapabilities> change);
 }

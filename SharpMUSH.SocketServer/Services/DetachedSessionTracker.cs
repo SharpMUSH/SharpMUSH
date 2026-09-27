@@ -1,4 +1,4 @@
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>Schedules a delayed action; abstracted so grace expiry is deterministic in tests.</summary>
 public interface IGraceScheduler

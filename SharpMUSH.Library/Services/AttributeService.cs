@@ -100,6 +100,85 @@ public class AttributeService(
 		string attribute,
 		IAttributeService.AttributeMode mode,
 		bool parent = true)
+		=> await ReadAttributeAsync(executor, obj, attribute, mode, parent, EagerShape) switch
+		{
+			{ Found: { } found } => found,
+			{ Error: { } error } => new Error<string>(error),
+			_ => new None()
+		};
+
+	/// <summary>
+	/// What <see cref="ReadAttributeAsync{T}"/> needs to know about one attribute representation:
+	/// how to resolve a path with inheritance, how to fetch one prefix on one target, and which
+	/// <see cref="IPermissionService"/> overloads gate it. One instance each for
+	/// <see cref="SharpAttribute"/> and <see cref="LazySharpAttribute"/>, so the eager and lazy
+	/// reads run the same walk rather than two copies of it.
+	/// </summary>
+	/// <param name="ServesWriteModes">
+	/// Whether <c>Set</c>/<c>SystemSet</c> are served. The lazy read is not: a write needs the value
+	/// it is gating, so deferring it buys nothing (see <see cref="IAttributeService.LazilyGetAttributeAsync"/>).
+	/// </param>
+	private sealed record AttributeReadShape<T>(
+		Func<DBRef, string[], bool, CancellationToken, ValueTask<ResolvedAttribute<T>?>> Resolve,
+		Func<DBRef, string[], ValueTask<T?>> FetchPrefix,
+		Func<AnySharpObject, AnySharpObject, T[], ValueTask<bool>> CanView,
+		Func<AnySharpObject, AnySharpObject, T[], ValueTask<bool>> CanExecute,
+		Func<T, string> LongNameOf,
+		Func<T, bool> IsNoInherit,
+		bool ServesWriteModes)
+		where T : class;
+
+	/// <summary>An attribute path resolved with inheritance: the element-type-neutral part of
+	/// <see cref="AttributeWithInheritance"/> and <see cref="LazyAttributeWithInheritance"/>.</summary>
+	private sealed record ResolvedAttribute<T>(T[] Attributes, DBRef SourceObject, AttributeSource Source);
+
+	/// <summary>The outcome of one read: the resolved path, a permission/validation error, or neither (none).</summary>
+	private readonly record struct AttributeRead<T>(T[]? Found, string? Error);
+
+	private AttributeReadShape<SharpAttribute> EagerShape => _eagerShape ??= new(
+		async (dbref, path, parent, token) =>
+			await mediator.CreateStream(new GetAttributeWithInheritanceQuery(dbref, path, parent), token)
+				.FirstOrDefaultAsync(token) is { } hit
+				? new ResolvedAttribute<SharpAttribute>(hit.Attributes, hit.SourceObject, hit.Source)
+				: null,
+		(target, path) => FetchAncestorAsync(target, path, NoKnownAttributes),
+		(who, target, path) => ps.CanViewAttribute(who, target, path),
+		(who, target, path) => ps.CanExecuteAttribute(who, target, path),
+		static x => x.LongName,
+		static x => x.IsNoInherit(),
+		ServesWriteModes: true);
+
+	private AttributeReadShape<SharpAttribute>? _eagerShape;
+
+	private AttributeReadShape<LazySharpAttribute> LazyShape => _lazyShape ??= new(
+		async (dbref, path, parent, token) =>
+			await mediator.CreateStream(new GetLazyAttributeWithInheritanceQuery(dbref, path, parent), token)
+				.FirstOrDefaultAsync(token) is { } hit
+				? new ResolvedAttribute<LazySharpAttribute>(hit.Attributes, hit.SourceObject, hit.Source)
+				: null,
+		(target, path) => FetchLazyAncestorAsync(target, path, NoKnownLazyAttributes),
+		(who, target, path) => ps.CanViewAttribute(who, target, path),
+		(who, target, path) => ps.CanExecuteAttribute(who, target, path),
+		static x => x.LongName,
+		static x => x.IsNoInherit(),
+		ServesWriteModes: false);
+
+	private AttributeReadShape<LazySharpAttribute>? _lazyShape;
+
+	/// <summary>
+	/// The single-attribute read gate behind both <see cref="GetAttributeAsync"/> and
+	/// <see cref="LazilyGetAttributeAsync"/>: validate the name, resolve it with inheritance, fall
+	/// through to the type ancestor, and gate the result on the mode's permission - re-walking the
+	/// branch per <see cref="ReadWalkApplies"/> where PennMUSH does.
+	/// </summary>
+	private async ValueTask<AttributeRead<T>> ReadAttributeAsync<T>(
+		AnySharpObject executor,
+		AnySharpObject obj,
+		string attribute,
+		IAttributeService.AttributeMode mode,
+		bool parent,
+		AttributeReadShape<T> shape)
+		where T : class
 	{
 		var cancellationToken = ExecutionBudget.CurrentToken;
 		cancellationToken.ThrowIfCancellationRequested();
@@ -107,14 +186,19 @@ public class AttributeService(
 
 		if (!await CheckReadAsync(() => validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj)))
 		{
-			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
+			return new AttributeRead<T>(null, ErrorMessages.Returns.ObjectAttributeString);
 		}
 
-		Func<AnySharpObject, AnySharpObject, SharpAttribute[], ValueTask<bool>> permissionPredicate = mode switch
+		if (!shape.ServesWriteModes && mode is not (IAttributeService.AttributeMode.Read or IAttributeService.AttributeMode.Execute))
 		{
-			IAttributeService.AttributeMode.Read => (who, target, path) => CheckReadAsync(() => ps.CanViewAttribute(who, target, path)),
-			IAttributeService.AttributeMode.Execute => (who, target, path) => CheckReadAsync(() => ps.CanExecuteAttribute(who, target, path)),
-			IAttributeService.AttributeMode.Set => (who, target, path) => CheckReadAsync(() => ps.CanExecuteAttribute(who, target, path)),
+			throw new InvalidOperationException(nameof(IAttributeService.AttributeMode));
+		}
+
+		Func<AnySharpObject, AnySharpObject, T[], ValueTask<bool>> permissionPredicate = mode switch
+		{
+			IAttributeService.AttributeMode.Read => (who, target, path) => CheckReadAsync(() => shape.CanView(who, target, path)),
+			IAttributeService.AttributeMode.Execute => (who, target, path) => CheckReadAsync(() => shape.CanExecute(who, target, path)),
+			IAttributeService.AttributeMode.Set => (who, target, path) => CheckReadAsync(() => shape.CanExecute(who, target, path)),
 			IAttributeService.AttributeMode.SystemSet => (_, _, _) => ValueTask.FromResult(true),
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
@@ -126,11 +210,9 @@ public class AttributeService(
 			IAttributeService.AttributeMode.SystemSet => string.Empty,
 			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
 		};
+		var denied = new AttributeRead<T>(null, permissionFailureType);
 
-		var attributeResult = mediator.CreateStream(
-			new GetAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, parent), cancellationToken);
-
-		var result = await attributeResult.FirstOrDefaultAsync(cancellationToken);
+		var result = await shape.Resolve(obj.Object().DBRef, attributePath, parent, cancellationToken);
 		cancellationToken.ThrowIfCancellationRequested();
 
 		// PennMUSH ancestor fall-through: after the object's own @parent chain is exhausted,
@@ -138,10 +220,10 @@ public class AttributeService(
 		// is enabled and nothing was found on the object or its parents.
 		if (result == null && parent)
 		{
-			var ancestor = await GetAncestorAttributeAsync(obj, attributePath);
+			var ancestor = await GetAncestorAttributeAsync(obj, attributePath, shape);
 			if (ancestor == null)
 			{
-				return new None();
+				return default;
 			}
 
 			// Penn draws no line between an @parent-sourced and an ancestor-sourced leaf: `target =
@@ -154,20 +236,21 @@ public class AttributeService(
 				return await AttributeAncestry.CanReadAsync(ancestor.Attributes[^1], ancestor.SourceObject,
 						await AncestorTargetChainAsync(obj, ancestor.AncestorRef), obj.Object().DBRef,
 						(target, parts) =>
-							FetchReadWalkAncestorAsync(target, parts, ancestor.SourceObject, ancestor.Attributes),
-						path => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, path)))
-					? ancestor.Attributes
-					: new Error<string>(permissionFailureType);
+							FetchReadWalkAncestorAsync(target, parts, ancestor.SourceObject, ancestor.Attributes, shape),
+						path => CheckReadAsync(() => shape.CanView(executor, obj, path)),
+						shape.LongNameOf, shape.IsNoInherit)
+					? new AttributeRead<T>(ancestor.Attributes, null)
+					: denied;
 			}
 
 			return await permissionPredicate(executor, obj, ancestor.Attributes)
-				? ancestor.Attributes
-				: new Error<string>(permissionFailureType);
+				? new AttributeRead<T>(ancestor.Attributes, null)
+				: denied;
 		}
 
 		if (result == null)
 		{
-			return new None();
+			return default;
 		}
 
 		if (ReadWalkApplies(mode, attributePath, result.Source))
@@ -178,15 +261,16 @@ public class AttributeService(
 
 			return await AttributeAncestry.CanReadAsync(resolved[^1], source,
 					source.SameObjectAs(origin) ? [origin] : await ParentChainAsync(obj), origin,
-					(target, parts) => FetchReadWalkAncestorAsync(target, parts, source, resolved),
-					path => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, path)))
-				? resolved
-				: new Error<string>(permissionFailureType);
+					(target, parts) => FetchReadWalkAncestorAsync(target, parts, source, resolved, shape),
+					path => CheckReadAsync(() => shape.CanView(executor, obj, path)),
+					shape.LongNameOf, shape.IsNoInherit)
+				? new AttributeRead<T>(resolved, null)
+				: denied;
 		}
 
 		return await permissionPredicate(executor, obj, result.Attributes)
-			? result.Attributes
-			: new Error<string>(permissionFailureType);
+			? new AttributeRead<T>(result.Attributes, null)
+			: denied;
 	}
 
 	internal static ValueTask<bool> CheckReadAsync(Func<ValueTask<bool>> read)
@@ -272,8 +356,9 @@ public class AttributeService(
 	/// the ancestor is disabled, the object IS its own type ancestor (no self-loop), the ancestor
 	/// object does not exist, or the attribute is flagged <c>no_inherit</c> on the ancestor.
 	/// </summary>
-	private async ValueTask<AncestorHit<SharpAttribute>?> GetAncestorAttributeAsync(AnySharpObject obj,
-		string[] attributePath)
+	private async ValueTask<AncestorHit<T>?> GetAncestorAttributeAsync<T>(AnySharpObject obj,
+		string[] attributePath, AttributeReadShape<T> shape)
+		where T : class
 	{
 		var ancestorRef = await obj.Ancestor(configuration);
 		if (ancestorRef is null)
@@ -287,9 +372,7 @@ public class AttributeService(
 			return null;
 		}
 
-		var ancestorResult = await mediator
-			.CreateStream(new GetAttributeWithInheritanceQuery(ancestorRef.Value, attributePath, true), ExecutionBudget.CurrentToken)
-			.FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
+		var ancestorResult = await shape.Resolve(ancestorRef.Value, attributePath, true, ExecutionBudget.CurrentToken);
 		ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
 
 		if (ancestorResult == null)
@@ -303,12 +386,12 @@ public class AttributeService(
 		// crossing an inheritance boundary, and the ancestor is such a boundary exactly like an
 		// @parent is. Task 7 fixed this shape for @parent chains in the provider; this
 		// fall-through kept the old leaf-only test.
-		if (ancestorResult.Attributes.Any(a => a.IsNoInherit()))
+		if (ancestorResult.Attributes.Any(shape.IsNoInherit))
 		{
 			return null;
 		}
 
-		return new AncestorHit<SharpAttribute>(ancestorResult.Attributes, ancestorResult.SourceObject,
+		return new AncestorHit<T>(ancestorResult.Attributes, ancestorResult.SourceObject,
 			ancestorResult.Source, ancestorRef.Value);
 	}
 
@@ -347,131 +430,18 @@ public class AttributeService(
 
 	/// <inheritdoc/>
 	/// <remarks>
-	/// The eager twin of this method, line for line, apart from the element type and the two write
-	/// modes it does not serve. The duplication is deliberate rather than collapsed behind a
-	/// type-shape abstraction: this is the server's hottest read path, the two bodies are the
-	/// PennMUSH <c>can_read_attr_internal</c> walk with its citations attached, and a generic
-	/// rewrite would trade a readable ninety lines for indirection over the query type, the
-	/// permission overload, the ancestor fetch and the return union — while hiding exactly the
-	/// asymmetry documented on the interface.
+	/// The same read gate as <see cref="GetAttributeAsync"/> — one <see cref="ReadAttributeAsync{T}"/>
+	/// walk, over <see cref="LazySharpAttribute"/> — minus the two write modes it does not serve.
 	/// </remarks>
 	public async ValueTask<OptionalLazySharpAttributeOrError> LazilyGetAttributeAsync(AnySharpObject executor,
 		AnySharpObject obj, string attribute,
 		IAttributeService.AttributeMode mode, bool parent = true)
-	{
-		if (!await CheckReadAsync(() => validateService.Valid(IValidateService.ValidationType.AttributeName, MarkupText.Plain(attribute), obj)))
+		=> await ReadAttributeAsync(executor, obj, attribute, mode, parent, LazyShape) switch
 		{
-			return new Error<string>(ErrorMessages.Returns.ObjectAttributeString);
-		}
-
-		var attributePath = attribute.Split('`');
-
-		Func<AnySharpObject, AnySharpObject, LazySharpAttribute[], ValueTask<bool>> permissionPredicate = mode switch
-		{
-			IAttributeService.AttributeMode.Read => (who, target, path) => CheckReadAsync(() => ps.CanViewAttribute(who, target, path)),
-			IAttributeService.AttributeMode.Execute => (who, target, path) => CheckReadAsync(() => ps.CanExecuteAttribute(who, target, path)),
-			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
+			{ Found: { } found } => found,
+			{ Error: { } error } => new Error<string>(error),
+			_ => new None()
 		};
-		var permissionFailureType = mode switch
-		{
-			IAttributeService.AttributeMode.Read => ErrorMessages.Returns.AttrPermissions,
-			IAttributeService.AttributeMode.Execute => ErrorMessages.Returns.AttrEvalPermissions,
-			_ => throw new InvalidOperationException(nameof(IAttributeService.AttributeMode))
-		};
-
-		var attributeResult = mediator.CreateStream(
-			new GetLazyAttributeWithInheritanceQuery(obj.Object().DBRef, attributePath, parent), ExecutionBudget.CurrentToken);
-
-		var result = await attributeResult.FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
-		ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
-
-		// PennMUSH ancestor fall-through (lazy): see GetAttributeAsync for full semantics.
-		if (result == null && parent)
-		{
-			var ancestor = await GetLazyAncestorAttributeAsync(obj, attributePath);
-			if (ancestor == null)
-			{
-				return new None();
-			}
-
-			if (ReadWalkApplies(mode, attributePath, ancestor.Source))
-			{
-				return await AttributeAncestry.CanReadAsync(ancestor.Attributes[^1], ancestor.SourceObject,
-						await AncestorTargetChainAsync(obj, ancestor.AncestorRef), obj.Object().DBRef,
-						(target, parts) =>
-							FetchLazyReadWalkAncestorAsync(target, parts, ancestor.SourceObject, ancestor.Attributes),
-						path => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, path)))
-					? ancestor.Attributes
-					: new Error<string>(permissionFailureType);
-			}
-
-			return await permissionPredicate(executor, obj, ancestor.Attributes)
-				? ancestor.Attributes
-				: new Error<string>(permissionFailureType);
-		}
-
-		if (result == null)
-		{
-			return new None();
-		}
-
-		// The lazy path is the same read as GetAttributeAsync's and must gate identically -
-		// see ReadWalkApplies.
-		if (ReadWalkApplies(mode, attributePath, result.Source))
-		{
-			var origin = obj.Object().DBRef;
-			var source = result.SourceObject;
-			var resolved = result.Attributes;
-
-			return await AttributeAncestry.CanReadAsync(resolved[^1], source,
-					source.SameObjectAs(origin) ? [origin] : await ParentChainAsync(obj), origin,
-					(target, parts) => FetchLazyReadWalkAncestorAsync(target, parts, source, resolved),
-					path => CheckReadAsync(() => ps.CanViewAttribute(executor, obj, path)))
-				? resolved
-				: new Error<string>(permissionFailureType);
-		}
-
-		return await permissionPredicate(executor, obj, result.Attributes)
-			? result.Attributes
-			: new Error<string>(permissionFailureType);
-	}
-
-	/// <summary>
-	/// Lazy variant of <see cref="GetAncestorAttributeAsync"/>.
-	/// </summary>
-	private async ValueTask<AncestorHit<LazySharpAttribute>?> GetLazyAncestorAttributeAsync(AnySharpObject obj,
-		string[] attributePath)
-	{
-		var ancestorRef = await obj.Ancestor(configuration);
-		if (ancestorRef is null)
-		{
-			return null;
-		}
-
-		if (ancestorRef.Value.Number == obj.Object().DBRef.Number)
-		{
-			return null;
-		}
-
-		var ancestorResult = await mediator
-			.CreateStream(new GetLazyAttributeWithInheritanceQuery(ancestorRef.Value, attributePath, true), ExecutionBudget.CurrentToken)
-			.FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
-		ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
-
-		if (ancestorResult == null)
-		{
-			return null;
-		}
-
-		// See GetAncestorAttributeAsync: no_inherit anywhere on the branch blocks the whole path.
-		if (ancestorResult.Attributes.Any(a => a.IsNoInherit()))
-		{
-			return null;
-		}
-
-		return new AncestorHit<LazySharpAttribute>(ancestorResult.Attributes, ancestorResult.SourceObject,
-			ancestorResult.Source, ancestorRef.Value);
-	}
 
 
 	public async ValueTask<SharpAttributesOrError> GetVisibleAttributesAsync(AnySharpObject executor, AnySharpObject obj,
@@ -707,18 +677,12 @@ public class AttributeService(
 	/// work, resolving the same prefix names against targets NEARER than the source, reaches the
 	/// database.
 	/// </summary>
-	private ValueTask<SharpAttribute?> FetchReadWalkAncestorAsync(DBRef target, string[] path,
-		DBRef source, SharpAttribute[] resolved)
-		=> target.SameObjectAs(source) && ResolvedPrefix(path, resolved, static x => x.LongName) is { } known
-			? ValueTask.FromResult<SharpAttribute?>(known)
-			: FetchAncestorAsync(target, path, NoKnownAttributes);
-
-	/// <inheritdoc cref="FetchReadWalkAncestorAsync"/>
-	private ValueTask<LazySharpAttribute?> FetchLazyReadWalkAncestorAsync(DBRef target, string[] path,
-		DBRef source, LazySharpAttribute[] resolved)
-		=> target.SameObjectAs(source) && ResolvedPrefix(path, resolved, static x => x.LongName) is { } known
-			? ValueTask.FromResult<LazySharpAttribute?>(known)
-			: FetchLazyAncestorAsync(target, path, NoKnownLazyAttributes);
+	private static ValueTask<T?> FetchReadWalkAncestorAsync<T>(DBRef target, string[] path,
+		DBRef source, T[] resolved, AttributeReadShape<T> shape)
+		where T : class
+		=> target.SameObjectAs(source) && ResolvedPrefix(path, resolved, shape.LongNameOf) is { } known
+			? ValueTask.FromResult<T?>(known)
+			: shape.FetchPrefix(target, path);
 
 	/// <summary>
 	/// The already-materialised node for <paramref name="path"/> within a root..leaf

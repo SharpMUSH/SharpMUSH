@@ -1,4 +1,4 @@
-namespace SharpMUSH.ConnectionServer.Configuration;
+namespace SharpMUSH.SocketServer.Configuration;
 
 /// <summary>
 /// Configuration settings for the ConnectionServer

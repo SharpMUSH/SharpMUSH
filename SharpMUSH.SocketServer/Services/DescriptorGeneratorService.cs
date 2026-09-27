@@ -1,4 +1,4 @@
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
 /// Service for generating unique connection descriptors

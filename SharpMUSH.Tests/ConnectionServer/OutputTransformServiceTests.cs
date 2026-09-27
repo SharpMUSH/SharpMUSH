@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using SharpMUSH.ConnectionServer.Models;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Models;
+using SharpMUSH.RenderingWorker.Services;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Library.Utilities;
 using System.Text;
 

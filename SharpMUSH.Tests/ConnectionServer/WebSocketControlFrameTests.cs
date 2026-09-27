@@ -1,4 +1,4 @@
-using SharpMUSH.ConnectionServer.ProtocolHandlers;
+using SharpMUSH.SocketServer.ProtocolHandlers;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 

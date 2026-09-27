@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>
 /// In-memory <see cref="IResumeTokenStore"/>. Does NOT survive a ConnectionServer restart — use

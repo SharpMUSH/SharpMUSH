@@ -1,6 +1,6 @@
 using System.Text;
 using SharpMUSH.Client.Services;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 
 namespace SharpMUSH.Tests.ClientState;
 

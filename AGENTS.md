@@ -59,7 +59,7 @@ The test framework is **TUnit** (not xUnit or MSTest). The `--treenode-filter` f
 
 ## Running the Server
 
-The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMUSH.ConnectionServer`. The compose stack runs both on the embedded `lightning` provider with NATS, and is what `deploy/` ships to production:
+The startup project is `SharpMUSH.Server`. For full operation, also run `SharpMUSH.SocketServer` (client sockets) and `SharpMUSH.RenderingWorker` (output rendering). The compose stack runs all three on the embedded `lightning` provider with NATS, and is what `deploy/` ships to production:
 
 ```bash
 docker compose up -d
@@ -99,7 +99,8 @@ Browser (Blazor WASM)
     │  SignalR /hubs/game
     └──► SharpMUSH.Server  (ASP.NET Core, port 8081 HTTPS)
               │  NATS pub/sub
-              └──► SharpMUSH.ConnectionServer  (Telnet :4201, HTTP :4202)
+              └──► SharpMUSH.SocketServer  (Telnet :4201, HTTP :4202)
+                        │  HTTP/2 over a Unix socket ──► SharpMUSH.RenderingWorker
                         │  Telnet / WebSocket
                         └──► MU* clients
 ```
@@ -110,7 +111,8 @@ Browser (Blazor WASM)
 |---------|------|
 | `SharpMUSH.Server` | ASP.NET Core host — REST API, SignalR hub, Blazor WASM file serving, middleware stack |
 | `SharpMUSH.Client` | Blazor WASM web portal (MudBlazor 9.x) |
-| `SharpMUSH.ConnectionServer` | Raw telnet/WebSocket gateway; bridges to Server via NATS |
+| `SharpMUSH.SocketServer` | Raw telnet/WebSocket gateway; owns client sockets and bridges to Server via NATS. Image `sharpmush-socketserver`, compose service `connectionserver` |
+| `SharpMUSH.RenderingWorker` | Renders markup for a connection's protocol; restarts without dropping sockets. Image `sharpmush-connectionserver`, compose service `renderer` |
 | `SharpMUSH.Library` | Core interfaces, models, service contracts (`ISharpDatabase`, all `I*Service`) |
 | `SharpMUSH.Implementation` | MUSH parser (ANTLR4), commands, functions, substitutions |
 | `SharpMUSH.Database.Lightning` | LMDB embedded provider through Lightning.NET; one directory per world; writes group-committed on one thread, sync policy per `SHARPMUSH_LIGHTNING_SYNC` |

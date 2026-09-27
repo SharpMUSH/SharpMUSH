@@ -1,6 +1,6 @@
 using SharpMUSH.Library.Services.Interfaces;
 
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 /// <summary>Renews live connection state and resume credentials without replacing player bindings.</summary>
 public sealed class ConnectionStateRefreshService(

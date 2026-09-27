@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 
 IMAGES = {
     "server": "Dockerfile",
-    "connectionserver": "SharpMUSH.ConnectionServer/Dockerfile",
+    "connectionserver": "SharpMUSH.RenderingWorker/Dockerfile",
     "socketserver": "SharpMUSH.SocketServer/Dockerfile",
 }
 POLICY = {".github/workflows/docker-dev.yml", ".github/workflows/_docker-dev-publish.yml", ".github/scripts/image_impact.py",

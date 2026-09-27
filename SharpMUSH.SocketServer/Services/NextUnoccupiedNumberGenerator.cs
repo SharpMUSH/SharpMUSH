@@ -1,7 +1,7 @@
 // Relocated from SharpMUSH.Library: the connection server is its only consumer, and this keeps
 // the process decoupled from the full Library. DotNext's LastOrNone() was replaced with the
 // equivalent SortedSet check to avoid carrying the package.
-namespace SharpMUSH.ConnectionServer.Services;
+namespace SharpMUSH.SocketServer.Services;
 
 public class NextUnoccupiedNumberGenerator(long initial)
 {

@@ -32,7 +32,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Processing ConnectionServer..." -ForegroundColor Cyan
 Write-Host "  Building..." -ForegroundColor Gray
 # Note: Context is root (.), Dockerfile is in subdirectory
-docker build -t sharpmush/sharpmush-connectionserver:$Tag -f SharpMUSH.ConnectionServer/Dockerfile .
+docker build -t sharpmush/sharpmush-connectionserver:$Tag -f SharpMUSH.RenderingWorker/Dockerfile .
 if ($LASTEXITCODE -ne 0) { Write-Error "Build failed"; exit 1 }
 
 Write-Host "  Pushing..." -ForegroundColor Gray

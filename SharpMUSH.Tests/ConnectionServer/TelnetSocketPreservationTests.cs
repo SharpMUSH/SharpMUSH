@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using SharpMUSH.ConnectionServer.Services;
+using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.NATS;
 
@@ -27,7 +27,7 @@ public class TelnetSocketPreservationTests
 		var natsUrl = $"nats://localhost:{NatsTestServer.Instance.GetMappedPublicPort(4222)}";
 		var retry = new RetryLogger();
 		WebApplication? worker = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, socketPath);
-		await using var owner = await SharpMUSH.ConnectionServer.Program.CreateHostBuilderAsync(
+		await using var owner = await SharpMUSH.SocketServer.Program.CreateHostBuilderAsync(
 			[.. TestDiagnostics.HostArguments, "--ConnectionServer:TelnetPort=0", "--ConnectionServer:HttpPort=0", "--ConnectionServer:TelnetSslPort=0",
 				"--Rendering:SocketPath=" + socketPath], natsUrl,
 			services => services.AddSingleton<ILogger<RemoteOutputRenderer>>(retry));
