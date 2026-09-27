@@ -84,6 +84,23 @@ public class ConnectionFunctionParityTests
 			.IsEqualTo(ErrorMessages.Returns.FunctionRequiresOneArgument);
 
 	/// <summary>
+	/// For the functions that do not check their argument first, an empty name is a name that matches
+	/// no player: <c>lookup_player("")</c> and <c>match_result("")</c> both find nothing, so the caller is
+	/// not taken to mean themselves. Observed on a live PennMUSH 80a1d5b, as God and as a mortal.
+	/// </summary>
+	[Test]
+	[Arguments("conn()", "-1")]
+	[Arguments("idle()", "-1")]
+	[Arguments("cmds()", "-1")]
+	[Arguments("recv()", "-1")]
+	[Arguments("sent()", "-1")]
+	[Arguments("ssl()", "#-1 NOT CONNECTED")]
+	[Arguments("pueblo()", "#-1 NOT CONNECTED")]
+	[Arguments("doing()", "")]
+	public async Task EmptyName_MatchesNobody(string code, string expected)
+		=> await Assert.That(await EvaluateAsync(code)).IsEqualTo(expected);
+
+	/// <summary>
 	/// The second argument is the fallback, and it is used for every failure after the argument check —
 	/// PennMUSH reaches <c>args[1]</c> whenever lookup_desc found nothing or the dimension is zero.
 	/// </summary>
@@ -162,9 +179,111 @@ public class ConnectionFunctionParityTests
 		}
 	}
 
+	/// <summary>
+	/// <c>lookup_desc</c>'s descriptor-number branch (<c>src/bsd.c:6634-6641</c>) answers only a Priv_Who
+	/// caller, or a caller asking about their own descriptor. A mortal who names someone else's descriptor
+	/// finds nothing, so every function answers as it does for a number nobody is on. Observed on a live
+	/// PennMUSH 80a1d5b, a mortal naming another mortal's descriptor.
+	/// </summary>
+	[Test]
+	[Arguments("conn", "-1")]
+	[Arguments("idle", "-1")]
+	[Arguments("cmds", "-1")]
+	[Arguments("recv", "-1")]
+	[Arguments("sent", "-1")]
+	[Arguments("ssl", "#-1 NOT CONNECTED")]
+	[Arguments("pueblo", "#-1 NOT CONNECTED")]
+	[Arguments("terminfo", "#-1 NOT CONNECTED")]
+	[Arguments("width", "78")]
+	[Arguments("height", "24")]
+	[NotInParallel(nameof(ConnectionFunctionParityTests))]
+	public async Task WithoutSeeAll_AnotherPlayersDescriptorNumberFindsNothing(string function, string expected)
+	{
+		var (targetRef, onlookerRef) = await TargetAndOnlookerAsync($"DescNumber{function}");
+		var handle = await ConnectAsync(targetRef);
+		try
+		{
+			await Assert.That(await EvaluateAsAsync(onlookerRef, $"{function}({handle})")).IsEqualTo(expected);
+			await Assert.That(await EvaluateAsync($"{function}({handle})")).IsNotEqualTo(expected);
+		}
+		finally
+		{
+			await WebAppFactoryArg.Services.GetRequiredService<IConnectionService>().Disconnect(handle);
+		}
+	}
+
+	/// <summary>
+	/// Asked by name, <c>lookup_desc</c> finds another player's connection for anyone, and only the
+	/// functions that read an address or traffic count refuse it afterwards. Observed on a live PennMUSH
+	/// 80a1d5b: a mortal's <c>conn()</c>, <c>idle()</c>, <c>pueblo()</c>, <c>width()</c> and
+	/// <c>terminfo()</c> answer about another connected mortal.
+	/// </summary>
+	[Test]
+	[Arguments("pueblo", "0")]
+	[Arguments("width", "100")]
+	[Arguments("height", "40")]
+	[NotInParallel(nameof(ConnectionFunctionParityTests))]
+	public async Task WithoutSeeAll_AnotherPlayerAskedByNameIsFound(string function, string expected)
+	{
+		var (targetRef, onlookerRef) = await TargetAndOnlookerAsync($"ByName{function}");
+		var handle = await ConnectAsync(targetRef);
+		try
+		{
+			await Assert.That(await EvaluateAsAsync(onlookerRef, $"{function}(#{targetRef.Number})"))
+				.IsEqualTo(expected);
+		}
+		finally
+		{
+			await WebAppFactoryArg.Services.GetRequiredService<IConnectionService>().Disconnect(handle);
+		}
+	}
+
+	/// <summary>
+	/// <c>lookup_desc</c> skips a connection hidden with <c>@hide</c> unless the caller is Priv_Who
+	/// (<c>src/bsd.c:6655-6660</c>), so a hidden player is not connected as far as a mortal can tell.
+	/// PennMUSH 80a1d5b, live, with a mortal asking about a player who had run <c>@hide/on</c>. host()
+	/// and ipaddr() stay the permission error they give for any other player.
+	/// </summary>
+	[Test]
+	[Arguments("conn", "-1")]
+	[Arguments("idle", "-1")]
+	[Arguments("ssl", "#-1 NOT CONNECTED")]
+	[Arguments("pueblo", "#-1 NOT CONNECTED")]
+	[Arguments("terminfo", "#-1 NOT CONNECTED")]
+	[Arguments("width", "78")]
+	[NotInParallel(nameof(ConnectionFunctionParityTests))]
+	public async Task AHiddenConnectionIsNotConnectedExceptToSeeAll(string function, string expected)
+	{
+		var (targetRef, onlookerRef) = await TargetAndOnlookerAsync($"Hidden{function}");
+		var handle = await ConnectAsync(targetRef, hidden: true);
+		try
+		{
+			await Assert.That(await EvaluateAsAsync(onlookerRef, $"{function}(#{targetRef.Number})"))
+				.IsEqualTo(expected);
+			await Assert.That(await EvaluateAsync($"{function}(#{targetRef.Number})")).IsNotEqualTo(expected);
+		}
+		finally
+		{
+			await WebAppFactoryArg.Services.GetRequiredService<IConnectionService>().Disconnect(handle);
+		}
+	}
+
+	private async Task<string> EvaluateAsAsync(DBRef executor, string code) =>
+		(await WebAppFactoryArg.FunctionParserFor(executor).FunctionParse(MarkupText.Plain(code)))!
+			.Message!.ToPlainText();
+
+	private async Task<(DBRef Target, DBRef Onlooker)> TargetAndOnlookerAsync(string label)
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		return (await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, $"Target{label}"),
+			await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, $"Onlooker{label}"));
+	}
+
 	private static long _handleSeq = 960_000;
 
-	private async Task<long> ConnectAsync(DBRef player, string? terminalType = null, long idleMilliseconds = 0)
+	private async Task<long> ConnectAsync(DBRef player, string? terminalType = null, long idleMilliseconds = 0,
+		bool hidden = false)
 	{
 		var connectionService = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 		var handle = Interlocked.Increment(ref _handleSeq);
@@ -176,7 +295,10 @@ public class ConnectionFunctionParityTests
 			["InternetProtocolAddress"] = "127.0.0.1",
 			["HostName"] = "localhost",
 			["ConnectionType"] = "telnet",
-			["PresenceClass"] = PresenceClasses.Play
+			["PresenceClass"] = PresenceClasses.Play,
+			["WIDTH"] = "100",
+			["HEIGHT"] = "40",
+			["Hidden"] = hidden ? "1" : "0"
 		});
 
 		if (terminalType is not null)
