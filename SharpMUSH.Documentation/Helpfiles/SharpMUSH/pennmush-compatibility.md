@@ -528,9 +528,23 @@ none. PennMUSH answers `6` here:
 
 ## Argument-less forms PennMUSH does not offer
 
-`config()` with no argument lists every option name. `stext()` with no argument is the current
-switch, the same as `stext(0)`. `lwhoid()` accepts the `<status>` argument `lwho()` takes — PennMUSH
-declares the pair differently although one C function serves both.
+**A choice.**
+
+**PennMUSH** answers `stext()` with `#-1 ARGUMENT MUST BE INTEGER`, and declares `lwhoid()` with at
+most one argument, so `lwhoid(me,online)` is an argument-count error.<br>
+**SharpMUSH** treats `stext()` as `stext(0)`, the innermost switch, and lets `lwhoid()` take the
+`<status>` argument `lwho()` takes.<br>
+**Why.** An omitted level means the innermost one everywhere else. PennMUSH serves `lwho()` and
+`lwhoid()` with one C function and only declares them differently.<br>
+**Workaround.** Write `stext(0)`, and give `lwhoid()` at most one argument, for code that has to run
+on both.
+
+```sharp
+> think switch(a,a,stext())
+a
+> think switch(a,a,stext(0))
+a
+```
 
 ## `ansi()` and `lit()`
 
@@ -609,30 +623,45 @@ In PennMUSH the same lines answer `1` and create `#50` again.
 trailing zeros dropped, as in PennMUSH. SharpMUSH defaults to 6, the same as PennMUSH, and caps the
 setting at 15. `round()` cannot ask for more places than the setting allows.
 
-A result that rounds to zero from below is written `0`, where PennMUSH writes `-0`.
-
 ```sharp
 > think pi()
 3.141593
 > think round(pi(),6)
 3.141593
+```
+
+## A result that rounds to zero from below is `0`
+
+**A choice.**
+
+**PennMUSH** writes it `-0`, the sign C's `printf` leaves on it.<br>
+**SharpMUSH** writes `0`.<br>
+**Why.** `-0` and `0` are the same number, but compared as text, by `switch()`, `strmatch()` or a
+`$`-command pattern, they are different answers.<br>
+**Workaround.** Compare numbers with `eq()`, which is true for `-0` and `0` on both servers.
+
+PennMUSH answers `-0` to the first line:
+
+```sharp
 > think fdiv(-1,10000000000000000)
 0
+> think eq(-0,0)
+1
 ```
 
 ## Fraction representation
 
-`fraction()` answers the **exact** rational of its argument, reduced. Every number softcode can hand
-it is a decimal, so an exact rational always exists, and dividing the result out gives back exactly
-the number that went in.
+**A choice.**
 
-PennMUSH answers the *simplest* fraction within one part in 10^10 instead: `frac()` walks the
+**PennMUSH** answers the *simplest* fraction within one part in 10^10: `frac()` walks the
 convergents of a continued fraction and stops at the first one inside that tolerance, which its own
 help states — "dividing the numerator by the denominator of the results will not always return the
-original `<number>`, but something close to it". Where no simpler fraction is that close the two
-agree, which covers every number of six decimal places or fewer; where one is, SharpMUSH stays exact
-and PennMUSH does not.
-
+original `<number>`, but something close to it".<br>
+**SharpMUSH** answers the **exact** rational of its argument, reduced. Where no simpler fraction is
+within PennMUSH's tolerance the two agree, which covers every number of six decimal places or fewer;
+where one is, SharpMUSH stays exact and PennMUSH does not.<br>
+**Why.** Every number softcode can hand it is a decimal, so an exact rational always exists, and
+dividing the result out gives back exactly the number that went in.<br>
 **Workaround.** `round()` the number first if you want a simpler fraction than the one it names.
 
 ```sharp
@@ -714,15 +743,27 @@ ON
 
 ## `wshtml()` takes no `<default string>`; there is no `wsjson()`
 
-PennMUSH's `wshtml(<html>, <default>)` and `wsjson(<json>, <default>)` write the payload into the
+**A choice.**
+
+**PennMUSH**'s `wshtml(<html>, <default>)` and `wsjson(<json>, <default>)` write the payload into the
 line as an out-of-band region and the `<default>` as the reading for a client without WebSockets,
-because its output buffer holds raw bytes and cannot degrade a tag on its own. SharpMUSH's output is
-markup, which can. `wshtml(<html>)` parses the fragment into tags over text, the same value
-`tagwrap()` builds one tag at a time: a WebSocket, Pueblo or MXP client gets the tags, an ANSI
-client gets the styling it can show for `<b>`, `<i>`, `<u>` and `<s>` and the words for everything
-else, and everything else gets the words — so there is no second string to supply. `wsjson()` does not exist — JSON is
-data for a program, not text with a plain reading — and `oob()` sends it where a connection can
-receive it, over GMCP or the WebSocket.
+because its output buffer holds raw bytes and cannot degrade a tag on its own. `think` shows only the
+`<default>`.<br>
+**SharpMUSH**'s output is markup, which can. `wshtml(<html>)` parses the fragment into tags over text,
+the same value `tagwrap()` builds one tag at a time: a WebSocket, Pueblo or MXP client gets the tags,
+an ANSI client gets the styling it can show for `<b>`, `<i>`, `<u>` and `<s>` and the words for
+everything else, and everything else gets the words. `wsjson()` does not exist.<br>
+**Why.** The words of the fragment are already its plain reading, so there is no second string to
+supply. JSON is data for a program, not text with a plain reading.<br>
+**Workaround.** Drop the `<default>` argument, and send JSON with `oob()`, which delivers it where a
+connection can receive it, over GMCP or the WebSocket.
+
+PennMUSH shows nothing for the first line:
+
+```sharp
+> think wshtml(<b>hi</b>)
+hi
+```
 
 ## SharpMUSH-only functions
 

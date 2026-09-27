@@ -8,10 +8,11 @@ namespace SharpMUSH.Tests.Documentation;
 /// and what it says. <see cref="CompatibilityProfileExampleTests"/> runs its examples; this checks the
 /// entries around them.
 ///
-/// <para>An entry is a <c>## </c> heading and the text up to the next heading. One that describes a
-/// difference has a <c>**PennMUSH**</c> paragraph. Outside [COMPATIBILITY UNRESOLVED] such an entry
-/// is a decision already made, so it says <c>**A choice.**</c> and gives what SharpMUSH does, why, a
-/// workaround and an example. An entry that cannot be shown from a single session says
+/// <para>An entry is a <c>## </c> heading and the text up to the next heading. Every entry is a
+/// decided difference unless its section says otherwise ([COMPATIBILITY UNRESOLVED], [COMPATIBILITY
+/// DEFECTS], [COMPATIBILITY MATCHED]) or <see cref="NotADifference"/> names it with the reason. A
+/// decided difference says <c>**A choice.**</c> and gives what PennMUSH does, what SharpMUSH does, why,
+/// a workaround and an example. An entry that cannot be shown from a single session says
 /// <c>**No example.**</c> and why, so the gap is visible rather than silent.</para>
 ///
 /// <para>The differential harness's allowlist, <c>tools/parity/known-differences.json</c>, may only
@@ -24,10 +25,30 @@ public class CompatibilityProfileStructureTests
 	private const string Choice = "**A choice.**";
 	private const string Unresolved = "COMPATIBILITY UNRESOLVED";
 
+	/// <summary>Sections whose entries are, by definition, not decisions.</summary>
+	private static readonly HashSet<string> UndecidedSections =
+		[Unresolved, "COMPATIBILITY DEFECTS", "COMPATIBILITY MATCHED"];
+
+	/// <summary>
+	/// Entries in a decided section that are not themselves a difference, and why. Anything else there
+	/// has to be written up as a choice, so a new entry cannot skip the format by leaving out a marker.
+	/// </summary>
+	private static readonly Dictionary<string, string> NotADifference = new()
+	{
+		["Boolean compatibility — `tiny_booleans`"] = "describes a setting PennMUSH also has",
+		["Numeric compatibility — `tiny_math`, `null_eq_zero`"] = "describes settings PennMUSH also has",
+		["Trim argument order — `tiny_trim_fun`"] = "describes a setting PennMUSH also has",
+		["`ansi()` and `lit()`"] = "only the declared maximum differs; behaviour matches",
+		["Time precision"] = "the consequence of the choice *A trailing `<precision>` on the time functions*",
+		["Objids and stamped dbrefs"] = "the representation decision is tracked in #1006 item 13",
+		["Number precision"] = "describes `float_precision`, which matches PennMUSH",
+		["SharpMUSH-only functions"] = "additions: PennMUSH softcode cannot call a name it never had",
+		["SharpMUSH-only commands"] = "additions: PennMUSH softcode cannot call a name it never had",
+	};
+
 	/// <summary>One <c>## </c> entry: its section (the <c>#</c> heading above it), heading and text.</summary>
 	public sealed record ProfileEntry(int Line, string Section, string Heading, string Body)
 	{
-		public bool DescribesADifference => Body.Contains("**PennMUSH**", StringComparison.Ordinal);
 		public bool IsChoice => Body.Contains(Choice, StringComparison.Ordinal);
 
 		public override string ToString() => $"{Profile}:{Line} {Heading}";
@@ -51,14 +72,26 @@ public class CompatibilityProfileStructureTests
 	}
 
 	[Test]
-	public async ValueTask UnresolvedEntriesAreNotChoices()
+	public async ValueTask UndecidedEntriesAreNotChoices()
 	{
-		var unresolved = ReadEntries().Where(entry => entry.Section == Unresolved).ToList();
+		var entries = ReadEntries().ToList();
 
-		await Assert.That(unresolved).IsNotEmpty();
-		foreach (var entry in unresolved)
+		await Assert.That(entries.Count(entry => entry.Section == Unresolved)).IsGreaterThan(0);
+		foreach (var entry in entries.Where(entry => UndecidedSections.Contains(entry.Section) || NotADifference.ContainsKey(entry.Heading)))
 		{
-			await Assert.That(entry.IsChoice).IsFalse().Because($"{entry} has no decision yet");
+			await Assert.That(entry.IsChoice).IsFalse().Because($"{entry} is not listed as a decided difference");
+		}
+	}
+
+	/// <summary>An exclusion whose heading has gone would otherwise sit in the list unnoticed.</summary>
+	[Test]
+	public async ValueTask EveryExclusionNamesAnEntry()
+	{
+		var headings = ReadEntries().Select(entry => entry.Heading).ToHashSet();
+
+		foreach (var heading in NotADifference.Keys)
+		{
+			await Assert.That(headings).Contains(heading).Because($"NotADifference names \"{heading}\"");
 		}
 	}
 
@@ -89,12 +122,12 @@ public class CompatibilityProfileStructureTests
 	[Test]
 	public async ValueTask ProfileHasDecidedDifferences()
 	{
-		await Assert.That(DecidedDifferences().Count()).IsGreaterThan(20);
+		await Assert.That(DecidedDifferences().Count()).IsGreaterThan(30);
 	}
 
 	public static IEnumerable<Func<ProfileEntry>> DecidedDifferences() =>
 		ReadEntries()
-			.Where(entry => entry.Section != Unresolved && (entry.DescribesADifference || entry.IsChoice))
+			.Where(entry => !UndecidedSections.Contains(entry.Section) && !NotADifference.ContainsKey(entry.Heading))
 			.Select(entry => (Func<ProfileEntry>)(() => entry));
 
 	private static IEnumerable<ProfileEntry> ReadEntries()
