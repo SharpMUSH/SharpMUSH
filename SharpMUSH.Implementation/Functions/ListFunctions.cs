@@ -1255,8 +1255,8 @@ public partial class Functions
 	/// <c>FN_NOPARSE</c> in PennMUSH (<c>{"STRALLOF", fun_allof, 2, INT_MAX, FN_NOPARSE}</c>,
 	/// <c>src/function.c:765</c>): <c>do_whichof</c> parses the trailing delimiter before any
 	/// candidate (<c>src/funmisc.c:1405-1413</c>), so a side effect written there is visible to
-	/// every candidate. Registered <c>Regular</c>, the parser pre-evaluated the arguments left to
-	/// right and the candidates ran first.
+	/// every candidate. It is registered <c>NoParse</c> for that reason: a <c>Regular</c> function has
+	/// its arguments evaluated left to right before it runs, which would run the candidates first.
 	///
 	/// <para>This is <see cref="AllOf"/> with PennMUSH's <c>isbool</c> flag off — one C function
 	/// serves both, differing only in whether a candidate counts because it is true or because it

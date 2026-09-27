@@ -170,12 +170,6 @@ public static class ErrorMessages
 		public const string ErrorNotARoom = "#-1 OBJECT IS NOT A ROOM";
 		public const string ErrorNotSupported = "#-1 NOT SUPPORTED";
 		public const string FieldWidthExceedsLineWidth = "#-1 FIELD WIDTH EXCEEDS LINE WIDTH";
-		/// <summary>
-		/// No PennMUSH function answers this, and nothing reads it: the text-file functions, its only
-		/// reader, say <see cref="NoSuchFile"/> as PennMUSH does. Kept only because the lanes in flight
-		/// share this file.
-		/// </summary>
-		public const string FileNotFound = "#-1 FILE NOT FOUND";
 		/// <summary>A named text file that does not exist, PennMUSH's wording (<c>src/help.c:1144</c>).</summary>
 		public const string NoSuchFile = "#-1 NO SUCH FILE";
 		public const string ImaginaryNumber = "#-1 IMAGINARY NUMBER";

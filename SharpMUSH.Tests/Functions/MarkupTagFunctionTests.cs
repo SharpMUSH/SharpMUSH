@@ -33,12 +33,10 @@ public class MarkupTagFunctionTests
 	/// The output of <paramref name="who"/>'s own <c>think</c>, in the form it was sent in.
 	/// </summary>
 	/// <remarks>
-	/// Chosen by sender and recipient, never by position (#1247). This used to answer
-	/// <c>.Last()</c> of everything that reached the mortal while the command ran, and test players
-	/// share a room: another test's player leaving broadcasts "<c>X has left.</c>" into the same
-	/// bucket, and under load that broadcast arrived after the think's own output and won.
-	/// <c>Tagwrap_ForAMortal_KeepsOnlyParametersABrowserCannotRun</c> failed a full run with
-	/// <c>SpkNestSp_… has left.</c> where it wanted <c>&lt;a&gt;Click&lt;/a&gt;</c>.
+	/// Chosen by sender and recipient, never by position (#1247). Test players share a room, so
+	/// another test's player leaving broadcasts "<c>X has left.</c>" into the same bucket while the
+	/// command runs, and under load that broadcast can arrive after the think's own output. The
+	/// last message to reach the mortal is therefore not necessarily the think's.
 	/// <para>
 	/// <c>think</c> notifies its own executor, so the one notification this test is entitled to read
 	/// is the one the mortal sent to itself. Only
