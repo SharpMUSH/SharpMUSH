@@ -20,12 +20,6 @@ public static class FunctionDispatchCoverageGate
 	{
 		// FunctionArityParityTests.AttribSetSharpIsRegisteredButTheLexerCannotReachIt pins this.
 		["attrib_set#"] = "the lexer's function-name token does not admit '#', so the call never lexes as one",
-
-		// Differ from PennMUSH on every call the parity harness makes (sc.coverage-gaps); there is
-		// nothing correct to pin until they are fixed.
-		["pos"] = "GRA-126: searches for the string inside the target, and answers 0 for no match",
-		["lparent"] = "GRA-126: omits the object itself and answers objids",
-		["children"] = "GRA-126: answers objids",
 	};
 
 	[After(TestSession)]

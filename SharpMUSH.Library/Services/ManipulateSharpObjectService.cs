@@ -616,6 +616,12 @@ public class ManipulateSharpObjectService(
 
 		await mediator.Send(new UnsetObjectParentCommand(obj));
 
+		// PennMUSH's do_parent (src/set.c) says "Parent changed." for "none" too.
+		if (notify)
+		{
+			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ParentSet), executor);
+		}
+
 		return true;
 	}
 

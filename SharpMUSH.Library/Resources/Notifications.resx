@@ -2199,6 +2199,9 @@
   <data name="SearchUnknownOwner" xml:space="preserve">
     <value>Unknown owner.</value>
   </data>
+  <data name="SearchUnknownParent" xml:space="preserve">
+    <value>Unknown parent.</value>
+  </data>
   <data name="SearchNothingFound" xml:space="preserve">
     <value>Nothing found.</value>
   </data>

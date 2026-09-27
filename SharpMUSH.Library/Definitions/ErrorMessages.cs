@@ -1861,6 +1861,7 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SearchCriteriaFormat = "  Criteria: {0}";
 		public const string SearchUnknownOwner = "Unknown owner.";
+		public const string SearchUnknownParent = "Unknown parent.";
 		public const string SearchNothingFound = "Nothing found.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SearchObjectEntryFormat = "  #{0} ({1}) [{2}]";
