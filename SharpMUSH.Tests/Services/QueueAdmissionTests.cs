@@ -2340,6 +2340,21 @@ public class QueueAdmissionTests
 	};
 
 	/// <summary>
+	/// A mediator whose objects are <see cref="ConfigureTargets"/>'s, that answers the HALT flag
+	/// lookup, and that completes the returned signal when the runaway path writes the flag — which
+	/// <see cref="HaltRunaway"/> does after the wipe, so it doubles as the wipe's completion signal.
+	/// </summary>
+	private static (IMediator Mediator, TaskCompletionSource Halted) RunawayMediator()
+	{
+		var mediator = TargetMediator();
+		var halted = Signal();
+		mediator.Send(Arg.Any<GetObjectFlagQuery>(), Arg.Any<CancellationToken>()).Returns(HaltFlag());
+		mediator.Send(Arg.Any<SetObjectFlagCommand>(), Arg.Any<CancellationToken>())
+			.Returns(_ => { halted.TrySetResult(); return ValueTask.FromResult(true); });
+		return (mediator, halted);
+	}
+
+	/// <summary>
 	/// <c>pay_queue</c> ends with <c>set_flag_internal(player, "HALT")</c> (<c>src/cque.c:312</c>) —
 	/// no type test, so a runaway player is halted exactly as a runaway object is. The flag does not
 	/// silence them: the queue exempts players (<c>insert_que</c>, <c>src/cque.c:530</c>) and
@@ -2348,8 +2363,7 @@ public class QueueAdmissionTests
 	[Test]
 	public async Task ARunawayPlayerIsHaltedLikeAnyOtherOffender()
 	{
-		var mediator = TargetMediator();
-		mediator.Send(Arg.Any<GetObjectFlagQuery>(), Arg.Any<CancellationToken>()).Returns(HaltFlag());
+		var (mediator, _) = RunawayMediator();
 		await using var queue = Create(global: 4, owner: 1, mediator: mediator);
 		var state = ParserState.RootFor(new DBRef(10));
 
@@ -2364,6 +2378,60 @@ public class QueueAdmissionTests
 	}
 
 	/// <summary>
+	/// The wipe is mandatory and unbounded. <c>pay_queue</c>'s <c>do_halt</c> and
+	/// <c>set_flag_internal</c> sit outside <c>start_cpu_timer</c>, which bounds an entry's evaluation
+	/// and not the queue's bookkeeping (<c>src/cque.c:303-313</c> against <c>:1141</c>). Capping it at
+	/// one entry's deadline abandons a long wipe part-done, and nothing retries: the offender keeps its
+	/// backlog and never gets the flag.
+	/// </summary>
+	[Test]
+	public async Task TheRunawayHaltOutlivesOneEntrysExecutionBudget()
+	{
+		var (mediator, halted) = RunawayMediator();
+		// Reads that take longer than one entry's deadline and honour cancellation, as the database
+		// does. Under a per-entry budget the wipe's first read is already past it.
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(async ValueTask<AnyOptionalSharpObject> (call) =>
+			{
+				var node = await TargetMediator().Send(call.Arg<GetObjectNodeQuery>(), CancellationToken.None);
+				await Task.Delay(TimeSpan.FromMilliseconds(40), CancellationToken.None);
+				call.Arg<CancellationToken>().ThrowIfCancellationRequested();
+				return node;
+			});
+		await using var queue = Create(global: 4, owner: 1, mediator: mediator, milliseconds: 1);
+		var state = ParserState.RootFor(new DBRef(10));
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think pending"), state, TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think runaway"), state, TimeSpan.FromHours(1))).Reason)
+			.IsEqualTo(QueueRejectionReason.OwnerLimit);
+
+		await halted.Task.WaitAsync(TimeSpan.FromSeconds(10))
+			.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+	}
+
+	/// <summary>
+	/// The rejection notice is best-effort — it walks the owner's connections, and that can throw when
+	/// the transport is down. Telling nobody about a runaway is survivable; leaving one running is not,
+	/// so the halt is scheduled before the notice rather than after it.
+	/// </summary>
+	[Test]
+	public async Task TheRunawayHaltIsScheduledEvenWhenTheRejectionNoticeFails()
+	{
+		var (mediator, halted) = RunawayMediator();
+		var connections = Substitute.For<IConnectionService>();
+		connections.Get(Arg.Any<DBRef>()).Returns(_ => throw new InvalidOperationException("transport down"));
+		await using var queue = Create(global: 4, owner: 1, mediator: mediator, connections: connections,
+			notifications: Substitute.For<INotifyService>());
+		var state = ParserState.RootFor(new DBRef(10));
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think pending"), state, TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+			await queue.AdmitCommandList(MarkupText.Plain("think runaway"), state, TimeSpan.FromHours(1)));
+
+		await halted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+	}
+
+	/// <summary>
 	/// The wipe <c>pay_queue</c> performs (<c>do_halt(Owner(player), "", player)</c>,
 	/// <c>src/cque.c:311</c>) walks the queue, and a typed line is not on it — <c>run_user_input</c>
 	/// never inserts one. SharpMUSH does queue typed input, so the wipe has to spare that group or the
@@ -2372,13 +2440,9 @@ public class QueueAdmissionTests
 	[Test]
 	public async Task TheRunawayWipeLeavesWhatTheOffenderAlreadyTyped()
 	{
-		var mediator = TargetMediator();
-		mediator.Send(Arg.Any<GetObjectFlagQuery>(), Arg.Any<CancellationToken>()).Returns(HaltFlag());
-		// The flag is set after the wipe, so this is the wipe's completion signal. Without it the test
-		// would race the detached halt and pass on a typed entry that simply ran first.
-		var wiped = Signal();
-		mediator.Send(Arg.Any<SetObjectFlagCommand>(), Arg.Any<CancellationToken>())
-			.Returns(_ => { wiped.TrySetResult(); return ValueTask.FromResult(true); });
+		// The flag is set after the wipe, so that signal is the wipe's completion signal. Without it
+		// the test would race the detached halt and pass on a typed entry that simply ran first.
+		var (mediator, wiped) = RunawayMediator();
 		await using var queue = Create(global: 6, owner: 2, mediator: mediator);
 		var offender = new DBRef(10);
 		var blocked = Signal(); var release = Signal(); var typedRan = false;
@@ -2412,8 +2476,7 @@ public class QueueAdmissionTests
 	[Test]
 	public async Task ATypedLineOverTheQuotaIsRefusedWithoutHaltingWhoTypedIt()
 	{
-		var mediator = TargetMediator();
-		mediator.Send(Arg.Any<GetObjectFlagQuery>(), Arg.Any<CancellationToken>()).Returns(HaltFlag());
+		var (mediator, _) = RunawayMediator();
 		await using var queue = Create(global: 4, owner: 1, mediator: mediator);
 		var typist = new DBRef(10);
 

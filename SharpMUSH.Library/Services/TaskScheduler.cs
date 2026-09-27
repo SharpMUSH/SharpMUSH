@@ -232,13 +232,6 @@ public partial class TaskScheduler(
 				_ => QueueOutcome.InvalidTarget
 			});
 		}
-		if (!result.Accepted && notifyOnRejection && notifyService is not null)
-		{
-			if (handle is not null) await notifyService.NotifyLocalized(handle.Value, "QueueRejected", result.Reason);
-			else if (DBRef.TryParse(owner, out var player))
-				await foreach (var connection in connectionService.Get(player!.Value))
-					await notifyService.NotifyLocalized(connection.Handle, "QueueRejected", result.Reason);
-		}
 		// pay_queue wipes and halts whatever executor tripped the quota, player or not
 		// (do_halt(Owner(player), "", player) then set_flag_internal(player, "HALT"),
 		// src/cque.c:303-313). What decides it is the entry, not the type: run_user_input builds its
@@ -246,8 +239,18 @@ public partial class TaskScheduler(
 		// line never reaches insert_que and so never reaches pay_queue, whoever typed it. That is also
 		// what makes the flag safe on a player — they can still type, and process_command
 		// (src/game.c:1181) refuses only what the queue carries for them.
+		//
+		// Scheduled before the rejection notice, which is best-effort and can fail: telling nobody
+		// about a runaway is survivable, leaving one running is not.
 		if (result.Reason == QueueRejectionReason.OwnerLimit && group != DirectInputGroup && executor is { } offender)
 			QueueRunawayHalt(offender, owner);
+		if (!result.Accepted && notifyOnRejection && notifyService is not null)
+		{
+			if (handle is not null) await notifyService.NotifyLocalized(handle.Value, "QueueRejected", result.Reason);
+			else if (DBRef.TryParse(owner, out var player))
+				await foreach (var connection in connectionService.Get(player!.Value))
+					await notifyService.NotifyLocalized(connection.Handle, "QueueRejected", result.Reason);
+		}
 		return result;
 	}
 
@@ -276,9 +279,13 @@ public partial class TaskScheduler(
 			try
 			{
 				// The refused admission's budget is disposed the moment it returns, and the ambient one
-				// flows into this task. The wipe gets a lifetime of its own, bounded by shutdown.
-				var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? 1000;
-				using var budget = ExecutionBudget.FromMilliseconds(milliseconds == 0 ? 1000 : milliseconds, _shutdownCts.Token);
+				// flows into this task. The wipe gets a lifetime of its own, bounded by shutdown and by
+				// nothing else: pay_queue's do_halt and set_flag_internal sit outside start_cpu_timer,
+				// which bounds an entry's evaluation rather than the queue's bookkeeping
+				// (src/cque.c:303-313 against :1141). A per-entry deadline here would abandon a long wipe
+				// part-done and leave the offender unhalted with its backlog intact — the one outcome
+				// this path exists to prevent, and one nothing retries.
+				using var budget = ExecutionBudget.FromMilliseconds(0, _shutdownCts.Token);
 				using var scope = budget.Enter();
 				await HaltRunaway(offender, owner);
 			}
