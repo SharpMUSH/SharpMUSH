@@ -10,7 +10,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Server.Authentication;
-using SharpMUSH.Server.Helpers;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Server.Controllers;
 

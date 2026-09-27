@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace SharpMUSH.Server.Helpers;
+namespace SharpMUSH.Library.Logging;
 
 /// <summary>
 /// Provides utilities for sanitizing user input before logging to prevent log injection attacks.

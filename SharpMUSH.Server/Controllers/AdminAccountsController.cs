@@ -8,7 +8,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
-using SharpMUSH.Server.Helpers;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Server.Controllers;
 

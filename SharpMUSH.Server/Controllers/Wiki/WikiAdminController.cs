@@ -8,7 +8,7 @@ using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
-using SharpMUSH.Server.Helpers;
+using SharpMUSH.Library.Logging;
 using SharpMUSH.Server.Middleware;
 using SharpMUSH.Server.Services;
 

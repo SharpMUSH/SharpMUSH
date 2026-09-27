@@ -1,4 +1,4 @@
-using SharpMUSH.Server.Helpers;
+using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Tests.Server.Helpers;
 
