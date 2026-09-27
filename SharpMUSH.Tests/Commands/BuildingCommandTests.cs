@@ -1358,4 +1358,121 @@ public class BuildingCommandTests
 		await Assert.That(allowed.Message!.ToPlainText().Trim()).IsEqualTo("1");
 		await Assert.That(await HomeOf(item)).IsEqualTo($"#{linker.DbRef.Number}");
 	}
+
+	private async Task<string> OwnerOf(DBRef reference)
+	{
+		var owner = await Parser.FunctionParse(MarkupText.Plain($"[owner(#{reference.Number})]"));
+		return BareDbref(owner!.Message!.ToPlainText().Trim());
+	}
+
+	private async Task<DBRef> UnlinkedExit(string prefix)
+	{
+		var opened = await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@open {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+		return DBRef.Parse(opened.Message!.ToPlainText()!);
+	}
+
+	/// <summary>A room anyone may link into: <c>can_link_to</c>'s <c>LINK_OK</c> half.</summary>
+	private async Task<DBRef> LinkableRoom(string prefix)
+	{
+		var dug = await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+		var room = DBRef.Parse(dug.Message!.ToPlainText()!);
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@set {room}=LINK_OK"));
+		return room;
+	}
+
+	private async Task<DBRef?> DestinationOf(DBRef exitReference)
+	{
+		var exit = (await Mediator.Send(new GetObjectNodeQuery(exitReference))).Expect<SharpExit>();
+		return await exit.Home.WithCancellation(CancellationToken.None) is AnySharpContainer destination
+			? destination.Object().DBRef
+			: null;
+	}
+
+	/// <summary>
+	/// <c>fun_link</c> is one call to <c>do_link</c> (<c>src/fundb.c:2219-2237</c>), whose exit
+	/// destination is anything <c>can_link_to</c> admits — an exit may lead to a player or a thing, not
+	/// only a room. The second copy of the function refused everything but a room.
+	/// </summary>
+	[Test]
+	public async ValueTask LinkFunctionLinksAnExitToAnyContainer()
+	{
+		var exitDbRef = await UnlinkedExit("LinkFnAnyExit");
+		var thing = await CreateFixtureThing("LinkFnAnyDestination");
+
+		var linked = await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"think link(#{exitDbRef.Number}, #{thing.Number})"));
+
+		await Assert.That(linked.Message!.ToPlainText().Trim()).IsEqualTo("1");
+		await Assert.That(await DestinationOf(exitDbRef)).IsEqualTo(thing);
+	}
+
+	/// <summary>
+	/// <c>do_link</c>'s exit gate is <c>controls(player, thing) || (Location(thing) == NOTHING &amp;&amp;
+	/// eval_lock(Link_Lock))</c> (<c>src/create.c:342-348</c>): an exit that leads nowhere may be linked
+	/// — and by that act seized, <c>chown_object</c> at <c>:371</c> — by anyone who passes its
+	/// <c>@lock/link</c>. SharpMUSH asked for control up front, so the lock half and the transfer
+	/// behind it were both unreachable.
+	/// </summary>
+	[Test]
+	public async ValueTask LinkingAnUnlinkedExitThroughItsLinkLockSeizesIt()
+	{
+		var owner = await CreatePlayer("LinkLockOwner");
+		var linker = await CreatePlayer("LinkLockLinker");
+
+		var exitDbRef = await UnlinkedExit("LinkLockExit");
+		await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@chown {exitDbRef}=#{owner.DbRef.Number}"));
+		var destination = await LinkableRoom("LinkLockRoom");
+
+		// A link lock nobody passes leaves the exit alone.
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@lock/link {exitDbRef}=#FALSE"));
+		await Parser.CommandParse(linker.Handle, ConnectionService,
+			MarkupText.Plain($"@link {exitDbRef}={destination}"));
+
+		await Assert.That(await DestinationOf(exitDbRef)).IsNull();
+		await Assert.That(await OwnerOf(exitDbRef)).IsEqualTo($"#{owner.DbRef.Number}");
+
+		// One it passes links the exit and hands it over.
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@lock/link {exitDbRef}=#TRUE"));
+		await Parser.CommandParse(linker.Handle, ConnectionService,
+			MarkupText.Plain($"@link {exitDbRef}={destination}"));
+
+		await Assert.That(await DestinationOf(exitDbRef)).IsEqualTo(destination);
+		await Assert.That(await OwnerOf(exitDbRef)).IsEqualTo($"#{linker.DbRef.Number}");
+	}
+
+	/// <summary>
+	/// <c>do_link</c> refuses <c>preserve</c> to anyone but a wizard (<c>src/create.c:352-355</c>), and
+	/// keeps the owner when a wizard asks for it (<c>:369</c>, <c>:375-378</c>). <c>link()</c> reads it
+	/// from <c>parse_boolean(args[2])</c> (<c>src/fundb.c:2232-2233</c>). SharpMUSH declared both the
+	/// third argument and the <c>/PRESERVE</c> switch and read neither.
+	/// </summary>
+	[Test]
+	public async ValueTask LinkPreserveIsWizardOnlyAndKeepsTheOwner()
+	{
+		var owner = await CreatePlayer("LinkPreserveOwner");
+		var linker = await CreatePlayer("LinkPreserveLinker");
+
+		var exitDbRef = await UnlinkedExit("LinkPreserveExit");
+		await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@chown {exitDbRef}=#{owner.DbRef.Number}"));
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@lock/link {exitDbRef}=#TRUE"));
+		var destination = await LinkableRoom("LinkPreserveRoom");
+
+		var refused = await Parser.CommandParse(linker.Handle, ConnectionService,
+			MarkupText.Plain($"think link(#{exitDbRef.Number}, #{destination.Number}, 1)"));
+
+		await Assert.That(refused.Message!.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await DestinationOf(exitDbRef)).IsNull();
+		await Assert.That(await OwnerOf(exitDbRef)).IsEqualTo($"#{owner.DbRef.Number}");
+
+		// A wizard's /preserve links the exit without taking it.
+		await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@link/preserve {exitDbRef}={destination}"));
+
+		await Assert.That(await DestinationOf(exitDbRef)).IsEqualTo(destination);
+		await Assert.That(await OwnerOf(exitDbRef)).IsEqualTo($"#{owner.DbRef.Number}");
+	}
 }

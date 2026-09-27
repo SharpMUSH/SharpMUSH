@@ -605,6 +605,11 @@ public partial class Commands
 		await DidItService.DidIt(parser, new DidItRequest(thing, thing, AWhat: "STARTUP"));
 	}
 
+	/// <remarks>
+	/// PennMUSH <c>do_link</c> (<c>src/create.c:308-448</c>), which <c>fun_link</c> calls with the same
+	/// arguments (<c>src/fundb.c:2219-2237</c>), so the whole body lives in
+	/// <see cref="LinkHelpers.LinkAsync"/> and <c>link()</c> reaches it too.
+	/// </remarks>
 	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
 		MaxArgs = 2, ParameterNames = ["object", "destination"])]
 	public async ValueTask<Option<CallState>> Link(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -614,186 +619,16 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var exitName = args["0"].Message!.ToPlainText();
 		var destName = args["1"].Message!.ToPlainText();
+		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, exitName, LocateFlags.All,
-			async exitObj =>
+			async target => await LinkHelpers.LinkAsync(parser, Mediator, NotifyService, LocateService,
+				PermissionService, LockService, AttributeService, ManipulateSharpObjectService, executor, target,
+				destName, preserve) switch
 			{
-				if (!await PermissionService.Controls(executor, exitObj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				if (exitObj is SharpExit exit)
-				{
-					if (destName.Equals(LinkTypeHome, StringComparison.InvariantCultureIgnoreCase))
-					{
-						await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Plain(LinkTypeHome));
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToHome), executor);
-						return CallState.Empty;
-					}
-					else if (destName.Equals(LinkTypeVariable, StringComparison.InvariantCultureIgnoreCase))
-					{
-						await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Plain(LinkTypeVariable));
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedToVariable), executor);
-						return CallState.Empty;
-					}
-
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-						executor, executor, destName, LocateFlags.All,
-						async destObj =>
-						{
-							// An exit may lead to any container — room, player or thing (PennMUSH can_link_to).
-							// Only another exit is not a place you can end up.
-							if (!destObj.IsContainer)
-							{
-								return await NotifyService.NotifyAndReturn(
-										executor.Object().DBRef,
-										errorReturn: ErrorMessages.Returns.InvalidDestination,
-										notifyMessage: ErrorMessages.Notifications.InvalidDestinationExit,
-										shouldNotify: true);
-							}
-
-							var destination = destObj.AsContainer;
-
-							if (!await CanLinkTo(executor, destObj))
-							{
-								return await NotifyService.NotifyAndReturn(
-									executor.Object().DBRef,
-									errorReturn: ErrorMessages.Returns.PermissionDenied,
-									notifyMessage: ErrorMessages.Notifications.CantLinkToThat,
-									shouldNotify: true);
-							}
-
-							var exitOwner = await exitObj.Object().Owner.WithCancellation(CancellationToken.None);
-							var executorObj = executor.Object();
-							var executorOwner = await executorObj.Owner.WithCancellation(CancellationToken.None);
-
-							var exitNotControlled = !await PermissionService.Controls(executor, exitObj);
-							var isOwnedByOther = exitOwner.Object.Id != executorOwner.Object.Id;
-
-							// When linking an exit owned by someone else that executor doesn't control:
-							// Check @lock/link, transfer ownership, and set HALT flag
-							if (isOwnedByOther && exitNotControlled)
-							{
-								var linkLockPasses = await LockService.Evaluate(LockType.Link, exitObj, executor);
-								if (!linkLockPasses)
-								{
-									return await NotifyService.NotifyAndReturn(
-										executor.Object().DBRef,
-										errorReturn: ErrorMessages.Returns.PermissionDenied,
-										notifyMessage: ErrorMessages.Notifications.DontPassLinkLock,
-										shouldNotify: true);
-								}
-
-								if (executor is SharpPlayer executorPlayer)
-								{
-									try
-									{
-										await Mediator.Send(new SetObjectOwnerCommand(exitObj, executorPlayer));
-									}
-									catch (Exception)
-									{
-										return await NotifyService.NotifyAndReturn(
-											executor.Object().DBRef,
-											errorReturn: ErrorMessages.Returns.PermissionDenied,
-											notifyMessage: ErrorMessages.Notifications.FailedToTransferOwnership,
-											shouldNotify: true);
-									}
-								}
-
-								// Set HALT flag to prevent looping
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, exitObj, "HALT", true);
-							}
-
-							await AttributeService.SetAttributeAsync(executor, exitObj, AttrLinkType, MarkupText.Empty);
-
-							await Mediator.Send(new LinkExitCommand(exit, destination));
-
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, exitObj.Object().DBRef.Number, destination.Object().DBRef.Number);
-							return CallState.Empty;
-						}
-					);
-				}
-				else if (exitObj.IsThing || exitObj.IsPlayer)
-				{
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-						executor, executor, destName, LocateFlags.All,
-						async destObj =>
-						{
-							// create.c:395: a home is any object that is not an exit — a room, a player or a
-							// thing. safe_tel's "homed to the mover" case (move.c:311) is only reachable
-							// because a player can be a home.
-							if (!destObj.IsContainer)
-							{
-								return await NotifyService.NotifyAndReturn(
-									executor.Object().DBRef,
-									errorReturn: ErrorMessages.Returns.InvalidDestination,
-									notifyMessage: ErrorMessages.Notifications.HomeIsAnExit,
-									shouldNotify: true);
-							}
-
-							// create.c:399.
-							if (destObj.Object().DBRef.Equals(exitObj.Object().DBRef))
-							{
-								return await NotifyService.NotifyAndReturn(
-									executor.Object().DBRef,
-									errorReturn: ErrorMessages.Returns.InvalidDestination,
-									notifyMessage: ErrorMessages.Notifications.CannotLinkToItself,
-									shouldNotify: true);
-							}
-
-							// create.c:404. Penn's following room == HOME guard (create.c:412) is
-							// unreachable: this branch matches with MAT_EVERYTHING, which has no
-							// home entry, and only parse_linkable_room ever yields HOME.
-							if (!await CanSetHomeTo(executor, destObj))
-							{
-								return await NotifyService.NotifyAndReturn(
-									executor.Object().DBRef,
-									errorReturn: ErrorMessages.Returns.PermissionDenied,
-									notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-									shouldNotify: true);
-							}
-
-							// Convert to AnySharpContent for SetObjectHomeCommand
-							var contentObj = exitObj.AsContent;
-							await Mediator.Send(new SetObjectHomeCommand(contentObj, destObj.AsContainer));
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HomeSet), executor);
-							return CallState.Empty;
-						}
-					);
-				}
-				else if (exitObj is SharpRoom room)
-				{
-					return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-						executor, executor, destName, LocateFlags.All,
-						async destObj =>
-						{
-							if (destObj is not SharpRoom destinationRoom)
-							{
-								return await NotifyService.NotifyAndReturn(
-									executor.Object().DBRef,
-									errorReturn: ErrorMessages.Returns.InvalidDestination,
-									notifyMessage: ErrorMessages.Notifications.DropToMustBeRoom,
-									shouldNotify: true);
-							}
-
-							await Mediator.Send(new LinkRoomCommand(room, destinationRoom));
-							await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToSet), executor);
-							return CallState.Empty;
-						}
-					);
-				}
-
-				return await NotifyService.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.InvalidObjectType,
-					notifyMessage: ErrorMessages.Notifications.InvalidObjectTypeForLinking,
-					shouldNotify: true);
+				Success => CallState.Empty,
+				Error<string> refused => new CallState(refused.Value)
 			}
 		);
 	}
@@ -885,22 +720,6 @@ public partial class Commands
 
 	private ValueTask<bool> CanLinkTo(AnySharpObject executor, AnySharpObject destination)
 		=> PermissionService.CanLinkToAsync(executor, destination);
-
-	/// <summary>
-	/// PennMUSH <c>do_link</c>'s home gate (<c>src/create.c:404</c>): <c>!controls(player, room) &amp;&amp;
-	/// !Abode(room)</c>. Any non-exit can be a home, so without this a player could home an object
-	/// they control into someone else's inventory. <c>ABODE</c> is ROOM-only in the flag seed, as in
-	/// PennMUSH, so a player or thing destination is gated on control alone.
-	/// </summary>
-	private async ValueTask<bool> CanSetHomeTo(AnySharpObject executor, AnySharpObject destination)
-	{
-		if (await PermissionService.Controls(executor, destination))
-		{
-			return true;
-		}
-
-		return await destination.HasFlag("ABODE");
-	}
 
 	/// <summary>
 	/// PennMUSH <c>do_open</c> (<c>src/create.c:205-237</c>), which reads a 1-based <c>links</c> array
