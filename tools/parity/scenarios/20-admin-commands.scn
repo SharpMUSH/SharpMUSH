@@ -46,7 +46,26 @@ think [haspower(*Alice,GUEST)]
 @config/list=names
 @config names
 
+::case admin.config.display  how config() prints a value: dbrefs keep their #, booleans read Yes/No
+# The dbrefs themselves differ by design (SharpMUSH seeds handlers and ancestors PennMUSH leaves at
+# #-1), so each option is asked for its shape rather than its value; the booleans agree outright.
+think [strmatch(config(player_start),#*)] [strmatch(config(master_room),#*)] [strmatch(config(base_room),#*)] [strmatch(config(default_home),#*)] [strmatch(config(probate_judge),#*)]
+think [strmatch(config(ancestor_room),#*)] [strmatch(config(ancestor_exit),#*)] [strmatch(config(ancestor_thing),#*)] [strmatch(config(ancestor_player),#*)]
+think [strmatch(config(event_handler),#*)] [strmatch(config(http_handler),#*)] [strmatch(config(max_dbref),#*)]
+think [config(exits_connect_rooms)] [config(zone_control_zmp_only)] [config(noisy_whisper)]
+
 ::case admin.search  @search and @find
 @search name=Widget
 @find Widget
 @stats
+
+::case admin.restrict-command  @config/set restrict_command restricts a command live
+# PennMUSH applies it through config_set's restrict_command branch (conf.c:866, reached from cmds.c:335).
+::login god One godpass
+::as god
+@config/set restrict_command=@find wizard
+::as alice
+@find Widget
+::as god
+@command/restrict @find=!FLAG^GAGGED
+::as wiz

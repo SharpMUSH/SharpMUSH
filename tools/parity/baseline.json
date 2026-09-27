@@ -221,6 +221,22 @@
    "command": "Carol carolpw2"
   },
   {
+   "key": "20-admin-commands/admin.restrict-command#0",
+   "command": "One godpass"
+  },
+  {
+   "key": "20-admin-commands/admin.restrict-command#1",
+   "command": "@config/set restrict_command=@find wizard"
+  },
+  {
+   "key": "20-admin-commands/admin.restrict-command#2",
+   "command": "@find Widget"
+  },
+  {
+   "key": "20-admin-commands/admin.restrict-command#3",
+   "command": "@command/restrict @find=!FLAG^GAGGED"
+  },
+  {
    "key": "20-admin-commands/admin.search#0",
    "command": "@search name=Widget"
   },
@@ -331,6 +347,46 @@
   {
    "key": "30-softcode/sc.strings#2",
    "command": "think [pos(c,abcd)] [strmatch(hello,h*o)] [match(a b c,b)] [comp(a,b)] [ljust(a,3)]|[rjust(a,3)]|[center(a,5)]"
+  },
+  {
+   "key": "40-compat-choices/choice.dropto#0",
+   "command": "Wiz wizpass"
+  },
+  {
+   "key": "40-compat-choices/choice.dropto#11",
+   "command": "@create Pebble"
+  },
+  {
+   "key": "40-compat-choices/choice.dropto#12",
+   "command": "@tel me=[get(EventSink/DROPROOM)]"
+  },
+  {
+   "key": "40-compat-choices/choice.dropto#14",
+   "command": "@tel me=[v(HOMELOC)]"
+  },
+  {
+   "key": "40-compat-choices/choice.dropto#3",
+   "command": "@create EventSink"
+  },
+  {
+   "key": "40-compat-choices/choice.dropto#5",
+   "command": "@trigger EventSink/MKROOM"
+  },
+  {
+   "key": "40-compat-choices/choice.dropto#9",
+   "command": "@link [get(EventSink/DROPROOM)]=[loc(*Alice)]"
+  },
+  {
+   "key": "40-compat-choices/choice.housekeeping#0",
+   "command": "One godpass"
+  },
+  {
+   "key": "40-compat-choices/choice.mail-fwd#0",
+   "command": "Alice alicepass"
+  },
+  {
+   "key": "40-compat-choices/choice.mail-fwd#1",
+   "command": "Bob bobpass"
   },
   {
    "key": "50-mail/mail.fwd-by-name#0",

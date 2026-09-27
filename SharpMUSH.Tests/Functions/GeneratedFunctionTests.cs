@@ -91,19 +91,29 @@ public class GeneratedFunctionTests
 		await Assert.That(result1.ToPlainText()).IsEqualTo(result3.ToPlainText());
 	}
 
+	/// <summary>
+	/// PennMUSH prints a boolean option as Yes or No, never the language's own spelling of the bit
+	/// (<c>help config()</c>; <c>cf_bool</c> in <c>display_config_value</c>, <c>src/conf.c:1705</c>).
+	/// Observed on 1.8.8 (<c>80a1d5b9</c>): <c>think config(exits_connect_rooms)</c> → <c>No</c>.
+	/// </summary>
 	[Test]
-	public async Task Config_BooleanOption_ReturnsCorrectValue()
+	public async Task Config_BooleanOption_ReadsYesOrNo()
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain("config(noisy_whisper)")))?.Message!;
 		var resultText = result.ToPlainText();
 
-		await Assert.That(resultText).IsIn("True", "False");
+		await Assert.That(resultText).IsIn("Yes", "No");
 	}
 
+	/// <summary>
+	/// A plain numeric option carries no <c>#</c> — only a dbref-typed one does
+	/// (<see cref="ConfigDbrefOptionTests"/>). Observed on 1.8.8 (<c>80a1d5b9</c>):
+	/// <c>think config(max_aliases)</c> → <c>3</c>.
+	/// </summary>
 	[Test]
-	public async Task Config_NumericOption_ReturnsCorrectValue()
+	public async Task Config_NumericOption_ReturnsBareNumber()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("config(player_start)")))?.Message!;
+		var result = (await Parser.FunctionParse(MarkupText.Plain("config(max_aliases)")))?.Message!;
 		var resultText = result.ToPlainText();
 
 		await Assert.That(uint.TryParse(resultText, out _)).IsTrue();
@@ -138,8 +148,9 @@ public class GeneratedFunctionTests
 
 		var propertyName = SharpMUSH.Configuration.Generated.ConfigMetadata.AttributeToPropertyName["mud_name"];
 		var expectedValue = SharpMUSH.Configuration.Generated.ConfigAccessor.GetValue(options, propertyName);
+		var metadata = SharpMUSH.Configuration.Generated.ConfigMetadata.PropertyMetadata[propertyName];
 
-		await Assert.That(resultText).IsEqualTo(expectedValue?.ToString() ?? "");
+		await Assert.That(resultText).IsEqualTo(SharpMUSH.Configuration.ConfigValueDisplay.Format(expectedValue, metadata));
 	}
 
 	#endregion

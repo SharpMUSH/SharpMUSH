@@ -1,0 +1,68 @@
+# Deliberate differences (pennmush-compatibility.md, #1134) that need a second player, God or a server
+# setting to show, so the profile cannot give them a one-line ```sharp example. Each case is the example
+# for one **A choice.** entry and names it; the one step that shows the difference is allowlisted in
+# known-differences.json under that entry's heading, and every other step has to match or be an open gap.
+# Configuration is changed only inside a case and put back before it ends.
+
+::case choice.housekeeping  PennMUSH's file and allocator housekeeping answers NOT SUPPORTED
+::login god One godpass
+::as god
+@stats/chunks
+@logwipe/check wrongpassword
+
+::case choice.dropto  a drop-to move's event names who caused it
+# A STICKY room keeps what is dropped in it until the last player leaves, then sends it to its drop-to
+# (send_contents, move.c:187): that move is the one PennMUSH reports as caused by SYSEVENT. The handler
+# records the enactor of that move only, so the step that shows it holds nothing else. EventSink digs the
+# room, so dig()'s "created with room number" goes to it, not to a transcript: PennMUSH reuses a slot freed
+# by an earlier scenario, and that deliberate difference is not what this case shows.
+::login wiz Wiz wizpass
+::as wiz
+@power me=No_Pay
+think [set(me,HOMELOC:[loc(me)])][set(me,OLDEVENTS:[config(event_handler)])]
+@create EventSink
+&MKROOM EventSink=think [set(me,DROPROOM:[dig(DropRoom)])]
+@trigger EventSink/MKROOM
+::settle
+&OBJECT`MOVE EventSink=@switch %4=dropto,{&DROPTO_BY me=%#}
+::as god
+@config/set event_handler=[locate(*Wiz,EventSink,i)]
+::as wiz
+@link [get(EventSink/DROPROOM)]=[loc(*Alice)]
+@set [get(EventSink/DROPROOM)]=STICKY
+@create Pebble
+@tel me=[get(EventSink/DROPROOM)]
+drop Pebble
+@tel me=[v(HOMELOC)]
+::settle
+think [get(EventSink/DROPTO_BY)]
+::as god
+@config/set event_handler=[if(get(*Wiz/OLDEVENTS),get(*Wiz/OLDEVENTS),-1)]
+
+::case choice.mail-fwd  a refused forward is reported
+::login alice Alice alicepass
+::login bob Bob bobpass
+::as bob
+@lock/mail me=!*Alice
+::as alice
+@mail Alice=Forward me/A note to pass on.
+@mail/fwd 1=*Bob
+::as bob
+@unlock/mail me
+
+::case choice.mail-folder  folders are named freely and created on delivery
+::as bob
+&MAILFILTER me=newbox
+::as alice
+@mail Bob=Filed/Where does this go?
+::as bob
+&MAILFILTER me
+
+::case choice.mail-forwardlist  an empty MAILFORWARDLIST is no list
+::as bob
+&MAILFORWARDLIST me=
+think [hasattr(me,MAILFORWARDLIST)]
+::as alice
+@mail Bob=Listed/Does this arrive?
+::as bob
+&MAILFORWARDLIST me

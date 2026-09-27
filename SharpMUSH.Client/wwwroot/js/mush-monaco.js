@@ -243,7 +243,8 @@
                         contents.push({ value: def.helpPreview });
                     }
                     if (def.helpFull) {
-                        var args = encodeURIComponent(JSON.stringify([name.toUpperCase()]));
+                        // NAME() so a same-named command (IDLE, VERSION) does not answer for the function.
+                        var args = encodeURIComponent(JSON.stringify([name.toUpperCase() + '()']));
                         contents.push({ value: '[📖 Show full help](command:sharpmush.showHelp?' + args + ')', isTrusted: true });
                     }
                     return {
