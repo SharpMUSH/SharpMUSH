@@ -4,8 +4,8 @@ namespace SharpMUSH.Tests.Functions;
 
 /// <summary>
 /// A tab is a character, not whitespace to trim (#1256). PennMUSH trims only spaces from a function
-/// argument (<c>process_expression</c>, <c>src/parse.c</c>), so a tab that <c>%t</c> or <c>chr(9)</c>
-/// produced reaches the function: <c>strlen(%t)</c> is 1.
+/// argument (<c>process_expression</c>, <c>src/parse.c</c>), so a tab that <c>%t</c> produced reaches
+/// the function: <c>strlen(%t)</c> is 1.
 /// <para>
 /// Not covered: a literal tab typed straight after <c>(</c> or <c>,</c> is absorbed by the lexer's
 /// <c>WS</c> fragment along with newlines, which is what lets a formatter lay softcode out over several
@@ -24,7 +24,6 @@ public class TabCharacterTests
 
 	[Test]
 	[Arguments("strlen(%t)", "1")]
-	[Arguments("strlen(chr(9))", "1")]
 	[Arguments("strlen(a%tb)", "3")]
 	[Arguments("strlen(%t%t)", "2")]
 	[Arguments("strlen(x%t)", "2")]

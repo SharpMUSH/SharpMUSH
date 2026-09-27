@@ -649,6 +649,13 @@ public partial class Functions
 			return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
 
+		// PennMUSH refuses control characters (C0, DEL and C1) with #-1 UNPRINTABLE CHARACTER
+		// (fun_chr, src/funstr.c). Code points above 255 are a deliberate Unicode extension.
+		if (charInt <= char.MaxValue && char.IsControl((char)charInt))
+		{
+			return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.UnprintableCharacter));
+		}
+
 		try
 		{
 			return ValueTask.FromResult<CallState>(char.ConvertFromUtf32(charInt));
