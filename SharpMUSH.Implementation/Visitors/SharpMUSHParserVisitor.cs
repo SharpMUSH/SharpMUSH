@@ -1162,10 +1162,42 @@ public class SharpMUSHParserVisitor(
 
 
 	/// <summary>
+	/// PennMUSH's <c>process_command</c> gate (<c>src/game.c:1181</c>): a halted executor runs no
+	/// command, and its owner is told <c>Attempt to execute command by halted object #N</c> every
+	/// time one is refused. A <em>player</em> is exempt only for a command it typed at a connection
+	/// (<c>QUEUE_SOCKET</c>), which is what <see cref="ParserStateFlags.DirectInput"/> stands for.
+	/// </summary>
+	/// <remarks>
+	/// This is the far end of the queue's player exemption. <c>insert_que</c> (<c>src/cque.c:530</c>)
+	/// and <c>do_entry</c> (<c>:1136</c>) drop a halted <em>object's</em> entry outright but admit a
+	/// halted player's, so a halted player's queued work reaches execution and is refused here
+	/// instead — noisily, once per command, rather than silently at admission. That is also what
+	/// makes the flag safe to set on a runaway player (<c>pay_queue</c>, <c>:303-313</c>): the player
+	/// keeps typing, and only what the queue carries for them stops.
+	/// <para>Placed where Penn places it — after the connection-level commands, which <c>do_command</c>
+	/// (<c>src/bsd.c:4155-4269</c>) answers before <c>process_command</c> is ever reached, and before
+	/// <c>command_parse</c>, so a halted executor's speech token, chat alias or <c>$</c>-command is
+	/// refused along with everything else.</para>
+	/// </remarks>
+	private async ValueTask<bool> RefuseHaltedExecutor()
+	{
+		if (parser.CurrentState.Executor is null) return false;
+		if (await parser.CurrentState.ExecutorObject(Mediator) is not AnySharpObject executor) return false;
+		if (executor.IsPlayer && parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)) return false;
+		if (!await executor.HasFlag("HALT", ExecutionBudget.CurrentToken)) return false;
+
+		var owner = (await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
+		await NotifyService.NotifyLocalized(owner,
+			nameof(ErrorMessages.Notifications.HaltedObjectCommandRefusedFormat),
+			executor.Object().DBRef.Number);
+		return true;
+	}
+
+	/// <summary>
 	/// Evaluates the command, with the parser info given.
 	/// </summary>
 	/// <remarks>
-	/// Call State is expected to be empty on return. 
+	/// Call State is expected to be empty on return.
 	/// But if one wanted to implement a @pipe command that can pass a result from say, a @dig command, 
 	/// there would be a need for some way of passing on secondary data.
 	/// </remarks>
@@ -1272,6 +1304,8 @@ public class SharpMUSHParserVisitor(
 					nameof(ErrorMessages.Notifications.NoSuchCommandAtLogin));
 				return new None();
 			}
+
+			if (await RefuseHaltedExecutor()) return new None();
 
 			// PennMUSH src/command.c command_parse(): before any command-table lookup, a leading
 			// SAY_TOKEN ("), POSE_TOKEN (:), SEMI_POSE_TOKEN (;) or EMIT_TOKEN (\) is replaced by the

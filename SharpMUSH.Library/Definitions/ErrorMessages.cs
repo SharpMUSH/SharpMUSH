@@ -1437,6 +1437,13 @@ public static class ErrorMessages
 		/// <summary>PennMUSH <c>pay_queue</c> (<c>src/cque.c:304</c>): the owner of an object that ran past its queue quota is told so.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RunawayObjectFormat = "Runaway object: {0}({1}). Commands halted.";
+		/// <summary>
+		/// PennMUSH <c>process_command</c> (<c>src/game.c:1181</c>): a halted executor's command is
+		/// refused and its owner told, once per refused command. Takes the dbref number alone, as
+		/// Penn's <c>%d</c> does — never an objid.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string HaltedObjectCommandRefusedFormat = "Attempt to execute command by halted object #{0}";
 
 		public const string NotifyMustSpecifySemaphoreObject = "You must specify an object to use for the semaphore.";
 		public const string NotifyMustSpecifyValidObjectAttribute = "You must specify a valid object with an optional valid attribute to use for the semaphore.";

@@ -239,12 +239,14 @@ public partial class TaskScheduler(
 				await foreach (var connection in connectionService.Get(player!.Value))
 					await notifyService.NotifyLocalized(connection.Handle, "QueueRejected", result.Reason);
 		}
-		// Deviation: PennMUSH's pay_queue wipes whatever executor tripped the quota, player or not
-		// (do_halt(Owner(player), "", player), src/cque.c:311). Its message names an object, and a
-		// player only ever reaches that branch through queued work, since run_user_input bypasses
-		// pay_queue entirely (src/cque.c:1076-1088). Here the refusal already stopped the new entry,
-		// and wiping a player's queue on top of it would take out work they did not run away with.
-		if (result.Reason == QueueRejectionReason.OwnerLimit && !executorIsPlayer && executor is { } offender)
+		// pay_queue wipes and halts whatever executor tripped the quota, player or not
+		// (do_halt(Owner(player), "", player) then set_flag_internal(player, "HALT"),
+		// src/cque.c:303-313). What decides it is the entry, not the type: run_user_input builds its
+		// entry with QUEUE_SOCKET and hands it straight to do_entry (src/cque.c:1076-1088), so a typed
+		// line never reaches insert_que and so never reaches pay_queue, whoever typed it. That is also
+		// what makes the flag safe on a player — they can still type, and process_command
+		// (src/game.c:1181) refuses only what the queue carries for them.
+		if (result.Reason == QueueRejectionReason.OwnerLimit && group != DirectInputGroup && executor is { } offender)
 			QueueRunawayHalt(offender, owner);
 		return result;
 	}
@@ -294,11 +296,12 @@ public partial class TaskScheduler(
 		// entry freeing a slot the next one takes, and the quota alone never brings the loop to a stop.
 		await Halt(offender);
 
-		// Penn exempts players from the halted gate at both ends — insert_que (src/cque.c:530) and the
-		// dequeue re-check (:1136) each test !IsPlayer(executor) first. SharpMUSH's DidItService
-		// honours HALT on everyone, so the flag on a player would silence them outright. Admission
-		// already refuses to send a player down this path; this is the second lock on that door.
-		if (node is AnySharpObject haltable and not SharpPlayer)
+		// set_flag_internal(player, "HALT") (src/cque.c:312) names no type and excludes none. A halted
+		// player is not a silenced player: the queue exempts them (insert_que, src/cque.c:530; the
+		// dequeue re-check, :1136), and what reaches process_command is refused there (src/game.c:1181)
+		// unless the player typed it. So the flag stops the runaway's queued work and leaves the
+		// person at the keyboard able to type — including `@set me=!halt`.
+		if (node is AnySharpObject haltable)
 		{
 			var haltFlag = await mediator.Send(new GetObjectFlagQuery("HALT"), ExecutionBudget.CurrentToken);
 			if (haltFlag is not null) await mediator.Send(new SetObjectFlagCommand(haltable, haltFlag), ExecutionBudget.CurrentToken);

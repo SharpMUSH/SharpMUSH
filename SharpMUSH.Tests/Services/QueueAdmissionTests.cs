@@ -1,4 +1,5 @@
 ﻿using Mediator;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -2306,5 +2307,58 @@ public class QueueAdmissionTests
 			await Assert.That(ran).IsFalse();
 		}
 		finally { release.TrySetResult(); }
+	}
+
+	/// <summary>The HALT flag <see cref="ConfigureTargets"/>'s objects do not carry until one is set.</summary>
+	private static SharpObjectFlag HaltFlag() => new()
+	{
+		Name = "HALT", Symbol = "h", System = true, SetPermissions = [], UnsetPermissions = [], TypeRestrictions = []
+	};
+
+	/// <summary>
+	/// <c>pay_queue</c> ends with <c>set_flag_internal(player, "HALT")</c> (<c>src/cque.c:312</c>) —
+	/// no type test, so a runaway player is halted exactly as a runaway object is. The flag does not
+	/// silence them: the queue exempts players (<c>insert_que</c>, <c>src/cque.c:530</c>) and
+	/// <c>process_command</c> (<c>src/game.c:1181</c>) refuses only what it did not type. #1006.
+	/// </summary>
+	[Test]
+	public async Task ARunawayPlayerIsHaltedLikeAnyOtherOffender()
+	{
+		var mediator = TargetMediator();
+		mediator.Send(Arg.Any<GetObjectFlagQuery>(), Arg.Any<CancellationToken>()).Returns(HaltFlag());
+		await using var queue = Create(global: 4, owner: 1, mediator: mediator);
+		var state = ParserState.RootFor(new DBRef(10));
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think pending"), state, TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think runaway"), state, TimeSpan.FromHours(1))).Reason)
+			.IsEqualTo(QueueRejectionReason.OwnerLimit);
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+
+		await mediator.Received().Send(
+			Arg.Is<SetObjectFlagCommand>(set => set.Flag.Name == "HALT" && set.Target.Object().DBRef.Number == 10),
+			Arg.Any<CancellationToken>());
+	}
+
+	/// <summary>
+	/// <c>run_user_input</c> builds its entry with <c>QUEUE_SOCKET</c> and hands it to <c>do_entry</c>
+	/// directly (<c>src/cque.c:1076-1088</c>), so a typed line never passes through <c>insert_que</c>
+	/// and never reaches <c>pay_queue</c>. Whoever typed it, it cannot be the runaway — and a player
+	/// whose own objects filled the quota must not be halted for still being at the keyboard.
+	/// </summary>
+	[Test]
+	public async Task ATypedLineOverTheQuotaIsRefusedWithoutHaltingWhoTypedIt()
+	{
+		var mediator = TargetMediator();
+		mediator.Send(Arg.Any<GetObjectFlagQuery>(), Arg.Any<CancellationToken>()).Returns(HaltFlag());
+		await using var queue = Create(global: 4, owner: 1, mediator: mediator);
+		var typist = new DBRef(10);
+
+		await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think pending"),
+			ParserState.RootFor(typist), TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.That((await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null),
+			"typed", Scheduler.DirectInputGroup, typist)).Reason).IsEqualTo(QueueRejectionReason.OwnerLimit);
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+
+		await mediator.DidNotReceive().Send(Arg.Any<SetObjectFlagCommand>(), Arg.Any<CancellationToken>());
 	}
 }
