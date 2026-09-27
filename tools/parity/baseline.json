@@ -289,18 +289,6 @@
    "command": "Alice alicepass"
   },
   {
-   "key": "25-requested-dbref/dbref.open#0",
-   "command": "@open RqExit=here,RqExitBack,here,[elements(v(HOLES),10)],[elements(v(HOLES),13)]"
-  },
-  {
-   "key": "25-requested-dbref/dbref.open#2",
-   "command": "think [strmatch(num(open(RqFunExit,here,here,elements(v(HOLES),11))),elements(v(HOLES),11))]"
-  },
-  {
-   "key": "25-requested-dbref/dbref.pcreate#2",
-   "command": "think [strmatch(num(pcreate(RqFunPlayer,rqpass,elements(v(HOLES),16))),elements(v(HOLES),16))]"
-  },
-  {
    "key": "30-softcode/sc.control#2",
    "command": "think [null(x)][s(%b)] [lit([add(1,2)])] [eval(add(1,2))]"
   },
