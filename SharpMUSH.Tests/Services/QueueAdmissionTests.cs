@@ -2364,6 +2364,46 @@ public class QueueAdmissionTests
 	}
 
 	/// <summary>
+	/// The wipe <c>pay_queue</c> performs (<c>do_halt(Owner(player), "", player)</c>,
+	/// <c>src/cque.c:311</c>) walks the queue, and a typed line is not on it — <c>run_user_input</c>
+	/// never inserts one. SharpMUSH does queue typed input, so the wipe has to spare that group or the
+	/// halt would take back with one hand what the gate's player exemption gives with the other.
+	/// </summary>
+	[Test]
+	public async Task TheRunawayWipeLeavesWhatTheOffenderAlreadyTyped()
+	{
+		var mediator = TargetMediator();
+		mediator.Send(Arg.Any<GetObjectFlagQuery>(), Arg.Any<CancellationToken>()).Returns(HaltFlag());
+		// The flag is set after the wipe, so this is the wipe's completion signal. Without it the test
+		// would race the detached halt and pass on a typed entry that simply ran first.
+		var wiped = Signal();
+		mediator.Send(Arg.Any<SetObjectFlagCommand>(), Arg.Any<CancellationToken>())
+			.Returns(_ => { wiped.TrySetResult(); return ValueTask.FromResult(true); });
+		await using var queue = Create(global: 6, owner: 2, mediator: mediator);
+		var offender = new DBRef(10);
+		var blocked = Signal(); var release = Signal(); var typedRan = false;
+
+		// Park the consumer, so the typed entry below is admitted and still waiting when the wipe runs.
+		await queue.AdmitWork(async () => { blocked.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			await Assert.That((await queue.AdmitWork(() => { typedRan = true; return ValueTask.FromResult<CallState?>(null); },
+				"typed", Scheduler.DirectInputGroup, offender)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think queued"),
+				ParserState.RootFor(offender), TimeSpan.FromHours(1))).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitCommandList(MarkupText.Plain("think runaway"),
+				ParserState.RootFor(offender), TimeSpan.FromHours(1))).Reason).IsEqualTo(QueueRejectionReason.OwnerLimit);
+			await wiped.Task.WaitAsync(TimeSpan.FromSeconds(10));
+		}
+		finally { release.TrySetResult(); }
+
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+
+		await Assert.That(typedRan).IsTrue().Because("a halted player keeps the line they had already typed");
+	}
+
+	/// <summary>
 	/// <c>run_user_input</c> builds its entry with <c>QUEUE_SOCKET</c> and hands it to <c>do_entry</c>
 	/// directly (<c>src/cque.c:1076-1088</c>), so a typed line never passes through <c>insert_que</c>
 	/// and never reaches <c>pay_queue</c>. Whoever typed it, it cannot be the runaway — and a player

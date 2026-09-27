@@ -122,6 +122,83 @@ public class HaltedExecutorGateTests : ServerTestBase
 	}
 
 	/// <summary>
+	/// The gate runs before the command name is looked up in anything, so a <c>SOCKET</c> command is
+	/// refused like the rest. A queue entry keeps the handle it was started from, and the socket
+	/// branch tests only that handle, so a queued <c>WHO</c> would otherwise be answered for an
+	/// executor <c>process_command</c> refuses. The same <c>WHO</c> typed by the halted player still
+	/// answers: <c>do_command</c> (<c>src/bsd.c:4155-4269</c>) reaches the connection-level commands
+	/// before <c>process_command</c> is called at all.
+	/// </summary>
+	[Test]
+	public async Task HaltedPlayersQueuedSocketCommandIsRefusedWhileTheirTypedOneAnswers()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HaltGateSocket");
+		var who = await Canonical(player.DbRef);
+		try
+		{
+			await Cmd($"@set {who}=HALT");
+			var start = Notifications.CountFor(who);
+			var listings = Notifications.CountForHandle(player.Handle);
+
+			// Queued from the player's own connection, so the entry keeps the handle — the state the
+			// socket branch reads. CommandListParse clears DirectInput when the entry runs, which is
+			// the whole of the difference between this and the typed WHO below.
+			var typedState = WebAppFactoryArg.CommandParserFor(who, player.Handle).CurrentState;
+			var job = await Scheduler.AdmitCommandList(MString.Plain("WHO"), typedState, TimeSpan.FromHours(1));
+			await Assert.That(job.Accepted).IsTrue();
+			await Run(RequirePid(job));
+
+			await Assert.That(Notifications.For(who).Skip(start)).Contains(Refusal(who));
+			await Assert.That(Notifications.ForHandle(player.Handle).Skip(listings)).IsEmpty()
+				.Because("the queued WHO was refused before the socket branch could answer it");
+
+			await CmdAs(who, player.Handle, "WHO");
+
+			await Assert.That(Notifications.ForHandle(player.Handle).Skip(listings)).IsNotEmpty()
+				.Because("a typed WHO is answered before process_command is reached");
+		}
+		finally
+		{
+			await Cmd($"@set {who}=!HALT");
+			await ConnectionService.Disconnect(player.Handle);
+		}
+	}
+
+	/// <summary>
+	/// <c>do_teach</c> queues its lesson with neither <c>QUEUE_SOCKET</c> nor <c>QUEUE_INPLACE</c>
+	/// (<c>src/speech.c:130-163</c>), so the lesson is not the typed line the gate exempts even though
+	/// <c>TEACH</c> itself was typed. <see cref="ParserStateFlags.QueueMatches"/> is what carries that
+	/// distinction through the redispatch.
+	/// </summary>
+	[Test]
+	public async Task HaltedPlayersTypedTeachRunsButItsLessonDoesNot()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HaltGateTeach");
+		var who = await Canonical(player.DbRef);
+		try
+		{
+			await Cmd($"@set {who}=HALT");
+			var start = Notifications.CountFor(who);
+
+			await CmdAs(who, player.Handle, $"teach &TAUGHT {who}=lessonran");
+			await Scheduler.DrainImmediateQueueForTests();
+
+			await Assert.That(await Eval($"get({who}/TAUGHT)")).IsEqualTo("")
+				.Because("the lesson carries no QUEUE_SOCKET, so the gate refuses it");
+			await Assert.That(Notifications.For(who).Skip(start)).Contains(Refusal(who));
+			await Assert.That(Notifications.For(who).Skip(start).Any(m => m.Contains("types -->"))).IsTrue()
+				.Because("TEACH itself was typed, so it ran and announced the lesson");
+		}
+		finally
+		{
+			await Cmd($"@set {who}=!HALT");
+			await ConnectionService.Disconnect(player.Handle);
+		}
+	}
+
+	/// <summary>
 	/// <c>queue_attribute_useatr</c> queues an action attribute without reading the object's flags, and
 	/// <c>insert_que</c> then exempts a player from the halted drop, so a halted player's
 	/// <c>@a</c>-attribute is queued and reaches the gate — which refuses it audibly. Dropping it at

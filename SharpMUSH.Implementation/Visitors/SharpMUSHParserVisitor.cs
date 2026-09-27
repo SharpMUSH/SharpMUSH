@@ -1165,7 +1165,10 @@ public class SharpMUSHParserVisitor(
 	/// PennMUSH's <c>process_command</c> gate (<c>src/game.c:1181</c>): a halted executor runs no
 	/// command, and its owner is told <c>Attempt to execute command by halted object #N</c> every
 	/// time one is refused. A <em>player</em> is exempt only for a command it typed at a connection
-	/// (<c>QUEUE_SOCKET</c>), which is what <see cref="ParserStateFlags.DirectInput"/> stands for.
+	/// (<c>QUEUE_SOCKET</c>), which here is <see cref="ParserStateFlags.DirectInput"/> without
+	/// <see cref="ParserStateFlags.QueueMatches"/> — the same pair the <c>QUEUE_INPLACE</c> decision
+	/// reads, since <c>TEACH</c>'s lesson keeps the former's <c>QUEUE_NOLIST</c> meaning and not the
+	/// socket's (<c>do_teach</c> queues it with neither flag, <c>src/speech.c:130-163</c>).
 	/// </summary>
 	/// <remarks>
 	/// This is the far end of the queue's player exemption. <c>insert_que</c> (<c>src/cque.c:530</c>)
@@ -1174,16 +1177,21 @@ public class SharpMUSHParserVisitor(
 	/// instead — noisily, once per command, rather than silently at admission. That is also what
 	/// makes the flag safe to set on a runaway player (<c>pay_queue</c>, <c>:303-313</c>): the player
 	/// keeps typing, and only what the queue carries for them stops.
-	/// <para>Placed where Penn places it — after the connection-level commands, which <c>do_command</c>
-	/// (<c>src/bsd.c:4155-4269</c>) answers before <c>process_command</c> is ever reached, and before
-	/// <c>command_parse</c>, so a halted executor's speech token, chat alias or <c>$</c>-command is
-	/// refused along with everything else.</para>
+	/// <para>Placed before <em>everything</em> the command name is looked up in, as
+	/// <c>process_command</c> is — so a halted executor's <c>SOCKET</c> command, speech token, chat
+	/// alias and <c>$</c>-command are all refused. The <c>SOCKET</c> branch below tests
+	/// <see cref="ParserState.Handle"/>, and a queue entry keeps the handle it was started from, so
+	/// letting it run first would answer a queued <c>WHO</c> that Penn refuses. The connection-level
+	/// commands <c>do_command</c> (<c>src/bsd.c:4155-4269</c>) answers before <c>process_command</c>
+	/// is reached are the typed ones, and those carry the exemption.</para>
 	/// </remarks>
 	private async ValueTask<bool> RefuseHaltedExecutor()
 	{
 		if (parser.CurrentState.Executor is null) return false;
 		if (await parser.CurrentState.ExecutorObject(Mediator) is not AnySharpObject executor) return false;
-		if (executor.IsPlayer && parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)) return false;
+		if (executor.IsPlayer
+			&& parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput)
+			&& !parser.CurrentState.Flags.HasFlag(ParserStateFlags.QueueMatches)) return false;
 		if (!await executor.HasFlag("HALT", ExecutionBudget.CurrentToken)) return false;
 
 		var owner = (await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.DBRef;
@@ -1250,6 +1258,8 @@ public class SharpMUSHParserVisitor(
 				ConnectionService.IncrementMetadata(parser.CurrentState.Handle.Value, "CommandCount");
 			}
 
+			if (await RefuseHaltedExecutor()) return new None();
+
 			// The library is keyed case-insensitively, so an exact-name match is one lookup. Scanning
 			// every registered command for it - twice, here and for the single-token check below - was
 			// a sixth of all bytes a plain `think` allocated.
@@ -1304,8 +1314,6 @@ public class SharpMUSHParserVisitor(
 					nameof(ErrorMessages.Notifications.NoSuchCommandAtLogin));
 				return new None();
 			}
-
-			if (await RefuseHaltedExecutor()) return new None();
 
 			// PennMUSH src/command.c command_parse(): before any command-table lookup, a leading
 			// SAY_TOKEN ("), POSE_TOKEN (:), SEMI_POSE_TOKEN (;) or EMIT_TOKEN (\) is replaced by the
