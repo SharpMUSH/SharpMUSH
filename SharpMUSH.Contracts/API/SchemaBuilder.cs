@@ -1,5 +1,6 @@
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Generated;
+using SharpMUSH.Configuration.Options;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Library.API;
@@ -11,8 +12,10 @@ public static partial class SchemaBuilder
 {
 	/// <summary>
 	/// Builds the configuration schema. It describes the shape of the options — names, types, groups,
-	/// declared defaults — none of which depends on the values currently loaded, so it takes no options
-	/// instance. Everything comes from the tables the config generators emit.
+	/// shipped defaults — none of which depends on the values currently loaded, so it takes no options
+	/// instance. Everything but the defaults comes from the tables the config generators emit; the
+	/// defaults come from <see cref="SharpMUSHOptions.Default"/>, the one place a shipped default is
+	/// written down.
 	/// </summary>
 	public static ConfigurationSchema BuildSchema()
 	{
@@ -74,6 +77,7 @@ public static partial class SchemaBuilder
 	private static List<PropertyMetadata> BuildProperties()
 	{
 		var properties = new List<PropertyMetadata>(ConfigMetadata.PropertyNames.Length);
+		var defaults = SharpMUSHOptions.Default();
 
 		foreach (var propertyName in ConfigMetadata.PropertyNames)
 		{
@@ -92,7 +96,7 @@ public static partial class SchemaBuilder
 				Order = attr.Order,
 				Type = GetPropertyTypeName(type),
 				Component = InferComponentType(type),
-				DefaultValue = ConfigAccessor.GetDeclaredDefault(propertyName),
+				DefaultValue = ConfigAccessor.GetValue(defaults, propertyName),
 				Min = attr.Min,
 				Max = attr.Max,
 				Pattern = attr.ValidationPattern,
