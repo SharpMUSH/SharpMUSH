@@ -252,7 +252,6 @@ public class FormattingFunctionUnitTests
 	[Test]
 	[Arguments("table(a b c d,5,12,%b,--)", "a    --b    \nc    --d    ")]
 	[Arguments("table(a b c d,5,16,%b,--)", "a    --b    \nc    --d    ")]
-	[Arguments("table(a b c d,5,16,%b,--)", "a    --b    \nc    --d    ")]
 	public async Task TableChargesAMultiCharacterSeparatorItsOwnWidth(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

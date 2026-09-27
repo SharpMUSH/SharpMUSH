@@ -229,17 +229,11 @@ public class InformationFunctionUnitTests
 	}
 
 	/// <summary>
-	/// The argument used to be read as an object TYPE — <c>PLAYER</c>, <c>THINGS</c>, <c>ROOM</c>,
-	/// <c>GARBAGE</c>, else <c>#-1 INVALID TYPE</c> — and answered a single count over the whole
-	/// database with no owner and no permission question anywhere in it. PennMUSH has no such
-	/// contract, and the shipped <c>help lstats()</c> never described one. Those words are now just
-	/// names that resolve to no player, which is <c>e_notvis</c> (<c>hdrs/parse.h:35</c>).
+	/// The argument is a player, never an object type: <c>fun_lstats</c> hands anything other than
+	/// empty, <c>all</c> or <c>me</c> to <c>lookup_player</c>, so words such as <c>player</c>,
+	/// <c>things</c>, <c>room</c> or <c>here</c> are names that resolve to no player. Each is
+	/// <c>e_notvis</c> (<c>hdrs/parse.h:35</c>).
 	/// </summary>
-	/// <remarks>
-	/// <c>Lstats_WithTypeFilter</c>, <c>Lstats_GarbageAlwaysZero</c> and <c>Lstats_InvalidType</c>
-	/// asserted that contract and are deliberately gone; <c>Lstats_NoArguments</c> asserted five
-	/// fields and is now <see cref="LstatsCountsTheWholeDatabaseInSixFields"/>.
-	/// </remarks>
 	[Test]
 	[Arguments("lstats(player)")]
 	[Arguments("lstats(things)")]

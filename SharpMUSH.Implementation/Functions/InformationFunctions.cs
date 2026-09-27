@@ -516,9 +516,8 @@ public partial class Functions
 	/// <c>fun_lstats</c> (<c>src/fundb.c:2376-2405</c>) takes a <em>player</em>: absent, empty or
 	/// <c>all</c> is <c>ANY_OWNER</c>, <c>me</c> is the executor, and anything else goes through
 	/// <c>lookup_player</c>, which resolves a name or a <c>#dbref</c> and insists on a player — a
-	/// miss being <c>e_notvis</c>. This read the argument as an object <em>type</em> instead and
-	/// answered a single count, which is a contract nothing in PennMUSH has: it ignored the owner
-	/// entirely, so there was no permission question to ask and it never asked one.
+	/// miss being <c>e_notvis</c>. The argument is never an object <em>type</em>: a word such as
+	/// <c>player</c> or <c>room</c> is just a name, and names no player.
 	///
 	/// <para>The gate is <c>Search_All(executor) || who == ANY_OWNER || controls(executor, who)</c>
 	/// (<c>:2396-2398</c>). Note which way the middle term runs: a mortal asking for the whole

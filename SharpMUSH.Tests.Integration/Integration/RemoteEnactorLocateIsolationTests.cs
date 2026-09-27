@@ -193,10 +193,9 @@ public class RemoteEnactorLocateIsolationTests
 	/// <summary>
 	/// @trigger must locate its target AS THE EXECUTOR. A WIZARD helper in #2 runs a $-command (triggered by
 	/// a remote mortal) that does `@trigger %!/INNER`; the target (%! = the helper itself) must be locatable
-	/// even though the mortal enactor is in another room. With the bug (target located as the enactor) the
-	/// @trigger fails with "NOT PERMITTED TO EVALUATE ON LOOKER" and INNER never runs. This also confirms
-	/// @trigger's DISTINCT semantics survive the fix: INNER runs AS the target (me = the helper, the new
-	/// executor) with the triggerer as the enactor — i.e. the fix touches only the locate, not the queueing.
+	/// even though the mortal enactor is in another room. Located as the enactor, the target is out of
+	/// reach and INNER never runs. INNER also runs AS the target (me = the helper, the new executor) with
+	/// the triggerer as the enactor: executor-relative locating does not change how @trigger queues.
 	/// </summary>
 	[Test]
 	public async Task Trigger_FromRemoteEnactor_LocatesTargetAsExecutor()
@@ -214,10 +213,8 @@ public class RemoteEnactorLocateIsolationTests
 		TestDiagnostics.WriteLine($"probe={probe} (loc #2)   room={room}");
 		TestDiagnostics.WriteLine($"trigger result=[{got}]");
 
-		await Assert.That(got).DoesNotContain("NOT PERMITTED")
-			.Because("@trigger must locate its target (%!) as the executor, not the remote enactor");
 		await Assert.That(got).Contains("R:TRIGGERED")
-			.Because("the triggered attribute must actually run");
+			.Because("@trigger must locate its target (%!) as the executor, not the remote enactor, so INNER runs");
 		await Assert.That(got).Contains($"ranAs={probe}")
 			.Because("@trigger's distinct semantics must survive: INNER runs AS the target object (the new executor)");
 		await Assert.That(got).Contains("hereOf=#2")
