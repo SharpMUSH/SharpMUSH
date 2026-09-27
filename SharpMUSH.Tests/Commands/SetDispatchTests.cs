@@ -186,6 +186,12 @@ public class SetDispatchTests
 		var agent = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SetMeAgent");
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chown {agent}={forcer.DbRef}"));
+
+		// @chown without /preserve halts what it moves (chown_object, src/set.c:333-340), and a halted
+		// executor runs no command at all (process_command, src/game.c:1181). Left on, the @force below
+		// is refused before do_set is reached and the test would pass or fail on the wrong rule.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {agent}=!HALT"));
+
 		await Parser.CommandParse(forcer.Handle, ConnectionService, MarkupText.Plain($"@force {agent}=@set me=DARK"));
 
 		await Assert.That(await HasFlag(agent, "DARK")).IsTrue()

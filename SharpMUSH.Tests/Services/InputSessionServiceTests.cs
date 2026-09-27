@@ -391,12 +391,23 @@ public class InputSessionServiceTests
 		await worker.StartAsync(CancellationToken.None);
 		try { await notice.Task.WaitAsync(TimeSpan.FromSeconds(5)); }
 		finally { await worker.StopAsync(CancellationToken.None); }
-		await Assert.That(h.Notify.ReceivedCalls().Count(call => call.GetMethodInfo().Name == "NotifyLocalized")).IsEqualTo(0);
+		await Assert.That(QueueRejectionNotices(h)).IsEqualTo(0);
 		await h.Notify.Received(1).NotifyLocalizedToSession(1, "transport", "InputSessionTimeoutRejected");
 		h.Notify.ClearReceivedCalls();
 		await queue.AdmitWork(() => ValueTask.FromResult<CallState?>(null), "ordinary", "test", h.Actor.Object.DBRef);
-		await Assert.That(h.Notify.ReceivedCalls().Count(call => call.GetMethodInfo().Name == "NotifyLocalized")).IsEqualTo(1);
+		await Assert.That(QueueRejectionNotices(h)).IsEqualTo(1);
 	}
+
+	/// <summary>
+	/// Counts only the rejection notice this test is about. An owner-limit rejection also starts the
+	/// runaway halt (<c>pay_queue</c>, <c>src/cque.c:303-313</c>), which tells the owner the object ran
+	/// away on a task of its own; counting every <c>NotifyLocalized</c> would make this assertion race
+	/// that task rather than measure who heard the timeout.
+	/// </summary>
+	private static int QueueRejectionNotices(Harness h)
+		=> h.Notify.ReceivedCalls().Count(call =>
+			call.GetMethodInfo().Name == "NotifyLocalized"
+			&& call.GetArguments() is [_, "QueueRejected", ..]);
 
 	[Test]
 	public async Task TimeoutWorkerCancellationReachesActualQueueAdmission()

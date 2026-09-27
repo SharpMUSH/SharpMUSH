@@ -1863,21 +1863,45 @@ public class QueueAdmissionTests
 	[Arguments(false, false, 1)]
 	[Arguments(true, false, 3)]
 	[Arguments(false, true, 3)]
-	public async Task PrivilegedAllowanceAddsDatabaseCountButRetainsGlobalCeiling(bool wizard, bool power, int allowance)
+	public async Task PrivilegedAllowanceAddsDatabaseCount(bool wizard, bool power, int allowance)
 	{
 		var mediator = Substitute.For<IMediator>();
 		ConfigureTargets(mediator, wizard, power);
+		mediator.Send(Arg.Any<GetObjectFlagQuery>(), Arg.Any<CancellationToken>()).Returns(HaltFlag());
 		mediator.Send(Arg.Any<GetObjectCountQuery>(), Arg.Any<CancellationToken>()).Returns(2);
 		await using var queue = Create(global: 4, owner: 1, mediator: mediator);
 		var state = ParserState.RootFor(new DBRef(10));
 		for (var i = 0; i < allowance; i++)
 			await Assert.That((await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think pending"), state, TimeSpan.FromHours(1))).Accepted).IsTrue();
 		await Assert.That((await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think rejected"), state, TimeSpan.FromHours(1))).Reason).IsEqualTo(QueueRejectionReason.OwnerLimit);
-		if (wizard || power)
-		{
-			await Assert.That((await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think other"), ParserState.RootFor(new DBRef(11)), TimeSpan.FromHours(1))).Accepted).IsTrue();
-			await Assert.That((await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think capped"), ParserState.RootFor(new DBRef(11)), TimeSpan.FromHours(1))).Reason).IsEqualTo(QueueRejectionReason.GlobalLimit);
-		}
+		// That rejection starts the runaway halt, which wipes what #10 had queued (pay_queue,
+		// src/cque.c:303-313). Let it finish before the queue is disposed, or it races teardown.
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+	}
+
+	/// <summary>
+	/// The privileged allowance is added to the owner's quota, not to the global one: a wizard whose
+	/// own bucket still has room is refused all the same once the server-wide ceiling is reached.
+	/// </summary>
+	/// <remarks>
+	/// Nothing here is allowed to trip the owner limit. That rejection halts the offender and wipes its
+	/// queue, which would give back the very entries this measures the global ceiling with.
+	/// </remarks>
+	[Test]
+	[Arguments(true, false)]
+	[Arguments(false, true)]
+	public async Task PrivilegedAllowanceStillRespectsTheGlobalCeiling(bool wizard, bool power)
+	{
+		var mediator = Substitute.For<IMediator>();
+		ConfigureTargets(mediator, wizard, power);
+		mediator.Send(Arg.Any<GetObjectCountQuery>(), Arg.Any<CancellationToken>()).Returns(2);
+		await using var queue = Create(global: 4, owner: 1, mediator: mediator);
+		// Three for #10 and one for #11 — each inside its own allowance of three, four in all.
+		var state = ParserState.RootFor(new DBRef(10));
+		for (var i = 0; i < 3; i++)
+			await Assert.That((await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think pending"), state, TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.That((await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think other"), ParserState.RootFor(new DBRef(11)), TimeSpan.FromHours(1))).Accepted).IsTrue();
+		await Assert.That((await queue.AdmitCommandList(MarkupString.MarkupText.Plain("think capped"), ParserState.RootFor(new DBRef(11)), TimeSpan.FromHours(1))).Reason).IsEqualTo(QueueRejectionReason.GlobalLimit);
 	}
 
 	[Test]
