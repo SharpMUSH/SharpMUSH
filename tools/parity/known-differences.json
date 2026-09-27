@@ -10,6 +10,66 @@
       "tracking": "#1134",
       "profile": "`money()` is not supported",
       "command": "think [money(*Alice)] [money(*Wiz)]"
+    },
+    {
+      "id": "KD-0002",
+      "scenario": "40-compat-choices",
+      "case": "choice.housekeeping",
+      "step": 1,
+      "reason": "PennMUSH reports its attribute-chunk allocator; SharpMUSH stores attributes in its database and has no allocator to report.",
+      "tracking": "#1134",
+      "profile": "PennMUSH's file and allocator housekeeping answers `NOT SUPPORTED`",
+      "command": "@stats/chunks"
+    },
+    {
+      "id": "KD-0003",
+      "scenario": "40-compat-choices",
+      "case": "choice.housekeeping",
+      "step": 2,
+      "reason": "PennMUSH checks the password and would wipe its own log file; SharpMUSH's logs go to configured sinks the game does not own, so @logwipe refuses before any password check.",
+      "tracking": "#1134",
+      "profile": "PennMUSH's file and allocator housekeeping answers `NOT SUPPORTED`",
+      "command": "@logwipe/check wrongpassword"
+    },
+    {
+      "id": "KD-0004",
+      "scenario": "40-compat-choices",
+      "case": "choice.dropto",
+      "step": 16,
+      "reason": "PennMUSH gives a STICKY room's drop-to move to SYSEVENT (#-1 as the handler sees it); SharpMUSH has no SYSEVENT object and passes on the player whose leaving caused the move.",
+      "tracking": "#1134",
+      "profile": "A drop-to move's event names who caused it",
+      "command": "think [get(EventSink/DROPTO_BY)]"
+    },
+    {
+      "id": "KD-0005",
+      "scenario": "40-compat-choices",
+      "case": "choice.mail-fwd",
+      "step": 4,
+      "reason": "PennMUSH forwards silently and counts the recipient it tried; SharpMUSH reports the refusal and counts the recipients the message reached.",
+      "tracking": "#1134",
+      "profile": "A refused forward is reported — `@mail/fwd`",
+      "command": "@mail/fwd 1=*Bob"
+    },
+    {
+      "id": "KD-0006",
+      "scenario": "40-compat-choices",
+      "case": "choice.mail-folder",
+      "step": 1,
+      "reason": "PennMUSH refuses a MAILFILTER folder name the player has not used yet; SharpMUSH creates the folder and files the message.",
+      "tracking": "#1134",
+      "profile": "Folders are named freely and created on delivery",
+      "command": "@mail Bob=Filed/Where does this go?"
+    },
+    {
+      "id": "KD-0007",
+      "scenario": "40-compat-choices",
+      "case": "choice.mail-forwardlist",
+      "step": 2,
+      "reason": "PennMUSH reads an empty MAILFORWARDLIST as a list naming nobody and drops the mail; SharpMUSH treats it as no list and delivers normally.",
+      "tracking": "#1134",
+      "profile": "An empty `MAILFORWARDLIST` is no list",
+      "command": "@mail Bob=Listed/Does this arrive?"
     }
   ]
 }

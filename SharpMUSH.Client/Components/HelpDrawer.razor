@@ -129,7 +129,7 @@
     {
         var entry = Help.Get(name);
         if (entry is null) return;
-        if (_current is not null) _history.Push(_current.Name);
+        if (_current is not null) _history.Push(_current.Key);
         SetEntry(entry);
         _open = true;
         StateHasChanged();
@@ -178,7 +178,7 @@
     private void OnEntrySelected(HelpEntry? entry)
     {
         if (entry is null) return;
-        if (_current is not null) _history.Push(_current.Name);
+        if (_current is not null) _history.Push(_current.Key);
         SetEntry(entry);
         _searchValue = null;
     }
@@ -194,7 +194,7 @@
         // Helpfiles use three cross-reference styles — none of which include a URL,
         // so Markdig would render them as plain text without this pre-processing.
         //
-        //   [word()]    function ref  → [word()](help:WORD)
+        //   [word()]    function ref  → [word()](help:WORD())
         //   [@cmd]      command ref   → [@cmd](help:@CMD)
         //   [TOPIC]     topic ref     → [TOPIC](help:TOPIC)   (bare word, letters/digits/hyphens)
 
@@ -202,7 +202,7 @@
         md = System.Text.RegularExpressions.Regex.Replace(
             md,
             @"\[(@?[\w][\w\-\/]*\(\))\](?!\()",
-            m => $"{m.Value}(help:{m.Groups[1].Value.TrimEnd(')').TrimEnd('(').ToUpperInvariant()})");
+            m => $"{m.Value}(help:{m.Groups[1].Value.ToUpperInvariant()})");
 
         // 2. Command refs: [@cmd]
         md = System.Text.RegularExpressions.Regex.Replace(
