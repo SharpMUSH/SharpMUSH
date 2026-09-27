@@ -858,10 +858,13 @@ public class CommandManagementTests
 	/// <summary>
 	/// <c>config_set</c> returns 0, and <c>cmd_config</c> says "Couldn't set that option.", for a name
 	/// that finds no command and for a name with no restriction after it (<c>src/conf.c:869-892</c>).
+	/// So is <c>nobody</c> for a command the game runs by name, which <c>command_restrictions</c> never
+	/// disables, rather than "Option set." for a line that does nothing.
 	/// </summary>
 	[Test]
 	[Arguments("ZCNOSUCHCMD1 wizard")]
 	[Arguments("@find")]
+	[Arguments("GOTO nobody")]
 	public async ValueTask ConfigSetRestrictCommand_WithoutACommandAndRestriction_CouldntSet(string value)
 	{
 		var wizard = await Wizard();
