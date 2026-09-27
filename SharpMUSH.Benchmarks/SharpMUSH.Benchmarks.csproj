@@ -10,7 +10,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+		<PackageReference Include="BenchmarkDotNet" Version="0.16.0-preview.2" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="$(DotNetPackageVersion)" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(DotNetPackageVersion)" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
