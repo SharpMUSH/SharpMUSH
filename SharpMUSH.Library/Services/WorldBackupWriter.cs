@@ -19,8 +19,19 @@ namespace SharpMUSH.Library.Services;
 public sealed partial class WorldBackupWriter(
 	WorldBackupOptions options,
 	Func<string, CancellationToken, ValueTask> writePayload,
-	ILogger logger)
+	ILogger logger,
+	TimeProvider time)
 {
+	/// <summary>
+	/// On the system clock. Kept as its own overload rather than an optional parameter so providers
+	/// already compiled against the three-argument constructor still bind to it.
+	/// </summary>
+	public WorldBackupWriter(WorldBackupOptions options, Func<string, CancellationToken, ValueTask> writePayload,
+		ILogger logger)
+		: this(options, writePayload, logger, TimeProvider.System)
+	{
+	}
+
 	/// <summary>Prefix for a copy still being written. Hidden, and never matched by <see cref="NameRegex"/>.</summary>
 	private const string IncomingPrefix = ".incoming-";
 
@@ -87,7 +98,13 @@ public sealed partial class WorldBackupWriter(
 		}
 	}
 
-	public IReadOnlyList<WorldBackup> List()
+	public IReadOnlyList<WorldBackup> List() =>
+		BackupDirectories()
+			.OrderByDescending(d => d.Name, StringComparer.Ordinal)
+			.Select(Describe)
+			.ToArray();
+
+	private IEnumerable<DirectoryInfo> BackupDirectories()
 	{
 		if (!Directory.Exists(options.Root)) return [];
 
@@ -97,27 +114,33 @@ public sealed partial class WorldBackupWriter(
 			// is deliberately named so it fails this: the `latest` pointer (one of these copies under
 			// another name, which counted twice would let retention delete a real one in its place) and
 			// a copy still being written.
-			.Where(d => NameRegex().IsMatch(d.Name))
-			.OrderByDescending(d => d.Name, StringComparer.Ordinal)
-			.Select(Describe)
-			.ToArray();
+			.Where(d => NameRegex().IsMatch(d.Name));
 	}
 
 	/// <summary>
 	/// A UTC timestamp, which sorts chronologically as text — so retention and "newest first" both
-	/// come from an ordinal sort of the names, with no stat call. Suffixed on the vanishing chance two
-	/// copies land in the same millisecond.
+	/// come from an ordinal sort of the names, with no stat call.
+	///
+	/// <para>Always strictly after the newest copy on disk: where the clock has not moved past it (two
+	/// copies in one millisecond, or a clock stepped back) the stamp is taken a millisecond after it
+	/// instead. Checking only whether the name is free is not enough — retention frees the oldest
+	/// names, and a new copy reusing one would sort oldest and be pruned the moment it was written.</para>
 	/// </summary>
 	private string NextName()
 	{
-		var stamp = DateTime.UtcNow.ToString(StampFormat, CultureInfo.InvariantCulture);
-		var name = stamp;
-		for (var n = 1; Directory.Exists(Path.Combine(options.Root, name)); n++)
+		var clock = time.GetUtcNow().UtcDateTime;
+		// To the millisecond the name carries, so "later than the newest" means a different name.
+		var now = clock.AddTicks(-(clock.Ticks % TimeSpan.TicksPerMillisecond));
+		var newest = BackupDirectories().Select(d => d.Name).Max(StringComparer.Ordinal);
+		if (newest is not null
+				&& DateTime.TryParseExact(newest[..StampFormat.Length], StampFormat, CultureInfo.InvariantCulture,
+					DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var last)
+				&& now <= last)
 		{
-			name = $"{stamp}-{n}";
+			now = last.AddMilliseconds(1);
 		}
 
-		return name;
+		return now.ToString(StampFormat, CultureInfo.InvariantCulture);
 	}
 
 	/// <summary>
@@ -194,7 +217,10 @@ public sealed partial class WorldBackupWriter(
 		return new WorldBackup(directory.Name, directory.FullName, createdAt, size);
 	}
 
-	/// <summary>Matches <see cref="StampFormat"/> plus the same-millisecond suffix.</summary>
+	/// <summary>
+	/// Matches <see cref="StampFormat"/>, plus the same-millisecond suffix older versions added, so
+	/// copies they wrote are still listed and pruned.
+	/// </summary>
 	[GeneratedRegex(@"^\d{8}-\d{6}-\d{3}(-\d+)?$")]
 	private static partial Regex NameRegex();
 }
