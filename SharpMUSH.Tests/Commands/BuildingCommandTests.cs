@@ -123,6 +123,26 @@ public class BuildingCommandTests
 		await AssertDigNotifications("DoDigTestRoom", currentLocationDbRef, newDb, forward, back);
 	}
 
+	/// <summary>
+	/// <c>fun_dig</c> is <c>do_dig</c> (<c>fundb.c:2177-2189</c>), so the function tells the digger the
+	/// same things the command does (<c>create.c:504-512</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask DigFunctionNotifiesLikeTheCommand()
+	{
+		var currentLocation = await Parser.FunctionParse(MarkupText.Plain("%l"));
+		var currentLocationDbRef = DBRef.Parse(currentLocation!.Message!.ToPlainText());
+
+		await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain("think dig(DigFnTestRoom,DigFnTestExit;DigFnTestExitAlias,DigFnTestExitBack;DigFnTestExitAliasBack)"));
+
+		var forward = await ExitIn(currentLocationDbRef, "DigFnTestExit");
+		var newDb = (await forward.Home.WithCancellation(CancellationToken.None)).Expect<AnySharpContainer>().Object().DBRef;
+		var back = await ExitIn(newDb, "DigFnTestExitBack");
+
+		await AssertDigNotifications("DigFnTestRoom", currentLocationDbRef, newDb, forward, back);
+	}
+
 	[Test]
 	public async ValueTask DoDigForCommandListCheck2()
 	{

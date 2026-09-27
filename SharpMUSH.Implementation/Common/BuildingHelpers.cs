@@ -300,10 +300,8 @@ public static class BuildingHelpers
 	/// pass. A guest may source one nowhere, and neither may anybody in something that is not a room.
 	/// </summary>
 	/// <remarks>
-	/// <c>Commands.CanOpenFrom</c> (<c>MovementCommands.cs</c>) is the same rule for <c>@teleport</c>'s
-	/// exit relocation (<c>wiz.c:469</c>); the building path keeps its copy here because
-	/// <c>Functions</c> is a different partial class and <c>open()</c> is held to the same standard as
-	/// <c>@open</c>.
+	/// Building (<c>@open</c>, <c>open()</c>, <c>@dig</c>, <c>dig()</c>, <c>@clone</c>) and
+	/// <c>@teleport</c>'s exit relocation (<c>wiz.c:469</c>) all ask this one rule.
 	/// </remarks>
 	public static async ValueTask<bool> CanOpenFromAsync(
 		IPermissionService permissionService,
