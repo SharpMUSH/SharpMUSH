@@ -63,7 +63,9 @@ class DbrefCanonicalizer:
     * New objects: anything at or above `first_free` was created by a scenario. It becomes
       #NEW<k>, numbered by first appearance on that side, so creation order is compared but
       allocation policy is not. The numbering restarts at every scenario file (`new_scope`), so a
-      dbref printed on only one side in one scenario cannot shift the numbers in later ones.
+      dbref printed on only one side in one scenario cannot shift the numbers of objects created in
+      later ones. An object first printed in an earlier file keeps that label, shown as
+      #NEW<k>@<scenario>, so a later file that names the wrong prior object still differs.
     * Objids (`#12:1790269900000`) keep their form but the creation time becomes <CTIME>.
     * Any other dbref on a non-reference side (`foreign_tag`, e.g. "S" for SharpMUSH) is that
       server's own system object, not PennMUSH's object with the same number: SharpMUSH's #3 is
@@ -75,17 +77,23 @@ class DbrefCanonicalizer:
         self._anchors = anchors
         self._first_free = first_free
         self._foreign_tag = foreign_tag
-        self._new: dict[int, int] = {}
+        self._new: dict[int, tuple[str, int]] = {}  # dbref -> (scope it was first seen in, k)
+        self._scope = ""
+        self._count = 0
 
-    def new_scope(self) -> None:
-        """Restart #NEW<k> numbering; called at each scenario file boundary."""
-        self._new.clear()
+    def new_scope(self, scope: str) -> None:
+        """Restart #NEW<k> numbering for objects first seen from now on; called per scenario file."""
+        self._scope, self._count = scope, 0
 
     def _canon(self, n: int) -> str:
         if n in self._anchors:
             return str(self._anchors[n])
         if n >= self._first_free:
-            return "NEW" + str(self._new.setdefault(n, len(self._new) + 1))
+            if n not in self._new:
+                self._count += 1
+                self._new[n] = (self._scope, self._count)
+            scope, k = self._new[n]
+            return f"NEW{k}" if scope == self._scope else f"NEW{k}@{scope}"
         return self._foreign_tag + str(n)
 
     def apply(self, text: str) -> str:

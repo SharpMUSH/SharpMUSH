@@ -93,7 +93,7 @@ def write_reports(out: Path, meta: dict, results, stale, fixed, orphans, anchors
              "site content, not behaviour.")
     L.append("- `dbref`: dbrefs of world-fixture objects are mapped to PennMUSH's numbering; dbrefs of "
              "objects created during scenarios become `#NEW<k>` in order of first appearance within each "
-             "scenario file; any other "
+             "scenario file (an object first shown in an earlier file stays `#NEW<k>@<scenario>`); any other "
              "SharpMUSH dbref is one of its own system objects and becomes `#S<n>`, so it never matches "
              "the PennMUSH object that happens to share its number.")
     (out / "report.md").write_text("\n".join(L) + "\n", encoding="utf-8")

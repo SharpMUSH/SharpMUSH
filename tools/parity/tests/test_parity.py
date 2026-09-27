@@ -105,6 +105,16 @@ class CompareTests(unittest.TestCase):
         self.assertEqual([x.status for x in r], [compare.DIFF, compare.MATCH])
         self.assertEqual(r[1].sharp_text, "#NEW1 #NEW2")
 
+    def test_objects_from_an_earlier_scenario_keep_their_identity(self):
+        # Both sides create two objects in "a"; in "b" SharpMUSH names the wrong one of them.
+        def rec(scn, out):
+            return StepRecord(scn, "c", 0, "command", "a", "think x", output=out)
+        p = [rec("a", "#1001 #1002"), rec("b", "#1001 #1003")]
+        s = [rec("a", "#1501 #1502"), rec("b", "#1502 #1503")]
+        r, _, _ = compare.compare(p, s, self.canon(), self.canon(), [], [], [], frozenset())
+        self.assertEqual([x.status for x in r], [compare.MATCH, compare.DIFF])
+        self.assertEqual((r[1].penn_text, r[1].sharp_text), ("#NEW1@a #NEW1", "#NEW2@a #NEW1"))
+
     def test_match_ignores_colour(self):
         r, stale, _ = self.run_compare(self.rec("Room\r\n"), self.rec("\x1b[1mRoom\x1b[0m\r\n"))
         self.assertEqual(r[0].status, compare.MATCH)

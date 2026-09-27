@@ -130,8 +130,8 @@ def compare(penn: list[StepRecord], sharp: list[StepRecord], penn_canon, sharp_c
     for p in penn:
         if p.scenario != scenario:  # #NEW<k> numbering is per scenario file
             scenario = p.scenario
-            penn_canon.new_scope()
-            sharp_canon.new_scope()
+            penn_canon.new_scope(scenario)
+            sharp_canon.new_scope(scenario)
         s = by_key.get(p.key())
         if s is None:
             s = StepRecord(p.scenario, p.case, p.index, p.kind, p.session, p.command,

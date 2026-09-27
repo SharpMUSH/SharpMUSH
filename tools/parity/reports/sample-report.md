@@ -1,7 +1,7 @@
 # PennMUSH vs SharpMUSH parity report
 
-- Generated: 2026-09-27 05:49:49Z
-- SharpMUSH commit: db2d71284
+- Generated: 2026-09-27 06:01:32Z
+- SharpMUSH commit: fae5ab24b
 - PennMUSH commit: 80a1d5b
 - Scenarios: 00-login, 05-import, 10-player-commands, 20-admin-commands, 25-requested-dbref, 30-softcode
 - **Steps: 197 — 110 match, 1 known difference, 86 open gap (baseline), 0 UNEXPECTED DIFFERENCE, 0 error; 0 stale allowlist entries, 0 baseline entries now fixed, 0 orphaned entries**
@@ -760,11 +760,11 @@
 +MAILFOLDERS [$cw+ #1]: 0:INBOX:0
  Carrying:
 -Widget(#7Tn)
--Gadget(#NEW1Tn)
+-Gadget(#NEW1@10-player-commandsTn)
 -Home: Room Zero(#0RL)
 -Location: Lab(#6Rn)
 +Widget(#7nT)
-+Gadget(#NEW1GnT)
++Gadget(#NEW1@10-player-commandsGnT)
 +Home: Room Zero(#0LR)
 +Location: Lab(#6nR)
 ```
@@ -1393,11 +1393,11 @@
 +Room Zero(#0LR)
  You are in Room Zero.
  Contents:
--RqFunCopy(#NEW1Tn)
--RqCopy(#NEW2Tn)
+-RqFunCopy(#NEW17@25-requested-dbrefTn)
+-RqCopy(#NEW12@25-requested-dbrefTn)
 +Wiz(#3AenWP)
-+RqCopy(#NEW1nT)
-+RqFunCopy(#NEW2nT)
++RqCopy(#NEW12@25-requested-dbrefnT)
++RqFunCopy(#NEW17@25-requested-dbrefnT)
  Obvious exits:
 -RqFunExit, RqExitBack, RqExit, RqFunOut, and RqOut
 +RqOut, RqFunOut, RqExit, RqFunExit, and RqExitBack
@@ -1555,4 +1555,4 @@
 - `sync-token`: The harness's own sync sentinels never appear in transcripts; if one leaks into a line it becomes <SYNC>.
 - `trailing-ws`: Trailing spaces/tabs on each line are removed; a trailing blank line is dropped.
 - `site-text`: on login steps the connect screen, MOTD and wizard MOTD text of each server (connect.txt, motd.txt, wizmotd.txt) and SharpMUSH's `Connected!` line are removed: they are site content, not behaviour.
-- `dbref`: dbrefs of world-fixture objects are mapped to PennMUSH's numbering; dbrefs of objects created during scenarios become `#NEW<k>` in order of first appearance within each scenario file; any other SharpMUSH dbref is one of its own system objects and becomes `#S<n>`, so it never matches the PennMUSH object that happens to share its number.
+- `dbref`: dbrefs of world-fixture objects are mapped to PennMUSH's numbering; dbrefs of objects created during scenarios become `#NEW<k>` in order of first appearance within each scenario file (an object first shown in an earlier file stays `#NEW<k>@<scenario>`); any other SharpMUSH dbref is one of its own system objects and becomes `#S<n>`, so it never matches the PennMUSH object that happens to share its number.
