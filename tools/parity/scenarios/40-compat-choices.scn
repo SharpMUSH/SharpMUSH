@@ -66,3 +66,16 @@ think [hasattr(me,MAILFORWARDLIST)]
 @mail Bob=Listed/Does this arrive?
 ::as bob
 &MAILFORWARDLIST me
+
+::case choice.restrictions-reapply  changing command_restrictions starts its commands again
+# PennMUSH applies each restrict_command line once (conf.c:866-896), so the @command/restrict after it
+# stands. SharpMUSH keeps the lines as command_restrictions and applies the whole setting again when it
+# changes, so @find goes back to the wizard-only line. @dump is WIZARD-locked on both servers already.
+::as god
+@config/set restrict_command=@find wizard
+@command/restrict @find=!FLAG^GAGGED
+@config/set restrict_command=@dump wizard
+::as alice
+@find Widget
+::as god
+@command/restrict @find=!FLAG^GAGGED

@@ -67,7 +67,8 @@ public class CommandRestrictionBootstrapTests
 	}
 
 	/// <summary>
-	/// Nothing else applies them: one call site is what makes the window above meaningful.
+	/// Nothing else applies them at boot: one call site is what makes the window above meaningful. The
+	/// only other caller is <c>@config/set restrict_command</c>, which nobody can type until the game is up.
 	/// </summary>
 	[Test]
 	public async Task OnlyTheBootstrapServiceAppliesThem()
@@ -85,8 +86,9 @@ public class CommandRestrictionBootstrapTests
 		{
 			"CommandRestrictionBootstrapService.cs",
 			"DefinitionRegistryCommands.cs",
-			"ICommandRestrictionApplier.cs"
-		}).Because("the declaration, the implementation, and exactly one production caller");
+			"ICommandRestrictionApplier.cs",
+			"ServerAdminCommands.cs"
+		}).Because("the declaration, the implementation, the boot caller, and @config/set restrict_command");
 	}
 
 	/// <summary>

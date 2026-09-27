@@ -735,9 +735,7 @@ public partial class Commands : ICommandRestrictionApplier
 						// "nobody" is CMD_T_DISABLED. The commands the game runs by name cannot go: the
 						// engine would find nothing to run, which is what @command/restrict refuses over.
 						// One @command/disable already took out stays the wizard's to put back.
-						if (!CommandsTheGameRuns.Contains(attribute.Name)
-								&& !attribute.Name.Equals("@COMMAND", StringComparison.OrdinalIgnoreCase)
-								&& CommandLibrary.ContainsKey(name))
+						if (CanBeDisabled(attribute) && CommandLibrary.ContainsKey(name))
 						{
 							ParkCommand(found.LibraryInformation);
 							disabled = true;
@@ -764,6 +762,38 @@ public partial class Commands : ICommandRestrictionApplier
 			_configuredRestrictions[attribute] = disabled || _configuredRestrictions.GetValueOrDefault(attribute);
 		}
 	}
+
+	/// <summary>
+	/// Whether <paramref name="name"/> finds a command and <paramref name="restriction"/> is one the
+	/// configured layer would apply to it, rather than skip: restriction words, a lock, or only a
+	/// <c>"</c> message — and not <c>nobody</c> for a command that cannot be disabled.
+	/// </summary>
+	private async ValueTask<bool> IsValidRestrictionAsync(AnySharpObject executor, string name, string restriction)
+	{
+		if (name.Length == 0 || FindCommand(name) is not { } found)
+		{
+			return false;
+		}
+
+		var quote = restriction.IndexOf('"');
+		var terms = (quote >= 0 ? restriction[..quote] : restriction).Trim();
+		var attribute = found.LibraryInformation.Attribute;
+		return terms.Length == 0
+					 || await RestrictionFromWords(terms, attribute.Behavior) switch
+					 {
+						 CommandRestriction { Disables: true } => CanBeDisabled(attribute),
+						 CommandRestriction => true,
+						 _ => LockService.Validate(terms, executor)
+					 };
+	}
+
+	/// <summary>
+	/// Whether <c>nobody</c> may take the command out: not the ones the game runs by name, nor
+	/// <c>@command</c>, which is the only way to put a command back.
+	/// </summary>
+	private static bool CanBeDisabled(SharpCommandAttribute attribute)
+		=> !CommandsTheGameRuns.Contains(attribute.Name)
+			 && !attribute.Name.Equals("@COMMAND", StringComparison.OrdinalIgnoreCase);
 
 	private readonly record struct CommandRestriction(string Lock, CommandBehavior Behavior, bool Disables);
 

@@ -356,21 +356,23 @@ once per run.
 runs (`cmds.c:334-335`, `conf.c:866-896`). Each one replaces the command's restriction
 (`command.c:1752-1760`). There is no list to take a line back out of, so nothing returns a command to the
 restriction it was made with.<br>
-**SharpMUSH** keeps the lines as one setting, `command_restrictions`. It applies it at startup, before
-`@STARTUP` runs, as PennMUSH does, and applies it again whenever it is changed from the portal, in both
-directions: a command the change no
+**SharpMUSH** keeps the lines as one setting, `command_restrictions`. `@config/set restrict_command`
+adds a line to it, or replaces the line for that command, and applies it at once, as PennMUSH does. The
+setting is applied at startup, before `@STARTUP` runs, as PennMUSH does, and again whenever it is changed
+from the portal or `@config/set`, in both directions: a command the change no
 longer restricts goes back to the restriction it was made with, and is enabled again if the
 configuration had disabled it with `nobody`. Every command the old or the new setting names starts
 again from the restriction it was made with, so a live `@command/restrict` on one of those commands
 is lost. Commands the setting does not name, and changes to other options, leave live restrictions
-alone. (#1250)<br>
+alone. (#1250) `@config/set restrict_command` with words that are neither restriction words nor a
+valid lock says `Couldn't set that option.`; PennMUSH says `Option set.` and leaves the command
+unlocked.<br>
 **Why.** The configuration can be changed while the game is running; a restriction that waits for a
-restart looks as if it had been ignored.<br>
+restart looks as if it had been ignored. A mistyped restriction is refused rather than leaving the command
+open to everyone.<br>
 **Workaround.** After changing `command_restrictions`, repeat any `@command/restrict` that should
 still apply to a command it names, or put the restriction in `command_restrictions` itself.<br>
-**No example.** SharpMUSH changes `command_restrictions` only from the portal, which the parity harness
-does not drive. PennMUSH's in-game route, `@config/set restrict_command`, is refused here; that is a
-defect (see [COMPATIBILITY DEFECTS]), not this choice.
+**Example.** The parity case `choice.restrictions-reapply` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
 
 ## PennMUSH's file and allocator housekeeping answers `NOT SUPPORTED`
 
@@ -934,9 +936,7 @@ choices.
   **`attrib_set#()` cannot be called.** The parser's function-name token does not admit `#`, so the
   text is returned unchanged. Use `attrib_set()`. (#974)<br>
   **`objmem()` always answers 0.** (#974)<br>
-  **`buy` has no economy.** It is a stub. (#1006 item 10)<br>
-  **`@config/set restrict_command` is refused.** PennMUSH restricts the command while the game runs;
-  SharpMUSH answers "Couldn't set that option." (parity case `admin.restrict-command`)
+  **`buy` has no economy.** It is a stub. (#1006 item 10)
 
 The other movement and queue gaps left by the movement work are enumerated in #1006 rather than
 repeated here; its items 1, 2, 4 and 15 are in [COMPATIBILITY UNRESOLVED].

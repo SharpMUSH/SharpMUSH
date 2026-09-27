@@ -551,6 +551,13 @@ public partial class Commands
 	private async ValueTask<CallState> SetConfigOptionAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		string optionName, string? value, bool save)
 	{
+		// config_set's restrict_command pseudo-option (conf.c:866-896), which cmd_config reaches on its
+		// second try (cmds.c:334-335).
+		if (optionName.Equals("restrict_command", StringComparison.OrdinalIgnoreCase))
+		{
+			return await SetCommandRestrictionAsync(executor, value, save);
+		}
+
 		if (ConfigPropertyFor(optionName) is not { } property || value is null)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCouldntSet), executor);
@@ -574,6 +581,49 @@ public partial class Commands
 			SharpMUSHOptions => await ConfigSetAsync(executor, name, value, save),
 			Error<string> error => await ConfigRefusedAsync(executor, name, value, error.Value)
 		};
+	}
+
+	/// <summary>
+	/// <c>@config/set restrict_command=&lt;command&gt; &lt;restriction&gt;</c>: the command's name up to the
+	/// first space, and the restriction <c>restrict_command</c> reads (<c>src/conf.c:866-896</c>). A name
+	/// that finds no command, a missing restriction, or one that is neither restriction words nor a lock
+	/// is "Couldn't set that option.".
+	/// <para>
+	/// PennMUSH applies it to the live command table and, for <c>/save</c> only, appends the line to
+	/// <c>mush.cnf</c>. Here it becomes the command's entry in <c>command_restrictions</c>, stored as every
+	/// <c>@config/set</c> is, and the setting is applied before the command answers — so it replaces the
+	/// command's restriction just as PennMUSH's does, and lasts across a restart.
+	/// </para>
+	/// </summary>
+	private async ValueTask<CallState> SetCommandRestrictionAsync(AnySharpObject executor, string? value, bool save)
+	{
+		var text = value?.Trim() ?? "";
+		var space = text.IndexOfAny([' ', '\t']);
+		var name = space < 0 ? "" : text[..space];
+		var restriction = space < 0 ? "" : text[(space + 1)..].Trim();
+		if (restriction.Length == 0 || !await IsValidRestrictionAsync(executor, name, restriction))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigCouldntSet), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		var current = await CurrentPersistedOptionsAsync();
+		var restrictions = current.Restriction.CommandRestrictions
+			.Where(entry => !entry.Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+			.ToDictionary(entry => entry.Key, entry => entry.Value);
+		restrictions[name] = [restriction];
+
+		await ObjectDataService.SetExpandedServerDataAsync(current with
+		{
+			Restriction = current.Restriction with { CommandRestrictions = restrictions }
+		});
+		ConfigReloadService.SignalChange();
+		// The reload reapplies the setting only when it changed. Applied here as well, because
+		// restrict_command replaces the command's restriction even when the line is one already set,
+		// and because the reload's own pass is not awaited.
+		await ApplyConfiguredRestrictionsAsync(restrictions);
+
+		return await ConfigSetAsync(executor, "restrict_command", text, save);
 	}
 
 	private async ValueTask<CallState> ConfigSetAsync(AnySharpObject executor, string name, string value, bool save)

@@ -1,9 +1,11 @@
 ﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -785,6 +787,109 @@ public class CommandManagementTests
 		await Assert.That(refused).Contains("Configured refusal.")
 			.Because("the alias's entry adds its message to the lock the command's entry set");
 		await Assert.That(refused).DoesNotContain("mine");
+	}
+
+	/// <summary>
+	/// <c>@config/set restrict_command=&lt;command&gt; &lt;restriction&gt;</c> restricts the command while
+	/// the game runs: <c>cmd_config</c> retries <c>config_set</c> with restrictions allowed
+	/// (<c>src/cmds.c:334-335</c>), whose <c>restrict_command</c> branch replaces the command's lock
+	/// (<c>src/conf.c:866-896</c>, <c>src/command.c:1752-1760</c>). PennMUSH 1.8.8 answers "Option set."
+	/// and the mortal is refused (parity case <c>admin.restrict-command</c>). Here the line becomes the
+	/// command's <c>command_restrictions</c> entry, as <c>@config/set</c> stores every option.
+	/// </summary>
+	[Test, NotInParallel(ConfiguredRestrictionsKey)]
+	public async ValueTask ConfigSetRestrictCommand_RestrictsTheCommandNow()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdCfgSet");
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+		await Assert.That(await As(mortal, $"{clone} mine")).Contains("mine").Because("precondition");
+
+		try
+		{
+			await Assert.That(await As(wizard, $"@config/set restrict_command={clone} wizard \"Set in game."))
+				.Contains("Option set.");
+
+			var refused = await As(mortal, $"{clone} mine");
+			await Assert.That(refused).Contains("Set in game.");
+			await Assert.That(refused).DoesNotContain("mine");
+			await Assert.That(await As(wizard, $"@command {clone}")).Contains("  Lock: (FLAG^WIZARD)");
+
+			var stored = await WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>()
+				.GetExpandedServerDataAsync<SharpMUSHOptions>();
+			await Assert.That(stored!.Restriction.CommandRestrictions[clone]).IsEquivalentTo(new[] { "wizard \"Set in game." });
+		}
+		finally
+		{
+			await ForgetConfiguredRestrictionAsync(clone);
+		}
+	}
+
+	/// <summary>
+	/// Each <c>@config/set restrict_command</c> replaces the command's restriction, even one repeating
+	/// the line already set: <c>restrict_command</c> frees the command's lock before it parses the new
+	/// one (<c>src/command.c:1752-1760</c>), so a live <c>@command/restrict</c> made since is gone.
+	/// </summary>
+	[Test, NotInParallel(ConfiguredRestrictionsKey)]
+	public async ValueTask ConfigSetRestrictCommand_Repeated_ReplacesALiveRestriction()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdCfgAgain");
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+
+		try
+		{
+			await As(wizard, $"@config/set restrict_command={clone} wizard");
+			await As(wizard, $"@command/restrict {clone}=!FLAG^GAGGED");
+			await Assert.That(await As(mortal, $"{clone} first")).Contains("first").Because("precondition");
+
+			await Assert.That(await As(wizard, $"@config/set restrict_command={clone} wizard")).Contains("Option set.");
+
+			await Assert.That(await As(mortal, $"{clone} second")).Contains("Permission denied.");
+		}
+		finally
+		{
+			await ForgetConfiguredRestrictionAsync(clone);
+		}
+	}
+
+	/// <summary>
+	/// <c>config_set</c> returns 0, and <c>cmd_config</c> says "Couldn't set that option.", for a name
+	/// that finds no command and for a name with no restriction after it (<c>src/conf.c:869-892</c>).
+	/// So is <c>nobody</c> for a command the game runs by name, which <c>command_restrictions</c> never
+	/// disables, rather than "Option set." for a line that does nothing.
+	/// </summary>
+	[Test]
+	[Arguments("ZCNOSUCHCMD1 wizard")]
+	[Arguments("@find")]
+	[Arguments("GOTO nobody")]
+	public async ValueTask ConfigSetRestrictCommand_WithoutACommandAndRestriction_CouldntSet(string value)
+	{
+		var wizard = await Wizard();
+
+		await Assert.That(await As(wizard, $"@config/set restrict_command={value}")).Contains("Couldn't set that option.");
+	}
+
+	/// <summary>Takes the entry a test stored back out, and puts the configured layer back to match.</summary>
+	private async Task ForgetConfiguredRestrictionAsync(string name)
+	{
+		var data = WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>();
+		if (await data.GetExpandedServerDataAsync<SharpMUSHOptions>() is not { } stored)
+		{
+			return;
+		}
+
+		var remaining = stored.Restriction.CommandRestrictions
+			.Where(entry => entry.Key != name)
+			.ToDictionary(entry => entry.Key, entry => entry.Value);
+		await data.SetExpandedServerDataAsync(stored with
+		{
+			Restriction = stored.Restriction with { CommandRestrictions = remaining }
+		});
+		WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>().SignalChange();
+		await Restrictions.ApplyConfiguredRestrictionsAsync(remaining);
 	}
 
 	/// <summary><c>=nobody</c> is <c>/disable</c>, so it is refused for the commands the game runs itself.</summary>
