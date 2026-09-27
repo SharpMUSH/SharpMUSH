@@ -411,6 +411,27 @@ public class MarkupTagFunctionTests
 	}
 
 	/// <summary>
+	/// PennMUSH's two-argument form, as imported softcode writes it (#1282), is emitted like the one-argument
+	/// form rather than as an arity error in front of the rest of the line.
+	/// </summary>
+	[Test]
+	[Arguments("think ")]
+	[Arguments("@pemit %#=")]
+	public async Task Wshtml_WithPennMUSHsDefaultArgumentIsEmittedAsTheFragment(string emitter)
+	{
+		var marker = Marker();
+		var mortal = await MortalAsync("WshtmlDefaultMortal");
+
+		var window = OpenWindow(mortal);
+		await CommandParser.CommandParse(mortal.Handle, ConnectionService,
+			MarkupText.Plain($"{emitter}[wshtml(<b>{marker}</b>,{marker})] and more"));
+		var said = OwnOutput(mortal, window);
+
+		await Assert.That(said.Render(MarkupFormat.Html)).IsEqualTo($"<b>{marker}</b> and more");
+		await Assert.That(said.Render(MarkupFormat.Plain)).IsEqualTo($"{marker} and more");
+	}
+
+	/// <summary>
 	/// Nothing reaches the player's notifications or their websocket (portal) connection, the channel
 	/// out-of-band functions such as <c>oob()</c> write to. An <c>oob()</c> probe sent afterwards on the
 	/// same connection shows the socket was being watched: everything published before it has arrived.

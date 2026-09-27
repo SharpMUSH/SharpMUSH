@@ -741,7 +741,7 @@ On a game with a `Public` channel you have joined:
 ON
 ```
 
-## `wshtml()` takes no `<default string>`; there is no `wsjson()`
+## `wshtml()` accepts but does not use `<default string>`; there is no `wsjson()`
 
 **A choice.**
 
@@ -752,11 +752,14 @@ because its output buffer holds raw bytes and cannot degrade a tag on its own. `
 **SharpMUSH**'s output is markup, which can. `wshtml(<html>)` parses the fragment into tags over text,
 the same value `tagwrap()` builds one tag at a time: a WebSocket, Pueblo or MXP client gets the tags,
 an ANSI client gets the styling it can show for `<b>`, `<i>`, `<u>` and `<s>` and the words for
-everything else, and everything else gets the words. `wsjson()` does not exist.<br>
+everything else, and everything else gets the words. The `<default>` argument is accepted, so
+softcode written for PennMUSH runs unchanged, but it is not used: a client without HTML sees the
+fragment's own text rather than `<default>` (`wshtml(<b>x</b>,y)` reads `x`, where PennMUSH shows
+`y`). `wsjson()` does not exist.<br>
 **Why.** The words of the fragment are already its plain reading, so there is no second string to
 supply. JSON is data for a program, not text with a plain reading.<br>
-**Workaround.** Drop the `<default>` argument, and send JSON with `oob()`, which delivers it where a
-connection can receive it, over GMCP or the WebSocket.
+**Workaround.** If the plain reading matters, make the fragment's own text say it. Send JSON with
+`oob()`, which delivers it where a connection can receive it, over GMCP or the WebSocket.
 
 PennMUSH shows nothing for the first line:
 
