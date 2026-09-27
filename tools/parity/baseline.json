@@ -305,6 +305,38 @@
    "command": "think [setq(0,outer)][ulocal(#lambda/setq(0,inner)%%q0,x)] [r(0)]"
   },
   {
+   "key": "30-softcode/sc.coverage-gaps#0",
+   "command": "think [art(apple)] [art(banana)] [art(Egg)] [art(unicorn)] [art(hour)] [art(8)]"
+  },
+  {
+   "key": "30-softcode/sc.coverage-gaps#1",
+   "command": "think [ordinal(1)] [ordinal(2)] [ordinal(3)] [ordinal(4)] [ordinal(11)] [ordinal(12)] [ordinal(21)] [ordinal(100)] [ordinal(0)] [ordinal(-1)] [ordinal(abc)]"
+  },
+  {
+   "key": "30-softcode/sc.coverage-gaps#3",
+   "command": "think [pos(b,abc)] [pos(bc,abcbc)] [pos(z,abc)] [pos(,abc)]"
+  },
+  {
+   "key": "30-softcode/sc.coverage-gaps#5",
+   "command": "think [player(first(ports(me)))=num(me)] [player(-1)] [player(abc)]"
+  },
+  {
+   "key": "30-softcode/sc.coverage-gaps#6",
+   "command": "think [parent(first(lcon(*Alice)),loc(*Alice))]"
+  },
+  {
+   "key": "30-softcode/sc.coverage-gaps#7",
+   "command": "think [lparent(first(lcon(*Alice)))] [lparent(loc(*Alice))] [children(loc(*Alice))]"
+  },
+  {
+   "key": "30-softcode/sc.coverage-gaps#8",
+   "command": "think [children(first(lcon(*Alice)))]"
+  },
+  {
+   "key": "30-softcode/sc.coverage-gaps#9",
+   "command": "think [parent(first(lcon(*Alice)),none)] [lparent(first(lcon(*Alice)))]"
+  },
+  {
    "key": "30-softcode/sc.errors#0",
    "command": "think [nosuchfunction(1)]"
   },
@@ -381,6 +413,14 @@
    "command": "Bob bobpass"
   },
   {
+   "key": "40-compat-choices/choice.restrictions-reapply#1",
+   "command": "@command/restrict @find=!FLAG^GAGGED"
+  },
+  {
+   "key": "40-compat-choices/choice.restrictions-reapply#4",
+   "command": "@command/restrict @find=!FLAG^GAGGED"
+  },
+  {
    "key": "50-mail/mail.fwd-by-name#0",
    "command": "Alice alicepass"
   },
@@ -399,14 +439,6 @@
   {
    "key": "50-mail/mail.fwd-by-name#6",
    "command": "@mail/fwd 1=Bob Alice"
-  },
-  {
-   "key": "40-compat-choices/choice.restrictions-reapply#1",
-   "command": "@command/restrict @find=!FLAG^GAGGED"
-  },
-  {
-   "key": "40-compat-choices/choice.restrictions-reapply#4",
-   "command": "@command/restrict @find=!FLAG^GAGGED"
   }
  ]
 }

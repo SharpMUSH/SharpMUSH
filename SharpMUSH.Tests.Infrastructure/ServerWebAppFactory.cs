@@ -84,6 +84,12 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	private static readonly ConcurrentDictionary<string, ConcurrentBag<double>> _commandDurations = new(StringComparer.OrdinalIgnoreCase);
 	private static readonly ConcurrentDictionary<string, long> _connectionEventCounts = new(StringComparer.OrdinalIgnoreCase);
 
+	/// <summary>
+	/// Every function name the parser has dispatched in this process so far, as typed (aliases
+	/// included). <see cref="FunctionCoverage.Build"/> maps them onto the registry.
+	/// </summary>
+	public static IReadOnlyCollection<string> DispatchedFunctionNames => _functionDurations.Keys.ToArray();
+
 	static ServerWebAppFactory()
 	{
 		// Register once at process exit to write telemetry regardless of disposal order.
@@ -300,6 +306,8 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 					.OrderByDescending(x => x.AvgMs).Take(10))
 					sb.AppendLine($"| {name} | {count} | {avgMs:F2} |");
 				sb.AppendLine();
+
+				sb.Append(FunctionCoverage.ToMarkdown(FunctionCoverage.Build(DispatchedFunctionNames)));
 			}
 
 			if (_commandDurations.Count > 0)
