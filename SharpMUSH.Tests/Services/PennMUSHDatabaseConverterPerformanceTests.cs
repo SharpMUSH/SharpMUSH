@@ -16,41 +16,76 @@ public class PennMUSHDatabaseConverterPerformanceTests
 {
 
 	/// <summary>
+	/// Imports a 10MB+ PennMUSH database and checks that every object and attribute arrives.
+	/// </summary>
+	/// <remarks>
+	/// The import is checked by what it produced, not by how long it took. The same file takes about
+	/// 4 seconds on a CI runner in most runs and 20 to 48 seconds in some, and in those runs the small
+	/// imports in <see cref="PennMUSHConcurrentImportTests"/> were 10 to 50 times slower too: the runner
+	/// was slow, not the converter. <see cref="LargeDatabaseConversionPerformance"/> keeps the time budget.
+	/// </remarks>
+	[Test]
+	[Category("LongRunning")]
+	public async ValueTask LargeDatabaseConvertsEveryObjectAndAttribute()
+	{
+		await ImportLargeDatabaseAsync(async (database, result, _, _) =>
+		{
+			await Assert.That(result.IsSuccessful).IsTrue();
+			await Assert.That(result.Errors).IsEmpty()
+				.Because($"the import reported: {string.Join(" | ", result.Errors.Take(5))}");
+			await Assert.That(result.TotalObjects).IsEqualTo(database.Objects.Count);
+			await Assert.That(result.AttributesConverted).IsEqualTo(database.Objects.Sum(obj => obj.Attributes.Count));
+		});
+	}
+
+	/// <summary>
 	/// Tests conversion performance with a large 10MB+ PennMUSH database.
 	/// </summary>
 	/// <remarks>
 	/// Ten megabytes is about 540 objects and 29,000 attributes: Lightning parses and converts it in
-	/// about 4 seconds, and the budget is roughly five times that. The budget is
-	/// wall-clock time, so the test runs with nothing else executing: under the full parallel suite a
-	/// CI runner has taken 31 seconds over the same file.
+	/// about 4 seconds, and the budget is roughly five times that. The budget is wall-clock time, which
+	/// a shared CI runner cannot hold to (see <see cref="LargeDatabaseConvertsEveryObjectAndAttribute"/>),
+	/// so this runs on request, with nothing else executing.
 	/// </remarks>
 	[Test]
 	[NotInParallel]
 	[Category("Performance")]
 	[Category("LongRunning")]
+	[Explicit("Performance test - run manually for benchmarking")]
 	public async ValueTask LargeDatabaseConversionPerformance()
+	{
+		await ImportLargeDatabaseAsync(async (database, result, parseTime, convertTime) =>
+		{
+			await Assert.That(result.IsSuccessful).IsTrue();
+			await Assert.That(result.TotalObjects).IsGreaterThan(0);
+
+			const double timeoutSeconds = 20.0;
+
+			var totalTime = parseTime + convertTime;
+			await Assert.That(totalTime.TotalSeconds).IsLessThan(timeoutSeconds)
+				.Because($"Conversion of a 10MB database should complete in under {timeoutSeconds} seconds");
+		});
+	}
+
+	private static async ValueTask ImportLargeDatabaseAsync(
+		Func<PennMUSHDatabase, ConversionResult, TimeSpan, TimeSpan, Task> check)
 	{
 		var databaseFilePath = await PennMUSHDatabaseGenerator.GenerateLargeDatabaseFileAsync(10 * 1024 * 1024);
 
 		try
 		{
 			await using var world = await IsolatedImportWorld.CreateAsync();
-			var parser = world.Parser;
-			var converter = world.Converter;
 
 			var parseStopwatch = Stopwatch.StartNew();
-			var database = await parser.ParseFileAsync(databaseFilePath);
+			var database = await world.Parser.ParseFileAsync(databaseFilePath);
 			parseStopwatch.Stop();
 
 			var convertStopwatch = Stopwatch.StartNew();
-			var result = await converter.ConvertDatabaseAsync(database);
+			var result = await world.Converter.ConvertDatabaseAsync(database);
 			convertStopwatch.Stop();
 
-			await Assert.That(result.IsSuccessful).IsTrue();
-			await Assert.That(result.TotalObjects).IsGreaterThan(0);
-
-			var fileSize = new FileInfo(databaseFilePath).Length;
-			var fileSizeMB = fileSize / (1024.0 * 1024.0);
+			var fileSizeMB = new FileInfo(databaseFilePath).Length / (1024.0 * 1024.0);
+			var totalTime = parseStopwatch.Elapsed + convertStopwatch.Elapsed;
 
 			TestDiagnostics.WriteLine($"=== Performance Metrics ===");
 			TestDiagnostics.WriteLine($"Database file size: {fileSizeMB:F2} MB");
@@ -63,16 +98,12 @@ public class PennMUSHDatabaseConverterPerformanceTests
 			TestDiagnostics.WriteLine($"Locks: {result.LocksConverted}");
 			TestDiagnostics.WriteLine($"Parse time: {parseStopwatch.Elapsed.TotalSeconds:F3} seconds");
 			TestDiagnostics.WriteLine($"Convert time: {convertStopwatch.Elapsed.TotalSeconds:F3} seconds");
-			TestDiagnostics.WriteLine($"Total time: {(parseStopwatch.Elapsed + convertStopwatch.Elapsed).TotalSeconds:F3} seconds");
-			TestDiagnostics.WriteLine($"Objects/second: {result.TotalObjects / (parseStopwatch.Elapsed + convertStopwatch.Elapsed).TotalSeconds:F2}");
-			TestDiagnostics.WriteLine($"MB/second: {fileSizeMB / (parseStopwatch.Elapsed + convertStopwatch.Elapsed).TotalSeconds:F2}");
+			TestDiagnostics.WriteLine($"Total time: {totalTime.TotalSeconds:F3} seconds");
+			TestDiagnostics.WriteLine($"Objects/second: {result.TotalObjects / totalTime.TotalSeconds:F2}");
+			TestDiagnostics.WriteLine($"MB/second: {fileSizeMB / totalTime.TotalSeconds:F2}");
 			TestDiagnostics.WriteLine($"===========================");
 
-			const double timeoutSeconds = 20.0;
-
-			var totalTime = parseStopwatch.Elapsed + convertStopwatch.Elapsed;
-			await Assert.That(totalTime.TotalSeconds).IsLessThan(timeoutSeconds)
-				.Because($"Conversion of {fileSizeMB:F2}MB should complete in under {timeoutSeconds} seconds");
+			await check(database, result, parseStopwatch.Elapsed, convertStopwatch.Elapsed);
 		}
 		finally
 		{
