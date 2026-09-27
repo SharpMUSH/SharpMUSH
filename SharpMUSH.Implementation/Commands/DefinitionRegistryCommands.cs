@@ -2006,10 +2006,11 @@ public partial class Commands : ICommandRestrictionApplier
 			if (await registry.Find(Mediator, name.ToUpperInvariant()) is not null) return await Say(keys.AlreadyExists, name);
 
 			// A flag's second argument is its letter, kept as typed; a power's is its alias.
-			if (!await registry.Create(Mediator, name.ToUpperInvariant(), registry.SingleAlias ? second.ToUpperInvariant() : second))
-			{
-				return await Say(keys.FailedToCreate, name);
-			}
+			var (addConflict, created) = await CheckedCreateAsync(registry, name.ToUpperInvariant(),
+				registry.SingleAlias ? second.ToUpperInvariant() : second);
+
+			if (addConflict is not null) return await Say(keys.AliasConflict, addConflict);
+			if (!created) return await Say(keys.FailedToCreate, name);
 
 			await Say(keys.Created, name, second);
 			return new CallState(MarkupText.Plain(name));
@@ -2152,6 +2153,33 @@ public partial class Commands : ICommandRestrictionApplier
 	/// outside it.</para>
 	/// </summary>
 	private static readonly SemaphoreSlim DefinitionMutationGate = new(1, 1);
+
+	/// <summary>
+	/// <c>@power/add</c>'s second argument is the new power's alias. PennMUSH's is a letter
+	/// (<c>do_flag_add</c>, <c>src/flags.c:2505</c>, reads <c>args_right[1]</c> as one character), so
+	/// Penn has no alias to validate here — but SharpMUSH's creation enters the very namespace
+	/// <c>@power/alias</c> does, and owes it the same uniqueness or the alias check is only a front
+	/// door. A flag's second argument really is its letter, and creates no alias.
+	/// </summary>
+	/// <returns>The conflicting definition's name, or whether the definition was created.</returns>
+	private async ValueTask<(string? Conflict, bool Created)> CheckedCreateAsync(DefinitionRegistry registry,
+		string name, string second)
+	{
+		await DefinitionMutationGate.WaitAsync();
+		try
+		{
+			if (registry.SingleAlias && await FindAliasConflict(registry.All(Mediator), name, [second]) is { } conflict)
+			{
+				return (conflict, false);
+			}
+
+			return (null, await registry.Create(Mediator, name, second));
+		}
+		finally
+		{
+			DefinitionMutationGate.Release();
+		}
+	}
 
 	/// <summary>
 	/// Runs <paramref name="findConflict"/> (when there is one) and the write as one critical section.

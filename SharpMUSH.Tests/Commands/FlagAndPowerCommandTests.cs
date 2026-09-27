@@ -147,7 +147,8 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-		var alias = "TPOW";
+		// Unique per test: an alias namespace is unique per flagspace, and these run in parallel.
+		var alias = $"TPOW_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
 
@@ -166,7 +167,8 @@ public class FlagAndPowerCommandTests
 	public async ValueTask Power_Add_PreventsSystemPowerCreation()
 	{
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-		var alias = "TPOW";
+		// Unique per test: an alias namespace is unique per flagspace, and these run in parallel.
+		var alias = $"TPOW_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
 
@@ -182,7 +184,8 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-		var alias = "TPOW";
+		// Unique per test: an alias namespace is unique per flagspace, and these run in parallel.
+		var alias = $"TPOW_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 
 		var createdPower = await Mediator.Send(new CreatePowerCommand(
 			powerName, alias, string.Empty, false,
@@ -303,7 +306,8 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = $"TEST_POWER_DISABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-		var alias = "TPOW";
+		// Unique per test: an alias namespace is unique per flagspace, and these run in parallel.
+		var alias = $"TPOW_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
 
@@ -326,7 +330,8 @@ public class FlagAndPowerCommandTests
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var powerName = $"TEST_POWER_ENABLE_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
-		var alias = "TPOW";
+		// Unique per test: an alias namespace is unique per flagspace, and these run in parallel.
+		var alias = $"TPOW_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}={alias}"));
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/disable {powerName}"));
@@ -1101,6 +1106,56 @@ public class FlagAndPowerCommandTests
 
 		await Mediator.Send(new DeletePowerCommand(holder));
 		await Mediator.Send(new DeletePowerCommand(claimant));
+	}
+
+	// @power/add's second argument is the new power's alias, so it enters the same namespace
+	// @power/alias does and owes it the same uniqueness — otherwise the check is only a front door
+	// and `@power/add NEW=BUILDER` still makes an object carrying only NEW answer to BUILDER (#1249).
+	[Test]
+	public async ValueTask Power_Add_RejectsNameOfAnotherPowerAsItsAlias()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var powerName = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {powerName}=builder"));
+
+		await Assert.That(await Mediator.Send(new GetPowerQuery(powerName))).IsNull();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.PowerAliasConflictFormat), executor, executor)).IsTrue();
+	}
+
+	[Test]
+	public async ValueTask Power_Add_RejectsAliasOfAnotherPower()
+	{
+		var holder = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var claimant = $"TEST_POWER_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		var holderAlias = $"PA_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power/add {holder}={holderAlias}"));
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@power/add {claimant}={holderAlias.ToLowerInvariant()}"));
+
+		await Assert.That(await Mediator.Send(new GetPowerQuery(claimant))).IsNull();
+		await Assert.That((await Mediator.Send(new GetPowerQuery(holderAlias)))!.Name).IsEqualTo(holder);
+
+		await Mediator.Send(new DeletePowerCommand(holder));
+	}
+
+	// A flag's second argument is its letter, not an alias, so @flag/add creates none to collide.
+	[Test]
+	public async ValueTask Flag_Add_LetterIsNotTreatedAsAnAlias()
+	{
+		var flagName = $"TEST_FLAG_{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
+		// A private-use letter, so parallel letter-allocation tests keep their ASCII symbols free.
+		const string letter = "";
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@flag/add {flagName}={letter}"));
+
+		var created = await Mediator.Send(new GetObjectFlagQuery(flagName));
+		await Assert.That(created).IsNotNull();
+		await Assert.That(created!.Aliases ?? []).IsEmpty();
+
+		await Mediator.Send(new DeleteObjectFlagCommand(flagName));
 	}
 
 	/// <summary>
