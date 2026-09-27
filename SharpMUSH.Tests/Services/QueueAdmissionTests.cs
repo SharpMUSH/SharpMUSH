@@ -2488,4 +2488,38 @@ public class QueueAdmissionTests
 
 		await mediator.DidNotReceive().Send(Arg.Any<SetObjectFlagCommand>(), Arg.Any<CancellationToken>());
 	}
+
+	/// <summary>
+	/// <c>@halt &lt;object&gt;</c> is <c>do_halt</c>, which walks the run, wait and semaphore queues
+	/// (<c>src/cque.c:2179-2218</c>). A typed line is on none of them — <c>run_user_input</c> hands its
+	/// <c>QUEUE_SOCKET</c> entry straight to <c>do_entry</c> (<c>:1076-1090</c>) — so no halt in Penn
+	/// can take one back. SharpMUSH queues typed input, so the wipe has to spare that group.
+	/// </summary>
+	[Test]
+	public async Task HaltingAnObjectLeavesTheLineItAlreadyTyped()
+	{
+		await using var queue = Create(global: 6, owner: 4);
+		var target = new DBRef(10);
+		var blocked = Signal(); var release = Signal();
+		var typedRan = false; var queuedRan = false;
+
+		// Park the consumer, so both entries below are admitted and still waiting when the halt runs.
+		await queue.AdmitWork(async () => { blocked.TrySetResult(); await release.Task; return null; }, "blocker", "test");
+		await blocked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		try
+		{
+			await Assert.That((await queue.AdmitWork(() => { typedRan = true; return ValueTask.FromResult<CallState?>(null); },
+				"typed", Scheduler.DirectInputGroup, target)).Accepted).IsTrue();
+			await Assert.That((await queue.AdmitWork(() => { queuedRan = true; return ValueTask.FromResult<CallState?>(null); },
+				"queued", Scheduler.EnqueueGroup, target)).Accepted).IsTrue();
+
+			await queue.Halt(target);
+		}
+		finally { release.TrySetResult(); }
+
+		await queue.DrainImmediateQueueForTests(TimeSpan.FromSeconds(10));
+
+		await Assert.That(queuedRan).IsFalse().Because("@halt <object> wipes what the object had queued");
+		await Assert.That(typedRan).IsTrue().Because("do_halt never reaches a line the player already typed");
+	}
 }

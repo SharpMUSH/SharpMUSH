@@ -127,7 +127,9 @@ public interface ITaskScheduler
 	ValueTask Drain(DbRefAttribute dbAttribute, int? count = null);
 
 	/// <summary>
-	/// Halts queued jobs related to a DBRef, including semaphore waits.
+	/// Halts queued jobs related to a DBRef, including semaphore waits, and excluding the lines it
+	/// has already typed — <c>do_halt</c> walks the run, wait and semaphore queues, and typed input
+	/// is on none of them (<c>src/cque.c:1076-1090</c>, <c>:2179-2218</c>).
 	/// </summary>
 	/// <param name="dbRef">DbRef</param>
 	ValueTask Halt(DBRef dbRef);

@@ -301,7 +301,7 @@ public partial class TaskScheduler(
 
 		// The wipe has to happen: without it the backlog the object already built keeps running, each
 		// entry freeing a slot the next one takes, and the quota alone never brings the loop to a stop.
-		await HaltQueuedWork(offender);
+		await Halt(offender);
 
 		// set_flag_internal(player, "HALT") (src/cque.c:312) names no type and excludes none. A halted
 		// player is not a silenced player: the queue exempts them (insert_que, src/cque.c:530; the
@@ -1044,20 +1044,21 @@ public partial class TaskScheduler(
 		return removed.Length;
 	}
 
-	public ValueTask Halt(DBRef dbRef) => HaltWhere(dbRef, _ => true);
-
 	/// <summary>
-	/// The runaway wipe: everything the offender has queued, except what it typed.
+	/// <c>do_halt</c>: everything the object has queued, except what it typed. This is the whole of
+	/// <c>@halt &lt;object&gt;</c>, the runaway wipe and <c>free_object</c>'s halt alike, because
+	/// PennMUSH gives them one implementation.
 	/// </summary>
 	/// <remarks>
-	/// <c>do_halt(Owner(player), "", player)</c> (<c>src/cque.c:311</c>) walks the queue, and a typed
-	/// line is not on it: <c>run_user_input</c> hands its entry straight to <c>do_entry</c> without
-	/// ever inserting it (<c>:1076-1088</c>). SharpMUSH does queue typed input, in
-	/// <see cref="DirectInputGroup"/>, so sparing that group is what reproduces the same set — and it
-	/// is what the halted gate promises, since the flag this wipe accompanies leaves a player able to
-	/// type. A line already admitted and waiting its turn is as typed as the next one.
+	/// <c>do_halt</c> walks the run, wait and semaphore queues (<c>src/cque.c:2179-2218</c>), and a
+	/// typed line is on none of them: <c>run_user_input</c> builds its entry with
+	/// <c>QUEUE_SOCKET</c> and hands it straight to <c>do_entry</c> without ever inserting it
+	/// (<c>:1076-1090</c>). SharpMUSH does queue typed input, in <see cref="DirectInputGroup"/>, so
+	/// sparing that group is what reproduces the same set — and it is what the halted gate promises,
+	/// since the <c>HALT</c> flag the runaway wipe sets leaves a player able to type. A line already
+	/// admitted and waiting its turn is as typed as the next one.
 	/// </remarks>
-	private ValueTask HaltQueuedWork(DBRef dbRef) => HaltWhere(dbRef, entry => entry.Group != DirectInputGroup);
+	public ValueTask Halt(DBRef dbRef) => HaltWhere(dbRef, entry => entry.Group != DirectInputGroup);
 
 	private async ValueTask HaltWhere(DBRef dbRef, Func<QueueEntry, bool> include)
 	{
