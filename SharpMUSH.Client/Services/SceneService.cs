@@ -52,14 +52,17 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 
 
 	/// <summary>Lists scenes by filter (active|recent|scheduled).</summary>
-	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50) =>
-		await Client.GetApiAsync<List<SceneDto>>(
-				$"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}", "The server returned no scene list.")
-			switch
-			{
-				List<SceneDto> dtos => (IReadOnlyList<SceneSummary>)[.. dtos.Select(ToSummary)],
-				ApiFailure failure => failure
-			};
+	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50)
+	{
+		var result = await Client.GetApiAsync<List<SceneDto>>(
+			$"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}", "The server returned no scene list.");
+
+		return result switch
+		{
+			List<SceneDto> dtos => (IReadOnlyList<SceneSummary>)[.. dtos.Select(ToSummary)],
+			ApiFailure failure => failure
+		};
+	}
 
 	/// <summary>Convenience: the currently running scenes.</summary>
 	public Task<ApiResult<IReadOnlyList<SceneSummary>>> GetActiveScenesAsync(int count = 50)
@@ -73,13 +76,16 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 	/// One scene. <see cref="ApiFailureKind.NotFound"/> covers both a scene that does not exist and one
 	/// the caller may not see: the server answers 404 to both so that private scene ids cannot be probed.
 	/// </summary>
-	public async Task<ApiResult<SceneSummary>> GetSceneAsync(string id) =>
-		await Client.GetApiAsync<SceneDto>($"api/scenes/{Uri.EscapeDataString(id)}", "The server returned no scene.")
-			switch
-			{
-				SceneDto dto => ToSummary(dto),
-				ApiFailure failure => failure
-			};
+	public async Task<ApiResult<SceneSummary>> GetSceneAsync(string id)
+	{
+		var result = await Client.GetApiAsync<SceneDto>($"api/scenes/{Uri.EscapeDataString(id)}", "The server returned no scene.");
+
+		return result switch
+		{
+			SceneDto dto => ToSummary(dto),
+			ApiFailure failure => failure
+		};
+	}
 
 	/// <summary>
 	/// The scene's poses in chain order (optionally only the last <paramref name="count"/>).
@@ -90,7 +96,9 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 			? $"api/scenes/{Uri.EscapeDataString(id)}/poses?count={c}"
 			: $"api/scenes/{Uri.EscapeDataString(id)}/poses";
 
-		return await Client.GetApiAsync<List<ScenePoseDto>>(url, "The server returned no poses.") switch
+		var result = await Client.GetApiAsync<List<ScenePoseDto>>(url, "The server returned no poses.");
+
+		return result switch
 		{
 			List<ScenePoseDto> dtos => (IReadOnlyList<ScenePoseView>)[.. dtos.Select(ToPose)],
 			ApiFailure failure => failure
