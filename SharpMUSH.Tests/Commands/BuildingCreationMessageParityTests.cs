@@ -28,19 +28,22 @@ public class BuildingCreationMessageParityTests
 	private TestIsolationHelpers.TestPlayer _builder = null!;
 	private DBRef _room;
 
-	/// <summary>A wizard standing in a room of its own, so what it hears is only what it did.</summary>
+	/// <summary>
+	/// A wizard created in a room of its own, so what it hears is only what it did. It is never in the
+	/// shared start room: a room broadcast there reads the contents first and notifies each one after an
+	/// awaited permission check, so a builder moved out mid-broadcast still heard another test's
+	/// "has left" after <see cref="Run"/> had started counting.
+	/// </summary>
 	[Before(Test)]
 	public async Task SetUpBuilder()
 	{
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
+		_room = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("BcmRoom"), god));
 		_builder = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, "BcmBuilder");
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "BcmBuilder", _room);
 		var builder = (await Mediator.Send(new GetObjectNodeQuery(_builder.DbRef))).Expect<SharpPlayer>();
 		var wizard = await Mediator.Send(new GetObjectFlagQuery("WIZARD"));
 		await Assert.That(await Mediator.Send(new SetObjectFlagCommand(builder, wizard!))).IsTrue();
-		_room = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("BcmRoom"), builder));
-		var room = (await Mediator.Send(new GetObjectNodeQuery(_room))).Expect<SharpRoom>();
-		var origin = await builder.Location.WithCancellation(CancellationToken.None);
-		await Mediator.Send(new MoveObjectCommand(builder, room, origin.Object().DBRef, IsSilent: true));
 	}
 
 	[After(Test)]
