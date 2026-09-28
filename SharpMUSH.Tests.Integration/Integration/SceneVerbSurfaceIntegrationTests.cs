@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
@@ -59,7 +58,7 @@ public class SceneVerbSurfaceIntegrationTests
 		return [.. Notifications.For(actor).Skip(before)];
 	}
 
-	private async Task<string> CreatePlayerAsync(string name, long handle)
+	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name)
 	{
 		await God1($"@pcreate {name}=pw-{Tag}-1");
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
@@ -67,11 +66,9 @@ public class SceneVerbSurfaceIntegrationTests
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
 		await God1($"@set {dbref}=APPROVED");
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, null);
-		await ConnectionService.Bind(handle, parsed.Value);
+		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, parsed.Value);
 		_actors[handle] = parsed.Value;
-		return dbref;
+		return (dbref, handle);
 	}
 
 	/// <summary>The Scene Logger, which carries the package's attributes.</summary>
@@ -101,8 +98,7 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task UnfocusedVerb_SaysSoInsteadOfActing(string command)
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long handle = 9500;
-		await CreatePlayerAsync($"Lune{Tag}", handle);
+		var (_, handle) = await CreatePlayerAsync($"Lune{Tag}");
 
 		var said = await RunAs(handle, command);
 
@@ -133,10 +129,8 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task AWizardFocusedOnAnotherPlayersScene_CanStillAdministerIt()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long ownerHandle = 9501;
-		const long wizardHandle = 9504;
-		await CreatePlayerAsync($"Perr{Tag}", ownerHandle);
-		var wizard = await CreatePlayerAsync($"Wiz{Tag}", wizardHandle);
+		var (_, ownerHandle) = await CreatePlayerAsync($"Perr{Tag}");
+		var (wizard, wizardHandle) = await CreatePlayerAsync($"Wiz{Tag}");
 		await God1($"@set {wizard}=WIZARD");
 		await Assert.That(await Eval($"orflags({wizard},Wr)")).IsEqualTo("1")
 			.Because("the character has to actually be a wizard for this to test anything");
@@ -159,10 +153,8 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task AFocusedNonOwner_IsRefusedInWords()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long ownerHandle = 9502;
-		const long guestHandle = 9503;
-		await CreatePlayerAsync($"Quill{Tag}", ownerHandle);
-		await CreatePlayerAsync($"Rook{Tag}", guestHandle);
+		var (_, ownerHandle) = await CreatePlayerAsync($"Quill{Tag}");
+		var (_, guestHandle) = await CreatePlayerAsync($"Rook{Tag}");
 
 		await RunAs(ownerHandle, $"+scene/create Quill Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");
@@ -191,10 +183,8 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task SceneInfo_ShowsTheCastWithRolesAndWhereItIs(string verb)
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long ownerHandle = 9520;
-		const long castHandle = 9521;
-		await CreatePlayerAsync($"Ines{Tag}", ownerHandle);
-		await CreatePlayerAsync($"Joss{Tag}", castHandle);
+		var (_, ownerHandle) = await CreatePlayerAsync($"Ines{Tag}");
+		var (_, castHandle) = await CreatePlayerAsync($"Joss{Tag}");
 
 		await RunAs(ownerHandle, $"+scene/create Ines Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");
@@ -215,8 +205,7 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task SceneInfo_SaysWhetherAnyoneMayWatch()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long ownerHandle = 9522;
-		await CreatePlayerAsync($"Kite{Tag}", ownerHandle);
+		var (_, ownerHandle) = await CreatePlayerAsync($"Kite{Tag}");
 
 		await RunAs(ownerHandle, $"+scene/create Kite Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");
@@ -234,8 +223,7 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task SceneWho_IsNoLongerACommand()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long handle = 9523;
-		await CreatePlayerAsync($"Lark{Tag}", handle);
+		var (_, handle) = await CreatePlayerAsync($"Lark{Tag}");
 		await RunAs(handle, $"+scene/create Lark Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(_actors[handle].ToString())})");
 
@@ -256,10 +244,8 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task SceneInfo_ShowsOneCastLine_CarryingPersonaAndRole()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long ownerHandle = 9530;
-		const long castHandle = 9531;
-		var owner = await CreatePlayerAsync($"Mira{Tag}", ownerHandle);
-		await CreatePlayerAsync($"Nolan{Tag}", castHandle);
+		var (owner, ownerHandle) = await CreatePlayerAsync($"Mira{Tag}");
+		var (_, castHandle) = await CreatePlayerAsync($"Nolan{Tag}");
 
 		await RunAs(ownerHandle, $"+scene/create Mira Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(owner)})");
@@ -291,8 +277,7 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task SceneInfo_BuildsItsLinkFromTheGamesAddressAndTheSceneId()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long handle = 9540;
-		await CreatePlayerAsync($"Odile{Tag}", handle);
+		var (_, handle) = await CreatePlayerAsync($"Odile{Tag}");
 
 		await RunAs(handle, $"+scene/create Odile Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(_actors[handle].ToString())})");
@@ -348,11 +333,9 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task WebComposeVerb_FocusesTheSceneItPostsTo(string mode, string text)
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long ownerHandle = 9550;
-		const long guestHandle = 9551;
 		// Two letters of the mode keep each name unique and within player_name_len (15).
-		await CreatePlayerAsync($"Rue{Tag}{mode[..2]}", ownerHandle);
-		var guest = await CreatePlayerAsync($"Sabel{Tag}{mode[..2]}", guestHandle);
+		var (_, ownerHandle) = await CreatePlayerAsync($"Rue{Tag}{mode[..2]}");
+		var (guest, guestHandle) = await CreatePlayerAsync($"Sabel{Tag}{mode[..2]}");
 
 		await RunAs(ownerHandle, $"+scene/create Rue Scene {Tag} {mode}");
 		var sceneId = await Eval($"scenefocus({Num(_actors[ownerHandle].ToString())})");
@@ -382,8 +365,7 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task AWebComposedPose_ReachesTheArchiveWithItsWhitespaceIntact()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long handle = 9570;
-		var who = await CreatePlayerAsync($"Yarrow{Tag}", handle);
+		var (who, handle) = await CreatePlayerAsync($"Yarrow{Tag}");
 
 		await RunAs(handle, $"+scene/create Yarrow Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(who)})");
@@ -407,10 +389,8 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task BareRecall_ShowsTwoRoundsOfTheCast()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long ownerHandle = 9560;
-		const long castHandle = 9561;
-		var owner = await CreatePlayerAsync($"Tarn{Tag}", ownerHandle);
-		await CreatePlayerAsync($"Vell{Tag}", castHandle);
+		var (owner, ownerHandle) = await CreatePlayerAsync($"Tarn{Tag}");
+		var (_, castHandle) = await CreatePlayerAsync($"Vell{Tag}");
 
 		await RunAs(ownerHandle, $"+scene/create Tarn Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(owner)})");
@@ -447,8 +427,7 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task Recall_AttributesAndSeparatesEachPose()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long handle = 9563;
-		var who = await CreatePlayerAsync($"Zev{Tag}", handle);
+		var (who, handle) = await CreatePlayerAsync($"Zev{Tag}");
 
 		await RunAs(handle, $"+scene/create Zev Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(who)})");
@@ -484,8 +463,7 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task Recall_WithAnImpossibleCount_SaysSo(string count)
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long handle = 9564;
-		var who = await CreatePlayerAsync($"Ash{Tag}{count.Length}{count[0]}", handle);
+		var (who, handle) = await CreatePlayerAsync($"Ash{Tag}{count.Length}{count[0]}");
 
 		await RunAs(handle, $"+scene/create Ash Scene {Tag} {count}");
 		var sceneId = await Eval($"scenefocus({Num(who)})");
@@ -511,8 +489,7 @@ public class SceneVerbSurfaceIntegrationTests
 	public async Task Recall_WithoutAFocus_SaysSo(string command)
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long handle = 9562;
-		await CreatePlayerAsync($"Wren{Tag}{command.Length}", handle);
+		var (_, handle) = await CreatePlayerAsync($"Wren{Tag}{command.Length}");
 
 		var said = await RunAs(handle, command);
 

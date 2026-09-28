@@ -1049,32 +1049,18 @@ public partial class Functions
 		return new CallState(string.Join(" ", await handles.ToArrayAsync()));
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>fun_player</c> (<c>src/bsd.c</c>): who is on the connection <c>lookup_desc</c> finds.
+	/// A descriptor number answers for See_All, or for the caller's own connection; a name answers when
+	/// that player has a connection the caller can see. Every other case, and a connection still at the
+	/// login screen, is <c>#-1</c>.
+	/// </summary>
 	[SharpFunction(Name = "player", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["descriptor"])]
 	public async ValueTask<CallState> Player(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var portString = parser.CurrentState.Arguments["0"].Message!.ToPlainText()!;
-
-		if (!long.TryParse(portString, out var port))
-		{
-			return new CallState(ErrorMessages.Returns.InvalidPort);
-		}
-
-		var data = ConnectionService.Get(port);
-
-		if (data?.Ref == executor.Object().DBRef)
-		{
-			return new CallState($"#{executor.Object().DBRef.Number}");
-		}
-
-		if (await executor.IsWizard() || await executor.IsRoyalty() || await executor.IsSee_All())
-		{
-			return data is null
-				? new CallState(ErrorMessages.Returns.InvalidPort)
-				: new CallState($"#{data.Ref?.Number}");
-		}
-
-		return new CallState(ErrorMessages.Returns.PermissionDenied);
+		var descriptor = await LookupDescriptorAsync(parser, executor);
+		return new CallState(descriptor?.Ref is { } who ? $"#{who.Number}" : "#-1");
 	}
 
 	[SharpFunction(Name = "height", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

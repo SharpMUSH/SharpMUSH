@@ -110,6 +110,47 @@ public class SchedulerKeysTests
 	}
 
 	/// <summary>
+	/// The Quartz jobs and <c>GetDelayTasks</c> read the PID back out of the trigger name. It is
+	/// whatever follows the last dash, because the identity in front may carry dashes of its own.
+	/// </summary>
+	[Test]
+	public async Task ATriggerNameGivesBackThePidItWasBuiltWith()
+	{
+		await Assert.That(SchedulerKeys.TriggerPid(SchedulerKeys.Trigger(new DBRef(5, 1744849081000), 16))).IsEqualTo(16L);
+		await Assert.That(SchedulerKeys.TriggerPid(SchedulerKeys.Trigger((DBRef?)null, 16))).IsEqualTo(16L);
+		await Assert.That(SchedulerKeys.TriggerPid(SchedulerKeys.TriggerName("async:#5/FOO-BAR", 16))).IsEqualTo(16L)
+			.Because("an attribute name may contain a dash");
+		await Assert.That(SchedulerKeys.TriggerName("input-session:3", 16)).IsEqualTo("input-session:3-16");
+	}
+
+	[Test]
+	[Arguments("startup")]
+	[Arguments("dbref:#5-")]
+	[Arguments("dbref:#5-x")]
+	[Arguments("dbref:#5-+16")]
+	[Arguments("dbref:#5- 16")]
+	public async Task ANameWithoutATrailingPidIsNotATrigger(string triggerName)
+	{
+		await Assert.That(SchedulerKeys.TryTriggerPid(triggerName, out _)).IsFalse();
+		await Assert.That(() => SchedulerKeys.TriggerPid(triggerName)).Throws<FormatException>()
+			.Because("a Quartz job only fires for triggers the queue named");
+	}
+
+	/// <summary><c>@ps</c> reports the executor a trigger name carries, and only a dbref counts.</summary>
+	[Test]
+	public async Task ATriggerNameGivesBackItsExecutor()
+	{
+		var executor = new DBRef(5, 1744849081000);
+
+		await Assert.That(SchedulerKeys.TriggerExecutor(SchedulerKeys.Trigger(executor, 16))).IsEqualTo(executor);
+		await Assert.That(SchedulerKeys.TriggerExecutor(SchedulerKeys.Trigger(new DBRef(5), 16))).IsEqualTo(new DBRef(5));
+		await Assert.That(SchedulerKeys.TriggerExecutor(SchedulerKeys.Trigger((DBRef?)null, 16))).IsNull();
+		await Assert.That(SchedulerKeys.TriggerExecutor(SchedulerKeys.TriggerName(SchedulerKeys.Owner(42L), 16))).IsNull()
+			.Because("a connection handle is not an object");
+		await Assert.That(SchedulerKeys.TriggerExecutor(SchedulerKeys.TriggerName("async:#5/FOO-BAR", 16))).IsNull();
+	}
+
+	/// <summary>
 	/// A state with no executor rendered <c>dbref:</c> with nothing after it before these helpers
 	/// existed, and still has to: the alternative silently renames triggers a running scheduler
 	/// already holds.

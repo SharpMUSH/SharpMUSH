@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
@@ -32,11 +31,8 @@ public class PlusHelpIntegrationTests
 
 	private static readonly string Tag = Guid.NewGuid().ToString("N")[..8];
 
-	private const long ReaderHandle = 9600;
-	private const long StaffHandle = 9601;
-
-	private string? _reader;
-	private string? _staff;
+	private long? _readerHandle;
+	private long? _staffHandle;
 
 	/// <summary>
 	/// A plain mortal — every reading test drives this. Never God: #1 passes every lock, so a
@@ -44,15 +40,15 @@ public class PlusHelpIntegrationTests
 	/// </summary>
 	private async Task<long> ReaderAsync()
 	{
-		_reader ??= await CreatePlayerAsync($"Read{Tag}", ReaderHandle);
-		return ReaderHandle;
+		_readerHandle ??= await CreatePlayerAsync($"Read{Tag}");
+		return _readerHandle.Value;
 	}
 
 	/// <summary>A wizard, for the staff verbs.</summary>
 	private async Task<long> StaffAsync()
 	{
-		_staff ??= await CreatePlayerAsync($"Staff{Tag}", StaffHandle, wizard: true);
-		return StaffHandle;
+		_staffHandle ??= await CreatePlayerAsync($"Staff{Tag}", wizard: true);
+		return _staffHandle.Value;
 	}
 
 	private readonly ConcurrentDictionary<long, DBRef> _actors = new();
@@ -76,7 +72,8 @@ public class PlusHelpIntegrationTests
 
 	private static string Joined(IReadOnlyList<string> lines) => string.Join("\n", lines);
 
-	private async Task<string> CreatePlayerAsync(string name, long handle, bool wizard = false)
+	/// <summary>Creates and connects a player; returns the handle it is connected on.</summary>
+	private async Task<long> CreatePlayerAsync(string name, bool wizard = false)
 	{
 		await God1($"@pcreate {name}=pw-{Tag}-1");
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
@@ -90,11 +87,9 @@ public class PlusHelpIntegrationTests
 			await God1($"@set {dbref}=WIZARD");
 		}
 
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, null);
-		await ConnectionService.Bind(handle, parsed.Value);
+		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, parsed.Value);
 		_actors[handle] = parsed.Value;
-		return dbref;
+		return handle;
 	}
 
 	/// <summary>

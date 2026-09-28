@@ -469,83 +469,19 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Returns the Indefinite Article ('a' or 'an') of a word.
+	/// PennMUSH's <c>fun_art</c> (<c>src/funstr.c</c>): "an" when the argument starts with a vowel,
+	/// "a" otherwise, empty argument included. It looks at the first character only, so
+	/// <c>art(hour)</c> is "a" and <c>art(unicorn)</c> is "an".
 	/// </summary>
-	/// <remarks>
-	/// Uses the basic implementation found here: https://stackoverflow.com/a/8044744/1894135
-	/// This is very specific to English. There are many edge cases that are not covered, and better solutions may exist.
-	/// </remarks>
 	[SharpFunction(Name = "art", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
-	public async ValueTask<CallState> Art(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> Art(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var nounPhrase = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		await ValueTask.CompletedTask;
+		var text = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		var m = GetWord().Match(nounPhrase);
-
-		if (!m.Success)
-		{
-			return "an";
-		}
-
-		var word = m.Groups[0].Value;
-		var wordLower = word.ToLower();
-
-		if (AnWordPrefixes.Any(anWord => wordLower.StartsWith(anWord)))
-		{
-			return "an";
-		}
-
-		if (wordLower.StartsWith("hour") && !wordLower.StartsWith("houri"))
-		{
-			return "an";
-		}
-
-
-		if (wordLower.Length == 1)
-		{
-			return AnLetters.Contains(wordLower[0])
-				? "an"
-				: "a";
-		}
-
-		if (ArticleRegex().IsMatch(word))
-		{
-			return "an";
-		}
-
-		if (ArticleEuwRegex().IsMatch(wordLower)
-				|| ArticleOnceRegex().IsMatch(wordLower)
-				|| ArticleUniRegex().IsMatch(wordLower)
-				|| ArticleUConsonantRegex().IsMatch(wordLower))
-		{
-			return "a";
-		}
-
-		if (ArticleRegex2().IsMatch(word))
-		{
-			return "a";
-		}
-
-		if (word == word.ToUpper())
-		{
-			return AnLetters.Contains(wordLower[0])
-				? "an"
-				: "a";
-		}
-
-		if (wordLower[0] is 'a' or 'e' or 'i' or 'o' or 'u')
-		{
-			return "an";
-		}
-
-		return ArticleRegex3().IsMatch(wordLower) ? "an" : "a";
+		return ValueTask.FromResult<CallState>(text.Length > 0 && char.ToLowerInvariant(text[0]) is 'a' or 'e' or 'i' or 'o' or 'u'
+			? "an"
+			: "a");
 	}
-
-	/// <summary>Letters that take "an" when read as a letter (a single letter, or an initialism).</summary>
-	private const string AnLetters = "aedhilmnorsx";
-
-	private static readonly string[] AnWordPrefixes = ["euler", "heir", "honest", "hono"];
 
 	[SharpFunction(Name = "before", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string1", "string2"])]
 	public ValueTask<CallState> Before(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1477,23 +1413,138 @@ public partial class Functions
 			: ValueTask.FromResult<CallState>(arg0.EnumerateRunes().First().Value);
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>fun_spellnum</c> called as <c>ORDINAL</c> (<c>src/funmath.c</c>): the number is spelled
+	/// the way <c>spellnum()</c> spells it (<c>ordinal(100)</c> is "one hundredth", <c>ordinal(-1)</c>
+	/// "negative first") and its last word is made ordinal. Anything but digits is not a number; a
+	/// decimal point is a number that is not an integer.
+	/// </summary>
 	[SharpFunction(Name = "ORDINAL", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
 	public ValueTask<CallState> Ordinal(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var numberArg = parser.CurrentState.Arguments["0"].Message!;
+		var number = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim(' ');
+		var minus = number.StartsWith('-');
+		if (minus || number.StartsWith('+'))
+		{
+			number = number[1..];
+		}
 
-		return !int.TryParse(numberArg.ToPlainText(), out var number)
-			? new ValueTask<CallState>(new CallState(ErrorMessages.Returns.Integer))
-			: new ValueTask<CallState>(new CallState(number.ToOrdinalWords()));
+		number = number.TrimStart('0');
+
+		foreach (var c in number)
+		{
+			if (c == '.')
+			{
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
+			}
+
+			if (!char.IsAsciiDigit(c))
+			{
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Number));
+			}
+		}
+
+		// Penn pads to whole groups of three before its 999,999,999,999,999 limit.
+		var padded = number.PadLeft((number.Length + 2) / 3 * 3, '0');
+		if (padded.Length > 15)
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.OutOfRange));
+		}
+
+		var spelled = number.Length == 0
+			? "zero"
+			: (minus ? "negative " : "") + SpellDigits(padded);
+
+		return ValueTask.FromResult(new CallState(Ordinalize(spelled)));
 	}
 
-	[SharpFunction(Name = "pos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["target", "string"])]
+	/// <summary>
+	/// PennMUSH's <c>do_spellnum</c> (<c>src/funmath.c</c>): digits, a multiple of three long, spelled
+	/// out in groups of three with no "and".
+	/// </summary>
+	private static string SpellDigits(string digits)
+	{
+		string[] bigOnes = ["", "thousand", "million", "billion", "trillion"];
+		string[] singles = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+		string[] special = ["ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+		string[] tens = ["", " ", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+
+		var spelled = new StringBuilder();
+		var group = digits.Length / 3;
+
+		for (var offset = 0; group > 0; offset += 3)
+		{
+			group--;
+			var x0 = digits[offset] - '0';
+			var x1 = digits[offset + 1] - '0';
+			var x2 = digits[offset + 2] - '0';
+
+			if (x0 != 0)
+			{
+				if (spelled.Length > 0) spelled.Append(' ');
+				spelled.Append(singles[x0]).Append(" hundred");
+			}
+
+			if (x1 == 1)
+			{
+				if (spelled.Length > 0) spelled.Append(' ');
+				spelled.Append(special[x2]);
+			}
+			else if (x1 != 0 || x2 != 0)
+			{
+				if (spelled.Length > 0) spelled.Append(' ');
+				if (x1 != 0)
+				{
+					spelled.Append(tens[x1]);
+					if (x2 != 0) spelled.Append('-');
+				}
+
+				spelled.Append(singles[x2]);
+			}
+
+			if (group > 0 && (x0 != 0 || x1 != 0 || x2 != 0))
+			{
+				if (spelled.Length > 0) spelled.Append(' ');
+				spelled.Append(bigOnes[group]);
+			}
+		}
+
+		return spelled.ToString();
+	}
+
+	private static readonly string[] OrdinalSingles = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "twelve"];
+	private static readonly string[] OrdinalSinglesTh = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "twelfth"];
+
+	/// <summary>
+	/// PennMUSH's <c>do_ordinalize</c> (<c>src/funmath.c</c>): the last word of a spelled number, made ordinal.
+	/// </summary>
+	private static string Ordinalize(string spelled)
+	{
+		for (var i = 0; i < OrdinalSingles.Length; i++)
+		{
+			if (spelled.EndsWith(OrdinalSingles[i], StringComparison.OrdinalIgnoreCase))
+			{
+				return spelled[..^OrdinalSingles[i].Length] + OrdinalSinglesTh[i];
+			}
+		}
+
+		return spelled.EndsWith('y')
+			? spelled[..^1] + "ieth"
+			: spelled + "th";
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>fun_pos</c> (<c>src/funstr.c</c>): where the first argument first appears in the
+	/// second, counting from 1, or <c>#-1</c> when it does not. An empty first argument is at 1.
+	/// </summary>
+	[SharpFunction(Name = "pos", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["needle", "haystack"])]
 	public ValueTask<CallState> StringPosition(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var arg0 = parser.CurrentState.Arguments["0"].Message!;
-		var arg1 = parser.CurrentState.Arguments["1"].Message!;
+		var needle = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var haystack = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var index = haystack.IndexOf(needle, StringComparison.Ordinal);
 
-		return new ValueTask<CallState>(arg0.IndexOf(arg1.ToPlainText()) + 1);
+		return ValueTask.FromResult<CallState>(index < 0 ? "#-1" : (index + 1).ToString());
 	}
 
 	[SharpFunction(Name = "repeat", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "count"])]
@@ -2083,32 +2134,8 @@ public partial class Functions
 		return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.ErrorNotSupported));
 	}
 
-	[GeneratedRegex(@"\w+")]
-	private static partial Regex GetWord();
-
-	[GeneratedRegex("(?!FJO|[HLMNS]Y.|RY[EO]|SQU|(F[LR]?|[HL]|MN?|N|RH?|S[CHKLMNPTVW]?|X(YL)?)[AEIOU])[FHLMNRSX][A-Z]")]
-	private static partial Regex ArticleRegex();
-
-	[GeneratedRegex("^U[NK][AIEO]")]
-	private static partial Regex ArticleRegex2();
-
-	[GeneratedRegex("^y(b[lor]|cl[ea]|fere|gg|p[ios]|rou|tt)")]
-	private static partial Regex ArticleRegex3();
-
 	[GeneratedRegex(" +")]
 	private static partial Regex SpacesRegex();
-
-	[GeneratedRegex("^e[uw]")]
-	private static partial Regex ArticleEuwRegex();
-
-	[GeneratedRegex(@"^onc?e\b")]
-	private static partial Regex ArticleOnceRegex();
-
-	[GeneratedRegex("^uni([^nmd]|mo)")]
-	private static partial Regex ArticleUniRegex();
-
-	[GeneratedRegex("^u[bcfhjkqrst][aeiou]")]
-	private static partial Regex ArticleUConsonantRegex();
 
 	[SharpFunction(Name = "@@", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
 	public ValueTask<CallState> AtAt(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>

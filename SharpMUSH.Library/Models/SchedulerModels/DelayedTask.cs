@@ -1,6 +1,7 @@
 using Quartz;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Models.SchedulerModels;
@@ -14,7 +15,7 @@ internal class DelayedTask(ITaskScheduler taskScheduler, IOptionsWrapper<SharpMU
 			var milliseconds = configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? LimitOptions.DefaultQueueEntryCpuTime;
 			using var budget = ExecutionBudget.FromMilliseconds(milliseconds == 0 ? 1000 : milliseconds, context.CancellationToken);
 			using var scope = budget.Enter();
-			await taskScheduler.ReleaseScheduledWork(long.Parse(context.Trigger.Key.Name.Split('-').Last()),
+			await taskScheduler.ReleaseScheduledWork(SchedulerKeys.TriggerPid(context.Trigger.Key.Name),
 				semaphoreTimeout: false, generation: context.MergedJobDataMap.GetLong("Generation"));
 		}
 		catch (Exception exception) when (!context.CancellationToken.IsCancellationRequested)
