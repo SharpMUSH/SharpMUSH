@@ -1059,25 +1059,8 @@ public partial class Functions
 	public async ValueTask<CallState> Player(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var name = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var seeAll = await executor.IsSee_All();
-
-		if (long.TryParse(name, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var port))
-		{
-			var data = ConnectionService.Get(port);
-			return data?.Ref is { } who && (seeAll || who == executor.Object().DBRef)
-				? new CallState($"#{who.Number}")
-				: new CallState("#-1");
-		}
-
-		if (await LocateService.LocateConnectionTarget(parser, executor, executor, name) is not (AnySharpObject and SharpPlayer player))
-		{
-			return new CallState("#-1");
-		}
-
-		var visible = await ConnectionService.Get(player.Object.DBRef)
-			.AnyAsync(connection => seeAll || !connection.IsHidden);
-		return new CallState(visible ? $"#{player.Object.DBRef.Number}" : "#-1");
+		var descriptor = await LookupDescriptorAsync(parser, executor);
+		return new CallState(descriptor?.Ref is { } who ? $"#{who.Number}" : "#-1");
 	}
 
 	[SharpFunction(Name = "height", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
