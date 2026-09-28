@@ -501,8 +501,8 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(sceneId).DoesNotStartWith("#-1");
 
 		await RunAndCollectAs(quinnHandle, $"+scene/join {sceneId}");
+		// Quinn deliberately never poses → oldest (never) → up next.
 		await RunAndCollectAs(patHandle, "pose stretches and yawns by the fire.");   // captured for Pat
-																																					 // Quinn deliberately never poses → oldest (never) → up next.
 
 		var potMsgs = await RunAndCollectAs(patHandle, "+pot");
 		var lines = potMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()).ToList();
