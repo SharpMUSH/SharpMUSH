@@ -27,6 +27,7 @@ public class LocateServiceCompatibilityTests
 
 	private readonly LocateService _locateService;
 	private readonly TestObjectFactory _factory = new();
+	private readonly SharpRoom _sharedRoom;
 
 	public LocateServiceCompatibilityTests()
 	{
@@ -37,6 +38,15 @@ public class LocateServiceCompatibilityTests
 		wrapper.CurrentValue.Returns(options);
 
 		_locateService = new LocateService(_mediator, _notifyService, _permissionService, wrapper);
+
+		// The arrangement nearly every test shares. A test that needs otherwise stubs over it: NSubstitute
+		// answers with the most recent matching setup.
+		_sharedRoom = _factory.CreateRoom(999, "Shared Room");
+		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
+				Arg.Any<IPermissionService.InteractType>())
+			.Returns(true);
+		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
+			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 	}
 
 	/// <summary>
@@ -58,23 +68,14 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_NameMatching_ShouldMatchExactNamesForNonExits()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(3, "TestObject", sharedRoom, player);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(3, "TestObject", _sharedRoom, player);
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		Holds(sharedRoom, contents);
-
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
+		Holds(_sharedRoom, contents);
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
-			.Returns(true);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -94,23 +95,14 @@ public class LocateServiceCompatibilityTests
 		// Before fix: (!cur.IsExit && !string.Equals(...)) would match everything that DIDN'T match
 		// After fix: (!cur.IsExit && string.Equals(...)) only matches exact names
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(3, "TestObject", sharedRoom, player);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(3, "TestObject", _sharedRoom, player);
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		Holds(sharedRoom, contents);
-
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
+		Holds(_sharedRoom, contents);
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
-			.Returns(true);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -129,17 +121,9 @@ public class LocateServiceCompatibilityTests
 		// truthy in C, so "me" matches. Only MAT_TYPE — OnlyMatchTypePreference — turns a looker of the
 		// wrong type into a refusal. Reading NoTypePreference as "do not match me" had it backwards.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
-			.Returns(true);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -172,17 +156,10 @@ public class LocateServiceCompatibilityTests
 		var player = _factory.CreatePlayer(1, "TestPlayer", room1);
 		var target = _factory.CreatePlayer(2, "TargetPlayer", room2);
 
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
-
 		// "me" is the looker's, and MAT_CONTROL asks whether the permission subject — the executor —
 		// controls the object being returned. It used to ask whether the executor controlled itself,
 		// which is what the looker/where swap in LocateMatch made it look like.
 		_permissionService.Controls(target, player)
-			.Returns(true);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -215,20 +192,12 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_HereMatching_ShouldMatchCurrentLocation()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
 
 		_mediator.CreateStream(Arg.Any<GetContentsQuery>(), Arg.Any<CancellationToken>())
 			.Returns(_ => AsyncEnumerable.Empty<AnySharpContent>());
 
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
-
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
-			.Returns(true);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -245,21 +214,13 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_AbsoluteDBRef_ShouldMatchByDBRef()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(42, "TestObject", sharedRoom, player);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(42, "TestObject", _sharedRoom, player);
 
 		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 42), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<AnyOptionalSharpObject>(thing.WithNoneOption()));
 
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
-
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
-			.Returns(true);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -275,24 +236,19 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_TypePreference_ShouldRespectPlayerPreference()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var targetPlayer = _factory.CreatePlayer(5, "Bob", sharedRoom);
-		var thing = _factory.CreateThing(6, "Bob", sharedRoom, player);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var targetPlayer = _factory.CreatePlayer(5, "Bob", _sharedRoom);
+		var thing = _factory.CreateThing(6, "Bob", _sharedRoom, player);
 
 		var contents = new[] { thing, targetPlayer }.ToAsyncEnumerable();
 
-		Holds(sharedRoom, contents);
+		Holds(_sharedRoom, contents);
 
 		var playerResults = new[] { targetPlayer.Expect<SharpPlayer>() }.ToAsyncEnumerable();
 		_mediator.CreateStream(Arg.Is<GetPlayerQuery>(q => q.Name.Contains("Bob")), Arg.Any<CancellationToken>())
 			.Returns(_ => playerResults);
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
-			.Returns(true);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -313,13 +269,8 @@ public class LocateServiceCompatibilityTests
 		// Directly tests that Match_List does prefix matching (PennMUSH string_match() behavior).
 		// Verifies that "Long" correctly locates an object named "LongObjectName" using prefix matching.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(3, "LongObjectName", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(3, "LongObjectName", _sharedRoom, player);
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
@@ -340,13 +291,8 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_PartialMatching_ShouldNotFindObjectByPrefixWhenNoPartialMatchesSet()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(3, "LongObjectName", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(3, "LongObjectName", _sharedRoom, player);
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
@@ -367,22 +313,14 @@ public class LocateServiceCompatibilityTests
 		// default flag injection — so the inventory scope is the only one that runs and finds nothing.
 		// Prefix matching itself is covered by MatchList_PartialMatching_* and the seam tests.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(3, "LongObjectName", sharedRoom, player);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(3, "LongObjectName", _sharedRoom, player);
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		Holds(sharedRoom, contents);
-
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
+		Holds(_sharedRoom, contents);
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
-			.Returns(true);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -398,22 +336,14 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_NoPartialMatches_ShouldRequireExactMatch()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(3, "LongObjectName", sharedRoom, player);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(3, "LongObjectName", _sharedRoom, player);
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		Holds(sharedRoom, contents);
-
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
+		Holds(_sharedRoom, contents);
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
-			.Returns(true);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -428,22 +358,14 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_MatchObjectsInLookerLocation_ShouldFindObjectsInSameRoom()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(3, "RoomObject", sharedRoom, player);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(3, "RoomObject", _sharedRoom, player);
 
 		var contents = new[] { thing, player }.ToAsyncEnumerable();
 
-		Holds(sharedRoom, contents);
-
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
+		Holds(_sharedRoom, contents);
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
-			.Returns(true);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -461,23 +383,15 @@ public class LocateServiceCompatibilityTests
 	{
 		// In PennMUSH, this typically returns an ambiguous match or the first/last depending on flags
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing1 = _factory.CreateThing(3, "Coin", sharedRoom, player);
-		var thing2 = _factory.CreateThing(4, "Coin", sharedRoom, player);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing1 = _factory.CreateThing(3, "Coin", _sharedRoom, player);
+		var thing2 = _factory.CreateThing(4, "Coin", _sharedRoom, player);
 
 		var contents = new[] { thing1, thing2 }.ToAsyncEnumerable();
 
-		Holds(sharedRoom, contents);
-
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
+		Holds(_sharedRoom, contents);
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
-			.Returns(true);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -493,16 +407,12 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task LocateMatch_VisibilityCheck_ShouldRespectCanExamine()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(3, "HiddenObject", sharedRoom, player);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(3, "HiddenObject", _sharedRoom, player);
 
 		var contents = new[] { thing }.ToAsyncEnumerable();
 
-		Holds(sharedRoom, contents);
-
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
+		Holds(_sharedRoom, contents);
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
@@ -545,9 +455,6 @@ public class LocateServiceCompatibilityTests
 
 		Holds(room1, contents);
 
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
-
 		// The executor controls neither the looker nor the object, and stands in another room: the
 		// three arms of the gate that used to stand here.
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -555,10 +462,6 @@ public class LocateServiceCompatibilityTests
 		_permissionService.Controls(looker, looker)
 			.Returns(true);
 		_permissionService.Controls(executor, executor)
-			.Returns(true);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
 
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
@@ -577,10 +480,9 @@ public class LocateServiceCompatibilityTests
 		// Verifies the restored CanInteract continue: when CanInteract returns false,
 		// the object must be silently skipped rather than considered for matching.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(3, "VisibleObject", sharedRoom, player);
-		var hiddenThing = _factory.CreateThing(4, "HiddenObject", sharedRoom, player);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(3, "VisibleObject", _sharedRoom, player);
+		var hiddenThing = _factory.CreateThing(4, "HiddenObject", _sharedRoom, player);
 
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), thing, Arg.Any<IPermissionService.InteractType>())
 			.Returns(true);
@@ -606,13 +508,8 @@ public class LocateServiceCompatibilityTests
 		// PennMUSH exit matching uses exact name only — prefix search is for things/players.
 		// "Nor" must NOT match an exit named "North".
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var exit = _factory.CreateExit(10, "North", ["n", "north"], sharedRoom);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var exit = _factory.CreateExit(10, "North", ["n", "north"], _sharedRoom);
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
@@ -629,13 +526,8 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_ExitName_ExactMatch_FindsExit()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var exit = _factory.CreateExit(10, "North", ["n"], sharedRoom);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var exit = _factory.CreateExit(10, "North", ["n"], _sharedRoom);
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
@@ -654,13 +546,8 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_ExitAlias_ExactMatch_FindsExit()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var exit = _factory.CreateExit(10, "North", ["n", "go north"], sharedRoom);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var exit = _factory.CreateExit(10, "North", ["n", "go north"], _sharedRoom);
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
@@ -681,14 +568,9 @@ public class LocateServiceCompatibilityTests
 	{
 		// Even with an alias, exits do not match by prefix — only exact.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
 		// Exit named "Exit_A" so its name does not accidentally match "north"
-		var exit = _factory.CreateExit(10, "Exit_A", ["northwest"], sharedRoom);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var exit = _factory.CreateExit(10, "Exit_A", ["northwest"], _sharedRoom);
 
 		var list = new[] { exit }.ToAsyncEnumerable();
 
@@ -706,13 +588,8 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_PlayerAlias_ExactMatch()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var target = _factory.CreatePlayer(5, "Wizard", ["Wiz", "Admin"], sharedRoom);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var target = _factory.CreatePlayer(5, "Wizard", ["Wiz", "Admin"], _sharedRoom);
 
 		var list = new[] { target }.ToAsyncEnumerable();
 
@@ -738,13 +615,8 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_PlayerAlias_DoesNotPrefixMatch()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var target = _factory.CreatePlayer(5, "Wizard", ["Administrator"], sharedRoom);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var target = _factory.CreatePlayer(5, "Wizard", ["Administrator"], _sharedRoom);
 
 		var list = new[] { target }.ToAsyncEnumerable();
 
@@ -765,13 +637,8 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_PlayerName_StillPrefixMatches()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var target = _factory.CreatePlayer(5, "Bartholomew", ["Administrator"], sharedRoom);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var target = _factory.CreatePlayer(5, "Bartholomew", ["Administrator"], _sharedRoom);
 
 		var list = new[] { target }.ToAsyncEnumerable();
 
@@ -791,13 +658,8 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_PlayerAlias_StillMatchesInFull()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var target = _factory.CreatePlayer(5, "Wizard", ["Administrator"], sharedRoom);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var target = _factory.CreatePlayer(5, "Wizard", ["Administrator"], _sharedRoom);
 
 		var list = new[] { target }.ToAsyncEnumerable();
 
@@ -818,14 +680,9 @@ public class LocateServiceCompatibilityTests
 		// match on an alias prefix rather than its name; aliases no longer prefix-match at all, so the
 		// partial arm here is now the name — which is what MATCH_LIST tests. See #794.)
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var exactPlayer = _factory.CreatePlayer(5, "ExactAliasPlayer", ["Wiz"], sharedRoom);
-		var prefixPlayer = _factory.CreatePlayer(6, "Wizard", ["SomethingElse"], sharedRoom);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var exactPlayer = _factory.CreatePlayer(5, "ExactAliasPlayer", ["Wiz"], _sharedRoom);
+		var prefixPlayer = _factory.CreatePlayer(6, "Wizard", ["SomethingElse"], _sharedRoom);
 
 		// Put prefix first, exact second — exact should win regardless of list order
 		var list = new[] { prefixPlayer, exactPlayer }.ToAsyncEnumerable();
@@ -849,14 +706,9 @@ public class LocateServiceCompatibilityTests
 		// When two objects have the same name, Match_List should set curr=2, right_type=2,
 		// which LocateMatch interprets as an ambiguous match (ErrorAmbiguous).
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var coin1 = _factory.CreateThing(3, "Coin", sharedRoom, player);
-		var coin2 = _factory.CreateThing(4, "Coin", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var coin1 = _factory.CreateThing(3, "Coin", _sharedRoom, player);
+		var coin2 = _factory.CreateThing(4, "Coin", _sharedRoom, player);
 
 		var list = new[] { coin1, coin2 }.ToAsyncEnumerable();
 
@@ -880,14 +732,9 @@ public class LocateServiceCompatibilityTests
 		// With UseLastIfAmbiguous, the last matching object in the list is returned.
 		// Verifies ChooseThing returns the latter object when both are same-type matches.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var coin1 = _factory.CreateThing(3, "Coin", sharedRoom, player);
-		var coin2 = _factory.CreateThing(4, "Coin", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var coin1 = _factory.CreateThing(3, "Coin", _sharedRoom, player);
+		var coin2 = _factory.CreateThing(4, "Coin", _sharedRoom, player);
 
 		var list = new[] { coin1, coin2 }.ToAsyncEnumerable();
 
@@ -909,14 +756,9 @@ public class LocateServiceCompatibilityTests
 	{
 		// Two objects matching by prefix also produce an ambiguous counter state.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var sword1 = _factory.CreateThing(3, "Sword_A", sharedRoom, player);
-		var sword2 = _factory.CreateThing(4, "Sword_B", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var sword1 = _factory.CreateThing(3, "Sword_A", _sharedRoom, player);
+		var sword2 = _factory.CreateThing(4, "Sword_B", _sharedRoom, player);
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
@@ -939,14 +781,9 @@ public class LocateServiceCompatibilityTests
 		// PennMUSH: when an exact match is found after a partial match, the partial
 		// count is discarded and exact takes over (curr reset to 1, exact=true).
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var partialMatch = _factory.CreateThing(3, "SwordFake", sharedRoom, player); // prefix "Sword" matches
-		var exactMatch = _factory.CreateThing(4, "Sword", sharedRoom, player);       // exact "Sword" match
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var partialMatch = _factory.CreateThing(3, "SwordFake", _sharedRoom, player); // prefix "Sword" matches
+		var exactMatch = _factory.CreateThing(4, "Sword", _sharedRoom, player);       // exact "Sword" match
 
 		// Partial first, then exact
 		var list = new[] { partialMatch, exactMatch }.ToAsyncEnumerable();
@@ -972,14 +809,9 @@ public class LocateServiceCompatibilityTests
 		// Uncontrolled objects must be silently skipped (PennMUSH continue semantics),
 		// preserving any previously found controlled match.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var ownedThing = _factory.CreateThing(3, "Widget", sharedRoom, player);
-		var foreignThing = _factory.CreateThing(4, "Widget", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var ownedThing = _factory.CreateThing(3, "Widget", _sharedRoom, player);
+		var foreignThing = _factory.CreateThing(4, "Widget", _sharedRoom, player);
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
 		_permissionService.Controls(player, foreignThing).Returns(false);
@@ -1002,13 +834,8 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_CaseInsensitive_LowercaseQueryFindsUpperCaseName()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(3, "TestObject", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(3, "TestObject", _sharedRoom, player);
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
@@ -1027,13 +854,8 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_CaseInsensitive_UppercaseQueryFindsMixedCaseName()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(3, "myWidget", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(3, "myWidget", _sharedRoom, player);
 
 		var list = new[] { thing }.ToAsyncEnumerable();
 
@@ -1055,15 +877,10 @@ public class LocateServiceCompatibilityTests
 		// Verifies that Match_List with final=2 (English "2nd") returns the 2nd object
 		// matching the name in list order — this is the runtime behavior of ParseEnglish.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var sword1 = _factory.CreateThing(3, "Sword", sharedRoom, player);
-		var sword2 = _factory.CreateThing(4, "Sword", sharedRoom, player);
-		var sword3 = _factory.CreateThing(5, "Sword", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var sword1 = _factory.CreateThing(3, "Sword", _sharedRoom, player);
+		var sword2 = _factory.CreateThing(4, "Sword", _sharedRoom, player);
+		var sword3 = _factory.CreateThing(5, "Sword", _sharedRoom, player);
 
 		var list = new[] { sword1, sword2, sword3 }.ToAsyncEnumerable();
 
@@ -1085,14 +902,9 @@ public class LocateServiceCompatibilityTests
 	{
 		// English "1st sword" — with final=1, the very first match is returned.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var sword1 = _factory.CreateThing(3, "Sword", sharedRoom, player);
-		var sword2 = _factory.CreateThing(4, "Sword", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var sword1 = _factory.CreateThing(3, "Sword", _sharedRoom, player);
+		var sword2 = _factory.CreateThing(4, "Sword", _sharedRoom, player);
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
@@ -1115,14 +927,9 @@ public class LocateServiceCompatibilityTests
 		// without finding the 5th. The caller (LocateMatch) uses final!=0 && curr!=final
 		// to detect the "ordinal not reached" condition and return None.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var sword1 = _factory.CreateThing(3, "Sword", sharedRoom, player);
-		var sword2 = _factory.CreateThing(4, "Sword", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var sword1 = _factory.CreateThing(3, "Sword", _sharedRoom, player);
+		var sword2 = _factory.CreateThing(4, "Sword", _sharedRoom, player);
 
 		var list = new[] { sword1, sword2 }.ToAsyncEnumerable();
 
@@ -1143,14 +950,9 @@ public class LocateServiceCompatibilityTests
 		// MATCH_TYPE returns -1 for a wrong-type object when MAT_TYPE is unset, so it is still a
 		// candidate: curr counts both, ChooseThing hands back the thing, and right_type == 1 is what
 		// keeps that from reading as ambiguous.
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var targetPlayer = _factory.CreatePlayer(5, "Widget", sharedRoom);
-		var thing = _factory.CreateThing(6, "Widget", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var targetPlayer = _factory.CreatePlayer(5, "Widget", _sharedRoom);
+		var thing = _factory.CreateThing(6, "Widget", _sharedRoom, player);
 
 		var list = new[] { targetPlayer, thing }.ToAsyncEnumerable();
 
@@ -1170,14 +972,9 @@ public class LocateServiceCompatibilityTests
 	public async Task MatchList_ThingsPreferenceWithOnlyMatchTypePreference_SkipsNonThings()
 	{
 		// MAT_TYPE — the flag that turns the preference into a filter.
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var targetPlayer = _factory.CreatePlayer(5, "Widget", sharedRoom);
-		var thing = _factory.CreateThing(6, "Widget", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var targetPlayer = _factory.CreatePlayer(5, "Widget", _sharedRoom);
+		var thing = _factory.CreateThing(6, "Widget", _sharedRoom, player);
 
 		var list = new[] { targetPlayer, thing }.ToAsyncEnumerable();
 
@@ -1195,14 +992,9 @@ public class LocateServiceCompatibilityTests
 	[Test]
 	public async Task MatchList_PlayersPreference_PrefersThePlayerButStillCountsTheThing()
 	{
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var targetPlayer = _factory.CreatePlayer(5, "Widget", sharedRoom);
-		var thing = _factory.CreateThing(6, "Widget", sharedRoom, player);
-
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var targetPlayer = _factory.CreatePlayer(5, "Widget", _sharedRoom);
+		var thing = _factory.CreateThing(6, "Widget", _sharedRoom, player);
 
 		var list = new[] { thing, targetPlayer }.ToAsyncEnumerable();
 
@@ -1226,11 +1018,7 @@ public class LocateServiceCompatibilityTests
 		// search that finds nothing — not an error. The noisy path is where the refusal is reported, and
 		// AnObjectRefusedForControlSaysSoRatherThanClaimingItIsNotThere covers that.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
 
 		// executor doesn't control themselves → the "here" OnlyMatchLookerControlledObjects check fails
 		_permissionService.Controls(player, player).Returns(false);
@@ -1247,16 +1035,9 @@ public class LocateServiceCompatibilityTests
 	{
 		// MatchMeForLooker + OnlyMatchLookerControlledObjects + executor controls themselves → match.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
 
 		_permissionService.Controls(player, player).Returns(true);
-		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<IPermissionService.InteractType>())
-			.Returns(true);
 		_permissionService.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>())
 			.Returns(true);
 
@@ -1275,15 +1056,11 @@ public class LocateServiceCompatibilityTests
 		// Absolute identity bypasses ordinary examination visibility.
 		// Reality interaction policy still applies, including for staff.
 
-		var sharedRoom = _factory.CreateRoom(999, "Shared Room");
-		var player = _factory.CreatePlayer(1, "TestPlayer", sharedRoom);
-		var thing = _factory.CreateThing(42, "Hidden", sharedRoom, player);
+		var player = _factory.CreatePlayer(1, "TestPlayer", _sharedRoom);
+		var thing = _factory.CreateThing(42, "Hidden", _sharedRoom, player);
 
 		_mediator.Send(Arg.Is<GetObjectNodeQuery>(q => q.DBRef.Number == 42), Arg.Any<CancellationToken>())
 			.Returns(callInfo => ValueTask.FromResult<AnyOptionalSharpObject>(thing.WithNoneOption()));
-
-		_mediator.CreateStream(Arg.Any<GetPlayerQuery>(), Arg.Any<CancellationToken>())
-			.Returns(_ => AsyncEnumerable.Empty<SharpPlayer>());
 
 		_permissionService.Controls(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(true);
 		_permissionService.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
