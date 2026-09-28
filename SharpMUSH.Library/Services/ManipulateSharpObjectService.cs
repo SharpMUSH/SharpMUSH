@@ -551,13 +551,13 @@ public class ManipulateSharpObjectService(
 	public async ValueTask<CallState> SetParent(AnySharpObject executor, AnySharpObject obj, AnySharpObject newParent,
 		bool notify)
 	{
-		// Allow if: executor controls newParent OR obj has LINK_OK OR executor passes Parent lock
-		// Deny if: NOT(controls newParent) AND NOT(LINK_OK) AND NOT(passes Parent lock)
-		var controls = await permissionService.Controls(executor, newParent);
-		var hasLinkOk = await obj.HasFlag("LINK_OK");
-		var passesLock = await permissionService.PassesLock(executor, newParent, LockType.Parent);
+		// PennMUSH do_parent (src/set.c:1462-1467): the executor must control the new parent, or the
+		// new parent must be LINK_OK and the executor must pass its Parent lock.
+		var permitted = await permissionService.Controls(executor, newParent)
+			|| (await newParent.HasFlag("LINK_OK")
+				&& await permissionService.PassesLock(executor, newParent, LockType.Parent));
 
-		if (!controls && !hasLinkOk && !passesLock)
+		if (!permitted)
 		{
 			if (notify)
 			{
