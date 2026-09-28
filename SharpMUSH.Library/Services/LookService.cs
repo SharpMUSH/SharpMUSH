@@ -11,7 +11,6 @@ using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
-using static MarkupString.MStringInterpolation;
 
 namespace SharpMUSH.Library.Services;
 
@@ -67,7 +66,6 @@ public class LookService(
 		var viewingFromInside = lookerLocation != null
 			&& lookerLocation.Object().DBRef == viewingObject.DBRef;
 
-		var baseName = viewingObject.Name;
 		var baseDesc = MarkupText.Empty;
 		string? descriptionAttributeName = null;
 		var god = await HelperFunctions.GetGod(mediator);
@@ -144,9 +142,7 @@ public class LookService(
 		// arrives through a transparent exit.
 		if (!lookThroughExit)
 		{
-			var flags = await viewingObject.Flags.Value.ToArrayAsync();
-			var flagStr = string.Join(string.Empty, flags.Select(x => x.Symbol));
-			var defaultFormattedName = Format($"{baseName.Hilight()}(#{viewingObject.DBRef.Number}{flagStr})");
+			var defaultFormattedName = await MessageFormatting.FormatObjectWithDbrefMString(viewingObject);
 
 			formattedName = defaultFormattedName;
 			if (realViewing.IsRoom && viewingFromInside)
