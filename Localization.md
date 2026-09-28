@@ -58,9 +58,11 @@ positional placeholders (`{0}`, `{1}`, …).
 
 ### Adding a new server notification
 
-1. Add the English constant to
-   `SharpMUSH.Library/Definitions/ErrorMessages.cs` under the `Notifications`
-   class:
+1. Add the English constant to the `Notifications` class. It is a partial
+   class: domain families live in
+   `SharpMUSH.Library/Definitions/ErrorMessages.Notifications.<Domain>.cs`
+   (Administration, Attributes, Chat, Commands, FlagsAndPowers, Functions,
+   Queue), and everything else in `SharpMUSH.Library/Definitions/ErrorMessages.cs`:
 
    ```csharp
    public static readonly CompositeFormat MyNewMessage =
@@ -368,7 +370,8 @@ incrementally.
 
 ```
 SharpMUSH.Library/
-  Definitions/ErrorMessages.cs              — Notifications.* constants
+  Definitions/ErrorMessages.cs              — Returns.* and general Notifications.* constants
+  Definitions/ErrorMessages.Notifications.*.cs — Notifications.* constants by domain
   Resources/Notifications.resx              — English baseline (~350 keys)
   Resources/Notifications.fr.resx           — French proof-of-concept (~20 keys)
   Services/Interfaces/ILocalizationService.cs
