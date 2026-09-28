@@ -34,6 +34,10 @@ public class CoverageGapParityTests : ServerTestBase
 	[Arguments("ordinal(1.5)", "#-1 ARGUMENT MUST BE INTEGER")]
 	[Arguments("ordinal(a.5)", "#-1 ARGUMENT MUST BE NUMBER")]
 	[Arguments("ordinal(1e3)", "#-1 ARGUMENT MUST BE NUMBER")]
+	// fun_spellnum answers INTEGER at the first '.', before it has looked at what follows.
+	[Arguments("ordinal(1.2.3)", "#-1 ARGUMENT MUST BE INTEGER")]
+	[Arguments("ordinal(1.x)", "#-1 ARGUMENT MUST BE INTEGER")]
+	[Arguments("ordinal(x.1)", "#-1 ARGUMENT MUST BE NUMBER")]
 	[Arguments("ordinal(101)", "one hundred first")]
 	[Arguments("ordinal(112)", "one hundred twelfth")]
 	[Arguments("ordinal(90)", "ninetieth")]
