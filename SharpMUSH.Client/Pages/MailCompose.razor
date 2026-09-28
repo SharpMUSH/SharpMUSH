@@ -1,6 +1,7 @@
 @page "/mail/compose"
 @attribute [Authorize]
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject IStringLocalizer<SharedResource> Loc
 @inject MailService Mail
 @inject NavigationManager Nav
@@ -62,17 +63,18 @@
     private async Task SendAsync()
     {
         _sending = true;
-        var ok = await Mail.SendAsync(_to.Trim(), _subject, _body, _urgent);
+        var result = await Mail.SendAsync(_to.Trim(), _subject, _body, _urgent);
         _sending = false;
 
-        if (ok)
+        switch (result)
         {
-            Snackbar.Add(Loc["MailSent"], Severity.Success);
-            Nav.NavigateTo("/mail");
-        }
-        else
-        {
-            Snackbar.Add(Loc["MailSendFailed"], Severity.Error);
+            case Success:
+                Snackbar.Add(Loc["MailSent"], Severity.Success);
+                Nav.NavigateTo("/mail");
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["MailSendFailed", failure.Message], Severity.Error);
+                break;
         }
     }
 }

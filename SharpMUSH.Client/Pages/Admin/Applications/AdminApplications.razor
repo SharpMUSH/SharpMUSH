@@ -5,6 +5,7 @@
 @using SharpMUSH.Library.Models.Portal.Applications
 @using SharpMUSH.Library.Models.Portal.Widgets
 @attribute [Authorize(Policy = "applications.admin")]
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject IStringLocalizer<SharedResource> Loc
 @inject ApplicationRegistryClient Registry
 @inject ISnackbar Snackbar
@@ -226,15 +227,16 @@
 
         if (confirmed == true)
         {
-            if (await Registry.DeleteAsync(app.Slug))
+            switch (await Registry.DeleteAsync(app.Slug))
             {
-                Snackbar.Add(Loc["LayAppRemoved", app.Slug], Severity.Success);
-                if (_selected?.Slug == app.Slug) _selected = null;
-                await LoadAsync();
-            }
-            else
-            {
-                Snackbar.Add(Loc["LayAppRemoveFailed"], Severity.Error);
+                case Success:
+                    Snackbar.Add(Loc["LayAppRemoved", app.Slug], Severity.Success);
+                    if (_selected?.Slug == app.Slug) _selected = null;
+                    await LoadAsync();
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(Loc["LayAppRemoveFailed", failure.Message], Severity.Error);
+                    break;
             }
         }
     }

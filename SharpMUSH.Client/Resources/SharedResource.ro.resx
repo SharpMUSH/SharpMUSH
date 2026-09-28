@@ -1469,7 +1469,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayAppRemoveFailed" xml:space="preserve">
-    <value>Eliminarea aplicației a eșuat.</value>
+    <value>Eliminarea aplicației a eșuat: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="LayAppRemoveTitle" xml:space="preserve">
@@ -1485,7 +1485,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayAppSaveFailed" xml:space="preserve">
-    <value>Salvarea a eșuat.</value>
+    <value>Salvarea a eșuat: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="LayAppSaved" xml:space="preserve">
@@ -1845,7 +1845,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailDeleteFailed" xml:space="preserve">
-    <value>Mesajul nu a putut fi șters.</value>
+    <value>Mesajul nu a putut fi șters: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailDeleted" xml:space="preserve">
@@ -1865,7 +1865,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailSendFailed" xml:space="preserve">
-    <value>Mailul nu a putut fi trimis. Verificați numele destinatarului.</value>
+    <value>Mailul nu a putut fi trimis: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailSent" xml:space="preserve">
@@ -2981,7 +2981,7 @@
     <comment>MT — assumed Allow/Deny/Inherit is a tri-state permission value, so rendered as adjectives (Permis/Refuzat/Moștenit) rather than verbs</comment>
   </data>
   <data name="RolAssignFailed" xml:space="preserve">
-    <value>Atribuirea rolului a eșuat.</value>
+    <value>Atribuirea rolului a eșuat: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolAssigned" xml:space="preserve">
@@ -3017,7 +3017,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolDeleteFailed" xml:space="preserve">
-    <value>Ștergerea rolului a eșuat.</value>
+    <value>Ștergerea rolului a eșuat: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolDeleteTitle" xml:space="preserve">
@@ -3133,7 +3133,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolRemoveFailed" xml:space="preserve">
-    <value>Eliminarea rolului a eșuat.</value>
+    <value>Eliminarea rolului a eșuat: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolRemoveRole" xml:space="preserve">
@@ -3145,7 +3145,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSaveFailed" xml:space="preserve">
-    <value>Salvarea a eșuat.</value>
+    <value>Salvarea a eșuat: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolSaveRole" xml:space="preserve">

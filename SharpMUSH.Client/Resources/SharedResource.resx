@@ -1184,7 +1184,7 @@
     <value>Message deleted.</value>
   </data>
   <data name="MailDeleteFailed" xml:space="preserve">
-    <value>Could not delete message.</value>
+    <value>Could not delete message: {0}</value>
   </data>
   <data name="ComposeMail" xml:space="preserve">
     <value>Compose Mail</value>
@@ -1196,7 +1196,7 @@
     <value>Mail sent.</value>
   </data>
   <data name="MailSendFailed" xml:space="preserve">
-    <value>Could not send mail. Check the recipient name.</value>
+    <value>Could not send mail: {0}</value>
   </data>
   <data name="AuthSignIn" xml:space="preserve">
     <value>Sign In</value>
@@ -2300,7 +2300,7 @@
     <value>Removed {0}.</value>
   </data>
   <data name="LayAppRemoveFailed" xml:space="preserve">
-    <value>Failed to remove application.</value>
+    <value>Failed to remove application: {0}</value>
   </data>
   <data name="LayAppSlug" xml:space="preserve">
     <value>Slug</value>
@@ -2357,7 +2357,7 @@
     <value>Saved {0}.</value>
   </data>
   <data name="LayAppSaveFailed" xml:space="preserve">
-    <value>Save failed.</value>
+    <value>Save failed: {0}</value>
   </data>
   <data name="AdmKicker" xml:space="preserve">
     <value>Administration</value>
@@ -2959,7 +2959,7 @@
     <value>Saved {0}.</value>
   </data>
   <data name="RolSaveFailed" xml:space="preserve">
-    <value>Save failed.</value>
+    <value>Save failed: {0}</value>
   </data>
   <data name="RolDeleteTitle" xml:space="preserve">
     <value>Delete role</value>
@@ -2971,7 +2971,7 @@
     <value>Deleted {0}.</value>
   </data>
   <data name="RolDeleteFailed" xml:space="preserve">
-    <value>Failed to delete role.</value>
+    <value>Failed to delete role: {0}</value>
   </data>
   <data name="RolEnterUsername" xml:space="preserve">
     <value>Enter a username to look up.</value>
@@ -2980,13 +2980,13 @@
     <value>Assigned {0}.</value>
   </data>
   <data name="RolAssignFailed" xml:space="preserve">
-    <value>Failed to assign role.</value>
+    <value>Failed to assign role: {0}</value>
   </data>
   <data name="RolRemoved" xml:space="preserve">
     <value>Removed {0}.</value>
   </data>
   <data name="RolRemoveFailed" xml:space="preserve">
-    <value>Failed to remove role.</value>
+    <value>Failed to remove role: {0}</value>
   </data>
   <data name="RolScene" xml:space="preserve">
     <value>Scene</value>

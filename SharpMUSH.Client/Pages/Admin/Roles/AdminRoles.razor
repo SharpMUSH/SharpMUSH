@@ -3,6 +3,7 @@
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Authorization
 @attribute [Authorize(Policy = "roles.admin")]
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject IStringLocalizer<SharedResource> Loc
 @inject RoleRegistryClient Roles
 @inject ISnackbar Snackbar
@@ -381,17 +382,18 @@
             _editing.CreatedAt,
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
-        var (ok, error) = await Roles.UpsertAsync(model);
+        var result = await Roles.UpsertAsync(model);
         _saving = false;
 
-        if (ok)
+        switch (result)
         {
-            Snackbar.Add(Loc["RolSaved", model.Slug], Severity.Success);
-            await LoadAsync();
-        }
-        else
-        {
-            Snackbar.Add(error ?? Loc["RolSaveFailed"], Severity.Error);
+            case Success:
+                Snackbar.Add(Loc["RolSaved", model.Slug], Severity.Success);
+                await LoadAsync();
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["RolSaveFailed", failure.Message], Severity.Error);
+                break;
         }
     }
 
@@ -406,17 +408,17 @@
 
         if (confirmed == true)
         {
-            var (ok, error) = await Roles.DeleteAsync(_editing.Slug);
-            if (ok)
+            switch (await Roles.DeleteAsync(_editing.Slug))
             {
-                Snackbar.Add(Loc["RolDeleted", _editing.Slug], Severity.Success);
-                _selected = null;
-                _editing = null;
-                await LoadAsync();
-            }
-            else
-            {
-                Snackbar.Add(error ?? Loc["RolDeleteFailed"], Severity.Error);
+                case Success:
+                    Snackbar.Add(Loc["RolDeleted", _editing.Slug], Severity.Success);
+                    _selected = null;
+                    _editing = null;
+                    await LoadAsync();
+                    break;
+                case ApiFailure failure:
+                    Snackbar.Add(Loc["RolDeleteFailed", failure.Message], Severity.Error);
+                    break;
             }
         }
     }
@@ -445,14 +447,15 @@
     {
         if (_account is null) return;
 
-        if (await Roles.AssignAsync(_account.AccountId, slug))
+        switch (await Roles.AssignAsync(_account.AccountId, slug))
         {
-            Snackbar.Add(Loc["RolAssigned", slug], Severity.Success);
-            _account = await Roles.LookupAccountAsync(_account.Username);
-        }
-        else
-        {
-            Snackbar.Add(Loc["RolAssignFailed"], Severity.Error);
+            case Success:
+                Snackbar.Add(Loc["RolAssigned", slug], Severity.Success);
+                _account = await Roles.LookupAccountAsync(_account.Username);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["RolAssignFailed", failure.Message], Severity.Error);
+                break;
         }
     }
 
@@ -460,14 +463,15 @@
     {
         if (_account is null) return;
 
-        if (await Roles.RemoveAsync(_account.AccountId, slug))
+        switch (await Roles.RemoveAsync(_account.AccountId, slug))
         {
-            Snackbar.Add(Loc["RolRemoved", slug], Severity.Success);
-            _account = await Roles.LookupAccountAsync(_account.Username);
-        }
-        else
-        {
-            Snackbar.Add(Loc["RolRemoveFailed"], Severity.Error);
+            case Success:
+                Snackbar.Add(Loc["RolRemoved", slug], Severity.Success);
+                _account = await Roles.LookupAccountAsync(_account.Username);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["RolRemoveFailed", failure.Message], Severity.Error);
+                break;
         }
     }
 

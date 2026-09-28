@@ -3,6 +3,7 @@
 @using SharpMUSH.Library.Authorization
 @using SharpMUSH.Library.Models.Portal.Applications
 @using SharpMUSH.Library.Models.Portal.Widgets
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject IStringLocalizer<SharedResource> Loc
 @inject ApplicationRegistryClient Registry
 @inject ISnackbar Snackbar
@@ -145,17 +146,18 @@
             _zones.Select(z => z.ToString()).ToArray(),
             _order);
 
-        var (ok, error) = await Registry.UpsertAsync(model);
+        var result = await Registry.UpsertAsync(model);
         _saving = false;
 
-        if (ok)
+        switch (result)
         {
-            Snackbar.Add(Loc["LayAppSaved", model.Slug], Severity.Success);
-            MudDialog.Close(DialogResult.Ok(true));
-        }
-        else
-        {
-            Snackbar.Add(error ?? Loc["LayAppSaveFailed"].Value, Severity.Error);
+            case Success:
+                Snackbar.Add(Loc["LayAppSaved", model.Slug], Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["LayAppSaveFailed", failure.Message], Severity.Error);
+                break;
         }
     }
 }

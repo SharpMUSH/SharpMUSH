@@ -1,5 +1,6 @@
 @using SharpMUSH.Client.Models.Roles
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject IStringLocalizer<SharedResource> Loc
 @inject RoleRegistryClient Roles
 @inject ISnackbar Snackbar
@@ -83,17 +84,18 @@
             CreatedAt: Existing?.CreatedAt ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             UpdatedAt: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
 
-        var (ok, error) = await Roles.UpsertAsync(model);
+        var result = await Roles.UpsertAsync(model);
         _saving = false;
 
-        if (ok)
+        switch (result)
         {
-            Snackbar.Add(Loc["RolSaved", model.Slug], Severity.Success);
-            MudDialog.Close(DialogResult.Ok(model.Slug));
-        }
-        else
-        {
-            Snackbar.Add(error ?? Loc["RolSaveFailed"], Severity.Error);
+            case Success:
+                Snackbar.Add(Loc["RolSaved", model.Slug], Severity.Success);
+                MudDialog.Close(DialogResult.Ok(model.Slug));
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["RolSaveFailed", failure.Message], Severity.Error);
+                break;
         }
     }
 }

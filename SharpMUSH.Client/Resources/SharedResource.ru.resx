@@ -1469,7 +1469,7 @@
     <comment>MT — head noun «приложение» added so the quoted name stays nominative; softcode kept untranslated.</comment>
   </data>
   <data name="LayAppRemoveFailed" xml:space="preserve">
-    <value>Не удалось удалить приложение.</value>
+    <value>Не удалось удалить приложение: {0}</value>
     <comment>MT — impersonal status message.</comment>
   </data>
   <data name="LayAppRemoveTitle" xml:space="preserve">
@@ -1485,7 +1485,7 @@
     <comment>MT — slug kept untranslated and Latin per glossary.</comment>
   </data>
   <data name="LayAppSaveFailed" xml:space="preserve">
-    <value>Не удалось сохранить.</value>
+    <value>Не удалось сохранить: {0}</value>
     <comment>MT — impersonal status message.</comment>
   </data>
   <data name="LayAppSaved" xml:space="preserve">
@@ -1845,7 +1845,7 @@
     <comment>MT — per the corpus.</comment>
   </data>
   <data name="MailDeleteFailed" xml:space="preserve">
-    <value>Не удалось удалить сообщение.</value>
+    <value>Не удалось удалить сообщение: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailDeleted" xml:space="preserve">
@@ -1865,7 +1865,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailSendFailed" xml:space="preserve">
-    <value>Не удалось отправить письмо. Проверьте имя получателя.</value>
+    <value>Не удалось отправить письмо: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailSent" xml:space="preserve">
@@ -2981,7 +2981,7 @@
     <comment>MT — permission tri-state with RolDeny/RolInherit.</comment>
   </data>
   <data name="RolAssignFailed" xml:space="preserve">
-    <value>Не удалось назначить роль.</value>
+    <value>Не удалось назначить роль: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolAssigned" xml:space="preserve">
@@ -3017,7 +3017,7 @@
     <comment>MT — {0} sits inside quotation marks and {1} in parentheses, so neither needs to agree with the surrounding grammar.</comment>
   </data>
   <data name="RolDeleteFailed" xml:space="preserve">
-    <value>Не удалось удалить роль.</value>
+    <value>Не удалось удалить роль: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolDeleteTitle" xml:space="preserve">
@@ -3133,7 +3133,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolRemoveFailed" xml:space="preserve">
-    <value>Не удалось снять роль.</value>
+    <value>Не удалось снять роль: {0}</value>
     <comment>MT — «снять» keeps remove distinct from delete (RolDeleteFailed).</comment>
   </data>
   <data name="RolRemoveRole" xml:space="preserve">
@@ -3145,7 +3145,7 @@
     <comment>MT — impersonal, role name after a colon so no agreement with {0} is required.</comment>
   </data>
   <data name="RolSaveFailed" xml:space="preserve">
-    <value>Не удалось сохранить.</value>
+    <value>Не удалось сохранить: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolSaveRole" xml:space="preserve">

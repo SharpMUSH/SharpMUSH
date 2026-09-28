@@ -1,6 +1,7 @@
 @page "/mail/{Id:int}"
 @attribute [Authorize]
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @inject IStringLocalizer<SharedResource> Loc
 @inject MailService Mail
 @inject NavigationManager Nav
@@ -25,7 +26,7 @@
     }
     else if (_message is null)
     {
-        <div class="md-card" style="color:var(--text-dim);">@Loc["MailNotFound"]</div>
+        <div class="md-card" style="color:var(--text-dim);">@(_error ?? Loc["MailNotFound"])</div>
     }
     else
     {
@@ -71,6 +72,7 @@
     public string? Folder { get; set; }
 
     private MailService.MailMessage? _message;
+    private string? _error;
     private bool _loading = true;
 
     private string FolderName => string.IsNullOrWhiteSpace(Folder) ? "INBOX" : Folder!;
@@ -78,7 +80,10 @@
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
-        _message = await Mail.ReadAsync(FolderName, Id);
+        var result = await Mail.ReadAsync(FolderName, Id);
+        _message = result is MailService.MailMessage message ? message : null;
+        // A missing message keeps the page's own wording; anything else is the server's reason.
+        _error = result is ApiFailure { Kind: not ApiFailureKind.NotFound } failure ? failure.Message : null;
         _loading = false;
     }
 
@@ -93,14 +98,15 @@
 
     private async Task DeleteAsync()
     {
-        if (await Mail.DeleteAsync(FolderName, Id))
+        switch (await Mail.DeleteAsync(FolderName, Id))
         {
-            Snackbar.Add(Loc["MailDeleted"], Severity.Success);
-            Nav.NavigateTo("/mail");
-        }
-        else
-        {
-            Snackbar.Add(Loc["MailDeleteFailed"], Severity.Error);
+            case Success:
+                Snackbar.Add(Loc["MailDeleted"], Severity.Success);
+                Nav.NavigateTo("/mail");
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["MailDeleteFailed", failure.Message], Severity.Error);
+                break;
         }
     }
 }

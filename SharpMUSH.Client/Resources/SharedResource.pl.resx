@@ -1469,7 +1469,7 @@
     <comment>MT — {0} quoted and {1} parenthesized so both interpolations stay uninflected</comment>
   </data>
   <data name="LayAppRemoveFailed" xml:space="preserve">
-    <value>Nie udało się usunąć aplikacji.</value>
+    <value>Nie udało się usunąć aplikacji: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="LayAppRemoveTitle" xml:space="preserve">
@@ -1485,7 +1485,7 @@
     <comment>MT — "Slug" kept untranslated per glossary</comment>
   </data>
   <data name="LayAppSaveFailed" xml:space="preserve">
-    <value>Zapis nie powiódł się.</value>
+    <value>Zapis nie powiódł się: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="LayAppSaved" xml:space="preserve">
@@ -1845,7 +1845,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailDeleteFailed" xml:space="preserve">
-    <value>Nie można usunąć wiadomości.</value>
+    <value>Nie można usunąć wiadomości: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailDeleted" xml:space="preserve">
@@ -1865,7 +1865,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailSendFailed" xml:space="preserve">
-    <value>Nie można wysłać poczty. Sprawdź nazwę odbiorcy.</value>
+    <value>Nie można wysłać poczty: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailSent" xml:space="preserve">
@@ -2981,7 +2981,7 @@
     <comment>MT — permission tri-state (Allow / Deny / Inherit)</comment>
   </data>
   <data name="RolAssignFailed" xml:space="preserve">
-    <value>Nie udało się przypisać roli.</value>
+    <value>Nie udało się przypisać roli: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolAssigned" xml:space="preserve">
@@ -3017,7 +3017,7 @@
     <comment>MT — head noun 'rolę' carries the accusative so the quoted name {0} stays in the nominative; {1} assumed to be the role slug</comment>
   </data>
   <data name="RolDeleteFailed" xml:space="preserve">
-    <value>Nie udało się usunąć roli.</value>
+    <value>Nie udało się usunąć roli: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolDeleteTitle" xml:space="preserve">
@@ -3133,7 +3133,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolRemoveFailed" xml:space="preserve">
-    <value>Nie udało się odebrać roli.</value>
+    <value>Nie udało się odebrać roli: {0}</value>
     <comment>MT — 'remove' here means revoking a role from an account, distinct from deleting the role</comment>
   </data>
   <data name="RolRemoveRole" xml:space="preserve">
@@ -3145,7 +3145,7 @@
     <comment>MT — head noun + colon so the role name {0} stays in the nominative</comment>
   </data>
   <data name="RolSaveFailed" xml:space="preserve">
-    <value>Zapis nie powiódł się.</value>
+    <value>Zapis nie powiódł się: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolSaveRole" xml:space="preserve">
