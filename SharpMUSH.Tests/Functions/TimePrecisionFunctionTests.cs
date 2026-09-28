@@ -193,13 +193,33 @@ public class TimePrecisionFunctionTests
 		await Assert.That(milliseconds).IsGreaterThan(now - 60_000).And.IsLessThan(now + 60_000);
 	}
 
+	/// <summary>
+	/// secs(f) reads the wall clock, so whether it carries a '.' depends on the millisecond it lands
+	/// on: a whole second prints with no fraction. Instead the value must fall between clock reads
+	/// taken either side of the call, to the millisecond. A secs(f) truncated to whole seconds lands
+	/// below the first read unless that read is itself a whole second. The rendering is checked
+	/// against fixed instants in <see cref="FractionalTrimsTrailingZeros"/>.
+	/// </summary>
 	[Test]
-	public async Task SecsFractionalCarriesADecimalPoint()
+	public async Task SecsFractionalIsTheCurrentTimeToTheMillisecond()
 	{
-		var result = await Eval("secs(f)");
-		await Assert.That(result).Contains(".");
-		await Assert.That(decimal.Parse(result, CultureInfo.InvariantCulture)).IsGreaterThan(0m);
+		var before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		var seconds = decimal.Parse(await Eval("secs(f)"), CultureInfo.InvariantCulture);
+		var after = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		await Assert.That(seconds * 1000m).IsGreaterThanOrEqualTo(before).And.IsLessThanOrEqualTo(after);
 	}
+
+	/// <summary>
+	/// Fractional seconds drop trailing zeros like every other non-integer this server prints, so a
+	/// whole second has no decimal point at all.
+	/// </summary>
+	[Test]
+	[Arguments(1790565951000L, "1790565951")]
+	[Arguments(1790565951500L, "1790565951.5")]
+	[Arguments(1790565951050L, "1790565951.05")]
+	[Arguments(1790565951001L, "1790565951.001")]
+	public async Task FractionalTrimsTrailingZeros(long milliseconds, string expected)
+		=> await Assert.That(TimePrecisions.Format(milliseconds, TimePrecision.Fractional)).IsEqualTo(expected);
 
 	[Test]
 	public async Task SecsRejectsAnUnknownPrecision()
