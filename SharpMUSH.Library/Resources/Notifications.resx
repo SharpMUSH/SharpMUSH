@@ -1981,6 +1981,38 @@
     <value>Restarted {0}.</value>
   </data>
 
+  <!-- @scan command -->
+  <data name="ScanMatchesOnRoomContents" xml:space="preserve">
+    <value>Matches on contents of this room:</value>
+  </data>
+  <data name="ScanMatchesOnCarriedObjects" xml:space="preserve">
+    <value>Matches on carried objects:</value>
+  </data>
+  <data name="ScanMatchesOnZoneMasterRoomOfLocation" xml:space="preserve">
+    <value>Matches on zone master room of location:</value>
+  </data>
+  <data name="ScanMatchesOnPersonalZoneMasterRoom" xml:space="preserve">
+    <value>Matches on personal zone master room:</value>
+  </data>
+  <data name="ScanMatchesOnMasterRoomObjects" xml:space="preserve">
+    <value>Matches on objects in the Master Room:</value>
+  </data>
+  <data name="ScanMatchEntryFormat" xml:space="preserve">
+    <value>{0}  [{1}:{2}]</value>
+  </data>
+  <data name="ScanMatchedHereFormat" xml:space="preserve">
+    <value>Matched here: {0}  [{1}:{2}]</value>
+  </data>
+  <data name="ScanMatchedSelfFormat" xml:space="preserve">
+    <value>Matched self: {0}  [{1}:{2}]</value>
+  </data>
+  <data name="ScanMatchedZoneOfLocationFormat" xml:space="preserve">
+    <value>Matched zone of location: {0}  [{1}:{2}]</value>
+  </data>
+  <data name="ScanMatchedPersonalZoneFormat" xml:space="preserve">
+    <value>Matched personal zone: {0}  [{1}:{2}]</value>
+  </data>
+
   <!-- @sweep command -->
   <data name="SweepListeningInRoom" xml:space="preserve">
     <value>Listening in ROOM:</value>

@@ -1086,6 +1086,25 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RestartedObjectFormat = "Restarted {0}.";
 
+		// @scan's section headings and match lines, verbatim from do_scan (pennmush/src/game.c:1890-1996)
+		// and confirmed against a live PennMUSH 1.8.8. A heading prints whether or not its section
+		// matched anything; the attribute list in {2} arrives with its own leading space.
+		public const string ScanMatchesOnRoomContents = "Matches on contents of this room:";
+		public const string ScanMatchesOnCarriedObjects = "Matches on carried objects:";
+		public const string ScanMatchesOnZoneMasterRoomOfLocation = "Matches on zone master room of location:";
+		public const string ScanMatchesOnPersonalZoneMasterRoom = "Matches on personal zone master room:";
+		public const string ScanMatchesOnMasterRoomObjects = "Matches on objects in the Master Room:";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ScanMatchEntryFormat = "{0}  [{1}:{2}]";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ScanMatchedHereFormat = "Matched here: {0}  [{1}:{2}]";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ScanMatchedSelfFormat = "Matched self: {0}  [{1}:{2}]";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ScanMatchedZoneOfLocationFormat = "Matched zone of location: {0}  [{1}:{2}]";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ScanMatchedPersonalZoneFormat = "Matched personal zone: {0}  [{1}:{2}]";
+
 		public const string SweepListeningInRoom = "Listening in ROOM:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SweepObjectIsListeningFormat = "{0} is listening.";

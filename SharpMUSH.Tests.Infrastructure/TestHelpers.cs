@@ -5,6 +5,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Utilities;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
@@ -330,6 +331,23 @@ public static class TestHelpers
 			.Do(call => Deliver(
 				call.ArgAt<AnySharpObject>(0).Object().DBRef,
 				localization.Format(call.ArgAt<string>(1), null, call.ArgAt<object[]>(3)),
+				call.ArgAt<AnySharpObject?>(2)));
+
+		// The markup-argument variant formats an MString template instead of a composite-format string,
+		// so it needs its own hook or everything sent through it (@scan's match lines, for one) is
+		// invisible to a test even though the real service delivers it.
+		notifier
+			.When(x => x.NotifyLocalizedMarkup(Arg.Any<DBRef>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<MString[]>()))
+			.Do(call => Deliver(
+				call.ArgAt<DBRef>(0),
+				MarkupTemplateFormatter.Format(localization.Get(call.ArgAt<string>(1), null), call.ArgAt<MString[]>(3)).ToPlainText(),
+				call.ArgAt<AnySharpObject?>(2)));
+
+		notifier
+			.When(x => x.NotifyLocalizedMarkup(Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<AnySharpObject?>(), Arg.Any<MString[]>()))
+			.Do(call => Deliver(
+				call.ArgAt<AnySharpObject>(0).Object().DBRef,
+				MarkupTemplateFormatter.Format(localization.Get(call.ArgAt<string>(1), null), call.ArgAt<MString[]>(3)).ToPlainText(),
 				call.ArgAt<AnySharpObject?>(2)));
 
 		// Handle-addressed output: the descriptor overloads. These have no DBRef to capture against —
