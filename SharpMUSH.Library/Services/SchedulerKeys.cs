@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Library.Models;
+﻿using System.Globalization;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services;
 
@@ -101,5 +102,48 @@ internal static class SchedulerKeys
 	/// replaces already did — a state with no executor produced <c>dbref:-16</c>, and changing that
 	/// would rename live triggers.
 	/// </summary>
-	public static string Trigger(DBRef? executor, long pid) => $"{Owner(executor)}-{pid}";
+	public static string Trigger(DBRef? executor, long pid) => TriggerName(Owner(executor), pid);
+
+	/// <summary>
+	/// The trigger name for the entry with this PID queued under <paramref name="identity"/>, which
+	/// is an owner (<see cref="Owner(DBRef?)"/>) or a label such as <c>async:#5/FOO</c>.
+	/// </summary>
+	public static string TriggerName(string identity, long pid) => $"{identity}-{pid}";
+
+	/// <summary>
+	/// The PID a trigger name ends in. The identity in front of it may itself contain a dash — an
+	/// attribute name such as <c>FOO-BAR</c>, or the dbref <c>#-1</c> — so the PID is whatever
+	/// follows the last one, and it must be digits only.
+	/// </summary>
+	public static bool TryTriggerPid(string triggerName, out long pid)
+	{
+		var dash = triggerName.LastIndexOf('-');
+		if (dash < 0)
+		{
+			pid = 0;
+			return false;
+		}
+
+		return long.TryParse(triggerName.AsSpan(dash + 1), NumberStyles.None, CultureInfo.InvariantCulture, out pid);
+	}
+
+	/// <summary>
+	/// The PID of a trigger this queue named. A Quartz job fires only for triggers built by
+	/// <see cref="TriggerName(string, long)"/>, so a name without one is a defect, not input to skip.
+	/// </summary>
+	public static long TriggerPid(string triggerName)
+		=> TryTriggerPid(triggerName, out var pid)
+			? pid
+			: throw new FormatException($"'{triggerName}' is not a queue trigger name.");
+
+	/// <summary>
+	/// The executor a trigger name built by <see cref="Trigger(DBRef?, long)"/> encodes
+	/// (<c>dbref:#5:1744849081000-16</c> → <c>#5:1744849081000</c>), or null when it names none.
+	/// </summary>
+	public static DBRef? TriggerExecutor(string triggerName)
+	{
+		var dash = triggerName.LastIndexOf('-');
+		var identity = WithoutOwnerPrefix(dash < 0 ? triggerName : triggerName.AsSpan(0, dash));
+		return DBRef.TryParse(identity.ToString(), out var executor) ? executor : null;
+	}
 }

@@ -140,7 +140,7 @@ public partial class TaskScheduler(
 	}
 	public bool HasPendingWork(string triggerName, string group)
 	{
-		lock (_admissionLock) return _pendingEntries.Values.Any(entry => entry.TriggerName == $"{triggerName}-{entry.Pid}" && entry.Group == group);
+		lock (_admissionLock) return _pendingEntries.Values.Any(entry => entry.TriggerName == SchedulerKeys.TriggerName(triggerName, entry.Pid) && entry.Group == group);
 	}
 	private QueueAdmissionResult Reject(QueueRejectionReason reason)
 	{
@@ -251,7 +251,7 @@ public partial class TaskScheduler(
 			{
 				var pid = NextPid();
 				DBRef.TryParse(owner, out var diagnosticOwner);
-				var entry = new QueueEntry(pid, $"{identity}-{pid}", group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget, OnReleased: onReleased, ManagesSemaphoreCount: managesSemaphoreCount)
+				var entry = new QueueEntry(pid, SchedulerKeys.TriggerName(identity, pid), group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget, OnReleased: onReleased, ManagesSemaphoreCount: managesSemaphoreCount)
 				{
 					Observation = diagnostics?.Admitted(pid, executor, diagnosticOwner, SchedulerKeys.KindOf(group), sourceAttribute),
 					PendingInput = pendingInput,
@@ -1245,36 +1245,10 @@ public partial class TaskScheduler(
 	}
 
 	/// <summary>
-	/// The executor a trigger name encodes (<c>dbref:#5:1744849081000-16</c> → <c>#5:1744849081000</c>),
-	/// or the raw name when it does not carry one.
+	/// The executor a trigger name encodes, or the raw name when it does not carry one.
 	/// </summary>
 	private static NameOrDbRef DescribeTrigger(string triggerName)
-	{
-		var identity = SchedulerKeys.WithoutOwnerPrefix(triggerName.AsSpan());
-
-		Span<System.Range> parts = stackalloc System.Range[2];
-		identity.Split(parts, '-');
-
-		return DBRef.TryParse(identity[parts[0]].ToString(), out var dbref)
-			? dbref!.Value
-			: triggerName;
-	}
-
-	/// <summary>
-	/// The PID from a trigger name shaped <c>prefix-pid</c>: exactly one dash, followed by the number.
-	/// </summary>
-	private static bool TryParsePid(string triggerName, out long pid)
-	{
-		var name = triggerName.AsSpan();
-		Span<System.Range> parts = stackalloc System.Range[3];
-		if (name.Split(parts, '-') != 2)
-		{
-			pid = 0;
-			return false;
-		}
-
-		return long.TryParse(name[parts[1]], out pid);
-	}
+		=> SchedulerKeys.TriggerExecutor(triggerName) is { } executor ? executor : triggerName;
 
 	public IAsyncEnumerable<SemaphoreTaskData> GetSemaphoreTasks(DBRef obj)
 		=> SemaphoreSnapshots(e => e.SemaphoreTarget?.Matches(obj) == true).ToAsyncEnumerable();
@@ -1308,12 +1282,10 @@ public partial class TaskScheduler(
 		var keys = await _scheduler.GetTriggerKeys(
 			GroupMatcher<TriggerKey>.GroupEquals(SchedulerKeys.Delay(obj)), token);
 
-		// Extract PID from identity: "dbref:{executor}-{pid}"
 		foreach (var key in keys)
 		{
 			token.ThrowIfCancellationRequested();
-			// Extract PID from identity: "dbref:{executor}-{pid}"
-			if (TryParsePid(key.Name, out var pid))
+			if (SchedulerKeys.TryTriggerPid(key.Name, out var pid))
 			{
 				yield return pid;
 			}
