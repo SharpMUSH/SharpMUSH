@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Bunit;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using MudBlazor;
@@ -119,5 +120,25 @@ public class GalleryRefusalTests : TrackingBunitContext
 
 		var shown = await SingleSnackbar(cut);
 		await Assert.That(shown.Message).IsEqualTo($"GallerySetIconFailed({Refusal})");
+	}
+
+	/// <summary>
+	/// A browser that cannot name a file's type reports <c>""</c>. Building the part's Content-Type from
+	/// that threw out of the upload handler; the upload now goes, and the server's refusal comes back.
+	/// </summary>
+	[Test]
+	public async Task AnUploadWithNoContentTypeReachesTheServer()
+	{
+		Arrange(isIcon: false, method => method == HttpMethod.Post ? HttpStatusCode.BadRequest : HttpStatusCode.OK);
+
+		var file = Substitute.For<IBrowserFile>();
+		file.Name.Returns("portrait");
+		file.ContentType.Returns(string.Empty);
+		file.Size.Returns(3);
+		file.OpenReadStream(Arg.Any<long>(), Arg.Any<CancellationToken>()).Returns(_ => new MemoryStream([1, 2, 3]));
+
+		var result = await Services.GetRequiredService<GalleryService>().UploadAsync("Gandalf", file);
+
+		await Assert.That(result.Expect<ApiFailure>().Message).IsEqualTo(Refusal);
 	}
 }

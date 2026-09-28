@@ -49,8 +49,14 @@ public class GalleryService(IHttpClientFactory httpClientFactory)
 
 		using var content = new MultipartFormDataContent();
 		var streamContent = new StreamContent(stream);
-		streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
 		content.Add(streamContent, "file", file.Name);
+
+		// A browser that cannot name the type sends "", which the MediaTypeHeaderValue constructor throws on,
+		// out of the widget's click handler. Sent without one, the server refuses it and says which types it takes.
+		if (System.Net.Http.Headers.MediaTypeHeaderValue.TryParse(file.ContentType, out var mediaType))
+		{
+			streamContent.Headers.ContentType = mediaType;
+		}
 
 		return await Client.PostContentApiAsync<List<GalleryItem>>(GalleryUrl(name), content, NoGallery);
 	}
