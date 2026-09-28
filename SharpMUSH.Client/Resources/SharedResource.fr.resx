@@ -3106,8 +3106,16 @@
     <comment>MT</comment>
   </data>
   <data name="GalleryUploadFailed" xml:space="preserve">
-    <value>Échec du téléversement de l'image.</value>
+    <value>Échec du téléversement de l'image : {0}</value>
     <comment>MT — « téléversement » per the existing WkUploadFailed/EnumPermMediaUpload wording</comment>
+  </data>
+  <data name="GalleryDeleteFailed" xml:space="preserve">
+    <value>Impossible de supprimer l'image : {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GallerySetIconFailed" xml:space="preserve">
+    <value>Impossible de définir l'icône : {0}</value>
+    <comment>MT</comment>
   </data>
   <data name="Help" xml:space="preserve">
     <value>Aide</value>

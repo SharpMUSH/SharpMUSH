@@ -1301,7 +1301,15 @@
     <comment>MT</comment>
   </data>
   <data name="GalleryUploadFailed" xml:space="preserve">
-    <value>Falha ao enviar a imagem.</value>
+    <value>Falha ao enviar a imagem: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryDeleteFailed" xml:space="preserve">
+    <value>Não foi possível excluir a imagem: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GallerySetIconFailed" xml:space="preserve">
+    <value>Não foi possível definir o ícone: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="Help" xml:space="preserve">

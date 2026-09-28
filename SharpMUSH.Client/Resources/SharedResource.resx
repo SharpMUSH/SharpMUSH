@@ -1130,7 +1130,13 @@
     <value>Set as profile icon</value>
   </data>
   <data name="GalleryUploadFailed" xml:space="preserve">
-    <value>Image upload failed.</value>
+    <value>Image upload failed: {0}</value>
+  </data>
+  <data name="GalleryDeleteFailed" xml:space="preserve">
+    <value>Could not delete the image: {0}</value>
+  </data>
+  <data name="GallerySetIconFailed" xml:space="preserve">
+    <value>Could not set the icon: {0}</value>
   </data>
   <data name="ProfileHandler" xml:space="preserve">
     <value>Profile Handler</value>

@@ -1301,7 +1301,15 @@
     <comment>MT</comment>
   </data>
   <data name="GalleryUploadFailed" xml:space="preserve">
-    <value>Качването на изображението е неуспешно.</value>
+    <value>Качването на изображението е неуспешно: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryDeleteFailed" xml:space="preserve">
+    <value>Изображението не можа да бъде изтрито: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GallerySetIconFailed" xml:space="preserve">
+    <value>Иконата не можа да бъде зададена: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="Help" xml:space="preserve">

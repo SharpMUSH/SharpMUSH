@@ -1301,7 +1301,15 @@
     <comment>MT</comment>
   </data>
   <data name="GalleryUploadFailed" xml:space="preserve">
-    <value>Afbeelding uploaden mislukt.</value>
+    <value>Afbeelding uploaden mislukt: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryDeleteFailed" xml:space="preserve">
+    <value>Kan de afbeelding niet verwijderen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GallerySetIconFailed" xml:space="preserve">
+    <value>Kan het pictogram niet instellen: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="Help" xml:space="preserve">

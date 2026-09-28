@@ -1301,7 +1301,15 @@
     <comment>MT</comment>
   </data>
   <data name="GalleryUploadFailed" xml:space="preserve">
-    <value>Hochladen des Bildes fehlgeschlagen.</value>
+    <value>Hochladen des Bildes fehlgeschlagen: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryDeleteFailed" xml:space="preserve">
+    <value>Das Bild konnte nicht gelöscht werden: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GallerySetIconFailed" xml:space="preserve">
+    <value>Das Symbol konnte nicht festgelegt werden: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="Help" xml:space="preserve">

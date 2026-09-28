@@ -1301,7 +1301,15 @@
     <comment>MT</comment>
   </data>
   <data name="GalleryUploadFailed" xml:space="preserve">
-    <value>图片上传失败。</value>
+    <value>图片上传失败：{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryDeleteFailed" xml:space="preserve">
+    <value>无法删除图片：{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GallerySetIconFailed" xml:space="preserve">
+    <value>无法设置图标：{0}</value>
     <comment>MT</comment>
   </data>
   <data name="Help" xml:space="preserve">
