@@ -14,7 +14,13 @@ public class TestContainerJanitorTests
 	[Test]
 	public async Task ContainersOfAnExitedProcessAreOrphaned()
 	{
-		using var process = Process.Start(new ProcessStartInfo("sleep", "60") { UseShellExecute = false })!;
+		// Any long-lived child will do; Windows has no `sleep` executable.
+		var sleeper = OperatingSystem.IsWindows()
+			? new ProcessStartInfo("ping", "-n 60 127.0.0.1")
+			: new ProcessStartInfo("sleep", "60");
+		sleeper.UseShellExecute = false;
+		sleeper.RedirectStandardOutput = true;
+		using var process = Process.Start(sleeper)!;
 		var labels = Labels(TestContainerJanitor.OwnerLabels);
 		labels[TestContainerJanitor.OwnerPidLabel] = process.Id.ToString();
 		labels[TestContainerJanitor.OwnerStartLabel] =

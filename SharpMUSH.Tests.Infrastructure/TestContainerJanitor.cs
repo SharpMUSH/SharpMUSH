@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Net;
 using System.Net.Sockets;
 using Docker.DotNet;
 using Docker.DotNet.Models;
@@ -45,49 +46,62 @@ public static class TestContainerJanitor
 			["label"] = new Dictionary<string, bool> { [OwnerPidLabel] = true }
 		};
 
-		IList<ContainerListResponse> containers;
+		var containers = await Reach(endpoint, () => client.Containers.ListContainersAsync(
+			new ContainersListParameters { All = true, Filters = ownedFilter }, cancellationToken));
+
+		var removed = 0;
+		foreach (var container in containers.Where(c => IsOrphaned(c.Labels)))
+		{
+			if (await TryRemove(endpoint, "container", container.ID, () => client.Containers.RemoveContainerAsync(container.ID,
+					new ContainerRemoveParameters { Force = true, RemoveVolumes = true }, cancellationToken)))
+				removed++;
+		}
+
+		var networks = await Reach(endpoint, () => client.Networks.ListNetworksAsync(
+			new NetworksListParameters { Filters = ownedFilter }, cancellationToken));
+		foreach (var network in networks.Where(n => IsOrphaned(n.Labels)))
+			await TryRemove(endpoint, "network", network.ID, () => client.Networks.DeleteNetworkAsync(network.ID, cancellationToken));
+
+		if (removed > 0)
+			await Console.Error.WriteLineAsync(
+				$"TestContainerJanitor: removed {removed} test container(s) left by test processes that no longer exist.");
+	}
+
+	/// <summary>Runs a Docker call, turning a refused socket into the actionable <see cref="Unreachable"/> error.</summary>
+	private static async Task<T> Reach<T>(IDockerEndpointAuthenticationConfiguration endpoint, Func<Task<T>> call)
+	{
 		try
 		{
-			containers = await client.Containers.ListContainersAsync(
-				new ContainersListParameters { All = true, Filters = ownedFilter }, cancellationToken);
+			return await call();
 		}
 		catch (Exception ex) when (IsUnreachable(ex))
 		{
 			throw Unreachable(endpoint.Endpoint.ToString(), ex);
 		}
+	}
 
-		var removed = 0;
-		foreach (var container in containers.Where(c => IsOrphaned(c.Labels)))
+	/// <summary>
+	/// Removes one orphan. Not found (another session's sweep got there first) and conflict (removal
+	/// already in progress, or a network still attached to a container being removed) are expected and
+	/// quiet; the next sweep retries them. Anything else is reported, not swallowed.
+	/// </summary>
+	private static async Task<bool> TryRemove(IDockerEndpointAuthenticationConfiguration endpoint, string kind, string id, Func<Task> remove)
+	{
+		try
 		{
-			try
-			{
-				await client.Containers.RemoveContainerAsync(container.ID,
-					new ContainerRemoveParameters { Force = true, RemoveVolumes = true }, cancellationToken);
-				removed++;
-			}
-			catch (DockerApiException)
-			{
-				// Removed concurrently by another session's sweep, or already being torn down.
-			}
+			await Reach(endpoint, async () => { await remove(); return true; });
+			return true;
 		}
-
-		var networks = await client.Networks.ListNetworksAsync(
-			new NetworksListParameters { Filters = ownedFilter }, cancellationToken);
-		foreach (var network in networks.Where(n => IsOrphaned(n.Labels)))
+		catch (DockerApiException ex) when (ex.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Conflict)
 		{
-			try
-			{
-				await client.Networks.DeleteNetworkAsync(network.ID, cancellationToken);
-			}
-			catch (DockerApiException)
-			{
-				// Still attached to a container another sweep is removing; the next sweep gets it.
-			}
+			return false;
 		}
-
-		if (removed > 0)
+		catch (DockerApiException ex)
+		{
 			await Console.Error.WriteLineAsync(
-				$"TestContainerJanitor: removed {removed} test container(s) left by test processes that no longer exist.");
+				$"TestContainerJanitor: could not remove orphaned test {kind} {id}: {(int)ex.StatusCode} {ex.ResponseBody}");
+			return false;
+		}
 	}
 
 	/// <summary>
