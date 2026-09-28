@@ -644,7 +644,7 @@ public class ManipulateSharpObjectService(
 		{
 			if (notify)
 			{
-				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ZoneCycleCannotAdd), executor);
+				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.CantMakeCircularZones), executor);
 			}
 
 			return ErrorMessages.Returns.ZoneLoop;
@@ -652,9 +652,11 @@ public class ManipulateSharpObjectService(
 
 		await mediator.Send(new SetObjectZoneCommand(obj, newZone));
 
+		// PennMUSH's do_chzone says "Zone changed." for every outcome it reports, including a cleared
+		// zone (src/set.c:487). "Zone set."/"Zone cleared." were SharpMUSH inventions.
 		if (notify)
 		{
-			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ZoneSet), executor);
+			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ZoneChanged), executor);
 		}
 
 		return true;
@@ -673,9 +675,10 @@ public class ManipulateSharpObjectService(
 
 		await mediator.Send(new UnsetObjectZoneCommand(obj));
 
+		// @chzone x=none reports the same "Zone changed." as a set does (src/set.c:487).
 		if (notify)
 		{
-			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ZoneCleared), executor);
+			await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.ZoneChanged), executor);
 		}
 
 		return true;

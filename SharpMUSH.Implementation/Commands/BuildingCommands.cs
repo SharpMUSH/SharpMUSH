@@ -610,7 +610,7 @@ public partial class Commands
 	/// arguments (<c>src/fundb.c:2219-2237</c>), so the whole body lives in
 	/// <see cref="LinkHelpers.LinkAsync"/> and <c>link()</c> reaches it too.
 	/// </remarks>
-	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
+	[SharpCommand(Name = "@LINK", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 1,
 		MaxArgs = 2, ParameterNames = ["object", "destination"])]
 	public async ValueTask<Option<CallState>> Link(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -618,19 +618,18 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var exitName = args["0"].Message!.ToPlainText();
-		var destName = args["1"].Message!.ToPlainText();
+		// MinArgs = 1: an absent or empty destination is @unlink (src/create.c:321-324), so it has to
+		// reach do_link rather than be rejected as too few arguments.
+		var destName = args.TryGetValue("1", out var destArg) ? destArg.Message!.ToPlainText() : string.Empty;
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, exitName, LocateFlags.All,
-			async target => await LinkHelpers.LinkAsync(parser, Mediator, NotifyService, LocateService,
-				PermissionService, LockService, AttributeService, ManipulateSharpObjectService, executor, target,
-				destName, preserve) switch
-			{
-				Success => CallState.Empty,
-				Error<string> refused => new CallState(refused.Value)
-			}
-		);
+		return await LinkHelpers.LinkAsync(parser, Mediator, NotifyService, LocateService, PermissionService,
+			LockService, AttributeService, ManipulateSharpObjectService, executor, exitName, destName,
+			preserve) switch
+		{
+			Success => CallState.Empty,
+			Error<string> refused => new CallState(refused.Value)
+		};
 	}
 
 	[SharpCommand(Name = "@NUKE", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
@@ -968,6 +967,11 @@ public partial class Commands
 	}
 
 
+	/// <remarks>
+	/// PennMUSH <c>do_unlink</c> (<c>src/create.c:250-289</c>), which <c>do_link</c> falls back to when
+	/// given no destination, so the body lives in <see cref="LinkHelpers.UnlinkAsync"/> and
+	/// <c>@link foo=</c> — and <c>link(foo,)</c> — reach it too.
+	/// </remarks>
 	[SharpCommand(Name = "@UNLINK", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Unlink(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -976,41 +980,12 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, targetName, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				if (obj is SharpExit exit)
-				{
-					await AttributeService.SetAttributeAsync(executor, obj, AttrLinkType, MarkupText.Empty);
-
-					await Mediator.Send(new UnlinkExitCommand(exit));
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UnlinkedExit), executor, obj.Object().DBRef.Number);
-					return CallState.Empty;
-				}
-				else if (obj is SharpRoom room)
-				{
-					await Mediator.Send(new UnlinkRoomCommand(room));
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToRemoved), executor);
-					return CallState.Empty;
-				}
-
-				return await NotifyService.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.InvalidObjectType,
-					notifyMessage: ErrorMessages.Notifications.InvalidObjectTypeGeneric,
-					shouldNotify: true);
-			}
-		);
+		return await LinkHelpers.UnlinkAsync(parser, Mediator, NotifyService, LocateService, PermissionService,
+			AttributeService, executor, targetName) switch
+		{
+			Success => CallState.Empty,
+			Error<string> refused => new CallState(refused.Value)
+		};
 	}
 
 	/// <summary>

@@ -796,8 +796,23 @@ public static class ErrorMessages
 		public const string ProgramsDontKillPeople = "Programs don't kill people; people kill people!";
 
 		// --- Zone messages aligned with PennMUSH src/set.c ---
+		/// <summary>
+		/// <c>do_chzone</c>'s only success report (<c>src/set.c:487</c>) — it says the same thing when the
+		/// zone is cleared, which is why there is no separate "Zone cleared." here.
+		/// </summary>
 		public const string ZoneChanged = "Zone changed.";
 		public const string CantMakeCircularZones = "You can't make circular zones!";
+		/// <summary><c>do_chzone</c>'s no-op guard (<c>src/set.c:394</c>).</summary>
+		public const string ObjectAlreadyInThatZone = "That object is already in that zone.";
+		/// <summary><c>do_chzone</c>'s <c>controls(player, thing)</c> refusal (<c>src/set.c:400</c>).</summary>
+		public const string NoPowerToShiftReality = "You don't have the power to shift reality.";
+		/// <summary><c>do_chzone</c>'s self-zone guard, mortals only (<c>src/set.c:423</c>).</summary>
+		public const string CantZoneObjectsToThemselves = "You shouldn't zone objects to themselves!";
+		/// <summary><c>do_chzoneall</c>'s empty right-hand side (<c>src/wiz.c:1033</c>).</summary>
+		public const string NoZoneSpecified = "No zone specified.";
+		/// <summary><c>do_chzoneall</c>'s summary (<c>src/wiz.c:1055</c>).</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ZoneChangedForObjectsFormat = "Zone changed for {0} objects.";
 
 		// --- Channel messages aligned with PennMUSH src/extchat.c (CHAT: prefix) ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1070,9 +1085,6 @@ public static class ErrorMessages
 		public const string CyclicAncestor = "You are not allowed to be your own ancestor!";
 		public const string TooManyAncestors = "Too many ancestors.";
 		public const string ParentSet = "Parent changed.";
-		public const string ZoneCycleCannotAdd = "Cannot add zone: would create a cycle.";
-		public const string ZoneSet = "Zone set.";
-		public const string ZoneCleared = "Zone cleared.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ClearedPowersFromFormat = "Cleared {0} power(s) from {1}.";
 
@@ -2079,11 +2091,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SitelockRuleRemovedFormat = "Sitelock rule for '{0}' removed.";
 		public const string SitelockRuleNotFound = "No sitelock rule was found for that pattern.";
-
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ZonesClearedForOwnerFormat = "Zones cleared for {0} object(s) owned by {1}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ZoneSetForOwnerFormat = "Zone set to {0} for {1} object(s) owned by {2}.";
 
 		public const string KickUsage = "Usage: @kick <player>";
 

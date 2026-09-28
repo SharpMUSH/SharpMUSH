@@ -23,15 +23,57 @@ namespace SharpMUSH.Implementation.Common;
 public static class LinkHelpers
 {
 	/// <inheritdoc cref="LinkHelpers"/>
-	/// <param name="target">
-	/// The object being linked, already matched — <c>do_link</c>'s <c>noisy_match_result</c>
-	/// (<c>src/create.c:330</c>), which both callers perform.
-	/// </param>
+	/// <param name="targetName">The unmatched object being linked, <c>do_link</c>'s <c>name</c>.</param>
 	/// <param name="destinationName">The unmatched destination, <c>do_link</c>'s <c>room_name</c>.</param>
 	/// <param name="preserve">
 	/// <c>@link/preserve</c>, and <c>link()</c>'s third argument (<c>src/fundb.c:2232-2233</c>).
 	/// </param>
+	/// <remarks>
+	/// <c>do_link</c>'s second guard — "You somehow wound up in a exit. No biscuit."
+	/// (<c>src/create.c:325-329</c>) — has no counterpart here, and cannot. PennMUSH holds a location
+	/// in one flat dbref space, so an object can be sitting in an exit; SharpMUSH's location relation
+	/// is an <see cref="AnySharpContainer"/>, which is a room, a player or a thing and never an exit.
+	/// There is no state for the guard to catch.
+	/// </remarks>
 	public static async ValueTask<Result<Success>> LinkAsync(
+		IMUSHCodeParser parser,
+		IMediator mediator,
+		INotifyService notifyService,
+		ILocateService locateService,
+		IPermissionService permissionService,
+		ILockService lockService,
+		IAttributeService attributeService,
+		IManipulateSharpObjectService manipulateSharpObjectService,
+		AnySharpObject executor,
+		string targetName,
+		string destinationName,
+		bool preserve)
+	{
+		// create.c:321-324: no destination at all is @unlink, ahead of matching the object, and do_link
+		// reports 0 whether the unlink went through or not.
+		if (destinationName.Length == 0)
+		{
+			return await UnlinkAsync(parser, mediator, notifyService, locateService, permissionService,
+				attributeService, executor, targetName) switch
+			{
+				Success => new Error<string>(ErrorMessages.Returns.MissingArguments),
+				Error<string> refused => refused
+			};
+		}
+
+		return await LocatedAsync(parser, locateService, executor, targetName) switch
+		{
+			AnySharpObject target => await LinkedAsync(parser, mediator, notifyService, locateService,
+				permissionService, lockService, attributeService, manipulateSharpObjectService, executor, target,
+				destinationName, preserve),
+			Error<string> unmatched => unmatched
+		};
+	}
+
+	/// <summary>
+	/// <c>do_link</c>'s type switch (<c>src/create.c:332-447</c>) over the object it matched.
+	/// </summary>
+	private static async ValueTask<Result<Success>> LinkedAsync(
 		IMUSHCodeParser parser,
 		IMediator mediator,
 		INotifyService notifyService,
@@ -56,6 +98,74 @@ public static class LinkHelpers
 			_ => await RefusedAsync(notifyService, executor, ErrorMessages.Returns.InvalidObjectType,
 				ErrorMessages.Notifications.InvalidObjectTypeForLinking)
 		};
+
+	/// <summary>
+	/// PennMUSH <c>do_unlink</c> (<c>src/create.c:250-289</c>), which <c>@UNLINK</c> is and which
+	/// <c>do_link</c> falls back to when it is given no destination.
+	/// </summary>
+	/// <remarks>
+	/// The match here is the caller's <see cref="LocateFlags.All"/> rather than <c>do_unlink</c>'s
+	/// <c>MAT_EXIT | MAT_HERE | MAT_ABSOLUTE</c> (plus <c>MAT_CONTROL</c> for a mortal), so a failed
+	/// match reports the locator's wording and not <c>do_unlink</c>'s "Unlink what?" — the same match
+	/// <c>@UNLINK</c> has always used. Narrowing it is a separate change.
+	/// </remarks>
+	public static async ValueTask<Result<Success>> UnlinkAsync(
+		IMUSHCodeParser parser,
+		IMediator mediator,
+		INotifyService notifyService,
+		ILocateService locateService,
+		IPermissionService permissionService,
+		IAttributeService attributeService,
+		AnySharpObject executor,
+		string targetName)
+		=> await LocatedAsync(parser, locateService, executor, targetName) switch
+		{
+			AnySharpObject target => await UnlinkedAsync(mediator, notifyService, permissionService, attributeService,
+				executor, target),
+			Error<string> unmatched => unmatched
+		};
+
+	/// <inheritdoc cref="UnlinkAsync"/>
+	private static async ValueTask<Result<Success>> UnlinkedAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		IAttributeService attributeService,
+		AnySharpObject executor,
+		AnySharpObject target)
+	{
+		// create.c:267.
+		if (!await permissionService.Controls(executor, target))
+		{
+			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
+				ErrorMessages.Notifications.PermissionDenied);
+		}
+
+		switch (target)
+		{
+			// create.c:271-277. _LINKTYPE goes with the relation: HOME and VARIABLE are destinations too,
+			// so leaving one behind would unlink an exit that still leads somewhere.
+			case SharpExit exit:
+				await attributeService.SetAttributeAsync(executor, target, TeleportHelpers.AttrLinkType,
+					MarkupText.Empty);
+				await mediator.Send(new UnlinkExitCommand(exit));
+				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.UnlinkedExit),
+					executor, target.Object().DBRef.Number);
+				return new Success();
+
+			// create.c:278-282.
+			case SharpRoom room:
+				await mediator.Send(new UnlinkRoomCommand(room));
+				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DropToRemoved),
+					executor);
+				return new Success();
+
+			// create.c:283-285.
+			default:
+				return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.InvalidObjectType,
+					ErrorMessages.Notifications.InvalidObjectTypeGeneric);
+		}
+	}
 
 	/// <summary>
 	/// <c>do_link</c>'s <c>TYPE_EXIT</c> branch (<c>src/create.c:333-383</c>): the two variable-link

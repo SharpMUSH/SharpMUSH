@@ -236,15 +236,13 @@ public partial class Functions
 		var destName = args["1"].Message!.ToPlainText();
 		var preserve = args.TryGetValue("2", out var preserveArg) && preserveArg.Message!.Truthy(parser);
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, objectName, LocateFlags.All,
-			async target => await LinkHelpers.LinkAsync(parser, Mediator, NotifyService, LocateService,
-				PermissionService, LockService, AttributeService, ManipulateSharpObjectService, executor, target,
-				destName, preserve) switch
-			{
-				Success => new CallState("1"),
-				Error<string> refused => new CallState(refused.Value)
-			});
+		return await LinkHelpers.LinkAsync(parser, Mediator, NotifyService, LocateService, PermissionService,
+			LockService, AttributeService, ManipulateSharpObjectService, executor, objectName, destName,
+			preserve) switch
+		{
+			Success => new CallState("1"),
+			Error<string> refused => new CallState(refused.Value)
+		};
 	}
 
 	/// <remarks>

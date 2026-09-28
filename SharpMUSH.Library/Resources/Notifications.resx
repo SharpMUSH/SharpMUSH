@@ -583,6 +583,21 @@
   <data name="CantMakeCircularZones" xml:space="preserve">
     <value>You can't make circular zones!</value>
   </data>
+  <data name="ObjectAlreadyInThatZone" xml:space="preserve">
+    <value>That object is already in that zone.</value>
+  </data>
+  <data name="NoPowerToShiftReality" xml:space="preserve">
+    <value>You don't have the power to shift reality.</value>
+  </data>
+  <data name="CantZoneObjectsToThemselves" xml:space="preserve">
+    <value>You shouldn't zone objects to themselves!</value>
+  </data>
+  <data name="NoZoneSpecified" xml:space="preserve">
+    <value>No zone specified.</value>
+  </data>
+  <data name="ZoneChangedForObjectsFormat" xml:space="preserve">
+    <value>Zone changed for {0} objects.</value>
+  </data>
 
   <!-- Channel messages (CHAT: prefix) - note angle brackets require XML escaping -->
   <data name="ChatNotOnChannel" xml:space="preserve">
@@ -721,15 +736,6 @@
   </data>
   <data name="ParentSet" xml:space="preserve">
     <value>Parent changed.</value>
-  </data>
-  <data name="ZoneCycleCannotAdd" xml:space="preserve">
-    <value>Cannot add zone: would create a cycle.</value>
-  </data>
-  <data name="ZoneSet" xml:space="preserve">
-    <value>Zone set.</value>
-  </data>
-  <data name="ZoneCleared" xml:space="preserve">
-    <value>Zone cleared.</value>
   </data>
   <data name="ClearedPowersFromFormat" xml:space="preserve">
     <value>Cleared {0} power(s) from {1}.</value>
@@ -2625,14 +2631,6 @@
   </data>
   <data name="SitelockInvalidSyntax" xml:space="preserve">
     <value>Invalid @SITELOCK syntax. Use '@help @sitelock' for usage information.</value>
-  </data>
-
-  <!-- @chzoneall -->
-  <data name="ZonesClearedForOwnerFormat" xml:space="preserve">
-    <value>Zones cleared for {0} object(s) owned by {1}.</value>
-  </data>
-  <data name="ZoneSetForOwnerFormat" xml:space="preserve">
-    <value>Zone set to {0} for {1} object(s) owned by {2}.</value>
   </data>
 
   <!-- @kick -->
