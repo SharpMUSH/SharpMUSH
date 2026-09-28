@@ -109,68 +109,22 @@ public partial class Functions
 	public async ValueTask<CallState> Commands(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var descriptor = await LookupDescriptorAsync(parser, executor);
 
-		IConnectionService.ConnectionData? connection;
-
-		if (long.TryParse(arg0, out var port))
-		{
-			connection = ConnectionService.Get(port);
-		}
-		else
-		{
-			var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-			connection = maybeLocate is AnySharpObject and SharpPlayer player
-				? await LeastIdleConnectionAsync(player.Object.DBRef)
-				: null;
-		}
-
-		if (connection is null || !await CanAccessConnectionData(executor, connection.Ref))
-		{
-			return new CallState("-1");
-		}
-
-		return new CallState(connection.CommandCount.ToString(CultureInfo.InvariantCulture));
+		return descriptor is not null && await ArgHelpers.CanReadDescriptorAsync(executor, descriptor.Ref)
+			? new CallState(descriptor.CommandCount.ToString(CultureInfo.InvariantCulture))
+			: new CallState("-1");
 	}
 
 	[SharpFunction(Name = "conn", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ConnectedSeconds(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-
-		if (long.TryParse(arg0, out var port))
-		{
-			var data2 = ConnectionService.Get(port);
-			if (data2 is null || data2.Ref is null)
-			{
-				return new CallState("-1");
-			}
-
-			if (await Mediator.Send(new GetObjectNodeQuery(data2.Ref.Value)) is not AnySharpObject connectedPlayer
-					|| !await PermissionService.CanSee(executor, connectedPlayer))
-			{
-				return new CallState("-1");
-			}
-
-			return new CallState(data2.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
-		}
-
-		// fun_conn answers every failure with "-1" — a name that matches nothing, a match that is not
+		// fun_conn answers every failure with "-1": a name that matches nothing, a player who is not
 		// connected, and a descriptor the caller may not see are one outcome, not three.
-		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
-		{
-			return new CallState("-1");
-		}
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var descriptor = await LookupDescriptorAsync(parser, executor);
 
-		if (!await PermissionService.CanSee(executor, located.Object))
-		{
-			return new CallState("-1");
-		}
-
-		var data = await LeastIdleConnectionAsync(located.Object.DBRef);
-		return new CallState(data?.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
+		return new CallState(descriptor?.Connected?.TotalSeconds.ToString(CultureInfo.InvariantCulture) ?? "-1");
 	}
 
 	[SharpFunction(Name = "connlog", MinArgs = 3, MaxArgs = int.MaxValue,
@@ -361,49 +315,22 @@ public partial class Functions
 	public async ValueTask<CallState> Doing(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var descriptor = await LookupDescriptorAsync(parser, executor);
 
-		if (long.TryParse(arg0, out var port))
-		{
-			var data = ConnectionService.Get(port);
-			if (data is null || data.Ref is null)
-			{
-				return new CallState(string.Empty);
-			}
-
-			if (await Mediator.Send(new GetObjectNodeQuery(data.Ref.Value)) is not AnySharpObject player)
-			{
-				return new CallState(string.Empty);
-			}
-
-			var maybeAttr = await AttributeService.GetAttributeAsync(
-				executor,
-				player,
-				"DOING",
-				mode: IAttributeService.AttributeMode.Read,
-				parent: false);
-
-			return maybeAttr switch
-			{
-				SharpAttribute[] chain => new CallState(chain.Last().Value),
-				None or Error<string> => new CallState(string.Empty)
-			};
-		}
-
-		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
+		if (descriptor?.Ref is not { } playerRef
+				|| await Mediator.Send(new GetObjectNodeQuery(playerRef)) is not AnySharpObject player)
 		{
 			return new CallState(string.Empty);
 		}
 
-		var doingAttr = await AttributeService.GetAttributeAsync(
+		var maybeAttr = await AttributeService.GetAttributeAsync(
 			executor,
-			located,
+			player,
 			"DOING",
 			mode: IAttributeService.AttributeMode.Read,
 			parent: false);
 
-		return doingAttr switch
+		return maybeAttr switch
 		{
 			SharpAttribute[] chain => new CallState(chain.Last().Value),
 			None or Error<string> => new CallState(string.Empty)
@@ -411,22 +338,30 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "host", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
-	public async ValueTask<CallState> HostName(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> HostName(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> DescriptorAddressAsync(parser, descriptor => descriptor.HostName);
+
+	/// <summary>
+	/// PennMUSH's <c>fun_hostname</c> and <c>fun_ipaddr</c> (<c>src/bsd.c</c>), which differ only in the
+	/// field they read. Both find the descriptor with <c>lookup_desc</c> and then let only the player on
+	/// it, or See_All, read it. PennMUSH answers every failure with a bare <c>#-1</c>; these say which
+	/// failure it was where that gives nothing away (see "A failing function says why" in
+	/// <c>help pennmush compatibility</c>).
+	/// </summary>
+	private async ValueTask<CallState> DescriptorAddressAsync(IMUSHCodeParser parser,
+		Func<IConnectionService.ConnectionData, string> field)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		if (long.TryParse(arg0, out var port))
+		if (long.TryParse(arg0, out _))
 		{
 			// "No descriptor" and "not yours to see" are one answer: whether the descriptor exists is
 			// itself the thing a caller without See_All must not learn.
-			var data = ConnectionService.Get(port);
-			if (data is null || !await CanAccessConnectionData(executor, data.Ref))
-			{
-				return new CallState(ErrorMessages.Returns.NoSuchDescriptorOrPermissionDenied);
-			}
-
-			return new CallState(data.HostName);
+			var descriptor = await LookupDescriptorAsync(parser, executor);
+			return descriptor is not null && await ArgHelpers.CanReadDescriptorAsync(executor, descriptor.Ref)
+				? new CallState(field(descriptor))
+				: new CallState(ErrorMessages.Returns.NoSuchDescriptorOrPermissionDenied);
 		}
 
 		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
@@ -435,18 +370,17 @@ public partial class Functions
 			return new CallState(maybeLocate is Error<string> error ? error.Value : ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
+		// Asked by name, the refusal comes before anything about the connection, so it does not say
+		// whether the player is connected.
+		if (!await ArgHelpers.CanReadDescriptorAsync(executor, located.Object.DBRef))
 		{
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
-		if (connectionData is null)
-		{
-			return new CallState(ErrorMessages.Returns.NotConnected);
-		}
-
-		return new CallState(connectionData.HostName);
+		var connection = await ArgHelpers.VisibleConnectionAsync(ConnectionService, executor, located.Object.DBRef);
+		return connection is null
+			? new CallState(ErrorMessages.Returns.NotConnected)
+			: new CallState(field(connection));
 	}
 
 	/// <summary>
@@ -476,75 +410,14 @@ public partial class Functions
 		}
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var descriptor = await LookupDescriptorAsync(parser, executor);
 
-		if (long.TryParse(arg0, out var port))
-		{
-			var data2 = ConnectionService.Get(port);
-			if (data2 is null || data2.Ref is null)
-			{
-				return new CallState("-1");
-			}
-
-			if (await Mediator.Send(new GetObjectNodeQuery(data2.Ref.Value)) is not AnySharpObject connectedPlayer
-					|| !await PermissionService.CanSee(executor, connectedPlayer))
-			{
-				return new CallState("-1");
-			}
-
-			return new CallState(FormatIdle(data2.Idle, precision));
-		}
-
-		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate is not (AnySharpObject and SharpPlayer locate))
-		{
-			return new CallState(maybeLocate is Error<string> error ? error.Value : "-1");
-		}
-
-		if (!await PermissionService.CanSee(executor, locate.Object))
-		{
-			return new CallState("-1");
-		}
-
-		var connectionData = await LeastIdleConnectionAsync(locate.Object.DBRef);
-		return new CallState(FormatIdle(connectionData?.Idle, precision));
+		return new CallState(FormatIdle(descriptor?.Idle, precision));
 	}
 
 	[SharpFunction(Name = "ipaddr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
-	public async ValueTask<CallState> IpAddress(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-
-		if (long.TryParse(arg0, out var port))
-		{
-			// One answer for both failures, as for host(), and for the same reason.
-			var data = ConnectionService.Get(port);
-			if (data is null || !await CanAccessConnectionData(executor, data.Ref))
-			{
-				return new CallState(ErrorMessages.Returns.NoSuchDescriptorOrPermissionDenied);
-			}
-
-			return new CallState(data.InternetProtocolAddress);
-		}
-
-		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
-		{
-			return new CallState(maybeLocate is Error<string> error ? error.Value : ErrorMessages.Returns.NoSuchPlayer);
-		}
-
-		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
-		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
-
-		return connectionData is null
-			? new CallState(ErrorMessages.Returns.NotConnected)
-			: new CallState(connectionData.InternetProtocolAddress);
-	}
+	public ValueTask<CallState> IpAddress(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> DescriptorAddressAsync(parser, descriptor => descriptor.InternetProtocolAddress);
 
 	[SharpFunction(Name = "lports", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> ListPorts(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -841,144 +714,58 @@ public partial class Functions
 
 	[SharpFunction(Name = "pueblo", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Pueblo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await ArgHelpers.ForHandleOrPlayer(parser, Mediator, ConnectionService, LocateService,
-			parser.CurrentState.Arguments["0"],
-			(_, cd) => ValueTask.FromResult<CallState>(cd.Metadata.GetValueOrDefault("PUEBLO", "0")),
-			(_, cd) => ValueTask.FromResult<CallState>(cd.Metadata.GetValueOrDefault("PUEBLO", "0"))
-		);
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var descriptor = await LookupDescriptorAsync(parser, executor);
+
+		return descriptor is null
+			? new CallState(ErrorMessages.Returns.NotConnected)
+			: new CallState(descriptor.Metadata.GetValueOrDefault("PUEBLO", "0"));
+	}
 
 	[SharpFunction(Name = "recv", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Received(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		// fun_recv counts as an integer and fails as one: "-1" for a player who is not connected and for a
+		// descriptor the caller may not read, with no "#-1" anywhere in it.
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var descriptor = await LookupDescriptorAsync(parser, executor);
 
-		if (long.TryParse(arg0, out var port))
-		{
-			var data = ConnectionService.Get(port);
-			if (data is null)
-			{
-				return new CallState("-1");
-			}
-
-			// fun_recv counts as an integer and fails as one: "-1" for a descriptor that is not there and
-			// for one the caller may not read, with no "#-1" anywhere in it.
-			if (!await CanAccessConnectionData(executor, data.Ref))
-			{
-				return new CallState("-1");
-			}
-
-			return new CallState(data.Metadata.GetValueOrDefault("RECV", "0"));
-		}
-
-		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
-		{
-			return new CallState("-1");
-		}
-
-		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
-		{
-			return new CallState("-1");
-		}
-
-		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
-		return connectionData is null
-			? new CallState("-1")
-			: new CallState(connectionData.Metadata.GetValueOrDefault("RECV", "0"));
+		return descriptor is not null && await ArgHelpers.CanReadDescriptorAsync(executor, descriptor.Ref)
+			? new CallState(descriptor.Metadata.GetValueOrDefault("RECV", "0"))
+			: new CallState("-1");
 	}
 
 	[SharpFunction(Name = "sent", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Sent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		// fun_sent counts as an integer and fails as one: "-1" for a player who is not connected and for a
+		// descriptor the caller may not read, with no "#-1" anywhere in it.
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var descriptor = await LookupDescriptorAsync(parser, executor);
 
-		if (long.TryParse(arg0, out var port))
-		{
-			var data = ConnectionService.Get(port);
-			if (data is null)
-			{
-				return new CallState("-1");
-			}
-
-			// fun_sent counts as an integer and fails as one: "-1" for a descriptor that is not there and
-			// for one the caller may not read, with no "#-1" anywhere in it.
-			if (!await CanAccessConnectionData(executor, data.Ref))
-			{
-				return new CallState("-1");
-			}
-
-			return new CallState(data.Metadata.GetValueOrDefault("SENT", "0"));
-		}
-
-		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
-		{
-			return new CallState("-1");
-		}
-
-		if (!await CanAccessConnectionData(executor, located.Object.DBRef))
-		{
-			return new CallState("-1");
-		}
-
-		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
-		return connectionData is null
-			? new CallState("-1")
-			: new CallState(connectionData.Metadata.GetValueOrDefault("SENT", "0"));
+		return descriptor is not null && await ArgHelpers.CanReadDescriptorAsync(executor, descriptor.Ref)
+			? new CallState(descriptor.Metadata.GetValueOrDefault("SENT", "0"))
+			: new CallState("-1");
 	}
 
 	[SharpFunction(Name = "ssl", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> SecureSocketLayer(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		// fun_ssl separates the two failures where fun_hostname folds them: no descriptor is
+		// "#-1 NOT CONNECTED", and a descriptor you may not read is a permission error. The boolean 0
+		// means "connected, and not over TLS", which is a different fact.
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		var descriptor = await LookupDescriptorAsync(parser, executor);
 
-		if (long.TryParse(arg0, out var port))
-		{
-			var data = ConnectionService.Get(port);
-			if (data is null)
-			{
-				// fun_ssl separates the two failures where fun_hostname folds them: no descriptor is
-				// "#-1 NOT CONNECTED", and a descriptor you may not read is a permission error. The
-				// boolean 0 means "connected, and not over TLS", which is a different fact.
-				return new CallState(ErrorMessages.Returns.NotConnected);
-			}
-
-			if (data.Ref != executor.Object().DBRef)
-			{
-				if (!await executor.IsSee_All())
-				{
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
-				}
-			}
-
-			var ssl = data.Metadata.GetValueOrDefault("SSL", "0");
-			return new CallState(ssl);
-		}
-
-		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
+		if (descriptor is null)
 		{
 			return new CallState(ErrorMessages.Returns.NotConnected);
 		}
 
-		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
-
-		if (connectionData is null)
-		{
-			return new CallState(ErrorMessages.Returns.NotConnected);
-		}
-
-		// lookup_desc first, permission second: a name that matches a player who is not online is "not
-		// connected" whoever asks, and only a descriptor that exists can be refused.
-		if (located.Object.DBRef != executor.Object().DBRef && !await executor.IsSee_All())
-		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
-		}
-
-		return new CallState(connectionData.Metadata.GetValueOrDefault("SSL", "0"));
+		return await ArgHelpers.CanReadDescriptorAsync(executor, descriptor.Ref)
+			? new CallState(descriptor.Metadata.GetValueOrDefault("SSL", "0"))
+			: new CallState(ErrorMessages.Returns.PermissionDenied);
 	}
 
 	[SharpFunction(Name = "terminfo", MinArgs = 1, MaxArgs = 1,
@@ -986,41 +773,23 @@ public partial class Functions
 	public async ValueTask<CallState> TerminalInformation(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var hasSeeAll = await executor.IsSee_All();
 
 		// fun_terminfo checks the argument before it looks anything up, and says so rather than
 		// answering "unknown" — which would claim the descriptor exists and has no terminal type.
-		if (string.IsNullOrEmpty(arg0))
+		if (string.IsNullOrEmpty(parser.CurrentState.Arguments["0"].Message!.ToPlainText()))
 		{
 			return new CallState(ErrorMessages.Returns.FunctionRequiresOneArgument);
 		}
 
-		if (long.TryParse(arg0, out var port))
-		{
-			var data = ConnectionService.Get(port);
-
-			return data is null
-				? new CallState(ErrorMessages.Returns.NotConnected)
-				: new CallState(BuildTermInfo(data.Metadata, hasSeeAll || data.Ref == executor.Object().DBRef,
-					await ArgHelpers.ColorFlagsOfAsync(Mediator, data.Ref)));
-		}
-
-		var maybeLocate = await LocateService.LocateConnectionTarget(parser, executor, executor, arg0);
-		if (maybeLocate is not (AnySharpObject and SharpPlayer located))
-		{
-			return new CallState(ErrorMessages.Returns.NotConnected);
-		}
-
-		var connectionData = await LeastIdleConnectionAsync(located.Object.DBRef);
+		var descriptor = await LookupDescriptorAsync(parser, executor);
 
 		// "unknown" is default_ttype — what a connected client with no terminal type is called. A
 		// target that is not connected at all is a different answer.
-		return connectionData is null
+		return descriptor is null
 			? new CallState(ErrorMessages.Returns.NotConnected)
-			: new CallState(BuildTermInfo(connectionData.Metadata,
-				hasSeeAll || located.Object.DBRef == executor.Object().DBRef,
-				await ArgHelpers.ColorFlagsOfAsync(Mediator, connectionData.Ref)));
+			: new CallState(BuildTermInfo(descriptor.Metadata,
+				await ArgHelpers.CanReadDescriptorAsync(executor, descriptor.Ref),
+				await ArgHelpers.ColorFlagsOfAsync(Mediator, descriptor.Ref)));
 	}
 
 	[SharpFunction(Name = "width", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -1355,24 +1124,11 @@ public partial class Functions
 		return new CallState(isHiddenPlayer ? "1" : "0");
 	}
 
-	/// <inheritdoc cref="ArgHelpers.LeastIdleConnectionAsync"/>
-	private ValueTask<IConnectionService.ConnectionData?> LeastIdleConnectionAsync(DBRef who)
-		=> ArgHelpers.LeastIdleConnectionAsync(ConnectionService, who);
-
-	/// <summary>
-	/// Checks if the executor has permission to access connection data for another player.
-	/// </summary>
-	private async ValueTask<bool> CanAccessConnectionData(AnySharpObject executor, DBRef? targetDbRef)
-	{
-		if (targetDbRef == executor.Object().DBRef)
-		{
-			return true;
-		}
-
-		return await executor.IsWizard() ||
-					 await executor.IsRoyalty() ||
-					 await executor.IsSee_All();
-	}
+	/// <inheritdoc cref="ArgHelpers.LookupDescriptorAsync"/>
+	private ValueTask<IConnectionService.ConnectionData?> LookupDescriptorAsync(IMUSHCodeParser parser,
+		AnySharpObject executor)
+		=> ArgHelpers.LookupDescriptorAsync(parser, LocateService, ConnectionService, executor,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText());
 
 	/// <summary>
 	/// PennMUSH's <c>fun_width</c> / <c>fun_height</c> (src/bsd.c), which are one function apart from
@@ -1399,26 +1155,14 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.FunctionRequiresOneArgument);
 		}
 
-		var connection = long.TryParse(target, out var port)
-			? ConnectionService.Get(port)
-			: await LocatedConnectionAsync(parser, target);
+		var connection = await LookupDescriptorAsync(parser,
+			await parser.CurrentState.KnownExecutorObject(Mediator));
 
 		// PennMUSH's "&& match->width > 0": a dimension of zero is one nobody has reported, so it takes
 		// the default rather than being sent as a width of nothing.
 		return connection?.Metadata.GetValueOrDefault(key) is { Length: > 0 } dimension && dimension != "0"
 			? new CallState(dimension)
 			: new CallState(defaultArg);
-
-		async ValueTask<IConnectionService.ConnectionData?> LocatedConnectionAsync(
-			IMUSHCodeParser inner, string name)
-		{
-			var executor = await inner.CurrentState.KnownExecutorObject(Mediator);
-			var maybeLocate = await LocateService.LocateConnectionTarget(inner, executor, executor, name);
-
-			return maybeLocate is AnySharpObject and SharpPlayer player
-				? await LeastIdleConnectionAsync(player.Object.DBRef)
-				: null;
-		}
 	}
 
 	/// <summary>

@@ -230,34 +230,66 @@ public static partial class ArgHelpers
 				? dbref.ToString()
 				: x.Groups["User"].Value);
 
-	public static async ValueTask<CallState> ForHandleOrPlayer(IMUSHCodeParser parser, IMediator mediator,
-		IConnectionService connectionService, ILocateService locateService, CallState value,
-		Func<long, IConnectionService.ConnectionData, ValueTask<CallState>> handleFunc,
-		Func<SharpPlayer, IConnectionService.ConnectionData, ValueTask<CallState>> playerFunc)
+	/// <summary>
+	/// PennMUSH's <c>lookup_desc</c> (<c>src/bsd.c:6629-6666</c>): how every per-connection function
+	/// turns its argument into a descriptor, and the first of the two permission checks they make.
+	/// <list type="bullet">
+	/// <item>A descriptor number answers only for a Priv_Who caller, or for the caller's own
+	/// descriptor. Anyone else learns nothing, not even whether the number is in use.</item>
+	/// <item>A name is matched as a player (<c>me</c>, <c>#dbref</c> and <c>*name</c> included) and
+	/// answers with that player's least idle connection. A connection hidden with <c>@hide</c> counts
+	/// only for a Priv_Who caller, so a hidden player is simply not connected to everyone else.</item>
+	/// </list>
+	/// Null is the one failure: every caller turns it into its own "not connected" answer.
+	/// The second check, on who may read a descriptor's private fields, is
+	/// <see cref="CanReadDescriptorAsync"/>.
+	/// </summary>
+	public static async ValueTask<IConnectionService.ConnectionData?> LookupDescriptorAsync(
+		IMUSHCodeParser parser, ILocateService locateService, IConnectionService connectionService,
+		AnySharpObject executor, string name)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
-		var valueText = (value.Message ?? MarkupText.Empty).ToPlainText();
+		var privWho = await executor.IsSee_All();
 
-		var isHandle = long.TryParse(valueText, out var handle);
-
-		if (isHandle)
+		if (long.TryParse(name, out var handle))
 		{
-			var handleData = connectionService.Get(handle);
-			if (handleData is null) return new CallState("#-1 That handle is not connected.");
-
-			return await handleFunc(handle, handleData);
+			var descriptor = connectionService.Get(handle);
+			return descriptor is not null && (privWho || descriptor.Ref == executor.Object().DBRef)
+				? descriptor
+				: null;
 		}
 
-		var maybeFound =
-			await locateService.LocatePlayerAndNotifyIfInvalidWithCallState(parser, executor, executor, valueText);
-
-		return maybeFound switch
+		var located = await locateService.LocateConnectionTarget(parser, executor, executor, name);
+		if (located is not (AnySharpObject and SharpPlayer player))
 		{
-			Error<CallState> error => error.Value,
-			AnySharpObject and SharpPlayer found => await ForConnectedPlayer(connectionService, found, playerFunc),
-			AnySharpObject => throw new InvalidOperationException("A player-only locate returned a non-player.")
-		};
+			return null;
+		}
+
+		return await VisibleConnectionAsync(connectionService, executor, player.Object.DBRef);
 	}
+
+	/// <summary>
+	/// The descriptor <see cref="LookupDescriptorAsync"/> settles on for a player it has matched: the
+	/// least idle one, counting a connection hidden with <c>@hide</c> only when
+	/// <paramref name="executor"/> is Priv_Who.
+	/// </summary>
+	public static async ValueTask<IConnectionService.ConnectionData?> VisibleConnectionAsync(
+		IConnectionService connectionService, AnySharpObject executor, DBRef player)
+	{
+		var privWho = await executor.IsSee_All();
+		return await connectionService.Get(player)
+			.Where(connection => privWho || !connection.IsHidden)
+			.MinByAsync(connection => connection.Idle ?? TimeSpan.MaxValue);
+	}
+
+	/// <summary>
+	/// The second check, which PennMUSH's <c>fun_hostname</c>, <c>fun_ipaddr</c>, <c>fun_cmds</c>,
+	/// <c>fun_sent</c>, <c>fun_recv</c> and <c>fun_ssl</c> (<c>src/bsd.c</c>) make on the descriptor
+	/// <see cref="LookupDescriptorAsync"/> found: its address and traffic belong to the player on it
+	/// (<paramref name="player"/>) and to See_All. The other per-connection functions answer anyone who
+	/// got past the lookup.
+	/// </summary>
+	public static async ValueTask<bool> CanReadDescriptorAsync(AnySharpObject executor, DBRef? player)
+		=> player == executor.Object().DBRef || await executor.IsSee_All();
 
 	/// <summary>
 	/// The descriptor PennMUSH's <c>lookup_desc()</c> (<c>src/bsd.c</c>) settles on for a player: it
@@ -269,16 +301,6 @@ public static partial class ArgHelpers
 	public static ValueTask<IConnectionService.ConnectionData?> LeastIdleConnectionAsync(
 		IConnectionService connectionService, DBRef who)
 		=> connectionService.Get(who).MinByAsync(connection => connection.Idle ?? TimeSpan.MaxValue);
-
-	private static async ValueTask<CallState> ForConnectedPlayer(IConnectionService connectionService,
-		SharpPlayer player, Func<SharpPlayer, IConnectionService.ConnectionData, ValueTask<CallState>> playerFunc)
-	{
-		var playerData = await LeastIdleConnectionAsync(connectionService, player.Object.DBRef);
-
-		if (playerData is null) return new CallState("#-1 That player is not connected.");
-
-		return await playerFunc(player, playerData);
-	}
 
 	/// <summary>
 	/// The colour flags set on whoever is behind a descriptor, or null at the connect screen where
