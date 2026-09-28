@@ -119,7 +119,10 @@ public partial class Commands
 		async ValueTask<List<(AnySharpObject Obj, List<string> Attributes)>> FindMatches(
 			IAsyncEnumerable<AnySharpObject> candidates)
 		{
+			// The list keeps Penn's report order; the index keeps the grouping off O(n^2), which a
+			// default scan of a well-populated master room would otherwise pay.
 			List<(AnySharpObject Obj, List<string> Attributes)> grouped = [];
+			Dictionary<DBRef, List<string>> byObject = [];
 
 			var matched = await CommandDiscoveryService.MatchUserDefinedCommand(parser,
 				candidates.Where((item, ct) => perceive(item.Object().DBRef, ct)), arg0);
@@ -138,15 +141,15 @@ public partial class Commands
 				var dbref = obj.Object().DBRef;
 				runningOutput.Add($"#{dbref.Number}/{attr.LongName}");
 
-				var existing = grouped.FindIndex(entry => entry.Obj.Object().DBRef == dbref);
-				if (existing < 0)
+				if (byObject.TryGetValue(dbref, out var attributes))
 				{
-					grouped.Add((obj, [attr.LongName]));
+					attributes.Add(attr.LongName);
+					continue;
 				}
-				else
-				{
-					grouped[existing].Attributes.Add(attr.LongName);
-				}
+
+				attributes = [attr.LongName];
+				byObject[dbref] = attributes;
+				grouped.Add((obj, attributes));
 			}
 
 			return grouped;
