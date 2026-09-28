@@ -30,7 +30,7 @@ public static class FunctionCoverage
 	private static readonly Lazy<string> TestCorpus = new(() =>
 		string.Join('\n', TestPaths.TestSourceFiles()
 			.Concat(Directory.EnumerateFiles(
-				Path.Combine(TestPaths.RepositoryRoot, "SharpMUSH.Tests"), "*.t", SearchOption.AllDirectories))
+				Path.Join(TestPaths.RepositoryRoot, "SharpMUSH.Tests"), "*.t", SearchOption.AllDirectories))
 			.Select(File.ReadAllText))
 		.ToLowerInvariant());
 
@@ -100,6 +100,24 @@ public static class FunctionCoverage
 		sb.AppendLine();
 	}
 
-	private static bool IsMentioned(string name) =>
-		TestCorpus.Value.Contains($"{name}(", StringComparison.Ordinal);
+	/// <summary>
+	/// Whether <c>name(</c> appears with no identifier character in front of it, so that <c>vadd(</c>
+	/// does not count as a mention of <c>add()</c>, nor <c>lu(</c> of <c>u()</c>.
+	/// </summary>
+	private static bool IsMentioned(string name)
+	{
+		var corpus = TestCorpus.Value;
+		var token = $"{name}(";
+		for (var index = corpus.IndexOf(token, StringComparison.Ordinal);
+			index >= 0;
+			index = corpus.IndexOf(token, index + 1, StringComparison.Ordinal))
+		{
+			if (index == 0 || !IsIdentifierChar(corpus[index - 1]))
+				return true;
+		}
+
+		return false;
+	}
+
+	private static bool IsIdentifierChar(char c) => char.IsLetterOrDigit(c) || c == '_';
 }

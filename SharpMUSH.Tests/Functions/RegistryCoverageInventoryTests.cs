@@ -14,13 +14,18 @@ namespace SharpMUSH.Tests.Functions;
 /// mention inside an unrelated assertion string as coverage, so it is a floor rather than a
 /// guarantee. What was actually run is measured separately: <see cref="FunctionCoverage.Build"/>
 /// compares the parser's dispatch telemetry with this scan, and the test job's telemetry summary lists
-/// every function that is mentioned but was never dispatched.</para>
+/// every function that is mentioned but was never dispatched. A function with a reason not to be
+/// run yet is in <see cref="FunctionDispatchCoverageGate.KnownGaps"/>, which this check shares.</para>
 /// </summary>
 public class RegistryCoverageInventoryTests
 {
 	[Test]
 	public async Task EveryRegisteredFunctionIsCalledBySomeTest()
 	{
-		await Assert.That(FunctionCoverage.NeverMentioned()).IsEmpty();
+		var unexplained = FunctionCoverage.NeverMentioned()
+			.Where(name => !FunctionDispatchCoverageGate.KnownGaps.ContainsKey(name))
+			.ToList();
+
+		await Assert.That(unexplained).IsEmpty();
 	}
 }
