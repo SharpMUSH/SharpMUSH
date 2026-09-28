@@ -7,6 +7,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
+using TUnit.Assertions.Enums;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -184,7 +185,7 @@ public class ScanCommandTests
 			"Matches on contents of this room:",
 			"Matches on carried objects:",
 			"Matches on objects in the Master Room:"
-		]);
+		], CollectionOrdering.Matching);
 	}
 
 	/// <summary>
@@ -202,7 +203,7 @@ public class ScanCommandTests
 		var (player, _, word) = await ScannerAsync("ScanSwitchHeading");
 
 		await Assert.That(await ScanOutputAsync(player, $"@scan/{@switch} {word} test"))
-			.IsEquivalentTo([heading]);
+			.IsEquivalentTo([heading], CollectionOrdering.Matching);
 	}
 
 	/// <summary>
@@ -277,7 +278,7 @@ public class ScanCommandTests
 			"Matches on carried objects:",
 			$"Matched self: {self}",
 			"Matches on objects in the Master Room:"
-		]);
+		], CollectionOrdering.Matching);
 	}
 
 	/// <summary>The <c>unparse_object</c> half of a match line: name, dbref and flag symbols.</summary>
