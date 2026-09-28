@@ -2474,10 +2474,13 @@
     <value>@NEWPASSWORD: /GENERATE switch cannot be used with other arguments.</value>
   </data>
   <data name="NewPasswordGeneratedFormat" xml:space="preserve">
-    <value>Generated password for {0}: {1}</value>
+    <value>Password for {0} changed to {1}.</value>
   </data>
   <data name="NewPasswordSetFormat" xml:space="preserve">
-    <value>Set new password for {0}: {1}</value>
+    <value>Password for {0} changed.</value>
+  </data>
+  <data name="NewPasswordChangedByFormat" xml:space="preserve">
+    <value>Your password has been changed by {0}.</value>
   </data>
 
   <!-- @purge -->

@@ -133,6 +133,7 @@ public partial class Commands
 					PasswordService.HashPassword(asPlayer.Object.DBRef.ToString(), generatedPassword)));
 
 			await NotifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordGeneratedFormat), executor, asPlayer.Object.Name, generatedPassword);
+			await NotifyService.NotifyLocalized(asPlayer.Object.DBRef, nameof(ErrorMessages.Notifications.NewPasswordChangedByFormat), executor, executor.Object().Name);
 
 			return new CallState(generatedPassword);
 		}
@@ -148,7 +149,8 @@ public partial class Commands
 
 		await Mediator.Send(new SetPlayerPasswordCommand(asPlayer, newHashedPassword));
 
-		await NotifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordSetFormat), executor, asPlayer.Object.Name, arg1);
+		await NotifyService.NotifyLocalized(executor.Object().DBRef, nameof(ErrorMessages.Notifications.NewPasswordSetFormat), executor, asPlayer.Object.Name);
+		await NotifyService.NotifyLocalized(asPlayer.Object.DBRef, nameof(ErrorMessages.Notifications.NewPasswordChangedByFormat), executor, executor.Object().Name);
 
 		return new CallState(arg1);
 	}

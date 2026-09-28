@@ -1238,9 +1238,11 @@ public static partial class ErrorMessages
 
 		public const string NewPasswordGenerateSwitchConflict = "@NEWPASSWORD: /GENERATE switch cannot be used with other arguments.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string NewPasswordGeneratedFormat = "Generated password for {0}: {1}";
+		public const string NewPasswordGeneratedFormat = "Password for {0} changed to {1}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string NewPasswordSetFormat = "Set new password for {0}: {1}";
+		public const string NewPasswordSetFormat = "Password for {0} changed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NewPasswordChangedByFormat = "Your password has been changed by {0}.";
 
 		public const string PurgeComplete = "Purge complete.";
 
