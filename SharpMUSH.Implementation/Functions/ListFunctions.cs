@@ -1546,20 +1546,17 @@ public partial class Functions
 		var list1 = args["0"].Message ?? MarkupText.Empty;
 		var list2 = args["1"].Message ?? MarkupText.Empty;
 
-		// PennMUSH: no lists, no work (before the delimiter is checked).
+		// PennMUSH: no lists, no work.
 		if (list1.Length == 0 && list2.Length == 0)
 		{
 			return CallState.Empty;
 		}
 
+		// Unlike PennMUSH, a delimiter may be longer than one character.
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
 		if (delimiter.Length == 0)
 		{
 			delimiter = MarkupText.Space;
-		}
-		else if (delimiter.EnumerateGraphemes().Take(2).Count() != 1)
-		{
-			return new CallState(ErrorMessages.Returns.SeparatorMustBeOneChar);
 		}
 
 		// With four arguments, a non-empty fourth is a sort type and an empty one is the
