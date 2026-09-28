@@ -112,6 +112,19 @@ file sealed class RosterFailsHandler : HttpMessageHandler
 }
 
 /// <summary>
+/// Answers everything but the scene list, which fails the way an unreachable scene store does. The
+/// Active Scenes tile used to read 0 here: <see cref="SceneService"/> turned any failure into an
+/// empty list.
+/// </summary>
+file sealed class ScenesFailHandler : HttpMessageHandler
+{
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+		Task.FromResult(request.RequestUri!.AbsolutePath.StartsWith("/api/scenes", StringComparison.Ordinal)
+			? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+			: new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<object>()) });
+}
+
+/// <summary>
 /// The "Players Online" tile must report who is connected — as people, one per character — rather
 /// than the size of the character roster or the number of open connections. And no tile may state
 /// a count it never received: a request that failed shows the unknown placeholder, not zero.
@@ -134,9 +147,7 @@ public class StatsWidgetTests : TrackingBunitContext
 			.AddSingleton(sp => new WikiService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				NullLogger<WikiService>.Instance))
-			.AddSingleton(sp => new SceneService(
-				sp.GetRequiredService<IHttpClientFactory>(),
-				NullLogger<SceneService>.Instance))
+			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>()))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
@@ -206,5 +217,20 @@ public class StatsWidgetTests : TrackingBunitContext
 		await Assert.That(TileValue(markup, "Characters")).IsEqualTo("—");
 		// And the dash is explained rather than left looking like a value still in flight.
 		await Assert.That(markup).Contains("WidUnavailable");
+	}
+
+	[TUnit.Core.Test]
+	public async Task AFailedSceneFetch_LeavesTheTileUnknown_RatherThanZero()
+	{
+		Wire(this, new ScenesFailHandler());
+
+		var cut = Render<StatsWidget>();
+		cut.WaitForAssertion(() =>
+		{
+			if (TileValue(cut.Markup, "WidPlayersOnline") == "—") throw new InvalidOperationException("stats not loaded yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(TileValue(cut.Markup, "WidActiveScenes")).IsEqualTo("—");
+		await Assert.That(cut.Markup).Contains("WidUnavailable");
 	}
 }

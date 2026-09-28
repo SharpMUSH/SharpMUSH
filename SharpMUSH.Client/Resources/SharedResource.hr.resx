@@ -1301,7 +1301,15 @@
     <comment>MT</comment>
   </data>
   <data name="GalleryUploadFailed" xml:space="preserve">
-    <value>Prijenos slike nije uspio.</value>
+    <value>Prijenos slike nije uspio: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryDeleteFailed" xml:space="preserve">
+    <value>Slika se nije mogla izbrisati: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GallerySetIconFailed" xml:space="preserve">
+    <value>Ikona se nije mogla postaviti: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="Help" xml:space="preserve">

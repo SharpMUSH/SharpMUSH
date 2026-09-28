@@ -29,31 +29,29 @@ namespace SharpMUSH.Client.Services;
 public static class ApiCall
 {
 	/// <param name="whenEmpty">What to say when the call succeeded and the body was <c>null</c>.</param>
-	public static async Task<ApiResult<T>> GetApiAsync<T>(this HttpClient http, string url, string whenEmpty)
-	{
-		try
-		{
-			return await ReadAsync<T>(await http.GetAsync(url), whenEmpty);
-		}
-		catch (Exception ex)
-		{
-			return ApiFailure.Transport(ex);
-		}
-	}
+	public static Task<ApiResult<T>> GetApiAsync<T>(this HttpClient http, string url, string whenEmpty) =>
+		ReadingAsync<T>(() => http.GetAsync(url), whenEmpty);
 
 	/// <summary>POSTs <paramref name="body"/> as JSON and reads a <typeparamref name="TResult"/> back.</summary>
-	public static async Task<ApiResult<TResult>> PostApiAsync<TBody, TResult>(
-		this HttpClient http, string url, TBody body, string whenEmpty)
-	{
-		try
-		{
-			return await ReadAsync<TResult>(await http.PostAsJsonAsync(url, body), whenEmpty);
-		}
-		catch (Exception ex)
-		{
-			return ApiFailure.Transport(ex);
-		}
-	}
+	public static Task<ApiResult<TResult>> PostApiAsync<TBody, TResult>(
+		this HttpClient http, string url, TBody body, string whenEmpty) =>
+		ReadingAsync<TResult>(() => http.PostAsJsonAsync(url, body), whenEmpty);
+
+	/// <summary>
+	/// POSTs content that is not JSON — a multipart upload — and reads a <typeparamref name="TResult"/> back.
+	/// </summary>
+	public static Task<ApiResult<TResult>> PostContentApiAsync<TResult>(
+		this HttpClient http, string url, HttpContent content, string whenEmpty) =>
+		ReadingAsync<TResult>(() => http.PostAsync(url, content), whenEmpty);
+
+	/// <summary>PUTs <paramref name="body"/> as JSON and reads a <typeparamref name="TResult"/> back.</summary>
+	public static Task<ApiResult<TResult>> PutApiAsync<TBody, TResult>(
+		this HttpClient http, string url, TBody body, string whenEmpty) =>
+		ReadingAsync<TResult>(() => http.PutAsJsonAsync(url, body), whenEmpty);
+
+	/// <summary>DELETEs where the server answers with what is left.</summary>
+	public static Task<ApiResult<TResult>> DeleteApiAsync<TResult>(this HttpClient http, string url, string whenEmpty) =>
+		ReadingAsync<TResult>(() => http.DeleteAsync(url), whenEmpty);
 
 	/// <summary>POSTs <paramref name="body"/> as JSON where the answer is only whether it worked.</summary>
 	public static async Task<ApiResult<Success>> PostApiAsync<TBody>(this HttpClient http, string url, TBody body) =>
@@ -74,6 +72,18 @@ public static class ApiCall
 			return response.IsSuccessStatusCode
 				? new Success()
 				: ApiFailure.FromStatus(response.StatusCode, await response.Content.ReadAsStringAsync());
+		}
+		catch (Exception ex)
+		{
+			return ApiFailure.Transport(ex);
+		}
+	}
+
+	private static async Task<ApiResult<T>> ReadingAsync<T>(Func<Task<HttpResponseMessage>> send, string whenEmpty)
+	{
+		try
+		{
+			return await ReadAsync<T>(await send(), whenEmpty);
 		}
 		catch (Exception ex)
 		{

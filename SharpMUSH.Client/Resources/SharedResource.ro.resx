@@ -1301,7 +1301,15 @@
     <comment>MT</comment>
   </data>
   <data name="GalleryUploadFailed" xml:space="preserve">
-    <value>Încărcarea imaginii a eșuat.</value>
+    <value>Încărcarea imaginii a eșuat: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryDeleteFailed" xml:space="preserve">
+    <value>Imaginea nu a putut fi ștearsă: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GallerySetIconFailed" xml:space="preserve">
+    <value>Pictograma nu a putut fi setată: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="Help" xml:space="preserve">

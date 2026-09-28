@@ -67,16 +67,3 @@ public sealed record ScenePoseView(
 
 	public DateTimeOffset CreatedAtUtc => DateTimeOffset.FromUnixTimeMilliseconds(CreatedAt);
 }
-
-/// <summary>Client-side projection of <c>SceneController.SceneMemberDto</c>.</summary>
-public sealed record SceneMemberView(
-	string SceneId,
-	string? MemberDbref,
-	string MemberName,
-	string Role,
-	string ShowAs,
-	bool IsCurrent,
-	long GrantedAt)
-{
-	public DateTimeOffset GrantedAtUtc => DateTimeOffset.FromUnixTimeMilliseconds(GrantedAt);
-}

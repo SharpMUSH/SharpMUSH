@@ -1301,7 +1301,15 @@
     <comment>MT</comment>
   </data>
   <data name="GalleryUploadFailed" xml:space="preserve">
-    <value>Не удалось загрузить изображение.</value>
+    <value>Не удалось загрузить изображение: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryDeleteFailed" xml:space="preserve">
+    <value>Не удалось удалить изображение: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GallerySetIconFailed" xml:space="preserve">
+    <value>Не удалось установить значок: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="Help" xml:space="preserve">

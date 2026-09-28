@@ -14,13 +14,17 @@
         @if (EffectiveCanEdit)
         {
             <MudFileUpload T="IBrowserFile" FilesChanged="UploadAsync"
-                           Accept="image/*" MaximumFileCount="1" MaxFileSize="10485760" />
+                           Accept="image/*" MaximumFileCount="1" MaxFileSize="GalleryService.MaxUploadBytes" />
         }
     </MudStack>
 
     @if (_loading)
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else if (_error is not null)
+    {
+        <MudText Typo="Typo.body2" Color="Color.Error" Class="character-gallery-error">@_error</MudText>
     }
     else if (_items.Count == 0)
     {
@@ -94,6 +98,9 @@
     private GalleryService.GalleryItem? _lightbox;
     private bool _loading = true;
     private bool _busy;
+
+    /// <summary>Why the gallery could not be read — which is not the same as it having no images.</summary>
+    private string? _error;
     private string? _resolvedName;
 
     protected override async Task OnParametersSetAsync()
@@ -105,7 +112,12 @@
         }
         _resolvedName = name;
         _loading = true;
-        _items = await Gallery.ListAsync(name);
+        var result = await Gallery.ListAsync(name);
+        (_items, _error) = result switch
+        {
+            List<GalleryService.GalleryItem> items => (items, (string?)null),
+            ApiFailure failure => ([], failure.Message),
+        };
         _loading = false;
     }
 
@@ -124,36 +136,42 @@
     private async Task UploadAsync(IBrowserFile? file)
     {
         if (file is null || _resolvedName is null) return;
-        _busy = true;
-        IReadOnlyList<GalleryService.GalleryItem>? updated;
-        try { updated = await Gallery.UploadAsync(_resolvedName, file); }
-        finally { _busy = false; }
-        if (updated is null)
-        {
-            Snackbar.Add(Loc["GalleryUploadFailed"], Severity.Error);
-            return;
-        }
-        _items = updated;
+        await WriteAsync(Gallery.UploadAsync(_resolvedName, file), "GalleryUploadFailed");
     }
 
     private async Task DeleteAsync(GalleryService.GalleryItem item)
     {
         if (_resolvedName is null) return;
-        _busy = true;
-        IReadOnlyList<GalleryService.GalleryItem>? updated;
-        try { updated = await Gallery.DeleteAsync(_resolvedName, item.AssetId); }
-        finally { _busy = false; }
-        if (updated is not null) { _items = updated; }
+        await WriteAsync(Gallery.DeleteAsync(_resolvedName, item.AssetId), "GalleryDeleteFailed");
     }
 
     private async Task SetIconAsync(GalleryService.GalleryItem item)
     {
         if (_resolvedName is null) return;
         var reordered = _items.Select(i => i with { IsIcon = i.AssetId == item.AssetId }).ToList();
+        await WriteAsync(Gallery.ReplaceAsync(_resolvedName, reordered), "GallerySetIconFailed");
+    }
+
+    /// <summary>
+    /// Every write answers with the gallery as the server now holds it. A refused delete or icon change
+    /// used to leave the page exactly as it was with nothing said, which reads as the click not landing.
+    /// </summary>
+    private async Task WriteAsync(Task<ApiResult<List<GalleryService.GalleryItem>>> write, string failedKey)
+    {
         _busy = true;
-        IReadOnlyList<GalleryService.GalleryItem>? updated;
-        try { updated = await Gallery.ReplaceAsync(_resolvedName, reordered); }
+        ApiResult<List<GalleryService.GalleryItem>> result;
+        try { result = await write; }
         finally { _busy = false; }
-        if (updated is not null) { _items = updated; }
+
+        switch (result)
+        {
+            case List<GalleryService.GalleryItem> updated:
+                _items = updated;
+                _error = null;
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc[failedKey, failure.Message], Severity.Error);
+                break;
+        }
     }
 }

@@ -20,6 +20,10 @@
             }
         </div>
     }
+    else if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="scene-list-error">@_error</MudAlert>
+    }
     else if (_scenes.Count == 0)
     {
         <EmptyState>@Loc["WidNoActiveScenes"]</EmptyState>
@@ -72,11 +76,17 @@
 
 @code {
     private IReadOnlyList<SceneSummary> _scenes = [];
+    private string? _error;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        _scenes = await SceneService.GetActiveScenesAsync();
+        var result = await SceneService.GetActiveScenesAsync();
+        (_scenes, _error) = result switch
+        {
+            IReadOnlyList<SceneSummary> scenes => (scenes, (string?)null),
+            ApiFailure failure => ([], failure.Message),
+        };
         _loading = false;
     }
 

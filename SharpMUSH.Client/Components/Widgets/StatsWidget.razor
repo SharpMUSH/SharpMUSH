@@ -36,11 +36,12 @@
     /// <summary>Which counts failed to load, so their dash can be explained rather than left ambiguous.</summary>
     private bool _charactersFailed;
     private bool _onlineFailed;
+    private bool _activeScenesFailed;
 
     private (string LabelKey, string Value, bool Failed)[] Tiles =>
     [
         ("WidPlayersOnline", _online?.ToString() ?? "—", _onlineFailed),
-        ("WidActiveScenes",  _activeScenes?.ToString() ?? "—", false),
+        ("WidActiveScenes",  _activeScenes?.ToString() ?? "—", _activeScenesFailed),
         ("RecentChanges",    _recent?.ToString() ?? "—", false),
         ("Characters",       _characters?.ToString() ?? "—", _charactersFailed),
     ];
@@ -53,11 +54,10 @@
         var recentTask = WikiService.GetRecentChangesAsync(10).AsTask();
         var charsTask = CharacterDirectory.ListAsync();
         var onlineTask = CharacterDirectory.ListOnlineAsync();
-        var scenesTask = SceneService.GetActiveScenesAsync().AsTask();
+        var scenesTask = SceneService.GetActiveScenesAsync();
         await Task.WhenAll(recentTask, charsTask, onlineTask, scenesTask);
 
         _recent = (await recentTask).Count;
-        _activeScenes = (await scenesTask).Count;
 
         // A tile that could not be fetched keeps the loading placeholder instead of printing 0:
         // "the game has no characters" and "the request never arrived" look identical as a count,
@@ -70,5 +70,7 @@
             ? online.Count
             : null;
         _onlineFailed = _online is null;
+        _activeScenes = await scenesTask is IReadOnlyList<SceneSummary> scenes ? scenes.Count : null;
+        _activeScenesFailed = _activeScenes is null;
     }
 }

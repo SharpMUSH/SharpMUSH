@@ -1301,7 +1301,15 @@
     <comment>MT</comment>
   </data>
   <data name="GalleryUploadFailed" xml:space="preserve">
-    <value>Bilduppladdningen misslyckades.</value>
+    <value>Bilduppladdningen misslyckades: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GalleryDeleteFailed" xml:space="preserve">
+    <value>Det gick inte att ta bort bilden: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="GallerySetIconFailed" xml:space="preserve">
+    <value>Det gick inte att ange ikonen: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="Help" xml:space="preserve">

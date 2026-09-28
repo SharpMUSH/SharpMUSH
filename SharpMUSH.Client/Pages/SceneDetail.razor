@@ -11,6 +11,16 @@
         <MudProgressLinear Indeterminate="true" />
     </div>
 }
+else if (_error is not null)
+{
+    <PageTitle>@Loc["RolScene"] — @Loc["AppTitle"]</PageTitle>
+    <div style="padding:var(--cpad);">
+        <MudAlert Severity="Severity.Error" Class="scene-load-error">@_error</MudAlert>
+        <MudButton Href="/scenes" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
+            @Loc["RolBackToScenes"]
+        </MudButton>
+    </div>
+}
 else if (_notFound)
 {
     <PageTitle>@Loc["RolScene"] — @Loc["NotFound"]</PageTitle>
@@ -66,7 +76,11 @@ else
         @{
             var visible = FilteredPoses();
         }
-        @if (visible.Count == 0)
+        @if (_posesError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="scene-poses-error">@_posesError</MudAlert>
+        }
+        else if (visible.Count == 0)
         {
             <EmptyState>@Loc["RolNoPoses"]</EmptyState>
         }
@@ -106,25 +120,43 @@ else
     private bool _loading = true;
     private bool _notFound;
 
+    /// <summary>Why the scene could not be read, for any failure but 404 — which is <see cref="_notFound"/>.</summary>
+    private string? _error;
+    private string? _posesError;
+
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
         _notFound = false;
+        _error = null;
+        _posesError = null;
         _poses = [];
         _allTags = [];
         _activeTag = null;
         _scene = null;
 
-        var scene = await SceneService.GetSceneAsync(Id);
-        if (scene is null)
+        switch (await SceneService.GetSceneAsync(Id))
         {
-            _notFound = true;
-            _loading = false;
-            return;
+            case SceneSummary scene:
+                _scene = scene;
+                break;
+            case ApiFailure { Kind: ApiFailureKind.NotFound }:
+                _notFound = true;
+                _loading = false;
+                return;
+            case ApiFailure failure:
+                _error = failure.Message;
+                _loading = false;
+                return;
         }
 
-        _scene = scene;
-        _poses = await SceneService.GetPosesAsync(Id);
+        var result = await SceneService.GetPosesAsync(Id);
+
+        (_poses, _posesError) = result switch
+        {
+            IReadOnlyList<ScenePoseView> poses => (poses, (string?)null),
+            ApiFailure failure => ([], failure.Message),
+        };
         RebuildTags();
         _loading = false;
     }

@@ -1,6 +1,4 @@
 using SharpMUSH.Client.Models;
-using System.Net.Http.Json;
-using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Client.Services;
 
@@ -10,8 +8,10 @@ namespace SharpMUSH.Client.Services;
 /// never writes scenes through this service: pose authoring happens via a normal
 /// game command (POSE/SAY/SEMIPOSE) sent on the GameHub connection.
 /// </summary>
-public class SceneService(IHttpClientFactory httpClientFactory, ILogger<SceneService> logger)
+public class SceneService(IHttpClientFactory httpClientFactory)
 {
+	private HttpClient Client => httpClientFactory.CreateClient("api");
+
 	// Mirror SceneController records; timestamps are long Unix-millis (deserialization contract).
 	private record SceneDto(
 		string Id,
@@ -50,137 +50,59 @@ public class SceneService(IHttpClientFactory httpClientFactory, ILogger<SceneSer
 		string? LastEditorDbref,
 		string? LastEditorName);
 
-	private record SceneMemberDto(
-		string SceneId,
-		string? MemberDbref,
-		string MemberName,
-		string Role,
-		string ShowAs,
-		bool IsCurrent,
-		long GrantedAt);
 
-	/// <summary>
-	/// Lists scenes by filter (active|recent|scheduled). Failures (network, server
-	/// error) return an empty list so the browse UI simply shows nothing.
-	/// </summary>
-	public async ValueTask<IReadOnlyList<SceneSummary>> ListScenesAsync(
-		string filter = "recent", int count = 50)
+	/// <summary>Lists scenes by filter (active|recent|scheduled).</summary>
+	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50)
 	{
-		try
+		var result = await Client.GetApiAsync<List<SceneDto>>(
+			$"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}", "The server returned no scene list.");
+
+		return result switch
 		{
-			var http = httpClientFactory.CreateClient("api");
-			var dtos = await http.GetFromJsonAsync<List<SceneDto>>(
-				$"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}");
-			return dtos?.Select(ToSummary).ToList() ?? [];
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "ListScenesAsync failed for filter={Filter}", filter);
-			return [];
-		}
+			List<SceneDto> dtos => (IReadOnlyList<SceneSummary>)[.. dtos.Select(ToSummary)],
+			ApiFailure failure => failure
+		};
 	}
 
 	/// <summary>Convenience: the currently running scenes.</summary>
-	public ValueTask<IReadOnlyList<SceneSummary>> GetActiveScenesAsync(int count = 50)
+	public Task<ApiResult<IReadOnlyList<SceneSummary>>> GetActiveScenesAsync(int count = 50)
 		=> ListScenesAsync("active", count);
 
 	/// <summary>Convenience: the most recent scenes (newest first).</summary>
-	public ValueTask<IReadOnlyList<SceneSummary>> GetRecentScenesAsync(int count = 50)
+	public Task<ApiResult<IReadOnlyList<SceneSummary>>> GetRecentScenesAsync(int count = 50)
 		=> ListScenesAsync("recent", count);
 
 	/// <summary>
-	/// Returns one scene, or null when it does not exist or the caller may not see it.
+	/// One scene. <see cref="ApiFailureKind.NotFound"/> covers both a scene that does not exist and one
+	/// the caller may not see: the server answers 404 to both so that private scene ids cannot be probed.
 	/// </summary>
-	public async ValueTask<SceneSummary?> GetSceneAsync(string id)
+	public async Task<ApiResult<SceneSummary>> GetSceneAsync(string id)
 	{
-		try
+		var result = await Client.GetApiAsync<SceneDto>($"api/scenes/{Uri.EscapeDataString(id)}", "The server returned no scene.");
+
+		return result switch
 		{
-			var http = httpClientFactory.CreateClient("api");
-			var dto = await http.GetFromJsonAsync<SceneDto>($"api/scenes/{Uri.EscapeDataString(id)}");
-			return dto is null ? null : ToSummary(dto);
-		}
-		catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-		{
-			return null;
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "GetSceneAsync failed for id={Id}", LogSanitizer.Sanitize(id));
-			return null;
-		}
+			SceneDto dto => ToSummary(dto),
+			ApiFailure failure => failure
+		};
 	}
 
 	/// <summary>
-	/// Returns the scene's poses in chain order (optionally only the last
-	/// <paramref name="count"/>). Failures return an empty list.
+	/// The scene's poses in chain order (optionally only the last <paramref name="count"/>).
 	/// </summary>
-	public async ValueTask<IReadOnlyList<ScenePoseView>> GetPosesAsync(string id, int? count = null)
+	public async Task<ApiResult<IReadOnlyList<ScenePoseView>>> GetPosesAsync(string id, int? count = null)
 	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var url = count is { } c
-				? $"api/scenes/{Uri.EscapeDataString(id)}/poses?count={c}"
-				: $"api/scenes/{Uri.EscapeDataString(id)}/poses";
-			var dtos = await http.GetFromJsonAsync<List<ScenePoseDto>>(url);
-			return dtos?.Select(ToPose).ToList() ?? [];
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "GetPosesAsync failed for id={Id}", LogSanitizer.Sanitize(id));
-			return [];
-		}
-	}
+		var url = count is { } c
+			? $"api/scenes/{Uri.EscapeDataString(id)}/poses?count={c}"
+			: $"api/scenes/{Uri.EscapeDataString(id)}/poses";
 
-	/// <summary>Returns the scene's members. Failures return an empty list.</summary>
-	public async ValueTask<IReadOnlyList<SceneMemberView>> GetMembersAsync(string id)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var dtos = await http.GetFromJsonAsync<List<SceneMemberDto>>(
-				$"api/scenes/{Uri.EscapeDataString(id)}/members");
-			return dtos?.Select(ToMember).ToList() ?? [];
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "GetMembersAsync failed for id={Id}", id);
-			return [];
-		}
-	}
+		var result = await Client.GetApiAsync<List<ScenePoseDto>>(url, "The server returned no poses.");
 
-	/// <summary>Returns the distinct display personas used in the scene. Failures return an empty list.</summary>
-	public async ValueTask<IReadOnlyList<string>> GetCastAsync(string id)
-	{
-		try
+		return result switch
 		{
-			var http = httpClientFactory.CreateClient("api");
-			var list = await http.GetFromJsonAsync<List<string>>(
-				$"api/scenes/{Uri.EscapeDataString(id)}/cast");
-			return list ?? [];
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "GetCastAsync failed for id={Id}", id);
-			return [];
-		}
-	}
-
-	/// <summary>Returns the distinct opaque pose tags across the scene. Failures return an empty list.</summary>
-	public async ValueTask<IReadOnlyList<string>> GetTagsAsync(string id)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var list = await http.GetFromJsonAsync<List<string>>(
-				$"api/scenes/{Uri.EscapeDataString(id)}/tags");
-			return list ?? [];
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "GetTagsAsync failed for id={Id}", id);
-			return [];
-		}
+			List<ScenePoseDto> dtos => (IReadOnlyList<ScenePoseView>)[.. dtos.Select(ToPose)],
+			ApiFailure failure => failure
+		};
 	}
 
 	private static SceneSummary ToSummary(SceneDto d) => new(
@@ -192,7 +114,4 @@ public class SceneService(IHttpClientFactory httpClientFactory, ILogger<SceneSer
 		d.Id, d.SceneId, d.AuthorDbref, d.AuthorName, d.ShowAsName, d.OriginDbref, d.OriginName,
 		d.Source, d.Tags ?? [], d.Meta ?? new Dictionary<string, string>(), d.CreatedAt, d.IsDeleted,
 		d.Content, d.Markup, d.EditCount, d.LastEditedAt, d.LastEditorDbref, d.LastEditorName);
-
-	private static SceneMemberView ToMember(SceneMemberDto d) => new(
-		d.SceneId, d.MemberDbref, d.MemberName, d.Role, d.ShowAs, d.IsCurrent, d.GrantedAt);
 }

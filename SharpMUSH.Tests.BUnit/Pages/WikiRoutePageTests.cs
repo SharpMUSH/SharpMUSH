@@ -149,9 +149,7 @@ file static class WikiServiceSetup
 				.AddSingleton(sp => new SchemaAppService(
 						sp.GetRequiredService<IHttpClientFactory>(),
 						NullLogger<SchemaAppService>.Instance))
-				.AddSingleton(sp => new GalleryService(
-						sp.GetRequiredService<IHttpClientFactory>(),
-						NullLogger<GalleryService>.Instance))
+				.AddSingleton(sp => new GalleryService(sp.GetRequiredService<IHttpClientFactory>()))
 				.AddSingleton(sp => new CharacterDirectoryService(
 						sp.GetRequiredService<IHttpClientFactory>(),
 						NullLogger<CharacterDirectoryService>.Instance))

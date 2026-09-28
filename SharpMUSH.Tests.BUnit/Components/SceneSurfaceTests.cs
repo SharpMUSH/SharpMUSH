@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
@@ -82,6 +81,14 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 
 	private int _activeListCalls;
 
+	/// <summary>
+	/// Paths the server fails with a 503 and an <c>{ "error": … }</c> body, as it does when the scene
+	/// store is unreachable. Settable mid-test, so a read can succeed and a later re-read fail.
+	/// </summary>
+	public HashSet<string> Failing { get; } = [];
+
+	public const string StoreDown = "The scene store did not answer.";
+
 	private const string SceneListWithNewScene = """
 	[
 	  {"id":"S1","status":"active","isPublic":true,"isTempRoom":false,"scheduledFor":null,
@@ -98,6 +105,14 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		var path = request.RequestUri!.AbsolutePath;
+		if (Failing.Contains(path))
+		{
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+			{
+				Content = new StringContent($$"""{"error":"{{StoreDown}}"}""", Encoding.UTF8, "application/json")
+			});
+		}
+
 		string? body = path switch
 		{
 			// Keyed on the ACTIVE list specifically: the page reads recent and active from this same
@@ -222,7 +237,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		Services
 			.AddMudServices()
 			.AddSingleton(factory)
-			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SceneService>.Instance))
+			.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>()))
 			.AddSingleton<IConnectionStateService>(_hub)
 			.AddSingleton<ISceneHubControl>(_hub)
 			.AddSingleton(_terminal)
@@ -682,5 +697,105 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await Task.Delay(TimeSpan.FromSeconds(3));
 
 		await _terminal.DidNotReceive().SendAsync("+scene/private");
+	}
+
+	/// <summary>
+	/// A 404 is the not-found card; any other failure is not. <see cref="SceneService"/> answered
+	/// <see langword="null"/> for both, so a scene store that was down told every player that the scene
+	/// they were in had stopped existing.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_WhenTheServerFails_SaysWhy_NotThatTheSceneIsGone()
+	{
+		_api.Failing.Add("/api/scenes/S1");
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+
+		cut.WaitForAssertion(() => cut.Find(".scene-load-error"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".scene-load-error").TextContent.Trim()).IsEqualTo(SceneSurfaceApiHandler.StoreDown);
+		await Assert.That(cut.Markup).DoesNotContain("RolSceneNotFound");
+	}
+
+	[TUnit.Core.Test]
+	public async Task SceneDetail_WhenTheServerFails_SaysWhy_NotThatTheSceneIsGone()
+	{
+		_api.Failing.Add("/api/scenes/S1");
+		var cut = Render<SceneDetail>(p => p.Add(c => c.Id, "S1"));
+
+		cut.WaitForAssertion(() => cut.Find(".scene-load-error"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".scene-load-error").TextContent.Trim()).IsEqualTo(SceneSurfaceApiHandler.StoreDown);
+		await Assert.That(cut.Markup).DoesNotContain("RolSceneNotFound");
+	}
+
+	/// <summary>
+	/// A move re-reads the whole chain. When that read failed, the page cleared the log and put nothing
+	/// back, so one dropped request emptied the scene a player was reading.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_AFailedReloadAfterAMove_KeepsThePosesOnScreen()
+	{
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("draws a blade"))
+				throw new InvalidOperationException("poses not loaded yet");
+		}, TimeSpan.FromSeconds(5));
+
+		_api.Failing.Add("/api/scenes/S1/poses");
+		await cut.InvokeAsync(() => _hub.RaiseScene(new SceneEventMessage(
+			SceneId: "S1",
+			EventType: "move",
+			ActorName: "Wizard",
+			PoseId: "P2",
+			Content: string.Empty,
+			Markup: string.Empty,
+			Tags: [],
+			Source: "pose",
+			Location: "The Tavern",
+			Timestamp: 1700000700000)));
+
+		cut.WaitForAssertion(() => cut.Find(".scene-poses-error"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Markup).Contains("draws a blade");
+		await Assert.That(cut.Markup).Contains("says calm down");
+		await Assert.That(cut.Find(".scene-poses-error").TextContent.Trim()).IsEqualTo(SceneSurfaceApiHandler.StoreDown);
+	}
+
+	/// <summary>An archive that did not answer is not an empty archive.</summary>
+	[TUnit.Core.Test]
+	public async Task Scenes_AFailedListIsNotAnEmptyArchive()
+	{
+		_api.Failing.Add("/api/scenes");
+		var cut = Render<Scenes>();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-list-error"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".scene-list-error").TextContent.Trim()).IsEqualTo(SceneSurfaceApiHandler.StoreDown);
+		await Assert.That(cut.Markup).DoesNotContain("ResNoScenesFound");
+	}
+
+	[TUnit.Core.Test]
+	public async Task ScenesActive_AFailedListIsNotAnEmptyList()
+	{
+		_api.Failing.Add("/api/scenes");
+		var cut = Render<ScenesActive>();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-list-error"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".scene-list-error").TextContent.Trim()).IsEqualTo(SceneSurfaceApiHandler.StoreDown);
+		await Assert.That(cut.Markup).DoesNotContain("WidNoActiveScenes");
+	}
+
+	[TUnit.Core.Test]
+	public async Task ActiveSceneWidget_AFailedListSaysWhy()
+	{
+		_api.Failing.Add("/api/scenes");
+		var cut = Render<ActiveSceneWidget>();
+
+		cut.WaitForAssertion(() => cut.Find(".active-scene-widget-error"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".active-scene-widget-error").TextContent.Trim()).IsEqualTo(SceneSurfaceApiHandler.StoreDown);
+		await Assert.That(cut.Markup).DoesNotContain("WidNoActiveScenes");
 	}
 }
