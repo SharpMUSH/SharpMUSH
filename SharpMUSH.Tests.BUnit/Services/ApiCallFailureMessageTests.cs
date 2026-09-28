@@ -29,15 +29,8 @@ public class ApiCallFailureMessageTests
 			Content = new StringContent(body, Encoding.UTF8, mediaType)
 		})).CreateClient("api");
 
-	private static async Task<ApiFailure> FailureOf(HttpClient http)
-	{
-		var result = await http.PostApiAsync("api/anything", new { });
-		return result switch
-		{
-			ApiFailure failure => failure,
-			_ => throw new InvalidOperationException("Expected the call to fail.")
-		};
-	}
+	private static async Task<ApiFailure> FailureOf(HttpClient http) =>
+		(await http.PostApiAsync("api/anything", new { })).Expect<ApiFailure>();
 
 	[Test]
 	public async Task AnErrorObjectIsUnwrappedToItsSentence()
@@ -117,6 +110,6 @@ public class ApiCallFailureMessageTests
 
 		var result = await http.PostApiAsync("api/anything", new { });
 
-		await Assert.That(result is Success).IsTrue();
+		await Assert.That(result.Expect<Success>()).IsEqualTo(new Success());
 	}
 }

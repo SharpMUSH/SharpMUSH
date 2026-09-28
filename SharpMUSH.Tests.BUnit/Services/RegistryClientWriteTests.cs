@@ -36,7 +36,7 @@ public class RegistryClientWriteTests
 
 		var result = await roles.AssignAsync("accounts/42", "bulders");
 
-		await Assert.That(result is ApiFailure { Message: "Unknown role: bulders" }).IsTrue();
+		await Assert.That(result.Expect<ApiFailure>().Message).IsEqualTo("Unknown role: bulders");
 		await Assert.That(wire.LastRequest!.Method).IsEqualTo(HttpMethod.Post);
 		await Assert.That(wire.LastRequest!.RequestUri!.AbsolutePath)
 			.IsEqualTo("/api/roles/account/accounts%2F42/bulders");
@@ -49,7 +49,7 @@ public class RegistryClientWriteTests
 
 		var result = await roles.RemoveAsync("accounts/42", "builder");
 
-		await Assert.That(result is Success).IsTrue();
+		await Assert.That(result.Expect<Success>()).IsEqualTo(new Success());
 		await Assert.That(wire.LastRequest!.Method).IsEqualTo(HttpMethod.Delete);
 	}
 
@@ -60,7 +60,8 @@ public class RegistryClientWriteTests
 
 		var result = await apps.DeleteAsync("chargen");
 
-		await Assert.That(result is ApiFailure { Kind: ApiFailureKind.Forbidden, Message: "Permission denied." })
-			.IsTrue();
+		var failure = result.Expect<ApiFailure>();
+		await Assert.That(failure.Kind).IsEqualTo(ApiFailureKind.Forbidden);
+		await Assert.That(failure.Message).IsEqualTo("Permission denied.");
 	}
 }

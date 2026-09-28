@@ -26,6 +26,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Expect<T>(), the union-case binding AGENTS.md prescribes for tests. Linked rather than
+         referenced: Tests.Infrastructure brings the database, socket server and container stack. -->
+    <Compile Include="..\SharpMUSH.Tests.Infrastructure\UnionExpectations.cs" Link="UnionExpectations.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Inputs for PortalSurfacesTests, which cross-checks the two files that decide what the
          per-locale localization gate covers: the key-prefix -> surface map in the i18n tooling, and
          the client's SatelliteResourceLanguages. Copied rather than located by walking up from the
