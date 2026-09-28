@@ -1,3 +1,4 @@
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -72,133 +73,52 @@ public partial class Commands
 		);
 	}
 
+	/// <remarks>
+	/// PennMUSH <c>do_chzone</c> (<c>src/set.c:373-489</c>), which <c>do_chzoneall</c> calls once per
+	/// object (<c>src/wiz.c:1046-1054</c>), so the whole body lives in
+	/// <see cref="ZoneHelpers.ChangeZoneAsync"/> and <c>@CHZONEALL</c> reaches it too.
+	/// <para><c>MinArgs = 1</c>: an absent or empty right-hand side is <c>none</c>, as it is in
+	/// <c>do_chzone</c> (<c>src/set.c:384</c>).</para>
+	/// </remarks>
 	[SharpCommand(Name = "@CHZONE", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
-		MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "zone"])]
+		MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "zone"])]
 	public async ValueTask<Option<CallState>> ChangeZone(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message!.ToPlainText();
-		var zoneName = args["1"].Message!.ToPlainText();
+		var zoneName = args.TryGetValue("1", out var zoneArg) ? zoneArg.Message!.ToPlainText() : string.Empty;
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
-			async obj =>
-			{
-				if (!await PermissionService.Controls(executor, obj))
-				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
-				}
-
-				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
-				{
-					await Mediator.Send(new UnsetObjectZoneCommand(obj));
-					await NotifyService.Notify(executor, "Zone cleared.", executor);
-					return CallState.Empty;
-				}
-
-				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
+			async obj => zoneName.Length == 0 || zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase)
+				? Reported(await ChangeZoneAsync(parser, executor, obj, new AnyOptionalSharpObject(new None()), preserve,
+					noisy: true))
+				: await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 					executor, executor, zoneName, LocateFlags.All,
-					async zoneObj =>
-					{
-						// PennMUSH do_chzone (src/set.c:408-420) gates this on
-						// `has_lock && eval_lock_with(...)`, with has_lock computed as
-						// `getlock(zone, Chzone_Lock) != TRUE_BOOLEXP` and the comment "Note that an
-						// object with no chzone-lock isn't valid". An unset lock evaluates #TRUE, so
-						// asking only for the verdict hands every never-zone-locked object to every
-						// mortal as a zone. The lock has to be *present* before its verdict counts.
-						if (!await PermissionService.Controls(executor, zoneObj))
-						{
-							var zoneLock = await LockService.LookupAsync(zoneObj, nameof(LockType.ChZone), ExecutionBudget.CurrentToken);
-							if (zoneLock is not ResolvedLock resolved ||
-								!await LockService.Evaluate(resolved.Data.LockString, zoneObj, executor))
-							{
-								// Penn runs fail_lock() when the lock exists and refused, and a bare
-								// notify when there was no lock to fail.
-								if (zoneLock is ResolvedLock)
-								{
-									await DidItService.FailLockLocalized(parser, executor, zoneObj, LockType.ChZone,
-										new LocalizedNotification(nameof(ErrorMessages.Notifications.PermissionDeniedCannotZoneTo)));
-									return new CallState(ErrorMessages.Returns.PermissionDenied);
-								}
-
-								return await NotifyService.NotifyAndReturn(
-										executor.Object().DBRef,
-										errorReturn: ErrorMessages.Returns.PermissionDenied,
-										notifyMessage: ErrorMessages.Notifications.PermissionDeniedCannotZoneTo,
-										shouldNotify: true);
-							}
-						}
-
-						// Check for cycles before setting the zone
-						if (!await HelperFunctions.SafeToAddZone(Mediator, Database, obj, zoneObj))
-						{
-							return await NotifyService.NotifyAndReturn(
-								executor.Object().DBRef,
-								errorReturn: ErrorMessages.Returns.ZoneLoop,
-								notifyMessage: ErrorMessages.Notifications.CantMakeCircularZones,
-								shouldNotify: true);
-						}
-
-						// Clear privileged flags and powers unless /preserve is used.
-						//
-						// Ahead of the zone change, and not after it as PennMUSH's do_chzone (src/set.c:373)
-						// writes it: PennMUSH strips with clear_flag_internal() and destroy_flag_bitmask(),
-						// which ask nobody's permission, so its one controls() check above is the whole
-						// authorization. These go through ManipulateSharpObjectService, which checks Controls
-						// itself — and Controls reads the object's *current* zone (PermissionService.Controls,
-						// Zone Master Object branch). Once the zone has moved, an executor who held the object
-						// only through the zone it is leaving no longer controls it, the strip is refused, and
-						// @CHZONE reports "Zone changed." over an object that kept every power. Running the
-						// strip first is what keeps the authorization checked at the top of this command the
-						// one that governs it. Nothing below can fail, so the observable order is PennMUSH's.
-						if (!preserve && !obj.IsPlayer)
-						{
-							if (await obj.HasFlag("WIZARD"))
-							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
-							}
-							if (await obj.HasFlag("ROYALTY"))
-							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
-							}
-							if (await obj.HasFlag("TRUST"))
-							{
-								await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!TRUST", false);
-							}
-
-							// Same clearing @CHZONEALL uses: it materializes the collection before
-							// unsetting and publishes ObjectFlagChangedNotification per power, which
-							// the hand-rolled loop here did not.
-							await ManipulateSharpObjectService.ClearAllPowers(executor, obj, false);
-						}
-
-						await Mediator.Send(new SetObjectZoneCommand(obj, zoneObj));
-
-						// PennMUSH check_zone_lock (src/lock.c:962): a zone that has never been
-						// zone-locked gets `=me` installed on it, written as GOD. It is a system
-						// write on purpose — the executor who most needs it is the one who reached
-						// this zone through its lock rather than through control, and so cannot
-						// write to it.
-						if (!zoneObj.Object().Locks.ContainsKey(nameof(LockType.ChZone)))
-						{
-							await LockService.SetSystemAsync(zoneObj, nameof(LockType.ChZone),
-								$"=#{zoneObj.Object().DBRef.Number}", ExecutionBudget.CurrentToken);
-						}
-
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneChanged), executor);
-						return CallState.Empty;
-					}
-				);
-			}
+					async zoneObj => Reported(await ChangeZoneAsync(parser, executor, obj,
+						new AnyOptionalSharpObject(zoneObj), preserve, noisy: true)))
 		);
 	}
+
+	/// <summary>Binds this command instance's services to <see cref="ZoneHelpers.ChangeZoneAsync"/>.</summary>
+	private ValueTask<Result<Success>> ChangeZoneAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject target, AnyOptionalSharpObject zone, bool preserve, bool noisy)
+		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, Database, NotifyService, PermissionService, LockService,
+			DidItService, ManipulateSharpObjectService, executor, target, zone, preserve, noisy);
+
+	/// <summary>
+	/// <c>do_chzone</c> reports its own refusals and returns 0; the command turns that into the error
+	/// return softcode sees.
+	/// </summary>
+	private static CallState Reported(Result<Success> changed)
+		=> changed switch
+		{
+			Success => CallState.Empty,
+			Error<string> refused => new CallState(refused.Value)
+		};
 
 	[SharpCommand(Name = "@CHOWNALL", Switches = ["PRESERVE", "THINGS", "ROOMS", "EXITS"],
 		Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD", MinArgs = 1, MaxArgs = 2, ParameterNames = ["old-owner", "new-owner"])]
@@ -302,15 +222,22 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
+	/// <remarks>
+	/// PennMUSH <c>do_chzoneall</c> (<c>src/wiz.c:1015-1056</c>) matches the owner and the zone once,
+	/// then calls <c>do_chzone</c> per object with <c>noisy</c> off — "This keeps consistency on things
+	/// like flag resetting, etc...". <see cref="ZoneHelpers.ChangeZoneAsync"/> is that call, so the
+	/// destination's <c>@lock/chzone</c>, the cycle walk, <c>check_zone_lock</c>'s default lock and the
+	/// already-in-that-zone skip all apply here as they do to <c>@CHZONE</c>.
+	/// </remarks>
 	[SharpCommand(Name = "@CHZONEALL", Switches = ["PRESERVE"], Behavior = CB.Default | CB.EqSplit, CommandLock = "FLAG^WIZARD",
-		MinArgs = 2, MaxArgs = 2, ParameterNames = ["old-zone", "new-zone"])]
+		MinArgs = 1, MaxArgs = 2, ParameterNames = ["old-zone", "new-zone"])]
 	public async ValueTask<Option<CallState>> ChangeZoneAll(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var playerName = args["0"].Message!.ToPlainText();
-		var zoneName = args["1"].Message!.ToPlainText();
+		var zoneName = args.TryGetValue("1", out var zoneArg) ? zoneArg.Message!.ToPlainText() : string.Empty;
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
 		// A player by name, so MAT_PMATCH: MAT_EVERYTHING carries MAT_PLAYER, which only answers to a
@@ -329,74 +256,57 @@ public partial class Commands
 						shouldNotify: true);
 				}
 
+				// wiz.c:1032-1035: unlike @CHZONE, an empty right-hand side here is a usage error and not
+				// "none" — only the literal word unzones.
+				if (zoneName.Length == 0)
+				{
+					return await NotifyService.NotifyAndReturn(
+						executor.Object().DBRef,
+						errorReturn: ErrorMessages.Returns.MissingArguments,
+						notifyMessage: ErrorMessages.Notifications.NoZoneSpecified,
+						shouldNotify: true);
+				}
+
 				if (zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase))
 				{
-					var allObjects = Mediator.CreateStream(new GetAllTypedObjectsQuery())!;
-					var count = 0;
-
-					await foreach (var obj in allObjects)
-					{
-						var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
-						if (objOwner.Object.DBRef.Number == player.Object().DBRef.Number)
-						{
-							// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
-							await Mediator.Send(new UnsetObjectZoneCommand(obj));
-							count++;
-						}
-					}
-
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZonesClearedForOwnerFormat), executor, count, player.Object().Name);
-					return CallState.Empty;
+					return await ReZoneOwnedAsync(parser, executor, player, new AnyOptionalSharpObject(new None()),
+						preserve);
 				}
 
 				return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 					executor, executor, zoneName, LocateFlags.All,
-					async zoneObj =>
-					{
-						var allObjects = Mediator.CreateStream(new GetAllTypedObjectsQuery())!;
-						var count = 0;
-
-						await foreach (var obj in allObjects)
-						{
-							var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
-							if (objOwner.Object.DBRef.Number == player.Object().DBRef.Number)
-							{
-								// obj is already AnySharpObject — no secondary GetObjectNodeQuery needed
-
-								if (!await HelperFunctions.SafeToAddZone(Mediator, Database, obj, zoneObj))
-								{
-									continue;
-								}
-
-								await Mediator.Send(new SetObjectZoneCommand(obj, zoneObj));
-
-								if (!preserve && !obj.IsPlayer)
-								{
-									if (await obj.HasFlag("WIZARD"))
-									{
-										await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!WIZARD", false);
-									}
-									if (await obj.HasFlag("ROYALTY"))
-									{
-										await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!ROYALTY", false);
-									}
-									if (await obj.HasFlag("TRUST"))
-									{
-										await ManipulateSharpObjectService.SetOrUnsetFlag(executor, obj, "!TRUST", false);
-									}
-
-									await ManipulateSharpObjectService.ClearAllPowers(executor, obj, false);
-								}
-
-								count++;
-							}
-						}
-
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ZoneSetForOwnerFormat), executor, zoneObj.Object().Name, count, player.Object().Name);
-						return CallState.Empty;
-					}
+					async zoneObj => await ReZoneOwnedAsync(parser, executor, player,
+						new AnyOptionalSharpObject(zoneObj), preserve)
 				);
 			}
 		);
+	}
+
+	/// <summary>
+	/// <c>do_chzoneall</c>'s loop (<c>src/wiz.c:1046-1055</c>): every object the owner owns goes through
+	/// <c>do_chzone</c>, and the count is how many of those returned 1.
+	/// </summary>
+	private async ValueTask<CallState> ReZoneOwnedAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		AnySharpObject owner, AnyOptionalSharpObject zone, bool preserve)
+	{
+		var count = 0;
+
+		await foreach (var obj in Mediator.CreateStream(new GetAllTypedObjectsQuery()))
+		{
+			var objOwner = await obj.Object().Owner.WithCancellation(CancellationToken.None);
+			if (objOwner.Object.DBRef.Number != owner.Object().DBRef.Number)
+			{
+				continue;
+			}
+
+			if (await ChangeZoneAsync(parser, executor, obj, zone, preserve, noisy: false) is Success)
+			{
+				count++;
+			}
+		}
+
+		await NotifyService.NotifyLocalized(executor,
+			nameof(ErrorMessages.Notifications.ZoneChangedForObjectsFormat), executor, count);
+		return CallState.Empty;
 	}
 }

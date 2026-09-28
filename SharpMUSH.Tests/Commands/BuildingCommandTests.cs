@@ -1475,4 +1475,73 @@ public class BuildingCommandTests
 		await Assert.That(await DestinationOf(exitDbRef)).IsEqualTo(destination);
 		await Assert.That(await OwnerOf(exitDbRef)).IsEqualTo($"#{owner.DbRef.Number}");
 	}
+
+	/// <summary>
+	/// <c>do_link</c> with no destination is <c>do_unlink</c> (<c>src/create.c:321-324</c>) — checked
+	/// before it matches the object at all — and it returns 0 whether or not the unlink went through.
+	/// SharpMUSH's <c>@LINK</c> declared <c>MinArgs = 2</c>, so the fallback was unreachable and
+	/// <c>@link foo=</c> answered "expects at least 2 arguments".
+	/// </summary>
+	[Test]
+	public async ValueTask LinkWithNoDestinationUnlinksTheExit()
+	{
+		var exitDbRef = await UnlinkedExit("LinkUnlinkFallbackExit");
+		var destination = await LinkableRoom("LinkUnlinkFallbackRoom");
+
+		await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@link {exitDbRef}={destination}"));
+		await Assert.That(await DestinationOf(exitDbRef)).IsEqualTo(destination);
+
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@link {exitDbRef}="));
+
+		await Assert.That(await DestinationOf(exitDbRef)).IsNull();
+	}
+
+	/// <summary>
+	/// <c>fun_link</c> is <c>safe_integer(do_link(...))</c> (<c>src/fundb.c:2236</c>), so
+	/// <c>link(&lt;exit&gt;,)</c> reaches the same <c>do_unlink</c> fallback and still reports failure.
+	/// SharpMUSH's copy tried to match the empty string as a destination instead.
+	/// </summary>
+	[Test]
+	public async ValueTask LinkFunctionWithNoDestinationUnlinksTheExit()
+	{
+		var exitDbRef = await UnlinkedExit("LinkFnUnlinkFallbackExit");
+		var destination = await LinkableRoom("LinkFnUnlinkFallbackRoom");
+
+		await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@link {exitDbRef}={destination}"));
+		await Assert.That(await DestinationOf(exitDbRef)).IsEqualTo(destination);
+
+		var unlinked = await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"think link(#{exitDbRef.Number},)"));
+
+		await Assert.That(unlinked.Message!.ToPlainText().Trim())
+			.IsEqualTo(ErrorMessages.Returns.MissingArguments);
+		await Assert.That(await DestinationOf(exitDbRef)).IsNull();
+	}
+
+	/// <summary>
+	/// <c>do_unlink</c> refuses an object it does not control (<c>src/create.c:267</c>), so the fallback
+	/// cannot be used to strip an exit someone else owns.
+	/// </summary>
+	[Test]
+	public async ValueTask LinkWithNoDestinationStillNeedsControlOfTheExit()
+	{
+		var owner = await CreatePlayer("UnlinkFallbackOwner");
+		var stranger = await CreatePlayer("UnlinkFallbackStranger");
+
+		var exitDbRef = await UnlinkedExit("UnlinkFallbackExit");
+		var destination = await LinkableRoom("UnlinkFallbackRoom");
+		await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@link {exitDbRef}={destination}"));
+		await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@chown {exitDbRef}=#{owner.DbRef.Number}"));
+
+		var refused = await Parser.CommandParse(stranger.Handle, ConnectionService,
+			MarkupText.Plain($"think link(#{exitDbRef.Number},)"));
+
+		await Assert.That(refused.Message!.ToPlainText().Trim())
+			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await DestinationOf(exitDbRef)).IsEqualTo(destination);
+	}
 }
