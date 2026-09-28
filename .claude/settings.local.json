@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/home/grave/RiderProjects/SharpMUSH/.paperclip/worktrees/GRA-99-960-sweep-building-core-create-dig-open-link-clone-functions-share-the-command-implementation/scripts/paperclip-issue-update.sh:*)",
+      "Bash(/home/grave/RiderProjects/SharpMUSH/.paperclip/worktrees/GRA-99-960-sweep-building-core-create-dig-open-link-clone-functions-share-the-command-implementation/scripts/paperclip:*)",
+      "Bash(curl:*)",
+      "Bash(env)",
+      "Bash(env:*)"
+    ],
+    "additionalDirectories": [
+      "/home/grave/.paperclip/instances/default/companies/97e76bf9-f8c3-491e-add3-125574054c40",
+      "/home/grave/.paperclip/instances/default/companies/97e76bf9-f8c3-491e-add3-125574054c40/acp-engine/agents/b48ebde0-bf8a-44c2-b5b9-b50ab12e8fe2",
+      "/home/grave/.paperclip/instances/default/workspaces/b48ebde0-bf8a-44c2-b5b9-b50ab12e8fe2"
+    ],
+    "defaultMode": "default"
+  }
+}

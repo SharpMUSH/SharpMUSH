@@ -1,9 +1,12 @@
 using Mediator;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Common;
@@ -44,6 +47,7 @@ public static class ZoneHelpers
 		ILockService lockService,
 		IDidItService didItService,
 		IManipulateSharpObjectService manipulateSharpObjectService,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
 		AnySharpObject executor,
 		AnySharpObject target,
 		AnyOptionalSharpObject zone,
@@ -85,10 +89,22 @@ public static class ZoneHelpers
 		}
 
 		// set.c:470-471: a non-wizard's /preserve is discarded rather than refused, so the flags and
-		// powers come off anyway.
+		// powers come off anyway. Hoisted above check_zone_lock because the warnings at :477-482 read it.
 		if (preserve && !await executor.IsWizard())
 		{
 			preserve = false;
+		}
+
+		// set.c:449-450.
+		await CheckZoneLockAsync(mediator, notifyService, permissionService, lockService, configuration, executor,
+			destination, noisy);
+
+		// set.c:452-456. Hasprivs(Owner(thing)), so a mortal's object owned by nobody privileged is quiet.
+		var owner = new AnySharpObject(await target.Object().Owner.WithCancellation(CancellationToken.None));
+		if (noisy && !target.IsPlayer && await owner.IsPriv())
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChzoningAdminOwnedObject),
+				executor);
 		}
 
 		// set.c:472-482, but ahead of the zone change rather than after it.
@@ -105,18 +121,110 @@ public static class ZoneHelpers
 		{
 			await StripPrivilegeAsync(manipulateSharpObjectService, executor, target);
 		}
-
-		// check_zone_lock (src/lock.c:962): a zone that has never been zone-locked gets `=me` installed
-		// on it, written as GOD. It is a system write on purpose — the executor who most needs it is the
-		// one who reached this zone through its lock rather than through control, and so cannot write to
-		// it.
-		if (!destination.Object().Locks.ContainsKey(nameof(LockType.ChZone)))
+		else if (noisy)
 		{
-			await lockService.SetSystemAsync(destination, nameof(LockType.ChZone),
-				$"=#{destination.Object().DBRef.Number}", ExecutionBudget.CurrentToken);
+			// set.c:477-482: the object keeps what the strip would have taken, so say what it kept.
+			await WarnAboutKeptPrivilegeAsync(notifyService, executor, target);
 		}
 
 		return Written(await manipulateSharpObjectService.SetZone(executor, target, destination, noisy));
+	}
+
+	/// <summary>
+	/// PennMUSH <c>check_zone_lock</c> (<c>src/lock.c:962-990</c>): a zone that has never been
+	/// zone-locked gets <c>=me</c> installed on it, and one that has gets looked over for a lock that
+	/// gates nothing.
+	/// </summary>
+	/// <remarks>
+	/// The lock is the <b>Zone</b> lock, not the Chzone lock <c>do_chzone</c>'s destination gate reads.
+	/// They are two locks with two jobs: Chzone says who may zone an object <em>to</em> this one
+	/// (<c>src/set.c:409</c>), while Zone is what hands control of a zoned object to whoever passes it
+	/// (<c>src/predicat.c:409</c>). Installing the default on Chzone left the control lock open and shut
+	/// the destination gate against everyone but the zone itself.
+	/// </remarks>
+	private static async ValueTask CheckZoneLockAsync(
+		IMediator mediator,
+		INotifyService notifyService,
+		IPermissionService permissionService,
+		ILockService lockService,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
+		AnySharpObject executor,
+		AnySharpObject destination,
+		bool noisy)
+	{
+		if (!destination.Object().Locks.ContainsKey(nameof(LockType.Zone)))
+		{
+			// lock.c:965-967, written as GOD on purpose — the executor who most needs the lock installed is
+			// the one who reached this zone through a lock rather than through control, and so cannot write
+			// to it.
+			await lockService.SetSystemAsync(destination, nameof(LockType.Zone),
+				$"=#{destination.Object().DBRef.Number}", ExecutionBudget.CurrentToken);
+
+			if (noisy)
+			{
+				await NotifyAboutZoneAsync(notifyService, permissionService, executor, destination,
+					nameof(ErrorMessages.Notifications.ZoneAutomaticallyLockedFormat));
+			}
+
+			return;
+		}
+
+		// lock.c:973-974.
+		if (!noisy)
+		{
+			return;
+		}
+
+		// lock.c:975: the zone's Zone lock evaluated against the executor's *location*, which is the
+		// cheapest thing that is not the executor and that a lock written as `=player` will not admit.
+		var location = (await executor.Where()).WithExitOption();
+		if (!await lockService.Evaluate(LockType.Zone, destination, location))
+		{
+			return;
+		}
+
+		// lock.c:976-978: "Does #0 and #2 pass it? If so, probably trivial elock".
+		var playerStart = await RoomAsync(mediator, configuration.CurrentValue.Database.PlayerStart);
+		var masterRoom = await RoomAsync(mediator, configuration.CurrentValue.Database.MasterRoom);
+		var trivial = playerStart is AnySharpObject start && await lockService.Evaluate(LockType.Zone, destination, start)
+			&& masterRoom is AnySharpObject master && await lockService.Evaluate(LockType.Zone, destination, master);
+
+		await NotifyAboutZoneAsync(notifyService, permissionService, executor, destination,
+			trivial
+				? nameof(ErrorMessages.Notifications.ZoneShouldHaveMoreSecureLockFormat)
+				: nameof(ErrorMessages.Notifications.ZoneMayHaveLooseLockFormat));
+	}
+
+	/// <summary>One of <c>check_zone_lock</c>'s three notices, all of which name the zone by <c>unparse_object</c>.</summary>
+	private static async ValueTask NotifyAboutZoneAsync(INotifyService notifyService,
+		IPermissionService permissionService, AnySharpObject executor, AnySharpObject destination, string key)
+		=> await notifyService.NotifyLocalized(executor, key, executor,
+			await MessageFormatting.UnparseObjectAsync(permissionService, executor, destination));
+
+	/// <summary><c>PLAYER_START</c> and <c>MASTER_ROOM</c>, which a world need not actually hold.</summary>
+	private static async ValueTask<AnyOptionalSharpObject> RoomAsync(IMediator mediator, uint dbref)
+		=> await mediator.Send(new GetObjectNodeQuery(new DBRef(Convert.ToInt32(dbref))));
+
+	/// <summary>
+	/// <c>do_chzone</c>'s two warnings for a target whose privileges survive the change
+	/// (<c>src/set.c:477-482</c>) — because <c>/preserve</c> kept them, or because the target is a
+	/// player and the strip never applied to one.
+	/// </summary>
+	private static async ValueTask WarnAboutKeptPrivilegeAsync(INotifyService notifyService, AnySharpObject executor,
+		AnySharpObject target)
+	{
+		if (await target.IsPriv())
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChzoningPrivilegedPlayer),
+				executor);
+		}
+
+		// Inherit(thing) is the TRUST flag (src/flags.c).
+		if (await target.HasFlag("TRUST"))
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChzoningTrustPlayer),
+				executor);
+		}
 	}
 
 	/// <summary><c>Zone(thing) == zone</c> (<c>src/set.c:392</c>), for both a real zone and none.</summary>

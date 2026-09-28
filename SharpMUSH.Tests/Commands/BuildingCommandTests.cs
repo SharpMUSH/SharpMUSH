@@ -1521,8 +1521,11 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
-	/// <c>do_unlink</c> refuses an object it does not control (<c>src/create.c:267</c>), so the fallback
-	/// cannot be used to strip an exit someone else owns.
+	/// <c>do_unlink</c> adds <c>MAT_CONTROL</c> to its match for anyone who is not a wizard
+	/// (<c>src/create.c:256-258</c>), so an exit someone else owns never resolves and the fallback
+	/// cannot be used to strip it. The match is silent, which is why the answer is "Unlink what?" and
+	/// not the <c>controls()</c> refusal below it — that arm is for a wizard, who controls everything
+	/// the match could have handed back.
 	/// </summary>
 	[Test]
 	public async ValueTask LinkWithNoDestinationStillNeedsControlOfTheExit()
@@ -1541,7 +1544,59 @@ public class BuildingCommandTests
 			MarkupText.Plain($"think link(#{exitDbRef.Number},)"));
 
 		await Assert.That(refused.Message!.ToPlainText().Trim())
-			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+			.IsEqualTo(ErrorMessages.Returns.NoMatch);
 		await Assert.That(await DestinationOf(exitDbRef)).IsEqualTo(destination);
+
+		// Pattern C: `stranger` is unique to this test, so the receiver pins the call.
+		await NotifyService
+			.Received(1)
+			.NotifyAndReturn(stranger.DbRef, ErrorMessages.Returns.NoMatch,
+				ErrorMessages.Notifications.UnlinkWhat, Arg.Any<bool>());
+	}
+
+	/// <summary>
+	/// <c>do_unlink</c> matches <c>MAT_EXIT | MAT_HERE | MAT_ABSOLUTE</c> (<c>src/create.c:254</c>) —
+	/// no MAT_NEIGHBOR, no MAT_POSSESSION, no MAT_PLAYER. A thing standing in the room is not something
+	/// <c>@unlink</c> can name, and because the match is silent the answer is "Unlink what?" rather than
+	/// the locator's "I can't see that here." Matching with <see cref="LocateFlags.All"/> resolved it
+	/// and then refused it as the wrong type.
+	/// </summary>
+	[Test]
+	public async ValueTask UnlinkWillNotMatchANeighbourByName()
+	{
+		var thingName = TestIsolationHelpers.GenerateUniqueName("UnlinkNeighbour");
+		await TestIsolationHelpers.CreateObjectCommandAsync(Parser, ConnectionService, thingName, Actor.Handle);
+
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@unlink {thingName}"));
+
+		// Pattern C: Actor is created fresh per test, so the receiver pins the call.
+		await NotifyService
+			.Received(1)
+			.NotifyAndReturn(Actor.DbRef, ErrorMessages.Returns.NoMatch,
+				ErrorMessages.Notifications.UnlinkWhat, Arg.Any<bool>());
+	}
+
+	/// <summary>
+	/// <c>@unlink here</c>: <c>MAT_HERE</c> is in <c>do_unlink</c>'s flags, and the <c>TYPE_EXIT</c>
+	/// preference is not <c>MAT_TYPE</c>, so a room still matches and its drop-to comes off
+	/// (<c>src/create.c:278-282</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask UnlinkHereRemovesTheRoomsDropTo()
+	{
+		var destination = await LinkableRoom("UnlinkDropToTarget");
+		var here = (await (await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef))).Expect<AnySharpObject>().Where())
+			.Object().DBRef;
+
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@link {here}={destination}"));
+		var room = (await Mediator.Send(new GetObjectNodeQuery(here))).Expect<SharpRoom>();
+		await Assert.That((await room.Location.WithCancellation(CancellationToken.None)).IsNone).IsFalse();
+
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@unlink here"));
+
+		var after = (await Mediator.Send(new GetObjectNodeQuery(here))).Expect<SharpRoom>();
+		await Assert.That((await after.Location.WithCancellation(CancellationToken.None)).IsNone).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
+			NotifyService, nameof(ErrorMessages.Notifications.DropToRemoved), Actor.DbRef, Actor.DbRef)).IsTrue();
 	}
 }
