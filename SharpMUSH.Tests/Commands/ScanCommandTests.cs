@@ -1,8 +1,11 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Common;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Commands;
@@ -53,6 +56,14 @@ public class ScanCommandTests
 	{
 		var result = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
 		return result.Message?.ToPlainText() ?? string.Empty;
+	}
+
+	/// <summary>The lines <paramref name="player"/> was notified of by one <c>@scan</c>, in order.</summary>
+	private async Task<List<string>> ScanOutputAsync(TestIsolationHelpers.TestPlayer player, string command)
+	{
+		var offset = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+		return [.. WebAppFactoryArg.Notifications.For(player.DbRef).Skip(offset)];
 	}
 
 	/// <summary>
@@ -151,5 +162,131 @@ public class ScanCommandTests
 		await Assert.That(await ScanAsync(player, $"@scan/room {word} test"))
 			.DoesNotContain("CMD_ZONE")
 			.Because("a zone object is not in the room, so /room must not reach it");
+	}
+
+	/// <summary>
+	/// #1355. <c>do_scan</c> prints a section's heading before it looks, not after it finds something
+	/// (<c>src/game.c:1891</c>, <c>:1912</c>, <c>:1988</c>), so a scan that matches nothing still tells
+	/// the player where it looked. SharpMUSH printed nothing at all.
+	///
+	/// <para>The expected lines are what a live PennMUSH 1.8.8 (<c>pennmush/</c> @ 80a1d5b9) printed for
+	/// <c>@scan RandomGuid</c> from a room with no zone: the three unconditional headings, in that
+	/// order, and nothing else. The zone headings are absent because an unzoned location has no zone
+	/// master room to name.</para>
+	/// </summary>
+	[Test]
+	public async Task Scan_PrintsEverySectionHeadingWhenNothingMatches()
+	{
+		var (player, _, word) = await ScannerAsync("ScanHeadings");
+
+		await Assert.That(await ScanOutputAsync(player, $"@scan {word} test")).IsEquivalentTo(
+		[
+			"Matches on contents of this room:",
+			"Matches on carried objects:",
+			"Matches on objects in the Master Room:"
+		]);
+	}
+
+	/// <summary>
+	/// Each switch prints its own section's heading and no other's (<c>cmd_scan</c>,
+	/// <c>src/cmds.c:1367-1383</c>, maps ROOM to CHECK_NEIGHBORS|CHECK_HERE, SELF to
+	/// CHECK_INVENTORY|CHECK_SELF, GLOBALS to CHECK_GLOBAL). CHECK_HERE and CHECK_SELF have no heading
+	/// of their own, so <c>/room</c> and <c>/self</c> print exactly one line each.
+	/// </summary>
+	[Test]
+	[Arguments("room", "Matches on contents of this room:")]
+	[Arguments("self", "Matches on carried objects:")]
+	[Arguments("globals", "Matches on objects in the Master Room:")]
+	public async Task Scan_PrintsOnlyTheHeadingOfTheSwitchedSection(string @switch, string heading)
+	{
+		var (player, _, word) = await ScannerAsync("ScanSwitchHeading");
+
+		await Assert.That(await ScanOutputAsync(player, $"@scan/{@switch} {word} test"))
+			.IsEquivalentTo([heading]);
+	}
+
+	/// <summary>
+	/// <c>/zone</c> prints no heading when the location has no zone: both zone blocks are guarded on
+	/// the zone existing, and the heading sits inside the guard (<c>src/game.c:1931-1981</c>).
+	/// </summary>
+	[Test]
+	public async Task Scan_PrintsNoZoneHeadingWhenTheLocationHasNoZone()
+	{
+		var (player, _, word) = await ScannerAsync("ScanNoZone");
+
+		await Assert.That(await ScanOutputAsync(player, $"@scan/zone {word} test")).IsEmpty();
+	}
+
+	/// <summary>
+	/// A zone master room gets its own heading, and the objects under it are reported in <c>do_scan</c>'s
+	/// <c>"%s  [%d:%s]"</c> shape - two spaces, the count of matching attributes, then each match as
+	/// <c>" #&lt;dbref&gt;/&lt;ATTR&gt;"</c> (<c>src/game.c:1937-1944</c>, <c>src/attrib.c:1990-2000</c>).
+	/// A live 1.8.8 printed, for a thing with two matching commands:
+	/// <c>ScanBox(#3T)  [2: #3/CMD_A #3/CMD_B]</c>.
+	/// </summary>
+	[Test]
+	public async Task Scan_ReportsOneLinePerObjectCountingItsMatchingAttributes()
+	{
+		var (player, _, word) = await ScannerAsync("ScanCount");
+
+		var createResult = await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("ScanCountObj")}"));
+		var box = createResult.Message!.ToPlainText().Trim();
+		await TestIsolationHelpers.ClearNoCommandAsync(Parser, ConnectionService, DBRef.Parse(box));
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&CMD_A {box}=${word} *:think a"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&CMD_B {box}=${word} *:think b"));
+
+		var number = DBRef.Parse(box).Number;
+		var lines = await ScanOutputAsync(player, $"@scan/self {word} test");
+
+		await Assert.That(lines).Count().IsEqualTo(2);
+		await Assert.That(lines[0]).IsEqualTo("Matches on carried objects:");
+		await Assert.That(lines[1]).EndsWith($"  [2: #{number}/CMD_A #{number}/CMD_B]");
+	}
+
+	/// <summary>
+	/// The location object's match has no heading of its own and reads "Matched here: …"
+	/// (<c>src/game.c:1905</c>); the executor's reads "Matched self: …" (<c>:1926</c>). With the default
+	/// switch set the executor is also in the room's contents, so <c>do_scan</c> reports it twice - once
+	/// under the room heading, once as "Matched self:" - and a live 1.8.8 prints both lines.
+	/// </summary>
+	[Test]
+	public async Task Scan_LabelsTheLocationAndTheExecutorWithTheirOwnWording()
+	{
+		var (player, room, word) = await ScannerAsync("ScanLabels");
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&CMD_HERE {room}=${word} *:think here"));
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"&CMD_ME me=${word} *:think me"));
+
+		var roomRef = DBRef.Parse(room);
+		var lines = await ScanOutputAsync(player, $"@scan {word} test");
+
+		var self = $"{await UnparseAsync(player.DbRef)}  [1: #{player.DbRef.Number}/CMD_ME]";
+		var here = $"{await UnparseAsync(roomRef)}  [1: #{roomRef.Number}/CMD_HERE]";
+
+		await Assert.That(lines).IsEquivalentTo(
+		[
+			"Matches on contents of this room:",
+			self,
+			$"Matched here: {here}",
+			"Matches on carried objects:",
+			$"Matched self: {self}",
+			"Matches on objects in the Master Room:"
+		]);
+	}
+
+	/// <summary>The <c>unparse_object</c> half of a match line: name, dbref and flag symbols.</summary>
+	private async Task<string> UnparseAsync(DBRef dbref)
+	{
+		var obj = await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject found
+			? found.Object()
+			: throw new InvalidOperationException($"#{dbref.Number} vanished mid-test");
+
+		return await MessageFormatting.FormatObjectWithDbref(obj);
 	}
 }

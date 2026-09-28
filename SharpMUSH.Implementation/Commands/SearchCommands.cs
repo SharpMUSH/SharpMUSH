@@ -1,6 +1,7 @@
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -111,25 +112,61 @@ public partial class Commands
 			return isVisual;
 		}
 
-		async ValueTask ReportMatches(IAsyncEnumerable<AnySharpObject> candidates)
+		// do_scan reports one line per OBJECT, not per attribute: atr_comm_match returns how many of
+		// that object's attributes matched and appends each as " #<dbref>/<ATTR>" to one buffer, which
+		// the caller prints as "<object>  [<count>:<attrs>]" (src/game.c:1895, src/attrib.c:1990-2000).
+		// Grouping here is what makes an object with two matching $-commands one line and not two.
+		async ValueTask<List<(AnySharpObject Obj, List<string> Attributes)>> FindMatches(
+			IAsyncEnumerable<AnySharpObject> candidates)
 		{
+			List<(AnySharpObject Obj, List<string> Attributes)> grouped = [];
+
 			var matched = await CommandDiscoveryService.MatchUserDefinedCommand(parser,
 				candidates.Where((item, ct) => perceive(item.Object().DBRef, ct)), arg0);
 			if (!matched.TryGetValue(out var matches))
 			{
-				return;
+				return grouped;
 			}
 
-			foreach (var (i, (obj, attr, _)) in matches.Index())
+			foreach (var (obj, attr, _) in matches)
 			{
 				if (!await CanScan(obj))
 				{
 					continue;
 				}
 
-				runningOutput.Add($"#{obj.Object().DBRef.Number}/{attr.LongName}");
-				await NotifyService.Notify(executor,
-					$"{obj.Object().Name}\t[{i}: #{obj.Object().DBRef.Number}/{attr.LongName}]", executor);
+				var dbref = obj.Object().DBRef;
+				runningOutput.Add($"#{dbref.Number}/{attr.LongName}");
+
+				var existing = grouped.FindIndex(entry => entry.Obj.Object().DBRef == dbref);
+				if (existing < 0)
+				{
+					grouped.Add((obj, [attr.LongName]));
+				}
+				else
+				{
+					grouped[existing].Attributes.Add(attr.LongName);
+				}
+			}
+
+			return grouped;
+		}
+
+		// Prints the grouped matches under the wording `key` names - the bare entry under a section
+		// heading, or one of do_scan's four "Matched <where>:" one-liners.
+		async ValueTask Report(string key, List<(AnySharpObject Obj, List<string> Attributes)> matches)
+		{
+			foreach (var (obj, attributes) in matches)
+			{
+				var dbref = obj.Object().DBRef.Number;
+				// The attribute list carries its own leading space, because Penn's buffer does
+				// (safe_chr(' ') per match, src/attrib.c:1990) and the "[%d:%s]" format supplies none.
+				var attributeList = string.Concat(attributes.Select(attribute => $" #{dbref}/{attribute}"));
+
+				await NotifyService.NotifyLocalizedMarkup(executor, key, executor,
+					await MessageFormatting.FormatObjectWithDbrefMString(obj.Object()),
+					MarkupText.Plain(attributes.Count.ToString()),
+					MarkupText.Plain(attributeList));
 			}
 		}
 
@@ -151,54 +188,62 @@ public partial class Commands
 				? ownZone
 				: null;
 
-		var scannedNeighbors = false;
+		const string Entry = nameof(ErrorMessages.Notifications.ScanMatchEntryFormat);
 
 		if (here is not null && switches.Contains("ROOM"))
 		{
 			// Penn splits this into two flags and @scan with no switches sets both: CHECK_NEIGHBORS for
 			// the contents of the location, CHECK_HERE for the location object itself
-			// (src/game.c:1892-1911). Only the first was implemented, so a $-command living on the room
-			// - the ordinary place to put one - was never reported.
-			await ReportMatches(here.Content(Mediator).Select(x => x.WithRoomOption()));
-			await ReportMatches(Just(here.WithExitOption()));
-			scannedNeighbors = true;
+			// (src/game.c:1890-1909). The heading belongs to CHECK_NEIGHBORS and prints whether or not
+			// anything matched; CHECK_HERE has no heading and prints only on a match.
+			await NotifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.ScanMatchesOnRoomContents), executor);
+			await Report(Entry, await FindMatches(here.Content(Mediator).Select(x => x.WithRoomOption())));
+
+			await Report(nameof(ErrorMessages.Notifications.ScanMatchedHereFormat),
+				await FindMatches(Just(here.WithExitOption())));
 		}
 
 		if (switches.Contains("SELF"))
 		{
-			// CHECK_INVENTORY, then CHECK_SELF (src/game.c:1911-1927). The self check is not gated on
-			// being a container: Penn scans the executor whether or not it can hold anything, and this
-			// whole branch used to be skipped for an executor that could not.
+			// CHECK_INVENTORY, then CHECK_SELF (src/game.c:1911-1929). The self check is not gated on
+			// being a container: Penn scans the executor whether or not it can hold anything.
+			await NotifyService.NotifyLocalized(executor,
+				nameof(ErrorMessages.Notifications.ScanMatchesOnCarriedObjects), executor);
+
 			if (executor.IsContainer)
 			{
-				await ReportMatches(executor.AsContainer.Content(Mediator).Select(x => x.WithRoomOption()));
+				await Report(Entry,
+					await FindMatches(executor.AsContainer.Content(Mediator).Select(x => x.WithRoomOption())));
 			}
 
-			// An executor standing in the room is already in its contents, so the neighbours pass above
-			// has reported it. do_scan lets that duplicate through because it prints the two passes under
-			// separate headings; this returns one flat list, so follow scan_list instead, which drops
-			// CHECK_SELF the moment CHECK_NEIGHBORS is set for exactly this reason (src/game.c:1763-1764).
-			if (!scannedNeighbors)
-			{
-				await ReportMatches(Just(executor));
-			}
+			// An executor standing in the room is in its contents too, so with the default switch set a
+			// $-command on the executor is reported twice - once under "Matches on contents of this room:"
+			// and again as "Matched self:". do_scan makes no attempt to suppress that (unlike scan_list,
+			// src/game.c:1763-1764, which has no headings to separate the two), and a live 1.8.8 prints
+			// both lines, so neither does this.
+			await Report(nameof(ErrorMessages.Notifications.ScanMatchedSelfFormat),
+				await FindMatches(Just(executor)));
 		}
 
 		if (switches.Contains("ZONE"))
 		{
-			// A zone that is a room is a Zone Master Room and its CONTENTS carry the commands; a zone
-			// that is anything else carries them itself (src/game.c:1931-1978). Scanning the contents in
-			// both cases - which is what this did - looks in the wrong place for every non-room zone,
-			// and the executor's own zone was not consulted at all.
+			// A zone that is a room is a Zone Master Room and its CONTENTS carry the commands, under a
+			// heading; a zone that is anything else carries them itself and gets a one-line report with
+			// no heading (src/game.c:1931-1981).
 			if (hereZone is not null)
 			{
-				await ScanZone(hereZone);
+				await ScanZone(hereZone,
+					nameof(ErrorMessages.Notifications.ScanMatchesOnZoneMasterRoomOfLocation),
+					nameof(ErrorMessages.Notifications.ScanMatchedZoneOfLocationFormat));
 			}
 
 			if (personalZone is not null
 					&& (hereZone is null || personalZone.Object().DBRef != hereZone.Object().DBRef))
 			{
-				await ScanZone(personalZone);
+				await ScanZone(personalZone,
+					nameof(ErrorMessages.Notifications.ScanMatchesOnPersonalZoneMasterRoom),
+					nameof(ErrorMessages.Notifications.ScanMatchedPersonalZoneFormat));
 			}
 		}
 
@@ -207,41 +252,52 @@ public partial class Commands
 			var masterRoom = new DBRef(Convert.ToInt32(Configuration.CurrentValue.Database.MasterRoom));
 
 			// Penn's own guard, verbatim: skip when the executor stands in the master room, or the master
-			// room is either zone (src/game.c:1984). Note it tests only those three dbrefs - it does NOT
-			// ask whether the ROOM or ZONE branch actually ran, so `@scan/globals` from inside the master
-			// room reports nothing in PennMUSH too. Kept as-is for parity rather than "improved".
+			// room is either zone (src/game.c:1984-1986). Note it tests only those three dbrefs - it does
+			// NOT ask whether the ROOM or ZONE branch actually ran, so `@scan/globals` from inside the
+			// master room reports nothing in PennMUSH either, not even the heading.
 			var alreadyScanned = here?.Object().DBRef == masterRoom
 				|| hereZone?.Object().DBRef == masterRoom
 				|| personalZone?.Object().DBRef == masterRoom;
 
 			if (!alreadyScanned)
 			{
-				await ReportMatches(Mediator.CreateStream(new GetContentsQuery(masterRoom))
-					?.Select(x => x.WithRoomOption()) ?? AsyncEnumerable.Empty<AnySharpObject>());
+				await NotifyService.NotifyLocalized(executor,
+					nameof(ErrorMessages.Notifications.ScanMatchesOnMasterRoomObjects), executor);
+				await Report(Entry, await FindMatches(Mediator.CreateStream(new GetContentsQuery(masterRoom))
+					?.Select(x => x.WithRoomOption()) ?? AsyncEnumerable.Empty<AnySharpObject>()));
 			}
 		}
 
-		return new CallState(string.Join(" ", runningOutput));
+		// The return value is the scan_list shape - a flat list of obj/attr pairs (src/game.c:1729) -
+		// not the printed report, and scan_list never repeats an object: it drops CHECK_SELF once
+		// CHECK_NEIGHBORS has run (src/game.c:1763-1764). Deduplicate to match, so the executor's own
+		// $-command appears once here even though it is printed under two headings above.
+		return new CallState(string.Join(" ", runningOutput.Distinct()));
 
-		async ValueTask ScanZone(AnySharpObject zone)
+		async ValueTask ScanZone(AnySharpObject zone, string headerKey, string matchedKey)
 		{
 			if (zone.IsRoom)
 			{
 				// Penn guards both zone blocks with the same expression - Location(player) != Zone(player)
-				// (src/game.c:1937, 1971) - which compares the location to the PERSONAL zone even while
+				// (src/game.c:1936, 1963) - which compares the location to the PERSONAL zone even while
 				// scanning the location's zone. Reads like a slip, but it is what Penn does, and it is
 				// materially different from comparing against the zone being scanned: with no personal
 				// zone set, Zone(player) is NOTHING and the location's Zone Master Room is always scanned.
-				if (here?.Object().DBRef != personalZone?.Object().DBRef)
+				// The heading sits inside that guard, so a suppressed block prints nothing at all.
+				if (here is not null && personalZone is not null
+						&& here.Object().DBRef == personalZone.Object().DBRef)
 				{
-					await ReportMatches(Mediator.CreateStream(new GetContentsQuery(zone.Object().DBRef))
-						?.Select(x => x.WithRoomOption()) ?? AsyncEnumerable.Empty<AnySharpObject>());
+					return;
 				}
+
+				await NotifyService.NotifyLocalized(executor, headerKey, executor);
+				await Report(Entry, await FindMatches(Mediator.CreateStream(new GetContentsQuery(zone.Object().DBRef))
+					?.Select(x => x.WithRoomOption()) ?? AsyncEnumerable.Empty<AnySharpObject>()));
 
 				return;
 			}
 
-			await ReportMatches(Just(zone));
+			await Report(matchedKey, await FindMatches(Just(zone)));
 		}
 	}
 
