@@ -250,7 +250,7 @@
       "helpFull": "`@chzone[/preserve] <object>=<zone>`<br>\n`@chzone <object>=none`\n\nThe first form of this command changes the zone of `<object>` to `<zone>`. This puts the object on that zone and may (if the zone_control_zmp_only @config option is off) allow anyone who passes the Zone @lock of `<zone>` to control `<object>`. Any kind of object can be @chzoned, and any kind of object can be used as a zone.\n\nThe second form of this command removes `<object>` from its current zone, leaving it unzoned.\n\nIf a player is @chzoned, any objects he creates from that point on will automatically be on the same zone. Objects the player already owns are not affected.\n\nYou must control `<object>`, and either control `<zone>` or pass its @lock/chzone.\n\nSee [@chzone2].",
       "helpPreview": "`@chzone[/preserve] <object>=<zone>`<br>\n`@chzone <object>=none`\nThe first form of this command changes the zone of `<object>` to `<zone>`. This puts the object on that zone and may (if the zone_control_zmp_only @config option is off) allow anyone who passes the Zone @lock of `<zone>` to control `<object>`. Any kind of object can be @chzoned, and any kind of object can be used as a zone.",
       "maxArgs": 2,
-      "minArgs": 2,
+      "minArgs": 1,
       "parameterNames": [
         "object",
         "zone"
@@ -263,7 +263,7 @@
       "helpFull": "`@chzoneall[/preserve] <player>=<zone object>`\n\nChanges the zone of all objects owned by `<player>` to `<zone object>`. If `<zone object>` is \"none\", the zone is reset to NOTHING. Only wizards may use this command.\n\n\n**See Also:**\n- [@chzone]\n- [ZONES]",
       "helpPreview": "`@chzoneall[/preserve] <player>=<zone object>`\nChanges the zone of all objects owned by `<player>` to `<zone object>`. If `<zone object>` is \"none\", the zone is reset to NOTHING. Only wizards may use this command.\n**See Also:**",
       "maxArgs": 2,
-      "minArgs": 2,
+      "minArgs": 1,
       "parameterNames": [
         "old-zone",
         "new-zone"
@@ -849,7 +849,7 @@
       "helpFull": "`@link[/preserve] <object>=[<dbref> | here | home | variable]`\n\nLinks `<object>` to either a room or a thing. If a thing or player is linked, that sets the object's HOME. If a room is linked, that sets the object's drop-to room, which is where objects that are dropped in the room will be sent to.\n\nMost often, @link is used to link or relink an exit to a destination room. In order to link an exit to a room, you must either own or control the room, OR the room must be set LINK_OK. If the exit is currently unlinked, and you pass its @lock/link, you may link it even if you do not own it. In this case, the exit will be @chowned to you (and set HALT). Linking an exit may have a cost (usually 1 penny.) The Wizard-only `/preserve` switch can be used to link without @chowning and HALTing the exit.\n\nIf the destination of an exit is \"variable\", its destination is determined at the time of travel by the attribute DESTINATION on the exit, which is evaluated like a U()-function. You must have permission to link to whatever the DESTINATION evaluates to in order for the exit to work. If there's no DESTINATION attribute, the EXITTO attribute is also tried.\n\nIf the destination is \"home\", those who travel through the exit will be sent to their homes.\n\nLINK_OK objects can also be used as semaphores, and any object can be @parented to them.\n\n\n**See Also:**\n- [EXITS]\n- [@open]\n- [@dig]\n- [DROP-TO]\n- [HOME]",
       "helpPreview": "`@link[/preserve] <object>=[<dbref> | here | home | variable]`\nLinks `<object>` to either a room or a thing. If a thing or player is linked, that sets the object's HOME. If a room is linked, that sets the object's drop-to room, which is where objects that are dropped in the room will be sent to.\nMost often, @link is used to link or relink an exit to a destination room. In order to link an exit to a room, you must either own or control the room, OR the room must be set LINK_OK. If the exit is currently unlinked, and you pass its @lock/link, you may link it even if you do not own it. In this case, the exit will be @chowned to you (and set HALT). Linking an exit may have a cost (usually 1 penny.) The Wizard-only `/preserve` switch can be used to link without @chowning and HALTing the exit.",
       "maxArgs": 2,
-      "minArgs": 2,
+      "minArgs": 1,
       "parameterNames": [
         "object",
         "destination"
