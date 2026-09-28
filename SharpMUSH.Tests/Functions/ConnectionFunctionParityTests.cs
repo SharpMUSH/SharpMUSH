@@ -279,8 +279,6 @@ public class ConnectionFunctionParityTests
 			await TestIsolationHelpers.CreateTestPlayerAsync(services, mediator, $"Onlooker{label}"));
 	}
 
-	private static long _handleSeq = 960_000;
-
 	private async Task<long> ConnectAsync(DBRef player, string? terminalType = null, long idleMilliseconds = 0,
 		bool hidden = false)
 	{
