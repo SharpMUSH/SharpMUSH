@@ -19,6 +19,15 @@
         <MudProgressLinear Indeterminate="true" />
     </div>
 }
+else if (_error is not null)
+{
+    <div style="padding:var(--cpad);">
+        <MudAlert Severity="Severity.Error" Class="scene-load-error">@_error</MudAlert>
+        <MudButton Href="/scenes/active" Color="Color.Primary" Variant="Variant.Text" Class="mt-2">
+            @Loc["RolBackToActiveScenes"]
+        </MudButton>
+    </div>
+}
 else if (_notFound)
 {
     <div style="padding:var(--cpad);">
@@ -73,7 +82,11 @@ else
         }
 
         <div class="scene-log scene-log--live">
-            @if (_poses.Count == 0)
+            @if (_posesError is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="scene-poses-error">@_posesError</MudAlert>
+            }
+            else if (_poses.Count == 0)
             {
                 <MudText Style="color:var(--text-faint);font-style:italic;">@Loc["RolWaitingForActivity"]</MudText>
             }
@@ -116,6 +129,12 @@ else
     private bool _loading = true;
     private bool _notFound;
     private bool _liveUnavailable;
+
+    /// <summary>Why the scene could not be read, for any failure but 404 — which is <see cref="_notFound"/>.</summary>
+    private string? _error;
+
+    /// <summary>Why the pose chain could not be read; the poses already shown stay on screen.</summary>
+    private string? _posesError;
     private string _composeText = string.Empty;
     // Emit by default: it renders the author's words verbatim, with no name glued to the front.
     // That is what a compose box on one scene's own page is for — the other three modes stay
@@ -135,6 +154,8 @@ else
         _loading = true;
         _notFound = false;
         _liveUnavailable = false;
+        _error = null;
+        _posesError = null;
         _poses.Clear();
         _scene = null;
 
@@ -143,16 +164,24 @@ else
         // and the hub throws one message for both — a refusal a caller can tell apart is a way to enumerate
         // private scene ids. Any future edit that wants to explain a not-found must keep those two cases
         // sharing an answer.
-        var scene = await SceneService.GetSceneAsync(Id);
-        if (scene is null)
+        // Only a 404 is that answer. Any other failure is the server failing to answer at all, and the
+        // not-found card would turn an outage into a claim that the scene is gone.
+        switch (await SceneService.GetSceneAsync(Id))
         {
-            _notFound = true;
-            _loading = false;
-            return;
+            case SceneSummary scene:
+                _scene = scene;
+                break;
+            case ApiFailure { Kind: ApiFailureKind.NotFound }:
+                _notFound = true;
+                _loading = false;
+                return;
+            case ApiFailure failure:
+                _error = failure.Message;
+                _loading = false;
+                return;
         }
 
-        _scene = scene;
-        _poses.AddRange(await SceneService.GetPosesAsync(Id, count: 100));
+        ShowPoses(await SceneService.GetPosesAsync(Id, count: 100));
 
         // Only the login and character-switch paths connect the hub, so a returning player arrives
         // here with none. Reconnect rather than connect: ConnectAsync returns the moment it sees a
@@ -238,10 +267,27 @@ else
 
     private async Task ReloadPosesAsync()
     {
-        var fresh = await SceneService.GetPosesAsync(Id, count: 100);
-        _poses.Clear();
-        _poses.AddRange(fresh);
+        ShowPoses(await SceneService.GetPosesAsync(Id, count: 100));
         await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Replaces the chain with a fresh read. A read that failed leaves what is on screen alone: clearing
+    /// it would wipe a live log the player is reading because one re-fetch after a move did not arrive.
+    /// </summary>
+    private void ShowPoses(ApiResult<IReadOnlyList<ScenePoseView>> result)
+    {
+        switch (result)
+        {
+            case IReadOnlyList<ScenePoseView> fresh:
+                _poses.Clear();
+                _poses.AddRange(fresh);
+                _posesError = null;
+                break;
+            case ApiFailure failure:
+                _posesError = failure.Message;
+                break;
+        }
     }
 
     /// <summary>

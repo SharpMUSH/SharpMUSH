@@ -31,7 +31,14 @@
     else
     {
         <MudPaper Elevation="0" Style="padding:1.25rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);height:100%;box-sizing:border-box;">
-            <MudText Style="color:var(--text-dim);">@Loc["WidNoActiveScenes"]</MudText>
+            @if (_error is not null)
+            {
+                <MudText Class="active-scene-widget-error" Style="color:var(--text-dim);">@_error</MudText>
+            }
+            else
+            {
+                <MudText Style="color:var(--text-dim);">@Loc["WidNoActiveScenes"]</MudText>
+            }
             <MudButton Variant="Variant.Text" Href="/scenes" Color="Color.Primary" Size="Size.Small" Class="mt-1">@Loc["WidBrowseArchive"]</MudButton>
         </MudPaper>
     }
@@ -42,11 +49,17 @@
     [Parameter] public string Zone { get; set; } = string.Empty;
 
     private IReadOnlyList<SceneSummary>? _activeScenes;
+    private string? _error;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        _activeScenes = await SceneService.GetActiveScenesAsync();
+        var result = await SceneService.GetActiveScenesAsync();
+        (_activeScenes, _error) = result switch
+        {
+            IReadOnlyList<SceneSummary> scenes => (scenes, (string?)null),
+            ApiFailure failure => (null, failure.Message),
+        };
         _loading = false;
     }
 

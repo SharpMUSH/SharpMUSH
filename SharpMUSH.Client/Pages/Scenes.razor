@@ -45,10 +45,10 @@
 
     <MudTabs Elevation="0" Rounded="false" @bind-ActivePanelIndex="_tab">
         <MudTabPanel Text="@Loc["ResTabRecent"]" BadgeData="@(_recent?.Count)" BadgeColor="Color.Default">
-            @SceneList(_recent)
+            @SceneList(_recent, _recentError)
         </MudTabPanel>
         <MudTabPanel Text="@Loc["ResTabLive"]" BadgeData="@(_active?.Count)" BadgeColor="Color.Success">
-            @SceneList(_active)
+            @SceneList(_active, _activeError)
         </MudTabPanel>
     </MudTabs>
 </div>
@@ -65,6 +65,8 @@
     private bool _newPublic = true;
     private IReadOnlyList<SceneSummary>? _recent;
     private IReadOnlyList<SceneSummary>? _active;
+    private string? _recentError;
+    private string? _activeError;
 
     // MainLayout opens the websocket, and a player can arrive before it finishes; reading
     // IsConnected once without listening leaves the start button permanently absent for them.
@@ -78,8 +80,8 @@
     {
         var recentTask = SceneService.GetRecentScenesAsync(50);
         var activeTask = SceneService.GetActiveScenesAsync();
-        _recent = await recentTask;
-        _active = await activeTask;
+        (_recent, _recentError) = Listed(await recentTask);
+        (_active, _activeError) = Listed(await activeTask);
         _loading = false;
     }
 
@@ -103,7 +105,7 @@
             for (var attempt = 0; attempt < 6 && !created; attempt++)
             {
                 await Task.Delay(250);
-                _active = await SceneService.GetActiveScenesAsync();
+                (_active, _activeError) = Listed(await SceneService.GetActiveScenesAsync());
                 created = _active?.Any(s => !before.Contains(s.Id)) == true;
             }
 
@@ -114,7 +116,7 @@
                 await Terminal.SendAsync("+scene/private");
             }
 
-            _recent = await SceneService.GetRecentScenesAsync(50);
+            (_recent, _recentError) = Listed(await SceneService.GetRecentScenesAsync(50));
 
             if (created)
             {
@@ -130,7 +132,18 @@
         }
     }
 
-    private RenderFragment SceneList(IReadOnlyList<SceneSummary>? scenes) => __builder =>
+    /// <summary>
+    /// A list that could not be fetched keeps its reason: "no scenes" and "the archive did not answer"
+    /// are different facts, and only one of them is something the portal knows.
+    /// </summary>
+    private static (IReadOnlyList<SceneSummary>? Scenes, string? Error) Listed(
+        ApiResult<IReadOnlyList<SceneSummary>> result) => result switch
+    {
+        IReadOnlyList<SceneSummary> scenes => (scenes, null),
+        ApiFailure failure => (null, failure.Message),
+    };
+
+    private RenderFragment SceneList(IReadOnlyList<SceneSummary>? scenes, string? error) => __builder =>
     {
         if (_loading)
         {
@@ -138,6 +151,10 @@
             {
                 <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="72px" Class="mb-2" Style="border-radius:var(--radius);" />
             }
+        }
+        else if (error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="scene-list-error">@error</MudAlert>
         }
         else if (scenes is null || scenes.Count == 0)
         {
