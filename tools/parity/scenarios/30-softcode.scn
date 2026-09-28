@@ -54,3 +54,16 @@ think [get(nothing/nothing)] [name(#9999)] [loc(#9999)]
 ::case sc.wshtml-default  wshtml() takes PennMUSH's <default string> (#1282)
 think [wshtml(<b>x</b>,x)]
 @pemit me=[wshtml(<b>x</b>,x)] and more
+
+::case sc.coverage-gaps  functions no SharpMUSH.Tests case dispatched until #974
+think [art(apple)] [art(banana)] [art(Egg)] [art(unicorn)] [art(hour)] [art(8)]
+think [ordinal(1)] [ordinal(2)] [ordinal(3)] [ordinal(4)] [ordinal(11)] [ordinal(12)] [ordinal(21)] [ordinal(100)] [ordinal(0)] [ordinal(-1)] [ordinal(abc)]
+think [floor(2.7)] [floor(-2.7)] [floor(3)] [floor(abc)]
+think [pos(b,abc)] [pos(bc,abcbc)] [pos(z,abc)] [pos(,abc)]
+think [bound(5,1,10)] [bound(-5,1,10)] [bound(15,1)] [bound(1.5,1,2)]
+think [player(first(ports(me)))=num(me)] [player(-1)] [player(abc)]
+# The Widget is parented to the Lab for two steps and put back, so later cases see the world unchanged.
+think [parent(first(lcon(*Alice)),loc(*Alice))]
+think [lparent(first(lcon(*Alice)))] [lparent(loc(*Alice))] [children(loc(*Alice))]
+think [children(first(lcon(*Alice)))]
+think [parent(first(lcon(*Alice)),none)] [lparent(first(lcon(*Alice)))]

@@ -1,7 +1,7 @@
 namespace SharpMUSH.Tests.Functions;
 
 /// <summary>
-/// Which registered names the suite actually calls, regenerated rather than transcribed.
+/// Which registered names the suite mentions, regenerated rather than transcribed.
 ///
 /// <para>#974 carried a hand-written list of 44 never-invoked functions. By the time anyone came back
 /// to it the list was wrong in both directions — several of the named functions had since gained
@@ -12,30 +12,20 @@ namespace SharpMUSH.Tests.Functions;
 ///
 /// <para>The measure is deliberately crude: does any test source contain <c>name(</c>. That counts a
 /// mention inside an unrelated assertion string as coverage, so it is a floor rather than a
-/// guarantee. A floor at zero is still the difference between "nobody has ever run this" and "someone
-/// has".</para>
+/// guarantee. What was actually run is measured separately: <see cref="FunctionCoverage.Build"/>
+/// compares the parser's dispatch telemetry with this scan, and the test job's telemetry summary lists
+/// every function that is mentioned but was never dispatched. A function with a reason not to be
+/// run yet is in <see cref="FunctionDispatchCoverageGate.KnownGaps"/>, which this check shares.</para>
 /// </summary>
 public class RegistryCoverageInventoryTests
 {
-	private static readonly Lazy<string> TestCorpus = new(() =>
-		string.Join('\n', TestPaths.TestSourceFiles()
-			.Concat(Directory.EnumerateFiles(
-				Path.Combine(TestPaths.RepositoryRoot, "SharpMUSH.Tests"), "*.t", SearchOption.AllDirectories))
-			.Select(File.ReadAllText))
-		.ToLowerInvariant());
-
 	[Test]
 	public async Task EveryRegisteredFunctionIsCalledBySomeTest()
 	{
-		var corpus = TestCorpus.Value;
-
-		var never = RegistryInventory.Functions
-			.Select(f => f.Name)
-			.Distinct(StringComparer.OrdinalIgnoreCase)
-			.Where(name => !corpus.Contains($"{name.ToLowerInvariant()}(", StringComparison.Ordinal))
-			.Order(StringComparer.OrdinalIgnoreCase)
+		var unexplained = FunctionCoverage.NeverMentioned()
+			.Where(name => !FunctionDispatchCoverageGate.KnownGaps.ContainsKey(name))
 			.ToList();
 
-		await Assert.That(never).IsEmpty();
+		await Assert.That(unexplained).IsEmpty();
 	}
 }
