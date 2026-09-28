@@ -1,5 +1,4 @@
-using System.Net.Http.Json;
-using SharpMUSH.Library.Logging;
+using SharpMUSH.Library.DiscriminatedUnions;
 
 namespace SharpMUSH.Client.Services;
 
@@ -7,7 +6,12 @@ namespace SharpMUSH.Client.Services;
 /// Client-side mailbox, backed by the in-game <c>@mail</c> system through <c>/api/mail</c>.
 /// All operations act on the authenticated character's mail.
 /// </summary>
-public class MailService(IHttpClientFactory httpClientFactory, ILogger<MailService> logger)
+/// <remarks>
+/// Every call answers with <see cref="ApiResult{T}"/>. The server says why a send was refused —
+/// "No such character: Bob", "Subject may be at most N characters." — and a <see langword="bool"/>
+/// dropped that, leaving the page to guess at the recipient.
+/// </remarks>
+public class MailService(IHttpClientFactory httpClientFactory)
 {
 	/// <summary>A mailbox row; mirrors <c>MailController.MailSummaryDto</c>.</summary>
 	public record MailSummary(int Number, string From, string Subject, DateTimeOffset DateSent, bool Read, bool Urgent, string Folder);
@@ -17,82 +21,25 @@ public class MailService(IHttpClientFactory httpClientFactory, ILogger<MailServi
 
 	private record SendRequest(string To, string Subject, string Body, bool Urgent);
 
-	/// <summary>Lists messages in a folder (default INBOX); empty on failure.</summary>
-	public async Task<IReadOnlyList<MailSummary>> ListAsync(string folder = "INBOX")
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var rows = await http.GetFromJsonAsync<List<MailSummary>>($"api/mail?folder={Uri.EscapeDataString(folder)}");
-			return rows ?? [];
-		}
-		catch (HttpRequestException ex)
-		{
-			logger.LogWarning(ex, "Failed to load mail folder {Folder}.", folder);
-			return [];
-		}
-	}
+	private HttpClient Client => httpClientFactory.CreateClient("api");
+
+	/// <summary>Lists messages in a folder (default INBOX).</summary>
+	public Task<ApiResult<IReadOnlyList<MailSummary>>> ListAsync(string folder = "INBOX") =>
+		Client.GetApiAsync<IReadOnlyList<MailSummary>>(
+			$"api/mail?folder={Uri.EscapeDataString(folder)}", "The server returned no mailbox.");
 
 	/// <summary>Lists the character's folder names.</summary>
-	public async Task<IReadOnlyList<string>> FoldersAsync()
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var folders = await http.GetFromJsonAsync<List<string>>("api/mail/folders");
-			return folders ?? ["INBOX"];
-		}
-		catch (HttpRequestException ex)
-		{
-			logger.LogWarning(ex, "Failed to load mail folders.");
-			return ["INBOX"];
-		}
-	}
+	public Task<ApiResult<IReadOnlyList<string>>> FoldersAsync() =>
+		Client.GetApiAsync<IReadOnlyList<string>>("api/mail/folders", "The server returned no folder list.");
 
-	/// <summary>Reads one message (marks it read server-side); null if not found.</summary>
-	public async Task<MailMessage?> ReadAsync(string folder, int number)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			return await http.GetFromJsonAsync<MailMessage>($"api/mail/{Uri.EscapeDataString(folder)}/{number}");
-		}
-		catch (HttpRequestException ex)
-		{
-			logger.LogWarning(ex, "Failed to read mail {Folder}/{Number}.", LogSanitizer.Sanitize(folder), number);
-			return null;
-		}
-	}
+	/// <summary>Reads one message, which marks it read server-side.</summary>
+	public Task<ApiResult<MailMessage>> ReadAsync(string folder, int number) =>
+		Client.GetApiAsync<MailMessage>(
+			$"api/mail/{Uri.EscapeDataString(folder)}/{number}", "The server returned no message.");
 
-	/// <summary>Sends mail; returns true on success.</summary>
-	public async Task<bool> SendAsync(string to, string subject, string body, bool urgent)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/mail", new SendRequest(to, subject, body, urgent));
-			return response.IsSuccessStatusCode;
-		}
-		catch (HttpRequestException ex)
-		{
-			logger.LogWarning(ex, "Failed to send mail to {To}.", to);
-			return false;
-		}
-	}
+	public Task<ApiResult<Success>> SendAsync(string to, string subject, string body, bool urgent) =>
+		Client.PostApiAsync("api/mail", new SendRequest(to, subject, body, urgent));
 
-	/// <summary>Deletes a message; returns true on success.</summary>
-	public async Task<bool> DeleteAsync(string folder, int number)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var response = await http.DeleteAsync($"api/mail/{Uri.EscapeDataString(folder)}/{number}");
-			return response.IsSuccessStatusCode;
-		}
-		catch (HttpRequestException ex)
-		{
-			logger.LogWarning(ex, "Failed to delete mail {Folder}/{Number}.", LogSanitizer.Sanitize(folder), number);
-			return false;
-		}
-	}
+	public Task<ApiResult<Success>> DeleteAsync(string folder, int number) =>
+		Client.DeleteApiAsync($"api/mail/{Uri.EscapeDataString(folder)}/{number}");
 }

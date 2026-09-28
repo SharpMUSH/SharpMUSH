@@ -1469,7 +1469,7 @@
     <comment>MT — impersonal construction so the verb does not agree with the interpolated application name</comment>
   </data>
   <data name="LayAppRemoveFailed" xml:space="preserve">
-    <value>Приложението не можа да бъде премахнато.</value>
+    <value>Приложението не можа да бъде премахнато: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="LayAppRemoveTitle" xml:space="preserve">
@@ -1485,7 +1485,7 @@
     <comment>MT — «slug» kept in English per glossary</comment>
   </data>
   <data name="LayAppSaveFailed" xml:space="preserve">
-    <value>Запазването е неуспешно.</value>
+    <value>Запазването е неуспешно: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="LayAppSaved" xml:space="preserve">
@@ -1845,7 +1845,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailDeleteFailed" xml:space="preserve">
-    <value>Съобщението не може да бъде изтрито.</value>
+    <value>Съобщението не може да бъде изтрито: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailDeleted" xml:space="preserve">
@@ -1865,7 +1865,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailSendFailed" xml:space="preserve">
-    <value>Пощата не може да бъде изпратена. Проверете името на получателя.</value>
+    <value>Пощата не може да бъде изпратена: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailSent" xml:space="preserve">
@@ -2981,7 +2981,7 @@
     <comment>MT — permission tri-state value</comment>
   </data>
   <data name="RolAssignFailed" xml:space="preserve">
-    <value>Присвояването на ролята е неуспешно.</value>
+    <value>Присвояването на ролята е неуспешно: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolAssigned" xml:space="preserve">
@@ -3017,7 +3017,7 @@
     <comment>MT — second sentence names «ролята» explicitly so no pronoun agrees with the interpolated name</comment>
   </data>
   <data name="RolDeleteFailed" xml:space="preserve">
-    <value>Изтриването на ролята е неуспешно.</value>
+    <value>Изтриването на ролята е неуспешно: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolDeleteTitle" xml:space="preserve">
@@ -3133,7 +3133,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolRemoveFailed" xml:space="preserve">
-    <value>Премахването на ролята е неуспешно.</value>
+    <value>Премахването на ролята е неуспешно: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolRemoveRole" xml:space="preserve">
@@ -3145,7 +3145,7 @@
     <comment>MT — colon construction avoids participle agreement with the role name</comment>
   </data>
   <data name="RolSaveFailed" xml:space="preserve">
-    <value>Запазването е неуспешно.</value>
+    <value>Запазването е неуспешно: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolSaveRole" xml:space="preserve">

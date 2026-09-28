@@ -1469,7 +1469,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayAppRemoveFailed" xml:space="preserve">
-    <value>Anwendung konnte nicht entfernt werden.</value>
+    <value>Anwendung konnte nicht entfernt werden: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="LayAppRemoveTitle" xml:space="preserve">
@@ -1485,7 +1485,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayAppSaveFailed" xml:space="preserve">
-    <value>Speichern fehlgeschlagen.</value>
+    <value>Speichern fehlgeschlagen: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="LayAppSaved" xml:space="preserve">
@@ -1845,7 +1845,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailDeleteFailed" xml:space="preserve">
-    <value>Nachricht konnte nicht gelöscht werden.</value>
+    <value>Nachricht konnte nicht gelöscht werden: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailDeleted" xml:space="preserve">
@@ -1865,7 +1865,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailSendFailed" xml:space="preserve">
-    <value>Post konnte nicht gesendet werden. Prüfen Sie den Empfängernamen.</value>
+    <value>Post konnte nicht gesendet werden: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailSent" xml:space="preserve">
@@ -2981,7 +2981,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolAssignFailed" xml:space="preserve">
-    <value>Rolle konnte nicht zugewiesen werden.</value>
+    <value>Rolle konnte nicht zugewiesen werden: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolAssigned" xml:space="preserve">
@@ -3017,7 +3017,7 @@
     <comment>MT — "sie" agrees with the feminine Rolle.</comment>
   </data>
   <data name="RolDeleteFailed" xml:space="preserve">
-    <value>Rolle konnte nicht gelöscht werden.</value>
+    <value>Rolle konnte nicht gelöscht werden: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolDeleteTitle" xml:space="preserve">
@@ -3133,7 +3133,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolRemoveFailed" xml:space="preserve">
-    <value>Rolle konnte nicht entfernt werden.</value>
+    <value>Rolle konnte nicht entfernt werden: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolRemoveRole" xml:space="preserve">
@@ -3145,7 +3145,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSaveFailed" xml:space="preserve">
-    <value>Speichern fehlgeschlagen.</value>
+    <value>Speichern fehlgeschlagen: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolSaveRole" xml:space="preserve">

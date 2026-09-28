@@ -1469,7 +1469,7 @@
     <comment>MT — softcode kept untranslated; both placeholders sit inside quotes/parentheses and stay uninflected</comment>
   </data>
   <data name="LayAppRemoveFailed" xml:space="preserve">
-    <value>Uklanjanje aplikacije nije uspjelo.</value>
+    <value>Uklanjanje aplikacije nije uspjelo: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="LayAppRemoveTitle" xml:space="preserve">
@@ -1485,7 +1485,7 @@
     <comment>MT — slug kept untranslated per the glossary</comment>
   </data>
   <data name="LayAppSaveFailed" xml:space="preserve">
-    <value>Spremanje nije uspjelo.</value>
+    <value>Spremanje nije uspjelo: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="LayAppSaved" xml:space="preserve">
@@ -1845,7 +1845,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailDeleteFailed" xml:space="preserve">
-    <value>Poruku nije moguće obrisati.</value>
+    <value>Poruku nije moguće obrisati: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailDeleted" xml:space="preserve">
@@ -1865,7 +1865,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailSendFailed" xml:space="preserve">
-    <value>Poštu nije moguće poslati. Provjerite ime primatelja.</value>
+    <value>Poštu nije moguće poslati: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailSent" xml:space="preserve">
@@ -2981,7 +2981,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolAssignFailed" xml:space="preserve">
-    <value>Dodjela uloge nije uspjela.</value>
+    <value>Dodjela uloge nije uspjela: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolAssigned" xml:space="preserve">
@@ -3017,7 +3017,7 @@
     <comment>MT — added the governing noun 'ulogu' so the role name stays uninflected</comment>
   </data>
   <data name="RolDeleteFailed" xml:space="preserve">
-    <value>Brisanje uloge nije uspjelo.</value>
+    <value>Brisanje uloge nije uspjelo: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolDeleteTitle" xml:space="preserve">
@@ -3133,7 +3133,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolRemoveFailed" xml:space="preserve">
-    <value>Uklanjanje uloge nije uspjelo.</value>
+    <value>Uklanjanje uloge nije uspjelo: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolRemoveRole" xml:space="preserve">
@@ -3145,7 +3145,7 @@
     <comment>MT — restructured so the role name sits after a colon in nominative</comment>
   </data>
   <data name="RolSaveFailed" xml:space="preserve">
-    <value>Spremanje nije uspjelo.</value>
+    <value>Spremanje nije uspjelo: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolSaveRole" xml:space="preserve">

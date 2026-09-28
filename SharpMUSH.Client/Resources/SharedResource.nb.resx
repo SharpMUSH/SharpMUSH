@@ -1469,7 +1469,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayAppRemoveFailed" xml:space="preserve">
-    <value>Kunne ikke fjerne applikasjonen.</value>
+    <value>Kunne ikke fjerne applikasjonen: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="LayAppRemoveTitle" xml:space="preserve">
@@ -1485,7 +1485,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayAppSaveFailed" xml:space="preserve">
-    <value>Lagring mislyktes.</value>
+    <value>Lagring mislyktes: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="LayAppSaved" xml:space="preserve">
@@ -1845,7 +1845,7 @@
     <comment>MT — kept as the name of the @mail feature, per the corpus glossary for nb.</comment>
   </data>
   <data name="MailDeleteFailed" xml:space="preserve">
-    <value>Kunne ikke slette meldingen.</value>
+    <value>Kunne ikke slette meldingen: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailDeleted" xml:space="preserve">
@@ -1865,7 +1865,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailSendFailed" xml:space="preserve">
-    <value>Kunne ikke sende mail. Sjekk mottakernavnet.</value>
+    <value>Kunne ikke sende mail: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailSent" xml:space="preserve">
@@ -2981,7 +2981,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolAssignFailed" xml:space="preserve">
-    <value>Kunne ikke tildele rollen.</value>
+    <value>Kunne ikke tildele rollen: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolAssigned" xml:space="preserve">
@@ -3017,7 +3017,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolDeleteFailed" xml:space="preserve">
-    <value>Kunne ikke slette rollen.</value>
+    <value>Kunne ikke slette rollen: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolDeleteTitle" xml:space="preserve">
@@ -3133,7 +3133,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolRemoveFailed" xml:space="preserve">
-    <value>Kunne ikke fjerne rollen.</value>
+    <value>Kunne ikke fjerne rollen: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolRemoveRole" xml:space="preserve">
@@ -3145,7 +3145,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSaveFailed" xml:space="preserve">
-    <value>Lagring mislyktes.</value>
+    <value>Lagring mislyktes: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="RolSaveRole" xml:space="preserve">

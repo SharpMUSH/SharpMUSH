@@ -1348,7 +1348,7 @@
     <value>{0} retirée.</value>
   </data>
   <data name="LayAppRemoveFailed" xml:space="preserve">
-    <value>Échec du retrait de l'application.</value>
+    <value>Échec du retrait de l'application: {0}</value>
   </data>
   <data name="LayAppSlug" xml:space="preserve">
     <value>Slug</value>
@@ -1405,7 +1405,7 @@
     <value>{0} enregistrée.</value>
   </data>
   <data name="LayAppSaveFailed" xml:space="preserve">
-    <value>Échec de l'enregistrement.</value>
+    <value>Échec de l'enregistrement: {0}</value>
   </data>
   <data name="AdmKicker" xml:space="preserve">
     <value>Administration</value>
@@ -1961,7 +1961,7 @@
     <value>{0} enregistré.</value>
   </data>
   <data name="RolSaveFailed" xml:space="preserve">
-    <value>Échec de l'enregistrement.</value>
+    <value>Échec de l'enregistrement: {0}</value>
   </data>
   <data name="RolDeleteTitle" xml:space="preserve">
     <value>Supprimer le rôle</value>
@@ -1973,7 +1973,7 @@
     <value>{0} supprimé.</value>
   </data>
   <data name="RolDeleteFailed" xml:space="preserve">
-    <value>Échec de la suppression du rôle.</value>
+    <value>Échec de la suppression du rôle: {0}</value>
   </data>
   <data name="RolEnterUsername" xml:space="preserve">
     <value>Saisissez un nom d'utilisateur à rechercher.</value>
@@ -1982,13 +1982,13 @@
     <value>{0} attribué.</value>
   </data>
   <data name="RolAssignFailed" xml:space="preserve">
-    <value>Échec de l'attribution du rôle.</value>
+    <value>Échec de l'attribution du rôle: {0}</value>
   </data>
   <data name="RolRemoved" xml:space="preserve">
     <value>{0} retiré.</value>
   </data>
   <data name="RolRemoveFailed" xml:space="preserve">
-    <value>Échec du retrait du rôle.</value>
+    <value>Échec du retrait du rôle: {0}</value>
   </data>
   <data name="RolScene" xml:space="preserve">
     <value>Scène</value>
@@ -3174,7 +3174,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailDeleteFailed" xml:space="preserve">
-    <value>Impossible de supprimer le message.</value>
+    <value>Impossible de supprimer le message: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailDeleted" xml:space="preserve">
@@ -3194,7 +3194,7 @@
     <comment>MT</comment>
   </data>
   <data name="MailSendFailed" xml:space="preserve">
-    <value>Impossible d'envoyer le courrier. Vérifiez le nom du destinataire.</value>
+    <value>Impossible d'envoyer le courrier: {0}</value>
     <comment>MT</comment>
   </data>
   <data name="MailSent" xml:space="preserve">

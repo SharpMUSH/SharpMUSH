@@ -80,7 +80,7 @@ public class MailPageTests : TrackingBunitContext
 			.AddSingleton(factory)
 			.AddSingleton(terminal)
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
-			.AddSingleton(sp => new MailService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<MailService>.Instance));
+			.AddSingleton(sp => new MailService(sp.GetRequiredService<IHttpClientFactory>()));
 
 		this.AddAuthorization().SetAuthorized("headwiz");
 		JSInterop.Mode = JSRuntimeMode.Loose;

@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using SharpMUSH.Client.Models.Applications;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Logging;
 
 namespace SharpMUSH.Client.Services;
@@ -43,54 +44,13 @@ public class ApplicationRegistryClient(IHttpClientFactory httpClientFactory, ILo
 		}
 	}
 
-	/// <summary>Creates or updates an application. Returns (ok, error-message-when-not-ok).</summary>
-	public async Task<(bool Ok, string? Error)> UpsertAsync(PortalApplication application)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/applications", application);
-			if (response.IsSuccessStatusCode)
-			{
-				return (true, null);
-			}
+	/// <summary>Creates or updates an application; a refusal carries the server's reason.</summary>
+	public Task<ApiResult<Success>> UpsertAsync(PortalApplication application) =>
+		Client.PostApiAsync("api/applications", application);
 
-			var body = await response.Content.ReadAsStringAsync();
-			return (false, ExtractError(body) ?? $"Save failed (HTTP {(int)response.StatusCode}).");
-		}
-		catch (HttpRequestException ex)
-		{
-			logger.LogWarning(ex, "Failed to upsert application {Slug}.", application.Slug);
-			return (false, "Could not reach the server.");
-		}
-	}
+	/// <summary>Deletes an application by slug.</summary>
+	public Task<ApiResult<Success>> DeleteAsync(string slug) =>
+		Client.DeleteApiAsync($"api/applications/{Uri.EscapeDataString(slug)}");
 
-	/// <summary>Deletes an application by slug. Returns true on success.</summary>
-	public async Task<bool> DeleteAsync(string slug)
-	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			var response = await http.DeleteAsync($"api/applications/{Uri.EscapeDataString(slug)}");
-			return response.IsSuccessStatusCode;
-		}
-		catch (HttpRequestException ex)
-		{
-			logger.LogWarning(ex, "Failed to delete application {Slug}.", slug);
-			return false;
-		}
-	}
-
-	private static string? ExtractError(string body)
-	{
-		try
-		{
-			using var doc = JsonDocument.Parse(body);
-			return doc.RootElement.TryGetProperty("error", out var error) ? error.GetString() : null;
-		}
-		catch (JsonException)
-		{
-			return null;
-		}
-	}
+	private HttpClient Client => httpClientFactory.CreateClient("api");
 }
