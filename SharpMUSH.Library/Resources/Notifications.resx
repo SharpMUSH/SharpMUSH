@@ -568,6 +568,24 @@
   <data name="ZoneChangedForObjectsFormat" xml:space="preserve">
     <value>Zone changed for {0} objects.</value>
   </data>
+  <data name="ZoneAutomaticallyLockedFormat" xml:space="preserve">
+    <value>Unlocked zone {0} - automatically zone-locking to itself</value>
+  </data>
+  <data name="ZoneShouldHaveMoreSecureLockFormat" xml:space="preserve">
+    <value>Zone {0} really should have a more secure zone-lock.</value>
+  </data>
+  <data name="ZoneMayHaveLooseLockFormat" xml:space="preserve">
+    <value>Warning: Zone {0} may have loose zone lock. Lock zones to =player, not player</value>
+  </data>
+  <data name="ChzoningAdminOwnedObject" xml:space="preserve">
+    <value>Warning: @chzoning admin-owned object!</value>
+  </data>
+  <data name="ChzoningPrivilegedPlayer" xml:space="preserve">
+    <value>Warning: @chzoning a privileged player.</value>
+  </data>
+  <data name="ChzoningTrustPlayer" xml:space="preserve">
+    <value>Warning: @chzoning a TRUST player.</value>
+  </data>
 
   <!-- Channel messages (CHAT: prefix) - note angle brackets require XML escaping -->
   <data name="ChatNotOnChannel" xml:space="preserve">
@@ -612,6 +630,9 @@
   </data>
   <data name="UnlinkedExit" xml:space="preserve">
     <value>Unlinked exit #{0}.</value>
+  </data>
+  <data name="UnlinkWhat" xml:space="preserve">
+    <value>Unlink what?</value>
   </data>
   <data name="OpenedExit" xml:space="preserve">
     <value>Opened exit {0}</value>

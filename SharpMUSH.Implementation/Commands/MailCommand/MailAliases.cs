@@ -788,14 +788,8 @@ public static class MailAliases
 	}
 
 	/// <summary><c>unparse_object(player, target, AN_SYS)</c>: the name, with dbref and flags when the viewer may see them.</summary>
-	private static async ValueTask<string> UnparseAsync(Services services, AnySharpObject viewer, SharpPlayer target)
-	{
-		var obj = new AnySharpObject(target);
-		var showReference = await services.Permissions.CanExamine(viewer, obj)
-			|| await services.Permissions.CanLinkToAsync(viewer, obj) || await obj.HasFlag("JUMP_OK")
-			|| await obj.HasFlag("CHOWN_OK") || await obj.HasFlag("DESTROY_OK");
-		return showReference ? await MessageFormatting.FormatObjectWithDbref(target.Object) : target.Object.Name;
-	}
+	private static ValueTask<string> UnparseAsync(Services services, AnySharpObject viewer, SharpPlayer target)
+		=> MessageFormatting.UnparseObjectAsync(services.Permissions, viewer, new AnySharpObject(target));
 
 	/// <summary>get_shortprivs: the Use and See columns of the list, <c>E</c> for everyone.</summary>
 	private static string ShortPrivileges(SharpMailAlias alias)

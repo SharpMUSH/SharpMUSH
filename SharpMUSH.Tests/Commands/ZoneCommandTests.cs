@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -192,7 +193,7 @@ public class ZoneCommandTests
 
 		var after = (await Mediator.Send(new GetObjectNodeQuery(victim))).Expect<AnySharpObject>();
 		await Assert.That((await after.Object().Zone.WithCancellation(CancellationToken.None)).IsNone).IsTrue();
-		await Assert.That(after.Object().Locks.ContainsKey(nameof(LockType.ChZone))).IsFalse();
+		await Assert.That(after.Object().Locks.ContainsKey(nameof(LockType.Zone))).IsFalse();
 		await Assert.That(await PowerNamesOf(victim)).Contains("Builder");
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {victim}"));
@@ -213,7 +214,7 @@ public class ZoneCommandTests
 		var victim = await CreateOwnedBy(owner, "ChzoneAllVictim");
 
 		var zoneBefore = (await Mediator.Send(new GetObjectNodeQuery(zone))).Expect<AnySharpObject>();
-		await Assert.That(zoneBefore.Object().Locks.ContainsKey(nameof(LockType.ChZone))).IsFalse();
+		await Assert.That(zoneBefore.Object().Locks.ContainsKey(nameof(LockType.Zone))).IsFalse();
 
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzoneall #{owner.DbRef.Number}={zone}"));
 
@@ -223,7 +224,7 @@ public class ZoneCommandTests
 
 		// check_zone_lock ran, which only happens if the per-object work went through do_chzone.
 		var zoneAfter = (await Mediator.Send(new GetObjectNodeQuery(zone))).Expect<AnySharpObject>();
-		await Assert.That(zoneAfter.Object().Locks[nameof(LockType.ChZone)].LockString)
+		await Assert.That(zoneAfter.Object().Locks[nameof(LockType.Zone)].LockString)
 			.IsEqualTo($"=#{zone.Number}");
 	}
 
@@ -423,6 +424,10 @@ public class ZoneCommandTests
 	/// PennMUSH <c>check_zone_lock</c> (<c>src/lock.c:962</c>) installs <c>=me</c> on a zone that has
 	/// none, through <c>add_lock(GOD, …)</c> — a system write, not the triggering player's. Going
 	/// through <c>ILockService.SetAsync</c> instead would run the write against that player.
+	/// <para>The lock is <c>Zone_Lock</c>, not <c>Chzone_Lock</c>: Chzone says who may zone an object
+	/// <em>to</em> this one (<c>src/set.c:409</c>), while Zone is what hands control of a zoned object
+	/// to whoever passes it (<c>src/predicat.c:409</c>). Writing the default onto Chzone left the
+	/// control lock open and shut the destination gate against everyone but the zone itself.</para>
 	/// </summary>
 	[Test]
 	public async ValueTask ChzoneInstallsTheDefaultZoneLockAsASystemWrite()
@@ -434,9 +439,106 @@ public class ZoneCommandTests
 		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@chzone {victim}={zone}"));
 
 		var zoneNode = (await Mediator.Send(new GetObjectNodeQuery(zone))).Expect<AnySharpObject>();
-		var installed = zoneNode.Object().Locks[nameof(LockType.ChZone)];
+		var installed = zoneNode.Object().Locks[nameof(LockType.Zone)];
 		await Assert.That(installed.LockString).IsEqualTo($"=#{zone.Number}");
 		await Assert.That(installed.Creator?.Number).IsEqualTo(1);
+
+		// …and nothing was written to the Chzone lock, which would deny every later @chzone to this zone.
+		await Assert.That(zoneNode.Object().Locks.ContainsKey(nameof(LockType.ChZone))).IsFalse();
+
+		// lock.c:968-971 reports the install, naming the zone through unparse_object.
+		var ownerNode = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Expect<AnySharpObject>();
+		var unparsed = await MessageFormatting.UnparseObjectAsync(
+			WebAppFactoryArg.Services.GetRequiredService<IPermissionService>(), ownerNode, zoneNode);
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(NotifyService,
+			nameof(ErrorMessages.Notifications.ZoneAutomaticallyLockedFormat),
+			$"Unlocked zone {unparsed} - automatically zone-locking to itself", owner.DbRef)).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>do_chzone</c> matches its object with <c>MAT_NEARBY</c> (<c>src/set.c:380</c>) — MAT_EVERYTHING
+	/// plus MAT_NEAR — so an object that is neither near the player nor controlled by them is not one
+	/// they can re-zone by naming its dbref. SharpMUSH matched with <c>MAT_EVERYTHING</c>, which has no
+	/// such filter.
+	/// </summary>
+	[Test]
+	public async ValueTask ChzoneWillNotReachAnObjectThatIsNotNearby()
+	{
+		var owner = await CreateTestPlayerWithHandleAsync("ZT_NearbyOwner");
+		var stranger = await CreateTestPlayerWithHandleAsync("ZT_NearbyStranger");
+
+		// In `owner`'s inventory, so `stranger` neither controls it nor stands anywhere near it.
+		var victim = await CreateOwnedBy(owner, "NearbyVictim");
+		var zone = await CreateOwnedBy(stranger, "NearbyZone");
+
+		await Parser.CommandParse(stranger.Handle, ConnectionService, MarkupText.Plain($"@chzone {victim}={zone}"));
+
+		// Pattern C: `stranger` is unique to this test, so Received(1) is unambiguous.
+		await NotifyService
+			.Received(1)
+			.Notify(TestHelpers.MatchingObject(stranger.DbRef),
+				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "I can't see that here.")),
+				TestHelpers.MatchingObject(stranger.DbRef), INotifyService.NotificationType.Announce);
+
+		var after = (await Mediator.Send(new GetObjectNodeQuery(victim))).Expect<AnySharpObject>();
+		await Assert.That((await after.Object().Zone.WithCancellation(CancellationToken.None)).IsNone).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>do_chzone</c>'s admin-owned warning (<c>src/set.c:452-456</c>), which fires on
+	/// <c>Hasprivs(Owner(thing))</c> and so does not depend on the flags the object itself carries.
+	/// </summary>
+	[Test]
+	public async ValueTask ChzoneWarnsAboutAnAdminOwnedObject()
+	{
+		var admin = await CreateWizardWithHandleAsync("ZT_AdminOwner");
+		var zone = await CreateOwnedBy(admin, "AdminOwnedZone");
+		var victim = await CreateOwnedBy(admin, "AdminOwnedVictim");
+
+		await Parser.CommandParse(admin.Handle, ConnectionService, MarkupText.Plain($"@chzone {victim}={zone}"));
+
+		// Pattern C: `admin` is unique to this test, so the key match is unambiguous.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.ChzoningAdminOwnedObject), admin.DbRef, admin.DbRef)).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>do_chzone</c>'s <c>else</c> branch (<c>src/set.c:477-482</c>): when the privileges survive —
+	/// here because a wizard's <c>/preserve</c> kept them — the change says what was kept rather than
+	/// passing in silence.
+	/// </summary>
+	[Test]
+	public async ValueTask ChzonePreserveWarnsThatThePrivilegesWereKept()
+	{
+		var admin = await CreateWizardWithHandleAsync("ZT_KeptPrivilege");
+		var zone = await CreateOwnedBy(admin, "KeptPrivilegeZone");
+		var victim = await CreateOwnedBy(admin, "KeptPrivilegeVictim");
+
+		await Parser.CommandParse(admin.Handle, ConnectionService, MarkupText.Plain($"@set {victim}=TRUST"));
+		await Assert.That(await (await Node(victim)).HasFlag("TRUST")).IsTrue();
+
+		await Parser.CommandParse(admin.Handle, ConnectionService,
+			MarkupText.Plain($"@chzone/preserve {victim}={zone}"));
+
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.ChzoningTrustPlayer), admin.DbRef, admin.DbRef)).IsTrue();
+		// The whole point of /preserve: the flag the strip would have taken is still there.
+		await Assert.That(await (await Node(victim)).HasFlag("TRUST")).IsTrue();
+	}
+
+	private async Task<AnySharpObject> Node(DBRef dbref)
+		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
+
+	/// <summary>
+	/// A fresh player carrying WIZARD, so a test that needs an admin executor still gets a receiver
+	/// unique to itself rather than sharing #1 with the rest of the session.
+	/// </summary>
+	private async Task<TestIsolationHelpers.TestPlayer> CreateWizardWithHandleAsync(string namePrefix)
+	{
+		var player = await CreateTestPlayerWithHandleAsync(namePrefix);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{player.DbRef.Number}=WIZARD"));
+		await Assert.That(await (await Node(player.DbRef)).IsWizard()).IsTrue();
+		return player;
 	}
 
 	[Test]

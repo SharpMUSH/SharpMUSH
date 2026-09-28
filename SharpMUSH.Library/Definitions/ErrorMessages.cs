@@ -683,6 +683,35 @@ public static partial class ErrorMessages
 		/// <summary><c>do_chzoneall</c>'s summary (<c>src/wiz.c:1055</c>).</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ZoneChangedForObjectsFormat = "Zone changed for {0} objects.";
+		/// <summary>
+		/// <c>check_zone_lock</c>'s report of the <c>=me</c> Zone lock it just installed
+		/// (<c>src/lock.c:968-971</c>). No full stop: PennMUSH's string has none.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ZoneAutomaticallyLockedFormat =
+			"Unlocked zone {0} - automatically zone-locking to itself";
+		/// <summary>
+		/// <c>check_zone_lock</c>'s trivial-lock advisory (<c>src/lock.c:977-981</c>): the zone's Zone lock
+		/// admits the player start room and the master room as readily as the player's own location, so it
+		/// is gating on nothing.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ZoneShouldHaveMoreSecureLockFormat =
+			"Zone {0} really should have a more secure zone-lock.";
+		/// <summary>
+		/// <c>check_zone_lock</c>'s loose-lock advisory (<c>src/lock.c:983-987</c>): the lock passes for the
+		/// player's location, which is what <c>@lock/zone &lt;zone&gt;=player</c> rather than
+		/// <c>=player</c> does.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ZoneMayHaveLooseLockFormat =
+			"Warning: Zone {0} may have loose zone lock. Lock zones to =player, not player";
+		/// <summary><c>do_chzone</c>'s admin-owned warning (<c>src/set.c:453-456</c>).</summary>
+		public const string ChzoningAdminOwnedObject = "Warning: @chzoning admin-owned object!";
+		/// <summary><c>do_chzone</c>'s warning for a target that keeps its privileges (<c>src/set.c:479</c>).</summary>
+		public const string ChzoningPrivilegedPlayer = "Warning: @chzoning a privileged player.";
+		/// <summary><c>do_chzone</c>'s warning for a target that keeps TRUST (<c>src/set.c:481</c>).</summary>
+		public const string ChzoningTrustPlayer = "Warning: @chzoning a TRUST player.";
 
 		// --- Lock/Unlock messages aligned with PennMUSH src/lock.c ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -706,6 +735,12 @@ public static partial class ErrorMessages
 		public const string LinkedExitToRoom = "Linked exit #{0} to #{1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string UnlinkedExit = "Unlinked exit #{0}.";
+		/// <summary>
+		/// <c>do_unlink</c>'s <c>NOTHING</c> arm (<c>src/create.c:261</c>). Its match is silent, so a name
+		/// that resolves to nothing — including one dropped because a mortal does not control it — reports
+		/// this rather than the locator's "I can't see that here."
+		/// </summary>
+		public const string UnlinkWhat = "Unlink what?";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string OpenedExit = "Opened exit {0}";
 

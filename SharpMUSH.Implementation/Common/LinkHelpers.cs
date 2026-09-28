@@ -104,10 +104,12 @@ public static class LinkHelpers
 	/// <c>do_link</c> falls back to when it is given no destination.
 	/// </summary>
 	/// <remarks>
-	/// The match here is the caller's <see cref="LocateFlags.All"/> rather than <c>do_unlink</c>'s
-	/// <c>MAT_EXIT | MAT_HERE | MAT_ABSOLUTE</c> (plus <c>MAT_CONTROL</c> for a mortal), so a failed
-	/// match reports the locator's wording and not <c>do_unlink</c>'s "Unlink what?" — the same match
-	/// <c>@UNLINK</c> has always used. Narrowing it is a separate change.
+	/// <c>do_unlink</c> matches <c>MAT_EXIT | MAT_HERE | MAT_ABSOLUTE</c> with a <c>TYPE_EXIT</c>
+	/// preference, and adds <c>MAT_CONTROL</c> for anyone who is not a wizard (<c>:254-258</c>). The
+	/// call is <c>match_result</c>, not <c>noisy_match_result</c>, because <c>do_unlink</c> words both
+	/// failures itself. Matching with <see cref="LocateFlags.All"/> and letting the locator report
+	/// meant <c>@unlink</c> resolved names PennMUSH does not reach here — any neighbour, anything
+	/// carried, any player by <c>*name</c> — and answered "I can't see that here." for the rest.
 	/// </remarks>
 	public static async ValueTask<Result<Success>> UnlinkAsync(
 		IMUSHCodeParser parser,
@@ -118,12 +120,41 @@ public static class LinkHelpers
 		IAttributeService attributeService,
 		AnySharpObject executor,
 		string targetName)
-		=> await LocatedAsync(parser, locateService, executor, targetName) switch
+	{
+		// create.c:256-258. A candidate dropped for MAT_CONTROL leaves the search empty, so a mortal
+		// naming someone else's exit gets "Unlink what?" rather than "Permission denied." — the
+		// permission refusal below is only reachable once the match itself succeeded.
+		var flags = UnlinkMatchFlags;
+		if (!await executor.IsWizard())
+		{
+			flags |= LocateFlags.OnlyMatchLookerControlledObjects;
+		}
+
+		return await locateService.Locate(parser, executor, executor, targetName, flags) switch
 		{
 			AnySharpObject target => await UnlinkedAsync(mediator, notifyService, permissionService, attributeService,
 				executor, target),
-			Error<string> unmatched => unmatched
+			// create.c:263-265.
+			Error<string> { Value: ErrorMessages.Returns.AmbiguousMatch }
+				=> await RefusedAsync(notifyService, executor, ErrorMessages.Returns.AmbiguousMatch,
+					ErrorMessages.Notifications.AmbiguousMatch),
+			// create.c:260-262: match_result's only other failure is NOTHING.
+			_ => await RefusedAsync(notifyService, executor, ErrorMessages.Returns.NoMatch,
+				ErrorMessages.Notifications.UnlinkWhat)
 		};
+	}
+
+	/// <summary>
+	/// <c>do_unlink</c>'s <c>match_flags</c> before the <c>MAT_CONTROL</c> a mortal adds, with
+	/// <c>TYPE_EXIT</c> as the preferred type (<c>src/create.c:254-259</c>).
+	/// </summary>
+	/// <remarks>
+	/// The preference is not <c>MAT_TYPE</c>, so a room still matches — which is how <c>@unlink here</c>
+	/// removes a drop-to.
+	/// </remarks>
+	private const LocateFlags UnlinkMatchFlags =
+		LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.MatchHereForLookerLocation |
+		LocateFlags.AbsoluteMatch | LocateFlags.ExitsPreference;
 
 	/// <inheritdoc cref="UnlinkAsync"/>
 	private static async ValueTask<Result<Success>> UnlinkedAsync(
