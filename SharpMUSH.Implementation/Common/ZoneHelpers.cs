@@ -184,8 +184,14 @@ public static class ZoneHelpers
 	/// refusals with two different messages.
 	/// </summary>
 	/// <remarks>
-	/// Zoning an object to itself is refused for mortals only (<c>:422</c>); PennMUSH's own walk stops
-	/// on <c>tmp == Zone(tmp)</c>, so a privileged player is allowed to build that fixed point.
+	/// PennMUSH refuses the self-zone to mortals only (<c>:422</c>) — its walk stops on
+	/// <c>tmp == Zone(tmp)</c>, so a privileged player may build that fixed point. SharpMUSH refuses it
+	/// to everyone: <see cref="IObjectStore.IsReachableViaParentOrZoneAsync"/> and
+	/// <see cref="IManipulateSharpObjectService.SetZone"/> both treat a self-loop as unsafe, and
+	/// <c>ZoneParentCycleTests.SelfZone_ShouldFail</c> fixes that as the rule. Exempting a wizard here
+	/// would not let the write through — <c>SetZone</c> refuses it again — it would only strip the
+	/// object's flags and powers and install a zone lock on the way to the refusal. A deliberate
+	/// difference for the compatibility profile (#1134), not a gap to close in this method.
 	/// </remarks>
 	private static async ValueTask<Result<Success>> CycleRefusedAsync(
 		IMediator mediator,
@@ -197,7 +203,7 @@ public static class ZoneHelpers
 		bool noisy)
 		=> await HelperFunctions.SafeToAddRelationship(mediator, database, target, destination) switch
 		{
-			RelationshipSafety.SelfReference when !await executor.IsPriv()
+			RelationshipSafety.SelfReference
 				=> await RefusedAsync(notifyService, executor, noisy, ErrorMessages.Returns.ZoneLoop,
 					nameof(ErrorMessages.Notifications.CantZoneObjectsToThemselves)),
 			RelationshipSafety.Cycle

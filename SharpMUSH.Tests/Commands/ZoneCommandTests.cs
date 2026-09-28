@@ -172,6 +172,33 @@ public class ZoneCommandTests
 	}
 
 	/// <summary>
+	/// A refused zone change must not have written anything first. <c>do_chzone</c>'s self-zone guard
+	/// (<c>src/set.c:421-426</c>) comes before the flag strip and before <c>check_zone_lock</c>, and
+	/// SharpMUSH refuses the self-zone to privileged players too, because
+	/// <c>ManipulateSharpObjectService.SetZone</c> rejects a self-loop as well — exempting a wizard in
+	/// the helper would have stripped the object and installed a zone lock on the way to a refusal it
+	/// could not avoid.
+	/// </summary>
+	[Test]
+	public async ValueTask ChzoneRefusingASelfZoneWritesNothing()
+	{
+		var victim = await CreateOwnedBy(await CreateTestPlayerWithHandleAsync("ZT_SelfZone"), "SelfZoneVictim");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {victim}=Builder"));
+		await Assert.That(await PowerNamesOf(victim)).Contains("Builder");
+
+		// As God: privileged, and PennMUSH would have let the self-zone through.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {victim}={victim}"));
+
+		var after = (await Mediator.Send(new GetObjectNodeQuery(victim))).Expect<AnySharpObject>();
+		await Assert.That((await after.Object().Zone.WithCancellation(CancellationToken.None)).IsNone).IsTrue();
+		await Assert.That(after.Object().Locks.ContainsKey(nameof(LockType.ChZone))).IsFalse();
+		await Assert.That(await PowerNamesOf(victim)).Contains("Builder");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {victim}"));
+	}
+
+	/// <summary>
 	/// <c>do_chzoneall</c> is a loop calling <c>do_chzone</c> per object with <c>noisy</c> off
 	/// (<c>src/wiz.c:1046-1054</c>) — "This keeps consistency on things like flag resetting, etc...".
 	/// SharpMUSH's second copy of the loop wrote the zone straight through the Mediator, so
