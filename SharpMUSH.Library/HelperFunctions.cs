@@ -341,6 +341,17 @@ public static partial class HelperFunctions
 									 || (x.Aliases ?? []).Any(a => a.Equals(flag, StringComparison.InvariantCultureIgnoreCase)), cancellationToken);
 
 	/// <summary>
+	/// <see cref="HasFlag(SharpObject,string)"/> plus the letter fallback of Penn's <c>flag_hash_lookup</c>
+	/// (<c>src/flags.c:162-189</c>): a single character that names no flag is looked up as a flag
+	/// letter, compared exactly (<c>letter_to_flagptr</c>: <c>f-&gt;letter == c</c>), so <c>h</c> is HALT
+	/// and <c>H</c> is HAVEN. This is what <c>hasflag()</c> and a <c>FLAG^</c> lock ask.
+	/// </summary>
+	public static async ValueTask<bool> HasFlagOrLetter(this SharpObject obj, string nameOrLetter)
+		=> await obj.HasFlag(nameOrLetter)
+			|| (nameOrLetter.Length == 1
+					&& await obj.Flags.Value.AnyAsync(x => x.Symbol == nameOrLetter, ExecutionBudget.CurrentToken));
+
+	/// <summary>
 	/// PennMUSH <c>LOUD</c> (hlp/pennflag.hlp:256): "LOUD objects bypass all speech, channel speech, and
 	/// interaction @locks. This flag can only be set by royalty or wizards." Penn consults it at the call
 	/// site rather than inside <c>Chan_Can_Speak</c> — see <c>src/extchat.c:1539</c>.

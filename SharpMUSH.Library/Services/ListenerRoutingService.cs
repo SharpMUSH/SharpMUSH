@@ -227,7 +227,7 @@ public class ListenerRoutingService(
 		MString message,
 		AnySharpObject speaker)
 	{
-		var hasMonitor = await listener.Object().Flags.Value.AnyAsync(f => f.Name == "MONITOR");
+		var hasMonitor = await listener.HasFlag("MONITOR");
 		if (!hasMonitor || await listener.HasFlag("HALT"))
 			return;
 
@@ -259,7 +259,7 @@ public class ListenerRoutingService(
 		AnySharpObject speaker,
 		NotificationType type)
 	{
-		var hasPuppet = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "PUPPET", ExecutionBudget.CurrentToken);
+		var hasPuppet = await puppet.HasFlag("PUPPET");
 		if (!hasPuppet)
 			return;
 
@@ -277,7 +277,7 @@ public class ListenerRoutingService(
 		if (bindings.Length == 0) return;
 
 		// Check if puppet and owner are in same location (unless VERBOSE)
-		var hasVerbose = await puppet.Object().Flags.Value.AnyAsync(f => f.Name == "VERBOSE", ExecutionBudget.CurrentToken);
+		var hasVerbose = await puppet.HasFlag("VERBOSE");
 		if (!hasVerbose && !IsPrivate(type))
 		{
 			var puppetLocation = await LocateService.FriendlyWhereIs(puppet, ExecutionBudget.CurrentToken);

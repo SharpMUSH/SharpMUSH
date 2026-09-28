@@ -200,24 +200,6 @@ public static partial class ArgHelpers
 		return new ValueTask<CallState>(result != negate ? "1" : "0");
 	}
 
-	/// <summary>
-	/// Flag and power names are matched case-insensitively, by name or alias: PennMUSH's
-	/// <c>match_flag</c> / <c>match_power</c> (<c>src/flags.c:124-149</c>) both resolve through
-	/// <c>ptab_find</c>, which compares with <c>strcasecmp</c> and <c>string_prefix</c>, and
-	/// <c>string_prefix</c> compares through <c>DOWNCASE</c>.
-	/// <para>
-	/// Both of these forward to <see cref="HelperFunctions"/> so there is exactly one answer to
-	/// "does this object have this flag/power?" — the two used to be separate implementations that
-	/// disagreed, which made a permission check depend on which helper the call site reached for.
-	/// </para>
-	/// </summary>
-	public static ValueTask<bool> HasObjectFlags(SharpObject obj, SharpObjectFlag flag)
-		=> obj.HasFlag(flag.Name);
-
-	/// <inheritdoc cref="HasObjectFlags"/>
-	public static ValueTask<bool> HasObjectPowers(SharpObject obj, string power)
-		=> obj.HasPower(power);
-
 	public static IEnumerable<DbRefOrName> NameList(string list)
 		=> NameListPattern().Matches(list).Select(x =>
 			HelperFunctions.ParseDbRef(x.Groups["DBRef"].Value) is DBRef dbref

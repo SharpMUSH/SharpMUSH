@@ -563,14 +563,10 @@ public partial class Commands
 	/// </summary>
 	private async Task SyncPlayerOutputPreferences(long handle, SharpObject player)
 	{
-		var ansiEnabled = await player.Flags.Value.AnyAsync(f =>
-			string.Equals(f.Name, "ANSI", StringComparison.OrdinalIgnoreCase));
-		var colorEnabled = await player.Flags.Value.AnyAsync(f =>
-			string.Equals(f.Name, "COLOR", StringComparison.OrdinalIgnoreCase));
-		var xterm256Enabled = await player.Flags.Value.AnyAsync(f =>
-			string.Equals(f.Name, "XTERM256", StringComparison.OrdinalIgnoreCase));
-		var truecolorEnabled = await player.Flags.Value.AnyAsync(f =>
-			string.Equals(f.Name, "TRUECOLOR", StringComparison.OrdinalIgnoreCase));
+		var ansiEnabled = await player.HasFlag("ANSI");
+		var colorEnabled = await player.HasFlag("COLOR");
+		var xterm256Enabled = await player.HasFlag("XTERM256");
+		var truecolorEnabled = await player.HasFlag("TRUECOLOR");
 
 		if (MessageBus != null)
 		{
