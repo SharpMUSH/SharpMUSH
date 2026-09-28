@@ -127,7 +127,8 @@ public class ExamineHeaderParityTests
 		var room = await RunCaptured("examine/brief here");
 		await Assert.That(room).Contains("Exits:\n")
 			.Because($"EXAM_BRIEF still lists a room's exits (look.c:909-916); actual output: {room}");
-		await Assert.That(room).Contains(exitName);
+		await Assert.That(room.Split('\n').Count(line => line.Contains(exitName))).IsEqualTo(1)
+			.Because($"Contents(thing) never holds exits, so an exit is listed only under Exits:; actual output: {room}");
 	}
 
 	[Test]

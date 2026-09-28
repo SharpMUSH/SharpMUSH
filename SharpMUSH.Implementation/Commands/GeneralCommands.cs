@@ -202,7 +202,9 @@ public partial class Commands
 		var perceive = await ObserveRealityAsync(parser, executor);
 		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
 			? []
+			// GetContentsQuery also yields exits; Penn's Contents(thing) never does, and exits get their own list.
 			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+				.Where(item => !item.IsExit)
 				.Where((item, ct) => perceive(item.Object().DBRef, ct))
 				.ToArrayAsync(ExecutionBudget.CurrentToken);
 
