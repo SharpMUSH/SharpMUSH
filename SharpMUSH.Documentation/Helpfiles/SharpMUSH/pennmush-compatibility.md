@@ -310,6 +310,25 @@ entry is a position in a list.
 1 0
 ```
 
+## A set function's delimiter can be longer than one character
+
+**A choice.**
+
+**Affects** `setunion() setdiff() setinter() setsymdiff()`.<br>
+**PennMUSH** answers `#-1 SEPARATOR MUST BE ONE CHARACTER` to a `<delimiter>` longer than one
+character, once either list is non-empty.<br>
+**SharpMUSH** splits both lists on the whole `<delimiter>` and joins the answer with it, unless an
+`<osep>` is given.<br>
+**Why.** Data held in softcode lists often already contains every single character.<br>
+**Workaround.** Use a one-character `<delimiter>`; it means the same on both servers.
+
+```sharp
+> think setunion(a::b,b::c,::)
+a::b::c
+> think setinter(a::b,b::c,::)
+b
+```
+
 # COMPATIBILITY COMMANDS
 Deliberate differences in the command table, the configuration and the objects the game starts with.
 
