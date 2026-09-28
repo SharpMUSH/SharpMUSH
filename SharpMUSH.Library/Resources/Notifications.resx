@@ -14,9 +14,6 @@
   </resheader>
 
   <!-- Object and matching notifications -->
-  <data name="BadObjectName" xml:space="preserve">
-    <value>I don't understand that object name.</value>
-  </data>
   <data name="InvalidNameThing" xml:space="preserve">
     <value>Invalid name for a thing.</value>
   </data>
@@ -25,9 +22,6 @@
   </data>
   <data name="CantSeeThat" xml:space="preserve">
     <value>I can't see that here.</value>
-  </data>
-  <data name="NoSuchObject" xml:space="preserve">
-    <value>I can't find that.</value>
   </data>
   <data name="CouldNotFind" xml:space="preserve">
     <value>Could not find that.</value>
@@ -58,18 +52,6 @@
   </data>
 
   <!-- Object type notifications -->
-  <data name="NotARoom" xml:space="preserve">
-    <value>That's not a room.</value>
-  </data>
-  <data name="NotAnExit" xml:space="preserve">
-    <value>That's not an exit.</value>
-  </data>
-  <data name="NotAThing" xml:space="preserve">
-    <value>That's not a thing.</value>
-  </data>
-  <data name="NotAPlayer" xml:space="preserve">
-    <value>That's not a player.</value>
-  </data>
   <data name="MustBePlayer" xml:space="preserve">
     <value>New owner must be a player.</value>
   </data>
@@ -175,12 +157,6 @@
   <data name="InvalidArgument" xml:space="preserve">
     <value>Invalid argument.</value>
   </data>
-  <data name="InvalidArguments" xml:space="preserve">
-    <value>Invalid arguments to {0}.</value>
-  </data>
-  <data name="InvalidDbref" xml:space="preserve">
-    <value>That's not a valid object reference.</value>
-  </data>
   <data name="DontUnderstandThosePermissions" xml:space="preserve">
     <value>I don't understand those permissions.</value>
   </data>
@@ -217,9 +193,6 @@
   <!-- Function notifications -->
   <data name="RecursionLimit" xml:space="preserve">
     <value>That caused too much recursion.</value>
-  </data>
-  <data name="FunctionDisabled" xml:space="preserve">
-    <value>That function is disabled.</value>
   </data>
 
   <!-- Operation result notifications -->
@@ -302,9 +275,6 @@
   </data>
 
   <!-- HTTP/Network notifications -->
-  <data name="CannotSetContentLengthHeader" xml:space="preserve">
-    <value>You cannot set Content-Length header.</value>
-  </data>
 
   <!-- Destruction edge-case notifications -->
   <data name="GuestCantDestroy" xml:space="preserve">
@@ -583,6 +553,21 @@
   <data name="CantMakeCircularZones" xml:space="preserve">
     <value>You can't make circular zones!</value>
   </data>
+  <data name="ObjectAlreadyInThatZone" xml:space="preserve">
+    <value>That object is already in that zone.</value>
+  </data>
+  <data name="NoPowerToShiftReality" xml:space="preserve">
+    <value>You don't have the power to shift reality.</value>
+  </data>
+  <data name="CantZoneObjectsToThemselves" xml:space="preserve">
+    <value>You shouldn't zone objects to themselves!</value>
+  </data>
+  <data name="NoZoneSpecified" xml:space="preserve">
+    <value>No zone specified.</value>
+  </data>
+  <data name="ZoneChangedForObjectsFormat" xml:space="preserve">
+    <value>Zone changed for {0} objects.</value>
+  </data>
 
   <!-- Channel messages (CHAT: prefix) - note angle brackets require XML escaping -->
   <data name="ChatNotOnChannel" xml:space="preserve">
@@ -721,15 +706,6 @@
   </data>
   <data name="ParentSet" xml:space="preserve">
     <value>Parent changed.</value>
-  </data>
-  <data name="ZoneCycleCannotAdd" xml:space="preserve">
-    <value>Cannot add zone: would create a cycle.</value>
-  </data>
-  <data name="ZoneSet" xml:space="preserve">
-    <value>Zone set.</value>
-  </data>
-  <data name="ZoneCleared" xml:space="preserve">
-    <value>Zone cleared.</value>
   </data>
   <data name="ClearedPowersFromFormat" xml:space="preserve">
     <value>Cleared {0} power(s) from {1}.</value>
@@ -2625,14 +2601,6 @@
   </data>
   <data name="SitelockInvalidSyntax" xml:space="preserve">
     <value>Invalid @SITELOCK syntax. Use '@help @sitelock' for usage information.</value>
-  </data>
-
-  <!-- @chzoneall -->
-  <data name="ZonesClearedForOwnerFormat" xml:space="preserve">
-    <value>Zones cleared for {0} object(s) owned by {1}.</value>
-  </data>
-  <data name="ZoneSetForOwnerFormat" xml:space="preserve">
-    <value>Zone set to {0} for {1} object(s) owned by {2}.</value>
   </data>
 
   <!-- @kick -->

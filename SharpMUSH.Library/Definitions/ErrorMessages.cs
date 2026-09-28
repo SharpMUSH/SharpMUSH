@@ -34,8 +34,6 @@ public static class ErrorMessages
 		/// the function has no one to notify, so the reason is the return value.
 		/// </summary>
 		public const string InvalidSourceRoom = "#-1 INVALID SOURCE ROOM";
-		public const string NotAnExit = "#-1 NOT AN EXIT";
-		public const string NotAThing = "#-1 NOT A THING";
 		public const string NotAPlayer = "#-1 NOT A PLAYER";
 		public const string InvalidPlayer = "#-1 INVALID PLAYER";
 		public const string InvalidRoom = "#-1 INVALID ROOM";
@@ -67,8 +65,6 @@ public static class ErrorMessages
 		public const string AttrPermissions = "#-1 NO PERMISSION TO GET ATTRIBUTE";
 		public const string AttrEvalPermissions = "#-1 NO PERMISSION TO EVALUATE ATTRIBUTE";
 		public const string AttrSetPermissions = "#-1 NO PERMISSION TO SET ATTRIBUTE";
-		public const string AttrWipPermissions = "#-1 NO PERMISSION TO WIPE ATTRIBUTE";
-		public const string CannotTeleport = "#-1 NO PERMISSION TO TELEPORT OBJECT";
 
 		public const string InvalidArgument = "#-1 INVALID ARGUMENT";
 		public const string Integer = "#-1 ARGUMENT MUST BE INTEGER";
@@ -81,6 +77,7 @@ public static class ErrorMessages
 		public const string DomainError = "#-1 DOMAIN ERROR";
 		public const string InvalidPassword = "#-1 INVALID PASSWORD";
 		public const string InvalidFlag = "#-1 INVALID FLAG";
+		public const string InvalidPower = "#-1 INVALID POWER";
 		public const string ObjectAttributeString = "#-1 INVALID OBJECT/ATTRIBUTE VALUE";
 		/// <summary>
 		/// PennMUSH's single failure for every bad flag argument (<c>src/set.c:583-585</c>,
@@ -117,7 +114,6 @@ public static class ErrorMessages
 		public const string OutputTooLarge = "#-1 OUTPUT EXCEEDED MAXIMUM SIZE";
 		public const string RegisterRange = "#-1 REGISTER OUT OF RANGE";
 		public const string BadRegName = "#-1 REGISTER NAME INVALID";
-		public const string TooManyRegs = "#-1 TOO MANY REGISTERS";
 		public const string TooManySwitches = "#-1 TOO MANY SWITCHES, OR A BAD COMBINATION OF SWITCHES";
 		public const string OutOfRange = "#-1 OUT OF RANGE";
 
@@ -129,14 +125,6 @@ public static class ErrorMessages
 		public const string ComparisonRequiresTwoNumbers = "#-1 COMPARISON REQUIRES 2 OR MORE NUMBERS";
 		public const string SeparatorMustBeOneChar = "#-1 SEPARATOR MUST BE ONE CHARACTER";
 		public const string MissingArguments = "#-1 MISSING ARGUMENTS";
-		public const string NoSuchRecord = "#-1 NO SUCH RECORD";
-
-		public const string SqlNoConnection = "#-1 SQL ERROR: NO DATABASE CONNECTED";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SqlError = "#-1 SQL ERROR: {0}";
-		public const string SqliteError = "#-1 SQLITE ERROR";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SqliteErrorDetail = "#-1 SQLITE ERROR: {0}";
 
 		public const string AmbiguousChannelName = "#-2 AMBIGUOUS CHANNEL NAME";
 
@@ -159,26 +147,20 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ParserFailure = "#-1 PARSER FAILURE: {0}";
 
-		public const string NothingToEvaluate = "#-1 NOTHING TO EVALUATE";
 		public const string NothingToDo = "#-1 NOTHING TO DO";
-		public const string ExitsCannotContainThings = "#-1 EXITS CANNOT CONTAIN THINGS";
 		public const string CantSeeThroughThat = "#-1 CANNOT SEE THROUGH THAT";
 		public const string ParentLoop = "#-1 PARENT LOOP DETECTED";
 		public const string TooManyAncestors = "#-1 TOO MANY ANCESTORS";
-		public const string NotSupported = "#-1 BEHAVIOR NOT SUPPORTED BY SHARPMUSH";
 		public const string SafeObject = "#-1 OBJECT IS SAFE";
 
 		public const string ArgMustEndInInteger = "#-1 ARGUMENT MUST END IN AN INTEGER";
 		public const string ConnectionNotFound = "#-1 CONNECTION NOT FOUND";
-		public const string CycleDetected = "#-1 CYCLE DETECTED";
 		public const string DecryptionError = "#-1 DECRYPTION ERROR";
 		public const string Depth = "#-1 MAX DEPTH EXCEEDED";
 		public const string DivisionByZero = "#-1 DIVISION BY ZERO";
 		public const string EntryNotFound = "#-1 ENTRY NOT FOUND";
 		public const string Error = "#-1 ERROR";
-		public const string ErrorNotARoom = "#-1 OBJECT IS NOT A ROOM";
 		public const string ErrorNotSupported = "#-1 NOT SUPPORTED";
-		public const string FieldWidthExceedsLineWidth = "#-1 FIELD WIDTH EXCEEDS LINE WIDTH";
 		/// <summary>A named text file that does not exist, PennMUSH's wording (<c>src/help.c:1144</c>).</summary>
 		public const string NoSuchFile = "#-1 NO SUCH FILE";
 		public const string ImaginaryNumber = "#-1 IMAGINARY NUMBER";
@@ -205,7 +187,6 @@ public static class ErrorMessages
 		public const string InvalidObjectAttribute = "#-1 INVALID OBJECT/ATTRIBUTE";
 		public const string InvalidOperation = "#-1 INVALID OPERATION";
 		public const string InvalidPid = "#-1 INVALID PID";
-		public const string InvalidPort = "#-1 INVALID PORT";
 		public const string InvalidPrecision = "#-1 INVALID PRECISION";
 		public const string InvalidQueueType = "#-1 INVALID QUEUE TYPE";
 		public const string InvalidRegex = "#-1 INVALID REGEX";
@@ -219,13 +200,11 @@ public static class ErrorMessages
 		public const string InvalidTimestring = "#-1 INVALID TIMESTRING";
 		public const string InvalidType = "#-1 INVALID TYPE";
 		public const string InvalidValue = "#-1 INVALID VALUE";
-		public const string InvalidVictim = "#-1 INVALID VICTIM";
 		public const string InvalidWidth = "#-1 INVALID WIDTH (MUST BE 10-1000)";
 		public const string MalformedNumber = "#-1 MALFORMED NUMBER";
 		public const string MissingJson2 = "#-1 MISSING JSON2";
 		public const string NoMatchingColorName = "#-1 NO MATCHING COLOR NAME";
 		public const string NoQuerySpecified = "#-1 NO QUERY SPECIFIED";
-		public const string NoSuchLock = "#-1 NO SUCH LOCK";
 		public const string NoSuchMail = "#-1 NO SUCH MAIL";
 		public const string NoSuchOption = "#-1 NO SUCH OPTION";
 		public const string NoSuchWikiPage = "#-1 NO SUCH WIKI PAGE";
@@ -262,12 +241,10 @@ public static class ErrorMessages
 		public const string PathNotFound = "#-1 PATH NOT FOUND";
 		public const string RecipientDoesNotAcceptMail = "#-1 RECIPIENT DOES NOT ACCEPT MAIL FROM YOU";
 		public const string RegexpInvalid = "#-1 REGEXP ERROR: INVALID REGULAR EXPRESSION";
-		public const string ResultOutOfRange = "#-1 RESULT WAS OUTSIDE OF RANGE";
 		public const string SecondsMustNotBeNegative = "#-1 SECONDS MUST NOT BE NEGATIVE";
 		public const string SingleCharArgument = "#-1 ARGUMENT MUST BE A SINGLE CHARACTER";
 		public const string SqlNotEnabled = "#-1 SQL IS NOT ENABLED";
 		public const string StringLengthsMustBeEqual = "#-1 STRING LENGTHS MUST BE EQUAL";
-		public const string TextFileServiceNotAvailable = "#-1 TEXT FILE SERVICE NOT AVAILABLE";
 		public const string ThisIsARoom = "#-1 THIS IS A ROOM";
 		public const string TooManyColumnsForAlign = "#-1 TOO MANY COLUMNS FOR ALIGN";
 		public const string UseTagwrapInstead = "#-1 USE TAGWRAP INSTEAD";
@@ -371,8 +348,6 @@ public static class ErrorMessages
 
 		public const string Unfindable = "#-1 UNFINDABLE";
 		public const string UnknownFlag = "#-1 UNKNOWN FLAG";
-		public const string UpdateFailed = "#-1 UPDATE FAILED";
-		public const string YouAreNotAMemberOfThatChannel = "#-1 YOU ARE NOT A MEMBER OF THAT CHANNEL";
 		public const string YouCannotModifyThisChannel = "#-1 YOU CANNOT MODIFY THIS CHANNEL";
 		public const string ChannelAlreadyExists = "#-1 CHANNEL ALREADY EXISTS";
 		public const string ChannelCreationFailed = "#-1 CHANNEL COULD NOT BE CREATED";
@@ -436,11 +411,9 @@ public static class ErrorMessages
 		public const string AccountClosedFormat = "Account '{0}' closed; active sessions revoked.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AccountMarkedDeletedFormat = "Account '{0}' marked deleted; active sessions revoked. The account record is retained.";
-		public const string BadObjectName = "I don't understand that object name.";
 		public const string InvalidNameThing = "Invalid name for a thing.";
 		public const string NoMatch = "I don't see that here.";
 		public const string CantSeeThat = "I can't see that here.";
-		public const string NoSuchObject = "I can't find that.";
 		public const string CouldNotFind = "Could not find that.";
 		public const string CantFindThatPlayer = "I can't find that player";
 		// match.c:481 — with the exclamation mark. The neighbouring two are already exact.
@@ -456,10 +429,6 @@ public static class ErrorMessages
 		public const string DontSeeThatHereFormat = "I don't see {0} here.";
 		public const string DontKnowWhoYouMean = "I don't know who you mean!";
 
-		public const string NotARoom = "That's not a room.";
-		public const string NotAnExit = "That's not an exit.";
-		public const string NotAThing = "That's not a thing.";
-		public const string NotAPlayer = "That's not a player.";
 		public const string MustBePlayer = "New owner must be a player.";
 		public const string InvalidDestinationExit = "Invalid destination for exit.";
 		public const string HomeMustBeRoom = "Home must be a room.";
@@ -497,9 +466,6 @@ public static class ErrorMessages
 		public const string HavenFlagSet = "You are set HAVEN and cannot receive pages.";
 
 		public const string InvalidArgument = "Invalid argument.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string InvalidArguments = "Invalid arguments to {0}.";
-		public const string InvalidDbref = "That's not a valid object reference.";
 		public const string DontUnderstandThosePermissions = "I don't understand those permissions.";
 		public const string DontUnderstandThatKey = "I don't understand that key.";
 		public const string DontUnderstandListOfTypes = "I don't understand the list of types.";
@@ -515,7 +481,6 @@ public static class ErrorMessages
 		public const string PlayerAliasInUse = "That player alias is already in use.";
 
 		public const string RecursionLimit = "That caused too much recursion.";
-		public const string FunctionDisabled = "That function is disabled.";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string Created = "Created {0} ({1}).";
@@ -571,8 +536,6 @@ public static class ErrorMessages
 		public const string NotAnAdmin = "You don't look like an admin to me.";
 		public const string CantAliasCommandToThat = "I can't alias a command to that!";
 		public const string CantMakeMultipleRequests = "You can't make multiple requests at the same time!";
-
-		public const string CannotSetContentLengthHeader = "You cannot set Content-Length header.";
 
 		// --- Destruction edge-case notifications (PennMUSH src/destroy.c) ---
 		public const string GuestCantDestroy = "I'm sorry, Dave, I'm afraid I can't do that.";
@@ -796,8 +759,23 @@ public static class ErrorMessages
 		public const string ProgramsDontKillPeople = "Programs don't kill people; people kill people!";
 
 		// --- Zone messages aligned with PennMUSH src/set.c ---
+		/// <summary>
+		/// <c>do_chzone</c>'s only success report (<c>src/set.c:487</c>) — it says the same thing when the
+		/// zone is cleared, which is why there is no separate "Zone cleared." here.
+		/// </summary>
 		public const string ZoneChanged = "Zone changed.";
 		public const string CantMakeCircularZones = "You can't make circular zones!";
+		/// <summary><c>do_chzone</c>'s no-op guard (<c>src/set.c:394</c>).</summary>
+		public const string ObjectAlreadyInThatZone = "That object is already in that zone.";
+		/// <summary><c>do_chzone</c>'s <c>controls(player, thing)</c> refusal (<c>src/set.c:400</c>).</summary>
+		public const string NoPowerToShiftReality = "You don't have the power to shift reality.";
+		/// <summary><c>do_chzone</c>'s self-zone guard, mortals only (<c>src/set.c:423</c>).</summary>
+		public const string CantZoneObjectsToThemselves = "You shouldn't zone objects to themselves!";
+		/// <summary><c>do_chzoneall</c>'s empty right-hand side (<c>src/wiz.c:1033</c>).</summary>
+		public const string NoZoneSpecified = "No zone specified.";
+		/// <summary><c>do_chzoneall</c>'s summary (<c>src/wiz.c:1055</c>).</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ZoneChangedForObjectsFormat = "Zone changed for {0} objects.";
 
 		// --- Channel messages aligned with PennMUSH src/extchat.c (CHAT: prefix) ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1070,9 +1048,6 @@ public static class ErrorMessages
 		public const string CyclicAncestor = "You are not allowed to be your own ancestor!";
 		public const string TooManyAncestors = "Too many ancestors.";
 		public const string ParentSet = "Parent changed.";
-		public const string ZoneCycleCannotAdd = "Cannot add zone: would create a cycle.";
-		public const string ZoneSet = "Zone set.";
-		public const string ZoneCleared = "Zone cleared.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ClearedPowersFromFormat = "Cleared {0} power(s) from {1}.";
 
@@ -2079,11 +2054,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SitelockRuleRemovedFormat = "Sitelock rule for '{0}' removed.";
 		public const string SitelockRuleNotFound = "No sitelock rule was found for that pattern.";
-
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ZonesClearedForOwnerFormat = "Zones cleared for {0} object(s) owned by {1}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ZoneSetForOwnerFormat = "Zone set to {0} for {1} object(s) owned by {2}.";
 
 		public const string KickUsage = "Usage: @kick <player>";
 

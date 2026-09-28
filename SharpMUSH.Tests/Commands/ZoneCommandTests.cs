@@ -67,11 +67,15 @@ public class ZoneCommandTests
 		await Assert.That(zone.Object().DBRef.Number).IsEqualTo(zoneDbRef.Number);
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>do_chzone</c> has exactly one success report, <c>"Zone changed."</c>
+	/// (<c>src/set.c:487</c>), and reaches it for <c>=none</c> too: the <c>zone != NOTHING</c> guards
+	/// above it cover the destination gate and the flag strip, not the notify. "Zone cleared." was a
+	/// SharpMUSH invention, and it was written as a raw string rather than a resource key.
+	/// </summary>
 	[Test]
 	public async ValueTask ChzoneClearZone()
 	{
-		// Pattern C: "Zone cleared." is a fixed server string that executor #1 may receive in
-		// other tests (any @chzone …=none). Use a fresh player as the unique receiver/sender.
 		var freshPlayer = await CreateTestPlayerWithHandleAsync("ZT_ClearZone");
 
 		// Create unique zone master object as the fresh player (they own it → controls check passes)
@@ -95,9 +99,11 @@ public class ZoneCommandTests
 
 		await Parser.CommandParse(freshPlayer.Handle, ConnectionService, MarkupText.Plain($"@chzone {objDbRef}=none"));
 
-		// Pattern C: freshPlayer.DbRef is unique to this test so Received(1) is unambiguous.
+		// Pattern C: freshPlayer.DbRef is unique to this test so the key match is unambiguous.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.ZoneChanged), freshPlayer.DbRef, freshPlayer.DbRef)).IsTrue();
 		await NotifyService
-			.Received(1)
+			.DidNotReceive()
 			.Notify(TestHelpers.MatchingObject(freshPlayer.DbRef),
 				Arg.Is<SharpMessage>(msg => TestHelpers.MessagePlainTextEquals(msg, "Zone cleared.")),
 				TestHelpers.MatchingObject(freshPlayer.DbRef), INotifyService.NotificationType.Announce);
@@ -106,6 +112,119 @@ public class ZoneCommandTests
 		var zone = await updatedObject.Object().Zone.WithCancellation(CancellationToken.None);
 
 		await Assert.That(zone.IsNone).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>do_chzone</c>'s no-op guard (<c>src/set.c:392-396</c>): re-zoning an object to the zone it is
+	/// already in says so and returns 0, which is also <c>do_chzoneall</c>'s <c>Zone(i) != zone</c>
+	/// filter (<c>src/wiz.c:1047</c>). SharpMUSH re-ran the whole change, stripping the object's powers
+	/// a second time and reporting "Zone changed.".
+	/// </summary>
+	[Test]
+	public async ValueTask ChzoneRefusesAnObjectAlreadyInThatZone()
+	{
+		var owner = await CreateTestPlayerWithHandleAsync("ZT_AlreadyZoned");
+		var zone = await CreateOwnedBy(owner, "AlreadyZonedZone");
+		var victim = await CreateOwnedBy(owner, "AlreadyZonedVictim");
+
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@chzone {victim}={zone}"));
+
+		var moved = (await Mediator.Send(new GetObjectNodeQuery(victim))).Expect<AnySharpObject>();
+		var moveZone = (await moved.Object().Zone.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+		await Assert.That(moveZone.Object().DBRef.Number).IsEqualTo(zone.Number);
+
+		await Parser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"@chzone {victim}={zone}"));
+
+		// Pattern C: owner is unique to this test, so the key match is unambiguous.
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService,
+			nameof(ErrorMessages.Notifications.ObjectAlreadyInThatZone), owner.DbRef, owner.DbRef)).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>do_chzone</c> discards <c>/preserve</c> for anyone who is not a wizard —
+	/// <c>if (!Wizard(player)) preserve = 0;</c> (<c>src/set.c:470-471</c>) — so a mortal cannot keep an
+	/// object's WIZARD/ROYALTY/TRUST flags or its powers across a zone change. SharpMUSH honoured the
+	/// switch for everyone, which is a mortal handing a zone an object that kept every power it had.
+	/// </summary>
+	[Test]
+	public async ValueTask ChzonePreserveIsWizardOnly()
+	{
+		var owner = await CreateTestPlayerWithHandleAsync("ZT_MortalPreserve");
+		var zone = await CreateOwnedBy(owner, "MortalPreserveZone");
+		var victim = await CreateOwnedBy(owner, "MortalPreserveVictim");
+
+		// The scenario stands on the executor being a mortal who controls both objects.
+		var ownerObj = (await Mediator.Send(new GetObjectNodeQuery(owner.DbRef))).Expect<AnySharpObject>();
+		await Assert.That(await ownerObj.IsWizard()).IsFalse();
+
+		// Granted as God: a mortal cannot @power anything.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {victim}=Builder"));
+		await Assert.That(await PowerNamesOf(victim)).Contains("Builder");
+
+		await Parser.CommandParse(owner.Handle, ConnectionService,
+			MarkupText.Plain($"@chzone/preserve {victim}={zone}"));
+
+		var moved = (await Mediator.Send(new GetObjectNodeQuery(victim))).Expect<AnySharpObject>();
+		var movedZone = (await moved.Object().Zone.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+		await Assert.That(movedZone.Object().DBRef.Number).IsEqualTo(zone.Number);
+
+		await Assert.That(await PowerNamesOf(victim)).IsEmpty();
+	}
+
+	/// <summary>
+	/// A refused zone change must not have written anything first. <c>do_chzone</c>'s self-zone guard
+	/// (<c>src/set.c:421-426</c>) comes before the flag strip and before <c>check_zone_lock</c>, and
+	/// SharpMUSH refuses the self-zone to privileged players too, because
+	/// <c>ManipulateSharpObjectService.SetZone</c> rejects a self-loop as well — exempting a wizard in
+	/// the helper would have stripped the object and installed a zone lock on the way to a refusal it
+	/// could not avoid.
+	/// </summary>
+	[Test]
+	public async ValueTask ChzoneRefusingASelfZoneWritesNothing()
+	{
+		var victim = await CreateOwnedBy(await CreateTestPlayerWithHandleAsync("ZT_SelfZone"), "SelfZoneVictim");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {victim}=Builder"));
+		await Assert.That(await PowerNamesOf(victim)).Contains("Builder");
+
+		// As God: privileged, and PennMUSH would have let the self-zone through.
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzone {victim}={victim}"));
+
+		var after = (await Mediator.Send(new GetObjectNodeQuery(victim))).Expect<AnySharpObject>();
+		await Assert.That((await after.Object().Zone.WithCancellation(CancellationToken.None)).IsNone).IsTrue();
+		await Assert.That(after.Object().Locks.ContainsKey(nameof(LockType.ChZone))).IsFalse();
+		await Assert.That(await PowerNamesOf(victim)).Contains("Builder");
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@destroy {victim}"));
+	}
+
+	/// <summary>
+	/// <c>do_chzoneall</c> is a loop calling <c>do_chzone</c> per object with <c>noisy</c> off
+	/// (<c>src/wiz.c:1046-1054</c>) — "This keeps consistency on things like flag resetting, etc...".
+	/// SharpMUSH's second copy of the loop wrote the zone straight through the Mediator, so
+	/// <c>check_zone_lock</c>'s default <c>=me</c> lock (<c>src/lock.c:962</c>) was never installed and
+	/// the summary was a per-owner string PennMUSH does not have.
+	/// </summary>
+	[Test]
+	public async ValueTask ChzoneAllRunsTheSameRoutineAsChzone()
+	{
+		var owner = await CreateTestPlayerWithHandleAsync("ZT_ChzoneAllOwner");
+		var zone = await CreateOwnedBy(owner, "ChzoneAllZone");
+		var victim = await CreateOwnedBy(owner, "ChzoneAllVictim");
+
+		var zoneBefore = (await Mediator.Send(new GetObjectNodeQuery(zone))).Expect<AnySharpObject>();
+		await Assert.That(zoneBefore.Object().Locks.ContainsKey(nameof(LockType.ChZone))).IsFalse();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@chzoneall #{owner.DbRef.Number}={zone}"));
+
+		var moved = (await Mediator.Send(new GetObjectNodeQuery(victim))).Expect<AnySharpObject>();
+		var movedZone = (await moved.Object().Zone.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>();
+		await Assert.That(movedZone.Object().DBRef.Number).IsEqualTo(zone.Number);
+
+		// check_zone_lock ran, which only happens if the per-object work went through do_chzone.
+		var zoneAfter = (await Mediator.Send(new GetObjectNodeQuery(zone))).Expect<AnySharpObject>();
+		await Assert.That(zoneAfter.Object().Locks[nameof(LockType.ChZone)].LockString)
+			.IsEqualTo($"=#{zone.Number}");
 	}
 
 	/// <summary>Power names currently granted to an object.</summary>
