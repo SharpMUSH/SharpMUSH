@@ -1,4 +1,3 @@
-using System.Text;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -106,17 +105,15 @@ public class SceneApprovalIntegrationTests
 	private async Task<string> EvalAs(long handle, string expression) =>
 		(await RunAs(handle, $"think {expression}")).Trim();
 
-	private async Task<string> CreatePlayerAsync(string name, long handle)
+	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name)
 	{
 		await God1($"@pcreate {name}=pw_{Tag}_123");
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
 		if (string.IsNullOrEmpty(dbref) || dbref.StartsWith("#-") || !DBRef.TryParse(dbref, out var parsed))
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
-		await ConnectionService.Bind(handle, parsed!.Value);
-		return dbref;
+		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, parsed!.Value);
+		return (dbref, handle);
 	}
 
 	/// <summary>
@@ -146,9 +143,9 @@ public class SceneApprovalIntegrationTests
 		await God1("@set #1=WIZARD");
 
 		// ---- 1. The predicate itself ------------------------------------------------------------
-		var approved = await CreatePlayerAsync($"App_{Tag}", 51L);
-		var unapproved = await CreatePlayerAsync($"Unapp_{Tag}", 52L);
-		var guest = await CreatePlayerAsync($"Guesty_{Tag}", 53L);
+		var (approved, approvedHandle) = await CreatePlayerAsync($"App_{Tag}");
+		var (unapproved, unapprovedHandle) = await CreatePlayerAsync($"Unapp_{Tag}");
+		var (guest, guestHandle) = await CreatePlayerAsync($"Guesty_{Tag}");
 
 		await God1($"@set {approved}=APPROVED");
 		await GrantGuestPowerAsync(guest);
@@ -186,7 +183,7 @@ public class SceneApprovalIntegrationTests
 		await Assert.That(await EvalNum($"loc({loggerDbref})")).IsEqualTo(roomDbref);
 
 		// ---- 3. An APPROVED character may own a scene -------------------------------------------
-		var createOut = await RunAs(51L, $"+scene/create Approval Test {Tag}");
+		var createOut = await RunAs(approvedHandle, $"+scene/create Approval Test {Tag}");
 		Log($"[CREATE approved] {createOut}");
 		var sceneId = await Eval($"get({approved}/MY.SID)");
 		await Assert.That(sceneId).IsNotEmpty().Because("an approved character may create and own a scene");
@@ -208,7 +205,7 @@ public class SceneApprovalIntegrationTests
 
 		foreach (var (command, what) in associatingVerbs)
 		{
-			var output = await RunAs(52L, command);
+			var output = await RunAs(unapprovedHandle, command);
 			Log($"[REFUSED unapproved] {command} -> {output.Replace("\n", " | ")}");
 			await Assert.That(output).Contains(NotApproved)
 				.Because($"an unapproved character must be refused when trying to {what}");
@@ -220,29 +217,29 @@ public class SceneApprovalIntegrationTests
 			.Because("no refused verb may leave a membership edge behind");
 		await Assert.That(await Eval($"scenefocus({unapproved})")).StartsWith("#-1")
 			.Because("an unapproved character is focused on nothing");
-		await Assert.That(await EvalAs(52L, "scenelist(mine)")).IsEmpty()
+		await Assert.That(await EvalAs(unapprovedHandle, "scenelist(mine)")).IsEmpty()
 			.Because("an unapproved character has no scenes");
 
 		// ---- 5. A GUEST is refused too, flag or no flag ------------------------------------------
-		var guestJoin = await RunAs(53L, $"+scene/join {sceneId}");
+		var guestJoin = await RunAs(guestHandle, $"+scene/join {sceneId}");
 		Log($"[REFUSED guest] +scene/join -> {guestJoin.Replace("\n", " | ")}");
 		await Assert.That(guestJoin).Contains(NotApproved)
 			.Because("guests never participate in scenes");
 		await Assert.That(await MembersAsync(sceneId)).DoesNotContain(Num(guest));
 
 		// ---- 6. Viewing stays OPEN to an unapproved character ------------------------------------
-		var browse = await RunAs(52L, "+scene");
+		var browse = await RunAs(unapprovedHandle, "+scene");
 		Log($"[VIEW unapproved] +scene -> {browse.Replace("\n", " | ")[..Math.Min(160, browse.Replace("\n", " | ").Length)]}");
 		await Assert.That(browse).DoesNotContain(NotApproved)
 			.Because("browsing the scene list needs no approval");
 		await Assert.That(browse).Contains("Scenes:");
 
-		var upcoming = await RunAs(52L, "+scene/upcoming");
+		var upcoming = await RunAs(unapprovedHandle, "+scene/upcoming");
 		await Assert.That(upcoming).DoesNotContain(NotApproved)
 			.Because("viewing the schedule needs no approval");
 		await Assert.That(upcoming).Contains("Scheduled Scenes");
 
-		var info = await RunAs(52L, $"+scene {sceneId}");
+		var info = await RunAs(unapprovedHandle, $"+scene {sceneId}");
 		Log($"[VIEW unapproved] +scene {sceneId} -> {info.Replace("\n", " | ")[..Math.Min(160, info.Replace("\n", " | ").Length)]}");
 		await Assert.That(info).DoesNotContain(NotApproved)
 			.Because("reading scene information needs no approval");
@@ -250,14 +247,14 @@ public class SceneApprovalIntegrationTests
 
 		// ---- 7. Approval is checked at POSE time, so revoking it stops capture immediately --------
 		var posesBefore = await Eval($"scene({sceneId}, posecount)");
-		await RunAs(51L, "pose tests that capture works while approved.");
+		await RunAs(approvedHandle, "pose tests that capture works while approved.");
 		var posesWhileApproved = await Eval($"scene({sceneId}, posecount)");
 		await Assert.That(int.Parse(posesWhileApproved)).IsGreaterThan(int.Parse(posesBefore))
 			.Because("an approved, focused character's pose is captured");
 
 		await God1($"@set {approved}=!APPROVED");
 		await Assert.That(await Eval($"isapproved({approved})")).IsEqualTo("0");
-		await RunAs(51L, "pose tests that capture stops the moment approval is revoked.");
+		await RunAs(approvedHandle, "pose tests that capture stops the moment approval is revoked.");
 		var posesAfterRevoke = await Eval($"scene({sceneId}, posecount)");
 		Log($"[REVOKE] posecount before={posesBefore} approved={posesWhileApproved} after-revoke={posesAfterRevoke}");
 		await Assert.That(posesAfterRevoke).IsEqualTo(posesWhileApproved)
@@ -272,7 +269,7 @@ public class SceneApprovalIntegrationTests
 	public async Task AtScene_Command_IsWizardOnly_ForEverySwitch()
 	{
 		await God1("@set #1=WIZARD");
-		var mortal = await CreatePlayerAsync($"Mortal_{Tag}", 61L);
+		var (mortal, mortalHandle) = await CreatePlayerAsync($"Mortal_{Tag}");
 		await Assert.That(mortal).IsNotEmpty();
 
 		// The 18 action switches plus the bare (display) form. All 19 go through one wizard gate at the
@@ -285,19 +282,19 @@ public class SceneApprovalIntegrationTests
 
 		foreach (var name in switches)
 		{
-			var result = await Parser.CommandParse(61L, ConnectionService, MarkupText.Plain($"@scene/{name} something=else"));
+			var result = await Parser.CommandParse(mortalHandle, ConnectionService, MarkupText.Plain($"@scene/{name} something=else"));
 			await Assert.That(result.Message!.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED")
 				.Because($"@scene/{name} is wizard-only — players drive the system through +scene");
 		}
 
-		var bareResult = await Parser.CommandParse(61L, ConnectionService, MarkupText.Plain("@scene something"));
+		var bareResult = await Parser.CommandParse(mortalHandle, ConnectionService, MarkupText.Plain("@scene something"));
 		await Assert.That(bareResult.Message!.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED")
 			.Because("the bare display form is gated by the same check");
 
 		// And the player is told, not silently ignored. The FLAG^WIZARD CommandLock refuses first, so the
 		// message is the engine's localized PermissionDenied rather than the plugin's own SCENE: prefix —
 		// the plugin's explicit IsWizard() gate is the second line of defence behind it, not the first.
-		var refusalOutput = await RunAs(61L, "@scene/list");
+		var refusalOutput = await RunAs(mortalHandle, "@scene/list");
 		await Assert.That(refusalOutput).Contains(nameof(ErrorMessages.Notifications.PermissionDenied))
 			.Because("a refused command has to say so");
 	}
@@ -306,7 +303,7 @@ public class SceneApprovalIntegrationTests
 	public async Task SceneWriteFunctions_AreUnreachableFromMortalSoftcode()
 	{
 		await God1("@set #1=WIZARD");
-		var mortal = await CreatePlayerAsync($"FnMor_{Tag}", 62L);
+		var (mortal, mortalHandle) = await CreatePlayerAsync($"FnMor_{Tag}");
 		var sceneId = await Eval($"scenecreate(,#1,Function Surface {Tag})");
 		await Assert.That(sceneId).DoesNotStartWith("#-1");
 
@@ -327,7 +324,7 @@ public class SceneApprovalIntegrationTests
 
 		foreach (var expression in writes)
 		{
-			var result = await EvalAs(62L, expression);
+			var result = await EvalAs(mortalHandle, expression);
 			await Assert.That(result).StartsWith("#-1")
 				.Because($"{expression} is a wizard-only side-effect function and a player is not a wizard");
 		}
@@ -340,7 +337,7 @@ public class SceneApprovalIntegrationTests
 	public async Task SceneList_DoesNotLeakPrivateSceneIdsToNonMembers()
 	{
 		await God1("@set #1=WIZARD");
-		await CreatePlayerAsync($"Lister_{Tag}", 63L);
+		var (_, listerHandle) = await CreatePlayerAsync($"Lister_{Tag}");
 
 		// Explicitly private: scenes are created watchable, so this is the case that must be asked for.
 		var privateScene = await Eval($"scenecreate(,#1,Private {Tag})");
@@ -350,13 +347,13 @@ public class SceneApprovalIntegrationTests
 		await God1($"@scene/set {publicScene}/status=active");
 		await God1($"@scene/set {publicScene}/public=1");
 
-		var listed = await EvalAs(63L, "scenelist(active)");
+		var listed = await EvalAs(listerHandle, "scenelist(active)");
 
 		await Assert.That(listed).Contains(publicScene)
 			.Because("a public scene is listable by anyone");
 		await Assert.That(listed).DoesNotContain(privateScene)
 			.Because("the storage filters carry no visibility clause, so the function layer must");
-		await Assert.That(await EvalAs(63L, $"scene({privateScene}, status)")).StartsWith("#-1")
+		await Assert.That(await EvalAs(listerHandle, $"scene({privateScene}, status)")).StartsWith("#-1")
 			.Because("and reading its fields stays refused, as it always was");
 
 	}
@@ -365,17 +362,17 @@ public class SceneApprovalIntegrationTests
 	public async Task ApprovedFlag_CannotBeSetOrUnsetByAnUnprivilegedPlayer()
 	{
 		await God1("@set #1=WIZARD");
-		var setter = await CreatePlayerAsync($"Setter_{Tag}", 64L);
-		var target = await CreatePlayerAsync($"Target_{Tag}", 65L);
+		var (setter, setterHandle) = await CreatePlayerAsync($"Setter_{Tag}");
+		var (target, targetHandle) = await CreatePlayerAsync($"Target_{Tag}");
 
-		await RunAs(64L, $"@set {target}=APPROVED");
+		await RunAs(setterHandle, $"@set {target}=APPROVED");
 		await Assert.That(await Eval($"isapproved({target})")).IsEqualTo("0")
 			.Because("APPROVED is royalty-settable; an ordinary player cannot approve anyone");
 
 		await God1($"@set {target}=APPROVED");
 		await Assert.That(await Eval($"isapproved({target})")).IsEqualTo("1");
 
-		await RunAs(64L, $"@set {target}=!APPROVED");
+		await RunAs(setterHandle, $"@set {target}=!APPROVED");
 		await Assert.That(await Eval($"isapproved({target})")).IsEqualTo("1")
 			.Because("nor can an ordinary player revoke someone else's approval");
 

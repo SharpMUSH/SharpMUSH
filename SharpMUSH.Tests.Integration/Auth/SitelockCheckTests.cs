@@ -57,8 +57,6 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 	private IMediator Mediator => factory.Services.GetRequiredService<IMediator>();
 	private INotifyService NotifyService => factory.Services.GetRequiredService<INotifyService>();
 
-	private static long _nextTelnetHandle = 90_000;
-
 	/// <summary>
 	/// Test client pinned to the https base address. The server uses UseHttpsRedirection;
 	/// following the 307 from http→https makes HttpClient drop the Authorization header,
@@ -218,7 +216,7 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 	/// <summary>Registers a fresh, not-yet-connected telnet-style handle carrying a specific origin IP.</summary>
 	private async Task<long> RegisterTelnetHandleAsync(string ip)
 	{
-		var handle = Interlocked.Increment(ref _nextTelnetHandle);
+		var handle = TestIsolationHelpers.GenerateUniqueHandle();
 		var metadata = new ConcurrentDictionary<string, string>(new Dictionary<string, string>
 		{
 			["ConnectionStartTime"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(),
