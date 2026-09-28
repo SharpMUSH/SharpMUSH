@@ -1557,17 +1557,18 @@ public partial class Functions
 		{
 			delimiter = MarkupText.Space;
 		}
-		else if (delimiter.Length != 1)
+		else if (delimiter.EnumerateGraphemes().Take(2).Count() != 1)
 		{
 			return new CallState(ErrorMessages.Returns.SeparatorMustBeOneChar);
 		}
 
 		// With four arguments, a non-empty fourth is a sort type and an empty one is the
 		// output separator. With five, the fourth is the sort type and the fifth the separator.
-		var sortType = args.TryGetValue("3", out var sortArg) ? sortArg.Message?.ToPlainText() ?? "" : "";
+		var sortArg = args.TryGetValue("3", out var sortCall) ? sortCall.Message ?? MarkupText.Empty : MarkupText.Empty;
+		var sortType = sortArg.ToPlainText();
 		var outputSeparator = args.Count switch
 		{
-			4 when sortType.Length == 0 => MarkupText.Empty,
+			4 when sortArg.Length == 0 => MarkupText.Empty,
 			5 => args["4"].Message ?? MarkupText.Empty,
 			_ => delimiter
 		};

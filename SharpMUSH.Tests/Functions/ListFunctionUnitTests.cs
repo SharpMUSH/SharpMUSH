@@ -869,6 +869,10 @@ public class ListFunctionUnitTests
 	[Arguments("setunion(b a c,d,,-a)", "d c b a")]
 	[Arguments("setunion(3 1 2,1,,-n)", "3 2 1")]
 	[Arguments("setunion(b a,c,,zzz)", "a b c")]
+	// SharpMUSH-only inputs: a delimiter is one grapheme, not one UTF-16 unit, and a fourth
+	// argument holding only point markup is not empty, so it is a sort type, not the separator.
+	[Arguments("setunion(a😀b,b😀c,😀)", "a😀b😀c")]
+	[Arguments("setunion(a,b,,sound(a.wav))", "a b")]
 	public async Task SetFunctionsSortTypeAndSeparators(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
