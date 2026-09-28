@@ -175,7 +175,7 @@ public class SceneRoleplayIntegrationTests
 	/// package's 1.6.0 guard. The refusal path is the subject of
 	/// <see cref="Scenes.SceneApprovalIntegrationTests"/>; here approval is fixture, not subject.</para>
 	/// </summary>
-	private async Task<string> CreatePlayerAsync(string name, string password, long handle)
+	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name, string password)
 	{
 		await God1($"@pcreate {name}={password}");
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
@@ -184,13 +184,11 @@ public class SceneRoleplayIntegrationTests
 
 		await God1($"@set {dbref}=APPROVED");
 
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
-		await ConnectionService.Bind(handle, parsed!.Value);
+		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, parsed!.Value);
 
 		// Return the full "#N:creation" objid — loc()/@tel resolve players reliably with it.
 		// Scene functions and softcode %# emit the short "#N" form, so equality goes via Num().
-		return dbref;
+		return (dbref, handle);
 	}
 
 	[Test]
@@ -236,9 +234,9 @@ public class SceneRoleplayIntegrationTests
 		var roomDbref = Num(digOut); // short "#N" form for comparisons
 		Log($"[SETUP] Scene room: {roomName} = {digOut}");
 
-		var alice = await CreatePlayerAsync($"Alice_{Tag}", "pw_alice_123", 11L);
-		var bob = await CreatePlayerAsync($"Bob_{Tag}", "pw_bob_123", 12L);
-		var carol = await CreatePlayerAsync($"Carol_{Tag}", "pw_carol_123", 13L);
+		var (alice, aliceHandle) = await CreatePlayerAsync($"Alice_{Tag}", "pw_alice_123");
+		var (bob, bobHandle) = await CreatePlayerAsync($"Bob_{Tag}", "pw_bob_123");
+		var (carol, carolHandle) = await CreatePlayerAsync($"Carol_{Tag}", "pw_carol_123");
 		Log($"[SETUP] Players: Alice={alice} Bob={bob} Carol={carol}");
 
 		// Teleport all three into the scene room so %L (their location) resolves to the scene room.
@@ -265,7 +263,7 @@ public class SceneRoleplayIntegrationTests
 		// to the package default — `active` (1.1.0) — so the scene is immediately the room's active
 		// scene and capture fires without a separate +scene/start.
 		var sceneTitle = $"The Tavern Meeting {Tag}";
-		var createMsgs = await RunAndCollectAs(11L, $"+scene/create {sceneTitle}");
+		var createMsgs = await RunAndCollectAs(aliceHandle, $"+scene/create {sceneTitle}");
 		Log($"[CREATE] {string.Join(" | ", createMsgs)}");
 
 		// The verb stamps the new scene id onto Alice's MY.SID attribute. Read it directly
@@ -298,16 +296,16 @@ public class SceneRoleplayIntegrationTests
 			.Because("a created-active scene is the room's active scene with no separate start");
 
 		// +scene/start is idempotent on an already-active scene (it also resumes a paused one).
-		var startMsgs = await RunAndCollectAs(11L, "+scene/start");
+		var startMsgs = await RunAndCollectAs(aliceHandle, "+scene/start");
 		Log($"[START] {string.Join(" | ", startMsgs)}");
 		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("active")
 			.Because("+scene/start keeps the scene active");
 		await Assert.That(await Eval($"scenewhere({roomDbref})")).IsEqualTo(sceneId)
 			.Because("the scene remains the room's active scene (capture pre-req)");
 
-		var bobJoin = await RunAndCollectAs(12L, $"+scene/join {sceneId}");
+		var bobJoin = await RunAndCollectAs(bobHandle, $"+scene/join {sceneId}");
 		Log($"[JOIN] Bob: {string.Join(" | ", bobJoin)}");
-		var carolJoin = await RunAndCollectAs(13L, $"+scene/join {sceneId}");
+		var carolJoin = await RunAndCollectAs(carolHandle, $"+scene/join {sceneId}");
 		Log($"[JOIN] Carol: {string.Join(" | ", carolJoin)}");
 
 		await Assert.That(await Eval($"scenefocus({bob})")).IsEqualTo(sceneId)
@@ -315,9 +313,9 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(await Eval($"scenefocus({carol})")).IsEqualTo(sceneId);
 
 		// Personas via +scene/as (recorded on the member edge and stamped onto future poses).
-		await RunAndCollectAs(11L, "+scene/as Alice the Innkeeper");
-		await RunAndCollectAs(12L, "+scene/as Bob the Bard");
-		await RunAndCollectAs(13L, "+scene/as Carol the Cloaked");
+		await RunAndCollectAs(aliceHandle, "+scene/as Alice the Innkeeper");
+		await RunAndCollectAs(bobHandle, "+scene/as Bob the Bard");
+		await RunAndCollectAs(carolHandle, "+scene/as Carol the Cloaked");
 
 		await Assert.That(await Eval($"scenemember({sceneId}, {alice}, showas)")).IsEqualTo("Alice the Innkeeper");
 		await Assert.That(await Eval($"scenemember({sceneId}, {bob}, showas)")).IsEqualTo("Bob the Bard");
@@ -334,10 +332,10 @@ public class SceneRoleplayIntegrationTests
 
 		// Each focused character poses natively; the @hook/override on POSE/SAY/SEMIPOSE
 		// reproduces the room emit AND records the pose into the scene.
-		await RunAndCollectAs(11L, "pose lights a candle on the bar.");
-		await RunAndCollectAs(12L, "say Well met, friends!");
-		await RunAndCollectAs(13L, ";slips into the corner booth.");
-		await RunAndCollectAs(11L, "pose pours three ales.");
+		await RunAndCollectAs(aliceHandle, "pose lights a candle on the bar.");
+		await RunAndCollectAs(bobHandle, "say Well met, friends!");
+		await RunAndCollectAs(carolHandle, ";slips into the corner booth.");
+		await RunAndCollectAs(aliceHandle, "pose pours three ales.");
 
 		var poseIds = (await Eval($"sceneposes({sceneId})"))
 			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -374,13 +372,13 @@ public class SceneRoleplayIntegrationTests
 			.Because("Alice authored exactly two poses");
 
 		// Negative capture: a co-located passer-by who is NOT focused on the scene is NOT captured.
-		var dave = await CreatePlayerAsync($"Dave_{Tag}", "pw_dave_123", 14L);
+		var (dave, daveHandle) = await CreatePlayerAsync($"Dave_{Tag}", "pw_dave_123");
 		await God1($"@tel {dave}={digOut}");
 		await Assert.That(await EvalNum($"loc({dave})")).IsEqualTo(roomDbref)
 			.Because("Dave is in the same room");
 		await Assert.That(await Eval($"scenefocus({dave})")).StartsWith("#-1")
 			.Because("Dave never joined/focused the scene");
-		await RunAndCollectAs(14L, "pose loiters by the door, eavesdropping.");
+		await RunAndCollectAs(daveHandle, "pose loiters by the door, eavesdropping.");
 		var afterDave = (await Eval($"sceneposes({sceneId})"))
 			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		await Assert.That(afterDave.Length).IsEqualTo(4)
@@ -391,7 +389,7 @@ public class SceneRoleplayIntegrationTests
 
 		// +scene/edit <poseId>=<find>^^^<replace>; author-only is enforced by @scene/editpose.
 		var bobPoseId = poseIds[1];
-		await RunAndCollectAs(12L, $"+scene/edit {bobPoseId}=friends^^^companions");
+		await RunAndCollectAs(bobHandle, $"+scene/edit {bobPoseId}=friends^^^companions");
 		await Assert.That(await Eval($"scenepose({sceneId}, {bobPoseId}, content)")).Contains("companions")
 			.Because("+scene/edit should rewrite the content (friends → companions)");
 		await Assert.That(await Eval($"scenepose({sceneId}, {bobPoseId}, content)")).DoesNotContain("friends!")
@@ -399,12 +397,12 @@ public class SceneRoleplayIntegrationTests
 		var editCountAfter = await Eval($"scenepose({sceneId}, {bobPoseId}, editcount)");
 		Log($"[EDIT] editcount after edit: {editCountAfter}");
 
-		await RunAndCollectAs(12L, $"+scene/undo {bobPoseId}");
+		await RunAndCollectAs(bobHandle, $"+scene/undo {bobPoseId}");
 		await Assert.That(await Eval($"scenepose({sceneId}, {bobPoseId}, content)")).Contains("Well met, friends!")
 			.Because("+scene/undo should restore the pre-edit content");
 
 		// +scene/recall <count> prints the last <count> pose contents (Alice is focused).
-		var recapMsgs = await RunAndCollectAs(11L, "+scene/recall 10");
+		var recapMsgs = await RunAndCollectAs(aliceHandle, "+scene/recall 10");
 		var recap = string.Join("\n", recapMsgs);
 		Log($"[RECAP]\n{recap}");
 		await Assert.That(recap).Contains("lights a candle on the bar.")
@@ -420,7 +418,7 @@ public class SceneRoleplayIntegrationTests
 		// over a list — a nested one, in the tracker's case, sorting members by how long since each
 		// last posed. Both name their element with %iL rather than ##; an empty table body is what a
 		// substitution that resolved to nothing would look like.
-		var potMsgs = await RunAndCollectAs(11L, "+pot");
+		var potMsgs = await RunAndCollectAs(aliceHandle, "+pot");
 		var pot = string.Join("\n", potMsgs);
 		Log($"[POT]\n{pot}");
 		await Assert.That(pot).Contains("Pose Tracker").Because("the tracker prints its header");
@@ -434,7 +432,7 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(pot).DoesNotContain("I can't see that here")
 			.Because("and msecs() with no argument tried to locate an object named '', once per member");
 
-		var browseMsgs = await RunAndCollectAs(11L, "+scene");
+		var browseMsgs = await RunAndCollectAs(aliceHandle, "+scene");
 		var browse = string.Join("\n", browseMsgs);
 		Log($"[BROWSE]\n{browse}");
 		await Assert.That(browse).Contains("Scenes:").Because("the browser prints its header");
@@ -444,7 +442,7 @@ public class SceneRoleplayIntegrationTests
 		// +scene/info <id> is the scene's card. Its Players table is one row per member: what they are
 		// to the scene, the name they answer to, and how much they have posed. The personas that used
 		// to have a Cast line of their own now sit in the Name column beside the character.
-		var whoMsgs = await RunAndCollectAs(11L, $"+scene/info {sceneId}");
+		var whoMsgs = await RunAndCollectAs(aliceHandle, $"+scene/info {sceneId}");
 		var who = string.Join("\n", whoMsgs);
 		Log($"[INFO]\n{who}");
 		await Assert.That(who).Contains("Players").Because("the card prints the players table");
@@ -458,7 +456,7 @@ public class SceneRoleplayIntegrationTests
 		foreach (var persona in new[] { "Alice the Innkeeper", "Bob the Bard", "Carol the Cloaked" })
 			await Assert.That(cast).Contains(persona);
 
-		var finishMsgs = await RunAndCollectAs(11L, "+scene/finish");
+		var finishMsgs = await RunAndCollectAs(aliceHandle, "+scene/finish");
 		Log($"[FINISH] {string.Join(" | ", finishMsgs)}");
 		await Assert.That(await Eval($"scene({sceneId}, status)")).IsEqualTo("finished")
 			.Because("+scene/finish drives status to finished");
@@ -491,22 +489,22 @@ public class SceneRoleplayIntegrationTests
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
 		var digOut = (await God1($"@dig PotRoom_{Tag}")).Message!.ToPlainText().Trim();
-		var pat = await CreatePlayerAsync($"Pat_{Tag}", "pw_pat_123", 21L);
-		var quinn = await CreatePlayerAsync($"Quinn_{Tag}", "pw_quinn_123", 22L);
+		var (pat, patHandle) = await CreatePlayerAsync($"Pat_{Tag}", "pw_pat_123");
+		var (quinn, quinnHandle) = await CreatePlayerAsync($"Quinn_{Tag}", "pw_quinn_123");
 		foreach (var p in new[] { pat, quinn }) await God1($"@tel {p}={digOut}");
 		await God1($"@tel {loggerDbref}={digOut}");
 
-		await RunAndCollectAs(21L, $"+scene/create PotTest_{Tag}");
-		await RunAndCollectAs(21L, "+scene/start");
+		await RunAndCollectAs(patHandle, $"+scene/create PotTest_{Tag}");
+		await RunAndCollectAs(patHandle, "+scene/start");
 		var sceneId = await Eval($"get({pat}/MY.SID)");   // CMD`CREATE records the id in MY.SID
 		await Assert.That(sceneId).IsNotEmpty().Because("+scene/create should have recorded the scene id");
 		await Assert.That(sceneId).DoesNotStartWith("#-1");
 
-		await RunAndCollectAs(22L, $"+scene/join {sceneId}");
-		await RunAndCollectAs(21L, "pose stretches and yawns by the fire.");   // captured for Pat
+		await RunAndCollectAs(quinnHandle, $"+scene/join {sceneId}");
+		await RunAndCollectAs(patHandle, "pose stretches and yawns by the fire.");   // captured for Pat
 																																					 // Quinn deliberately never poses → oldest (never) → up next.
 
-		var potMsgs = await RunAndCollectAs(21L, "+pot");
+		var potMsgs = await RunAndCollectAs(patHandle, "+pot");
 		var lines = potMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()).ToList();
 		var table = string.Join("\n", lines);
 		TestDiagnostics.WriteLine("=== +pot ===\n" + table);
@@ -532,14 +530,14 @@ public class SceneRoleplayIntegrationTests
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
 		var digOut = (await God1($"@dig ListRoom_{Tag}")).Message!.ToPlainText().Trim();
-		var rob = await CreatePlayerAsync($"Rob_{Tag}", "pw_rob_123", 31L);
+		var (rob, robHandle) = await CreatePlayerAsync($"Rob_{Tag}", "pw_rob_123");
 		await God1($"@tel {rob}={digOut}");
 		await God1($"@tel {loggerDbref}={digOut}");
 
-		await RunAndCollectAs(31L, $"+scene/create ListTest_{Tag}");
-		await RunAndCollectAs(31L, "+scene/start");
+		await RunAndCollectAs(robHandle, $"+scene/create ListTest_{Tag}");
+		await RunAndCollectAs(robHandle, "+scene/start");
 
-		var listMsgs = await RunAndCollectAs(31L, "+scene");
+		var listMsgs = await RunAndCollectAs(robHandle, "+scene");
 		var table = string.Join("\n", listMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
 		TestDiagnostics.WriteLine("=== +scene ===\n" + table);
 
@@ -560,11 +558,11 @@ public class SceneRoleplayIntegrationTests
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 		await God1($"@tel {loggerDbref}=#0");
 
-		var sam = await CreatePlayerAsync($"Sam_{Tag}", "pw_sam_123", 41L);
+		var (sam, samHandle) = await CreatePlayerAsync($"Sam_{Tag}", "pw_sam_123");
 		await God1($"@tel {sam}=#0");
 
 		// Schedule with raw epoch-seconds (convtime rejects it → SCHED_WHEN falls back to the number * 1000).
-		var schedMsgs = await RunAndCollectAs(41L, $"+scene/schedule Gala_{Tag}=2524608000");
+		var schedMsgs = await RunAndCollectAs(samHandle, $"+scene/schedule Gala_{Tag}=2524608000");
 		var schedLine = schedMsgs.First(m => m.Contains("Scheduled scene"));
 		var schedId = schedLine.Replace("Scheduled scene ", "").Split(' ')[0];
 		await Assert.That(schedId).IsNotEmpty().Because("the schedule confirmation should carry the new scene id");
@@ -575,7 +573,7 @@ public class SceneRoleplayIntegrationTests
 
 		// scenelist() is exercised through the verb (command-parser context) rather than Eval (the
 		// function-parser doesn't see the just-written scene in a collection scan; a key lookup does).
-		var listMsgs = await RunAndCollectAs(41L, "+scene/upcoming");
+		var listMsgs = await RunAndCollectAs(samHandle, "+scene/upcoming");
 		var table = string.Join("\n", listMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
 		TestDiagnostics.WriteLine("=== +scene/upcoming ===\n" + table);
 		await Assert.That(table).Contains("Scheduled Scenes").Because("the schedule header should render");
@@ -594,33 +592,33 @@ public class SceneRoleplayIntegrationTests
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
 		var digOut = (await God1($"@dig PartRoom_{Tag}")).Message!.ToPlainText().Trim();
-		var tom = await CreatePlayerAsync($"Tom_{Tag}", "pw_tom_123", 51L);
+		var (tom, tomHandle) = await CreatePlayerAsync($"Tom_{Tag}", "pw_tom_123");
 		await God1($"@tel {tom}={digOut}");
 		await God1($"@tel {loggerDbref}={digOut}");
 
-		await RunAndCollectAs(51L, $"+scene/create PartTest_{Tag}");
-		await RunAndCollectAs(51L, "+scene/start");
+		await RunAndCollectAs(tomHandle, $"+scene/create PartTest_{Tag}");
+		await RunAndCollectAs(tomHandle, "+scene/start");
 		var sceneId = await Eval($"get({tom}/MY.SID)");
 		await Assert.That(sceneId).IsNotEmpty();
 
 		// Pitch (set while focused, owner-gated).
-		await RunAndCollectAs(51L, "+scene/pitch A tense standoff at dawn.");
+		await RunAndCollectAs(tomHandle, "+scene/pitch A tense standoff at dawn.");
 		await Assert.That(await Eval($"scene({sceneId}, summary)")).IsEqualTo("A tense standoff at dawn.");
 
 		// Deactivate: focus cleared, membership retained.
-		await RunAndCollectAs(51L, "+scene/deactivate");
+		await RunAndCollectAs(tomHandle, "+scene/deactivate");
 		await Assert.That(await Eval($"scenefocus({tom})")).StartsWith("#-1")
 			.Because("deactivate clears the player's focus");
 		await Assert.That(await Eval($"scenemember({sceneId}, {tom}, role)")).DoesNotStartWith("#-1")
 			.Because("deactivate keeps membership");
 
 		// Activate: focus restored.
-		await RunAndCollectAs(51L, $"+scene/activate {sceneId}");
+		await RunAndCollectAs(tomHandle, $"+scene/activate {sceneId}");
 		await Assert.That(await Eval($"scenefocus({tom})")).IsEqualTo(sceneId)
 			.Because("activate re-focuses the player");
 
 		// Details card renders the fields (Volund-style `+scene <id>`).
-		var infoMsgs = await RunAndCollectAs(51L, $"+scene {sceneId}");
+		var infoMsgs = await RunAndCollectAs(tomHandle, $"+scene {sceneId}");
 		var card = string.Join("\n", infoMsgs.SelectMany(m => m.Split('\n')).Select(l => l.TrimEnd()));
 		TestDiagnostics.WriteLine("=== +scene <id> ===\n" + card);
 		await Assert.That(card).Contains("Pitch").Because("the details card should have a Pitch row");
@@ -651,18 +649,18 @@ public class SceneRoleplayIntegrationTests
 
 		// A player in a SEPARATE dug room — the logger is NOT co-located with them.
 		var digOut = (await God1($"@dig CapRoom_{Tag}")).Message!.ToPlainText().Trim();
-		var zed = await CreatePlayerAsync($"Zed_{Tag}", "pw_zed_123", 61L);
+		var (zed, zedHandle) = await CreatePlayerAsync($"Zed_{Tag}", "pw_zed_123");
 		await God1($"@tel {zed}={digOut}");
 
 		// +scene/create must work globally (logger $-commands live in #2) even though Zed isn't there.
-		await RunAndCollectAs(61L, $"+scene/create CapTest_{Tag}");
-		await RunAndCollectAs(61L, "+scene/start");
+		await RunAndCollectAs(zedHandle, $"+scene/create CapTest_{Tag}");
+		await RunAndCollectAs(zedHandle, "+scene/start");
 		var sceneId = await Eval($"get({zed}/MY.SID)");
 		await Assert.That(sceneId).IsNotEmpty()
 			.Because("+scene/create should work for a remote player when the logger is global in #2");
 
 		// #4: pose must OUTPUT to Zed's room and be CAPTURED — using loc(%#), not the logger's %L.
-		var poseMsgs = await RunAndCollectAs(61L, "pose waves a banner");
+		var poseMsgs = await RunAndCollectAs(zedHandle, "pose waves a banner");
 		var poseOut = string.Join("\n", poseMsgs.SelectMany(m => m.Split('\n')));
 		TestDiagnostics.WriteLine("=== remote pose output ===\n" + poseOut);
 		await Assert.That(poseOut).Contains("waves a banner")
@@ -684,19 +682,19 @@ public class SceneRoleplayIntegrationTests
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
 		var digOut = (await God1($"@dig FormRoom_{Tag}")).Message!.ToPlainText().Trim();
-		var ada = await CreatePlayerAsync($"Ada_{Tag}", "pw_ada_123", 71L);
+		var (ada, adaHandle) = await CreatePlayerAsync($"Ada_{Tag}", "pw_ada_123");
 		await God1($"@tel {ada}={digOut}");
 		await God1($"@tel {loggerDbref}={digOut}");   // co-located, to isolate FORM matching from #4
 
-		await RunAndCollectAs(71L, $"+scene/create FormTest_{Tag}");
-		await RunAndCollectAs(71L, "+scene/start");
+		await RunAndCollectAs(adaHandle, $"+scene/create FormTest_{Tag}");
+		await RunAndCollectAs(adaHandle, "+scene/start");
 		var sceneId = await Eval($"get({ada}/MY.SID)");
 
-		await RunAndCollectAs(71L, "pose waves.");          // "pose " form
-		await RunAndCollectAs(71L, ":nods.");               // ':' pose shortcut
-		await RunAndCollectAs(71L, ";grins.");              // ';' semipose shortcut
-		await RunAndCollectAs(71L, "\"hello there");        // '\"' say shortcut
-		await RunAndCollectAs(71L, "@emit The wind howls."); // @emit (currently unhooked)
+		await RunAndCollectAs(adaHandle, "pose waves.");          // "pose " form
+		await RunAndCollectAs(adaHandle, ":nods.");               // ':' pose shortcut
+		await RunAndCollectAs(adaHandle, ";grins.");              // ';' semipose shortcut
+		await RunAndCollectAs(adaHandle, "\"hello there");        // '\"' say shortcut
+		await RunAndCollectAs(adaHandle, "@emit The wind howls."); // @emit (currently unhooked)
 
 		var captured = await Eval($"words(sceneposes({sceneId}))");
 		var contents = await Eval($"iter(sceneposes({sceneId}),scenepose({sceneId},##,content),,|)");
@@ -723,15 +721,15 @@ public class SceneRoleplayIntegrationTests
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
 		var digOut = (await God1($"@dig SenderRoom_{Tag}")).Message!.ToPlainText().Trim();
-		var eve = await CreatePlayerAsync($"Eve_{Tag}", "pw_eve_123", 91L);
+		var (eve, eveHandle) = await CreatePlayerAsync($"Eve_{Tag}", "pw_eve_123");
 		await God1($"@tel {eve}={digOut}");
 		await God1($"@tel {loggerDbref}={digOut}");
 
-		await RunAndCollectAs(91L, $"+scene/create SenderTest_{Tag}");
-		await RunAndCollectAs(91L, "+scene/start");
+		await RunAndCollectAs(eveHandle, $"+scene/create SenderTest_{Tag}");
+		await RunAndCollectAs(eveHandle, "+scene/start");
 
 		// SAY — Eve has no FORMAT`SAY, so the built-in default literals are used ("You say…" / "Name says…").
-		var sayNotes = await RunAndCollectNotificationsAs(91L, "say I am the speaker.");
+		var sayNotes = await RunAndCollectNotificationsAs(eveHandle, "say I am the speaker.");
 		var sayHeard = sayNotes.Where(n => n.Message.Contains("I am the speaker.")).ToList();
 		await Assert.That(sayHeard).IsNotEmpty().Because("the say must be broadcast to the room");
 		foreach (var n in sayHeard)
@@ -740,14 +738,14 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(sayHeard.All(n => n.Sender != Num(loggerDbref))).IsTrue()
 			.Because("the Scene Logger must never be the sender of a captured say");
 
-		var poseNotes = await RunAndCollectNotificationsAs(91L, "pose stands up.");
+		var poseNotes = await RunAndCollectNotificationsAs(eveHandle, "pose stands up.");
 		var poseHeard = poseNotes.Where(n => n.Message.Contains("stands up.")).ToList();
 		await Assert.That(poseHeard).IsNotEmpty();
 		foreach (var n in poseHeard)
 			await Assert.That(n.Sender).IsEqualTo(Num(eve))
 				.Because("the captured pose's sender must be the speaker");
 
-		var emitNotes = await RunAndCollectNotificationsAs(91L, "@emit A bell tolls.");
+		var emitNotes = await RunAndCollectNotificationsAs(eveHandle, "@emit A bell tolls.");
 		var emitHeard = emitNotes.Where(n => n.Message.Contains("A bell tolls.")).ToList();
 		await Assert.That(emitHeard).IsNotEmpty();
 		foreach (var n in emitHeard)
@@ -769,20 +767,20 @@ public class SceneRoleplayIntegrationTests
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
 		var digOut = (await God1($"@dig SplitRoom_{Tag}")).Message!.ToPlainText().Trim();
-		var fred = await CreatePlayerAsync($"Fred_{Tag}", "pw_fred_123", 92L);
-		var gwen = await CreatePlayerAsync($"Gwen_{Tag}", "pw_gwen_123", 93L);
+		var (fred, fredHandle) = await CreatePlayerAsync($"Fred_{Tag}", "pw_fred_123");
+		var (gwen, gwenHandle) = await CreatePlayerAsync($"Gwen_{Tag}", "pw_gwen_123");
 		foreach (var p in new[] { fred, gwen }) await God1($"@tel {p}={digOut}");
 		await God1($"@tel {loggerDbref}={digOut}");
 
-		await RunAndCollectAs(92L, $"+scene/create SplitTest_{Tag}");
-		await RunAndCollectAs(92L, "+scene/start");
+		await RunAndCollectAs(fredHandle, $"+scene/create SplitTest_{Tag}");
+		await RunAndCollectAs(fredHandle, "+scene/start");
 
 		// Fred sets a FORMAT`SAY that splits speaker (You) vs observer (Name) per recipient.
 		// %0 = message, %1 = the recipient's short #N (the @message ## token), %# = the speaker.
 		// Literal commas inside the format use chr(44) (raw `,`/`\,` is unreliable here).
 		await God1($"&FORMAT`SAY {fred}=if(strmatch(%1,%#),You say[chr(44)] \"%0\",[name(%#)] says[chr(44)] \"%0\")");
 
-		var sayNotes = await RunAndCollectNotificationsAs(92L, "say hi all");
+		var sayNotes = await RunAndCollectNotificationsAs(fredHandle, "say hi all");
 		var speakerLine = sayNotes.FirstOrDefault(n => n.Recipient == Num(fred) && n.Message.Contains("hi all"));
 		var observerLine = sayNotes.FirstOrDefault(n => n.Recipient == Num(gwen) && n.Message.Contains("hi all"));
 
@@ -808,18 +806,18 @@ public class SceneRoleplayIntegrationTests
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
 		var digOut = (await God1($"@dig YouSayRoom_{Tag}")).Message!.ToPlainText().Trim();
-		var jane = await CreatePlayerAsync($"Jane_{Tag}", "pw_jane_123", 96L);
-		var kurt = await CreatePlayerAsync($"Kurt_{Tag}", "pw_kurt_123", 97L);
+		var (jane, janeHandle) = await CreatePlayerAsync($"Jane_{Tag}", "pw_jane_123");
+		var (kurt, kurtHandle) = await CreatePlayerAsync($"Kurt_{Tag}", "pw_kurt_123");
 		foreach (var p in new[] { jane, kurt }) await God1($"@tel {p}={digOut}");
 		await God1($"@tel {loggerDbref}={digOut}");
 
-		await RunAndCollectAs(96L, $"+scene/create YouSayTest_{Tag}");
-		await RunAndCollectAs(96L, "+scene/start");
+		await RunAndCollectAs(janeHandle, $"+scene/create YouSayTest_{Tag}");
+		await RunAndCollectAs(janeHandle, "+scene/start");
 		var sceneId = await Eval($"get({jane}/MY.SID)");
 
 		foreach (var (command, text) in new[] { ("say hello there", "hello there"), ("\"quoted shortcut", "quoted shortcut") })
 		{
-			var notes = await RunAndCollectNotificationsAs(96L, command);
+			var notes = await RunAndCollectNotificationsAs(janeHandle, command);
 			var speakerLines = notes.Where(n => n.Recipient == Num(jane) && n.Message.Contains(text)).Select(n => n.Message).ToList();
 			var observerLines = notes.Where(n => n.Recipient == Num(kurt) && n.Message.Contains(text)).Select(n => n.Message).ToList();
 
@@ -847,19 +845,19 @@ public class SceneRoleplayIntegrationTests
 		var loggerDbref = DBRef.Parse(packageObjects.Single(o => o.Ref == "logger").Objid).ToString();
 
 		var digOut = (await God1($"@dig FmtRoom_{Tag}")).Message!.ToPlainText().Trim();
-		var hugo = await CreatePlayerAsync($"Hugo_{Tag}", "pw_hugo_123", 94L);
-		var iris = await CreatePlayerAsync($"Iris_{Tag}", "pw_iris_123", 95L);
+		var (hugo, hugoHandle) = await CreatePlayerAsync($"Hugo_{Tag}", "pw_hugo_123");
+		var (iris, irisHandle) = await CreatePlayerAsync($"Iris_{Tag}", "pw_iris_123");
 		foreach (var p in new[] { hugo, iris }) await God1($"@tel {p}={digOut}");
 		await God1($"@tel {loggerDbref}={digOut}");
 
-		await RunAndCollectAs(94L, $"+scene/create FmtTest_{Tag}");
-		await RunAndCollectAs(94L, "+scene/start");
-		await RunAndCollectAs(95L, $"+scene/join [get({hugo}/MY.SID)]");
+		await RunAndCollectAs(hugoHandle, $"+scene/create FmtTest_{Tag}");
+		await RunAndCollectAs(hugoHandle, "+scene/start");
+		await RunAndCollectAs(irisHandle, $"+scene/join [get({hugo}/MY.SID)]");
 
 		// Hugo sets a custom FORMAT`SAY. %0 = message, %1 = recipient dbref, %# = speaker.
 		await God1($"&FORMAT`SAY {hugo}=CUSTOMFMT[name(%#)]: %0");
 
-		var hugoSay = await RunAndCollectNotificationsAs(94L, "say with format");
+		var hugoSay = await RunAndCollectNotificationsAs(hugoHandle, "say with format");
 		var hugoObserver = hugoSay.FirstOrDefault(n => n.Recipient == Num(iris) && n.Message.Contains("with format"));
 		await Assert.That(hugoObserver).IsNotNull();
 		await Assert.That(hugoObserver!.Message).Contains("CUSTOMFMT")
@@ -868,7 +866,7 @@ public class SceneRoleplayIntegrationTests
 			.Because("the custom format renders name + message");
 
 		// Iris has no FORMAT`SAY → default literal third-person "Name says, \"…\"".
-		var irisSay = await RunAndCollectNotificationsAs(95L, "say no format");
+		var irisSay = await RunAndCollectNotificationsAs(irisHandle, "say no format");
 		var irisObserver = irisSay.FirstOrDefault(n => n.Recipient == Num(hugo) && n.Message.Contains("no format"));
 		await Assert.That(irisObserver).IsNotNull();
 		await Assert.That(irisObserver!.Message).DoesNotContain("CUSTOMFMT")
@@ -891,13 +889,13 @@ public class SceneRoleplayIntegrationTests
 		await God1($"@teleport {loggerDbref}=#2");
 
 		var digOut = (await God1($"@dig SeqRoom_{Tag}")).Message!.ToPlainText().Trim();
-		var bea = await CreatePlayerAsync($"Bea_{Tag}", "pw_bea_123", 81L);
+		var (bea, beaHandle) = await CreatePlayerAsync($"Bea_{Tag}", "pw_bea_123");
 		await God1($"@tel {bea}={digOut}");
 
 		// Two scenes back-to-back → consecutive numeric ids.
-		await RunAndCollectAs(81L, $"+scene/create SeqA_{Tag}");
+		await RunAndCollectAs(beaHandle, $"+scene/create SeqA_{Tag}");
 		var idA = await Eval($"get({bea}/MY.SID)");
-		await RunAndCollectAs(81L, $"+scene/create SeqB_{Tag}");
+		await RunAndCollectAs(beaHandle, $"+scene/create SeqB_{Tag}");
 		var idB = await Eval($"get({bea}/MY.SID)");
 		// the 1-based counter is the trailing numeric segment in all cases.
 		static int IdSeq(string id) => int.Parse(id.Split(':')[^1]);
@@ -907,9 +905,9 @@ public class SceneRoleplayIntegrationTests
 			.Because("scene ids increment by a 1-based counter");
 
 		// Two poses in scene B → consecutive numeric pose ids.
-		await RunAndCollectAs(81L, "+scene/start");
-		await RunAndCollectAs(81L, "pose one.");
-		await RunAndCollectAs(81L, "pose two.");
+		await RunAndCollectAs(beaHandle, "+scene/start");
+		await RunAndCollectAs(beaHandle, "pose one.");
+		await RunAndCollectAs(beaHandle, "pose two.");
 		var poseIds = (await Eval($"sceneposes({idB})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		await Assert.That(poseIds.Length).IsEqualTo(2).Because("both poses should be captured");
 		await Assert.That(IdSeq(poseIds[1])).IsEqualTo(IdSeq(poseIds[0]) + 1)

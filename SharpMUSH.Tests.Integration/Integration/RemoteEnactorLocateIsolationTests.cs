@@ -1,4 +1,3 @@
-using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
@@ -82,17 +81,15 @@ public class RemoteEnactorLocateIsolationTests
 			.Select(ExtractMessageText).OfType<string>().ToList();
 	}
 
-	private async Task<string> CreatePlayerAsync(string name, string password, long handle)
+	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name, string password)
 	{
 		await God1($"@pcreate {name}={password}");
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
 		if (string.IsNullOrEmpty(dbref) || dbref.StartsWith("#-") || !DBRef.TryParse(dbref, out var parsed))
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
-		await ConnectionService.Bind(handle, parsed!.Value);
-		return dbref;
+		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, parsed!.Value);
+		return (dbref, handle);
 	}
 
 	/// <summary>All notifications a trigger produced, joined — so an error to ANY recipient is visible.</summary>
@@ -104,9 +101,9 @@ public class RemoteEnactorLocateIsolationTests
 
 	/// <summary>
 	/// The shared geometry: a WIZARD probe thing in the master room (#2, so its $-commands are global) and a
-	/// player in a SEPARATE dug room (remote — not co-located with the probe). Returns (probe, room, pcNum).
+	/// player in a SEPARATE dug room (remote — not co-located with the probe). Returns (probe, room, pcNum, pcHandle).
 	/// </summary>
-	private async Task<(string Probe, string Room, string PcNum)> SetupRemoteGeometryAsync(string who, long handle)
+	private async Task<(string Probe, string Room, string PcNum, long PcHandle)> SetupRemoteGeometryAsync(string who)
 	{
 		await God1("@set #1=WIZARD");
 
@@ -117,12 +114,12 @@ public class RemoteEnactorLocateIsolationTests
 			.Because("the probe must be in the master room so its $-commands are global to a remote enactor");
 
 		var room = Num((await God1($"@dig Room{who}_{Tag}")).Message!.ToPlainText().Trim());
-		var pc = await CreatePlayerAsync($"{who}_{Tag}", "pw_remote_123", handle);
+		var (pc, pcHandle) = await CreatePlayerAsync($"{who}_{Tag}", "pw_remote_123");
 		await God1($"@tel {pc}={room}");
 		await Assert.That(Num(await Eval($"loc({pc})"))).IsEqualTo(room)
 			.Because("the enactor must be remote from the probe (different room) to reproduce the scene geometry");
 
-		return (probe, room, Num(pc));
+		return (probe, room, Num(pc), pcHandle);
 	}
 
 	/// <summary>
@@ -132,8 +129,7 @@ public class RemoteEnactorLocateIsolationTests
 	[Test]
 	public async Task Include_FromRemoteEnactor_PreservesCallingContext_LikeInline()
 	{
-		var (probe, room, pcNum) = await SetupRemoteGeometryAsync("Inc", 73L);
-		const long pcHandle = 73L;
+		var (probe, room, pcNum, pcHandle) = await SetupRemoteGeometryAsync("Inc");
 
 		// Probe A — enactor (%#) visibility.
 		await God1($"&C_A_INL {probe}=$proa-inl-{Tag}:@pemit %#=R:[%#]");
@@ -200,8 +196,7 @@ public class RemoteEnactorLocateIsolationTests
 	[Test]
 	public async Task Trigger_FromRemoteEnactor_LocatesTargetAsExecutor()
 	{
-		var (probe, room, _) = await SetupRemoteGeometryAsync("Trg", 74L);
-		const long pcHandle = 74L;
+		var (probe, room, _, pcHandle) = await SetupRemoteGeometryAsync("Trg");
 
 		// INNER runs as the triggered object; report who it ran as. Emit to God (#1) so it's always collected.
 		await God1($"&I_TRIG {probe}=@pemit #1=R:TRIGGERED ranAs=[num(me)] hereOf=[num(here)]");

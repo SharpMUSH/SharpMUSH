@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
@@ -75,7 +74,7 @@ public class SceneWebComposeIntegrationTests
 		return HeardBy(actor, before);
 	}
 
-	private async Task<string> CreatePlayerAsync(string name, long handle)
+	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name)
 	{
 		await God1($"@pcreate {name}=pw-{Tag}-1");
 		var dbref = (await God1($"think [pmatch({name})]")).Message?.ToPlainText()?.Trim() ?? string.Empty;
@@ -83,11 +82,9 @@ public class SceneWebComposeIntegrationTests
 			throw new InvalidOperationException($"Failed to create player {name}; pmatch returned '{dbref}'.");
 
 		await God1($"@set {dbref}=APPROVED");
-		await ConnectionService.Register(handle, "localhost", "localhost", "test",
-			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
-		await ConnectionService.Bind(handle, parsed.Value);
+		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, parsed.Value);
 		_actors[handle] = parsed.Value;
-		return dbref;
+		return (dbref, handle);
 	}
 
 	/// <summary>
@@ -116,11 +113,9 @@ public class SceneWebComposeIntegrationTests
 	public async Task WebCompose_RecordsIntoTheNamedScene_FromOutsideItsRoom_AndDoesNotEmitThere()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long witnessHandle = 9401;
-		const long remoteHandle = 9402;
 
-		var witness = await CreatePlayerAsync($"Brin{Tag}", witnessHandle);
-		var remote = await CreatePlayerAsync($"Aster{Tag}", remoteHandle);
+		var (witness, witnessHandle) = await CreatePlayerAsync($"Brin{Tag}");
+		var (remote, remoteHandle) = await CreatePlayerAsync($"Aster{Tag}");
 
 		// A room with the scene in it; the witness stands there, the remote poser does not.
 		var yard = (await God1($"@dig Well Yard {Tag}")).Message?.ToPlainText()?.Trim() ?? string.Empty;
@@ -166,9 +161,8 @@ public class SceneWebComposeIntegrationTests
 	public async Task WebCompose_EmitsToTheRoom_WhenThePoserIsStandingInIt()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long ownerHandle = 9411;
 
-		var owner = await CreatePlayerAsync($"Cass{Tag}", ownerHandle);
+		var (owner, ownerHandle) = await CreatePlayerAsync($"Cass{Tag}");
 		var yard = (await God1($"@dig Cass Yard {Tag}")).Message?.ToPlainText()?.Trim() ?? string.Empty;
 		var yardRef = yard.Split(' ').First(t => t.StartsWith('#'));
 		await God1($"@tel {owner}={yardRef}");
@@ -192,9 +186,8 @@ public class SceneWebComposeIntegrationTests
 	public async Task WebCompose_PoseAndSay_RenderWithTheSpeakersName()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long handle = 9421;
 
-		var player = await CreatePlayerAsync($"Dree{Tag}", handle);
+		var (player, handle) = await CreatePlayerAsync($"Dree{Tag}");
 		var name = await Eval($"name({Num(player)})");
 		await RunAs(handle, $"+scene/create Dree Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(player)})");
@@ -221,10 +214,9 @@ public class SceneWebComposeIntegrationTests
 	[Test]
 	public async Task WebCompose_MultiLinePose_ArrivesWithRealLineBreaks()
 	{
-		const long handle = 9441;
 		await PutLoggerInMasterRoomAsync();
 
-		var player = await CreatePlayerAsync($"Fenn{Tag}", handle);
+		var (player, handle) = await CreatePlayerAsync($"Fenn{Tag}");
 		await RunAs(handle, $"+scene/create Fenn Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(player)})");
 
@@ -250,10 +242,9 @@ public class SceneWebComposeIntegrationTests
 	[Test]
 	public async Task WebCompose_LeavesAnExistingMembersFocusAlone()
 	{
-		const long handle = 9451;
 		await PutLoggerInMasterRoomAsync();
 
-		var player = await CreatePlayerAsync($"Gale{Tag}", handle);
+		var (player, handle) = await CreatePlayerAsync($"Gale{Tag}");
 		await RunAs(handle, $"+scene/create Gale Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(player)})");
 		await Assert.That(sceneId).DoesNotStartWith("#-1")
@@ -273,10 +264,9 @@ public class SceneWebComposeIntegrationTests
 	[Test]
 	public async Task WebCompose_DoesNotDemoteAnOwnerWhoPoses()
 	{
-		const long handle = 9471;
 		await PutLoggerInMasterRoomAsync();
 
-		var owner = await CreatePlayerAsync($"Juno{Tag}", handle);
+		var (owner, handle) = await CreatePlayerAsync($"Juno{Tag}");
 		await RunAs(handle, $"+scene/create Juno Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(owner)})");
 		await Assert.That(await Eval($"scenemember({sceneId},{Num(owner)},role)")).IsEqualTo("owner");
@@ -290,12 +280,10 @@ public class SceneWebComposeIntegrationTests
 	[Test]
 	public async Task WebCompose_StillAddsANewPoserToTheCast()
 	{
-		const long ownerHandle = 9461;
-		const long guestHandle = 9462;
 		await PutLoggerInMasterRoomAsync();
 
-		var owner = await CreatePlayerAsync($"Hale{Tag}", ownerHandle);
-		var newcomer = await CreatePlayerAsync($"Ivy{Tag}", guestHandle);
+		var (owner, ownerHandle) = await CreatePlayerAsync($"Hale{Tag}");
+		var (newcomer, guestHandle) = await CreatePlayerAsync($"Ivy{Tag}");
 		await RunAs(ownerHandle, $"+scene/create Hale Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(owner)})");
 		await RunAs(ownerHandle, "+scene/public");
@@ -311,8 +299,7 @@ public class SceneWebComposeIntegrationTests
 	public async Task WebCompose_RefusesAnUnknownScene()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long handle = 9431;
-		await CreatePlayerAsync($"Erin{Tag}", handle);
+		var (_, handle) = await CreatePlayerAsync($"Erin{Tag}");
 
 		var said = await RunAs(handle, $"+scene/emit no-such-scene-{Tag}=into the void");
 
@@ -332,8 +319,7 @@ public class SceneWebComposeIntegrationTests
 	public async Task WebCompose_KeepsTheColourAPoseWasWrittenWith()
 	{
 		await PutLoggerInMasterRoomAsync();
-		const long handle = 9410;
-		await CreatePlayerAsync($"Isolde{Tag}", handle);
+		var (_, handle) = await CreatePlayerAsync($"Isolde{Tag}");
 
 		await RunAs(handle, $"+scene/create Isolde Scene {Tag}");
 		var sceneId = await Eval($"scenefocus({Num(_actors[handle].ToString())})");
