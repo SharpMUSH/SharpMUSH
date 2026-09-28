@@ -195,15 +195,18 @@ public class TimePrecisionFunctionTests
 
 	/// <summary>
 	/// secs(f) reads the wall clock, so whether it carries a '.' depends on the millisecond it lands
-	/// on: a whole second prints with no fraction. Check the value here and the rendering against
-	/// fixed instants in <see cref="FractionalTrimsTrailingZeros"/>.
+	/// on: a whole second prints with no fraction. Instead the value must fall between clock reads
+	/// taken either side of the call, to the millisecond. A secs(f) truncated to whole seconds lands
+	/// below the first read unless that read is itself a whole second. The rendering is checked
+	/// against fixed instants in <see cref="FractionalTrimsTrailingZeros"/>.
 	/// </summary>
 	[Test]
-	public async Task SecsFractionalIsTheCurrentTimeInSeconds()
+	public async Task SecsFractionalIsTheCurrentTimeToTheMillisecond()
 	{
+		var before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		var seconds = decimal.Parse(await Eval("secs(f)"), CultureInfo.InvariantCulture);
-		var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-		await Assert.That(seconds).IsGreaterThan(now - 60m).And.IsLessThan(now + 60m);
+		var after = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		await Assert.That(seconds * 1000m).IsGreaterThanOrEqualTo(before).And.IsLessThanOrEqualTo(after);
 	}
 
 	/// <summary>
