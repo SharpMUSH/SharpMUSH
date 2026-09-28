@@ -1069,7 +1069,7 @@ public static class ErrorMessages
 		public const string SelfAncestor = "A thing cannot be its own ancestor!";
 		public const string CyclicAncestor = "You are not allowed to be your own ancestor!";
 		public const string TooManyAncestors = "Too many ancestors.";
-		public const string ParentSet = "Parent set.";
+		public const string ParentSet = "Parent changed.";
 		public const string ZoneCycleCannotAdd = "Cannot add zone: would create a cycle.";
 		public const string ZoneSet = "Zone set.";
 		public const string ZoneCleared = "Zone cleared.";

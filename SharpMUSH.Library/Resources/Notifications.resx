@@ -720,7 +720,7 @@
     <value>Too many ancestors.</value>
   </data>
   <data name="ParentSet" xml:space="preserve">
-    <value>Parent set.</value>
+    <value>Parent changed.</value>
   </data>
   <data name="ZoneCycleCannotAdd" xml:space="preserve">
     <value>Cannot add zone: would create a cycle.</value>
