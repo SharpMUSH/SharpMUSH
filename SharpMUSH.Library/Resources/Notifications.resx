@@ -14,9 +14,6 @@
   </resheader>
 
   <!-- Object and matching notifications -->
-  <data name="BadObjectName" xml:space="preserve">
-    <value>I don't understand that object name.</value>
-  </data>
   <data name="InvalidNameThing" xml:space="preserve">
     <value>Invalid name for a thing.</value>
   </data>
@@ -25,9 +22,6 @@
   </data>
   <data name="CantSeeThat" xml:space="preserve">
     <value>I can't see that here.</value>
-  </data>
-  <data name="NoSuchObject" xml:space="preserve">
-    <value>I can't find that.</value>
   </data>
   <data name="CouldNotFind" xml:space="preserve">
     <value>Could not find that.</value>
@@ -58,18 +52,6 @@
   </data>
 
   <!-- Object type notifications -->
-  <data name="NotARoom" xml:space="preserve">
-    <value>That's not a room.</value>
-  </data>
-  <data name="NotAnExit" xml:space="preserve">
-    <value>That's not an exit.</value>
-  </data>
-  <data name="NotAThing" xml:space="preserve">
-    <value>That's not a thing.</value>
-  </data>
-  <data name="NotAPlayer" xml:space="preserve">
-    <value>That's not a player.</value>
-  </data>
   <data name="MustBePlayer" xml:space="preserve">
     <value>New owner must be a player.</value>
   </data>
@@ -175,12 +157,6 @@
   <data name="InvalidArgument" xml:space="preserve">
     <value>Invalid argument.</value>
   </data>
-  <data name="InvalidArguments" xml:space="preserve">
-    <value>Invalid arguments to {0}.</value>
-  </data>
-  <data name="InvalidDbref" xml:space="preserve">
-    <value>That's not a valid object reference.</value>
-  </data>
   <data name="DontUnderstandThosePermissions" xml:space="preserve">
     <value>I don't understand those permissions.</value>
   </data>
@@ -217,9 +193,6 @@
   <!-- Function notifications -->
   <data name="RecursionLimit" xml:space="preserve">
     <value>That caused too much recursion.</value>
-  </data>
-  <data name="FunctionDisabled" xml:space="preserve">
-    <value>That function is disabled.</value>
   </data>
 
   <!-- Operation result notifications -->
@@ -302,9 +275,6 @@
   </data>
 
   <!-- HTTP/Network notifications -->
-  <data name="CannotSetContentLengthHeader" xml:space="preserve">
-    <value>You cannot set Content-Length header.</value>
-  </data>
 
   <!-- Destruction edge-case notifications -->
   <data name="GuestCantDestroy" xml:space="preserve">
