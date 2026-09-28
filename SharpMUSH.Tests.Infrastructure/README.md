@@ -30,3 +30,9 @@ The build archives preserve native executable permissions and plugin/configurati
 CI disables the optional HTML reporter with `TUNIT_DISABLE_HTML_REPORTER=true` and uploads TRX
 results even when a test job fails. Use the same environment variable for local timing captures
 to exclude HTML generation from the measurement.
+
+Test containers and networks carry `sharpmush.tests.owner-*` labels naming the test process that
+created them. Local runs disable Ryuk, so a killed test host cannot clean up after itself; instead
+the next session's `DockerNetwork` removes any labeled container or network whose owner process
+no longer exists (`TestContainerJanitor`). New test containers should add
+`.WithLabel(TestContainerJanitor.OwnerLabels)`.

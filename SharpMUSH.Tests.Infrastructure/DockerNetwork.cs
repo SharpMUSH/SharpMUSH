@@ -12,10 +12,16 @@ public class DockerNetwork : IAsyncInitializer, IAsyncDisposable
 {
 	public INetwork Instance { get; } = new NetworkBuilder()
 		.WithName($"tunit-sharpmush-{Guid.NewGuid():N}")
+		.WithLabel(TestContainerJanitor.OwnerLabels)
 		.WithLogger(TestDiagnostics.ContainerLogger)
 		.Build();
 
-	public async Task InitializeAsync() => await Instance.CreateAsync();
+	public async Task InitializeAsync()
+	{
+		// Every container-backed fixture depends on this network, so this runs before any of them start.
+		await TestContainerJanitor.SweepOnceAsync();
+		await Instance.CreateAsync();
+	}
 
 	public async ValueTask DisposeAsync()
 	{
