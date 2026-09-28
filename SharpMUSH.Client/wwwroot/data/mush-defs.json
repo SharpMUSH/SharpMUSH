@@ -6549,7 +6549,8 @@
       "maxArgs": 2,
       "minArgs": 1,
       "parameterNames": [
-        "object"
+        "object",
+        "parent"
       ]
     },
     "parse": {
@@ -6678,8 +6679,8 @@
       "maxArgs": 2,
       "minArgs": 2,
       "parameterNames": [
-        "target",
-        "string"
+        "needle",
+        "haystack"
       ]
     },
     "poss": {

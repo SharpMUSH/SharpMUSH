@@ -76,21 +76,40 @@ public partial class Functions
 		=> (await room.Location.WithCancellation(CancellationToken.None)).Object()?.DBRef.ToString()
 			 ?? ErrorMessages.Returns.NoDropTo;
 
+	/// <summary>
+	/// PennMUSH's <c>fun_lsearch</c> called as <c>CHILDREN</c> (<c>src/wiz.c</c>): <c>lsearch()</c> with
+	/// <c>PARENT=&lt;object&gt;</c> and no owner, so a searcher without See_All or the Search power finds
+	/// only children they own. The object must be a dbref or objid, as the PARENT class requires, or it
+	/// is "Unknown parent." and <c>#-1</c>. Dbrefs, not objids, and "Nothing found." when there are none.
+	/// </summary>
 	[SharpFunction(Name = "children", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Children(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor,
-			executor,
-			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
-			LocateFlags.All,
-			async locate =>
-			{
-				var children = locate.Object().Children.Value ?? AsyncEnumerable.Empty<SharpObject>();
-				return string.Join(" ", await children.Select(x => x.DBRef.ToString()).ToArrayAsync());
-			});
+		if (!DBRef.TryParse(arg0, out var parentRef)
+				|| (await Mediator.Send(new GetObjectNodeQuery(parentRef!.Value))).IsNone)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchUnknownParent), executor);
+			return new CallState("#-1");
+		}
+
+		DBRef? owner = await executor.IsSee_All() || await executor.HasPower("Search")
+			? null
+			: (await executor.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+
+		var search = await SearchSpecEngine.ExecuteResultAsync(
+			parser, Mediator, LocateService, AttributeService, BooleanExpressionParser, PermissionService,
+			executor, owner, [new SearchSpecEngine.SearchPair("PARENT", arg0)], useRegex: false);
+
+		if (search.Matches.Count == 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchNothingFound), executor);
+			return new CallState(string.Empty) { HadErrors = search.HadErrors };
+		}
+
+		return new CallState(string.Join(" ", search.Matches.Select(child => $"#{child.Key}"))) { HadErrors = search.HadErrors };
 	}
 
 	[SharpFunction(Name = "con", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -494,25 +513,17 @@ public partial class Functions
 			AnySharpObject located => await ExaminableParents(located)
 		};
 
+		// PennMUSH's fun_lparent (src/fundb.c): the object itself, then each parent in turn for as long
+		// as the executor can examine the object before it. Dbrefs, not objids.
 		async ValueTask<CallState> ExaminableParents(AnySharpObject locate)
 		{
-			var list = new List<DBRef>();
+			var list = new List<string> { $"#{locate.Object().DBRef.Number}" };
 
-			while (true)
+			while (await PermissionService.CanExamine(executor, locate)
+						 && await locate.Object().Parent.WithCancellation(CancellationToken.None) is AnySharpObject parent)
 			{
-				var parent = await locate.Object().Parent.WithCancellation(CancellationToken.None);
-				if (parent is not AnySharpObject knownParent)
-				{
-					break;
-				}
-
-				if (!await PermissionService.CanExamine(executor, knownParent))
-				{
-					break;
-				}
-
-				locate = knownParent;
-				list.Add(knownParent.Object().DBRef);
+				list.Add($"#{parent.Object().DBRef.Number}");
+				locate = parent;
 			}
 
 			return string.Join(" ", list);
@@ -777,57 +788,72 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>("20250102000000");
 	}
 
-	[SharpFunction(Name = "parent", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, SideEffectMinArgs = 2, ParameterNames = ["object"])]
+	/// <summary>
+	/// PennMUSH's <c>fun_parent</c> (<c>src/fundb.c</c>). With a second argument it first does what
+	/// <c>@parent &lt;object&gt;=&lt;parent&gt;</c> does, notices included. Either way it then returns the
+	/// object's parent as a dbref, <c>#-1</c> for none, to anyone who can examine the object.
+	/// </summary>
+	[SharpFunction(Name = "parent", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, SideEffectMinArgs = 2, ParameterNames = ["object", "parent"])]
 	public async ValueTask<CallState> Parent(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		var arg0 = args["0"].Message!.ToPlainText();
-		var arg1 = args.TryGetValue("1", out var value)
-			? value.Message!.ToPlainText()
-			: null;
 
-		if (arg1 is null)
+		if (args.TryGetValue("1", out var newParentArg))
 		{
-			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-				parser, executor, executor, arg0, LocateFlags.All,
-				async found =>
-					(await found.Object().Parent.WithCancellation(CancellationToken.None)).Object()
-					?.DBRef.ToString() ?? "");
+			await SetParentAsync(newParentArg.Message!.ToPlainText());
 		}
 
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, args["0"].Message!.ToPlainText(), LocateFlags.All,
-			async target =>
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
+			parser, executor, executor, arg0, LocateFlags.All,
+			async found =>
 			{
-				if (!await PermissionService.Controls(executor, target))
+				if (!await PermissionService.CanExamine(executor, found))
 				{
 					return ErrorMessages.Returns.PermissionDenied;
 				}
 
-				switch (args)
-				{
-					case { Count: 1 }:
-					case { Count: 2 } when args["1"].Message!.ToPlainText()
-						.Equals("none", StringComparison.InvariantCultureIgnoreCase):
-						await Mediator.Send(new UnsetObjectParentCommand(target));
-						return CallState.Empty;
-					default:
-						return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-							parser, executor, executor, args["1"].Message!.ToPlainText(), LocateFlags.All,
-							async newParent =>
-							{
-								// PennMUSH's fun_parent (src/fundb.c:1617-1640) runs do_parent, which notifies the
-								// executor of success or refusal, then returns the object's parent as it now stands.
-								await ManipulateSharpObjectService.SetParent(executor, target, newParent, true);
-								var parent = (await target.Object().Parent.WithCancellation(CancellationToken.None)).Object();
-								return parent is null ? "#-1" : $"#{parent.DBRef.Number}";
-							}
-						);
-				}
+				var parent = await found.Object().Parent.WithCancellation(CancellationToken.None);
+				return parent is AnySharpObject known ? $"#{known.Object().DBRef.Number}" : "#-1";
+			});
+
+		// PennMUSH's do_parent (src/set.c), which fun_parent calls: it reports every failure itself.
+		async ValueTask SetParentAsync(string newParentName)
+		{
+			if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, arg0, LocateFlags.All)
+					is not AnySharpObject target)
+			{
+				return;
 			}
-		);
+
+			AnySharpObject? newParent = null;
+			if (newParentName.Length > 0 && !newParentName.Equals("none", StringComparison.OrdinalIgnoreCase))
+			{
+				if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, newParentName, LocateFlags.All)
+						is not AnySharpObject found)
+				{
+					return;
+				}
+
+				newParent = found;
+			}
+
+			if (!await PermissionService.Controls(executor, target))
+			{
+				await NotifyService.Notify(executor, ErrorMessages.Notifications.PermissionDenied);
+				return;
+			}
+
+			if (newParent is null)
+			{
+				await ManipulateSharpObjectService.UnsetParent(executor, target, true);
+			}
+			else
+			{
+				await ManipulateSharpObjectService.SetParent(executor, target, newParent, true);
+			}
+		}
 	}
 
 	[SharpFunction(Name = "pmatch", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["name"])]
