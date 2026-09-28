@@ -1205,33 +1205,37 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// Parses space-separated long flag names like "wizard !puppet connected" for andlflags/orlflags.
-	/// Returns null for invalid syntax (e.g. "! puppet" with space between ! and name).
+	/// Checks space-separated flag or power names like "wizard !puppet connected" against an object,
+	/// as PennMUSH's <c>flaglist_check_long</c> (<c>src/flags.c</c>) does for andlflags/orlflags and,
+	/// over the POWER namespace, andlpowers/orlpowers. Returns null for invalid syntax: an empty list,
+	/// or a '!' with no name after it ("! puppet").
 	/// </summary>
-	private async ValueTask<bool?> FlagLongNameCheck(AnySharpObject obj, string[] flagTokens, bool orMode)
+	private async ValueTask<bool?> FlagLongNameCheck(AnySharpObject obj, string list, bool orMode, bool powers)
 	{
+		var tokens = list.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		if (tokens.Length == 0)
+			return null;
+
 		var ret = !orMode;
-		foreach (var token in flagTokens)
+		foreach (var token in tokens)
 		{
-			if (token == "!")
-				return null; // Standalone '!' is invalid syntax
+			bool negate = token.StartsWith('!');
+			var name = negate ? token[1..] : token;
 
-			bool negate = token.StartsWith("!");
-			var flagName = negate ? token[1..] : token;
-
-			if (string.IsNullOrEmpty(flagName))
+			if (string.IsNullOrEmpty(name))
 				return null;
 
-			bool hasIt;
-			switch (flagName.ToUpperInvariant())
-			{
-				case "PLAYER": hasIt = obj.IsPlayer; break;
-				case "ROOM": hasIt = obj.IsRoom; break;
-				case "THING": hasIt = obj.IsThing; break;
-				case "EXIT": hasIt = obj.IsExit; break;
-				case "CONNECTED": hasIt = await ConnectionService.IsOnline(obj); break;
-				default: hasIt = await obj.HasFlag(flagName); break;
-			}
+			bool hasIt = powers
+				? await obj.HasPower(name)
+				: name.ToUpperInvariant() switch
+				{
+					"PLAYER" => obj.IsPlayer,
+					"ROOM" => obj.IsRoom,
+					"THING" => obj.IsThing,
+					"EXIT" => obj.IsExit,
+					"CONNECTED" => await ConnectionService.IsOnline(obj),
+					_ => await obj.HasFlag(name)
+				};
 
 			bool effective = negate ? !hasIt : hasIt;
 			if (orMode)
@@ -1246,128 +1250,58 @@ public partial class Functions
 		return ret;
 	}
 
-	[SharpFunction(Name = "orflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
-	public async ValueTask<CallState> OrFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	private enum FlagListForm { Letters, Names, Powers }
+
+	/// <summary>
+	/// The one body behind orflags/andflags, orlflags/andlflags and orlpowers/andlpowers: one object and
+	/// a flag list (PennMUSH <c>fun_orflags</c> … <c>fun_andlflags</c>, <c>src/fundb.c</c>; ORLPOWERS and
+	/// ANDLPOWERS are <c>fun_orlflags</c>/<c>fun_andlflags</c> called by another name). A malformed list
+	/// is <c>#-1 INVALID FLAG</c>, or <c>#-1 INVALID POWER</c> for the power forms.
+	/// </summary>
+	private async ValueTask<CallState> FlagListFunction(IMUSHCodeParser parser, FlagListForm form, bool orMode)
 	{
-		// orflags() checks if object has ANY of the specified flags (single-letter format)
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
+		var listArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				var result = await FlagLetterCheck(found, flagsArg, orMode: true);
-				if (result is null)
-					return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "orflags"));
-				return new CallState(result.Value);
+				var result = form == FlagListForm.Letters
+					? await FlagLetterCheck(found, listArg, orMode)
+					: await FlagLongNameCheck(found, listArg, orMode, powers: form == FlagListForm.Powers);
+				return result is { } matched
+					? new CallState(matched)
+					: new CallState(form == FlagListForm.Powers
+						? ErrorMessages.Returns.InvalidPower
+						: ErrorMessages.Returns.InvalidFlag);
 			});
 	}
+
+	[SharpFunction(Name = "orflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
+	public ValueTask<CallState> OrFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> FlagListFunction(parser, FlagListForm.Letters, orMode: true);
 
 	[SharpFunction(Name = "orlflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
-	public async ValueTask<CallState> OrListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		// orlflags() checks if object has ANY of the specified flags (long-name format, space-separated)
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, objArg, LocateFlags.All,
-			async found =>
-			{
-				var tokens = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-				var result = await FlagLongNameCheck(found, tokens, orMode: true);
-				if (result is null)
-					return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "orlflags"));
-				return new CallState(result.Value);
-			});
-	}
+	public ValueTask<CallState> OrListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> FlagListFunction(parser, FlagListForm.Names, orMode: true);
 
 	[SharpFunction(Name = "orlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "powers"])]
-	public async ValueTask<CallState> OrListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var powersArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-		var objList = objListArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		var powers = powersArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-		return new CallState(await objList.ToAsyncEnumerable()
-			.AnyAsync(async (objRef, _) =>
-			{
-				var maybeObj = await LocateService.Locate(parser, executor, executor, objRef, LocateFlags.All);
-				if (maybeObj is not AnySharpObject found) return false;
-				return await powers.ToAsyncEnumerable()
-					.AnyAsync(async (power, _) => await found.HasPower(power));
-			}));
-	}
+	public ValueTask<CallState> OrListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> FlagListFunction(parser, FlagListForm.Powers, orMode: true);
 
 	[SharpFunction(Name = "andflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
-	public async ValueTask<CallState> AndFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		// andflags() checks if object has ALL of the specified flags (single-letter format)
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, objArg, LocateFlags.All,
-			async found =>
-			{
-				var result = await FlagLetterCheck(found, flagsArg, orMode: false);
-				if (result is null)
-					return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "andflags"));
-				return new CallState(result.Value);
-			});
-	}
+	public ValueTask<CallState> AndFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> FlagListFunction(parser, FlagListForm.Letters, orMode: false);
 
 	[SharpFunction(Name = "andlflags", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "flags"])]
-	public async ValueTask<CallState> AndListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		// andlflags() checks if object has ALL of the specified flags (long-name format, space-separated)
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var flagsArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, objArg, LocateFlags.All,
-			async found =>
-			{
-				var tokens = flagsArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-				var result = await FlagLongNameCheck(found, tokens, orMode: false);
-				if (result is null)
-					return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "andlflags"));
-				return new CallState(result.Value);
-			});
-	}
+	public ValueTask<CallState> AndListFlags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> FlagListFunction(parser, FlagListForm.Names, orMode: false);
 
 	[SharpFunction(Name = "andlpowers", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "powers"])]
-	public async ValueTask<CallState> AndListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var objListArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var powersArg = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-		var objList = objListArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		var powers = powersArg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-		if (objList.Length == 0)
-		{
-			return new CallState(false);
-		}
-
-		return new CallState(await objList.ToAsyncEnumerable()
-			.AllAsync(async (objRef, _) =>
-			{
-				var maybeObj = await LocateService.Locate(parser, executor, executor, objRef, LocateFlags.All);
-				if (maybeObj is not AnySharpObject found) return false;
-				return await powers.ToAsyncEnumerable()
-					.AllAsync(async (power, _) => await found.HasPower(power));
-			}));
-	}
+	public ValueTask<CallState> AndListPowers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> FlagListFunction(parser, FlagListForm.Powers, orMode: false);
 
 	[SharpFunction(Name = "ncon", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public async ValueTask<CallState> NumberOfContents(IMUSHCodeParser parser, SharpFunctionAttribute _2)

@@ -81,6 +81,7 @@ public static class ErrorMessages
 		public const string DomainError = "#-1 DOMAIN ERROR";
 		public const string InvalidPassword = "#-1 INVALID PASSWORD";
 		public const string InvalidFlag = "#-1 INVALID FLAG";
+		public const string InvalidPower = "#-1 INVALID POWER";
 		public const string ObjectAttributeString = "#-1 INVALID OBJECT/ATTRIBUTE VALUE";
 		/// <summary>
 		/// PennMUSH's single failure for every bad flag argument (<c>src/set.c:583-585</c>,

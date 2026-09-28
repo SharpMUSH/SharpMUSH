@@ -63,20 +63,71 @@ public class FlagFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// orlpowers()/andlpowers() are orlflags()/andlflags() over the POWER namespace: one object, a
+	// space-separated list of power names (pennmush src/function.c ORLPOWERS → fun_orlflags,
+	// src/fundb.c fun_orlflags/fun_andlflags, src/flags.c flaglist_check_long). Expected values
+	// from a live PennMUSH 80a1d5b run against a thing holding Boot and Login.
 	[Test]
-	[Arguments("andlpowers(%#,)", "")]
-	public async Task Andlpowers(string str, string expected)
+	[Arguments("orlpowers({0}, boot)", "1")]
+	[Arguments("orlpowers({0}, poll)", "0")]
+	[Arguments("andlpowers({0}, boot login)", "1")]
+	[Arguments("andlpowers({0}, boot poll)", "0")]
+	[Arguments("andlpowers({0}, BOOT Login)", "1")]
+	[Arguments("orlpowers({0}, !poll)", "1")]
+	[Arguments("orlpowers({0}, boot ! poll)", "1")]
+	[Arguments("andlpowers({0}, boot !)", "#-1 INVALID POWER")]
+	[Arguments("orlpowers({0}, nosuchpower)", "0")]
+	[Arguments("andlpowers({0}, nosuchpower)", "0")]
+	[Arguments("orlpowers({0}, !nosuchpower)", "1")]
+	[Arguments("andlpowers({0},)", "#-1 INVALID POWER")]
+	[Arguments("orlpowers({0},)", "#-1 INVALID POWER")]
+	[Arguments("andlpowers({0}, wizard)", "0")]
+	[Arguments("orlpowers({0}, player)", "0")]
+	public async Task ListPowersCheckOneObject(string template, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		var thing = await PoweredThing();
+		var result = (await Parser.FunctionParse(MarkupText.Plain(string.Format(template, thing))))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	// The first argument is one object, not a list of them: PennMUSH match_thing()s "#1 <thing>"
+	// as a single name, which matches nothing.
 	[Test]
-	[Arguments("orlpowers(%#,)", "")]
-	public async Task Orlpowers(string str, string expected)
+	public async Task ListPowersDoNotTakeAnObjectList()
+	{
+		var thing = await PoweredThing();
+		var result = (await Parser.FunctionParse(MarkupText.Plain($"orlpowers(#1 {thing}, boot)")))?.Message!;
+		await Assert.That(result.ToPlainText()).StartsWith("#-1");
+	}
+
+	// Live PennMUSH 80a1d5b: a bad flag list is #-1 INVALID FLAG in all four flag functions, and an
+	// empty list is invalid for the name-list forms but vacuous for the letter forms.
+	[Test]
+	[Arguments("andflags(%#, W!)", "#-1 INVALID FLAG")]
+	[Arguments("orflags(%#, v!)", "#-1 INVALID FLAG")]
+	[Arguments("andlflags(%#, !)", "#-1 INVALID FLAG")]
+	[Arguments("orlflags(%#, noaccents ! myopic)", "#-1 INVALID FLAG")]
+	[Arguments("andlflags(%#,)", "#-1 INVALID FLAG")]
+	[Arguments("orlflags(%#,)", "#-1 INVALID FLAG")]
+	[Arguments("andflags(%#,)", "1")]
+	[Arguments("orflags(%#,)", "0")]
+	[Arguments("andlflags(%#, boot)", "0")]
+	public async Task FlagListErrorsAndEmptyLists(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
-		await Assert.That(result.ToPlainText()).IsNotNull();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	private async Task<DBRef> PoweredThing()
+	{
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "PowerList");
+		var obj = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<AnySharpObject>();
+		foreach (var name in new[] { "Boot", "Login" })
+		{
+			var power = await Mediator.Send(new GetPowerQuery(name));
+			await Mediator.Send(new SetObjectPowerCommand(obj, power!));
+		}
+		return thing;
 	}
 
 	// Penn testflags.t: hasflag tests
