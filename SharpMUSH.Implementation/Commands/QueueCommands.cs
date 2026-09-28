@@ -444,7 +444,7 @@ public partial class Commands
 		AnySharpObject objectToNotify, string notifyType, Dictionary<string, CallState> args, string? maybeAttributeString)
 	{
 		if (!await PermissionService.Controls(executor, objectToNotify) &&
-			!await objectToNotify.Object().Flags.Value.AnyAsync(flag => flag.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase), ExecutionBudget.CurrentToken))
+			!await objectToNotify.HasFlag("LINK_OK"))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -817,7 +817,7 @@ public partial class Commands
 		AnySharpObject objectToDrain, string[] switches, string? arg1, string? maybeAttribute)
 	{
 		if (!await PermissionService.Controls(executor, objectToDrain) &&
-			!await objectToDrain.Object().Flags.Value.AnyAsync(flag => flag.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase), ExecutionBudget.CurrentToken))
+			!await objectToDrain.HasFlag("LINK_OK"))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);

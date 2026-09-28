@@ -546,7 +546,7 @@ public partial class Functions
 		}
 
 		var isWizard = await executor.IsWizard();
-		var hasSendOOBPower = await ArgHelpers.HasObjectPowers(executor.Object(), "Send_OOB");
+		var hasSendOOBPower = await executor.HasPower("Send_OOB");
 
 		int sentCount = 0;
 

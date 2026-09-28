@@ -1,4 +1,3 @@
-using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -16,16 +15,13 @@ namespace SharpMUSH.Tests.Internal;
 /// (<c>src/strutil.c</c>) compares through <c>DOWNCASE</c>. So <c>Can_Spoof</c>,
 /// <c>can_spoof</c> and <c>CAN_SPOOF</c> all name the same power there.</para>
 ///
-/// <para><see cref="ArgHelpers.HasObjectPowers"/> answered the same question as
-/// <see cref="HelperFunctions.HasPower(SharpObject,string)"/> with an ordinal <c>==</c>, so a
-/// permission check succeeded or failed depending on which helper the call site reached for and on
-/// the casing the caller happened to pass. Same for
-/// <see cref="ArgHelpers.HasObjectFlags"/> against
-/// <see cref="HelperFunctions.HasFlag(SharpObject,string)"/>, which additionally compared flags by
-/// reference — <see cref="SharpObjectFlag"/> is a class with no equality override, so only the very
-/// instance hanging off the object could ever match.</para>
+/// <para><c>ArgHelpers.HasObjectPowers</c> / <c>HasObjectFlags</c> once answered the same question
+/// with an ordinal <c>==</c> (and, for flags, by reference), so a permission check depended on which
+/// helper the call site reached for. Those forwarders are gone; every caller asks
+/// <see cref="HelperFunctions.HasPower(SharpObject,string)"/> and
+/// <see cref="HelperFunctions.HasFlag(SharpObject,string)"/> directly.</para>
 /// </summary>
-public class ArgHelperPowerFlagCaseTests
+public class FlagPowerHelperCaseTests
 {
 	private static SharpObject ObjectWith(SharpPower[] powers, SharpObjectFlag[] flags) =>
 		new()
@@ -58,12 +54,12 @@ public class ArgHelperPowerFlagCaseTests
 			TypeRestrictions = []
 		};
 
-	private static SharpObjectFlag Flag(string name, string[]? aliases = null) =>
+	private static SharpObjectFlag Flag(string name, string[]? aliases = null, string symbol = "S") =>
 		new()
 		{
 			Name = name,
 			Aliases = aliases,
-			Symbol = "S",
+			Symbol = symbol,
 			System = true,
 			SetPermissions = [],
 			UnsetPermissions = [],
@@ -75,11 +71,11 @@ public class ArgHelperPowerFlagCaseTests
 	[Arguments("can_spoof")]
 	[Arguments("CAN_SPOOF")]
 	[Arguments("cAn_SpOoF")]
-	public async Task HasObjectPowers_MatchesTheNameRegardlessOfCase(string asked)
+	public async Task HasPower_MatchesTheNameRegardlessOfCase(string asked)
 	{
 		var obj = ObjectWith([Power("Can_Spoof")], []);
 
-		await Assert.That(await ArgHelpers.HasObjectPowers(obj, asked))
+		await Assert.That(await obj.HasPower(asked))
 			.IsTrue()
 			.Because("PennMUSH's match_power resolves through ptab_find, which compares with strcasecmp");
 	}
@@ -88,57 +84,61 @@ public class ArgHelperPowerFlagCaseTests
 	[Arguments("Pueblo_Send")]
 	[Arguments("pueblo_send")]
 	[Arguments("PUEBLO_SEND")]
-	public async Task HasObjectPowers_MatchesAnAliasRegardlessOfCase(string asked)
+	public async Task HasPower_MatchesAnAliasRegardlessOfCase(string asked)
 	{
 		var obj = ObjectWith([Power("Send_OOB", "Pueblo_Send")], []);
 
-		await Assert.That(await ArgHelpers.HasObjectPowers(obj, asked))
+		await Assert.That(await obj.HasPower(asked))
 			.IsTrue()
 			.Because("ptab_flag holds aliases alongside names, and the comparison is the same one");
 	}
 
 	[Test]
-	public async Task HasObjectPowers_StillSaysNoToAPowerTheObjectLacks()
+	public async Task HasPower_StillSaysNoToAPowerTheObjectLacks()
 	{
 		var obj = ObjectWith([Power("Can_Spoof")], []);
 
-		await Assert.That(await ArgHelpers.HasObjectPowers(obj, "Can_Dark")).IsFalse();
+		await Assert.That(await obj.HasPower("Can_Dark")).IsFalse();
 	}
 
 	[Test]
 	[Arguments("MONITOR")]
 	[Arguments("monitor")]
 	[Arguments("Monitor")]
-	public async Task HasObjectFlags_MatchesTheNameRegardlessOfCaseAndInstance(string asked)
+	public async Task HasFlag_MatchesTheNameRegardlessOfCaseAndInstance(string asked)
 	{
 		var obj = ObjectWith([], [Flag("MONITOR", ["LISTENER", "WATCHER"])]);
 
-		await Assert.That(await ArgHelpers.HasObjectFlags(obj, Flag(asked)))
+		await Assert.That(await obj.HasFlag(asked))
 			.IsTrue()
 			.Because("match_flag resolves through the same case-insensitive ptab_find as match_power");
 	}
 
 	[Test]
-	public async Task HasObjectFlags_StillSaysNoToAFlagTheObjectLacks()
+	public async Task HasFlag_StillSaysNoToAFlagTheObjectLacks()
 	{
 		var obj = ObjectWith([], [Flag("MONITOR", ["LISTENER", "WATCHER"])]);
 
-		await Assert.That(await ArgHelpers.HasObjectFlags(obj, Flag("DARK"))).IsFalse();
+		await Assert.That(await obj.HasFlag("DARK")).IsFalse();
 	}
 
 	/// <summary>
-	/// The whole point of the fix: the two helpers now answer identically, whatever is asked.
+	/// <c>flag_hash_lookup</c> (<c>src/flags.c:162-189</c>) falls back to the flag letter for a single
+	/// character, and <c>letter_to_flagptr</c> compares it exactly: <c>h</c> is HALT, <c>H</c> is HAVEN.
 	/// </summary>
 	[Test]
-	[Arguments("Can_Spoof")]
-	[Arguments("can_spoof")]
-	[Arguments("CAN_SPOOF")]
-	[Arguments("Can_Dark")]
-	public async Task TheTwoPowerHelpersAgree(string asked)
+	[Arguments("HALT", true)]
+	[Arguments("halt", true)]
+	[Arguments("h", true)]
+	[Arguments("H", false)]
+	[Arguments("COLOUR", true)]
+	[Arguments("C", true)]
+	[Arguments("c", false)]
+	[Arguments("HAVEN", false)]
+	public async Task HasFlagOrLetter_MatchesNameAliasOrExactLetter(string asked, bool expected)
 	{
-		var obj = ObjectWith([Power("Can_Spoof")], []);
+		var obj = ObjectWith([], [Flag("HALT", symbol: "h"), Flag("COLOR", ["COLOUR"], "C")]);
 
-		await Assert.That(await ArgHelpers.HasObjectPowers(obj, asked))
-			.IsEqualTo(await obj.HasPower(asked));
+		await Assert.That(await obj.HasFlagOrLetter(asked)).IsEqualTo(expected);
 	}
 }
