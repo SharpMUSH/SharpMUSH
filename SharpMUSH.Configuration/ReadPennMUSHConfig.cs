@@ -394,15 +394,19 @@ public static partial class ReadPennMushConfig
 		return lines;
 	}
 
-	/// <summary>
-	/// Every <paramref name="directive"/> line — <c>restrict_command</c> or <c>restrict_function</c> —
-	/// as the name it restricts and the restriction, which is the shape <c>@config/set restrict_command</c>
-	/// stores. PennMUSH applies the lines in order, each replacing the restriction's lock and message,
-	/// so a later line for the same name takes the place of an earlier one here, and says so.
-	/// </summary>
 	/// <summary>The <c>restrict_function</c> words SharpMUSH applies: the ones <c>check_func</c> tests (<c>src/function.c</c>).</summary>
 	private static readonly string[] FunctionPermissionWords = ["nobody", "noguest", "nogagged", "nofixed", "admin", "wizard", "god"];
 
+	/// <summary>
+	/// Every <paramref name="directive"/> line — <c>restrict_command</c> or <c>restrict_function</c> —
+	/// as the name it restricts and the restriction, which is the shape <c>@config/set restrict_command</c>
+	/// stores. PennMUSH applies the lines in order. A <c>restrict_command</c> line replaces the
+	/// restriction's lock and message, so a later line for the same name takes the place of an earlier
+	/// one here, and says so. A <c>restrict_function</c> line sets or clears the function's bits one word
+	/// at a time (<c>apply_restrictions</c>, <c>src/function.c</c>), so its words are merged into the
+	/// earlier lines': each word takes the place of an earlier mention of the same word, with or without
+	/// its <c>!</c>.
+	/// </summary>
 	private static Dictionary<string, string[]> Restrictions(string directive, IEnumerable<string> lines, List<string> skipped)
 	{
 		var restrictions = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
@@ -419,7 +423,11 @@ public static partial class ReadPennMushConfig
 				continue;
 			}
 
-			if (restrictions.TryGetValue(name, out var earlier) && earlier[0] != restriction)
+			if (directive == "restrict_function" && restrictions.TryGetValue(name, out var bits))
+			{
+				restriction = MergeFunctionRestriction(bits[0], restriction);
+			}
+			else if (restrictions.TryGetValue(name, out var earlier) && earlier[0] != restriction)
 			{
 				var earlierName = restrictions.Keys.First(key => key.Equals(name, StringComparison.OrdinalIgnoreCase));
 				skipped.Add($"{directive} {earlierName} {earlier[0]}: replaced by the later line {directive} {name} {restriction}.");
@@ -431,6 +439,22 @@ public static partial class ReadPennMushConfig
 		}
 
 		return restrictions;
+	}
+
+	/// <summary>
+	/// <paramref name="later"/>'s words applied over <paramref name="earlier"/>'s, as
+	/// <c>apply_restrictions</c> ORs a word's bit in and clears it for <c>!word</c>.
+	/// </summary>
+	private static string MergeFunctionRestriction(string earlier, string later)
+	{
+		var words = earlier.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries).ToList();
+		foreach (var word in later.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries))
+		{
+			words.RemoveAll(kept => kept.TrimStart('!').Equals(word.TrimStart('!'), StringComparison.OrdinalIgnoreCase));
+			words.Add(word);
+		}
+
+		return string.Join(' ', words);
 	}
 
 	/// <summary>The first word of a configuration line, or null for a blank line or a comment.</summary>

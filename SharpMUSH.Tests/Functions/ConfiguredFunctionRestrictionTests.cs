@@ -106,6 +106,25 @@ public class ConfiguredFunctionRestrictionTests
 	}
 
 	/// <summary>
+	/// <c>nobody</c> is <c>FN_DISABLED</c> (<c>src/function.c</c>), which the parser answers with
+	/// <c>e_disabled</c>, <c>#-1 FUNCTION DISABLED</c>, not <c>e_perm</c> (<c>src/parse.c</c>).
+	/// </summary>
+	[Test]
+	public async Task Nobody_DisablesTheFunction()
+	{
+		var mortal = await PlayerAsync("FnCfgNobody");
+
+		Restrictions.Apply(new Dictionary<string, string[]> { ["lstats"] = ["nobody"] });
+
+		await Assert.That(await Think(mortal, "lstats()")).IsEqualTo(ErrorMessages.Returns.FunctionDisabled);
+		await Assert.That(await Think(mortal, "stats()")).IsEqualTo(ErrorMessages.Returns.FunctionDisabled);
+
+		Restrictions.Apply(new Dictionary<string, string[]>());
+
+		await Assert.That(await Think(mortal, "lstats()")).IsNotEqualTo(ErrorMessages.Returns.FunctionDisabled);
+	}
+
+	/// <summary>
 	/// Only who may call the function is applied: <c>nosidefx</c> and a <c>!</c> word would otherwise
 	/// sit in the restriction looking applied while doing nothing. Driven with its own registry, so the
 	/// shared host's function table is untouched.

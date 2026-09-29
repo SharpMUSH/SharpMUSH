@@ -127,6 +127,35 @@ public class ReadPennMushConfigRestrictionTests
 	}
 
 	/// <summary>
+	/// <c>restrict_function</c> lines add up. <c>apply_restrictions</c> (<c>src/function.c</c>) ORs each
+	/// word's bit into the function's flags and clears it for <c>!word</c>, so a later line for the same
+	/// function keeps the earlier line's words, unlike <c>restrict_command</c>.
+	/// </summary>
+	[Test]
+	public async Task RepeatedFunctionRestrictions_Accumulate()
+	{
+		var game = GameDirectory();
+		try
+		{
+			var mushCnf = Write(game, "mush.cnf",
+				"restrict_function lstats noguest",
+				"restrict_function LSTATS wizard",
+				"restrict_function pemit noguest nogagged",
+				"restrict_function pemit !noguest");
+
+			var import = ReadPennMushConfig.Import(mushCnf);
+
+			await Assert.That(import.Options.Restriction.FunctionRestrictions["lstats"]).IsEquivalentTo(new[] { "noguest wizard" });
+			await Assert.That(import.Options.Restriction.FunctionRestrictions["pemit"]).IsEquivalentTo(new[] { "nogagged !noguest" });
+			await Assert.That(import.Skipped.Where(line => line.Contains("replaced"))).IsEmpty();
+		}
+		finally
+		{
+			Directory.Delete(game, true);
+		}
+	}
+
+	/// <summary>
 	/// An uploaded <c>mush.cnf</c> arrives without the <c>restrict.cnf</c> it includes. PennMUSH logs
 	/// "Cannot open configuration file" and reads on; the import does the same, and says so.
 	/// </summary>

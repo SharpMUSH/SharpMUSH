@@ -519,6 +519,11 @@ public class SharpMUSHParserVisitor(
 		return result with { Message = stripAnsi ? MarkupText.Plain(message.ToPlainText()) : message };
 	};
 
+	/// <summary>Whether a function restriction says <c>nobody</c>, PennMUSH's <c>FN_DISABLED</c> (<c>src/function.c</c>).</summary>
+	private static bool Disables(string? restriction)
+		=> restriction?.Split([' ', '\t', ','], StringSplitOptions.RemoveEmptyEntries)
+			.Any(word => word.Equals("nobody", StringComparison.OrdinalIgnoreCase)) ?? false;
+
 	private bool BeginsRestrictedEvaluation(FunctionContext context)
 	{
 		var name = FunctionNameOf(context);
@@ -864,7 +869,10 @@ public class SharpMUSHParserVisitor(
 					|| (builtinRestriction is not null && (isolated || !await executor!.SatisfiesFunctionRestriction(builtinRestriction))))
 			{
 				success = false;
-				return new CallState(ErrorMessages.Returns.PermissionDenied, contextDepth);
+				// nobody is FN_DISABLED, which answers e_disabled rather than e_perm (src/parse.c).
+				return new CallState(Disables(functionRestriction) || Disables(builtinRestriction)
+					? ErrorMessages.Returns.FunctionDisabled
+					: ErrorMessages.Returns.PermissionDenied, contextDepth);
 			}
 
 			/* Validation, this should probably go into its own function! */
