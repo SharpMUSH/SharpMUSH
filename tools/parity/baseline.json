@@ -129,10 +129,6 @@
    "command": "Wiz wizpass"
   },
   {
-   "key": "10-player-commands/room.dig#0",
-   "command": "@dig Annex=Annex Door,Back"
-  },
-  {
    "key": "10-player-commands/room.dig#2",
    "command": "look"
   },

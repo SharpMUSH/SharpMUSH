@@ -209,6 +209,43 @@ public class OpenArgumentParityTests
 	}
 
 	/// <summary>
+	/// <c>do_dig</c> discards each <c>do_real_open</c>'s answer and asks for the next exit regardless
+	/// (<c>create.c:507-517</c>) — unlike <c>do_open</c>, which gates its return exit on
+	/// <c>GoodObject(forward)</c> (<c>:229-230</c>). So a forward exit the digger may not source where
+	/// they stand does not cost them the return exit, which is sourced in the room they just dug.
+	/// SharpMUSH stopped the dig at the refusal, which is why
+	/// <c>tools/parity/scenarios/10-player-commands/room.dig</c> lost three lines to PennMUSH.
+	/// </summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async ValueTask ARefusedForwardExitDoesNotCostTheReturnExit(bool throughTheFunction)
+	{
+		var uid = Guid.NewGuid().ToString("N")[..8];
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "OapDigBoth2");
+		// God's room, neither controlled nor OPEN_OK: can_open_from refuses the forward exit, and
+		// can_link_to refuses it as the return exit's destination.
+		var room = Ref(await AsGod($"@dig OapDigBoth2Room{uid}"));
+		await AsGod($"@teleport {mortal.DbRef}={room}");
+
+		var dug = Ref(await Run(mortal.Handle, throughTheFunction
+			? $"think dig(OapDigBoth2New{uid},OapDigBoth2To{uid},OapDigBoth2Back{uid})"
+			: $"@dig OapDigBoth2New{uid}=OapDigBoth2To{uid},OapDigBoth2Back{uid}"));
+
+		await Assert.That((await Named($"OapDigBoth2To{uid}")).Length).IsEqualTo(0)
+			.Because("can_open_from refuses an exit sourced in a room the digger may not open in");
+
+		var back = await Named($"OapDigBoth2Back{uid}");
+		await Assert.That(back.Length).IsEqualTo(1)
+			.Because("create.c:513-515 opens argv[2] whatever argv[1] did");
+		await Assert.That(await SourceOf(Ref(back[0]))).IsEqualTo(dug.Number)
+			.Because("the return exit is sourced in the room just dug, which the digger owns");
+		await Assert.That(await DestinationOf(Ref(back[0]))).IsNull()
+			.Because("can_link_to refuses the room the digger is standing in, and Penn leaves the exit unlinked");
+	}
+
+	/// <summary>
 	/// The exit back is sourced in the room just dug — which the digger owns — and linked to "here",
 	/// which <c>parse_linkable_room</c> (<c>create.c:41-67</c>) puts through <c>can_link_to</c>. A
 	/// digger who may not link into the room they are standing in gets the exit and no link, which is
