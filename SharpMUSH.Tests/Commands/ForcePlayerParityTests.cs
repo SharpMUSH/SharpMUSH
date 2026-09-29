@@ -66,6 +66,19 @@ public class ForcePlayerParityTests
 		await Assert.That(heard.IndexOf($"{target.Name} says, \"{text} 1\"")).IsGreaterThan(triggered);
 	}
 
+	/// <summary>A refused <c>@trigger/match</c> is not also reported as triggered.</summary>
+	[Test]
+	public async Task TriggerMatchWithoutAStringIsNotReportedAsTriggered()
+	{
+		var (wizard, target) = await Setup("TrigNoMatch");
+
+		await Run(wizard.Handle, $"&TRIG *{target.Name}=say never");
+		await Run(wizard.Handle, $"@trigger/match *{target.Name}/TRIG");
+
+		await Assert.That(Factory.Notifications.For(wizard.DbRef)).Contains("You must provide a string to match when using /match.");
+		await Assert.That(Factory.Notifications.For(wizard.DbRef)).DoesNotContain($"{target.Name} - Triggered.");
+	}
+
 	/// <summary>match_controlled says "Permission denied." for a player the forcer cannot control; do_force adds "Sorry.".</summary>
 	[Test]
 	public async Task ForcingAnUncontrolledPlayerIsDeniedThenSorry()

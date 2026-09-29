@@ -1272,9 +1272,19 @@ public partial class Commands
 		var attributeText = attribute.Value.ToPlainText();
 		var attributeLongName = attribute.LongName!.ToUpper();
 
+		// With /match, the first argument (index 1) is the test string. Refused before the notice below, so a
+		// refusal is never also reported as a trigger.
+		CallState? matchArg = null;
+		if (switches.Contains("MATCH") && (!args.TryGetValue("1", out matchArg) || matchArg.Message == null))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerMustProvideMatchString), executor);
+			return new CallState(ErrorMessages.Returns.NoMatchString);
+		}
+
 		// do_trigger (PennMUSH src/set.c:1341-1345): once queue_attribute_base_priv has found a readable
-		// attribute, the triggerer hears "<name> - Triggered." unless AreQuiet. Penn queues the body, so the
-		// notice comes before anything the attribute does.
+		// attribute, the triggerer hears "<name> - Triggered." unless AreQuiet - even if the attribute is
+		// empty or /match finds nothing, since queue_attribute_useatr still returns 1. Penn queues the body,
+		// so the notice comes before anything the attribute does.
 		if (!await targetObject.Object().AreQuietAsync(executor))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerTriggeredFormat), executor,
@@ -1321,14 +1331,7 @@ public partial class Commands
 
 		if (switches.Contains("MATCH"))
 		{
-			// With /match, the first argument (index 1) is the test string
-			if (!args.TryGetValue("1", out var matchArg) || matchArg.Message == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerMustProvideMatchString), executor);
-				return new CallState(ErrorMessages.Returns.NoMatchString);
-			}
-
-			var testString = matchArg.Message.ToPlainText();
+			var testString = matchArg!.Message!.ToPlainText();
 
 			var patterns = attributeText.Split(new[] { '\n', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
