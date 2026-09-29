@@ -74,7 +74,7 @@ public partial class Functions
 			"revision" => new CallState(localized.RevisionNumber.ToString()),
 			"updated" => new CallState(localized.Page.UpdatedAt.ToUnixTimeSeconds().ToString()),
 			"author" => new CallState(localized.Page.AuthorDbref),
-			_ => new CallState("#-1 UNKNOWN WIKI FIELD"),
+			_ => new CallState(ErrorMessages.Returns.UnknownWikiField),
 		};
 	}
 
@@ -97,7 +97,7 @@ public partial class Functions
 			{
 				if (!Enum.TryParse<WikiNamespace>(nsText, ignoreCase: true, out var parsed))
 				{
-					return new CallState("#-1 NO SUCH WIKI NAMESPACE");
+					return new CallState(ErrorMessages.Returns.NoSuchWikiNamespace);
 				}
 				ns = parsed;
 			}

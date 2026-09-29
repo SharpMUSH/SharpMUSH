@@ -96,7 +96,7 @@ public partial class Functions
 		}
 		catch (Exception ex) when (ex is DbException or InvalidOperationException)
 		{
-			return new CallState($"#-1 SQL ERROR: {ex.Message}") { HadErrors = hadErrors };
+			return new CallState(string.Format(ErrorMessages.Returns.SqlErrorFormat, ex.Message)) { HadErrors = hadErrors };
 		}
 	}
 
@@ -245,7 +245,7 @@ public partial class Functions
 				}
 				catch (Exception ex) when (ex is DbException or InvalidOperationException)
 				{
-					return new CallState($"#-1 SQL ERROR: {ex.Message}") { HadErrors = hadErrors };
+					return new CallState(string.Format(ErrorMessages.Returns.SqlErrorFormat, ex.Message)) { HadErrors = hadErrors };
 				}
 
 				return new CallState(MarkupText.Join(osep, results)) { HadErrors = hadErrors };

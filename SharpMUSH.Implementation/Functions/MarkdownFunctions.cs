@@ -43,7 +43,7 @@ public partial class Functions
 		}
 		catch (Exception ex)
 		{
-			return ValueTask.FromResult(new CallState($"#-1 ERROR RENDERING MARKDOWN: {ex.Message}"));
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.MarkdownRenderErrorFormat, ex.Message)));
 		}
 	}
 
@@ -91,7 +91,7 @@ public partial class Functions
 				}
 				catch (Exception ex)
 				{
-					return new CallState($"#-1 ERROR RENDERING MARKDOWN: {ex.Message}");
+					return new CallState(string.Format(ErrorMessages.Returns.MarkdownRenderErrorFormat, ex.Message));
 				}
 			});
 	}

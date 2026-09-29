@@ -120,7 +120,7 @@ public static class JsonHelpers
 
 		if (duplicateKeys.Count > 0)
 		{
-			return ValueTask.FromResult(new CallState($"#-1 DUPLICATE KEYS: {string.Join(", ", duplicateKeys)}"));
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.DuplicateKeysFormat, string.Join(", ", duplicateKeys))));
 		}
 
 		try

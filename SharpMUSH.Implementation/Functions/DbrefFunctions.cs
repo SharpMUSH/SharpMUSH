@@ -92,7 +92,7 @@ public partial class Functions
 				|| (await Mediator.Send(new GetObjectNodeQuery(parentRef!.Value))).IsNone)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchUnknownParent), executor);
-			return new CallState("#-1");
+			return new CallState(ErrorMessages.Returns.Nothing);
 		}
 
 		DBRef? owner = await executor.IsSee_All() || await executor.HasPower("Search")
@@ -815,7 +815,7 @@ public partial class Functions
 				}
 
 				var parent = await found.Object().Parent.WithCancellation(CancellationToken.None);
-				return parent is AnySharpObject known ? $"#{known.Object().DBRef.Number}" : "#-1";
+				return parent is AnySharpObject known ? $"#{known.Object().DBRef.Number}" : ErrorMessages.Returns.Nothing;
 			});
 
 		// PennMUSH's do_parent (src/set.c), which fun_parent calls: it reports every failure itself.

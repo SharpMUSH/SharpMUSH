@@ -147,7 +147,7 @@ public partial class Functions
 			? "qregisters"
 			: RegisterTypes.FirstOrDefault(t => t.StartsWith(typeArgStr, StringComparison.OrdinalIgnoreCase));
 		if (canonicalType is null)
-			return ValueTask.FromResult(new CallState($"#-1 R: INVALID REGISTER TYPE '{typeArgStr}'"));
+			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.InvalidRegisterTypeFormat, typeArgStr)));
 
 		switch (canonicalType)
 		{
@@ -205,7 +205,7 @@ public partial class Functions
 
 			default:
 				// Unreachable: canonicalType is always one of the five valid names (or we returned above).
-				return ValueTask.FromResult(new CallState($"#-1 R: INVALID REGISTER TYPE '{typeArgStr}'"));
+				return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.InvalidRegisterTypeFormat, typeArgStr)));
 		}
 	}
 

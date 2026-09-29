@@ -1333,7 +1333,7 @@ public partial class Functions
 		var functionName = (parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText();
 		if (string.IsNullOrWhiteSpace(functionName))
 		{
-			return new CallState("#-1 FUNCTION (No function name given)");
+			return new CallState(ErrorMessages.Returns.NoFunctionNameGiven);
 		}
 
 		if (parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out var targetFunction))
@@ -1376,7 +1376,7 @@ public partial class Functions
 		// If attribute lookup returned nothing, report function not found
 		if (result2.Message is null || result2.Message.ToPlainText().Length == 0)
 		{
-			return new CallState($"#-1 FUNCTION ({functionName.ToUpper()}) NOT FOUND") { HadErrors = result2.HadErrors };
+			return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, functionName.ToUpper())) { HadErrors = result2.HadErrors };
 		}
 
 		return result2;
@@ -1428,14 +1428,14 @@ public partial class Functions
 		{
 			type = (a1.Message ?? MarkupText.Empty).ToPlainText().ToLowerInvariant();
 			if (type is not ("builtin" or "local" or "all"))
-				return new CallState("#-1");
+				return new CallState(ErrorMessages.Returns.Nothing);
 		}
 
 		bool Names(string full) => full.StartsWith(option, StringComparison.OrdinalIgnoreCase);
 
 		return option switch
 		{
-			"" => new CallState("#-1"),
+			"" => new CallState(ErrorMessages.Returns.Nothing),
 			_ when option.Equals("motd", StringComparison.OrdinalIgnoreCase) => await Motd(parser, default!),
 			_ when option.ToLowerInvariant() is "wizmotd" or "downmotd" or "fullmotd"
 				=> await GetWizardMotdAsync(parser, option.ToLowerInvariant()),
@@ -1448,7 +1448,7 @@ public partial class Functions
 				Mediator.CreateStream(new GetAllObjectFlagsQuery()).Select(f => (f.Name, f.Symbol, f.SetPermissions, f.Disabled)))),
 			_ when Names("powers") => new CallState(await FlagListAsync(parser,
 				Mediator.CreateStream(new GetPowersQuery()).Select(p => (p.Name, p.Symbol, p.SetPermissions, p.Disabled)))),
-			_ => new CallState("#-1")
+			_ => new CallState(ErrorMessages.Returns.Nothing)
 		};
 
 		static async ValueTask<CallState> UpperSorted(IAsyncEnumerable<string> names)

@@ -32,7 +32,7 @@ public partial class Functions
 			"soundex" => ValueTask.FromResult<CallState>(ComputeSoundex(
 				arg0.StartsWith("ph", StringComparison.OrdinalIgnoreCase) ? "f" + arg0[2..] : arg0)),
 			"phone" => ValueTask.FromResult<CallState>(ComputePhoneticHash(arg0)),
-			_ => ValueTask.FromResult<CallState>("#-1 INVALID HASH TYPE")
+			_ => ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidHashType)
 		};
 	}
 
@@ -53,7 +53,7 @@ public partial class Functions
 					? "1" : "0"),
 			"phone" => ValueTask.FromResult<CallState>(
 				ComputePhoneticHash(arg0) == ComputePhoneticHash(arg1) ? "1" : "0"),
-			_ => ValueTask.FromResult<CallState>("#-1 INVALID HASH TYPE")
+			_ => ValueTask.FromResult<CallState>(ErrorMessages.Returns.InvalidHashType)
 		};
 	}
 

@@ -1060,7 +1060,7 @@ public partial class Functions
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var descriptor = await LookupDescriptorAsync(parser, executor);
-		return new CallState(descriptor?.Ref is { } who ? $"#{who.Number}" : "#-1");
+		return new CallState(descriptor?.Ref is { } who ? $"#{who.Number}" : ErrorMessages.Returns.Nothing);
 	}
 
 	[SharpFunction(Name = "height", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]

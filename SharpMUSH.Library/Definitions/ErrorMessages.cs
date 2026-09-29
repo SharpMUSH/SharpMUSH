@@ -368,6 +368,35 @@ public static partial class ErrorMessages
 		public const string UsageAddcom = "#-1 USAGE: ADDCOM <ALIAS>=<CHANNEL>";
 		public const string UsageDelcom = "#-1 USAGE: DELCOM <ALIAS>";
 		public const string UsageComtitle = "#-1 USAGE: COMTITLE <ALIAS>=<TITLE>";
+
+		// Function-family failures (#965): one home for the literals the Functions partials returned inline.
+		public const string NoSuchLock = "#-1 NO SUCH LOCK";
+		public const string InvalidBoolexp = "#-1 INVALID BOOLEXP";
+		/// <summary><c>fun_atrlock</c>'s own wording (<c>src/fundb.c:2437,2441</c>).</summary>
+		public const string ArgumentMustBeObjectAttribute = "#-1 ARGUMENT MUST BE OBJ/ATTR";
+		public const string InvalidHashType = "#-1 INVALID HASH TYPE";
+		public const string UnknownWikiField = "#-1 UNKNOWN WIKI FIELD";
+		public const string NoSuchWikiNamespace = "#-1 NO SUCH WIKI NAMESPACE";
+		public const string NoFunctionNameGiven = "#-1 FUNCTION (No function name given)";
+
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string InvalidRegisterTypeFormat = "#-1 R: INVALID REGISTER TYPE '{0}'";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string JsonSetFailedFormat = "#-1 SET FAILED: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string JsonReplaceFailedFormat = "#-1 REPLACE FAILED: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string JsonRemoveFailedFormat = "#-1 REMOVE FAILED: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DuplicateKeysFormat = "#-1 DUPLICATE KEYS: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string MarkdownRenderErrorFormat = "#-1 ERROR RENDERING MARKDOWN: {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SqlErrorFormat = "#-1 SQL ERROR: {0}";
+
+		/// <summary>A failure whose reason is supplied by the caller, rendered as <c>#-1 REASON</c>.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ReasonFormat = "#-1 {0}";
 		public const string UpdateToWhat = "#-1 UPDATE TO WHAT?";
 		public const string QueryWhere = "#-1 QUERY WHERE?";
 		public const string WhatDoYouWantToQuery = "#-1 WHAT DO YOU WANT TO QUERY?";
