@@ -98,42 +98,6 @@ public class LocateService(
 		return loc;
 	}
 
-	public async ValueTask<AnySharpObjectOrErrorCallState> LocateAndNotifyIfInvalidWithCallState(IMUSHCodeParser parser,
-		AnySharpObject looker, AnySharpObject executor,
-		string name, LocateFlags flags)
-	{
-		var (loc, noControl) = await LocateWithDiagnosis(looker, executor, name, flags);
-		if (loc is AnySharpObject found)
-		{
-			return found;
-		}
-
-		var caller = await parser.CurrentState.CallerObject(mediator);
-		await notifyService.Notify(executor, LocateNotifyMessage(loc, noControl), Sender(caller));
-		var callStateMessage = loc is Error<string> error ? error.Value : ErrorMessages.Returns.NoMatch;
-
-		return new Error<CallState>(new CallState(callStateMessage));
-	}
-
-	public async ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
-		AnySharpObject looker,
-		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, ValueTask<CallState>> foundFunc)
-		=> await LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, flags) switch
-		{
-			Error<CallState> error => error.Value,
-			AnySharpObject obj => await foundFunc(obj)
-		};
-
-
-	public async ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
-		AnySharpObject looker,
-		AnySharpObject executor, string name, LocateFlags flags, Func<AnySharpObject, CallState> foundFunc)
-		=> await LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, flags) switch
-		{
-			Error<CallState> error => error.Value,
-			AnySharpObject obj => foundFunc(obj)
-		};
-
 	public async ValueTask<AnyOptionalSharpObjectOrError> Locate(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
@@ -232,50 +196,6 @@ public class LocateService(
 		// resolves and reported them as "I can't see that here" rather than as a suppressed match.
 		return await LocateMatch(executor, looker, flags, name, absolute);
 	}
-
-	// A player-name match is GLOBAL in PennMUSH: pmatch()/player lookup resolves any player by name
-	// regardless of where they stand or whether the looker can "see" them. It no longer needs a flag to
-	// say so — the dark/can-examine gate that used to reject a perfectly valid player here (404'ing
-	// GET /api/profile/<name> for every character, since the profile http_handler #4 is neither near nor
-	// a controller) was fun_locate's, and has gone back there.
-	// AbsoluteMatch because lookup_player resolves "#1" as readily as a name, and every caller of this
-	// helper hands it whatever the user typed. It used to arrive by accident: the flag set names a scope,
-	// so nothing was injected, and a dbref reached no scope at all.
-	private const LocateFlags PlayerMatchFlags =
-		LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
-		LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.AbsoluteMatch;
-
-	/// <inheritdoc />
-	public ValueTask<AnyOptionalSharpObjectOrError> LocateConnectionTarget(IMUSHCodeParser parser,
-		AnySharpObject looker, AnySharpObject executor,
-		string name) =>
-		Locate(parser, looker, executor, name, PlayerMatchFlags | LocateFlags.MatchMeForLooker);
-
-	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(IMUSHCodeParser parser,
-		AnySharpObject looker, AnySharpObject executor,
-		string name) =>
-		LocateAndNotifyIfInvalid(parser, looker, executor, name, PlayerMatchFlags);
-
-	public ValueTask<AnySharpObjectOrErrorCallState> LocatePlayerAndNotifyIfInvalidWithCallState(IMUSHCodeParser parser,
-		AnySharpObject looker, AnySharpObject executor,
-		string name) =>
-		LocateAndNotifyIfInvalidWithCallState(parser, looker, executor, name, PlayerMatchFlags);
-
-	public async ValueTask<CallState> LocatePlayerAndNotifyIfInvalidWithCallStateFunction(IMUSHCodeParser parser,
-		AnySharpObject looker,
-		AnySharpObject executor, string name, Func<SharpPlayer, ValueTask<CallState>> foundFunc)
-		=> await LocatePlayerAndNotifyIfInvalidWithCallState(parser, looker, executor, name) switch
-		{
-			Error<CallState> error => error.Value,
-			AnySharpObject and SharpPlayer player => await foundFunc(player),
-			AnySharpObject other => throw new InvalidOperationException(
-				$"A player-only locate matched {other.Object().DBRef}, which is not a player.")
-		};
-
-	public ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(IMUSHCodeParser parser, AnySharpObject looker,
-		AnySharpObject executor, string name)
-		=>
-			Locate(parser, looker, executor, name, PlayerMatchFlags);
 
 	// PennMUSH's match_result_internal has one object; SharpMUSH splits it. `executor` is match.c's
 	// `who` — the permission subject every Controls/CanInteract/Nearby/Long_Fingers question is asked
