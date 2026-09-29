@@ -4,6 +4,7 @@ using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -345,10 +346,16 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SafeTargetScheduledAnyway), executor);
 		}
 
-		var destroyMsg = obj.IsPlayer
-			? string.Format(ErrorMessages.Notifications.ObjectAndPossessionsScheduledDestroyedFormat, obj.Object().Name)
-			: string.Format(ErrorMessages.Notifications.ObjectScheduledDestroyedFormat, obj.Object().Name);
-		await NotifyService.Notify(executor, destroyMsg, executor);
+		// do_destroy names its target with unparse_object (src/destroy.c:377, :391, :405) — the name
+		// plus the dbref and flag letters a viewer allowed to see them gets — not the bare name.
+		// Which of the three player wordings applies is destroy_possessions and really_safe (:369-377).
+		var destroyed = await MessageFormatting.UnparseObjectAsync(PermissionService, executor, obj);
+		var destroyKey = !obj.IsPlayer || !Configuration.CurrentValue.Command.DestroyPossessions
+			? nameof(ErrorMessages.Notifications.ObjectScheduledDestroyedFormat)
+			: reallySafe
+				? nameof(ErrorMessages.Notifications.PlayerAndNonSafeObjectsScheduledDestroyedFormat)
+				: nameof(ErrorMessages.Notifications.PlayerAndObjectsScheduledDestroyedFormat);
+		await NotifyService.NotifyLocalized(executor, destroyKey, executor, destroyed);
 
 		await PreDestroyAsync(parser, executor, obj.Object().DBRef, []);
 

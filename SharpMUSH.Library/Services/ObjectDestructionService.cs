@@ -88,6 +88,11 @@ public class ObjectDestructionService(
 			return false;
 		}
 
+		// do_halt's report to the owner (src/cque.c:2177). PennMUSH free_object() reaches do_halt after
+		// clear_*, so the report lands after whatever emptying the container announced — hence here,
+		// rather than beside the HaltObjectQueueRequest above that does do_halt's other half.
+		await ReportHaltAsync(target, cancellationToken);
+
 		// Exits that led here point at their own source instead of into limbo, and anything that
 		// called this home falls back to default_home. Both stand in for the pass in PennMUSH
 		// free_object() that walks db_top fixing every reference to the doomed dbref.
@@ -188,6 +193,27 @@ public class ObjectDestructionService(
 		logger.LogInformation("Purge freed {Freed} object(s).", freed);
 
 		return freed;
+	}
+
+	/// <summary>
+	/// PennMUSH <c>do_halt()</c>'s <c>Halted: &lt;name&gt;(#&lt;dbref&gt;)</c> to the halted object's owner
+	/// (<c>src/cque.c:2176-2178</c>), suppressed when that owner is QUIET. It is the object's own name
+	/// and bare dbref — <c>do_halt</c> formats the dbref itself rather than going through
+	/// <c>unparse_object</c>, so no flag letters follow it.
+	/// </summary>
+	private async ValueTask ReportHaltAsync(AnySharpObject target, CancellationToken ct)
+	{
+		var obj = target.Object();
+		var owner = (await obj.Owner.WithCancellation(ct)).Object;
+
+		if (await owner.HasQuietFlagAsync())
+		{
+			return;
+		}
+
+		await notifyService.NotifyLocalized(owner.DBRef,
+			nameof(ErrorMessages.Notifications.HaltedObjectReportFormat), sender: null,
+			obj.Name, obj.DBRef.Number);
 	}
 
 	/// <summary>

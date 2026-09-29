@@ -443,24 +443,79 @@ public class BuildingCommandTests
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ZoneChanged), executor, executor)).IsTrue();
 	}
 
+	/// <summary>
+	/// <c>do_destroy</c> names its target with <c>unparse_object</c> (<c>pennmush/src/destroy.c:391</c>
+	/// @ 80a1d5b), so the confirmation carries the dbref and flag letters and not just the name. The
+	/// parity harness saw PennMUSH answer <c>RqA(#NEW1Tn) is scheduled to be destroyed.</c> where
+	/// SharpMUSH answered <c>RqA is scheduled to be destroyed.</c>
+	/// (<c>25-requested-dbref/dbref.holes</c> step 3).
+	/// </summary>
 	[Test]
 	public async ValueTask RecycleObject()
 	{
 		var executor = Actor.DbRef;
-		// Create an object, capture its DBRef so we don't rely on hardcoded #13
-		var createResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@create RecycleTest_Unique"));
+		var name = TestIsolationHelpers.GenerateUniqueName("RecycleTest");
+		var createResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@create {name}"));
 		var recycleDbRef = DBRef.Parse(createResult.Message!.ToPlainText()!);
 
+		var before = WebAppFactoryArg.Notifications.CountFor(executor);
 		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@recycle {recycleDbRef}"));
 
 		var recycled = (await Mediator.Send(new GetObjectNodeQuery(recycleDbRef))).Expect<AnySharpObject>();
 		await Assert.That(await recycled.Object().Flags.Value.AnyAsync(flag => flag.Name == "GOING")).IsTrue();
 
-		// Implementation sends: string.Format(ObjectScheduledDestroyedFormat, name)
-		// = "RecycleTest_Unique is scheduled to be destroyed."
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "RecycleTest_Unique is scheduled to be destroyed.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		// The flag letters themselves are whatever the object carries; what parity turns on is that the
+		// name is followed by "(#<dbref><flags>)" rather than standing alone.
+		var scheduled = WebAppFactoryArg.Notifications.For(executor).Skip(before)
+			.First(message => message.EndsWith(" is scheduled to be destroyed.", StringComparison.Ordinal));
+
+		await Assert.That(scheduled).StartsWith($"{name}(#{recycleDbRef.Number}");
+		await Assert.That(scheduled).EndsWith(") is scheduled to be destroyed.");
+	}
+
+	/// <summary>
+	/// <c>free_object()</c> reaches <c>do_halt()</c>, which tells the object's owner
+	/// <c>Halted: &lt;name&gt;(#&lt;dbref&gt;)</c> (<c>pennmush/src/cque.c:2176-2178</c> @ 80a1d5b) —
+	/// the bare dbref, because <c>do_halt</c> formats it itself instead of calling
+	/// <c>unparse_object</c>. SharpMUSH stopped the queue silently.
+	/// </summary>
+	[Test]
+	public async ValueTask RecycleTwiceReportsTheHaltToTheOwner()
+	{
+		var executor = Actor.DbRef;
+		var name = TestIsolationHelpers.GenerateUniqueName("HaltReport");
+		var createResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@create {name}"));
+		var doomed = DBRef.Parse(createResult.Message!.ToPlainText()!);
+
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@recycle {doomed}"));
+
+		var before = WebAppFactoryArg.Notifications.CountFor(executor);
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@recycle {doomed}"));
+
+		await Assert.That(WebAppFactoryArg.Notifications.For(executor).Skip(before))
+			.Contains($"Halted: {name}(#{doomed.Number})");
+	}
+
+	/// <summary>
+	/// <c>do_halt</c> gates that report on <c>!Quiet(Owner(player))</c>
+	/// (<c>pennmush/src/cque.c:2176</c> @ 80a1d5b), so a QUIET owner is told nothing.
+	/// </summary>
+	[Test]
+	public async ValueTask RecycleTwiceTellsAQuietOwnerNothing()
+	{
+		var executor = Actor.DbRef;
+		var name = TestIsolationHelpers.GenerateUniqueName("QuietHalt");
+		var createResult = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@create {name}"));
+		var doomed = DBRef.Parse(createResult.Message!.ToPlainText()!);
+
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@recycle {doomed}"));
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain("@set me=QUIET"));
+
+		var before = WebAppFactoryArg.Notifications.CountFor(executor);
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@recycle {doomed}"));
+
+		await Assert.That(WebAppFactoryArg.Notifications.For(executor).Skip(before))
+			.DoesNotContain($"Halted: {name}(#{doomed.Number})");
 	}
 
 	[Test]
