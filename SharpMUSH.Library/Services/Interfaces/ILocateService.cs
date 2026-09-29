@@ -92,6 +92,13 @@ public enum LocateFlags
 				EnglishStyleMatching
 }
 
+/// <summary>
+/// PennMUSH's <c>match_result</c>, in its two forms: <see cref="Locate"/> is the silent one and
+/// <see cref="LocateAndNotifyIfInvalid"/> the one that tells the executor why nothing was found. Every
+/// other locate shape — the <see cref="CallState"/> ones and the player-only ones — is one of these two
+/// with a fixed flag set or a different return type, and lives in <see cref="LocateServiceExtensions"/>
+/// so that there is exactly one place a failed locate is reported from.
+/// </summary>
 public interface ILocateService
 {
 	ValueTask<AnyOptionalSharpObjectOrError> LocateAndNotifyIfInvalid(
@@ -101,79 +108,12 @@ public interface ILocateService
 		string name,
 		LocateFlags flags);
 
-	ValueTask<AnySharpObjectOrErrorCallState> LocateAndNotifyIfInvalidWithCallState(
-		IMUSHCodeParser parser,
-		AnySharpObject looker,
-		AnySharpObject executor,
-		string name,
-		LocateFlags flags);
-
-	ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(
-		IMUSHCodeParser parser,
-		AnySharpObject looker,
-		AnySharpObject executor,
-		string name,
-		LocateFlags flags,
-		Func<AnySharpObject, ValueTask<CallState>> foundFunc);
-
-	ValueTask<CallState> LocateAndNotifyIfInvalidWithCallStateFunction(
-		IMUSHCodeParser parser,
-		AnySharpObject looker,
-		AnySharpObject executor,
-		string name,
-		LocateFlags flags,
-		Func<AnySharpObject, CallState> foundFunc);
-
 	ValueTask<AnyOptionalSharpObjectOrError> Locate(
 		IMUSHCodeParser parser,
 		AnySharpObject looker,
 		AnySharpObject executor,
 		string name,
 		LocateFlags flags);
-
-	/// <summary>
-	/// The player half of PennMUSH's <c>lookup_desc()</c> (src/bsd.c), which is how every connection
-	/// function resolves its argument: <c>lookup_player()</c> first, and on a miss
-	/// <c>match_result(executor, name, TYPE_PLAYER, MAT_ABSOLUTE | MAT_PLAYER | MAT_ME | MAT_TYPE)</c>.
-	/// <para>
-	/// Two differences from <see cref="LocatePlayerAndNotifyIfInvalid"/>, both load-bearing. The
-	/// <c>MAT_ME</c> means "me" resolves to the caller, which is what a player types and what every
-	/// one of <c>terminfo()</c>, <c>ssl()</c>, <c>host()</c> and their siblings is asked with. And it
-	/// is silent: those are functions, they answer with a string, and the notifying locate was
-	/// emitting "I can't see that here." into the player's own output every time one of them was
-	/// called with a name that did not resolve.
-	/// </para>
-	/// </summary>
-	ValueTask<AnyOptionalSharpObjectOrError> LocateConnectionTarget(
-		IMUSHCodeParser parser,
-		AnySharpObject looker,
-		AnySharpObject executor,
-		string name);
-
-	ValueTask<AnyOptionalSharpObjectOrError> LocatePlayerAndNotifyIfInvalid(
-		IMUSHCodeParser parser,
-		AnySharpObject looker,
-		AnySharpObject executor,
-		string name);
-
-	ValueTask<AnySharpObjectOrErrorCallState> LocatePlayerAndNotifyIfInvalidWithCallState(
-		IMUSHCodeParser parser,
-		AnySharpObject looker,
-		AnySharpObject executor,
-		string name);
-
-	ValueTask<CallState> LocatePlayerAndNotifyIfInvalidWithCallStateFunction(
-		IMUSHCodeParser parser,
-		AnySharpObject looker,
-		AnySharpObject executor,
-		string name,
-		Func<SharpPlayer, ValueTask<CallState>> foundFunc);
-
-	ValueTask<AnyOptionalSharpObjectOrError> LocatePlayer(
-		IMUSHCodeParser parser,
-		AnySharpObject looker,
-		AnySharpObject executor,
-		string name);
 
 	ValueTask<AnySharpContainer> Room(AnySharpObject content);
 }

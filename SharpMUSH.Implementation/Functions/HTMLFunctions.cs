@@ -8,6 +8,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Html;
+using SharpMUSH.Library.Services.Interfaces;
 using static SharpMUSH.Library.Services.Interfaces.LocateFlags;
 
 namespace SharpMUSH.Implementation.Functions;

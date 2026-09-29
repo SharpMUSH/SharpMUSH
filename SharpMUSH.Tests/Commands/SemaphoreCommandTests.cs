@@ -1,4 +1,4 @@
-using Mediator;
+﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -47,9 +47,6 @@ public class SemaphoreCommandTests
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
 			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(actor));
 		var locate = Substitute.For<ILocateService>();
-		locate.LocateAndNotifyIfInvalidWithCallState(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpObject>(),
-			Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<LocateFlags>())
-			.Returns(ValueTask.FromResult<AnySharpObjectOrErrorCallState>(target));
 		locate.LocateAndNotifyIfInvalid(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpObject>(),
 			Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<LocateFlags>())
 			.Returns(ValueTask.FromResult<AnyOptionalSharpObjectOrError>(target));
