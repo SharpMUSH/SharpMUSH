@@ -1519,106 +1519,73 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "setunion", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
-	public async ValueTask<CallState> SetUnion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var list1 = args["0"].Message;
-		var list2 = args["1"].Message;
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
-		// PennMUSH: empty delimiter arg means use space (default)
-		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MarkupText.Space;
-		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Plain("m"));
-		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
-
-		var aList1 = MushText.SplitList(delimiter, list1 ?? MarkupText.Empty);
-		var aList2 = MushText.SplitList(delimiter, list2 ?? MarkupText.Empty);
-
-		var sortTypeType = SortService.StringToSortType(sortType.ToPlainText());
-		var comparer = SortService.GetEqualityComparer(sortTypeType);
-		var sorted = SortService.Sort(Enumerable.DistinctBy(aList1
-			.Concat(aList2), x => x.ToPlainText(), comparer), (x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
-
-		return new CallState(MarkupText.Join(outputSeparator, await sorted.ToArrayAsync()));
-	}
+	public ValueTask<CallState> SetUnion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> SetManipulationAsync(parser, onlyInFirst: true, onlyInSecond: true, inBoth: true);
 
 	[SharpFunction(Name = "setdiff", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
-	public async ValueTask<CallState> SetDifference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var list1 = args["0"].Message;
-		var list2 = args["1"].Message;
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
-		// PennMUSH: empty delimiter arg means use space (default)
-		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MarkupText.Space;
-		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Plain("m"));
-		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
-
-		var aList1 = MushText.SplitList(delimiter, list1 ?? MarkupText.Empty);
-		var aList2 = MushText.SplitList(delimiter, list2 ?? MarkupText.Empty);
-
-		var sortTypeType = SortService.StringToSortType(sortType.ToPlainText());
-		var comparer = SortService.GetEqualityComparer(sortTypeType);
-		var set2 = new HashSet<string>(aList2.Select(x => x.ToPlainText()), comparer);
-
-		var difference = aList1.Where(x => !set2.Contains(x.ToPlainText()));
-
-		var sorted = SortService.Sort(Enumerable.DistinctBy(difference, x => x.ToPlainText(), comparer),
-			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
-
-		return new CallState(MarkupText.Join(outputSeparator, await sorted.ToArrayAsync()));
-	}
+	public ValueTask<CallState> SetDifference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> SetManipulationAsync(parser, onlyInFirst: true, onlyInSecond: false, inBoth: false);
 
 	[SharpFunction(Name = "setinter", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
-	public async ValueTask<CallState> SetIntersection(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var list1 = args["0"].Message;
-		var list2 = args["1"].Message;
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
-		// PennMUSH: empty delimiter arg means use space (default)
-		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MarkupText.Space;
-		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Plain("m"));
-		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
-
-		var aList1 = MushText.SplitList(delimiter, list1 ?? MarkupText.Empty);
-		var aList2 = MushText.SplitList(delimiter, list2 ?? MarkupText.Empty);
-
-		var sortTypeType = SortService.StringToSortType(sortType.ToPlainText());
-		var comparer = SortService.GetEqualityComparer(sortTypeType);
-		var set2 = new HashSet<string>(aList2.Select(x => x.ToPlainText()), comparer);
-
-		var intersection = aList1.Where(x => set2.Contains(x.ToPlainText()));
-
-		var sorted = SortService.Sort(Enumerable.DistinctBy(intersection, x => x.ToPlainText(), comparer),
-			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
-
-		return new CallState(MarkupText.Join(outputSeparator, await sorted.ToArrayAsync()));
-	}
+	public ValueTask<CallState> SetIntersection(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> SetManipulationAsync(parser, onlyInFirst: false, onlyInSecond: false, inBoth: true);
 
 	[SharpFunction(Name = "setsymdiff", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
-	public async ValueTask<CallState> SetSymmetricalDifference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> SetSymmetricalDifference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> SetManipulationAsync(parser, onlyInFirst: true, onlyInSecond: true, inBoth: false);
+
+	/// <summary>
+	/// The body of setunion/setdiff/setinter/setsymdiff, PennMUSH's fun_setmanip
+	/// (src/funlist.c): which items survive is chosen by whether they are only in the
+	/// first list, only in the second, or in both.
+	/// </summary>
+	private async ValueTask<CallState> SetManipulationAsync(IMUSHCodeParser parser,
+		bool onlyInFirst, bool onlyInSecond, bool inBoth)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var list1 = args["0"].Message;
-		var list2 = args["1"].Message;
+		var list1 = args["0"].Message ?? MarkupText.Empty;
+		var list2 = args["1"].Message ?? MarkupText.Empty;
+
+		// PennMUSH: no lists, no work.
+		if (list1.Length == 0 && list2.Length == 0)
+		{
+			return CallState.Empty;
+		}
+
+		// Unlike PennMUSH, a delimiter may be longer than one character.
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
-		// PennMUSH: empty delimiter arg means use space (default)
-		if (string.IsNullOrEmpty(delimiter.ToPlainText())) delimiter = MarkupText.Space;
-		var sortType = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Plain("m"));
-		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter);
+		if (delimiter.Length == 0)
+		{
+			delimiter = MarkupText.Space;
+		}
 
-		var aList1 = MushText.SplitList(delimiter, list1 ?? MarkupText.Empty);
-		var aList2 = MushText.SplitList(delimiter, list2 ?? MarkupText.Empty);
+		// With four arguments, a non-empty fourth is a sort type and an empty one is the
+		// output separator. With five, the fourth is the sort type and the fifth the separator.
+		var sortArg = args.TryGetValue("3", out var sortCall) ? sortCall.Message ?? MarkupText.Empty : MarkupText.Empty;
+		var sortType = sortArg.ToPlainText();
+		var outputSeparator = args.Count switch
+		{
+			4 when sortArg.Length == 0 => MarkupText.Empty,
+			5 => args["4"].Message ?? MarkupText.Empty,
+			_ => delimiter
+		};
+		if (sortType.Length == 0)
+		{
+			sortType = "m";
+		}
 
-		var sortTypeType = SortService.StringToSortType(sortType.ToPlainText());
+		var aList1 = MushText.SplitList(delimiter, list1);
+		var aList2 = MushText.SplitList(delimiter, list2);
+
+		var sortTypeType = SortService.StringToSortType(sortType);
 		var comparer = SortService.GetEqualityComparer(sortTypeType);
 		var set1 = new HashSet<string>(aList1.Select(x => x.ToPlainText()), comparer);
 		var set2 = new HashSet<string>(aList2.Select(x => x.ToPlainText()), comparer);
 
-		var symdiff = aList1.Where(x => !set2.Contains(x.ToPlainText()))
-			.Concat(aList2.Where(x => !set1.Contains(x.ToPlainText())));
+		var kept = aList1.Where(x => set2.Contains(x.ToPlainText()) ? inBoth : onlyInFirst)
+			.Concat(aList2.Where(x => !set1.Contains(x.ToPlainText()) && onlyInSecond));
 
-		var sorted = SortService.Sort(Enumerable.DistinctBy(symdiff, x => x.ToPlainText(), comparer),
+		var sorted = SortService.Sort(Enumerable.DistinctBy(kept, x => x.ToPlainText(), comparer),
 			(x, ct) => ValueTask.FromResult(x.ToPlainText()), parser, sortTypeType);
 
 		return new CallState(MarkupText.Join(outputSeparator, await sorted.ToArrayAsync()));

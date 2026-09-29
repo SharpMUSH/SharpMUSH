@@ -5,13 +5,19 @@ using NATS.Client.JetStream.Models;
 using NATS.Client.KeyValueStore;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.SocketServer.Services;
-using SharpMUSH.Messaging.NATS.Strategy;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 
 [NotInParallel]
 public class JetStreamReplayIntegrationTests
 {
+	// A non-reused broker for this class. The reused SharpMUSH-NATS dev container keeps the host ports it was
+	// first given, so restarting it after a stop fails when anything else on the host has taken one of them.
+	[ClassDataSource<NatsTestServer>(Shared = SharedType.PerClass)]
+	public required NatsTestServer NatsTestServer { get; init; }
+
+	private string Url => $"nats://localhost:{NatsTestServer.Instance.GetMappedPublicPort(4222)}";
+
 	private static Task<JetStreamTerminalReplayStore> Replay(string url) =>
 		JetStreamTerminalReplayStore.CreateAsync(url, NullLogger<JetStreamTerminalReplayStore>.Instance);
 
@@ -21,8 +27,7 @@ public class JetStreamReplayIntegrationTests
 	[Test]
 	public async Task Replay_and_resume_survive_a_simulated_restart()
 	{
-		await using var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
-		var url = await strategy.GetUrlAsync();
+		var url = Url;
 		var session = Guid.NewGuid().ToString("N");
 		string token;
 		long first, second, third;
@@ -51,8 +56,7 @@ public class JetStreamReplayIntegrationTests
 	[Test]
 	public async Task Legacy_tokens_and_frames_cannot_enter_v2_replay()
 	{
-		await using var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
-		var url = await strategy.GetUrlAsync();
+		var url = Url;
 		var session = Guid.NewGuid().ToString("N");
 		await using var connection = new NatsConnection(new NatsOpts { Url = url });
 		await connection.ConnectAsync();
@@ -72,8 +76,7 @@ public class JetStreamReplayIntegrationTests
 	[Test]
 	public async Task Token_consumption_has_one_CAS_winner()
 	{
-		await using var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
-		var url = await strategy.GetUrlAsync();
+		var url = Url;
 		await using var first = await Tokens(url);
 		await using var second = await Tokens(url);
 		var token = await first.MintAsync(42, Guid.NewGuid().ToString("N"));
@@ -85,8 +88,7 @@ public class JetStreamReplayIntegrationTests
 	[Test]
 	public async Task Replay_paginates_across_fetch_batches_after_restart()
 	{
-		await using var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
-		var url = await strategy.GetUrlAsync();
+		var url = Url;
 		var session = Guid.NewGuid().ToString("N");
 		var sequences = new List<long>();
 		await using (var replay = await Replay(url))
@@ -102,8 +104,7 @@ public class JetStreamReplayIntegrationTests
 	[Test]
 	public async Task Session_revocation_is_visible_to_other_instances()
 	{
-		await using var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
-		var url = await strategy.GetUrlAsync();
+		var url = Url;
 		var session = Guid.NewGuid().ToString("N");
 		await using var first = await Tokens(url);
 		await using var second = await Tokens(url);
@@ -116,8 +117,7 @@ public class JetStreamReplayIntegrationTests
 	[Test]
 	public async Task Dropping_replay_preserves_other_sessions()
 	{
-		await using var strategy = new NatsTestContainerStrategy(TestDiagnostics.ContainerLogger);
-		var url = await strategy.GetUrlAsync();
+		var url = Url;
 		await using var replay = await Replay(url);
 		var session = Guid.NewGuid().ToString("N");
 		var otherSession = Guid.NewGuid().ToString("N");

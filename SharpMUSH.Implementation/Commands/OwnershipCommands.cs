@@ -91,8 +91,10 @@ public partial class Commands
 		var zoneName = args.TryGetValue("1", out var zoneArg) ? zoneArg.Message!.ToPlainText() : string.Empty;
 		var preserve = parser.CurrentState.Switches.Contains("PRESERVE");
 
+		// set.c:380: MAT_NEARBY for the object, which is MAT_EVERYTHING plus MAT_NEAR — you re-zone what
+		// is in front of you, not anything you can name. The zone below stays MAT_EVERYTHING (:386).
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, targetName, LocateFlags.All,
+			executor, executor, targetName, LocateFlags.All | LocateFlags.OnlyMatchObjectsInLookerLocation,
 			async obj => zoneName.Length == 0 || zoneName.Equals("none", StringComparison.InvariantCultureIgnoreCase)
 				? Reported(await ChangeZoneAsync(parser, executor, obj, new AnyOptionalSharpObject(new None()), preserve,
 					noisy: true))
@@ -107,7 +109,7 @@ public partial class Commands
 	private ValueTask<Result<Success>> ChangeZoneAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject target, AnyOptionalSharpObject zone, bool preserve, bool noisy)
 		=> ZoneHelpers.ChangeZoneAsync(parser, Mediator, Database, NotifyService, PermissionService, LockService,
-			DidItService, ManipulateSharpObjectService, executor, target, zone, preserve, noisy);
+			DidItService, ManipulateSharpObjectService, Configuration, executor, target, zone, preserve, noisy);
 
 	/// <summary>
 	/// <c>do_chzone</c> reports its own refusals and returns 0; the command turns that into the error

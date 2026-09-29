@@ -568,6 +568,24 @@
   <data name="ZoneChangedForObjectsFormat" xml:space="preserve">
     <value>Zone changed for {0} objects.</value>
   </data>
+  <data name="ZoneAutomaticallyLockedFormat" xml:space="preserve">
+    <value>Unlocked zone {0} - automatically zone-locking to itself</value>
+  </data>
+  <data name="ZoneShouldHaveMoreSecureLockFormat" xml:space="preserve">
+    <value>Zone {0} really should have a more secure zone-lock.</value>
+  </data>
+  <data name="ZoneMayHaveLooseLockFormat" xml:space="preserve">
+    <value>Warning: Zone {0} may have loose zone lock. Lock zones to =player, not player</value>
+  </data>
+  <data name="ChzoningAdminOwnedObject" xml:space="preserve">
+    <value>Warning: @chzoning admin-owned object!</value>
+  </data>
+  <data name="ChzoningPrivilegedPlayer" xml:space="preserve">
+    <value>Warning: @chzoning a privileged player.</value>
+  </data>
+  <data name="ChzoningTrustPlayer" xml:space="preserve">
+    <value>Warning: @chzoning a TRUST player.</value>
+  </data>
 
   <!-- Channel messages (CHAT: prefix) - note angle brackets require XML escaping -->
   <data name="ChatNotOnChannel" xml:space="preserve">
@@ -612,6 +630,9 @@
   </data>
   <data name="UnlinkedExit" xml:space="preserve">
     <value>Unlinked exit #{0}.</value>
+  </data>
+  <data name="UnlinkWhat" xml:space="preserve">
+    <value>Unlink what?</value>
   </data>
   <data name="OpenedExit" xml:space="preserve">
     <value>Opened exit {0}</value>
@@ -1565,8 +1586,8 @@
   </data>
 
   <!-- @force command -->
-  <data name="ForcePermissionDeniedDoNotControl" xml:space="preserve">
-    <value>Permission denied. You do not control the target.</value>
+  <data name="ForceSorry" xml:space="preserve">
+    <value>Sorry.</value>
   </data>
   <data name="ForceThemToDoWhat" xml:space="preserve">
     <value>Force them to do what?</value>
@@ -1676,6 +1697,9 @@
   </data>
   <data name="TriggerNoSuchAttributeFormat" xml:space="preserve">
     <value>No such attribute: {0}</value>
+  </data>
+  <data name="TriggerTriggeredFormat" xml:space="preserve">
+    <value>{0} - Triggered.</value>
   </data>
   <data name="TriggerMustProvideMatchString" xml:space="preserve">
     <value>You must provide a string to match when using /match.</value>
@@ -1958,6 +1982,38 @@
   </data>
   <data name="RestartedObjectFormat" xml:space="preserve">
     <value>Restarted {0}.</value>
+  </data>
+
+  <!-- @scan command -->
+  <data name="ScanMatchesOnRoomContents" xml:space="preserve">
+    <value>Matches on contents of this room:</value>
+  </data>
+  <data name="ScanMatchesOnCarriedObjects" xml:space="preserve">
+    <value>Matches on carried objects:</value>
+  </data>
+  <data name="ScanMatchesOnZoneMasterRoomOfLocation" xml:space="preserve">
+    <value>Matches on zone master room of location:</value>
+  </data>
+  <data name="ScanMatchesOnPersonalZoneMasterRoom" xml:space="preserve">
+    <value>Matches on personal zone master room:</value>
+  </data>
+  <data name="ScanMatchesOnMasterRoomObjects" xml:space="preserve">
+    <value>Matches on objects in the Master Room:</value>
+  </data>
+  <data name="ScanMatchEntryFormat" xml:space="preserve">
+    <value>{0}  [{1}:{2}]</value>
+  </data>
+  <data name="ScanMatchedHereFormat" xml:space="preserve">
+    <value>Matched here: {0}  [{1}:{2}]</value>
+  </data>
+  <data name="ScanMatchedSelfFormat" xml:space="preserve">
+    <value>Matched self: {0}  [{1}:{2}]</value>
+  </data>
+  <data name="ScanMatchedZoneOfLocationFormat" xml:space="preserve">
+    <value>Matched zone of location: {0}  [{1}:{2}]</value>
+  </data>
+  <data name="ScanMatchedPersonalZoneFormat" xml:space="preserve">
+    <value>Matched personal zone: {0}  [{1}:{2}]</value>
   </data>
 
   <!-- @sweep command -->

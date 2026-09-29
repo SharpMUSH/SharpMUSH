@@ -54,14 +54,6 @@ public class SharpMUSHBooleanExpressionVisitor(
 			: new ValueTask<T>(read.AsTask().WaitAsync(ExecutionBudget.CurrentToken));
 	}
 
-	private static ValueTask<bool> HasFlag(AnySharpObject dbRef, string flag)
-		=> dbRef.Object().Flags.Value
-			.AnyAsync(x => x.Name == flag || x.Symbol == flag, ExecutionBudget.CurrentToken);
-
-	private static ValueTask<bool> HasPower(AnySharpObject dbRef, string power)
-		=> dbRef.Object().Powers.Value
-			.AnyAsync(x => x.Name == power || x.Alias == power, ExecutionBudget.CurrentToken);
-
 	/// <summary>
 	/// A lock's operands are fixed the moment it is compiled, so the work of reading them is too.
 	/// <c>ParseDbRef</c> is a regex match, and running it per evaluation was the dominant cost of a
@@ -264,14 +256,16 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override LockPredicate VisitBitFlagExpr(SharpMUSHBoolExpParser.BitFlagExprContext context)
 	{
-		var flag = LockLiteralText.Read(context.literal()).ToUpperInvariant().Trim();
-		return (_, unlockerObj) => HasFlag(unlockerObj, flag);
+		// sees_flag (src/boolexp.c:502-510) resolves the operand as written: name and alias match without
+		// regard to case, but a single letter is compared exactly, so it must not be upper-cased here.
+		var flag = LockLiteralText.Read(context.literal()).Trim();
+		return (_, unlockerObj) => unlockerObj.Object().HasFlagOrLetter(flag);
 	}
 
 	public override LockPredicate VisitBitPowerExpr(SharpMUSHBoolExpParser.BitPowerExprContext context)
 	{
-		var power = LockLiteralText.Read(context.literal()).ToUpperInvariant().Trim();
-		return (_, unlockerObj) => HasPower(unlockerObj, power);
+		var power = LockLiteralText.Read(context.literal()).Trim();
+		return (_, unlockerObj) => unlockerObj.HasPower(power);
 	}
 
 	public override LockPredicate VisitBitTypeExpr(SharpMUSHBoolExpParser.BitTypeExprContext context)

@@ -742,8 +742,11 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				continue;
 			}
 
-			// SharpMUSH resolves an attribute name without aliases, so DESC does not reach DESCRIBE.
-			aliased.AddRange(definition.Aliases);
+			// SharpMUSH reads through PennMUSH's own attralias (DESC is DESCRIBE) but has no table for
+			// others, so only an alias beyond those is lost.
+			aliased.AddRange(definition.Aliases.Where(alias =>
+				!(AttributeService.StandardAttributeAliases.TryGetValue(alias, out var realName)
+					&& realName.Equals(definition.Name, StringComparison.OrdinalIgnoreCase))));
 
 			if (!known.Add(definition.Name))
 			{

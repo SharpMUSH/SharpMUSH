@@ -461,12 +461,8 @@ public partial class Functions
 			if (string.Equals(flagNameOrSymbol, "CONNECTED", StringComparison.OrdinalIgnoreCase))
 				return await ConnectionService.IsOnline(realLocated);
 
-			// Name, alias or letter — the three things flag_hash_lookup resolves (src/flags.c). The alias
-			// arm was missing, so hasflag(x,COLOUR) said 0 for an object flagged COLOR. See #834.
-			return await realLocated.Object().Flags.Value.AnyAsync(f =>
-				string.Equals(f.Name, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase) ||
-				string.Equals(f.Symbol, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase) ||
-				(f.Aliases ?? []).Any(a => string.Equals(a, flagNameOrSymbol, StringComparison.OrdinalIgnoreCase)));
+			// Name, alias or letter — the three things flag_hash_lookup resolves (src/flags.c). See #834.
+			return await realLocated.Object().HasFlagOrLetter(flagNameOrSymbol);
 		}
 
 		async ValueTask<CallState> HasAttributeFlag(AnySharpObject realLocated, string attribute)

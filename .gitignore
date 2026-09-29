@@ -424,6 +424,10 @@ pennmush
 .claude/worktrees/
 .superpowers/
 
+# Per-machine Claude Code settings: absolute paths and a personal permission
+# allowlist, described as untracked in .claude/hooks/README.md.
+.claude/settings.local.json
+
 # Local LMDB world from running the server locally on the lightning provider
 lightning-data/
 lightning-data.previous/

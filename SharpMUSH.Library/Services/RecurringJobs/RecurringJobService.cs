@@ -234,13 +234,13 @@ public sealed class RecurringJobService(
 		if (actor.ActiveCharacter is not { IsObjid: true } active || actor.Executor != active || !await capabilities.AuthorizeAsync(actor, scope, ct))
 			throw Error("denied", "A linked active player with the required jobs capability is required.");
 		if (await objects.GetObjectNodeAsync(active, ct) is not AnySharpObject executor || executor is not SharpPlayer player
-			|| player.Object.DBRef != active || (await player.Object.Flags.Value.ToListAsync(ct)).Any(f => f.Name is "HALT" or "GOING")) throw Error("missing", "The executing player no longer exists.");
+			|| player.Object.DBRef != active || await player.Object.HasFlag("HALT", ct) || await player.Object.HasFlag("GOING", ct)) throw Error("missing", "The executing player no longer exists.");
 		return executor;
 	}
 	private async Task<SharpAttribute> Executable(AnySharpObject executor, DBRef target, string attribute, CancellationToken ct)
 	{
 		if (await objects.GetObjectNodeAsync(target, ct) is not AnySharpObject obj || obj.Object().DBRef != target
-			|| (await obj.Object().Flags.Value.ToListAsync(ct)).Any(f => f.Name is "HALT" or "GOING")) throw Error("missing", "The target identity no longer exists.");
+			|| await obj.HasFlag("HALT", ct) || await obj.HasFlag("GOING", ct)) throw Error("missing", "The target identity no longer exists.");
 		if (!await permissions.Controls(executor, obj).AsTask().WaitAsync(ct)) throw Error("denied", "The executing player must control the target.");
 		// HTTP callers carry a request token but have no ambient queue budget. Propagate
 		// both lifetimes into the read-only attribute API and bound legacy implementations.

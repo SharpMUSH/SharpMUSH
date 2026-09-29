@@ -118,10 +118,17 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "EXAMINE", Switches = ["BRIEF", "DEBUG", "MORTAL", "PARENT", "ALL", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["object"])]
-	public async ValueTask<Option<CallState>> Examine(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	public ValueTask<Option<CallState>> Examine(IMUSHCodeParser parser, SharpCommandAttribute _2)
+		=> ExamineAsync(parser, parser.CurrentState.Switches.ToArray());
+
+	/// <summary>
+	/// <c>do_examine</c> (<c>src/look.c:780-990</c>). Every object line is <c>object_header</c>
+	/// (<see cref="MessageFormatting.FormatObjectWithDbrefMString"/>); <c>FLAGS_ON_EXAMINE</c> gates only
+	/// the <c>Type: ... Flags: ...</c> line, and <c>BRIEF</c> skips only the description and attributes.
+	/// </summary>
+	private async ValueTask<Option<CallState>> ExamineAsync(IMUSHCodeParser parser, string[] switches)
 	{
 		var args = parser.CurrentState.Arguments;
-		var switches = parser.CurrentState.Switches.ToArray();
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		AnyOptionalSharpObject viewing;
@@ -195,14 +202,14 @@ public partial class Commands
 		var perceive = await ObserveRealityAsync(parser, executor);
 		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
 			? []
+			// GetContentsQuery also yields exits; Penn's Contents(thing) never does, and exits get their own list.
 			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+				.Where(item => !item.IsExit)
 				.Where((item, ct) => perceive(item.Object().DBRef, ct))
 				.ToArrayAsync(ExecutionBudget.CurrentToken);
 
 		var obj = viewingKnown.Object()!;
 		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
-		var name = obj.Name;
-		var ownerName = ownerObj.Name;
 		var description = (await AttributeService.GetAttributeAsync(executor, viewingKnown, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, false)) switch
 		{
@@ -222,13 +229,12 @@ public partial class Commands
 
 		var showFlags = Configuration.CurrentValue.Cosmetic.FlagsOnExamine;
 
-		var objFlagStr = showFlags ? MessageFormatting.FlagSymbols(objFlags) : string.Empty;
-		var nameRow = Format($"{name.Hilight()}(#{obj.DBRef.Number}{objFlagStr})");
-		outputSections.Add(nameRow);
+		outputSections.Add(await MessageFormatting.FormatObjectWithDbrefMString(obj));
 
-		outputSections.Add(showFlags
-			? MarkupText.Plain($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}")
-			: MarkupText.Plain($"Type: {obj.Type}"));
+		if (showFlags)
+		{
+			outputSections.Add(MarkupText.Plain($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}"));
+		}
 
 		if (!switches.Contains("BRIEF"))
 		{
@@ -246,9 +252,8 @@ public partial class Commands
 			zoneSection = MarkupText.Plain("  Zone: *NOTHING*");
 		}
 
-		var ownerFlagStr = showFlags ? await MessageFormatting.FlagSymbolsAsync(ownerObj) : string.Empty;
-		var ownerRow = Format($"Owner: {ownerName.Hilight()}(#{ownerObj.DBRef.Number}{ownerFlagStr}){zoneSection}");
-		outputSections.Add(ownerRow);
+		var ownerLine = await MessageFormatting.FormatObjectWithDbrefMString(ownerObj);
+		outputSections.Add(Format($"Owner: {ownerLine}{zoneSection}"));
 
 		var parentObject = objParent.Object();
 		if (parentObject == null)
@@ -375,79 +380,79 @@ public partial class Commands
 					await NotifyService.Notify(enactor, formatted, enactor);
 				}
 			}
+		}
 
-			if (!switches.Contains("OPAQUE") && contents.Length > 0)
+		if (!switches.Contains("OPAQUE") && contents.Length > 0)
+		{
+			var conFormatResult = await AttributeService.GetAttributeAsync(executor, viewingKnown, "CONFORMAT",
+				IAttributeService.AttributeMode.Read, false);
+
+			if (conFormatResult.IsAttribute)
 			{
-				var conFormatResult = await AttributeService.GetAttributeAsync(executor, viewingKnown, "CONFORMAT",
-					IAttributeService.AttributeMode.Read, false);
+				var contentDbrefs = string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
+				var contentNames = string.Join("|", contents.Select(x => x.Object().Name));
 
-				if (conFormatResult.IsAttribute)
+				var formatArgs = new Dictionary<string, CallState>
 				{
-					var contentDbrefs = string.Join(" ", contents.Select(x => x.Object().DBRef.ToString()));
-					var contentNames = string.Join("|", contents.Select(x => x.Object().Name));
+					["0"] = new CallState(contentDbrefs),
+					["1"] = new CallState(contentNames)
+				};
 
-					var formatArgs = new Dictionary<string, CallState>
-					{
-						["0"] = new CallState(contentDbrefs),
-						["1"] = new CallState(contentNames)
-					};
+				var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
+					parser, executor, viewingKnown, "CONFORMAT", formatArgs);
 
-					var formattedContents = await AttributeService.EvaluateAttributeFunctionAsync(
-						parser, executor, viewingKnown, "CONFORMAT", formatArgs);
+				await NotifyService.Notify(enactor, formattedContents, enactor);
+			}
+			else
+			{
+				var contentsLabel = viewingKnown.IsPlayer ? "Carrying:" : "Contents:";
+				var contentItems = await contents
+					.ToAsyncEnumerable()
+					.Select((AnySharpContent content, CancellationToken _) => MessageFormatting.FormatObjectWithDbrefMString(content.Object()))
+					.Prepend(MarkupText.Plain(contentsLabel))
+					.ToListAsync();
+				await NotifyService.Notify(enactor,
+					MarkupText.Join(MarkupText.Plain("\n"), contentItems), enactor);
+			}
+		}
 
-					await NotifyService.Notify(enactor, formattedContents, enactor);
-				}
-				else
-				{
-					var contentsLabel = viewingKnown.IsRoom ? "Contents:" : "Carrying:";
-					var contentItems = await contents
-						.ToAsyncEnumerable()
-						.Select((AnySharpContent content, CancellationToken _) => MessageFormatting.FormatObjectWithDbrefMString(content.Object()))
-						.Prepend(MarkupText.Plain(contentsLabel))
-						.ToListAsync();
-					await NotifyService.Notify(enactor,
-						MarkupText.Join(MarkupText.Plain("\n"), contentItems), enactor);
-				}
+		if (!switches.Contains("OPAQUE") && !viewingKnown.IsExit)
+		{
+			var exits = await Mediator.CreateStream(new GetExitsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
+				.Where((exit, ct) => perceive(exit.Object.DBRef, ct))
+				.ToArrayAsync(ExecutionBudget.CurrentToken);
+
+			if (exits.Length > 0)
+			{
+				var exitLines = await exits
+					.ToAsyncEnumerable()
+					.Select((SharpExit exit, CancellationToken _) => MessageFormatting.FormatObjectWithDbrefMString(exit.Object))
+					.Prepend(MarkupText.Plain("Exits:"))
+					.ToListAsync();
+				await NotifyService.Notify(enactor,
+					MarkupText.Join(MarkupText.Plain("\n"), exitLines), enactor);
+			}
+		}
+
+		if (!viewingKnown.IsRoom)
+		{
+			var homeContainer = await viewingKnown.MinusRoom().Home();
+			var locationContainer = await viewingKnown.AsContent.Location();
+
+			var locationLine = await MessageFormatting.FormatObjectWithDbrefMString(locationContainer.Object());
+
+			// An unlinked exit has no destination to report; PennMUSH shows #-1 for NOTHING.
+			if (homeContainer is AnySharpContainer home)
+			{
+				var homeLine = await MessageFormatting.FormatObjectWithDbrefMString(home.Object());
+				await NotifyService.Notify(enactor, Format($"Home: {homeLine}"), enactor);
+			}
+			else
+			{
+				await NotifyService.Notify(enactor, Format($"Home: #-1"), enactor);
 			}
 
-			if (!switches.Contains("OPAQUE") && !viewingKnown.IsExit)
-			{
-				var exits = await Mediator.CreateStream(new GetExitsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
-					.Where((exit, ct) => perceive(exit.Object.DBRef, ct))
-					.ToArrayAsync(ExecutionBudget.CurrentToken);
-
-				if (exits.Length > 0)
-				{
-					var exitLines = await exits
-						.ToAsyncEnumerable()
-						.Select((SharpExit exit, CancellationToken _) => MessageFormatting.FormatObjectWithDbrefMString(exit.Object))
-						.Prepend(MarkupText.Plain("Exits:"))
-						.ToListAsync();
-					await NotifyService.Notify(enactor,
-						MarkupText.Join(MarkupText.Plain("\n"), exitLines), enactor);
-				}
-			}
-
-			if (!viewingKnown.IsRoom)
-			{
-				var homeContainer = await viewingKnown.MinusRoom().Home();
-				var locationContainer = await viewingKnown.AsContent.Location();
-
-				var locationLine = await MessageFormatting.FormatObjectWithDbrefMString(locationContainer.Object());
-
-				// An unlinked exit has no destination to report; PennMUSH shows #-1 for NOTHING.
-				if (homeContainer is AnySharpContainer home)
-				{
-					var homeLine = await MessageFormatting.FormatObjectWithDbrefMString(home.Object());
-					await NotifyService.Notify(enactor, Format($"Home: {homeLine}"), enactor);
-				}
-				else
-				{
-					await NotifyService.Notify(enactor, Format($"Home: #-1"), enactor);
-				}
-
-				await NotifyService.Notify(enactor, Format($"Location: {locationLine}"), enactor);
-			}
+			await NotifyService.Notify(enactor, Format($"Location: {locationLine}"), enactor);
 		}
 
 		return new CallState(obj.DBRef.ToString());

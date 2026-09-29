@@ -838,4 +838,43 @@ public class ListFunctionUnitTests
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+	// Live PennMUSH 80a1d5b (runtest.pl): fun_setmanip's argument handling (src/funlist.c:815-881).
+	// A 4th argument that is empty is the output separator; a non-empty one is a sort type.
+	[Test]
+	[Arguments("setunion(a b,c d,,)", "abcd")]
+	[Arguments("setunion(a b,c d,,|)", "a b c d")]
+	[Arguments("setunion(a b,c d,,a)", "a b c d")]
+	[Arguments("setunion(a b,c d,,a,|)", "a|b|c|d")]
+	[Arguments("setunion(a b,c d,,,|)", "a|b|c|d")]
+	[Arguments("setunion(a b,c d,,a,)", "abcd")]
+	[Arguments("setunion(a|b,c,|,,-)", "a-b-c")]
+	[Arguments("setunion(3 1 2,1,,n,)", "123")]
+	[Arguments("setdiff(a b c,b,,|)", "a c")]
+	[Arguments("setdiff(a b c,b,,)", "ac")]
+	[Arguments("setinter(a b,a b,,,)", "ab")]
+	[Arguments("setsymdiff(a b c,c d,,a,-)", "a-b-d")]
+	[Arguments("setunion(10 9 1,2)", "1 2 9 10")]
+	[Arguments("setunion(a10 a9 a1,b)", "a1 a9 a10 b")]
+	[Arguments("setunion(a10 a9 a1,b,,a)", "a1 a10 a9 b")]
+	[Arguments("setunion(B a b,A)", "a B")]
+	[Arguments("setunion(B a b,A,,i)", "a B")]
+	[Arguments("setunion(B a b,A,,m)", "a B")]
+	[Arguments("setunion(b a c,d,,-a)", "d c b a")]
+	[Arguments("setunion(3 1 2,1,,-n)", "3 2 1")]
+	[Arguments("setunion(b a,c,,zzz)", "a b c")]
+	// Deliberate difference: PennMUSH answers #-1 SEPARATOR MUST BE ONE CHARACTER to a
+	// delimiter longer than one character; SharpMUSH splits and joins on it (help pennmush compatibility).
+	[Arguments("setunion(a::b,b::c,::)", "a::b::c")]
+	[Arguments("setdiff(a::b,b,::)", "a")]
+	[Arguments("setinter(a::b,b::c,::)", "b")]
+	[Arguments("setsymdiff(a::b,b::c,::)", "a::c")]
+	[Arguments("setunion(a::b,c,::,,|)", "a|b|c")]
+	[Arguments("setunion(a😀b,b😀c,😀)", "a😀b😀c")]
+	// A fourth argument holding only point markup is not empty, so it is a sort type, not the separator.
+	[Arguments("setunion(a,b,,sound(a.wav))", "a b")]
+	public async Task SetFunctionsSortTypeAndSeparators(string str, string expected)
+	{
+		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }

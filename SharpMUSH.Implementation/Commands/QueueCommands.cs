@@ -444,7 +444,7 @@ public partial class Commands
 		AnySharpObject objectToNotify, string notifyType, Dictionary<string, CallState> args, string? maybeAttributeString)
 	{
 		if (!await PermissionService.Controls(executor, objectToNotify) &&
-			!await objectToNotify.Object().Flags.Value.AnyAsync(flag => flag.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase), ExecutionBudget.CurrentToken))
+			!await objectToNotify.HasFlag("LINK_OK"))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -817,7 +817,7 @@ public partial class Commands
 		AnySharpObject objectToDrain, string[] switches, string? arg1, string? maybeAttribute)
 	{
 		if (!await PermissionService.Controls(executor, objectToDrain) &&
-			!await objectToDrain.Object().Flags.Value.AnyAsync(flag => flag.Name.Equals("LINK_OK", StringComparison.OrdinalIgnoreCase), ExecutionBudget.CurrentToken))
+			!await objectToDrain.HasFlag("LINK_OK"))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -901,12 +901,19 @@ public partial class Commands
 		// Strip them here before execution (PennMUSH PE_COMMAND_BRACES equivalent).
 		cmdListArg = HelperFunctions.StripOuterBraces(cmdListArg);
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objArg.ToPlainText(),
-				LocateFlags.All) switch
+		// do_force (PennMUSH src/wiz.c:636-638): whatever match_controlled refused, it has already said
+		// why, and do_force adds "Sorry." after it.
+		switch (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, objArg.ToPlainText(),
+					LocateFlags.All))
 		{
-			AnySharpObject found => await ForceAsync(parser, executor, found, cmdListArg),
-			Error<CallState> error => error.Value
-		};
+			case AnySharpObject found:
+				return await ForceAsync(parser, executor, found, cmdListArg);
+			case Error<CallState> error:
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ForceSorry), executor);
+				return error.Value;
+			default:
+				return new None();
+		}
 	}
 
 	private async ValueTask<Option<CallState>> ForceAsync(IMUSHCodeParser parser, AnySharpObject executor,
@@ -919,9 +926,12 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		// match_controlled (src/match.c:104, MAT_CONTROL) answers "Permission denied." for an object the
+		// forcer can see but not control; do_force then says "Sorry." (src/wiz.c:636-638).
 		if (!await PermissionService.Controls(executor, found))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ForcePermissionDeniedDoNotControl), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ForceSorry), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
@@ -1262,6 +1272,25 @@ public partial class Commands
 		var attributeText = attribute.Value.ToPlainText();
 		var attributeLongName = attribute.LongName!.ToUpper();
 
+		// With /match, the first argument (index 1) is the test string. Refused before the notice below, so a
+		// refusal is never also reported as a trigger.
+		CallState? matchArg = null;
+		if (switches.Contains("MATCH") && (!args.TryGetValue("1", out matchArg) || matchArg.Message == null))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerMustProvideMatchString), executor);
+			return new CallState(ErrorMessages.Returns.NoMatchString);
+		}
+
+		// do_trigger (PennMUSH src/set.c:1341-1345): once queue_attribute_base_priv has found a readable
+		// attribute, the triggerer hears "<name> - Triggered." unless AreQuiet - even if the attribute is
+		// empty or /match finds nothing, since queue_attribute_useatr still returns 1. Penn queues the body,
+		// so the notice comes before anything the attribute does.
+		if (!await targetObject.Object().AreQuietAsync(executor))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerTriggeredFormat), executor,
+				targetObject.Object().Name);
+		}
+
 		if (string.IsNullOrWhiteSpace(attributeText))
 		{
 			return CallState.Empty;
@@ -1302,14 +1331,7 @@ public partial class Commands
 
 		if (switches.Contains("MATCH"))
 		{
-			// With /match, the first argument (index 1) is the test string
-			if (!args.TryGetValue("1", out var matchArg) || matchArg.Message == null)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerMustProvideMatchString), executor);
-				return new CallState(ErrorMessages.Returns.NoMatchString);
-			}
-
-			var testString = matchArg.Message.ToPlainText();
+			var testString = matchArg!.Message!.ToPlainText();
 
 			var patterns = attributeText.Split(new[] { '\n', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 

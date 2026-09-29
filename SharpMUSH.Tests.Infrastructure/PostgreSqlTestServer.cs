@@ -10,6 +10,7 @@ public class PostgreSqlTestServer : IAsyncInitializer, IAsyncDisposable
 		.WithUsername("testuser")
 		.WithPassword("testpass")
 		.WithReuse(false)
+		.WithLabel(TestContainerJanitor.OwnerLabels)
 		.WithLogger(TestDiagnostics.ContainerLogger)
 		.Build();
 

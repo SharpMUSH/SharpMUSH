@@ -8,7 +8,7 @@ namespace SharpMUSH.Library.Definitions;
 /// Returns: Technical MUSH format (e.g., "#-1 PERMISSION DENIED") - never translated
 /// Notifications: User-friendly messages (e.g., "You don't have permission to do that.") - translatable
 /// </summary>
-public static class ErrorMessages
+public static partial class ErrorMessages
 {
 	/// <summary>
 	/// Technical error messages for error returns (parsing/API).
@@ -390,23 +390,12 @@ public static class ErrorMessages
 	/// These are more natural English and SHOULD be translated for i18n.
 	/// Found in actual Notify calls across the codebase.
 	/// </summary>
-	public static class Notifications
+	public static partial class Notifications
 	{
 		public const string LocalFunctionMessage = "{0}";
 		public const string LocalFunctionHeader = "Owner-local functions (call with localfun):";
 		public const string LocalFunctionReset = "Removed {0} unpreserved owner-local functions.";
 		public const string LocalFunctionChanged = "Owner-local function {0}: {1}.";
-
-		public const string QueueControlSyntax = "Use @queue/list [pid], @queue/pause pid=reason, or @queue/resume pid; add /owner or /object for a target batch.";
-		public const string QueueControlBadReason = "Pause reasons must contain at most 160 characters and no control characters.";
-		public const string QueueControlOutcome = "PID {0}: {1}.";
-		public const string QueueControlEntry = "PID {0} source {1} owner {2} {3} {4}; remaining {5}s; signalled {6}; {7}";
-		public const string QueueControlTruncated = "Showing or processing at most 200 entries. Narrow the selection; repeat a batch operation for remaining eligible entries.";
-		public const string QueueControlEmpty = "No accessible matching queue entries.";
-		public const string QueuePausedHint = "Paused jobs: {0}. Use @queue/list for pause details and @queue/pause or @queue/resume to manage pending jobs.";
-		public const string QueueRejected = "Queue admission rejected: {0}.";
-		public const string QueueUsage = "Admitted jobs: {0}; global limit: {1}; per-owner limit: {2}.";
-		public const string QueueRejections = "Queue rejections ({0}): {1}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AccountClosedFormat = "Account '{0}' closed; active sessions revoked.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -457,8 +446,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedSetAttribute = "Permission denied to set attribute on {0}.";
 		public const string LackSpoofingPermissions = "Permission denied: You lack spoofing permissions.";
-		public const string AttributeCannotBeChanged = "That attribute cannot be changed by you.";
-		public const string AttributePermissionsCannotBeChanged = "That attribute's permissions cannot be changed.";
 		public const string NoPermissionToChown = "You don't have the permission to chown that.";
 		public const string CantRemakeWorld = "You can't remake the world in your image.";
 		public const string CannotDoWhileGagged = "You cannot do that while gagged.";
@@ -487,30 +474,6 @@ public static class ErrorMessages
 		public const string CreatedObject = "Created: Object {0}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string UnableToWipeAttribute = "Unable to wipe attribute {0}.";
-		/// <summary>
-		/// PennMUSH's <c>AE_SAFE</c> wording (<c>src/set.c:1507-1509</c>), distinct from
-		/// <c>AE_ERROR</c>'s <see cref="UnableToWipeAttribute"/>: <c>real_atr_clr</c>
-		/// (<c>src/attrib.c:1100-1101</c>) tests <c>AF_Safe</c> before <c>Can_Write_Attr</c> and
-		/// returns its own code, so the player is told which flag to clear rather than just that
-		/// the wipe failed.
-		/// </summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeIsSafeSetNotSafe = "Attribute {0} is SAFE. Set it !SAFE to modify it.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCannotBeWipedChildBlocked = "Attribute {0} cannot be wiped because a child attribute cannot be wiped.";
-		/// <summary>
-		/// PennMUSH's <c>af_helper</c> reports each half of a flag batch as ONE line naming the
-		/// whole list - <c>"%s/%s - %s reset."</c> / <c>"%s/%s - %s set."</c>
-		/// (<c>src/set.c:522-535</c>) - built from the REQUESTED bitmask, not from what actually
-		/// changed, and suppressed entirely when <c>AreQuiet(player, thing)</c> or
-		/// <c>AF_Quiet(atr)</c>. There is deliberately no "already set" or "is not set" wording:
-		/// Penn has no such case.
-		/// </summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeFlagsResetFormat = "{0}/{1} - {2} reset.";
-		/// <inheritdoc cref="AttributeFlagsResetFormat"/>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeFlagsSetFormat = "{0}/{1} - {2} set.";
 		public const string NoAttributesWiped = "No attributes wiped.";
 		public const string OneAttributeWiped = "One attribute wiped.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -608,68 +571,12 @@ public static class ErrorMessages
 		public const string WhoDoYouThinkYouAre = "Who do you think you are, GOD?";
 		public const string NoPowerOverBodyAndMind = "You do not have the power over body and mind!";
 
-		// --- GAME: broadcast notifications (PennMUSH src/bsd.c, src/game.c, src/conf.c) ---
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string GameShutdownBy = "GAME: Shutdown by {0}";
-		public const string GameShutdownExternal = "GAME: Shutdown by external signal";
-		public const string GameSavingDatabase = "GAME: Saving database. Game may freeze for a few moments.";
-		public const string GameSaveComplete = "GAME: Save complete.";
-		public const string GameSaveIn1Minute = "GAME: Database save in 1 minute.";
-		public const string GameSaveIn5Minutes = "GAME: Database save in 5 minutes.";
-		public const string GameHasConnected = "has connected.";
-		public const string GameHasReconnected = "has reconnected.";
-		public const string GameHasDisconnected = "has disconnected.";
-		public const string GameHasPartiallyDisconnected = "has partially disconnected.";
-		public const string GameHasHiddenConnected = "has HIDDEN-connected.";
-		public const string GameHasHiddenReconnected = "has HIDDEN-reconnected.";
-		public const string GameHasHiddenDisconnected = "has HIDDEN-disconnected.";
-		public const string GameHasPartiallyHiddenDisconnected = "has partially HIDDEN-disconnected.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string GameRebootBy = "GAME: Reboot w/o disconnect by {0}, please wait.";
-		public const string GameRebootFinished = "GAME: Reboot finished.";
-		public const string GameRebootFailed = "GAME: Reboot failed.";
-		public const string GameDbSaveFailed = "GAME: ERROR! Database save failed!";
-		public const string GameDbConsistencyCheck = "GAME: Performing database consistency check.";
-		public const string GameDbConsistencyDone = "GAME: Database consistency check complete.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string GameSuspectCreated = "GAME: Suspect {0} created.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string GameSuspectActivity = "GAME: Suspect {0}";
-
-		public const string GameRebootNoDisconnect = "GAME: Reboot w/o disconnect from game account, please wait.";
-
 
 		// --- OUTPUTPREFIX / OUTPUTSUFFIX (PennMUSH hdrs/conf.h) ---
 		public const string OutputPrefixSet = "OUTPUTPREFIX set.";
 		public const string OutputSuffixSet = "OUTPUTSUFFIX set.";
 		public const string OutputPrefixCleared = "OUTPUTPREFIX cleared.";
 		public const string OutputSuffixCleared = "OUTPUTSUFFIX cleared.";
-
-		// --- SOCKSET / @SOCKSET (PennMUSH src/bsd.c sockset()) ---
-		public const string SocksetNotConnected = "You are not connected?";
-		public const string SocksetNeedsOptionAndValue = "You must give an option and a value.";
-		public const string SocksetSetWhatOption = "Set what option?";
-		public const string SocksetWidthSet = "Width set.";
-		public const string SocksetHeightSet = "Height set.";
-		public const string SocksetWidthNeedsPositiveInteger = "Width expects a positive integer.";
-		public const string SocksetHeightNeedsPositiveInteger = "Height expects a positive integer.";
-		public const string SocksetTerminalTypeSet = "Terminal Type set.";
-		public const string SocksetPromptNewlinesOn = "A newline will be sent after a prompt.";
-		public const string SocksetPromptNewlinesOff = "No newline will be sent after a prompt.";
-		public const string SocksetStripAccentsOn = "Accents will be stripped.";
-		public const string SocksetStripAccentsOff = "Accents will not be stripped.";
-		public const string SocksetUnknownColorStyle =
-			"Unknown color style. Valid color styles: 'auto', 'plain', 'hilite', '16color', 'xterm256', 'truecolor'.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SocksetColorStyleSetFormat = "Colorstyle set to '{0}'";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SocksetInvalidOptionFormat = "@sockset option '{0}' is not a valid option.";
-		public const string SocksetInvalidDescriptor = "Invalid descriptor.";
-
-		public const string LocaleSetFormat = "Locale set to {0}.";
-		public const string LocaleCleared = "Locale cleared (reset to default).";
-		public const string LocaleInvalidFormat = "Invalid locale: {0}.";
-		public const string LocaleCurrentFormat = "Current locale: {0}.";
 
 		// --- Movement messages aligned with PennMUSH src/move.c ---
 		public const string ExitDestinationInvalid = "Exit destination is invalid.";
@@ -743,6 +650,21 @@ public static class ErrorMessages
 		/// <summary>PennMUSH <c>src/speech.c:945</c>: the target's page lock refused the pager.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NotAcceptingYourPages = "{0} is not accepting your pages.";
+		/// <summary>PennMUSH <c>src/speech.c:939</c>: the target is HAVEN, so it refuses every pager.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NotAcceptingAnyPages = "{0} is not accepting any pages.";
+		/// <summary>PennMUSH <c>src/speech.c:930</c>: the named player holds no connection.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NotConnected = "{0} is not connected.";
+		/// <summary>PennMUSH <c>src/speech.c:912</c>: the name named no player at all.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string CannotFindWhoToPage = "I can't find who you're trying to page with: {0}";
+		/// <summary>PennMUSH <c>src/speech.c:918</c>: the name fit more than one connected player.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NotSureWhoToPage = "I'm not sure who you want to page with: {0}";
+		/// <summary>PennMUSH <c>src/speech.c:981</c>: every name the scan could not page, space-separated.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string UnableToPage = "Unable to page: {0}";
 
 		// --- Destruction SAFE messages aligned with PennMUSH src/destroy.c ---
 		/// <summary>PennMUSH: when object is SAFE and REALLY_SAFE is true (strict mode).</summary>
@@ -776,191 +698,35 @@ public static class ErrorMessages
 		/// <summary><c>do_chzoneall</c>'s summary (<c>src/wiz.c:1055</c>).</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ZoneChangedForObjectsFormat = "Zone changed for {0} objects.";
-
-		// --- Channel messages aligned with PennMUSH src/extchat.c (CHAT: prefix) ---
+		/// <summary>
+		/// <c>check_zone_lock</c>'s report of the <c>=me</c> Zone lock it just installed
+		/// (<c>src/lock.c:968-971</c>). No full stop: PennMUSH's string has none.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatNotOnChannel = "CHAT: You are not on channel <{0}>.";
+		public const string ZoneAutomaticallyLockedFormat =
+			"Unlocked zone {0} - automatically zone-locking to itself";
+		/// <summary>
+		/// <c>check_zone_lock</c>'s trivial-lock advisory (<c>src/lock.c:977-981</c>): the zone's Zone lock
+		/// admits the player start room and the master room as readily as the player's own location, so it
+		/// is gating on nothing.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatChannelDescSet = "CHAT: Channel <{0}> description set.";
+		public const string ZoneShouldHaveMoreSecureLockFormat =
+			"Zone {0} really should have a more secure zone-lock.";
+		/// <summary>
+		/// <c>check_zone_lock</c>'s loose-lock advisory (<c>src/lock.c:983-987</c>): the lock passes for the
+		/// player's location, which is what <c>@lock/zone &lt;zone&gt;=player</c> rather than
+		/// <c>=player</c> does.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatChannelDescCleared = "CHAT: Channel <{0}> description cleared.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatResizingBuffer = "CHAT: Resizing buffer of channel <{0}>";
-		public const string ChatGuestsCantModify = "CHAT: Guests may not modify channels.";
-		public const string ChatGuestsCantJoin = "Guests are not allowed to join channels.";
-		/// <summary>PennMUSH src/extchat.c:1237 / :1252 / :1290.</summary>
-		public const string ChatInvalidTarget = "Invalid target.";
-		/// <summary>PennMUSH src/extchat.c:1533 — <c>do_chat</c> / <c>do_cemit</c> type refusal.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatWrongTypeForChannel = "Sorry, you're not the right type to be on channel <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:1241 — <c>@channel/on</c> type refusal.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatWrongTypeOfThingForChannel = "Sorry, wrong type of thing for channel <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:1267.</summary>
-		public const string ChatJoinDenied = "Permission to join denied.";
-		/// <summary>PennMUSH src/extchat.c:1355.</summary>
-		public const string ChatJoinOverrideSelf =
-			"CHAT: Warning: You don't meet channel join permissions! (joining anyway)";
-		/// <summary>PennMUSH src/extchat.c:1263.</summary>
-		public const string ChatJoinOverrideTarget =
-			"CHAT: Warning: Target does not meet channel join permissions! (joining anyway)";
-		/// <summary>PennMUSH src/extchat.c:1541.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatNotAllowedToSpeak = "Sorry, you're not allowed to speak on channel <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:1636.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatNotAllowedToCemit = "Sorry, you're not allowed to @cemit on channel <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:1545.</summary>
-		public const string ChatNoSuchChannel = "CHAT: No such channel.";
-		/// <summary>PennMUSH src/extchat.c:2002.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatCannotHideOnChannel = "You are not permitted to hide on channel <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:1737.</summary>
-		public const string ChatCannotCreateThatType = "You can't create channels of that type.";
-		/// <summary>PennMUSH src/extchat.c:1833.</summary>
-		public const string ChatCannotMakeThatType = "You can't make channels that type.";
-		/// <summary>PennMUSH src/extchat.c:1836.</summary>
-		public const string ChatChannelWillBeDisabled = "Warning: channel will be disabled.";
-		/// <summary>PennMUSH src/extchat.c:1049 — <c>list_partial_matches</c>, the header the ambiguity
-		/// refusal is followed by. Each matching channel name is appended after a space.</summary>
-		public const string ChatPartialMatchesAre = "CHAT: Partial matches are:";
-		/// <summary>PennMUSH src/extchat.c:1294.</summary>
-		public const string ChatGuestsCantLeave = "Guests are not allowed to leave channels.";
-		/// <summary>PennMUSH src/extchat.c:1332.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatAlreadyOnChannel = "CHAT: You are already on channel <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:1367.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatYouJoinChannel = "CHAT: You join channel <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:1404.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatYouLeaveChannel = "CHAT: You leave channel <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:1274 — sent to the player who did the joining.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatYouJoinTargetToChannel = "CHAT: You join {0} to channel <{1}>.";
-		/// <summary>PennMUSH src/extchat.c:1272 — sent to the player who was joined.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatJoinsYouToChannel = "CHAT: {0} joins you to channel <{1}>.";
-		/// <summary>PennMUSH src/extchat.c:1305 — sent to the player who did the removing.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatYouRemoveTargetFromChannel = "CHAT: You remove {0} from channel <{1}>.";
-		/// <summary>PennMUSH src/extchat.c:1303 — sent to the player who was removed.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatRemovesYouFromChannel = "CHAT: {0} removes you from channel <{1}>.";
-		/// <summary>PennMUSH src/extchat.c:1283 / :1309.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatTargetAlreadyOnChannel = "{0} is already on channel <{1}>.";
-		/// <summary>PennMUSH src/extchat.c:1310.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatTargetNotOnChannel = "{0} is not on channel <{1}>.";
-		/// <summary>PennMUSH src/extchat.c:4072.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatRecallFromChannel = "CHAT: Recall from channel <{0}>";
-		/// <summary>PennMUSH src/extchat.c:4092.</summary>
-		public const string ChatEndRecall = "CHAT: End recall";
-		/// <summary>PennMUSH src/extchat.c:4095.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatRecallEntireBuffer =
-			"CHAT: To recall the entire buffer, use @chan/recall {0}=0";
-		/// <summary>PennMUSH src/extchat.c:4062.</summary>
-		public const string ChatNothingToRecall = "CHAT: Nothing to recall.";
-		/// <summary>PennMUSH src/extchat.c:4051.</summary>
-		public const string ChatMustBeAbleToJoinToRecall =
-			"CHAT: You must be able to join a channel to recall from it.";
-		/// <summary>PennMUSH src/extchat.c:4030 — <c>@channel/recall</c> with a non-numeric line count.</summary>
-		public const string ChatHowManyLinesToRecall = "How many lines did you want to recall?";
-		/// <summary>PennMUSH src/extchat.c:4009.</summary>
-		public const string ChatWhichLineToStartRecall = "Which line do you want to start recall from?";
-		/// <summary>PennMUSH src/extchat.c:2981.</summary>
-		public const string ChatNoConnectedPlayersOnChannel = "There are no connected players on that channel.";
-		/// <summary>PennMUSH src/extchat.c:2983.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatMembersOfChannelAre = "Members of channel <{0}> are:";
-		/// <summary>PennMUSH src/extchat.c:2698 — the one-line form of @channel/list/quiet.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatChannelList = "CHAT: Channel list: {0}";
-		/// <summary>PennMUSH src/extchat.c:2696.</summary>
-		public const string ChatNone = "(None)";
-		/// <summary>PennMUSH src/extchat.c:2764 — @channel/what's buffer line.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatRecallBufferSummary = "Recall buffer: {0} full lines, with {1} lines stored.";
-
-		// --- @channel/gag, /mute, /hide and /combine: PennMUSH do_chan_user_flags (src/extchat.c:1900-2050)
-		/// <summary>PennMUSH src/extchat.c:1908.</summary>
-		public const string ChatOnlyPlayersCanUseThat = "Only players can use that option.";
-		/// <summary>PennMUSH src/extchat.c:1915.</summary>
-		public const string ChatNotOnAnyChannels = "You are not on any channels.";
-		/// <summary>PennMUSH src/extchat.c:1922.</summary>
-		public const string ChatAllChannelsMuted = "All channels have been muted.";
-		public const string ChatAllChannelsUnmuted = "All channels have been unmuted.";
-		/// <summary>PennMUSH src/extchat.c:1926.</summary>
-		public const string ChatHideOnAllChannels = "You hide on all the channels you can.";
-		public const string ChatUnhideOnAllChannels = "You unhide on all channels.";
-		/// <summary>PennMUSH src/extchat.c:1930.</summary>
-		public const string ChatAllChannelsGagged = "All channels have been gagged.";
-		public const string ChatAllChannelsUngagged = "All channels have been ungagged.";
-		/// <summary>PennMUSH src/extchat.c:1934.</summary>
-		public const string ChatAllChannelsCombined = "All channels have been combined.";
-		public const string ChatAllChannelsUncombined = "All channels have been uncombined.";
-		/// <summary>PennMUSH src/extchat.c:1963.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatNoLongerHearConnections = "You will no longer hear connection messages on channel <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:1969.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatNowHearConnections = "You will now hear connection messages on channel <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:2008.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatNoLongerOnWhoList = "You no longer appear on channel <{0}>'s who list.";
-		/// <summary>PennMUSH src/extchat.c:2014.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatNowOnWhoList = "You now appear on channel <{0}>'s who list.";
-		/// <summary>PennMUSH src/extchat.c:2023.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatNoLongerHearMessages = "You will no longer hear messages on channel <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:2029.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatNowHearMessages = "You will now hear messages on channel <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:2038.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatConnectionsNowCombined = "Connect messages on channel <{0}> will now be combined with others.";
-		/// <summary>PennMUSH src/extchat.c:2045.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatConnectionsNoLongerCombined = "Connect messages on channel <{0}> will no longer be combined with others.";
-
-		// --- @channel/title: PennMUSH do_chan_title (src/extchat.c:3125-3185)
-		/// <summary>PennMUSH src/extchat.c:3147.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatNoTitleSetOn = "You have no title set on <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:3149.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatYourTitleOnIs = "Your title on <{0}> is '{1}'.";
-		/// <summary>PennMUSH src/extchat.c:3160 — "(NoTitles) " is prepended on a NoTitles channel.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatTitleCleared = "Title cleared for {0}channel <{1}>.";
-		/// <summary>PennMUSH src/extchat.c:3181.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatTitleSet = "Title set for {0}channel <{1}>.";
-		/// <summary>PennMUSH src/extchat.c:3166.</summary>
-		public const string ChatTitleTooLong = "Title too long.";
-		/// <summary>PennMUSH src/extchat.c:3173.</summary>
-		public const string ChatInvalidCharacterInTitle = "Invalid character in title.";
-		/// <summary>PennMUSH src/extchat.c:2828.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatCannotDecompile = "CHAT: You don't have permission to decompile <{0}>.";
-		/// <summary>PennMUSH src/extchat.c:2247 — the refusal on @channel/wipe, verbatim.</summary>
-		public const string ChatWipeThatSillyGrin = "CHAT: Wipe that silly grin off your face instead.";
-		/// <summary>PennMUSH src/extchat.c:2251.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatChannelWiped = "CHAT: Channel <{0}> wiped.";
-		/// <summary>PennMUSH src/extchat.c:2226 — told to each member that was removed.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatRemovedAllUsers = "CHAT: {0} has removed all users from <{1}>.";
-		/// <summary>PennMUSH src/extchat.c:1557.</summary>
-		public const string ChatMustBeOnChannelToSpeak = "You must be on that channel to speak on it.";
-		/// <summary>PennMUSH src/extchat.c:1560.</summary>
-		public const string ChatMustStopGaggingToSpeak = "You must stop gagging that channel to speak on it.";
-		/// <summary>PennMUSH src/extchat.c:1680.</summary>
-		public const string ChatWhatToEmit = "What do you want to emit?";
+		public const string ZoneMayHaveLooseLockFormat =
+			"Warning: Zone {0} may have loose zone lock. Lock zones to =player, not player";
+		/// <summary><c>do_chzone</c>'s admin-owned warning (<c>src/set.c:453-456</c>).</summary>
+		public const string ChzoningAdminOwnedObject = "Warning: @chzoning admin-owned object!";
+		/// <summary><c>do_chzone</c>'s warning for a target that keeps its privileges (<c>src/set.c:479</c>).</summary>
+		public const string ChzoningPrivilegedPlayer = "Warning: @chzoning a privileged player.";
+		/// <summary><c>do_chzone</c>'s warning for a target that keeps TRUST (<c>src/set.c:481</c>).</summary>
+		public const string ChzoningTrustPlayer = "Warning: @chzoning a TRUST player.";
 
 		// --- Lock/Unlock messages aligned with PennMUSH src/lock.c ---
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -984,51 +750,14 @@ public static class ErrorMessages
 		public const string LinkedExitToRoom = "Linked exit #{0} to #{1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string UnlinkedExit = "Unlinked exit #{0}.";
+		/// <summary>
+		/// <c>do_unlink</c>'s <c>NOTHING</c> arm (<c>src/create.c:261</c>). Its match is silent, so a name
+		/// that resolves to nothing — including one dropped because a mortal does not control it — reports
+		/// this rather than the locator's "I can't see that here."
+		/// </summary>
+		public const string UnlinkWhat = "Unlink what?";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string OpenedExit = "Opened exit {0}";
-
-		// --- Flag/Power messages aligned with PennMUSH src/flags.c ---
-		// PennMUSH format: "AName(thing) - FLAGNAME set." / "AName(thing) - FLAGNAME reset."
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagSet = "{0} - {1} set.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagAlreadySet = "{0} - {1} (already) set.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagReset = "{0} - {1} reset.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagAlreadyReset = "{0} - {1} (already) reset.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string DontRecognizeFlag = "{0} - I don't recognize that flag.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string DontRecognizePower = "{0} - I don't recognize that power.";
-		// PennMUSH set_power reports powers as granted/removed, not set/reset.
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerGranted = "{0} - {1} granted.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerAlreadyGranted = "{0} - {1} (already) granted.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerRemoved = "{0} - {1} removed.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerAlreadyRemoved = "{0} - {1} (already) removed.";
-
-		// PennMUSH src/wiz.c do_power.
-		public const string OnlyWizardsMayGrantPowers = "Only wizards may grant powers.";
-		public const string GodIsAlreadyAllPowerful = "God is already all-powerful.";
-		public const string MustSpecifyPowerToSet = "You must specify a power to set.";
-		// PennMUSH src/flags.c do_flag_info, with the flagspace name lowercased.
-		public const string NoSuchPowerInfo = "No such power.";
-
-		// --- Attribute set messages aligned with PennMUSH src/set.c ---
-		// PennMUSH format: "ObjectName/ATTRNAME - Set."
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeSet = "{0}/{1} - Set.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCleared = "{0}/{1} - Cleared.";
-
-		// PennMUSH src/atr_tab.c check_attr_value: a set refused by @attribute/enum or @attribute/limit.
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeValueNotInEnumFormat = "Value for {0} needs to be one of: {1}";
-		public const string AttributeValueFailsLimit = "Attribute value does not match the /limit regexp.";
 
 		public const string Connected = "Connected!";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1052,32 +781,18 @@ public static class ErrorMessages
 		public const string ClearedPowersFromFormat = "Cleared {0} power(s) from {1}.";
 
 		public const string NeedObjectAttributePair = "You need to give an object/attribute pair.";
-		public const string AttributeIsLocked = "That attribute is locked.";
-		public const string AttributeIsUnlocked = "That attribute is unlocked.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string InvalidArgumentsToCommandFormat = "Invalid arguments to {0}.";
 		public const string InvalidSourceFormat = "Invalid source format. Use: object/attribute";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeNotFoundOnSourceFormat = "Attribute {0} not found on source object.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string InvalidDestinationFormat = "Invalid destination format: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToCopyAttributeToFormat = "Failed to copy attribute to {0}: {1}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCopiedToDestinationsFormat = "Attribute copied to {0} {1}.";
 		public const string FailedToCopyAttributeAny = "Failed to copy attribute to any destinations.";
-		public const string AttributeLocked = "Attribute locked.";
-		public const string AttributeUnlocked = "Attribute unlocked.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeMovedFailedRemoveFormat = "Attribute moved to {0} {1} but failed to remove source: {2}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeMovedToFormat = "Attribute moved to {0} {1}.";
 		public const string FailedToMoveAttributeAny = "Failed to move attribute to any destinations.";
-		public const string AttributeNotFound = "No such attribute.";
 		public const string CanOnlyChownToYourself = "You can only chown an attribute to yourself.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToChangeOwnershipFormat = "Failed to change ownership: {0}";
-		public const string AttributeOwnerChanged = "Attribute owner changed.";
 		public const string WipeWhat = "Wipe what?";
 		public const string ObjectIsProtectedSafe = "That object is protected (SAFE).";
 
@@ -1149,7 +864,6 @@ public static class ErrorMessages
 		public const string DontYouHaveAnythingToSay = "Don't you have anything to say?";
 		public const string HuhTypeHelp = "Huh?  (Type \"help\" for help.)";
 		public const string AllObjectsHalted = "All objects halted.";
-		public const string Halted = "Halted.";
 		public const string Notified = "Notified.";
 		public const string YouDoNotHavePermissionToSpoofEmits = "You do not have permission to spoof emits.";
 		public const string NoSuchCommandAtLogin = "No such command available at login.";
@@ -1166,35 +880,6 @@ public static class ErrorMessages
 		public const string UsageAtCommandFormat = "Usage: @{0} <object>=<value>";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ErrorDetailFormat = "Error: {0}";
-
-		public const string ChatAlreadyExists = "CHAT: Channel already exists.";
-		public const string ChatChannelCreationFailed = "CHAT: The channel could not be created.";
-		public const string ChatInvalidChannelNameShort = "CHAT: Invalid channel name.";
-		public const string ChatChannelCreated = "Channel has been created.";
-		public const string ChatYesOrNoOnly = "CHAT: Yes or No are the only valid options.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatNotMemberFormat = "CHAT: You are not a member of {0}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatCombinedChannelsOnFormat = "CHAT: Combined channels turned on for {0}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatCombinedChannelsOffFormat = "CHAT: Combined channels turned off for {0}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatAlreadyInGagStateFormat = "CHAT: You are already in that gag state on {0}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatGaggedOnFormat = "CHAT: You have been gagged on {0}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatUngaggedOnFormat = "CHAT: You have been ungagged on {0}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatAlreadyInHideStateFormat = "CHAT: You are already in that hide state on {0}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatHiddenOnChannelFormat = "CHAT: You have been hidden on {0}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatUnhiddenOnChannelFormat = "CHAT: You have been unhidden on {0}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatPlayerRemovedFromChannelFormat = "CHAT: {0} has been removed from {1}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ChatPlayerAddedToChannelFormat = "CHAT: {0} has been added to {1}.";
-		public const string ChatChannelRenamed = "CHAT: Renamed channel.";
 		public const string UsageAddcom = "Usage: addcom <alias>=<channel>";
 		public const string AliasNameCannotBeEmpty = "Alias name cannot be empty.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1243,81 +928,24 @@ public static class ErrorMessages
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AllObjectsHaltedWithCountFormat = "All objects halted. {0} objects processed.";
-		public const string FlagAddRequiresNameAndSymbol = "@FLAG/ADD requires flag name and symbol.";
-		public const string FlagNameAndSymbolCannotBeEmpty = "Flag name and symbol cannot be empty.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagAlreadyExistsFormat = "Flag '{0}' already exists.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagCreatedWithSymbolFormat = "Flag '{0}' created with symbol '{1}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToCreateFlagFormat = "Failed to create flag '{0}'.";
-		public const string FlagDeleteRequiresName = "@FLAG/DELETE requires a flag name.";
-		public const string FlagNameCannotBeEmpty = "Flag name cannot be empty.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagNotFoundFormat = "Flag '{0}' not found.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CannotDeleteSystemFlagFormat = "Cannot delete system flag '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagDeletedFormat = "Flag '{0}' deleted.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToDeleteFlagFormat = "Failed to delete flag '{0}'.";
-		// PennMUSH src/flags.c do_flag_letter, with the FLAG flagspace name.
-		public const string FlagLetterRequiresName = "@FLAG/LETTER requires a flag name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagLetterSetFormat = "Letter for flag {0} set to '{1}'.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagLetterClearedFormat = "Letter for flag {0} cleared.";
-		public const string FlagCharactersMustBeSingleCharacters = "Flag characters must be single characters.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagLetterConflictFormat = "Letter conflicts with the {0} flag.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToUpdateFlagFormat = "Failed to update flag '{0}'.";
-		public const string FlagTypeRequiresNameAndTypes = "@FLAG/TYPE requires flag name and type restrictions.";
-		public const string FlagNameAndTypesCannotBeEmpty = "Flag name and types cannot be empty.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagTypeUpdatedFormat = "Flag '{0}' type restrictions updated to: {1}.";
-		public const string FlagAliasRequiresNameAndAliases = "@FLAG/ALIAS requires flag name and aliases.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagAliasesSetFormat = "Flag '{0}' aliases set to: {1}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagAliasConflictFormat = "That alias already matches the {0} flag.";
-		public const string FlagRestrictRequiresNameAndPermissions = "@FLAG/RESTRICT requires flag name and permissions.";
-		public const string FlagNameAndPermissionsCannotBeEmpty = "Flag name and permissions cannot be empty.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagPermissionsUpdatedFormat = "Flag '{0}' permissions updated to: {1}.";
-		public const string FlagDecompileRequiresName = "@FLAG/DECOMPILE requires a flag name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagDisabledFormat = "Flag '{0}' disabled.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagEnabledFormat = "Flag '{0}' enabled.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToDisableFlagFormat = "Failed to disable flag '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToEnableFlagFormat = "Failed to enable flag '{0}'.";
-
-		public const string PowerAddRequiresNameAndAlias = "@POWER/ADD requires power name and alias.";
-		public const string PowerNameAndAliasCannotBeEmpty = "Power name and alias cannot be empty.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerAlreadyExistsFormat = "Power '{0}' already exists.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerCreatedWithAliasFormat = "Power '{0}' created with alias '{1}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToCreatePowerFormat = "Failed to create power '{0}'.";
-		public const string PowerDeleteRequiresName = "@POWER/DELETE requires a power name.";
-		public const string PowerNameCannotBeEmpty = "Power name cannot be empty.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerNotFoundFormat = "Power '{0}' not found.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CannotDeleteSystemPowerFormat = "Cannot delete system power '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerDeletedFormat = "Power '{0}' deleted.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToDeletePowerFormat = "Failed to delete power '{0}'.";
-		public const string PowerAliasRequiresNameAndAlias = "@POWER/ALIAS requires power name and new alias.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerAliasChangedFormat = "Power '{0}' alias changed to '{1}'.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerAliasConflictFormat = "That alias already matches the {0} power.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToUpdatePowerFormat = "Failed to update power '{0}'.";
 
@@ -1327,17 +955,12 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MessageLoggedToCategoryFormat = "Message logged to {0} log.";
 		public const string PoorUsage = "Usage: @poor <player>";
-		public const string QuotaSystemDisabled = "The quota system is disabled on this server.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PlayerSetToPoorFormat = "{0} has been set to poor status (quota: 0).";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string YourQuotaSetToZeroByFormat = "Your building quota has been set to 0 by {0}.";
-		public const string QuotaSystemDisabledMessage = "Quota system disabled.";
 		public const string CantLookAtOthersQuota = "You can't look at someone else's quota.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string QuotaStatusFormat = "Quota: {0}/{1}";
 		public const string AllQuotaUsage = "Usage: @allquota <amount>";
-		public const string QuotaAmountMustBeNumber = "Quota amount must be a number.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SetQuotaForPlayersFormat = "Set quota to {0} for {1} players.";
 		public const string NotSupportedForSharpMUSH = "Not Supported for SharpMUSH.";
@@ -1345,11 +968,6 @@ public static class ErrorMessages
 		public const string NoLongerAppearOnWho = "You no longer appear on the WHO list.";
 		public const string NowAppearOnWho = "You now appear on the WHO list.";
 		public const string NeedAnnouncePower = "Permission denied. You need the Announce power.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string MotdClearedFormat = "{0} MOTD cleared.";
-		public const string MotdUsage = "Usage: @motd[/<type>] <message>";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string MotdSetFormat = "{0} MOTD set.";
 
 		public const string NoSuicideAllowed = "Sorry, no suicide allowed.";
 		public const string EvenYouCantDoThat = "Even you can't do that!";
@@ -1402,37 +1020,9 @@ public static class ErrorMessages
 		public const string FindObjectResultFormat = "  #{0} ({1})";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FindFoundMatchingFormat = "Found {0} matching objects.";
-
-		public const string HaltMustSpecifyPid = "You must specify a process ID.";
-		public const string HaltInvalidPidFormat = "Invalid process ID format.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HaltTaskHaltedFormat = "Task {0} halted.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HaltNoTaskWithPidFormat = "No task found with PID {0}.";
-		public const string HaltMustSpecifyTarget = "You must specify a target object.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HaltedPlayerAndObjectsFormat = "Halted {0} and all their objects.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HaltedObjectWithActionsFormat = "Halted {0} with replacement actions.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HaltedObjectFormat = "Halted {0}.";
 		/// <summary>PennMUSH <c>pay_queue</c> (<c>src/cque.c:304</c>): the owner of an object that ran past its queue quota is told so.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RunawayObjectFormat = "Runaway object: {0}({1}). Commands halted.";
-		/// <summary>
-		/// PennMUSH <c>process_command</c> (<c>src/game.c:1181</c>): a halted executor's command is
-		/// refused and its owner told, once per refused command. Takes the dbref number alone, as
-		/// Penn's <c>%d</c> does — never an objid.
-		/// </summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HaltedObjectCommandRefusedFormat = "Attempt to execute command by halted object #{0}";
-
-		public const string NotifyMustSpecifySemaphoreObject = "You must specify an object to use for the semaphore.";
-		public const string NotifyMustSpecifyValidObjectAttribute = "You must specify a valid object with an optional valid attribute to use for the semaphore.";
-		public const string NotifyMustSpecifyQregAssignments = "You must specify Q-register assignments.";
-		public const string NotifyQregAssignmentsMustBePairs = "Q-register assignments must be in pairs: qreg,value[,qreg,value...]";
-		public const string NotifyInvalidNumber = "Invalid number specified.";
-		public const string NotifyNoTaskWaitingOnSemaphore = "No task is waiting on that semaphore.";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ObjectDoesNotWantToHearFromYouFormat = "{0} does not want to hear from you.";
@@ -1442,63 +1032,8 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SwitchInvalidRegexpFormat = "Invalid regexp: {0}: {1}";
 
-		public const string WaitCommandListMissing = "Command list missing";
-		public const string WaitPermissionDenied = "Permission Denied.";
-		public const string WaitInvalidTimeArgumentFormat = "Invalid time argument format";
-		public const string WaitInvalidFirstArgumentFormat = "Invalid first argument format";
-		public const string WaitInvalidPidSpecified = "Invalid PID specified.";
-		public const string WaitWhatToDoWithProcess = "What do you want to do with the process?";
-		public const string WaitInvalidTimeSpecified = "Invalid time specified.";
-
-		public const string CommandMustSpecifyName = "You must specify a command name.";
-		public const string CommandMustSpecifyAlias = "You must specify an alias name.";
-		public const string CommandMustSpecifyCloneName = "You must specify a clone name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandAddedFormat = "Command {0} added.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandAlreadyExistsFormat = "Command {0} already exists.";
-		public const string CommandBadName = "Bad command name.";
-		public const string CommandNoevalNoLongerNoparse = "WARNING: /NOEVAL no longer creates a Noparse command. Use /NOPARSE if that's what you meant.";
-		public const string CommandAliasBadName = "I can't alias a command to that!";
-		public const string CommandAliasFailed = "Unable to set alias.";
-		public const string CommandAliasSet = "Alias set.";
-		public const string CommandNoSuchCommand = "No such command.";
-		public const string CommandCloned = "Command cloned.";
-		public const string CommandCannotDeleteBuiltin = "You can't delete built-in commands. @command/disable instead.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandRemovedFormat = "Removed {0} from command table.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandRemovedWithAliasesFormat = "Removed {0} and aliases from command table.";
-		public const string CommandHowToRestrict = "How do you want to restrict the command?";
-		public const string CommandRestrictFailed = "Restrict attempt failed.";
-		public const string CommandAlwaysEnabled = "@command is ALWAYS enabled.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandCalledByTheGameFormat = "{0} is run by the game itself and cannot be disabled.";
-		public const string CommandNotImplemented = "This command has not been implemented.";
-		public const string CommandLibraryUnavailable = "Command library unavailable.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandNotFoundFormat = "Command '{0}' not found.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoNameFormat = "Command: {0} ({1})";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoTypeFormat = "  Type: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoMinArgsFormat = "  Min Args: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoMaxArgsFormat = "  Max Args: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoSwitchesFormat = "  Switches: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoBehaviorFormat = "  Behavior: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoLockFormat = "  Lock: {0}";
-		public const string CommandInfoFailureMsgFormat = "  Failure Msg: {0}";
-
-		public const string DrainInvalidNumber = "Invalid number specified.";
-		public const string DrainCannotSpecifyBothAnyAndAttribute = "You may not specify both /any and a specific attribute.";
-		public const string DrainCannotSpecifyBothAllAndNumber = "You may not specify both /all and a number.";
-
-		public const string ForcePermissionDeniedDoNotControl = "Permission denied. You do not control the target.";
+		/// <summary>PennMUSH <c>do_force</c> (<c>src/wiz.c:637</c>), after match_controlled refuses the target.</summary>
+		public const string ForceSorry = "Sorry.";
 		public const string ForceThemToDoWhat = "Force them to do what?";
 
 		public const string YouDoNotHavePermissionToSpoofEmitsDetail = "You do not have permission to spoof emits.";
@@ -1506,54 +1041,9 @@ public static class ErrorMessages
 		public const string DontYouHaveAnythingToSayDetail = "Don't you have anything to say?";
 		public const string InvalidRoomSpecifiedDetail = "Invalid room specified.";
 
-		public const string PsMustSpecifyPid = "You must specify a process ID.";
-		public const string PsInvalidPidFormat = "Invalid process ID format.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsNoTaskWithPidFormat = "No task found with PID {0}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsDebugTaskFormat = "@ps/debug: Task {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsDebugOwnerFormat = "  Owner: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsDebugSemaphoreFormat = "  Semaphore: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsDebugCommandFormat = "  Command: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsDebugDelayFormat = "  Delay: {0}s";
-		public const string PsSummaryHeader = "@ps/summary: Queue totals";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsCommandQueueFormat = "  Command queue: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsWaitQueueFormat = "  Wait queue: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsSemaphoreQueueFormat = "  Semaphore queue: {0}";
-		public const string PsLoadAverageZero = "  Load average: 0.0, 0.0, 0.0";
-		public const string PsQuickHeader = "@ps/quick: Your queue totals";
-		public const string PsAllHeader = "@ps/all: All queued tasks";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsAllGroupFormat = "Group: {0} ({1} tasks)";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsQueueForTargetFormat = "@ps: Queue for {0}";
-		public const string PsSemaphoreTasksHeader = "Semaphore tasks:";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsSemaphoreTaskEntryFormat = "  [{0}] {1} ({2}): {3}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsAndMoreFormat = "  ... and {0} more";
-		public const string PsWaitQueueHeader = "Wait queue tasks:";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PsWaitTaskEntryFormat = "  [{0}] (delayed)";
-		public const string PsQueueManagementNotImplemented = "Note: Queue management not yet implemented.";
-
 		public const string SelectMustSpecifyTestString = "You must specify a test string.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SelectInvalidRegexPatternFormat = "Invalid regex pattern: {0}";
-
-		public const string TriggerMustSpecifyAttributePath = "You must specify an object/attribute to trigger.";
-		public const string TriggerMustSpecifyObjectAttributePath = "You must specify an object/attribute path.";
-		public const string TriggerPermissionDeniedDoNotControl = "Permission denied. You do not control that object.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string TriggerNoSuchAttributeFormat = "No such attribute: {0}";
-		public const string TriggerMustProvideMatchString = "You must provide a string to match when using /match.";
 
 		public const string WhereIsMustSpecifyPlayer = "You must specify a player to locate.";
 		public const string WhereIsCanOnlyLocatePlayers = "You can only @whereis players.";
@@ -1566,35 +1056,6 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WhereIsObjectInLocationFormat = "{0} is in {1}.";
 
-		public const string ConfigCantRemakeWorld = "You can't remake the world in your image.";
-		public const string ConfigWhatToSet = "What did you want to set?";
-		public const string ConfigCouldntSet = "Couldn't set that option.";
-		public const string ConfigOptionSet = "Option set.";
-		public const string ConfigOptionSetAndSaved = "Option set and saved.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigOptionNotSettableFormat = "{0} cannot be set from inside the game.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigInvalidValueFormat = "'{1}' is not a valid value for {0}.";
-		public const string ConfigOptionEnabled = "Enabled.";
-		public const string ConfigOptionDisabled = "Disabled.";
-		public const string ConfigCategoriesHeader = "Configuration Categories:";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigCategoryItemFormat = "  {0}";
-		public const string ConfigUseCategoryHelp = "Use '@config <category>' to see options in a category.";
-		public const string ConfigUseOptionHelp = "Use '@config <option>' to see the value of an option.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigNoOptionsInCategoryFormat = "No options found in category '{0}'.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigOptionsInCategoryFormat = "Options in {0}:";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigOptionValueFormat = "  {0}: {1}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigOptionDescriptionFormat = "  Description: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigOptionCategoryFormat = "  Category: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ConfigNoCategoryOrOptionFormat = "No configuration category or option named '{0}'.";
-
 		public const string EditInvalidArguments = "Invalid arguments to @edit.";
 		public const string EditInvalidFormat = "Invalid format. Use: object/attribute=search,replace";
 		public const string EditMustSpecifySearchAndReplace = "You must specify search and replace strings.";
@@ -1605,79 +1066,6 @@ public static class ErrorMessages
 		public const string EditWouldChangeToFormat = "{0} - Would change to: {1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EditSummaryFormat = "{0} {1} attribute{2}. {3} unchanged.";
-
-		public const string FunctionLibraryUnavailable = "Function library unavailable.";
-		public const string FunctionGlobalUserDefinedHeader = "Global user-defined functions:";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionUserDefinedCountFormat = "  User-defined: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionEntryFormat = "    {0}: {1}-{2} args, Flags: {3}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionAndMoreFormat = "    ... and {0} more";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionBuiltInCountFormat = "  Built-in: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionUserDefinedSummaryFormat = "  {0} user-defined functions";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionBuiltInSummaryFormat = "  {0} built-in functions";
-		public const string FunctionMustSpecifyName = "You must specify a function name.";
-		public const string FunctionMustSpecifyAliasName = "You must specify an alias name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionAliasWouldCreateFormat = "@function/alias: Would create alias '{0}' for function '{1}'.";
-		public const string FunctionAliasingNotImplemented = "Note: Function aliasing not yet implemented.";
-		public const string FunctionMustSpecifyCloneName = "You must specify a clone name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionCloneWouldCloneFormat = "@function/clone: Would clone function '{0}' as '{1}'.";
-		public const string FunctionCloningNotImplemented = "Note: Function cloning not yet implemented.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionDeleteWouldDeleteFormat = "@function/delete: Would delete function '{0}'.";
-		public const string FunctionDeletionNotImplemented = "Note: Function deletion not yet implemented.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionDisableWouldDisableFormat = "@function/disable: Would disable function '{0}'.";
-		public const string FunctionDisablingNotImplemented = "Note: Function disabling not yet implemented.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionEnableWouldEnableFormat = "@function/enable: Would enable function '{0}'.";
-		public const string FunctionEnablingNotImplemented = "Note: Function enabling not yet implemented.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionRestrictWouldRestrictFormat = "@function/restrict: Would restrict function '{0}' to: {1}";
-		public const string FunctionRestrictionNotImplemented = "Note: Function restriction not yet implemented.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionRestrictedFormat = "Function '{0}' restricted to: {1}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionRestrictionClearedFormat = "Restriction cleared on function '{0}'.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionClonedFormat = "Function '{0}' cloned from '{1}'.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionBuiltinRestoredFormat = "Function '{0}' restored to its built-in implementation.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionPreservedFormat = "Function '{0}' marked as preserved.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionRestoredOneFormat = "Function '{0}' restored to its built-in implementation.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionRestoredResetFormat = "@function/restore: removed {0} unpreserved user function(s); preserved entries kept.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionDefineWouldDefineFormat = "@function: Would define function '{0}' as: {1}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionMinArgsFormat = "  Min args: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionMaxArgsFormat = "  Max args: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionRestrictionsArgFormat = "  Restrictions: {0}";
-		public const string FunctionDynamicDefinitionNotImplemented = "Note: Dynamic function definition not yet implemented.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionNotFoundFormat = "Function '{0}' not found.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionInfoNameFormat = "Function: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionInfoTypeFormat = "  Type: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionInfoMinArgsFormat = "  Min Args: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionInfoMaxArgsFormat = "  Max Args: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionInfoFlagsFormat = "  Flags: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FunctionInfoRestrictionsFormat = "  Restrictions: {0}";
 
 		public const string GrepInvalidArguments = "Invalid arguments to @grep.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1714,6 +1102,25 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RestartedObjectFormat = "Restarted {0}.";
 
+		// @scan's section headings and match lines, verbatim from do_scan (pennmush/src/game.c:1890-1996)
+		// and confirmed against a live PennMUSH 1.8.8. A heading prints whether or not its section
+		// matched anything; the attribute list in {2} arrives with its own leading space.
+		public const string ScanMatchesOnRoomContents = "Matches on contents of this room:";
+		public const string ScanMatchesOnCarriedObjects = "Matches on carried objects:";
+		public const string ScanMatchesOnZoneMasterRoomOfLocation = "Matches on zone master room of location:";
+		public const string ScanMatchesOnPersonalZoneMasterRoom = "Matches on personal zone master room:";
+		public const string ScanMatchesOnMasterRoomObjects = "Matches on objects in the Master Room:";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ScanMatchEntryFormat = "{0}  [{1}:{2}]";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ScanMatchedHereFormat = "Matched here: {0}  [{1}:{2}]";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ScanMatchedSelfFormat = "Matched self: {0}  [{1}:{2}]";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ScanMatchedZoneOfLocationFormat = "Matched zone of location: {0}  [{1}:{2}]";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ScanMatchedPersonalZoneFormat = "Matched personal zone: {0}  [{1}:{2}]";
+
 		public const string SweepListeningInRoom = "Listening in ROOM:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SweepObjectIsListeningFormat = "{0} is listening.";
@@ -1741,82 +1148,8 @@ public static class ErrorMessages
 		public const string RetryUsage = "Usage: @retry <condition>[=<arg0>,<arg1>,...]";
 		public const string RetryNothingToRetry = "Nothing to retry.";
 
-		public const string AttributeCommandMustSpecifyAttribute = "You must specify an attribute.";
-		public const string AttributeCommandMustSpecifyFlags = "You must specify attribute flags.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandUnknownFlagFormat = "Unknown attribute flag: {0}";
-		public const string AttributeCommandFailedToCreate = "Failed to create attribute entry.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandPermissionsNowFormat = "{0} -- Attribute permissions now: {1}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandRetroactiveUpdatedFormat = "{0} existing copies of {1} updated.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandRetroactivePartialFormat = "Stopped after {0} objects: {1} existing copies of {2} updated, {3} could not be. Run the command again to finish.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandRemovedFromTableFormat = "Attribute '{0}' removed from standard attribute table.";
-		public const string AttributeCommandExistingCopiesRemain = "Existing copies remain but are no longer \"standard\".";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandNotFoundInTableFormat = "Attribute '{0}' not found in table.";
-		public const string AttributeCommandMustSpecifyNewName = "You must specify a new name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandRenamedFormat = "Attribute '{0}' renamed to '{1}' in standard attribute table.";
-		// PennMUSH src/atr_tab.c do_attribute_limit.
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandRestrictionSetFormat = "{0} -- Attribute {1} set to: {2}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandRestrictionUnsetFormat = "{0} -- Attribute limit or enum unset.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandRestrictionAlreadyUnsetFormat = "{0} -- Attribute limit or enum already unset.";
-		public const string AttributeCommandNotInTableUseAccess = "I don't know that attribute. Please use @attribute/access to create it, first.";
-		public const string AttributeCommandInvalidRegexp = "Invalid Regular Expression.";
-		public const string AttributeCommandDelimiterOneCharacter = "Delimiter must be one character.";
-		public const string AttributeCommandFailedToUpdate = "Failed to update attribute entry.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandNotFoundNotErrorFormat = "Attribute '{0}' not found in standard attribute table.";
-		public const string AttributeCommandNotFoundNotError2 = "This is not an error - the attribute may still be used on objects.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandInfoFormat = "@attribute: Information for '{0}'";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandDefaultFlagsFormat = "  Default flags: {0}";
-		public const string AttributeCommandDefaultFlagsNone = "  Default flags: none";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandLimitPatternValueFormat = "  Limit pattern: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandEnumValuesFormat = "  Enum values: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandNoMatchPatternFormat = "No attributes match pattern '{0}'.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandDecompileHeaderFormat = "@attribute/decompile: {0} attributes match pattern '{1}'";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandDecompileAccessFormat = "@attribute/access{0} {1}={2}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandDecompileLimitFormat = "@attribute/limit {0}={1}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string AttributeCommandDecompileEnumFormat = "@attribute/enum {0}={1}";
-
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string LogWipeUnsupportedFormat = "@logwipe: SharpMUSH cannot {0} the {1} log. Its logs go to the logging sinks in its configuration, which the game does not own; rotate or clear them there.";
-
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsObjectCountsFormat = "{0} objects = {1} rooms, {2} exits, {3} things, {4} players.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsNoSuchPlayerFormat = "{0}: No such player.";
-		public const string StatsNeedSearchWarrant = "You need a search warrant to do that!";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsFlagspaceHeaderFormat = "Stats for flagspace {0}:";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsFlagspaceEntriesFormat = "  {0} entries in flag table.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsFlagspaceFlagsetsFormat = "  {0} different flagsets in use. {1} objects with no flags set.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsFlagspaceMostCommonFormat = "  {0} objects share the most common set of flags.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsFlagspaceUniqueFormat = "  {0} objects have unique flagsets.";
-		public const string StatsTablesHeader = "Table        Entries";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsTablesRowFormat = "{0,-12} {1,7}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string StatsChunksUnsupportedFormat = "@stats/{0}: SharpMUSH has no chunk allocator. Attributes live in the database provider, which keeps no equivalent counters.";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EntrancesToFormat = "Entrances to {0}:";
@@ -1869,51 +1202,19 @@ public static class ErrorMessages
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CannotModifySystemFlagFormat = "Cannot modify system flag '{0}'.";
-		public const string FlagDebugRequiresName = "@FLAG/DEBUG requires a flag name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FlagDisableEnableRequiresNameFormat = "@FLAG/{0} requires a flag name.";
-		public const string FlagUsage = "Usage: @flag/list, @flag/add <name>=<symbol>, @flag/delete <name>, @flag/letter <name>[=<letter>], @flag/type <name>=<types>, @flag/alias <name>=<aliases>, @flag/restrict <name>=<permissions>, @flag/decompile <name>";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CannotModifySystemPowerFormat = "Cannot modify system power '{0}'.";
-		public const string PowerTypeRequiresNameAndTypes = "@POWER/TYPE requires power name and type restrictions.";
-		public const string PowerNameAndTypesCannotBeEmpty = "Power name and types cannot be empty.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerTypeUpdatedFormat = "Power '{0}' type restrictions updated to: {1}.";
-		public const string PowerRestrictRequiresNameAndPermissions = "@POWER/RESTRICT requires power name and permissions.";
-		public const string PowerNameAndPermissionsCannotBeEmpty = "Power name and permissions cannot be empty.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerPermissionsUpdatedFormat = "Power '{0}' permissions updated to: {1}.";
-		public const string PowerDecompileRequiresName = "@POWER/DECOMPILE requires a power name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerDisableEnableRequiresNameFormat = "@POWER/{0} requires a power name.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CannotDisableSystemPowerFormat = "Cannot disable system power '{0}'.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerDisabledFormat = "Power '{0}' disabled.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerEnabledFormat = "Power '{0}' enabled.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToDisablePowerFormat = "Failed to disable power '{0}'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string FailedToEnablePowerFormat = "Failed to enable power '{0}'.";
-		// PennMUSH src/flags.c do_flag_letter.
-		public const string PowerLetterRequiresName = "@POWER/LETTER requires a power name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerLetterSetFormat = "Letter for power {0} set to '{1}'.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerLetterClearedFormat = "Letter for power {0} cleared.";
-		public const string PowerCharactersMustBeSingleCharacters = "Power characters must be single characters.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PowerLetterConflictFormat = "Letter conflicts with the {0} power.";
-		public const string PowerUsage = "Usage: @power <power>, @power <object>=[!]<power> [[!]<power>...], @power/list, @power/add <name>=<alias>, @power/delete <name>, @power/alias <name>=<alias>, @power/letter <name>[=<letter>], @power/type <name>=<types>, @power/restrict <name>=<permissions>, @power/decompile <name>";
 
 		public const string FullMotdCleared = "Full MOTD cleared.";
 		public const string RejectMotdUsage = "Usage: @rejectmotd <message>";
 		public const string FullMotdSet = "Full MOTD set.";
-		public const string WizMotdCleared = "Wizard MOTD cleared.";
-		public const string WizMotdUsage = "Usage: @wizmotd <message>";
-		public const string WizMotdSet = "Wizard MOTD set.";
 
 		public const string NoSuggestionCategoriesDefined = "No suggestion categories defined.";
 		public const string SuggestAddUsage = "Usage: @suggest/add <category>=<word>";
@@ -1932,32 +1233,8 @@ public static class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SuggestCategoryWordCountFormat = "Category '{0}' ({1} words):";
 		public const string SuggestUsage = "Usage: @suggest[/list], @suggest <category>, @suggest/add <category>=<word>, @suggest/delete <category>=<word>";
-
-		public const string BootPortUsage = "Usage: @boot/port <descriptor number>";
-		public const string BootDescriptorMustBeNumber = "Descriptor number must be a number.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string BootNoSuchDescriptorFormat = "No such descriptor: {0}.";
-		public const string BootUsage = "Usage: @boot <player> | @boot/me | @boot/port <descriptor>";
 		public const string PlayerNotConnected = "That player is not connected.";
 		public const string YouHaveBeenDisconnected = "You have been disconnected.";
-
-		public const string HookMustSpecifyCommandName = "You must specify a command name.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HookNoHooksForCommandFormat = "No hooks set for command '{0}'.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HookListHeaderFormat = "Hooks for command '{0}':";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HookEntryFormat = "  {0}: {1}/{2}{3}";
-		public const string HookMustSpecifyType = "You must specify a hook type: /ignore, /override, /before, /after, or /extend";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HookClearedFormat = "Hook '{0}' cleared for command '{1}'.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HookNotSetFormat = "No '{0}' hook set for command '{1}'.";
-		public const string HookMustSpecifyObject = "You must specify an object.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HookAttributeNotFoundFormat = "Attribute '{0}' not found on object {1}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string HookSetFormat = "Hook '{0}' set for command '{1}'{2}.";
 
 		public const string NewPasswordGenerateSwitchConflict = "@NEWPASSWORD: /GENERATE switch cannot be used with other arguments.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1967,49 +1244,14 @@ public static class ErrorMessages
 
 		public const string PurgeComplete = "Purge complete.";
 
-		public const string ShutdownOnlyGodPanic = "Only God can perform a panic shutdown.";
-		public const string ShutdownPanicInitiated = "PANIC SHUTDOWN initiated by God.";
-		public const string ShutdownRebootInitiated = "REBOOT initiated. In SharpMUSH's web-based architecture:";
-		public const string ShutdownRebootDocker = "- For Docker/Kubernetes: Update deployment to trigger rolling restart";
-		public const string ShutdownRebootStandalone = "- For standalone: Restart the web application";
-		public const string ShutdownRebootRedis = "- Player connections will be preserved via Redis state store";
-		public const string ShutdownParanoidInitiated = "PARANOID SHUTDOWN initiated.";
-		public const string ShutdownParanoidDatabase = "Database state is continuously persisted.";
-		public const string ShutdownInitiated = "SHUTDOWN initiated.";
-		public const string ShutdownNoteWebApp = "Note: SharpMUSH runs as a web application. Traditional shutdown is not applicable.";
-		public const string ShutdownNoteOrchestration = "In cloud/container deployments, use your orchestration tools to manage server lifecycle.";
-		public const string ShutdownNoteNoSave = "Database state is preserved automatically. No explicit save is needed.";
-
 		public const string ChownAllUsage = "Usage: @chownall <player>[=<new owner>]";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ChownAllCompleteFormat = "Changed ownership of {0} object(s) from {1} to {2}.";
-
-		/// <summary>
-		/// PennMUSH src/command.c: <c>"%s doesn't know switch %s."</c>, notified in place of running the
-		/// command. Only the first unknown switch is named, as PennMUSH names only the first.
-		/// </summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandUnknownSwitchFormat = "{0} doesn't know switch {1}.";
 
 		/// <summary>PennMUSH src/cmds.c do_list, for a missing or unrecognised <c>@list</c> type.</summary>
 		public const string ListNotUnderstood = "I don't understand what you want to @list.";
 
 		public const string DumpDoesNothing = "Dump command does nothing for SharpMUSH. Consider using @backup.";
-
-		/// <summary>Reported by <c>@backup</c> on a provider that cannot copy its own world; the reason
-		/// comes from the provider, because they differ.</summary>
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string BackupUnavailableFormat = "@backup is not available here: {0}.";
-		public const string BackupStarted = "Copying the world. The game keeps running; this may take a while.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string BackupCompleteFormat = "Backup {0} written ({1}). Keeping {2}.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string BackupFailedFormat = "Backup failed: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string BackupListHeaderFormat = "Backups in {0}:";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string BackupListRowFormat = "  {0}  {1}";
-		public const string BackupListEmpty = "No backups have been taken yet.";
 
 		public const string PlayerCreateInvalidName = "That is not a valid player name.";
 		public const string PlayerNameAlreadyExists = "That player name already exists.";
@@ -2018,50 +1260,12 @@ public static class ErrorMessages
 		/// <summary>PennMUSH src/wiz.c do_pcreate: "New player '%s' (#%d) created with password '%s'".</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PlayerCreatedFormat = "New player '{0}' (#{1}) created with password '{2}'";
-
-		public const string QuotaSetUsage = "Usage: @quota/set <player>=<amount>";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string QuotaForPlayerSetFormat = "Quota for {0} set to {1}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string YourQuotaSetToByFormat = "Your quota has been set to {0} by {1}.";
-		public const string QuotaListingHeader = "Quota listing for all players:";
-		public const string QuotaListingColumnHeader = "Player                      Used/Quota";
-		public const string QuotaListingSeparator = "=========================================";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string QuotaPlayerRowFormat = "{0} {1,4}/{2,-4}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string QuotaPlayerObjectsFormat = "{0}'s quota: {1}/{2} objects used.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AllQuotaSetForPlayerFormat = "Your building quota has been set to {0} by {1}.";
 
-		public const string SitelockCheckRequiresHost = "@SITELOCK/CHECK requires a hostname or IP address.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SitelockHostMatchesFormat = "Host '{0}' matches pattern '{1}' with options: {2}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SitelockHostNoMatchFormat = "Host '{0}' does not match any sitelock rules (default access allowed).";
-		public const string SitelockNameListHeader = "Any name matching these wildcard patterns is banned:";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SitelockNameLockedFormat = "Name {0} locked.";
-		public const string SitelockNameRemoved = "Name removed.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SitelockNameNotBannedFormat = "No banned name pattern is {0}.";
-		public const string SitelockBanRequiresPattern = "@SITELOCK/BAN requires a host pattern.";
-		public const string SitelockRegisterRequiresPattern = "@SITELOCK/REGISTER requires a host pattern.";
-		public const string SitelockRemoveRequiresPattern = "@SITELOCK/REMOVE requires a host pattern.";
-		public const string SitelockInvalidSyntax = "Invalid @SITELOCK syntax. Use '@help @sitelock' for usage information.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SitelockRuleAddedFormat = "Sitelock rule for '{0}' added: {1}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SitelockRuleRemovedFormat = "Sitelock rule for '{0}' removed.";
-		public const string SitelockRuleNotFound = "No sitelock rule was found for that pattern.";
-
 		public const string KickUsage = "Usage: @kick <player>";
-
-		public const string PollMessageCleared = "Poll message cleared.";
-		public const string PollNoPollMessage = "No poll message is currently set.";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string PollCurrentMessageFormat = "Current poll: {0}";
-		public const string PollMessageSet = "Poll message set.";
 
 		public const string ReadCacheServiceNotAvailable = "Text file service not available.";
 		public const string ReadCacheReindexing = "Reindexing text files...";

@@ -37,10 +37,6 @@
    "command": "think [flags(*Wiz)] [flags(*Alice)]"
   },
   {
-   "key": "05-import/import.rooms#0",
-   "command": "think [name(loc(*Alice))] [type(loc(*Alice))] [get(loc(*Alice)/DESC)]"
-  },
-  {
    "key": "05-import/import.rooms#1",
    "command": "look"
   },
@@ -59,10 +55,6 @@
   {
    "key": "05-import/import.things#2",
    "command": "think [loc(first(lcon(*Alice)))=loc(*Alice)] [owner(first(lcon(*Alice)))=owner(*Alice)]"
-  },
-  {
-   "key": "05-import/import.things#3",
-   "command": "think [get(first(lcon(*Alice))/DESC)]"
   },
   {
    "key": "10-player-commands/comm.page#0",
@@ -183,22 +175,6 @@
   {
    "key": "10-player-commands/setup.sessions#1",
    "command": "Bob bobpass"
-  },
-  {
-   "key": "20-admin-commands/admin.denied#0",
-   "command": "@pcreate Mallory=x"
-  },
-  {
-   "key": "20-admin-commands/admin.denied#2",
-   "command": "@force *Wiz=say hi"
-  },
-  {
-   "key": "20-admin-commands/admin.force#0",
-   "command": "@force *Alice=say forced hello"
-  },
-  {
-   "key": "20-admin-commands/admin.force#2",
-   "command": "@trigger *Alice/TRIG=1"
   },
   {
    "key": "20-admin-commands/admin.lists#0",
@@ -355,10 +331,6 @@
   {
    "key": "40-compat-choices/choice.dropto#3",
    "command": "@create EventSink"
-  },
-  {
-   "key": "40-compat-choices/choice.dropto#5",
-   "command": "@trigger EventSink/MKROOM"
   },
   {
    "key": "40-compat-choices/choice.dropto#9",

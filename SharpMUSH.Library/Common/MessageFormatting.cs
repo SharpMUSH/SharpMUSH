@@ -1,12 +1,32 @@
 using MarkupString;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Services.Interfaces;
 using static MarkupString.MStringInterpolation;
 
 namespace SharpMUSH.Library.Common;
 
 public static class MessageFormatting
 {
+	/// <summary>
+	/// PennMUSH's <c>unparse_object</c> (<c>src/unparse.c:39</c> into <c>real_unparse</c>): the object's
+	/// name, and its dbref with flag symbols after it when the viewer is allowed to see them.
+	/// </summary>
+	/// <remarks>
+	/// <c>unparse_object</c> passes <c>obey_myopic = 0</c>, so MYOPIC does not suppress the dbref here —
+	/// that is <c>unparse_object_myopic</c>. The visibility test is <c>real_unparse</c>'s
+	/// (<c>src/unparse.c:118-119</c>): examine, link-to, or any of JUMP_OK / CHOWN_OK / DESTROY_OK.
+	/// </remarks>
+	public static async ValueTask<string> UnparseObjectAsync(IPermissionService permissions,
+		AnySharpObject viewer, AnySharpObject target)
+	{
+		var showReference = await permissions.CanExamine(viewer, target)
+			|| await permissions.CanLinkToAsync(viewer, target) || await target.HasFlag("JUMP_OK")
+			|| await target.HasFlag("CHOWN_OK") || await target.HasFlag("DESTROY_OK");
+		return showReference ? await FormatObjectWithDbref(target.Object()) : target.Object().Name;
+	}
+
 	/// <summary>
 	/// The concatenated flag symbols of an object, as PennMUSH appends them after a dbref.
 	/// </summary>
