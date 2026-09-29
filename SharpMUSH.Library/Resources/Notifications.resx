@@ -1781,13 +1781,7 @@
     <value>Options in {0}:</value>
   </data>
   <data name="ConfigOptionValueFormat" xml:space="preserve">
-    <value>  {0}: {1}</value>
-  </data>
-  <data name="ConfigOptionDescriptionFormat" xml:space="preserve">
-    <value>  Description: {0}</value>
-  </data>
-  <data name="ConfigOptionCategoryFormat" xml:space="preserve">
-    <value>  Category: {0}</value>
+    <value> {0,-40} {1}</value>
   </data>
   <data name="ConfigNoCategoryOrOptionFormat" xml:space="preserve">
     <value>No configuration category or option named '{0}'.</value>
