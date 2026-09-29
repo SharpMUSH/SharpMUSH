@@ -9,9 +9,9 @@
 {
     <MudProgressLinear Indeterminate="true" />
 }
-else if (_failed)
+else if (_error is not null)
 {
-    <MudAlert Severity="Severity.Error" Dense="true">@Loc["HelpLoadFailed"]</MudAlert>
+    <MudAlert Severity="Severity.Error" Dense="true">@Loc["HelpLoadFailed"] @_error</MudAlert>
 }
 else if (_entry is not null && _entry.Topic is not null)
 {
@@ -43,7 +43,7 @@ else
 
     private GameHelpEntry? _entry;
     private bool _loading = true;
-    private bool _failed;
+    private string? _error;
     private string? _loadedTopic;
 
     protected override async Task OnParametersSetAsync()
@@ -57,9 +57,12 @@ else
         _loadedTopic = key;
 
         _loading = true;
-        _failed = false;
-        _entry = Admin ? await Help.GetAdminEntryAsync(Topic) : await Help.GetEntryAsync(Topic);
-        _failed = _entry is null;
+        var result = Admin ? await Help.GetAdminEntryAsync(Topic) : await Help.GetEntryAsync(Topic);
+        (_entry, _error) = result switch
+        {
+            GameHelpEntry entry => (entry, null),
+            ApiFailure failure => ((GameHelpEntry?)null, failure.Message)
+        };
         _loading = false;
     }
 

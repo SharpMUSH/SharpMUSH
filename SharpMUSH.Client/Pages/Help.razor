@@ -21,7 +21,7 @@
     }
     else if (_index is null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true">@Loc["HelpLoadFailed"]</MudAlert>
+        <MudAlert Severity="Severity.Error" Dense="true">@Loc["HelpLoadFailed"] @_error</MudAlert>
     }
     else
     {
@@ -53,7 +53,11 @@
 
         <AuthorizeView Roles="Wizard,God">
             <Authorized>
-                @if (_adminIndex is not null)
+                @if (_adminError is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="help-admin">@Loc["HelpLoadFailed"] @_adminError</MudAlert>
+                }
+                else if (_adminIndex is not null)
                 {
                     <section class="help-body help-topics help-admin">
                         <h2 class="help-section-title">@Loc["HelpAdminTitle"]</h2>
@@ -74,6 +78,8 @@
 @code {
     private GameHelpIndex? _index;
     private GameHelpIndex? _adminIndex;
+    private string? _error;
+    private string? _adminError;
     private bool _loading = true;
     private string _filter = string.Empty;
 
@@ -90,7 +96,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _index = await HelpFiles.GetIndexAsync();
+        var result = await HelpFiles.GetIndexAsync();
+        (_index, _error) = result switch
+        {
+            GameHelpIndex index => (index, null),
+            ApiFailure failure => ((GameHelpIndex?)null, failure.Message)
+        };
 
         // Only staff ask for the admin corpus. The gate that matters is the server's 403 on
         // /api/help/admin — this check just keeps every anonymous page view from spending a
@@ -100,7 +111,12 @@
             var user = (await AuthState).User;
             if (user.IsInRole("Wizard") || user.IsInRole("God"))
             {
-                _adminIndex = await HelpFiles.GetAdminIndexAsync();
+                var admin = await HelpFiles.GetAdminIndexAsync();
+                (_adminIndex, _adminError) = admin switch
+                {
+                    GameHelpIndex index => (index, null),
+                    ApiFailure failure => ((GameHelpIndex?)null, failure.Message)
+                };
             }
         }
 
