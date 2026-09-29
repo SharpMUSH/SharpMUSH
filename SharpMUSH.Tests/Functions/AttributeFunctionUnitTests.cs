@@ -858,6 +858,34 @@ public class AttributeFunctionUnitTests
 		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo($"Read via {alias}.|Read via {alias}.|0");
 	}
 
+	/// <summary>
+	/// The alias lives in the one by-name read every function goes through, so everything that gets or
+	/// evaluates an attribute by name sees it. Listing does not: <c>lattr()</c> matches stored names only.
+	/// </summary>
+	[Test]
+	[Arguments("get(%q0/DESC)", "x%0")]
+	[Arguments("xget(%q0,DESC)", "x%0")]
+	[Arguments("default(%q0/DESC,none)", "x%0")]
+	[Arguments("edefault(%q0/DESC,none)", "x")]
+	[Arguments("udefault(%q0/DESC,none,1)", "x1")]
+	[Arguments("u(%q0/DESC,1)", "x1")]
+	[Arguments("ulocal(%q0/DESC,1)", "x1")]
+	[Arguments("eval(%q0,DESC)", "x")]
+	[Arguments("get_eval(%q0/DESC)", "x")]
+	[Arguments("map(%q0/DESC,a b)", "xa xb")]
+	[Arguments("foreach(%q0/DESC,ab)", "xaxb")]
+	[Arguments("fold(%q0/DESC,a b)", "xa")]
+	[Arguments("hasattr(%q0/DESC)", "1")]
+	[Arguments("hasattrval(%q0/DESC)", "1")]
+	[Arguments("lattr(%q0/DESC)", "")]
+	public async Task EveryByNameReadSeesTheAliasButListingDoesNot(string call, string expected)
+	{
+		var thing = $"AliasAll_{Guid.NewGuid():N}"[..20];
+		var result = await Parser.FunctionParse(MarkupText.Plain(
+			$"[setq(0,create({thing}))][attrib_set(%q0/DESCRIBE,x\\%0)][{call}]"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo(expected);
+	}
+
 	/// <summary>An attribute that really is named like an alias wins over the aliased one, as in atr_get_noparent.</summary>
 	[Test]
 	public async Task AnAttributeNamedLikeAnAliasIsReadFirst()
