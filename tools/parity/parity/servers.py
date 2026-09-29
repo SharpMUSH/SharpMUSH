@@ -125,7 +125,11 @@ class PennMush:
         cnf.write_text("\n".join(lines) + "\n", encoding="utf-8")
         # --disable-socket-quota: netmud allows a connection 100 commands then 1 per second (a
         # compile-time constant); sentinel traffic exhausts that and stalls a session mid-scenario.
-        self.proc = Process("pennmush", ["./netmush", "--no-session", "--disable-socket-quota", "mush.cnf"], self.game, self.logs / "pennmush.out")
+        # PennMUSH takes LC_COLLATE (and LC_CTYPE) from the environment (bsd.c:727), and strcoll decides
+        # the order of @list flags, sort() and friends; pin it so a local run agrees with CI's.
+        penn_env = {**os.environ, "LC_ALL": "C.UTF-8"}
+        self.proc = Process("pennmush", ["./netmush", "--no-session", "--disable-socket-quota", "mush.cnf"], self.game,
+                            self.logs / "pennmush.out", penn_env)
         # Readiness comes from PennMUSH's own log: a probe connection that closes at once wedges its
         # event loop until the next restart (observed), so nothing may connect early.
         wait_for(lambda: log_contains(self.game / "log" / "netmush.log", "RESTART FINISHED"),

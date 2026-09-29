@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
@@ -2536,54 +2537,19 @@ public partial class Commands : ICommandRestrictionApplier
 			return CallState.Empty;
 		}
 
-		if (kind == ListKind.Flags)
+		if (kind is ListKind.Flags or ListKind.Powers)
 		{
-			var output = new System.Text.StringBuilder();
-			var header = useLowercase ? "Object Flags:" : "OBJECT FLAGS:";
-			output.AppendLine(header);
+			// PennMUSH's do_list_flags (src/flags.c): one "Flags: NAME (c), NAME, ..." line from
+			// list_all_flags, whose /lowercase folds the list but not its label.
+			var list = FlagListHelpers.Format(kind == ListKind.Flags
+					? await Mediator.CreateStream(new GetAllObjectFlagsQuery())
+						.Select(f => (f.Name, f.Symbol, f.SetPermissions, f.Disabled)).ToArrayAsync()
+					: await Mediator.CreateStream(new GetPowersQuery())
+						.Select(p => (p.Name, p.Symbol, p.SetPermissions, p.Disabled)).ToArrayAsync(),
+				executor.IsGod(), await executor.IsPriv());
+			var label = kind == ListKind.Flags ? "Flags" : "Powers";
 
-			var headerLine = useLowercase
-				? "name                 symbol type restrictions"
-				: "NAME                 SYMBOL TYPE RESTRICTIONS";
-			output.AppendLine(headerLine);
-			output.AppendLine("-------------------- ------ -------------------");
-
-			var flags = Mediator.CreateStream(new GetAllObjectFlagsQuery());
-			await foreach (var flag in flags)
-			{
-				var flagName = useLowercase ? flag.Name?.ToLower() ?? "" : flag.Name ?? "";
-				var symbol = useLowercase ? flag.Symbol?.ToLower() ?? "" : flag.Symbol ?? "";
-				var types = string.Join(",", (flag.TypeRestrictions ?? []).Select(t => useLowercase ? t?.ToLower() ?? "" : t ?? ""));
-				output.AppendLine($"{flagName,-20} {symbol,-6} {types}");
-			}
-
-			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
-			return CallState.Empty;
-		}
-
-		if (kind == ListKind.Powers)
-		{
-			var output = new System.Text.StringBuilder();
-			var header = useLowercase ? "Object Powers:" : "OBJECT POWERS:";
-			output.AppendLine(header);
-
-			var headerLine = useLowercase
-				? "name                 symbol alias              type restrictions"
-				: "NAME                 SYMBOL ALIAS              TYPE RESTRICTIONS";
-			output.AppendLine(headerLine);
-			output.AppendLine("-------------------- ------ ------------------ -------------------");
-
-			var powers = Mediator.CreateStream(new GetPowersQuery());
-			await foreach (var power in powers)
-			{
-				var powerName = useLowercase ? power.Name.ToLower() : power.Name;
-				var alias = useLowercase ? power.Alias.ToLower() : power.Alias;
-				// A power's letter is case-sensitive, so /lowercase never folds it.
-				var types = string.Join(",", power.TypeRestrictions.Select(t => useLowercase ? t.ToLower() : t));
-				output.AppendLine($"{powerName,-20} {power.Symbol,-6} {alias,-18} {types}");
-			}
-
-			await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
+			await NotifyService.Notify(executor, $"{label}: {(useLowercase ? list.ToLowerInvariant() : list)}", executor);
 			return CallState.Empty;
 		}
 

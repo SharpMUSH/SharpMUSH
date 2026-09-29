@@ -109,6 +109,9 @@ routing. Those are behaviour and appear as differences.
   it is a bug for `baseline.json`. Each entry needs `id`, `scenario`, `case`, optional `step`,
   `reason`, `tracking`, `profile` (the text of the profile's `## ` heading that documents it; the
   harness refuses a heading that is not there) and, when `step` is given, that step's `command`.
+  An entry may also give `sharp` and `penn` (always both): the exact normalized output of each server
+  it accepts. Any other output on either side is still a difference, so an entry for SharpMUSH-only
+  additions to a list cannot also hide a wrong or missing item.
   `CompatibilityProfileStructureTests` (in `SharpMUSH.Tests`) also checks, without a PennMUSH build,
   that each `profile` heading is an entry marked **A choice.**, not an unresolved question.
   A step that differs *and* is allowlisted is reported as `known-difference`; an entry whose steps all
@@ -116,7 +119,8 @@ routing. Those are behaviour and appear as differences.
   failure.
 - `baseline.json` is **not** an allowlist. It lists steps that differ today because of *open parity
   bugs*, so CI can ratchet: `--baseline` fails only on differences outside it, and also fails when a
-  baseline step starts matching, so the fixing PR must delete the entry. Regenerate with
+  baseline step starts matching (or is left with only a difference an allowlist `sharp`/`penn` pin accepts),
+  so the fixing PR must delete the entry. Regenerate with
   `tools/parity/run.sh --write-baseline --allow-failures` (a full run: it refuses `--only`, and it
   does not write while any step is an ERROR). Fix PRs should shrink it.
 - Step keys are positional (`scenario/case#index`), so both files also record each step's command.
