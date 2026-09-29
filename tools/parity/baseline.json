@@ -341,10 +341,6 @@
    "command": "@create EventSink"
   },
   {
-   "key": "40-compat-choices/choice.dropto#5",
-   "command": "@trigger EventSink/MKROOM"
-  },
-  {
    "key": "40-compat-choices/choice.dropto#9",
    "command": "@link [get(EventSink/DROPROOM)]=[loc(*Alice)]"
   },
