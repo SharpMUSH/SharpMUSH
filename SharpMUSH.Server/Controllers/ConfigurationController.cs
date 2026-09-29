@@ -234,13 +234,14 @@ public class ConfigurationController(
 			var tempFile = Path.GetTempFileName();
 			await System.IO.File.WriteAllTextAsync(tempFile, configContent);
 
-			var import = ReadPennMushConfig.Import(tempFile);
+			var import = ReadPennMushConfig.Import(tempFile, followIncludes: false);
 			var importedOptions = import.Options;
 
 			System.IO.File.Delete(tempFile);
 
-			// An uploaded mush.cnf arrives alone, so the restrict.cnf and alias.cnf it includes are not
-			// beside it; each line that could not be carried over is named rather than lost silently.
+			// An uploaded mush.cnf arrives alone. Its include lines are not followed, since they would name
+			// files on this server, so the restrict.cnf and alias.cnf it includes are not read; each line
+			// that could not be carried over is named rather than lost silently.
 			foreach (var line in import.Skipped)
 			{
 				logger.LogWarning("Configuration import did not carry over: {Line}", line);

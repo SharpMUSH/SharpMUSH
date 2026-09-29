@@ -46,6 +46,36 @@ public class ConfigurationControllerTests
 		await Assert.That(response.Configuration.Net.SslPort).IsEqualTo((uint)4206);
 	}
 
+	/// <summary>
+	/// An uploaded configuration's <c>include</c> is not followed: it would name a file on the server,
+	/// and whatever that file sets would be read into the configuration and sent back in the response.
+	/// </summary>
+	[Test]
+	public async Task ImportConfiguration_DoesNotFollowAnIncludeToAServerFile()
+	{
+		var database = WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
+		var optionsWrapper = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var configReloadService = WebAppFactoryArg.Services.GetRequiredService<ConfigurationReloadService>();
+		var logger = WebAppFactoryArg.Services.GetRequiredService<ILogger<ConfigurationController>>();
+
+		var controller = new ConfigurationController(optionsWrapper, database, configReloadService, logger);
+
+		var serverFile = Path.Join(Path.GetTempPath(), $"sharpmush-server-{Guid.NewGuid():N}.cnf");
+		await File.WriteAllLinesAsync(serverFile, ["mud_name Read From The Server", "restrict_command @dig nobody"]);
+		try
+		{
+			var result = await controller.ImportConfiguration($"mud_name Test MUSH Uploaded\ninclude {serverFile}\n");
+
+			await Assert.That(result.Result).IsTypeOf<OkObjectResult>();
+			var response = (ConfigurationResponse)((OkObjectResult)result.Result!).Value!;
+			await Assert.That(response.Configuration.Net.MudName).IsEqualTo("Test MUSH Uploaded");
+		}
+		finally
+		{
+			File.Delete(serverFile);
+		}
+	}
+
 	[Test]
 	public async Task ImportConfiguration_EmptyConfig_ReturnsOk()
 	{

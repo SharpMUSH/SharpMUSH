@@ -425,8 +425,10 @@ answered `Use @recycle instead` and the thing is not destroyed (`game/restrictcn
 own permission check allows: a player's `@destroy <thing>` destroys the thing, and a guest can
 `@create`. An imported game keeps its own: reading a PennMUSH `mush.cnf` follows its `include` lines,
 as `config_file_startup` does, and carries each `restrict_command` line into `command_restrictions`
-and each `restrict_function` line into `function_restrictions`. A line that cannot be carried (an
-include that cannot be read, a restriction with no value, a `restrict_attribute`) is logged by name.<br>
+and each `restrict_function` line into `function_restrictions` (kept, but not yet applied to
+functions). A line that cannot be carried (an include that cannot be read, a restriction with no value,
+a `restrict_attribute`) is logged by name, and so is every `include` in a `mush.cnf` uploaded through
+the portal, which is not followed because it would name a file on the server.<br>
 **Why.** Those lines are one site's policy, not the engine's behaviour — `restrict.cnf` is a file the
 administrator edits, and two PennMUSH games rarely ship the same one. Taking `@destroy` away from
 ordinary players on a fresh install is the game's decision to make, and SharpMUSH does not make it for

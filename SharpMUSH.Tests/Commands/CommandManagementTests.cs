@@ -776,14 +776,14 @@ public class CommandManagementTests
 		var clone = CommandName();
 		await As(wizard, $"@command/clone think={clone}");
 
-		var game = Path.Combine(Path.GetTempPath(), $"sharpmush-game-{Guid.NewGuid():N}");
+		var game = Path.Join(Path.GetTempPath(), $"sharpmush-game-{Guid.NewGuid():N}");
 		Directory.CreateDirectory(game);
 		try
 		{
-			await File.WriteAllLinesAsync(Path.Combine(game, "restrict.cnf"), [$"restrict_command {clone} wizard \" Imported refusal."]);
-			await File.WriteAllLinesAsync(Path.Combine(game, "mush.cnf"), ["include restrict.cnf"]);
+			await File.WriteAllLinesAsync(Path.Join(game, "restrict.cnf"), [$"restrict_command {clone} wizard \" Imported refusal."]);
+			await File.WriteAllLinesAsync(Path.Join(game, "mush.cnf"), ["include restrict.cnf"]);
 
-			var imported = ReadPennMushConfig.Create(Path.Combine(game, "mush.cnf"));
+			var imported = ReadPennMushConfig.Create(Path.Join(game, "mush.cnf"));
 			await Restrictions.ApplyConfiguredRestrictionsAsync(imported.Restriction.CommandRestrictions);
 		}
 		finally

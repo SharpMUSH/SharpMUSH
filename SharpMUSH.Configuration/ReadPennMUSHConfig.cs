@@ -22,10 +22,16 @@ public static partial class ReadPennMushConfig
 	/// <c>include</c> lines, and the shipped <c>mush.cnf</c> keeps every <c>restrict_command</c> in the
 	/// <c>restrict.cnf</c> it includes; reading neither lost all of a game's command restrictions.
 	/// </summary>
-	public static PennMushConfigImport Import(string configFile)
+	/// <param name="configFile">The <c>mush.cnf</c> to read.</param>
+	/// <param name="followIncludes">
+	/// False for a file that did not come from the server's own disk, such as one uploaded through the
+	/// portal: its <c>include</c> lines are reported rather than followed, so it cannot name a file on
+	/// the server and have that file's settings read back into the configuration.
+	/// </param>
+	public static PennMushConfigImport Import(string configFile, bool followIncludes = true)
 	{
 		List<string> skipped = [];
-		var text = ReadWithIncludes(configFile, skipped);
+		var text = ReadWithIncludes(configFile, skipped, followIncludes);
 
 		var propertyDictionary = ConfigMetadata.PropertyToAttributeName;
 		var configDictionary = ConfigMetadata.AttributeToPropertyName.Keys
@@ -311,6 +317,13 @@ public static partial class ReadPennMushConfig
 			)
 		};
 
+		// Carried so the game's restrictions are kept and shown, but nothing applies function_restrictions
+		// to the function table yet, so each is named rather than claimed as working.
+		foreach (var (name, restriction) in work.Restriction.FunctionRestrictions)
+		{
+			skipped.Add($"restrict_function {name} {restriction[0]}: kept in function_restrictions, but SharpMUSH does not apply it yet.");
+		}
+
 		foreach (var line in text.Where(line => DirectiveName(line) is { } name
 							 && name.StartsWith("restrict_", StringComparison.OrdinalIgnoreCase)
 							 && !name.Equals("restrict_command", StringComparison.OrdinalIgnoreCase)
@@ -331,7 +344,7 @@ public static partial class ReadPennMushConfig
 	/// the shipped <c>mush.cnf</c>. An include that cannot be read is reported and passed over, as
 	/// PennMUSH logs it and reads on; only the top-level file has to exist.
 	/// </summary>
-	private static List<string> ReadWithIncludes(string configFile, List<string> skipped, int depth = 0)
+	private static List<string> ReadWithIncludes(string configFile, List<string> skipped, bool followIncludes, int depth = 0)
 	{
 		List<string> lines = [];
 		foreach (var line in File.ReadAllLines(configFile))
@@ -349,6 +362,12 @@ public static partial class ReadPennMushConfig
 				continue;
 			}
 
+			if (!followIncludes)
+			{
+				skipped.Add($"include {included}: not followed, because an uploaded configuration cannot read files on the server; nothing it sets was carried over.");
+				continue;
+			}
+
 			if (depth >= 10)
 			{
 				skipped.Add($"include {included} in {configFile}: include depth too deep, not read.");
@@ -357,10 +376,10 @@ public static partial class ReadPennMushConfig
 
 			var path = Path.IsPathRooted(included)
 				? included
-				: Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configFile)) ?? "", included);
+				: Path.Join(Path.GetDirectoryName(Path.GetFullPath(configFile)), included);
 			try
 			{
-				lines.AddRange(ReadWithIncludes(path, skipped, depth + 1));
+				lines.AddRange(ReadWithIncludes(path, skipped, followIncludes, depth + 1));
 			}
 			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
 			{

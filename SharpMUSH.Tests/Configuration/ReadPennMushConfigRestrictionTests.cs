@@ -28,14 +28,14 @@ public class ReadPennMushConfigRestrictionTests
 
 	private static string GameDirectory()
 	{
-		var directory = Path.Combine(Path.GetTempPath(), $"sharpmush-game-{Guid.NewGuid():N}");
+		var directory = Path.Join(Path.GetTempPath(), $"sharpmush-game-{Guid.NewGuid():N}");
 		Directory.CreateDirectory(directory);
 		return directory;
 	}
 
 	private static string Write(string directory, string name, params string[] lines)
 	{
-		var path = Path.Combine(directory, name);
+		var path = Path.Join(directory, name);
 		File.WriteAllLines(path, lines);
 		return path;
 	}
@@ -61,7 +61,11 @@ public class ReadPennMushConfigRestrictionTests
 			await Assert.That(commands["@destroy"]).IsEquivalentTo(new[] { "noplayer \" Use @recycle instead" });
 			await Assert.That(commands["warn_on_missing"]).IsEquivalentTo(new[] { "nobody" });
 			await Assert.That(import.Options.Restriction.FunctionRestrictions["lstats"]).IsEquivalentTo(new[] { "noguest" });
-			await Assert.That(import.Skipped).IsEmpty();
+			// Kept, but nothing applies function_restrictions yet, so the report says so.
+			await Assert.That(import.Skipped).IsEquivalentTo(new[]
+			{
+				"restrict_function lstats noguest: kept in function_restrictions, but SharpMUSH does not apply it yet."
+			});
 		}
 		finally
 		{
@@ -79,8 +83,8 @@ public class ReadPennMushConfigRestrictionTests
 		var game = GameDirectory();
 		try
 		{
-			Directory.CreateDirectory(Path.Combine(game, "local"));
-			Write(game, Path.Combine("local", "more.cnf"), "restrict_command @dig builder");
+			Directory.CreateDirectory(Path.Join(game, "local"));
+			Write(game, Path.Join("local", "more.cnf"), "restrict_command @dig builder");
 			Write(game, "restrict.cnf", "restrict_command @open noguest", "include local/more.cnf");
 			var mushCnf = Write(game, "mush.cnf", "restrict_command ahelp admin", "include restrict.cnf");
 
@@ -173,6 +177,34 @@ public class ReadPennMushConfigRestrictionTests
 
 			await Assert.That(commands["@wall"]).IsEquivalentTo(new[] { "wizard" });
 			await Assert.That(commands["@boot"]).IsEquivalentTo(new[] { "=#12" });
+		}
+		finally
+		{
+			Directory.Delete(game, true);
+		}
+	}
+
+	/// <summary>
+	/// A configuration that did not come from the server's disk has its <c>include</c> lines reported,
+	/// not followed, so it cannot read a file on the server into the configuration.
+	/// </summary>
+	[Test]
+	public async Task IncludesNotFollowed_AreReportedAndNothingIsRead()
+	{
+		var game = GameDirectory();
+		try
+		{
+			var serverFile = Write(game, "secret.cnf", "sql_password hunter2", "restrict_command @dig nobody");
+			var uploaded = Write(game, "uploaded.cnf", "mud_name Uploaded", $"include {serverFile}");
+
+			var import = ReadPennMushConfig.Import(uploaded, followIncludes: false);
+
+			await Assert.That(import.Options.Net.SqlPassword).IsNotEqualTo("hunter2");
+			await Assert.That(import.Options.Restriction.CommandRestrictions).IsEmpty();
+			await Assert.That(import.Skipped).IsEquivalentTo(new[]
+			{
+				$"include {serverFile}: not followed, because an uploaded configuration cannot read files on the server; nothing it sets was carried over."
+			});
 		}
 		finally
 		{
