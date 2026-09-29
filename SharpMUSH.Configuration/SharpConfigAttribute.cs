@@ -46,4 +46,12 @@ public class SharpConfigAttribute : Attribute
 	/// both <c>uint</c> — so it is declared here. See <see cref="ConfigValueDisplay"/>.
 	/// </summary>
 	public bool Dbref { get; set; }
+
+	/// <summary>
+	/// The option is a default-flag list, PennMUSH's <c>cf_flag</c> handler (<c>src/conf.c:709</c>). That
+	/// handler appends each configured word after a space, so the stored text of a non-empty list
+	/// starts with one; <c>config()</c> and <c>@config</c> print it as stored. See
+	/// <see cref="ConfigValueDisplay"/>.
+	/// </summary>
+	public bool Flag { get; set; }
 }
