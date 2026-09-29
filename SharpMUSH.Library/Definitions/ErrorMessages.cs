@@ -628,6 +628,19 @@ public static partial class ErrorMessages
 		public const string CantPickThatUp = "You can't pick that up.";
 		/// <summary>PennMUSH <c>src/rob.c:323</c>: the object's give lock refused.</summary>
 		public const string CantGiveThatAway = "You can't give that away.";
+		/// <summary>
+		/// PennMUSH <c>src/rob.c:287</c>, <c>:296</c> and <c>:538</c>: <c>give</c> named no recipient, or
+		/// named one <c>match_result</c> did not find. The same line answers both, which is why a failed
+		/// recipient match cannot go through the notifying locate — that one says "I can't see that here."
+		/// </summary>
+		public const string GiveToWhom = "Give to whom?";
+		/// <summary>
+		/// PennMUSH <c>src/rob.c:309</c>: the gift name matched more than one thing the giver carries.
+		/// <c>rob.c</c> is the only place this bare wording appears — every other ambiguity report names
+		/// what it was looking for (<see cref="DontKnowWhichYouMean"/>) or says "one"
+		/// (<see cref="AmbiguousMatch"/>).
+		/// </summary>
+		public const string DontKnowWhichYouMeanBare = "I don't know which you mean!";
 		/// <summary>PennMUSH <c>src/rob.c:329</c>: the recipient's from lock refused.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string DoesntWantAnythingFromYou = "{0} doesn't want anything from you.";

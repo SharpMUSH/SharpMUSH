@@ -712,6 +712,32 @@ public partial class Commands
 			Env0: thing.Object().DBRef.ToString()));
 	}
 
+	/// <summary>
+	/// <c>match_result(player, recipient, TYPE_PLAYER, MAT_NEAR_THINGS | MAT_ENGLISH)</c>
+	/// (<c>src/rob.c:283-284</c>), member for member. <c>MAT_NEAR_THINGS</c> is
+	/// <c>MAT_OBJECTS | MAT_NEAR</c> (<c>hdrs/match.h:63-64</c>), so three things fall out of it that
+	/// <see cref="LocateFlags.All"/> gets wrong.
+	/// <para>
+	/// <c>MAT_NEAR</c> — <see cref="LocateFlags.OnlyMatchObjectsInLookerLocation"/> — is the one the
+	/// parity gap turned on. <c>*&lt;player&gt;</c> resolves globally, but under <c>MAT_NEAR</c> a
+	/// resolved player is still dropped unless <c>nearby || controls</c> or Long_Fingers
+	/// (<c>src/match.c:398-399</c>), so <c>give *Bob=1</c> from another room finds nothing at all and
+	/// never reaches the amount. Without it SharpMUSH matched Bob anywhere on the game and answered
+	/// about the transfer instead.
+	/// </para>
+	/// <para>
+	/// <c>MAT_HERE</c> and <c>MAT_EXIT</c> are absent, so "here" and a local exit are not recipients;
+	/// and the <c>TYPE_PLAYER</c> preference arrives without <c>MAT_TYPE</c>
+	/// (<see cref="LocateFlags.OnlyMatchTypePreference"/>), which makes it a tie-breaker rather than a
+	/// filter — a thing in the room is still a perfectly good recipient.
+	/// </para>
+	/// </summary>
+	private const LocateFlags GiveRecipientFlags =
+		LocateFlags.MatchMeForLooker | LocateFlags.AbsoluteMatch | LocateFlags.MatchWildCardForPlayerName |
+		LocateFlags.MatchObjectsInLookerLocation | LocateFlags.MatchObjectsInLookerInventory |
+		LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.EnglishStyleMatching |
+		LocateFlags.PlayersPreference;
+
 	[SharpCommand(Name = "GIVE", Switches = ["SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
 		MaxArgs = 0, ParameterNames = ["player", "amount"])]
 	public async ValueTask<Option<CallState>> Give(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -725,7 +751,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(recipientName))
 		{
-			await NotifyService.Notify(executor, "Give to whom?", executor);
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.GiveToWhom, executor);
 			return CallState.Empty;
 		}
 
@@ -735,17 +761,30 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var recipientResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, recipientName, LocateFlags.All);
+		var recipientResult = await LocateService.Locate(parser, executor, executor, recipientName, GiveRecipientFlags);
 
-		if (recipientResult is not AnySharpObject recipient || recipient.IsRoom || recipient.IsExit)
+		// rob.c:284-291 answers a failed recipient match with its own two lines, so the match has to be
+		// the silent one: the notifying locate says "I can't see that here." and then this reported a
+		// second line on top of it.
+		if (recipientResult is Error<string> { Value: var recipientError }
+				&& recipientError == ErrorMessages.Returns.AmbiguousMatch)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.DontKnowWhoYouMean, executor);
 			return CallState.Empty;
 		}
 
-		if (!recipient.IsPlayer && !recipient.IsThing)
+		if (recipientResult is not AnySharpObject recipient)
 		{
-			await NotifyService.Notify(executor, "You can't give things to that.", executor);
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.GiveToWhom, executor);
+			return CallState.Empty;
+		}
+
+		// rob.c has no equivalent refusal — with MAT_NEAR_THINGS a room can still arrive by dbref, and
+		// Penn carries on to the ENTER_OK/controls gate. SharpMUSH stops here; that difference is older
+		// than this fix and no harness step reaches it.
+		if (recipient.IsRoom || recipient.IsExit)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -758,7 +797,15 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var objectResult = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, thingToGive, LocateFlags.All);
+		// Silent for the same reason as the recipient: rob.c:302-310 has its own two lines for a failed
+		// gift match, and the notifying locate prefixed each of them with "I can't see that here."
+		var objectResult = await LocateService.Locate(parser, executor, executor, thingToGive, LocateFlags.All);
+
+		if (objectResult is Error<string> { Value: var giftError } && giftError == ErrorMessages.Returns.AmbiguousMatch)
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.DontKnowWhichYouMeanBare, executor);
+			return CallState.Empty;
+		}
 
 		if (objectResult is not AnySharpObject objectToGive || objectToGive.IsRoom || objectToGive.IsExit)
 		{
