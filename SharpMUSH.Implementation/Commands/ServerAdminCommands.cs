@@ -949,13 +949,21 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// <c>do_stats</c>: the object count by type, over the world or over one owner's objects. SharpMUSH
-	/// removes a destroyed object rather than keeping it as garbage, so there is no garbage figure and
-	/// no "next object" line.
+	/// <c>do_stats</c>: the object count by type, over the world or over one owner's objects. The world's
+	/// line ends with the garbage count, which is always <see cref="ObjectStatsHelpers.Garbage"/> here:
+	/// SharpMUSH removes a destroyed object rather than keeping it as garbage, so there is also never a
+	/// free dbref for Penn's "next object" line to name.
 	/// </summary>
 	private async ValueTask<Option<CallState>> ObjectStatsAsync(AnySharpObject executor, DBRef? owner)
 	{
 		var counts = await ObjectStatsHelpers.CountAsync(Mediator, owner);
+
+		if (owner is null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsWorldCountsFormat), executor,
+				counts.Total, counts.Rooms, counts.Exits, counts.Things, counts.Players, ObjectStatsHelpers.Garbage);
+			return new CallState(counts.ForEveryone());
+		}
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsObjectCountsFormat), executor,
 			counts.Total, counts.Rooms, counts.Exits, counts.Things, counts.Players);
