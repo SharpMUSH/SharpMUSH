@@ -729,8 +729,18 @@ public partial class Commands : ICommandRestrictionApplier
 		// asks, so it is fetched once and only if some entry gets that far.
 		AnySharpObject? lockee = null;
 
-		var named = restrictions
+		var candidates = restrictions
 			.Select(entry => (Name: entry.Key, Words: entry.Value, Found: FindCommand(entry.Key)))
+			.ToList();
+
+		// PennMUSH logs "CONFIG: Invalid command or restriction for <name>." for a line it cannot apply
+		// (config_set, src/conf.c); an imported restrict.cnf names commands SharpMUSH may not have.
+		foreach (var (name, _, _) in candidates.Where(entry => entry.Found is null))
+		{
+			Logger.LogWarning("CONFIG: Invalid command or restriction for {Command}.", name);
+		}
+
+		var named = candidates
 			.Where(entry => entry.Found is not null)
 			.Select(entry => (entry.Name, entry.Words, Found: entry.Found!.Value))
 			.ToList();
@@ -777,6 +787,7 @@ public partial class Commands : ICommandRestrictionApplier
 						attribute.CommandLock = terms;
 						break;
 					default:
+						Logger.LogWarning("CONFIG: Invalid command or restriction for {Command}.", name);
 						continue;
 				}
 			}

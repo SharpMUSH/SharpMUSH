@@ -14,9 +14,24 @@ public static partial class ReadPennMushConfig
 	/// the default on fourteen options, so a world imported from a <c>mush.cnf</c> was not the world a
 	/// fresh <c>@config</c> described.
 	/// </summary>
-	public static SharpMUSHOptions Create(string configFile)
+	public static SharpMUSHOptions Create(string configFile) => Import(configFile).Options;
+
+	/// <summary>
+	/// Reads a PennMUSH <c>mush.cnf</c> as <see cref="Create"/> does, and says which of its lines could
+	/// not be carried over. PennMUSH's <c>config_file_startup</c> (<c>src/conf.c</c>) follows
+	/// <c>include</c> lines, and the shipped <c>mush.cnf</c> keeps every <c>restrict_command</c> in the
+	/// <c>restrict.cnf</c> it includes; reading neither lost all of a game's command restrictions.
+	/// </summary>
+	/// <param name="configFile">The <c>mush.cnf</c> to read.</param>
+	/// <param name="followIncludes">
+	/// False for a file that did not come from the server's own disk, such as one uploaded through the
+	/// portal: its <c>include</c> lines are reported rather than followed, so it cannot name a file on
+	/// the server and have that file's settings read back into the configuration.
+	/// </param>
+	public static PennMushConfigImport Import(string configFile, bool followIncludes = true)
 	{
-		string[] text;
+		List<string> skipped = [];
+		var text = ReadWithIncludes(configFile, skipped, followIncludes);
 
 		var propertyDictionary = ConfigMetadata.PropertyToAttributeName;
 		var configDictionary = ConfigMetadata.AttributeToPropertyName.Keys
@@ -35,15 +50,6 @@ public static partial class ReadPennMushConfig
 			propertyDictionary[nameof(FlagOptions.ThingFlags)],
 			propertyDictionary[nameof(FlagOptions.ChannelFlags)]
 		];
-
-		try
-		{
-			text = File.ReadAllLines(configFile);
-		}
-		catch (Exception ex) when (ex is FileNotFoundException or IOException)
-		{
-			throw;
-		}
 
 		// Keys the configuration file names but SharpMUSH has no option for are ignored: a PennMUSH
 		// mush.cnf carries plenty of them (chunk_swap_file, forking_dump, compress_program...). The
@@ -285,7 +291,10 @@ public static partial class ReadPennMushConfig
 				Enumeration(Get(nameof(DebugOptions.ParserPredictionMode)), d.Debug.ParserPredictionMode)
 			),
 			Alias = d.Alias,
-			Restriction = d.Restriction,
+			Restriction = new RestrictionOptions(
+				CommandRestrictions: Restrictions("restrict_command", text, skipped),
+				FunctionRestrictions: Restrictions("restrict_function", text, skipped)
+			),
 			// The two the default seeds with examples start empty for an import: the game being
 			// imported brings its own names.cnf and access.cnf, and seeding a PennMUSH game with
 			// SharpMUSH's example rules would lock a site nobody asked to lock.
@@ -308,9 +317,153 @@ public static partial class ReadPennMushConfig
 			)
 		};
 
-		return work;
+		// Carried so the game's restrictions are kept and shown, but nothing applies function_restrictions
+		// to the function table yet, so each is named rather than claimed as working.
+		foreach (var (name, restriction) in work.Restriction.FunctionRestrictions)
+		{
+			skipped.Add($"restrict_function {name} {restriction[0]}: kept in function_restrictions, but SharpMUSH does not apply it yet.");
+		}
+
+		foreach (var line in text.Where(line => DirectiveName(line) is { } name
+							 && name.StartsWith("restrict_", StringComparison.OrdinalIgnoreCase)
+							 && !name.Equals("restrict_command", StringComparison.OrdinalIgnoreCase)
+							 && !name.Equals("restrict_function", StringComparison.OrdinalIgnoreCase)))
+		{
+			skipped.Add($"{line.Trim()}: SharpMUSH has no equivalent, so it was not carried over.");
+		}
+
+		return new PennMushConfigImport(work, skipped);
 
 		string Get(string key) => configDictionary[propertyDictionary[key]];
+	}
+
+	/// <summary>
+	/// The file's lines with each <c>include</c> line replaced by the lines of the file it names, as
+	/// <c>config_file_startup</c> reads them: an included file may include others, ten deep at most. A
+	/// relative name is found beside the file that names it, which is PennMUSH's game directory for
+	/// the shipped <c>mush.cnf</c>. An include that cannot be read is reported and passed over, as
+	/// PennMUSH logs it and reads on; only the top-level file has to exist.
+	/// </summary>
+	private static List<string> ReadWithIncludes(string configFile, List<string> skipped, bool followIncludes, int depth = 0)
+	{
+		List<string> lines = [];
+		foreach (var line in File.ReadAllLines(configFile))
+		{
+			if (DirectiveName(line) is not { } name || !name.Equals("include", StringComparison.OrdinalIgnoreCase))
+			{
+				lines.Add(line);
+				continue;
+			}
+
+			var included = DirectiveValue(line);
+			if (included.Length == 0)
+			{
+				skipped.Add($"include in {configFile}: names no file.");
+				continue;
+			}
+
+			if (!followIncludes)
+			{
+				skipped.Add($"include {included}: not followed, because an uploaded configuration cannot read files on the server; nothing it sets was carried over.");
+				continue;
+			}
+
+			if (depth >= 10)
+			{
+				skipped.Add($"include {included} in {configFile}: include depth too deep, not read.");
+				continue;
+			}
+
+			var path = Path.IsPathRooted(included)
+				? included
+				: Path.Join(Path.GetDirectoryName(Path.GetFullPath(configFile)), included);
+			try
+			{
+				lines.AddRange(ReadWithIncludes(path, skipped, followIncludes, depth + 1));
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+			{
+				skipped.Add($"include {included} in {configFile}: cannot read {path} ({ex.Message}); nothing it sets was carried over.");
+			}
+		}
+
+		return lines;
+	}
+
+	/// <summary>
+	/// Every <paramref name="directive"/> line — <c>restrict_command</c> or <c>restrict_function</c> —
+	/// as the name it restricts and the restriction, which is the shape <c>@config/set restrict_command</c>
+	/// stores. PennMUSH applies the lines in order, each replacing the restriction's lock and message,
+	/// so a later line for the same name takes the place of an earlier one here, and says so.
+	/// </summary>
+	private static Dictionary<string, string[]> Restrictions(string directive, IEnumerable<string> lines, List<string> skipped)
+	{
+		var restrictions = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+		foreach (var line in lines.Where(line => directive.Equals(DirectiveName(line), StringComparison.OrdinalIgnoreCase)))
+		{
+			var value = DirectiveValue(line);
+			var space = value.IndexOfAny([' ', '\t']);
+			var name = space < 0 ? value : value[..space];
+			var restriction = space < 0 ? "" : value[(space + 1)..].Trim();
+			if (restriction.Length == 0)
+			{
+				// PennMUSH's own words for the line (config_set, src/conf.c).
+				skipped.Add($"{line.Trim()}: {directive} {name} requires a restriction value.");
+				continue;
+			}
+
+			if (restrictions.TryGetValue(name, out var earlier) && earlier[0] != restriction)
+			{
+				var earlierName = restrictions.Keys.First(key => key.Equals(name, StringComparison.OrdinalIgnoreCase));
+				skipped.Add($"{directive} {earlierName} {earlier[0]}: replaced by the later line {directive} {name} {restriction}.");
+			}
+
+			// Removed first so the key is the later line's spelling of the name.
+			restrictions.Remove(name);
+			restrictions[name] = [restriction];
+		}
+
+		return restrictions;
+	}
+
+	/// <summary>The first word of a configuration line, or null for a blank line or a comment.</summary>
+	private static string? DirectiveName(string line)
+	{
+		var trimmed = line.Trim();
+		if (trimmed.Length == 0 || trimmed[0] == '#')
+		{
+			return null;
+		}
+
+		var space = trimmed.IndexOfAny([' ', '\t']);
+		return space < 0 ? trimmed : trimmed[..space];
+	}
+
+	/// <summary>
+	/// What follows a directive line's first word, as <c>config_file_startup</c> cuts it: a <c>#</c> not
+	/// followed by a digit starts a comment (a <c>#</c> followed by one is a dbref), and trailing space
+	/// goes.
+	/// </summary>
+	private static string DirectiveValue(string line)
+	{
+		var trimmed = line.Trim();
+		var space = trimmed.IndexOfAny([' ', '\t']);
+		if (space < 0)
+		{
+			return "";
+		}
+
+		var value = trimmed[(space + 1)..].TrimStart();
+		for (var i = 0; i < value.Length; i++)
+		{
+			if (value[i] == '#' && (i + 1 >= value.Length || !char.IsDigit(value[i + 1])))
+			{
+				value = value[..i];
+				break;
+			}
+		}
+
+		return value.TrimEnd();
 	}
 
 	private static bool Boolean(string value, bool fallback) =>
