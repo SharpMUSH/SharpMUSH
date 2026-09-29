@@ -191,6 +191,10 @@ public class RealityGameTests
 		var home = await player.Location.WithCancellation(default);
 		var name = "RealityPager" + Guid.NewGuid().ToString("N")[..12];
 		var target = (await objects.GetObjectNodeAsync(await mediator.Send(new CreatePlayerCommand(name, "TestPassword123!", home.Object().DBRef, home.Object().DBRef, 10)))).Expect<SharpPlayer>();
+		// PennMUSH do_page (src/speech.c:927) refuses a recipient who holds no connection at all, so
+		// the reality direction under test only gets a say once the target is logged in.
+		var connections = Get<IConnectionService>();
+		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(connections, target.Object.DBRef);
 		try
 		{
 			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"]), default);
@@ -202,7 +206,11 @@ public class RealityGameTests
 					MarkupText.Plain($"page{(overrideLock ? "/override" : "")} {(byName ? "*" + name : target.Object.DBRef.ToString())}=directional-page-message"));
 			await Assert.That(output.Body.ToString()).Contains("directional-page-message");
 		}
-		finally { await policy.SaveConfigurationAsync(original, default); }
+		finally
+		{
+			await connections.Disconnect(handle);
+			await policy.SaveConfigurationAsync(original, default);
+		}
 	}
 
 	[Test, NotInParallel]

@@ -170,26 +170,56 @@ public partial class Commands
 			? messageArg
 			: messageArg.Substring(1);
 
-		var recipientNames = recipientsText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		var successfulRecipients = new List<AnySharpObject>();
 
-		foreach (var recipientName in recipientNames)
+		// speech.c:905-957 walks the list with next_in_list and resolves each name with lookup_player
+		// and then short_page. Neither is a room-local match, so a page reaches a connected player
+		// wherever they stand — and never reaches anything that is not a player.
+		var unable = new List<string>();
+
+		foreach (var recipientName in NextInList(recipientsText))
 		{
-			if (await LocateService.LocateAndNotifyIfInvalidWithCallState(
-					parser, executor, executor, recipientName, LocateFlags.All | LocateFlags.MatchForPage)
-				is not AnySharpObject recipient)
+			var resolved = await ResolvePageRecipient(recipientName);
+			if (resolved is not AnySharpObject recipient)
 			{
+				// speech.c:911-921 — both misses name the string the pager typed, not an object, and both
+				// add it to the trailing `Unable to page:` line.
+				await NotifyService.Notify(executor, resolved is AmbiguousName
+					? string.Format(ErrorMessages.Notifications.NotSureWhoToPage, recipientName)
+					: string.Format(ErrorMessages.Notifications.CannotFindWhoToPage, recipientName), executor);
+				unable.Add(SafeStringWithSpace(recipientName));
 				continue;
 			}
 
-			if (!isOverride)
+			// speech.c:922-924 computes both gates before reporting either, because the "not connected"
+			// branch below is the one a DARK target's HAVEN or failed lock is reported as.
+			var targetName = recipient.Object().Name;
+			var isHaven = !isOverride && await recipient.HasFlag("HAVEN");
+			var failsLock = !isOverride && !await LockService.Evaluate(LockType.Page, recipient, executor);
+
+			if (!await ConnectionService.IsConnected(recipient)
+					|| (await recipient.IsDark() && (isHaven || failsLock)))
 			{
-				var recipientFlags = recipient.Object().Flags.Value;
-				if (await recipientFlags.AnyAsync(f => f.Name.Equals("HAVEN", StringComparison.OrdinalIgnoreCase)))
+				// speech.c:927-935: a DARK player who would have refused the page is indistinguishable
+				// from one who is not logged in, which is the point of hiding behind DARK.
+				await NotifyService.Notify(executor,
+					string.Format(ErrorMessages.Notifications.NotConnected, targetName), executor);
+
+				if (failsLock)
 				{
-					await NotifyService.Notify(executor, $"{recipient.Object().Name} is not accepting pages.", executor);
-					continue;
+					await DidItService.FailLock(parser, executor, recipient, LockType.Page);
 				}
+
+				unable.Add(SafeStringWithSpace(targetName));
+				continue;
+			}
+
+			if (isHaven)
+			{
+				await NotifyService.Notify(executor,
+					string.Format(ErrorMessages.Notifications.NotAcceptingAnyPages, targetName), executor);
+				unable.Add(SafeStringWithSpace(targetName));
+				continue;
 			}
 
 			if (!isOverride)
@@ -201,31 +231,38 @@ public partial class Commands
 							IPermissionService.InteractType.Page))
 				{
 					await NotifyService.Notify(executor,
-						string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, recipient.Object().Name),
-						executor);
-
-					continue;
-				}
-
-				if (!await LockService.Evaluate(LockType.Page, recipient, executor))
-				{
-					// speech.c:944-948: the pager is told, and then
-					// fail_lock(executor, target, Page_Lock, NULL, NOTHING). The Page lock is not in
-					// lock_msgs, so its failure attributes are the derived PAGE_LOCK`FAILURE /
-					// `OFAILURE / `AFAILURE (lock.c:861-870) that LockMessages.FailureAttributes
-					// builds, and FailLock evaluates them as the recipient. No default: Penn passes
-					// NULL.
-					await NotifyService.Notify(executor,
-						string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, recipient.Object().Name),
-						executor);
-
-					await DidItService.FailLock(parser, executor, recipient, LockType.Page);
-
+						string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, targetName), executor);
+					unable.Add(SafeStringWithSpace(targetName));
 					continue;
 				}
 			}
 
+			if (failsLock)
+			{
+				// speech.c:944-948: the pager is told, and then
+				// fail_lock(executor, target, Page_Lock, NULL, NOTHING). The Page lock is not in
+				// lock_msgs, so its failure attributes are the derived PAGE_LOCK`FAILURE /
+				// `OFAILURE / `AFAILURE (lock.c:861-870) that LockMessages.FailureAttributes
+				// builds, and FailLock evaluates them as the recipient. No default: Penn passes
+				// NULL.
+				await NotifyService.Notify(executor,
+					string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, targetName), executor);
+
+				await DidItService.FailLock(parser, executor, recipient, LockType.Page);
+
+				unable.Add(SafeStringWithSpace(targetName));
+				continue;
+			}
+
 			successfulRecipients.Add(recipient);
+		}
+
+		// speech.c:978-981 holds this back to the end of the scan: one line naming everything the page
+		// could not reach, after each one's own notice.
+		if (unable.Count > 0)
+		{
+			await NotifyService.Notify(executor,
+				string.Format(ErrorMessages.Notifications.UnableToPage, string.Join(' ', unable)), executor);
 		}
 
 		if (successfulRecipients.Count > 0)
@@ -321,13 +358,116 @@ public partial class Commands
 				await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
 			}
 		}
-		else if (recipientNames.Length > 0)
-		{
-			await NotifyService.Notify(executor, "No one to page.", executor);
-		}
 
 		return CallState.Empty;
 	}
+
+	/// <summary>
+	/// plyrlist.c <c>lookup_player</c> (:163) and then bsd.c <c>short_page</c> (:6376), which is how
+	/// <c>do_page</c> (speech.c:908-910) finds a recipient. Neither is a room-local match, so a page
+	/// reaches a player standing anywhere and never reaches anything that is not a player.
+	/// </summary>
+	private async ValueTask<PageRecipient> ResolvePageRecipient(string name)
+	{
+		if (await LookupPlayer(name) is AnySharpObject player)
+		{
+			return player;
+		}
+
+		return await ShortPage(name);
+	}
+
+	/// <summary>
+	/// plyrlist.c <c>lookup_player</c>: a <c>#dbref</c> or objid that names a player, a leading
+	/// <c>*</c> (<c>LOOKUP_TOKEN</c>) stripped, and otherwise the whole name or alias — matched
+	/// case-insensitively and never partially.
+	/// </summary>
+	private async ValueTask<Found<AnySharpObject>> LookupPlayer(string name)
+	{
+		if (name.Length == 0)
+		{
+			return new NotFound();
+		}
+
+		if (name[0] == '#')
+		{
+			return DBRef.TryParse(name, out var dbref)
+					&& await Mediator.Send(new GetObjectNodeQuery(dbref!.Value)) is AnySharpObject and SharpPlayer known
+				? new Found<AnySharpObject>(known)
+				: new NotFound();
+		}
+
+		var lookup = name[0] == '*' ? name[1..] : name;
+
+		return await Mediator.CreateStream(new GetPlayerQuery(lookup)).FirstOrDefaultAsync() is { } found
+			? new Found<AnySharpObject>(found)
+			: new NotFound();
+	}
+
+	/// <summary>
+	/// bsd.c <c>short_page</c> (:6376): the connected players whose name starts with
+	/// <paramref name="name"/>, case-insensitively. A whole-name match wins outright and ends the walk;
+	/// two of them are <see cref="AmbiguousName"/>.
+	/// </summary>
+	private async ValueTask<PageRecipient> ShortPage(string name)
+	{
+		if (name.Length == 0)
+		{
+			return new NotFound();
+		}
+
+		var count = 0;
+		var match = new PageRecipient(new NotFound());
+		DBRef? previous = null;
+
+		await foreach (var connection in ConnectionService.GetAll())
+		{
+			// short_page walks DESC_ITER_CONN, so a socket still at the connect screen is nobody.
+			if (connection.State is not IConnectionService.ConnectionState.LoggedIn || connection.Ref is null)
+			{
+				continue;
+			}
+
+			if (await Mediator.Send(new GetObjectNodeQuery(connection.Ref.Value)) is not AnySharpObject player)
+			{
+				continue;
+			}
+
+			var playerName = player.Object().Name;
+			if (!playerName.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
+			if (playerName.Equals(name, StringComparison.OrdinalIgnoreCase))
+			{
+				return player;
+			}
+
+			// short_page compares against the *previous* match rather than a set, so one player holding
+			// two connections that are not adjacent in the list counts twice and reads as ambiguous.
+			if (previous is null || !connection.Ref.Value.Equals(previous.Value))
+			{
+				previous = connection.Ref.Value;
+				match = player;
+				count++;
+			}
+		}
+
+		return count switch
+		{
+			0 => new NotFound(),
+			1 => match,
+			_ => new AmbiguousName()
+		};
+	}
+
+	/// <summary>
+	/// strutil.c <c>safe_str_space</c>: a name holding a space goes back into the <c>Unable to page:</c>
+	/// list quoted, which is how the pager can tell one name from two.
+	/// </summary>
+	private static string SafeStringWithSpace(string name)
+		=> name.Contains(' ') ? $"\"{name}\"" : name;
 
 	private static Dictionary<string, CallState> PageFormatArguments(
 		MString message, string pageType, string alias, string recipientRefs, MString defaultMessage) => new()
@@ -406,13 +546,13 @@ public partial class Commands
 		// nothing, or an object that cannot hear the whisperer, lands in one `Unable to whisper to:`
 		// line — the deaf one also gets its own `can't hear you` — and the hundredth good target ends
 		// the scan.
-		foreach (var targetName in WhisperTargetNames(targetArg.ToPlainText()))
+		foreach (var targetName in NextInList(targetArg.ToPlainText()))
 		{
 			var found = await LocateService.Locate(parser, executor, executor, targetName, WhisperTargetFlags);
 			if (found is not AnySharpObject target
 					|| !await PermissionService.CanInteract(executor, target, IPermissionService.InteractType.Hear))
 			{
-				unable.Add(targetName.Contains(' ') ? $"\"{targetName}\"" : targetName);
+				unable.Add(SafeStringWithSpace(targetName));
 				if (found is AnySharpObject deaf)
 				{
 					await NotifyService.Notify(executor, $"{deaf.Object().Name} can't hear you.", executor);
@@ -523,14 +663,14 @@ public partial class Commands
 	/// <summary>speech.c: <c>dbref good[100]</c>.</summary>
 	private const int MaxWhisperTargets = 100;
 
-	private static readonly SearchValues<char> WhisperNameBreaks = SearchValues.Create(" \"");
+	private static readonly SearchValues<char> NextInListBreaks = SearchValues.Create(" \"");
 
 	/// <summary>
 	/// strutil.c <c>next_in_list</c>: spaces separate names, a leading <c>"</c> takes everything up to
 	/// the next <c>"</c> as one name, and an unquoted name also stops at a <c>"</c>. Nothing else splits
 	/// a name — <c>#12Lamp</c> is one token, which <c>parse_dbref</c> then refuses as a whole.
 	/// </summary>
-	private static IEnumerable<string> WhisperTargetNames(string list)
+	private static IEnumerable<string> NextInList(string list)
 	{
 		var head = 0;
 		while (true)
@@ -548,7 +688,7 @@ public partial class Commands
 				continue;
 			}
 
-			var stop = list.AsSpan(head).IndexOfAny(WhisperNameBreaks);
+			var stop = list.AsSpan(head).IndexOfAny(NextInListBreaks);
 			var next = stop < 0 ? list.Length : head + stop;
 			yield return list[head..next];
 			head = next;

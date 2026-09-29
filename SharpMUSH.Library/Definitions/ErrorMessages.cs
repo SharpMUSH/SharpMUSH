@@ -650,6 +650,21 @@ public static partial class ErrorMessages
 		/// <summary>PennMUSH <c>src/speech.c:945</c>: the target's page lock refused the pager.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NotAcceptingYourPages = "{0} is not accepting your pages.";
+		/// <summary>PennMUSH <c>src/speech.c:939</c>: the target is HAVEN, so it refuses every pager.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NotAcceptingAnyPages = "{0} is not accepting any pages.";
+		/// <summary>PennMUSH <c>src/speech.c:930</c>: the named player holds no connection.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NotConnected = "{0} is not connected.";
+		/// <summary>PennMUSH <c>src/speech.c:912</c>: the name named no player at all.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string CannotFindWhoToPage = "I can't find who you're trying to page with: {0}";
+		/// <summary>PennMUSH <c>src/speech.c:918</c>: the name fit more than one connected player.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NotSureWhoToPage = "I'm not sure who you want to page with: {0}";
+		/// <summary>PennMUSH <c>src/speech.c:981</c>: every name the scan could not page, space-separated.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string UnableToPage = "Unable to page: {0}";
 
 		// --- Destruction SAFE messages aligned with PennMUSH src/destroy.c ---
 		/// <summary>PennMUSH: when object is SAFE and REALLY_SAFE is true (strict mode).</summary>
