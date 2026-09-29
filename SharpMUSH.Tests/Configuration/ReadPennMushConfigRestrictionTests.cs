@@ -61,11 +61,8 @@ public class ReadPennMushConfigRestrictionTests
 			await Assert.That(commands["@destroy"]).IsEquivalentTo(new[] { "noplayer \" Use @recycle instead" });
 			await Assert.That(commands["warn_on_missing"]).IsEquivalentTo(new[] { "nobody" });
 			await Assert.That(import.Options.Restriction.FunctionRestrictions["lstats"]).IsEquivalentTo(new[] { "noguest" });
-			// Kept, but nothing applies function_restrictions yet, so the report says so.
-			await Assert.That(import.Skipped).IsEquivalentTo(new[]
-			{
-				"restrict_function lstats noguest: kept in function_restrictions, but SharpMUSH does not apply it yet."
-			});
+			// Applied like restrict_command, so there is nothing to report.
+			await Assert.That(import.Skipped).IsEmpty();
 		}
 		finally
 		{

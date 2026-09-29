@@ -317,13 +317,6 @@ public static partial class ReadPennMushConfig
 			)
 		};
 
-		// Carried so the game's restrictions are kept and shown, but nothing applies function_restrictions
-		// to the function table yet, so each is named rather than claimed as working.
-		foreach (var (name, restriction) in work.Restriction.FunctionRestrictions)
-		{
-			skipped.Add($"restrict_function {name} {restriction[0]}: kept in function_restrictions, but SharpMUSH does not apply it yet.");
-		}
-
 		foreach (var line in text.Where(line => DirectiveName(line) is { } name
 							 && name.StartsWith("restrict_", StringComparison.OrdinalIgnoreCase)
 							 && !name.Equals("restrict_command", StringComparison.OrdinalIgnoreCase)

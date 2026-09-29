@@ -7,6 +7,7 @@ using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
 
@@ -64,6 +65,12 @@ public class CommandRestrictionBootstrapTests
 			.Because("a restriction naming a plugin command is skipped if it is applied before the plugin registers it");
 		await Assert.That(restrictions).IsLessThan(startupAttributes)
 			.Because("boot @STARTUP runs as God and must not reach a command the configuration disabled");
+
+		var functions = Array.IndexOf(order, nameof(FunctionRestrictionBootstrapService));
+		await Assert.That(functions).IsGreaterThan(plugins)
+			.Because("function_restrictions has to find a plugin's functions in the table");
+		await Assert.That(functions).IsLessThan(startupAttributes)
+			.Because("boot @STARTUP must already be held to function_restrictions");
 	}
 
 	/// <summary>
@@ -126,6 +133,41 @@ public class CommandRestrictionBootstrapTests
 		await service.StopAsync(CancellationToken.None);
 		await monitor.Change(WithRestrictions([]));
 		await Assert.That(applied).Count().IsEqualTo(3).Because("a stopped service no longer listens");
+	}
+
+	/// <summary>
+	/// <c>function_restrictions</c> reaches the function table at boot and again when it changes, and
+	/// removing an entry loosens the function. Driven with its own registry and options monitor, so the
+	/// shared host's function table keeps its own restrictions.
+	/// </summary>
+	[Test]
+	public async Task FunctionRestrictionsAreAppliedAtBootAndReappliedWhenTheyChange()
+	{
+		var registry = new UserDefinedFunctionService();
+		var applier = new ConfiguredFunctionRestrictions(
+			Factory.Services.GetRequiredService<ILibraryProvider<FunctionDefinition>>(), registry,
+			NullLogger<ConfiguredFunctionRestrictions>.Instance);
+		var restricted = WithFunctionRestrictions(new() { ["lstats"] = ["noguest"] });
+		var monitor = new ChangingOptions(restricted);
+		using var service = new FunctionRestrictionBootstrapService(applier, monitor, NullLogger<FunctionRestrictionBootstrapService>.Instance);
+
+		await service.StartAsync(CancellationToken.None);
+		await Assert.That(registry.GetBuiltinRestriction("lstats")).IsEqualTo("noguest");
+		await Assert.That(registry.GetBuiltinRestriction("stats")).IsEqualTo("noguest").Because("an alias is the same function");
+
+		await monitor.Change(WithFunctionRestrictions([]));
+		await Assert.That(registry.GetBuiltinRestriction("lstats")).IsNull().Because("removing the entry loosens the function");
+		await Assert.That(registry.GetBuiltinRestriction("stats")).IsNull();
+
+		await service.StopAsync(CancellationToken.None);
+		await monitor.Change(restricted);
+		await Assert.That(registry.GetBuiltinRestriction("lstats")).IsNull().Because("a stopped service no longer listens");
+	}
+
+	private static SharpMUSHOptions WithFunctionRestrictions(Dictionary<string, string[]> restrictions)
+	{
+		var options = SharpMUSHOptions.Default();
+		return options with { Restriction = options.Restriction with { FunctionRestrictions = restrictions } };
 	}
 
 	private static SharpMUSHOptions WithRestrictions(Dictionary<string, string[]> restrictions)
