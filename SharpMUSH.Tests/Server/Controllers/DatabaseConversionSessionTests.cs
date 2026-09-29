@@ -69,6 +69,38 @@ public class DatabaseConversionSessionTests
 		await Assert.That(File.Exists(chat)).IsFalse();
 	}
 
+	/// <summary>
+	/// The converter reports nothing until it has parsed the dump. The import page reads a 404 from the
+	/// progress endpoint as "the session is gone", so a session in that gap must still answer.
+	/// </summary>
+	[Test]
+	public async Task A_conversion_that_has_not_reported_yet_still_has_progress()
+	{
+		var (database, mail, chat) = TempFiles();
+		var converter = Substitute.For<IPennMUSHDatabaseConverter>();
+		converter.ConvertDatabaseAsync(database, mail, chat, Arg.Any<IProgress<ConversionProgress>>(), Arg.Any<CancellationToken>())
+			.Returns(call => Task.Delay(Timeout.Infinite, call.Arg<CancellationToken>())
+				.ContinueWith<ConversionResult>(_ => throw new OperationCanceledException(), TaskScheduler.Default));
+
+		var sessionId = Guid.NewGuid().ToString();
+		DatabaseConversionSession.StartConversion(sessionId, converter, database, mail, chat, NullLogger.Instance,
+			CancellationToken.None);
+
+		try
+		{
+			var progress = DatabaseConversionSession.GetProgress(sessionId);
+
+			await Assert.That(progress).IsNotNull();
+			await Assert.That(progress!.PercentageComplete).IsEqualTo(0);
+			await Assert.That(DatabaseConversionSession.GetProgress(Guid.NewGuid().ToString())).IsNull();
+		}
+		finally
+		{
+			DatabaseConversionSession.CancelConversion(sessionId);
+			await WaitForDeletionAsync(database, mail, chat);
+		}
+	}
+
 	/// <summary>The request limit is the whole form, so it has to hold a database, a maildb and a chatdb all at the file limit.</summary>
 	[Test]
 	public async Task The_upload_limit_fits_every_file_at_its_limit()
