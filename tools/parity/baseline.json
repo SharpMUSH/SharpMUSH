@@ -177,10 +177,6 @@
    "command": "@list powers"
   },
   {
-   "key": "20-admin-commands/admin.lists#3",
-   "command": "@config names"
-  },
-  {
    "key": "20-admin-commands/admin.pcreate#1",
    "command": "@newpassword Carol=carolpw2"
   },

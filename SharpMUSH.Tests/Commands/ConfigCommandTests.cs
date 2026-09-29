@@ -45,6 +45,36 @@ public class ConfigCommandTests
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, executor)).IsTrue();
 	}
 
+	private async Task<List<string>> AsWizard(string command)
+	{
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "CfgWiz");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
+		var before = WebAppFactoryArg.Notifications.CountFor(wizard.DbRef);
+		await Parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain(command));
+		return [.. WebAppFactoryArg.Notifications.For(wizard.DbRef).Skip(before)];
+	}
+
+	/// <summary>
+	/// <c>do_config_list</c> (<c>src/conf.c:1584-1621</c>) shows every option whose name starts with
+	/// the word, as <c>config_to_string</c>'s <c>" %-40s %s"</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask ConfigCommand_OptionPrefix_ListsEachMatchingOptionOnOneLine()
+	{
+		var shown = await AsWizard("@config names_f");
+
+		await Assert.That(shown).IsEquivalentTo(new[] { " names_file                               names.cnf" });
+	}
+
+	/// <summary>A word that begins no option name is matched anywhere in one: <c>*names*</c>.</summary>
+	[Test]
+	public async ValueTask ConfigCommand_NoPrefixMatch_FallsBackToAWildcard()
+	{
+		var shown = await AsWizard("@config names");
+
+		await Assert.That(shown).Contains(" names_file                               names.cnf");
+	}
+
 	[Test]
 	public async ValueTask ConfigCommand_InvalidOption_ReturnsNotFound()
 	{

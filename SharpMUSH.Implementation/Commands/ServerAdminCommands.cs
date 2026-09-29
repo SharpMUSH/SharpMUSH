@@ -1110,20 +1110,30 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var allOptions = getAllOptions();
-		var matchingOption = allOptions.FirstOrDefault(opt =>
-			opt.ConfigAttr.Name.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
-
-		if (matchingOption.PropertyName != null)
+		// do_config_list (src/conf.c:1584-1621): every option whose name starts with the word, or failing
+		// that every option whose name contains it, one config_to_string line each.
+		var allOptions = getAllOptions().ToList();
+		var matchingOptions = allOptions
+			.Where(opt => opt.ConfigAttr.Name.StartsWith(searchTerm, StringComparison.OrdinalIgnoreCase))
+			.ToList();
+		if (matchingOptions.Count == 0)
 		{
-			var name = useLowercase ? matchingOption.ConfigAttr.Name.ToLower() : matchingOption.ConfigAttr.Name;
-			var value = ConfigValueDisplay.Format(matchingOption.Value, matchingOption.ConfigAttr);
-			var desc = matchingOption.ConfigAttr.Description;
+			matchingOptions = allOptions
+				.Where(opt => opt.ConfigAttr.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+				.ToList();
+		}
 
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionDescriptionFormat), executor, desc);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionCategoryFormat), executor, matchingOption.Category);
-			return new CallState(value);
+		if (matchingOptions.Count > 0)
+		{
+			string? lastValue = null;
+			foreach (var opt in matchingOptions)
+			{
+				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
+				lastValue = ConfigValueDisplay.Format(opt.Value, opt.ConfigAttr);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, lastValue);
+			}
+
+			return new CallState(matchingOptions.Count == 1 ? lastValue! : string.Empty);
 		}
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), executor, searchTerm);
