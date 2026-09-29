@@ -150,12 +150,16 @@ public class HaltedExecutorGateTests : ServerTestBase
 			await Run(RequirePid(job));
 
 			await Assert.That(Notifications.For(who).Skip(start)).Contains(Refusal(who));
-			await Assert.That(Notifications.ForHandle(player.Handle).Skip(listings)).IsEmpty()
+			// By the listing's header, not by emptiness: a logged-in handle also hears every @wall
+			// another test makes, so "nothing reached this connection" is not a claim it can make.
+			await Assert.That(Notifications.ForHandle(player.Handle).Skip(listings))
+				.DoesNotContain(line => line.Contains("Player Name", StringComparison.Ordinal))
 				.Because("the queued WHO was refused before the socket branch could answer it");
 
 			await CmdAs(who, player.Handle, "WHO");
 
-			await Assert.That(Notifications.ForHandle(player.Handle).Skip(listings)).IsNotEmpty()
+			await Assert.That(Notifications.ForHandle(player.Handle).Skip(listings))
+				.Contains(line => line.Contains("Player Name", StringComparison.Ordinal))
 				.Because("a typed WHO is answered before process_command is reached");
 		}
 		finally

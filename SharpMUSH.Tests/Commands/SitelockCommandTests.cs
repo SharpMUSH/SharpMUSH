@@ -304,9 +304,16 @@ public class SitelockCommandTests
 
 		using var _ = TestOptionsOverride.Scope(o => o with { BannedNames = new BannedNamesOptions([$"{stem}*", ownName.ToLowerInvariant()]) });
 
+		// Only what the thinker told itself: the mortal stands in the shared start room and God is a
+		// Wizard, so another test's "X has disconnected." or GAME: line can land in the same window.
 		async Task<string> Valid(long handle, DBRef who, string name)
-			=> (await MessagesWhile(who, async () =>
-				await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think valid(playername,{name})")))).Single();
+		{
+			var before = WebAppFactoryArg.Notifications.DeliveryCountFor(who);
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"think valid(playername,{name})"));
+			return WebAppFactoryArg.Notifications.DeliveriesFor(who).Skip(before)
+				.Where(delivery => delivery.Sender == who)
+				.Single().Message;
+		}
 
 		await Assert.That(await Valid(mortal.Handle, mortal.DbRef, $"{stem}x")).IsEqualTo("0").Because("the name matches a banned pattern");
 		await Assert.That(await Valid(mortal.Handle, mortal.DbRef, $"Q{stem}")).IsEqualTo("1").Because("the pattern is anchored at the start");
