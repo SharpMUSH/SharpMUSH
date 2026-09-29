@@ -72,6 +72,16 @@
       "command": "@find Widget"
     },
     {
+      "id": "KD-0011",
+      "scenario": "10-player-commands",
+      "case": "obj.create",
+      "step": 5,
+      "reason": "The reference PennMUSH runs with the shipped restrict.cnf, whose `restrict_command @destroy noplayer \" Use @recycle instead` (game/restrictcnf.dst:86) refuses a player's @destroy before it runs; SharpMUSH ships command_restrictions empty, so the command destroys the thing. Not pinned with `sharp`: the refusal is all of PennMUSH's side, and SharpMUSH's side is the unparse of the destroyed object, whose flag letters are still GRA-141 (#1404).",
+      "tracking": "#1134",
+      "profile": "A new game restricts no commands",
+      "command": "@destroy Gadget"
+    },
+    {
       "id": "KD-0009",
       "scenario": "20-admin-commands",
       "case": "admin.lists",

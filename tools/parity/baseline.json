@@ -93,10 +93,6 @@
    "command": "look Gadget"
   },
   {
-   "key": "10-player-commands/obj.create#5",
-   "command": "@destroy Gadget"
-  },
-  {
    "key": "10-player-commands/obj.create#6",
    "command": "look Gadget"
   },

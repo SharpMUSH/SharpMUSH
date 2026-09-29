@@ -781,6 +781,34 @@ public class CommandManagementTests
 	}
 
 	/// <summary>
+	/// PennMUSH ships <c>restrict_command @destroy noplayer " Use @recycle instead</c> in
+	/// <c>restrict.cnf</c> (<c>game/restrictcnf.dst:86</c>); SharpMUSH ships
+	/// <c>command_restrictions</c> empty, which the compatibility profile records as a choice ("A new
+	/// game restricts no commands"). That entry's workaround is this line, in PennMUSH's own words,
+	/// through <c>command_restrictions</c> — so it has to refuse a player with PennMUSH's message.
+	/// Driven on a clone of <c>@destroy</c>, so the shared command table keeps its own.
+	/// </summary>
+	[Test, NotInParallel(ConfiguredRestrictionsKey)]
+	public async ValueTask ConfiguredRestrictions_TakePennMushsShippedDestroyLine()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdCfgDestroy");
+		var clone = CommandName();
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "RestrictedDestroy");
+		await As(wizard, $"@command/clone @destroy={clone}");
+
+		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]>
+		{
+			[clone] = ["noplayer", "\" Use @recycle instead"]
+		});
+
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains("Lock       : (TYPE^THING|TYPE^ROOM|TYPE^EXIT)");
+		var refused = await As(mortal, $"{clone} {thing}");
+		await Assert.That(refused).Contains("Use @recycle instead");
+		await Assert.That(refused).DoesNotContain("scheduled to be destroyed");
+	}
+
+	/// <summary>
 	/// The rule for a live <c>@command/restrict</c> across a change (the maintainer's decision on
 	/// #1250): a command the setting names starts again from the restriction it was made with, so a
 	/// live restriction on it is lost; one on a command the setting does not name stays.
