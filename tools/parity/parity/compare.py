@@ -23,9 +23,11 @@ class Entry:
     tracking: str
     command: Optional[str] = None  # required with `step`: pins the positional key to its command
     profile: Optional[str] = None  # the `## ` heading in the compatibility profile that explains it
-    # When set, the entry accepts exactly this (normalized) SharpMUSH output and nothing else: an
-    # entry for SharpMUSH-only additions to a list does not also hide a wrong or missing item.
+    # When set, the entry accepts exactly this (normalized) SharpMUSH output against exactly `penn`
+    # and nothing else: an entry for SharpMUSH-only additions to a list does not also hide a wrong
+    # or missing item on either side.
     sharp: Optional[str] = None
+    penn: Optional[str] = None
 
     def covers(self, rec: StepRecord) -> bool:
         return (self.scenario == rec.scenario and self.case == rec.case
@@ -52,11 +54,13 @@ def load_allowlist(path: Path, profile: Path = PROFILE) -> list[Entry]:
                 raise ValueError(f"{path}: entry {e.get('id', e)!r} is missing '{required}'")
         if e.get("step") is not None and not e.get("command"):
             raise ValueError(f"{path}: entry {e['id']!r} names a step, so it needs that step's 'command'")
+        if (e.get("sharp") is None) != (e.get("penn") is None):
+            raise ValueError(f"{path}: entry {e['id']!r} pins one side's output; 'sharp' and 'penn' go together")
         if e["profile"] not in headings:
             raise ValueError(f"{path}: entry {e['id']!r} names profile entry {e['profile']!r}, "
                              f"which is not a '## ' heading in {profile.name}")
         out.append(Entry(e["id"], e["scenario"], e["case"], e.get("step"), e["reason"], e["tracking"],
-                         e.get("command"), e["profile"], e.get("sharp")))
+                         e.get("command"), e["profile"], e.get("sharp"), e.get("penn")))
     return out
 
 
@@ -141,7 +145,7 @@ def compare(penn: list[StepRecord], sharp: list[StepRecord], penn_canon, sharp_c
                            error="step not reached on SharpMUSH (an earlier step failed)")
         pt, st = _render(p, penn_canon, penn_site), _render(s, sharp_canon, sharp_site)
         entry = next((e for e in allowlist if e.covers(p)), None)
-        accepts = entry is not None and (entry.sharp is None or entry.sharp == st)
+        accepts = entry is not None and (entry.sharp is None or (entry.sharp, entry.penn) == (st, pt))
         if p.error or s.error:
             status = ERROR
             diff = "\n".join(f"{n}: {r.error}" for n, r in (("PennMUSH", p), ("SharpMUSH", s)) if r.error)
