@@ -439,6 +439,26 @@ public class GeneralCommandTests
 		await Assert.That(messages[3]).IsEqualTo("Totals: Rooms...0  Exits...0  Things...1  Players...0");
 	}
 
+	/// <summary>do_search shows an exit with where it runs from and to, NOWHERE for an unlinked end.</summary>
+	[Test]
+	public async ValueTask Search_ShowsAnExitsEnds()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SearchExit");
+		var token = TestIsolationHelpers.GenerateUniqueName("SearchExitTok");
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@dig/teleport {token}Room"));
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@open {token}Out"));
+
+		var messages = await MessagesWhile(mortal.DbRef, () => Parser.CommandParse(mortal.Handle, ConnectionService,
+			MarkupText.Plain($"@search type=exit,name={token}")).AsTask());
+
+		await Assert.That(messages[0]).IsEqualTo("\nEXITS:");
+		await Assert.That(messages[1]).StartsWith($"{token}Out(#");
+		await Assert.That(messages[1]).Contains($" [from {token}Room(#");
+		await Assert.That(messages[1]).EndsWith(" to NOWHERE]");
+		await Assert.That(messages[^1]).IsEqualTo("Totals: Rooms...0  Exits...1  Things...0  Players...0");
+	}
+
 	// Regression coverage for "@search all type=PLAYER" being parsed as a NAME search for the
 	// literal text "player" instead of a TYPE filter — @SEARCH's CB.EqSplit|CB.RSArgs behavior only
 	// splits the raw command text on the first top-level '=', so "all type" (the player field plus

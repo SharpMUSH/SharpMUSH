@@ -410,8 +410,9 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchExitsHeader), executor);
 			foreach (var exit in exits)
 			{
-				var from = AnySharpContainer.RefOf(await exit.Where());
-				var to = AnyOptionalSharpContainer.RefOf(await ((SharpExit)exit.Value!).Home.WithCancellation(CancellationToken.None));
+				if (exit is not SharpExit sharpExit) continue;
+				var from = AnySharpContainer.RefOf(await sharpExit.Location.WithCancellation(CancellationToken.None));
+				var to = AnyOptionalSharpContainer.RefOf(await sharpExit.Home.WithCancellation(CancellationToken.None));
 				await NotifyService.Notify(executor, string.Format(ErrorMessages.Notifications.SearchExitEntryFormat,
 					await Header(exit), await HeaderOrNowhere(from), await HeaderOrNowhere(to)), executor);
 			}
