@@ -42,20 +42,10 @@
       "command": "think [get(EventSink/DROPTO_BY)]"
     },
     {
-      "id": "KD-0005",
-      "scenario": "40-compat-choices",
-      "case": "choice.mail-fwd",
-      "step": 4,
-      "reason": "PennMUSH forwards silently and counts the recipient it tried; SharpMUSH reports the refusal and counts the recipients the message reached.",
-      "tracking": "#1134",
-      "profile": "A refused forward is reported — `@mail/fwd`",
-      "command": "@mail/fwd 1=*Bob"
-    },
-    {
       "id": "KD-0006",
       "scenario": "40-compat-choices",
       "case": "choice.mail-folder",
-      "step": 1,
+      "step": 3,
       "reason": "PennMUSH refuses a MAILFILTER folder name the player has not used yet; SharpMUSH creates the folder and files the message.",
       "tracking": "#1134",
       "profile": "Folders are named freely and created on delivery",
