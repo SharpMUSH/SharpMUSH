@@ -164,8 +164,8 @@ public static class BuildingHelpers
 
 	/// <summary>
 	/// The whole of PennMUSH's <c>do_dig</c> (<c>src/create.c:466-522</c>): a room, optionally an exit
-	/// to it from where the digger stands and an exit back, each charged on its own and each able to
-	/// stop the dig where the quota runs out without taking back what was already paid for.
+	/// to it from where the digger stands and an exit back, each charged on its own and each asked for
+	/// independently — a refused exit costs only itself, and nothing already paid for is taken back.
 	/// <para><c>fun_dig</c> hands <c>args</c> straight to <c>do_dig</c> (<c>src/fundb.c:2177-2189</c>),
 	/// so <c>dig()</c> is this same body and not the thinner copy it used to be — it opened no exits at
 	/// all.</para>
@@ -262,8 +262,8 @@ public static class BuildingHelpers
 
 	/// <summary>
 	/// The zone, the report and the two exits, once the room exists — <c>do_dig</c> from
-	/// <c>create.c:492</c> onwards. The answer is the room either way, as it is in Penn: an exit the
-	/// quota or the permission check turns down stops the dig and leaves what was already paid for.
+	/// <c>create.c:492</c> onwards. The answer is the room either way, as it is in Penn, and what was
+	/// already paid for stays.
 	/// </summary>
 	private static async ValueTask<Result<DBRef>> RoomDugAsync(
 		IMediator mediator,
@@ -300,12 +300,15 @@ public static class BuildingHelpers
 
 		// create.c:507-517 — the exit to the new room is sourced where the digger stands, and the exit
 		// back is sourced in the new room and linked to "here", which parse_linkable_room resolves to
-		// speech_loc(player). An exit that is refused stops the dig, and the room stays.
-		if (Given(exitTo) is not null
-			&& !await DugExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
-				executor, exitTo!, where, room, toAt, openedExits))
+		// speech_loc(player). do_dig discards each do_real_open's answer and asks for the next exit
+		// regardless, so a forward exit the digger may not source where they stand does not cost them
+		// the return exit, which is sourced in the room they just dug and do own. This is where do_dig
+		// and do_open differ: do_open gates its return exit on GoodObject(forward) (:230), do_dig does
+		// not.
+		if (Given(exitTo) is not null)
 		{
-			return dug;
+			await DugExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
+				executor, exitTo!, where, room, toAt, openedExits);
 		}
 
 		if (Given(exitFrom) is not null)
@@ -324,7 +327,7 @@ public static class BuildingHelpers
 	/// <c>@dig</c> never asked, and which matters more now that <c>dig()</c> reaches the same code from
 	/// softcode.
 	/// </summary>
-	private static async ValueTask<bool> DugExitAsync(
+	private static async ValueTask DugExitAsync(
 		IMediator mediator,
 		IObjectStore database,
 		IOptionsWrapper<SharpMUSHOptions> configuration,
@@ -341,7 +344,7 @@ public static class BuildingHelpers
 		if (await OpenExitAsync(mediator, database, configuration, notifyService, permissionService, lockService,
 				executor, exitName, from, requestedDbref) is not DBRef opened)
 		{
-			return false;
+			return;
 		}
 
 		openedExits.Add(opened);
@@ -355,7 +358,7 @@ public static class BuildingHelpers
 		{
 			await notifyService.NotifyLocalized(executor.Object().DBRef,
 				nameof(ErrorMessages.Notifications.CantLinkToThat), executor);
-			return true;
+			return;
 		}
 
 		if (await mediator.Send(new GetObjectNodeQuery(opened)) is not (AnySharpObject and SharpExit exit))
@@ -366,8 +369,6 @@ public static class BuildingHelpers
 		await mediator.Send(new LinkExitCommand(exit, to));
 		await notifyService.NotifyLocalized(executor.Object().DBRef,
 			nameof(ErrorMessages.Notifications.LinkedExitToRoom), executor, opened.Number, to.Object().DBRef.Number);
-
-		return true;
 	}
 
 	/// <summary>
