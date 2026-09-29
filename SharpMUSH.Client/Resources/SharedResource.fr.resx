@@ -3811,4 +3811,12 @@
     <value>Impossible d’importer la configuration : {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>Impossible d’importer la base de données : {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>Impossible d’annuler la conversion : {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

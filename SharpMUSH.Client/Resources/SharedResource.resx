@@ -3851,4 +3851,10 @@
   <data name="ConfigImportFailed" xml:space="preserve">
     <value>Could not import the configuration: {0}</value>
   </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>Could not import the database: {0}</value>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>Could not cancel the conversion: {0}</value>
+  </data>
 </root>

@@ -4558,4 +4558,12 @@
     <value>Konfigurationen kunde inte importeras: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>Databasen kunde inte importeras: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>Konverteringen kunde inte avbrytas: {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

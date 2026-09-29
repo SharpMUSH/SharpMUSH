@@ -4558,4 +4558,12 @@
     <value>Конфигурацията не можа да бъде импортирана: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>Базата данни не можа да бъде импортирана: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>Преобразуването не можа да бъде отменено: {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

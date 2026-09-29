@@ -2,6 +2,7 @@
 @attribute [Authorize(Policy = "server.admin")]
 @implements IDisposable
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
 @using SharpMUSH.Library.Services.DatabaseConversion
 @inject DatabaseConversionService ConversionService
 @inject ILogger<ImportDatabase> Logger
@@ -14,6 +15,16 @@
 		<h1 class="dbimport-title">@Loc["ImportPennMUSHDatabase"]</h1>
 		<p class="dbimport-subtitle">@Loc["ImportDatabaseDescription"]</p>
 	</header>
+
+	@if (_error is not null)
+	{
+		<MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@_error</MudAlert>
+	}
+
+	@if (_pollError is not null)
+	{
+		<MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4">@_pollError</MudAlert>
+	}
 
 	@if (!_isConverting && _result == null)
 	{
@@ -260,6 +271,10 @@
 	private ConversionProgress? _progress;
 	private ConversionResult? _result;
 	private System.Threading.Timer? _progressTimer;
+	private string? _error;
+
+	// Kept apart from _error so a poll that succeeds clears only what a poll said, not why a cancel was refused.
+	private string? _pollError;
 
 	private void OnFileSelected(IBrowserFile? file) => _selectedFile = file;
 
@@ -280,26 +295,36 @@
 			return;
 
 		_isUploading = true;
+		_error = null;
 
 		try
 		{
 			await using var stream = _selectedFile.OpenReadStream(maxAllowedSize: 104857600); // 100MB
 			await using var mailStream = _selectedMailFile?.OpenReadStream(maxAllowedSize: 104857600);
 			await using var chatStream = _selectedChatFile?.OpenReadStream(maxAllowedSize: 104857600);
-			_sessionId = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name, mailStream,
+			var upload = await ConversionService.UploadDatabaseAsync(stream, _selectedFile.Name, mailStream,
 				_selectedMailFile?.Name, chatStream, _selectedChatFile?.Name);
 
-			if (_sessionId != null)
+			switch (upload)
 			{
-				_isUploading = false;
-				_isConverting = true;
-
-				_progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+				case string sessionId:
+					_sessionId = sessionId;
+					_isConverting = true;
+					_progressTimer = new System.Threading.Timer(OnTimerCallback, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+					break;
+				case ApiFailure failure:
+					_error = Loc["DatabaseImportFailed", failure.Message].Value;
+					break;
 			}
 		}
 		catch (Exception ex)
 		{
+			// Reading the chosen file failed in the browser (too large, or gone), before anything was sent.
 			Logger.LogError(ex, "Error starting conversion of {FileName}", _selectedFile.Name);
+			_error = Loc["DatabaseImportFailed", ex.Message].Value;
+		}
+		finally
+		{
 			_isUploading = false;
 		}
 	}
@@ -331,15 +356,40 @@
 
 		try
 		{
-			_progress = await ConversionService.GetProgressAsync(_sessionId);
-
-			// 100% can arrive a moment before the server has stored the result; keep polling until it has.
-			if (_progress?.PercentageComplete >= 100
-			    && await ConversionService.GetResultAsync(_sessionId) is { } result)
+			switch (await ConversionService.GetProgressAsync(_sessionId))
 			{
-				_result = result;
-				_isConverting = false;
-				_progressTimer?.Dispose();
+				case ConversionProgress progress:
+					_progress = progress;
+					_pollError = null;
+					break;
+				case ApiFailure { Kind: ApiFailureKind.NotFound } failure:
+					// The server has no such session — it restarted, or dropped it. Polling again would spin
+					// over an empty card forever, which is what a null used to do.
+					StopPolling(Loc["DatabaseImportFailed", failure.Message].Value);
+					break;
+				case ApiFailure failure:
+					// One missed poll is not the conversion failing: it runs on the server either way. Say so
+					// and ask again on the next tick.
+					_pollError = failure.Message;
+					break;
+			}
+
+			// 100% can arrive a moment before the server has stored the result; until it has, the result
+			// read answers 404 and the next tick asks again.
+			if (_isConverting && _progress?.PercentageComplete >= 100)
+			{
+				switch (await ConversionService.GetResultAsync(_sessionId))
+				{
+					case ConversionResult result:
+						_result = result;
+						_pollError = null;
+						_isConverting = false;
+						_progressTimer?.Dispose();
+						break;
+					case ApiFailure { Kind: not ApiFailureKind.NotFound } failure:
+						_pollError = failure.Message;
+						break;
+				}
 			}
 
 			await InvokeAsync(StateHasChanged);
@@ -362,17 +412,27 @@
 		if (_sessionId == null)
 			return;
 
-		try
+		// A refused cancel used to reset the page as though the conversion had stopped, while the server
+		// carried on converting.
+		switch (await ConversionService.CancelConversionAsync(_sessionId))
 		{
-			await ConversionService.CancelConversionAsync(_sessionId);
-			_isConverting = false;
-			_progressTimer?.Dispose();
-			Reset();
+			case Success:
+				Reset();
+				break;
+			case ApiFailure failure:
+				_error = Loc["ConversionCancelFailed", failure.Message].Value;
+				break;
 		}
-		catch (Exception ex)
-		{
-			Logger.LogError(ex, "Error cancelling conversion");
-		}
+	}
+
+	private void StopPolling(string error)
+	{
+		_progressTimer?.Dispose();
+		_isConverting = false;
+		_sessionId = null;
+		_progress = null;
+		_pollError = null;
+		_error = error;
 	}
 
 	private void Reset()
@@ -385,6 +445,8 @@
 		_result = null;
 		_isConverting = false;
 		_isUploading = false;
+		_error = null;
+		_pollError = null;
 		_progressTimer?.Dispose();
 	}
 

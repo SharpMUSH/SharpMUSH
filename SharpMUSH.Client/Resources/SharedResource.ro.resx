@@ -4558,4 +4558,12 @@
     <value>Configurația nu a putut fi importată: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>Baza de date nu a putut fi importată: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>Conversia nu a putut fi anulată: {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

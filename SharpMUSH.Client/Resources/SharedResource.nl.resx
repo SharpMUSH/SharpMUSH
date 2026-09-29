@@ -4558,4 +4558,12 @@
     <value>De configuratie kon niet worden geïmporteerd: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>De database kon niet worden geïmporteerd: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>De conversie kon niet worden geannuleerd: {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

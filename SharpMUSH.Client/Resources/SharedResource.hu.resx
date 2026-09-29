@@ -4558,4 +4558,12 @@
     <value>A konfigurációt nem sikerült importálni: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>Az adatbázist nem sikerült importálni: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>Az átalakítást nem sikerült megszakítani: {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

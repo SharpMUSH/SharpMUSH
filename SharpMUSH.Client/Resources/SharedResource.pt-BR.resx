@@ -4558,4 +4558,12 @@
     <value>Não foi possível importar a configuração: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>Não foi possível importar o banco de dados: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>Não foi possível cancelar a conversão: {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

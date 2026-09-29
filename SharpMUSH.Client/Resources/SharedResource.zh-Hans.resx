@@ -4558,4 +4558,12 @@
     <value>无法导入配置：{0}</value>
     <comment>MT</comment>
   </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>无法导入数据库：{0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>无法取消转换：{0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

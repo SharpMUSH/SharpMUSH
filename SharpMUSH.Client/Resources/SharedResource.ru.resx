@@ -4558,4 +4558,12 @@
     <value>Не удалось импортировать конфигурацию: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>Не удалось импортировать базу данных: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>Не удалось отменить преобразование: {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

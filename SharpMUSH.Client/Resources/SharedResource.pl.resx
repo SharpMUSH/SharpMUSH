@@ -4558,4 +4558,12 @@
     <value>Nie udało się zaimportować konfiguracji: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>Nie udało się zaimportować bazy danych: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>Nie udało się anulować konwersji: {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>
