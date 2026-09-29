@@ -74,8 +74,31 @@ public class CommandManagementTests
 			await WebAppFactoryArg.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests();
 		});
 
-	private Task<TestIsolationHelpers.TestPlayer> Mortal(string prefix)
-		=> TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+	/// <summary>
+	/// Runs <paramref name="command"/> as <paramref name="player"/> and keeps only what the command told
+	/// that player about itself (the sender is the player). A connected Wizard also hears every
+	/// <c>@wall</c>, <c>@wizwall</c> and <c>GAME:</c> broadcast another test makes while the command runs,
+	/// so a test that asserts the whole reply, or its order, reads it through this.
+	/// </summary>
+	private async Task<List<string>> ToldSelf(TestIsolationHelpers.TestPlayer player, string command)
+	{
+		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(player.DbRef);
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain(command));
+		return [.. WebAppFactoryArg.Notifications.DeliveriesFor(player.DbRef).Skip(before)
+			.Where(delivery => delivery.Sender == player.DbRef)
+			.Select(delivery => delivery.Message)];
+	}
+
+	/// <summary>
+	/// A connected player standing in a room of its own: in the shared start room it would also hear
+	/// other tests' players arrive, leave and disconnect.
+	/// </summary>
+	private async Task<TestIsolationHelpers.TestPlayer> Mortal(string prefix)
+	{
+		var god = (await Mediator.Send(new GetObjectNodeQuery(God))).Expect<AnySharpObject>().Expect<SharpPlayer>();
+		var home = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName($"{prefix}Room"), god));
+		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, home);
+	}
 
 	/// <summary>
 	/// A fresh Wizard standing in a room of its own: in the shared start room it also hears other
@@ -300,7 +323,7 @@ public class CommandManagementTests
 		var clone = CommandName();
 		await As(wizard, $"@command/clone @find={clone}");
 
-		var described = await As(wizard, $"@command/restrict {clone}=!FLAG^GAGGED");
+		var described = await ToldSelf(wizard, $"@command/restrict {clone}=!FLAG^GAGGED");
 
 		await Assert.That(described.Select(line => line.TrimEnd())).IsEquivalentTo(new[]
 		{
@@ -326,7 +349,7 @@ public class CommandManagementTests
 		await HookService.SetHookAsync(clone, "BEFORE", wizard.DbRef, "CMD.BEFORE", false, false, false, false);
 		try
 		{
-			var described = (await As(wizard, $"@command {clone}")).Select(line => line.TrimEnd()).ToList();
+			var described = (await ToldSelf(wizard, $"@command {clone}")).Select(line => line.TrimEnd()).ToList();
 
 			await Assert.That(described).Contains("Lock       : *UNLOCKED*");
 			await Assert.That(described).Contains(line => line.StartsWith("Arguments  :"));
