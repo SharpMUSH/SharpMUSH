@@ -47,6 +47,12 @@ public class ObjectTriadParityTests
 		return value!.Message!.ToPlainText().Trim();
 	}
 
+	private async Task<string> Location(DBRef what)
+	{
+		var value = await GodParser.FunctionParse(MarkupText.Plain($"[loc({what})]"));
+		return value!.Message!.ToPlainText().Trim();
+	}
+
 	/// <summary>Digs a fresh room and silently gathers every named object into it.</summary>
 	private async Task<string> Room(string prefix, params object[] occupants)
 	{
@@ -572,6 +578,98 @@ public class ObjectTriadParityTests
 		await Scheduler.DrainImmediateQueueForTests();
 
 		await Assert.That(await Read(gift, "KEPT")).IsEqualTo($"#{giver.DbRef.Number}");
+	}
+
+	/// <summary>
+	/// <c>match_result(player, recipient, TYPE_PLAYER, MAT_NEAR_THINGS | MAT_ENGLISH)</c>
+	/// (<c>src/rob.c:283-284</c>) carries <c>MAT_NEAR</c>, and a player resolved by <c>*&lt;name&gt;</c>
+	/// is dropped again unless <c>nearby || controls</c> (<c>src/match.c:398-399</c>). So
+	/// <c>give *&lt;someone elsewhere&gt;=1</c> finds nobody and says so — it never reaches the amount,
+	/// which is why PennMUSH answers this with <c>Give to whom?</c> and not with anything about money.
+	/// </summary>
+	[Test]
+	public async ValueTask GiveToAPlayerInAnotherRoomFindsNobody()
+	{
+		var giver = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "GiveFarGiver");
+		var elsewhere = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "GiveFarTarget");
+		await Room("GiveFarGiverRoom", giver.DbRef);
+		await Room("GiveFarTargetRoom", elsewhere.DbRef);
+
+		var seen = await MessagesWhile(giver.DbRef, async () =>
+			await GodParser.CommandParse(giver.Handle, ConnectionService,
+				MarkupText.Plain($"give *{elsewhere.Name}=1")));
+
+		await Assert.That(seen).IsEquivalentTo(new[] { "Give to whom?" })
+			.Because("MAT_NEAR drops the player, and rob.c:287 is the whole of the reply");
+	}
+
+	/// <summary>
+	/// The other arm of the same <c>NOTHING</c> case (<c>src/rob.c:286-288</c>): a name no player
+	/// answers to. One line, not the notifying locate's "I can't see that here." followed by a second.
+	/// </summary>
+	[Test]
+	public async ValueTask GiveToANameNobodyAnswersToFindsNobody()
+	{
+		var giver = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "GiveMissGiver");
+		await Room("GiveMissRoom", giver.DbRef);
+		var absent = TestIsolationHelpers.GenerateUniqueName("GiveMissNobody");
+
+		var seen = await MessagesWhile(giver.DbRef, async () =>
+			await GodParser.CommandParse(giver.Handle, ConnectionService, MarkupText.Plain($"give *{absent}=1")));
+
+		await Assert.That(seen).IsEquivalentTo(new[] { "Give to whom?" })
+			.Because("rob.c answers a failed recipient match with exactly one line");
+	}
+
+	/// <summary>
+	/// <c>MAT_PLAYER</c> is still in the set, so the <c>*&lt;name&gt;</c> form works on a player who is
+	/// standing there: the near check is <c>nearby(who, match) || controls(…)</c>, not a removal of the
+	/// player scope. Without this, narrowing the flags would have looked like a fix while breaking
+	/// every <c>give *someone=&lt;gift&gt;</c> in the room.
+	/// </summary>
+	[Test]
+	public async ValueTask GiveToAPlayerInTheRoomStillResolvesTheStarForm()
+	{
+		var giver = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "GiveNearGiver");
+		var nearby = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "GiveNearTarget");
+		var gift = await Thing("GiveNearGift");
+		await Room("GiveNearRoom", giver.DbRef, nearby.DbRef, gift);
+
+		await God($"@set {nearby.DbRef}=ENTER_OK");
+		await GodParser.CommandParse(giver.Handle, ConnectionService, MarkupText.Plain($"get {gift}"));
+
+		await GodParser.CommandParse(giver.Handle, ConnectionService,
+			MarkupText.Plain($"give *{nearby.Name}={gift}"));
+
+		await Assert.That(BareDbrefs(await Location(gift))).IsEqualTo($"#{nearby.DbRef.Number}")
+			.Because("a nearby player passes MAT_NEAR, so the gift changes hands");
+	}
+
+	/// <summary>
+	/// <c>match_result(player, amnt, TYPE_THING, MAT_POSSESSION | MAT_ENGLISH)</c>'s <c>NOTHING</c>
+	/// (<c>src/rob.c:302-305</c>): one line, <c>You don't have that!</c>. The notifying locate put
+	/// "I can't see that here." in front of it.
+	/// </summary>
+	[Test]
+	public async ValueTask GiveOfSomethingTheGiverDoesNotHaveSaysSoOnce()
+	{
+		var giver = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "GiveNoGiftGiver");
+		var recipient = await Thing("GiveNoGiftBox");
+		await Room("GiveNoGiftRoom", giver.DbRef, recipient);
+		var absent = TestIsolationHelpers.GenerateUniqueName("GiveNoGiftAbsent");
+
+		var seen = await MessagesWhile(giver.DbRef, async () =>
+			await GodParser.CommandParse(giver.Handle, ConnectionService,
+				MarkupText.Plain($"give {recipient}={absent}")));
+
+		await Assert.That(seen).IsEquivalentTo(new[] { "You don't have that!" })
+			.Because("rob.c:303 is the whole of the reply to a gift that matched nothing");
 	}
 
 	// --- USE ------------------------------------------------------------------------------------

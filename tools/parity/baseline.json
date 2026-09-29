@@ -105,14 +105,6 @@
    "command": "get Widget"
   },
   {
-   "key": "10-player-commands/obj.give#3",
-   "command": "give *Bob=1"
-  },
-  {
-   "key": "10-player-commands/obj.give#4",
-   "command": "give *Nobody=1"
-  },
-  {
    "key": "10-player-commands/obj.inventory#0",
    "command": "inventory"
   },
