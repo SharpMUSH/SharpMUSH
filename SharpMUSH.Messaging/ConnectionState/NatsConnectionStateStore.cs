@@ -6,6 +6,7 @@ using NATS.Client.JetStream;
 using NATS.Client.KeyValueStore;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
+using SharpMUSH.Messaging.NATS;
 using System.Text.Json;
 
 namespace SharpMUSH.Library.Services;
@@ -39,14 +40,21 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 		ILogger<NatsConnectionStateStore> logger,
 		CancellationToken ct = default)
 	{
-		var nats = new NatsConnection(new NatsOpts { Url = url });
-		await nats.ConnectAsync();
-		var js = new NatsJSContext(nats);
-		var kv = new NatsKVContext(js);
-		var store = await kv.CreateOrUpdateStoreAsync(
-			new NatsKVConfig(BucketName) { MaxAge = TimeSpan.FromHours(24) },
-			ct);
-		return new NatsConnectionStateStore(nats, store, logger);
+		var nats = await NatsStartupConnection.ConnectAsync(url, NatsStartupConnection.DefaultTimeout, ct);
+		try
+		{
+			var js = new NatsJSContext(nats);
+			var kv = new NatsKVContext(js);
+			var store = await kv.CreateOrUpdateStoreAsync(
+				new NatsKVConfig(BucketName) { MaxAge = TimeSpan.FromHours(24) },
+				ct);
+			return new NatsConnectionStateStore(nats, store, logger);
+		}
+		catch
+		{
+			await nats.DisposeAsync();
+			throw;
+		}
 	}
 
 	public async Task SetConnectionAsync(long handle, ConnectionStateData data, CancellationToken ct = default)

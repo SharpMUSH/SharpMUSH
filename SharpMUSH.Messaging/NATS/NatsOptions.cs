@@ -51,6 +51,12 @@ public class NatsOptions
 	/// <summary>Maximum time allowed for a message publish, including broker disconnection.</summary>
 	public TimeSpan PublishTimeout { get; set; } = TimeSpan.FromSeconds(2);
 
+	/// <summary>
+	/// Maximum time to wait for the first connection to the broker at startup. Failed attempts are
+	/// retried until this deadline passes.
+	/// </summary>
+	public TimeSpan ConnectTimeout { get; set; } = NatsStartupConnection.DefaultTimeout;
+
 	internal string GetConsumeStreamName() => ConsumeStreamName ?? StreamName;
 	internal string GetConsumeSubjectPrefix() => ConsumeSubjectPrefix ?? SubjectPrefix;
 }
