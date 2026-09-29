@@ -228,11 +228,18 @@ public static class SearchSpecEngine
 			return new SearchResult(await filteredObjects.ToListAsync(), false);
 		}
 
-		// Optimize: Convert to AnySharpObject once per object and evaluate all criteria
+		// Resolve each row through GetObjectNodeQuery rather than hydrating it from the scan: locks and
+		// permissions must be judged against the canonical cached object, and the full objid check drops
+		// a row recycled since the scan. A row destroyed or recycled in between no longer resolves and is
+		// skipped, as @find skips it.
 		var finalResults = new List<SharpObject>();
 		await foreach (var obj in filteredObjects)
 		{
-			var typedObj = await CreateAnySharpObjectFromSharpObject(mediator, obj);
+			if (await mediator.Send(new GetObjectNodeQuery(obj.DBRef)) is not AnySharpObject typedObj)
+			{
+				continue;
+			}
+
 			bool matches = true;
 
 			if (visOnly && !await permissionService.CanExamine(executor, typedObj))
@@ -408,20 +415,5 @@ public static class SearchSpecEngine
 		}
 
 		return true;
-	}
-
-	/// <summary>
-	/// Creates an AnySharpObject from a SharpObject based on its Type property.
-	/// This is needed when we have a raw SharpObject from the database but need to work with the discriminated union.
-	/// </summary>
-	private static async Task<AnySharpObject> CreateAnySharpObjectFromSharpObject(IMediator mediator, SharpObject obj)
-	{
-		var dbref = new DBRef(obj.Key, obj.CreationTime);
-		if (await mediator.Send(new GetObjectNodeQuery(dbref)) is not AnySharpObject found)
-		{
-			throw new InvalidOperationException($"Object {dbref} not found when evaluating lock criteria");
-		}
-
-		return found;
 	}
 }
