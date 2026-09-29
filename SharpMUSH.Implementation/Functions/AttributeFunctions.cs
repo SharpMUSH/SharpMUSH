@@ -90,11 +90,21 @@ public partial class Functions
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, dbref, LocateFlags.All, async realLocated =>
 			{
-				var contents = args.TryGetValue("1", out var tmpContents)
-					? tmpContents.Message!
-					: MarkupText.Empty;
+				// Without a value it clears, as do_set_atr(thing, s, NULL, ...) does
+				// (src/fundb.c:2295-2296); an empty value still creates the attribute. Clearing one
+				// that is not there is AE_NOTFOUND, which PennMUSH notifies as "No such attribute to
+				// reset." (src/attrib.c:2411-2412) and SharpMUSH returns.
+				var hasValue = args.TryGetValue("1", out var contents);
+				if (!hasValue && await AttributeService.GetAttributeAsync(executor, realLocated, attribute,
+						IAttributeService.AttributeMode.Read, parent: false) is None)
+				{
+					return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+				}
 
-				var setResult = await AttributeService.SetAttributeAsync(executor, realLocated, attribute, contents);
+				var setResult = hasValue
+					? await AttributeService.SetAttributeAsync(executor, realLocated, attribute, contents!.Message!)
+					: await AttributeService.ClearAttributeAsync(executor, realLocated, attribute,
+						IAttributeService.AttributePatternMode.Exact);
 
 				await NotifyOfSet(executor, realLocated, attribute, setResult is Success, args.ContainsKey("1"));
 
@@ -431,9 +441,11 @@ public partial class Functions
 				// PennMUSH answers 0 only for an attribute that is genuinely absent from an object
 				// the caller may examine; an attribute that exists but cannot be read is e_perm,
 				// not "no" (src/fundb.c:243-256). Reporting absence for a refusal tells a mortal
-				// the attribute is not there, which is a different and wrong answer.
+				// the attribute is not there, which is a different and wrong answer. The refusal is
+				// e_perm, not the NO PERMISSION TO GET ATTRIBUTE that get() gives.
 				return maybeAttr switch
 				{
+					Error<string> { Value: ErrorMessages.Returns.AttrPermissions } => new CallState(ErrorMessages.Returns.PermissionDenied),
 					Error<string> error => new CallState(error.Value),
 					SharpAttribute[] chain => new CallState(
 						!requireValue || HasValue(chain.Last().Value.ToPlainText()) ? "1" : "0"),

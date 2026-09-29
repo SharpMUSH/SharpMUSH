@@ -373,7 +373,10 @@ public partial class Functions
 		var arguments = parser.CurrentState.ArgumentsOrdered;
 		var pattern = (parser.CurrentState.Arguments["1"].Message ?? MarkupText.Empty).ToPlainText()!;
 		var regex = SoftcodeRegex.Wildcard(pattern);
+		// An empty delimiter is a space (delim_check, src/function.c:253-255); an output separator
+		// given explicitly is used as it is, even empty (fun_matchall, src/funlist.c:402-407).
 		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(arguments, 2, " ");
+		if (delimiter.Length == 0) delimiter = MarkupText.Space;
 		var outputSeparator = ArgHelpers.NoParseDefaultNoParseArgument(arguments, 3, delimiter);
 		var split = MushText.SplitList(delimiter, parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty);
 
