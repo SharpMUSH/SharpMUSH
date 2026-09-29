@@ -130,8 +130,8 @@ public class AtListCommandTests
 	}
 
 	// PennMUSH src/flags.c do_list_flags: one "Flags: NAME (c), NAME, ..." line from list_all_flags,
-	// sorted as ALPHANUM_LIST (strcoll, so punctuation only breaks ties: NOSPOOF sits between NO_LEAVE
-	// and NO_TEL). Internal flags are never listed, and mdark ones (NO_LOG, SUSPECT) only to a wizard
+	// sorted as ALPHANUM_LIST under the C locale (byte order, so NOSPOOF precedes NO_COMMAND and
+	// CHAN_USEFIRSTMATCH precedes CHOWN_OK). Internal flags are never listed, and mdark ones (NO_LOG, SUSPECT) only to a wizard
 	// or royalty; the executor here is a mortal.
 	[Test]
 	public async ValueTask List_Flags_DisplaysFlagList()
@@ -139,7 +139,7 @@ public class AtListCommandTests
 		var text = await ListLineAsync("@list/flags", "Flags: ");
 
 		await Assert.That(text).StartsWith("Flags: ABODE (A), ANSI (A), ");
-		await Assert.That(text).Contains("NO_LEAVE (N), NOSPOOF (\"), NO_TEL (N), NO_WARN (w)");
+		await Assert.That(text).Contains("NOACCENTS (~), NOSPOOF (\"), NO_COMMAND (n), NO_LEAVE (N), NO_TEL (N), NO_WARN (w)");
 		await Assert.That(text).Contains(", CHAN_USEFIRSTMATCH, CHOWN_OK (C), ");
 		var names = text["Flags: ".Length..].Split(", ").Select(entry => entry.Split(' ')[0]).ToArray();
 		await Assert.That(names).DoesNotContain("GOING");
@@ -164,9 +164,9 @@ public class AtListCommandTests
 		var text = await ListLineAsync("@list/powers", "Powers: ");
 
 		await Assert.That(text).StartsWith(
-			"Powers: Announce, Boot, Builder, CAN_DARK, CAN_HTTP, Can_spoof, Chat_Privs, DEBIT, Functions, Guest, Halt, Hide, HOOK, Idle, ");
+			"Powers: Announce, Boot, Builder, CAN_DARK, CAN_HTTP, Can_spoof, Chat_Privs, DEBIT, Functions, Guest, HOOK, Halt, Hide, Idle, ");
 		await Assert.That(text).Contains(", Long_Fingers, MANY_ATTRIBS, No_Pay, ");
-		await Assert.That(text).Contains(", Pemit_All, PICK_DBREFS, Player_Create, ");
+		await Assert.That(text).Contains(", Open_Anywhere, PICK_DBREFS, Pemit_All, Player_Create, ");
 	}
 
 	private async ValueTask<string> ListLineAsync(string command, string label)
