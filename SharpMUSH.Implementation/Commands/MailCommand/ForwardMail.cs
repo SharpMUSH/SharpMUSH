@@ -74,17 +74,17 @@ public static class ForwardMail
 			? mail.Subject
 			: MarkupText.Concat(MarkupText.Plain(ForwardPrefix), mail.Subject);
 
-		// do_mail_fwd sends with silent=1 (extmail.c:1296) and then only counts attempts, so a refused
-		// forward reads as a success. Refusals are reported here instead.
+		// extmail.c:1292 — do_mail_fwd sends with silent=1, so no "You sent your message to" line per
+		// recipient, and its count is of attempts: a refused forward still counts.
 		var delivered = new List<SharpPlayer>();
 		foreach (var recipient in recipients)
 		{
 			delivered.AddRange(await MailDelivery.SendAsync(parser, delivery, executor, recipient,
 				new MailDelivery.Letter(subject, mail.Content, MarkupText.Empty, Urgent: false, Forwarded: true),
-				silent: false));
+				silent: true));
 		}
 
-		await notifyService.Notify(executor, $"MAIL: {delivered.Count} messages forwarded.", executor);
+		await notifyService.Notify(executor, $"MAIL: {recipients.Count} messages forwarded.", executor);
 
 		// As for @mail: a caller that sees only this return value can tell no match from a refusal.
 		if (delivered.Count == 0)

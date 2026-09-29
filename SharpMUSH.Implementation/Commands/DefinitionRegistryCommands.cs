@@ -137,41 +137,67 @@ public partial class Commands : ICommandRestrictionApplier
 		var (definition, isSystem) = commandInfo;
 		var attr = definition.Attribute;
 
+		// cmd_command (src/command.c:2197): name, flags, lock, failure message, switches, then how
+		// each side of the = is parsed, and last do_hook_list's hooks.
+		var behavior = attr.Behavior;
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoNameFormat), executor, attr.Name, disabled ? "Disabled" : "Enabled");
-		// A command @command/add made is registered as a system entry because only those are matched
-		// from the command trie, but it is not built in, and list_commands tells the two apart.
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoTypeFormat), executor,
-			isSystem && !IsAddedCommand(definition) ? "Built-in" : "User-defined");
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMinArgsFormat), executor, attr.MinArgs);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoMaxArgsFormat), executor, attr.MaxArgs);
 
-		if (attr.Switches != null && attr.Switches.Length > 0)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoSwitchesFormat), executor, string.Join(", ", attr.Switches));
-		}
+		var flags = new List<string>();
+		if (behavior.HasFlag(CB.Switches)) flags.Add("Switches");
+		if (behavior.HasFlag(CB.EqSplit)) flags.Add("Eqsplit");
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoFlagsFormat), executor, string.Join(", ", flags));
 
-		var behaviors = new List<string>();
-		if ((attr.Behavior & CB.Default) != 0) behaviors.Add("Default");
-		if ((attr.Behavior & CB.EqSplit) != 0) behaviors.Add("EqSplit");
-		if ((attr.Behavior & CB.LSArgs) != 0) behaviors.Add("LSArgs");
-		if ((attr.Behavior & CB.RSArgs) != 0) behaviors.Add("RSArgs");
-		if ((attr.Behavior & CB.RSNoParse) != 0) behaviors.Add("RSNoParse");
-		if ((attr.Behavior & CB.NoGagged) != 0) behaviors.Add("NoGagged");
-		if ((attr.Behavior & CB.NoParse) != 0) behaviors.Add("NoParse");
-
-		if (behaviors.Count > 0)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoBehaviorFormat), executor, string.Join(" | ", behaviors));
-		}
-
-		if (!string.IsNullOrEmpty(attr.CommandLock))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoLockFormat), executor, attr.CommandLock);
-		}
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoLockFormat), executor,
+			string.IsNullOrEmpty(attr.CommandLock) ? "*UNLOCKED*" : attr.CommandLock);
 
 		if (!string.IsNullOrEmpty(attr.RestrictMessage))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoFailureMsgFormat), executor, attr.RestrictMessage);
+		}
+
+		if (attr.Switches is { Length: > 0 })
+		{
+			// dyn_switch_list is the sorted switch table, and each switch is named in capitals.
+			var switchNames = attr.Switches.Select(sw => sw.ToUpperInvariant()).Distinct().Order(StringComparer.Ordinal);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoSwitchesFormat), executor, string.Join(", ", switchNames));
+		}
+		else
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoNoSwitches), executor);
+		}
+
+		var leftside = new List<string>();
+		if (behavior.HasFlag(CB.LSArgs) || behavior.HasFlag(CB.Args)) leftside.Add("Args");
+		if (behavior.HasFlag(CB.NoParse)) leftside.Add("Noparse");
+		if (behavior.HasFlag(CB.EqSplit))
+		{
+			var rightside = new List<string>();
+			if (behavior.HasFlag(CB.RSArgs)) rightside.Add("Args");
+			if (behavior.HasFlag(CB.RSNoParse)) rightside.Add("Noparse");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoLeftsideFormat), executor, string.Join(", ", leftside));
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoRightsideFormat), executor, string.Join(", ", rightside));
+		}
+		else
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoArgumentsFormat), executor, string.Join(", ", leftside));
+		}
+
+		// do_hook_list(executor, arg_left, 0): a Wizard or HOOK-powered caller sees the hooks, in
+		// before, after, ignore, override, extend order; nothing is said when there are none.
+		if (await executor.IsWizard() || await executor.HasPower("HOOK"))
+		{
+			var hooks = await HookService.GetAllHooksAsync(attr.Name);
+			foreach (var hookType in (string[])["BEFORE", "AFTER", "IGNORE", "OVERRIDE", "EXTEND"])
+			{
+				if (!hooks.TryGetValue(hookType, out var hook)) continue;
+				var name = hookType.ToLowerInvariant();
+				if (hookType is "OVERRIDE" or "EXTEND" && hook.Inline)
+				{
+					name += "/inline" + (hook.NoBreak ? "/nobreak" : "") + (hook.Localize ? "/localize" : "") + (hook.ClearRegs ? "/clearregs" : "");
+				}
+
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandInfoHookFormat), executor, name, hook.TargetObject.Number, hook.AttributeName);
+			}
 		}
 
 		return CallState.Empty;

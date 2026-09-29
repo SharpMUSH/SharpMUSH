@@ -72,7 +72,7 @@ public static class BuildingHelpers
 		{
 			// Outside the gate: CreatedAsync fires OBJECT`CREATE, which runs its handler inline.
 			DBRef thing => await CreatedAsync(parser, mediator, database, notifyService, eventService, executor,
-				name, thing),
+				thing),
 			Error<string> refused => refused
 		};
 	}
@@ -88,7 +88,6 @@ public static class BuildingHelpers
 		INotifyService notifyService,
 		IEventService eventService,
 		AnySharpObject executor,
-		MString name,
 		DBRef thing)
 	{
 		// A new object inherits its creator's zone, once the cycle guard allows it.
@@ -99,7 +98,10 @@ public static class BuildingHelpers
 			await mediator.Send(new SetObjectZoneCommand(created, zone));
 		}
 
-		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Created), executor, name, thing);
+		// create.c:604 — `Created: Object #N.`, and nothing more. Neither the name the builder just typed
+		// nor the object's creation time is in it.
+		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CreatedObject), executor,
+			$"#{thing.Number}");
 
 		await eventService.TriggerEventAsync(parser, "OBJECT`CREATE", executor.Object().DBRef,
 			thing.ToString(),
@@ -811,8 +813,17 @@ public static class BuildingHelpers
 			await createHooks.ObjectCreatedAsync(cloneDbRef, executor.Object().DBRef);
 		}
 
-		await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ClonedNewObjectFormat),
-			executor, cloneDbRef.Number);
+		// create.c:727 `Cloned: Object %s.` for a thing and :744 `Cloned: Room #%d.` for a room, each with
+		// the bare dbref. An exit gets neither: its branch is a do_real_open (:771-773), whose own
+		// "Opened exit #N" is the only line do_clone leaves behind for one.
+		if (!target.IsExit)
+		{
+			await notifyService.NotifyLocalized(executor,
+				target.IsRoom
+					? nameof(ErrorMessages.Notifications.ClonedRoom)
+					: nameof(ErrorMessages.Notifications.ClonedObject),
+				executor, $"#{cloneDbRef.Number}");
+		}
 
 		// real_did_it(player, clone, NULL, NULL, NULL, NULL, "ACLONE", …) — create.c:727 and :742. The
 		// attribute has just been copied onto the clone, and it runs there with the cloner as enactor.

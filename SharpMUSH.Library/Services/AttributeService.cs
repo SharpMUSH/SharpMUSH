@@ -56,7 +56,7 @@ public class AttributeService(
 	/// field initializer because it is handed this service as its Execute-mode read, and C# forbids
 	/// <c>this</c> there; construction is idempotent, so a race simply builds it twice.
 	/// </summary>
-	private AttributeEvaluator Evaluator => _evaluator ??= new AttributeEvaluator(this, mediator, locateService,
+	private AttributeEvaluator Evaluator => _evaluator ??= new AttributeEvaluator(this, ps, mediator, locateService,
 		validateService, notifyService, configuration, logger, userFunctions);
 
 	/// <inheritdoc/>
@@ -193,7 +193,7 @@ public class AttributeService(
 	}
 
 	/// <summary>PennMUSH's built-in attribute aliases (<c>attralias</c>, <c>hdrs/atr_tab.h</c>).</summary>
-	internal static readonly IReadOnlyDictionary<string, string> StandardAttributeAliases =
+	public static readonly IReadOnlyDictionary<string, string> StandardAttributeAliases =
 		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
 		{
 			["DESC"] = "DESCRIBE",
