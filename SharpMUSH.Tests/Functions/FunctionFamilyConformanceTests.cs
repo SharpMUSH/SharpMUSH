@@ -155,6 +155,39 @@ public class FunctionFamilyConformanceTests
 	}
 
 	/// <summary>
+	/// The clear looks the name up exactly, as <c>find_atr_in_list</c> does (<c>src/attrib.c:1095</c>):
+	/// an alias names nothing to clear, and the attribute it would resolve to stays. PennMUSH answers
+	/// "No such attribute to reset." and keeps <c>DESCRIBE</c>.
+	/// </summary>
+	[Test]
+	public async Task AttribSetClearsByExactNameNotAlias()
+	{
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "FamAlias");
+
+		await Assert.That(await Eval($"[attrib_set({thing}/DESCRIBE,d)][attrib_set({thing}/DESC)]|[get({thing}/DESCRIBE)]"))
+			.IsEqualTo($"{ErrorMessages.Returns.NoSuchAttribute}|d");
+	}
+
+	/// <summary>
+	/// <c>do_set_atr</c> asks <c>controls()</c> before anything else (<c>src/attrib.c:2265</c>), so a
+	/// caller who may not clear an attribute learns nothing about whether it exists: a missing
+	/// attribute and a present one are refused alike.
+	/// </summary>
+	[Test]
+	public async Task AttribSetRefusesAClearBeforeLookingForTheAttribute()
+	{
+		var uid = Uid();
+		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FamClrO");
+		var viewer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FamClrV");
+		await CommandParser.CommandParse(owner.Handle, ConnectionService, MarkupText.Plain($"&FFHERE{uid} me=x"));
+
+		await Assert.That(await Eval(viewer.Handle, $"[attrib_set({owner.DbRef}/FFHERE{uid})]|[attrib_set({owner.DbRef}/FFGONE{uid})]"))
+			.IsEqualTo($"{ErrorMessages.Returns.AttrSetPermissions}|{ErrorMessages.Returns.AttrSetPermissions}");
+	}
+
+	/// <summary>
 	/// The four <c>hasattr</c> forms refuse an attribute the caller cannot read with <c>e_perm</c>
 	/// (<c>src/fundb.c:255-256</c>), not the <c>NO PERMISSION TO GET ATTRIBUTE</c> of <c>get()</c>,
 	/// which the <c>get</c>/<c>xget</c> pair keeps.

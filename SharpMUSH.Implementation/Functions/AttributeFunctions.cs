@@ -93,12 +93,22 @@ public partial class Functions
 				// Without a value it clears, as do_set_atr(thing, s, NULL, ...) does
 				// (src/fundb.c:2295-2296); an empty value still creates the attribute. Clearing one
 				// that is not there is AE_NOTFOUND, which PennMUSH notifies as "No such attribute to
-				// reset." (src/attrib.c:2411-2412) and SharpMUSH returns.
+				// reset." (src/attrib.c:2411-2412) and SharpMUSH returns. The control check comes first
+				// (src/attrib.c:2265), so a caller who may not clear cannot probe what exists, and the
+				// lookup is by exact name, as find_atr_in_list's is: an alias such as DESC is not found.
 				var hasValue = args.TryGetValue("1", out var contents);
-				if (!hasValue && await AttributeService.GetAttributeAsync(executor, realLocated, attribute,
-						IAttributeService.AttributeMode.Read, parent: false) is None)
+				if (!hasValue)
 				{
-					return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+					if (!await PermissionService.Controls(executor, realLocated))
+					{
+						return new CallState(ErrorMessages.Returns.AttrSetPermissions);
+					}
+
+					if (!await Mediator.CreateStream(new GetAttributesQuery(realLocated.Object().DBRef, attribute, false,
+							IAttributeService.AttributePatternMode.Exact)).AnyAsync())
+					{
+						return new CallState(ErrorMessages.Returns.NoSuchAttribute);
+					}
 				}
 
 				var setResult = hasValue

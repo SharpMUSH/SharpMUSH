@@ -19,6 +19,8 @@ think [median(ansi(r,3),1,2)] [mean(ansi(r,4),2)] [lmath(add,ansi(r,1) 2)]
 think [attrib_set(me/FFSET,x)][attrib_set(me/FFSET)][hasattr(me,FFSET)]|[attrib_set(me/FFSET,)][hasattr(me,FFSET)][hasattrval(me,FFSET)]
 think [attrib_set(me/FFSET)][hasattr(me,FFSET)]
 think [attrib_set(me/FFNEVER)][hasattr(me,FFNEVER)]
+think [attrib_set(me/ffset,y)][attrib_set(me/ffset)][hasattr(me,FFSET)]
+think [attrib_set(me/DESCRIBE,d)][attrib_set(me/DESC)]|[get(me/DESCRIBE)][attrib_set(me/DESCRIBE)]
 
 ::case ff.delims  input and output delimiters through the shared cores
 think [grab(a|b|c,b,|)] [match(a|b|c,c,|)] [graball(a|b|ab,*b,|)] [matchall(a b a,a,,|)]
@@ -48,7 +50,7 @@ think [get(*Alice/FFSECRET)]|[xget(*Alice,FFSECRET)]|[get(*Alice/FFVIS)]|[xget(*
 think [hasattr(*Alice,FFSECRET)]|[hasattrp(*Alice,FFSECRET)]|[hasattrval(*Alice,FFSECRET)]|[hasattrpval(*Alice,FFSECRET)]
 think [lattr(*Alice/FF*)]|[lattrp(*Alice/FF*)]|[nattr(*Alice/FF*)]|[nattrp(*Alice/FF*)]
 think [reglattr(*Alice/^FF)]|[reglattrp(*Alice/^FF)]|[xattr(*Alice/FF*,1,5)]|[xattrp(*Alice/FF*,1,5)]
-think [attrib_set(*Alice/FFSECRET,x)]|[mailstats(*Alice)]
+think [attrib_set(*Alice/FFSECRET,x)]|[mailstats(*Alice)]|[attrib_set(*Alice/FFMISSING)]
 think [orflags(*Alice,W)]|[andflags(*Alice,!W)]
 think [recv(*Alice)]|[sent(*Alice)]|[ssl(*Alice)]|[isnum(conn(*Alice))]
 ::as alice
