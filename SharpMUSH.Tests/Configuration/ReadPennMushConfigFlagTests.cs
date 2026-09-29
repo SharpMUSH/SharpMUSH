@@ -53,6 +53,50 @@ public class ReadPennMushConfigFlagTests
 	}
 
 	/// <summary>
+	/// PennMUSH's shipped mushcnf.dst sets player_flags over three lines, and its cf_flag appends each
+	/// one, so <c>config(player_flags)</c> there is <c>enter_ok ansi no_command</c>. Only the last line
+	/// used to survive, and imported worlds created players without ENTER_OK and ANSI.
+	/// </summary>
+	[Test]
+	public async Task RepeatedFlagLines_Accumulate()
+	{
+		var path = WriteTempConfig(
+			"player_flags enter_ok",
+			"player_flags ansi",
+			"player_flags no_command",
+			"room_flags no_command",
+			"room_flags dark",
+			"mud_name First",
+			"mud_name Second");
+		try
+		{
+			var options = ReadPennMushConfig.Create(path);
+
+			await Assert.That(options.Flag.PlayerFlags).IsEquivalentTo(new[] { "enter_ok", "ansi", "no_command" });
+			await Assert.That(options.Flag.RoomFlags).IsEquivalentTo(new[] { "no_command", "dark" });
+			// Options that are not flag lists still take their last line.
+			await Assert.That(options.Net.MudName).IsEqualTo("Second");
+		}
+		finally
+		{
+			File.Delete(path);
+		}
+	}
+
+	/// <summary>
+	/// The shipped mushcnf.dst, read as PennMUSH 1.8.8 reads it: <c>config(player_flags)</c> there is
+	/// <c>enter_ok ansi no_command</c>, not just the last of its three lines.
+	/// </summary>
+	[Test]
+	public async Task TheShippedConfig_KeepsEveryPlayerFlagsLine()
+	{
+		var flags = ReadPennMushConfig.Create(
+			Path.Join(TestPaths.RepositoryRoot, "SharpMUSH.Configuration", "mushcnf.dst")).Flag;
+
+		await Assert.That(flags.PlayerFlags).IsEquivalentTo(new[] { "enter_ok", "ansi", "no_command" });
+	}
+
+	/// <summary>
 	/// The default flags for each type, as PennMUSH's own <c>game/mushcnf.dst</c> ships them:
 	/// NO_COMMAND on players, rooms and things, and nothing on exits. NO_COMMAND keeps an object out
 	/// of the $-command search, which is why it is a default at all — rooms and things were being
