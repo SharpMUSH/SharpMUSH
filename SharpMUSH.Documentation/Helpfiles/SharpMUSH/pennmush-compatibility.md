@@ -831,22 +831,8 @@ arguments and return an error. Use `oob()` for GMCP. `objmem()` always answers 0
   `~<command>` — run one command under strict parsing.
 
 # COMPATIBILITY MAIL
-`@mail` matches PennMUSH's commands and switches. Four differences are deliberate, and all four are
+`@mail` matches PennMUSH's commands and switches. Three differences are deliberate, and all three are
 about what happens to a message between the sender's `@mail` and the recipient's folder.
-
-## A refused forward is reported — `@mail/fwd`
-
-**A choice.**
-
-**PennMUSH** forwards with `silent=1` (`extmail.c:1296`) and then counts the recipients it tried, so a
-forward to somebody who does not accept your mail reads as a success.<br>
-**SharpMUSH** forwards with refusals reported, counts the recipients the message actually reached, and
-answers `#-1 RECIPIENT DOES NOT ACCEPT MAIL FROM YOU` when that count is zero.<br>
-**Why.** A forward that silently went nowhere is the one case where the sender most needs to be told:
-unlike `@mail`, they are forwarding something they cannot re-send from memory.<br>
-**Workaround.** Read the count in `MAIL: <n> messages forwarded.` rather than assuming the forward
-arrived. Code that tested only for a dbref answer sees an error string instead.<br>
-**Example.** The parity case `choice.mail-fwd` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
 
 ## A `MAILFILTER` that mails its owner does not recurse
 

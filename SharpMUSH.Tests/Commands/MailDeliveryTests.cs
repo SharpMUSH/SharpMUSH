@@ -177,21 +177,45 @@ public class MailDeliveryTests
 	}
 
 	/// <summary>
-	/// A forward goes through the recipient's mail lock like a send (<c>extmail.c:1578</c>), with the same
-	/// refusal the sender would see for a send.
+	/// A forward goes through the recipient's mail lock like a send (<c>extmail.c:1578</c>), but
+	/// <c>do_mail_fwd</c> sends with <c>silent=1</c> (<c>extmail.c:1292</c>): the default refusal is
+	/// withheld, the lock's own <c>MAIL_LOCK`FAILURE</c> still shows, and the attempt still counts.
 	/// </summary>
 	[Test]
-	public async ValueTask ForwardingToALockedRecipientIsRefused()
+	public async ValueTask ForwardingToALockedRecipientIsRefusedSilently()
 	{
 		var sender = await Player("MdFwdLock");
 		var target = await Player("MdFwdLockTo");
 		await Run(target, "@lock/mail me=#0");
 		await Run(sender, "@mail me=Locked/Body.");
 
-		var heard = await Heard(sender, () => Run(sender, $"@mail/fwd 1=#{target.DbRef.Number}"));
+		var plain = await Heard(sender, () => Run(sender, $"@mail/fwd 1=#{target.DbRef.Number}"));
+		await Run(target, "&MAIL_LOCK`FAILURE me=custom forward failure");
+		var custom = await Heard(sender, () => Run(sender, $"@mail/fwd 1=#{target.DbRef.Number}"));
 
-		await Assert.That(heard).Contains($"MAIL: {target.Name} is not accepting mail from you right now.");
+		await Assert.That(plain).IsEquivalentTo(["MAIL: 1 messages forwarded."]);
+		await Assert.That(custom).Contains("custom forward failure");
+		await Assert.That(custom).DoesNotContain(m => m.Contains("is not accepting mail"));
 		await Assert.That(await Mailbox(target)).IsEmpty();
+	}
+
+	/// <summary>
+	/// <c>do_mail_fwd</c> sends with <c>silent=1</c> (<c>extmail.c:1292</c>), so the forwarder hears only
+	/// the count, never <c>MAIL: You sent your message to ...</c>. Captured from PennMUSH 1.8.8 (80a1d5b)
+	/// by <c>tools/parity/scenarios/50-mail.scn</c> for <c>@mail/fwd 1=Bob Alice</c>:
+	/// <c>MAIL: You have a new message (3) from Alice.</c>, then <c>MAIL: 2 messages forwarded.</c>
+	/// </summary>
+	[Test]
+	public async ValueTask ForwardingDoesNotConfirmEachRecipient()
+	{
+		var sender = await Player("MdFwdQuiet");
+		var target = await Player("MdFwdQuietTo");
+		await Run(sender, "@mail me=Quiet/Forward me.");
+
+		var heard = await Heard(sender, () => Run(sender, $"@mail/fwd 1={target.Name} {sender.Name}"));
+
+		await Assert.That(heard).IsEquivalentTo(
+			["MAIL: You have a new message (2) from " + sender.Name + ".", "MAIL: 2 messages forwarded."]);
 	}
 
 	/// <summary>

@@ -333,11 +333,11 @@
    "command": "One godpass"
   },
   {
-   "key": "40-compat-choices/choice.mail-fwd#0",
+   "key": "40-compat-choices/choice.mail-folder#0",
    "command": "Alice alicepass"
   },
   {
-   "key": "40-compat-choices/choice.mail-fwd#1",
+   "key": "40-compat-choices/choice.mail-folder#1",
    "command": "Bob bobpass"
   },
   {
@@ -359,14 +359,6 @@
   {
    "key": "50-mail/mail.fwd-by-name#2",
    "command": "home"
-  },
-  {
-   "key": "50-mail/mail.fwd-by-name#4",
-   "command": "@mail/fwd 1=Bob"
-  },
-  {
-   "key": "50-mail/mail.fwd-by-name#6",
-   "command": "@mail/fwd 1=Bob Alice"
   }
  ]
 }
