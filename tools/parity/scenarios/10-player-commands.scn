@@ -77,3 +77,18 @@ frobnicate
 @frobnicate
 huh
 think
+
+::case perm.ufun  get(), xget() and u() on another player's attributes honour read, then eval, permission
+::login wiz Wiz wizpass
+&PERMH *Wiz=h[add(1,1)]
+&PERMV *Wiz=v[add(1,1)]
+@set *Wiz/PERMV=visual
+::as bob
+&PERMB me=b[add(1,1)]
+@set me/PERMB=visual
+::as alice
+think [get(*Wiz/PERMH)]|[xget(*Wiz,PERMH)]|[u(*Wiz/PERMH)]
+think [get(*Wiz/PERMV)]|[u(*Wiz/PERMV)]
+think [get(*Bob/PERMB)]|[u(*Bob/PERMB)]
+think [get(*Wiz/NOPE)]|[xget(*Wiz,NOPE)]|[u(*Wiz/NOPE)]
+think [get(*Wiz/SUCCESS)]|[get(me/NOPE)]|[get(me/SUCCESS)]
