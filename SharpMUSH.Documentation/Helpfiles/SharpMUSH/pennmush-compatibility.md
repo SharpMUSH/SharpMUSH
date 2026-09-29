@@ -329,6 +329,24 @@ a::b::c
 b
 ```
 
+## A Wizard's `mailstats()` is their own
+
+**A choice.**
+
+**Affects** `mailstats() maildstats() mailfstats()` with no `<player>`.<br>
+**PennMUSH** turns a Wizard's empty `<player>` into "all mail" (`extmail.c:2238-2242`), then
+rejects that as no player before its all-mail branch is reached. The Wizard is told ": No such
+player." and gets nothing back.<br>
+**SharpMUSH** gives a Wizard their own statistics, as it gives everyone else.<br>
+**Why.** `help mailstats()` documents `mailstats([<player>])` as your own statistics, and PennMUSH's
+answer is an error nobody could have relied on.<br>
+**Workaround.** None needed: `mailstats(me)` means the same on both servers.
+
+```sharp
+> think words(mailstats())
+2
+```
+
 # COMPATIBILITY COMMANDS
 Deliberate differences in the command table, the configuration and the objects the game starts with.
 
@@ -830,23 +848,27 @@ arguments and return an error. Use `oob()` for GMCP. `objmem()` always answers 0
   does not.<br>
   `~<command>` — run one command under strict parsing.
 
-# COMPATIBILITY MAIL
-`@mail` matches PennMUSH's commands and switches. Four differences are deliberate, and all four are
-about what happens to a message between the sender's `@mail` and the recipient's folder.
-
-## A refused forward is reported — `@mail/fwd`
+## SharpMUSH-only flags and powers
 
 **A choice.**
 
-**PennMUSH** forwards with `silent=1` (`extmail.c:1296`) and then counts the recipients it tried, so a
-forward to somebody who does not accept your mail reads as a success.<br>
-**SharpMUSH** forwards with refusals reported, counts the recipients the message actually reached, and
-answers `#-1 RECIPIENT DOES NOT ACCEPT MAIL FROM YOU` when that count is zero.<br>
-**Why.** A forward that silently went nowhere is the one case where the sender most needs to be told:
-unlike `@mail`, they are forwarding something they cannot re-send from memory.<br>
-**Workaround.** Read the count in `MAIL: <n> messages forwarded.` rather than assuming the forward
-arrived. Code that tested only for a dbref answer sees an error string instead.<br>
-**Example.** The parity case `choice.mail-fwd` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
+**PennMUSH** has no `APPROVED`, `SCENE_ROOM` or `TRUECOLOR` flag and no `See_OOB` or `Unkillable`
+power.<br>
+**SharpMUSH** defines all five, so `@list flags`, `@list powers`, `list(flags)` and `list(powers)` name
+them among PennMUSH's own, in the same sorted, comma-separated line.<br>
+**Why.** `APPROVED` is what `isapproved()` reads, `SCENE_ROOM` belongs to the scene plugin and
+`TRUECOLOR` marks a client that takes 24-bit colour; `See_OOB` and `Unkillable` are reserved for
+SharpMUSH subsystems. An imported PennMUSH database has none of them set.<br>
+**Workaround.** None needed for imported code: nothing PennMUSH wrote can set or test a name it never
+had. Code that walks `list(flags)` should expect names it does not know, as it already must for a
+game's own `@flag/add` flags.
+
+**Example.** The parity case `admin.lists` in `tools/parity/scenarios/20-admin-commands.scn` lists
+both, and the harness accepts exactly these five names on SharpMUSH's side.
+
+# COMPATIBILITY MAIL
+`@mail` matches PennMUSH's commands and switches. Three differences are deliberate, and all three are
+about what happens to a message between the sender's `@mail` and the recipient's folder.
 
 ## A `MAILFILTER` that mails its owner does not recurse
 
@@ -955,7 +977,11 @@ choices.
   **`attrib_set#()` cannot be called.** The parser's function-name token does not admit `#`, so the
   text is returned unchanged. Use `attrib_set()`. (#974)<br>
   **`objmem()` always answers 0.** (#974)<br>
-  **`buy` has no economy.** It is a stub. (#1006 item 10)
+  **`buy` has no economy.** It is a stub. (#1006 item 10)<br>
+  **`TERSE` is an alias of `CLOUDY`.** PennMUSH has them as two flags sharing the letter `x`, so
+  `@list flags` lists `TERSE (x)` there and not here. (#1404)<br>
+  **The vacation flag is named `ON_VACATION`.** PennMUSH names it `ON-VACATION`; both spellings are
+  accepted here, but lists show the other one. (#1405)
 
 The other movement and queue gaps left by the movement work are enumerated in #1006 rather than
 repeated here; its items 1, 2, 4 and 15 are in [COMPATIBILITY UNRESOLVED].

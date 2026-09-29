@@ -248,8 +248,8 @@ public class BuildingCommandTests
 		await Assert.That(clone.Object()!.Name).IsEqualTo("CloneObjectTestSource");
 		await Assert.That(cloneDbRef).IsNotEqualTo(sourceDbRef);
 		await NotifyService.Received(1).NotifyLocalized(TestHelpers.MatchingObject(executor),
-			nameof(ErrorMessages.Notifications.ClonedNewObjectFormat), TestHelpers.MatchingObject(executor),
-			Arg.Is<object[]>(args => args.Length == 1 && Equals(args[0], cloneDbRef.Number)));
+			nameof(ErrorMessages.Notifications.ClonedObject), TestHelpers.MatchingObject(executor),
+			Arg.Is<object[]>(args => args.Length == 1 && Equals(args[0], $"#{cloneDbRef.Number}")));
 	}
 
 	[Test]
@@ -1598,5 +1598,155 @@ public class BuildingCommandTests
 		await Assert.That((await after.Location.WithCancellation(CancellationToken.None)).IsNone).IsTrue();
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
 			NotifyService, nameof(ErrorMessages.Notifications.DropToRemoved), Actor.DbRef, Actor.DbRef)).IsTrue();
+	}
+
+	/// <summary>
+	/// Everything <see cref="Actor"/> was told while <paramref name="action"/> ran, read from the
+	/// recipient-keyed recorder rather than the session-shared substitute's call list.
+	/// </summary>
+	private async Task<List<string>> ActorHeardWhile(Func<Task> action)
+	{
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountFor(Actor.DbRef);
+		await action();
+		return [.. recorder.For(Actor.DbRef).Skip(before)];
+	}
+
+	/// <summary>
+	/// <c>do_create</c> reports the bare dbref and nothing else:
+	/// <c>notify_format(player, T("Created: Object %s."), unparse_dbref(thing))</c>
+	/// (<c>src/create.c:604</c>). SharpMUSH said <c>Created &lt;name&gt; (#N:&lt;ctime&gt;).</c>, which
+	/// leaks the creation stamp into a line imported softcode parses.
+	/// </summary>
+	[Test]
+	public async ValueTask CreateReportsTheBareDbrefPennMUSHPrints()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("CreatedLine");
+		DBRef? created = null;
+
+		var heard = await ActorHeardWhile(async () =>
+		{
+			var result = await Parser.CommandParse(Actor.Handle, ConnectionService,
+				MarkupText.Plain($"@create {name}"));
+			created = DBRef.Parse(result.Message!.ToPlainText());
+		});
+
+		await Assert.That(heard).Contains($"Created: Object #{created!.Value.Number}.");
+		await Assert.That(heard.Any(line => line.Contains(name, StringComparison.Ordinal))).IsFalse()
+			.Because("do_create names neither the object nor its creation time");
+	}
+
+	/// <summary>
+	/// <c>do_clone</c>'s thing branch (<c>src/create.c:727</c>) is the same bare dbref under a different
+	/// verb. SharpMUSH said <c>Cloned. New object: #N.</c>
+	/// </summary>
+	[Test]
+	public async ValueTask CloneOfAThingReportsClonedObject()
+	{
+		var source = await CreateFixtureThing("ClonedLine");
+		DBRef? clone = null;
+
+		var heard = await ActorHeardWhile(async () =>
+		{
+			var result = await Parser.CommandParse(Actor.Handle, ConnectionService,
+				MarkupText.Plain($"@clone {source}"));
+			clone = DBRef.Parse(result.Message!.ToPlainText());
+		});
+
+		await Assert.That(heard).Contains($"Cloned: Object #{clone!.Value.Number}.");
+	}
+
+	/// <summary>
+	/// A cloned room says <c>Cloned: Room #%d.</c> instead (<c>src/create.c:744</c>) — one verb per type,
+	/// which the single format string could not express.
+	/// </summary>
+	[Test]
+	public async ValueTask CloneOfARoomReportsClonedRoom()
+	{
+		var source = await LinkableRoom("ClonedRoomLine");
+		DBRef? clone = null;
+
+		var heard = await ActorHeardWhile(async () =>
+		{
+			var result = await Parser.CommandParse(Actor.Handle, ConnectionService,
+				MarkupText.Plain($"@clone {source}"));
+			clone = DBRef.Parse(result.Message!.ToPlainText());
+		});
+
+		await Assert.That(heard).Contains($"Cloned: Room #{clone!.Value.Number}.");
+	}
+
+	/// <summary>
+	/// A cloned exit gets no <c>Cloned:</c> line at all: its branch is a <c>do_real_open</c>
+	/// (<c>src/create.c:771-773</c>), so the only report is that routine's own "Opened exit #N"
+	/// (<c>:159</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask CloneOfAnExitReportsOnlyTheOpenedExit()
+	{
+		var destination = await LinkableRoom("ClonedExitTarget");
+		var exitName = TestIsolationHelpers.GenerateUniqueName("ClonedExit");
+		var opened = await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@open {exitName}={destination}"));
+		var source = DBRef.Parse(opened.Message!.ToPlainText());
+
+		var heard = await ActorHeardWhile(async () => await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@clone {source}={TestIsolationHelpers.GenerateUniqueName("ClonedExitCopy")}")));
+
+		await Assert.That(heard.Any(line => line.StartsWith("Cloned:", StringComparison.Ordinal))).IsFalse()
+			.Because("do_clone's exit branch never reaches a Cloned: notify");
+		await Assert.That(heard.Any(line => line.StartsWith("Opened exit ", StringComparison.Ordinal))).IsTrue();
+	}
+
+	/// <summary>
+	/// <c>if (!AreQuiet(player, thing)) notify(player, T("Name set."))</c> (<c>src/set.c:153-154</c>).
+	/// <c>@name</c> confirmed nothing at all, so softcode that waits on the line never saw it.
+	/// </summary>
+	[Test]
+	public async ValueTask NameConfirmsWithNameSet()
+	{
+		var target = await CreateFixtureThing("NameSetTarget");
+
+		var heard = await ActorHeardWhile(async () => await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@name {target}={TestIsolationHelpers.GenerateUniqueName("NameSetNew")}")));
+
+		await Assert.That(heard).Contains("Name set.");
+	}
+
+	/// <summary>
+	/// <c>AreQuiet(x, y)</c> is <c>Quiet(x) || (Quiet(y) &amp;&amp; Owner(y) == x)</c>
+	/// (<c>hdrs/dbdefs.h:198</c>), so a QUIET object the renamer owns swallows the confirmation.
+	/// </summary>
+	[Test]
+	public async ValueTask NameOfAQuietObjectConfirmsNothing()
+	{
+		var target = await CreateFixtureThing("NameSetQuiet");
+		await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@set {target}=QUIET"));
+
+		var heard = await ActorHeardWhile(async () => await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@name {target}={TestIsolationHelpers.GenerateUniqueName("NameSetQuietNew")}")));
+
+		await Assert.That(heard).DoesNotContain("Name set.");
+	}
+
+	/// <summary>
+	/// <c>do_link</c>'s room branch says <c>Dropto set.</c> (<c>src/create.c:439</c>) and
+	/// <c>do_unlink</c>'s says <c>Dropto removed.</c> (<c>:281</c>) — one word, not the hyphenated
+	/// "Drop-to" SharpMUSH printed.
+	/// </summary>
+	[Test]
+	public async ValueTask RoomDropToUsesPennMUSHsSpelling()
+	{
+		var here = (await (await Mediator.Send(new GetObjectNodeQuery(Actor.DbRef))).Expect<AnySharpObject>().Where())
+			.Object().DBRef;
+		var destination = await LinkableRoom("DroptoSpelling");
+
+		var linked = await ActorHeardWhile(async () => await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@link {here}={destination}")));
+		await Assert.That(linked).Contains("Dropto set.");
+
+		var unlinked = await ActorHeardWhile(async () => await Parser.CommandParse(Actor.Handle, ConnectionService,
+			MarkupText.Plain($"@unlink {here}")));
+		await Assert.That(unlinked).Contains("Dropto removed.");
 	}
 }

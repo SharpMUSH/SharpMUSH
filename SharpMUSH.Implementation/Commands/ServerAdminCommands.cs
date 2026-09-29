@@ -949,13 +949,21 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// <c>do_stats</c>: the object count by type, over the world or over one owner's objects. SharpMUSH
-	/// removes a destroyed object rather than keeping it as garbage, so there is no garbage figure and
-	/// no "next object" line.
+	/// <c>do_stats</c>: the object count by type, over the world or over one owner's objects. The world's
+	/// line ends with the garbage count, which is always <see cref="ObjectStatsHelpers.Garbage"/> here:
+	/// SharpMUSH removes a destroyed object rather than keeping it as garbage, so there is also never a
+	/// free dbref for Penn's "next object" line to name.
 	/// </summary>
 	private async ValueTask<Option<CallState>> ObjectStatsAsync(AnySharpObject executor, DBRef? owner)
 	{
 		var counts = await ObjectStatsHelpers.CountAsync(Mediator, owner);
+
+		if (owner is null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsWorldCountsFormat), executor,
+				counts.Total, counts.Rooms, counts.Exits, counts.Things, counts.Players, ObjectStatsHelpers.Garbage);
+			return new CallState(counts.ForEveryone());
+		}
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StatsObjectCountsFormat), executor,
 			counts.Total, counts.Rooms, counts.Exits, counts.Things, counts.Players);
@@ -1041,8 +1049,9 @@ public partial class Commands
 
 		var allCategories = ConfigGenerated.ConfigAccessor.Categories.ToList();
 
+		// PropertyNames is declaration order; do_config_list walks its conftable in a fixed order too.
 		IEnumerable<(string Category, string PropertyName, SharpConfigAttribute ConfigAttr, object? Value)> getAllOptions() =>
-			ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys
+			ConfigGenerated.ConfigMetadata.PropertyNames
 				.Where(propName => CanViewConfigOption(executor, propName))
 				.Select(propName => (
 				Category: ConfigGenerated.ConfigAccessor.GetCategoryForProperty(propName) ?? "",
@@ -1110,20 +1119,30 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var allOptions = getAllOptions();
-		var matchingOption = allOptions.FirstOrDefault(opt =>
-			opt.ConfigAttr.Name.Equals(searchTerm, StringComparison.OrdinalIgnoreCase));
-
-		if (matchingOption.PropertyName != null)
+		// do_config_list (src/conf.c:1584-1621): every option whose name starts with the word, or failing
+		// that every option whose name contains it, one config_to_string line each.
+		var allOptions = getAllOptions().ToList();
+		var matchingOptions = allOptions
+			.Where(opt => opt.ConfigAttr.Name.StartsWith(searchTerm, StringComparison.OrdinalIgnoreCase))
+			.ToList();
+		if (matchingOptions.Count == 0)
 		{
-			var name = useLowercase ? matchingOption.ConfigAttr.Name.ToLower() : matchingOption.ConfigAttr.Name;
-			var value = ConfigValueDisplay.Format(matchingOption.Value, matchingOption.ConfigAttr);
-			var desc = matchingOption.ConfigAttr.Description;
+			matchingOptions = allOptions
+				.Where(opt => opt.ConfigAttr.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+				.ToList();
+		}
 
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, value);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionDescriptionFormat), executor, desc);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionCategoryFormat), executor, matchingOption.Category);
-			return new CallState(value);
+		if (matchingOptions.Count > 0)
+		{
+			string? lastValue = null;
+			foreach (var opt in matchingOptions)
+			{
+				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
+				lastValue = ConfigValueDisplay.Format(opt.Value, opt.ConfigAttr);
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, lastValue);
+			}
+
+			return new CallState(matchingOptions.Count == 1 ? lastValue! : string.Empty);
 		}
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigNoCategoryOrOptionFormat), executor, searchTerm);

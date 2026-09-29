@@ -39,18 +39,9 @@ think [get(EventSink/DROPTO_BY)]
 ::as god
 @config/set event_handler=[if(get(*Wiz/OLDEVENTS),get(*Wiz/OLDEVENTS),-1)]
 
-::case choice.mail-fwd  a refused forward is reported
+::case choice.mail-folder  folders are named freely and created on delivery
 ::login alice Alice alicepass
 ::login bob Bob bobpass
-::as bob
-@lock/mail me=!*Alice
-::as alice
-@mail Alice=Forward me/A note to pass on.
-@mail/fwd 1=*Bob
-::as bob
-@unlock/mail me
-
-::case choice.mail-folder  folders are named freely and created on delivery
 ::as bob
 &MAILFILTER me=newbox
 ::as alice

@@ -2486,7 +2486,8 @@ public class MovementParityTests
 		var before = await ExitEnds(exit);
 		var destination = await Dig("ExitCrumblingDest");
 
-		await God($"@set {destination}=GOING");
+		// GOING is internal (flag_tab.h), so only @destroy can put a room in that state.
+		await God($"@destroy {destination}");
 
 		var godSaw = await MessagesWhile(god, async () =>
 			await Teleport(1, via, exit, destination));

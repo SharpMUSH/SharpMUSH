@@ -131,6 +131,32 @@ class CompareTests(unittest.TestCase):
         r, stale, _ = self.run_compare(self.rec("1"), self.rec("1"), [entry])
         self.assertEqual((r[0].status, [e.id for e in stale]), (compare.MATCH, ["KD-1"]))
 
+    def test_an_entry_with_sharp_accepts_that_output_and_nothing_else(self):
+        entry = compare.Entry("KD-1", "s", "c", None, "why", "#1134", profile="p", sharp="1, 2", penn="1")
+        r, stale, _ = self.run_compare(self.rec("1"), self.rec("1, 2"), [entry])
+        self.assertEqual((r[0].status, stale), (compare.KNOWN, []))
+        # Any other difference is still one, and the entry is not stale while it waits.
+        r, stale, _ = self.run_compare(self.rec("1"), self.rec("1, 3"), [entry])
+        self.assertEqual((r[0].status, stale), (compare.DIFF, []))
+        r, stale, fixed = self.run_compare(self.rec("1"), self.rec("1, 3"), [entry], baseline=["s/c#0"])
+        self.assertEqual((r[0].status, stale, fixed), (compare.OPEN, [], []))
+        # A PennMUSH that answers differently is not the pinned difference either.
+        r, _, _ = self.run_compare(self.rec("0"), self.rec("1, 2"), [entry])
+        self.assertEqual(r[0].status, compare.DIFF)
+        # Once only the accepted difference is left, the baseline entry has to go.
+        r, _, fixed = self.run_compare(self.rec("1"), self.rec("1, 2"), [entry], baseline=["s/c#0"])
+        self.assertEqual((r[0].status, fixed), (compare.KNOWN, ["s/c#0"]))
+
+    def test_sharp_and_penn_are_pinned_together(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "k.json"
+            p.write_text(json.dumps({"entries": [{"id": "KD-1", "scenario": "s", "case": "c", "reason": "r",
+                                                  "tracking": "#1134", "profile": "p", "sharp": "x"}]}))
+            prof = Path(d) / "p.md"
+            prof.write_text("## p\n")
+            with self.assertRaises(ValueError):
+                compare.load_allowlist(p, prof)
+
     def test_baseline_marks_open_gaps_and_reports_fixed_ones(self):
         r, _, fixed = self.run_compare(self.rec("1"), self.rec("2"), baseline=["s/c#0"])
         self.assertEqual((r[0].status, fixed), (compare.OPEN, []))
