@@ -65,14 +65,6 @@
    "command": "think [get(first(lcon(*Alice))/DESC)]"
   },
   {
-   "key": "10-player-commands/comm.page#0",
-   "command": "page Bob=Are you there?"
-  },
-  {
-   "key": "10-player-commands/comm.page#2",
-   "command": "page Nobody=hello"
-  },
-  {
    "key": "10-player-commands/flags.set#1",
    "command": "think [hasflag(me,HAVEN)] [flags(me)]"
   },

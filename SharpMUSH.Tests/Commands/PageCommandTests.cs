@@ -388,6 +388,301 @@ public class PageCommandTests
 		}
 	}
 
+	// --- Recipient resolution (speech.c do_page:906-957) ----------------------------------------
+	//
+	// Every expectation below was read off a live PennMUSH 1.8.8 (pennmush @ 80a1d5b9), 2026-09-28,
+	// with One in #0 and PBob connected in a room of his own:
+	//
+	//   > page PBob=Are you there?    You paged PBob with 'Are you there?'   → PBob: One pages: Are you there?
+	//   > page Nobody=hello           I can't find who you're trying to page with: Nobody
+	//                                 Unable to page: Nobody
+	//   > page me=hello self          I can't find who you're trying to page with: me
+	//                                 Unable to page: me
+	//   > page PBo=partial            You paged PBob with 'partial'
+	//   > page POff=offline test      POff is not connected. / Unable to page: POff
+	//   > page PBob Nobody=mixed      I can't find ...: Nobody / Unable to page: Nobody
+	//                                 You paged PBob with 'mixed'
+	//   > page "Master Room"=quoted   I can't find ...: Master Room / Unable to page: "Master Room"
+	//   > page PBo=ambiguous          (PBob and PBobby both connected)
+	//                                 I'm not sure who you want to page with: PBo / Unable to page: PBo
+	//   > page PBob=haven test        (PBob set HAVEN) PBob is not accepting any pages.
+	//                                 Unable to page: PBob
+
+	/// <summary>
+	/// speech.c:908-910 resolves a recipient with <c>lookup_player</c> and <c>short_page</c>, neither of
+	/// which is a room-local match, so a page reaches a connected player wherever they stand.
+	/// </summary>
+	[Test]
+	public async ValueTask Page_ReachesAConnectedPlayerInAnotherRoom()
+	{
+		var sender = await CreatePlayerAsync("PageRemoteSender");
+		var recipient = await CreatePlayerAsync("PageRemoteRecipient");
+		try
+		{
+			await GodCommandAsync($"@teleport/silent {recipient.DbRef}={await DigRoomAsync("PageRemoteRoom")}");
+
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			var recipientStart = Notifications.CountFor(recipient.DbRef);
+			await PageAsync(sender, recipient.Name, "Are you there?");
+
+			var outgoing = $"You paged {recipient.Name} with 'Are you there?'";
+			var incoming = $"{sender.Name} pages: Are you there?";
+			await Assert.That(PageMessagesSince(sender.DbRef, senderStart, outgoing)).IsEquivalentTo([outgoing]);
+			await Assert.That(PageMessagesSince(recipient.DbRef, recipientStart, incoming)).IsEquivalentTo([incoming]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(recipient.Handle);
+		}
+	}
+
+	/// <summary>speech.c:911-916 and :979-981.</summary>
+	[Test]
+	public async ValueTask Page_UnknownNameIsReportedAndListedAsUnableToPage()
+	{
+		var sender = await CreatePlayerAsync("PageUnknownSender");
+		try
+		{
+			var missing = TestIsolationHelpers.GenerateUniqueName("PageNobody");
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await PageAsync(sender, missing, "hello");
+
+			await AssertLinesAsync(sender, senderStart,
+				$"I can't find who you're trying to page with: {missing}",
+				$"Unable to page: {missing}");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+		}
+	}
+
+	/// <summary>
+	/// <c>do_page</c> has no <c>MAT_ME</c>: "me" is looked up as a player name like any other, so it
+	/// never means the pager.
+	/// </summary>
+	[Test]
+	public async ValueTask Page_MeDoesNotResolveToThePager()
+	{
+		var sender = await CreatePlayerAsync("PageMeSender");
+		try
+		{
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await PageAsync(sender, "me", "hello self");
+
+			// Only the self-page is pinned: another test's connected player may legitimately answer to
+			// the prefix "me", and which of Penn's two misses that produces is world state, not parity.
+			var selfPage = $"You paged {sender.Name} with 'hello self'";
+			await Assert.That(PageMessagesSince(sender.DbRef, senderStart, selfPage)).IsEmpty();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+		}
+	}
+
+	/// <summary>bsd.c short_page (:6376): a prefix of a connected player's name is enough.</summary>
+	[Test]
+	public async ValueTask Page_PartialNameMatchesAConnectedPlayer()
+	{
+		var sender = await CreatePlayerAsync("PagePartialSender");
+		var recipient = await CreatePlayerAsync("PagePartialRecipient");
+		try
+		{
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await PageAsync(sender, recipient.Name[..^1], "partial");
+
+			var outgoing = $"You paged {recipient.Name} with 'partial'";
+			await Assert.That(PageMessagesSince(sender.DbRef, senderStart, outgoing)).IsEquivalentTo([outgoing]);
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(recipient.Handle);
+		}
+	}
+
+	/// <summary>bsd.c short_page returns <c>AMBIGUOUS</c> when the prefix fits two connected players.</summary>
+	[Test]
+	public async ValueTask Page_AmbiguousPrefixIsRefused()
+	{
+		var sender = await CreatePlayerAsync("PageAmbiguousSender");
+		var first = await CreatePlayerAsync("PageAmbiguousTarget");
+		var second = await CreatePlayerAsync("PageAmbiguousTarget");
+		try
+		{
+			// Both names start with this and neither equals it, which is exactly short_page's AMBIGUOUS.
+			// The trim matters when one unique name happens to be a prefix of the other ("…_1", "…_10"):
+			// an exact match wins outright, so the shared run would not be ambiguous at all.
+			var shared = string.Concat(first.Name.TakeWhile((c, i) => i < second.Name.Length && second.Name[i] == c));
+			var prefix = shared.Length < Math.Min(first.Name.Length, second.Name.Length) ? shared : shared[..^1];
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await PageAsync(sender, prefix, "ambiguous");
+
+			await AssertLinesAsync(sender, senderStart,
+				$"I'm not sure who you want to page with: {prefix}",
+				$"Unable to page: {prefix}");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(first.Handle);
+			await ConnectionService.Disconnect(second.Handle);
+		}
+	}
+
+	/// <summary>speech.c:927-937 — a player who exists but holds no connection takes no page.</summary>
+	[Test]
+	public async ValueTask Page_OfflinePlayerIsReportedAsNotConnected()
+	{
+		var sender = await CreatePlayerAsync("PageOfflineSender");
+		try
+		{
+			var offlineRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+				WebAppFactoryArg.Services, Mediator, "PageOfflineTarget");
+			var offlineName = (await Mediator.Send(new GetObjectNodeQuery(offlineRef)))
+				.Expect<AnySharpObject>().Object().Name;
+
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await PageAsync(sender, offlineName, "offline test");
+
+			await AssertLinesAsync(sender, senderStart,
+				$"{offlineName} is not connected.",
+				$"Unable to page: {offlineName}");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+		}
+	}
+
+	/// <summary>speech.c:938-943 — the HAVEN wording is "any pages", not "your pages".</summary>
+	[Test]
+	public async ValueTask Page_HavenRecipientIsNotAcceptingAnyPages()
+	{
+		var sender = await CreatePlayerAsync("PageHavenSender");
+		var recipient = await CreatePlayerAsync("PageHavenRecipient");
+		try
+		{
+			await GodCommandAsync($"@set {recipient.DbRef}=HAVEN");
+
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await PageAsync(sender, recipient.Name, "haven test");
+
+			await AssertLinesAsync(sender, senderStart,
+				$"{recipient.Name} is not accepting any pages.",
+				$"Unable to page: {recipient.Name}");
+		}
+		finally
+		{
+			await GodCommandAsync($"@set {recipient.DbRef}=!HAVEN");
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(recipient.Handle);
+		}
+	}
+
+	/// <summary>
+	/// speech.c:979-981 — one <c>Unable to page:</c> line for the whole scan, and the good recipients
+	/// are paged all the same.
+	/// </summary>
+	[Test]
+	public async ValueTask Page_MixedGoodAndBadNamesStillPagesTheGoodOne()
+	{
+		var sender = await CreatePlayerAsync("PageMixedSender");
+		var recipient = await CreatePlayerAsync("PageMixedRecipient");
+		try
+		{
+			var missing = TestIsolationHelpers.GenerateUniqueName("PageMixedNobody");
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await PageAsync(sender, $"{recipient.Name} {missing}", "mixed");
+
+			await AssertLinesAsync(sender, senderStart,
+				$"I can't find who you're trying to page with: {missing}",
+				$"Unable to page: {missing}",
+				$"You paged {recipient.Name} with 'mixed'");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(recipient.Handle);
+		}
+	}
+
+	/// <summary>
+	/// strutil.c <c>next_in_list</c> takes a quoted name whole, and <c>safe_str_space</c> (:956) puts it
+	/// back in quotes in the <c>Unable to page:</c> line.
+	/// </summary>
+	[Test]
+	public async ValueTask Page_QuotedNameWithASpaceStaysOneNameAndIsRequoted()
+	{
+		var sender = await CreatePlayerAsync("PageQuotedSender");
+		try
+		{
+			var missing = $"{TestIsolationHelpers.GenerateUniqueName("PageQuoted")} Person";
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await PageAsync(sender, $"\"{missing}\"", "quoted");
+
+			await AssertLinesAsync(sender, senderStart,
+				$"I can't find who you're trying to page with: {missing}",
+				$"Unable to page: \"{missing}\"");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+		}
+	}
+
+	/// <summary>
+	/// <c>lookup_player</c> refuses anything that is not a player and <c>short_page</c> only ever walks
+	/// connected players, so a thing the pager is carrying — which a room-local match would find first —
+	/// is not a recipient.
+	/// </summary>
+	[Test]
+	public async ValueTask Page_DoesNotMatchANonPlayerTheSenderIsCarrying()
+	{
+		var sender = await CreatePlayerAsync("PageThingSender");
+		try
+		{
+			var thingName = TestIsolationHelpers.GenerateUniqueName("PageThing");
+			var thing = (await TestIsolationHelpers.CreateObjectCommandAsync(
+				WebAppFactoryArg.CommandParser, ConnectionService, thingName)).Message!.ToPlainText().Trim();
+			await GodCommandAsync($"@teleport/silent {thing}={sender.DbRef}");
+
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await PageAsync(sender, thingName, "object");
+
+			await AssertLinesAsync(sender, senderStart,
+				$"I can't find who you're trying to page with: {thingName}",
+				$"Unable to page: {thingName}");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+		}
+	}
+
+	private async Task AssertLinesAsync(PagePlayer receiver, int start, params string[] expected)
+	{
+		var messages = PageMessagesSince(receiver.DbRef, start, expected);
+
+		await Assert.That(messages.Length).IsEqualTo(expected.Length);
+		for (var i = 0; i < expected.Length; i++)
+		{
+			await Assert.That(messages[i]).IsEqualTo(expected[i]);
+		}
+	}
+
+	private async Task<string> DigRoomAsync(string prefix)
+	{
+		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));
+		using var scope = budget.Enter();
+		var dug = await WebAppFactoryArg.CommandParser.CommandParse(
+			1, ConnectionService, MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+
+		return dug.Message!.ToPlainText().Trim();
+	}
+
 	private async Task<PagePlayer> CreatePlayerAsync(string prefix)
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
@@ -397,10 +692,15 @@ public class PageCommandTests
 		return new PagePlayer(player.DbRef, player.Handle, playerObject, playerObject.Object().Name);
 	}
 
+	/// <summary>
+	/// A page to oneself, by name. <c>do_page</c> has no <c>MAT_ME</c> — see
+	/// <see cref="Page_MeDoesNotResolveToThePager"/> — so this is how PennMUSH spells it:
+	/// <c>page One=self by name</c> echoes both the outgoing and the incoming line.
+	/// </summary>
 	private async Task<string[]> PageSelfAsync(PagePlayer player, string message, params string[] selectedMessages)
 	{
 		var start = Notifications.CountFor(player.DbRef);
-		await PageAsync(player, "me", message);
+		await PageAsync(player, player.Name, message);
 
 		return PageMessagesSince(player.DbRef, start, selectedMessages);
 	}
