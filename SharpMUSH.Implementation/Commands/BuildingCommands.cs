@@ -112,6 +112,14 @@ public partial class Commands
 						name.ToPlainText(),
 						oldName);
 
+					// `if (!AreQuiet(player, thing)) notify(player, T("Name set."))` (set.c:153-154), between
+					// the OBJECT`RENAME event and real_did_it.
+					if (!await found.Object().AreQuietAsync(executor))
+					{
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NameSet),
+							executor);
+					}
+
 					// real_did_it(player, thing, NULL, NULL, "ONAME", NULL, "ANAME", NOTHING, pe_regs,
 					// NA_INTER_PRESENCE, AN_SYS) with %0 the old name and %1 the new (set.c:155-158).
 					// There is no actor half — @name's own "Name set." is a separate notify — and the
