@@ -1,5 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -100,6 +102,29 @@ public class ConfiguredFunctionRestrictionTests
 
 		await Assert.That(await Think(flagged, "lstats()")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(await Think(mortal, "lstats()")).IsNotEqualTo(ErrorMessages.Returns.PermissionDenied);
+	}
+
+	/// <summary>
+	/// Only who may call the function is applied: <c>nosidefx</c> and a <c>!</c> word would otherwise
+	/// sit in the restriction looking applied while doing nothing. Driven with its own registry, so the
+	/// shared host's function table is untouched.
+	/// </summary>
+	[Test]
+	public async Task OnlyPermissionWords_ReachTheFunctionTable()
+	{
+		var registry = new UserDefinedFunctionService();
+		var applier = new ConfiguredFunctionRestrictions(
+			WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<FunctionDefinition>>(), registry,
+			NullLogger<ConfiguredFunctionRestrictions>.Instance);
+
+		applier.Apply(new Dictionary<string, string[]>
+		{
+			["lstats"] = ["NoGuest nosidefx !admin"],
+			["pemit"] = ["nosidefx"]
+		});
+
+		await Assert.That(registry.GetBuiltinRestriction("lstats")).IsEqualTo("NoGuest");
+		await Assert.That(registry.GetBuiltinRestriction("pemit")).IsNull();
 	}
 
 	/// <summary>

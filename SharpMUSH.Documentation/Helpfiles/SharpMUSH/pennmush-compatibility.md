@@ -427,8 +427,10 @@ own permission check allows: a player's `@destroy <thing>` destroys the thing, a
 as `config_file_startup` does, and carries each `restrict_command` line into `command_restrictions`
 and each `restrict_function` line into `function_restrictions`, and both are applied at startup, so
 an imported `restrict_function lstats noguest` answers a guest's `lstats()` with
-`#-1 PERMISSION DENIED` as PennMUSH does. A `!`-prefixed `restrict_function` word, which in PennMUSH
-clears one of a built-in's own restrictions, is logged and ignored. A line that cannot be carried (an include that cannot be read, a restriction with no value,
+`#-1 PERMISSION DENIED` as PennMUSH does. Only the `restrict_function` words that say who may call
+a function are applied (`nobody`, `noguest`, `nogagged`, `nofixed`, `admin`, `wizard`, `god`). A
+word that changes how it runs (`nosidefx`, `logargs`, `noparse` and the like), or a `!` word that
+clears one of a built-in's own restrictions, is kept but has no effect, and the import names it. A line that cannot be carried (an include that cannot be read, a restriction with no value,
 a `restrict_attribute`) is logged by name, and so is every `include` in a `mush.cnf` uploaded through
 the portal, which is not followed because it would name a file on the server.<br>
 **Why.** Those lines are one site's policy, not the engine's behaviour — `restrict.cnf` is a file the

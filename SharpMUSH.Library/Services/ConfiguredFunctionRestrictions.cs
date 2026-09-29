@@ -14,6 +14,7 @@ namespace SharpMUSH.Library.Services;
 /// <c>@function/restrict</c> writes and the parser consults.
 /// </summary>
 /// <remarks>
+/// Only the words that say who may call a function are applied; see <see cref="PermissionWords"/>.
 /// The set replaces the previous one, as <c>command_restrictions</c> does (#1250): every function
 /// the previous set restricted loses that restriction before the new set is applied, which is what
 /// lets a restriction be loosened. A live <c>@function/restrict</c> on a function either set names
@@ -24,6 +25,14 @@ public sealed class ConfiguredFunctionRestrictions(
 	IUserDefinedFunctionService registry,
 	ILogger<ConfiguredFunctionRestrictions> logger)
 {
+	/// <summary>
+	/// The <c>func_restrictions</c> words (<c>src/function.c</c>) that <c>check_func</c> tests: who may
+	/// call the function. The rest (<c>nosidefx</c>, <c>logargs</c>, <c>noparse</c>, ...) change how it
+	/// runs, and are not applied.
+	/// </summary>
+	public static readonly IReadOnlySet<string> PermissionWords =
+		new HashSet<string>(["nobody", "noguest", "nogagged", "nofixed", "admin", "wizard", "god"], StringComparer.OrdinalIgnoreCase);
+
 	private readonly Lock _gate = new();
 	private string[] _applied = [];
 
@@ -49,14 +58,16 @@ public sealed class ConfiguredFunctionRestrictions(
 					continue;
 				}
 
-				// A leading ! clears one of the function's own bits in PennMUSH (apply_restrictions).
-				// A built-in's own restrictions are not in the overlay, so there is nothing here to clear.
-				foreach (var cleared in terms.Where(term => term.StartsWith('!')))
+				// Only who may call the function is applied. A leading ! clears one of the function's own
+				// bits in PennMUSH (apply_restrictions), and a built-in's own restrictions are not in the
+				// overlay; the other words change how the function runs, which the overlay cannot express.
+				foreach (var ignored in terms.Where(term => !PermissionWords.Contains(term)))
 				{
-					logger.LogWarning("CONFIG: restrict_function {Function} {Restriction}: a built-in's own restrictions cannot be cleared; ignored.", name, cleared);
+					logger.LogWarning("CONFIG: restrict_function {Function} {Restriction}: only {Applied} are applied; ignored.",
+						name, ignored, string.Join(", ", PermissionWords));
 				}
 
-				var added = terms.Where(term => !term.StartsWith('!')).ToArray();
+				var added = terms.Where(PermissionWords.Contains).ToArray();
 				if (added.Length == 0)
 				{
 					continue;

@@ -317,6 +317,17 @@ public static partial class ReadPennMushConfig
 			)
 		};
 
+		// Only who may call a function is applied (ConfiguredFunctionRestrictions.PermissionWords, which
+		// this project cannot reference); a word that changes how it runs is kept but does nothing.
+		foreach (var (name, restriction) in work.Restriction.FunctionRestrictions)
+		{
+			foreach (var word in restriction[0].Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries)
+						 .Where(word => !FunctionPermissionWords.Contains(word, StringComparer.OrdinalIgnoreCase)))
+			{
+				skipped.Add($"restrict_function {name} {word}: kept in function_restrictions, but SharpMUSH applies only {string.Join(", ", FunctionPermissionWords)}, so it has no effect.");
+			}
+		}
+
 		foreach (var line in text.Where(line => DirectiveName(line) is { } name
 							 && name.StartsWith("restrict_", StringComparison.OrdinalIgnoreCase)
 							 && !name.Equals("restrict_command", StringComparison.OrdinalIgnoreCase)
@@ -389,6 +400,9 @@ public static partial class ReadPennMushConfig
 	/// stores. PennMUSH applies the lines in order, each replacing the restriction's lock and message,
 	/// so a later line for the same name takes the place of an earlier one here, and says so.
 	/// </summary>
+	/// <summary>The <c>restrict_function</c> words SharpMUSH applies: the ones <c>check_func</c> tests (<c>src/function.c</c>).</summary>
+	private static readonly string[] FunctionPermissionWords = ["nobody", "noguest", "nogagged", "nofixed", "admin", "wizard", "god"];
+
 	private static Dictionary<string, string[]> Restrictions(string directive, IEnumerable<string> lines, List<string> skipped)
 	{
 		var restrictions = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);

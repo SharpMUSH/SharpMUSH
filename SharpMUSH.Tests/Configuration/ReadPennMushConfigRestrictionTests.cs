@@ -97,6 +97,36 @@ public class ReadPennMushConfigRestrictionTests
 	}
 
 	/// <summary>
+	/// Only the <c>restrict_function</c> words <c>check_func</c> tests are applied. A word that changes
+	/// how the function runs (<c>nosidefx</c>, <c>logargs</c>) or clears one of its own restrictions
+	/// (<c>!</c>) is kept, and reported as having no effect rather than claimed as working.
+	/// </summary>
+	[Test]
+	public async Task FunctionRestrictionWordsThatAreNotApplied_AreReported()
+	{
+		var game = GameDirectory();
+		try
+		{
+			var mushCnf = Write(game, "mush.cnf", "restrict_function pemit nosidefx", "restrict_function lstats NoGuest !admin");
+
+			var import = ReadPennMushConfig.Import(mushCnf);
+
+			await Assert.That(import.Options.Restriction.FunctionRestrictions["pemit"]).IsEquivalentTo(new[] { "nosidefx" });
+			await Assert.That(import.Options.Restriction.FunctionRestrictions["lstats"]).IsEquivalentTo(new[] { "NoGuest !admin" });
+			const string applied = "nobody, noguest, nogagged, nofixed, admin, wizard, god";
+			await Assert.That(import.Skipped).IsEquivalentTo(new[]
+			{
+				$"restrict_function pemit nosidefx: kept in function_restrictions, but SharpMUSH applies only {applied}, so it has no effect.",
+				$"restrict_function lstats !admin: kept in function_restrictions, but SharpMUSH applies only {applied}, so it has no effect."
+			});
+		}
+		finally
+		{
+			Directory.Delete(game, true);
+		}
+	}
+
+	/// <summary>
 	/// An uploaded <c>mush.cnf</c> arrives without the <c>restrict.cnf</c> it includes. PennMUSH logs
 	/// "Cannot open configuration file" and reads on; the import does the same, and says so.
 	/// </summary>
