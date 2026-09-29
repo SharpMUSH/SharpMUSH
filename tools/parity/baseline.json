@@ -185,22 +185,6 @@
    "command": "Bob bobpass"
   },
   {
-   "key": "20-admin-commands/admin.denied#0",
-   "command": "@pcreate Mallory=x"
-  },
-  {
-   "key": "20-admin-commands/admin.denied#2",
-   "command": "@force *Wiz=say hi"
-  },
-  {
-   "key": "20-admin-commands/admin.force#0",
-   "command": "@force *Alice=say forced hello"
-  },
-  {
-   "key": "20-admin-commands/admin.force#2",
-   "command": "@trigger *Alice/TRIG=1"
-  },
-  {
    "key": "20-admin-commands/admin.lists#0",
    "command": "@list flags"
   },
@@ -355,10 +339,6 @@
   {
    "key": "40-compat-choices/choice.dropto#3",
    "command": "@create EventSink"
-  },
-  {
-   "key": "40-compat-choices/choice.dropto#5",
-   "command": "@trigger EventSink/MKROOM"
   },
   {
    "key": "40-compat-choices/choice.dropto#9",

@@ -221,6 +221,39 @@ public class HookOverrideBehaviorTests
 	}
 
 	/// <summary>
+	/// A hooked <c>$</c>-command's enactor is the object that ran the hooked command, whether it runs in place
+	/// or queued: <c>atr_comm_match</c> (<c>src/attrib.c</c>) hands <c>player</c> to both
+	/// <c>new_queue_actionlist_int(thing, player, player, ...)</c> and <c>parse_que_attr(thing, player, ...)</c>.
+	/// So an object <c>@force</c>d to <c>@emit</c> is <c>%#</c> to the override, not the forcer. The inline row
+	/// kept the forcer as enactor, which is how the scene package's inline SAY/POSE hooks made
+	/// <c>@force *Alice=say hi</c> come out as the wizard speaking (GRA-138).
+	/// </summary>
+	[Test]
+	[Arguments("override")]
+	[Arguments("override/inline")]
+	public async ValueTask HookedMatch_EnactorIsTheForcedObject(string hookSwitches)
+	{
+		var obj = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HookEnactor");
+		var puppet = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "HookPuppet");
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"&OVR {obj}=$(?i)^@emit (.*)$:&RESULT {obj}=%#"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {obj}/OVR=regexp"));
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@hook/{hookSwitches} @EMIT={obj},OVR"));
+
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@force {puppet}=@emit hello"));
+			await DrainQueue();
+
+			await Assert.That(await ReadAttributeAsync(obj, "RESULT")).IsEqualTo($"#{puppet.Number}");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync("@EMIT", "OVERRIDE");
+		}
+	}
+
+	/// <summary>
 	/// A regexp <c>$</c>-command is matched against the command line AFTER evaluation, so a <c>%r</c> in
 	/// what the player typed is a REAL line break by the time the pattern runs. <c>.</c> does not cross
 	/// one without the <c>s</c> flag, which makes the difference between a pattern that captures a
