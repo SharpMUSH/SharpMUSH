@@ -23,6 +23,9 @@ class Entry:
     tracking: str
     command: Optional[str] = None  # required with `step`: pins the positional key to its command
     profile: Optional[str] = None  # the `## ` heading in the compatibility profile that explains it
+    # When set, the entry accepts exactly this (normalized) SharpMUSH output and nothing else: an
+    # entry for SharpMUSH-only additions to a list does not also hide a wrong or missing item.
+    sharp: Optional[str] = None
 
     def covers(self, rec: StepRecord) -> bool:
         return (self.scenario == rec.scenario and self.case == rec.case
@@ -53,7 +56,7 @@ def load_allowlist(path: Path, profile: Path = PROFILE) -> list[Entry]:
             raise ValueError(f"{path}: entry {e['id']!r} names profile entry {e['profile']!r}, "
                              f"which is not a '## ' heading in {profile.name}")
         out.append(Entry(e["id"], e["scenario"], e["case"], e.get("step"), e["reason"], e["tracking"],
-                         e.get("command"), e["profile"]))
+                         e.get("command"), e["profile"], e.get("sharp")))
     return out
 
 
@@ -138,6 +141,7 @@ def compare(penn: list[StepRecord], sharp: list[StepRecord], penn_canon, sharp_c
                            error="step not reached on SharpMUSH (an earlier step failed)")
         pt, st = _render(p, penn_canon, penn_site), _render(s, sharp_canon, sharp_site)
         entry = next((e for e in allowlist if e.covers(p)), None)
+        accepts = entry is not None and (entry.sharp is None or entry.sharp == st)
         if p.error or s.error:
             status = ERROR
             diff = "\n".join(f"{n}: {r.error}" for n, r in (("PennMUSH", p), ("SharpMUSH", s)) if r.error)
@@ -146,12 +150,13 @@ def compare(penn: list[StepRecord], sharp: list[StepRecord], penn_canon, sharp_c
             # A matching step under an allowlist entry is only "stale" if EVERY step it covers
             # matches; decided after the loop.
         else:
-            status = KNOWN if entry else (OPEN if p.key() in baseline else DIFF)
+            status = KNOWN if accepts else (OPEN if p.key() in baseline else DIFF)
             diff = "\n".join(difflib.unified_diff(pt.split("\n"), st.split("\n"), "PennMUSH", "SharpMUSH", lineterm="", n=2))
-        if entry and status in (KNOWN, DIFF):
+        if entry and status in (KNOWN, DIFF, OPEN):
             used.add(entry.id)
         results.append(Result(p.key(), status, p, s, pt, st, diff, entry if status == KNOWN else None))
     stale = [e for e in allowlist if e.id not in used and any(e.covers(r.penn) for r in results)]
-    # A baseline entry whose step now matches is progress the baseline must record.
-    fixed = sorted(k for k in baseline if any(r.key == k and r.status == MATCH for r in results))
+    # A baseline entry whose step now matches, or differs only as an allowlist entry accepts, is
+    # progress the baseline must record.
+    fixed = sorted(k for k in baseline if any(r.key == k and r.status in (MATCH, KNOWN) for r in results))
     return results, stale, fixed

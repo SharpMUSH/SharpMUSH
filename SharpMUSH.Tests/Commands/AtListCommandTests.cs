@@ -126,43 +126,58 @@ public class AtListCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Flags:")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "Flags: abode (a), ansi (a), ")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
 	}
 
+	// PennMUSH src/flags.c do_list_flags: one "Flags: NAME (c), NAME, ..." line from list_all_flags,
+	// sorted as ALPHANUM_LIST (strcoll, so punctuation only breaks ties: NOSPOOF sits between NO_LEAVE
+	// and NO_TEL). Internal flags are never listed, and mdark ones (NO_LOG, SUSPECT) only to a wizard
+	// or royalty; the executor here is a mortal.
 	[Test]
 	public async ValueTask List_Flags_DisplaysFlagList()
 	{
-		var executor = _player.DbRef;
-		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list/flags"));
+		var text = await ListLineAsync("@list/flags", "Flags: ");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "OBJECT FLAGS:\nNAME                 SYMBOL TYPE RESTRICTIONS")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(text).StartsWith("Flags: ABODE (A), ANSI (A), ");
+		await Assert.That(text).Contains("NO_LEAVE (N), NOSPOOF (\"), NO_TEL (N), NO_WARN (w)");
+		await Assert.That(text).Contains(", CHAN_USEFIRSTMATCH, CHOWN_OK (C), ");
+		var names = text["Flags: ".Length..].Split(", ").Select(entry => entry.Split(' ')[0]).ToArray();
+		await Assert.That(names).DoesNotContain("GOING");
+		await Assert.That(names).DoesNotContain("GOING_TWICE");
+		await Assert.That(names).DoesNotContain("NO_LOG");
 	}
 
+	// /lowercase folds the list but not its "Flags" label (do_list_flags lowercases only the list).
 	[Test]
 	public async ValueTask List_Flags_Lowercase_DisplaysLowercaseFlagList()
 	{
-		var executor = _player.DbRef;
-		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list/lowercase/flags"));
+		var text = await ListLineAsync("@list/lowercase/flags", "Flags: ");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "Object Flags:\nname                 symbol type restrictions")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(text).StartsWith("Flags: abode (a), ansi (a), ");
 	}
 
+	// Powers keep PennMUSH's own spelling of each name: the table-defined ones in mixed case, the ones
+	// flags.c adds at startup (Debit, Many_Attribs, hook, Can_dark, Pick_Dbrefs, Can_HTTP) upper-cased.
 	[Test]
 	public async ValueTask List_Powers_DisplaysPowerList()
 	{
-		var executor = _player.DbRef;
-		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain("@list/powers"));
+		var text = await ListLineAsync("@list/powers", "Powers: ");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor),
-				Arg.Is<SharpMessage>(s => TestHelpers.MessagePlainTextStartsWith(s, "OBJECT POWERS:\nNAME                 SYMBOL ALIAS              TYPE RESTRICTIONS")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(text).StartsWith(
+			"Powers: Announce, Boot, Builder, CAN_DARK, CAN_HTTP, Can_spoof, Chat_Privs, DEBIT, Functions, Guest, Halt, Hide, HOOK, Idle, ");
+		await Assert.That(text).Contains(", Long_Fingers, MANY_ATTRIBS, No_Pay, ");
+		await Assert.That(text).Contains(", Pemit_All, PICK_DBREFS, Player_Create, ");
+	}
+
+	private async ValueTask<string> ListLineAsync(string command, string label)
+	{
+		var notifications = WebAppFactoryArg.Notifications;
+		var before = notifications.DeliveryCountFor(_player.DbRef);
+		await Parser.CommandParse(_player.Handle, ConnectionService, MarkupText.Plain(command));
+
+		return notifications.DeliveriesFor(_player.DbRef).Skip(before)
+			.Select(delivery => delivery.Message)
+			.Single(message => message.StartsWith(label, StringComparison.Ordinal));
 	}
 
 	[Test]

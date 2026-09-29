@@ -173,10 +173,6 @@
    "command": "@list flags"
   },
   {
-   "key": "20-admin-commands/admin.lists#1",
-   "command": "@list powers"
-  },
-  {
    "key": "20-admin-commands/admin.lists#3",
    "command": "@config names"
   },

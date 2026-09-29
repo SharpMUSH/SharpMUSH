@@ -75,7 +75,9 @@ public static class FlagSeed
 		("TRUECOLOR", "", ["TRUECOLOUR","RGB","24BIT"], [], [], ["PLAYER"]),
 		("MONIKER", "", null, ["royalty"], ["royalty"], ["ROOM","PLAYER","EXIT","THING"]),
 		("OPEN_OK", "", null, [], [], ["ROOM"]),
-		("GOING", "G", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
-		("GOING_TWICE", "", null, ["wizard"], ["wizard"], ["ROOM","PLAYER","EXIT","THING"]),
+		// PennMUSH hdrs/flag_tab.h:19,74 - GOING is F_INTERNAL, GOING_TWICE F_INTERNAL | F_DARK. Only the
+		// server sets or clears them (@destroy, @undestroy, the purge), and list_all_flags never shows them.
+		("GOING", "G", null, ["internal"], ["internal"], ["ROOM","PLAYER","EXIT","THING"]),
+		("GOING_TWICE", "", null, ["internal","dark"], ["internal","dark"], ["ROOM","PLAYER","EXIT","THING"]),
 	];
 }

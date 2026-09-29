@@ -131,6 +131,19 @@ class CompareTests(unittest.TestCase):
         r, stale, _ = self.run_compare(self.rec("1"), self.rec("1"), [entry])
         self.assertEqual((r[0].status, [e.id for e in stale]), (compare.MATCH, ["KD-1"]))
 
+    def test_an_entry_with_sharp_accepts_that_output_and_nothing_else(self):
+        entry = compare.Entry("KD-1", "s", "c", None, "why", "#1134", profile="p", sharp="1, 2")
+        r, stale, _ = self.run_compare(self.rec("1"), self.rec("1, 2"), [entry])
+        self.assertEqual((r[0].status, stale), (compare.KNOWN, []))
+        # Any other difference is still one, and the entry is not stale while it waits.
+        r, stale, _ = self.run_compare(self.rec("1"), self.rec("1, 3"), [entry])
+        self.assertEqual((r[0].status, stale), (compare.DIFF, []))
+        r, stale, fixed = self.run_compare(self.rec("1"), self.rec("1, 3"), [entry], baseline=["s/c#0"])
+        self.assertEqual((r[0].status, stale, fixed), (compare.OPEN, [], []))
+        # Once only the accepted difference is left, the baseline entry has to go.
+        r, _, fixed = self.run_compare(self.rec("1"), self.rec("1, 2"), [entry], baseline=["s/c#0"])
+        self.assertEqual((r[0].status, fixed), (compare.KNOWN, ["s/c#0"]))
+
     def test_baseline_marks_open_gaps_and_reports_fixed_ones(self):
         r, _, fixed = self.run_compare(self.rec("1"), self.rec("2"), baseline=["s/c#0"])
         self.assertEqual((r[0].status, fixed), (compare.OPEN, []))
