@@ -47,10 +47,9 @@ public sealed class NatsJetStreamMessageBus : IMessageBus, IAsyncDisposable
 	{
 		if (options.PublishTimeout <= TimeSpan.Zero || options.PublishTimeout.TotalMilliseconds > uint.MaxValue - 1)
 			throw new ArgumentOutOfRangeException(nameof(options.PublishTimeout));
-		var nats = new NatsConnection(new NatsOpts { Url = options.Url });
+		var nats = await NatsStartupConnection.ConnectAsync(options.Url, options.ConnectTimeout, ct);
 		try
 		{
-			await nats.ConnectAsync();
 			var js = new NatsJSContext(nats);
 			await js.CreateOrUpdateStreamAsync(
 				new StreamConfig(options.StreamName, [$"{options.SubjectPrefix}.>"])
