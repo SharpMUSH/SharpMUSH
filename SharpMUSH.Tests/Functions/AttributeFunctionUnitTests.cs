@@ -814,6 +814,28 @@ public class AttributeFunctionUnitTests
 	}
 
 	/// <summary>
+	/// <c>get()</c> and <c>xget()</c> are one read (<c>do_get_attrib</c>, whose <c>atr_get</c> walks
+	/// the <c>@parent</c> chain), so both return an inherited value. PennMUSH 80a1d5b:
+	/// <c>xget(Kid,PATTR)</c> → <c>fromparent</c>.
+	/// </summary>
+	[Test]
+	[Arguments("get({0}/{1})")]
+	[Arguments("xget({0},{1})")]
+	public async Task GetAndXgetReadAnInheritedAttribute(string call)
+	{
+		var attribute = $"XGP{Guid.NewGuid():N}"[..11].ToUpperInvariant();
+		var parent = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "XgetParent");
+		var child = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "XgetChild");
+
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{attribute} {parent}=fromparent"));
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@parent {child}={parent}"));
+
+		var result = await Parser.FunctionParse(MarkupText.Plain(string.Format(call, child, attribute)));
+
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("fromparent");
+	}
+
+	/// <summary>
 	/// What the <c>VAL</c> forms count as a value: only the empty string is empty, plus a value of
 	/// exactly one space while <c>empty_attrs</c> is off (<c>src/fundb.c:245-250</c>). Two spaces and
 	/// a tab are values under both settings — a blanket whitespace test answers 0 for them, which is

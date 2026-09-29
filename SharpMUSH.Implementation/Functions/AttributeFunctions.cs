@@ -65,38 +65,18 @@ public partial class Functions
 	}
 
 	[SharpFunction(Name = "attrib_set", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object/attribute"])]
-	public async ValueTask<CallState> AttributeSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var split = HelperFunctions.SplitObjectAndAttr(args["0"].Message!.ToPlainText());
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		if (split is not { Object: var dbref, Attribute: var attribute })
-		{
-			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "ATTRIB_SET"));
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, dbref, LocateFlags.All, async realLocated =>
-			{
-				var contents = args.TryGetValue("1", out var tmpContents)
-					? tmpContents.Message!
-					: MarkupText.Empty;
-
-				var setResult = await AttributeService.SetAttributeAsync(executor, realLocated, attribute, contents);
-
-				await NotifyOfSet(executor, realLocated, attribute, setResult is Success, args.ContainsKey("1"));
-
-				return new CallState(setResult switch
-				{
-					Success => string.Empty,
-					Error<string> failure => failure.Value
-				});
-			});
-	}
+	public ValueTask<CallState> AttributeSet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> AttributeSetAsync(parser, _ => string.Empty);
 
 	[SharpFunction(Name = "attrib_set#", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["object/attribute"])]
-	public async ValueTask<CallState> AttributeSetSharp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public ValueTask<CallState> AttributeSetSharp(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> AttributeSetAsync(parser, target => $"{target.Object().Name}/{parser.CurrentState.Arguments["0"].Message}");
+
+	/// <summary>
+	/// The one body of <c>attrib_set()</c> (PennMUSH's <c>fun_attrib_set</c>, <c>src/fundb.c:2270</c>)
+	/// and SharpMUSH's <c>attrib_set#()</c>, which differ only in what a successful set returns.
+	/// </summary>
+	private async ValueTask<CallState> AttributeSetAsync(IMUSHCodeParser parser, Func<AnySharpObject, string> successResult)
 	{
 		var args = parser.CurrentState.Arguments;
 		var split = HelperFunctions.SplitObjectAndAttr(args["0"].Message!.ToPlainText());
@@ -120,7 +100,7 @@ public partial class Functions
 
 				return new CallState(setResult switch
 				{
-					Success => $"{realLocated.Object().Name}/{args["0"].Message}",
+					Success => successResult(realLocated),
 					Error<string> failure => failure.Value
 				});
 			});
@@ -296,12 +276,22 @@ public partial class Functions
 	[SharpFunction(Name = "get", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object/attribute"])]
 	public async ValueTask<CallState> Get(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (HelperFunctions.SplitObjectAndAttr((parser.CurrentState.Arguments["0"].Message ?? MarkupText.Empty).ToPlainText()) is not { Object: var dbref, Attribute: var attribute })
 		{
 			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpper()));
 		}
 
+		return await GetAttributeValueAsync(parser, dbref, attribute);
+	}
+
+	/// <summary>
+	/// The one body of <c>get()</c> and <c>xget()</c>, which differ only in how they take their
+	/// arguments: PennMUSH's <c>fun_get</c> and <c>fun_xget</c> both end in <c>do_get_attrib</c>
+	/// (<c>src/fundb.c:46-71</c>), whose <c>atr_get</c> walks the <c>@parent</c> chain.
+	/// </summary>
+	private async ValueTask<CallState> GetAttributeValueAsync(IMUSHCodeParser parser, string dbref, string attribute)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor,
 			executor,
@@ -1155,31 +1145,10 @@ public partial class Functions
 		=> AttributeRangeAsync(parser, attribute.Name, true, IAttributeService.AttributePatternMode.Wildcard);
 
 	[SharpFunction(Name = "xget", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "attribute"])]
-	public async ValueTask<CallState> AlternativeGet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var dbref = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
-		var attribute = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
-
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, dbref, LocateFlags.All,
-			async actualObject =>
-			{
-				var maybeAttr = await AttributeService.GetAttributeAsync(
-					executor,
-					actualObject,
-					attribute,
-					mode: IAttributeService.AttributeMode.Read,
-					parent: false);
-
-				return maybeAttr switch
-				{
-					SharpAttribute[] chain => new CallState(chain.Last().Value),
-					None => await MissingAttributeGetResultAsync(executor, actualObject, attribute),
-					Error<string> error => new CallState(error.Value)
-				};
-			});
-	}
+	public ValueTask<CallState> AlternativeGet(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> GetAttributeValueAsync(parser,
+			parser.CurrentState.Arguments["0"].Message!.ToPlainText(),
+			parser.CurrentState.Arguments["1"].Message!.ToPlainText());
 
 	[SharpFunction(Name = "zfun", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["zone", "attribute", "arguments..."])]
 	public async ValueTask<CallState> ZoneFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)

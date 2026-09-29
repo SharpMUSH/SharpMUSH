@@ -640,21 +640,35 @@ public partial class Functions
 	}
 
 
+	/// <summary>
+	/// The arguments of <c>mean()</c>, <c>median()</c> and <c>stddev()</c> as numbers, or null if any
+	/// is not one (PennMUSH's <c>math_mean</c>/<c>math_median</c>/<c>math_stddev</c> all start with
+	/// the same <c>is_number</c> check and answer <c>#-1 ARGUMENTS MUST BE NUMBERS</c>).
+	/// </summary>
+	private static List<double>? NumberArguments(IMUSHCodeParser parser)
+	{
+		var numbers = NumericEvaluation.For(parser);
+		var values = new List<double>();
+
+		foreach (var arg in parser.CurrentState.ArgumentsOrdered)
+		{
+			if (!numbers.TryDouble((arg.Value.Message ?? MarkupText.Empty).ToPlainText(), out var value))
+			{
+				return null;
+			}
+			values.Add(value);
+		}
+
+		return values;
+	}
+
 	[SharpFunction(Name = "mean", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Mean(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var numbers = NumericEvaluation.For(parser);
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var values = new List<double>();
-
-		foreach (var arg in args)
+		if (NumberArguments(parser) is not { } values)
 		{
-			if (!numbers.TryDouble((arg.Value.Message ?? MarkupText.Empty).ToPlainText(), out var value))
-			{
-				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
-			}
-			values.Add(value);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		// Only lmath() can pass an empty list; PennMUSH's math_mean answers 0 for it.
@@ -665,17 +679,9 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Median(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var numbers = NumericEvaluation.For(parser);
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var values = new List<double>();
-
-		foreach (var arg in args)
+		if (NumberArguments(parser) is not { } values)
 		{
-			if (!numbers.TryDouble((arg.Value.Message ?? MarkupText.Empty).ToPlainText(), out var value))
-			{
-				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
-			}
-			values.Add(value);
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		if (values.Count == 0)
@@ -1071,22 +1077,15 @@ public partial class Functions
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number..."])]
 	public ValueTask<CallState> StdDev(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var numbers = NumericEvaluation.For(parser);
-		var args = parser.CurrentState.ArgumentsOrdered;
-		var values = new List<double>();
-
-		foreach (var arg in args)
-		{
-			if (!numbers.TryDouble((arg.Value.Message ?? MarkupText.Empty).ToPlainText(), out var value))
-			{
-				return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
-			}
-			values.Add(value);
-		}
-
-		if (values.Count <= 1)
+		// math_stddev answers 0 for fewer than two values before it checks any is a number.
+		if (parser.CurrentState.ArgumentsOrdered.Count <= 1)
 		{
 			return ValueTask.FromResult<CallState>(0);
+		}
+
+		if (NumberArguments(parser) is not { } values)
+		{
+			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
 		var mean = values.Average();
