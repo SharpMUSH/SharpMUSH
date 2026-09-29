@@ -1788,7 +1788,9 @@ public class SharpMUSHParserVisitor(
 			var body = attr.Value.Substring(attr.CommandListIndex!.Value, attr.Value.Length - attr.CommandListIndex!.Value);
 
 			// In place, the body is still its own queue entry in PennMUSH (PE_INFO_DEFAULT): it starts with
-			// no %c/%u, and what it runs never reaches the command that matched it.
+			// no %c/%u, and what it runs never reaches the command that matched it. Its enactor and caller are
+			// the object that ran the matching command (atr_comm_match's new_queue_actionlist_int(thing, player,
+			// player, ...), src/attrib.c), so a forced player's inline-hooked `say` speaks as that player.
 			var newParser = prs.Push(bodyState with
 			{
 				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.Name),
@@ -1796,6 +1798,7 @@ public class SharpMUSHParserVisitor(
 				Arguments = arguments,
 				Function = null,
 				Executor = obj.Object().DBRef,
+				Enactor = prs.CurrentState.Executor,
 				Caller = prs.CurrentState.Executor,
 				CommandText = new CommandText()
 			});

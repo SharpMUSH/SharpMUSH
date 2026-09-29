@@ -28,10 +28,19 @@ public partial class Commands
 	/// requested dbref from <c>args_right[2]</c>, and <c>do_pcreate</c> (<c>src/wiz.c:108-146</c>) settles
 	/// that dbref through <c>make_first_free_wrapper</c> before it looks at the name or the password.
 	/// </remarks>
-	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default | CB.EqSplit | CB.RSArgs, CommandLock = "FLAG^WIZARD",
+	[SharpCommand(Name = "@PCREATE", Behavior = CB.Default | CB.EqSplit | CB.RSArgs,
 		MinArgs = 2, MaxArgs = 3, ParameterNames = ["name", "password", "dbref"])]
 	public async ValueTask<Option<CallState>> PlayerCreate(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		// @PCREATE has no command restriction in PennMUSH; do_pcreate (src/wiz.c:113-116) refuses anyone
+		// who is not Create_Player - a wizard or a holder of the Player_Create power (hdrs/mushdb.h:51).
+		var creator = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await creator.IsWizard() && !await creator.HasPower("Player_Create"))
+		{
+			await NotifyService.NotifyLocalized(creator, nameof(ErrorMessages.Notifications.NoPowerOverBodyAndMind), creator);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var defaultHome = Configuration.CurrentValue.Database.DefaultHome;
 		var defaultHomeDbref = new DBRef((int)defaultHome);

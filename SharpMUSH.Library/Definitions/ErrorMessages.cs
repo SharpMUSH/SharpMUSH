@@ -1032,7 +1032,8 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SwitchInvalidRegexpFormat = "Invalid regexp: {0}: {1}";
 
-		public const string ForcePermissionDeniedDoNotControl = "Permission denied. You do not control the target.";
+		/// <summary>PennMUSH <c>do_force</c> (<c>src/wiz.c:637</c>), after match_controlled refuses the target.</summary>
+		public const string ForceSorry = "Sorry.";
 		public const string ForceThemToDoWhat = "Force them to do what?";
 
 		public const string YouDoNotHavePermissionToSpoofEmitsDetail = "You do not have permission to spoof emits.";

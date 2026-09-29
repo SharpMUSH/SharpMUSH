@@ -1586,8 +1586,8 @@
   </data>
 
   <!-- @force command -->
-  <data name="ForcePermissionDeniedDoNotControl" xml:space="preserve">
-    <value>Permission denied. You do not control the target.</value>
+  <data name="ForceSorry" xml:space="preserve">
+    <value>Sorry.</value>
   </data>
   <data name="ForceThemToDoWhat" xml:space="preserve">
     <value>Force them to do what?</value>
@@ -1697,6 +1697,9 @@
   </data>
   <data name="TriggerNoSuchAttributeFormat" xml:space="preserve">
     <value>No such attribute: {0}</value>
+  </data>
+  <data name="TriggerTriggeredFormat" xml:space="preserve">
+    <value>{0} - Triggered.</value>
   </data>
   <data name="TriggerMustProvideMatchString" xml:space="preserve">
     <value>You must provide a string to match when using /match.</value>

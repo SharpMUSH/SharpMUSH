@@ -101,6 +101,8 @@ public static partial class ErrorMessages
 		public const string TriggerPermissionDeniedDoNotControl = "Permission denied. You do not control that object.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string TriggerNoSuchAttributeFormat = "No such attribute: {0}";
+		/// <summary>PennMUSH <c>do_trigger</c> (<c>src/set.c:1345</c>).</summary>
+		public const string TriggerTriggeredFormat = "{0} - Triggered.";
 		public const string TriggerMustProvideMatchString = "You must provide a string to match when using /match.";
 	}
 }

@@ -26,6 +26,7 @@ public class NatsTestServer : IAsyncInitializer, IAsyncDisposable
 		.WithBindMount(_configTempFile, NatsConfigPath)
 		.WithCommand("-c", NatsConfigPath)
 		.WithReuse(false)
+		.WithLabel(TestContainerJanitor.OwnerLabels)
 		.WithLogger(TestDiagnostics.ContainerLogger)
 		.Build();
 
