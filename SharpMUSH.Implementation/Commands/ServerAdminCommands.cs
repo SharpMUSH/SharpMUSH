@@ -1041,8 +1041,9 @@ public partial class Commands
 
 		var allCategories = ConfigGenerated.ConfigAccessor.Categories.ToList();
 
+		// PropertyNames is declaration order; do_config_list walks its conftable in a fixed order too.
 		IEnumerable<(string Category, string PropertyName, SharpConfigAttribute ConfigAttr, object? Value)> getAllOptions() =>
-			ConfigGenerated.ConfigMetadata.PropertyToAttributeName.Keys
+			ConfigGenerated.ConfigMetadata.PropertyNames
 				.Where(propName => CanViewConfigOption(executor, propName))
 				.Select(propName => (
 				Category: ConfigGenerated.ConfigAccessor.GetCategoryForProperty(propName) ?? "",

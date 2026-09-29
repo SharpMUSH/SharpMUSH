@@ -66,6 +66,24 @@ public class ConfigCommandTests
 		await Assert.That(shown).IsEquivalentTo(new[] { " names_file                               names.cnf" });
 	}
 
+	/// <summary>
+	/// Several matches come out in declaration order, as <c>do_config_list</c> walks its fixed
+	/// <c>conftable</c>, not in the order a dictionary happens to enumerate.
+	/// </summary>
+	[Test]
+	public async ValueTask ConfigCommand_SeveralMatches_ComeOutInDeclarationOrder()
+	{
+		var expected = SharpMUSH.Configuration.Generated.ConfigMetadata.PropertyNames
+			.Select(property => SharpMUSH.Configuration.Generated.ConfigMetadata.PropertyMetadata[property].Name)
+			.Where(name => name.StartsWith("player_", StringComparison.OrdinalIgnoreCase))
+			.ToList();
+
+		var shown = (await AsWizard("@config player_")).Select(line => line.Trim().Split(' ')[0]).ToList();
+
+		await Assert.That(expected.Count).IsGreaterThan(1);
+		await Assert.That(shown).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
 	/// <summary>A word that begins no option name is matched anywhere in one: <c>*names*</c>.</summary>
 	[Test]
 	public async ValueTask ConfigCommand_NoPrefixMatch_FallsBackToAWildcard()
