@@ -41,11 +41,6 @@ public sealed class ConfiguredFunctionRestrictions(
 	{
 		lock (_gate)
 		{
-			foreach (var name in _applied)
-			{
-				registry.SetBuiltinRestriction(name, null);
-			}
-
 			var library = functions.Get();
 			var layer = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 			foreach (var (name, words) in restrictions)
@@ -85,9 +80,16 @@ public sealed class ConfiguredFunctionRestrictions(
 				}
 			}
 
+			// The new layer goes in before the old one comes out, so a function both name is never
+			// unrestricted in between.
 			foreach (var (name, words) in layer)
 			{
 				registry.SetBuiltinRestriction(name, string.Join(' ', words));
+			}
+
+			foreach (var name in _applied.Where(name => !layer.ContainsKey(name)))
+			{
+				registry.SetBuiltinRestriction(name, null);
 			}
 
 			_applied = [.. layer.Keys];

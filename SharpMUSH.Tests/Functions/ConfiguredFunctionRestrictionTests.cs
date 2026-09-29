@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -125,6 +126,26 @@ public class ConfiguredFunctionRestrictionTests
 
 		await Assert.That(registry.GetBuiltinRestriction("lstats")).IsEqualTo("NoGuest");
 		await Assert.That(registry.GetBuiltinRestriction("pemit")).IsNull();
+	}
+
+	/// <summary>
+	/// A reapply puts the new layer in before taking the old one out: a function both layers restrict
+	/// is never cleared, not even for the moment a concurrent call could slip through.
+	/// </summary>
+	[Test]
+	public void Reapplying_NeverClearsAFunctionBothLayersRestrict()
+	{
+		var registry = Substitute.For<IUserDefinedFunctionService>();
+		var applier = new ConfiguredFunctionRestrictions(
+			WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<FunctionDefinition>>(), registry,
+			NullLogger<ConfiguredFunctionRestrictions>.Instance);
+		applier.Apply(new Dictionary<string, string[]> { ["lstats"] = ["noguest"], ["pemit"] = ["wizard"] });
+		registry.ClearReceivedCalls();
+
+		applier.Apply(new Dictionary<string, string[]> { ["lstats"] = ["noguest"] });
+
+		registry.DidNotReceive().SetBuiltinRestriction(Arg.Is<string>(name => name.Equals("lstats", StringComparison.OrdinalIgnoreCase)), Arg.Is<string?>(restriction => restriction == null));
+		registry.Received().SetBuiltinRestriction(Arg.Is<string>(name => name.Equals("pemit", StringComparison.OrdinalIgnoreCase)), Arg.Is<string?>(restriction => restriction == null));
 	}
 
 	/// <summary>
