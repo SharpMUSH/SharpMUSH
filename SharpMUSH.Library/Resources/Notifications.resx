@@ -1317,11 +1317,17 @@
   <data name="MustUseNukeToDestroyPlayer" xml:space="preserve">
     <value>You must use @nuke to destroy a player.</value>
   </data>
-  <data name="ObjectAndPossessionsScheduledDestroyedFormat" xml:space="preserve">
-    <value>{0} and their possessions are scheduled to be destroyed.</value>
+  <data name="PlayerAndObjectsScheduledDestroyedFormat" xml:space="preserve">
+    <value>{0} and all their objects are scheduled to be destroyed.</value>
+  </data>
+  <data name="PlayerAndNonSafeObjectsScheduledDestroyedFormat" xml:space="preserve">
+    <value>{0} and all their (non-SAFE) objects are scheduled to be destroyed.</value>
   </data>
   <data name="ObjectScheduledDestroyedFormat" xml:space="preserve">
     <value>{0} is scheduled to be destroyed.</value>
+  </data>
+  <data name="HaltedObjectReportFormat" xml:space="preserve">
+    <value>Halted: {0}(#{1})</value>
   </data>
 
   <!-- Softcode functions -->

@@ -988,10 +988,30 @@ public static partial class ErrorMessages
 		public const string EvenYouCantDoThat = "Even you can't do that!";
 		public const string MayNotDestroyConnectedPlayer = "How gruesome. You may not destroy players who are connected.";
 		public const string MustUseNukeToDestroyPlayer = "You must use @nuke to destroy a player.";
+		/// <summary>
+		/// <c>do_destroy</c>'s TYPE_PLAYER branch with <c>destroy_possessions</c> on and
+		/// <c>really_safe</c> off (<c>src/destroy.c:374</c>). <c>{0}</c> is <c>unparse_object</c>.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ObjectAndPossessionsScheduledDestroyedFormat = "{0} and their possessions are scheduled to be destroyed.";
+		public const string PlayerAndObjectsScheduledDestroyedFormat = "{0} and all their objects are scheduled to be destroyed.";
+		/// <summary>
+		/// The same branch with <c>really_safe</c> on, which spares the player's SAFE objects
+		/// (<c>src/destroy.c:372</c>).
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PlayerAndNonSafeObjectsScheduledDestroyedFormat = "{0} and all their (non-SAFE) objects are scheduled to be destroyed.";
+		/// <summary>
+		/// <c>do_destroy</c>'s message for anything whose possessions stay behind
+		/// (<c>src/destroy.c:377</c>, <c>:391</c>, <c>:405</c>). <c>{0}</c> is <c>unparse_object</c>.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ObjectScheduledDestroyedFormat = "{0} is scheduled to be destroyed.";
+		/// <summary>
+		/// <c>do_halt</c>'s report to the halted object's owner (<c>src/cque.c:2177</c>), which
+		/// <c>free_object</c> reaches on the way to deleting the object.
+		/// </summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string HaltedObjectReportFormat = "Halted: {0}(#{1})";
 
 		public const string DefaultHomeLocationInvalid = "Default home location is invalid.";
 		/// <summary>
