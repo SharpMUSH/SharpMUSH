@@ -23,6 +23,12 @@ public static class ConfigValueDisplay
 	/// <summary>The text <c>config()</c> and <c>@config</c> print for one option's stored value.</summary>
 	/// <param name="value">The value read off the live options, null when the option is unset.</param>
 	/// <param name="metadata">The option's declaration, which says whether it names an object.</param>
+	/// <remarks>
+	/// A list option prints its words space-separated, never the array's type name. A default-flag
+	/// list (<see cref="SharpConfigAttribute.Flag"/>) also keeps the leading space <c>cf_flag</c>
+	/// stores: PennMUSH 1.8.8 (<c>80a1d5b9</c>, shipped <c>mushcnf.dst</c>) prints
+	/// <c>config(player_flags)</c> as <c>" enter_ok ansi no_command"</c>.
+	/// </remarks>
 	public static string Format(object? value, SharpConfigAttribute metadata)
 		=> metadata.Dbref
 			? value is null ? Nothing : $"#{value}"
@@ -30,6 +36,13 @@ public static class ConfigValueDisplay
 			{
 				bool flag => flag ? "Yes" : "No",
 				null => string.Empty,
+				string text => text,
+				IEnumerable<string> words => FormatList(words.ToArray(), metadata.Flag),
 				_ => value.ToString() ?? string.Empty
 			};
+
+	private static string FormatList(string[] words, bool flagList)
+		=> words.Length == 0 ? string.Empty
+			: flagList ? " " + string.Join(' ', words)
+			: string.Join(' ', words);
 }

@@ -84,6 +84,19 @@ public class ConfigCommandTests
 		await Assert.That(shown).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
+	/// <summary>
+	/// A flag-list option prints its flags, not <c>System.String[]</c>. Observed on PennMUSH 1.8.8
+	/// (<c>80a1d5b9</c>, shipped <c>mushcnf.dst</c>): <c>cf_flag</c> stores a leading space, so the value
+	/// column starts one space further right.
+	/// </summary>
+	[Test]
+	public async ValueTask ConfigCommand_FlagListOption_ShowsItsFlags()
+	{
+		var shown = await AsWizard("@config room_flags");
+
+		await Assert.That(shown).IsEquivalentTo(new[] { " room_flags                                no_command" });
+	}
+
 	/// <summary>A word that begins no option name is matched anywhere in one: <c>*names*</c>.</summary>
 	[Test]
 	public async ValueTask ConfigCommand_NoPrefixMatch_FallsBackToAWildcard()
