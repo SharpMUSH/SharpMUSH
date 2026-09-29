@@ -1553,28 +1553,34 @@
     <value>Command '{0}' not found.</value>
   </data>
   <data name="CommandInfoNameFormat" xml:space="preserve">
-    <value>Command: {0} ({1})</value>
+    <value>Name       : {0} ({1})</value>
   </data>
-  <data name="CommandInfoTypeFormat" xml:space="preserve">
-    <value>  Type: {0}</value>
-  </data>
-  <data name="CommandInfoMinArgsFormat" xml:space="preserve">
-    <value>  Min Args: {0}</value>
-  </data>
-  <data name="CommandInfoMaxArgsFormat" xml:space="preserve">
-    <value>  Max Args: {0}</value>
-  </data>
-  <data name="CommandInfoSwitchesFormat" xml:space="preserve">
-    <value>  Switches: {0}</value>
-  </data>
-  <data name="CommandInfoBehaviorFormat" xml:space="preserve">
-    <value>  Behavior: {0}</value>
+  <data name="CommandInfoFlagsFormat" xml:space="preserve">
+    <value>Flags      : {0}</value>
   </data>
   <data name="CommandInfoLockFormat" xml:space="preserve">
-    <value>  Lock: {0}</value>
+    <value>Lock       : {0}</value>
   </data>
   <data name="CommandInfoFailureMsgFormat" xml:space="preserve">
-    <value>  Failure Msg: {0}</value>
+    <value>Failure Msg: {0}</value>
+  </data>
+  <data name="CommandInfoSwitchesFormat" xml:space="preserve">
+    <value>Switches   : {0}</value>
+  </data>
+  <data name="CommandInfoNoSwitches" xml:space="preserve">
+    <value>Switches   :</value>
+  </data>
+  <data name="CommandInfoLeftsideFormat" xml:space="preserve">
+    <value>Leftside   : {0}</value>
+  </data>
+  <data name="CommandInfoRightsideFormat" xml:space="preserve">
+    <value>Rightside  : {0}</value>
+  </data>
+  <data name="CommandInfoArgumentsFormat" xml:space="preserve">
+    <value>Arguments  : {0}</value>
+  </data>
+  <data name="CommandInfoHookFormat" xml:space="preserve">
+    <value>@hook/{0}: #{1}/{2}</value>
   </data>
 
   <!-- @drain command -->
