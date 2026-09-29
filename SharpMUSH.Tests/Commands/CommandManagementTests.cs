@@ -2,9 +2,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -74,9 +77,15 @@ public class CommandManagementTests
 	private Task<TestIsolationHelpers.TestPlayer> Mortal(string prefix)
 		=> TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
 
+	/// <summary>
+	/// A fresh Wizard standing in a room of its own: in the shared start room it also hears other
+	/// tests' players arrive, leave and disconnect, and those lines land in what <see cref="As"/> returns.
+	/// </summary>
 	private async Task<TestIsolationHelpers.TestPlayer> Wizard()
 	{
-		var wizard = await Mortal("CmdWiz");
+		var god = (await Mediator.Send(new GetObjectNodeQuery(God))).Expect<AnySharpObject>().Expect<SharpPlayer>();
+		var home = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("CmdWizRoom"), god));
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "CmdWiz", home);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		return wizard;
 	}
