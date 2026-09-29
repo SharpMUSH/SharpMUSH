@@ -425,8 +425,12 @@ answered `Use @recycle instead` and the thing is not destroyed (`game/restrictcn
 own permission check allows: a player's `@destroy <thing>` destroys the thing, and a guest can
 `@create`. An imported game keeps its own: reading a PennMUSH `mush.cnf` follows its `include` lines,
 as `config_file_startup` does, and carries each `restrict_command` line into `command_restrictions`
-and each `restrict_function` line into `function_restrictions` (kept, but not yet applied to
-functions). A line that cannot be carried (an include that cannot be read, a restriction with no value,
+and each `restrict_function` line into `function_restrictions`, and both are applied at startup, so
+an imported `restrict_function lstats noguest` answers a guest's `lstats()` with
+`#-1 PERMISSION DENIED` as PennMUSH does. Only the `restrict_function` words that say who may call
+a function are applied (`nobody`, `noguest`, `nogagged`, `nofixed`, `admin`, `wizard`, `god`). A
+word that changes how it runs (`nosidefx`, `logargs`, `noparse` and the like), or a `!` word that
+clears one of a built-in's own restrictions, is kept but has no effect, and the import names it. A line that cannot be carried (an include that cannot be read, a restriction with no value,
 a `restrict_attribute`) is logged by name, and so is every `include` in a `mush.cnf` uploaded through
 the portal, which is not followed because it would name a file on the server.<br>
 **Why.** Those lines are one site's policy, not the engine's behaviour — `restrict.cnf` is a file the
@@ -437,7 +441,9 @@ a world nobody has configured yet.<br>
 `@config/set restrict_command=@destroy noplayer " Use @recycle instead`, one per command, or set
 `command_restrictions` from the portal's configuration page. `noguest`, `nofixed`, `noplayer`,
 `nobody`, a flag or power name, a lock and the `" <message>` suffix all mean there what they mean in
-`restrict.cnf`, and the restriction applies at once and lasts across restarts.<br>
+`restrict.cnf`, and the restriction applies at once and lasts across restarts. The same goes for
+`function_restrictions` from the portal, with `noguest`, `nogagged`, `nofixed`, `admin`, `wizard`,
+`god` and `nobody`.<br>
 **Example.** The parity case `obj.create` in `tools/parity/scenarios/10-player-commands.scn` runs it on both servers.
 
 ## PennMUSH's file and allocator housekeeping answers `NOT SUPPORTED`

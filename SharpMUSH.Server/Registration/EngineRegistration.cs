@@ -228,6 +228,8 @@ internal static class EngineRegistration
 		// In-memory registry of global user-defined functions (@function). Not persisted:
 		// durability comes from re-running @function on boot via the @STARTUP attribute pass.
 		services.AddSingleton<IUserDefinedFunctionService, UserDefinedFunctionService>();
+		// Writes function_restrictions into that registry's built-in restriction overlay.
+		services.AddSingleton<ConfiguredFunctionRestrictions>();
 		services.AddSingleton(x => x.GetService<ILibraryProvider<FunctionDefinition>>()!.Get());
 		services.AddSingleton(x => x.GetService<ILibraryProvider<CommandDefinition>>()!.Get());
 

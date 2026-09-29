@@ -111,7 +111,8 @@ public static partial class HelperFunctions
 	///
 	/// <para>The restriction is a space-separated list of permission keywords, each optionally
 	/// prefixed with <c>!</c> to negate it. Recognised keywords: <c>nobody</c> (never permitted),
-	/// <c>god</c>, <c>wizard</c>, <c>royalty</c>, <c>admin</c> (wizard or royalty). A bare keyword
+	/// <c>god</c>, <c>wizard</c>, <c>royalty</c>, <c>admin</c> (wizard or royalty), and
+	/// <c>noguest</c>, <c>nogagged</c>, <c>nofixed</c> (not a guest; owner not GAGGED; owner not FIXED). A bare keyword
 	/// requires the executor to satisfy it; a <c>!</c>-prefixed keyword forbids executors that
 	/// satisfy it. All tokens must pass. An empty/whitespace restriction permits everyone.</para>
 	/// </summary>
@@ -138,6 +139,10 @@ public static partial class HelperFunctions
 				"wizard" => await executor.IsWizard(),
 				"royalty" => await executor.IsRoyalty(),
 				"admin" => await executor.IsWizard() || await executor.IsRoyalty(),
+				// check_func (src/function.c): Guest() is the power, Gagged() and Fixed() the owner's flag.
+				"noguest" => !await executor.IsGuest(),
+				"nogagged" => !await OwnerHasFlag(executor, "GAGGED"),
+				"nofixed" => !await OwnerHasFlag(executor, "FIXED"),
 				// Unknown keywords are treated permissively (ignored) so that unsupported PennMUSH
 				// restriction flags never silently lock everyone out of a function.
 				_ => true
@@ -163,6 +168,12 @@ public static partial class HelperFunctions
 		}
 
 		return true;
+	}
+
+	private static async ValueTask<bool> OwnerHasFlag(AnySharpObject executor, string flag)
+	{
+		AnySharpObject owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
+		return await owner.HasFlag(flag);
 	}
 
 	// VISUAL, DARK, LIGHT, AUDIBLE, ORPHAN and PUPPET are flags in PennMUSH (hdrs/dbdefs.h:132-162,

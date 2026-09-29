@@ -1,0 +1,114 @@
+using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Services.Interfaces;
+
+namespace SharpMUSH.Library.Services;
+
+/// <summary>
+/// Applies the configured <c>function_restrictions</c> to the live function table. PennMUSH runs the
+/// <c>restrict_function</c> lines of <c>mush.cnf</c> through <c>restrict_function()</c>
+/// (<c>src/function.c</c>), the <c>restrict_function</c> branch of <c>config_set</c>
+/// (<c>src/conf.c</c>): the words are added to the function's own restriction bits, which
+/// <c>check_func</c> tests on every call. Here they go into the built-in restriction overlay that
+/// <c>@function/restrict</c> writes and the parser consults.
+/// </summary>
+/// <remarks>
+/// Only the words that say who may call a function are applied; see <see cref="PermissionWords"/>.
+/// The set replaces the previous one, as <c>command_restrictions</c> does (#1250): every function
+/// the previous set restricted loses that restriction before the new set is applied, which is what
+/// lets a restriction be loosened. A live <c>@function/restrict</c> on a function either set names
+/// is discarded; functions neither set names are left alone.
+/// </remarks>
+public sealed class ConfiguredFunctionRestrictions(
+	ILibraryProvider<FunctionDefinition> functions,
+	IUserDefinedFunctionService registry,
+	ILogger<ConfiguredFunctionRestrictions> logger)
+{
+	/// <summary>
+	/// The <c>func_restrictions</c> words (<c>src/function.c</c>) that <c>check_func</c> tests: who may
+	/// call the function. The rest (<c>nosidefx</c>, <c>logargs</c>, <c>noparse</c>, ...) change how it
+	/// runs, and are not applied.
+	/// </summary>
+	public static readonly IReadOnlySet<string> PermissionWords =
+		new HashSet<string>(["nobody", "noguest", "nogagged", "nofixed", "admin", "wizard", "god"], StringComparer.OrdinalIgnoreCase);
+
+	private readonly Lock _gate = new();
+	private string[] _applied = [];
+
+	/// <param name="restrictions">Function name to its restriction words, as <c>function_restrictions</c> holds them.</param>
+	public void Apply(IReadOnlyDictionary<string, string[]> restrictions)
+	{
+		lock (_gate)
+		{
+			var library = functions.Get();
+			var layer = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+			foreach (var (name, words) in restrictions)
+			{
+				var terms = string.Join(' ', words).Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
+				if (!library.TryGetValue(name, out var found) || terms.Length == 0)
+				{
+					// restrict_function returns 0 for a name it cannot find, and config_set logs it.
+					logger.LogWarning("CONFIG: Invalid function or restriction for {Function}.", name);
+					continue;
+				}
+
+				// Only who may call the function is applied. A leading ! clears one of the function's own
+				// bits in PennMUSH (apply_restrictions), and a built-in's own restrictions are not in the
+				// overlay; the other words change how the function runs, which the overlay cannot express.
+				foreach (var ignored in terms.Where(term => !PermissionWords.Contains(term)))
+				{
+					logger.LogWarning("CONFIG: restrict_function {Function} {Restriction}: only {Applied} are applied; ignored.",
+						name, ignored, string.Join(", ", PermissionWords));
+				}
+
+				var added = terms.Where(PermissionWords.Contains).ToArray();
+				if (added.Length == 0)
+				{
+					continue;
+				}
+
+				// An alias is the same FUN in PennMUSH, so restricting either restricts both.
+				foreach (var key in NamesOf(library, found.LibraryInformation.Attribute, name))
+				{
+					if (!layer.TryGetValue(key, out var list))
+					{
+						layer[key] = list = [];
+					}
+
+					list.AddRange(added);
+				}
+			}
+
+			// The new layer goes in before the old one comes out, so a function both name is never
+			// unrestricted in between.
+			foreach (var (name, words) in layer)
+			{
+				registry.SetBuiltinRestriction(name, string.Join(' ', words));
+			}
+
+			foreach (var name in _applied.Where(name => !layer.ContainsKey(name)))
+			{
+				registry.SetBuiltinRestriction(name, null);
+			}
+
+			_applied = [.. layer.Keys];
+		}
+	}
+
+	/// <summary>
+	/// The name the function was looked up by, its own name and its configured aliases — each only
+	/// while the library still maps it to the same function. A <c>@function/clone</c> shares the
+	/// definition too, but is a function of its own, as its copy is in PennMUSH.
+	/// </summary>
+	private static IEnumerable<string> NamesOf(LibraryService<string, FunctionDefinition> library, SharpFunctionAttribute attribute, string name)
+	{
+		var aliases = Configurable.FunctionAliases
+			.Where(entry => entry.Key.Equals(attribute.Name, StringComparison.OrdinalIgnoreCase))
+			.SelectMany(entry => entry.Value);
+
+		return new[] { name, attribute.Name }.Concat(aliases)
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.Where(key => library.TryGetValue(key, out var entry) && ReferenceEquals(entry.LibraryInformation.Attribute, attribute));
+	}
+}
