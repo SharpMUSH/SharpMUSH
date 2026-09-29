@@ -196,9 +196,6 @@
   </data>
 
   <!-- Operation result notifications -->
-  <data name="Created" xml:space="preserve">
-    <value>Created {0} ({1}).</value>
-  </data>
   <data name="CreatedObject" xml:space="preserve">
     <value>Created: Object {0}.</value>
   </data>
@@ -813,11 +810,14 @@
   <data name="HomeSet" xml:space="preserve">
     <value>Home set.</value>
   </data>
+  <data name="NameSet" xml:space="preserve">
+    <value>Name set.</value>
+  </data>
   <data name="DropToSet" xml:space="preserve">
-    <value>Drop-to set.</value>
+    <value>Dropto set.</value>
   </data>
   <data name="DropToRemoved" xml:space="preserve">
-    <value>Drop-to removed.</value>
+    <value>Dropto removed.</value>
   </data>
   <data name="SparedFromDestructionFormat" xml:space="preserve">
     <value>Spared from destruction: {0}</value>
@@ -831,8 +831,11 @@
   <data name="LinkedToNameFormat" xml:space="preserve">
     <value>Linked to {0}.</value>
   </data>
-  <data name="ClonedNewObjectFormat" xml:space="preserve">
-    <value>Cloned. New object: #{0}.</value>
+  <data name="ClonedObject" xml:space="preserve">
+    <value>Cloned: Object {0}.</value>
+  </data>
+  <data name="ClonedRoom" xml:space="preserve">
+    <value>Cloned: Room {0}.</value>
   </data>
   <data name="MonikerCleared" xml:space="preserve">
     <value>Moniker cleared.</value>
@@ -1550,28 +1553,34 @@
     <value>Command '{0}' not found.</value>
   </data>
   <data name="CommandInfoNameFormat" xml:space="preserve">
-    <value>Command: {0} ({1})</value>
+    <value>Name       : {0} ({1})</value>
   </data>
-  <data name="CommandInfoTypeFormat" xml:space="preserve">
-    <value>  Type: {0}</value>
-  </data>
-  <data name="CommandInfoMinArgsFormat" xml:space="preserve">
-    <value>  Min Args: {0}</value>
-  </data>
-  <data name="CommandInfoMaxArgsFormat" xml:space="preserve">
-    <value>  Max Args: {0}</value>
-  </data>
-  <data name="CommandInfoSwitchesFormat" xml:space="preserve">
-    <value>  Switches: {0}</value>
-  </data>
-  <data name="CommandInfoBehaviorFormat" xml:space="preserve">
-    <value>  Behavior: {0}</value>
+  <data name="CommandInfoFlagsFormat" xml:space="preserve">
+    <value>Flags      : {0}</value>
   </data>
   <data name="CommandInfoLockFormat" xml:space="preserve">
-    <value>  Lock: {0}</value>
+    <value>Lock       : {0}</value>
   </data>
   <data name="CommandInfoFailureMsgFormat" xml:space="preserve">
-    <value>  Failure Msg: {0}</value>
+    <value>Failure Msg: {0}</value>
+  </data>
+  <data name="CommandInfoSwitchesFormat" xml:space="preserve">
+    <value>Switches   : {0}</value>
+  </data>
+  <data name="CommandInfoNoSwitches" xml:space="preserve">
+    <value>Switches   :</value>
+  </data>
+  <data name="CommandInfoLeftsideFormat" xml:space="preserve">
+    <value>Leftside   : {0}</value>
+  </data>
+  <data name="CommandInfoRightsideFormat" xml:space="preserve">
+    <value>Rightside  : {0}</value>
+  </data>
+  <data name="CommandInfoArgumentsFormat" xml:space="preserve">
+    <value>Arguments  : {0}</value>
+  </data>
+  <data name="CommandInfoHookFormat" xml:space="preserve">
+    <value>@hook/{0}: #{1}/{2}</value>
   </data>
 
   <!-- @drain command -->
@@ -1772,13 +1781,7 @@
     <value>Options in {0}:</value>
   </data>
   <data name="ConfigOptionValueFormat" xml:space="preserve">
-    <value>  {0}: {1}</value>
-  </data>
-  <data name="ConfigOptionDescriptionFormat" xml:space="preserve">
-    <value>  Description: {0}</value>
-  </data>
-  <data name="ConfigOptionCategoryFormat" xml:space="preserve">
-    <value>  Category: {0}</value>
+    <value> {0,-40} {1}</value>
   </data>
   <data name="ConfigNoCategoryOrOptionFormat" xml:space="preserve">
     <value>No configuration category or option named '{0}'.</value>
@@ -2474,10 +2477,13 @@
     <value>@NEWPASSWORD: /GENERATE switch cannot be used with other arguments.</value>
   </data>
   <data name="NewPasswordGeneratedFormat" xml:space="preserve">
-    <value>Generated password for {0}: {1}</value>
+    <value>Password for {0} changed to {1}.</value>
   </data>
   <data name="NewPasswordSetFormat" xml:space="preserve">
-    <value>Set new password for {0}: {1}</value>
+    <value>Password for {0} changed.</value>
+  </data>
+  <data name="NewPasswordChangedByFormat" xml:space="preserve">
+    <value>Your password has been changed by {0}.</value>
   </data>
 
   <!-- @purge -->

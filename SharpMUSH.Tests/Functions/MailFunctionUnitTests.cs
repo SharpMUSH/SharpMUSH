@@ -165,48 +165,54 @@ public class MailFunctionUnitTests
 		await Assert.That(received).IsEqualTo(3);
 	}
 
+	/// <summary>
+	/// The fixture sends three messages to itself: one read, one unread, and one unread but cleared. As in
+	/// PennMUSH's <c>fun_mailstats</c> and <c>count_mail</c>, the cleared one counts only as cleared, so
+	/// one message is unread, not two. Live PennMUSH 80a1d5b, with the same three messages:
+	/// <c>maildstats()</c> gives <c>0 0 0 3 1 1</c> and <c>mail(Mortal)</c> gives <c>1 1 1</c>.
+	/// </summary>
 	[Test]
-	public async Task Maildstats_ValidPlayer_ReturnsDetailedStats()
+	public async Task MailStats_ClearedMessageCountsOnlyAsCleared()
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("maildstats(%#)")))?.Message!;
-		var parts = result.ToPlainText()!.Split(' ');
-		await Assert.That(parts.Length).IsEqualTo(6);
-		foreach (var part in parts)
-		{
-			await Assert.That(int.TryParse(part, out _)).IsTrue();
-		}
-		var sent = int.Parse(parts[0]);
-		var sentUnread = int.Parse(parts[1]);
-		var sentCleared = int.Parse(parts[2]);
-		var received = int.Parse(parts[3]);
-		var receivedUnread = int.Parse(parts[4]);
-		var receivedCleared = int.Parse(parts[5]);
+		var bytes = $"TESTMAIL-{TestRunId}-MSG1-Content".Length
+			+ $"TESTMAIL-{TestRunId}-MSG2-Content with more text".Length
+			+ $"TESTMAIL-{TestRunId}-MSG3-Content".Length;
 
-		await Assert.That(sent).IsEqualTo(3);
-		await Assert.That(received).IsEqualTo(3);
-		await Assert.That(receivedUnread).IsEqualTo(2);
-		await Assert.That(receivedCleared).IsEqualTo(1);
-		await Assert.That(sentUnread).IsEqualTo(2);
-		await Assert.That(sentCleared).IsEqualTo(1);
+		await Assert.That((await Parser.FunctionParse(MarkupText.Plain("maildstats(%#)")))!.Message!.ToPlainText())
+			.IsEqualTo("3 1 1 3 1 1");
+		await Assert.That((await Parser.FunctionParse(MarkupText.Plain("mailfstats(%#)")))!.Message!.ToPlainText())
+			.IsEqualTo($"3 1 1 {bytes} 3 1 1 {bytes}");
+		await Assert.That((await Parser.FunctionParse(MarkupText.Plain("mail(%#)")))!.Message!.ToPlainText())
+			.IsEqualTo("1 1 1");
 	}
 
+	/// <summary>
+	/// <c>fun_mailstats</c> looks the player up first and then requires <c>controls()</c>, so a mortal
+	/// may read their own statistics however they name themselves, and anyone else's is refused.
+	/// Live PennMUSH 80a1d5b, as a mortal with three messages: <c>mailstats(me)</c>,
+	/// <c>mailstats(Mortal)</c> and <c>mailstats(*Mortal)</c> each give <c>0 3</c>;
+	/// <c>mailstats(One)</c> notifies "The post office protects privacy!"; <c>mailstats(nosuchguy)</c>
+	/// notifies "nosuchguy: No such player.". SharpMUSH returns those two reasons instead.
+	/// </summary>
 	[Test]
-	public async Task Mailfstats_ValidPlayer_ReturnsFullStats()
+	[Arguments("mailstats()", "0 0")]
+	[Arguments("mailstats(me)", "0 0")]
+	[Arguments("mailstats(%#)", "0 0")]
+	[Arguments("maildstats(me)", "0 0 0 0 0 0")]
+	[Arguments("mailfstats(me)", "0 0 0 0 0 0 0 0")]
+	[Arguments("mailstats(#1)", "#-1 PERMISSION DENIED")]
+	[Arguments("maildstats(#1)", "#-1 PERMISSION DENIED")]
+	[Arguments("mailfstats(#1)", "#-1 PERMISSION DENIED")]
+	[Arguments("mailstats(NoSuchMailStatsPlayer)", "#-1 NO SUCH PLAYER")]
+	public async Task MailStats_MortalReadsOnlyTheirOwn(string code, string expected)
 	{
-		var result = (await Parser.FunctionParse(MarkupText.Plain("mailfstats(%#)")))?.Message!;
-		var parts = result.ToPlainText()!.Split(' ');
-		await Assert.That(parts.Length).IsEqualTo(8);
-		foreach (var part in parts)
-		{
-			await Assert.That(int.TryParse(part, out _)).IsTrue();
-		}
-		var sent = int.Parse(parts[0]);
-		var received = int.Parse(parts[4]);
-		var receivedBytes = int.Parse(parts[7]);
+		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "MailStatsMortal");
+		var asMortal = WebAppFactoryArg.FunctionParserFor(mortal);
 
-		await Assert.That(sent).IsEqualTo(3);
-		await Assert.That(received).IsEqualTo(3);
-		await Assert.That(receivedBytes).IsGreaterThan(0);
+		var result = (await asMortal.FunctionParse(MarkupText.Plain(code)))!.Message!.ToPlainText();
+
+		await Assert.That(result).IsEqualTo(expected);
 	}
 
 	[Test]
@@ -320,7 +326,9 @@ public class MailFunctionUnitTests
 
 	/// <summary>
 	/// Only a player has a mailbox. A located non-player answers as a missing player, and a non-player
-	/// executor holds no mail, rather than either one throwing out of the function.
+	/// executor holds no mail, rather than either one throwing out of the function. The mail*stats()
+	/// functions refuse a non-player executor outright, as <c>fun_mailstats</c> does: live PennMUSH
+	/// 80a1d5b gives <c>objeval(StatObj,mailstats())</c> nothing but "No such player.".
 	/// </summary>
 	[Test]
 	[Arguments("mail(here)", "#-1 NO SUCH PLAYER")]
@@ -333,7 +341,7 @@ public class MailFunctionUnitTests
 	[Arguments("folderstats(here,INBOX)", "#-1 NO SUCH PLAYER")]
 	[Arguments("objeval(here,mail())", "0")]
 	[Arguments("objeval(here,mail(1))", "#-1 NO SUCH MAIL")]
-	[Arguments("objeval(here,mailstats())", "0 0")]
+	[Arguments("objeval(here,mailstats())", "#-1 NO SUCH PLAYER")]
 	public async Task MailFunctions_NonPlayer_HasNoMailbox(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;

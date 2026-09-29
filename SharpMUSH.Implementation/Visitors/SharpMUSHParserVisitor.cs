@@ -2388,8 +2388,10 @@ public class SharpMUSHParserVisitor(
 				return await HandleUserDefinedCommand(localParser, matches, inPlace: hook.Inline);
 			}
 
+			// run_hook (command.c:2406-2433) reads the hook attribute with a bare atr_get: the wizard who set
+			// the @hook chose the code, so the player whose command triggered it needs no right to read it.
 			return await AttributeService.EvaluateAttributeFunctionResultAsync(localParser, executorObj, targetObj,
-				hook.AttributeName, new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: false);
+				hook.AttributeName, new Dictionary<string, CallState>(), evalParent: true, ignorePermissions: true);
 		}
 		finally
 		{

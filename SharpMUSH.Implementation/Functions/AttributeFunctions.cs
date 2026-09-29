@@ -319,11 +319,53 @@ public partial class Functions
 				return maybeAttr switch
 				{
 					SharpAttribute[] chain => new CallState(chain.Last().Value),
-					None => CallState.Empty,
+					None => await MissingAttributeGetResultAsync(executor, x, attribute),
 					Error<string> error => new CallState(error.Value)
 				};
 			});
 	}
+
+	/// <summary>
+	/// What <c>get()</c>/<c>xget()</c> return when the attribute is not set: PennMUSH's
+	/// <c>do_get_attrib</c> (<c>src/fundb.c:61-70</c>). A standard attribute name answers empty only
+	/// if its table entry would be readable (<c>Can_Read_Attr</c> on the entry's default flags); any
+	/// other name answers empty only to someone who can examine the object. Otherwise
+	/// <c>#-1 NO PERMISSION TO GET ATTRIBUTE</c>, so a missing attribute reveals no more than a set one.
+	/// </summary>
+	private async ValueTask<CallState> MissingAttributeGetResultAsync(AnySharpObject executor, AnySharpObject obj,
+		string attribute)
+	{
+		// atr_match finds a standard attribute by its alias too (DESC is DESCRIBE's table entry).
+		var name = Library.Services.AttributeService.StandardAttributeAliases.TryGetValue(attribute, out var realName)
+			? realName
+			: attribute.ToUpperInvariant();
+		var readable = await Mediator.Send(new GetAttributeEntryQuery(name)) is { } entry
+			? await PermissionService.CanViewAttribute(executor, obj, UnsetAttributeFor(entry, name))
+			: await PermissionService.CanExamine(executor, obj);
+
+		return readable ? CallState.Empty : new CallState(ErrorMessages.Returns.AttrPermissions);
+	}
+
+	/// <summary>A standard attribute as it would be if set: the table entry's default flags, no value.</summary>
+	private static SharpAttribute UnsetAttributeFor(SharpAttributeEntry entry, string name)
+		=> new(
+			Id: string.Empty,
+			Key: string.Empty,
+			Name: name,
+			Flags: [.. entry.DefaultFlags.Select(flag => new SharpAttributeFlag
+			{
+				Name = flag,
+				Symbol = string.Empty,
+				System = true,
+				Inheritable = false
+			})],
+			CommandListIndex: null,
+			LongName: name,
+			Leaves: new DotNext.Threading.AsyncLazy<IAsyncEnumerable<SharpAttribute>>(
+				_ => Task.FromResult(AsyncEnumerable.Empty<SharpAttribute>())),
+			Owner: new DotNext.Threading.AsyncLazy<SharpPlayer?>(_ => Task.FromResult<SharpPlayer?>(null)),
+			SharpAttributeEntry: new DotNext.Threading.AsyncLazy<SharpAttributeEntry?>(
+				_ => Task.FromResult<SharpAttributeEntry?>(entry)));
 
 	[SharpFunction(Name = "get_eval", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object/attribute"])]
 	public async ValueTask<CallState> GetEval(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1133,7 +1175,7 @@ public partial class Functions
 				return maybeAttr switch
 				{
 					SharpAttribute[] chain => new CallState(chain.Last().Value),
-					None => CallState.Empty,
+					None => await MissingAttributeGetResultAsync(executor, actualObject, attribute),
 					Error<string> error => new CallState(error.Value)
 				};
 			});

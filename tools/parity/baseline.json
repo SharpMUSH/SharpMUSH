@@ -69,16 +69,8 @@
    "command": "&FOO Widget=bar"
   },
   {
-   "key": "10-player-commands/obj.attrs#1",
-   "command": "think [get(Widget/FOO)]"
-  },
-  {
    "key": "10-player-commands/obj.attrs#2",
    "command": "&FOO Widget="
-  },
-  {
-   "key": "10-player-commands/obj.attrs#3",
-   "command": "think [get(Widget/FOO)]"
   },
   {
    "key": "10-player-commands/obj.attrs#4",
@@ -93,16 +85,8 @@
    "command": "@set Widget/COLOR=!no_command"
   },
   {
-   "key": "10-player-commands/obj.create#0",
-   "command": "@create Gizmo"
-  },
-  {
    "key": "10-player-commands/obj.create#2",
    "command": "look Gizmo"
-  },
-  {
-   "key": "10-player-commands/obj.create#3",
-   "command": "@name Gizmo=Gadget"
   },
   {
    "key": "10-player-commands/obj.create#4",
@@ -145,8 +129,8 @@
    "command": "examine Widget"
   },
   {
-   "key": "10-player-commands/obj.inventory#3",
-   "command": "think [get(Widget/COLOR)] [get(Widget/SIZE)] [u(Widget/GREET,World)]"
+   "key": "10-player-commands/perm.ufun#0",
+   "command": "Wiz wizpass"
   },
   {
    "key": "10-player-commands/room.dig#0",
@@ -173,24 +157,12 @@
    "command": "@list flags"
   },
   {
-   "key": "20-admin-commands/admin.lists#3",
-   "command": "@config names"
-  },
-  {
-   "key": "20-admin-commands/admin.pcreate#1",
-   "command": "@newpassword Carol=carolpw2"
-  },
-  {
    "key": "20-admin-commands/admin.pcreate#2",
    "command": "Carol carolpw2"
   },
   {
    "key": "20-admin-commands/admin.restrict-command#0",
    "command": "One godpass"
-  },
-  {
-   "key": "20-admin-commands/admin.restrict-command#3",
-   "command": "@command/restrict @find=!FLAG^GAGGED"
   },
   {
    "key": "20-admin-commands/admin.search#0",
@@ -225,32 +197,8 @@
    "command": "@teleport *Alice=[loc(*Alice)]"
   },
   {
-   "key": "25-requested-dbref/dbref.clone#0",
-   "command": "@clone RqThing=RqCopy,[elements(v(HOLES),12)]"
-  },
-  {
-   "key": "25-requested-dbref/dbref.clone#2",
-   "command": "think [strmatch(num(clone(RqThing,RqFunCopy,elements(v(HOLES),17))),elements(v(HOLES),17))]"
-  },
-  {
-   "key": "25-requested-dbref/dbref.create#0",
-   "command": "@create RqThing=,[elements(v(HOLES),1)]"
-  },
-  {
-   "key": "25-requested-dbref/dbref.create#2",
-   "command": "think [strmatch(num(create(RqFun,,elements(v(HOLES),2))),elements(v(HOLES),2))]"
-  },
-  {
-   "key": "25-requested-dbref/dbref.create#3",
-   "command": "@create RqCost=10,[elements(v(HOLES),3)]"
-  },
-  {
    "key": "25-requested-dbref/dbref.holes#0",
    "command": "Wiz wizpass"
-  },
-  {
-   "key": "25-requested-dbref/dbref.holes#2",
-   "command": "think [set(me,HOLES:[create(RqA)] [create(RqB)] [create(RqC)] [create(RqD)] [create(RqE)] [create(RqF)] [create(RqG)] [create(RqH)] [create(RqI)] [create(RqJ)] [create(RqK)] [create(RqL)] [create(RqM)] [create(RqN)] [create(RqO)] [create(RqP)] [create(RqQ)])]"
   },
   {
    "key": "25-requested-dbref/dbref.holes#3",
@@ -321,28 +269,16 @@
    "command": "@create EventSink"
   },
   {
-   "key": "40-compat-choices/choice.dropto#9",
-   "command": "@link [get(EventSink/DROPROOM)]=[loc(*Alice)]"
-  },
-  {
    "key": "40-compat-choices/choice.housekeeping#0",
    "command": "One godpass"
   },
   {
-   "key": "40-compat-choices/choice.mail-fwd#0",
+   "key": "40-compat-choices/choice.mail-folder#0",
    "command": "Alice alicepass"
   },
   {
-   "key": "40-compat-choices/choice.mail-fwd#1",
+   "key": "40-compat-choices/choice.mail-folder#1",
    "command": "Bob bobpass"
-  },
-  {
-   "key": "40-compat-choices/choice.restrictions-reapply#1",
-   "command": "@command/restrict @find=!FLAG^GAGGED"
-  },
-  {
-   "key": "40-compat-choices/choice.restrictions-reapply#4",
-   "command": "@command/restrict @find=!FLAG^GAGGED"
   },
   {
    "key": "50-mail/mail.fwd-by-name#0",
@@ -355,14 +291,6 @@
   {
    "key": "50-mail/mail.fwd-by-name#2",
    "command": "home"
-  },
-  {
-   "key": "50-mail/mail.fwd-by-name#4",
-   "command": "@mail/fwd 1=Bob"
-  },
-  {
-   "key": "50-mail/mail.fwd-by-name#6",
-   "command": "@mail/fwd 1=Bob Alice"
   }
  ]
 }

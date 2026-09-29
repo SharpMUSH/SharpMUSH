@@ -26,6 +26,7 @@ namespace SharpMUSH.Library.Services;
 /// </remarks>
 internal sealed class AttributeEvaluator(
 	IAttributeService attributes,
+	IPermissionService permissions,
 	IMediator mediator,
 	ILocateService locateService,
 	IValidateService validateService,
@@ -58,7 +59,11 @@ internal sealed class AttributeEvaluator(
 				: throw new InvalidOperationException("Object #1 does not exist to evaluate an attribute without permission checks.");
 		}
 
-		return await attributes.GetAttributeAsync(realExecutor, obj, attribute, IAttributeService.AttributeMode.Execute, evalParent) switch
+		var fetched = ignorePermissions
+			? await attributes.GetAttributeAsync(realExecutor, obj, attribute, IAttributeService.AttributeMode.Execute, evalParent)
+			: await FetchUserFunctionAttributeAsync(realExecutor, obj, attribute, evalParent);
+
+		return fetched switch
 		{
 			SharpAttribute[] chain => await RunAsOwnerAsync(parser,
 				new AttributeFunction(obj, chain.Last().LongName.ToUpper(), chain.Last().Value),
@@ -66,6 +71,25 @@ internal sealed class AttributeEvaluator(
 			None => CallState.Empty,
 			Error<string> error => new CallState(error.Value)
 		};
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>fetch_ufun_attrib</c> permission gate (<c>src/utils.c:244-253</c>): the caller must be
+	/// able to READ the attribute (<c>#-1 NO PERMISSION TO GET ATTRIBUTE</c>) before being asked whether
+	/// they may EVALUATE it (<c>#-1 PERMISSION DENIED</c>). Gating on evaluation alone ran attributes the
+	/// caller could not even <c>get()</c>. <c>UFUN_IGNORE_PERMS</c> callers skip this entirely.
+	/// </summary>
+	private async ValueTask<OptionalSharpAttributeOrError> FetchUserFunctionAttributeAsync(AnySharpObject executor,
+		AnySharpObject obj, string attribute, bool parent)
+	{
+		var read = await attributes.GetAttributeAsync(executor, obj, attribute, IAttributeService.AttributeMode.Read, parent);
+		if (read is SharpAttribute[] chain
+				&& !await AttributeService.CheckReadAsync(() => permissions.CanExecuteAttribute(executor, obj, chain)))
+		{
+			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		return read;
 	}
 
 	public ValueTask<CallState> CallAttributeFunctionAsync(IMUSHCodeParser parser, AttributeFunction function)
@@ -158,7 +182,7 @@ internal sealed class AttributeEvaluator(
 			return CallState.Empty;
 		}
 
-		return await attributes.GetAttributeAsync(executor, owner, attributeName, IAttributeService.AttributeMode.Execute, parent: true) switch
+		return await FetchUserFunctionAttributeAsync(executor, owner, attributeName, parent: true) switch
 		{
 			SharpAttribute[] chain => new AttributeFunction(owner, chain.Last().LongName.ToUpper(), chain.Last().Value),
 			None => new CallState(ErrorMessages.Returns.NoSuchAttribute),

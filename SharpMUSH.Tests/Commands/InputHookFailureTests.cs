@@ -122,7 +122,7 @@ public class InputHookFailureTests
 			await hooks.Received().GetHookAsync(Arg.Is<string>(s => s.Equals(commandName, StringComparison.OrdinalIgnoreCase)), hookType);
 			if (mode == "throw") await Assert.That(functionCalls).IsEqualTo(1);
 			if (mode == "legacy") await legacy.Received(1).EvaluateAttributeFunctionAsync(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				"HOOKBODY", Arg.Any<Dictionary<string, CallState>>(), true, false);
+				"HOOKBODY", Arg.Any<Dictionary<string, CallState>>(), true, true);
 			var failed = mode is "syntax" or "throw" or "nested" || mode.StartsWith("branch-", StringComparison.Ordinal);
 			await Assert.That(result!.HadErrors).IsEqualTo(failed);
 			await Assert.That(sessions.GetCapturing(player.Handle) is null).IsEqualTo(failed);
