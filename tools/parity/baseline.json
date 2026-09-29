@@ -69,16 +69,8 @@
    "command": "&FOO Widget=bar"
   },
   {
-   "key": "10-player-commands/obj.attrs#1",
-   "command": "think [get(Widget/FOO)]"
-  },
-  {
    "key": "10-player-commands/obj.attrs#2",
    "command": "&FOO Widget="
-  },
-  {
-   "key": "10-player-commands/obj.attrs#3",
-   "command": "think [get(Widget/FOO)]"
   },
   {
    "key": "10-player-commands/obj.attrs#4",
@@ -137,8 +129,8 @@
    "command": "examine Widget"
   },
   {
-   "key": "10-player-commands/obj.inventory#3",
-   "command": "think [get(Widget/COLOR)] [get(Widget/SIZE)] [u(Widget/GREET,World)]"
+   "key": "10-player-commands/perm.ufun#0",
+   "command": "Wiz wizpass"
   },
   {
    "key": "10-player-commands/room.dig#0",
