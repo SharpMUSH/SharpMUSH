@@ -9,11 +9,13 @@ using System.Collections.Immutable;
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// The locate shapes in <see cref="LocateServiceExtensions"/> are not operations of their own: each is
-/// the silent or the noisy primitive on <see cref="ILocateService"/> with a fixed flag set or a different
-/// return type. These pin that down, so a shape cannot grow its own notify path again.
+/// The locate shapes on <see cref="ILocateService"/> beyond <see cref="ILocateService.Locate"/>,
+/// <see cref="ILocateService.LocateAndNotifyIfInvalid"/> and <see cref="ILocateService.Room"/> are default
+/// members: each is the silent or the noisy primitive with a fixed flag set or a different return type.
+/// These drive them through a fake that implements only the primitives, so a shape cannot grow its own
+/// notify path again.
 /// </summary>
-public class LocateServiceExtensionsTests
+public class LocateServiceDefaultMemberTests
 {
 	private const LocateFlags PlayerFlags =
 		LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference | LocateFlags.EnglishStyleMatching |
@@ -22,33 +24,46 @@ public class LocateServiceExtensionsTests
 	private static readonly IMUSHCodeParser Parser = Substitute.For<IMUSHCodeParser>();
 	private static readonly AnySharpObject Looker = new(Room(0, "Looker"));
 
-	private static ILocateService Noisy(AnyOptionalSharpObjectOrError answer)
+	/// <summary>Implements only the primitives, and records which one each call reached and with what.</summary>
+	private sealed class PrimitivesOnly(AnyOptionalSharpObjectOrError answer) : ILocateService
 	{
-		var locate = Substitute.For<ILocateService>();
-		locate.LocateAndNotifyIfInvalid(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<AnySharpObject>(), Arg.Any<string>(), Arg.Any<LocateFlags>())
-			.Returns(ValueTask.FromResult(answer));
-		return locate;
+		public List<(string Primitive, string Name, LocateFlags Flags)> Calls { get; } = [];
+
+		public ValueTask<AnyOptionalSharpObjectOrError> LocateAndNotifyIfInvalid(IMUSHCodeParser parser,
+			AnySharpObject looker, AnySharpObject executor, string name, LocateFlags flags)
+		{
+			Calls.Add(("noisy", name, flags));
+			return ValueTask.FromResult(answer);
+		}
+
+		public ValueTask<AnyOptionalSharpObjectOrError> Locate(IMUSHCodeParser parser,
+			AnySharpObject looker, AnySharpObject executor, string name, LocateFlags flags)
+		{
+			Calls.Add(("silent", name, flags));
+			return ValueTask.FromResult(answer);
+		}
+
+		public ValueTask<AnySharpContainer> Room(AnySharpObject content) => throw new NotSupportedException();
 	}
 
 	[Test]
 	public async Task CallStateShape_OnAMiss_ReportsThroughTheNoisyPrimitiveAndReturnsNoMatch()
 	{
-		var locate = Noisy(new None());
+		var fake = new PrimitivesOnly(new None());
+		ILocateService locate = fake;
 
 		var result = await locate.LocateAndNotifyIfInvalidWithCallState(Parser, Looker, Looker, "nothing",
 			LocateFlags.All);
 
 		await Assert.That(result is Error<CallState> { Value: var e } && e.Message!.ToPlainText() == ErrorMessages.Returns.NoMatch)
 			.IsTrue();
-		await locate.Received(1).LocateAndNotifyIfInvalid(Parser, Looker, Looker, "nothing", LocateFlags.All);
-		await locate.DidNotReceiveWithAnyArgs().Locate(default!, default!, default!, default!, default);
+		await Assert.That(fake.Calls).IsEquivalentTo(new[] { ("noisy", "nothing", LocateFlags.All) });
 	}
 
 	[Test]
 	public async Task CallStateShape_KeepsTheErrorStringTheLocateAnswered()
 	{
-		var locate = Noisy(new Error<string>(ErrorMessages.Returns.AmbiguousMatch));
+		ILocateService locate = new PrimitivesOnly(new Error<string>(ErrorMessages.Returns.AmbiguousMatch));
 
 		var result = await locate.LocateAndNotifyIfInvalidWithCallStateFunction(Parser, Looker, Looker, "both",
 			LocateFlags.All, _ => new CallState("found"));
@@ -59,7 +74,7 @@ public class LocateServiceExtensionsTests
 	[Test]
 	public async Task FunctionShape_OnAHit_HandsTheObjectToTheContinuation()
 	{
-		var locate = Noisy(Looker);
+		ILocateService locate = new PrimitivesOnly(Looker);
 
 		var result = await locate.LocateAndNotifyIfInvalidWithCallStateFunction(Parser, Looker, Looker, "me",
 			LocateFlags.All, found => ValueTask.FromResult(new CallState(found.Object().Name)));
@@ -70,29 +85,28 @@ public class LocateServiceExtensionsTests
 	[Test]
 	public async Task PlayerShapes_UseThePlayerFlagSet_NoisyAndSilent()
 	{
-		var locate = Noisy(new None());
-		locate.Locate(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(),
-				Arg.Any<string>(), Arg.Any<LocateFlags>())
-			.Returns(ValueTask.FromResult<AnyOptionalSharpObjectOrError>(new None()));
+		var fake = new PrimitivesOnly(new None());
+		ILocateService locate = fake;
 
 		await locate.LocatePlayerAndNotifyIfInvalid(Parser, Looker, Looker, "Alice");
 		await locate.LocatePlayerAndNotifyIfInvalidWithCallState(Parser, Looker, Looker, "Bob");
 		await locate.LocatePlayer(Parser, Looker, Looker, "Carol");
 		await locate.LocateConnectionTarget(Parser, Looker, Looker, "me");
 
-		await locate.Received(1).LocateAndNotifyIfInvalid(Parser, Looker, Looker, "Alice", PlayerFlags);
-		await locate.Received(1).LocateAndNotifyIfInvalid(Parser, Looker, Looker, "Bob", PlayerFlags);
-		await locate.Received(1).Locate(Parser, Looker, Looker, "Carol", PlayerFlags);
-		// lookup_desc's MAT_ME, and silent: a connection function answers with a string, not a notify.
-		await locate.Received(1).Locate(Parser, Looker, Looker, "me", PlayerFlags | LocateFlags.MatchMeForLooker);
-		await locate.DidNotReceive().LocateAndNotifyIfInvalid(Arg.Any<IMUSHCodeParser>(), Arg.Any<AnySharpObject>(),
-			Arg.Any<AnySharpObject>(), "me", Arg.Any<LocateFlags>());
+		await Assert.That(fake.Calls).IsEquivalentTo(new[]
+		{
+			("noisy", "Alice", PlayerFlags),
+			("noisy", "Bob", PlayerFlags),
+			("silent", "Carol", PlayerFlags),
+			// lookup_desc's MAT_ME, and silent: a connection function answers with a string, not a notify.
+			("silent", "me", PlayerFlags | LocateFlags.MatchMeForLooker)
+		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[Test]
 	public async Task PlayerFunctionShape_RefusesANonPlayerMatch()
 	{
-		var locate = Noisy(Looker);
+		ILocateService locate = new PrimitivesOnly(Looker);
 
 		await Assert.That(async () => await locate.LocatePlayerAndNotifyIfInvalidWithCallStateFunction(Parser, Looker,
 				Looker, "#0", _ => ValueTask.FromResult(new CallState("player"))))
