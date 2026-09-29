@@ -850,6 +850,10 @@ public class AttributeFunctionUnitTests
 	[Arguments("idesc", "IDESCRIBE")]
 	[Arguments("SUCC", "SUCCESS")]
 	[Arguments("OFAIL", "OFAILURE")]
+	[Arguments("ASUCC", "ASUCCESS")]
+	[Arguments("OSUCC", "OSUCCESS")]
+	[Arguments("FAIL", "FAILURE")]
+	[Arguments("AFAIL", "AFAILURE")]
 	public async Task GetReadsAStandardAttributeThroughItsAlias(string alias, string realName)
 	{
 		var thing = $"AliasRead_{Guid.NewGuid():N}"[..20];

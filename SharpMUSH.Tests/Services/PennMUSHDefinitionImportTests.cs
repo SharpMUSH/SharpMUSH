@@ -91,7 +91,8 @@ public class PennMUSHDefinitionImportTests
 
 	/// <summary>
 	/// What the source's tables carry and SharpMUSH has no place for is named in the report, not lost
-	/// quietly: attribute aliases, and an alias of a definition this server keeps its own version of.
+	/// quietly: an alias of a definition this server keeps its own version of. PennMUSH's standard
+	/// attribute aliases are not in it; SharpMUSH reads through them.
 	/// </summary>
 	[Test]
 	public async Task WhatCouldNotBeImportedIsReported()
@@ -100,8 +101,8 @@ public class PennMUSHDefinitionImportTests
 		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath));
 
 		await Assert.That(result.Errors).IsEmpty();
-		await Assert.That(result.Warnings.Any(w => w.Contains("attribute alias"))).IsTrue()
-			.Because("the source's table aliases DESC to DESCRIBE, which SharpMUSH cannot");
+		await Assert.That(result.Warnings.Where(w => w.Contains("attribute alias"))).IsEmpty()
+			.Because("the source's table aliases only DESC, SUCC and the like, which SharpMUSH reads through");
 		await Assert.That(result.Warnings.Any(w => w.Contains("ON_VACATION") && w.Contains("VACATION"))).IsTrue()
 			.Because("SharpMUSH's ON_VACATION does not answer to the source's VACATION");
 		await Assert.That(result.Warnings.Any(w => w.Contains("source flag definition(s) already exist"))).IsTrue();
@@ -196,6 +197,10 @@ public class PennMUSHDefinitionImportTests
 			.Because("no_such_flag fails the whole set, as string_to_atrflagsets does");
 		await Assert.That(result.Warnings.Any(w => w.Contains("ORACLE_NOTE") && w.Contains("default flags"))).IsTrue();
 		await Assert.That(result.Warnings.Any(w => w.Contains("ORACLE_NOTE") && w.Contains("default value"))).IsTrue();
+
+		// DESC is PennMUSH's own alias of DESCRIBE, which reads resolve; LOOKTEXT is the source's own.
+		await Assert.That(result.Warnings.Single(w => w.Contains("attribute alias"))).StartsWith("1 source attribute alias(es)")
+			.And.Contains("LOOKTEXT");
 	}
 
 	/// <summary>
@@ -335,7 +340,7 @@ public class PennMUSHDefinitionImportTests
 			},
 			new PennMUSHAttributeDefinition
 			{
-				Name = "DESCRIBE", Flags = ["wizard"], Creator = 7, Data = "a default description", Aliases = ["DESC"]
+				Name = "DESCRIBE", Flags = ["wizard"], Creator = 7, Data = "a default description", Aliases = ["DESC", "LOOKTEXT"]
 			}
 		],
 		Objects =
