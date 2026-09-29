@@ -59,7 +59,7 @@ public partial class Functions
 		if (HelperFunctions.SplitDbRefAndOptionalAttr(args["0"].Message!.ToPlainText())
 			is not { Object: var dbref, Attribute: { } attributeName })
 		{
-			return new CallState(ArgumentMustBeObjectAttribute);
+			return new CallState(ErrorMessages.Returns.ArgumentMustBeObjectAttribute);
 		}
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
@@ -81,7 +81,7 @@ public partial class Functions
 		if (await AttributeService.GetAttributeAsync(executor, target, attributeName,
 				IAttributeService.AttributeMode.Read, parent: false) is not SharpAttribute[] chain)
 		{
-			return new CallState("#-1");
+			return new CallState(ErrorMessages.Returns.Nothing);
 		}
 
 		if (shouldLock is not bool lockIt)
@@ -92,13 +92,6 @@ public partial class Functions
 		return await AttributeLockHelpers.ChangeAsync(PermissionService, AttributeService, NotifyService, Mediator,
 			executor, target, attributeName, chain, lockIt);
 	}
-
-	/// <summary>
-	/// <c>fun_atrlock</c>'s own wording (<c>src/fundb.c:2437,2441</c>), which no other function
-	/// says; a constant in <c>ErrorMessages</c> would be a shared file this change has no other
-	/// reason to touch.
-	/// </summary>
-	private const string ArgumentMustBeObjectAttribute = "#-1 ARGUMENT MUST BE OBJ/ATTR";
 
 	[SharpFunction(Name = "testlock", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> TestLock(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -116,7 +109,7 @@ public partial class Functions
 			{
 				if (await BooleanExpressionParser.BindAsync(lockString, executor) is not string expression)
 				{
-					return new CallState("#-1 INVALID BOOLEXP");
+					return new CallState(ErrorMessages.Returns.InvalidBoolexp);
 				}
 
 				// Evaluate the lock: does victim pass the lock expression?
@@ -216,8 +209,8 @@ public partial class Functions
 		if (parser.CurrentState.Arguments.Count == 0 ||
 			parser.CurrentState.Arguments.Count == 1 && string.IsNullOrEmpty(parser.CurrentState.Arguments["0"].Message?.ToPlainText()))
 			return ValueTask.FromResult(new CallState(fullNames ? string.Join(" ", LockService.LockPrivileges.Keys) : string.Concat(LockService.LockPrivileges.Values.Select(x => x.Item1))));
-		return ReadLockAsync(parser, "#-1 NO SUCH LOCK", (_, _, resolved) =>
-			ValueTask.FromResult(new CallState(resolved is null ? "#-1 NO SUCH LOCK" : Format(resolved.Data.Flags))));
+		return ReadLockAsync(parser, ErrorMessages.Returns.NoSuchLock, (_, _, resolved) =>
+			ValueTask.FromResult(new CallState(resolved is null ? ErrorMessages.Returns.NoSuchLock : Format(resolved.Data.Flags))));
 	}
 
 	[SharpFunction(Name = "llocks", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -245,9 +238,9 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 		if (await BooleanExpressionParser.BindAsync(args["0"].Message!.ToPlainText(), executor) is not string expression)
-			return new CallState("#-1 INVALID BOOLEXP");
+			return new CallState(ErrorMessages.Returns.InvalidBoolexp);
 		var delimiter = args.TryGetValue("2", out var separator) ? separator.Message!.ToPlainText() : " ";
-		if (delimiter.Length != 1) return new CallState("#-1 SEPARATOR MUST BE ONE CHARACTER");
+		if (delimiter.Length != 1) return new CallState(ErrorMessages.Returns.SeparatorMustBeOneChar);
 		var results = new List<string>();
 		foreach (var reference in args["1"].Message!.ToPlainText().Split(delimiter, StringSplitOptions.RemoveEmptyEntries))
 		{
@@ -260,8 +253,8 @@ public partial class Functions
 
 	[SharpFunction(Name = "lockowner", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public ValueTask<CallState> LockOwner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ReadLockAsync(parser, "#-1 NO SUCH LOCK", (_, _, resolved) => ValueTask.FromResult(new CallState(resolved is null
-			? "#-1 NO SUCH LOCK" : resolved.Data.Creator is { } creator ? $"#{creator.Number}" : "#-1")));
+		=> ReadLockAsync(parser, ErrorMessages.Returns.NoSuchLock, (_, _, resolved) => ValueTask.FromResult(new CallState(resolved is null
+			? ErrorMessages.Returns.NoSuchLock : resolved.Data.Creator is { } creator ? $"#{creator.Number}" : ErrorMessages.Returns.Nothing)));
 }
 
 /// <summary>

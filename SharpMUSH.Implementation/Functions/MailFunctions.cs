@@ -280,7 +280,7 @@ public partial class Functions
 
 		return filteredList switch
 		{
-			Error<string> error => new CallState("#-1 " + error.Value),
+			Error<string> error => new CallState(string.Format(ErrorMessages.Returns.ReasonFormat, error.Value)),
 			IAsyncEnumerable<SharpMail> mailList => await MailPositions(mailbox, mailList)
 		};
 	}
@@ -331,7 +331,7 @@ public partial class Functions
 		}
 
 		var from = await mail.From.WithCancellation(CancellationToken.None);
-		return new CallState(from.Object()?.DBRef.ToString() ?? "#-1");
+		return new CallState(from.Object()?.DBRef.ToString() ?? ErrorMessages.Returns.Nothing);
 	}
 	/// <summary>
 	/// extmail.c:1466 — <c>do_mail_send(executor, args[0], args[1], 0, 1, 0)</c>: the same send

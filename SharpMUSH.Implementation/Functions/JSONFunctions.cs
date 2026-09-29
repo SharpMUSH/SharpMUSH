@@ -321,7 +321,7 @@ public partial class Functions
 				var setResult = setPatch.Apply(jsonDoc);
 				return setResult.IsSuccess
 					? new CallState(setResult.Result!.ToJsonString())
-					: new CallState($"#-1 SET FAILED: {setResult.Error}");
+					: new CallState(string.Format(ErrorMessages.Returns.JsonSetFailedFormat, setResult.Error));
 			}
 
 			if (action == "replace")
@@ -336,7 +336,7 @@ public partial class Functions
 				var replaceResult = replacePatch.Apply(jsonDoc);
 				return replaceResult.IsSuccess
 					? new CallState(replaceResult.Result!.ToJsonString())
-					: new CallState($"#-1 REPLACE FAILED: {replaceResult.Error}");
+					: new CallState(string.Format(ErrorMessages.Returns.JsonReplaceFailedFormat, replaceResult.Error));
 			}
 
 			if (action == "remove")
@@ -351,7 +351,7 @@ public partial class Functions
 				var removeResult = removePatch.Apply(jsonDoc);
 				return removeResult.IsSuccess
 					? new CallState(removeResult.Result!.ToJsonString())
-					: new CallState($"#-1 REMOVE FAILED: {removeResult.Error}");
+					: new CallState(string.Format(ErrorMessages.Returns.JsonRemoveFailedFormat, removeResult.Error));
 			}
 
 			return new CallState(ErrorMessages.Returns.InvalidOperation);

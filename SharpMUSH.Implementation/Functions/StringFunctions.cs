@@ -1528,7 +1528,7 @@ public partial class Functions
 		var haystack = parser.CurrentState.Arguments["1"].Message!.ToPlainText();
 		var index = haystack.IndexOf(needle, StringComparison.Ordinal);
 
-		return ValueTask.FromResult<CallState>(index < 0 ? "#-1" : (index + 1).ToString());
+		return ValueTask.FromResult<CallState>(index < 0 ? ErrorMessages.Returns.Nothing : (index + 1).ToString());
 	}
 
 	[SharpFunction(Name = "repeat", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "count"])]
