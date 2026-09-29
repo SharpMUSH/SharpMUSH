@@ -1274,26 +1274,10 @@ public partial class Functions
 		return (result ?? CallState.Empty) with { HadErrors = result?.HadErrors == true || parsedIfElse.HadErrors };
 	}
 
+	/// <summary>PennMUSH registers <c>ifelse</c> as <c>fun_if</c> with three required arguments (<c>src/function.c:504</c>).</summary>
 	[SharpFunction(Name = "ifelse", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.NoParse, ParameterNames = ["expression"])]
-	public async ValueTask<CallState> IfElse(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var parsedIfElse = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
-		var ifCase = parser.CurrentState.Arguments["1"].Message!;
-		var elseCase = parser.CurrentState.Arguments["2"].Message!;
-		var truthy = parsedIfElse.Message.Truthy(parser);
-		CallState? result;
-
-		if (truthy)
-		{
-			result = await parser.FunctionParse(ifCase);
-		}
-		else
-		{
-			result = await parser.FunctionParse(elseCase);
-		}
-
-		return (result ?? CallState.Empty) with { HadErrors = result?.HadErrors == true || parsedIfElse.HadErrors };
-	}
+	public ValueTask<CallState> IfElse(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> If(parser, _2);
 
 	[SharpFunction(Name = "lcstr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
 	public ValueTask<CallState> LowerCaseString(IMUSHCodeParser parser, SharpFunctionAttribute _2)

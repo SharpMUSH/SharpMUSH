@@ -213,6 +213,12 @@ public class MathFunctionUnitTests
 
 	[Test]
 	[Arguments("stddev(1,2,3,4,5)", "1.581139")]
+	[Arguments("stddev(1,2,3,4)", "1.290994")]
+	// math_stddev answers 0 for a single value before checking it is a number (PennMUSH 80a1d5b).
+	[Arguments("stddev(abc)", "0")]
+	[Arguments("stddev(1,abc)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	[Arguments("mean(abc)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	[Arguments("median(abc)", "#-1 ARGUMENTS MUST BE NUMBERS")]
 	public async Task Stddev(string expr, string expected)
 	{
 		var result = await Parser.FunctionParse(MarkupText.Plain(expr));
@@ -418,6 +424,7 @@ public class MathFunctionUnitTests
 	[Arguments("lmath(median, 1 2 3 4)", "2.5")]
 	[Arguments("lmath(median,)", "0")]
 	[Arguments("lmath(stddev, 5)", "0")]
+	[Arguments("lmath(stddev, abc)", "0")]
 	public async Task LMathRunsTheScalarRoutine(string str, string expected)
 	{
 		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message!;
