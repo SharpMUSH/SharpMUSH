@@ -1,6 +1,9 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -45,9 +48,16 @@ public class ConfigCommandTests
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, executor)).IsTrue();
 	}
 
+	/// <summary>
+	/// Runs <paramref name="command"/> as a fresh Wizard and returns everything it heard. The Wizard
+	/// stands in a room of its own: in the shared start room it also hears other tests' players
+	/// arrive, leave and disconnect.
+	/// </summary>
 	private async Task<List<string>> AsWizard(string command)
 	{
-		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "CfgWiz");
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>().Expect<SharpPlayer>();
+		var home = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName("CfgWizRoom"), god));
+		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "CfgWiz", home);
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
 		var before = WebAppFactoryArg.Notifications.CountFor(wizard.DbRef);
 		await Parser.CommandParse(wizard.Handle, ConnectionService, MarkupText.Plain(command));
