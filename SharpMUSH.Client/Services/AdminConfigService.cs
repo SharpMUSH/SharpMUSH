@@ -13,44 +13,44 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 	private SharpMUSHOptions? _currentOptions = null;
 	private Dictionary<string, SharpConfigAttribute> _metadata = [];
 
-	public async Task<Result<IEnumerable<ConfigItem>>> GetOptionsAsync()
-	{
-		try
-		{
-			var configResponse = await FetchConfigurationFromServer();
-			_currentOptions = configResponse.Configuration;
-			_metadata = configResponse.Metadata;
+	private HttpClient Client => httpClient.CreateClient("api");
 
-			return configResponse.ToConfigItems();
-		}
-		catch (Exception ex)
+	public async Task<Result<IEnumerable<ConfigItem>>> GetOptionsAsync() =>
+		await FetchConfigurationFromServer() switch
 		{
-			logger.LogError(ex, "Error fetching options from server, using defaults");
-			return new Result<IEnumerable<ConfigItem>>([]);
+			ConfigurationResponse response => Remember(response).ToConfigItems(),
+			ApiFailure failure => new Error<string>(failure.Message)
+		};
+
+	/// <summary>Sends a PennMUSH-style config file for the server to apply.</summary>
+	/// <remarks>
+	/// This used to throw, and the import page caught the exception into the log: a refused file
+	/// stopped the spinner and said nothing, which reads as the click not landing.
+	/// </remarks>
+	public async Task<ApiResult<ConfigurationResponse>> ImportFromConfigFileAsync(string configFileContent)
+	{
+		var result = await Client.PostApiAsync<string, ConfigurationResponse>(
+			"/api/configuration/import", configFileContent, "The server returned no configuration.");
+
+		switch (result)
+		{
+			case ConfigurationResponse response:
+				Remember(response);
+				break;
+			case ApiFailure failure:
+				logger.LogError("Importing the configuration file failed: {Reason}", failure.Message);
+				break;
 		}
+
+		return result;
 	}
 
-	public async Task<SharpMUSHOptions> ImportFromConfigFileAsync(string configFileContent)
-	{
-		try
-		{
-			var response = await httpClient.CreateClient("api").PostAsJsonAsync("/api/configuration/import", configFileContent);
-			response.EnsureSuccessStatusCode();
-
-			var configResponse = await response.Content.ReadFromJsonAsync<ConfigurationResponse>();
-			if (configResponse?.Configuration != null)
-			{
-				_currentOptions = configResponse.Configuration;
-			}
-			return configResponse?.Configuration!;
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "Error importing configuration file");
-			throw;
-		}
-	}
-
+	/// <remarks>
+	/// Not on <see cref="ApiCall"/>, deliberately: a refused save answers
+	/// <c>{ "errors": { "&lt;path&gt;": "…", "_global": "…" } }</c>, and the editor places each message
+	/// next to its field. <see cref="ApiFailure.ServerSentence"/> keeps one sentence, so this hands the
+	/// page the body whole.
+	/// </remarks>
 	public async Task<Result<ConfigurationResponse>> UpdateConfigAsync(
 		Dictionary<string, object?> changes)
 	{
@@ -90,23 +90,15 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		}
 	}
 
-	public async Task<string?> ExportConfigAsync()
+	/// <summary>The server's configuration as the JSON file it exports.</summary>
+	public async Task<ApiResult<string>> ExportConfigAsync()
 	{
-		try
-		{
-			var client = httpClient.CreateClient("api");
-			return await client.GetStringAsync("/api/configuration/export");
-		}
-		catch (HttpRequestException ex)
-		{
-			logger.LogError(ex, "Error exporting configuration");
-			return null;
-		}
-		catch (TaskCanceledException ex)
-		{
-			logger.LogError(ex, "Error exporting configuration");
-			return null;
-		}
+		var result = await Client.GetTextApiAsync("/api/configuration/export");
+
+		if (result is ApiFailure failure)
+			logger.LogError("Exporting the configuration failed: {Reason}", failure.Message);
+
+		return result;
 	}
 
 	public void ResetToDefault()
@@ -114,24 +106,31 @@ public class AdminConfigService(ILogger<AdminConfigService> logger, IHttpClientF
 		_currentOptions = null;
 	}
 
-	public async Task<ConfigurationResponse> FetchConfigurationFromServer()
+	/// <summary>The configuration the server is running with, its metadata and its schema.</summary>
+	/// <remarks>
+	/// A failure used to come back as a response whose <see cref="ConfigurationResponse.Configuration"/>
+	/// was <see langword="null"/> behind a <c>null!</c>, so the reason was lost and a caller that forgot
+	/// to check dereferenced it. A response that names no configuration is a failure here too.
+	/// </remarks>
+	public async Task<ApiResult<ConfigurationResponse>> FetchConfigurationFromServer()
 	{
-		try
-		{
-			var response = await httpClient.CreateClient("api").GetAsync("/api/configuration");
-			response.EnsureSuccessStatusCode();
+		var result = await Client.GetApiAsync<ConfigurationResponse>(
+			"/api/configuration", "The server returned no configuration.");
 
-			var configResponse = await response.Content.ReadFromJsonAsync<ConfigurationResponse>();
-			return configResponse!;
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(ex, "Error fetching configuration from server");
-			return new ConfigurationResponse
-			{
-				Configuration = null!
-			};
-		}
+		if (result is ConfigurationResponse { Configuration: null })
+			result = new ApiFailure(ApiFailureKind.Unexpected, "The configuration response carried no configuration.");
+
+		if (result is ApiFailure failure)
+			logger.LogError("Fetching the configuration failed: {Reason}", failure.Message);
+
+		return result;
+	}
+
+	private ConfigurationResponse Remember(ConfigurationResponse response)
+	{
+		_currentOptions = response.Configuration;
+		_metadata = response.Metadata;
+		return response;
 	}
 
 	public class ConfigItem

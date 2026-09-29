@@ -3807,4 +3807,8 @@
   <data name="DiagStatus_Halted" xml:space="preserve"><value>Arrêté</value></data>
   <data name="DiagStatus_ConnectionLimit" xml:space="preserve"><value>Limite de rafale de connexion</value></data>
   <data name="DiagUnsupported" xml:space="preserve"><value>Cet ordonnanceur ne prend pas en charge le diagnostic de la file.</value></data>
+  <data name="ConfigImportFailed" xml:space="preserve">
+    <value>Impossible d’importer la configuration : {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

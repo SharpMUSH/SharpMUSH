@@ -61,10 +61,15 @@
 
     private async Task ExportAsync()
     {
-        var json = await AdminConfigService.ExportConfigAsync();
-        if (json == null)
+        var export = await AdminConfigService.ExportConfigAsync();
+        var (json, error) = export switch
         {
-            Snackbar.Add(Loc["ExportFailed"].Value, Severity.Error);
+            string body => (body, null),
+            ApiFailure failure => ((string?)null, failure.Message)
+        };
+        if (json is null)
+        {
+            Snackbar.Add($"{Loc["ExportFailed"]}: {error}", Severity.Error);
             return;
         }
 

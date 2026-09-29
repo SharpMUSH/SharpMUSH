@@ -56,6 +56,11 @@
 				</MudExpansionPanels>
 			}
 
+			@if (_error is not null)
+			{
+				<MudAlert Severity="Severity.Error" Dense="true" Class="mt-4">@Loc["ConfigImportFailed", _error].Value</MudAlert>
+			}
+
 			<div class="config-actions mt-4">
 				<button type="button" class="config-ghost-btn" @onclick="ClearSelection">
 					<MudIcon Icon="Icons.Material.Filled.Clear" Style="font-size:1rem;" />
@@ -85,10 +90,12 @@
 	private IBrowserFile? _selectedFile;
 	private string? _fileContent;
 	private bool _isImporting;
+	private string? _error;
 
 	private async Task OnFileSelected(IBrowserFile? file)
 	{
 		_selectedFile = file;
+		_error = null;
 		
 		if (file != null)
 		{
@@ -109,6 +116,7 @@
 	{
 		_selectedFile = null;
 		_fileContent = null;
+		_error = null;
 	}
 
 	private async Task ImportConfiguration()
@@ -117,19 +125,18 @@
 			return;
 
 		_isImporting = true;
+		_error = null;
 
-		try
+		switch (await AdminConfigService.ImportFromConfigFileAsync(_fileContent))
 		{
-			await AdminConfigService.ImportFromConfigFileAsync(_fileContent);
-			Navigation.NavigateTo("/admin/config");
+			case ConfigurationResponse:
+				Navigation.NavigateTo("/admin/config");
+				break;
+			case ApiFailure failure:
+				_error = failure.Message;
+				break;
 		}
-		catch (Exception ex)
-		{
-			Logger.LogError(ex, "Error importing configuration");
-		}
-		finally
-		{
-			_isImporting = false;
-		}
+
+		_isImporting = false;
 	}
 }

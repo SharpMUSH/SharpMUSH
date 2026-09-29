@@ -193,10 +193,15 @@
         
         try
         {
-            var schema = await SchemaService.GetSchemaAsync();
-            if (schema == null)
+            var schemaResult = await SchemaService.GetSchemaAsync();
+            var (schema, schemaError) = schemaResult switch
             {
-                Snackbar.Add(Loc["FailedToLoadSchema"].Value, Severity.Error);
+                ConfigurationSchema found => (found, null),
+                ApiFailure failure => ((ConfigurationSchema?)null, failure.Message)
+            };
+            if (schema is null)
+            {
+                Snackbar.Add($"{Loc["FailedToLoadSchema"]}: {schemaError}", Severity.Error);
                 return;
             }
 
@@ -217,10 +222,15 @@
                 .Where(kvp => kvp.Value.Category.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-            var configResponse = await AdminConfigService.FetchConfigurationFromServer();
-            if (configResponse.Configuration == null)
+            var configResult = await AdminConfigService.FetchConfigurationFromServer();
+            var (configResponse, configError) = configResult switch
             {
-                Snackbar.Add(Loc["FailedToLoadValues"].Value, Severity.Error);
+                ConfigurationResponse found => (found, null),
+                ApiFailure failure => ((ConfigurationResponse?)null, failure.Message)
+            };
+            if (configResponse is null)
+            {
+                Snackbar.Add($"{Loc["FailedToLoadValues"]}: {configError}", Severity.Error);
                 return;
             }
 
