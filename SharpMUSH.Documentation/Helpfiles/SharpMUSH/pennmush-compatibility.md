@@ -411,6 +411,31 @@ open to everyone.<br>
 still apply to a command it names, or put the restriction in `command_restrictions` itself.<br>
 **Example.** The parity case `choice.restrictions-reapply` in `tools/parity/scenarios/40-compat-choices.scn` runs it on both servers.
 
+## A new game restricts no commands
+
+**A choice.**
+
+**PennMUSH** ships `restrict.cnf` and includes it from `mush.cnf`, so a stock game already applies 21
+`restrict_command` lines at startup (`game/restrictcnf.dst`): a guest cannot `@create`, `@dig`,
+`@open`, `@set`, `@link` or `@lock`, a FIXED player's `home` is refused with `You can't do that IC!`,
+and `@destroy` is `noplayer` with its own message, so a player who types `@destroy <thing>` is
+answered `Use @recycle instead` and the thing is not destroyed (`game/restrictcnf.dst:86`, sent by
+`command.c:2336-2339`).<br>
+**SharpMUSH** ships `command_restrictions` empty, and reading a PennMUSH `mush.cnf` does not follow
+its `include` lines, so an imported game does not bring `restrict.cnf` across either. Every command is
+open to whatever its own permission check allows: a player's `@destroy <thing>` destroys the thing,
+and a guest can `@create`.<br>
+**Why.** Those lines are one site's policy, not the engine's behaviour — `restrict.cnf` is a file the
+administrator edits, and two PennMUSH games rarely ship the same one. Taking `@destroy` away from
+ordinary players on a fresh install is the game's decision to make, and SharpMUSH does not make it for
+a world nobody has configured yet.<br>
+**Workaround.** Put the lines back, in the words PennMUSH writes them:
+`@config/set restrict_command=@destroy noplayer " Use @recycle instead`, one per command, or set
+`command_restrictions` from the portal's configuration page. `noguest`, `nofixed`, `noplayer`,
+`nobody`, a flag or power name, a lock and the `" <message>` suffix all mean there what they mean in
+`restrict.cnf`, and the restriction applies at once and lasts across restarts.<br>
+**Example.** The parity case `obj.create` in `tools/parity/scenarios/10-player-commands.scn` runs it on both servers.
+
 ## PennMUSH's file and allocator housekeeping answers `NOT SUPPORTED`
 
 **A choice.**
