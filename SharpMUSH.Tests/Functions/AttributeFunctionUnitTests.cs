@@ -841,6 +841,33 @@ public class AttributeFunctionUnitTests
 		}
 	}
 
+	/// <summary>
+	/// PennMUSH reads a standard attribute through its alias (<c>attralias</c>, hdrs/atr_tab.h):
+	/// <c>get(obj/DESC)</c> is <c>get(obj/DESCRIBE)</c>. An imported @desc is stored as DESCRIBE.
+	/// </summary>
+	[Test]
+	[Arguments("DESC", "DESCRIBE")]
+	[Arguments("idesc", "IDESCRIBE")]
+	[Arguments("SUCC", "SUCCESS")]
+	[Arguments("OFAIL", "OFAILURE")]
+	public async Task GetReadsAStandardAttributeThroughItsAlias(string alias, string realName)
+	{
+		var thing = $"AliasRead_{Guid.NewGuid():N}"[..20];
+		var result = await Parser.FunctionParse(MarkupText.Plain(
+			$"[setq(0,create({thing}))][attrib_set(%q0/{realName},Read via {alias}.)][get(%q0/{alias})]|[u(%q0/{alias})]|[hasattr(%q0/{alias}`SUB)]"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo($"Read via {alias}.|Read via {alias}.|0");
+	}
+
+	/// <summary>An attribute that really is named like an alias wins over the aliased one, as in atr_get_noparent.</summary>
+	[Test]
+	public async Task AnAttributeNamedLikeAnAliasIsReadFirst()
+	{
+		var thing = $"AliasOwn_{Guid.NewGuid():N}"[..20];
+		var result = await Parser.FunctionParse(MarkupText.Plain(
+			$"[setq(0,create({thing}))][attrib_set(%q0/DESCRIBE,long)][attrib_set(%q0/DESC,short)][get(%q0/DESC)]"));
+		await Assert.That(result!.Message!.ToPlainText()).IsEqualTo("short");
+	}
+
 	private async Task<DBRef> MintMortalAsync(string prefix)
 	{
 		var name = $"{prefix}{Guid.NewGuid():N}"[..14];

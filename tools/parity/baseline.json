@@ -37,10 +37,6 @@
    "command": "think [flags(*Wiz)] [flags(*Alice)]"
   },
   {
-   "key": "05-import/import.rooms#0",
-   "command": "think [name(loc(*Alice))] [type(loc(*Alice))] [get(loc(*Alice)/DESC)]"
-  },
-  {
    "key": "05-import/import.rooms#1",
    "command": "look"
   },
@@ -59,10 +55,6 @@
   {
    "key": "05-import/import.things#2",
    "command": "think [loc(first(lcon(*Alice)))=loc(*Alice)] [owner(first(lcon(*Alice)))=owner(*Alice)]"
-  },
-  {
-   "key": "05-import/import.things#3",
-   "command": "think [get(first(lcon(*Alice))/DESC)]"
   },
   {
    "key": "10-player-commands/comm.page#0",
