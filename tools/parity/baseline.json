@@ -193,10 +193,6 @@
    "command": "One godpass"
   },
   {
-   "key": "20-admin-commands/admin.restrict-command#3",
-   "command": "@command/restrict @find=!FLAG^GAGGED"
-  },
-  {
    "key": "20-admin-commands/admin.search#0",
    "command": "@search name=Widget"
   },
@@ -339,14 +335,6 @@
   {
    "key": "40-compat-choices/choice.mail-fwd#1",
    "command": "Bob bobpass"
-  },
-  {
-   "key": "40-compat-choices/choice.restrictions-reapply#1",
-   "command": "@command/restrict @find=!FLAG^GAGGED"
-  },
-  {
-   "key": "40-compat-choices/choice.restrictions-reapply#4",
-   "command": "@command/restrict @find=!FLAG^GAGGED"
   },
   {
    "key": "50-mail/mail.fwd-by-name#0",

@@ -279,6 +279,57 @@ public class CommandManagementTests
 		await Assert.That(await As(other, $"{clone} locked hello")).DoesNotContain("locked hello");
 	}
 
+	/// <summary>
+	/// <c>cmd_command</c>'s description of a command (<c>src/command.c:2197-2258</c>): name, flags,
+	/// lock, switches, and how each side of the <c>=</c> is parsed. <c>@find</c> splits at the
+	/// <c>=</c> and splits its right side into arguments.
+	/// </summary>
+	[Test]
+	public async ValueTask Describe_IsPennsNameFlagsLockSwitchesAndSides()
+	{
+		var wizard = await Wizard();
+		var clone = CommandName();
+		await As(wizard, $"@command/clone @find={clone}");
+
+		var described = await As(wizard, $"@command/restrict {clone}=!FLAG^GAGGED");
+
+		await Assert.That(described.Select(line => line.TrimEnd())).IsEquivalentTo(new[]
+		{
+			$"Name       : {clone} (Enabled)",
+			"Flags      : Eqsplit",
+			"Lock       : !FLAG^GAGGED",
+			"Switches   :",
+			"Leftside   :",
+			"Rightside  : Args"
+		});
+	}
+
+	/// <summary>
+	/// A command that does not split at the <c>=</c> has one "Arguments" line, and one with no lock
+	/// shows <c>*UNLOCKED*</c>; its hooks follow (<c>do_hook_list</c>, <c>src/command.c:2746</c>).
+	/// </summary>
+	[Test]
+	public async ValueTask Describe_UnsplitCommand_ShowsArgumentsAndHooks()
+	{
+		var wizard = await Wizard();
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+		await HookService.SetHookAsync(clone, "BEFORE", wizard.DbRef, "CMD.BEFORE", false, false, false, false);
+		try
+		{
+			var described = (await As(wizard, $"@command {clone}")).Select(line => line.TrimEnd()).ToList();
+
+			await Assert.That(described).Contains("Lock       : *UNLOCKED*");
+			await Assert.That(described).Contains(line => line.StartsWith("Arguments  :"));
+			await Assert.That(described).DoesNotContain(line => line.StartsWith("Leftside"));
+			await Assert.That(described[^1]).IsEqualTo($"@hook/before: #{wizard.DbRef.Number}/CMD.BEFORE");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(clone, "BEFORE");
+		}
+	}
+
 	[Test]
 	public async ValueTask Restrict_WithNothing_AsksHow()
 	{
@@ -388,7 +439,7 @@ public class CommandManagementTests
 
 		await As(wizard, $"@command/restrict {clone}=player");
 
-		await Assert.That(await As(wizard, $"@command {clone}")).Contains("  Lock: (TYPE^PLAYER)");
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains("Lock       : (TYPE^PLAYER)");
 		await Assert.That(await As(wizard, $"{clone} still mine")).Contains("still mine");
 	}
 
@@ -409,7 +460,7 @@ public class CommandManagementTests
 
 		var set = await As(wizard, $"@command/restrict {clone}=wizard \"The {clone} is not for you.");
 
-		await Assert.That(set).Contains($"  Failure Msg: The {clone} is not for you.");
+		await Assert.That(set).Contains($"Failure Msg: The {clone} is not for you.");
 
 		var refused = await As(mortal, $"{clone} nope");
 		await Assert.That(refused).Contains($"The {clone} is not for you.");
@@ -434,7 +485,7 @@ public class CommandManagementTests
 
 		var cleared = await As(wizard, $"@command/restrict {clone}=wizard \"");
 
-		await Assert.That(cleared).DoesNotContain("  Failure Msg: Not yours.");
+		await Assert.That(cleared).DoesNotContain("Failure Msg: Not yours.");
 		await Assert.That(await As(mortal, $"{clone} nope")).Contains("Permission denied.");
 	}
 
@@ -451,7 +502,7 @@ public class CommandManagementTests
 
 		await As(wizard, $"@command/clone {original}={clone}");
 
-		await Assert.That(await As(wizard, $"@command {clone}")).Contains("  Failure Msg: Copied refusal.");
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains("Failure Msg: Copied refusal.");
 		await Assert.That(await As(mortal, $"{clone} nope")).Contains("Copied refusal.");
 	}
 
@@ -465,7 +516,7 @@ public class CommandManagementTests
 
 		await As(wizard, $"@command/restrict {clone}=noplayer");
 
-		await Assert.That(await As(wizard, $"@command {clone}")).Contains("  Lock: (TYPE^THING|TYPE^ROOM|TYPE^EXIT)");
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains("Lock       : (TYPE^THING|TYPE^ROOM|TYPE^EXIT)");
 	}
 
 	/// <summary>
@@ -639,7 +690,7 @@ public class CommandManagementTests
 			[clone] = ["wizard", "\"Configured refusal."]
 		});
 
-		await Assert.That(await As(wizard, $"@command {clone}")).Contains("  Lock: (FLAG^WIZARD)");
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains("Lock       : (FLAG^WIZARD)");
 		var refused = await As(mortal, $"{clone} mine");
 		await Assert.That(refused).Contains("Configured refusal.");
 		await Assert.That(refused).DoesNotContain("mine");
@@ -656,7 +707,7 @@ public class CommandManagementTests
 		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]> { [clone] = ["nobody"] });
 
 		await Assert.That(await As(wizard, $"{clone} gone")).Contains(Huh);
-		await Assert.That(await As(wizard, $"@command {clone}")).Contains($"Command: {clone} (Disabled)");
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains($"Name       : {clone} (Disabled)");
 	}
 
 	/// <summary>
@@ -726,7 +777,7 @@ public class CommandManagementTests
 		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]>());
 
 		await Assert.That(await As(wizard, $"{clone} back")).Contains("back");
-		await Assert.That(await As(wizard, $"@command {clone}")).Contains($"Command: {clone} (Enabled)");
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains($"Name       : {clone} (Enabled)");
 	}
 
 	/// <summary>
@@ -814,7 +865,7 @@ public class CommandManagementTests
 			var refused = await As(mortal, $"{clone} mine");
 			await Assert.That(refused).Contains("Set in game.");
 			await Assert.That(refused).DoesNotContain("mine");
-			await Assert.That(await As(wizard, $"@command {clone}")).Contains("  Lock: (FLAG^WIZARD)");
+			await Assert.That(await As(wizard, $"@command {clone}")).Contains("Lock       : (FLAG^WIZARD)");
 
 			var stored = await WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>()
 				.GetExpandedServerDataAsync<SharpMUSHOptions>();
@@ -905,18 +956,23 @@ public class CommandManagementTests
 		await Assert.That(messages).Contains("GOTO is run by the game itself and cannot be disabled.");
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
 			.Because("the refusal is the command's result, not just a message");
-		await Assert.That(await As(wizard, "@command GOTO")).Contains("Command: GOTO (Enabled)");
+		await Assert.That(await As(wizard, "@command GOTO")).Contains("Name       : GOTO (Enabled)");
 	}
 
-	/// <summary>An added command is registered as a system entry so the trie matches it, but it is not built in.</summary>
+	/// <summary>
+	/// An added command takes the NOEVAL switch unless it parses neither side
+	/// (<c>do_command_add</c>, <c>src/command.c:1939</c>), and <c>@command</c> lists it.
+	/// </summary>
 	[Test]
-	public async ValueTask Info_ForAnAddedCommand_SaysUserDefined()
+	public async ValueTask Info_ForAnAddedCommand_ListsItsNoevalSwitch()
 	{
 		var wizard = await Wizard();
 		var name = CommandName();
+		var unparsed = CommandName();
 		await As(wizard, $"@command/add {name}");
+		await As(wizard, $"@command/add/noparse/rsnoparse {unparsed}");
 
-		await Assert.That(await As(wizard, $"@command {name}")).Contains("  Type: User-defined");
-		await Assert.That(await As(wizard, "@command think")).Contains("  Type: Built-in");
+		await Assert.That(await As(wizard, $"@command {name}")).Contains("Switches   : NOEVAL");
+		await Assert.That(await As(wizard, $"@command {unparsed}")).Contains("Switches   :");
 	}
 }
