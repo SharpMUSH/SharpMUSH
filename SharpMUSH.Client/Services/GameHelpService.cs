@@ -1,6 +1,3 @@
-using System.Net;
-using System.Net.Http.Json;
-
 namespace SharpMUSH.Client.Services;
 
 /// <summary>A corpus index: its front-page entry rendered to HTML, plus every topic name in it.</summary>
@@ -37,63 +34,51 @@ public record GameHelpEntry(
 /// </remarks>
 public sealed class GameHelpService(IHttpClientFactory httpClientFactory, ILogger<GameHelpService> logger)
 {
-	/// <summary>Loads the general help index, or <see langword="null"/> if the server would not answer.</summary>
-	public Task<GameHelpIndex?> GetIndexAsync() => GetIndexAsync("api/help");
+	private HttpClient Client => httpClientFactory.CreateClient("api");
 
-	/// <summary>Loads the administrator help index. Returns <see langword="null"/> for a reader who may not read it.</summary>
-	public Task<GameHelpIndex?> GetAdminIndexAsync() => GetIndexAsync("api/help/admin");
+	/// <summary>Loads the general help index.</summary>
+	public Task<ApiResult<GameHelpIndex>> GetIndexAsync() => GetIndexAsync("api/help");
+
+	/// <summary>
+	/// Loads the administrator help index. A reader who may not read it gets the server's
+	/// <see cref="ApiFailureKind.Forbidden"/>.
+	/// </summary>
+	public Task<ApiResult<GameHelpIndex>> GetAdminIndexAsync() => GetIndexAsync("api/help/admin");
 
 	/// <summary>Resolves one topic in the general corpus.</summary>
-	public Task<GameHelpEntry?> GetEntryAsync(string topic) => GetEntryAsync("api/help/entry", topic);
+	public Task<ApiResult<GameHelpEntry>> GetEntryAsync(string topic) => GetEntryAsync("api/help/entry", topic);
 
 	/// <summary>Resolves one topic in the administrator corpus.</summary>
-	public Task<GameHelpEntry?> GetAdminEntryAsync(string topic) => GetEntryAsync("api/help/admin/entry", topic);
+	public Task<ApiResult<GameHelpEntry>> GetAdminEntryAsync(string topic) => GetEntryAsync("api/help/admin/entry", topic);
 
-	private async Task<GameHelpIndex?> GetIndexAsync(string route)
+	private async Task<ApiResult<GameHelpIndex>> GetIndexAsync(string route)
 	{
-		try
-		{
-			var http = httpClientFactory.CreateClient("api");
-			return await http.GetFromJsonAsync<GameHelpIndex>(route);
-		}
-		catch (Exception ex) when (ex is HttpRequestException or NotSupportedException or System.Text.Json.JsonException)
-		{
-			logger.LogWarning(ex, "Failed to load the help index from {Route}.", route);
-			return null;
-		}
+		var result = await Client.GetApiAsync<GameHelpIndex>(route, "The server returned no help index.");
+
+		if (result is ApiFailure failure)
+			logger.LogWarning("Failed to load the help index from {Route}: {Reason}", route, failure.Message);
+
+		return result;
 	}
 
-	private async Task<GameHelpEntry?> GetEntryAsync(string route, string topic)
+	private async Task<ApiResult<GameHelpEntry>> GetEntryAsync(string route, string topic)
 	{
 		// Topic names include '@mail', 'getting started', '%#' and '#-1 exception'. Escaping them as a
 		// query value is the only encoding that survives all of them intact.
-		var url = $"{route}?topic={Uri.EscapeDataString(topic)}";
+		var result = await Client.GetApiAsync<GameHelpEntry>(
+			$"{route}?topic={Uri.EscapeDataString(topic)}", "The server returned no help entry.");
 
-		try
+		switch (result)
 		{
-			var http = httpClientFactory.CreateClient("api");
-			var response = await http.GetAsync(url);
-
-			// A miss is a documented answer, not a transport failure: the page says "no such topic"
-			// rather than "something went wrong".
-			if (response.StatusCode == HttpStatusCode.NotFound)
-			{
-				return await response.Content.ReadFromJsonAsync<GameHelpEntry>()
-					?? new GameHelpEntry(string.Empty, topic, null, null, null, []);
-			}
-
-			if (!response.IsSuccessStatusCode)
-			{
-				logger.LogWarning("Help lookup for {Topic} returned {Status}.", topic, response.StatusCode);
-				return null;
-			}
-
-			return await response.Content.ReadFromJsonAsync<GameHelpEntry>();
-		}
-		catch (Exception ex) when (ex is HttpRequestException or NotSupportedException or System.Text.Json.JsonException)
-		{
-			logger.LogWarning(ex, "Failed to load help topic {Topic}.", topic);
-			return null;
+			// A miss is a documented answer, not a failure: the page says "no such topic" rather than
+			// "something went wrong".
+			case ApiFailure { Kind: ApiFailureKind.NotFound }:
+				return new GameHelpEntry(string.Empty, topic, null, null, null, []);
+			case ApiFailure failure:
+				logger.LogWarning("Failed to load help topic {Topic}: {Reason}", topic, failure.Message);
+				return failure;
+			default:
+				return result;
 		}
 	}
 }
