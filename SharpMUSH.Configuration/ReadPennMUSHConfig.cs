@@ -24,6 +24,18 @@ public static partial class ReadPennMushConfig
 
 		var splitter = KeyValueSplittingRegex();
 
+		// PennMUSH's cf_flag (src/conf.c) appends each line of a flag option to what earlier lines set,
+		// so the shipped mushcnf.dst can give player_flags as three lines (enter_ok, ansi, no_command).
+		// Every other option takes its last line.
+		HashSet<string> accumulating =
+		[
+			propertyDictionary[nameof(FlagOptions.PlayerFlags)],
+			propertyDictionary[nameof(FlagOptions.RoomFlags)],
+			propertyDictionary[nameof(FlagOptions.ExitFlags)],
+			propertyDictionary[nameof(FlagOptions.ThingFlags)],
+			propertyDictionary[nameof(FlagOptions.ChannelFlags)]
+		];
+
 		try
 		{
 			text = File.ReadAllLines(configFile);
@@ -43,7 +55,11 @@ public static partial class ReadPennMushConfig
 							 .Select(match => match.Groups)
 							 .Where(groups => configDictionary.ContainsKey(groups["Key"].Value)))
 		{
-			configDictionary[groups["Key"].Value] = groups["Value"].Value;
+			var key = groups["Key"].Value;
+			var value = groups["Value"].Value;
+			configDictionary[key] = accumulating.Contains(key) && configDictionary[key].Length > 0
+				? $"{configDictionary[key]} {value}"
+				: value;
 		}
 
 		var d = SharpMUSHOptions.Default();
