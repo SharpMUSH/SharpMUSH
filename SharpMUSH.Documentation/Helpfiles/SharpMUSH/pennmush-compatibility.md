@@ -421,10 +421,12 @@ still apply to a command it names, or put the restriction in `command_restrictio
 and `@destroy` is `noplayer` with its own message, so a player who types `@destroy <thing>` is
 answered `Use @recycle instead` and the thing is not destroyed (`game/restrictcnf.dst:86`, sent by
 `command.c:2336-2339`).<br>
-**SharpMUSH** ships `command_restrictions` empty, and reading a PennMUSH `mush.cnf` does not follow
-its `include` lines, so an imported game does not bring `restrict.cnf` across either. Every command is
-open to whatever its own permission check allows: a player's `@destroy <thing>` destroys the thing,
-and a guest can `@create`.<br>
+**SharpMUSH** ships `command_restrictions` empty. Every command in a new game is open to whatever its
+own permission check allows: a player's `@destroy <thing>` destroys the thing, and a guest can
+`@create`. An imported game keeps its own: reading a PennMUSH `mush.cnf` follows its `include` lines,
+as `config_file_startup` does, and carries each `restrict_command` line into `command_restrictions`
+and each `restrict_function` line into `function_restrictions`. A line that cannot be carried (an
+include that cannot be read, a restriction with no value, a `restrict_attribute`) is logged by name.<br>
 **Why.** Those lines are one site's policy, not the engine's behaviour — `restrict.cnf` is a file the
 administrator edits, and two PennMUSH games rarely ship the same one. Taking `@destroy` away from
 ordinary players on a fresh install is the game's decision to make, and SharpMUSH does not make it for

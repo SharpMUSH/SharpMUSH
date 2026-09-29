@@ -1,5 +1,6 @@
 ﻿using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
@@ -761,6 +762,39 @@ public class CommandManagementTests
 		});
 
 		await Assert.That(await As(mortal, $"{clone} mine")).Contains("Permission denied.");
+	}
+
+	/// <summary>
+	/// An imported PennMUSH game's <c>restrict.cnf</c>, reached through its <c>mush.cnf</c>'s
+	/// <c>include restrict.cnf</c>, restricts the command in SharpMUSH as it did in PennMUSH.
+	/// </summary>
+	[Test, NotInParallel(ConfiguredRestrictionsKey)]
+	public async ValueTask ConfiguredRestrictions_FromAnImportedRestrictCnf_ReachTheCommandTable()
+	{
+		var wizard = await Wizard();
+		var mortal = await Mortal("CmdCfgImport");
+		var clone = CommandName();
+		await As(wizard, $"@command/clone think={clone}");
+
+		var game = Path.Combine(Path.GetTempPath(), $"sharpmush-game-{Guid.NewGuid():N}");
+		Directory.CreateDirectory(game);
+		try
+		{
+			await File.WriteAllLinesAsync(Path.Combine(game, "restrict.cnf"), [$"restrict_command {clone} wizard \" Imported refusal."]);
+			await File.WriteAllLinesAsync(Path.Combine(game, "mush.cnf"), ["include restrict.cnf"]);
+
+			var imported = ReadPennMushConfig.Create(Path.Combine(game, "mush.cnf"));
+			await Restrictions.ApplyConfiguredRestrictionsAsync(imported.Restriction.CommandRestrictions);
+		}
+		finally
+		{
+			Directory.Delete(game, true);
+		}
+
+		var refused = await As(mortal, $"{clone} mine");
+		await Assert.That(refused).Contains("Imported refusal.");
+		await Assert.That(refused).DoesNotContain("mine");
+		await Assert.That(await As(wizard, $"@command {clone}")).Contains("Lock       : (FLAG^WIZARD)");
 	}
 
 	/// <summary>

@@ -234,9 +234,17 @@ public class ConfigurationController(
 			var tempFile = Path.GetTempFileName();
 			await System.IO.File.WriteAllTextAsync(tempFile, configContent);
 
-			var importedOptions = ReadPennMushConfig.Create(tempFile);
+			var import = ReadPennMushConfig.Import(tempFile);
+			var importedOptions = import.Options;
 
 			System.IO.File.Delete(tempFile);
+
+			// An uploaded mush.cnf arrives alone, so the restrict.cnf and alias.cnf it includes are not
+			// beside it; each line that could not be carried over is named rather than lost silently.
+			foreach (var line in import.Skipped)
+			{
+				logger.LogWarning("Configuration import did not carry over: {Line}", line);
+			}
 
 			// Pass the object directly - the database will handle serialization
 			await database.SetExpandedServerData(nameof(SharpMUSHOptions), importedOptions);

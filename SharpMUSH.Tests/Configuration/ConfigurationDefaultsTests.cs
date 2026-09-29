@@ -62,7 +62,7 @@ public class ConfigurationDefaultsTests
 		["forking_dump"] = "Penn forks to write its flatfile.",
 		["help_command"] = "Penn registers help files as commands; SharpMUSH indexes its own helpfiles.",
 		["ahelp_command"] = "Penn registers help files as commands.",
-		["restrict_command"] = "Read from restrict.cnf instead, as Restriction.CommandRestrictions.",
+		["restrict_command"] = "A directive, not an option: read into Restriction.CommandRestrictions.",
 		["help_db"] = "Penn's help index file.",
 		["sendmail_prog"] = "Penn mails @mail out through sendmail.",
 		["connlog_db"] = "Penn's connection log database file.",
@@ -70,7 +70,7 @@ public class ConfigurationDefaultsTests
 		["log_max_size"] = "Penn rotates its own log files.",
 		["log_size_policy"] = "Penn rotates its own log files.",
 		["mssp"] = "Free-form MSSP fields; SharpMUSH answers MSSP from the game itself.",
-		["include"] = "A directive, not an option: alias.cnf and restrict.cnf are read separately."
+		["include"] = "A directive, not an option: the file it names is read in its place."
 	};
 
 	private static string ShippedConfig =>
