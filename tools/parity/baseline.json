@@ -93,16 +93,8 @@
    "command": "@set Widget/COLOR=!no_command"
   },
   {
-   "key": "10-player-commands/obj.create#0",
-   "command": "@create Gizmo"
-  },
-  {
    "key": "10-player-commands/obj.create#2",
    "command": "look Gizmo"
-  },
-  {
-   "key": "10-player-commands/obj.create#3",
-   "command": "@name Gizmo=Gadget"
   },
   {
    "key": "10-player-commands/obj.create#4",
@@ -229,32 +221,8 @@
    "command": "@teleport *Alice=[loc(*Alice)]"
   },
   {
-   "key": "25-requested-dbref/dbref.clone#0",
-   "command": "@clone RqThing=RqCopy,[elements(v(HOLES),12)]"
-  },
-  {
-   "key": "25-requested-dbref/dbref.clone#2",
-   "command": "think [strmatch(num(clone(RqThing,RqFunCopy,elements(v(HOLES),17))),elements(v(HOLES),17))]"
-  },
-  {
-   "key": "25-requested-dbref/dbref.create#0",
-   "command": "@create RqThing=,[elements(v(HOLES),1)]"
-  },
-  {
-   "key": "25-requested-dbref/dbref.create#2",
-   "command": "think [strmatch(num(create(RqFun,,elements(v(HOLES),2))),elements(v(HOLES),2))]"
-  },
-  {
-   "key": "25-requested-dbref/dbref.create#3",
-   "command": "@create RqCost=10,[elements(v(HOLES),3)]"
-  },
-  {
    "key": "25-requested-dbref/dbref.holes#0",
    "command": "Wiz wizpass"
-  },
-  {
-   "key": "25-requested-dbref/dbref.holes#2",
-   "command": "think [set(me,HOLES:[create(RqA)] [create(RqB)] [create(RqC)] [create(RqD)] [create(RqE)] [create(RqF)] [create(RqG)] [create(RqH)] [create(RqI)] [create(RqJ)] [create(RqK)] [create(RqL)] [create(RqM)] [create(RqN)] [create(RqO)] [create(RqP)] [create(RqQ)])]"
   },
   {
    "key": "25-requested-dbref/dbref.holes#3",
@@ -323,10 +291,6 @@
   {
    "key": "40-compat-choices/choice.dropto#3",
    "command": "@create EventSink"
-  },
-  {
-   "key": "40-compat-choices/choice.dropto#9",
-   "command": "@link [get(EventSink/DROPROOM)]=[loc(*Alice)]"
   },
   {
    "key": "40-compat-choices/choice.housekeeping#0",

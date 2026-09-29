@@ -127,6 +127,6 @@ public class BuildingFunctionParityTests
 		await Eval(player.Handle, $"create({name})");
 
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(
-			NotifyService, nameof(ErrorMessages.Notifications.Created), player.DbRef)).IsTrue();
+			NotifyService, nameof(ErrorMessages.Notifications.CreatedObject), player.DbRef)).IsTrue();
 	}
 }
