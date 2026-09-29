@@ -23,11 +23,8 @@ public class ConfigListOptionTests
 
 	private IMUSHCodeParser Parser => WebAppFactoryArg.FunctionParser;
 
-	/// <remarks>
-	/// <c>player_flags</c> is left out: <c>mushcnf.dst</c> sets it over three lines, which <c>cf_flag</c>
-	/// accumulates, and SharpMUSH's reader keeps only the last one (tracked separately).
-	/// </remarks>
 	[Test]
+	[Arguments("player_flags", " enter_ok ansi no_command")]
 	[Arguments("room_flags", " no_command")]
 	[Arguments("thing_flags", " no_command")]
 	[Arguments("channel_flags", " player")]
