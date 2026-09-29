@@ -756,7 +756,8 @@ public class AttributeFunctionUnitTests
 	}
 
 	/// <summary>
-	/// An attribute the caller may not read is <c>e_perm</c>, not "no" (<c>src/fundb.c:243-256</c>),
+	/// An attribute the caller may not read is <c>e_perm</c>, <c>#-1 PERMISSION DENIED</c>, not "no"
+	/// (<c>src/fundb.c:243-256</c>; PennMUSH 80a1d5b in <c>35-function-families.scn</c>, <c>ff.perms</c>),
 	/// and the one-argument and two-argument spellings have to say the same thing — they are the same
 	/// <c>fun_hasattr</c> reached two ways.
 	/// </summary>
@@ -782,7 +783,7 @@ public class AttributeFunctionUnitTests
 		var oneArgument = await mortal.FunctionParse(MarkupText.Plain($"{function}(#{god}/HASATTRUNREADABLE)"));
 		var twoArguments = await mortal.FunctionParse(MarkupText.Plain($"{function}(#{god},HASATTRUNREADABLE)"));
 
-		await Assert.That(oneArgument!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.AttrPermissions)
+		await Assert.That(oneArgument!.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
 			.Because("an attribute that exists but cannot be read is a refusal, not an absence");
 		await Assert.That(twoArguments!.Message!.ToPlainText()).IsEqualTo(oneArgument.Message!.ToPlainText())
 			.Because("obj/attr in one argument and obj,attr in two are the same call");

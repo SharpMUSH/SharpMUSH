@@ -104,6 +104,42 @@
       "command": "@list powers",
       "sharp": "Powers: Announce, Boot, Builder, CAN_DARK, CAN_HTTP, Can_spoof, Chat_Privs, DEBIT, Functions, Guest, HOOK, Halt, Hide, Idle, Immortal, Link_Anywhere, Login, Long_Fingers, MANY_ATTRIBS, No_Pay, No_Quota, Open_Anywhere, PICK_DBREFS, Pemit_All, Player_Create, Poll, Queue, Quotas, SQL_OK, Search, See_All, See_OOB, See_Queue, Send_OOB, Tport_Anything, Tport_Anywhere, Unkillable",
       "penn": "Powers: Announce, Boot, Builder, CAN_DARK, CAN_HTTP, Can_spoof, Chat_Privs, DEBIT, Functions, Guest, HOOK, Halt, Hide, Idle, Immortal, Link_Anywhere, Login, Long_Fingers, MANY_ATTRIBS, No_Pay, No_Quota, Open_Anywhere, PICK_DBREFS, Pemit_All, Player_Create, Poll, Queue, Quotas, SQL_OK, Search, See_All, See_Queue, Send_OOB, Tport_Anything, Tport_Anywhere"
+    },
+    {
+      "id": "KD-0011",
+      "scenario": "35-function-families",
+      "case": "ff.attrib-set",
+      "step": 2,
+      "reason": "Clearing an attribute that is not there is AE_NOTFOUND. PennMUSH notifies 'No such attribute to reset.' and returns nothing; SharpMUSH's attrib_set() returns the reason instead, as it does for its other failures.",
+      "tracking": "#962",
+      "profile": "A failing function says why",
+      "command": "think [attrib_set(me/FFNEVER)][hasattr(me,FFNEVER)]",
+      "sharp": "#-1 NO SUCH ATTRIBUTE0",
+      "penn": "No such attribute to reset.\n0"
+    },
+    {
+      "id": "KD-0013",
+      "scenario": "35-function-families",
+      "case": "ff.attrib-set",
+      "step": 4,
+      "reason": "Clearing looks the name up exactly (find_atr_in_list), so clearing DESC while DESCRIBE is set is AE_NOTFOUND and DESCRIBE stays. PennMUSH notifies 'No such attribute to reset.'; SharpMUSH's attrib_set() returns the reason instead.",
+      "tracking": "#962",
+      "profile": "A failing function says why",
+      "command": "think [attrib_set(me/DESCRIBE,d)][attrib_set(me/DESC)]|[get(me/DESCRIBE)][attrib_set(me/DESCRIBE)]",
+      "sharp": "Wiz/DESCRIBE - Set.\nWiz/DESCRIBE - Cleared.\n#-1 NO SUCH ATTRIBUTE|d",
+      "penn": "Wiz/DESCRIBE - Set.\nNo such attribute to reset.\nWiz/DESCRIBE - Cleared.\n|d"
+    },
+    {
+      "id": "KD-0012",
+      "scenario": "35-function-families",
+      "case": "ff.perms",
+      "step": 9,
+      "reason": "PennMUSH's attrib_set() fails silently on an object the caller does not control, whether or not the attribute exists, and mailstats() notifies 'The post office protects privacy!' and returns nothing; SharpMUSH returns the reason from each, and the same refusal for a missing attribute, so existence is not revealed.",
+      "tracking": "#962",
+      "profile": "A failing function says why",
+      "command": "think [attrib_set(*Alice/FFSECRET,x)]|[mailstats(*Alice)]|[attrib_set(*Alice/FFMISSING)]",
+      "sharp": "#-1 NO PERMISSION TO SET ATTRIBUTE|#-1 PERMISSION DENIED|#-1 NO PERMISSION TO SET ATTRIBUTE",
+      "penn": "The post office protects privacy!\n||"
     }
   ]
 }

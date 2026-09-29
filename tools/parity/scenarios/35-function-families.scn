@@ -1,0 +1,60 @@
+# Function families #962 folded into one core each: wildcard scans, set operations, get/xget,
+# if/ifelse, attrib_set, lmath and the aggregates, the attribute p-suffix pairs, the flag lists
+# and the descriptor functions. Each case pins one of the properties a shared core must keep for
+# every member of its family: markup, delimiters, numeric width and permissions.
+::case ff.login
+::login wiz Wiz wizpass
+think ok
+
+::case ff.markup  a shared core hands back its arguments' markup (the harness strips ANSI, so decompose shows it)
+think [decompose(grab(ansi(r,alpha) beta,a*))]|[decompose(graball(ansi(r,alpha) [ansi(g,apex)] beta,a*))]
+think [match(ansi(r,alpha) beta,beta)] [matchall(ansi(r,alpha) beta [ansi(h,alpha)],alpha)]
+think [decompose(setunion(ansi(r,b) a,c))]|[decompose(setdiff(ansi(r,b) a,a))]
+think [decompose(if(1,ansi(r,x)))]|[decompose(ifelse(0,a,ansi(g,y)))]
+think [attrib_set(me/FFMARK,ansi(r,hi))][decompose(get(me/FFMARK))]|[decompose(xget(me,FFMARK))]
+think [median(ansi(r,3),1,2)] [mean(ansi(r,4),2)] [lmath(add,ansi(r,1) 2)]
+&FFMARK me
+
+::case ff.attrib-set  attrib_set() without a value clears; with an empty one it sets
+think [attrib_set(me/FFSET,x)][attrib_set(me/FFSET)][hasattr(me,FFSET)]|[attrib_set(me/FFSET,)][hasattr(me,FFSET)][hasattrval(me,FFSET)]
+think [attrib_set(me/FFSET)][hasattr(me,FFSET)]
+think [attrib_set(me/FFNEVER)][hasattr(me,FFNEVER)]
+think [attrib_set(me/ffset,y)][attrib_set(me/ffset)][hasattr(me,FFSET)]
+think [attrib_set(me/DESCRIBE,d)][attrib_set(me/DESC)]|[get(me/DESCRIBE)][attrib_set(me/DESCRIBE)]
+
+::case ff.delims  input and output delimiters through the shared cores
+think [grab(a|b|c,b,|)] [match(a|b|c,c,|)] [graball(a|b|ab,*b,|)] [matchall(a b a,a,,|)]
+think [grab(a b,b,)] [match(a b,b,)] [graball(a b ab,*b,)] [matchall(a b a,a,,)]
+think [setunion(c|a,b|a,|)] [setinter(a|b|c,c|b,|,:)] [setdiff(a b c,b,,,+)] [setsymdiff(a b,b c,,,|)]
+think [setunion(a b,c d,,)]
+think [lmath(add,1|2|3,|)] [lmath(max,1:5:3,:)] [lmath(and,1 0)] [lmath(or,0 0 1)]
+
+::case ff.numeric  lmath and the aggregates answer at the scalar functions' width
+think [lmath(add,0.1 0.2)] [add(0.1,0.2)] [lmath(fdiv,7 2)] [lmath(div,7 2)] [lmath(modulo,-7 3)]
+think [lmath(add,9223372036854775807 1)] [add(9223372036854775807,1)]
+think [lmath(mul,4294967296 4294967296)] [mul(4294967296,4294967296)]
+think [mean(1,2)] [lmath(mean,1 2)] [median(1,2,3,4)] [lmath(median,1 2 3 4)] [stddev(1,2,3,4)] [lmath(stddev,1 2 3 4)]
+think [mean(1,2,3)] [stddev(5,5)] [stddev(abc)] [median(1.5)] [lmath(min,-0.5 3)] [lmath(max,1.5 2)]
+think [mean(1,a)] [lmath(add,1 a)] [stddev()] [lmath(median,)] [lmath(mean,)]
+think [median()] [mean()]
+
+::case ff.perms  both members of a pair apply the same permission check
+::login alice Alice alicepass
+::login bob Bob bobpass
+::as alice
+&FFSECRET me=hidden
+&FFVIS me=shown
+@set me/FFVIS=visual
+::as bob
+think [get(*Alice/FFSECRET)]|[xget(*Alice,FFSECRET)]|[get(*Alice/FFVIS)]|[xget(*Alice,FFVIS)]
+think [hasattr(*Alice,FFSECRET)]|[hasattrp(*Alice,FFSECRET)]|[hasattrval(*Alice,FFSECRET)]|[hasattrpval(*Alice,FFSECRET)]
+think [lattr(*Alice/FF*)]|[lattrp(*Alice/FF*)]|[nattr(*Alice/FF*)]|[nattrp(*Alice/FF*)]
+think [reglattr(*Alice/^FF)]|[reglattrp(*Alice/^FF)]|[xattr(*Alice/FF*,1,5)]|[xattrp(*Alice/FF*,1,5)]
+think [attrib_set(*Alice/FFSECRET,x)]|[mailstats(*Alice)]|[attrib_set(*Alice/FFMISSING)]
+think [orflags(*Alice,W)]|[andflags(*Alice,!W)]
+think [recv(*Alice)]|[sent(*Alice)]|[ssl(*Alice)]|[isnum(conn(*Alice))]
+::as alice
+think [get(me/FFSECRET)]|[attrib_set(me/FFSECRET)]|[hasattr(me,FFSECRET)]|[isnum(recv(me))]
+&FFVIS me
+::logout alice
+::logout bob
