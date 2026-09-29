@@ -81,7 +81,9 @@ public class GameCommandTests
 	[Arguments("teach/list", "Teach what action list?")]
 	public async ValueTask TeachWithoutArgumentReportsExpectedError(string command, string expectedMessage)
 	{
-		var executor = await CreatePlayerAsync("TeachMissingArgumentExecutor");
+		// The whole reply is asserted, so the executor stands in a room of its own: in the shared start
+		// room other tests' "X has disconnected." would land in the window too.
+		var executor = await CreatePlayerAsync("TeachMissingArgumentExecutor", await DigRoomAsync("TeachMissingArgumentRoom"));
 		try
 		{
 			var start = Notifications.CountFor(executor.DbRef);
@@ -143,13 +145,23 @@ public class GameCommandTests
 		}
 	}
 
-	private async Task<TeachPlayer> CreatePlayerAsync(string prefix)
+	private async Task<TeachPlayer> CreatePlayerAsync(string prefix, DBRef? home = null)
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+		var player = home is { } room
+			? await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+				WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room)
+			: await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+				WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
 		var playerObject = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
 
 		return new TeachPlayer(player.DbRef, player.Handle, playerObject.Object().Name);
+	}
+
+	private async Task<DBRef> DigRoomAsync(string prefix)
+	{
+		var dug = await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+		return DBRef.Parse(dug.Message!.ToPlainText().Trim());
 	}
 
 	private async Task CommandAsAsync(TeachPlayer player, string command)
