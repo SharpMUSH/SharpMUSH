@@ -180,6 +180,41 @@ public class AttributeService(
 		AttributeReadShape<T> shape)
 		where T : class
 	{
+		var read = await ReadAttributeByNameAsync(executor, obj, attribute, mode, parent, shape);
+
+		// PennMUSH's atr_get_with_parent/atr_get_noparent (src/attrib.c): when the name is not found
+		// anywhere on the chain, retry it as an alias of a standard attribute (DESC is DESCRIBE).
+		// Reads only - atr_add looks up the exact name.
+		return read is { Found: null, Error: null }
+					 && mode is (IAttributeService.AttributeMode.Read or IAttributeService.AttributeMode.Execute)
+					 && StandardAttributeAliases.TryGetValue(attribute, out var realName)
+			? await ReadAttributeByNameAsync(executor, obj, realName, mode, parent, shape)
+			: read;
+	}
+
+	/// <summary>PennMUSH's built-in attribute aliases (<c>attralias</c>, <c>hdrs/atr_tab.h</c>).</summary>
+	internal static readonly IReadOnlyDictionary<string, string> StandardAttributeAliases =
+		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		{
+			["DESC"] = "DESCRIBE",
+			["IDESC"] = "IDESCRIBE",
+			["SUCC"] = "SUCCESS",
+			["ASUCC"] = "ASUCCESS",
+			["OSUCC"] = "OSUCCESS",
+			["FAIL"] = "FAILURE",
+			["AFAIL"] = "AFAILURE",
+			["OFAIL"] = "OFAILURE"
+		};
+
+	private async ValueTask<AttributeRead<T>> ReadAttributeByNameAsync<T>(
+		AnySharpObject executor,
+		AnySharpObject obj,
+		string attribute,
+		IAttributeService.AttributeMode mode,
+		bool parent,
+		AttributeReadShape<T> shape)
+		where T : class
+	{
 		var cancellationToken = ExecutionBudget.CurrentToken;
 		cancellationToken.ThrowIfCancellationRequested();
 		var attributePath = attribute.Split('`');
