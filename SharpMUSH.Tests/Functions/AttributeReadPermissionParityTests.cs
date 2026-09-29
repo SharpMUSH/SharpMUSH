@@ -101,4 +101,18 @@ public class AttributeReadPermissionParityTests
 		await Assert.That(await Eval(viewer, $"[get(#1/SUCCESS)]|[get(me/NOPE{uid})]|[get(me/SUCCESS)]"))
 			.IsEqualTo($"{ErrorMessages.Returns.AttrPermissions}||");
 	}
+
+	[Test]
+	public async ValueTask UnsetAttribute_ByStandardAlias_IsJudgedByTheAliasedEntry()
+	{
+		var viewer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "PermUfunA");
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "PermUfunBox");
+		await Cmd(1, $"@tel {thing}={viewer.DbRef}");
+
+		// atr_match resolves DESC to DESCRIBE, whose entry is visual and nearby: a carried object's unset
+		// description reads empty under either name. IDESCRIBE's entry is not visual.
+		await Assert.That(await Eval(viewer.Handle, $"[get({thing}/DESCRIBE)]|[get({thing}/DESC)]|[get({thing}/IDESC)]"))
+			.IsEqualTo($"||{ErrorMessages.Returns.AttrPermissions}");
+	}
 }

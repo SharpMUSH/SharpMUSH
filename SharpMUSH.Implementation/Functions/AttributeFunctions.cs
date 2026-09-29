@@ -335,7 +335,10 @@ public partial class Functions
 	private async ValueTask<CallState> MissingAttributeGetResultAsync(AnySharpObject executor, AnySharpObject obj,
 		string attribute)
 	{
-		var name = attribute.ToUpperInvariant();
+		// atr_match finds a standard attribute by its alias too (DESC is DESCRIBE's table entry).
+		var name = Library.Services.AttributeService.StandardAttributeAliases.TryGetValue(attribute, out var realName)
+			? realName
+			: attribute.ToUpperInvariant();
 		var readable = await Mediator.Send(new GetAttributeEntryQuery(name)) is { } entry
 			? await PermissionService.CanViewAttribute(executor, obj, UnsetAttributeFor(entry, name))
 			: await PermissionService.CanExamine(executor, obj);

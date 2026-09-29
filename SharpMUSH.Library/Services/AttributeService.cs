@@ -193,7 +193,7 @@ public class AttributeService(
 	}
 
 	/// <summary>PennMUSH's built-in attribute aliases (<c>attralias</c>, <c>hdrs/atr_tab.h</c>).</summary>
-	internal static readonly IReadOnlyDictionary<string, string> StandardAttributeAliases =
+	public static readonly IReadOnlyDictionary<string, string> StandardAttributeAliases =
 		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
 		{
 			["DESC"] = "DESCRIBE",
