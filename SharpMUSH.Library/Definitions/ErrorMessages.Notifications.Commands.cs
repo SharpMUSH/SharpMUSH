@@ -35,20 +35,24 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CommandNotFoundFormat = "Command '{0}' not found.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoNameFormat = "Command: {0} ({1})";
+		public const string CommandInfoNameFormat = "Name       : {0} ({1})";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoTypeFormat = "  Type: {0}";
+		public const string CommandInfoFlagsFormat = "Flags      : {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoMinArgsFormat = "  Min Args: {0}";
+		public const string CommandInfoLockFormat = "Lock       : {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoMaxArgsFormat = "  Max Args: {0}";
+		public const string CommandInfoFailureMsgFormat = "Failure Msg: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoSwitchesFormat = "  Switches: {0}";
+		public const string CommandInfoSwitchesFormat = "Switches   : {0}";
+		public const string CommandInfoNoSwitches = "Switches   :";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoBehaviorFormat = "  Behavior: {0}";
+		public const string CommandInfoLeftsideFormat = "Leftside   : {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string CommandInfoLockFormat = "  Lock: {0}";
-		public const string CommandInfoFailureMsgFormat = "  Failure Msg: {0}";
+		public const string CommandInfoRightsideFormat = "Rightside  : {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string CommandInfoArgumentsFormat = "Arguments  : {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string CommandInfoHookFormat = "@hook/{0}: #{1}/{2}";
 
 		public const string HookMustSpecifyCommandName = "You must specify a command name.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

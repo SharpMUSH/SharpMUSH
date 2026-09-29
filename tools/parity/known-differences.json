@@ -42,20 +42,10 @@
       "command": "think [get(EventSink/DROPTO_BY)]"
     },
     {
-      "id": "KD-0005",
-      "scenario": "40-compat-choices",
-      "case": "choice.mail-fwd",
-      "step": 4,
-      "reason": "PennMUSH forwards silently and counts the recipient it tried; SharpMUSH reports the refusal and counts the recipients the message reached.",
-      "tracking": "#1134",
-      "profile": "A refused forward is reported — `@mail/fwd`",
-      "command": "@mail/fwd 1=*Bob"
-    },
-    {
       "id": "KD-0006",
       "scenario": "40-compat-choices",
       "case": "choice.mail-folder",
-      "step": 1,
+      "step": 3,
       "reason": "PennMUSH refuses a MAILFILTER folder name the player has not used yet; SharpMUSH creates the folder and files the message.",
       "tracking": "#1134",
       "profile": "Folders are named freely and created on delivery",
@@ -80,6 +70,30 @@
       "tracking": "#1250",
       "profile": "`command_restrictions` reapplies without a restart",
       "command": "@find Widget"
+    },
+    {
+      "id": "KD-0009",
+      "scenario": "20-admin-commands",
+      "case": "admin.lists",
+      "step": 0,
+      "reason": "SharpMUSH defines the APPROVED, SCENE_ROOM and TRUECOLOR flags and the See_OOB and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these five are the only difference accepted.",
+      "tracking": "#1406",
+      "profile": "SharpMUSH-only flags and powers",
+      "command": "@list flags",
+      "sharp": "Flags: ABODE (A), ANSI (A), APPROVED (+), AUDIBLE (a), CHAN_USEFIRSTMATCH, CHOWN_OK (C), CLOUDY (x), COLOR (C), DARK (D), DEBUG (b), DESTROY_OK (d), ENTER_OK (e), FIXED (F), FLOATING (F), GAGGED (g), HALT (h), HAVEN (H), HEAR_CONNECT, HEAVY, JUDGE (J), JUMP_OK (J), JURY_OK (j), KEEPALIVE (k), LIGHT (l), LINK_OK (L), LISTEN_PARENT (^), LOUD, MISTRUST (m), MONIKER, MONITOR (M), MYOPIC (m), NOACCENTS (~), NOSPOOF (\"), NO_COMMAND (n), NO_LEAVE (N), NO_LOG, NO_TEL (N), NO_WARN (w), ON-VACATION (o), OPAQUE (O), OPEN_OK, ORPHAN (i), PARANOID, PUPPET (p), QUIET (Q), ROYALTY (r), SAFE (X), SCENE_ROOM (S), SHARED (Z), STICKY (S), SUSPECT (s), TERSE (x), TRACK_MONEY, TRANSPARENT (t), TRUECOLOR, TRUST (I), UNFINDABLE (U), UNINSPECTED (u), UNREGISTERED (?), VERBOSE (v), VISUAL (V), WIZARD (W), XTERM256, Z_TEL (Z)",
+      "penn": "Flags: ABODE (A), ANSI (A), AUDIBLE (a), CHAN_USEFIRSTMATCH, CHOWN_OK (C), CLOUDY (x), COLOR (C), DARK (D), DEBUG (b), DESTROY_OK (d), ENTER_OK (e), FIXED (F), FLOATING (F), GAGGED (g), HALT (h), HAVEN (H), HEAR_CONNECT, HEAVY, JUDGE (J), JUMP_OK (J), JURY_OK (j), KEEPALIVE (k), LIGHT (l), LINK_OK (L), LISTEN_PARENT (^), LOUD, MISTRUST (m), MONIKER, MONITOR (M), MYOPIC (m), NOACCENTS (~), NOSPOOF (\"), NO_COMMAND (n), NO_LEAVE (N), NO_LOG, NO_TEL (N), NO_WARN (w), ON-VACATION (o), OPAQUE (O), OPEN_OK, ORPHAN (i), PARANOID, PUPPET (p), QUIET (Q), ROYALTY (r), SAFE (X), SHARED (Z), STICKY (S), SUSPECT (s), TERSE (x), TRACK_MONEY, TRANSPARENT (t), TRUST (I), UNFINDABLE (U), UNINSPECTED (u), UNREGISTERED (?), VERBOSE (v), VISUAL (V), WIZARD (W), XTERM256, Z_TEL (Z)"
+    },
+    {
+      "id": "KD-0010",
+      "scenario": "20-admin-commands",
+      "case": "admin.lists",
+      "step": 1,
+      "reason": "SharpMUSH defines the APPROVED, SCENE_ROOM and TRUECOLOR flags and the See_OOB and Unkillable powers, which PennMUSH does not have; `sharp` pins the list so that these five are the only difference accepted.",
+      "tracking": "#1406",
+      "profile": "SharpMUSH-only flags and powers",
+      "command": "@list powers",
+      "sharp": "Powers: Announce, Boot, Builder, CAN_DARK, CAN_HTTP, Can_spoof, Chat_Privs, DEBIT, Functions, Guest, HOOK, Halt, Hide, Idle, Immortal, Link_Anywhere, Login, Long_Fingers, MANY_ATTRIBS, No_Pay, No_Quota, Open_Anywhere, PICK_DBREFS, Pemit_All, Player_Create, Poll, Queue, Quotas, SQL_OK, Search, See_All, See_OOB, See_Queue, Send_OOB, Tport_Anything, Tport_Anywhere, Unkillable",
+      "penn": "Powers: Announce, Boot, Builder, CAN_DARK, CAN_HTTP, Can_spoof, Chat_Privs, DEBIT, Functions, Guest, HOOK, Halt, Hide, Idle, Immortal, Link_Anywhere, Login, Long_Fingers, MANY_ATTRIBS, No_Pay, No_Quota, Open_Anywhere, PICK_DBREFS, Pemit_All, Player_Create, Poll, Queue, Quotas, SQL_OK, Search, See_All, See_Queue, Send_OOB, Tport_Anything, Tport_Anywhere"
     }
   ]
 }

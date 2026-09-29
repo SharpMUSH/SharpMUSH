@@ -12,3 +12,11 @@ home
 ::as bob
 @tel me=[loc(*Alice)]
 ::as alice
+
+::case mail.fwd-refused  a forward the recipient's mail lock refuses is silent and still counted
+::as bob
+@lock/mail me=!*Alice
+::as alice
+@mail/fwd 1=*Bob
+::as bob
+@unlock/mail me

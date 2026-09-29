@@ -469,8 +469,12 @@ public static partial class ErrorMessages
 
 		public const string RecursionLimit = "That caused too much recursion.";
 
+		/// <summary>
+		/// <c>do_create</c>'s confirmation (<c>src/create.c:604</c>):
+		/// <c>notify_format(player, T("Created: Object %s."), unparse_dbref(thing))</c>. The argument is
+		/// <c>unparse_dbref</c>'s bare <c>#N</c> — no name, and no creation time.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string Created = "Created {0} ({1}).";
 		public const string CreatedObject = "Created: Object {0}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string UnableToWipeAttribute = "Unable to wipe attribute {0}.";
@@ -800,8 +804,10 @@ public static partial class ErrorMessages
 		public const string LinkedToHome = "Linked to home.";
 		public const string LinkedToVariable = "Linked to variable.";
 		public const string HomeSet = "Home set.";
-		public const string DropToSet = "Drop-to set.";
-		public const string DropToRemoved = "Drop-to removed.";
+		/// <summary><c>do_name</c>'s confirmation (<c>src/set.c:154</c>), gated on <c>AreQuiet</c>.</summary>
+		public const string NameSet = "Name set.";
+		public const string DropToSet = "Dropto set.";
+		public const string DropToRemoved = "Dropto removed.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SparedFromDestructionFormat = "Spared from destruction: {0}";
 		public const string SourceMustBeARoom = "Source must be a room.";
@@ -813,8 +819,17 @@ public static partial class ErrorMessages
 		public const string ExitsOnlyFromRooms = "You can only make exits out of rooms.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string LinkedToNameFormat = "Linked to {0}.";
+		/// <summary>
+		/// <c>do_clone</c>'s thing branch (<c>src/create.c:727</c>):
+		/// <c>notify_format(player, T("Cloned: Object %s."), unparse_dbref(clone))</c>, the same bare
+		/// <c>#N</c> as <see cref="CreatedObject"/>. A room says <see cref="ClonedRoom"/>; an exit says
+		/// nothing, because its branch is a <c>do_real_open</c>.
+		/// </summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string ClonedNewObjectFormat = "Cloned. New object: #{0}.";
+		public const string ClonedObject = "Cloned: Object {0}.";
+		/// <summary><c>do_clone</c>'s room branch (<c>src/create.c:744</c>).</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string ClonedRoom = "Cloned: Room {0}.";
 		public const string MonikerCleared = "Moniker cleared.";
 		public const string MonikerSet = "Moniker set.";
 		public const string DigWhat = "Dig what?";
@@ -1010,16 +1025,11 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string YouFollowFormat = "You follow {0}.";
 
+		/// <summary>PennMUSH <c>do_find</c> (<c>src/look.c:1102</c>).</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FindSearchingFormat = "@find: Searching for objects{0}...";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FindSearchMatchingFormat = " matching '{0}'";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FindRangeFormat = "Range: {0} to {1}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FindObjectResultFormat = "  #{0} ({1})";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FindFoundMatchingFormat = "Found {0} matching objects.";
+		public const string FindObjectsFoundFormat = "*** {0} objects found ***";
+		/// <summary>PennMUSH <c>do_find</c> (<c>src/look.c:1079</c>): a range bound that is not an object.</summary>
+		public const string FindInvalidRange = "Invalid range argument";
 		/// <summary>PennMUSH <c>pay_queue</c> (<c>src/cque.c:304</c>): the owner of an object that ran past its queue quota is told so.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RunawayObjectFormat = "Runaway object: {0}({1}). Commands halted.";
@@ -1163,18 +1173,24 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EntrancesCountFormat = "{0} entrance(s) found.";
 
-		public const string SearchAdvancedHeader = "@search: Advanced database search";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SearchPlayerFilterFormat = "  Player filter: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SearchCriteriaFormat = "  Criteria: {0}";
 		public const string SearchUnknownOwner = "Unknown owner.";
 		public const string SearchUnknownParent = "Unknown parent.";
 		public const string SearchNothingFound = "Nothing found.";
+		// PennMUSH do_search's report (src/wiz.c:1323-1414). Each heading is preceded by a blank line.
+		public const string SearchRoomsHeader = "\nROOMS:";
+		public const string SearchExitsHeader = "\nEXITS:";
+		public const string SearchThingsHeader = "\nTHINGS:";
+		public const string SearchPlayersHeader = "\nPLAYERS:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SearchObjectEntryFormat = "  #{0} ({1}) [{2}]";
+		public const string SearchOwnedEntryFormat = "{0} [owner: {1}]";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SearchObjectsFoundFormat = "{0} objects found.";
+		public const string SearchExitEntryFormat = "{0} [from {1} to {2}]";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SearchPlayerLocationFormat = "{0} [location: {1}]";
+		public const string SearchNowhere = "NOWHERE";
+		public const string SearchDone = "----------  Search Done  ----------";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SearchTotalsFormat = "Totals: Rooms...{0}  Exits...{1}  Things...{2}  Players...{3}";
 
 		public const string ListMotdCurrentSettingsHeader = "Current Message of the Day settings:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -1238,9 +1254,11 @@ public static partial class ErrorMessages
 
 		public const string NewPasswordGenerateSwitchConflict = "@NEWPASSWORD: /GENERATE switch cannot be used with other arguments.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string NewPasswordGeneratedFormat = "Generated password for {0}: {1}";
+		public const string NewPasswordGeneratedFormat = "Password for {0} changed to {1}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string NewPasswordSetFormat = "Set new password for {0}: {1}";
+		public const string NewPasswordSetFormat = "Password for {0} changed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NewPasswordChangedByFormat = "Your password has been changed by {0}.";
 
 		public const string PurgeComplete = "Purge complete.";
 

@@ -167,47 +167,15 @@ public class DebugVerboseTests
 	{
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "DiagDbg");
-		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@create DiagDebugThing"));
+		// @CREATE returns the new object's dbref as its call state. Mining it out of the notification
+		// instead meant reading the session-shared substitute's call list, and tied this diagnostic to
+		// the wording of "Created: Object #N." — which is do_create's, and not this test's business.
+		var created = await Parser.CommandParse(testPlayer.Handle, ConnectionService,
+			MarkupText.Plain("@create DiagDebugThing"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("&DIAGFUNC_UNIQ2 DiagDebugThing=[add(1,2)]"));
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set DiagDebugThing/DIAGFUNC_UNIQ2=DEBUG"));
 
-		var createCall = NotifyService.ReceivedCalls()
-			.FirstOrDefault(c =>
-			{
-				var args = c.GetArguments();
-				if (args.Length < 2) return false;
-				if (args[1] is SharpMessage msg)
-					return TestHelpers.MessagePlainTextContains(msg, "DiagDebugThing");
-				// NotifyLocalized path with sender overload: (who, key, sender, params object[] formatArgs)
-				// args[3] is the params array: [name, dbref]
-				if (args[1] is string && args.Length > 3 && args[3] is object[] formatArgs)
-					return formatArgs.Any(a => a?.ToString()?.Contains("DiagDebugThing") == true);
-				return false;
-			});
-
-		await Assert.That(createCall).IsNotNull().Because("@create should produce a notification");
-
-		string createMsg;
-		var createArgs = createCall!.GetArguments();
-		if (createArgs[1] is SharpMessage omsg)
-		{
-			createMsg = PlainText(omsg);
-		}
-		else if (createArgs[1] is string && createArgs.Length > 3 && createArgs[3] is object[] fmtArgs && fmtArgs.Length > 1)
-		{
-			// NotifyLocalized with sender: (who, key, sender, params object[] {name, dbref})
-			// fmtArgs[1] is the DBRef object → ToString() = "#N"
-			createMsg = fmtArgs[1]?.ToString() ?? string.Empty;
-		}
-		else
-		{
-			createMsg = string.Empty;
-		}
-
-		var match = Regex.Match(createMsg, @"#(\d+)");
-		await Assert.That(match.Success).IsTrue().Because("Create notification should contain DBRef");
-		var dbrefNum = int.Parse(match.Groups[1].Value);
-		var dbref = new DBRef(dbrefNum);
+		var dbref = DBRef.Parse(created.Message!.ToPlainText());
 
 		// Read via GetAttributeQuery (old path) - should pass
 		var attrsOld = await Mediator.CreateStream(new GetAttributeQuery(

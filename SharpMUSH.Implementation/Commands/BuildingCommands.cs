@@ -104,6 +104,13 @@ public partial class Commands
 				// a single literal error message.
 				if (result.Message?.ToPlainText().StartsWith("#-1", StringComparison.Ordinal) != true)
 				{
+					// set.c:151-154 is `queue_event(...OBJECT`RENAME...)` and then
+					// `if (!AreQuiet(player, thing)) notify(player, T("Name set."))`. queue_event only
+					// enqueues, so AreQuiet reads the state as it was at the rename; SharpMUSH's
+					// TriggerEventAsync runs the handler inline (EventService.CommandListParse), so a
+					// handler that sets QUIET would otherwise swallow the confirmation for its own rename.
+					var quiet = await found.Object().AreQuietAsync(executor);
+
 					await EventService.TriggerEventAsync(
 						parser,
 						"OBJECT`RENAME",
@@ -111,6 +118,12 @@ public partial class Commands
 						found.Object().DBRef.ToString(),
 						name.ToPlainText(),
 						oldName);
+
+					if (!quiet)
+					{
+						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.NameSet),
+							executor);
+					}
 
 					// real_did_it(player, thing, NULL, NULL, "ONAME", NULL, "ANAME", NOTHING, pe_regs,
 					// NA_INTER_PRESENCE, AN_SYS) with %0 the old name and %1 the new (set.c:155-158).

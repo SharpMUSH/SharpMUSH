@@ -1415,7 +1415,8 @@ public partial class Functions
 	/// PennMUSH's <c>fun_list</c> (<c>src/funmisc.c:1288-1327</c>). The motds are named exactly; every
 	/// other option answers to any prefix of its name, tried in Penn's order, so <c>list(f)</c> is
 	/// functions. A type other than builtin, local or all, an empty option and an unknown one are
-	/// <c>#-1</c>. Names come back upper-case.
+	/// <c>#-1</c>. Names come back upper-case, except flags and powers, which keep their own casing as
+	/// <c>@list flags</c> shows them.
 	/// </summary>
 	[SharpFunction(Name = "list", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
 	public async ValueTask<CallState> List(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1485,31 +1486,12 @@ public partial class Functions
 			.Distinct(StringComparer.Ordinal)
 			.Order(StringComparer.Ordinal);
 
-	/// <summary>
-	/// Penn's <c>list_all_flags</c> with <c>FLAG_LIST_NAMECHAR</c>: <c>NAME (c), NAME</c>, sorted. God sees
-	/// everything but internal flags; a wizard or royalty also loses the disabled ones; anyone else also
-	/// loses dark and mdark ones.
-	/// </summary>
+	/// <summary>Penn's <c>list_all_flags</c> with <c>FLAG_LIST_NAMECHAR</c>, as <c>@list flags</c> prints it.</summary>
 	private async ValueTask<string> FlagListAsync(IMUSHCodeParser parser,
 		IAsyncEnumerable<(string Name, string Symbol, string[] SetPermissions, bool Disabled)> flags)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var god = executor.IsGod();
-		var privileged = await executor.IsPriv();
-
-		bool Has(string[] permissions, string permission)
-			=> permissions.Contains(permission, StringComparer.OrdinalIgnoreCase);
-
-		var visible = (await flags.ToArrayAsync())
-			.Where(f => !Has(f.SetPermissions, "internal"))
-			.Where(f => god || !(f.Disabled || Has(f.SetPermissions, "disabled")))
-			.Where(f => privileged || !(Has(f.SetPermissions, "dark") || Has(f.SetPermissions, "mdark")))
-			.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
-			.Select(f => f.Name.ToUpperInvariant()
-				+ (f.Symbol is { Length: 1 } letter ? $" ({letter})" : string.Empty)
-				+ (f.Disabled ? " (disabled)" : string.Empty));
-
-		return string.Join(", ", visible);
+		return FlagListHelpers.Format(await flags.ToArrayAsync(), executor.IsGod(), await executor.IsPriv());
 	}
 
 	[SharpFunction(Name = "scan", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
