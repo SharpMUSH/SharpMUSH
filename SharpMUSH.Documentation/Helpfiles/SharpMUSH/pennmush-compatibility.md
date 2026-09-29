@@ -329,6 +329,24 @@ a::b::c
 b
 ```
 
+## A Wizard's `mailstats()` is their own
+
+**A choice.**
+
+**Affects** `mailstats() maildstats() mailfstats()` with no `<player>`.<br>
+**PennMUSH** turns a Wizard's empty `<player>` into "all mail" (`extmail.c:2238-2242`), then
+rejects that as no player before its all-mail branch is reached. The Wizard is told ": No such
+player." and gets nothing back.<br>
+**SharpMUSH** gives a Wizard their own statistics, as it gives everyone else.<br>
+**Why.** `help mailstats()` documents `mailstats([<player>])` as your own statistics, and PennMUSH's
+answer is an error nobody could have relied on.<br>
+**Workaround.** None needed: `mailstats(me)` means the same on both servers.
+
+```sharp
+> think words(mailstats())
+2
+```
+
 # COMPATIBILITY COMMANDS
 Deliberate differences in the command table, the configuration and the objects the game starts with.
 

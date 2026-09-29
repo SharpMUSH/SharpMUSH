@@ -5673,7 +5673,7 @@
       "maxArgs": 1,
       "minArgs": 1,
       "parameterNames": [
-        "folder"
+        "player"
       ]
     },
     "maillist": {

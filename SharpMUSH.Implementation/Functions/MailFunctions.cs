@@ -111,22 +111,19 @@ public partial class Functions
 		return await executor.IsWizard();
 	}
 
-	/// <summary>The counts the mail statistics functions report, taken in one pass over a mailbox.</summary>
-	private readonly record struct MailTally(int Total, int Read, int Cleared, int Bytes)
+	/// <summary>
+	/// The counts the mail statistics functions report, taken in one pass over a mailbox. As in PennMUSH's
+	/// <c>count_mail</c>, a cleared message counts only as cleared, and an uncleared one as read or unread.
+	/// </summary>
+	private readonly record struct MailTally(int Total, int Unread, int Cleared, int Bytes)
 	{
-		public int Unread => Total - Read;
+		public int Read => Total - Unread - Cleared;
 	}
-
-	/// <summary>What has arrived in a mailbox. Only a player has one; anything else has received nothing.</summary>
-	private ValueTask<MailTally> ReceivedTally(AnySharpObject target)
-		=> target is SharpPlayer mailbox
-			? TallyMail(Mediator.CreateStream(new GetAllMailListQuery(mailbox)))
-			: ValueTask.FromResult(new MailTally());
 
 	private static ValueTask<MailTally> TallyMail(IAsyncEnumerable<SharpMail> mail)
 		=> mail.AggregateAsync(new MailTally(), (tally, m) => new MailTally(
 			tally.Total + 1,
-			tally.Read + (m.Read ? 1 : 0),
+			tally.Unread + (!m.Cleared && !m.Read ? 1 : 0),
 			tally.Cleared + (m.Cleared ? 1 : 0),
 			tally.Bytes + m.Content.Length));
 
@@ -354,51 +351,27 @@ public partial class Functions
 		return new CallState(string.Empty);
 	}
 	[SharpFunction(Name = "mailstats", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player"])]
-	public async ValueTask<CallState> mailstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+	public ValueTask<CallState> mailstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> MailStatsAsync(parser, MailStatsDetail.Counts);
 
-		var playerArg = args["0"].Message!.ToPlainText();
-
-		AnySharpObject target;
-		if (string.IsNullOrWhiteSpace(playerArg))
-		{
-			target = executor;
-		}
-		else
-		{
-			if (!await CanViewOtherPlayerMail(executor))
-			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
-			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
-				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-
-			if (locateResult is not (AnySharpObject and SharpPlayer located))
-			{
-				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
-			}
-
-			target = located;
-		}
-
-		var sentCount = await Mediator.CreateStream(new GetAllSentMailListQuery(target.Object())).CountAsync();
-		// Only a player has a mailbox; anything else has received nothing.
-		var receivedCount = target is SharpPlayer mailbox
-			? await Mediator.CreateStream(new GetAllMailListQuery(mailbox)).CountAsync()
-			: 0;
-
-		return new CallState($"{sentCount} {receivedCount}");
-	}
 	[SharpFunction(Name = "maildstats", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player"])]
-	public async ValueTask<CallState> maildstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+	public ValueTask<CallState> maildstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> MailStatsAsync(parser, MailStatsDetail.Status);
 
-		var playerArg = args["0"].Message!.ToPlainText();
+	[SharpFunction(Name = "mailfstats", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["player"])]
+	public ValueTask<CallState> mailfstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> MailStatsAsync(parser, MailStatsDetail.Full);
+
+	private enum MailStatsDetail { Counts, Status, Full }
+
+	/// <summary>
+	/// PennMUSH's <c>fun_mailstats</c>, which serves all three names. The player is looked up first and
+	/// then must be controlled, so anyone may read their own statistics.
+	/// </summary>
+	private async ValueTask<CallState> MailStatsAsync(IMUSHCodeParser parser, MailStatsDetail detail)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var playerArg = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
 
 		AnySharpObject target;
 		if (string.IsNullOrWhiteSpace(playerArg))
@@ -407,15 +380,9 @@ public partial class Functions
 		}
 		else
 		{
-			if (!await CanViewOtherPlayerMail(executor))
-			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
 			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
 				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-
-			if (locateResult is not (AnySharpObject and SharpPlayer located))
+			if (locateResult is not AnySharpObject located)
 			{
 				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 			}
@@ -423,47 +390,27 @@ public partial class Functions
 			target = located;
 		}
 
-		var sent = await TallyMail(Mediator.CreateStream(new GetAllSentMailListQuery(target.Object())));
-		var received = await ReceivedTally(target);
-
-		return new CallState($"{sent.Total} {sent.Unread} {sent.Cleared} {received.Total} {received.Unread} {received.Cleared}");
-	}
-	[SharpFunction(Name = "mailfstats", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["folder"])]
-	public async ValueTask<CallState> mailfstats(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		var playerArg = args["0"].Message!.ToPlainText();
-
-		AnySharpObject target;
-		if (string.IsNullOrWhiteSpace(playerArg))
+		if (target is not SharpPlayer mailbox)
 		{
-			target = executor;
-		}
-		else
-		{
-			if (!await CanViewOtherPlayerMail(executor))
-			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
-			}
-
-			var locateResult = await LocateService.LocateAndNotifyIfInvalid(
-				parser, executor, executor, playerArg, LocateFlags.PlayersPreference);
-
-			if (locateResult is not (AnySharpObject and SharpPlayer located))
-			{
-				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
-			}
-
-			target = located;
+			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		var sent = await TallyMail(Mediator.CreateStream(new GetAllSentMailListQuery(target.Object())));
-		var received = await ReceivedTally(target);
+		if (!await PermissionService.Controls(executor, target))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
 
-		return new CallState($"{sent.Total} {sent.Unread} {sent.Cleared} {sent.Bytes} {received.Total} {received.Unread} {received.Cleared} {received.Bytes}");
+		var sent = await TallyMail(Mediator.CreateStream(new GetAllSentMailListQuery(mailbox.Object)));
+		var received = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(mailbox)));
+
+		return new CallState(detail switch
+		{
+			MailStatsDetail.Counts => $"{sent.Total} {received.Total}",
+			MailStatsDetail.Status => $"{sent.Total} {sent.Unread} {sent.Cleared} {received.Total} {received.Unread} {received.Cleared}",
+			_ => $"{sent.Total} {sent.Unread} {sent.Cleared} {sent.Bytes} {received.Total} {received.Unread} {received.Cleared} {received.Bytes}"
+		});
 	}
+
 	[SharpFunction(Name = "mailstatus", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["message"])]
 	public async ValueTask<CallState> mailstatus(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
