@@ -32,6 +32,24 @@ public static class ApiCall
 	public static Task<ApiResult<T>> GetApiAsync<T>(this HttpClient http, string url, string whenEmpty) =>
 		ReadingAsync<T>(() => http.GetAsync(url), whenEmpty);
 
+	/// <summary>
+	/// GETs a body that is the payload itself — a file to hand the user — rather than a value to
+	/// deserialise. An empty body is an empty file, not a failure.
+	/// </summary>
+	public static async Task<ApiResult<string>> GetTextApiAsync(this HttpClient http, string url)
+	{
+		try
+		{
+			using var response = await http.GetAsync(url);
+			var body = await response.Content.ReadAsStringAsync();
+			return response.IsSuccessStatusCode ? body : ApiFailure.FromStatus(response.StatusCode, body);
+		}
+		catch (Exception ex)
+		{
+			return ApiFailure.Transport(ex);
+		}
+	}
+
 	/// <summary>POSTs <paramref name="body"/> as JSON and reads a <typeparamref name="TResult"/> back.</summary>
 	public static Task<ApiResult<TResult>> PostApiAsync<TBody, TResult>(
 		this HttpClient http, string url, TBody body, string whenEmpty) =>

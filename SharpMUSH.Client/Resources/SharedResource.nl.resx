@@ -4554,4 +4554,16 @@
   </data>
 <data name="RolResolutionExplanation" xml:space="preserve"><value>De expliciete regel met de hoogste prioriteit beslist; weigering wint bij gelijke prioriteit. Overerving geldt alleen zonder expliciete regel. Zonder toestemming wordt toegang geweigerd. Gedelegeerde beheerders mogen alleen eigen rechten met lagere prioriteit beheren en hun eigen rollen of beperkingen niet wijzigen.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Huidige toegang: {0}; prioriteit {1}; rollen {2}; beslissing {3}.</value></data>
+  <data name="ConfigImportFailed" xml:space="preserve">
+    <value>De configuratie kon niet worden geïmporteerd: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>De database kon niet worden geïmporteerd: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>De conversie kon niet worden geannuleerd: {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

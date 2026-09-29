@@ -21,6 +21,10 @@
     }
     else
     {
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@Loc["FailedToLoadSchema"]: @_error</MudAlert>
+        }
         <div class="config-cat-grid">
             @foreach (var cat in Categories)
             {
@@ -38,7 +42,10 @@
                             }
                         </div>
                         <div class="config-cat-desc">@Loc[c.DescKey]</div>
-                        <div class="config-cat-count">@GetGroupCount(c.Group) @Loc["Settings"]</div>
+                        @if (_error is null)
+                        {
+                            <div class="config-cat-count">@GetGroupCount(c.Group) @Loc["Settings"]</div>
+                        }
                     </div>
                 </div>
             }
@@ -48,6 +55,7 @@
 
 @code {
     private bool _loading = true;
+    private string? _error;
     private Dictionary<string, int> _groupCounts = new();
 
     private sealed record CatCard(string Group, string TitleKey, string DescKey, string Icon, string Route, bool Important = false);
@@ -74,25 +82,23 @@
 
     protected override async Task OnInitializedAsync()
     {
-        try
+        // A failed read used to be swallowed here and every card read "0 settings": a server that did
+        // not answer looked like one with nothing to configure. The cards stay usable without counts.
+        switch (await SchemaService.GetSchemaAsync())
         {
-            var schema = await SchemaService.GetSchemaAsync();
-            if (schema != null)
-            {
+            case ConfigurationSchema schema:
                 foreach (var (group, categories) in GroupCategories)
                 {
                     _groupCounts[group] = schema.Properties.Values
                         .Count(p => categories.Any(c => c.Equals(p.Category, StringComparison.OrdinalIgnoreCase)));
                 }
-            }
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
         }
-        catch
-        {
-        }
-        finally
-        {
-            _loading = false;
-        }
+
+        _loading = false;
     }
 
     private int GetGroupCount(string group) =>

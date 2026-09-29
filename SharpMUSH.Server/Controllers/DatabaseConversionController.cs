@@ -255,10 +255,19 @@ public static class DatabaseConversionSession
 			}, TaskScheduler.Default);
 	}
 
+	/// <summary>
+	/// The session's latest progress report, or <see langword="null"/> when there is no such session.
+	/// </summary>
+	/// <remarks>
+	/// The converter reports nothing until it has parsed the dump, which on a large database takes a
+	/// while. A session in that gap answers a zero report rather than <see langword="null"/>: the
+	/// endpoint's 404 is how the import page learns the session is gone (a restart, the hourly
+	/// cleanup), and a 404 during that gap told it a conversion still running had been lost.
+	/// </remarks>
 	public static ConversionProgress? GetProgress(string sessionId)
 	{
 		return _sessions.TryGetValue(sessionId, out var session)
-			? session.CurrentProgress
+			? session.CurrentProgress ?? new ConversionProgress { CurrentPhase = "Starting" }
 			: null;
 	}
 

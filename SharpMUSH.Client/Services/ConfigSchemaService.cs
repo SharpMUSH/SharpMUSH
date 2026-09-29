@@ -1,28 +1,31 @@
 using SharpMUSH.Library.API;
-using System.Net.Http.Json;
 
 namespace SharpMUSH.Client.Services;
 
-public class ConfigSchemaService(IHttpClientFactory httpClientFactory)
+public class ConfigSchemaService(IHttpClientFactory httpClientFactory, ILogger<ConfigSchemaService> logger)
 {
-	public async Task<ConfigurationSchema?> GetSchemaAsync()
+	/// <summary>The configuration schema the server describes its options with.</summary>
+	/// <remarks>
+	/// This used to answer <see langword="null"/> for every failure, and the configuration home page
+	/// swallowed that into a count of 0 settings in every group — a server that did not answer looked
+	/// like a server with nothing to configure.
+	/// </remarks>
+	public async Task<ApiResult<ConfigurationSchema>> GetSchemaAsync()
 	{
-		try
-		{
-			var client = httpClientFactory.CreateClient("api");
-			var response = await client.GetFromJsonAsync<ConfigurationResponse>("/api/configuration");
+		var response = await httpClientFactory.CreateClient("api")
+			.GetApiAsync<ConfigurationResponse>("/api/configuration", "The server returned no configuration.");
 
-			if (response?.Schema == null)
-			{
-				return null;
-			}
-
-			return response.Schema;
-		}
-		catch (Exception)
+		ApiResult<ConfigurationSchema> result = response switch
 		{
-			// TODO: Add logging
-			return null;
-		}
+			ConfigurationResponse { Schema: { } schema } => schema,
+			ConfigurationResponse => new ApiFailure(ApiFailureKind.Unexpected,
+				"The configuration response carried no schema."),
+			ApiFailure failure => failure
+		};
+
+		if (result is ApiFailure failed)
+			logger.LogWarning("Failed to load the configuration schema: {Reason}", failed.Message);
+
+		return result;
 	}
 }

@@ -4554,4 +4554,16 @@
   </data>
 <data name="RolResolutionExplanation" xml:space="preserve"><value>A legmagasabb prioritású kifejezett szabály dönt; egyezéskor a tiltás győz. Öröklés csak kifejezett szabály nélkül érvényes. Engedély nélkül a hozzáférés tiltott. A megbízott kezelők csak a saját, alacsonyabb prioritású engedélyeiket kezelhetik, saját szerepeiket és korlátozásaikat nem módosíthatják.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Jelenlegi hozzáférés: {0}; prioritás {1}; szerepek {2}; döntés {3}.</value></data>
+  <data name="ConfigImportFailed" xml:space="preserve">
+    <value>A konfigurációt nem sikerült importálni: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>Az adatbázist nem sikerült importálni: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>Az átalakítást nem sikerült megszakítani: {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

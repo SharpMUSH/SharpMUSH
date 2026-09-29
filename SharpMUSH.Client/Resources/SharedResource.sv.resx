@@ -4554,4 +4554,16 @@
   </data>
 <data name="RolResolutionExplanation" xml:space="preserve"><value>Den uttryckliga regeln med högst prioritet avgör; avslag vinner vid lika prioritet. Arv används endast utan uttrycklig regel. Utan tillstånd nekas åtkomst. Delegerade administratörer får endast hantera egna behörigheter med lägre prioritet och får inte ändra sina egna roller eller begränsningar.</value></data>
 <data name="RolEffectiveExplanation" xml:space="preserve"><value>Aktuell åtkomst: {0}; prioritet {1}; roller {2}; beslut {3}.</value></data>
+  <data name="ConfigImportFailed" xml:space="preserve">
+    <value>Konfigurationen kunde inte importeras: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="DatabaseImportFailed" xml:space="preserve">
+    <value>Databasen kunde inte importeras: {0}</value>
+    <comment>MT</comment>
+  </data>
+  <data name="ConversionCancelFailed" xml:space="preserve">
+    <value>Konverteringen kunde inte avbrytas: {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>
