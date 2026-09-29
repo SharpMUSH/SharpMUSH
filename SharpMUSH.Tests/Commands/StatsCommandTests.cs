@@ -33,6 +33,10 @@ public partial class StatsCommandTests
 	[GeneratedRegex(@"^(\d+) objects = (\d+) rooms, (\d+) exits, (\d+) things, (\d+) players\.$")]
 	private static partial Regex CountLine();
 
+	/// <summary>The whole-database form: do_stats adds the garbage count, always 0 here.</summary>
+	[GeneratedRegex(@"^(\d+) objects = (\d+) rooms, (\d+) exits, (\d+) things, (\d+) players, 0 garbage\.$")]
+	private static partial Regex WorldLine();
+
 	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
 	{
 		var recorder = WebAppFactoryArg.Notifications;
@@ -73,7 +77,7 @@ public partial class StatsCommandTests
 		var messages = await MessagesWhile(counter.DbRef,
 			async () => await Parser.CommandParse(counter.Handle, ConnectionService, MarkupText.Plain("@stats")));
 
-		var line = messages.Select(m => CountLine().Match(m)).Single(m => m.Success);
+		var line = messages.Select(m => WorldLine().Match(m)).Single(m => m.Success);
 		var figures = Enumerable.Range(1, 5).Select(i => int.Parse(line.Groups[i].Value)).ToArray();
 		await Assert.That(figures[0]).IsEqualTo(figures[1] + figures[2] + figures[3] + figures[4]);
 		await Assert.That(figures[1]).IsGreaterThan(0).Because("the world always has room #0");

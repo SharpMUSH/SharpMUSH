@@ -103,6 +103,9 @@ public static partial class ErrorMessages
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string StatsObjectCountsFormat = "{0} objects = {1} rooms, {2} exits, {3} things, {4} players.";
+		/// <summary>PennMUSH <c>do_stats</c> (<c>src/wiz.c:779</c>): the whole database, garbage included.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string StatsWorldCountsFormat = "{0} objects = {1} rooms, {2} exits, {3} things, {4} players, {5} garbage.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string StatsNoSuchPlayerFormat = "{0}: No such player.";
 		public const string StatsNeedSearchWarrant = "You need a search warrant to do that!";

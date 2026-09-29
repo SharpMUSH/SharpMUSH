@@ -1010,16 +1010,11 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string YouFollowFormat = "You follow {0}.";
 
+		/// <summary>PennMUSH <c>do_find</c> (<c>src/look.c:1102</c>).</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FindSearchingFormat = "@find: Searching for objects{0}...";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FindSearchMatchingFormat = " matching '{0}'";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FindRangeFormat = "Range: {0} to {1}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FindObjectResultFormat = "  #{0} ({1})";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string FindFoundMatchingFormat = "Found {0} matching objects.";
+		public const string FindObjectsFoundFormat = "*** {0} objects found ***";
+		/// <summary>PennMUSH <c>do_find</c> (<c>src/look.c:1079</c>): a range bound that is not an object.</summary>
+		public const string FindInvalidRange = "Invalid range argument";
 		/// <summary>PennMUSH <c>pay_queue</c> (<c>src/cque.c:304</c>): the owner of an object that ran past its queue quota is told so.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string RunawayObjectFormat = "Runaway object: {0}({1}). Commands halted.";
@@ -1163,18 +1158,24 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string EntrancesCountFormat = "{0} entrance(s) found.";
 
-		public const string SearchAdvancedHeader = "@search: Advanced database search";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SearchPlayerFilterFormat = "  Player filter: {0}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SearchCriteriaFormat = "  Criteria: {0}";
 		public const string SearchUnknownOwner = "Unknown owner.";
 		public const string SearchUnknownParent = "Unknown parent.";
 		public const string SearchNothingFound = "Nothing found.";
+		// PennMUSH do_search's report (src/wiz.c:1323-1414). Each heading is preceded by a blank line.
+		public const string SearchRoomsHeader = "\nROOMS:";
+		public const string SearchExitsHeader = "\nEXITS:";
+		public const string SearchThingsHeader = "\nTHINGS:";
+		public const string SearchPlayersHeader = "\nPLAYERS:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SearchObjectEntryFormat = "  #{0} ({1}) [{2}]";
+		public const string SearchOwnedEntryFormat = "{0} [owner: {1}]";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string SearchObjectsFoundFormat = "{0} objects found.";
+		public const string SearchExitEntryFormat = "{0} [from {1} to {2}]";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SearchPlayerLocationFormat = "{0} [location: {1}]";
+		public const string SearchNowhere = "NOWHERE";
+		public const string SearchDone = "----------  Search Done  ----------";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string SearchTotalsFormat = "Totals: Rooms...{0}  Exits...{1}  Things...{2}  Players...{3}";
 
 		public const string ListMotdCurrentSettingsHeader = "Current Message of the Day settings:";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

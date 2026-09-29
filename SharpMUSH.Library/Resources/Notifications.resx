@@ -1378,21 +1378,6 @@
   </data>
 
   <!-- @find command -->
-  <data name="FindSearchingFormat" xml:space="preserve">
-    <value>@find: Searching for objects{0}...</value>
-  </data>
-  <data name="FindSearchMatchingFormat" xml:space="preserve">
-    <value> matching '{0}'</value>
-  </data>
-  <data name="FindRangeFormat" xml:space="preserve">
-    <value>Range: {0} to {1}</value>
-  </data>
-  <data name="FindObjectResultFormat" xml:space="preserve">
-    <value>  #{0} ({1})</value>
-  </data>
-  <data name="FindFoundMatchingFormat" xml:space="preserve">
-    <value>Found {0} matching objects.</value>
-  </data>
 
   <!-- @halt command -->
   <data name="HaltMustSpecifyPid" xml:space="preserve">
@@ -2219,15 +2204,6 @@
   </data>
 
   <!-- @search command -->
-  <data name="SearchAdvancedHeader" xml:space="preserve">
-    <value>@search: Advanced database search</value>
-  </data>
-  <data name="SearchPlayerFilterFormat" xml:space="preserve">
-    <value>  Player filter: {0}</value>
-  </data>
-  <data name="SearchCriteriaFormat" xml:space="preserve">
-    <value>  Criteria: {0}</value>
-  </data>
   <data name="SearchUnknownOwner" xml:space="preserve">
     <value>Unknown owner.</value>
   </data>
@@ -2236,12 +2212,6 @@
   </data>
   <data name="SearchNothingFound" xml:space="preserve">
     <value>Nothing found.</value>
-  </data>
-  <data name="SearchObjectEntryFormat" xml:space="preserve">
-    <value>  #{0} ({1}) [{2}]</value>
-  </data>
-  <data name="SearchObjectsFoundFormat" xml:space="preserve">
-    <value>{0} objects found.</value>
   </data>
 
   <!-- @listmotd command -->
@@ -2821,5 +2791,36 @@
   </data>
   <data name="ForwardListTargetRefusesMailFormat" xml:space="preserve">
     <value>I don't think #{0} wants {1}'s mail.</value>
+  </data>
+  <data name="FindObjectsFoundFormat" xml:space="preserve">
+    <value>*** {0} objects found ***</value>
+  </data>
+  <data name="FindInvalidRange" xml:space="preserve">
+    <value>Invalid range argument</value>
+  </data>
+  <data name="SearchRoomsHeader" xml:space="preserve">
+    <value>
+ROOMS:</value>
+  </data>
+  <data name="SearchExitsHeader" xml:space="preserve">
+    <value>
+EXITS:</value>
+  </data>
+  <data name="SearchThingsHeader" xml:space="preserve">
+    <value>
+THINGS:</value>
+  </data>
+  <data name="SearchPlayersHeader" xml:space="preserve">
+    <value>
+PLAYERS:</value>
+  </data>
+  <data name="SearchDone" xml:space="preserve">
+    <value>----------  Search Done  ----------</value>
+  </data>
+  <data name="SearchTotalsFormat" xml:space="preserve">
+    <value>Totals: Rooms...{0}  Exits...{1}  Things...{2}  Players...{3}</value>
+  </data>
+  <data name="StatsWorldCountsFormat" xml:space="preserve">
+    <value>{0} objects = {1} rooms, {2} exits, {3} things, {4} players, {5} garbage.</value>
   </data>
 </root>

@@ -371,55 +371,92 @@ public class GeneralCommandTests
 		}
 	}
 
+	/// <summary>
+	/// PennMUSH's do_find: an object_header line per object the searcher controls whose name has a word
+	/// starting with the pattern, then "*** N objects found ***". Run as a mortal, whose own notification
+	/// bucket no other test writes to.
+	/// </summary>
 	[Test]
-	public async ValueTask Find_SearchesForObjects()
+	public async ValueTask Find_ListsControlledObjectsByWordPrefix()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@find test"));
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FindMortal");
+		var token = TestIsolationHelpers.GenerateUniqueName("FindTok");
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create Red {token}"));
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create {token}Blue"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FindSearchingFormat), executor, executor)).IsTrue();
+		var messages = await MessagesWhile(mortal.DbRef, () => Parser.CommandParse(mortal.Handle, ConnectionService,
+			MarkupText.Plain($"@find {token[..^2]}")).AsTask());
+
+		await Assert.That(messages.Count(m => m.StartsWith($"Red {token}(#", StringComparison.Ordinal))).IsEqualTo(1);
+		await Assert.That(messages.Count(m => m.StartsWith($"{token}Blue(#", StringComparison.Ordinal))).IsEqualTo(1);
+		await Assert.That(messages[^1]).IsEqualTo("*** 2 objects found ***");
 	}
 
+	/// <summary>do_find refuses a range bound that is not an object.</summary>
+	[Test]
+	public async ValueTask Find_RejectsARangeThatIsNotAnObject()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FindRange");
+
+		var messages = await MessagesWhile(mortal.DbRef, () => Parser.CommandParse(mortal.Handle, ConnectionService,
+			MarkupText.Plain("@find x=#999999999")).AsTask());
+
+		await Assert.That(messages).IsEquivalentTo(["Invalid range argument"]);
+	}
+
+	/// <summary>The whole-database form ends with PennMUSH's garbage count, always 0 here.</summary>
 	[Test]
 	public async ValueTask Stats_ShowsDatabaseStatistics()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@stats"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.StatsObjectCountsFormat), executor, executor)).IsTrue();
+		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.StatsWorldCountsFormat), executor, executor)).IsTrue();
 	}
 
+	/// <summary>
+	/// PennMUSH's do_search report: a blank line and a heading per type, <c>Name(#dbref...) [owner: ...]</c>
+	/// per object, then the "Search Done" rule and the totals.
+	/// </summary>
 	[Test]
-	public async ValueTask Search_PerformsDatabaseSearch()
+	public async ValueTask Search_ReportsByTypeWithOwnersAndTotals()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@search"));
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SearchMortal");
+		var token = TestIsolationHelpers.GenerateUniqueName("SearchTok");
+		await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@create {token}"));
 
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.SearchAdvancedHeader), executor, executor)).IsTrue();
+		var messages = await MessagesWhile(mortal.DbRef, () => Parser.CommandParse(mortal.Handle, ConnectionService,
+			MarkupText.Plain($"@search name={token}")).AsTask());
+
+		await Assert.That(messages.Count).IsEqualTo(4);
+		await Assert.That(messages[0]).IsEqualTo("\nTHINGS:");
+		await Assert.That(messages[1]).StartsWith($"{token}(#");
+		await Assert.That(messages[1]).Contains($" [owner: {mortal.Name}(#{mortal.DbRef.Number}");
+		await Assert.That(messages[2]).IsEqualTo("----------  Search Done  ----------");
+		await Assert.That(messages[3]).IsEqualTo("Totals: Rooms...0  Exits...0  Things...1  Players...0");
 	}
 
 	// Regression coverage for "@search all type=PLAYER" being parsed as a NAME search for the
 	// literal text "player" instead of a TYPE filter — @SEARCH's CB.EqSplit|CB.RSArgs behavior only
 	// splits the raw command text on the first top-level '=', so "all type" (the player field plus
 	// the leading search class) landed together in one chunk with no class/restriction parsing at
-	// all. See ParseSearchCommandArgs in GeneralCommands.cs.
+	// all. See ParseSearchCommandArgs in SearchCommands.cs.
 	[Test]
 	public async ValueTask Search_TypeEqualsPlayer_FiltersByTypeNotByName()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;
 		var offType = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "SearchTypeBugPLAYER");
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@search all type=PLAYER"));
-
-		// The criteria line must show the parsed pair, not a raw "all type=PLAYER" echo.
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedRendering(NotifyService,
-			nameof(ErrorMessages.Notifications.SearchCriteriaFormat), "  Criteria: TYPE=PLAYER", executor)).IsTrue();
+		var messages = await MessagesWhile(executor, () => Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain("@search all type=PLAYER")).AsTask());
 
 		// A THING whose name contains "PLAYER" must NOT match a TYPE=PLAYER search...
-		await Assert.That(SearchResultContains(offType.Number, "THING")).IsFalse();
-
-		// ...while an actual player (the fixture's God, #1) must.
-		await Assert.That(SearchResultContains(executor.Number, "PLAYER")).IsTrue();
+		await Assert.That(messages.Any(m => m.Contains($"(#{offType.Number}"))).IsFalse();
+		// ...while an actual player (the fixture's God, #1) must, with its location for a wizard.
+		await Assert.That(messages.Any(m => m.Contains("(#1") && m.Contains(" [location: "))).IsTrue();
 	}
 
 	[Test]
@@ -430,26 +467,20 @@ public class GeneralCommandTests
 		var control = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, $"{token}_Control");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {match}=MONITOR"));
 
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@search all type=thing,flags=MONITOR"));
+		var messages = await MessagesWhile(WebAppFactoryArg.ExecutorDBRef, () => Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@search all type=thing,flags=MONITOR,name={token}")).AsTask());
 
-		await Assert.That(SearchResultContains(match.Number, "THING")).IsTrue();
-		await Assert.That(SearchResultContains(control.Number, "THING")).IsFalse();
+		await Assert.That(messages.Any(m => m.Contains($"(#{match.Number}"))).IsTrue();
+		await Assert.That(messages.Any(m => m.Contains($"(#{control.Number}"))).IsFalse();
 	}
 
-	/// <summary>
-	/// Whether a <c>SearchObjectEntryFormat</c> notification was sent for the given dbref number and
-	/// type, inspecting the mock's recorded calls directly (mirrors
-	/// <see cref="TestHelpers.ReceivedNotifyLocalizedWithKey"/>'s approach for params-array calls).
-	/// </summary>
-	private bool SearchResultContains(int dbRefNumber, string type) =>
-		NotifyService.ReceivedCalls()
-			.Any(c =>
-				c.GetMethodInfo().Name is "NotifyLocalized" or "NotifyLocalizedMarkup" &&
-				c.GetArguments().Length >= 2 &&
-				c.GetArguments()[1] is string k && k == nameof(ErrorMessages.Notifications.SearchObjectEntryFormat) &&
-				c.GetArguments()[^1] is object[] { Length: 3 } fmtArgs &&
-				Convert.ToInt32(fmtArgs[0]) == dbRefNumber &&
-				fmtArgs[2] is string t && t.Equals(type, StringComparison.OrdinalIgnoreCase));
+	private async Task<List<string>> MessagesWhile(DBRef who, Func<Task> action)
+	{
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountFor(who);
+		await action();
+		return [.. recorder.For(who).Skip(before)];
+	}
 
 	[Test]
 	public async ValueTask Entrances_ShowsLinkedObjects()

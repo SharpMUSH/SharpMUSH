@@ -19,6 +19,11 @@ namespace SharpMUSH.Implementation.Commands;
 
 public partial class Commands
 {
+	/// <summary>
+	/// PennMUSH's <c>do_find</c> (<c>src/look.c:1066</c>): every object you control in
+	/// <c>[begin, end)</c>, exits excepted, whose name has a word starting with <c>&lt;name&gt;</c>
+	/// (<c>string_match</c>), one <c>object_header</c> line each, then the count.
+	/// </summary>
 	[SharpCommand(Name = "@FIND", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
 		MinArgs = 0, MaxArgs = 3, ParameterNames = ["name", "flags"])]
 	public async ValueTask<Option<CallState>> Find(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -26,67 +31,69 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.Arguments;
 
-		string? searchName = null;
-		if (args.Count > 0 && args.ContainsKey("0"))
-		{
-			searchName = args["0"].Message?.ToPlainText();
-		}
+		string Arg(string key) => args.TryGetValue(key, out var value) ? value.Message?.ToPlainText().Trim() ?? "" : "";
 
-		int? beginDbref = null;
-		int? endDbref = null;
+		var name = Arg("0");
+		int? begin = null;
+		int? end = null;
 
-		if (args.Count >= 2 && args.ContainsKey("1"))
+		// A range bound may carry a '#' and must name an object that exists (GoodObject).
+		foreach (var (key, assign) in new (string, Action<int>)[] { ("1", v => begin = v), ("2", v => end = v) })
 		{
-			var beginStr = args["1"].Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(beginStr) && int.TryParse(beginStr, out var begin))
+			var text = Arg(key);
+			if (text.Length == 0) continue;
+			if (!int.TryParse(text.TrimStart('#'), out var number)
+				|| await Mediator.Send(new GetObjectNodeQuery(new DBRef(number))) is not AnySharpObject)
 			{
-				beginDbref = begin;
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindInvalidRange), executor);
+				return new CallState(ErrorMessages.Returns.InvalidArgument);
 			}
+
+			assign(number);
 		}
-
-		if (args.Count >= 3 && args.ContainsKey("2"))
-		{
-			var endStr = args["2"].Message?.ToPlainText();
-			if (!string.IsNullOrEmpty(endStr) && int.TryParse(endStr, out var end))
-			{
-				endDbref = end;
-			}
-		}
-
-		var matchCount = 0;
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindSearchingFormat), executor, searchName != null ? string.Format(ErrorMessages.Notifications.FindSearchMatchingFormat, searchName) : "");
 
 		var filter = new ObjectSearchFilter
 		{
-			NamePattern = searchName,
-			MinDbRef = beginDbref,
-			MaxDbRef = endDbref
+			Types = ["ROOM", "THING", "PLAYER"],
+			MinDbRef = begin,
+			// do_find's upper bound is exclusive.
+			MaxDbRef = end - 1
 		};
 
-		var controlledResults = await Mediator.CreateStream(new GetFilteredObjectsQuery(filter))
-			.Where(async (obj, ct) =>
+		var count = 0;
+		await foreach (var obj in Mediator.CreateStream(new GetFilteredObjectsQuery(filter)))
+		{
+			if ((name.Length > 0 && !StringMatch(obj.Name, name))
+				|| await Mediator.Send(new GetObjectNodeQuery(obj.DBRef)) is not AnySharpObject node
+				|| !await PermissionService.Controls(executor, node))
 			{
-				return await Mediator.Send(new GetObjectNodeQuery(obj.DBRef), ct) is AnySharpObject objNode
-					&& await PermissionService.Controls(executor, objNode);
-			})
-			.ToListAsync();
+				continue;
+			}
 
-		matchCount = controlledResults.Count;
-
-		if (beginDbref.HasValue || endDbref.HasValue)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindRangeFormat), executor, beginDbref ?? 0, endDbref?.ToString() ?? "end");
+			await NotifyService.Notify(executor, await MessageFormatting.UnparseObjectAsync(PermissionService, executor, node), executor);
+			count++;
 		}
 
-		foreach (var obj in controlledResults)
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindObjectsFoundFormat), executor, count);
+		return new CallState(count.ToString());
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>string_match</c> (<c>src/strutil.c:268</c>): <paramref name="sub"/> is a
+	/// case-insensitive prefix of some word of <paramref name="src"/>, a word starting after any run of
+	/// characters that are not letters or digits.
+	/// </summary>
+	private static bool StringMatch(string src, string sub)
+	{
+		var i = 0;
+		while (i < src.Length)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindObjectResultFormat), executor, obj.Key, obj.Name);
+			if (src.AsSpan(i).StartsWith(sub, StringComparison.OrdinalIgnoreCase)) return true;
+			while (i < src.Length && char.IsLetterOrDigit(src[i])) i++;
+			while (i < src.Length && !char.IsLetterOrDigit(src[i])) i++;
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FindFoundMatchingFormat), executor, matchCount);
-
-		return new CallState(matchCount.ToString());
+		return false;
 	}
 
 	[SharpCommand(Name = "@SCAN", Switches = ["ROOM", "SELF", "ZONE", "GLOBALS"], Behavior = CB.Default | CB.NoGagged,
@@ -344,33 +351,101 @@ public partial class Commands
 			executor, ownerFilter, pairs, useRegex: false);
 		var matches = search.Matches;
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchAdvancedHeader), executor);
-
-		if (playerText != null)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchPlayerFilterFormat), executor, playerText);
-		}
-
-		if (pairs.Count > 0)
-		{
-			var criteria = string.Join(", ", pairs.Select(p => $"{p.ClassType.ToUpperInvariant()}={p.Restriction}"));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchCriteriaFormat), executor, criteria);
-		}
-
 		if (matches.Count == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchNothingFound), executor);
 			return new CallState("0") { HadErrors = search.HadErrors };
 		}
 
-		foreach (var obj in matches)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchObjectEntryFormat), executor, obj.Key, obj.Name, obj.Type);
-		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchObjectsFoundFormat), executor, matches.Count);
+		await ReportSearchAsync(executor, matches);
 
 		return new CallState(matches.Count.ToString()) { HadErrors = search.HadErrors };
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>do_search</c> report (<c>src/wiz.c:1289-1414</c>): the matches split by type, each
+	/// type under its own heading, each object as <c>object_header</c> with its owner, an exit with where
+	/// it runs from and to, a player with its location when the searcher may search or see everything;
+	/// then the totals.
+	/// </summary>
+	private async ValueTask ReportSearchAsync(AnySharpObject executor, IReadOnlyList<SharpObject> matches)
+	{
+		var nodes = new List<AnySharpObject>(matches.Count);
+		foreach (var match in matches)
+		{
+			if (await Mediator.Send(new GetObjectNodeQuery(match.DBRef)) is AnySharpObject node)
+			{
+				nodes.Add(node);
+			}
+		}
+
+		async ValueTask<string> Header(AnySharpObject obj)
+			=> await MessageFormatting.UnparseObjectAsync(PermissionService, executor, obj);
+
+		async ValueTask<string> HeaderOrNowhere(DBRef? dbref)
+			=> dbref is { } where && await Mediator.Send(new GetObjectNodeQuery(where)) is AnySharpObject node
+				? await Header(node)
+				: ErrorMessages.Notifications.SearchNowhere;
+
+		async ValueTask<string> Owned(AnySharpObject obj)
+			=> string.Format(ErrorMessages.Notifications.SearchOwnedEntryFormat, await Header(obj),
+				await Header(new AnySharpObject(await obj.Object().Owner.WithCancellation(CancellationToken.None))));
+
+		var rooms = nodes.Where(n => n.IsRoom).ToList();
+		var exits = nodes.Where(n => n.IsExit).ToList();
+		var things = nodes.Where(n => n.IsThing).ToList();
+		var players = nodes.Where(n => n.IsPlayer).ToList();
+
+		if (rooms.Count > 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchRoomsHeader), executor);
+			foreach (var room in rooms)
+			{
+				await NotifyService.Notify(executor, await Owned(room), executor);
+			}
+		}
+
+		if (exits.Count > 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchExitsHeader), executor);
+			foreach (var exit in exits)
+			{
+				var from = AnySharpContainer.RefOf(await exit.Where());
+				var to = AnyOptionalSharpContainer.RefOf(await ((SharpExit)exit.Value!).Home.WithCancellation(CancellationToken.None));
+				await NotifyService.Notify(executor, string.Format(ErrorMessages.Notifications.SearchExitEntryFormat,
+					await Header(exit), await HeaderOrNowhere(from), await HeaderOrNowhere(to)), executor);
+			}
+		}
+
+		if (things.Count > 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchThingsHeader), executor);
+			foreach (var thing in things)
+			{
+				await NotifyService.Notify(executor, await Owned(thing), executor);
+			}
+		}
+
+		if (players.Count > 0)
+		{
+			var showLocation = await ObjectStatsHelpers.CanSearchAll(executor) || await executor.HasPower("SEE_ALL");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchPlayersHeader), executor);
+			foreach (var player in players)
+			{
+				var line = await Header(player);
+				if (showLocation)
+				{
+					var location = AnySharpContainer.RefOf(await player.Where());
+					line = string.Format(ErrorMessages.Notifications.SearchPlayerLocationFormat, line, await HeaderOrNowhere(location));
+				}
+
+				await NotifyService.Notify(executor, line, executor);
+			}
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchDone), executor);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchTotalsFormat), executor,
+			rooms.Count, exits.Count, things.Count, players.Count);
 	}
 
 	/// <summary>
