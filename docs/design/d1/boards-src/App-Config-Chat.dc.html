@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin — Chat settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0e0f11}
+a{color:#00f5b7;text-decoration:none}a:hover{color:#7affd9}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; background: #0e0f11; color: #e9edf0; font-family: 'Hanken Grotesk', sans-serif; font-size: 14px; display: flex; overflow: hidden">
+<nav aria-label="Sections" style="width: 72px; flex-shrink: 0; box-sizing: border-box; background: #0a0b0c; border-right: 1px solid #1d2024; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 0">
+<div aria-hidden="true" style="width: 44px; height: 44px; border-radius: 14px; background: #16181b; border: 1px solid #262a2f; box-sizing: border-box; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 512 512"><g fill="{{accent}}"><path d="m345.16-0.31-88.2 163.24-88.13-163.1-167.67 252.72 87.98 234.7-1.24-233.41 64.74-117.99 104.11 196.48 0.27-0.37 0.51 0.0 104.11-196.48 64.74 117.99-1.25 233.41 87.98-234.7z"></path><path d="m143.1 228.96 65.57 113.27v170.77l-65.99-166.48z"></path><path d="m370.64 227.45-65.57 113.27v170.77l65.99-166.48z"></path></g></svg></div>
+<div style="width: 28px; height: 1px; background: #262a2f; margin: 4px 0"></div>
+<a href="#" aria-label="Home" style="width: 44px; height: 44px; border-radius: 14px; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z"></path></svg></a>
+<a href="#" aria-label="Play" style="width: 44px; height: 44px; border-radius: 14px; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v14H4z"></path><path d="M8 10l3 2-3 2"></path><path d="M13 15h4"></path></svg></a>
+<a href="#" aria-label="Scenes" style="width: 44px; height: 44px; border-radius: 14px; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v12H4z"></path><path d="M4 10h16"></path><path d="M9 6l-2 4"></path><path d="M15 6l-2 4"></path></svg></a>
+<a href="#" aria-label="Wiki" style="width: 44px; height: 44px; border-radius: 14px; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"></path><path d="M5 18a2 2 0 0 1 2-2h12"></path></svg></a>
+<a href="#" aria-label="Characters" style="width: 44px; height: 44px; border-radius: 14px; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3 20c0-3 3-5 6-5s6 2 6 5"></path><circle cx="17" cy="9" r="2.5"></circle><path d="M16 14c3 0 5 2 5 5"></path></svg></a>
+<a href="#" aria-label="Mail, 2 unread" style="width: 44px; height: 44px; border-radius: 14px; color: #9aa3ab; display: flex; align-items: center; justify-content: center; position: relative"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18v12H3z"></path><path d="M3 6l9 7 9-7"></path></svg><span style="position: absolute; top: 0; right: 0; min-width: 18px; height: 18px; border-radius: 9px; background: #ff8a8a; color: #0e0f11; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center">2</span></a>
+<div style="flex-grow: 1"></div>
+<a href="#" aria-label="Staff tools" aria-current="page" style="width: 44px; height: 44px; border-radius: 14px; background: #1c1f23; color: {{accent}}; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"></path></svg></a>
+<img src="/_blob/b3bd401c3375ab3442e941f8e62c7cf5" alt="Ilsa Varn (you)" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover">
+</nav>
+<nav aria-label="Configuration" style="width: 232px; flex-shrink: 0; box-sizing: border-box; background: #101113; border-right: 1px solid #1d2024; padding: 16px 10px; display: {{sideOpen}}; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 8px; padding: 0 2px 0 10px">
+<div style="flex-grow: 1; min-width: 0"><div style="font-size: 18px; font-weight: 700">Configuration</div><div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #9aa3ab">Admin · server settings</div></div>
+<button type="button" aria-label="Collapse sidebar" title="Collapse sidebar" onClick="{{toggleSide}}" style="width: 36px; height: 36px; flex-shrink: 0; border: 0; border-radius: 10px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 6l-6 6 6 6"></path><path d="M19 6l-6 6 6 6"></path></svg></button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8790; padding: 0 10px 6px">Settings</div>
+<a href="#" aria-expanded="false" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px; border-radius: 10px; color: #e9edf0"><span aria-hidden="true" style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="2"></rect><rect x="4" y="13" width="16" height="7" rx="2"></rect><path d="M8 7.5h.01"></path><path d="M8 16.5h.01"></path></svg></span><span style="flex-grow: 1">Server</span><span style="color: #7d8790; display: flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></span></a>
+<a href="#" aria-expanded="false" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px; border-radius: 10px; color: #e9edf0"><span aria-hidden="true" style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16a8 8 0 1 1 16 0"></path><path d="M12 16l4-5"></path></svg></span><span style="flex-grow: 1">Performance</span><span style="color: #7d8790; display: flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></span></a>
+<a href="#" aria-expanded="false" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px; border-radius: 10px; color: #e9edf0"><span aria-hidden="true" style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg></span><span style="flex-grow: 1">Security</span><span style="color: #7d8790; display: flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></span></a>
+<a href="App-Config-Chat.dc.html" aria-expanded="true" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px; border-radius: 10px; color: #e9edf0; font-weight: 600"><span aria-hidden="true" style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; background: #1c1f23; color: {{accent}}; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v16H5z"></path><path d="M8 8h8"></path><path d="M8 12h8"></path><path d="M8 16h5"></path></svg></span><span style="flex-grow: 1">Content</span><span style="color: #7d8790; display: flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></span></a>
+<a href="#" style="display: flex; align-items: center; gap: 8px; height: 32px; margin-left: 22px; padding: 0 8px 0 14px; border-left: 1px solid #262a2f; color: #9aa3ab"><span style="flex-grow: 1">Messages</span><span style="font-size: 12px; font-weight: 400; color: #9aa3ab">21</span></a>
+<a href="#" style="display: flex; align-items: center; gap: 8px; height: 32px; margin-left: 22px; padding: 0 8px 0 14px; border-left: 1px solid #262a2f; color: #9aa3ab"><span style="flex-grow: 1">Cosmetic</span><span style="font-size: 12px; font-weight: 400; color: #9aa3ab">17</span></a>
+<a href="App-Config-Chat.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 8px; height: 32px; margin-left: 22px; padding: 0 8px 0 14px; border-left: 1px solid #262a2f; background: #1c1f23; border-radius: 0 10px 10px 0; color: {{accent}}; font-weight: 600"><span style="flex-grow: 1">Chat</span><span style="font-size: 12px; font-weight: 400; color: #9aa3ab">7</span></a>
+<a href="#" style="display: flex; align-items: center; gap: 8px; height: 32px; margin-left: 22px; padding: 0 8px 0 14px; border-left: 1px solid #262a2f; color: #9aa3ab"><span style="flex-grow: 1">Wiki</span><span style="font-size: 12px; font-weight: 400; color: #9aa3ab">1</span></a>
+<a href="#" aria-expanded="false" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px; border-radius: 10px; color: #e9edf0"><span aria-hidden="true" style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"></path></svg></span><span style="flex-grow: 1">Logs & files</span><span style="color: #7d8790; display: flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></span></a>
+<a href="#" aria-expanded="false" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px; border-radius: 10px; color: #e9edf0"><span aria-hidden="true" style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10"></path><path d="M18 7h2"></path><circle cx="16" cy="7" r="2"></circle><path d="M4 17h4"></path><path d="M12 17h8"></path><circle cx="10" cy="17" r="2"></circle></svg></span><span style="flex-grow: 1">Advanced</span><span style="color: #7d8790; display: flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></span></a>
+</div>
+<div style="flex-grow: 1"></div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8790; padding: 0 10px 6px">Maintenance</div>
+<a href="#" style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px; border-radius: 10px; color: #e9edf0"><span aria-hidden="true" style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M4 20h16"></path></svg></span><span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Import</span></a>
+<a href="#" style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px; border-radius: 10px; color: #e9edf0"><span aria-hidden="true" style="width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12"></path><path d="M7 11l5 5 5-5"></path><path d="M4 20h16"></path></svg></span><span style="flex-grow: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Export</span></a>
+</div>
+</nav>
+<nav aria-label="Configuration, collapsed" style="width: 64px; flex-shrink: 0; box-sizing: border-box; background: #101113; border-right: 1px solid #1d2024; padding: 16px 0; display: {{sideClosed}}; flex-direction: column; align-items: center; gap: 10px">
+<button type="button" aria-label="Expand sidebar" title="Expand sidebar" onClick="{{toggleSide}}" style="width: 40px; height: 40px; flex-shrink: 0; border: 0; border-radius: 10px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 6l6 6-6 6"></path><path d="M5 6l6 6-6 6"></path></svg></button>
+<a href="#" aria-label="Server" title="Server" style="width: 40px; height: 40px; border-radius: 12px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="7" rx="2"></rect><rect x="4" y="13" width="16" height="7" rx="2"></rect><path d="M8 7.5h.01"></path><path d="M8 16.5h.01"></path></svg></a>
+<a href="#" aria-label="Performance" title="Performance" style="width: 40px; height: 40px; border-radius: 12px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16a8 8 0 1 1 16 0"></path><path d="M12 16l4-5"></path></svg></a>
+<a href="#" aria-label="Security" title="Security" style="width: 40px; height: 40px; border-radius: 12px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg></a>
+<a href="App-Config-Chat.dc.html" aria-label="Content" aria-current="true" title="Content" style="width: 40px; height: 40px; border-radius: 12px; background: #1c1f23; color: {{accent}}; box-shadow: inset 0 0 0 2px {{accent}}; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v16H5z"></path><path d="M8 8h8"></path><path d="M8 12h8"></path><path d="M8 16h5"></path></svg></a>
+<a href="#" aria-label="Logs & files" title="Logs & files" style="width: 40px; height: 40px; border-radius: 12px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z"></path></svg></a>
+<a href="#" aria-label="Advanced" title="Advanced" style="width: 40px; height: 40px; border-radius: 12px; background: #1c1f23; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10"></path><path d="M18 7h2"></path><circle cx="16" cy="7" r="2"></circle><path d="M4 17h4"></path><path d="M12 17h8"></path><circle cx="10" cy="17" r="2"></circle></svg></a>
+<div style="flex-grow: 1"></div>
+<a href="#" aria-label="Import" title="Import" style="width: 40px; height: 40px; border-radius: 12px; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M4 20h16"></path></svg></a>
+<a href="#" aria-label="Export" title="Export" style="width: 40px; height: 40px; border-radius: 12px; color: #9aa3ab; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12"></path><path d="M7 11l5 5 5-5"></path><path d="M4 20h16"></path></svg></a>
+</nav>
+<main style="flex-grow: 1; min-width: 0; position: relative; box-sizing: border-box; padding: 16px 12px 16px 20px; display: flex; flex-direction: column; gap: 14px">
+<header style="flex-shrink: 0; display: flex; align-items: flex-end; gap: 12px; padding: 4px 4px 2px">
+<div style="flex-grow: 1; min-width: 0"><div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8790">Admin · server settings</div><h1 style="margin: 4px 0 0; font-size: 26px; line-height: 1.15; font-weight: 700">Chat</h1><div style="margin-top: 4px; font-size: 13px; color: #9aa3ab">Chat and communication settings</div></div><button type="button" style="height: 36px; padding: 0 14px 0 12px; border: 0; border-radius: 18px; background: #1c1f23; color: #e9edf0; font-weight: 600; box-shadow: inset 0 0 0 1px #262a2f; font: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; white-space: nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"></path><path d="M4 4v4h4"></path></svg>Reset to defaults</button>
+</header>
+<div style="flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 14px; padding-bottom: 80px">
+<section aria-label="General" style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8790; padding: 0 4px">General</div>
+<div style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px">
+<div style="display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid #262a2f">
+<div style="flex-grow: 1; min-width: 0"><div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 600">Chat Token Alias</span><code style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7d8790">Chat.ChatTokenAlias</code></div><div style="margin-top: 2px; font-size: 13px; color: #9aa3ab">Character used as prefix for chat commands</div></div>
+<div style="display: flex; align-items: center; gap: 10px"><input type="text" aria-label="Chat Token Alias" value="+" maxlength="1" style="width: 56px; height: 36px; box-sizing: border-box; border: 1px solid #262a2f; border-radius: 10px; background: #0e0f11; color: #e9edf0; font-family: 'JetBrains Mono', monospace; font-size: 14px; text-align: center"></div>
+</div>
+<div style="display: flex; align-items: center; gap: 16px; padding: 10px 16px">
+<div style="flex-grow: 1; min-width: 0"><div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 600">Use Muxcomm</span><code style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7d8790">Chat.UseMuxComm</code><span style="display: {{muxBadge}}; height: 18px; padding: 0 7px; border-radius: 9px; background: rgba(255, 180, 84, 0.14); color: #ffb454; font-size: 11px; font-weight: 700; align-items: center" title="Unsaved change">changed</span></div><div style="margin-top: 2px; font-size: 13px; color: #9aa3ab">Use MUX-style communication system</div></div>
+<div style="display: flex; align-items: center; gap: 10px"><button type="button" role="switch" aria-checked="{{muxOn}}" aria-label="Use Muxcomm" onClick="{{muxToggle}}" style="width: 44px; height: 24px; flex-shrink: 0; position: relative; box-sizing: border-box; padding: 0; border: 1px solid {{muxEdge}}; border-radius: 12px; background: {{muxTrack}}"><span aria-hidden="true" style="position: absolute; top: 2px; left: {{muxKnob}}; width: 18px; height: 18px; border-radius: 9px; background: {{muxKnobBg}}"></span></button></div>
+</div>
+</div>
+</section>
+<section aria-label="Limits" style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8790; padding: 0 4px">Limits</div>
+<div style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px">
+<div style="display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid #262a2f">
+<div style="flex-grow: 1; min-width: 0"><div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 600">Max Channels</span><code style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7d8790">Chat.MaxChannels</code></div><div style="margin-top: 2px; font-size: 13px; color: #9aa3ab">Maximum number of channels allowed on the MUSH</div></div>
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-size: 12px; color: #7d8790; font-family: 'JetBrains Mono', monospace">1–10000</span><input type="number" aria-label="Max Channels" value="200" style="width: 112px; height: 36px; box-sizing: border-box; padding: 0 12px; border: 1px solid #262a2f; border-radius: 10px; background: #0e0f11; color: #e9edf0; font-family: 'JetBrains Mono', monospace; font-size: 14px; text-align: right"></div>
+</div>
+<div style="display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid #262a2f">
+<div style="flex-grow: 1; min-width: 0"><div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 600">Max Player Chans</span><code style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7d8790">Chat.MaxPlayerChannels</code></div><div style="margin-top: 2px; font-size: 13px; color: #9aa3ab">Maximum channels a single player can join</div></div>
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-size: 12px; color: #7d8790; font-family: 'JetBrains Mono', monospace">1–100</span><input type="number" aria-label="Max Player Chans" value="20" style="width: 112px; height: 36px; box-sizing: border-box; padding: 0 12px; border: 1px solid #262a2f; border-radius: 10px; background: #0e0f11; color: #e9edf0; font-family: 'JetBrains Mono', monospace; font-size: 14px; text-align: right"></div>
+</div>
+<div style="display: flex; align-items: center; gap: 16px; padding: 10px 16px">
+<div style="flex-grow: 1; min-width: 0"><div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 600">Chan Title Len</span><code style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7d8790">Chat.ChannelTitleLength</code></div><div style="margin-top: 2px; font-size: 13px; color: #9aa3ab">Maximum length of channel titles</div></div>
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-size: 12px; color: #7d8790; font-family: 'JetBrains Mono', monospace">10–500</span><input type="number" aria-label="Chan Title Len" value="80" style="width: 112px; height: 36px; box-sizing: border-box; padding: 0 12px; border: 1px solid #262a2f; border-radius: 10px; background: #0e0f11; color: #e9edf0; font-family: 'JetBrains Mono', monospace; font-size: 14px; text-align: right"></div>
+</div>
+</div>
+</section>
+<section aria-label="Economy" style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8790; padding: 0 4px">Economy</div>
+<div style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px">
+<div style="display: flex; align-items: center; gap: 16px; padding: 10px 16px">
+<div style="flex-grow: 1; min-width: 0"><div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 600">Chan Cost</span><code style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7d8790">Chat.ChannelCost</code></div><div style="margin-top: 2px; font-size: 13px; color: #9aa3ab">Cost in pennies to create a new channel</div></div>
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-size: 12px; color: #7d8790; font-family: 'JetBrains Mono', monospace">0–100000</span><input type="number" aria-label="Chan Cost" value="1000" style="width: 112px; height: 36px; box-sizing: border-box; padding: 0 12px; border: 1px solid #262a2f; border-radius: 10px; background: #0e0f11; color: #e9edf0; font-family: 'JetBrains Mono', monospace; font-size: 14px; text-align: right"></div>
+</div>
+</div>
+</section>
+<section aria-label="Behavior" style="display: flex; flex-direction: column; gap: 6px">
+<div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8790; padding: 0 4px">Behavior</div>
+<div style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px">
+<div style="display: flex; align-items: center; gap: 16px; padding: 10px 16px">
+<div style="flex-grow: 1; min-width: 0"><div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="font-size: 14px; font-weight: 600">Noisy Cemit</span><code style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #7d8790">Chat.NoisyCEmit</code><span style="display: {{noisyBadge}}; height: 18px; padding: 0 7px; border-radius: 9px; background: rgba(255, 180, 84, 0.14); color: #ffb454; font-size: 11px; font-weight: 700; align-items: center" title="Unsaved change">changed</span></div><div style="margin-top: 2px; font-size: 13px; color: #9aa3ab">Show channel name in @cemit messages</div></div>
+<div style="display: flex; align-items: center; gap: 10px"><button type="button" role="switch" aria-checked="{{noisyOn}}" aria-label="Noisy Cemit" onClick="{{noisyToggle}}" style="width: 44px; height: 24px; flex-shrink: 0; position: relative; box-sizing: border-box; padding: 0; border: 1px solid {{noisyEdge}}; border-radius: 12px; background: {{noisyTrack}}"><span aria-hidden="true" style="position: absolute; top: 2px; left: {{noisyKnob}}; width: 18px; height: 18px; border-radius: 9px; background: {{noisyKnobBg}}"></span></button></div>
+</div>
+</div>
+</section>
+</div>
+<div role="region" aria-label="Unsaved changes" style="position: absolute; left: 20px; right: 12px; bottom: 16px; display: {{saveDisplay}}; align-items: center; gap: 10px; padding: 10px 10px 10px 16px; border: 1px solid #262a2f; border-radius: 16px; background: #1c1f23; box-shadow: 0 12px 32px rgba(0,0,0,0.5)"><span style="color: #ffb454; display: flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l9 16H3z"></path><path d="M12 10v4"></path><path d="M12 17h.01"></path></svg></span><span style="flex-grow: 1; font-size: 14px"><strong>Unsaved changes</strong> in this section <span style="margin-left: 6px; height: 20px; padding: 0 8px; border-radius: 10px; background: rgba(255, 180, 84, 0.14); color: #ffb454; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">{{changeLabel}}</span></span><button type="button" onClick="{{resetChanges}}" style="height: 36px; padding: 0 16px 0 16px; border: 0; border-radius: 18px; background: #1c1f23; color: #e9edf0; font-weight: 600; box-shadow: inset 0 0 0 1px #262a2f; font: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; white-space: nowrap">Reset changes</button><button type="button" onClick="{{saveChanges}}" style="height: 36px; padding: 0 16px 0 16px; border: 0; border-radius: 18px; background: {{accent}}; color: #03150f; font-weight: 700; font: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; white-space: nowrap">Save configuration</button></div>
+</main>
+<aside aria-label="About this section" style="width: 196px; flex-shrink: 0; box-sizing: border-box; padding: 16px 16px 16px 0; display: flex; flex-direction: column; gap: 14px">
+<section aria-label="In this section" style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 8px"><h2 style="margin: 0; flex-grow: 1; font-size: 13px; font-weight: 700">In this section</h2></div>
+<div style="display: flex; flex-direction: column"><a href="#" style="display: flex; padding: 5px 0 5px 10px; border-left: 2px solid {{accent}}; color: {{accent}}; font-size: 13px"><span style="flex-grow: 1">General</span><span style="color: #7d8790">2</span></a>
+<a href="#" style="display: flex; padding: 5px 0 5px 10px; border-left: 2px solid #262a2f; color: #9aa3ab; font-size: 13px"><span style="flex-grow: 1">Limits</span><span style="color: #7d8790">3</span></a>
+<a href="#" style="display: flex; padding: 5px 0 5px 10px; border-left: 2px solid #262a2f; color: #9aa3ab; font-size: 13px"><span style="flex-grow: 1">Economy</span><span style="color: #7d8790">1</span></a>
+<a href="#" style="display: flex; padding: 5px 0 5px 10px; border-left: 2px solid #262a2f; color: #9aa3ab; font-size: 13px"><span style="flex-grow: 1">Behavior</span><span style="color: #7d8790">1</span></a></div>
+</section>
+<section aria-label="Related settings" style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 8px"><h2 style="margin: 0; flex-grow: 1; font-size: 13px; font-weight: 700">Related</h2></div>
+<a href="#" style="display: flex; flex-direction: column; gap: 2px; color: #e9edf0; font-size: 13px"><span>Chat Strip Quote</span><span style="font-size: 12px; color: #9aa3ab">Cosmetic · Remove quote marks from chat messages</span></a>
+<a href="D1-Play-Channel.dc.html" style="display: flex; flex-direction: column; gap: 2px; color: #e9edf0; font-size: 13px"><span>Channels in Play</span><span style="font-size: 12px; color: #9aa3ab">Where these limits show up for players</span></a>
+</section>
+</aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#00f5b7","options":["#00f5b7","#ffb454","#b39cff","#5aa9ff"]},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { side: true, mux: true, muxSaved: false, noisy: false, noisySaved: false };
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#00f5b7';
+    const s = this.state;
+    const rgba = (hex, a) => {
+      let h = String(hex).replace('#', '');
+      if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+      const n = parseInt(h, 16);
+      return 'rgba(' + ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255) + ', ' + a + ')';
+    };
+    return {
+      accent: accent,
+      accentLine: rgba(accent, 0.5),
+      accentTint: rgba(accent, 0.14),
+      sideOpen: s.side ? 'flex' : 'none',
+      sideClosed: s.side ? 'none' : 'flex',
+      muxOn: String(s.mux),
+      muxTrack: s.mux ? accent : '#262a2f',
+      muxEdge: s.mux ? accent : '#4a525a',
+      muxKnob: s.mux ? '22px' : '2px',
+      muxKnobBg: s.mux ? '#03150f' : '#c3cad0',
+      muxBadge: s.mux !== s.muxSaved ? 'inline-flex' : 'none',
+      noisyOn: String(s.noisy),
+      noisyTrack: s.noisy ? accent : '#262a2f',
+      noisyEdge: s.noisy ? accent : '#4a525a',
+      noisyKnob: s.noisy ? '22px' : '2px',
+      noisyKnobBg: s.noisy ? '#03150f' : '#c3cad0',
+      noisyBadge: s.noisy !== s.noisySaved ? 'inline-flex' : 'none',
+      saveDisplay: (s.mux !== s.muxSaved || s.noisy !== s.noisySaved) ? 'flex' : 'none',
+      changeLabel: ((n) => n + (n === 1 ? ' change' : ' changes'))((s.mux !== s.muxSaved ? 1 : 0) + (s.noisy !== s.noisySaved ? 1 : 0)),
+      toggleSide: () => this.setState({ side: !s.side }),
+      muxToggle: () => this.setState({ mux: !s.mux }),
+      noisyToggle: () => this.setState({ noisy: !s.noisy }),
+      resetChanges: () => this.setState({ mux: s.muxSaved, noisy: s.noisySaved }),
+      saveChanges: () => this.setState({ muxSaved: s.mux, noisySaved: s.noisy })
+    };
+  }
+}
+</script>
+</body>
+</html>

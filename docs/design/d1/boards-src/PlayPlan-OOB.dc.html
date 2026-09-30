@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Play — OOB payloads</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0e0f11}
+a{color:#00f5b7;text-decoration:none}a:hover{color:#7affd9}
+</style>
+</helmet>
+<div style="width: 1280px; height: 1380px; box-sizing: border-box; background: #0e0f11; color: #e9edf0; font-family: 'Hanken Grotesk', sans-serif; font-size: 14px; overflow: hidden; position: relative">
+<div style="padding: 48px 56px; display: flex; flex-direction: column; gap: 24px">
+<div><div style="font-size: 30px; font-weight: 700">Play data: out-of-band payloads</div><div style="font-size: 15px; color: #9aa3ab; margin-top: 4px">Sent with <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #c4cbd1">oob(&lt;targets&gt;, &lt;package&gt;, &lt;json&gt;)</span> from the room-contents handler to everyone connected in the room. Routed by package into the client's OobChannelStore.</div></div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start">
+<section style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700">room.info</span><span style="padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; background: rgba(0,245,183,0.12); color: #7ad8bd">new</span></div>
+<div style="font-size: 13px; line-height: 1.45; color: #9aa3ab">On arrival, and when the room's name, image or description changes.</div>
+<pre style="margin: 0; padding: 14px 16px; border-radius: 12px; background: #0a0b0c; border: 1px solid #1d2024; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.55; color: #c4cbd1; white-space: pre; overflow: hidden">{
+  &quot;v&quot;: 2,
+  &quot;dbref&quot;: &quot;#1201&quot;,
+  &quot;objid&quot;: &quot;#1201:1719500000&quot;,
+  &quot;name&quot;: &quot;Lower Docks&quot;,
+  &quot;area&quot;: &quot;Harbour Ward&quot;,
+  &quot;image&quot;: {
+    &quot;url&quot;: &quot;/assets/rooms/1201.jpg&quot;,
+    &quot;alt&quot;: &quot;The quay at dusk&quot;,
+    &quot;width&quot;: 1600, &quot;height&quot;: 440,
+    &quot;focal&quot;: [0.5, 0.6]
+  },
+  &quot;desc&quot;: {
+    &quot;format&quot;: &quot;markdown&quot;,
+    &quot;text&quot;: &quot;Tarred pilings and stacked…&quot;
+  },
+  &quot;scene&quot;: {
+    &quot;id&quot;: 42,
+    &quot;title&quot;: &quot;Salt Market at Dusk&quot;
+  }
+}</pre>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8790; margin-right: 4px">Drives</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Room banner</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Description</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Scene header</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Minimised strip</span></div>
+
+</section>
+<section style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700">room.contents</span><span style="padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; background: rgba(255,180,84,0.12); color: #ffc98a">extends</span></div>
+<div style="font-size: 13px; line-height: 1.45; color: #9aa3ab">On movement, connect and disconnect (ROOM`CONTENTS). Adds identity, type, image, status and actions to each row.</div>
+<pre style="margin: 0; padding: 14px 16px; border-radius: 12px; background: #0a0b0c; border: 1px solid #1d2024; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.55; color: #c4cbd1; white-space: pre; overflow: hidden">{
+  &quot;v&quot;: 2,
+  &quot;who&quot;: [
+    {
+      &quot;dbref&quot;: &quot;#312&quot;,
+      &quot;objid&quot;: &quot;#312:1718000000&quot;,
+      &quot;type&quot;: &quot;player&quot;, &quot;name&quot;: &quot;Tomas Reyes&quot;,
+      &quot;color&quot;: &quot;#ffb454&quot;,
+      &quot;image&quot;: {
+        &quot;url&quot;: &quot;/assets/chars/312.jpg&quot;,
+        &quot;alt&quot;: &quot;Tomas Reyes&quot;
+      },
+      &quot;status&quot;: &quot;active&quot;, &quot;idle&quot;: 60,
+      &quot;profile&quot;: true, &quot;cmd&quot;: &quot;look #312&quot;,
+      &quot;actions&quot;: [
+        { &quot;label&quot;: &quot;Page&quot;,
+          &quot;cmd&quot;: &quot;page #312=&quot; }
+      ]
+    },
+    {
+      &quot;dbref&quot;: &quot;#1142&quot;,
+      &quot;type&quot;: &quot;thing&quot;,
+      &quot;name&quot;: &quot;Oilcloth bundle&quot;,
+      &quot;image&quot;: {
+        &quot;url&quot;: &quot;/assets/obj/1142.jpg&quot;
+      },
+      &quot;cmd&quot;: &quot;look #1142&quot;
+    }
+  ]
+}</pre>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8790; margin-right: 4px">Drives</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Here</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Story portraits</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Character sheet</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Objects</span></div>
+
+</section>
+<section style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700">room.exits</span><span style="padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; background: rgba(255,180,84,0.12); color: #ffc98a">extends</span></div>
+<div style="font-size: 13px; line-height: 1.45; color: #9aa3ab">Same trigger. Adds aliases, state, hints, a confirm prompt and a destination preview.</div>
+<pre style="margin: 0; padding: 14px 16px; border-radius: 12px; background: #0a0b0c; border: 1px solid #1d2024; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.55; color: #c4cbd1; white-space: pre; overflow: hidden">{
+  &quot;v&quot;: 2,
+  &quot;exits&quot;: [
+    {
+      &quot;dbref&quot;: &quot;#1210&quot;,
+      &quot;name&quot;: &quot;Harbour Row&quot;,
+      &quot;aliases&quot;: [&quot;n&quot;, &quot;north&quot;],
+      &quot;cmd&quot;: &quot;goto #1210&quot;,
+      &quot;state&quot;: &quot;open&quot;,
+      &quot;dest&quot;: {
+        &quot;name&quot;: &quot;Harbour Row&quot;,
+        &quot;area&quot;: &quot;Harbour Ward&quot;,
+        &quot;image&quot;: {
+          &quot;url&quot;: &quot;/assets/rooms/1210.jpg&quot;
+        },
+        &quot;desc&quot;: &quot;A lamplit street of…&quot;,
+        &quot;here&quot;: 2
+      }
+    },
+    {
+      &quot;dbref&quot;: &quot;#1211&quot;,
+      &quot;name&quot;: &quot;Customs House&quot;,
+      &quot;aliases&quot;: [&quot;w&quot;],
+      &quot;state&quot;: &quot;locked&quot;,
+      &quot;hint&quot;: &quot;Closed after dusk&quot;
+    },
+    {
+      &quot;dbref&quot;: &quot;#1212&quot;,
+      &quot;name&quot;: &quot;Ferry Steps&quot;,
+      &quot;aliases&quot;: [&quot;e&quot;],
+      &quot;cmd&quot;: &quot;goto #1212&quot;,
+      &quot;confirm&quot;: &quot;This leaves the scene.&quot;
+    }
+  ]
+}</pre>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8790; margin-right: 4px">Drives</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Exits</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Hover preview</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Keyboard aliases</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Mobile sheet</span></div>
+
+</section>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start">
+<section style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700">Story feed</span><span style="padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; background: #1c1f23; color: #c4cbd1">existing</span></div>
+<div style="font-size: 13px; line-height: 1.45; color: #9aa3ab">Scene poses already stream as SceneEventMessage. Adding the actor's objid lets Story view show the right portrait; the "ooc" tag drives the OOC band.</div>
+<pre style="margin: 0; padding: 14px 16px; border-radius: 12px; background: #0a0b0c; border: 1px solid #1d2024; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.55; color: #c4cbd1; white-space: pre; overflow: hidden">// realtime group game.scene.{id}, not OOB
+{ &quot;SceneId&quot;: 42, &quot;EventType&quot;: &quot;pose&quot;,
+  &quot;PoseId&quot;: 1881,
+  &quot;ActorName&quot;: &quot;Wren Halloway&quot;,
+  &quot;ActorObjId&quot;: &quot;#301:1718300000&quot;, // new
+  &quot;Content&quot;: &quot;brb, making tea&quot;,
+  &quot;Tags&quot;: [&quot;ooc&quot;],
+  &quot;Timestamp&quot;: 1790729280000 }</pre>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8790; margin-right: 4px">Drives</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Story view</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">OOC band</span></div>
+<div style="font-size: 12px; line-height: 1.45; color: #9aa3ab">Outside a scene there is no Story view; Terminal shows the raw stream.</div>
+</section>
+<section style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700">Character sheet</span><span style="padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; background: #1c1f23; color: #c4cbd1">existing</span></div>
+<div style="font-size: 13px; line-height: 1.45; color: #9aa3ab">Not OOB. Clicking a character with "profile": true fetches the profile schema and data over HTTP and renders it as an Area 21 view.</div>
+<pre style="margin: 0; padding: 14px 16px; border-radius: 12px; background: #0a0b0c; border: 1px solid #1d2024; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.55; color: #c4cbd1; white-space: pre; overflow: hidden">GET http/profile/schema
+GET http/profile?objid=#312:1718000000
+→ SchemaViewRenderer (compact)
+
+Gallery: portal-managed images,
+is_profile_image marks the portrait.</pre>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8790; margin-right: 4px">Drives</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Character sheet</span><span style="padding: 3px 9px; border-radius: 10px; background: #1c1f23; font-size: 12px; color: #d2d8dd">Portrait viewer</span></div>
+
+</section>
+<section style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px; padding: 6px 18px 10px"><div style="padding: 10px 0; border-bottom: 1px solid #1d2024"><div style="font-weight: 700; font-size: 14px">Versioned, additive</div><div style="font-size: 13px; line-height: 1.5; color: #9aa3ab">Every payload carries <b>"v": 2</b>. Today's parser reads only dbref, name and cmd and ignores the rest, so v2 is backward compatible with the current Play page.</div></div><div style="padding: 10px 0; border-bottom: 1px solid #1d2024"><div style="font-weight: 700; font-size: 14px">Softcode decides, the portal draws</div><div style="font-size: 13px; line-height: 1.5; color: #9aa3ab">Visibility, status words, name colours, actions, locks and hints all come from softcode (FN`WHOROW / FN`EXITROW). The client invents none of them.</div></div><div style="padding: 10px 0; border-bottom: 1px solid #1d2024"><div style="font-weight: 700; font-size: 14px">Whole lists, not diffs</div><div style="font-size: 13px; line-height: 1.5; color: #9aa3ab">Send the full list on every change, as ROOM`CONTENTS does now. Idempotent and easy to recover after a reconnect.</div></div><div style="padding: 10px 0; border-bottom: 1px solid #1d2024"><div style="font-weight: 700; font-size: 14px">Images by reference</div><div style="font-size: 13px; line-height: 1.5; color: #9aa3ab">URLs into the portal asset library with alt, width and height (no layout jump) and an optional focal point for cropping. Never inline image data.</div></div><div style="padding: 10px 0; border-bottom: 1px solid #1d2024"><div style="font-weight: 700; font-size: 14px">Stable identity</div><div style="font-size: 13px; line-height: 1.5; color: #9aa3ab">Use objid alongside dbref so cached images and open sheets survive a recycled dbref.</div></div><div style="padding: 10px 0; border-bottom: 1px solid #1d2024"><div style="font-weight: 700; font-size: 14px">Privacy by omission</div><div style="font-size: 13px; line-height: 1.5; color: #9aa3ab">Dark exits, hidden objects and idle times are left out by softcode, not hidden by the client.</div></div></section>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#00f5b7","options":["#00f5b7","#ffb454","#b39cff","#5aa9ff"]},"$preview":{"width":1280,"height":1380}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#00f5b7' };
+  }
+}
+</script>
+</body>
+</html>
