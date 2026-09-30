@@ -4980,4 +4980,28 @@
   <data name="LayAppOobPackageHelper" xml:space="preserve">
     <value>Данни на живо от играта, напр. weather.now; заменя URL адреса за данни</value>
   </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Днес</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Вчера</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Нови</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Съобщение до {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Канал</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Лични съобщения</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Още няма нищо.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Обратно към сцената</value>
+  </data>
 </root>

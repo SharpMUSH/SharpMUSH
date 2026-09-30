@@ -4980,4 +4980,28 @@
   <data name="LayAppOobPackageHelper" xml:space="preserve">
     <value>Данные в реальном времени от игры, например weather.now; заменяет URL данных</value>
   </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Сегодня</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Вчера</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Новые</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Сообщение: {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Канал</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Личные сообщения</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Пока ничего нет.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Вернуться к сцене</value>
+  </data>
 </root>

@@ -4980,4 +4980,28 @@
   <data name="LayAppOobPackageHelper" xml:space="preserve">
     <value>A játék által küldött élő adatok, pl. weather.now; az adat-URL helyett</value>
   </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Ma</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Tegnap</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Új</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Üzenet ide: {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Csatorna</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Privát üzenetek</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Még nincs itt semmi.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Vissza a jelenethez</value>
+  </data>
 </root>

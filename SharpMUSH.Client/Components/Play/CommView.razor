@@ -1,0 +1,194 @@
+@using SharpMUSH.Client.Services
+@inject ICommFeed Feed
+@inject CharacterDirectoryService Directory
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* D1 §5.1 / board 06 the channel view: one channel, or one page conversation, in main. Lines are grouped
+   by day ("Today", "Yesterday", a date) and by author (a header per run of lines within five minutes), with
+   a "New" divider where the lines unread at opening begin. Bodies are text, never markup. The composer
+   sends @chat to a channel, or page to the conversation's people by dbref (a quoted name when there is no
+   objid). While open, the feed's Viewing is this key, so its lines do not count as unread. *@
+<section class="comm" aria-labelledby="comm-title">
+    <header class="comm-head">
+        <div class="comm-titles">
+            <h2 class="comm-title" id="comm-title">@Title</h2>
+            <div class="comm-sub">@(IsConversation ? Loc["NavPlayPagesSub"] : Loc["NavPlayChannelSub"])</div>
+        </div>
+        <button type="button" class="comm-close" aria-label="@Loc["NavPlayBackToScene"]" title="@Loc["NavPlayBackToScene"]" @onclick="OnClose">
+            <MudIcon Icon="@Icons.Material.Outlined.Close" Size="Size.Small" />
+        </button>
+    </header>
+    <div class="comm-scroll">
+        <div class="comm-lines">
+            @if (_lines.Count == 0)
+            {
+                <div class="comm-empty">@Loc["NavPlayNothingYet"]</div>
+            }
+            @for (var i = 0; i < _lines.Count; i++)
+            {
+                var line = _lines[i];
+                var day = line.Timestamp.ToLocalTime().Date;
+                if (i == 0 || _lines[i - 1].Timestamp.ToLocalTime().Date != day)
+                {
+                    <div class="comm-day"><span>@DayLabel(day)</span></div>
+                }
+                if (i == _newAt)
+                {
+                    <div class="comm-new" role="separator"><span>@Loc["NavPlayNewLines"]</span></div>
+                }
+                if (StartsGroup(i))
+                {
+                    var end = GroupEnd(i);
+                    <div class="comm-group">
+                        @Avatar(line)
+                        <div class="comm-body">
+                            <div class="comm-meta">
+                                <span class="comm-name">@line.From</span>
+                                <span class="comm-time">@line.Timestamp.ToLocalTime().ToString("HH:mm")</span>
+                            </div>
+                            @for (var j = i; j <= end; j++)
+                            {
+                                <div class="comm-text">@_lines[j].Text</div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+    <div class="comm-compose">
+        <BottomBar>
+            <div class="comm-compose-row">
+                <input class="comm-input" type="text" placeholder="@Loc["NavPlayMessageTo", Target]" aria-label="@Loc["NavPlayMessageTo", Target]"
+                       value="@_text" @oninput="e => _text = e.Value?.ToString() ?? string.Empty" @onkeydown="OnKeyAsync" />
+                <button type="button" class="comm-send" disabled="@string.IsNullOrWhiteSpace(_text)" @onclick="SendAsync">@Loc["Send"]</button>
+            </div>
+        </BottomBar>
+    </div>
+</section>
+
+@code {
+    /// <summary>A channel's name, or a conversation's key.</summary>
+    [Parameter, EditorRequired] public string Key { get; set; } = string.Empty;
+
+    /// <summary>A command line to send (@chat or page).</summary>
+    [Parameter] public EventCallback<string> OnSend { get; set; }
+
+    /// <summary>Back to the scene or the terminal.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>A run of lines from one author within this long shares one header.</summary>
+    private static readonly TimeSpan GroupGap = TimeSpan.FromMinutes(5);
+
+    private IReadOnlyList<CommMessage> _lines = [];
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _directory = [];
+    private string? _openedKey;
+    private int _newAt = -1;
+    private string _text = string.Empty;
+
+    private CommConversation? Conversation => Feed.Conversations.FirstOrDefault(c => c.Key == Key);
+
+    private bool IsConversation => Conversation is not null;
+
+    private string Title => Conversation is { } c ? string.Join(", ", c.With) : $"# {Key}";
+
+    /// <summary>What the composer says it writes to: "#Public", or the people.</summary>
+    private string Target => Conversation is { } c ? string.Join(", ", c.With) : $"#{Key}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Feed.Changed += OnFeedChanged;
+        if (await Directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
+        {
+            _directory = rows;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(_openedKey, Key, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        // The "New" divider marks the lines that were unread when the view opened; they are read from now.
+        _openedKey = Key;
+        _text = string.Empty;
+        _lines = Feed.Messages(Key);
+        var unread = Conversation?.Unread ?? Feed.Channels.FirstOrDefault(c => c.Name == Key)?.Unread ?? 0;
+        _newAt = unread > 0 && unread < _lines.Count ? _lines.Count - unread : -1;
+        Feed.Viewing = Key;
+        Feed.MarkRead(Key);
+    }
+
+    private void OnFeedChanged()
+    {
+        _lines = Feed.Messages(Key);
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private bool StartsGroup(int i) =>
+        i == 0 || i == _newAt || !SameRun(_lines[i - 1], _lines[i]);
+
+    private int GroupEnd(int i)
+    {
+        var end = i;
+        while (end + 1 < _lines.Count && end + 1 != _newAt && SameRun(_lines[end], _lines[end + 1])) end++;
+        return end;
+    }
+
+    private static bool SameRun(CommMessage a, CommMessage b) =>
+        string.Equals(a.From, b.From, StringComparison.Ordinal)
+        && string.Equals(a.FromObjId, b.FromObjId, StringComparison.Ordinal)
+        && a.Timestamp.ToLocalTime().Date == b.Timestamp.ToLocalTime().Date
+        && b.Timestamp - a.Timestamp <= GroupGap;
+
+    private string DayLabel(DateTime day)
+    {
+        var today = DateTime.Now.Date;
+        return day == today ? Loc["NavPlayToday"]
+            : day == today.AddDays(-1) ? Loc["NavPlayYesterday"]
+            : day.ToString("D");
+    }
+
+    private RenderFragment Avatar(CommMessage line) => __builder =>
+    {
+        var image = _directory.FirstOrDefault(r => line.FromObjId is not null && r.Objid == line.FromObjId)?.Image;
+        @if (ImageUrlPolicy.IsRenderable(image))
+        {
+            <img class="comm-avatar" src="@image!.Trim()" alt="" />
+        }
+        else
+        {
+            var hue = NameHue.Of(line.From);
+            <span class="comm-avatar comm-avatar--initials" style="background:hsl(@hue 30% 24%);color:hsl(@hue 45% 82%);" aria-hidden="true">@Initials.From(line.From)</span>
+        }
+    };
+
+    // Enter in a one-line input inserts nothing, so it needs no preventDefault.
+    private Task OnKeyAsync(KeyboardEventArgs e) => e.Key == "Enter" ? SendAsync() : Task.CompletedTask;
+
+    private async Task SendAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_text)) return;
+        var text = MushComposeEncoder.Encode(_text.Trim());
+        var line = Conversation is { } c ? $"page {PageTargets(c)}={text}" : $"@chat {Key}={text}";
+        _text = string.Empty;
+        await OnSend.InvokeAsync(line);
+    }
+
+    /// <summary>Each person by dbref (the objid's number) when known, else by name in quotes: a name may have spaces.</summary>
+    private static string PageTargets(CommConversation c) =>
+        string.Join(' ', c.With.Select((name, i) =>
+            i < c.WithObjIds.Count && c.WithObjIds[i] is { Length: > 0 } objid ? objid.Split(':')[0] : $"\"{name}\""));
+
+    public void Dispose()
+    {
+        Feed.Changed -= OnFeedChanged;
+        if (string.Equals(Feed.Viewing, _openedKey, StringComparison.Ordinal))
+        {
+            Feed.Viewing = null;
+        }
+    }
+}

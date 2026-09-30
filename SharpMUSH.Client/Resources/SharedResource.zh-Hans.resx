@@ -4980,4 +4980,28 @@
   <data name="LayAppOobPackageHelper" xml:space="preserve">
     <value>游戏推送的实时数据，例如 weather.now；替代数据 URL</value>
   </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>今天</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>昨天</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>新消息</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>发送给 {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>私信</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>这里还没有内容。</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>返回场景</value>
+  </data>
 </root>

@@ -4233,4 +4233,28 @@
   <data name="LayAppOobPackageHelper" xml:space="preserve">
     <value>Données en direct envoyées par le jeu, p. ex. weather.now ; remplace l’URL de données</value>
   </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Aujourd'hui</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Hier</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nouveau</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Message à {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Messages privés</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Rien pour l'instant.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Retour à la scène</value>
+  </data>
 </root>

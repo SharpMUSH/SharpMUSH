@@ -4980,4 +4980,28 @@
   <data name="LayAppOobPackageHelper" xml:space="preserve">
     <value>Livedata som spelet skickar, t.ex. weather.now; ersätter data-URL:en</value>
   </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>I dag</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>I går</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nytt</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Meddelande till {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Privata meddelanden</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Inget här än.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Tillbaka till scenen</value>
+  </data>
 </root>

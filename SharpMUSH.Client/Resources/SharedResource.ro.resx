@@ -4980,4 +4980,28 @@
   <data name="LayAppOobPackageHelper" xml:space="preserve">
     <value>Date în timp real trimise de joc, de ex. weather.now; înlocuiește URL-ul de date</value>
   </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Astăzi</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Ieri</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nou</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Mesaj către {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Mesaje private</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Încă nimic aici.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Înapoi la scenă</value>
+  </data>
 </root>

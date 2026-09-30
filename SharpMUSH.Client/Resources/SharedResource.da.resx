@@ -4980,4 +4980,28 @@
   <data name="LayAppOobPackageHelper" xml:space="preserve">
     <value>Live-data sendt af spillet, f.eks. weather.now; erstatter data-URL'en</value>
   </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>I dag</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>I går</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nye</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Skriv til {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Private beskeder</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Intet her endnu.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Tilbage til scenen</value>
+  </data>
 </root>

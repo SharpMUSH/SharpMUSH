@@ -67,7 +67,14 @@ else
                     <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
                                 Minimised="@_bannerMinimised" MinimisedChanged="OnBannerMinimisedAsync" />
                 }
-                <div class="play-card">
+                @if (_commKey is { } commKey)
+                {
+                    <div class="play-comm">
+                        <CommView Key="@commKey" OnSend="SendAsync" OnClose="CloseComm" />
+                    </div>
+                }
+                @* Hidden, not removed, under the channel view: the terminal keeps its connection and output. *@
+                <div class="play-card" hidden="@(_commKey is not null)">
                     <PlaySceneCard Title="@CardTitle" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged">
                         <Controls>
                             @if (View == PlayView.Terminal)
@@ -199,7 +206,10 @@ else
     private PlayView View => InScene ? _chosenView ?? PlayView.Story : PlayView.Terminal;
 
     /// <summary>The sidebar's current row: the In scene row only while the Story is shown.</summary>
-    private string? SidebarCurrent => View == PlayView.Story ? null : string.Empty;
+    private string? SidebarCurrent => _commKey ?? (View == PlayView.Story ? null : string.Empty);
+
+    /// <summary>The channel or conversation main is showing (board 06), or null for the scene card.</summary>
+    private string? _commKey;
 
     private string CardTitle =>
         Room.Info?.Scene?.Title is { Length: > 0 } title ? title
@@ -417,17 +427,16 @@ else
         }
     }
 
-    private void OpenScene() => _chosenView = PlayView.Story;
-
-    /// <summary>
-    /// A channel or conversation. Until the channel view exists (README §5.1, board 06) its lines are in
-    /// the terminal, which is where this goes.
-    /// </summary>
-    private void OpenComm(string key)
+    private void OpenScene()
     {
-        _chosenView = PlayView.Terminal;
-        Comms.MarkRead(key);
+        _commKey = null;
+        _chosenView = PlayView.Story;
     }
+
+    /// <summary>A channel or conversation opens the channel view in main (README §5.1, board 06).</summary>
+    private void OpenComm(string key) => _commKey = key;
+
+    private void CloseComm() => _commKey = null;
 
     private void OpenSceneFromSheet()
     {

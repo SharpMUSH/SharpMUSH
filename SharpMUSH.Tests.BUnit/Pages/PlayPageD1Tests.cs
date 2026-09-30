@@ -25,6 +25,7 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 public class PlayPageD1Tests : TrackingBunitContext
 {
 	private readonly OobChannelStore _store = new();
+	private readonly TestCommFeed _comms = new();
 	private readonly IPlayTerminalService _play = Substitute.For<IPlayTerminalService>();
 
 	public PlayPageD1Tests()
@@ -56,7 +57,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		hostEnv.Environment.Returns("Production");
 		Services.AddSingleton(hostEnv);
 
-		PlayPageServices.Install(Services);
+		PlayPageServices.Install(Services, _comms);
 	}
 
 	/// <summary>The shell's page-sidebar outlet and a popover provider beside the page, as MainLayout composes them.</summary>
@@ -231,6 +232,32 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".sheet"), TimeSpan.FromSeconds(5));
 		cut.FindAll(".sheet-actions > *")[1].Click();
 		await Assert.That(cut.Find(".composer textarea").GetAttribute("value")).IsEqualTo("page #312=");
+	}
+
+	[Test]
+	public async Task AChannelRow_OpensTheChannelViewInMain_AndCloseReturnsToTheScene()
+	{
+		_comms.ChannelList = [new CommChannel("Public", 1)];
+		_comms.Lines["Public"] = [new CommMessage("channel", "Public", [], "Wren Halloway", null, "anyone up for a scene?", DateTimeOffset.Now)];
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".test-pagebar .play-side-channels .kit-row"), TimeSpan.FromSeconds(5));
+		cut.Find(".test-pagebar .play-side-channels .kit-row").Click();
+
+		await Assert.That(cut.Find(".comm-title").TextContent).IsEqualTo("# Public");
+		await Assert.That(cut.Find(".play-card").HasAttribute("hidden")).IsTrue();
+		await Assert.That(cut.FindComponents<GlobalTerminal>().Count).IsEqualTo(1).Because("the terminal keeps its connection and output");
+		await Assert.That(cut.Find(".test-pagebar .play-side-channels .kit-row").GetAttribute("aria-current")).IsEqualTo("page");
+		await Assert.That(cut.Find(".test-pagebar .play-side-scene .kit-row").GetAttribute("aria-current")).IsNull();
+
+		cut.Find(".comm-compose input").Input("I'm in");
+		cut.Find(".comm-compose button.comm-send").Click();
+		await _play.Received(1).SendAsync("@chat Public=I'm in");
+
+		cut.Find("button.comm-close").Click();
+		await Assert.That(cut.FindAll(".comm").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".play-card").HasAttribute("hidden")).IsFalse();
+		await Assert.That(_comms.Viewing).IsNull();
 	}
 
 	[Test]

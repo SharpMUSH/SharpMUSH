@@ -4980,4 +4980,28 @@
   <data name="LayAppOobPackageHelper" xml:space="preserve">
     <value>Live gegevens die het spel stuurt, bijv. weather.now; vervangt de gegevens-URL</value>
   </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Vandaag</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Gisteren</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Nieuw</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Bericht aan {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Kanaal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Privéberichten</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Nog niets hier.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Terug naar de scène</value>
+  </data>
 </root>

@@ -4980,4 +4980,28 @@
   <data name="LayAppOobPackageHelper" xml:space="preserve">
     <value>Podaci uživo koje šalje igra, npr. weather.now; zamjenjuje URL podataka</value>
   </data>
+  <data name="NavPlayToday" xml:space="preserve">
+    <value>Danas</value>
+  </data>
+  <data name="NavPlayYesterday" xml:space="preserve">
+    <value>Jučer</value>
+  </data>
+  <data name="NavPlayNewLines" xml:space="preserve">
+    <value>Novo</value>
+  </data>
+  <data name="NavPlayMessageTo" xml:space="preserve">
+    <value>Poruka za {0}</value>
+  </data>
+  <data name="NavPlayChannelSub" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="NavPlayPagesSub" xml:space="preserve">
+    <value>Privatne poruke</value>
+  </data>
+  <data name="NavPlayNothingYet" xml:space="preserve">
+    <value>Ovdje još nema ničega.</value>
+  </data>
+  <data name="NavPlayBackToScene" xml:space="preserve">
+    <value>Natrag na scenu</value>
+  </data>
 </root>
