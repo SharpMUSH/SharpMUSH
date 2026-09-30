@@ -1,0 +1,86 @@
+using Bunit;
+using SharpMUSH.Client.Components.Kit;
+
+namespace SharpMUSH.Tests.BUnit.Components.Kit;
+
+public class SidebarRowTests : BunitContext
+{
+	[Test]
+	public async Task WithHref_RendersAnAnchor_AndCurrentSetsAriaCurrent()
+	{
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Salt Market").Add(x => x.Href, "/scenes/42").Add(x => x.IsCurrent, true));
+		var a = cut.Find("a.kit-row");
+		await Assert.That(a.GetAttribute("href")).IsEqualTo("/scenes/42");
+		await Assert.That(a.GetAttribute("aria-current")).IsEqualTo("page");
+		await Assert.That(a.ClassList).Contains("kit-row--current");
+	}
+
+	[Test]
+	public async Task WithoutHref_RendersAButton_ThatRaisesOnClick()
+	{
+		var clicked = false;
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Public").Add(x => x.OnClick, () => clicked = true));
+		var b = cut.Find("button.kit-row");
+		await Assert.That(b.GetAttribute("type")).IsEqualTo("button");
+		b.Click();
+		await Assert.That(clicked).IsTrue();
+	}
+
+	[Test]
+	public async Task ImageLead_RendersImg_OnlyForARenderableUrl()
+	{
+		var ok = Render<SidebarRow>(p => p.Add(x => x.Label, "x").Add(x => x.Lead, SidebarRow.SidebarLead.Image).Add(x => x.ImageUrl, "/a.jpg").Add(x => x.Name, "Lower Docks"));
+		await Assert.That(ok.Find("img.kit-row-img").GetAttribute("src")).IsEqualTo("/a.jpg");
+		var bad = Render<SidebarRow>(p => p.Add(x => x.Label, "x").Add(x => x.Lead, SidebarRow.SidebarLead.Image).Add(x => x.ImageUrl, "javascript:1").Add(x => x.Name, "Lower Docks"));
+		await Assert.That(bad.FindAll("img").Count).IsEqualTo(0);
+		await Assert.That(bad.Find(".kit-row-fallback")).IsNotNull();
+	}
+
+	[Test]
+	public async Task AvatarLead_WithoutImage_ShowsInitialsOnATintedFill()
+	{
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Dace Kellan").Add(x => x.Lead, SidebarRow.SidebarLead.Avatar).Add(x => x.Name, "Dace Kellan"));
+		var fb = cut.Find(".kit-row-avatar.kit-row-fallback");
+		await Assert.That(fb.TextContent.Trim()).IsEqualTo("DK");
+		await Assert.That(fb.GetAttribute("style")).Contains("hsl(");
+	}
+
+	[Test]
+	public async Task GroupAvatar_StacksTwoImages()
+	{
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Tomas, Dace").Add(x => x.Lead, SidebarRow.SidebarLead.Avatar).Add(x => x.ImageUrl, "/t.jpg").Add(x => x.ImageUrl2, "/d.jpg"));
+		await Assert.That(cut.FindAll("img.kit-row-avatar").Count).IsEqualTo(2);
+		await Assert.That(cut.Find(".kit-row-lead").ClassList).Contains("kit-row-lead--group");
+	}
+
+	[Test]
+	public async Task Unread_RendersAPill_AndBoldsTheRow()
+	{
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Public").Add(x => x.Lead, SidebarRow.SidebarLead.Channel).Add(x => x.Unread, 3));
+		await Assert.That(cut.Find(".kit-row-unread").TextContent).IsEqualTo("3");
+		await Assert.That(cut.Find(".kit-row").ClassList).Contains("kit-row--unread");
+	}
+
+	[Test]
+	public async Task Count_RendersDimCount()
+	{
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Theme").Add(x => x.Count, 12));
+		await Assert.That(cut.Find(".kit-row-count").TextContent).IsEqualTo("12");
+	}
+
+	[Test]
+	public async Task Collapsed_HidesTheLabelButKeepsItAsTitle()
+	{
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Theme").Add(x => x.Collapsed, true));
+		await Assert.That(cut.FindAll(".kit-row-label").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".kit-row").GetAttribute("title")).IsEqualTo("Theme");
+		await Assert.That(cut.Find(".kit-row").GetAttribute("aria-label")).IsEqualTo("Theme");
+	}
+
+	[Test]
+	public async Task Collapsed_WithUnread_StillShowsTheBadge()
+	{
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Public").Add(x => x.Lead, SidebarRow.SidebarLead.Channel).Add(x => x.Unread, 2).Add(x => x.Collapsed, true));
+		await Assert.That(cut.Find(".kit-row-unread--badge").TextContent).IsEqualTo("2");
+	}
+}
