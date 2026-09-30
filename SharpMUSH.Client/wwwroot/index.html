@@ -20,11 +20,8 @@
     <link rel="icon" type="image/svg" href="assets/Logo.svg" />
     <link rel="preload" href="/fonts/cascadia-mono.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
     <link rel="preload" href="/fonts/hanken-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
-    <!-- #[.{fingerprint}] is replaced with the file's content hash at build time
-         (OverrideHtmlAssetPlaceholders), so these URLs change whenever their content does and the
-         server can let browsers cache them for a year. -->
-    <link href="css/custom#[.{fingerprint}].css" rel="stylesheet" />
-    <link href="SharpMUSH.Client#[.{fingerprint}].styles.css" rel="stylesheet" />
+    <link href="css/custom.css" rel="stylesheet" />
+    <link href="SharpMUSH.Client.styles.css" rel="stylesheet" />
     <script type="importmap"></script>
 </head>
 
@@ -52,14 +49,14 @@
          Monaco (3.67 MB) and Mermaid (2.57 MB) were fetched by every visitor of the home page,
          who mostly never opens the softcode editor or a wiki diagram. They load on demand now,
          through the loader below, and the pages that need them await it before rendering. -->
-    <script src="js/lazy-assets#[.{fingerprint}].js"></script>
-    <script src="js/portal-interop#[.{fingerprint}].js"></script>
+    <script src="js/lazy-assets.js"></script>
+    <script src="js/portal-interop.js"></script>
     <!-- Terminal grid measurement and resize observer -->
-    <script src="js/terminalMetrics#[.{fingerprint}].js"></script>
-    <script src="js/layout#[.{fingerprint}].js"></script>
+    <script src="js/terminalMetrics.js"></script>
+    <script src="js/layout.js"></script>
     <!-- The wiki post-render pass (mermaid run + anchor scroll). Mermaid itself is fetched by this
          script only when a page actually contains a diagram. -->
-    <script src="js/wiki-render#[.{fingerprint}].js"></script>
+    <script src="js/wiki-render.js"></script>
     <!-- Manual start so the runtime boots in the visitor's culture. Blazor fetches the satellite
          (translation) assemblies for applicationCulture alongside the rest of the boot resources;
          a culture that only arrives later, when Program.cs applies the stored locale, has its
@@ -79,7 +76,7 @@
         })();
         Blazor.start({ applicationCulture: locale });
     </script>
-    <script src="_content/MudBlazor/MudBlazor.min#[.{fingerprint}].js"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 
 </body>
 

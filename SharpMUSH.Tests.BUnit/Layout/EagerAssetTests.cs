@@ -16,15 +16,13 @@ public class EagerAssetTests
 	private static string IndexHtml() =>
 		File.ReadAllText(Path.Join(AppContext.BaseDirectory, "client", "index.html"));
 
-	/// <summary>Script/link tags in index.html — everything a visitor fetches before Blazor starts —
-	/// as the paths they name: the build replaces a <c>#[.{fingerprint}]</c> marker with the file's
-	/// content hash, so the marker is dropped here.</summary>
+	/// <summary>Script/link tags in index.html — everything a visitor fetches before Blazor starts.</summary>
 	private static IEnumerable<string> EagerReferences()
 	{
 		var html = IndexHtml();
 		foreach (Match m in Regex.Matches(html, "(?:src|href)\\s*=\\s*\"([^\"]+)\"", RegexOptions.IgnoreCase))
 		{
-			yield return m.Groups[1].Value.Replace("#[.{fingerprint}]", "", StringComparison.Ordinal);
+			yield return m.Groups[1].Value;
 		}
 	}
 

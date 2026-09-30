@@ -16,10 +16,7 @@ function boot() {
         getElementById: id => id === 'output' ? output : null
     }});
     const html = readFileSync(new URL('index.html', root), 'utf8');
-    for (const [, reference] of html.matchAll(/<script src="(js\/[^"]+)"/g)) {
-        // The build swaps the #[.{fingerprint}] marker for the file's content hash; the source file on
-        // disk carries no hash at all.
-        const src = reference.replace('#[.{fingerprint}]', '');
+    for (const [, src] of html.matchAll(/<script src="(js\/[^"]+)"/g)) {
         vm.runInContext(readFileSync(new URL(src, root), 'utf8'), context, { filename: src });
     }
     return { terminal: context.window.SharpMUSH.Terminal, helpers: context.window.SharpMUSH, output, listeners };
