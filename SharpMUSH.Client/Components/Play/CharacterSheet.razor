@@ -179,8 +179,11 @@
         await RunFocusAsync("sharpmushLayout.rememberFocus");
 
         // A second name chosen while the first is loading must not be overwritten by the first's answers.
-        var profile = await Profiles.GetAsync(name);
-        var gallery = await Gallery.ListAsync(name);
+        // The two are independent, so both go out at once.
+        var profileTask = Profiles.GetAsync(name);
+        var galleryTask = Gallery.ListAsync(name);
+        var profile = await profileTask;
+        var gallery = await galleryTask;
         if (generation != _generation) return;
 
         _profile = profile is CharacterProfileData data ? data : null;

@@ -40,23 +40,19 @@ public static partial class WikiImages
 	public static string StripFirstImage(string html, string url)
 	{
 		if (string.IsNullOrEmpty(html) || string.IsNullOrEmpty(url)) return html;
-		foreach (Match match in ImgTag().Matches(html))
+		var match = ImgTag().Matches(html).FirstOrDefault(m => WebUtility.HtmlDecode(m.Groups[1].Value) == url);
+		if (match is null) return html;
+
+		var start = match.Index;
+		var end = match.Index + match.Length;
+		var open = OpeningParagraphBefore().Match(html[..start]);
+		var close = ClosingParagraphAfter().Match(html[end..]);
+		if (open.Success && close.Success)
 		{
-			if (WebUtility.HtmlDecode(match.Groups[1].Value) != url) continue;
-
-			var start = match.Index;
-			var end = match.Index + match.Length;
-			var open = OpeningParagraphBefore().Match(html[..start]);
-			var close = ClosingParagraphAfter().Match(html[end..]);
-			if (open.Success && close.Success)
-			{
-				start -= open.Length;
-				end += close.Length;
-			}
-
-			return html.Remove(start, end - start);
+			start -= open.Length;
+			end += close.Length;
 		}
 
-		return html;
+		return html.Remove(start, end - start);
 	}
 }

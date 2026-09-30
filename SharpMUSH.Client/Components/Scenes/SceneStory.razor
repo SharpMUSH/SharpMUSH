@@ -288,7 +288,7 @@
     private void RebuildMentions()
     {
         var targets = new Dictionary<string, StoryMentions.Target>(StringComparer.OrdinalIgnoreCase);
-        foreach (var o in Occupants.Where(o => o.Type is null or "player" && !string.IsNullOrWhiteSpace(o.Name)))
+        foreach (var o in Occupants.Where(o => (o.Type is null or "player") && !string.IsNullOrWhiteSpace(o.Name)))
         {
             targets.TryAdd(o.Name.Trim(), new StoryMentions.Target(o.Name.Trim(), o.Color, o.You || IsViewer(o.Name)));
         }

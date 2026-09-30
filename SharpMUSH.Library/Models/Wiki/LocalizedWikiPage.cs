@@ -29,8 +29,9 @@ namespace SharpMUSH.Library.Models.Wiki;
 /// <param name="Published">The <em>served</em> row's flag — the translation's when a translation is
 /// served, the page's when the source is served.</param>
 /// <param name="RevisionNumber">The served row's revision counter.</param>
-/// <param name="LastEditorDbref">Who last edited the served row — the translator's edit, not the
-/// source page's, when a translation is served.</param>
+/// <param name="LastEditorDbref">Who last edited the served row: a translation's editor is not the
+/// source page's.</param>
+/// <param name="UpdatedAt">When the served row was last edited.</param>
 public sealed record LocalizedWikiPage(
 	WikiPage Page,
 	string Locale,
@@ -41,7 +42,8 @@ public sealed record LocalizedWikiPage(
 	string PlainText,
 	bool Published,
 	int RevisionNumber,
-	string LastEditorDbref)
+	string LastEditorDbref,
+	DateTimeOffset UpdatedAt)
 {
 	/// <summary>
 	/// True when the served locale is a different <em>language</em> from the requested one, which is

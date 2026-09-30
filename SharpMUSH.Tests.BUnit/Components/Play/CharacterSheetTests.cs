@@ -197,4 +197,30 @@ public class CharacterSheetTests : TrackingBunitContext
 		await Assert.That(cut.Find("img.sheet-portrait").GetAttribute("src")).IsEqualTo("/api/wiki-assets/t/room.jpg");
 		await Assert.That(Nav.Uri).DoesNotContain("character");
 	}
+
+	[Test]
+	public async Task TheProfileAndTheGallery_AreAskedForTogether()
+	{
+		// The profile's answer is held until the gallery has been asked for: loaded one after the
+		// other, the gallery request never comes while the profile is pending.
+		var galleryAsked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var galleryAskedDuringProfile = false;
+		_fake.OnRequest = async request =>
+		{
+			var path = request.RequestUri!.PathAndQuery;
+			if (path.StartsWith("/api/profile/Tomas%20Reyes/gallery", StringComparison.Ordinal))
+			{
+				galleryAsked.TrySetResult();
+			}
+			else if (path.StartsWith("/http/profile", StringComparison.Ordinal))
+			{
+				galleryAskedDuringProfile = await Task.WhenAny(galleryAsked.Task, Task.Delay(TimeSpan.FromSeconds(2))) == galleryAsked.Task;
+			}
+		};
+
+		var cut = RenderSheet(occupant: Tomas);
+		cut.WaitForAssertion(() => cut.Find(".sheet-gallery-item"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(galleryAskedDuringProfile).IsTrue();
+	}
 }

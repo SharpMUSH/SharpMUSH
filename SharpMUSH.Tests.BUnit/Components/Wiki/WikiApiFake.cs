@@ -33,7 +33,20 @@ internal sealed class WikiApiFake : HttpMessageHandler
 		Page("4", "notes", "Loose Notes", null, null, null),
 	];
 
+	/// <summary>A category of 250 pages, more than any one listing request returns.</summary>
+	public static readonly string[] BigCategory =
+		[.. Enumerable.Range(1, 250).Select(i => Page("1", $"big_{i}", $"Big {i}", "big"))];
+
 	public bool Refuse { get; set; }
+
+	/// <summary>Pages a category listing the way the API does: <c>skip</c> and <c>take</c> from the query.</summary>
+	public static string Paged(HttpRequestMessage request, string[] pages)
+	{
+		var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri!.Query);
+		var skip = int.TryParse(query["skip"], out var s) ? s : 0;
+		var take = int.TryParse(query["take"], out var t) ? t : 50;
+		return "[" + string.Join(",", pages.Skip(skip).Take(take)) + "]";
+	}
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
@@ -43,9 +56,10 @@ internal sealed class WikiApiFake : HttpMessageHandler
 		{
 			"/api/wiki/pages" => "[" + string.Join(",", AllPages) + "]",
 			"/api/wiki/recent" => "[" + string.Join(",", AllPages.Reverse()) + "]",
-			"/api/wiki/category/guides" => "[" + AllPages[0] + "," + AllPages[1] + "]",
-			"/api/wiki/category/lore" => "[" + AllPages[2] + "]",
+			"/api/wiki/category/guides" => Paged(request, [AllPages[0], AllPages[1]]),
+			"/api/wiki/category/lore" => Paged(request, [AllPages[2]]),
 			"/api/wiki/category/empty" => "[]",
+			"/api/wiki/category/big" => Paged(request, BigCategory),
 			_ => null,
 		};
 		return Task.FromResult(body is null

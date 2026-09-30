@@ -4927,7 +4927,7 @@
     <value>Поза</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>Кажи</value>
+    <value>Реплика</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>OOC</value>

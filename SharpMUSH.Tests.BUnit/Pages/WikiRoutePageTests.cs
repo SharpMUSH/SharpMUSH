@@ -278,6 +278,28 @@ public class WikiPageRouteTests : TrackingBunitContext
 		await Assert.That(editor.Instance.Article!.Content).IsEqualTo("Content here.");
 		await Assert.That(cut.Markup).Contains("wiki-edit-title");
 	}
+
+	[TUnit.Core.Test]
+	public async Task WikiPageEdit_MissingPage_StartsFromTheTitleTheCreatorEntered()
+	{
+		// The sidebar's New page asks for a title and opens the editor at its slug; the slug alone
+		// ("salt_market") is not what the creator typed.
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/wiki/main/general/salt_market/edit?title=Salt%20Market");
+		var host = Render<Components.MudHarness>(p => p
+				.AddChildContent<SharpMUSH.Client.Pages.WikiPageEdit>(cp => cp
+						.Add(c => c.Slug, "salt_market")
+						.Add(c => c.Ns, "main")
+						.Add(c => c.Category, "general")));
+		var cut = host.FindComponent<SharpMUSH.Client.Pages.WikiPageEdit>();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindComponents<WikiEdit>().Count == 0)
+				throw new InvalidOperationException("editor not rendered yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindComponent<WikiEdit>().Instance.Article!.Title).IsEqualTo("Salt Market");
+	}
 }
 
 /// <summary>
