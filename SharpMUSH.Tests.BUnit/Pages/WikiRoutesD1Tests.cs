@@ -26,9 +26,9 @@ public class WikiRoutesD1Tests : TrackingBunitContext
 	public async Task WikiLayout_HostsTheSidebarBesideTheBody()
 	{
 		_nav.NavigateTo("/wiki");
-		var cut = Render<WikiLayout>(p => p.Add(x => x.Body, b => b.AddMarkupContent(0, "<p id=\"body\">x</p>")));
-		cut.WaitForAssertion(() => cut.Find(".wiki-shell .wiki-side-cats a.kit-row"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Find(".wiki-shell .kit-section-body #body")).IsNotNull();
+		var cut = Render<PageSidebarHost>(h => h.AddChildContent<WikiLayout>(p => p.Add(x => x.Body, b => b.AddMarkupContent(0, "<p id=\"body\">x</p>"))));
+		cut.WaitForAssertion(() => cut.Find(".test-pagebar .wiki-shell .wiki-side-cats a.kit-row"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-section-body.wiki-shell #body")).IsNotNull();
 	}
 
 	[Test]

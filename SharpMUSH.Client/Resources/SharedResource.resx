@@ -4148,4 +4148,10 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>This character's profile could not be read right now.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Collapse the {0} sidebar</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Expand the {0} sidebar</value>
+  </data>
 </root>

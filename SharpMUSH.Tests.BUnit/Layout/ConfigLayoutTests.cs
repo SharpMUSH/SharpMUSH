@@ -47,6 +47,7 @@ public class ConfigLayoutTests : TrackingBunitContext
 			.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
 			.AddSingleton<AdminConfigService>()
 			.AddSingleton<ConfigSchemaService>()
+			.AddSingleton<SidebarCollapseService>()
 			.AddEchoLocalizer();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
@@ -61,11 +62,12 @@ public class ConfigLayoutTests : TrackingBunitContext
 		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/chat");
 		var expectedChat = SchemaBuilder.BuildSchema().Properties.Values.Count(p => p.Category.Equals("Chat", StringComparison.OrdinalIgnoreCase));
 
-		var cut = Render<ConfigLayout>(p => p.Add(x => x.Body, b => b.AddMarkupContent(0, "<p id=\"body\">x</p>")));
+		var cut = Render<PageSidebarHost>(h => h.AddChildContent<ConfigLayout>(p => p.Add(x => x.Body, b => b.AddMarkupContent(0, "<p id=\"body\">x</p>"))));
 
 		cut.WaitForAssertion(() => cut.Find("a[href='/admin/config/chat'] .kit-row-count"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find("a[href='/admin/config/chat'] .kit-row-count").TextContent).IsEqualTo(expectedChat.ToString());
-		await Assert.That(cut.Find(".config-shell .kit-section-body #body")).IsNotNull();
+		await Assert.That(cut.Find(".kit-section-body.config-shell #body")).IsNotNull();
+		await Assert.That(cut.Find(".test-pagebar .kit-pagebar.config-shell")).IsNotNull().Because("the sidebar renders in the shell's page-sidebar slot");
 	}
 
 	[Test]
@@ -74,7 +76,7 @@ public class ConfigLayoutTests : TrackingBunitContext
 		AddServices((_, _) => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
 		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config");
 
-		var cut = Render<ConfigLayout>(p => p.Add(x => x.Body, b => b.AddMarkupContent(0, "x")));
+		var cut = Render<PageSidebarHost>(h => h.AddChildContent<ConfigLayout>(p => p.Add(x => x.Body, b => b.AddMarkupContent(0, "x"))));
 
 		await Assert.That(cut.FindAll("details.config-side-group").Count).IsEqualTo(6);
 		await Assert.That(cut.FindAll(".kit-row-count").Count).IsEqualTo(0);

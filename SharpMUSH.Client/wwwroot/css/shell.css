@@ -152,6 +152,26 @@
 	}
 }
 
+/* ── Page-sidebar slot (D1 §3): a section's SectionShell fills it; empty, the column is gone ── */
+.phosphor-pagebar {
+	flex-shrink: 0;
+	width: var(--side-w);
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	background: var(--surface-3);
+	border-right: 1px solid var(--border-soft);
+	transition: width var(--motion-slide);
+}
+
+.phosphor-pagebar:not(:has(.kit-pagebar)) {
+	display: none;
+}
+
+.phosphor-pagebar:has(.kit-pagebar--collapsed) {
+	width: 62px;
+}
+
 /* ── Widget aside columns (left / right sidebar zones) ── */
 .phosphor-widget-aside {
 	flex-shrink: 0;
@@ -1153,6 +1173,25 @@
 		transition: opacity 0.22s ease;
 	}
 	.phosphor-shell--nav-open .phosphor-nav-backdrop {
+		opacity: 1;
+		pointer-events: auto;
+	}
+
+	/* The page sidebar leaves the flow too: an off-canvas panel opened from the header (below). */
+	.phosphor-pagebar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		bottom: 0;
+		width: min(280px, 86vw);
+		z-index: 1001;
+		transform: translateX(-100%);
+		transition: transform 0.22s ease;
+		box-shadow: 2px 0 24px rgba(0, 0, 0, 0.5);
+	}
+	.phosphor-pagebar:has(.kit-pagebar--collapsed) { width: min(280px, 86vw); }
+	.phosphor-shell--pagebar-open .phosphor-pagebar { transform: translateX(0); }
+	.phosphor-shell--pagebar-open .phosphor-nav-backdrop {
 		opacity: 1;
 		pointer-events: auto;
 	}

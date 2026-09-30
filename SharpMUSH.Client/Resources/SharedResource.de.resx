@@ -4803,4 +4803,10 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Das Profil dieses Charakters kann gerade nicht gelesen werden.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Seitenleiste „{0}“ einklappen</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Seitenleiste „{0}“ ausklappen</value>
+  </data>
 </root>

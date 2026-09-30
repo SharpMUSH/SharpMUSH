@@ -4803,4 +4803,10 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Профиль этого персонажа сейчас не удаётся прочитать.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Свернуть боковую панель «{0}»</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Развернуть боковую панель «{0}»</value>
+  </data>
 </root>

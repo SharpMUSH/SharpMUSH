@@ -64,14 +64,17 @@ public class DesignTokensTests
 	}
 
 	[Test]
-	public async Task TheTopbarHeightIsATokenTheSectionStickyBoxSubtracts()
+	public async Task ThePageSidebar_IsAShellColumnThatScrollsOnItsOwn_AndIsGoneWhenEmpty()
 	{
+		// README §3: the page sidebar is a shell slot, 232px (62 collapsed), not a sticky box inside the
+		// page that has to subtract the chrome above it from 100dvh.
 		var shell = File.ReadAllText(Path.Join(ClientSource.CssRoot, "shell.css"));
-		await Assert.That(shell).Contains("height: var(--topbar-h)")
-			.Because("a sticky box inside the scroll container must know how tall the topbar above it is");
-		var layout = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Components", "Kit", "SectionShell.razor.css"));
-		await Assert.That(layout).Contains("calc(100dvh - var(--topbar-h)")
-			.Because("a 100dvh sticky sidebar under a 60px topbar hides its bottom 60px — the pinned Maintenance rows");
+		var start = shell.IndexOf(".phosphor-pagebar {", StringComparison.Ordinal);
+		var block = shell[start..shell.IndexOf('}', start)];
+		await Assert.That(block).Contains("width: var(--side-w)");
+		await Assert.That(block).Contains("overflow-y: auto");
+		await Assert.That(shell).Contains(".phosphor-pagebar:not(:has(.kit-pagebar))");
+		await Assert.That(shell).Contains(".phosphor-pagebar:has(.kit-pagebar--collapsed)");
 	}
 
 	[Test]

@@ -1,4 +1,5 @@
 @using SharpMUSH.Client.Components
+@using Microsoft.AspNetCore.Components.Sections
 @using SharpMUSH.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @using SharpMUSH.Library.Models.Portal.Widgets
@@ -28,6 +29,12 @@
     <div class="phosphor-nav-backdrop" @onclick="CloseMobileNav"></div>
 
     <NavMenu IsCollapsed="@_sidebarCollapsed" />
+
+    @* D1 §3 page-sidebar slot: a section's layout fills it through SectionShell. The column shows only
+       while a sidebar is mounted (shell.css :has), 232px or the 62px strip. *@
+    <aside class="phosphor-pagebar">
+        <SectionOutlet SectionName="@PageSidebarSlot.Name" />
+    </aside>
 
     @if (_layout is not null && _layout.Settings.LeftSidebarEnabled && !_isConfigRoute)
     {

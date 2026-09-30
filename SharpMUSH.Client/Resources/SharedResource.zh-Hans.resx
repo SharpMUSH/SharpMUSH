@@ -4803,4 +4803,10 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>暂时无法读取此角色的资料。</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>收起“{0}”侧栏</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>展开“{0}”侧栏</value>
+  </data>
 </root>

@@ -4803,4 +4803,10 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Профилът на този персонаж не може да бъде прочетен в момента.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Свий страничната лента „{0}“</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Разгъни страничната лента „{0}“</value>
+  </data>
 </root>

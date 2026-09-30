@@ -4803,4 +4803,10 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Rollfigurens profil kan inte läsas just nu.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Fäll ihop sidopanelen {0}</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Fäll ut sidopanelen {0}</value>
+  </data>
 </root>

@@ -4803,4 +4803,10 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>A karakter profilja most nem olvasható.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>{0} oldalsáv összecsukása</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>{0} oldalsáv kinyitása</value>
+  </data>
 </root>

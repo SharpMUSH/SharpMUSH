@@ -4056,4 +4056,10 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Le profil de ce personnage est illisible pour le moment.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Réduire la barre latérale {0}</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Développer la barre latérale {0}</value>
+  </data>
 </root>

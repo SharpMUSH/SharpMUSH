@@ -4803,4 +4803,10 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Het profiel van dit personage kan nu niet worden gelezen.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Zijbalk {0} inklappen</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Zijbalk {0} uitklappen</value>
+  </data>
 </root>

@@ -4,8 +4,8 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 @* The Characters section (/characters, a profile, character creation): the D1 page sidebar beside
-   the page body. Phase 1 moves the sidebar into the shell's page-sidebar slot. *@
-<SectionShell Class="char-shell" NavLabel="@Loc["Characters"]">
-    <Nav><CharactersSidebar /></Nav>
+   the page body. The sidebar renders in the shell's page-sidebar slot and collapses to its strip. *@
+<SectionShell Key="characters" Class="char-shell" NavLabel="@Loc["Characters"]">
+    <Nav Context="collapsed"><CharactersSidebar Collapsed="@collapsed" /></Nav>
     <ChildContent>@Body</ChildContent>
 </SectionShell>

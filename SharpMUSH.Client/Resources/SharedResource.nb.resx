@@ -4803,4 +4803,10 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Profilen til denne figuren kan ikke leses akkurat nå.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Skjul sidepanelet {0}</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Vis sidepanelet {0}</value>
+  </data>
 </root>

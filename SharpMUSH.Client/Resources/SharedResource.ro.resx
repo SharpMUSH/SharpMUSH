@@ -4803,4 +4803,10 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Profilul acestui personaj nu poate fi citit acum.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Restrânge bara laterală {0}</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Extinde bara laterală {0}</value>
+  </data>
 </root>

@@ -4803,4 +4803,10 @@
   <data name="NavCharProfileUnavailable" xml:space="preserve">
     <value>Nie można teraz odczytać profilu tej postaci.</value>
   </data>
+  <data name="NavSidebarCollapse" xml:space="preserve">
+    <value>Zwiń pasek boczny {0}</value>
+  </data>
+  <data name="NavSidebarExpand" xml:space="preserve">
+    <value>Rozwiń pasek boczny {0}</value>
+  </data>
 </root>

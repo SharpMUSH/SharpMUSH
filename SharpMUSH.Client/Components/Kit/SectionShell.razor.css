@@ -1,41 +1,56 @@
-.kit-section {
-	display: grid;
-	grid-template-columns: var(--side-w) minmax(0, 1fr);
-	gap: 16px;
-	align-items: start;
+/* The sidebar itself renders into the shell's slot (MainLayout's .phosphor-pagebar column), which
+   owns its width, background, border and scrolling; this file styles what the section puts there. */
+.kit-pagebar {
+	position: relative;
 	min-height: 100%;
+	box-sizing: border-box;
 }
 
-.kit-section-nav {
-	min-width: 0;
-	background: var(--surface-3);
-	border-right: 1px solid var(--border-soft);
-	position: sticky;
-	top: 0;
-	/* the scroll container starts under the topbar (and above the touch tab bar), so a
-	   100dvh box would hide its bottom rows — the pinned Maintenance links */
-	max-height: calc(100dvh - var(--topbar-h) - var(--bottomnav-clearance, 0px));
-	overflow-y: auto;
-	overscroll-behavior: contain;
-	align-self: stretch;
+/* the collapse button: 36×36, radius 10, top right of the sidebar (the title row leaves room for it) */
+.kit-pagebar-toggle {
+	position: absolute;
+	top: 14px;
+	right: 12px;
+	z-index: 1;
+	width: 36px;
+	height: 36px;
+	display: grid;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	border-radius: 10px;
+	background: var(--surface-2);
+	color: var(--text-dim);
+	cursor: pointer;
+	transition: color var(--motion-pop), background var(--motion-pop);
+}
+
+.kit-pagebar-toggle:hover,
+.kit-pagebar-toggle:focus-visible {
+	color: var(--text);
+	background: var(--border);
+	outline: none;
+}
+
+.kit-pagebar-toggle:focus-visible {
+	box-shadow: 0 0 0 2px var(--accent);
+}
+
+.kit-pagebar ::deep .kit-side-head {
+	padding-right: 52px;
+}
+
+/* collapsed: the button leads the 62px strip, the sidebar's leads follow under it */
+.kit-pagebar--collapsed {
+	padding-top: 62px;
+}
+
+.kit-pagebar--collapsed .kit-pagebar-toggle {
+	right: auto;
+	left: 13px;
 }
 
 .kit-section-body {
 	min-width: 0;
 	padding: var(--main-pad);
-}
-
-@container page (max-width: 64rem) {
-	.kit-section {
-		grid-template-columns: minmax(0, 1fr);
-		gap: 12px;
-	}
-
-	.kit-section-nav {
-		position: static;
-		max-height: 17.5rem;
-		border: 1px solid var(--border-soft);
-		border-radius: var(--radius-card);
-		margin: 12px 12px 0;
-	}
 }
