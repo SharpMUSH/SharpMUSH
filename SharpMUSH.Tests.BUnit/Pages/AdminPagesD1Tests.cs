@@ -66,6 +66,9 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			.AddSingleton<DatabaseConversionService>()
 			.AddSingleton<PackagesAdminService>()
 			.AddSingleton<RoleRegistryClient>()
+			.AddSingleton<SitelockService>()
+			.AddSingleton<BannedNamesService>()
+			.AddSingleton<RestrictionsService>()
 			.AddSingleton<ILayoutService, LayoutService>()
 			.AddSingleton(sp => new AccountAuthService(factory, sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 				NullLogger<AccountAuthService>.Instance, []));
@@ -111,6 +114,9 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	[Arguments(typeof(AdminRoles), "RolHeading", "RolNewRole")]
 	[Arguments(typeof(AdminSnapshots), "SnapshotsTitle", null)]
 	[Arguments(typeof(SuggestionManagement), "SuggestionManagement", "AddCategory")]
+	[Arguments(typeof(Sitelock), "SitelockRules", null)]
+	[Arguments(typeof(BannedNames), "BannedPlayerNames", null)]
+	[Arguments(typeof(Restrictions), "CommandAndFunctionRestrictions", null)]
 	public async Task OpensWithThePlainHeader_AndPutsContentInKitCards(Type page, string title, string? action, string content = ".kit-card, .lay-card")
 	{
 		var cut = RenderPage(page);
@@ -124,6 +130,64 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		{
 			await Assert.That(cut.Find(".kit-page-actions").TextContent).Contains(action);
 		}
+	}
+
+	/// <summary>
+	/// The config list pages (sitelock, banned names, restrictions) render their add form and their
+	/// list through <c>AdminKeyValueList</c>. It used to draw raw <c>&lt;input class="config-input"&gt;</c>
+	/// boxes styled by each page's scoped CSS, which never reached into the child component, so they
+	/// rendered as unstyled white boxes. The form is now a kit card of MudBlazor fields with a capsule
+	/// action, and the list a kit card of rows.
+	/// </summary>
+	[Test]
+	[Arguments(typeof(Sitelock), "api/sitelock", """{"*.bad.example":["!connect"]}""")]
+	[Arguments(typeof(BannedNames), "api/bannednames", """["Vader"]""")]
+	[Arguments(typeof(Restrictions), "api/restrictions/commands", """{"@nuke":["nobody"]}""")]
+	public async Task ConfigListPages_UseKitCardsMudFieldsAndACapsuleAction(Type page, string endpoint, string body)
+	{
+		_api.Bodies[endpoint] = body;
+		var cut = RenderPage(page);
+
+		cut.WaitForAssertion(() => cut.Find(".config-list-name"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".kit-card").Count).IsGreaterThanOrEqualTo(2)
+			.Because("the add form and the list each sit in a kit card");
+		await Assert.That(cut.FindAll(".config-input, .config-primary-btn, .config-icon-btn, .config-field-card").Count).IsEqualTo(0)
+			.Because("the hand-built controls are gone");
+		await Assert.That(cut.FindAll("input").Count).IsGreaterThan(0);
+		await Assert.That(cut.FindAll("input:not(.mud-input-slot)").Count).IsEqualTo(0)
+			.Because("every field is a MudBlazor field styled like the rest of the portal");
+		await Assert.That(cut.FindAll("button.kit-capsule.kit-capsule--primary").Count).IsEqualTo(1)
+			.Because("the add action is the page's one primary capsule");
+		await Assert.That(cut.FindAll("button.mud-icon-button.config-delete[aria-label='Delete']").Count).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// The command and function lists are switched with the kit's chips rather than a MudBlazor tab
+	/// strip, and each chip still loads its own list.
+	/// </summary>
+	[Test]
+	public async Task Restrictions_SwitchesItsTwoListsWithKitChips()
+	{
+		_api.Bodies["api/restrictions/commands"] = """{"@nuke":["nobody"]}""";
+		_api.Bodies["api/restrictions/functions"] = """{"pemit":["nobody"]}""";
+		var cut = RenderPage(typeof(Restrictions));
+
+		cut.WaitForAssertion(() => cut.Find(".config-list-name"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".mud-tabs").Count).IsEqualTo(0);
+		var chips = cut.FindAll(".kit-chips .kit-chip");
+		await Assert.That(chips.Count).IsEqualTo(2);
+		await Assert.That(cut.Find(".kit-chip--on").TextContent.Trim()).IsEqualTo("CommandRestrictions");
+		await Assert.That(cut.Find(".config-list-name").TextContent).IsEqualTo("@nuke");
+
+		chips[1].Click();
+
+		cut.WaitForAssertion(() =>
+		{
+			var name = cut.Find(".config-list-name").TextContent;
+			if (name != "pemit") throw new InvalidOperationException($"list shows '{name}'");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".kit-chip--on").TextContent.Trim()).IsEqualTo("FunctionRestrictions");
+		await Assert.That(cut.Find(".kit-card-title").TextContent).IsEqualTo("AddFunctionRestriction");
 	}
 
 	/// <summary>The README buttons were labelled with a literal English "README" in every locale.</summary>
