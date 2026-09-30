@@ -7,6 +7,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Reality;
+using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 
 namespace SharpMUSH.Implementation.Commands;
@@ -24,6 +25,15 @@ public partial class Commands
 			: (target, ct) => policy.CanPerceiveAsync(viewer.Object().DBRef, target, ct);
 		return (target, ct) => observe(target, ct.CanBeCanceled ? ct : ExecutionBudget.CurrentToken);
 	}
+
+	/// <summary>
+	/// The contents-visibility scan for <paramref name="container"/> — reality plus the DARK/LIGHT rules,
+	/// the same one look uses, so what an examine lists and what a look lists cannot drift apart.
+	/// </summary>
+	private static ValueTask<Func<AnySharpContent, CancellationToken, ValueTask<bool>>> ObserveContentsAsync(
+		IMUSHCodeParser parser, AnySharpObject viewer, AnySharpObject container, IConnectionService connections)
+		=> WorldVisibility.CreateScanAsync(viewer, container,
+			parser.ServiceProvider.GetRequiredService<IRealityPolicy>(), connections, ExecutionBudget.CurrentToken);
 
 	/// <summary>Whether <paramref name="mover"/> could arrive at <paramref name="destination"/> at all.</summary>
 	private static ValueTask<bool> CanMoveInReality(IMUSHCodeParser parser, DBRef mover, DBRef destination)
