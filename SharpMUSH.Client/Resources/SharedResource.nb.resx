@@ -4899,4 +4899,28 @@
   <data name="NavPlayExitKey" xml:space="preserve">
     <value>Trykk {0} for å gå</value>
   </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Hele bildet</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>I denne scenen</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inaktiv {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Detaljer</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galleri</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Se alle</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Karakterark: {0}</value>
+  </data>
 </root>

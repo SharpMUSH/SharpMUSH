@@ -4244,4 +4244,28 @@
   <data name="NavPlayExitKey" xml:space="preserve">
     <value>Press {0} to go</value>
   </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Full image</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profile</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>In this scene</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Idle {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Gallery</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>View all</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Character sheet: {0}</value>
+  </data>
 </root>

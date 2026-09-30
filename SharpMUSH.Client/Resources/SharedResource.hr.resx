@@ -4899,4 +4899,28 @@
   <data name="NavPlayExitKey" xml:space="preserve">
     <value>Pritisnite {0} za odlazak</value>
   </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Cijela slika</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>U ovoj sceni</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Neaktivan {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Pojedinosti</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galerija</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Prikaži sve</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>List lika: {0}</value>
+  </data>
 </root>

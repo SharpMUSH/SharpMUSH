@@ -4899,4 +4899,28 @@
   <data name="NavPlayExitKey" xml:space="preserve">
     <value>Tryck {0} för att gå</value>
   </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Hela bilden</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>I den här scenen</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inaktiv {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Detaljer</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galleri</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Visa alla</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Rollformulär: {0}</value>
+  </data>
 </root>

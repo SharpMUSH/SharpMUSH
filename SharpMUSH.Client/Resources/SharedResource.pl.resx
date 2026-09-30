@@ -4899,4 +4899,28 @@
   <data name="NavPlayExitKey" xml:space="preserve">
     <value>Naciśnij {0}, aby przejść</value>
   </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Pełny obraz</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>W tej scenie</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Bezczynny {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Szczegóły</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galeria</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Zobacz wszystko</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Karta postaci: {0}</value>
+  </data>
 </root>

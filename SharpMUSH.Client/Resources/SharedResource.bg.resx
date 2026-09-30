@@ -4899,4 +4899,28 @@
   <data name="NavPlayExitKey" xml:space="preserve">
     <value>Натиснете {0}, за да тръгнете</value>
   </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Цялото изображение</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Профил</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>В тази сцена</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Неактивен {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Подробности</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Галерия</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Виж всички</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Лист на персонажа: {0}</value>
+  </data>
 </root>

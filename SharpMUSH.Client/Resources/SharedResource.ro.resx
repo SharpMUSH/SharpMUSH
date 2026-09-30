@@ -4899,4 +4899,28 @@
   <data name="NavPlayExitKey" xml:space="preserve">
     <value>Apăsați {0} pentru a merge</value>
   </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Imagine completă</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>În această scenă</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inactiv {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Detalii</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galerie</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Vezi tot</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Fișa personajului: {0}</value>
+  </data>
 </root>

@@ -4899,4 +4899,28 @@
   <data name="NavPlayExitKey" xml:space="preserve">
     <value>Nyomja meg: {0}</value>
   </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Teljes kép</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>Ebben a jelenetben</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Tétlen {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Részletek</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galéria</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Összes</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Karakterlap: {0}</value>
+  </data>
 </root>

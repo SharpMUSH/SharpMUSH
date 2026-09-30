@@ -4899,4 +4899,28 @@
   <data name="NavPlayExitKey" xml:space="preserve">
     <value>按 {0} 前往</value>
   </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>完整图片</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>资料</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>在此场景中</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>闲置 {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>详情</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>图库</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>查看全部</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>角色卡：{0}</value>
+  </data>
 </root>

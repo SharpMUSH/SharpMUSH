@@ -4899,4 +4899,28 @@
   <data name="NavPlayExitKey" xml:space="preserve">
     <value>Druk op {0} om te gaan</value>
   </data>
+  <data name="NavPlayFullImage" xml:space="preserve">
+    <value>Volledige afbeelding</value>
+  </data>
+  <data name="NavPlayProfile" xml:space="preserve">
+    <value>Profiel</value>
+  </data>
+  <data name="NavPlayInThisScene" xml:space="preserve">
+    <value>In deze scène</value>
+  </data>
+  <data name="NavPlayIdle" xml:space="preserve">
+    <value>Inactief {0}</value>
+  </data>
+  <data name="NavPlayDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="NavPlayGallery" xml:space="preserve">
+    <value>Galerij</value>
+  </data>
+  <data name="NavPlayViewAll" xml:space="preserve">
+    <value>Alles bekijken</value>
+  </data>
+  <data name="NavPlaySheetLabel" xml:space="preserve">
+    <value>Karakterblad: {0}</value>
+  </data>
 </root>
