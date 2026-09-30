@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models.Wiki;
@@ -19,14 +20,17 @@ namespace SharpMUSH.Server.Controllers;
 
 /// <summary>
 /// Character profile gallery. Image bytes are stored by <see cref="IWikiAssetService"/> (the shared
-/// file store); gallery composition (order, captions, icon) is kept as a <c>PROFILE`GALLERY</c> JSON
-/// attribute on the character — backend-agnostic, no extra DB schema. Edits require the requester to
-/// control the character (owner) or be staff (Wizard/Royalty), enforced by <see cref="IPermissionService"/>.
+/// file store); gallery composition (order, captions, icon, banner) is kept as a <c>PROFILE`GALLERY</c>
+/// JSON attribute on the character — backend-agnostic, no extra DB schema. Every write also mirrors the
+/// icon, the banner and the icon's caption into the standard <c>IMAGE</c>, <c>IMAGE`BANNER</c> and
+/// <c>IMAGE`ALT</c> attributes (spec §2), so softcode and OOB payloads read the same picture. Edits
+/// require the requester to control the character (owner) or be staff (Wizard/Royalty), enforced by
+/// <see cref="IPermissionService"/>.
 ///
 /// Routes:
 ///   GET    /api/profile/{name}/gallery          — list gallery entries (anonymous)
 ///   POST   /api/profile/{name}/gallery          — upload an image (owner/staff)
-///   PUT    /api/profile/{name}/gallery          — replace order/captions/icon (owner/staff)
+///   PUT    /api/profile/{name}/gallery          — replace order/captions/icon/banner (owner/staff)
 ///   DELETE /api/profile/{name}/gallery/{assetId} — remove an image (owner/staff)
 /// </summary>
 [ApiController]
@@ -45,9 +49,6 @@ public class GalleryController(
 	{
 		"image/png", "image/jpeg", "image/gif", "image/webp"
 	};
-
-	/// <summary>A gallery image entry; mirrors the client model.</summary>
-	public record GalleryEntry(string AssetId, string FileName, string Url, string? Caption, int Order, bool IsIcon);
 
 	[HttpGet]
 	[AllowAnonymous]
@@ -109,10 +110,11 @@ public class GalleryController(
 			Order: entries.Count == 0 ? 0 : entries.Max(e => e.Order) + 1,
 			IsIcon: entries.Count == 0));
 
-		var write = await WriteGalleryAsync(character, entries);
+		var normalized = GalleryRules.Normalize(entries);
+		var write = await WriteGalleryAsync(character, normalized);
 		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
 		logger.LogInformation("Gallery image added to {Character}: asset={Asset} by={Uploader}", LogSanitizer.Sanitize(name), asset.Id, LogSanitizer.Sanitize(uploaderDbref));
-		return Ok(entries.OrderBy(e => e.Order).ToList());
+		return Ok(normalized);
 	}
 
 	[HttpPut]
@@ -123,20 +125,14 @@ public class GalleryController(
 		if (character is null) return NotFound();
 		if (!allowed) return Forbid();
 
-		// Keep only entries whose assets still exist in this character's gallery, and enforce a single icon.
-		var existing = await ReadGalleryAsync(character);
-		var validIds = existing.Select(e => e.AssetId).ToHashSet(StringComparer.Ordinal);
-		var sanitized = entries
-			.Where(e => validIds.Contains(e.AssetId))
-			.Select((e, i) => e with { Order = i })
-			.ToList();
-
-		var iconSeen = false;
-		for (var i = 0; i < sanitized.Count; i++)
-		{
-			if (sanitized[i].IsIcon && !iconSeen) { iconSeen = true; }
-			else if (sanitized[i].IsIcon) { sanitized[i] = sanitized[i] with { IsIcon = false }; }
-		}
+		// Keep only entries whose assets still exist in this character's gallery, each once, with the
+		// stored file name and URL (a client names the order, captions and flags, never where a file is),
+		// in the order sent; then one icon and at most one banner.
+		var existing = (await ReadGalleryAsync(character)).ToDictionary(e => e.AssetId, StringComparer.Ordinal);
+		var sanitized = GalleryRules.Normalize(entries
+			.Where(e => existing.ContainsKey(e.AssetId))
+			.DistinctBy(e => e.AssetId)
+			.Select((e, i) => existing[e.AssetId] with { Caption = e.Caption, Order = i, IsIcon = e.IsIcon, IsBanner = e.IsBanner }));
 
 		var write = await WriteGalleryAsync(character, sanitized);
 		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
@@ -158,17 +154,12 @@ public class GalleryController(
 			return NotFound();
 		}
 
-		// If we removed the icon, promote the new first image.
-		if (entries.Count > 0 && entries.All(e => !e.IsIcon))
-		{
-			var first = entries.MinBy(e => e.Order)!;
-			entries[entries.IndexOf(first)] = first with { IsIcon = true };
-		}
-
-		var write = await WriteGalleryAsync(character, entries);
+		// Removing the icon promotes the new first image; removing the banner leaves none.
+		var normalized = GalleryRules.Normalize(entries);
+		var write = await WriteGalleryAsync(character, normalized);
 		if (write is Error<string> error) return StatusCode(StatusCodes.Status500InternalServerError, error.Value);
 		await assetService.DeleteAsync(assetId);
-		return Ok(entries.OrderBy(e => e.Order).ToList());
+		return Ok(normalized);
 	}
 
 	private async Task<AnySharpObject?> ResolveCharacterAsync(string name, CancellationToken ct)
@@ -226,9 +217,37 @@ public class GalleryController(
 		}
 	}
 
+	/// <summary>
+	/// Writes the gallery, then mirrors it into the standard image attributes. A mirror that fails is
+	/// reported like a failed gallery write: the portal and softcode would otherwise disagree about
+	/// which picture is the character's.
+	/// </summary>
 	private async Task<Result<Success>> WriteGalleryAsync(AnySharpObject character, IReadOnlyList<GalleryEntry> entries)
 	{
 		var json = JsonSerializer.Serialize(entries);
-		return await attributeService.SetAttributeAsync(character, character, GalleryAttribute, MarkupText.Plain(json));
+		if (await attributeService.SetAttributeAsync(character, character, GalleryAttribute, MarkupText.Plain(json)) is Error<string> failed)
+		{
+			return failed;
+		}
+
+		// Parents before children: sets run IMAGE first, clears run it last, so a branch attribute is
+		// never written under a missing parent or cleared out from under a child.
+		var mirror = GalleryRules.Mirror(entries);
+		(string Attribute, string Value)[] mirrored = [("IMAGE", mirror.Image), ("IMAGE`BANNER", mirror.Banner), ("IMAGE`ALT", mirror.Alt)];
+		var sets = mirrored.Where(m => m.Value.Length > 0);
+		var clears = mirrored.Where(m => m.Value.Length == 0).Reverse();
+		foreach (var (attribute, value) in sets.Concat(clears))
+		{
+			var result = value.Length == 0
+				? await attributeService.ClearAttributeAsync(character, character, attribute, IAttributeService.AttributePatternMode.Exact)
+				: await attributeService.SetAttributeAsync(character, character, attribute, MarkupText.Plain(value));
+			if (result is Error<string> error)
+			{
+				logger.LogWarning("Mirroring the gallery into {Attribute} on {Dbref} failed: {Error}", attribute, character.Object().DBRef, error.Value);
+				return error;
+			}
+		}
+
+		return new Success();
 	}
 }
