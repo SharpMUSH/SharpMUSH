@@ -101,7 +101,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.GetAsync($"api/wiki/pages?skip={skip}&take={take}{NsQuery(ns, first: false)}{LangQuery(lang, first: false)}");
+			using var response = await http.GetAsync($"api/wiki/pages?skip={skip}&take={take}{NsQuery(ns, first: false)}{LangQuery(lang, first: false)}");
 			response.EnsureSuccessStatusCode();
 
 			var dtos = await response.Content.ReadFromJsonAsync<List<WikiPageDto>>() ?? [];
@@ -239,7 +239,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PutAsJsonAsync(
+			using var response = await http.PutAsJsonAsync(
 				$"api/wiki/{Uri.EscapeDataString(slug)}/translations/{Uri.EscapeDataString(locale)}{KeyQuery(ns, category)}",
 				new UpsertTranslationRequest(title, markdown, editSummary, published, expectedRevisionNumber));
 
@@ -267,7 +267,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.DeleteAsync(
+			using var response = await http.DeleteAsync(
 				$"api/wiki/{Uri.EscapeDataString(slug)}/translations/{Uri.EscapeDataString(locale)}{KeyQuery(ns, category)}");
 
 			return response.IsSuccessStatusCode
@@ -294,7 +294,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/wiki", new CreatePageRequest(title, markdown, ns, category));
+			using var response = await http.PostAsJsonAsync("api/wiki", new CreatePageRequest(title, markdown, ns, category));
 
 			if (response.IsSuccessStatusCode)
 			{
@@ -329,7 +329,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PutAsJsonAsync(
+			using var response = await http.PutAsJsonAsync(
 				$"api/wiki/{Uri.EscapeDataString(slug)}{KeyQuery(ns, category)}",
 				new UpdatePageRequest(markdown, editSummary));
 
@@ -367,7 +367,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		{
 			var http = httpClientFactory.CreateClient("api");
 			// The page is identified by its CURRENT category; `category` is the (possibly new) value to set.
-			var response = await http.PutAsJsonAsync(
+			using var response = await http.PutAsJsonAsync(
 				$"api/wiki/{Uri.EscapeDataString(slug)}/metadata{KeyQuery(ns, currentCategory ?? category)}",
 				new SetMetadataRequest(category, tags.ToArray(), published));
 
@@ -403,7 +403,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync(
+			using var response = await http.PostAsJsonAsync(
 				$"api/wiki/{Uri.EscapeDataString(slug)}/rollback{KeyQuery(ns, category)}",
 				new RollbackRequest(revisionNumber));
 
@@ -439,7 +439,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync("api/wiki/exists", new ExistsRequest(refArray));
+			using var response = await http.PostAsJsonAsync("api/wiki/exists", new ExistsRequest(refArray));
 			if (!response.IsSuccessStatusCode)
 				return new Dictionary<string, bool>();
 
@@ -463,7 +463,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync(
+			using var response = await http.PostAsJsonAsync(
 				"api/wiki/batch/protect",
 				new BatchProtectRequest(refs.ToArray(), isProtected));
 
@@ -495,7 +495,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.PostAsJsonAsync(
+			using var response = await http.PostAsJsonAsync(
 				"api/wiki/batch/delete",
 				new BatchDeleteRequest(refs.ToArray()));
 
@@ -526,7 +526,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var response = await http.DeleteAsync($"api/wiki/{Uri.EscapeDataString(slug)}{KeyQuery(ns, category)}");
+			using var response = await http.DeleteAsync($"api/wiki/{Uri.EscapeDataString(slug)}{KeyQuery(ns, category)}");
 
 			if (response.IsSuccessStatusCode)
 				return new None();
