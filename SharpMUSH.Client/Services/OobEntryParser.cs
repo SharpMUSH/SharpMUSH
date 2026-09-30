@@ -221,30 +221,28 @@ public static class OobEntryParser
 	{
 		if (!row.TryGetProperty("actions", out var actions) || actions.ValueKind != JsonValueKind.Array) return [];
 
-		var result = new List<OccupantAction>();
-		foreach (var action in actions.EnumerateArray())
-		{
-			if (action.ValueKind == JsonValueKind.Object
-				&& Text(action, "label") is { } label
-				&& Text(action, "cmd") is { } cmd)
-				result.Add(new OccupantAction(label, cmd));
-		}
-
-		return result;
+		return
+		[
+			.. actions.EnumerateArray()
+				.Where(action => action.ValueKind == JsonValueKind.Object)
+				.Select(action => Text(action, "label") is { } label && Text(action, "cmd") is { } cmd
+					? new OccupantAction(label, cmd)
+					: null)
+				.OfType<OccupantAction>()
+		];
 	}
 
 	private static IReadOnlyList<string> Aliases(JsonElement row)
 	{
 		if (!row.TryGetProperty("aliases", out var aliases) || aliases.ValueKind != JsonValueKind.Array) return [];
 
-		var result = new List<string>();
-		foreach (var alias in aliases.EnumerateArray())
-		{
-			if (alias.ValueKind == JsonValueKind.String && alias.GetString() is { Length: > 0 } text)
-				result.Add(text);
-		}
-
-		return result;
+		return
+		[
+			.. aliases.EnumerateArray()
+				.Where(alias => alias.ValueKind == JsonValueKind.String)
+				.Select(alias => alias.GetString() ?? string.Empty)
+				.Where(text => text.Length > 0)
+		];
 	}
 
 	private static ExitState? State(JsonElement row) =>

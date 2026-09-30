@@ -21,36 +21,34 @@ public class ConfigSchemaService(IHttpClientFactory httpClientFactory, ILogger<C
 	/// </remarks>
 	public Task<ApiResult<ConfigurationSchema>> GetSchemaAsync()
 	{
-		var pending = _schema;
-		if (pending is not null)
+		if (_schema is { } pending)
 		{
 			return pending;
 		}
 
-		// The slot is taken before the fetch starts, so a fetch that completes synchronously (a fake
-		// handler, a cached response) can still forget itself on failure before anyone observes it.
-		var completion = new TaskCompletionSource<ApiResult<ConfigurationSchema>>();
-		_schema = completion.Task;
-		_ = RunAsync(completion);
-		return completion.Task;
+		var fetch = FetchAsync();
+		_schema = fetch;
+		_ = ForgetIfFailedAsync(fetch);
+		return fetch;
 	}
 
-	private async Task RunAsync(TaskCompletionSource<ApiResult<ConfigurationSchema>> completion)
+	/// <summary>
+	/// Drops <paramref name="fetch"/> from the slot once it settles as a failure or a fault, so the
+	/// next caller fetches again. It runs after the slot is set, so a fetch that completed
+	/// synchronously (a fake handler, a cached response) is still forgotten; and it clears the slot
+	/// only while it still holds this fetch.
+	/// </summary>
+	private async Task ForgetIfFailedAsync(Task<ApiResult<ConfigurationSchema>> fetch)
 	{
-		try
+		await ((Task)fetch).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+		if (fetch is { IsCompletedSuccessfully: true, Result: not ApiFailure })
 		{
-			var result = await FetchAsync();
-			if (result is ApiFailure)
-			{
-				_schema = null;
-			}
-
-			completion.SetResult(result);
+			return;
 		}
-		catch (Exception ex)
+
+		if (ReferenceEquals(_schema, fetch))
 		{
 			_schema = null;
-			completion.SetException(ex);
 		}
 	}
 

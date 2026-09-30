@@ -14,7 +14,10 @@ else
 @code {
     [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
 
-    /// <summary>The character's softcode colour (any CSS colour). Null → the neutral faint underline.</summary>
+    /// <summary>
+    /// The character's softcode colour. Only <c>#rrggbb</c> is written into the style (<see cref="NameColor"/>);
+    /// null or anything else → the neutral faint underline.
+    /// </summary>
     [Parameter] public string? Color { get; set; }
 
     /// <summary>The viewer's own name: underline in the accent.</summary>
@@ -43,7 +46,7 @@ else
         }
     }
 
-    private string? Style => Self ? "--name:var(--accent)" : Color is null ? null : $"--name:{Color}";
+    private string? Style => Self ? "--name:var(--accent)" : NameColor.Safe(Color) is { } color ? $"--name:{color}" : null;
 
     private RenderFragment Text => __builder =>
     {
