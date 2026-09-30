@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Implementation.Services;
+using SharpMUSH.Library.Commands;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -70,11 +71,41 @@ public class ChannelBroadcastServiceTests
 			Arg.Any<IMUSHCodeParser>(), Arg.Any<string>(), Arg.Any<DBRef?>(), Arg.Any<string[]>());
 	}
 
-	private static ChannelBroadcastService Service(INotifyService notifyService, IEventService eventService) =>
+	/// <summary>
+	/// CHANNEL`MESSAGE follows delivery, not the recall buffer: once the members have their terminal line,
+	/// a buffer write that fails must not keep the portal's comm feed from getting the same line.
+	/// </summary>
+	[Test]
+	public async Task BufferFailure_AfterDelivery_StillRaisesChannelMessage()
+	{
+		var eventService = Substitute.For<IEventService>();
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<AddChannelMessageCommand>(), Arg.Any<CancellationToken>())
+			.Returns<ValueTask<Unit>>(_ => throw new InvalidOperationException("recall store unavailable"));
+		// Only a line with a speaker is buffered, and a speaker's line reaches a member who will hear them.
+		var permissions = Substitute.For<IPermissionService>();
+		permissions.CanInteract(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), IPermissionService.InteractType.Hear)
+			.Returns(true);
+		var service = Service(Substitute.For<INotifyService>(), eventService, mediator, permissions);
+		var member = new AnySharpObject(Thing(330, "Speaker"));
+		var line = Line(Channel(member, gagged: false), INotifyService.NotificationType.Say) with { Source = member };
+
+		await Assert.That(async () => await service.BroadcastAsync(line, CancellationToken.None))
+			.Throws<InvalidOperationException>();
+
+		await eventService.Received(1).TriggerEventAsync(
+			Arg.Any<IMUSHCodeParser>(),
+			SharpEvents.ChannelMessage,
+			Arg.Any<DBRef?>(),
+			Arg.Is<string[]>(args => args[5] == member.Object().DBRef.ToString()));
+	}
+
+	private static ChannelBroadcastService Service(INotifyService notifyService, IEventService eventService,
+		IMediator? mediator = null, IPermissionService? permissions = null) =>
 		new(
-			Substitute.For<IPermissionService>(),
+			permissions ?? Substitute.For<IPermissionService>(),
 			notifyService,
-			Substitute.For<IMediator>(),
+			mediator ?? Substitute.For<IMediator>(),
 			Substitute.For<IAttributeService>(),
 			Substitute.For<IMUSHCodeParser>(),
 			eventService,
