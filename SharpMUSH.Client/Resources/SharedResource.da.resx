@@ -4842,4 +4842,19 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Find en figur ved navn “{0}”</value>
   </data>
+  <data name="NavSettingsSignedInAs" xml:space="preserve">
+    <value>Logget ind som {0}</value>
+  </data>
+  <data name="NavSettingsOverview" xml:space="preserve">
+    <value>Oversigt</value>
+  </data>
+  <data name="NavSettingsGroupAccount" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="NavSettingsGroupPreferences" xml:space="preserve">
+    <value>Præferencer</value>
+  </data>
+  <data name="NavSettingsDescription" xml:space="preserve">
+    <value>Din konto, dine figurer og hvordan portalen ser ud.</value>
+  </data>
 </root>

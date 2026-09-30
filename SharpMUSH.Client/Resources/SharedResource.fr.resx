@@ -4095,4 +4095,19 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Trouver un personnage nommé « {0} »</value>
   </data>
+  <data name="NavSettingsSignedInAs" xml:space="preserve">
+    <value>Connecté en tant que {0}</value>
+  </data>
+  <data name="NavSettingsOverview" xml:space="preserve">
+    <value>Vue d’ensemble</value>
+  </data>
+  <data name="NavSettingsGroupAccount" xml:space="preserve">
+    <value>Compte</value>
+  </data>
+  <data name="NavSettingsGroupPreferences" xml:space="preserve">
+    <value>Préférences</value>
+  </data>
+  <data name="NavSettingsDescription" xml:space="preserve">
+    <value>Votre compte, vos personnages et l’apparence de ce portail.</value>
+  </data>
 </root>

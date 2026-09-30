@@ -4187,4 +4187,19 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Find a character named “{0}”</value>
   </data>
+  <data name="NavSettingsSignedInAs" xml:space="preserve">
+    <value>Signed in as {0}</value>
+  </data>
+  <data name="NavSettingsOverview" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="NavSettingsGroupAccount" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="NavSettingsGroupPreferences" xml:space="preserve">
+    <value>Preferences</value>
+  </data>
+  <data name="NavSettingsDescription" xml:space="preserve">
+    <value>Your account, your characters and how this portal looks.</value>
+  </data>
 </root>

@@ -4842,4 +4842,19 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Găsește un personaj numit „{0}”</value>
   </data>
+  <data name="NavSettingsSignedInAs" xml:space="preserve">
+    <value>Conectat ca {0}</value>
+  </data>
+  <data name="NavSettingsOverview" xml:space="preserve">
+    <value>Prezentare generală</value>
+  </data>
+  <data name="NavSettingsGroupAccount" xml:space="preserve">
+    <value>Cont</value>
+  </data>
+  <data name="NavSettingsGroupPreferences" xml:space="preserve">
+    <value>Preferințe</value>
+  </data>
+  <data name="NavSettingsDescription" xml:space="preserve">
+    <value>Contul tău, personajele tale și cum arată acest portal.</value>
+  </data>
 </root>
