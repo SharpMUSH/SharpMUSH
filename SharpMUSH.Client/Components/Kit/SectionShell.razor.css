@@ -59,6 +59,13 @@
 	padding: 0;
 }
 
+/* The hand-built config pages (Banned names, Import, Restrictions, Sitelock) put the kit's plain header
+   straight into a .config-section-page block; the header carries no margin of its own, so the space under
+   it is set here once for all of them. */
+.kit-section-body ::deep .config-section-page > .kit-page-head {
+	margin-bottom: 1.25rem;
+}
+
 /* a full-height page (the softcode editor) needs a definite height through the section body */
 .kit-section-body:has(> .full-height) {
 	height: 100%;

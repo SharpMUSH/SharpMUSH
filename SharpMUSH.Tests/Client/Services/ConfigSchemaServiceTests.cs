@@ -36,32 +36,63 @@ public class ConfigSchemaServiceTests
 		}), Encoding.UTF8, "application/json")
 	};
 
-	private static (ConfigSchemaService Service, CountingHandler Handler) Build(params Func<HttpResponseMessage>[] replies)
+	/// <summary>
+	/// The service, the handler that counts its requests, and the client between them. The test owns
+	/// the client (a factory hands clients out and never takes them back), so the harness disposes it.
+	/// </summary>
+	private sealed record Harness(ConfigSchemaService Service, CountingHandler Handler, HttpClient Client) : IDisposable
+	{
+		public void Dispose() => Client.Dispose();
+	}
+
+	private static Harness Build(params Func<HttpResponseMessage>[] replies) =>
+		Build(factory => factory, replies);
+
+	private static Harness Build(Func<IHttpClientFactory, IHttpClientFactory> configure, params Func<HttpResponseMessage>[] replies)
 	{
 		var handler = new CountingHandler(new Queue<Func<HttpResponseMessage>>(replies));
 		var client = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(client);
-		return (new ConfigSchemaService(factory, NullLogger<ConfigSchemaService>.Instance), handler);
+		return new Harness(new ConfigSchemaService(configure(factory), NullLogger<ConfigSchemaService>.Instance), handler, client);
 	}
 
 	[Test]
 	public async Task ASuccessfulSchemaIsFetchedOnce()
 	{
-		var (service, handler) = Build(Ok, Ok);
-		var first = await service.GetSchemaAsync();
-		var second = await service.GetSchemaAsync();
+		using var harness = Build(Ok, Ok);
+		var first = await harness.Service.GetSchemaAsync();
+		var second = await harness.Service.GetSchemaAsync();
 		first.Expect<ConfigurationSchema>();
 		second.Expect<ConfigurationSchema>();
-		await Assert.That(handler.Requests).IsEqualTo(1);
+		await Assert.That(harness.Handler.Requests).IsEqualTo(1);
 	}
 
 	[Test]
 	public async Task AFailureIsNotRemembered()
 	{
-		var (service, handler) = Build(() => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable), Ok);
-		(await service.GetSchemaAsync()).Expect<ApiFailure>();
-		(await service.GetSchemaAsync()).Expect<ConfigurationSchema>();
-		await Assert.That(handler.Requests).IsEqualTo(2);
+		using var harness = Build(() => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable), Ok);
+		(await harness.Service.GetSchemaAsync()).Expect<ApiFailure>();
+		(await harness.Service.GetSchemaAsync()).Expect<ConfigurationSchema>();
+		await Assert.That(harness.Handler.Requests).IsEqualTo(2);
+	}
+
+	[Test]
+	public async Task AFetchThatThrowsIsNotRemembered()
+	{
+		var calls = 0;
+		using var harness = Build(factory =>
+		{
+			var client = factory.CreateClient("api");
+			var throwing = Substitute.For<IHttpClientFactory>();
+			throwing.CreateClient("api").Returns(_ => ++calls == 1
+				? throw new InvalidOperationException("no api client yet")
+				: client);
+			return throwing;
+		}, Ok);
+
+		await Assert.That(async () => await harness.Service.GetSchemaAsync()).Throws<InvalidOperationException>();
+		(await harness.Service.GetSchemaAsync()).Expect<ConfigurationSchema>();
+		await Assert.That(harness.Handler.Requests).IsEqualTo(1);
 	}
 }
