@@ -18,14 +18,16 @@ namespace SharpMUSH.Plugins.Scene.Commands;
 ///
 /// <para>The room hears <c>&lt;OOC&gt; Name: text</c>. As with the usual MUSH OOC commands, a leading
 /// <c>:</c> poses (<c>ooc :waves</c> → <c>&lt;OOC&gt; Name waves</c>) and a leading <c>;</c> semiposes
-/// (<c>ooc ;'s back</c> → <c>&lt;OOC&gt; Name's back</c>). It is delivered like <c>@emit</c>: the room's
-/// Speech lock applies, and a gagged player cannot use it.</para>
+/// (<c>ooc ;'s back</c> → <c>&lt;OOC&gt; Name's back</c>). It is spoken as <c>say</c>/<c>pose</c> are: the
+/// room's Speech lock applies, the speaker's SPEECHMOD transforms the words once (with <c>"</c>, <c>:</c>
+/// or <c>;</c> as %1), the name is the speech name (NAMEACCENT, MONIKER, <c>Someone</c> for the
+/// invisible), and a gagged player cannot use it.</para>
 ///
 /// <para>When the speaker is focused on the active scene in the room they are standing in — the same
 /// test the capture hooks apply to a pose — the line is also recorded there through the ordinary pose
 /// path, with source <c>ooc</c> and tag <c>ooc</c>, and broadcast like any other pose. The recorded text
-/// is the line without the <c>&lt;OOC&gt;</c> marker (the tag carries it), and it is the player's own
-/// name, not their scene persona: out of character is the player speaking. Anywhere else nothing is
+/// is exactly the line the room heard, less the <c>&lt;OOC&gt;</c> marker (the tag carries it): the speech
+/// name, not the scene persona, since out of character is the player speaking. Anywhere else nothing is
 /// recorded. The speaker must also be approved when they speak, re-checked on every line as the scene
 /// package's capture hooks do, because focus and membership survive a revoked APPROVED flag. The rule is
 /// the package's own <c>FUN`IS`APPROVED</c>, evaluated on its Scene Logger as the logger, so a game that
@@ -58,25 +60,39 @@ public static class OocCommand
 			return CallState.Empty;
 		}
 
-		var line = Line(executor.Object().Name, message);
-		var said = await communication.EmitWithOutcomeAsync(parser, new EmitRequest(EmitScope.Immediate, Band(line), []));
+		// Spoken as SAY/POSE/SEMIPOSE are — Speech lock, SPEECHMOD once on the words, the speech name — in
+		// the OOC frame; the scene records the line the room heard.
+		var (token, words) = Split(message);
+		var said = await communication.FramedSpeechAsync(parser, words, token,
+			(name, transformed) => Band(Line(name, token, transformed)));
 		if (!said.Admitted) return said.Result;
 
-		await RecordAsync(parser, executor, line);
+		await RecordAsync(parser, executor, Line(said.Name, token, said.Message));
 		return said.Result;
 	}
 
 	/// <summary>
-	/// What was said, without the marker: <c>Name: text</c>, or <c>Name text</c> after a <c>:</c>, or
-	/// <c>Nametext</c> after a <c>;</c>.
+	/// The speech token a message is spoken with and the words after it: <c>:</c> (pose) and <c>;</c>
+	/// (semipose) when it starts with one, else <c>"</c> (say). The token is also what SPEECHMOD sees as %1.
 	/// </summary>
-	public static MString Line(string name, MString message) =>
+	public static (string Token, MString Words) Split(MString message) =>
 		message.ToPlainText() switch
 		{
-			[':', ..] => MarkupText.Concat([MarkupText.Plain(name), MarkupText.Plain(" "), message.Substring(1)]),
-			[';', ..] => MarkupText.Concat(MarkupText.Plain(name), message.Substring(1)),
-			_ => MarkupText.Concat([MarkupText.Plain(name), MarkupText.Plain(": "), message]),
+			[':', ..] => (":", message.Substring(1)),
+			[';', ..] => (";", message.Substring(1)),
+			_ => ("\"", message),
 		};
+
+	/// <summary>
+	/// What was said, without the marker: <c>Name: words</c>, or <c>Name words</c> for <c>:</c>, or
+	/// <c>Namewords</c> for <c>;</c>.
+	/// </summary>
+	public static MString Line(MString name, string token, MString words) => token switch
+	{
+		":" => MarkupText.Concat([name, MarkupText.Plain(" "), words]),
+		";" => MarkupText.Concat(name, words),
+		_ => MarkupText.Concat([name, MarkupText.Plain(": "), words]),
+	};
 
 	/// <summary>What the room hears: the line, marked <c>&lt;OOC&gt;</c>.</summary>
 	public static MString Band(MString line) => MarkupText.Concat(MarkupText.Plain(Marker), line);

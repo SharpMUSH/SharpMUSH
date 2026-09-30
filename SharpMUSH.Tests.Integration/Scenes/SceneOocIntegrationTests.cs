@@ -187,6 +187,41 @@ public class SceneOocIntegrationTests
 		await Assert.That(await PoseCountAsync(sceneId)).IsEqualTo(before);
 	}
 
+	/// <summary>
+	/// The speaker is named as <c>say</c> and <c>pose</c> name them (NAMEACCENT here), and the scene
+	/// records the name the room heard.
+	/// </summary>
+	[Test]
+	public async Task Ooc_names_the_speaker_as_speech_does()
+	{
+		var (sceneId, poser, witness) = await SceneRoomAsync("Acc");
+		await God1($"&NAMEACCENT {poser.Dbref}='{new string('-', poser.Name.Length - 1)}");
+		var accented = "Á" + poser.Name[1..];
+		var witnessBefore = HeardCount(witness);
+
+		await RunAs(poser.Handle, "ooc hi all");
+
+		await Assert.That(HeardBy(witness, witnessBefore)).Contains($"<OOC> {accented}: hi all");
+		await Assert.That(await LastPoseAsync(sceneId, "content")).IsEqualTo($"{accented}: hi all");
+	}
+
+	/// <summary>
+	/// SPEECHMOD transforms what was said — once, and only the words, as it does for a pose — and the
+	/// scene records exactly what the room heard.
+	/// </summary>
+	[Test]
+	public async Task Ooc_applies_SPEECHMOD_to_the_words_and_records_what_was_heard()
+	{
+		var (sceneId, poser, witness) = await SceneRoomAsync("Mod");
+		await God1($"&SPEECHMOD {poser.Dbref}=[ucstr(%0)]");
+		var witnessBefore = HeardCount(witness);
+
+		await RunAs(poser.Handle, "ooc quiet words");
+
+		await Assert.That(HeardBy(witness, witnessBefore)).Contains($"<OOC> {poser.Name}: QUIET WORDS");
+		await Assert.That(await LastPoseAsync(sceneId, "content")).IsEqualTo($"{poser.Name}: QUIET WORDS");
+	}
+
 	[Test]
 	public async Task Ooc_with_no_scene_at_all_is_only_heard()
 	{

@@ -307,15 +307,19 @@ keyed by pose id). `@EMIT` is **not** hooked — the editor must not pose via it
 softcode package, because the portal's OOC band keys off a tag and something has
 to produce it. The room hears `<OOC> Name: text`; a leading `:` poses
 (`ooc :waves` → `<OOC> Name waves`) and a leading `;` semiposes (`ooc ;'s
-back` → `<OOC> Name's back`). Delivery is `@emit`'s: the room's Speech lock
-applies and a gagged player cannot use it. `ooc` with nothing to say (a prefix
-alone included) says nothing.
+back` → `<OOC> Name's back`). It is spoken the way `say`/`pose` are, through
+`ICommunicationService.FramedSpeechAsync`: the room's Speech lock applies, the
+speaker's `SPEECHMOD` transforms the words once (with `"`, `:` or `;` as `%1`),
+the name is the speech name (`NAMEACCENT`, `MONIKER`, `Someone` for the
+invisible), and a gagged player cannot use it. `ooc` with nothing to say (a
+prefix alone included) says nothing.
 
 It records under the capture rule above — the speaker is focused on the active
 scene in the room they stand in — through `ISceneService.AddPoseAsync` with
 source `ooc` and tags `[ooc]`, and broadcasts like any pose. The stored text is
-the line **without** the `<OOC>` marker (the tag carries it) and uses the
-player's own name, not their `showas` persona. Anywhere else it is only said.
+exactly the line the room heard **without** the `<OOC>` marker (the tag carries
+it), so it has the speech name, not the `showas` persona. Anywhere else it is
+only said.
 The speaker must also be approved, re-checked on every line as the capture hooks
 do, since focus and membership survive a revoked `APPROVED` flag. The command
 evaluates the package's own `` FUN`IS`APPROVED `` on the Scene Logger (as the
