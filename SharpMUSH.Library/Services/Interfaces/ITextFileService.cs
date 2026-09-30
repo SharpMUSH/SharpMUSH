@@ -7,6 +7,13 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// </summary>
 public interface ITextFileService
 {
+	/// <summary>Canonical identity plus focused terminal content and its complete article.</summary>
+	async Task<HelpEntry?> GetHelpEntryAsync(string fileReference, string entryName)
+	{
+		var markdown = await GetEntryAsync(fileReference, entryName);
+		return markdown is null ? null : new HelpEntry(entryName, markdown);
+	}
+
 	/// <summary>
 	/// Lists all available categories (subdirectories)
 	/// </summary>

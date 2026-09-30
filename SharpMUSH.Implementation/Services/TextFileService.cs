@@ -3,11 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Documentation;
-using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
-using System.Buffers;
-using System.Text;
-using System.Text.RegularExpressions;
 using SharpMUSH.Library.Utilities;
 
 namespace SharpMUSH.Implementation.Services;
@@ -19,7 +15,9 @@ public record IndexEntry(
 	string FilePath,
 	long StartPosition,
 	long EndPosition,
-	string EntryName
+	string EntryName,
+	HelpEntry? Help = null,
+	bool Hidden = false
 );
 
 public class TextFileService : ITextFileService
@@ -74,13 +72,17 @@ public class TextFileService : ITextFileService
 
 		lock (_indexLock)
 		{
+			if (category != null && !_categoryIndexes.ContainsKey(category))
+			{
+				return string.Empty;
+			}
 			if (category != null && _categoryIndexes.TryGetValue(category, out var entries))
 			{
-				return string.Join(separator, entries.Keys.OrderBy(k => k));
+				return string.Join(separator, entries.Values.Where(entry => !entry.Hidden).Select(entry => entry.EntryName).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(k => k));
 			}
 
 			var allEntries = _categoryIndexes.Values
-				.SelectMany(dict => dict.Keys)
+				.SelectMany(dict => dict.Values.Where(entry => !entry.Hidden).Select(entry => entry.EntryName))
 				.Distinct(StringComparer.OrdinalIgnoreCase)
 				.OrderBy(k => k);
 
@@ -88,7 +90,10 @@ public class TextFileService : ITextFileService
 		}
 	}
 
-	public async Task<string?> GetEntryAsync(string fileReference, string entryName)
+	public async Task<string?> GetEntryAsync(string fileReference, string entryName) =>
+		(await GetHelpEntryAsync(fileReference, entryName))?.Markdown;
+
+	public async Task<HelpEntry?> GetHelpEntryAsync(string fileReference, string entryName)
 	{
 		await _initializationTask.WithCancellation(CancellationToken.None);
 
@@ -97,9 +102,12 @@ public class TextFileService : ITextFileService
 		IndexEntry? indexEntry = null;
 		lock (_indexLock)
 		{
-			if (category != null && _categoryIndexes.TryGetValue(category, out var categoryEntries))
+			if (category != null)
 			{
-				categoryEntries.TryGetValue(entryName, out indexEntry);
+				if (_categoryIndexes.TryGetValue(category, out var categoryEntries))
+				{
+					categoryEntries.TryGetValue(entryName, out indexEntry);
+				}
 			}
 			else
 			{
@@ -118,7 +126,7 @@ public class TextFileService : ITextFileService
 			return null;
 		}
 
-		return await ReadEntryFromFileAsync(indexEntry);
+		return indexEntry.Help;
 	}
 
 	public Task<IEnumerable<string>> ListFilesAsync(string? category = null)
@@ -172,18 +180,22 @@ public class TextFileService : ITextFileService
 		{
 			IEnumerable<string> entries;
 
+			if (category != null && !_categoryIndexes.ContainsKey(category))
+			{
+				return [];
+			}
 			if (category != null && _categoryIndexes.TryGetValue(category, out var categoryEntries))
 			{
-				entries = categoryEntries.Keys;
+				entries = categoryEntries.Where(item => !item.Value.Hidden && SoftcodeRegex.IsMatch(regex, item.Key)).Select(item => item.Value.EntryName);
 			}
 			else
 			{
-				entries = _categoryIndexes.Values
-					.SelectMany(dict => dict.Keys)
-					.Distinct(StringComparer.OrdinalIgnoreCase);
+				entries = _categoryIndexes.Values.SelectMany(dict => dict)
+					.Where(item => !item.Value.Hidden && SoftcodeRegex.IsMatch(regex, item.Key))
+					.Select(item => item.Value.EntryName);
 			}
 
-			return entries.Where(e => SoftcodeRegex.IsMatch(regex, e)).ToList();
+			return entries.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 		}
 	}
 
@@ -196,6 +208,10 @@ public class TextFileService : ITextFileService
 		IEnumerable<KeyValuePair<string, IndexEntry>> entries;
 		lock (_indexLock)
 		{
+			if (category != null && !_categoryIndexes.ContainsKey(category))
+			{
+				return [];
+			}
 			if (category != null && _categoryIndexes.TryGetValue(category, out var categoryEntries))
 			{
 				entries = categoryEntries.ToList();
@@ -211,16 +227,19 @@ public class TextFileService : ITextFileService
 		}
 
 		var results = new List<string>();
-		foreach (var (entryName, indexEntry) in entries)
+		foreach (var indexEntry in entries.Select(pair => pair.Value).Where(entry => !entry.Hidden)
+			.DistinctBy(entry => entry.EntryName, StringComparer.OrdinalIgnoreCase))
 		{
-			var content = await ReadEntryFromFileAsync(indexEntry);
+			var content = indexEntry.Help?.Article is { } article
+				? indexEntry.Help.SectionId is null ? article.Overview : article.Sections.First(section => section.Id == indexEntry.Help.SectionId).Markdown
+				: indexEntry.Help?.Markdown ?? string.Empty;
 			if (content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
 			{
-				results.Add(entryName);
+				results.Add(indexEntry.EntryName);
 			}
 		}
 
-		return results;
+		return results.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 	}
 
 	/// <summary>
@@ -247,7 +266,7 @@ public class TextFileService : ITextFileService
 		var categories = await ListCategoriesAsync();
 		var rebuilt = new Dictionary<string, Dictionary<string, IndexEntry>>(StringComparer.OrdinalIgnoreCase);
 
-		foreach (var category in categories)
+		foreach (var category in categories.OrderBy(name => name, StringComparer.Ordinal))
 		{
 			var categoryIndex = BuildCategoryIndex(category);
 			if (categoryIndex is not null)
@@ -284,69 +303,56 @@ public class TextFileService : ITextFileService
 
 		var categoryIndex = new Dictionary<string, IndexEntry>(StringComparer.OrdinalIgnoreCase);
 
-		var mdFiles = Directory.GetFiles(categoryPath, "*.md");
+		var mdFiles = Directory.GetFiles(categoryPath, "*.md").OrderBy(path => path, StringComparer.Ordinal);
 
 		foreach (var file in mdFiles)
 		{
-			IndexMarkdownFile(file, categoryIndex);
+			IndexMarkdownFile(file, category, categoryIndex);
 		}
 
 		_logger.LogDebug("Indexed category {Category}: {Count} entries", category, categoryIndex.Count);
 		return categoryIndex;
 	}
 
-	private void IndexMarkdownFile(string filePath, Dictionary<string, IndexEntry> index)
+	private void IndexMarkdownFile(string filePath, string category, Dictionary<string, IndexEntry> index)
 	{
-		var fileInfo = new FileInfo(filePath);
-
-		switch (Helpfiles.IndexMarkdownPositions(fileInfo))
+		var parsed = HelpArticleParser.Parse(File.ReadAllText(filePath), category);
+		foreach (var source in parsed)
 		{
-			case Dictionary<string, (long Start, long End)> entries:
-				foreach (var (entryName, positions) in entries)
+			var article = source.Article;
+			if (source.Declared && index.Values.Any(entry => entry.Help?.Article?.Id == article.Id))
+			{
+				throw new InvalidDataException($"Duplicate article ID in {category}: {article.Id}");
+			}
+			void Add(string lookup, HelpEntry help, bool hidden = false)
+			{
+				var entry = new IndexEntry(filePath, 0, 0, help.Topic, help, hidden);
+				if (!index.TryAdd(lookup, entry))
 				{
-					var entry = new IndexEntry(
-						filePath,
-						positions.Start,
-						positions.End,
-						entryName
-					);
-					index[entryName] = entry;
+					if (source.Declared || index[lookup].Help?.Article?.Id.StartsWith("legacy:", StringComparison.Ordinal) == false)
+					{
+						throw new InvalidDataException($"Duplicate help lookup in {category}: {lookup}");
+					}
+					_logger.LogWarning("Duplicate legacy help lookup {Lookup} in {File}; keeping the first definition", lookup, filePath);
 				}
-
-				break;
-			case Error<string> error:
-				_logger.LogWarning("Failed to index markdown {File}: {Error}", filePath, error.Value);
-				break;
-		}
-	}
-
-	private async Task<string> ReadEntryFromFileAsync(IndexEntry entry)
-	{
-		var length = (int)(entry.EndPosition - entry.StartPosition);
-		var buffer = ArrayPool<byte>.Shared.Rent(length);
-
-		try
-		{
-			using var fileStream = new FileStream(
-				entry.FilePath,
-				FileMode.Open,
-				FileAccess.Read,
-				FileShare.Read,
-				bufferSize: 4096,
-				useAsync: true);
-
-			fileStream.Seek(entry.StartPosition, SeekOrigin.Begin);
-			var bytesRead = await fileStream.ReadAsync(buffer.AsMemory(0, length));
-
-			var content = Encoding.UTF8.GetString(buffer.AsSpan(0, bytesRead));
-
-			// Strip consecutive alias headers - keep only the first # header.
-			// Aliased topics share the same byte range which includes all alias headers.
-			return StripConsecutiveHeaders(content);
-		}
-		finally
-		{
-			ArrayPool<byte>.Shared.Return(buffer);
+			}
+			Add(article.Lookup, article.Entry());
+			foreach (var alias in article.Aliases)
+			{
+				Add(alias, article.Entry());
+			}
+			foreach (var section in article.Sections)
+			{
+				Add(section.Lookup, article.Entry(section));
+				foreach (var alias in section.Aliases)
+				{
+					Add(alias, article.Entry(section));
+				}
+			}
+			foreach (var (alias, target) in source.Redirects)
+			{
+				Add(alias, index[target].Help!, true);
+			}
 		}
 	}
 
@@ -413,7 +419,8 @@ public class TextFileService : ITextFileService
 
 		lock (_indexLock)
 		{
-			return _categoryIndexes.ContainsKey(fileName) ? fileName : null;
+			return _categoryIndexes.ContainsKey(fileName) || fileName.Split('.')[0] is "help" or "ahelp" or "news"
+				? fileName : null;
 		}
 	}
 
@@ -462,3 +469,4 @@ public class TextFileService : ITextFileService
 		return null;
 	}
 }
+

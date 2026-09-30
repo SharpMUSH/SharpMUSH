@@ -1,0 +1,113 @@
+using SharpMUSH.Documentation;
+using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
+
+namespace SharpMUSH.Tests.Documentation;
+
+public class HelpArticleTests
+{
+	private const string Article = """
+		<!-- help-article
+		{"corpus":"help","id":"sample","lookup":"sample()","aliases":["alternate()"],
+		 "sections":[{"id":"examples","heading":"Examples","lookup":"sample examples"},
+		 {"id":"options","heading":"Options","lookup":"sample options"}],
+		 "redirects":{"SAMPLE2":"sample examples"}}
+		-->
+		# Sample
+		Overview.
+		## Options
+		Option details.
+		## Examples
+		```sharp
+		# This is code
+		  significant   spacing
+		```
+		### Local explanation
+		Example details.
+		""";
+
+	[Test]
+	public async Task DeclaredOrderAndFocusedScopesShareIdentity()
+	{
+		var parsed = HelpArticleParser.Parse(Article, "help").Single();
+		var article = parsed.Article;
+		await Assert.That(article.Sections.Select(section => section.Id)).IsEquivalentTo(new[] { "examples", "options" });
+		await Assert.That(article.Markdown.IndexOf("## Examples", StringComparison.Ordinal))
+			.IsLessThan(article.Markdown.IndexOf("## Options", StringComparison.Ordinal));
+		await Assert.That(article.Entry().Markdown).Contains("help sample examples");
+		await Assert.That(article.Entry().Markdown).DoesNotContain("Option details");
+		await Assert.That(article.Entry(article.Sections[0]).Markdown).Contains("Local explanation");
+		await Assert.That(article.Entry(article.Sections[0]).Markdown).DoesNotContain("Option details");
+		await Assert.That(article.Markdown).Contains("  significant   spacing");
+		await Assert.That(parsed.Redirects["SAMPLE2"]).IsEqualTo("sample examples");
+	}
+
+	[Test]
+	public async Task WebHasStableAnchorsAndOneCompleteArticle()
+	{
+		var article = HelpArticleParser.Parse(Article, "help").Single().Article;
+		var html = HelpHtmlRenderer.RenderToHtml(article.Markdown, topic => "/help/" + topic, article);
+		await Assert.That(html).Contains("id=\"examples\"");
+		await Assert.That(html).Contains("href=\"#examples\"");
+		await Assert.That(html).Contains("Option details");
+		await Assert.That(html.Split("Example details").Length).IsEqualTo(2);
+		await Assert.That(html).DoesNotContain("help-article");
+	}
+
+	[Test]
+	public async Task LegacyAliasesIgnoreFencedAndIndentedHeadings()
+	{
+		const string markdown = "# real\n# alias\nBody\n```sharp\n# fenced\n```\n\n    # indented\n\n# next\nNext body";
+		var articles = HelpArticleParser.Parse(markdown, "help");
+		await Assert.That(articles.Count).IsEqualTo(2);
+		await Assert.That(articles[0].Article.Aliases).Contains("alias");
+		await Assert.That(articles[0].Article.Overview).Contains("# fenced");
+	}
+
+	[Test]
+	public async Task TerminalReferencesAreReadableAndCorpusScoped()
+	{
+		var rendered = RecursiveMarkdownHelper.RenderMarkdown("Related: [object snapshots]", corpus: "ahelp");
+		await Assert.That(rendered.ToPlainText()).Contains("ahelp object snapshots");
+	}
+
+	[Test]
+	[Arguments("\"id\":\"options\"", "\"id\":\"examples\"")]
+	[Arguments("\"heading\":\"Options\"", "\"heading\":\"Missing\"")]
+	[Arguments("\"SAMPLE2\":\"sample examples\"", "\"SAMPLE2\":\"SAMPLE2\"")]
+	[Arguments("\"corpus\":\"help\"", "\"corpus\":\"ahelp\"")]
+	public async Task InvalidDeclarationsAreRejected(string before, string after)
+	{
+		await Assert.That(() => HelpArticleParser.Parse(Article.Replace(before, after), "help"))
+			.Throws<InvalidDataException>();
+	}
+
+	[Test]
+	public async Task EveryShippedCorpusPassesIntegrityValidation()
+	{
+		foreach (var directory in Directory.GetDirectories("TextFiles"))
+		{
+			var corpus = Path.GetFileName(directory);
+			var articles = Directory.GetFiles(directory, "*.md")
+				.SelectMany(file => HelpArticleParser.Parse(File.ReadAllText(file), corpus)).ToList();
+			HelpCorpusValidator.Validate(articles);
+			await Assert.That(articles.Count).IsGreaterThan(0);
+		}
+	}
+
+	[Test]
+	[Arguments("[missing topic]")]
+	[Arguments("[SAMPLE2]")]
+	public async Task MissingAndDeprecatedLinksAreRejected(string link)
+	{
+		var parsed = HelpArticleParser.Parse(Article + "\n" + link, "help");
+		await Assert.That(() => HelpCorpusValidator.Validate(parsed)).Throws<InvalidDataException>();
+	}
+
+	[Test]
+	public async Task NewNumberedContinuationsAreRejected()
+	{
+		var parsed = HelpArticleParser.Parse(Article, "help")
+			.Concat(HelpArticleParser.Parse("# sample2\nContinuation.", "help")).ToList();
+		await Assert.That(() => HelpCorpusValidator.Validate(parsed)).Throws<InvalidDataException>();
+	}
+}

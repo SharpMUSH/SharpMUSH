@@ -24,6 +24,28 @@ namespace SharpMUSH.Tests.Integration.Portal;
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class HelpApiTests(ServerWebAppFactory factory)
 {
+	[Test]
+	public async Task NamedSectionShowsCompleteWebArticleAndFocusedTerminalEntry()
+	{
+		var resolver = factory.Services.GetRequiredService<IHelpTopicResolver>();
+		var terminal = await resolver.GetExactAsync("help", "align examples");
+		await Assert.That(terminal?.Article?.Id).IsEqualTo("align");
+		await Assert.That(terminal?.Markdown).DoesNotContain("&haiku");
+		await Assert.That(terminal?.Markdown).Contains("Ashen-Shug");
+		var http = CreateClient();
+		var entry = await http.GetFromJsonAsync<HelpEntryDto>("api/help/entry?topic=align%20examples");
+		await Assert.That(entry?.Markdown).Contains("&haiku");
+		await Assert.That(entry?.Html).Contains("id=\"examples\"");
+		await Assert.That(entry?.Html).Contains("href=\"#examples\"");
+		var index = await http.GetFromJsonAsync<HelpIndexDto>("api/help");
+		await Assert.That(index!.Topics).DoesNotContain("ALIGN2");
+		await Assert.That(index.Topics).DoesNotContain("LALIGN()");
+		var manifest = await http.GetFromJsonAsync<List<HelpArticle>>("api/help/articles");
+		await Assert.That(manifest!.Count(article => article.Id == "align")).IsEqualTo(1);
+		await Assert.That((await http.GetAsync("api/help/admin/articles")).StatusCode)
+			.IsEqualTo(HttpStatusCode.Unauthorized);
+	}
+
 	private record HelpIndexDto(string Corpus, string? Topic, string? Html, IReadOnlyList<string> Topics);
 
 	private record HelpEntryDto(

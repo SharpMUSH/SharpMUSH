@@ -1,0 +1,3222 @@
+[
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ALIGN()",
+      "LALIGN()"
+    ],
+    "target": "align()",
+    "sha256": "018d44dad3901209c73f05ac5afa529d00586aa861d580fc2d43e8f768fe8193"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ALIGN2"
+    ],
+    "target": "align columns",
+    "sha256": "7deeb97d8bd13cb44c1a73ac81d0e6d271f7a31e9c16e73b2cc1127bc3addd60"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ALIGN3"
+    ],
+    "target": "align examples",
+    "sha256": "13730e9611b6644f93671ed4f01f6d09230c343d38f1de531424d27d17873896"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ALIGN4"
+    ],
+    "target": "align decorated layouts",
+    "sha256": "bb6a76dfd7dcb9f86eff6179e834c2663283233b39656e16dd0ee292dbf71cfb"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ALIGN5"
+    ],
+    "target": "align column merging",
+    "sha256": "44427d5ee62e1846af936ed4333f1a42bab4c273b6aa5625fab45c065c269791"
+  },
+  {
+    "source": "sharpattr.md",
+    "old": [
+      "ATTRIBUTE TREES",
+      "ATTR TREES",
+      "ATTRIB TREES",
+      "\\`"
+    ],
+    "target": "attribute trees",
+    "sha256": "5d20700d6248b6e64f393915fb46b47a4c7506b2aed9f9d6bb978d72dfe70629"
+  },
+  {
+    "source": "sharpattr.md",
+    "old": [
+      "ATTRIBUTE TREES2",
+      "\\`2",
+      "ATTR TREES2",
+      "ATTRIB TREES2"
+    ],
+    "target": "attribute trees browsing",
+    "sha256": "53315cb40f870dd02114164f15e63c97820c9e53778cd2045c46f573efafdd04"
+  },
+  {
+    "source": "sharpattr.md",
+    "old": [
+      "ATTRIBUTE TREES3",
+      "\\`3",
+      "ATTR TREES3",
+      "ATTRIB TREES3"
+    ],
+    "target": "attribute trees permissions",
+    "sha256": "cebe9a43f89376ced45fb3639cc025c1e23a29af96b577e5e5a3fa6b83dd1887"
+  },
+  {
+    "source": "sharpattr.md",
+    "old": [
+      "ATTRIBUTE TREES4",
+      "\\`4",
+      "ATTR TREES4",
+      "ATTRIB TREES4"
+    ],
+    "target": "attribute trees inheritance",
+    "sha256": "59e4b69ffc1f869f553cfa579a4d2a6e4ac724ce54fa43958050619dd3fdd643"
+  },
+  {
+    "source": "sharpattr.md",
+    "old": [
+      "ATTRIBUTE FLAGS"
+    ],
+    "target": "attribute flags",
+    "sha256": "1e1bc5b3ea69526cf1c3879521c91439c2e9cb41d7e97c765ab2aabdb195d836"
+  },
+  {
+    "source": "sharpattr.md",
+    "old": [
+      "ATTRIBUTE FLAGS2"
+    ],
+    "target": "attribute flags access and matching",
+    "sha256": "89d44e9765d39308abf50b97dde4f42a50f90d7768b4aee75bc2450a31afb7e4"
+  },
+  {
+    "source": "sharpattr.md",
+    "old": [
+      "ATTRIBUTE FLAGS3"
+    ],
+    "target": "attribute flags listening and internal",
+    "sha256": "3ae055b8a099802dac42bee5cec6a658ef78ad84a0c9ff490088f561f628fb0f"
+  },
+  {
+    "source": "sharpattr.md",
+    "old": [
+      "ATTRIBUTE FLAGS4"
+    ],
+    "target": "attribute flags display",
+    "sha256": "6c1a49e99b354e0b1720ca57e7a028c5f8b8cc928feeabf2fec123fe697a2699"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@hook"
+    ],
+    "target": "@hook",
+    "sha256": "4f49e690114814412783a5445d897f7c2d0fed9809bcc27435f447cb330dfb6a"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@hook2"
+    ],
+    "target": "@hook evaluation",
+    "sha256": "327136c74c344b60a1676bdf540046e5bc7a6ff1f76d21c27c6e7187bc15afd2"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@hook3"
+    ],
+    "target": "@hook inline",
+    "sha256": "aa05b6c077f63147d477a39c8380b056311d76bf4a66c0764289fdbd3d4e37a3"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@hook4"
+    ],
+    "target": "@hook extension",
+    "sha256": "2bda99f9ba1eb9eced4d8f28d526361d511e6f42346c54acff404e0f4068421c"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@hook5"
+    ],
+    "target": "@hook before and after",
+    "sha256": "8f584a531941ce9b4bf85e3fd36bb7931dfea0542de3191b762f37459219f456"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@hook6"
+    ],
+    "target": "@hook override",
+    "sha256": "f77782480a1e3eb67fb219f56a81ccbf2cf0840f5ee465160ee0d849dbb03934"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@hook7"
+    ],
+    "target": "@hook registers",
+    "sha256": "f09a1c06147c706bb8e6c264b1d704949cf006c3d01b2b9d0911eb28e44ef280"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@command"
+    ],
+    "target": "@command",
+    "sha256": "0a0437f0c97f3eb2007d4d8ea49dbdbab5ff25be12f26094328794c3a6c78db4"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@command2"
+    ],
+    "target": "@command added commands",
+    "sha256": "abd446e54beba384c8e437eb2234778455a63ccb4314ea0d37e7b235cefc3256"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@command3"
+    ],
+    "target": "@command examples",
+    "sha256": "4a3fa2d3cc0e3cf2c510581dbe5531ec457ac6adb70fb2230139cfc100b03352"
+  },
+  {
+    "source": "sharphttp.md",
+    "old": [
+      "HTTP",
+      "http_handler",
+      "http_per_second",
+      "@config http_per_second",
+      "@config http_handler"
+    ],
+    "target": "http",
+    "sha256": "2a81f6c4f0dc2d70999092919df46018736f710a700f7cd77182544ddb396a20"
+  },
+  {
+    "source": "sharphttp.md",
+    "old": [
+      "HTTP2"
+    ],
+    "target": "http setup",
+    "sha256": "5438cc51d5436dd9c57e6b58476f62cf67936fa1c5a46acbc951f20ed322262a"
+  },
+  {
+    "source": "sharphttp.md",
+    "old": [
+      "HTTP3"
+    ],
+    "target": "http headers and limits",
+    "sha256": "13d605bc7d9de90f3743a7fb88bb70b665d16b5d1be84fa04d71bc0686e90357"
+  },
+  {
+    "source": "sharphttp.md",
+    "old": [
+      "HTTP ROUTING"
+    ],
+    "target": "http routing",
+    "sha256": "40a230e4ffc50ec48072b1df004d8bc1d63fca00f3f6f8c7882cc34ac1d781fe"
+  },
+  {
+    "source": "sharphttp.md",
+    "old": [
+      "HTTP EXAMPLES"
+    ],
+    "target": "http examples",
+    "sha256": "cb798a2fe69997ca0b8308bca53247f529b2470c0a7c39edbe2bba97f539ea37"
+  },
+  {
+    "source": "sharphttp.md",
+    "old": [
+      "HTTP SIMPLE"
+    ],
+    "target": "http simple",
+    "sha256": "3fe21701ae23e2b0c53d6a8c56d8936a585219270fc48c12a1fee36fd5068c01"
+  },
+  {
+    "source": "sharphttp.md",
+    "old": [
+      "HTTP GET"
+    ],
+    "target": "http get",
+    "sha256": "d0ba25ae5e43b70edc8fe778cfff05a8987f840426c9904983a144e56ea7c0e0"
+  },
+  {
+    "source": "sharphttp.md",
+    "old": [
+      "HTTP POST"
+    ],
+    "target": "http post",
+    "sha256": "24356b77c9e1913783f490aaa03a0b5f06ce1b1b288f0b9c10938981d3704365"
+  },
+  {
+    "source": "sharphttp.md",
+    "old": [
+      "HTTP SITELOCK"
+    ],
+    "target": "http sitelock",
+    "sha256": "fce2a17e164d276733d2154986377bc2e99ef423a8724553e129f17fa099213d"
+  },
+  {
+    "source": "sharphttp.md",
+    "old": [
+      "@RESPOND",
+      "@RESPOND/TYPE",
+      "@RESPOND/HEADER"
+    ],
+    "target": "@respond",
+    "sha256": "832bd86efa109b678450e57a1fe02f5f56a3b59f3cbcaab26dcc22a279e3acce"
+  },
+  {
+    "source": "sharphttp.md",
+    "old": [
+      "@RESPOND2"
+    ],
+    "target": "@respond examples",
+    "sha256": "eb58e69ec13e4166be0d2a1ef629326aa11cf3cb47c02ad3e2735b253f45db71"
+  },
+  {
+    "source": "sharphttp.md",
+    "old": [
+      "@RESPOND3"
+    ],
+    "target": "@respond requirements",
+    "sha256": "e865af9100015c1e4780cf8d2207620e99f53fe490ae7ba079fad5c84b74380f"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SPEAK()",
+      "SPEAKPENN()"
+    ],
+    "target": "speak()",
+    "sha256": "2813ccab00f3913274ded655873d0e88c64fb04ebd9f75d053c7dfaa190e3898"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SPEAK2"
+    ],
+    "target": "speak examples",
+    "sha256": "c74cd0493319c8796648114b49607194cdcd71b14ae768eb1b3d45398af36eeb"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SPEAK3"
+    ],
+    "target": "speak transforms",
+    "sha256": "d38f6fd4750001e96acb5ddc06fde3865cbfb0a88e84a11fd0c8ccd63bd9a101"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SPEAK4"
+    ],
+    "target": "speak transform examples",
+    "sha256": "74b1fbcda927baa2f8a2b2b073800e51789f4a28c4c3ee21b9c3a0508cd37d08"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SPEAK5"
+    ],
+    "target": "speak empty fragments",
+    "sha256": "6ef353f01dfe509858f67578070d8c6d301cb44fa316ab77b9c4141bd637759c"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SPEAK6"
+    ],
+    "target": "speak empty speech",
+    "sha256": "7008d5540124cbb9ee67a6640d1003b5c451178c19b064df07743367ecd18e08"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SPEAK7"
+    ],
+    "target": "speak selective transforms",
+    "sha256": "a14e7de5683f1dbf7fd6c178d62e015cc9675401fce2a84ad0e6b58894d8386a"
+  },
+  {
+    "source": "markdown.md",
+    "old": [
+      "RENDERMARKDOWN()"
+    ],
+    "target": "rendermarkdown()",
+    "sha256": "4487e7550c4bade641c3c9a4441bf522e92a60b06bc5e99ea6fa171f7d838178"
+  },
+  {
+    "source": "markdown.md",
+    "old": [
+      "RENDERMARKDOWNCUSTOM()"
+    ],
+    "target": "rendermarkdowncustom()",
+    "sha256": "c41c3fdb53736340e6c80aec33e7060c8e58b08be8dc2dade547aa46151cd12a"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "FUNCTIONS",
+      "FUNCTION"
+    ],
+    "target": "functions",
+    "sha256": "fb811263cc9997ad2e1ad4f4ab67113cd8e5b0ec69be5df80ee6803e33a8e8da"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "FUNCTIONS2"
+    ],
+    "target": "functions built-in and user functions",
+    "sha256": "dcef7a6ed3598604efd17be02a86494fa13df0dea9206ee123eb9b67af051b95"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ACCENTS"
+    ],
+    "target": "accents",
+    "sha256": "7789c1d2536362e7710058399b71c53b22d25f789f2e174e7fe8a25b1373b98e"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ACCENTS2"
+    ],
+    "target": "accents special characters",
+    "sha256": "cc0d25626183f5473f1c2da4c823ebc77b9fdca254fc7446ee058930cf61a541"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ACCENT()"
+    ],
+    "target": "accent()",
+    "sha256": "07b622dafdb59a7e290ff80513785ec2182c3c633e39a72bdf8323720ede4d9a"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ACCENT2",
+      "ACCENTS3"
+    ],
+    "target": "accent accent examples",
+    "sha256": "ec99c28b0c5bb96f2afd0d4ef156be34f31638c499c1827aaf7dcf7ceb49e102"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ANSI()"
+    ],
+    "target": "ansi()",
+    "sha256": "ae11883c2ea5c7d7f257426ab4ce82f41e056d24e59b11b6960979da396910d3"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ANSI2"
+    ],
+    "target": "ansi legacy color codes",
+    "sha256": "85db1f0b109c81f9cca19b97041529c794568678991b72286d629a01f8a9af07"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ANSI3"
+    ],
+    "target": "ansi color examples",
+    "sha256": "1b1ea5231869767bb8a9a6538d7f79b5475146bfbcab547139f2e1c7a2c4da03"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "COLORS()"
+    ],
+    "target": "colors()",
+    "sha256": "ece97b2c787f36ed59bbc999753aba88d910ee5c51c3fb2927389116a0c4c2ef"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "colors2"
+    ],
+    "target": "colors palette examples",
+    "sha256": "2f14dbc00695b46b6ae94835388918a55bf7526ebaad7f4feeafed11887bbd68"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "FOLD()"
+    ],
+    "target": "fold()",
+    "sha256": "5eb902cfca553e79968558912a112eab8ae95896b0f78338f4c5294c97e2d3be"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "FOLD2"
+    ],
+    "target": "fold fold examples",
+    "sha256": "e0859ad366e40cba3d63379cbbf97271269942b208b612d31b91b213387d21e2"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "FOREACH()"
+    ],
+    "target": "foreach()",
+    "sha256": "9e1c6008b56f0e65e83cc4c3657c489d9ba26f9dd3634c89af2c6ba8fd670a47"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "FOREACH2"
+    ],
+    "target": "foreach character iteration examples",
+    "sha256": "a9be3cf1289ef0fe5684022261a39866e365d58ffb78a4417c09b25ae75f00c6"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ITER()",
+      "PARSE()"
+    ],
+    "target": "iter()",
+    "sha256": "3b1f347dff9e5a0bafc70b4e6345fa690e30deeacdc7145fccd4202241868b95"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ITER2"
+    ],
+    "target": "iter iteration examples",
+    "sha256": "5b1ef07dc64c1bfa05567c6983c1a2003a2409a76bd5dce3c9de457683bb3c4c"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ILEV()",
+      "ITEXT()",
+      "INUM()",
+      "%i",
+      "%i0"
+    ],
+    "target": "ilev()",
+    "sha256": "41a3b0a89a32a1cd4d9813e612b9de8f8031cbc040319efe1135ff5445c81742"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ITEXT2"
+    ],
+    "target": "ilev nested iteration examples",
+    "sha256": "0b9d93f7767c4dabecf1856dfbf934f027c55dcafaead55196b9d35a5a24abe3"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "LOCATE()"
+    ],
+    "target": "locate()",
+    "sha256": "20cdba04336caef6a47d1484fb116feafc03591174cb71901d3a8ae4fc7976a0"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "LOCATE2"
+    ],
+    "target": "locate search locations",
+    "sha256": "379b6e059fa75553eeffab42c4f2b93ba30746b17b730588cfdbba7c39a9a6da"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "LOCATE3"
+    ],
+    "target": "locate matching examples",
+    "sha256": "43e950d8d39bc36782a189f808712d6d74db2c33b9d6ec6fb02e135a8c6a26e7"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "LSEARCH()",
+      "NLSEARCH()",
+      "SEARCH()",
+      "NSEARCH()",
+      "LSEARCHR()",
+      "CHILDREN()",
+      "NCHILDREN()"
+    ],
+    "target": "lsearch()",
+    "sha256": "801d718478a3e07cad28cc47659c5f2f1f2c443ebaab9e950faa78367cb2e275"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "LSEARCH2",
+      "SEARCH2"
+    ],
+    "target": "lsearch evaluation classes",
+    "sha256": "b8a801c6da5a25210b0972872efcf3d2041d16e4cfbefc70bb8492ef7a830aea"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "LSEARCH3",
+      "SEARCH3"
+    ],
+    "target": "lsearch search examples",
+    "sha256": "576c41f67adadf80b8e540e175568cef89e0ad2b3654fccbcebd09d76de0f77c"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ELEMENT()",
+      "MATCH()",
+      "MATCHALL()"
+    ],
+    "target": "element()",
+    "sha256": "728fdfc02dd876bdfc34cd9f01b3099ec738f2ad0b7aa6c9248cea8a7c436984"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "MATCH2"
+    ],
+    "target": "element wildcard examples",
+    "sha256": "0b929118ddaa1b20eeb74e014536ef66d5a9d263d2652f869186c49ba0b2a9bb"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "REGLMATCH()",
+      "REGLMATCHI()",
+      "REGLMATCHALL()",
+      "REGLMATCHALLI()",
+      "REGMATCHALLI()"
+    ],
+    "target": "reglmatch()",
+    "sha256": "b53bdc2eb1386645ee00d81d29929fe2d8e7561c0a417141cc6aed15d72f103c"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "REGLMATCH2"
+    ],
+    "target": "reglmatch regular expression examples",
+    "sha256": "2eca89b63f0d8e228f88bab05422655ba28fad83804692b6debd4e51fb460b20"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "MIX()"
+    ],
+    "target": "mix()",
+    "sha256": "1ad0e6000a62a99d342f13a59d86398f95649dfabd23eb621b2402d5c3a69c2c"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "MIX2"
+    ],
+    "target": "mix parallel list examples",
+    "sha256": "2a259d35abbd6d5340c1841f1872e41366a61d12fcb1fc808f4b8bd70284bb14"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "MUNGE()"
+    ],
+    "target": "munge()",
+    "sha256": "c92bcfbfe84cbb2a8c9409eb35bbe649e43d6f881602c3716ff368f4c8de3975"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "MUNGE2"
+    ],
+    "target": "munge reordering related lists",
+    "sha256": "15b8895dddd2431fe3247921413e7ce0cd167381dcd5ac30c1e1f12b4a83e2b7"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "MUNGE3"
+    ],
+    "target": "munge connection order example",
+    "sha256": "6f542a393469a48a740d2124054ec9bc7f1b3a0162b55b35afe8e364eaad13de"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "REGMATCH()",
+      "REGMATCHI()"
+    ],
+    "target": "regmatch()",
+    "sha256": "1e6a7c3d57f04ca20fc235c6d55d387be05e0dc9b98512329e2b7e3a7bcbce7d"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "REGMATCH2"
+    ],
+    "target": "regmatch capture examples",
+    "sha256": "d29c920caceb4bb89657f6209fca9e3f19631f8196dd43596650cc3e82a7038e"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "FN()"
+    ],
+    "target": "fn()",
+    "sha256": "d6b286365d401be26f51faa44df37129fb1765c1ec01ebc9f0595266f456475b"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "FN2"
+    ],
+    "target": "fn executor selection",
+    "sha256": "f0498a81df9895a48e8c626adcfac15a5cbb7537ad8048699898f0cabaa11dbb"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SETQ()",
+      "SETR()"
+    ],
+    "target": "setq()",
+    "sha256": "ded3573cc22f165b5c08ff8bc99d701b23512a4d926abddf072692e9e50856c7"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SETQ2"
+    ],
+    "target": "setq register names and limits",
+    "sha256": "861169e810d5785e605a7151a8bceebfd597ff2ec83e2a9309ec7921cf25ca38"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SETQ3"
+    ],
+    "target": "setq expression examples",
+    "sha256": "f95c2d8b40e8f22cbd17f29ac61e1198398b8dce14ddf2adfcac7402b4d2db0d"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SETQ4"
+    ],
+    "target": "setq command thread lifetime",
+    "sha256": "f111813920701915ea972123c508b2e32c87a8f3fa6fc5f1d5cc1a3391423732"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SOUNDEX()"
+    ],
+    "target": "soundex()",
+    "sha256": "88af1ba5a4ad0269b60561608df3eaee6c53b0575174b698a14b143dc4b4d66c"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SOUNDEX2"
+    ],
+    "target": "soundex soundex algorithm",
+    "sha256": "e3e1760067e1088954094cf527e3ae9ea816cd28758fbdbb79b01c61d5b81fb6"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SWITCH()",
+      "SWITCHALL()",
+      "CASE()",
+      "CASEALL()"
+    ],
+    "target": "switch()",
+    "sha256": "2163e6562bad4380c1363fe98ca985e7ba321a7f39457094e298f546b64f7cb2"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "SWITCH2"
+    ],
+    "target": "switch pattern selection examples",
+    "sha256": "069d9fb195ae0d3c144d7f16a69976b56cda48238d4942e9100b7141fa9c3c31"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "JSON()"
+    ],
+    "target": "json()",
+    "sha256": "4d5d87dfd9317a6896b20e3b2a371f63e257c88735eaa0e302384843015e90b6"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "JSON2"
+    ],
+    "target": "json value construction examples",
+    "sha256": "c5d02ad063b590dc6902b9ab804c2f477f0b83dbabf0bf2297237692a416deb8"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "JSON_ARRAY()"
+    ],
+    "target": "json_array()",
+    "sha256": "7876e10abd900f74f88d1c83d7a36f3c8b3f99ea602715c4a4bf38ce122fd7af"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "JSON_ARRAY2"
+    ],
+    "target": "json_array array construction examples",
+    "sha256": "a74acf84bc8c5c5030bcd758bc3eaf0d18dca94283bba030e2ba5a3d9fb1b64a"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "JSON_MAP()"
+    ],
+    "target": "json_map()",
+    "sha256": "63dc6f23162ab8af2b4c5b1fc1b509a25e1b44ccb829a1dcb8f5500d129130a5"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "JSON_MAP2"
+    ],
+    "target": "json_map mapping primitive values",
+    "sha256": "666b0141e65a470f5a2b99ed348e55f77aa4a04293a01243ddb97a20f72265ea"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "JSON_MAP3"
+    ],
+    "target": "json_map nested pretty printer",
+    "sha256": "7689f239cc188a4584820d41a85fc0fe5ce65e194eba9be6890ba2556ea1cd22"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "JSON_QUERY()"
+    ],
+    "target": "json_query()",
+    "sha256": "c6cf2837221bfcef863cfa71600861f520bdb0f9c64c33a0f411c39d491acb15"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "JSON_QUERY2"
+    ],
+    "target": "json_query types and array queries",
+    "sha256": "d7faeb0528a3c292d4a4e36911d6c4f9eb733b8f084ff5b142a44e8ae192ede7"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "JSON_QUERY3"
+    ],
+    "target": "json_query object and nested queries",
+    "sha256": "f0337adf1390412639cee86fa9090e7e681201b895a97e5740cddfd3f446820f"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "JSON_MOD()"
+    ],
+    "target": "json_mod()",
+    "sha256": "a9c3e684a11e7a14b490c861ca9ec13361a1114f5b7526b2dd4f979544f8169f"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "JSON_MOD2"
+    ],
+    "target": "json_mod modification examples",
+    "sha256": "a13aa72c82938d185a87644eb00babe46f03747bb40570de434f2f0c3912d57c"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIME()",
+      "UTCTIME()"
+    ],
+    "target": "time()",
+    "sha256": "7fb1146994bf46adf81b8dbb6b03caf6ff2247cf87054ac646e719ec70743d8c"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIME2"
+    ],
+    "target": "time timezone examples",
+    "sha256": "7e08d02e46d565f9589aaa2173eaf1e7e7fb12bee7b1a8c147f396f44b219bae"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMECALC()",
+      "SECSCALC()"
+    ],
+    "target": "timecalc()",
+    "sha256": "f59cb67eb369aeeb9d3c17b0080f6e747cdc35e99c46237f41a128ac9967cd11"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMECALC2"
+    ],
+    "target": "timecalc time modifiers",
+    "sha256": "5256b2b464740f1ade7d42485eff725b8618ac1e1ccfc367562ed371dcefb563"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ETIMEFMT()"
+    ],
+    "target": "etimefmt()",
+    "sha256": "8f7a591a3dd17897e9ebd4bfd9a5cbf6bb225eedd06a6246c296bea75a643e5d"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ETIMEFMT2"
+    ],
+    "target": "etimefmt duration escape codes",
+    "sha256": "04f802f0b1eb021e4f35e925ca586586a41bdaaa7c31ec7760795c5abd742583"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ETIMEFMT3"
+    ],
+    "target": "etimefmt duration examples",
+    "sha256": "b8b36b87d3f03b3c7793f25ed114cbc59f4dfcdbdf631f66d32ecaee883612ef"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEFMT()"
+    ],
+    "target": "timefmt()",
+    "sha256": "8e172f89c1696d73a1f10eb12abfa82072c61386053929dd4a4a7f88979f0111"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEFMT2"
+    ],
+    "target": "timefmt date escape codes",
+    "sha256": "d86efb029ff766ad20b5f40044d6805fbe5e88bcfc4df8cb52f26c089e505edb"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "PFUN()"
+    ],
+    "target": "pfun()",
+    "sha256": "9d79aedb6b5ce762facb80ed0b3e0ecb98921962cf0f8d2b4ec1695e843a9be5"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "PFUN2"
+    ],
+    "target": "pfun evaluation permissions",
+    "sha256": "0d551e5ba7e7d1b943c89b861fe50f32b48a615d37f5919dc34b4ad38f52b78b"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "PFUN3"
+    ],
+    "target": "pfun branch inheritance examples",
+    "sha256": "4c763cb63c6431a38693dc5a966d1d9221bdbb13f2a3555f4913aeb5b65214d7"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "U()",
+      "UFUN()",
+      "ULAMBDA()"
+    ],
+    "target": "u()",
+    "sha256": "24c231ac6fe1b3eb02e0736c8d207f8399a2150e25f5981a4d19574b04a92997"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "U2",
+      "UFUN2"
+    ],
+    "target": "u evaluation identity",
+    "sha256": "6ceb25606de8ad229b37d2e5184459589ae4e15109ab16a051a2beca6147e306"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "U3",
+      "UFUN3"
+    ],
+    "target": "u attribute call examples",
+    "sha256": "be67d64aade23edd5d81814a81a64b26a953a3686c5406e3aaa3ff98f9b30491"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ULOCAL()"
+    ],
+    "target": "ulocal()",
+    "sha256": "3359d4bd8a10220e64e4dc346d5cf179af5d71019bd3e28e48fe60a28a325097"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "ULOCAL2"
+    ],
+    "target": "ulocal local register examples",
+    "sha256": "a0890047cdd0058c90669060510a4df9e577878ff88418dfb17aea23b52ba0d2"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "VALID()"
+    ],
+    "target": "valid()",
+    "sha256": "06ce7b708dab70c1c88535a18286d3fcf8758d8eeba11054cc4d50803957a39a"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "valid2"
+    ],
+    "target": "valid validation types",
+    "sha256": "221805b03938d8211933d2bd776ce31b37e137ed048a431e0ea624808815c901"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "CONNLOG()"
+    ],
+    "target": "connlog()",
+    "sha256": "4298aacc5983958f4257477a2f43d5e411930c08e28e2c68fcbb7b1d4e95ca49"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "CONNLOG2"
+    ],
+    "target": "connlog search filters",
+    "sha256": "a9f0581314c3e05695d6d10e8d8469ea7c3e9d429035c8fe2f284f02233b1cfb"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "CONNLOG3"
+    ],
+    "target": "connlog connection search examples",
+    "sha256": "2302edf8f798a6a74f817ce00768e49918b8fc037489af0531e1782395b1a65b"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "]"
+    ],
+    "target": "]",
+    "sha256": "b233c28e814bdf1353846bc7ee44c696c951e030a295a0aafc2cb9eaf3f7e9b4"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "]2"
+    ],
+    "target": "] literal command examples",
+    "sha256": "00860c161d091f55a83f64da0733e93c690b0e50dbdad10039600a105bd5e5f9"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@attribute"
+    ],
+    "target": "@attribute",
+    "sha256": "4e6ac5f6f7b198cfe5e508ee8289532eb404db7676d5a60db0bfb28d9a703358"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@attribute2"
+    ],
+    "target": "@attribute attribute registry management",
+    "sha256": "9e51b5b3fb47cb24eab519d86d9536b4c429be25b52a7a1c95b4e38864d4579a"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@attribute3"
+    ],
+    "target": "@attribute registry permissions",
+    "sha256": "38034a74b6e170e91cd9f9b8e828d982c6a7eea5b3eebfa0ec35ccece6999986"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@break",
+      "@assert"
+    ],
+    "target": "@break",
+    "sha256": "b77f0158f99476d06a81cc42548b7d03d1d353e07b635d959c2ff40040a15037"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@break2",
+      "@assert2"
+    ],
+    "target": "@break conditional break examples",
+    "sha256": "ec13a98b98b74f7f8da7a7a62a4c4e72200e303c2ae258649eeafe5a8cdb7ec9"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@chzone"
+    ],
+    "target": "@chzone",
+    "sha256": "542baf1be7c8cb0cbe758c0e7b617782bc45b60075f8b58e53b119d3594798bc"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@chzone2"
+    ],
+    "target": "@chzone zone control and inheritance",
+    "sha256": "0b31cbe213828920c95cb7e7eb1f11d422ed5347959453144207f5588908a535"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@include"
+    ],
+    "target": "@include",
+    "sha256": "5bfce5d0f0ed2d17a92b88087065143e3c4e3242157cbe9b5a7b0936f18ba8f3"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@include2"
+    ],
+    "target": "@include include switches",
+    "sha256": "b748a258931bc4e6f3360b95a0741bc32c9c2b125f178754ff1216f3d0d51a6e"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@include3",
+      "@include/chain"
+    ],
+    "target": "@include attribute pipelines",
+    "sha256": "2f9c38168177fd60c8bb7320639d0ed7e14afed48c12d78c4c7468b78b953ba6"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@decompile"
+    ],
+    "target": "@decompile",
+    "sha256": "a23d9bd11ca18b1a1dde85fb3568273db79a87277dc49940ddb4b955fc124f5d"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@decompile2"
+    ],
+    "target": "@decompile output switches",
+    "sha256": "80f7feff9677d1bc99f22cc2a2398d3788a75db11a4380f8b55b221e9c059f6c"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@decompile3"
+    ],
+    "target": "@decompile tinyfugue editing",
+    "sha256": "a72412af634d89e5eb8816b1deb009642ccb9a424c5e71c92ede9dd808346dde"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@destroy",
+      "@recycle",
+      "@nuke"
+    ],
+    "target": "@destroy",
+    "sha256": "c60eed756381790028bc6ec339eaeaba38a8e4cad2975df1f92e7a35f2a1a4ae"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@destroy2",
+      "DESTRUCTION"
+    ],
+    "target": "@destroy destruction lifecycle",
+    "sha256": "a73270ce43c1ef0d7d77a086a51fa992aa39f94829ef9be117e4c59346befc7b"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@dig"
+    ],
+    "target": "@dig",
+    "sha256": "b4201fd521ae690862066a5d02ce20d326d6eb8a9d438ecd9583c38148dcdee1"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@dig2"
+    ],
+    "target": "@dig room and exit examples",
+    "sha256": "958c1b4dfef5cd53f2293e49db65772f7d74f015771243e1cb7095a884b00763"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@dolist"
+    ],
+    "target": "@dolist",
+    "sha256": "2d369eb5b69cba52105d31611f57db1f07af5f1173a8deaec2b6b45c03a55999"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@dolist2"
+    ],
+    "target": "@dolist notification and delimiters",
+    "sha256": "beb198a328d1b7dd94c223acca38428d144ae979eb92f5b6cb9b7b5519f6d228"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@dolist3"
+    ],
+    "target": "@dolist iteration examples",
+    "sha256": "fb86b01615b8bd835ae5e0a05745732dabeaa14af7d80372864e1bd39e0434ef"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@edit",
+      "@gedit"
+    ],
+    "target": "@edit",
+    "sha256": "9f43b91f69307482d9e129e5d1ef860b7bd06ddd69f568b1a08c66906d5ec5f8"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@edit2"
+    ],
+    "target": "@edit regular expression replacement",
+    "sha256": "ea3c564260fc5484fad188612658a0ea27f9bc1a1730fe2ddc0e51cf931ca52b"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@filter"
+    ],
+    "target": "@filter",
+    "sha256": "287bd1e092e8a4fe234bca97a5befba84749345af7ffff6670f66217a09a8d86"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@filter2"
+    ],
+    "target": "@filter audible exit example",
+    "sha256": "c0597d17dc76eb1ad8db27af785810c2eb9d03613e78d8fd5ddfc5424758e756"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@force"
+    ],
+    "target": "@force",
+    "sha256": "3990baf62bc2e4fc2d1967dabad6b10f495a4f3f3fbdf386e8bbd769229df146"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@force2"
+    ],
+    "target": "@force evaluation and spoofing",
+    "sha256": "732a0ede1994f88451f2af2eb7dd51c700042bfa24d4ef38d76a6ae19efd7e28"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@force3"
+    ],
+    "target": "@force inline execution",
+    "sha256": "70ee6859612ad666f3f7dab6db41cd7364e3362cb8a5f9f3f580bb02e5e8903a"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@flag"
+    ],
+    "target": "@flag",
+    "sha256": "2ec7ab373d73beedcf9528e862b35a5fa1d1bbda9c65a3c00a47f24cc16f4ab0"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@flag2"
+    ],
+    "target": "@flag adding flags",
+    "sha256": "a1632bc6a4516cbe5fdf4805b381ba8b9be89e3485b8b9a49a1decef7ff2659f"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@function"
+    ],
+    "target": "@function",
+    "sha256": "502657a9912265a236685f8869a0c892ec6e7fc480f491323faa3e170d3a9f49"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@function2"
+    ],
+    "target": "@function definition permissions",
+    "sha256": "cc54cda1ecb4f194b850e005c34c8f65da77e94f5998554274df8cf0eaf64d2f"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@function3"
+    ],
+    "target": "@function startup loading",
+    "sha256": "7cfbc463993be05fef88c8f854fad76416d9ff31ddd92ba8315f6d68ed447c8a"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@function4"
+    ],
+    "target": "@function replacing built-in functions",
+    "sha256": "cdc5447a5571cd9ea1f43e5030a90761c18dbaeeb66a714b427fef8e194d090d"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@if",
+      "@ifelse",
+      "@skip"
+    ],
+    "target": "@if",
+    "sha256": "84ffbd0cf77732a15acf962656d73231b3645d53563c56740e9a2cf962688338"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@if2"
+    ],
+    "target": "@if conditional examples",
+    "sha256": "c7acaa00508e9edfb7b52064123a01e313394b2f6956d98cb2ebf06bc38cc9c8"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@listen"
+    ],
+    "target": "@listen",
+    "sha256": "c612e12b8e40a5579ca6c67fd1210f3c363b67d05eab9f70b58170c1f05bcdb4"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@listen2"
+    ],
+    "target": "@listen listening behavior",
+    "sha256": "2f5f238da96292f4c76762ccfc1e4c6469fa6d67573749f20e18f3f77edef095"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@message"
+    ],
+    "target": "@message",
+    "sha256": "9e6a44ecc2928a399fcbca4edb2551eadc710859405311461ecd1ce66f55c0b2"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@message2"
+    ],
+    "target": "@message speech format examples",
+    "sha256": "cb972fa2f5227aac40b5ac7bd19a1acdbc8ad7a388438e1d5e5ef0bf34bb54e6"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@message3"
+    ],
+    "target": "@message language system example",
+    "sha256": "aa6b68918136e85aa397d4adc708ba5f69009d841ba914bfce16273a5e6dc6ea"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@notify"
+    ],
+    "target": "@notify",
+    "sha256": "114aae8a88cd19bb444fe941dfe1b0c1b655a6f7996494120bae4548463c57c0"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@notify2"
+    ],
+    "target": "@notify updating waiting registers",
+    "sha256": "cf1b05b048445729980de9dcd8c5e04e739fb12307b1a64f458e709b498bc8b3"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@oemit"
+    ],
+    "target": "@oemit",
+    "sha256": "4fb130968b6151f622790bcc246dae08f7e1a6fcd7a3a4bd8d967ece657d5082"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@oemit2"
+    ],
+    "target": "@oemit location targeting examples",
+    "sha256": "ab0ab171ebe47377bfa25a507e0586968239c4e15321ef54b9e96bf72fc65eee"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@pageformat",
+      "@outpageformat"
+    ],
+    "target": "@pageformat",
+    "sha256": "3ed9430702d0e5a1dca867d7f29632c0886f88cf8704131cd3fe3623b3f48167"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@pageformat2",
+      "@outpageformat2"
+    ],
+    "target": "@pageformat page format examples",
+    "sha256": "7c4355b14a3f706ba551eb7ae6c4b26926409fb2b986b868fbd84010069508f6"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@pemit"
+    ],
+    "target": "@pemit",
+    "sha256": "4040114de9c9fdcd1b53204a1bc3494e062a3812e488d2dd53cfd09917b99464"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@pemit2"
+    ],
+    "target": "@pemit output switches",
+    "sha256": "989e61964491e830ce4b631b9023ac6de2365ac74afe6eab7507f57ddffaed79"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@power"
+    ],
+    "target": "@power",
+    "sha256": "da83b1b7ed94c429a4baed3e7ee142932ae1d40ecfaa663c26c60bc7412600b3"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@power2"
+    ],
+    "target": "@power power registry syntax",
+    "sha256": "10e0a198eb6bc05af9bffc29b71507c50e6db0106308aef0d5e48400e82a3cd9"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@power3"
+    ],
+    "target": "@power power registry behavior",
+    "sha256": "a83cb3c4481fa3a5b89b60da71f3221772c9d5a077ffd1bc44b83d87bb6d5105"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@ps"
+    ],
+    "target": "@ps",
+    "sha256": "a9ea5d61e2fa9e77b24b91db7072c19821e7ddb8495d4de0f3a283db48cf64cc"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@ps2"
+    ],
+    "target": "@ps inspecting a queue entry",
+    "sha256": "74e3428d4c0dc72147dd3873e4ddb6fb9c2bdc39864818f1426d89a85c5e0b27"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@quota"
+    ],
+    "target": "@quota",
+    "sha256": "b5c7ad0ab043d288f27167bf4e1429156e63c1954199e200bcbc34e6c87ba07f"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@quota2",
+      "@squota",
+      "@allquota"
+    ],
+    "target": "@quota administrative quota changes",
+    "sha256": "5ac23603ff21fcb1909a63e3f3b9256fbc0998c46110243e285ed7e81bd3db34"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@retry"
+    ],
+    "target": "@retry",
+    "sha256": "2ef3b32b172ec9c938373672de7a4b0bca994d23b2d498ea3c8ec00f126aa870"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@retry2"
+    ],
+    "target": "@retry retry examples",
+    "sha256": "d21f0ad0c721b10645ff9ed271971b0fcda3b83dce620bf7c5128ca832cc5997"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@search"
+    ],
+    "target": "@search",
+    "sha256": "fe6ff66395750a69ac30e87823617f8a83fc25e05dfdfa9d82882558aaffaa21"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@search2"
+    ],
+    "target": "@search flags and powers",
+    "sha256": "d0b08fde4857f87b988420fff55de854b3e71f59900c4062c0c2c9da48416bcc"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@search3"
+    ],
+    "target": "@search dbref ranges and evaluation",
+    "sha256": "b6946e336fb3b9f53dee85ee2f792526dae11fb2cfc7608b60b9f4a844109d5d"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@search4"
+    ],
+    "target": "@search search permissions",
+    "sha256": "6aee69bfa9e7f22407055b395c39bec6a44ec196090dc6acb9672af891dc6a69"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@search5"
+    ],
+    "target": "@search object search examples",
+    "sha256": "dd877aa9a92c9a27237a32a9b1f3ea564406e9e47d73a83bb8200b0ec3db5d58"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@sitelock"
+    ],
+    "target": "@sitelock",
+    "sha256": "e1c9a133d6e508832a58819f54a504cba29cce3d32d7360833a47f1b822eb57d"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@sitelock2"
+    ],
+    "target": "@sitelock allow and deny options",
+    "sha256": "1c16b4ec668bebb826cb0c2ff697e8ab76ef299fe7a3caf13f12524f8690d99e"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@sitelock3"
+    ],
+    "target": "@sitelock character-specific rules",
+    "sha256": "d5cbfca5ecbf0d91821c111eafcd23e53a13c360caf7900d7952871e19f39ae9"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@switch",
+      "@sw",
+      "@select"
+    ],
+    "target": "@switch",
+    "sha256": "c2acb3aa0bec67c09a0efcea6ff81aae42b98e938a01e99442c8cbe3b74f05a9"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@switch2"
+    ],
+    "target": "@switch inline execution",
+    "sha256": "26bc44b6536fae0ec4ad3ca3c28471e78a605920df2d690c4bf2e9d0fa1d99ef"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@switch3"
+    ],
+    "target": "@switch pattern matching examples",
+    "sha256": "1657475544da4551ea0f723a273cbbadcc28ff81c98fd455e2cbe8a1de0de47f"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@switch4"
+    ],
+    "target": "@switch queue ordering examples",
+    "sha256": "b1ce8096ce61ec3ba7373fa480786af7f66aecd7956827237e2cfbb1953fbdbc"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@teleport"
+    ],
+    "target": "@teleport",
+    "sha256": "7908a0420fa75f19deadca7910b9570ebe6423a1e9c40f03648defec2e1d6022"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@teleport2"
+    ],
+    "target": "@teleport exits and destination behavior",
+    "sha256": "8d17b611f328cf7f3dfabdf77c82116f62b0987f6ab20baed7dd7d3dc1958af4"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@trigger"
+    ],
+    "target": "@trigger",
+    "sha256": "0892121016ba7dd487adae39ae7115de4714fa405de4a161c5db701381859c3c"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@trigger2"
+    ],
+    "target": "@trigger enactor and register behavior",
+    "sha256": "05925b39d57589766165fbca41aa28161761909464d6969b5b0f5bd3a47fc946"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@trigger3"
+    ],
+    "target": "@trigger trigger examples",
+    "sha256": "c1f2450ab30838c886fd15760463ef3e6261a49f5908e07f74a3cbecbe66d793"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@uptime"
+    ],
+    "target": "@uptime",
+    "sha256": "fdbc3a66ec5c3b51dc3dbd121fe0ffae0999424e1306d76b8c02a247edb8445e"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@uptime2"
+    ],
+    "target": "@uptime process statistics",
+    "sha256": "9215cea1c4ca84e1a667f7fd6e57d8678a2319f3b014a1664b0a8e06846f160a"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@verb"
+    ],
+    "target": "@verb",
+    "sha256": "ad621cdfef7ad4dd9654f77eb529e9a30de31287ef077918c7fd8878cdb2e50c"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@verb2"
+    ],
+    "target": "@verb verb permissions",
+    "sha256": "fcaacca6e0298e1c1b9643078a2d2dfa59bbd392a7cb6056aeecd2fab4a09a0d"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@verb3"
+    ],
+    "target": "@verb local verb example",
+    "sha256": "83fa7132d6d17f93f22422992996b71649abcd67403e03a87643f3045f9648c3"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@verb4"
+    ],
+    "target": "@verb global verb example",
+    "sha256": "25cc4bf3902c95d861d76b4ee8e1cdc3124dfd2c40c0f1c3294fa97b60cca6f6"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@wait"
+    ],
+    "target": "@wait",
+    "sha256": "28856071b8076fa82fe8cc75bc3c608f16a81e4ad35a2f6bd440c4aa4136c82b"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@wait2"
+    ],
+    "target": "@wait named semaphores",
+    "sha256": "e3c5677df39957fcb6c1e1456a45d84b062a90aee4a3497351c20eca3903aace"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@wait3"
+    ],
+    "target": "@wait retiming queued jobs",
+    "sha256": "a84601c8d4e40c1b5b878d60bfcd3c195a3874d1e93c751016020e7ee77888f2"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@warnings"
+    ],
+    "target": "@warnings",
+    "sha256": "8ae671dfe845ada774af95b37a4217b73c853b1c267596cfae59922d7a379c9d"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@warnings2"
+    ],
+    "target": "@warnings building warning profiles",
+    "sha256": "cc2523dc7d21be8bfa6d943a07ddad6b636dbda85b7f4459e7efcb7fb853d832"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@warnings3"
+    ],
+    "target": "@warnings selective warning profiles",
+    "sha256": "b7dbe6b2718dbe1a260f37c8a6ba3c36f9a2f6df0d8ec356c5f547b09db88c2b"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "look",
+      "l",
+      "read"
+    ],
+    "target": "look",
+    "sha256": "0581a3125b685dc4432973dd42459e9713a54f8e258cf3ae9f237ab12e292751"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "look2"
+    ],
+    "target": "look contents and visibility",
+    "sha256": "d04f7130edb81fca6af76b8c25180875eb881005b418e17e22a3dff5bbb34524"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "page",
+      "p"
+    ],
+    "target": "page",
+    "sha256": "23d152f5473053feb99f48c8dfdeef4a457a08024ce179f426e63500666ce264"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "page2"
+    ],
+    "target": "page recipient matching and poses",
+    "sha256": "33206c7ecfd59385af5543c91872f2103ebb21ffed85c71240f1c94acb3ff851"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      ":",
+      ";",
+      "pose",
+      "semipose"
+    ],
+    "target": ":",
+    "sha256": "f313e4c2ee9362ef53f0f84e43915f77dba597fdf1ce80f0d6f557e7cc24e8f3"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "pose2"
+    ],
+    "target": ": pose examples",
+    "sha256": "5133b89fbc5c274ea973d0e22229d89ec5cad59fe78467081ecf7e67d62ad388"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "WHO",
+      "DOING"
+    ],
+    "target": "who",
+    "sha256": "07b86ad28d9ef9cc1eecf10d3dab46922129f300eca5f53b282f855fecd23ab6"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "WHO2"
+    ],
+    "target": "who softcoded who integration",
+    "sha256": "27f0f9ce8ff78aa990eacde8fecc364237ad3350ae2918e77ec39cc1357c09af"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "help search",
+      "help/search",
+      "helpfile"
+    ],
+    "target": "help search",
+    "sha256": "359190c2ebba4f1b877dde5ffdb80a67d5e3ddbe15036746696a46f9571e32dd"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "helpfile2",
+      "help query"
+    ],
+    "target": "help search content search",
+    "sha256": "dba5cd5b31291ad8fa7f87b95dc5533563b738591bb8f459f80e3c685472db8e"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "newbie"
+    ],
+    "target": "newbie",
+    "sha256": "882a73b9fe4e92276bba073e72ca1d4d009940f678062b3071c562e9b55e456d"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "newbie2"
+    ],
+    "target": "newbie reading command syntax",
+    "sha256": "43c49575097b12281d47b03650002bb7bc269246684b90dccd5561b5ebcb0db3"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "newbie3"
+    ],
+    "target": "newbie finding related help",
+    "sha256": "ac2700c8938a8cd82e0626efeffa4fd2501d2922981d781253a54f8e3165c7f7"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "GS MOVING"
+    ],
+    "target": "gs moving",
+    "sha256": "065f0bbb8d894b36f936681fa2eb3577e21ea53a435e5e9d723a0441eeb9a619"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "GS MOVING2"
+    ],
+    "target": "gs moving home and navigation",
+    "sha256": "bf0b69300e00ef72c462b835327d1c56d37cb67aa2019e154b3d255908288d62"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "GS TALKING"
+    ],
+    "target": "gs talking",
+    "sha256": "80459e5dc8b2375931d394febfd9d27d72886f8336bdd24e2c84b3413168efd5"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "GS TALKING2"
+    ],
+    "target": "gs talking posing actions",
+    "sha256": "326c0e6003d539563b48f594ed484f3374d5eb56264ab04b5fd0e1d04d85b400"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "GS CHAT",
+      "GS CHANNELS"
+    ],
+    "target": "gs chat",
+    "sha256": "b5b62a5aabc4066932dbc3f09f8aebc211eba6ea7fb30ade1443b0d8c40464a2"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "GS CHAT2"
+    ],
+    "target": "gs chat speaking on channels",
+    "sha256": "ed315a1515f7f5f4a3958ff3b6a2584d6445f1006d5963da62c58b4a5c383c47"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "GS MAIL"
+    ],
+    "target": "gs mail",
+    "sha256": "65e76f7e8f887c0797a8c58bd4ab32f2b9c06efb8880d76d5b432c993540b375"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "GS MAIL2"
+    ],
+    "target": "gs mail sending mail",
+    "sha256": "77de0c921fff3502e3b102415b77499a2ece77fa37dca337726628c0e46c0273"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "topics"
+    ],
+    "target": "topics",
+    "sha256": "29603753090e103706cc88d266424d8b09da394b952026046dd1a3889bd06f7a"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "topics2"
+    ],
+    "target": "topics additional topics",
+    "sha256": "35be0959e75932925afbb2eb08bfb6b6e71a055d6967f77a2239fd70f52e1018"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ACTION LISTS"
+    ],
+    "target": "action lists",
+    "sha256": "80ce8bd3dfa898fc4283134f39eb24e79bce163c327362922b8550f8de08986b"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ACTION2"
+    ],
+    "target": "action lists action list examples",
+    "sha256": "7957cd0bed00ac0e46e79628119204cf50b0887f003c53de9574c57cd26b17fc"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ANONYMOUS ATTRIBUTES",
+      "LAMBDA",
+      "#LAMBDA",
+      "#APPLY"
+    ],
+    "target": "anonymous attributes",
+    "sha256": "dd599e9c8a4c2227f366b96d9ebfbfcd88408b3d158f0881e71386750edde802"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ANONYMOUS2",
+      "LAMBDA2",
+      "#LAMBDA2"
+    ],
+    "target": "anonymous attributes list mapping examples",
+    "sha256": "ea88172d9766c48a8c18b4588a78efece38bcecbde32412e3329e4873d3b4b57"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ANONYMOUS3",
+      "LAMBDA3",
+      "#LAMBDA3"
+    ],
+    "target": "anonymous attributes literal evaluation",
+    "sha256": "2f445df238efae09af9f1d245cd5af5651f058a2fa5c047a0c04397947e2c547"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ANONYMOUS4",
+      "LAMBDA4",
+      "#LAMBDA4",
+      "LAMBDA FUNCTIONS"
+    ],
+    "target": "anonymous attributes supported functions",
+    "sha256": "7b1cdcfef2fe930fc75a373c75c0b5b942e91c4c60a8ec4ceff75114edcde455"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ATTRIBUTES",
+      "ATTRIBUTES LIST",
+      "ATTRIBUTE LIST"
+    ],
+    "target": "attributes",
+    "sha256": "a0c63eb61d38a02b728e7d515a425104fc643189eb4f4bc8ccadbd354b124346"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ATTRIBUTES2"
+    ],
+    "target": "attributes attribute contents",
+    "sha256": "7f1038ef9cfa397471e7a9355eec724bb3e06fdb6a26d68806b89eefe2d9841f"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ATTRIBUTES3"
+    ],
+    "target": "attributes abbreviating names",
+    "sha256": "9bc2c55991dd761005878eb3fc308a66c1d68e961431f8ee88aad23334a706f4"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ATTRIBUTES4"
+    ],
+    "target": "attributes attribute ownership",
+    "sha256": "fe8294cf941c7c513648d061f4fda94e9c1d053c12580bef2d5c99df1b754da9"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "BOOLEAN VALUES"
+    ],
+    "target": "boolean values",
+    "sha256": "ba03a5e2fe3b1dc5579d423f181c527f8478cdf910959c43271d4335896c70be"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "BOOLEAN2"
+    ],
+    "target": "boolean values boolean configuration",
+    "sha256": "b64d29e33fca215ccd116538cc430b666d9c826ba47f53d0a049dedb5805444b"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "BOOLEAN3"
+    ],
+    "target": "boolean values boolean examples",
+    "sha256": "f1e486db68f8e4cc57860297bfa1aa9b24ab53c5dd8bbc372b5425e6befc5797"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "DATABASE",
+      "DBREFS",
+      "DBREF NUMBER",
+      "DBREF #"
+    ],
+    "target": "database",
+    "sha256": "47c9aa5833847828d6f0e3dfe5f435e0717e9fe625277a11949fd6896e818183"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "DBREF2"
+    ],
+    "target": "database finding object references",
+    "sha256": "6c9c0ee3a2e5ae37e0cd15546b2655921c2f4afd2b355040bc39bb0eed794106"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "EVALUATION ORDER"
+    ],
+    "target": "evaluation order",
+    "sha256": "b3272aa4eb651ecda9aa1272611adc2a4a730fedc0fea68435bf4ea1e0ab35ff"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "EVALUATION2"
+    ],
+    "target": "evaluation order zone fallback matching",
+    "sha256": "6ae553afafa193b607e829c42d3a0a8a4155aa392c81a2d3afaaf297a11428a4"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "FAILURE"
+    ],
+    "target": "failure",
+    "sha256": "9df413b679fb0a444cfeff3d411f00fe5b67ad9bf22658e0b2f0c6971a7dca78"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "failure2"
+    ],
+    "target": "failure failure attributes",
+    "sha256": "37258667c9f10e0d471fcb6a1ab897c17bccfb7d93449875ae8ddd630fef21bd"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "INTERIORS"
+    ],
+    "target": "interiors",
+    "sha256": "1cb37a2ad8691ac1acd17fd2b8f235aa4832b70fe8451849cc040c78d0a055b9"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "INTERIORS2"
+    ],
+    "target": "interiors communication across interiors",
+    "sha256": "a58d3f90afdf74c76f44ecdeead7b60d428dd1ce528d6ab136b153b94ad1a570"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "LISTENING"
+    ],
+    "target": "listening",
+    "sha256": "2833bafbb41d04848481d2ade3b433de071686109c0d0dde2f613a8a4202508e"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "^",
+      "^-LISTENS",
+      "LISTENING2"
+    ],
+    "target": "listening listen patterns",
+    "sha256": "c0523b389345273dbb013903520231e5860e1b1a41d68870e73b174b5dd9e57f"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "LISTENING3"
+    ],
+    "target": "listening listener flags and triggers",
+    "sha256": "605169768fb3032150b2690d7617beb95cc3020fea7604e880f853030b76922c"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "MONIKERS"
+    ],
+    "target": "monikers",
+    "sha256": "c166ccfdc0abb6712762e0fec7682fff8bcc04a141210f765b1df58bc4cd4012"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "MONIKERS2"
+    ],
+    "target": "monikers display configuration",
+    "sha256": "a4bf85d45e29f68648989a52985d783f877c92f61b3ce0d3980461fcfadfde73"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "MUSHCODE",
+      "SOFTCODE"
+    ],
+    "target": "mushcode",
+    "sha256": "c2b59cca2ebbe2e8be9f8490f1ee33d55d1ad4b4aa3d036f47624ecc655ff141"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "MUSHCODE2"
+    ],
+    "target": "mushcode learning resources",
+    "sha256": "44a3a410fce42cd46a9094757506fb3bb16791d971efa5a66ffa24bdd0e62d5a"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "PARENT",
+      "PARENTS",
+      "OBJECT PARENTS"
+    ],
+    "target": "parent",
+    "sha256": "2ae65459521e506398c0b1cc689a9fad04b3edd901cbff9b294d38e221822011"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "PARENTS2"
+    ],
+    "target": "parent inherited properties",
+    "sha256": "88afbaa030e3f65f47c1b713b99b2715c5e72be1352581f4937d91becf8a274e"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "PARENTS3"
+    ],
+    "target": "parent attribute overrides",
+    "sha256": "e5eb761a7776235b62da24462f5727c190f70d54fc9bc81e939a9b4e72a2384a"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "PARENTS4"
+    ],
+    "target": "parent command overrides",
+    "sha256": "2208037ca96ada57fd4bae0a9c29fbc24735662b042af193c1ec973f0702ff22"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "PARENTS5"
+    ],
+    "target": "parent ancestor behavior",
+    "sha256": "d3f0c18222754fa79df419f56c1d3a6eb93fe92ed14c53b58177b7bec787fdc7"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "PUPPETS"
+    ],
+    "target": "puppets",
+    "sha256": "7ccd067b4170ebbf9dc5b67e141b7d9d56082c3bb3c53bfc27605f2d801d2d40"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "PUPPETS2"
+    ],
+    "target": "puppets puppet example",
+    "sha256": "425fba9ad129dbf174715e2c30d31bd8adb939695806021824deee43a5573ad7"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "QUEUE"
+    ],
+    "target": "queue",
+    "sha256": "dd41eb16a0b814ee36f1807be7a778def2fac3b993392b5aa55b2c0a01015006"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "QUEUE2"
+    ],
+    "target": "queue queue configuration",
+    "sha256": "1e9f040fc0d6c8f27f0e091370ff41b958103672c9890073ccd25c206ef2ae06"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "REGEXP",
+      "REGEXPS"
+    ],
+    "target": "regexp",
+    "sha256": "695b017ecaa70365b5d3b0a91c89f5187fa2b4a1a59e7e738421ecc307312281"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "REGEXPS2"
+    ],
+    "target": "regexp data validation examples",
+    "sha256": "67fada58aebae6b880640d436997341b137b190991362fc79f2c3bd61dcfa131"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "REGEXP SYNTAX"
+    ],
+    "target": "regexp syntax",
+    "sha256": "cec60d5014a51ab1f0cf398f1a2b978b86174b920ae8ed55536ec5cea71727a4"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "regexp syntax2"
+    ],
+    "target": "regexp syntax pattern characters",
+    "sha256": "2b76790263e109ab40d2347282e6a59087f9c063b28cc6baa7beffe572eb97eb"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "regexp syntax3"
+    ],
+    "target": "regexp syntax character classes",
+    "sha256": "65d15646825e22dc6f3ba4ef28f14a4ed358825a7758d5ecb3608a60e472f516"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "regexp syntax4"
+    ],
+    "target": "regexp syntax boundary assertions",
+    "sha256": "afa8fcbae24f88f7fe60c9ba528e3d0faf19289e048a4ae6a37c242d4f5e75ab"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "regexp syntax5"
+    ],
+    "target": "regexp syntax quantifiers",
+    "sha256": "b3be5a6c906cbc4f4ae3e86e530a0c1108249321128d18d5d94bbd9eaf1cdd3f"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "regexp syntax6"
+    ],
+    "target": "regexp syntax back references",
+    "sha256": "6e84f84a7b8834ba23df48971d1a45c51c22b052d0204625ab53ac084285a6c7"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "regexp syntax7"
+    ],
+    "target": "regexp syntax lookaround assertions",
+    "sha256": "e813e3d27e266d20a1c56c300be184d3d0661e965178cfaf3ceccf28f06bd743"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "regexp syntax8"
+    ],
+    "target": "regexp syntax advanced syntax resources",
+    "sha256": "0e3671fe5daa2a9a90458e451b31e63e759833e54b0eaf57a41e82b3a671f8bb"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "REGEXP CLASSES"
+    ],
+    "target": "regexp classes",
+    "sha256": "d83beed00c005101b46073d41b7cae55dc35f3154f7252de0385356deaaaaed6"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "REGEXP CLASSES2"
+    ],
+    "target": "regexp classes portable character classes",
+    "sha256": "af7e852742ef0e05cf97825ab533a105590a0f8443ed7f672325d3fe5392102e"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "REGISTERS"
+    ],
+    "target": "registers",
+    "sha256": "b82b181b04433af5e5e089099b477012d98e09902754564379c6106762a3c557"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "REGISTERS2"
+    ],
+    "target": "registers capture register behavior",
+    "sha256": "3db4a26521bb328d80df384b91adf14d6b9bfa8b351d19f87b3aedfb4e50815d"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "SEMAPHORES"
+    ],
+    "target": "semaphores",
+    "sha256": "b8ec1a5fadf365d271fee578430b930397ab2f9606aba5390aeef7ae5eec4e99"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "SEMAPHORES2"
+    ],
+    "target": "semaphores notifying waiters",
+    "sha256": "7ce6072091a025fbaed67ba6cfd305265fd57e1c4813f219be947411bb93d3e1"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "SEMAPHORES3"
+    ],
+    "target": "semaphores execution identity",
+    "sha256": "e05202fc02c76ca333c9611db2abfcecb06399b7f743be574ef0c472eca1fc08"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "SEMAPHORES4"
+    ],
+    "target": "semaphores mutual exclusion",
+    "sha256": "d8c84e936f67025e10a49b0a1abaf82b776fbcfe7324ca6b23e7e10c73913fa5"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "SEMAPHORES5"
+    ],
+    "target": "semaphores named semaphore attributes",
+    "sha256": "1f3c3ea8d83028ec899fccaea8df5871bce924325078ad401b2babcbf6d6ac2c"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "SEMAPHORES6"
+    ],
+    "target": "semaphores named semaphore example",
+    "sha256": "3e4280d4e98beb1decbfd08e35248c970170783b01ccde964bbe352ccd9a1ae3"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "%",
+      "%b",
+      "%t",
+      "%%",
+      "SUBSTITUTIONS"
+    ],
+    "target": "%",
+    "sha256": "4e1449cdc0e23340c78a27bb8c3d1804de90e30537444064f5c72eeb0de47846"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "SUBSTITUTIONS2",
+      "%2",
+      "%v",
+      "%w",
+      "%x"
+    ],
+    "target": "% pronouns",
+    "sha256": "817570723116ef21a292cd6d6921dea81b6dedc5492de5be568a5c2887ef91b4"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "SUBSTITUTIONS3",
+      "%3",
+      "%L",
+      "%c",
+      "%u",
+      "%?",
+      "%=",
+      "%+",
+      "%d"
+    ],
+    "target": "% substitution reference",
+    "sha256": "dca3fef062cb2e505153d2b49a7642baf433543df2b3d7f62a1658a2832e886e"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "SUBSTITUTIONS4",
+      "%4"
+    ],
+    "target": "% substitution examples",
+    "sha256": "2893e01387611181040e50cafe8ad3df977ef4cc300e47d90db4cc7bd2a6dbba"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "$-COMMANDS",
+      "MACROS",
+      "USER-DEFINED COMMANDS"
+    ],
+    "target": "$-commands",
+    "sha256": "614addfe8d2de2542428796fb95dae9e55cf0738f59d418b5a1fa1bc47892c53"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "$-COMMANDS2",
+      "MACROS2",
+      "USER-DEFINED2"
+    ],
+    "target": "$-commands patterns and registers",
+    "sha256": "656e2b8589ef2607f20c7f642e038c4264af4ddd16ca4b52081862d50897059b"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "VERBS"
+    ],
+    "target": "verbs",
+    "sha256": "dcb4767add5b991ca066b27dd696b3138d4de34e334b84e619fdaff446036577"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "VERBS2",
+      "NONAME",
+      "NOSPACE"
+    ],
+    "target": "verbs name and spacing behavior",
+    "sha256": "52b485658cfe7323ef5716d4354018730eadc0c62093cae2bb49d77e724b519f"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "WARNINGS LIST"
+    ],
+    "target": "warnings list",
+    "sha256": "e87e8e2ae62c381f232578f1711dbdbebedcd23872f91d1fa0a5db3a2d95e5b3"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "WARNINGS LIST2"
+    ],
+    "target": "warnings list combined warning profiles",
+    "sha256": "6385deeeb416979a762c9f6ba8bdbb505761846b02151bb03f5780546497d525"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ZONE MASTERS",
+      "ZMPs",
+      "SHARED PLAYERS"
+    ],
+    "target": "zone masters",
+    "sha256": "319a1b88a96c4ae485ec7a566e47a1a75d6119caaec4dcd0f1fb8b456b1083da"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "SHARED PLAYERS2"
+    ],
+    "target": "zone masters shared player examples",
+    "sha256": "03de397705093c60e3a6f437e5c436e8c98ab42414cac60054a19fb84841ab40"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ZONES",
+      "ZONE OBJECTS",
+      "ZONE MASTER OBJECTS",
+      "ZONE MASTER THINGS",
+      "ZMOs",
+      "ZMTs"
+    ],
+    "target": "zones",
+    "sha256": "2eef04b646fb77bc91b2dd0bda49d40c1f8453d6cf022e8b52f81ce20899bfca"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "ZONES2"
+    ],
+    "target": "zones zone commands",
+    "sha256": "73f1e68ef80676ac78e17d785b3d58331f204370817329e3ce57fdcba268fb3a"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "RESTRICT"
+    ],
+    "target": "restrict",
+    "sha256": "810c75aef584f66b30e51de760c7f29fdc3c57dc2a188f78046cf00ea35a6556"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "RESTRICT2"
+    ],
+    "target": "restrict command restriction rules",
+    "sha256": "ed83e3ec48cc329851262819fd7db63ddc198b5a091d4fe147a1183703448ab7"
+  },
+  {
+    "source": "sharptop.md",
+    "old": [
+      "RESTRICT3"
+    ],
+    "target": "restrict function and command permissions",
+    "sha256": "982e1bbfa44564a8957df03d039bf128f3734d1413c3ee8001296420ddf8ceb4"
+  },
+  {
+    "source": "sharpconf.md",
+    "old": [
+      "@config cosmetic"
+    ],
+    "target": "@config cosmetic",
+    "sha256": "c1d674b48560d2002b45c9b9e0a3097572e22d58310691a61fc3b9f20427567b"
+  },
+  {
+    "source": "sharpconf.md",
+    "old": [
+      "@config cosmetic2"
+    ],
+    "target": "@config cosmetic page and flag display",
+    "sha256": "923a12e89c8f8f0d556a443ad58959aeedb6aec979461cf9f1d1097c767867e8"
+  },
+  {
+    "source": "sharpconf.md",
+    "old": [
+      "@config limits"
+    ],
+    "target": "@config limits",
+    "sha256": "f38c00688c9bbf8f49ffad862ee7fa4302c88c851b75eb61c8e7d36ab0d9556f"
+  },
+  {
+    "source": "sharpconf.md",
+    "old": [
+      "@config limits2"
+    ],
+    "target": "@config limits communication and economy limits",
+    "sha256": "51956aa5e4477dccaef73c7cdae44b936af7fcf8e7b941619d31defe300d3c70"
+  },
+  {
+    "source": "sharpconf.md",
+    "old": [
+      "@config limits3"
+    ],
+    "target": "@config limits evaluation and queue limits",
+    "sha256": "0f14fd05b28a507521502dcff2cc93c3721ab06cee9fa5c73b1a957517529a6d"
+  },
+  {
+    "source": "sharpconf.md",
+    "old": [
+      "@config limits4"
+    ],
+    "target": "@config limits connection and alias limits",
+    "sha256": "f937fcae851bbfaa49757cf4413bf9d697d2e9f05bde1b853416bb0fefdc7759"
+  },
+  {
+    "source": "sharpflag.md",
+    "old": [
+      "FLAGS"
+    ],
+    "target": "flags",
+    "sha256": "cf911547b29414ade06b3d12fec8fdc040c034f4286cc119c7f4ee6668b51aca"
+  },
+  {
+    "source": "sharpflag.md",
+    "old": [
+      "FLAGS2"
+    ],
+    "target": "flags inspecting flags",
+    "sha256": "24bc023e68e2c2efdc617327aab511825291b5f3e1fe06e3b2397b9c281db7a0"
+  },
+  {
+    "source": "sharpflag.md",
+    "old": [
+      "DEBUG"
+    ],
+    "target": "debug",
+    "sha256": "d75fae70c8fde703e8f631b9f669906b136775a6dd2f23e5948ceb30a0bc9f7f"
+  },
+  {
+    "source": "sharpflag.md",
+    "old": [
+      "DEBUG2"
+    ],
+    "target": "debug debugging example",
+    "sha256": "faca52e77ddf7bfab060ddf5af6e50e8df09a549ab4ef1e11790ce288152f499"
+  },
+  {
+    "source": "sharpmail.md",
+    "old": [
+      "@MALIAS"
+    ],
+    "target": "@malias",
+    "sha256": "d8038b8fac593c6698e766902aa542380d055b44a48026e5201baee10a987ff9"
+  },
+  {
+    "source": "sharpmail.md",
+    "old": [
+      "@MALIAS2"
+    ],
+    "target": "@malias creating and naming aliases",
+    "sha256": "2333744a171b9e7dfd45b3c858330098b9ea242088eca67f1330d2d24bbb5763"
+  },
+  {
+    "source": "sharpmail.md",
+    "old": [
+      "@MALIAS3"
+    ],
+    "target": "@malias managing recipients",
+    "sha256": "f0fd4c1cd84d635872743393e3d5729f3341901a572db7426a01d5d735d1741f"
+  },
+  {
+    "source": "sharpmail.md",
+    "old": [
+      "@MALIAS4"
+    ],
+    "target": "@malias alias permissions",
+    "sha256": "b8288d8f5359a9e3c225b375394a15bb4fbf333a61e766ff1f3bbab7154a489a"
+  },
+  {
+    "source": "sharpmail.md",
+    "old": [
+      "@MALIAS5"
+    ],
+    "target": "@malias administrative alias operations",
+    "sha256": "5748c148433a35d2c86cf25a761988ab3b7f06a070acd139be23a3d578c466ea"
+  },
+  {
+    "source": "sharpevents.md",
+    "old": [
+      "EVENT EXAMPLES"
+    ],
+    "target": "event examples",
+    "sha256": "263b049d37937a9a0634046d56f03d7d4dfef4d3a38afa987502e781053c0a09"
+  },
+  {
+    "source": "sharpevents.md",
+    "old": [
+      "EVENT EXAMPLES2"
+    ],
+    "target": "event examples player creation example",
+    "sha256": "9edda4e3ecfed0c2d9e63fbc2b31e80cc4b2770de4d9e135d8405b70350a9181"
+  },
+  {
+    "source": "sharppueb.md",
+    "old": [
+      "PUEBLO"
+    ],
+    "target": "pueblo",
+    "sha256": "d83c4f452ad80211942e06f85e60c6ca2ebf398cf8ba05516cb075379acfba8b"
+  },
+  {
+    "source": "sharppueb.md",
+    "old": [
+      "PUEBLO2"
+    ],
+    "target": "pueblo client enhancements",
+    "sha256": "46a9cd92d69eb588d662589fa2cd840a1138b5988958dccce4d4d128e23c046f"
+  },
+  {
+    "source": "sharplock.md",
+    "old": [
+      "LOCK KEYS"
+    ],
+    "target": "lock keys",
+    "sha256": "40162caec59e8d910201ea924de9e0d583b4712f45c08f616be94697b5d3668a"
+  },
+  {
+    "source": "sharplock.md",
+    "old": [
+      "LOCK KEYS2",
+      "@LOCK-COMPLEX"
+    ],
+    "target": "lock keys combining lock keys",
+    "sha256": "692685db73e46ac73096183cbb0c7338117fd026b3957ca703c7793680583d2a"
+  },
+  {
+    "source": "sharplock.md",
+    "old": [
+      "@LOCK-EVALUATION"
+    ],
+    "target": "@lock-evaluation",
+    "sha256": "1c430f9ce6f37c1608ed114e3230026d547783901fba9900a3ef474ebf0ed107"
+  },
+  {
+    "source": "sharplock.md",
+    "old": [
+      "@LOCK-EVAL2",
+      "@LOCK-EVALUATION2"
+    ],
+    "target": "@lock-evaluation evaluation lock example",
+    "sha256": "9f666e4c1d3cb0282806e4ffd2d1b87c11d04e0b5874599f920e352c7bd96739"
+  },
+  {
+    "source": "sharplock.md",
+    "old": [
+      "LOCKTYPES",
+      "LOCKLIST",
+      "LOCK TYPES",
+      "LOCK LIST"
+    ],
+    "target": "locktypes",
+    "sha256": "1b551431011be366c1d6a9a6adbd1bfa7ebc65ca25606db2a1c0b2485a20e609"
+  },
+  {
+    "source": "sharplock.md",
+    "old": [
+      "LOCK TYPES2",
+      "LOCKTYPES2"
+    ],
+    "target": "locktypes additional lock types",
+    "sha256": "c081b11201a925dfcf3312102fb48016b7765398b79f38a6f38edada52ddb95a"
+  },
+  {
+    "source": "sharpchat.md",
+    "old": [
+      "@CHATFORMAT"
+    ],
+    "target": "@chatformat",
+    "sha256": "47972eac7c0b5e6ee93e68d093089314a4241bc5bd63b9bb4928286ff1a59416"
+  },
+  {
+    "source": "sharpchat.md",
+    "old": [
+      "@CHATFORMAT2"
+    ],
+    "target": "@chatformat wrapping channel messages",
+    "sha256": "9cfc2e3a80eb35b6f68c5dba3cda2dcf56345928be19050086ea54a79e471b52"
+  },
+  {
+    "source": "sharpchat.md",
+    "old": [
+      "@CHATFORMAT3"
+    ],
+    "target": "@chatformat channel color themes",
+    "sha256": "82cf81960b942f557a0134cebe28f8305efcf82c0947634dd5e3321f0959c791"
+  },
+  {
+    "source": "sharpchat.md",
+    "old": [
+      "@CHANNEL JOINING",
+      "@channel/list",
+      "@CLIST",
+      "@channel/what",
+      "@channel/who",
+      "@channel/on",
+      "@channel/join",
+      "@channel/off",
+      "@channel/leave"
+    ],
+    "target": "@channel joining",
+    "sha256": "e0afed88c9ffd0a546f6c8b8013e61c13a5c3352a7036a4f7078430b7341ccf4"
+  },
+  {
+    "source": "sharpchat.md",
+    "old": [
+      "@CHANNEL JOINING2",
+      "@channel/gag",
+      "@channel/ungag",
+      "@channel/hide",
+      "@channel/unhide",
+      "@channel/mute",
+      "@channel/combine",
+      "@channel/uncombine"
+    ],
+    "target": "@channel joining personal channel settings",
+    "sha256": "bb47e1352c88d20ca1ee197877aa4f4a2652fa0e31b2d733fdb136ac1b74a444"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES13"
+    ],
+    "target": "timezones historical catalog",
+    "sha256": "0702a4808a3ba6517f3121f11c2d135637ea9bda003603ce4115dbcdcb13e17d"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES12"
+    ],
+    "target": "timezones historical catalog",
+    "sha256": "86765933efb34d402bcbb82a8559ab152e5948a2a83ef92a3407a519ffa4a4fc"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES11"
+    ],
+    "target": "timezones historical catalog",
+    "sha256": "a99968d26f08737e3cdaf4d275065563969e839332e496c26ab7115a4dcf093e"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES10"
+    ],
+    "target": "timezones historical catalog",
+    "sha256": "9c3d05906e546e0529a61f3907a5eb1e897d0cd636f022eab4fc7bbe6da20a24"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES9"
+    ],
+    "target": "timezones historical catalog",
+    "sha256": "7c6a57334c416b4122c9c2f3dca268ff812ed08aa4bf75a5ea8fea88e619c761"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES8"
+    ],
+    "target": "timezones historical catalog",
+    "sha256": "8a889176a70d21382fccea137f56e736608628b47fd655f7f493cbcc8cc859f1"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES7"
+    ],
+    "target": "timezones historical catalog",
+    "sha256": "e651e309c9171f8d80346573005cf3c27ea7e12d07c74ccc7dd27ad0d44f9faf"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES6"
+    ],
+    "target": "timezones historical catalog",
+    "sha256": "9fe238b02e42dd918202386040fefc58695f035a4d026d8f5c692ab5f94b194b"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES5"
+    ],
+    "target": "timezones historical catalog",
+    "sha256": "de13862efeccec9ec6f84214f78f517f5e6497bc8b2c11e1d0e5f65572142d79"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES4"
+    ],
+    "target": "timezones historical catalog",
+    "sha256": "c6c300299841ff41f47082e8aaab3997f53cf98582b5e3cea15c0d9a49bf98a1"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES3"
+    ],
+    "target": "timezones historical catalog",
+    "sha256": "a201401083a8d9d793e274d5146ed85558103fd0b106ca29ff50ec990d36504e"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES2"
+    ],
+    "target": "timezones historical catalog",
+    "sha256": "8b8e3409405e6d0a893eaae04eddf54cca883786058e0b8beaf27c75dd45b812"
+  },
+  {
+    "source": "sharpfunc.md",
+    "old": [
+      "TIMEZONES",
+      "@TZ"
+    ],
+    "target": "timezones",
+    "sha256": "f81dcd744c777cc53e6bb560469230590fda778d9e1eb9afe61a74500c96c59f"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "@charges",
+      "@runout"
+    ],
+    "target": "@charges",
+    "sha256": "6aa6c4a83ee6e33c3c5e9430daa626f3d4b363021c4bf4f9efeb063b98d19ad5"
+  },
+  {
+    "source": "sharpcmd.md",
+    "old": [
+      "charges2",
+      "runout2"
+    ],
+    "target": "@charges examples",
+    "sha256": "6b6fe924316c4ad7b047c87d6f50074a40532c02d321b86b0a958ad953a947f1"
+  },
+  {
+    "source": "sharpwiki.md",
+    "old": [
+      "WIKI",
+      "@WIKI",
+      "@WIKI/SOURCE",
+      "@WIKI/DRAFT"
+    ],
+    "target": "wiki",
+    "sha256": "4f050a81fdadba4745e47c609ab2b2d1288940c0381a8f9ace9f14bed4fe3476"
+  },
+  {
+    "source": "sharpwiki.md",
+    "old": [
+      "WIKI-EDITING",
+      "@WIKI/CREATE",
+      "@WIKI/EDIT",
+      "@WIKI/APPEND",
+      "@WIKI/ROLLBACK",
+      "@WIKI/TRANSLATE"
+    ],
+    "target": "wiki editing",
+    "sha256": "adfac8dfb1d7eeae7597f4476c6c1cbca72e83121eb32ccac1f0c05315fe974c"
+  },
+  {
+    "source": "sharpwiki.md",
+    "old": [
+      "WIKI-ADMIN",
+      "@WIKI/DELETE",
+      "@WIKI/PROTECT",
+      "@WIKI/UNPROTECT",
+      "@WIKI/PUBLISH",
+      "@WIKI/UNPUBLISH",
+      "@WIKI/CATEGORY",
+      "@WIKI/TAG",
+      "@WIKI/HISTORY"
+    ],
+    "target": "wiki administration",
+    "sha256": "e38a84b943a0459699d84ef5170c0db11a0484f9e02dea63f2a6ca6c9acabb06"
+  },
+  {
+    "source": "queuecontrol.md",
+    "old": [
+      "@queue"
+    ],
+    "target": "@queue",
+    "sha256": "c837f29297332cf9003fdc7618acdcc175ef75e7212f20682b0e724feb135b67"
+  },
+  {
+    "source": "restrictedexpr.md",
+    "old": [
+      "restrictedexpr()"
+    ],
+    "target": "restrictedexpr()",
+    "sha256": "9b95ffee3563ce8285a0870f57337ce0c167df27de244b47b58dcd340a651a4b"
+  },
+  {
+    "source": "queuebudgets.md",
+    "old": [
+      "queue budgets"
+    ],
+    "target": "queue budgets",
+    "sha256": "084283b84297e56651423e2897e727903d239dff45c599e6f02d6b4550d15dff"
+  },
+  {
+    "source": "queuebudgets.md",
+    "old": [
+      "execution budget"
+    ],
+    "target": "execution budget",
+    "sha256": "da39e08e3a6879e2a87a42f36047bed391d7df76e7add1149fdc1f1e8a824425"
+  },
+  {
+    "source": "ahelp/snapshots.md",
+    "old": [
+      "Object snapshots",
+      "@SNAPSHOT"
+    ],
+    "target": "object snapshots",
+    "sha256": "a93deba0cb89c4c1694f4f04a1314f314936d8487d9f0d1af92f55a145132723"
+  },
+  {
+    "source": "ahelp/jobs.md",
+    "old": [
+      "Recurring jobs",
+      "@JOB"
+    ],
+    "target": "recurring jobs",
+    "sha256": "6ea4f5231447d2244a8b734cd1b6ed9d761028083477bd7d87d2ad36e6bdad2c"
+  },
+  {
+    "source": "ahelp/reality.md",
+    "old": [
+      "@REALITY",
+      "Reality layers"
+    ],
+    "target": "@reality",
+    "sha256": "d1bb332c48200ade7939fec31a6f72766d33edf42ca790ea46c22a9ee53238c0"
+  },
+  {
+    "source": "ahelp/capabilities.md",
+    "old": [
+      "Administrative capabilities"
+    ],
+    "target": "administrative capabilities",
+    "sha256": "95261cbc6e78bd92148ea71a57bc76aab1afddc555a18424fd55838d5cd5dc57"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "PENNMUSH COMPATIBILITY"
+    ],
+    "target": "pennmush compatibility",
+    "sha256": "498f338463e7b0b6f1f5f789304ccf69224888ba27cd341340c9044e2f0cef99"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "COMPATIBILITY CONFIG"
+    ],
+    "target": "compatibility config",
+    "sha256": "3468a3a26f53ffb16b16b31b4598138354eda79d0da79940f427cc36a50e8972"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "COMPATIBILITY PARSER"
+    ],
+    "target": "compatibility parser",
+    "sha256": "c48e4e9bd631c870d83d1d9ee89bdec3df30e0b529db0399533ea6c0c24cc5a4"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "COMPATIBILITY COMMANDS"
+    ],
+    "target": "compatibility commands",
+    "sha256": "9fcc35988a1dc32b1a1f043e14587bffdb9cae1f8820a971b3a56483508455ea"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "COMPATIBILITY ARGUMENTS"
+    ],
+    "target": "compatibility arguments",
+    "sha256": "25a6e7fb78868d87e570b2af3ca8c22c3e8313f3e09002aed91369812b0321b1"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "COMPATIBILITY IDENTITY"
+    ],
+    "target": "compatibility identity",
+    "sha256": "ec11c4ccb2ef2e8bf4f9aef4a81d4de65a7219a37b68a64c4dbf3d1268773fe3"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "COMPATIBILITY OUTPUT"
+    ],
+    "target": "compatibility output",
+    "sha256": "80379f9e14abce22b08b1018f834c59042114927301a2ea8a41b4b1292c1676f"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "COMPATIBILITY ECONOMY"
+    ],
+    "target": "compatibility economy",
+    "sha256": "744ca5bf66d80db9a15f8998f0dca13b57f30511a9ab58e0369f938861c63390"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "COMPATIBILITY NAMES"
+    ],
+    "target": "compatibility names",
+    "sha256": "3d4545c3dc8af5021bbb67472090979db09b309f0f4d60532831daf651745076"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "COMPATIBILITY MAIL"
+    ],
+    "target": "compatibility mail",
+    "sha256": "58c223ca0c9930c8f57adf8a3d7b4a8fa1bb8b9cc7d90cea81d4823ffc829cba"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "COMPATIBILITY UNRESOLVED"
+    ],
+    "target": "compatibility unresolved",
+    "sha256": "795d8b6fabe70938be5b8063f0329061adb5acd54b9a6de2ea7a2512db030533"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "COMPATIBILITY DEFECTS"
+    ],
+    "target": "compatibility defects",
+    "sha256": "7a5bcf11dbea281cc916f26545e6105a89f7c6beb9d96cdeb65487bd2c43d3d2"
+  },
+  {
+    "source": "pennmush-compatibility.md",
+    "old": [
+      "COMPATIBILITY MATCHED"
+    ],
+    "target": "compatibility matched",
+    "sha256": "fb3eb25a30ee50efce27ba0017fe2be5e32ccb0310f05efda0ac7ee2e7bba4ec"
+  },
+  {
+    "source": "sharpchat.md",
+    "old": [
+      "CHANNEL FUNCTIONS",
+      "CHANNELS()",
+      "COWNER()",
+      "CFLAGS()",
+      "CLFLAGS()",
+      "CSTATUS()",
+      "CTITLE()",
+      "CWHO()",
+      "CRECALL()",
+      "CBUFFER()",
+      "CBUFFERADD()",
+      "CDESC()",
+      "CMSGS()",
+      "CUSERS()",
+      "CMOGRIFIER()",
+      "CINFO()",
+      "CLOCK()"
+    ],
+    "target": "channel functions",
+    "sha256": "761b7b4fd0c1bac76d2ca365d0d94c6f879b6408d8db3e381abe57d1bd68747e"
+  }
+]

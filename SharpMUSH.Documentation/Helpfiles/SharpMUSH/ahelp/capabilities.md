@@ -1,8 +1,40 @@
+<!-- help-article
+{
+  "corpus": "ahelp",
+  "id": "administrative-capabilities",
+  "lookup": "administrative capabilities",
+  "aliases": [],
+  "sections": [
+    {
+      "id": "grant-and-deny-resolution",
+      "heading": "Grant and deny resolution",
+      "lookup": "administrative capabilities grant and deny resolution"
+    },
+    {
+      "id": "capability-scopes",
+      "heading": "Capability scopes",
+      "lookup": "administrative capabilities capability scopes"
+    },
+    {
+      "id": "actor-identity-and-revocation",
+      "heading": "Actor identity and revocation",
+      "lookup": "administrative capabilities actor identity and revocation"
+    },
+    {
+      "id": "delegated-role-management",
+      "heading": "Delegated role management",
+      "lookup": "administrative capabilities delegated role management"
+    }
+  ]
+}
+-->
 # Administrative capabilities
 
 Portal roles are the shared source for delegated administrative operations. They use the
 existing account assignments and persist in world backups. Adding capabilities does not
 change Penn-compatible flags, powers, ownership checks or locks.
+
+## Grant and deny resolution
 
 Each scope has Allow, Deny or Inherit. The highest-priority explicit opinion wins; Deny
 wins a priority tie. A child scope with any resolved explicit opinion uses that opinion.
@@ -10,12 +42,16 @@ Only children without an explicit opinion inherit an allowed parent. Therefore a
 explicit child denial survives even a higher-priority parent grant. A higher-priority
 explicit child Allow can override a lower-priority child Deny. No grant means denied.
 
+## Capability scopes
+
 The stable action scopes are snapshots.capture, snapshots.restore, jobs.manage.own,
 jobs.manage, queue.inspect.own, queue.inspect, queue.control.own, queue.control,
 diagnostics.profile and reality.admin. The administrative job/queue scopes imply their
 corresponding own scopes. Own scopes still require a separate resource-owner check.
 Snapshot restore never follows from capture. Feature implementations enforce these gates
 where the operation executes, including after waiting in a queue.
+
+## Actor identity and revocation
 
 Authenticated account-only portal actions retain the existing account role derivation.
 Game entry points call GetGameActorAsync with the actual executor full objid to resolve
@@ -26,6 +62,8 @@ foreign characters and privileged callbacks cannot borrow the account's authorit
 The executing service reloads account status, character links and persisted roles on
 every authorization; queue records store identities, never cached grants. Transfer,
 unlink, disable and revocation therefore apply when queued work executes.
+
+## Delegated role management
 
 Delegated role managers can manage lower-priority grants they already hold. They cannot
 edit assigned roles, change their own assignments, modify system roles or remove deny

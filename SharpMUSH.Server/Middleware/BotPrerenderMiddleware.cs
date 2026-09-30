@@ -123,7 +123,7 @@ public sealed class BotPrerenderMiddleware(
 				{
 					html = HelpController.GeneratePrerenderHtml(
 						entry,
-						$"{canonicalBase}{HelpController.PublicTopicHref(entry.Topic)}");
+						$"{canonicalBase}{HelpController.PublicTopicHref(entry.Article?.Lookup ?? entry.Topic)}");
 				}
 			}
 		}

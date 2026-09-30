@@ -1,5 +1,46 @@
+<!-- help-article
+{
+  "corpus": "ahelp",
+  "id": "object-snapshots",
+  "lookup": "object snapshots",
+  "aliases": [
+    "@SNAPSHOT"
+  ],
+  "sections": [
+    {
+      "id": "commands",
+      "heading": "Commands",
+      "lookup": "object snapshots commands"
+    },
+    {
+      "id": "preview-and-restore-selection",
+      "heading": "Preview and restore selection",
+      "lookup": "object snapshots preview and restore selection"
+    },
+    {
+      "id": "captured-data",
+      "heading": "Captured data",
+      "lookup": "object snapshots captured data"
+    },
+    {
+      "id": "retention-limits",
+      "heading": "Retention limits",
+      "lookup": "object snapshots retention limits"
+    },
+    {
+      "id": "recovery",
+      "heading": "Recovery",
+      "lookup": "object snapshots recovery"
+    },
+    {
+      "id": "validation",
+      "heading": "Validation",
+      "lookup": "object snapshots validation"
+    }
+  ]
+}
+-->
 # Object snapshots
-# @SNAPSHOT
 
 Object snapshots recover mistakes on a room, exit or code object without restoring the
 world. The active player needs snapshots.capture to capture and snapshots.restore
@@ -8,11 +49,17 @@ and current capabilities. Another owned object cannot borrow the player's delega
 Snapshots are visible to their creating account while the current character can still
 read their attributes and locks. Ownership changes and role revocation apply immediately.
 
+## Commands
+```sharp
+
     @snapshot/capture object=description
     @snapshot/list object
     @snapshot/preview object=snapshot-id
     @snapshot/restore object=snapshot-id,preview-token
     @snapshot/resolve object=pending-recovery-id
+```
+
+## Preview and restore selection
 
 Add /locks, /flags or /name to preview and restore to include those fields. Use identical
 switches for preview and restore. The basic operation restores the captured attributes
@@ -20,6 +67,8 @@ and their flags. Attributes created afterward, locks not present in the snapshot
 structural relationships are retained. The portal's Object snapshots page also lets you
 select individual attribute names before previewing. A changed target or selection
 invalidates the preview; inspect a fresh preview before trying again.
+
+## Captured data
 
 Capture records markup, attribute flags, ancestor access metadata and creator identities, locks and their flags,
 object flags, name, full object identity, type, creator, time, description, schema and
@@ -29,10 +78,14 @@ restored. Attribute creator identities validate historical read access; ordinary
 writes determine ownership when restoring. Privileged or locked locks require their normal
 administrative workflow. Normal attribute and object flag restrictions still apply.
 
+## Retention limits
+
 Histories retain 1–20 snapshots per object (10 by default), with an additional pending
 recovery image protected from pruning. Each image is limited to 1024 readable attributes
 and 2 MiB. Histories use the existing database expanded-object store; they survive restarts
 and travel in provider world backups. No external file directory needs copying.
+
+## Recovery
 
 Restore is a sequence of cache-invalidating Mediator mutations, not a cross-command
 transaction. Before the first change, a durable before-image and pending recovery marker
@@ -50,6 +103,8 @@ retains the image, and records the resolving account, character and time.
 
 Writes through this service are serialized within the single engine; other
 commands can still change an object, so avoid concurrent editing during restore.
+
+## Validation
 
 A malformed image, unsupported schema, changed object type, recycled object number,
 missing attribute creator/flag, missing stable lock reference, invalid preview or missing

@@ -2,6 +2,9 @@ using Markdig;
 using Markdig.Renderers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
+using Markdig.Renderers.Html;
+using SharpMUSH.Library.Services.Interfaces;
+using System.Net;
 using System.Text;
 
 namespace SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -38,12 +41,24 @@ public static class HelpHtmlRenderer
 	/// Maps a topic name to the URL a reader should be sent to. Called for every <c>[topic]</c>
 	/// reference in the body; return <see langword="null"/> to leave the reference as plain text.
 	/// </param>
-	public static string RenderToHtml(string markdown, Func<string, string?> topicHref)
+	public static string RenderToHtml(string markdown, Func<string, string?> topicHref, HelpArticle? article = null)
 	{
 		ArgumentNullException.ThrowIfNull(markdown);
 		ArgumentNullException.ThrowIfNull(topicHref);
 
 		var document = Markdown.Parse(markdown, Pipeline);
+		if (article is not null)
+		{
+			foreach (var heading in document.OfType<HeadingBlock>())
+			{
+				var section = article.Sections.FirstOrDefault(section =>
+					section.Heading == HelpArticleParser.HeadingText(markdown, heading));
+				if (section is not null)
+				{
+					heading.GetAttributes().Id = section.Id;
+				}
+			}
+		}
 
 		foreach (var link in document.Descendants<LinkInline>())
 		{
@@ -62,7 +77,10 @@ public static class HelpHtmlRenderer
 		renderer.Render(document);
 		writer.Flush();
 
-		return writer.ToString();
+		var toc = article is null || article.Sections.Count == 0 ? string.Empty
+			: "<nav class=\"help-toc\"><ul>" + string.Concat(article.Sections.Select(section =>
+				$"<li><a href=\"#{WebUtility.HtmlEncode(section.Id)}\">{WebUtility.HtmlEncode(section.Heading)}</a></li>")) + "</ul></nav>";
+		return toc + writer.ToString();
 	}
 
 	/// <summary>

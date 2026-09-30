@@ -1,5 +1,8 @@
 @inject GameHelpService Help
 @inject IStringLocalizer<SharedResource> Loc
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 @* Renders one help topic out of the server's shipped helpfile corpus. Not a wiki page: there is
    nothing to create here, so a topic nobody wrote about is a plain "no such topic", never an
@@ -15,7 +18,13 @@ else if (_error is not null)
 }
 else if (_entry is not null && _entry.Topic is not null)
 {
-    <article class="help-entry">@((MarkupString)(_entry.Html ?? string.Empty))</article>
+    @if (_entry.CanonicalHref is not null)
+    {
+        <HeadContent>
+            <link rel="canonical" href="@Navigation.ToAbsoluteUri(_entry.CanonicalHref).GetLeftPart(UriPartial.Path)" />
+        </HeadContent>
+    }
+    <article class="help-entry" @ref="_articleElement">@((MarkupString)(_entry.Html ?? string.Empty))</article>
 }
 else if (_entry is not null && _entry.Candidates.Count > 0)
 {
@@ -45,6 +54,9 @@ else
     private bool _loading = true;
     private string? _error;
     private string? _loadedTopic;
+    private ElementReference _articleElement;
+    private IJSObjectReference? _module;
+    private bool _focusRequested;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -64,6 +76,27 @@ else
             ApiFailure failure => ((GameHelpEntry?)null, failure.Message)
         };
         _loading = false;
+        _focusRequested = _entry?.SectionId is not null || new Uri(Navigation.Uri).Fragment.Length > 1;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_loading || !_focusRequested || _entry?.Topic is null)
+        {
+            return;
+        }
+        _focusRequested = false;
+        var section = _entry.SectionId ?? Uri.UnescapeDataString(new Uri(Navigation.Uri).Fragment.TrimStart('#'));
+        _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Help/HelpEntryPanel.razor.js");
+        await _module.InvokeVoidAsync("focusSection", _articleElement, section);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.DisposeAsync();
+        }
     }
 
     private string HrefFor(string topic) =>

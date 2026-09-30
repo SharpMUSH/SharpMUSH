@@ -85,6 +85,10 @@ public partial class RecursiveMarkdownRenderer
 		// Help-topic shortcuts ([topic]) are command links; ordinary links navigate.
 		// A markdown link title ([text](url "title")) becomes the link hint.
 		var isCommand = link.GetData(HelpTopicInlineParser.CommandDataKey) is true;
+		if (isCommand)
+		{
+			contentText = url;
+		}
 		var hint = string.IsNullOrWhiteSpace(link.Title) ? null : link.Title;
 		var linkMarkup = Ansi.Create(
 			linkUrl: url,

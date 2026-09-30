@@ -1,5 +1,6 @@
 using Markdig;
 using Markdig.Syntax;
+using Markdig.Syntax.Inlines;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 
@@ -61,10 +62,17 @@ public static class RecursiveMarkdownHelper
 	/// Optional MUSH code parser used to apply syntax highlighting to
 	/// <c>sharp</c> fenced code blocks.
 	/// </param>
-	public static MString RenderMarkdown(string markdown, int maxWidth = 78, IMUSHCodeParser? mushParser = null)
+	public static MString RenderMarkdown(string markdown, int maxWidth = 78, IMUSHCodeParser? mushParser = null, string corpus = "help")
 	{
 		var pipeline = BuildPipeline();
 		var document = Markdown.Parse(markdown, pipeline);
+		foreach (var link in document.Descendants<LinkInline>())
+		{
+			if (link.GetData(HelpTopicInlineParser.CommandDataKey) is true && link.Url?.StartsWith("help ", StringComparison.Ordinal) == true)
+			{
+				link.Url = corpus + link.Url[4..];
+			}
+		}
 		var renderer = new RecursiveMarkdownRenderer(maxWidth, mushParser);
 		return renderer.Render(document);
 	}
