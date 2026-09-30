@@ -7,6 +7,7 @@ using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
+using SharpMUSH.Client.Components.Admin;
 using SharpMUSH.Client.Pages.Admin;
 using SharpMUSH.Client.Pages.Admin.Config;
 using SharpMUSH.Client.Services;
@@ -127,7 +128,7 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		var snackbar = Substitute.For<ISnackbar>();
 		Services.AddSingleton(snackbar);
 
-		var cut = Render<ConfigNavDrawer>();
+		var cut = Render<ConfigSidebar>();
 		cut.FindAll("button").First(b => b.TextContent.Contains("Export")).Click();
 
 		cut.WaitForAssertion(() => snackbar.Received().Add(

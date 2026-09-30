@@ -3884,4 +3884,7 @@
   <data name="AdmKitComposerPlaceholder" xml:space="preserve">
     <value>Write your pose…</value>
   </data>
+  <data name="AdmConfigGroupToggle" xml:space="preserve">
+    <value>Show or hide {0}</value>
+  </data>
 </root>
