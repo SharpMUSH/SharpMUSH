@@ -380,8 +380,13 @@ public class SceneOocIntegrationTests
 			break;
 		}
 
-		await Assert.That(received).IsNotNull();
-		await Assert.That(received!.Value.GetProperty("ActorObjId").GetString()).IsEqualTo(objid);
-		await Assert.That(received.Value.GetProperty("Tags")[0].GetString()).IsEqualTo("ooc");
+		if (received is not { } sceneEvent)
+		{
+			Assert.Fail("no scene event carried the pose");
+			return;
+		}
+
+		await Assert.That(sceneEvent.GetProperty("ActorObjId").GetString()).IsEqualTo(objid);
+		await Assert.That(sceneEvent.GetProperty("Tags")[0].GetString()).IsEqualTo("ooc");
 	}
 }

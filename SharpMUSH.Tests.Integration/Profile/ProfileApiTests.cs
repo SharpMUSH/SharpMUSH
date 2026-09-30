@@ -435,6 +435,30 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		await Assert.That(rows[name].GetProperty("image").GetString()).IsEqualTo("/assets/chars/[name(me)].jpg");
 		// Every row carries the key, blank for a character that has set nothing.
 		await Assert.That(rows.Values.All(row => row.TryGetProperty("image", out var image) && image.ValueKind == JsonValueKind.String)).IsTrue();
+
+		// The handler is a wizard, so get() reads a private attribute too. Only a visual image is
+		// published: the seeded flags are defaults, and an IMAGE set before they existed, or with
+		// visual cleared, keeps its owner's choice. A private banner falls back to a public IMAGE.
+		await Cmd($"@set #{player.Object.Key}/IMAGE`BANNER=!visual");
+
+		using (var privateBanner = await Profile())
+		{
+			var fields = privateBanner.RootElement.GetProperty("fields");
+			await Assert.That(fields.GetProperty("banner").GetProperty("value").GetString()).IsEqualTo("/assets/chars/[name(me)].jpg");
+		}
+
+		await Cmd($"@set #{player.Object.Key}/IMAGE=!visual");
+
+		using (var privateImage = await Profile())
+		{
+			var fields = privateImage.RootElement.GetProperty("fields");
+			await Assert.That(fields.GetProperty("image").GetProperty("value").GetString()).IsEqualTo(string.Empty);
+			await Assert.That(fields.GetProperty("banner").GetProperty("value").GetString()).IsEqualTo(string.Empty);
+		}
+
+		using var hidden = JsonDocument.Parse(await (await http.GetAsync("http/characters")).Content.ReadAsStringAsync());
+		var hiddenRow = hidden.RootElement.EnumerateArray().Single(row => row.GetProperty("name").GetString() == name);
+		await Assert.That(hiddenRow.GetProperty("image").GetString()).IsEqualTo(string.Empty);
 	}
 
 	[Test]
