@@ -30,31 +30,54 @@ When ``ROOM`CONTENTS`` fires the handler receives:
 | `%1` | Cause: `move-in`, `move-out`, `connect`, or `disconnect` |
 | `%#` | The object that **caused** the event — see below |
 
-For **each** connected player in that room it builds that player's own view
-and sends it over their WebSocket (or GMCP) connection:
+It does the viewer-independent work once (``FN`PREPARE``), then for **each**
+connected player in the room builds that player's own view and sends it over
+their WebSocket (or GMCP) connection:
 
 - **`room.contents`** — `{"v": 2, "who": [ … ]}`, one row per non-exit
-  occupant (things and players).
+  occupant the viewer may see (things and players).
 - **`room.exits`** — `{"v": 2, "exits": [ … ]}`, one row per exit the viewer
   may see, with the `goto` command a client issues to traverse it.
 - **`room.info`** — `{"v": 2, …}`, the room itself: identity, area, picture,
   description, scene. Sent on `move-in` and `connect` only.
 
-Three things in a payload depend on who is looking, which is why one JSON for
-the whole room (what 1.0 did) is not enough: a DARK exit is omitted for a
-viewer who may not see it, an exit's `state` is `locked` when its lock fails
-*for that viewer* (and only then does it carry a `hint`), and the viewer's own
-row says `"you": true`.
+What depends on who is looking, which is why one JSON for the whole room
+(what 1.0 did) is not enough: a DARK occupant or exit is omitted for a viewer
+who may not see it (the handler is a wizard object and `lcon()` shows it
+everything); an exit's `state` is `locked` when its lock fails *for that
+viewer*, and only then does it carry a `hint` — and only when it is *not*
+locked does it carry the destination preview; the viewer's own row says
+`"you": true`; the `scene` block appears only for a viewer who may see the
+scene.
 
 **`%#` is not the mover.** The event's enactor is whoever caused the change:
-the player who walked, but also the wizard who `@tel`'d someone else, or God
-(`#1`) for a system move such as a void rescue. The handler therefore does not
-try to address `room.info` to "the mover": it sends it to every connected
-occupant of the room on the arrival causes, and the mover is in `lcon(%0)` by
-the time the event fires. A client already holding the same `room.info` can
-ignore a repeat. (A ``ROOM`INFO`` engine event that would fire on a name,
-image or description edit is deferred; the engine has no attribute-change
-event, and the Play page re-requests through `query.*` instead.)
+the player who walked or connected, but also the wizard who `@tel`'d someone
+else, or God (`#1`) for a system move such as a void rescue. The handler sends
+`room.info` to the enactor alone when the enactor is in the room (the usual
+case), and to every connected occupant otherwise; the mover is then unknown but
+in `lcon(%0)`, and a client already holding the same `room.info` can ignore a
+repeat. A ``ROOM`INFO`` engine event that would fire on a name, image or
+description edit is deferred; the engine has no attribute-change event, and a
+client that wants a fresh `room.info` outside these causes has no route to it
+yet (the terminal's `query.*` evaluates as the *player*, so
+``u(#9/FN`PAYLOAD`INFO,…)`` from there runs with `me` = the player and does
+not work).
+
+**Descriptions and the enactor.** ``FN`DESC`` evaluates a room's `DESCRIBE` as
+the room (the executor `look` gives it) with the event's enactor as `%#`/`%N`,
+**once per event**, and the text is pushed to every viewer that gets it. A
+description that branches on who is looking (`hasflag(%#,WIZARD)`, `%N`)
+therefore shows one branch to everyone; limiting `room.info` to the enactor
+covers the common case, but destination previews go to everyone. A game whose
+descriptions branch on the viewer blanks ``FN`DESC``.
+
+**Cost.** With K occupants, M exits and N viewers, one event is O(K+M)
+evaluations of descriptions and images (once, in ``FN`PREPARE``) plus
+O(N·(K+M)) cheap per-viewer patches, of which one `elock()` per exit per
+viewer is the largest. ``FN`DESC`` is the expensive helper — a `DESCRIBE`
+evaluation for the room and for each exit destination. On a big hub, blank it
+(``&FN`DESC #9=``) and the page falls back to its own text; blank ``FN`DEST``
+to drop destination previews entirely.
 
 ---
 
@@ -73,52 +96,77 @@ These were learned the hard way; the handler relies on all of them:
    call, so per-viewer content means per-viewer calls: `iter()` over
    ``filter(me/FN`VIEWER, lcon(%0))`` with `%i0` as the viewer.
 
-3. **Build JSON arrays with `json_array()`, not `json(array, iter(...))`.**
+3. **Hoist with q-registers.** `u()` shares the caller's registers on this
+   engine (only `localize()`/`ulocal()` push a frame), so ``FN`PREPARE`` can
+   `setq()` every base row once — `w<n>` per occupant, `x<n>`/`d<n>` per exit,
+   `info<n>` for the room — and the per-viewer helpers read them back with
+   `r()`. Each helper falls back to building its base on the spot
+   (`strfirstof(r(...), u(...))`) so it also works called alone.
+
+4. **`lcon()`, `lexits()`, `loc()` and `filter()` answer objids**, as
+   `#12:1790741308439`, not bare dbrefs. A register name cannot hold the
+   colon, and `member(lcon(%0),%#)` never matches a bare `%#`: every key and
+   every comparison goes through `num()`.
+
+5. **Build JSON arrays with `json_array()`, not `json(array, iter(...))`.**
    `json(array, …)` takes each element as a *separate* argument, so feeding it
    a single `iter()` list cannot work. `json_array(<list>[, <delim>])`
    assembles a list of already-formed JSON values into an array, and answers
    `[]` for an empty list. Produce the per-element JSON with `iter()`.
 
-4. **Use `%r` as the `json_array`/`iter` separator.** A row embeds names,
+6. **Use `%r` as the `json_array`/`iter` separator.** A row embeds names,
    descriptions and hints, which can contain a space or a `|`; it cannot
    contain a raw newline once `json(string, …)` has escaped it. 1.0 used `|`,
    which a description can contain.
 
-5. **Optional keys are a `json_mod(<base>, patch, <patch>)`.** Function
+7. **Optional keys are a `json_mod(<base>, patch, <patch>)`.** Function
    arguments are split before evaluation, so a key/value pair cannot be
    conditionally *inserted* into `json(object, …)`. Instead every row is a
    base object plus a merge patch (RFC 7396): a `null` value in the patch
    **removes** the key. ``FN`IMAGE`` answers the word `null` for an object
    with no `IMAGE`, and the row comes out without an `image` key at all.
 
-6. **Filter with a stored attribute, not `#lambda`.** ``filter(me/FN`WHOVIS,
-   lcon(%0))`` is clean; the `#lambda/...` inline form mis-splits on commas
-   inside the lambda body. `filter()` passes its arguments from the fifth on
-   to the predicate as `%1…`, which is how ``FN`EXITVIS`` gets the viewer.
+8. **Validate before `json(number, …)`.** One malformed value — an
+   `` IMAGE`FOCAL `` of `center` — made `json(number,…)` an error, the array
+   `#-1`, the patch invalid, the row not JSON, and then `oob()` rejected the
+   whole `room.contents` for every viewer, silently. ``FN`FOCALOK`` checks the
+   shape first and the key is dropped instead.
 
-7. **`lcon(%0)` includes exits in this engine.** Filter them out of the *who*
-   list with `not(hastype(%0,exit))` so exits don't appear as occupants.
+9. **A regex in softcode needs `\[` and `\]`**, because a bare `[...]` is
+   evaluated as a function call and its brackets vanish; a bare `)` inside an
+   argument closes the call, so groups are out too. ``FN`COLOR``'s
+   `^#\[0-9a-fA-F\]…$` is spelt out six times for that reason, and
+   ``FN`FOCALOK`` uses no regex at all.
 
-8. **Connected detection.** `hasflag(%0,CONNECTED)` reflects presence: true
-   for a player with a live *play* session, false for a disconnected or
-   portal-only (background) connection. ``FN`WHOVIS`` uses it to keep asleep
-   players out of the *who* list. There is no `isplayer()` on this engine
-   (nor on PennMUSH) — 1.0 called one, and `not()` of the resulting error was
-   true, so every disconnected player was listed. Use `hastype(%0,player)`.
+10. **Filter with a stored attribute, not `#lambda`.** ``filter(me/FN`WHOVIS,
+    lcon(%0),,,%1)`` is clean; the `#lambda/...` inline form mis-splits on
+    commas inside the lambda body. `filter()` passes its arguments from the
+    fifth on to the predicate as `%1…`, which is how the viewer gets there.
 
-9. **An unknown function is literal text**, as on PennMUSH: without the Scene
-   plugin, `scenewhere(#12)` evaluates to `scenewhere(#12)`, not to an error.
-   ``FN`SCENE`` therefore asks `scene(<id>, id)` to echo the id it was given,
-   which only a real, visible scene does.
+11. **`lcon(%0)` includes exits in this engine.** Filter them out of the *who*
+    list with `not(hastype(%0,exit))` so exits don't appear as occupants.
 
-10. **`objeval(<obj>, <expr>)` evaluates the object argument** (fixed
+12. **Connected detection.** `hasflag(%0,CONNECTED)` reflects presence: true
+    for a player with a live *play* session, false for a disconnected or
+    portal-only (background) connection. There is no `isplayer()` on this
+    engine (nor on PennMUSH) — 1.0 called one, and `not()` of the resulting
+    error was true, so every disconnected player was listed. Use
+    `hastype(%0,player)`.
+
+13. **An unknown function is literal text**, as on PennMUSH: without the Scene
+    plugin, `scenewhere(#12)` evaluates to `scenewhere(#12)`, not to an error.
+    And with the plugin, `scenewhere()` of a scene-less room is the constant
+    `#-1 NOT FOUND`, which `scene(#-1 NOT FOUND, id)` echoes back. ``FN`SCENE``
+    rejects a `#-1*` answer first, then asks `scene(<id>, id)` to echo the id.
+
+14. **`objeval(<obj>, <expr>)` evaluates the object argument** (fixed
     alongside 2.0 to match `fun_objeval`): ``FN`DESC`` runs a room's
-    `DESCRIBE` as the room, the executor `look` gives it, so its softcode
-    runs with the room's permissions and not the wizard handler's.
+    `DESCRIBE` as the room, so its softcode runs with the room's permissions
+    and not the wizard handler's.
 
-11. **`num(%0)` returns the `#N` dbref form** (e.g. `#76`), so don't prepend
+15. **`num(%0)` returns the `#N` dbref form** (e.g. `#76`), so don't prepend
     an extra `#`. Side-effect builders (`dig()`, `open()`, `create()`) answer
-    an **objid** (`#76:1790738802944`); `num()` it before comparing.
+    an **objid**; `num()` it before comparing.
 
 ---
 
@@ -137,10 +185,11 @@ carries a comment per attribute; this is the map.
 
 | Attribute | Answers 1 when |
 |---|---|
-| ``FN`WHOVIS`` | the occupant is listed: not an exit, and if a player, CONNECTED |
-| ``FN`VIEWER`` | the occupant receives pushes: a CONNECTED player |
-| ``FN`ONLINE`` | a player counts toward a destination's `here` |
-| ``FN`EXITVIS`` | the viewer may see the exit: not DARK, or LIGHT, or the viewer is Wizard/Royalty/`See_All` |
+| ``FN`WHOVIS`` (`%0`, `%1`) | the occupant is listed to the viewer: not an exit; a player only if CONNECTED; a DARK one only to Wizard/Royalty, `See_All`, or itself |
+| ``FN`VIEWER`` (`%0`) | the occupant receives pushes: a CONNECTED player |
+| ``FN`ONLINE`` (`%0`) | a player counts toward a destination's `here`: CONNECTED and not DARK |
+| ``FN`EXITVIS`` (`%0`, `%1`) | the viewer may see the exit: not DARK, or LIGHT, or the viewer is Wizard/Royalty/`See_All` |
+| ``FN`FOCALOK`` (`%0` value) | an `` IMAGE`FOCAL `` is two numbers, each 0 to 1 |
 
 **Value helpers.**
 
@@ -148,32 +197,45 @@ carries a comment per attribute; this is the map.
 |---|---|
 | ``FN`STATUS`` (`%0` idle seconds) | `active` under 5 min, `idle` under 30, else `away` |
 | ``FN`AREA`` (`%0` room) | the name of the room's zone, else its parent, else nothing |
+| ``FN`COLOR`` (`%0` player) | `` PROFILE`COLOR `` as a JSON string when it is `#rrggbb`, else `null` |
 | ``FN`IMAGE`` (`%0` object) | `{"url","alt","focal"}` from `IMAGE`/``IMAGE`ALT``/``IMAGE`FOCAL``, or `null` |
 | ``FN`DESC`` (`%0` room) | the room's `DESCRIBE`, evaluated as the room |
 | ``FN`SCENE`` (`%0` room, `%1` viewer) | `{"id","title","cast"}` for a scene the viewer may see, or `null` |
-| ``FN`EXITHINT`` (`%0` exit) | the exit's `@fail`, unevaluated |
-| ``FN`EXITSTATE`` (`%0` exit, `%1` viewer, `%2` loc(exit)) | `closed` when unlinked, `locked` when the Basic lock fails for the viewer, else `open` |
-| ``FN`DEST`` (`%0` destination, `%1` viewer) | `{"name","area","image","desc","here"}` |
+| ``FN`EXITHINT`` (`%0` exit) | the exit's `@fail`, as stored — plain text, never evaluated |
+| ``FN`EXITSTATE`` (`%0` exit, `%1` viewer, `%2` loc(exit)) | `closed` when unlinked (`#-1`), `locked` when the Basic lock fails for the viewer, else `open` (VARIABLE `#-2` and HOME `#-3` stay open) |
+| ``FN`DEST`` (`%0` destination) | `{"name","area","image","desc","here"}` |
 
-**Rows and payloads.**
+**Base rows, built once per event.**
+
+| Attribute | Gives |
+|---|---|
+| ``FN`WHOBASE`` (`%0` occupant) | dbref, objid, type, name, cmd; for players image, color, status, idle, profile |
+| ``FN`EXITBASE`` (`%0` exit) | dbref, objid, name, aliases, cmd, confirm |
+| ``FN`EXITDEST`` (`%0` exit) | the ``FN`DEST`` of where it leads, or nothing |
+| ``FN`INFOBASE`` (`%0` room) | `room.info` without the scene block |
+| ``FN`PREPARE`` (`%0` room) | sets `mover`, `w<n>`, `x<n>`, `d<n>`, `info<n>` |
+
+**Rows and payloads, per viewer.**
 
 ```mushcode
-&FN`WHOROW #9=json_mod(json(object,dbref,json(string,num(%0)),objid,json(string,objid(%0)),type,json(string,lcstr(type(%0))),name,json(string,name(%0)),cmd,json(string,look [num(%0)])),patch,json(object,image,u(me/FN`IMAGE,%0),you,if(strmatch(num(%0),num(%1)),true,null),color,if(setr(c,get(%0/PROFILE`COLOR)),json(string,%q<c>),null),status,if(hastype(%0,player),json(string,u(me/FN`STATUS,idle(%0))),null),idle,if(hastype(%0,player),json(number,idle(%0)),null),profile,if(hastype(%0,player),true,null),actions,if(cand(hastype(%0,player),not(strmatch(num(%0),num(%1)))),json(array,json(object,label,json(string,Page),cmd,json(string,page [num(%0)]=))),null)))
-&FN`EXITROW #9=json_mod(json(object,dbref,json(string,num(%0)),objid,json(string,objid(%0)),name,json(string,name(%0)),aliases,json_array(iter(fullalias(%0),json(string,%i0))),cmd,json(string,goto [num(%0)]),state,json(string,setr(st,u(me/FN`EXITSTATE,%0,%1,setr(d,loc(%0)))))),patch,json(object,hint,if(cand(strmatch(%q<st>,locked),setr(h,u(me/FN`EXITHINT,%0))),json(string,%q<h>),null),confirm,if(setr(c,get(%0/CONFIRM)),json(string,%q<c>),null),dest,if(isdbref(%q<d>),u(me/FN`DEST,%q<d>,%1),null)))
-&FN`PAYLOAD`CONTENTS #9=json(object,v,json(number,2),who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0)),u(me/FN`WHOROW,%i0,%1),,%r),%r))
+&FN`WHOROW #9=json_mod(strfirstof(r(w[rest(num(%0),#)]),u(me/FN`WHOBASE,%0)),patch,json(object,you,if(strmatch(num(%0),num(%1)),true,null),actions,if(cand(hastype(%0,player),not(strmatch(num(%0),num(%1)))),json(array,json(object,label,json(string,Page),cmd,json(string,page [num(%0)]=))),null)))
+&FN`EXITROW #9=json_mod(strfirstof(r(x[rest(num(%0),#)]),u(me/FN`EXITBASE,%0)),patch,json(object,state,json(string,setr(st,u(me/FN`EXITSTATE,%0,%1,loc(%0)))),hint,if(cand(strmatch(%q<st>,locked),setr(h,u(me/FN`EXITHINT,%0))),json(string,%q<h>),null),dest,if(cand(not(strmatch(%q<st>,locked)),setr(dd,strfirstof(r(d[rest(num(%0),#)]),u(me/FN`EXITDEST,%0)))),%q<dd>,null)))
+&FN`PAYLOAD`CONTENTS #9=json(object,v,json(number,2),who,json_array(iter(filter(me/FN`WHOVIS,lcon(%0),,,%1),u(me/FN`WHOROW,%i0,%1),,%r),%r))
 &FN`PAYLOAD`EXITS #9=json(object,v,json(number,2),exits,json_array(iter(if(hastype(%0,room),filter(me/FN`EXITVIS,lexits(%0),,,%1)),u(me/FN`EXITROW,%i0,%1),,%r),%r))
-&FN`PAYLOAD`INFO #9=json_mod(json(object,v,json(number,2),dbref,json(string,num(%0)),objid,json(string,objid(%0)),name,json(string,name(%0)),desc,json(object,format,json(string,text),text,json(string,u(me/FN`DESC,%0)))),patch,json(object,area,if(setr(a,u(me/FN`AREA,%0)),json(string,%q<a>),null),image,u(me/FN`IMAGE,%0),scene,u(me/FN`SCENE,%0,%1)))
-&ROOM`CONTENTS #9=think null(iter(filter(me/FN`VIEWER,lcon(%0)),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(match(move-in connect,%1),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))]))
+&FN`PAYLOAD`INFO #9=json_mod(strfirstof(r(info[rest(num(%0),#)]),u(me/FN`INFOBASE,%0)),patch,json(object,scene,u(me/FN`SCENE,%0,%1)))
+&ROOM`CONTENTS #9=think null(u(me/FN`PREPARE,%0),iter(filter(me/FN`VIEWER,lcon(%0)),[oob(%i0,room.contents,u(me/FN`PAYLOAD`CONTENTS,%0,%i0))][oob(%i0,room.exits,u(me/FN`PAYLOAD`EXITS,%0,%i0))][if(cand(match(move-in connect,%1),cor(not(%q<mover>),strmatch(num(%i0),%q<mover>))),oob(%i0,room.info,u(me/FN`PAYLOAD`INFO,%0,%i0)))]))
 ```
 
 Reading the main handler:
 
+- ``u(me/FN`PREPARE, %0)`` — once: every base row and the room's info into
+  registers; `mover` = the enactor's dbref if the enactor is in the room.
 - ``filter(me/FN`VIEWER, lcon(%0))`` — the viewers: connected players in the room.
 - `iter(<viewers>, …)` — for each, with `%i0` the viewer:
-  - ``oob(%i0, room.contents, u(me/FN`PAYLOAD`CONTENTS, %0, %i0))`` — build
-    the who list as this viewer sees it and send it to this viewer alone;
+  - ``oob(%i0, room.contents, u(me/FN`PAYLOAD`CONTENTS, %0, %i0))`` — the who
+    list as this viewer sees it, to this viewer alone;
   - the same for `room.exits`;
-  - `if(match(move-in connect, %1), …)` — on the arrival causes, `room.info` too.
+  - on the arrival causes, `room.info` — to the mover when known, else to all.
 - The exits payload is guarded on `%0` being a room. The event fires for
   whichever container was affected and that is not always a room — a player
   carrying something, or a thing something was teleported into, raise it too.
@@ -190,10 +252,12 @@ Verify it is set:
 
 ### Data the rows read
 
+All of it as **plain text** via `get()`, never evaluated:
+
 - `IMAGE`, ``IMAGE`ALT``, ``IMAGE`FOCAL`` on any object (`help IMAGE`) — the picture.
-- ``PROFILE`COLOR`` on a player — the row's `color`.
+- ``PROFILE`COLOR`` on a player — the row's `color`, only as `#rrggbb`.
 - `CONFIRM` on an exit — a confirmation the client shows before traversing.
-- `@fail` on an exit — the `hint` on a locked row.
+- `@fail` on an exit — the `hint` on a locked row; softcode in it arrives as the code itself.
 - A room's zone or `@parent` — its `area`.
 
 ---
@@ -225,16 +289,27 @@ as its executor (`me`, `%!`, `%@`) and the causing object as `%#`; seeded `#9`
 is a WIZARD, which is what lets the handler's introspection calls see the room.
 
 The v2 tests install the package's own attributes from the embedded manifest
-and substitute only the handler, with one that stores what a payload builder
-answers for a named viewer — ``&LAST_PAYLOAD #9=[u(me/FN`PAYLOAD`EXITS,%0,#13)]``
+and substitute only the handler, with one that runs ``FN`PREPARE`` and then
+stores what a payload builder answers for a named viewer —
+``&LAST_PAYLOAD #9=[null(u(me/FN`PREPARE,%0))][u(me/FN`PAYLOAD`EXITS,%0,#13)]``
 — instead of sending it, since `oob()` needs a live WebSocket the harness
-lacks. Against a purpose-built room (a wizard and a mortal connected, a player
-asleep, a thing with a picture and one without, and exits plain, locked, DARK
-and unlinked) they assert, for each viewer, valid JSON with `v: 2`; the locked
-exit `locked` with its hint for the mortal and `open` for the wizard; the DARK
-exit absent for the mortal; `you: true` on the viewer's own row only; and
-`room.info` with `v`, `objid`, `name` and `image.url` from `&IMAGE`. A last
-test runs the shipped handler itself, unmodified, for every cause.
+lacks. The room they build is deliberately hostile: a DARK wizard with a valid
+`` PROFILE`COLOR ``, a mortal with a portrait, a bad `` IMAGE`FOCAL `` and a
+`` PROFILE`COLOR `` that tries to carry more CSS, a player asleep, a thing with
+a picture, a DARK thing, a thing whose name has a comma, quotes, parentheses and
+a semicolon, exits plain (with `CONFIRM`), locked to the wizard, DARK and
+unlinked, and a description with a literal newline and a `%N`. For each viewer
+they assert valid JSON with `v: 2`; the DARK wizard, thing and exit absent for
+the mortal and present for the wizard; the locked exit `locked` with its hint
+and no `dest` for the mortal, `open` with `dest` for the wizard; the hostile
+colour dropped and the good one kept; the bad focal dropped with the payload
+still valid; `you: true` on the viewer's own row only; and `room.info` with
+`v`, `objid`, `name`, `image.url` and the evaluated description. The scene
+block is tested against `@function` stand-ins for the plugin's answers
+(`#-1 NOT FOUND` for no scene; a real id, `public` and members for one). One
+test reads the registers ``FN`PREPARE`` fills; one runs the shipped handler
+itself, unmodified, for every cause, and checks `room.info` goes to the mover
+alone when the mover is the enactor.
 
 `SharpMUSH.Tests.Integration/Packages/RoomContentsPackageTests.cs` covers the
 delivery side: that the bundled `room-contents` package is installed at boot and
@@ -244,62 +319,100 @@ that its attributes land on the configured event handler.
 
 ## JSON payload shapes (v2)
 
-As the tests built them, for a mortal viewer (`#13`) in a room with a wizard
-(`#12`), a thing with a picture and one without:
+As the tests built them. The room holds a DARK wizard (`#13`), a mortal
+(`#14`), a thing with a picture (`#20`), a DARK crate (`#21`) and a thing with
+a hostile name (`#22`).
 
 ### `room.contents`
 
+For the wizard — everyone, `you` on its own row, its colour kept, the mortal's
+hostile colour and bad focal dropped:
+
 ```json
 {"v":2,"who":[
-  {"dbref":"#12","objid":"#12:1790738802944","type":"player","name":"RcWiz_52cA8g_eypU_1","cmd":"look #12",
-   "status":"active","idle":0,"profile":true,"actions":[{"label":"Page","cmd":"page #12="}]},
-  {"dbref":"#13","objid":"#13:1790738802967","type":"player","name":"RcMortal_52cA8g_eypU_2","cmd":"look #13",
-   "image":{"url":"/assets/chars/7b1abf4e.jpg","alt":"RcMortal_52cA8g_eypU_2"},"you":true,"color":"#ffb454",
-   "status":"active","idle":0,"profile":true},
-  {"dbref":"#19","objid":"#19:1790738803092","type":"thing","name":"Oilcloth bundle 7b1abf4e","cmd":"look #19",
-   "image":{"url":"/assets/obj/7b1abf4e.jpg","alt":"Oilcloth bundle 7b1abf4e"}},
-  {"dbref":"#20","objid":"#20:1790738803095","type":"thing","name":"Crate 7b1abf4e","cmd":"look #20"}]}
+  {"dbref":"#13","objid":"#13:1790741467794","type":"player","name":"RcWiz_AZovdJr3wSw_1","cmd":"look #13",
+   "color":"#ffb454","status":"active","idle":1,"profile":true,"you":true},
+  {"dbref":"#14","objid":"#14:1790741467825","type":"player","name":"RcMortal_AZovdJr3wSw_2","cmd":"look #14",
+   "image":{"url":"/assets/chars/f12d1d09.jpg","alt":"RcMortal_AZovdJr3wSw_2"},
+   "status":"active","idle":1,"profile":true,"actions":[{"label":"Page","cmd":"page #14="}]},
+  {"dbref":"#20","objid":"#20:1790741467927","type":"thing","name":"Oilcloth bundle f12d1d09","cmd":"look #20",
+   "image":{"url":"/assets/obj/f12d1d09.jpg","alt":"Oilcloth bundle f12d1d09"}},
+  {"dbref":"#21","objid":"#21:1790741467928","type":"thing","name":"Crate f12d1d09","cmd":"look #21"},
+  {"dbref":"#22","objid":"#22:1790741467931","type":"thing","name":"Badf12d1d09, "quoted" (thing); $5 <tag>","cmd":"look #22"}]}
+```
+
+For the mortal — the DARK wizard and the DARK crate are not there:
+
+```json
+{"v":2,"who":[
+  {"dbref":"#14","objid":"#14:1790741467825","type":"player","name":"RcMortal_AZovdJr3wSw_2","cmd":"look #14",
+   "image":{"url":"/assets/chars/f12d1d09.jpg","alt":"RcMortal_AZovdJr3wSw_2"},"status":"active","idle":1,"profile":true,"you":true},
+  {"dbref":"#20","objid":"#20:1790741467927","type":"thing","name":"Oilcloth bundle f12d1d09","cmd":"look #20",
+   "image":{"url":"/assets/obj/f12d1d09.jpg","alt":"Oilcloth bundle f12d1d09"}},
+  {"dbref":"#22","objid":"#22:1790741467931","type":"thing","name":"Badf12d1d09, "quoted" (thing); $5 <tag>","cmd":"look #22"}]}
 ```
 
 `you` appears on one row per payload; `actions` never on your own row; the
 player-only keys (`status`, `idle`, `profile`, `actions`, `color`) never on a
-thing; `image` only where `IMAGE` is set.
+thing; `image` only where `IMAGE` is set; `color` only when it is `#rrggbb`.
 
 ### `room.exits`
 
 For the mortal — the DARK exit is not there, and the locked one is `locked`
-with its hint:
+with its hint and no `dest`:
 
 ```json
 {"v":2,"exits":[
-  {"dbref":"#26","objid":"#26:1790738804041","name":"north31c071df","aliases":["n31c071df"],"cmd":"goto #26","state":"open",
-   "confirm":"This leaves the scene.","dest":{"name":"RcDest31c071df","desc":"A lamplit street.","here":0}},
-  {"dbref":"#27","objid":"#27:1790738804042","name":"east31c071df","aliases":["e31c071df"],"cmd":"goto #27","state":"locked",
-   "hint":"Closed after dusk.","dest":{"name":"RcDest31c071df","desc":"A lamplit street.","here":0}},
-  {"dbref":"#29","objid":"#29:1790738804044","name":"west31c071df","aliases":[],"cmd":"goto #29","state":"closed"}]}
+  {"dbref":"#28","objid":"#28:1790741469223","name":"north7b789db9","aliases":["n7b789db9"],"cmd":"goto #28",
+   "confirm":"This leaves the scene.","state":"open","dest":{"name":"RcDest7b789db9","desc":"A lamplit street.","here":0}},
+  {"dbref":"#29","objid":"#29:1790741469224","name":"east7b789db9","aliases":["e7b789db9"],"cmd":"goto #29",
+   "state":"locked","hint":"Closed after dusk."},
+  {"dbref":"#31","objid":"#31:1790741469226","name":"west7b789db9","aliases":[],"cmd":"goto #31","state":"closed"}]}
 ```
 
-For the wizard, the same room has four exits, `east` is `open` with no
-`hint`, and `secret` (DARK) is listed.
+For the wizard — four exits, `east` is `open` with its `dest`, and `secret`
+(DARK) is listed:
+
+```json
+{"v":2,"exits":[
+  {"dbref":"#28","objid":"#28:1790741469223","name":"north7b789db9","aliases":["n7b789db9"],"cmd":"goto #28",
+   "confirm":"This leaves the scene.","state":"open","dest":{"name":"RcDest7b789db9","desc":"A lamplit street.","here":0}},
+  {"dbref":"#29","objid":"#29:1790741469224","name":"east7b789db9","aliases":["e7b789db9"],"cmd":"goto #29",
+   "state":"open","dest":{"name":"RcDest7b789db9","desc":"A lamplit street.","here":0}},
+  {"dbref":"#30","objid":"#30:1790741469225","name":"secret7b789db9","aliases":[],"cmd":"goto #30",
+   "state":"open","dest":{"name":"RcDest7b789db9","desc":"A lamplit street.","here":0}},
+  {"dbref":"#31","objid":"#31:1790741469226","name":"west7b789db9","aliases":[],"cmd":"goto #31","state":"closed"}]}
+```
 
 - `state` is `open | locked | closed`. `closed` is an exit that leads nowhere;
   a HOME or VARIABLE destination stays `open` and has no `dest`.
 - `cmd` stays on a locked exit: locks are dynamic, and trying one is how a
   player reads its `@fail`.
 - `dest.area` and `dest.image` follow the same omit-when-unset rule as the
-  room's own.
+  room's own; `dest.here` counts connected, non-DARK players.
 
 ### `room.info`
 
+With a parent (hence `area`), and — with a scene stub answering for the
+plugin — a public scene:
+
 ```json
-{"v":2,"dbref":"#32","objid":"#32:1790738804713","name":"RcRoome7d4f144",
- "desc":{"format":"text","text":"Tarred pilings and stacked crates."},
- "area":"RcDeste7d4f144",
- "image":{"url":"/assets/rooms/e7d4f144.jpg","alt":"The quay at dusk","focal":[0.5,0.6]}}
+{"v":2,"dbref":"#35","objid":"#35:1790741470197","name":"RcRoom12459103",
+ "desc":{"format":"text","text":"Tarred pilings.\nStacked crates, God looks on."},
+ "area":"RcDest12459103",
+ "image":{"url":"/assets/rooms/12459103.jpg","alt":"The quay at dusk","focal":[0.5,0.6]}}
+```
+
+```json
+{"v":2,"dbref":"#47","objid":"#47:1790741471143","name":"RcRoom468adfc9",
+ "desc":{"format":"text","text":"Tarred pilings.\nStacked crates, God looks on."},
+ "image":{"url":"/assets/rooms/468adfc9.jpg","alt":"The quay at dusk","focal":[0.5,0.6]},
+ "scene":{"id":"42","title":"Salt Market at Dusk","cast":3}}
 ```
 
 - `desc.format` is `text`: the description is the evaluated `DESCRIBE`, with
-  markup stripped by `oob()`. Nothing produces markdown here.
+  markup stripped by `oob()`; the `%r` became a newline and the `%N` the
+  enactor's name. Nothing produces markdown here.
 - `area` appears once the room has a zone or a parent; `image` once it has an
   `IMAGE`; `scene` (`{"id","title","cast"}`, `id` a string) once a scene the
   viewer may see runs in the room. Otherwise the key is absent.

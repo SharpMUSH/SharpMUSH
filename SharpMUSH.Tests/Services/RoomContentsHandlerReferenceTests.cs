@@ -186,7 +186,7 @@ public class RoomContentsHandlerReferenceTests
 	}
 
 	[Test]
-	public async ValueTask HandlerBuildsValidRoomContentsJsonPayload()
+	public async ValueTask V1RowShape_StillBuildsValidJson()
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
 		var thingName = $"Probe{token}";
@@ -253,14 +253,17 @@ public class RoomContentsHandlerReferenceTests
 	// ── OOB v2 (room-contents 2.0) ─────────────────────────────────────────────────────────
 
 	/// <summary>
-	/// A room built for the v2 tests: two connected players (one a wizard), one asleep, two things
-	/// (one with a picture), and four exits to a second room — plain, locked against everyone but
-	/// God, DARK, and unlinked. Every name carries the token so nothing here can be confused with
+	/// A room built for the v2 tests. Connected: a wizard who is DARK (hidden from mortals) with a
+	/// valid PROFILE`COLOR, and a mortal with a portrait, a bad IMAGE`FOCAL and a hostile
+	/// PROFILE`COLOR. Asleep: one player. Things: a bundle with a picture, a DARK crate, and a thing
+	/// whose name carries a comma, quotes, parentheses and a semicolon. Exits to a second room: plain
+	/// (with a CONFIRM), locked to the wizard, DARK, and unlinked. The room's description has a
+	/// literal newline and a %N. Every name carries the token so nothing here can be confused with
 	/// what another test built.
 	/// </summary>
 	private sealed record Fixture(
 		string Room, string Dest, string Wizard, string Mortal, string Asleep,
-		string Bundle, string Crate, string North, string Locked, string Dark, string Unlinked,
+		string Bundle, string Crate, string Hostile, string North, string Locked, string Dark, string Unlinked,
 		long WizardHandle, long MortalHandle);
 
 	/// <summary>Runs a side-effect builder and returns the new object's bare dbref (<c>#N</c>).</summary>
@@ -283,15 +286,19 @@ public class RoomContentsHandlerReferenceTests
 		await Cmd($"&IMAGE {room}=/assets/rooms/{token}.jpg");
 		await Cmd($"&IMAGE`ALT {room}=The quay at dusk");
 		await Cmd($"&IMAGE`FOCAL {room}=0.5 0.6");
-		await Cmd($"&DESCRIBE {room}=Tarred pilings and stacked crates.");
+		// Typed at a client, & stores verbatim: the %r and %N are code the handler evaluates.
+		await Cmd($"&DESCRIBE {room}=Tarred pilings.%rStacked crates, %N looks on.");
 		await Cmd($"&DESCRIBE {dest}=A lamplit street.");
 
 		var wizard = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "RcWiz", roomRef);
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "RcMortal", roomRef);
 		var asleep = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "RcAsleep");
 		await Cmd($"@set #{wizard.DbRef.Number}=WIZARD");
-		await Cmd($"&PROFILE`COLOR #{mortal.DbRef.Number}=#ffb454");
+		await Cmd($"@set #{wizard.DbRef.Number}=DARK");
+		await Cmd($"&PROFILE`COLOR #{wizard.DbRef.Number}=#ffb454");
+		await Cmd($"&PROFILE`COLOR #{mortal.DbRef.Number}=#fff;background:url(x)");
 		await Cmd($"&IMAGE #{mortal.DbRef.Number}=/assets/chars/{token}.jpg");
+		await Cmd($"&IMAGE`FOCAL #{mortal.DbRef.Number}=center");
 
 		var north = await Build($"open(north{token};n{token},{dest},{room})");
 		var locked = await Build($"open(east{token};e{token},{dest},{room})");
@@ -308,15 +315,27 @@ public class RoomContentsHandlerReferenceTests
 		var bundle = await Build($"create(Oilcloth bundle {token})");
 		var crate = await Build($"create(Crate {token})");
 		await Cmd($"&IMAGE {bundle}=/assets/obj/{token}.jpg");
-		await Eval($"tel({bundle},{room})");
-		await Eval($"tel({crate},{room})");
+		await Cmd($"@set {crate}=DARK");
+		// A name with everything a legal name may carry that JSON, the argument splitter or a
+		// command list would trip on: a comma, double quotes, parentheses, a semicolon, a dollar and
+		// angle brackets. (Backslash, pipe, brackets, percent and control characters are not legal
+		// in a name here — ValidateService.NameRegex — so they cannot reach a row.) Renamed after
+		// creation because a comma cannot pass through create()'s argument list.
+		var hostile = await Build($"create(Bad{token})");
+		await Cmd($"@name {hostile}=Bad{token}, \"quoted\" (thing); $5 <tag>");
+		await Assert.That(await Eval($"name({hostile})")).Contains("\"quoted\" (thing);").Because("the hostile name must have been applied");
+		foreach (var thing in new[] { bundle, crate, hostile })
+		{
+			await Eval($"tel({thing},{room})");
+		}
+
 		foreach (var player in new[] { wizard.DbRef, mortal.DbRef, asleep })
 		{
 			await Eval($"tel(#{player.Number},{room})");
 		}
 
 		return new Fixture(room, dest, $"#{wizard.DbRef.Number}", $"#{mortal.DbRef.Number}", $"#{asleep.Number}",
-			bundle, crate, north, locked, dark, unlinked, wizard.Handle, mortal.Handle);
+			bundle, crate, hostile, north, locked, dark, unlinked, wizard.Handle, mortal.Handle);
 	}
 
 	/// <summary>
@@ -328,7 +347,7 @@ public class RoomContentsHandlerReferenceTests
 	{
 		await ConnectionService.Disconnect(f.WizardHandle);
 		await ConnectionService.Disconnect(f.MortalHandle);
-		foreach (var obj in new[] { f.North, f.Locked, f.Dark, f.Unlinked, f.Bundle, f.Crate, f.Dest, f.Room })
+		foreach (var obj in new[] { f.North, f.Locked, f.Dark, f.Unlinked, f.Bundle, f.Crate, f.Hostile, f.Dest, f.Room })
 		{
 			await Cmd($"@dest/override {obj}");
 		}
@@ -336,13 +355,13 @@ public class RoomContentsHandlerReferenceTests
 
 	/// <summary>
 	/// Runs the package's payload helper for <paramref name="viewer"/> through the real event path
-	/// with the send replaced by a store, and parses what it built. The handler is the package's
-	/// own but for the oob() call: <c>u(me/&lt;helper&gt;,%0,&lt;viewer&gt;)</c> is exactly the
-	/// expression the shipped ROOM`CONTENTS hands to oob().
+	/// with the send replaced by a store, and parses what it built. The handler is the package's own
+	/// but for the oob() call: FN`PREPARE first, then <c>u(me/&lt;helper&gt;,%0,&lt;viewer&gt;)</c>,
+	/// which is exactly what the shipped ROOM`CONTENTS hands to oob().
 	/// </summary>
 	private async Task<JsonDocument> Payload(string helper, string room, string viewer, string cause = "move-in")
 	{
-		await Cmd($"&ROOM`CONTENTS #9=&LAST_PAYLOAD #9=[u(me/{helper},%0,{viewer})]");
+		await Cmd($"&ROOM`CONTENTS #9=&LAST_PAYLOAD #9=[null(u(me/FN`PREPARE,%0))][u(me/{helper},%0,{viewer})]");
 		await Trigger(room, cause);
 		var payload = await Eval("get(#9/LAST_PAYLOAD)");
 		await Assert.That(payload).DoesNotContain("#-1").Because($"{helper} for {viewer} produced an error: {payload}");
@@ -374,23 +393,28 @@ public class RoomContentsHandlerReferenceTests
 			var mortalSees = RowsByDbref(forMortal, "who");
 			var wizardSees = RowsByDbref(forWizard, "who");
 
-			// Both connected players and both things are listed; the asleep player is not
-			// (FN`WHOVIS: players only while CONNECTED — 1.0's isplayer() did not exist and let
-			// every disconnected player through).
+			// Connected players and things are listed; the asleep player is not (FN`WHOVIS: players
+			// only while CONNECTED — 1.0's isplayer() did not exist and let every disconnected player
+			// through). lcon() includes exits on this engine; none may leak into who.
 			foreach (var rows in new[] { mortalSees, wizardSees })
 			{
 				await Assert.That(rows.Keys).Contains(f.Mortal);
-				await Assert.That(rows.Keys).Contains(f.Wizard);
 				await Assert.That(rows.Keys).Contains(f.Bundle);
-				await Assert.That(rows.Keys).Contains(f.Crate);
+				await Assert.That(rows.Keys).Contains(f.Hostile);
 				await Assert.That(rows.Keys).DoesNotContain(f.Asleep);
-				// lcon() includes exits on this engine; none may leak into who.
 				await Assert.That(rows.Keys).DoesNotContain(f.North);
 			}
 
+			// DARK occupants: lcon() runs as #9 and sees them, so FN`WHOVIS must drop them for a viewer
+			// who may not — the DARK wizard and the DARK crate are absent for the mortal, present for
+			// the wizard.
+			await Assert.That(mortalSees.Keys).DoesNotContain(f.Wizard);
+			await Assert.That(mortalSees.Keys).DoesNotContain(f.Crate);
+			await Assert.That(wizardSees.Keys).Contains(f.Wizard);
+			await Assert.That(wizardSees.Keys).Contains(f.Crate);
+
 			// "you" only on the viewer's own row, and only for that viewer.
 			await Assert.That(mortalSees[f.Mortal].GetProperty("you").GetBoolean()).IsTrue();
-			await Assert.That(mortalSees[f.Wizard].TryGetProperty("you", out _)).IsFalse();
 			await Assert.That(wizardSees[f.Wizard].GetProperty("you").GetBoolean()).IsTrue();
 			await Assert.That(wizardSees[f.Mortal].TryGetProperty("you", out _)).IsFalse();
 
@@ -401,22 +425,31 @@ public class RoomContentsHandlerReferenceTests
 			await Assert.That(mortalRow.GetProperty("type").GetString()).IsEqualTo("player");
 			await Assert.That(wizardSees[f.Bundle].GetProperty("type").GetString()).IsEqualTo("thing");
 
-			// Player extras: colour, status/idle, profile, and a Page action for everyone but yourself.
-			await Assert.That(mortalRow.GetProperty("color").GetString()).IsEqualTo("#ffb454");
+			// Player extras: status/idle, profile, and a Page action for everyone but yourself.
 			await Assert.That(mortalRow.GetProperty("status").GetString()).IsEqualTo("active");
 			await Assert.That(mortalRow.GetProperty("idle").ValueKind).IsEqualTo(JsonValueKind.Number);
 			await Assert.That(mortalRow.GetProperty("profile").GetBoolean()).IsTrue();
 			await Assert.That(mortalRow.GetProperty("actions")[0].GetProperty("cmd").GetString()).IsEqualTo($"page {f.Mortal}=");
 			await Assert.That(wizardSees[f.Wizard].TryGetProperty("actions", out _)).IsFalse();
-			await Assert.That(wizardSees[f.Wizard].TryGetProperty("color", out _)).IsFalse();
+
+			// color lands in a CSS custom property: only #rrggbb passes, a hostile value is dropped.
+			await Assert.That(wizardSees[f.Wizard].GetProperty("color").GetString()).IsEqualTo("#ffb454");
+			await Assert.That(mortalRow.TryGetProperty("color", out _)).IsFalse();
 
 			// Images: {url, alt} from IMAGE / IMAGE`ALT (alt falls back to the name); no image key at all
-			// on a row without IMAGE. Things carry none of the player-only keys.
+			// on a row without IMAGE; a malformed IMAGE`FOCAL is dropped, not an error that would have
+			// made the whole payload invalid.
 			var bundle = wizardSees[f.Bundle];
 			await Assert.That(bundle.GetProperty("image").GetProperty("url").GetString()).IsEqualTo($"/assets/obj/{token}.jpg");
 			await Assert.That(bundle.GetProperty("image").GetProperty("alt").GetString()).IsEqualTo($"Oilcloth bundle {token}");
 			await Assert.That(bundle.GetProperty("image").TryGetProperty("focal", out _)).IsFalse();
 			await Assert.That(mortalRow.GetProperty("image").GetProperty("url").GetString()).IsEqualTo($"/assets/chars/{token}.jpg");
+			await Assert.That(mortalRow.GetProperty("image").TryGetProperty("focal", out _)).IsFalse();
+
+			// A hostile name (comma, quotes, parentheses, semicolon) comes through exactly as name() has it.
+			await Assert.That(wizardSees[f.Hostile].GetProperty("name").GetString()).IsEqualTo(await Eval($"name({f.Hostile})"));
+
+			// Things carry none of the player-only keys.
 			var crate = wizardSees[f.Crate];
 			foreach (var absent in new[] { "image", "status", "idle", "profile", "actions", "color", "you" })
 			{
@@ -451,13 +484,15 @@ public class RoomContentsHandlerReferenceTests
 			await Assert.That(mortalSees.Keys).DoesNotContain(f.Dark);
 			await Assert.That(wizardSees.Keys).Contains(f.Dark);
 
-			// The locked exit: locked, with its @fail as the hint, for the mortal; open for the wizard,
-			// who passes every lock. cmd stays on both.
+			// The locked exit: locked, with its @fail as the hint and NO destination preview, for the
+			// mortal; open with the preview for the wizard, who holds the key. cmd stays on both.
 			await Assert.That(mortalSees[f.Locked].GetProperty("state").GetString()).IsEqualTo("locked");
 			await Assert.That(mortalSees[f.Locked].GetProperty("hint").GetString()).IsEqualTo("Closed after dusk.");
+			await Assert.That(mortalSees[f.Locked].TryGetProperty("dest", out _)).IsFalse();
 			await Assert.That(mortalSees[f.Locked].GetProperty("cmd").GetString()).IsEqualTo($"goto {f.Locked}");
 			await Assert.That(wizardSees[f.Locked].GetProperty("state").GetString()).IsEqualTo("open");
 			await Assert.That(wizardSees[f.Locked].TryGetProperty("hint", out _)).IsFalse();
+			await Assert.That(wizardSees[f.Locked].GetProperty("dest").GetProperty("name").GetString()).IsEqualTo($"RcDest{token}");
 
 			// The plain exit: open, aliases from the exit name, confirm from its CONFIRM attribute, and a
 			// destination preview with the connected head count of the (empty) far room.
@@ -504,7 +539,10 @@ public class RoomContentsHandlerReferenceTests
 			await Assert.That(root.GetProperty("objid").GetString()).StartsWith($"{f.Room}:");
 			await Assert.That(root.GetProperty("name").GetString()).IsEqualTo($"RcRoom{token}");
 			await Assert.That(root.GetProperty("desc").GetProperty("format").GetString()).IsEqualTo("text");
-			await Assert.That(root.GetProperty("desc").GetProperty("text").GetString()).IsEqualTo("Tarred pilings and stacked crates.");
+			// The description is evaluated: the %r is a real newline (escaped by json(), so the payload
+			// stayed valid) and %N is the event's enactor — God here, who fired the event.
+			await Assert.That(root.GetProperty("desc").GetProperty("text").GetString())
+				.IsEqualTo($"Tarred pilings.\nStacked crates, {await Eval("name(#1)")} looks on.");
 
 			// &IMAGE on the room yields image.url, alt from IMAGE`ALT, focal from IMAGE`FOCAL as numbers.
 			var image = root.GetProperty("image");
@@ -533,13 +571,117 @@ public class RoomContentsHandlerReferenceTests
 	}
 
 	/// <summary>
+	/// The scene block against the Scene plugin's real answers, stood in for by @function globals
+	/// (the plugin is not loaded in this harness): scenewhere() answers the constant
+	/// <c>#-1 NOT FOUND</c> for a room with no scene, and scene(#-1 NOT FOUND,id) answers the same
+	/// constant — an id-echo guard alone passes that, and a Wizard viewer then got a phantom scene
+	/// in every scene-less room. With a real scene, public, every viewer gets id, title and cast.
+	/// </summary>
+	[Test]
+	public async ValueTask V2Info_SceneBlock_RejectsNotFound_AndCarriesARealScene()
+	{
+		var token = Guid.NewGuid().ToString("N")[..8];
+		Fixture? f = null;
+		try
+		{
+			await InstallPackage();
+			f = await BuildFixture(token);
+
+			await Cmd("&FN`T`NOTFOUND #9=#-1 NOT FOUND");
+			await Cmd("@function scenewhere=#9,FN`T`NOTFOUND");
+			await Cmd("@function scene=#9,FN`T`NOTFOUND");
+
+			using var none = await Payload("FN`PAYLOAD`INFO", f.Room, f.Wizard, "connect");
+			await Assert.That(none.RootElement.TryGetProperty("scene", out _)).IsFalse()
+				.Because("a Wizard viewer of a scene-less room must not get a phantom #-1 NOT FOUND scene");
+
+			await Cmd("&FN`T`SCENEWHERE #9=42");
+			await Cmd("&FN`T`SCENE #9=switch(%1,id,42,public,1,title,Salt Market at Dusk)");
+			await Cmd("&FN`T`SCENEMEMBERS #9=#1 #2 #3");
+			await Cmd("@function scenewhere=#9,FN`T`SCENEWHERE");
+			await Cmd("@function scene=#9,FN`T`SCENE");
+			await Cmd("@function scenemembers=#9,FN`T`SCENEMEMBERS");
+
+			foreach (var viewer in new[] { f.Wizard, f.Mortal })
+			{
+				using var doc = await Payload("FN`PAYLOAD`INFO", f.Room, viewer, "connect");
+				var scene = doc.RootElement.GetProperty("scene");
+				await Assert.That(scene.GetProperty("id").GetString()).IsEqualTo("42");
+				await Assert.That(scene.GetProperty("title").GetString()).IsEqualTo("Salt Market at Dusk");
+				await Assert.That(scene.GetProperty("cast").GetInt32()).IsEqualTo(3);
+			}
+		}
+		finally
+		{
+			foreach (var fn in new[] { "scenewhere", "scene", "scenemembers" })
+			{
+				await Cmd($"@function/delete {fn}");
+			}
+
+			foreach (var attr in new[] { "FN`T`NOTFOUND", "FN`T`SCENEWHERE", "FN`T`SCENE", "FN`T`SCENEMEMBERS" })
+			{
+				await Cmd($"&{attr} #9=");
+			}
+
+			await RestorePackage();
+			if (f is not null) await TearDownFixture(f);
+		}
+	}
+
+	/// <summary>
+	/// The viewer-independent work — occupant base rows, exit base rows and destination previews,
+	/// the room's own info — is computed once per event by FN`PREPARE into q-registers the
+	/// per-viewer helpers read, so a room with N viewers evaluates each description and image once,
+	/// not N times. u() shares the caller's registers on this engine, which is what makes that work.
+	/// </summary>
+	[Test]
+	public async ValueTask Prepare_HoistsViewerIndependentRowsOncePerEvent()
+	{
+		var token = Guid.NewGuid().ToString("N")[..8];
+		Fixture? f = null;
+		try
+		{
+			await InstallPackage();
+			f = await BuildFixture(token);
+
+			await Cmd($"&ROOM`CONTENTS #9=&LAST_PAYLOAD #9=[null(u(me/FN`PREPARE,%0))][r(w{f.Mortal[1..]})]%r[r(x{f.North[1..]})]%r[r(d{f.North[1..]})]%r[r(info{f.Room[1..]})]");
+			await Trigger(f.Room, "move-in");
+			var recorded = await Eval("get(#9/LAST_PAYLOAD)");
+			var parts = recorded.Split('\n');
+			await Assert.That(parts.Length).IsEqualTo(4).Because($"recorded: {recorded}");
+			await Assert.That(parts[0]).IsNotEmpty().Because($"the mortal's base row must be in w{f.Mortal[1..]}; recorded: {recorded}");
+
+			using var who = JsonDocument.Parse(parts[0]);
+			await Assert.That(who.RootElement.GetProperty("dbref").GetString()).IsEqualTo(f.Mortal);
+			await Assert.That(who.RootElement.TryGetProperty("you", out _)).IsFalse().Because("the base row carries nothing per viewer");
+
+			using var exit = JsonDocument.Parse(parts[1]);
+			await Assert.That(exit.RootElement.GetProperty("dbref").GetString()).IsEqualTo(f.North);
+			await Assert.That(exit.RootElement.TryGetProperty("state", out _)).IsFalse().Because("state is per viewer");
+
+			using var dest = JsonDocument.Parse(parts[2]);
+			await Assert.That(dest.RootElement.GetProperty("name").GetString()).IsEqualTo($"RcDest{token}");
+
+			using var info = JsonDocument.Parse(parts[3]);
+			await Assert.That(info.RootElement.GetProperty("dbref").GetString()).IsEqualTo(f.Room);
+			await Assert.That(info.RootElement.TryGetProperty("scene", out _)).IsFalse().Because("scene is per viewer");
+		}
+		finally
+		{
+			await RestorePackage();
+			if (f is not null) await TearDownFixture(f);
+		}
+	}
+
+	/// <summary>
 	/// The shipped handler itself, unmodified, run through the real event path against the fixture
 	/// room for each cause. oob() delivers to nobody here (the harness has no WebSocket), so the
 	/// assertion is that the handler runs to completion without an error reaching the handler
-	/// object — the whole per-viewer iteration, every helper, every json_mod() patch.
+	/// object — the whole per-viewer iteration, every helper, every json_mod() patch — and that
+	/// room.info goes to the causer alone when the causer is in the room, to everyone otherwise.
 	/// </summary>
 	[Test]
-	public async ValueTask ShippedHandler_RunsEndToEnd_ForEveryCause()
+	public async ValueTask ShippedHandler_RunsEndToEnd_ForEveryCause_AndTargetsRoomInfo()
 	{
 		var token = Guid.NewGuid().ToString("N")[..8];
 		Fixture? f = null;
@@ -550,23 +692,33 @@ public class RoomContentsHandlerReferenceTests
 
 			// null() swallows the handler's own output; anything else reaching #9 is an evaluation
 			// error ("#-1 ...") or a locate failure ("I can't see that here."). Capture both by
-			// recording what the handler evaluates to, with the send left in place.
+			// recording what the handler evaluates to — the same body with strcat() for null(), so
+			// every argument still runs and their output is stored — with the send left in place.
 			var handler = PackageAttributes.Value["ROOM`CONTENTS"];
 			await Assert.That(handler).StartsWith("think null(");
-			var body = handler["think null(".Length..^1];
-			await Cmd($"&ROOM`CONTENTS #9=&LAST_PAYLOAD #9=[{body}]");
+			var body = handler["think null(".Length..];
+			await Cmd($"&ROOM`CONTENTS #9=&LAST_PAYLOAD #9=strcat({body}");
 
+			// The causer (God, the test's enactor) is not in the room: two viewers, each sent
+			// room.contents and room.exits (0 deliveries each, no WebSocket), plus room.info to both on
+			// the arrival causes. Per viewer the counts concatenate to a run of zeros, and iter()
+			// joins the viewers with its default space.
 			foreach (var cause in new[] { "move-in", "move-out", "connect", "disconnect" })
 			{
 				await Cmd("&LAST_PAYLOAD #9=unset");
 				await Trigger(f.Room, cause);
 				var result = await Eval("get(#9/LAST_PAYLOAD)");
-				// Two viewers, each sent room.contents and room.exits (0 deliveries each, no WebSocket),
-				// plus room.info on the arrival causes: per viewer the counts concatenate to a run of
-				// zeros, and iter() joins the viewers with its default space.
 				await Assert.That(result).IsEqualTo(cause is "move-in" or "connect" ? "000 000" : "00 00")
 					.Because($"{cause}: the handler must run every oob() cleanly, got '{result}'");
 			}
+
+			// The causer is in the room (the mortal walked in): room.info goes to the mortal alone, so
+			// one viewer's run has three zeros and the other's two.
+			await Cmd("&LAST_PAYLOAD #9=unset");
+			await EventService.TriggerEventAsync(WebAppFactoryArg.CommandParser, SharpEvents.RoomContents,
+				new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "move-in");
+			var targeted = (await Eval("get(#9/LAST_PAYLOAD)")).Split(' ').Order().ToArray();
+			await Assert.That(targeted).IsEquivalentTo(["00", "000"]);
 		}
 		finally
 		{
