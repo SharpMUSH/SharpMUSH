@@ -32,6 +32,63 @@ public class DesignTokensTests
 			.Because("README §2 lists these as the additions every kit piece reads");
 	}
 
+	/// <summary>
+	/// README §2: "the §4.3 scrim keeps light text above 4.5:1 on bright art". Banner art is whatever a game
+	/// uploads, so the worst case is a white image: white text over the scrim composited on white must reach
+	/// 4.5:1 through the band the text occupies — the lower half of a closed banner, and up to 72% of an open
+	/// one, where the description sits.
+	/// </summary>
+	[Test]
+	[Arguments("--scrim", 50)]
+	[Arguments("--scrim-open", 72)]
+	public async Task TheScrimKeepsLightTextReadable_OnWhiteArt(string token, int textBandPercent)
+	{
+		var stops = ScrimStops(token);
+		for (var at = 0; at <= textBandPercent; at++)
+		{
+			var alpha = AlphaAt(stops, at);
+			// rgba(10, 11, 13, alpha) over white, as sRGB channels 0..255.
+			double Channel(double c) => alpha * c + (1 - alpha) * 255;
+			var background = Luminance(Channel(10), Channel(11), Channel(13));
+			var ratio = 1.05 / (background + 0.05);
+			await Assert.That(ratio).IsGreaterThanOrEqualTo(4.5)
+				.Because($"{token} at {at}% from the bottom has alpha {alpha:0.00}");
+		}
+	}
+
+	private static List<(double Alpha, double At)> ScrimStops(string token)
+	{
+		var line = Regex.Match(Tokens(), $@"^\s*{Regex.Escape(token)}\s*:(?<value>[^;]+);", RegexOptions.Multiline).Groups["value"].Value;
+		return Regex.Matches(line, @"rgba\(\s*10,\s*11,\s*13,\s*(?<a>[\d.]+)\)\s*(?<p>[\d.]+)%")
+			.Select(m => (double.Parse(m.Groups["a"].Value, System.Globalization.CultureInfo.InvariantCulture),
+				double.Parse(m.Groups["p"].Value, System.Globalization.CultureInfo.InvariantCulture)))
+			.ToList();
+	}
+
+	private static double AlphaAt(List<(double Alpha, double At)> stops, double at)
+	{
+		for (var i = 1; i < stops.Count; i++)
+		{
+			if (at <= stops[i].At)
+			{
+				var (a0, p0) = stops[i - 1];
+				var (a1, p1) = stops[i];
+				return a0 + (a1 - a0) * (at - p0) / (p1 - p0);
+			}
+		}
+		return stops[^1].Alpha;
+	}
+
+	private static double Luminance(double r, double g, double b)
+	{
+		static double Linear(double c)
+		{
+			c /= 255;
+			return c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+		}
+		return 0.2126 * Linear(r) + 0.7152 * Linear(g) + 0.0722 * Linear(b);
+	}
+
 	[Test]
 	public async Task TextFaintMeetsAa()
 	{
