@@ -12,7 +12,6 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Logging;
 using SharpMUSH.Server.Services;
-using MarkupString;
 using SharpMUSH.Server.Authentication;
 using System.Text.Json;
 
@@ -43,7 +42,7 @@ public class GalleryController(
 	IVisibleWorldProjection projection,
 	ILogger<GalleryController> logger) : ControllerBase
 {
-	private const string GalleryAttribute = "PROFILE`GALLERY";
+	private const string GalleryAttribute = GalleryWriter.GalleryAttribute;
 
 	private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
 	{
@@ -224,36 +223,26 @@ public class GalleryController(
 	}
 
 	/// <summary>
-	/// Writes the gallery, then mirrors it into the standard image attributes. A mirror that fails is
-	/// reported like a failed gallery write: the portal and softcode would otherwise disagree about
-	/// which picture is the character's.
+	/// Writes the gallery and mirrors it into the standard image attributes, all or nothing
+	/// (<see cref="GalleryWriter"/>): a failed mirror puts the gallery back, since the portal and softcode
+	/// would otherwise disagree about which picture is the character's.
 	/// </summary>
-	private async Task<Result<Success>> WriteGalleryAsync(AnySharpObject character, IReadOnlyList<GalleryEntry> entries)
+	private Task<Result<Success>> WriteGalleryAsync(AnySharpObject character, IReadOnlyList<GalleryEntry> entries) =>
+		GalleryWriter.WriteAsync(new CharacterAttributes(attributeService, character), entries, logger);
+
+	/// <summary>The character's own attributes, read and written as itself.</summary>
+	private sealed class CharacterAttributes(IAttributeService attributes, AnySharpObject character) : GalleryWriter.IStore
 	{
-		var json = JsonSerializer.Serialize(entries);
-		if (await attributeService.SetAttributeAsync(character, character, GalleryAttribute, MarkupText.Plain(json)) is Error<string> failed)
-		{
-			return failed;
-		}
+		public async ValueTask<MString?> ReadAsync(string attribute) =>
+			await attributes.GetAttributeAsync(character, character, attribute, IAttributeService.AttributeMode.Read, parent: false)
+				is SharpAttribute[] { Length: > 0 } path
+				? path[^1].Value
+				: null;
 
-		// Parents before children: sets run IMAGE first, clears run it last, so a branch attribute is
-		// never written under a missing parent or cleared out from under a child.
-		var mirror = GalleryRules.Mirror(entries);
-		(string Attribute, string Value)[] mirrored = [("IMAGE", mirror.Image), ("IMAGE`BANNER", mirror.Banner), ("IMAGE`ALT", mirror.Alt)];
-		var sets = mirrored.Where(m => m.Value.Length > 0);
-		var clears = mirrored.Where(m => m.Value.Length == 0).Reverse();
-		foreach (var (attribute, value) in sets.Concat(clears))
-		{
-			var result = value.Length == 0
-				? await attributeService.ClearAttributeAsync(character, character, attribute, IAttributeService.AttributePatternMode.Exact)
-				: await attributeService.SetAttributeAsync(character, character, attribute, MarkupText.Plain(value));
-			if (result is Error<string> error)
-			{
-				logger.LogWarning("Mirroring the gallery into {Attribute} on {Dbref} failed: {Error}", attribute, character.Object().DBRef, error.Value);
-				return error;
-			}
-		}
+		public ValueTask<Result<Success>> SetAsync(string attribute, MString value) =>
+			attributes.SetAttributeAsync(character, character, attribute, value);
 
-		return new Success();
+		public ValueTask<Result<Success>> ClearAsync(string attribute) =>
+			attributes.ClearAttributeAsync(character, character, attribute, IAttributeService.AttributePatternMode.Exact);
 	}
 }

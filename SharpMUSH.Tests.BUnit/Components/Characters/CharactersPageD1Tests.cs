@@ -14,9 +14,11 @@ public class CharactersPageD1Tests : TrackingBunitContext
 {
 	private readonly BunitNavigationManager _nav;
 
+	private readonly CharactersApiFake _fake;
+
 	public CharactersPageD1Tests()
 	{
-		CharactersApiFake.Install(this);
+		_fake = CharactersApiFake.Install(this).Fake;
 		Services.AddSingleton(CharactersApiFake.Anonymous(this));
 		_nav = Services.GetRequiredService<BunitNavigationManager>();
 	}
@@ -57,5 +59,20 @@ public class CharactersPageD1Tests : TrackingBunitContext
 		await Assert.That(Names(RenderAt("/characters?q=ilsa"))).IsEquivalentTo(new[] { "Ilsa Varn" });
 		await Assert.That(Names(RenderAt("/characters?online=1"))).IsEquivalentTo(new[] { "Tomas Reyes", "Wren Halloway" });
 		await Assert.That(Names(RenderAt("/characters?new=1"))).IsEquivalentTo(new[] { "Magister Oake", "Wren Halloway" });
+	}
+
+	[Test]
+	public async Task Online_IsMatchedByObjid_NotByName()
+	{
+		_fake.Characters = """
+			[{"name":"Tomas Reyes","objid":"#312:1","created":1,"category":""},
+			 {"name":"Tomas Reyes","objid":"#412:1","created":1,"category":""}]
+			""";
+		_fake.Online = """[{"name":"Tomas Reyes","objid":"#412:1","created":1,"category":""}]""";
+
+		var all = RenderAt("/characters");
+		await Assert.That(all.FindAll(".char-grid .kit-portrait--highlight").Count).IsEqualTo(1)
+			.Because("only #412 is connected; the other Tomas shares the name, not the presence");
+		await Assert.That(Names(RenderAt("/characters?online=1")).Count).IsEqualTo(1);
 	}
 }

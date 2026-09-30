@@ -12,8 +12,25 @@ namespace SharpMUSH.Tests.Client.Services;
 /// color, plus role when a game adds it. Fields arrive either as plain strings or as the handler's
 /// <c>{ value, visible }</c> shape; a colour that is not <c>#rrggbb</c> never reaches a style.
 /// </summary>
-public class CharacterProfileServiceTests
+public class CharacterProfileServiceTests : IDisposable
 {
+	private readonly List<HttpClient> _clients = [];
+
+	public void Dispose()
+	{
+		foreach (var client in _clients)
+		{
+			client.Dispose();
+		}
+	}
+
+	private HttpClient Client(Func<string, string?> answer)
+	{
+		var http = new HttpClient(new Handler(answer)) { BaseAddress = new Uri("https://localhost:8081/") };
+		_clients.Add(http);
+		return http;
+	}
+
 	private sealed class Handler(Func<string, string?> answer) : HttpMessageHandler
 	{
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -27,9 +44,9 @@ public class CharacterProfileServiceTests
 
 	private const string Characters = """[{"name":"Tomas Reyes","objid":"#312:1718000000","created":1718000000,"category":"","image":"/api/wiki-assets/a/tomas.jpg"}]""";
 
-	private static CharacterProfileService Build(Func<string, string?> answer)
+	private CharacterProfileService Build(Func<string, string?> answer)
 	{
-		var http = new HttpClient(new Handler(answer)) { BaseAddress = new Uri("https://localhost:8081/") };
+		var http = Client(answer);
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(http);
 		return new CharacterProfileService(factory, new CharacterDirectoryService(factory, NullLogger<CharacterDirectoryService>.Instance));
@@ -79,6 +96,28 @@ public class CharacterProfileServiceTests
 	}
 
 	[Test]
+	public async Task AFieldTheHandlerMarksInvisible_IsNotShown()
+	{
+		var service = Build(path => path switch
+		{
+			"/http/characters" => Characters,
+			_ when path.StartsWith("/http/profile", StringComparison.Ordinal) => """
+				{"character":"Tomas Reyes","objid":"#312:1718000000","dbref":"#312",
+				 "fields":{"image":{"value":"/api/wiki-assets/a/tomas.jpg","visible":false},
+				           "banner":{"value":"/api/wiki-assets/b/docks.jpg","visible":false},
+				           "color":{"value":"#ffb454","visible":false},"role":{"value":"Spy","visible":false}}}
+				""",
+			_ => null,
+		});
+
+		var profile = (await service.GetAsync("Tomas Reyes")).Expect<CharacterProfileData>();
+		await Assert.That(profile.Image).IsNull().Because("the handler marked the field hidden from this viewer");
+		await Assert.That(profile.Banner).IsNull();
+		await Assert.That(profile.Color).IsNull();
+		await Assert.That(profile.Role).IsNull();
+	}
+
+	[Test]
 	public async Task NoSuchCharacter_IsNotFound_AndAnUnreadableDirectoryIsNot()
 	{
 		var missing = await Build(path => path == "/http/characters" ? Characters : null).GetAsync("Nobody");
@@ -102,13 +141,12 @@ public class CharacterProfileServiceTests
 	{
 		var requests = 0;
 		var fail = true;
-		var http = new HttpClient(new Handler(path =>
+		var http = Client(path =>
 		{
 			if (path != "/http/characters") return null;
 			requests++;
 			return fail ? null : Characters;
-		}))
-		{ BaseAddress = new Uri("https://localhost:8081/") };
+		});
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(http);
 		var directory = new CharacterDirectoryService(factory, NullLogger<CharacterDirectoryService>.Instance);
@@ -125,7 +163,7 @@ public class CharacterProfileServiceTests
 	{
 		var directory = new CharacterDirectoryService(
 			Substitute.For<IHttpClientFactory>().Tap(f => f.CreateClient(Arg.Any<string>()).Returns(
-				new HttpClient(new Handler(p => p == "/http/characters" ? Characters : null)) { BaseAddress = new Uri("https://localhost:8081/") })),
+				Client(p => p == "/http/characters" ? Characters : null))),
 			NullLogger<CharacterDirectoryService>.Instance);
 		var rows = (await directory.ListAsync()).Expect<IReadOnlyList<CharacterDirectoryService.CharacterSummary>>();
 		await Assert.That(rows[0].Image).IsEqualTo("/api/wiki-assets/a/tomas.jpg");
