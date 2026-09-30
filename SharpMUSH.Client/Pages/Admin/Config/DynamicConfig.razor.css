@@ -126,6 +126,13 @@
 	transition: background var(--motion-pop);
 }
 
+/* an invisible 44px hit box around the 24px pill: README §9's touch target without a fatter switch */
+.cfg-switch::after {
+	content: "";
+	position: absolute;
+	inset: -10px;
+}
+
 .cfg-switch--on {
 	background: var(--accent);
 }
