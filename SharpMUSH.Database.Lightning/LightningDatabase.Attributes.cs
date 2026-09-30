@@ -250,9 +250,10 @@ public partial class LightningDatabase
 	/// default flags <see cref="Tables.AttrEntry"/> configures for that level's long name, and holding an
 	/// empty value; the leaf then takes <paramref name="value"/>.
 	/// <para>
-	/// Overwriting an existing node only ever adds flags, never clears them, and re-points the owner at
-	/// the setter on <em>every</em> level of the path, leaf and auto-created branch alike. The <c>branch</c>
-	/// flag lands on every non-leaf level that lacks it, so a leaf that grows a child becomes a branch.
+	/// As PennMUSH's <c>atr_add</c>: an entry's default flags apply only when a node is created, so a node
+	/// that already exists keeps the flags its owner chose. The leaf's owner becomes the setter; an existing
+	/// branch keeps its owner and only gains the <c>branch</c> flag, so a leaf that grows a child becomes a
+	/// branch.
 	/// </para>
 	/// </summary>
 	public async ValueTask<bool> SetAttributeAsync(DBRef dbref, string[] attribute, MString value, SharpPlayer owner,
@@ -335,11 +336,8 @@ public partial class LightningDatabase
 			var existing = tx.TryGet(Tables.AttrMeta, key, out var bytes) ? Codec.Deserialize<AttrMetaRecord>(bytes) : null;
 			var entry = ReadAttributeEntryRecord(tx, longName);
 
-			var flags = new List<string>(existing?.Flags ?? []);
-			foreach (var flagName in entry?.DefaultFlags ?? [])
-			{
-				AddFlag(flags, flagName);
-			}
+			// The entry's defaults are a new node's flags; an existing node keeps its own.
+			var flags = new List<string>(existing?.Flags ?? entry?.DefaultFlags ?? []);
 
 			if (isLeaf)
 			{
@@ -355,7 +353,7 @@ public partial class LightningDatabase
 
 			tx.Put(Tables.AttrMeta, key, Codec.Serialize(new AttrMetaRecord
 			{
-				Owner = write.Owner,
+				Owner = isLeaf || existing is null ? write.Owner : existing.Owner,
 				Flags = [.. flags],
 				Entry = entry?.Name ?? existing?.Entry
 			}));
