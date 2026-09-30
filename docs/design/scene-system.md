@@ -301,6 +301,24 @@ fires, so there is **one capture path, no double-capture, no echo loop** (room
 emit and the `game.scene.{id}` broadcast are two renderings of one stored pose,
 keyed by pose id). `@EMIT` is **not** hooked — the editor must not pose via it.
 
+### Out of character — the plugin's `ooc` command
+
+`ooc <text>` ships in the Scene plugin (`Commands/OocCommand.cs`), not in the
+softcode package, because the portal's OOC band keys off a tag and something has
+to produce it. The room hears `<OOC> Name: text`; a leading `:` poses
+(`ooc :waves` → `<OOC> Name waves`) and a leading `;` semiposes (`ooc ;'s
+back` → `<OOC> Name's back`). Delivery is `@emit`'s: the room's Speech lock
+applies and a gagged player cannot use it. `ooc` with nothing to say (a prefix
+alone included) says nothing.
+
+It records under the capture rule above — the speaker is focused on the active
+scene in the room they stand in — through `ISceneService.AddPoseAsync` with
+source `ooc` and tags `[ooc]`, and broadcasts like any pose. The stored text is
+the line **without** the `<OOC>` marker (the tag carries it) and uses the
+player's own name, not their `showas` persona. Anywhere else it is only said.
+Approval (`` FUN`IS`APPROVED ``) is package policy the plugin cannot see; being
+focused on the scene already means the player was let in.
+
 ## Default Softcode (`#SCENELOGGER` bootstrap)
 
 Players use `+scene/*` (softcode) and pose natively; they never call `@scene`.
@@ -379,8 +397,13 @@ forwards `game.scene.*` to `GameHub.SceneGroupName(id)`; `IGameHubClient` gains
 
 `SceneEventMessage(SceneId, EventType ["pose"|"edit"|"delete"|"move"|"meta"],
 ActorName [= ShowAsName/AuthorName], PoseId, Content, Markup, Tags, Source,
-Location, Timestamp)`. Lives in a core-shared contract assembly so type identity
-survives ALC isolation.
+Location, Timestamp, ActorObjId)`. `ActorObjId` is the author's objid
+(`#N:ctime-ms`), resolved from `AuthorDbref` when the event is sent (null when
+the author is gone), so the portal keys a portrait on an identity that survives a
+recycled dbref. The record lives in the plugin; the client keeps its own copy of
+the same positional shape (`SharpMUSH.Client/Models/SceneEventMessage.cs`), because
+the plugin loads in a collectible ALC the client cannot reference. Contract tests in
+`SharpMUSH.Tests.ScenePlugin` and `SharpMUSH.Tests.BUnit` pin the same JSON.
 
 ## Portal UI + Tag Filtering
 
