@@ -130,7 +130,9 @@ These were learned the hard way; the handler relies on all of them:
    `get()` reads an attribute its owner made private. The seeded `visual`
    flag is a default for a *new* attribute: an `IMAGE` set before the seed
    existed, or with `visual` cleared since, keeps its owner's choice.
-   ``FN`PICTURE`` reads an image attribute only when it is `visual`.
+   ``FN`PICTURE`` reads an image attribute only when it is `visual`, and a
+   leaf such as `` IMAGE`BANNER `` only when `IMAGE` is `visual` too: the flag
+   does not propagate down a tree, and a private branch hides its leaves.
 
 8. **Validate before `json(number, …)`.** One malformed value — an
    `` IMAGE`FOCAL `` of `center` — made `json(number,…)` an error, the array
@@ -204,7 +206,7 @@ carries a comment per attribute; this is the map.
 | ``FN`STATUS`` (`%0` idle seconds) | `active` under 5 min, `idle` under 30, else `away` |
 | ``FN`AREA`` (`%0` room) | the name of the room's zone, else its parent, else nothing |
 | ``FN`COLOR`` (`%0` player) | `` PROFILE`COLOR `` as a JSON string when it is `#rrggbb`, else `null` |
-| ``FN`PICTURE`` (`%0` object, `%1` attribute) | the attribute's value when it is `visual`, else blank |
+| ``FN`PICTURE`` (`%0` object, `%1` attribute) | the attribute's value when it and its branch are `visual`, else blank |
 | ``FN`IMAGEREF`` (`%0` object, `%1` URL) | `{"url","alt","focal"}` with alt/focal from ``IMAGE`ALT``/``IMAGE`FOCAL``, or `null` for a blank URL |
 | ``FN`IMAGE`` (`%0` object) | the thumbnail: ``FN`IMAGEREF`` of `IMAGE` |
 | ``FN`BANNER`` (`%0` room) | the banner: ``FN`IMAGEREF`` of ``IMAGE`BANNER``, falling back to `IMAGE` |
