@@ -1,0 +1,11 @@
+.story {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.story-empty {
+	color: var(--text-faint);
+	font-style: italic;
+	padding: 8px 0;
+}

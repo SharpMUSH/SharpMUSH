@@ -100,3 +100,56 @@ test('a disposed .NET object does not surface as an unhandled rejection', async 
     listeners.get('keydown')(key(body, { ctrlKey: true }).event);
     assert.ok(caught, 'the invoke must carry a catch');
 });
+
+// Play's Story view: a click on a pose's mention opens the character sheet; a new-tab click keeps the link.
+function storyElement() {
+    const listeners = new Map();
+    return {
+        listeners,
+        addEventListener: (name, handler) => listeners.set(name, handler),
+        removeEventListener: (name, handler) => { if (listeners.get(name) === handler) listeners.delete(name); },
+        contains: () => true
+    };
+}
+
+function mentionClick(init) {
+    let prevented = false;
+    const link = { getAttribute: name => (name === 'data-name' ? 'Tomas Reyes' : null) };
+    return {
+        event: {
+            button: 0, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false,
+            target: { closest: selector => (selector.startsWith('a.mention') ? link : null) },
+            preventDefault: () => { prevented = true; }, ...init
+        },
+        prevented: () => prevented
+    };
+}
+
+test('a plain click on a mention opens the character, a new-tab click follows the link', () => {
+    const { layout } = boot();
+    const element = storyElement();
+    const calls = [];
+    layout.delegateMentions(element, { invokeMethodAsync: (name, arg) => { calls.push([name, arg]); return Promise.resolve(); } });
+
+    const plain = mentionClick({});
+    element.listeners.get('click')(plain.event);
+    const newTab = mentionClick({ ctrlKey: true });
+    element.listeners.get('click')(newTab.event);
+    const middle = mentionClick({ button: 1 });
+    element.listeners.get('click')(middle.event);
+
+    assert.deepEqual(calls, [['OpenMention', 'Tomas Reyes']]);
+    assert.ok(plain.prevented());
+    assert.equal(newTab.prevented() || middle.prevented(), false);
+});
+
+test('a click outside a mention does nothing, and undelegating removes the listener', () => {
+    const { layout } = boot();
+    const element = storyElement();
+    const calls = [];
+    layout.delegateMentions(element, { invokeMethodAsync: name => { calls.push(name); return Promise.resolve(); } });
+    element.listeners.get('click')({ button: 0, target: { closest: () => null }, preventDefault: () => assert.fail('not a mention') });
+    layout.undelegateMentions(element);
+    assert.equal(element.listeners.has('click'), false);
+    assert.deepEqual(calls, []);
+});

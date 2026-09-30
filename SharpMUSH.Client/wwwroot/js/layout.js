@@ -55,6 +55,30 @@ window.sharpmushLayout = {
 		this._paletteRef = null;
 	},
 
+	// A pose's mentions are rendered HTML links to /character/{Name}. In Play a plain click opens the
+	// character sheet instead; a modified or middle click keeps the link's own behaviour (a new tab).
+	delegateMentions: function (element, dotnetRef) {
+		if (!element || element._sharpmushMentions) return;
+		const handler = event => {
+			if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+			const link = event.target && event.target.closest ? event.target.closest('a.mention[data-name]') : null;
+			if (!link || !element.contains(link)) return;
+			event.preventDefault();
+			const pending = dotnetRef.invokeMethodAsync('OpenMention', link.getAttribute('data-name'));
+			if (pending && typeof pending.catch === 'function') {
+				pending.catch(() => { });
+			}
+		};
+		element._sharpmushMentions = handler;
+		element.addEventListener('click', handler);
+	},
+
+	undelegateMentions: function (element) {
+		if (!element || !element._sharpmushMentions) return;
+		element.removeEventListener('click', element._sharpmushMentions);
+		element._sharpmushMentions = null;
+	},
+
 	// Back-compat alias.
 	isNarrow: function () {
 		return this.isTouchChrome();

@@ -1,0 +1,318 @@
+@using Microsoft.AspNetCore.SignalR
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Services.Interfaces
+@inject IStringLocalizer<SharedResource> Loc
+@inject SceneService SceneService
+@inject IConnectionStateService Hub
+@inject ISceneHubControl SceneHub
+@inject CharacterDirectoryService Directory
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* D1 §5.4 the Story view of one scene: the REST backlog, then the scene hub's pose/edit/delete/move
+   events, one StoryPose per pose. Shared by Play and /scenes/{id}/live. A portrait and a colour come
+   from the room's occupant rows, else the directory, and only for the name the pose shows. *@
+<div class="story" @ref="_root">
+    @if (_posesError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="scene-poses-error">@_posesError</MudAlert>
+    }
+    else if (!_loading && _poses.Count == 0)
+    {
+        <div class="story-empty">@Loc["RolWaitingForActivity"]</div>
+    }
+    @foreach (var pose in _poses)
+    {
+        var who = Identify(pose);
+        <StoryPose @key="pose.Id" Pose="pose" ImageUrl="@who?.Image" Color="@who?.Color" Mentions="_mentions" OnCharacter="OnCharacter" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string SceneId { get; set; } = string.Empty;
+
+    /// <summary>The room's <c>room.contents</c> rows: the first source of portraits, colours and mentions.</summary>
+    [Parameter] public IReadOnlyList<RoomOccupant> Occupants { get; set; } = [];
+
+    /// <summary>The viewer's character: their name is a mention in the accent.</summary>
+    [Parameter] public string? ViewerName { get; set; }
+
+    /// <summary>A portrait, a name or a mention was chosen. Without a handler they link to the profile page.</summary>
+    [Parameter] public EventCallback<string> OnCharacter { get; set; }
+
+    /// <summary>
+    /// Whether the live subscription was refused: the archive still shows, but nothing new will arrive and
+    /// posting from here would look like it vanished.
+    /// </summary>
+    [Parameter] public EventCallback<bool> LiveUnavailableChanged { get; set; }
+
+    /// <summary>How many poses the backlog reads.</summary>
+    [Parameter] public int Backlog { get; set; } = 100;
+
+    private readonly List<ScenePoseView> _poses = [];
+
+    /// <summary>The objid each live pose's event carried (REST poses carry only the author's dbref).</summary>
+    private readonly Dictionary<string, string> _objids = new(StringComparer.Ordinal);
+
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _directory = [];
+    private IReadOnlyList<StoryMentions.Target> _mentions = [];
+    private ElementReference _root;
+    private DotNetObjectReference<SceneStory>? _self;
+    private bool _mentionsDelegated;
+    private bool _loading = true;
+    private string? _posesError;
+    private string? _joinedSceneId;
+    private string? _loadedSceneId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SceneHub.OnSceneEventReceived += HandleSceneEvent;
+        if (await Directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
+        {
+            _directory = rows;
+            RebuildMentions();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        RebuildMentions();
+        if (string.Equals(_loadedSceneId, SceneId, StringComparison.Ordinal)) return;
+
+        _loadedSceneId = SceneId;
+        _loading = true;
+        _posesError = null;
+        _poses.Clear();
+        _objids.Clear();
+        ShowPoses(await SceneService.GetPosesAsync(SceneId, count: Backlog));
+        _loading = false;
+        RebuildMentions();
+
+        // Only the login and character-switch paths connect the hub, so a returning player arrives with
+        // none. Reconnect rather than connect: ConnectAsync returns the moment it sees a hub object,
+        // connected or not, so it cannot revive a dropped one.
+        if (!Hub.IsConnected)
+        {
+            await Hub.ReconnectAsync();
+        }
+
+        await LeaveJoinedSceneAsync();
+        try
+        {
+            await SceneHub.JoinSceneAsync(SceneId);
+            _joinedSceneId = SceneId;
+            await LiveUnavailableChanged.InvokeAsync(false);
+        }
+        catch (HubException)
+        {
+            // Not "not found": the backlog above was readable, so the caller may read this scene. What
+            // was refused is the live subscription (a session acting as no character, or a scene that
+            // stopped being visible between the two calls). Naming that leaks nothing the 200 did not.
+            await LiveUnavailableChanged.InvokeAsync(true);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Mentions in a pose are rendered HTML, which cannot carry a Blazor handler; one listener on the
+        // story hands their clicks to OnCharacter. Without a handler they stay profile links.
+        if (_mentionsDelegated || !OnCharacter.HasDelegate) return;
+        _mentionsDelegated = true;
+        _self = DotNetObjectReference.Create(this);
+        try
+        {
+            await JS.InvokeVoidAsync("sharpmushLayout.delegateMentions", _root, _self);
+        }
+        catch (JSException)
+        {
+            // No layout script: the mentions stay profile links, which is what they are without Play.
+        }
+    }
+
+    [JSInvokable]
+    public Task OpenMention(string name) => OnCharacter.InvokeAsync(name);
+
+    private void HandleSceneEvent(SceneEventMessage msg)
+    {
+        if (!string.Equals(msg.SceneId, SceneId, StringComparison.Ordinal)) return;
+
+        switch (msg.EventType)
+        {
+            case "pose":
+                // Appended exactly once: there is no optimistic insert, so an author's own pose arrives
+                // here and renders for the first time.
+                if (_poses.All(p => !string.Equals(p.Id, msg.PoseId, StringComparison.Ordinal)))
+                {
+                    _poses.Add(FromEvent(msg, existing: null));
+                    Remember(msg);
+                }
+                break;
+
+            case "edit":
+                ReplacePose(msg.PoseId, existing => FromEvent(msg, existing));
+                Remember(msg);
+                break;
+
+            case "delete":
+                ReplacePose(msg.PoseId, existing => existing with { IsDeleted = true });
+                break;
+
+            case "move":
+                // A reorder is not described by the event; re-read the ordered chain.
+                _ = ReloadPosesAsync();
+                return;
+
+            default:
+                return;
+        }
+
+        RebuildMentions();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void Remember(SceneEventMessage msg)
+    {
+        if (!string.IsNullOrWhiteSpace(msg.ActorObjId)) _objids[msg.PoseId] = msg.ActorObjId;
+    }
+
+    private void ReplacePose(string poseId, Func<ScenePoseView, ScenePoseView> mutate)
+    {
+        var idx = _poses.FindIndex(p => string.Equals(p.Id, poseId, StringComparison.Ordinal));
+        if (idx >= 0) _poses[idx] = mutate(_poses[idx]);
+    }
+
+    private async Task ReloadPosesAsync()
+    {
+        ShowPoses(await SceneService.GetPosesAsync(SceneId, count: Backlog));
+        RebuildMentions();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Replaces the chain with a fresh read. A read that failed leaves what is on screen alone: clearing it
+    /// would wipe a live log the player is reading because one re-fetch after a move did not arrive.
+    /// </summary>
+    private void ShowPoses(ApiResult<IReadOnlyList<ScenePoseView>> result)
+    {
+        switch (result)
+        {
+            case IReadOnlyList<ScenePoseView> fresh:
+                _poses.Clear();
+                _poses.AddRange(fresh);
+                _posesError = null;
+                break;
+            case ApiFailure failure:
+                _posesError = failure.Message;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Projects a realtime event onto a <see cref="ScenePoseView"/>. For edits the existing pose supplies what
+    /// the event does not carry (author identity); EditCount is bumped so the "edited" badge shows.
+    /// </summary>
+    private static ScenePoseView FromEvent(SceneEventMessage msg, ScenePoseView? existing) => new(
+        Id: msg.PoseId,
+        SceneId: msg.SceneId,
+        AuthorDbref: existing?.AuthorDbref,
+        AuthorName: existing?.AuthorName ?? msg.ActorName,
+        ShowAsName: msg.ActorName,
+        OriginDbref: existing?.OriginDbref,
+        OriginName: existing?.OriginName ?? msg.Location,
+        Source: msg.Source,
+        Tags: msg.Tags ?? [],
+        Meta: existing?.Meta ?? new Dictionary<string, string>(),
+        CreatedAt: existing?.CreatedAt ?? msg.Timestamp,
+        IsDeleted: false,
+        Content: msg.Content,
+        Markup: msg.Markup,
+        EditCount: existing is null ? 1 : existing.EditCount + 1,
+        LastEditedAt: existing is null ? null : msg.Timestamp,
+        LastEditorDbref: existing?.LastEditorDbref,
+        LastEditorName: existing is null ? null : msg.ActorName);
+
+    private sealed record Who(string? Image, string? Color);
+
+    /// <summary>
+    /// The portrait and colour for a pose. The pose's identity (the event's objid, or the REST author's dbref)
+    /// finds a candidate, which is used only when its name is the name the pose shows; otherwise the shown
+    /// name is looked up as itself. A persona therefore never wears its author's portrait.
+    /// </summary>
+    private Who? Identify(ScenePoseView pose)
+    {
+        var shown = pose.DisplayName;
+        _objids.TryGetValue(pose.Id, out var objid);
+        var dbref = objid is not null ? objid.Split(':')[0] : pose.AuthorDbref;
+
+        var occupant = Occupants.FirstOrDefault(o => SameIdentity(o.ObjId, o.Dbref, objid, dbref) && NameIs(o.Name, shown))
+            ?? Occupants.FirstOrDefault(o => NameIs(o.Name, shown));
+        var listed = _directory.FirstOrDefault(r => SameIdentity(r.Objid, r.Objid.Split(':')[0], objid, dbref) && NameIs(r.Name, shown))
+            ?? _directory.FirstOrDefault(r => NameIs(r.Name, shown));
+
+        return occupant is null && listed is null
+            ? null
+            : new Who(occupant?.Image?.Url ?? listed?.Image, occupant?.Color);
+    }
+
+    private static bool SameIdentity(string? objid, string? dbref, string? wantObjid, string? wantDbref) =>
+        (wantObjid is not null && string.Equals(objid, wantObjid, StringComparison.Ordinal))
+        || (wantObjid is null && wantDbref is not null && string.Equals(dbref, wantDbref, StringComparison.Ordinal));
+
+    private static bool NameIs(string? name, string shown) =>
+        !string.IsNullOrWhiteSpace(name) && string.Equals(name.Trim(), shown.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Participants: the players in the room and everyone who has posed, each once.</summary>
+    private void RebuildMentions()
+    {
+        var targets = new Dictionary<string, StoryMentions.Target>(StringComparer.OrdinalIgnoreCase);
+        foreach (var o in Occupants.Where(o => o.Type is null or "player" && !string.IsNullOrWhiteSpace(o.Name)))
+        {
+            targets.TryAdd(o.Name.Trim(), new StoryMentions.Target(o.Name.Trim(), o.Color, o.You || IsViewer(o.Name)));
+        }
+        foreach (var name in _poses.Select(p => p.DisplayName).Where(n => !string.IsNullOrWhiteSpace(n)))
+        {
+            targets.TryAdd(name.Trim(), new StoryMentions.Target(name.Trim(), null, IsViewer(name)));
+        }
+        _mentions = targets.Values.ToList();
+    }
+
+    private bool IsViewer(string name) => ViewerName is not null && NameIs(name, ViewerName);
+
+    public async ValueTask DisposeAsync()
+    {
+        SceneHub.OnSceneEventReceived -= HandleSceneEvent;
+        await LeaveJoinedSceneAsync();
+        if (_mentionsDelegated)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("sharpmushLayout.undelegateMentions", _root);
+            }
+            catch (Exception e) when (e is JSException or JSDisconnectedException)
+            {
+                // The page is going away with the circuit; the listener goes with it.
+            }
+        }
+        _self?.Dispose();
+    }
+
+    /// <summary>
+    /// Leaves the joined scene group, if any, tolerating a hub refusal: this runs on a scene change and on
+    /// disposal, where a thrown <see cref="HubException"/> has nowhere to surface, and the membership dies
+    /// with the connection anyway.
+    /// </summary>
+    private async Task LeaveJoinedSceneAsync()
+    {
+        if (_joinedSceneId is not { } sceneId) return;
+
+        _joinedSceneId = null;
+        try
+        {
+            await SceneHub.LeaveSceneAsync(sceneId);
+        }
+        catch (HubException)
+        {
+        }
+    }
+}
