@@ -4857,4 +4857,16 @@
   <data name="NavSettingsDescription" xml:space="preserve">
     <value>Dein Konto, deine Charaktere und wie dieses Portal aussieht.</value>
   </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# Nachricht} other {# Nachrichten}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Ungelesen</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Weitergeleitete Nachricht von {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Zurück zu {0}</value>
+  </data>
 </root>

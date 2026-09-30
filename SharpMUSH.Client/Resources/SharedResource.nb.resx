@@ -4857,4 +4857,16 @@
   <data name="NavSettingsDescription" xml:space="preserve">
     <value>Kontoen din, figurene dine og hvordan portalen ser ut.</value>
   </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# melding} other {# meldinger}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Ulest</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Videresendt melding fra {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Tilbake til {0}</value>
+  </data>
 </root>

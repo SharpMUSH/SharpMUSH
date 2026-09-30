@@ -4857,4 +4857,16 @@
   <data name="NavSettingsDescription" xml:space="preserve">
     <value>你的账户、你的角色以及门户的外观。</value>
   </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, other {# 条消息}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>未读</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>来自 {0} 的转发消息：</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>返回 {0}</value>
+  </data>
 </root>

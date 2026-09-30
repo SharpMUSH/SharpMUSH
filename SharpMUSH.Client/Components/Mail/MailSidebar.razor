@@ -1,0 +1,153 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using SharpMUSH.Client.Services
+@inject MailService MailApi
+@inject ITerminalService Terminal
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* D1 §6.5 Mail page sidebar: "Mail" and the inbox's unread count, Compose, then one row per
+   folder (the inbox with its unread pill), the folder on screen marked. Mail belongs to the active
+   character, so without one there is no mailbox to list and the sidebar says so. Collapsed keeps
+   each row's icon. *@
+<div class="mail-side @(Collapsed ? "mail-side--collapsed" : null)">
+    @if (!Collapsed)
+    {
+        <SidebarHead Title="@Loc["Mail"]">
+            <Sub>
+                @if (_connected && _inboxUnread is int unread)
+                {
+                    <span>@Loc.Plural("NavUnreadCount", "count", unread)</span>
+                }
+            </Sub>
+        </SidebarHead>
+    }
+    @if (!_connected)
+    {
+        @if (!Collapsed)
+        {
+            <div class="mail-side-empty">@Loc["MailNeedsCharacter"]</div>
+        }
+    }
+    else
+    {
+        <nav class="mail-side-compose" aria-label="@Loc["Compose"]">
+            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Edit" Label="@Loc["Compose"]"
+                        Href="/mail/compose" IsCurrent="@(_path == "/mail/compose")" Collapsed="@Collapsed" />
+        </nav>
+        @if (!Collapsed)
+        {
+            <SectionLabel>@Loc["NavMailFolders"]</SectionLabel>
+        }
+        <nav class="mail-side-folders" aria-label="@Loc["NavMailFolders"]">
+            @foreach (var name in _folders)
+            {
+                var folder = name;
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@FolderIcon(folder)" Label="@folder"
+                            Href="@FolderHref(folder)" IsCurrent="@IsCurrent(folder)"
+                            Unread="@(folder == Inbox ? _inboxUnread ?? 0 : 0)" Collapsed="@Collapsed" />
+            }
+        </nav>
+    }
+</div>
+
+@code {
+    /// <summary>Only the icons, for the collapsed strip.</summary>
+    [Parameter] public bool Collapsed { get; set; }
+
+    public const string Inbox = "INBOX";
+
+    private bool _connected;
+    private IReadOnlyList<string> _folders = [Inbox];
+    private int? _inboxUnread;
+    private string _path = "/mail";
+    private string? _folderQuery;
+
+    /// <summary>Only the latest refresh may write: reads land in any order.</summary>
+    private long _ticket;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        Terminal.ConnectionStateChanged += OnConnectionChanged;
+        MailApi.Changed += OnMailChanged;
+        Locate();
+        _connected = Terminal.IsConnected;
+        if (_connected) await RefreshAsync();
+    }
+
+    /// <summary>The address of a folder's list.</summary>
+    public static string FolderHref(string folder) => $"/mail?folder={Uri.EscapeDataString(folder)}";
+
+    private async Task RefreshAsync()
+    {
+        var ticket = ++_ticket;
+        var folders = MailApi.FoldersAsync();
+        var inbox = MailApi.ListAsync(Inbox);
+        var names = await folders is IReadOnlyList<string> list && list.Count > 0 ? list : [Inbox];
+        int? unread = await inbox is IReadOnlyList<MailService.MailSummary> rows ? rows.Count(r => !r.Read) : null;
+        if (ticket != _ticket) return;
+        (_folders, _inboxUnread) = (names, unread);
+    }
+
+    private bool IsCurrent(string folder)
+    {
+        if (_path == "/mail/compose") return false;
+        if (_path != "/mail" && !_path.StartsWith("/mail/", StringComparison.Ordinal)) return false;
+        return string.Equals(_folderQuery ?? Inbox, folder, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string FolderIcon(string folder) => folder.ToUpperInvariant() switch
+    {
+        "INBOX" => Icons.Material.Outlined.Inbox,
+        "SENT" => Icons.Material.Outlined.Send,
+        "TRASH" => Icons.Material.Outlined.Delete,
+        _ => Icons.Material.Outlined.Folder,
+    };
+
+    private void Locate()
+    {
+        var uri = new Uri(Nav.Uri);
+        var path = uri.AbsolutePath.TrimEnd('/');
+        _path = path.Length == 0 ? "/" : path;
+        _folderQuery = QueryValue(uri.Query, "folder");
+    }
+
+    private static string? QueryValue(string query, string name)
+    {
+        foreach (var part in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var eq = part.IndexOf('=');
+            if (eq > 0 && part[..eq] == name) return Uri.UnescapeDataString(part[(eq + 1)..]);
+        }
+
+        return null;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>
+    {
+        Locate();
+        StateHasChanged();
+    });
+
+    private void OnConnectionChanged(bool connected) => InvokeAsync(async () =>
+    {
+        _connected = connected;
+        if (connected) await RefreshAsync();
+        StateHasChanged();
+    });
+
+    private void OnMailChanged() => InvokeAsync(async () =>
+    {
+        if (!_connected) return;
+        await RefreshAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+        Terminal.ConnectionStateChanged -= OnConnectionChanged;
+        MailApi.Changed -= OnMailChanged;
+    }
+}

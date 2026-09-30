@@ -4857,4 +4857,16 @@
   <data name="NavSettingsDescription" xml:space="preserve">
     <value>Vaš račun, vaši likovi i izgled ovog portala.</value>
   </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# poruka} few {# poruke} other {# poruka}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Nepročitano</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Proslijeđena poruka od {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Natrag na {0}</value>
+  </data>
 </root>

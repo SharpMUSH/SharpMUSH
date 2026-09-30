@@ -4857,4 +4857,16 @@
   <data name="NavSettingsDescription" xml:space="preserve">
     <value>Ваша учётная запись, ваши персонажи и внешний вид портала.</value>
   </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# сообщение} few {# сообщения} many {# сообщений} other {# сообщения}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Непрочитано</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Пересланное сообщение от {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Назад в {0}</value>
+  </data>
 </root>

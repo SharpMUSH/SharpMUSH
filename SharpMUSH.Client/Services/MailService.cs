@@ -32,14 +32,32 @@ public class MailService(IHttpClientFactory httpClientFactory)
 	public Task<ApiResult<IReadOnlyList<string>>> FoldersAsync() =>
 		Client.GetApiAsync<IReadOnlyList<string>>("api/mail/folders", "The server returned no folder list.");
 
+	/// <summary>
+	/// Raised after a read, a send or a delete lands: each can change a folder's contents or its
+	/// unread count, which the Mail section's sidebar shows beside the page that made the change.
+	/// </summary>
+	public event Action? Changed;
+
 	/// <summary>Reads one message, which marks it read server-side.</summary>
-	public Task<ApiResult<MailMessage>> ReadAsync(string folder, int number) =>
-		Client.GetApiAsync<MailMessage>(
+	public async Task<ApiResult<MailMessage>> ReadAsync(string folder, int number)
+	{
+		var result = await Client.GetApiAsync<MailMessage>(
 			$"api/mail/{Uri.EscapeDataString(folder)}/{number}", "The server returned no message.");
+		if (result is MailMessage) Changed?.Invoke();
+		return result;
+	}
 
-	public Task<ApiResult<Success>> SendAsync(string to, string subject, string body, bool urgent) =>
-		Client.PostApiAsync("api/mail", new SendRequest(to, subject, body, urgent));
+	public async Task<ApiResult<Success>> SendAsync(string to, string subject, string body, bool urgent)
+	{
+		var result = await Client.PostApiAsync("api/mail", new SendRequest(to, subject, body, urgent));
+		if (result is Success) Changed?.Invoke();
+		return result;
+	}
 
-	public Task<ApiResult<Success>> DeleteAsync(string folder, int number) =>
-		Client.DeleteApiAsync($"api/mail/{Uri.EscapeDataString(folder)}/{number}");
+	public async Task<ApiResult<Success>> DeleteAsync(string folder, int number)
+	{
+		var result = await Client.DeleteApiAsync($"api/mail/{Uri.EscapeDataString(folder)}/{number}");
+		if (result is Success) Changed?.Invoke();
+		return result;
+	}
 }

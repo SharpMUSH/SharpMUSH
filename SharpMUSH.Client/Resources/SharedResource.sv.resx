@@ -4857,4 +4857,16 @@
   <data name="NavSettingsDescription" xml:space="preserve">
     <value>Ditt konto, dina rollfigurer och hur portalen ser ut.</value>
   </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# meddelande} other {# meddelanden}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Oläst</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Vidarebefordrat meddelande från {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Tillbaka till {0}</value>
+  </data>
 </root>

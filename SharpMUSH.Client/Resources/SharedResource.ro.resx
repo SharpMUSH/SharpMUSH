@@ -4857,4 +4857,16 @@
   <data name="NavSettingsDescription" xml:space="preserve">
     <value>Contul tău, personajele tale și cum arată acest portal.</value>
   </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# mesaj} few {# mesaje} other {# de mesaje}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Necitit</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Mesaj redirecționat de la {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Înapoi la {0}</value>
+  </data>
 </root>

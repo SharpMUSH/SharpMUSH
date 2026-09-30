@@ -1,0 +1,27 @@
+.mail-side {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-height: 100%;
+	padding: 12px 8px;
+	box-sizing: border-box;
+}
+
+.mail-side--collapsed {
+	padding: 12px 4px;
+}
+
+.mail-side-compose,
+.mail-side-folders {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin-bottom: 8px;
+}
+
+.mail-side-empty {
+	padding: 6px 10px;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--text-dim);
+}

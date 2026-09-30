@@ -1,5 +1,7 @@
 @page "/mail"
+@layout MailLayout
 @attribute [Authorize]
+@using SharpMUSH.Client.Components.Mail
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
 @inject ITerminalService Terminal
@@ -9,153 +11,124 @@
 
 <PageTitle>@Loc["Mail"] — @Loc["AppTitle"]</PageTitle>
 
+@* D1 §6.5 mailbox: the folders are the section sidebar's, so the folder on screen is the address's
+   (?folder=, the inbox by default). The page is the plain header over the folder's list card and a
+   reading card beside it; below the narrow tier they stack. *@
 @if (!_characterActive)
 {
-    <div style="padding:var(--cpad);">
-        <EmptyState>
-            <MudText>@Loc["MailNeedsCharacter"]</MudText>
-            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/characters" Class="mt-2">
-                @Loc["Characters"]
-            </MudButton>
-        </EmptyState>
+    <div class="mail-page">
+        <PlainPageHeader Kicker="@Loc["AppTitle"]" Title="@Loc["Mail"]" />
+        <KitCard Class="mail-needs-character">
+            <div class="mail-note">
+                <p>@Loc["MailNeedsCharacter"]</p>
+                <CapsuleButton Href="/characters" Icon="@Icons.Material.Outlined.Groups">@Loc["Characters"]</CapsuleButton>
+            </div>
+        </KitCard>
     </div>
 }
 else
 {
     <div class="mail-page full-height">
+        <PlainPageHeader Kicker="@Loc["AppTitle"]" Title="@Loc["Mail"]">
+            <Actions>
+                <CapsuleButton Primary="true" Href="/mail/compose" Icon="@Icons.Material.Outlined.Edit">@Loc["Compose"]</CapsuleButton>
+            </Actions>
+        </PlainPageHeader>
 
-        <div class="mail-folders">
-            <div style="padding:0.875rem 0.75rem 0.5rem;border-bottom:1px solid var(--border-soft);">
-                <MudText Class="section-kicker">@Loc["NavMailFolders"]</MudText>
-            </div>
-            <MudNavMenu Dense="true" Style="padding:0.5rem 0.25rem;">
-                @foreach (var f in _folders)
-                {
-                    var folder = f;
-                    <MudNavLink Icon="@FolderIcon(folder)" IconColor="Color.Default"
-                                OnClick="() => SelectFolderAsync(folder)"
-                                Class="@(_folder == folder ? "active-folder" : "")">
-                        @folder
-                    </MudNavLink>
-                }
-            </MudNavMenu>
-            <div style="margin-top:auto;padding:0.75rem;">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                           StartIcon="@Icons.Material.Filled.Edit" Href="/mail/compose" Size="Size.Small">
-                    @Loc["Compose"]
-                </MudButton>
-            </div>
-        </div>
-
-        <div class="mail-list">
-            <div style="padding:0.625rem 0.875rem;border-bottom:1px solid var(--border-soft);display:flex;align-items:center;gap:0.5rem;">
-                <MudText Style="font-size:0.8125rem;font-weight:600;flex:1;">@_folder</MudText>
-                @if (_messages.Count > 0)
-                {
-                    <MudText Style="font-size:0.6875rem;color:var(--text-faint);">@_messages.Count</MudText>
-                }
-            </div>
-            <div class="mail-list-body">
-                @if (_loading)
-                {
-                    <div style="padding:0.75rem;">
-                        @for (var i = 0; i < 5; i++) { <MudSkeleton Height="52px" Class="mb-1" /> }
-                    </div>
-                }
-                else if (_listError is not null)
-                {
-                    <div class="mail-list-error" style="padding:1rem;color:var(--mud-palette-error);font-size:0.8125rem;">@_listError</div>
-                }
-                else if (_messages.Count == 0)
-                {
-                    <div style="padding:1rem;color:var(--text-faint);font-size:0.8125rem;">@Loc["MailEmpty"]</div>
-                }
-                else
-                {
-                    @foreach (var msg in _messages)
+        <div class="mail-panes">
+            <KitCard Class="mail-list" Title="@_folder" Sub="@(_messages.Count > 0 ? Loc.Plural("NavMailMessageCount", "count", _messages.Count) : null)">
+                <div class="mail-list-body">
+                    @if (_loading)
                     {
-                        var m = msg;
-                        <div class="mail-row" style="@($"padding:0.625rem 0.875rem;border-bottom:1px solid var(--border-soft);cursor:pointer;background:{(_selected?.Number == m.Number ? "var(--surface-2)" : "transparent")};border-left:{(!m.Read ? "3px solid var(--accent)" : "3px solid transparent")}")"
-                             @onclick="() => SelectMessageAsync(m)">
-                            <div style="display:flex;align-items:center;gap:0.375rem;margin-bottom:0.125rem;">
-                                @if (!m.Read)
-                                {
-                                    <span style="width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;"></span>
-                                }
-                                @if (m.Urgent)
-                                {
-                                    <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Color="Color.Error" Size="Size.Small" />
-                                }
-                                <MudText Style="@($"font-size:0.8125rem;font-weight:{(m.Read ? "400" : "600")};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;")">@m.From</MudText>
-                                <MudText Style="font-size:0.6875rem;color:var(--text-faint);flex-shrink:0;">@m.DateSent.LocalDateTime.ToString("MMM d")</MudText>
-                            </div>
-                            <MudText Style="font-size:0.75rem;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@m.Subject</MudText>
+                        <div class="mail-note">
+                            @for (var i = 0; i < 5; i++) { <MudSkeleton Height="52px" Class="mb-1" /> }
                         </div>
                     }
-                }
-            </div>
-        </div>
-
-        <div class="mail-reading">
-            @if (_selected is null)
-            {
-                <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-faint);font-size:0.875rem;">
-                    @Loc["NavMailSelectMessage"]
-                </div>
-            }
-            else
-            {
-                <div style="padding:1.25rem var(--cpad);border-bottom:1px solid var(--border);flex-shrink:0;">
-                    <div style="display:flex;align-items:flex-start;gap:0.875rem;">
-                        <MudAvatar Style="@($"background:hsl({Math.Abs(_selected.From.GetHashCode()) % 360},50%,30%);color:#fff;font-weight:600;flex-shrink:0;")">
-                            @(_selected.From.Length > 0 ? _selected.From[0].ToString().ToUpper() : "?")
-                        </MudAvatar>
-                        <div style="flex:1;min-width:0;">
-                            <MudText Style="font-size:1rem;font-weight:700;margin-bottom:0.125rem;">@_selected.Subject</MudText>
-                            <MudText Style="font-size:0.8125rem;color:var(--text-dim);">@Loc["From"]: @_selected.From</MudText>
-                            <MudText Style="font-size:0.75rem;color:var(--text-faint);">@_selected.DateSent.LocalDateTime.ToString("dddd, MMMM d yyyy, h:mm tt")</MudText>
-                        </div>
-                    </div>
-                </div>
-                <div class="mail-reading-body">
-                    @if (_bodyLoading)
+                    else if (_listError is not null)
                     {
-                        <MudSkeleton Height="18px" Class="mb-1" />
-                        <MudSkeleton Height="18px" Width="80%" Class="mb-1" />
-                        <MudSkeleton Height="18px" Width="60%" />
+                        <div class="mail-note mail-list-error">@_listError</div>
                     }
-                    else if (_body is null)
+                    else if (_messages.Count == 0)
                     {
-                        <MudText Style="font-size:0.8125rem;color:var(--text-faint);">@(_bodyError ?? Loc["MailNotFound"])</MudText>
+                        <div class="mail-note mail-list-empty">@Loc["MailEmpty"]</div>
                     }
                     else
                     {
-                        <div style="white-space:pre-wrap;font-family:var(--font-mono);font-size:0.8125rem;line-height:1.6;color:var(--text);">@_body</div>
+                        @foreach (var msg in _messages)
+                        {
+                            var m = msg;
+                            <button type="button" class="mail-row @(_selected?.Number == m.Number ? "mail-row--selected" : null) @(m.Read ? null : "mail-row--unread")"
+                                    aria-current="@(_selected?.Number == m.Number ? "true" : null)" @onclick="() => SelectMessageAsync(m)">
+                                <span class="mail-row-top">
+                                    @if (!m.Read)
+                                    {
+                                        <span class="mail-row-dot" role="img" aria-label="@Loc["NavMailUnread"]"></span>
+                                    }
+                                    @if (m.Urgent)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.PriorityHigh" Color="Color.Error" Size="Size.Small" Title="@Loc["Urgent"]" />
+                                    }
+                                    <span class="mail-row-from">@m.From</span>
+                                    <span class="mail-row-date">@m.DateSent.LocalDateTime.ToString("MMM d")</span>
+                                </span>
+                                <span class="mail-row-subject">@m.Subject</span>
+                            </button>
+                        }
                     }
-                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="mt-3"
-                               Color="Color.Default" OnClick="OpenDetail">
-                        @Loc["NavMailReadFullMessage"]
-                    </MudButton>
                 </div>
-                <div style="padding:0.75rem var(--cpad);border-top:1px solid var(--border);display:flex;gap:0.5rem;flex-shrink:0;">
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Reply">
-                        @Loc["Reply"]
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Forward">
-                        @Loc["NavMailForward"]
-                    </MudButton>
-                </div>
-            }
+            </KitCard>
+
+            <KitCard Class="mail-reading">
+                @if (_selected is null)
+                {
+                    <div class="mail-reading-none">@Loc["NavMailSelectMessage"]</div>
+                }
+                else
+                {
+                    <div class="mail-reading-head">
+                        <span class="mail-reading-avatar" style="@AvatarStyle(_selected.From)" aria-hidden="true">@Initials.From(_selected.From)</span>
+                        <div class="mail-reading-meta">
+                            <div class="mail-reading-subject">@_selected.Subject</div>
+                            <div class="mail-reading-from">@Loc["From"]: @_selected.From</div>
+                            <div class="mail-reading-date">@_selected.DateSent.LocalDateTime.ToString("dddd, MMMM d yyyy, h:mm tt")</div>
+                        </div>
+                    </div>
+                    <div class="mail-reading-body">
+                        @if (_bodyLoading)
+                        {
+                            <MudSkeleton Height="18px" Class="mb-1" />
+                            <MudSkeleton Height="18px" Width="80%" Class="mb-1" />
+                            <MudSkeleton Height="18px" Width="60%" />
+                        }
+                        else if (_body is null)
+                        {
+                            <div class="mail-reading-missing">@(_bodyError ?? Loc["MailNotFound"])</div>
+                        }
+                        else
+                        {
+                            <div class="mail-reading-text">@_body</div>
+                        }
+                    </div>
+                    <div class="mail-reading-actions">
+                        <CapsuleButton Class="mail-reply" Href="@ReplyHref(_selected)" Icon="@Icons.Material.Outlined.Reply">@Loc["Reply"]</CapsuleButton>
+                        @if (_body is not null)
+                        {
+                            <CapsuleButton Class="mail-forward" Href="@ForwardHref(_selected, _body)" Icon="@Icons.Material.Outlined.Forward">@Loc["NavMailForward"]</CapsuleButton>
+                        }
+                        <CapsuleButton Class="mail-open" Href="@DetailHref(_selected)" Icon="@Icons.Material.Outlined.OpenInFull">@Loc["NavMailReadFullMessage"]</CapsuleButton>
+                    </div>
+                }
+            </KitCard>
         </div>
     </div>
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "folder")]
+    public string? FolderQuery { get; set; }
+
     private bool _characterActive;
-    private string _folder = "INBOX";
-    private IReadOnlyList<string> _folders = ["INBOX"];
+    private string _folder = MailSidebar.Inbox;
     private IReadOnlyList<MailService.MailSummary> _messages = [];
     private MailService.MailSummary? _selected;
     private string? _body;
@@ -164,33 +137,32 @@ else
     private bool _bodyLoading;
     private bool _loading;
 
+    /// <summary>The folder whose list is on screen (or loading); a query change reloads.</summary>
+    private string? _loadedFolder;
+
     // A fetch is identified by ticket, not by what it fetched: INBOX, then SENT, then INBOX again
     // gives two requests the same folder name, so comparing names lets the older one win.
     private long _folderTicket;
     private long _readTicket;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         _characterActive = Terminal.IsConnected;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
-        if (_characterActive)
-            await LoadAsync();
     }
 
-    private async Task LoadAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        _loading = true;
-        // Without a folder list the page can still show the inbox, so that failure is not the headline.
-        _folders = await MailApi.FoldersAsync() is IReadOnlyList<string> folders ? folders : ["INBOX"];
-        ShowList(await MailApi.ListAsync(_folder));
-        _loading = false;
+        _folder = string.IsNullOrWhiteSpace(FolderQuery) ? MailSidebar.Inbox : FolderQuery;
+        if (_characterActive && !string.Equals(_loadedFolder, _folder, StringComparison.Ordinal))
+            await LoadFolderAsync(_folder);
     }
 
-    private async Task SelectFolderAsync(string folder)
+    private async Task LoadFolderAsync(string folder)
     {
         var ticket = ++_folderTicket;
         _readTicket++;
-        _folder = folder;
+        _loadedFolder = folder;
         _selected = null;
         _body = null;
         _loading = true;
@@ -199,17 +171,12 @@ else
 
         if (ticket != _folderTicket) return;
 
-        ShowList(messages);
-        _loading = false;
-    }
-
-    private void ShowList(ApiResult<IReadOnlyList<MailService.MailSummary>> result)
-    {
-        (_messages, _listError) = result switch
+        (_messages, _listError) = messages switch
         {
-            IReadOnlyList<MailService.MailSummary> messages => (messages, (string?)null),
+            IReadOnlyList<MailService.MailSummary> rows => (rows, (string?)null),
             ApiFailure failure => ([], failure.Message),
         };
+        _loading = false;
     }
 
     /// <summary>Selecting a row fetches the body, the same way <c>/mail/{number}</c> does.</summary>
@@ -240,25 +207,36 @@ else
         }
     }
 
-    private void OpenDetail()
+    /// <summary>A reply is addressed to the sender, its subject prefixed once.</summary>
+    public static string ReplyHref(MailService.MailSummary message)
     {
-        if (_selected is not null)
-            Nav.NavigateTo($"/mail/{_selected.Number}?folder={Uri.EscapeDataString(_selected.Folder)}");
+        var subject = message.Subject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase) ? message.Subject : $"Re: {message.Subject}";
+        return $"/mail/compose?to={Uri.EscapeDataString(message.From)}&subject={Uri.EscapeDataString(subject)}";
     }
 
-    private static string FolderIcon(string folder) => folder switch
+    /// <summary>A forward carries the subject and the quoted text; the reader chooses who it goes to.</summary>
+    private string ForwardHref(MailService.MailSummary message, string body)
     {
-        "INBOX"  => Icons.Material.Filled.Inbox,
-        "SENT"   => Icons.Material.Filled.Send,
-        "TRASH"  => Icons.Material.Filled.Delete,
-        _        => Icons.Material.Filled.Folder
-    };
+        var subject = message.Subject.StartsWith("Fwd:", StringComparison.OrdinalIgnoreCase) ? message.Subject : $"Fwd: {message.Subject}";
+        var quoted = $"{Loc["NavMailForwardedFrom", message.From]}\n{body}";
+        return $"/mail/compose?subject={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(quoted)}";
+    }
+
+    private static string DetailHref(MailService.MailSummary message) =>
+        $"/mail/{message.Number}?folder={Uri.EscapeDataString(message.Folder)}";
+
+    private static string AvatarStyle(string name)
+    {
+        var hue = NameHue.Of(name);
+        return $"background:hsl({hue} 30% 24%);color:hsl({hue} 45% 82%);";
+    }
 
     private void OnConnectionChanged(bool connected)
         => InvokeAsync(async () =>
         {
             _characterActive = connected;
-            if (connected) { await LoadAsync(); }
+            _loadedFolder = null;
+            if (connected) await LoadFolderAsync(_folder);
             StateHasChanged();
         });
 

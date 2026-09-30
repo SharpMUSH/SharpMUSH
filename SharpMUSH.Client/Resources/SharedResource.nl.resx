@@ -4857,4 +4857,16 @@
   <data name="NavSettingsDescription" xml:space="preserve">
     <value>Je account, je personages en hoe dit portaal eruitziet.</value>
   </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# bericht} other {# berichten}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Ongelezen</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Doorgestuurd bericht van {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Terug naar {0}</value>
+  </data>
 </root>

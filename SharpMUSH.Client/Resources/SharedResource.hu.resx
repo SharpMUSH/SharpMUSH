@@ -4857,4 +4857,16 @@
   <data name="NavSettingsDescription" xml:space="preserve">
     <value>A fiókod, a karaktereid és a portál megjelenése.</value>
   </data>
+  <data name="NavMailMessageCount" xml:space="preserve">
+    <value>{count, plural, one {# üzenet} other {# üzenet}}</value>
+  </data>
+  <data name="NavMailUnread" xml:space="preserve">
+    <value>Olvasatlan</value>
+  </data>
+  <data name="NavMailForwardedFrom" xml:space="preserve">
+    <value>Továbbított üzenet tőle: {0}:</value>
+  </data>
+  <data name="NavMailBackToFolder" xml:space="preserve">
+    <value>Vissza ide: {0}</value>
+  </data>
 </root>
