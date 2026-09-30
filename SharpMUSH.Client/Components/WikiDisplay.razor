@@ -486,7 +486,7 @@ else
         }
 
         _moreLoadedFor = key;
-        var siblings = (await Wiki.GetByCategoryAsync(key, 0, 500))
+        var siblings = (await Wiki.GetAllByCategoryAsync(key))
             .Where(p => p.Namespace.Equals(Namespace, StringComparison.OrdinalIgnoreCase))
             .Where(p => !p.Slug.Equals(Slug, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(p => p.UpdatedAt)
@@ -554,10 +554,12 @@ else
     /// against <c>&lt;base href="/"&gt;</c> and leave the page.</summary>
     private string TocHref(string anchor) => $"{PagePath}{new Uri(Nav.Uri).Query}#{anchor}";
 
-    /// <summary>Whether anything remains to show once the banner has taken the first image.</summary>
+    /// <summary>Whether anything remains to show once the banner has taken the first image. A
+    /// directive placeholder is an empty element the body hydrates into a listing, so it counts.</summary>
     private static bool HasVisibleContent(string html) =>
         !string.IsNullOrWhiteSpace(WebUtility.HtmlDecode(AnyTag.Replace(html, string.Empty)))
-        || EmbeddedMedia.IsMatch(html);
+        || EmbeddedMedia.IsMatch(html)
+        || DirectivePlaceholder.IsMatch(html);
 
     private static readonly Regex RenderedH2 = new(@"<h2\b[^>]*\bid\s*=\s*""([^""]*)""[^>]*>(.*?)</h2>", RegexOptions.IgnoreCase | RegexOptions.Singleline, TimeSpan.FromSeconds(1));
     private static readonly Regex AnyTag = new(@"<[^>]+>", RegexOptions.Singleline, TimeSpan.FromSeconds(1));

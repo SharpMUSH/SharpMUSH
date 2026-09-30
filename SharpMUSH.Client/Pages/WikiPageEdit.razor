@@ -7,7 +7,7 @@
 
 <div class="full-bleed full-height wiki-edit-host">
     <WikiView @key="@($"{Ns}:{Category}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns" Category="@Category"
-              Locale="@Lang" Mode="WikiView.WikiMode.Edit" />
+              Locale="@Lang" NewTitle="@NewTitle" Mode="WikiView.WikiMode.Edit" />
 </div>
 
 @code {
@@ -26,4 +26,11 @@
     /// </summary>
     [SupplyParameterFromQuery(Name = "lang")]
     public string? Lang { get; set; }
+
+    /// <summary>
+    /// The title a creator typed before the editor opened (<c>?title=</c>, from the sidebar's New page).
+    /// Only a page that does not exist yet starts from it; the route carries just the slug made from it.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "title")]
+    public string? NewTitle { get; set; }
 }

@@ -57,6 +57,9 @@ else
     /// <summary>The locale requested via <c>?lang=</c>; null means the reader's stored preference.</summary>
     [Parameter] public string? Locale { get; init; }
 
+    /// <summary>The title a page that does not exist yet starts from; null or blank means its slug.</summary>
+    [Parameter] public string? NewTitle { get; init; }
+
     /// <summary>
     /// True when this renders inside another page (a layout widget) rather than as the <c>/wiki</c>
     /// route itself, which drops chrome that only makes sense on that route.
@@ -112,7 +115,7 @@ else
                 Tags = [.. _article.Tags],
                 Published = _article.Published,
             }
-            : new WikiArticle(Slug, string.Empty, null) { Category = Category };
+            : new WikiArticle(string.IsNullOrWhiteSpace(NewTitle) ? Slug : NewTitle.Trim(), string.Empty, null) { Category = Category };
 
     /// <summary>
     /// Switching locale in the editor is a navigation, not local state: <c>?lang=</c> stays the single

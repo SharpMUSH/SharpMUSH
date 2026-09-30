@@ -146,6 +146,29 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		}
 	}
 
+	/// <summary>Batch size for <see cref="GetAllByCategoryAsync"/>.</summary>
+	private const int CategoryBatch = 200;
+
+	/// <summary>
+	/// Every page in a category, read in batches. The server pages over stored rows and drops the
+	/// drafts this caller may not see afterwards, so a short batch does not mean the last one: only an
+	/// empty batch ends the listing. A failed request ends it too, with what was read so far.
+	/// </summary>
+	/// <remarks>
+	/// The one listing this reads short: a whole batch of stored rows that are all drafts hidden from
+	/// this caller comes back empty, as the end does. Paging over visible rows is the server's to fix.
+	/// </remarks>
+	public async ValueTask<IReadOnlyList<WikiPageSummary>> GetAllByCategoryAsync(string category, string? lang = null)
+	{
+		var all = new List<WikiPageSummary>();
+		for (var skip = 0; ; skip += CategoryBatch)
+		{
+			var batch = await GetByCategoryAsync(category, skip, CategoryBatch, lang);
+			if (batch.Count == 0) return all;
+			all.AddRange(batch);
+		}
+	}
+
 	/// <summary>
 	/// Lists pages carrying a tag. Failures return an empty list.
 	/// </summary>

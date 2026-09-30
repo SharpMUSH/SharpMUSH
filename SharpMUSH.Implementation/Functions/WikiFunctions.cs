@@ -72,7 +72,7 @@ public partial class Functions
 			"tags" => new CallState(string.Join(" ", localized.Page.Tags)),
 			"namespace" => new CallState(localized.Page.Namespace),
 			"revision" => new CallState(localized.RevisionNumber.ToString()),
-			"updated" => new CallState(localized.Page.UpdatedAt.ToUnixTimeSeconds().ToString()),
+			"updated" => new CallState(localized.UpdatedAt.ToUnixTimeSeconds().ToString()),
 			"author" => new CallState(localized.Page.AuthorDbref),
 			_ => new CallState(ErrorMessages.Returns.UnknownWikiField),
 		};
