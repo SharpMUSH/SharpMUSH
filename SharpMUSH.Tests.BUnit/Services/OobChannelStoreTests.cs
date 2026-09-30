@@ -1,6 +1,6 @@
 using SharpMUSH.Client.Services;
 
-namespace SharpMUSH.Tests.Client.Services;
+namespace SharpMUSH.Tests.BUnit.Services;
 
 public class OobChannelStoreTests
 {

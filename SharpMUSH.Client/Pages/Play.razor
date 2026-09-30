@@ -108,7 +108,7 @@ else
                         @if (!string.IsNullOrWhiteSpace(e.Cmd))
                         {
                             <div class="play-entry play-clickable"
-                                 @onclick="@(() => RunEntry(e))">
+                                 @onclick="@(() => RunEntry(e.Cmd))">
                                 @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
                             </div>
                         }
@@ -135,7 +135,7 @@ else
                         @if (!string.IsNullOrWhiteSpace(e.Cmd))
                         {
                             <div class="play-entry play-clickable"
-                                 @onclick="@(() => RunEntry(e))">
+                                 @onclick="@(() => RunEntry(e.Cmd))">
                                 @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
                             </div>
                         }
@@ -171,8 +171,8 @@ else
 }
 
 @code {
-    private IReadOnlyList<OobEntry> _here = [];
-    private IReadOnlyList<OobEntry> _exits = [];
+    private IReadOnlyList<RoomOccupant> _here = [];
+    private IReadOnlyList<RoomExit> _exits = [];
 
     private GlobalTerminal? _playTerm;
 
@@ -268,10 +268,10 @@ else
         switch (package)
         {
             case "room.contents":
-                _here = OobEntryParser.Parse(PlayTerminal.OobChannels.Get(package), "who");
+                _here = OobEntryParser.ParseOccupants(PlayTerminal.OobChannels.Get(package));
                 break;
             case "room.exits":
-                _exits = OobEntryParser.Parse(PlayTerminal.OobChannels.Get(package), "exits");
+                _exits = OobEntryParser.ParseExits(PlayTerminal.OobChannels.Get(package));
                 break;
             default:
                 return;
@@ -279,10 +279,10 @@ else
         InvokeAsync(StateHasChanged);
     }
 
-    private async Task RunEntry(OobEntry entry)
+    private async Task RunEntry(string? cmd)
     {
-        if (!string.IsNullOrWhiteSpace(entry.Cmd))
-            await PlayTerminal.SendAsync(entry.Cmd);
+        if (!string.IsNullOrWhiteSpace(cmd))
+            await PlayTerminal.SendAsync(cmd);
     }
 
     public void Dispose()
