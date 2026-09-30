@@ -61,22 +61,6 @@ public static class SceneFunctions
 		return enactor.Object().DBRef.ToString();
 	}
 
-	/// <summary>
-	/// Expands a bare dbref into its objid (<c>#13:1788365739971</c>), the spelling the rest of the
-	/// engine uses for a reference that is stored or compared. Returns the input unchanged when it is
-	/// empty or names nothing — a missing reference is not an error to report here.
-	/// </summary>
-	private static async ValueTask<string> ObjIdAsync(IMUSHCodeParser parser, string? dbref)
-	{
-		if (string.IsNullOrWhiteSpace(dbref) || !DBRef.TryParse(dbref, out var parsed) || parsed is not { } reference)
-			return dbref ?? string.Empty;
-
-		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
-		return await mediator.Send(new GetObjectNodeQuery(reference)) is AnySharpObject node
-			? node.Object().DBRef.ToString()
-			: dbref;
-	}
-
 	/// <summary>Guard for side-effect (write) functions: false ⇒ side effects are disabled in config.</summary>
 	private static bool SideEffectsEnabled(IMUSHCodeParser parser)
 		=> parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
@@ -128,7 +112,7 @@ public static class SceneFunctions
 			// compare against loc(), which carries the creation stamp — a bare dbref could never match
 			// it, so any such comparison was quietly always false. owner/starter stay bare because the
 			// scene package's FUN`OWNS compares them against %#, which is the short form.
-			"room" => new CallState(await ObjIdAsync(parser, scene.RoomDbref)),
+			"room" => new CallState(await SceneLocate.ObjIdOrSelfAsync(parser, scene.RoomDbref)),
 			"roomname" => new CallState(scene.RoomName),
 			_ => new CallState(scene.Meta.TryGetValue(field, out var metaVal)
 				? metaVal

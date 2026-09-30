@@ -17,6 +17,11 @@ namespace SharpMUSH.Client.Models;
 /// <param name="Source">Opaque pose source label.</param>
 /// <param name="Location">Snapshot of the pose's origin room name.</param>
 /// <param name="Timestamp">UTC Unix-millis of the event.</param>
+/// <param name="ActorObjId">
+/// The objid (<c>#N:ctime-ms</c>) of the pose's author, resolved when the event is broadcast, so the portal
+/// can key a portrait on an identity that survives a recycled dbref. Null for an event with no pose, or
+/// when the author no longer exists. Appended last: the wire is positional in both copies of this record.
+/// </param>
 public sealed record SceneEventMessage(
 	string SceneId,
 	string EventType,
@@ -27,4 +32,5 @@ public sealed record SceneEventMessage(
 	IReadOnlyList<string> Tags,
 	string Source,
 	string Location,
-	long Timestamp);
+	long Timestamp,
+	string? ActorObjId);
