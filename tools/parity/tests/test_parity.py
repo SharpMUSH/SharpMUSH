@@ -206,6 +206,20 @@ class CompareTests(unittest.TestCase):
         allowlist = compare.load_allowlist(Path(__file__).resolve().parent.parent / "known-differences.json")
         self.assertTrue(allowlist)
 
+    def test_declared_profile_uses_section_metadata_across_articles(self):
+        with tempfile.TemporaryDirectory() as d:
+            def article(name, identity, headings):
+                path = Path(d) / name
+                metadata = {"corpus": "help", "id": identity,
+                            "sections": [{"heading": heading} for heading in headings]}
+                path.write_text("<!-- help-article\n" + json.dumps(metadata) + "\n-->\n# Title\n"
+                                "```sharp\n## Not an entry\n```\n")
+                return path
+            profile = article("overview.md", "pennmush-compatibility", [])
+            article("arbitrary-name.md", "compatibility-economy", ["Money policy"])
+            article("unrelated.md", "other-guide", ["Not a compatibility choice"])
+            self.assertEqual(compare.profile_headings(profile), {"Money policy"})
+
     def test_allowlist_entries_need_a_reason_and_tracking(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "k.json"

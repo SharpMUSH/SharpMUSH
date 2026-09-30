@@ -99,7 +99,7 @@ public static class HelpHtmlRenderer
 			{
 				sb.Append(' ');
 			}
-			sb.Append(literal.Content.ToString());
+			sb.Append(literal.Content);
 			if (sb.Length >= maxLength)
 			{
 				break;

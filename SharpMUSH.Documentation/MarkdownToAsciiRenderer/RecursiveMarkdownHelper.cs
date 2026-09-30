@@ -66,12 +66,10 @@ public static class RecursiveMarkdownHelper
 	{
 		var pipeline = BuildPipeline();
 		var document = Markdown.Parse(markdown, pipeline);
-		foreach (var link in document.Descendants<LinkInline>())
+		foreach (var link in document.Descendants<LinkInline>().Where(link =>
+			link.GetData(HelpTopicInlineParser.CommandDataKey) is true && link.Url?.StartsWith("help ", StringComparison.Ordinal) == true))
 		{
-			if (link.GetData(HelpTopicInlineParser.CommandDataKey) is true && link.Url?.StartsWith("help ", StringComparison.Ordinal) == true)
-			{
-				link.Url = corpus + link.Url[4..];
-			}
+			link.Url = corpus + link.Url![4..];
 		}
 		var renderer = new RecursiveMarkdownRenderer(maxWidth, mushParser);
 		return renderer.Render(document);
