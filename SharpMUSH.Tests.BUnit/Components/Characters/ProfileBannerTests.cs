@@ -103,6 +103,18 @@ public class ProfileBannerTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task Online_IsThisCharactersObjid_NotAnotherWithItsName()
+	{
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{}}""";
+		_fake.Online = """[{"name":"Tomas Reyes","objid":"#412:1","created":1,"category":""}]""";
+
+		var cut = RenderProfile();
+		cut.WaitForAssertion(() => cut.Find(".char-profile-pill--dbref"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".char-profile-pill--online").Count).IsEqualTo(0)
+			.Because("the connected Tomas Reyes is #412, not this one");
+	}
+
+	[Test]
 	public async Task NoSuchCharacter_SaysSo()
 	{
 		var cut = RenderProfile("Nobody Here");

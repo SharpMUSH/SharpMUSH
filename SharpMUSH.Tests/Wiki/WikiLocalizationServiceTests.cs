@@ -70,6 +70,20 @@ public class WikiLocalizationServiceTests
 	}
 
 	[Test]
+	public async Task TheLastEditor_IsTheServedRowsEditor()
+	{
+		var (storage, service) = Build();
+		var page = await SeedAsync(storage);
+		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, published: true, expectedRevisionNumber: null);
+
+		var french = (await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr", false)).Expect<LocalizedWikiPage>();
+		var english = (await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "en", false)).Expect<LocalizedWikiPage>();
+
+		await Assert.That(french.LastEditorDbref).IsEqualTo("#2").Because("#2 wrote the French text the reader is shown");
+		await Assert.That(english.LastEditorDbref).IsEqualTo("#1");
+	}
+
+	[Test]
 	public async Task UnpublishedTranslation_IsInvisibleToAnOrdinaryReaderWhoGetsTheFallbackAndBanner()
 	{
 		var (storage, service) = Build();

@@ -66,7 +66,10 @@ public partial class CharacterProfileService(IHttpClientFactory httpClientFactor
 	private static string? Text(JsonElement obj, string name) =>
 		obj.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String && v.GetString() is { Length: > 0 } s ? s : null;
 
-	/// <summary>A field as a plain string or profile-handler's <c>{ value, visible }</c>; blank is null.</summary>
+	/// <summary>
+	/// A field as a plain string or profile-handler's <c>{ value, visible }</c>; blank is null, and so is
+	/// a field the handler marked <c>visible: false</c> — the same rule <c>SchemaViewRenderer</c> applies.
+	/// </summary>
 	private static string? Field(JsonElement fields, string name)
 	{
 		if (fields.ValueKind != JsonValueKind.Object || !fields.TryGetProperty(name, out var v))
@@ -77,6 +80,7 @@ public partial class CharacterProfileService(IHttpClientFactory httpClientFactor
 		var raw = v.ValueKind switch
 		{
 			JsonValueKind.String => v.GetString(),
+			JsonValueKind.Object when v.TryGetProperty("visible", out var shown) && shown.ValueKind == JsonValueKind.False => null,
 			JsonValueKind.Object when v.TryGetProperty("value", out var inner) && inner.ValueKind == JsonValueKind.String => inner.GetString(),
 			_ => null,
 		};

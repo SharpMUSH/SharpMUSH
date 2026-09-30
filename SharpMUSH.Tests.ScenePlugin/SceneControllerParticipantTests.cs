@@ -40,7 +40,7 @@ public class SceneControllerParticipantTests
 			IReadOnlyList<Scene> result = filter == "mine" && viewerDbref is not null
 				? scenes.Where(kv => kv.Value.Any(m => Same(m, viewerDbref))).Select(kv => kv.Key)
 					.OrderByDescending(s => s.LastActivityAt).Take(count).ToList()
-				: scenes.Keys.ToList();
+				: scenes.Keys.OrderByDescending(s => s.LastActivityAt).Take(count).ToList();
 			return Task.FromResult(result);
 		}
 
@@ -90,6 +90,56 @@ public class SceneControllerParticipantTests
 		await Assert.That(scenes.Select(s => s.Id).ToList()).IsEquivalentTo(new[] { "2", "1" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
 			.Because("scene 3 is private and the anonymous caller is not in it; scene 4 is not Tomas's");
 		await Assert.That(service.Lists).Contains(("mine", Tomas));
+	}
+
+	[Test]
+	public async Task Participant_Count_IsAppliedAfterVisibility()
+	{
+		var service = new MemberSceneService(new Dictionary<Scene, string[]>
+		{
+			[SceneOf("1", isPublic: true, lastActivity: 10)] = [Tomas],
+			[SceneOf("2", isPublic: true, lastActivity: 20)] = [Tomas],
+			[SceneOf("5", isPublic: false, lastActivity: 50)] = [Tomas],
+			[SceneOf("6", isPublic: false, lastActivity: 60)] = [Tomas],
+		});
+
+		var result = await ControllerFor(service, caller: null).ListScenes(count: 2, participant: Tomas);
+
+		var scenes = ((IEnumerable<SceneController.SceneDto>)((OkObjectResult)result).Value!).Select(s => s.Id).ToList();
+		await Assert.That(scenes).IsEquivalentTo(new[] { "2", "1" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("the two newest scenes are private to Tomas; the two newest the caller may see are older");
+	}
+
+	[Test]
+	public async Task List_Count_IsAppliedAfterVisibility()
+	{
+		var service = new MemberSceneService(new Dictionary<Scene, string[]>
+		{
+			[SceneOf("1", isPublic: true, lastActivity: 10)] = [Tomas],
+			[SceneOf("5", isPublic: false, lastActivity: 50)] = [Tomas],
+			[SceneOf("6", isPublic: false, lastActivity: 60)] = [Tomas],
+		});
+
+		var result = await ControllerFor(service, caller: null).ListScenes(count: 1);
+
+		var scenes = ((IEnumerable<SceneController.SceneDto>)((OkObjectResult)result).Value!).Select(s => s.Id).ToList();
+		await Assert.That(scenes).IsEquivalentTo(new[] { "1" }).Because("the newest visible scene, not the newest scene");
+	}
+
+	[Test]
+	public async Task Partners_CountOverTheLast50VisibleScenes_NotTheLast50Scenes()
+	{
+		var scenes = new Dictionary<Scene, string[]> { [SceneOf("public", isPublic: true, lastActivity: 1)] = [Tomas, Ilsa] };
+		for (var i = 0; i < 50; i++)
+		{
+			scenes[SceneOf($"private-{i}", isPublic: false, lastActivity: 100 + i)] = [Tomas, Wren];
+		}
+
+		var result = await ControllerFor(new MemberSceneService(scenes), caller: null).GetPartners(Tomas);
+
+		var partners = ((IEnumerable<SceneController.ScenePartnerDto>)((OkObjectResult)result).Value!).ToList();
+		await Assert.That(partners.Select(p => p.Dbref).ToList()).IsEquivalentTo(new[] { Ilsa })
+			.Because("fifty newer private scenes do not push the one visible scene out of the window");
 	}
 
 	[Test]
