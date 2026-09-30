@@ -31,7 +31,8 @@ public class WikiAdminController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
 	IPrerenderCacheService prerenderCache,
-	ILogger<WikiAdminController> logger) : WikiControllerBase(wikiService, localization, logger)
+	IWikiNameResolver names,
+	ILogger<WikiAdminController> logger) : WikiControllerBase(wikiService, localization, names, logger)
 {
 	/// <summary>
 	/// PUT /api/wiki/{slug}/protection
@@ -74,7 +75,7 @@ public class WikiAdminController(
 		Logger.LogInformation("Wiki page metadata updated: slug={Slug} category={Category} published={Published}",
 			LogSanitizer.Sanitize(slug), LogSanitizer.Sanitize(page.Category), page.Published);
 		prerenderCache.InvalidatePrefix("/wiki/");
-		return Ok(ToDto(page));
+		return Ok(await ToDtoAsync(page));
 	}
 
 	/// <summary>

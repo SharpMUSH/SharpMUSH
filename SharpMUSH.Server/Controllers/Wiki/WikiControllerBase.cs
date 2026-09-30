@@ -27,8 +27,12 @@ namespace SharpMUSH.Server.Controllers;
 public abstract class WikiControllerBase(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
+	IWikiNameResolver names,
 	ILogger logger) : ControllerBase
 {
+	/// <summary>Resolves the author and editor dbrefs the store keeps to player names for the DTOs.</summary>
+	protected IWikiNameResolver Names { get; } = names;
+
 	/// <summary>Page storage. A property rather than a captured parameter so derived controllers,
 	/// which pass the same instance down, do not each capture a second copy of it.</summary>
 	protected IWikiService Wiki { get; } = wikiService;
@@ -114,6 +118,35 @@ public abstract class WikiControllerBase(
 	protected static WikiRevisionDto ToDto(WikiRevision r) => new(
 		r.RevisionNumber, r.EditorDbref, r.Timestamp, r.EditSummary, r.MarkdownSource);
 
+	/// <summary>The page DTO with the facts the D1 banner needs: the last editor's name and the first image.</summary>
+	protected async Task<WikiPageDto> ToDtoAsync(WikiPage p) => ToDto(p) with
+	{
+		LastEditedBy = await Names.NameOfAsync(p.LastEditorDbref, HttpContext.RequestAborted),
+		Image = WikiImages.FirstImageUrl(p.MarkdownSource),
+	};
+
+	protected async Task<WikiPageDto> ToDtoAsync(LocalizedWikiPage p, IReadOnlyList<string> availableLocales) => ToDto(p, availableLocales) with
+	{
+		LastEditedBy = await Names.NameOfAsync(p.Page.LastEditorDbref, HttpContext.RequestAborted),
+		Image = WikiImages.FirstImageUrl(p.MarkdownSource),
+	};
+
+	protected async Task<WikiRevisionDto> ToDtoAsync(WikiRevision r) => ToDto(r) with
+	{
+		EditorName = await Names.NameOfAsync(r.EditorDbref, HttpContext.RequestAborted),
+	};
+
+	protected async Task<List<WikiRevisionDto>> ToDtosAsync(IEnumerable<WikiRevision> revisions)
+	{
+		var list = new List<WikiRevisionDto>();
+		foreach (var revision in revisions)
+		{
+			list.Add(await ToDtoAsync(revision));
+		}
+
+		return list;
+	}
+
 	protected static WikiTranslationSummaryDto ToDto(WikiTranslationSummary t) =>
 		new(t.Locale, t.Title, t.Published, t.UpdatedAt, t.RevisionNumber);
 
@@ -132,7 +165,7 @@ public abstract class WikiControllerBase(
 		if (!string.IsNullOrWhiteSpace(lang) && WikiHelpers.NormalizeLocaleOrEmpty(lang).Length == 0)
 			Logger.LogDebug("Unrecognised wiki lang tag ignored: {Lang}", LogSanitizer.Sanitize(lang));
 
-		return ToDto(localized, available);
+		return await ToDtoAsync(localized, available);
 	}
 
 	/// <summary>
@@ -149,7 +182,13 @@ public abstract class WikiControllerBase(
 	{
 		var visible = FilterVisible(pages).ToList();
 		var localized = await Localization.LocalizeAllAsync(visible, lang, IncludeDrafts);
-		return localized.Select(p => ToDto(p, []));
+		var dtos = new List<WikiPageDto>();
+		foreach (var page in localized)
+		{
+			dtos.Add(await ToDtoAsync(page, []));
+		}
+
+		return dtos;
 	}
 
 	/// <summary>

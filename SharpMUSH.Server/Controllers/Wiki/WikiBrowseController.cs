@@ -31,7 +31,8 @@ namespace SharpMUSH.Server.Controllers;
 public class WikiBrowseController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
-	ILogger<WikiBrowseController> logger) : WikiControllerBase(wikiService, localization, logger)
+	IWikiNameResolver names,
+	ILogger<WikiBrowseController> logger) : WikiControllerBase(wikiService, localization, names, logger)
 {
 	/// <summary>
 	/// GET /api/wiki/recent?count=20&amp;lang=fr
