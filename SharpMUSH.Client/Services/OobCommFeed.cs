@@ -116,7 +116,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		}
 
 		_channels = list.Channels;
-		_viewer = list.Viewer ?? _viewer;
+		if (list.Viewer is { } viewer && (_viewer is null || !IsSame(_viewer, viewer)))
+		{
+			_viewer = viewer;
+			UncountViewersOwnLines(viewer);
+		}
 		foreach (var (name, unread) in list.ServerUnread)
 		{
 			if (unread > 0) _unread[name] = unread;
@@ -178,6 +182,24 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 			_conversations.Remove(key);
 			_history.Remove(key);
 			_unread.Remove(key);
+		}
+	}
+
+	/// <summary>
+	/// Takes the viewer's own lines back out of the unread counts. They arrive before the viewer is known —
+	/// on connect the player's own presence line comes ahead of the channel list that says who they are —
+	/// and were counted then. A key's unread lines are its last <c>n</c>, so those are the ones recounted.
+	/// </summary>
+	private void UncountViewersOwnLines(CommParticipant viewer)
+	{
+		foreach (var (key, unread) in _unread.ToArray())
+		{
+			if (!_history.TryGetValue(key, out var lines)) continue;
+
+			var others = lines.Skip(Math.Max(0, lines.Count - unread))
+				.Count(line => !IsSame(new CommParticipant(line.From, line.FromObjId), viewer));
+			if (others > 0) _unread[key] = others;
+			else _unread.Remove(key);
 		}
 	}
 

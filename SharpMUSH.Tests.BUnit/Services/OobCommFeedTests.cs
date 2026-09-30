@@ -70,6 +70,35 @@ public class OobCommFeedTests
 		await Assert.That(feed.Messages("Public").Count).IsEqualTo(1);
 	}
 
+	/// <summary>
+	/// On connect the viewer's own presence line ("God has reconnected.") arrives before the channel list
+	/// that says who the viewer is. Once it does, the viewer's own lines stop counting.
+	/// </summary>
+	[Test]
+	public async Task The_viewers_own_lines_stop_counting_once_the_viewer_is_known()
+	{
+		var (store, feed) = Create();
+
+		store.Set(CommPayloadParser.MessagePackage, Line("Public", "Ilsa", "#5:1", "Ilsa has reconnected."));
+		store.Set(CommPayloadParser.MessagePackage, Line("Public", "Wren", "#12:1", "welcome back"));
+		store.Set(CommPayloadParser.MessagePackage,
+			"""{"kind":"channel","channel":"Public","from":"Ilsa","text":"no objid"}""");
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList("Public"));
+
+		await Assert.That(feed.Channels.Single().Unread).IsEqualTo(1).Because("only Wren's line is someone else's");
+	}
+
+	[Test]
+	public async Task A_page_the_viewer_sent_before_they_were_known_is_not_unread()
+	{
+		var (store, feed) = Create();
+
+		store.Set(CommPayloadParser.MessagePackage, Page("Ilsa", "#5:1", [("Tomas", "#7:2")], "psst"));
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList());
+
+		await Assert.That(feed.Conversations.Single().Unread).IsEqualTo(0);
+	}
+
 	[Test]
 	public async Task Lines_for_the_key_being_viewed_are_not_unread()
 	{
