@@ -62,7 +62,7 @@ public class TextFileService : ITextFileService
 	/// setting is used as given.
 	/// </summary>
 	public static string ResolveDirectory(string configured, string serverDirectory) =>
-		Path.IsPathRooted(configured) ? configured : Path.Combine(serverDirectory, configured);
+		Path.IsPathRooted(configured) ? configured : Path.Join(serverDirectory, configured);
 
 	public Task<IEnumerable<string>> ListCategoriesAsync()
 	{

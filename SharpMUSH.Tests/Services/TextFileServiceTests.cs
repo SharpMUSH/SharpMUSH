@@ -19,7 +19,7 @@ public class TextFileServiceTests
 	public async Task ARelativeDirectory_IsTheOneBesideTheServer_NotTheWorkingDirectory()
 	{
 		await Assert.That(TextFileService.ResolveDirectory("TextFiles", "/srv/sharpmush/bin"))
-			.IsEqualTo(Path.Combine("/srv/sharpmush/bin", "TextFiles"));
+			.IsEqualTo(Path.Join("/srv/sharpmush/bin", "TextFiles"));
 		await Assert.That(TextFileService.ResolveDirectory("/data/help", "/srv/sharpmush/bin"))
 			.IsEqualTo("/data/help").Because("an absolute setting is used as given");
 	}
