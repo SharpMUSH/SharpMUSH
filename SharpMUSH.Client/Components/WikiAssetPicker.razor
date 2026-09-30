@@ -19,7 +19,7 @@ else
                 <MudPaper Outlined="true"
                           Class="pa-2 d-flex flex-column align-center cursor-pointer"
                           @onclick="@(() => SelectAsset(asset))">
-                    <img src="@asset.Url"
+                    <img src="@ApiUrl.Resolve(asset.Url)"
                          alt="@asset.FileName"
                          style="max-width: 96px; max-height: 96px; object-fit: contain;" />
                     <MudText Typo="Typo.caption"

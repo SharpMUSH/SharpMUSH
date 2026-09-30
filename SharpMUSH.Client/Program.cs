@@ -95,6 +95,8 @@ foreach (var widget in BuiltInWidgets.All)
 var apiBaseAddress = ApiBaseAddressResolver.Resolve(
 	builder.HostEnvironment.BaseAddress,
 	builder.Configuration[ApiBaseAddressResolver.ConfigurationKey]);
+// Server file paths (/api/wiki-assets/...) in an <img> resolve against the API, not the page.
+SharpMUSH.Client.Components.Kit.ApiUrl.UseBase(apiBaseAddress);
 
 // Bridge Widget-kind Dynamic Applications (Area 21) into the layout palette: load the registry once
 // per page load (anonymous) and register a synthetic widget per app, rendered by SchemaWidget. The

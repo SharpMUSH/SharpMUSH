@@ -13,7 +13,7 @@
     <div class="kit-banner-strip">
         @if (HasImage)
         {
-            <img class="kit-banner-strip-img" src="@ImageUrl!.Trim()" alt="" />
+            <img class="kit-banner-strip-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="" />
         }
         <div class="kit-banner-strip-blur" aria-hidden="true"></div>
         <div class="kit-banner-strip-scrim" aria-hidden="true"></div>
@@ -33,7 +33,7 @@ else
     <div class="kit-banner @(Open ? "kit-banner--open" : null) @(HasImage ? null : "kit-banner--noimage") @(UsesHue ? "kit-banner--hue" : null)" style="@BannerStyle">
         @if (HasImage)
         {
-            <img class="kit-banner-img" src="@ImageUrl!.Trim()" alt="@(Alt ?? string.Empty)" style="@FocalStyle" />
+            <img class="kit-banner-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="@(Alt ?? string.Empty)" style="@FocalStyle" />
         }
         <div class="kit-banner-blur kit-banner-blur--soft" aria-hidden="true"></div>
         <div class="kit-banner-blur kit-banner-blur--mid" aria-hidden="true"></div>

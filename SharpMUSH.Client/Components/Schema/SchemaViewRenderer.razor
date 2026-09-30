@@ -130,7 +130,7 @@ else
                 var src = element.SrcField is not null ? ValueToString(Lookup(element.SrcField)) : element.Value;
                 @if (ImageUrlPolicy.IsRenderable(src))
                 {
-                    <img class="schema-image" src="@src!.Trim()" alt="@(element.Alt ?? string.Empty)" loading="lazy" />
+                    <img class="schema-image" src="@ApiUrl.Resolve(src!)" alt="@(element.Alt ?? string.Empty)" loading="lazy" />
                 }
                 break;
 
