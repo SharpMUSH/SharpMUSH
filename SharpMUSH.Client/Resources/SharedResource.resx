@@ -4220,4 +4220,28 @@
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Full output · channels and pages included</value>
   </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# there}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Locked</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Closed</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Leaves scene</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Go</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Look</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Stay</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Press {0} to go</value>
+  </data>
 </root>

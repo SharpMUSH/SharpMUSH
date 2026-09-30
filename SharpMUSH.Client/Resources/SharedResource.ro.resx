@@ -4875,4 +4875,28 @@
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Ieșire completă · cu canale și mesaje</value>
   </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# acolo}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Încuiat</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Închis</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Părăsește scena</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Mergi</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Privește</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Rămâi</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Apăsați {0} pentru a merge</value>
+  </data>
 </root>

@@ -4875,4 +4875,28 @@
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Пълен изход · с каналите и съобщенията</value>
   </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# там}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Заключено</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Затворено</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Напуска сцената</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Тръгни</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Огледай</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Остани</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Натиснете {0}, за да тръгнете</value>
+  </data>
 </root>

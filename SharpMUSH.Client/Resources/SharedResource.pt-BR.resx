@@ -4875,4 +4875,28 @@
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Saída completa · canais e mensagens incluídos</value>
   </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# lá}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Trancado</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Fechado</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Sai da cena</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Ir</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Olhar</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Ficar</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Pressione {0} para ir</value>
+  </data>
 </root>

@@ -4875,4 +4875,28 @@
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>完整输出 · 包括频道和私信</value>
   </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {那里 # 人}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>已锁</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>已关闭</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>离开场景</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>前往</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>查看</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>留下</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>按 {0} 前往</value>
+  </data>
 </root>

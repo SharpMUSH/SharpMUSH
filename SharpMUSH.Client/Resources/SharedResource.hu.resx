@@ -4875,4 +4875,28 @@
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Teljes kimenet · csatornákkal és üzenetekkel</value>
   </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# ott}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Zárva</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Zárt</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Elhagyja a jelenetet</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Menj</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Nézd meg</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Maradok</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Nyomja meg: {0}</value>
+  </data>
 </root>

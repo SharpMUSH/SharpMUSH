@@ -143,6 +143,74 @@ test('a plain click on a mention opens the character, a new-tab click follows th
     assert.equal(newTab.prevented() || middle.prevented(), false);
 });
 
+// Play's exit keys (README §5.6): the keycap's letter takes the exit, except while the reader is typing
+// or a dialog (the character sheet, the palette) is open.
+function bootWithDialog(open) {
+    const listeners = new Map();
+    const context = vm.createContext({
+        window: { matchMedia: () => ({ matches: false }) },
+        document: {
+            addEventListener: (name, handler) => listeners.set(name, handler),
+            querySelector: selector => (open && selector.includes('aria-modal') ? {} : null)
+        },
+        HTMLElement: class {}
+    });
+    vm.runInContext(readFileSync(new URL('js/layout.js', root), 'utf8'), context, { filename: 'js/layout.js' });
+    return { layout: context.window.sharpmushLayout, listeners };
+}
+
+function press(k, target = body, init = {}) {
+    let prevented = false;
+    return {
+        event: { key: k, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, repeat: false, target,
+            preventDefault: () => { prevented = true; }, ...init },
+        prevented: () => prevented
+    };
+}
+
+test('an exit key goes, in either case, and is not typed anywhere else', () => {
+    const { layout, listeners } = bootWithDialog(false);
+    const calls = [];
+    layout.registerExitKeys({ invokeMethodAsync: (name, arg) => { calls.push([name, arg]); return Promise.resolve(); } }, ['n', 'w']);
+    const n = press('n');
+    listeners.get('keydown')(n.event);
+    listeners.get('keydown')(press('W').event);
+    assert.deepEqual(calls, [['GoByKey', 'n'], ['GoByKey', 'w']]);
+    assert.ok(n.prevented());
+});
+
+test('exit keys are ignored while typing, with a modifier, held down, unlisted, or under a dialog', () => {
+    const { layout, listeners } = bootWithDialog(false);
+    const calls = [];
+    layout.registerExitKeys({ invokeMethodAsync: name => { calls.push(name); return Promise.resolve(); } }, ['n']);
+    for (const event of [press('n', input), press('n', editor), press('n', { tagName: 'TEXTAREA' }), press('n', { tagName: 'SELECT' }),
+        press('n', body, { ctrlKey: true }), press('n', body, { altKey: true }), press('n', body, { metaKey: true }),
+        press('n', body, { repeat: true }), press('x')]) {
+        listeners.get('keydown')(event.event);
+        assert.equal(event.prevented(), false);
+    }
+    assert.deepEqual(calls, []);
+
+    const dialog = bootWithDialog(true);
+    const underDialog = [];
+    dialog.layout.registerExitKeys({ invokeMethodAsync: name => { underDialog.push(name); return Promise.resolve(); } }, ['n']);
+    dialog.listeners.get('keydown')(press('n').event);
+    assert.deepEqual(underDialog, []);
+});
+
+test('re-registering replaces the keys, and unregistering stops them', () => {
+    const { layout, listeners } = bootWithDialog(false);
+    const calls = [];
+    const ref = { invokeMethodAsync: (name, arg) => { calls.push(arg); return Promise.resolve(); } };
+    layout.registerExitKeys(ref, ['n']);
+    layout.registerExitKeys(ref, ['s']);
+    listeners.get('keydown')(press('n').event);
+    listeners.get('keydown')(press('s').event);
+    layout.unregisterExitKeys();
+    listeners.get('keydown')(press('s').event);
+    assert.deepEqual(calls, ['s']);
+});
+
 test('a click outside a mention does nothing, and undelegating removes the listener', () => {
     const { layout } = boot();
     const element = storyElement();

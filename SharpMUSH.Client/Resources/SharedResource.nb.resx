@@ -4875,4 +4875,28 @@
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Full utdata · kanaler og meldinger inkludert</value>
   </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# der}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Låst</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Stengt</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Forlater scenen</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Gå</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Se</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Bli</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Trykk {0} for å gå</value>
+  </data>
 </root>

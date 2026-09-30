@@ -4875,4 +4875,28 @@
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Volledige uitvoer · inclusief kanalen en berichten</value>
   </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# daar}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Op slot</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Gesloten</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Verlaat de scène</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Ga</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Bekijk</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Blijf</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Druk op {0} om te gaan</value>
+  </data>
 </root>

@@ -4875,4 +4875,28 @@
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Potpuni ispis · s kanalima i porukama</value>
   </data>
+  <data name="NavPlayThereCount" xml:space="preserve">
+    <value>{count, plural, other {# tamo}}</value>
+  </data>
+  <data name="NavPlayLocked" xml:space="preserve">
+    <value>Zaključano</value>
+  </data>
+  <data name="NavPlayClosed" xml:space="preserve">
+    <value>Zatvoreno</value>
+  </data>
+  <data name="NavPlayLeavesScene" xml:space="preserve">
+    <value>Napušta scenu</value>
+  </data>
+  <data name="NavPlayGo" xml:space="preserve">
+    <value>Idi</value>
+  </data>
+  <data name="NavPlayLook" xml:space="preserve">
+    <value>Pogledaj</value>
+  </data>
+  <data name="NavPlayStay" xml:space="preserve">
+    <value>Ostani</value>
+  </data>
+  <data name="NavPlayExitKey" xml:space="preserve">
+    <value>Pritisnite {0} za odlazak</value>
+  </data>
 </root>

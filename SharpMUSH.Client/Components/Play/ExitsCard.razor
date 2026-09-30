@@ -1,0 +1,234 @@
+@using SharpMUSH.Client.Models
+@inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* D1 §5.6 Exits (boards 01, 10, 11), from room.exits: one tile per exit in the state the payload
+   sends — open, occupied (a count, never names), locked (still listed, with its hint), closed,
+   leaves the scene (asks first, in the payload's words), no image (the fallback tile). Dark exits
+   are never sent, so none is invented. The keycap is the first alias; pressing a one-letter keycap
+   goes, except while typing. Hover or focus shows a preview with Go and Look. Rows is the mobile Room
+   sheet's list. *@
+<KitCard Aside="true" Title="@($"{Loc["NavExits"]} · {Exits.Count}")" Class="exits-card">
+    @if (_confirming is { } pending)
+    {
+        <div class="exit-confirm" role="alertdialog" aria-labelledby="exit-confirm-text" aria-describedby="exit-confirm-text">
+            <span class="exit-confirm-text" id="exit-confirm-text">@pending.Confirm</span>
+            <div class="exit-confirm-actions">
+                <button type="button" class="exit-confirm-go" @ref="_confirmGo" @onclick="ConfirmAsync">@Loc["NavPlayGo"]</button>
+                <button type="button" class="exit-confirm-stay" @onclick="Cancel">@Loc["NavPlayStay"]</button>
+            </div>
+        </div>
+    }
+    @if (Exits.Count == 0)
+    {
+        <div class="exits-empty">@Loc["NavNoExitsAvailable"]</div>
+    }
+    else
+    {
+        <div class="exits @(Rows ? "exits--rows" : "exits--tiles")">
+            @foreach (var exit in Exits)
+            {
+                var e = exit;
+                var key = KeyOf(e);
+                <div class="exit exit--@StateName(e)">
+                    <button type="button" class="exit-go" disabled="@string.IsNullOrWhiteSpace(e.Cmd)"
+                            aria-keyshortcuts="@(IsSingleKey(key) ? key : null)" title="@(IsSingleKey(key) ? Loc["NavPlayExitKey", key!].Value : null)"
+                            @onclick="() => TakeAsync(e)">
+                        <span class="exit-media">
+                            @if (ImageUrlPolicy.IsRenderable(e.Dest?.Image?.Url))
+                            {
+                                <img class="exit-img" src="@e.Dest!.Image!.Url.Trim()" alt="" loading="lazy" />
+                            }
+                            else
+                            {
+                                <span class="exit-img exit-fallback" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Explore" Size="Size.Small" /></span>
+                            }
+                            @Pill(e)
+                        </span>
+                        <span class="exit-text">
+                            <span class="exit-row">
+                                <span class="exit-name">@NameOf(e)</span>
+                                @if (key is not null)
+                                {
+                                    <kbd class="exit-key">@key</kbd>
+                                }
+                            </span>
+                            @if (SubOf(e) is { } sub)
+                            {
+                                <span class="exit-sub">@sub</span>
+                            }
+                        </span>
+                    </button>
+                    @if (!Rows)
+                    {
+                        <div class="exit-preview" role="group" aria-label="@NameOf(e)">
+                            @if (ImageUrlPolicy.IsRenderable(e.Dest?.Image?.Url))
+                            {
+                                <img class="exit-preview-img" src="@e.Dest!.Image!.Url.Trim()" alt="" loading="lazy" />
+                            }
+                            <div class="exit-preview-body">
+                                <div class="exit-row">
+                                    <span class="exit-preview-name">@(e.Dest?.Name ?? NameOf(e))</span>
+                                    @if (key is not null)
+                                    {
+                                        <kbd class="exit-key">@key</kbd>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(e.Dest?.Desc))
+                                {
+                                    <p class="exit-preview-desc">@e.Dest!.Desc</p>
+                                }
+                                @if (e.Dest?.Here is > 0)
+                                {
+                                    <div class="exit-preview-there">@Loc.Plural("NavPlayThereCount", "count", e.Dest.Here.Value)</div>
+                                }
+                                <div class="exit-preview-actions">
+                                    <button type="button" class="exit-preview-go" disabled="@string.IsNullOrWhiteSpace(e.Cmd)" @onclick="() => TakeAsync(e)">@Loc["NavPlayGo"]</button>
+                                    <button type="button" class="exit-preview-look" @onclick="() => OnCommand.InvokeAsync(LookAt(e))">@Loc["NavPlayLook"]</button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</KitCard>
+
+@code {
+    /// <summary>The latest <c>room.exits</c> rows.</summary>
+    [Parameter] public IReadOnlyList<RoomExit> Exits { get; set; } = [];
+
+    /// <summary>A command to send to the game (an exit's cmd, or a look at it).</summary>
+    [Parameter] public EventCallback<string> OnCommand { get; set; }
+
+    /// <summary>The mobile Room sheet's list: rows with the area or hint, and no preview.</summary>
+    [Parameter] public bool Rows { get; set; }
+
+    /// <summary>Whether this list answers the page's exit keys. Only one list on a page may.</summary>
+    [Parameter] public bool AliasKeys { get; set; } = true;
+
+    private RoomExit? _confirming;
+    private ElementReference _confirmGo;
+    private bool _focusConfirm;
+    private DotNetObjectReference<ExitsCard>? _self;
+    private string _registered = string.Empty;
+
+    /// <summary>A keycap key pressed on the page (layout.js ignores it while typing or under a dialog).</summary>
+    [JSInvokable]
+    public Task GoByKey(string key)
+    {
+        var exit = Exits.FirstOrDefault(e => string.Equals(KeyOf(e), key, StringComparison.OrdinalIgnoreCase));
+        return exit is null ? Task.CompletedTask : TakeAsync(exit);
+    }
+
+    private async Task TakeAsync(RoomExit exit)
+    {
+        if (string.IsNullOrWhiteSpace(exit.Cmd)) return;
+        if (!string.IsNullOrWhiteSpace(exit.Confirm))
+        {
+            _confirming = exit;
+            _focusConfirm = true;
+            StateHasChanged();
+            return;
+        }
+        await OnCommand.InvokeAsync(exit.Cmd);
+    }
+
+    private async Task ConfirmAsync()
+    {
+        if (_confirming is not { } exit) return;
+        _confirming = null;
+        await OnCommand.InvokeAsync(exit.Cmd!);
+    }
+
+    private void Cancel() => _confirming = null;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusConfirm && _confirming is not null)
+        {
+            _focusConfirm = false;
+            try
+            {
+                await _confirmGo.FocusAsync();
+            }
+            catch (InvalidOperationException)
+            {
+                // Not attached yet (prerender): the dialog is still announced by its role.
+            }
+        }
+
+        if (!AliasKeys) return;
+        var keys = Exits.Select(KeyOf).Where(IsSingleKey).Select(k => k!.ToLowerInvariant()).Distinct().ToArray();
+        var signature = string.Join('\u0001', keys);
+        if (signature == _registered && !firstRender) return;
+        _registered = signature;
+        _self ??= DotNetObjectReference.Create(this);
+        try
+        {
+            await JS.InvokeVoidAsync("sharpmushLayout.registerExitKeys", _self, keys);
+        }
+        catch (JSException)
+        {
+            // No layout script: the tiles still go on click.
+        }
+    }
+
+    private static string? KeyOf(RoomExit e) => e.Aliases.FirstOrDefault(a => !string.IsNullOrWhiteSpace(a))?.Trim();
+
+    private static bool IsSingleKey(string? key) => key is { Length: 1 } && char.IsLetterOrDigit(key[0]);
+
+    private string NameOf(RoomExit e) => string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name;
+
+    private static string LookAt(RoomExit e) => $"look {(string.IsNullOrWhiteSpace(e.Dbref) ? e.Name : e.Dbref)}";
+
+    private static string StateName(RoomExit e) => e.State switch
+    {
+        ExitState.Locked => "locked",
+        ExitState.Closed => "closed",
+        _ => "open",
+    };
+
+    /// <summary>The line under the name: a locked or closed exit's hint; in the rows, else the destination's area.</summary>
+    private string? SubOf(RoomExit e) => e.State is ExitState.Locked or ExitState.Closed && !string.IsNullOrWhiteSpace(e.Hint)
+        ? e.Hint
+        : Rows ? e.Dest?.Area : null;
+
+    private RenderFragment Pill(RoomExit e) => __builder =>
+    {
+        @if (e.State == ExitState.Locked)
+        {
+            <span class="exit-pill exit-pill--locked"><MudIcon Icon="@Icons.Material.Outlined.Lock" Size="Size.Small" /> @Loc["NavPlayLocked"]</span>
+        }
+        else if (e.State == ExitState.Closed)
+        {
+            <span class="exit-pill exit-pill--closed"><MudIcon Icon="@Icons.Material.Outlined.DoorFront" Size="Size.Small" /> @Loc["NavPlayClosed"]</span>
+        }
+        else if (!string.IsNullOrWhiteSpace(e.Confirm))
+        {
+            <span class="exit-pill exit-pill--scene">@Loc["NavPlayLeavesScene"]</span>
+        }
+        else if (e.Dest?.Here is > 0)
+        {
+            <span class="exit-pill exit-pill--there">@Loc.Plural("NavPlayThereCount", "count", e.Dest.Here.Value)</span>
+        }
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (AliasKeys && _self is not null)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("sharpmushLayout.unregisterExitKeys");
+            }
+            catch (Exception e) when (e is JSException or JSDisconnectedException)
+            {
+                // The page is going away; so is the listener's reason to act.
+            }
+        }
+        _self?.Dispose();
+    }
+}
