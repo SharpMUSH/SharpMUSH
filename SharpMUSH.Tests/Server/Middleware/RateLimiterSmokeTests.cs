@@ -132,6 +132,10 @@ public class RateLimiterSmokeTests
 	[Test]
 	[Arguments(typeof(SetupController), nameof(SetupController.GetStatus))]
 	[Arguments(typeof(ServerInfoController), nameof(ServerInfoController.Get))]
+	// Not a boot read, but the same mistake: a reader clicking through help topics spent the budget
+	// their next sign-in needed.
+	[Arguments(typeof(HelpController), nameof(HelpController.Entry))]
+	[Arguments(typeof(HelpController), nameof(HelpController.Index))]
 	public async Task ThePortalBootReads_AreNotRateLimited(Type controller, string action)
 	{
 		var method = controller.GetMethod(action)!;

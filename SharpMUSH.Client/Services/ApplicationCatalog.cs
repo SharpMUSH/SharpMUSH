@@ -60,14 +60,18 @@ public sealed class ApplicationCatalog
 	/// </param>
 	/// <param name="onLoaded">Runs once the snapshot is in (not on failure) — startup uses it to add the
 	/// Widget-kind applications to the layout palette.</param>
-	public static ApplicationCatalog StartLoading(Uri apiBaseAddress, Action<ApplicationCatalog>? onLoaded = null)
-		=> new(catalog => catalog.LoadAsync(apiBaseAddress, onLoaded));
+	/// <param name="handler">The transport; tests supply one. Not disposed here.</param>
+	public static ApplicationCatalog StartLoading(Uri apiBaseAddress, Action<ApplicationCatalog>? onLoaded = null,
+		HttpMessageHandler? handler = null)
+		=> new(catalog => catalog.LoadAsync(apiBaseAddress, onLoaded, handler));
 
-	private async Task LoadAsync(Uri apiBaseAddress, Action<ApplicationCatalog>? onLoaded)
+	private async Task LoadAsync(Uri apiBaseAddress, Action<ApplicationCatalog>? onLoaded, HttpMessageHandler? handler)
 	{
 		try
 		{
-			using var http = new HttpClient { BaseAddress = apiBaseAddress, Timeout = TimeSpan.FromSeconds(5) };
+			using var http = handler is null ? new HttpClient() : new HttpClient(handler, disposeHandler: false);
+			http.BaseAddress = apiBaseAddress;
+			http.Timeout = TimeSpan.FromSeconds(5);
 			var apps = await http.GetFromJsonAsync<List<PortalApplication>>("api/applications");
 			_bySlug = Index(apps ?? []);
 			Console.WriteLine($"[ApplicationCatalog] Loaded {_bySlug.Count} application(s), {WidgetApps.Count} widget(s) from {apiBaseAddress}api/applications.");

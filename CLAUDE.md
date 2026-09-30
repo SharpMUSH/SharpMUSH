@@ -147,12 +147,17 @@ MUSH-specific policy (space-list semantics, `compressSpaces`, glob-to-regex, col
 
 The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all non-API, non-file routes → `index.html`, sent `Cache-Control: no-cache`). A published image serves the assets through `MapStaticAssets` from the client's `SharpMUSH.Client.staticwebassets.endpoints.json`, copied into the server's content root by the `Dockerfile`: fingerprinted files get `immutable` caching and every asset its precompressed `.br`/`.gz`. Without the manifest (dev runs, test hosts) it falls back to `UseBlazorFrameworkFiles` + `UseStaticFiles`. See `SharpMUSH.Server/PortalStaticFiles.cs`.
 
+Startup is on the critical path of every visit: `Program.cs` awaits nothing on the network before the
+first render, and a request the first render needs goes out alongside the others rather than after
+them. The trimmer roots for runtime-loaded plugin components are opt-in (`PluginComponentSupport`,
+see `SharpMUSH.Client.csproj`) because they cost every visitor 1.1 MB.
+
 **Key services registered at startup:**
 
 - `IWidgetRegistry` / `ILayoutService` — widget system; widgets registered at startup in `Program.cs`
-- `IThemeService` — DB-backed MudTheme + CSS variables
-- `IWikiService` (via `InMemoryWikiService`) — wiki CRUD
-- `ISceneService` (via `InMemorySceneService`) — real-time scene participation
+- `ApplicationCatalog` — the Dynamic Applications snapshot; loads alongside the first render, so a reader that needs the whole list awaits `Loaded`
+- `IThemeService` — built-in MudTheme presets, the choice persisted in localStorage
+- `WikiService` / `SceneService` — HTTP clients for the server's wiki and scene APIs (scene writes go through game commands)
 - `IGameHubConnectionFactory` / `IConnectionStateService` — SignalR lifecycle management
 - `AccountAuthService` — account-session token stored in WASM memory; mints per-character OTTs for the terminal
 - `ITerminalService` / `IWebSocketClientService` — raw WebSocket terminal
@@ -307,5 +312,5 @@ and the human escape hatch (`SHARPMUSH_STOP_HOOK=off`) are in `.claude/hooks/REA
 - **Logging**: Serilog, configured through `appsettings.json`
 - **Metrics**: OpenTelemetry → Prometheus scraping at `/metrics` (server :9092, connection server :9091)
 - **Caching**: `ZiggyCreatures.FusionCache`; compiled boolean-expression cache keyed as `"compiled-expressions"`
-- **Rate limiting**: `"public-api"` — fixed window per client IP (30 req/min, `RateLimiting:PublicApi:*`) on the credential/claim endpoints that opt in with `[EnableRateLimiting]`; `"mcp"` — per client IP on `/mcp`; `"softcode-http"` — one global `http_per_second` budget on `/http/*`. Portal assets and the boot reads (`api/setup/status`, `api/server-info`) are not limited
+- **Rate limiting**: `"public-api"` — fixed window per client IP (30 req/min, `RateLimiting:PublicApi:*`) on the credential/claim endpoints that opt in with `[EnableRateLimiting]`; `"mcp"` — per client IP on `/mcp`; `"softcode-http"` — one global `http_per_second` budget on `/http/*`. Portal assets, the boot reads (`api/setup/status`, `api/server-info`) and `api/help` are not limited
 - **CORS**: Configured via `Cors:AllowedOrigins` in `appsettings.json`; development allows all origins with credentials (required for SignalR)

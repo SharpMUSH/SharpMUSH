@@ -183,6 +183,30 @@ public class LayoutServiceTests : TrackingTestContext
 		await Assert.That(handler.Calls).IsEqualTo(2);
 	}
 
+	[Test]
+	public async Task GetLayoutAsync_ServerError_FallsBackToTheDefault_WithoutKeepingIt()
+	{
+		// A 500 while the page loads used to be cached as "this scope has no layout", pinning the tab
+		// to the default until a reload even once the server answered again.
+		var stored = new LayoutConfiguration(
+			new Dictionary<WidgetZone, List<WidgetPlacement>>
+			{
+				[WidgetZone.MainContent] = [new WidgetPlacement("WelcomeText", 0, null)]
+			},
+			new LayoutSettings(LeftSidebarEnabled: false, RightSidebarEnabled: false));
+		var attempt = 0;
+		var handler = new ScriptedHandler(_ => ++attempt == 1 ? new HttpResponseMessage(HttpStatusCode.InternalServerError) : Ok(stored));
+		var svc = Build(handler);
+
+		var first = await svc.GetLayoutAsync(LayoutScopes.Home);
+		var second = await svc.GetLayoutAsync(LayoutScopes.Home);
+
+		await Assert.That(first.Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("Stats")
+			.Because("a failed read still renders the scope's default");
+		await Assert.That(second.Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("WelcomeText");
+		await Assert.That(handler.Calls).IsEqualTo(2);
+	}
+
 	/// <summary>A save that lands while a read is in flight is newer than what that read fetched.</summary>
 	[Test]
 	public async Task GetLayoutAsync_SaveDuringRead_ReadYieldsTheSavedLayout()

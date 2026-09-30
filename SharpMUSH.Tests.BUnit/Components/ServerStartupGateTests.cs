@@ -6,6 +6,7 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Resources;
+using SharpMUSH.Client.Services;
 using System.Net;
 using SharpMUSH.Tests.BUnit.Resources;
 
@@ -66,7 +67,7 @@ public class ServerStartupGateTests : TrackingBunitContext
 	{
 		var apiClient = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
-		factory.CreateClient("api").Returns(apiClient);
+		factory.CreateClient(ApiClients.Anonymous).Returns(apiClient);
 		Services.AddSingleton(factory);
 	}
 

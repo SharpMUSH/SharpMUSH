@@ -55,10 +55,37 @@ public class PluginComponentLoaderTests : TrackingBunitContext
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(http);
 
-		var loader = new PluginComponentLoader(factory, NullLogger<PluginComponentLoader>.Instance);
+		// A build that supports compiled components, or the fetch below would never be made.
+		var loader = new PluginComponentLoader(factory, NullLogger<PluginComponentLoader>.Instance, supported: true);
 		var type = await loader.ResolveComponentAsync("api/plugins/p/ui/Comp.dll", "Comp.Widget");
 
 		await Assert.That(type).IsNull().Because("a non-success fetch must not load or resolve a component");
+		factory.Received(1).CreateClient("api");
+	}
+
+	[TUnit.Core.Test]
+	public async Task ResolveComponentAsync_OnABuildWithoutComponentSupport_FetchesNothing()
+	{
+		// The stock build trims the UI surface a compiled component compiles against (the roots are opt-in,
+		// PluginComponentSupport). Loading one anyway would fail at some arbitrary later member access, so
+		// the loader refuses before it asks the server for the assembly.
+		var factory = Substitute.For<IHttpClientFactory>();
+		var loader = new PluginComponentLoader(factory, NullLogger<PluginComponentLoader>.Instance, supported: false);
+
+		var type = await loader.ResolveComponentAsync("api/plugins/p/ui/Comp.dll", "Comp.Widget");
+
+		await Assert.That(loader.Supported).IsFalse();
+		await Assert.That(type).IsNull();
+		factory.DidNotReceiveWithAnyArgs().CreateClient(default!);
+	}
+
+	[TUnit.Core.Test]
+	public async Task TheDefaultBuild_DoesNotSupportComponents()
+	{
+		// Tests build without -p:PluginComponentSupport=true, exactly like the stock image.
+		await Assert.That(PluginComponentLoader.BuildSupportsComponents).IsFalse();
+		await Assert.That(new PluginComponentLoader(Substitute.For<IHttpClientFactory>(),
+			NullLogger<PluginComponentLoader>.Instance).Supported).IsFalse();
 	}
 
 	[TUnit.Core.Test]

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Library.Logging;
 
@@ -19,7 +20,7 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 
 	/// <summary>
 	/// Concurrent first reads of one scope share a request. Only a resolved layout is kept (in
-	/// <see cref="_cache"/>); a fetch that throws is not, so the next read tries again.
+	/// <see cref="_cache"/>); a failed fetch is not, so the next read tries again.
 	/// </summary>
 	private readonly SingleFlight<string, LayoutConfiguration> _loads = new(StringComparer.OrdinalIgnoreCase);
 
@@ -30,13 +31,19 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 			? Task.FromResult(cached)
 			: _loads.RunAsync(scope, () => LoadAsync(scope));
 
-	private async Task<LayoutConfiguration> LoadAsync(string scope)
-	{
-		var resolved = await FetchAsync(scope) ?? GetDefaultLayout(scope);
+	private async Task<LayoutConfiguration> LoadAsync(string scope) =>
+		await FetchAsync(scope) switch
+		{
+			LayoutConfiguration stored => Keep(scope, stored),
+			NotFound => Keep(scope, GetDefaultLayout(scope)),
+			// The default stands in for this read only. Kept, it would pin the tab to the default for
+			// the rest of its life because the server stumbled once while the page loaded.
+			Error<string> => GetDefaultLayout(scope),
+		};
 
+	private LayoutConfiguration Keep(string scope, LayoutConfiguration resolved) =>
 		// A save or reset that landed while this read was in flight is newer than what it fetched.
-		return _cache.TryAdd(scope, resolved) ? resolved : _cache[scope];
-	}
+		_cache.TryAdd(scope, resolved) ? resolved : _cache[scope];
 
 	public async Task<bool> SaveLayoutAsync(string scope, LayoutConfiguration layout)
 	{
@@ -101,7 +108,9 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 		}
 	}
 
-	private async Task<LayoutConfiguration?> FetchAsync(string scope)
+	/// <summary>The stored layout; <see cref="NotFound"/> when the scope has never been customized; an
+	/// error when the server could not be asked or did not answer usably.</summary>
+	private async Task<FoundResult<LayoutConfiguration>> FetchAsync(string scope)
 	{
 		try
 		{
@@ -113,21 +122,23 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 			// cached build keeps working against an older server (and vice versa) during a rollout.
 			if (response.StatusCode is HttpStatusCode.NoContent or HttpStatusCode.NotFound)
 			{
-				return null;
+				return new NotFound();
 			}
 
 			if (!response.IsSuccessStatusCode)
 			{
 				logger.LogWarning("Loading layout for scope {Scope} failed (HTTP {Status}).", LogSanitizer.Sanitize(scope), (int)response.StatusCode);
-				return null;
+				return new Error<string>($"HTTP {(int)response.StatusCode}");
 			}
 
-			return await response.Content.ReadFromJsonAsync<LayoutConfiguration>(JsonOptions);
+			return await response.Content.ReadFromJsonAsync<LayoutConfiguration>(JsonOptions) is { } layout
+				? layout
+				: new Error<string>("empty layout body");
 		}
 		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)
 		{
 			logger.LogWarning(ex, "Loading layout for scope {Scope} failed.", LogSanitizer.Sanitize(scope));
-			return null;
+			return new Error<string>(ex.Message);
 		}
 	}
 
