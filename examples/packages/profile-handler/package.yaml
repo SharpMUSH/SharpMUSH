@@ -33,6 +33,11 @@ objects:
       # Unused by the shipped schema — see the opt-in block under GET`PROFILE`SCHEMA.
       FN`FIELD: |-
         json(object,value,json(string,get(%0/PROFILE`%1)),visible,json(boolean,true))
+      # A player's name colour (%0 = the player), or blank. It lands in a CSS custom property on
+      # the page, so only #rrggbb passes; a value that tries to carry more CSS reads as unset.
+      # Brackets are escaped because a bare [...] is evaluated here.
+      FN`COLOR: |-
+        if(regmatch(setr(c,get(%0/PROFILE`COLOR)),^#\[0-9a-fA-F\]\[0-9a-fA-F\]\[0-9a-fA-F\]\[0-9a-fA-F\]\[0-9a-fA-F\]\[0-9a-fA-F\]$),%q<c>)
       # Directory category for one player (%0). Wizard > Royalty > Guest; blank otherwise.
       FN`CHARCAT: |-
         firstof(if(hasflag(%0,WIZARD),Wizard),if(hasflag(%0,ROYALTY),Royalty),if(haspower(%0,Guest),Guest))
@@ -99,9 +104,10 @@ objects:
       # banner are the seeded IMAGE / IMAGE`BANNER attributes (help IMAGE); banner falls back to
       # IMAGE, so a character with a portrait and no wide art still gets a picture behind the name.
       # color is PROFILE`COLOR under the usual opt-in PROFILE`<key> convention — the name colour
-      # stays game-defined and needs no seed. All three are read with get(), never u().
+      # stays game-defined and needs no seed — validated by FN`COLOR to #rrggbb. All three are read
+      # with get(), never u().
       GET`PROFILE: |-
-        @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json(object,character,json(string,name(%q<form.objid>)),objid,json(string,objid(%q<form.objid>)),dbref,json(string,num(%q<form.objid>)),fields,json(object,created,u(FN`VALUE,ctime(%q<form.objid>)),objid,u(FN`VALUE,objid(%q<form.objid>)),image,u(FN`VALUE,get(%q<form.objid>/IMAGE)),banner,u(FN`VALUE,strfirstof(get(%q<form.objid>/IMAGE`BANNER),get(%q<form.objid>/IMAGE))),color,u(FN`VALUE,get(%q<form.objid>/PROFILE`COLOR))))
+        @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json(object,character,json(string,name(%q<form.objid>)),objid,json(string,objid(%q<form.objid>)),dbref,json(string,num(%q<form.objid>)),fields,json(object,created,u(FN`VALUE,ctime(%q<form.objid>)),objid,u(FN`VALUE,objid(%q<form.objid>)),image,u(FN`VALUE,get(%q<form.objid>/IMAGE)),banner,u(FN`VALUE,strfirstof(get(%q<form.objid>/IMAGE`BANNER),get(%q<form.objid>/IMAGE))),color,u(FN`VALUE,u(FN`COLOR,%q<form.objid>))))
       # GET /http/profile/schema — the Portal Schema Document the portal renders from
       # (Area 21, kind:"view"). The character profile is the canonical view instance:
       # sections → keyvalue-style field elements; the GET`PROFILE data endpoint supplies
@@ -126,7 +132,7 @@ objects:
       # rather an unfilled field vanish than render blank.
       #
       #   GET`PROFILE: |-
-      #     @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json(object,character,json(string,name(%q<form.objid>)),objid,json(string,objid(%q<form.objid>)),dbref,json(string,num(%q<form.objid>)),fields,json(object,created,u(FN`VALUE,ctime(%q<form.objid>)),objid,u(FN`VALUE,objid(%q<form.objid>)),image,u(FN`VALUE,get(%q<form.objid>/IMAGE)),banner,u(FN`VALUE,strfirstof(get(%q<form.objid>/IMAGE`BANNER),get(%q<form.objid>/IMAGE))),color,u(FN`VALUE,get(%q<form.objid>/PROFILE`COLOR)),fullname,u(FN`FIELD,%q<form.objid>,fullname),alias,u(FN`FIELD,%q<form.objid>,alias),age,u(FN`FIELD,%q<form.objid>,age),concept,u(FN`FIELD,%q<form.objid>,concept),faction,u(FN`FIELD,%q<form.objid>,faction),description,u(FN`FIELD,%q<form.objid>,description)))
+      #     @assert cand(isdbref(%q<form.objid>),hastype(%q<form.objid>,player))=@respond 404 NO SUCH CHARACTER; @respond/type application/json; think json(object,character,json(string,name(%q<form.objid>)),objid,json(string,objid(%q<form.objid>)),dbref,json(string,num(%q<form.objid>)),fields,json(object,created,u(FN`VALUE,ctime(%q<form.objid>)),objid,u(FN`VALUE,objid(%q<form.objid>)),image,u(FN`VALUE,get(%q<form.objid>/IMAGE)),banner,u(FN`VALUE,strfirstof(get(%q<form.objid>/IMAGE`BANNER),get(%q<form.objid>/IMAGE))),color,u(FN`VALUE,u(FN`COLOR,%q<form.objid>)),fullname,u(FN`FIELD,%q<form.objid>,fullname),alias,u(FN`FIELD,%q<form.objid>,alias),age,u(FN`FIELD,%q<form.objid>,age),concept,u(FN`FIELD,%q<form.objid>,concept),faction,u(FN`FIELD,%q<form.objid>,faction),description,u(FN`FIELD,%q<form.objid>,description)))
       #
       #   GET`PROFILE`SCHEMA: |-
       #     @respond/type application/json; think json(object,kind,json(string,view),schema_version,json(number,1),pages,json(array,json(object,key,json(string,profile),order,json(number,1),sections,json(array,json(object,name,json(string,Demographics),order,json(number,1),elements,json(array,json(object,kind,json(string,field),key,json(string,fullname),label,json(string,Full Name),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,alias),label,json(string,Alias),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,age),label,json(string,Age),type,json(string,text),visible_to,json(string,public)),json(object,kind,json(string,field),key,json(string,concept),label,json(string,Concept),type,json(string,text),visible_to,json(string,public)))),json(object,name,json(string,Status),order,json(number,2),elements,json(array,json(object,kind,json(string,field),key,json(string,faction),label,json(string,Faction),type,json(string,text),visible_to,json(string,public)))),json(object,name,json(string,Description),order,json(number,3),elements,json(array,json(object,kind,json(string,field),key,json(string,description),label,json(string,Description),type,json(string,mstring),visible_to,json(string,public))))))))

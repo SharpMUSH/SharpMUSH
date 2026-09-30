@@ -400,8 +400,16 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 			}
 		}
 
-		// A portrait with softcode in it must come back verbatim: get(), never u().
+		// A portrait with softcode in it must come back verbatim: get(), never u(). The colour lands
+		// in a CSS custom property, so only #rrggbb is accepted: a hostile value reads as blank.
 		await Cmd($"&IMAGE #{player.Object.Key}=/assets/chars/[name(me)].jpg");
+		await Cmd($"&PROFILE`COLOR #{player.Object.Key}=#fff;background:url(x)");
+
+		using (var hostile = await Profile())
+		{
+			await Assert.That(hostile.RootElement.GetProperty("fields").GetProperty("color").GetProperty("value").GetString()).IsEqualTo(string.Empty);
+		}
+
 		await Cmd($"&PROFILE`COLOR #{player.Object.Key}=#ffb454");
 
 		using (var portrait = await Profile())
