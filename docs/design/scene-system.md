@@ -326,6 +326,13 @@ evaluates the package's own `` FUN`IS`APPROVED `` on the Scene Logger (as the
 logger), so a redefined rule applies to OOC too; without the package installed it
 falls back to the package default, a player with the `APPROVED` flag.
 
+**A game with its own `ooc`.** Built-in commands are matched before `$`-commands,
+so this `ooc` shadows a master-room `$ooc *` a game already has. To keep the
+game's own, a wizard runs `@command/disable OOC`: the built-in leaves the command
+table and the line falls through to `$`-commands as if it did not exist. The
+disable lasts until the server restarts, so put it in a wizard object's
+`STARTUP`. (`@command/enable OOC` brings the built-in back.)
+
 ## Default Softcode (`#SCENELOGGER` bootstrap)
 
 Players use `+scene/*` (softcode) and pose natively; they never call `@scene`.
@@ -404,10 +411,11 @@ forwards `game.scene.*` to `GameHub.SceneGroupName(id)`; `IGameHubClient` gains
 
 `SceneEventMessage(SceneId, EventType ["pose"|"edit"|"delete"|"move"|"meta"],
 ActorName [= ShowAsName/AuthorName], PoseId, Content, Markup, Tags, Source,
-Location, Timestamp, ActorObjId)`. `ActorObjId` is the author's objid
-(`#N:ctime-ms`), resolved from `AuthorDbref` when the event is sent (null when
-the author is gone), so the portal keys a portrait on an identity that survives a
-recycled dbref. The record lives in the plugin; the client keeps its own copy of
+Location, Timestamp, ActorObjId)`. `ActorObjId` is the objid (`#N:ctime-ms`)
+of the current holder of the author's dbref, resolved from `AuthorDbref` when the
+event is sent (null when nothing holds it). Pose storage keeps only the dbref
+number, so after a recycle it names the new holder, not the original author. The
+record lives in the plugin; the client keeps its own copy of
 the same positional shape (`SharpMUSH.Client/Models/SceneEventMessage.cs`), because
 the plugin loads in a collectible ALC the client cannot reference. Contract tests in
 `SharpMUSH.Tests.ScenePlugin` and `SharpMUSH.Tests.BUnit` pin the same JSON.

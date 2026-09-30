@@ -252,9 +252,106 @@ public class SceneOocIntegrationTests
 			.IsFalse();
 	}
 
+	/// <summary>A room whose Speech lock refuses the speaker hears nothing, and nothing is recorded.</summary>
+	[Test]
+	public async Task Ooc_refused_by_the_speech_lock_says_and_records_nothing()
+	{
+		var (sceneId, poser, witness) = await SceneRoomAsync("Lck");
+		var room = await Eval($"loc({Num(poser.Dbref)})");
+		await God1($"@lock/speech {room}=#1");
+		var before = await PoseCountAsync(sceneId);
+		var witnessBefore = HeardCount(witness);
+
+		await RunAs(poser.Handle, "ooc hush");
+
+		await Assert.That(await PoseCountAsync(sceneId)).IsEqualTo(before);
+		await Assert.That(HeardBy(witness, witnessBefore).Any(m => m.Contains("hush", StringComparison.Ordinal)))
+			.IsFalse();
+	}
+
+	[Test]
+	public async Task Ooc_from_a_gagged_player_is_refused()
+	{
+		var (sceneId, poser, witness) = await SceneRoomAsync("Gag");
+		await God1($"@set {poser.Dbref}=GAGGED");
+		var before = await PoseCountAsync(sceneId);
+		var witnessBefore = HeardCount(witness);
+
+		await RunAs(poser.Handle, "ooc muffled");
+
+		await Assert.That(await PoseCountAsync(sceneId)).IsEqualTo(before);
+		await Assert.That(HeardBy(witness, witnessBefore).Any(m => m.Contains("muffled", StringComparison.Ordinal)))
+			.IsFalse();
+	}
+
+	[Test]
+	public async Task Ooc_noeval_keeps_brackets_literal()
+	{
+		var (sceneId, poser, witness) = await SceneRoomAsync("Nev");
+		var witnessBefore = HeardCount(witness);
+
+		await RunAs(poser.Handle, "ooc/noeval try [add(1,2)]");
+
+		await Assert.That(await LastPoseAsync(sceneId, "content")).IsEqualTo($"{poser.Name}: try [add(1,2)]");
+		await Assert.That(HeardBy(witness, witnessBefore)).Contains($"<OOC> {poser.Name}: try [add(1,2)]");
+	}
+
 	/// <summary>
-	/// The realtime event names its author by objid, resolved when it is sent, so the portal can key a
-	/// portrait on an identity that survives a recycled dbref (the pose itself stores only the dbref).
+	/// Colour survives into the record. Compared with an uncoloured line's markup, since storage serialises
+	/// plain text too and markup never equals content.
+	/// </summary>
+	[Test]
+	public async Task Ooc_records_colour_with_its_markup()
+	{
+		var (sceneId, poser, _) = await SceneRoomAsync("Clr");
+		await RunAs(poser.Handle, "ooc a red ember");
+		var plainMarkup = await LastPoseAsync(sceneId, "markup");
+
+		await RunAs(poser.Handle, "ooc a [ansi(hr,red)] ember");
+
+		await Assert.That(await LastPoseAsync(sceneId, "content")).IsEqualTo($"{poser.Name}: a red ember");
+		await Assert.That(await LastPoseAsync(sceneId, "markup")).IsNotEqualTo(plainMarkup);
+	}
+
+	/// <summary>
+	/// The built-in shadows a game's own master-room <c>$ooc</c> command; <c>@command/disable OOC</c> takes
+	/// it out of the table, and the line falls through to the game's command again.
+	/// </summary>
+	[Test]
+	public async Task Disabling_ooc_lets_a_games_own_ooc_command_answer()
+	{
+		var speaker = await CreatePlayerAsync("Dis");
+		var room = await DigAsync("OocDisRoom");
+		await God1($"@tel {speaker.Dbref}={room}");
+		var marker = Guid.NewGuid().ToString("N")[..10];
+		var created = (await God1($"@create OocSoftcode{marker}")).Message?.ToPlainText()?.Trim() ?? string.Empty;
+		var softcode = created.Split(' ').First(t => t.StartsWith('#'));
+		await God1($"&CMD`OOC {softcode}=$ooc *:@pemit %#=GAMEOOC{marker} %0");
+		await God1($"@set {softcode}=!NO_COMMAND");
+		await God1($"@tel {softcode}=#2");
+
+		try
+		{
+			var before = HeardCount(speaker.Dbref);
+			await RunAs(speaker.Handle, "ooc builtin");
+			await Assert.That(HeardBy(speaker.Dbref, before)).Contains($"<OOC> {speaker.Name}: builtin");
+
+			await God1("@command/disable OOC");
+			before = HeardCount(speaker.Dbref);
+			await RunAs(speaker.Handle, "ooc softcode");
+			await Assert.That(HeardBy(speaker.Dbref, before)).Contains($"GAMEOOC{marker} softcode");
+		}
+		finally
+		{
+			await God1("@command/enable OOC");
+			await God1($"@nuke {softcode}");
+			await God1($"@nuke {softcode}");
+		}
+	}
+
+	/// <summary>
+	/// The realtime event names its author by objid, resolved when it is sent from the dbref the pose
+	/// stores (so it is whoever holds that dbref at the time).
 	/// </summary>
 	[Test]
 	public async Task The_scene_event_carries_the_authors_objid()
