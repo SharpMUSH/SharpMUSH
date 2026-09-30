@@ -113,7 +113,7 @@ lighten it without re-measuring. Text dimmed behind a modal (the character sheet
 
 ## 3. The frame (every page)
 
-![frame](boards/20-patterns.png)
+![Board 20, app patterns: the shared frame of rail, page sidebar, main column with optional image banner and bottom bar, and an aside of stacked cards; beside it the image banner, sidebar rows, tiles, name and link styles, the bottom bar, and a table of what each page puts in each zone](boards/20-patterns.png)
 
 ```
 ┌──────┬──────────────┬─────────────── .phosphor-page (container: page) ───────┐
@@ -285,7 +285,7 @@ consumer), `Components/ScenePoseLine.razor`.
 
 | | |
 |---|---|
-| ![](boards/01-play-scene.png) | ![](boards/04-play-scene-terminal.png) |
+| ![Play, Story view: the room banner above a scene log of poses, each with a portrait and a name in its colour, one OOC band, and the Pose, Say, OOC and Command composer](boards/01-play-scene.png) | ![Play, Terminal view: the same frame and banner, but the log is monospaced raw output with the room description, channel lines and pages included, and a single command line below](boards/04-play-scene-terminal.png) |
 | In scene, Story view | Terminal view |
 
 ### 5.1 Page sidebar
