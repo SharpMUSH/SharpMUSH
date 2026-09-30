@@ -20,12 +20,24 @@ public static class MessageFormatting
 	/// </remarks>
 	public static async ValueTask<string> UnparseObjectAsync(IPermissionService permissions,
 		AnySharpObject viewer, AnySharpObject target)
-	{
-		var showReference = await permissions.CanExamine(viewer, target)
+		=> await ShowsReferenceAsync(permissions, viewer, target)
+			? await FormatObjectWithDbref(target.Object())
+			: target.Object().Name;
+
+	/// <inheritdoc cref="UnparseObjectAsync"/>
+	/// <remarks>The name portion is hilighted, as <see cref="FormatObjectWithDbrefMString"/> does.</remarks>
+	public static async ValueTask<MString> UnparseObjectMStringAsync(IPermissionService permissions,
+		AnySharpObject viewer, AnySharpObject target)
+		=> await ShowsReferenceAsync(permissions, viewer, target)
+			? await FormatObjectWithDbrefMString(target.Object())
+			: target.Object().Name.Hilight();
+
+	/// <summary><c>real_unparse</c>'s dbref visibility test (<c>src/unparse.c:118-119</c>).</summary>
+	private static async ValueTask<bool> ShowsReferenceAsync(IPermissionService permissions,
+		AnySharpObject viewer, AnySharpObject target)
+		=> await permissions.CanExamine(viewer, target)
 			|| await permissions.CanLinkToAsync(viewer, target) || await target.HasFlag("JUMP_OK")
 			|| await target.HasFlag("CHOWN_OK") || await target.HasFlag("DESTROY_OK");
-		return showReference ? await FormatObjectWithDbref(target.Object()) : target.Object().Name;
-	}
 
 	/// <summary>
 	/// The concatenated flag symbols of an object, as PennMUSH appends them after a dbref.

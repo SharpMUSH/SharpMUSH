@@ -17,7 +17,9 @@
     // editor.main.js runs, and our own configuration after that.
     const bundles = {
         monaco: {
-            css: [],
+            // Unlayered on purpose (see the file's own comment): it has to outrank Monaco's
+            // runtime-injected stylesheet, which no layered rule in custom.css can.
+            css: ["css/monaco-overrides.css"],
             js: [
                 "_content/BlazorMonaco/jsInterop.js",
                 "_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js",

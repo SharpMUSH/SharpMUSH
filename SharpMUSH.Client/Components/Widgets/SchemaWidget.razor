@@ -110,6 +110,9 @@ else
             return (null, null, null);
         }
 
+        // The catalog loads alongside the first render; waiting for it costs no more than the fetch
+        // below would, and spares the request when it has the app.
+        await Catalog.Loaded;
         var app = Catalog.Get(WidgetName) ?? await RegistryClient.GetAsync(WidgetName);
         return app is null
             ? (null, null, null)

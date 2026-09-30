@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -16,8 +15,9 @@ public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options) : C
 {
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName);
 
+	// Not rate-limited: every portal page load asks for this before it renders, and it reads two
+	// options values. A limiter here only ever delayed the portal's boot.
 	[HttpGet]
-	[EnableRateLimiting("public-api")]
 	public IActionResult Get()
 		=> Ok(new ServerInfoResponse(options.CurrentValue.Net.Guests, options.CurrentValue.Net.MudName));
 }
