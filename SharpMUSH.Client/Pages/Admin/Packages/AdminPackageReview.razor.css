@@ -1,20 +1,39 @@
-@container page (max-width: 48rem) {
-    ::deep .pkg-objects-table thead { display: none; }
+/* The page used to carry no padding at all, so under Build & manage (whose body adds none) the
+   review ran into the section's edges. */
+.pkg-review {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: var(--main-pad);
+    min-width: 0;
+}
 
-    ::deep .pkg-objects-table tr {
+.pkg-review-body {
+    padding: 14px 16px 16px;
+    min-width: 0;
+}
+
+.pkg-review-body ::deep .pkg-objects-table {
+    background: transparent;
+}
+
+@container page (max-width: 48rem) {
+    .pkg-review-body ::deep .pkg-objects-table thead { display: none; }
+
+    .pkg-review-body ::deep .pkg-objects-table tr {
         display: block;
         border-bottom: 1px solid var(--border-soft);
         padding-block: 0.5rem;
     }
 
-    ::deep .pkg-objects-table td {
+    .pkg-review-body ::deep .pkg-objects-table td {
         display: grid;
         grid-template-columns: minmax(0, 6rem) minmax(0, 1fr);
         gap: 0.5rem;
         border: none;
     }
 
-    ::deep .pkg-objects-table td::before {
+    .pkg-review-body ::deep .pkg-objects-table td::before {
         content: attr(data-label);
         color: var(--text-dim);
         font-size: 0.8125rem;
@@ -22,5 +41,7 @@
 
     .pkg-review ::deep .flex-row { flex-wrap: wrap; }
 
-    ::deep .mud-input-control { max-width: 100%; }
+    .pkg-review ::deep .mud-input-control { max-width: 100%; }
+
+    .pkg-review ::deep .kit-page-head { flex-wrap: wrap; }
 }

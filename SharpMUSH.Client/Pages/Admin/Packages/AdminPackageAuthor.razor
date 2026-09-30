@@ -9,137 +9,139 @@
 
 <PageTitle>@Loc["PkgAuthorHeading"] — @Loc["PkgAdminSection"] — @Loc["AppTitle"]</PageTitle>
 
-<div class="pkg-page" style="padding:var(--cpad);">
-    <div class="pkg-header">
-        <div class="pkg-kicker">@Loc["PkgKickerAuthoring"]</div>
-        <h1 class="pkg-title">@Loc["PkgAuthorHeading"]</h1>
-        <p class="pkg-desc">
-            @Loc["PkgAuthorDescription"]
-        </p>
-    </div>
+<div class="pkg-page">
+    <PlainPageHeader Kicker="@Loc["PkgKickerAuthoring"]" Title="@Loc["PkgAuthorHeading"]" Description="@Loc["PkgAuthorDescription"]" />
 
-    <div class="pkg-card mb-4">
-        <div class="pkg-card-head"><span class="pkg-step">1</span> @Loc["PkgStepSelectObjects"]</div>
-        <div class="pkg-card-body">
-            <MudTextField @bind-Value="_objidInput" Label="@Loc["PkgObjectIdsLabel"]"
-                          Lines="3" Variant="Variant.Outlined" />
-            <MudButton Class="mt-2 pkg-btn-primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@ScanAsync">
-                @Loc["PkgScanSelection"]
-            </MudButton>
-        </div>
+    <div class="pkg-step">
+        <SectionLabel>@Loc["WidFormStepOf", 1, 4]</SectionLabel>
+        <KitCard Title="@Loc["PkgStepSelectObjects"]">
+            <div class="pkg-card-body">
+                <MudTextField @bind-Value="_objidInput" Label="@Loc["PkgObjectIdsLabel"]"
+                              Lines="3" Variant="Variant.Outlined" />
+                <MudButton Class="mt-2 pkg-btn-primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@ScanAsync">
+                    @Loc["PkgScanSelection"]
+                </MudButton>
+            </div>
+        </KitCard>
     </div>
 
 @if (_scan is not null)
 {
-    <div class="pkg-card mb-4">
-        <div class="pkg-card-head"><span class="pkg-step">2</span> @Loc["PkgStepRefsAttributes"]</div>
-        <div class="pkg-card-body">
-            <MudExpansionPanels MultiExpansion="true" Dense="true">
-                @foreach (var obj in _scan.Objects)
-                {
-                    <MudExpansionPanel>
-                        <TitleContent>
-                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                                <MudText>@obj.Name</MudText>
-                                <MudChip T="string" Size="Size.Small">@obj.Type.ToLowerInvariant()</MudChip>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@obj.Objid</MudText>
-                            </MudStack>
-                        </TitleContent>
-                        <ChildContent>
-                            <MudTextField T="string"
-                                          Value="@(_refs.GetValueOrDefault(obj.Objid) ?? obj.SuggestedRef)"
-                                          ValueChanged="@(v => _refs[obj.Objid] = v)"
-                                          Label="@Loc["PkgManifestRefLabel"]"
-                                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" />
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["PkgAttributesToInclude"]</MudText>
-                            @foreach (var attr in obj.Attributes.Keys.OrderBy(a => a, StringComparer.Ordinal))
-                            {
-                                var key = (obj.Objid, attr);
-                                <MudCheckBox T="bool"
-                                             Value="@(!_excluded.Contains(key))"
-                                             ValueChanged="@(included => ToggleAttribute(key, included))"
-                                             Label="@attr" Dense="true" />
-                            }
-                        </ChildContent>
-                    </MudExpansionPanel>
-                }
-            </MudExpansionPanels>
-        </div>
+    <div class="pkg-step">
+        <SectionLabel>@Loc["WidFormStepOf", 2, 4]</SectionLabel>
+        <KitCard Title="@Loc["PkgStepRefsAttributes"]">
+            <div class="pkg-card-body">
+                <MudExpansionPanels MultiExpansion="true" Dense="true">
+                    @foreach (var obj in _scan.Objects)
+                    {
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudText>@obj.Name</MudText>
+                                    <MudChip T="string" Size="Size.Small">@obj.Type.ToLowerInvariant()</MudChip>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@obj.Objid</MudText>
+                                </MudStack>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudTextField T="string"
+                                              Value="@(_refs.GetValueOrDefault(obj.Objid) ?? obj.SuggestedRef)"
+                                              ValueChanged="@(v => _refs[obj.Objid] = v)"
+                                              Label="@Loc["PkgManifestRefLabel"]"
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["PkgAttributesToInclude"]</MudText>
+                                @foreach (var attr in obj.Attributes.Keys.OrderBy(a => a, StringComparer.Ordinal))
+                                {
+                                    var key = (obj.Objid, attr);
+                                    <MudCheckBox T="bool"
+                                                 Value="@(!_excluded.Contains(key))"
+                                                 ValueChanged="@(included => ToggleAttribute(key, included))"
+                                                 Label="@attr" Dense="true" />
+                                }
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    }
+                </MudExpansionPanels>
+            </div>
+        </KitCard>
     </div>
 
     @if (_scan.ExternalDbrefs.Count > 0)
     {
-        <div class="pkg-card mb-4">
-            <div class="pkg-card-head"><span class="pkg-step">3</span> @Loc["PkgStepClassifyExternal", _scan.ExternalDbrefs.Count]</div>
-            <div class="pkg-card-body">
-                @foreach (var external in _scan.ExternalDbrefs)
-                {
-                    var c = ClassificationFor(external.Dbref);
-                    <MudPaper Elevation="0" Class="pa-3 mb-2" Style="border:1px solid var(--border-soft);background:var(--surface-2);border-radius:var(--radius);">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudText><code>@external.Dbref</code></MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @Loc.Plural("PkgOccurrences", new Dictionary<string, object?> { ["count"] = external.Occurrences, ["location"] = external.ExampleAttribute })
-                            </MudText>
-                        </MudStack>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-1">
-                            <MudSelect T="string" Value="@c.Mode" ValueChanged="@(m => SetMode(external.Dbref, m))"
-                                       Label="@Loc["PkgResolutionLabel"]" Margin="Margin.Dense" Variant="Variant.Outlined"
-                                       Class="pkg-resolution-select">
-                                <MudSelectItem Value="@("wellknown")">@Loc["PkgModeWellKnown"]</MudSelectItem>
-                                <MudSelectItem Value="@("configure")">@Loc["PkgModeConfigure"]</MudSelectItem>
-                            </MudSelect>
-                            @if (c.Mode == "wellknown")
-                            {
-                                <MudSelect T="string" Value="@c.WellKnown" ValueChanged="@(v => SetWellKnown(external.Dbref, v))"
-                                           Label="@Loc["PkgWellKnownRefLabel"]" Margin="Margin.Dense" Variant="Variant.Outlined"
-                                           Class="pkg-wellknown-select">
-                                    @foreach (var name in WellKnownRefs.All.Order())
-                                    {
-                                        <MudSelectItem Value="@name">$@name</MudSelectItem>
-                                    }
+        <div class="pkg-step">
+            <SectionLabel>@Loc["WidFormStepOf", 3, 4]</SectionLabel>
+            <KitCard Title="@Loc["PkgStepClassifyExternal", _scan.ExternalDbrefs.Count]">
+                <div class="pkg-card-body">
+                    @foreach (var external in _scan.ExternalDbrefs)
+                    {
+                        var c = ClassificationFor(external.Dbref);
+                        <div class="pkg-external">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudText><code>@external.Dbref</code></MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @Loc.Plural("PkgOccurrences", new Dictionary<string, object?> { ["count"] = external.Occurrences, ["location"] = external.ExampleAttribute })
+                                </MudText>
+                            </MudStack>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-1">
+                                <MudSelect T="string" Value="@c.Mode" ValueChanged="@(m => SetMode(external.Dbref, m))"
+                                           Label="@Loc["PkgResolutionLabel"]" Margin="Margin.Dense" Variant="Variant.Outlined"
+                                           Class="pkg-resolution-select">
+                                    <MudSelectItem Value="@("wellknown")">@Loc["PkgModeWellKnown"]</MudSelectItem>
+                                    <MudSelectItem Value="@("configure")">@Loc["PkgModeConfigure"]</MudSelectItem>
                                 </MudSelect>
-                            }
-                            else
-                            {
-                                <MudTextField T="string" Value="@c.ConfigureKey" ValueChanged="@(v => SetConfigureKey(external.Dbref, v))"
-                                              Label="@Loc["PkgConfigureKeyLabel"]" Margin="Margin.Dense" Variant="Variant.Outlined"
-                                              Class="pkg-configure-key-field" />
-                                <MudTextField T="string" Value="@c.ConfigureLabel" ValueChanged="@(v => SetConfigureLabel(external.Dbref, v))"
-                                              Label="@Loc["PkgConfigurePromptLabel"]" Margin="Margin.Dense" Variant="Variant.Outlined" />
-                            }
-                        </MudStack>
-                    </MudPaper>
-                }
-            </div>
+                                @if (c.Mode == "wellknown")
+                                {
+                                    <MudSelect T="string" Value="@c.WellKnown" ValueChanged="@(v => SetWellKnown(external.Dbref, v))"
+                                               Label="@Loc["PkgWellKnownRefLabel"]" Margin="Margin.Dense" Variant="Variant.Outlined"
+                                               Class="pkg-wellknown-select">
+                                        @foreach (var name in WellKnownRefs.All.Order())
+                                        {
+                                            <MudSelectItem Value="@name">$@name</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                }
+                                else
+                                {
+                                    <MudTextField T="string" Value="@c.ConfigureKey" ValueChanged="@(v => SetConfigureKey(external.Dbref, v))"
+                                                  Label="@Loc["PkgConfigureKeyLabel"]" Margin="Margin.Dense" Variant="Variant.Outlined"
+                                                  Class="pkg-configure-key-field" />
+                                    <MudTextField T="string" Value="@c.ConfigureLabel" ValueChanged="@(v => SetConfigureLabel(external.Dbref, v))"
+                                                  Label="@Loc["PkgConfigurePromptLabel"]" Margin="Margin.Dense" Variant="Variant.Outlined" />
+                                }
+                            </MudStack>
+                        </div>
+                    }
+                </div>
+            </KitCard>
         </div>
     }
 
-    <div class="pkg-card mb-4">
-        <div class="pkg-card-head"><span class="pkg-step">4</span> @Loc["PkgStepMetadataExport"]</div>
-        <div class="pkg-card-body">
-            <MudGrid Spacing="2">
-                <MudItem xs="12" md="4">
-                    <MudTextField @bind-Value="_packageId" Label="@Loc["PkgPackageIdLabel"]"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="6" md="2">
-                    <MudTextField @bind-Value="_version" Label="@Loc["PkgVersionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="6" md="3">
-                    <MudTextField @bind-Value="_license" Label="@Loc["PkgLicenseLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="12" md="3">
-                    <MudTextField @bind-Value="_authors" Label="@Loc["PkgAuthorsLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField @bind-Value="_description" Label="@Loc["PkgDescriptionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-            </MudGrid>
-            <MudButton Class="mt-3 pkg-btn-primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@ExportAsync">
-                @Loc["PkgExportYaml"]
-            </MudButton>
-        </div>
+    <div class="pkg-step">
+        <SectionLabel>@Loc["WidFormStepOf", 4, 4]</SectionLabel>
+        <KitCard Title="@Loc["PkgStepMetadataExport"]">
+            <div class="pkg-card-body">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" md="4">
+                        <MudTextField @bind-Value="_packageId" Label="@Loc["PkgPackageIdLabel"]"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="6" md="2">
+                        <MudTextField @bind-Value="_version" Label="@Loc["PkgVersionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="6" md="3">
+                        <MudTextField @bind-Value="_license" Label="@Loc["PkgLicenseLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudTextField @bind-Value="_authors" Label="@Loc["PkgAuthorsLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="_description" Label="@Loc["PkgDescriptionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudItem>
+                </MudGrid>
+                <MudButton Class="mt-3 pkg-btn-primary" Variant="Variant.Filled" Disabled="@_busy" OnClick="@ExportAsync">
+                    @Loc["PkgExportYaml"]
+                </MudButton>
+            </div>
+        </KitCard>
     </div>
 }
 </div>
@@ -147,7 +149,7 @@
 <MudDialog @bind-Visible="_showExport" Options="@(new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true })">
     <TitleContent><MudText Typo="Typo.h6">package.yaml</MudText></TitleContent>
     <DialogContent>
-        <pre class="mush-pane" style="max-height: 480px">@_exportedYaml</pre>
+        <pre class="mush-pane pkg-export-yaml">@_exportedYaml</pre>
         <MudText Typo="Typo.caption" Color="Color.Secondary">
             @Loc["PkgExportHint"] <code>&lt;package&gt;/v&lt;version&gt;</code>.
         </MudText>
