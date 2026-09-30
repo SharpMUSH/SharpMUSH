@@ -58,6 +58,11 @@ builder.Services.AddSingleton<AdminAccountsService>();
 builder.Services.AddSingleton<AdminGuestsService>();
 // Registers the terminal facades — see AddTerminalServices for the rationale.
 builder.Services.AddTerminalServices();
+// Channels and pages for the Play sidebar, read off the play terminal's OOB store: the comm-feed
+// package pushes to every connection a player has, and only the play connection is the one to count.
+// The concrete type is registered too, for the view that sets OobCommFeed.Viewing.
+builder.Services.AddSingleton(sp => new OobCommFeed(sp.GetRequiredService<IPlayTerminalService>().OobChannels));
+builder.Services.AddSingleton<ICommFeed>(sp => sp.GetRequiredService<OobCommFeed>());
 builder.Services.AddSingleton<MushQueryService>();
 builder.Services.AddSingleton<ObjectApiService>();
 builder.Services.AddHttpClient("help", c =>
