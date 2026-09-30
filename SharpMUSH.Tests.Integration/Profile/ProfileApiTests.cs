@@ -364,6 +364,79 @@ public class ProfileApiTests(ServerWebAppFactory factory)
 		await Assert.That(fields.GetProperty("created").GetProperty("value").GetString()).IsNotNullOrEmpty();
 	}
 
+	/// <summary>
+	/// profile-handler 1.5 (spec 2026-09-29 §3): the profile carries the seeded image attributes and
+	/// the opt-in name colour, in the same {value, visible} shape as every other field, and every
+	/// directory row carries the portrait. banner falls back to IMAGE so a character with a portrait
+	/// and no wide art still gets a picture behind the name. All three are read with get(): a URL is
+	/// text the player typed, and evaluating it would run whatever they hid in it as the handler.
+	/// </summary>
+	[Test]
+	public async Task ProfileAndDirectory_CarryImageBannerAndColor_ReadNotEvaluated()
+	{
+		var mediator = factory.Services.GetRequiredService<IMediator>();
+		var connectionService = factory.Services.GetRequiredService<IConnectionService>();
+		var home = new DBRef(0, null);
+		var name = TestIsolationHelpers.GenerateUniqueName("ImgProfile");
+		await mediator.Send(new CreatePlayerCommand(name, "testpass", home, home, 1));
+		var player = await mediator.CreateStream(new GetPlayerQuery(name)).FirstAsync();
+		var objid = $"#{player.Object.Key}:{player.Object.CreationTime}";
+		var http = factory.CreateHttpClient();
+
+		async Task Cmd(string command) =>
+			await factory.CommandParser.CommandParse(1, connectionService, MarkupText.Plain(command));
+
+		async Task<JsonDocument> Profile() =>
+			JsonDocument.Parse(await (await http.GetAsync($"http/profile?objid={Uri.EscapeDataString(objid)}")).Content.ReadAsStringAsync());
+
+		// Nothing set: the keys are there, visible, and blank — the portal draws its fallbacks.
+		using (var blank = await Profile())
+		{
+			var fields = blank.RootElement.GetProperty("fields");
+			foreach (var key in new[] { "image", "banner", "color" })
+			{
+				await Assert.That(fields.GetProperty(key).GetProperty("visible").GetBoolean()).IsTrue();
+				await Assert.That(fields.GetProperty(key).GetProperty("value").GetString()).IsEqualTo(string.Empty);
+			}
+		}
+
+		// A portrait with softcode in it must come back verbatim: get(), never u(). The colour lands
+		// in a CSS custom property, so only #rrggbb is accepted: a hostile value reads as blank.
+		await Cmd($"&IMAGE #{player.Object.Key}=/assets/chars/[name(me)].jpg");
+		await Cmd($"&PROFILE`COLOR #{player.Object.Key}=#fff;background:url(x)");
+
+		using (var hostile = await Profile())
+		{
+			await Assert.That(hostile.RootElement.GetProperty("fields").GetProperty("color").GetProperty("value").GetString()).IsEqualTo(string.Empty);
+		}
+
+		await Cmd($"&PROFILE`COLOR #{player.Object.Key}=#ffb454");
+
+		using (var portrait = await Profile())
+		{
+			var fields = portrait.RootElement.GetProperty("fields");
+			await Assert.That(fields.GetProperty("image").GetProperty("value").GetString()).IsEqualTo("/assets/chars/[name(me)].jpg");
+			await Assert.That(fields.GetProperty("banner").GetProperty("value").GetString()).IsEqualTo("/assets/chars/[name(me)].jpg");
+			await Assert.That(fields.GetProperty("color").GetProperty("value").GetString()).IsEqualTo("#ffb454");
+		}
+
+		await Cmd($"&IMAGE`BANNER #{player.Object.Key}=/assets/chars/wide.jpg");
+
+		using (var banner = await Profile())
+		{
+			var fields = banner.RootElement.GetProperty("fields");
+			await Assert.That(fields.GetProperty("banner").GetProperty("value").GetString()).IsEqualTo("/assets/chars/wide.jpg");
+			await Assert.That(fields.GetProperty("image").GetProperty("value").GetString()).IsEqualTo("/assets/chars/[name(me)].jpg");
+		}
+
+		using var directory = JsonDocument.Parse(await (await http.GetAsync("http/characters")).Content.ReadAsStringAsync());
+		var rows = directory.RootElement.EnumerateArray()
+			.ToDictionary(row => row.GetProperty("name").GetString()!, row => row);
+		await Assert.That(rows[name].GetProperty("image").GetString()).IsEqualTo("/assets/chars/[name(me)].jpg");
+		// Every row carries the key, blank for a character that has set nothing.
+		await Assert.That(rows.Values.All(row => row.TryGetProperty("image", out var image) && image.ValueKind == JsonValueKind.String)).IsTrue();
+	}
+
 	[Test]
 	public async Task ProfileGet_UnknownObjid_Returns404()
 	{

@@ -73,4 +73,39 @@ public class PlaySidebarTests : BunitContext
 				throw new InvalidOperationException("contents not rendered yet");
 		}, TimeSpan.FromSeconds(5));
 	}
+
+	/// <summary>
+	/// A v2 push renders exactly as v1 did — the sidebar still shows names and runs each row's
+	/// <c>cmd</c> — and a <c>room.info</c> push, which it does not show yet, changes nothing.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Sidebar_RendersV2RowsAndRunsTheirCommand()
+	{
+		var store = new OobChannelStore();
+		var play = Substitute.For<IPlayTerminalService>();
+		play.OobChannels.Returns(store);
+		play.Lines.Returns(Array.Empty<SharpMUSH.Client.Models.TerminalLine>());
+		Services.AddSingleton<IPlayTerminalService>(play);
+
+		var cut = Render<MudHarness>(p => p.AddChildContent<Play>());
+
+		store.Set(OobEntryParser.RoomInfoPackage, """{"v":2,"dbref":"#35","name":"Lower Docks"}""");
+		store.Set(OobEntryParser.RoomContentsPackage,
+			"""{"v":2,"who":[{"dbref":"#312","objid":"#312:1","type":"player","name":"Tomas Reyes","cmd":"look #312","you":true}]}""");
+		store.Set(OobEntryParser.RoomExitsPackage,
+			"""{"v":2,"exits":[{"dbref":"#28","name":"Harbour Row","aliases":["n"],"cmd":"goto #28","state":"locked","hint":"Closed"},{"name":""}]}""");
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("Tomas Reyes") || !cut.Markup.Contains("Harbour Row"))
+				throw new InvalidOperationException("rows not rendered yet");
+		}, TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Markup).DoesNotContain("Lower Docks");
+		await Assert.That(cut.Markup).Contains("RolUntitled");
+
+		cut.FindAll(".play-entry.play-clickable").Single(e => e.TextContent.Contains("Harbour Row")).Click();
+
+		await play.Received(1).SendAsync("goto #28");
+	}
 }

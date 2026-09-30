@@ -136,8 +136,12 @@ public class SceneWebComposeIntegrationTests
 		// Windowed on the witness, because the witness is who the claim is about: the assertion below
 		// says nobody standing in the yard heard this, and the only way to say that is to read what the
 		// person standing in the yard was told.
-		var witnessRef = DBRef.Parse(Num(witness));
+		// The recorder keys on the full objid pmatch() answered; a bare #N reads as someone who was never
+		// told anything, and the negative assertion below would then pass whatever was emitted.
+		var witnessRef = DBRef.Parse(witness);
 		var witnessHeardBefore = Notifications.CountFor(witnessRef);
+		await Assert.That(witnessHeardBefore).IsGreaterThan(0)
+			.Because("the witness created the scene and was told so; hearing nothing means the window is on nobody");
 
 		await RunAs(remoteHandle, $"+scene/emit {sceneId}=A raven settles on the well.");
 
@@ -325,6 +329,11 @@ public class SceneWebComposeIntegrationTests
 		var sceneId = await Eval($"scenefocus({Num(_actors[handle].ToString())})");
 		await Assert.That(sceneId).DoesNotStartWith("#-1");
 
+		// Storage serialises plain text as well, so markup never equals content; the markup an uncoloured
+		// pose of the same words gets is the baseline the colour has to differ from.
+		await RunAs(handle, $"+scene/emit {sceneId}=A red ember.");
+		var plainMarkup = await LastPoseAsync(sceneId, "markup");
+
 		await RunAs(handle, $"+scene/emit {sceneId}=A [ansi(hr,red)] ember.");
 
 		var content = await LastPoseAsync(sceneId, "content");
@@ -332,7 +341,7 @@ public class SceneWebComposeIntegrationTests
 
 		await Assert.That(content).IsEqualTo("A red ember.")
 			.Because("the plain projection is the words without the colour");
-		await Assert.That(markup).IsNotEqualTo(content)
-			.Because("markup identical to the plain text means the colour never reached storage");
+		await Assert.That(markup).IsNotEqualTo(plainMarkup)
+			.Because("the markup of an uncoloured pose means the colour never reached storage");
 	}
 }

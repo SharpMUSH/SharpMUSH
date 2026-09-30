@@ -59,7 +59,8 @@ public static class SceneBroadcast
 			return;
 		}
 
-		var message = BuildMessage(sceneId, eventType, pose);
+		var message = BuildMessage(sceneId, eventType, pose,
+			await SceneLocate.ObjIdAsync(parser, pose?.AuthorDbref));
 		var subject = SubjectForScene(sceneId);
 
 		var nats = await GetConnectionAsync(options.Url);
@@ -73,7 +74,12 @@ public static class SceneBroadcast
 	/// Projects a <see cref="ScenePose"/> onto the realtime <see cref="SceneEventMessage"/>.
 	/// ActorName prefers <see cref="ScenePose.ShowAsName"/>, falling back to AuthorName.
 	/// </summary>
-	private static SceneEventMessage BuildMessage(string sceneId, string eventType, ScenePose? pose)
+	/// <param name="actorObjId">
+	/// The objid of <see cref="ScenePose.AuthorDbref"/>, resolved by the caller when the event is sent
+	/// (the pose stores only the dbref), or null when the author is gone. Ignored without a pose.
+	/// </param>
+	public static SceneEventMessage BuildMessage(string sceneId, string eventType, ScenePose? pose,
+		string? actorObjId)
 	{
 		if (pose is null)
 		{
@@ -87,7 +93,8 @@ public static class SceneBroadcast
 				Tags: [],
 				Source: string.Empty,
 				Location: string.Empty,
-				Timestamp: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+				Timestamp: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+				ActorObjId: null);
 		}
 
 		var actor = string.IsNullOrEmpty(pose.ShowAsName) ? pose.AuthorName : pose.ShowAsName;
@@ -102,7 +109,8 @@ public static class SceneBroadcast
 			Tags: pose.Tags,
 			Source: pose.Source,
 			Location: pose.OriginName,
-			Timestamp: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+			Timestamp: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+			ActorObjId: actorObjId);
 	}
 
 	private static async ValueTask<NatsConnection> GetConnectionAsync(string url)

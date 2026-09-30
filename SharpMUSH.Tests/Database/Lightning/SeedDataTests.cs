@@ -10,8 +10,26 @@ public class SeedDataTests
 		await Assert.That(FlagSeed.Flags.Length).IsEqualTo(64);
 		await Assert.That(AttributeFlagSeed.Flags.Length).IsEqualTo(26);
 		await Assert.That(PowerSeed.Powers.Length).IsEqualTo(37);
-		await Assert.That(AttributeEntrySeed.Entries.Length).IsEqualTo(216);
+		await Assert.That(AttributeEntrySeed.Entries.Length).IsEqualTo(220);
 		await Assert.That(InitialObjectSeed.Objects.Select(o => o.Dbref)).IsEquivalentTo(Enumerable.Range(0, 10).Select(i => (long)i));
+	}
+
+	/// <summary>
+	/// The four standard image attributes the portal reads (docs/superpowers/specs/
+	/// 2026-09-29-image-attributes-and-oob-v2-design.md §1). <c>visual</c> and <c>public</c> do not
+	/// propagate down an attribute tree, so every leaf needs them itself for <c>get(obj/IMAGE`ALT)</c>
+	/// to answer a stranger; <c>no_command</c> keeps a URL from ever matching as a $-command.
+	/// </summary>
+	[Test]
+	[Arguments("IMAGE")]
+	[Arguments("IMAGE`BANNER")]
+	[Arguments("IMAGE`ALT")]
+	[Arguments("IMAGE`FOCAL")]
+	public async Task ImageAttributesAreSeededVisualAndPublic(string name)
+	{
+		var entry = AttributeEntrySeed.Entries.Single(e => e.Name == name);
+
+		await Assert.That(entry.DefaultFlags).IsEquivalentTo(["no_command", "visual", "prefixmatch", "public"]);
 	}
 
 	[Test]

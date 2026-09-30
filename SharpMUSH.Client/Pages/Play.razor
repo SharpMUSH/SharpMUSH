@@ -108,7 +108,7 @@ else
                         @if (!string.IsNullOrWhiteSpace(e.Cmd))
                         {
                             <div class="play-entry play-clickable"
-                                 @onclick="@(() => RunEntry(e))">
+                                 @onclick="@(() => RunEntry(e.Cmd))">
                                 @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
                             </div>
                         }
@@ -135,7 +135,7 @@ else
                         @if (!string.IsNullOrWhiteSpace(e.Cmd))
                         {
                             <div class="play-entry play-clickable"
-                                 @onclick="@(() => RunEntry(e))">
+                                 @onclick="@(() => RunEntry(e.Cmd))">
                                 @(string.IsNullOrWhiteSpace(e.Name) ? Loc["RolUntitled"] : e.Name)
                             </div>
                         }
@@ -171,8 +171,8 @@ else
 }
 
 @code {
-    private IReadOnlyList<OobEntry> _here = [];
-    private IReadOnlyList<OobEntry> _exits = [];
+    private IReadOnlyList<RoomOccupant> _here = [];
+    private IReadOnlyList<RoomExit> _exits = [];
 
     private GlobalTerminal? _playTerm;
 
@@ -222,9 +222,8 @@ else
     protected override void OnInitialized()
     {
         PlayTerminal.ConnectionStateChanged += OnConnectionChanged;
-        PlayTerminal.OobChannels.ChannelUpdated += OnChannelUpdated;
-        RefreshFromStore("room.contents");
-        RefreshFromStore("room.exits");
+        PlayTerminal.OobChannels.RoomChanged += OnRoomChanged;
+        ReadRoom();
     }
 
     protected override Task OnInitializedAsync() => ResolveRosterAsync();
@@ -261,33 +260,30 @@ else
 
     private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
 
-    private void OnChannelUpdated(string package) => RefreshFromStore(package);
-
-    private void RefreshFromStore(string package)
+    private void OnRoomChanged()
     {
-        switch (package)
-        {
-            case "room.contents":
-                _here = OobEntryParser.Parse(PlayTerminal.OobChannels.Get(package), "who");
-                break;
-            case "room.exits":
-                _exits = OobEntryParser.Parse(PlayTerminal.OobChannels.Get(package), "exits");
-                break;
-            default:
-                return;
-        }
+        ReadRoom();
         InvokeAsync(StateHasChanged);
     }
 
-    private async Task RunEntry(OobEntry entry)
+    // The store keeps the room typed and replaces each list whole on every push, so this reads one
+    // snapshot rather than parsing the payloads again.
+    private void ReadRoom()
     {
-        if (!string.IsNullOrWhiteSpace(entry.Cmd))
-            await PlayTerminal.SendAsync(entry.Cmd);
+        var room = PlayTerminal.OobChannels.Room;
+        _here = room.Occupants;
+        _exits = room.Exits;
+    }
+
+    private async Task RunEntry(string? cmd)
+    {
+        if (!string.IsNullOrWhiteSpace(cmd))
+            await PlayTerminal.SendAsync(cmd);
     }
 
     public void Dispose()
     {
         PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
-        PlayTerminal.OobChannels.ChannelUpdated -= OnChannelUpdated;
+        PlayTerminal.OobChannels.RoomChanged -= OnRoomChanged;
     }
 }

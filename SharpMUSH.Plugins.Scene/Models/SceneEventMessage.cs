@@ -17,6 +17,12 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// <param name="Source">Opaque pose source label.</param>
 /// <param name="Location">Snapshot of the pose's origin room name.</param>
 /// <param name="Timestamp">UTC Unix-millis of the event.</param>
+/// <param name="ActorObjId">
+/// The objid (<c>#N:ctime-ms</c>) of the current holder of the pose author's dbref, resolved when the event
+/// is broadcast. Pose storage keeps only the dbref number, so after a recycle this names the new holder,
+/// not the original author. Null for an event with no pose, or when nothing holds that dbref. Appended
+/// last: the wire is positional in both copies of this record.
+/// </param>
 public record SceneEventMessage(
 	string SceneId,
 	string EventType,
@@ -27,4 +33,5 @@ public record SceneEventMessage(
 	IReadOnlyList<string> Tags,
 	string Source,
 	string Location,
-	long Timestamp);
+	long Timestamp,
+	string? ActorObjId);

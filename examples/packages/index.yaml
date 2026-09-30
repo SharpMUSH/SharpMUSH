@@ -25,12 +25,12 @@ packages:
     description: Inbound HTTP verb routers (attach mode)
   - path: profile-handler/
     package: profile-handler
-    version: 1.4.0
+    version: 1.5.0
     description: Read-only character directory, online list + profile API (requires http-handler)
   - path: room-contents/
     package: room-contents
-    version: 1.0.0
-    description: room.contents/room.exits OOB pushes for the portal Play sidebar (bundled default)
+    version: 2.0.0
+    description: room.info/room.contents/room.exits OOB v2 pushes, per viewer, for the portal Play page (bundled default)
   - path: chargen/
     package: chargen
     version: 1.0.0

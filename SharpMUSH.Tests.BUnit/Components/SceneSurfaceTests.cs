@@ -524,7 +524,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 			Tags: ["greeting"],
 			Source: "pose",
 			Location: "The Tavern",
-			Timestamp: 1700000600000)));
+			Timestamp: 1700000600000,
+			ActorObjId: "#12:1700000000000")));
 
 		cut.WaitForAssertion(() =>
 		{
@@ -753,7 +754,8 @@ public class SceneSurfaceTests : TrackingBunitContext
 			Tags: [],
 			Source: "pose",
 			Location: "The Tavern",
-			Timestamp: 1700000700000)));
+			Timestamp: 1700000700000,
+			ActorObjId: null)));
 
 		cut.WaitForAssertion(() => cut.Find(".scene-poses-error"), TimeSpan.FromSeconds(5));
 
