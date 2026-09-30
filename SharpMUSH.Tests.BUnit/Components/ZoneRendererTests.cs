@@ -17,7 +17,7 @@ namespace SharpMUSH.Tests.BUnit.Components;
 /// <summary>
 /// BUnit component tests for <see cref="ZoneRenderer"/>.
 /// </summary>
-public abstract class ZoneRendererTestBase : BunitContext
+public abstract class ZoneRendererTestBase : TrackingBunitContext
 {
 	protected ZoneRendererTestBase()
 	{

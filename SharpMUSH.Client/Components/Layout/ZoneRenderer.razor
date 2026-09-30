@@ -2,6 +2,8 @@
 @using SharpMUSH.Client.Components.Widgets
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Client.Widgets
+@using SharpMUSH.Library.Authorization
+@using Microsoft.Extensions.DependencyInjection
 
 @if (_placements.Count > 0)
 {
@@ -55,12 +57,18 @@
 
     [Inject] private IWidgetRegistry? Registry { get; set; }
 
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
     private IReadOnlyList<WidgetPlacement> _placements = [];
 
+    /// <summary>Bumped per parameter set, so a resolution that finishes after a newer one is dropped.</summary>
+    private int _generation;
+
     protected override async Task OnParametersSetAsync()
     {
+        var generation = ++_generation;
         if (Layout is null)
         {
             _placements = [];
@@ -70,13 +78,66 @@
         // A layout is one arrangement for everyone, so an application widget placed in it is gated here, where
         // it renders: below its minimum role it is left out (the server still gates its data routes).
         var role = AuthState is null
-            ? SharpMUSH.Library.Authorization.PortalRole.Guest
+            ? PortalRole.Guest
             : PortalRoleHelper.CurrentRole((await AuthState).User);
-        _placements = Layout.Zones.TryGetValue(Zone, out var list)
-            ? list.OrderBy(p => p.Order)
-                .Where(p => Registry?.GetWidget(p.WidgetName) is not ApplicationPortalWidget app || role >= app.MinimumRole)
-                .ToList().AsReadOnly()
-            : (IReadOnlyList<WidgetPlacement>)[];
+        var ordered = Layout.Zones.TryGetValue(Zone, out var list)
+            ? list.OrderBy(p => p.Order).ToList()
+            : [];
+
+        // An application the catalog has not delivered yet has no role to check. Everything else renders now;
+        // such a placement joins once its application is found and admits this viewer.
+        _placements = Visible(ordered, role, resolved: null);
+        var unresolved = ordered
+            .Where(p => Registry?.GetWidget(p.WidgetName) is UnresolvedApplicationWidget)
+            .Select(p => p.WidgetName)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (unresolved.Count == 0)
+        {
+            return;
+        }
+
+        var resolved = await MinimumRolesAsync(unresolved);
+        if (generation == _generation)
+        {
+            _placements = Visible(ordered, role, resolved);
+        }
+    }
+
+    private IReadOnlyList<WidgetPlacement> Visible(
+        List<WidgetPlacement> ordered, PortalRole role, IReadOnlyDictionary<string, PortalRole>? resolved) =>
+        ordered.Where(p => Registry?.GetWidget(p.WidgetName) switch
+        {
+            ApplicationPortalWidget app => role >= app.MinimumRole,
+            UnresolvedApplicationWidget => resolved is not null
+                && resolved.TryGetValue(p.WidgetName, out var minimum) && role >= minimum,
+            _ => true
+        }).ToList().AsReadOnly();
+
+    /// <summary>
+    /// Each slug's application minimum role, looked up the way <see cref="SchemaWidget"/> finds the application:
+    /// the catalog once it is in, else a fetch by slug. A slug with no application is absent from the result.
+    /// </summary>
+    /// <remarks>
+    /// The two services are asked for here rather than injected: only an unresolved placement reaches this, and
+    /// it renders <see cref="SchemaWidget"/>, which injects both, so any host that gets here registers them.
+    /// Injecting them would make every host of a zone register them whether or not it places an application.
+    /// </remarks>
+    private async Task<Dictionary<string, PortalRole>> MinimumRolesAsync(IReadOnlyList<string> slugs)
+    {
+        var catalog = Services.GetRequiredService<ApplicationCatalog>();
+        var registryClient = Services.GetRequiredService<ApplicationRegistryClient>();
+        await catalog.Loaded;
+        var roles = new Dictionary<string, PortalRole>(StringComparer.Ordinal);
+        foreach (var slug in slugs)
+        {
+            if ((catalog.Get(slug) ?? await registryClient.GetAsync(slug)) is { } app)
+            {
+                roles[slug] = app.MinimumRoleEnum;
+            }
+        }
+
+        return roles;
     }
 
     private static int ClampSpan(int span) => span is >= 1 and <= 12 ? span : 12;
