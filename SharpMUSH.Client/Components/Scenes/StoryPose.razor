@@ -101,7 +101,7 @@ else
     {
         @if (ImageUrlPolicy.IsRenderable(ImageUrl))
         {
-            <img class="story-portrait" src="@ImageUrl!.Trim()" alt="" />
+            <img class="story-portrait" src="@ApiUrl.Resolve(ImageUrl!)" alt="" />
         }
         else
         {

@@ -38,7 +38,7 @@ else
                             @onclick="() => OnCommand.InvokeAsync(o.Cmd!)">
                         @if (ImageUrlPolicy.IsRenderable(o.Image?.Url))
                         {
-                            <img class="here-thing-img" src="@o.Image!.Url.Trim()" alt="@(o.Image.Alt ?? string.Empty)" loading="lazy" />
+                            <img class="here-thing-img" src="@ApiUrl.Resolve(o.Image!.Url)" alt="@(o.Image.Alt ?? string.Empty)" loading="lazy" />
                         }
                         else
                         {

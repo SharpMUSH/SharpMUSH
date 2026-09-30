@@ -46,7 +46,7 @@
             {
                 <div class="assets-card" @key="asset.Id">
                     <div class="assets-thumb">
-                        <img src="@asset.Url" alt="@asset.FileName" />
+                        <img src="@ApiUrl.Resolve(asset.Url)" alt="@asset.FileName" />
                         <span class="assets-thumb-type">@ShortType(asset.ContentType)</span>
                     </div>
                     <div class="assets-card-body">

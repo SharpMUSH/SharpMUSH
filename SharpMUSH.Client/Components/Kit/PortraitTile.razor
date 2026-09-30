@@ -41,7 +41,7 @@ else
     {
         @if (ImageUrlPolicy.IsRenderable(ImageUrl))
         {
-            <img class="kit-portrait-img" src="@ImageUrl!.Trim()" alt="@(Alt ?? string.Empty)" style="@($"height:{Height}px;")" loading="lazy" />
+            <img class="kit-portrait-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="@(Alt ?? string.Empty)" style="@($"height:{Height}px;")" loading="lazy" />
         }
         else
         {

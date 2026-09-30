@@ -54,7 +54,7 @@ else
                         <span class="exit-media">
                             @if (ImageUrlPolicy.IsRenderable(e.Dest?.Image?.Url))
                             {
-                                <img class="exit-img" src="@e.Dest!.Image!.Url.Trim()" alt="" loading="lazy" />
+                                <img class="exit-img" src="@ApiUrl.Resolve(e.Dest!.Image!.Url)" alt="" loading="lazy" />
                             }
                             else
                             {
@@ -81,7 +81,7 @@ else
                         <div class="exit-preview" role="group" aria-label="@NameOf(e)">
                             @if (ImageUrlPolicy.IsRenderable(e.Dest?.Image?.Url))
                             {
-                                <img class="exit-preview-img" src="@e.Dest!.Image!.Url.Trim()" alt="" loading="lazy" />
+                                <img class="exit-preview-img" src="@ApiUrl.Resolve(e.Dest!.Image!.Url)" alt="" loading="lazy" />
                             }
                             <div class="exit-preview-body">
                                 <div class="exit-row">

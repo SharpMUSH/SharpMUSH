@@ -20,7 +20,7 @@
                 <div class="sheet-hero">
                     @if (ImageUrlPolicy.IsRenderable(Portrait))
                     {
-                        <img class="sheet-portrait" src="@Portrait!.Trim()" alt="@Name" />
+                        <img class="sheet-portrait" src="@ApiUrl.Resolve(Portrait!)" alt="@Name" />
                     }
                     else
                     {
@@ -84,7 +84,7 @@
                                         aria-label="@(entry.Caption ?? entry.FileName)" @onclick="() => OpenViewer(index + _portraitOffset)">
                                     @if (ImageUrlPolicy.IsRenderable(entry.Url))
                                     {
-                                        <img src="@entry.Url.Trim()" alt="" loading="lazy" />
+                                        <img src="@ApiUrl.Resolve(entry.Url)" alt="" loading="lazy" />
                                     }
                                 </button>
                             }
