@@ -13,6 +13,9 @@ public partial class Helpfiles(DirectoryInfo directory, ILogger<Helpfiles>? logg
 	private readonly Dictionary<string, HelpEntry> _entries = new(StringComparer.OrdinalIgnoreCase);
 	private readonly HashSet<string> _redirects = new(StringComparer.OrdinalIgnoreCase);
 
+	/// <summary>Retrieves canonical article and section identity for exporters.</summary>
+	public HelpEntry? FindHelpEntry(string topic) => _entries.GetValueOrDefault(topic);
+
 	/// <summary>
 	/// Finds a help entry by exact match or wildcard pattern
 	/// </summary>

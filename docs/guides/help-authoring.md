@@ -103,6 +103,11 @@ The PennMUSH parity harness also consumes the declared sections of compatibility
 articles when validating its known-differences allowlist. Keep those section
 headings synchronized with the allowlist's `profile` references.
 
+The softcode editor's generated help drawer also consumes complete articles from
+the shared model. Regenerate `SharpMUSH.Client/wwwroot/data/mush-*.json` with
+`SHARPMUSH_REGENERATE_CLIENT_DATA=1` when help changes. The `help-integrity` job
+uploads generated editor data and fails if the checked-in snapshots differ.
+
 ## Formatting
 
 - Use real section headings instead of bold paragraphs acting as headings.

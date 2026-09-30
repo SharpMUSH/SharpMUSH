@@ -54,7 +54,11 @@ public class HelpApiTests(ServerWebAppFactory factory)
 		string? Topic,
 		string? Markdown,
 		string? Html,
-		IReadOnlyList<string> Candidates);
+		IReadOnlyList<string> Candidates)
+	{
+		public string? ArticleId { get; init; }
+		public string? SectionId { get; init; }
+	}
 
 	private record AccountRegisterRequest(string Username, string? Email, string Password);
 
@@ -103,7 +107,7 @@ public class HelpApiTests(ServerWebAppFactory factory)
 		var index = await http.GetFromJsonAsync<HelpIndexDto>("api/help");
 
 		await Assert.That(index!.Html!).Contains("href=\"/help/newbie\"");
-		await Assert.That(index.Html!).Contains("href=\"/help/getting%20started\"");
+		await Assert.That(index.Html!).Contains("href=\"/help/Getting%20Started\"");
 	}
 
 	[Test]
@@ -147,15 +151,16 @@ public class HelpApiTests(ServerWebAppFactory factory)
 
 		var entry = await response.Content.ReadFromJsonAsync<HelpEntryDto>();
 		await Assert.That(entry!.Topic).IsNull();
-		await Assert.That(entry.Candidates).Contains("helpfile");
+		await Assert.That(entry.Candidates).Contains("help search");
+		await Assert.That(entry.Candidates).DoesNotContain("helpfile");
 		await Assert.That(entry.Candidates.Count).IsGreaterThan(1);
 	}
 
 	/// <summary>
 	/// The whole point of the change: <c>help @mail</c> at a telnet prompt and
 	/// <c>GET /api/help/entry?topic=@mail</c> must be the same entry, not two systems that happen to
-	/// look similar. Asserted by rendering the API's markdown through the game's own ASCII renderer
-	/// and comparing it to what the command actually notified.
+	/// look similar. They share canonical identity while the web composes the full article and the
+	/// terminal renders the focused lookup returned by the common resolver.
 	/// </summary>
 	[Test]
 	[Arguments("@mail")]
@@ -167,12 +172,17 @@ public class HelpApiTests(ServerWebAppFactory factory)
 		var entry = await http.GetFromJsonAsync<HelpEntryDto>(
 			$"api/help/entry?topic={Uri.EscapeDataString(topic)}");
 		await Assert.That(entry!.Markdown).IsNotNull();
+		var resolver = factory.Services.GetRequiredService<IHelpTopicResolver>();
+		var focused = (await resolver.ResolveAsync("help", topic)).Expect<HelpEntry>();
+		await Assert.That(entry.Topic).IsEqualTo(focused.Topic);
+		await Assert.That(entry.ArticleId).IsEqualTo(focused.Article?.Id);
+		await Assert.That(entry.SectionId).IsEqualTo(focused.SectionId);
 
 		var before = NotifyCount();
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"help {topic}"));
 		var notified = NotifiedSince(before);
 
-		var expected = RecursiveMarkdownHelper.RenderMarkdown(entry.Markdown!).ToString();
+		var expected = RecursiveMarkdownHelper.RenderMarkdown(focused.Markdown).ToString();
 
 		await Assert.That(notified).Contains(expected)
 			.Because($"'help {topic}' in game and /help/{topic} in the portal must reach the same entry");

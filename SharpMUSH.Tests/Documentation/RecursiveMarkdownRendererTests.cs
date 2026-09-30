@@ -473,7 +473,7 @@ public class RecursiveMarkdownRendererTests
 
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
 
-		await Assert.That(result.ToPlainText()).IsEqualTo("See newbie2 for more.");
+		await Assert.That(result.ToPlainText()).IsEqualTo("See help newbie2 for more.");
 
 		// It is a command link: HTML renders xch_cmd (not href), ANSI has no OSC 8 link.
 		await Assert.That(result.Render(MarkupFormat.Html)).Contains("xch_cmd=\"help newbie2\"");

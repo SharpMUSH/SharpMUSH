@@ -52,9 +52,9 @@ public static class ClientDataGenerator
 			.ToList();
 
 		var commands = RegistryInventory.Commands
-			.Select(c => (c.Name, Help: help.FindEntry(c.Name), Entry: CommandEntry(c.Attribute)))
+			.Select(c => (c.Name, Help: FullHelp(help, c.Name), Entry: CommandEntry(c.Attribute)))
 			.Concat(Aliases(AliasOptions.Default.CommandAliases, RegistryInventory.Commands.Select(c => c.Name))
-				.Select(alias => (Name: alias.Alias, Help: help.FindEntry(alias.Alias) ?? help.FindEntry(alias.Target),
+				.Select(alias => (Name: alias.Alias, Help: FullHelp(help, alias.Alias) ?? FullHelp(help, alias.Target),
 					Entry: CommandEntry(RegistryInventory.Commands.First(c => c.Name.Equals(alias.Target, StringComparison.OrdinalIgnoreCase)).Attribute))))
 			.ToList();
 
@@ -92,7 +92,13 @@ public static class ClientDataGenerator
 	};
 
 	private static string? FunctionHelp(Helpfiles help, string name)
-		=> help.FindEntry($"{name}()") ?? help.FindEntry(name);
+		=> FullHelp(help, $"{name}()") ?? FullHelp(help, name);
+
+	private static string? FullHelp(Helpfiles help, string topic)
+	{
+		var entry = help.FindHelpEntry(topic);
+		return entry?.Article?.Markdown ?? entry?.Markdown;
+	}
 
 	/// <summary>
 	/// A markdown entry comes back led by its topic's <c># HEADER</c>, run straight into the body. The
@@ -157,3 +163,4 @@ public static class ClientDataGenerator
 	private static string Serialize(JsonNode node)
 		=> node.ToJsonString(Output).Replace("\r\n", "\n") + "\n";
 }
+

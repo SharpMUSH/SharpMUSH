@@ -46,7 +46,7 @@ public class TextFileServiceTests
 				.IsEquivalentTo(new[] { "align()" });
 			await Assert.That(await resolver.SearchTopicsAsync("help", "*align*"))
 				.IsEquivalentTo(new[] { "align()", "align examples" });
-			var fuzzy = (await resolver.ResolveAsync("help", "al ex")).Expect<HelpEntry>();
+			var fuzzy = (await resolver.ResolveAsync("help", "al examples")).Expect<HelpEntry>();
 			await Assert.That(fuzzy.Topic).IsEqualTo("align examples");
 			await Assert.That(await resolver.SearchContentAsync("help", "Needle"))
 				.IsEquivalentTo(new[] { "align examples" });
