@@ -17,18 +17,25 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 
 	private readonly Dictionary<string, LayoutConfiguration> _cache = new(StringComparer.OrdinalIgnoreCase);
 
+	/// <summary>
+	/// Concurrent first reads of one scope share a request. Only a resolved layout is kept (in
+	/// <see cref="_cache"/>); a fetch that throws is not, so the next read tries again.
+	/// </summary>
+	private readonly SingleFlight<string, LayoutConfiguration> _loads = new(StringComparer.OrdinalIgnoreCase);
+
 	public event Action<string>? OnLayoutChanged;
 
-	public async Task<LayoutConfiguration> GetLayoutAsync(string scope)
-	{
-		if (_cache.TryGetValue(scope, out var cached))
-		{
-			return cached;
-		}
+	public Task<LayoutConfiguration> GetLayoutAsync(string scope) =>
+		_cache.TryGetValue(scope, out var cached)
+			? Task.FromResult(cached)
+			: _loads.RunAsync(scope, () => LoadAsync(scope));
 
+	private async Task<LayoutConfiguration> LoadAsync(string scope)
+	{
 		var resolved = await FetchAsync(scope) ?? GetDefaultLayout(scope);
-		_cache[scope] = resolved;
-		return resolved;
+
+		// A save or reset that landed while this read was in flight is newer than what it fetched.
+		return _cache.TryAdd(scope, resolved) ? resolved : _cache[scope];
 	}
 
 	public async Task<bool> SaveLayoutAsync(string scope, LayoutConfiguration layout)

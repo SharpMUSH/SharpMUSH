@@ -163,6 +163,9 @@ public class AccountAuthService(
 	private Task? _initTask;
 	private Task<DebugOttResponse?>? _debugOttTask;
 
+	/// <summary>Keyed by session token, so a sign-in mid-request never joins the previous session's roster read.</summary>
+	private readonly SingleFlight<string, ServerResult<IReadOnlyList<CharacterSummary>>> _charactersFlight = new(StringComparer.Ordinal);
+
 	/// <summary>
 	/// Single-flight, idempotent hydration: the first caller kicks off <see cref="InitCoreAsync"/>
 	/// and every caller (that one and any later one, concurrent or sequential) awaits the very
@@ -588,11 +591,21 @@ public class AccountAuthService(
 	/// had merely failed that it had no character, and offer to create one. The failure is in the
 	/// type so a consumer has to decide what to do with it.
 	/// </remarks>
+	/// <para>
+	/// MainLayout, the global terminal and the quickstart widget each ask on first render; their
+	/// "roster still empty" guards all pass before any answer lands, so concurrent calls on one
+	/// session share a request. A call after it finishes (after a mutation, say) asks again.
+	/// </para>
 	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> GetCharactersAsync()
 	{
 		await InitAsync();
-		if (AccountSessionToken is null) return new ServerResult<IReadOnlyList<CharacterSummary>>([]);
+		if (AccountSessionToken is not { } session) return new ServerResult<IReadOnlyList<CharacterSummary>>([]);
 
+		return await _charactersFlight.RunAsync(session, FetchCharactersAsync);
+	}
+
+	private async Task<ServerResult<IReadOnlyList<CharacterSummary>>> FetchCharactersAsync()
+	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
