@@ -1,0 +1,464 @@
+using System.Text.Json.Nodes;
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using NATS.Client.Core;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
+using SharpMUSH.Messaging.NATS;
+using SharpMUSH.Tests.Infrastructure;
+
+namespace SharpMUSH.Tests.Integration.Packages;
+
+/// <summary>
+/// The bundled <c>comm-feed</c> package turns the engine's <c>CHANNEL`MESSAGE</c>, <c>PAGE`MESSAGE</c>
+/// and <c>PLAYER`CHANNELS</c> events into the <c>comm.message</c> and <c>comm.channels</c> OOB pushes the
+/// portal's Play sidebar reads (docs/softcode/comm-feed-handler.md).
+///
+/// <para>Every test runs the real path: players on websocket connections, the command they would type,
+/// the event the engine raises, the package's attributes as installed at boot, and <c>oob()</c> publishing
+/// to NATS. What each connection was sent is read off the NATS subject the connection server consumes, up
+/// to a probe each watched player sends itself afterwards — so "received nothing" is an observation, not a
+/// timeout.</para>
+/// </summary>
+[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
+public class CommFeedPackageTests(ServerWebAppFactory factory)
+{
+	private IMediator Mediator => factory.Services.GetRequiredService<IMediator>();
+	private IConnectionService ConnectionService => factory.Services.GetRequiredService<IConnectionService>();
+
+	private IPackageRegistryService Registry =>
+		(IPackageRegistryService)factory.Services.GetRequiredService<ISharpDatabase>();
+
+	/// <summary>A player on a websocket connection: what the portal holds.</summary>
+	private sealed record Viewer(DBRef DbRef, long Handle, string Name)
+	{
+		public string Number => $"#{DbRef.Number}";
+	}
+
+	private async Task<Viewer> ViewerAsync(string prefix)
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName(prefix);
+		var options = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		var home = new DBRef((int)options.CurrentValue.Database.DefaultHome);
+		var player = await Mediator.Send(new SharpMUSH.Library.Commands.Database.CreatePlayerCommand(
+			name, "TestPassword123", home, home, (int)options.CurrentValue.Limit.StartingQuota));
+		var handle = await TestIsolationHelpers.ConnectTestHandleAsync(ConnectionService, player, "websocket");
+
+		// A room of its own, as the notification tests do: a connected player left in DefaultHome makes
+		// every later arrival there refresh one more viewer's room.contents, for the rest of the session.
+		var room = await factory.CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName($"{prefix}Room")}"));
+		await God($"@teleport/silent #{player.Number}={room.Message!.ToPlainText().Trim()}");
+
+		return new Viewer(player, handle, name);
+	}
+
+	private Task God(string command) =>
+		factory.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
+
+	private Task Run(Viewer who, string command) =>
+		factory.CommandParser.CommandParse(who.Handle, ConnectionService, MarkupText.Plain(command)).AsTask();
+
+	private async Task<string> Objid(Viewer who) =>
+		(await factory.FunctionParser.FunctionParse(MarkupText.Plain($"objid({who.Number})")))!.Message!.ToPlainText();
+
+	private static string UniqueChannel(string prefix) =>
+		TestIsolationHelpers.GenerateUniqueName(prefix).Replace("_", string.Empty);
+
+	/// <summary>A player-joinable channel with <paramref name="members"/> on it, made by God.</summary>
+	private async Task<string> ChannelAsync(string prefix, params Viewer[] members)
+	{
+		var name = UniqueChannel(prefix);
+		await God($"@channel/add {name}=player open hide_ok");
+		foreach (var member in members)
+		{
+			await God($"@channel/on {name}={member.Number}");
+		}
+
+		return name;
+	}
+
+	/// <summary>
+	/// Watches the NATS subject websocket output is published on. <see cref="SentWhile"/> runs an action
+	/// and then has every watched player <c>oob()</c> itself a probe; since one publisher's messages arrive
+	/// in order, a handle's probe arriving means everything published to it before the probe has too.
+	/// </summary>
+	private sealed class OobWatch : IAsyncDisposable
+	{
+		private readonly NatsConnection _nats;
+		private readonly INatsSub<WebSocketOutputMessage> _sub;
+
+		private OobWatch(NatsConnection nats, INatsSub<WebSocketOutputMessage> sub)
+		{
+			_nats = nats;
+			_sub = sub;
+		}
+
+		public static async Task<OobWatch> OpenAsync(ServerWebAppFactory factory)
+		{
+			var nats = new NatsConnection(new NatsOpts
+			{
+				Url = $"nats://localhost:{factory.NatsTestServer.Instance.GetMappedPublicPort(4222)}"
+			});
+			var subject = NatsSubjects.For(typeof(WebSocketOutputMessage),
+				factory.Services.GetRequiredService<NatsOptions>().SubjectPrefix);
+			var sub = await nats.SubscribeCoreAsync(subject,
+				serializer: CompressingNatsSerializer<WebSocketOutputMessage>.Default);
+			// The subscription is in place on the server before anything is published.
+			await nats.PingAsync();
+			return new OobWatch(nats, sub);
+		}
+
+		/// <summary>The OOB frames (package, data) each watched viewer's connection was sent while <paramref name="action"/> ran.</summary>
+		public async Task<Dictionary<long, List<(string Package, JsonNode? Data)>>> SentWhile(
+			Func<Task> action, Func<Viewer, string, Task> run, params Viewer[] watched)
+		{
+			await action();
+
+			var probe = $"probe.{Guid.NewGuid():N}";
+			foreach (var viewer in watched)
+			{
+				await run(viewer, $"think [null(oob(%#,{probe}))]");
+			}
+
+			var handles = watched.Select(v => v.Handle).ToHashSet();
+			var sent = watched.ToDictionary(v => v.Handle, _ => new List<(string, JsonNode?)>());
+			var probed = new HashSet<long>();
+			using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+			await foreach (var message in _sub.Msgs.ReadAllAsync(timeout.Token))
+			{
+				if (message.Data is not { } output || !handles.Contains(output.Handle)) continue;
+				if (JsonNode.Parse(output.Data) is not JsonObject envelope) continue;
+
+				var package = envelope["package"]?.GetValue<string>() ?? string.Empty;
+				if (package == probe)
+				{
+					probed.Add(output.Handle);
+					if (probed.Count == handles.Count) break;
+					continue;
+				}
+
+				sent[output.Handle].Add((package, envelope["data"]?.DeepClone()));
+			}
+
+			return sent;
+		}
+
+		public async ValueTask DisposeAsync()
+		{
+			await _sub.DisposeAsync();
+			await _nats.DisposeAsync();
+		}
+	}
+
+	private static List<JsonObject> Frames(List<(string Package, JsonNode? Data)> sent, string package) =>
+		sent.Where(f => f.Package == package).Select(f => f.Data).OfType<JsonObject>().ToList();
+
+	private static string[] Strings(JsonNode? array) =>
+		array is JsonArray items ? items.Select(i => i!.GetValue<string>()).ToArray() : [];
+
+	[Test]
+	public async Task IsInstalledAtBoot_OnTheConfiguredEventHandler()
+	{
+		if (await Registry.GetInstalledPackageAsync("comm-feed") is not InstalledPackageRecord)
+			throw new InvalidOperationException("comm-feed is not installed.");
+
+		var managed = await Registry.GetManagedAttributesAsync("comm-feed");
+		var names = managed.Select(m => m.Attribute).ToList();
+		await Assert.That(names).Contains("CHANNEL`MESSAGE");
+		await Assert.That(names).Contains("PAGE`MESSAGE");
+		await Assert.That(names).Contains("PLAYER`CHANNELS");
+		await Assert.That((await Registry.GetPackageObjectsAsync("comm-feed")).Count).IsEqualTo(0);
+
+		var configured = factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
+			.CurrentValue.Database.EventHandler;
+		await Assert.That(managed.Single(m => m.Attribute == "CHANNEL`MESSAGE").Objid).StartsWith($"#{configured}:");
+	}
+
+	[Test]
+	public async Task ChannelLine_ReachesItsMembers_AndNobodyElse()
+	{
+		var speaker = await ViewerAsync("CommSpeaker");
+		var member = await ViewerAsync("CommMember");
+		var outsider = await ViewerAsync("CommOutsider");
+		var channel = await ChannelAsync("CommLine", speaker, member);
+		var marker = TestIsolationHelpers.GenerateUniqueName("line");
+		var before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(speaker, $"@chat {channel}=hello, [add(1,2)] \\[add(1,2)\\] {marker}"), Run,
+			speaker, member, outsider);
+
+		await Assert.That(Frames(sent[outsider.Handle], "comm.message")).IsEmpty()
+			.Because("someone not on the channel did not see the line in their terminal");
+
+		var speakerObjid = await Objid(speaker);
+		foreach (var who in new[] { speaker, member })
+		{
+			var message = Frames(sent[who.Handle], "comm.message").Single();
+			await Assert.That(message["v"]!.GetValue<int>()).IsEqualTo(2);
+			await Assert.That(message["kind"]!.GetValue<string>()).IsEqualTo("channel");
+			await Assert.That(message["channel"]!.GetValue<string>()).IsEqualTo(channel);
+			await Assert.That(Strings(message["to"])).IsEmpty();
+			await Assert.That(message["from"]!.GetValue<string>()).IsEqualTo(speaker.Name);
+			await Assert.That(message["fromObjid"]!.GetValue<string>()).IsEqualTo(speakerObjid);
+			await Assert.That(message["style"]!.GetValue<string>()).IsEqualTo("say");
+			// @chat evaluated the message once, as the speaker typed it; the handler passes the result on
+			// without evaluating it again, so the escaped brackets arrive as text and the comma survives.
+			await Assert.That(message["text"]!.GetValue<string>()).IsEqualTo($"hello, 3 [add(1,2)] {marker}");
+			await Assert.That(message["ts"]!.GetValue<long>()).IsGreaterThanOrEqualTo(before);
+		}
+	}
+
+	[Test]
+	public async Task ChannelPose_TextIsThePoseAsTheTerminalReadsIt()
+	{
+		var speaker = await ViewerAsync("CommPoser");
+		var member = await ViewerAsync("CommPoseMember");
+		var channel = await ChannelAsync("CommPose", speaker, member);
+		var marker = TestIsolationHelpers.GenerateUniqueName("pose");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(speaker, $"@chat {channel}=:waves {marker}"), Run, member);
+
+		var message = Frames(sent[member.Handle], "comm.message").Single();
+		await Assert.That(message["style"]!.GetValue<string>()).IsEqualTo("pose");
+		await Assert.That(message["text"]!.GetValue<string>()).IsEqualTo($"{speaker.Name} waves {marker}");
+	}
+
+	[Test]
+	public async Task ChannelLine_IsNotSentToAGaggedMember()
+	{
+		var speaker = await ViewerAsync("CommGagSpeaker");
+		var gagged = await ViewerAsync("CommGagged");
+		var listener = await ViewerAsync("CommGagListener");
+		var channel = await ChannelAsync("CommGag", speaker, gagged, listener);
+		await Run(gagged, $"@channel/gag {channel}=yes");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(speaker, $"@chat {channel}=anyone there"), Run,
+			gagged, listener);
+
+		await Assert.That(Frames(sent[gagged.Handle], "comm.message")).IsEmpty()
+			.Because("a gagged member hears nothing on the channel");
+		await Assert.That(Frames(sent[listener.Handle], "comm.message")).Count().IsEqualTo(1)
+			.Because("the control: an ungagged member is sent the line");
+	}
+
+	[Test]
+	public async Task ChannelLine_FromAHiddenSpeaker_ReachesMembersNamingTheSpeaker()
+	{
+		var hider = await ViewerAsync("CommHider");
+		var member = await ViewerAsync("CommHiderMember");
+		var channel = await ChannelAsync("CommHide", hider, member);
+		await Run(hider, $"@channel/hide {channel}=yes");
+		var marker = TestIsolationHelpers.GenerateUniqueName("hidden");
+
+		var window = factory.Notifications.CountFor(member.DbRef);
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(hider, $"@chat {channel}={marker}"), Run, member);
+
+		// Hiding keeps a member off the channel's who list; it does not anonymise what they say, and the
+		// member's terminal names them. The payload says what the terminal says.
+		await Assert.That(factory.Notifications.For(member.DbRef).Skip(window)
+			.Any(line => line.Contains(marker) && line.Contains(hider.Name))).IsTrue();
+		var message = Frames(sent[member.Handle], "comm.message").Single();
+		await Assert.That(message["from"]!.GetValue<string>()).IsEqualTo(hider.Name);
+		await Assert.That(message["text"]!.GetValue<string>()).IsEqualTo(marker);
+	}
+
+	[Test]
+	public async Task PageToOne_ReachesThePagerAndTheRecipientOnly()
+	{
+		var pager = await ViewerAsync("CommPager");
+		var recipient = await ViewerAsync("CommPaged");
+		var bystander = await ViewerAsync("CommPageBystander");
+		var marker = TestIsolationHelpers.GenerateUniqueName("page");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(pager, $"page {recipient.Name}=psst, {marker}"), Run,
+			pager, recipient, bystander);
+
+		await Assert.That(Frames(sent[bystander.Handle], "comm.message")).IsEmpty();
+
+		var pagerObjid = await Objid(pager);
+		var recipientObjid = await Objid(recipient);
+		foreach (var who in new[] { pager, recipient })
+		{
+			var message = Frames(sent[who.Handle], "comm.message").Single();
+			await Assert.That(message["v"]!.GetValue<int>()).IsEqualTo(2);
+			await Assert.That(message["kind"]!.GetValue<string>()).IsEqualTo("page");
+			await Assert.That(message.ContainsKey("channel")).IsFalse();
+			await Assert.That(Strings(message["to"])).IsEquivalentTo(new[] { recipient.Name });
+			await Assert.That(Strings(message["toObjids"])).IsEquivalentTo(new[] { recipientObjid });
+			await Assert.That(message["from"]!.GetValue<string>()).IsEqualTo(pager.Name);
+			await Assert.That(message["fromObjid"]!.GetValue<string>()).IsEqualTo(pagerObjid);
+			await Assert.That(message["style"]!.GetValue<string>()).IsEqualTo("say");
+			await Assert.That(message["text"]!.GetValue<string>()).IsEqualTo($"psst, {marker}");
+		}
+	}
+
+	[Test]
+	public async Task PageToSeveral_ReachesEveryRecipientAndNamesThemAll()
+	{
+		var pager = await ViewerAsync("CommGroupPager");
+		var first = await ViewerAsync("CommGroupFirst");
+		var second = await ViewerAsync("CommGroupSecond");
+		var marker = TestIsolationHelpers.GenerateUniqueName("group");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(pager, $"page {first.Name} {second.Name}=:nods {marker}"), Run,
+			pager, first, second);
+
+		foreach (var who in new[] { pager, first, second })
+		{
+			var message = Frames(sent[who.Handle], "comm.message").Single();
+			await Assert.That(Strings(message["to"])).IsEquivalentTo(new[] { first.Name, second.Name });
+			await Assert.That(message["style"]!.GetValue<string>()).IsEqualTo("pose");
+			await Assert.That(message["text"]!.GetValue<string>()).IsEqualTo($"{pager.Name} nods {marker}");
+		}
+	}
+
+	[Test]
+	public async Task PageRefusedByAPageLock_SendsNothing()
+	{
+		var pager = await ViewerAsync("CommLockedPager");
+		var locked = await ViewerAsync("CommPageLocked");
+		await God($"@lock/page {locked.Number}=#FALSE");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(pager, $"page {locked.Name}=let me in"), Run, pager, locked);
+
+		await Assert.That(Frames(sent[pager.Handle], "comm.message")).IsEmpty();
+		await Assert.That(Frames(sent[locked.Handle], "comm.message")).IsEmpty();
+	}
+
+	[Test]
+	public async Task PageToAHavenPlayer_SendsNothing()
+	{
+		var pager = await ViewerAsync("CommHavenPager");
+		var haven = await ViewerAsync("CommHaven");
+		await God($"@set {haven.Number}=HAVEN");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(pager, $"page {haven.Name}=hello?"), Run, pager, haven);
+
+		await Assert.That(Frames(sent[pager.Handle], "comm.message")).IsEmpty();
+		await Assert.That(Frames(sent[haven.Handle], "comm.message")).IsEmpty();
+	}
+
+	/// <summary>
+	/// A group page that some recipients refuse still reaches the others, and neither names nor reaches
+	/// the ones who refused: <c>to</c> is who the page reached, as the terminal's "(to ...)" is. This is
+	/// also the control for the two tests above, which pass trivially if nothing is ever sent.
+	/// </summary>
+	[Test]
+	public async Task GroupPage_LeavesOutTheRecipientsWhoRefusedIt()
+	{
+		var pager = await ViewerAsync("CommMixedPager");
+		var locked = await ViewerAsync("CommMixedLocked");
+		var haven = await ViewerAsync("CommMixedHaven");
+		var willing = await ViewerAsync("CommMixedWilling");
+		await God($"@lock/page {locked.Number}=#FALSE");
+		await God($"@set {haven.Number}=HAVEN");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(
+			() => Run(pager, $"page {locked.Name} {haven.Name} {willing.Name}=all of you"),
+			Run, pager, locked, haven, willing);
+
+		await Assert.That(Frames(sent[locked.Handle], "comm.message")).IsEmpty();
+		await Assert.That(Frames(sent[haven.Handle], "comm.message")).IsEmpty();
+		foreach (var who in new[] { pager, willing })
+		{
+			var message = Frames(sent[who.Handle], "comm.message").Single();
+			await Assert.That(Strings(message["to"])).IsEquivalentTo(new[] { willing.Name });
+		}
+	}
+
+	[Test]
+	public async Task JoiningAndLeaving_PushTheJoinersChannelList()
+	{
+		var joiner = await ViewerAsync("CommJoiner");
+		var other = await ViewerAsync("CommJoinOther");
+		var channel = await ChannelAsync("CommJoin");
+		var joinerObjid = await Objid(joiner);
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var joined = await watch.SentWhile(() => Run(joiner, $"@channel/on {channel}"), Run, joiner, other);
+
+		await Assert.That(Frames(joined[other.Handle], "comm.channels")).IsEmpty()
+			.Because("only the player whose list changed is sent one");
+		var list = Frames(joined[joiner.Handle], "comm.channels").Single();
+		await Assert.That(list["v"]!.GetValue<int>()).IsEqualTo(2);
+		await Assert.That(list["viewer"]!["objid"]!.GetValue<string>()).IsEqualTo(joinerObjid);
+		await Assert.That(list["viewer"]!["name"]!.GetValue<string>()).IsEqualTo(joiner.Name);
+		var row = list["channels"]!.AsArray().OfType<JsonObject>().Single(c => c["name"]!.GetValue<string>() == channel);
+		await Assert.That(row["joined"]!.GetValue<bool>()).IsTrue();
+		await Assert.That(row.ContainsKey("gagged")).IsFalse();
+
+		var gagged = await watch.SentWhile(() => Run(joiner, $"@channel/gag {channel}=yes"), Run, joiner);
+		var gagRow = Frames(gagged[joiner.Handle], "comm.channels").Single()["channels"]!.AsArray()
+			.OfType<JsonObject>().Single(c => c["name"]!.GetValue<string>() == channel);
+		await Assert.That(gagRow["gagged"]!.GetValue<bool>()).IsTrue();
+
+		var left = await watch.SentWhile(() => Run(joiner, $"@channel/off {channel}"), Run, joiner);
+		var after = Frames(left[joiner.Handle], "comm.channels").Single();
+		await Assert.That(after["channels"]!.AsArray().OfType<JsonObject>()
+			.Any(c => c["name"]!.GetValue<string>() == channel)).IsFalse();
+	}
+
+	/// <summary>
+	/// Renaming or deleting a channel changes every member's list, not the admin's who did it, so each
+	/// member is sent theirs. Deletion reads the members before the channel is gone.
+	/// </summary>
+	[Test]
+	public async Task RenamingAndDeleting_PushEveryMembersChannelList()
+	{
+		var first = await ViewerAsync("CommRenameFirst");
+		var second = await ViewerAsync("CommRenameSecond");
+		var channel = await ChannelAsync("CommRename", first, second);
+		var renamed = UniqueChannel("CommRenamed");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var afterRename = await watch.SentWhile(() => God($"@channel/rename {channel}={renamed}"), Run, first, second);
+		foreach (var who in new[] { first, second })
+		{
+			var names = Frames(afterRename[who.Handle], "comm.channels").Single()["channels"]!.AsArray()
+				.OfType<JsonObject>().Select(c => c["name"]!.GetValue<string>()).ToList();
+			await Assert.That(names).Contains(renamed);
+			await Assert.That(names).DoesNotContain(channel);
+		}
+
+		var afterDelete = await watch.SentWhile(() => God($"@channel/delete {renamed}"), Run, first, second);
+		foreach (var who in new[] { first, second })
+		{
+			var names = Frames(afterDelete[who.Handle], "comm.channels").Single()["channels"]!.AsArray()
+				.OfType<JsonObject>().Select(c => c["name"]!.GetValue<string>()).ToList();
+			await Assert.That(names).DoesNotContain(renamed);
+		}
+	}
+
+	[Test]
+	public async Task Connecting_PushesTheChannelList()
+	{
+		var player = await ViewerAsync("CommConnecter");
+		var channel = await ChannelAsync("CommConnect", player);
+		var socket = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService, "websocket");
+		var connecting = player with { Handle = socket };
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(
+			() => factory.CommandParser.CommandParse(socket, ConnectionService,
+				MarkupText.Plain($"connect {player.Name} TestPassword123")).AsTask(),
+			Run, connecting);
+
+		var list = Frames(sent[socket], "comm.channels").Single();
+		await Assert.That(list["channels"]!.AsArray().OfType<JsonObject>()
+			.Any(c => c["name"]!.GetValue<string>() == channel)).IsTrue();
+	}
+}
