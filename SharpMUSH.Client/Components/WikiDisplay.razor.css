@@ -99,7 +99,6 @@
 	outline: none;
 }
 
-.wiki-toc a:target,
 .wiki-toc a[aria-current] {
 	color: var(--accent);
 	border-left-color: var(--accent);

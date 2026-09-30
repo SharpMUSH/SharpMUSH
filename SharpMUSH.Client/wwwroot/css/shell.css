@@ -842,21 +842,25 @@
 
 /* D1 §4.8: a character link reads as a mention — body colour, a thin underline in the faint colour */
 .WikiContent .mud-card-content a.mention {
-	color: inherit;
-	border-bottom: 0;
-	text-decoration: underline 1px color-mix(in srgb, var(--name, var(--text-faint)) var(--mention-alpha), transparent);
-	text-underline-offset: var(--mention-offset);
+    color: inherit;
+    border-bottom: 0;
+    text-decoration: underline 1px color-mix(in srgb, var(--name, var(--text-faint)) var(--mention-alpha), transparent);
+    text-underline-offset: var(--mention-offset);
 }
 
 .WikiContent .mud-card-content a.mention:hover,
 .WikiContent .mud-card-content a.mention:focus-visible {
-	color: inherit;
-	text-decoration-color: var(--name, var(--text-faint));
+    color: inherit;
+    text-decoration-color: var(--name, var(--text-faint));
 }
 
 /* Redlinks — wiki links to pages that don't exist yet */
 .WikiContent .mud-card-content a.wiki-redlink {
     color: var(--link-missing);
+}
+
+/* the dashed border is the redlink's underline; a mention already has one */
+.WikiContent .mud-card-content a.wiki-redlink:not(.mention) {
     border-bottom: 1px dashed currentColor;
 }
 

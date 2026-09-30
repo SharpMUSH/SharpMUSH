@@ -5,6 +5,11 @@
 	align-items: start;
 }
 
+/* a layout saved before the right zone existed renders it empty: give the column back */
+.wiki-index-page:has(.wiki-index-aside:empty) {
+	grid-template-columns: minmax(0, 1fr);
+}
+
 .wiki-index-main {
 	min-width: 0;
 }

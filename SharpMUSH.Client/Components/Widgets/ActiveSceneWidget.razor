@@ -19,7 +19,7 @@
                 @foreach (var scene in _activeScenes.Take(3))
                 {
                     var s = scene;
-                    <ImageTile Label="@SceneTitle(s)" Sub="@s.RoomName" Icon="@Icons.Material.Outlined.Theaters" Href="@($"/scenes/{s.Id}/live")" />
+                    <ImageTile Label="@SceneTitle(s)" Sub="@s.RoomName" Count="@s.PoseCount" Icon="@Icons.Material.Outlined.Theaters" Href="@($"/scenes/{s.Id}/live")" />
                 }
             </div>
         }

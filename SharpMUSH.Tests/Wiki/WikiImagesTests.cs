@@ -5,27 +5,39 @@ namespace SharpMUSH.Tests.Wiki;
 /// <summary>
 /// The first image of a wiki page is its banner (D1 README §6.2): the server reports it on the
 /// DTO, and the client removes that one copy from the rendered body so it does not show twice.
+/// Both read the rendered HTML, which is what the store keeps and what the body shows, so the
+/// image found and the image removed are the same element however its URL was escaped.
 /// </summary>
 public class WikiImagesTests
 {
 	[Test]
-	public async Task FirstImageUrl_FindsAPlainImage()
-		=> await Assert.That(WikiImages.FirstImageUrl("Intro\n\n![The quay](/api/wiki-assets/abc/quay.jpg)\n\nMore"))
+	public async Task FirstImageUrl_FindsThePlainImage()
+		=> await Assert.That(WikiImages.FirstImageUrl("<p>Intro</p><p><img class=\"wiki-img\" src=\"/api/wiki-assets/abc/quay.jpg\" alt=\"The quay\" loading=\"lazy\" /></p><p>More</p>"))
 			.IsEqualTo("/api/wiki-assets/abc/quay.jpg");
 
 	[Test]
-	public async Task FirstImageUrl_HandlesATitle_AndTakesOnlyTheFirst()
-		=> await Assert.That(WikiImages.FirstImageUrl("![a](/one.jpg \"Title\") then ![b](/two.jpg)"))
+	public async Task FirstImageUrl_DecodesEntities_AndKeepsPercentEncoding()
+	{
+		// Markdig writes src through WriteEscapeUrl: & becomes &amp;, non-ASCII and spaces are percent-encoded.
+		await Assert.That(WikiImages.FirstImageUrl("<p><img src=\"/img/x.jpg?w=800&amp;h=400\" alt=\"\"></p>"))
+			.IsEqualTo("/img/x.jpg?w=800&h=400");
+		await Assert.That(WikiImages.FirstImageUrl("<p><img src=\"/api/wiki-assets/1/caf%C3%A9%20quay.png\" alt=\"\"></p>"))
+			.IsEqualTo("/api/wiki-assets/1/caf%C3%A9%20quay.png");
+	}
+
+	[Test]
+	public async Task FirstImageUrl_TakesOnlyTheFirst()
+		=> await Assert.That(WikiImages.FirstImageUrl("<p><img src=\"/one.jpg\" alt=\"a\" title=\"Title\"> then <img src=\"/two.jpg\" alt=\"b\"></p>"))
 			.IsEqualTo("/one.jpg");
 
 	[Test]
-	public async Task FirstImageUrl_IgnoresImagesInsideCode()
-		=> await Assert.That(WikiImages.FirstImageUrl("```\n![x](/in-code.jpg)\n```\n\nText `![y](/inline.jpg)` end"))
+	public async Task FirstImageUrl_IgnoresAnImageShownAsCode()
+		=> await Assert.That(WikiImages.FirstImageUrl("<pre><code>&lt;img src=\"/in-code.jpg\"&gt;</code></pre><p>Text <code>&lt;img src=\"/inline.jpg\"&gt;</code> end</p>"))
 			.IsNull();
 
 	[Test]
 	public async Task FirstImageUrl_NoImage_IsNull()
-		=> await Assert.That(WikiImages.FirstImageUrl("# Title\n\nJust [a link](/wiki/main/general/x).")).IsNull();
+		=> await Assert.That(WikiImages.FirstImageUrl("<h1>Title</h1><p>Just <a href=\"/wiki/main/general/x\">a link</a>.</p>")).IsNull();
 
 	[Test]
 	public async Task FirstImageUrl_EmptyOrNull_IsNull()
@@ -35,12 +47,27 @@ public class WikiImagesTests
 	}
 
 	[Test]
-	public async Task StripFirstImage_RemovesOnlyTheImgWithThatSrc_Once()
+	public async Task StripFirstImage_RemovesTheImgAndItsEmptyParagraph_Once()
 	{
 		const string html = "<p><img class=\"wiki-img\" src=\"/one.jpg\" alt=\"a\" loading=\"lazy\" /></p><p>text</p><p><img src=\"/one.jpg\" alt=\"again\"></p>";
 		var stripped = WikiImages.StripFirstImage(html, "/one.jpg");
-		await Assert.That(stripped).IsEqualTo("<p></p><p>text</p><p><img src=\"/one.jpg\" alt=\"again\"></p>");
+		await Assert.That(stripped).IsEqualTo("<p>text</p><p><img src=\"/one.jpg\" alt=\"again\"></p>")
+			.Because("the paragraph the image sat in alone would otherwise open the body with a blank line");
 	}
+
+	[Test]
+	public async Task StripFirstImage_MatchesTheEscapedSrc()
+	{
+		await Assert.That(WikiImages.StripFirstImage("<p><img src=\"/img/x.jpg?w=800&amp;h=400\" alt=\"\"></p><p>t</p>", "/img/x.jpg?w=800&h=400"))
+			.IsEqualTo("<p>t</p>");
+		await Assert.That(WikiImages.StripFirstImage("<p><img src=\"/a/caf%C3%A9%20quay.png\" alt=\"\"></p><p>t</p>", "/a/caf%C3%A9%20quay.png"))
+			.IsEqualTo("<p>t</p>");
+	}
+
+	[Test]
+	public async Task StripFirstImage_KeepsAParagraphThatHasOtherContent()
+		=> await Assert.That(WikiImages.StripFirstImage("<p>Look: <img src=\"/one.jpg\" alt=\"\"> here</p>", "/one.jpg"))
+			.IsEqualTo("<p>Look:  here</p>");
 
 	[Test]
 	public async Task StripFirstImage_LeavesOtherImagesAlone()

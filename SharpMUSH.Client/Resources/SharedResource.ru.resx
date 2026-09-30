@@ -4671,4 +4671,7 @@
   <data name="NavWikiOverview" xml:space="preserve">
     <value>Обзор</value>
   </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Основное пространство имён</value>
+  </data>
 </root>

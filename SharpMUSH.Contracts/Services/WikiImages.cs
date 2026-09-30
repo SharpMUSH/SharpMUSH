@@ -1,48 +1,62 @@
+using System.Net;
 using System.Text.RegularExpressions;
-using Markdig;
-using Markdig.Syntax;
-using Markdig.Syntax.Inlines;
 
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// A wiki page's image is the first image in its Markdown (D1 README §6.2). The server reports it
-/// on the page DTO so a banner can show it, and the client removes that one copy from the rendered
-/// body so it does not appear twice.
+/// A wiki page's image is the first image in its body (D1 README §6.2). The server reports it on
+/// the page DTO so a banner can show it, and the client removes that one copy from the rendered
+/// body so it does not appear twice. Both read the rendered HTML the store already keeps: no
+/// second Markdown parse per listing, and the image found is the element the client removes
+/// however Markdig escaped its URL (<c>&amp;amp;</c>, percent-encoding). An image quoted in a code
+/// block is text (<c>&amp;lt;img</c>) and never matches.
 /// </summary>
 public static partial class WikiImages
 {
-	private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder().Build();
+	[GeneratedRegex(@"<img\b[^>]*\bsrc\s*=\s*""([^""]*)""[^>]*>", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+	private static partial Regex ImgTag();
 
-	/// <summary>
-	/// The URL of the first Markdown image (<c>![alt](url)</c>, with or without a title), or null.
-	/// Images inside fenced or inline code are not images and are skipped, which parsing (rather
-	/// than a regex over the source) gets right for free.
-	/// </summary>
-	public static string? FirstImageUrl(string? markdown)
+	[GeneratedRegex(@"<p>\s*$", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+	private static partial Regex OpeningParagraphBefore();
+
+	[GeneratedRegex(@"^\s*</p>", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+	private static partial Regex ClosingParagraphAfter();
+
+	/// <summary>The URL of the first <c>&lt;img&gt;</c> in rendered HTML, entity-decoded, or null.</summary>
+	public static string? FirstImageUrl(string? html)
 	{
-		if (string.IsNullOrWhiteSpace(markdown)) return null;
-		var document = Markdown.Parse(markdown, Pipeline);
-		var image = document.Descendants<LinkInline>().FirstOrDefault(link => link.IsImage);
-		return string.IsNullOrWhiteSpace(image?.Url) ? null : image.Url;
+		if (string.IsNullOrWhiteSpace(html)) return null;
+		var match = ImgTag().Match(html);
+		if (!match.Success) return null;
+		var url = WebUtility.HtmlDecode(match.Groups[1].Value);
+		return string.IsNullOrWhiteSpace(url) ? null : url;
 	}
 
 	/// <summary>
-	/// Removes the first <c>&lt;img&gt;</c> whose <c>src</c> is <paramref name="url"/> from rendered
-	/// HTML. Later images, including a repeat of the same one, stay.
+	/// Removes the first <c>&lt;img&gt;</c> whose decoded <c>src</c> is <paramref name="url"/> from
+	/// rendered HTML, together with the <c>&lt;p&gt;</c> it sat in alone. Later images, including a
+	/// repeat of the same one, stay.
 	/// </summary>
 	public static string StripFirstImage(string html, string url)
 	{
 		if (string.IsNullOrEmpty(html) || string.IsNullOrEmpty(url)) return html;
-		var pattern = @"<img\b[^>]*\bsrc\s*=\s*""" + Regex.Escape(url) + @"""[^>]*>";
-		return Regex.Replace(html, pattern, string.Empty, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1)) is var stripped && stripped.Length != html.Length
-			? RemoveOnlyFirst(html, pattern)
-			: html;
-	}
+		foreach (Match match in ImgTag().Matches(html))
+		{
+			if (WebUtility.HtmlDecode(match.Groups[1].Value) != url) continue;
 
-	private static string RemoveOnlyFirst(string html, string pattern)
-	{
-		var match = Regex.Match(html, pattern, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
-		return match.Success ? html.Remove(match.Index, match.Length) : html;
+			var start = match.Index;
+			var end = match.Index + match.Length;
+			var open = OpeningParagraphBefore().Match(html[..start]);
+			var close = ClosingParagraphAfter().Match(html[end..]);
+			if (open.Success && close.Success)
+			{
+				start -= open.Length;
+				end += close.Length;
+			}
+
+			return html.Remove(start, end - start);
+		}
+
+		return html;
 	}
 }

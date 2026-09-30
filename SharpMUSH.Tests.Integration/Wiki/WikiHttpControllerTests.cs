@@ -179,6 +179,20 @@ public class WikiHttpControllerTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
+	public async Task GetPage_TheFirstImage_MayBeReferenceStyle_AndCarriesItsQueryUnescaped()
+	{
+		// The image is found in the rendered HTML, so a reference-style image counts like any other,
+		// and an & in the URL comes back as written (not as &amp;) so the client can match the <img>.
+		var http = factory.CreateHttpClient();
+		var create = await http.PostAsJsonAsync("api/wiki",
+			new CreatePageRequest($"Ref Image {Guid.NewGuid():N}", "![The quay][q]\n\nBody.\n\n[q]: /api/wiki-assets/abc/quay.jpg?w=800&h=400", null));
+		await Assert.That(create.StatusCode).IsEqualTo(HttpStatusCode.Created);
+		var dto = await create.Content.ReadFromJsonAsync<WikiPageDto>();
+
+		await Assert.That(dto!.Image).IsEqualTo("/api/wiki-assets/abc/quay.jpg?w=800&h=400");
+	}
+
+	[Test]
 	public async Task GetRevisions_AfterEdit_ReturnsHistoryNewestFirst()
 	{
 		var http = factory.CreateHttpClient();

@@ -16,7 +16,7 @@
     {
         <div class="wiki-side-head">
             <div class="wiki-side-title">@Loc["Wiki"]</div>
-            <div class="wiki-side-sub">@Loc["WikiNamespace"] · @Loc.Plural("NavWikiPagesCount", "count", _pages.Count)</div>
+            <div class="wiki-side-sub">@Loc["NavWikiMainNamespace"] · @Loc.Plural("NavWikiPagesCount", "count", _pages.Count)</div>
         </div>
         <form class="wiki-side-search" role="search" @onsubmit="Search" @onsubmit:preventDefault>
             <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" />
@@ -110,7 +110,7 @@
         if (title.Length == 0) return;
         _newOpen = false;
         _newTitle = string.Empty;
-        Nav.NavigateTo($"/wiki/main/{WikiHelpers.DefaultCategory}/{WikiHelpers.Slugify(title)}/edit");
+        Nav.NavigateTo($"/wiki/main/{WikiHelpers.DefaultCategory}/{Uri.EscapeDataString(WikiHelpers.Slugify(title))}/edit");
     }
 
     public void Dispose() => Nav.LocationChanged -= OnLocationChanged;

@@ -4016,4 +4016,7 @@
   <data name="NavWikiOverview" xml:space="preserve">
     <value>Overview</value>
   </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Main namespace</value>
+  </data>
 </root>

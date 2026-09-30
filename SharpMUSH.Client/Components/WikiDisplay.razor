@@ -11,6 +11,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
 @inject ILogger<WikiDisplay> Logger
+@inject NavigationManager Nav
 
 @if (Article is null && IsCharacterBiography)
 {
@@ -56,10 +57,6 @@ else if (DisplayAsHero)
     <div class="WikiContent WikiContent--hero" style="text-align:center;">
         @LocaleBanner
         <div class="mud-card-content">
-            @if (Article.Image is not null)
-            {
-                <img class="wiki-img" src="@Article.Image" alt="@Article.Title" />
-            }
             @RenderSegments
         </div>
     </div>
@@ -97,13 +94,16 @@ else
                     </PlainPageHeader>
                 }
                 @FallbackNotice
-                <KitCard Class="wiki-article-card">
-                    <div class="WikiContent wiki-article-body" id="overview">
-                        <div class="mud-card-content">
-                            @RenderSegments
+                @if (_hasBody)
+                {
+                    <KitCard Class="wiki-article-card">
+                        <div class="WikiContent wiki-article-body" id="wiki-top">
+                            <div class="mud-card-content">
+                                @RenderSegments
+                            </div>
                         </div>
-                    </div>
-                </KitCard>
+                    </KitCard>
+                }
             }
             else
             {
@@ -132,7 +132,7 @@ else
                                 @foreach (var entry in _toc)
                                 {
                                     var anchor = entry.Anchor;
-                                    <a href="@($"{PagePath}#{anchor}")" aria-current="@(anchor == _tocCurrent ? "location" : null)"
+                                    <a href="@TocHref(anchor)" aria-current="@(anchor == _tocCurrent ? "location" : null)"
                                        @onclick="@(() => _tocCurrent = anchor)">@entry.Text</a>
                                 }
                             </nav>
@@ -245,7 +245,9 @@ else
 
     private List<BodySegment> _segments = [];
     private List<TocEntry> _toc = [];
-    private string _tocCurrent = "overview";
+    private string _tocCurrent = TopAnchor;
+    private bool _hasBody = true;
+    private const string TopAnchor = "wiki-top";
 
     /// <summary>A character the body links to: the link text and its /character/ href.</summary>
     private sealed record Mentioned(string Name, string Href);
@@ -409,7 +411,8 @@ else
         }
 
         _segments = SplitOnDirectives(html);
-        _toc = BuildToc(Article?.Content);
+        _hasBody = HasVisibleContent(html);
+        _toc = BuildToc(html);
         _mentioned = Embedded ? [] : FindMentioned(html);
 
         var marked = MarkMentions(await MarkRedlinksAsync(html));
@@ -436,7 +439,8 @@ else
         }
 
         _moreLoadedFor = key;
-        var siblings = (await Wiki.GetByCategoryAsync(key, 0, 50))
+        var siblings = (await Wiki.GetByCategoryAsync(key, 0, 500))
+            .Where(p => p.Namespace.Equals(Namespace, StringComparison.OrdinalIgnoreCase))
             .Where(p => !p.Slug.Equals(Slug, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(p => p.UpdatedAt)
             .ToList();
@@ -485,35 +489,32 @@ else
         }
     };
 
-    /// <summary>Parses level-2 (##) markdown headings into a table of contents.
-    /// Anchors match Markdig's auto-identifier (GitHub-style) so #links resolve.</summary>
-    /// <summary>The h2 headings, led by an "Overview" entry for the intro (board 23). Empty when the
-    /// page has no headings: a one-section page needs no table of contents.</summary>
-    private List<TocEntry> BuildToc(string? markdown)
+    /// <summary>The h2 headings as Markdig rendered them (their ids are the anchors the body
+    /// carries), led by an "Overview" entry for the intro (board 23). Empty when the page has no
+    /// headings: a one-section page needs no table of contents.</summary>
+    private List<TocEntry> BuildToc(string html)
     {
-        if (string.IsNullOrEmpty(markdown)) return [];
-        var headings = markdown.Split('\n')
-            .Select(l => l.TrimEnd())
-            .Where(l => l.StartsWith("## ", StringComparison.Ordinal))
-            .Select(l => l[3..].Trim())
-            .Where(t => t.Length > 0)
-            .Select(t => new TocEntry(t, Slugify(t)))
+        if (string.IsNullOrEmpty(html)) return [];
+        var headings = RenderedH2.Matches(html)
+            .Select(m => new TocEntry(WebUtility.HtmlDecode(AnyTag.Replace(m.Groups[2].Value, string.Empty)).Trim(), m.Groups[1].Value))
+            .Where(e => e.Text.Length > 0 && e.Anchor.Length > 0)
             .ToList();
-        return headings.Count == 0 ? [] : [new TocEntry(Loc["NavWikiOverview"], "overview"), .. headings];
+        return headings.Count == 0 ? [] : [new TocEntry(Loc["NavWikiOverview"], TopAnchor), .. headings];
     }
 
-    private static string Slugify(string text)
-    {
-        var sb = new StringBuilder();
-        foreach (var ch in text.ToLowerInvariant())
-        {
-            if (char.IsLetterOrDigit(ch)) sb.Append(ch);
-            else if (ch is ' ' or '-' or '_') sb.Append('-');
-        }
-        var s = sb.ToString();
-        while (s.Contains("--", StringComparison.Ordinal)) s = s.Replace("--", "-");
-        return s.Trim('-');
-    }
+    /// <summary>The link for a TOC entry: the page path with the query as addressed now (so a
+    /// translated page keeps its <c>?lang=</c>) plus the anchor. A bare <c>#anchor</c> would resolve
+    /// against <c>&lt;base href="/"&gt;</c> and leave the page.</summary>
+    private string TocHref(string anchor) => $"{PagePath}{new Uri(Nav.Uri).Query}#{anchor}";
+
+    /// <summary>Whether anything remains to show once the banner has taken the first image.</summary>
+    private static bool HasVisibleContent(string html) =>
+        !string.IsNullOrWhiteSpace(WebUtility.HtmlDecode(AnyTag.Replace(html, string.Empty)))
+        || EmbeddedMedia.IsMatch(html);
+
+    private static readonly Regex RenderedH2 = new(@"<h2\b[^>]*\bid\s*=\s*""([^""]*)""[^>]*>(.*?)</h2>", RegexOptions.IgnoreCase | RegexOptions.Singleline, TimeSpan.FromSeconds(1));
+    private static readonly Regex AnyTag = new(@"<[^>]+>", RegexOptions.Singleline, TimeSpan.FromSeconds(1));
+    private static readonly Regex EmbeddedMedia = new(@"<(img|video|audio|iframe|svg|table)\b", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
 
     /// <summary>An anchor found in rendered HTML: the href as written, and the wiki page
     /// reference ("ns/category/slug") whose existence decides whether it is a redlink.</summary>

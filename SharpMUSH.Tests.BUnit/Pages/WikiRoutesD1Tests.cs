@@ -68,6 +68,8 @@ public class WikiRoutesD1Tests : TrackingBunitContext
 		// newest first: the draft "Combat Basics" (updated 01-02) leads "Getting Started" (01-01)
 		await Assert.That(tiles[0].GetAttribute("href")).IsEqualTo("/wiki/main/guides/combat");
 		await Assert.That(tiles[0].QuerySelector(".wiki-cat-tag--draft")).IsNotNull();
+		await Assert.That(tiles[0].QuerySelector(".wiki-cat-tag--draft")!.ClassList).Contains("kit-pill--warn")
+			.Because("the tag styles come from the kit pill; the widget's scoped .wiki-cat-tag rules do not reach this page");
 		await Assert.That(tiles[1].GetAttribute("href")).IsEqualTo("/wiki/main/guides/intro");
 		await Assert.That(tiles[1].QuerySelector("img.kit-tile-img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/a/intro.jpg");
 		await Assert.That(cut.Find(".kit-page-desc").TextContent).Contains("2");

@@ -84,6 +84,8 @@ public class DesignTokensTests
 		var red = shell[shell.IndexOf(".WikiContent .mud-card-content a.wiki-redlink {", StringComparison.Ordinal)..];
 		await Assert.That(red[..red.IndexOf('}')]).Contains("var(--link-missing)");
 		await Assert.That(shell).Contains(".WikiContent .mud-card-content a.mention {");
+		await Assert.That(shell).Contains(".WikiContent .mud-card-content a.wiki-redlink:not(.mention) {")
+			.Because("a redlinked mention keeps the mention underline; the dashed border would be a second one");
 	}
 
 	[Test]

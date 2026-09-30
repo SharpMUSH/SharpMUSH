@@ -137,6 +137,7 @@
     private void ReadQuery()
     {
         // ?q=… from the shell search or the sidebar; the client has no query-string helper library.
+        _search = string.Empty;
         var query = new Uri(Nav.Uri).Query.TrimStart('?');
         foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {

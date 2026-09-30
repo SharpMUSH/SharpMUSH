@@ -4671,4 +4671,7 @@
   <data name="NavWikiOverview" xml:space="preserve">
     <value>Resumen</value>
   </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Espacio de nombres principal</value>
+  </data>
 </root>

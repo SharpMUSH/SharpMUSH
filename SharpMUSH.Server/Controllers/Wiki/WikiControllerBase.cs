@@ -122,13 +122,13 @@ public abstract class WikiControllerBase(
 	protected async Task<WikiPageDto> ToDtoAsync(WikiPage p) => ToDto(p) with
 	{
 		LastEditedBy = await Names.NameOfAsync(p.LastEditorDbref, HttpContext.RequestAborted),
-		Image = WikiImages.FirstImageUrl(p.MarkdownSource),
+		Image = WikiImages.FirstImageUrl(p.RenderedHtml),
 	};
 
 	protected async Task<WikiPageDto> ToDtoAsync(LocalizedWikiPage p, IReadOnlyList<string> availableLocales) => ToDto(p, availableLocales) with
 	{
 		LastEditedBy = await Names.NameOfAsync(p.Page.LastEditorDbref, HttpContext.RequestAborted),
-		Image = WikiImages.FirstImageUrl(p.MarkdownSource),
+		Image = WikiImages.FirstImageUrl(p.RenderedHtml),
 	};
 
 	protected async Task<WikiRevisionDto> ToDtoAsync(WikiRevision r) => ToDto(r) with

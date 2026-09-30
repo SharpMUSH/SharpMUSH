@@ -4671,4 +4671,7 @@
   <data name="NavWikiOverview" xml:space="preserve">
     <value>Oversigt</value>
   </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Hovednavnerum</value>
+  </data>
 </root>

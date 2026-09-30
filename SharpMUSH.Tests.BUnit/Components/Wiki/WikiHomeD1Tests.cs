@@ -91,6 +91,19 @@ public class WikiHomeD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task SearchFromTheAddress_ClearsWhenTheQueryGoes()
+	{
+		var cut = RenderHome("/wiki?q=harbour");
+		await Assert.That(cut.FindAll(".wiki-cat-card").Count).IsEqualTo(1);
+		_nav.NavigateTo("/wiki");
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".wiki-cat-card").Count < 2) throw new InvalidOperationException("still filtered");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".wiki-hero-search input").GetAttribute("value")).IsEqualTo("");
+	}
+
+	[Test]
 	public async Task Typing_FiltersTheCards_AndNoMatchSaysSo()
 	{
 		var cut = RenderHome();

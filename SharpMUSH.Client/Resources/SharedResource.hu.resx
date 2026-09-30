@@ -4671,4 +4671,7 @@
   <data name="NavWikiOverview" xml:space="preserve">
     <value>Áttekintés</value>
   </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Fő névtér</value>
+  </data>
 </root>

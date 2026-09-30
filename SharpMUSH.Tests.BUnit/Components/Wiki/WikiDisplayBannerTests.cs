@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using Bunit;
 using Bunit.TestDoubles;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
@@ -29,7 +30,8 @@ file sealed class PageAsideHandler : HttpMessageHandler
 				WikiApiFake.Page("1", "harbour_ward", "Harbour Ward", "theme", "/api/wiki-assets/h/ward.jpg", "Ilsa Varn"),
 				WikiApiFake.Page("2", "setting_overview", "Setting Overview", "theme", "/api/wiki-assets/h/overview.jpg", "Wren"),
 				WikiApiFake.Page("3", "tone_and_content", "Tone and Content", "theme", null, "Wren"),
-				WikiApiFake.Page("4", "the_tides", "The Tides", "theme", "/api/wiki-assets/h/tides.jpg", "Dace")) + "]",
+				WikiApiFake.Page("4", "the_tides", "The Tides", "theme", "/api/wiki-assets/h/tides.jpg", "Dace"),
+				WikiApiFake.Page("5", "harbour_ward", "Harbour Ward (help)", "theme", null, "Dace", ns: "help")) + "]",
 			_ => null,
 		};
 		return Task.FromResult(body is null
@@ -69,6 +71,7 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 		"<p>Harbour Ward runs along the waterfront.</p>" +
 		"<h2 id=\"geography\">Geography</h2><p>Reclaimed land.</p>" +
 		"<h2 id=\"notable-residents\">Notable residents</h2>" +
+		"<h2 id=\"numbered\">1. <em>Numbered</em></h2><p>n</p>" +
 		"<p><a href=\"/character/tomas_reyes\">Tomas Reyes</a> and <a href=\"/character/magister_oake\">Magister Oake</a> keep a pew at the " +
 		"<a href=\"/wiki/main/theme/tidewater_chapel\">Tidewater Chapel</a>.</p>";
 
@@ -151,12 +154,15 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".wiki-page-aside .wiki-more a.kit-row"), TimeSpan.FromSeconds(5));
 		var aside = cut.Find(".wiki-page-aside");
 		var toc = aside.QuerySelectorAll(".wiki-toc a");
-		await Assert.That(toc.Length).IsEqualTo(3).Because("board 23: an Overview entry for the intro leads the headings");
-		await Assert.That(toc[0].GetAttribute("href")).IsEqualTo("/wiki/main/theme/harbour_ward#overview");
+		await Assert.That(toc.Length).IsEqualTo(4).Because("board 23: an Overview entry for the intro leads the headings");
+		await Assert.That(toc[0].GetAttribute("href")).IsEqualTo("/wiki/main/theme/harbour_ward#wiki-top");
 		await Assert.That(toc[0].GetAttribute("aria-current")).IsEqualTo("location");
-		await Assert.That(cut.Find(".wiki-article-body").GetAttribute("id")).IsEqualTo("overview");
+		await Assert.That(cut.Find(".wiki-article-body").GetAttribute("id")).IsEqualTo("wiki-top");
 		await Assert.That(toc[1].GetAttribute("href")).IsEqualTo("/wiki/main/theme/harbour_ward#geography");
 		await Assert.That(toc[1].GetAttribute("aria-current")).IsNull();
+		await Assert.That(toc[3].GetAttribute("href")).IsEqualTo("/wiki/main/theme/harbour_ward#numbered")
+			.Because("anchors come from the rendered <h2 id>, not a second slugify of the Markdown");
+		await Assert.That(toc[3].TextContent).IsEqualTo("1. Numbered");
 		await Assert.That(aside.QuerySelector(".wiki-locales a[lang='de']")).IsNotNull();
 
 		var mentioned = aside.QuerySelectorAll(".wiki-mentioned .kit-portrait");
@@ -168,10 +174,46 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 		var more = aside.QuerySelectorAll(".wiki-more a.kit-row");
 		await Assert.That(more.Length).IsEqualTo(3).Because("three siblings, never this page itself");
 		await Assert.That(more.Select(a => a.GetAttribute("href")).ToList()).DoesNotContain("/wiki/main/theme/harbour_ward");
+		await Assert.That(more.Select(a => a.GetAttribute("href")!).Any(h => h.StartsWith("/wiki/help/"))).IsFalse()
+			.Because("a same-named page in another namespace is not a sibling");
+		await Assert.That(aside.QuerySelector(".wiki-more a.wiki-more-all")!.TextContent).Contains("4");
 		await Assert.That(aside.QuerySelector(".wiki-more .kit-card-head a.wiki-more-all")!.GetAttribute("href")).IsEqualTo("/wiki/category/theme")
 			.Because("board 23 puts 'All N' in the card header, beside the title");
 		await Assert.That(more.Select(a => a.QuerySelector(".kit-row-fallback svg")).Count(x => x is not null)).IsEqualTo(1)
 			.Because("Tone and Content has no image, so its row leads with the document icon");
+	}
+
+	[Test]
+	public async Task TocLinks_KeepTheQueryString()
+	{
+		// A translated page is /path?lang=de; a TOC link that drops the query re-keys WikiView and
+		// reloads the source locale.
+		Services.GetRequiredService<NavigationManager>().NavigateTo("/wiki/main/theme/harbour_ward?lang=de");
+		var cut = RenderWard();
+		await Assert.That(cut.FindAll(".wiki-toc a")[1].GetAttribute("href")).IsEqualTo("/wiki/main/theme/harbour_ward?lang=de#geography");
+	}
+
+	[Test]
+	public async Task TheBodyCard_DoesNotOpenWithTheParagraphTheBannerEmptied()
+	{
+		var cut = RenderWard();
+		var first = cut.Find(".wiki-article-body .mud-card-content").FirstElementChild!;
+		await Assert.That(first.TextContent).Contains("Harbour Ward runs along the waterfront.");
+	}
+
+	[Test]
+	public async Task AnImageOnlyPage_HasABannerAndNoBodyCard()
+	{
+		var article = new WikiArticle("Just a picture", "![x](/api/wiki-assets/h/only.jpg)", "/api/wiki-assets/h/only.jpg",
+			"<p><img class=\"wiki-img\" src=\"/api/wiki-assets/h/only.jpg\" alt=\"x\" /></p>")
+		{
+			Id = "9", Slug = "just_a_picture", Category = "theme", Locale = "en", RequestedLocale = "en", AvailableLocales = ["en"],
+		};
+		var cut = Render<WikiDisplay>(p => p
+			.Add(c => c.Slug, "just_a_picture").Add(c => c.Namespace, "main").Add(c => c.Category, "theme")
+			.Add(c => c.Article, article).Add(c => c.ActivateEditMode, () => Task.CompletedTask));
+		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".wiki-article-card").Count).IsEqualTo(0).Because("nothing is left to show under the banner");
 	}
 
 	[Test]

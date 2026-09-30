@@ -32,11 +32,11 @@
                     <Overlay>
                         @if (!p.Published)
                         {
-                            <Pill Class="wiki-cat-tag wiki-cat-tag--draft">@Loc["NavWikiDraft"]</Pill>
+                            <Pill Tag="true" Warn="true" Class="wiki-cat-tag wiki-cat-tag--draft">@Loc["NavWikiDraft"]</Pill>
                         }
                         @if (p.IsProtected)
                         {
-                            <Pill Class="wiki-cat-tag wiki-cat-tag--locked">@Loc["NavWikiLocked"]</Pill>
+                            <Pill Tag="true" Class="wiki-cat-tag wiki-cat-tag--locked">@Loc["NavWikiLocked"]</Pill>
                         }
                     </Overlay>
                 </ImageTile>

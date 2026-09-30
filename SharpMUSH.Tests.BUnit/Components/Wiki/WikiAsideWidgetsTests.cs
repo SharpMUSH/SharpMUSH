@@ -63,6 +63,7 @@ public class WikiAsideWidgetsTests : TrackingBunitContext
 		await Assert.That(tiles.Count).IsEqualTo(2);
 		await Assert.That(tiles[0].QuerySelector(".kit-tile-label")!.TextContent).IsEqualTo("Salt Market at Dusk");
 		await Assert.That(tiles[0].GetAttribute("href")).IsEqualTo("/scenes/42/live");
+		await Assert.That(tiles[0].QuerySelector(".kit-tile-count")!.TextContent).IsEqualTo("12").Because("board 21 shows the pose count at the tile's edge");
 		await Assert.That(tiles[1].QuerySelector(".kit-tile-label")!.TextContent).Contains("Harbour Row");
 	}
 

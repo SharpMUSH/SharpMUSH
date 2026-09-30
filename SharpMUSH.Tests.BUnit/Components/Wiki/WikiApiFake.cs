@@ -17,9 +17,9 @@ namespace SharpMUSH.Tests.BUnit.Components.Wiki;
 /// </summary>
 internal sealed class WikiApiFake : HttpMessageHandler
 {
-	public static string Page(string id, string slug, string title, string? category, string? image = null, string? editor = null, bool published = true, bool isProtected = false) =>
+	public static string Page(string id, string slug, string title, string? category, string? image = null, string? editor = null, bool published = true, bool isProtected = false, string ns = "main") =>
 		$$"""
-		{"id":"{{id}}","slug":"{{slug}}","title":"{{title}}","namespace":"main","markdownSource":"","renderedHtml":"","plainText":"",
+		{"id":"{{id}}","slug":"{{slug}}","title":"{{title}}","namespace":"{{ns}}","markdownSource":"","renderedHtml":"","plainText":"",
 		 "createdAt":"2026-01-01T00:00:00+00:00","updatedAt":"2026-01-0{{id}}T00:00:00+00:00","isProtected":{{(isProtected ? "true" : "false")}},"revisionNumber":1,
 		 "category":{{(category is null ? "null" : $"\"{category}\"")}},"tags":[],"published":{{(published ? "true" : "false")}},
 		 "image":{{(image is null ? "null" : $"\"{image}\"")}},"lastEditedBy":{{(editor is null ? "null" : $"\"{editor}\"")}}}

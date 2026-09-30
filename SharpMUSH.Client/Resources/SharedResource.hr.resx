@@ -4671,4 +4671,7 @@
   <data name="NavWikiOverview" xml:space="preserve">
     <value>Pregled</value>
   </data>
+  <data name="NavWikiMainNamespace" xml:space="preserve">
+    <value>Glavni imenski prostor</value>
+  </data>
 </root>

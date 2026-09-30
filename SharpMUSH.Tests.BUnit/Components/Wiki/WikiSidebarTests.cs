@@ -46,6 +46,7 @@ public class WikiSidebarTests : TrackingBunitContext
 	public async Task HeaderCountsThePages_AndBrowseLinksHomeAndRecent()
 	{
 		var cut = RenderAt("/wiki");
+		await Assert.That(cut.Find(".wiki-side-sub").TextContent).StartsWith("Main namespace").Because("board 21: \"Main namespace · N pages\"");
 		await Assert.That(cut.Find(".wiki-side-sub").TextContent).Contains("4");
 		await Assert.That(cut.Find(".wiki-side-browse a[href='/wiki']").GetAttribute("aria-current")).IsEqualTo("page");
 		await Assert.That(cut.Find(".wiki-side-browse a[href='/wiki/recent']")).IsNotNull();
@@ -80,6 +81,12 @@ public class WikiSidebarTests : TrackingBunitContext
 		creator.Find(".wiki-side-new-form input").Input("Salt Market");
 		creator.Find(".wiki-side-new-form").Submit();
 		await Assert.That(_nav.Uri).EndsWith("/wiki/main/general/salt_market/edit");
+
+		creator.Find("button.wiki-side-new").Click();
+		creator.Find(".wiki-side-new-form input").Input("What? / Why#");
+		creator.Find(".wiki-side-new-form").Submit();
+		await Assert.That(_nav.Uri).EndsWith("/wiki/main/general/what%3F_%2F_why%23/edit")
+			.Because("a title with ?, / or # must not break the route");
 	}
 
 	[Test]
