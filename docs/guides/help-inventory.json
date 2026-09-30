@@ -13,9 +13,9 @@
       "file": "accent-function.md",
       "corpus": "help",
       "names": [
-        "accent accent examples"
+        "accent examples"
       ],
-      "canonical": "accent accent examples",
+      "canonical": "accent examples",
       "section": true
     },
     {
@@ -24,7 +24,7 @@
       "names": [
         "ACCENT2"
       ],
-      "canonical": "accent accent examples",
+      "canonical": "accent examples",
       "redirect": true
     },
     {
@@ -33,7 +33,7 @@
       "names": [
         "ACCENTS3"
       ],
-      "canonical": "accent accent examples",
+      "canonical": "accent examples",
       "redirect": true
     },
     {
@@ -613,9 +613,9 @@
       "file": "attribute-command.md",
       "corpus": "help",
       "names": [
-        "@attribute attribute registry management"
+        "@attribute registry management"
       ],
-      "canonical": "@attribute attribute registry management",
+      "canonical": "@attribute registry management",
       "section": true
     },
     {
@@ -633,7 +633,7 @@
       "names": [
         "@attribute2"
       ],
-      "canonical": "@attribute attribute registry management",
+      "canonical": "@attribute registry management",
       "redirect": true
     },
     {
@@ -2485,9 +2485,9 @@
       "file": "failure.md",
       "corpus": "help",
       "names": [
-        "failure failure attributes"
+        "failure attributes"
       ],
-      "canonical": "failure failure attributes",
+      "canonical": "failure attributes",
       "section": true
     },
     {
@@ -2496,7 +2496,7 @@
       "names": [
         "failure2"
       ],
-      "canonical": "failure failure attributes",
+      "canonical": "failure attributes",
       "redirect": true
     },
     {
@@ -2617,9 +2617,9 @@
       "file": "fold-function.md",
       "corpus": "help",
       "names": [
-        "fold fold examples"
+        "fold examples"
       ],
-      "canonical": "fold fold examples",
+      "canonical": "fold examples",
       "section": true
     },
     {
@@ -2628,7 +2628,7 @@
       "names": [
         "FOLD2"
       ],
-      "canonical": "fold fold examples",
+      "canonical": "fold examples",
       "redirect": true
     },
     {
@@ -3214,9 +3214,9 @@
       "file": "include-command.md",
       "corpus": "help",
       "names": [
-        "@include include switches"
+        "@include switches"
       ],
-      "canonical": "@include include switches",
+      "canonical": "@include switches",
       "section": true
     },
     {
@@ -3235,7 +3235,7 @@
       "names": [
         "@include2"
       ],
-      "canonical": "@include include switches",
+      "canonical": "@include switches",
       "redirect": true
     },
     {
@@ -4471,18 +4471,18 @@
       "file": "power-command.md",
       "corpus": "help",
       "names": [
-        "@power power registry syntax"
+        "@power registry syntax"
       ],
-      "canonical": "@power power registry syntax",
+      "canonical": "@power registry syntax",
       "section": true
     },
     {
       "file": "power-command.md",
       "corpus": "help",
       "names": [
-        "@power power registry behavior"
+        "@power registry behavior"
       ],
-      "canonical": "@power power registry behavior",
+      "canonical": "@power registry behavior",
       "section": true
     },
     {
@@ -4491,7 +4491,7 @@
       "names": [
         "@power2"
       ],
-      "canonical": "@power power registry syntax",
+      "canonical": "@power registry syntax",
       "redirect": true
     },
     {
@@ -4500,7 +4500,7 @@
       "names": [
         "@power3"
       ],
-      "canonical": "@power power registry behavior",
+      "canonical": "@power registry behavior",
       "redirect": true
     },
     {
@@ -4637,9 +4637,9 @@
       "file": "queue.md",
       "corpus": "help",
       "names": [
-        "queue queue configuration"
+        "queue configuration"
       ],
-      "canonical": "queue queue configuration",
+      "canonical": "queue configuration",
       "section": true
     },
     {
@@ -4648,7 +4648,7 @@
       "names": [
         "QUEUE2"
       ],
-      "canonical": "queue queue configuration",
+      "canonical": "queue configuration",
       "redirect": true
     },
     {
@@ -5304,9 +5304,9 @@
       "file": "retry-command.md",
       "corpus": "help",
       "names": [
-        "@retry retry examples"
+        "@retry examples"
       ],
-      "canonical": "@retry retry examples",
+      "canonical": "@retry examples",
       "section": true
     },
     {
@@ -5315,7 +5315,7 @@
       "names": [
         "@retry2"
       ],
-      "canonical": "@retry retry examples",
+      "canonical": "@retry examples",
       "redirect": true
     },
     {
@@ -5348,9 +5348,9 @@
       "file": "search-command.md",
       "corpus": "help",
       "names": [
-        "@search search permissions"
+        "@search permissions"
       ],
-      "canonical": "@search search permissions",
+      "canonical": "@search permissions",
       "section": true
     },
     {
@@ -5386,7 +5386,7 @@
       "names": [
         "@search4"
       ],
-      "canonical": "@search search permissions",
+      "canonical": "@search permissions",
       "redirect": true
     },
     {
@@ -12018,9 +12018,9 @@
       "file": "soundex-function.md",
       "corpus": "help",
       "names": [
-        "soundex soundex algorithm"
+        "soundex algorithm"
       ],
-      "canonical": "soundex soundex algorithm",
+      "canonical": "soundex algorithm",
       "section": true
     },
     {
@@ -12029,7 +12029,7 @@
       "names": [
         "SOUNDEX2"
       ],
-      "canonical": "soundex soundex algorithm",
+      "canonical": "soundex algorithm",
       "redirect": true
     },
     {
@@ -12629,9 +12629,9 @@
       "file": "trigger-command.md",
       "corpus": "help",
       "names": [
-        "@trigger trigger examples"
+        "@trigger examples"
       ],
-      "canonical": "@trigger trigger examples",
+      "canonical": "@trigger examples",
       "section": true
     },
     {
@@ -12649,7 +12649,7 @@
       "names": [
         "@trigger3"
       ],
-      "canonical": "@trigger trigger examples",
+      "canonical": "@trigger examples",
       "redirect": true
     },
     {
@@ -12809,9 +12809,9 @@
       "file": "verb-command.md",
       "corpus": "help",
       "names": [
-        "@verb verb permissions"
+        "@verb permissions"
       ],
-      "canonical": "@verb verb permissions",
+      "canonical": "@verb permissions",
       "section": true
     },
     {
@@ -12838,7 +12838,7 @@
       "names": [
         "@verb2"
       ],
-      "canonical": "@verb verb permissions",
+      "canonical": "@verb permissions",
       "redirect": true
     },
     {

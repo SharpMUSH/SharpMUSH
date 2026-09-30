@@ -8,17 +8,17 @@
     {
       "id": "power-registry-syntax",
       "heading": "Power registry syntax",
-      "lookup": "@power power registry syntax"
+      "lookup": "@power registry syntax"
     },
     {
       "id": "power-registry-behavior",
       "heading": "Power registry behavior",
-      "lookup": "@power power registry behavior"
+      "lookup": "@power registry behavior"
     }
   ],
   "redirects": {
-    "@power2": "@power power registry syntax",
-    "@power3": "@power power registry behavior"
+    "@power2": "@power registry syntax",
+    "@power3": "@power registry behavior"
   }
 }
 -->
@@ -32,7 +32,7 @@
 
 The third form manipulates powers on objects, and is limited to Wizards. `@power <object>=<power>` grants the given power; `@power <object>=!<power>` revokes it. Several powers may be given at once, separated by spaces, and each may independently carry the `!` prefix. Powers cannot be granted to players set UNREGISTERED, and only God may alter God's powers.
 
-God can add, delete, and otherwise manipulate power definitions. See help @power power registry syntax for these commands.
+God can add, delete, and otherwise manipulate power definitions. See help @power registry syntax for these commands.
 
 
 **See Also:**
@@ -56,8 +56,8 @@ These commands manipulate power definitions. Only God may use them, with the exc
 - /enable re-enables a disabled power
 - /alias replaces the alias of an existing power
 - /letter changes or removes the single-letter abbreviation of an existing power (see below)
-- /restrict changes power permissions (see help @power power registry behavior)
-- /type changes power type(s) (see help @power power registry behavior)
+- /restrict changes power permissions (see help @power registry behavior)
+- /type changes power type(s) (see help @power registry behavior)
 - /delete deletes a power completely, removing it from all objects in the database and the removing it permanently from the power table. It requires the exact power name or alias to be used. Be very very careful with this.
 - /decompile shows a power's full definition
 

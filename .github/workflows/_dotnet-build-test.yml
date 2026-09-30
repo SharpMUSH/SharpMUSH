@@ -107,6 +107,48 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  help-integrity:
+    needs: [build]
+    runs-on: ubuntu-latest
+    env:
+      # Detailed console output and TRX retain results without the optional HTML report.
+      TUNIT_DISABLE_HTML_REPORTER: "true"
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Build.props
+
+      - name: Download test build output
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: SharpMUSH.Tests
+          path: ${{ runner.temp }}/test-build
+
+      - name: Download shared test build support
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: test-build-support
+          path: ${{ runner.temp }}/test-build
+
+      - name: Restore build outputs and verify cached dependencies
+        run: |
+          tar -xzf "$RUNNER_TEMP/test-build/test-build-support.tar.gz"
+          tar -xzf "$RUNNER_TEMP/test-build/SharpMUSH.Tests.tar.gz"
+          python3 .github/scripts/ensure-test-packages.py
+
+      - name: Validate help article structure and corpus links
+        timeout-minutes: 5
+        run: >-
+          dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --treenode-filter "/*/*/HelpArticleTests/*"
+
   test:
     needs: [build]
     runs-on: ubuntu-latest
@@ -363,3 +405,4 @@ jobs:
           name: myrddin-bbs-package
           path: '**/MyrddinBBS_GeneratedPackage.yaml'
           if-no-files-found: warn
+

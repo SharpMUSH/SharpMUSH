@@ -8,11 +8,11 @@
     {
       "id": "failure-attributes",
       "heading": "Failure attributes",
-      "lookup": "failure failure attributes"
+      "lookup": "failure attributes"
     }
   ],
   "redirects": {
-    "failure2": "failure failure attributes"
+    "failure2": "failure attributes"
   }
 }
 -->

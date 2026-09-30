@@ -10,11 +10,11 @@
     {
       "id": "fold-examples",
       "heading": "Fold examples",
-      "lookup": "fold fold examples"
+      "lookup": "fold examples"
     }
   ],
   "redirects": {
-    "FOLD2": "fold fold examples"
+    "FOLD2": "fold examples"
   }
 }
 -->

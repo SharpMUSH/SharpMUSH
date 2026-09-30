@@ -8,7 +8,7 @@
     {
       "id": "verb-permissions",
       "heading": "Verb permissions",
-      "lookup": "@verb verb permissions"
+      "lookup": "@verb permissions"
     },
     {
       "id": "local-verb-example",
@@ -22,7 +22,7 @@
     }
   ],
   "redirects": {
-    "@verb2": "@verb verb permissions",
+    "@verb2": "@verb permissions",
     "@verb3": "@verb local verb example",
     "@verb4": "@verb global verb example"
   }

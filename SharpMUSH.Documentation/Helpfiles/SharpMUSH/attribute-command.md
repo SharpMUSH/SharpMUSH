@@ -8,7 +8,7 @@
     {
       "id": "attribute-registry-management",
       "heading": "Attribute registry management",
-      "lookup": "@attribute attribute registry management"
+      "lookup": "@attribute registry management"
     },
     {
       "id": "registry-permissions",
@@ -17,7 +17,7 @@
     }
   ],
   "redirects": {
-    "@attribute2": "@attribute attribute registry management",
+    "@attribute2": "@attribute registry management",
     "@attribute3": "@attribute registry permissions"
   }
 }

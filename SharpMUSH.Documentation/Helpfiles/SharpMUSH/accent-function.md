@@ -10,12 +10,12 @@
     {
       "id": "accent-examples",
       "heading": "Accent examples",
-      "lookup": "accent accent examples"
+      "lookup": "accent examples"
     }
   ],
   "redirects": {
-    "ACCENT2": "accent accent examples",
-    "ACCENTS3": "accent accent examples"
+    "ACCENT2": "accent examples",
+    "ACCENTS3": "accent examples"
   }
 }
 -->

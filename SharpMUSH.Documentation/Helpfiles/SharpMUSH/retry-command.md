@@ -8,11 +8,11 @@
     {
       "id": "retry-examples",
       "heading": "Retry examples",
-      "lookup": "@retry retry examples"
+      "lookup": "@retry examples"
     }
   ],
   "redirects": {
-    "@retry2": "@retry retry examples"
+    "@retry2": "@retry examples"
   }
 }
 -->

@@ -418,7 +418,7 @@
       "ACCENT2",
       "ACCENTS3"
     ],
-    "target": "accent accent examples",
+    "target": "accent examples",
     "sha256": "ec99c28b0c5bb96f2afd0d4ef156be34f31638c499c1827aaf7dcf7ceb49e102"
   },
   {
@@ -474,7 +474,7 @@
     "old": [
       "FOLD2"
     ],
-    "target": "fold fold examples",
+    "target": "fold examples",
     "sha256": "e0859ad366e40cba3d63379cbbf97271269942b208b612d31b91b213387d21e2"
   },
   {
@@ -743,7 +743,7 @@
     "old": [
       "SOUNDEX2"
     ],
-    "target": "soundex soundex algorithm",
+    "target": "soundex algorithm",
     "sha256": "e3e1760067e1088954094cf527e3ae9ea816cd28758fbdbb79b01c61d5b81fb6"
   },
   {
@@ -1072,7 +1072,7 @@
     "old": [
       "@attribute2"
     ],
-    "target": "@attribute attribute registry management",
+    "target": "@attribute registry management",
     "sha256": "9e51b5b3fb47cb24eab519d86d9536b4c429be25b52a7a1c95b4e38864d4579a"
   },
   {
@@ -1130,7 +1130,7 @@
     "old": [
       "@include2"
     ],
-    "target": "@include include switches",
+    "target": "@include switches",
     "sha256": "b748a258931bc4e6f3360b95a0741bc32c9c2b125f178754ff1216f3d0d51a6e"
   },
   {
@@ -1467,7 +1467,7 @@
     "old": [
       "@power2"
     ],
-    "target": "@power power registry syntax",
+    "target": "@power registry syntax",
     "sha256": "10e0a198eb6bc05af9bffc29b71507c50e6db0106308aef0d5e48400e82a3cd9"
   },
   {
@@ -1475,7 +1475,7 @@
     "old": [
       "@power3"
     ],
-    "target": "@power power registry behavior",
+    "target": "@power registry behavior",
     "sha256": "a83cb3c4481fa3a5b89b60da71f3221772c9d5a077ffd1bc44b83d87bb6d5105"
   },
   {
@@ -1525,7 +1525,7 @@
     "old": [
       "@retry2"
     ],
-    "target": "@retry retry examples",
+    "target": "@retry examples",
     "sha256": "d21f0ad0c721b10645ff9ed271971b0fcda3b83dce620bf7c5128ca832cc5997"
   },
   {
@@ -1557,7 +1557,7 @@
     "old": [
       "@search4"
     ],
-    "target": "@search search permissions",
+    "target": "@search permissions",
     "sha256": "6aee69bfa9e7f22407055b395c39bec6a44ec196090dc6acb9672af891dc6a69"
   },
   {
@@ -1663,7 +1663,7 @@
     "old": [
       "@trigger3"
     ],
-    "target": "@trigger trigger examples",
+    "target": "@trigger examples",
     "sha256": "c1f2450ab30838c886fd15760463ef3e6261a49f5908e07f74a3cbecbe66d793"
   },
   {
@@ -1695,7 +1695,7 @@
     "old": [
       "@verb2"
     ],
-    "target": "@verb verb permissions",
+    "target": "@verb permissions",
     "sha256": "fcaacca6e0298e1c1b9643078a2d2dfa59bbd392a7cb6056aeecd2fab4a09a0d"
   },
   {
@@ -2121,7 +2121,7 @@
     "old": [
       "failure2"
     ],
-    "target": "failure failure attributes",
+    "target": "failure attributes",
     "sha256": "37258667c9f10e0d471fcb6a1ab897c17bccfb7d93449875ae8ddd630fef21bd"
   },
   {
@@ -2270,7 +2270,7 @@
     "old": [
       "QUEUE2"
     ],
-    "target": "queue queue configuration",
+    "target": "queue configuration",
     "sha256": "1e9f040fc0d6c8f27f0e091370ff41b958103672c9890073ccd25c206ef2ae06"
   },
   {

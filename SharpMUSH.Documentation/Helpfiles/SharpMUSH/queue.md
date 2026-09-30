@@ -8,11 +8,11 @@
     {
       "id": "queue-configuration",
       "heading": "Queue configuration",
-      "lookup": "queue queue configuration"
+      "lookup": "queue configuration"
     }
   ],
   "redirects": {
-    "QUEUE2": "queue queue configuration"
+    "QUEUE2": "queue configuration"
   }
 }
 -->

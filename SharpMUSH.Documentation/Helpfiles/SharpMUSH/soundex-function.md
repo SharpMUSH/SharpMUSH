@@ -10,11 +10,11 @@
     {
       "id": "soundex-algorithm",
       "heading": "Soundex algorithm",
-      "lookup": "soundex soundex algorithm"
+      "lookup": "soundex algorithm"
     }
   ],
   "redirects": {
-    "SOUNDEX2": "soundex soundex algorithm"
+    "SOUNDEX2": "soundex algorithm"
   }
 }
 -->
@@ -29,7 +29,7 @@ The soundex function returns the soundex pattern for a word. A soundex pattern r
 F160
 ```
 
-For details of how the algorithm works, see [soundex soundex algorithm].
+For details of how the algorithm works, see [soundex algorithm].
 
 
 **See Also:**

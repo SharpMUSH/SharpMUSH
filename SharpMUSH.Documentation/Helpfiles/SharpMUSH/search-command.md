@@ -18,7 +18,7 @@
     {
       "id": "search-permissions",
       "heading": "Search permissions",
-      "lookup": "@search search permissions"
+      "lookup": "@search permissions"
     },
     {
       "id": "object-search-examples",
@@ -29,7 +29,7 @@
   "redirects": {
     "@search2": "@search flags and powers",
     "@search3": "@search dbref ranges and evaluation",
-    "@search4": "@search search permissions",
+    "@search4": "@search permissions",
     "@search5": "@search object search examples"
   }
 }

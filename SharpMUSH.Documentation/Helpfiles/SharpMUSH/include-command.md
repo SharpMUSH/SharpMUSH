@@ -8,7 +8,7 @@
     {
       "id": "include-switches",
       "heading": "Include switches",
-      "lookup": "@include include switches"
+      "lookup": "@include switches"
     },
     {
       "id": "attribute-pipelines",
@@ -20,7 +20,7 @@
     }
   ],
   "redirects": {
-    "@include2": "@include include switches",
+    "@include2": "@include switches",
     "@include3": "@include attribute pipelines"
   }
 }
@@ -89,7 +89,7 @@ A `+set <number>` command that validates its input through a three-step chain:
 
 **See Also:**
 - [@include]
-- [@include include switches]
+- [@include switches]
 - [@break]
 - [@dolist]
 - [@trigger]

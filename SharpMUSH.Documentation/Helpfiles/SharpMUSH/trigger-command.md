@@ -13,12 +13,12 @@
     {
       "id": "trigger-examples",
       "heading": "Trigger examples",
-      "lookup": "@trigger trigger examples"
+      "lookup": "@trigger examples"
     }
   ],
   "redirects": {
     "@trigger2": "@trigger enactor and register behavior",
-    "@trigger3": "@trigger trigger examples"
+    "@trigger3": "@trigger examples"
   }
 }
 -->

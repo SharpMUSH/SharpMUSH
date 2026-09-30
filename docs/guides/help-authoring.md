@@ -151,7 +151,7 @@ catalog is retained as a complete, explicitly historical section.
 
 Run `dotnet run --project SharpMUSH.Tests -- --treenode-filter
 "/*/*/HelpArticleTests/*"` and the help service/command tests. The normal CI test
-job runs the shipped-corpus integrity check. Invalid declarations, missing section
+suite and the dedicated `help-integrity` CI job run the shipped-corpus check. Invalid declarations, missing section
 targets, duplicate declared IDs or lookups, unresolved/deprecated declared links,
 redirect chains, and numbered continuations fail. Existing unresolved links in
 unmigrated articles remain legacy debt; unrelated edits are not blocked by them.
