@@ -40,7 +40,7 @@ public class WikiBrowseController(
 	[HttpGet("recent")]
 	public async Task<IActionResult> GetRecentChanges([FromQuery] int count = 20, [FromQuery] string? lang = null)
 	{
-		var pages = await Wiki.GetRecentChangesAsync(count);
+		var pages = await Wiki.GetRecentChangesAsync(count, Visibility);
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
@@ -52,7 +52,7 @@ public class WikiBrowseController(
 	public async Task<IActionResult> ListNamespacePages(
 		string ns, [FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? lang = null)
 	{
-		var pages = await Wiki.GetByNamespaceAsync(ParseNamespace(ns), skip, take);
+		var pages = await Wiki.GetByNamespaceAsync(ParseNamespace(ns), skip, take, Visibility);
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
@@ -78,7 +78,7 @@ public class WikiBrowseController(
 		[FromQuery] string? ns = null, [FromQuery] string? lang = null)
 	{
 		var nsFilter = ParseOptionalNamespace(ns);
-		var pages = await Wiki.GetAllPagesAsync(skip, take, nsFilter);
+		var pages = await Wiki.GetAllPagesAsync(skip, take, nsFilter, Visibility);
 		Response.Headers["X-Total-Count"] =
 			(await Wiki.CountPagesAsync(nsFilter, CanSeeUnpublished)).ToString();
 		return Ok(await LocalizedListAsync(pages, lang));
@@ -92,7 +92,7 @@ public class WikiBrowseController(
 	public async Task<IActionResult> ListCategoryPages(
 		string category, [FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? lang = null)
 	{
-		var pages = await Wiki.GetByCategoryAsync(category, skip, take);
+		var pages = await Wiki.GetByCategoryAsync(category, skip, take, Visibility);
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
@@ -104,7 +104,7 @@ public class WikiBrowseController(
 	public async Task<IActionResult> ListTagPages(
 		string tag, [FromQuery] int skip = 0, [FromQuery] int take = 50, [FromQuery] string? lang = null)
 	{
-		var pages = await Wiki.GetByTagAsync(tag, skip, take);
+		var pages = await Wiki.GetByTagAsync(tag, skip, take, Visibility);
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
 

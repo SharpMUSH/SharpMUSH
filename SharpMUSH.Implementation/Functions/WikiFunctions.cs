@@ -104,12 +104,11 @@ public partial class Functions
 		}
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
-		var pages = await wikiService.GetAllPagesAsync(0, 1000, ns);
+		// Softcode has no reader to check drafts against, so — as in wiki() and wikisearch() — a draft is
+		// never discoverable from a function.
+		var pages = await wikiService.GetAllPagesAsync(0, 1000, ns, WikiVisibility.PublishedOnly);
 
-		// GetAllPagesAsync includes unpublished pages. Softcode has no reader to check drafts against,
-		// so — as in wiki() and wikisearch() — a draft is never discoverable from a function.
-		return new CallState(string.Join(" ",
-			pages.Where(p => p.Published).Select(WikiCommandHelper.DisplayReference)));
+		return new CallState(string.Join(" ", pages.Select(WikiCommandHelper.DisplayReference)));
 	}
 
 	/// <summary>
@@ -164,11 +163,10 @@ public partial class Functions
 		}
 
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
-		var pages = await wikiService.GetRecentChangesAsync(count);
+		// Same rule as wikilist(): no drafts. The store filters before counting, so a run of recent draft
+		// edits neither shows nor shortens the answer. Softcode has no reader to gate on.
+		var pages = await wikiService.GetRecentChangesAsync(count, WikiVisibility.PublishedOnly);
 
-		// Same rule as wikilist(): drafts are filtered out after the fetch, so a run of recent draft edits
-		// shortens the answer rather than disclosing them. Softcode has no reader to gate on.
-		return new CallState(string.Join(" ",
-			pages.Where(p => p.Published).Select(WikiCommandHelper.DisplayReference)));
+		return new CallState(string.Join(" ", pages.Select(WikiCommandHelper.DisplayReference)));
 	}
 }

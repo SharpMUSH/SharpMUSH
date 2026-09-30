@@ -82,14 +82,15 @@ public abstract class WikiControllerBase(
 	/// </summary>
 	protected string? CallerDbref => User.GetActingCharacter()?.ToString();
 
-	/// <summary>True when the caller is the original author of <paramref name="page"/>. Authors
-	/// always see their own drafts even without the <see cref="PortalPermission.WikiRead"/> scope.</summary>
-	protected bool IsAuthor(WikiPage page) =>
-		CallerDbref is { Length: > 0 } me && string.Equals(page.AuthorDbref, me, StringComparison.Ordinal);
+	/// <summary>
+	/// The pages the caller may view: published ones, every draft with wiki.read, and the drafts the
+	/// caller authored (authors always see their own). Listings hand it to the store, which applies it
+	/// before paging, so a page of a listing is a page of rows this caller may see.
+	/// </summary>
+	protected WikiVisibility Visibility => new(CanSeeUnpublished, CallerDbref);
 
-	/// <summary>True when the caller may view <paramref name="page"/>: it is published, the caller
-	/// can see unpublished pages (wiki.read), or the caller authored it.</summary>
-	protected bool CanSee(WikiPage page) => page.Published || CanSeeUnpublished || IsAuthor(page);
+	/// <summary>True when the caller may view <paramref name="page"/> (<see cref="Visibility"/>).</summary>
+	protected bool CanSee(WikiPage page) => Visibility.Admits(page.Published, page.AuthorDbref);
 
 	/// <summary>Filters out unpublished (draft) pages the caller may not see (not published, no
 	/// wiki.read scope, and not their own authored draft).</summary>

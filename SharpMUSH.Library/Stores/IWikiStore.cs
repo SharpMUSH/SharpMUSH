@@ -30,19 +30,23 @@ public interface IWikiStore
 	Task<Found<WikiPage>> GetPageByIdAsync(string id);
 
 	/// <summary>Pages by <c>UpdatedAt</c> descending, newest-created first within one timestamp.</summary>
-	Task<IReadOnlyList<WikiPage>> GetRecentPagesAsync(int count);
+	/// <remarks><paramref name="visibility"/> is applied before <c>count</c>.</remarks>
+	Task<IReadOnlyList<WikiPage>> GetRecentPagesAsync(int count, WikiVisibility visibility);
 
 	/// <summary>Pages ordered by namespace then slug, ordinally; <paramref name="ns"/> null for every namespace.</summary>
-	Task<IReadOnlyList<WikiPage>> GetPagesAsync(string? ns, int skip, int take);
+	/// <remarks><paramref name="visibility"/> is applied before <c>skip</c>/<c>take</c>.</remarks>
+	Task<IReadOnlyList<WikiPage>> GetPagesAsync(string? ns, int skip, int take, WikiVisibility visibility);
 
 	/// <summary>A page whose stored published flag is absent counts as published.</summary>
 	Task<int> CountPagesAsync(string? ns, bool includeDrafts);
 
 	/// <summary>Pages in <paramref name="category"/>, case-insensitively, ordered by title.</summary>
-	Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take);
+	/// <remarks><paramref name="visibility"/> is applied before <c>skip</c>/<c>take</c>.</remarks>
+	Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility);
 
 	/// <summary>Pages carrying <paramref name="tag"/>, case-insensitively, ordered by title.</summary>
-	Task<IReadOnlyList<WikiPage>> GetPagesByTagAsync(string tag, int skip, int take);
+	/// <remarks><paramref name="visibility"/> is applied before <c>skip</c>/<c>take</c>.</remarks>
+	Task<IReadOnlyList<WikiPage>> GetPagesByTagAsync(string tag, int skip, int take, WikiVisibility visibility);
 
 	/// <summary>
 	/// Stores <paramref name="page"/> under a newly allocated id, ignoring the one it carries, with its

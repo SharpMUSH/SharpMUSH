@@ -33,19 +33,22 @@ public interface IWikiService
 	/// <summary>
 	/// Returns the most recently updated pages, ordered by <c>UpdatedAt</c> descending.
 	/// </summary>
-	Task<IReadOnlyList<WikiPage>> GetRecentChangesAsync(int count = 20);
+	/// <param name="visibility">The pages returned, applied before paging; null returns every page.</param>
+	Task<IReadOnlyList<WikiPage>> GetRecentChangesAsync(int count = 20, WikiVisibility? visibility = null);
 
 	/// <summary>
 	/// Lists pages within a given namespace, with skip/take pagination.
 	/// </summary>
-	Task<IReadOnlyList<WikiPage>> GetByNamespaceAsync(WikiNamespace ns, int skip = 0, int take = 50);
+	/// <param name="visibility">The pages returned, applied before paging; null returns every page.</param>
+	Task<IReadOnlyList<WikiPage>> GetByNamespaceAsync(WikiNamespace ns, int skip = 0, int take = 50, WikiVisibility? visibility = null);
 
 	/// <summary>
 	/// Lists ALL pages (optionally restricted to one namespace), ordered by
-	/// namespace then slug, with skip/take pagination. Includes unpublished pages —
-	/// callers are responsible for visibility filtering.
+	/// namespace then slug, with skip/take pagination. Includes unpublished pages unless
+	/// <paramref name="visibility"/> says otherwise.
 	/// </summary>
-	Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null);
+	/// <param name="visibility">The pages returned, applied before paging; null returns every page.</param>
+	Task<IReadOnlyList<WikiPage>> GetAllPagesAsync(int skip = 0, int take = 50, WikiNamespace? ns = null, WikiVisibility? visibility = null);
 
 	/// <summary>
 	/// Returns the total page count (optionally restricted to one namespace).
@@ -62,12 +65,14 @@ public interface IWikiService
 	/// <summary>
 	/// Lists pages with the given category (case-insensitive), ordered by title.
 	/// </summary>
-	Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50);
+	/// <param name="visibility">The pages returned, applied before paging; null returns every page.</param>
+	Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50, WikiVisibility? visibility = null);
 
 	/// <summary>
 	/// Lists pages carrying the given tag (case-insensitive), ordered by title.
 	/// </summary>
-	Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50);
+	/// <param name="visibility">The pages returned, applied before paging; null returns every page.</param>
+	Task<IReadOnlyList<WikiPage>> GetByTagAsync(string tag, int skip = 0, int take = 50, WikiVisibility? visibility = null);
 
 	/// <summary>
 	/// Creates a new wiki page. The (namespace, category, slug) identity must be unique.
