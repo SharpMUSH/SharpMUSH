@@ -207,30 +207,24 @@ internal static class WebHostRegistration
 				new HeaderApiVersionReader("x-api-version"));
 		}).AddMvc();
 
-		// Named "public-api" policy: fixed window, 30 req/min per client IP,
-		// queue depth 5.  Auth endpoints opt in via [EnableRateLimiting("public-api")].
-		// Limits are configuration-driven (defaults below match the historical hardcoded
-		// values) so the test host can raise them without touching production behavior.
-		// NOTE: the config reads live INSIDE the AddRateLimiter delegate on purpose — the
-		// delegate runs lazily at options resolution (after the host is fully built), so
-		// configuration sources appended late (e.g. the test host's in-memory overrides)
-		// are visible. An eager read at ConfigureServices time only ever sees the defaults
+		// Limits are configuration-driven so the test host can raise them without touching production
+		// behavior. NOTE: every config read lives INSIDE the AddRateLimiter delegate (and the partition
+		// factories under it) on purpose — the delegate runs lazily at options resolution (after the
+		// host is fully built), so configuration sources appended late (e.g. the test host's in-memory
+		// overrides) are visible. An eager read at ConfigureServices time only ever sees the defaults
 		// under WebApplicationFactory-style test hosts.
 		services.AddRateLimiter(opts =>
 		{
 			opts.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-			opts.AddFixedWindowLimiter("public-api", limiterOpts =>
-			{
-				limiterOpts.PermitLimit = configuration.GetValue("RateLimiting:PublicApi:PermitLimit", 30);
-				limiterOpts.Window = TimeSpan.FromSeconds(configuration.GetValue("RateLimiting:PublicApi:WindowSeconds", 60));
-				limiterOpts.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-				limiterOpts.QueueLimit = configuration.GetValue("RateLimiting:PublicApi:QueueLimit", 5);
-			});
+
+			// "public-api": a fixed window per client IP on the anonymous credential/claim surfaces,
+			// which opt in with [EnableRateLimiting]. See PublicApiRateLimit.
+			opts.AddPublicApiPolicy(configuration);
 
 			// "mcp" policy: partitioned per client IP so one source can't brute-force the
 			// character+password auth on /mcp, while a legitimate agent (single IP) still gets
-			// generous tool-call throughput. Partitioning (unlike the global "public-api" limiter)
-			// keeps one caller's bursts from throttling everyone else.
+			// generous tool-call throughput. Partitioning keeps one caller's bursts from throttling
+			// everyone else.
 			opts.AddPolicy("mcp", httpContext =>
 				RateLimitPartition.GetFixedWindowLimiter(
 					partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
