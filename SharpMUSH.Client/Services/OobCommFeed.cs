@@ -57,12 +57,29 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	public IReadOnlyList<CommChannel> Channels =>
 		_channels.Select(channel => channel with { Unread = UnreadFor(channel.Name) }).ToArray();
 
-	public IReadOnlyList<CommConversation> Conversations =>
-		_conversations
-			.Select(pair => new CommConversation(
-				pair.Key, pair.Value.With, pair.Value.WithObjIds, UnreadFor(pair.Key), pair.Value.LastAt))
-			.OrderByDescending(conversation => conversation.LastAt)
-			.ToArray();
+	/// <remarks>
+	/// Who a conversation is with is worked out as it is read, against the viewer as now known, so one
+	/// filed before the viewer was known stops listing them once they are. Its key never changes: it names
+	/// every participant, the viewer included, whether or not the viewer was known when it was built.
+	/// </remarks>
+	public IReadOnlyList<CommConversation> Conversations
+	{
+		get
+		{
+			var viewer = Viewer();
+			return _conversations
+				.Select(pair =>
+				{
+					var others = pair.Value.Participants
+						.Where(participant => viewer is null || !IsSame(participant, viewer))
+						.ToArray();
+					return new CommConversation(pair.Key, others.Select(other => other.Name).ToArray(),
+						others.Select(other => other.ObjId).ToArray(), UnreadFor(pair.Key), pair.Value.LastAt);
+				})
+				.OrderByDescending(conversation => conversation.LastAt)
+				.ToArray();
+		}
+	}
 
 	/// <inheritdoc/>
 	public string? Viewing
@@ -136,7 +153,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 
 		var message = entry.Message;
 		var viewer = Viewer();
-		var key = message.Channel ?? ConversationFor(entry, viewer);
+		var key = message.Channel ?? ConversationFor(entry);
 
 		if (!_history.TryGetValue(key, out var lines)) _history[key] = lines = new Queue<CommMessage>();
 		lines.Enqueue(message);
@@ -151,7 +168,7 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 	}
 
 	/// <summary>Files a page under its conversation, updating who it is with and when it last spoke.</summary>
-	private string ConversationFor(CommEntry entry, CommParticipant? viewer)
+	private string ConversationFor(CommEntry entry)
 	{
 		var participants = new List<CommParticipant> { new(entry.Message.From, entry.Message.FromObjId) };
 		foreach (var recipient in entry.Recipients)
@@ -160,15 +177,11 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		}
 
 		var key = ConversationKeyPrefix + string.Join(' ', participants.Select(Identity).Order(StringComparer.Ordinal));
-		var others = participants.Where(participant => viewer is null || !IsSame(participant, viewer)).ToArray();
 		var lastAt = _conversations.TryGetValue(key, out var known) && known.LastAt > entry.Message.Timestamp
 			? known.LastAt
 			: entry.Message.Timestamp;
 
-		_conversations[key] = new Conversation(
-			others.Select(other => other.Name).ToArray(),
-			others.Select(other => other.ObjId).ToArray(),
-			lastAt);
+		_conversations[key] = new Conversation(participants, lastAt);
 		return key;
 	}
 
@@ -237,5 +250,6 @@ public sealed class OobCommFeed : ICommFeed, IDisposable
 		Changed?.Invoke();
 	}
 
-	private sealed record Conversation(IReadOnlyList<string> With, IReadOnlyList<string?> WithObjIds, DateTimeOffset LastAt);
+	/// <summary>A conversation's participants as its latest page named them, the viewer included.</summary>
+	private sealed record Conversation(IReadOnlyList<CommParticipant> Participants, DateTimeOffset LastAt);
 }

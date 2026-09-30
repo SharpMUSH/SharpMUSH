@@ -99,6 +99,39 @@ public class OobCommFeedTests
 		await Assert.That(feed.Conversations.Single().Unread).IsEqualTo(0);
 	}
 
+	/// <summary>
+	/// A conversation filed before the viewer was known names the viewer among who it is with until the
+	/// list arrives; after, it is the same conversation as one filed later, without the viewer.
+	/// </summary>
+	[Test]
+	public async Task A_conversation_filed_before_the_viewer_was_known_drops_the_viewer_and_stays_one()
+	{
+		var (store, feed) = Create();
+		store.Set(CommPayloadParser.MessagePackage, Page("Tomas", "#7:2", [("Ilsa", "#5:1")], "psst", 1000));
+		store.Set(CommPayloadParser.MessagePackage, Page("Ilsa", "#5:1", [("Tomas", "#7:2")], "yes?", 2000));
+
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList());
+		store.Set(CommPayloadParser.MessagePackage, Page("Tomas", "#7:2", [("Ilsa", "#5:1")], "later", 3000));
+
+		var conversation = feed.Conversations.Single();
+		await Assert.That(conversation.With).IsEquivalentTo(new[] { "Tomas" });
+		await Assert.That(conversation.WithObjIds).IsEquivalentTo(new string?[] { "#7:2" });
+		await Assert.That(conversation.Unread).IsEqualTo(2).Because("the viewer's own reply does not count");
+		await Assert.That(feed.Messages(conversation.Key).Select(m => m.Text))
+			.IsEquivalentTo(new[] { "psst", "yes?", "later" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task A_conversation_filed_before_the_viewer_was_known_drops_the_viewer_as_soon_as_it_is()
+	{
+		var (store, feed) = Create();
+		store.Set(CommPayloadParser.MessagePackage, Page("Ilsa", "#5:1", [("Tomas", "#7:2"), ("Dace", "#8:3")], "all"));
+
+		store.Set(CommPayloadParser.ChannelsPackage, ChannelList());
+
+		await Assert.That(feed.Conversations.Single().With).IsEquivalentTo(new[] { "Tomas", "Dace" });
+	}
+
 	[Test]
 	public async Task Lines_for_the_key_being_viewed_are_not_unread()
 	{
