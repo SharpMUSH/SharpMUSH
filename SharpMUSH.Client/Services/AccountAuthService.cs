@@ -234,13 +234,12 @@ public class AccountAuthService(
 		// Stored grants are never authority: roles can migrate or be revoked while this tab is closed.
 		Role = null;
 		Permissions = [];
-		var token = AccountSessionToken;
-		if (await LoadSessionAuthorityAsync(token) == SessionAuthorityLoad.Failed)
+		if (await LoadSessionAuthorityAsync(AccountSessionToken) == SessionAuthorityLoad.Failed)
 		{
 			// The credential stays usable, but with no role or grant the tab is a Guest until the server
 			// answers. InitAsync is cached for the life of the tab, so without this one timed-out refresh
 			// — a server restarting, a dropped request — would leave it that way until a reload.
-			_ = RetrySessionAuthorityAsync(token);
+			_ = RetrySessionAuthorityAsync();
 		}
 	}
 
@@ -293,25 +292,32 @@ public class AccountAuthService(
 		}
 	}
 
+	/// <summary>Bumped whenever the tab's authority is replaced wholesale — a sign-in, a sign-out, a
+	/// session dropped — and not by a character switch, which keeps the same account and its grants.</summary>
+	private int _authorityGeneration;
+
 	/// <summary>
-	/// Asks again, backing off, until the server answers for <paramref name="token"/> or the tab moves
-	/// on (a sign-in, a sign-out, a switch), then tells the portal so gated controls reappear.
+	/// Asks again, backing off, until the server answers or the tab's account changes (a sign-in or a
+	/// sign-out), then tells the portal so gated controls reappear. Each attempt uses the token the tab
+	/// holds at that moment: a character switch adopts a new token for the same account without loading
+	/// its authority, so a recovery keyed to the old token would give up and leave the tab a Guest.
 	/// </summary>
-	private async Task RetrySessionAuthorityAsync(string? token)
+	private async Task RetrySessionAuthorityAsync()
 	{
+		var generation = _authorityGeneration;
 		var deadline = DateTimeOffset.UtcNow + SessionAuthorityRetryLimit;
 		for (var attempt = 0; DateTimeOffset.UtcNow < deadline; attempt++)
 		{
 			await Task.Delay(SessionAuthorityRetryDelays[Math.Min(attempt, SessionAuthorityRetryDelays.Count - 1)]);
-			if (AccountSessionToken != token) return;
+			if (generation != _authorityGeneration || AccountSessionToken is not { } token) return;
 
 			switch (await LoadSessionAuthorityAsync(token))
 			{
 				case SessionAuthorityLoad.Loaded or SessionAuthorityLoad.SignedOut:
 					RaiseAuthStateChanged();
 					return;
-				case SessionAuthorityLoad.Superseded:
-					return;
+					// Superseded: the token changed while the request was out. The generation check at the
+					// top of the next attempt tells a switch (carry on) from a sign-in or sign-out (stop).
 			}
 		}
 	}
@@ -320,6 +326,7 @@ public class AccountAuthService(
 	/// <see cref="AuthStateChanged"/> — the caller decides when the notification is due.</summary>
 	private void ClearSessionState()
 	{
+		_authorityGeneration++;
 		AccountSessionToken = null;
 		Username = null;
 		MustChangePassword = false;
@@ -808,6 +815,7 @@ public class AccountAuthService(
 			}
 		}
 
+		_authorityGeneration++;
 		AccountSessionToken = null;
 		Username = null;
 		SetCharacters([]);
@@ -880,6 +888,7 @@ public class AccountAuthService(
 			return false;
 		}
 
+		_authorityGeneration++;
 		AccountSessionToken = token;
 		Username = username;
 		MustChangePassword = mustChangePassword;
