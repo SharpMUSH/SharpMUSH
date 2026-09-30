@@ -1932,6 +1932,10 @@
     <value>Não foi possível carregar o componente compilado deste aplicativo. O código de navegador pode estar desativado (allow_browser_code) ou o assembly não passou na verificação.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
+    <value>Este portal foi compilado sem suporte a componentes de aplicativo compilados, então este aplicativo não pode ser executado aqui. O operador pode recompilá-lo com PluginComponentSupport ativado (o argumento de build do Docker PLUGIN_COMPONENTS).</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
     <value>Este aplicativo requer um personagem ativo.</value>
     <comment>MT</comment>

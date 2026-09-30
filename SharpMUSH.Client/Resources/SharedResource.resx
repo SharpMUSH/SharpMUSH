@@ -3587,6 +3587,9 @@
   <data name="NavApplicationComponentLoadFailed" xml:space="preserve">
     <value>This application's compiled component could not be loaded. Browser code may be disabled (allow_browser_code), or the assembly failed verification.</value>
   </data>
+  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
+    <value>This portal was built without support for compiled application components, so this application cannot run here. The operator can rebuild it with PluginComponentSupport enabled (the PLUGIN_COMPONENTS Docker build argument).</value>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>The application's schema could not be loaded. The softcode handler at {0} may be missing or returning invalid JSON.</value>
   </data>

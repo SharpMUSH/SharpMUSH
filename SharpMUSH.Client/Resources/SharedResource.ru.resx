@@ -1932,6 +1932,10 @@
     <value>Не удалось загрузить скомпилированный компонент этого приложения. Возможно, отключён код в браузере (allow_browser_code) или сборка не прошла проверку.</value>
     <comment>MT — allow_browser_code kept as-is: it is a config key name.</comment>
   </data>
+  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
+    <value>Этот портал собран без поддержки скомпилированных компонентов приложений, поэтому это приложение не может здесь работать. Оператор может пересобрать его с включённым PluginComponentSupport (аргумент сборки Docker PLUGIN_COMPONENTS).</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
     <value>Это приложение требует активного персонажа.</value>
     <comment>MT</comment>

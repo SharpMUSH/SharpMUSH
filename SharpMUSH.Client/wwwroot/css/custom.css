@@ -8,6 +8,7 @@
 @import url("globals.css") layer(shell);
 @import url("utilities.css") layer(utilities);
 
-/* Deliberately unlayered: it has to beat Monaco's runtime-injected, unlayered stylesheet, which
-   no layered rule can do. */
-@import url("monaco-overrides.css");
+/* monaco-overrides.css is not imported here: it only matters once the softcode editor has loaded
+   Monaco, so it ships in lazy-assets.js's monaco bundle instead of with every page. It is still
+   unlayered — a <link> of its own — because it has to beat Monaco's runtime-injected, unlayered
+   stylesheet, which no layered rule can do. */

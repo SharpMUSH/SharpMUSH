@@ -1932,6 +1932,10 @@
     <value>De gecompileerde component van deze applicatie kon niet worden geladen. Browsercode is mogelijk uitgeschakeld (allow_browser_code) of de assembly is niet geverifieerd.</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
+    <value>Dit portaal is gebouwd zonder ondersteuning voor gecompileerde applicatiecomponenten, dus deze applicatie kan hier niet draaien. De beheerder kan het opnieuw bouwen met PluginComponentSupport ingeschakeld (het Docker-buildargument PLUGIN_COMPONENTS).</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
     <value>Deze applicatie vereist een actief personage.</value>
     <comment>MT</comment>

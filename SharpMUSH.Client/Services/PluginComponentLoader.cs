@@ -13,9 +13,30 @@ namespace SharpMUSH.Client.Services;
 /// (the forced refresh on plugin unload is what reclaims it); so loaded assemblies are cached by URL. <b>Gate
 /// aware:</b> a non-success fetch (e.g. the server 404s the endpoint because <c>allow_browser_code</c> is off,
 /// or the bytes fail hash verification) is a no-op that returns null — the caller falls back to a notice.</para>
+///
+/// <para><b>Build gate:</b> a component compiled against the portal's UI surface can only run if the trimmer
+/// kept all of that surface, which it does only in a build published with <c>PluginComponentSupport=true</c>
+/// (see <c>SharpMUSH.Client.csproj</c>). On any other build <see cref="Supported"/> is false and the loader
+/// fetches nothing: a component loaded against a trimmed MudBlazor would fail at some arbitrary later
+/// member access rather than here.</para>
 /// </summary>
-public sealed class PluginComponentLoader(IHttpClientFactory httpClientFactory, ILogger<PluginComponentLoader> logger)
+/// <param name="supported">Overrides <see cref="BuildSupportsComponents"/>; for tests of both builds.</param>
+public sealed class PluginComponentLoader(
+	IHttpClientFactory httpClientFactory,
+	ILogger<PluginComponentLoader> logger,
+	bool? supported = null)
 {
+	/// <summary>Whether this build was published with the UI surface compiled components need rooted.</summary>
+	public static bool BuildSupportsComponents =>
+#if PLUGIN_COMPONENTS
+		true;
+#else
+		false;
+#endif
+
+	/// <summary>Whether this loader will load compiled components at all.</summary>
+	public bool Supported { get; } = supported ?? BuildSupportsComponents;
+
 	// Cache by assembly URL: the bytes are immutable for a given URL and an assembly cannot be unloaded, so a
 	// second request for the same URL reuses the already-loaded Assembly.
 	private readonly ConcurrentDictionary<string, Assembly> _assemblies = new(StringComparer.OrdinalIgnoreCase);
@@ -29,6 +50,13 @@ public sealed class PluginComponentLoader(IHttpClientFactory httpClientFactory, 
 	{
 		if (string.IsNullOrWhiteSpace(assemblyUrl) || string.IsNullOrWhiteSpace(componentTypeName))
 		{
+			return null;
+		}
+
+		if (!Supported)
+		{
+			logger.LogWarning("Not loading plugin component '{Type}': this portal build was published without "
+				+ "PluginComponentSupport, so the UI surface it compiles against has been trimmed.", componentTypeName);
 			return null;
 		}
 

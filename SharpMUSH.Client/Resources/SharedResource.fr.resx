@@ -2574,6 +2574,10 @@
   <data name="NavApplicationComponentLoadFailed" xml:space="preserve">
     <value>Le composant compilé de cette application n'a pas pu être chargé. Le code navigateur est peut-être désactivé (allow_browser_code), ou l'assembly n'a pas passé la vérification.</value>
   </data>
+  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
+    <value>Ce portail a été compilé sans prise en charge des composants d'application compilés : cette application ne peut donc pas s'exécuter ici. L'opérateur peut le recompiler avec PluginComponentSupport activé (l'argument de build Docker PLUGIN_COMPONENTS).</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationSchemaLoadFailed" xml:space="preserve">
     <value>Le schéma de l'application n'a pas pu être chargé. Le gestionnaire softcode à l'adresse {0} est peut-être absent ou renvoie du JSON invalide.</value>
   </data>

@@ -90,7 +90,9 @@ else
         timeoutCts.CancelAfter(ProbeTimeout);
         try
         {
-            var client = HttpClientFactory.CreateClient("api");
+            // Anonymous: the bearer handler on "api" would hold this probe until the tab's stored
+            // session had been restored, a round trip of its own the probe has no use for.
+            var client = HttpClientFactory.CreateClient(ApiClients.Anonymous);
             var response = await client.GetAsync("api/health", timeoutCts.Token);
             return response.IsSuccessStatusCode;
         }

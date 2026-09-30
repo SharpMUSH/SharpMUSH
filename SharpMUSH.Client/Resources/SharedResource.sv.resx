@@ -1932,6 +1932,10 @@
     <value>Den här applikationens kompilerade komponent kunde inte läsas in. Webbläsarkod kan vara avstängd (allow_browser_code), eller så klarade inte assemblyn verifieringen.</value>
     <comment>MT — allow_browser_code left as the config identifier it is.</comment>
   </data>
+  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
+    <value>Den här portalen är byggd utan stöd för kompilerade applikationskomponenter, så den här applikationen kan inte köras här. Operatören kan bygga om den med PluginComponentSupport påslaget (Docker-byggargumentet PLUGIN_COMPONENTS).</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
     <value>Den här applikationen kräver en aktiv karaktär.</value>
     <comment>MT</comment>

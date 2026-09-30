@@ -1932,6 +1932,10 @@
     <value>Nije moguće učitati prevedenu komponentu ove aplikacije. Kod u pregledniku možda je onemogućen (allow_browser_code) ili provjera sklopa nije uspjela.</value>
     <comment>MT — 'allow_browser_code' is a config key name, left as-is</comment>
   </data>
+  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
+    <value>Ovaj portal izgrađen je bez podrške za prevedene komponente aplikacija, pa se ova aplikacija ovdje ne može pokrenuti. Operater ga može ponovno izgraditi s uključenim PluginComponentSupport (Docker argument izgradnje PLUGIN_COMPONENTS).</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
     <value>Ova aplikacija zahtijeva aktivnog lika.</value>
     <comment>MT</comment>

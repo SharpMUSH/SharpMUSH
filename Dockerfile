@@ -8,7 +8,11 @@ RUN dotnet publish SharpMUSH.Server/SharpMUSH.Server.csproj -c Release -o /app -
 # Publish the Blazor WASM portal and bundle its static assets into the server's web root, so a
 # single image serves the API + SignalR + the portal at one origin (see UseBlazorFrameworkFiles in
 # Program.cs). Without this the server has no wwwroot/index.html and "/" returns 404.
-RUN dotnet publish SharpMUSH.Client/SharpMUSH.Client.csproj -c Release -o /client --no-restore
+# PLUGIN_COMPONENTS=true keeps the UI surface compiled plugin components (allow_browser_code) need
+# from being trimmed, at 1.1 MB more for every visitor's first load — see SharpMUSH.Client.csproj.
+ARG PLUGIN_COMPONENTS=false
+RUN dotnet publish SharpMUSH.Client/SharpMUSH.Client.csproj -c Release -o /client --no-restore \
+      -p:PluginComponentSupport=$PLUGIN_COMPONENTS
 RUN mkdir -p /app/wwwroot && cp -a /client/wwwroot/. /app/wwwroot/
 # Copy the dev certificate if it exists (optional for build, can be mounted at runtime)
 RUN if [ -f SharpMUSH.Server/sharpmush-dev.pfx ]; then \

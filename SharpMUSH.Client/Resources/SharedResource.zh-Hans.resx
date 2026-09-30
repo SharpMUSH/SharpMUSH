@@ -1932,6 +1932,10 @@
     <value>无法加载此应用程序编译后的组件。浏览器端代码可能已被禁用（allow_browser_code），或程序集未通过校验。</value>
     <comment>MT</comment>
   </data>
+  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
+    <value>此门户在构建时未启用编译应用程序组件支持，因此此应用程序无法在此运行。运营者可以启用 PluginComponentSupport（Docker 构建参数 PLUGIN_COMPONENTS）后重新构建。</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
     <value>此应用需要一个活动角色。</value>
     <comment>MT</comment>
