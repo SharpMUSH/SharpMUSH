@@ -87,6 +87,17 @@ public class PlayScopeTests : BunitContext
 	}
 
 	[Test]
+	public async Task OutsidePlay_TheExitsWidget_TakesNoKeys()
+	{
+		// Placed on Home or a profile, single-letter exit shortcuts would fire on a page that is not Play.
+		PushRoom();
+		Render<ExitsWidget>();
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier == "sharpmushLayout.registerExitKeys")).IsFalse();
+		InPlay<ExitsWidget>(new PlayPageContext(_ => Task.CompletedTask, _ => Task.CompletedTask));
+		JSInterop.VerifyInvoke("sharpmushLayout.registerExitKeys");
+	}
+
+	[Test]
 	public async Task OutsidePlay_AnExitStillGoes_ThroughThePlayConnection()
 	{
 		PushRoom();

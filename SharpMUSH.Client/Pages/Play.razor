@@ -13,6 +13,7 @@
 @inject ICommFeed Comms
 @inject ILayoutService Layouts
 @inject ApplicationCatalog Catalog
+@inject IWidgetRegistry Widgets
 @using SharpMUSH.Client.Components.Layout
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Library.Models.Portal.Widgets
@@ -159,25 +160,26 @@ else
                     <div class="play-sheet-grip" aria-hidden="true"></div>
                     @if (sheet == MobileSheet.Room)
                     {
+                        @* The Room sheet is the aside on a phone (§5.9): one tab per entry of the play layout, then the
+                           scope panels, each rendered as the aside renders it but in sheet mode. *@
                         <div class="play-sheet-tabs" role="tablist">
-                            <button type="button" role="tab" id="play-tab-here" aria-controls="play-panel-room" aria-selected="@(!_roomExits ? "true" : "false")"
-                                    class="play-sheet-tab @(!_roomExits ? "play-sheet-tab--on" : null)" @onclick="() => _roomExits = false">
-                                @($"{Loc["TermBrowserHere"]} · {Room.Occupants.Count(o => !o.You)}")
-                            </button>
-                            <button type="button" role="tab" id="play-tab-exits" aria-controls="play-panel-room" aria-selected="@(_roomExits ? "true" : "false")"
-                                    class="play-sheet-tab @(_roomExits ? "play-sheet-tab--on" : null)" @onclick="() => _roomExits = true">
-                                @($"{Loc["NavExits"]} · {Room.Exits.Count}")
-                            </button>
+                            @foreach (var entry in _asideEntries)
+                            {
+                                var e = entry;
+                                var on = e.Name == _sheetEntry;
+                                <button type="button" role="tab" id="@($"play-tab-{e.Name}")" aria-controls="play-panel-room" aria-selected="@(on ? "true" : "false")"
+                                        class="play-sheet-tab @(on ? "play-sheet-tab--on" : null)" @onclick="() => _sheetEntry = e.Name">
+                                    @TabLabel(e)
+                                </button>
+                            }
                         </div>
-                        <div class="play-sheet-body" role="tabpanel" id="play-panel-room" aria-labelledby="@(_roomExits ? "play-tab-exits" : "play-tab-here")">
-                            @if (_roomExits)
-                            {
-                                <ExitsCard Exits="@Room.Exits" Rows="true" Bare="true" AliasKeys="false" OnCommand="SendFromSheetAsync" />
-                            }
-                            else
-                            {
-                                <HereCard Occupants="@Room.Occupants" Bare="true" OnCharacter="OpenSheetFromRoom" OnCommand="SendFromSheetAsync" />
-                            }
+                        <div class="play-sheet-body" role="tabpanel" id="play-panel-room" aria-labelledby="@($"play-tab-{_sheetEntry}")">
+                            <CascadingValue Value="_sheetContext" IsFixed="true">
+                                @if (_asideEntries.FirstOrDefault(e => e.Name == _sheetEntry) is { } shown)
+                                {
+                                    <DynamicComponent Type="@shown.Widget.ComponentType" Parameters="@EntryParameters(shown)" />
+                                }
+                            </CascadingValue>
                         </div>
                     }
                     else
@@ -212,7 +214,17 @@ else
     private enum MobileSheet { Room, Channels, Pages }
 
     private MobileSheet? _mobileSheet;
-    private bool _roomExits = true;
+    /// <summary>One aside entry: a layout placement or a scope panel, by widget name.</summary>
+    private sealed record AsideEntry(string Name, IPortalWidget Widget, System.Text.Json.JsonElement? Config);
+
+    /// <summary>The play layout's aside, then the scope panels it does not place, as the Room sheet's tabs.</summary>
+    private IReadOnlyList<AsideEntry> _asideEntries = [];
+
+    /// <summary>The Room sheet's current tab: Exits when there is one (board 11), else the first.</summary>
+    private string? _sheetEntry;
+
+    /// <summary>The sheet's variant of the page context: sheet mode, and a send that closes the sheet.</summary>
+    private PlayPageContext _sheetContext = null!;
 
     private bool InScene => Room.Info?.Scene is not null;
 
@@ -349,18 +361,73 @@ else
         _pageContext = new PlayPageContext(
             occupant => InvokeAsync(() => { OpenSheet(occupant); StateHasChanged(); }),
             SendAsync);
+        _sheetContext = new PlayPageContext(
+            occupant => InvokeAsync(() => { OpenSheetFromRoom(occupant); StateHasChanged(); }),
+            command => InvokeAsync(async () => { await SendFromSheetAsync(command); StateHasChanged(); }),
+            InSheet: true);
+        Layouts.OnLayoutChanged += OnLayoutChanged;
     }
 
     protected override async Task OnInitializedAsync()
     {
         await ResolveRosterAsync();
+        await LoadAsideAsync();
+    }
+
+    /// <summary>
+    /// The aside's entries from the play layout, then the widget apps registered for the Play scope that the
+    /// layout does not place and the viewer's role allows. Re-read when an admin changes the layout.
+    /// </summary>
+    private async Task LoadAsideAsync()
+    {
         var layout = await Layouts.GetLayoutAsync(LayoutScopes.Play);
-        var placed = layout.Zones.TryGetValue(WidgetZone.RightSidebar, out var placements)
-            ? placements.Select(p => p.WidgetName).ToHashSet(StringComparer.OrdinalIgnoreCase)
-            : [];
+        var placements = layout.Zones.TryGetValue(WidgetZone.RightSidebar, out var list) ? list.OrderBy(p => p.Order).ToList() : [];
+        var placed = placements.Select(p => p.WidgetName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var role = AuthState is null ? SharpMUSH.Library.Authorization.PortalRole.Guest : PortalRoleHelper.CurrentRole((await AuthState).User);
         _scopePanels = Catalog.ForScope(LayoutScopes.Play)
+            .Where(a => role >= a.MinimumRoleEnum)
             .Where(a => a.KindEnum == SharpMUSH.Library.Models.Portal.Applications.ApplicationKind.Widget && !placed.Contains(a.Slug))
             .ToList();
+
+        var entries = new List<AsideEntry>();
+        foreach (var placement in placements)
+        {
+            if (Widgets.GetWidget(placement.WidgetName) is { } widget) entries.Add(new AsideEntry(placement.WidgetName, widget, placement.Config));
+        }
+        foreach (var app in _scopePanels)
+        {
+            if (Widgets.GetWidget(app.Slug) is { } widget) entries.Add(new AsideEntry(app.Slug, widget, null));
+        }
+        _asideEntries = entries;
+        if (_sheetEntry is null || entries.All(e => e.Name != _sheetEntry))
+        {
+            _sheetEntry = entries.FirstOrDefault(e => e.Name == "Exits")?.Name ?? entries.FirstOrDefault()?.Name;
+        }
+    }
+
+    private void OnLayoutChanged(string scope)
+    {
+        if (!string.Equals(scope, LayoutScopes.Play, StringComparison.OrdinalIgnoreCase)) return;
+        _ = InvokeAsync(async () =>
+        {
+            await LoadAsideAsync();
+            StateHasChanged();
+        });
+    }
+
+    private string TabLabel(AsideEntry entry) => entry.Name switch
+    {
+        "Here" => $"{Loc["TermBrowserHere"]} · {Room.Occupants.Count(o => !o.You)}",
+        "Exits" => $"{Loc["NavExits"]} · {Room.Exits.Count}",
+        _ => Catalog.Get(entry.Name)?.DisplayName ?? Loc[entry.Widget.DisplayName],
+    };
+
+    /// <summary>The parameters ZoneRenderer passes a widget; application widgets also get their slug.</summary>
+    private static Dictionary<string, object> EntryParameters(AsideEntry entry)
+    {
+        var parameters = new Dictionary<string, object> { ["Config"] = entry.Config!, ["Zone"] = nameof(WidgetZone.RightSidebar) };
+        if (entry.Widget.ComponentType == typeof(SchemaWidget)) parameters["WidgetName"] = entry.Name;
+        return parameters;
     }
 
     private async Task ResolveRosterAsync()
@@ -509,8 +576,11 @@ else
         catch (InvalidOperationException) { }
     }
 
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
     public void Dispose()
     {
+        Layouts.OnLayoutChanged -= OnLayoutChanged;
         PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
         PlayTerminal.OobChannels.RoomChanged -= OnRoomChanged;
         Comms.Changed -= OnCommsChanged;

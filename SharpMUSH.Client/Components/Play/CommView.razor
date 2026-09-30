@@ -85,6 +85,9 @@
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _directory = [];
     private string? _openedKey;
     private int _newAt = -1;
+
+    /// <summary>The first line unread at opening; the divider follows it, not an index the trimmed history shifts.</summary>
+    private CommMessage? _firstUnread;
     private string _text = string.Empty;
 
     private CommConversation? Conversation => Feed.Conversations.FirstOrDefault(c => c.Key == Key);
@@ -117,14 +120,29 @@
         _text = string.Empty;
         _lines = Feed.Messages(Key);
         var unread = Conversation?.Unread ?? Feed.Channels.FirstOrDefault(c => c.Name == Key)?.Unread ?? 0;
-        _newAt = unread > 0 && unread < _lines.Count ? _lines.Count - unread : -1;
+        _firstUnread = unread > 0 && unread < _lines.Count ? _lines[_lines.Count - unread] : null;
+        _newAt = FirstUnreadIndex();
         Feed.Viewing = Key;
         Feed.MarkRead(Key);
     }
 
+    private int FirstUnreadIndex() => _firstUnread is null ? -1 : IndexOf(_lines, _firstUnread);
+
+    private static int IndexOf(IReadOnlyList<CommMessage> lines, CommMessage line)
+    {
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (ReferenceEquals(lines[i], line) || lines[i] == line) return i;
+        }
+        return -1;
+    }
+
     private void OnFeedChanged()
     {
+        // A reconnect clears the feed, and with it Viewing; this view is still open.
+        if (_openedKey is not null && Feed.Viewing is null) Feed.Viewing = _openedKey;
         _lines = Feed.Messages(Key);
+        _newAt = FirstUnreadIndex();
         _ = InvokeAsync(StateHasChanged);
     }
 

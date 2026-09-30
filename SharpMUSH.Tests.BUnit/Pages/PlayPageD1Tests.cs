@@ -11,7 +11,9 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
 using SharpMUSH.Client.Components.Play;
+using SharpMUSH.Client.Models.Widgets;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal.Widgets;
 using SharpMUSH.Tests.BUnit.Components;
 using PlayPage = SharpMUSH.Client.Pages.Play;
 
@@ -32,6 +34,9 @@ public class PlayPageD1Tests : TrackingBunitContext
 	[
 		new("weather", "Weather", null, "Widget", "http/weather/schema", null, null, "Guest", null, ["RightSidebar"], 30,
 			Scope: "play", OobPackage: "weather.now"),
+		// Staff-only: never offered to a visitor below its minimum role.
+		new("staffboard", "Staff board", null, "Widget", "http/staff/schema", null, null, "Wizard", null, ["RightSidebar"], 40,
+			Scope: "play"),
 	];
 	private readonly IPlayTerminalService _play = Substitute.For<IPlayTerminalService>();
 
@@ -210,11 +215,51 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(sheet.GetAttribute("aria-modal")).IsEqualTo("true");
 		await Assert.That(cut.Find(".mud-overlay").GetAttribute("style")).Contains("align-items: flex-end")
 			.Because("MudOverlay centres a zero-size content box; the sheet sits on the bottom edge instead");
+		var sheetTabs = cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList();
+		await Assert.That(sheetTabs).IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("the Room sheet is the play layout, then the scope panels, as the desktop aside is");
 		await Assert.That(cut.FindAll(".play-sheet .exits--rows .exit").Count).IsEqualTo(1);
 		cut.Find(".play-sheet .exit button.exit-go").Click();
 		await _play.Received(1).SendAsync("goto #1210");
 		await Assert.That(cut.FindAll(".play-sheet").Count).IsEqualTo(0);
 	}
+
+	[Test]
+	public async Task APanelAboveTheViewersRole_IsNotShown()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .play-panel"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-aside .play-panel .kit-card-title").Select(t => t.TextContent).ToList())
+			.IsEquivalentTo(new[] { "Weather" });
+	}
+
+	[Test]
+	public async Task PlacingAPanelInTheLayout_WhilePlayIsOpen_DoesNotShowItTwice()
+	{
+		var layouts = Substitute.For<ILayoutService>();
+		var withoutWeather = PlayLayout("Here", "Exits");
+		var withWeather = PlayLayout("Here", "Exits", "weather");
+		var current = withoutWeather;
+		layouts.GetLayoutAsync(Arg.Any<string>()).Returns(_ => Task.FromResult(current));
+		Services.AddSingleton(layouts);
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .play-panel"), TimeSpan.FromSeconds(5));
+
+		current = withWeather;
+		layouts.OnLayoutChanged += Raise.Event<Action<string>>(LayoutScopes.Play);
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".play-aside .play-panel").Count != 0) throw new InvalidOperationException("the panel is still listed apart");
+		}, TimeSpan.FromSeconds(5));
+	}
+
+	private static LayoutConfiguration PlayLayout(params string[] names) =>
+		new(new Dictionary<WidgetZone, List<WidgetPlacement>>
+		{
+			[WidgetZone.RightSidebar] = names.Select((n, i) => new WidgetPlacement(n, i, null)).ToList(),
+		}, new LayoutSettings(false, false));
 
 	[Test]
 	public async Task TheInSceneRow_IsCurrentOnlyWhileTheStoryIsShown()

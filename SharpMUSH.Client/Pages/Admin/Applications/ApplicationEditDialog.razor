@@ -55,14 +55,18 @@
                 <MudItem xs="12" sm="4">
                     <MudNumericField @bind-Value="_order" Label="@Loc["LayAppOrder"]" Variant="Variant.Outlined" />
                 </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_scope" Label="@Loc["LayAppScopeOptional"]" Variant="Variant.Outlined"
-                                  HelperText="@Loc["LayAppScopeHelper"]" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_oobPackage" Label="@Loc["LayAppOobPackageOptional"]" Variant="Variant.Outlined"
-                                  HelperText="@Loc["LayAppOobPackageHelper"]" />
-                </MudItem>
+                @* A layout scope and a live OOB feed only mean something for a widget. *@
+                @if (_kind == ApplicationKind.Widget)
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_scope" Label="@Loc["LayAppScopeOptional"]" Variant="Variant.Outlined"
+                                      HelperText="@Loc["LayAppScopeHelper"]" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="_oobPackage" Label="@Loc["LayAppOobPackageOptional"]" Variant="Variant.Outlined"
+                                      HelperText="@Loc["LayAppOobPackageHelper"]" />
+                    </MudItem>
+                }
                 @if (_kind == ApplicationKind.Widget)
                 {
                     <MudItem xs="12">
@@ -163,8 +167,8 @@
             Existing?.RenderKind ?? ApplicationRenderKind.Schema,
             Existing?.ComponentAssemblyUrl,
             Existing?.ComponentTypeName,
-            string.IsNullOrWhiteSpace(_scope) ? null : _scope.Trim(),
-            string.IsNullOrWhiteSpace(_oobPackage) ? null : _oobPackage.Trim());
+            _kind != ApplicationKind.Widget || string.IsNullOrWhiteSpace(_scope) ? null : _scope.Trim(),
+            _kind != ApplicationKind.Widget || string.IsNullOrWhiteSpace(_oobPackage) ? null : _oobPackage.Trim());
 
         var result = await Registry.UpsertAsync(model);
         _saving = false;

@@ -8,7 +8,7 @@
 
 @* README §7.4 the Here widget: HereCard over the play connection's room. In the Play scope a character
    opens the page's sheet; placed anywhere else, a row runs its own cmd. *@
-<HereCard Occupants="@_occupants" OnCharacter="OpenAsync" OnCommand="SendAsync" />
+<HereCard Occupants="@_occupants" OnCharacter="OpenAsync" OnCommand="SendAsync" Bare="@(Page?.InSheet == true)" />
 
 @code {
     [Parameter] public JsonElement? Config { get; set; }

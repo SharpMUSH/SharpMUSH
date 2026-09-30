@@ -119,6 +119,33 @@ public class CommViewTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task TheNewDivider_StaysOnItsLine_WhenTheHistoryIsTrimmed()
+	{
+		// The feed keeps a bounded history: when a line arrives at the cap the oldest drops, and an index
+		// would slide the divider one line later each time.
+		var first = Line("A", "one", Now.AddMinutes(-3));
+		var unread = Line("B", "two", Now.AddMinutes(-2));
+		_feed.ChannelList = [new CommChannel("Public", 1)];
+		_feed.Lines["Public"] = [first, unread];
+		var cut = RenderView("Public");
+		_feed.Lines["Public"] = [unread, Line("C", "three", Now)];
+		_feed.Raise();
+		cut.WaitForAssertion(() => cut.Find(".comm-group .comm-text"), TimeSpan.FromSeconds(5));
+		var order = cut.FindAll(".comm-group, .comm-new").Select(e => e.ClassList.Contains("comm-new") ? "NEW" : e.QuerySelector(".comm-text")!.TextContent).ToList();
+		await Assert.That(order.IndexOf("NEW")).IsEqualTo(order.IndexOf("two") - 1);
+	}
+
+	[Test]
+	public async Task AFeedClearedUnderTheView_IsToldAgainWhatIsBeingViewed()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 0)];
+		RenderView("Public");
+		_feed.Viewing = null; // a reconnect clears the feed
+		_feed.Raise();
+		await Assert.That(_feed.Viewing).IsEqualTo("Public");
+	}
+
+	[Test]
 	public async Task TheCloseButton_GoesBack()
 	{
 		_feed.ChannelList = [new CommChannel("Public", 0)];

@@ -8,7 +8,9 @@
 
 @* README §7.4 the Exits widget: ExitsCard over the play connection's room, with its keycaps and alias
    keys. Commands go through the Play page when it is the host, else straight down the play connection. *@
-<ExitsCard Exits="@_exits" OnCommand="SendAsync" />
+@* Keys only on Play itself, and only once: placed on another page an exit shortcut would fire there. *@
+<ExitsCard Exits="@_exits" OnCommand="SendAsync" Rows="@(Page?.InSheet == true)" Bare="@(Page?.InSheet == true)"
+           AliasKeys="@(Page is { InSheet: false })" />
 
 @code {
     [Parameter] public JsonElement? Config { get; set; }

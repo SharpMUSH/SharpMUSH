@@ -23,4 +23,6 @@ public record ProfilePageContext(string CharacterName, bool CanEdit, string? Dbr
 /// </summary>
 /// <param name="OpenCharacter">Opens the character sheet for a room row.</param>
 /// <param name="Send">Sends a command line through the play connection.</param>
-public record PlayPageContext(Func<RoomOccupant, Task> OpenCharacter, Func<string, Task> Send);
+/// <param name="InSheet">Rendered in the phone Room sheet: no card chrome, exits as rows, and the page's
+/// exit keys stay with the aside.</param>
+public record PlayPageContext(Func<RoomOccupant, Task> OpenCharacter, Func<string, Task> Send, bool InSheet = false);
