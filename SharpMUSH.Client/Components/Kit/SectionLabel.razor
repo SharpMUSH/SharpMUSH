@@ -1,0 +1,10 @@
+@* D1 §4.1 sidebar section label: mono, 10px, uppercase, faint, .12em. The global .section-kicker
+   keeps its .16em spacing for stat tiles and panel headers; this is the sidebar variant. *@
+<div class="kit-section-label @Class">@ChildContent</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Optional extra CSS classes.</summary>
+    [Parameter] public string? Class { get; set; }
+}
