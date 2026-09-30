@@ -61,6 +61,8 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			.AddSingleton<DatabaseConversionService>()
 			.AddEchoLocalizer();
 
+		// The configuration home gates its admin-tools aside with AuthorizeView.
+		AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
