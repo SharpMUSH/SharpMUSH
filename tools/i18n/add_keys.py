@@ -21,34 +21,34 @@ from __future__ import annotations
 
 import json
 import os
-import re
+import subprocess
 import sys
+import xml.etree.ElementTree as ET
+from xml.sax.saxutils import escape, quoteattr
 
 RES_DIR = os.path.join("SharpMUSH.Client", "Resources")
 
 
-def resx_path(locale: str) -> str:
+def resx_path(res_dir: str, locale: str) -> str:
     name = "SharedResource.resx" if locale == "" else f"SharedResource.{locale}.resx"
-    return os.path.join(RES_DIR, name)
+    return os.path.join(res_dir, name)
 
 
-def esc(s: str) -> str:
-    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+def read(path: str) -> str:
+    with open(path, encoding="utf-8") as f:
+        return f.read()
 
 
 def existing_keys(text: str) -> set[str]:
-    return set(re.findall(r'<data name="([^"]+)"', text))
+    return {name for d in ET.fromstring(text.encode("utf-8")).iter("data") if (name := d.get("name")) is not None}
 
 
-def main() -> int:
-    if len(sys.argv) != 2:
-        print(__doc__, file=sys.stderr)
-        return 2
-    with open(sys.argv[1], encoding="utf-8") as f:
-        keys: dict[str, dict[str, str]] = json.load(f)
+def entry(key: str, value: str) -> str:
+    return f'  <data name={quoteattr(key)} xml:space="preserve">\n    <value>{escape(value)}</value>\n  </data>\n'
 
-    neutral_text = open(resx_path(""), encoding="utf-8").read()
-    have = existing_keys(neutral_text)
+
+def add_keys(keys: dict[str, dict[str, str]], res_dir: str = RES_DIR) -> int:
+    have = existing_keys(read(resx_path(res_dir, "")))
     for key, values in keys.items():
         if "" not in values:
             print(f"{key}: no neutral value", file=sys.stderr)
@@ -59,30 +59,34 @@ def main() -> int:
 
     locales = sorted({loc for values in keys.values() for loc in values})
     for loc in locales:
-        path = resx_path(loc)
+        path = resx_path(res_dir, loc)
         if not os.path.exists(path):
             print(f"{loc}: {path} does not exist", file=sys.stderr)
             return 1
 
     for loc in locales:
-        path = resx_path(loc)
-        text = open(path, encoding="utf-8").read()
+        path = resx_path(res_dir, loc)
+        text = read(path)
         present = existing_keys(text)
-        block = ""
-        for key, values in keys.items():
-            if loc not in values or key in present:
-                continue
-            block += f'  <data name="{key}" xml:space="preserve">\n    <value>{esc(values[loc])}</value>\n  </data>\n'
+        block = "".join(entry(key, values[loc]) for key, values in keys.items() if loc in values and key not in present)
         if not block:
             continue
         idx = text.rindex("</root>")
-        text = text[:idx] + block + text[idx:]
         with open(path, "w", encoding="utf-8", newline="\n") as f:
-            f.write(text)
+            f.write(text[:idx] + block + text[idx:])
         print(f"{path}: +{block.count('<data ')}")
+    return 0
 
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print(__doc__, file=sys.stderr)
+        return 2
+    with open(sys.argv[1], encoding="utf-8") as f:
+        keys: dict[str, dict[str, str]] = json.load(f)
+    if (code := add_keys(keys)) != 0:
+        return code
     # The same gates CI runs, so a bad plural or placeholder is caught at authoring time.
-    import subprocess
     return subprocess.call([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "validate_resx.py")])
 
 

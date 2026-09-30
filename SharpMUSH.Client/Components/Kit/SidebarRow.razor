@@ -29,6 +29,9 @@ else
     /// <summary>The name initials and the tint come from; defaults to <see cref="Label"/>.</summary>
     [Parameter] public string? Name { get; set; }
 
+    /// <summary>The second person of a group page: their initials stand in when <see cref="ImageUrl2"/> is absent.</summary>
+    [Parameter] public string? Name2 { get; set; }
+
     /// <summary>A MudBlazor icon for the icon lead.</summary>
     [Parameter] public string? Icon { get; set; }
     [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
@@ -49,7 +52,10 @@ else
     [Parameter] public string? Href { get; set; }
     [Parameter] public EventCallback OnClick { get; set; }
 
-    private bool IsGroup => Lead == SidebarLead.Avatar && ImageUrl2 is not null;
+    private bool IsGroup => Lead == SidebarLead.Avatar && (ImageUrl2 is not null || Name2 is not null);
+
+    private string SecondFallbackStyle =>
+        $"background:hsl({NameHue.Of(Name2)} 30% 24%);color:hsl({NameHue.Of(Name2)} 45% 82%);";
 
     private string RowClass => string.Join(' ', new[]
     {
@@ -103,6 +109,10 @@ else
                     @if (IsGroup && ImageUrlPolicy.IsRenderable(ImageUrl2))
                     {
                         <img class="kit-row-avatar kit-row-avatar--second" src="@ImageUrl2!.Trim()" alt="" />
+                    }
+                    else if (IsGroup)
+                    {
+                        <span class="kit-row-avatar kit-row-avatar--second kit-row-fallback" style="@SecondFallbackStyle">@Initials.From(Name2)</span>
                     }
                     break;
                 case SidebarLead.Icon:
