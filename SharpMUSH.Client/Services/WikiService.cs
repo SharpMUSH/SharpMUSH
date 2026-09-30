@@ -13,6 +13,8 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiService> logger)
 {
+	/// <summary>Concurrent reads of one recent-changes list (the stats tile and the activity widget) share a request.</summary>
+	private readonly SingleFlight<string, IReadOnlyList<WikiPageSummary>> _recentFlight = new();
 
 	public async ValueTask<Maybe<WikiArticle>> GetWikiArticle(
 		string slug, string? category = null, string? ns = null, string? lang = null)
@@ -40,12 +42,18 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// Failures (network, server error) return an empty list — the index UI
 	/// simply shows nothing rather than breaking the whole page.
 	/// </summary>
-	public async ValueTask<IReadOnlyList<WikiPageSummary>> GetRecentChangesAsync(int count = 20, string? lang = null)
+	public ValueTask<IReadOnlyList<WikiPageSummary>> GetRecentChangesAsync(int count = 20, string? lang = null)
+	{
+		var url = $"api/wiki/recent?count={count}{LangQuery(lang, first: false)}";
+		return new ValueTask<IReadOnlyList<WikiPageSummary>>(_recentFlight.RunAsync(url, () => FetchRecentChangesAsync(url)));
+	}
+
+	private async Task<IReadOnlyList<WikiPageSummary>> FetchRecentChangesAsync(string url)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>($"api/wiki/recent?count={count}{LangQuery(lang, first: false)}");
+			var dtos = await http.GetFromJsonAsync<List<WikiPageDto>>(url);
 			return dtos?.Select(ToSummary).ToList() ?? [];
 		}
 		catch (Exception ex)

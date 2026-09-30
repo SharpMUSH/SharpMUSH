@@ -9,7 +9,7 @@
 @inject NavigationManager Nav
 @inject AccountAuthService AccountAuth
 @inject CharacterSwitchService CharacterSwitch
-@inject ApplicationRegistryClient Registry
+@inject ApplicationCatalog Applications
 @inject ServerInfoService ServerInfo
 @inject IJSRuntime JS
 @inject ILogger<NavMenu> Logger
@@ -289,13 +289,24 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Independent of the role and the application list, so it is not queued behind them.
+        var serverInfo = LoadServerInfoAsync();
+
         var role = AuthState is null
             ? PortalRole.Guest
             : PortalRoleHelper.CurrentRole((await AuthState).User);
 
-        _apps = await Registry.ListAsync();
+        // The startup catalog, not a second GET api/applications of our own: the list is the same
+        // for every viewer (the caller filters by role), and the catalog is already fetching it.
+        await Applications.Loaded;
+        _apps = Applications.All;
         _novelSections = PortalNavSections.NovelSections(_apps, role);
 
+        await serverInfo;
+    }
+
+    private async Task LoadServerInfoAsync()
+    {
         _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
         _gameName = await ServerInfo.GameNameAsync();
     }
