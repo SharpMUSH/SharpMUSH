@@ -222,9 +222,8 @@ else
     protected override void OnInitialized()
     {
         PlayTerminal.ConnectionStateChanged += OnConnectionChanged;
-        PlayTerminal.OobChannels.ChannelUpdated += OnChannelUpdated;
-        RefreshFromStore("room.contents");
-        RefreshFromStore("room.exits");
+        PlayTerminal.OobChannels.RoomChanged += OnRoomChanged;
+        ReadRoom();
     }
 
     protected override Task OnInitializedAsync() => ResolveRosterAsync();
@@ -261,22 +260,19 @@ else
 
     private void OnConnectionChanged(bool _) => InvokeAsync(StateHasChanged);
 
-    private void OnChannelUpdated(string package) => RefreshFromStore(package);
-
-    private void RefreshFromStore(string package)
+    private void OnRoomChanged()
     {
-        switch (package)
-        {
-            case "room.contents":
-                _here = OobEntryParser.ParseOccupants(PlayTerminal.OobChannels.Get(package));
-                break;
-            case "room.exits":
-                _exits = OobEntryParser.ParseExits(PlayTerminal.OobChannels.Get(package));
-                break;
-            default:
-                return;
-        }
+        ReadRoom();
         InvokeAsync(StateHasChanged);
+    }
+
+    // The store keeps the room typed and replaces each list whole on every push, so this reads one
+    // snapshot rather than parsing the payloads again.
+    private void ReadRoom()
+    {
+        var room = PlayTerminal.OobChannels.Room;
+        _here = room.Occupants;
+        _exits = room.Exits;
     }
 
     private async Task RunEntry(string? cmd)
@@ -288,6 +284,6 @@ else
     public void Dispose()
     {
         PlayTerminal.ConnectionStateChanged -= OnConnectionChanged;
-        PlayTerminal.OobChannels.ChannelUpdated -= OnChannelUpdated;
+        PlayTerminal.OobChannels.RoomChanged -= OnRoomChanged;
     }
 }

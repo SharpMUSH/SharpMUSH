@@ -113,3 +113,16 @@ public sealed record RoomExit(
 	string? Hint,
 	string? Confirm,
 	ExitDestination? Dest);
+
+/// <summary>
+/// The latest of each <c>room.*</c> payload, typed. Every push replaces its part whole — the softcode
+/// sends whole lists, never diffs — and leaves the other two parts as they were.
+/// </summary>
+/// <param name="Info">The latest <c>room.info</c>, or null before one arrives (or when it was unreadable).</param>
+/// <param name="Occupants">The latest <c>room.contents</c> rows.</param>
+/// <param name="Exits">The latest <c>room.exits</c> rows.</param>
+public sealed record RoomState(RoomInfo? Info, IReadOnlyList<RoomOccupant> Occupants, IReadOnlyList<RoomExit> Exits)
+{
+	/// <summary>No room: nothing has been pushed, or the store was cleared.</summary>
+	public static RoomState Empty { get; } = new(null, [], []);
+}
