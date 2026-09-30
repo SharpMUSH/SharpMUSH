@@ -106,8 +106,10 @@ removed.
 | OOC label on OOC icon tile · redlink on surface | 6.12 · 7.84 |
 | text over banner images, every board and state | lowest 8.87 (wiki home hero); Play lowest 9.28 (minimised strip) |
 
-Banner contrast depends on the image. The §4.3 scrim keeps light text above 4.5:1 on bright art, so don't
-lighten it without re-measuring. Text dimmed behind a modal (the character sheet) is inactive and exempt.
+Banner contrast depends on the image. The §4.3 scrim keeps light text above 4.5:1 on any art, a white
+image included: its alpha stays at 0.58 or more through the text band (the lower half of a closed banner,
+72% of an open one). `DesignTokensTests.TheScrimKeepsLightTextReadable_OnWhiteArt` measures it, so it
+cannot be lightened by accident. Text dimmed behind a modal (the character sheet) is inactive and exempt.
 
 ---
 
@@ -466,7 +468,7 @@ The `room-contents` package pushes these (`examples/packages/room-contents`, `` 
   omission (dark exits, per-viewer lock hints) needs a per-target loop in softcode. That is v2 package work.
 
 ```jsonc
-// room.info (NEW): on arrival, and when the name, image or description changes
+// room.info (NEW): on arrival and on connect (there is no attribute-change event, so an edit is not re-sent)
 { "v": 2, "dbref": "#1201", "objid": "#1201:1719500000", "name": "Lower Docks", "area": "Harbour Ward",
   "image": { "url": "/assets/rooms/1201.jpg", "alt": "The quay at dusk", "width": 1600, "height": 440, "focal": [0.5, 0.6] },
   "desc": { "format": "markdown", "text": "Tarred pilings and stacked…" },
