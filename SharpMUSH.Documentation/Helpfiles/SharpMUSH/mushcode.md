@@ -28,8 +28,7 @@ At its most basic, writing MUSHcode is just stringing together a series of comma
 
 If you would like to learn more about MUSHcoding and how to create `$-commands` for yourself, the following help files may be useful. You may also find it useful to download a copy of Amberyl's MUSH manual and follow the examples described there. However, the manual is quite old now, and some parts may no longer be relevant or entirely accurate. 
   
-Related Help Topics (in no particular order)<br>
--------------------
+### Related help topics
 - [attributes]
 - [%]
 - [NON-STANDARD ATTRIBUTES]

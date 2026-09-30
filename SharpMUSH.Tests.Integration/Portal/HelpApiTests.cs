@@ -107,7 +107,7 @@ public class HelpApiTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
-	[Arguments("@mail", "@MAIL")]
+	[Arguments("@mail", "MAIL")]
 	[Arguments("mail-sending", "MAIL-SENDING")]
 	[Arguments("getting started", "Getting Started")]
 	[Arguments("NEWBIE", "newbie")]

@@ -80,9 +80,11 @@ public static class HelpArticleParser
 			}
 			indexed.Add((section, matches[0]));
 		}
-		if (headings.Any(heading => heading.Level == 2 && !indexed.Any(item => item.Heading == heading)))
+		var undeclared = headings.Where(heading => heading.Level == 2 && !indexed.Any(item => item.Heading == heading)).ToList();
+		if (undeclared.Count > 0)
 		{
-			throw new InvalidDataException("Every H2 must be declared as a section.");
+			throw new InvalidDataException($"Every H2 in {metadata.Id} must be declared as a section: "
+				+ string.Join(", ", undeclared.Select(heading => HeadingText(markdown, heading))));
 		}
 		var firstSection = indexed.Count == 0 ? markdown.Length : indexed.Min(item => item.Heading.Span.Start);
 		var overview = markdown[title.Span.Start..firstSection].Trim();

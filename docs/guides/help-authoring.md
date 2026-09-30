@@ -99,6 +99,10 @@ from the same indexed records. `GET /api/help/admin/articles` has the existing
 Wizard/God account-session gate. Export each article once, retaining IDs and
 section order; do not import engine help into the editable game wiki.
 
+The PennMUSH parity harness also consumes the declared sections of compatibility
+articles when validating its known-differences allowlist. Keep those section
+headings synchronized with the allowlist's `profile` references.
+
 ## Formatting
 
 - Use real section headings instead of bold paragraphs acting as headings.
