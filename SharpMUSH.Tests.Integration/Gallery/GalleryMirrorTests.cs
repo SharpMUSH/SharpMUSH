@@ -49,6 +49,37 @@ public class GalleryMirrorTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
+	public async Task Replace_KeepsTheStoredUrl_WhateverTheClientSends()
+	{
+		// PUT used to store each entry as sent, so a client could point a gallery image (and, through the
+		// mirror, IMAGE) at any URL it liked. Only order, captions and flags are the client's to set.
+		var http = factory.CreateHttpClient();
+		var name = await GodNameAsync(http);
+		var url = $"api/profile/{Uri.EscapeDataString(name)}/gallery";
+		var before = await http.GetFromJsonAsync<List<GalleryEntry>>(url) ?? [];
+		try
+		{
+			var entries = await UploadAsync(http, name, $"spoof-{Guid.NewGuid():N}.png");
+			var mine = entries[^1];
+			var response = await http.PutAsJsonAsync(url, entries
+				.Select(e => e.AssetId == mine.AssetId ? e with { Url = "javascript:alert(1)", FileName = "x" } : e)
+				.ToList());
+			var saved = (await response.Content.ReadFromJsonAsync<List<GalleryEntry>>())!.Single(e => e.AssetId == mine.AssetId);
+
+			await Assert.That(saved.Url).IsEqualTo(mine.Url);
+			await Assert.That(saved.FileName).IsEqualTo(mine.FileName);
+		}
+		finally
+		{
+			var now = await http.GetFromJsonAsync<List<GalleryEntry>>(url) ?? [];
+			foreach (var entry in now.Where(e => before.All(b => b.AssetId != e.AssetId)))
+			{
+				await http.DeleteAsync($"{url}/{Uri.EscapeDataString(entry.AssetId)}");
+			}
+		}
+	}
+
+	[Test]
 	public async Task GalleryWrites_MirrorIconBannerAndCaption_AndClearWhatTheyRemove()
 	{
 		var http = factory.CreateHttpClient();
