@@ -3869,7 +3869,7 @@
     <comment>MT</comment>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>Atividade recente no wiki</value>
+    <value>Alterados recentemente</value>
     <comment>MT</comment>
   </data>
   <data name="WidSceneIn" xml:space="preserve">
@@ -4667,5 +4667,8 @@
   </data>
   <data name="NavWikiAlsoIn" xml:space="preserve">
     <value>Também em</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>Visão geral</value>
   </data>
 </root>

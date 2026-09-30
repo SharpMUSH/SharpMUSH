@@ -38,7 +38,7 @@
             var g = group;
             var label = WikiCategories.Label(g.Key, Loc["ResCategoryGeneral"]);
             var route = WikiCategories.Route(g.Key);
-            <SidebarRow Lead="SidebarRow.SidebarLead.Image" ImageUrl="@g.Cover" Name="@label" Label="@label" Count="@g.Pages.Count" Href="@route" IsCurrent="@(_path == route)" Collapsed="@Collapsed" />
+            <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@g.Cover" Name="@label" Label="@label" Count="@g.Pages.Count" Href="@route" IsCurrent="@(_path == route)" Collapsed="@Collapsed" />
         }
     </nav>
     <div class="wiki-side-spacer"></div>

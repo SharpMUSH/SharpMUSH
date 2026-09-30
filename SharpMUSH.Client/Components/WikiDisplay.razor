@@ -98,7 +98,7 @@ else
                 }
                 @FallbackNotice
                 <KitCard Class="wiki-article-card">
-                    <div class="WikiContent wiki-article-body">
+                    <div class="WikiContent wiki-article-body" id="overview">
                         <div class="mud-card-content">
                             @RenderSegments
                         </div>
@@ -131,7 +131,9 @@ else
                             <nav class="wiki-toc" aria-label="@Loc["ResOnThisPage"]">
                                 @foreach (var entry in _toc)
                                 {
-                                    <a href="@($"{PagePath}#{entry.Anchor}")">@entry.Text</a>
+                                    var anchor = entry.Anchor;
+                                    <a href="@($"{PagePath}#{anchor}")" aria-current="@(anchor == _tocCurrent ? "location" : null)"
+                                       @onclick="@(() => _tocCurrent = anchor)">@entry.Text</a>
                                 }
                             </nav>
                         }
@@ -164,15 +166,19 @@ else
                 @if (_more.Count > 0)
                 {
                     <KitCard Aside="true" Class="wiki-more" Title="@string.Format(Loc["NavWikiMoreIn"], CategoryLabel)">
+                        <Controls>
+                            <a class="wiki-more-all" href="@WikiCategories.Route(Category)">@Loc.Plural("NavWikiAllShort", "count", _moreTotal)</a>
+                        </Controls>
+                        <ChildContent>
                         <div class="wiki-more-rows">
                             @foreach (var sibling in _more)
                             {
                                 var page2 = sibling;
-                                <SidebarRow Lead="SidebarRow.SidebarLead.Image" ImageUrl="@page2.Image" Name="@page2.Title" Label="@page2.Title"
+                                <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@page2.Image" Name="@page2.Title" Label="@page2.Title"
                                             Href="@WikiRoutes.PathFor(page2.Namespace, page2.Category, page2.Slug)" />
                             }
                         </div>
-                        <a class="wiki-more-all" href="@WikiCategories.Route(Category)">@Loc.Plural("NavWikiAllShort", "count", _moreTotal)</a>
+                        </ChildContent>
                     </KitCard>
                 }
             </aside>
@@ -239,6 +245,7 @@ else
 
     private List<BodySegment> _segments = [];
     private List<TocEntry> _toc = [];
+    private string _tocCurrent = "overview";
 
     /// <summary>A character the body links to: the link text and its /character/ href.</summary>
     private sealed record Mentioned(string Name, string Href);
@@ -480,16 +487,19 @@ else
 
     /// <summary>Parses level-2 (##) markdown headings into a table of contents.
     /// Anchors match Markdig's auto-identifier (GitHub-style) so #links resolve.</summary>
-    private static List<TocEntry> BuildToc(string? markdown)
+    /// <summary>The h2 headings, led by an "Overview" entry for the intro (board 23). Empty when the
+    /// page has no headings: a one-section page needs no table of contents.</summary>
+    private List<TocEntry> BuildToc(string? markdown)
     {
         if (string.IsNullOrEmpty(markdown)) return [];
-        return markdown.Split('\n')
+        var headings = markdown.Split('\n')
             .Select(l => l.TrimEnd())
             .Where(l => l.StartsWith("## ", StringComparison.Ordinal))
             .Select(l => l[3..].Trim())
             .Where(t => t.Length > 0)
             .Select(t => new TocEntry(t, Slugify(t)))
             .ToList();
+        return headings.Count == 0 ? [] : [new TocEntry(Loc["NavWikiOverview"], "overview"), .. headings];
     }
 
     private static string Slugify(string text)

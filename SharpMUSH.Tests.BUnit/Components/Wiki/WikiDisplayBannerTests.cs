@@ -151,8 +151,12 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".wiki-page-aside .wiki-more a.kit-row"), TimeSpan.FromSeconds(5));
 		var aside = cut.Find(".wiki-page-aside");
 		var toc = aside.QuerySelectorAll(".wiki-toc a");
-		await Assert.That(toc.Length).IsEqualTo(2);
-		await Assert.That(toc[0].GetAttribute("href")).IsEqualTo("/wiki/main/theme/harbour_ward#geography");
+		await Assert.That(toc.Length).IsEqualTo(3).Because("board 23: an Overview entry for the intro leads the headings");
+		await Assert.That(toc[0].GetAttribute("href")).IsEqualTo("/wiki/main/theme/harbour_ward#overview");
+		await Assert.That(toc[0].GetAttribute("aria-current")).IsEqualTo("location");
+		await Assert.That(cut.Find(".wiki-article-body").GetAttribute("id")).IsEqualTo("overview");
+		await Assert.That(toc[1].GetAttribute("href")).IsEqualTo("/wiki/main/theme/harbour_ward#geography");
+		await Assert.That(toc[1].GetAttribute("aria-current")).IsNull();
 		await Assert.That(aside.QuerySelector(".wiki-locales a[lang='de']")).IsNotNull();
 
 		var mentioned = aside.QuerySelectorAll(".wiki-mentioned .kit-portrait");
@@ -164,7 +168,10 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 		var more = aside.QuerySelectorAll(".wiki-more a.kit-row");
 		await Assert.That(more.Length).IsEqualTo(3).Because("three siblings, never this page itself");
 		await Assert.That(more.Select(a => a.GetAttribute("href")).ToList()).DoesNotContain("/wiki/main/theme/harbour_ward");
-		await Assert.That(aside.QuerySelector(".wiki-more a.wiki-more-all")!.GetAttribute("href")).IsEqualTo("/wiki/category/theme");
+		await Assert.That(aside.QuerySelector(".wiki-more .kit-card-head a.wiki-more-all")!.GetAttribute("href")).IsEqualTo("/wiki/category/theme")
+			.Because("board 23 puts 'All N' in the card header, beside the title");
+		await Assert.That(more.Select(a => a.QuerySelector(".kit-row-fallback svg")).Count(x => x is not null)).IsEqualTo(1)
+			.Because("Tone and Content has no image, so its row leads with the document icon");
 	}
 
 	[Test]

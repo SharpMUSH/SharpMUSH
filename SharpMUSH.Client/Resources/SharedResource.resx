@@ -3133,7 +3133,7 @@
     <value>New character</value>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>Recent Wiki Activity</value>
+    <value>Recently changed</value>
   </data>
   <data name="WidNoRecentWikiActivity" xml:space="preserve">
     <value>No recent wiki activity.</value>
@@ -4012,5 +4012,8 @@
   </data>
   <data name="NavWikiAlsoIn" xml:space="preserve">
     <value>Also in</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>Overview</value>
   </data>
 </root>

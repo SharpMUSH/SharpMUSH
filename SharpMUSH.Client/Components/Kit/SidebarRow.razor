@@ -79,6 +79,10 @@ else
                     {
                         <img class="kit-row-img" src="@ImageUrl!.Trim()" alt="" />
                     }
+                    else if (Icon is not null)
+                    {
+                        <span class="kit-row-img kit-row-fallback"><MudIcon Icon="@Icon" Size="Size.Small" /></span>
+                    }
                     else
                     {
                         <span class="kit-row-img kit-row-fallback">@FallbackInitials</span>

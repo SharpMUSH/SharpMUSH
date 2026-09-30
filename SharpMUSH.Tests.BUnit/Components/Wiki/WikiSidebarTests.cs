@@ -39,7 +39,7 @@ public class WikiSidebarTests : TrackingBunitContext
 		await Assert.That(rows[0].QuerySelector("img.kit-row-img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/a/intro.jpg");
 		await Assert.That(rows[2].GetAttribute("href")).IsEqualTo("/wiki/category/general")
 			.Because("uncategorised pages are 'General', listed after the named categories");
-		await Assert.That(rows[2].QuerySelector(".kit-row-fallback")).IsNotNull();
+		await Assert.That(rows[2].QuerySelector(".kit-row-fallback svg")).IsNotNull().Because("no cover: the document icon, as on board 21");
 	}
 
 	[Test]

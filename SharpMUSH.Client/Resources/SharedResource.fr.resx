@@ -2133,7 +2133,7 @@
     <value>Nouveau personnage</value>
   </data>
   <data name="WidRecentWikiActivity" xml:space="preserve">
-    <value>Activité récente du wiki</value>
+    <value>Modifiés récemment</value>
   </data>
   <data name="WidNoRecentWikiActivity" xml:space="preserve">
     <value>Aucune activité récente du wiki.</value>
@@ -3920,5 +3920,8 @@
   </data>
   <data name="NavWikiAlsoIn" xml:space="preserve">
     <value>Aussi en</value>
+  </data>
+  <data name="NavWikiOverview" xml:space="preserve">
+    <value>Aperçu</value>
   </data>
 </root>

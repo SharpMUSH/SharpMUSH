@@ -196,15 +196,16 @@ public class WikiPageRouteTests : TrackingBunitContext
 	{
 		// The index composes from the "wiki-index" layout scope; its default layout is the
 		// WikiIndex widget — a hero + auto-generated category grid sourced from WikiService.
+		// The localizer here echoes keys, so the hero title renders as its resx key.
 		var cut = Render<SharpMUSH.Client.Pages.WikiIndex>();
 
 		cut.WaitForAssertion(() =>
 		{
-			if (!cut.Markup.Contains("Everything you need to play"))
+			if (!cut.Markup.Contains("NavWikiHeroTitle"))
 				throw new InvalidOperationException("wiki-index layout not resolved yet");
 		}, TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Markup).Contains("Everything you need to play");
+		await Assert.That(cut.Markup).Contains("NavWikiHeroTitle");
 		await Assert.That(cut.Markup).Contains("wiki-hero");
 	}
 

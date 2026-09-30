@@ -37,8 +37,8 @@ public class WikiAsideWidgetsTests : TrackingBunitContext
 		await Assert.That(rows[1].QuerySelector(".kit-row-label")!.TextContent).IsEqualTo("Harbour Ward");
 		await Assert.That(rows[1].QuerySelector(".kit-row-sub")!.TextContent).Contains("Wren");
 		await Assert.That(rows[1].QuerySelector("img.kit-row-img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/b/harbour.jpg");
-		await Assert.That(rows[0].QuerySelector(".kit-row-fallback")).IsNotNull()
-			.Because("the newest page (Loose Notes) has no image, so its row shows initials");
+		await Assert.That(rows[0].QuerySelector(".kit-row-fallback svg")).IsNotNull()
+			.Because("the newest page (Loose Notes) has no image, so its row leads with the document icon");
 		await Assert.That(cut.Find(".kit-card-title").TextContent).IsNotEmpty();
 	}
 

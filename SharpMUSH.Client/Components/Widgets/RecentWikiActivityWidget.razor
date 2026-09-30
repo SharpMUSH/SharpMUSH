@@ -22,7 +22,7 @@
                 @foreach (var wp in _recentChanges.Take(6))
                 {
                     var entry = wp;
-                    <SidebarRow Lead="SidebarRow.SidebarLead.Image" ImageUrl="@entry.Image" Name="@entry.Title" Label="@entry.Title"
+                    <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Description" ImageUrl="@entry.Image" Name="@entry.Title" Label="@entry.Title"
                                 Sub="@Meta(entry)" Href="@WikiRoutes.PathFor(entry.Namespace, entry.Category, entry.Slug)" />
                 }
             </div>
