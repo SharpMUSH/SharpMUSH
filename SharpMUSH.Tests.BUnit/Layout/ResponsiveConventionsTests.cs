@@ -85,11 +85,6 @@ public class ResponsiveConventionsTests
 
 	private static readonly Dictionary<string, string> PagesWithoutContainerTiersByDesign = new(StringComparer.Ordinal)
 	{
-		["Pages/Admin/AdminMedia.razor.css"] =
-			"the asset grid is a repeat(auto-fit, minmax(...)) grid on a child component; it re-flows "
-			+ "by track count, so a tier would only restate what auto-fit already does",
-		["Pages/Admin/AdminWiki.razor.css"] =
-			"same — its stat grid is repeat(auto-fit, minmax(180px, 1fr)), which self-tiers",
 		["Pages/Register.razor.css"] =
 			"the route renders a <PageTitle> and redirects to /login?tab=register; there is no layout here",
 		["Pages/WikiPage.razor.css"] =

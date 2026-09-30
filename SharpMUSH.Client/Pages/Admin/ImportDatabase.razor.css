@@ -1,46 +1,23 @@
 .dbimport-page {
-	padding: var(--cpad);
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: var(--main-pad);
+	min-width: 0;
 }
 
-.dbimport-header {
-	margin-bottom: 1.5rem;
-}
-.dbimport-kicker {
-	font-family: var(--font-mono);
-	font-size: 0.6875rem;
-	letter-spacing: 0.18em;
-	text-transform: uppercase;
-	color: var(--accent);
-	margin-bottom: 0.625rem;
-}
-.dbimport-title {
-	margin: 0;
-	font-family: var(--font-display);
-	font-size: 1.625rem;
-	font-weight: 600;
-	letter-spacing: -0.01em;
-	color: var(--text);
-}
-.dbimport-subtitle {
-	margin: 0.5rem 0 0;
-	font-family: var(--font-ui);
-	font-size: 0.84375rem;
-	color: var(--text-dim);
-	max-width: 70ch;
+.dbimport-body {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 14px 16px 16px;
 }
 
-.dbimport-card {
-	background: var(--surface);
-	border: 1px solid var(--border-soft);
-	border-radius: var(--radius-lg);
-	box-shadow: var(--shadow);
-	padding: 1.25rem;
-	margin-bottom: 1rem;
+/* the drop zone is a KitCard, so its root carries the card's scope, not this page's */
+.dbimport-page ::deep .dbimport-dropzone {
+	border-style: dashed;
 }
 
-.dbimport-dropzone {
-	border: 1.5px dashed var(--border);
-}
 .dbimport-dropzone-inner {
 	display: flex;
 	flex-direction: column;
@@ -48,31 +25,34 @@
 	justify-content: center;
 	gap: 0.5rem;
 	min-height: 140px;
-	margin-top: 0.5rem;
 }
+
 .dbimport-dropzone-inner ::deep .dbimport-dropzone-icon {
 	font-size: 2.75rem;
 	color: var(--accent);
 }
+
 .dbimport-dropzone-title {
-	font-family: var(--font-display);
-	font-size: 1.0625rem;
-	font-weight: 600;
+	font-size: 15px;
+	font-weight: 700;
 	color: var(--text);
 }
+
 .dbimport-dropzone-hint {
-	font-family: var(--font-ui);
-	font-size: 0.78125rem;
+	font-size: 13px;
 	color: var(--text-dim);
 }
 
-.dbimport-section-label {
-	font-family: var(--font-mono);
-	font-size: 0.6875rem;
-	letter-spacing: 0.12em;
-	text-transform: uppercase;
-	color: var(--text-dim);
-	margin-bottom: 0.875rem;
+.dbimport-body ::deep .dbimport-label {
+	padding: 6px 0 0;
+}
+
+.dbimport-body ::deep .dbimport-label-error {
+	color: var(--mud-palette-error);
+}
+
+.dbimport-body ::deep .dbimport-label-warning {
+	color: var(--warn);
 }
 
 .dbimport-file-row {
@@ -80,18 +60,20 @@
 	align-items: center;
 	gap: 0.625rem;
 }
+
 .dbimport-file-row ::deep .dbimport-file-icon {
 	font-size: 1.25rem;
 	color: var(--accent);
 }
+
 .dbimport-file-name {
-	font-family: var(--font-ui);
-	font-size: 0.875rem;
+	font-size: 14px;
 	color: var(--text);
 }
+
 .dbimport-file-size {
 	font-family: var(--font-mono);
-	font-size: 0.75rem;
+	font-size: 12px;
 	color: var(--text-faint);
 }
 
@@ -99,47 +81,39 @@
 	display: flex;
 	justify-content: space-between;
 	gap: 0.75rem;
-	margin-top: 1.125rem;
+	margin-top: 6px;
 }
+
 .dbimport-actions-start {
 	justify-content: flex-start;
+}
+
+.dbimport-actions ::deep .dbimport-cancel {
+	color: var(--mud-palette-error);
 }
 
 .dbimport-progress-caption {
 	text-align: center;
 	font-family: var(--font-mono);
-	font-size: 0.8125rem;
+	font-size: 13px;
 	color: var(--text-dim);
-	margin-bottom: 1.125rem;
 }
 
 .dbimport-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
-	gap: 0.875rem;
+	gap: 12px;
 }
+
 .dbimport-tile {
-	background: var(--surface-3);
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-	padding: 1rem;
+	background: var(--surface-2);
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius-tile);
+	padding: 12px 14px;
 }
+
 .dbimport-tile-wide {
 	grid-column: 1 / -1;
-}
-.dbimport-tile-label {
-	font-family: var(--font-mono);
-	font-size: 0.6875rem;
-	letter-spacing: 0.12em;
-	text-transform: uppercase;
-	color: var(--text-dim);
-	margin-bottom: 0.75rem;
-}
-.dbimport-tile-label-error {
-	color: #ff6b6b;
-}
-.dbimport-tile-label-warning {
-	color: #ffb454;
 }
 
 .dbimport-stat-list {
@@ -147,51 +121,21 @@
 	flex-direction: column;
 	gap: 0.5rem;
 }
+
 .dbimport-stat {
 	display: flex;
 	justify-content: space-between;
 	align-items: baseline;
 	gap: 0.75rem;
-	font-family: var(--font-ui);
-	font-size: 0.84375rem;
+	font-size: 13px;
 	color: var(--text-dim);
-}
-.dbimport-stat strong {
-	font-family: var(--font-mono);
-	font-size: 0.875rem;
-	font-weight: 600;
-	color: var(--text);
 }
 
-::deep .dbimport-btn {
-	text-transform: none;
-	font-family: var(--font-ui);
+.dbimport-stat strong {
+	font-family: var(--font-mono);
+	font-size: 14px;
 	font-weight: 600;
-	border-radius: var(--radius);
-}
-::deep .dbimport-btn-primary {
-	background: var(--accent);
-	color: var(--accent-on);
-}
-::deep .dbimport-btn-primary:hover {
-	background: var(--accent-dim);
-}
-::deep .dbimport-btn-ghost {
-	color: var(--text-dim);
-	border: 1px solid var(--border);
-	background: var(--surface-2);
-}
-::deep .dbimport-btn-ghost:hover {
 	color: var(--text);
-	border-color: var(--accent);
-}
-::deep .dbimport-btn-danger {
-	color: #ff6b6b;
-	border: 1px solid rgba(255, 107, 107, 0.4);
-	background: transparent;
-}
-::deep .dbimport-btn-danger:hover {
-	background: rgba(255, 107, 107, 0.1);
 }
 
 @container page (max-width: 48rem) {
@@ -208,8 +152,7 @@
 		flex-direction: column-reverse;
 	}
 
-	::deep .dbimport-btn {
-		width: 100%;
+	.dbimport-actions ::deep .kit-capsule {
 		justify-content: center;
 	}
 }

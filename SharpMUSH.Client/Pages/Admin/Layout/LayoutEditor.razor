@@ -12,24 +12,18 @@
 <PageTitle>@Loc["LayEditorPageTitle", ScopeLabel] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="layedit full-bleed">
-    <div class="layedit-head">
-        <div>
-            <a class="layedit-back" href="/admin/layout"><MudIcon Icon="@Icons.Material.Filled.ArrowBack" Style="font-size:0.8125rem;" /> @Loc["LayAllLayouts"]</a>
-            <h1 class="layedit-title">@ScopeLabel</h1>
-            <p class="layedit-blurb">@(_scopeInfo is null ? null : Loc[_scopeInfo.DescriptionKey].Value)</p>
-        </div>
-        <div class="layedit-actions">
-            <button type="button" class="le-btn @(_showPreview ? "le-btn--on" : "")" @onclick="@(() => _showPreview = !_showPreview)">
-                <MudIcon Icon="@Icons.Material.Filled.Visibility" Style="font-size:0.875rem;" /> @Loc["LayPreview"]
-            </button>
-            <button type="button" class="le-btn" @onclick="ResetAsync" disabled="@_saving">
-                <MudIcon Icon="@Icons.Material.Filled.RestartAlt" Style="font-size:0.875rem;" /> @Loc["ResetToDefault"]
-            </button>
-            <button type="button" class="le-btn le-btn--primary" @onclick="SaveAsync" disabled="@(_saving || !_dirty)">
-                <MudIcon Icon="@Icons.Material.Filled.Save" Style="font-size:0.875rem;" /> @(_saving ? Loc["LayPublishing"] : Loc["LayPublish"])
-            </button>
-        </div>
-    </div>
+    <a class="layedit-back" href="/admin/layout"><MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="layedit-back-icon" /> @Loc["LayAllLayouts"]</a>
+    <PlainPageHeader Kicker="@Loc["LayLayoutsKicker"]" Title="@ScopeLabel"
+                     Description="@(_scopeInfo is null ? null : Loc[_scopeInfo.DescriptionKey].Value)">
+        <Actions>
+            <CapsuleButton Icon="@Icons.Material.Filled.Visibility" Pressed="@_showPreview" Primary="@_showPreview"
+                           OnClick="@(() => _showPreview = !_showPreview)">@Loc["LayPreview"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Filled.RestartAlt" OnClick="ResetAsync" Disabled="@_saving">@Loc["ResetToDefault"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Filled.Save" Primary="true" OnClick="SaveAsync" Disabled="@(_saving || !_dirty)">
+                @(_saving ? Loc["LayPublishing"] : Loc["LayPublish"])
+            </CapsuleButton>
+        </Actions>
+    </PlainPageHeader>
 
     @if (_scopeInfo is null)
     {

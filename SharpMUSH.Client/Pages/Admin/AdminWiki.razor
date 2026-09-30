@@ -10,34 +10,25 @@
 
 <PageTitle>@Loc["WikiAdmin"] — @Loc["AdmBreadcrumb"] — @Loc["AppTitle"]</PageTitle>
 
-<div style="padding:var(--cpad);">
-    <div class="adminwiki-head">
-        <div class="adminwiki-kicker">@Loc["ResAdminWikiKicker"]</div>
-        <h1 class="adminwiki-title">@Loc["WikiAdmin"]</h1>
-        <p class="adminwiki-intro">@Loc["WikiAdminDescription"]</p>
-    </div>
+<div class="adminwiki">
+    <PlainPageHeader Kicker="@Loc["ResAdminWikiKicker"]" Title="@Loc["WikiAdmin"]" Description="@Loc["WikiAdminDescription"]" />
 
-    <div class="adminwiki-stats">
+    <AdminStats>
         @* Tile labels are resource keys — a collection initializer cannot reach the injected Loc. *@
         @foreach (var tile in new[] {
-            (_totalPages, "ResWikiStatTotalPages", Icons.Material.Filled.Article,    false),
-            (_published,  "WikiPublished",         Icons.Material.Filled.Visibility, false),
-            (_drafts,     "ResWikiStatDrafts",     Icons.Material.Filled.EditNote,   true),
-            (_protected_, "WikiProtected",         Icons.Material.Filled.Lock,       true),
-            (_coverage.Values.Sum(v => v.Count), "ResWikiStatTranslations", Icons.Material.Filled.Translate, false),
+            ("pages",        _totalPages, "ResWikiStatTotalPages", Icons.Material.Filled.Article,    false),
+            ("published",    _published,  "WikiPublished",         Icons.Material.Filled.Visibility, false),
+            ("drafts",       _drafts,     "ResWikiStatDrafts",     Icons.Material.Filled.EditNote,   true),
+            ("protected",    _protected_, "WikiProtected",         Icons.Material.Filled.Lock,       true),
+            ("translations", _coverage.Values.Sum(v => v.Count), "ResWikiStatTranslations", Icons.Material.Filled.Translate, false),
         })
         {
-            var (val, labelKey, icon, warn) = tile;
-            <div class="adminwiki-stat">
-                <div class="adminwiki-stat-top">
-                    <span class="adminwiki-stat-label">@Loc[labelKey]</span>
-                    <MudIcon Icon="@icon" Style="@($"font-size:0.875rem;color:{(warn ? "#d9a23a" : "var(--accent)")};")" />
-                </div>
-                <div class="adminwiki-stat-value">@(_statsLoaded ? val.ToString() : "—")</div>
-            </div>
+            var (key, val, labelKey, icon, warn) = tile;
+            <AdminStat Key="@key" Icon="@icon" Label="@Loc[labelKey]" Warn="@warn" Value="@(_statsLoaded ? val.ToString() : "—")" />
         }
-    </div>
+    </AdminStats>
 
+    <KitCard>
     <div class="adminwiki-grid-scroll">
     <MudDataGrid @ref="_grid"
                  T="WikiPageSummary"
@@ -49,7 +40,7 @@
                  Class="mush-dark-grid"
                  Elevation="0">
         <ToolBarContent>
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%;flex-wrap:wrap;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="adminwiki-toolbar">
                 <MudSelect T="string"
                            Value="@_namespaceFilter"
                            ValueChanged="@OnNamespaceFilterChanged"
@@ -57,7 +48,7 @@
                            Dense="true"
                            Margin="Margin.Dense"
                            Variant="Variant.Outlined"
-                           Style="max-width:180px;">
+                           Class="adminwiki-filter adminwiki-filter--ns">
                     <MudSelectItem T="string" Value="@(string.Empty)">@Loc["WikiAllNamespaces"]</MudSelectItem>
                     <MudSelectItem T="string" Value="@("main")">main</MudSelectItem>
                     <MudSelectItem T="string" Value="@("help")">help</MudSelectItem>
@@ -71,7 +62,7 @@
                            Dense="true"
                            Margin="Margin.Dense"
                            Variant="Variant.Outlined"
-                           Style="max-width:200px;">
+                           Class="adminwiki-filter adminwiki-filter--locale">
                     @foreach (var option in LocaleFilterOptions)
                     {
                         var optionValue = option.Value;
@@ -82,7 +73,7 @@
                               Placeholder="@Loc["ResSearchTitlesPlaceholder"]"
                               Variant="Variant.Outlined" Margin="Margin.Dense"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-                              Style="max-width:280px;" />
+                              Class="adminwiki-filter adminwiki-filter--search" />
                 <MudSpacer />
                 <MudButton Variant="Variant.Outlined" Color="Color.Warning"
                            StartIcon="@Icons.Material.Filled.Lock"
@@ -124,10 +115,9 @@
             <PropertyColumn Property="p => p.Category" Title="@Loc["WikiCategory"]" Sortable="false" />
             <TemplateColumn Title="@Loc["WikiPublished"]" Sortable="false">
                 <CellTemplate>
-                    <MudChip T="string" Size="Size.Small"
-                             Style="@($"height:18px;font-size:0.625rem;padding:0 0.375rem;background:{(context.Item.Published ? "rgba(0,200,100,0.12)" : "rgba(217,162,58,0.12)")};color:{(context.Item.Published ? "#6cde9a" : "#d9a23a")};")">
+                    <Pill Tag="true" Warn="@(!context.Item.Published)">
                         @(context.Item.Published ? Loc["WikiPublished"] : Loc["ResDraft"])
-                    </MudChip>
+                    </Pill>
                 </CellTemplate>
             </TemplateColumn>
             <TemplateColumn Title="@Loc["WikiUpdated"]" Sortable="false">
@@ -197,6 +187,7 @@
         </PagerContent>
     </MudDataGrid>
     </div>
+    </KitCard>
 </div>
 
 <MudDialog @bind-Visible="_showDeleteConfirm">
