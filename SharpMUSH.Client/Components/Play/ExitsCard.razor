@@ -9,7 +9,23 @@
    are never sent, so none is invented. The keycap is the first alias; pressing a one-letter keycap
    goes, except while typing. Hover or focus shows a preview with Go and Look. Rows is the mobile Room
    sheet's list. *@
-<KitCard Aside="true" Title="@($"{Loc["NavExits"]} · {Exits.Count}")" Class="exits-card">
+@if (Bare)
+{
+    @Body
+}
+else
+{
+    <KitCard Aside="true" Title="@($"{Loc["NavExits"]} · {Exits.Count}")" Class="exits-card">
+        @Body
+    </KitCard>
+}
+
+@code {
+    /// <summary>Without the card: the mobile Room sheet, whose tabs carry the title.</summary>
+    [Parameter] public bool Bare { get; set; }
+
+    private RenderFragment Body => __builder =>
+    {
     @if (_confirming is { } pending)
     {
         <div class="exit-confirm" role="alertdialog" aria-labelledby="exit-confirm-text" aria-describedby="exit-confirm-text">
@@ -94,9 +110,8 @@
             }
         </div>
     }
-</KitCard>
+    };
 
-@code {
     /// <summary>The latest <c>room.exits</c> rows.</summary>
     [Parameter] public IReadOnlyList<RoomExit> Exits { get; set; } = [];
 

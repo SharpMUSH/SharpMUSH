@@ -5,7 +5,23 @@
    first name, and the status word when it is not "active"), then objects as square thumbnails. The
    viewer is not listed (board 01's "Here · 4" beside "5 here"). A character with a profile opens the
    character sheet; anything else runs its cmd. *@
-<KitCard Aside="true" Title="@($"{Loc["TermBrowserHere"]} · {_listed.Count}")" Class="here-card">
+@if (Bare)
+{
+    @Body
+}
+else
+{
+    <KitCard Aside="true" Title="@($"{Loc["TermBrowserHere"]} · {_listed.Count}")" Class="here-card">
+        @Body
+    </KitCard>
+}
+
+@code {
+    /// <summary>Without the card: the mobile Room sheet, whose tabs carry the title.</summary>
+    [Parameter] public bool Bare { get; set; }
+
+    private RenderFragment Body => __builder =>
+    {
     @if (_listed.Count == 0)
     {
         <div class="here-empty">@Loc["NavConnectToSeeWhoIsHere"]</div>
@@ -39,9 +55,8 @@
             }
         </div>
     }
-</KitCard>
+    };
 
-@code {
     /// <summary>The latest <c>room.contents</c> rows.</summary>
     [Parameter] public IReadOnlyList<RoomOccupant> Occupants { get; set; } = [];
 

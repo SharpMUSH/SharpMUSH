@@ -28,6 +28,7 @@ public class SectionShellTests : BunitContext
 	private sealed class Host : ComponentBase
 	{
 		[Parameter] public string Key { get; set; } = "wiki";
+		[Parameter] public bool Hidden { get; set; }
 
 		protected override void BuildRenderTree(RenderTreeBuilder b)
 		{
@@ -40,6 +41,7 @@ public class SectionShellTests : BunitContext
 			b.OpenComponent<SectionShell>(4);
 			b.AddAttribute(5, nameof(SectionShell.Key), Key);
 			b.AddAttribute(6, nameof(SectionShell.NavLabel), "Wiki");
+			b.AddAttribute(9, nameof(SectionShell.Hidden), Hidden);
 			b.AddAttribute(7, nameof(SectionShell.Nav), (RenderFragment<bool>)(collapsed => nb =>
 			{
 				nb.OpenElement(0, "div");
@@ -63,6 +65,18 @@ public class SectionShellTests : BunitContext
 		await Assert.That(cut.Find(".slot .kit-pagebar .side")).IsNotNull();
 		await Assert.That(cut.Find(".kit-section-body #body")).IsNotNull();
 		await Assert.That(cut.FindAll(".kit-section-body .kit-pagebar").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task Hidden_TakesTheSidebarOutOfTheSlot_AndKeepsTheBodyMounted()
+	{
+		// Play's focus mode steps the page sidebar away; the body (the terminal) must not remount.
+		var cut = Render<Host>();
+		cut.Render(p => p.Add(x => x.Hidden, true));
+		await Assert.That(cut.FindAll(".slot .kit-pagebar").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".kit-section-body #body")).IsNotNull();
+		cut.Render(p => p.Add(x => x.Hidden, false));
+		await Assert.That(cut.FindAll(".slot .kit-pagebar").Count).IsEqualTo(1);
 	}
 
 	[Test]

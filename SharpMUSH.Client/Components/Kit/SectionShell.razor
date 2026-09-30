@@ -9,6 +9,8 @@
    page-sidebar slot (MainLayout's SectionOutlet), which the shell shows only while one is mounted;
    the body stays in the page. The collapse button sits at the sidebar's top right (36×36, radius
    10); collapsed, the sidebar renders its 62px strip. The state is remembered per section (Q3). *@
+@if (!Hidden)
+{
 <SectionContent SectionName="@PageSidebarSlot.Name">
     <div class="kit-pagebar @(Collapsed ? "kit-pagebar--collapsed" : null) @Class" data-section="@Key">
         <button type="button" class="kit-pagebar-toggle" aria-expanded="@(Collapsed ? "false" : "true")"
@@ -20,6 +22,7 @@
         @Nav?.Invoke(Collapsed)
     </div>
 </SectionContent>
+}
 <div class="kit-section-body @(PadBody ? null : "kit-section-body--flush") @Class">
     @ChildContent
 </div>
@@ -41,6 +44,12 @@
 
     /// <summary>False when the pages bring their own padding (Build &amp; manage's admin pages).</summary>
     [Parameter] public bool PadBody { get; set; } = true;
+
+    /// <summary>
+    /// Takes the sidebar out of the shell's slot (the shell then hides the page bar) while the body stays
+    /// mounted: Play's focus mode, which must not restart the terminal.
+    /// </summary>
+    [Parameter] public bool Hidden { get; set; }
 
     private bool _collapsed;
 

@@ -4206,4 +4206,13 @@
   <data name="NavPlaySendHint" xml:space="preserve">
     <value>Ctrl+Entrée envoie</value>
   </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scène</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Lieu</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Sections du jeu</value>
+  </data>
 </root>

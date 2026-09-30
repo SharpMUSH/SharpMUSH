@@ -403,6 +403,13 @@
         StateHasChanged();
     }
 
+    /// <summary>Puts <paramref name="text"/> in the input line for the player to finish (Play's "page Name=").</summary>
+    public void SetInput(string text)
+    {
+        _input = text;
+        StateHasChanged();
+    }
+
     private Task ClearAsync()
     {
         ClearOutput();

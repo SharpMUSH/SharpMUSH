@@ -4953,4 +4953,13 @@
   <data name="NavPlaySendHint" xml:space="preserve">
     <value>Ctrl+Enter šalje</value>
   </data>
+  <data name="NavPlayTabScene" xml:space="preserve">
+    <value>Scena</value>
+  </data>
+  <data name="NavPlayTabRoom" xml:space="preserve">
+    <value>Prostorija</value>
+  </data>
+  <data name="NavPlayTabs" xml:space="preserve">
+    <value>Dijelovi igre</value>
+  </data>
 </root>
