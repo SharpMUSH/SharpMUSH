@@ -5009,4 +5009,7 @@
   <data name="HelpNoTopics" xml:space="preserve">
     <value>此游戏未安装帮助主题。</value>
   </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>显示 {0} 的 README</value>
+  </data>
 </root>

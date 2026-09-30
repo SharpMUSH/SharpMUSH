@@ -39,3 +39,19 @@
 .online-characters-all:focus-visible {
 	text-decoration: underline;
 }
+
+/* in a page's main column: the main card's body is padded here, the rows run across it */
+.online-characters-widget--main ::deep .kit-card-body {
+	padding: 8px 12px 12px;
+}
+
+.online-characters-rows--main {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(12rem, 100%), 1fr));
+	gap: 2px 12px;
+	margin: 0;
+}
+
+.online-characters-widget--main .online-characters-all {
+	margin-top: 0;
+}

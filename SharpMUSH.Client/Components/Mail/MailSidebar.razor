@@ -107,10 +107,9 @@
 
     private void Locate()
     {
-        var uri = new Uri(Nav.Uri);
-        var path = uri.AbsolutePath.TrimEnd('/');
-        _path = path.Length == 0 ? "/" : path;
-        _folderQuery = QueryValue(uri.Query, "folder");
+        var at = SectionPath.Of(Nav);
+        _path = at.Path;
+        _folderQuery = QueryValue(at.Query, "folder");
     }
 
     private static string? QueryValue(string query, string name)
@@ -137,10 +136,23 @@
         StateHasChanged();
     });
 
-    private void OnMailChanged() => InvokeAsync(async () =>
+    private void OnMailChanged(MailService.MailChange change) => InvokeAsync(async () =>
     {
         if (!_connected) return;
-        await RefreshAsync();
+        switch (change)
+        {
+            // One inbox message read: the pill loses one where it stands, with no request.
+            case { MarkedRead: true } when string.Equals(change.Folder, Inbox, StringComparison.OrdinalIgnoreCase):
+                if (_inboxUnread is > 0) _inboxUnread--;
+                break;
+            // A message read in another folder changes nothing the sidebar counts.
+            case { MarkedRead: true }:
+                return;
+            default:
+                await RefreshAsync();
+                break;
+        }
+
         StateHasChanged();
     });
 

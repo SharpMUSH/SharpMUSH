@@ -1,18 +1,52 @@
 @page "/"
 @inject IStringLocalizer<SharedResource> Loc
+@inject ILayoutService LayoutService
+@implements IDisposable
 
 <PageTitle>@Loc["Home"] — @Loc["AppTitle"]</PageTitle>
 
 @* D1 §6.5 home (boards 30, 31): the plain header over the admin-composed "home" scope. Its
    MainContent is the main column (stats, the home wiki page, live scenes, recent wiki changes by
    default) and its RightSidebar zone is the aside (online now, getting started), rendered inside
-   the page as the wiki home and the profile do. Admins recompose both in the layout editor. *@
-<div class="home-page">
+   the page as the wiki home and the profile do. Admins recompose both in the layout editor; a
+   layout with nothing in the aside zone (one saved before the zone existed) has no aside at all. *@
+<div class="home-page @(_hasAside ? "home-page--aside" : null)">
     <div class="home-main">
         <PlainPageHeader Kicker="@Loc["AppTitle"]" Title="@Loc["HomeWhatsHappening"]" />
         <ScopedZone Scope="@LayoutScopes.Home" Zone="WidgetZone.MainContent" />
     </div>
-    <aside class="home-aside">
-        <ScopedZone Scope="@LayoutScopes.Home" Zone="WidgetZone.RightSidebar" Grid="false" />
-    </aside>
+    @if (_hasAside)
+    {
+        <aside class="home-aside">
+            <ScopedZone Scope="@LayoutScopes.Home" Zone="WidgetZone.RightSidebar" Grid="false" />
+        </aside>
+    }
 </div>
+
+@code {
+    private bool _hasAside;
+
+    protected override async Task OnInitializedAsync()
+    {
+        LayoutService.OnLayoutChanged += OnLayoutChanged;
+        await ReadAsideAsync();
+    }
+
+    private async Task ReadAsideAsync()
+    {
+        var layout = await LayoutService.GetLayoutAsync(LayoutScopes.Home);
+        _hasAside = layout.Zones.TryGetValue(WidgetZone.RightSidebar, out var aside) && aside.Count > 0;
+    }
+
+    private void OnLayoutChanged(string scope)
+    {
+        if (!string.Equals(scope, LayoutScopes.Home, StringComparison.OrdinalIgnoreCase)) return;
+        _ = InvokeAsync(async () =>
+        {
+            await ReadAsideAsync();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() => LayoutService.OnLayoutChanged -= OnLayoutChanged;
+}

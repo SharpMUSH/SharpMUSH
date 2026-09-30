@@ -6,7 +6,7 @@
 <article class="scene-card @(Scene.IsLive ? "scene-card--live" : null)">
     <div class="scene-card-main">
         <div class="scene-card-top">
-            <h3 class="scene-card-title">@Loc.Title(Scene)</h3>
+            <h2 class="scene-card-title">@Loc.Title(Scene)</h2>
             @if (Scene.IsLive)
             {
                 <Pill Tag="true" Dot="var(--accent)" Class="scene-card-live">@Loc["RolLiveBadge"]</Pill>

@@ -4355,4 +4355,7 @@
   <data name="HelpNoTopics" xml:space="preserve">
     <value>This game has no help topics installed.</value>
   </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>Show the README for {0}</value>
+  </data>
 </root>

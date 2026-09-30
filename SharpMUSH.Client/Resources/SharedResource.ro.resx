@@ -5009,4 +5009,7 @@
   <data name="HelpNoTopics" xml:space="preserve">
     <value>Acest joc nu are subiecte de ajutor instalate.</value>
   </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>Afișează README pentru {0}</value>
+  </data>
 </root>

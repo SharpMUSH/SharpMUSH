@@ -5009,4 +5009,7 @@
   <data name="HelpNoTopics" xml:space="preserve">
     <value>Este jogo não tem tópicos de ajuda instalados.</value>
   </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>Mostrar o README de {0}</value>
+  </data>
 </root>

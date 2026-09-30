@@ -184,11 +184,15 @@
         public int Span { get; set; } = 12;
     }
 
-    // Vertical zones lay widgets out in a 12-column grid (per-placement width). The top bar is
-    // horizontal, so it stays a simple list with no column-width control.
-    private static bool IsGridZone(WidgetZone zone) => zone != WidgetZone.TopBar;
+    // A zone is a grid (per-placement column width) exactly where it is rendered as one. The global
+    // scope's chrome zones are grids in MainLayout except the horizontal top bar; a page scope renders
+    // only its MainContent as a grid and its RightSidebar aside as a plain stack (Grid="false").
+    private bool IsGridZone(WidgetZone zone) =>
+        string.Equals(Scope, LayoutScopes.Global, StringComparison.OrdinalIgnoreCase)
+            ? zone != WidgetZone.TopBar
+            : zone == WidgetZone.MainContent;
 
-    private static bool IsGridZoneName(string zone)
+    private bool IsGridZoneName(string zone)
         => Enum.TryParse<WidgetZone>(zone, out var z) && IsGridZone(z);
 
     private static int ClampSpan(int span) => span is >= 1 and <= 12 ? span : 12;

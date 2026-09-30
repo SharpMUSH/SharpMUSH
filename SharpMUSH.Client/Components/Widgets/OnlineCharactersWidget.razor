@@ -5,9 +5,11 @@
 
 @* D1 §6.5 "Online now · N" (board 30) as an aside card: avatar rows linking each profile, then
    "See everyone" to the directory's online filter. Everyone here came from lwho(), so the row's
-   dot is always the connected one. *@
-<div class="online-characters-widget">
-    <KitCard Aside="true" Title="@(_characters is { Count: > 0 } ? Loc.Plural("WidOnlineNowCount", "count", _characters.Count) : Loc["WidOnlineNow"].Value)">
+   dot is always the connected one. Placed in a page's main column (a pre-D1 home layout) it takes
+   the main card, See everyone in its header and the rows across the width. *@
+<div class="online-characters-widget @(InMain ? "online-characters-widget--main" : null)">
+    <KitCard Aside="@(!InMain)" Title="@(_characters is { Count: > 0 } ? Loc.Plural("WidOnlineNowCount", "count", _characters.Count) : Loc["WidOnlineNow"].Value)"
+             Controls="@(InMain && _characters is { Count: > 0 } ? SeeEveryone : null)">
         @if (_loading)
         {
             @for (var i = 0; i < 4; i++) { <MudSkeleton Height="32px" Class="mb-1" /> }
@@ -20,7 +22,7 @@
         }
         else if (_characters is { Count: > 0 })
         {
-            <div class="online-characters-rows">
+            <div class="online-characters-rows @(InMain ? "online-characters-rows--main" : null)">
                 @foreach (var c in _characters.Take(Shown))
                 {
                     var row = c;
@@ -28,7 +30,10 @@
                                 Class="online-characters-row" Href="@($"/character/{Uri.EscapeDataString(row.Name)}")" />
                 }
             </div>
-            <a class="online-characters-all" href="/characters?online=1">@Loc["WidSeeEveryone"]</a>
+            @if (!InMain)
+            {
+                @SeeEveryone
+            }
         }
         else
         {
@@ -42,6 +47,14 @@
     [Parameter] public string Zone { get; set; } = string.Empty;
 
     private const int Shown = 8;
+
+    /// <summary>In a page's main column the widget takes the main card rather than the aside one.</summary>
+    private bool InMain => Zone == nameof(WidgetZone.MainContent);
+
+    private RenderFragment SeeEveryone => __builder =>
+    {
+        <a class="online-characters-all" href="/characters?online=1">@Loc["WidSeeEveryone"]</a>
+    };
 
     /// <summary>The connected characters, or null when the fetch failed. Empty means nobody is on.</summary>
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary>? _characters;

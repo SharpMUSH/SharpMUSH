@@ -6,8 +6,8 @@
 @* D1 §6.5 "Getting started" (board 30) as an aside card. The first-visit offer depends on who is
    looking: an anonymous visitor is offered an account, an account with no character the character
    creator, and anyone else a quiet "New character" row among the ways in. *@
-<div class="quickstart-widget">
-    <KitCard Aside="true" Title="@Loc["WidNewHere"]">
+<div class="quickstart-widget @(InMain ? "quickstart-widget--main" : null)">
+    <KitCard Aside="@(!InMain)" Title="@Loc["WidNewHere"]">
         @if (ShowCreateHero)
         {
             <div class="quickstart-lead">@Loc["WidNoCharacterYet"]</div>
@@ -27,7 +27,7 @@
             <p class="quickstart-text">@Loc["WidQuickstartIntro"]</p>
         }
 
-        <nav class="quickstart-links" aria-label="@Loc["WidNewHere"]">
+        <nav class="quickstart-links @(InMain ? "quickstart-links--main" : null)" aria-label="@Loc["WidNewHere"]">
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="@Loc["WidReadTheWiki"]" Href="/wiki" />
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Groups" Label="@Loc["WidBrowseCharacters"]" Href="/characters" />
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Theaters" Label="@Loc["WidBrowseScenes"]" Href="/scenes" />
@@ -42,6 +42,9 @@
 @code {
     [Parameter] public JsonElement? Config { get; set; }
     [Parameter] public string Zone { get; set; } = string.Empty;
+
+    /// <summary>In a page's main column (a pre-D1 home layout) the widget takes the main card.</summary>
+    private bool InMain => Zone == nameof(WidgetZone.MainContent);
 
     private bool ShowCreateHero => AccountAuth.IsLoggedIn && AccountAuth.Characters.Count == 0;
     private bool ShowQuietCreate => AccountAuth.IsLoggedIn && AccountAuth.Characters.Count > 0;

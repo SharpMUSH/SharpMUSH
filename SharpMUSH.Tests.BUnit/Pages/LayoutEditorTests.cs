@@ -256,6 +256,37 @@ public class LayoutEditorTests : TrackingBunitContext
 	private static string PlacedNames(IRenderedComponent<SharpMUSH.Client.Pages.Admin.Layout.LayoutEditor> cut)
 		=> string.Join(",", cut.FindAll(".le-zone-drop .le-item-name").Select(e => e.TextContent.Trim()));
 
+	/// <summary>
+	/// A page renders its RightSidebar zone as a plain stack (<c>ScopedZone Grid="false"</c>), so the
+	/// editor must not offer it column widths or preview it as a 12-column grid. The global scope's
+	/// chrome zones are grids (MainLayout renders them with <c>Grid="true"</c>) and stay so.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task APagesAsideZone_IsAFlowZone_NotAGrid()
+	{
+		var cut = Render<SharpMUSH.Client.Pages.Admin.Layout.LayoutEditor>(p => p.Add(x => x.Scope, LayoutScopes.WikiIndex));
+		cut.WaitForAssertion(() => cut.Find(".le-zone-drop"), TimeSpan.FromSeconds(5));
+
+		var drops = cut.FindAll(".mud-drop-zone.le-zone-drop");
+		await Assert.That(drops.Count).IsEqualTo(2);
+		await Assert.That(drops[0].ClassList).Contains("le-zone-drop--grid").Because("MainContent is the page's grid");
+		await Assert.That(drops[1].ClassList).DoesNotContain("le-zone-drop--grid").Because("the page renders RightSidebar with Grid=false");
+		await Assert.That(cut.FindAll(".le-zone-hint")[1].TextContent).IsEqualTo("LayFlowZoneHint");
+	}
+
+	[TUnit.Core.Test]
+	public async Task TheGlobalScopesSidebars_StayGrids()
+	{
+		_layout.GetLayoutAsync(LayoutScopes.Global).Returns(Task.FromResult(new LayoutConfiguration(
+			new Dictionary<WidgetZone, List<WidgetPlacement>>(), new LayoutSettings(LeftSidebarEnabled: true, RightSidebarEnabled: true))));
+		var cut = Render<SharpMUSH.Client.Pages.Admin.Layout.LayoutEditor>(p => p.Add(x => x.Scope, LayoutScopes.Global));
+		cut.WaitForAssertion(() => cut.Find(".le-zone-drop"), TimeSpan.FromSeconds(5));
+
+		var hints = cut.FindAll(".le-zone-hint").Select(h => h.TextContent).ToList();
+		await Assert.That(hints).IsEquivalentTo(new[] { "LayFlowZoneHint", "LayGridZoneHint", "LayGridZoneHint", "LayGridZoneHint" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching).Because("TopBar, LeftSidebar, RightSidebar, Footer");
+	}
+
 	private async Task<IRenderedComponent<SharpMUSH.Client.Pages.Admin.Layout.LayoutEditor>> RenderEditorAsync(
 		params WidgetPlacement[] placements)
 	{

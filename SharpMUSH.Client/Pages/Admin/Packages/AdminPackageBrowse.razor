@@ -53,7 +53,7 @@
             {
                 <KitCard Title="@(entry.PackageId ?? entry.Path)">
                     <Controls>
-                        <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="README" aria-label="README"
+                        <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="@Loc["PkgShowReadme", entry.PackageId ?? entry.Path]" aria-label="@Loc["PkgShowReadme", entry.PackageId ?? entry.Path]"
                                        OnClick="@(() => ShowReadmeAsync(entry))" />
                     </Controls>
                     <ChildContent>

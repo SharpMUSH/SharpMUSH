@@ -5009,4 +5009,7 @@
   <data name="HelpNoTopics" xml:space="preserve">
     <value>Ehhez a játékhoz nincsenek súgótémák telepítve.</value>
   </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>{0} README megjelenítése</value>
+  </data>
 </root>

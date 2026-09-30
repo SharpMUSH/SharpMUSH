@@ -5009,4 +5009,7 @@
   <data name="HelpNoTopics" xml:space="preserve">
     <value>В этой игре не установлены разделы справки.</value>
   </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>Показать README для {0}</value>
+  </data>
 </root>

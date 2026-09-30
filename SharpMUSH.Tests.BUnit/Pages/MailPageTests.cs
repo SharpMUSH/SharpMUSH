@@ -9,6 +9,7 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
@@ -170,14 +171,36 @@ public class MailPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task Forward_OpensComposeWithTheSubjectAndTheBody()
+	public async Task Forward_OpensComposeWithTheSubject_AndHandsTheBodyOverOutOfTheAddress()
 	{
 		var cut = RenderAt("/mail");
 		Select(cut, 0);
-		var href = cut.Find(".mail-reading-actions a.mail-forward").GetAttribute("href")!;
-		await Assert.That(href).StartsWith("/mail/compose?subject=Fwd%3A%20The%20ledger&body=");
-		await Assert.That(Uri.UnescapeDataString(href)).Contains(SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Body);
-		await Assert.That(href).DoesNotContain("to=").Because("a forward is addressed by the reader, not to the sender");
+		var nav = Services.GetRequiredService<BunitNavigationManager>();
+
+		cut.Find(".mail-reading-actions button.mail-forward").Click();
+
+		var uri = new Uri(nav.Uri);
+		await Assert.That(uri.AbsolutePath).IsEqualTo("/mail/compose");
+		await Assert.That(uri.Query).StartsWith("?subject=Fwd%3A%20The%20ledger&draft=");
+		await Assert.That(Uri.UnescapeDataString(nav.Uri)).DoesNotContain(SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Body)
+			.Because("a long quoted message in the address hits URL limits and lands in history and logs");
+		await Assert.That(nav.Uri).DoesNotContain("to=").Because("a forward is addressed by the reader, not to the sender");
+
+		var compose = Render<SharpMUSH.Client.Pages.MailCompose>();
+		await Assert.That(compose.Find("textarea").GetAttribute("value") ?? compose.Find("textarea").TextContent)
+			.Contains(SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Body);
+	}
+
+	/// <summary>A draft is handed over once: a second visit to the same address opens compose without it.</summary>
+	[Test]
+	public async Task AForwardedDraft_IsTakenOnce()
+	{
+		SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
+		var mail = Services.GetRequiredService<MailService>();
+		var id = mail.StageDraft("quoted text");
+
+		await Assert.That(mail.TakeDraft(id) is string body && body == "quoted text").IsTrue();
+		await Assert.That(mail.TakeDraft(id) is NotFound).IsTrue();
 	}
 
 	[Test]
@@ -214,12 +237,12 @@ public class MailPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task Compose_TakesTheBodyFromTheAddress()
+	public async Task Compose_UsesThePlainHeader_AndTakesToAndSubjectFromTheAddress()
 	{
 		SharpMUSH.Tests.BUnit.Components.Mail.MailApiFake.Install(this);
-		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/mail/compose?subject=Fwd%3A%20x&body=quoted%20text");
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/mail/compose?to=Wren&subject=Fwd%3A%20x&body=ignored");
 		var cut = Render<SharpMUSH.Client.Pages.MailCompose>();
 		await Assert.That(cut.Find(".kit-page-head .kit-page-title").TextContent).IsEqualTo("ComposeMail");
-		await Assert.That(cut.FindAll("textarea").Single().GetAttribute("value") ?? cut.Find("textarea").TextContent).Contains("quoted text");
+		await Assert.That(cut.Markup).DoesNotContain("ignored").Because("the body only arrives as a staged draft");
 	}
 }

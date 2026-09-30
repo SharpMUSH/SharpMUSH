@@ -88,12 +88,26 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 		return auth;
 	}
 
-	private IRenderedComponent<QuickstartWidget> RenderWidget(AccountAuthService auth)
+	private IRenderedComponent<QuickstartWidget> RenderWidget(AccountAuthService auth, WidgetZone zone = WidgetZone.RightSidebar)
 	{
 		Services.AddSingleton(auth);
 		return Render<QuickstartWidget>(p => p
 			.Add(c => c.Config, null)
-			.Add(c => c.Zone, WidgetZone.RightSidebar.ToString()));
+			.Add(c => c.Zone, zone.ToString()));
+	}
+
+	/// <summary>
+	/// A home layout saved before D1 keeps this widget in MainContent. There it takes the main card
+	/// and lays its ways in across the width.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task InTheMainColumn_TakesTheMainCard()
+	{
+		var cut = RenderWidget(BuildAuth([]), WidgetZone.MainContent);
+
+		await Assert.That(cut.FindAll(".kit-card--aside").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".kit-card-head .kit-card-title").TextContent).IsEqualTo("WidNewHere");
+		await Assert.That(cut.Find(".quickstart-links").ClassList).Contains("quickstart-links--main");
 	}
 
 	[TUnit.Core.Test]

@@ -30,11 +30,15 @@ public sealed class MailApiFake : HttpMessageHandler
 
 	public const string Body = "Meet me by the second bell.";
 
+	/// <summary>Every list or folder request the fake has answered, to prove a change was applied without one.</summary>
+	public int ListRequests { get; private set; }
+
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
 		var query = request.RequestUri.Query;
 
+		if (request.Method == HttpMethod.Get && path is "api/mail/folders" or "api/mail") ListRequests++;
 		if (request.Method == HttpMethod.Get && path == "api/mail/folders") return Task.FromResult(Json(new[] { "INBOX", "SENT" }));
 		if (request.Method == HttpMethod.Get && path == "api/mail") return Task.FromResult(Json(query.Contains("folder=SENT") ? _sent : _inbox));
 
@@ -63,9 +67,10 @@ public sealed class MailApiFake : HttpMessageHandler
 	private static HttpResponseMessage Json<T>(T value) => new(HttpStatusCode.OK) { Content = JsonContent.Create(value) };
 
 	/// <summary>Registers the fake behind a real <see cref="MailService"/>, a terminal in the given state, and the rest.</summary>
-	public static ITerminalService Install(TrackingBunitContext ctx, bool connected = true)
+	public static MailApiFake Install(TrackingBunitContext ctx, bool connected = true)
 	{
-		var client = ctx.Track(new HttpClient(new MailApiFake()) { BaseAddress = new Uri("https://localhost:8081/") });
+		var fake = new MailApiFake();
+		var client = ctx.Track(new HttpClient(fake) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(client);
 		var terminal = Substitute.For<ITerminalService>();
@@ -79,6 +84,6 @@ public sealed class MailApiFake : HttpMessageHandler
 			.AddEchoLocalizer();
 		ctx.JSInterop.Mode = JSRuntimeMode.Loose;
 		ctx.AddAuthorization().SetAuthorized("headwiz");
-		return terminal;
+		return fake;
 	}
 }

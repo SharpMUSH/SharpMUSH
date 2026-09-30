@@ -5009,4 +5009,7 @@
   <data name="HelpNoTopics" xml:space="preserve">
     <value>Det här spelet har inga hjälpämnen installerade.</value>
   </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>Visa README för {0}</value>
+  </data>
 </root>

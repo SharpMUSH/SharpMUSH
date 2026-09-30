@@ -113,7 +113,7 @@ else
                         <CapsuleButton Class="mail-reply" Href="@ReplyHref(_selected)" Icon="@Icons.Material.Outlined.Reply">@Loc["Reply"]</CapsuleButton>
                         @if (_body is not null)
                         {
-                            <CapsuleButton Class="mail-forward" Href="@ForwardHref(_selected, _body)" Icon="@Icons.Material.Outlined.Forward">@Loc["NavMailForward"]</CapsuleButton>
+                            <CapsuleButton Class="mail-forward" OnClick="@(() => Forward(_selected, _body))" Icon="@Icons.Material.Outlined.Forward">@Loc["NavMailForward"]</CapsuleButton>
                         }
                         <CapsuleButton Class="mail-open" Href="@DetailHref(_selected)" Icon="@Icons.Material.Outlined.OpenInFull">@Loc["NavMailReadFullMessage"]</CapsuleButton>
                     </div>
@@ -188,7 +188,7 @@ else
         _bodyError = null;
         _bodyLoading = true;
 
-        var result = await MailApi.ReadAsync(msg.Folder, msg.Number);
+        var result = await MailApi.ReadAsync(msg.Folder, msg.Number, wasUnread: !msg.Read);
 
         if (ticket != _readTicket) return;
 
@@ -214,12 +214,15 @@ else
         return $"/mail/compose?to={Uri.EscapeDataString(message.From)}&subject={Uri.EscapeDataString(subject)}";
     }
 
-    /// <summary>A forward carries the subject and the quoted text; the reader chooses who it goes to.</summary>
-    private string ForwardHref(MailService.MailSummary message, string body)
+    /// <summary>
+    /// A forward opens compose with the subject in the address and the quoted text staged in the mail
+    /// service; the reader chooses who it goes to.
+    /// </summary>
+    private void Forward(MailService.MailSummary message, string body)
     {
         var subject = message.Subject.StartsWith("Fwd:", StringComparison.OrdinalIgnoreCase) ? message.Subject : $"Fwd: {message.Subject}";
-        var quoted = $"{Loc["NavMailForwardedFrom", message.From]}\n{body}";
-        return $"/mail/compose?subject={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(quoted)}";
+        var draft = MailApi.StageDraft($"{Loc["NavMailForwardedFrom", message.From]}\n{body}");
+        Nav.NavigateTo($"/mail/compose?subject={Uri.EscapeDataString(subject)}&draft={draft}");
     }
 
     private static string DetailHref(MailService.MailSummary message) =>

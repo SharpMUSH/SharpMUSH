@@ -11,7 +11,8 @@
 <PageTitle>@Loc["ComposeMail"] — @Loc["AppTitle"]</PageTitle>
 
 @* D1 §6.5 compose: the plain header, the message in a card, and the bottom bar (§4.11) with
-   Urgent, Cancel and Send. ?to=, ?subject= and ?body= fill it in (a reply, a forward). *@
+   Urgent, Cancel and Send. ?to= and ?subject= fill it in (a reply); ?draft= takes a body staged
+   in the mail service (a forward's quoted text). *@
 <div class="mail-compose-page">
     <PlainPageHeader Kicker="@Loc["Mail"]" Title="@Loc["ComposeMail"]" />
 
@@ -40,7 +41,7 @@
 @code {
     [SupplyParameterFromQuery(Name = "to")] public string? ToQuery { get; set; }
     [SupplyParameterFromQuery(Name = "subject")] public string? SubjectQuery { get; set; }
-    [SupplyParameterFromQuery(Name = "body")] public string? BodyQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "draft")] public string? DraftQuery { get; set; }
 
     private string _to = string.Empty;
     private string _subject = string.Empty;
@@ -48,13 +49,19 @@
     private bool _urgent;
     private bool _sending;
 
+    /// <summary>The address the form was last filled from; a re-render at the same one keeps what was typed.</summary>
+    private (string? To, string? Subject, string? Draft)? _filledFrom;
+
     protected override void OnParametersSet()
     {
         // Mirror the query params each navigation so a prior reply's recipient/subject
-        // never persists when the user opens a blank compose form.
+        // never persists when the user opens a blank compose form. A draft is taken once, so the
+        // same address must not refill (and blank) the form.
+        if (_filledFrom == (ToQuery, SubjectQuery, DraftQuery)) return;
+        _filledFrom = (ToQuery, SubjectQuery, DraftQuery);
         _to = string.IsNullOrWhiteSpace(ToQuery) ? string.Empty : ToQuery!;
         _subject = string.IsNullOrWhiteSpace(SubjectQuery) ? string.Empty : SubjectQuery!;
-        _body = string.IsNullOrWhiteSpace(BodyQuery) ? string.Empty : BodyQuery!;
+        _body = DraftQuery is { Length: > 0 } draft && Mail.TakeDraft(draft) is string staged ? staged : string.Empty;
     }
 
     private async Task SendAsync()

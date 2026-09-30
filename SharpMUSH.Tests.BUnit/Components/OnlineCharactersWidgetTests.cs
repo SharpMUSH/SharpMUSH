@@ -202,6 +202,23 @@ public class OnlineCharactersWidgetTests : TrackingBunitContext
 	/// not-found page. D1 §6.5: the rows are sidebar avatar rows in an aside card, "Online now · N",
 	/// with "See everyone" to the directory's online filter.
 	/// </summary>
+	/// <summary>
+	/// A home layout saved before D1 keeps this widget in MainContent. There it takes the main card
+	/// (52px header with See everyone at the right) and lays its rows across the width.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task InTheMainColumn_TakesTheMainCard()
+	{
+		Wire(this, new DoubledConnectionHandler());
+
+		var cut = Render<OnlineCharactersWidget>(p => p.Add(x => x.Zone, "MainContent"));
+		cut.WaitForAssertion(() => cut.Find("a.kit-row"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".kit-card--aside").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".kit-card-head .kit-card-controls a.online-characters-all").GetAttribute("href")).IsEqualTo("/characters?online=1");
+		await Assert.That(cut.Find(".online-characters-rows").ClassList).Contains("online-characters-rows--main");
+	}
+
 	[TUnit.Core.Test]
 	public async Task RowsOpenTheProfile_InAnAsideCard_WithSeeEveryone()
 	{

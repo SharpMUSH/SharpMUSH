@@ -16,9 +16,11 @@ public class MailSidebarTests : TrackingBunitContext
 {
 	private BunitNavigationManager Nav => Services.GetRequiredService<BunitNavigationManager>();
 
+	private MailApiFake _fake = default!;
+
 	private IRenderedComponent<MailSidebar> RenderAt(string path, bool connected = true, bool collapsed = false)
 	{
-		MailApiFake.Install(this, connected);
+		_fake = MailApiFake.Install(this, connected);
 		Nav.NavigateTo(path);
 		var cut = Render<MailSidebar>(p => p.Add(x => x.Collapsed, collapsed));
 		if (connected)
@@ -64,6 +66,37 @@ public class MailSidebarTests : TrackingBunitContext
 				throw new InvalidOperationException("pill not refreshed yet");
 		}, TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".mail-side-folders a.kit-row[href='/mail?folder=INBOX'] .kit-row-unread").TextContent).IsEqualTo("1");
+	}
+
+	/// <summary>
+	/// Reading a message the list knew was unread takes one off the pill where it stands: the sidebar
+	/// used to re-fetch the folders and the inbox (two requests) on every read, read or not.
+	/// </summary>
+	[Test]
+	public async Task ReadingAKnownUnreadMessage_DecrementsThePill_WithoutARequest()
+	{
+		var cut = RenderAt("/mail");
+		var before = _fake.ListRequests;
+		await Services.GetRequiredService<MailService>().ReadAsync("INBOX", 1, wasUnread: true);
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find(".mail-side-folders a.kit-row[href='/mail?folder=INBOX'] .kit-row-unread").TextContent != "1")
+				throw new InvalidOperationException("pill not decremented yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(_fake.ListRequests).IsEqualTo(before);
+	}
+
+	[Test]
+	public async Task ReadingAKnownReadMessage_ChangesNothing()
+	{
+		var cut = RenderAt("/mail");
+		var before = _fake.ListRequests;
+		var changes = 0;
+		Services.GetRequiredService<MailService>().Changed += _ => changes++;
+		await Services.GetRequiredService<MailService>().ReadAsync("INBOX", 3, wasUnread: false);
+		await Assert.That(changes).IsEqualTo(0);
+		await Assert.That(_fake.ListRequests).IsEqualTo(before);
+		await Assert.That(cut.Find(".mail-side-folders a.kit-row[href='/mail?folder=INBOX'] .kit-row-unread").TextContent).IsEqualTo("2");
 	}
 
 	[Test]

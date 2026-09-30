@@ -4263,4 +4263,7 @@
   <data name="HelpNoTopics" xml:space="preserve">
     <value>Ce jeu n’a aucun sujet d’aide installé.</value>
   </data>
+  <data name="PkgShowReadme" xml:space="preserve">
+    <value>Afficher le README de {0}</value>
+  </data>
 </root>

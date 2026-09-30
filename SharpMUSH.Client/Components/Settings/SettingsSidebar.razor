@@ -59,8 +59,7 @@
 
     private void Locate()
     {
-        var path = new Uri(Nav.Uri).AbsolutePath.TrimEnd('/');
-        _path = path.Length == 0 ? "/" : path;
+        _path = SectionPath.Of(Nav).Path;
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>

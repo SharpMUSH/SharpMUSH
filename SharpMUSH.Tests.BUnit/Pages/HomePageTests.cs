@@ -51,6 +51,7 @@ public class HomePageTests : BunitContext
 		await Assert.That(cut.Find(".home-main").TextContent).Contains("MainHello");
 		await Assert.That(cut.Find(".home-main").TextContent).DoesNotContain("AsideHello");
 		await Assert.That(cut.Find(".home-aside").TextContent).Contains("AsideHello");
+		await Assert.That(cut.Find(".home-page").ClassList).Contains("home-page--aside");
 	}
 
 	[Test]
@@ -66,8 +67,9 @@ public class HomePageTests : BunitContext
 		var cut = Render<SharpMUSH.Client.Pages.Home>();
 		cut.WaitForAssertion(() => cut.Find(".home-main .welcome-text-widget"), TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Find(".home-aside").ChildElementCount).IsEqualTo(0)
-			.Because("Home.razor.css gives the column back to main when the aside is :empty");
+		await Assert.That(cut.FindAll(".home-aside").Count).IsEqualTo(0)
+			.Because("with nothing placed in the aside zone there is no aside, and main takes the width");
+		await Assert.That(cut.Find(".home-page").ClassList).DoesNotContain("home-page--aside");
 	}
 
 	[Test]

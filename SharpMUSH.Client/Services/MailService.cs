@@ -33,31 +33,58 @@ public class MailService(IHttpClientFactory httpClientFactory)
 		Client.GetApiAsync<IReadOnlyList<string>>("api/mail/folders", "The server returned no folder list.");
 
 	/// <summary>
-	/// Raised after a read, a send or a delete lands: each can change a folder's contents or its
-	/// unread count, which the Mail section's sidebar shows beside the page that made the change.
+	/// What changed in the mailbox, for the Mail section's sidebar beside the page that made the change.
 	/// </summary>
-	public event Action? Changed;
+	/// <param name="Folder">The folder that changed.</param>
+	/// <param name="MarkedRead">True when the only change is one unread message in it becoming read, so
+	/// a count can be adjusted where it stands; false when the folder's contents may have changed.</param>
+	public sealed record MailChange(string Folder, bool MarkedRead);
 
-	/// <summary>Reads one message, which marks it read server-side.</summary>
-	public async Task<ApiResult<MailMessage>> ReadAsync(string folder, int number)
+	/// <summary>Raised after a read that changed something, a send or a delete lands.</summary>
+	public event Action<MailChange>? Changed;
+
+	/// <summary>
+	/// Reads one message, which marks it read server-side. <paramref name="wasUnread"/> is what the
+	/// caller knows of it: true (the list showed it unread) or false (already read) let the sidebar
+	/// adjust or ignore; null (a direct link) makes it re-read the folder.
+	/// </summary>
+	public async Task<ApiResult<MailMessage>> ReadAsync(string folder, int number, bool? wasUnread = null)
 	{
 		var result = await Client.GetApiAsync<MailMessage>(
 			$"api/mail/{Uri.EscapeDataString(folder)}/{number}", "The server returned no message.");
-		if (result is MailMessage) Changed?.Invoke();
+		if (result is MailMessage && wasUnread is not false) Changed?.Invoke(new MailChange(folder, MarkedRead: wasUnread is true));
 		return result;
 	}
+
+	private readonly Dictionary<string, string> _drafts = new(StringComparer.Ordinal);
+
+	/// <summary>
+	/// Holds a message body for the compose page (a forward's quoted text) and returns the id to
+	/// hand it over by. A body does not travel in the address, where a long one hits URL limits and
+	/// lands in history; a reload loses it, as it would lose anything typed.
+	/// </summary>
+	public string StageDraft(string body)
+	{
+		var id = Guid.NewGuid().ToString("N");
+		_drafts[id] = body;
+		return id;
+	}
+
+	/// <summary>The staged body, once: taking it removes it.</summary>
+	public Found<string> TakeDraft(string id) =>
+		_drafts.Remove(id, out var body) ? body : new NotFound();
 
 	public async Task<ApiResult<Success>> SendAsync(string to, string subject, string body, bool urgent)
 	{
 		var result = await Client.PostApiAsync("api/mail", new SendRequest(to, subject, body, urgent));
-		if (result is Success) Changed?.Invoke();
+		if (result is Success) Changed?.Invoke(new MailChange("SENT", MarkedRead: false));
 		return result;
 	}
 
 	public async Task<ApiResult<Success>> DeleteAsync(string folder, int number)
 	{
 		var result = await Client.DeleteApiAsync($"api/mail/{Uri.EscapeDataString(folder)}/{number}");
-		if (result is Success) Changed?.Invoke();
+		if (result is Success) Changed?.Invoke(new MailChange(folder, MarkedRead: false));
 		return result;
 	}
 }

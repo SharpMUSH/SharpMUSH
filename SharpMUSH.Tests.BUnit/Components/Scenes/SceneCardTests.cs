@@ -26,6 +26,7 @@ public class SceneCardTests : TrackingBunitContext
 		var cut = Render<SceneCard>(p => p.Add(x => x.Scene, Scene()).Add(x => x.CanJoin, true));
 
 		await Assert.That(cut.Find(".scene-card-title").TextContent.Trim()).IsEqualTo("Salt Market at Dusk");
+		await Assert.That(cut.Find(".scene-card-title").TagName).IsEqualTo("H2").Because("the card sits directly under the page h1");
 		await Assert.That(cut.Find(".scene-card-live").TextContent).Contains("LIVE");
 		var meta = cut.Find(".scene-card-meta").TextContent;
 		await Assert.That(meta).Contains("Lower Docks");

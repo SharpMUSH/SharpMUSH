@@ -92,7 +92,7 @@
                                 <MudText Typo="Typo.subtitle1">@entry.Listing.Name</MudText>
                                 <TrustBadge Trust="PackageRemoteTrust.Community" />
                                 <MudSpacer />
-                                <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="README" aria-label="README"
+                                <MudIconButton Icon="@Icons.Material.Filled.Description" Size="Size.Small" title="@Loc["PkgShowReadme", entry.Listing.Name]" aria-label="@Loc["PkgShowReadme", entry.Listing.Name]"
                                                OnClick="@(() => ShowReadmeAsync(entry.Listing))" />
                                 @if (entry.AlreadyConfigured)
                                 {
