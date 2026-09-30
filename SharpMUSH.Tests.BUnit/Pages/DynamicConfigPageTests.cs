@@ -28,13 +28,19 @@ file sealed class RouteHandler(Func<HttpMethod, string, HttpResponseMessage> res
 /// </summary>
 public class DynamicConfigPageTests : TrackingBunitContext
 {
-	private string _json = ConfigLayoutTests.RealConfigurationJson();
+	/// <summary>What /api/configuration answers; a test may swap the body before it renders.</summary>
+	private sealed class Served
+	{
+		public string Json { get; set; } = ConfigLayoutTests.RealConfigurationJson();
+	}
+
+	private readonly Served _served = new();
 
 	public DynamicConfigPageTests()
 	{
 		var client = Track(new HttpClient(new RouteHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
 		{
-			Content = new StringContent(_json, Encoding.UTF8, "application/json")
+			Content = new StringContent(_served.Json, Encoding.UTF8, "application/json")
 		}))
 		{ BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
@@ -147,7 +153,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 			prop.Group = null;
 		}
 		schema.Categories.First(c => c.Name.Equals("Dump", StringComparison.OrdinalIgnoreCase)).Groups.Clear();
-		_json = System.Text.Json.JsonSerializer.Serialize(new ConfigurationResponse
+		_served.Json = System.Text.Json.JsonSerializer.Serialize(new ConfigurationResponse
 		{
 			Configuration = SharpMUSH.Configuration.Options.SharpMUSHOptions.Default(),
 			Schema = schema
