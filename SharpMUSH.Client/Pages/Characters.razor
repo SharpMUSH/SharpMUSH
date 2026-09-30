@@ -52,7 +52,7 @@
             {
                 var ch = character;
                 <PortraitTile Name="@ch.Name" ImageUrl="@ch.Image" Alt="@ch.Name" Label="@ch.Name" Height="120"
-                              Highlight="@IsOnline(ch.Name)" Href="@($"/character/{Uri.EscapeDataString(ch.Name)}")" />
+                              Highlight="@IsOnline(ch)" Href="@($"/character/{Uri.EscapeDataString(ch.Name)}")" />
             }
         </div>
     }
@@ -63,7 +63,8 @@
     private const string UncategorisedKey = "\u0000";
 
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _all = [];
-    private HashSet<string> _onlineNames = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Who is connected, by objid: two characters may share a display name, never an objid.</summary>
+    private HashSet<string> _onlineObjids = new(StringComparer.Ordinal);
     private bool _loading = true;
     private bool _failed;
     private string _search = string.Empty;
@@ -94,7 +95,7 @@
             if (_selectedCategory is not null)
                 results = results.Where(c => (c.Category?.Trim() ?? string.Empty) == _selectedCategory);
             if (_onlyOnline)
-                results = results.Where(c => _onlineNames.Contains(c.Name));
+                results = results.Where(IsOnline);
             if (_onlyNew)
                 results = results.Where(CharactersSidebar.IsNew);
             return results.ToList();
@@ -112,7 +113,7 @@
         _all = result is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows ? rows : [];
         if (await online is IReadOnlyList<CharacterDirectoryService.CharacterSummary> here)
         {
-            _onlineNames = new HashSet<string>(here.Select(r => r.Name), StringComparer.OrdinalIgnoreCase);
+            _onlineObjids = new HashSet<string>(here.Select(r => r.Objid), StringComparer.Ordinal);
         }
         _categories = _all
             .Select(c => c.Category?.Trim() ?? string.Empty)
@@ -123,7 +124,7 @@
         _loading = false;
     }
 
-    private bool IsOnline(string name) => _onlineNames.Contains(name);
+    private bool IsOnline(CharacterDirectoryService.CharacterSummary character) => _onlineObjids.Contains(character.Objid);
 
     private void SelectCategory(string key) =>
         _selectedCategory = key == AllKey ? null : key == UncategorisedKey ? string.Empty : key;

@@ -138,16 +138,8 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 				: BadRequest(new { error = "participant must be a dbref such as #42." });
 		}
 
-		// The service applies its own viewer-scoped visibility filtering; we additionally gate each
-		// returned scene through CanSeeAsync so non-public scenes never leak to non-members.
-		var scenes = await sceneService.ListScenesAsync(filter, CallerDbref, count: count);
-
-		var visible = new List<SceneDto>(scenes.Count);
-		foreach (var scene in scenes)
-			if (await CanSeeAsync(scene))
-				visible.Add(ToDto(scene));
-
-		return Ok(visible);
+		// Every returned scene is gated through CanSeeAsync so non-public scenes never leak to non-members.
+		return Ok((await VisibleScenesAsync(filter, CallerDbref, count)).Select(ToDto));
 	}
 
 	/// <summary>
@@ -189,14 +181,44 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	}
 
 	/// <summary>The scenes <paramref name="member"/> belongs to, newest first, that the caller may see.</summary>
-	private async Task<List<Contracts.Scene>> VisibleScenesOfAsync(DBRef member, int count)
+	private Task<List<Contracts.Scene>> VisibleScenesOfAsync(DBRef member, int count) =>
+		VisibleScenesAsync("mine", member.ToString(), count);
+
+	/// <summary>
+	/// The first <paramref name="count"/> scenes of <paramref name="filter"/> that the caller may see. The
+	/// service's own <c>count</c> cuts the list before visibility is known, so the window is widened until
+	/// it holds <paramref name="count"/> visible scenes or the service has no more to give — newer scenes
+	/// the caller cannot open never push the older ones it can out of the answer.
+	/// </summary>
+	private async Task<List<Contracts.Scene>> VisibleScenesAsync(string filter, string? viewer, int count)
 	{
-		var scenes = await sceneService.ListScenesAsync("mine", member.ToString(), count: count);
-		var visible = new List<Contracts.Scene>(scenes.Count);
-		foreach (var scene in scenes)
-			if (await CanSeeAsync(scene))
-				visible.Add(scene);
-		return visible;
+		var wanted = Math.Max(0, count);
+		var seen = new Dictionary<string, bool>(StringComparer.Ordinal);
+		var ask = Math.Max(1, wanted);
+		while (true)
+		{
+			var scenes = await sceneService.ListScenesAsync(filter, viewer, count: ask);
+			var visible = new List<Contracts.Scene>(Math.Min(scenes.Count, wanted));
+			foreach (var scene in scenes)
+			{
+				if (!seen.TryGetValue(scene.Id, out var canSee))
+				{
+					seen[scene.Id] = canSee = await CanSeeAsync(scene);
+				}
+
+				if (canSee && visible.Count < wanted)
+				{
+					visible.Add(scene);
+				}
+			}
+
+			if (visible.Count >= wanted || scenes.Count < ask || ask >= int.MaxValue / 2)
+			{
+				return visible;
+			}
+
+			ask *= 2;
+		}
 	}
 
 	/// <summary>

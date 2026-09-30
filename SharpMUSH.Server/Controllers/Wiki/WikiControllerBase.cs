@@ -127,7 +127,7 @@ public abstract class WikiControllerBase(
 
 	protected async Task<WikiPageDto> ToDtoAsync(LocalizedWikiPage p, IReadOnlyList<string> availableLocales) => ToDto(p, availableLocales) with
 	{
-		LastEditedBy = await Names.NameOfAsync(p.Page.LastEditorDbref, HttpContext.RequestAborted),
+		LastEditedBy = await Names.NameOfAsync(p.LastEditorDbref, HttpContext.RequestAborted),
 		Image = WikiImages.FirstImageUrl(p.RenderedHtml),
 	};
 

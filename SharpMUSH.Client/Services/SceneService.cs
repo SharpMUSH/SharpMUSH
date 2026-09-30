@@ -50,6 +50,8 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 		string? LastEditorDbref,
 		string? LastEditorName);
 
+	private record SceneMemberDto(string? MemberDbref, bool IsCurrent);
+
 
 	/// <summary>Lists scenes by filter (active|recent|scheduled).</summary>
 	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50)
@@ -86,6 +88,25 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 		return result switch
 		{
 			List<ScenePartner> partners => (IReadOnlyList<ScenePartner>)partners,
+			ApiFailure failure => failure
+		};
+	}
+
+	/// <summary>
+	/// The dbrefs (<c>#312</c>, without the creation stamp) of the scene's members — everyone who joined or
+	/// watched it — skipping edges held by a recycled dbref's former owner.
+	/// </summary>
+	public async Task<ApiResult<IReadOnlyList<string>>> GetMemberDbrefsAsync(string sceneId)
+	{
+		var result = await Client.GetApiAsync<List<SceneMemberDto>>(
+			$"api/scenes/{Uri.EscapeDataString(sceneId)}/members", "The server returned no member list.");
+
+		return result switch
+		{
+			List<SceneMemberDto> members => (IReadOnlyList<string>)[.. members
+				.Where(m => m.IsCurrent && !string.IsNullOrWhiteSpace(m.MemberDbref))
+				.Select(m => m.MemberDbref!.Split(':')[0])
+				.Distinct(StringComparer.Ordinal)],
 			ApiFailure failure => failure
 		};
 	}

@@ -52,7 +52,8 @@ public class WikiControllerHtmlTests
 			RenderedHtml: page.RenderedHtml,
 			PlainText: page.PlainText,
 			Published: page.Published,
-			RevisionNumber: page.RevisionNumber);
+			RevisionNumber: page.RevisionNumber,
+			LastEditorDbref: page.LastEditorDbref);
 
 	private static readonly string[] SingleLocale = ["en"];
 

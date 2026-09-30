@@ -7,8 +7,18 @@ using SharpMUSH.Client.Services;
 namespace SharpMUSH.Tests.Client.Services;
 
 /// <summary>The profile's Recent scenes and Often plays with read <c>?participant=</c> and <c>/partners</c>.</summary>
-public class SceneServiceParticipantTests
+public class SceneServiceParticipantTests : IDisposable
 {
+	private readonly List<HttpClient> _clients = [];
+
+	public void Dispose()
+	{
+		foreach (var client in _clients)
+		{
+			client.Dispose();
+		}
+	}
+
 	private sealed class Handler(Dictionary<string, string> bodies) : HttpMessageHandler
 	{
 		public List<string> Paths { get; } = [];
@@ -23,11 +33,13 @@ public class SceneServiceParticipantTests
 		}
 	}
 
-	private static (SceneService, Handler) Build(Dictionary<string, string> bodies)
+	private (SceneService, Handler) Build(Dictionary<string, string> bodies)
 	{
 		var handler = new Handler(bodies);
+		var http = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") };
+		_clients.Add(http);
 		var factory = Substitute.For<IHttpClientFactory>();
-		factory.CreateClient(Arg.Any<string>()).Returns(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
+		factory.CreateClient(Arg.Any<string>()).Returns(http);
 		return (new SceneService(factory), handler);
 	}
 
