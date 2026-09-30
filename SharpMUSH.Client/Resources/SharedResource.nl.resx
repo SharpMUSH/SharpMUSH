@@ -4921,13 +4921,13 @@
     <value>Alles bekijken</value>
   </data>
   <data name="NavPlaySheetLabel" xml:space="preserve">
-    <value>Karakterblad: {0}</value>
+    <value>Personageblad: {0}</value>
   </data>
   <data name="NavPlayTypePose" xml:space="preserve">
     <value>Pose</value>
   </data>
   <data name="NavPlayTypeSay" xml:space="preserve">
-    <value>Zeg</value>
+    <value>Zeggen</value>
   </data>
   <data name="NavPlayTypeOoc" xml:space="preserve">
     <value>OOC</value>
@@ -4954,7 +4954,7 @@
     <value>Scène</value>
   </data>
   <data name="NavPlayTabRoom" xml:space="preserve">
-    <value>Ruimte</value>
+    <value>Kamer</value>
   </data>
   <data name="NavPlayTabs" xml:space="preserve">
     <value>Speelonderdelen</value>
