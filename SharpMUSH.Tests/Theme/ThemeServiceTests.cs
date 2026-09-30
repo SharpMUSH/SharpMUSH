@@ -112,6 +112,22 @@ public class ThemeServiceTests
 	}
 
 	[Test]
+	public async Task InitializeAsync_ReadsStorageOnce_SoALaterCallCompletesSynchronously()
+	{
+		// Program.cs awaits the restore before the first render. ThemeProvider asks again from
+		// OnInitializedAsync; if that second call went back to storage it would yield, and the provider
+		// would render the default theme first and the stored one after — the double render this avoids.
+		var js = MakeJs("Amber");
+		var svc = new ThemeService(js);
+		await svc.InitializeAsync();
+
+		var again = svc.InitializeAsync();
+
+		await Assert.That(again.IsCompletedSuccessfully).IsTrue();
+		await Assert.That(js.ReceivedCalls().Count()).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task InitializeAsync_WithStoredUnknownPreset_KeepsDefault()
 	{
 		var svc = new ThemeService(MakeJs("Does Not Exist"));

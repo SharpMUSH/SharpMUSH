@@ -19,8 +19,8 @@ namespace SharpMUSH.Tests.BUnit.Layout;
 /// Fakes the two endpoints NavMenu's own init touches: <c>api/auth/account-login</c> (used here to
 /// seed a real <see cref="AccountAuthService"/> with a two-character roster in server order — the
 /// same pattern as <c>AccountAuthServiceActiveCharacterTests.FakeLoginHandler</c>) and
-/// <c>api/applications</c> (fetched unconditionally by <see cref="ApplicationRegistryClient"/> from
-/// NavMenu's own <c>OnInitializedAsync</c>).
+/// <c>api/applications</c> (answered empty; NavMenu lists applications from the startup
+/// <see cref="ApplicationCatalog"/>, registered empty too).
 /// </summary>
 file sealed class NavMenuApiHandler(IReadOnlyList<CharacterSummary> characters) : HttpMessageHandler
 {
@@ -126,6 +126,7 @@ public class NavMenuActiveCharacterTests : TrackingBunitContext, IAsyncDisposabl
 		Services.AddSingleton(sp => new ApplicationRegistryClient(
 			sp.GetRequiredService<IHttpClientFactory>(),
 			NullLogger<ApplicationRegistryClient>.Instance));
+		Services.AddSingleton(new ApplicationCatalog([]));
 
 		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 		var (success, error, _) = await auth.LoginAsync("headwiz", "password");

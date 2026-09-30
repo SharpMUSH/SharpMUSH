@@ -63,16 +63,16 @@ internal static class WebHostRegistration
 	public static IServiceCollection AddSharpMushHttpPipeline(
 		this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
-		// Compress what we send. Only the Blazor _framework files arrived compressed before, because
-		// UseBlazorFrameworkFiles serves pre-brotlied copies of those and nothing else was covered —
-		// so a cold first visit pulled 15.0 MB, with Monaco's editor.api (3.67 MB), Mermaid (2.57 MB),
+		// Compress what we send that is not already compressed: API and hub responses, index.html via
+		// the SPA fallback, and — when there is no portal endpoints manifest (a dev run, a test host) —
+		// the portal's own files. A published image serves the portal's precompressed .br/.gz through
+		// MapStaticAssets (PortalStaticFiles), and responses that already carry a Content-Encoding are
+		// skipped by this middleware, so nothing is compressed twice. Before either existed a cold
+		// first visit pulled 15.0 MB, with Monaco's editor.api (3.67 MB), Mermaid (2.57 MB),
 		// MudBlazor's CSS and mush-defs.json all going out as raw bytes.
 		//
-		// Fastest, not Optimal: this compresses on the fly, and the largest asset here is several
-		// megabytes — paying maximum-ratio brotli per request would trade a download stall for a
-		// server stall. Fastest still takes those files down by roughly an order of magnitude.
-		// Responses that already carry a Content-Encoding (the pre-brotlied _framework files) are
-		// skipped by the middleware, so nothing is compressed twice.
+		// Fastest, not Optimal: this compresses on the fly, and paying maximum-ratio brotli per
+		// request would trade a download stall for a server stall.
 		services.AddResponseCompression(options =>
 		{
 			options.EnableForHttps = true;
@@ -207,30 +207,24 @@ internal static class WebHostRegistration
 				new HeaderApiVersionReader("x-api-version"));
 		}).AddMvc();
 
-		// Named "public-api" policy: fixed window, 30 req/min per client IP,
-		// queue depth 5.  Auth endpoints opt in via [EnableRateLimiting("public-api")].
-		// Limits are configuration-driven (defaults below match the historical hardcoded
-		// values) so the test host can raise them without touching production behavior.
-		// NOTE: the config reads live INSIDE the AddRateLimiter delegate on purpose — the
-		// delegate runs lazily at options resolution (after the host is fully built), so
-		// configuration sources appended late (e.g. the test host's in-memory overrides)
-		// are visible. An eager read at ConfigureServices time only ever sees the defaults
+		// Limits are configuration-driven so the test host can raise them without touching production
+		// behavior. NOTE: every config read lives INSIDE the AddRateLimiter delegate (and the partition
+		// factories under it) on purpose — the delegate runs lazily at options resolution (after the
+		// host is fully built), so configuration sources appended late (e.g. the test host's in-memory
+		// overrides) are visible. An eager read at ConfigureServices time only ever sees the defaults
 		// under WebApplicationFactory-style test hosts.
 		services.AddRateLimiter(opts =>
 		{
 			opts.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-			opts.AddFixedWindowLimiter("public-api", limiterOpts =>
-			{
-				limiterOpts.PermitLimit = configuration.GetValue("RateLimiting:PublicApi:PermitLimit", 30);
-				limiterOpts.Window = TimeSpan.FromSeconds(configuration.GetValue("RateLimiting:PublicApi:WindowSeconds", 60));
-				limiterOpts.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-				limiterOpts.QueueLimit = configuration.GetValue("RateLimiting:PublicApi:QueueLimit", 5);
-			});
+
+			// "public-api": a fixed window per client IP on the anonymous credential/claim surfaces,
+			// which opt in with [EnableRateLimiting]. See PublicApiRateLimit.
+			opts.AddPublicApiPolicy(configuration);
 
 			// "mcp" policy: partitioned per client IP so one source can't brute-force the
 			// character+password auth on /mcp, while a legitimate agent (single IP) still gets
-			// generous tool-call throughput. Partitioning (unlike the global "public-api" limiter)
-			// keeps one caller's bursts from throttling everyone else.
+			// generous tool-call throughput. Partitioning keeps one caller's bursts from throttling
+			// everyone else.
 			opts.AddPolicy("mcp", httpContext =>
 				RateLimitPartition.GetFixedWindowLimiter(
 					partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",

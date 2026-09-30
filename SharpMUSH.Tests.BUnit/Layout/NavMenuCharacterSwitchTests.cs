@@ -146,6 +146,7 @@ public class NavMenuCharacterSwitchTests : TrackingBunitContext, IAsyncDisposabl
 		Services.AddSingleton(sp => new ApplicationRegistryClient(
 			sp.GetRequiredService<IHttpClientFactory>(),
 			NullLogger<ApplicationRegistryClient>.Instance));
+		Services.AddSingleton(new ApplicationCatalog([]));
 
 		var auth = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
 		var (success, error, _) = await auth.LoginAsync("headwiz", "password");

@@ -51,6 +51,7 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 					Uri.TryCreate(_options.Url, UriKind.Absolute, out var endpoint) ? endpoint.Host : "configured endpoint");
 				await using var nats = new NatsConnection(new NatsOpts { Url = _options.Url });
 				await nats.ConnectAsync();
+				_registry.Attach(() => nats.ConnectionState == NatsConnectionState.Open);
 				_logger.LogInformation("[NATS-CONSUMER] Connected to NATS. Ensuring stream {Stream} exists.", _options.GetConsumeStreamName());
 
 				var js = new NatsJSContext(nats);
@@ -80,6 +81,8 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 				// socket owner must stay alive even if a broker operation fails unexpectedly.
 				_logger.LogError(ex, "[NATS-CONSUMER] Consumer group failed; reconnecting without stopping the host.");
 			}
+			// Whatever ended the group, none of its consumers is consuming until the retry resubscribes it.
+			_registry.MarkAllInactive();
 			if (System.Diagnostics.Stopwatch.GetElapsedTime(started) >= TimeSpan.FromMinutes(1)) failures = 0;
 			try { await Task.Delay(RetryDelay(failures++), stoppingToken); }
 			catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }

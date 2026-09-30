@@ -10,8 +10,8 @@ namespace SharpMUSH.Tests.BUnit.Services;
 /// address to a hardcoded https://…:8081. That is only correct for the dev launch profile
 /// (SharpMUSH.Server/Properties/launchSettings.json binds https://localhost:8081), and it breaks
 /// every reverse-proxied deployment — behind Cloudflare the site is served on 443 and :8081 is
-/// not routable at all, so ServerStartupGate's /api/health probe could never succeed and the app
-/// sat behind the startup screen forever.
+/// not routable at all, so the client's startup gate (since replaced by the server's own startup
+/// page) could never reach /api/health and the app sat behind the startup screen forever.
 ///
 /// The rule: same-origin by default (correct behind any proxy), with an explicit opt-in override
 /// for dev, supplied via appsettings.Development.json rather than baked into the code.
