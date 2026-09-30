@@ -4908,4 +4908,34 @@
   <data name="NavSceneCast" xml:space="preserve">
     <value>{count, plural, other {角色 · #}}</value>
   </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, other {# 个主题}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>搜索帮助</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>浏览</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>帮助索引</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>入门</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>MUSH 新手</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>主题</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {无匹配} other {# 个匹配}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>管理员帮助</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>管理员索引</value>
+  </data>
 </root>

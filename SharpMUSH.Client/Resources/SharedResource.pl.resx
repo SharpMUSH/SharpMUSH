@@ -4908,4 +4908,34 @@
   <data name="NavSceneCast" xml:space="preserve">
     <value>{count, plural, one {Obsada · #} few {Obsada · #} many {Obsada · #} other {Obsada · #}}</value>
   </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# temat} few {# tematy} many {# tematów} other {# tematu}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Szukaj w pomocy</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Przeglądaj</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Spis pomocy</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Pierwsze kroki</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Nowy w MUSH</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Tematy</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Brak wyników} one {# wynik} few {# wyniki} many {# wyników} other {# wyniku}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Pomoc administracyjna</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Spis administracyjny</value>
+  </data>
 </root>

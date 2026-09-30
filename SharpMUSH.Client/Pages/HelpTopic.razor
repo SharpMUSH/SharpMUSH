@@ -1,22 +1,24 @@
 @page "/help/{Topic}"
+@layout HelpLayout
 @using SharpMUSH.Client.Components.Help
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Topic — @Loc["Help"] — @Loc["AppTitle"]</PageTitle>
 
+@* One topic of the shipped help corpus: the plain header under "Help", the entry in a card, and a way
+   back to the index for a reader whose sidebar is folded into the drawer. *@
 <div class="help-page">
-    <header class="help-header">
-        <div class="help-kicker">
-            <a class="help-kicker-link" href="/help">@Loc["Help"]</a>
-            <span class="help-kicker-sep">/</span>
-            <span class="help-kicker-current">@Topic</span>
-        </div>
-        <h1 class="help-title">@Topic</h1>
-    </header>
+    <PlainPageHeader Kicker="@Loc["Help"]" Title="@Topic">
+        <Actions>
+            <CapsuleButton Href="/help" Icon="@Icons.Material.Outlined.MenuBook">@Loc["NavHelpIndex"]</CapsuleButton>
+        </Actions>
+    </PlainPageHeader>
 
-    <section class="help-body">
-        <HelpEntryPanel Topic="@Topic" />
-    </section>
+    <KitCard>
+        <div class="help-body">
+            <HelpEntryPanel Topic="@Topic" />
+        </div>
+    </KitCard>
 </div>
 
 @code {

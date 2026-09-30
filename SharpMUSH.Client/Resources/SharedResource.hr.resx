@@ -4908,4 +4908,34 @@
   <data name="NavSceneCast" xml:space="preserve">
     <value>{count, plural, one {Uloge · #} few {Uloge · #} other {Uloge · #}}</value>
   </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# tema} few {# teme} other {# tema}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Pretraži pomoć</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Pregled</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Kazalo pomoći</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Prvi koraci</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Novi u MUSH-u</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Teme</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Nema podudaranja} one {# podudaranje} few {# podudaranja} other {# podudaranja}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Pomoć za administratore</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Administratorsko kazalo</value>
+  </data>
 </root>

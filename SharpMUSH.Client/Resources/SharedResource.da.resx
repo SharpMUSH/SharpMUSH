@@ -4908,4 +4908,34 @@
   <data name="NavSceneCast" xml:space="preserve">
     <value>{count, plural, one {Medvirkende · #} other {Medvirkende · #}}</value>
   </data>
+  <data name="NavHelpTopicsCount" xml:space="preserve">
+    <value>{count, plural, one {# emne} other {# emner}}</value>
+  </data>
+  <data name="NavHelpSearch" xml:space="preserve">
+    <value>Søg i hjælpen</value>
+  </data>
+  <data name="NavHelpBrowse" xml:space="preserve">
+    <value>Gennemse</value>
+  </data>
+  <data name="NavHelpIndex" xml:space="preserve">
+    <value>Hjælpeindeks</value>
+  </data>
+  <data name="NavHelpGettingStarted" xml:space="preserve">
+    <value>Kom godt i gang</value>
+  </data>
+  <data name="NavHelpNewbie" xml:space="preserve">
+    <value>Ny i MUSH</value>
+  </data>
+  <data name="NavHelpTopics" xml:space="preserve">
+    <value>Emner</value>
+  </data>
+  <data name="NavHelpMatches" xml:space="preserve">
+    <value>{count, plural, =0 {Ingen resultater} one {# resultat} other {# resultater}}</value>
+  </data>
+  <data name="NavHelpAdmin" xml:space="preserve">
+    <value>Administratorhjælp</value>
+  </data>
+  <data name="NavHelpAdminIndex" xml:space="preserve">
+    <value>Administratorindeks</value>
+  </data>
 </root>

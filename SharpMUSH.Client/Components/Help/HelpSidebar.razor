@@ -1,0 +1,199 @@
+@using Microsoft.AspNetCore.Components.Routing
+@inject GameHelpService HelpFiles
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@* The Help page sidebar (README §6.5, in the board-21 shape): "Help · N topics", a search that opens a
+   topic by its exact name or lands on the index filtered to the term, Browse (the index and the
+   getting-started entries the corpus has), a slice of the topic list — the matches while searching,
+   otherwise the neighbours of the topic being read, never all ~1500 — and Admin help for Wizard and
+   God, who alone are asked the admin index. Collapsed keeps the browse icons. *@
+<div class="help-side @(Collapsed ? "help-side--collapsed" : null)">
+    @if (!Collapsed)
+    {
+        <SidebarHead Title="@Loc["Help"]" Sub="@HeadSub" />
+        <SidebarSearch Placeholder="@Loc["NavHelpSearch"]" OnSearch="Search" />
+        <SectionLabel>@Loc["NavHelpBrowse"]</SectionLabel>
+    }
+    <nav class="help-side-browse" aria-label="@Loc["NavHelpBrowse"]">
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="@Loc["NavHelpIndex"]"
+                    Href="/help" IsCurrent="@(_path == "/help")" Collapsed="@Collapsed" />
+        @foreach (var (topic, label, icon) in Starters())
+        {
+            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@icon" Label="@label"
+                        Href="@TopicHref(topic)" IsCurrent="@IsTopic(topic)" Collapsed="@Collapsed" />
+        }
+    </nav>
+    @if (!Collapsed && _index is not null)
+    {
+        var (label, topics) = TopicSlice();
+        <SectionLabel Class="help-side-topics-label">@label</SectionLabel>
+        <nav class="help-side-topics" aria-label="@Loc["NavHelpTopics"]">
+            @foreach (var topic in topics)
+            {
+                <SidebarRow Class="help-side-topic" Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Article" Label="@topic"
+                            Href="@TopicHref(topic)" IsCurrent="@IsTopic(topic)" />
+            }
+        </nav>
+    }
+    <AuthorizeView Roles="Wizard,God">
+        <Authorized>
+            @if (!Collapsed)
+            {
+                <SectionLabel>@Loc["NavHelpAdmin"]</SectionLabel>
+            }
+            <nav class="help-side-admin" aria-label="@Loc["NavHelpAdmin"]">
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.AdminPanelSettings" Label="@Loc["NavHelpAdminIndex"]"
+                            Href="@AdminHref(AdminIndexTopic)" IsCurrent="@IsAdminTopic(AdminIndexTopic)" Collapsed="@Collapsed" />
+                @if (!Collapsed && _adminIndex is not null)
+                {
+                    @foreach (var topic in Slice(_adminIndex.Topics, _adminTopic, AdminIndexTopic))
+                    {
+                        <SidebarRow Class="help-side-topic" Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Article" Label="@topic"
+                                    Href="@AdminHref(topic)" IsCurrent="@IsAdminTopic(topic)" />
+                    }
+                }
+            </nav>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    /// <summary>Only the icons, for the collapsed strip.</summary>
+    [Parameter] public bool Collapsed { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    /// <summary>How many topics the sidebar lists at once, of a corpus of ~1500.</summary>
+    public const int TopicsShown = 12;
+
+    /// <summary>The entries a newcomer is sent to, when the corpus has them: (topic, label key, icon).</summary>
+    private static readonly (string Topic, string LabelKey, string Icon)[] StarterTopics =
+    [
+        ("getting started", "NavHelpGettingStarted", Icons.Material.Outlined.Flag),
+        ("newbie", "NavHelpNewbie", Icons.Material.Outlined.School),
+    ];
+
+    private GameHelpIndex? _index;
+    private GameHelpIndex? _adminIndex;
+    private string _path = "/help";
+
+    /// <summary>The general topic being read, decoded from /help/{topic}.</summary>
+    private string? _topic;
+
+    /// <summary>The admin topic being read, decoded from /help/admin/{topic}.</summary>
+    private string? _adminTopic;
+
+    /// <summary>The index's filter (/help?q=), which the sidebar's search sets.</summary>
+    private string _query = string.Empty;
+
+    private RenderFragment? HeadSub => _index is { } index
+        ? b => b.AddContent(0, Loc.Plural("NavHelpTopicsCount", "count", index.Topics.Count))
+        : null;
+
+    /// <summary>The starters this corpus has, spelled as the corpus spells them.</summary>
+    private IEnumerable<(string Topic, string Label, string Icon)> Starters()
+    {
+        if (_index is null) yield break;
+        foreach (var (wanted, labelKey, icon) in StarterTopics)
+        {
+            if (_index.Topics.FirstOrDefault(t => string.Equals(t, wanted, StringComparison.OrdinalIgnoreCase)) is string topic)
+            {
+                yield return (topic, Loc[labelKey].Value, icon);
+            }
+        }
+    }
+
+    private string AdminIndexTopic => _adminIndex?.Topic ?? "ahelp";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        Locate();
+        _index = await HelpFiles.GetIndexAsync() is GameHelpIndex index ? index : null;
+
+        // Only staff ask for the admin corpus, as on the index page: the server's 403 is the gate, and
+        // a mortal's sidebar has no reason to spend a refused request on every page.
+        if (AuthState is not null)
+        {
+            var user = (await AuthState).User;
+            if (user.IsInRole("Wizard") || user.IsInRole("God"))
+            {
+                _adminIndex = await HelpFiles.GetAdminIndexAsync() is GameHelpIndex admin ? admin : null;
+            }
+        }
+    }
+
+    /// <summary>While searching the index, the first matches; otherwise the neighbours of the topic being read.</summary>
+    private (string Label, IReadOnlyList<string> Topics) TopicSlice()
+    {
+        var topics = _index?.Topics ?? [];
+        if (_path == "/help" && _query.Length > 0)
+        {
+            var matches = topics.Where(t => t.Contains(_query, StringComparison.OrdinalIgnoreCase)).ToList();
+            return (Loc.Plural("NavHelpMatches", "count", matches.Count), matches.Take(TopicsShown).ToList());
+        }
+        return (Loc["NavHelpTopics"], Slice(topics, _topic, _index?.Topic));
+    }
+
+    /// <summary>
+    /// <see cref="TopicsShown"/> topics around <paramref name="current"/>, or from the start of the list
+    /// when it is not one of them, leaving out the corpus's own index entry (the index row links it).
+    /// </summary>
+    public static IReadOnlyList<string> Slice(IReadOnlyList<string> topics, string? current, string? indexTopic)
+    {
+        var listed = topics.Where(t => !string.Equals(t, indexTopic, StringComparison.OrdinalIgnoreCase)).ToList();
+        var at = current is null ? -1 : listed.FindIndex(t => string.Equals(t, current, StringComparison.OrdinalIgnoreCase));
+        var start = at < 0 ? 0 : Math.Clamp(at - TopicsShown / 2, 0, Math.Max(0, listed.Count - TopicsShown));
+        return listed.Skip(start).Take(TopicsShown).ToList();
+    }
+
+    private static string TopicHref(string topic) => $"/help/{Uri.EscapeDataString(topic)}";
+
+    private static string AdminHref(string topic) => $"/help/admin/{Uri.EscapeDataString(topic)}";
+
+    private bool IsTopic(string topic) => string.Equals(_topic, topic, StringComparison.OrdinalIgnoreCase);
+
+    private bool IsAdminTopic(string topic) => string.Equals(_adminTopic, topic, StringComparison.OrdinalIgnoreCase);
+
+    private void Search(string term)
+    {
+        if (term.Length == 0)
+        {
+            Nav.NavigateTo("/help");
+            return;
+        }
+
+        // A name the corpus has opens that topic; anything else (a fragment, a glob) filters the index.
+        var exact = _index?.Topics.FirstOrDefault(t => string.Equals(t, term, StringComparison.OrdinalIgnoreCase));
+        Nav.NavigateTo(exact is not null ? TopicHref(exact) : $"/help?q={Uri.EscapeDataString(term)}");
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        Locate();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void Locate()
+    {
+        var relative = "/" + Nav.ToBaseRelativePath(Nav.Uri);
+        var cut = relative.IndexOfAny(['?', '#']);
+        _path = (cut >= 0 ? relative[..cut] : relative).TrimEnd('/');
+        if (_path.Length == 0) _path = "/";
+        _topic = null;
+        _adminTopic = null;
+        if (_path.StartsWith("/help/admin/", StringComparison.Ordinal))
+        {
+            _adminTopic = Uri.UnescapeDataString(_path["/help/admin/".Length..]);
+        }
+        else if (_path.StartsWith("/help/", StringComparison.Ordinal))
+        {
+            _topic = Uri.UnescapeDataString(_path["/help/".Length..]);
+        }
+        _query = HelpQuery.From(Nav.Uri);
+    }
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}
