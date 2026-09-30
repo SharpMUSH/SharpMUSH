@@ -21,7 +21,7 @@ public class ChannelBroadcastServiceTests
 		var service = Service(notifyService, Substitute.For<IEventService>());
 		var member = new AnySharpObject(Thing(300, "Listener"));
 
-		await service.BroadcastAsync(Emit(Channel(member, gagged: false)), CancellationToken.None);
+		await service.BroadcastAsync(Line(Channel(member, gagged: false)), CancellationToken.None);
 
 		await notifyService.Received(1).Notify(member, Arg.Any<SharpMessage>(), null, INotifyService.NotificationType.Emit);
 	}
@@ -38,7 +38,8 @@ public class ChannelBroadcastServiceTests
 		var member = new AnySharpObject(Thing(310, "Listener"));
 		var before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-		await service.BroadcastAsync(Emit(Channel(member, gagged: false)), CancellationToken.None);
+		await service.BroadcastAsync(Line(Channel(member, gagged: false), INotifyService.NotificationType.Say),
+			CancellationToken.None);
 
 		await eventService.Received(1).TriggerEventAsync(
 			Arg.Any<IMUSHCodeParser>(),
@@ -48,7 +49,7 @@ public class ChannelBroadcastServiceTests
 				args.Length == 7
 				&& args[0] == "Public"
 				&& args[1] == string.Empty
-				&& args[2] == "emit"
+				&& args[2] == "say"
 				&& args[3] == "System"
 				&& args[4] == "The server is restarting."
 				&& args[5] == member.Object().DBRef.ToString()
@@ -63,7 +64,7 @@ public class ChannelBroadcastServiceTests
 		var service = Service(Substitute.For<INotifyService>(), eventService);
 		var member = new AnySharpObject(Thing(320, "Gagged"));
 
-		await service.BroadcastAsync(Emit(Channel(member, gagged: true)), CancellationToken.None);
+		await service.BroadcastAsync(Line(Channel(member, gagged: true)), CancellationToken.None);
 
 		await eventService.DidNotReceive().TriggerEventAsync(
 			Arg.Any<IMUSHCodeParser>(), Arg.Any<string>(), Arg.Any<DBRef?>(), Arg.Any<string[]>());
@@ -88,10 +89,11 @@ public class ChannelBroadcastServiceTests
 		Privs = []
 	};
 
-	private static ChannelMessageNotification Emit(SharpChannel channel) => new(
+	private static ChannelMessageNotification Line(SharpChannel channel,
+		INotifyService.NotificationType type = INotifyService.NotificationType.Emit) => new(
 		channel,
 		new None(),
-		INotifyService.NotificationType.Emit,
+		type,
 		MarkupText.Plain("The server is restarting."),
 		MarkupText.Empty,
 		MarkupText.Plain("System"),

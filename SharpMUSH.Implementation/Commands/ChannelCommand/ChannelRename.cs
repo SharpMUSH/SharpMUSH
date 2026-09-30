@@ -73,8 +73,9 @@ public static class ChannelRename
 			null
 		));
 
-		// Announced here, after the write has invalidated the cached channel list, rather than from the
-		// write's handler, where a listener reading the list could still be handed the old name.
+		// Announced here, after the write's second cache-invalidation pass, rather than from its handler: a
+		// channel list cached again between the first pass and the write survives until that second pass,
+		// and a listener reading it would be handed the old name (see UpdateChannelCommandHandler).
 		foreach (var member in members)
 		{
 			await Mediator.Publish(new ChannelMembershipChangedNotification(member, newChannelName.ToPlainText(), "rename"));

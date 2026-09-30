@@ -373,7 +373,7 @@ public partial class Commands
 					PageMessageType.SemiPose => "semipose",
 					_ => "say"
 				},
-				executor.Object().Name,
+				senderName,
 				message.ToPlainText(),
 				DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture));
 		}

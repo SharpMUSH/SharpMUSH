@@ -271,6 +271,63 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		await Assert.That(message["text"]!.GetValue<string>()).IsEqualTo(marker);
 	}
 
+	/// <summary>
+	/// An <c>@cemit</c> line does not name its emitter in a member's terminal (only a NOSPOOF member sees
+	/// who sent it), so the payload names nobody either — with or without <c>/spoof</c>.
+	/// </summary>
+	[Test]
+	[Arguments("@cemit")]
+	[Arguments("@cemit/spoof")]
+	public async Task ChannelEmit_DoesNotNameTheEmitter(string command)
+	{
+		var member = await ViewerAsync("CommEmitMember");
+		var channel = await ChannelAsync("CommEmit", member);
+		var marker = TestIsolationHelpers.GenerateUniqueName("emit");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => God($"{command} {channel}={marker}"), Run, member);
+
+		var message = Frames(sent[member.Handle], "comm.message").Single();
+		await Assert.That(message["style"]!.GetValue<string>()).IsEqualTo("emit");
+		await Assert.That(message["text"]!.GetValue<string>()).IsEqualTo(marker);
+		await Assert.That(message["from"]!.GetValue<string>()).IsEqualTo(string.Empty);
+		await Assert.That(message.ContainsKey("fromObjid")).IsFalse();
+	}
+
+	/// <summary>
+	/// A connect line from a member hidden on the channel goes only to See_All members (PennMUSH's
+	/// CB_SEEALL), and a connect line never goes to a member who muted the channel (CB_CHECKQUIET). The
+	/// payload follows the terminal: the mortal and the muted member are sent nothing.
+	/// </summary>
+	[Test]
+	public async Task HiddenMembersConnectLine_ReachesOnlySeeAllMembers_AndNotAMutedOne()
+	{
+		var hider = await ViewerAsync("CommPresenceHider");
+		var mortal = await ViewerAsync("CommPresenceMortal");
+		var seer = await ViewerAsync("CommPresenceSeer");
+		var muted = await ViewerAsync("CommPresenceMuted");
+		await God($"@power {seer.Number}=See_All");
+		await God($"@power {muted.Number}=See_All");
+		var channel = await ChannelAsync("CommPresence", hider, mortal, seer, muted);
+		await Run(hider, $"@channel/hide {channel}=yes");
+		await Run(muted, $"@channel/mute {channel}=yes");
+		var socket = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService, "websocket");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(
+			() => factory.CommandParser.CommandParse(socket, ConnectionService,
+				MarkupText.Plain($"connect {hider.Name} TestPassword123")).AsTask(),
+			Run, mortal, seer, muted);
+
+		await Assert.That(Frames(sent[mortal.Handle], "comm.message")).IsEmpty()
+			.Because("a mortal member does not see a hidden member's connect line");
+		await Assert.That(Frames(sent[muted.Handle], "comm.message")).IsEmpty()
+			.Because("a member who muted the channel is not sent connect lines, See_All or not");
+		var line = Frames(sent[seer.Handle], "comm.message").Single();
+		await Assert.That(line["style"]!.GetValue<string>()).IsEqualTo("presence");
+		await Assert.That(line["channel"]!.GetValue<string>()).IsEqualTo(channel);
+	}
+
 	[Test]
 	public async Task PageToOne_ReachesThePagerAndTheRecipientOnly()
 	{

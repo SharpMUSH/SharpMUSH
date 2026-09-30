@@ -82,14 +82,19 @@ public class ChannelBroadcastService(
 			return;
 		}
 
+		// An @cemit line does not name its emitter: a member's terminal shows the message alone, and only
+		// a NOSPOOF member is told who sent it. The handler still runs with the emitter as %#.
+		var named = notification.MessageType is not (INotifyService.NotificationType.Emit
+			or INotifyService.NotificationType.NSEmit);
+
 		await eventService.TriggerEventAsync(
 			parser,
 			SharpEvents.ChannelMessage,
 			sender?.Object().DBRef,
 			notification.Channel.Name.ToPlainText(),
-			sender?.Object().DBRef.ToString() ?? string.Empty,
+			named ? sender?.Object().DBRef.ToString() ?? string.Empty : string.Empty,
 			StyleFor(line.ChatType),
-			line.PlayerName.ToPlainText(),
+			named ? line.PlayerName.ToPlainText() : string.Empty,
 			line.Message.ToPlainText(),
 			string.Join(' ', recipients.Select(recipient => recipient.Object().DBRef.ToString())),
 			sentAt.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture));

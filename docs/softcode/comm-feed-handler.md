@@ -50,14 +50,18 @@ the handler can only narrow the engine's list, never widen it.
 
 A hidden speaker is **not** anonymised: `@channel/hide` keeps a member off the
 channel's who list, and their lines still name them in every member's
-terminal, so they name them in the payload too.
+terminal, so they name them in the payload too. An `@cemit` line (with or
+without `/spoof`) is the other way round: a member's terminal shows the
+message alone — only a NOSPOOF member is told who emitted it — so the event
+passes an empty speaker objid and name, and the payload's `from` is empty and
+`fromObjid` absent. `%#` is still the emitter.
 
 ## Event arguments
 
 | Event | `%0` | `%1` | `%2` | `%3` | `%4` | `%5` | `%6` |
 |---|---|---|---|---|---|---|---|
-| ``CHANNEL`MESSAGE`` | channel name | speaker objid (empty when sourceless) | style | speaker name | message | recipient objids | unix ms |
-| ``PAGE`MESSAGE`` | pager objid | recipient objids | style | pager name | message | unix ms | |
+| ``CHANNEL`MESSAGE`` | channel name | speaker objid (empty when sourceless or an `@cemit`) | style | speaker name (empty for an `@cemit`) | message | recipient objids | unix ms |
+| ``PAGE`MESSAGE`` | pager objid | recipient objids | style | pager name, with the page alias when `page_aliases` is on | message | unix ms | |
 | ``PLAYER`CHANNELS`` | player objid | cause | channel (empty on connect) | | | | |
 
 - Style is `say`, `pose`, `semipose`, `emit` (`@cemit`) or `presence` (a
@@ -162,7 +166,9 @@ A page (here a group pose-page):
   is empty for a channel line (a channel has members, not addressees).
   `toObjids` lines up with `to` and appears only on a page.
 - `from` is the speaker's name as the terminal line shows it (after the
-  mogrifier); `fromObjid` is absent for a line with no speaker.
+  mogrifier; with the pager's alias, `Name (alias)`, when `page_aliases` is
+  on); it is empty, and `fromObjid` absent, for a line with no speaker and for
+  an `@cemit`.
 - `text` is the line as the terminal reads it after the channel name or the
   page prefix: a pose carries the name (`Ilsa Varn nods`), because that is how
   a pose reads; `style` says which it was.
@@ -181,10 +187,13 @@ of a missing `v` and of any malformed member):
   included — by objid where there is one, sorted, prefixed `page `, so every
   page among the same people is one conversation whoever sent it, and it can
   never be a channel name (those cannot hold a space).
-- 200 lines are kept per key.
-- A line from someone else arriving for a key that is not being viewed is
-  unread until `MarkRead`.
-- A new connection or a character switch clears it all, as it clears the room.
+- 200 lines are kept per key, and the 100 most recent conversations.
+- A line from someone else arriving for a key that is not `Viewing` is
+  unread until `MarkRead`. A count a `comm.channels` row carries, 0 included,
+  replaces the feed's own; a channel a new list no longer carries is
+  forgotten, history and count.
+- A new connection or a character switch clears it all, `Viewing` included,
+  as it clears the room.
 
 ## Testing
 
@@ -194,7 +203,9 @@ the package as installed at boot, and `oob()` publishing to NATS. It reads
 what each connection was sent off the NATS subject the connection server
 consumes, up to a probe each watched player sends itself afterwards, so
 "received nothing" is observed rather than timed out. It covers a channel
-member against a non-member, a gagged member, a hidden speaker, a pose, a page
+member against a non-member, a gagged member, a hidden speaker, a pose,
+`@cemit` and `@cemit/spoof`, a hidden member's connect line (See_All only, and
+not to a member who muted the channel), a page
 to one and to several, a page lock and a HAVEN refusing it, a group page some
 recipients refuse, joining, gagging and leaving, a rename and a deletion, and
 connecting.

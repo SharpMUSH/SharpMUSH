@@ -13,9 +13,13 @@ public class CreateChannelCommandHandler(IChannelStore database) : ICommandHandl
 }
 
 /// <summary>
-/// A rename changes every member's channel list too, but it is announced by <c>ChannelRename</c>, not
-/// here: this write invalidates the cached channel list only once it returns, so a handler of the
-/// announcement run from inside it could read the list from before the rename.
+/// A rename changes every member's channel list too, but it is announced by <c>ChannelRename</c> once
+/// this has returned, not from here. <c>CacheInvalidationBehavior</c> clears the cached channel list
+/// before this handler and again after it; a read that lands between the first pass and the write (any
+/// other command listing channels meanwhile) caches the pre-rename list again, and only the second pass
+/// removes it. A listener run from inside this handler runs before that pass and can be handed the old
+/// name — which is what the rename test in <c>CommFeedPackageTests</c> saw when the announcement was
+/// published here.
 /// </summary>
 public class UpdateChannelCommandHandler(IChannelStore database) : ICommandHandler<UpdateChannelCommand>
 {
@@ -36,7 +40,11 @@ public class UpdateChannelCommandHandler(IChannelStore database) : ICommandHandl
 	}
 }
 
-/// <summary>The members are read before the channel goes, since afterwards there is nothing to read them from.</summary>
+/// <summary>
+/// The members are read before the channel goes, since afterwards there is nothing to read them from.
+/// Announcing from inside the handler is safe here, unlike a rename: a cached channel list that still
+/// holds the deleted channel yields nothing for it, because membership is read from the store.
+/// </summary>
 public class DeleteChannelCommandHandler(IChannelStore database, IPublisher publisher) : ICommandHandler<DeleteChannelCommand>
 {
 	public async ValueTask<Unit> Handle(DeleteChannelCommand request, CancellationToken cancellationToken)
