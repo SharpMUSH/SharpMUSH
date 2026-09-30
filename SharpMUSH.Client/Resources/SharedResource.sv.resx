@@ -4674,4 +4674,43 @@
   <data name="NavWikiMainNamespace" xml:space="preserve">
     <value>Huvudnamnrymd</value>
   </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# online} other {# online}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# rollfigur} other {# rollfigurer}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {Alla # online} other {Alla # online}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Hitta en rollfigur</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Online nu</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Ingen är online.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>du</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Dina rollfigurer</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Skapa en rollfigur</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Bläddra</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>Alla rollfigurer</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Nyaste</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Rollfigurskategorier</value>
+  </data>
 </root>

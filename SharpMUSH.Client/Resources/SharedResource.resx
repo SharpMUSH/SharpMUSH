@@ -4019,4 +4019,43 @@
   <data name="NavWikiMainNamespace" xml:space="preserve">
     <value>Main namespace</value>
   </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# online} other {# online}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# character} other {# characters}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {All # online} other {All # online}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Find a character</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Online now</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Nobody is online.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>you</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Your characters</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Create a character</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>All characters</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Newest</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Character categories</value>
+  </data>
 </root>

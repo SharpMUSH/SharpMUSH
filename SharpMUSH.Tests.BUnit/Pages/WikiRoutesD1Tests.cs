@@ -28,7 +28,7 @@ public class WikiRoutesD1Tests : TrackingBunitContext
 		_nav.NavigateTo("/wiki");
 		var cut = Render<WikiLayout>(p => p.Add(x => x.Body, b => b.AddMarkupContent(0, "<p id=\"body\">x</p>")));
 		cut.WaitForAssertion(() => cut.Find(".wiki-shell .wiki-side-cats a.kit-row"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Find(".wiki-shell-body #body")).IsNotNull();
+		await Assert.That(cut.Find(".wiki-shell .kit-section-body #body")).IsNotNull();
 	}
 
 	[Test]

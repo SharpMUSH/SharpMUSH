@@ -1,13 +1,12 @@
-.config-shell {
+.kit-section {
 	display: grid;
 	grid-template-columns: var(--side-w) minmax(0, 1fr);
 	gap: 16px;
 	align-items: start;
-	padding: 0;
 	min-height: 100%;
 }
 
-.config-section-nav {
+.kit-section-nav {
 	min-width: 0;
 	background: var(--surface-3);
 	border-right: 1px solid var(--border-soft);
@@ -21,18 +20,18 @@
 	align-self: stretch;
 }
 
-.config-section-body {
+.kit-section-body {
 	min-width: 0;
 	padding: var(--main-pad);
 }
 
 @container page (max-width: 64rem) {
-	.config-shell {
+	.kit-section {
 		grid-template-columns: minmax(0, 1fr);
 		gap: 12px;
 	}
 
-	.config-section-nav {
+	.kit-section-nav {
 		position: static;
 		max-height: 17.5rem;
 		border: 1px solid var(--border-soft);

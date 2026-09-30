@@ -14,14 +14,10 @@
 <div class="wiki-side @(Collapsed ? "wiki-side--collapsed" : null)">
     @if (!Collapsed)
     {
-        <div class="wiki-side-head">
-            <div class="wiki-side-title">@Loc["Wiki"]</div>
-            <div class="wiki-side-sub">@Loc["NavWikiMainNamespace"] · @Loc.Plural("NavWikiPagesCount", "count", _pages.Count)</div>
-        </div>
-        <form class="wiki-side-search" role="search" @onsubmit="Search" @onsubmit:preventDefault>
-            <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" />
-            <input type="search" placeholder="@Loc["NavWikiSearch"]" aria-label="@Loc["NavWikiSearch"]" value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
-        </form>
+        <SidebarHead Title="@Loc["Wiki"]">
+            <Sub>@Loc["NavWikiMainNamespace"] · @Loc.Plural("NavWikiPagesCount", "count", _pages.Count)</Sub>
+        </SidebarHead>
+        <SidebarSearch Placeholder="@Loc["NavWikiSearch"]" OnSearch="Search" />
         <SectionLabel>@Loc["NavWikiBrowse"]</SectionLabel>
     }
     <nav class="wiki-side-browse" aria-label="@Loc["NavWikiBrowse"]">
@@ -71,7 +67,6 @@
     private IReadOnlyList<WikiPageSummary> _pages = [];
     private IReadOnlyList<WikiCategoryGroup> _groups = [];
     private string _path = "/wiki";
-    private string _search = string.Empty;
     private bool _newOpen;
     private string _newTitle = string.Empty;
 
@@ -98,9 +93,8 @@
         if (_path.Length == 0) _path = "/";
     }
 
-    private void Search()
+    private void Search(string term)
     {
-        var term = _search.Trim();
         Nav.NavigateTo(term.Length == 0 ? "/wiki" : $"/wiki?q={Uri.EscapeDataString(term)}");
     }
 

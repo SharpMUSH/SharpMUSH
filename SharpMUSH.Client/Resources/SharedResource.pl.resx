@@ -4674,4 +4674,43 @@
   <data name="NavWikiMainNamespace" xml:space="preserve">
     <value>Główna przestrzeń nazw</value>
   </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# online} few {# online} many {# online} other {# online}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# postać} few {# postacie} many {# postaci} other {# postaci}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {Wszyscy # online} few {Wszyscy # online} many {Wszyscy # online} other {Wszyscy # online}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Znajdź postać</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>Teraz online</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Nikt nie jest online.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>ty</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Twoje postacie</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Utwórz postać</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Przeglądaj</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>Wszystkie postacie</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Najnowsze</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Kategorie postaci</value>
+  </data>
 </root>

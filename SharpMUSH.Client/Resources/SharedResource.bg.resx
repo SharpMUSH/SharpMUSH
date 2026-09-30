@@ -4674,4 +4674,43 @@
   <data name="NavWikiMainNamespace" xml:space="preserve">
     <value>Основно пространство от имена</value>
   </data>
+  <data name="NavCharOnlineCount" xml:space="preserve">
+    <value>{count, plural, one {# на линия} other {# на линия}}</value>
+  </data>
+  <data name="NavCharCount" xml:space="preserve">
+    <value>{count, plural, one {# персонаж} other {# персонажа}}</value>
+  </data>
+  <data name="NavCharAllOnline" xml:space="preserve">
+    <value>{count, plural, one {Всички # на линия} other {Всички # на линия}}</value>
+  </data>
+  <data name="NavCharSearch" xml:space="preserve">
+    <value>Намери персонаж</value>
+  </data>
+  <data name="NavCharOnlineNow" xml:space="preserve">
+    <value>На линия сега</value>
+  </data>
+  <data name="NavCharNoneOnline" xml:space="preserve">
+    <value>Никой не е на линия.</value>
+  </data>
+  <data name="NavCharYou" xml:space="preserve">
+    <value>вие</value>
+  </data>
+  <data name="NavCharYourCharacters" xml:space="preserve">
+    <value>Вашите персонажи</value>
+  </data>
+  <data name="NavCharCreate" xml:space="preserve">
+    <value>Създай персонаж</value>
+  </data>
+  <data name="NavCharBrowse" xml:space="preserve">
+    <value>Разглеждане</value>
+  </data>
+  <data name="NavCharAll" xml:space="preserve">
+    <value>Всички персонажи</value>
+  </data>
+  <data name="NavCharNewest" xml:space="preserve">
+    <value>Най-нови</value>
+  </data>
+  <data name="NavCharCategories" xml:space="preserve">
+    <value>Категории персонажи</value>
+  </data>
 </root>

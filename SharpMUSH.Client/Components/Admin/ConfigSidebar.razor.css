@@ -11,22 +11,6 @@
 	padding: 12px 4px;
 }
 
-.config-side-head {
-	padding: 4px 10px 12px;
-}
-
-.config-side-title {
-	font-size: 18px;
-	font-weight: 700;
-	color: var(--text);
-}
-
-.config-side-sub {
-	font-size: 12px;
-	color: var(--text-dim);
-	margin-top: 2px;
-}
-
 .config-side-tree {
 	display: flex;
 	flex-direction: column;
