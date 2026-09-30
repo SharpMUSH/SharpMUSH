@@ -4962,4 +4962,22 @@
   <data name="NavPlayTabs" xml:space="preserve">
     <value>Sekcje gry</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Zakres układu</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Zakres układu (opcjonalnie)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Strona, do której należy widżet, np. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>Pakiet OOB</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>Pakiet OOB (opcjonalnie)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Dane na żywo wysyłane przez grę, np. weather.now; zastępuje adres URL danych</value>
+  </data>
 </root>

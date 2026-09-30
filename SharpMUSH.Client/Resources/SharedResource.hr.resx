@@ -4962,4 +4962,22 @@
   <data name="NavPlayTabs" xml:space="preserve">
     <value>Dijelovi igre</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Opseg rasporeda</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Opseg rasporeda (neobavezno)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Stranica kojoj widget pripada, npr. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB paket</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB paket (neobavezno)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Podaci uživo koje šalje igra, npr. weather.now; zamjenjuje URL podataka</value>
+  </data>
 </root>

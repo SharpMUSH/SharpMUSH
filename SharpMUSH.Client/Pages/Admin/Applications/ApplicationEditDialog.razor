@@ -55,6 +55,14 @@
                 <MudItem xs="12" sm="4">
                     <MudNumericField @bind-Value="_order" Label="@Loc["LayAppOrder"]" Variant="Variant.Outlined" />
                 </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_scope" Label="@Loc["LayAppScopeOptional"]" Variant="Variant.Outlined"
+                                  HelperText="@Loc["LayAppScopeHelper"]" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_oobPackage" Label="@Loc["LayAppOobPackageOptional"]" Variant="Variant.Outlined"
+                                  HelperText="@Loc["LayAppOobPackageHelper"]" />
+                </MudItem>
                 @if (_kind == ApplicationKind.Widget)
                 {
                     <MudItem xs="12">
@@ -101,6 +109,8 @@
     private string? _navPlacement;
     private IReadOnlyCollection<WidgetZone> _zones = new HashSet<WidgetZone>();
     private int _order;
+    private string? _scope;
+    private string? _oobPackage;
 
     protected override void OnInitialized()
     {
@@ -118,6 +128,8 @@
             _navPlacement = Existing.NavPlacement;
             _zones = Existing.ZoneEnums.ToHashSet();
             _order = Existing.Order;
+            _scope = Existing.Scope;
+            _oobPackage = Existing.OobPackage;
         }
     }
 
@@ -144,7 +156,15 @@
             _minimumRole.ToString(),
             string.IsNullOrWhiteSpace(_navPlacement) ? null : _navPlacement,
             _zones.Select(z => z.ToString()).ToArray(),
-            _order);
+            _order,
+            // The dialog has no inputs for these; an edit sends back what the record already holds,
+            // so saving a component app does not quietly turn it into a schema app.
+            Existing?.OwningPackage,
+            Existing?.RenderKind ?? ApplicationRenderKind.Schema,
+            Existing?.ComponentAssemblyUrl,
+            Existing?.ComponentTypeName,
+            string.IsNullOrWhiteSpace(_scope) ? null : _scope.Trim(),
+            string.IsNullOrWhiteSpace(_oobPackage) ? null : _oobPackage.Trim());
 
         var result = await Registry.UpsertAsync(model);
         _saving = false;

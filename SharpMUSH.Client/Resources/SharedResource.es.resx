@@ -4962,4 +4962,22 @@
   <data name="NavPlayTabs" xml:space="preserve">
     <value>Secciones de juego</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Ámbito de diseño</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Ámbito de diseño (opcional)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>La página a la que pertenece el widget, p. ej. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>Paquete OOB</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>Paquete OOB (opcional)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Datos en vivo enviados por el juego, p. ej. weather.now; sustituye a la URL de datos</value>
+  </data>
 </root>

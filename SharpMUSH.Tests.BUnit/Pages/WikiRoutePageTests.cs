@@ -164,6 +164,7 @@ file static class WikiServiceSetup
 						NullLogger<AccountAuthService>.Instance, []))
 				// The profile header is an application-backed SchemaWidget; it injects these.
 				.AddSingleton(new SharpMUSH.Client.Services.ApplicationCatalog([]))
+				.AddSingleton(Substitute.For<IPlayTerminalService>())
 				.AddSingleton(sp => new ApplicationRegistryClient(
 						sp.GetRequiredService<IHttpClientFactory>(),
 						NullLogger<ApplicationRegistryClient>.Instance))

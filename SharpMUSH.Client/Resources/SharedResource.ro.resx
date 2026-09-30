@@ -4962,4 +4962,22 @@
   <data name="NavPlayTabs" xml:space="preserve">
     <value>Secțiuni de joc</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Domeniul aspectului</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Domeniul aspectului (opțional)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>Pagina căreia îi aparține widgetul, de ex. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>Pachet OOB</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>Pachet OOB (opțional)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Date în timp real trimise de joc, de ex. weather.now; înlocuiește URL-ul de date</value>
+  </data>
 </root>

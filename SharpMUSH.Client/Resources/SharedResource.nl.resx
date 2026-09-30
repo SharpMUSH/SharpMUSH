@@ -4962,4 +4962,22 @@
   <data name="NavPlayTabs" xml:space="preserve">
     <value>Speelonderdelen</value>
   </data>
+  <data name="LayAppScope" xml:space="preserve">
+    <value>Lay-outbereik</value>
+  </data>
+  <data name="LayAppScopeOptional" xml:space="preserve">
+    <value>Lay-outbereik (optioneel)</value>
+  </data>
+  <data name="LayAppScopeHelper" xml:space="preserve">
+    <value>De pagina waar de widget bij hoort, bijv. play</value>
+  </data>
+  <data name="LayAppOobPackage" xml:space="preserve">
+    <value>OOB-pakket</value>
+  </data>
+  <data name="LayAppOobPackageOptional" xml:space="preserve">
+    <value>OOB-pakket (optioneel)</value>
+  </data>
+  <data name="LayAppOobPackageHelper" xml:space="preserve">
+    <value>Live gegevens die het spel stuurt, bijv. weather.now; vervangt de gegevens-URL</value>
+  </data>
 </root>

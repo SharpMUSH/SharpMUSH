@@ -7,13 +7,17 @@
 @inject ApplicationCatalog Catalog
 @inject ApplicationRegistryClient RegistryClient
 @inject CharacterDirectoryService Directory
+@inject IPlayTerminalService PlayTerminal
+@implements IDisposable
 @inject IStringLocalizer<SharedResource> Loc
 
 @* A schema-driven widget (Area 21). Its schema/data routes come either from its config ({ schemaUrl,
    dataUrl }, for manually-placed schema widgets) or — when it is an application-backed palette widget —
    from the application catalog, resolved by the widget's slug (WidgetName). Page-context tokens such
    as {objid}/{character} are filled from the cascading ProfilePageContext, so e.g. the character header
-   application renders the right character. The shared renderers display the result. *@
+   application renders the right character. The shared renderers display the result.
+   An application with an OobPackage takes its data from the play connection's OOB store instead of its
+   data route: the latest payload of that package, re-read on every push for it (README §7.4). *@
 
 @if (_loading)
 {
@@ -47,13 +51,18 @@ else
     private PortalSchemaDocument? _schema;
     private SchemaData? _data;
 
+    /// <summary>The OOB package this widget's data follows, or null when its data comes from a route.</summary>
+    private string? _oobPackage;
+    private IOobChannelStore? _subscribedStore;
+
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
         _schema = null;
         _data = null;
 
-        var (schemaUrl, dataUrl) = await ResolveRoutesAsync();
+        var (schemaUrl, dataUrl, oobPackage) = await ResolveRoutesAsync();
+        FollowOobPackage(oobPackage);
         if (!string.IsNullOrWhiteSpace(schemaUrl))
         {
             // Fill page-context tokens (e.g. {objid}) before fetching, so the right character renders.
@@ -65,7 +74,11 @@ else
                 _schema = await Schema.GetSchemaAsync(resolvedSchema);
             }
 
-            if (_schema is not null && !string.IsNullOrWhiteSpace(dataUrl))
+            if (_schema is not null && _oobPackage is not null)
+            {
+                _data = ReadOobData();
+            }
+            else if (_schema is not null && !string.IsNullOrWhiteSpace(dataUrl))
             {
                 var resolvedData = Substitute(dataUrl!, objid);
                 // A data route needing {objid} we couldn't resolve → skip data (schema still renders).
@@ -83,23 +96,79 @@ else
     /// Schema/data routes from config, else from the application catalog by slug, else a lazy fetch of
     /// the application by slug (so an app-backed widget renders even if the startup snapshot was empty).
     /// </summary>
-    private async Task<(string? SchemaUrl, string? DataUrl)> ResolveRoutesAsync()
+    private async Task<(string? SchemaUrl, string? DataUrl, string? OobPackage)> ResolveRoutesAsync()
     {
         var schemaUrl = ConfigString("schemaUrl");
         var dataUrl = ConfigString("dataUrl");
         if (!string.IsNullOrWhiteSpace(schemaUrl))
         {
-            return (schemaUrl, dataUrl);
+            return (schemaUrl, dataUrl, null);
         }
 
         if (string.IsNullOrWhiteSpace(WidgetName))
         {
-            return (null, null);
+            return (null, null, null);
         }
 
         var app = Catalog.Get(WidgetName) ?? await RegistryClient.GetAsync(WidgetName);
-        return app is null ? (null, null) : (app.SchemaUrl, app.DataUrl);
+        return app is null
+            ? (null, null, null)
+            : (app.SchemaUrl, app.DataUrl, string.IsNullOrWhiteSpace(app.OobPackage) ? null : app.OobPackage);
     }
+
+    /// <summary>Subscribes to the play connection's OOB pushes while this widget follows a package, and only then.</summary>
+    private void FollowOobPackage(string? package)
+    {
+        _oobPackage = package;
+        if (package is null)
+        {
+            Unsubscribe();
+            return;
+        }
+
+        if (_subscribedStore is null)
+        {
+            _subscribedStore = PlayTerminal.OobChannels;
+            _subscribedStore.ChannelUpdated += OnChannelUpdated;
+        }
+    }
+
+    /// <summary>The package's latest payload as schema data; an absent or malformed one renders the schema without data.</summary>
+    private SchemaData? ReadOobData() =>
+        _oobPackage is { } package && SchemaAppService.ParseData(PlayTerminal.OobChannels.Get(package)) is SchemaData data
+            ? data
+            : null;
+
+    private void OnChannelUpdated(string package)
+    {
+        if (!string.Equals(package, _oobPackage, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _ = InvokeAsync(() =>
+        {
+            // Still loading the schema: OnParametersSetAsync reads the payload once the schema is in.
+            if (_schema is null)
+            {
+                return;
+            }
+
+            _data = ReadOobData();
+            StateHasChanged();
+        });
+    }
+
+    private void Unsubscribe()
+    {
+        if (_subscribedStore is not null)
+        {
+            _subscribedStore.ChannelUpdated -= OnChannelUpdated;
+            _subscribedStore = null;
+        }
+    }
+
+    public void Dispose() => Unsubscribe();
 
     private async Task<string?> ResolveObjidIfNeededAsync(string schemaUrl, string? dataUrl)
     {
