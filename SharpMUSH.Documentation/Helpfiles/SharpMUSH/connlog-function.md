@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "connlog-function",
   "lookup": "connlog()",
-  "aliases": [],
+  "aliases": [
+    "connlog"
+  ],
   "sections": [
     {
       "id": "search-filters",

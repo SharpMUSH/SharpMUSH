@@ -4,7 +4,8 @@
       "file": "accent-function.md",
       "corpus": "help",
       "names": [
-        "accent()"
+        "accent()",
+        "accent"
       ],
       "canonical": "accent()"
     },
@@ -359,7 +360,8 @@
       "corpus": "help",
       "names": [
         "align()",
-        "LALIGN()"
+        "LALIGN()",
+        "align"
       ],
       "canonical": "align()"
     },
@@ -1284,7 +1286,8 @@
       "file": "colors-function.md",
       "corpus": "help",
       "names": [
-        "colors()"
+        "colors()",
+        "colors"
       ],
       "canonical": "colors()"
     },
@@ -2070,7 +2073,8 @@
       "file": "connlog-function.md",
       "corpus": "help",
       "names": [
-        "connlog()"
+        "connlog()",
+        "connlog"
       ],
       "canonical": "connlog()"
     },
@@ -2341,7 +2345,8 @@
       "names": [
         "element()",
         "MATCH()",
-        "MATCHALL()"
+        "MATCHALL()",
+        "element"
       ],
       "canonical": "element()"
     },
@@ -2367,7 +2372,8 @@
       "file": "etimefmt-function.md",
       "corpus": "help",
       "names": [
-        "etimefmt()"
+        "etimefmt()",
+        "etimefmt"
       ],
       "canonical": "etimefmt()"
     },
@@ -2575,7 +2581,8 @@
       "file": "fn-function.md",
       "corpus": "help",
       "names": [
-        "fn()"
+        "fn()",
+        "fn"
       ],
       "canonical": "fn()"
     },
@@ -2601,7 +2608,8 @@
       "file": "fold-function.md",
       "corpus": "help",
       "names": [
-        "fold()"
+        "fold()",
+        "fold"
       ],
       "canonical": "fold()"
     },
@@ -2671,7 +2679,8 @@
       "file": "foreach-function.md",
       "corpus": "help",
       "names": [
-        "foreach()"
+        "foreach()",
+        "foreach"
       ],
       "canonical": "foreach()"
     },
@@ -3170,7 +3179,8 @@
         "ITEXT()",
         "INUM()",
         "%i",
-        "%i0"
+        "%i0",
+        "ilev"
       ],
       "canonical": "ilev()"
     },
@@ -3268,7 +3278,8 @@
       "corpus": "help",
       "names": [
         "iter()",
-        "PARSE()"
+        "PARSE()",
+        "iter"
       ],
       "canonical": "iter()"
     },
@@ -3294,7 +3305,8 @@
       "file": "json-array-function.md",
       "corpus": "help",
       "names": [
-        "json_array()"
+        "json_array()",
+        "json_array"
       ],
       "canonical": "json_array()"
     },
@@ -3320,7 +3332,8 @@
       "file": "json-function.md",
       "corpus": "help",
       "names": [
-        "json()"
+        "json()",
+        "json"
       ],
       "canonical": "json()"
     },
@@ -3346,7 +3359,8 @@
       "file": "json-map-function.md",
       "corpus": "help",
       "names": [
-        "json_map()"
+        "json_map()",
+        "json_map"
       ],
       "canonical": "json_map()"
     },
@@ -3390,7 +3404,8 @@
       "file": "json-mod-function.md",
       "corpus": "help",
       "names": [
-        "json_mod()"
+        "json_mod()",
+        "json_mod"
       ],
       "canonical": "json_mod()"
     },
@@ -3416,7 +3431,8 @@
       "file": "json-query-function.md",
       "corpus": "help",
       "names": [
-        "json_query()"
+        "json_query()",
+        "json_query"
       ],
       "canonical": "json_query()"
     },
@@ -3582,7 +3598,8 @@
       "file": "locate-function.md",
       "corpus": "help",
       "names": [
-        "locate()"
+        "locate()",
+        "locate"
       ],
       "canonical": "locate()"
     },
@@ -3769,7 +3786,8 @@
         "NSEARCH()",
         "LSEARCHR()",
         "CHILDREN()",
-        "NCHILDREN()"
+        "NCHILDREN()",
+        "lsearch"
       ],
       "canonical": "lsearch()"
     },
@@ -3955,7 +3973,8 @@
       "file": "mix-function.md",
       "corpus": "help",
       "names": [
-        "mix()"
+        "mix()",
+        "mix"
       ],
       "canonical": "mix()"
     },
@@ -4007,7 +4026,8 @@
       "file": "munge-function.md",
       "corpus": "help",
       "names": [
-        "munge()"
+        "munge()",
+        "munge"
       ],
       "canonical": "munge()"
     },
@@ -4358,10 +4378,19 @@
       "redirect": true
     },
     {
+      "file": "pennmush-compatibility.md",
+      "corpus": "help",
+      "names": [
+        "pennmush compatibility"
+      ],
+      "canonical": "pennmush compatibility"
+    },
+    {
       "file": "pfun-function.md",
       "corpus": "help",
       "names": [
-        "pfun()"
+        "pfun()",
+        "pfun"
       ],
       "canonical": "pfun()"
     },
@@ -4933,7 +4962,8 @@
         "REGLMATCHI()",
         "REGLMATCHALL()",
         "REGLMATCHALLI()",
-        "REGMATCHALLI()"
+        "REGMATCHALLI()",
+        "reglmatch"
       ],
       "canonical": "reglmatch()"
     },
@@ -4960,7 +4990,8 @@
       "corpus": "help",
       "names": [
         "regmatch()",
-        "REGMATCHI()"
+        "REGMATCHI()",
+        "regmatch"
       ],
       "canonical": "regmatch()"
     },
@@ -4986,7 +5017,8 @@
       "file": "render-markdown-custom.md",
       "corpus": "help",
       "names": [
-        "rendermarkdowncustom()"
+        "rendermarkdowncustom()",
+        "rendermarkdowncustom"
       ],
       "canonical": "rendermarkdowncustom()"
     },
@@ -5066,7 +5098,8 @@
       "file": "render-markdown.md",
       "corpus": "help",
       "names": [
-        "rendermarkdown()"
+        "rendermarkdown()",
+        "rendermarkdown"
       ],
       "canonical": "rendermarkdown()"
     },
@@ -5200,7 +5233,8 @@
       "file": "restrictedexpr.md",
       "corpus": "help",
       "names": [
-        "restrictedexpr()"
+        "restrictedexpr()",
+        "restrictedexpr"
       ],
       "canonical": "restrictedexpr()"
     },
@@ -5467,7 +5501,8 @@
       "corpus": "help",
       "names": [
         "setq()",
-        "SETR()"
+        "SETR()",
+        "setq"
       ],
       "canonical": "setq()"
     },
@@ -11974,7 +12009,8 @@
       "file": "soundex-function.md",
       "corpus": "help",
       "names": [
-        "soundex()"
+        "soundex()",
+        "soundex"
       ],
       "canonical": "soundex()"
     },
@@ -12001,7 +12037,8 @@
       "corpus": "help",
       "names": [
         "speak()",
-        "SPEAKPENN()"
+        "SPEAKPENN()",
+        "speak"
       ],
       "canonical": "speak()"
     },
@@ -12287,7 +12324,8 @@
         "switch()",
         "SWITCHALL()",
         "CASE()",
-        "CASEALL()"
+        "CASEALL()",
+        "switch"
       ],
       "canonical": "switch()"
     },
@@ -12340,7 +12378,8 @@
       "corpus": "help",
       "names": [
         "time()",
-        "UTCTIME()"
+        "UTCTIME()",
+        "time"
       ],
       "canonical": "time()"
     },
@@ -12367,7 +12406,8 @@
       "corpus": "help",
       "names": [
         "timecalc()",
-        "SECSCALC()"
+        "SECSCALC()",
+        "timecalc"
       ],
       "canonical": "timecalc()"
     },
@@ -12393,7 +12433,8 @@
       "file": "timefmt-function.md",
       "corpus": "help",
       "names": [
-        "timefmt()"
+        "timefmt()",
+        "timefmt"
       ],
       "canonical": "timefmt()"
     },
@@ -12617,7 +12658,8 @@
       "names": [
         "u()",
         "UFUN()",
-        "ULAMBDA()"
+        "ULAMBDA()",
+        "u"
       ],
       "canonical": "u()"
     },
@@ -12679,7 +12721,8 @@
       "file": "ulocal-function.md",
       "corpus": "help",
       "names": [
-        "ulocal()"
+        "ulocal()",
+        "ulocal"
       ],
       "canonical": "ulocal()"
     },
@@ -12731,7 +12774,8 @@
       "file": "valid-function.md",
       "corpus": "help",
       "names": [
-        "valid()"
+        "valid()",
+        "valid"
       ],
       "canonical": "valid()"
     },

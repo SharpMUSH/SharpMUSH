@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "valid-function",
   "lookup": "valid()",
-  "aliases": [],
+  "aliases": [
+    "valid"
+  ],
   "sections": [
     {
       "id": "validation-types",

@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "json-mod-function",
   "lookup": "json_mod()",
-  "aliases": [],
+  "aliases": [
+    "json_mod"
+  ],
   "sections": [
     {
       "id": "modification-examples",

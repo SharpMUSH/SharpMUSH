@@ -71,6 +71,17 @@ public class HelpArticleTests
 	}
 
 	[Test]
+	public async Task ExplicitH3LookupRetainsItsLocalContentOnly()
+	{
+		var markdown = Article.Replace("\"sections\":[", "\"sections\":[{\"id\":\"narrow\",\"heading\":\"Local explanation\",\"lookup\":\"sample explanation\"},");
+		var article = HelpArticleParser.Parse(markdown, "help").Single().Article;
+		var section = article.Sections.Single(section => section.Id == "narrow");
+		await Assert.That(article.Entry(section).Markdown).Contains("Example details");
+		await Assert.That(article.Entry(section).Markdown).DoesNotContain("significant");
+		await Assert.That(article.Sections.Single(section => section.Id == "examples").Markdown).DoesNotContain("Local explanation");
+	}
+
+	[Test]
 	[Arguments("\"id\":\"options\"", "\"id\":\"examples\"")]
 	[Arguments("\"heading\":\"Options\"", "\"heading\":\"Missing\"")]
 	[Arguments("\"SAMPLE2\":\"sample examples\"", "\"SAMPLE2\":\"SAMPLE2\"")]

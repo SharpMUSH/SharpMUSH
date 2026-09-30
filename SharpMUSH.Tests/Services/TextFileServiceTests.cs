@@ -44,6 +44,10 @@ public class TextFileServiceTests
 				.IsEquivalentTo(new[] { "align()", "align examples" });
 			await Assert.That(await resolver.SearchTopicsAsync("help", "lalign*"))
 				.IsEquivalentTo(new[] { "align()" });
+			await Assert.That(await resolver.SearchTopicsAsync("help", "*align*"))
+				.IsEquivalentTo(new[] { "align()", "align examples" });
+			var fuzzy = (await resolver.ResolveAsync("help", "al ex")).Expect<HelpEntry>();
+			await Assert.That(fuzzy.Topic).IsEqualTo("align examples");
 			await Assert.That(await resolver.SearchContentAsync("help", "Needle"))
 				.IsEquivalentTo(new[] { "align examples" });
 			await Assert.That(await resolver.GetExactAsync("help", "security")).IsNull();
@@ -54,6 +58,14 @@ public class TextFileServiceTests
 			await Assert.That((await service.GetEntryAsync("help", "align()"))!).DoesNotContain("Revised");
 			await service.ReindexAsync();
 			await Assert.That((await service.GetEntryAsync("help", "align()"))!).Contains("Revised");
+			Directory.CreateDirectory(Path.Join(root, "help.fr"));
+			await File.WriteAllTextAsync(Path.Join(root, "help.fr", "align.md"), article.Replace("Overview.", "Vue française."));
+			await File.WriteAllTextAsync(Path.Join(root, "help", "prefix.md"), "# zulu\n# a0alias\nAlpha.\n# a1topic\nBeta.");
+			await service.ReindexAsync();
+			var prefix = (await resolver.ResolveAsync("help", "a")).Expect<HelpEntry>();
+			await Assert.That(prefix.Topic).IsEqualTo("zulu");
+			await Assert.That(await localized.GetEntryAsync("help", "align()", "fr")).Contains("Vue française");
+			await Assert.That((await service.GetHelpEntryAsync("help.fr", "align()"))?.Article?.Id).IsEqualTo("align");
 		}
 		finally
 		{

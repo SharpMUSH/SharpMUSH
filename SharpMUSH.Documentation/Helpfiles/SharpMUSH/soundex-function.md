@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "soundex-function",
   "lookup": "soundex()",
-  "aliases": [],
+  "aliases": [
+    "soundex"
+  ],
   "sections": [
     {
       "id": "soundex-algorithm",

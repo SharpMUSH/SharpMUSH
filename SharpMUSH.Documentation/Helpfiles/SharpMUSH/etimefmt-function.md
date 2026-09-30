@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "etimefmt-function",
   "lookup": "etimefmt()",
-  "aliases": [],
+  "aliases": [
+    "etimefmt"
+  ],
   "sections": [
     {
       "id": "duration-escape-codes",

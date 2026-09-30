@@ -4,7 +4,8 @@
   "id": "setq-function",
   "lookup": "setq()",
   "aliases": [
-    "SETR()"
+    "SETR()",
+    "setq"
   ],
   "sections": [
     {

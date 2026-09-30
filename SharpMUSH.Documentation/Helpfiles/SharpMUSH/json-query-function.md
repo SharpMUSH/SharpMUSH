@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "json-query-function",
   "lookup": "json_query()",
-  "aliases": [],
+  "aliases": [
+    "json_query"
+  ],
   "sections": [
     {
       "id": "types-and-array-queries",

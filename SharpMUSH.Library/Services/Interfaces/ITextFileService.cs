@@ -14,6 +14,14 @@ public interface ITextFileService
 		return markdown is null ? null : new HelpEntry(entryName, markdown);
 	}
 
+	/// <summary>First alphabetically matched lookup, preserving PennMUSH's alias prefix ordering.</summary>
+	async Task<HelpEntry?> GetPrefixEntryAsync(string fileReference, string prefix)
+	{
+		var first = (await SearchEntriesAsync(fileReference, prefix + "*"))
+			.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+		return first is null ? null : await GetHelpEntryAsync(fileReference, first);
+	}
+
 	/// <summary>
 	/// Lists all available categories (subdirectories)
 	/// </summary>

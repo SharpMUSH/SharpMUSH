@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "pfun-function",
   "lookup": "pfun()",
-  "aliases": [],
+  "aliases": [
+    "pfun"
+  ],
   "sections": [
     {
       "id": "evaluation-permissions",

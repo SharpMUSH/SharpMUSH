@@ -6,7 +6,8 @@
   "aliases": [
     "SWITCHALL()",
     "CASE()",
-    "CASEALL()"
+    "CASEALL()",
+    "switch"
   ],
   "sections": [
     {

@@ -9,7 +9,8 @@
     "NSEARCH()",
     "LSEARCHR()",
     "CHILDREN()",
-    "NCHILDREN()"
+    "NCHILDREN()",
+    "lsearch"
   ],
   "sections": [
     {

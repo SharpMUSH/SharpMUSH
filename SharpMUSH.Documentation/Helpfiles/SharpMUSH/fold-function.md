@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "fold-function",
   "lookup": "fold()",
-  "aliases": [],
+  "aliases": [
+    "fold"
+  ],
   "sections": [
     {
       "id": "fold-examples",

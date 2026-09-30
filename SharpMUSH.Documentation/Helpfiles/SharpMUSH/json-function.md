@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "json-function",
   "lookup": "json()",
-  "aliases": [],
+  "aliases": [
+    "json"
+  ],
   "sections": [
     {
       "id": "value-construction-examples",

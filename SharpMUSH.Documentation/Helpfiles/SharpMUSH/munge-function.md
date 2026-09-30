@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "munge-function",
   "lookup": "munge()",
-  "aliases": [],
+  "aliases": [
+    "munge"
+  ],
   "sections": [
     {
       "id": "reordering-related-lists",

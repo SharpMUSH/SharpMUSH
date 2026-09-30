@@ -4,7 +4,8 @@
   "id": "align",
   "lookup": "align()",
   "aliases": [
-    "LALIGN()"
+    "LALIGN()",
+    "align"
   ],
   "sections": [
     {

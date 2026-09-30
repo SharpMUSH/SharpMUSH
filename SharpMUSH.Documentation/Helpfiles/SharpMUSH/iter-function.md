@@ -4,7 +4,8 @@
   "id": "iter-function",
   "lookup": "iter()",
   "aliases": [
-    "PARSE()"
+    "PARSE()",
+    "iter"
   ],
   "sections": [
     {

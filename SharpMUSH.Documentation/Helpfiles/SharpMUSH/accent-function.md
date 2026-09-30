@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "accent-function",
   "lookup": "accent()",
-  "aliases": [],
+  "aliases": [
+    "accent"
+  ],
   "sections": [
     {
       "id": "accent-examples",

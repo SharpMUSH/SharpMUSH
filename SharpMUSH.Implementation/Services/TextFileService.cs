@@ -154,6 +154,22 @@ public class TextFileService : ITextFileService
 		}
 	}
 
+	public async Task<HelpEntry?> GetPrefixEntryAsync(string fileReference, string prefix)
+	{
+		await _initializationTask.WithCancellation(CancellationToken.None);
+		var category = ResolveEntryCategory(fileReference);
+		var regex = SoftcodeRegex.Wildcard(prefix + "*");
+		lock (_indexLock)
+		{
+			IEnumerable<KeyValuePair<string, IndexEntry>> entries = category is null
+				? _categoryIndexes.Values.SelectMany(index => index)
+				: _categoryIndexes.TryGetValue(category, out var index) ? index : [];
+			return entries.Where(pair => !pair.Value.Hidden && SoftcodeRegex.IsMatch(regex, pair.Key))
+				.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+				.Select(pair => pair.Value.Help).FirstOrDefault();
+		}
+	}
+
 	public async Task<string?> GetFileContentAsync(string fileReference)
 	{
 		var (category, fileName) = ParseFileReference(fileReference);
@@ -469,4 +485,3 @@ public class TextFileService : ITextFileService
 		return null;
 	}
 }
-

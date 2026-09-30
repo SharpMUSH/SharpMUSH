@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "restrictedexpr",
   "lookup": "restrictedexpr()",
-  "aliases": [],
+  "aliases": [
+    "restrictedexpr"
+  ],
   "sections": [
     {
       "id": "examples",

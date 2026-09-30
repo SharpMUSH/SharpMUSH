@@ -361,7 +361,7 @@
       "RENDERMARKDOWN()"
     ],
     "target": "rendermarkdown()",
-    "sha256": "4487e7550c4bade641c3c9a4441bf522e92a60b06bc5e99ea6fa171f7d838178"
+    "sha256": "4d4e9a437f5f2911da42501dad555603d13ae2c0c09ddf9dc662293ed1bb7973"
   },
   {
     "source": "markdown.md",
@@ -369,7 +369,7 @@
       "RENDERMARKDOWNCUSTOM()"
     ],
     "target": "rendermarkdowncustom()",
-    "sha256": "c41c3fdb53736340e6c80aec33e7060c8e58b08be8dc2dade547aa46151cd12a"
+    "sha256": "0d9a6aa232252ac2f0c4c56dd0d185ab4e60d4976b69e4285f00efbb43641d2d"
   },
   {
     "source": "sharpfunc.md",
@@ -2443,7 +2443,7 @@
       "%%",
       "SUBSTITUTIONS"
     ],
-    "target": "%",
+    "target": "substitutions",
     "sha256": "4e1449cdc0e23340c78a27bb8c3d1804de90e30537444064f5c72eeb0de47846"
   },
   {
@@ -2455,7 +2455,7 @@
       "%w",
       "%x"
     ],
-    "target": "% pronouns",
+    "target": "substitutions pronouns",
     "sha256": "817570723116ef21a292cd6d6921dea81b6dedc5492de5be568a5c2887ef91b4"
   },
   {
@@ -2471,7 +2471,7 @@
       "%+",
       "%d"
     ],
-    "target": "% substitution reference",
+    "target": "substitutions substitution reference",
     "sha256": "dca3fef062cb2e505153d2b49a7642baf433543df2b3d7f62a1658a2832e886e"
   },
   {
@@ -2480,7 +2480,7 @@
       "SUBSTITUTIONS4",
       "%4"
     ],
-    "target": "% substitution examples",
+    "target": "substitutions substitution examples",
     "sha256": "2893e01387611181040e50cafe8ad3df977ef4cc300e47d90db4cc7bd2a6dbba"
   },
   {
@@ -3030,7 +3030,7 @@
       "@queue"
     ],
     "target": "@queue",
-    "sha256": "c837f29297332cf9003fdc7618acdcc175ef75e7212f20682b0e724feb135b67"
+    "sha256": "aa469b01d6c3dd81d39e5396b829775ad488e8cd3e349156285469586005edcd"
   },
   {
     "source": "restrictedexpr.md",
@@ -3038,7 +3038,7 @@
       "restrictedexpr()"
     ],
     "target": "restrictedexpr()",
-    "sha256": "9b95ffee3563ce8285a0870f57337ce0c167df27de244b47b58dcd340a651a4b"
+    "sha256": "21b787076f314ef51a3db04eef0b869b08b1d6aa2878a6a0f032cb96cac5dec6"
   },
   {
     "source": "queuebudgets.md",
@@ -3046,7 +3046,7 @@
       "queue budgets"
     ],
     "target": "queue budgets",
-    "sha256": "084283b84297e56651423e2897e727903d239dff45c599e6f02d6b4550d15dff"
+    "sha256": "27dcda3fd15bad9c445f8382ce61e5f8bb630625dfeed4660129c1f047527264"
   },
   {
     "source": "queuebudgets.md",
@@ -3063,7 +3063,7 @@
       "@SNAPSHOT"
     ],
     "target": "object snapshots",
-    "sha256": "a93deba0cb89c4c1694f4f04a1314f314936d8487d9f0d1af92f55a145132723"
+    "sha256": "18394038784407b4ef77d04932ff003fd5d0451a88614ec461a340f6a12ad448"
   },
   {
     "source": "ahelp/jobs.md",
@@ -3072,7 +3072,7 @@
       "@JOB"
     ],
     "target": "recurring jobs",
-    "sha256": "6ea4f5231447d2244a8b734cd1b6ed9d761028083477bd7d87d2ad36e6bdad2c"
+    "sha256": "af5377e324860e8e99f4faeee50aa8402a497b49b1eb04896d8e8810bc78e295"
   },
   {
     "source": "ahelp/reality.md",
@@ -3081,7 +3081,7 @@
       "Reality layers"
     ],
     "target": "@reality",
-    "sha256": "d1bb332c48200ade7939fec31a6f72766d33edf42ca790ea46c22a9ee53238c0"
+    "sha256": "bca4d7ba1ada2adf717a941383781a16d7be16b67c9c9f3fe6912358c60661ef"
   },
   {
     "source": "ahelp/capabilities.md",
@@ -3089,7 +3089,7 @@
       "Administrative capabilities"
     ],
     "target": "administrative capabilities",
-    "sha256": "95261cbc6e78bd92148ea71a57bc76aab1afddc555a18424fd55838d5cd5dc57"
+    "sha256": "25e60cd2765a2aaf5267d3e02590402e122dadb860522bd99663cbd7266293d6"
   },
   {
     "source": "pennmush-compatibility.md",

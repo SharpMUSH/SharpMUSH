@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "mix-function",
   "lookup": "mix()",
-  "aliases": [],
+  "aliases": [
+    "mix"
+  ],
   "sections": [
     {
       "id": "parallel-list-examples",

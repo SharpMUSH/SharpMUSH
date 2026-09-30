@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "json-array-function",
   "lookup": "json_array()",
-  "aliases": [],
+  "aliases": [
+    "json_array"
+  ],
   "sections": [
     {
       "id": "array-construction-examples",

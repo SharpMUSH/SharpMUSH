@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "colors-function",
   "lookup": "colors()",
-  "aliases": [],
+  "aliases": [
+    "colors"
+  ],
   "sections": [
     {
       "id": "palette-examples",

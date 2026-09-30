@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "render-markdown-custom",
   "lookup": "rendermarkdowncustom()",
-  "aliases": [],
+  "aliases": [
+    "rendermarkdowncustom"
+  ],
   "sections": [
     {
       "id": "custom-template-system",

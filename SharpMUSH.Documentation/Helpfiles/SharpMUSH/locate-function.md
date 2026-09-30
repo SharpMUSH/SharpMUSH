@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "locate-function",
   "lookup": "locate()",
-  "aliases": [],
+  "aliases": [
+    "locate"
+  ],
   "sections": [
     {
       "id": "search-locations",

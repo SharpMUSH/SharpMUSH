@@ -5,7 +5,8 @@
   "lookup": "element()",
   "aliases": [
     "MATCH()",
-    "MATCHALL()"
+    "MATCHALL()",
+    "element"
   ],
   "sections": [
     {

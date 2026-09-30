@@ -2,6 +2,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject ILogger<HelpEntryPanel> Logger
 @implements IAsyncDisposable
 
 @* Renders one help topic out of the server's shipped helpfile corpus. Not a wiki page: there is
@@ -87,8 +88,15 @@ else
         }
         _focusRequested = false;
         var section = _entry.SectionId ?? Uri.UnescapeDataString(new Uri(Navigation.Uri).Fragment.TrimStart('#'));
-        _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Help/HelpEntryPanel.razor.js");
-        await _module.InvokeVoidAsync("focusSection", _articleElement, section);
+        try
+        {
+            _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./Components/Help/HelpEntryPanel.razor.js");
+            await _module.InvokeVoidAsync("focusSection", _articleElement, section);
+        }
+        catch (JSException error)
+        {
+            Logger.LogDebug(error, "Could not scroll help to section {Section}", section);
+        }
     }
 
     public async ValueTask DisposeAsync()

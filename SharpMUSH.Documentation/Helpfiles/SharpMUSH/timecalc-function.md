@@ -4,7 +4,8 @@
   "id": "timecalc-function",
   "lookup": "timecalc()",
   "aliases": [
-    "SECSCALC()"
+    "SECSCALC()",
+    "timecalc"
   ],
   "sections": [
     {

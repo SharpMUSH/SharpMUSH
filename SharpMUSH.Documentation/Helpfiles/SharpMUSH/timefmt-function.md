@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "timefmt-function",
   "lookup": "timefmt()",
-  "aliases": [],
+  "aliases": [
+    "timefmt"
+  ],
   "sections": [
     {
       "id": "date-escape-codes",

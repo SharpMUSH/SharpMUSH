@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "render-markdown",
   "lookup": "rendermarkdown()",
-  "aliases": [],
+  "aliases": [
+    "rendermarkdown"
+  ],
   "sections": [
     {
       "id": "supported-markdown-features",

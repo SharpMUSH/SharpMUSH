@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "fn-function",
   "lookup": "fn()",
-  "aliases": [],
+  "aliases": [
+    "fn"
+  ],
   "sections": [
     {
       "id": "executor-selection",

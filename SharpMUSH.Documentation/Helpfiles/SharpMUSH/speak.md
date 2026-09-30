@@ -4,7 +4,8 @@
   "id": "speak",
   "lookup": "speak()",
   "aliases": [
-    "SPEAKPENN()"
+    "SPEAKPENN()",
+    "speak"
   ],
   "sections": [
     {

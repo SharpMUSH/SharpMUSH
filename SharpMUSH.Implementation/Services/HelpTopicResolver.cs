@@ -34,14 +34,10 @@ public sealed class HelpTopicResolver(ITextFileService textFiles) : IHelpTopicRe
 
 		// PennMUSH tries a prefix match first (name LIKE 'topic%', first alphabetically wins) and only
 		// falls back to the fuzzy pattern when that finds nothing.
-		var prefixMatches = await SearchAsync(corpus, topic + "*");
-		if (prefixMatches.Count > 0)
+		var prefix = await textFiles.GetPrefixEntryAsync(corpus, topic);
+		if (prefix is not null)
 		{
-			var entry = await GetExactAsync(corpus, prefixMatches[0]);
-			if (entry is not null)
-			{
-				return entry;
-			}
+			return prefix;
 		}
 
 		return await NarrowAsync(corpus, await SearchAsync(corpus, BuildFuzzyPattern(topic)));

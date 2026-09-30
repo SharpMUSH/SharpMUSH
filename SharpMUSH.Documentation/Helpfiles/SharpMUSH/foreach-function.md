@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "foreach-function",
   "lookup": "foreach()",
-  "aliases": [],
+  "aliases": [
+    "foreach"
+  ],
   "sections": [
     {
       "id": "character-iteration-examples",

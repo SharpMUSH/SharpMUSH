@@ -4,7 +4,8 @@
   "id": "time-function",
   "lookup": "time()",
   "aliases": [
-    "UTCTIME()"
+    "UTCTIME()",
+    "time"
   ],
   "sections": [
     {

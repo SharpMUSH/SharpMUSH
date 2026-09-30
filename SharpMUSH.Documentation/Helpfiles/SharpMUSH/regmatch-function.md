@@ -4,7 +4,8 @@
   "id": "regmatch-function",
   "lookup": "regmatch()",
   "aliases": [
-    "REGMATCHI()"
+    "REGMATCHI()",
+    "regmatch"
   ],
   "sections": [
     {

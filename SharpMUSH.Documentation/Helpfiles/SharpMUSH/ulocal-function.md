@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "ulocal-function",
   "lookup": "ulocal()",
-  "aliases": [],
+  "aliases": [
+    "ulocal"
+  ],
   "sections": [
     {
       "id": "local-register-examples",

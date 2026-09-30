@@ -5,7 +5,8 @@
   "lookup": "u()",
   "aliases": [
     "UFUN()",
-    "ULAMBDA()"
+    "ULAMBDA()",
+    "u"
   ],
   "sections": [
     {

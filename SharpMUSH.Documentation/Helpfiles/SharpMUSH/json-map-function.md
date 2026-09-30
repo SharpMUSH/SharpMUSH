@@ -3,7 +3,9 @@
   "corpus": "help",
   "id": "json-map-function",
   "lookup": "json_map()",
-  "aliases": [],
+  "aliases": [
+    "json_map"
+  ],
   "sections": [
     {
       "id": "mapping-primitive-values",

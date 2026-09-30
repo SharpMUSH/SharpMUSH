@@ -7,7 +7,8 @@
     "REGLMATCHI()",
     "REGLMATCHALL()",
     "REGLMATCHALLI()",
-    "REGMATCHALLI()"
+    "REGMATCHALLI()",
+    "reglmatch"
   ],
   "sections": [
     {
