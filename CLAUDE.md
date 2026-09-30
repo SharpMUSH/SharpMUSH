@@ -155,7 +155,9 @@ Readiness is the server's business, not the portal's: until `ServerReadiness` is
 started, every NATS input consumer consuming, the output bridge connected — the parts that come up
 after Kestrel is already listening), a request for the SPA shell gets `PortalStartupPage` (503 +
 `Retry-After`), so a portal that loaded is talking to a server that can play the game. `/api/health`
-and `/ready` report the live state (503 while the broker is out); `/health` is liveness only.
+and `/ready` report the live state (503 while the broker is out); `/health` is liveness only. The
+standalone client dev server (`dotnet run --project SharpMUSH.Client`, API via `ApiBaseAddress` in
+`appsettings.Development.json`) bypasses that page: start the API first, or reload once it is up.
 
 **Key services registered at startup:**
 
