@@ -61,7 +61,7 @@
         _loading = true;
         try
         {
-            _pages = (await Wiki.GetByCategoryAsync(WikiCategories.Key(Category), 0, 200))
+            _pages = (await Wiki.GetAllByCategoryAsync(WikiCategories.Key(Category)))
                 .OrderByDescending(p => p.UpdatedAt)
                 .ToList();
         }

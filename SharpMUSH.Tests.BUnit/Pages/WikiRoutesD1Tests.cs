@@ -76,6 +76,16 @@ public class WikiRoutesD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task Category_ListsEveryPage_NotJustTheFirstRequest()
+	{
+		_nav.NavigateTo("/wiki/category/big");
+		var cut = Render<WikiCategory>(p => p.Add(x => x.Category, "big"));
+		cut.WaitForAssertion(() => cut.Find(".kit-tile"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".kit-tile").Count).IsEqualTo(WikiApiFake.BigCategory.Length);
+		await Assert.That(cut.Find(".kit-page-desc").TextContent).Contains("250");
+	}
+
+	[Test]
 	public async Task Category_WithNoPages_ShowsTheEmptyState()
 	{
 		_nav.NavigateTo("/wiki/category/empty");
