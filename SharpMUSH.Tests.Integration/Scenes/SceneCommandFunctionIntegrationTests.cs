@@ -138,8 +138,8 @@ public class SceneCommandFunctionIntegrationTests
 
 	/// <summary>
 	/// The side-effect functions broadcast their pose writes on <c>game.scene.{id}</c>, as the
-	/// <c>@scene</c> switches do — which is what the design promises, and what makes a pose recorded by
-	/// softcode (or edited with <c>+scene/edit</c>, which calls <c>sceneeditpose</c>) appear live.
+	/// <c>@scene</c> switches do — which is what the design promises, and what makes a pose that softcode
+	/// records or edits through these functions appear live.
 	/// </summary>
 	[Test]
 	public async Task SceneFunctions_BroadcastTheirPoseWrites()
@@ -174,5 +174,44 @@ public class SceneCommandFunctionIntegrationTests
 		await Assert.That(seen.Select(e => (e.EventType, e.PoseId))).IsEquivalentTo(
 			[("pose", first), ("pose", second), ("edit", first), ("move", second), ("delete", first)]);
 		await Assert.That(seen.All(e => e.ActorObjId == godObjid)).IsTrue();
+	}
+
+	/// <summary>
+	/// Undo and redo change which edit a pose shows, so a live view has to hear them: both paths — the
+	/// <c>sceneundo</c>/<c>sceneredo</c> functions and the <c>@scene/undo</c>/<c>/redo</c> switches —
+	/// broadcast an <c>edit</c> carrying the pose's now-current text.
+	/// </summary>
+	[Test]
+	public async Task SceneUndoAndRedo_BroadcastAnEdit_InBothPaths()
+	{
+		var sceneId = await CreateSceneAsync("UndoRedo");
+		var poseId = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,before)");
+		await Eval($"sceneeditpose({poseId},{God},after)");
+
+		await using var nats = new NatsConnection(new NatsOpts
+		{
+			Url = $"nats://localhost:{WebAppFactory.NatsTestServer.Instance.GetMappedPublicPort(4222)}"
+		});
+		await using var events = await nats.SubscribeCoreAsync<string>($"game.scene.{sceneId}");
+		await nats.PingAsync();
+
+		await Eval($"sceneundo({poseId})");
+		await Eval($"sceneredo({poseId})");
+		await Cmd($"@scene/undo {poseId}");
+		await Cmd($"@scene/redo {poseId}");
+
+		var seen = new List<(string EventType, string PoseId, string Content)>();
+		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+		await foreach (var message in events.Msgs.ReadAllAsync(timeout.Token))
+		{
+			if (message.Data is not { } data) continue;
+			var root = JsonDocument.Parse(data).RootElement;
+			seen.Add((root.GetProperty("EventType").GetString()!, root.GetProperty("PoseId").GetString()!,
+				root.GetProperty("Content").GetString()!));
+			if (seen.Count == 4) break;
+		}
+
+		await Assert.That(seen).IsEquivalentTo(
+			[("edit", poseId, "before"), ("edit", poseId, "after"), ("edit", poseId, "before"), ("edit", poseId, "after")]);
 	}
 }

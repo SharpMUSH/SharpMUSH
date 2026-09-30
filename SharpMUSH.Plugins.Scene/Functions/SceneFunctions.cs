@@ -705,7 +705,7 @@ public static class SceneFunctions
 
 		return result switch
 		{
-			ScenePose pose => new CallState(pose.Id),
+			ScenePose pose => await PublishedAsync(parser, "edit", pose),
 			NotFound => new CallState(SceneNotFound),
 			Error<string> error => new CallState(error.Value),
 		};
@@ -731,7 +731,7 @@ public static class SceneFunctions
 
 		return result switch
 		{
-			ScenePose pose => new CallState(pose.Id),
+			ScenePose pose => await PublishedAsync(parser, "edit", pose),
 			NotFound => new CallState(SceneNotFound),
 			Error<string> error => new CallState(error.Value),
 		};
