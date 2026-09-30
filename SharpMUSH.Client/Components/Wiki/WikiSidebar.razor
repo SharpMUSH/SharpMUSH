@@ -110,7 +110,7 @@
         if (title.Length == 0) return;
         _newOpen = false;
         _newTitle = string.Empty;
-        Nav.NavigateTo($"/wiki/main/{WikiHelpers.DefaultCategory}/{Uri.EscapeDataString(WikiHelpers.Slugify(title))}/edit");
+        Nav.NavigateTo($"/wiki/main/{WikiHelpers.DefaultCategory}/{Uri.EscapeDataString(WikiHelpers.Slugify(title))}/edit?title={Uri.EscapeDataString(title)}");
     }
 
     public void Dispose() => Nav.LocationChanged -= OnLocationChanged;

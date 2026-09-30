@@ -80,12 +80,13 @@ public class WikiSidebarTests : TrackingBunitContext
 		creator.Find("button.wiki-side-new").Click();
 		creator.Find(".wiki-side-new-form input").Input("Salt Market");
 		creator.Find(".wiki-side-new-form").Submit();
-		await Assert.That(_nav.Uri).EndsWith("/wiki/main/general/salt_market/edit");
+		await Assert.That(_nav.Uri).EndsWith("/wiki/main/general/salt_market/edit?title=Salt%20Market")
+			.Because("the editor starts from the title the creator typed, not the slug made from it");
 
 		creator.Find("button.wiki-side-new").Click();
 		creator.Find(".wiki-side-new-form input").Input("What? / Why#");
 		creator.Find(".wiki-side-new-form").Submit();
-		await Assert.That(_nav.Uri).EndsWith("/wiki/main/general/what%3F_%2F_why%23/edit")
+		await Assert.That(_nav.Uri).EndsWith("/wiki/main/general/what%3F_%2F_why%23/edit?title=What%3F%20%2F%20Why%23")
 			.Because("a title with ?, / or # must not break the route");
 	}
 
