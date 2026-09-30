@@ -22,13 +22,18 @@ namespace SharpMUSH.Tests.BUnit.Layout;
 /// </summary>
 public class NavRailTests : TrackingBunitContext
 {
-	private sealed class NoAppsHandler : HttpMessageHandler
+	/// <summary>Answers <c>api/applications</c> with <see cref="Apps"/> (none unless a test adds some).</summary>
+	private sealed class AppsHandler : HttpMessageHandler
 	{
+		public object[] Apps { get; set; } = [];
+
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 			=> Task.FromResult(request.RequestUri!.AbsolutePath.TrimStart('/') == "api/applications"
-				? new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<object>()) }
+				? new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Apps) }
 				: new HttpResponseMessage(HttpStatusCode.NotFound));
 	}
+
+	private readonly AppsHandler _apps = new();
 
 	private readonly BunitAuthorizationContext _auth;
 	private readonly ITerminalService _terminal;
@@ -51,7 +56,7 @@ public class NavRailTests : TrackingBunitContext
 		Services.AddSingleton(Substitute.For<IConnectionStateService>());
 		Services.AddSingleton<CharacterSwitchService>();
 
-		var client = Track(new HttpClient(new NoAppsHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
+		var client = Track(new HttpClient(_apps) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(client);
 		Services.AddSingleton(factory);
@@ -117,6 +122,29 @@ public class NavRailTests : TrackingBunitContext
 		var build = staff.Find("a.phosphor-rail-build");
 		await Assert.That(build.GetAttribute("href")).IsEqualTo("/admin/diagnostics").Because("its first visible destination");
 		await Assert.That(build.GetAttribute("aria-current")).IsEqualTo("page");
+	}
+
+	[Test]
+	public async Task RoleGatedApps_FollowTheSignedInRole_WithoutARemount()
+	{
+		_apps.Apps =
+		[
+			new
+			{
+				slug = "council", displayName = "Council", icon = (string?)null, kind = "Page", schemaUrl = "/apps/council/schema",
+				dataUrl = (string?)null, submitRoute = (string?)null, minimumRole = "Wizard", navPlacement = "Council",
+				zones = Array.Empty<string>(), order = 0,
+			},
+		];
+		_auth.SetAuthorized("wiz");
+		_auth.SetRoles("Wizard");
+		var cut = RenderAt("/");
+		cut.WaitForAssertion(() => cut.Find("a.phosphor-rail-item[href='/apps/council']"), TimeSpan.FromSeconds(5));
+
+		_auth.SetNotAuthorized();
+		cut.WaitForState(() => cut.FindAll("a[href='/apps/council']").Count == 0, TimeSpan.FromSeconds(2));
+		await Assert.That(cut.FindAll("a[href='/apps/council']").Count).IsEqualTo(0)
+			.Because("signing out leaves the Wizard-only section behind the previous role");
 	}
 
 	[Test]

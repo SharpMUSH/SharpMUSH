@@ -14,7 +14,8 @@ namespace SharpMUSH.Client.Services;
 public class ApplicationRegistryClient(IHttpClientFactory httpClientFactory, ILogger<ApplicationRegistryClient> logger)
 {
 	// The rail, the drawer and the section sidebars all read this list, and the sidebars re-read on
-	// render; they share one read and a short memo. A write through this client refreshes it, and a
+	// render; they share one read and a short memo. A write through this client refreshes it once the
+	// server has answered — a read made while the write was in flight saw the old catalog — and a
 	// failed read is not kept.
 	private readonly ShortMemo<(bool Ok, IReadOnlyList<PortalApplication> Apps)> _list =
 		new(TimeSpan.FromSeconds(60), r => r.Ok);
@@ -53,17 +54,27 @@ public class ApplicationRegistryClient(IHttpClientFactory httpClientFactory, ILo
 	}
 
 	/// <summary>Creates or updates an application; a refusal carries the server's reason.</summary>
-	public Task<ApiResult<Success>> UpsertAsync(PortalApplication application)
-	{
-		_list.Forget();
-		return Client.PostApiAsync("api/applications", application);
-	}
+	public Task<ApiResult<Success>> UpsertAsync(PortalApplication application) =>
+		ForgettingListAsync(Client.PostApiAsync("api/applications", application));
 
 	/// <summary>Deletes an application by slug.</summary>
-	public Task<ApiResult<Success>> DeleteAsync(string slug)
+	public Task<ApiResult<Success>> DeleteAsync(string slug) =>
+		ForgettingListAsync(Client.DeleteApiAsync($"api/applications/{Uri.EscapeDataString(slug)}"));
+
+	/// <summary>
+	/// Awaits a write, then drops the memo. A failed write is forgotten too: it may have been applied
+	/// before the answer was lost, and one extra read is cheaper than a stale rail.
+	/// </summary>
+	private async Task<ApiResult<Success>> ForgettingListAsync(Task<ApiResult<Success>> write)
 	{
-		_list.Forget();
-		return Client.DeleteApiAsync($"api/applications/{Uri.EscapeDataString(slug)}");
+		try
+		{
+			return await write;
+		}
+		finally
+		{
+			_list.Forget();
+		}
 	}
 
 	private HttpClient Client => httpClientFactory.CreateClient("api");
