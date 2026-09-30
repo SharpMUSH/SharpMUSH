@@ -1932,10 +1932,6 @@
     <value>Nie można wczytać skompilowanego komponentu tej aplikacji. Kod przeglądarki może być wyłączony (allow_browser_code) lub zestaw nie przeszedł weryfikacji.</value>
     <comment>MT — 'allow_browser_code' left as-is: config key name</comment>
   </data>
-  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
-    <value>Ten portal zbudowano bez obsługi skompilowanych komponentów aplikacji, więc ta aplikacja nie może tu działać. Operator może go przebudować z włączonym PluginComponentSupport (argument budowania Dockera PLUGIN_COMPONENTS).</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
     <value>Ta aplikacja wymaga aktywnej postaci.</value>
     <comment>MT</comment>

@@ -149,8 +149,7 @@ The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all 
 
 Startup is on the critical path of every visit: `Program.cs` awaits nothing on the network before the
 first render, and a request the first render needs goes out alongside the others rather than after
-them. The trimmer roots for runtime-loaded plugin components are opt-in (`PluginComponentSupport`,
-see `SharpMUSH.Client.csproj`) because they cost every visitor 1.1 MB.
+them.
 
 **Key services registered at startup:**
 

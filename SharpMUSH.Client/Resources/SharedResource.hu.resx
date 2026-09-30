@@ -1932,10 +1932,6 @@
     <value>Ennek az alkalmazásnak a lefordított komponensét nem sikerült betölteni. Lehet, hogy a böngészőoldali kód le van tiltva (allow_browser_code), vagy az assembly nem ment át az ellenőrzésen.</value>
     <comment>MT</comment>
   </data>
-  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
-    <value>Ez a portál a lefordított alkalmazáskomponensek támogatása nélkül készült, ezért ez az alkalmazás itt nem futtatható. Az üzemeltető újraépítheti a PluginComponentSupport bekapcsolásával (a PLUGIN_COMPONENTS Docker build argumentummal).</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
     <value>Ez az alkalmazás aktív karaktert igényel.</value>
     <comment>MT</comment>

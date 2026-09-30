@@ -162,8 +162,6 @@ public record DatabaseOptions(
 		Description = "Allow plugins to ship compiled Blazor components that load into the browser portal",
 		Group = "Behavior",
 		Order = 3,
-		Tooltip = "Off by default. Enabling lets operator-trusted plugins run arbitrary compiled C# in the browser. "
-			+ "The portal must also be built with PluginComponentSupport (Docker build argument PLUGIN_COMPONENTS=true): "
-			+ "the stock build trims the UI surface these components compile against.")]
+		Tooltip = "Off by default. Enabling lets operator-trusted plugins run arbitrary compiled C# in the browser; gives up client AOT/trimming.")]
 	bool AllowBrowserCode
 );

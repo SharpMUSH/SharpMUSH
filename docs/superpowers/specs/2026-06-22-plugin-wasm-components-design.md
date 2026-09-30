@@ -71,9 +71,3 @@ Extend `RegisteredApplication` (Library, general portal type — not a plugin co
     components keep their full compile-time surface. The BCL remains trimmed; a compiled plugin
     component that reflects into otherwise-unused BCL members is the accepted residual risk. AOT
     remains a non-goal.
-  - **Refined 2026-09-30 (portal time-to-interactive PR):** those roots cost every visitor 1.1 MB brotli
-    (MudBlazor alone 1.33 MB rooted vs 0.44 MB trimmed; 19% of the first load), for a capability that is off
-    by default. They are now opt-in at build time — `-p:PluginComponentSupport=true`, the Dockerfile's
-    `PLUGIN_COMPONENTS` build argument — and a build without them refuses to load compiled components
-    (`PluginComponentLoader.Supported`) and says so on the application page, rather than loading one against a
-    trimmed surface. Turning `allow_browser_code` on therefore also needs a portal built with the roots.

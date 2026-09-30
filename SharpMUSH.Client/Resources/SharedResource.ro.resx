@@ -1932,10 +1932,6 @@
     <value>Componenta compilată a acestei aplicații nu a putut fi încărcată. Este posibil ca rularea codului în browser să fie dezactivată (allow_browser_code) sau ca ansamblul să nu fi trecut verificarea.</value>
     <comment>MT</comment>
   </data>
-  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
-    <value>Acest portal a fost construit fără suport pentru componente de aplicație compilate, așa că această aplicație nu poate rula aici. Operatorul îl poate reconstrui cu PluginComponentSupport activat (argumentul de build Docker PLUGIN_COMPONENTS).</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
     <value>Această aplicație necesită un personaj activ.</value>
     <comment>MT</comment>

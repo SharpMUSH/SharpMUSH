@@ -10,11 +10,7 @@ RUN dotnet publish SharpMUSH.Server/SharpMUSH.Server.csproj -c Release -o /app -
 # wwwroot/index.html and "/" returns 404. The endpoints manifest goes into the content root beside
 # the server: it is what makes the server answer with MapStaticAssets — immutable caching for the
 # fingerprinted files, precompressed br/gzip for every asset (see PortalStaticFiles.cs).
-# PLUGIN_COMPONENTS=true keeps the UI surface compiled plugin components (allow_browser_code) need
-# from being trimmed, at 1.1 MB more for every visitor's first load — see SharpMUSH.Client.csproj.
-ARG PLUGIN_COMPONENTS=false
-RUN dotnet publish SharpMUSH.Client/SharpMUSH.Client.csproj -c Release -o /client --no-restore \
-      -p:PluginComponentSupport=$PLUGIN_COMPONENTS
+RUN dotnet publish SharpMUSH.Client/SharpMUSH.Client.csproj -c Release -o /client --no-restore
 RUN mkdir -p /app/wwwroot && cp -a /client/wwwroot/. /app/wwwroot/ \
     && cp /client/SharpMUSH.Client.staticwebassets.endpoints.json /app/
 # Copy the dev certificate if it exists (optional for build, can be mounted at runtime)

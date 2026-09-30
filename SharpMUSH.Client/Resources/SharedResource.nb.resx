@@ -1932,10 +1932,6 @@
     <value>Den kompilerte komponenten til denne applikasjonen kunne ikke lastes. Nettleserkode kan være slått av (allow_browser_code), eller så feilet verifiseringen av assemblyen.</value>
     <comment>MT — 'allow_browser_code' is a config key, kept verbatim.</comment>
   </data>
-  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
-    <value>Denne portalen er bygget uten støtte for kompilerte applikasjonskomponenter, så denne applikasjonen kan ikke kjøre her. Operatøren kan bygge den på nytt med PluginComponentSupport slått på (Docker-byggeargumentet PLUGIN_COMPONENTS).</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
     <value>Denne applikasjonen krever en aktiv karakter.</value>
     <comment>MT</comment>

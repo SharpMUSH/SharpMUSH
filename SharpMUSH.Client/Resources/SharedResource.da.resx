@@ -1932,10 +1932,6 @@
     <value>Denne applikations kompilerede komponent kunne ikke indlæses. Browserkode er måske slået fra (allow_browser_code), eller assemblyen bestod ikke verifikationen.</value>
     <comment>MT</comment>
   </data>
-  <data name="NavApplicationComponentUnsupportedBuild" xml:space="preserve">
-    <value>Denne portal er bygget uden understøttelse af kompilerede applikationskomponenter, så denne applikation kan ikke køre her. Operatøren kan bygge den igen med PluginComponentSupport slået til (Docker-byggeargumentet PLUGIN_COMPONENTS).</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavApplicationNeedsCharacter" xml:space="preserve">
     <value>Denne applikation kræver en aktiv karakter.</value>
     <comment>MT</comment>
