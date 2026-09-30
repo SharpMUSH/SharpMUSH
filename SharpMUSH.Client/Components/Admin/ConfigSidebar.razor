@@ -21,9 +21,8 @@
         <SectionLabel>@Loc["Settings"]</SectionLabel>
     }
     <nav class="config-side-tree" aria-label="@Loc["Settings"]">
-        @foreach (var group in ConfigSections.Groups)
+        @foreach (var g in ConfigSections.Groups)
         {
-            var g = group;
             @if (Collapsed)
             {
                 <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@g.Icon" Label="@Loc[g.TitleKey]" Href="@g.FirstRoute" IsCurrent="@(g == _currentGroup)" Collapsed="true" />
@@ -39,9 +38,8 @@
                         <span class="config-side-chevron" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" /></span>
                     </summary>
                     <div class="config-side-sections">
-                        @foreach (var section in g.Sections)
+                        @foreach (var s in g.Sections)
                         {
-                            var s = section;
                             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@s.Icon" Label="@Loc[s.TitleKey]" Href="@s.Route" IsCurrent="@(s == _currentSection)" Count="@CountFor(s)" />
                         }
                     </div>
