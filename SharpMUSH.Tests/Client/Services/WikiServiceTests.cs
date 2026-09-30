@@ -31,7 +31,9 @@ public class WikiServiceTests : TrackingTestContext
 		string ns = "Main",
 		string markdown = "# Home",
 		string html = "<h1>Home</h1>",
-		int revision = 2) =>
+		int revision = 2,
+		string? lastEditedBy = null,
+		string? image = null) =>
 		$$"""
 		{
 		  "id": "{{id}}",
@@ -44,7 +46,9 @@ public class WikiServiceTests : TrackingTestContext
 		  "createdAt": "2025-01-01T00:00:00Z",
 		  "updatedAt": "2025-01-02T00:00:00Z",
 		  "isProtected": false,
-		  "revisionNumber": {{revision}}
+		  "revisionNumber": {{revision}},
+		  "lastEditedBy": {{(lastEditedBy is null ? "null" : $"\"{lastEditedBy}\"")}},
+		  "image": {{(image is null ? "null" : $"\"{image}\"")}}
 		}
 		""";
 
@@ -85,6 +89,31 @@ public class WikiServiceTests : TrackingTestContext
 
 		var article = result.Expect<WikiArticle>();
 		await Assert.That(article.Content).IsEqualTo("## Updated");
+	}
+
+	[Test]
+	public async Task UpdatePageAsync_200_MapsLastEditedByImageAndUpdatedAt()
+	{
+		// D1 README §6.2: the banner shows the first image and "Last edited by X · when".
+		var service = BuildService(HttpStatusCode.OK, PageDtoJson(lastEditedBy: "Ilsa Varn", image: "/api/wiki-assets/a/quay.jpg"), out _);
+
+		var article = (await service.UpdatePageAsync("home", "# Home", null)).Expect<WikiArticle>();
+
+		await Assert.That(article.LastEditedBy).IsEqualTo("Ilsa Varn");
+		await Assert.That(article.Image).IsEqualTo("/api/wiki-assets/a/quay.jpg");
+		await Assert.That(article.UpdatedAt).IsEqualTo(DateTimeOffset.Parse("2025-01-02T00:00:00Z"));
+	}
+
+	[Test]
+	public async Task GetRecentChangesAsync_MapsImageAndLastEditedByOntoSummaries()
+	{
+		var service = BuildService(HttpStatusCode.OK, "[" + PageDtoJson(slug: "quay", lastEditedBy: "Wren", image: "/q.jpg") + "]", out _);
+
+		var summaries = await service.GetRecentChangesAsync(10);
+
+		await Assert.That(summaries.Count).IsEqualTo(1);
+		await Assert.That(summaries[0].LastEditedBy).IsEqualTo("Wren");
+		await Assert.That(summaries[0].Image).IsEqualTo("/q.jpg");
 	}
 
 	[Test]

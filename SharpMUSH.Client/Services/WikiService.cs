@@ -530,11 +530,13 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		new(
 			title: dto.Title,
 			content: dto.MarkdownSource,
-			image: null,
+			image: dto.Image,
 			renderedHtml: dto.RenderedHtml
 		)
 		{
 			Id = dto.Id,
+			LastEditedBy = dto.LastEditedBy,
+			UpdatedAt = dto.UpdatedAt,
 			Slug = dto.Slug,
 			Category = dto.Category,
 			Tags = dto.Tags.ToList(),
@@ -580,6 +582,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			IsProtected = dto.IsProtected,
 			Locale = dto.Locale,
 			IsFallback = dto.IsFallback,
+			Image = dto.Image,
+			LastEditedBy = dto.LastEditedBy,
 		};
 
 	private static WikiRevisionInfo ToRevision(WikiRevisionDto dto) =>

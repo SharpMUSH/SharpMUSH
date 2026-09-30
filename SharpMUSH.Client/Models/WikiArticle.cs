@@ -21,7 +21,14 @@ public class WikiArticle
 	/// <summary>Raw Markdown source (used as edit content and fallback render input).</summary>
 	public string Content { get; set; }
 
+	/// <summary>The first image in the page's Markdown, shown as the page banner; null when there is none.</summary>
 	public string? Image { get; set; }
+
+	/// <summary>The name of the player who last edited the page; null when the server could not name one.</summary>
+	public string? LastEditedBy { get; set; }
+
+	/// <summary>When the page was last edited.</summary>
+	public DateTimeOffset? UpdatedAt { get; set; }
 
 	/// <summary>
 	/// Pre-rendered HTML produced by <see cref="SharpMUSH.Library.Services.WikiMarkdigPipeline"/>
