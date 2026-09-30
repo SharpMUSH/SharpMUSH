@@ -316,8 +316,11 @@ scene in the room they stand in — through `ISceneService.AddPoseAsync` with
 source `ooc` and tags `[ooc]`, and broadcasts like any pose. The stored text is
 the line **without** the `<OOC>` marker (the tag carries it) and uses the
 player's own name, not their `showas` persona. Anywhere else it is only said.
-Approval (`` FUN`IS`APPROVED ``) is package policy the plugin cannot see; being
-focused on the scene already means the player was let in.
+The speaker must also be approved, re-checked on every line as the capture hooks
+do, since focus and membership survive a revoked `APPROVED` flag. The command
+evaluates the package's own `` FUN`IS`APPROVED `` on the Scene Logger (as the
+logger), so a redefined rule applies to OOC too; without the package installed it
+falls back to the package default, a player with the `APPROVED` flag.
 
 ## Default Softcode (`#SCENELOGGER` bootstrap)
 

@@ -169,6 +169,24 @@ public class SceneOocIntegrationTests
 		await Assert.That(HeardBy(bystander, bystanderBefore)).Contains($"<OOC> {poser.Name}: anyone around?");
 	}
 
+	/// <summary>
+	/// Approval is re-checked on every write, as the scene package's capture hooks do: focus and
+	/// membership survive a revoked APPROVED flag, so they cannot stand in for it.
+	/// </summary>
+	[Test]
+	public async Task Ooc_from_a_player_no_longer_approved_is_heard_and_not_recorded()
+	{
+		var (sceneId, poser, witness) = await SceneRoomAsync("Una");
+		await God1($"@set {poser.Dbref}=!APPROVED");
+		var before = await PoseCountAsync(sceneId);
+		var witnessBefore = HeardCount(witness);
+
+		await RunAs(poser.Handle, "ooc still here");
+
+		await Assert.That(HeardBy(witness, witnessBefore)).Contains($"<OOC> {poser.Name}: still here");
+		await Assert.That(await PoseCountAsync(sceneId)).IsEqualTo(before);
+	}
+
 	[Test]
 	public async Task Ooc_with_no_scene_at_all_is_only_heard()
 	{
