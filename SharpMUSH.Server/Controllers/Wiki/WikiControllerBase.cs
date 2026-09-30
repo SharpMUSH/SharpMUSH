@@ -106,7 +106,7 @@ public abstract class WikiControllerBase(
 
 	protected static WikiPageDto ToDto(LocalizedWikiPage p, IReadOnlyList<string> availableLocales) => new(
 		p.Page.Id, p.Page.Slug, p.Title, p.Page.Namespace, p.MarkdownSource, p.RenderedHtml, p.PlainText,
-		p.Page.CreatedAt, p.Page.UpdatedAt, p.Page.IsProtected, p.RevisionNumber,
+		p.Page.CreatedAt, p.UpdatedAt, p.Page.IsProtected, p.RevisionNumber,
 		p.Page.Category, p.Page.Tags, p.Published)
 	{
 		Locale = p.Locale,

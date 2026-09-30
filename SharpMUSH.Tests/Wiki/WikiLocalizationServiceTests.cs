@@ -70,17 +70,21 @@ public class WikiLocalizationServiceTests
 	}
 
 	[Test]
-	public async Task TheLastEditor_IsTheServedRowsEditor()
+	public async Task ServedRow_CarriesItsOwnEditorAndEditTime()
 	{
 		var (storage, service) = Build();
 		var page = await SeedAsync(storage);
-		await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, published: true, expectedRevisionNumber: null);
+		var translation = (await storage.UpsertTranslationAsync(page.Id, "fr", "Dragons (fr)", "corps fr", "#2", null, published: true, expectedRevisionNumber: null))
+			.Expect<WikiTranslation>();
 
 		var french = (await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "fr", false)).Expect<LocalizedWikiPage>();
 		var english = (await service.GetLocalizedBySlugAsync("dragons", "general", WikiNamespace.Main, "en", false)).Expect<LocalizedWikiPage>();
 
-		await Assert.That(french.LastEditorDbref).IsEqualTo("#2").Because("#2 wrote the French text the reader is shown");
+		await Assert.That(french.LastEditorDbref).IsEqualTo("#2")
+			.Because("the translation's editor wrote what the reader sees, not the source page's");
+		await Assert.That(french.UpdatedAt).IsEqualTo(translation.UpdatedAt);
 		await Assert.That(english.LastEditorDbref).IsEqualTo("#1");
+		await Assert.That(english.UpdatedAt).IsEqualTo(page.UpdatedAt);
 	}
 
 	[Test]

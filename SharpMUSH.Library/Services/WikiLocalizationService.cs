@@ -125,7 +125,8 @@ public sealed class WikiLocalizationService(
 			PlainText: served.PlainText,
 			Published: served.Published,
 			RevisionNumber: served.RevisionNumber,
-			LastEditorDbref: served.LastEditorDbref);
+			LastEditorDbref: served.LastEditorDbref,
+			UpdatedAt: served.UpdatedAt);
 	}
 
 	private static LocalizedWikiPage FromSource(WikiPage page, string source, string requested) =>
@@ -139,5 +140,6 @@ public sealed class WikiLocalizationService(
 			PlainText: page.PlainText,
 			Published: page.Published,
 			RevisionNumber: page.RevisionNumber,
-			LastEditorDbref: page.LastEditorDbref);
+			LastEditorDbref: page.LastEditorDbref,
+			UpdatedAt: page.UpdatedAt);
 }
