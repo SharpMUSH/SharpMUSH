@@ -25,8 +25,10 @@
 	border-color: var(--accent);
 }
 
+/* grows with the text, from a message-sized box rather than one line */
 .mc-fields ::deep .mc-field textarea {
 	field-sizing: content;
+	min-height: 12rem;
 }
 
 .mc-bar {
