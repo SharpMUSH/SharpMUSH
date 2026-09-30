@@ -426,6 +426,7 @@ else
         {
             html = WikiImages.StripFirstImage(html, Article!.Image!);
         }
+        html = ApiUrl.ResolveHtml(html);
 
         _hasBody = HasVisibleContent(html);
         _toc = BuildToc(html);

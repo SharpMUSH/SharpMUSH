@@ -42,7 +42,7 @@
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 
             _html = cfg is not null && !string.IsNullOrWhiteSpace(cfg.Markdown)
-                ? Markdown.ToHtml(cfg.Markdown)
+                ? ApiUrl.ResolveHtml(Markdown.ToHtml(cfg.Markdown))
                 : string.Empty;
         }
         catch (JsonException)

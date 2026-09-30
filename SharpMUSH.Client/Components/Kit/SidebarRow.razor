@@ -86,7 +86,7 @@ else
                 case SidebarLead.Image:
                     @if (ImageUrlPolicy.IsRenderable(ImageUrl))
                     {
-                        <img class="kit-row-img" src="@ImageUrl!.Trim()" alt="" />
+                        <img class="kit-row-img" src="@ApiUrl.Resolve(ImageUrl!)" alt="" />
                     }
                     else if (Icon is not null)
                     {
@@ -100,7 +100,7 @@ else
                 case SidebarLead.Avatar:
                     @if (ImageUrlPolicy.IsRenderable(ImageUrl))
                     {
-                        <img class="kit-row-avatar" src="@ImageUrl!.Trim()" alt="" />
+                        <img class="kit-row-avatar" src="@ApiUrl.Resolve(ImageUrl!)" alt="" />
                     }
                     else
                     {
@@ -108,7 +108,7 @@ else
                     }
                     @if (IsGroup && ImageUrlPolicy.IsRenderable(ImageUrl2))
                     {
-                        <img class="kit-row-avatar kit-row-avatar--second" src="@ImageUrl2!.Trim()" alt="" />
+                        <img class="kit-row-avatar kit-row-avatar--second" src="@ApiUrl.Resolve(ImageUrl2!)" alt="" />
                     }
                     else if (IsGroup)
                     {

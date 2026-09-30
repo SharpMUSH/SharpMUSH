@@ -64,7 +64,7 @@
                                 <div class="adm-media-thumb">
                                     @if (AssetKind(a.ContentType) == "image")
                                     {
-                                        <img src="@a.Url" alt="@a.FileName" loading="lazy" />
+                                        <img src="@ApiUrl.Resolve(a.Url)" alt="@a.FileName" loading="lazy" />
                                     }
                                     else
                                     {
@@ -105,7 +105,7 @@
                                     <CellTemplate>
                                         @if (AssetKind(context.Item.ContentType) == "image")
                                         {
-                                            <img class="adm-media-list-thumb" src="@context.Item.Url" alt="" />
+                                            <img class="adm-media-list-thumb" src="@ApiUrl.Resolve(context.Item.Url)" alt="" />
                                         }
                                         else
                                         {
