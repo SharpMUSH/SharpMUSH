@@ -5006,4 +5006,7 @@
   <data name="AdmAssetsUploadTitle" xml:space="preserve">
     <value>Încarcă o imagine</value>
   </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Acest joc nu are subiecte de ajutor instalate.</value>
+  </data>
 </root>

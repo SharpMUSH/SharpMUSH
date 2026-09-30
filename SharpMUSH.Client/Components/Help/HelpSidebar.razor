@@ -25,7 +25,8 @@
                         Href="@TopicHref(topic)" IsCurrent="@IsTopic(topic)" Collapsed="@Collapsed" />
         }
     </nav>
-    @if (!Collapsed && _index is not null)
+    @* A game with no help files has no topics to list, so no heading over nothing. *@
+    @if (!Collapsed && _index is { Topics.Count: > 0 })
     {
         var (label, topics) = TopicSlice();
         <SectionLabel Class="help-side-topics-label">@label</SectionLabel>

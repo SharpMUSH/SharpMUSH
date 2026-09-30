@@ -5006,4 +5006,7 @@
   <data name="AdmAssetsUploadTitle" xml:space="preserve">
     <value>Prenesi sliku</value>
   </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Ova igra nema instaliranih tema pomoći.</value>
+  </data>
 </root>

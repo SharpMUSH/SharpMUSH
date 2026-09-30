@@ -5006,4 +5006,7 @@
   <data name="AdmAssetsUploadTitle" xml:space="preserve">
     <value>Загрузить изображение</value>
   </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>В этой игре не установлены разделы справки.</value>
+  </data>
 </root>

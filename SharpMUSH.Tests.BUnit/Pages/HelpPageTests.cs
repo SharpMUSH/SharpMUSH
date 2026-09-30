@@ -207,6 +207,26 @@ public class HelpPageTests : TrackingBunitContext
 			.Because("the filter sits in the topic card's header");
 	}
 
+	/// <summary>
+	/// A game with no help files installed answers an index with no entry and no topics. The page drew
+	/// an empty card for the entry and told the reader "no topic matches that filter" when there was
+	/// no filter; it now draws no entry card and says the game has no help topics.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Index_WithNoHelpFiles_SaysSo_WithoutAnEmptyCard()
+	{
+		HelpApi.Install(this, isStaff: false, new Dictionary<string, Dictionary<string, string>> { ["help"] = new(), ["ahelp"] = new() });
+		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
+		this.AddAuthorization();
+
+		var cut = Render<SharpMUSH.Client.Pages.Help>();
+		cut.WaitForAssertion(() => cut.Find(".help-empty"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".help-entry").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".help-empty").TextContent).IsEqualTo("HelpNoTopics");
+		await Assert.That(cut.Markup).DoesNotContain("HelpNoTopicsMatch");
+	}
+
 	/// <summary>The sidebar's search lands on <c>/help?q=</c> when no topic has exactly that name.</summary>
 	[TUnit.Core.Test]
 	public async Task Index_TheAddressFiltersTheTopics()

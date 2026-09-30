@@ -27,9 +27,13 @@
     }
     else
     {
-        <KitCard>
-            <article class="help-entry">@((MarkupString)(_index.Html ?? string.Empty))</article>
-        </KitCard>
+        @* A game with no help files answers no index entry: no card rather than an empty one. *@
+        @if (!string.IsNullOrWhiteSpace(_index.Html))
+        {
+            <KitCard>
+                <article class="help-entry">@((MarkupString)_index.Html)</article>
+            </KitCard>
+        }
 
         <KitCard Title="@string.Format(Loc["HelpAllTopics"], _index.Topics.Count)">
             <Controls>
@@ -38,7 +42,11 @@
             </Controls>
             <ChildContent>
                 <div class="help-topics">
-                    @if (Filtered.Count == 0)
+                    @if (_index.Topics.Count == 0)
+                    {
+                        <p class="help-empty">@Loc["HelpNoTopics"]</p>
+                    }
+                    else if (Filtered.Count == 0)
                     {
                         <p class="help-empty">@Loc["HelpNoTopicsMatch"]</p>
                     }
@@ -61,7 +69,7 @@
                 {
                     <MudAlert Severity="Severity.Error" Dense="true" Class="help-admin">@Loc["HelpLoadFailed"] @_adminError</MudAlert>
                 }
-                else if (_adminIndex is not null)
+                else if (_adminIndex is { Topics.Count: > 0 })
                 {
                     <KitCard Class="help-admin" Title="@Loc["HelpAdminTitle"]" Sub="@Loc["HelpAdminSubtitle"]">
                         <div class="help-topics">

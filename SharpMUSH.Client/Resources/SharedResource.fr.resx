@@ -4260,4 +4260,7 @@
   <data name="AdmAssetsUploadTitle" xml:space="preserve">
     <value>Téléverser une image</value>
   </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Ce jeu n’a aucun sujet d’aide installé.</value>
+  </data>
 </root>

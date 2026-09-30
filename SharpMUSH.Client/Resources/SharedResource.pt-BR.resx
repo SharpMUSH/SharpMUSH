@@ -5006,4 +5006,7 @@
   <data name="AdmAssetsUploadTitle" xml:space="preserve">
     <value>Enviar uma imagem</value>
   </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Este jogo não tem tópicos de ajuda instalados.</value>
+  </data>
 </root>

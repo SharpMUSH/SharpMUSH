@@ -5006,4 +5006,7 @@
   <data name="AdmAssetsUploadTitle" xml:space="preserve">
     <value>Качване на изображение</value>
   </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>В тази игра няма инсталирани помощни теми.</value>
+  </data>
 </root>

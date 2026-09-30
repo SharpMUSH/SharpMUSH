@@ -5006,4 +5006,7 @@
   <data name="AdmAssetsUploadTitle" xml:space="preserve">
     <value>Kép feltöltése</value>
   </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Ehhez a játékhoz nincsenek súgótémák telepítve.</value>
+  </data>
 </root>

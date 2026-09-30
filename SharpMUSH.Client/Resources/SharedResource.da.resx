@@ -5006,4 +5006,7 @@
   <data name="AdmAssetsUploadTitle" xml:space="preserve">
     <value>Upload et billede</value>
   </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Dette spil har ingen hjælpeemner installeret.</value>
+  </data>
 </root>

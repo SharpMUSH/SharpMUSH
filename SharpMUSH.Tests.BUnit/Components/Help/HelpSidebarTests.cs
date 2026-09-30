@@ -43,6 +43,16 @@ public class HelpSidebarTests : TrackingBunitContext
 	};
 
 	[Test]
+	public async Task WithNoHelpFiles_ThereIsNoTopicsHeadingOverNothing()
+	{
+		Install(isStaff: false, new() { ["help"] = new(), ["ahelp"] = new() });
+		var cut = RenderAt("/help");
+		await Assert.That(cut.Find(".kit-side-sub").TextContent).IsEqualTo("0 topics");
+		await Assert.That(cut.FindAll(".help-side-topics-label").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".help-side-topics").Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task Header_CountsTheTopics()
 	{
 		Install(isStaff: false);

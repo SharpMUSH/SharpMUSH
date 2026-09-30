@@ -5006,4 +5006,7 @@
   <data name="AdmAssetsUploadTitle" xml:space="preserve">
     <value>Afbeelding uploaden</value>
   </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Dit spel heeft geen helponderwerpen geïnstalleerd.</value>
+  </data>
 </root>

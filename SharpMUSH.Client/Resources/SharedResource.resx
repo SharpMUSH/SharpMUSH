@@ -4352,4 +4352,7 @@
   <data name="AdmAssetsUploadTitle" xml:space="preserve">
     <value>Upload an image</value>
   </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>This game has no help topics installed.</value>
+  </data>
 </root>

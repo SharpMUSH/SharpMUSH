@@ -5006,4 +5006,7 @@
   <data name="AdmAssetsUploadTitle" xml:space="preserve">
     <value>Bild hochladen</value>
   </data>
+  <data name="HelpNoTopics" xml:space="preserve">
+    <value>Dieses Spiel hat keine Hilfethemen installiert.</value>
+  </data>
 </root>
