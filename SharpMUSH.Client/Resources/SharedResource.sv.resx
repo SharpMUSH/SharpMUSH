@@ -4976,4 +4976,34 @@
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Administratörsregister</value>
   </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Administration · Stavningskontroll</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Databas</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Hantera · Diagnostik</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Hantera · Automatisering</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Bygg · Återställning</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Filtrera efter typ</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Visa som</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Roller eller tilldelningar</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Hanterarens attribut</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Ladda upp en bild</value>
+  </data>
 </root>

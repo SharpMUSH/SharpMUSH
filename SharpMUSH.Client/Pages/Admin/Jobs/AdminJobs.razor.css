@@ -1,5 +1,106 @@
-.jobs { container-type: inline-size; width: 100%; max-width: 52rem; margin-inline: auto; padding: 1rem; display: grid; gap: 1rem; }
-.jobs-form, .jobs-entry { padding: 1rem; border: 1px solid var(--mud-palette-lines-default); border-radius: var(--mud-default-borderradius); display: grid; gap: .65rem; min-width: 0; }
-.jobs-entry code { overflow-wrap: anywhere; }
-.jobs-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
-@container (max-width: 30rem) { .jobs-actions { flex-direction: column; } .jobs-actions ::deep button { width: 100%; } }
+.jobs {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: var(--main-pad);
+	min-width: 0;
+}
+
+/* README §3: main and aside stay side by side at the medium tier; only narrow stacks them */
+.jobs-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) var(--aside-w);
+	gap: 14px;
+	align-items: start;
+}
+
+.jobs-main {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-width: 0;
+}
+
+.jobs-aside {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.jobs-form,
+.jobs-list {
+	display: grid;
+	gap: 0.65rem;
+	padding: 14px 16px 16px;
+	min-width: 0;
+}
+
+.jobs-empty {
+	margin: 0;
+	font-size: 13px;
+	color: var(--text-dim);
+}
+
+.jobs-entry {
+	display: grid;
+	gap: 0.4rem;
+	min-width: 0;
+	padding: 12px 0;
+	border-top: 1px solid var(--border-soft);
+}
+
+.jobs-entry:first-of-type {
+	border-top: 0;
+}
+
+.jobs-entry-title {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--text);
+}
+
+.jobs-entry code {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--text-faint);
+	overflow-wrap: anywhere;
+}
+
+.jobs-entry-line {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: var(--text);
+}
+
+.jobs-entry-meta {
+	font-size: 13px;
+	color: var(--text-dim);
+}
+
+.jobs-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.jobs-help {
+	margin: 0;
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--text-dim);
+}
+
+@container page (max-width: 48rem) {
+	.jobs-layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.jobs-actions {
+		flex-direction: column;
+	}
+
+	.jobs-actions ::deep button {
+		width: 100%;
+	}
+}

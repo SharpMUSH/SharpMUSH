@@ -4976,4 +4976,34 @@
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>管理员索引</value>
   </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>管理 · 拼写检查</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>管理 · 数据库</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>管理 · 诊断</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>管理 · 自动化</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>构建 · 恢复</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>按类型筛选</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>显示为</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>角色或分配</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>处理器属性</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>上传图片</value>
+  </data>
 </root>

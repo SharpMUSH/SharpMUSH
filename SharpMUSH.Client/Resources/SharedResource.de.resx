@@ -4976,4 +4976,34 @@
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Admin-Übersicht</value>
   </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Verwaltung · Rechtschreibprüfung</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Datenbank</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Verwalten · Diagnose</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Verwalten · Automatisierung</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Bauen · Wiederherstellung</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Nach Art filtern</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Anzeigen als</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Rollen oder Zuweisungen</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Handler-Attribute</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Bild hochladen</value>
+  </data>
 </root>

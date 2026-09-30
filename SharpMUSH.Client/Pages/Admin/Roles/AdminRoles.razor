@@ -12,30 +12,20 @@
 <PageTitle>@Loc["RolPageTitle"] — @Loc["AdminPanel"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="roleadmin">
-    <div class="roleadmin-head">
-        <div>
-            <div class="roleadmin-kicker">@Loc["RolKicker"]</div>
-            <h1 class="roleadmin-title">@Loc["RolHeading"]</h1>
-        </div>
-        <div class="roleadmin-actions">
-            <div class="ra-seg">
-                <button type="button" class="ra-seg-btn @(_tab == Tab.Roles ? "ra-seg-btn--on" : "")"
-                        @onclick="@(() => _tab = Tab.Roles)">@Loc["RolTabRoles"]</button>
-                <button type="button" class="ra-seg-btn @(_tab == Tab.Assignments ? "ra-seg-btn--on" : "")"
-                        @onclick="@(() => _tab = Tab.Assignments)">@Loc["RolTabAssignments"]</button>
-            </div>
+    <PlainPageHeader Kicker="@Loc["RolKicker"]" Title="@Loc["RolHeading"]">
+        <Actions>
+            <TypeChips Items="@TabItems" Selected="@_tab.ToString()" SelectedChanged="@(v => _tab = Enum.Parse<Tab>(v))"
+                       AriaLabel="@Loc["AdmRolesTabsLabel"]" />
             @if (_tab == Tab.Roles)
             {
-                <button type="button" class="ra-btn ra-btn--primary" @onclick="NewRole">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> @Loc["RolNewRole"]
-                </button>
+                <CapsuleButton Icon="@Icons.Material.Filled.Add" Primary="true" OnClick="NewRole">@Loc["RolNewRole"]</CapsuleButton>
             }
-        </div>
-    </div>
+        </Actions>
+    </PlainPageHeader>
 
     @if (_loading)
     {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Style="height:2px;" />
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
     }
     else if (_tab == Tab.Roles)
     {
@@ -51,7 +41,7 @@
                     var on = _selected?.Slug == r.Slug;
                     <button type="button" class="ra-card @(on ? "ra-card--on" : "")" @onclick="@(() => Select(r))">
                         <span class="ra-dot" style="@($"background:{SafeColor(r.Color)};")"></span>
-                        <div style="flex:1;min-width:0;">
+                        <div class="ra-grow">
                             <div class="ra-card-name">@r.Name</div>
                             <div class="ra-card-sub">@r.Slug</div>
                         </div>
@@ -64,14 +54,14 @@
                 }
             </div>
 
-            <div class="roleadmin-detail">
+            <KitCard Class="roleadmin-detail">
                 @if (_editing is null)
                 {
                     <div class="ra-empty-detail">
-                        <MudIcon Icon="@Icons.Material.Filled.Shield" Style="font-size:2.5rem;color:var(--text-faint);opacity:0.4;" />
+                        <MudIcon Icon="@Icons.Material.Filled.Shield" Class="ra-ico ra-ico--empty" />
                         <span>@Loc["RolSelectOrCreate"]</span>
                         <button type="button" class="ra-btn ra-btn--primary" @onclick="NewRole">
-                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" /> @Loc["RolNewRole"]
+                            <MudIcon Icon="@Icons.Material.Filled.Add" Class="ra-ico" /> @Loc["RolNewRole"]
                         </button>
                     </div>
                 }
@@ -79,8 +69,8 @@
                 {
                     <div class="ra-detail-head">
                         <span class="ra-detail-dot" style="@($"background:{SafeColor(_editColor)};")"></span>
-                        <div style="flex:1;min-width:0;">
-                            <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;">
+                        <div class="ra-grow">
+                            <div class="ra-titles">
                                 <h2 class="ra-detail-name">@(_editing.IsSystem ? _editing.Name : (string.IsNullOrWhiteSpace(_editName) ? Loc["RolUntitled"] : _editName))</h2>
                                 @if (_editing.IsSystem)
                                 {
@@ -131,13 +121,13 @@
                                         </div>
                                         <div class="ra-tristate">
                                             <button type="button"
-                                                    class="ra-tri ra-tri--inherit @(state == "Inherit" ? "ra-tri--on" : "")"
+                                                    class="ra-tri ra-tri--inherit @(state == "Inherit" ? "ra-tri--on" : "")" aria-pressed="@(state == "Inherit" ? "true" : "false")"
                                                     @onclick="@(() => SetState(d.Scope, "Inherit"))">@Loc["RolInherit"]</button>
                                             <button type="button"
-                                                    class="ra-tri ra-tri--allow @(state == "Allow" ? "ra-tri--on" : "")"
+                                                    class="ra-tri ra-tri--allow @(state == "Allow" ? "ra-tri--on" : "")" aria-pressed="@(state == "Allow" ? "true" : "false")"
                                                     @onclick="@(() => SetState(d.Scope, "Allow"))">@Loc["RolAllow"]</button>
                                             <button type="button"
-                                                    class="ra-tri ra-tri--deny @(state == "Deny" ? "ra-tri--on" : "")"
+                                                    class="ra-tri ra-tri--deny @(state == "Deny" ? "ra-tri--on" : "")" aria-pressed="@(state == "Deny" ? "true" : "false")"
                                                     @onclick="@(() => SetState(d.Scope, "Deny"))">@Loc["RolDeny"]</button>
                                         </div>
                                     </div>
@@ -148,24 +138,24 @@
 
                     <div class="ra-section ra-section--actions">
                         <button type="button" class="ra-btn ra-btn--primary" @onclick="SaveRole" disabled="@_saving">
-                            <MudIcon Icon="@Icons.Material.Filled.Save" Style="font-size:0.875rem;" /> @Loc["RolSaveRole"]
+                            <MudIcon Icon="@Icons.Material.Filled.Save" Class="ra-ico" /> @Loc["RolSaveRole"]
                         </button>
                         @if (!_editing.IsSystem)
                         {
                             <button type="button" class="ra-btn ra-btn--danger" @onclick="DeleteRole" disabled="@_saving">
-                                <MudIcon Icon="@Icons.Material.Filled.Delete" Style="font-size:0.875rem;" /> @Loc["Delete"]
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Class="ra-ico" /> @Loc["Delete"]
                             </button>
                         }
                     </div>
                 }
-            </div>
+            </KitCard>
         </div>
     }
     else
     {
-        <div class="roleadmin-assign">
+        <KitCard Class="roleadmin-assign">
             <div class="ra-search">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;color:var(--text-faint);" />
+                <MudIcon Icon="@Icons.Material.Filled.Search" Class="ra-ico ra-ico--faint" />
                 <input value="@_lookupName" placeholder="@Loc["RolSearchByUsername"]"
                        @oninput="@(e => _lookupName = e.Value?.ToString() ?? string.Empty)"
                        @onkeydown="OnLookupKeyDown" />
@@ -184,7 +174,7 @@
             @if (_lookedUp && _account is null)
             {
                 <div class="ra-empty-detail">
-                    <MudIcon Icon="@Icons.Material.Filled.PersonOff" Style="font-size:2.5rem;color:var(--text-faint);opacity:0.4;" />
+                    <MudIcon Icon="@Icons.Material.Filled.PersonOff" Class="ra-ico ra-ico--empty" />
                     <span>@Loc["RolNoAccountFound", _lookupName]</span>
                 </div>
             }
@@ -192,8 +182,8 @@
             {
                 <div class="ra-account-card">
                     <div class="ra-account-head">
-                        <div style="flex:1;min-width:0;">
-                            <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;">
+                        <div class="ra-grow">
+                            <div class="ra-titles">
                                 <h2 class="ra-detail-name">@_account.Username</h2>
                                 @if (_account.Status != "Active")
                                 {
@@ -218,7 +208,7 @@
                                 <span class="ra-chip">
                                     <span class="ra-dot ra-dot--sm" style="@($"background:{SafeColor(role?.Color ?? "#888")};")"></span>
                                     @(role?.Name ?? s)
-                                    <button type="button" class="ra-chip-x" title="@Loc["RolRemoveRole"]"
+                                    <button type="button" class="ra-chip-x" title="@Loc["RolRemoveRole"]" aria-label="@Loc["RolRemoveRole"]"
                                             @onclick="@(() => RemoveAssignment(s))">×</button>
                                 </span>
                             }
@@ -236,7 +226,7 @@
                                     <button type="button" class="ra-add-chip" @onclick="@(() => AddAssignment(r.Slug))">
                                         <span class="ra-dot ra-dot--sm" style="@($"background:{SafeColor(r.Color)};")"></span>
                                         @r.Name
-                                        <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.875rem;" />
+                                        <MudIcon Icon="@Icons.Material.Filled.Add" Class="ra-ico" />
                                     </button>
                                 }
                             </div>
@@ -247,16 +237,19 @@
             else
             {
                 <div class="ra-empty-detail">
-                    <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Style="font-size:2.5rem;color:var(--text-faint);opacity:0.4;" />
+                    <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Class="ra-ico ra-ico--empty" />
                     <span>@Loc["RolSearchAccountPrompt"]</span>
                 </div>
             }
-        </div>
+        </KitCard>
     }
 </div>
 
 @code {
     private enum Tab { Roles, Assignments }
+
+    private IReadOnlyList<(string Key, string Label)> TabItems =>
+        [(nameof(Tab.Roles), Loc["RolTabRoles"].Value), (nameof(Tab.Assignments), Loc["RolTabAssignments"].Value)];
 
     private Tab _tab = Tab.Roles;
     private bool _loading = true;

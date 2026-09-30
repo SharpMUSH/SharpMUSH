@@ -4230,4 +4230,34 @@
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Index d'administration</value>
   </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Administration · Orthographe</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Base de données</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Gérer · Diagnostic</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Gérer · Automatisation</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Construire · Récupération</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Filtrer par type</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Afficher en</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Rôles ou attributions</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Attributs du gestionnaire</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Téléverser une image</value>
+  </data>
 </root>

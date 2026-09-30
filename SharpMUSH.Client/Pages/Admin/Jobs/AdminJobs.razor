@@ -9,49 +9,74 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["JobsTitle"]</PageTitle>
-<section class="jobs">
-    <MudText Typo="Typo.h4">@Loc["JobsTitle"]</MudText>
-    <MudText>@Loc["JobsIntro"]</MudText>
+<div class="jobs">
+    <PlainPageHeader Kicker="@Loc["AdmJobsKicker"]" Title="@Loc["JobsTitle"]" Description="@Loc["JobsIntro"]">
+        <Actions>
+            <CapsuleButton Icon="@Icons.Material.Filled.Refresh" OnClick="Load" Disabled="_busy">@Loc["JobsRefresh"]</CapsuleButton>
+        </Actions>
+    </PlainPageHeader>
+
     @if (_error is not null) { <MudAlert Severity="Severity.Error">@_error</MudAlert> }
-    <AuthorizeView Policy="jobs.manage"><Authorized><MudCheckBox @bind-Value="_all" Label="@Loc["JobsAll"]" /></Authorized></AuthorizeView>
-    <MudButton OnClick="Load" Disabled="_busy">@Loc["JobsRefresh"]</MudButton>
-    <AuthorizeView Policy="jobs.manage.own"><Authorized>
-        <div class="jobs-form">
-            <MudText Typo="Typo.h6">@Loc["JobsCreate"]</MudText>
-            <MudTextField @bind-Value="_target" Label="@Loc["JobsTarget"]" />
-            <MudTextField @bind-Value="_attribute" Label="@Loc["JobsAttribute"]" />
-            <MudTextField @bind-Value="_description" Label="@Loc["JobsDescription"]" MaxLength="500" />
-            <MudTextField @bind-Value="_schedule" Label="@Loc["JobsSchedule"]" />
-            <MudTextField @bind-Value="_zone" Label="@Loc["JobsTimeZone"]" />
-            <MudText Typo="Typo.caption">@Loc["JobsScheduleHelp"]</MudText>
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Create" Disabled="_busy">@Loc["JobsCreate"]</MudButton>
+
+    <div class="jobs-layout">
+        <div class="jobs-main">
+            <AuthorizeView Policy="jobs.manage.own"><Authorized>
+                <KitCard Title="@Loc["JobsCreate"]">
+                    <div class="jobs-form">
+                        <MudTextField @bind-Value="_target" Label="@Loc["JobsTarget"]" />
+                        <MudTextField @bind-Value="_attribute" Label="@Loc["JobsAttribute"]" />
+                        <MudTextField @bind-Value="_description" Label="@Loc["JobsDescription"]" MaxLength="500" />
+                        <MudTextField @bind-Value="_schedule" Label="@Loc["JobsSchedule"]" />
+                        <MudTextField @bind-Value="_zone" Label="@Loc["JobsTimeZone"]" />
+                        <div class="jobs-actions">
+                            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Create" Disabled="_busy">@Loc["JobsCreate"]</MudButton>
+                        </div>
+                    </div>
+                </KitCard>
+            </Authorized></AuthorizeView>
+
+            <KitCard>
+                <div class="jobs-list">
+                    <AuthorizeView Policy="jobs.manage"><Authorized>
+                        <MudCheckBox @bind-Value="_all" Label="@Loc["JobsAll"]" />
+                    </Authorized></AuthorizeView>
+                    @if (_jobs.Length == 0) { <p class="jobs-empty">@Loc["JobsEmpty"]</p> }
+                    @foreach (var job in _jobs)
+                    {
+                        <article class="jobs-entry" @key="job.Id">
+                            <h2 class="jobs-entry-title">@job.Description</h2>
+                            <code>@job.Id</code>
+                            <div class="jobs-entry-line">@job.Target/@job.Attribute</div>
+                            <div class="jobs-entry-meta">@Loc["JobsOwner"]: @job.OwnerAccount · @job.Character</div>
+                            <div class="jobs-entry-meta">@job.Schedule · @job.TimeZone · @Loc["JobsStatus_" + job.Status]</div>
+                            <div class="jobs-entry-meta">@Loc["JobsNext"]: @Time(job.NextRun) · @Loc["JobsLast"]: @Time(job.LastRun)</div>
+                            @if (job.LastError is not null) { <MudAlert Severity="Severity.Warning" Dense="true">@job.LastError</MudAlert> }
+                            <div class="jobs-actions">
+                                <MudButton OnClick="@(() => Toggle(job))" Disabled="_busy">@Loc[job.Enabled ? "JobsDisable" : "JobsEnable"]</MudButton>
+                                <MudButton OnClick="@(() => Select(job))" Disabled="_busy">@Loc["JobsEdit"]</MudButton>
+                                <MudButton Color="Color.Error" OnClick="@(() => Delete(job))" Disabled="_busy">@Loc["JobsDelete"]</MudButton>
+                            </div>
+                            @if (_selected == job.Id)
+                            {
+                                <MudTextField @bind-Value="_editSchedule" Label="@Loc["JobsSchedule"]" />
+                                <MudTextField @bind-Value="_editZone" Label="@Loc["JobsTimeZone"]" />
+                                <div class="jobs-actions">
+                                    <MudButton Color="Color.Primary" OnClick="@(() => Save(job))" Disabled="_busy">@Loc["JobsSave"]</MudButton>
+                                </div>
+                            }
+                        </article>
+                    }
+                </div>
+            </KitCard>
         </div>
-    </Authorized></AuthorizeView>
-    @if (_jobs.Length == 0) { <MudText>@Loc["JobsEmpty"]</MudText> }
-    @foreach (var job in _jobs)
-    {
-        <article class="jobs-entry" @key="job.Id">
-            <MudText Typo="Typo.h6">@job.Description</MudText>
-            <code>@job.Id</code>
-            <MudText>@job.Target/@job.Attribute</MudText>
-            <MudText>@Loc["JobsOwner"]: @job.OwnerAccount · @job.Character</MudText>
-            <MudText>@job.Schedule · @job.TimeZone · @Loc["JobsStatus_" + job.Status]</MudText>
-            <MudText>@Loc["JobsNext"]: @Time(job.NextRun) · @Loc["JobsLast"]: @Time(job.LastRun)</MudText>
-            @if (job.LastError is not null) { <MudAlert Severity="Severity.Warning">@job.LastError</MudAlert> }
-            <div class="jobs-actions">
-                <MudButton OnClick="@(() => Toggle(job))" Disabled="_busy">@Loc[job.Enabled ? "JobsDisable" : "JobsEnable"]</MudButton>
-                <MudButton OnClick="@(() => Select(job))" Disabled="_busy">@Loc["JobsEdit"]</MudButton>
-                <MudButton Color="Color.Error" OnClick="@(() => Delete(job))" Disabled="_busy">@Loc["JobsDelete"]</MudButton>
-            </div>
-            @if (_selected == job.Id)
-            {
-                <MudTextField @bind-Value="_editSchedule" Label="@Loc["JobsSchedule"]" />
-                <MudTextField @bind-Value="_editZone" Label="@Loc["JobsTimeZone"]" />
-                <MudButton Color="Color.Primary" OnClick="@(() => Save(job))" Disabled="_busy">@Loc["JobsSave"]</MudButton>
-            }
-        </article>
-    }
-</section>
+
+        <aside class="jobs-aside">
+            <KitCard Aside="true" Title="@Loc["JobsSchedule"]">
+                <p class="jobs-help">@Loc["JobsScheduleHelp"]</p>
+            </KitCard>
+        </aside>
+    </div>
+</div>
 
 @code {
     private HttpClient? _api;

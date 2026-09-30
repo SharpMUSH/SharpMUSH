@@ -4976,4 +4976,34 @@
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Administratoroversikt</value>
   </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Administrasjon · Stavekontroll</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Database</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Administrer · Diagnostikk</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Administrer · Automatisering</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Bygg · Gjenoppretting</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Filtrer etter type</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Vis som</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Roller eller tildelinger</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Håndtererens attributter</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Last opp et bilde</value>
+  </data>
 </root>

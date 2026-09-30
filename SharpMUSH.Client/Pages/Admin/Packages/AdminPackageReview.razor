@@ -14,7 +14,7 @@
 <div class="pkg-review">
 @if (_plan is null)
 {
-    <MudText Typo="Typo.h4" Class="mb-2">@Loc["PkgReview"]</MudText>
+    <PlainPageHeader Kicker="@Loc["PkgKickerRegistry"]" Title="@Loc["PkgReview"]" />
     @if (_loadError is not null)
     {
         <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
@@ -26,28 +26,25 @@
 }
 else
 {
-    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
-        <MudText Typo="Typo.h4">
-            @(_plan.Changeset.Kind == PackageRevisionKind.Install ? Loc["PkgInstallHeading"] : Loc["PkgUpgradeHeading"]): @_plan.PackageId @_plan.Version
-        </MudText>
-        <MudSpacer />
-        <MudButton Variant="Variant.Outlined" OnClick="@(() => Nav.NavigateTo("/admin/packages/browse"))">@Loc["Cancel"]</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanApply || _busy)" OnClick="@ApplyAsync">
-            @Loc["PkgApply"]
-        </MudButton>
-    </MudStack>
-    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
-        @Loc["PkgPlanLocation", _remote, _path, _plan.Commit[..Math.Min(10, _plan.Commit.Length)]]
-        @if (_plan.Changeset.FromVersion is not null)
-        {
-            <text> @Loc["PkgUpgradingFrom", _plan.Changeset.FromVersion]</text>
-        }
-    </MudText>
+    <PlainPageHeader Kicker="@Loc["PkgKickerRegistry"]"
+                     Title="@($"{(_plan.Changeset.Kind == PackageRevisionKind.Install ? Loc["PkgInstallHeading"] : Loc["PkgUpgradeHeading"])}: {_plan.PackageId} {_plan.Version}")">
+        <DescriptionContent>
+            @Loc["PkgPlanLocation", _remote, _path, _plan.Commit[..Math.Min(10, _plan.Commit.Length)]]
+            @if (_plan.Changeset.FromVersion is not null)
+            {
+                <text> @Loc["PkgUpgradingFrom", _plan.Changeset.FromVersion]</text>
+            }
+        </DescriptionContent>
+        <Actions>
+            <CapsuleButton Href="/admin/packages/browse">@Loc["Cancel"]</CapsuleButton>
+            <CapsuleButton Primary="true" Disabled="@(!CanApply || _busy)" OnClick="@ApplyAsync">@Loc["PkgApply"]</CapsuleButton>
+        </Actions>
+    </PlainPageHeader>
 
     @* ── Blockers ─────────────────────────────────────────────────────── *@
     @foreach (var issue in _plan.Changeset.DependencyIssues)
     {
-        <MudAlert Severity="Severity.Error" Class="mb-2">
+        <MudAlert Severity="Severity.Error">
             @if (issue.IsConflict)
             {
                 <text>@Loc["PkgConflictsWithInstalled"] <b>@issue.PackageId</b> @issue.InstalledVersion.</text>
@@ -68,25 +65,24 @@ else
 
     @foreach (var warning in _plan.ManifestWarnings)
     {
-        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-1">@warning</MudAlert>
+        <MudAlert Severity="Severity.Warning" Dense="true">@warning</MudAlert>
     }
     @foreach (var collision in _plan.Changeset.CommandCollisions)
     {
-        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-1">
+        <MudAlert Severity="Severity.Warning" Dense="true">
             @Loc["PkgCommandCollision", collision.Pattern, collision.OtherPackageId, collision.OtherObjid, collision.OtherAttribute]
         </MudAlert>
     }
     @foreach (var note in _plan.Changeset.Notes)
     {
-        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-1">@note</MudAlert>
+        <MudAlert Severity="Severity.Info" Dense="true">@note</MudAlert>
     }
 
     @* ── Configure ────────────────────────────────────────────────────── *@
     @if (_plan.Configure.Count > 0)
     {
-        <MudCard Class="mb-4">
-            <MudCardHeader><MudText Typo="Typo.h6">@Loc["Configuration"]</MudText></MudCardHeader>
-            <MudCardContent>
+        <KitCard Title="@Loc["Configuration"]">
+            <div class="pkg-review-body">
                 <MudStack Spacing="2">
                     @foreach (var prompt in _plan.Configure)
                     {
@@ -101,15 +97,14 @@ else
                         @Loc["PkgReplan"]
                     </MudButton>
                 </MudStack>
-            </MudCardContent>
-        </MudCard>
+            </div>
+        </KitCard>
     }
 
     @* ── Objects ──────────────────────────────────────────────────────── *@
-    <MudCard Class="mb-4">
-        <MudCardHeader><MudText Typo="Typo.h6">@Loc["PkgObjectsCount", _plan.Changeset.Objects.Count]</MudText></MudCardHeader>
-        <MudCardContent>
-            <MudTable Items="_plan.Changeset.Objects" Dense="true" Class="pkg-objects-table">
+    <KitCard Title="@Loc["PkgObjectsCount", _plan.Changeset.Objects.Count]">
+        <div class="pkg-review-body">
+            <MudTable Items="_plan.Changeset.Objects" Dense="true" Elevation="0" Class="pkg-objects-table">
                 <HeaderContent>
                     <MudTh>@Loc["PkgRef"]</MudTh><MudTh>@Loc["PkgAction"]</MudTh><MudTh>@Loc["PkgType"]</MudTh><MudTh>@Loc["PkgName"]</MudTh><MudTh>@Loc["PkgDetails"]</MudTh>
                 </HeaderContent>
@@ -134,21 +129,19 @@ else
                     </MudTd>
                 </RowTemplate>
             </MudTable>
-        </MudCardContent>
-    </MudCard>
+        </div>
+    </KitCard>
 
     @* ── Attributes ───────────────────────────────────────────────────── *@
-    <MudCard Class="mb-4">
-        <MudCardHeader>
-            <MudText Typo="Typo.h6">
-                @Loc["PkgAttributesCount", _plan.Changeset.Attributes.Count]
-                @if (_conflicts.Count > 0)
-                {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">@Loc["PkgConflictCount", _conflicts.Count]</MudChip>
-                }
-            </MudText>
-        </MudCardHeader>
-        <MudCardContent>
+    <KitCard Title="@Loc["PkgAttributesCount", _plan.Changeset.Attributes.Count]">
+        <Controls>
+            @if (_conflicts.Count > 0)
+            {
+                <Pill Tag="true" Warn="true">@Loc["PkgConflictCount", _conflicts.Count]</Pill>
+            }
+        </Controls>
+        <ChildContent>
+        <div class="pkg-review-body">
             <MudExpansionPanels MultiExpansion="true" Dense="true">
                 @foreach (var change in _plan.Changeset.Attributes)
                 {
@@ -224,8 +217,9 @@ else
                     </MudExpansionPanel>
                 }
             </MudExpansionPanels>
-        </MudCardContent>
-    </MudCard>
+        </div>
+        </ChildContent>
+    </KitCard>
 }
 </div>
 

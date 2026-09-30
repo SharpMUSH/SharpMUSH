@@ -95,6 +95,26 @@ public class LayoutEditorTests : TrackingBunitContext
 	}
 
 	/// <summary>
+	/// D1 §6.5: the editor opens with the kit's plain header (a way back, the scope as the title, its
+	/// actions as capsules with Preview a pressed toggle) and keeps its board full-bleed.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task OpensWithThePlainHeader_AndKeepsTheBoardFullBleed()
+	{
+		var cut = await RenderEditorAsync();
+
+		await Assert.That(cut.FindAll(".kit-page-head h1").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".layedit").ClassList).Contains("full-bleed");
+		await Assert.That(cut.Find(".kit-page-actions").TextContent).Contains("LayPublish");
+		var preview = cut.Find(".kit-page-actions [aria-pressed]");
+		await Assert.That(preview.TextContent).Contains("LayPreview");
+		await Assert.That(preview.GetAttribute("aria-pressed")).IsEqualTo("true").Because("the preview starts open");
+		preview.Click();
+		await Assert.That(cut.Find(".kit-page-actions [aria-pressed]").GetAttribute("aria-pressed")).IsEqualTo("false");
+		await Assert.That(cut.Find("a.layedit-back[href='/admin/layout']").TextContent).Contains("LayAllLayouts");
+	}
+
+	/// <summary>
 	/// The zone drop targets must set <c>AllowReorder</c>. Without it MudBlazor renders no
 	/// <c>mud-dropitem-placeholder</c> — so a drag shows no landing skeleton — and, worse,
 	/// <c>CommitTransaction</c> hands <c>ItemDropped</c> an index of <c>-1</c>, which clamps to 0 and

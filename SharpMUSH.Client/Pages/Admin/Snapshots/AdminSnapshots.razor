@@ -7,63 +7,84 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@Loc["SnapshotsTitle"]</PageTitle>
-<section class="snapshots">
-<MudStack Spacing="3">
-    <MudText Typo="Typo.h4">@Loc["SnapshotsTitle"]</MudText>
-    <MudText>@Loc["SnapshotsIntro"]</MudText>
-    <MudTextField @bind-Value="_target" @bind-Value:after="ClearTarget" Label="@Loc["SnapshotsObject"]" Variant="Variant.Outlined" />
-    <MudButton OnClick="Load" Disabled="_busy">@Loc["SnapshotsLoad"]</MudButton>
+<div class="snapshots">
+    <PlainPageHeader Kicker="@Loc["AdmSnapshotsKicker"]" Title="@Loc["SnapshotsTitle"]" Description="@Loc["SnapshotsIntro"]" />
+
     @if (_error is not null) { <MudAlert Severity="Severity.Error">@_error</MudAlert> }
     @if (_notice is not null) { <MudAlert Severity="Severity.Success">@_notice</MudAlert> }
-    @if (_history?.PendingRecoveryId is { } recovery)
-    {
-        <MudAlert Severity="Severity.Warning">@Loc["SnapshotsRecovery", recovery]</MudAlert>
-        <AuthorizeView Policy="snapshots.restore"><Authorized>
-            <MudText>@Loc["SnapshotsResolveHelp"]</MudText>
-            <MudButton Color="Color.Warning" OnClick="ResolveRecovery" Disabled="_busy">@Loc["SnapshotsResolve"]</MudButton>
-        </Authorized></AuthorizeView>
-    }
+
+    <KitCard>
+        <div class="snapshots-body">
+            <div class="snapshots-lookup">
+                <MudTextField @bind-Value="_target" @bind-Value:after="ClearTarget" Label="@Loc["SnapshotsObject"]" Variant="Variant.Outlined" />
+                <MudButton OnClick="Load" Disabled="_busy">@Loc["SnapshotsLoad"]</MudButton>
+            </div>
+            @if (_history?.PendingRecoveryId is { } recovery)
+            {
+                <MudAlert Severity="Severity.Warning">@Loc["SnapshotsRecovery", recovery]</MudAlert>
+                <AuthorizeView Policy="snapshots.restore"><Authorized>
+                    <MudText>@Loc["SnapshotsResolveHelp"]</MudText>
+                    <MudButton Color="Color.Warning" OnClick="ResolveRecovery" Disabled="_busy">@Loc["SnapshotsResolve"]</MudButton>
+                </Authorized></AuthorizeView>
+            }
+        </div>
+    </KitCard>
+
     <AuthorizeView Policy="snapshots.capture"><Authorized>
-    <MudTextField @bind-Value="_description" Label="@Loc["SnapshotsDescription"]" MaxLength="500" />
-    <MudNumericField T="int" @bind-Value="_retain" Min="1" Max="20" Label="@Loc["SnapshotsRetention"]" />
-    <MudButton Variant="Variant.Filled" OnClick="Capture" Disabled="_busy">@Loc["SnapshotsCapture"]</MudButton>
+        <KitCard Title="@Loc["SnapshotsCapture"]">
+            <div class="snapshots-body">
+                <MudTextField @bind-Value="_description" Label="@Loc["SnapshotsDescription"]" MaxLength="500" />
+                <MudNumericField T="int" @bind-Value="_retain" Min="1" Max="20" Label="@Loc["SnapshotsRetention"]" />
+                <div>
+                    <MudButton Variant="Variant.Filled" OnClick="Capture" Disabled="_busy">@Loc["SnapshotsCapture"]</MudButton>
+                </div>
+            </div>
+        </KitCard>
     </Authorized></AuthorizeView>
+
     @if (_history is not null)
     {
-        <MudSelect T="string" Value="_selected" ValueChanged="Select" Label="@Loc["SnapshotsChoose"]">
-            @foreach (var saved in _history.Snapshots)
-            {
-                <MudSelectItem T="string" Value="@saved.Id">@saved.Description — @DateTimeOffset.FromUnixTimeMilliseconds(saved.CreatedAt).ToLocalTime() (@saved.Id[..8])</MudSelectItem>
-            }
-        </MudSelect>
-    }
-    @if (_selected is not null)
-    {
-        <MudTextField @bind-Value="_attributes" @bind-Value:after="ClearPreview" Lines="5" ReadOnly="RecoverySelected" Label="@Loc["SnapshotsAttributes"]" HelperText="@Loc["SnapshotsAttributesHelp"]" />
-        <MudCheckBox Disabled="RecoverySelected" @bind-Value="_locks" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsLocks"]" />
-        <MudCheckBox Disabled="RecoverySelected" @bind-Value="_flags" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsFlags"]" />
-        <MudCheckBox Disabled="RecoverySelected" @bind-Value="_name" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsName"]" />
-        <AuthorizeView Policy="snapshots.restore">
-            <Authorized>
-                <MudButton OnClick="Preview" Disabled="_busy">@Loc["SnapshotsPreview"]</MudButton>
-                @if (_preview is not null)
+        <KitCard Title="@Loc["SnapshotsChoose"]">
+            <div class="snapshots-body">
+                <MudSelect T="string" Value="_selected" ValueChanged="Select" Label="@Loc["SnapshotsChoose"]">
+                    @foreach (var saved in _history.Snapshots)
+                    {
+                        <MudSelectItem T="string" Value="@saved.Id">@saved.Description — @DateTimeOffset.FromUnixTimeMilliseconds(saved.CreatedAt).ToLocalTime() (@saved.Id[..8])</MudSelectItem>
+                    }
+                </MudSelect>
+                @if (_selected is not null)
                 {
-                    <MudSimpleTable>
-                        <thead><tr><th>@Loc["SnapshotsField"]</th><th>@Loc["SnapshotsBefore"]</th><th>@Loc["SnapshotsAfter"]</th></tr></thead>
-                        <tbody>
-                            @foreach (var change in _preview.Changes)
+                    <MudTextField @bind-Value="_attributes" @bind-Value:after="ClearPreview" Lines="5" ReadOnly="RecoverySelected" Label="@Loc["SnapshotsAttributes"]" HelperText="@Loc["SnapshotsAttributesHelp"]" />
+                    <MudCheckBox Disabled="RecoverySelected" @bind-Value="_locks" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsLocks"]" />
+                    <MudCheckBox Disabled="RecoverySelected" @bind-Value="_flags" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsFlags"]" />
+                    <MudCheckBox Disabled="RecoverySelected" @bind-Value="_name" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsName"]" />
+                    <AuthorizeView Policy="snapshots.restore">
+                        <Authorized>
+                            <div>
+                                <MudButton OnClick="Preview" Disabled="_busy">@Loc["SnapshotsPreview"]</MudButton>
+                            </div>
+                            @if (_preview is not null)
                             {
-                                <tr><td>@change.Field @if (change.FormattingChanged) { <small>@Loc["SnapshotsFormattingChanged"]</small> }</td><td><pre>@change.Before</pre></td><td><pre>@change.After</pre></td></tr>
+                                <MudSimpleTable>
+                                    <thead><tr><th>@Loc["SnapshotsField"]</th><th>@Loc["SnapshotsBefore"]</th><th>@Loc["SnapshotsAfter"]</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var change in _preview.Changes)
+                                        {
+                                            <tr><td>@change.Field @if (change.FormattingChanged) { <small>@Loc["SnapshotsFormattingChanged"]</small> }</td><td><pre>@change.Before</pre></td><td><pre>@change.After</pre></td></tr>
+                                        }
+                                    </tbody>
+                                </MudSimpleTable>
+                                <div>
+                                    <MudButton Color="Color.Warning" Variant="Variant.Filled" OnClick="Restore" Disabled="_busy">@Loc["SnapshotsRestore"]</MudButton>
+                                </div>
                             }
-                        </tbody>
-                    </MudSimpleTable>
-                    <MudButton Color="Color.Warning" Variant="Variant.Filled" OnClick="Restore" Disabled="_busy">@Loc["SnapshotsRestore"]</MudButton>
+                        </Authorized>
+                    </AuthorizeView>
                 }
-            </Authorized>
-        </AuthorizeView>
+            </div>
+        </KitCard>
     }
-</MudStack>
-</section>
+</div>
 
 @code {
     private string _target = "", _description = "", _attributes = "";

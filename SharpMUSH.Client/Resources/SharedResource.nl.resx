@@ -4976,4 +4976,34 @@
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Beheerdersoverzicht</value>
   </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Beheer · Spellingcontrole</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Beheer · Database</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Beheren · Diagnose</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Beheren · Automatisering</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Bouwen · Herstel</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Filteren op soort</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Weergeven als</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Rollen of toewijzingen</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Handler-attributen</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Afbeelding uploaden</value>
+  </data>
 </root>

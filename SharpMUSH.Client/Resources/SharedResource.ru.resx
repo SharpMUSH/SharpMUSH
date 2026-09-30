@@ -4976,4 +4976,34 @@
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Оглавление для администраторов</value>
   </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Администрирование · Орфография</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Админ · База данных</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Управление · Диагностика</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Управление · Автоматизация</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Строительство · Восстановление</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Фильтр по типу</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Показать как</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Роли или назначения</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Атрибуты обработчика</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Загрузить изображение</value>
+  </data>
 </root>

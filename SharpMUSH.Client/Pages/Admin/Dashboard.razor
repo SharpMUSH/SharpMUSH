@@ -1,52 +1,80 @@
 @page "/admin"
 @attribute [Authorize(Policy = "players.view")]
 @inject IStringLocalizer<SharedResource> Loc
+@inject IAuthorizationService Authorization
 
 <PageTitle>@Loc["AdmDashboardTitle"] — @Loc["AppTitle"]</PageTitle>
 
-<div style="padding:var(--cpad);">
-    <div class="ph-header">
-        <div class="ph-kicker">@Loc["AdmKicker"]</div>
-        <h1 class="ph-title">@Loc["AdmDashboardTitle"]</h1>
-    </div>
+@* D1 §6.5: the plain header over a grid of linked tool cards, laid out like the configuration home
+   (board 27). Each card sits behind the same gate as the page it opens, so a viewer is only offered
+   the tools they can actually use. *@
+<div class="adm-dash">
+    <PlainPageHeader Kicker="@Loc["AdmKicker"]" Title="@Loc["AdmDashboardTitle"]" />
 
-    <div class="ph-grid">
-        @foreach (var card in _cards)
+    <div class="adm-dash-grid">
+        @foreach (var card in _visible)
         {
-            <a href="@card.Href" class="ph-card">
-                <div class="ph-card-icon">
-                    <MudIcon Icon="@card.Icon" />
-                </div>
-                <div class="ph-card-body">
-                    <div class="ph-card-title">@Loc[card.TitleKey]</div>
-                    <div class="ph-card-action">@Loc[card.ActionKey]</div>
-                </div>
-                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Class="ph-card-chevron" />
+            <a href="@card.Href" class="adm-dash-card">
+                <span class="adm-dash-icon" aria-hidden="true"><MudIcon Icon="@card.Icon" Size="Size.Small" /></span>
+                <span class="adm-dash-text">
+                    <span class="adm-dash-title">@Loc[card.TitleKey]</span>
+                    <span class="adm-dash-desc">@Loc[card.ActionKey]</span>
+                </span>
+                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Class="adm-dash-chevron" />
             </a>
         }
     </div>
 </div>
 
 @code {
-    private record AdminCard(string TitleKey, string ActionKey, string Href, string Icon);
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
-    private readonly AdminCard[] _cards =
+    /// <summary>A tool and its gate: visible when the viewer satisfies any one policy or holds any one role.</summary>
+    private sealed record AdminCard(string TitleKey, string ActionKey, string Href, string Icon, string[] Policies, string[]? Roles = null);
+
+    private static readonly AdminCard[] Cards =
     [
-        new("DiagTitle", "DiagDescription", "/admin/diagnostics", Icons.Material.Filled.QueryStats),
-        new("AdmPlayersTitle", "AdmPlayersAction", "/admin/players", Icons.Material.Filled.Group),
-        new("AdmAccountsTitle", "AdmAccountsAction", "/admin/accounts", Icons.Material.Filled.ManageAccounts),
-        new("Characters", "AdmCharactersAction", "/admin/characters", Icons.Material.Filled.Person),
-        new("AdmProfilesTitle", "AdmProfilesAction", "/admin/profiles", Icons.Material.Filled.Badge),
-        new("Configuration", "AdmConfigAction", "/admin/config", Icons.Material.Filled.Settings),
-        new("AdmRolesTitle", "AdmRolesAction", "/admin/roles", Icons.Material.Filled.Shield),
-        new("AdmModerationTitle", "AdmModerationAction", "/admin/moderation", Icons.Material.Filled.Gavel),
-        new("Suggestions", "AdmSuggestionsAction", "/admin/suggestions", Icons.Material.Filled.Lightbulb),
-        new("WikiAdmin", "WikiAdmin", "/admin/wiki", Icons.Material.Filled.MenuBook),
-        new("AdmMediaTitle", "AdmMediaAction", "/admin/media", Icons.Material.Filled.PermMedia),
-        new("AdmApplicationsTitle", "AdmApplicationsAction", "/admin/applications", Icons.Material.Filled.Apps),
-        new("AdmPackagesTitle", "AdmPackagesAction", "/admin/packages", Icons.Material.Filled.Inventory2),
-        new("AdmLayoutTitle", "AdmLayoutAction", "/admin/layout", Icons.Material.Filled.Dashboard),
-        new("Server", "AdmServerAction", "/admin/server", Icons.Material.Filled.Dns),
-        new("AdmDatabaseImportTitle", "AdmDatabaseImportAction", "/admin/database/import", Icons.Material.Filled.CloudUpload),
+        new("DiagTitle", "DiagDescription", "/admin/diagnostics", Icons.Material.Filled.QueryStats, ["queue.inspect", "queue.inspect.own"]),
+        new("AdmPlayersTitle", "AdmPlayersAction", "/admin/players", Icons.Material.Filled.Group, ["players.view"]),
+        new("AdmAccountsTitle", "AdmAccountsAction", "/admin/accounts", Icons.Material.Filled.ManageAccounts, [], ["Wizard", "God"]),
+        new("Characters", "AdmCharactersAction", "/admin/characters", Icons.Material.Filled.Person, ["players.view"]),
+        new("AdmProfilesTitle", "AdmProfilesAction", "/admin/profiles", Icons.Material.Filled.Badge, ["players.moderate"]),
+        new("Configuration", "AdmConfigAction", "/admin/config", Icons.Material.Filled.Settings, ["config.admin"]),
+        new("AdmRolesTitle", "AdmRolesAction", "/admin/roles", Icons.Material.Filled.Shield, ["roles.admin"]),
+        new("AdmModerationTitle", "AdmModerationAction", "/admin/moderation", Icons.Material.Filled.Gavel, ["players.moderate"]),
+        new("Suggestions", "AdmSuggestionsAction", "/admin/suggestions", Icons.Material.Filled.Lightbulb, ["config.admin"]),
+        new("WikiAdmin", "WikiAdmin", "/admin/wiki", Icons.Material.Filled.MenuBook, ["wiki.admin"]),
+        new("AdmMediaTitle", "AdmMediaAction", "/admin/media", Icons.Material.Filled.PermMedia, ["media.admin"]),
+        new("AdmApplicationsTitle", "AdmApplicationsAction", "/admin/applications", Icons.Material.Filled.Apps, ["applications.admin"]),
+        new("AdmPackagesTitle", "AdmPackagesAction", "/admin/packages", Icons.Material.Filled.Inventory2, ["packages.admin"]),
+        new("AdmLayoutTitle", "AdmLayoutAction", "/admin/layout", Icons.Material.Filled.Dashboard, ["layout.admin"]),
+        new("Server", "AdmServerAction", "/admin/server", Icons.Material.Filled.Dns, ["server.admin"]),
+        new("AdmDatabaseImportTitle", "AdmDatabaseImportAction", "/admin/database/import", Icons.Material.Filled.CloudUpload, ["server.admin"]),
     ];
+
+    private IReadOnlyList<AdminCard> _visible = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Every card used to render for anyone who could open /admin, so a viewer with players.view
+        // alone was offered configuration, roles and the database import, and met a refusal on each.
+        if (AuthState is null) return;
+        var user = (await AuthState).User;
+        var visible = new List<AdminCard>();
+        foreach (var card in Cards)
+        {
+            if (await MayOpenAsync(user, card)) visible.Add(card);
+        }
+        _visible = visible;
+    }
+
+    private async Task<bool> MayOpenAsync(System.Security.Claims.ClaimsPrincipal user, AdminCard card)
+    {
+        if (card.Roles?.Any(user.IsInRole) == true) return true;
+        foreach (var policy in card.Policies)
+        {
+            if ((await Authorization.AuthorizeAsync(user, policy)).Succeeded) return true;
+        }
+        return false;
+    }
 }

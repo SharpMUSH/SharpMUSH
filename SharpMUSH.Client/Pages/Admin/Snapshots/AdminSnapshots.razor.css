@@ -1,6 +1,23 @@
 .snapshots {
-    padding: var(--cpad);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: var(--main-pad);
     min-width: 0;
+}
+
+.snapshots-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px 16px;
+    min-width: 0;
+}
+
+.snapshots-lookup {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .snapshots pre {
@@ -21,6 +38,11 @@
 }
 
 @container page (max-width: 48rem) {
+    .snapshots-lookup {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
     .snapshots ::deep .mud-button-root {
         width: 100%;
     }

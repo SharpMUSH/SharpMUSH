@@ -12,185 +12,142 @@
 <PageTitle>@Loc["PkgPackages"] — @Loc["PkgAdminSection"] — @Loc["AppTitle"]</PageTitle>
 
 <div class="pkg-page">
-    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.25rem;">
-        <MudText Typo="Typo.h4" Style="font-weight:700;">@Loc["PkgSoftcodePackages"]</MudText>
-        <MudSpacer />
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.TravelExplore"
-                   Href="/admin/packages/browse">@Loc["PkgBrowse"]</MudButton>
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Cloud"
-                   Href="/admin/packages/remotes">@Loc["PkgRemotes"]</MudButton>
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit"
-                   Href="/admin/packages/author">@Loc["PkgAuthor"]</MudButton>
-        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
-                       OnClick="ReloadAsync" Disabled="_busy" />
-    </div>
-    <MudText Style="color:var(--text-dim);font-size:0.875rem;margin-bottom:1.25rem;">
-        @Loc["PkgInstalledDescription"]
-    </MudText>
+    <PlainPageHeader Kicker="@Loc["PkgKickerRegistry"]" Title="@Loc["PkgSoftcodePackages"]" Description="@Loc["PkgInstalledDescription"]">
+        <Actions>
+            <CapsuleButton Icon="@Icons.Material.Filled.TravelExplore" Href="/admin/packages/browse">@Loc["PkgBrowse"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Filled.Cloud" Href="/admin/packages/remotes">@Loc["PkgRemotes"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Filled.Edit" Href="/admin/packages/author">@Loc["PkgAuthor"]</CapsuleButton>
+            <CapsuleButton Icon="@Icons.Material.Filled.Refresh" AriaLabel="@Loc["Refresh"]" OnClick="ReloadAsync" Disabled="_busy" />
+        </Actions>
+    </PlainPageHeader>
 
-    <div class="pkg-stat-grid">
-        @{
-            var updatesAvailable = _installed is not null ? _installed.Count(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable) : 0;
-        }
-        @foreach (var tile in new[]
+    @{
+        var updatesAvailable = _installed?.Count(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable) ?? 0;
+    }
+    <AdminStats>
+        <AdminStat Key="installed" Icon="@Icons.Material.Filled.Archive" Label="@Loc["PkgInstalled"]"
+                   Value="@(_installed?.Count.ToString() ?? "—")" />
+        <AdminStat Key="updates" Icon="@Icons.Material.Filled.SystemUpdate" Label="@Loc["PkgUpdatesAvailable"]"
+                   Value="@(_installed is null ? "—" : updatesAvailable.ToString())" />
+        <AdminStat Key="remotes" Icon="@Icons.Material.Filled.Cloud" Label="@Loc["PkgRemotes"]"
+                   Value="@(_remoteCount?.ToString() ?? "—")" />
+        <AdminStat Key="objects" Icon="@Icons.Material.Filled.DataObject" Label="@Loc["PkgObjects"]"
+                   Value="@(_installed?.Sum(p => p.ObjectCount).ToString() ?? "—")" />
+    </AdminStats>
+
+    <KitCard>
+        @if (_installed is not null)
         {
-            (_installed?.Count.ToString() ?? "—",         "PkgInstalled",        Icons.Material.Filled.Archive,      "var(--accent)"),
-            (updatesAvailable.ToString(),                  "PkgUpdatesAvailable", Icons.Material.Filled.SystemUpdate, "#6cde9a"),
-            ("—",                                         "PkgRemotes",          Icons.Material.Filled.Cloud,        "#5aa9ff"),
-            (_installed?.Sum(p => p.ObjectCount).ToString() ?? "—", "PkgObjects", Icons.Material.Filled.DataObject,   "#b39cff"),
-        })
-        {
-            var (val, labelKey, icon, color) = tile;
-            <MudPaper Elevation="0" Style="@($"padding:1rem 1.125rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);")">
-                <div style="display:flex;align-items:center;gap:0.75rem;">
-                    <MudIcon Icon="@icon" Style="@($"color:{color};font-size:1.375rem;")" />
-                    <div>
-                        <MudText Style="@($"font-size:1.375rem;font-weight:700;color:{color};line-height:1.1;")">
-                            @(_installed is null ? "—" : val)
-                        </MudText>
-                        <MudText Class="section-kicker" Style="opacity:0.7;">@Loc[labelKey]</MudText>
-                    </div>
+            <div class="pkg-tabs">
+                <button type="button" class="pkg-tab @(_tab == PkgTab.Installed ? "active" : "")" aria-pressed="@(_tab == PkgTab.Installed ? "true" : "false")"
+                        @onclick="@(() => _tab = PkgTab.Installed)">
+                    @Loc["PkgInstalled"]
+                    <span class="pkg-tab-count">@_installed.Count</span>
+                </button>
+                <button type="button" class="pkg-tab @(_tab == PkgTab.Updates ? "active" : "")" aria-pressed="@(_tab == PkgTab.Updates ? "true" : "false")"
+                        @onclick="@(() => _tab = PkgTab.Updates)">
+                    @Loc["PkgUpdates"]
+                    <span class="pkg-tab-count">@updatesAvailable</span>
+                </button>
+                <div class="pkg-tabs-spacer"></div>
+                <div class="pkg-search">
+                    <MudIcon Icon="@Icons.Material.Filled.Search" Class="pkg-search-icon" />
+                    <input type="text" placeholder="@Loc["PkgSearchPlaceholder"]" aria-label="@Loc["PkgSearchPlaceholder"]" value="@_search"
+                           @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
                 </div>
-            </MudPaper>
-        }
-    </div>
-
-    @if (_installed is not null)
-    {
-        var installedCount = _installed.Count;
-        var updateCount = _installed.Count(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable);
-        <div class="pkg-tabs">
-            <button class="pkg-tab @(_tab == PkgTab.Installed ? "active" : "")" @onclick="@(() => _tab = PkgTab.Installed)">
-                @Loc["PkgInstalled"]
-                <span class="pkg-tab-count">@installedCount</span>
-            </button>
-            <button class="pkg-tab @(_tab == PkgTab.Updates ? "active" : "")" @onclick="@(() => _tab = PkgTab.Updates)">
-                @Loc["PkgUpdates"]
-                <span class="pkg-tab-count">@updateCount</span>
-            </button>
-            <div style="flex:1;"></div>
-            <div class="pkg-search">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:1rem;color:var(--text-faint);" />
-                <input type="text" placeholder="@Loc["PkgSearchPlaceholder"]" value="@_search"
-                       @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
             </div>
-        </div>
-    }
-
-    @if (_installed is null)
-    {
-        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
-        @for (var i = 0; i < 4; i++) { <MudSkeleton Height="64px" Class="mb-2" /> }
-    }
-    else if (_installed.Count == 0)
-    {
-        <EmptyState>
-            @Loc["PkgNoneInstalled"]
-        </EmptyState>
-    }
-    else
-    {
-        var visible = FilteredPackages().ToList();
-        if (visible.Count == 0)
-        {
-            <EmptyState>
-                @(_tab == PkgTab.Updates ? Loc["PkgNoUpdatesAvailable"] : Loc["PkgNoSearchMatch"])
-            </EmptyState>
         }
-        <div style="display:flex;flex-direction:column;gap:0.5rem;">
-            @foreach (var pkg in visible)
+
+        <div class="pkg-body">
+            @if (_installed is null)
             {
-                var p = pkg;
-                _updates.TryGetValue(p.Package.Id, out var update);
-                <MudPaper Elevation="0"
-                          Style="display:flex;align-items:center;gap:1rem;padding:0.875rem 1.125rem;border-radius:var(--radius);background:var(--surface);"
-                          Class="pkg-row">
-                    <MudIcon Icon="@Icons.Material.Filled.Archive"
-                             Style="font-size:1.25rem;color:var(--accent);flex-shrink:0;" />
-                    <div style="flex:1;min-width:0;">
-                        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.125rem;">
-                            <MudText Style="font-size:0.875rem;font-weight:600;">@p.Package.Id</MudText>
-                            <MudChip T="string" Size="Size.Small"
-                                     Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;border:1px solid var(--border);">
-                                v@(p.Package.Version)
-                            </MudChip>
-                            @if (!string.IsNullOrEmpty(p.Package.SourceRepo))
-                            {
-                                <MudChip T="string" Size="Size.Small"
-                                         Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;background:rgba(90,169,255,0.10);color:#5aa9ff;">
-                                    @p.Package.SourceRepo
-                                </MudChip>
-                            }
-                            @if (update is not null)
-                            {
-                                @if (update.InstalledTagMoved)
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                @for (var i = 0; i < 4; i++) { <MudSkeleton Height="64px" Class="mb-2" /> }
+            }
+            else if (_installed.Count == 0)
+            {
+                <EmptyState>
+                    @Loc["PkgNoneInstalled"]
+                </EmptyState>
+            }
+            else
+            {
+                var visible = FilteredPackages().ToList();
+                if (visible.Count == 0)
+                {
+                    <EmptyState>
+                        @(_tab == PkgTab.Updates ? Loc["PkgNoUpdatesAvailable"] : Loc["PkgNoSearchMatch"])
+                    </EmptyState>
+                }
+                <div class="pkg-rows">
+                    @foreach (var pkg in visible)
+                    {
+                        var p = pkg;
+                        _updates.TryGetValue(p.Package.Id, out var update);
+                        <div class="pkg-row">
+                            <MudIcon Icon="@Icons.Material.Filled.Archive" Class="pkg-row-icon" />
+                            <div class="pkg-row-main">
+                                <div class="pkg-row-tags">
+                                    <span class="pkg-row-name">@p.Package.Id</span>
+                                    <Pill Tag="true">v@(p.Package.Version)</Pill>
+                                    @if (!string.IsNullOrEmpty(p.Package.SourceRepo))
+                                    {
+                                        <Pill Tag="true">@p.Package.SourceRepo</Pill>
+                                    }
+                                    @if (update is not null)
+                                    {
+                                        @if (update.InstalledTagMoved)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Error">@Loc["PkgTagMoved"]</MudChip>
+                                        }
+                                        else if (update.UpdateAvailable)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Success">@Loc["PkgVersionAvailable", update.LatestVersion ?? string.Empty]</MudChip>
+                                        }
+                                        else
+                                        {
+                                            <Pill Tag="true">@Loc["PkgCurrent"]</Pill>
+                                        }
+                                        @if (update.PathChangedAtHead)
+                                        {
+                                            <Pill Tag="true" Warn="true">@Loc["PkgDevDrift"]</Pill>
+                                        }
+                                    }
+                                </div>
+                                <div class="pkg-row-meta">
+                                    <span>@Loc["PkgInstalledOn", p.Package.InstalledAt.ToString("yyyy-MM-dd")]</span>
+                                    <span>@Loc["PkgObjAttrCounts", p.ObjectCount, p.ManagedAttributeCount]</span>
+                                    @if (p.Dependents.Count > 0)
+                                    {
+                                        <span>@Loc["PkgRequiredBy", string.Join(", ", p.Dependents)]</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="pkg-row-actions">
+                                @if (update is null)
                                 {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Error"
-                                             Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">
-                                        @Loc["PkgTagMoved"]
-                                    </MudChip>
+                                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                                               Disabled="@_busy"
+                                               OnClick="@(() => CheckUpdateAsync(p.Package.Id))">
+                                        @Loc["PkgCheck"]
+                                    </MudButton>
                                 }
-                                else if (update.UpdateAvailable)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Success"
-                                             Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">
-                                        @Loc["PkgVersionAvailable", update.LatestVersion ?? string.Empty]
-                                    </MudChip>
-                                }
-                                else
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Default"
-                                             Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">
-                                        @Loc["PkgCurrent"]
-                                    </MudChip>
-                                }
-                                @if (update.PathChangedAtHead)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                             Style="height:18px;font-size:0.625rem;padding:0 0.3125rem;">
-                                        @Loc["PkgDevDrift"]
-                                    </MudChip>
-                                }
-                            }
+                                <MudTooltip Text="@Loc["PkgRevisionHistory"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" aria-label="@Loc["PkgRevisionHistory"]"
+                                                   OnClick="@(() => OpenHistoryAsync(p.Package.Id))" />
+                                </MudTooltip>
+                                <MudTooltip Text="@Loc["PkgUninstall"]">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" aria-label="@Loc["PkgUninstall"]"
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => OpenUninstall(p))" />
+                                </MudTooltip>
+                            </div>
                         </div>
-                        <div style="display:flex;align-items:center;gap:0.75rem;">
-                            <MudText Style="font-size:0.75rem;color:var(--text-faint);">
-                                @Loc["PkgInstalledOn", p.Package.InstalledAt.ToString("yyyy-MM-dd")]
-                            </MudText>
-                            <MudText Style="font-size:0.75rem;color:var(--text-faint);">
-                                @Loc["PkgObjAttrCounts", p.ObjectCount, p.ManagedAttributeCount]
-                            </MudText>
-                            @if (p.Dependents.Count > 0)
-                            {
-                                <MudText Style="font-size:0.75rem;color:var(--text-faint);">
-                                    @Loc["PkgRequiredBy", string.Join(", ", p.Dependents)]
-                                </MudText>
-                            }
-                        </div>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:0.25rem;flex-shrink:0;">
-                        @if (update is null)
-                        {
-                            <MudButton Variant="Variant.Text" Size="Size.Small"
-                                       Disabled="@_busy"
-                                       OnClick="@(() => CheckUpdateAsync(p.Package.Id))">
-                                @Loc["PkgCheck"]
-                            </MudButton>
-                        }
-                        <MudTooltip Text="@Loc["PkgRevisionHistory"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small"
-                                           OnClick="@(() => OpenHistoryAsync(p.Package.Id))" />
-                        </MudTooltip>
-                        <MudTooltip Text="@Loc["PkgUninstall"]">
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                           Color="Color.Error"
-                                           OnClick="@(() => OpenUninstall(p))" />
-                        </MudTooltip>
-                    </div>
-                </MudPaper>
+                    }
+                </div>
             }
         </div>
-    }
+    </KitCard>
 </div>
 
 <MudDialog @bind-Visible="_showHistory" Options="@(new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true })">
@@ -259,6 +216,9 @@
     private enum PkgTab { Installed, Updates }
 
     private IReadOnlyList<InstalledPackageDto>? _installed;
+
+    /// <summary>How many remotes are configured; null until read, or when the read failed.</summary>
+    private int? _remoteCount;
     private readonly Dictionary<string, PackageUpdateInfo> _updates = new();
     private bool _busy;
 
@@ -292,6 +252,14 @@
         {
             IReadOnlyList<InstalledPackageDto> packages => packages,
             ApiFailure failure => Failed(failure)
+        };
+
+        // The remotes tile used to read "—" whatever was configured: nothing ever asked. A failed read
+        // leaves it at "—" without a snackbar; the installed list above is what the page is for.
+        _remoteCount = await Packages.GetRemotesAsync() switch
+        {
+            IReadOnlyList<PackageRemoteRecord> remotes => remotes.Count,
+            ApiFailure => null
         };
 
         IReadOnlyList<InstalledPackageDto> Failed(ApiFailure failure)

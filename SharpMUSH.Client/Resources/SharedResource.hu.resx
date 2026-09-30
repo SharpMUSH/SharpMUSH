@@ -4976,4 +4976,34 @@
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Adminisztrátori tartalomjegyzék</value>
   </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Adminisztráció · Helyesírás</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Adatbázis</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Kezelés · Diagnosztika</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Kezelés · Automatizálás</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Építés · Helyreállítás</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Szűrés típus szerint</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Megjelenítés</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Szerepkörök vagy hozzárendelések</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>A kezelő attribútumai</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Kép feltöltése</value>
+  </data>
 </root>
