@@ -89,8 +89,8 @@ public class Program
 		// default, so no header is trusted until an operator explicitly configures the proxy hop.
 		app.UseForwardedHeaders();
 
-		// Before the static-file and Blazor-framework middleware, so it can compress what they serve.
-		// The pre-brotlied _framework files already carry a Content-Encoding and are skipped.
+		// Early, so it can compress what everything below serves. Responses that already carry a
+		// Content-Encoding — the precompressed portal assets — are skipped, never encoded twice.
 		app.UseResponseCompression();
 
 		app.UseRouting();
@@ -110,11 +110,11 @@ public class Program
 		// ── URL canonicalisation: must run before static files so redirects fire first
 		app.UseMiddleware<CanonicalUrlMiddleware>();
 
-		// Serve the bundled Blazor WASM portal's framework files (_framework/*, blazor.boot.json,
-		// compressed variants) with the correct content types, then its static assets. Paired with
-		// MapFallbackToFile("index.html") below so the SPA is served from this server.
-		app.UseBlazorFrameworkFiles();
-		app.UseStaticFiles();
+		// The bundled Blazor WASM portal. A published image serves it from the client's endpoints
+		// manifest via MapStaticAssets (mapped with the SPA fallback below); without the manifest this
+		// falls back to the Blazor-framework and static-file middleware. See PortalStaticFiles.
+		var portalManifest = PortalStaticFiles.FindManifest(env);
+		app.UsePortalStaticFiles(portalManifest);
 
 		app.UseMiddleware<BotDetectionMiddleware>();
 
@@ -189,9 +189,9 @@ public class Program
 
 		app.MapPrometheusScrapingEndpoint();
 
-		// SPA fallback: all non-API, non-static routes serve index.html so that
-		// Blazor WASM handles client-side routing (deep links, browser refresh).
-		app.MapFallbackToFile("index.html");
+		// The portal's asset endpoints, and the SPA fallback: all non-API, non-file routes serve
+		// index.html (no-cache) so that Blazor WASM handles client-side routing (deep links, refresh).
+		app.MapPortal(portalManifest);
 
 		return app;
 	}

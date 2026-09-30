@@ -386,7 +386,9 @@ docker compose -f docker-compose.cloudflare.yml up -d connectionserver
 ```
 
 Nothing on the box ever builds, and no inbound access is required. There is no separate client
-image — the Blazor WASM portal is baked into the server image at build time.
+image — the Blazor WASM portal is baked into the server image at build time, together with its
+static-assets endpoints manifest, from which the server takes each file's caching and compression
+headers (fingerprinted files are cached as immutable, `index.html` is always revalidated).
 
 To update the *other* services (nats, cloudflared, backup — deliberately outside watchtower's
 label scope) or to force an immediate app update instead of waiting for the poll:

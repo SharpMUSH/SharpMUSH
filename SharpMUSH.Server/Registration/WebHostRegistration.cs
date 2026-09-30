@@ -63,16 +63,16 @@ internal static class WebHostRegistration
 	public static IServiceCollection AddSharpMushHttpPipeline(
 		this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
 	{
-		// Compress what we send. Only the Blazor _framework files arrived compressed before, because
-		// UseBlazorFrameworkFiles serves pre-brotlied copies of those and nothing else was covered —
-		// so a cold first visit pulled 15.0 MB, with Monaco's editor.api (3.67 MB), Mermaid (2.57 MB),
+		// Compress what we send that is not already compressed: API and hub responses, index.html via
+		// the SPA fallback, and — when there is no portal endpoints manifest (a dev run, a test host) —
+		// the portal's own files. A published image serves the portal's precompressed .br/.gz through
+		// MapStaticAssets (PortalStaticFiles), and responses that already carry a Content-Encoding are
+		// skipped by this middleware, so nothing is compressed twice. Before either existed a cold
+		// first visit pulled 15.0 MB, with Monaco's editor.api (3.67 MB), Mermaid (2.57 MB),
 		// MudBlazor's CSS and mush-defs.json all going out as raw bytes.
 		//
-		// Fastest, not Optimal: this compresses on the fly, and the largest asset here is several
-		// megabytes — paying maximum-ratio brotli per request would trade a download stall for a
-		// server stall. Fastest still takes those files down by roughly an order of magnitude.
-		// Responses that already carry a Content-Encoding (the pre-brotlied _framework files) are
-		// skipped by the middleware, so nothing is compressed twice.
+		// Fastest, not Optimal: this compresses on the fly, and paying maximum-ratio brotli per
+		// request would trade a download stall for a server stall.
 		services.AddResponseCompression(options =>
 		{
 			options.EnableForHttps = true;

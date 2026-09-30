@@ -145,7 +145,7 @@ MUSH-specific policy (space-list semantics, `compressSpaces`, glob-to-regex, col
 
 ### Web Portal (SharpMUSH.Client)
 
-The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all non-API routes → `index.html`).
+The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all non-API, non-file routes → `index.html`, sent `Cache-Control: no-cache`). A published image serves the assets through `MapStaticAssets` from the client's `SharpMUSH.Client.staticwebassets.endpoints.json`, copied into the server's content root by the `Dockerfile`: fingerprinted files get `immutable` caching and every asset its precompressed `.br`/`.gz`. Without the manifest (dev runs, test hosts) it falls back to `UseBlazorFrameworkFiles` + `UseStaticFiles`. See `SharpMUSH.Server/PortalStaticFiles.cs`.
 
 **Key services registered at startup:**
 
