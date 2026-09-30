@@ -1,5 +1,4 @@
 using System.Threading.Channels;
-using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -44,6 +43,7 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 	private readonly ILogger<NatsBridgeService> _logger;
 	private readonly PluginCatalog _pluginCatalog;
 	private readonly IRoomEventDispatcher _roomDispatcher;
+	private readonly ServerReadiness _readiness;
 
 	public NatsBridgeService(
 		IHubContext<GameHub, IGameHubClient> hubContext,
@@ -51,7 +51,8 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 		NatsOptions natsOptions,
 		PluginCatalog pluginCatalog,
 		ILogger<NatsBridgeService> logger,
-		IRoomEventDispatcher roomDispatcher)
+		IRoomEventDispatcher roomDispatcher,
+		ServerReadiness readiness)
 	{
 		_hubContext = hubContext;
 		_pluginHubContext = pluginHubContext;
@@ -59,6 +60,7 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 		_pluginCatalog = pluginCatalog;
 		_logger = logger;
 		_roomDispatcher = roomDispatcher;
+		_readiness = readiness;
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -77,17 +79,31 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 				nats = new NatsConnection(new NatsOpts { Url = _natsOptions.Url });
 				await nats.ConnectAsync();
 				_logger.LogInformation("[NatsBridge] Connected. Subscribing to game.output.* and game.room.* (game.scene.* is now a plugin bridge leg)");
+
+				// Subscribe before reporting ready. Core NATS does not replay: output published before the
+				// server has registered the SUB is gone, and readiness is what lets a portal load and send
+				// commands. SubscribeCoreAsync returns once the SUB is written; the PING that follows is
+				// answered only after the server has processed everything sent before it.
+				await using var output = await nats.SubscribeCoreAsync("game.output.*",
+					serializer: NatsJsonSerializer<GameOutputMessage>.Default, cancellationToken: stoppingToken);
+				await using var rooms = await nats.SubscribeCoreAsync("game.room.*",
+					serializer: NatsJsonSerializer<RoomEventMessage>.Default, cancellationToken: stoppingToken);
+				await nats.PingAsync(stoppingToken);
+
+				var connection = nats;
+				_readiness.SetBridgeConnection(() => connection.ConnectionState == NatsConnectionState.Open);
 				delay = 2;
 
 				var subscriptionTasks = new List<Task>
 				{
-					SubscribeOutputAsync(nats, stoppingToken),
-					SubscribeRoomAsync(nats, stoppingToken)
+					ForwardOutputAsync(output.Msgs.ReadAllAsync(stoppingToken)),
+					ForwardRoomEventsAsync(RoomMessages(rooms.Msgs.ReadAllAsync(stoppingToken)), stoppingToken)
 				};
 
 				// Phase 2a: run each plugin-contributed bridge subscription (IBridgeSubscriptionSource)
 				// alongside the built-ins. Each is wrapped so a single failing subscription is logged and
-				// cannot tear down the bridge loop (or the other subscriptions).
+				// cannot tear down the bridge loop (or the other subscriptions). A source subscribes inside
+				// its own RunAsync, so readiness cannot wait on it; plugin legs (scenes) are best-effort.
 				foreach (var source in _pluginCatalog.BridgeSources)
 				{
 					subscriptionTasks.Add(RunBridgeSourceAsync(source, nats, stoppingToken));
@@ -116,6 +132,7 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 			}
 			finally
 			{
+				_readiness.SetBridgeConnection(null);
 				if (nats is not null)
 					await nats.DisposeAsync();
 			}
@@ -148,13 +165,10 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 		}
 	}
 
-	private async Task SubscribeOutputAsync(NatsConnection nats, CancellationToken ct)
+	private async Task ForwardOutputAsync(IAsyncEnumerable<NatsMsg<GameOutputMessage>> messages)
 	{
 		// Subject wildcard: "game.output.*" — the last token is the character dbref.
-		await foreach (var msg in nats.SubscribeAsync<GameOutputMessage>(
-			"game.output.*",
-			serializer: NatsJsonSerializer<GameOutputMessage>.Default,
-			cancellationToken: ct))
+		await foreach (var msg in messages)
 		{
 			if (msg.Data is null) continue;
 
@@ -237,14 +251,9 @@ public sealed class NatsBridgeService : BackgroundService, INatsBridgeService
 		}
 	}
 
-	private Task SubscribeRoomAsync(NatsConnection nats, CancellationToken ct)
-		=> ForwardRoomEventsAsync(RoomMessages(nats, ct), ct);
-
-	private static async IAsyncEnumerable<RoomEventMessage> RoomMessages(NatsConnection nats,
-		[EnumeratorCancellation] CancellationToken ct)
+	private static async IAsyncEnumerable<RoomEventMessage> RoomMessages(IAsyncEnumerable<NatsMsg<RoomEventMessage>> messages)
 	{
-		await foreach (var message in nats.SubscribeAsync<RoomEventMessage>("game.room.*",
-			serializer: NatsJsonSerializer<RoomEventMessage>.Default, cancellationToken: ct))
+		await foreach (var message in messages)
 			if (message.Data is { } data) yield return data;
 	}
 }
