@@ -163,6 +163,9 @@ public class AccountAuthService(
 	private Task? _initTask;
 	private Task<DebugOttResponse?>? _debugOttTask;
 
+	/// <summary>Keyed by session token, so a sign-in mid-request never joins the previous session's roster read.</summary>
+	private readonly SingleFlight<string, ServerResult<IReadOnlyList<CharacterSummary>>> _charactersFlight = new(StringComparer.Ordinal);
+
 	/// <summary>
 	/// Single-flight, idempotent hydration: the first caller kicks off <see cref="InitCoreAsync"/>
 	/// and every caller (that one and any later one, concurrent or sequential) awaits the very
@@ -231,38 +234,91 @@ public class AccountAuthService(
 		// Stored grants are never authority: roles can migrate or be revoked while this tab is closed.
 		Role = null;
 		Permissions = [];
+		if (await LoadSessionAuthorityAsync(AccountSessionToken) == SessionAuthorityLoad.Failed)
+		{
+			// The credential stays usable, but with no role or grant the tab is a Guest until the server
+			// answers. InitAsync is cached for the life of the tab, so without this one timed-out refresh
+			// — a server restarting, a dropped request — would leave it that way until a reload.
+			_ = RetrySessionAuthorityAsync();
+		}
+	}
+
+	private enum SessionAuthorityLoad { Loaded, SignedOut, Failed, Superseded }
+
+	/// <summary>How long to wait between attempts after the session's authority could not be loaded.
+	/// The last delay repeats until <see cref="SessionAuthorityRetryLimit"/>. Settable for tests.</summary>
+	public IReadOnlyList<TimeSpan> SessionAuthorityRetryDelays { get; set; } =
+		[TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30)];
+
+	/// <summary>How long to keep retrying before leaving the tab as it is.</summary>
+	public TimeSpan SessionAuthorityRetryLimit { get; set; } = TimeSpan.FromMinutes(10);
+
+	/// <summary>Loads the current role, grants and name for <paramref name="token"/> from the server.</summary>
+	private async Task<SessionAuthorityLoad> LoadSessionAuthorityAsync(string? token)
+	{
 		try
 		{
-			// Authentication-state queries share this bootstrap task; a stalled refresh must not
-			// hold public rendering for the named client's much longer default timeout.
+			// Authentication-state queries share the bootstrap task; a stalled refresh must not hold
+			// public rendering for the named client's much longer default timeout.
 			using var refresh = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-			var token = AccountSessionToken;
 			using var request = new HttpRequestMessage(HttpMethod.Get, "api/account/session");
 			// The bearer handler normally awaits InitAsync. Supplying the hydrated token here avoids
 			// recursively waiting on this same initialization task.
 			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 			using var response = await httpClientFactory.CreateClient("api")
 				.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, refresh.Token);
-			if (AccountSessionToken != token) return;
+			if (AccountSessionToken != token) return SessionAuthorityLoad.Superseded;
 			if (response.StatusCode == HttpStatusCode.Unauthorized)
 			{
 				ClearSessionState();
-				return;
+				return SessionAuthorityLoad.SignedOut;
 			}
-			if (!response.IsSuccessStatusCode) return;
+			if (!response.IsSuccessStatusCode) return SessionAuthorityLoad.Failed;
 			var current = await response.Content.ReadFromJsonAsync<SessionStateResponse>(cancellationToken: refresh.Token);
 			refresh.Token.ThrowIfCancellationRequested();
-			if (current is null || AccountSessionToken != token) return;
+			if (AccountSessionToken != token) return SessionAuthorityLoad.Superseded;
+			if (current is null) return SessionAuthorityLoad.Failed;
 			Username = current.Username;
 			MustChangePassword = current.MustChangePassword;
 			Role = current.Role;
 			Permissions = current.Permissions ?? [];
+			return SessionAuthorityLoad.Loaded;
 		}
 		catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException)
 		{
-			// The credential remains usable even when current display authority could not be loaded.
 			// No stored role or grant has been restored, so permission-gated controls stay closed.
 			logger.LogWarning(ex, "Could not refresh account session permissions");
+			return SessionAuthorityLoad.Failed;
+		}
+	}
+
+	/// <summary>Bumped whenever the tab's authority is replaced wholesale — a sign-in, a sign-out, a
+	/// session dropped — and not by a character switch, which keeps the same account and its grants.</summary>
+	private int _authorityGeneration;
+
+	/// <summary>
+	/// Asks again, backing off, until the server answers or the tab's account changes (a sign-in or a
+	/// sign-out), then tells the portal so gated controls reappear. Each attempt uses the token the tab
+	/// holds at that moment: a character switch adopts a new token for the same account without loading
+	/// its authority, so a recovery keyed to the old token would give up and leave the tab a Guest.
+	/// </summary>
+	private async Task RetrySessionAuthorityAsync()
+	{
+		var generation = _authorityGeneration;
+		var deadline = DateTimeOffset.UtcNow + SessionAuthorityRetryLimit;
+		for (var attempt = 0; DateTimeOffset.UtcNow < deadline; attempt++)
+		{
+			await Task.Delay(SessionAuthorityRetryDelays[Math.Min(attempt, SessionAuthorityRetryDelays.Count - 1)]);
+			if (generation != _authorityGeneration || AccountSessionToken is not { } token) return;
+
+			switch (await LoadSessionAuthorityAsync(token))
+			{
+				case SessionAuthorityLoad.Loaded or SessionAuthorityLoad.SignedOut:
+					RaiseAuthStateChanged();
+					return;
+					// Superseded: the token changed while the request was out. The generation check at the
+					// top of the next attempt tells a switch (carry on) from a sign-in or sign-out (stop).
+			}
 		}
 	}
 
@@ -270,6 +326,7 @@ public class AccountAuthService(
 	/// <see cref="AuthStateChanged"/> — the caller decides when the notification is due.</summary>
 	private void ClearSessionState()
 	{
+		_authorityGeneration++;
 		AccountSessionToken = null;
 		Username = null;
 		MustChangePassword = false;
@@ -588,11 +645,21 @@ public class AccountAuthService(
 	/// had merely failed that it had no character, and offer to create one. The failure is in the
 	/// type so a consumer has to decide what to do with it.
 	/// </remarks>
+	/// <para>
+	/// MainLayout, the global terminal and the quickstart widget each ask on first render; their
+	/// "roster still empty" guards all pass before any answer lands, so concurrent calls on one
+	/// session share a request. A call after it finishes (after a mutation, say) asks again.
+	/// </para>
 	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> GetCharactersAsync()
 	{
 		await InitAsync();
-		if (AccountSessionToken is null) return new ServerResult<IReadOnlyList<CharacterSummary>>([]);
+		if (AccountSessionToken is not { } session) return new ServerResult<IReadOnlyList<CharacterSummary>>([]);
 
+		return await _charactersFlight.RunAsync(session, FetchCharactersAsync);
+	}
+
+	private async Task<ServerResult<IReadOnlyList<CharacterSummary>>> FetchCharactersAsync()
+	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
@@ -748,6 +815,7 @@ public class AccountAuthService(
 			}
 		}
 
+		_authorityGeneration++;
 		AccountSessionToken = null;
 		Username = null;
 		SetCharacters([]);
@@ -820,6 +888,7 @@ public class AccountAuthService(
 			return false;
 		}
 
+		_authorityGeneration++;
 		AccountSessionToken = token;
 		Username = username;
 		MustChangePassword = mustChangePassword;

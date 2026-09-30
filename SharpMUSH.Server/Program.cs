@@ -17,6 +17,7 @@ using SharpMUSH.Server.Hubs;
 using SharpMUSH.Server.Logging;
 using SharpMUSH.Server.Mcp;
 using SharpMUSH.Server.Middleware;
+using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Server;
 
@@ -89,8 +90,8 @@ public class Program
 		// default, so no header is trusted until an operator explicitly configures the proxy hop.
 		app.UseForwardedHeaders();
 
-		// Before the static-file and Blazor-framework middleware, so it can compress what they serve.
-		// The pre-brotlied _framework files already carry a Content-Encoding and are skipped.
+		// Early, so it can compress what everything below serves. Responses that already carry a
+		// Content-Encoding — the precompressed portal assets — are skipped, never encoded twice.
 		app.UseResponseCompression();
 
 		app.UseRouting();
@@ -110,11 +111,23 @@ public class Program
 		// ── URL canonicalisation: must run before static files so redirects fire first
 		app.UseMiddleware<CanonicalUrlMiddleware>();
 
-		// Serve the bundled Blazor WASM portal's framework files (_framework/*, blazor.boot.json,
-		// compressed variants) with the correct content types, then its static assets. Paired with
-		// MapFallbackToFile("index.html") below so the SPA is served from this server.
-		app.UseBlazorFrameworkFiles();
-		app.UseStaticFiles();
+		// The bundled Blazor WASM portal. A published image serves it from the client's endpoints
+		// manifest via MapStaticAssets (mapped with the SPA fallback below); without the manifest this
+		// falls back to the Blazor-framework and static-file middleware. See PortalStaticFiles.
+		var portalManifest = PortalStaticFiles.FindManifest(env);
+		if (portalManifest is null && File.Exists(Path.Join(env.WebRootPath ?? "wwwroot", "index.html")))
+		{
+			// A portal is bundled but its manifest is not: served this way it gets no long-lived caching,
+			// and the scripts it loads by their plain names (the portal's own are content-hashed on disk)
+			// are not found. The Dockerfile copies the manifest; a hand-rolled deployment may not.
+			app.Logger.LogWarning("The portal in {WebRoot} is being served without {Manifest} in {ContentRoot}; "
+				+ "copy it from the client's publish output.", env.WebRootPath, PortalStaticFiles.ManifestFileName, env.ContentRootPath);
+		}
+		// Until the game is first ready, a browser asking for the portal gets the startup page instead —
+		// the one place the portal's readiness is checked. Before the bot middleware, so a crawler is told
+		// 503 + Retry-After too rather than handed a prerender of a server that cannot serve it.
+		app.UsePortalStartupPage();
+		app.UsePortalStaticFiles(portalManifest);
 
 		app.UseMiddleware<BotDetectionMiddleware>();
 
@@ -165,15 +178,18 @@ public class Program
 			}
 		}
 
+		// Liveness: the process answers. Readiness: it can play the game right now — see ServerReadiness for
+		// what comes up after Kestrel is already listening (the input consumers and the output bridge).
+		// Unauthenticated and unlimited: orchestrators and the portal's startup page poll them.
 		app.MapGet("/health", () => "healthy");
-		app.MapGet("/ready", () => "ready");
-
-		// Polled by the client's ServerStartupGate before it lets the app render: hosted services
-		// (incl. BootstrapService/migrations) all complete before Kestrel accepts traffic, so mere
-		// reachability of this endpoint is sufficient readiness. Dependency-free and unauthenticated
-		// on purpose — it must answer even before the DB/bootstrap has finished, and it is polled
-		// every few seconds so it carries no rate limit.
-		app.MapGet("/api/health", () => Results.Ok(new { status = "ready" }));
+		app.MapGet("/ready", (ServerReadiness readiness) => readiness.IsReady
+			? Results.Text("ready")
+			: Results.Text("not ready", statusCode: StatusCodes.Status503ServiceUnavailable));
+		app.MapGet("/api/health", (ServerReadiness readiness) => readiness.IsReady
+			? Results.Ok(new { status = "ready" })
+			: Results.Json(
+				new { status = readiness.HasBeenReady ? "degraded" : "starting", pending = readiness.Pending() },
+				statusCode: StatusCodes.Status503ServiceUnavailable));
 
 		// Inbound HTTP to the MUSH: /http/<path> runs the http_handler's <METHOD> attribute as
 		// commands, PennMUSH-style (see help sharphttp). Prefixed (rather than a catch-all) so it
@@ -189,9 +205,9 @@ public class Program
 
 		app.MapPrometheusScrapingEndpoint();
 
-		// SPA fallback: all non-API, non-static routes serve index.html so that
-		// Blazor WASM handles client-side routing (deep links, browser refresh).
-		app.MapFallbackToFile("index.html");
+		// The portal's asset endpoints, and the SPA fallback: all non-API, non-file routes serve
+		// index.html (no-cache) so that Blazor WASM handles client-side routing (deep links, refresh).
+		app.MapPortal(portalManifest);
 
 		return app;
 	}
