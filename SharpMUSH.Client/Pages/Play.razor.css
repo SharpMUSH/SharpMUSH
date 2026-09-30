@@ -47,6 +47,11 @@
     flex-direction: column;
 }
 
+/* A scoped display rule outranks the user agent's [hidden]; focus mode hides the aside this way. */
+.play-aside[hidden] {
+    display: none;
+}
+
 /* Story and Terminal share one cell; the one not shown keeps its size (the terminal measures its
    columns) but is invisible and inert. */
 .play-views {
