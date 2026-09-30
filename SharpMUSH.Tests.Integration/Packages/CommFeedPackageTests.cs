@@ -500,6 +500,24 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 		}
 	}
 
+	/// <summary>
+	/// Creating a channel puts its creator on it (PennMUSH's do_chan_admin adds the owner), and that is a
+	/// change to the creator's channel list like any join.
+	/// </summary>
+	[Test]
+	public async Task CreatingAChannel_PushesTheCreatorsChannelList()
+	{
+		var creator = await ViewerAsync("CommCreator");
+		var channel = UniqueChannel("CommCreate");
+
+		await using var watch = await OobWatch.OpenAsync(factory);
+		var sent = await watch.SentWhile(() => Run(creator, $"@channel/add {channel}=player"), Run, creator);
+
+		var list = Frames(sent[creator.Handle], "comm.channels").Single();
+		await Assert.That(list["channels"]!.AsArray().OfType<JsonObject>()
+			.Any(c => c["name"]!.GetValue<string>() == channel)).IsTrue();
+	}
+
 	[Test]
 	public async Task Connecting_PushesTheChannelList()
 	{
