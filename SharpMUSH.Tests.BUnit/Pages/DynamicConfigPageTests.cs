@@ -143,6 +143,69 @@ public class DynamicConfigPageTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task TocHighlightsTheGroupNamedInTheFragment()
+	{
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/chat#group-limits");
+		var cut = RenderChat();
+		var current = cut.Find(".cfg-toc--current");
+		await Assert.That(current.GetAttribute("href")).IsEqualTo("#group-limits");
+		await Assert.That(current.GetAttribute("aria-current")).IsEqualTo("location");
+		await Assert.That(cut.FindAll(".cfg-toc--current").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task TocFollowsTheFragmentAsItChanges()
+	{
+		var cut = RenderChat();
+		await Assert.That(cut.FindAll(".cfg-toc--current").Count).IsEqualTo(0);
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/chat#group-economy");
+		cut.WaitForAssertion(() => cut.Find(".cfg-toc--current"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".cfg-toc--current").GetAttribute("href")).IsEqualTo("#group-economy");
+	}
+
+	[Test]
+	public async Task ClickingATocLinkMarksItCurrent_WithoutALocationChange()
+	{
+		// A hash-only navigation raises no LocationChanged in Blazor, so the click itself must do it.
+		var cut = RenderChat();
+		cut.FindAll(".cfg-toc")[2].Click();
+		await Assert.That(cut.Find(".cfg-toc--current").GetAttribute("href")).IsEqualTo("#group-economy");
+	}
+
+	[Test]
+	public async Task HelpTextIsAssociatedWithItsControl()
+	{
+		var cut = RenderChat();
+		var row = cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.MaxChannels");
+		var input = row.QuerySelector("input.cfg-num")!;
+		var describedBy = input.GetAttribute("aria-describedby");
+		await Assert.That(describedBy).IsNotNull();
+		var help = row.QuerySelector($"#{describedBy}")!;
+		await Assert.That(help.ClassList).Contains("cfg-row-help");
+	}
+
+	[Test]
+	public async Task DeclaredGroupsWithNoProperties_FallBackToOneCard_AndNoToc()
+	{
+		// An inconsistent schema: groups are declared but every property names a group that is not.
+		var schema = SchemaBuilder.BuildSchema();
+		foreach (var prop in schema.Properties.Values.Where(p => p.Category.Equals("Dump", StringComparison.OrdinalIgnoreCase)))
+		{
+			prop.Group = "Elsewhere";
+		}
+		_served.Json = System.Text.Json.JsonSerializer.Serialize(new ConfigurationResponse
+		{
+			Configuration = SharpMUSH.Configuration.Options.SharpMUSHOptions.Default(),
+			Schema = schema
+		});
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/dump");
+		var cut = Render<DynamicConfig>(p => p.Add(x => x.Category, "dump"));
+		cut.WaitForAssertion(() => cut.Find(".cfg-row"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".cfg-group .kit-card").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".cfg-toc").Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task FlatCategory_HasOneCardAndNoToc()
 	{
 		// Every shipped category has groups, so a flat one is built from the real schema with Dump's

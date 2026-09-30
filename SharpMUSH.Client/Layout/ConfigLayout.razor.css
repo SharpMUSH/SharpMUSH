@@ -13,7 +13,9 @@
 	border-right: 1px solid var(--border-soft);
 	position: sticky;
 	top: 0;
-	max-height: 100dvh;
+	/* the scroll container starts under the topbar (and above the touch tab bar), so a
+	   100dvh box would hide its bottom rows — the pinned Maintenance links */
+	max-height: calc(100dvh - var(--topbar-h) - var(--bottomnav-clearance, 0px));
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	align-self: stretch;

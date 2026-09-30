@@ -16,17 +16,16 @@
     <div class="config-home-main">
         <PlainPageHeader Kicker="@Loc["ResConfigHomeKicker"]" Title="@Loc["ServerConfiguration"]" Description="@Loc["ManageAllSettings"]" />
 
+        @* The six cards need nothing from the schema; only their counts do, so they render at once. *@
         @if (_loading)
         {
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="height:2px;" />
         }
-        else
+        else if (_error is not null)
         {
-            @if (_error is not null)
-            {
-                <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@Loc["FailedToLoadSchema"]: @_error</MudAlert>
-            }
-            <div class="config-cat-grid">
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@Loc["FailedToLoadSchema"]: @_error</MudAlert>
+        }
+        <div class="config-cat-grid">
                 @foreach (var group in ConfigSections.Groups)
                 {
                     var g = group;
@@ -43,7 +42,7 @@
                                         <span class="config-cat-flag">@Loc["Important"]</span>
                                     }
                                 </div>
-                                @if (_error is null)
+                                @if (!_loading && _error is null)
                                 {
                                     <div class="config-cat-count">@Loc.Plural("AdmConfigSettingsCount", "count", CountFor(g))</div>
                                 }
@@ -62,8 +61,7 @@
                         </div>
                     </a>
                 }
-            </div>
-        }
+        </div>
     </div>
 
     <aside class="config-home-aside">

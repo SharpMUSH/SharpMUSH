@@ -11,7 +11,7 @@
         {
             <p class="kit-page-desc">@DescriptionContent</p>
         }
-        else if (Description is not null)
+        else if (!string.IsNullOrWhiteSpace(Description))
         {
             <p class="kit-page-desc">@Description</p>
         }

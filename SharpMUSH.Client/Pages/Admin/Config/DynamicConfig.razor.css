@@ -431,7 +431,6 @@
 	outline-offset: -2px;
 }
 
-.cfg-toc:target,
 .cfg-toc--current {
 	color: var(--accent);
 	border-left-color: var(--accent);

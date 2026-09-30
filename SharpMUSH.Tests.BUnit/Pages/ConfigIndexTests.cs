@@ -15,11 +15,11 @@ using SharpMUSH.Tests.BUnit.Layout;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
-/// <summary>Answers each request from its method and the path it asked for.</summary>
-file sealed class RouteHandler(Func<HttpMethod, string, HttpResponseMessage> respond) : HttpMessageHandler
+/// <summary>Answers immediately, or waits on the held completion source when a test holds the reply.</summary>
+file sealed class HoldableHandler(ConfigIndexTests.Server server, Func<HttpResponseMessage> respond) : HttpMessageHandler
 {
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-		Task.FromResult(respond(request.Method, request.RequestUri!.AbsolutePath.TrimStart('/')));
+		server.Hold?.Task ?? Task.FromResult(respond());
 }
 
 /// <summary>
@@ -30,9 +30,17 @@ public class ConfigIndexTests : TrackingBunitContext
 {
 	private BunitAuthorizationContext Auth { get; }
 
+	/// <summary>Whether the fake server answers at all; a test may hold the answer to see the page mid-load.</summary>
+	internal sealed class Server
+	{
+		public TaskCompletionSource<HttpResponseMessage>? Hold { get; set; }
+	}
+
+	private readonly Server _server = new();
+
 	public ConfigIndexTests()
 	{
-		var client = Track(new HttpClient(new RouteHandler((_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+		var client = Track(new HttpClient(new HoldableHandler(_server, () => new HttpResponseMessage(HttpStatusCode.OK)
 		{
 			Content = new StringContent(ConfigLayoutTests.RealConfigurationJson(), Encoding.UTF8, "application/json")
 		}))
@@ -55,6 +63,21 @@ public class ConfigIndexTests : TrackingBunitContext
 		var cut = Render<ConfigIndex>();
 		cut.WaitForAssertion(() => cut.Find(".config-cat-count"), TimeSpan.FromSeconds(5));
 		return cut;
+	}
+
+	[Test]
+	public async Task CardsRenderWhileTheSchemaIsStillLoading()
+	{
+		_server.Hold = new TaskCompletionSource<HttpResponseMessage>();
+		var cut = Render<ConfigIndex>();
+		await Assert.That(cut.FindAll("a.config-cat-card").Count).IsEqualTo(6)
+			.Because("the six groups need nothing from the schema; only the counts do");
+		await Assert.That(cut.FindAll(".config-cat-count").Count).IsEqualTo(0);
+		_server.Hold.SetResult(new HttpResponseMessage(HttpStatusCode.OK)
+		{
+			Content = new StringContent(ConfigLayoutTests.RealConfigurationJson(), Encoding.UTF8, "application/json")
+		});
+		cut.WaitForAssertion(() => cut.Find(".config-cat-count"), TimeSpan.FromSeconds(5));
 	}
 
 	[Test]

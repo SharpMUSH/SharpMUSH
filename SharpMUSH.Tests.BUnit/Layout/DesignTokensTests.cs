@@ -18,7 +18,7 @@ public class DesignTokensTests
 		"--blur-mask-soft", "--blur-mask-mid", "--blur-mask-deep",
 		"--blur-mask-soft-open", "--blur-mask-mid-open", "--blur-mask-deep-open",
 		"--mention-offset", "--mention-alpha",
-		"--switch-knob-off",
+		"--switch-knob-off", "--topbar-h",
 	];
 
 	[Test]
@@ -61,6 +61,17 @@ public class DesignTokensTests
 			await Assert.That(block).Contains(selector)
 				.Because("README §9: targets are 44px under a coarse pointer, and only the shell may say so");
 		}
+	}
+
+	[Test]
+	public async Task TheTopbarHeightIsATokenTheConfigStickyBoxSubtracts()
+	{
+		var shell = File.ReadAllText(Path.Join(ClientSource.CssRoot, "shell.css"));
+		await Assert.That(shell).Contains("height: var(--topbar-h)")
+			.Because("a sticky box inside the scroll container must know how tall the topbar above it is");
+		var layout = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Layout", "ConfigLayout.razor.css"));
+		await Assert.That(layout).Contains("calc(100dvh - var(--topbar-h)")
+			.Because("a 100dvh sticky sidebar under a 60px topbar hides its bottom 60px — the pinned Maintenance rows");
 	}
 
 	[Test]

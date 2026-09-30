@@ -11,6 +11,7 @@
 @inject ConfigSchemaService SchemaService
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
 
 <PageTitle>@CategoryTitle - @Loc["Configuration"]</PageTitle>
 
@@ -63,7 +64,7 @@
                     </MudAlert>
                 </KitCard>
             }
-            else if (!_categoryMetadata.Groups.Any())
+            else if (NonEmptyGroups.Count == 0)
             {
                 <div class="cfg-group">
                     <KitCard>
@@ -76,10 +77,9 @@
             }
             else
             {
-                @foreach (var group in _categoryMetadata.Groups.OrderBy(g => g.Order))
+                @foreach (var group in NonEmptyGroups)
                 {
                     var groupProperties = GetPropertiesInGroup(group.Name).OrderBy(p => p.Order).ToList();
-                    if (groupProperties.Count == 0) { continue; }
 
                     <div class="cfg-group" id="@GroupAnchor(group.Name)">
                         <SectionLabel>@group.DisplayName</SectionLabel>
@@ -111,16 +111,18 @@
         }
     </div>
 
-    @if (!_loading && _categoryMetadata is { Groups.Count: > 0 })
+    @if (!_loading && NonEmptyGroups.Count > 0)
     {
         <aside class="config-section-aside">
             <KitCard Aside="true" Title="@Loc["AdmConfigInThisSection"]">
                 <div class="cfg-toc-list">
-                    @foreach (var group in _categoryMetadata.Groups.OrderBy(g => g.Order))
+                    @foreach (var group in NonEmptyGroups)
                     {
                         var count = GetPropertiesInGroup(group.Name).Count();
-                        if (count == 0) { continue; }
-                        <a class="cfg-toc" href="@("#" + GroupAnchor(group.Name))">
+                        var anchor = GroupAnchor(group.Name);
+                        var current = anchor == _currentAnchor;
+                        @* Blazor raises no LocationChanged for a hash-only navigation, so the click marks the link current itself. *@
+                        <a class="cfg-toc @(current ? "cfg-toc--current" : null)" href="@("#" + anchor)" aria-current="@(current ? "location" : null)" @onclick="@(() => _currentAnchor = anchor)">
                             <span class="cfg-toc-name">@group.DisplayName</span>
                             <span class="cfg-toc-count">@count</span>
                         </a>
@@ -142,7 +144,6 @@
     private bool _saving = false;
     private bool _hasChanges = false;
     private int _changedCount = 0;
-    private ConfigurationSchema? _schema;
     private CategoryMetadata? _categoryMetadata;
     private Dictionary<string, PropertyMetadata> _categoryProperties = new();
     private Dictionary<string, object?> _currentValues = new();
@@ -159,13 +160,34 @@
 
     private string CategoryTitle => _categoryMetadata?.DisplayName ?? FormatCategoryName(Category);
 
+    /// <summary>The "#group-…" anchor in the address, so the table of contents can mark it current.</summary>
+    private string? _currentAnchor;
+
+    /// <summary>The schema's groups that hold at least one property of this category, in order.</summary>
+    private IReadOnlyList<GroupMetadata> NonEmptyGroups =>
+        _categoryMetadata is null
+            ? []
+            : _categoryMetadata.Groups.OrderBy(g => g.Order).Where(g => GetPropertiesInGroup(g.Name).Any()).ToList();
+
     protected override void OnInitialized()
     {
-        if (CustomPageCategories.Contains(Category))
-        {
-            return;
-        }
+        NavigationManager.LocationChanged += OnLocationChanged;
+        ReadAnchor();
     }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        ReadAnchor();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void ReadAnchor()
+    {
+        var fragment = new Uri(NavigationManager.Uri).Fragment;
+        _currentAnchor = fragment.Length > 1 ? fragment[1..] : null;
+    }
+
+    public void Dispose() => NavigationManager.LocationChanged -= OnLocationChanged;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -198,8 +220,6 @@
                 Snackbar.Add($"{Loc["FailedToLoadSchema"]}: {schemaError}", Severity.Error);
                 return;
             }
-
-            _schema = schema;
 
             var categoryName = MapCategoryName(Category);
             
@@ -256,6 +276,10 @@
         var hasError = _validationErrors.TryGetValue(prop.Path, out var errorText);
         var isChanged = IsPropertyChanged(prop.Path);
         var stacked = prop.Component is "stringlist" or "dictionary";
+        var helpId = string.IsNullOrEmpty(prop.Description) ? null : "cfg-help-" + Slug(prop.Path);
+        var errorId = hasError ? "cfg-error-" + Slug(prop.Path) : null;
+        var describedBy = string.Join(' ', new[] { helpId, errorId }.Where(id => id is not null));
+        if (describedBy.Length == 0) describedBy = null;
 
         <div class="cfg-row @(stacked ? "cfg-row--stacked" : "cfg-row--inline")">
             <div class="cfg-row-text">
@@ -267,20 +291,20 @@
                         <span class="cfg-row-changed" title="@Loc["ResDefaultValueTooltip", prop.DefaultValue ?? string.Empty]">@Loc["ResChangedBadge"]</span>
                     }
                 </div>
-                @if (!string.IsNullOrEmpty(prop.Description))
+                @if (helpId is not null)
                 {
-                    <div class="cfg-row-help">@prop.Description</div>
+                    <div class="cfg-row-help" id="@helpId">@prop.Description</div>
                 }
-                @if (hasError)
+                @if (errorId is not null)
                 {
-                    <div class="cfg-row-error">@errorText</div>
+                    <div class="cfg-row-error" id="@errorId">@errorText</div>
                 }
             </div>
             <div class="cfg-row-control @(stacked ? "cfg-row-control--full" : "")">
                 @if (prop.Component == "switch")
                 {
                     var on = GetBoolValue(prop);
-                    <button type="button" role="switch" aria-checked="@(on ? "true" : "false")" aria-label="@displayName"
+                    <button type="button" role="switch" aria-checked="@(on ? "true" : "false")" aria-label="@displayName" aria-describedby="@describedBy"
                             class="cfg-switch @(on ? "cfg-switch--on" : "")"
                             disabled="@prop.ReadOnly"
                             @onclick="@(() => UpdateValue(prop, !on))">
@@ -290,7 +314,7 @@
                 else if (prop.Component == "select" && prop.Options is { Count: > 0 })
                 {
                     var current = GetStringValue(prop);
-                    <div class="cfg-pills" role="group" aria-label="@displayName">
+                    <div class="cfg-pills" role="group" aria-label="@displayName" aria-describedby="@describedBy">
                         @foreach (var opt in prop.Options)
                         {
                             var option = opt;
@@ -309,7 +333,7 @@
                     {
                         <span class="cfg-range">@range</span>
                     }
-                    <input class="cfg-num" type="number" inputmode="numeric" aria-label="@displayName"
+                    <input class="cfg-num" type="number" inputmode="numeric" aria-label="@displayName" aria-describedby="@describedBy"
                            value="@GetNumericString(prop)"
                            min="@(GetIntMin(prop)?.ToString())"
                            max="@(GetIntMax(prop)?.ToString())"
@@ -391,7 +415,7 @@
                 else
                 {
                     var single = IsSingleChar(prop);
-                    <input class="cfg-text @(single ? "cfg-text--char" : "")" type="text" aria-label="@displayName"
+                    <input class="cfg-text @(single ? "cfg-text--char" : "")" type="text" aria-label="@displayName" aria-describedby="@describedBy"
                            maxlength="@(single ? 1 : null)"
                            value="@GetStringValue(prop)"
                            readonly="@prop.ReadOnly"
@@ -418,8 +442,10 @@
         };
     }
 
-    private static string GroupAnchor(string groupName) =>
-        "group-" + System.Text.RegularExpressions.Regex.Replace(groupName.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+    private static string GroupAnchor(string groupName) => "group-" + Slug(groupName);
+
+    private static string Slug(string text) =>
+        System.Text.RegularExpressions.Regex.Replace(text.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
 
     private string GetNumericString(PropertyMetadata prop) =>
         ConfigValues.NumericString(_currentValues, prop);

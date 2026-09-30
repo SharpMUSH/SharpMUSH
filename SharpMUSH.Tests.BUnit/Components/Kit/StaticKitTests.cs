@@ -36,6 +36,13 @@ public class StaticKitTests : BunitContext
 	}
 
 	[Test]
+	public async Task PlainPageHeader_WhitespaceDescription_RendersNoParagraph()
+	{
+		var cut = Render<PlainPageHeader>(p => p.Add(x => x.Title, "x").Add(x => x.Description, "   "));
+		await Assert.That(cut.FindAll(".kit-page-desc").Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task PlainPageHeader_DescriptionContent_RendersMarkupInTheDescription()
 	{
 		var cut = Render<PlainPageHeader>(p => p.Add(x => x.Title, "Sitelock")

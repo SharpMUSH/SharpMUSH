@@ -125,6 +125,7 @@
 	--ooc-icon-fg: #d6c9ff;         /* 6.12:1 on --ooc-icon-bg */
 
 	/* ── frame ── */
+	--topbar-h: 60px;               /* the shell topbar; a sticky box inside .phosphor-main subtracts it */
 	--rail-w: 72px;
 	--side-w: 232px;                /* same as today's expanded sidebar */
 	--side-strip-w: 62px;           /* same as today's collapsed sidebar (boards draw 64) */

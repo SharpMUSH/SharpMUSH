@@ -80,12 +80,15 @@
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         Locate();
-        StateHasChanged();
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private void Locate()
     {
-        var path = Nav.ToAbsoluteUri(Nav.Uri).AbsolutePath;
+        // Base-relative, so a portal hosted under a sub-path still matches its own routes.
+        var path = "/" + Nav.ToBaseRelativePath(Nav.Uri);
+        var cut = path.IndexOfAny(['?', '#']);
+        if (cut >= 0) path = path[..cut];
         _currentSection = ConfigSections.SectionForPath(path);
         _currentGroup = ConfigSections.GroupForPath(path);
         _onImport = path.TrimEnd('/').Equals("/admin/config/import", StringComparison.OrdinalIgnoreCase);
