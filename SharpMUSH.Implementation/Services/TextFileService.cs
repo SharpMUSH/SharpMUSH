@@ -52,9 +52,21 @@ public class TextFileService : ITextFileService
 		}
 	}
 
+	/// <summary>The configured text-files directory, resolved (see <see cref="ResolveDirectory"/>).</summary>
+	private string BaseDirectory => ResolveDirectory(_options.Value.TextFile.TextFilesDirectory, AppContext.BaseDirectory);
+
+	/// <summary>
+	/// A relative <paramref name="configured"/> directory is the one beside the server binary, where the build
+	/// copies the help files — not the process's working directory, which is the repository root under
+	/// <c>dotnet run --project</c> and only happens to be the binary's folder in the Docker image. An absolute
+	/// setting is used as given.
+	/// </summary>
+	public static string ResolveDirectory(string configured, string serverDirectory) =>
+		Path.IsPathRooted(configured) ? configured : Path.Combine(serverDirectory, configured);
+
 	public Task<IEnumerable<string>> ListCategoriesAsync()
 	{
-		var baseDir = _options.Value.TextFile.TextFilesDirectory;
+		var baseDir = BaseDirectory;
 		if (!Directory.Exists(baseDir))
 		{
 			_logger.LogWarning("Text files directory does not exist: {Directory}", baseDir);
@@ -123,7 +135,7 @@ public class TextFileService : ITextFileService
 
 	public Task<IEnumerable<string>> ListFilesAsync(string? category = null)
 	{
-		var baseDir = _options.Value.TextFile.TextFilesDirectory;
+		var baseDir = BaseDirectory;
 
 		if (category != null)
 		{
@@ -235,7 +247,7 @@ public class TextFileService : ITextFileService
 	/// </remarks>
 	public async Task ReindexAsync()
 	{
-		var baseDir = _options.Value.TextFile.TextFilesDirectory;
+		var baseDir = BaseDirectory;
 
 		if (!Directory.Exists(baseDir))
 		{
@@ -274,7 +286,7 @@ public class TextFileService : ITextFileService
 	/// </summary>
 	private Dictionary<string, IndexEntry>? BuildCategoryIndex(string category)
 	{
-		var baseDir = _options.Value.TextFile.TextFilesDirectory;
+		var baseDir = BaseDirectory;
 		var categoryPath = Path.Combine(baseDir, category);
 
 		if (!Directory.Exists(categoryPath))
@@ -440,7 +452,7 @@ public class TextFileService : ITextFileService
 			return null;
 		}
 
-		var baseDir = _options.Value.TextFile.TextFilesDirectory;
+		var baseDir = BaseDirectory;
 
 		if (category != null)
 		{

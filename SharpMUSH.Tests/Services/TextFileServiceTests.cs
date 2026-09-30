@@ -8,6 +8,22 @@ namespace SharpMUSH.Tests.Services;
 
 public class TextFileServiceTests
 {
+	/// <summary>
+	/// The build copies the help files next to the server binary (TextFiles/ under bin/), and the default
+	/// setting is the relative "TextFiles". Resolved against the working directory it only worked where
+	/// the process starts in the binary's folder (the Docker image's /app): `dotnet run --project
+	/// SharpMUSH.Server` from the repository root found no help at all, and created an empty
+	/// TextFiles/ in the repository.
+	/// </summary>
+	[Test]
+	public async Task ARelativeDirectory_IsTheOneBesideTheServer_NotTheWorkingDirectory()
+	{
+		await Assert.That(TextFileService.ResolveDirectory("TextFiles", "/srv/sharpmush/bin"))
+			.IsEqualTo(Path.Combine("/srv/sharpmush/bin", "TextFiles"));
+		await Assert.That(TextFileService.ResolveDirectory("/data/help", "/srv/sharpmush/bin"))
+			.IsEqualTo("/data/help").Because("an absolute setting is used as given");
+	}
+
 	// SharpMUSHOptions is a record with many required properties, so load the checked-in minimal fixture
 	// and override only what matters here — the same pattern as SitelockGuardTests.
 	private static readonly SharpMUSHOptions BaseConfig =
