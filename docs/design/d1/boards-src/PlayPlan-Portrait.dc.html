@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Play — Portrait viewer</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0e0f11}
+a{color:#00f5b7;text-decoration:none}a:hover{color:#7affd9}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; box-sizing: border-box; background: #0e0f11; color: #e9edf0; font-family: 'Hanken Grotesk', sans-serif; font-size: 14px; overflow: hidden; position: relative">
+<img src="/_blob/f7f82009d1714d39a0b2ebffc93caee5" alt="" aria-hidden="true" style="position: absolute; inset: -40px; width: calc(100% + 80px); height: calc(100% + 80px); object-fit: cover; filter: blur(48px) saturate(120%); opacity: 0.5">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(8,9,10,0.72)"></div>
+<div role="dialog" aria-label="Tomas Reyes, gallery" style="position: absolute; inset: 0; display: flex; flex-direction: column">
+<header style="height: 72px; flex-shrink: 0; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; gap: 14px">
+<img src="/_blob/f7f82009d1714d39a0b2ebffc93caee5" alt="" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover">
+<div style="flex-grow: 1"><div style="font-size: 16px; font-weight: 700">Tomas Reyes</div><div style="font-size: 13px; color: #c4cbd1">Portrait · 1 of 3</div></div>
+<a href="App-Character.dc.html" style="height: 40px; padding: 0 16px; border-radius: 20px; display: flex; align-items: center; font-weight: 600; backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 0 0 1px rgba(255,255,255,0.08); background: rgba(14,15,17,0.30); color: #e9edf0">Open profile</a>
+<a href="PlayPlan-Character.dc.html" aria-label="Close" style="width: 40px; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 0 0 1px rgba(255,255,255,0.08); background: rgba(14,15,17,0.30); color: #e9edf0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
+</header>
+<div style="flex-grow: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 28px">
+<button type="button" aria-label="Previous image" disabled style="width: 48px; height: 48px; border: 0; border-radius: 24px; display: flex; align-items: center; justify-content: center; opacity: 0.4; backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 0 0 1px rgba(255,255,255,0.08); background: rgba(14,15,17,0.30); color: #e9edf0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<figure style="margin: 0; display: flex; flex-direction: column; align-items: center; gap: 12px">
+<img src="/_blob/f7f82009d1714d39a0b2ebffc93caee5" alt="Tomas Reyes: a lamplighter in a flat cap and high-collared coat, lit from behind by a warm lamp" style="width: 540px; height: 540px; border-radius: 18px; object-fit: cover; box-shadow: 0 30px 80px rgba(0,0,0,0.6)">
+<figcaption style="font-size: 14px; color: #d2d8dd">Portrait · set as profile image</figcaption>
+</figure>
+<button type="button" aria-label="Next image" style="width: 48px; height: 48px; border: 0; border-radius: 24px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 0 0 1px rgba(255,255,255,0.08); background: rgba(14,15,17,0.30); color: #e9edf0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</div>
+<div style="height: 108px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 12px">
+<button type="button" aria-label="Portrait" aria-current="true" style="width: 72px; height: 72px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 2px {{accent}}; background: none"><img src="/_blob/f7f82009d1714d39a0b2ebffc93caee5" alt="" style="width: 100%; height: 100%; object-fit: cover"></button>
+<button type="button" aria-label="At work on Harbour Row" style="width: 72px; height: 72px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; opacity: 0.7; background: none"><img src="/_blob/64bde6110ebb852fd25cbcf2f5079a31" alt="" style="width: 100%; height: 100%; object-fit: cover"></button>
+<button type="button" aria-label="The Lower Docks at dusk" style="width: 72px; height: 72px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; opacity: 0.7; background: none"><img src="/_blob/2c274fe6412da41d58ffbd5f5faebc63" alt="" style="width: 100%; height: 100%; object-fit: cover"></button>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#00f5b7","options":["#00f5b7","#ffb454","#b39cff","#5aa9ff"]},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#00f5b7' };
+  }
+}
+</script>
+</body>
+</html>
