@@ -4,6 +4,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject CharacterProfileService Profiles
 @inject GalleryService Gallery
+@inject SceneService Scenes
 @inject IJSRuntime JS
 
 @* D1 §5.7 the character sheet drawer (board 08): a modal from the right with the full-height portrait
@@ -44,7 +45,7 @@
                 </div>
                 <div class="sheet-body">
                     <div class="sheet-pills">
-                        @if (InScene && Occupant is not null)
+                        @if (_inScene && Occupant is not null)
                         {
                             <Pill Dot="var(--accent)">@Loc["NavPlayInThisScene"]</Pill>
                         }
@@ -103,8 +104,11 @@
     /// <summary>Their row in the room, when they are here: its picture, idle time and look command.</summary>
     [Parameter] public RoomOccupant? Occupant { get; set; }
 
-    /// <summary>Whether the room has a scene running: someone in the room is in it.</summary>
-    [Parameter] public bool InScene { get; set; }
+    /// <summary>
+    /// The scene running in the room, if any. The In this scene pill is shown only when its member list
+    /// names this character: being in the room is not being in its scene.
+    /// </summary>
+    [Parameter] public string? SceneId { get; set; }
 
     [Parameter] public EventCallback OnClose { get; set; }
 
@@ -123,6 +127,9 @@
     private bool _viewerOpen;
     private int _viewerIndex;
     private string? _loadedFor;
+    private string? _loadedScene;
+    private bool _inScene;
+    private int _membershipGeneration;
     private int _generation;
     private bool _focusClose;
     private CapsuleButton? _closeButton;
@@ -148,9 +155,22 @@
             _loadedFor = null;
             return;
         }
-        if (string.Equals(Name, _loadedFor, StringComparison.Ordinal)) return;
+        var nameChanged = !string.Equals(Name, _loadedFor, StringComparison.Ordinal);
+        if (!nameChanged && string.Equals(SceneId, _loadedScene, StringComparison.Ordinal)) return;
 
-        _loadedFor = Name;
+        _loadedScene = SceneId;
+        if (nameChanged)
+        {
+            await LoadCharacterAsync(Name);
+        }
+
+        await RefreshMembershipAsync();
+    }
+
+    private async Task LoadCharacterAsync(string name)
+    {
+        _loadedFor = name;
+        _inScene = false;
         _profile = null;
         _gallery = [];
         _viewerOpen = false;
@@ -159,13 +179,29 @@
         await RunFocusAsync("sharpmushLayout.rememberFocus");
 
         // A second name chosen while the first is loading must not be overwritten by the first's answers.
-        var profile = await Profiles.GetAsync(Name);
-        var gallery = await Gallery.ListAsync(Name);
+        var profile = await Profiles.GetAsync(name);
+        var gallery = await Gallery.ListAsync(name);
         if (generation != _generation) return;
 
         _profile = profile is CharacterProfileData data ? data : null;
         _gallery = gallery is List<GalleryEntry> entries ? entries.OrderByDescending(e => e.IsIcon).ThenBy(e => e.Order).ToList() : [];
         BuildViewerItems();
+    }
+
+    /// <summary>
+    /// Whether the room's scene lists this character (by dbref) among its current members. Counted apart
+    /// from the character load, so a scene starting or ending re-asks only this; the last ask wins.
+    /// </summary>
+    private async Task RefreshMembershipAsync()
+    {
+        var generation = ++_membershipGeneration;
+        var inScene = SceneId is { } sceneId && Dbref is { } dbref
+            && await Scenes.GetMemberDbrefsAsync(sceneId) is IReadOnlyList<string> members
+            && members.Contains(dbref.Split(':')[0], StringComparer.Ordinal);
+        if (generation == _membershipGeneration)
+        {
+            _inScene = inScene;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

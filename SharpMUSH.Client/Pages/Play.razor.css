@@ -74,6 +74,16 @@
     pointer-events: none;
 }
 
+.play-story-unavailable {
+    flex-shrink: 0;
+    margin: 8px 16px 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--warn-tint);
+    color: var(--warn);
+    font-size: 13px;
+}
+
 /* column-reverse keeps the story anchored at its newest pose as poses arrive. */
 .play-story-scroll {
     flex: 1;

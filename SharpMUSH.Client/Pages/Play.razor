@@ -80,9 +80,13 @@ else
                                 @if (Room.Info?.Scene is { } scene)
                                 {
                                     <div class="play-view play-story @(View == PlayView.Story ? null : "play-view--off")" inert="@(View != PlayView.Story)">
+                                        @if (StoryLiveUnavailable)
+                                        {
+                                            <div class="play-story-unavailable" role="status">@Loc["RolSceneLiveUnavailable"]</div>
+                                        }
                                         <div class="play-story-scroll">
                                             <SceneStory SceneId="@scene.Id" Occupants="@Room.Occupants" ViewerName="@PlayTerminal.ConnectedPlayerName"
-                                                        OnCharacter="OpenSheetByName" />
+                                                        OnCharacter="OpenSheetByName" LiveUnavailableChanged="unavailable => OnLiveUnavailable(scene.Id, unavailable)" />
                                         </div>
                                     </div>
                                 }
@@ -95,7 +99,7 @@ else
                         <Footer>
                             @if (View == PlayView.Story)
                             {
-                                <PlayComposer @ref="_composer" Connected="@PlayTerminal.IsConnected" OnSend="SendAsync" />
+                                <PlayComposer @ref="_composer" Connected="@(PlayTerminal.IsConnected && !StoryLiveUnavailable)" OnSend="SendAsync" />
                             }
                         </Footer>
                     </PlaySceneCard>
@@ -171,7 +175,7 @@ else
         </MudOverlay>
     }
 
-    <CharacterSheet Name="@_sheetName" Occupant="@_sheetOccupant" InScene="@InScene" OnClose="CloseSheet"
+    <CharacterSheet Name="@_sheetName" Occupant="@_sheetOccupant" SceneId="@Room.Info?.Scene?.Id" OnClose="CloseSheet"
                     OnCommand="SendAsync" OnPage="StartPageAsync" Details="SheetDetails" />
 }
 
@@ -194,6 +198,22 @@ else
     private bool _roomExits = true;
 
     private bool InScene => Room.Info?.Scene is not null;
+
+    /// <summary>The scene whose live subscription the hub refused, as SceneStory reported it.</summary>
+    private string? _liveRefusedFor;
+
+    /// <summary>
+    /// This client cannot receive the room scene's poses (a guest, or a character that cannot see it):
+    /// the Story says so and its composer does not send, as on the live scene page — a pose sent from
+    /// here would be posted and never appear. The terminal view still takes commands.
+    /// </summary>
+    private bool StoryLiveUnavailable => Room.Info?.Scene?.Id is { } id && id == _liveRefusedFor;
+
+    private void OnLiveUnavailable(string sceneId, bool unavailable)
+    {
+        if (unavailable) _liveRefusedFor = sceneId;
+        else if (_liveRefusedFor == sceneId) _liveRefusedFor = null;
+    }
 
     /// <summary>Story in a scene unless the player chose Terminal; outside a scene there is only the terminal.</summary>
     private PlayView View => InScene ? _chosenView ?? PlayView.Story : PlayView.Terminal;

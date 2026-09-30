@@ -26,6 +26,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 {
 	private readonly OobChannelStore _store = new();
 	private readonly IPlayTerminalService _play = Substitute.For<IPlayTerminalService>();
+	private readonly FakeSceneHub _hub;
 
 	public PlayPageD1Tests()
 	{
@@ -56,7 +57,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		hostEnv.Environment.Returns("Production");
 		Services.AddSingleton(hostEnv);
 
-		PlayPageServices.Install(Services);
+		_hub = PlayPageServices.Install(Services);
 	}
 
 	/// <summary>The shell's page-sidebar outlet and a popover provider beside the page, as MainLayout composes them.</summary>
@@ -172,6 +173,22 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.Find(".composer textarea").Input("leans on the crates");
 		cut.Find("button.composer-send").Click();
 		await _play.Received(1).SendAsync("pose leans on the crates");
+	}
+
+	[Test]
+	public async Task ARefusedLiveSubscription_WarnsInTheStory_AndTheComposerDoesNotSend()
+	{
+		_hub.JoinRefusal = new Microsoft.AspNetCore.SignalR.HubException("no character can see this scene");
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-story .play-story-unavailable"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".play-story-unavailable").GetAttribute("role")).IsEqualTo("status");
+
+		cut.Find(".composer textarea").Input("leans on the crates");
+		await Assert.That(cut.Find("button.composer-send").HasAttribute("disabled")).IsTrue()
+			.Because("this client would never see the pose arrive in the story");
+		cut.Find("button.composer-send").Click();
+		await _play.DidNotReceive().SendAsync(Arg.Any<string>());
 	}
 
 	[Test]

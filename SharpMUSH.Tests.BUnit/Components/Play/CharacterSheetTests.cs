@@ -31,6 +31,14 @@ public class CharacterSheetTests : TrackingBunitContext
 			 {"assetId":"c","fileName":"c.jpg","url":"/api/wiki-assets/c/c.jpg","caption":"Docks","order":2,"isIcon":false,"isBanner":false},
 			 {"assetId":"d","fileName":"d.jpg","url":"/api/wiki-assets/d/d.jpg","caption":null,"order":3,"isIcon":false,"isBanner":false}]
 			""";
+		_fake.Extra["/api/scenes/42/members"] = """
+			[{"sceneId":"42","memberDbref":"#312","memberName":"Tomas Reyes","role":"participant","showAs":"","isCurrent":true,"grantedAt":1},
+			 {"sceneId":"42","memberDbref":"#313","memberName":"Ilsa Varn","role":"participant","showAs":"","isCurrent":true,"grantedAt":1}]
+			""";
+		_fake.Extra["/api/scenes/43/members"] = """
+			[{"sceneId":"43","memberDbref":"#313","memberName":"Ilsa Varn","role":"participant","showAs":"","isCurrent":true,"grantedAt":1},
+			 {"sceneId":"43","memberDbref":"#312","memberName":"A former #312","role":"participant","showAs":"","isCurrent":false,"grantedAt":1}]
+			""";
 	}
 
 	private BunitNavigationManager Nav => Services.GetRequiredService<BunitNavigationManager>();
@@ -38,13 +46,13 @@ public class CharacterSheetTests : TrackingBunitContext
 	private static readonly RoomOccupant Tomas = new("#312", "Tomas Reyes", "look #312", "#312:1", "player", "#ffb454",
 		new ImageRef("/api/wiki-assets/t/room.jpg", "Tomas", null, null, null), "idle", 90, true, false, [new OccupantAction("Page", "page #312=")]);
 
-	private IRenderedComponent<CharacterSheet> RenderSheet(string? name = "Tomas Reyes", RoomOccupant? occupant = null, bool inScene = true,
+	private IRenderedComponent<CharacterSheet> RenderSheet(string? name = "Tomas Reyes", RoomOccupant? occupant = null, string? sceneId = "42",
 		Action? onClose = null, Action<string>? onCommand = null, Action<string>? onPage = null)
 	{
 		var cut = Render<CharacterSheet>(p => p
 			.Add(x => x.Name, name)
 			.Add(x => x.Occupant, occupant)
-			.Add(x => x.InScene, inScene)
+			.Add(x => x.SceneId, sceneId)
 			.Add(x => x.OnClose, () => onClose?.Invoke())
 			.Add(x => x.OnCommand, c => onCommand?.Invoke(c))
 			.Add(x => x.OnPage, n => onPage?.Invoke(n))
@@ -84,6 +92,16 @@ public class CharacterSheetTests : TrackingBunitContext
 		await Assert.That(cut.Find(".sheet-role").TextContent).IsEqualTo("Lamplighter · Guild of Lamplighters");
 		var pills = cut.FindAll(".sheet-pills .kit-pill").Select(p => p.TextContent.Trim()).ToList();
 		await Assert.That(pills).IsEquivalentTo(new[] { "In this scene", "Idle 1m", "#312" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task SomeoneInTheRoom_ButNotInItsScene_HasNoScenePill()
+	{
+		var cut = RenderSheet(occupant: Tomas, sceneId: "43");
+		cut.WaitForAssertion(() => cut.Find(".sheet-pills .kit-pill"), TimeSpan.FromSeconds(5));
+		var pills = cut.FindAll(".sheet-pills .kit-pill").Select(p => p.TextContent.Trim()).ToList();
+		await Assert.That(pills).IsEquivalentTo(new[] { "Idle 1m", "#312" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
+			.Because("a passer-by in the room is not in its scene; #312's only membership belongs to a former holder");
 	}
 
 	[Test]
