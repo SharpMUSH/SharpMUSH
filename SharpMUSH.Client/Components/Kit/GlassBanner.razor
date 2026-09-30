@@ -1,0 +1,113 @@
+@inject IStringLocalizer<SharedResource> Loc
+@* D1 §4.3 glass banner. Only for a subject with an image: the image, three masked backdrop-blur
+   layers (2/6/12px) so the picture stays sharp above the text, then the scrim. Text bottom-left
+   with the on-image shadow; Back top-left; capsules top-right. Open (Play's Description) swaps in
+   the *-open masks and scrim and grows to OpenHeight. Minimised collapses to a 48px strip that keeps
+   the image, the title and one fact, with a restore button.
+
+   The minimise and restore buttons are native <button>s rather than CapsuleButton because they
+   expose aria-expanded, which a capsule has no reason to carry. .kit-capsule-native duplicates the
+   icon-capsule look; keep it in step with CapsuleButton.razor.css. *@
+@if (Minimised)
+{
+    <div class="kit-banner-strip">
+        @if (HasImage)
+        {
+            <img class="kit-banner-strip-img" src="@ImageUrl!.Trim()" alt="" />
+        }
+        <div class="kit-banner-strip-blur" aria-hidden="true"></div>
+        <div class="kit-banner-strip-scrim" aria-hidden="true"></div>
+        <div class="kit-banner-strip-row">
+            <span class="kit-banner-strip-title">@Title</span>
+            @if (Fact is not null)
+            {
+                <span class="kit-banner-strip-fact">@Fact</span>
+            }
+            <span class="kit-banner-spacer"></span>
+            <button type="button" class="kit-capsule-native kit-banner-restore" aria-label="@Loc["NavBannerRestore"]" aria-expanded="false" @onclick="@(() => MinimisedChanged.InvokeAsync(false))">
+                <MudIcon Icon="@Icons.Material.Outlined.ExpandMore" Size="Size.Small" />
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    <div class="kit-banner @(Open ? "kit-banner--open" : null) @(HasImage ? null : "kit-banner--noimage")" style="@($"height:{(Open ? OpenHeight : Height)}px;")">
+        @if (HasImage)
+        {
+            <img class="kit-banner-img" src="@ImageUrl!.Trim()" alt="@(Alt ?? string.Empty)" style="@FocalStyle" />
+        }
+        <div class="kit-banner-blur kit-banner-blur--soft" aria-hidden="true"></div>
+        <div class="kit-banner-blur kit-banner-blur--mid" aria-hidden="true"></div>
+        <div class="kit-banner-blur kit-banner-blur--deep" aria-hidden="true"></div>
+        <div class="kit-banner-scrim" aria-hidden="true"></div>
+        @if (Open && OpenContent is not null)
+        {
+            <div class="kit-banner-open">@OpenContent</div>
+        }
+        <div class="kit-banner-text kit-banner-text--@TitleSize">
+            @if (Kicker is not null)
+            {
+                <div class="kit-banner-kicker">@Kicker</div>
+            }
+            <div class="kit-banner-title">@Title</div>
+            @if (Secondary is not null)
+            {
+                <div class="kit-banner-secondary">@Secondary</div>
+            }
+        </div>
+        @if (Back is not null)
+        {
+            <div class="kit-banner-back">@Back</div>
+        }
+        <div class="kit-banner-actions">
+            @Actions
+            @if (Minimisable)
+            {
+                <button type="button" class="kit-capsule-native kit-banner-minimise" aria-label="@Loc["NavBannerMinimise"]" aria-expanded="true" @onclick="@(() => MinimisedChanged.InvokeAsync(true))">
+                    <MudIcon Icon="@Icons.Material.Outlined.ExpandLess" Size="Size.Small" />
+                </button>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? ImageUrl { get; set; }
+    [Parameter] public string? Alt { get; set; }
+
+    /// <summary>Focal point as fractions of width and height (0–1); drives object-position.</summary>
+    [Parameter] public (double X, double Y)? Focal { get; set; }
+    [Parameter] public string? Kicker { get; set; }
+
+    /// <summary>The secondary lines under the title ("area · N here · N exits").</summary>
+    [Parameter] public RenderFragment? Secondary { get; set; }
+
+    /// <summary>Capsules top-right. The minimise button is appended after them.</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    /// <summary>The Back capsule, top-left.</summary>
+    [Parameter] public RenderFragment? Back { get; set; }
+    [Parameter] public int Height { get; set; } = 150;
+    [Parameter] public int OpenHeight { get; set; } = 200;
+    [Parameter] public bool Open { get; set; }
+
+    /// <summary>Content shown over the image while Open (the room description).</summary>
+    [Parameter] public RenderFragment? OpenContent { get; set; }
+    [Parameter] public bool Minimised { get; set; }
+    [Parameter] public EventCallback<bool> MinimisedChanged { get; set; }
+
+    /// <summary>The one fact shown on the minimised strip.</summary>
+    [Parameter] public string? Fact { get; set; }
+    [Parameter] public bool Minimisable { get; set; } = true;
+
+    /// <summary>"play" (17px), "hero" (26px) or "character" (28px).</summary>
+    [Parameter] public string TitleSize { get; set; } = "play";
+
+    private bool HasImage => ImageUrlPolicy.IsRenderable(ImageUrl);
+
+    private string FocalStyle => Focal is { } f
+        ? $"object-position:{Math.Round(f.X * 100)}% {Math.Round(f.Y * 100)}%;"
+        : string.Empty;
+}

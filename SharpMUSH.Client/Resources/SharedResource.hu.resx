@@ -4566,4 +4566,10 @@
     <value>Az átalakítást nem sikerült megszakítani: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Fejléckép összecsukása</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Fejléckép megjelenítése</value>
+  </data>
 </root>

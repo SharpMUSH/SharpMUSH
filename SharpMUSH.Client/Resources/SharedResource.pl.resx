@@ -4566,4 +4566,10 @@
     <value>Nie udało się anulować konwersji: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Zwiń baner</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Pokaż baner</value>
+  </data>
 </root>

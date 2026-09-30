@@ -4566,4 +4566,10 @@
     <value>无法取消转换：{0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>收起横幅</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>显示横幅</value>
+  </data>
 </root>

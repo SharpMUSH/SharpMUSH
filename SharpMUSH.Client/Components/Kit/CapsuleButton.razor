@@ -1,0 +1,45 @@
+@* D1 §4.3 capsule button: 36px tall, radius 18, glass. Primary = solid accent with --accent-on
+   text, kept for the page's one primary action or a pressed toggle. Icon-only capsules are 36×36
+   and need an AriaLabel. *@
+@if (Href is not null)
+{
+    <a class="@Css" href="@Href" aria-label="@AriaLabel" aria-pressed="@PressedAttr">@Inner</a>
+}
+else
+{
+    <button type="button" class="@Css" aria-label="@AriaLabel" aria-pressed="@PressedAttr" disabled="@Disabled" @onclick="OnClick">@Inner</button>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public bool Primary { get; set; }
+
+    /// <summary>Set for a toggle; renders aria-pressed. Null renders no aria-pressed at all.</summary>
+    [Parameter] public bool? Pressed { get; set; }
+    [Parameter] public string? AriaLabel { get; set; }
+    [Parameter] public string? Href { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private bool IconOnly => ChildContent is null;
+    private string? PressedAttr => Pressed is null ? null : (Pressed.Value ? "true" : "false");
+
+    private string Css => string.Join(' ', new[]
+    {
+        "kit-capsule",
+        Primary ? "kit-capsule--primary" : null,
+        IconOnly ? "kit-capsule--icon" : null,
+        Class,
+    }.Where(c => !string.IsNullOrEmpty(c)));
+
+    private RenderFragment Inner => __builder =>
+    {
+        @if (Icon is not null)
+        {
+            <MudIcon Icon="@Icon" Size="Size.Small" />
+        }
+        @ChildContent
+    };
+}

@@ -3857,4 +3857,10 @@
   <data name="ConversionCancelFailed" xml:space="preserve">
     <value>Could not cancel the conversion: {0}</value>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Minimise banner</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Show banner</value>
+  </data>
 </root>

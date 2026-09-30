@@ -4566,4 +4566,10 @@
     <value>Kunne ikke avbryte konverteringen: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Minimer banner</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Vis banner</value>
+  </data>
 </root>

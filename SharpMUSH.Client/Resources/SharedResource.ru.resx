@@ -4566,4 +4566,10 @@
     <value>Не удалось отменить преобразование: {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavBannerMinimise" xml:space="preserve">
+    <value>Свернуть баннер</value>
+  </data>
+  <data name="NavBannerRestore" xml:space="preserve">
+    <value>Показать баннер</value>
+  </data>
 </root>
