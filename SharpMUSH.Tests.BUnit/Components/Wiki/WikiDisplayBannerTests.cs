@@ -26,12 +26,12 @@ file sealed class PageAsideHandler : HttpMessageHandler
 		string? body = path switch
 		{
 			"/api/wiki/exists" => """{"character/general/tomas_reyes":true,"character/general/magister_oake":true,"main/theme/tidewater_chapel":false}""",
-			"/api/wiki/category/theme" => "[" + string.Join(",",
+			"/api/wiki/category/theme" => WikiApiFake.Paged(request, [
 				WikiApiFake.Page("1", "harbour_ward", "Harbour Ward", "theme", "/api/wiki-assets/h/ward.jpg", "Ilsa Varn"),
 				WikiApiFake.Page("2", "setting_overview", "Setting Overview", "theme", "/api/wiki-assets/h/overview.jpg", "Wren"),
 				WikiApiFake.Page("3", "tone_and_content", "Tone and Content", "theme", null, "Wren"),
 				WikiApiFake.Page("4", "the_tides", "The Tides", "theme", "/api/wiki-assets/h/tides.jpg", "Dace"),
-				WikiApiFake.Page("5", "harbour_ward", "Harbour Ward (help)", "theme", null, "Dace", ns: "help")) + "]",
+				WikiApiFake.Page("5", "harbour_ward", "Harbour Ward (help)", "theme", null, "Dace", ns: "help")]),
 			_ => null,
 		};
 		return Task.FromResult(body is null

@@ -459,7 +459,7 @@ else
         }
 
         _moreLoadedFor = key;
-        var siblings = (await Wiki.GetByCategoryAsync(key, 0, 500))
+        var siblings = (await Wiki.GetAllByCategoryAsync(key))
             .Where(p => p.Namespace.Equals(Namespace, StringComparison.OrdinalIgnoreCase))
             .Where(p => !p.Slug.Equals(Slug, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(p => p.UpdatedAt)
