@@ -22,6 +22,29 @@ window.sharpmushLayout = {
 		}
 	},
 
+	// ⌘K / Ctrl+K opens the command palette (README §10 Q1) from anywhere except a place the reader is
+	// typing: the terminal input and every text field keep their keys. One listener for the page; a
+	// later registration (a re-rendered shell) replaces the one it answers to.
+	registerPaletteHotkey: function (dotnetRef) {
+		this._paletteRef = dotnetRef;
+		if (this._paletteListening) {
+			return;
+		}
+
+		this._paletteListening = true;
+		document.addEventListener('keydown', event => {
+			if (event.key !== 'k' && event.key !== 'K') return;
+			if (!event.ctrlKey && !event.metaKey) return;
+			const target = event.target;
+			const tag = target && target.tagName;
+			if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (target && target.isContentEditable)) return;
+			event.preventDefault();
+			if (this._paletteRef) {
+				this._paletteRef.invokeMethodAsync('OpenPaletteFromHotkey');
+			}
+		});
+	},
+
 	// Back-compat alias.
 	isNarrow: function () {
 		return this.isTouchChrome();

@@ -1,0 +1,137 @@
+@using SharpMUSH.Client.Services
+@using Microsoft.AspNetCore.Authorization
+@inject IStringLocalizer<SharedResource> Loc
+@inject NavigationManager Nav
+@inject IAuthorizationService Authorization
+
+@* README §10 Q1: the rail's search opens a command palette (⌘K / Ctrl+K anywhere but a text field).
+   Typing filters the destinations the viewer can use; the last two rows search the wiki and the
+   character directory for what was typed. Arrow keys move, Enter goes, Escape closes and hands
+   focus back to whatever opened it. *@
+@if (Open)
+{
+    <MudOverlay Visible="true" LockScroll="true" OnClick="CloseAsync" Style="@Scrim">
+        <div class="kit-palette" role="dialog" aria-modal="true" aria-label="@Loc["NavSearchOpen"]"
+             @onclick:stopPropagation="true" @onkeydown="OnKeyDownAsync" @onkeydown:preventDefault="_swallow">
+            <div class="kit-palette-field">
+                <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" />
+                <input @ref="_input" type="text" role="combobox" aria-expanded="true" aria-controls="kit-palette-list"
+                       aria-activedescendant="@($"kit-palette-{_active}")" aria-label="@Loc["NavSearchOpen"]"
+                       placeholder="@Loc["NavPalettePlaceholder"]" value="@_query"
+                       @oninput="@(e => { _query = e.Value?.ToString() ?? string.Empty; _active = 0; })" />
+                <kbd class="kit-palette-kbd">Esc</kbd>
+            </div>
+            <ul class="kit-palette-list" id="kit-palette-list" role="listbox">
+                @for (var i = 0; i < Items.Count; i++)
+                {
+                    var index = i;
+                    var item = Items[i];
+                    <li id="@($"kit-palette-{index}")" role="option" aria-selected="@(index == _active ? "true" : "false")"
+                        class="kit-palette-item @(index == _active ? "kit-palette-item--active" : null)"
+                        @onclick="@(() => GoAsync(item))" @onmousemove="@(() => _active = index)">
+                        <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                        <span class="kit-palette-label">@item.Label</span>
+                        @if (item.Hint is not null)
+                        {
+                            <span class="kit-palette-hint">@item.Hint</span>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    </MudOverlay>
+}
+
+@code {
+    /// <summary>One row: where it goes, what it says, and a dim hint ("Build &amp; manage").</summary>
+    public sealed record Item(string Href, string Icon, string Label, string? Hint = null);
+
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private const string Scrim = "background: rgba(8, 9, 10, 0.72); align-items: flex-start; padding-top: 12vh;";
+
+    private ElementReference _input;
+    private string _query = string.Empty;
+    private int _active;
+    private bool _swallow;
+    private bool _wasOpen;
+    private IReadOnlyList<Item> _destinations = [];
+
+    private IReadOnlyList<Item> Items
+    {
+        get
+        {
+            var term = _query.Trim();
+            var matches = term.Length == 0
+                ? _destinations
+                : _destinations.Where(d => d.Label.Contains(term, StringComparison.CurrentCultureIgnoreCase)).ToList();
+            if (term.Length == 0) return matches;
+            return
+            [
+                .. matches,
+                new Item($"/wiki?q={Uri.EscapeDataString(term)}", Icons.Material.Outlined.MenuBook, string.Format(Loc["NavPaletteSearchWiki"], term)),
+                new Item($"/characters?q={Uri.EscapeDataString(term)}", Icons.Material.Outlined.Groups, string.Format(Loc["NavPaletteFindCharacter"], term)),
+            ];
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Open && !_wasOpen)
+        {
+            _query = string.Empty;
+            _active = 0;
+            var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
+            var build = await BuildNavCatalog.VisibleAsync(Authorization, user);
+            _destinations =
+            [
+                new("/", Icons.Material.Outlined.Home, Loc["Home"]),
+                new("/play", Icons.Material.Outlined.Terminal, Loc["Play"]),
+                new("/scenes", Icons.Material.Outlined.Theaters, Loc["SceneArchive"]),
+                new("/wiki", Icons.Material.Outlined.MenuBook, Loc["Wiki"]),
+                new("/characters", Icons.Material.Outlined.Groups, Loc["Characters"]),
+                new("/help", Icons.Material.Outlined.HelpOutline, Loc["Help"]),
+                new("/settings", Icons.Material.Outlined.Settings, Loc["Settings"]),
+                .. build.Select(b => new Item(b.Href, b.Icon, Loc[b.LabelKey], Loc["NavBuildManage"])),
+            ];
+        }
+        _wasOpen = Open;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Open)
+        {
+            try { await _input.FocusAsync(); }
+            catch (InvalidOperationException) { }
+        }
+    }
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        _swallow = e.Key is "ArrowDown" or "ArrowUp" or "Enter" or "Escape";
+        var count = Items.Count;
+        switch (e.Key)
+        {
+            case "ArrowDown" when count > 0: _active = (_active + 1) % count; break;
+            case "ArrowUp" when count > 0: _active = (_active - 1 + count) % count; break;
+            case "Enter" when count > 0: await GoAsync(Items[Math.Clamp(_active, 0, count - 1)]); break;
+            case "Escape": await CloseAsync(); break;
+        }
+    }
+
+    private async Task GoAsync(Item item)
+    {
+        await CloseAsync();
+        Nav.NavigateTo(item.Href);
+    }
+
+    private async Task CloseAsync()
+    {
+        _wasOpen = false;
+        await OpenChanged.InvokeAsync(false);
+    }
+}
