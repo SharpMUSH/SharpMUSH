@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from add_keys import add_keys  # noqa: E402
+from add_keys import add_keys, read  # noqa: E402
 
 RESX = """<?xml version="1.0" encoding="utf-8"?>
 <root>
@@ -39,14 +39,14 @@ class AddKeysTests(unittest.TestCase):
         self.assertEqual(names(self.path("de"))[key], "Hallo")
 
     def test_duplicate_detection_compares_decoded_names(self):
-        before = open(self.path(), encoding="utf-8").read()
+        before = read(self.path())
         self.assertEqual(add_keys({"Existing&Key": {"": "Again"}}, self.dir.name), 1)
-        self.assertEqual(open(self.path(), encoding="utf-8").read(), before)
+        self.assertEqual(read(self.path()), before)
 
     def test_missing_locale_writes_nothing(self):
-        before = open(self.path(), encoding="utf-8").read()
+        before = read(self.path())
         self.assertEqual(add_keys({"NewKey": {"": "New", "xx": "Nope"}}, self.dir.name), 1)
-        self.assertEqual(open(self.path(), encoding="utf-8").read(), before)
+        self.assertEqual(read(self.path()), before)
 
 
 if __name__ == "__main__":
