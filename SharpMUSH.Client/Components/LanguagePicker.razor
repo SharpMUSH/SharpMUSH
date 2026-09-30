@@ -1,3 +1,4 @@
+@using System.Globalization
 @using SharpMUSH.Client.Resources
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
@@ -27,11 +28,10 @@
         .Select(code => new LanguageOption(code, PortalLocales.DisplayName(code)))
         .ToArray();
 
-    protected override async Task OnInitializedAsync()
-    {
-        var stored = await JSRuntime.GetItemAsync(BrowserStore.Local, "locale");
-        _currentLocale = stored ?? "en";
-    }
+    // Program.cs has already read the stored locale and made it the UI culture (resetting a bad tag
+    // to English), so that answer is taken from there rather than read from storage a second time.
+    protected override void OnInitialized()
+        => _currentLocale = CultureInfo.DefaultThreadCurrentUICulture?.Name is { Length: > 0 } name ? name : "en";
 
     private async Task SetLanguageAsync(string locale)
     {

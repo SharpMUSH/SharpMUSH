@@ -105,8 +105,8 @@ public class AccountPanelTests : TrackingBunitContext
 		public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) => [];
 	}
 
-	/// <summary>Fakes <c>api/applications</c> only — NavMenu's own OnInitializedAsync fetches it
-	/// unconditionally via <see cref="ApplicationRegistryClient"/>, whether or not anyone logs in.</summary>
+	/// <summary>Fakes <c>api/applications</c> only; NavMenu itself lists applications from the startup
+	/// <see cref="ApplicationCatalog"/>, registered empty alongside.</summary>
 	private sealed class ApplicationsOnlyHandler : HttpMessageHandler
 	{
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -171,6 +171,7 @@ public class AccountPanelTests : TrackingBunitContext
 		Services.AddSingleton(sp => new ApplicationRegistryClient(
 			sp.GetRequiredService<IHttpClientFactory>(),
 			NullLogger<ApplicationRegistryClient>.Instance));
+		Services.AddSingleton(new ApplicationCatalog([]));
 		Services.AddSingleton(sp => new AccountAuthService(
 			sp.GetRequiredService<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []));
 
@@ -208,6 +209,7 @@ public class AccountPanelTests : TrackingBunitContext
 		Services.AddSingleton(sp => new ApplicationRegistryClient(
 			sp.GetRequiredService<IHttpClientFactory>(),
 			NullLogger<ApplicationRegistryClient>.Instance));
+		Services.AddSingleton(new ApplicationCatalog([]));
 		Services.AddSingleton(sp => new AccountAuthService(
 			sp.GetRequiredService<IHttpClientFactory>(), JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []));
 

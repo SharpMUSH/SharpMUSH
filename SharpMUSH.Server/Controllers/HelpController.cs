@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Services.Interfaces;
@@ -39,7 +38,8 @@ namespace SharpMUSH.Server.Controllers;
 /// </remarks>
 [ApiController]
 [Route("api/help")]
-[EnableRateLimiting("public-api")]
+// Not on the "public-api" limiter: that is the login throttle, and reading help — a click per topic —
+// spent the same per-client budget as signing in. These are in-memory reads, like the wiki's.
 [Produces("application/json")]
 public sealed class HelpController(IHelpTopicResolver resolver) : ControllerBase
 {

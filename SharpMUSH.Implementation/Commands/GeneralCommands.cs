@@ -126,6 +126,11 @@ public partial class Commands
 	/// (<see cref="MessageFormatting.FormatObjectWithDbrefMString"/>); <c>FLAGS_ON_EXAMINE</c> gates only
 	/// the <c>Type: ... Flags: ...</c> line, and <c>BRIEF</c> skips only the description and attributes.
 	/// </summary>
+	/// <remarks>
+	/// Two early returns, in Penn's order. An attribute pattern is the whole command (<c>:796-801</c>).
+	/// Otherwise a viewer who may not examine gets the description and the attributes they may read, then
+	/// the owner line in place of everything an examine is really for (<c>:809-823</c>, <c>:896-909</c>).
+	/// </remarks>
 	private async ValueTask<Option<CallState>> ExamineAsync(IMUSHCodeParser parser, string[] switches)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -137,40 +142,27 @@ public partial class Commands
 		if (args.Count == 1)
 		{
 			var argText = args["0"].Message!.ToPlainText();
-			if (HelperFunctions.SplitDbRefAndOptionalAttr(argText) is { Object: var objectName, Attribute: var maybeAttributePattern })
+			var objectName = argText;
+
+			if (HelperFunctions.SplitDbRefAndOptionalAttr(argText) is { Object: var splitObject, Attribute: var maybeAttributePattern })
 			{
+				objectName = splitObject;
 				attributePattern = maybeAttributePattern;
-
-				var locate = await LocateService.LocateAndNotifyIfInvalid(
-					parser,
-					executor,
-					executor,
-					objectName,
-					LocateFlags.All);
-
-				if (locate is not AnySharpObject located)
-				{
-					return new None();
-				}
-
-				viewing = located;
 			}
-			else
+
+			var locate = await LocateService.LocateAndNotifyIfInvalid(
+				parser,
+				executor,
+				executor,
+				objectName,
+				LocateFlags.All);
+
+			if (locate is not AnySharpObject located)
 			{
-				var locate = await LocateService.LocateAndNotifyIfInvalid(
-					parser,
-					executor,
-					executor,
-					argText,
-					LocateFlags.All);
-
-				if (locate is not AnySharpObject located)
-				{
-					return new None();
-				}
-
-				viewing = located;
+				return new None();
 			}
+
+			viewing = located;
 		}
 		else
 		{
@@ -182,6 +174,17 @@ public partial class Commands
 			return new None();
 		}
 
+		var obj = viewingKnown.Object()!;
+
+		// An attribute pattern is answered on its own and returns (look.c:796-801) -- before the
+		// permission and proximity tests below, so no header and no owner line, and EXAM_BRIEF never
+		// reaches its own branch.
+		if (!string.IsNullOrEmpty(attributePattern))
+		{
+			await ExamineAttributesAsync(parser, enactor, executor, viewingKnown, attributePattern, switches);
+			return new CallState(obj.DBRef.ToString());
+		}
+
 		var canExamine = await PermissionService.CanExamine(executor, viewingKnown);
 
 		if (switches.Contains("MORTAL") && await executor.IsWizard())
@@ -189,197 +192,129 @@ public partial class Commands
 			canExamine = await PermissionService.Controls(executor, viewingKnown);
 		}
 
-		if (!canExamine)
+		var publicAttributes = Configuration.CurrentValue.Cosmetic.ExaminePublicAttributes;
+
+		// An object the viewer may not examine and is not standing next to -- or any such object at all
+		// when ex_public_attribs is off -- is worth one line, its header and its owner's (look.c:809-823).
+		// The injected ILocateService property shadows the type, so nearby() is qualified.
+		if (!canExamine
+			&& (!publicAttributes || !await Library.Services.LocateService.Nearby(executor, viewingKnown)))
 		{
-			var limitedObj = viewingKnown.Object();
-			var limitedOwnerObj = (await limitedObj.Owner.WithCancellation(CancellationToken.None)).Object;
-			await NotifyService.Notify(enactor,
-				Format($"{limitedObj.Name.Hilight()} is owned by {limitedOwnerObj.Name.Hilight()}."),
-				enactor);
-			return new CallState(limitedObj.DBRef.ToString());
+			await NotifyOwnedByAsync(enactor, executor, viewingKnown);
+			return new CallState(obj.DBRef.ToString());
 		}
 
 		var perceive = await ObserveRealityAsync(parser, executor);
-		var contents = (switches.Contains("OPAQUE") || viewing.IsExit)
+
+		// Contents at all only when the viewer may examine, or when the thing is neither a room nor
+		// opaque (look.c:883-884).
+		var showContents = !switches.Contains("OPAQUE") && !viewingKnown.IsExit
+			&& (canExamine || (!viewingKnown.IsRoom && !await viewingKnown.IsOpaque()));
+
+		// Contents walk DOLIST_VISIBLE (look.c:885), whose first_visible applies the DARK/LIGHT rules
+		// (predicat.c:1130-1160) -- so a mortal who does not control a DARK object never sees it listed.
+		// The exits list below is a plain DOLIST (look.c:916) and has no such filter.
+		var canSeeContent = await ObserveContentsAsync(parser, executor, viewingKnown, ConnectionService);
+
+		var contents = !showContents
 			? []
 			// GetContentsQuery also yields exits; Penn's Contents(thing) never does, and exits get their own list.
 			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
 				.Where(item => !item.IsExit)
-				.Where((item, ct) => perceive(item.Object().DBRef, ct))
+				.Where((AnySharpContent item, CancellationToken ct) => canSeeContent(item, ct))
 				.ToArrayAsync(ExecutionBudget.CurrentToken);
-
-		var obj = viewingKnown.Object()!;
-		var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
-		var description = (await AttributeService.GetAttributeAsync(executor, viewingKnown, "DESCRIBE",
-				IAttributeService.AttributeMode.Read, false)) switch
-		{
-			SharpAttribute[] attr => attr.Last().Value.Length == 0
-				? MarkupText.Plain("There is nothing to see here")
-				: attr.Last().Value,
-			None => MarkupText.Plain("There is nothing to see here"),
-			Error<string> => MarkupText.Empty
-		};
-
-		var objFlags = await obj.Flags.Value.ToArrayAsync();
-		var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
-		var objPowers = obj.Powers.Value;
-		var objZone = await obj.Zone.WithCancellation(CancellationToken.None);
 
 		var outputSections = new List<MString>();
 
-		var showFlags = Configuration.CurrentValue.Cosmetic.FlagsOnExamine;
-
-		outputSections.Add(await MessageFormatting.FormatObjectWithDbrefMString(obj));
-
-		if (showFlags)
+		if (canExamine)
 		{
-			outputSections.Add(MarkupText.Plain($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}"));
-		}
+			outputSections.Add(await MessageFormatting.FormatObjectWithDbrefMString(obj));
 
-		if (!switches.Contains("BRIEF"))
-		{
-			outputSections.Add(description);
-		}
-
-		MString zoneSection;
-		if (objZone is AnySharpObject zone)
-		{
-			var zoneLine = await MessageFormatting.FormatObjectWithDbrefMString(zone.Object());
-			zoneSection = Format($"  Zone: {zoneLine}");
-		}
-		else
-		{
-			zoneSection = MarkupText.Plain("  Zone: *NOTHING*");
-		}
-
-		var ownerLine = await MessageFormatting.FormatObjectWithDbrefMString(ownerObj);
-		outputSections.Add(Format($"Owner: {ownerLine}{zoneSection}"));
-
-		var parentObject = objParent.Object();
-		if (parentObject == null)
-		{
-			outputSections.Add(MarkupText.Plain("Parent: *NOTHING*"));
-		}
-		else
-		{
-			var parentLine = await MessageFormatting.FormatObjectWithDbrefMString(parentObject);
-			outputSections.Add(Format($"Parent: {parentLine}"));
-		}
-
-		foreach (var lockKvp in obj.Locks.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
-		{
-			outputSections.Add(MarkupText.Plain(await FormatLockLineAsync(executor, lockKvp.Key, lockKvp.Value)));
-		}
-
-		var powersList = await objPowers.Select(x => x.Name).ToArrayAsync();
-		outputSections.Add(MarkupText.Plain($"Powers: {string.Join(" ", powersList)}"));
-
-		var warningsStr = obj.Warnings != WarningType.None
-			? WarningTypeHelper.UnparseWarnings(obj.Warnings)
-			: string.Empty;
-		outputSections.Add(MarkupText.Plain($"Warnings checked: {warningsStr}"));
-
-		if (switches.Contains("DEBUG") && await executor.IsWizard())
-		{
-			outputSections.Add(MarkupText.Plain($"Created: {obj.CreationTime} ({DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F})"));
-		}
-		else
-		{
-			outputSections.Add(MarkupText.Plain($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):ddd MMM dd HH:mm:ss yyyy}"));
-		}
-
-		outputSections.Add(MarkupText.Plain($"Last modified: {DateTimeOffset.FromUnixTimeMilliseconds(obj.ModifiedTime):ddd MMM dd HH:mm:ss yyyy}"));
-
-		if (viewingKnown is SharpPlayer viewedPlayer)
-		{
-			outputSections.Add(MarkupText.Plain($"Quota: {viewedPlayer.Quota}"));
-		}
-
-		await NotifyService.Notify(enactor, MarkupText.Join(MarkupText.Plain("\n"), outputSections), enactor);
-
-		if (!switches.Contains("BRIEF"))
-		{
-			var checkParents = switches.Contains("PARENT");
-
-			SharpAttributesOrError atrs;
-			if (!string.IsNullOrEmpty(attributePattern))
+			if (Configuration.CurrentValue.Cosmetic.FlagsOnExamine)
 			{
-				var patternMode = IAttributeService.AttributePatternMode.Wildcard;
+				var objFlags = await obj.Flags.Value.ToArrayAsync();
+				outputSections.Add(MarkupText.Plain($"Type: {obj.Type} Flags: {string.Join(" ", objFlags.Select(x => x.Name))}"));
+			}
+		}
 
-				atrs = await AttributeService.GetAttributePatternAsync(
-					executor,
-					viewingKnown,
-					attributePattern,
-					checkParents,
-					patternMode);
+		// atr_get_noparent's raw value, and nothing at all when the object has no DESCRIBE
+		// (look.c:832-839). ex_public_attribs gates it for every viewer, examinable or not.
+		if (publicAttributes && !switches.Contains("BRIEF")
+			&& await AttributeService.GetAttributeAsync(executor, viewingKnown, "DESCRIBE",
+				IAttributeService.AttributeMode.Read, false) is SharpAttribute[] describe)
+		{
+			outputSections.Add(describe.Last().Value);
+		}
+
+		if (canExamine)
+		{
+			var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
+			var objZone = await obj.Zone.WithCancellation(CancellationToken.None);
+			var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
+
+			MString zoneSection;
+			if (objZone is AnySharpObject zone)
+			{
+				var zoneLine = await MessageFormatting.FormatObjectWithDbrefMString(zone.Object());
+				zoneSection = Format($"  Zone: {zoneLine}");
 			}
 			else
 			{
-				atrs = await AttributeService.GetVisibleAttributesAsync(executor, viewingKnown);
+				zoneSection = MarkupText.Plain("  Zone: *NOTHING*");
 			}
 
-			if (atrs is SharpAttribute[] visibleAttributes)
+			var ownerLine = await MessageFormatting.FormatObjectWithDbrefMString(ownerObj);
+			outputSections.Add(Format($"Owner: {ownerLine}{zoneSection}"));
+
+			var parentObject = objParent.Object();
+			if (parentObject == null)
 			{
-				var showAll = switches.Contains("ALL");
-
-				// Lazily computed: only a flagged attribute needs it, and most @examine calls have none.
-				int? width = null;
-
-				foreach (var attr in visibleAttributes)
-				{
-					const string VeiledFlagName = "VEILED";
-					if (!showAll && attr.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase)))
-					{
-						continue;
-					}
-
-					var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
-					var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
-
-					if (!await PermissionService.CanViewAttribute(executor, viewingKnown, attr))
-					{
-						continue;
-					}
-
-					var header = MarkupText.Plain($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight();
-					var parseType = attr.SyntaxParseType();
-
-					if (parseType is null)
-					{
-						await NotifyService.Notify(enactor, Format($"{header}{attr.Value}"), enactor);
-						continue;
-					}
-
-					await NotifyService.Notify(enactor, header, enactor);
-
-					if (attr.Value.Length == 0)
-					{
-						continue;
-					}
-
-					width ??= await ExecutorFormatWidthAsync(executor);
-
-					// Cost per flagged, non-empty attribute: 3 lexes and 2 full parses of `source`.
-					// Tokenize lexes once (no parse). GetSemanticTokens and ValidateAndGetErrors each
-					// independently construct their own lexer + parser and run the parseType grammar
-					// rule again -- one to walk the parse tree for token classification, the other with
-					// a custom ParserErrorListener attached. Neither IMUSHCodeParser method exposes a
-					// way to reuse the other's lex/parse, and there's no third overload that returns
-					// tokens + semantic tokens + errors from one pass. Collapsing this to one lex/parse
-					// would need a new combined method on IMUSHCodeParser (e.g. an
-					// `Analyze(MString, ParseType) -> (TokenInfo[], SemanticToken[], ParseError[])` that
-					// attaches an error listener to the same parser instance AnalyzeSemanticTokens already
-					// walks) -- an interface change, deliberately not made here per review instruction;
-					// left as the known, documented cost of this path instead.
-					var source = attr.Value;
-					var tokens = parser.Tokenize(source);
-					var semanticTokens = parser.GetSemanticTokens(source, parseType.Value);
-					var errors = SoftcodeSource.Validate(parser, source, parseType.Value);
-					var formatted = SoftcodeFormatter.Format(source, tokens, semanticTokens, errors, width.Value, parser, parseType.Value);
-
-					await NotifyService.Notify(enactor, formatted, enactor);
-				}
+				outputSections.Add(MarkupText.Plain("Parent: *NOTHING*"));
 			}
+			else
+			{
+				var parentLine = await MessageFormatting.FormatObjectWithDbrefMString(parentObject);
+				outputSections.Add(Format($"Parent: {parentLine}"));
+			}
+
+			foreach (var lockKvp in obj.Locks.OrderBy(x => x.Key, StringComparer.OrdinalIgnoreCase))
+			{
+				outputSections.Add(MarkupText.Plain(await FormatLockLineAsync(executor, lockKvp.Key, lockKvp.Value)));
+			}
+
+			var powersList = await obj.Powers.Value.Select(x => x.Name).ToArrayAsync();
+			outputSections.Add(MarkupText.Plain($"Powers: {string.Join(" ", powersList)}"));
+
+			var warningsStr = obj.Warnings != WarningType.None
+				? WarningTypeHelper.UnparseWarnings(obj.Warnings)
+				: string.Empty;
+			outputSections.Add(MarkupText.Plain($"Warnings checked: {warningsStr}"));
+
+			if (switches.Contains("DEBUG") && await executor.IsWizard())
+			{
+				outputSections.Add(MarkupText.Plain($"Created: {obj.CreationTime} ({DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):F})"));
+			}
+			else
+			{
+				outputSections.Add(MarkupText.Plain($"Created: {DateTimeOffset.FromUnixTimeMilliseconds(obj.CreationTime):ddd MMM dd HH:mm:ss yyyy}"));
+			}
+
+			outputSections.Add(MarkupText.Plain($"Last modified: {DateTimeOffset.FromUnixTimeMilliseconds(obj.ModifiedTime):ddd MMM dd HH:mm:ss yyyy}"));
+
+			if (viewingKnown is SharpPlayer viewedPlayer)
+			{
+				outputSections.Add(MarkupText.Plain($"Quota: {viewedPlayer.Quota}"));
+			}
+		}
+
+		if (outputSections.Count > 0)
+		{
+			await NotifyService.Notify(enactor, MarkupText.Join(MarkupText.Plain("\n"), outputSections), enactor);
+		}
+
+		if (!switches.Contains("BRIEF"))
+		{
+			await ExamineAttributesAsync(parser, enactor, executor, viewingKnown, attributePattern, switches);
 		}
 
 		if (!switches.Contains("OPAQUE") && contents.Length > 0)
@@ -406,14 +341,26 @@ public partial class Commands
 			else
 			{
 				var contentsLabel = viewingKnown.IsPlayer ? "Carrying:" : "Contents:";
+				// object_header of each item (look.c:893), which is unparse_object -- so a viewer who may
+				// not see a content's dbref gets its bare name, whatever they may do with the container.
 				var contentItems = await contents
 					.ToAsyncEnumerable()
-					.Select((AnySharpContent content, CancellationToken _) => MessageFormatting.FormatObjectWithDbrefMString(content.Object()))
+					.Select((AnySharpContent content, CancellationToken _) =>
+						MessageFormatting.UnparseObjectMStringAsync(PermissionService, executor, content.WithRoomOption()))
 					.Prepend(MarkupText.Plain(contentsLabel))
 					.ToListAsync();
 				await NotifyService.Notify(enactor,
 					MarkupText.Join(MarkupText.Plain("\n"), contentItems), enactor);
 			}
+		}
+
+		// Everything past the contents belongs to a viewer who may examine; the rest get the owner line
+		// and nothing else (look.c:896-909). Penn also shows a room's obvious exits here, which needs a
+		// look_exits seam ILookService does not have yet -- tracked with this fix's issue.
+		if (!canExamine)
+		{
+			await NotifyOwnedByAsync(enactor, executor, viewingKnown);
+			return new CallState(obj.DBRef.ToString());
 		}
 
 		if (!switches.Contains("OPAQUE") && !viewingKnown.IsExit)
@@ -456,6 +403,118 @@ public partial class Commands
 		}
 
 		return new CallState(obj.DBRef.ToString());
+	}
+
+	/// <summary>
+	/// All an examine says about an object the viewer may not examine: two <c>object_header</c>s, and no
+	/// full stop after them (<c>src/look.c:813-818</c> and <c>:900-905</c>).
+	/// </summary>
+	private async ValueTask NotifyOwnedByAsync(AnySharpObject enactor, AnySharpObject executor, AnySharpObject viewing)
+	{
+		var owner = await viewing.Object().Owner.WithCancellation(CancellationToken.None);
+		var viewedLine = await MessageFormatting.UnparseObjectMStringAsync(PermissionService, executor, viewing);
+		var ownerLine = await MessageFormatting.UnparseObjectMStringAsync(PermissionService, executor, new AnySharpObject(owner));
+
+		await NotifyService.Notify(enactor, Format($"{viewedLine} is owned by {ownerLine}"), enactor);
+	}
+
+	/// <summary>
+	/// <c>examine_atrs</c> (<c>src/look.c:372-405</c>): the attribute lines an examine prints. A pattern
+	/// that matches nothing answers <c>No matching attributes.</c>; the whole-object form stays silent.
+	/// </summary>
+	private async ValueTask ExamineAttributesAsync(IMUSHCodeParser parser, AnySharpObject enactor,
+		AnySharpObject executor, AnySharpObject viewing, string? attributePattern, string[] switches)
+	{
+		var checkParents = switches.Contains("PARENT");
+		var named = !string.IsNullOrEmpty(attributePattern);
+
+		var atrs = named
+			? await AttributeService.GetAttributePatternAsync(executor, viewing, attributePattern!, checkParents,
+				IAttributeService.AttributePatternMode.Wildcard)
+			: await AttributeService.GetVisibleAttributesAsync(executor, viewing);
+
+		// examine_helper and examine_helper_veiled both drop DESCRIBE from a whole-object listing when
+		// ex_public_attribs is on (look.c:310-312, :346-348) -- the description line above already is it.
+		var skipDescribe = Configuration.CurrentValue.Cosmetic.ExaminePublicAttributes
+			&& (!named || attributePattern == "*");
+
+		var shown = 0;
+
+		if (atrs is SharpAttribute[] visibleAttributes)
+		{
+			var showAll = switches.Contains("ALL");
+
+			// Lazily computed: only a flagged attribute needs it, and most @examine calls have none.
+			int? width = null;
+
+			foreach (var attr in visibleAttributes)
+			{
+				if (skipDescribe && attr.LongName.Equals("DESCRIBE", StringComparison.OrdinalIgnoreCase))
+				{
+					continue;
+				}
+
+				const string VeiledFlagName = "VEILED";
+				if (!showAll && attr.Flags.Any(f => f.Name.Equals(VeiledFlagName, StringComparison.OrdinalIgnoreCase)))
+				{
+					continue;
+				}
+
+				var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
+				var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
+
+				if (!await PermissionService.CanViewAttribute(executor, viewing, attr))
+				{
+					continue;
+				}
+
+				shown++;
+
+				var header = MarkupText.Plain($"{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight();
+				var parseType = attr.SyntaxParseType();
+
+				if (parseType is null)
+				{
+					await NotifyService.Notify(enactor, Format($"{header}{attr.Value}"), enactor);
+					continue;
+				}
+
+				await NotifyService.Notify(enactor, header, enactor);
+
+				if (attr.Value.Length == 0)
+				{
+					continue;
+				}
+
+				width ??= await ExecutorFormatWidthAsync(executor);
+
+				// Cost per flagged, non-empty attribute: 3 lexes and 2 full parses of `source`.
+				// Tokenize lexes once (no parse). GetSemanticTokens and ValidateAndGetErrors each
+				// independently construct their own lexer + parser and run the parseType grammar
+				// rule again -- one to walk the parse tree for token classification, the other with
+				// a custom ParserErrorListener attached. Neither IMUSHCodeParser method exposes a
+				// way to reuse the other's lex/parse, and there's no third overload that returns
+				// tokens + semantic tokens + errors from one pass. Collapsing this to one lex/parse
+				// would need a new combined method on IMUSHCodeParser (e.g. an
+				// `Analyze(MString, ParseType) -> (TokenInfo[], SemanticToken[], ParseError[])` that
+				// attaches an error listener to the same parser instance AnalyzeSemanticTokens already
+				// walks) -- an interface change, deliberately not made here per review instruction;
+				// left as the known, documented cost of this path instead.
+				var source = attr.Value;
+				var tokens = parser.Tokenize(source);
+				var semanticTokens = parser.GetSemanticTokens(source, parseType.Value);
+				var errors = SoftcodeSource.Validate(parser, source, parseType.Value);
+				var formatted = SoftcodeFormatter.Format(source, tokens, semanticTokens, errors, width.Value, parser, parseType.Value);
+
+				await NotifyService.Notify(enactor, formatted, enactor);
+			}
+		}
+
+		if (named && shown == 0)
+		{
+			await NotifyService.NotifyLocalized(enactor,
+				nameof(ErrorMessages.Notifications.ExamineNoMatchingAttributes), enactor);
+		}
 	}
 
 	private async ValueTask<string> FormatLockLineAsync(AnySharpObject viewer, string name, SharpLockData data)

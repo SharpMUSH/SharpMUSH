@@ -6,7 +6,7 @@
 @using System.Net
 @using System.Text
 @using System.Text.RegularExpressions
-@inject WikiMarkdigPipeline Pipeline
+@inject IServiceProvider Services
 @inject WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
@@ -399,10 +399,21 @@ else
         }
     </div>;
 
+    // The article HTML this display last marked, and the marking: a parent re-render hands the same
+    // article back (often while the first check is still out), and asking the server again which of
+    // its links exist would change nothing.
+    private string? _markedFrom;
+    private Task<string>? _marking;
+
     protected override async Task OnParametersSetAsync()
     {
+        // The server renders the article; the Markdig pipeline is only for the rare page that arrives
+        // without its HTML, so it is resolved (and its pipeline built) only then rather than by every
+        // wiki view, the home page's included.
         var html = Article?.RenderedHtml
-                   ?? (Article is not null ? Pipeline.RenderToHtml(Article.Content) : string.Empty);
+                   ?? (Article is not null
+                       ? Services.GetRequiredService<WikiMarkdigPipeline>().RenderToHtml(Article.Content)
+                       : string.Empty);
 
         // The banner shows the first image; the body must not show it a second time.
         if (!Embedded && HasBanner)
@@ -410,13 +421,22 @@ else
             html = WikiImages.StripFirstImage(html, Article!.Image!);
         }
 
-        _segments = SplitOnDirectives(html);
         _hasBody = HasVisibleContent(html);
         _toc = BuildToc(html);
         _mentioned = Embedded ? [] : FindMentioned(html);
 
-        var marked = MarkMentions(await MarkRedlinksAsync(html));
-        if (marked != html)
+        if (html != _markedFrom || _marking is null)
+        {
+            _markedFrom = html;
+            _marking = MarkRedlinksAsync(html);
+        }
+
+        var marking = _marking;
+        // Unmarked until the redlink check answers; the lifecycle renders as soon as this awaits.
+        _segments = SplitOnDirectives(marking.IsCompletedSuccessfully ? MarkMentions(marking.Result) : html);
+
+        var marked = MarkMentions(await marking);
+        if (marking == _marking && marked != html)
         {
             _segments = SplitOnDirectives(marked);
         }

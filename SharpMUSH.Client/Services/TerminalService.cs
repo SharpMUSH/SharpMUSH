@@ -82,8 +82,11 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		// Discard any buffered commands from a previous (possibly interrupted) session so they
 		// are not flushed to the server before the new connect token is authenticated.
 		wsService.ClearSendBuffer();
+		// No pause before the login line. A fixed 300 ms sleep used to stand here, from before the
+		// server held early input: WebSocketInputConsumer now waits for the connection to register
+		// (ConnectionIncarnation.WaitForRegistrationAsync) before running it, so a line sent the moment
+		// the socket opens is no longer lost — and every sign-in paid the sleep.
 		await ConnectAsync(serverUri);
-		await Task.Delay(300);
 		_logger.LogInformation("Using pre-fetched OTT for account character login");
 		// Never echo any part of the OTT: ConnectWithOttAsync is used for real account
 		// logins, so the token must not leak into the terminal line buffer (or anything
@@ -96,8 +99,8 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 	public async Task ConnectAsGuestAsync(string serverUri)
 	{
 		wsService.ClearSendBuffer();
+		// No pause: the server holds early input until the connection registers (ConnectWithOttAsync).
 		await ConnectAsync(serverUri);
-		await Task.Delay(300);
 		AddSystemLine("[Guest] Connecting…");
 		await wsService.SendAsync("connect guest");
 	}

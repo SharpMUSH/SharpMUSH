@@ -13,13 +13,20 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public class ApplicationRegistryClient(IHttpClientFactory httpClientFactory, ILogger<ApplicationRegistryClient> logger)
 {
+	private const string ListRoute = "api/applications";
+
+	private readonly SingleFlight<string, IReadOnlyList<PortalApplication>> _listFlight = new();
+
 	/// <summary>Lists all registered applications (caller filters by role for display).</summary>
-	public async Task<IReadOnlyList<PortalApplication>> ListAsync()
+	/// <remarks>Concurrent callers (the startup catalog and the nav menu) share one request.</remarks>
+	public Task<IReadOnlyList<PortalApplication>> ListAsync() => _listFlight.RunAsync(ListRoute, FetchListAsync);
+
+	private async Task<IReadOnlyList<PortalApplication>> FetchListAsync()
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
-			var apps = await http.GetFromJsonAsync<List<PortalApplication>>("api/applications");
+			var apps = await http.GetFromJsonAsync<List<PortalApplication>>(ListRoute);
 			return apps ?? [];
 		}
 		catch (Exception ex) when (ex is HttpRequestException or JsonException or NotSupportedException)

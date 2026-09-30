@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.Models.Portal.Widgets;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.Client.Services;
 
@@ -29,7 +30,7 @@ public class LayoutServiceTests : TrackingTestContext
 		}
 	}
 
-	private LayoutService Build(ScriptedHandler handler)
+	private LayoutService Build(HttpMessageHandler handler)
 	{
 		var http = Track(new HttpClient(handler) { BaseAddress = new Uri("http://localhost") });
 		var factory = Substitute.For<IHttpClientFactory>();
@@ -158,6 +159,86 @@ public class LayoutServiceTests : TrackingTestContext
 
 		await Assert.That(ReferenceEquals(first, second)).IsTrue();
 		await Assert.That(handler.Calls).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// The result was cached but the in-flight read was not, so every component that asked for a
+	/// scope before the first answer landed fetched it again.
+	/// </summary>
+	[Test]
+	public async Task GetLayoutAsync_ConcurrentCallsForOneScope_FetchOnce()
+	{
+		var handler = new GatedHttpHandler(_ => NoContent());
+		var svc = Build(handler);
+
+		var first = svc.GetLayoutAsync(LayoutScopes.Home);
+		var second = svc.GetLayoutAsync(LayoutScopes.Home);
+		handler.Release();
+
+		await Assert.That(ReferenceEquals(await first, await second)).IsTrue();
+		await Assert.That(handler.Calls).IsEqualTo(1);
+	}
+
+	/// <summary>A read that throws leaves nothing behind: the next read goes back to the server.</summary>
+	[Test]
+	public async Task GetLayoutAsync_ReadThatThrows_IsNotKept()
+	{
+		var attempt = 0;
+		var handler = new ScriptedHandler(_ => ++attempt == 1 ? throw new TaskCanceledException("timed out") : NoContent());
+		var svc = Build(handler);
+
+		await Assert.That(async () => await svc.GetLayoutAsync(LayoutScopes.Home)).Throws<TaskCanceledException>();
+		var layout = await svc.GetLayoutAsync(LayoutScopes.Home);
+
+		await Assert.That(layout.Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("Stats");
+		await Assert.That(handler.Calls).IsEqualTo(2);
+	}
+
+	[Test]
+	public async Task GetLayoutAsync_ServerError_FallsBackToTheDefault_WithoutKeepingIt()
+	{
+		// A 500 while the page loads used to be cached as "this scope has no layout", pinning the tab
+		// to the default until a reload even once the server answered again.
+		var stored = new LayoutConfiguration(
+			new Dictionary<WidgetZone, List<WidgetPlacement>>
+			{
+				[WidgetZone.MainContent] = [new WidgetPlacement("WelcomeText", 0, null)]
+			},
+			new LayoutSettings(LeftSidebarEnabled: false, RightSidebarEnabled: false));
+		var attempt = 0;
+		var handler = new ScriptedHandler(_ => ++attempt == 1 ? new HttpResponseMessage(HttpStatusCode.InternalServerError) : Ok(stored));
+		var svc = Build(handler);
+
+		var first = await svc.GetLayoutAsync(LayoutScopes.Home);
+		var second = await svc.GetLayoutAsync(LayoutScopes.Home);
+
+		await Assert.That(first.Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("Stats")
+			.Because("a failed read still renders the scope's default");
+		await Assert.That(second.Zones[WidgetZone.MainContent][0].WidgetName).IsEqualTo("WelcomeText");
+		await Assert.That(handler.Calls).IsEqualTo(2);
+	}
+
+	/// <summary>A save that lands while a read is in flight is newer than what that read fetched.</summary>
+	[Test]
+	public async Task GetLayoutAsync_SaveDuringRead_ReadYieldsTheSavedLayout()
+	{
+		var saved = new LayoutConfiguration(
+			new Dictionary<WidgetZone, List<WidgetPlacement>>
+			{
+				[WidgetZone.MainContent] = [new WidgetPlacement("WelcomeText", 0, null)]
+			},
+			new LayoutSettings(LeftSidebarEnabled: false, RightSidebarEnabled: false));
+		var handler = new GatedHttpHandler(
+			request => request.Method == HttpMethod.Put ? new HttpResponseMessage(HttpStatusCode.OK) : NoContent(),
+			hold: request => request.Method == HttpMethod.Get);
+		var svc = Build(handler);
+
+		var read = svc.GetLayoutAsync(LayoutScopes.Home);
+		await Assert.That(await svc.SaveLayoutAsync(LayoutScopes.Home, saved)).IsTrue();
+		handler.Release();
+
+		await Assert.That(ReferenceEquals(await read, saved)).IsTrue();
+		await Assert.That(ReferenceEquals(await svc.GetLayoutAsync(LayoutScopes.Home), saved)).IsTrue();
 	}
 
 	[Test]

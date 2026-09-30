@@ -6,8 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>SharpMUSH.Client</title>
     <base href="/" />
-    <link rel="preload" as="style" href="_content/MudBlazor/MudBlazor.min.css" />
     <link rel="preload" id="webassembly" />
+    <!-- custom.css pulls these in with @import (that is how each lands in its cascade layer), and an
+         @import is only discovered once custom.css itself has arrived and been parsed — a second
+         round trip before first paint. Preloading them with the exact URLs the imports resolve to
+         fetches all of them alongside custom.css instead. -->
+    <link rel="preload" as="style" href="_content/MudBlazor/MudBlazor.min.css" />
+    <link rel="preload" as="style" href="css/tokens.css" />
+    <link rel="preload" as="style" href="css/shell.css" />
+    <link rel="preload" as="style" href="css/mush-syntax.css" />
+    <link rel="preload" as="style" href="css/globals.css" />
+    <link rel="preload" as="style" href="css/utilities.css" />
     <link rel="icon" type="image/svg" href="assets/Logo.svg" />
     <link rel="preload" href="/fonts/cascadia-mono.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
     <link rel="preload" href="/fonts/hanken-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
@@ -40,24 +49,28 @@
          Monaco (3.67 MB) and Mermaid (2.57 MB) were fetched by every visitor of the home page,
          who mostly never opens the softcode editor or a wiki diagram. They load on demand now,
          through the loader below, and the pages that need them await it before rendering. -->
-    <script src="js/lazy-assets.js"></script>
-    <script src="js/portal-interop.js"></script>
+    <script src="js/lazy-assets#[.{fingerprint}].js"></script>
+    <script src="js/portal-interop#[.{fingerprint}].js"></script>
     <!-- Terminal grid measurement and resize observer -->
-    <script src="js/terminalMetrics.js"></script>
-    <script src="js/layout.js"></script>
+    <script src="js/terminalMetrics#[.{fingerprint}].js"></script>
+    <script src="js/layout#[.{fingerprint}].js"></script>
     <!-- The wiki post-render pass (mermaid run + anchor scroll). Mermaid itself is fetched by this
          script only when a page actually contains a diagram. -->
-    <script src="js/wiki-render.js"></script>
-    <!-- Manual start so the runtime knows the culture BEFORE boot: with sharded ICU (we ship no
-         full globalization data), Blazor hard-errors if the culture changes during startup.
-         Program.cs applies the same locale afterwards, which is then a no-op rather than a
-         "change". Offered locales (en, fr — see LanguagePicker) both live in the EFIGS shard. -->
+    <script src="js/wiki-render#[.{fingerprint}].js"></script>
+    <!-- Manual start so the runtime boots in the visitor's culture. Blazor fetches the satellite
+         (translation) assemblies for applicationCulture alongside the rest of the boot resources;
+         a culture that only arrives later, when Program.cs applies the stored locale, has its
+         satellites fetched one after another before the first render instead. So every locale the
+         picker offers belongs in this list — PortalSurfacesTests keeps it in step with
+         PortalLocales.Codes. Anything else (a stale or hand-edited value) boots in English, and
+         Program.cs resets it the same way. -->
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js" autostart="false"></script>
     <script>
+        const portalLocales = ["en", "bg", "da", "de", "es", "fr", "hr", "hu", "nb", "nl", "pl", "pt-BR", "ro", "ru", "sv", "zh-Hans"];
         const locale = (() => {
             try {
                 const stored = localStorage.getItem('locale');
-                if (stored === 'en' || stored === 'fr') return stored;
+                if (portalLocales.includes(stored)) return stored;
             } catch { /* storage unavailable — fall through */ }
             return 'en';
         })();
