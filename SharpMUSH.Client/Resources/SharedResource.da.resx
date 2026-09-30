@@ -4842,4 +4842,16 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Find en figur ved navn “{0}”</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Forbundet som {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>I scene</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanaler</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Beskeder</value>
+  </data>
 </root>

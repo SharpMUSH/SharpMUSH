@@ -4842,4 +4842,16 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Pronađi lika po imenu „{0}”</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Povezan kao {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>U sceni</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanali</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Poruke</value>
+  </data>
 </root>

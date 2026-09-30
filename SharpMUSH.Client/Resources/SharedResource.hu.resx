@@ -4842,4 +4842,16 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>„{0}” nevű karakter keresése</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Csatlakozva: {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>Jelenetben</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Csatornák</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Üzenetek</value>
+  </data>
 </root>

@@ -1,0 +1,178 @@
+using Bunit;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Client.Components.Play;
+using SharpMUSH.Client.Models;
+using SharpMUSH.Client.Services;
+using SharpMUSH.Tests.BUnit.Components.Characters;
+
+namespace SharpMUSH.Tests.BUnit.Components.Play;
+
+/// <summary>
+/// README §5.1 Play page sidebar (boards 01 and 07): "Play · ● Connected as {name}", In scene (the
+/// room's picture, the scene title and its cast), Channels and Pages from the comm feed, and the
+/// collapsed strip.
+/// </summary>
+public class PlaySidebarD1Tests : TrackingBunitContext
+{
+	private readonly FakeCommFeed _feed = new();
+
+	public PlaySidebarD1Tests()
+	{
+		CharactersApiFake.Install(this);
+		Services.AddSingleton<ICommFeed>(_feed);
+	}
+
+	private static readonly RoomInfo Docks = new("#1201", "Lower Docks", "#1201:1", "Harbour Ward",
+		new ImageRef("/api/wiki-assets/r/docks.jpg", "The quay", null, null, null), null,
+		new RoomScene("42", "Salt Market at Dusk", 5));
+
+	private IRenderedComponent<PlaySidebar> RenderSidebar(RoomInfo? room = null, bool connected = true, bool collapsed = false,
+		string? current = null, Action? onScene = null, Action<string>? onOpen = null) =>
+		Render<PlaySidebar>(p => p
+			.Add(x => x.CharacterName, "Ilsa Varn")
+			.Add(x => x.Connected, connected)
+			.Add(x => x.Room, room)
+			.Add(x => x.Collapsed, collapsed)
+			.Add(x => x.Current, current)
+			.Add(x => x.OnOpenScene, () => onScene?.Invoke())
+			.Add(x => x.OnOpen, key => onOpen?.Invoke(key)));
+
+	[Test]
+	public async Task Head_SaysWhoIsConnected()
+	{
+		var cut = RenderSidebar();
+		await Assert.That(cut.Find(".kit-side-title").TextContent).IsEqualTo("Play");
+		await Assert.That(cut.Find(".kit-side-sub").TextContent).Contains("Connected as Ilsa Varn");
+		await Assert.That(cut.FindAll(".play-side-dot--on").Count).IsEqualTo(1);
+
+		var offline = RenderSidebar(connected: false);
+		await Assert.That(offline.Find(".kit-side-sub").TextContent).Contains("Disconnected");
+		await Assert.That(offline.FindAll(".play-side-dot--on").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task InScene_IsTheRoomPicture_TheSceneTitle_AndItsCast_AndOpensTheScene()
+	{
+		var opened = false;
+		var cut = RenderSidebar(Docks, onScene: () => opened = true);
+		var row = cut.Find(".play-side-scene .kit-row");
+		await Assert.That(row.QuerySelector("img")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/r/docks.jpg");
+		await Assert.That(row.QuerySelector(".kit-row-label")!.TextContent).IsEqualTo("Salt Market at Dusk");
+		await Assert.That(row.QuerySelector(".kit-row-count")!.TextContent).IsEqualTo("5");
+		await Assert.That(row.GetAttribute("aria-current")).IsEqualTo("page").Because("the scene is what main shows");
+		row.Click();
+		await Assert.That(opened).IsTrue();
+	}
+
+	[Test]
+	public async Task OutsideAScene_ThereIsNoInSceneGroup()
+	{
+		var cut = RenderSidebar(Docks with { Scene = null });
+		await Assert.That(cut.FindAll(".play-side-scene").Count).IsEqualTo(0);
+		await Assert.That(cut.Markup).DoesNotContain("In scene");
+	}
+
+	[Test]
+	public async Task AnUnsafeRoomPicture_IsNotRendered()
+	{
+		var cut = RenderSidebar(Docks with { Image = new ImageRef("javascript:alert(1)", null, null, null, null) });
+		await Assert.That(cut.Find(".play-side-scene .kit-row").QuerySelector("img")).IsNull();
+	}
+
+	[Test]
+	public async Task Channels_AreHashRows_WithUnreadPills_AndOpenInMain()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 3), new CommChannel("Newcomers", 0), new CommChannel("Staff", 4, Joined: false)];
+		string? opened = null;
+		var cut = RenderSidebar(onOpen: k => opened = k, current: "Newcomers");
+		var rows = cut.FindAll(".play-side-channels .kit-row");
+		await Assert.That(rows.Count).IsEqualTo(2).Because("a channel the viewer has not joined is not listed");
+		await Assert.That(rows[0].ClassList).Contains("kit-row--channel");
+		await Assert.That(rows[0].ClassList).Contains("kit-row--unread");
+		await Assert.That(rows[0].QuerySelector(".kit-row-unread")!.TextContent).IsEqualTo("3");
+		await Assert.That(rows[1].ClassList).DoesNotContain("kit-row--unread");
+		await Assert.That(rows[1].GetAttribute("aria-current")).IsEqualTo("page");
+		rows[0].Click();
+		await Assert.That(opened).IsEqualTo("Public");
+	}
+
+	[Test]
+	public async Task Pages_OnePerson_HasTheirPortraitAndFullName_AGroupStacksTwo()
+	{
+		var at = DateTimeOffset.UtcNow;
+		_feed.ConversationList =
+		[
+			new CommConversation("#314:1", ["Wren Halloway"], ["#314:1"], 2, at),
+			new CommConversation("#312:1|#315:1", ["Tomas Reyes", "Dace Kellan"], ["#312:1", "#315:1"], 1, at),
+		];
+		string? opened = null;
+		var cut = RenderSidebar(onOpen: k => opened = k);
+		cut.WaitForAssertion(() => cut.Find(".play-side-pages img.kit-row-avatar"), TimeSpan.FromSeconds(5));
+		var rows = cut.FindAll(".play-side-pages .kit-row");
+		await Assert.That(rows[0].QuerySelector(".kit-row-label")!.TextContent).IsEqualTo("Wren Halloway");
+		await Assert.That(rows[0].QuerySelector(".kit-row-unread")!.TextContent).IsEqualTo("2");
+		await Assert.That(rows[1].QuerySelector(".kit-row-label")!.TextContent).IsEqualTo("Tomas, Dace");
+		await Assert.That(rows[1].QuerySelector("img.kit-row-avatar")!.GetAttribute("src")).IsEqualTo("/api/wiki-assets/t/tomas.jpg")
+			.Because("the picture comes from the directory row with that objid");
+		await Assert.That(rows[1].QuerySelector(".kit-row-avatar--second")!.TextContent).IsEqualTo("DK");
+		rows[1].Click();
+		await Assert.That(opened).IsEqualTo("#312:1|#315:1");
+	}
+
+	[Test]
+	public async Task AnEmptyFeed_ShowsNeitherGroup()
+	{
+		var cut = RenderSidebar(Docks);
+		await Assert.That(cut.FindAll(".play-side-channels").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".play-side-pages").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task TheFeedChanging_Rerenders()
+	{
+		var cut = RenderSidebar();
+		_feed.ChannelList = [new CommChannel("Public", 1)];
+		_feed.Raise();
+		cut.WaitForAssertion(() => cut.Find(".play-side-channels .kit-row"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".play-side-channels .kit-row-label").TextContent).IsEqualTo("Public");
+	}
+
+	[Test]
+	public async Task Collapsed_KeepsOnlyTheLeads()
+	{
+		_feed.ChannelList = [new CommChannel("Public", 3)];
+		var cut = RenderSidebar(Docks, collapsed: true);
+		await Assert.That(cut.FindAll(".kit-side-title").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".kit-row-label").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".play-side-channels .kit-row-hash").TextContent).IsEqualTo("#P");
+		await Assert.That(cut.Find(".play-side-channels .kit-row-unread--badge").TextContent).IsEqualTo("3");
+	}
+
+	[Test]
+	public async Task Disposing_StopsListeningToTheFeed()
+	{
+		var cut = RenderSidebar();
+		await Assert.That(_feed.Listeners).IsEqualTo(1);
+		cut.Instance.Dispose();
+		await Assert.That(_feed.Listeners).IsEqualTo(0);
+	}
+
+	private sealed class FakeCommFeed : ICommFeed
+	{
+		private Action? _changed;
+		public IReadOnlyList<CommChannel> ChannelList { get; set; } = [];
+		public IReadOnlyList<CommConversation> ConversationList { get; set; } = [];
+		public IReadOnlyList<CommChannel> Channels => ChannelList;
+		public IReadOnlyList<CommConversation> Conversations => ConversationList;
+		public int Listeners => _changed?.GetInvocationList().Length ?? 0;
+		public IReadOnlyList<CommMessage> Messages(string key) => [];
+		public void MarkRead(string key) { }
+		public void Raise() => _changed?.Invoke();
+
+		public event Action? Changed
+		{
+			add => _changed += value;
+			remove => _changed -= value;
+		}
+	}
+}

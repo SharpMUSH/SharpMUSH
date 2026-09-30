@@ -4842,4 +4842,16 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Găsește un personaj numit „{0}”</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Conectat ca {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>În scenă</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Canale</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Mesaje</value>
+  </data>
 </root>

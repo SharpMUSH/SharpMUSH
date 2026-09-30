@@ -4842,4 +4842,16 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Hitta en rollfigur som heter ”{0}”</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Ansluten som {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>I scen</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanaler</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Meddelanden</value>
+  </data>
 </root>

@@ -4842,4 +4842,16 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>查找名为“{0}”的角色</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>已作为 {0} 连接</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>场景中</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>频道</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>私信</value>
+  </data>
 </root>

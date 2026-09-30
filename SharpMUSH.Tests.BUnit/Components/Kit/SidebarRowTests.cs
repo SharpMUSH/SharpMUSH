@@ -87,6 +87,26 @@ public class SidebarRowTests : BunitContext
 	}
 
 	[Test]
+	public async Task GroupAvatar_WithoutASecondImage_ShowsTheSecondPersonsInitials()
+	{
+		// Board 01's "Tomas, Dace": Dace has no picture, so the stacked second avatar is "DK".
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Tomas, Dace").Add(x => x.Lead, SidebarRow.SidebarLead.Avatar)
+			.Add(x => x.ImageUrl, "/t.jpg").Add(x => x.Name, "Tomas Reyes").Add(x => x.Name2, "Dace Kellan"));
+		await Assert.That(cut.Find(".kit-row-lead").ClassList).Contains("kit-row-lead--group");
+		await Assert.That(cut.Find(".kit-row-avatar--second").TextContent).IsEqualTo("DK");
+	}
+
+	[Test]
+	public async Task ChannelLead_Collapsed_ShowsTheHashAndTheFirstLetter()
+	{
+		// Board 07: the collapsed strip tells channels apart as #P, #N, #L.
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Public").Add(x => x.Lead, SidebarRow.SidebarLead.Channel).Add(x => x.Collapsed, true));
+		await Assert.That(cut.Find(".kit-row-hash").TextContent).IsEqualTo("#P");
+		var open = Render<SidebarRow>(p => p.Add(x => x.Label, "Public").Add(x => x.Lead, SidebarRow.SidebarLead.Channel));
+		await Assert.That(open.Find(".kit-row-hash").TextContent).IsEqualTo("#");
+	}
+
+	[Test]
 	public async Task Unread_RendersAPill_AndBoldsTheRow()
 	{
 		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Public").Add(x => x.Lead, SidebarRow.SidebarLead.Channel).Add(x => x.Unread, 3));

@@ -29,6 +29,9 @@ else
     /// <summary>The name initials and the tint come from; defaults to <see cref="Label"/>.</summary>
     [Parameter] public string? Name { get; set; }
 
+    /// <summary>The second person of a group page: their initials stand in when <see cref="ImageUrl2"/> is absent.</summary>
+    [Parameter] public string? Name2 { get; set; }
+
     /// <summary>A MudBlazor icon for the icon lead.</summary>
     [Parameter] public string? Icon { get; set; }
     [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
@@ -49,7 +52,13 @@ else
     [Parameter] public string? Href { get; set; }
     [Parameter] public EventCallback OnClick { get; set; }
 
-    private bool IsGroup => Lead == SidebarLead.Avatar && ImageUrl2 is not null;
+    private bool IsGroup => Lead == SidebarLead.Avatar && (ImageUrl2 is not null || Name2 is not null);
+
+    private string SecondFallbackStyle =>
+        $"background:hsl({NameHue.Of(Name2)} 30% 24%);color:hsl({NameHue.Of(Name2)} 45% 82%);";
+
+    /// <summary>Collapsed, a channel keeps its first letter so the strip can tell them apart (board 07).</summary>
+    private string ChannelMark => Collapsed && Label.Length > 0 ? $"#{char.ToUpperInvariant(Label[0])}" : "#";
 
     private string RowClass => string.Join(' ', new[]
     {
@@ -104,12 +113,16 @@ else
                     {
                         <img class="kit-row-avatar kit-row-avatar--second" src="@ImageUrl2!.Trim()" alt="" />
                     }
+                    else if (IsGroup && Name2 is not null)
+                    {
+                        <span class="kit-row-avatar kit-row-avatar--second kit-row-fallback" style="@SecondFallbackStyle">@Initials.From(Name2)</span>
+                    }
                     break;
                 case SidebarLead.Icon:
                     <span class="kit-row-icon"><MudIcon Icon="@(Icon ?? Icons.Material.Outlined.Folder)" Size="Size.Small" /></span>
                     break;
                 case SidebarLead.Channel:
-                    <span class="kit-row-hash">#</span>
+                    <span class="kit-row-hash">@ChannelMark</span>
                     break;
             }
         </span>

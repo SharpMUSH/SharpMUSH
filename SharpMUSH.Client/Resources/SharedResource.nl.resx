@@ -4842,4 +4842,16 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Zoek een personage met de naam ‘{0}’</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Verbonden als {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>In scène</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Kanalen</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Berichten</value>
+  </data>
 </root>

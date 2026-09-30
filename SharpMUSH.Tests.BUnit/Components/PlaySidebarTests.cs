@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Pages;
+using PlayPage = SharpMUSH.Client.Pages.Play;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Tests.BUnit.Resources;
@@ -63,7 +64,7 @@ public class PlaySidebarTests : BunitContext
 		// Play now hosts a MudMenu (terminal settings) which requires a MudPopoverProvider in
 		// the render tree, so host it inside MudHarness (provider contributes only an empty
 		// container, so the sidebar assertion is unaffected).
-		var cut = Render<MudHarness>(p => p.AddChildContent<Play>());
+		var cut = Render<MudHarness>(p => p.AddChildContent<PlayPage>());
 
 		store.Set("room.contents", "{\"who\":[{\"dbref\":\"#5\",\"name\":\"Bob\",\"cmd\":\"look #5\"}]}");
 
@@ -87,7 +88,7 @@ public class PlaySidebarTests : BunitContext
 		play.Lines.Returns(Array.Empty<SharpMUSH.Client.Models.TerminalLine>());
 		Services.AddSingleton<IPlayTerminalService>(play);
 
-		var cut = Render<MudHarness>(p => p.AddChildContent<Play>());
+		var cut = Render<MudHarness>(p => p.AddChildContent<PlayPage>());
 
 		store.Set(OobEntryParser.RoomInfoPackage, """{"v":2,"dbref":"#35","name":"Lower Docks"}""");
 		store.Set(OobEntryParser.RoomContentsPackage,

@@ -4842,4 +4842,16 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Найти персонажа по имени «{0}»</value>
   </data>
+  <data name="NavPlayConnectedAs" xml:space="preserve">
+    <value>Подключён как {0}</value>
+  </data>
+  <data name="NavPlayInScene" xml:space="preserve">
+    <value>В сцене</value>
+  </data>
+  <data name="NavPlayChannels" xml:space="preserve">
+    <value>Каналы</value>
+  </data>
+  <data name="NavPlayPages" xml:space="preserve">
+    <value>Личные</value>
+  </data>
 </root>
