@@ -10,6 +10,7 @@ using NSubstitute;
 using SharpMUSH.Client.Components.Widgets;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.API;
 using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Components;

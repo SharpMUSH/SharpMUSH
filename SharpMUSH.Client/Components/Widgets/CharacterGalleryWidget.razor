@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
 @inject GalleryService Gallery
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
@@ -94,8 +95,8 @@
     /// <summary>Edit controls show when the page passes CanEdit directly or via the profile page context.</summary>
     private bool EffectiveCanEdit => CanEdit || (PageContext?.CanEdit ?? false);
 
-    private IReadOnlyList<GalleryService.GalleryItem> _items = [];
-    private GalleryService.GalleryItem? _lightbox;
+    private IReadOnlyList<GalleryEntry> _items = [];
+    private GalleryEntry? _lightbox;
     private bool _loading = true;
     private bool _busy;
 
@@ -115,7 +116,7 @@
         var result = await Gallery.ListAsync(name);
         (_items, _error) = result switch
         {
-            List<GalleryService.GalleryItem> items => (items, (string?)null),
+            List<GalleryEntry> items => (items, (string?)null),
             ApiFailure failure => ([], failure.Message),
         };
         _loading = false;
@@ -131,7 +132,7 @@
         return null;
     }
 
-    private void OpenLightbox(GalleryService.GalleryItem item) => _lightbox = item;
+    private void OpenLightbox(GalleryEntry item) => _lightbox = item;
 
     private async Task UploadAsync(IBrowserFile? file)
     {
@@ -139,13 +140,13 @@
         await WriteAsync(Gallery.UploadAsync(_resolvedName, file), "GalleryUploadFailed");
     }
 
-    private async Task DeleteAsync(GalleryService.GalleryItem item)
+    private async Task DeleteAsync(GalleryEntry item)
     {
         if (_resolvedName is null) return;
         await WriteAsync(Gallery.DeleteAsync(_resolvedName, item.AssetId), "GalleryDeleteFailed");
     }
 
-    private async Task SetIconAsync(GalleryService.GalleryItem item)
+    private async Task SetIconAsync(GalleryEntry item)
     {
         if (_resolvedName is null) return;
         var reordered = _items.Select(i => i with { IsIcon = i.AssetId == item.AssetId }).ToList();
@@ -156,16 +157,16 @@
     /// Every write answers with the gallery as the server now holds it. A refused delete or icon change
     /// used to leave the page exactly as it was with nothing said, which reads as the click not landing.
     /// </summary>
-    private async Task WriteAsync(Task<ApiResult<List<GalleryService.GalleryItem>>> write, string failedKey)
+    private async Task WriteAsync(Task<ApiResult<List<GalleryEntry>>> write, string failedKey)
     {
         _busy = true;
-        ApiResult<List<GalleryService.GalleryItem>> result;
+        ApiResult<List<GalleryEntry>> result;
         try { result = await write; }
         finally { _busy = false; }
 
         switch (result)
         {
-            case List<GalleryService.GalleryItem> updated:
+            case List<GalleryEntry> updated:
                 _items = updated;
                 _error = null;
                 break;

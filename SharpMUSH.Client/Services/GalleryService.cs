@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.Forms;
+using SharpMUSH.Library.API;
 
 namespace SharpMUSH.Client.Services;
 
@@ -13,9 +14,6 @@ namespace SharpMUSH.Client.Services;
 /// </remarks>
 public class GalleryService(IHttpClientFactory httpClientFactory)
 {
-	/// <summary>A gallery image entry; mirrors <c>GalleryController.GalleryEntry</c>.</summary>
-	public record GalleryItem(string AssetId, string FileName, string Url, string? Caption, int Order, bool IsIcon);
-
 	public const long MaxUploadBytes = 10_485_760;
 
 	private const string NoGallery = "The server returned no gallery.";
@@ -23,11 +21,11 @@ public class GalleryService(IHttpClientFactory httpClientFactory)
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
 	/// <summary>Lists a character's gallery, order-sorted.</summary>
-	public Task<ApiResult<List<GalleryItem>>> ListAsync(string name) =>
-		Client.GetApiAsync<List<GalleryItem>>(GalleryUrl(name), NoGallery);
+	public Task<ApiResult<List<GalleryEntry>>> ListAsync(string name) =>
+		Client.GetApiAsync<List<GalleryEntry>>(GalleryUrl(name), NoGallery);
 
 	/// <summary>Uploads an image and answers with the updated gallery.</summary>
-	public async Task<ApiResult<List<GalleryItem>>> UploadAsync(string name, IBrowserFile file)
+	public async Task<ApiResult<List<GalleryEntry>>> UploadAsync(string name, IBrowserFile file)
 	{
 		// OpenReadStream throws for a file over the limit before anything is sent. Said here, rather than
 		// surfacing as "could not reach the server" from ApiCall's transport catch.
@@ -58,16 +56,24 @@ public class GalleryService(IHttpClientFactory httpClientFactory)
 			streamContent.Headers.ContentType = mediaType;
 		}
 
-		return await Client.PostContentApiAsync<List<GalleryItem>>(GalleryUrl(name), content, NoGallery);
+		return await Client.PostContentApiAsync<List<GalleryEntry>>(GalleryUrl(name), content, NoGallery);
 	}
 
 	/// <summary>Deletes an image and answers with the updated gallery.</summary>
-	public Task<ApiResult<List<GalleryItem>>> DeleteAsync(string name, string assetId) =>
-		Client.DeleteApiAsync<List<GalleryItem>>($"{GalleryUrl(name)}/{Uri.EscapeDataString(assetId)}", NoGallery);
+	public Task<ApiResult<List<GalleryEntry>>> DeleteAsync(string name, string assetId) =>
+		Client.DeleteApiAsync<List<GalleryEntry>>($"{GalleryUrl(name)}/{Uri.EscapeDataString(assetId)}", NoGallery);
 
 	/// <summary>Replaces order/captions/icon and answers with the gallery as the server sanitized it.</summary>
-	public Task<ApiResult<List<GalleryItem>>> ReplaceAsync(string name, IReadOnlyList<GalleryItem> items) =>
-		Client.PutApiAsync<IReadOnlyList<GalleryItem>, List<GalleryItem>>(GalleryUrl(name), items, NoGallery);
+	public Task<ApiResult<List<GalleryEntry>>> ReplaceAsync(string name, IReadOnlyList<GalleryEntry> items) =>
+		Client.PutApiAsync<IReadOnlyList<GalleryEntry>, List<GalleryEntry>>(GalleryUrl(name), items, NoGallery);
+
+	/// <summary>The gallery with <paramref name="assetId"/> as its only icon.</summary>
+	public static IReadOnlyList<GalleryEntry> WithIcon(IEnumerable<GalleryEntry> items, string assetId) =>
+		[.. items.Select(i => i with { IsIcon = i.AssetId == assetId })];
+
+	/// <summary>The gallery with <paramref name="assetId"/> as its only banner, or none when null.</summary>
+	public static IReadOnlyList<GalleryEntry> WithBanner(IEnumerable<GalleryEntry> items, string? assetId) =>
+		[.. items.Select(i => i with { IsBanner = i.AssetId == assetId })];
 
 	private static string GalleryUrl(string name) => $"api/profile/{Uri.EscapeDataString(name)}/gallery";
 }

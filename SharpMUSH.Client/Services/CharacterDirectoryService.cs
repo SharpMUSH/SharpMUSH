@@ -15,9 +15,10 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// <summary>
 	/// A directory row from the GET`CHARACTERS softcode: name, objid, creation unix-ms, and the
 	/// game-defined category (FN`CHARCAT). The portal imposes no categories of its own — blank
-	/// (or absent, on handlers that predate categorization) means uncategorized.
+	/// (or absent, on handlers that predate categorization) means uncategorized. Image is the
+	/// character's IMAGE attribute (profile-handler 1.5); blank or absent means none.
 	/// </summary>
-	public record CharacterSummary(string Name, string Objid, long Created, string Category = "")
+	public record CharacterSummary(string Name, string Objid, long Created, string Category = "", string? Image = null)
 	{
 		public DateTimeOffset CreatedAt => DateTimeOffset.FromUnixTimeMilliseconds(Created);
 
