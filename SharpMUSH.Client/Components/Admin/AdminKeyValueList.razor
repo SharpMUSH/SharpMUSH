@@ -10,74 +10,69 @@
     handling. The text is passed in so each page keeps its own resource keys; the behaviour is here.
 *@
 
-@if (_loading)
-{
-    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
-}
-else
-{
-    <div class="config-group-title">@Text.AddTitle</div>
-    <div class="config-field-card config-pad mb-5">
-        <div class="@(HasValues ? "config-add-fields" : "config-add-grid")">
-            @if (HasValues)
-            {
-                <div class="config-add-field">
-                    <label class="config-field-label-text">@Text.KeyLabel</label>
-                    <input class="config-input" placeholder="@Text.KeyPlaceholder"
-                           value="@_newKey"
-                           @oninput="@(e => _newKey = e.Value?.ToString() ?? string.Empty)" />
-                </div>
-                <div class="config-add-field">
-                    <label class="config-field-label-text">@Text.ValuesLabel</label>
-                    <input class="config-input" placeholder="@Text.ValuesPlaceholder"
-                           value="@_newValues"
-                           @oninput="@(e => _newValues = e.Value?.ToString() ?? string.Empty)" />
-                </div>
-            }
-            else
-            {
-                <input class="config-input" placeholder="@Text.KeyPlaceholder"
-                       value="@_newKey"
-                       @oninput="@(e => _newKey = e.Value?.ToString() ?? string.Empty)"
-                       @onkeydown="HandleKeyDown" />
-            }
-            <button type="button" class="config-primary-btn" @onclick="AddAsync" disabled="@(!CanAdd)">
-                <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:1rem;" />
-                @Text.AddButton
-            </button>
-        </div>
-    </div>
-
-    <div class="config-group-title">@Text.ListTitle</div>
-    @if (_entries.Count == 0)
+@* D1 frame: the add form is a kit card of MudBlazor fields with the one primary capsule, the list a
+   kit card of rows. The fields used to be raw inputs whose styling lived in each page's scoped CSS,
+   which never reaches into this component, so they rendered as bare white boxes. *@
+<div class="kvl">
+    @if (_loading)
     {
-        <div class="config-field-card config-pad">
-            <span class="config-empty">@Text.Empty</span>
-        </div>
+        <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
     }
     else
     {
-        <div class="config-field-card">
-            @foreach (var entry in _entries.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase))
-            {
-                <div class="config-list-row">
-                    <div class="config-list-text">
-                        <span class="config-list-name">@entry.Key</span>
-                        @if (entry.Values.Count > 0)
+        <KitCard Title="@Text.AddTitle">
+            <div class="kvl-add @(HasValues ? "kvl-add--pair" : null)">
+                <MudTextField T="string" Value="@_newKey" ValueChanged="@(v => _newKey = v ?? string.Empty)"
+                              Label="@Text.KeyLabel" Placeholder="@KeyPlaceholder"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                              Class="kvl-field kvl-field--key"
+                              OnKeyDown="HandleKeyDown" />
+                @if (HasValues)
+                {
+                    <MudTextField T="string" Value="@_newValues" ValueChanged="@(v => _newValues = v ?? string.Empty)"
+                                  Label="@Text.ValuesLabel" Placeholder="@Text.ValuesPlaceholder"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                                  Class="kvl-field kvl-field--values"
+                                  OnKeyDown="HandleKeyDown" />
+                }
+                <CapsuleButton Primary="true" Icon="@Icons.Material.Filled.Add" Class="kvl-add-btn"
+                               Disabled="@(!CanAdd)" OnClick="AddAsync">@Text.AddButton</CapsuleButton>
+            </div>
+        </KitCard>
+
+        <KitCard Title="@Text.ListTitle">
+            <Controls>
+                <Pill Tag="true">@_entries.Count</Pill>
+            </Controls>
+            <ChildContent>
+                @if (_entries.Count == 0)
+                {
+                    <p class="config-empty">@Text.Empty</p>
+                }
+                else
+                {
+                    <ul class="kvl-rows">
+                        @foreach (var entry in _entries.OrderBy(e => e.Key, StringComparer.OrdinalIgnoreCase))
                         {
-                            <span class="config-list-sub">@string.Join(", ", entry.Values)</span>
+                            <li class="kvl-row">
+                                <div class="kvl-row-text">
+                                    <code class="config-list-name">@entry.Key</code>
+                                    @if (entry.Values.Count > 0)
+                                    {
+                                        <span class="config-list-sub">@string.Join(", ", entry.Values)</span>
+                                    }
+                                </div>
+                                <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Color="Color.Error"
+                                               Class="config-delete" aria-label="@Loc["Delete"]" title="@Loc["Delete"]"
+                                               OnClick="@(() => DeleteAsync(entry.Key))" />
+                            </li>
                         }
-                    </div>
-                    <button type="button" class="config-icon-btn config-icon-btn--danger"
-                            title="@Loc["Delete"]"
-                            @onclick="@(() => DeleteAsync(entry.Key))">
-                        <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:1rem;" />
-                    </button>
-                </div>
-            }
-        </div>
+                    </ul>
+                }
+            </ChildContent>
+        </KitCard>
     }
-}
+</div>
 
 @code {
     /// <summary>Every string this list renders, so the page keeps its own resource keys.</summary>
@@ -104,6 +99,9 @@ else
     /// nothing to label them with.
     /// </summary>
     private bool HasValues => Text.ValuesLabel is not null;
+
+    /// <summary>The key field's placeholder, left off where it would only repeat the label (a banned name).</summary>
+    private string? KeyPlaceholder => Text.KeyPlaceholder == Text.KeyLabel ? null : Text.KeyPlaceholder;
 
     private bool CanAdd => !string.IsNullOrWhiteSpace(_newKey)
         && (!HasValues || !string.IsNullOrWhiteSpace(_newValues));

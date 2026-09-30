@@ -149,7 +149,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 
 		component.FindAll("input")[0].Input("  *.example.com  ");
 		component.FindAll("input")[1].Input("!connect , register ,");
-		component.Find("button.config-primary-btn").Click();
+		component.Find("button.kit-capsule--primary").Click();
 
 		await Assert.That(addedKey).IsEqualTo("*.example.com");
 		await Assert.That(addedValues).IsEquivalentTo(new[] { "!connect", "register" });
@@ -171,7 +171,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 
 		component.FindAll("input")[0].Input("*.example.com");
 		component.FindAll("input")[1].Input("!connect");
-		component.Find("button.config-primary-btn").Click();
+		component.Find("button.kit-capsule--primary").Click();
 
 		await Assert.That(loads).IsEqualTo(1);
 		await Assert.That(component.FindAll("input")[0].GetAttribute("value")).IsEqualTo("*.example.com");
@@ -193,7 +193,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 				return Task.FromResult<ApiResult<Success>>(new Success());
 			});
 
-		component.Find("button.config-icon-btn--danger").Click();
+		component.Find("button.config-delete").Click();
 
 		await Assert.That(deleted).IsEqualTo("alpha.example");
 		await Assert.That(loads).IsEqualTo(2);
@@ -226,7 +226,7 @@ public class AdminKeyValueListTests : TrackingBunitContext
 
 		component.FindAll("input")[0].Input("*.example.com");
 		component.FindAll("input")[1].Input(" , , ");
-		component.Find("button.config-primary-btn").Click();
+		component.Find("button.kit-capsule--primary").Click();
 
 		await Assert.That(calls).IsEqualTo(0);
 		await Assert.That(Services.GetRequiredService<ISnackbar>().ShownSnackbars

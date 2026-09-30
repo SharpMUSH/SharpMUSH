@@ -85,6 +85,12 @@ public class ResponsiveConventionsTests
 
 	private static readonly Dictionary<string, string> PagesWithoutContainerTiersByDesign = new(StringComparer.Ordinal)
 	{
+		["Pages/Admin/BannedNames.razor.css"] =
+			"renders only the kit header and <AdminKeyValueList>, whose own stylesheet carries the tiers",
+		["Pages/Admin/Restrictions.razor.css"] =
+			"a chip row above <AdminKeyValueList>, which carries the tiers; the chips wrap on their own",
+		["Pages/Admin/Sitelock.razor.css"] =
+			"styles only the code list in the kit header; <AdminKeyValueList> carries the tiers",
 		["Pages/Register.razor.css"] =
 			"the route renders a <PageTitle> and redirects to /login?tab=register; there is no layout here",
 		["Pages/WikiPage.razor.css"] =
