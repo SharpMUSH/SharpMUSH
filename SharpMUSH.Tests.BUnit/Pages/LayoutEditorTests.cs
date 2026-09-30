@@ -66,6 +66,8 @@ public class LayoutEditorTests : TrackingBunitContext
 			.AddSingleton(sp => new WikiService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance))
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
+		// The live preview renders the WikiIndex widget, whose hero gates New page with AuthorizeView.
+		AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 

@@ -4629,4 +4629,25 @@
   <data name="NavDaysAgo" xml:space="preserve">
     <value>{count, plural, one {hace # día} other {hace # días}}</value>
   </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · Wiki del mundo</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>Todo lo que necesitas para jugar</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>Trasfondo, normas y guías para empezar, editadas por el equipo y los jugadores. No hace falta cuenta para leer.</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, one {Toda # página} other {Todas las # páginas}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>Todavía no hay páginas en la wiki.</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>Ninguna página coincide con «{0}».</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {En directo} one {En directo · #} other {En directo · #}}</value>
+  </data>
 </root>

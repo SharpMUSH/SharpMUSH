@@ -4629,4 +4629,25 @@
   <data name="NavDaysAgo" xml:space="preserve">
     <value>{count, plural, one {acum # zi} few {acum # zile} other {acum # de zile}}</value>
   </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · Wiki-ul lumii</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>Tot ce ai nevoie ca să joci</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>Poveste, reguli și ghiduri de început, editate de echipă și jucători. Nu ai nevoie de cont ca să citești.</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, one {Toată # pagină} few {Toate cele # pagini} other {Toate cele # de pagini}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>Încă nu există pagini wiki.</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>Nicio pagină nu se potrivește cu „{0}”.</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {Live acum} one {Live acum · #} few {Live acum · #} other {Live acum · #}}</value>
+  </data>
 </root>

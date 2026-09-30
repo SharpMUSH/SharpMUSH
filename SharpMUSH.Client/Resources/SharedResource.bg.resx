@@ -4629,4 +4629,25 @@
   <data name="NavDaysAgo" xml:space="preserve">
     <value>{count, plural, one {преди # ден} other {преди # дни}}</value>
   </data>
+  <data name="NavWikiHeroKicker" xml:space="preserve">
+    <value>{0} · Уики на света</value>
+  </data>
+  <data name="NavWikiHeroTitle" xml:space="preserve">
+    <value>Всичко, което ви трябва, за да играете</value>
+  </data>
+  <data name="NavWikiHeroBlurb" xml:space="preserve">
+    <value>История, правила и ръководства за начинаещи, редактирани от екипа и играчите. За четене не е нужен акаунт.</value>
+  </data>
+  <data name="NavWikiAllPages" xml:space="preserve">
+    <value>{count, plural, one {Всички # страница} other {Всички # страници}}</value>
+  </data>
+  <data name="NavWikiNoPages" xml:space="preserve">
+    <value>Все още няма уики страници.</value>
+  </data>
+  <data name="NavWikiNoMatches" xml:space="preserve">
+    <value>Няма страници, съответстващи на „{0}“.</value>
+  </data>
+  <data name="NavLiveNow" xml:space="preserve">
+    <value>{count, plural, =0 {На живо сега} one {На живо сега · #} other {На живо сега · #}}</value>
+  </data>
 </root>
