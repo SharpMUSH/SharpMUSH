@@ -176,7 +176,7 @@
         var image = _directory.FirstOrDefault(r => line.FromObjId is not null && r.Objid == line.FromObjId)?.Image;
         @if (ImageUrlPolicy.IsRenderable(image))
         {
-            <img class="comm-avatar" src="@image!.Trim()" alt="" />
+            <img class="comm-avatar" src="@ApiUrl.Resolve(image!)" alt="" />
         }
         else
         {
