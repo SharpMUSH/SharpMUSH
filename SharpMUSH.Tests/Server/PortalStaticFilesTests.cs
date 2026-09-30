@@ -33,15 +33,15 @@ public class PortalStaticFilesTests
 	private static async Task<(WebApplication App, HttpClient Client, string Root)> StartAsync(bool withManifest)
 	{
 		var root = Directory.CreateTempSubdirectory("portal-static-files-").FullName;
-		var webRoot = Path.Combine(root, "wwwroot");
-		Directory.CreateDirectory(Path.Combine(webRoot, "_framework"));
-		await File.WriteAllBytesAsync(Path.Combine(webRoot, "index.html"), IndexHtml);
-		await File.WriteAllBytesAsync(Path.Combine(webRoot, FingerprintedRoute), Wasm);
-		await File.WriteAllBytesAsync(Path.Combine(webRoot, FingerprintedRoute + ".br"), WasmBrotli);
+		var webRoot = Path.Join(root, "wwwroot");
+		Directory.CreateDirectory(Path.Join(webRoot, "_framework"));
+		await File.WriteAllBytesAsync(Path.Join(webRoot, "index.html"), IndexHtml);
+		await File.WriteAllBytesAsync(Path.Join(webRoot, FingerprintedRoute), Wasm);
+		await File.WriteAllBytesAsync(Path.Join(webRoot, FingerprintedRoute + ".br"), WasmBrotli);
 
 		if (withManifest)
 		{
-			await File.WriteAllTextAsync(Path.Combine(root, PortalStaticFiles.ManifestFileName), Manifest());
+			await File.WriteAllTextAsync(Path.Join(root, PortalStaticFiles.ManifestFileName), Manifest());
 		}
 
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -113,15 +113,15 @@ public class PortalStaticFilesTests
 		Directory.Delete(root, recursive: true);
 	}
 
-	private static Task<HttpResponseMessage> GetAsync(HttpClient client, string path, string? acceptEncoding = null)
+	private static async Task<HttpResponseMessage> GetAsync(HttpClient client, string path, string? acceptEncoding = null)
 	{
-		var request = new HttpRequestMessage(HttpMethod.Get, path);
+		using var request = new HttpRequestMessage(HttpMethod.Get, path);
 		if (acceptEncoding is not null)
 		{
 			request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue(acceptEncoding));
 		}
 
-		return client.SendAsync(request);
+		return await client.SendAsync(request);
 	}
 
 	private static string? CacheControl(HttpResponseMessage response) => response.Headers.CacheControl?.ToString();

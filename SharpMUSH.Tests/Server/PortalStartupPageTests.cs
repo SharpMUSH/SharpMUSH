@@ -46,9 +46,9 @@ public class PortalStartupPageTests
 	private static async Task<Harness> StartAsync()
 	{
 		var root = Directory.CreateTempSubdirectory("portal-startup-page-").FullName;
-		var webRoot = Path.Combine(root, "wwwroot");
+		var webRoot = Path.Join(root, "wwwroot");
 		Directory.CreateDirectory(webRoot);
-		await File.WriteAllTextAsync(Path.Combine(webRoot, "index.html"), "<!DOCTYPE html><html><body>portal</body></html>");
+		await File.WriteAllTextAsync(Path.Join(webRoot, "index.html"), "<!DOCTYPE html><html><body>portal</body></html>");
 
 		var consumers = new NatsConsumerRegistry();
 		consumers.Registrations.Add(new(typeof(TelnetInputMessage), "input", "input", (_, _, _) => Task.CompletedTask));

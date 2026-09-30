@@ -115,7 +115,7 @@ public class Program
 		// manifest via MapStaticAssets (mapped with the SPA fallback below); without the manifest this
 		// falls back to the Blazor-framework and static-file middleware. See PortalStaticFiles.
 		var portalManifest = PortalStaticFiles.FindManifest(env);
-		if (portalManifest is null && File.Exists(Path.Combine(env.WebRootPath ?? "wwwroot", "index.html")))
+		if (portalManifest is null && File.Exists(Path.Join(env.WebRootPath ?? "wwwroot", "index.html")))
 		{
 			// A portal is bundled but its manifest is not: served this way it gets no long-lived caching,
 			// and the scripts it loads by their plain names (the portal's own are content-hashed on disk)

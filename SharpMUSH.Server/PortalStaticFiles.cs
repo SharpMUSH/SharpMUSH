@@ -39,7 +39,7 @@ public static class PortalStaticFiles
 	/// <summary>The portal's endpoints manifest in the content root, or <c>null</c> when there is none.</summary>
 	public static string? FindManifest(IHostEnvironment environment)
 	{
-		var path = Path.Combine(environment.ContentRootPath, ManifestFileName);
+		var path = Path.Join(environment.ContentRootPath, ManifestFileName);
 		return File.Exists(path) ? path : null;
 	}
 
