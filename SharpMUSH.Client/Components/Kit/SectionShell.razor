@@ -19,7 +19,7 @@
         @Nav?.Invoke(_collapsed)
     </div>
 </SectionContent>
-<div class="kit-section-body @Class">
+<div class="kit-section-body @(PadBody ? null : "kit-section-body--flush") @Class">
     @ChildContent
 </div>
 
@@ -37,6 +37,9 @@
     [Parameter] public string NavLabel { get; set; } = string.Empty;
 
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>False when the pages bring their own padding (Build &amp; manage's admin pages).</summary>
+    [Parameter] public bool PadBody { get; set; } = true;
 
     private bool _collapsed;
 

@@ -50,6 +50,7 @@ public class ConfigLayoutTests : TrackingBunitContext
 			.AddSingleton<SidebarCollapseService>()
 			.AddEchoLocalizer();
 		JSInterop.Mode = JSRuntimeMode.Loose;
+		AddAuthorization();
 	}
 
 	private static HttpResponseMessage Json(string json) =>

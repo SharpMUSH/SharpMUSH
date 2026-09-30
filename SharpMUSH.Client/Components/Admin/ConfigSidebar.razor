@@ -1,6 +1,7 @@
 @using SharpMUSH.Client.Models.Configuration
 @using Microsoft.AspNetCore.Components.Routing
 @inject IStringLocalizer<SharedResource> Loc
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService Authorization
 @inject NavigationManager Nav
 @inject AdminConfigService AdminConfigService
 @inject ISnackbar Snackbar
@@ -14,6 +15,12 @@
 <div class="config-side @(Collapsed ? "config-side--collapsed" : null)">
     @if (!Collapsed)
     {
+        @if (_back is not null)
+        {
+            <a class="config-side-back" href="@_back">
+                <MudIcon Icon="@Icons.Material.Outlined.ChevronLeft" Size="Size.Small" /> @Loc["NavBuildManage"]
+            </a>
+        }
         <SidebarHead Title="@Loc["Configuration"]">
             <Sub>@Loc["ResConfigSectionKicker"]</Sub>
         </SidebarHead>
@@ -60,6 +67,19 @@
 </div>
 
 @code {
+    /// <summary>Where "‹ Build &amp; manage" goes: the section's first other page this viewer may use, or
+    /// null when configuration is all they have there.</summary>
+    private string? _back;
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
+        _back = (await SharpMUSH.Client.Layout.BuildNavCatalog.VisibleAsync(Authorization, user))
+            .FirstOrDefault(e => e.Href != "/admin/config")?.Href;
+    }
+
     [Parameter] public bool Collapsed { get; set; }
 
     /// <summary>Settings per schema category; null while the schema is unknown, so no counts show.</summary>

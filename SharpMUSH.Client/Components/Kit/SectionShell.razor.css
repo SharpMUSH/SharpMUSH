@@ -54,3 +54,7 @@
 	min-width: 0;
 	padding: var(--main-pad);
 }
+
+.kit-section-body--flush {
+	padding: 0;
+}
