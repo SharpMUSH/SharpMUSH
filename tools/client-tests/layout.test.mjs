@@ -230,6 +230,19 @@ test('Enter sends from the composer, Shift+Enter and composition keep the newlin
     assert.equal(shift.prevented() || composing.prevented() || other.prevented(), false);
 });
 
+// Safari reports the Enter that commits an IME candidate after compositionend: isComposing is false,
+// and keyCode 229 is the only mark that the key belongs to the composition.
+test('the Enter that commits an IME candidate in Safari (keyCode 229) does not send', () => {
+    const { layout } = boot();
+    const element = storyElement();
+    const calls = [];
+    layout.composerEnter(element, { invokeMethodAsync: name => { calls.push(name); return Promise.resolve(); } });
+    const commit = press('Enter', body, { isComposing: false, keyCode: 229 });
+    element.listeners.get('keydown')(commit.event);
+    assert.deepEqual(calls, []);
+    assert.equal(commit.prevented(), false);
+});
+
 test('exit keys ignore Shift, so a capital letter is typed where it belongs', () => {
     const { layout, listeners } = bootWithDialog(false);
     const calls = [];

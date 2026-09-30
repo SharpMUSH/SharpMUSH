@@ -112,11 +112,13 @@ window.sharpmushLayout = {
 
 	// Play's composer: Enter sends and Shift+Enter is a new line. Decided here, per key, because Blazor
 	// decides preventDefault when it renders and would swallow the key after the one that sent. An Enter
-	// that ends an IME composition belongs to the composition.
+	// that ends an IME composition belongs to the composition; Safari sends that Enter after compositionend,
+	// with isComposing false, and keyCode 229 is then the only sign of it.
 	composerEnter: function (element, dotnetRef) {
 		if (!element || element._sharpmushEnter) return;
 		const handler = event => {
-			if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+			if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey
+				|| event.isComposing || event.keyCode === 229) return;
 			event.preventDefault();
 			const pending = dotnetRef.invokeMethodAsync('SendFromEnter');
 			if (pending && typeof pending.catch === 'function') {
