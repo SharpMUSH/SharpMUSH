@@ -1,4 +1,5 @@
 @using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.Wiki
 @using SharpMUSH.Client.Resources
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Services
@@ -65,60 +66,117 @@ else if (DisplayAsHero)
 }
 else
 {
-    <div class="wiki-article-grid">
-        <article class="wiki-article-main">
-            @* Embedded on another page, there is no wiki the reader came from, so no way "back" to it. *@
+    @* D1 §6.2 (boards 23–24). Not embedded: a glass banner when the page has an image (the first
+       Markdown image, which the body then omits) or the plain header; the body in a 640px card;
+       an aside with the table of contents and locales, the characters mentioned, and more pages in
+       the category. Embedded (a biography on a profile) keeps the article alone with no chrome. *@
+    <div class="wiki-page @(Embedded ? "wiki-page--embedded" : null)">
+        <div class="wiki-page-main">
             @if (!Embedded)
             {
-                <a class="wiki-back" href="/wiki"><MudIcon Icon="@Icons.Material.Filled.ChevronLeft" Style="font-size:0.875rem;" /> @Loc["Wiki"]</a>
-            }
-            <div class="wiki-article-kicker">@CategoryLabel</div>
-            <h1 class="wiki-article-title">@Article.Title</h1>
-
-            <div class="wiki-article-meta">
-                <span class="wiki-article-edit">
-                    <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:0.8125rem;" /> @Loc["ResAnyoneCanEdit"]
-                </span>
-                <div style="flex:1;"></div>
-                <AuthorizeView Policy="wiki.edit">
-                    <Authorized>
-                        <button type="button" class="wiki-btn wiki-btn--solid" @onclick="ActivateEditMode">
-                            <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:0.875rem;" /> @Loc["WikiEdit"]
-                        </button>
-                    </Authorized>
-                </AuthorizeView>
-                <a class="wiki-btn" href="@HistoryHref">
-                    <MudIcon Icon="@Icons.Material.Filled.History" Style="font-size:0.875rem;" /> @Loc["ResHistory"]
-                </a>
-            </div>
-
-            @LocaleBanner
-
-            <div class="WikiContent wiki-article-body">
-                <div class="mud-card-content">
-                    @if (Article.Image is not null)
-                    {
-                        <img class="wiki-img" src="@Article.Image" alt="@Article.Title" />
-                    }
-                    @RenderSegments
-                </div>
-            </div>
-        </article>
-
-        <aside class="wiki-toc">
-            @if (_toc.Count > 0)
-            {
-                <div class="wiki-toc-sticky">
-                    <div class="wiki-toc-label">@Loc["ResOnThisPage"]</div>
-                    <div class="wiki-toc-list">
-                        @foreach (var entry in _toc)
-                        {
-                            <a href="#@entry.Anchor">@entry.Text</a>
-                        }
+                @if (HasBanner)
+                {
+                    <GlassBanner Title="@Article.Title" Kicker="@CategoryLabel" ImageUrl="@Article.Image" Alt="@Article.Title"
+                                 Height="200" TitleSize="hero" HeadingLevel="1"
+                                 Minimised="@_minimised" MinimisedChanged="@(v => _minimised = v)" Fact="@MinimisedFact">
+                        <Secondary>@MetaLine</Secondary>
+                        <Back>
+                            <CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki">@Loc["Wiki"]</CapsuleButton>
+                        </Back>
+                        <Actions>@HeaderActions</Actions>
+                    </GlassBanner>
+                }
+                else
+                {
+                    <PlainPageHeader Kicker="@CategoryLabel" Title="@Article.Title">
+                        <DescriptionContent>@MetaLine</DescriptionContent>
+                        <Actions>
+                            <CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki">@Loc["Wiki"]</CapsuleButton>
+                            @HeaderActions
+                        </Actions>
+                    </PlainPageHeader>
+                }
+                @FallbackNotice
+                <KitCard Class="wiki-article-card">
+                    <div class="WikiContent wiki-article-body">
+                        <div class="mud-card-content">
+                            @RenderSegments
+                        </div>
                     </div>
-                </div>
+                </KitCard>
             }
-        </aside>
+            else
+            {
+                <article class="wiki-article-main">
+                    <div class="wiki-article-kicker">@CategoryLabel</div>
+                    <h1 class="wiki-article-title">@Article.Title</h1>
+                    @LocaleBanner
+                    <div class="WikiContent wiki-article-body">
+                        <div class="mud-card-content">
+                            @RenderSegments
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+
+        @if (!Embedded)
+        {
+            <aside class="wiki-page-aside">
+                @if (_toc.Count > 0 || OtherLocales.Any())
+                {
+                    <KitCard Aside="true" Title="@Loc["ResOnThisPage"]">
+                        @if (_toc.Count > 0)
+                        {
+                            <nav class="wiki-toc" aria-label="@Loc["ResOnThisPage"]">
+                                @foreach (var entry in _toc)
+                                {
+                                    <a href="@($"{PagePath}#{entry.Anchor}")">@entry.Text</a>
+                                }
+                            </nav>
+                        }
+                        @if (OtherLocales.Any())
+                        {
+                            <div class="wiki-locales">
+                                <SectionLabel>@Loc["NavWikiAlsoIn"]</SectionLabel>
+                                <div class="wiki-lang-chips" aria-label="@Loc["WikiAvailableTranslations"]">
+                                    @foreach (var locale in OtherLocales)
+                                    {
+                                        <a class="wiki-lang-chip" href="@LocaleHref(locale)" lang="@locale">@PortalLocales.DisplayName(locale)</a>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </KitCard>
+                }
+                @if (_mentioned.Count > 0)
+                {
+                    <KitCard Aside="true" Class="wiki-mentioned" Title="@Loc.Plural("NavWikiMentioned", "count", _mentioned.Count)">
+                        <div class="wiki-mentioned-grid">
+                            @foreach (var person in _mentioned)
+                            {
+                                var m = person;
+                                <PortraitTile Name="@m.Name" Href="@m.Href" />
+                            }
+                        </div>
+                    </KitCard>
+                }
+                @if (_more.Count > 0)
+                {
+                    <KitCard Aside="true" Class="wiki-more" Title="@string.Format(Loc["NavWikiMoreIn"], CategoryLabel)">
+                        <div class="wiki-more-rows">
+                            @foreach (var sibling in _more)
+                            {
+                                var page2 = sibling;
+                                <SidebarRow Lead="SidebarRow.SidebarLead.Image" ImageUrl="@page2.Image" Name="@page2.Title" Label="@page2.Title"
+                                            Href="@WikiRoutes.PathFor(page2.Namespace, page2.Category, page2.Slug)" />
+                            }
+                        </div>
+                        <a class="wiki-more-all" href="@WikiCategories.Route(Category)">@Loc.Plural("NavWikiAllShort", "count", _moreTotal)</a>
+                    </KitCard>
+                }
+            </aside>
+        }
     </div>
 }
 
@@ -182,6 +240,68 @@ else
     private List<BodySegment> _segments = [];
     private List<TocEntry> _toc = [];
 
+    /// <summary>A character the body links to: the link text and its /character/ href.</summary>
+    private sealed record Mentioned(string Name, string Href);
+
+    private static readonly Regex CharacterLinkWithText = new(
+        "<a href=\"(/character/[^\"#?/]+)\"[^>]*>(.*?)</a>",
+        RegexOptions.Compiled | RegexOptions.Singleline);
+
+    private List<Mentioned> _mentioned = [];
+    private List<WikiPageSummary> _more = [];
+    private int _moreTotal;
+    private bool _minimised;
+    private string? _moreLoadedFor;
+
+    private bool HasBanner => Article is not null && ImageUrlPolicy.IsRenderable(Article.Image);
+
+    private string PagePath => WikiRoutes.WikiPathFor(Namespace, Category, Slug);
+
+    private string? EditedWhen => Article?.UpdatedAt is { } at ? Loc.Format(at) : null;
+
+    private string MinimisedFact =>
+        EditedWhen is null ? CategoryLabel : $"{CategoryLabel} · {string.Format(Loc["NavWikiEditedAgo"], EditedWhen)}";
+
+    /// <summary>"Last edited by {mention} · when · anyone can edit" — the mention is a component, so the resx value is split around its placeholder.</summary>
+    private RenderFragment MetaLine => __builder =>
+    {
+        @if (Article?.LastEditedBy is { } editor)
+        {
+            var parts = Loc["NavWikiLastEditedBy"].Value.Split("{0}");
+            <span class="wiki-meta-edited">@parts[0]<Mention Name="@editor" />@(parts.Length > 1 ? parts[1] : string.Empty)</span>
+            @if (EditedWhen is not null)
+            {
+                <span class="wiki-meta-sep"> · </span><span>@EditedWhen</span>
+            }
+            <span class="wiki-meta-sep"> · </span>
+        }
+        <span class="wiki-meta-edit">@Loc["ResAnyoneCanEdit"]</span>
+    };
+
+    private RenderFragment HeaderActions => __builder =>
+    {
+        <CapsuleButton Icon="@Icons.Material.Outlined.History" Href="@HistoryHref">@Loc["ResHistory"]</CapsuleButton>
+        <AuthorizeView Policy="wiki.edit">
+            <Authorized>
+                <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Edit" OnClick="@(() => ActivateEditMode())">@Loc["WikiEdit"]</CapsuleButton>
+            </Authorized>
+        </AuthorizeView>
+    };
+
+    private static List<Mentioned> FindMentioned(string html) =>
+        CharacterLinkWithText.Matches(html)
+            .Select(m => new Mentioned(WebUtility.HtmlDecode(Regex.Replace(m.Groups[2].Value, "<[^>]+>", string.Empty)).Trim(), m.Groups[1].Value))
+            .Where(m => m.Name.Length > 0)
+            .DistinctBy(m => m.Href, StringComparer.Ordinal)
+            .ToList();
+
+    /// <summary>Character links read as mentions (D1 §4.8): body colour, a thin underline. A redlinked one keeps its dashed red.</summary>
+    private static string MarkMentions(string html)
+    {
+        html = CharacterLinkHref.Replace(html, m => $"<a href=\"/character/{m.Groups[1].Value}\" class=\"mention\">");
+        return Regex.Replace(html, "<a href=\"(/character/[^\"#?/]+)\" class=\"wiki-redlink\">", "<a href=\"$1\" class=\"wiki-redlink mention\">");
+    }
+
     /// <summary>
     /// True when this page is a character biography — served from /character/{slug}, where the wiki
     /// framing (and the "this page does not exist" wording) would misread as something broken.
@@ -223,6 +343,15 @@ else
     /// The fallback notice and language chips. Defined once and rendered in both the hero and grid
     /// branches — duplicating the markup is how the home page ends up silently never showing it.
     /// </summary>
+    /// <summary>The fallback notice alone; the language chips live in the aside when the page is not embedded.</summary>
+    private RenderFragment FallbackNotice => __builder =>
+    {
+        @if (ShowFallbackNotice)
+        {
+            @LocaleBanner
+        }
+    };
+
     private RenderFragment LocaleBanner => @<div>
         @if (ShowFallbackNotice)
         {
@@ -266,14 +395,46 @@ else
         var html = Article?.RenderedHtml
                    ?? (Article is not null ? Pipeline.RenderToHtml(Article.Content) : string.Empty);
 
+        // The banner shows the first image; the body must not show it a second time.
+        if (!Embedded && HasBanner)
+        {
+            html = WikiImages.StripFirstImage(html, Article!.Image!);
+        }
+
         _segments = SplitOnDirectives(html);
         _toc = BuildToc(Article?.Content);
+        _mentioned = Embedded ? [] : FindMentioned(html);
 
-        var marked = await MarkRedlinksAsync(html);
+        var marked = MarkMentions(await MarkRedlinksAsync(html));
         if (marked != html)
         {
             _segments = SplitOnDirectives(marked);
         }
+
+        await LoadMoreAsync();
+    }
+
+    /// <summary>Up to three other pages in this category for the aside, plus the total for the "All N" link.</summary>
+    private async Task LoadMoreAsync()
+    {
+        if (Embedded || Article is null)
+        {
+            return;
+        }
+
+        var key = WikiCategories.Key(Category);
+        if (key == _moreLoadedFor)
+        {
+            return;
+        }
+
+        _moreLoadedFor = key;
+        var siblings = (await Wiki.GetByCategoryAsync(key, 0, 50))
+            .Where(p => !p.Slug.Equals(Slug, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(p => p.UpdatedAt)
+            .ToList();
+        _moreTotal = siblings.Count + 1;
+        _more = siblings.Take(3).ToList();
     }
 
     /// <summary>

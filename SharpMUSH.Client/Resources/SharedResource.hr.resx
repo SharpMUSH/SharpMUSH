@@ -4650,4 +4650,22 @@
   <data name="NavLiveNow" xml:space="preserve">
     <value>{count, plural, =0 {Uživo sada} one {Uživo sada · #} few {Uživo sada · #} other {Uživo sada · #}}</value>
   </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Zadnje uredio {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>uređeno {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Spomenuti · #} few {Spomenuti · #} other {Spomenuti · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Više u {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Sve #} few {Sve #} other {Sve #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Također na</value>
+  </data>
 </root>

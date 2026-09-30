@@ -4650,4 +4650,22 @@
   <data name="NavLiveNow" xml:space="preserve">
     <value>{count, plural, =0 {Ao vivo agora} one {Ao vivo agora · #} other {Ao vivo agora · #}}</value>
   </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Última edição por {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>editado {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Mencionados · #} other {Mencionados · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Mais em {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Todas #} other {Todas #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Também em</value>
+  </data>
 </root>

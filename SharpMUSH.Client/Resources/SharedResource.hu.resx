@@ -4650,4 +4650,22 @@
   <data name="NavLiveNow" xml:space="preserve">
     <value>{count, plural, =0 {Most élőben} one {Most élőben · #} other {Most élőben · #}}</value>
   </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Utoljára szerkesztette: {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>szerkesztve: {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Említve · #} other {Említve · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Több itt: {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Mind a #} other {Mind a #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Más nyelven</value>
+  </data>
 </root>

@@ -3903,4 +3903,22 @@
   <data name="NavLiveNow" xml:space="preserve">
     <value>{count, plural, =0 {En direct} one {En direct · #} other {En direct · #}}</value>
   </data>
+  <data name="NavWikiLastEditedBy" xml:space="preserve">
+    <value>Dernière modification par {0}</value>
+  </data>
+  <data name="NavWikiEditedAgo" xml:space="preserve">
+    <value>modifié {0}</value>
+  </data>
+  <data name="NavWikiMentioned" xml:space="preserve">
+    <value>{count, plural, one {Mentionnés · #} other {Mentionnés · #}}</value>
+  </data>
+  <data name="NavWikiMoreIn" xml:space="preserve">
+    <value>Plus dans {0}</value>
+  </data>
+  <data name="NavWikiAllShort" xml:space="preserve">
+    <value>{count, plural, one {Toutes #} other {Toutes #}}</value>
+  </data>
+  <data name="NavWikiAlsoIn" xml:space="preserve">
+    <value>Aussi en</value>
+  </data>
 </root>

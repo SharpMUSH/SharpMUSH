@@ -74,7 +74,7 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 	{
 		var cut = RenderHome(embedded: false);
 
-		var hrefs = cut.FindAll("a.wiki-btn").Select(a => a.GetAttribute("href")).ToList();
+		var hrefs = cut.FindAll("a.kit-capsule").Select(a => a.GetAttribute("href")).ToList();
 
 		await Assert.That(hrefs).Contains("/wiki/main/general/home/history");
 	}
@@ -87,7 +87,7 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 
 		var cut = RenderHome(embedded: false);
 
-		await Assert.That(cut.FindAll("button.wiki-btn--solid")).IsNotEmpty();
+		await Assert.That(cut.FindAll("button.kit-capsule--primary")).IsNotEmpty();
 	}
 
 	[Test]
@@ -95,7 +95,8 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 	{
 		var cut = RenderHome(embedded: false);
 
-		await Assert.That(cut.FindAll(".wiki-article-title")).IsNotEmpty();
+		// the home page has no image, so the D1 frame is the plain header with the page's heading
+		await Assert.That(cut.FindAll(".kit-page-head h1")).IsNotEmpty();
 		await Assert.That(cut.FindAll(".WikiContent--hero")).IsEmpty();
 	}
 
@@ -108,8 +109,8 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 		var cut = RenderHome(embedded: true);
 
 		await Assert.That(cut.FindAll(".WikiContent--hero")).IsNotEmpty();
-		await Assert.That(cut.FindAll(".wiki-btn")).IsEmpty();
-		await Assert.That(cut.FindAll(".wiki-back")).IsEmpty();
+		await Assert.That(cut.FindAll(".kit-capsule")).IsEmpty();
+		await Assert.That(cut.FindAll(".kit-banner-back, .wiki-back")).IsEmpty();
 	}
 
 	[Test]

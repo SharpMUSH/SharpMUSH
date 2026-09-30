@@ -75,6 +75,18 @@ public class DesignTokensTests
 	}
 
 	[Test]
+	public async Task WikiLinksUseTheAccent_RedlinksTheMissingColour_AndMentionsInherit()
+	{
+		var shell = File.ReadAllText(Path.Join(ClientSource.CssRoot, "shell.css"));
+		var links = shell[shell.IndexOf(".WikiContent .mud-card-content a {", StringComparison.Ordinal)..];
+		await Assert.That(links[..links.IndexOf('}')]).Contains("var(--accent)")
+			.Because("README §4.8: wiki links change from the MudBlazor secondary to the accent");
+		var red = shell[shell.IndexOf(".WikiContent .mud-card-content a.wiki-redlink {", StringComparison.Ordinal)..];
+		await Assert.That(red[..red.IndexOf('}')]).Contains("var(--link-missing)");
+		await Assert.That(shell).Contains(".WikiContent .mud-card-content a.mention {");
+	}
+
+	[Test]
 	public async Task OldTextFaintValueIsGone()
 	{
 		await Assert.That(Tokens()).DoesNotContain("#5f6870");
