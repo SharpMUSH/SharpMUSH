@@ -150,7 +150,7 @@ The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all 
 **Key services registered at startup:**
 
 - `IWidgetRegistry` / `ILayoutService` — widget system; widgets registered at startup in `Program.cs`
-- `IThemeService` — DB-backed MudTheme + CSS variables
+- `IThemeService` — localStorage-backed accent preset applied to the MudTheme palette (the CSS variables in `wwwroot/css/tokens.css` are static; see `docs/design/ui-patterns.md` §13)
 - `IWikiService` (via `InMemoryWikiService`) — wiki CRUD
 - `ISceneService` (via `InMemorySceneService`) — real-time scene participation
 - `IGameHubConnectionFactory` / `IConnectionStateService` — SignalR lifecycle management

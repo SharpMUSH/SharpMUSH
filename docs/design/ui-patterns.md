@@ -1000,48 +1000,39 @@ CSS knowledge — they pick colors in a UI, the tokens propagate everywhere.
 
 ### Specification
 
-**3-layer token architecture:**
+**What exists (as of the D1 handoff, 2026-09-29).** The token set is the
+`:root` block of `SharpMUSH.Client/wwwroot/css/tokens.css` (cascade layer
+`tokens`), and `docs/design/d1/README.md` §2 is its table: `--bg`, `--surface`,
+`--surface-2`, `--surface-3`, `--rail-bg`, `--text`, `--text-dim`, `--text-faint`,
+`--border`, `--border-soft`, `--accent`, `--accent-dim`, `--accent-on`, `--glow`,
+the status colours (`--warn`, `--link-missing`, `--unread-alert`, the OOC band
+set), the frame widths (`--rail-w`, `--side-w`, `--side-strip-w`, `--aside-w`),
+the radii, and the glass-banner and mention tokens. `DesignTokensTests` pins the
+D1 additions and the AA contrast of `--text-faint`. New CSS reads these
+variables and never hard-codes the Phosphor green.
 
-```
-Layer 1: MudBlazor MudTheme (C# object, compile-time)
-  ├── Palette.Primary / Secondary / Tertiary
-  ├── Palette.Surface / Background / AppBar
-  ├── Typography (font family, scale)
-  └── LayoutProperties (border radius, elevation, spacing)
+**The theme service.** `IThemeService` (`ThemeService.cs`) is
+localStorage-backed (`sharp-theme-preset`) and offers five accent presets
+(Phosphor, Amber, Violet, Rose, Signal). Choosing one changes only the MudBlazor
+`MudTheme` palette through `ThemeProvider`; the CSS variables above are static,
+so plain-CSS chrome stays Phosphor whichever preset is chosen. Wiring
+`ThemeProvider` to emit `--accent`, `--accent-dim`, `--accent-on` and `--glow`
+from `ThemeService.DeriveAccent` is the open step before `/settings/theme` can
+ship (README §2 has the derived on-accent values and their contrast).
 
-Layer 2: CSS Custom Properties (runtime override layer)
-  ├── --sharp-accent: var(--mud-palette-primary);
-  ├── --sharp-surface-0: #1e1e2e;      (deepest background)
-  ├── --sharp-surface-1: #181825;      (sidebar, cards)
-  ├── --sharp-surface-2: #313244;      (elevated surfaces)
-  ├── --sharp-text-primary: #cdd6f4;
-  ├── --sharp-text-secondary: #a6adc8;
-  ├── --sharp-terminal-bg: #11111b;
-  ├── --sharp-border: #45475a;
-  └── --sharp-success/warning/error/info colors
-
-Layer 3: Admin Theme Presets (stored in DB, loaded at runtime)
-  ├── Catppuccin Mocha (default)
-  ├── Dracula
-  ├── Nord
-  ├── Solarized Dark / Light
-  ├── Tokyo Night
-  ├── High Contrast (accessibility)
-  └── Custom (admin defines via color picker UI)
-```
+**Not built (earlier vision, kept for the record):** a `--sharp-*` token layer,
+DB-stored admin theme presets (Catppuccin, Dracula, Nord, Solarized, Tokyo
+Night, High Contrast), an admin colour-picker editor with import/export, and a
+light mode. `docs/design/theme-editor.md` and `docs/todo/area-18-theme.md`
+carry that design; nothing in the code implements it yet.
 
 **Player-level customization (NOT layout — just visual):**
 - Pick from presets the admin has enabled (dropdown in user settings)
 - Toggle dark ↔ light (if admin enables light mode option)
 - Font size adjustment: Small / Normal / Large / XL (scales via rem)
 - Monospace vs. proportional for scene text (preference)
-- "Compact mode" toggle (reduces padding/margins by 25%)
-
-**Admin theme editor UI (Blazor admin panel):**
-- Color pickers for each token (live preview)
-- Import/export theme as JSON
-- Preview panel showing how the portal looks with current selections
-- "Apply to all users" vs. "Add as option" (let players opt in)
+- "Compact mode" toggle (reduces padding/margins by 25%; the `.density-compact`
+  class in `tokens.css` is the existing hook)
 
 ### Edge Cases
 
