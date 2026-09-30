@@ -1979,7 +1979,7 @@
     <value>Home Page</value>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>The main content of the landing page.</value>
+    <value>The landing page: its main column and its aside.</value>
   </data>
   <data name="LayScopeWikiIndex" xml:space="preserve">
     <value>Wiki Index</value>
@@ -3092,9 +3092,6 @@
   </data>
   <data name="WidOnlineNow" xml:space="preserve">
     <value>Online Now</value>
-  </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>View all {0} →</value>
   </data>
   <data name="WidNobodyConnected" xml:space="preserve">
     <value>No one is connected right now.</value>
@@ -4213,5 +4210,20 @@
   </data>
   <data name="NavMailBackToFolder" xml:space="preserve">
     <value>Back to {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>What's happening</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Online now} other {Online now · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>See everyone</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Scenes running right now</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# found} other {# found}}</value>
   </data>
 </root>

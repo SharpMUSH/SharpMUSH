@@ -3,10 +3,13 @@
 @using SharpMUSH.Client.Models.Widgets
 @using Markdig
 
+@* D1 §6.5: the admin's markdown as a card in the page's main column. *@
 @if (_visible && !string.IsNullOrWhiteSpace(_html))
 {
     <div class="welcome-text-widget">
-        @((MarkupString)_html)
+        <KitCard>
+            <div class="welcome-text-body">@((MarkupString)_html)</div>
+        </KitCard>
     </div>
 }
 

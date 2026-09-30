@@ -3,9 +3,16 @@
 
 <PageTitle>@Loc["Home"] — @Loc["AppTitle"]</PageTitle>
 
-@* The landing page composes from the "home" layout scope. Its default arranges the stats, active
-   scene, recent wiki activity, characters, and quickstart widgets in a 12-column grid; admins can
-   recompose it in the layout editor. *@
-<div class="home-dash">
-    <ScopedZone Scope="@LayoutScopes.Home" Zone="WidgetZone.MainContent" />
+@* D1 §6.5 home (boards 30, 31): the plain header over the admin-composed "home" scope. Its
+   MainContent is the main column (stats, the home wiki page, live scenes, recent wiki changes by
+   default) and its RightSidebar zone is the aside (online now, getting started), rendered inside
+   the page as the wiki home and the profile do. Admins recompose both in the layout editor. *@
+<div class="home-page">
+    <div class="home-main">
+        <PlainPageHeader Kicker="@Loc["AppTitle"]" Title="@Loc["HomeWhatsHappening"]" />
+        <ScopedZone Scope="@LayoutScopes.Home" Zone="WidgetZone.MainContent" />
+    </div>
+    <aside class="home-aside">
+        <ScopedZone Scope="@LayoutScopes.Home" Zone="WidgetZone.RightSidebar" Grid="false" />
+    </aside>
 </div>

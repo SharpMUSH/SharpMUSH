@@ -107,6 +107,20 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Markup).DoesNotContain("WidCreateYourCharacter");
 	}
 
+	/// <summary>D1 §6.5: an aside card whose ways in are sidebar rows and whose one offer is the primary capsule.</summary>
+	[TUnit.Core.Test]
+	public async Task IsAnAsideCard_WithRowLinks_AndOnePrimaryOffer()
+	{
+		var auth = BuildAuth([]);
+		var cut = RenderWidget(auth);
+
+		await Assert.That(cut.Find(".kit-card.kit-card--aside .kit-card-title").TextContent).IsEqualTo("WidNewHere");
+		await Assert.That(cut.FindAll(".quickstart-links a.kit-row").Select(a => a.GetAttribute("href")).ToList())
+			.IsEquivalentTo(new[] { "/wiki", "/characters", "/scenes" });
+		await Assert.That(cut.FindAll("a.kit-capsule--primary").Select(a => a.GetAttribute("href")).ToList())
+			.IsEquivalentTo(new[] { "/login?tab=register" });
+	}
+
 	[TUnit.Core.Test]
 	public async Task LoggedIn_ZeroCharacters_ShowsCreateHero()
 	{

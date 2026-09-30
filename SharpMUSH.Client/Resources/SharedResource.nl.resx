@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>De hoofdinhoud van de landingspagina.</value>
+    <value>De startpagina: de hoofdkolom en de zijkolom.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3916,10 +3916,6 @@
     <value>Ongecontroleerde bron — inspecteer alles voordat je die toepast</value>
     <comment>MT</comment>
   </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Alle {0} bekijken →</value>
-    <comment>MT</comment>
-  </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Wachten tot de server online komt…</value>
     <comment>MT</comment>
@@ -4868,5 +4864,20 @@
   </data>
   <data name="NavMailBackToFolder" xml:space="preserve">
     <value>Terug naar {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Wat er gebeurt</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Nu online} other {Nu online · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Iedereen bekijken</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Scènes die nu lopen</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# gevonden} other {# gevonden}}</value>
   </data>
 </root>

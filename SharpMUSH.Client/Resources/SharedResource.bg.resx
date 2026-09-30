@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>Основното съдържание на началната страница.</value>
+    <value>Началната страница: основната колона и страничната колона.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3916,10 +3916,6 @@
     <value>Непроверен източник — проверете всичко, преди да го приложите</value>
     <comment>MT</comment>
   </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Виж всички {0} →</value>
-    <comment>MT</comment>
-  </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Изчакване сървърът да стане достъпен…</value>
     <comment>MT</comment>
@@ -4868,5 +4864,20 @@
   </data>
   <data name="NavMailBackToFolder" xml:space="preserve">
     <value>Обратно към {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Какво се случва</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {На линия сега} other {На линия сега · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Вижте всички</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Сцени, които текат в момента</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# намерен} other {# намерени}}</value>
   </data>
 </root>

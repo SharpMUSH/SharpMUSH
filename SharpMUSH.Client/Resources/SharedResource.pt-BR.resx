@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>O conteúdo principal da página inicial.</value>
+    <value>A página inicial: sua coluna principal e sua coluna lateral.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3916,10 +3916,6 @@
     <value>Fonte não revisada — inspecione tudo antes de aplicar</value>
     <comment>MT</comment>
   </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Ver todos os {0} →</value>
-    <comment>MT — masculine plural assumed; the widget lists items of varying type</comment>
-  </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Aguardando o servidor ficar online…</value>
     <comment>MT</comment>
@@ -4868,5 +4864,20 @@
   </data>
   <data name="NavMailBackToFolder" xml:space="preserve">
     <value>Voltar para {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>O que está acontecendo</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Online agora} other {Online agora · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Ver todos</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Cenas acontecendo agora</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# encontrado} other {# encontrados}}</value>
   </data>
 </root>

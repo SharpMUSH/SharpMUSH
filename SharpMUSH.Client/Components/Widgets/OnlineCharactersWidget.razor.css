@@ -1,19 +1,41 @@
 .online-characters-widget {
-    container-type: inline-size;
-    height: 100%;
+	container-type: inline-size;
+	height: 100%;
 }
 
-.online-characters-row {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    padding: 0.3125rem 0;
-    border-bottom: 1px solid var(--border-soft);
+.online-characters-rows {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin: 0 -4px;
 }
 
-.online-characters-row ::deep .mud-link {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+/* the presence dot at the row's end (board 30): everyone listed here is connected */
+.online-characters-rows ::deep .online-characters-row::after {
+	content: "";
+	width: 7px;
+	height: 7px;
+	margin-left: auto;
+	border-radius: 50%;
+	background: var(--accent);
+	flex-shrink: 0;
+}
+
+.online-characters-note {
+	font-size: 13px;
+	color: var(--text-faint);
+}
+
+.online-characters-all {
+	display: inline-block;
+	margin-top: 8px;
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.online-characters-all:hover,
+.online-characters-all:focus-visible {
+	text-decoration: underline;
 }

@@ -1105,7 +1105,7 @@
     <value>Page d'accueil</value>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>Le contenu principal de la page d'accueil.</value>
+    <value>La page d’accueil : sa colonne principale et sa colonne latérale.</value>
   </data>
   <data name="LayScopeWikiIndex" xml:space="preserve">
     <value>Index du wiki</value>
@@ -2091,9 +2091,6 @@
   </data>
   <data name="WidOnlineNow" xml:space="preserve">
     <value>En ligne</value>
-  </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Voir les {0} →</value>
   </data>
   <data name="WidNobodyConnected" xml:space="preserve">
     <value>Personne n'est connecté pour le moment.</value>
@@ -4121,5 +4118,20 @@
   </data>
   <data name="NavMailBackToFolder" xml:space="preserve">
     <value>Retour à {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Ce qui se passe</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {En ligne} other {En ligne · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Voir tout le monde</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Scènes en cours en ce moment</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# trouvé} other {# trouvés}}</value>
   </data>
 </root>

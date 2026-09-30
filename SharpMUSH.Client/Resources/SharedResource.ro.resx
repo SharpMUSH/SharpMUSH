@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>Conținutul principal al paginii de întâmpinare.</value>
+    <value>Pagina de start: coloana principală și coloana laterală.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3916,10 +3916,6 @@
     <value>Sursă neverificată — inspectați totul înainte de aplicare</value>
     <comment>MT</comment>
   </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Vedeți toate ({0}) →</value>
-    <comment>MT — Romanian needs a gender for 'all'; feminine/neuter 'toate' fits the likely items (scene, pagini, poze)</comment>
-  </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Se așteaptă pornirea serverului…</value>
     <comment>MT</comment>
@@ -4868,5 +4864,20 @@
   </data>
   <data name="NavMailBackToFolder" xml:space="preserve">
     <value>Înapoi la {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Ce se întâmplă</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Online acum} other {Online acum · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Vezi pe toată lumea</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Scene în desfășurare acum</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# găsit} few {# găsite} other {# găsite}}</value>
   </data>
 </root>

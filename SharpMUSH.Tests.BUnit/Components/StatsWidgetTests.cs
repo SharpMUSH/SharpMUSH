@@ -183,6 +183,25 @@ public class StatsWidgetTests : TrackingBunitContext
 		await Assert.That(TileValue(markup, "WidPlayersOnline")).IsEqualTo("1");
 	}
 
+	/// <summary>D1 §6.5: four kit stat tiles (mono label over an accent value), no MudPaper grid.</summary>
+	[TUnit.Core.Test]
+	public async Task RendersFourKitTiles_LabelOverValue()
+	{
+		Wire(this, new StatsHandler());
+
+		var cut = Render<StatsWidget>();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Markup.Contains("—")) throw new InvalidOperationException("stats not loaded yet");
+		}, TimeSpan.FromSeconds(5));
+
+		var tiles = cut.FindAll(".stats-tiles .stats-tile");
+		await Assert.That(tiles.Count).IsEqualTo(4);
+		await Assert.That(tiles[0].QuerySelector(".stats-tile-label")!.TextContent).IsEqualTo("WidPlayersOnline");
+		await Assert.That(tiles[0].QuerySelector(".stats-tile-value")!.TextContent).IsEqualTo("1");
+		await Assert.That(cut.FindAll(".mud-paper").Count).IsEqualTo(0);
+	}
+
 	[TUnit.Core.Test]
 	public async Task PlayersOnline_CountsPeople_NotConnections()
 	{

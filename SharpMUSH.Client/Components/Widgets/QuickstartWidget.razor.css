@@ -1,4 +1,24 @@
 .quickstart-widget {
-    container-type: inline-size;
-    height: 100%;
+	container-type: inline-size;
+	height: 100%;
+}
+
+.quickstart-lead {
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--text);
+}
+
+.quickstart-text {
+	margin: 0;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--text-dim);
+}
+
+.quickstart-links {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin: 8px -4px 0;
 }

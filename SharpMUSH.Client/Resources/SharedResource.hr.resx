@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>Glavni sadržaj odredišne stranice.</value>
+    <value>Početna stranica: glavni stupac i bočni stupac.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3916,10 +3916,6 @@
     <value>Nepregledani izvor — provjerite sve prije primjene</value>
     <comment>MT</comment>
   </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Prikaži sve ({0}) →</value>
-    <comment>MT — count moved into parentheses so no Croatian numeral agreement is required</comment>
-  </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Čekanje da se poslužitelj pokrene…</value>
     <comment>MT</comment>
@@ -4868,5 +4864,20 @@
   </data>
   <data name="NavMailBackToFolder" xml:space="preserve">
     <value>Natrag na {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Što se događa</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Sada na mreži} other {Sada na mreži · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Prikaži sve</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Scene koje su upravo u tijeku</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# pronađen} few {# pronađena} other {# pronađenih}}</value>
   </data>
 </root>

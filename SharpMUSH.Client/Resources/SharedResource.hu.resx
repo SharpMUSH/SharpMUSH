@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>A nyitóoldal fő tartalma.</value>
+    <value>A kezdőlap: a fő oszlopa és az oldalsávja.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3916,10 +3916,6 @@
     <value>Nem ellenőrzött forrás — alkalmazás előtt vizsgáljon át mindent</value>
     <comment>MT</comment>
   </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Mind a(z) {0} megtekintése →</value>
-    <comment>MT</comment>
-  </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Várakozás a szerver elindulására…</value>
     <comment>MT</comment>
@@ -4868,5 +4864,20 @@
   </data>
   <data name="NavMailBackToFolder" xml:space="preserve">
     <value>Vissza ide: {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Mi történik</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Most online} other {Most online · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Mindenki megtekintése</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Éppen zajló jelenetek</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# találat} other {# találat}}</value>
   </data>
 </root>

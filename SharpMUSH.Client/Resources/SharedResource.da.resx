@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>Hovedindholdet på forsiden.</value>
+    <value>Forsiden: dens hovedkolonne og sidekolonne.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3916,10 +3916,6 @@
     <value>Ikke-gennemgået kilde — undersøg alt, før du anvender det</value>
     <comment>MT</comment>
   </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Vis alle {0} →</value>
-    <comment>MT</comment>
-  </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Venter på, at serveren kommer online…</value>
     <comment>MT</comment>
@@ -4868,5 +4864,20 @@
   </data>
   <data name="NavMailBackToFolder" xml:space="preserve">
     <value>Tilbage til {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Hvad sker der</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Online nu} other {Online nu · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Se alle</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Scener, der kører lige nu</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# fundet} other {# fundet}}</value>
   </data>
 </root>

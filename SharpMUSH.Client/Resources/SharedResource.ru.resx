@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>Основное содержимое главной страницы.</value>
+    <value>Главная страница: основная колонка и боковая колонка.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3916,10 +3916,6 @@
     <value>Непроверенный источник — изучите всё перед применением</value>
     <comment>MT</comment>
   </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Показать все ({0}) →</value>
-    <comment>MT — count moved into parentheses; a bare numeral before «все» would need case agreement.</comment>
-  </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Ожидание запуска сервера…</value>
     <comment>MT</comment>
@@ -4868,5 +4864,20 @@
   </data>
   <data name="NavMailBackToFolder" xml:space="preserve">
     <value>Назад в {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Что происходит</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {Сейчас в сети} other {Сейчас в сети · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Показать всех</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Сцены, которые идут сейчас</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# найден} few {# найдено} many {# найдено} other {# найдено}}</value>
   </data>
 </root>

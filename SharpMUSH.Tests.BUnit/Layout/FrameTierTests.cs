@@ -16,6 +16,8 @@ public class FrameTierTests
 		("Pages/WikiIndex.razor.css", ".wiki-index-page"),
 		("Pages/Admin/Config/ConfigIndex.razor.css", ".config-home"),
 		("Pages/Admin/Config/DynamicConfig.razor.css", ".config-section"),
+		("Pages/Home.razor.css", ".home-page"),
+		("Pages/Mail.razor.css", ".mail-panes"),
 	];
 
 	[Test]

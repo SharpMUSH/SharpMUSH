@@ -1725,7 +1725,7 @@
     <comment>MT</comment>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
-    <value>El contenido principal de la página de inicio.</value>
+    <value>La página de inicio: su columna principal y su columna lateral.</value>
     <comment>MT</comment>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
@@ -3916,10 +3916,6 @@
     <value>Fuente sin revisar — inspecciónelo todo antes de aplicarlo</value>
     <comment>MT</comment>
   </data>
-  <data name="WidViewAllCount" xml:space="preserve">
-    <value>Ver todos ({0}) →</value>
-    <comment>MT — assumed {0} is an item count, so parenthesized</comment>
-  </data>
   <data name="WidWaitingForServer" xml:space="preserve">
     <value>Esperando a que el servidor esté en línea…</value>
     <comment>MT</comment>
@@ -4868,5 +4864,20 @@
   </data>
   <data name="NavMailBackToFolder" xml:space="preserve">
     <value>Volver a {0}</value>
+  </data>
+  <data name="HomeWhatsHappening" xml:space="preserve">
+    <value>Qué está pasando</value>
+  </data>
+  <data name="WidOnlineNowCount" xml:space="preserve">
+    <value>{count, plural, =0 {En línea ahora} other {En línea ahora · #}}</value>
+  </data>
+  <data name="WidSeeEveryone" xml:space="preserve">
+    <value>Ver a todos</value>
+  </data>
+  <data name="WidLiveNowSub" xml:space="preserve">
+    <value>Escenas en curso ahora mismo</value>
+  </data>
+  <data name="WidCharactersFound" xml:space="preserve">
+    <value>{count, plural, one {# encontrado} other {# encontrados}}</value>
   </data>
 </root>

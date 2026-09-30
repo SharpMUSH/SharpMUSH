@@ -14,3 +14,20 @@
 	font-size: 13px;
 	color: var(--text-faint);
 }
+
+/* in a page's main column the main card's body is padded here */
+.recent-wiki-widget--main ::deep .kit-card-body {
+	padding: 8px 12px 12px;
+}
+
+.recent-wiki-all {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.recent-wiki-all:hover,
+.recent-wiki-all:focus-visible {
+	text-decoration: underline;
+}
