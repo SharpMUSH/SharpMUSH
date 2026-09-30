@@ -37,4 +37,20 @@ public class FrameTierTests
 
 		throw new InvalidOperationException($"{page.File} never stacks {page.Selector}; the narrow tier must.");
 	}
+
+	[Test]
+	public async Task TheWikiHome_KeepsItsHeroSearchAndThreeColumns_InTheMediumTiersMainColumn()
+	{
+		// Board 21 at 1280×800 with the sidebar open: main is about 740px beside the aside, and the hero
+		// search sits beside the blurb over three category columns. The widget queries its own width, so
+		// its first step down must be below 740px (46.25rem).
+		var css = File.ReadAllText(Path.Join(ClientSource.RazorRoot, "Components/Widgets/WikiIndexWidget.razor.css"));
+		foreach (Match block in Regex.Matches(css, @"@container \(max-width: (?<rem>[\d.]+)rem\)\s*\{(?<body>(?:[^{}]|\{[^{}]*\})*)\}"))
+		{
+			if (block.Groups["body"].Value.Contains(".wiki-hero-row") || block.Groups["body"].Value.Contains("repeat(2, minmax(0, 1fr))"))
+			{
+				await Assert.That(double.Parse(block.Groups["rem"].Value, System.Globalization.CultureInfo.InvariantCulture)).IsLessThan(46.25);
+			}
+		}
+	}
 }

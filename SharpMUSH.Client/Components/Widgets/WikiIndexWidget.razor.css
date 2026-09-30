@@ -204,7 +204,10 @@
 }
 
 /* the widget sizes itself against its own box: 2 columns when narrower than 48rem, 1 under 30rem */
-@container (max-width: 48rem) {
+/* The widget queries its own width. In the D1 frame at 1280×800 main is about 740px beside the aside,
+   where board 21 keeps the search beside the blurb and three category columns, so the first step
+   down is below that. */
+@container (max-width: 40rem) {
 	.wiki-cat-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -222,5 +225,15 @@
 @container (max-width: 30rem) {
 	.wiki-cat-grid {
 		grid-template-columns: minmax(0, 1fr);
+	}
+
+	/* a phone: the hero keeps its title on one line and its search, and drops the blurb, so the
+	   fixed-height banner does not clip the title */
+	.wiki-index ::deep .kit-banner-title {
+		font-size: 20px;
+	}
+
+	.wiki-hero-blurb {
+		display: none;
 	}
 }
