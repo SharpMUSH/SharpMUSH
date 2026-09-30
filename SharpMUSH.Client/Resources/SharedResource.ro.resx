@@ -4809,4 +4809,37 @@
   <data name="NavSidebarExpand" xml:space="preserve">
     <value>Extinde bara laterală {0}</value>
   </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Secțiuni</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Construire și administrare</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Instrumente de construire și de staff</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Caută și mergi la…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Cont: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Aplicații</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Limbă</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Meniul secțiunii</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Mergi la o pagină sau caută…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Caută „{0}” în wiki</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Găsește un personaj numit „{0}”</value>
+  </data>
 </root>

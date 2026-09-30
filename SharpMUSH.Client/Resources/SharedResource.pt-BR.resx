@@ -4809,4 +4809,37 @@
   <data name="NavSidebarExpand" xml:space="preserve">
     <value>Expandir a barra lateral de {0}</value>
   </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Seções</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Construir e gerenciar</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Ferramentas de construção e da equipe</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Pesquisar e ir para…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Conta: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Aplicativos</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Idioma</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Menu da seção</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Ir para uma página ou pesquisar…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Pesquisar “{0}” na wiki</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Encontrar um personagem chamado “{0}”</value>
+  </data>
 </root>

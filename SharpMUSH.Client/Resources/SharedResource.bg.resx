@@ -4809,4 +4809,37 @@
   <data name="NavSidebarExpand" xml:space="preserve">
     <value>Разгъни страничната лента „{0}“</value>
   </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Раздели</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Изграждане и управление</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Инструменти за изграждане и персонал</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Търсене и отиване до…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Профил: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Приложения</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Език</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Меню на раздела</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Отидете на страница или търсете…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Търсене в уикито за „{0}“</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Намери персонаж с име „{0}“</value>
+  </data>
 </root>

@@ -152,6 +152,131 @@
 	}
 }
 
+/* ── Rail (D1 §3): 72px, one 44×44 icon per section, radius 14; the current one filled
+   --surface-2 with an accent icon. Desktop only: touch chrome keeps the drawer and tab bar. ── */
+.phosphor-rail {
+	flex-shrink: 0;
+	width: var(--rail-w);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 14px 0;
+	box-sizing: border-box;
+	background: var(--rail-bg);
+	border-right: 1px solid var(--border-soft);
+	overflow-y: auto;
+	scrollbar-width: none;
+}
+
+.phosphor-rail-logo {
+	width: 44px;
+	height: 44px;
+	flex-shrink: 0;
+	display: grid;
+	place-items: center;
+	border-radius: 14px;
+	border: 1px solid var(--border);
+	background: var(--surface);
+}
+
+.phosphor-rail-sep {
+	width: 28px;
+	height: 1px;
+	margin: 6px 0;
+	flex-shrink: 0;
+	background: var(--border);
+}
+
+.phosphor-rail-item {
+	position: relative;
+	width: 44px;
+	height: 44px;
+	flex-shrink: 0;
+	display: grid;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	border-radius: 14px;
+	background: transparent;
+	color: var(--text-dim);
+	cursor: pointer;
+	text-decoration: none;
+	transition: background var(--motion-pop), color var(--motion-pop);
+}
+
+.phosphor-rail-item:hover {
+	background: var(--surface-2);
+	color: var(--text);
+}
+
+.phosphor-rail-item:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.phosphor-rail-item--on,
+.phosphor-rail-item--on:hover {
+	background: var(--surface-2);
+	color: var(--accent);
+}
+
+.phosphor-rail-dot {
+	position: absolute;
+	top: 9px;
+	right: 9px;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--text-dim);
+}
+
+.phosphor-rail-dot--unread {
+	background: var(--accent);
+	box-shadow: 0 0 6px rgba(var(--glow), 0.7);
+}
+
+.phosphor-rail-spacer {
+	flex: 1 1 auto;
+	min-height: 12px;
+}
+
+.phosphor-rail-lang {
+	width: 44px;
+	height: 44px;
+	display: grid;
+	place-items: center;
+	color: var(--text-dim);
+}
+
+/* the account in the rail is the avatar alone */
+.phosphor-profile-wrap--compact {
+	padding: 4px 0 0;
+	border-top: 0;
+}
+
+.phosphor-profile-wrap--compact .phosphor-profile-card {
+	width: 44px;
+	height: 44px;
+	padding: 0;
+	justify-content: center;
+	background: transparent;
+	border: 0;
+	border-radius: 14px;
+}
+
+.phosphor-profile-wrap--compact .phosphor-profile-card:hover,
+.phosphor-profile-wrap--compact .phosphor-profile-card:focus-visible {
+	background: var(--surface-2);
+}
+
+.phosphor-profile-wrap--compact .phosphor-avatar-wrap,
+.phosphor-profile-wrap--compact .phosphor-avatar {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+}
+
 /* ── Page-sidebar slot (D1 §3): a section's SectionShell fills it; empty, the column is gone ── */
 .phosphor-pagebar {
 	flex-shrink: 0;

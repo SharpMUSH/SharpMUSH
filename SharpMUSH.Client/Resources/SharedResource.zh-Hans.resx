@@ -4809,4 +4809,37 @@
   <data name="NavSidebarExpand" xml:space="preserve">
     <value>展开“{0}”侧栏</value>
   </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>板块</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>构建与管理</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>构建与管理员工具</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>搜索并前往…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>账户：{0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>应用</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>板块菜单</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>前往页面或搜索…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>在 Wiki 中搜索“{0}”</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>查找名为“{0}”的角色</value>
+  </data>
 </root>

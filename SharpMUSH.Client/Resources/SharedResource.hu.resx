@@ -4809,4 +4809,37 @@
   <data name="NavSidebarExpand" xml:space="preserve">
     <value>{0} oldalsáv kinyitása</value>
   </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Szakaszok</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Építés és kezelés</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Építő- és stábeszközök</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Keresés és ugrás…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Fiók: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Alkalmazások</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Nyelv</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Szakasz menüje</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Ugrás egy oldalra vagy keresés…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>„{0}” keresése a wikiben</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>„{0}” nevű karakter keresése</value>
+  </data>
 </root>

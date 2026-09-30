@@ -4809,4 +4809,37 @@
   <data name="NavSidebarExpand" xml:space="preserve">
     <value>Vis sidepanelet {0}</value>
   </data>
+  <data name="NavSections" xml:space="preserve">
+    <value>Seksjoner</value>
+  </data>
+  <data name="NavBuildManage" xml:space="preserve">
+    <value>Bygg og administrer</value>
+  </data>
+  <data name="NavBuildManageSub" xml:space="preserve">
+    <value>Bygge- og stabsverktøy</value>
+  </data>
+  <data name="NavSearchOpen" xml:space="preserve">
+    <value>Søk og gå til…</value>
+  </data>
+  <data name="NavAccountFor" xml:space="preserve">
+    <value>Konto: {0}</value>
+  </data>
+  <data name="NavApps" xml:space="preserve">
+    <value>Apper</value>
+  </data>
+  <data name="NavLanguage" xml:space="preserve">
+    <value>Språk</value>
+  </data>
+  <data name="NavSectionMenu" xml:space="preserve">
+    <value>Seksjonsmeny</value>
+  </data>
+  <data name="NavPalettePlaceholder" xml:space="preserve">
+    <value>Gå til en side, eller søk…</value>
+  </data>
+  <data name="NavPaletteSearchWiki" xml:space="preserve">
+    <value>Søk i wikien etter «{0}»</value>
+  </data>
+  <data name="NavPaletteFindCharacter" xml:space="preserve">
+    <value>Finn en figur som heter «{0}»</value>
+  </data>
 </root>

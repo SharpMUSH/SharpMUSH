@@ -1,0 +1,197 @@
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Library.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+@inject IStringLocalizer<SharedResource> Loc
+@inject ITerminalService Terminal
+@inject IPlayTerminalService PlayTerminal
+@inject NavigationManager Nav
+@inject AccountAuthService AccountAuth
+@inject ApplicationRegistryClient Registry
+@inject ServerInfoService ServerInfo
+@inject IAuthorizationService Authorization
+@implements IDisposable
+
+@* D1 §3 rail (desktop): 72px, the logo, one icon per section (Home, Play, Scenes, Wiki, Characters,
+   Help, Mail while a character is active, then any novel application section), a spacer, then
+   Build & manage when anything in it is visible to the viewer, search (the command palette), the
+   terminal toggle, the language, and the account. Each item is 44×44, radius 14; the current
+   section is filled --surface-2 with an accent icon and carries aria-current="page". Mobile hides
+   the rail and keeps the drawer (NavMenu) and bottom tab bar. *@
+<nav class="phosphor-rail" aria-label="@Loc["NavSections"]">
+    <a href="/" class="phosphor-rail-logo" aria-label="@_gameName" title="@_gameName">
+        <svg width="26" height="26" viewBox="0 0 512 512" aria-hidden="true">
+            <g fill="var(--accent)">
+                <path d="m345.16-0.31-88.2 163.24-88.13-163.1-167.67 252.72 87.98 234.7-1.24-233.41 64.74-117.99 104.11 196.48 0.27-0.37 0.51 0.0 104.11-196.48 64.74 117.99-1.25 233.41 87.98-234.7z" />
+                <path d="m143.1 228.96 65.57 113.27v170.77l-65.99-166.48z" />
+                <path d="m370.64 227.45-65.57 113.27v170.77l65.99-166.48z" />
+            </g>
+        </svg>
+    </a>
+    <div class="phosphor-rail-sep" aria-hidden="true"></div>
+
+    @Item("/", Icons.Material.Outlined.Home, Loc["Home"], IsHome)
+    @if (_showPlay)
+    {
+        <a href="/play" class="phosphor-rail-item @(IsUnder("/play") ? "phosphor-rail-item--on" : null)"
+           aria-current="@(IsUnder("/play") ? "page" : null)" aria-label="@PlayLabel" title="@PlayLabel">
+            <MudIcon Icon="@Icons.Material.Outlined.Terminal" />
+            @if (_playActive)
+            {
+                <span class="phosphor-rail-dot @(_playUnread ? "phosphor-rail-dot--unread" : null)" aria-hidden="true"></span>
+            }
+        </a>
+    }
+    @Item("/scenes", Icons.Material.Outlined.Theaters, Loc["SceneArchive"], IsUnder("/scenes"))
+    @Item("/wiki", Icons.Material.Outlined.MenuBook, Loc["Wiki"], IsUnder("/wiki"))
+    @Item("/characters", Icons.Material.Outlined.Groups, Loc["Characters"], IsUnder("/characters") || IsUnder("/character"))
+    @Item("/help", Icons.Material.Outlined.HelpOutline, Loc["Help"], IsUnder("/help"))
+    @if (_characterActive)
+    {
+        @Item("/mail", Icons.Material.Outlined.MailOutline, Loc["Mail"], IsUnder("/mail"))
+    }
+    @foreach (var section in _novelSections)
+    {
+        var s = section;
+        @Item($"/apps/{s.First.Slug}", string.IsNullOrWhiteSpace(s.First.Icon) ? Icons.Material.Outlined.Apps : s.First.Icon!, s.Name,
+            s.Apps.Any(a => IsUnder($"/apps/{a.Slug}")))
+    }
+
+    <div class="phosphor-rail-spacer"></div>
+
+    @if (_build.Count > 0)
+    {
+        <a href="@_build[0].Href" class="phosphor-rail-item phosphor-rail-build @(IsBuildSection ? "phosphor-rail-item--on" : null)"
+           aria-current="@(IsBuildSection ? "page" : null)" aria-label="@Loc["NavBuildManage"]" title="@Loc["NavBuildManage"]">
+            <MudIcon Icon="@Icons.Material.Outlined.Shield" />
+        </a>
+    }
+    <button type="button" class="phosphor-rail-item phosphor-rail-search" aria-label="@Loc["NavSearchOpen"]" title="@Loc["NavSearchOpen"]"
+            aria-haspopup="dialog" @onclick="OnSearch">
+        <MudIcon Icon="@Icons.Material.Outlined.Search" />
+    </button>
+    <button type="button" class="phosphor-rail-item phosphor-rail-terminal @(TerminalOpen ? "phosphor-rail-item--on" : null)"
+            aria-pressed="@(TerminalOpen ? "true" : "false")" aria-label="@Loc["NavCommandTerminal"]" title="@Loc["NavCommandTerminal"]"
+            @onclick="OnToggleTerminal">
+        <MudIcon Icon="@Icons.Material.Outlined.Keyboard" />
+    </button>
+    <div class="phosphor-rail-lang"><LanguagePicker AnchorOrigin="Origin.CenterRight" TransformOrigin="Origin.CenterLeft" /></div>
+    <AccountButton Compact="true" />
+</nav>
+
+@code {
+    /// <summary>Whether the command terminal drawer is open (the toggle shows pressed).</summary>
+    [Parameter] public bool TerminalOpen { get; set; }
+    [Parameter] public EventCallback OnToggleTerminal { get; set; }
+
+    /// <summary>Opens the command palette.</summary>
+    [Parameter] public EventCallback OnSearch { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private sealed record NovelSection(string Name, PortalApplication First, IReadOnlyList<PortalApplication> Apps);
+
+    private IReadOnlyList<NovelSection> _novelSections = [];
+    private IReadOnlyList<BuildNavCatalog.Entry> _build = [];
+    private IReadOnlyList<PortalApplication> _buildApps = [];
+    private bool _characterActive;
+    private bool _guestsEnabled = true;
+    private bool _showPlay => AccountAuth.IsLoggedIn || _guestsEnabled;
+    private bool _playActive;
+    private bool _playUnread;
+    private string _gameName = "SharpMUSH";
+    private string _path = "/";
+
+    private string PlayLabel => _playActive
+        ? $"{Loc["Play"]} · {(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])}"
+        : Loc["Play"];
+
+    private RenderFragment Item(string href, string icon, string label, bool current) =>
+        @<a href="@href" class="phosphor-rail-item @(current ? "phosphor-rail-item--on" : null)"
+            aria-current="@(current ? "page" : null)" aria-label="@label" title="@label">
+            <MudIcon Icon="@icon" />
+        </a>;
+
+    private bool IsHome => _path == "/";
+
+    private bool IsUnder(string prefix) =>
+        _path.Equals(prefix, StringComparison.OrdinalIgnoreCase)
+        || _path.StartsWith(prefix + "/", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The Build &amp; manage section: its catalogue pages and its applications.</summary>
+    private bool IsBuildSection =>
+        IsUnder("/admin") || IsUnder("/softcode") || _buildApps.Any(a => IsUnder($"/apps/{a.Slug}"));
+
+    protected override void OnInitialized()
+    {
+        _characterActive = Terminal.IsConnected;
+        Terminal.ConnectionStateChanged += OnConnectionChanged;
+        _playActive = PlayTerminal.IsConnected;
+        PlayTerminal.ConnectionStateChanged += OnPlayConnectionChanged;
+        PlayTerminal.LineReceived += OnPlayLine;
+        Nav.LocationChanged += OnLocationChanged;
+        Locate();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
+        _build = await BuildNavCatalog.VisibleAsync(Authorization, user);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var role = AuthState is null ? PortalRole.Guest : PortalRoleHelper.CurrentRole((await AuthState).User);
+        var apps = await Registry.ListAsync();
+        _novelSections = PortalNavSections.NovelSections(apps, role)
+            .Select(name => PortalNavSections.AppsForSection(apps, role, name))
+            .Where(list => list.Count > 0)
+            .Select(list => new NovelSection(list[0].NavPlacement!, list[0], list))
+            .ToList();
+        _buildApps = [.. PortalNavSections.AppsForSection(apps, role, "Build"), .. PortalNavSections.AppsForSection(apps, role, "Manage")];
+        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
+        _gameName = await ServerInfo.GameNameAsync();
+    }
+
+    private void Locate()
+    {
+        var path = new Uri(Nav.Uri).AbsolutePath.TrimEnd('/');
+        _path = path.Length == 0 ? "/" : path;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>
+    {
+        Locate();
+        if (IsUnder("/play")) _playUnread = false;
+        StateHasChanged();
+    });
+
+    private void OnConnectionChanged(bool connected) => InvokeAsync(() =>
+    {
+        _characterActive = connected;
+        StateHasChanged();
+    });
+
+    private void OnPlayConnectionChanged(bool connected) => InvokeAsync(() =>
+    {
+        _playActive = connected;
+        if (!connected) _playUnread = false;
+        StateHasChanged();
+    });
+
+    private void OnPlayLine(TerminalLine _) => InvokeAsync(() =>
+    {
+        if (IsUnder("/play")) return;
+        _playUnread = true;
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        Terminal.ConnectionStateChanged -= OnConnectionChanged;
+        PlayTerminal.ConnectionStateChanged -= OnPlayConnectionChanged;
+        PlayTerminal.LineReceived -= OnPlayLine;
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+}
