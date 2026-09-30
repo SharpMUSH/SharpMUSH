@@ -7,7 +7,12 @@
 .layedit-back ::deep .layedit-back-icon { font-size: 0.8125rem; }
 
 .layedit ::deep .le-board { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 1rem; }
-@container page (max-width: 64rem) { .layedit ::deep .le-board { grid-template-columns: minmax(0, 1fr); } }
+/* README §3: at 1280px with the page sidebar open the page is 976px (the medium tier); the palette stays beside
+   the zones there. Only the narrow tier stacks it, and then as wrapping chips so the zones stay in reach. */
+@container page (max-width: 48rem) {
+    .layedit ::deep .le-board { grid-template-columns: minmax(0, 1fr); }
+    .layedit ::deep .le-palette-zone { flex-direction: row; flex-wrap: wrap; }
+}
 
 .le-palette {
     background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-lg);

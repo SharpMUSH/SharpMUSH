@@ -18,6 +18,8 @@ public class FrameTierTests
 		("Pages/Admin/Config/DynamicConfig.razor.css", ".config-section"),
 		("Pages/Home.razor.css", ".home-page--aside"),
 		("Pages/Mail.razor.css", ".mail-panes"),
+		// The layout editor: its widget palette beside the zones being edited.
+		("Pages/Admin/Layout/LayoutEditor.razor.css", ".layedit ::deep .le-board"),
 	];
 
 	[Test]
