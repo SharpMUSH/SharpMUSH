@@ -1,7 +1,7 @@
 <!-- help-article
 {
   "corpus": "help",
-  "id": "queue",
+  "id": "queue-control",
   "lookup": "@queue",
   "aliases": [],
   "sections": [
