@@ -4011,4 +4011,43 @@
   <data name="NavViewerUnavailable" xml:space="preserve">
     <value>Cette image ne peut pas être affichée.</value>
   </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galerie · #} other {Galerie · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Tout voir</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portrait</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Utiliser comme bannière</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Retirer la bannière</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Impossible de changer la bannière : {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Scènes récentes</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Aucune scène pour l'instant.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>en cours</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Joue souvent avec</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Aucune scène partagée pour l'instant.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Scènes récentes</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Joue souvent avec</value>
+  </data>
 </root>

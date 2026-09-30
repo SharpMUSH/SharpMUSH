@@ -4758,4 +4758,43 @@
   <data name="NavViewerUnavailable" xml:space="preserve">
     <value>Această imagine nu poate fi afișată.</value>
   </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galerie · #} few {Galerie · #} other {Galerie · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Vezi tot</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portret</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Folosește ca banner</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Elimină bannerul</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Bannerul nu a putut fi schimbat: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Scene recente</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Încă nu există scene.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>în desfășurare</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Joacă des cu</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Încă nu există scene comune.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Scene recente</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Joacă des cu</value>
+  </data>
 </root>

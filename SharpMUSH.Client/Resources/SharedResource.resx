@@ -4103,4 +4103,43 @@
   <data name="NavViewerUnavailable" xml:space="preserve">
     <value>This image cannot be shown.</value>
   </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Gallery · #} other {Gallery · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>View all</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portrait</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Use as banner</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Remove banner</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Could not change the banner: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Recent scenes</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>No scenes yet.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>live now</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Often plays with</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>No shared scenes yet.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Recent scenes</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Often plays with</value>
+  </data>
 </root>

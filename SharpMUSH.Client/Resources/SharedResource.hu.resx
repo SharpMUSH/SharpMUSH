@@ -4758,4 +4758,43 @@
   <data name="NavViewerUnavailable" xml:space="preserve">
     <value>Ez a kép nem jeleníthető meg.</value>
   </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galéria · #} other {Galéria · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Összes</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portré</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Legyen a borító</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Borító eltávolítása</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>A borító nem módosítható: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Legutóbbi jelenetek</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Még nincs jelenet.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>most zajlik</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Gyakran játszik vele</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Még nincs közös jelenet.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Legutóbbi jelenetek</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Gyakran játszik vele</value>
+  </data>
 </root>

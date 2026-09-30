@@ -4758,4 +4758,43 @@
   <data name="NavViewerUnavailable" xml:space="preserve">
     <value>Deze afbeelding kan niet worden weergegeven.</value>
   </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galerij · #} other {Galerij · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Alles bekijken</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portret</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Als banner gebruiken</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Banner verwijderen</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>De banner kon niet worden gewijzigd: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Recente scènes</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Nog geen scènes.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>nu bezig</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Speelt vaak met</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Nog geen gedeelde scènes.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Recente scènes</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Speelt vaak met</value>
+  </data>
 </root>

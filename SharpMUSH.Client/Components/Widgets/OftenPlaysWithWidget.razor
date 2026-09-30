@@ -1,0 +1,71 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.Widgets
+@using SharpMUSH.Client.Services
+@inject SceneService Scenes
+@inject CharacterDirectoryService Directory
+@inject IStringLocalizer<SharedResource> Loc
+
+@* D1 §6.3 Often plays with (board 25): who shares the most scenes with this character, as portrait
+   tiles two across, each linking to that profile. Counted on the server from scenes the viewer may see. *@
+<div class="often-plays-widget">
+    <KitCard Aside="true" Title="@Loc["NavOftenPlaysWith"]">
+        @if (_loading)
+        {
+            <MudSkeleton Height="72px" />
+        }
+        else if (_partners is null)
+        {
+            <div class="often-plays-empty">@Loc["WidUnavailable"]</div>
+        }
+        else if (_partners.Count == 0)
+        {
+            <div class="often-plays-empty">@Loc["NavNoPartnersYet"]</div>
+        }
+        else
+        {
+            <div class="often-plays-grid">
+                @foreach (var partner in _partners)
+                {
+                    var p = partner;
+                    <PortraitTile Name="@p.Name" ImageUrl="@ImageOf(p.Name)" Alt="@p.Name" Label="@p.Name"
+                                  Href="@($"/character/{Uri.EscapeDataString(p.Name)}")" />
+                }
+            </div>
+        }
+    </KitCard>
+</div>
+
+@code {
+    [Parameter] public JsonElement? Config { get; set; }
+    [Parameter] public string Zone { get; set; } = string.Empty;
+    [CascadingParameter] private ProfilePageContext? PageContext { get; set; }
+
+    private const int Shown = 4;
+
+    /// <summary>Null when the partners could not be read — not the same as a character who plays alone.</summary>
+    private IReadOnlyList<ScenePartner>? _partners;
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _directory = [];
+    private bool _loading = true;
+    private string? _loadedFor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var name = ProfileCharacter.NameFrom(Config, PageContext);
+        if (name is null || name == _loadedFor) return;
+        _loadedFor = name;
+        _loading = true;
+        if (await Directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
+        {
+            _directory = rows;
+        }
+        _partners = await ProfileCharacter.DbrefOfAsync(Directory, name) is { } dbref
+            && await Scenes.GetPartnersAsync(dbref, Shown) is IReadOnlyList<ScenePartner> partners
+                ? partners
+                : null;
+        _loading = false;
+    }
+
+    private string? ImageOf(string name) =>
+        _directory.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))?.Image;
+}

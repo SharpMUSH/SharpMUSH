@@ -1,10 +1,98 @@
 .character-gallery-widget {
-    container-type: inline-size;
+	container-type: inline-size;
 }
 
-@container (max-width: 48rem) {
-    .character-gallery-widget ::deep .mud-grid-item-sm-4 {
-        max-width: 50%;
-        flex-basis: 50%;
-    }
+.gallery-view-all {
+	border: 0;
+	background: transparent;
+	padding: 4px 6px;
+	border-radius: var(--radius-row);
+	color: var(--accent);
+	font: inherit;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.gallery-view-all:hover,
+.gallery-view-all:focus-visible {
+	background: var(--surface-2);
+	outline: none;
+}
+
+.gallery-hero,
+.gallery-small-tile {
+	position: relative;
+	display: block;
+	width: 100%;
+	padding: 0;
+	border: 0;
+	border-radius: 10px;
+	overflow: hidden;
+	background: var(--surface-2);
+	cursor: zoom-in;
+}
+
+.gallery-hero {
+	height: 124px;
+}
+
+.gallery-hero img,
+.gallery-small-tile img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.gallery-hero:focus-visible,
+.gallery-small-tile:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.gallery-star {
+	position: absolute;
+	top: 6px;
+	left: 6px;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--glass-pill-bg);
+	backdrop-filter: var(--glass-filter);
+	-webkit-backdrop-filter: var(--glass-filter);
+	box-shadow: var(--glass-edge);
+	color: var(--warn);
+}
+
+.gallery-small {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 6px;
+	margin-top: 6px;
+}
+
+.gallery-small-tile {
+	height: 56px;
+}
+
+.gallery-empty,
+.character-gallery-error {
+	padding: 12px;
+	border: 1px dashed var(--border);
+	border-radius: 10px;
+	font-size: 13px;
+	color: var(--text-dim);
+	text-align: center;
+}
+
+.character-gallery-error {
+	color: var(--link-missing);
+}
+
+.gallery-upload {
+	margin-top: 10px;
 }

@@ -4758,4 +4758,43 @@
   <data name="NavViewerUnavailable" xml:space="preserve">
     <value>无法显示此图片。</value>
   </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, other {相册 · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>查看全部</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>头像</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>设为横幅</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>移除横幅</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>无法更改横幅：{0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>最近的场景</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>还没有场景。</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>进行中</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>常一起游戏</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>还没有共同的场景。</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>最近的场景</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>常一起游戏</value>
+  </data>
 </root>

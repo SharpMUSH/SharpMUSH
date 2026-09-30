@@ -12,6 +12,7 @@
 @inject IJSRuntime JS
 @inject ILogger<WikiDisplay> Logger
 @inject NavigationManager Nav
+@inject IServiceProvider ServiceProvider
 
 @if (Article is null && IsCharacterBiography)
 {
@@ -161,7 +162,7 @@ else
                             @foreach (var person in _mentioned)
                             {
                                 var m = person;
-                                <PortraitTile Name="@m.Name" Href="@m.Href" />
+                                <PortraitTile Name="@m.Name" ImageUrl="@MentionImage(m.Name)" Alt="@m.Name" Href="@m.Href" />
                             }
                         </div>
                     </KitCard>
@@ -264,6 +265,9 @@ else
         RegexOptions.Compiled | RegexOptions.Singleline);
 
     private List<Mentioned> _mentioned = [];
+
+    /// <summary>Directory rows for the Mentioned tiles' pictures (profile-handler 1.5's image column).</summary>
+    private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _characters = [];
     private List<WikiPageSummary> _more = [];
     private int _moreTotal;
     private bool _minimised;
@@ -429,7 +433,29 @@ else
         }
 
         await LoadMoreAsync();
+        await LoadMentionImagesAsync();
     }
+
+    /// <summary>
+    /// The pictures for the Mentioned tiles, from the character directory. Optional: a host that
+    /// registers no directory (an embedded biography, some tests) shows initials, as does a failed read.
+    /// </summary>
+    private async Task LoadMentionImagesAsync()
+    {
+        if (_mentioned.Count == 0 || _characters.Count > 0
+            || ServiceProvider.GetService(typeof(CharacterDirectoryService)) is not CharacterDirectoryService directory)
+        {
+            return;
+        }
+
+        if (await directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
+        {
+            _characters = rows;
+        }
+    }
+
+    private string? MentionImage(string name) =>
+        _characters.FirstOrDefault(r => string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase))?.Image;
 
     /// <summary>Up to three other pages in this category for the aside, plus the total for the "All N" link.</summary>
     private async Task LoadMoreAsync()

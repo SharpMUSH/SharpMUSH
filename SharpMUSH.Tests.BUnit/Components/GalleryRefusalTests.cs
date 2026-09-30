@@ -66,7 +66,8 @@ public class GalleryRefusalTests : TrackingBunitContext
 		var cut = Render<CharacterGalleryWidget>(p => p
 			.Add(w => w.CharacterName, "Gandalf")
 			.Add(w => w.CanEdit, true));
-		cut.WaitForAssertion(() => cut.Find(".gallery-thumb button"), TimeSpan.FromSeconds(5));
+		cut.WaitForAssertion(() => cut.Find("button.gallery-view-all"), TimeSpan.FromSeconds(5));
+		cut.Find("button.gallery-view-all").Click();
 		return cut;
 	}
 
@@ -99,11 +100,10 @@ public class GalleryRefusalTests : TrackingBunitContext
 	[Test]
 	public async Task ARefusedDeleteSaysWhy_AndKeepsTheImage()
 	{
-		// An icon already, so the only button on the thumbnail is delete.
 		Arrange(isIcon: true, method => method == HttpMethod.Delete ? HttpStatusCode.Forbidden : HttpStatusCode.OK);
 		var cut = RenderLoaded();
 
-		cut.Find(".gallery-thumb button").Click();
+		cut.Find(".kit-viewer-actions button.gallery-delete").Click();
 
 		var shown = await SingleSnackbar(cut);
 		await Assert.That(shown.Message).IsEqualTo($"GalleryDeleteFailed({Refusal})");
@@ -113,11 +113,10 @@ public class GalleryRefusalTests : TrackingBunitContext
 	[Test]
 	public async Task ARefusedIconChangeSaysWhy()
 	{
-		// Not the icon, so the first button on the thumbnail is "set as icon".
 		Arrange(isIcon: false, method => method == HttpMethod.Put ? HttpStatusCode.Forbidden : HttpStatusCode.OK);
 		var cut = RenderLoaded();
 
-		cut.Find(".gallery-thumb button").Click();
+		cut.Find(".kit-viewer-actions button.gallery-make-icon").Click();
 
 		var shown = await SingleSnackbar(cut);
 		await Assert.That(shown.Message).IsEqualTo($"GallerySetIconFailed({Refusal})");

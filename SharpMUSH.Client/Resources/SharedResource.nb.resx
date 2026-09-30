@@ -4758,4 +4758,43 @@
   <data name="NavViewerUnavailable" xml:space="preserve">
     <value>Dette bildet kan ikke vises.</value>
   </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Galleri · #} other {Galleri · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Se alle</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Portrett</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Bruk som banner</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Fjern banner</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Kunne ikke endre banneret: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Nylige scener</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Ingen scener ennå.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>pågår nå</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Spiller ofte med</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Ingen felles scener ennå.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Nylige scener</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Spiller ofte med</value>
+  </data>
 </root>

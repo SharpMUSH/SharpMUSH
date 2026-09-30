@@ -4758,4 +4758,43 @@
   <data name="NavViewerUnavailable" xml:space="preserve">
     <value>Това изображение не може да бъде показано.</value>
   </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Галерия · #} other {Галерия · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Виж всички</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Портрет</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Използвай за банер</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Премахни банера</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Банерът не можа да бъде сменен: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Последни сцени</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Все още няма сцени.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>на живо</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Често играе с</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Все още няма общи сцени.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Последни сцени</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Често играе с</value>
+  </data>
 </root>

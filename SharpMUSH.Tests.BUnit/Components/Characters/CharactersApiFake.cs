@@ -35,20 +35,27 @@ public sealed class CharactersApiFake : HttpMessageHandler
 		 {"name":"Wren Halloway","objid":"#314:1","created":1,"category":""}]
 		""";
 
+	/// <summary>Answers by path for GET, and by "METHOD path" for anything else.</summary>
 	public Dictionary<string, string> Extra { get; } = new(StringComparer.Ordinal);
 
-	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	/// <summary>Sees every request before it is answered (to capture a write's body).</summary>
+	public Func<HttpRequestMessage, Task>? OnRequest { get; set; }
+
+	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
+		if (OnRequest is not null) await OnRequest(request);
 		var path = request.RequestUri!.PathAndQuery;
-		string? body = path switch
-		{
-			"/http/characters" => Characters,
-			"/http/online" => Online,
-			_ => Extra.GetValueOrDefault(path),
-		};
-		return Task.FromResult(body is null
+		string? body = request.Method == HttpMethod.Get
+			? path switch
+			{
+				"/http/characters" => Characters,
+				"/http/online" => Online,
+				_ => Extra.GetValueOrDefault(path),
+			}
+			: Extra.GetValueOrDefault($"{request.Method.Method} {path}");
+		return body is null
 			? new HttpResponseMessage(HttpStatusCode.NotFound)
-			: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
+			: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 	}
 
 	/// <summary>Registers the fake, the directory, profile and scene services, MudBlazor, localization and authorization.</summary>

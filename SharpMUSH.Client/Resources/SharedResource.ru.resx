@@ -4758,4 +4758,43 @@
   <data name="NavViewerUnavailable" xml:space="preserve">
     <value>Это изображение нельзя показать.</value>
   </data>
+  <data name="NavGalleryTitle" xml:space="preserve">
+    <value>{count, plural, one {Галерея · #} few {Галерея · #} many {Галерея · #} other {Галерея · #}}</value>
+  </data>
+  <data name="NavGalleryViewAll" xml:space="preserve">
+    <value>Все</value>
+  </data>
+  <data name="NavGalleryPortrait" xml:space="preserve">
+    <value>Портрет</value>
+  </data>
+  <data name="NavGalleryMakeBanner" xml:space="preserve">
+    <value>Сделать обложкой</value>
+  </data>
+  <data name="NavGalleryRemoveBanner" xml:space="preserve">
+    <value>Убрать обложку</value>
+  </data>
+  <data name="GallerySetBannerFailed" xml:space="preserve">
+    <value>Не удалось сменить обложку: {0}</value>
+  </data>
+  <data name="NavRecentScenes" xml:space="preserve">
+    <value>Недавние сцены</value>
+  </data>
+  <data name="NavNoScenesYet" xml:space="preserve">
+    <value>Сцен пока нет.</value>
+  </data>
+  <data name="NavLiveNowShort" xml:space="preserve">
+    <value>идёт сейчас</value>
+  </data>
+  <data name="NavOftenPlaysWith" xml:space="preserve">
+    <value>Часто играет с</value>
+  </data>
+  <data name="NavNoPartnersYet" xml:space="preserve">
+    <value>Общих сцен пока нет.</value>
+  </data>
+  <data name="LayWidgetRecentScenes" xml:space="preserve">
+    <value>Недавние сцены</value>
+  </data>
+  <data name="LayWidgetOftenPlaysWith" xml:space="preserve">
+    <value>Часто играет с</value>
+  </data>
 </root>

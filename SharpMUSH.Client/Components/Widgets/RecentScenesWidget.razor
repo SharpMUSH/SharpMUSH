@@ -1,0 +1,69 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.Widgets
+@using SharpMUSH.Client.Services
+@inject SceneService Scenes
+@inject CharacterDirectoryService Directory
+@inject IStringLocalizer<SharedResource> Loc
+
+@* D1 §6.3 Recent scenes (board 25): the character's last three scenes the viewer may see, a live one
+   marked "live now" and linking to the live view, the rest with when they last moved. *@
+<div class="recent-scenes-widget">
+    <KitCard Aside="true" Title="@Loc["NavRecentScenes"]">
+        @if (_loading)
+        {
+            <MudSkeleton Height="40px" />
+        }
+        else if (_scenes is null)
+        {
+            <div class="recent-scenes-empty">@Loc["WidUnavailable"]</div>
+        }
+        else if (_scenes.Count == 0)
+        {
+            <div class="recent-scenes-empty">@Loc["NavNoScenesYet"]</div>
+        }
+        else
+        {
+            <div class="recent-scenes-rows">
+                @foreach (var scene in _scenes)
+                {
+                    var s = scene;
+                    <SidebarRow Lead="SidebarRow.SidebarLead.Image" Icon="@Icons.Material.Outlined.Theaters" ImageUrl="@ImageOf(s)"
+                                Name="@TitleOf(s)" Label="@TitleOf(s)" Sub="@(s.IsLive ? $"● {Loc["NavLiveNowShort"]}" : Loc.Format(s.LastActivityAtUtc))"
+                                Href="@(s.IsLive ? $"/scenes/{s.Id}/live" : $"/scenes/{s.Id}")" />
+                }
+            </div>
+        }
+    </KitCard>
+</div>
+
+@code {
+    [Parameter] public JsonElement? Config { get; set; }
+    [Parameter] public string Zone { get; set; } = string.Empty;
+    [CascadingParameter] private ProfilePageContext? PageContext { get; set; }
+
+    private const int Shown = 3;
+
+    /// <summary>Null when the scenes could not be read — not the same as a character with none.</summary>
+    private IReadOnlyList<SceneSummary>? _scenes;
+    private bool _loading = true;
+    private string? _loadedFor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var name = ProfileCharacter.NameFrom(Config, PageContext);
+        if (name is null || name == _loadedFor) return;
+        _loadedFor = name;
+        _loading = true;
+        _scenes = await ProfileCharacter.DbrefOfAsync(Directory, name) is { } dbref
+            && await Scenes.GetParticipantScenesAsync(dbref, Shown) is IReadOnlyList<SceneSummary> scenes
+                ? scenes.OrderByDescending(s => s.IsLive).ThenByDescending(s => s.LastActivityAt).ToList()
+                : null;
+        _loading = false;
+    }
+
+    private static string TitleOf(SceneSummary s) =>
+        s.Meta.TryGetValue("title", out var title) && !string.IsNullOrWhiteSpace(title) ? title : s.RoomName;
+
+    private static string? ImageOf(SceneSummary s) => s.Meta.TryGetValue("image", out var image) ? image : null;
+}

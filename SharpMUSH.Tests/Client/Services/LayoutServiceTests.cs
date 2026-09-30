@@ -122,6 +122,9 @@ public class LayoutServiceTests : TrackingTestContext
 		await Assert.That(main.Select(p => p.WidgetName)).Contains("character-header");
 		await Assert.That(main.Select(p => p.WidgetName)).Contains("WikiBody");
 		await Assert.That(layout.Zones[WidgetZone.RightSidebar][0].WidgetName).IsEqualTo("CharacterGallery");
+		// README §6.3: the aside is Gallery, then Recent scenes, then Often plays with.
+		await Assert.That(layout.Zones[WidgetZone.RightSidebar].Select(p => p.WidgetName).ToList())
+			.IsEquivalentTo(new[] { "CharacterGallery", "RecentScenes", "OftenPlaysWith" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	/// <summary>
