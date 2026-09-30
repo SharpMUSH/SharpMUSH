@@ -68,7 +68,7 @@ else
                                 Minimised="@_bannerMinimised" MinimisedChanged="OnBannerMinimisedAsync" />
                 }
                 <div class="play-card">
-                    <SceneCard Title="@CardTitle" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged">
+                    <PlaySceneCard Title="@CardTitle" InScene="@InScene" View="@View" ViewChanged="OnViewChanged" Focus="@_focus" FocusChanged="OnFocusChanged">
                         <Controls>
                             @if (View == PlayView.Terminal)
                             {
@@ -98,7 +98,7 @@ else
                                 <PlayComposer @ref="_composer" Connected="@PlayTerminal.IsConnected" OnSend="SendAsync" />
                             }
                         </Footer>
-                    </SceneCard>
+                    </PlaySceneCard>
                 </div>
             </div>
             @if (!_focus)
@@ -133,7 +133,7 @@ else
 
     @if (_mobileSheet is { } sheet)
     {
-        <MudOverlay Visible="true" LockScroll="true" OnClick="CloseMobileSheet" Style="background: rgba(8, 9, 10, 0.55);">
+        <MudOverlay Visible="true" LockScroll="true" OnClick="CloseMobileSheet" Style="background: rgba(8, 9, 10, 0.55); align-items: flex-end;">
             <div class="play-sheet" role="dialog" aria-modal="true" aria-label="@SheetLabel(sheet)" tabindex="-1"
                  @onclick:stopPropagation="true" @onkeydown="OnMobileSheetKey">
                 <MudFocusTrap DefaultFocus="DefaultFocus.FirstChild">

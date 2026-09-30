@@ -1,10 +1,8 @@
 /* MudOverlay owns the fixed, full-screen layer; the sheet sits at its right edge (§4.12). */
 .sheet {
-	position: absolute;
-	top: 0;
-	right: 0;
-	bottom: 0;
-	width: min(405px, 100%);
+	position: relative;
+	height: 100%;
+	width: min(405px, 100vw);
 	background: var(--surface);
 	border-left: 1px solid var(--border);
 	box-shadow: var(--shadow);

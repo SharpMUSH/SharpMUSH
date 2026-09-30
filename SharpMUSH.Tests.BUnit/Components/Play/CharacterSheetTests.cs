@@ -69,6 +69,8 @@ public class CharacterSheetTests : TrackingBunitContext
 		await Assert.That(dialog.GetAttribute("aria-label")).IsEqualTo("Character sheet: Tomas Reyes");
 		await Assert.That(cut.FindComponents<MudFocusTrap>().Count).IsEqualTo(1);
 		JSInterop.VerifyInvoke("sharpmushLayout.rememberFocus");
+		// MudOverlay centres a zero-size content box; without this the sheet collapsed to nothing.
+		await Assert.That(cut.Find(".mud-overlay").GetAttribute("style")).Contains("justify-content: flex-end");
 	}
 
 	[Test]

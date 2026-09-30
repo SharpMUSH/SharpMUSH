@@ -10,18 +10,18 @@ namespace SharpMUSH.Tests.BUnit.Components.Play;
 /// README §5.3 scene card header (boards 01, 04, 05): the title, a sub-line per view, the Story |
 /// Terminal radiogroup (only in a scene) and the focus button.
 /// </summary>
-public class SceneCardTests : BunitContext
+public class PlaySceneCardTests : BunitContext
 {
-	public SceneCardTests()
+	public PlaySceneCardTests()
 	{
 		Services.AddLocalization();
 		Services.AddMudServices();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
-	private IRenderedComponent<SceneCard> RenderCard(bool inScene = true, PlayView view = PlayView.Story, bool focus = false,
+	private IRenderedComponent<PlaySceneCard> RenderCard(bool inScene = true, PlayView view = PlayView.Story, bool focus = false,
 		Action<PlayView>? onView = null, Action<bool>? onFocus = null) =>
-		Render<SceneCard>(p => p
+		Render<PlaySceneCard>(p => p
 			.Add(x => x.Title, "Salt Market at Dusk")
 			.Add(x => x.InScene, inScene)
 			.Add(x => x.View, view)

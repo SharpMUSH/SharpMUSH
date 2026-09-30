@@ -12,6 +12,7 @@
 .here-thing {
 	display: flex;
 	flex-direction: column;
+	align-items: stretch;
 	gap: 4px;
 	min-width: 0;
 	padding: 0;

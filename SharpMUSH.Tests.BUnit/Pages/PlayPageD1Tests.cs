@@ -198,6 +198,8 @@ public class PlayPageD1Tests : TrackingBunitContext
 		tabs[1].Click();
 		var sheet = cut.Find(".play-sheet[role='dialog']");
 		await Assert.That(sheet.GetAttribute("aria-modal")).IsEqualTo("true");
+		await Assert.That(cut.Find(".mud-overlay").GetAttribute("style")).Contains("align-items: flex-end")
+			.Because("MudOverlay centres a zero-size content box; the sheet sits on the bottom edge instead");
 		await Assert.That(cut.FindAll(".play-sheet .exits--rows .exit").Count).IsEqualTo(1);
 		cut.Find(".play-sheet .exit button.exit-go").Click();
 		await _play.Received(1).SendAsync("goto #1210");
