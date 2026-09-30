@@ -4923,4 +4923,34 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Karta postaci: {0}</value>
   </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Poza</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Powiedz</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Polecenie</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Napisz swoją pozę…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Powiedz coś…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Mów poza postacią…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Wpisz polecenie…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Rodzaj wiadomości</value>
+  </data>
+  <data name="NavPlaySendHint" xml:space="preserve">
+    <value>Ctrl+Enter wysyła</value>
+  </data>
 </root>

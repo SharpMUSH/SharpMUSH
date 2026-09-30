@@ -4923,4 +4923,34 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>List lika: {0}</value>
   </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Poza</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Reci</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Naredba</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Napišite svoju pozu…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Recite nešto…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Govorite izvan uloge…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Upišite naredbu…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Vrsta poruke</value>
+  </data>
+  <data name="NavPlaySendHint" xml:space="preserve">
+    <value>Ctrl+Enter šalje</value>
+  </data>
 </root>

@@ -4923,4 +4923,34 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Ficha de personagem: {0}</value>
   </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Dizer</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Comando</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Escreva sua pose…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Diga algo…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Fale fora do personagem…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Digite um comando…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Tipo de mensagem</value>
+  </data>
+  <data name="NavPlaySendHint" xml:space="preserve">
+    <value>Ctrl+Enter envia</value>
+  </data>
 </root>

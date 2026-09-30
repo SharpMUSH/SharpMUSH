@@ -4923,4 +4923,34 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Karakterlap: {0}</value>
   </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Póz</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Mond</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Parancs</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Írd meg a pózodat…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Mondj valamit…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Szerepen kívül…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Írj be egy parancsot…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Üzenettípus</value>
+  </data>
+  <data name="NavPlaySendHint" xml:space="preserve">
+    <value>Ctrl+Enter küld</value>
+  </data>
 </root>

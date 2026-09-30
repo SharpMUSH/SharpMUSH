@@ -4268,4 +4268,34 @@
   <data name="NavPlaySheetLabel" xml:space="preserve">
     <value>Character sheet: {0}</value>
   </data>
+  <data name="NavPlayTypePose" xml:space="preserve">
+    <value>Pose</value>
+  </data>
+  <data name="NavPlayTypeSay" xml:space="preserve">
+    <value>Say</value>
+  </data>
+  <data name="NavPlayTypeOoc" xml:space="preserve">
+    <value>OOC</value>
+  </data>
+  <data name="NavPlayTypeCommand" xml:space="preserve">
+    <value>Command</value>
+  </data>
+  <data name="NavPlayPlaceholderPose" xml:space="preserve">
+    <value>Write your pose…</value>
+  </data>
+  <data name="NavPlayPlaceholderSay" xml:space="preserve">
+    <value>Say something…</value>
+  </data>
+  <data name="NavPlayPlaceholderOoc" xml:space="preserve">
+    <value>Speak out of character…</value>
+  </data>
+  <data name="NavPlayPlaceholderCommand" xml:space="preserve">
+    <value>Type a command…</value>
+  </data>
+  <data name="NavPlayMessageType" xml:space="preserve">
+    <value>Message type</value>
+  </data>
+  <data name="NavPlaySendHint" xml:space="preserve">
+    <value>Ctrl+Enter sends</value>
+  </data>
 </root>
