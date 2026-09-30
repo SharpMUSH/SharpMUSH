@@ -4842,4 +4842,34 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Encontrar um personagem chamado “{0}”</value>
   </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Administração · Ortografia</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Banco de dados</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Gerenciar · Diagnóstico</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Gerenciar · Automação</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Construir · Recuperação</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Filtrar por tipo</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Mostrar como</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Funções ou atribuições</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Atributos do manipulador</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Enviar uma imagem</value>
+  </data>
 </root>

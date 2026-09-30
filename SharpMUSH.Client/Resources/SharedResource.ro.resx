@@ -4842,4 +4842,34 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Găsește un personaj numit „{0}”</value>
   </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Administrare · Ortografie</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Bază de date</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Gestionare · Diagnosticare</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Gestionare · Automatizare</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Construire · Recuperare</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Filtrează după tip</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Afișează ca</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Roluri sau atribuiri</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Atributele handlerului</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Încarcă o imagine</value>
+  </data>
 </root>

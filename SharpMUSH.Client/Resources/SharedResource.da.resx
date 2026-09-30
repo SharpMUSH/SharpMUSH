@@ -4842,4 +4842,34 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Find en figur ved navn “{0}”</value>
   </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Administration · Stavekontrol</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Admin · Database</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Administrer · Diagnostik</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Administrer · Automatisering</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Byg · Gendannelse</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Filtrér efter type</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Vis som</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Roller eller tildelinger</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Handlerens attributter</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Upload et billede</value>
+  </data>
 </root>

@@ -1,96 +1,87 @@
-.ph-header {
-    margin-bottom: 1.5rem;
-}
-.ph-kicker {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 0.375rem;
-}
-.ph-title {
-    font-family: var(--font-display);
-    font-size: 1.625rem;
-    font-weight: 600;
-    color: var(--text);
-    margin: 0;
+.adm-dash {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: var(--main-pad);
+	min-width: 0;
 }
 
-.ph-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
+.adm-dash-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+	gap: 14px;
 }
 
-.ph-card {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.125rem 1.25rem;
-    background: var(--surface);
-    border: 1px solid var(--border-soft);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
-    text-decoration: none;
-    transition: border-color 0.15s ease, transform 0.15s ease;
-}
-.ph-card:hover {
-    border-color: rgba(var(--glow), 0.4);
-    transform: translateY(-1px);
+.adm-dash-card {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+	padding: 16px;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-card);
+	color: var(--text);
+	text-decoration: none;
+	transition: border-color var(--motion-pop);
 }
 
-.ph-card-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    border-radius: var(--radius);
-    background: rgba(var(--glow), 0.12);
-    color: var(--accent);
-    flex-shrink: 0;
+.adm-dash-card:hover {
+	border-color: rgba(var(--glow), 0.4);
 }
 
-.ph-card-body {
-    flex: 1;
-    min-width: 0;
-}
-.ph-card-title {
-    font-family: var(--font-display);
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text);
-}
-.ph-card-action {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-top: 0.125rem;
+.adm-dash-card:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
-.ph-card ::deep .ph-card-chevron {
-    color: var(--text-faint);
-    flex-shrink: 0;
+.adm-dash-icon {
+	width: 40px;
+	height: 40px;
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-row);
+	background: rgba(var(--glow), 0.10);
+	color: var(--accent);
 }
-.ph-card:hover ::deep .ph-card-chevron {
-    color: var(--accent);
+
+.adm-dash-text {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.adm-dash-title {
+	font-size: 15px;
+	font-weight: 700;
+}
+
+.adm-dash-desc {
+	font-size: 13px;
+	line-height: 1.45;
+	color: var(--text-dim);
+}
+
+.adm-dash-card ::deep .adm-dash-chevron {
+	flex-shrink: 0;
+	color: var(--text-faint);
+}
+
+.adm-dash-card:hover ::deep .adm-dash-chevron {
+	color: var(--accent);
 }
 
 @container page (max-width: 48rem) {
-    .ph-title {
-        font-size: 1.375rem;
-    }
+	.adm-dash-card {
+		padding: 12px 14px;
+	}
 
-    .ph-card {
-        padding: 0.875rem 1rem;
-        gap: 0.75rem;
-    }
-
-    .ph-card-icon {
-        width: 36px;
-        height: 36px;
-    }
+	.adm-dash-icon {
+		width: 36px;
+		height: 36px;
+	}
 }

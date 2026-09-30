@@ -4842,4 +4842,34 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Намери персонаж с име „{0}“</value>
   </data>
+  <data name="AdmSuggestionsKicker" xml:space="preserve">
+    <value>Администрация · Правопис</value>
+  </data>
+  <data name="AdmDatabaseKicker" xml:space="preserve">
+    <value>Админ · База данни</value>
+  </data>
+  <data name="AdmDiagnosticsKicker" xml:space="preserve">
+    <value>Управление · Диагностика</value>
+  </data>
+  <data name="AdmJobsKicker" xml:space="preserve">
+    <value>Управление · Автоматизация</value>
+  </data>
+  <data name="AdmSnapshotsKicker" xml:space="preserve">
+    <value>Изграждане · Възстановяване</value>
+  </data>
+  <data name="AdmMediaKindFilter" xml:space="preserve">
+    <value>Филтър по вид</value>
+  </data>
+  <data name="AdmMediaViewMode" xml:space="preserve">
+    <value>Показване като</value>
+  </data>
+  <data name="AdmRolesTabsLabel" xml:space="preserve">
+    <value>Роли или назначения</value>
+  </data>
+  <data name="AdmProfilesAttributesTitle" xml:space="preserve">
+    <value>Атрибути на обработчика</value>
+  </data>
+  <data name="AdmAssetsUploadTitle" xml:space="preserve">
+    <value>Качване на изображение</value>
+  </data>
 </root>
