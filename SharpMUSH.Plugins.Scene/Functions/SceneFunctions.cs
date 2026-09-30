@@ -10,6 +10,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Plugins.Scene.Commands;
 
 namespace SharpMUSH.Plugins.Scene.Functions;
 
@@ -59,6 +60,16 @@ public static class SceneFunctions
 		// browser to the asking player's scenes rather than the Scene Logger's.
 		var enactor = await parser.CurrentState.KnownEnactorObject(mediator);
 		return enactor.Object().DBRef.ToString();
+	}
+
+	/// <summary>
+	/// Broadcasts a successful pose write on <c>game.scene.{id}</c>, as the <c>@scene</c> switches do, and
+	/// answers the pose id. Without it a pose recorded or edited by softcode never reached a live view.
+	/// </summary>
+	private static async ValueTask<CallState> PublishedAsync(IMUSHCodeParser parser, string eventType, ScenePose pose)
+	{
+		await SceneBroadcast.PublishSceneEventAsync(parser, pose.SceneId, eventType, pose);
+		return new CallState(pose.Id);
 	}
 
 	/// <summary>Guard for side-effect (write) functions: false ⇒ side effects are disabled in config.</summary>
@@ -607,7 +618,7 @@ public static class SceneFunctions
 		var origin = await SceneLocate.ObjectOrSelf(parser, args["3"].Message!.ToPlainText().Trim());
 		var source = args["4"].Message!.ToPlainText();
 		var tagsText = args["5"].Message!.ToPlainText().Trim();
-		var content = args["6"].Message!.ToPlainText();
+		var content = MarkupTextSerializer.Serialize(args["6"].Message!);
 
 		var tags = tagsText.Length == 0
 			? Array.Empty<string>()
@@ -618,7 +629,7 @@ public static class SceneFunctions
 
 		return result switch
 		{
-			ScenePose pose => new CallState(pose.Id),
+			ScenePose pose => await PublishedAsync(parser, "pose", pose),
 			NotFound => new CallState(SceneNotFound),
 			Error<string> error => new CallState(error.Value),
 		};
@@ -666,11 +677,11 @@ public static class SceneFunctions
 		var args = parser.CurrentState.Arguments;
 		var poseId = args["0"].Message!.ToPlainText().Trim();
 		var editor = await SceneLocate.PlayerOrSelf(parser, args["1"].Message!.ToPlainText().Trim());
-		var content = args["2"].Message!.ToPlainText();
+		var content = MarkupTextSerializer.Serialize(args["2"].Message!);
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		return await service.EditPoseAsync(poseId, editor, content) is ScenePose pose
-			? new CallState(pose.Id)
+			? await PublishedAsync(parser, "edit", pose)
 			: new CallState(SceneNotFound);
 	}
 
@@ -752,7 +763,7 @@ public static class SceneFunctions
 
 		return result switch
 		{
-			ScenePose pose => new CallState(pose.Id),
+			ScenePose pose => await PublishedAsync(parser, "move", pose),
 			NotFound => new CallState(SceneNotFound),
 			Error<string> error => new CallState(error.Value),
 		};
@@ -775,7 +786,7 @@ public static class SceneFunctions
 		var poseId = parser.CurrentState.Arguments["0"].Message!.ToPlainText().Trim();
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
 		return await service.DeletePoseAsync(poseId) is ScenePose pose
-			? new CallState(pose.Id)
+			? await PublishedAsync(parser, "delete", pose)
 			: new CallState(SceneNotFound);
 	}
 

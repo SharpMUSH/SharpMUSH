@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using NATS.Client.Core;
 using SharpMUSH.Library;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -105,5 +107,72 @@ public class SceneCommandFunctionIntegrationTests
 			.Because("pose ids must be 1-based counter values");
 		await Assert.That(IdSeq(p2)).IsEqualTo(IdSeq(p1) + 1)
 			.Because("pose ids increment by a 1-based counter");
+	}
+
+	/// <summary>
+	/// A pose written through the side-effect function keeps its colour, as one written through
+	/// <c>@scene/addpose</c> does: storage takes the content as a serialised MString, and handing it the
+	/// plain text stored the same markup an uncoloured pose has.
+	///
+	/// <para>Compared with an uncoloured pose's markup, not with <c>content</c>: storage serialises plain
+	/// text too, so markup never equals content and that comparison proves nothing.</para>
+	/// </summary>
+	[Test]
+	public async Task SceneAddPose_And_SceneEditPose_KeepTheirColour()
+	{
+		var sceneId = await CreateSceneAsync("Colour");
+		await Cmd($"@scene/set {sceneId}/public=1");
+		var plainId = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,A red ember.)");
+		var plainMarkup = await Eval($"scenepose({sceneId},{plainId},markup)");
+
+		var poseId = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,A [ansi(hr,red)] ember.)");
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},content)")).IsEqualTo("A red ember.");
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},markup)")).IsNotEqualTo(plainMarkup)
+			.Because("the markup of an uncoloured pose means the colour never reached storage");
+
+		await Eval($"sceneeditpose({plainId},{God},A [ansi(hr,red)] ember.)");
+		await Assert.That(await Eval($"scenepose({sceneId},{plainId},content)")).IsEqualTo("A red ember.");
+		await Assert.That(await Eval($"scenepose({sceneId},{plainId},markup)")).IsNotEqualTo(plainMarkup)
+			.Because("an edit through the function must keep its colour too");
+	}
+
+	/// <summary>
+	/// The side-effect functions broadcast their pose writes on <c>game.scene.{id}</c>, as the
+	/// <c>@scene</c> switches do — which is what the design promises, and what makes a pose recorded by
+	/// softcode (or edited with <c>+scene/edit</c>, which calls <c>sceneeditpose</c>) appear live.
+	/// </summary>
+	[Test]
+	public async Task SceneFunctions_BroadcastTheirPoseWrites()
+	{
+		var sceneId = await CreateSceneAsync("Broadcast");
+		var godObjid = await Eval($"objid({God})");
+
+		await using var nats = new NatsConnection(new NatsOpts
+		{
+			Url = $"nats://localhost:{WebAppFactory.NatsTestServer.Instance.GetMappedPublicPort(4222)}"
+		});
+		await using var events = await nats.SubscribeCoreAsync<string>($"game.scene.{sceneId}");
+		await nats.PingAsync();
+
+		var first = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,first)");
+		var second = await Eval($"sceneaddpose({sceneId},{God},,{God},pose,,second)");
+		await Eval($"sceneeditpose({first},{God},first again)");
+		await Eval($"scenemovepose({second})");
+		await Eval($"scenedelpose({first})");
+
+		var seen = new List<(string EventType, string PoseId, string? ActorObjId)>();
+		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+		await foreach (var message in events.Msgs.ReadAllAsync(timeout.Token))
+		{
+			if (message.Data is not { } data) continue;
+			var root = JsonDocument.Parse(data).RootElement;
+			seen.Add((root.GetProperty("EventType").GetString()!, root.GetProperty("PoseId").GetString()!,
+				root.GetProperty("ActorObjId").GetString()));
+			if (seen.Count == 5) break;
+		}
+
+		await Assert.That(seen.Select(e => (e.EventType, e.PoseId))).IsEquivalentTo(
+			[("pose", first), ("pose", second), ("edit", first), ("move", second), ("delete", first)]);
+		await Assert.That(seen.All(e => e.ActorObjId == godObjid)).IsTrue();
 	}
 }
