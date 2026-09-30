@@ -146,4 +146,13 @@ public class ThemeServiceTests
 		var mudPrimary = theme.PaletteDark.Primary.Value.ToLower()[..7];
 		await Assert.That(mudPrimary).IsEqualTo(preset.PrimaryColor.ToLower());
 	}
+
+	[Test]
+	public async Task ToMudTheme_TextDisabledMatchesTheFaintToken()
+	{
+		var theme = ThemeService.GetDefaultPreset().ToMudTheme();
+		var disabled = theme.PaletteDark.TextDisabled.Value.ToLower()[..7];
+		await Assert.That(disabled).IsEqualTo("#7d8790")
+			.Because("MudBlazor's disabled text must keep the same AA contrast as --text-faint in tokens.css");
+	}
 }
