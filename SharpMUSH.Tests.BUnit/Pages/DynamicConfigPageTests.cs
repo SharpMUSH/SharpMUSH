@@ -137,7 +137,8 @@ public class DynamicConfigPageTests : TrackingBunitContext
 		var cut = RenderChat();
 		var toc = cut.FindAll(".cfg-toc");
 		await Assert.That(toc.Count).IsEqualTo(ChatGroups());
-		await Assert.That(toc[0].GetAttribute("href")).IsEqualTo("#group-general");
+		await Assert.That(toc[0].GetAttribute("href")).IsEqualTo("/admin/config/chat#group-general")
+			.Because("a bare #anchor resolves against <base href> and navigates to the site root");
 		await Assert.That(toc[0].QuerySelector(".cfg-toc-count")!.TextContent).IsEqualTo("2");
 		await Assert.That(cut.Find("#group-general")).IsNotNull();
 	}
@@ -148,7 +149,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/chat#group-limits");
 		var cut = RenderChat();
 		var current = cut.Find(".cfg-toc--current");
-		await Assert.That(current.GetAttribute("href")).IsEqualTo("#group-limits");
+		await Assert.That(current.GetAttribute("href")).IsEqualTo("/admin/config/chat#group-limits");
 		await Assert.That(current.GetAttribute("aria-current")).IsEqualTo("location");
 		await Assert.That(cut.FindAll(".cfg-toc--current").Count).IsEqualTo(1);
 	}
@@ -160,7 +161,22 @@ public class DynamicConfigPageTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".cfg-toc--current").Count).IsEqualTo(0);
 		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/admin/config/chat#group-economy");
 		cut.WaitForAssertion(() => cut.Find(".cfg-toc--current"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Find(".cfg-toc--current").GetAttribute("href")).IsEqualTo("#group-economy");
+		await Assert.That(cut.Find(".cfg-toc--current").GetAttribute("href")).IsEqualTo("/admin/config/chat#group-economy");
+	}
+
+	[Test]
+	public async Task ReRenderingWithTheSameCategory_KeepsUnsavedChanges()
+	{
+		// The router re-renders the page on a hash-only navigation; the edits must survive it.
+		var cut = RenderChat();
+		cut.FindAll(".cfg-row").First(r => r.QuerySelector(".cfg-row-key")!.TextContent == "Chat.NoisyCEmit").QuerySelector("button[role=switch]")!.Click();
+		await Assert.That(cut.FindAll(".cfg-unsaved").Count).IsEqualTo(1);
+
+		cut.Render(p => p.Add(x => x.Category, "chat"));
+		await Task.Delay(200);
+
+		await Assert.That(cut.FindAll(".cfg-unsaved").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".cfg-row-changed").Count).IsEqualTo(1);
 	}
 
 	[Test]
@@ -169,7 +185,7 @@ public class DynamicConfigPageTests : TrackingBunitContext
 		// A hash-only navigation raises no LocationChanged in Blazor, so the click itself must do it.
 		var cut = RenderChat();
 		cut.FindAll(".cfg-toc")[2].Click();
-		await Assert.That(cut.Find(".cfg-toc--current").GetAttribute("href")).IsEqualTo("#group-economy");
+		await Assert.That(cut.Find(".cfg-toc--current").GetAttribute("href")).IsEqualTo("/admin/config/chat#group-economy");
 	}
 
 	[Test]

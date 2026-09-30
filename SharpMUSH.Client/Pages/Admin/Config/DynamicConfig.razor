@@ -121,8 +121,9 @@
                         var count = GetPropertiesInGroup(group.Name).Count();
                         var anchor = GroupAnchor(group.Name);
                         var current = anchor == _currentAnchor;
-                        @* Blazor raises no LocationChanged for a hash-only navigation, so the click marks the link current itself. *@
-                        <a class="cfg-toc @(current ? "cfg-toc--current" : null)" href="@("#" + anchor)" aria-current="@(current ? "location" : null)" @onclick="@(() => _currentAnchor = anchor)">
+                        @* The path is spelt out: a bare "#anchor" resolves against <base href="/"> and leaves the page.
+                           The click marks the link current itself, since a hash-only change raises no LocationChanged. *@
+                        <a class="cfg-toc @(current ? "cfg-toc--current" : null)" href="@($"{CurrentPath}#{anchor}")" aria-current="@(current ? "location" : null)" @onclick="@(() => _currentAnchor = anchor)">
                             <span class="cfg-toc-name">@group.DisplayName</span>
                             <span class="cfg-toc-count">@count</span>
                         </a>
@@ -189,13 +190,34 @@
 
     public void Dispose() => NavigationManager.LocationChanged -= OnLocationChanged;
 
+    private string? _loadedCategory;
+
+    /// <summary>The page's own path, base-relative, without query or fragment.</summary>
+    private string CurrentPath
+    {
+        get
+        {
+            var path = "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+            var cut = path.IndexOfAny(['?', '#']);
+            return cut >= 0 ? path[..cut] : path;
+        }
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         if (CustomPageCategories.Contains(Category))
         {
             return;
         }
-        
+
+        // The router re-renders this page on every navigation, including a hash-only one to a group
+        // anchor; reloading then would throw away unsaved edits. Load once per category.
+        if (string.Equals(_loadedCategory, Category, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _loadedCategory = Category;
         await LoadConfigurationAsync();
     }
 
