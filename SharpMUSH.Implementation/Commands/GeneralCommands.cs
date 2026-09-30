@@ -211,12 +211,17 @@ public partial class Commands
 		var showContents = !switches.Contains("OPAQUE") && !viewingKnown.IsExit
 			&& (canExamine || (!viewingKnown.IsRoom && !await viewingKnown.IsOpaque()));
 
+		// Contents walk DOLIST_VISIBLE (look.c:885), whose first_visible applies the DARK/LIGHT rules
+		// (predicat.c:1130-1160) -- so a mortal who does not control a DARK object never sees it listed.
+		// The exits list below is a plain DOLIST (look.c:916) and has no such filter.
+		var canSeeContent = await ObserveContentsAsync(parser, executor, viewingKnown, ConnectionService);
+
 		var contents = !showContents
 			? []
 			// GetContentsQuery also yields exits; Penn's Contents(thing) never does, and exits get their own list.
 			: await Mediator.CreateStream(new GetContentsQuery(viewingKnown.AsContainer), ExecutionBudget.CurrentToken)
 				.Where(item => !item.IsExit)
-				.Where((item, ct) => perceive(item.Object().DBRef, ct))
+				.Where((AnySharpContent item, CancellationToken ct) => canSeeContent(item, ct))
 				.ToArrayAsync(ExecutionBudget.CurrentToken);
 
 		var outputSections = new List<MString>();
@@ -336,9 +341,12 @@ public partial class Commands
 			else
 			{
 				var contentsLabel = viewingKnown.IsPlayer ? "Carrying:" : "Contents:";
+				// object_header of each item (look.c:893), which is unparse_object -- so a viewer who may
+				// not see a content's dbref gets its bare name, whatever they may do with the container.
 				var contentItems = await contents
 					.ToAsyncEnumerable()
-					.Select((AnySharpContent content, CancellationToken _) => MessageFormatting.FormatObjectWithDbrefMString(content.Object()))
+					.Select((AnySharpContent content, CancellationToken _) =>
+						MessageFormatting.UnparseObjectMStringAsync(PermissionService, executor, content.WithRoomOption()))
 					.Prepend(MarkupText.Plain(contentsLabel))
 					.ToListAsync();
 				await NotifyService.Notify(enactor,

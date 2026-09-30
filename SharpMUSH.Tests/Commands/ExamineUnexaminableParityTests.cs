@@ -128,6 +128,32 @@ public class ExamineUnexaminableParityTests
 			.Because("EX_PUBLIC_ATTRIBS off takes the same early return as being far away (look.c:809-823)");
 	}
 
+	/// <summary>
+	/// Contents walk <c>DOLIST_VISIBLE</c> (<c>look.c:885</c>), so <c>first_visible</c>'s DARK rules
+	/// apply (<c>src/predicat.c:1130-1160</c>), and each line is <c>object_header</c> of the *content*
+	/// (<c>:893</c>) — which hides a dbref the viewer is not allowed to see (<c>src/unparse.c:118-119</c>).
+	/// </summary>
+	[Test]
+	public async Task Examine_OfANearbyContainerSomeoneElseOwns_HidesDarkContentsAndDbrefs()
+	{
+		var room = (await Mediator.Send(new GetObjectNodeQuery(_room))).Expect<AnySharpObject>().AsContainer;
+		var boxName = TestIsolationHelpers.GenerateUniqueName("ExamBox");
+		var box = await Mediator.Send(new CreateThingCommand(boxName, room, _god, room));
+		var inside = (await Mediator.Send(new GetObjectNodeQuery(box))).Expect<AnySharpObject>().AsContainer;
+
+		var plainName = TestIsolationHelpers.GenerateUniqueName("ExamPlain");
+		await Mediator.Send(new CreateThingCommand(plainName, inside, _god, inside));
+		var darkName = TestIsolationHelpers.GenerateUniqueName("ExamDark");
+		var dark = await Mediator.Send(new CreateThingCommand(darkName, inside, _god, inside));
+		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@set #{dark.Number}=DARK"));
+
+		var output = await RunCaptured($"examine #{box.Number}");
+
+		await Assert.That(output).IsEqualTo($"Contents:\n{plainName}\n{boxName} is owned by {_god.Object.Name}")
+			.Because("the DARK content is not listed at all, and the other is listed by bare name");
+	}
+
 	[Test]
 	public async Task ExamineOfAnAttributeTheViewerCannotRead_SaysNoMatchingAttributes()
 	{
