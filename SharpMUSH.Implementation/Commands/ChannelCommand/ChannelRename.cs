@@ -7,6 +7,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Notifications;
 
 namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
@@ -55,6 +56,10 @@ public static class ChannelRename
 			return new CallState(ErrorMessages.Returns.InvalidChannelName);
 		}
 
+		// Read before the rename: the channel's identity is its name, so afterwards this object reads the
+		// members of a channel that no longer exists.
+		var members = await channel.Members.Value.Select(member => member.Member).ToListAsync();
+
 		await Mediator.Send(new UpdateChannelCommand(channel,
 			newChannelName,
 			null,
@@ -67,6 +72,13 @@ public static class ChannelRename
 			null,
 			null
 		));
+
+		// Announced here, after the write has invalidated the cached channel list, rather than from the
+		// write's handler, where a listener reading the list could still be handed the old name.
+		foreach (var member in members)
+		{
+			await Mediator.Publish(new ChannelMembershipChangedNotification(member, newChannelName.ToPlainText(), "rename"));
+		}
 
 		await NotifyService.Notify(executor, "CHAT: Renamed channel.", executor);
 		return new CallState("Renamed channel.");

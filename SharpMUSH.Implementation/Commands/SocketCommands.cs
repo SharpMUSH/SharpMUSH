@@ -622,6 +622,17 @@ public partial class Commands
 		await ConnectionAnnounceService.AnnounceConnectAsync(
 			parser, new AnySharpObject(player), connectionCount, ConnectionService.Get(handle)?.IsHidden ?? false);
 
+		// The player's own channel list, which a fresh connection has not been sent yet. Before the room
+		// refresh: event handlers spend this command's function-invocation allowance, and a crowded room's
+		// refresh can use up what is left of it.
+		await EventService.TriggerEventAsync(
+			parser,
+			SharpEvents.PlayerChannels,
+			playerRef,
+			player.Object.DBRef.ToString(),
+			"connect",
+			string.Empty);
+
 		// Refresh everyone in the room the player just appeared in.
 		var connectRoomContainer = await player.Location.WithCancellation(CancellationToken.None);
 		await EventService.TriggerEventAsync(
