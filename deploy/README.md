@@ -120,7 +120,7 @@ local development only — over HTTPS a browser will refuse a plaintext `ws://` 
 
 | Port | Service | Exposed to internet? |
 |------|---------|----------------------|
-| 80 / 443 | Caddy (web portal, SignalR, and `/ws` → connection server) | yes |
+| 80 / 443 (TCP), 443 (UDP) | Caddy (web portal, SignalR, and `/ws` → connection server); UDP 443 is HTTP/3 (QUIC) | yes — open UDP 443 on the host firewall too, or browsers stay on HTTP/2 |
 | 4201 | Telnet — **plaintext** | yes |
 | 4203 | Telnet over TLS — *configured but not yet implemented* | not yet |
 | 8080 | ASP.NET server (HTTP) | no — internal, behind Caddy |
@@ -386,7 +386,9 @@ docker compose -f docker-compose.cloudflare.yml up -d connectionserver
 ```
 
 Nothing on the box ever builds, and no inbound access is required. There is no separate client
-image — the Blazor WASM portal is baked into the server image at build time.
+image — the Blazor WASM portal is baked into the server image at build time, together with its
+static-assets endpoints manifest, from which the server takes each file's caching and compression
+headers (fingerprinted files are cached as immutable, `index.html` is always revalidated).
 
 To update the *other* services (nats, cloudflared, backup — deliberately outside watchtower's
 label scope) or to force an immediate app update instead of waiting for the poll:

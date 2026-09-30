@@ -145,7 +145,7 @@ MUSH-specific policy (space-list semantics, `compressSpaces`, glob-to-regex, col
 
 ### Web Portal (SharpMUSH.Client)
 
-The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all non-API routes → `index.html`).
+The portal is a Blazor WASM app served by `SharpMUSH.Server` (SPA fallback: all non-API, non-file routes → `index.html`, sent `Cache-Control: no-cache`). A published image serves the assets through `MapStaticAssets` from the client's `SharpMUSH.Client.staticwebassets.endpoints.json`, copied into the server's content root by the `Dockerfile`: fingerprinted files get `immutable` caching and every asset its precompressed `.br`/`.gz`. Without the manifest (dev runs, test hosts) it falls back to `UseBlazorFrameworkFiles` + `UseStaticFiles`. See `SharpMUSH.Server/PortalStaticFiles.cs`.
 
 **Key services registered at startup:**
 
@@ -307,5 +307,5 @@ and the human escape hatch (`SHARPMUSH_STOP_HOOK=off`) are in `.claude/hooks/REA
 - **Logging**: Serilog, configured through `appsettings.json`
 - **Metrics**: OpenTelemetry → Prometheus scraping at `/metrics` (server :9092, connection server :9091)
 - **Caching**: `ZiggyCreatures.FusionCache`; compiled boolean-expression cache keyed as `"compiled-expressions"`
-- **Rate limiting**: Fixed-window limiter on `"public-api"` (30 req/window); sliding-window on `"auth"` (10 req/window)
+- **Rate limiting**: `"public-api"` — fixed window per client IP (30 req/min, `RateLimiting:PublicApi:*`) on the credential/claim endpoints that opt in with `[EnableRateLimiting]`; `"mcp"` — per client IP on `/mcp`; `"softcode-http"` — one global `http_per_second` budget on `/http/*`. Portal assets and the boot reads (`api/setup/status`, `api/server-info`) are not limited
 - **CORS**: Configured via `Cors:AllowedOrigins` in `appsettings.json`; development allows all origins with credentials (required for SignalR)
