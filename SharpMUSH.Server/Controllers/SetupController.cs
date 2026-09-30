@@ -31,8 +31,9 @@ public class SetupController(
 	public record SetupStatusResponse(bool NeedsSetup);
 	public record SetupCompleteRequest(string Username, string Password);
 
+	// Not rate-limited: every portal page load asks this before it renders, and it is one read of the
+	// server state. The limiter belongs on Complete, which claims the admin account.
 	[HttpGet("status")]
-	[EnableRateLimiting("public-api")]
 	public async Task<IActionResult> GetStatus()
 		=> Ok(new SetupStatusResponse(await setupService.NeedsSetupAsync()));
 

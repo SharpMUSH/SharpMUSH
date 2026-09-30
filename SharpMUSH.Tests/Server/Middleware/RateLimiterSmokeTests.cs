@@ -1,120 +1,158 @@
+using System.Net;
+using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using System.Threading.RateLimiting;
+using SharpMUSH.Server.Controllers;
+using SharpMUSH.Server.RateLimiting;
 
 namespace SharpMUSH.Tests.Server.Middleware;
 
 /// <summary>
-/// Smoke tests for the "public-api" fixed-window rate-limiting policy.
-/// Uses an in-process minimal app (no Docker) to verify policy registration,
-/// per-IP queuing behaviour, and the 429 response shape.
-///
-/// Note: smoke tests use GlobalLimiter so every request is subject to limits
-/// without needing [EnableRateLimiting] on each endpoint. The production server
-/// uses the named "public-api" policy via [EnableRateLimiting] on AuthController.
+/// The production <c>"public-api"</c> policy (<see cref="PublicApiRateLimit"/>), registered exactly as
+/// the server registers it, on an in-process minimal app (no Docker). The caller's address is taken
+/// from an <c>X-Test-Client</c> header by a middleware standing in for UseForwardedHeaders, so one
+/// test can be several clients.
 /// </summary>
 public class RateLimiterSmokeTests
 {
-	private const string PolicyName = "public-api";
+	private const string ClientHeader = "X-Test-Client";
 
-	private static async Task<TestServer> BuildServerAsync(int permitLimit = 3, int queueLimit = 0)
+	private static async Task<(WebApplication App, HttpClient Client)> StartAsync(int permitLimit, int queueLimit = 0)
 	{
 		var builder = WebApplication.CreateBuilder();
 		builder.WebHost.UseTestServer();
 		builder.Logging.ClearProviders();
 		builder.Logging.AddSerilog(TestDiagnostics.CreateLogger(), dispose: true);
 
+		var configuration = new ConfigurationBuilder()
+			.AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				["RateLimiting:PublicApi:PermitLimit"] = permitLimit.ToString(),
+				["RateLimiting:PublicApi:WindowSeconds"] = "60",
+				["RateLimiting:PublicApi:QueueLimit"] = queueLimit.ToString(),
+			})
+			.Build();
+
 		builder.Services.AddRateLimiter(opts =>
 		{
 			opts.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-			opts.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
-							context => RateLimitPartition.GetFixedWindowLimiter(
-									partitionKey: "global",
-									factory: _ => new FixedWindowRateLimiterOptions
-									{
-										PermitLimit = permitLimit,
-										Window = TimeSpan.FromMinutes(1),
-										QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-										QueueLimit = queueLimit,
-									}));
+			opts.AddPublicApiPolicy(configuration);
 		});
 
 		var app = builder.Build();
-		app.UseRateLimiter();
-		app.Run(async ctx =>
+		app.Use((context, next) =>
 		{
-			ctx.Response.StatusCode = 200;
-			await ctx.Response.WriteAsync("ok");
+			if (IPAddress.TryParse(context.Request.Headers[ClientHeader], out var address))
+			{
+				context.Connection.RemoteIpAddress = address;
+			}
+
+			return next(context);
 		});
+		app.UseRouting();
+		app.UseRateLimiter();
+		app.MapGet("/limited", () => "ok").RequireRateLimiting(PublicApiRateLimit.PolicyName);
 
 		await app.StartAsync();
-		return app.GetTestServer();
+		return (app, app.GetTestClient());
+	}
+
+	private static async Task<HttpStatusCode> GetAsync(HttpClient client, string clientIp)
+	{
+		using var request = new HttpRequestMessage(HttpMethod.Get, "/limited");
+		request.Headers.Add(ClientHeader, clientIp);
+		using var response = await client.SendAsync(request);
+		return response.StatusCode;
 	}
 
 	[Test]
-	public async Task AddRateLimiter_PolicyRegistered_DoesNotThrowOnBuild()
+	public async Task Requests_WithinTheConfiguredLimit_AllSucceed()
 	{
-		// If rate-limiter configuration is invalid, UseRateLimiter() throws at startup.
-		using var server = await BuildServerAsync();
-		using var client = server.CreateClient();
-		var response = await client.GetAsync("/any");
-		await Assert.That((int)response.StatusCode).IsEqualTo(200);
-	}
-
-	[Test]
-	public async Task Requests_WithinLimit_AllSucceed()
-	{
-		using var server = await BuildServerAsync(permitLimit: 3, queueLimit: 0);
-		using var client = server.CreateClient();
+		var (app, client) = await StartAsync(permitLimit: 3);
+		await using var _ = app;
 
 		for (var i = 0; i < 3; i++)
 		{
-			var r = await client.GetAsync($"/test?i={i}");
-			await Assert.That((int)r.StatusCode).IsEqualTo(200);
+			await Assert.That(await GetAsync(client, "203.0.113.1")).IsEqualTo(HttpStatusCode.OK);
 		}
 	}
 
 	[Test]
-	public async Task Request_ExceedingLimit_Returns429()
+	public async Task A_RequestPastTheConfiguredLimit_Is429()
 	{
-		using var server = await BuildServerAsync(permitLimit: 2, queueLimit: 0);
-		using var client = server.CreateClient();
+		var (app, client) = await StartAsync(permitLimit: 2);
+		await using var _ = app;
 
-		await client.GetAsync("/test");
-		await client.GetAsync("/test");
+		await GetAsync(client, "203.0.113.1");
+		await GetAsync(client, "203.0.113.1");
 
-		var over = await client.GetAsync("/test");
-		await Assert.That((int)over.StatusCode).IsEqualTo(429);
+		await Assert.That(await GetAsync(client, "203.0.113.1")).IsEqualTo(HttpStatusCode.TooManyRequests);
+	}
+
+	/// <summary>
+	/// The policy used to be one window for every caller, so the site as a whole got the permit limit
+	/// — and one client spending it locked every other client out of logging in. Each address now has
+	/// a window of its own.
+	/// </summary>
+	[Test]
+	public async Task A_ClientThatExhaustedItsWindow_DoesNotThrottleAnother()
+	{
+		var (app, client) = await StartAsync(permitLimit: 2);
+		await using var _ = app;
+
+		await GetAsync(client, "203.0.113.1");
+		await GetAsync(client, "203.0.113.1");
+		await Assert.That(await GetAsync(client, "203.0.113.1")).IsEqualTo(HttpStatusCode.TooManyRequests);
+
+		await Assert.That(await GetAsync(client, "198.51.100.7")).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That(await GetAsync(client, "198.51.100.7")).IsEqualTo(HttpStatusCode.OK);
 	}
 
 	[Test]
-	public async Task RejectedResponse_HasContentType_ProblemDetails()
+	public async Task ThePartitionKey_IsTheRemoteAddress()
 	{
-		using var server = await BuildServerAsync(permitLimit: 1, queueLimit: 0);
-		using var client = server.CreateClient();
+		var context = new DefaultHttpContext();
+		await Assert.That(PublicApiRateLimit.PartitionKey(context)).IsEqualTo(PublicApiRateLimit.UnknownClient);
 
-		await client.GetAsync("/test");
-
-		var rejected = await client.GetAsync("/test");
-		await Assert.That((int)rejected.StatusCode).IsEqualTo(429);
-		// The built-in rate limiter doesn't add a body by default
-		// (AddProblemDetails wires that in the full server Startup.cs).
-		// We verify only the 429 status code here.
+		context.Connection.RemoteIpAddress = IPAddress.Parse("2001:db8::1");
+		await Assert.That(PublicApiRateLimit.PartitionKey(context)).IsEqualTo("2001:db8::1");
 	}
 
+	/// <summary>
+	/// Every portal page load asks for these two before it renders. They are cheap reads, and under
+	/// the limiter the portal's boot waited on — or was refused by — the login throttle.
+	/// </summary>
 	[Test]
-	public async Task PolicyName_MustBe_PublicApi_UsedInEnableLimiting()
+	[Arguments(typeof(SetupController), nameof(SetupController.GetStatus))]
+	[Arguments(typeof(ServerInfoController), nameof(ServerInfoController.Get))]
+	// Not a boot read, but the same mistake: a reader clicking through help topics spent the budget
+	// their next sign-in needed.
+	[Arguments(typeof(HelpController), nameof(HelpController.Entry))]
+	[Arguments(typeof(HelpController), nameof(HelpController.Index))]
+	public async Task ThePortalBootReads_AreNotRateLimited(Type controller, string action)
 	{
-		// Verifies the policy builds without throwing when referenced by name.
-		// If the name were wrong, UseRateLimiter() would throw at startup (tested implicitly
-		// by every test that calls BuildServer above). This assertion documents intent.
-		var name = PolicyName;
-		await Assert.That(name.StartsWith("public", StringComparison.OrdinalIgnoreCase)).IsTrue();
+		var method = controller.GetMethod(action)!;
+
+		await Assert.That(method.GetCustomAttribute<EnableRateLimitingAttribute>()).IsNull();
+		await Assert.That(controller.GetCustomAttribute<EnableRateLimitingAttribute>()).IsNull();
+	}
+
+	/// <summary>The endpoints the limiter exists for keep it.</summary>
+	[Test]
+	[Arguments(typeof(SetupController), nameof(SetupController.Complete))]
+	[Arguments(typeof(AuthController), nameof(AuthController.GetMushToken))]
+	public async Task TheCredentialEndpoints_KeepTheLimiter(Type controller, string action)
+	{
+		var method = controller.GetMethod(action)!;
+
+		await Assert.That(method.GetCustomAttribute<EnableRateLimitingAttribute>()?.PolicyName)
+			.IsEqualTo(PublicApiRateLimit.PolicyName);
 	}
 }

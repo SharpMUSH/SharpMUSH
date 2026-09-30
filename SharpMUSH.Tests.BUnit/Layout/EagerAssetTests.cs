@@ -16,14 +16,40 @@ public class EagerAssetTests
 	private static string IndexHtml() =>
 		File.ReadAllText(Path.Join(AppContext.BaseDirectory, "client", "index.html"));
 
-	/// <summary>Script/link tags in index.html — everything a visitor fetches before Blazor starts.</summary>
+	/// <summary>Script/link tags in index.html — everything a visitor fetches before Blazor starts —
+	/// as the paths they name: the build replaces a <c>#[.{fingerprint}]</c> marker with the file's
+	/// content hash, so the marker is dropped here.</summary>
 	private static IEnumerable<string> EagerReferences()
 	{
 		var html = IndexHtml();
 		foreach (Match m in Regex.Matches(html, "(?:src|href)\\s*=\\s*\"([^\"]+)\"", RegexOptions.IgnoreCase))
 		{
-			yield return m.Groups[1].Value;
+			yield return m.Groups[1].Value.Replace("#[.{fingerprint}]", "", StringComparison.Ordinal);
 		}
+	}
+
+	/// <summary>
+	/// custom.css places each stylesheet in its cascade layer with <c>@import</c>, and the browser only
+	/// discovers an import once custom.css has arrived and been parsed — a second round trip in front of
+	/// first paint unless index.html preloads it. The preload has to name the exact URL the import
+	/// resolves to, or the browser fetches the file twice.
+	/// </summary>
+	[Test]
+	public async Task EveryStylesheetImport_IsPreloaded()
+	{
+		var css = File.ReadAllText(Path.Join(AppContext.BaseDirectory, "client", "css", "custom.css"));
+		var imports = Regex.Matches(css, @"@import\s+url\(""([^""]+)""\)")
+			// Resolved as the browser resolves it: relative to custom.css itself.
+			.Select(m => new Uri(new Uri("https://portal/css/custom.css"), m.Groups[1].Value).AbsolutePath.TrimStart('/'))
+			.ToList();
+
+		var preloads = Regex.Matches(IndexHtml(), "<link\\s+rel=\"preload\"\\s+as=\"style\"\\s+href=\"([^\"]+)\"")
+			.Select(m => m.Groups[1].Value)
+			.ToHashSet(StringComparer.Ordinal);
+
+		await Assert.That(imports).IsNotEmpty();
+		await Assert.That(imports.Where(i => !preloads.Contains(i)).ToList()).IsEmpty()
+			.Because("an import index.html does not preload is fetched only after custom.css is parsed");
 	}
 
 	[Test]

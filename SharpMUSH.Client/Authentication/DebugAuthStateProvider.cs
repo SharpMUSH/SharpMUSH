@@ -23,10 +23,10 @@ namespace SharpMUSH.Client.Authentication;
 /// redundant single-use tokens; this provider no longer keeps its own cache.
 ///
 /// Returns an anonymous principal — no fabricated claims — when the server is not yet
-/// reachable or the bootstrap account does not yet exist. <c>ServerStartupGate</c> (see
-/// App.razor) keeps this provider from ever being queried before the server is actually up,
-/// so this path should only be hit by a very late/unlucky bootstrap race, and it must not
-/// paper over that with a fake "DebugAdmin" identity.
+/// reachable or the bootstrap account does not yet exist. The server does not hand out the portal
+/// until the game is ready (<c>PortalStartupPage</c>), so this path should only be hit by a
+/// development client served apart from the API, or a very late/unlucky bootstrap race, and it must
+/// not paper over that with a fake "DebugAdmin" identity.
 /// </summary>
 [SuppressMessage("Usage", "BL0013", Justification = "The provider hands its own freshly computed state to NotifyAuthenticationStateChanged; it caches nothing that could go stale.")]
 public class DebugAuthStateProvider : AuthenticationStateProvider
@@ -81,8 +81,8 @@ public class DebugAuthStateProvider : AuthenticationStateProvider
 		if (debugOtt?.AccountId is null)
 		{
 			// Server not yet reachable or the bootstrap account does not exist yet — anonymous,
-			// not a fabricated identity. ServerStartupGate should have prevented this provider
-			// from ever being queried this early; if it still happens, no fake claims either way.
+			// not a fabricated identity. The server's startup page keeps a portal from loading this
+			// early; if it still happens, no fake claims either way.
 			return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
 		}
 

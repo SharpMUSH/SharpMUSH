@@ -1178,7 +1178,8 @@ markup of their own).
 
 When a vendor ships CSS the app cannot import into a layer — Monaco injects
 its own stylesheet at runtime — the answer is an *unlayered* global sheet
-(`css/monaco-overrides.css`, imported without `layer(...)`), which wins on
+(`css/monaco-overrides.css`, linked without `layer(...)` by the Monaco bundle in
+`js/lazy-assets.js`, so only the editor page fetches it), which wins on
 specificity from outside the layer stack. Not `!important`, which would also
 outrank every page.
 

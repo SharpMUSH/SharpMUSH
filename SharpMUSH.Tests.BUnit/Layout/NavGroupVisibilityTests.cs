@@ -18,7 +18,7 @@ using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Layout;
 
-/// <summary>Answers the one call NavMenu's own init makes — GET api/applications — with no apps.</summary>
+/// <summary>Answers GET api/applications with no apps; everything else is a 404.</summary>
 file sealed class EmptyRegistryHandler : HttpMessageHandler
 {
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -76,6 +76,8 @@ public class NavGroupVisibilityTests : TrackingBunitContext, IAsyncDisposable
 		factory.CreateClient("api").Returns(apiClient);
 		Services.AddSingleton(factory);
 		Services.AddSingleton(new ApplicationRegistryClient(factory, NullLogger<ApplicationRegistryClient>.Instance));
+		// NavMenu lists applications from the startup catalog.
+		Services.AddSingleton(new ApplicationCatalog([]));
 		Services.AddSingleton(new AccountAuthService(
 			factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance,
 			[]));

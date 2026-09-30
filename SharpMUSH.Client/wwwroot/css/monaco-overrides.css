@@ -1,4 +1,4 @@
-/* Imported without layer(...) on purpose (custom.css): Monaco injects its own unlayered
+/* Loaded unlayered, with the Monaco bundle (js/lazy-assets.js): Monaco injects its own unlayered
    stylesheet at runtime, which no layered rule can outrank. */
 .mush-editor-fill > div,
 .mush-editor-fill .monaco-editor,
