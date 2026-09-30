@@ -1778,6 +1778,11 @@
     <value>No configuration category or option named '{0}'.</value>
   </data>
 
+  <!-- examine command -->
+  <data name="ExamineNoMatchingAttributes" xml:space="preserve">
+    <value>No matching attributes.</value>
+  </data>
+
   <!-- @edit command -->
   <data name="EditInvalidArguments" xml:space="preserve">
     <value>Invalid arguments to @edit.</value>

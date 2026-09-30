@@ -337,4 +337,29 @@ public class WikiServiceTests : TrackingTestContext
 		await Assert.That(handler.Sent.Count).IsEqualTo(11);
 		await Assert.That(handler.Sent.Count(c => !c.Disposed)).IsEqualTo(0);
 	}
+
+	/// <summary>
+	/// The home page's stats tile and recent-activity widget both read the last ten changes on the
+	/// same render; while one read is in flight the other joins it.
+	/// </summary>
+	[Test]
+	public async Task GetRecentChangesAsync_ConcurrentCalls_FetchOnce()
+	{
+		var handler = new GatedHttpHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+		{
+			Content = new StringContent($"[{PageDtoJson()}]", Encoding.UTF8, "application/json")
+		});
+		var service = BuildService(handler, out _);
+
+		var first = service.GetRecentChangesAsync(10).AsTask();
+		var second = service.GetRecentChangesAsync(10).AsTask();
+		handler.Release();
+
+		await Assert.That((await first).Count).IsEqualTo(1);
+		await Assert.That((await second).Count).IsEqualTo(1);
+		await Assert.That(handler.CallsTo("/api/wiki/recent?count=10")).IsEqualTo(1);
+
+		await service.GetRecentChangesAsync(10);
+		await Assert.That(handler.CallsTo("/api/wiki/recent?count=10")).IsEqualTo(2);
+	}
 }

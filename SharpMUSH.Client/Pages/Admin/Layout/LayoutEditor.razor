@@ -5,6 +5,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject ILayoutService LayoutService
 @inject IWidgetRegistry Registry
+@inject ApplicationCatalog Applications
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
@@ -416,6 +417,9 @@
     {
         _loading = true;
         var layout = await LayoutService.GetLayoutAsync(Scope);
+        // Widget-kind applications join the registry when the startup catalog arrives; a palette
+        // built before then would be missing them.
+        await Applications.Loaded;
 
         _leftOn = layout.Settings.LeftSidebarEnabled;
         _rightOn = layout.Settings.RightSidebarEnabled;

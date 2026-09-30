@@ -12,6 +12,9 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 {
 	private HttpClient Client => httpClientFactory.CreateClient("api");
 
+	/// <summary>Concurrent reads of one scene list (the stats tile and the active-scene widget) share a request.</summary>
+	private readonly SingleFlight<string, ApiResult<IReadOnlyList<SceneSummary>>> _listFlight = new();
+
 	// Mirror SceneController records; timestamps are long Unix-millis (deserialization contract).
 	private record SceneDto(
 		string Id,
@@ -52,10 +55,15 @@ public class SceneService(IHttpClientFactory httpClientFactory)
 
 
 	/// <summary>Lists scenes by filter (active|recent|scheduled).</summary>
-	public async Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50)
+	public Task<ApiResult<IReadOnlyList<SceneSummary>>> ListScenesAsync(string filter = "recent", int count = 50)
 	{
-		var result = await Client.GetApiAsync<List<SceneDto>>(
-			$"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}", "The server returned no scene list.");
+		var url = $"api/scenes?filter={Uri.EscapeDataString(filter)}&count={count}";
+		return _listFlight.RunAsync(url, () => FetchScenesAsync(url));
+	}
+
+	private async Task<ApiResult<IReadOnlyList<SceneSummary>>> FetchScenesAsync(string url)
+	{
+		var result = await Client.GetApiAsync<List<SceneDto>>(url, "The server returned no scene list.");
 
 		return result switch
 		{

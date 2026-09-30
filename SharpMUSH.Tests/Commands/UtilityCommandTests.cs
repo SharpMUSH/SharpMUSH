@@ -256,19 +256,20 @@ public class UtilityCommandTests
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MarkupText.Plain($"@desc {objDbRef}=[ansi(rh,AnsiColorText)]"));
 
+		var before = WebAppFactoryArg.Notifications.RawCountFor(testPlayer.DbRef);
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService,
 			MarkupText.Plain($"examine {objDbRef}"));
 
-		await NotifyService
-			.Received(2)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		// Once, not twice: with ex_public_attribs on, examine prints DESCRIBE as the description and
+		// examine_helper then drops it from the attribute list (look.c:310-312, :346-348).
+		var carryingTheDescription = WebAppFactoryArg.Notifications.RawFor(testPlayer.DbRef)
+			.Skip(before)
+			.Where(msg => TestHelpers.MessagePlainTextContains(msg, "AnsiColorText"))
+			.ToList();
 
-		await NotifyService
-			.Received(2)
-			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "AnsiColorText") &&
-				RendersAnsiEscapes(msg)), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+		await Assert.That(carryingTheDescription.Count).IsEqualTo(1);
+		await Assert.That(carryingTheDescription.All(RendersAnsiEscapes)).IsTrue()
+			.Because("the description keeps its markup all the way to the client");
 	}
 
 	[Test]

@@ -150,11 +150,10 @@ public class ExamineSyntaxFormattingTests
 		// The bug this guards against is a *second* Notify right after the header, for the empty
 		// formatted block (which -- because an empty funsyntax body is itself a parse error -- is not
 		// literally an empty string but a parser-failure summary; asserting "not empty" would have missed
-		// that). @examine's structure after the attribute loop is fixed: the very next line is always
-		// "Home:" (for a Thing/Player) or the room's exits/contents section, never anything derived from
-		// the attribute just rendered. So the guard is intact exactly when nothing sits between the
-		// header and that next structural line.
-		await Assert.That(texts[headerIndex + 1]).StartsWith("Home:");
+		// that). The attribute-pattern form of examine returns as soon as the attributes are printed
+		// (look.c:796-801), so the header is the last line there is: nothing may follow it.
+		await Assert.That(texts.Count).IsEqualTo(headerIndex + 1)
+			.Because($"examine <obj>/<pattern> prints attributes and nothing else; actual output: {string.Join(" | ", texts)}");
 	}
 
 	[Test]
