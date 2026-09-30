@@ -20,7 +20,7 @@ a{color:#00f5b7;text-decoration:none}a:hover{color:#7affd9}
 <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start">
 <section style="background: #16181b; border: 1px solid #262a2f; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
 <div style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700">room.info</span><span style="padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; background: rgba(0,245,183,0.12); color: #7ad8bd">new</span></div>
-<div style="font-size: 13px; line-height: 1.45; color: #9aa3ab">On arrival, and when the room's name, image or description changes.</div>
+<div style="font-size: 13px; line-height: 1.45; color: #9aa3ab">On arrival and on connect. A name, image or description edit is not re-sent: there is no attribute-change event.</div>
 <pre style="margin: 0; padding: 14px 16px; border-radius: 12px; background: #0a0b0c; border: 1px solid #1d2024; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.55; color: #c4cbd1; white-space: pre; overflow: hidden">{
   &quot;v&quot;: 2,
   &quot;dbref&quot;: &quot;#1201&quot;,
@@ -142,7 +142,7 @@ a{color:#00f5b7;text-decoration:none}a:hover{color:#7affd9}
 <div style="display: flex; align-items: center; gap: 10px"><span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700">Character sheet</span><span style="padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; background: #1c1f23; color: #c4cbd1">existing</span></div>
 <div style="font-size: 13px; line-height: 1.45; color: #9aa3ab">Not OOB. Clicking a character with "profile": true fetches the profile schema and data over HTTP and renders it as an Area 21 view.</div>
 <pre style="margin: 0; padding: 14px 16px; border-radius: 12px; background: #0a0b0c; border: 1px solid #1d2024; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.55; color: #c4cbd1; white-space: pre; overflow: hidden">GET http/profile/schema
-GET http/profile?objid=#312:1718000000
+GET http/profile?objid=%23312%3A1718000000
 → SchemaViewRenderer (compact)
 
 Gallery: portal-managed images,
