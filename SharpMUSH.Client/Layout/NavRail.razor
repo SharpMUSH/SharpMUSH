@@ -139,17 +139,24 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        // The gates depend only on who is signed in; a parent re-render (a terminal toggle, a palette
-        // opening) passes new callbacks and would otherwise re-ask every policy.
+        // The gates and the role-filtered applications depend only on who is signed in; a parent
+        // re-render (a terminal toggle, a palette opening) passes new callbacks and would otherwise
+        // re-ask every policy. A sign-in or sign-out cascades a new AuthState and recomputes both.
         if (_gatesKnown && ReferenceEquals(AuthState, _gatesFor)) return;
         (_gatesFor, _gatesKnown) = (AuthState, true);
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
         _build = await BuildNavCatalog.VisibleAsync(Authorization, user);
+        await LoadAppsAsync(PortalRoleHelper.CurrentRole(user));
     }
 
     protected override async Task OnInitializedAsync()
     {
-        var role = AuthState is null ? PortalRole.Guest : PortalRoleHelper.CurrentRole((await AuthState).User);
+        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
+        _gameName = await ServerInfo.GameNameAsync();
+    }
+
+    private async Task LoadAppsAsync(PortalRole role)
+    {
         var apps = await Registry.ListAsync();
         _novelSections = PortalNavSections.NovelSections(apps, role)
             .Select(name => PortalNavSections.AppsForSection(apps, role, name))
@@ -157,8 +164,6 @@
             .Select(list => new NovelSection(list[0].NavPlacement!, list[0], list))
             .ToList();
         _buildApps = [.. PortalNavSections.AppsForSection(apps, role, "Build"), .. PortalNavSections.AppsForSection(apps, role, "Manage")];
-        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
-        _gameName = await ServerInfo.GameNameAsync();
     }
 
     private void Locate()
