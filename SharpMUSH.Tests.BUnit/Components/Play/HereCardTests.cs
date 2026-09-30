@@ -89,6 +89,13 @@ public class HereCardTests : BunitContext
 	}
 
 	[Test]
+	public async Task AloneInTheRoom_SaysNobodyElseIsHere()
+	{
+		var cut = RenderHere([Player("Ilsa Varn", "#313", you: true)]);
+		await Assert.That(cut.Find(".here-empty").TextContent).IsEqualTo("Nobody else is here.");
+	}
+
+	[Test]
 	public async Task NobodyHere_SaysSo()
 	{
 		var cut = RenderHere([]);

@@ -82,6 +82,7 @@ window.sharpmushLayout = {
 	// Play's exits (README §5.6): pressing a keycap's letter takes that exit. Never while the reader is
 	// typing (the composer, the terminal input, any field), never with a modifier or a held key, and never
 	// under a dialog (the character sheet, the palette): the page behind it is not what they are using.
+	// Shift counts as a modifier: a capital letter is someone typing.
 	registerExitKeys: function (dotnetRef, keys) {
 		this._exitRef = dotnetRef;
 		this._exitKeys = new Set((keys || []).map(k => String(k).toLowerCase()));
@@ -89,7 +90,7 @@ window.sharpmushLayout = {
 		this._exitListening = true;
 		document.addEventListener('keydown', event => {
 			if (!this._exitRef || !this._exitKeys || event.repeat) return;
-			if (event.ctrlKey || event.metaKey || event.altKey) return;
+			if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
 			const key = typeof event.key === 'string' ? event.key.toLowerCase() : '';
 			if (!this._exitKeys.has(key)) return;
 			const target = event.target;
@@ -107,6 +108,29 @@ window.sharpmushLayout = {
 	unregisterExitKeys: function () {
 		this._exitRef = null;
 		this._exitKeys = null;
+	},
+
+	// Play's composer: Enter sends and Shift+Enter is a new line. Decided here, per key, because Blazor
+	// decides preventDefault when it renders and would swallow the key after the one that sent. An Enter
+	// that ends an IME composition belongs to the composition.
+	composerEnter: function (element, dotnetRef) {
+		if (!element || element._sharpmushEnter) return;
+		const handler = event => {
+			if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+			event.preventDefault();
+			const pending = dotnetRef.invokeMethodAsync('SendFromEnter');
+			if (pending && typeof pending.catch === 'function') {
+				pending.catch(() => { });
+			}
+		};
+		element._sharpmushEnter = handler;
+		element.addEventListener('keydown', handler);
+	},
+
+	uncomposerEnter: function (element) {
+		if (!element || !element._sharpmushEnter) return;
+		element.removeEventListener('keydown', element._sharpmushEnter);
+		element._sharpmushEnter = null;
 	},
 
 	// Back-compat alias.

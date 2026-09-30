@@ -4950,9 +4950,6 @@
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>消息类型</value>
   </data>
-  <data name="NavPlaySendHint" xml:space="preserve">
-    <value>Ctrl+Enter 发送</value>
-  </data>
   <data name="NavPlayTabScene" xml:space="preserve">
     <value>场景</value>
   </data>
@@ -4961,5 +4958,8 @@
   </data>
   <data name="NavPlayTabs" xml:space="preserve">
     <value>游戏分区</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>这里没有其他人。</value>
   </data>
 </root>

@@ -102,6 +102,29 @@ public class ExitsCardTests : BunitContext
 	}
 
 	[Test]
+	public async Task APendingConfirmation_DoesNotSurviveARoomChange()
+	{
+		// Reviewer: the "leaves the scene" dialog outlived the move and its Go would send the old room's exit.
+		var ran = new List<string>();
+		var cut = RenderExits([Ferry, Row], ran.Add);
+		await cut.InvokeAsync(() => cut.Instance.GoByKey("e"));
+		await Assert.That(cut.FindAll("[role='alertdialog']").Count).IsEqualTo(1);
+		cut.Render(p => p.Add(x => x.Exits, new[] { Customs }));
+		await Assert.That(cut.FindAll("[role='alertdialog']").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task Escape_CancelsThePendingConfirmation()
+	{
+		var ran = new List<string>();
+		var cut = RenderExits([Ferry], ran.Add);
+		Tile(cut, "Ferry Steps").QuerySelector("button.exit-go")!.Click();
+		cut.Find("[role='alertdialog']").KeyDown("Escape");
+		await Assert.That(cut.FindAll("[role='alertdialog']").Count).IsEqualTo(0);
+		await Assert.That(ran).IsEmpty();
+	}
+
+	[Test]
 	public async Task NoPicture_IsTheFallbackTile()
 	{
 		var cut = RenderExits([Out]);

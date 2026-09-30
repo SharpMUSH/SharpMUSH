@@ -28,7 +28,7 @@ else
     {
     @if (_confirming is { } pending)
     {
-        <div class="exit-confirm" role="alertdialog" aria-labelledby="exit-confirm-text" aria-describedby="exit-confirm-text">
+        <div class="exit-confirm" role="alertdialog" aria-labelledby="exit-confirm-text" aria-describedby="exit-confirm-text" @onkeydown="OnConfirmKey">
             <span class="exit-confirm-text" id="exit-confirm-text">@pending.Confirm</span>
             <div class="exit-confirm-actions">
                 <button type="button" class="exit-confirm-go" @ref="_confirmGo" @onclick="ConfirmAsync">@Loc["NavPlayGo"]</button>
@@ -145,7 +145,7 @@ else
         {
             _confirming = exit;
             _focusConfirm = true;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
             return;
         }
         await OnCommand.InvokeAsync(exit.Cmd);
@@ -159,6 +159,22 @@ else
     }
 
     private void Cancel() => _confirming = null;
+
+    // No preventDefault: it is decided at render time and would swallow the key after this one.
+    private void OnConfirmKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") Cancel();
+    }
+
+    /// <summary>A new room.exits (a move) drops a confirmation for an exit this room no longer has.</summary>
+    protected override void OnParametersSet()
+    {
+        if (_confirming is { } pending && !Exits.Any(e => string.Equals(e.Dbref, pending.Dbref, StringComparison.Ordinal)
+                && string.Equals(e.Cmd, pending.Cmd, StringComparison.Ordinal) && string.Equals(e.Name, pending.Name, StringComparison.Ordinal)))
+        {
+            _confirming = null;
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

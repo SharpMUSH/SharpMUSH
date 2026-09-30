@@ -211,6 +211,35 @@ test('re-registering replaces the keys, and unregistering stops them', () => {
     assert.deepEqual(calls, ['s']);
 });
 
+// Play's composer: Enter sends, Shift+Enter (and IME composition) keep the textarea's own behaviour.
+test('Enter sends from the composer, Shift+Enter and composition keep the newline', () => {
+    const { layout } = boot();
+    const element = storyElement();
+    const calls = [];
+    layout.composerEnter(element, { invokeMethodAsync: name => { calls.push(name); return Promise.resolve(); } });
+    const enter = press('Enter');
+    element.listeners.get('keydown')(enter.event);
+    const shift = press('Enter', body, { shiftKey: true });
+    element.listeners.get('keydown')(shift.event);
+    const composing = press('Enter', body, { isComposing: true });
+    element.listeners.get('keydown')(composing.event);
+    const other = press('a');
+    element.listeners.get('keydown')(other.event);
+    assert.deepEqual(calls, ['SendFromEnter']);
+    assert.ok(enter.prevented());
+    assert.equal(shift.prevented() || composing.prevented() || other.prevented(), false);
+});
+
+test('exit keys ignore Shift, so a capital letter is typed where it belongs', () => {
+    const { layout, listeners } = bootWithDialog(false);
+    const calls = [];
+    layout.registerExitKeys({ invokeMethodAsync: name => { calls.push(name); return Promise.resolve(); } }, ['n']);
+    const shifted = press('N', body, { shiftKey: true });
+    listeners.get('keydown')(shifted.event);
+    assert.deepEqual(calls, []);
+    assert.equal(shifted.prevented(), false);
+});
+
 test('a click outside a mention does nothing, and undelegating removes the listener', () => {
     const { layout } = boot();
     const element = storyElement();

@@ -80,7 +80,7 @@
                                 var index = i;
                                 var entry = _gallery[i];
                                 <button type="button" class="sheet-gallery-item @(entry.IsIcon ? "sheet-gallery-item--icon" : null)"
-                                        aria-label="@(entry.Caption ?? entry.FileName)" @onclick="() => OpenViewer(index)">
+                                        aria-label="@(entry.Caption ?? entry.FileName)" @onclick="() => OpenViewer(index + _portraitOffset)">
                                     @if (ImageUrlPolicy.IsRenderable(entry.Url))
                                     {
                                         <img src="@entry.Url.Trim()" alt="" loading="lazy" />
@@ -135,7 +135,7 @@
 
     private string? Dbref => _profile?.Dbref ?? Occupant?.Dbref;
 
-    private string? NameStyle => (Occupant?.Color ?? _profile?.Color) is { Length: 7 } c && c[0] == '#' ? $"color:{c};" : null;
+    private string? NameStyle => NameColor.Safe(Occupant?.Color ?? _profile?.Color) is { } c ? $"color:{c};" : null;
 
     private string FallbackStyle => $"background:hsl({NameHue.Of(Name)} 30% 24%);color:hsl({NameHue.Of(Name)} 45% 82%);";
 
@@ -165,7 +165,7 @@
 
         _profile = profile is CharacterProfileData data ? data : null;
         _gallery = gallery is List<GalleryEntry> entries ? entries.OrderByDescending(e => e.IsIcon).ThenBy(e => e.Order).ToList() : [];
-        _viewerItems = _gallery.Select(g => new ImageViewer.Item(g.Url, g.Caption, g.Caption, g.AssetId)).ToList();
+        BuildViewerItems();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -183,16 +183,24 @@
         _viewerOpen = true;
     }
 
-    /// <summary>The portrait in the viewer: its place in the gallery, or on its own when it is not in it.</summary>
+    /// <summary>How far the gallery sits into the viewer's list: 1 when the portrait is not a gallery picture and leads it.</summary>
+    private int _portraitOffset;
+
+    /// <summary>One list for the viewer, built once per character: the portrait first when the gallery lacks it.</summary>
+    private void BuildViewerItems()
+    {
+        var gallery = _gallery.Select(g => new ImageViewer.Item(g.Url, g.Caption, g.Caption, g.AssetId)).ToList();
+        var portrait = Portrait;
+        var own = portrait is not null && !_gallery.Any(g => string.Equals(g.Url, portrait, StringComparison.Ordinal));
+        _portraitOffset = own ? 1 : 0;
+        _viewerItems = own ? [new ImageViewer.Item(portrait!, Name, null), .. gallery] : gallery;
+    }
+
+    /// <summary>The portrait in the viewer: its place in the gallery, or the lead item when it is not in it.</summary>
     private void OpenPortrait()
     {
-        var at = _gallery.ToList().FindIndex(g => string.Equals(g.Url, Portrait, StringComparison.Ordinal));
-        if (at < 0)
-        {
-            _viewerItems = [new ImageViewer.Item(Portrait!, Name, null), .. _gallery.Select(g => new ImageViewer.Item(g.Url, g.Caption, g.Caption, g.AssetId))];
-            at = 0;
-        }
-        OpenViewer(at);
+        var at = _portraitOffset == 1 ? 0 : _gallery.ToList().FindIndex(g => string.Equals(g.Url, Portrait, StringComparison.Ordinal));
+        OpenViewer(Math.Max(0, at));
     }
 
     private Task LookAsync() =>

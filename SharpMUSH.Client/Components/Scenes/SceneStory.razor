@@ -64,6 +64,7 @@
     private string? _posesError;
     private string? _joinedSceneId;
     private string? _loadedSceneId;
+    private int _generation;
 
     protected override async Task OnInitializedAsync()
     {
@@ -80,12 +81,19 @@
         RebuildMentions();
         if (string.Equals(_loadedSceneId, SceneId, StringComparison.Ordinal)) return;
 
+        // A later scene id (two room.info pushes in a row) supersedes this one: every await below checks
+        // the generation, so a slow answer for the old scene can neither overwrite the new one's poses nor
+        // leave the hub subscribed to it.
         _loadedSceneId = SceneId;
+        var sceneId = SceneId;
+        var generation = ++_generation;
         _loading = true;
         _posesError = null;
         _poses.Clear();
         _objids.Clear();
-        ShowPoses(await SceneService.GetPosesAsync(SceneId, count: Backlog));
+        var backlog = await SceneService.GetPosesAsync(sceneId, count: Backlog);
+        if (generation != _generation) return;
+        ShowPoses(backlog);
         _loading = false;
         RebuildMentions();
 
@@ -95,14 +103,25 @@
         if (!Hub.IsConnected)
         {
             await Hub.ReconnectAsync();
+            if (generation != _generation) return;
         }
 
         await LeaveJoinedSceneAsync();
+        if (generation != _generation) return;
         try
         {
-            await SceneHub.JoinSceneAsync(SceneId);
-            _joinedSceneId = SceneId;
+            await SceneHub.JoinSceneAsync(sceneId);
+            if (generation != _generation)
+            {
+                await LeaveQuietlyAsync(sceneId);
+                return;
+            }
+            _joinedSceneId = sceneId;
             await LiveUnavailableChanged.InvokeAsync(false);
+        }
+        catch (HubException) when (generation != _generation)
+        {
+            // Superseded while the join was refused: the newer scene reports its own state.
         }
         catch (HubException)
         {
@@ -184,7 +203,10 @@
 
     private async Task ReloadPosesAsync()
     {
-        ShowPoses(await SceneService.GetPosesAsync(SceneId, count: Backlog));
+        var generation = _generation;
+        var poses = await SceneService.GetPosesAsync(SceneId, count: Backlog);
+        if (generation != _generation) return;
+        ShowPoses(poses);
         RebuildMentions();
         await InvokeAsync(StateHasChanged);
     }
@@ -274,7 +296,8 @@
         {
             targets.TryAdd(name.Trim(), new StoryMentions.Target(name.Trim(), null, IsViewer(name)));
         }
-        _mentions = targets.Values.ToList();
+        var next = targets.Values.ToList();
+        if (!next.SequenceEqual(_mentions)) _mentions = next;
     }
 
     private bool IsViewer(string name) => ViewerName is not null && NameIs(name, ViewerName);
@@ -307,6 +330,11 @@
         if (_joinedSceneId is not { } sceneId) return;
 
         _joinedSceneId = null;
+        await LeaveQuietlyAsync(sceneId);
+    }
+
+    private async Task LeaveQuietlyAsync(string sceneId)
+    {
         try
         {
             await SceneHub.LeaveSceneAsync(sceneId);

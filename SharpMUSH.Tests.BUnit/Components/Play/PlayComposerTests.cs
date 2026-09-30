@@ -68,17 +68,25 @@ public class PlayComposerTests : BunitContext
 	}
 
 	[Test]
-	public async Task CtrlEnter_Sends_ButEnterIsANewLine()
+	public async Task Enter_Sends_ThroughTheListenerTheComposerRegisters()
+	{
+		// Enter sends and Shift+Enter is a new line (plan Task 6). The key is decided in layout.js, so the
+		// browser's newline is prevented only for the Enter that sends.
+		var cut = RenderComposer();
+		JSInterop.VerifyInvoke("sharpmushLayout.composerEnter");
+		Type(cut, "a pose");
+		await cut.InvokeAsync(() => cut.Instance.SendFromEnter());
+		await Assert.That(_sent).IsEquivalentTo(new[] { "pose a pose" });
+		await Assert.That(cut.Find("textarea").GetAttribute("placeholder")).IsEqualTo("Write your pose…");
+	}
+
+	[Test]
+	public async Task CtrlEnter_StillSends()
 	{
 		var cut = RenderComposer();
 		Type(cut, "a pose");
-		cut.Find("textarea").KeyDown("Enter");
-		await Assert.That(_sent).IsEmpty().Because("a pose is prose, written over several lines");
 		cut.Find("textarea").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
 		await Assert.That(_sent).IsEquivalentTo(new[] { "pose a pose" });
-		Type(cut, "another");
-		cut.Find("textarea").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", MetaKey = true });
-		await Assert.That(_sent.Count).IsEqualTo(2);
 	}
 
 	[Test]

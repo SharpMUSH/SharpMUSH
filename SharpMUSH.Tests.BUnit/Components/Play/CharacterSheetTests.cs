@@ -139,6 +139,25 @@ public class CharacterSheetTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AColourThatIsNotHex_IsIgnored()
+	{
+		var cut = RenderSheet(occupant: Tomas with { Color = "#zz;x:1" });
+		await Assert.That(cut.Find(".sheet-name").GetAttribute("style")).IsNull();
+	}
+
+	[Test]
+	public async Task AfterFullImage_TheGalleryStripStillOpensItsOwnPicture()
+	{
+		var cut = RenderSheet(occupant: Tomas);
+		cut.WaitForAssertion(() => cut.Find(".sheet-gallery img"), TimeSpan.FromSeconds(5));
+		cut.Find("button.sheet-full").Click();
+		await Assert.That(cut.Find(".kit-viewer img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/t/room.jpg");
+		cut.Find(".kit-viewer").KeyDown("Escape");
+		cut.FindAll(".sheet-gallery button")[1].Click();
+		await Assert.That(cut.Find(".kit-viewer img").GetAttribute("src")).IsEqualTo("/api/wiki-assets/b/b.jpg");
+	}
+
+	[Test]
 	public async Task EscapeAndClose_Close()
 	{
 		var closed = 0;

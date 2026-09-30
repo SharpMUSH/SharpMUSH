@@ -66,7 +66,7 @@ else
 
     private bool IsOoc => Pose.Tags.Any(t => string.Equals(t, OocTag, StringComparison.OrdinalIgnoreCase));
 
-    private string? SafeColor => Color is { Length: 7 } c && c[0] == '#' && c.Skip(1).All(char.IsAsciiHexDigit) ? c : null;
+    private string? SafeColor => NameColor.Safe(Color);
 
     private string? NameStyle => SafeColor is { } c ? $"color:{c};" : null;
 
@@ -74,8 +74,22 @@ else
 
     private string ProfileHref => "/character/" + Uri.EscapeDataString(Pose.DisplayName);
 
-    private MarkupString Body => (MarkupString)StoryMentions.Mark(SceneMarkupRenderer.ToHtml(Pose.Markup),
-        Mentions.Where(m => !IsAuthor(m.Name)).ToList());
+    private MarkupString Body { get; set; }
+    private string? _bodyMarkup;
+    private IReadOnlyList<StoryMentions.Target>? _bodyMentions;
+
+    /// <summary>
+    /// Renders and marks the body only when the pose or the participants changed: every room push re-renders
+    /// the whole story, and a backlog is a hundred poses.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_bodyMentions, Mentions) && string.Equals(_bodyMarkup, Pose.Markup, StringComparison.Ordinal)) return;
+        _bodyMarkup = Pose.Markup;
+        _bodyMentions = Mentions;
+        Body = (MarkupString)StoryMentions.Mark(SceneMarkupRenderer.ToHtml(Pose.Markup),
+            Mentions.Where(m => !IsAuthor(m.Name)).ToList());
+    }
 
     private bool IsAuthor(string name) =>
         string.Equals(name, Pose.DisplayName, StringComparison.OrdinalIgnoreCase)

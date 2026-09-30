@@ -164,6 +164,22 @@ public class SceneStoryTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task ALateAnswerForTheOldScene_DoesNotOverwriteTheNewOne()
+	{
+		// Reviewer: two room.info pushes in quick succession; scene 42's slow backlog landed after 43's.
+		var gate = new TaskCompletionSource();
+		_api.Hold["/api/scenes/42/poses"] = gate.Task;
+		var cut = RenderStory();
+		cut.Render(p => p.Add(x => x.SceneId, "43"));
+		WaitForRows(cut, 0);
+		gate.SetResult();
+		await Task.Delay(200);
+		await Assert.That(cut.FindAll(".story-row").Count).IsEqualTo(0).Because("scene 42's answer arrived after 43 was chosen");
+		await Assert.That(_hub.Joined.LastOrDefault()).IsEqualTo("43");
+		await Assert.That(_hub.Joined).DoesNotContain("42");
+	}
+
+	[Test]
 	public async Task Disposing_LeavesTheScene()
 	{
 		var cut = RenderStory();
@@ -210,7 +226,16 @@ public class SceneStoryTests : TrackingBunitContext
 		 {"name":"Alice","objid":"#10:1","created":1,"category":"","image":"/api/wiki-assets/a/alice.jpg"}]
 		""";
 
-		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		/// <summary>Paths whose answer waits for the task.</summary>
+		public Dictionary<string, Task> Hold { get; } = [];
+
+		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			if (Hold.TryGetValue(request.RequestUri!.AbsolutePath, out var hold)) await hold;
+			return Answer(request);
+		}
+
+		private static HttpResponseMessage Answer(HttpRequestMessage request)
 		{
 			var body = request.RequestUri!.AbsolutePath switch
 			{
@@ -219,9 +244,9 @@ public class SceneStoryTests : TrackingBunitContext
 				"/http/characters" => Characters,
 				_ => null,
 			};
-			return Task.FromResult(body is null
+			return body is null
 				? new HttpResponseMessage(HttpStatusCode.NotFound)
-				: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
+				: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 		}
 	}
 }

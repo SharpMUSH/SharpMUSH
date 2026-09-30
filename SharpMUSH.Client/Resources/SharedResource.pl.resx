@@ -4950,9 +4950,6 @@
   <data name="NavPlayMessageType" xml:space="preserve">
     <value>Rodzaj wiadomości</value>
   </data>
-  <data name="NavPlaySendHint" xml:space="preserve">
-    <value>Ctrl+Enter wysyła</value>
-  </data>
   <data name="NavPlayTabScene" xml:space="preserve">
     <value>Scena</value>
   </data>
@@ -4961,5 +4958,8 @@
   </data>
   <data name="NavPlayTabs" xml:space="preserve">
     <value>Sekcje gry</value>
+  </data>
+  <data name="NavPlayNobodyElseHere" xml:space="preserve">
+    <value>Nikogo więcej tu nie ma.</value>
   </data>
 </root>

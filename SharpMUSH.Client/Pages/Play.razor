@@ -101,29 +101,27 @@ else
                     </PlaySceneCard>
                 </div>
             </div>
-            @if (!_focus)
-            {
-                <aside class="play-aside" aria-label="@Loc["NavPlayTabRoom"]">
-                    <HereCard Occupants="@Room.Occupants" OnCharacter="OpenSheet" OnCommand="SendAsync" />
-                    <ExitsCard Exits="@Room.Exits" OnCommand="SendAsync" />
-                </aside>
-            }
+            @* Hidden rather than removed in focus mode: the exit keys live with the Exits card. *@
+            <aside class="play-aside" aria-label="@Loc["NavPlayTabRoom"]" hidden="@_focus">
+                <HereCard Occupants="@Room.Occupants" OnCharacter="OpenSheet" OnCommand="SendAsync" />
+                <ExitsCard Exits="@Room.Exits" OnCommand="SendAsync" />
+            </aside>
             <nav class="play-tabs" aria-label="@Loc["NavPlayTabs"]">
                 <button type="button" class="play-tab @(_mobileSheet is null ? "play-tab--on" : null)" aria-pressed="@(_mobileSheet is null ? "true" : "false")"
                         @onclick="() => _mobileSheet = null">
                     <MudIcon Icon="@Icons.Material.Outlined.Theaters" Size="Size.Small" /><span>@Loc["NavPlayTabScene"]</span>
                 </button>
                 <button type="button" class="play-tab @(_mobileSheet == MobileSheet.Room ? "play-tab--on" : null)" aria-pressed="@(_mobileSheet == MobileSheet.Room ? "true" : "false")"
-                        @onclick="() => _mobileSheet = MobileSheet.Room">
+                        @onclick="() => OpenMobileSheetAsync(MobileSheet.Room)">
                     <MudIcon Icon="@Icons.Material.Outlined.MeetingRoom" Size="Size.Small" /><span>@Loc["NavPlayTabRoom"]</span>
                 </button>
                 <button type="button" class="play-tab @(_mobileSheet == MobileSheet.Channels ? "play-tab--on" : null)" aria-pressed="@(_mobileSheet == MobileSheet.Channels ? "true" : "false")"
-                        @onclick="() => _mobileSheet = MobileSheet.Channels">
+                        @onclick="() => OpenMobileSheetAsync(MobileSheet.Channels)">
                     <span class="play-tab-hash" aria-hidden="true">#</span><span>@Loc["NavPlayChannels"]</span>
                     @Badge(Comms.Channels.Where(c => c.Joined).Sum(c => c.Unread))
                 </button>
                 <button type="button" class="play-tab @(_mobileSheet == MobileSheet.Pages ? "play-tab--on" : null)" aria-pressed="@(_mobileSheet == MobileSheet.Pages ? "true" : "false")"
-                        @onclick="() => _mobileSheet = MobileSheet.Pages">
+                        @onclick="() => OpenMobileSheetAsync(MobileSheet.Pages)">
                     <MudIcon Icon="@Icons.Material.Outlined.ChatBubbleOutline" Size="Size.Small" /><span>@Loc["NavPlayPages"]</span>
                     @Badge(Comms.Conversations.Sum(c => c.Unread))
                 </button>
@@ -165,7 +163,7 @@ else
                     {
                         <div class="play-sheet-body">
                             <PlaySidebar CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected" Room="@Room.Info"
-                                         Current="@null" OnOpenScene="OpenSceneFromSheet" OnOpen="OpenCommFromSheet" />
+                                         Current="@SidebarCurrent" OnOpenScene="OpenSceneFromSheet" OnOpen="OpenCommFromSheet" />
                         </div>
                     }
                 </MudFocusTrap>
@@ -200,6 +198,9 @@ else
     /// <summary>Story in a scene unless the player chose Terminal; outside a scene there is only the terminal.</summary>
     private PlayView View => InScene ? _chosenView ?? PlayView.Story : PlayView.Terminal;
 
+    /// <summary>The sidebar's current row: the In scene row only while the Story is shown.</summary>
+    private string? SidebarCurrent => View == PlayView.Story ? null : string.Empty;
+
     private string CardTitle =>
         Room.Info?.Scene?.Title is { Length: > 0 } title ? title
         : Room.Info?.Name is { Length: > 0 } room ? room
@@ -207,7 +208,7 @@ else
 
     private RenderFragment<bool> SidebarNav => collapsed =>
         @<PlaySidebar Collapsed="collapsed" CharacterName="@PlayTerminal.ConnectedPlayerName" Connected="@PlayTerminal.IsConnected"
-                      Room="@Room.Info" Current="@null" OnOpenScene="OpenScene" OnOpen="OpenComm" />;
+                      Room="@Room.Info" Current="@SidebarCurrent" OnOpenScene="OpenScene" OnOpen="OpenComm" />;
 
     private RenderFragment<string> SheetDetails => name =>
         @<CascadingValue Value="@(new ProfilePageContext(name, false))">
@@ -398,17 +399,21 @@ else
         _sheetOccupant = null;
     }
 
-    /// <summary>The sheet's Page: the composer in Story, the terminal's own line otherwise.</summary>
+    /// <summary>
+    /// The sheet's Page: the composer in Story, the terminal's own line otherwise. The room row's Page action
+    /// (<c>page #312=</c>) is used when it has one: a dbref survives a rename and a name with spaces.
+    /// </summary>
     private async Task StartPageAsync(string name)
     {
+        var action = _sheetOccupant?.Actions.FirstOrDefault(a => string.Equals(a.Label, "Page", StringComparison.OrdinalIgnoreCase))?.Cmd;
         CloseSheet();
         if (View == PlayView.Story && _composer is not null)
         {
-            await _composer.StartPageAsync(name);
+            await _composer.StartPageAsync(name, action);
         }
-        else
+        else if (_playTerm is not null)
         {
-            _playTerm?.SetInput($"page {name}=");
+            await _playTerm.SetInputAsync(action ?? $"page {name}=");
         }
     }
 
@@ -436,12 +441,30 @@ else
         OpenComm(key);
     }
 
-    private void CloseMobileSheet() => _mobileSheet = null;
+    /// <summary>Opens a phone sheet, remembering what opened it so closing can hand focus back.</summary>
+    private async Task OpenMobileSheetAsync(MobileSheet sheet)
+    {
+        await RunFocusAsync("sharpmushLayout.rememberFocus");
+        _mobileSheet = sheet;
+    }
+
+    private async Task CloseMobileSheet()
+    {
+        _mobileSheet = null;
+        await RunFocusAsync("sharpmushLayout.restoreFocus");
+    }
 
     // No preventDefault: it is decided at render time and would swallow the next key.
-    private void OnMobileSheetKey(KeyboardEventArgs e)
+    private async Task OnMobileSheetKey(KeyboardEventArgs e)
     {
-        if (e.Key == "Escape") _mobileSheet = null;
+        if (e.Key == "Escape") await CloseMobileSheet();
+    }
+
+    private async Task RunFocusAsync(string identifier)
+    {
+        try { await JS.InvokeVoidAsync(identifier); }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
     }
 
     public void Dispose()

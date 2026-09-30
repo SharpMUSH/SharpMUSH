@@ -155,10 +155,12 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.Find("button.scene-card-focus").Click();
 		await Assert.That(cut.FindAll(".test-pagebar .kit-pagebar").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".kit-banner").Count).IsEqualTo(0);
-		await Assert.That(cut.FindAll(".play-aside").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".play-aside").HasAttribute("hidden")).IsTrue()
+			.Because("the aside stays mounted, so its exit keys keep working in focus mode");
+		await Assert.That(cut.FindComponents<ExitsCard>().Count).IsEqualTo(1);
 		await Assert.That(cut.FindComponents<GlobalTerminal>().Count).IsEqualTo(1);
 		cut.Find("button.scene-card-focus").Click();
-		await Assert.That(cut.FindAll(".play-aside").Count).IsEqualTo(1);
+		await Assert.That(cut.Find(".play-aside").HasAttribute("hidden")).IsFalse();
 	}
 
 	[Test]
@@ -204,6 +206,31 @@ public class PlayPageD1Tests : TrackingBunitContext
 		cut.Find(".play-sheet .exit button.exit-go").Click();
 		await _play.Received(1).SendAsync("goto #1210");
 		await Assert.That(cut.FindAll(".play-sheet").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task TheInSceneRow_IsCurrentOnlyWhileTheStoryIsShown()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".test-pagebar .play-side-scene .kit-row"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".test-pagebar .play-side-scene .kit-row").GetAttribute("aria-current")).IsEqualTo("page");
+		cut.FindAll(".scene-card-radio")[1].Click();
+		await Assert.That(cut.Find(".test-pagebar .play-side-scene .kit-row").GetAttribute("aria-current")).IsNull();
+	}
+
+	[Test]
+	public async Task PageFromTheSheet_UsesTheRowsPageAction_WhichNamesTheDbref()
+	{
+		var cut = RenderPlay();
+		_store.Set(OobEntryParser.RoomInfoPackage, """{"v":2,"name":"Lower Docks","scene":{"id":"42","title":"Salt Market"}}""");
+		_store.Set(OobEntryParser.RoomContentsPackage,
+			"""{"v":2,"who":[{"dbref":"#312","type":"player","name":"Tomas Reyes","cmd":"look #312","profile":true,"actions":[{"label":"Page","cmd":"page #312="}]}]}""");
+		cut.WaitForAssertion(() => cut.Find(".play-aside .kit-portrait"), TimeSpan.FromSeconds(5));
+		cut.Find(".play-aside .kit-portrait").Click();
+		cut.WaitForAssertion(() => cut.Find(".sheet"), TimeSpan.FromSeconds(5));
+		cut.FindAll(".sheet-actions > *")[1].Click();
+		await Assert.That(cut.Find(".composer textarea").GetAttribute("value")).IsEqualTo("page #312=");
 	}
 
 	[Test]

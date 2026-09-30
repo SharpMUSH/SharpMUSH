@@ -24,7 +24,7 @@ else
     {
     @if (_listed.Count == 0)
     {
-        <div class="here-empty">@Loc["NavConnectToSeeWhoIsHere"]</div>
+        <div class="here-empty">@(Occupants.Count > 0 ? Loc["NavPlayNobodyElseHere"] : Loc["NavConnectToSeeWhoIsHere"])</div>
     }
     else
     {
