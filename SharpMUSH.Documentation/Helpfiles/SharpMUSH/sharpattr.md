@@ -202,7 +202,7 @@ There are no width or height attributes: every portal surface that shows a pictu
 
 For players the portal's gallery will keep `IMAGE`, `IMAGE\`BANNER` and `IMAGE\`ALT` in step with its icon and banner entries, so a hand-set value on a player will be overwritten by the next gallery change. Rooms, things and exits are only ever set by hand.
 
-The default flags apply when an attribute is created. An `IMAGE` a game set before these entries existed keeps the flags it was created with -- clear it and set it again to pick up `visual` and `public`.
+The default flags apply when an attribute is created. An `IMAGE` a game set before these entries existed keeps the flags it was created with -- clear it and set it again to pick up `visual` and `public`. The bundled room-contents and profile-handler packages publish an image attribute only while it is `visual`, so clearing that flag (`@set me/IMAGE=!visual`) keeps a picture off the portal.
 
 **See Also:**
 - [ATTRIBUTE FLAGS2]

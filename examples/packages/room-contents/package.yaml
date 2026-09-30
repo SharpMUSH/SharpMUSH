@@ -84,14 +84,30 @@ objects:
       # room.contents for every viewer, silently.
       FN`FOCALOK: |-
         cand(eq(words(%0),2),isnum(first(%0)),isnum(last(%0)),gte(first(%0),0),lte(first(%0),1),gte(last(%0),0),lte(last(%0),1))
-      # The image reference of an object (%0) as {"url","alt","focal"} from the
-      # seeded IMAGE / IMAGE`ALT / IMAGE`FOCAL attributes (help IMAGE), or the
-      # word null when IMAGE is unset — null in a json_mod() patch REMOVES the
+      # One image attribute (%1) of an object (%0), or blank unless the
+      # attribute is visual. The handler is a wizard, so get() alone would
+      # read an attribute its owner made private: the seeded visual flag is a
+      # default for a NEW attribute, and an IMAGE set before the seed existed,
+      # or with visual cleared since, keeps its owner's choice. get(), never
+      # u(): a URL is text the owner typed.
+      FN`PICTURE: |-
+        if(hasflag(%0/%1,visual),get(%0/%1))
+      # The image reference of an object (%0) for the URL %1, as
+      # {"url","alt","focal"} from IMAGE`ALT / IMAGE`FOCAL (help IMAGE), or the
+      # word null when %1 is blank — null in a json_mod() patch REMOVES the
       # key, which is how a row without a picture carries no image key at all.
       # alt falls back to the object's name; focal is present only when set
-      # and well-formed. Everything here is get(): a URL is text the owner typed.
+      # and well-formed.
+      FN`IMAGEREF: |-
+        if(%1,json_mod(json(object,url,json(string,%1),alt,json(string,strfirstof(u(me/FN`PICTURE,%0,IMAGE`ALT),name(%0)))),patch,json(object,focal,if(u(me/FN`FOCALOK,setr(f,u(me/FN`PICTURE,%0,IMAGE`FOCAL))),json_array(iter(%q<f>,json(number,%i0))),null))),null)
+      # An object's (%0) thumbnail: IMAGE. Occupant rows and exit destination
+      # previews use it.
       FN`IMAGE: |-
-        if(setr(u,get(%0/IMAGE)),json_mod(json(object,url,json(string,%q<u>),alt,json(string,strfirstof(get(%0/IMAGE`ALT),name(%0)))),patch,json(object,focal,if(u(me/FN`FOCALOK,setr(f,get(%0/IMAGE`FOCAL))),json_array(iter(%q<f>,json(number,%i0))),null))),null)
+        u(me/FN`IMAGEREF,%0,u(me/FN`PICTURE,%0,IMAGE))
+      # A room's (%0) banner: IMAGE`BANNER, the wide art, falling back to
+      # IMAGE (help IMAGE). room.info uses it — it is the Play page's banner.
+      FN`BANNER: |-
+        u(me/FN`IMAGEREF,%0,strfirstof(u(me/FN`PICTURE,%0,IMAGE`BANNER),u(me/FN`PICTURE,%0,IMAGE)))
       # The description text of a room (%0), evaluated as the room itself — the
       # same executor `look` gives it — so its own softcode runs with its own
       # permissions and not the handler's. It is evaluated ONCE per event, with
@@ -154,12 +170,16 @@ objects:
       FN`EXITDEST: |-
         if(isdbref(setr(d,loc(%0))),u(me/FN`DEST,%q<d>))
       # The room's own info (%0 = the room) without the per-viewer scene block.
+      # Its image is the banner (FN`BANNER), not the thumbnail.
       FN`INFOBASE: |-
-        json_mod(json(object,v,json(number,2),dbref,json(string,num(%0)),objid,json(string,objid(%0)),name,json(string,name(%0)),desc,json(object,format,json(string,text),text,json(string,u(me/FN`DESC,%0)))),patch,json(object,area,if(setr(a,u(me/FN`AREA,%0)),json(string,%q<a>),null),image,u(me/FN`IMAGE,%0)))
+        json_mod(json(object,v,json(number,2),dbref,json(string,num(%0)),objid,json(string,objid(%0)),name,json(string,name(%0)),desc,json(object,format,json(string,text),text,json(string,u(me/FN`DESC,%0)))),patch,json(object,area,if(setr(a,u(me/FN`AREA,%0)),json(string,%q<a>),null),image,u(me/FN`BANNER,%0)))
       # Once per event (%0 = the room): every base row into a q-register the
       # per-viewer helpers read — w<n> for occupant #n, x<n> and d<n> for exit
       # #n and its destination preview, info<n> for room #n — and mover, the
-      # enactor's bare dbref when the enactor is in the room. u() shares the
+      # enactor's bare dbref when the enactor is in the room AND is a viewer
+      # (FN`VIEWER). A causer that is in the room but receives nothing — a
+      # thing that moved itself in — would otherwise match no viewer, and
+      # room.info would go to nobody. u() shares the
       # caller's registers on this engine, so a register set here is visible in
       # every helper the handler calls afterwards. Occupants are gathered with
       # the handler itself as the viewer (it is a wizard, so nothing is hidden
@@ -167,7 +187,7 @@ objects:
       # loc() answer OBJIDS (#12:1790741308439) here, so every key goes through
       # num(): a register name cannot hold the colon.
       FN`PREPARE: |-
-        null(setq(mover,if(strmatch(num(loc(%#)),num(%0)),num(%#))),iter(filter(me/FN`WHOVIS,lcon(%0),,,%!),setq(w[rest(num(%i0),#)],u(me/FN`WHOBASE,%i0))),iter(if(hastype(%0,room),lexits(%0)),setq(x[rest(num(%i0),#)],u(me/FN`EXITBASE,%i0),d[rest(num(%i0),#)],u(me/FN`EXITDEST,%i0))),setq(info[rest(num(%0),#)],u(me/FN`INFOBASE,%0)))
+        null(setq(mover,if(cand(strmatch(num(loc(%#)),num(%0)),u(me/FN`VIEWER,%#)),num(%#))),iter(filter(me/FN`WHOVIS,lcon(%0),,,%!),setq(w[rest(num(%i0),#)],u(me/FN`WHOBASE,%i0))),iter(if(hastype(%0,room),lexits(%0)),setq(x[rest(num(%i0),#)],u(me/FN`EXITBASE,%i0),d[rest(num(%i0),#)],u(me/FN`EXITDEST,%i0))),setq(info[rest(num(%0),#)],u(me/FN`INFOBASE,%0)))
 
       # ── Rows (per viewer) ────────────────────────────────────────────────
       # Each reads its base row from the register FN`PREPARE filled, or builds
@@ -213,11 +233,12 @@ objects:
       # player's own room.contents and room.exits and oob() them to that player
       # alone — a dark exit, a lock hint and "you" differ per viewer. room.info
       # goes out on move-in and connect: to the enactor alone when the enactor
-      # is in the room (the player who walked in or connected — the usual
-      # case, and the one whose %N the description was evaluated for), and to
-      # everyone otherwise (%# is the object that CAUSED the event: the wizard
-      # who @tel'd someone from elsewhere, or God for a system move, and the
-      # mover is then unknown but in lcon(%0)). A viewer already holding the
+      # is a viewer in the room (the player who walked in or connected — the
+      # usual case, and the one whose %N the description was evaluated for),
+      # and to everyone otherwise (%# is the object that CAUSED the event: the
+      # wizard who @tel'd someone from elsewhere, God for a system move, or a
+      # thing that moved itself in — the mover is then unknown or receives
+      # nothing). A viewer already holding the
       # same room.info can ignore it. null() swallows the oob() counts, which
       # would otherwise be thought at the handler object.
       ROOM`CONTENTS: |-

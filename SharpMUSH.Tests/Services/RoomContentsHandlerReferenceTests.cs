@@ -571,6 +571,86 @@ public class RoomContentsHandlerReferenceTests
 	}
 
 	/// <summary>
+	/// room.info is the Play page's banner, so it takes the wide art: IMAGE`BANNER, falling back to
+	/// IMAGE (help IMAGE). alt and focal still come from IMAGE`ALT / IMAGE`FOCAL. The occupant and
+	/// destination rows keep IMAGE — a thumbnail is not a banner.
+	/// </summary>
+	[Test]
+	public async ValueTask V2Info_UsesTheBanner_FallingBackToImage()
+	{
+		var token = Guid.NewGuid().ToString("N")[..8];
+		Fixture? f = null;
+		try
+		{
+			await InstallPackage();
+			f = await BuildFixture(token);
+
+			await Cmd($"&IMAGE`BANNER {f.Room}=/assets/rooms/{token}-wide.jpg");
+			using var both = await Payload("FN`PAYLOAD`INFO", f.Room, f.Mortal, "connect");
+			var image = both.RootElement.GetProperty("image");
+			await Assert.That(image.GetProperty("url").GetString()).IsEqualTo($"/assets/rooms/{token}-wide.jpg");
+			await Assert.That(image.GetProperty("alt").GetString()).IsEqualTo("The quay at dusk");
+
+			// A room with a banner and no IMAGE still gets a banner.
+			await Cmd($"&IMAGE`BANNER {f.Dest}=/assets/rooms/{token}-dest-wide.jpg");
+			using var bannerOnly = await Payload("FN`PAYLOAD`INFO", f.Dest, f.Mortal, "connect");
+			await Assert.That(bannerOnly.RootElement.GetProperty("image").GetProperty("url").GetString())
+				.IsEqualTo($"/assets/rooms/{token}-dest-wide.jpg");
+
+			// The exit's destination preview is a thumbnail: IMAGE only, so the banner-only room has none.
+			using var exits = await Payload("FN`PAYLOAD`EXITS", f.Room, f.Wizard);
+			var north = RowsByDbref(exits, "exits")[f.North];
+			await Assert.That(north.GetProperty("dest").TryGetProperty("image", out _)).IsFalse();
+		}
+		finally
+		{
+			await RestorePackage();
+			if (f is not null) await TearDownFixture(f);
+		}
+	}
+
+	/// <summary>
+	/// The handler is a wizard, so get() would read an image attribute its owner has made private.
+	/// Only a visual one is published: the seeded flags are defaults for a new attribute, and an IMAGE
+	/// set before they existed, or with visual cleared, keeps its owner's choice.
+	/// </summary>
+	[Test]
+	public async ValueTask V2_PrivateImageAttributes_AreNotPublished()
+	{
+		var token = Guid.NewGuid().ToString("N")[..8];
+		Fixture? f = null;
+		try
+		{
+			await InstallPackage();
+			f = await BuildFixture(token);
+
+			await Cmd($"@set {f.Mortal}/IMAGE=!visual");
+			await Cmd($"@set {f.Room}/IMAGE=!visual");
+			await Cmd($"&IMAGE`BANNER {f.Dest}=/assets/rooms/{token}-private.jpg");
+			await Cmd($"@set {f.Dest}/IMAGE`BANNER=!visual");
+
+			using var contents = await Payload("FN`PAYLOAD`CONTENTS", f.Room, f.Wizard);
+			var rows = RowsByDbref(contents, "who");
+			await Assert.That(rows[f.Mortal].TryGetProperty("image", out _)).IsFalse()
+				.Because("a private IMAGE must not reach anyone's room.contents");
+			await Assert.That(rows[f.Bundle].GetProperty("image").GetProperty("url").GetString())
+				.IsEqualTo($"/assets/obj/{token}.jpg");
+
+			using var info = await Payload("FN`PAYLOAD`INFO", f.Room, f.Mortal, "connect");
+			await Assert.That(info.RootElement.TryGetProperty("image", out _)).IsFalse();
+
+			using var dest = await Payload("FN`PAYLOAD`INFO", f.Dest, f.Mortal, "connect");
+			await Assert.That(dest.RootElement.TryGetProperty("image", out _)).IsFalse()
+				.Because("a private IMAGE`BANNER must not be published either");
+		}
+		finally
+		{
+			await RestorePackage();
+			if (f is not null) await TearDownFixture(f);
+		}
+	}
+
+	/// <summary>
 	/// The scene block against the Scene plugin's real answers, stood in for by @function globals
 	/// (the plugin is not loaded in this harness): scenewhere() answers the constant
 	/// <c>#-1 NOT FOUND</c> for a room with no scene, and scene(#-1 NOT FOUND,id) answers the same
@@ -719,6 +799,14 @@ public class RoomContentsHandlerReferenceTests
 				new DBRef(int.Parse(f.Mortal[1..]), null), f.Room, "move-in");
 			var targeted = (await Eval("get(#9/LAST_PAYLOAD)")).Split(' ').Order().ToArray();
 			await Assert.That(targeted).IsEquivalentTo(["00", "000"]);
+
+			// The causer is in the room but is not a viewer — a thing that moved itself in. Nobody
+			// would match it, so room.info goes to everyone rather than to no one.
+			await Cmd("&LAST_PAYLOAD #9=unset");
+			await EventService.TriggerEventAsync(WebAppFactoryArg.CommandParser, SharpEvents.RoomContents,
+				new DBRef(int.Parse(f.Bundle[1..]), null), f.Room, "move-in");
+			await Assert.That(await Eval("get(#9/LAST_PAYLOAD)")).IsEqualTo("000 000")
+				.Because("a causer who is not a connected viewer must not swallow room.info for everyone");
 		}
 		finally
 		{
