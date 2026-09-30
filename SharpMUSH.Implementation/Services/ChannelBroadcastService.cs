@@ -55,12 +55,14 @@ public class ChannelBroadcastService(
 		{
 			var recipients = await DeliverAsync(notification, sender, line, message, cancellationToken);
 
+			// The event follows delivery, before the recall buffer: once the members have the terminal line,
+			// a buffer write that fails (or is cancelled) must not keep the comm feed from getting it too.
+			await RaiseChannelMessageEventAsync(notification, sender, line, recipients, sentAt);
+
 			if (!line.SkipBuffer)
 			{
 				await BufferAsync(notification, sender, message, sentAt, cancellationToken);
 			}
-
-			await RaiseChannelMessageEventAsync(notification, sender, line, recipients, sentAt);
 		}
 	}
 
