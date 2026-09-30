@@ -69,6 +69,46 @@ public class GlassBannerTests : BunitContext
 	}
 
 	[Test]
+	public async Task RestoreThenMinimise_KeepsAButtonToFocus()
+	{
+		// The subtree swaps on Minimised; the counterpart button must exist after the swap so focus can move to it.
+		var minimised = true;
+		var cut = Render<GlassBanner>(p => p.Add(x => x.Title, "x").Add(x => x.ImageUrl, "/r.jpg").Add(x => x.Minimised, minimised)
+			.Add(x => x.MinimisedChanged, v => minimised = v));
+		cut.Find(".kit-banner-strip button").Click();
+		cut.Render(p => p.Add(x => x.Title, "x").Add(x => x.ImageUrl, "/r.jpg").Add(x => x.Minimised, minimised));
+		await Assert.That(cut.Find("button.kit-banner-minimise")).IsNotNull();
+		await Assert.That(JSInterop.Invocations.Any(i => i.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase))).IsTrue()
+			.Because("after the swap the banner moves focus to the counterpart button");
+	}
+
+	[Test]
+	public async Task HeadingLevel_RendersTheTitleAsAHeading_InBothStates()
+	{
+		var cut = Render<GlassBanner>(p => p.Add(x => x.Title, "Harbour Ward").Add(x => x.ImageUrl, "/r.jpg").Add(x => x.HeadingLevel, 1));
+		await Assert.That(cut.Find("h1.kit-banner-title").TextContent).IsEqualTo("Harbour Ward");
+		var strip = Render<GlassBanner>(p => p.Add(x => x.Title, "Harbour Ward").Add(x => x.ImageUrl, "/r.jpg").Add(x => x.HeadingLevel, 1).Add(x => x.Minimised, true));
+		await Assert.That(strip.Find("h1.kit-banner-strip-title").TextContent).IsEqualTo("Harbour Ward");
+	}
+
+	[Test]
+	public async Task OpenContent_IsKeyboardScrollable()
+	{
+		var cut = Render<GlassBanner>(p => p.Add(x => x.Title, "x").Add(x => x.ImageUrl, "/r.jpg").Add(x => x.Open, true)
+			.Add(x => x.OpenContent, b => b.AddMarkupContent(0, "desc")));
+		await Assert.That(cut.Find(".kit-banner-open").GetAttribute("tabindex")).IsEqualTo("0");
+	}
+
+	[Test]
+	public async Task CapsuleButton_Expanded_RendersAriaExpanded_AndAnchorsNeverCarryAriaPressed()
+	{
+		var btn = Render<CapsuleButton>(p => p.Add(x => x.Icon, MudBlazor.Icons.Material.Outlined.ExpandLess).Add(x => x.AriaLabel, "Minimise").Add(x => x.Expanded, true));
+		await Assert.That(btn.Find("button.kit-capsule").GetAttribute("aria-expanded")).IsEqualTo("true");
+		var link = Render<CapsuleButton>(p => p.Add(x => x.Href, "/x").Add(x => x.Pressed, true).AddChildContent("x"));
+		await Assert.That(link.Find("a.kit-capsule").HasAttribute("aria-pressed")).IsFalse();
+	}
+
+	[Test]
 	public async Task NotMinimisable_HasNoMinimiseButton()
 	{
 		var cut = Render<GlassBanner>(p => p.Add(x => x.Title, "x").Add(x => x.ImageUrl, "/r.jpg").Add(x => x.Minimisable, false));

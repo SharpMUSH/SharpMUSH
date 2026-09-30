@@ -36,5 +36,6 @@ public class KitPreviewTests : BunitContext
 		var cut = Render<KitPreview>();
 		await Assert.That(cut.Find("h1").TextContent).IsEqualTo("Design kit");
 		await Assert.That(cut.Find(".kit-page-desc").TextContent).Contains("boards");
+		await Assert.That(cut.FindAll("[role=radiogroup]").Select(g => g.GetAttribute("aria-label"))).Contains("Message type");
 	}
 }

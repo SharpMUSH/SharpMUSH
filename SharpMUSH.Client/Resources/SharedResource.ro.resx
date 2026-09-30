@@ -4572,4 +4572,7 @@
   <data name="NavBannerRestore" xml:space="preserve">
     <value>Afișează bannerul</value>
   </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# necitit} few {# necitite} other {# de necitite}}</value>
+  </data>
 </root>

@@ -39,6 +39,30 @@ public class DesignTokensTests
 	}
 
 	[Test]
+	public async Task CoarsePointerRuleCoversTheKitControls()
+	{
+		var shell = File.ReadAllText(Path.Join(ClientSource.CssRoot, "shell.css"));
+		// The documentation block near the top of shell.css quotes the query in prose; the rule itself starts a line.
+		var rule = Regex.Match(shell, @"^@media \(pointer: coarse\)", RegexOptions.Multiline);
+		await Assert.That(rule.Success).IsTrue();
+		var start = rule.Index;
+		var open = shell.IndexOf('{', start);
+		var depth = 0;
+		var end = open;
+		for (; end < shell.Length; end++)
+		{
+			if (shell[end] == '{') depth++;
+			else if (shell[end] == '}' && --depth == 0) break;
+		}
+		var block = shell[start..end];
+		foreach (var selector in new[] { ".kit-row", ".kit-capsule", ".kit-chip", ".kit-capsule--icon", ".kit-portrait", ".kit-tile" })
+		{
+			await Assert.That(block).Contains(selector)
+				.Because("README §9: targets are 44px under a coarse pointer, and only the shell may say so");
+		}
+	}
+
+	[Test]
 	public async Task OldTextFaintValueIsGone()
 	{
 		await Assert.That(Tokens()).DoesNotContain("#5f6870");

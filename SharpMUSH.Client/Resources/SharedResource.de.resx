@@ -4572,4 +4572,7 @@
   <data name="NavBannerRestore" xml:space="preserve">
     <value>Banner anzeigen</value>
   </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# ungelesen} other {# ungelesen}}</value>
+  </data>
 </root>

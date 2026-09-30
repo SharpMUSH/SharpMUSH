@@ -4572,4 +4572,7 @@
   <data name="NavBannerRestore" xml:space="preserve">
     <value>Показване на банера</value>
   </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# непрочетено} other {# непрочетени}}</value>
+  </data>
 </root>

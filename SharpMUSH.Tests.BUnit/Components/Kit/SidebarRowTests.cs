@@ -1,10 +1,16 @@
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Client.Components.Kit;
 
 namespace SharpMUSH.Tests.BUnit.Components.Kit;
 
 public class SidebarRowTests : BunitContext
 {
+	public SidebarRowTests()
+	{
+		Services.AddLocalization();
+	}
+
 	[Test]
 	public async Task WithHref_RendersAnAnchor_AndCurrentSetsAriaCurrent()
 	{
@@ -82,5 +88,14 @@ public class SidebarRowTests : BunitContext
 	{
 		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Public").Add(x => x.Lead, SidebarRow.SidebarLead.Channel).Add(x => x.Unread, 2).Add(x => x.Collapsed, true));
 		await Assert.That(cut.Find(".kit-row-unread--badge").TextContent).IsEqualTo("2");
+		await Assert.That(cut.Find(".kit-row").GetAttribute("aria-label")).IsEqualTo("Public, 2 unread")
+			.Because("aria-label replaces the accessible name, so the badge must be folded into it");
+	}
+
+	[Test]
+	public async Task Unread_PillCarriesAnAccessibleCount()
+	{
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Public").Add(x => x.Unread, 3));
+		await Assert.That(cut.Find(".kit-row-unread").GetAttribute("aria-label")).IsEqualTo("3 unread");
 	}
 }

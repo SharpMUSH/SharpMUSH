@@ -1,6 +1,6 @@
 .kit-preview {
 	display: grid;
-	grid-template-columns: 232px minmax(0, 1fr) 196px;
+	grid-template-columns: var(--side-w) minmax(0, 1fr) var(--aside-w);
 	grid-template-areas:
 		"head head head"
 		"side main aside";
@@ -99,7 +99,7 @@
 
 @container page (max-width: 64rem) {
 	.kit-preview {
-		grid-template-columns: 232px minmax(0, 1fr);
+		grid-template-columns: var(--side-w) minmax(0, 1fr);
 		grid-template-areas:
 			"head head"
 			"side main"

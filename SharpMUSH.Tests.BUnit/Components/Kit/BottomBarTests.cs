@@ -36,6 +36,14 @@ public class BottomBarTests : BunitContext
 	}
 
 	[Test]
+	public async Task TypeChips_WithoutAriaLabel_OmitsTheAttribute()
+	{
+		var items = new List<(string, string)> { ("pose", "Pose") };
+		var cut = Render<TypeChips>(p => p.Add(x => x.Items, items).Add(x => x.Selected, "pose"));
+		await Assert.That(cut.Find("[role=radiogroup]").HasAttribute("aria-label")).IsFalse();
+	}
+
+	[Test]
 	public async Task TypeChips_AreRealButtons()
 	{
 		var items = new List<(string, string)> { ("pose", "Pose") };

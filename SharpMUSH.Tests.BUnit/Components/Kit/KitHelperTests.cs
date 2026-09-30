@@ -14,6 +14,11 @@ public class KitHelperTests
 	[Arguments("", false)]
 	[Arguments(null, false)]
 	[Arguments("  /x.jpg", true)]
+	[Arguments("/\\evil.com/x.png", false)]
+	[Arguments("/\t\\evil.com/x.png", false)]
+	[Arguments("https://cdn.example/a\\b.jpg", false)]
+	[Arguments("/a\nb.jpg", false)]
+	[Arguments("HTTPS://cdn.example/x.jpg", true)]
 	public async Task ImageUrlPolicy_AcceptsOnlySiteRelativeOrHttps(string? url, bool expected)
 		=> await Assert.That(ImageUrlPolicy.IsRenderable(url)).IsEqualTo(expected);
 
@@ -37,6 +42,10 @@ public class KitHelperTests
 	[Arguments("  dace   kellan  ", "DK")]
 	[Arguments("", "?")]
 	[Arguments(null, "?")]
+	[Arguments("\U0001F98A Fox", "\U0001F98AF")]
+	[Arguments("Tomas\u00A0Reyes", "TR")]
+	[Arguments("张伟", "张")]
+	[Arguments("élodie varn", "ÉV")]
 	public async Task Initials_TakeTheFirstTwoWords(string? name, string expected)
 		=> await Assert.That(Initials.From(name)).IsEqualTo(expected);
 }

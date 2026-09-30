@@ -5,9 +5,9 @@
    the *-open masks and scrim and grows to OpenHeight. Minimised collapses to a 48px strip that keeps
    the image, the title and one fact, with a restore button.
 
-   The minimise and restore buttons are native <button>s rather than CapsuleButton because they
-   expose aria-expanded, which a capsule has no reason to carry. .kit-capsule-native duplicates the
-   icon-capsule look; keep it in step with CapsuleButton.razor.css. *@
+   Minimise and restore swap the whole subtree, which would drop keyboard focus on <body>; after
+   the swap the banner moves focus to the counterpart button. HeadingLevel renders the title as
+   <hN> so a page hero can be the page's heading. *@
 @if (Minimised)
 {
     <div class="kit-banner-strip">
@@ -18,15 +18,13 @@
         <div class="kit-banner-strip-blur" aria-hidden="true"></div>
         <div class="kit-banner-strip-scrim" aria-hidden="true"></div>
         <div class="kit-banner-strip-row">
-            <span class="kit-banner-strip-title">@Title</span>
+            @Heading("kit-banner-strip-title")
             @if (Fact is not null)
             {
                 <span class="kit-banner-strip-fact">@Fact</span>
             }
             <span class="kit-banner-spacer"></span>
-            <button type="button" class="kit-capsule-native kit-banner-restore" aria-label="@Loc["NavBannerRestore"]" aria-expanded="false" @onclick="@(() => MinimisedChanged.InvokeAsync(false))">
-                <MudIcon Icon="@Icons.Material.Outlined.ExpandMore" Size="Size.Small" />
-            </button>
+            <CapsuleButton @ref="_restoreButton" Icon="@Icons.Material.Outlined.ExpandMore" AriaLabel="@Loc["NavBannerRestore"]" Expanded="false" Class="kit-banner-restore" OnClick="@(() => SetMinimisedAsync(false))" />
         </div>
     </div>
 }
@@ -43,14 +41,14 @@ else
         <div class="kit-banner-scrim" aria-hidden="true"></div>
         @if (Open && OpenContent is not null)
         {
-            <div class="kit-banner-open">@OpenContent</div>
+            <div class="kit-banner-open" tabindex="0">@OpenContent</div>
         }
         <div class="kit-banner-text kit-banner-text--@TitleSize">
             @if (Kicker is not null)
             {
                 <div class="kit-banner-kicker">@Kicker</div>
             }
-            <div class="kit-banner-title">@Title</div>
+            @Heading("kit-banner-title")
             @if (Secondary is not null)
             {
                 <div class="kit-banner-secondary">@Secondary</div>
@@ -64,9 +62,7 @@ else
             @Actions
             @if (Minimisable)
             {
-                <button type="button" class="kit-capsule-native kit-banner-minimise" aria-label="@Loc["NavBannerMinimise"]" aria-expanded="true" @onclick="@(() => MinimisedChanged.InvokeAsync(true))">
-                    <MudIcon Icon="@Icons.Material.Outlined.ExpandLess" Size="Size.Small" />
-                </button>
+                <CapsuleButton @ref="_minimiseButton" Icon="@Icons.Material.Outlined.ExpandLess" AriaLabel="@Loc["NavBannerMinimise"]" Expanded="true" Class="kit-banner-minimise" OnClick="@(() => SetMinimisedAsync(true))" />
             }
         </div>
     </div>
@@ -105,9 +101,48 @@ else
     /// <summary>"play" (17px), "hero" (26px) or "character" (28px).</summary>
     [Parameter] public string TitleSize { get; set; } = "play";
 
+    /// <summary>1–6 renders the title as that heading; null renders a div (the caller has its own heading).</summary>
+    [Parameter] public int? HeadingLevel { get; set; }
+
+    private CapsuleButton? _minimiseButton;
+    private CapsuleButton? _restoreButton;
+    private bool _focusMinimise;
+    private bool _focusRestore;
+
     private bool HasImage => ImageUrlPolicy.IsRenderable(ImageUrl);
 
     private string FocalStyle => Focal is { } f
         ? $"object-position:{Math.Round(f.X * 100)}% {Math.Round(f.Y * 100)}%;"
         : string.Empty;
+
+    private string HeadingTag => HeadingLevel is >= 1 and <= 6 ? $"h{HeadingLevel}" : "div";
+
+    private RenderFragment Heading(string cssClass) => builder =>
+    {
+        builder.OpenElement(0, HeadingTag);
+        builder.AddAttribute(1, "class", cssClass);
+        builder.AddContent(2, Title);
+        builder.CloseElement();
+    };
+
+    private async Task SetMinimisedAsync(bool minimised)
+    {
+        _focusRestore = minimised;
+        _focusMinimise = !minimised;
+        await MinimisedChanged.InvokeAsync(minimised);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusRestore && Minimised && _restoreButton is not null)
+        {
+            _focusRestore = false;
+            await _restoreButton.FocusAsync();
+        }
+        else if (_focusMinimise && !Minimised && _minimiseButton is not null)
+        {
+            _focusMinimise = false;
+            await _minimiseButton.FocusAsync();
+        }
+    }
 }

@@ -65,6 +65,16 @@ public class MentionTests : BunitContext
 	}
 
 	[Test]
+	public async Task OocBand_OocMarkerIsReadable_OnlyTheInitialsAreDecorative()
+	{
+		var cut = Render<OocBand>(p => p.Add(x => x.Name, "Wren").AddChildContent("x"));
+		await Assert.That(cut.Find(".kit-ooc-tile").HasAttribute("aria-hidden")).IsFalse()
+			.Because("hiding the whole tile leaves a screen reader nothing that says this is OOC");
+		await Assert.That(cut.Find(".kit-ooc-initials").GetAttribute("aria-hidden")).IsEqualTo("true");
+		await Assert.That(cut.Find(".kit-ooc-tag").HasAttribute("aria-hidden")).IsFalse();
+	}
+
+	[Test]
 	public async Task OocBand_WithoutColourOrTime_OmitsBoth()
 	{
 		var cut = Render<OocBand>(p => p.Add(x => x.Name, "Wren").AddChildContent("x"));

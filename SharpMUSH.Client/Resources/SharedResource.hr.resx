@@ -4572,4 +4572,7 @@
   <data name="NavBannerRestore" xml:space="preserve">
     <value>Prikaži natpis</value>
   </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# nepročitana} few {# nepročitane} other {# nepročitanih}}</value>
+  </data>
 </root>

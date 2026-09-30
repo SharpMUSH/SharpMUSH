@@ -12,5 +12,5 @@
     [Parameter, EditorRequired] public IReadOnlyList<(string Key, string Label)> Items { get; set; } = [];
     [Parameter] public string Selected { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> SelectedChanged { get; set; }
-    [Parameter] public string AriaLabel { get; set; } = string.Empty;
+    [Parameter] public string? AriaLabel { get; set; }
 }

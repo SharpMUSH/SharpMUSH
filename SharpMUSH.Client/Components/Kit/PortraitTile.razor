@@ -13,6 +13,8 @@ else
 @code {
     [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
     [Parameter] public string? ImageUrl { get; set; }
+
+    /// <summary>Real alt text from softcode (IMAGE`ALT). Null leaves the image decorative: the label already names the person.</summary>
     [Parameter] public string? Alt { get; set; }
 
     /// <summary>The label under the image; defaults to <see cref="Name"/>.</summary>
@@ -36,7 +38,7 @@ else
     {
         @if (ImageUrlPolicy.IsRenderable(ImageUrl))
         {
-            <img class="kit-portrait-img" src="@ImageUrl!.Trim()" alt="@(Alt ?? Name)" style="@($"height:{Height}px;")" loading="lazy" />
+            <img class="kit-portrait-img" src="@ImageUrl!.Trim()" alt="@(Alt ?? string.Empty)" style="@($"height:{Height}px;")" loading="lazy" />
         }
         else
         {

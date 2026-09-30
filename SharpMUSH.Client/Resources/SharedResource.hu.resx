@@ -4572,4 +4572,7 @@
   <data name="NavBannerRestore" xml:space="preserve">
     <value>Fejléckép megjelenítése</value>
   </data>
+  <data name="NavUnreadCount" xml:space="preserve">
+    <value>{count, plural, one {# olvasatlan} other {# olvasatlan}}</value>
+  </data>
 </root>

@@ -15,6 +15,14 @@ public class TileTests : BunitContext
 	}
 
 	[Test]
+	public async Task PortraitTile_WithoutAlt_LeavesTheImageDecorative()
+	{
+		var cut = Render<PortraitTile>(p => p.Add(x => x.Name, "Tomas Reyes").Add(x => x.ImageUrl, "/t.jpg"));
+		await Assert.That(cut.Find("img.kit-portrait-img").GetAttribute("alt")).IsEqualTo("")
+			.Because("the label already names the person; alt=Name would announce the name twice");
+	}
+
+	[Test]
 	public async Task PortraitTile_WithoutImage_ShowsInitialsAtTheSameHeight()
 	{
 		var cut = Render<PortraitTile>(p => p.Add(x => x.Name, "Dace Kellan"));

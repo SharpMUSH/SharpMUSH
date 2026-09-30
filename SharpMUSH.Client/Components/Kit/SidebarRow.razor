@@ -1,16 +1,18 @@
+@using SharpMUSH.Client.Resources
+@inject IStringLocalizer<SharedResource> Loc
 @* D1 §4.2 sidebar row: one shape, the lead changes with the content (30px image, 28px avatar or a
    stacked pair, 30px icon tile, or a mono #). An <a> when it navigates, a <button> when it acts.
    The current item carries aria-current="page"; a collapsed strip keeps only the lead and moves
    the label to title/aria-label. *@
 @if (Href is not null)
 {
-    <a class="@RowClass" href="@Href" aria-current="@(IsCurrent ? "page" : null)" title="@(Collapsed ? Label : null)" aria-label="@(Collapsed ? Label : null)">
+    <a class="@RowClass" href="@Href" aria-current="@(IsCurrent ? "page" : null)" title="@(Collapsed ? Label : null)" aria-label="@CollapsedName">
         @Inner
     </a>
 }
 else
 {
-    <button type="button" class="@RowClass" aria-current="@(IsCurrent ? "page" : null)" title="@(Collapsed ? Label : null)" aria-label="@(Collapsed ? Label : null)" @onclick="OnClick">
+    <button type="button" class="@RowClass" aria-current="@(IsCurrent ? "page" : null)" title="@(Collapsed ? Label : null)" aria-label="@CollapsedName" @onclick="OnClick">
         @Inner
     </button>
 }
@@ -49,6 +51,11 @@ else
         Dim ? "kit-row--dim" : null,
         Collapsed ? "kit-row--collapsed" : null,
     }.Where(c => c is not null));
+
+    private string UnreadText => Loc.Plural("NavUnreadCount", "count", Unread);
+
+    /// <summary>Collapsed rows replace their accessible name with aria-label, so the unread count is folded in.</summary>
+    private string? CollapsedName => !Collapsed ? null : Unread > 0 ? $"{Label}, {UnreadText}" : Label;
 
     private int Hue => NameHue.Of(Name ?? Label);
     private string FallbackStyle => $"background:hsl({Hue} 30% 24%);color:hsl({Hue} 45% 82%);";
@@ -96,7 +103,7 @@ else
             <span class="kit-row-label">@Label</span>
             @if (Unread > 0)
             {
-                <span class="kit-row-unread">@Unread</span>
+                <span class="kit-row-unread" aria-label="@UnreadText">@Unread</span>
             }
             else if (Count is not null)
             {
@@ -105,7 +112,7 @@ else
         }
         else if (Unread > 0)
         {
-            <span class="kit-row-unread kit-row-unread--badge">@Unread</span>
+            <span class="kit-row-unread kit-row-unread--badge" aria-hidden="true">@Unread</span>
         }
     };
 }

@@ -80,7 +80,10 @@ def main() -> int:
         with open(path, "w", encoding="utf-8", newline="\n") as f:
             f.write(text)
         print(f"{path}: +{block.count('<data ')}")
-    return 0
+
+    # The same gates CI runs, so a bad plural or placeholder is caught at authoring time.
+    import subprocess
+    return subprocess.call([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "validate_resx.py")])
 
 
 if __name__ == "__main__":

@@ -38,7 +38,7 @@
     </div>
 
     <div class="kit-preview-main">
-        <GlassBanner Title="Harbour Ward" Kicker="Theme" ImageUrl="/assets/kit-samples/harbour-row.jpg" Alt="Lamplit street" Minimised="@_minimised" MinimisedChanged="@(v => _minimised = v)" Fact="minimised · 48 px" TitleSize="hero">
+        <GlassBanner Title="Harbour Ward" Kicker="Theme" ImageUrl="/assets/kit-samples/harbour-row.jpg" Alt="Lamplit street" Minimised="@_minimised" MinimisedChanged="@(v => _minimised = v)" Fact="minimised · 48 px" TitleSize="hero" HeadingLevel="2">
             <Secondary>Title, kicker and one line of meta</Secondary>
             <Back><CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki">Back</CapsuleButton></Back>
             <Actions>
@@ -57,7 +57,7 @@
 
         <KitCard Title="Salt Market at Dusk" Sub="Scene · logged to the scene archive">
             <Controls>
-                <TypeChips Items="@_views" Selected="@_view" SelectedChanged="@(v => _view = v)" AriaLabel="View" />
+                <TypeChips Items="@_views" Selected="@_view" SelectedChanged="@(v => _view = v)" AriaLabel="@Loc["AdmKitViewLabel"]" />
             </Controls>
             <ChildContent>
                 <div class="kit-preview-prose">
@@ -70,9 +70,9 @@
         </KitCard>
 
         <BottomBar>
-            <TypeChips Items="@_types" Selected="@_type" SelectedChanged="@(v => _type = v)" AriaLabel="Message type" />
+            <TypeChips Items="@_types" Selected="@_type" SelectedChanged="@(v => _type = v)" AriaLabel="@Loc["AdmKitTypeLabel"]" />
             <div class="kit-preview-compose">
-                <input class="kit-preview-input" type="text" placeholder="Write your pose…" aria-label="Message" />
+                <input class="kit-preview-input" type="text" placeholder="@Loc["AdmKitComposerPlaceholder"]" aria-label="@Loc["AdmKitMessageLabel"]" />
                 <CapsuleButton Primary="true">Send</CapsuleButton>
             </div>
         </BottomBar>

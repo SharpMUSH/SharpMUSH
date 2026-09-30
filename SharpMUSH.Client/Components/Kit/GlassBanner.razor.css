@@ -105,6 +105,8 @@
 }
 
 .kit-banner-title {
+	margin: 0;
+	font-family: inherit;
 	font-weight: 700;
 	font-size: 17px;
 	line-height: 1.25;
@@ -138,34 +140,6 @@
 	right: 10px;
 	display: flex;
 	gap: 6px;
-}
-
-/* the same look as CapsuleButton's icon-only capsule; native so it can carry aria-expanded */
-.kit-capsule-native {
-	height: 36px;
-	width: 36px;
-	padding: 0;
-	border: 0;
-	border-radius: 18px;
-	background: var(--glass-bg);
-	backdrop-filter: var(--glass-filter);
-	-webkit-backdrop-filter: var(--glass-filter);
-	box-shadow: var(--glass-edge);
-	color: var(--text);
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	cursor: pointer;
-	transition: filter var(--motion-pop);
-}
-
-.kit-capsule-native:hover {
-	filter: brightness(1.15);
-}
-
-.kit-capsule-native:focus-visible {
-	outline: 2px solid var(--accent);
-	outline-offset: 2px;
 }
 
 .kit-banner-strip {
@@ -214,6 +188,8 @@
 }
 
 .kit-banner-strip-title {
+	margin: 0;
+	font-family: inherit;
 	font-size: 14px;
 	font-weight: 700;
 }
