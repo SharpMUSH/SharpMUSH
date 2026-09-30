@@ -3917,4 +3917,7 @@
   <data name="AdmConfigToolWiki" xml:space="preserve">
     <value>Wiki &amp; media</value>
   </data>
+  <data name="AdmConfigInThisSection" xml:space="preserve">
+    <value>In this section</value>
+  </data>
 </root>

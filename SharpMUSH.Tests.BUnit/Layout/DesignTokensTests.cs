@@ -18,6 +18,7 @@ public class DesignTokensTests
 		"--blur-mask-soft", "--blur-mask-mid", "--blur-mask-deep",
 		"--blur-mask-soft-open", "--blur-mask-mid-open", "--blur-mask-deep-open",
 		"--mention-offset", "--mention-alpha",
+		"--switch-knob-off",
 	];
 
 	[Test]

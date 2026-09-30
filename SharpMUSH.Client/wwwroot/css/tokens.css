@@ -116,6 +116,7 @@
 	--warn: #ffb454;                /* "changed" badge, unsaved bar icon; 10.09:1 on --surface */
 	--warn-tint: rgba(255, 180, 84, 0.14);
 	--unread-alert: #ff8a8a;        /* rail mail badge fill (text uses --bg) */
+	--switch-knob-off: #c3cad0;     /* an off switch's knob carries the 3:1 non-text contrast on its --border track */
 
 	/* ── OOC band (Play story) ── */
 	--ooc-band-bg: #2e2748;         /* --text on it: 11.89:1 */

@@ -14,31 +14,24 @@
 
 <PageTitle>@CategoryTitle - @Loc["Configuration"]</PageTitle>
 
-<div class="config-section-page">
-    <div class="config-section-header">
-        <div>
-            <div class="config-kicker">@Loc["ResConfigSectionKicker"]</div>
-            <h1 class="config-title">@CategoryTitle</h1>
-            @if (!string.IsNullOrWhiteSpace(_categoryMetadata?.Description))
-            {
-                <p class="config-desc">@_categoryMetadata!.Description</p>
-            }
-        </div>
-        @if (!_loading && _categoryMetadata != null)
-        {
-            <MudTooltip Text="@Loc["ResetToDefaults"]">
-                <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
-                               Color="Color.Default"
-                               OnClick="ResetToDefaults" />
-            </MudTooltip>
-        }
-    </div>
+@* D1 §6.4 section page (boards 28–29): a plain header with Reset to defaults, a section label
+   above a card of rows per group, the kit controls on the right of each row, the unsaved bottom bar
+   (only while something changed), and an "In this section" table of contents in the aside. *@
+<div class="config-section">
+    <div class="config-section-main">
+        <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@CategoryTitle" Description="@_categoryMetadata?.Description">
+            <Actions>
+                @if (!_loading && _categoryMetadata != null)
+                {
+                    <CapsuleButton Icon="@Icons.Material.Outlined.RestartAlt" OnClick="ResetToDefaults">@Loc["ResetToDefaults"]</CapsuleButton>
+                }
+            </Actions>
+        </PlainPageHeader>
 
-    <div class="config-section-content">
-        @if (CustomPageCategories.Contains(Category))
-        {
-            <MudCard>
-                <MudCardContent>
+        <div class="config-section-content">
+            @if (CustomPageCategories.Contains(Category))
+            {
+                <KitCard>
                     <MudAlert Severity="Severity.Error">
                         <strong>@Loc["RoutingError"]</strong> @string.Format(Loc["RoutingErrorDescription"], Category)
                         <br/>
@@ -46,94 +39,95 @@
                         <br/>
                         @Loc["ResRoutingErrorHint"]
                     </MudAlert>
-                </MudCardContent>
-            </MudCard>
-        }
-        else if (_loading)
-        {
-            <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
-        }
-        else if (_categoryMetadata == null)
-        {
-            <MudCard>
-                <MudCardContent>
+                </KitCard>
+            }
+            else if (_loading)
+            {
+                <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+            }
+            else if (_categoryMetadata == null)
+            {
+                <KitCard>
                     <MudAlert Severity="Severity.Warning">
                         @string.Format(Loc["CategoryNotFound"], Category)
                     </MudAlert>
-                </MudCardContent>
-            </MudCard>
-        }
-        else if (!_categoryProperties.Any())
-        {
-            <MudCard>
-                <MudCardContent>
+                </KitCard>
+            }
+            else if (!_categoryProperties.Any())
+            {
+                <KitCard>
                     <MudAlert Severity="Severity.Info">
                         @string.Format(Loc["NoPropertiesFound"], CategoryTitle)
                         <br />
                         <small>@Loc["NoPropertiesHint"]</small>
                     </MudAlert>
-                </MudCardContent>
-            </MudCard>
-        }
-        else if (!_categoryMetadata.Groups.Any())
-        {
-            <div class="config-field-card">
-                @foreach (var prop in _categoryProperties.Values.OrderBy(p => p.Name))
-                {
-                    @RenderFieldRow(prop)
-                }
-            </div>
-        }
-        else
-        {
-            @foreach (var group in _categoryMetadata.Groups.OrderBy(g => g.Order))
+                </KitCard>
+            }
+            else if (!_categoryMetadata.Groups.Any())
             {
-                var groupProperties = GetPropertiesInGroup(group.Name).OrderBy(p => p.Order).ToList();
-                if (groupProperties.Count == 0) { continue; }
-
-                <div class="config-group-title">@group.DisplayName</div>
-                <div class="config-field-card mb-5">
-                    @foreach (var prop in groupProperties)
-                    {
-                        @RenderFieldRow(prop)
-                    }
+                <div class="cfg-group">
+                    <KitCard>
+                        @foreach (var prop in _categoryProperties.Values.OrderBy(p => p.Name))
+                        {
+                            @RenderFieldRow(prop)
+                        }
+                    </KitCard>
                 </div>
             }
+            else
+            {
+                @foreach (var group in _categoryMetadata.Groups.OrderBy(g => g.Order))
+                {
+                    var groupProperties = GetPropertiesInGroup(group.Name).OrderBy(p => p.Order).ToList();
+                    if (groupProperties.Count == 0) { continue; }
+
+                    <div class="cfg-group" id="@GroupAnchor(group.Name)">
+                        <SectionLabel>@group.DisplayName</SectionLabel>
+                        <KitCard>
+                            @foreach (var prop in groupProperties)
+                            {
+                                @RenderFieldRow(prop)
+                            }
+                        </KitCard>
+                    </div>
+                }
+            }
+        </div>
+
+        @if (_hasChanges)
+        {
+            <BottomBar Class="cfg-unsaved">
+                <div class="cfg-unsaved-row">
+                    <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" Class="cfg-unsaved-icon" />
+                    <span class="cfg-unsaved-text"><strong>@Loc["UnsavedChanges"]</strong> @Loc["InThisSection"]</span>
+                    <span class="cfg-count">@Loc.Plural("ResChangeCount", "count", _changedCount)</span>
+                    <span class="cfg-unsaved-spacer"></span>
+                    <CapsuleButton Class="cfg-reset" OnClick="ResetChanges" Disabled="_saving">@Loc["ResetChanges"]</CapsuleButton>
+                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Save" OnClick="SaveChanges" Disabled="_saving">
+                        @(_saving ? Loc["Saving"] : Loc["SaveConfiguration"])
+                    </CapsuleButton>
+                </div>
+            </BottomBar>
         }
     </div>
 
-    @if (_hasChanges)
+    @if (!_loading && _categoryMetadata is { Groups.Count: > 0 })
     {
-        <MudPaper Elevation="4" Class="save-bar">
-            <div class="save-bar-content">
-                <div class="save-bar-info">
-                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="mr-2" />
-                    <MudText Typo="Typo.body1">
-                        <strong>@Loc["UnsavedChanges"]</strong> @Loc["InThisSection"]
-                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="ml-2">
-                            @Loc.Plural("ResChangeCount", "count", _changedCount)
-                        </MudChip>
-                    </MudText>
+        <aside class="config-section-aside">
+            <KitCard Aside="true" Title="@Loc["AdmConfigInThisSection"]">
+                <div class="cfg-toc-list">
+                    @foreach (var group in _categoryMetadata.Groups.OrderBy(g => g.Order))
+                    {
+                        var count = GetPropertiesInGroup(group.Name).Count();
+                        if (count == 0) { continue; }
+                        <a class="cfg-toc" href="@("#" + GroupAnchor(group.Name))">
+                            <span class="cfg-toc-name">@group.DisplayName</span>
+                            <span class="cfg-toc-count">@count</span>
+                        </a>
+                    }
                 </div>
-                <div class="save-bar-actions">
-                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetChanges" Disabled="_saving">
-                        @Loc["ResetChanges"]
-                    </MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="SaveChanges"
-                               StartIcon="@Icons.Material.Filled.Save" Disabled="_saving">
-                        @if (_saving)
-                        {
-                            <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
-                            @Loc["Saving"]
-                        }
-                        else
-                        {
-                            @Loc["SaveConfiguration"]
-                        }
-                    </MudButton>
-                </div>
-            </div>
-        </MudPaper>
+            </KitCard>
+        </aside>
     }
 </div>
 
@@ -263,44 +257,45 @@
         var isChanged = IsPropertyChanged(prop.Path);
         var stacked = prop.Component is "stringlist" or "dictionary";
 
-        <div class="config-field-row @(stacked ? "config-field-row--stacked" : "config-field-row--inline")">
-            <div class="config-field-label">
-                <div class="config-field-name">
-                    @displayName
+        <div class="cfg-row @(stacked ? "cfg-row--stacked" : "cfg-row--inline")">
+            <div class="cfg-row-text">
+                <div class="cfg-row-name">
+                    <span>@displayName</span>
+                    <code class="cfg-row-key">@prop.Path</code>
                     @if (isChanged)
                     {
-                        <span class="config-changed" title="@Loc["ResDefaultValueTooltip", prop.DefaultValue ?? string.Empty]">@Loc["ResChangedBadge"]</span>
+                        <span class="cfg-row-changed" title="@Loc["ResDefaultValueTooltip", prop.DefaultValue ?? string.Empty]">@Loc["ResChangedBadge"]</span>
                     }
                 </div>
                 @if (!string.IsNullOrEmpty(prop.Description))
                 {
-                    <div class="config-field-help">@prop.Description</div>
+                    <div class="cfg-row-help">@prop.Description</div>
                 }
-                <code class="config-field-key">@prop.Path</code>
                 @if (hasError)
                 {
-                    <div class="config-field-error">@errorText</div>
+                    <div class="cfg-row-error">@errorText</div>
                 }
             </div>
-            <div class="config-field-control @(stacked ? "config-field-control--full" : "")">
+            <div class="cfg-row-control @(stacked ? "cfg-row-control--full" : "")">
                 @if (prop.Component == "switch")
                 {
                     var on = GetBoolValue(prop);
-                    <button type="button" class="config-toggle @(on ? "config-toggle--on" : "")"
+                    <button type="button" role="switch" aria-checked="@(on ? "true" : "false")" aria-label="@displayName"
+                            class="cfg-switch @(on ? "cfg-switch--on" : "")"
                             disabled="@prop.ReadOnly"
                             @onclick="@(() => UpdateValue(prop, !on))">
-                        <span class="config-toggle-knob"></span>
+                        <span class="cfg-switch-knob"></span>
                     </button>
                 }
                 else if (prop.Component == "select" && prop.Options is { Count: > 0 })
                 {
                     var current = GetStringValue(prop);
-                    <div class="config-pills">
+                    <div class="cfg-pills" role="group" aria-label="@displayName">
                         @foreach (var opt in prop.Options)
                         {
                             var option = opt;
                             var selected = current == option.Key;
-                            <button type="button" class="config-pill @(selected ? "config-pill--on" : "")"
+                            <button type="button" class="cfg-pill @(selected ? "cfg-pill--on" : "")" aria-pressed="@(selected ? "true" : "false")"
                                     @onclick="@(() => UpdateValue(prop, option.Key))">
                                 @option.Value
                             </button>
@@ -309,7 +304,12 @@
                 }
                 else if (prop.Component == "numeric")
                 {
-                    <input class="config-input" type="number" inputmode="numeric"
+                    var range = RangeText(prop);
+                    @if (range is not null)
+                    {
+                        <span class="cfg-range">@range</span>
+                    }
+                    <input class="cfg-num" type="number" inputmode="numeric" aria-label="@displayName"
                            value="@GetNumericString(prop)"
                            min="@(GetIntMin(prop)?.ToString())"
                            max="@(GetIntMax(prop)?.ToString())"
@@ -319,22 +319,22 @@
                 else if (prop.Component == "stringlist")
                 {
                     var items = GetStringListValue(prop);
-                    <div class="config-chip-row">
+                    <div class="cfg-chips">
                         @if (items.Count == 0)
                         {
-                            <span class="config-empty">@Loc["NoItems"]</span>
+                            <span class="cfg-empty">@Loc["NoItems"]</span>
                         }
                         @for (var i = 0; i < items.Count; i++)
                         {
                             var index = i;
-                            <span class="config-chip @(isChanged ? "config-chip--changed" : "")">
+                            <span class="cfg-chip @(isChanged ? "cfg-chip--changed" : "")">
                                 @items[index]
-                                <button type="button" class="config-chip-x" title="@Loc["LayRemove"]"
+                                <button type="button" class="cfg-chip-x" aria-label="@($"{Loc["LayRemove"]} {items[index]}")"
                                         @onclick="@(() => RemoveListItemAt(prop, index))">×</button>
                             </span>
                         }
                     </div>
-                    <input class="config-input" placeholder="@Loc["AddItem"]"
+                    <input class="cfg-text" placeholder="@Loc["AddItem"]" aria-label="@Loc["AddItem"]"
                            value="@GetListDraft(prop)"
                            @oninput="@(e => SetListDraft(prop, e.Value?.ToString() ?? string.Empty))"
                            @onkeydown="@(e => OnListDraftKeyDown(prop, e))" />
@@ -342,55 +342,57 @@
                 else if (prop.Component == "dictionary")
                 {
                     var entries = GetDictDraft(prop);
-                    <div class="config-dict">
+                    <div class="cfg-dict">
                         @if (entries.Count == 0)
                         {
-                            <span class="config-empty">@Loc["NoEntries"]</span>
+                            <span class="cfg-empty">@Loc["NoEntries"]</span>
                         }
                         @for (var e = 0; e < entries.Count; e++)
                         {
                             var entryIndex = e;
                             var entry = entries[entryIndex];
-                            <div class="config-dict-entry" @key="@($"{prop.Path}-entry-{entryIndex}")">
-                                <div class="config-dict-entry-head">
-                                    <input class="config-input" placeholder="@Loc["Key"]"
+                            <div class="cfg-dict-entry" @key="@($"{prop.Path}-entry-{entryIndex}")">
+                                <div class="cfg-dict-head">
+                                    <input class="cfg-text" placeholder="@Loc["Key"]" aria-label="@Loc["Key"]"
                                            value="@entry.Key"
                                            @onchange="@(ev => UpdateDictKey(prop, entryIndex, ev.Value?.ToString() ?? string.Empty))" />
-                                    <button type="button" class="config-icon-btn config-icon-btn--danger"
-                                            title="@Loc["RemoveEntry"]"
+                                    <button type="button" class="cfg-icon-btn cfg-icon-btn--danger"
+                                            aria-label="@Loc["RemoveEntry"]" title="@Loc["RemoveEntry"]"
                                             @onclick="@(() => RemoveDictEntry(prop, entryIndex))">
-                                        <MudIcon Icon="@Icons.Material.Filled.DeleteOutline" Style="font-size:1rem;" />
+                                        <MudIcon Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" />
                                     </button>
                                 </div>
-                                <div class="config-chip-row">
+                                <div class="cfg-chips">
                                     @if (entry.Values.Count == 0)
                                     {
-                                        <span class="config-empty">@Loc["NoItems"]</span>
+                                        <span class="cfg-empty">@Loc["NoItems"]</span>
                                     }
                                     @for (var v = 0; v < entry.Values.Count; v++)
                                     {
                                         var valueIndex = v;
-                                        <span class="config-chip">
+                                        <span class="cfg-chip">
                                             @entry.Values[valueIndex]
-                                            <button type="button" class="config-chip-x" title="@Loc["LayRemove"]"
+                                            <button type="button" class="cfg-chip-x" aria-label="@($"{Loc["LayRemove"]} {entry.Values[valueIndex]}")"
                                                     @onclick="@(() => RemoveDictValueItem(prop, entryIndex, valueIndex))">×</button>
                                         </span>
                                     }
                                 </div>
-                                <input class="config-input" placeholder="@Loc["AddValue"]"
+                                <input class="cfg-text" placeholder="@Loc["AddValue"]" aria-label="@Loc["AddValue"]"
                                        value="@entry.ValueDraft"
                                        @oninput="@(ev => entry.ValueDraft = ev.Value?.ToString() ?? string.Empty)"
                                        @onkeydown="@(ev => OnDictValueDraftKeyDown(prop, entryIndex, ev))" />
                             </div>
                         }
-                        <button type="button" class="config-add-btn" @onclick="@(() => AddDictEntry(prop))">
-                            <MudIcon Icon="@Icons.Material.Filled.Add" Style="font-size:0.9375rem;" /> @Loc["AddEntry"]
+                        <button type="button" class="cfg-add" @onclick="@(() => AddDictEntry(prop))">
+                            <MudIcon Icon="@Icons.Material.Outlined.Add" Size="Size.Small" /> @Loc["AddEntry"]
                         </button>
                     </div>
                 }
                 else
                 {
-                    <input class="config-input" type="text"
+                    var single = IsSingleChar(prop);
+                    <input class="cfg-text @(single ? "cfg-text--char" : "")" type="text" aria-label="@displayName"
+                           maxlength="@(single ? 1 : null)"
                            value="@GetStringValue(prop)"
                            readonly="@prop.ReadOnly"
                            @onchange="@(e => UpdateValue(prop, e.Value?.ToString()))" />
@@ -398,6 +400,26 @@
             </div>
         </div>
     };
+
+    /// <summary>The schema has no single-character flag; README §6.4 keys the narrow input on this pattern.</summary>
+    private static bool IsSingleChar(PropertyMetadata prop) => prop.Pattern == "^.$";
+
+    /// <summary>"min–max", or the one bound the schema gives; null when it gives neither.</summary>
+    private string? RangeText(PropertyMetadata prop)
+    {
+        var min = GetIntMin(prop);
+        var max = GetIntMax(prop);
+        return (min, max) switch
+        {
+            (null, null) => null,
+            ({ } lo, { } hi) => $"{lo}–{hi}",
+            ({ } lo, null) => $"≥{lo}",
+            (null, { } hi) => $"≤{hi}",
+        };
+    }
+
+    private static string GroupAnchor(string groupName) =>
+        "group-" + System.Text.RegularExpressions.Regex.Replace(groupName.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
 
     private string GetNumericString(PropertyMetadata prop) =>
         ConfigValues.NumericString(_currentValues, prop);
