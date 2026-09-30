@@ -307,10 +307,6 @@
     <value>Error al restablecer: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Error al restablecer ({0}).</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>No se pudo cargar el estado del handler.</value>
     <comment>MT</comment>

@@ -307,10 +307,6 @@
     <value>重置失败：{0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>重置失败（{0}）。</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>无法加载处理器状态。</value>
     <comment>MT</comment>

@@ -2608,9 +2608,6 @@
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Reset complete: {0} attributes written.</value>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Reset failed ({0}).</value>
-  </data>
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>Reset failed: {0}</value>
   </data>

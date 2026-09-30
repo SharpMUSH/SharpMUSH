@@ -1599,9 +1599,6 @@
   <data name="AdmProfilesResetComplete" xml:space="preserve">
     <value>Réinitialisation terminée : {0} attributs écrits.</value>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>La réinitialisation a échoué ({0}).</value>
-  </data>
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>La réinitialisation a échoué : {0}</value>
   </data>

@@ -67,14 +67,14 @@ public class ProfileHandlerAdminApiTests(ServerWebAppFactory factory)
 
 	private async Task<HandlerStatus> StatusAsync(HttpClient http)
 	{
-		var response = await http.GetAsync("api/admin/profile-handler");
+		using var response = await http.GetAsync("api/admin/profile-handler");
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		return (await response.Content.ReadFromJsonAsync<HandlerStatus>())!;
 	}
 
 	private async Task<ResetResult> ResetAsync(HttpClient http)
 	{
-		var response = await http.PostAsync("api/admin/profile-handler/reset", null);
+		using var response = await http.PostAsync("api/admin/profile-handler/reset", null);
 		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		return (await response.Content.ReadFromJsonAsync<ResetResult>())!;
 	}
@@ -82,7 +82,8 @@ public class ProfileHandlerAdminApiTests(ServerWebAppFactory factory)
 	[Test]
 	public async Task Status_ReportsTheConfiguredHandlerAndEveryProfileHandlerAttribute()
 	{
-		var status = await StatusAsync(CreateClient());
+		using var http = CreateClient();
+		var status = await StatusAsync(http);
 
 		await Assert.That(status.Configured).IsTrue();
 		await Assert.That(status.HandlerExists).IsTrue();
@@ -101,7 +102,7 @@ public class ProfileHandlerAdminApiTests(ServerWebAppFactory factory)
 	[Test, NotInParallel(nameof(ProfileHandlerAdminApiTests))]
 	public async Task Reset_OfAnAlreadyResetHandler_WritesNothing()
 	{
-		var http = CreateClient();
+		using var http = CreateClient();
 		await ResetAsync(http);
 
 		var again = await ResetAsync(http);
@@ -113,7 +114,7 @@ public class ProfileHandlerAdminApiTests(ServerWebAppFactory factory)
 	[Test, NotInParallel(nameof(ProfileHandlerAdminApiTests))]
 	public async Task Reset_RestoresADeletedAttribute()
 	{
-		var http = CreateClient();
+		using var http = CreateClient();
 		await ResetAsync(http); // from a clean handler, so the count below is this test's damage alone
 		await Mediator.Send(new ClearAttributeCommand(Handler, Damaged.Split('`')));
 
@@ -132,7 +133,7 @@ public class ProfileHandlerAdminApiTests(ServerWebAppFactory factory)
 	[Test, NotInParallel(nameof(ProfileHandlerAdminApiTests))]
 	public async Task Reset_OverwritesALocallyEditedAttribute()
 	{
-		var http = CreateClient();
+		using var http = CreateClient();
 		await ResetAsync(http); // from a clean handler, so the count below is this test's damage alone
 		var marker = TestIsolationHelpers.GenerateUniqueName("PHEdit");
 		var owner = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
@@ -144,5 +145,35 @@ public class ProfileHandlerAdminApiTests(ServerWebAppFactory factory)
 		await Assert.That(result.Failed).IsEmpty();
 		await Assert.That(result.Written).IsEqualTo(1);
 		await Assert.That(await ReadAsync(Damaged)).IsEqualTo(BundledHttpHooks.Attribute(Damaged));
+	}
+
+	/// <summary>
+	/// A game that installed a newer profile-handler than this build ships keeps it: bootstrap leaves a
+	/// same-or-newer install alone, so writing this build's values would downgrade the softcode while the
+	/// registry still records the newer version and its baselines.
+	/// </summary>
+	[Test, NotInParallel(nameof(ProfileHandlerAdminApiTests))]
+	public async Task Reset_WhenANewerVersionIsInstalled_RefusesAndWritesNothing()
+	{
+		using var http = CreateClient();
+		await ResetAsync(http); // from a clean handler
+		var registry = factory.Services.GetRequiredService<IPackageRegistryService>();
+		var installed = (await registry.GetInstalledPackageAsync("profile-handler")).Expect<InstalledPackageRecord>();
+		var marker = TestIsolationHelpers.GenerateUniqueName("PHNewer");
+		var owner = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
+		await Mediator.Send(new SetAttributeCommand(Handler, Damaged.Split('`'), MarkupText.Plain(marker), owner));
+		await registry.UpsertInstalledPackageAsync(installed with { Version = "999.0.0" });
+		try
+		{
+			using var response = await http.PostAsync("api/admin/profile-handler/reset", null);
+
+			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Conflict);
+			await Assert.That(await ReadAsync(Damaged)).IsEqualTo(marker);
+		}
+		finally
+		{
+			await registry.UpsertInstalledPackageAsync(installed);
+			await ResetAsync(http);
+		}
 	}
 }

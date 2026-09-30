@@ -307,10 +307,6 @@
     <value>Zurücksetzen fehlgeschlagen: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Zurücksetzen fehlgeschlagen ({0}).</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Handler-Status konnte nicht geladen werden.</value>
     <comment>MT</comment>

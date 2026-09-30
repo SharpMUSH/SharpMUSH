@@ -307,10 +307,6 @@
     <value>Tilbakestillingen mislyktes: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Tilbakestillingen mislyktes ({0}).</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Kunne ikke laste statusen til håndtereren.</value>
     <comment>MT</comment>

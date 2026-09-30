@@ -307,10 +307,6 @@
     <value>Нулирането е неуспешно: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Нулирането е неуспешно ({0}).</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Състоянието на обработчика не можа да бъде заредено.</value>
     <comment>MT</comment>

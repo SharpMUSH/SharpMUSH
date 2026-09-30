@@ -307,10 +307,6 @@
     <value>Återställningen misslyckades: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Återställningen misslyckades ({0}).</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Kunde inte läsa in hanterarens status.</value>
     <comment>MT</comment>

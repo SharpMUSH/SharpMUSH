@@ -30,7 +30,8 @@ namespace SharpMUSH.Server.Controllers;
 /// writes the planned value over every attribute whose live value still differs. The planned value
 /// is the package value with its <c>{{$ref}}</c> placeholders resolved, and it equals the recorded
 /// baseline, so afterwards the package manager sees those attributes as unmodified. Attributes on
-/// the handler that the package does not manage are left alone.</para>
+/// the handler that the package does not manage are left alone. Reset refuses (409) unless the
+/// installed version is the one this build ships, since only then do those baselines match.</para>
 ///
 /// Routes:
 ///   GET  api/admin/profile-handler        — handler dbref/name + presence of each package attribute
@@ -42,6 +43,7 @@ public class ProfileHandlerAdminController(
 	IMediator mediator,
 	IPackageManifestService manifests,
 	IPackageInstallService installer,
+	IPackageRegistryService registry,
 	IBundledPackageBootstrap bundled,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<ProfileHandlerAdminController> logger) : ControllerBase
@@ -106,13 +108,33 @@ public class ProfileHandlerAdminController(
 				$"{PackageId} could not be installed; check that http-handler is installed."));
 		}
 
+		// Bootstrap leaves a same-or-newer install alone and reports a failed upgrade's old record as
+		// installed, so "installed" alone does not mean this build's version is. Writing this build's
+		// values over any other version would change the softcode behind the registry's back: its
+		// recorded version and baselines would describe code that is no longer there.
+		var manifest = BundledManifest();
+		if (await registry.GetInstalledPackageAsync(PackageId) is not InstalledPackageRecord installed
+				|| !PackageVersion.TryParse(installed.Version, out var installedVersion)
+				|| installedVersion.CompareTo(manifest.Version) != 0)
+		{
+			return StatusCode(StatusCodes.Status409Conflict, new ApiErrorDto(
+				$"Reset restores {PackageId} v{manifest.Version}, which is not the installed version; " +
+				"upgrade or reinstall it through the package manager."));
+		}
+
 		if (await PackageManagerAsync(ct) is not { } packageManager)
 		{
 			return StatusCode(StatusCodes.Status500InternalServerError,
 				new ApiErrorDto("The package manager player does not exist."));
 		}
 
-		var plan = await installer.PlanAsync(BundledManifest(), cancellationToken: ct);
+		var plan = await installer.PlanAsync(manifest, cancellationToken: ct);
+		if (plan.IsBlocked)
+		{
+			return StatusCode(StatusCodes.Status409Conflict, new ApiErrorDto(
+				$"{PackageId} is blocked by:{string.Join(", ", plan.DependencyIssues.Select(i => i.PackageId))}."));
+		}
+
 		var written = 0;
 		var failed = new List<string>();
 		foreach (var change in plan.Attributes)

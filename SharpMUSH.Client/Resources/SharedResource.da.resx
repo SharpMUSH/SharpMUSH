@@ -307,10 +307,6 @@
     <value>Nulstilling mislykkedes: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Nulstilling mislykkedes ({0}).</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Kunne ikke indlæse handlerens status.</value>
     <comment>MT</comment>

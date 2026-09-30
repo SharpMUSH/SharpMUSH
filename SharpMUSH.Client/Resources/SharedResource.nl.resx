@@ -307,10 +307,6 @@
     <value>Herstel mislukt: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Herstel mislukt ({0}).</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Handlerstatus kon niet worden geladen.</value>
     <comment>MT</comment>

@@ -307,10 +307,6 @@
     <value>Resetarea a eșuat: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Resetarea a eșuat ({0}).</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Starea handler-ului nu a putut fi încărcată.</value>
     <comment>MT</comment>

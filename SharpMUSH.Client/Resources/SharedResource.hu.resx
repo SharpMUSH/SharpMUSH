@@ -307,10 +307,6 @@
     <value>A visszaállítás sikertelen: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>A visszaállítás sikertelen ({0}).</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>A kezelő állapota nem tölthető be.</value>
     <comment>MT</comment>

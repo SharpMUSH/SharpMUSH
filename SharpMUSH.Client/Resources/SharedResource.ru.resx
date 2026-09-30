@@ -307,10 +307,6 @@
     <value>Не удалось выполнить сброс: {0}</value>
     <comment>MT — impersonal status message; error text after a colon.</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Не удалось выполнить сброс ({0}).</value>
-    <comment>MT — status code in parentheses, no agreement needed.</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Не удалось загрузить статус обработчика.</value>
     <comment>MT</comment>

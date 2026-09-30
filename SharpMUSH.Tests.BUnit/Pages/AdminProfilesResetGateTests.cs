@@ -4,6 +4,7 @@ using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using MudBlazor;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Pages.Admin;
@@ -12,12 +13,22 @@ using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
-/// <summary>Answers the profile-handler status with a configured, present handler.</summary>
+/// <summary>
+/// Answers the profile-handler status with a configured, present handler, and refuses the reset the
+/// way the server does when the installed version is not the one this build ships.
+/// </summary>
 file sealed class HandlerStatusHandler : HttpMessageHandler
 {
+	public const string Refusal = "Reset restores profile-handler v1.0.0, which is not the installed version";
+
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-		=> Task.FromResult(request.RequestUri!.AbsolutePath.TrimStart('/') == "api/admin/profile-handler"
-			? new HttpResponseMessage(HttpStatusCode.OK)
+		=> Task.FromResult(Respond(request));
+
+	/// <summary>The response is the caller's to dispose; <see cref="HttpClient"/> hands it on.</summary>
+	private static HttpResponseMessage Respond(HttpRequestMessage request) =>
+		(request.Method.Method, request.RequestUri!.AbsolutePath.TrimStart('/')) switch
+		{
+			("GET", "api/admin/profile-handler") => new HttpResponseMessage(HttpStatusCode.OK)
 			{
 				Content = JsonContent.Create(new
 				{
@@ -27,8 +38,13 @@ file sealed class HandlerStatusHandler : HttpMessageHandler
 					handlerExists = true,
 					attributes = new[] { new { attribute = "GET`PROFILE", present = true } }
 				})
-			}
-			: new HttpResponseMessage(HttpStatusCode.NotFound));
+			},
+			("POST", "api/admin/profile-handler/reset") => new HttpResponseMessage(HttpStatusCode.Conflict)
+			{
+				Content = JsonContent.Create(new { error = Refusal })
+			},
+			_ => new HttpResponseMessage(HttpStatusCode.NotFound)
+		};
 }
 
 /// <summary>
@@ -82,5 +98,22 @@ public class AdminProfilesResetGateTests : TrackingBunitContext
 
 		await Assert.That(cut.FindAll("button").Any(b => b.TextContent.Contains("ResetToDefaults"))).IsTrue();
 		await Assert.That(cut.Markup).DoesNotContain("AdmProfilesResetNeedsPackagesAdmin");
+	}
+
+	/// <summary>A refused reset says why, not only its status code.</summary>
+	[Test]
+	public async Task ARefusedReset_ShowsTheServersReason()
+	{
+		var snackbar = Substitute.For<ISnackbar>();
+		Services.AddSingleton(snackbar);
+		Auth.SetPolicies("players.moderate", "packages.admin");
+		var cut = RenderLoaded();
+
+		cut.FindAll("button").First(b => b.TextContent.Contains("ResetToDefaults")).Click();
+
+		cut.WaitForAssertion(() => snackbar.Received().Add(
+			Arg.Is<string>(m => m.Contains("AdmProfilesResetFailedError") && m.Contains(HandlerStatusHandler.Refusal)),
+			Severity.Error, Arg.Any<Action<SnackbarOptions>>(), Arg.Any<string>()), TimeSpan.FromSeconds(5));
+		await Assert.That(snackbar.ReceivedCalls()).IsNotEmpty();
 	}
 }

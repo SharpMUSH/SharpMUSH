@@ -307,10 +307,6 @@
     <value>Reset nie powiódł się: {0}</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Reset nie powiódł się ({0}).</value>
-    <comment>MT — {0} is an HTTP status, kept in parentheses</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Nie można wczytać statusu obsługi.</value>
     <comment>MT</comment>

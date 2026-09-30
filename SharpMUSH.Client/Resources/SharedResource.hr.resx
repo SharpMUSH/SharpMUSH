@@ -307,10 +307,6 @@
     <value>Resetiranje nije uspjelo: {0}</value>
     <comment>MT — {0} follows a colon and needs no case agreement</comment>
   </data>
-  <data name="AdmProfilesResetFailedStatus" xml:space="preserve">
-    <value>Resetiranje nije uspjelo ({0}).</value>
-    <comment>MT — {0} is an HTTP status code in parentheses</comment>
-  </data>
   <data name="AdmProfilesStatusLoadFailed" xml:space="preserve">
     <value>Status rukovatelja nije moguće učitati.</value>
     <comment>MT</comment>
