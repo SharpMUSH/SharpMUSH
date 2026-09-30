@@ -87,10 +87,6 @@
 }
 
 @container page (max-width: 48rem) {
-    .sugg-page ::deep .kit-page-head {
-        flex-wrap: wrap;
-    }
-
     .sugg-empty {
         padding: 40px 20px;
     }

@@ -46,8 +46,6 @@
     .layedit ::deep .mud-dropitem-placeholder { grid-column: 1 / -1; }
     /* Every widget is full width here, so there is no width left to drag. Keyboard resize still works. */
     .le-resize { display: none; }
-    .layedit ::deep .kit-page-head { flex-wrap: wrap; }
-    .layedit ::deep .kit-page-actions { flex-wrap: wrap; }
 }
 
 .le-span-num {

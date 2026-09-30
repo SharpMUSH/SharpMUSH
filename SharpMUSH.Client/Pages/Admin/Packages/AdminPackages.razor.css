@@ -148,6 +148,4 @@
     .pkg-search { flex: 1 1 100%; }
     .pkg-search input { width: 100%; }
     .pkg-row { flex-wrap: wrap; }
-    .pkg-page ::deep .kit-page-head { flex-wrap: wrap; }
-    .pkg-page ::deep .kit-page-actions { flex-wrap: wrap; }
 }

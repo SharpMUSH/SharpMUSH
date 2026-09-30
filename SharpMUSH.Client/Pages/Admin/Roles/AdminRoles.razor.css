@@ -266,7 +266,6 @@
 
 @container page (max-width: 48rem) {
     .roleadmin-grid { grid-template-columns: minmax(0, 1fr); }
-    .roleadmin ::deep .kit-page-head { flex-wrap: wrap; }
 
     /* Permission rows: stack the label above a full-width tri-state for big touch targets. */
     .ra-perm-row { flex-direction: column; align-items: stretch; gap: 0.625rem; }

@@ -43,7 +43,6 @@
 }
 @container page (max-width: 48rem) {
     .appadmin-grid { grid-template-columns: minmax(0, 1fr); }
-    .appadmin ::deep .kit-page-head { flex-wrap: wrap; }
 }
 
 /* List */
