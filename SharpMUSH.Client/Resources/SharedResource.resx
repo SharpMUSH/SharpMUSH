@@ -4199,4 +4199,25 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Pages</value>
   </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# here}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# exit} other {# exits}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Story</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scene · logged to the scene archive</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Full output · channels and pages included</value>
+  </data>
 </root>

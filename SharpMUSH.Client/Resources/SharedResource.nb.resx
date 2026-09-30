@@ -4854,4 +4854,25 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Meldinger</value>
   </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# her}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# utgang} other {# utganger}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Beskrivelse</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Historie</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Visning</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scene · loggføres i scenearkivet</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Full utdata · kanaler og meldinger inkludert</value>
+  </data>
 </root>

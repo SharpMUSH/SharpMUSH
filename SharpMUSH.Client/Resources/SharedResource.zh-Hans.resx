@@ -4854,4 +4854,25 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>私信</value>
   </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {此处 # 人}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, other {# 个出口}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>故事</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>视图</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>场景 · 记录到场景存档</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>完整输出 · 包括频道和私信</value>
+  </data>
 </root>

@@ -4854,4 +4854,25 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Mensajes</value>
   </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# aquí}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# salida} other {# salidas}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Descripción</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Historia</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Vista</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Escena · se registra en el archivo de escenas</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Salida completa · con canales y mensajes</value>
+  </data>
 </root>

@@ -4854,4 +4854,25 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Wiadomości</value>
   </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# tutaj}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# wyjście} few {# wyjścia} many {# wyjść} other {# wyjścia}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Opis</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Opowieść</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Widok</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scena · zapisywana w archiwum scen</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Pełne wyjście · z kanałami i wiadomościami</value>
+  </data>
 </root>

@@ -4854,4 +4854,25 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Личные</value>
   </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# здесь}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# выход} few {# выхода} many {# выходов} other {# выхода}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Описание</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>История</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Вид</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Сцена · записывается в архив сцен</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Полный вывод · включая каналы и личные сообщения</value>
+  </data>
 </root>

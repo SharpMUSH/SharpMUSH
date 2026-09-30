@@ -4854,4 +4854,25 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Mesaje</value>
   </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# aici}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# ieșire} few {# ieșiri} other {# de ieșiri}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Descriere</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Poveste</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Vizualizare</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scenă · înregistrată în arhiva scenelor</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Ieșire completă · cu canale și mesaje</value>
+  </data>
 </root>

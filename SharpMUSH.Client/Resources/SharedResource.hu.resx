@@ -4854,4 +4854,25 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Üzenetek</value>
   </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# itt}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# kijárat} other {# kijárat}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Leírás</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Történet</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Nézet</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Jelenet · a jelenetarchívumba kerül</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Teljes kimenet · csatornákkal és üzenetekkel</value>
+  </data>
 </root>

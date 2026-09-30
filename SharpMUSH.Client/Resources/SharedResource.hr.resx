@@ -4854,4 +4854,25 @@
   <data name="NavPlayPages" xml:space="preserve">
     <value>Poruke</value>
   </data>
+  <data name="NavPlayHereCount" xml:space="preserve">
+    <value>{count, plural, other {# ovdje}}</value>
+  </data>
+  <data name="NavPlayExitCount" xml:space="preserve">
+    <value>{count, plural, one {# izlaz} few {# izlaza} other {# izlaza}}</value>
+  </data>
+  <data name="NavPlayDescription" xml:space="preserve">
+    <value>Opis</value>
+  </data>
+  <data name="NavPlayStory" xml:space="preserve">
+    <value>Priča</value>
+  </data>
+  <data name="NavPlayView" xml:space="preserve">
+    <value>Prikaz</value>
+  </data>
+  <data name="NavPlayStorySub" xml:space="preserve">
+    <value>Scena · bilježi se u arhivu scena</value>
+  </data>
+  <data name="NavPlayTerminalSub" xml:space="preserve">
+    <value>Potpuni ispis · s kanalima i porukama</value>
+  </data>
 </root>
