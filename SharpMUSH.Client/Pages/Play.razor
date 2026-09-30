@@ -121,9 +121,15 @@ else
             @* Hidden rather than removed in focus mode: the exit keys live with the Exits card. *@
             <aside class="play-aside" aria-label="@Loc["NavPlayTabRoom"]" hidden="@_focus">
                 @* README §7.4: the aside is the "play" layout scope (Here, then Exits, by default), then the game's
-                   panels registered for the Play scope that the layout does not already place. *@
+                   panels registered for the Play scope that the layout does not already place. The same entries
+                   as the Room sheet, so the role and zone rules hold in both. *@
                 <CascadingValue Value="_pageContext" IsFixed="true">
-                    <ScopedZone Scope="@LayoutScopes.Play" Zone="WidgetZone.RightSidebar" Grid="false" />
+                    @foreach (var entry in _asideEntries.Where(e => e.Placed))
+                    {
+                        <WidgetErrorBoundary WidgetName="@entry.Name">
+                            <DynamicComponent Type="@entry.Widget.ComponentType" Parameters="@EntryParameters(entry)" />
+                        </WidgetErrorBoundary>
+                    }
                     @foreach (var app in _scopePanels)
                     {
                         <KitCard Aside="true" Title="@app.DisplayName" Class="play-panel">
@@ -219,7 +225,8 @@ else
 
     private MobileSheet? _mobileSheet;
     /// <summary>One aside entry: a layout placement or a scope panel, by widget name.</summary>
-    private sealed record AsideEntry(string Name, IPortalWidget Widget, System.Text.Json.JsonElement? Config);
+    /// <param name="Placed">From the play layout; otherwise a scope panel the page appends.</param>
+    private sealed record AsideEntry(string Name, IPortalWidget Widget, System.Text.Json.JsonElement? Config, bool Placed);
 
     /// <summary>The play layout's aside, then the scope panels it does not place, as the Room sheet's tabs.</summary>
     private IReadOnlyList<AsideEntry> _asideEntries = [];
@@ -396,27 +403,32 @@ else
 
     /// <summary>
     /// The aside's entries from the play layout, then the widget apps registered for the Play scope that the
-    /// layout does not place and the viewer's role allows. Re-read when an admin changes the layout.
+    /// layout does not place, that allow the right sidebar, and that the viewer's role allows. An application
+    /// the layout places keeps its minimum role too: placing it is not granting it. Re-read when an admin
+    /// changes the layout.
     /// </summary>
     private async Task LoadAsideAsync()
     {
         var layout = await Layouts.GetLayoutAsync(LayoutScopes.Play);
-        var placements = layout.Zones.TryGetValue(WidgetZone.RightSidebar, out var list) ? list.OrderBy(p => p.Order).ToList() : [];
-        var placed = placements.Select(p => p.WidgetName).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var role = AuthState is null ? SharpMUSH.Library.Authorization.PortalRole.Guest : PortalRoleHelper.CurrentRole((await AuthState).User);
+        var placements = (layout.Zones.TryGetValue(WidgetZone.RightSidebar, out var list) ? list : [])
+            .OrderBy(p => p.Order)
+            .ToList();
+        var placed = placements.Select(p => p.WidgetName).ToHashSet(StringComparer.OrdinalIgnoreCase);
         _scopePanels = Catalog.ForScope(LayoutScopes.Play)
             .Where(a => role >= a.MinimumRoleEnum)
             .Where(a => a.KindEnum == SharpMUSH.Library.Models.Portal.Applications.ApplicationKind.Widget && !placed.Contains(a.Slug))
+            .Where(a => a.ZoneEnums.Contains(WidgetZone.RightSidebar))
             .ToList();
 
         var entries = new List<AsideEntry>();
-        foreach (var placement in placements)
+        foreach (var placement in placements.Where(p => Catalog.Get(p.WidgetName) is not { } app || role >= app.MinimumRoleEnum))
         {
-            if (Widgets.GetWidget(placement.WidgetName) is { } widget) entries.Add(new AsideEntry(placement.WidgetName, widget, placement.Config));
+            if (Widgets.GetWidget(placement.WidgetName) is { } widget) entries.Add(new AsideEntry(placement.WidgetName, widget, placement.Config, Placed: true));
         }
         foreach (var app in _scopePanels)
         {
-            if (Widgets.GetWidget(app.Slug) is { } widget) entries.Add(new AsideEntry(app.Slug, widget, null));
+            if (Widgets.GetWidget(app.Slug) is { } widget) entries.Add(new AsideEntry(app.Slug, widget, null, Placed: false));
         }
         _asideEntries = entries;
         if (_sheetEntry is null || entries.All(e => e.Name != _sheetEntry))

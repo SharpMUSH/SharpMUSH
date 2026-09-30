@@ -120,7 +120,8 @@
         _text = string.Empty;
         _lines = Feed.Messages(Key);
         var unread = Conversation?.Unread ?? Feed.Channels.FirstOrDefault(c => c.Name == Key)?.Unread ?? 0;
-        _firstUnread = unread > 0 && unread < _lines.Count ? _lines[_lines.Count - unread] : null;
+        // More unread than the bounded history keeps means every retained line is unread.
+        _firstUnread = unread > 0 && _lines.Count > 0 ? _lines[Math.Max(0, _lines.Count - unread)] : null;
         _newAt = FirstUnreadIndex();
         Feed.Viewing = Key;
         Feed.MarkRead(Key);

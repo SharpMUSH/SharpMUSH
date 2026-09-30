@@ -37,6 +37,9 @@ public class PlayPageD1Tests : TrackingBunitContext
 		// Staff-only: never offered to a visitor below its minimum role.
 		new("staffboard", "Staff board", null, "Widget", "http/staff/schema", null, null, "Wizard", null, ["RightSidebar"], 40,
 			Scope: "play"),
+		// Declares it runs only in the main content zone: never appended to the aside.
+		new("ledger", "Ledger", null, "Widget", "http/ledger/schema", null, null, "Guest", null, ["MainContent"], 50,
+			Scope: "play"),
 	];
 	private readonly IPlayTerminalService _play = Substitute.For<IPlayTerminalService>();
 	private readonly FakeSceneHub _hub;
@@ -270,6 +273,34 @@ public class PlayPageD1Tests : TrackingBunitContext
 		{
 			if (cut.FindAll(".play-aside .play-panel").Count != 0) throw new InvalidOperationException("the panel is still listed apart");
 		}, TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	public async Task APanelAboveTheViewersRole_StaysHidden_WhenTheLayoutPlacesIt()
+	{
+		var layouts = Substitute.For<ILayoutService>();
+		layouts.GetLayoutAsync(Arg.Any<string>()).Returns(Task.FromResult(PlayLayout("Here", "Exits", "staffboard")));
+		Services.AddSingleton(layouts);
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .play-panel"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindComponents<SharpMUSH.Client.Components.Widgets.SchemaWidget>()
+				.Select(w => w.Instance.WidgetName).ToList())
+			.DoesNotContain("staffboard").Because("placing a Wizard panel in the layout does not lower its minimum role");
+		cut.FindAll(".play-tab")[1].Click();
+		await Assert.That(cut.FindAll(".play-sheet [role='tab']").Select(t => t.TextContent.Trim()).ToList())
+			.IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task APanelThatDoesNotAllowTheRightSidebar_IsNotAppended()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .play-panel"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".play-aside .play-panel .kit-card-title").Select(t => t.TextContent).ToList())
+			.DoesNotContain("Ledger").Because("the ledger declares MainContent only");
 	}
 
 	private static LayoutConfiguration PlayLayout(params string[] names) =>

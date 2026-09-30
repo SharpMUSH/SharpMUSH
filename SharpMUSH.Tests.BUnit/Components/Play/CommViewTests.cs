@@ -119,6 +119,19 @@ public class CommViewTests : TrackingBunitContext
 	}
 
 	[Test]
+	[Arguments(2)]
+	[Arguments(250)]
+	public async Task EveryRetainedLineUnread_PutsTheDividerBeforeTheFirst(int unread)
+	{
+		// 2 is every line in the history; 250 is more than the bounded history keeps.
+		_feed.ChannelList = [new CommChannel("Public", unread)];
+		_feed.Lines["Public"] = [Line("A", "one", Now.AddMinutes(-3)), Line("B", "two", Now.AddMinutes(-2))];
+		var cut = RenderView("Public");
+		var order = cut.FindAll(".comm-group, .comm-new").Select(e => e.ClassList.Contains("comm-new") ? "NEW" : e.QuerySelector(".comm-text")!.TextContent).ToList();
+		await Assert.That(order).IsEquivalentTo(new[] { "NEW", "one", "two" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
 	public async Task TheNewDivider_StaysOnItsLine_WhenTheHistoryIsTrimmed()
 	{
 		// The feed keeps a bounded history: when a line arrives at the cap the oldest drops, and an index
