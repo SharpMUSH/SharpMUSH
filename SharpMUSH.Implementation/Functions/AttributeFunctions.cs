@@ -695,7 +695,12 @@ public partial class Functions
 	{
 		var sideFxEnabled = Configuration.CurrentValue.Function.FunctionSideEffects;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var arg0 = parser.CurrentState.Arguments["0"].Message!.ToPlainText();
+		// NoParse holds BOTH arguments back, but only the expression is meant to wait for its new
+		// executor: PennMUSH's fun_objeval (src/funmisc.c) runs process_expression over args[0] as
+		// the caller before it locates anything, so objeval(%0,...) and objeval([num(here)],...)
+		// name an object. Reading the raw text here looked "%0" up as a name and answered
+		// #-1 NO MATCH for every dynamic object.
+		var arg0 = (await parser.CurrentState.Arguments["0"].GetParsedResultAsync()).Message!.ToPlainText();
 		var arg1 = parser.CurrentState.Arguments["1"];
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
