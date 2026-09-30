@@ -3,6 +3,11 @@ using SharpMUSH.Client.Models;
 
 namespace SharpMUSH.Client.Services;
 
+/// <summary>
+/// The per-connection OOB cache. It assumes a single-threaded dispatcher (Blazor WASM): a push, its
+/// parse and the events it raises run to completion before the next push, and handlers are not guarded
+/// against re-entrancy.
+/// </summary>
 public sealed class OobChannelStore : IOobChannelStore
 {
 	private readonly ConcurrentDictionary<string, string> _channels = new();
