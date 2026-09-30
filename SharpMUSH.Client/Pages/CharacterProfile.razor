@@ -9,6 +9,7 @@
 @inject CharacterDirectoryService Directory
 @inject GalleryService Gallery
 @inject SceneService Scenes
+@inject AccountAuthService AccountAuth
 @inject IStringLocalizer<SharedResource> Loc
 
 <PageTitle>@DisplayName — @Loc["AppTitle"]</PageTitle>
@@ -28,6 +29,12 @@
 else
 {
     <div class="char-profile">
+        @if (_unreadable)
+        {
+            @* The directory knows this name but its profile could not be read: say so, rather than
+               drawing a profile of nothing that looks like one with nothing in it. *@
+            <div class="char-profile-unavailable" role="status">@Loc["NavCharProfileUnavailable"]</div>
+        }
         <GlassBanner Title="@DisplayName" ImageUrl="@BannerUrl" Alt="@DisplayName" Height="236" TitleSize="character" HeadingLevel="1"
                      TitleColor="@_profile?.Color" Hue="@NameHue.Of(DisplayName)" Minimisable="false">
             <Lead>
@@ -106,7 +113,11 @@ else
     private SceneSummary? _liveScene;
     private bool _online;
     private bool _missing;
+    private bool _unreadable;
     private string? _loadedFor;
+
+    /// <summary>Bumped on every load: an answer for an older load is dropped (A→B→C must show C).</summary>
+    private int _generation;
     private bool _viewerOpen;
     private IReadOnlyList<ImageViewer.Item> _viewerItems = [];
 
@@ -118,8 +129,11 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        var canEdit = AuthState is not null && (await AuthState).User.Identity?.IsAuthenticated == true;
-        _context = new ProfilePageContext(Name, canEdit);
+        var user = AuthState is null ? null : (await AuthState).User;
+        var mine = user?.Identity?.IsAuthenticated == true && await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> own
+            ? own
+            : [];
+        _context = new ProfilePageContext(Name, ProfileEditRights.CanEdit(user, mine, Name), _profile?.Dbref);
 
         if (string.Equals(_loadedFor, Name, StringComparison.OrdinalIgnoreCase))
         {
@@ -127,31 +141,42 @@ else
         }
 
         _loadedFor = Name;
-        (_profile, _gallery, _liveScene, _online, _missing) = (null, [], null, false, false);
+        var generation = ++_generation;
+        (_profile, _gallery, _liveScene, _online, _missing, _unreadable, _viewerItems, _viewerOpen) = (null, [], null, false, false, false, [], false);
 
         var profile = Profiles.GetAsync(Name);
         var gallery = Gallery.ListAsync(Name);
         var online = Directory.ListOnlineAsync();
 
-        switch (await profile)
+        var profileResult = await profile;
+        if (generation != _generation) return;
+        switch (profileResult)
         {
             case CharacterProfileData found:
                 _profile = found;
+                _context = _context with { Dbref = found.Dbref };
                 break;
             case ApiFailure { Kind: ApiFailureKind.NotFound }:
                 _missing = true;
                 return;
+            case ApiFailure:
+                _unreadable = true;
+                break;
         }
 
-        _gallery = await gallery is List<GalleryEntry> entries ? entries : [];
-        _online = await online is IReadOnlyList<CharacterDirectoryService.CharacterSummary> here
+        var galleryResult = await gallery;
+        var onlineResult = await online;
+        if (generation != _generation) return;
+        _gallery = galleryResult is List<GalleryEntry> entries ? entries : [];
+        _online = onlineResult is IReadOnlyList<CharacterDirectoryService.CharacterSummary> here
             && here.Any(r => string.Equals(r.Name, DisplayName, StringComparison.OrdinalIgnoreCase));
         _viewerItems = ViewerItems();
 
-        if (_profile?.Dbref is { } dbref
-            && await Scenes.GetParticipantScenesAsync(dbref, 5) is IReadOnlyList<SceneSummary> scenes)
+        if (_profile?.Dbref is { } dbref)
         {
-            _liveScene = scenes.FirstOrDefault(s => s.IsLive);
+            var scenes = await Scenes.GetParticipantScenesAsync(dbref, 5);
+            if (generation != _generation) return;
+            _liveScene = scenes is IReadOnlyList<SceneSummary> list ? list.FirstOrDefault(s => s.IsLive) : null;
         }
     }
 

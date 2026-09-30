@@ -112,6 +112,39 @@ public class ProfileBannerTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task ANameChange_PaintsOnlyTheLatestCharacter()
+	{
+		// Tomas's profile answers after Dace's: the late answer must not paint over Dace's page.
+		var release = new TaskCompletionSource();
+		_fake.OnRequest = async request =>
+		{
+			if (request.RequestUri!.PathAndQuery == TomasProfile) await release.Task;
+		};
+		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{"color":"#ffb454"}}""";
+		_fake.Extra["/http/profile?objid=%23315%3A1"] = """{"character":"Dace Kellan","objid":"#315:1","dbref":"#315","fields":{}}""";
+
+		var cut = Render<CharacterProfile>(p => p.Add(x => x.Name, "Tomas Reyes"));
+		cut.Render(p => p.Add(x => x.Name, "Dace Kellan"));
+		cut.WaitForAssertion(() => cut.Find(".char-profile-pill--dbref"), TimeSpan.FromSeconds(5));
+		release.SetResult();
+		await Task.Delay(200);
+		cut.WaitForAssertion(() => cut.Find("h1.kit-banner-title"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find("h1.kit-banner-title").TextContent).IsEqualTo("Dace Kellan");
+		await Assert.That(cut.Find(".char-profile-pill--dbref").TextContent).IsEqualTo("#315");
+	}
+
+	[Test]
+	public async Task AProfileThatCannotBeRead_IsNotAMissingCharacter()
+	{
+		// The directory knows Tomas; only the profile hook is gone. That is not "no such character".
+		var cut = RenderProfile();
+		cut.WaitForAssertion(() => cut.Find(".char-profile-unavailable"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".char-profile-missing").Count).IsEqualTo(0);
+		await Assert.That(cut.Find("h1.kit-banner-title").TextContent).IsEqualTo("Tomas Reyes");
+	}
+
+	[Test]
 	public async Task FullImage_OpensTheViewer()
 	{
 		_fake.Extra[TomasProfile] = """{"character":"Tomas Reyes","objid":"#312:1","dbref":"#312","fields":{"banner":"/api/wiki-assets/d/docks.jpg"}}""";

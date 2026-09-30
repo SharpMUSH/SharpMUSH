@@ -49,6 +49,33 @@ public class GalleryMirrorTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
+	public async Task AnEmptyReplace_OnAnEmptyGallery_LeavesAHandSetImageAlone()
+	{
+		// Spec §2: a hand-set &IMAGE belongs to its setter. A gallery write with nothing in it and nothing
+		// before it has nothing to mirror, so it must not clear what someone typed.
+		var http = factory.CreateHttpClient();
+		var name = await GodNameAsync(http);
+		var url = $"api/profile/{Uri.EscapeDataString(name)}/gallery";
+		var before = await http.GetFromJsonAsync<List<GalleryEntry>>(url) ?? [];
+		if (before.Count > 0) return; // another test's gallery; this case needs an empty one
+
+		var attributes = factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IAttributeService>();
+		var mediator = factory.Services.GetRequiredService<Mediator.IMediator>();
+		var god = (await mediator.Send(new SharpMUSH.Library.Queries.Database.GetObjectNodeQuery(new DBRef(1)))).Expect<SharpMUSH.Library.DiscriminatedUnions.AnySharpObject>();
+		await attributes.SetAttributeAsync(god, god, "IMAGE", MarkupString.MarkupText.Plain("/hand/set.jpg"));
+		try
+		{
+			var response = await http.PutAsJsonAsync(url, new List<GalleryEntry>());
+			await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+			await Assert.That(await ReadAttributeAsync("IMAGE")).IsEqualTo("/hand/set.jpg");
+		}
+		finally
+		{
+			await attributes.ClearAttributeAsync(god, god, "IMAGE", SharpMUSH.Library.Services.Interfaces.IAttributeService.AttributePatternMode.Exact);
+		}
+	}
+
+	[Test]
 	public async Task Replace_KeepsTheStoredUrl_WhateverTheClientSends()
 	{
 		// PUT used to store each entry as sent, so a client could point a gallery image (and, through the

@@ -4800,4 +4800,7 @@
   <data name="NavGalleryAdd" xml:space="preserve">
     <value>Dodaj obraz</value>
   </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>Nie można teraz odczytać profilu tej postaci.</value>
+  </data>
 </root>

@@ -159,6 +159,9 @@ file static class WikiServiceSetup
 						sp.GetRequiredService<IHttpClientFactory>(),
 						sp.GetRequiredService<CharacterDirectoryService>()))
 				.AddSingleton(sp => new SceneService(sp.GetRequiredService<IHttpClientFactory>()))
+				// The profile page offers edit controls to the character's own account; nobody signs in here.
+				.AddSingleton(sp => new AccountAuthService(sp.GetRequiredService<IHttpClientFactory>(), ctx.JSInterop.JSRuntime,
+						NullLogger<AccountAuthService>.Instance, []))
 				// The profile header is an application-backed SchemaWidget; it injects these.
 				.AddSingleton(new SharpMUSH.Client.Services.ApplicationCatalog([]))
 				.AddSingleton(sp => new ApplicationRegistryClient(

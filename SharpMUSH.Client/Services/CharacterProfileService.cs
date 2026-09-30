@@ -37,6 +37,9 @@ public partial class CharacterProfileService(IHttpClientFactory httpClientFactor
 		return result switch
 		{
 			JsonElement body => Parse(body, objid),
+			// The directory just found this character, so a 404 here means the profile hook is gone
+			// (an admin removed GET`PROFILE), not that the character is: only the directory says missing.
+			ApiFailure { Kind: ApiFailureKind.NotFound } failure => failure with { Kind = ApiFailureKind.Unexpected },
 			ApiFailure failure => failure,
 		};
 	}

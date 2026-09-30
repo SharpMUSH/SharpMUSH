@@ -8,5 +8,8 @@ namespace SharpMUSH.Client.Models.Widgets;
 /// layout editor.
 /// </summary>
 /// <param name="CharacterName">The character whose profile is being viewed (from the route).</param>
-/// <param name="CanEdit">Whether the current viewer may edit this character's profile content.</param>
-public record ProfilePageContext(string CharacterName, bool CanEdit);
+/// <param name="CanEdit">Whether the current viewer may edit this character's profile content: the
+/// account that owns the character, or staff.</param>
+/// <param name="Dbref">The character's dbref once the page has resolved it, so widgets need not ask
+/// the directory again; null until then.</param>
+public record ProfilePageContext(string CharacterName, bool CanEdit, string? Dbref = null);

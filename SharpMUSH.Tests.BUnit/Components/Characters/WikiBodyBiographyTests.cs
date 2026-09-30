@@ -29,6 +29,7 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 			{
 				"/api/wiki/ns/character/general/Tomas%20Reyes" => Page("tomas_reyes", "Tomas Reyes", "character"),
 				"/api/wiki/ns/main/general/rules" => Page("rules", "House Rules", "main"),
+				"/api/wiki/ns/character/general/Home" => Page("home", "Home", "character"),
 				"/api/wiki/exists" => "{}",
 				_ => null,
 			};
@@ -55,6 +56,7 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 			.AddSingleton(factory)
 			.AddSingleton(sp => new WikiService(factory, NullLogger<WikiService>.Instance))
 			.AddSingleton<WikiMarkdigPipeline>()
+			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance))
 			.AddLocalization();
 		AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;
@@ -74,6 +76,16 @@ public class WikiBodyBiographyTests : TrackingBunitContext
 		await Assert.That(cut.Find(".wiki-body-card").TextContent).Contains("Lean and quiet.");
 		await Assert.That(cut.FindAll(".wiki-body-card .wiki-article-title").Count).IsEqualTo(0)
 			.Because("the card header names it; a second title inside would repeat it");
+	}
+
+	[Test]
+	public async Task ACharacterNamedHome_IsStillABiography()
+	{
+		// The home hero is the main wiki's home page, not any page whose slug happens to be "home".
+		var cut = Render<CascadingWrapper>(p => p.AddChildContent<WikiBodyWidget>()
+			.Add(x => x.Context, new ProfilePageContext("Home", false)));
+		cut.WaitForAssertion(() => cut.Find(".wiki-body-card .kit-card-sub"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".wiki-body-card .kit-card-title").TextContent).IsEqualTo("Biography");
 	}
 
 	[Test]

@@ -59,6 +59,27 @@ public class ImageViewerTests : BunitContext
 	}
 
 	[Test]
+	public async Task AnArrowKey_NeverPreventsTheNextKeysDefault()
+	{
+		// preventDefault is decided when the dialog renders, so a flag set by one key would swallow the
+		// next Tab (focus stuck) or Enter (a capsule's click lost).
+		var cut = Render<ImageViewer>(p => p.Add(x => x.Items, Three).Add(x => x.Open, true));
+		cut.Find("[role='dialog']").KeyDown("ArrowRight");
+		await Assert.That(cut.Find("[role='dialog']").OuterHtml.ToLowerInvariant()).DoesNotContain("preventdefault");
+	}
+
+	[Test]
+	public async Task Open_TrapsFocus_AndCloseHandsItBack()
+	{
+		var cut = Render<ImageViewer>(p => p.Add(x => x.Items, Three).Add(x => x.Open, true));
+		await Assert.That(cut.FindComponents<MudBlazor.MudFocusTrap>().Count).IsEqualTo(1);
+		JSInterop.VerifyInvoke("sharpmushLayout.rememberFocus");
+
+		cut.Find("button.kit-viewer-close").Click();
+		JSInterop.VerifyInvoke("sharpmushLayout.restoreFocus");
+	}
+
+	[Test]
 	public async Task EscapeAndClose_Close()
 	{
 		var open = true;

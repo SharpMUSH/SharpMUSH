@@ -254,4 +254,17 @@ public class SchemaViewRendererShapeTests : BunitContext
 		await Assert.That(cut.FindAll("section.kit-card").Count).IsEqualTo(0);
 		await Assert.That(cut.Markup).DoesNotContain("Blank");
 	}
+
+	[TUnit.Core.Test]
+	public async Task AnImageElement_RendersOnlyAUrlThePolicyAccepts()
+	{
+		var doc = View(null, Page(1, null, Section(1, "S",
+			new SchemaElement(Kind: "image", Value: "javascript:alert(1)", Alt: "x"),
+			new SchemaElement(Kind: "image", Value: "/api/wiki-assets/a/ok.jpg", Alt: "ok"))));
+		var cut = RenderView(doc, Data());
+
+		var images = cut.FindAll("img");
+		await Assert.That(images.Count).IsEqualTo(1);
+		await Assert.That(images[0].GetAttribute("src")).IsEqualTo("/api/wiki-assets/a/ok.jpg");
+	}
 }

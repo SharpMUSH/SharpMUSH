@@ -4800,4 +4800,7 @@
   <data name="NavGalleryAdd" xml:space="preserve">
     <value>Dodaj sliku</value>
   </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>Profil ovog lika trenutačno se ne može pročitati.</value>
+  </data>
 </root>

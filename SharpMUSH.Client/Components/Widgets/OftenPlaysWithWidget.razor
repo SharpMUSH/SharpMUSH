@@ -52,14 +52,15 @@
     protected override async Task OnParametersSetAsync()
     {
         var name = ProfileCharacter.NameFrom(Config, PageContext);
-        if (name is null || name == _loadedFor) return;
-        _loadedFor = name;
+        var key = $"{name}\u0000{PageContext?.Dbref}";
+        if (name is null || key == _loadedFor) return;
+        _loadedFor = key;
         _loading = true;
         if (await Directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
         {
             _directory = rows;
         }
-        _partners = await ProfileCharacter.DbrefOfAsync(Directory, name) is { } dbref
+        _partners = await ProfileCharacter.DbrefOfAsync(Directory, name, PageContext) is { } dbref
             && await Scenes.GetPartnersAsync(dbref, Shown) is IReadOnlyList<ScenePartner> partners
                 ? partners
                 : null;

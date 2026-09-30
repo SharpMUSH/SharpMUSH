@@ -52,10 +52,11 @@
     protected override async Task OnParametersSetAsync()
     {
         var name = ProfileCharacter.NameFrom(Config, PageContext);
-        if (name is null || name == _loadedFor) return;
-        _loadedFor = name;
+        var key = $"{name}\u0000{PageContext?.Dbref}";
+        if (name is null || key == _loadedFor) return;
+        _loadedFor = key;
         _loading = true;
-        _scenes = await ProfileCharacter.DbrefOfAsync(Directory, name) is { } dbref
+        _scenes = await ProfileCharacter.DbrefOfAsync(Directory, name, PageContext) is { } dbref
             && await Scenes.GetParticipantScenesAsync(dbref, Shown) is IReadOnlyList<SceneSummary> scenes
                 ? scenes.OrderByDescending(s => s.IsLive).ThenByDescending(s => s.LastActivityAt).ToList()
                 : null;

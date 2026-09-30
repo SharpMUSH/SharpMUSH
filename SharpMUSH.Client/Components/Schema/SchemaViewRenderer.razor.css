@@ -66,6 +66,13 @@
 	overflow-wrap: anywhere;
 }
 
+.schema-image {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	border-radius: 10px;
+}
+
 .schema-kv {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));

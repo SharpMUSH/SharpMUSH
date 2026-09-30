@@ -90,6 +90,37 @@ public class CharacterProfileServiceTests
 	}
 
 	[Test]
+	public async Task AProfileHookThatAnswers404_IsNotANameThatDoesNotExist()
+	{
+		var result = await Build(path => path == "/http/characters" ? Characters : null).GetAsync("Tomas Reyes");
+		await Assert.That(result.Expect<ApiFailure>().Kind).IsNotEqualTo(ApiFailureKind.NotFound)
+			.Because("the directory found Tomas; only the profile could not be read");
+	}
+
+	[Test]
+	public async Task TheDirectory_IsReadOnceForABurstOfCallers_AndAFailureIsNotRemembered()
+	{
+		var requests = 0;
+		var fail = true;
+		var http = new HttpClient(new Handler(path =>
+		{
+			if (path != "/http/characters") return null;
+			requests++;
+			return fail ? null : Characters;
+		}))
+		{ BaseAddress = new Uri("https://localhost:8081/") };
+		var factory = Substitute.For<IHttpClientFactory>();
+		factory.CreateClient(Arg.Any<string>()).Returns(http);
+		var directory = new CharacterDirectoryService(factory, NullLogger<CharacterDirectoryService>.Instance);
+
+		await Assert.That(await directory.ListAsync()).IsTypeOf<ServerResult<IReadOnlyList<CharacterDirectoryService.CharacterSummary>>>();
+		fail = false;
+		var burst = await Task.WhenAll(directory.ListAsync(), directory.ListAsync(), directory.ListAsync());
+		await Assert.That(burst.All(r => r.Value is IReadOnlyList<CharacterDirectoryService.CharacterSummary>)).IsTrue();
+		await Assert.That(requests).IsEqualTo(2).Because("one failed read, then one read shared by the three callers");
+	}
+
+	[Test]
 	public async Task DirectoryRows_CarryTheImage()
 	{
 		var directory = new CharacterDirectoryService(

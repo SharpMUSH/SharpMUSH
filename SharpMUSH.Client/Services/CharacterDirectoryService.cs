@@ -12,6 +12,15 @@ namespace SharpMUSH.Client.Services;
 /// </summary>
 public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILogger<CharacterDirectoryService> logger)
 {
+	// Each read is a softcode iteration over every player, and one profile view has several readers
+	// (the page, the sidebar, the aside widgets, the wiki's mentions). They share one in-flight read
+	// and a short memo; a failed read is not remembered, so the next caller asks again.
+	private readonly ShortMemo<ServerResult<IReadOnlyList<CharacterSummary>>> _roster =
+		new(TimeSpan.FromSeconds(30), r => r.Value is IReadOnlyList<CharacterSummary>);
+
+	private readonly ShortMemo<ServerResult<IReadOnlyList<CharacterSummary>>> _online =
+		new(TimeSpan.FromSeconds(10), r => r.Value is IReadOnlyList<CharacterSummary>);
+
 	/// <summary>
 	/// A directory row from the GET`CHARACTERS softcode: name, objid, creation unix-ms, and the
 	/// game-defined category (FN`CHARCAT). The portal imposes no categories of its own — blank
@@ -36,7 +45,10 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// and a caller that never got an answer must not make one — so the failure is in the type, where
 	/// a consumer has to decide what to do with it.
 	/// </remarks>
-	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> ListAsync(CancellationToken cancellationToken = default)
+	public Task<ServerResult<IReadOnlyList<CharacterSummary>>> ListAsync(CancellationToken cancellationToken = default) =>
+		_roster.GetAsync(() => FetchRosterAsync(cancellationToken));
+
+	private async Task<ServerResult<IReadOnlyList<CharacterSummary>>> FetchRosterAsync(CancellationToken cancellationToken)
 	{
 		try
 		{
@@ -58,7 +70,10 @@ public class CharacterDirectoryService(IHttpClientFactory httpClientFactory, ILo
 	/// the roster of every character that exists: a character being listed there implies nothing
 	/// about presence.
 	/// </summary>
-	public async Task<ServerResult<IReadOnlyList<CharacterSummary>>> ListOnlineAsync(CancellationToken cancellationToken = default)
+	public Task<ServerResult<IReadOnlyList<CharacterSummary>>> ListOnlineAsync(CancellationToken cancellationToken = default) =>
+		_online.GetAsync(() => FetchOnlineAsync(cancellationToken));
+
+	private async Task<ServerResult<IReadOnlyList<CharacterSummary>>> FetchOnlineAsync(CancellationToken cancellationToken)
 	{
 		try
 		{

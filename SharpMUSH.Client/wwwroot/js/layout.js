@@ -8,6 +8,20 @@ window.sharpmushLayout = {
 		return window.matchMedia('(max-width: 760px), (pointer: coarse)').matches;
 	},
 
+	// A modal (the image viewer) remembers what opened it and hands focus back when it closes, so a
+	// keyboard user is not dropped on <body>.
+	rememberFocus: function () {
+		this._focusReturn = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+	},
+
+	restoreFocus: function () {
+		const target = this._focusReturn;
+		this._focusReturn = null;
+		if (target && target.isConnected) {
+			target.focus();
+		}
+	},
+
 	// Back-compat alias.
 	isNarrow: function () {
 		return this.isTouchChrome();

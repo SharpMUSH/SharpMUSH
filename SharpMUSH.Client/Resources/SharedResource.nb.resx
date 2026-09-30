@@ -4800,4 +4800,7 @@
   <data name="NavGalleryAdd" xml:space="preserve">
     <value>Legg til bilde</value>
   </data>
+  <data name="NavCharProfileUnavailable" xml:space="preserve">
+    <value>Profilen til denne figuren kan ikke leses akkurat nå.</value>
+  </data>
 </root>

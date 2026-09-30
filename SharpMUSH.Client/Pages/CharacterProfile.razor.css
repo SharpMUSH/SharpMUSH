@@ -69,6 +69,15 @@
 	min-width: 0;
 }
 
+.char-profile-unavailable {
+	padding: 10px 14px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-card);
+	background: var(--surface);
+	font-size: 13px;
+	color: var(--text-dim);
+}
+
 .char-profile-missing {
 	display: flex;
 	flex-direction: column;

@@ -129,6 +129,12 @@ public class GalleryController(
 		// stored file name and URL (a client names the order, captions and flags, never where a file is),
 		// in the order sent; then one icon and at most one banner.
 		var existing = (await ReadGalleryAsync(character)).ToDictionary(e => e.AssetId, StringComparer.Ordinal);
+		if (existing.Count == 0)
+		{
+			// Nothing stored and so nothing a client could name: writing would only clear a hand-set IMAGE.
+			return Ok(Array.Empty<GalleryEntry>());
+		}
+
 		var sanitized = GalleryRules.Normalize(entries
 			.Where(e => existing.ContainsKey(e.AssetId))
 			.DistinctBy(e => e.AssetId)

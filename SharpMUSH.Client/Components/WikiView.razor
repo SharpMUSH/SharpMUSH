@@ -15,7 +15,7 @@ else if (Mode == WikiMode.View)
 {
     <WikiDisplay Slug="@Slug" Namespace="@Namespace" Category="@Category" Locale="@Locale" Article="@_article"
                  Embedded="@Embedded" ShowTitle="@ShowTitle"
-                 ActivateEditMode="ActivateEditMode" OnArticleRestored="HandleArticleRestored" />
+                 ActivateEditMode="ActivateEditMode" />
 }
 else
 {
@@ -217,10 +217,6 @@ else
         || !saved.Tags.SequenceEqual(draft.Tags);
 
     /// <summary>Swaps in the article returned by a successful history-dialog rollback.</summary>
-    private void HandleArticleRestored(WikiArticle restored)
-    {
-        _article = restored;
-    }
 
     private void HandleCancel()
     {

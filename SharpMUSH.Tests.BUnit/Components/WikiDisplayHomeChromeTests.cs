@@ -43,7 +43,8 @@ public class WikiDisplayHomeChromeTests : TrackingBunitContext
 		Services.AddSingleton(factory);
 		Services.AddSingleton(sp => new WikiService(
 			sp.GetRequiredService<IHttpClientFactory>(), NullLogger<WikiService>.Instance));
-		Services.AddSingleton<WikiMarkdigPipeline>();
+		Services.AddSingleton<WikiMarkdigPipeline>()
+			.AddSingleton(sp => new CharacterDirectoryService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<CharacterDirectoryService>.Instance));
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		Auth = AddAuthorization();
 		JSInterop.Mode = JSRuntimeMode.Loose;

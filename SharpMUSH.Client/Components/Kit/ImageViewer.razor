@@ -1,4 +1,5 @@
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
 
 @* D1 §4.12 portrait viewer (board 09): a modal over the page, one image at a time at its natural
    aspect, its caption under it, "n of N", previous and next when there is more than one. Escape
@@ -12,7 +13,9 @@
     @* MudOverlay owns the fixed, scroll-locking layer: scoped CSS may not position anything fixed. *@
     <MudOverlay Visible="true" LockScroll="true" OnClick="CloseAsync" Class="kit-viewer-overlay" Style="@ScrimStyle">
     <div class="kit-viewer" role="dialog" aria-modal="true" aria-label="@(Label ?? Loc["NavViewerLabel"])" tabindex="-1"
-         @onkeydown="OnKeyDownAsync" @onkeydown:preventDefault="_swallowKey" @onclick:stopPropagation="true">
+         @onkeydown="OnKeyDownAsync" @onclick:stopPropagation="true">
+        @* Tab cycles inside the dialog; Close takes focus when it opens (see OnAfterRenderAsync). *@
+        <MudFocusTrap DefaultFocus="DefaultFocus.None">
         <div class="kit-viewer-frame">
             <div class="kit-viewer-bar">
                 <span class="kit-viewer-count">@Loc["NavViewerCount", _index + 1, Items.Count]</span>
@@ -46,6 +49,7 @@
                 <div class="kit-viewer-caption">@item.Caption</div>
             }
         </div>
+        </MudFocusTrap>
     </div>
     </MudOverlay>
 }
@@ -69,7 +73,7 @@
     private int _index;
     private bool _wasOpen;
     private bool _focusClose;
-    private bool _swallowKey;
+    private bool _rememberFocus;
     private CapsuleButton? _closeButton;
 
     private Item Current => Items[Math.Clamp(_index, 0, Items.Count - 1)];
@@ -84,6 +88,7 @@
         {
             _index = Items.Count == 0 ? 0 : Math.Clamp(Index, 0, Items.Count - 1);
             _focusClose = true;
+            _rememberFocus = true;
         }
         else if (Items.Count > 0)
         {
@@ -94,6 +99,13 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Remember what opened the viewer before focus moves into it, so closing can hand it back.
+        if (_rememberFocus)
+        {
+            _rememberFocus = false;
+            await RunFocusAsync("sharpmushLayout.rememberFocus");
+        }
+
         if (_focusClose && Open && _closeButton is not null)
         {
             _focusClose = false;
@@ -112,11 +124,21 @@
     {
         _wasOpen = false;
         await OpenChanged.InvokeAsync(false);
+        await RunFocusAsync("sharpmushLayout.restoreFocus");
     }
 
+    /// <summary>Focus hand-off through layout.js; a page without it (prerender, tests) just skips it.</summary>
+    private async Task RunFocusAsync(string identifier)
+    {
+        try { await JS.InvokeVoidAsync(identifier); }
+        catch (JSException) { }
+        catch (InvalidOperationException) { }
+    }
+
+    // No preventDefault: it is decided when the dialog renders, so it would act on the key after this
+    // one (a swallowed Tab or Enter). The arrows' only default, scrolling, is locked by the overlay.
     private async Task OnKeyDownAsync(KeyboardEventArgs e)
     {
-        _swallowKey = e.Key is "ArrowLeft" or "ArrowRight" or "Escape";
         switch (e.Key)
         {
             case "Escape": await CloseAsync(); break;

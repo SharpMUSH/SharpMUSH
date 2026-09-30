@@ -12,7 +12,7 @@
 @inject IJSRuntime JS
 @inject ILogger<WikiDisplay> Logger
 @inject NavigationManager Nav
-@inject IServiceProvider ServiceProvider
+@inject CharacterDirectoryService Characters
 
 @if (Article is null && IsCharacterBiography)
 {
@@ -223,11 +223,6 @@ else
     [Parameter]
     public required Func<Task> ActivateEditMode { get; init; }
 
-    /// <summary>Raised after a successful rollback (kept for API compatibility with WikiView;
-    /// restore now lives on the dedicated history page).</summary>
-    [Parameter]
-    public EventCallback<WikiArticle> OnArticleRestored { get; init; }
-
     /// <summary>
     /// One renderable chunk of the article body: either raw HTML, or a dynamic
     /// directive placeholder (when <c>Directive</c> is non-null).
@@ -437,18 +432,16 @@ else
     }
 
     /// <summary>
-    /// The pictures for the Mentioned tiles, from the character directory. Optional: a host that
-    /// registers no directory (an embedded biography, some tests) shows initials, as does a failed read.
+    /// The pictures for the Mentioned tiles, from the character directory; a failed read shows initials.
     /// </summary>
     private async Task LoadMentionImagesAsync()
     {
-        if (_mentioned.Count == 0 || _characters.Count > 0
-            || ServiceProvider.GetService(typeof(CharacterDirectoryService)) is not CharacterDirectoryService directory)
+        if (_mentioned.Count == 0 || _characters.Count > 0)
         {
             return;
         }
 
-        if (await directory.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
+        if (await Characters.ListAsync() is IReadOnlyList<CharacterDirectoryService.CharacterSummary> rows)
         {
             _characters = rows;
         }

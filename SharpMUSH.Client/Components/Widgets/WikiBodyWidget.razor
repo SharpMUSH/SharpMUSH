@@ -138,7 +138,8 @@
     }
 
     /// <summary>The home page renders as a hero with its own title; the card gives it no header.</summary>
-    private bool IsHero => string.Equals(_slug, "home", StringComparison.OrdinalIgnoreCase);
+    private bool IsHero => string.Equals(_slug, "home", StringComparison.OrdinalIgnoreCase)
+        && (_namespace is null || string.Equals(_namespace, "main", StringComparison.OrdinalIgnoreCase));
 
     private bool IsBiography => WikiRoutes.IsCharacterProfile(_namespace, _category);
 

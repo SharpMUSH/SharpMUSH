@@ -128,9 +128,9 @@ else
 
             case "image":
                 var src = element.SrcField is not null ? ValueToString(Lookup(element.SrcField)) : element.Value;
-                @if (!string.IsNullOrWhiteSpace(src))
+                @if (ImageUrlPolicy.IsRenderable(src))
                 {
-                    <MudImage Src="@src" Alt="@(element.Alt ?? string.Empty)" Fluid="true" Class="rounded" />
+                    <img class="schema-image" src="@src!.Trim()" alt="@(element.Alt ?? string.Empty)" loading="lazy" />
                 }
                 break;
 
