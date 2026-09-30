@@ -3863,4 +3863,10 @@
   <data name="NavBannerRestore" xml:space="preserve">
     <value>Show banner</value>
   </data>
+  <data name="AdmKitPreviewTitle" xml:space="preserve">
+    <value>Design kit</value>
+  </data>
+  <data name="AdmKitPreviewDesc" xml:space="preserve">
+    <value>Every D1 kit piece with sample data, for checking against the boards.</value>
+  </data>
 </root>

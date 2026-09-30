@@ -1,0 +1,117 @@
+@page "/admin/kit"
+@attribute [Authorize(Policy = "layout.admin")]
+@using SharpMUSH.Client.Components.Kit
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Staff-only preview of the D1 kit (docs/design/d1/README.md §4) with sample data, laid out like
+   board 20 so the pieces can be screenshotted against it. Not linked from navigation. Everything
+   below the header is sample data, not copy — it mirrors the board's specimen text. *@
+<PageTitle>@Loc["AdmKitPreviewTitle"]</PageTitle>
+
+<div class="kit-preview">
+    <div class="kit-preview-head">
+        <PlainPageHeader Kicker="D1 · app patterns" Title="@Loc["AdmKitPreviewTitle"]" Description="@Loc["AdmKitPreviewDesc"]">
+            <Actions>
+                <CapsuleButton Icon="@Icons.Material.Outlined.History">History</CapsuleButton>
+                <CapsuleButton Icon="@Icons.Material.Outlined.Edit" Primary="true">Edit</CapsuleButton>
+            </Actions>
+        </PlainPageHeader>
+    </div>
+
+    <div class="kit-preview-side">
+        <SectionLabel>In scene</SectionLabel>
+        <SidebarRow Lead="SidebarRow.SidebarLead.Image" ImageUrl="/assets/kit-samples/harbour-row.jpg" Name="Salt Market" Label="Salt Market at Dusk" Count="5" IsCurrent="true" Href="/scenes/42" />
+        <SectionLabel>Channels</SectionLabel>
+        <SidebarRow Lead="SidebarRow.SidebarLead.Channel" Label="Public" Unread="3" OnClick="@(() => { })" />
+        <SidebarRow Lead="SidebarRow.SidebarLead.Channel" Label="Newcomers" OnClick="@(() => { })" />
+        <SectionLabel>Pages</SectionLabel>
+        <SidebarRow Lead="SidebarRow.SidebarLead.Avatar" ImageUrl="/assets/kit-samples/wren.jpg" Name="Wren Halloway" Label="Wren Halloway" Unread="2" OnClick="@(() => { })" />
+        <SidebarRow Lead="SidebarRow.SidebarLead.Avatar" ImageUrl="/assets/kit-samples/tomas.jpg" ImageUrl2="/assets/kit-samples/wren.jpg" Name="Tomas, Dace" Label="Tomas, Dace" Unread="1" OnClick="@(() => { })" />
+        <SidebarRow Lead="SidebarRow.SidebarLead.Avatar" Name="Magister Oake" Label="Magister Oake" Dim="true" OnClick="@(() => { })" />
+        <SectionLabel>Browse</SectionLabel>
+        <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="Wiki home" Count="39" Href="/wiki" />
+        <div class="kit-preview-collapsed">
+            <SidebarRow Lead="SidebarRow.SidebarLead.Image" ImageUrl="/assets/kit-samples/harbour-row.jpg" Name="Salt Market" Label="Salt Market at Dusk" IsCurrent="true" Collapsed="true" Href="/scenes/42" />
+            <SidebarRow Lead="SidebarRow.SidebarLead.Channel" Label="Public" Unread="3" Collapsed="true" OnClick="@(() => { })" />
+            <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="Wiki home" Collapsed="true" Href="/wiki" />
+        </div>
+    </div>
+
+    <div class="kit-preview-main">
+        <GlassBanner Title="Harbour Ward" Kicker="Theme" ImageUrl="/assets/kit-samples/harbour-row.jpg" Alt="Lamplit street" Minimised="@_minimised" MinimisedChanged="@(v => _minimised = v)" Fact="minimised · 48 px" TitleSize="hero">
+            <Secondary>Title, kicker and one line of meta</Secondary>
+            <Back><CapsuleButton Icon="@Icons.Material.Outlined.ChevronLeft" Href="/wiki">Back</CapsuleButton></Back>
+            <Actions>
+                <CapsuleButton Icon="@Icons.Material.Outlined.History">History</CapsuleButton>
+                <CapsuleButton Icon="@Icons.Material.Outlined.Edit" Primary="true">Edit</CapsuleButton>
+            </Actions>
+        </GlassBanner>
+        <GlassBanner Title="Harbour Ward" ImageUrl="/assets/kit-samples/harbour-row.jpg" Minimised="true" Fact="minimised · 48 px" />
+        <GlassBanner Title="Lower Docks" ImageUrl="/assets/kit-samples/ferry-steps.jpg" Open="@_open" Minimisable="false">
+            <Secondary>Harbour Ward · 5 here · 3 exits</Secondary>
+            <Actions>
+                <CapsuleButton Icon="@Icons.Material.Outlined.Notes" Pressed="@_open" Primary="@_open" OnClick="@(() => _open = !_open)">Description</CapsuleButton>
+            </Actions>
+            <OpenContent>Tarred pilings and stacked crates line a quay that smells of salt and lamp oil. The lamplighters are starting their rounds.</OpenContent>
+        </GlassBanner>
+
+        <KitCard Title="Salt Market at Dusk" Sub="Scene · logged to the scene archive">
+            <Controls>
+                <TypeChips Items="@_views" Selected="@_view" SelectedChanged="@(v => _view = v)" AriaLabel="View" />
+            </Controls>
+            <ChildContent>
+                <div class="kit-preview-prose">
+                    walks with <Mention Name="Tomas Reyes" Color="#ffb454" /> and <Mention Name="Wren Halloway" /> past <Mention Name="Ilsa Varn" Self="true" />, carrying a brass lantern.
+                </div>
+                <div class="kit-preview-prose">
+                    <OocBand Name="Wren Halloway" Color="#5aa9ff" Time="17:08">brb, making tea</OocBand>
+                </div>
+            </ChildContent>
+        </KitCard>
+
+        <BottomBar>
+            <TypeChips Items="@_types" Selected="@_type" SelectedChanged="@(v => _type = v)" AriaLabel="Message type" />
+            <div class="kit-preview-compose">
+                <input class="kit-preview-input" type="text" placeholder="Write your pose…" aria-label="Message" />
+                <CapsuleButton Primary="true">Send</CapsuleButton>
+            </div>
+        </BottomBar>
+    </div>
+
+    <div class="kit-preview-aside">
+        <KitCard Aside="true" Title="Here · 4">
+            <div class="kit-preview-grid">
+                <PortraitTile Name="Tomas Reyes" Label="Tomas" ImageUrl="/assets/kit-samples/tomas.jpg" OnClick="@(() => { })" />
+                <PortraitTile Name="Wren Halloway" Label="Wren" ImageUrl="/assets/kit-samples/wren.jpg" Status="away" OnClick="@(() => { })" />
+                <PortraitTile Name="Ilsa Varn" Label="Ilsa" ImageUrl="/assets/kit-samples/wren.jpg" Highlight="true" OnClick="@(() => { })" />
+                <PortraitTile Name="Dace Kellan" Label="Dace" OnClick="@(() => { })" />
+            </div>
+        </KitCard>
+        <KitCard Aside="true" Title="Exits · 3">
+            <div class="kit-preview-stack">
+                <ImageTile Label="Harbour Row" Sub="Harbour Ward" ImageUrl="/assets/kit-samples/harbour-row.jpg" OnClick="@(() => { })" />
+                <ImageTile Label="Ferry Steps" Sub="Harbour Ward" ImageUrl="/assets/kit-samples/ferry-steps.jpg" OnClick="@(() => { })">
+                    <Overlay><Pill>3 there</Pill></Overlay>
+                </ImageTile>
+                <ImageTile Label="Out" Sub="Salt Market" Icon="@Icons.Material.Outlined.Explore" OnClick="@(() => { })" />
+            </div>
+        </KitCard>
+        <KitCard Aside="true" Title="Pills">
+            <div class="kit-preview-pills">
+                <Pill Dot="var(--accent)">In a scene · Salt Market at Dusk</Pill>
+                <Pill>Idle 1m</Pill>
+                <Pill>#312</Pill>
+            </div>
+        </KitCard>
+    </div>
+</div>
+
+@code {
+    private bool _minimised;
+    private bool _open;
+    private string _view = "story";
+    private string _type = "pose";
+
+    private static readonly IReadOnlyList<(string Key, string Label)> _views = [("story", "Story"), ("terminal", "Terminal")];
+    private static readonly IReadOnlyList<(string Key, string Label)> _types = [("pose", "Pose"), ("say", "Say"), ("ooc", "OOC"), ("cmd", "Command")];
+}
