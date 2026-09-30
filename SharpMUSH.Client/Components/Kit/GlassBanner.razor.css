@@ -86,14 +86,42 @@
 	text-shadow: var(--on-image-shadow);
 }
 
-.kit-banner-text {
+/* bottom row: the lead (a portrait), the text, and the bottom-right capsules */
+.kit-banner-foot {
 	position: absolute;
 	left: 16px;
 	right: 16px;
 	bottom: 14px;
+	display: flex;
+	align-items: flex-end;
+	gap: 16px;
+	min-width: 0;
+}
+
+.kit-banner-lead {
+	flex: none;
+	line-height: 0;
+}
+
+.kit-banner-text {
+	flex: 1 1 auto;
 	min-width: 0;
 	color: var(--text);
 	text-shadow: var(--on-image-shadow);
+}
+
+.kit-banner-bottom-actions {
+	flex: none;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* no image: a gradient on the subject's hue (the profile's fallback) */
+.kit-banner--hue {
+	background:
+		radial-gradient(ellipse at 30% 50%, rgba(var(--glow), 0.12) 0%, transparent 60%),
+		linear-gradient(135deg, hsl(var(--banner-hue) 40% 16%) 0%, hsl(calc(var(--banner-hue) + 40) 30% 10%) 100%);
 }
 
 .kit-banner-kicker {
@@ -201,4 +229,15 @@
 
 .kit-banner-spacer {
 	flex: 1 1 auto;
+}
+
+@container page (max-width: 48rem) {
+	.kit-banner-foot {
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+
+	.kit-banner-bottom-actions {
+		flex-basis: 100%;
+	}
 }

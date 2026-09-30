@@ -4713,4 +4713,49 @@
   <data name="NavCharCategories" xml:space="preserve">
     <value>Kategorije likova</value>
   </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Nijedan lik se ne zove {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>U sceni · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Na mreži</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Cijela slika</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Pošta</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>O liku {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Životopis</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wiki stranica · uređeno {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Preglednik slika</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} od {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Zatvori</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Prethodna slika</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Sljedeća slika</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Ova se slika ne može prikazati.</value>
+  </data>
 </root>

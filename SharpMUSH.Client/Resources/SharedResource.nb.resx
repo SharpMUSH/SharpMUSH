@@ -4713,4 +4713,49 @@
   <data name="NavCharCategories" xml:space="preserve">
     <value>Figurkategorier</value>
   </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Ingen figur heter {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>I en scene · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Pålogget</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Hele bildet</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Post</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>Om {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Biografi</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wikiside · redigert {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Bildeviser</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} av {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Lukk</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Forrige bilde</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Neste bilde</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Dette bildet kan ikke vises.</value>
+  </data>
 </root>

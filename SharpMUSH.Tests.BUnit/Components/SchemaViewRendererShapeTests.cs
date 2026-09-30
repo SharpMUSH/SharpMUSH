@@ -63,7 +63,7 @@ public class SchemaViewRendererShapeTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
-	public async Task Section_RendersAsPaper_AndHidesWhenAllFieldsInvisible()
+	public async Task Section_RendersAsACard_AndHidesWhenAllFieldsInvisible()
 	{
 		var doc = View(null,
 			Page(1, null,
@@ -71,8 +71,9 @@ public class SchemaViewRendererShapeTests : BunitContext
 				Section(2, "Hidden", new SchemaElement(Kind: "field", Key: "sec", Label: "Secret", Type: "text"))));
 		var cut = RenderView(doc, Data(("pub", "shown", true), ("sec", "nope", false)));
 
-		// Visible section rendered as a paper; the all-invisible section produces no paper/header.
-		await Assert.That(cut.FindAll("div.mud-paper").Count).IsEqualTo(1);
+		// Visible section rendered as a kit card titled with its name; the all-invisible section produces nothing.
+		await Assert.That(cut.FindAll("section.kit-card").Count).IsEqualTo(1);
+		await Assert.That(cut.Find("section.kit-card .kit-card-title").TextContent).IsEqualTo("Public");
 		await Assert.That(cut.Markup).Contains("Public");
 		await Assert.That(cut.Markup).Contains("shown");
 		await Assert.That(cut.Markup).DoesNotContain("Secret");
@@ -138,7 +139,7 @@ public class SchemaViewRendererShapeTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
-	public async Task KeyValue_RendersTableRows_ForVisibleKeysOnly()
+	public async Task KeyValue_RendersLabelledRows_ForVisibleKeysOnly()
 	{
 		var doc = View(null, Page(1, null,
 			Section(1, "Demographics", new SchemaElement(Kind: "keyvalue", Fields: ["fullname", "alias", "secret"]))));
@@ -147,9 +148,10 @@ public class SchemaViewRendererShapeTests : BunitContext
 			("alias", "Mithrandir", true),
 			("secret", "Olorin", false)));
 
-		await Assert.That(cut.FindAll("table").Count).IsGreaterThanOrEqualTo(1);
-		// Two visible keys → two rows; the hidden one is absent.
-		await Assert.That(cut.FindAll("tbody tr").Count).IsEqualTo(2);
+		// A definition list, label over value like every other field; two visible keys → two rows.
+		await Assert.That(cut.FindAll("dl.schema-kv").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".schema-kv-row").Count).IsEqualTo(2);
+		await Assert.That(cut.Find(".schema-kv-row dt").TextContent).IsEqualTo("fullname");
 		await Assert.That(cut.Markup).Contains("Gandalf the Grey");
 		await Assert.That(cut.Markup).Contains("Mithrandir");
 		await Assert.That(cut.Markup).DoesNotContain("Olorin");
@@ -189,29 +191,31 @@ public class SchemaViewRendererShapeTests : BunitContext
 	}
 
 	[TUnit.Core.Test]
-	public async Task DefaultColumns_StacksElements_NoGrid()
+	public async Task DefaultColumns_FlowShortFieldsIntoAnAutoGrid()
 	{
 		var doc = View(null, Page(1, null, Section(1, "S",
 			new SchemaElement(Kind: "field", Key: "a", Label: "A", Type: "text"),
 			new SchemaElement(Kind: "field", Key: "b", Label: "B", Type: "text"))));
 		var cut = RenderView(doc, Data(("a", "1", true), ("b", "2", true)));
 
-		// Per-row default: no grid.
-		await Assert.That(cut.FindAll("div.mud-grid").Count).IsEqualTo(0);
+		// No declared columns: short fields flow into as many columns as fit (board 25's Details row).
+		await Assert.That(cut.FindAll(".schema-grid--auto").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll(".schema-grid--auto .schema-cell").Count).IsEqualTo(2);
+		await Assert.That(cut.Find(".schema-cell .schema-label").TextContent).IsEqualTo("A");
+		await Assert.That(cut.Find(".schema-cell .schema-value").TextContent.Trim()).IsEqualTo("1");
 	}
 
 	[TUnit.Core.Test]
-	public async Task TwoColumns_RendersGrid_WithHalfWidthItems()
+	public async Task TwoColumns_RendersAFixedGrid()
 	{
 		var doc = View(null, Page(1, null, Columns(1, "S", 2,
 			new SchemaElement(Kind: "field", Key: "a", Label: "A", Type: "text"),
 			new SchemaElement(Kind: "field", Key: "b", Label: "B", Type: "text"))));
 		var cut = RenderView(doc, Data(("a", "1", true), ("b", "2", true)));
 
-		await Assert.That(cut.FindAll("div.mud-grid").Count).IsGreaterThanOrEqualTo(1);
-		await Assert.That(cut.FindAll("div.mud-grid-item").Count).IsEqualTo(2);
-		// 12 / 2 columns = md-6 per item.
-		await Assert.That(cut.FindAll("div.mud-grid-item-md-6").Count).IsEqualTo(2);
+		var grid = cut.Find(".schema-grid--cols");
+		await Assert.That(grid.GetAttribute("style")).Contains("--schema-cols:2");
+		await Assert.That(grid.QuerySelectorAll(".schema-cell").Length).IsEqualTo(2);
 	}
 
 	[TUnit.Core.Test]
@@ -221,8 +225,8 @@ public class SchemaViewRendererShapeTests : BunitContext
 			new SchemaElement(Kind: "field", Key: "wide", Label: "Wide", Type: "text", Span: 2))));
 		var cut = RenderView(doc, Data(("wide", "x", true)));
 
-		// span 2 in a 2-column section → md-12 (full width).
-		await Assert.That(cut.FindAll("div.mud-grid-item-md-12").Count).IsEqualTo(1);
+		// span 2 in a 2-column section → the whole row.
+		await Assert.That(cut.Find(".schema-cell").GetAttribute("style")).Contains("--schema-span:2");
 	}
 
 	[TUnit.Core.Test]
@@ -234,7 +238,7 @@ public class SchemaViewRendererShapeTests : BunitContext
 			Section(1, "S", new SchemaElement(Kind: "field", Key: "blank", Label: "Blank", Type: "text", Default: El("—")))));
 		var cut = RenderView(doc, Data(("blank", "", true)));
 
-		await Assert.That(cut.FindAll("div.mud-paper").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("section.kit-card").Count).IsEqualTo(1);
 		await Assert.That(cut.Markup).Contains("Blank");
 		await Assert.That(cut.Markup).Contains("—");
 	}
@@ -247,7 +251,7 @@ public class SchemaViewRendererShapeTests : BunitContext
 			Section(1, "S", new SchemaElement(Kind: "field", Key: "blank", Label: "Blank", Type: "text", ShowWhenEmpty: false))));
 		var cut = RenderView(doc, Data(("blank", "", true)));
 
-		await Assert.That(cut.FindAll("div.mud-paper").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("section.kit-card").Count).IsEqualTo(0);
 		await Assert.That(cut.Markup).DoesNotContain("Blank");
 	}
 }

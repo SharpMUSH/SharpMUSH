@@ -4713,4 +4713,49 @@
   <data name="NavCharCategories" xml:space="preserve">
     <value>Categorii de personaje</value>
   </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Niciun personaj nu se numește {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>Într-o scenă · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Imagine completă</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Poștă</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>Despre {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Biografie</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Pagină wiki · editată {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Vizualizator de imagini</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} din {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Închide</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Imaginea anterioară</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Imaginea următoare</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Această imagine nu poate fi afișată.</value>
+  </data>
 </root>

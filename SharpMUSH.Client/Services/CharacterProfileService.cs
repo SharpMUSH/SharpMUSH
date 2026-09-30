@@ -20,7 +20,7 @@ public partial class CharacterProfileService(IHttpClientFactory httpClientFactor
 	/// <see cref="ApiFailureKind.NotFound"/> when no character answers to it; another kind when the
 	/// directory or the profile could not be read.
 	/// </summary>
-	public async Task<ApiResult<CharacterProfile>> GetAsync(string name)
+	public async Task<ApiResult<CharacterProfileData>> GetAsync(string name)
 	{
 		return await directory.ResolveObjidAsync(name) switch
 		{
@@ -30,7 +30,7 @@ public partial class CharacterProfileService(IHttpClientFactory httpClientFactor
 		};
 	}
 
-	private async Task<ApiResult<CharacterProfile>> FetchAsync(string objid)
+	private async Task<ApiResult<CharacterProfileData>> FetchAsync(string objid)
 	{
 		var result = await httpClientFactory.CreateClient("api")
 			.GetApiAsync<JsonElement>($"http/profile?objid={Uri.EscapeDataString(objid)}", "The server returned no profile.");
@@ -41,7 +41,7 @@ public partial class CharacterProfileService(IHttpClientFactory httpClientFactor
 		};
 	}
 
-	private static ApiResult<CharacterProfile> Parse(JsonElement body, string objid)
+	private static ApiResult<CharacterProfileData> Parse(JsonElement body, string objid)
 	{
 		if (body.ValueKind != JsonValueKind.Object)
 		{
@@ -50,7 +50,7 @@ public partial class CharacterProfileService(IHttpClientFactory httpClientFactor
 
 		var fields = body.TryGetProperty("fields", out var f) && f.ValueKind == JsonValueKind.Object ? f : default;
 		var colour = Field(fields, "color");
-		return new CharacterProfile(
+		return new CharacterProfileData(
 			Name: Text(body, "character") ?? string.Empty,
 			Objid: Text(body, "objid") ?? objid,
 			Dbref: Text(body, "dbref") ?? objid.Split(':')[0],

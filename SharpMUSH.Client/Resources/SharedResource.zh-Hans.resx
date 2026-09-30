@@ -4713,4 +4713,49 @@
   <data name="NavCharCategories" xml:space="preserve">
     <value>角色类别</value>
   </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>没有名为 {0} 的角色。</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>正在场景中 · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>在线</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>完整图片</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>邮件</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>私信</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>关于 {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>简介</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wiki 页面 · {0}编辑</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>图片查看器</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>第 {0} 张，共 {1} 张</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>上一张</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>下一张</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>无法显示此图片。</value>
+  </data>
 </root>

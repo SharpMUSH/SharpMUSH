@@ -4713,4 +4713,49 @@
   <data name="NavCharCategories" xml:space="preserve">
     <value>Personagecategorieën</value>
   </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Er is geen personage met de naam {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>In een scène · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Volledige afbeelding</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Post</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>Over {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Biografie</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wikipagina · bewerkt {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Afbeeldingsviewer</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} van {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Sluiten</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Vorige afbeelding</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Volgende afbeelding</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Deze afbeelding kan niet worden weergegeven.</value>
+  </data>
 </root>

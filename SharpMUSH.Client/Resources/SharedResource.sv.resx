@@ -4713,4 +4713,49 @@
   <data name="NavCharCategories" xml:space="preserve">
     <value>Rollfigurskategorier</value>
   </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Ingen rollfigur heter {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>I en scen · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Hela bilden</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Post</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>Om {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Biografi</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wikisida · redigerad {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Bildvisare</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} av {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Stäng</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Föregående bild</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Nästa bild</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Bilden kan inte visas.</value>
+  </data>
 </root>

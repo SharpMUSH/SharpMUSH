@@ -49,7 +49,7 @@ public class CharacterProfileServiceTests
 			_ => null,
 		});
 
-		var profile = (await service.GetAsync("tomas reyes")).Expect<CharacterProfile>();
+		var profile = (await service.GetAsync("tomas reyes")).Expect<CharacterProfileData>();
 		await Assert.That(profile.Name).IsEqualTo("Tomas Reyes");
 		await Assert.That(profile.Dbref).IsEqualTo("#312");
 		await Assert.That(profile.Image).IsEqualTo("/api/wiki-assets/a/tomas.jpg");
@@ -71,7 +71,7 @@ public class CharacterProfileServiceTests
 			_ => null,
 		});
 
-		var profile = (await service.GetAsync("Tomas Reyes")).Expect<CharacterProfile>();
+		var profile = (await service.GetAsync("Tomas Reyes")).Expect<CharacterProfileData>();
 		await Assert.That(profile.Color).IsNull();
 		await Assert.That(profile.Image).IsNull();
 		await Assert.That(profile.Banner).IsNull();

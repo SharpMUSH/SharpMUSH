@@ -1,0 +1,94 @@
+.schema-view {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-width: 0;
+}
+
+.schema-title {
+	margin: 0;
+	font-size: 20px;
+	font-weight: 700;
+	color: var(--text);
+}
+
+.schema-page-title {
+	margin: 4px 0 0;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--text);
+}
+
+.schema-grid {
+	display: grid;
+	gap: 14px 18px;
+	min-width: 0;
+}
+
+/* undeclared columns: as many ~10rem columns as fit (four in a profile's main column) */
+.schema-grid--auto {
+	grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+}
+
+.schema-grid--cols {
+	grid-template-columns: repeat(var(--schema-cols), minmax(0, 1fr));
+}
+
+.schema-cell {
+	min-width: 0;
+	grid-column: span var(--schema-span, 1);
+}
+
+.schema-cell--wide {
+	grid-column: 1 / -1;
+}
+
+.schema-field {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	min-width: 0;
+}
+
+.schema-label {
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+.schema-value {
+	font-size: 14px;
+	color: var(--text);
+	overflow-wrap: anywhere;
+}
+
+.schema-kv {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+	gap: 14px 18px;
+	margin: 0;
+}
+
+.schema-kv-row {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	min-width: 0;
+}
+
+.schema-kv-row dd {
+	margin: 0;
+}
+
+@container page (max-width: 48rem) {
+	.schema-grid--cols {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.schema-cell {
+		grid-column: auto;
+	}
+
+	.schema-cell--wide {
+		grid-column: 1 / -1;
+	}
+}

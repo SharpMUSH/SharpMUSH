@@ -14,7 +14,7 @@
 else if (Mode == WikiMode.View)
 {
     <WikiDisplay Slug="@Slug" Namespace="@Namespace" Category="@Category" Locale="@Locale" Article="@_article"
-                 Embedded="@Embedded"
+                 Embedded="@Embedded" ShowTitle="@ShowTitle"
                  ActivateEditMode="ActivateEditMode" OnArticleRestored="HandleArticleRestored" />
 }
 else
@@ -68,6 +68,12 @@ else
     /// component drop its own frame rather than wrap an empty or missing page in one.
     /// </summary>
     [Parameter] public EventCallback<bool> OnLoaded { get; init; }
+
+    /// <summary>The loaded article (null when there is none), for a host that titles the page itself.</summary>
+    [Parameter] public EventCallback<WikiArticle?> OnArticle { get; init; }
+
+    /// <summary>False drops an embedded article's own kicker and title, for a host card whose header names it.</summary>
+    [Parameter] public bool ShowTitle { get; init; } = true;
 
     private WikiArticle? _article;
 
@@ -247,6 +253,7 @@ else
 
         _loading = false;
         await OnLoaded.InvokeAsync(_article is not null);
+        await OnArticle.InvokeAsync(_article);
         await base.OnInitializedAsync();
     }
 }

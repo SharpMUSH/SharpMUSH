@@ -4713,4 +4713,49 @@
   <data name="NavCharCategories" xml:space="preserve">
     <value>Charakterkategorien</value>
   </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Es gibt keinen Charakter namens {0}.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>In einer Szene · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Ganzes Bild</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Post</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>Über {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Biografie</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Wikiseite · bearbeitet {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Bildbetrachter</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} von {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Vorheriges Bild</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Nächstes Bild</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Dieses Bild kann nicht angezeigt werden.</value>
+  </data>
 </root>

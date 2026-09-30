@@ -4713,4 +4713,49 @@
   <data name="NavCharCategories" xml:space="preserve">
     <value>Категории персонажей</value>
   </data>
+  <data name="NavCharNotFound" xml:space="preserve">
+    <value>Персонажа с именем {0} нет.</value>
+  </data>
+  <data name="NavCharInScene" xml:space="preserve">
+    <value>В сцене · {0}</value>
+  </data>
+  <data name="NavCharOnline" xml:space="preserve">
+    <value>В сети</value>
+  </data>
+  <data name="NavCharFullImage" xml:space="preserve">
+    <value>Полное изображение</value>
+  </data>
+  <data name="NavCharMail" xml:space="preserve">
+    <value>Почта</value>
+  </data>
+  <data name="NavCharPage" xml:space="preserve">
+    <value>Пейдж</value>
+  </data>
+  <data name="NavCharAbout" xml:space="preserve">
+    <value>О персонаже {0}</value>
+  </data>
+  <data name="NavBiography" xml:space="preserve">
+    <value>Биография</value>
+  </data>
+  <data name="NavWikiPageEdited" xml:space="preserve">
+    <value>Вики-страница · изменена {0}</value>
+  </data>
+  <data name="NavViewerLabel" xml:space="preserve">
+    <value>Просмотр изображений</value>
+  </data>
+  <data name="NavViewerCount" xml:space="preserve">
+    <value>{0} из {1}</value>
+  </data>
+  <data name="NavViewerClose" xml:space="preserve">
+    <value>Закрыть</value>
+  </data>
+  <data name="NavViewerPrevious" xml:space="preserve">
+    <value>Предыдущее изображение</value>
+  </data>
+  <data name="NavViewerNext" xml:space="preserve">
+    <value>Следующее изображение</value>
+  </data>
+  <data name="NavViewerUnavailable" xml:space="preserve">
+    <value>Это изображение нельзя показать.</value>
+  </data>
 </root>

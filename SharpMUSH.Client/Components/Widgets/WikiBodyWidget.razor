@@ -5,6 +5,7 @@
 @using SharpMUSH.Client.Models.Widgets
 @using SharpMUSH.Library.Services
 @inject IAuthorizationService Authorization
+@inject IStringLocalizer<SharedResource> Loc
 
 @* Renders one wiki page. Which page, in precedence order: an explicit slug in the widget config; a
    "character" shorthand in the config (the Character-namespace page whose slug is that name); or the
@@ -21,15 +22,18 @@
 }
 @if (!string.IsNullOrWhiteSpace(_slug) && !NothingToShow)
 {
-    @* The wrapper is the container-query context; its scoped CSS clamps the paper's padding. *@
+    @* D1 §6.3: a card. On a profile it is the Biography, "Wiki page · edited …" under the title and
+       History at the right; a page placed by config is titled with its own title. The home page's
+       hero keeps its own presentation and gets no header. *@
     <div class="wiki-body-widget">
-        <MudPaper Elevation="0" Style="border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);">
+        <KitCard Class="wiki-body-card" Title="@CardTitle" Sub="@CardSub" Controls="@(IsHero || _article is null ? null : HistoryLink)">
             @* Keyed on the address: WikiView fetches once, on init, so a reconfigured widget has to
                remount to go and read the page it now points at. *@
             <WikiView @key="address" Slug="@_slug" Namespace="@_namespace" Category="@_category" Locale="@_locale"
-                      Mode="WikiView.WikiMode.View" Embedded="true"
-                      OnLoaded="@(found => HandleLoaded(address, found))" />
-        </MudPaper>
+                      Mode="WikiView.WikiMode.View" Embedded="true" ShowTitle="@IsHero"
+                      OnLoaded="@(found => HandleLoaded(address, found))"
+                      OnArticle="@(article => HandleArticle(address, article))" />
+        </KitCard>
     </div>
 }
 
@@ -54,6 +58,9 @@
 
     /// <summary>True once the configured page has been fetched and turned out not to exist.</summary>
     private bool _missing;
+
+    /// <summary>The page on screen, once loaded: its title, editor and when name the card.</summary>
+    private WikiArticle? _article;
 
     /// <summary>True when the viewer holds <c>wiki.create</c>, so a missing page is worth showing them.</summary>
     private bool _mayCreate;
@@ -104,6 +111,7 @@
         {
             _address = address;
             _missing = false;
+            _article = null;
         }
 
         (_slug, _namespace, _category, _locale) = (slug, ns, category, locale);
@@ -120,6 +128,36 @@
 
         _missing = !found;
     }
+
+    /// <summary>As <see cref="HandleLoaded"/>: only the page on screen may name the card.</summary>
+    private void HandleArticle(string? address, WikiArticle? article)
+    {
+        if (address != _address) return;
+
+        _article = article;
+    }
+
+    /// <summary>The home page renders as a hero with its own title; the card gives it no header.</summary>
+    private bool IsHero => string.Equals(_slug, "home", StringComparison.OrdinalIgnoreCase);
+
+    private bool IsBiography => WikiRoutes.IsCharacterProfile(_namespace, _category);
+
+    private string? CardTitle => IsHero ? null : IsBiography ? Loc["NavBiography"].Value : _article?.Title;
+
+    private string? CardSub => IsHero || _article?.UpdatedAt is not { } edited
+        ? null
+        : string.Format(Loc["NavWikiPageEdited"], Loc.Format(edited));
+
+    private string HistoryHref =>
+        WikiRoutes.WikiPathFor(_namespace, _article?.Category ?? _category, _article?.Slug ?? _slug ?? string.Empty) + "/history";
+
+    private RenderFragment HistoryLink => __builder =>
+    {
+        <a class="wiki-body-history" href="@HistoryHref">
+            <MudIcon Icon="@Icons.Material.Outlined.History" Size="Size.Small" />
+            <span>@Loc["ResHistory"]</span>
+        </a>
+    };
 
     /// <summary>
     /// True when the only thing left to frame is the wiki's "no such page" notice: honest wording on

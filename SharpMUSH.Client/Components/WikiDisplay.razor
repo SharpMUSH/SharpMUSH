@@ -108,8 +108,11 @@ else
             else
             {
                 <article class="wiki-article-main">
-                    <div class="wiki-article-kicker">@CategoryLabel</div>
-                    <h1 class="wiki-article-title">@Article.Title</h1>
+                    @if (ShowTitle)
+                    {
+                        <div class="wiki-article-kicker">@CategoryLabel</div>
+                        <h1 class="wiki-article-title">@Article.Title</h1>
+                    }
                     @LocaleBanner
                     <div class="WikiContent wiki-article-body">
                         <div class="mud-card-content">
@@ -211,6 +214,10 @@ else
     /// </summary>
     [Parameter]
     public bool Embedded { get; init; }
+
+    /// <summary>False drops an embedded article's kicker and title (the host card's header names it).</summary>
+    [Parameter]
+    public bool ShowTitle { get; init; } = true;
 
     [Parameter]
     public required Func<Task> ActivateEditMode { get; init; }
