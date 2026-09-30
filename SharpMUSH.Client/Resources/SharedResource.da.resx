@@ -5004,4 +5004,19 @@
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Tilbage til scenen</value>
   </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Spil</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Spilsidens højre kolonne: hvem der er her, udgangene og spillets paneler.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Her</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Udgange</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Apps</value>
+  </data>
 </root>

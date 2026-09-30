@@ -26,6 +26,13 @@ public class PlayPageD1Tests : TrackingBunitContext
 {
 	private readonly OobChannelStore _store = new();
 	private readonly TestCommFeed _comms = new();
+
+	/// <summary>A game panel shipped for the Play scope (board 13), fed by an OOB package.</summary>
+	private static readonly SharpMUSH.Client.Models.Applications.PortalApplication[] Apps =
+	[
+		new("weather", "Weather", null, "Widget", "http/weather/schema", null, null, "Guest", null, ["RightSidebar"], 30,
+			Scope: "play", OobPackage: "weather.now"),
+	];
 	private readonly IPlayTerminalService _play = Substitute.For<IPlayTerminalService>();
 
 	public PlayPageD1Tests()
@@ -57,7 +64,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		hostEnv.Environment.Returns("Production");
 		Services.AddSingleton(hostEnv);
 
-		PlayPageServices.Install(Services, _comms);
+		PlayPageServices.Install(Services, _comms, Apps);
 	}
 
 	/// <summary>The shell's page-sidebar outlet and a popover provider beside the page, as MainLayout composes them.</summary>
@@ -258,6 +265,18 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".comm").Count).IsEqualTo(0);
 		await Assert.That(cut.Find(".play-card").HasAttribute("hidden")).IsFalse();
 		await Assert.That(_comms.Viewing).IsNull();
+	}
+
+	[Test]
+	public async Task TheAside_IsThePlayLayout_ThenTheGamesPlayPanels()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .play-panel"), TimeSpan.FromSeconds(5));
+		var order = cut.FindAll(".play-aside .kit-card-title").Select(t => t.TextContent).ToList();
+		await Assert.That(order).IsEquivalentTo(new[] { "Here · 1", "Exits · 1", "Weather" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(cut.FindComponents<SharpMUSH.Client.Components.Widgets.HereWidget>().Count).IsEqualTo(1)
+			.Because("Here and Exits come from the play layout scope, not markup in the page");
 	}
 
 	[Test]

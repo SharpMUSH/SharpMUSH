@@ -5004,4 +5004,19 @@
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Înapoi la scenă</value>
   </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Joc</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Coloana din dreapta a paginii de joc: cine este aici, ieșirile și panourile jocului.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Aici</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Ieșiri</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Aplicații</value>
+  </data>
 </root>

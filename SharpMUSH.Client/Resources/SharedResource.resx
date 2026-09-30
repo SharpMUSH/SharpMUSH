@@ -4349,4 +4349,19 @@
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Back to the scene</value>
   </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Play</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>The play page's right column: who is here, the exits, and game panels.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Here</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Exits</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Apps</value>
+  </data>
 </root>

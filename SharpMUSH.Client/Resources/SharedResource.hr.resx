@@ -5004,4 +5004,19 @@
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Natrag na scenu</value>
   </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Igra</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Desni stupac stranice igre: tko je ovdje, izlazi i ploče igre.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Ovdje</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Izlazi</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Aplikacije</value>
+  </data>
 </root>

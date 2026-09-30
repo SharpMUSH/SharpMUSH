@@ -5004,4 +5004,19 @@
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Vissza a jelenethez</value>
   </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Játék</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>A játékoldal jobb oszlopa: ki van itt, a kijáratok és a játék paneljei.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Itt</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Kijáratok</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Alkalmazások</value>
+  </data>
 </root>

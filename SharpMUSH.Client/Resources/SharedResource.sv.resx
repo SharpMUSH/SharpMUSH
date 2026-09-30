@@ -5004,4 +5004,19 @@
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Tillbaka till scenen</value>
   </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Spela</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>Spelsidans högra kolumn: vem som är här, utgångarna och spelets paneler.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Här</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Utgångar</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Appar</value>
+  </data>
 </root>

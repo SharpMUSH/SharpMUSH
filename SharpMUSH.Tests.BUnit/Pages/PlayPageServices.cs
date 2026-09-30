@@ -15,7 +15,7 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// </summary>
 internal static class PlayPageServices
 {
-	public static FakeSceneHub Install(IServiceCollection services, ICommFeed? comms = null)
+	public static FakeSceneHub Install(IServiceCollection services, ICommFeed? comms = null, IReadOnlyList<PortalApplication>? apps = null)
 	{
 		var hub = new FakeSceneHub();
 		services
@@ -29,7 +29,15 @@ internal static class PlayPageServices
 			.AddSingleton(sp => new GalleryService(sp.GetRequiredService<IHttpClientFactory>()))
 			.AddSingleton(sp => new SchemaAppService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<SchemaAppService>.Instance))
 			.AddSingleton(sp => new ApplicationRegistryClient(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<ApplicationRegistryClient>.Instance))
-			.AddSingleton(new ApplicationCatalog(Array.Empty<PortalApplication>()));
+			.AddSingleton(new ApplicationCatalog(apps ?? []))
+			.AddSingleton<ILayoutService>(sp => new LayoutService(sp.GetRequiredService<IHttpClientFactory>(), NullLogger<LayoutService>.Instance))
+			.AddSingleton<IWidgetRegistry>(_ =>
+			{
+				var registry = new WidgetRegistry();
+				foreach (var widget in SharpMUSH.Client.Widgets.BuiltInWidgets.All) registry.Register(widget);
+				foreach (var app in apps ?? []) registry.Register(new SharpMUSH.Client.Widgets.ApplicationPortalWidget(app));
+				return registry;
+			});
 		return hub;
 	}
 }

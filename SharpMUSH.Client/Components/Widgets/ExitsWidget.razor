@@ -1,0 +1,39 @@
+@using System.Text.Json
+@using SharpMUSH.Client.Components.Play
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.Widgets
+@using SharpMUSH.Client.Services
+@inject IPlayTerminalService PlayTerminal
+@implements IDisposable
+
+@* README §7.4 the Exits widget: ExitsCard over the play connection's room, with its keycaps and alias
+   keys. Commands go through the Play page when it is the host, else straight down the play connection. *@
+<ExitsCard Exits="@_exits" OnCommand="SendAsync" />
+
+@code {
+    [Parameter] public JsonElement? Config { get; set; }
+
+    /// <summary>Injected by ZoneRenderer; declared so DynamicComponent does not throw on it.</summary>
+    [Parameter] public string Zone { get; set; } = string.Empty;
+
+    [CascadingParameter] private PlayPageContext? Page { get; set; }
+
+    private IReadOnlyList<RoomExit> _exits = [];
+
+    protected override void OnInitialized()
+    {
+        _exits = PlayTerminal.OobChannels.Room.Exits;
+        PlayTerminal.OobChannels.RoomChanged += OnRoomChanged;
+    }
+
+    private void OnRoomChanged()
+    {
+        _exits = PlayTerminal.OobChannels.Room.Exits;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private Task SendAsync(string command) =>
+        Page is not null ? Page.Send(command) : PlayTerminal.SendAsync(command);
+
+    public void Dispose() => PlayTerminal.OobChannels.RoomChanged -= OnRoomChanged;
+}

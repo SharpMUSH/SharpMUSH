@@ -11,6 +11,11 @@
 @inject IPlayTerminalService PlayTerminal
 @inject AccountAuthService AccountAuth
 @inject ICommFeed Comms
+@inject ILayoutService Layouts
+@inject ApplicationCatalog Catalog
+@using SharpMUSH.Client.Components.Layout
+@using SharpMUSH.Client.Models.Applications
+@using SharpMUSH.Library.Models.Portal.Widgets
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -110,8 +115,17 @@ else
             </div>
             @* Hidden rather than removed in focus mode: the exit keys live with the Exits card. *@
             <aside class="play-aside" aria-label="@Loc["NavPlayTabRoom"]" hidden="@_focus">
-                <HereCard Occupants="@Room.Occupants" OnCharacter="OpenSheet" OnCommand="SendAsync" />
-                <ExitsCard Exits="@Room.Exits" OnCommand="SendAsync" />
+                @* README §7.4: the aside is the "play" layout scope (Here, then Exits, by default), then the game's
+                   panels registered for the Play scope that the layout does not already place. *@
+                <CascadingValue Value="_pageContext" IsFixed="true">
+                    <ScopedZone Scope="@LayoutScopes.Play" Zone="WidgetZone.RightSidebar" Grid="false" />
+                    @foreach (var app in _scopePanels)
+                    {
+                        <KitCard Aside="true" Title="@app.DisplayName" Class="play-panel">
+                            <SchemaWidget WidgetName="@app.Slug" Zone="@nameof(WidgetZone.RightSidebar)" />
+                        </KitCard>
+                    }
+                </CascadingValue>
             </aside>
             <nav class="play-tabs" aria-label="@Loc["NavPlayTabs"]">
                 <button type="button" class="play-tab @(_mobileSheet is null ? "play-tab--on" : null)" aria-pressed="@(_mobileSheet is null ? "true" : "false")"
@@ -201,6 +215,12 @@ else
     private bool _roomExits = true;
 
     private bool InScene => Room.Info?.Scene is not null;
+
+    /// <summary>What the play-scope widgets may do on this page: open the sheet, send a command.</summary>
+    private PlayPageContext _pageContext = null!;
+
+    /// <summary>Widget apps registered for the Play scope that the play layout does not place itself.</summary>
+    private IReadOnlyList<PortalApplication> _scopePanels = [];
 
     /// <summary>Story in a scene unless the player chose Terminal; outside a scene there is only the terminal.</summary>
     private PlayView View => InScene ? _chosenView ?? PlayView.Story : PlayView.Terminal;
@@ -326,9 +346,22 @@ else
         PlayTerminal.OobChannels.RoomChanged += OnRoomChanged;
         Comms.Changed += OnCommsChanged;
         Room = PlayTerminal.OobChannels.Room;
+        _pageContext = new PlayPageContext(
+            occupant => InvokeAsync(() => { OpenSheet(occupant); StateHasChanged(); }),
+            SendAsync);
     }
 
-    protected override Task OnInitializedAsync() => ResolveRosterAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await ResolveRosterAsync();
+        var layout = await Layouts.GetLayoutAsync(LayoutScopes.Play);
+        var placed = layout.Zones.TryGetValue(WidgetZone.RightSidebar, out var placements)
+            ? placements.Select(p => p.WidgetName).ToHashSet(StringComparer.OrdinalIgnoreCase)
+            : [];
+        _scopePanels = Catalog.ForScope(LayoutScopes.Play)
+            .Where(a => a.KindEnum == SharpMUSH.Library.Models.Portal.Applications.ApplicationKind.Widget && !placed.Contains(a.Slug))
+            .ToList();
+    }
 
     private async Task ResolveRosterAsync()
     {

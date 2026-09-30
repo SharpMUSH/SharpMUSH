@@ -5004,4 +5004,19 @@
   <data name="NavPlayBackToScene" xml:space="preserve">
     <value>Voltar à cena</value>
   </data>
+  <data name="LayScopePlay" xml:space="preserve">
+    <value>Jogar</value>
+  </data>
+  <data name="LayScopePlayDesc" xml:space="preserve">
+    <value>A coluna direita da página de jogo: quem está aqui, as saídas e os painéis do jogo.</value>
+  </data>
+  <data name="LayWidgetHere" xml:space="preserve">
+    <value>Aqui</value>
+  </data>
+  <data name="LayWidgetExits" xml:space="preserve">
+    <value>Saídas</value>
+  </data>
+  <data name="NavPlayApps" xml:space="preserve">
+    <value>Aplicativos</value>
+  </data>
 </root>

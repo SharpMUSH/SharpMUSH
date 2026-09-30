@@ -15,11 +15,14 @@ namespace SharpMUSH.Tests.BUnit.Components.Play;
 public class PlaySidebarD1Tests : TrackingBunitContext
 {
 	private readonly TestCommFeed _feed = new();
+	private readonly CharactersApiFake _api;
 
 	public PlaySidebarD1Tests()
 	{
-		CharactersApiFake.Install(this);
+		(_api, var factory, _) = CharactersApiFake.Install(this);
 		Services.AddSingleton<ICommFeed>(_feed);
+		Services.AddSingleton(new ApplicationRegistryClient(factory, Microsoft.Extensions.Logging.Abstractions.NullLogger<ApplicationRegistryClient>.Instance));
+		_api.Extra["/api/applications"] = "[]";
 	}
 
 	private static readonly RoomInfo Docks = new("#1201", "Lower Docks", "#1201:1", "Harbour Ward",
@@ -147,6 +150,28 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 		await Assert.That(cut.Find(".play-side-channels .kit-row-hash").TextContent).IsEqualTo("#P");
 		await Assert.That(cut.Find(".play-side-channels .kit-row-unread--badge").TextContent).IsEqualTo("3");
 	}
+
+	[Test]
+	public async Task PageApps_PlacedInPlay_AreListedUnderApps()
+	{
+		// README §7.4: page apps with NavPlacement "Play" are listed at the foot of the Play sidebar.
+		_api.Extra["/api/applications"] = """
+			[{"slug":"weather-map","displayName":"Weather map","icon":null,"kind":"Page","schemaUrl":"http/weather/schema","dataUrl":null,
+			  "submitRoute":null,"minimumRole":"Guest","navPlacement":"Play","zones":[],"order":1},
+			 {"slug":"builder","displayName":"Builder","icon":null,"kind":"Page","schemaUrl":"http/b/schema","dataUrl":null,
+			  "submitRoute":null,"minimumRole":"Guest","navPlacement":"Build","zones":[],"order":1}]
+			""";
+		var cut = RenderSidebar();
+		cut.WaitForAssertion(() => cut.Find(".play-side-apps .kit-row"), TimeSpan.FromSeconds(5));
+		var rows = cut.FindAll(".play-side-apps .kit-row");
+		await Assert.That(rows.Count).IsEqualTo(1);
+		await Assert.That(rows[0].GetAttribute("href")).IsEqualTo("/apps/weather-map");
+		await Assert.That(rows[0].TextContent).Contains("Weather map");
+	}
+
+	[Test]
+	public async Task NoPlayApps_NoAppsGroup()
+		=> await Assert.That(RenderSidebar().FindAll(".play-side-apps").Count).IsEqualTo(0);
 
 	[Test]
 	public async Task Disposing_StopsListeningToTheFeed()
