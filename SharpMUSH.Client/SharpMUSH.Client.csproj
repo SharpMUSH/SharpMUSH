@@ -63,6 +63,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- Content-hash the portal's own scripts so the server can let browsers keep them for a year
+		     (MapStaticAssets serves a fingerprinted route as immutable). index.html names them as
+		     js/name#[.{fingerprint}].js and OverrideHtmlAssetPlaceholders writes the hash in on build;
+		     without this pattern a publish only strips the marker. JS only: the SDK task that resolves
+		     the markers considers .js/.mjs endpoints and nothing else, so the stylesheets stay unhashed
+		     and revalidate. The fingerprint is part of the file name on disk; the plain name
+		     (js/mermaid.min.js, which lazy-assets.js loads) remains a route in the endpoints manifest,
+		     so a server must serve the portal through that manifest (PortalStaticFiles). -->
+		<StaticWebAssetFingerprintPattern Include="JSModule" Pattern="*.js" Expression="#[.{fingerprint}]!" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="BlazorMonaco" Version="3.5.0" />
 		<PackageReference Include="MessageFormat" Version="8.0.0" />
 		<!-- AuthenticationStateProvider / CascadingAuthenticationState / [Authorize] on routable

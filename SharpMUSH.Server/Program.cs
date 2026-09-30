@@ -114,6 +114,14 @@ public class Program
 		// manifest via MapStaticAssets (mapped with the SPA fallback below); without the manifest this
 		// falls back to the Blazor-framework and static-file middleware. See PortalStaticFiles.
 		var portalManifest = PortalStaticFiles.FindManifest(env);
+		if (portalManifest is null && File.Exists(Path.Combine(env.WebRootPath ?? "wwwroot", "index.html")))
+		{
+			// A portal is bundled but its manifest is not: served this way it gets no long-lived caching,
+			// and the scripts it loads by their plain names (the portal's own are content-hashed on disk)
+			// are not found. The Dockerfile copies the manifest; a hand-rolled deployment may not.
+			app.Logger.LogWarning("The portal in {WebRoot} is being served without {Manifest} in {ContentRoot}; "
+				+ "copy it from the client's publish output.", env.WebRootPath, PortalStaticFiles.ManifestFileName, env.ContentRootPath);
+		}
 		app.UsePortalStaticFiles(portalManifest);
 
 		app.UseMiddleware<BotDetectionMiddleware>();
