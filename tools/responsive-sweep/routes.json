@@ -4,6 +4,8 @@
 		"/login",
 		"/register",
 		"/wiki",
+		"/wiki/recent",
+		"/wiki/category/general",
 		"/characters",
 		"/help",
 		"/scenes",
