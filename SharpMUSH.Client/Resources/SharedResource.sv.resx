@@ -4842,4 +4842,70 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Hitta en rollfigur som heter ”{0}”</value>
   </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Bläddra</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Alla scener</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>Live nu</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Dina scener</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Schemalagda</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Avslutade</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# live} other {# live}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# nylig} other {# nyliga}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Scenarkiv</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>Scenerna som {0} har deltagit i.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Scener planerade till senare, de närmaste först.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Scener som deras ägare har avslutat.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Logga in och spela som en karaktär för att se scenerna du har deltagit i.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privat</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Schemalagd till {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Filtrera poser efter tagg</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Detaljer</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Startad</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Senaste aktivitet</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Startad av</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Längd</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Rollista · #} other {Rollista · #}}</value>
+  </data>
 </root>

@@ -4842,4 +4842,70 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Găsește un personaj numit „{0}”</value>
   </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Răsfoire</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Toate scenele</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>În direct acum</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Scenele tale</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Programate</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Încheiate</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# în direct} few {# în direct} other {# în direct}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# recentă} few {# recente} other {# de recente}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Arhiva scenelor</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>Scenele la care a participat {0}.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Scene planificate pentru mai târziu, cele mai apropiate primele.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Scene pe care proprietarii lor le-au încheiat.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Autentifică-te și joacă un personaj pentru a vedea scenele la care ai participat.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privată</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Programată pentru {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Filtrează pozele după etichetă</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Detalii</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Începută</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Ultima activitate</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Începută de</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Lungime</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Distribuție · #} few {Distribuție · #} other {Distribuție · #}}</value>
+  </data>
 </root>

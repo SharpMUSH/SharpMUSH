@@ -4842,4 +4842,70 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>查找名为“{0}”的角色</value>
   </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>浏览</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>全部场景</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>正在进行</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>你的场景</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>已排期</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>已结束</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, other {# 场进行中}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, other {最近 # 场}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>场景档案</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>{0} 参与过的场景。</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>计划稍后进行的场景，最近的在前。</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>所有者已结束的场景。</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>登录并以某个角色行动，即可查看你参与过的场景。</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>私密</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>计划于 {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>按标签筛选动作</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>详情</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>开始于</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>最近活动</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>发起人</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>篇幅</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, other {角色 · #}}</value>
+  </data>
 </root>

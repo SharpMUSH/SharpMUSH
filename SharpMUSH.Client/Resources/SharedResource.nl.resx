@@ -4842,4 +4842,70 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Zoek een personage met de naam ‘{0}’</value>
   </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Bladeren</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Alle scènes</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>Nu live</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Jouw scènes</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Gepland</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Afgerond</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# live} other {# live}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# recent} other {# recent}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Scènearchief</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>De scènes waaraan {0} heeft deelgenomen.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Scènes gepland voor later, de eerstvolgende bovenaan.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Scènes die hun eigenaar heeft afgerond.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Meld je aan en speel als personage om de scènes te zien waaraan je hebt deelgenomen.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privé</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Gepland voor {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Poses filteren op tag</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Begonnen</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Laatste activiteit</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Gestart door</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Lengte</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Rolverdeling · #} other {Rolverdeling · #}}</value>
+  </data>
 </root>

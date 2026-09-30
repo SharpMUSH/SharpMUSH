@@ -4842,4 +4842,70 @@
   <data name="NavPaletteFindCharacter" xml:space="preserve">
     <value>Encontrar um personagem chamado “{0}”</value>
   </data>
+  <data name="NavScenesBrowse" xml:space="preserve">
+    <value>Navegar</value>
+  </data>
+  <data name="NavScenesAll" xml:space="preserve">
+    <value>Todas as cenas</value>
+  </data>
+  <data name="NavScenesLive" xml:space="preserve">
+    <value>Ao vivo agora</value>
+  </data>
+  <data name="NavScenesMine" xml:space="preserve">
+    <value>Suas cenas</value>
+  </data>
+  <data name="NavScenesScheduled" xml:space="preserve">
+    <value>Agendadas</value>
+  </data>
+  <data name="NavScenesFinished" xml:space="preserve">
+    <value>Encerradas</value>
+  </data>
+  <data name="NavScenesLiveCount" xml:space="preserve">
+    <value>{count, plural, one {# ao vivo} other {# ao vivo}}</value>
+  </data>
+  <data name="NavScenesRecentCount" xml:space="preserve">
+    <value>{count, plural, one {# recente} other {# recentes}}</value>
+  </data>
+  <data name="NavScenesArchiveTitle" xml:space="preserve">
+    <value>Arquivo de cenas</value>
+  </data>
+  <data name="NavScenesMineDesc" xml:space="preserve">
+    <value>As cenas de que {0} participou.</value>
+  </data>
+  <data name="NavScenesScheduledDesc" xml:space="preserve">
+    <value>Cenas planejadas para depois, as mais próximas primeiro.</value>
+  </data>
+  <data name="NavScenesFinishedDesc" xml:space="preserve">
+    <value>Cenas que seus donos encerraram.</value>
+  </data>
+  <data name="NavScenesMineNone" xml:space="preserve">
+    <value>Entre e jogue com um personagem para ver as cenas de que você participou.</value>
+  </data>
+  <data name="NavScenePrivate" xml:space="preserve">
+    <value>privada</value>
+  </data>
+  <data name="NavSceneScheduledFor" xml:space="preserve">
+    <value>Agendada para {0}</value>
+  </data>
+  <data name="NavSceneTagFilter" xml:space="preserve">
+    <value>Filtrar poses por etiqueta</value>
+  </data>
+  <data name="NavSceneDetails" xml:space="preserve">
+    <value>Detalhes</value>
+  </data>
+  <data name="NavSceneStarted" xml:space="preserve">
+    <value>Iniciada</value>
+  </data>
+  <data name="NavSceneLastActivity" xml:space="preserve">
+    <value>Última atividade</value>
+  </data>
+  <data name="NavSceneStartedBy" xml:space="preserve">
+    <value>Iniciada por</value>
+  </data>
+  <data name="NavSceneLength" xml:space="preserve">
+    <value>Extensão</value>
+  </data>
+  <data name="NavSceneCast" xml:space="preserve">
+    <value>{count, plural, one {Elenco · #} other {Elenco · #}}</value>
+  </data>
 </root>

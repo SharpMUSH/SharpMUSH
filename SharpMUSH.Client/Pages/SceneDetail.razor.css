@@ -1,31 +1,95 @@
 .scene-detail-page {
-    padding: var(--cpad);
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
 }
 
 .scene-detail-meta {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    color: var(--text-dim);
-    font-size: 0.8125rem;
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 8px;
+}
+
+.scene-detail-back {
+	display: flex;
+}
+
+/* D1 §3: main + aside inside the page, the aside a stack of cards */
+.scene-detail-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) var(--aside-w);
+	gap: 14px;
+	align-items: start;
+}
+
+.scene-detail-main {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-width: 0;
+}
+
+.scene-detail-aside {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	min-width: 0;
+}
+
+.scene-detail-log {
+	padding: 8px;
 }
 
 .scene-log {
-    max-height: 65vh;
-    max-height: 65svh;
-    padding: 1rem;
+	max-height: 65vh;
+	max-height: 65svh;
+	padding: 1rem;
 }
 
-/* Mobile: trim padding, wrap the meta row, and tighten the pose-log padding. */
+.scene-detail-empty {
+	padding: 24px;
+	border: 1px dashed var(--border);
+	border-radius: var(--radius-card);
+	color: var(--text-dim);
+	text-align: center;
+}
+
+.scene-detail-facts {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 6px 10px;
+	margin: 0;
+	font-size: 12px;
+}
+
+.scene-detail-facts dt {
+	color: var(--text-faint);
+}
+
+.scene-detail-facts dd {
+	margin: 0;
+	color: var(--text);
+	overflow-wrap: anywhere;
+}
+
+.scene-detail-cast {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	font-size: 13px;
+}
+
+/* narrow: the aside stacks under the log, and the log keeps less of its padding */
 @container page (max-width: 48rem) {
-    .scene-detail-page {
-        padding: var(--cpad-mobile);
-    }
-    .scene-detail-meta {
-        flex-wrap: wrap;
-        gap: 0.375rem 0.875rem;
-    }
-    .scene-log {
-        padding: 0.75rem;
-    }
+	.scene-detail-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.scene-log {
+		padding: 0.75rem;
+	}
 }
