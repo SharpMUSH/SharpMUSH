@@ -3920,4 +3920,58 @@
   <data name="AdmConfigInThisSection" xml:space="preserve">
     <value>In this section</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# page} other {# pages}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wiki home</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Recent changes</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>New page</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Page title</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Search the wiki</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>The latest edits across the wiki, newest first.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>No pages in this category yet.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>draft</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>locked</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>just now</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {# minute ago} other {# minutes ago}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {# hour ago} other {# hours ago}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {# day ago} other {# days ago}}</value>
+  </data>
 </root>

@@ -144,7 +144,13 @@ public sealed class LayoutService(IHttpClientFactory httpClientFactory, ILogger<
 		LayoutScopes.WikiIndex => new LayoutConfiguration(
 			new Dictionary<WidgetZone, List<WidgetPlacement>>
 			{
-				[WidgetZone.MainContent] = [new WidgetPlacement("WikiIndex", 0, null)]
+				[WidgetZone.MainContent] = [new WidgetPlacement("WikiIndex", 0, null)],
+				// D1 README §6.1: the wiki home aside is "Recently changed" then "Live now".
+				[WidgetZone.RightSidebar] =
+				[
+					new WidgetPlacement("RecentWikiActivity", 0, null),
+					new WidgetPlacement("ActiveScene", 1, null)
+				]
 			},
 			SidebarsOff),
 

@@ -32,6 +32,12 @@ else
     /// <summary>A MudBlazor icon for the icon lead.</summary>
     [Parameter] public string? Icon { get; set; }
     [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+
+    /// <summary>A dim second line under the label ("Wren · 2h ago"); the row grows to fit it.</summary>
+    [Parameter] public string? Sub { get; set; }
+
+    /// <summary>Extra classes on the row element, so a page can address its own rows.</summary>
+    [Parameter] public string? Class { get; set; }
     [Parameter] public int? Count { get; set; }
     [Parameter] public int Unread { get; set; }
     [Parameter] public bool IsCurrent { get; set; }
@@ -50,7 +56,9 @@ else
         Unread > 0 ? "kit-row--unread" : null,
         Dim ? "kit-row--dim" : null,
         Collapsed ? "kit-row--collapsed" : null,
-    }.Where(c => c is not null));
+        Sub is not null ? "kit-row--two-line" : null,
+        Class,
+    }.Where(c => !string.IsNullOrEmpty(c)));
 
     private string UnreadText => Loc.Plural("NavUnreadCount", "count", Unread);
 
@@ -100,7 +108,17 @@ else
         </span>
         @if (!Collapsed)
         {
-            <span class="kit-row-label">@Label</span>
+            @if (Sub is not null)
+            {
+                <span class="kit-row-text">
+                    <span class="kit-row-label">@Label</span>
+                    <span class="kit-row-sub">@Sub</span>
+                </span>
+            }
+            else
+            {
+                <span class="kit-row-label">@Label</span>
+            }
             @if (Unread > 0)
             {
                 <span class="kit-row-unread" aria-label="@UnreadText">@Unread</span>

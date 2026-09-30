@@ -29,7 +29,7 @@ public static class LayoutScopes
 		new(Home, "LayScopeHome", "LayScopeHomeDesc",
 			[WidgetZone.MainContent]),
 		new(WikiIndex, "LayScopeWikiIndex", "LayScopeWikiIndexDesc",
-			[WidgetZone.MainContent]),
+			[WidgetZone.MainContent, WidgetZone.RightSidebar]),
 		new(Profile, "LayScopeProfile", "LayScopeProfileDesc",
 			[WidgetZone.MainContent, WidgetZone.RightSidebar]),
 	];

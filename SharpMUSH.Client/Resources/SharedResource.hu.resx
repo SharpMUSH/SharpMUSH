@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# olvasatlan} other {# olvasatlan}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# oldal} other {# oldal}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Böngészés</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wiki kezdőlap</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Friss változtatások</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Kategóriák</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Új oldal</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Oldal címe</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Keresés a wikiben</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>A wiki legutóbbi szerkesztései, a legújabbak elöl.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Kategória</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Ebben a kategóriában még nincsenek oldalak.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>piszkozat</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>zárolt</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>épp most</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {# perce} other {# perce}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {# órája} other {# órája}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {# napja} other {# napja}}</value>
+  </data>
 </root>

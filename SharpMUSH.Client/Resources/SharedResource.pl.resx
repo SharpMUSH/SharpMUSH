@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# nieprzeczytana} few {# nieprzeczytane} many {# nieprzeczytanych} other {# nieprzeczytanej}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# strona} few {# strony} many {# stron} other {# strony}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Przeglądaj</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Strona główna wiki</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Ostatnie zmiany</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Kategorie</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Nowa strona</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Tytuł strony</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Szukaj w wiki</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Najnowsze edycje w wiki, od najnowszych.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Kategoria</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>W tej kategorii nie ma jeszcze stron.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>szkic</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>zablokowana</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>przed chwilą</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {# minutę temu} few {# minuty temu} many {# minut temu} other {# minuty temu}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {# godzinę temu} few {# godziny temu} many {# godzin temu} other {# godziny temu}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {# dzień temu} few {# dni temu} many {# dni temu} other {# dnia temu}}</value>
+  </data>
 </root>

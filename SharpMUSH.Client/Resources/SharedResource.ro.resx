@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# necitit} few {# necitite} other {# de necitite}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# pagină} few {# pagini} other {# de pagini}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Răsfoiește</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Pagina principală wiki</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Modificări recente</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Categorii</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Pagină nouă</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Titlul paginii</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Caută în wiki</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Cele mai recente modificări din wiki, cele mai noi primele.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Categorie</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Încă nu există pagini în această categorie.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>ciornă</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>blocată</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>chiar acum</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {acum # minut} few {acum # minute} other {acum # de minute}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {acum # oră} few {acum # ore} other {acum # de ore}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {acum # zi} few {acum # zile} other {acum # de zile}}</value>
+  </data>
 </root>

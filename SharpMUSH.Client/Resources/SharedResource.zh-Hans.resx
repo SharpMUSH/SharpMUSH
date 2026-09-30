@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, other {# 条未读}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, other {# 个页面}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>浏览</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wiki 首页</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>最近更改</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>分类</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>新页面</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>页面标题</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>搜索 Wiki</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Wiki 的最新编辑，最新的在前。</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>分类</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>此分类下还没有页面。</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>草稿</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>已锁定</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>刚刚</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, other {# 分钟前}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, other {# 小时前}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, other {# 天前}}</value>
+  </data>
 </root>

@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# sin leer} other {# sin leer}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# página} other {# páginas}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Explorar</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Inicio de la wiki</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Cambios recientes</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Categorías</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Página nueva</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Título de la página</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Buscar en la wiki</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Las últimas ediciones de la wiki, primero las más recientes.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Categoría</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Todavía no hay páginas en esta categoría.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>borrador</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>bloqueada</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>justo ahora</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {hace # minuto} other {hace # minutos}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {hace # hora} other {hace # horas}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {hace # día} other {hace # días}}</value>
+  </data>
 </root>

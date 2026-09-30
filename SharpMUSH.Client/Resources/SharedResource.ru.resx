@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанных}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# страница} few {# страницы} many {# страниц} other {# страницы}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Обзор</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Главная вики</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Недавние изменения</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Категории</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Новая страница</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Заголовок страницы</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Поиск по вики</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Последние правки в вики, сначала новые.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Категория</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>В этой категории пока нет страниц.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>черновик</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>заблокирована</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>только что</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {# минуту назад} few {# минуты назад} many {# минут назад} other {# минуты назад}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {# час назад} few {# часа назад} many {# часов назад} other {# часа назад}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {# день назад} few {# дня назад} many {# дней назад} other {# дня назад}}</value>
+  </data>
 </root>

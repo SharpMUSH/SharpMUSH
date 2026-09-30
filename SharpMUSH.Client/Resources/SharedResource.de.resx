@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# ungelesen} other {# ungelesen}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# Seite} other {# Seiten}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Durchsuchen</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wiki-Startseite</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Letzte Änderungen</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Kategorien</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Neue Seite</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Seitentitel</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Wiki durchsuchen</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Die neuesten Bearbeitungen im Wiki, neueste zuerst.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Kategorie</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Noch keine Seiten in dieser Kategorie.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>Entwurf</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>gesperrt</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>gerade eben</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {vor # Minute} other {vor # Minuten}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {vor # Stunde} other {vor # Stunden}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {vor # Tag} other {vor # Tagen}}</value>
+  </data>
 </root>

@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# nepročitana} few {# nepročitane} other {# nepročitanih}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# stranica} few {# stranice} other {# stranica}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Pregledaj</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Početna wikija</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Nedavne promjene</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Kategorije</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Nova stranica</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Naslov stranice</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Pretraži wiki</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Najnovija uređivanja wikija, najnovija prva.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Kategorija</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>U ovoj kategoriji još nema stranica.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>skica</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>zaključana</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>upravo sada</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {prije # minute} few {prije # minute} other {prije # minuta}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {prije # sat} few {prije # sata} other {prije # sati}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {prije # dan} few {prije # dana} other {prije # dana}}</value>
+  </data>
 </root>

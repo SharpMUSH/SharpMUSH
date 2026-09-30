@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# ongelezen} other {# ongelezen}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# pagina} other {# pagina's}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Bladeren</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wiki-startpagina</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Recente wijzigingen</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Categorieën</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Nieuwe pagina</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Paginatitel</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Zoeken in de wiki</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>De laatste bewerkingen in de wiki, nieuwste eerst.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Categorie</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Nog geen pagina's in deze categorie.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>concept</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>vergrendeld</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>zojuist</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {# minuut geleden} other {# minuten geleden}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {# uur geleden} other {# uur geleden}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {# dag geleden} other {# dagen geleden}}</value>
+  </data>
 </root>

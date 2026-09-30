@@ -134,6 +134,33 @@
 	text-overflow: ellipsis;
 }
 
+.kit-row--two-line {
+	height: auto;
+	min-height: 44px;
+	padding-top: 6px;
+	padding-bottom: 6px;
+}
+
+.kit-row-text {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.kit-row-text .kit-row-label {
+	flex: none;
+}
+
+.kit-row-sub {
+	font-size: 12px;
+	color: var(--text-dim);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .kit-row-count {
 	font-size: 12px;
 	color: var(--text-dim);

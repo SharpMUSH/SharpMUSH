@@ -102,6 +102,17 @@ public class LayoutServiceTests : TrackingTestContext
 	}
 
 	[Test]
+	public async Task GetDefaultLayout_WikiIndex_HasRecentActivityAndActiveSceneInTheRightSidebar()
+	{
+		// D1 README §6.1: the wiki home aside is RecentWikiActivity then ActiveScene ("Live now").
+		var svc = new LayoutService(Substitute.For<IHttpClientFactory>(), Substitute.For<ILogger<LayoutService>>());
+		var layout = svc.GetDefaultLayout(LayoutScopes.WikiIndex);
+		var aside = layout.Zones[WidgetZone.RightSidebar];
+		await Assert.That(aside.Select(p => p.WidgetName).ToList()).IsEquivalentTo(["RecentWikiActivity", "ActiveScene"]);
+		await Assert.That(LayoutScopes.Find(LayoutScopes.WikiIndex)!.Zones).Contains(WidgetZone.RightSidebar);
+	}
+
+	[Test]
 	public async Task GetDefaultLayout_Profile_HasHeaderBodyAndGallery()
 	{
 		var svc = Build(new ScriptedHandler(_ => NotFound()));

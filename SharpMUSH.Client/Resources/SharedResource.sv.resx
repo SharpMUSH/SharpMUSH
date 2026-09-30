@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# oläst} other {# olästa}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# sida} other {# sidor}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Bläddra</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wikins startsida</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Senaste ändringar</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Kategorier</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Ny sida</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Sidtitel</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Sök i wikin</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>De senaste redigeringarna i wikin, nyaste först.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Kategori</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Inga sidor i den här kategorin ännu.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>utkast</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>låst</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>just nu</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {# minut sedan} other {# minuter sedan}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {# timme sedan} other {# timmar sedan}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {# dag sedan} other {# dagar sedan}}</value>
+  </data>
 </root>

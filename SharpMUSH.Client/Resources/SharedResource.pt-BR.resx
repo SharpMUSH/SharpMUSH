@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# não lida} other {# não lidas}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# página} other {# páginas}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Explorar</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Início da wiki</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Mudanças recentes</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Categorias</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Nova página</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Título da página</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Pesquisar na wiki</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>As edições mais recentes da wiki, as mais novas primeiro.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Categoria</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Ainda não há páginas nesta categoria.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>rascunho</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>bloqueada</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>agora mesmo</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {há # minuto} other {há # minutos}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {há # hora} other {há # horas}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {há # dia} other {há # dias}}</value>
+  </data>
 </root>

@@ -1,0 +1,73 @@
+@page "/wiki/category/{Category}"
+@layout WikiLayout
+@using SharpMUSH.Client.Models
+@using SharpMUSH.Client.Models.Wiki
+@using SharpMUSH.Library.Services
+@inject WikiService Wiki
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Label — @Loc["Wiki"] — @Loc["AppTitle"]</PageTitle>
+
+@* One category's pages as image tiles (the "All N pages" target of the home cards and the sidebar
+   rows), with draft and locked tags where the home cards show them. *@
+<div class="wiki-cat">
+    <PlainPageHeader Kicker="@Loc["NavWikiCategoryKicker"]" Title="@Label" Description="@(_loading ? null : Loc.Plural("NavWikiPagesCount", "count", _pages.Count))" />
+
+    @if (_loading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Style="height:2px;" />
+    }
+    else if (_pages.Count == 0)
+    {
+        <EmptyState Class="wiki-cat-empty">@Loc["NavWikiCategoryEmpty"]</EmptyState>
+    }
+    else
+    {
+        <div class="wiki-cat-grid">
+            @foreach (var page in _pages)
+            {
+                var p = page;
+                <ImageTile Label="@p.Title" ImageUrl="@p.Image" Height="76" Href="@WikiRoutes.PathFor(p.Namespace, p.Category, p.Slug)"
+                           Sub="@(p.LastEditedBy is null ? Loc.Format(p.UpdatedAt) : string.Format(Loc["NavWikiEditedBy"], p.LastEditedBy, Loc.Format(p.UpdatedAt)))">
+                    <Overlay>
+                        @if (!p.Published)
+                        {
+                            <Pill Class="wiki-cat-tag wiki-cat-tag--draft">@Loc["NavWikiDraft"]</Pill>
+                        }
+                        @if (p.IsProtected)
+                        {
+                            <Pill Class="wiki-cat-tag wiki-cat-tag--locked">@Loc["NavWikiLocked"]</Pill>
+                        }
+                    </Overlay>
+                </ImageTile>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Category { get; set; } = string.Empty;
+
+    private bool _loading = true;
+    private IReadOnlyList<WikiPageSummary> _pages = [];
+    private string? _loadedCategory;
+
+    private string Label => WikiCategories.Label(Category, Loc["ResCategoryGeneral"]);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.Equals(_loadedCategory, Category, StringComparison.OrdinalIgnoreCase)) return;
+        _loadedCategory = Category;
+        _loading = true;
+        try
+        {
+            _pages = (await Wiki.GetByCategoryAsync(WikiCategories.Key(Category), 0, 200))
+                .OrderByDescending(p => p.UpdatedAt)
+                .ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

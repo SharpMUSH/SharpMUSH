@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# непрочетено} other {# непрочетени}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# страница} other {# страници}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Преглед</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Начало на уикито</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Последни промени</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Категории</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Нова страница</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Заглавие на страницата</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Търсене в уикито</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>Последните редакции в уикито, най-новите първи.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Категория</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Все още няма страници в тази категория.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>чернова</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>заключена</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>току-що</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {преди # минута} other {преди # минути}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {преди # час} other {преди # часа}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {преди # ден} other {преди # дни}}</value>
+  </data>
 </root>

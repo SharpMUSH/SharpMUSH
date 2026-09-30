@@ -68,6 +68,15 @@ public class SidebarRowTests : BunitContext
 	}
 
 	[Test]
+	public async Task Sub_RendersADimSecondLine_AndClassLandsOnTheRow()
+	{
+		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Harbour Ward").Add(x => x.Sub, "Wren · 2h ago").Add(x => x.Class, "wiki-recent-row").Add(x => x.Href, "/wiki/main/lore/harbour"));
+		await Assert.That(cut.Find(".kit-row-sub").TextContent).IsEqualTo("Wren · 2h ago");
+		await Assert.That(cut.Find(".kit-row").ClassList).Contains("wiki-recent-row");
+		await Assert.That(cut.Find(".kit-row").ClassList).Contains("kit-row--two-line");
+	}
+
+	[Test]
 	public async Task Count_RendersDimCount()
 	{
 		var cut = Render<SidebarRow>(p => p.Add(x => x.Label, "Theme").Add(x => x.Count, 12));

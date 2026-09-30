@@ -56,6 +56,21 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	}
 
 	/// <summary>
+	/// The same list with the failure in the type: "no recent changes" and "the server would not say"
+	/// are different facts, and the recent-changes page tells them apart.
+	/// </summary>
+	public async ValueTask<ApiResult<IReadOnlyList<WikiPageSummary>>> GetRecentChangesResultAsync(int count = 20, string? lang = null)
+	{
+		var result = await httpClientFactory.CreateClient("api")
+			.GetApiAsync<List<WikiPageDto>>($"api/wiki/recent?count={count}{LangQuery(lang, first: false)}", "The server returned no recent changes.");
+		return result switch
+		{
+			List<WikiPageDto> dtos => dtos.Select(ToSummary).ToList(),
+			ApiFailure failure => failure,
+		};
+	}
+
+	/// <summary>
 	/// Lists pages within a namespace, ordered by title. Failures return an empty list.
 	/// </summary>
 	public async ValueTask<IReadOnlyList<WikiPageSummary>> GetNamespacePagesAsync(

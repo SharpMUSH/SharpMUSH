@@ -4575,4 +4575,58 @@
   <data name="NavUnreadCount" xml:space="preserve">
     <value>{count, plural, one {# ulæst} other {# ulæste}}</value>
   </data>
+  <data name="NavWikiPagesCount" xml:space="preserve">
+    <value>{count, plural, one {# side} other {# sider}}</value>
+  </data>
+  <data name="NavWikiBrowse" xml:space="preserve">
+    <value>Gennemse</value>
+  </data>
+  <data name="NavWikiHome" xml:space="preserve">
+    <value>Wiki-forside</value>
+  </data>
+  <data name="NavWikiRecentChanges" xml:space="preserve">
+    <value>Seneste ændringer</value>
+  </data>
+  <data name="NavWikiCategories" xml:space="preserve">
+    <value>Kategorier</value>
+  </data>
+  <data name="NavWikiNewPage" xml:space="preserve">
+    <value>Ny side</value>
+  </data>
+  <data name="NavWikiNewPageTitle" xml:space="preserve">
+    <value>Sidetitel</value>
+  </data>
+  <data name="NavWikiSearch" xml:space="preserve">
+    <value>Søg i wikien</value>
+  </data>
+  <data name="NavWikiRecentDesc" xml:space="preserve">
+    <value>De seneste redigeringer i wikien, nyeste først.</value>
+  </data>
+  <data name="NavWikiCategoryKicker" xml:space="preserve">
+    <value>Kategori</value>
+  </data>
+  <data name="NavWikiCategoryEmpty" xml:space="preserve">
+    <value>Ingen sider i denne kategori endnu.</value>
+  </data>
+  <data name="NavWikiEditedBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="NavWikiDraft" xml:space="preserve">
+    <value>kladde</value>
+  </data>
+  <data name="NavWikiLocked" xml:space="preserve">
+    <value>låst</value>
+  </data>
+  <data name="NavJustNow" xml:space="preserve">
+    <value>lige nu</value>
+  </data>
+  <data name="NavMinutesAgo" xml:space="preserve">
+    <value>{count, plural, one {# minut siden} other {# minutter siden}}</value>
+  </data>
+  <data name="NavHoursAgo" xml:space="preserve">
+    <value>{count, plural, one {# time siden} other {# timer siden}}</value>
+  </data>
+  <data name="NavDaysAgo" xml:space="preserve">
+    <value>{count, plural, one {# dag siden} other {# dage siden}}</value>
+  </data>
 </root>
