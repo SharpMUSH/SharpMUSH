@@ -69,6 +69,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			.AddSingleton<SitelockService>()
 			.AddSingleton<BannedNamesService>()
 			.AddSingleton<RestrictionsService>()
+			.AddSingleton<AdminConfigService>()
 			.AddSingleton<ILayoutService, LayoutService>()
 			.AddSingleton(sp => new AccountAuthService(factory, sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 				NullLogger<AccountAuthService>.Instance, []));
@@ -117,6 +118,7 @@ public class AdminPagesD1Tests : TrackingBunitContext
 	[Arguments(typeof(Sitelock), "SitelockRules", null)]
 	[Arguments(typeof(BannedNames), "BannedPlayerNames", null)]
 	[Arguments(typeof(Restrictions), "CommandAndFunctionRestrictions", null)]
+	[Arguments(typeof(ImportConfig), "ImportConfiguration", null)]
 	public async Task OpensWithThePlainHeader_AndPutsContentInKitCards(Type page, string title, string? action, string content = ".kit-card, .lay-card")
 	{
 		var cut = RenderPage(page);
@@ -159,6 +161,32 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll("button.kit-capsule.kit-capsule--primary").Count).IsEqualTo(1)
 			.Because("the add action is the page's one primary capsule");
 		await Assert.That(cut.FindAll("button.mud-icon-button.config-delete[aria-label='Delete']").Count).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// The config import page puts the chosen file in a kit card: the preview is a read-only MudBlazor
+	/// field rather than a hand-styled textarea, and the import is the page's one primary capsule.
+	/// </summary>
+	[Test]
+	public async Task ImportConfig_ShowsTheChosenFileInAKitCard()
+	{
+		var cut = RenderPage(typeof(ImportConfig));
+		cut.FindComponent<Microsoft.AspNetCore.Components.Forms.InputFile>()
+			.UploadFiles(InputFileContent.CreateFromText("mud_name Test\n", "mush.cnf"));
+
+		cut.WaitForAssertion(() => cut.Find("button.kit-capsule--primary"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".kit-card").Count).IsGreaterThanOrEqualTo(2)
+			.Because("the drop zone and the chosen file each sit in a kit card");
+		await Assert.That(cut.FindAll(".config-field-card, .config-primary-btn, .config-ghost-btn, textarea.config-input").Count).IsEqualTo(0)
+			.Because("the hand-built controls are gone");
+		await Assert.That(cut.FindAll("button.kit-capsule.kit-capsule--primary").Count).IsEqualTo(1);
+		await Assert.That(cut.Find("button.kit-capsule--primary").TextContent).Contains("ImportConfiguration");
+		await Assert.That(cut.Find(".kit-card-title").TextContent).IsEqualTo("SelectedFile");
+
+		cut.Find(".mud-expand-panel-header").Click();
+		cut.WaitForAssertion(() => cut.Find("textarea.mud-input-slot"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("textarea.mud-input-slot").TextContent + cut.Find("textarea.mud-input-slot").GetAttribute("value"))
+			.Contains("mud_name Test");
 	}
 
 	/// <summary>
