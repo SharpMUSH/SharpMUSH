@@ -696,34 +696,28 @@ public partial class Functions
 		var sideFxEnabled = Configuration.CurrentValue.Function.FunctionSideEffects;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		// NoParse holds BOTH arguments back, but only the expression is meant to wait for its new
-		// executor: PennMUSH's fun_objeval (src/funmisc.c) runs process_expression over args[0] as
+		// executor: PennMUSH's fun_objeval (src/funufun.c) runs process_expression over args[0] as
 		// the caller before it locates anything, so objeval(%0,...) and objeval([num(here)],...)
 		// name an object. Reading the raw text here looked "%0" up as a name and answered
 		// #-1 NO MATCH for every dynamic object.
-		var arg0 = (await parser.CurrentState.Arguments["0"].GetParsedResultAsync()).Message!.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"];
+		var objectArg = await parser.CurrentState.Arguments["0"].GetParsedResultAsync();
+		var expression = parser.CurrentState.Arguments["1"];
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
-			executor, executor, arg0, LocateFlags.All,
-			async found =>
-			{
-				var sideFxRequirement = sideFxEnabled
-																&& await PermissionService.Controls(executor, found);
-				var noSideFxRequirement = !sideFxEnabled
-																	&& (await PermissionService.Controls(executor, found) || await executor.IsSee_All());
+		// fun_objeval is not an error path: when match_thing finds nothing (it notifies "I can't see
+		// that here.") or the executor may not evaluate as what it found, the expression is evaluated
+		// as the executor itself. Control is required when function side effects are on, control or
+		// See_All when they are off.
+		var located = await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor,
+			objectArg.Message!.ToPlainText(), LocateFlags.All);
+		var evaluator = located is AnySharpObject found && await MayEvaluateAs(found) ? found : executor;
 
-				if (sideFxRequirement || noSideFxRequirement)
-				{
-					return (await parser.With(state =>
-							state with
-							{
-								Executor = found.Object().DBRef
-							},
-						async newParser => await newParser.FunctionParse(arg1.Message!)))!;
-				}
+		var result = await parser.With(state => state with { Executor = evaluator.Object().DBRef },
+			async newParser => await newParser.FunctionParse(expression.Message!)) ?? CallState.Empty;
+		return result with { HadErrors = objectArg.HadErrors || result.HadErrors };
 
-				return ErrorMessages.Returns.PermissionDenied;
-			});
+		async ValueTask<bool> MayEvaluateAs(AnySharpObject target) =>
+			await PermissionService.Controls(executor, target)
+			|| (!sideFxEnabled && await executor.IsSee_All());
 	}
 
 	/// <summary>
