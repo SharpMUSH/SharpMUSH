@@ -1128,6 +1128,9 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string WhereIsObjectInLocationFormat = "{0} is in {1}.";
 
+		/// <summary><c>examine_atrs</c>'s answer to a named pattern that matched nothing (<c>src/look.c:384</c>).</summary>
+		public const string ExamineNoMatchingAttributes = "No matching attributes.";
+
 		public const string EditInvalidArguments = "Invalid arguments to @edit.";
 		public const string EditInvalidFormat = "Invalid format. Use: object/attribute=search,replace";
 		public const string EditMustSpecifySearchAndReplace = "You must specify search and replace strings.";
