@@ -149,6 +149,13 @@ jobs:
         run: >-
           dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --treenode-filter "/*/*/HelpArticleTests/*"
 
+      - name: Validate help lookup and presentation consumers
+        timeout-minutes: 5
+        run: |
+          for help_suite in TextFileServiceTests CompatibilityProfileStructureTests TerminalFrameRendererTests RecursiveMarkdownRendererTests WikiSyntaxInGameRenderingTests MarkupOutputRendererTests; do
+            dotnet run --project SharpMUSH.Tests --no-build --no-restore --verbosity normal -- --output Detailed --treenode-filter "/*/*/$help_suite/*"
+          done
+
       - name: Generate editor data from the shared article model
         env:
           SHARPMUSH_REGENERATE_CLIENT_DATA: "1"
